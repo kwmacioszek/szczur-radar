@@ -43,7 +43,21 @@ Make targeted corrections to the infrastructure and stack guidance for the selec
 
 ### [ ] 3. Provision and protect production
 
-**Status (2026-09-26): NOT STARTED — operator gate. Automated work stopped here** per this plan and the CLAUDE.md production-access boundary (account/billing/CLI-login/destructive actions are human-only). Everything below requires the human operator.
+**Status (2026-09-26): partially done by operator — the remainder is a genuine operator-only gate.**
+
+Done by operator: `railway config apply` → **SUCCESS**. Project `szczur-radar`, environment `production`; plan `3 to add, 0 to change, 0 to destroy` → `+ postgres`, `+ szczur-radar-api`, `+ szczur-radar-web`. This also validates the `.railway/railway.ts` IaC field names (the plan accepted them). CLI is logged in and the project linked (on the operator's machine).
+
+Remaining items are **operator-only Railway production operations**. The agent cannot perform them here: this session has no `railway` CLI on PATH, and the harness blocks Railway operations as `[Production Deploy]`. Operator checklist:
+- [ ] Billing guardrails: **$15** usage email alert + **$25** monthly hard compute limit (Usage / cost-control settings). See incident note below.
+- [ ] Verify all 3 services + Postgres are in Amsterdam (`europe-west4`): `railway status` / dashboard.
+- [ ] Generate a public domain for **web only**; confirm `szczur-radar-api` + `postgres` have **no** public domain or TCP proxy.
+- [x] Reference variables verified (`railway variables`, 2026-09-26): api `DATABASE_URL` → `postgres.railway.internal` ✓; web `API_PRIVATE_DOMAIN` → `szczur-radar-api.railway.internal` ✓. **`API_PORT` resolved EMPTY** ✗ — Railway does not expose a service's `PORT` as a referenceable variable. **Fixed in `.railway/railway.ts`**: pinned `API_INTERNAL_PORT=8000` (api binds it via `PORT`; web `API_PORT` is the matching literal). Needs `railway config plan` + `apply` to take effect, and must land **before** merge/deploy or the web→api proxy 502s.
+- [ ] **Rotate the Postgres password** before any production data: the full `DATABASE_URL` (with password) was surfaced in plaintext during verification. The DB is private-only (no public domain / TCP proxy) so external risk is low, but rotate it in the dashboard (human-only); the api's `DATABASE_URL` reference auto-updates.
+- [ ] Enable Postgres backups + PITR, wait for the first restorable point, run a restore drill into a **separate** DB service, record the result. If this cannot be done → **stop before any production data, reopen the Render fallback** (risk register #1).
+
+Deploy state observed (2026-09-26): `szczur-radar-api` **Failed** (expected — services deploy from `main`, still the pre-scaffold stub; resolves on merge), `szczur-radar-web` **Online** (Railpack served the starter Vue from `main`, not the Caddy/Dockerfile yet), `postgres` **Online**. Region not shown by `railway status` — still verify Amsterdam in the dashboard.
+
+Incident note — raising the $25 hard limit: the hard limit can take services offline when reached. Raise or temporarily remove it in the Railway usage / cost-control settings (https://docs.railway.com/pricing/cost-control), then redeploy/restart the affected services so they resume.
 
 Operator: connect the Railway account to kwmacioszek/szczur-radar, choose the plan, and configure a $15 compute usage email alert and a $25 monthly hard compute usage limit before provisioning. The hard limit can take workloads offline when reached; record how to raise it during an incident. Install/login to the CLI, create or link the production project, run railway config plan, review that it adds exactly the intended services and deletes nothing, then run railway config apply. Verify all services and Postgres are in Amsterdam. Railway documents the usage-limit behavior (https://docs.railway.com/pricing/cost-control).
 
@@ -53,7 +67,12 @@ Before collecting production data, enable scheduled Postgres volume backups and 
 
 ### [ ] 4. Release and verify
 
-**Status (2026-09-26): blocked on phase 3.** The scaffold is ready to merge; verification of `/`, `/api/health`, `/api/ready` and the web URL is recorded here once the operator has provisioned and enabled autodeploy.
+**Status (2026-09-26): blocked on the human merge gate + operator autodeploy toggle.**
+
+- Release candidate: **PR #1** (`deploy/railway-scaffold` → `main`), commit `4fe4a513828b307b0f48a2b92a27cb2c6e2d5299`, all 3 CI jobs green.
+- Merging PR #1 to `main` is the **human production-approval gate** (auto-deploy on merge) — not performed by the agent. NOTE: the services' IaC source is `main`, so until merge, any deploy from `main` builds the pre-scaffold stub (no FastAPI `app`, no web Dockerfile). Enable Wait for CI **before** relying on autodeploy.
+- Enabling native autodeploy + Wait for CI per service is an operator dashboard toggle.
+- After merge + deploy, verify (record here): `/`, `/api/health`, `/api/ready` through the web domain; api + Postgres have **no** public URL; an API 5xx passes through as JSON, not the SPA page. The "readiness 503 when DB down" path is already covered by the local test (`szczur-radar-api/tests/test_health.py`).
 
 Merge the checked scaffold to main, confirm GitHub Actions succeeds, then enable autodeploy and Wait for CI for both services. Check the deployed commit and deployment status for each service.
 
@@ -62,6 +81,18 @@ Verify /, /api/health, and /api/ready through the web domain; verify API and Pos
 Record the web URL, Railway project/environment and deployment IDs, configured variable names, backup/restore result, and smoke-check results in the deployment plan. Railway healthchecks run at deployment, not as continuous monitoring (https://docs.railway.com/deployments/healthchecks), so include a routine operational check of logs and readiness.
 
 ### [ ] 5. Enable safe PR previews and document recovery
+
+**Status (2026-09-26): support-steps runbook DONE (below). PR-preview enablement is operator-only and blocked until production works.**
+
+#### Support steps / recovery runbook
+
+- **Build failure — api:** Railpack didn't detect the app or Python version. Confirm `szczur-radar-api/.python-version` (3.13) and `uv.lock` are committed, and that the start command is the IaC one (`uv run uvicorn main:app --host :: --port $PORT`), not the default `uvicorn main:app`. Inspect `railway logs --service szczur-radar-api`.
+- **Build failure — web:** Dockerfile not detected, or `npm ci` / `vue-tsc` failed. Confirm `szczur-radar-web/Dockerfile` sits at the service root directory and `package-lock.json` is committed. The identical build is green in CI, so a Railway-only failure points at root-directory / build-context config.
+- **Proxy 502 (web → api):** Caddy can't reach the backend. Check the web service's `API_PRIVATE_DOMAIN` / `API_PORT` reference variables resolve to the api's `RAILWAY_PRIVATE_DOMAIN` / `PORT`; confirm uvicorn binds `::` (IPv6 private network); confirm the api deployment is live and healthy.
+- **Readiness 503:** `/api/ready` failed its `SELECT 1`. Check the api `DATABASE_URL` reference resolves and Postgres is up; read `railway logs --service szczur-radar-api`. Health 200 while ready 503 = app up, DB unreachable.
+- **CI wait / deploy stuck in `WAITING`:** Wait for CI is waiting on a workflow conclusion. Confirm the GitHub Actions run **concluded** (not skipped — do not path-filter the workflow) and the Railway GitHub app has repo permissions.
+- **Bad release:** roll back via dashboard → service → Deployments → Rollback (the CLI has no rollback). Code rollback does **not** roll back data — assess Postgres / migration state separately; every migration needs a tested downgrade or a fix-forward.
+- **Backups/PITR can't be enabled or restore-tested:** **stop before collecting production data** and reopen the documented Render fallback (managed Postgres with PITR) — risk register #1.
 
 Before enabling PR previews, seal all production-only secrets. Verify that preview environments cannot inherit those values; add separate preview credentials only when needed. Railway does not copy sealed values into PR environments (https://docs.railway.com/variables).
 

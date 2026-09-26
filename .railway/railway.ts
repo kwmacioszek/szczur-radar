@@ -12,6 +12,11 @@ import { defineRailway, github, postgres, project, service } from "railway/iac";
 
 const REPO = "kwmacioszek/szczur-radar";
 const REGION = "europe-west4"; // Railway "EU West (Amsterdam)"
+// Fixed private port for the API. Railway does not expose a service's PORT as a
+// referenceable variable (a `${{svc.PORT}}` reference resolves to empty), so we
+// pin it: the API binds it and the web Caddy proxy targets it deterministically
+// over the private network.
+const API_INTERNAL_PORT = "8000";
 
 export default defineRailway(() => {
   // Postgres. Backups/PITR are enabled by the operator in the dashboard
@@ -30,6 +35,7 @@ export default defineRailway(() => {
     healthcheck: "/api/health",
     replicas: { [REGION]: 1 },
     env: {
+      PORT: API_INTERNAL_PORT,
       DATABASE_URL: db.env.DATABASE_URL,
     },
   });
@@ -45,7 +51,7 @@ export default defineRailway(() => {
     replicas: { [REGION]: 1 },
     env: {
       API_PRIVATE_DOMAIN: api.env.RAILWAY_PRIVATE_DOMAIN,
-      API_PORT: api.env.PORT,
+      API_PORT: API_INTERNAL_PORT,
     },
   });
 

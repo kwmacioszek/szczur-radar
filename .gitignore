@@ -8,4 +8,5 @@ __pycache__/
 .pytest_cache/
 
 # Railway IaC deps
+node_modules/
 .railway/node_modules/
