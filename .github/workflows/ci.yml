@@ -26,27 +26,13 @@ jobs:
       - name: Run tests
         run: uv run pytest -q
 
-  frontend:
-    name: frontend (typecheck + build)
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: szczur-radar-web
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-          cache: npm
-          cache-dependency-path: szczur-radar-web/package-lock.json
-      - name: Install dependencies
-        run: npm ci
-      - name: Typecheck and build
-        run: npm run build
-
   web-container-smoke:
     name: web container smoke test
     runs-on: ubuntu-latest
+    # The image build runs `npm ci && npm run build` (vue-tsc typecheck + Vite
+    # build) against the real production Dockerfile, so this job IS also the
+    # frontend typecheck/build gate — no separate host build job, which would
+    # only re-run the same Vite build.
     steps:
       - uses: actions/checkout@v4
       - name: Build web image
