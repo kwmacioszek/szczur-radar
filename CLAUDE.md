@@ -1,94 +1,95 @@
+
 <!-- BEGIN @przeprogramowani/10x-cli -->
 
-## 10xDevs AI Toolkit — Module 1, Lesson 5
+## 10xDevs AI Toolkit — Moduł 1, Lekcja 5
 
-Pick a deployment platform and ship to production with the **infra chain**:
+Wybierz platformę wdrożeniową i wdroż na produkcję za pomocą **łańcucha infra**:
 
 ```
 (/10x-init  →  /10x-shape  →  /10x-prd  →  /10x-tech-stack-selector  →  /10x-bootstrapper  →  /10x-agents-md  →  /10x-rule-review  →  /10x-lesson)  →  /10x-infra-research  →  Plan Mode deploy
 ```
 
-The full Module 1 chain ships from Lessons 1–4 (re-included so you can fix any earlier contract mid-flight). `/10x-infra-research` is the lesson's main topic; the deploy step itself uses the host's built-in **Plan Mode** rather than a dedicated skill — the artifact (`context/deployment/deploy-plan.md`) is what carries forward.
+Pełny łańcuch Modułu 1 obejmuje rezultaty z Lekcji 1–4 (uwzględnione ponownie, aby można było poprawić dowolny wcześniejszy kontrakt w trakcie pracy). `/10x-infra-research` jest głównym tematem lekcji; sam krok wdrożenia używa wbudowanego **Plan Mode** hosta, a nie dedykowanej umiejętności — to artefakt (`context/deployment/deploy-plan.md`) jest przekazywany dalej.
 
-### Task Router — Where to start
+### Router zadań — od czego zacząć
 
-| Skill | Use it when |
+| Umiejętność | Użyj jej, gdy |
 | --- | --- |
-| **Infrastructure (lesson focus)** | |
-| `/10x-infra-research [path-to-tech-stack-or-prd]` | You have a `context/foundation/tech-stack.md` (and ideally a `prd.md`) and need to pick an MVP deployment platform. The skill loads the stack as a hard constraint, runs a 5-question developer interview (persistent connections, cost sensitivity, existing familiarity, global reach, co-location preference), spawns parallel subagent research across six candidate platforms, scores them Pass/Partial/Fail across the five agent-friendly criteria from `references/agent-friendly-criteria.md`, shortlists the top three, and runs a three-lens anti-bias cross-check on the leader (devil's advocate, pre-mortem, unknown unknowns) before writing `context/foundation/infrastructure.md`. Use AFTER `/10x-tech-stack-selector`, BEFORE `/10x-implement`. |
-| **Deploy (host built-in, not a skill)** | |
-| Plan Mode deploy | You have `infrastructure.md` + `tech-stack.md` and want a read-only plan reviewed before any mutation hits the platform. Activate the host's plan mode (Claude Code: `Shift+Tab` cycles default → auto-accept → plan; IDE: dedicated button) with the prompt "Wykonajmy pierwsze wdrożenie w oparciu o `@infrastructure.md`, zgodnie ze stackiem z `@tech-stack.md`". Read the plan, demand corrections, approve, then let the agent execute. The approved plan persists at `context/deployment/deploy-plan.md` so the next lesson's milestone planning can reference what's already deployed and which secrets are already wired. |
-| **Re-run upstream if needed** | |
-| `/10x-init` / `/10x-shape` / `/10x-prd` / `/10x-tech-stack-selector` / `/10x-bootstrapper` / `/10x-agents-md` / `/10x-rule-review` / `/10x-lesson` / `/10x-stack-assess` / `/10x-health-check` | Bundled so you can patch any earlier contract mid-flight. If the anti-bias cross-check forces a platform swap that pushes a stack-shaped decision (e.g. "this DB doesn't fit any platform we'd accept"), re-run `/10x-tech-stack-selector` to keep `tech-stack.md` and `infrastructure.md` aligned. |
+| **Infrastruktura (temat lekcji)** | |
+| `/10x-infra-research [path-to-tech-stack-or-prd]` | Masz `context/foundation/tech-stack.md` (a najlepiej także `prd.md`) i musisz wybrać platformę wdrożeniową dla MVP. Umiejętność ładuje stack jako twarde ograniczenie, przeprowadza 5-pytaniowy wywiad z deweloperem (trwałe połączenia, wrażliwość na koszty, istniejąca znajomość, zasięg globalny, preferencja współlokalizacji), uruchamia równoległe badania subagentów dla sześciu kandydujących platform, ocenia je jako Pass/Partial/Fail według pięciu kryteriów przyjaznych agentom z `references/agent-friendly-criteria.md`, wybiera trzy najlepsze i przeprowadza kontrolę antybiasową lidera z trzech perspektyw (adwokat diabła, pre-mortem, niewiadome niewiadome), zanim zapisze `context/foundation/infrastructure.md`. Użyj PO `/10x-tech-stack-selector`, PRZED `/10x-implement`. |
+| **Wdrożenie (wbudowane w hosta, nie jest umiejętnością)** | |
+| Plan Mode deploy | Masz `infrastructure.md` + `tech-stack.md` i chcesz, aby plan tylko do odczytu został sprawdzony, zanim jakakolwiek zmiana trafi na platformę. Aktywuj tryb planowania hosta (Claude Code: `Shift+Tab` przełącza default → auto-accept → plan; IDE: dedykowany przycisk) za pomocą promptu „Wykonajmy pierwsze wdrożenie w oparciu o `@infrastructure.md`, zgodnie ze stackiem z `@tech-stack.md`”. Przeczytaj plan, zażądaj poprawek, zatwierdź go, a następnie pozwól agentowi wykonać działania. Zatwierdzony plan jest zachowywany w `context/deployment/deploy-plan.md`, aby planowanie kamieni milowych w kolejnej lekcji mogło odwołać się do tego, co zostało już wdrożone i które sekrety są już podłączone. |
+| **W razie potrzeby uruchom ponownie poprzedni etap** | |
+| `/10x-init` / `/10x-shape` / `/10x-prd` / `/10x-tech-stack-selector` / `/10x-bootstrapper` / `/10x-agents-md` / `/10x-rule-review` / `/10x-lesson` / `/10x-stack-assess` / `/10x-health-check` | Zebrane razem, aby można było poprawić dowolny wcześniejszy kontrakt w trakcie pracy. Jeśli kontrola antybiasowa wymusi zmianę platformy, która wpływa na decyzję ukształtowaną przez stack (np. „ta DB nie pasuje do żadnej platformy, którą zaakceptowalibyśmy”), uruchom ponownie `/10x-tech-stack-selector`, aby zachować zgodność `tech-stack.md` i `infrastructure.md`. |
 
-### How the chain hands off
+### Jak łańcuch przekazuje pracę dalej
 
-- `/10x-infra-research` reads `context/foundation/tech-stack.md` (language, framework, runtime, database) as **hard constraints** — platforms that can't run the stack are dropped before scoring. It also reads `context/foundation/prd.md` (scale, latency, uptime expectations) as **soft weights** when scoring. Both inputs are optional but strongly recommended; without them the skill proceeds but warns.
-- The skill writes `context/foundation/infrastructure.md` as the third foundation contract: frontmatter (`project`, `researched_at`, `recommended_platform`, `runner_up`, `context_type`, `tech_stack`) plus a body covering recommendation, full platform comparison with scoring matrix, anti-bias findings, operational story (preview / secrets / rollback / approval / logs), and a risk register tying every entry back to the lens that surfaced it. On collision the skill prompts: overwrite, save as `infrastructure-v2.md`, or abort.
-- Plan Mode reads `infrastructure.md` and `tech-stack.md` together. The agent emits a step-by-step plan covering automated steps it owns, manual setup gates (account creation, secret configuration), exact deploy commands (Pages vs Workers commands are NOT interchangeable on Cloudflare — the plan must specify), and verification steps. The plan is rejected/edited until it's right; only then does Plan Mode exit and execution begin. The approved plan lands at `context/deployment/deploy-plan.md` and is consumed downstream by milestone-planning skills as ground truth for "what's already deployed".
+- `/10x-infra-research` odczytuje `context/foundation/tech-stack.md` (język, framework, runtime, baza danych) jako **twarde ograniczenia** — platformy, które nie obsługują stacka, są odrzucane przed oceną. Odczytuje także `context/foundation/prd.md` (skala, opóźnienia, oczekiwania dotyczące dostępności) jako **miękkie wagi** podczas oceniania. Oba wejścia są opcjonalne, ale zdecydowanie zalecane; bez nich umiejętność działa dalej, lecz wyświetla ostrzeżenie.
+- Umiejętność zapisuje `context/foundation/infrastructure.md` jako trzeci kontrakt fundamentowy: frontmatter (`project`, `researched_at`, `recommended_platform`, `runner_up`, `context_type`, `tech_stack`) oraz treść obejmującą rekomendację, pełne porównanie platform z macierzą ocen, ustalenia antybiasowe, model operacyjny (preview / secrets / rollback / approval / logs) i rejestr ryzyk wiążący każdy wpis z perspektywą, która go ujawniła. W przypadku kolizji umiejętność pyta: nadpisać, zapisać jako `infrastructure-v2.md` czy przerwać.
+- Plan Mode odczytuje razem `infrastructure.md` i `tech-stack.md`. Agent generuje plan krok po kroku obejmujący zautomatyzowane kroki, za które odpowiada, ręczne bramki konfiguracji (utworzenie konta, konfiguracja sekretów), dokładne komendy wdrożeniowe (komendy Pages i Workers NIE są wymienne w Cloudflare — plan musi to określać) oraz kroki weryfikacji. Plan jest odrzucany/edytowany, dopóki nie będzie poprawny; dopiero wtedy Plan Mode kończy działanie i rozpoczyna się wykonanie. Zatwierdzony plan trafia do `context/deployment/deploy-plan.md` i jest wykorzystywany dalej przez umiejętności planowania kamieni milowych jako źródło prawdy dla „tego, co jest już wdrożone”.
 
-### What the lesson's skills capture (and what they do NOT)
+### Co przechwytują umiejętności tej lekcji (a czego NIE)
 
-- **`/10x-infra-research` captures**: platform shortlist scored against five agent-friendly criteria (CLI quality, managed/serverless degree, agent-readable docs, stable/scriptable deploy API, MCP or first-class agent integration), three anti-bias outputs on the leader (numbered weaknesses, 150–200-word failure narrative, 3–5 unknown-unknowns), an operational story with one concrete answer per axis (not categories), and a risk register where every row names its source lens (`Devil's advocate` / `Pre-mortem` / `Unknown unknowns` / `Research finding`). Status of every non-GA feature is captured inline (`beta` / `preview` / `region-limited` / `deprecated`) with the date the status was checked.
-- **`/10x-infra-research` does NOT** build Docker images or write Dockerfiles, configure CI/CD pipelines, or plan beyond MVP scope (multi-region HA is explicitly out of scope). It does NOT decide for you — the user accepts, swaps to runner-up, or aborts after the cross-check, and that decision is recorded in the output.
-- **Plan Mode** captures: an explicit human gate between "agent has a plan" and "agent mutates production". The artifact (`deploy-plan.md`) is the audit trail for "what was supposed to happen" when the live run goes sideways. Plan Mode does NOT replace `/10x-infra-research` (the platform decision must already be made — Plan Mode plans the deploy, it doesn't pick where to deploy).
+- **`/10x-infra-research` przechwytuje**: shortlistę platform ocenionych według pięciu kryteriów przyjaznych agentom (jakość CLI, stopień zarządzania/serverless, dokumentacja czytelna dla agenta, stabilne/skryptowalne API wdrożeniowe, MCP lub integracja agentowa pierwszej klasy), trzy wyniki kontroli antybiasowej lidera (ponumerowane słabości, 150–200-słowowa narracja porażki, 3–5 niewiadomych niewiadomych), model operacyjny z jedną konkretną odpowiedzią dla każdej osi (nie kategoriami) oraz rejestr ryzyk, w którym każdy wiersz wskazuje źródłową perspektywę (`Devil's advocate` / `Pre-mortem` / `Unknown unknowns` / `Research finding`). Status każdej funkcji niebędącej GA jest przechwytywany inline (`beta` / `preview` / `region-limited` / `deprecated`) wraz z datą sprawdzenia statusu.
+- **`/10x-infra-research` NIE** buduje obrazów Docker ani nie pisze Dockerfile'ów, nie konfiguruje potoków CI/CD ani nie planuje poza zakresem MVP (multi-region HA jest wyraźnie poza zakresem). NIE podejmuje decyzji za Ciebie — użytkownik akceptuje, zamienia na runner-up albo przerywa po kontroli, a decyzja ta jest zapisywana w wyniku.
+- **Plan Mode** przechwytuje: wyraźną bramkę człowieka między „agent ma plan” a „agent modyfikuje produkcję”. Artefakt (`deploy-plan.md`) jest ścieżką audytową dla „tego, co miało się wydarzyć”, gdy rzeczywiste wykonanie pójdzie źle. Plan Mode NIE zastępuje `/10x-infra-research` (decyzja o platformie musi być już podjęta — Plan Mode planuje wdrożenie, nie wybiera miejsca wdrożenia).
 
-### The five agent-friendly criteria (and why they're load-bearing)
+### Pięć kryteriów przyjaznych agentom (i dlaczego są nośne)
 
-The criteria that make `/10x-infra-research`'s scoring matrix are not generic "good platform" axes — they're the specific traits that determine whether an agent can operate this platform from a session without you holding its hand:
+Kryteria tworzące macierz ocen `/10x-infra-research` nie są ogólnymi osiami „dobrej platformy” — są to konkretne cechy określające, czy agent może obsługiwać tę platformę z sesji bez prowadzenia go za rękę:
 
-1. **CLI-first** — every routine operation has a documented command; the agent doesn't need to click in a panel.
-2. **Managed / serverless** — fewer moving pieces means fewer ways the agent (or you) breaks something the platform was supposed to handle.
-3. **Agent-readable docs** — markdown / `llms.txt` / GitHub-hosted docs the agent can fetch and parse, not JS-rendered marketing pages.
-4. **Stable, scriptable deploy API** — predictable exit codes, structured output, no interactive prompts mid-deploy.
-5. **MCP server or first-class agent integration** — bonus, not required. CLI alone is fine for MVP; MCP earns its keep when the agent makes dozens of structured queries against live state.
+1. **CLI-first** — każda rutynowa operacja ma udokumentowaną komendę; agent nie musi klikać w panelu.
+2. **Managed / serverless** — mniej ruchomych elementów oznacza mniej sposobów, w jakie agent (lub Ty) może zepsuć coś, czym platforma miała się zajmować.
+3. **Agent-readable docs** — dokumentacja markdown / `llms.txt` / hostowana na GitHubie, którą agent może pobrać i sparsować, a nie strony marketingowe renderowane przez JS.
+4. **Stable, scriptable deploy API** — przewidywalne kody wyjścia, ustrukturyzowany output, brak interaktywnych promptów w trakcie wdrożenia.
+5. **MCP server or first-class agent integration** — bonus, nie wymóg. Samo CLI wystarcza dla MVP; MCP zyskuje na znaczeniu, gdy agent wykonuje dziesiątki ustrukturyzowanych zapytań względem stanu produkcyjnego.
 
-Hard filters apply before scoring (persistent-connection requirement drops Netlify/Vercel serverless-only; tech-stack runtime mismatch drops the platform entirely). Interview answers reweight criteria after — cost sensitivity penalizes expensive base tiers, familiarity breaks ties, global-reach preference favours edge-native platforms, co-location preference favours integrated databases.
+Twarde filtry są stosowane przed ocenianiem (wymóg trwałego połączenia odrzuca Netlify/Vercel obsługujące wyłącznie serverless; niezgodność runtime stacka całkowicie odrzuca platformę). Odpowiedzi z wywiadu później zmieniają wagi kryteriów — wrażliwość na koszty karze drogie poziomy bazowe, znajomość rozstrzyga remisy, preferencja zasięgu globalnego faworyzuje platformy edge-native, a preferencja współlokalizacji faworyzuje zintegrowane bazy danych.
 
-### Anti-bias as a decision discipline (not theatre)
+### Antybias jako dyscyplina decyzyjna (nie teatr)
 
-Every research conversation with an LLM has a built-in tilt toward whatever the user already signalled. `/10x-infra-research` runs three structured lenses against the leader BEFORE the file is written, not after:
+Każda rozmowa badawcza z LLM ma wbudowane przechylenie w stronę tego, co użytkownik już zasygnalizował. `/10x-infra-research` uruchamia trzy ustrukturyzowane perspektywy wobec lidera PRZED zapisaniem pliku, a nie po:
 
-- **Devil's advocate** — *find the weaknesses, hidden costs, and failure modes specific to deploying `<this stack>` on `<this platform>`*. Output is a numbered list of 3–5 specifics, not categories.
-- **Pre-mortem** — *six months later, this decision turned out to be a complete disaster; walk through the assumptions and underestimated risks that led there*. Output is a 150–200-word narrative; narratives surface concrete failure shapes that abstract risk lists hide.
-- **Unknown unknowns** — *what's true about this combination that the marketing page and docs don't make obvious?* Output is 3–5 non-obvious risks.
+- **Devil's advocate** — *znajdź słabości, ukryte koszty i tryby awarii specyficzne dla wdrażania `<this stack>` na `<this platform>`*. Wynikiem jest ponumerowana lista 3–5 konkretów, a nie kategorii.
+- **Pre-mortem** — *sześć miesięcy później ta decyzja okazała się kompletną katastrofą; przeanalizuj założenia i niedoszacowane ryzyka, które do tego doprowadziły*. Wynikiem jest narracja o długości 150–200 słów; narracje ujawniają konkretne kształty porażki, które ukrywają abstrakcyjne listy ryzyk.
+- **Unknown unknowns** — *co jest prawdą o tej kombinacji, czego strona marketingowa i dokumentacja nie czynią oczywistym?* Wynikiem jest 3–5 nieoczywistych ryzyk.
 
-After the cross-check the user has three real options: **proceed with the leader and absorb the risks into the register**, **swap to runner-up** (and re-run the cross-check on the new leader), or **swap to third place**. The third option is rare; if it never happens across many runs, the cross-check has degraded into a ritual and should be rewritten.
+Po kontroli użytkownik ma trzy rzeczywiste opcje: **kontynuować z liderem i włączyć ryzyka do rejestru**, **zamienić na runner-up** (i ponownie przeprowadzić kontrolę dla nowego lidera) albo **zamienić na trzecie miejsce**. Trzecia opcja zdarza się rzadko; jeśli nigdy nie występuje w wielu uruchomieniach, kontrola zdegradowała się do rytuału i należy ją przepisać.
 
-Two additional techniques (no skill required, raw prompts) belong in the same toolbox: forcing the model to compare three alternatives in a markdown table (structure beats "the same answer in different words"), and role-rotation (the same decision through a frontend dev's, security person's, and cost owner's eyes — surface the cost each role pays and propose alternatives if any of them flinch).
+Dwie dodatkowe techniki (nie wymagają umiejętności, surowe prompty) należą do tego samego zestawu narzędzi: zmuszenie modelu do porównania trzech alternatyw w tabeli markdown (struktura jest lepsza niż „ta sama odpowiedź innymi słowami”) oraz rotacja ról (ta sama decyzja oczami frontend developera, osoby od bezpieczeństwa i właściciela kosztów — ujawnij koszt, który ponosi każda rola, i zaproponuj alternatywy, jeśli któraś z nich się waha).
 
-### CLI vs MCP for live-infra operability
+### CLI kontra MCP dla operacyjności live-infra
 
-After deploy, the agent needs a way to talk to the running platform. Two paths, complementary not competing:
+Po wdrożeniu agent potrzebuje sposobu komunikacji z działającą platformą. Dwie ścieżki, uzupełniające się, a nie konkurujące:
 
-- **CLI** (`wrangler`, `flyctl`, `vercel`, `gh`) — explicit and auditable, output stays in the terminal, safer defaults for irreversible actions (e.g. `netlify deploy` is draft by default; `--prod` must be passed). Best for MVP: minimal setup, low context cost (no tool schemas pre-loaded), and the agent has to know the command (which is where a per-tool skill helps).
-- **MCP** — a dedicated server exposing structured tools with schemas (`pages_deployments_list`, etc.). Each connected MCP server adds tool definitions to the context window, so cost compounds across servers. Earns its keep when the agent makes many discovery-style queries against live state (logs, deployment diffs) and structured JSON beats parsing CLI output.
+- **CLI** (`wrangler`, `flyctl`, `vercel`, `gh`) — jawne i audytowalne, output pozostaje w terminalu, bezpieczniejsze ustawienia domyślne dla nieodwracalnych działań (np. `netlify deploy` domyślnie tworzy draft; należy przekazać `--prod`). Najlepsze dla MVP: minimalna konfiguracja, niski koszt kontekstu (brak wstępnie załadowanych schematów narzędzi), a agent musi znać komendę (w czym pomaga umiejętność per narzędzie).
+- **MCP** — dedykowany serwer udostępniający ustrukturyzowane narzędzia ze schematami (`pages_deployments_list` itp.). Każdy podłączony serwer MCP dodaje definicje narzędzi do okna kontekstowego, więc koszt kumuluje się między serwerami. Zyskuje na znaczeniu, gdy agent wykonuje wiele zapytań typu discovery względem stanu produkcyjnego (logi, różnice wdrożeń), a ustrukturyzowany JSON jest lepszy niż parsowanie outputu CLI.
 
-Sensible default: start with CLI, add MCP when you notice a recurring pattern of `--help` traversal the agent has to do to answer a class of questions. Anthropic's own [building-agents-that-reach-production](https://claude.com/blog/building-agents-that-reach-production-systems-with-mcp) framing is "API, CLI, and MCP are three complementary paths" — pick by task, not by hype.
+Rozsądne ustawienie domyślne: zacznij od CLI, dodaj MCP, gdy zauważysz powtarzalny wzorzec przechodzenia przez `--help`, który agent musi wykonywać, aby odpowiedzieć na określoną klasę pytań. Ujęcie Anthropic w [building-agents-that-reach-production](https://claude.com/blog/building-agents-that-reach-production-systems-with-mcp) brzmi: „API, CLI i MCP to trzy uzupełniające się ścieżki” — wybieraj według zadania, nie według hype'u.
 
-### Production-access boundary (minimal permissions, human-on-irreversibles)
+### Granica dostępu do produkcji (minimalne uprawnienia, człowiek przy nieodwracalnych działaniach)
 
-Both CLI and MCP can give the agent direct access to production. The lesson sets a default posture:
+Zarówno CLI, jak i MCP mogą dać agentowi bezpośredni dostęp do produkcji. Lekcja ustawia domyślną postawę:
 
-- **Tokens are scoped, not master keys.** On Cloudflare: an API token limited to Pages or Workers for one project, no DNS, no Workers Secrets for unrelated projects, no billing. AWS / GCP equivalent: scoped IAM role with `console-only-user` or read-only on production, full access on staging.
-- **Tokens live in env vars, not in `.mcp.json` committed to the repo.** The agent picks them up via the MCP server or CLI's env-discovery, not via plaintext in conversation.
-- **Destructive actions are human-only.** Drop a database, rotate a primary secret, delete a project — those are panel-by-hand operations, even if the agent suggests them. Manual click costs 30 seconds; cleanup after an automated mistake costs hours.
+- **Tokeny są ograniczone zakresem, nie są kluczami głównymi.** W Cloudflare: token API ograniczony do Pages lub Workers dla jednego projektu, bez DNS, bez Workers Secrets dla niepowiązanych projektów, bez rozliczeń. Odpowiednik AWS / GCP: ograniczona rola IAM z `console-only-user` lub dostępem tylko do odczytu na produkcji, pełnym dostępem na stagingu.
+- **Tokeny znajdują się w zmiennych env, a nie w `.mcp.json` commitowanym do repo.** Agent pobiera je przez serwer MCP lub wykrywanie env przez CLI, a nie przez plaintext w rozmowie.
+- **Destrukcyjne działania wykonuje wyłącznie człowiek.** Usunięcie bazy danych, rotacja głównego sekretu, skasowanie projektu — są to operacje wykonywane ręcznie w panelu, nawet jeśli agent je sugeruje. Ręczne kliknięcie kosztuje 30 sekund; sprzątanie po automatycznym błędzie kosztuje godziny.
 
-This is the MVP posture. As the project matures, the natural evolution is staging gets full agent access, production becomes read-only — covered in later modules.
+To jest postawa dla MVP. W miarę dojrzewania projektu naturalna ewolucja wygląda tak: staging otrzymuje pełny dostęp agenta, a produkcja staje się tylko do odczytu — co omawiają późniejsze moduły.
 
-### Foundation paths used by this lesson
+### Ścieżki fundamentowe używane przez tę lekcję
 
-- `context/foundation/tech-stack.md` — input (Lesson 2 hand-off, hard constraints)
-- `context/foundation/prd.md` — input (Lesson 1 hand-off, soft weights)
-- `context/foundation/infrastructure.md` — output (the third foundation contract)
-- `context/deployment/deploy-plan.md` — output of Plan Mode deploy (audit trail of "what was supposed to happen")
-- `context/foundation/lessons.md` — recurring rules & pitfalls (use `/10x-lesson` from Lesson 4 if you spot a class of agent failure during research or deploy)
-- `docs/reference/contract-surfaces.md` — load-bearing names registry
+- `context/foundation/tech-stack.md` — wejście (przekazanie z Lekcji 2, twarde ograniczenia)
+- `context/foundation/prd.md` — wejście (przekazanie z Lekcji 1, miękkie wagi)
+- `context/foundation/infrastructure.md` — wyjście (trzeci kontrakt fundamentowy)
+- `context/deployment/deploy-plan.md` — wyjście Plan Mode deploy (ścieżka audytowa „tego, co miało się wydarzyć”)
+- `context/foundation/lessons.md` — powtarzające się zasady i pułapki (użyj `/10x-lesson` z Lekcji 4, jeśli podczas badań lub wdrożenia zauważysz klasę błędu agenta)
+- `docs/reference/contract-surfaces.md` — rejestr nazw nośnych
 
-### Universal language
+### Uniwersalny język
 
-The shipped skill carries no 10xDevs / cohort / certification references. The candidate platform list (Cloudflare, Vercel, Netlify, Fly.io, Railway, Render) is the starting research lens, not a recommendation set — the scoring + interview + cross-check pipeline is what's load-bearing, and a platform absent from the default list can be added by extending the research step. The five agent-friendly criteria are the artifact's true core; `/10x-infra-research` re-reads them from `references/agent-friendly-criteria.md` so they evolve as platforms do.
+Dostarczona umiejętność nie zawiera odniesień do 10xDevs / cohort / certification. Lista kandydatów na platformy (Cloudflare, Vercel, Netlify, Fly.io, Railway, Render) jest punktem wyjścia dla badań, a nie zbiorem rekomendacji — nośny jest potok scoring + interview + cross-check, a platformę nieobecną na domyślnej liście można dodać przez rozszerzenie kroku badawczego. Pięć kryteriów przyjaznych agentom to rzeczywisty rdzeń artefaktu; `/10x-infra-research` ponownie odczytuje je z `references/agent-friendly-criteria.md`, aby ewoluowały wraz z platformami.
 
-Skills must not write to `context/archive/`. Archived changes are immutable; if a resolved target path starts with `context/archive/`, abort with: "This change is archived. Open a new change with `/10x-new` instead."
+Umiejętności nie mogą zapisywać do `context/archive/`. Zarchiwizowane zmiany są niezmienne; jeśli rozwiązana ścieżka docelowa zaczyna się od `context/archive/`, przerwij z komunikatem: „This change is archived. Open a new change with `/10x-new` instead.”
 
 <!-- END @przeprogramowani/10x-cli -->

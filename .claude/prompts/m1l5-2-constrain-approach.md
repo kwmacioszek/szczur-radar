@@ -1,1 +1,1 @@
-I want to ensure that auto-deploy on the main branch is handled by {{platform_name}} and not any external CI/CD system.
+Chcę upewnić się, że automatyczne wdrażanie w gałęzi main jest obsługiwane przez {{platform_name}}, a nie przez żaden zewnętrzny system CI/CD.

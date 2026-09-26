@@ -1,198 +1,198 @@
-# Skill Explainer
+# Wyjaśniacz Skilli
 
-Analyze a skill to understand its mechanics, design rationale, and how to build something similar. When invoked, read the target skill's source files and produce a structured report that demystifies how the skill works and why it's built that way.
+Przeanalizuj skill, aby zrozumieć jego mechanikę, uzasadnienie projektowe oraz sposób budowy czegoś podobnego. Po wywołaniu odczytaj pliki źródłowe docelowego skilla i przygotuj ustrukturyzowany raport, który wyjaśnia, jak skill działa i dlaczego został zbudowany w ten sposób.
 
-## Input
+## Dane wejściowe
 
-The user provides a skill name (e.g., `10x-plan`, `10x-shape`, `10x-new`). Accept it as:
-- A bare name: `10x-plan`
-- A slash-prefixed name: `/10x-plan`
-- A path to a SKILL.md file: `~/.claude/skills/10x-plan/SKILL.md`
+Użytkownik podaje nazwę skilla (np. `10x-plan`, `10x-shape`, `10x-new`). Akceptuj ją jako:
+- Samą nazwę: `10x-plan`
+- Nazwę z prefiksem ukośnika: `/10x-plan`
+- Ścieżkę do pliku SKILL.md: `~/.claude/skills/10x-plan/SKILL.md`
 
-If no skill name was provided, ask:
+Jeśli nie podano nazwy skilla, zapytaj:
 
 ```
-Which skill would you like me to explain? Provide a skill name (e.g., `10x-plan`) or a path to its SKILL.md file.
+Który skill chcesz, żebym wyjaśnił? Podaj nazwę skilla (np. `10x-plan`) lub ścieżkę do jego pliku SKILL.md.
 ```
 
-Then wait.
+Następnie poczekaj.
 
-## Discovery
+## Wykrywanie
 
-Find the skill's source files:
+Znajdź pliki źródłowe skilla:
 
-1. **Locate the SKILL.md.** Try these paths in order, stop at first hit:
+1. **Zlokalizuj SKILL.md.** Wypróbuj te ścieżki w kolejności i zatrzymaj się przy pierwszym trafieniu:
    - `~/.claude/skills/<name>/SKILL.md`
-   - `.claude/skills/<name>/SKILL.md` (project-local)
+   - `.claude/skills/<name>/SKILL.md` (lokalnie w projekcie)
    - `.agents/skills/<name>/SKILL.md` (Codex)
    - `.cursor/skills/<name>/SKILL.md` (Cursor)
-   - User-provided path (if a full path was given)
+   - Ścieżka podana przez użytkownika (jeśli podano pełną ścieżkę)
 
-   If none found, tell the user:
+   Jeśli żadnej nie znaleziono, powiedz użytkownikowi:
    ```
-   I couldn't find the SKILL.md for "<name>". Please provide the full path to the skill file.
+   Nie udało mi się znaleźć pliku SKILL.md dla "<name>". Podaj pełną ścieżkę do pliku skilla.
    ```
-   Then wait.
+   Następnie poczekaj.
 
-2. **Read the SKILL.md fully** — no truncation, no limit/offset.
+2. **Przeczytaj cały plik SKILL.md** — bez obcinania, bez limitu/offsetu.
 
-3. **Check for a `references/` directory** next to the SKILL.md. If it exists, list its contents and read every `.md` file in it fully. These are companion documents (schemas, templates, registries) that define contracts the skill enforces.
+3. **Sprawdź, czy obok pliku SKILL.md znajduje się katalog `references/`.** Jeśli istnieje, wyświetl jego zawartość i w całości przeczytaj każdy znajdujący się w nim plik `.md`. Są to dokumenty towarzyszące (schematy, szablony, rejestry), które definiują kontrakty egzekwowane przez skill.
 
-## Analysis
+## Analiza
 
-After reading all source files, produce the report below. Adapt the depth to the skill's complexity:
+Po przeczytaniu wszystkich plików źródłowych przygotuj poniższy raport. Dostosuj poziom szczegółowości do złożoności skilla:
 
-| Skill size | Depth |
+| Rozmiar skilla | Szczegółowość |
 |-----------|-------|
-| Under 150 lines (simple) | Concise — each section is 3-5 sentences. Skip sections that don't apply (e.g., simple skills rarely have sub-agent orchestration or self-review gates). |
-| 150-400 lines (medium) | Standard — each section is a short paragraph. Cover all 7 sections. |
-| Over 400 lines (complex/orchestrator) | Detailed — anatomy table, specific line references, extended mechanics analysis. All 7 sections in full. |
+| Poniżej 150 linii (prosty) | Zwięzła — każda sekcja ma 3–5 zdań. Pomiń sekcje, które nie mają zastosowania (np. proste skille rzadko mają orkiestrację sub-agentów lub bramki samooceny). |
+| 150–400 linii (średni) | Standardowa — każda sekcja to krótki akapit. Omów wszystkie 7 sekcji. |
+| Powyżej 400 linii (złożony/orkiestrator) | Szczegółowa — tabela anatomii, konkretne odwołania do linii, rozszerzona analiza mechaniki. Wszystkie 7 sekcji w pełni. |
 
-Do not pad simple skills with generic filler. A 95-line skill gets a tight, focused report. An 831-line orchestrator gets deep coverage.
+Nie wypełniaj prostych skilli ogólnikowymi zapychaczami. Skill mający 95 linii powinien otrzymać zwarty, skoncentrowany raport. Orkiestrator mający 831 linii powinien otrzymać dogłębne omówienie.
 
-## Report Structure
+## Struktura raportu
 
-Before the detailed sections, open with a short overview block that orients the reader. Print it exactly once, at the top of the report:
+Przed szczegółowymi sekcjami rozpocznij krótkim blokiem przeglądowym, który zorientuje czytelnika. Wydrukuj go dokładnie raz, na początku raportu:
 
 ```
-## Sections in this report
+## Sekcje w tym raporcie
 
-1. **Problem & Purpose** — Why this skill exists and what pain it removes
-2. **Chain Position** — Where it sits in the workflow: what feeds in, what comes after
-3. **Anatomy Walkthrough** — Section-by-section map of the SKILL.md file
-4. **Key Mechanics** — The behavioral drivers that make this skill tick, with high-leverage parts flagged
-5. **Design Decisions** — Why it's built this way and not another — the rejected alternatives
-6. **Adaptation Guide** — What you can tweak (easy / medium / hard) with concrete examples
-7. **Building Something Similar** — Step-by-step path from blank file to a working skill like this one
+1. **Problem i cel** — Dlaczego ten skill istnieje i jaki problem eliminuje
+2. **Pozycja w łańcuchu** — Gdzie znajduje się w workflow: co do niego trafia i co następuje później
+3. **Przegląd anatomii** — Mapa pliku SKILL.md sekcja po sekcji
+4. **Kluczowa mechanika** — Mechanizmy zachowania, które napędzają ten skill, ze wskazaniem elementów o wysokiej dźwigni
+5. **Decyzje projektowe** — Dlaczego zbudowano go w ten sposób, a nie inaczej — odrzucone alternatywy
+6. **Przewodnik adaptacji** — Co można zmienić (łatwe / średnie / trudne) wraz z konkretnymi przykładami
+7. **Budowanie czegoś podobnego** — Ścieżka krok po kroku od pustego pliku do działającego skilla podobnego do tego
 ```
 
-Then proceed with each section in full:
+Następnie przejdź do każdej sekcji w pełni:
 
-### 1. Problem & Purpose
+### 1. Problem i cel
 
-Answer: **"Why does this skill exist?"**
+Odpowiedz na pytanie: **„Dlaczego ten skill istnieje?”**
 
-Extract from the role statement and the "When to use / when to skip" section:
-- What problem does this skill solve? What was happening before it existed?
-- When should a user reach for it? What are the trigger signals?
-- When should they NOT use it? What's the wrong context?
-- What would happen if the user tried to do this task manually without the skill?
+Wyciągnij z deklaracji roli oraz sekcji „Kiedy używać / kiedy pomijać”:
+- Jaki problem rozwiązuje ten skill? Co działo się przed jego powstaniem?
+- Kiedy użytkownik powinien po niego sięgnąć? Jakie są sygnały wyzwalające?
+- Kiedy użytkownik NIE powinien go używać? Jaki jest niewłaściwy kontekst?
+- Co by się stało, gdyby użytkownik próbował wykonać to zadanie ręcznie, bez skilla?
 
-Do not just describe what the skill does — explain what pain it removes.
+Nie opisuj jedynie, co skill robi — wyjaśnij, jaki problem eliminuje.
 
-### 2. Chain Position
+### 2. Pozycja w łańcuchu
 
-Answer: **"Where does this skill sit in the workflow?"**
+Odpowiedz na pytanie: **„Gdzie ten skill znajduje się w workflow?”**
 
-Extract from the "Relationship to other skills" section:
-- **Upstream**: What files or artifacts does this skill expect as input? Which skill produces them? (e.g., `/10x-shape` produces `shape-notes.md` which `/10x-prd` consumes)
-- **Downstream**: What does this skill output? Which skill consumes it next? What file does it write to disk?
-- **The handoff model**: Skills communicate through files on disk, not through memory. Each skill writes an artifact, halts, and defers to the human before the next skill runs. Explain how this skill fits in that chain.
+Wyciągnij z sekcji „Relacja z innymi skillami”:
+- **Upstream**: Jakich plików lub artefaktów ten skill oczekuje jako danych wejściowych? Który skill je tworzy? (np. `/10x-shape` tworzy `shape-notes.md`, który wykorzystuje `/10x-prd`)
+- **Downstream**: Co ten skill generuje? Który skill wykorzystuje to dalej? Do jakiego pliku zapisuje dane na dysku?
+- **Model przekazania**: Skille komunikują się przez pliki na dysku, a nie przez pamięć. Każdy skill zapisuje artefakt, zatrzymuje się i przekazuje kontrolę człowiekowi, zanim uruchomiony zostanie kolejny skill. Wyjaśnij, jak ten skill wpisuje się w ten łańcuch.
 
-Show the chain position visually when useful:
+Gdy jest to przydatne, pokaż wizualnie pozycję w łańcuchu:
 ```
-[upstream skill] → input artifact → THIS SKILL → output artifact → [downstream skill]
+[skill upstream] → artefakt wejściowy → TEN SKILL → artefakt wyjściowy → [skill downstream]
 ```
 
-### 3. Anatomy Walkthrough
+### 3. Przegląd anatomii
 
-Answer: **"What are the sections of this SKILL.md and what does each do?"**
+Odpowiedz na pytanie: **„Jakie są sekcje tego pliku SKILL.md i co robi każda z nich?”**
 
-Break the SKILL.md into its sections and for each one, report:
-- **Section name** and approximate line range
-- **What it does** — one sentence
-- **Why it's there** — what would break or degrade if this section were removed
+Podziel SKILL.md na sekcje i dla każdej przedstaw:
+- **Nazwę sekcji** oraz przybliżony zakres linii
+- **Co robi** — jedno zdanie
+- **Dlaczego tam jest** — co by się zepsuło lub pogorszyło, gdyby tę sekcję usunąć
 
-Present as a table for medium and complex skills:
+Dla średnich i złożonych skilli przedstaw to jako tabelę:
 
-| Section | Lines | Purpose | Why it matters |
+| Sekcja | Linie | Cel | Dlaczego ma znaczenie |
 |---------|-------|---------|----------------|
-| YAML frontmatter | 1-8 | Name, description, allowed-tools | `description` controls when the skill activates; `allowed-tools` is a hard security boundary |
-| Role statement | 10-15 | One-sentence philosophy | Sets the skill's behavioral personality |
+| YAML frontmatter | 1-8 | Nazwa, opis, allowed-tools | `description` kontroluje, kiedy skill się aktywuje; `allowed-tools` jest twardą granicą bezpieczeństwa |
+| Deklaracja roli | 10-15 | Jednozdaniowa filozofia | Ustala osobowość zachowania skilla |
 | ... | ... | ... | ... |
 
-The goal: demystify the "thousands of lines." Show the learner that a long skill is really N sections, each with a clear job. The whole is less intimidating than the parts.
+Cel: wyjaśnić „tysiące linii”. Pokaż uczącej się osobie, że długi skill to w rzeczywistości N sekcji, z których każda ma jasno określone zadanie. Całość jest mniej onieśmielająca niż poszczególne części.
 
-### 4. Key Mechanics
+### 4. Kluczowa mechanika
 
-Answer: **"What are the 3-5 behavioral drivers that make THIS skill tick, and which parts have the highest leverage?"**
+Odpowiedz na pytanie: **„Jakie 3–5 mechanizmów zachowania napędza TEN konkretny skill i które części mają największą dźwignię?”**
 
-This section must be specific to the skill being analyzed — not a generic list of skill patterns. Read the process steps and identify what drives THIS skill's behavior. For each mechanic:
+Ta sekcja musi być specyficzna dla analizowanego skilla — nie może być ogólną listą wzorców skilli. Przeczytaj kroki procesu i zidentyfikuj, co napędza zachowanie TEGO skilla. Dla każdego mechanizmu:
 
-1. **Name it** — give the pattern a short, descriptive name
-2. **Explain how it works** — 2-3 sentences on the mechanism
-3. **Point to where** — which lines or sections of the SKILL.md implement it
-4. **Flag leverage** — mark parts where a small change produces a large behavior change. Typical high-leverage patterns include:
-   - `description` field (controls activation), `allowed-tools` (security boundary)
-   - Critical guardrails (hard behavioral rules)
-   - Templates/schemas (output shape that downstream skills may depend on)
-   - Self-review gates (embedded tests before output is committed)
+1. **Nazwij go** — nadaj wzorcowi krótką, opisową nazwę
+2. **Wyjaśnij, jak działa** — 2–3 zdania o mechanizmie
+3. **Wskaż miejsce** — które linie lub sekcje SKILL.md go implementują
+4. **Oznacz dźwignię** — zaznacz części, w których niewielka zmiana powoduje dużą zmianę zachowania. Typowe wzorce o wysokiej dźwigni obejmują:
+   - Pole `description` (kontroluje aktywację), `allowed-tools` (granica bezpieczeństwa)
+   - Krytyczne zabezpieczenia (twarde reguły zachowania)
+   - Szablony/schematy (kształt wyjścia, od którego mogą zależeć skille downstream)
+   - Bramki samooceny (osadzone testy przed zatwierdzeniem wyniku)
 
-Examples of mechanics found in real skills (use as reference, not checklist):
+Przykłady mechanizmów występujących w rzeczywistych skillach (użyj jako odniesienia, nie jako checklisty):
 
-- **Complexity-scaled questioning** (`10x-plan`): assesses task as LOW/MEDIUM/HIGH, scales question count, skips diagnostic questions when upstream artifacts exist
-- **Sub-agent orchestration** (`10x-research`): spawns parallel agents, each with a focused prompt, synthesizes findings
-- **Progress-driven state machine** (`10x-implement`): `## Progress` checkboxes are the single source of truth, no state sidecar
-- **Socratic discovery loop** (`10x-shape`): open question → surface gray areas → recommend → challenge → lock decision
-- **Anti-bias mechanisms** (`10x-infra-research`): devil's advocate, pre-mortem, unknown-unknowns cross-checks
+- **Pytania skalowane złożonością** (`10x-plan`): ocenia zadanie jako LOW/MEDIUM/HIGH, skaluje liczbę pytań, pomija pytania diagnostyczne, gdy istnieją artefakty upstream
+- **Orkiestracja sub-agentów** (`10x-research`): uruchamia równoległych agentów, każdy z ukierunkowanym promptem, syntezuje ustalenia
+- **Maszyna stanów sterowana postępem** (`10x-implement`): pola wyboru `## Progress` są jedynym źródłem prawdy, bez bocznego pliku stanu
+- **Sokratejska pętla odkrywania** (`10x-shape`): otwarte pytanie → ujawnienie szarych obszarów → rekomendacja → zakwestionowanie → zatwierdzenie decyzji
+- **Mechanizmy antybiasowe** (`10x-infra-research`): adwokat diabła, pre-mortem, kontrole krzyżowe unknown-unknowns
 
-### 5. Design Decisions
+### 5. Decyzje projektowe
 
-Answer: **"Why is this skill built THIS way and not another?"**
+Odpowiedz na pytanie: **„Dlaczego ten skill został zbudowany WŁAŚNIE w ten sposób, a nie inaczej?”**
 
-This is the section that answers "czemu skill jest tak a nie inaczej budowany." For each major structural choice in the skill, explain:
+To sekcja odpowiadająca na pytanie „czemu skill jest tak a nie inaczej budowany”. Dla każdego istotnego wyboru strukturalnego w skillu wyjaśnij:
 
-1. **The choice that was made** — what the skill does
-2. **The alternative that was rejected** — what it could have done instead
-3. **Why this way wins** — the specific tradeoff that made this choice better
+1. **Dokonany wybór** — co robi skill
+2. **Odrzuconą alternatywę** — co mógłby robić zamiast tego
+3. **Dlaczego to podejście wygrywa** — konkretny kompromis, który czyni ten wybór lepszym
 
-Look for decisions in these areas (not all will apply):
+Szukaj decyzji w tych obszarach (nie wszystkie będą mieć zastosowanie):
 
-- **Tool selection**: Why these `allowed-tools` and not others? (e.g., why no `Agent` in a skill that could theoretically use sub-agents?)
-- **State management**: Why state-in-file vs state-in-memory vs external sidecar?
-- **Chain behavior**: Why "STOP, do not chain" instead of auto-continuing? Why files on disk instead of passing state in-memory?
-- **Validation strategy**: Why validate at this point and not earlier/later? Why these specific checks?
-- **Output format**: Why this template structure? Why YAML frontmatter vs plain markdown? Why inline templates vs reference files?
-- **Interaction model**: Why AskUserQuestion at this step? Why not just decide automatically?
+- **Dobór narzędzi**: Dlaczego właśnie te `allowed-tools`, a nie inne? (np. dlaczego brak `Agent` w skillu, który teoretycznie mógłby używać sub-agentów?)
+- **Zarządzanie stanem**: Dlaczego stan w pliku zamiast stanu w pamięci lub zewnętrznego pliku sidecar?
+- **Zachowanie łańcucha**: Dlaczego „STOP, do not chain” zamiast automatycznego kontynuowania? Dlaczego pliki na dysku zamiast przekazywania stanu w pamięci?
+- **Strategia walidacji**: Dlaczego walidować w tym punkcie, a nie wcześniej/później? Dlaczego właśnie te konkretne kontrole?
+- **Format wyjścia**: Dlaczego taka struktura szablonu? Dlaczego YAML frontmatter zamiast zwykłego markdownu? Dlaczego szablony inline zamiast plików referencyjnych?
+- **Model interakcji**: Dlaczego AskUserQuestion na tym kroku? Dlaczego nie podjąć decyzji automatycznie?
 
-The goal is to surface the engineering thinking behind the skill. A learner who understands the rejected alternatives understands the design space — and can make their own choices when building something similar.
+Celem jest ujawnienie inżynierskiego myślenia stojącego za skillem. Osoba ucząca się, która rozumie odrzucone alternatywy, rozumie przestrzeń projektową — i może podejmować własne decyzje podczas budowania czegoś podobnego.
 
-### 6. Adaptation Guide
+### 6. Przewodnik adaptacji
 
-Answer: **"What can I tweak, and how risky is each change?"**
+Odpowiedz na pytanie: **„Co mogę zmienić i jakie ryzyko wiąże się z każdą zmianą?”**
 
-Organize by difficulty tier with 1-2 concrete examples per tier, specific to the skill being analyzed:
+Uporządkuj według poziomu trudności, z 1–2 konkretnymi przykładami na poziom, specyficznymi dla analizowanego skilla:
 
-**Easy (low risk, immediate effect):**
-- What to change: e.g., trigger phrases in `description`, template section headings, question option labels, report formatting
-- Example: "To add Polish trigger phrases, edit the `description` field and add 'stwórz plan' alongside 'create plan'"
-- What breaks if you get it wrong: nothing critical — worst case, the skill activates at wrong times or output formatting looks different
+**Łatwe (niskie ryzyko, natychmiastowy efekt):**
+- Co zmienić: np. frazy wyzwalające w `description`, nagłówki sekcji szablonu, etykiety opcji pytań, formatowanie raportu
+- Przykład: „Aby dodać polskie frazy wyzwalające, edytuj pole `description` i dodaj „stwórz plan” obok „create plan””
+- Co się zepsuje przy błędzie: nic krytycznego — w najgorszym przypadku skill będzie aktywować się w niewłaściwych momentach lub formatowanie wyjścia będzie wyglądać inaczej
 
-**Medium (requires understanding the chain):**
-- What to change: e.g., self-review gate criteria, scoring dimensions, question categories, number of sub-agents
-- Example: "To add a 'Security' dimension to the review scorecard, add it to the dimensions list in the process steps and update the report template"
-- What breaks if you get it wrong: the skill may produce incomplete or inconsistent output, but it won't break other skills in the chain
+**Średnie (wymaga zrozumienia łańcucha):**
+- Co zmienić: np. kryteria bramki samooceny, wymiary punktacji, kategorie pytań, liczba sub-agentów
+- Przykład: „Aby dodać wymiar „Security” do karty oceny, dodaj go do listy wymiarów w krokach procesu i zaktualizuj szablon raportu”
+- Co się zepsuje przy błędzie: skill może generować niepełne lub niespójne wyjście, ale nie zepsuje innych skilli w łańcuchu
 
-**Hard (structural, risk of breaking chain contracts):**
-- What to change: e.g., `allowed-tools` list, output file format, artifact naming, status lifecycle values
-- Example: "Changing the output filename from `plan.md` to `implementation-plan.md` would break `/10x-implement` which greps for `plan.md`"
-- What breaks if you get it wrong: downstream skills that depend on exact file names, section headers, or status values will fail silently or produce wrong output
+**Trudne (strukturalne, ryzyko złamania kontraktów łańcucha):**
+- Co zmienić: np. lista `allowed-tools`, format pliku wyjściowego, nazewnictwo artefaktów, wartości cyklu życia statusu
+- Przykład: „Zmiana nazwy pliku wyjściowego z `plan.md` na `implementation-plan.md` zepsułaby `/10x-implement`, który wyszukuje `plan.md`”
+- Co się zepsuje przy błędzie: skille downstream zależne od dokładnych nazw plików, nagłówków sekcji lub wartości statusu zawiodą po cichu albo wygenerują nieprawidłowe wyjście
 
-### 7. Building Something Similar
+### 7. Budowanie czegoś podobnego
 
-Answer: **"If I wanted to build my own version of this skill, how would I start?"**
+Odpowiedz na pytanie: **„Gdybym chciał zbudować własną wersję tego skilla, jak powinienem zacząć?”**
 
-Provide a practical, step-by-step construction path. Start simple and build up — this is the progressive journey from "blank file" to "working skill."
+Przedstaw praktyczną ścieżkę budowy krok po kroku. Zacznij prosto i stopniowo rozbudowuj — to progresywna droga od „pustego pliku” do „działającego skilla”.
 
-Before diving into manual steps, note two shortcuts:
-- **Conversational approach**: Just tell your agent "let's build a skill that does X" and iterate on the SKILL.md together in 3-4 rounds. This is the fastest path for personal skills.
-- **`/skill-creator`**: Anthropic's meta-skill for building skills with structured evals. Available at `github.com/anthropics/skills/tree/main/skills/skill-creator`. Better for shared or chain-integrated skills where you want automated verification.
+Zanim przejdziesz do ręcznych kroków, wspomnij o dwóch skrótach:
+- **Podejście konwersacyjne**: Po prostu powiedz agentowi „let's build a skill that does X” i wspólnie iterujcie nad SKILL.md przez 3–4 rundy. To najszybsza ścieżka dla osobistych skilli.
+- **`/skill-creator`**: Meta-skill Anthropic do budowania skilli z ustrukturyzowanymi ewaluacjami. Dostępny pod adresem `github.com/anthropics/skills/tree/main/skills/skill-creator`. Lepszy dla współdzielonych skilli lub skilli zintegrowanych z łańcuchem, w których potrzebujesz automatycznej weryfikacji.
 
-Both shortcuts produce the same SKILL.md — the steps below explain what they're generating, so you understand the output and can refine it:
+Oba skróty tworzą ten sam SKILL.md — poniższe kroki wyjaśniają, co generują, abyś rozumiał wynik i potrafił go udoskonalić:
 
-**Step 1: Start with a prompt.** Before creating a skill file, write the core instruction as a plain prompt. Test it in a conversation. Does it produce roughly the right output? Iterate until the core behavior works.
+**Krok 1: Zacznij od promptu.** Przed utworzeniem pliku skilla zapisz główną instrukcję jako zwykły prompt. Przetestuj go w rozmowie. Czy generuje w przybliżeniu właściwy wynik? Iteruj, aż podstawowe zachowanie zacznie działać.
 
-**Step 2: Create the skill file.** Create `<skill-name>/SKILL.md` in your skills directory. Add the minimal frontmatter:
+**Krok 2: Utwórz plik skilla.** Utwórz `<skill-name>/SKILL.md` w swoim katalogu skilli. Dodaj minimalny frontmatter:
 ```yaml
 ---
 name: <skill-name>
@@ -203,38 +203,38 @@ allowed-tools:
 ---
 ```
 
-**Step 3: Add structure.** Translate your prompt into sections: role statement, when-to-use/skip, initial response, and process steps. The role statement sets the personality; the when-to-use section prevents misuse.
+**Krok 3: Dodaj strukturę.** Przekształć prompt w sekcje: deklarację roli, kiedy używać/pomijać, odpowiedź początkową i kroki procesu. Deklaracja roli ustala osobowość; sekcja kiedy używać zapobiega niewłaściwemu zastosowaniu.
 
-**Step 4: Add guardrails.** What must this skill NEVER do? Write 3-5 critical guardrails. These are the highest-leverage lines — they prevent the most damaging failure modes.
+**Krok 4: Dodaj zabezpieczenia.** Czego ten skill NIGDY nie może robić? Zapisz 3–5 krytycznych zabezpieczeń. To linie o największej dźwigni — zapobiegają najbardziej szkodliwym trybom awarii.
 
-**Step 5: Add scope boundaries.** Write a "What this skill does NOT do" section. Explicit boundaries prevent scope creep and make the skill predictable.
+**Krok 5: Dodaj granice zakresu.** Napisz sekcję „Czego ten skill NIE robi”. Jawne granice zapobiegają rozszerzaniu zakresu i czynią skill przewidywalnym.
 
-**Step 6: (If needed) Add references.** If the skill enforces a schema, template, or registry, put those in a `references/` directory. Keep the SKILL.md focused on behavior; put data contracts in reference files.
+**Krok 6: (W razie potrzeby) Dodaj referencje.** Jeśli skill egzekwuje schemat, szablon lub rejestr, umieść je w katalogu `references/`. Zachowaj skupienie pliku SKILL.md na zachowaniu; kontrakty danych umieść w plikach referencyjnych.
 
-**Step 7: (If needed) Add chain integration.** If this skill is part of a chain, define the upstream input (what file it reads) and downstream output (what file it writes). Add the "Relationship to other skills" section. Add "STOP, do not chain" to guardrails.
+**Krok 7: (W razie potrzeby) Dodaj integrację z łańcuchem.** Jeśli ten skill jest częścią łańcucha, zdefiniuj wejście upstream (jaki plik odczytuje) oraz wyjście downstream (jaki plik zapisuje). Dodaj sekcję „Relacja z innymi skillami”. Dodaj „STOP, do not chain” do zabezpieczeń.
 
-**Step 8: (If needed) Add advanced patterns.** Based on what this skill demonstrates, mention which advanced patterns the learner could add:
-- Sub-agent orchestration (if the skill spawns agents)
-- Complexity scaling (if the skill adapts to input size)
-- Self-review gates (if the skill validates its own output)
-- Checkpoint-based resume (if the skill supports multi-session work)
-- AskUserQuestion for interactive decisions
+**Krok 8: (W razie potrzeby) Dodaj zaawansowane wzorce.** Na podstawie tego, co demonstruje ten skill, wskaż, które zaawansowane wzorce osoba ucząca się może dodać:
+- Orkiestrację sub-agentów (jeśli skill uruchamia agentów)
+- Skalowanie złożoności (jeśli skill dostosowuje się do rozmiaru wejścia)
+- Bramki samooceny (jeśli skill waliduje własne wyjście)
+- Wznawianie oparte na punktach kontrolnych (jeśli skill obsługuje pracę przez wiele sesji)
+- AskUserQuestion dla decyzji interaktywnych
 
-For each step, note what the skill being analyzed does at that level, so the learner can see the correspondence between the construction steps and the finished product.
+Dla każdego kroku zaznacz, co analizowany skill robi na tym poziomie, aby osoba ucząca się mogła zobaczyć zależność między krokami budowy a gotowym produktem.
 
-**Common mistakes to avoid:**
-- Starting with the advanced patterns before the core behavior works
-- Writing guardrails that are too vague ("be careful") instead of specific ("NEVER auto-chain to the next skill")
-- Forgetting the "What this skill does NOT do" section — scope creep is the #1 skill failure mode
-- Making `description` too broad (activates on everything) or too narrow (never activates)
+**Typowe błędy, których należy unikać:**
+- Zaczynanie od zaawansowanych wzorców, zanim podstawowe zachowanie zacznie działać
+- Pisanie zbyt ogólnikowych zabezpieczeń („be careful”) zamiast konkretnych („NEVER auto-chain to the next skill”)
+- Pomijanie sekcji „Czego ten skill NIE robi” — rozszerzanie zakresu to główny tryb awarii skilli
+- Tworzenie zbyt szerokiego `description` (aktywuje się przy wszystkim) albo zbyt wąskiego (nigdy się nie aktywuje)
 
-## Edge Cases
+## Przypadki brzegowe
 
-- **Skill has no references/ directory**: skip the references analysis. Don't mention that references are missing — most simple skills don't have them, and that's fine.
-- **Skill is a prompt file, not a SKILL.md**: if the user points to a `.claude/prompts/*.md` file, explain that prompts are simpler than skills (no frontmatter, no allowed-tools, no chain position) and analyze what's there. Adjust the report to skip sections that don't apply.
-- **Skill is very short (under 50 lines)**: produce a minimal report — Problem & Purpose + Anatomy + Building Something Similar. Skip chain position, key mechanics, and adaptation guide if there's nothing meaningful to say.
-- **Skill uses patterns not listed above**: analyze what you see. The mechanics list in section 5 is illustrative, not exhaustive. If the skill has a unique pattern, explain it.
+- **Skill nie ma katalogu references/**: pomiń analizę referencji. Nie wspominaj, że brakuje referencji — większość prostych skilli ich nie ma i to jest w porządku.
+- **Skill jest plikiem promptu, a nie SKILL.md**: jeśli użytkownik wskaże plik `.claude/prompts/*.md`, wyjaśnij, że prompty są prostsze niż skille (bez frontmatteru, bez allowed-tools, bez pozycji w łańcuchu) i przeanalizuj to, co się w nim znajduje. Dostosuj raport, aby pominąć sekcje, które nie mają zastosowania.
+- **Skill jest bardzo krótki (poniżej 50 linii)**: przygotuj minimalny raport — Problem i cel + Anatomia + Budowanie czegoś podobnego. Pomiń pozycję w łańcuchu, kluczową mechanikę i przewodnik adaptacji, jeśli nie ma nic znaczącego do powiedzenia.
+- **Skill używa wzorców niewymienionych powyżej**: analizuj to, co widzisz. Lista mechanizmów w sekcji 5 ma charakter ilustracyjny, a nie wyczerpujący. Jeśli skill ma unikalny wzorzec, wyjaśnij go.
 
-## Tone
+## Ton
 
-Write for a developer who can USE the skill but wants to understand HOW and WHY it works. Don't explain what Claude Code is or how slash commands work — the reader already uses these daily. Focus on the design decisions, the load-bearing parts, and the practical path to building their own.
+Pisz dla programisty, który potrafi UŻYWAĆ skilla, ale chce zrozumieć, JAK i DLACZEGO działa. Nie wyjaśniaj, czym jest Claude Code ani jak działają polecenia slash — czytelnik używa ich codziennie. Skup się na decyzjach projektowych, elementach nośnych oraz praktycznej ścieżce budowy własnego skilla.
