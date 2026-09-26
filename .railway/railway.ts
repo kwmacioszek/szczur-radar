@@ -11,6 +11,10 @@ import { defineRailway, github, postgres, project, service } from "railway/iac";
 // `railway/iac` DSL. If `railway config plan` rejects a field, reconcile it
 // against the installed SDK version — the plan gate exists to catch exactly
 // that before anything is applied.
+//
+// `checkSuites: true` on each source enables Railway "Wait for CI": deploys
+// wait for the whole GitHub Actions workflow conclusion. Declared here so IaC
+// does not reset the operator's toggle (a plan otherwise shows true → null).
 
 const REPO = "kwmacioszek/szczur-radar";
 const REGION = "europe-west4"; // Railway "EU West (Amsterdam)"
@@ -30,7 +34,7 @@ export default defineRailway(() => {
   // uv + .python-version (3.13); only the start command and healthcheck are
   // explicit (the default `uvicorn main:app` would not bind PORT/host).
   const api = service("szczur-radar-api", {
-    source: github(REPO, { branch: "main" }),
+    source: github(REPO, { branch: "main", checkSuites: true }),
     rootDirectory: "szczur-radar-api",
     watchPatterns: ["szczur-radar-api/**"],
     start: "uv run uvicorn main:app --host :: --port $PORT",
@@ -46,7 +50,7 @@ export default defineRailway(() => {
   // public service. Caddy reads the API's private host + port from these
   // reference variables to reverse-proxy /api/* (see szczur-radar-web/Caddyfile).
   const web = service("szczur-radar-web", {
-    source: github(REPO, { branch: "main" }),
+    source: github(REPO, { branch: "main", checkSuites: true }),
     rootDirectory: "szczur-radar-web",
     watchPatterns: ["szczur-radar-web/**"],
     healthcheck: "/healthz",
