@@ -4,6 +4,8 @@ import { defineRailway, github, postgres, project, service } from "railway/iac";
 // api, web, and Postgres services and replaces railway.toml for them.
 // Validate with `railway config plan` (dry run, deletes nothing) before
 // `railway config apply` — see context/deployment/deploy-plan.md, phase 3.
+// The `railway/iac` SDK resolves from node_modules at the REPO ROOT (see the
+// root package.json), not this directory: run `npm install` at the root first.
 //
 // NOTE: this SDK is young; field names are written to railway@3.11.0's
 // `railway/iac` DSL. If `railway config plan` rejects a field, reconcile it
