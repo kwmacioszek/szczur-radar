@@ -1,15 +1,20 @@
 ---
-bootstrapped_at: 2026-09-25T09:31:21Z
+bootstrapped_at: 2026-09-26T12:54:09Z
 starter_id: vite-vue
-starter_name: "Vite + Vue"
+starter_name: Vite + Vue
 project_name: szczur-radar-web
 language_family: js
 package_manager: npm
 cwd_strategy: subdir-then-move
 bootstrapper_confidence: verified
 phase_3_status: ok
-audit_command: "npm audit --json"
+audit_command: npm audit --json
 ---
+
+> Frontend module of a two-module repo (`szczur-radar-api/` + `szczur-radar-web/`). Scaffolded from inside
+> `szczur-radar-web/` with the hand-off at `context/foundation/tech-stack-web.md`; this log is written to the
+> root `context/` instead of a nested `szczur-radar-web/context/`. The backend module's log is
+> `verification-api.md`.
 
 ## Hand-off
 
@@ -20,7 +25,7 @@ project_name: szczur-radar-web
 hints:
   language_family: js
   team_size: solo
-  deployment_target: self-host
+  deployment_target: railway
   ci_provider: github-actions
   ci_default_flow: auto-deploy-on-merge
   bootstrapper_confidence: verified
@@ -28,63 +33,83 @@ hints:
   quality_override: false
   self_check_answers:
     typed: true
-    from_official_starter: false
-    conventions: false
+    from_official_starter: true
+    conventions: true
     docs_current: true
     can_judge_agent: false
-  has_auth: false
+  has_auth: true
   has_payments: false
   has_realtime: false
-  has_ai: false
+  has_ai: true
   has_background_jobs: false
 ```
 
-This is the frontend half of a two-module project (`szczur-radar-api` is the companion backend hand-off). The recommended default for `(web, js)` is 10x Astro Starter, but it bundles Supabase (database + auth) and Cloudflare edge deployment that this project doesn't need — the real backend, data store, and business logic already live in the separately-chosen FastAPI service, and the PRD explicitly has no auth. Custom path chosen deliberately: after comparing vite-vue, nuxt, vite-react, and angular, vite-vue (Vue 3 + TypeScript SPA, official Vite template, no bundled router or data layer) fits best given KISS scope discipline, the small MVP surface (a post list with sort/filter and a detail view), and the user's prior Vue experience. It clears all four agent-friendly gates in the registry. The five-point self-check came back mixed (typed and docs-current confirmed; official-starter recognition, convention-recognizability, and agent-output judgment marked as gaps) — this is a known, accepted gap in personal confidence, not a stack quality-gate failure, so `quality_override` stays false; router (`vue-router`) and any data layer will be added incrementally as the app grows, per an explicit "start minimal, extend later" decision. Deployment is self-host, alongside the backend; CI mirrors the backend (GitHub Actions, auto-deploy-on-merge).
+### Why this stack
+
+Szczur Radar's frontend (this module only — the FastAPI backend is a separate tech-stack-selector run) is a solo-built Vue 3 + TypeScript single-page app that consumes the backend's REST API; it has no server logic of its own. Vite+Vue was chosen over Nuxt: Nuxt's own server engine (Nitro) and SSR would duplicate what the separate FastAPI backend already owns, while Vite+Vue is an unopinionated SPA shell built for exactly this "bring your own backend" shape. TypeScript keeps the frontend typed end-to-end, mirroring the backend's Pydantic types across the API boundary. The starter ships no routing or test runner — vue-router and a test tool (e.g. Vitest) are added on top, not inherited. Deployment targets Railway rather than the starter's default CDN hosts (Cloudflare Pages/Vercel/Netlify), a deliberate choice to keep both modules on one platform alongside the backend. CI runs on GitHub Actions with auto-deploy-on-merge, matching the backend and the solo, short-feedback profile.
 
 ## Pre-scaffold verification
 
-| Signal      | Value                                       | Severity | Notes                                                              |
-| ----------- | -------------------------------------------- | -------- | -------------------------------------------------------------------- |
-| npm package | create-vite v9.2.1, published 2026-09-10     | fresh    | resolved from `cmd_template` (`npm create vite@latest`)              |
-| GitHub repo | not run                                      | n/a      | card `docs_url` (`https://vuejs.org`) is not a `github.com` URL      |
+| Signal      | Value                                          | Severity | Notes                                                        |
+| ----------- | ---------------------------------------------- | -------- | ------------------------------------------------------------ |
+| npm package | create-vite v9.2.1 published 2026-09-10        | fresh    | resolved from cmd_template (`npm create vite@latest`)        |
+| GitHub repo | not run                                        | —        | card `docs_url` is https://vuejs.org (not a GitHub URL)      |
 
 ## Scaffold log
 
-**Resolved invocation**: `npm create vite@latest .bootstrap-scaffold -- --template vue-ts`
+**Resolved invocation**: `npm create vite@latest .bootstrap-scaffold -- --template vue-ts` (run inside `szczur-radar-web/`)
 **Strategy**: subdir-then-move
 **Exit code**: 0
-**Files moved**: 11 top-level entries (`.gitignore`, `.vscode/`, `README.md`, `index.html`, `package.json`, `public/`, `src/`, `tsconfig.app.json`, `tsconfig.json`, `tsconfig.node.json`, `vite.config.ts`)
-**Conflicts (.scaffold siblings)**: none (cwd was empty)
-**.gitignore handling**: moved silently (no pre-existing `.gitignore` in cwd)
+**Files moved**: 18
+**Conflicts (.scaffold siblings)**: none (`szczur-radar-web/` was created empty for this run)
+**.gitignore handling**: moved silently (module-level `szczur-radar-web/.gitignore`; the root `.gitignore` is separate and unchanged by this step)
 **.bootstrap-scaffold cleanup**: deleted
 
-**Note**: `cmd_template` for this starter does not chain an install step (unlike, e.g., Next.js's template), so no `node_modules/` or lockfile existed immediately after scaffold — consistent with the skill's "does not install dependencies beyond what cmd_template itself runs" rule. `package.json`'s `name` field reads `"bootstrap-scaffold"` (inherited from the temp directory name); worth renaming manually to `szczur-radar-web` or similar.
+Notes:
+- Verified beforehand that `create-vite` runs non-interactively outside a TTY, so it does not stop on the "install and start now?" prompt.
+- `create-vite` set `package.json` `name` to `bootstrap-scaffold` (from the temp dir name). Changed to `szczur-radar-web` after the move-up.
+- Files: `.gitignore`, `.vscode/extensions.json`, `README.md`, `index.html`, `package.json`, `public/favicon.svg`, `public/icons.svg`, `src/App.vue`, `src/assets/{hero.png,vite.svg,vue.svg}`, `src/components/HelloWorld.vue`, `src/main.ts`, `src/style.css`, `tsconfig.app.json`, `tsconfig.json`, `tsconfig.node.json`, `vite.config.ts`.
 
 ## Post-scaffold audit
 
-**Tool**: `npm audit --json`
-**Status**: first attempt failed — `ENOLOCK` ("This command requires an existing lockfile"), because no install had run yet. Recovered by generating the lockfile only (`npm i --package-lock-only`, no full `node_modules` install beyond what that entails) per npm's own suggested recovery command, then re-ran the audit.
+**Tool**: npm audit --json
 **Summary**: 0 CRITICAL, 0 HIGH, 0 MODERATE, 0 LOW
-**Direct vs transitive**: 25 prod + 49 dev + 27 optional = 73 total dependencies scanned; audit tool does not break the zero-finding result down further since there is nothing to attribute.
+**Direct vs transitive**: 0/0/0/0 direct of total 0/0/0/0. 73 dependencies audited (prod 25, dev 49, optional 27, with overlap); 7 direct: `vue` (prod), `@types/node`, `@vitejs/plugin-vue`, `@vue/tsconfig`, `typescript`, `vite`, `vue-tsc` (dev).
 
-Clean tree — no advisories found.
+First attempt failed with `ENOLOCK` because the scaffold command does not install dependencies, so no `package-lock.json` existed. With the user's approval, `npm install` was run once (48 packages added, `package-lock.json` created; `node_modules/` is ignored via the module `.gitignore`), then the audit was re-run. The result above is from the second run.
+
+#### CRITICAL findings
+
+None.
+
+#### HIGH findings
+
+None.
+
+#### MODERATE findings
+
+None.
+
+#### LOW / INFO findings
+
+None.
 
 ## Hints recorded but not acted on
 
-| Hint                     | Value                                                              |
-| ------------------------ | -------------------------------------------------------------------- |
+| Hint                     | Value                                                                 |
+| ------------------------ | --------------------------------------------------------------------- |
 | bootstrapper_confidence  | verified                                                              |
 | quality_override         | false                                                                 |
 | path_taken               | custom                                                                |
-| self_check_answers       | typed: true, from_official_starter: false, conventions: false, docs_current: true, can_judge_agent: false |
+| self_check_answers       | typed: true, from_official_starter: true, conventions: true, docs_current: true, can_judge_agent: false |
 | team_size                | solo                                                                  |
-| deployment_target        | self-host                                                             |
-| ci_provider              | github-actions                                                       |
+| deployment_target        | railway                                                               |
+| ci_provider              | github-actions                                                        |
 | ci_default_flow          | auto-deploy-on-merge                                                  |
-| has_auth                 | false                                                                 |
+| has_auth                 | true                                                                  |
 | has_payments             | false                                                                 |
-| has_realtime              | false                                                                 |
-| has_ai                   | false                                                                 |
+| has_realtime             | false                                                                 |
+| has_ai                   | true                                                                  |
 | has_background_jobs      | false                                                                 |
 
 ## Next steps
@@ -92,9 +117,11 @@ Clean tree — no advisories found.
 Next: a future skill will set up agent context (CLAUDE.md, AGENTS.md). For now, your project is scaffolded and verified — happy hacking.
 
 Useful manual steps in the meantime:
-- `git init` at the monorepo root (not inside `web/`) once both `api/` and `web/` are scaffolded, to start one shared repo history.
-- This is one of two modules in a monorepo (`api/` + `web/`); the companion backend hand-off (`context/foundation/tech-stack.md`) is scaffolded separately into `api/` with its own verification log (`verification-api.md`).
-- Rename `package.json`'s `"name"` field from `"bootstrap-scaffold"` to something meaningful (e.g. `szczur-radar-web`).
-- Run `npm install` for the full `node_modules` (only the lockfile was generated so far) before `npm run dev`.
-- Add `vue-router` when you need more than the single list view, per the earlier "start minimal, extend later" decision.
-- Address audit findings per your project's risk tolerance — none found this run.
+- `git init` (if you have not already) to start your own repo history.
+- Review any `.scaffold` siblings the conflict policy created and decide which version of each file to keep.
+- Address audit findings per your project's risk tolerance — the full breakdown is in this log.
+
+Module-specific follow-ups (from the hand-off, not scaffolded in v1):
+- The starter is a bare SPA shell. vue-router, a test runner (e.g. Vitest), and an API client layer for the backend are added on top.
+- `src/App.vue` and `src/components/HelloWorld.vue` are Vite demo content, to be replaced.
+- Railway deploy for a static Vite build (build command + static serving) and the GitHub Actions workflow for `szczur-radar-web/` are not configured yet.

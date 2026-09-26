@@ -1,5 +1,5 @@
 ---
-bootstrapped_at: 2026-09-25T09:29:06Z
+bootstrapped_at: 2026-09-26T12:50:30Z
 starter_id: fastapi
 starter_name: FastAPI
 project_name: szczur-radar-api
@@ -8,8 +8,18 @@ package_manager: uv
 cwd_strategy: native-cwd
 bootstrapper_confidence: first-class
 phase_3_status: ok
-audit_command: "pip-audit (via `uv run --with pip-audit pip-audit --format json`)"
+audit_command: pip-audit
 ---
+
+> Backend module of a two-module repo (`szczur-radar-api/` + `szczur-radar-web/`). Scaffolded from inside
+> `api/` with the hand-off at `context/foundation/tech-stack-api.md`; this log is written to the root
+> `context/` instead of a nested `api/context/`. The frontend module gets its own `verification-web.md`.
+>
+> **Post-run change (2026-09-26):** the folder was renamed `api/` → `szczur-radar-api/` so it matches
+> `project_name`. `[project].name` in `pyproject.toml` was changed from `api` to `szczur-radar-api`, `.venv/`
+> was deleted and recreated with `uv sync` (a moved venv keeps stale absolute paths), and the root
+> `.gitignore` entries were updated to `szczur-radar-api/.venv/` and `szczur-radar-web/node_modules/`.
+> The scaffold log below records the original run under the old `api/` path.
 
 ## Hand-off
 
@@ -20,71 +30,102 @@ project_name: szczur-radar-api
 hints:
   language_family: python
   team_size: solo
-  deployment_target: self-host
+  deployment_target: railway
   ci_provider: github-actions
   ci_default_flow: auto-deploy-on-merge
   bootstrapper_confidence: first-class
-  path_taken: standard
+  path_taken: custom
   quality_override: false
-  self_check_answers: null
-  has_auth: false
+  self_check_answers:
+    typed: true
+    from_official_starter: true
+    conventions: true
+    docs_current: true
+    can_judge_agent: false
+  has_auth: true
   has_payments: false
   has_realtime: false
   has_ai: true
   has_background_jobs: true
 ```
 
-Solo backend for a personal investment-signal pipeline with a 3-week after-hours timeline and small scale — the priors favor a battle-tested, agent-friendly pick over a bespoke assembly. FastAPI is the recommended default for `(api, python)` and clears all four agent-friendly gates (typed via Pydantic, convention-based, popular within Python training data, well-documented), and it directly matches the project's earlier architectural decision to run the ingestion/LLM-classification/persistence flow as a LangGraph-orchestrated pipeline sitting behind a thin FastAPI layer — FastAPI's lack of a built-in ORM is not a gap here since the pipeline owns persistence directly. Deployment targets self-host rather than the card's nominal Fly default, because the PRD's access-control decision restricts the app to the home network/VPN with no public URL. CI runs on GitHub Actions with auto-deploy-on-merge, the standard solo/small-team shape. The background-job and AI feature flags are set (scheduled daily ingestion, LLM-based classification and trend analysis); auth, payments, and realtime are out of scope per the PRD's non-goals and access-control model.
+### Why this stack
+
+Szczur Radar's backend (this module only — the Vue frontend is a separate tech-stack-selector run) is a FastAPI-based REST API wrapping a LangGraph-orchestrated data and LLM pipeline. FastAPI was chosen because its native Pydantic typing aligns directly with LangGraph's structured input/output, keeping the pipeline-to-API boundary strongly typed end-to-end. Persistence is PostgreSQL via SQLAlchemy 2 and Alembic for migrations, assembled on top of FastAPI rather than inherited from the starter. Authentication uses FastAPI Users for the parts that fit (user model, password hashing, JWT, route guards); public self-registration is disabled, since the product has no public sign-up and no automated email — bootstrap, recovery, and user creation are handled by project-specific CLI commands instead. LangGraph is kept independent of the HTTP layer, so the pipeline can be invoked from scheduled jobs, CLI commands, API endpoints, or tests without change. Deployment targets Railway; CI runs on GitHub Actions with auto-deploy-on-merge, matching the solo, short-feedback profile.
 
 ## Pre-scaffold verification
 
-| Signal      | Value    | Severity | Notes                                                                                     |
-| ----------- | -------- | -------- | ------------------------------------------------------------------------------------------ |
-| npm package | not run  | n/a      | `python` language family; no npm-distributed CLI involved                                  |
-| GitHub repo | not run  | n/a      | card `docs_url` (`https://fastapi.tiangolo.com`) is not a `github.com` URL — no recency signal available |
+| Signal      | Value   | Severity | Notes                                                                 |
+| ----------- | ------- | -------- | --------------------------------------------------------------------- |
+| npm package | not run | —        | non-JS starter (python)                                               |
+| GitHub repo | not run | —        | card `docs_url` is https://fastapi.tiangolo.com (not a GitHub URL); no recency signal available |
 
 ## Scaffold log
 
-**Resolved invocation**: `uv init . && uv add fastapi uvicorn`
+**Resolved invocation**: `uv init . && uv add fastapi uvicorn` (run inside `api/`)
 **Strategy**: native-cwd
 **Exit code**: 0
-**Pre-flight files-to-touch**: could not enumerate ahead of time (standard `uv init` output only known after running)
-**Files written by CLI**: `.gitignore`, `.python-version`, `README.md`, `main.py`, `pyproject.toml`, `uv.lock`, `.venv/` (7 top-level entries)
-**Pre-existing files preserved**: none (cwd was empty before scaffold)
+**Pre-flight files-to-touch**: pyproject.toml, main.py, README.md, .python-version, uv.lock, .venv/
+**Files written by CLI**: 5 files + `.venv/` (pyproject.toml, main.py, README.md, .python-version, uv.lock)
+**Pre-existing files preserved**: none (`api/` was created empty for this run)
 
-**Note**: `uv init .` also initialised its own empty (no-commit) `.git/` as a side effect. Since this project is one module of a monorepo (root repo lives at the parent directory alongside `web/` and `context/`), the nested `.git/` was removed immediately after scaffold, with explicit user confirmation, to avoid a submodule-shaped conflict when the root repo is initialised.
+Notes:
+- `uv init` named the project `api` (from the directory name), not `szczur-radar-api`. `project_name` from the hand-off is metadata only.
+- `uv init` created no `.gitignore` (it skips VCS setup inside an existing git repo). The root `.gitignore` already excludes `api/.venv/` — verified with `git check-ignore`.
+- Resolved interpreter: CPython 3.13.13; `requires-python = ">=3.13"`.
+- Installed: fastapi 0.141.1, uvicorn 0.54.0, plus 11 transitive packages (pydantic 2.13.5, starlette 1.7.0, anyio 4.15.1, …).
 
 ## Post-scaffold audit
 
-**Tool**: `pip-audit` — not pre-installed; first attempt via `uvx pip-audit` audited the wrong (ephemeral, isolated) environment and was discarded. Re-run via `uv run --with pip-audit pip-audit --format json` to audit the project's actual `.venv`.
+**Tool**: pip-audit (invoked as `uvx pip-audit -r <uv export> --format json`, because `pip-audit` is not installed locally)
 **Summary**: 0 CRITICAL, 0 HIGH, 0 MODERATE, 0 LOW
-**Direct vs transitive**: not distinguished by this tool
+**Direct vs transitive**: not distinguished by this tool. 13 packages audited: 2 direct (fastapi, uvicorn), 11 transitive. No known vulnerabilities in either group.
 
-Clean tree — no advisories found across `fastapi`, `uvicorn`, `starlette`, `pydantic`, `pydantic-core`, `anyio`, `h11`, `click`, `idna`, `annotated-types`, `annotated-doc`, `typing-extensions`, `typing-inspection` (39 packages scanned total, including pip-audit's own toolchain).
+#### CRITICAL findings
+
+None.
+
+#### HIGH findings
+
+None.
+
+#### MODERATE findings
+
+None.
+
+#### LOW / INFO findings
+
+None.
 
 ## Hints recorded but not acted on
 
-| Hint                     | Value             |
-| ------------------------ | ------------------ |
-| bootstrapper_confidence  | first-class         |
-| quality_override         | false               |
-| path_taken               | standard            |
-| self_check_answers       | null                |
-| team_size                | solo                |
-| deployment_target        | self-host           |
-| ci_provider              | github-actions      |
-| ci_default_flow          | auto-deploy-on-merge |
-| has_auth                 | false               |
-| has_payments             | false               |
-| has_realtime             | false               |
-| has_ai                   | true                |
-| has_background_jobs      | true                |
+| Hint                     | Value                                                                 |
+| ------------------------ | --------------------------------------------------------------------- |
+| bootstrapper_confidence  | first-class                                                           |
+| quality_override         | false                                                                 |
+| path_taken               | custom                                                                |
+| self_check_answers       | typed: true, from_official_starter: true, conventions: true, docs_current: true, can_judge_agent: false |
+| team_size                | solo                                                                  |
+| deployment_target        | railway                                                               |
+| ci_provider              | github-actions                                                        |
+| ci_default_flow          | auto-deploy-on-merge                                                  |
+| has_auth                 | true                                                                  |
+| has_payments             | false                                                                 |
+| has_realtime             | false                                                                 |
+| has_ai                   | true                                                                  |
+| has_background_jobs      | true                                                                  |
 
 ## Next steps
 
 Next: a future skill will set up agent context (CLAUDE.md, AGENTS.md). For now, your project is scaffolded and verified — happy hacking.
 
 Useful manual steps in the meantime:
-- `git init` at the monorepo root (not inside `api/`) once both `api/` and `web/` are scaffolded, to start one shared repo history.
-- This is one of two modules in a monorepo (`api/` + `web/`); the companion frontend hand-off (`context/foundation/tech-stack-web.md`) is scaffolded separately into `web/` with its own verification log (`verification-web.md`).
-- Address audit findings per your project's risk tolerance — none found this run, but re-run `pip-audit` after adding dependencies (e.g. LangGraph, a DB driver).
+- `git init` (if you have not already) to start your own repo history.
+- Review any `.scaffold` siblings the conflict policy created and decide which version of each file to keep.
+- Address audit findings per your project's risk tolerance — the full breakdown is in this log.
+
+Module-specific follow-ups (from the hand-off, not scaffolded in v1):
+- The starter ships only FastAPI + Uvicorn. LangGraph, SQLAlchemy 2, Alembic, a PostgreSQL driver, and FastAPI Users are added on top.
+- `main.py` is a `uv init` placeholder (prints "Hello from api!"), not a FastAPI app yet.
+- Separate GitHub Actions deploys for `szczur-radar-api/` and `szczur-radar-web/` to Railway are not configured yet.
+- Frontend: run `/10x-bootstrapper context/foundation/tech-stack-web.md` from inside `szczur-radar-web/`.

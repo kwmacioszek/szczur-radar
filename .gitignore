@@ -1,3 +1,3 @@
-api/.venv/
-web/node_modules/
+szczur-radar-api/.venv/
+szczur-radar-web/node_modules/
 .DS_Store

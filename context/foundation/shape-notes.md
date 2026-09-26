@@ -42,7 +42,11 @@ checkpoint:
       decision: "data-pipeline (najbliższa pojedyncza wartość) — projekt to dwa moduły: pipeline+API jako rdzeń, aplikacja webowa jako warstwa konsumpcji; niuans do Open Questions, doprecyzowanie przy /10x-tech-stack-selector"
     - topic: "target_scale"
       decision: "users: small — twórca + garstka zaproszonych znajomych, nie szersza publika"
-  frs_drafted: 32
+    - topic: "Ask szczur (dodane po zamknięciu sesji)"
+      decision: "FR-032 (nice-to-have): pytanie do LLM o wybrany sygnał z widoku posta, wyłącznie przez API aplikacji; zawężone do wybranego posta, odpowiedź oparta na jego treści i zapisanej ocenie, limit pytań na użytkownika"
+    - topic: "logout vs auto-wygasanie sesji (rewizja)"
+      decision: "FR-013 (ręczny logout) z powrotem must-have; FR-029 (auto-wygasanie sesji) obniżone do nice-to-have — krótki timeout uciążliwy w trakcie czytania postów"
+  frs_drafted: 33
   quality_check_status: accepted
 ---
 
@@ -192,12 +196,15 @@ Acknowledged on 2026-09-26: 10-week MVP (deadline 2026-12-06) requires sustained
   > Socrates: Kontrargument rozważony: "pełny system haseł (hashing, sesje, walidacja) to nietrywialny nakład
   > dołożony do już dużego zakresu." Rozwiązanie: nakład zaakceptowany — logowanie to fundament całego systemu
   > kont, spójne z decyzją o e-mail+hasło z Fazy 2; FR zostaje must-have.
-- FR-013: Zalogowany użytkownik może ręcznie się wylogować. Priority: nice-to-have
+- FR-013: Zalogowany użytkownik może ręcznie się wylogować. Priority: must-have
   > Socrates: Kontrargument rozważony: "krótkie, wygasające sesje mogłyby wystarczyć zamiast jawnego przycisku
-  > wylogowania." Rozwiązanie: ręczne wylogowanie zdegradowane do nice-to-have; w zamian dodano FR-029 —
-  > automatyczne wygasanie sesji po bezczynności jako must-have mechanizm bezpieczeństwa niezależny od akcji usera.
+  > wylogowania." Rozwiązanie pierwotne: logout zdegradowany na rzecz FR-029. Rewizja (przez użytkownika wprost):
+  > agresywne auto-wygasanie sesji jest uciążliwe (wylogowuje w trakcie czytania postów), więc ręczny logout
+  > wraca do must-have jako prosty, oczekiwany mechanizm, a FR-029 spada do nice-to-have.
 - FR-029: Sesja użytkownika wygasa automatycznie po określonym czasie bezczynności (np. 5 minut, dokładna wartość
-  do ustalenia) i wymaga ponownego zalogowania; aktywność użytkownika przedłuża sesję. Priority: must-have
+  do ustalenia) i wymaga ponownego zalogowania; aktywność użytkownika przedłuża sesję. Priority: nice-to-have
+  > Socrates: Kontrargument rozważony (przez użytkownika wprost): "krótki timeout jest uciążliwy — wylogowuje w
+  > trakcie czytania." Rozwiązanie: obniżone do nice-to-have; podstawą wylogowania w MVP jest FR-013.
 - FR-014: Niezalogowany użytkownik nie ma dostępu do chronionych danych ani funkcji aplikacji. Priority: must-have
   > Socrates: Kontrargument rozważony: "jeśli guard nie jest konsekwentnie zastosowany na każdym endpoincie,
   > może zostać dziura bezpieczeństwa." Rozwiązanie: FR zostaje must-have bez zmian; dodatkowo w Fazie 5
@@ -286,6 +293,12 @@ Acknowledged on 2026-09-26: 10-week MVP (deadline 2026-12-06) requires sustained
   > fałszywych alarmów/ciszy)" i "nowy kanał powiadomień to dodatkowa infrastruktura." Rozwiązanie: oba ryzyka
   > przyjęte świadomie — funkcja wartościowa mimo ryzyk; kryterium i kanał powiadomień do doprecyzowania przy
   > realizacji (poza MVP).
+- FR-032: Użytkownik może z widoku szczegółowego posta wybrać akcję „Ask szczur” i zadać LLM pytanie o dany sygnał (np. dlaczego został oceniony w taki, a nie inny sposób). Pytanie dotyczy wyłącznie wybranego posta, a odpowiedź opiera się na treści tego posta i jego zapisanej ocenie. Obowiązuje limit pytań na użytkownika. Pytanie i odpowiedź przechodzą wyłącznie przez API aplikacji, nigdy bezpośrednio z przeglądarki do LLM. Priority: nice-to-have
+  > Socrates: Kontrargumenty rozważone: "koszt LLM rośnie bez limitu, wbrew guardrailowi o minimalizacji kosztów",
+  > "funkcja może zostać nadużyta jako ogólny chatbot na koszt właściciela" oraz "LLM może dopowiedzieć
+  > uzasadnienie niezgodne z faktyczną oceną sygnału". Rozwiązanie: wszystkie trzy przyjęte — FR zawężony do
+  > pytań o wybrany post, z odpowiedzią opartą na jego treści i zapisanej ocenie, oraz z limitem pytań na
+  > użytkownika; zostaje nice-to-have.
 
 ## Quality cross-check
 
