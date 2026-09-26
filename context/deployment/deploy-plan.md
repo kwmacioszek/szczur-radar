@@ -69,7 +69,7 @@ Before collecting production data, enable scheduled Postgres volume backups and 
 
 **Status (2026-09-26): blocked on the human merge gate + operator autodeploy toggle.**
 
-- Release candidate: **PR #1** (`deploy/railway-scaffold` → `main`), all 3 CI jobs green.
+- Release candidate: **PR #1** (`deploy/railway-scaffold` → `main`), CI green.
 - Pre-merge code review (2026-09-27): 8 findings, all quality/hygiene (no runtime bug). Applied on the branch: `API_PORT` proxy fallback aligned to 8000; two `infrastructure.md` doc contradictions fixed; orphaned `public/icons.svg`, empty `App.vue` script block, and redundant `caddy fmt` build step removed; stray root IaC npm files removed (SDK stays pinned in `.railway/`). CI build duplication removed: dropped the separate `frontend` job; the web container build (real Dockerfile) is now the single frontend typecheck + build gate.
 - Merging PR #1 to `main` is the **human production-approval gate** (auto-deploy on merge) — not performed by the agent. NOTE: the services' IaC source is `main`, so until merge, any deploy from `main` builds the pre-scaffold stub (no FastAPI `app`, no web Dockerfile). Enable Wait for CI **before** relying on autodeploy.
 - Enabling native autodeploy + Wait for CI per service is an operator dashboard toggle.
