@@ -8,7 +8,14 @@ During implementation, update the existing context/deployment/deploy-plan.md in 
 
 ## Phases
 
-### [ ] 1. Prepare the application
+### [x] 1. Prepare the application
+
+**Status (2026-09-26): done, verified locally.**
+
+- Backend: FastAPI app in `szczur-radar-api/` — `main.py` exposes `app`; `app/routes.py` serves `GET /api/health` (liveness) and `GET /api/ready` (async SQLAlchemy 2 + psycopg `SELECT 1`, returns 503 on failure); `app/database.py` builds the async engine lazily from `DATABASE_URL`. Deps added via uv: `sqlalchemy[asyncio]`, `psycopg[binary]`; dev: `pytest`, `httpx`. Data/admin routes intentionally absent until auth.
+- Tests: `tests/test_health.py` — **3 passed** (`/api/health` → 200; `/api/ready` → 200 when DB reachable, 503 when unavailable). `uv sync --locked` is clean.
+- Frontend: neutral "W przygotowaniu" page (`src/App.vue`, trimmed `src/style.css`, `<title>Szczur Radar`); starter demo component/assets removed. `npm run build` (vue-tsc typecheck + vite) passes.
+- Serving: `szczur-radar-web/Dockerfile` (multi-stage: `npm ci && npm run build` → Caddy), `Caddyfile` (SPA fallback, `/healthz` web health endpoint, `/api/*` reverse proxy preserving path via `API_PRIVATE_DOMAIN`/`API_PORT` env), `.dockerignore`. No DB/LLM creds in the frontend build. Container smoke test NOT run locally (Docker daemon down) — it runs in CI (phase 2).
 
 Replace the backend stub with FastAPI. Add GET /api/health (process is running) and GET /api/ready (PostgreSQL query succeeds; return 503 on failure). Add SQLAlchemy 2 and the PostgreSQL driver through uv; keep data and admin routes absent until authentication is implemented.
 
@@ -16,7 +23,15 @@ Replace the Vue starter screen with a neutral “in preparation” page. Build i
 
 Keep DATABASE_URL in the API service. Pass the API’s private hostname and port to the web service through Railway reference variables; Caddy reads those variables rather than hardcoded upstream coordinates. Do not put database or future LLM credentials in the frontend build.
 
-### [ ] 2. Define infrastructure and CI
+### [x] 2. Define infrastructure and CI
+
+**Status (2026-09-26): artifacts written; IaC validation and autodeploy toggles are operator steps in phase 3/4.**
+
+- `.railway/railway.ts` (SDK pinned to `railway@3.11.0` in `.railway/package.json`) declares: `postgres`; `szczur-radar-api` (Railpack, root `szczur-radar-api`, watch `szczur-radar-api/**`, start `uv run uvicorn main:app --host :: --port $PORT`, healthcheck `/api/health`, `DATABASE_URL` → Postgres ref, region `europe-west4`); `szczur-radar-web` (detected Dockerfile, root `szczur-radar-web`, watch `szczur-radar-web/**`, healthcheck `/healthz`, `API_PRIVATE_DOMAIN` → api `RAILWAY_PRIVATE_DOMAIN`, `API_PORT` → api `PORT`, region `europe-west4`).
+- `.github/workflows/ci.yml` runs on push to `main` + PR (NO path filter, per Wait for CI): backend `uv sync --locked` + `pytest`, frontend typecheck/build, web container smoke test.
+- Docs corrected: AGENTS.md CI/deploy lines; `infrastructure.md` risk rows + Getting Started note now reflect the private `/api/*` proxy (no `VITE_API_URL`, no public API domain, API binds `::`) and `.railway/railway.ts` IaC (replaces `railway.toml`).
+- Configured variable NAMES (no values): api `DATABASE_URL`; web `API_PRIVATE_DOMAIN`, `API_PORT`. GitHub secret to add (operator): project-scoped `RAILWAY_TOKEN`.
+- ⚠️ Operator to validate: `railway/iac` field names are written to the documented DSL but unverified against a live install — `railway config plan` (phase 3) is the safe gate; reconcile any rejected field there before `apply`. Enabling native autodeploy + Wait for CI are dashboard toggles (phase 3/4).
 
 Add one .railway/railway.ts for szczur-radar-api, szczur-radar-web, and Postgres, with pinned TypeScript SDK dependencies. Set each service’s GitHub source and root directory; use Railpack for the API and the detected web Dockerfile. Make the API bind to Railway’s PORT, set its healthcheck, and reference Postgres. Reference the API service’s private domain and PORT from the web service. Railway’s Infrastructure as Code (https://docs.railway.com/infrastructure-as-code) replaces railway.toml for new services.
 
@@ -28,6 +43,8 @@ Make targeted corrections to the infrastructure and stack guidance for the selec
 
 ### [ ] 3. Provision and protect production
 
+**Status (2026-09-26): NOT STARTED — operator gate. Automated work stopped here** per this plan and the CLAUDE.md production-access boundary (account/billing/CLI-login/destructive actions are human-only). Everything below requires the human operator.
+
 Operator: connect the Railway account to kwmacioszek/szczur-radar, choose the plan, and configure a $15 compute usage email alert and a $25 monthly hard compute usage limit before provisioning. The hard limit can take workloads offline when reached; record how to raise it during an incident. Install/login to the CLI, create or link the production project, run railway config plan, review that it adds exactly the intended services and deletes nothing, then run railway config apply. Verify all services and Postgres are in Amsterdam. Railway documents the usage-limit behavior (https://docs.railway.com/pricing/cost-control).
 
 Generate a Railway domain only for web; leave API and Postgres without public domains or TCP proxies. Set Postgres DATABASE_URL by service reference. Confirm the web proxy reaches the API using its referenced private hostname and port.
@@ -35,6 +52,8 @@ Generate a Railway domain only for web; leave API and Postgres without public do
 Before collecting production data, enable scheduled Postgres volume backups and PITR, wait for the first restorable point, and perform a restore drill into a separate database service. Record the restored test result and recovery steps. Railway notes that PITR begins only after its first base backup (https://docs.railway.com/guides/postgres-backups-restores).
 
 ### [ ] 4. Release and verify
+
+**Status (2026-09-26): blocked on phase 3.** The scaffold is ready to merge; verification of `/`, `/api/health`, `/api/ready` and the web URL is recorded here once the operator has provisioned and enabled autodeploy.
 
 Merge the checked scaffold to main, confirm GitHub Actions succeeds, then enable autodeploy and Wait for CI for both services. Check the deployed commit and deployment status for each service.
 

@@ -1,0 +1,73 @@
+name: CI
+
+# Runs on every push to main and on every PR. Intentionally NOT path-filtered:
+# Railway's "Wait for CI" evaluates the whole workflow conclusion, and a skipped
+# required workflow never blocks — path filtering would silently defeat the gate.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  backend:
+    name: backend (lint-lock + tests)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: szczur-radar-api
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.11.7"
+      - name: Sync locked dependencies
+        run: uv sync --locked
+      - name: Run tests
+        run: uv run pytest -q
+
+  frontend:
+    name: frontend (typecheck + build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: szczur-radar-web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: szczur-radar-web/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Typecheck and build
+        run: npm run build
+
+  web-container-smoke:
+    name: web container smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build web image
+        run: docker build -t szczur-radar-web ./szczur-radar-web
+      - name: Run container
+        run: docker run -d --name web -e PORT=8080 -p 8080:8080 szczur-radar-web
+      - name: Smoke test /healthz and /
+        run: |
+          ready=0
+          for _ in $(seq 1 30); do
+            if curl -fsS http://localhost:8080/healthz >/dev/null; then ready=1; break; fi
+            sleep 1
+          done
+          if [ "$ready" != "1" ]; then
+            echo "::error::web container did not become ready"
+            docker logs web
+            exit 1
+          fi
+          curl -fsS http://localhost:8080/healthz | grep -q "ok"
+          # SPA fallback must serve index.html (the app mount point) for unknown routes.
+          curl -fsS http://localhost:8080/some/deep/route | grep -q 'id="app"'
+      - name: Container logs
+        if: always()
+        run: docker logs web || true

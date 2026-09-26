@@ -34,8 +34,8 @@ Szczur Radar collects investment posts (Wykop, later Reddit), classifies them wi
 - `szczur-radar-web` is the only publicly exposed Railway service and serves the Vue SPA.
 - Browser requests to `/api/*` on the web application's public origin are reverse-proxied to the private `szczur-radar-api` service over Railway private networking.
 - `szczur-radar-api` must not have its own public domain.
-- No GitHub Actions CI/check workflow is currently configured. Before enabling production autodeploy, add CI checks and enable Railway Wait for CI.
-- Production deployment is planned through Railway native GitHub autodeploy from `main`.
+- CI runs via `.github/workflows/ci.yml` on every push to `main` and PR: backend locked-dependency sync + tests, frontend typecheck/build, and a web container smoke test. Do not path-filter this workflow — Railway's Wait for CI evaluates the whole workflow conclusion.
+- Production deployment is via Railway native GitHub autodeploy from `main`, gated by Wait for CI. Service topology and variables are declared as code in `.railway/railway.ts` (validate with `railway config plan` before `railway config apply`).
 - The scheduled LangGraph pipeline runs as a separate private Railway job/service and must not depend on the lifecycle of either the web or API service.
 - Before implementing authentication, document the selected transport, session or token storage, and CSRF handling in the change plan. Browser authentication requests follow the same-origin `/api/*` route above.
 <!-- BEGIN @przeprogramowani/10x-cli -->

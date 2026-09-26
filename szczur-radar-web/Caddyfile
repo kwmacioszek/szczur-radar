@@ -1,0 +1,36 @@
+{
+	admin off
+	persist_config off
+	auto_https off
+	log {
+		format json
+	}
+}
+
+# Railway injects PORT; 8080 is the local/CI fallback.
+:{$PORT:8080} {
+	log {
+		format json
+	}
+	encode gzip
+
+	# Web health endpoint — the target for this service's Railway healthcheck.
+	handle /healthz {
+		respond "ok" 200
+	}
+
+	# Reverse-proxy API calls to the private backend, preserving the full path
+	# (/api/health -> upstream /api/health). Host and port come from Railway
+	# reference variables (set in .railway/railway.ts); the defaults only keep
+	# the container bootable in CI, where no upstream exists.
+	handle /api/* {
+		reverse_proxy {$API_PRIVATE_DOMAIN:api.railway.internal}:{$API_PORT:8080}
+	}
+
+	# SPA fallback: serve the built assets, route unknown paths to index.html.
+	handle {
+		root * dist
+		try_files {path} /index.html
+		file_server
+	}
+}

@@ -1,3 +1,11 @@
 szczur-radar-api/.venv/
 szczur-radar-web/node_modules/
 .DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Railway IaC deps
+.railway/node_modules/
