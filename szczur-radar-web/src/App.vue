@@ -1,5 +1,3 @@
-<script setup lang="ts"></script>
-
 <template>
   <main class="page">
     <section class="card" aria-labelledby="title">

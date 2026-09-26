@@ -24,7 +24,7 @@
 	# reference variables (set in .railway/railway.ts); the defaults only keep
 	# the container bootable in CI, where no upstream exists.
 	handle /api/* {
-		reverse_proxy {$API_PRIVATE_DOMAIN:api.railway.internal}:{$API_PORT:8080}
+		reverse_proxy {$API_PRIVATE_DOMAIN:api.railway.internal}:{$API_PORT:8000}
 	}
 
 	# SPA fallback: serve the built assets, route unknown paths to index.html.

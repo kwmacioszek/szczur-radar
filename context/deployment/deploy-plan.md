@@ -69,7 +69,8 @@ Before collecting production data, enable scheduled Postgres volume backups and 
 
 **Status (2026-09-26): blocked on the human merge gate + operator autodeploy toggle.**
 
-- Release candidate: **PR #1** (`deploy/railway-scaffold` → `main`), commit `4fe4a513828b307b0f48a2b92a27cb2c6e2d5299`, all 3 CI jobs green.
+- Release candidate: **PR #1** (`deploy/railway-scaffold` → `main`), all 3 CI jobs green.
+- Pre-merge code review (2026-09-27): 8 findings, all quality/hygiene (no runtime bug). Applied on the branch: `API_PORT` proxy fallback aligned to 8000; two `infrastructure.md` doc contradictions fixed; orphaned `public/icons.svg`, empty `App.vue` script block, and redundant `caddy fmt` build step removed; stray root IaC npm files removed (SDK stays pinned in `.railway/`). CI `frontend`/`web-smoke` build duplication left as-is (intentional: faster/clearer typecheck signal).
 - Merging PR #1 to `main` is the **human production-approval gate** (auto-deploy on merge) — not performed by the agent. NOTE: the services' IaC source is `main`, so until merge, any deploy from `main` builds the pre-scaffold stub (no FastAPI `app`, no web Dockerfile). Enable Wait for CI **before** relying on autodeploy.
 - Enabling native autodeploy + Wait for CI per service is an operator dashboard toggle.
 - After merge + deploy, verify (record here): `/`, `/api/health`, `/api/ready` through the web domain; api + Postgres have **no** public URL; an API 5xx passes through as JSON, not the SPA page. The "readiness 503 when DB down" path is already covered by the local test (`szczur-radar-api/tests/test_health.py`).
