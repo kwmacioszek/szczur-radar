@@ -1,0 +1,8 @@
+{
+  "name": "szczur-radar-iac",
+  "private": true,
+  "description": "Railway Infrastructure-as-Code tooling. The Railway CLI resolves the `railway/iac` import in .railway/railway.ts from node_modules at the repo root, so the SDK is pinned here. Run `npm install`, then `railway config plan`.",
+  "dependencies": {
+    "railway": "3.11.0"
+  }
+}
