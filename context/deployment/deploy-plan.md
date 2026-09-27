@@ -94,9 +94,14 @@ Verify /, /api/health, and /api/ready through the web domain; verify API and Pos
 
 Record the web URL, Railway project/environment and deployment IDs, configured variable names, backup/restore result, and smoke-check results in the deployment plan. Railway healthchecks run at deployment, not as continuous monitoring (https://docs.railway.com/deployments/healthchecks), so include a routine operational check of logs and readiness.
 
-### [ ] 5. Enable safe PR previews and document recovery
+### [x] 5. Enable safe PR previews and document recovery
 
-**Status (2026-09-26): support-steps runbook DONE (below). PR-preview enablement is operator-only and blocked until production works.**
+**Status (2026-09-27): PR previews ENABLED + isolated ✓; serverless sleep ON; runbook DONE. Live end-to-end verify deferred to the first feature-PR deploy.**
+
+- Operator enabled **PR Environments** + **serverless (sleep)** in the dashboard — idle preview services cost ~nothing.
+- Isolation verified by topology: env `szczur-radar-pr-8` has its **own** `szczur-radar-api` + `szczur-radar-web` + **own `postgres`** (separate per-environment instance/volume — does not touch production) and its own domain `szczur-radar-web-szczur-radar-pr-8.up.railway.app`. This is a **full** isolated env, not Focused.
+- Live serving **not yet confirmed**: PR #8 predates the enable, so no PR-env deploy has run (`latestDeployment: null`; the domain returns "Application not found"). PR envs deploy on a **push to the PR branch** (gated by Wait for CI) → verify `/` + `/api/ready` (own Postgres) on the first feature PR.
+- Secrets: no production-only secrets exist yet (only per-service `DATABASE_URL`, and the PR env gets its own). **When Phase 6 adds LLM/Wykop creds, seal them** so PR envs don't inherit prod values (Railway doesn't copy sealed values into PR envs). Keep **bot PR previews off** (operator dashboard check).
 
 #### Support steps / recovery runbook
 
