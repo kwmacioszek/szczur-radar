@@ -6,6 +6,16 @@ Deploy the scaffold first: a neutral Vue page, a minimal FastAPI app, and Postgr
 
 During implementation, update the existing context/deployment/deploy-plan.md in place. Use its checkboxes to record completion, deployment IDs, test results, and the web URL—never secret values.
 
+## Release status (2026-09-27)
+
+**Scaffold release: DONE and live** at `https://szczur-radar-web-production.up.railway.app` — web page + both API probes work through one HTTPS domain, api + Postgres private, CI-gated, PITR enabled. Phases 1–4 complete.
+
+**Two exceptions, both gated on a Railway subscription (deferred; no production data is live):**
+1. **Cost limits** ($15 alert / $25 hard) — `railway usage limit set` requires an active subscription.
+2. **Clean restore drill** — PITR recovery-to-target is proven, but a healthy, query-verified restored instance needs a larger volume than the trial allows.
+
+Both are the hard gate **before Phase 6 (data collection)**: subscribe → set limits + re-run the restore drill until query-verified (else Render fallback, risk #1). Phase 5 (isolated PR previews) is optional/later.
+
 ## Phases
 
 ### [x] 1. Prepare the application
@@ -41,7 +51,7 @@ Use Railway native GitHub autodeploy for each service, gated by Wait for CI. Git
 
 Make targeted corrections to the infrastructure and stack guidance for the selected private API route and current IaC flow. Correct the stale deployment line in AGENTS.md while preserving the user’s other working changes.
 
-### [ ] 3. Provision and protect production
+### [~] 3. Provision and protect production
 
 **Status (2026-09-26): partially done by operator — the remainder is a genuine operator-only gate.**
 
@@ -55,7 +65,8 @@ Remaining items are **operator-only Railway production operations**. The agent c
 - [x] Public domain generated for **web only**: `szczur-radar-web-production.up.railway.app` (live, verified 2026-09-27). `szczur-radar-api` + `postgres` confirmed **no** public domain ✓.
 - [x] Reference variables verified (`railway variables`, 2026-09-26): api `DATABASE_URL` → `postgres.railway.internal` ✓; web `API_PRIVATE_DOMAIN` → `szczur-radar-api.railway.internal` ✓. **`API_PORT` resolved EMPTY** ✗ — Railway does not expose a service's `PORT` as a referenceable variable. **Fixed in `.railway/railway.ts`**: pinned `API_INTERNAL_PORT=8000` (api binds it via `PORT`; web `API_PORT` is the matching literal). Needs `railway config plan` + `apply` to take effect, and must land **before** merge/deploy or the web→api proxy 502s.
 - [x] **Postgres password rotated** by operator (2026-09-27) — the earlier plaintext `DATABASE_URL` exposure is now dead. DB connectivity confirmed intact afterwards: `/api/ready` → 200 (api → Postgres query OK).
-- [~] **PITR enabled (2026-09-27)** — `railway postgres pitr enable` succeeded on the **trial**: bucket wired, base backup present (`backupSetCount:1`, `archiverHealthy:true`, restorable point from ~09:59Z + live WAL archiving). So risk #1 (backups unavailable) is **not** triggered — backups work on trial. Automatic backup **schedule** is gated (`pitr schedule set` → "You do not have access"; revisit post-subscription). **Restore drill: PENDING operator** → re-check `pitr status --json` for the current `maxRestoreTime`, then `railway postgres pitr restore --service postgres --at <maxRestoreTime> --new-service-name postgres-restored`, verify the restored service has data (do NOT switch `DATABASE_URL`), then delete the drill service. Record result here. If a restore ever proves impossible → **stop before production data, reopen the Render fallback** (risk register #1).
+- [~] **PITR enabled (2026-09-27)** — `railway postgres pitr enable` succeeded on the **trial**: bucket wired (`Postgres-PITR`), base backup present (`backupSetCount:1`, `archiverHealthy:true`), live WAL archiving. Backups work on trial → risk #1 (backups unavailable) **not** triggered. Automatic backup **schedule** is gated (`pitr schedule set` → "You do not have access"; revisit post-subscription).
+- [~] **Restore drill (2026-09-27): PARTIAL — mechanism verified, restored instance crashed.** `railway postgres pitr restore --at 2026-09-27T09:59:39Z --new-service-name postgres-restored` → recovery **reached consistent state at the target** (`recovery stopping before commit of transaction 766, time 09:59:39`), which proves the backup + WAL archive are valid and restorable. **But the restored instance then CRASHED**: repeated `[28] No space left on device` writing `pg_wal`, ending `FATAL: could not write ... xlogtemp: No space left on device` — the restored-service volume was too small for the WAL replay (a trial/default-volume limit). Production `postgres` untouched (Online). So restore is mechanically proven but a **healthy, queryable** restored instance was not achieved on the trial. **Gate before Phase 6 (data collection):** re-run the drill with a larger restored volume (likely on subscription) until the restored instance comes up and is query-verified; if a clean restore can't be achieved with real data → **stop, reopen the Render fallback** (risk register #1). Cleanup: **delete the crashed `postgres-restored`** service (dashboard).
 
 Deploy state (2026-09-27): `szczur-radar-api` **Online** (Hypercorn, deployment `78d0dfbb`), `szczur-radar-web` **Online** at `szczur-radar-web-production.up.railway.app`, `postgres` **Online**. api + postgres have **no** public domain ✓. All services + Postgres confirmed in Amsterdam (`europe-west4`).
 
@@ -114,5 +125,7 @@ Enable real outbound Wykop and LLM calls only in production after credentials, s
 ## Acceptance and assumptions
 
 The first release passes when the web page and both API probes work through one HTTPS domain, the API and database remain private, CI gates deployments, the usage alert and hard limit are active, and a Postgres restore drill succeeds. The daily pipeline, accounts, Wykop, and LLM integration are later phases.
+
+**Status (2026-09-27):** met except the usage limit and a clean restore drill — both blocked by the trial (need a subscription), deferred while no production data is live (see **Release status** above). They are the gate before Phase 6.
 
 This plan follows the chosen Railway platform and the confirmed scaffold-first, private-proxy, native-autodeploy, full-preview decisions. No repository or Railway changes are made while this plan is under review.
