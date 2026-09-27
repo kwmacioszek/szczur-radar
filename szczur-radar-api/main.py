@@ -1,8 +1,9 @@
 """Szczur Radar API entrypoint.
 
 Exposes the ASGI ``app`` so the container start command
-``uvicorn main:app --host :: --port $PORT`` binds it on Railway's IPv6
-private network. ``python main.py`` runs a local dev server.
+``hypercorn main:app --bind "[::]:$PORT"`` binds it dual-stack on Railway:
+IPv6 for private networking AND IPv4 for the platform healthcheck (uvicorn's
+``::`` is IPv6-only from the CLI). ``python main.py`` runs a local dev server.
 """
 
 from __future__ import annotations

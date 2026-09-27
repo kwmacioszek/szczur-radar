@@ -30,14 +30,15 @@ export default defineRailway(() => {
   const db = postgres("postgres");
 
   // FastAPI backend. No public domain: reachable only through the web proxy
-  // over the private network, so uvicorn binds :: (IPv6). Railpack auto-detects
-  // uv + .python-version (3.13); only the start command and healthcheck are
-  // explicit (the default `uvicorn main:app` would not bind PORT/host).
+  // over the private network. Uses Hypercorn bound to :: for DUAL-STACK — IPv6
+  // for private networking AND IPv4 for Railway's healthcheck. (uvicorn's :: is
+  // IPv6-only from the CLI, so the IPv4 healthcheck failed with "service
+  // unavailable".) Railpack auto-detects uv + .python-version (3.13).
   const api = service("szczur-radar-api", {
     source: github(REPO, { branch: "main", checkSuites: true }),
     rootDirectory: "szczur-radar-api",
     watchPatterns: ["szczur-radar-api/**"],
-    start: "uv run uvicorn main:app --host :: --port $PORT",
+    start: 'uv run hypercorn main:app --bind "[::]:$PORT"',
     healthcheck: "/api/health",
     replicas: { [REGION]: 1 },
     env: {
