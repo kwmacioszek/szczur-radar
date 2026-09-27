@@ -3,7 +3,7 @@ import AppKit
 // Renders the current M-1 dependency map from context/foundation/roadmap.md.
 // Run: swift tools/render_roadmap.swift
 let width = 2800
-let height = 1760
+let height = 3180
 let output = "docs/visuals/roadmap-mvp.png"
 
 func color(_ hex: UInt32, _ alpha: CGFloat = 1) -> NSColor {
@@ -106,55 +106,113 @@ txt("9 ELEMENTÓW", 2300, 129, 320, 25, .bold)
 txt("2 fundamenty / 7 wycinków", 2300, 172, 320, 21, .regular, muted)
 
 let phaseX: [CGFloat] = [140, 755, 1370, 1985]
-let phaseTitle = ["01 / START RÓWNOLEGŁY", "02 / PIERWSZY SYGNAŁ", "03 / ROZBUDOWA MVP", "04 / NADZÓR"]
-let phaseSub = ["Fundamenty i dostęp", "Główna hipoteza produktu", "Widoki i automatyzacja", "Kontrola przebiegów"]
+let stageY: [CGFloat] = [290, 690, 1090, 1440]
+let stageTitle = ["01 / FUNDAMENTY I DOSTĘP", "02 / PIERWSZY SYGNAŁ", "03 / FUNKCJE MVP", "04 / NADZÓR AUTOMATU"]
+let stageSub = ["Prace mogą ruszyć równolegle", "Ocena LLM trafia do użytkownika", "Widoki i codzienny przebieg", "Historia i sygnał awarii"]
 for i in 0..<4 {
-    rounded(phaseX[i], 333, 514, 3, 0, i == 1 ? cyan : stroke)
-    txt(phaseTitle[i], phaseX[i], 353, 514, 23, .bold, i == 1 ? cyan : white)
-    txt(phaseSub[i], phaseX[i], 392, 514, 20, .regular, muted)
+    let accent = i == 1 ? cyan : stroke
+    rounded(160, stageY[i], 2480, 3, 0, accent)
+    txt(stageTitle[i], 160, stageY[i] + 13, 720, 23, .bold, i == 1 ? cyan : white)
+    txt(stageSub[i], 890, stageY[i] + 15, 1200, 21, .regular, muted)
 }
 
 let cards: [Card] = [
-    Card(id:"F-02", title:"Kontrakt oceny LLM", detail:"Walidacja V1 i próby na rzeczywistym modelu", req:"—", status:"planowanie", x:140, y:474, w:514, h:210, accent:violet, star:false),
-    Card(id:"S-01", title:"Admin i logowanie", detail:"CLI, sesja, ochrona tras i wylogowanie", req:"—", status:"planowanie", x:140, y:797, w:514, h:210, accent:green, star:false),
-    Card(id:"F-01", title:"Bramka danych produkcyjnych", detail:"Limity kosztów, restore drill, sekrety", req:"—", status:"do startu", x:140, y:1120, w:514, h:210, accent:amber, star:false),
-    Card(id:"S-02", title:"Ocenione posty z Wykopu", detail:"Pobranie → ocena LLM → lista postów", req:"S-01 + F-02", status:"propozycja", x:755, y:636, w:514, h:228, accent:cyan, star:true),
-    Card(id:"S-07", title:"Onboarding przez CLI", detail:"Konto, link aktywacyjny, odzyskiwanie", req:"S-01", status:"propozycja", x:755, y:1108, w:514, h:210, accent:green, star:false),
-    Card(id:"S-03", title:"Szczegóły posta", detail:"Tezy, cytaty, surowe dane, oryginał", req:"S-02", status:"propozycja", x:1370, y:474, w:514, h:210, accent:cyan, star:false),
-    Card(id:"S-04", title:"Filtrowanie ocen", detail:"Spółka lub temat + stanowisko autora", req:"S-02", status:"propozycja", x:1370, y:797, w:514, h:210, accent:cyan, star:false),
-    Card(id:"S-05", title:"Codzienny automat", detail:"Harmonogram i data ostatniej aktualizacji", req:"S-02 + F-01", status:"propozycja", x:1370, y:1120, w:514, h:210, accent:amber, star:false),
-    Card(id:"S-06", title:"Historia przebiegów", detail:"Dashboard admina i sygnał awarii", req:"S-05 + S-01", status:"propozycja", x:1985, y:1120, w:514, h:210, accent:amber, star:false)
+    Card(id:"F-01", title:"Bramka danych produkcyjnych", detail:"Limity kosztów, restore drill, sekrety", req:"—", status:"do startu", x:160, y:360, w:650, h:220, accent:amber, star:false),
+    Card(id:"F-02", title:"Kontrakt oceny LLM", detail:"Walidacja V1 i próby na rzeczywistym modelu", req:"—", status:"planowanie", x:1075, y:360, w:650, h:220, accent:violet, star:false),
+    Card(id:"S-01", title:"Admin i logowanie", detail:"CLI, sesja, ochrona tras i wylogowanie", req:"—", status:"planowanie", x:1990, y:360, w:650, h:220, accent:green, star:false),
+    Card(id:"S-02", title:"Ocenione posty z Wykopu", detail:"Pobranie → ocena LLM → lista postów", req:"S-01 + F-02", status:"propozycja", x:1075, y:760, w:650, h:230, accent:cyan, star:true),
+    Card(id:"S-07", title:"Onboarding przez CLI", detail:"Konto, link aktywacyjny, odzyskiwanie", req:"S-01", status:"propozycja", x:1990, y:760, w:650, h:220, accent:green, star:false),
+    Card(id:"S-05", title:"Codzienny automat", detail:"Harmonogram i data ostatniej aktualizacji", req:"S-02 + F-01", status:"propozycja", x:160, y:1160, w:650, h:220, accent:amber, star:false),
+    Card(id:"S-03", title:"Szczegóły posta", detail:"Tezy, cytaty, surowe dane, oryginał", req:"S-02", status:"propozycja", x:1075, y:1160, w:650, h:220, accent:cyan, star:false),
+    Card(id:"S-04", title:"Filtrowanie ocen", detail:"Spółka lub temat + stanowisko autora", req:"S-02", status:"propozycja", x:1990, y:1160, w:650, h:220, accent:cyan, star:false),
+    Card(id:"S-06", title:"Historia przebiegów", detail:"Dashboard admina i sygnał awarii", req:"S-05 + S-01", status:"propozycja", x:160, y:1510, w:650, h:220, accent:amber, star:false)
 ]
 
-// Edges are routed in the gutters so labels stay legible.
-arrow([(654,579),(704,579),(704,692),(755,692)], violet)
-arrow([(654,902),(704,902),(704,805),(755,805)], green)
-arrow([(654,902),(704,902),(704,1150),(755,1150)], green)
-arrow([(1269,695),(1320,695),(1320,579),(1370,579)], cyan)
-arrow([(1269,750),(1320,750),(1320,902),(1370,902)], cyan)
-arrow([(1269,815),(1320,815),(1320,1200),(1370,1200)], cyan)
-arrow([(654,1270),(690,1270),(690,1364),(1320,1364),(1320,1270),(1370,1270)], amber)
-arrow([(1884,1225),(1985,1225)], amber)
+// Downward prerequisite arrows. Independent branches occupy separate columns.
+arrow([(485,580),(485,1160)], amber)
+arrow([(1400,580),(1400,760)], violet)
+arrow([(2315,580),(2315,760)], green)
+arrow([(1990,500),(1850,500),(1850,720),(1580,720),(1580,760)], green)
+arrow([(1075,875),(900,875),(900,1070),(680,1070),(680,1160)], cyan)
+arrow([(1400,990),(1400,1160)], cyan)
+arrow([(1725,875),(1880,875),(1880,1070),(2120,1070),(2120,1160)], cyan)
+arrow([(485,1380),(485,1510)], amber)
 // S-01 is an explicit additional prerequisite of S-06; its requirement is
 // printed on the S-06 card. The graph's transitive path already includes it.
 for c in cards { card(c) }
 
-rounded(140, 1418, 2360, 218, 28, color(0x101D30), stroke, line: 2)
-txt("LEGENDA", 177, 1453, 250, 24, .bold)
-rounded(178, 1505, 62, 10, 5, violet)
-txt("Kontrakt LLM", 259, 1492, 270, 21, .medium)
-rounded(538, 1505, 62, 10, 5, green)
-txt("Dostęp i konta", 619, 1492, 290, 21, .medium)
-rounded(953, 1505, 62, 10, 5, cyan)
-txt("Przegląd sygnałów", 1034, 1492, 340, 21, .medium)
-rounded(1418, 1505, 62, 10, 5, amber)
-txt("Produkcja i automat", 1499, 1492, 340, 21, .medium)
-arrow([(1890,1510),(1960,1510)], muted)
-txt("Warunek wstępny", 1982, 1492, 330, 21, .medium)
-txt("Karty mogą powstawać równolegle, gdy nie łączy ich strzałka. S-02 to gwiazda przewodnia. S-01 → S-06 wynika też z łańcucha przez S-02 i S-05.",
-    178, 1565, 2220, 21, .regular, muted)
-txt("Źródło: context/foundation/roadmap.md  ·  M-1 / v2  ·  27.09.2026  ·  Status: otwarty", 145, 1683, 1950, 19, .regular, muted)
-txt("ODROCZONE: REDDIT · WYKRESY · POWIADOMIENIA · ASK SZCZUR", 1530, 1683, 1120, 18, .semibold, color(0x71849C))
+// The four terminal slices converge at the release gate.
+arrow([(485,1730),(485,1830)], amber)
+arrow([(1400,1380),(1400,1830)], cyan)
+arrow([(2315,1380),(2315,1830)], cyan)
+arrow([(2640,870),(2695,870),(2695,1780),(2570,1780),(2570,1830)], green)
+
+rounded(140, 1830, 2500, 160, 30, color(0x193148), cyan, line: 4)
+rounded(140, 1830, 14, 160, 6, cyan)
+txt("BRAMKA WYDANIA MVP", 190, 1850, 1280, 43, .heavy)
+txt("Otwiera się po ukończeniu F-01, F-02 oraz S-01–S-07. Cztery końcowe wycinki zbiegają się tutaj.",
+    192, 1920, 1740, 25, .medium, muted)
+rounded(2220, 1862, 355, 90, 20, color(0x0B2332), cyan.withAlphaComponent(0.65), line: 2)
+txt("0 / 9 UKOŃCZONYCH", 2250, 1882, 300, 27, .bold, cyan)
+
+txt("PO MVP  /  NOWE FUNKCJONALNOŚCI", 140, 2050, 1730, 39, .heavy)
+txt("Odroczone kierunki rozwoju. Rozgałęzienia pokazują możliwości po MVP, bez narzucania kolejności realizacji.",
+    142, 2102, 2270, 22, .regular, muted)
+path([(1400,1990),(1400,2150)], violet.withAlphaComponent(0.8), 5)
+path([(397,2150),(2242,2150)], violet.withAlphaComponent(0.8), 5)
+for x in [CGFloat(397), 1012, 1627, 2242] {
+    arrow([(x,2150),(x,2220)], violet)
+}
+for x in phaseX {
+    let middle = x + 257
+    let gutter = x + 549
+    arrow([(middle,2150),(gutter,2150),(gutter,2620),(x + 514,2620)], violet.withAlphaComponent(0.67))
+}
+
+struct Parked {
+    let title: String, refs: String, description: String
+}
+let parked: [Parked] = [
+    Parked(title:"Reddit i komentarze", refs:"FR-023 + komentarze", description:"Drugie źródło postów oraz rozmowy pod postami, mapowane do wspólnego modelu."),
+    Parked(title:"Wykresy i alerty", refs:"FR-024 / FR-025", description:"Trend sygnałów na wykresie giełdowym i powiadomienia o obiecującym trendzie."),
+    Parked(title:"Bogatsza ocena sygnału", refs:"Poza MVP / przyszły pipeline", description:"Rozpoznawanie spółek, decyzja o wartości sygnału, nowość, zaangażowanie i modele ML."),
+    Parked(title:"Sortowanie i eksport", refs:"FR-008 / FR-011b / FR-031", description:"Porządkowanie listy po polach oceny, źródle i dacie oraz eksport CSV/JSON."),
+    Parked(title:"Panel kont i e-mail", refs:"FR-016 / 017 / 019 / 020", description:"Zarządzanie kontami w aplikacji, e-mail z zaproszeniem i własna nazwa wyświetlana."),
+    Parked(title:"Sterowanie i sesje", refs:"FR-022 / FR-029", description:"Ręczne uruchomienie pipeline’u z dashboardu i automatyczne wygasanie sesji."),
+    Parked(title:"Ask szczur", refs:"FR-032", description:"Pytania do LLM o wybrany sygnał bez opuszczania widoku posta."),
+    Parked(title:"Ochrona i skala", refs:"Poza MVP / infrastruktura", description:"2FA, logowanie zewnętrzne, reset hasła, nowe role, HA i własne kopie zapasowe.")
+]
+for (i, p) in parked.enumerated() {
+    let x = phaseX[i % 4]
+    let y: CGFloat = i < 4 ? 2220 : 2500
+    rounded(x, y, 514, 238, 22, color(0x111E32), stroke, line: 2)
+    rounded(x, y, 8, 238, 4, violet.withAlphaComponent(0.8))
+    txt(p.title, x + 28, y + 22, 458, 27, .bold)
+    txt(p.refs.uppercased(), x + 28, y + 65, 458, 17, .semibold, violet)
+    txt(p.description, x + 28, y + 104, 458, 21, .regular, muted)
+}
+
+rounded(140, 2800, 2360, 268, 28, color(0x101D30), stroke, line: 2)
+txt("LEGENDA", 177, 2832, 250, 24, .bold)
+rounded(178, 2884, 62, 10, 5, violet)
+txt("Kontrakt LLM", 259, 2871, 270, 21, .medium)
+rounded(538, 2884, 62, 10, 5, green)
+txt("Dostęp i konta", 619, 2871, 290, 21, .medium)
+rounded(953, 2884, 62, 10, 5, cyan)
+txt("Przegląd sygnałów", 1034, 2871, 340, 21, .medium)
+rounded(1418, 2884, 62, 10, 5, amber)
+txt("Produkcja i automat", 1499, 2871, 340, 21, .medium)
+arrow([(1890,2889),(1960,2889)], muted)
+txt("Warunek wstępny", 1982, 2871, 330, 21, .medium)
+txt("Przed bramką: strzałka = warunek wstępny; bez strzałki prace mogą iść równolegle. Po bramce: strzałka = możliwy kierunek rozwoju.",
+    178, 2935, 2220, 20, .regular, muted)
+txt("S-02 to gwiazda przewodnia. Warunek S-01 → S-06 wynika także z łańcucha przez S-02 i S-05.",
+    178, 2974, 2220, 20, .regular, muted)
+txt("F = fundament: przygotowanie techniczne lub operacyjne.   S = wycinek: działająca funkcja produktu od początku do końca.",
+    178, 3013, 2220, 21, .medium, white)
+
+txt("Źródło: context/foundation/roadmap.md  ·  M-1 / v2  ·  27.09.2026  ·  Status: otwarty", 145, 3120, 1950, 19, .regular, muted)
+txt("KOLEJNOŚĆ WYNIKA Z ZALEŻNOŚCI, NIE Z DAT", 1850, 3120, 800, 18, .semibold, color(0x71849C))
 
 context.flushGraphics()
 NSGraphicsContext.restoreGraphicsState()
