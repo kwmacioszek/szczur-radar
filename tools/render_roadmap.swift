@@ -108,12 +108,11 @@ txt("2 fundamenty / 7 wycinków", 2300, 172, 320, 21, .regular, muted)
 let phaseX: [CGFloat] = [140, 755, 1370, 1985]
 let stageY: [CGFloat] = [290, 690, 1090, 1440]
 let stageTitle = ["01 / FUNDAMENTY I DOSTĘP", "02 / PIERWSZY SYGNAŁ", "03 / FUNKCJE MVP", "04 / NADZÓR AUTOMATU"]
-let stageSub = ["Prace mogą ruszyć równolegle", "Ocena LLM trafia do użytkownika", "Widoki i codzienny przebieg", "Historia i sygnał awarii"]
 for i in 0..<4 {
-    let accent = i == 1 ? cyan : stroke
-    rounded(160, stageY[i], 2480, 3, 0, accent)
-    txt(stageTitle[i], 160, stageY[i] + 13, 720, 23, .bold, i == 1 ? cyan : white)
-    txt(stageSub[i], 890, stageY[i] + 15, 1200, 21, .regular, muted)
+    let accent = [amber, cyan, cyan, amber][i]
+    rounded(20, stageY[i] - 10, 455, 60, 16, color(0x1B3048), accent, line: 2)
+    rounded(20, stageY[i] - 10, 9, 60, 4, accent)
+    txt(stageTitle[i], 47, stageY[i] + 2, 410, 25, .bold)
 }
 
 let cards: [Card] = [
@@ -128,14 +127,14 @@ let cards: [Card] = [
     Card(id:"S-06", title:"Historia przebiegów", detail:"Dashboard admina i sygnał awarii", req:"S-05 + S-01", status:"propozycja", x:160, y:1510, w:650, h:220, accent:amber, star:false)
 ]
 
-// Downward prerequisite arrows. Independent branches occupy separate columns.
+// Direct downward prerequisite arrows. Independent branches occupy separate columns.
 arrow([(485,580),(485,1160)], amber)
 arrow([(1400,580),(1400,760)], violet)
 arrow([(2315,580),(2315,760)], green)
-arrow([(1990,500),(1850,500),(1850,720),(1580,720),(1580,760)], green)
-arrow([(1075,875),(900,875),(900,1070),(680,1070),(680,1160)], cyan)
+arrow([(2100,580),(1650,760)], green)
+arrow([(1170,990),(700,1160)], cyan)
 arrow([(1400,990),(1400,1160)], cyan)
-arrow([(1725,875),(1880,875),(1880,1070),(2120,1070),(2120,1160)], cyan)
+arrow([(1630,990),(2100,1160)], cyan)
 arrow([(485,1380),(485,1510)], amber)
 // S-01 is an explicit additional prerequisite of S-06; its requirement is
 // printed on the S-06 card. The graph's transitive path already includes it.
@@ -145,51 +144,53 @@ for c in cards { card(c) }
 arrow([(485,1730),(485,1830)], amber)
 arrow([(1400,1380),(1400,1830)], cyan)
 arrow([(2315,1380),(2315,1830)], cyan)
-arrow([(2640,870),(2695,870),(2695,1780),(2570,1780),(2570,1830)], green)
+arrow([(1990,980),(1810,1830)], green)
 
 rounded(140, 1830, 2500, 160, 30, color(0x193148), cyan, line: 4)
 rounded(140, 1830, 14, 160, 6, cyan)
 txt("BRAMKA WYDANIA MVP", 190, 1850, 1280, 43, .heavy)
 txt("Otwiera się po ukończeniu F-01, F-02 oraz S-01–S-07. Cztery końcowe wycinki zbiegają się tutaj.",
     192, 1920, 1740, 25, .medium, muted)
+txt("Dalej: niezależne kierunki rozwoju po MVP.", 192, 1954, 1550, 20, .regular, cyan)
 rounded(2220, 1862, 355, 90, 20, color(0x0B2332), cyan.withAlphaComponent(0.65), line: 2)
 txt("0 / 9 UKOŃCZONYCH", 2250, 1882, 300, 27, .bold, cyan)
 
-txt("PO MVP  /  NOWE FUNKCJONALNOŚCI", 140, 2050, 1730, 39, .heavy)
-txt("Odroczone kierunki rozwoju. Rozgałęzienia pokazują możliwości po MVP, bez narzucania kolejności realizacji.",
-    142, 2102, 2270, 22, .regular, muted)
-path([(1400,1990),(1400,2150)], violet.withAlphaComponent(0.8), 5)
-path([(397,2150),(2242,2150)], violet.withAlphaComponent(0.8), 5)
 for x in [CGFloat(397), 1012, 1627, 2242] {
-    arrow([(x,2150),(x,2220)], violet)
-}
-for x in phaseX {
-    let middle = x + 257
-    let gutter = x + 549
-    arrow([(middle,2150),(gutter,2150),(gutter,2620),(x + 514,2620)], violet.withAlphaComponent(0.67))
+    arrow([(x,1990),(x,2140)], violet)
 }
 
 struct Parked {
     let title: String, refs: String, description: String
 }
-let parked: [Parked] = [
-    Parked(title:"Reddit i komentarze", refs:"FR-023 + komentarze", description:"Drugie źródło postów oraz rozmowy pod postami, mapowane do wspólnego modelu."),
-    Parked(title:"Wykresy i alerty", refs:"FR-024 / FR-025", description:"Trend sygnałów na wykresie giełdowym i powiadomienia o obiecującym trendzie."),
-    Parked(title:"Bogatsza ocena sygnału", refs:"Poza MVP / przyszły pipeline", description:"Rozpoznawanie spółek, decyzja o wartości sygnału, nowość, zaangażowanie i modele ML."),
-    Parked(title:"Sortowanie i eksport", refs:"FR-008 / FR-011b / FR-031", description:"Porządkowanie listy po polach oceny, źródle i dacie oraz eksport CSV/JSON."),
-    Parked(title:"Panel kont i e-mail", refs:"FR-016 / 017 / 019 / 020", description:"Zarządzanie kontami w aplikacji, e-mail z zaproszeniem i własna nazwa wyświetlana."),
-    Parked(title:"Sterowanie i sesje", refs:"FR-022 / FR-029", description:"Ręczne uruchomienie pipeline’u z dashboardu i automatyczne wygasanie sesji."),
-    Parked(title:"Ask szczur", refs:"FR-032", description:"Pytania do LLM o wybrany sygnał bez opuszczania widoku posta."),
-    Parked(title:"Ochrona i skala", refs:"Poza MVP / infrastruktura", description:"2FA, logowanie zewnętrzne, reset hasła, nowe role, HA i własne kopie zapasowe.")
+let parked: [(label: String, first: Parked, second: Parked)] = [
+    ("01 / ŹRÓDŁA I JAKOŚĆ",
+     Parked(title:"Reddit i komentarze", refs:"FR-023 + komentarze", description:"Drugie źródło postów oraz rozmowy pod postami, mapowane do wspólnego modelu."),
+     Parked(title:"Bogatsza ocena sygnału", refs:"Poza MVP / przyszły pipeline", description:"Rozpoznawanie spółek, decyzja o wartości sygnału, nowość, zaangażowanie i modele ML.")),
+    ("02 / ANALIZA I ODKRYWANIE",
+     Parked(title:"Wykresy i alerty", refs:"FR-024 / FR-025", description:"Trend sygnałów na wykresie giełdowym i powiadomienia o obiecującym trendzie."),
+     Parked(title:"Ask szczur", refs:"FR-032", description:"Pytania do LLM o wybrany sygnał bez opuszczania widoku posta.")),
+    ("03 / OBSŁUGA UŻYTKOWNIKA",
+     Parked(title:"Sortowanie i eksport", refs:"FR-008 / FR-011b / FR-031", description:"Porządkowanie listy po polach oceny, źródle i dacie oraz eksport CSV/JSON."),
+     Parked(title:"Panel kont i e-mail", refs:"FR-016 / 017 / 019 / 020", description:"Zarządzanie kontami w aplikacji, e-mail z zaproszeniem i własna nazwa wyświetlana.")),
+    ("04 / OPERACJE I SKALA",
+     Parked(title:"Sterowanie i sesje", refs:"FR-022 / FR-029", description:"Ręczne uruchomienie pipeline’u z dashboardu i automatyczne wygasanie sesji."),
+     Parked(title:"Ochrona i skala", refs:"Poza MVP / infrastruktura", description:"2FA, logowanie zewnętrzne, reset hasła, nowe role, HA i własne kopie zapasowe."))
 ]
-for (i, p) in parked.enumerated() {
-    let x = phaseX[i % 4]
-    let y: CGFloat = i < 4 ? 2220 : 2500
-    rounded(x, y, 514, 238, 22, color(0x111E32), stroke, line: 2)
-    rounded(x, y, 8, 238, 4, violet.withAlphaComponent(0.8))
-    txt(p.title, x + 28, y + 22, 458, 27, .bold)
-    txt(p.refs.uppercased(), x + 28, y + 65, 458, 17, .semibold, violet)
-    txt(p.description, x + 28, y + 104, 458, 21, .regular, muted)
+for (i, group) in parked.enumerated() {
+    let x = phaseX[i]
+    let y: CGFloat = 2140
+    rounded(x, y, 514, 590, 22, color(0x111E32), stroke, line: 2)
+    rounded(x, y, 8, 590, 4, violet.withAlphaComponent(0.8))
+    txt("PO MVP  ·  " + group.label, x + 28, y + 26, 458, 19, .bold, violet)
+    rounded(x + 28, y + 78, 458, 1, 0, stroke)
+    let features = [group.first, group.second]
+    for (j, p) in features.enumerated() {
+        let top = y + (j == 0 ? 108 : 340)
+        txt(p.title, x + 28, top, 458, 27, .bold)
+        txt(p.refs.uppercased(), x + 28, top + 43, 458, 17, .semibold, violet)
+        txt(p.description, x + 28, top + 82, 458, 21, .regular, muted)
+    }
+    rounded(x + 28, y + 321, 458, 1, 0, stroke)
 }
 
 rounded(140, 2800, 2360, 268, 28, color(0x101D30), stroke, line: 2)
