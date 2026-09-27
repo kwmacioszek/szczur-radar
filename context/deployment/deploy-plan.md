@@ -51,13 +51,13 @@ Done by operator: `railway config apply` → **SUCCESS**. Project `szczur-radar`
 
 Remaining items are **operator-only Railway production operations**. The agent cannot perform them here: this session has no `railway` CLI on PATH, and the harness blocks Railway operations as `[Production Deploy]`. Operator checklist:
 - [ ] Billing guardrails: **$15** usage email alert + **$25** monthly hard compute limit (Usage / cost-control settings). See incident note below.
-- [ ] Verify all 3 services + Postgres are in Amsterdam (`europe-west4`): `railway status` / dashboard.
-- [ ] Generate a public domain for **web only** — NOT done yet (`railway domain list --service szczur-radar-web` returns none). `szczur-radar-api` + `postgres` confirmed **no** public domain ✓ (2026-09-27).
+- [x] Verify all 3 services + Postgres are in Amsterdam (`europe-west4`) — confirmed by operator (2026-09-27).
+- [x] Public domain generated for **web only**: `szczur-radar-web-production.up.railway.app` (live, verified 2026-09-27). `szczur-radar-api` + `postgres` confirmed **no** public domain ✓.
 - [x] Reference variables verified (`railway variables`, 2026-09-26): api `DATABASE_URL` → `postgres.railway.internal` ✓; web `API_PRIVATE_DOMAIN` → `szczur-radar-api.railway.internal` ✓. **`API_PORT` resolved EMPTY** ✗ — Railway does not expose a service's `PORT` as a referenceable variable. **Fixed in `.railway/railway.ts`**: pinned `API_INTERNAL_PORT=8000` (api binds it via `PORT`; web `API_PORT` is the matching literal). Needs `railway config plan` + `apply` to take effect, and must land **before** merge/deploy or the web→api proxy 502s.
-- [ ] **Rotate the Postgres password** before any production data: the full `DATABASE_URL` (with password) was surfaced in plaintext during verification. The DB is private-only (no public domain / TCP proxy) so external risk is low, but rotate it in the dashboard (human-only); the api's `DATABASE_URL` reference auto-updates.
+- [x] **Postgres password rotated** by operator (2026-09-27) — the earlier plaintext `DATABASE_URL` exposure is now dead. DB connectivity confirmed intact afterwards: `/api/ready` → 200 (api → Postgres query OK).
 - [ ] Enable Postgres backups + PITR, wait for the first restorable point, run a restore drill into a **separate** DB service, record the result. If this cannot be done → **stop before any production data, reopen the Render fallback** (risk register #1).
 
-Deploy state observed (2026-09-27, after merge + Hypercorn fix + `railway config apply`): `szczur-radar-api` **Online** (Hypercorn, deployment `78d0dfbb`), `szczur-radar-web` **Online**, `postgres` **Online**. api + postgres have **no** public domain ✓; **web has no public domain yet** (blocks endpoint verification). Region not shown by `railway status` — still verify Amsterdam in the dashboard.
+Deploy state (2026-09-27): `szczur-radar-api` **Online** (Hypercorn, deployment `78d0dfbb`), `szczur-radar-web` **Online** at `szczur-radar-web-production.up.railway.app`, `postgres` **Online**. api + postgres have **no** public domain ✓. All services + Postgres confirmed in Amsterdam (`europe-west4`).
 
 Incident note — raising the $25 hard limit: the hard limit can take services offline when reached. Raise or temporarily remove it in the Railway usage / cost-control settings (https://docs.railway.com/pricing/cost-control), then redeploy/restart the affected services so they resume.
 
@@ -67,15 +67,15 @@ Generate a Railway domain only for web; leave API and Postgres without public do
 
 Before collecting production data, enable scheduled Postgres volume backups and PITR, wait for the first restorable point, and perform a restore drill into a separate database service. Record the restored test result and recovery steps. Railway notes that PITR begins only after its first base backup (https://docs.railway.com/guides/postgres-backups-restores).
 
-### [ ] 4. Release and verify
+### [x] 4. Release and verify
 
-**Status (2026-09-27): released — api + web + postgres Online; api healthcheck fixed (Hypercorn). Endpoint verification via the web domain still pending (no web domain yet).**
+**Status (2026-09-27): released AND verified — web page + both API probes work through one HTTPS domain; api + DB private.**
 
 - PR #1 (scaffold) merged → autodeploy. First `szczur-radar-api` deploy **FAILED**: build OK and the app came up on `[::]:8000`, but Railway's **IPv4** healthcheck to `/api/health` got "service unavailable" for 5 min — uvicorn's `::` bind is IPv6-only from the CLI, so it rejects the IPv4 healthcheck.
 - Fix (PR #2, merged): API start command → **Hypercorn** (`hypercorn main:app --bind "[::]:$PORT"`), which is dual-stack (IPv6 for the web→api private proxy + IPv4 for the healthcheck); verified locally that both IPv4 and IPv6 reach the `::` bind.
 - **Config-apply gotcha (lesson):** merging PR #2 alone did NOT fix it — the deploy still ran uvicorn, because in the IaC model the start command lives in the service config and changes **only** via `railway config apply`. git merge + autodeploy rebuilds **code**, not **config**. After the operator ran `railway config apply` + redeploy, `szczur-radar-api` deployment **`78d0dfbb` SUCCESS** (log: Hypercorn `Running on http://[::]:8000`), healthcheck passed.
 - Verified read-only (2026-09-27): api + web + postgres **Online**; api + postgres have **no** public domain ✓. Project `szczur-radar`, env `production`.
-- ⏳ Still to verify (needs a web public domain first — see phase 3): `/`, `/api/health`, `/api/ready` through the web HTTPS domain; that an API 5xx passes through as JSON, not the SPA page. The "readiness 503 when DB down" path is already covered by the local test (`szczur-radar-api/tests/test_health.py`).
+- ✅ Verified through `https://szczur-radar-web-production.up.railway.app` (2026-09-27): `/` → 200 (SPA, `<title>Szczur Radar`); `/api/health` → 200 `{"status":"ok"}`; `/api/ready` → 200 `{"status":"ready"}` (api → Postgres OK, incl. after the password rotation); `/api/nope` → 404 `{"detail":"Not Found"}` as JSON — API errors pass through the proxy, not the SPA page. api + postgres remain private. The "readiness 503 when DB down" path is covered by the local test (`szczur-radar-api/tests/test_health.py`).
 
 Merge the checked scaffold to main, confirm GitHub Actions succeeds, then enable autodeploy and Wait for CI for both services. Check the deployed commit and deployment status for each service.
 
