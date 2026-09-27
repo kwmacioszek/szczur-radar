@@ -69,8 +69,9 @@ Before collecting production data, enable scheduled Postgres volume backups and 
 
 ### [ ] 4. Release and verify
 
-**Status (2026-09-26): blocked on the human merge gate + operator autodeploy toggle.**
+**Status (2026-09-27): PR #1 merged; first api autodeploy FAILED on healthcheck — fixed (see below).**
 
+- 2026-09-27: PR #1 merged → autodeploy. `szczur-radar-web` **Online**, `postgres` **Online**, **`szczur-radar-api` FAILED**. Root cause (deploy logs): build OK and the app came up on `[::]:8000`, but Railway's **IPv4** healthcheck to `/api/health` got "service unavailable" — uvicorn's `::` bind is IPv6-only from the CLI, so it rejects the IPv4 healthcheck. Fix on branch `fix/api-healthcheck-hypercorn`: API start command → **Hypercorn** (`hypercorn main:app --bind "[::]:$PORT"`), which is dual-stack (IPv6 private networking + IPv4 healthcheck); verified locally (both IPv4 and IPv6 reach the `::` bind). Merge → autodeploy retries.
 - Release candidate: **PR #1** (`deploy/railway-scaffold` → `main`), CI green.
 - Pre-merge code review (2026-09-27): 8 findings, all quality/hygiene (no runtime bug). Applied on the branch: `API_PORT` proxy fallback aligned to 8000; two `infrastructure.md` doc contradictions fixed; orphaned `public/icons.svg`, empty `App.vue` script block, and redundant `caddy fmt` build step removed; stray root IaC npm files removed, SDK moved to `.railway/` (later corrected — see phase 3 SDK-location fix). CI build duplication removed: dropped the separate `frontend` job; the web container build (real Dockerfile) is now the single frontend typecheck + build gate.
 - Merging PR #1 to `main` is the **human production-approval gate** (auto-deploy on merge) — not performed by the agent. NOTE: the services' IaC source is `main`, so until merge, any deploy from `main` builds the pre-scaffold stub (no FastAPI `app`, no web Dockerfile). Enable Wait for CI **before** relying on autodeploy.
