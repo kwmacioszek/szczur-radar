@@ -6,6 +6,16 @@ Deploy the scaffold first: a neutral Vue page, a minimal FastAPI app, and Postgr
 
 During implementation, update the existing context/deployment/deploy-plan.md in place. Use its checkboxes to record completion, deployment IDs, test results, and the web URL—never secret values.
 
+## Release status (2026-09-27)
+
+**Scaffold release: DONE and live** at `https://szczur-radar-web-production.up.railway.app` — web page + both API probes work through one HTTPS domain, api + Postgres private, CI-gated, PITR enabled. Phases 1–4 complete.
+
+**Two exceptions, both gated on a Railway subscription (deferred; no production data is live):**
+1. **Cost limits** ($15 alert / $25 hard) — `railway usage limit set` requires an active subscription.
+2. **Clean restore drill** — PITR recovery-to-target is proven, but a healthy, query-verified restored instance needs a larger volume than the trial allows.
+
+Both are the hard gate **before Phase 6 (data collection)**: subscribe → set limits + re-run the restore drill until query-verified (else Render fallback, risk #1). Phase 5 (isolated PR previews) is optional/later.
+
 ## Phases
 
 ### [x] 1. Prepare the application
@@ -41,7 +51,7 @@ Use Railway native GitHub autodeploy for each service, gated by Wait for CI. Git
 
 Make targeted corrections to the infrastructure and stack guidance for the selected private API route and current IaC flow. Correct the stale deployment line in AGENTS.md while preserving the user’s other working changes.
 
-### [ ] 3. Provision and protect production
+### [~] 3. Provision and protect production
 
 **Status (2026-09-26): partially done by operator — the remainder is a genuine operator-only gate.**
 
@@ -115,5 +125,7 @@ Enable real outbound Wykop and LLM calls only in production after credentials, s
 ## Acceptance and assumptions
 
 The first release passes when the web page and both API probes work through one HTTPS domain, the API and database remain private, CI gates deployments, the usage alert and hard limit are active, and a Postgres restore drill succeeds. The daily pipeline, accounts, Wykop, and LLM integration are later phases.
+
+**Status (2026-09-27):** met except the usage limit and a clean restore drill — both blocked by the trial (need a subscription), deferred while no production data is live (see **Release status** above). They are the gate before Phase 6.
 
 This plan follows the chosen Railway platform and the confirmed scaffold-first, private-proxy, native-autodeploy, full-preview decisions. No repository or Railway changes are made while this plan is under review.
