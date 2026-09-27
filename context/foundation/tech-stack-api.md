@@ -27,3 +27,10 @@ hints:
 ## Why this stack
 
 Szczur Radar's backend (this module only — the Vue frontend is a separate tech-stack-selector run) is a FastAPI-based REST API wrapping a LangGraph-orchestrated data and LLM pipeline. FastAPI was chosen because its native Pydantic typing aligns directly with LangGraph's structured input/output, keeping the pipeline-to-API boundary strongly typed end-to-end. Persistence is PostgreSQL via SQLAlchemy 2 and Alembic for migrations, assembled on top of FastAPI rather than inherited from the starter. Authentication uses FastAPI Users for the parts that fit (user model, password hashing, JWT, route guards); public self-registration is disabled, since the product has no public sign-up and no automated email — bootstrap, recovery, and user creation are handled by project-specific CLI commands instead. LangGraph is kept independent of the HTTP layer, so the pipeline can be invoked from scheduled jobs, CLI commands, API endpoints, or tests without change. Deployment targets Railway; CI runs on GitHub Actions with auto-deploy-on-merge, matching the solo, short-feedback profile.
+
+## Raw source payload storage boundary
+
+Queryable, normalized post data and LLM-derived fields belong in PostgreSQL. The original source payload is a different concern: treat it as an immutable raw artifact behind a dedicated storage interface and keep only a stable reference from the application model. Do not embed the full raw JSON in the primary post row merely because PostgreSQL can store JSONB.
+
+The raw-payload interface must preserve the exact source payload, support transparent lossless compression, and allow the physical backend to change without changing the domain model or API contract. The initial backend is a downstream implementation decision; Railway Buckets are the preferred infrastructure candidate if RAW growth would otherwise consume the PostgreSQL volume. A database-backed implementation, if used temporarily, must still keep RAW physically/logically separate from the primary query path so it can be migrated later without rewriting post records.
+

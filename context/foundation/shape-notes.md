@@ -36,6 +36,8 @@ checkpoint:
       decision: "dodane FR-030 (must-have): etykieta z datą/godziną ostatniej UDANEJ aktualizacji danych, widoczna dla wszystkich ról; nigdy nie pokazuje daty nieudanego przebiegu — eliminuje mylące komunikaty bez potrzeby dodatkowego statusu w widoku usera"
     - topic: "retencja danych i eksport"
       decision: "retencja: bezterminowa, brak custom logiki archiwizacji w MVP — backup to odpowiedzialność platformy hostingowej (Railway), nie aplikacji (Forward: infra). Rozdzielone od realnej potrzeby: dodane FR-031 (nice-to-have) — eksport aktualnie widocznej/przefiltrowanej listy postów do CSV/JSON, do czytania offline"
+    - topic: "oddzielenie RAW payloadów od danych operacyjnych"
+      decision: "surowy payload źródłowy pozostaje bezterminowo dostępny, ale jest oddzielony od znormalizowanych danych używanych do filtrowania, sortowania i oceny. Granica storage musi umożliwiać bezstratną kompresję oraz późniejsze przeniesienie RAW niezależnie od modelu domenowego i bez utraty widoku surowych danych. Nie przesądza to jeszcze konkretnego backendu storage ani algorytmu kompresji"
     - topic: "prywatność kont i wydajność"
       decision: "user nie widzi danych kont innych userów (tylko wspólne przetworzone posty są dzielone); brak sztywnego wymogu czasu odpowiedzi w MVP (kilka sekund akceptowalne)"
     - topic: "product_type"
@@ -329,6 +331,7 @@ Użytkownik spotyka tę ocenę na liście i w widoku szczegółowym w aplikacji 
 - Użytkownik nie ma wglądu w dane kont innych userów (e-maile, aktywność) — widoczne wspólnie są wyłącznie przetworzone posty; dane kontowe ograniczone do własnego konta.
 - Aplikacja webowa nie ma sztywnego wymogu czasu odpowiedzi w MVP — kilkusekundowe ładowanie przy normalnym obciążeniu jest akceptowalne.
 - Dane (posty, konta) są przechowywane bezterminowo w MVP — brak automatycznej retencji/czyszczenia. Bezpieczeństwo przed utratą danych (backup) jest odpowiedzialnością platformy hostingowej, nie custom logiki aplikacji (patrz `## Forward: infra`).
+- Oryginalny payload źródłowy każdego zebranego posta pozostaje dostępny bez utraty informacji, ale jest utrzymywany niezależnie od znormalizowanych danych używanych przez aplikację; jego storage musi umożliwiać bezstratną kompresję i późniejsze przeniesienie RAW bez zmiany kontraktu aplikacji ani utraty widoku surowego posta.
 
 ## User Stories
 
@@ -383,6 +386,7 @@ Informacyjne, nie wchodzi do PRD — do podjęcia w `/10x-tech-stack-selector`:
 - Nowy komponent: CLI operatorskie (bootstrap/recovery/tworzenie usera, FR-026/027/028) — musi współdzielić logikę uwierzytelniania z backendem API (Moduł 1), nie być osobnym, niezależnym systemem kont.
 - Zasada graniczna z poprzedniej sesji (nadal aktualna): cała komunikacja aplikacji webowej z backendem przez API — bez bezpośrednich wywołań poza tą granicą.
 - Kontrakt mappera per źródło (przeniesione z poprzedniej sesji): każde źródło (Wykop, Reddit, przyszłe) mapuje własne, surowe dane do wspólnego, ustandaryzowanego modelu przed dalszym przetwarzaniem; warstwa downstream (ocena LLM, zapis, API) nie powinna zależeć od formatu konkretnego źródła. Wejście do LLM ma jasny, wspólny kontrakt; wyjście z LLM ma jasny, ustandaryzowany kontrakt (schemat z FR-004). To wskazówka architektoniczna dla `/10x-tech-stack-selector`, nie osobny FR — zgodna z NFR mówiącym, że dodanie nowego źródła ogranicza się do pozyskania i mapowania, bez zmiany warstwy oceny/zapisu/udostępniania.
+- Nowa granica storage dla RAW: surowy payload źródłowy nie powinien być częścią głównego, zapytaniowego rekordu posta. Warstwa backendu ma traktować RAW jako osobny, niezmienny artefakt dostępny przez stabilne odwołanie, tak aby można go było bezstratnie kompresować i w przyszłości przenieść między backendami storage bez zmiany modelu domenowego ani API. Konkretny backend i algorytm kompresji są decyzją downstream.
 
 ## Forward: technical-roadmap
 
@@ -399,3 +403,5 @@ Informacyjne, nie wchodzi do PRD — do podjęcia w `/10x-infra-research`:
 - Platforma docelowa: Railway (nie self-hosted).
 - Aplikacja będzie publicznie osiągalna pod adresem internetowym — stąd wymóg uwierzytelniania (patrz `## Access Control`).
 - Retencja/backup: sprawdzić możliwości managed backupu bazy danych na Railway — PRD zakłada bezterminowe przechowywanie danych bez custom logiki archiwizacji w aplikacji; bezpieczeństwo przed utratą danych ma zapewniać platforma, nie kod produktu.
+- Wzrost RAW/storage: stary Szczur Radar miał 11 767 wpisów z 29 dni i bazę SQLite ok. 46 MB (ok. 45 MB w `items`), co daje historyczny punkt odniesienia ok. 4 KB na wpis i ok. 0,56 GB/rok przy podobnym ruchu. Nowa wersja ma większy narzut (PostgreSQL, indeksy, wynik LLM), więc przed implementacją ingestu trzeba zaprojektować RAW jako osobny, kompresowalny artefakt i monitorować jego wzrost niezależnie od danych operacyjnych.
+- Railway-specific follow-up: porównać trzymanie RAW w osobnym storage z trzymaniem go na wolumenie Postgresa. Według dokumentacji Railway sprawdzonej 2026-09-27 Hobby ma 5 GB Volume Storage, podczas gdy Buckets mają na Hobby łączny limit 1 TB i są rozliczane osobno; to czyni object storage naturalnym kandydatem dla długowiecznych RAW payloadów, ale decyzja fizycznego backendu należy do planowania implementacji.
