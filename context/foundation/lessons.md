@@ -15,3 +15,10 @@
 - **Problem**: Trzymanie pełnego RAW JSON inline w głównym rekordzie posta niepotrzebnie powiększa relacyjną bazę i indeksowany/queryable storage, wiąże archiwalny payload z modelem domenowym oraz utrudnia późniejszą kompresję lub migrację do tańszego storage. Historyczny Szczur Radar osiągnął ok. 46 MB przy 11 767 wpisach z 29 dni, więc wzrost jest mierzalny i kumuluje się latami.
 - **Rule**: RAW JSON z zewnętrznych źródeł zawsze przechowuj oddzielnie od znormalizowanych rekordów aplikacyjnych. Zachowaj RAW bezstratnie i projektuj jego storage tak, aby można go było transparentnie kompresować oraz później przenieść do innego backendu bez zmiany modelu domenowego, API ani utraty widoku surowych danych.
 - **Applies to**: plan, plan-review, implement, impl-review
+
+## Railway trial: limity kosztów za paywallem, ale PITR działa
+
+- **Context**: Wdrożenie MVP na Railway na planie **trial** (bez aktywnej subskrypcji).
+- **Problem**: Na trialu `railway usage limit set` zwraca „Usage limits require an active subscription" — nie da się ustawić soft/hard limitu kosztów, więc egzekwowalnej bramki wydatków nie ma do czasu subskrypcji. PITR jest natomiast dostępne na trialu: `railway postgres pitr enable` tworzy base backup + ciągłe archiwizowanie WAL. Ale automatyczny harmonogram backupów (`railway postgres pitr schedule set`) jest gated („You do not have access to this resource"). Dodatkowo `pitr progress --watch` dotyczy tylko klastrów HA — na pojedynczej instancji zwraca mylący komunikat, który łatwo wziąć za brak PITR.
+- **Rule**: Na trialu Railway planuj kontrolę kosztów wokół budżetu trialu (brak egzekwowalnego twardego limitu) i ustaw limity ($ alert + hard limit) natychmiast po wykupieniu subskrypcji. Do odtwarzalności na trialu polegaj na PITR (ciągłe archiwizowanie + base backup z `pitr enable`); cykliczny harmonogram backupów traktuj jako pozycję po-subskrypcyjną. Zdrowie backupów sprawdzaj przez `railway postgres pitr status --json` (`backupSetCount`, `archiverHealthy`, `maxRestoreTime`), a nie przez `pitr progress` na usłudze nie-HA.
+- **Applies to**: infra, deploy, plan
