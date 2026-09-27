@@ -245,6 +245,7 @@ Administrator (operator wdrożenia) — zarządza dostępem: tworzy konta dla za
 - Użytkownik nie ma wglądu w dane kont innych userów (e-maile, aktywność) — widoczne wspólnie są wyłącznie przetworzone posty; dane kontowe ograniczone do własnego konta.
 - Aplikacja webowa nie ma sztywnego wymogu czasu odpowiedzi w MVP — kilkusekundowe ładowanie przy normalnym obciążeniu jest akceptowalne.
 - Dane (posty, konta) są przechowywane bezterminowo w MVP — brak automatycznej retencji/czyszczenia. Bezpieczeństwo przed utratą danych jest odpowiedzialnością platformy hostingowej, nie logiki aplikacji.
+- Oryginalny payload źródłowy każdego zebranego posta pozostaje dostępny bez utraty informacji, ale jest utrzymywany niezależnie od znormalizowanych danych używanych przez aplikację. Sposób jego przechowywania musi pozwalać na niezależną, bezstratną kompresję lub przeniesienie surowych danych bez zmiany zachowania aplikacji ani utraty dostępu do widoku surowego posta.
 
 ## Business Logic
 

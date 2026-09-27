@@ -86,6 +86,7 @@ The team put api, web, cron and Postgres on Railway on the Hobby plan, and every
 - The frontend is not a free CDN: Railpack serves `dist/` with Caddy in a usage-billed container.
 - Private networking is IPv6. Service-to-service connections require listening on `::` (Railway's FastAPI guide uses Hypercorn bound to `::`).
 - Nixpacks is deprecated. Tutorials and config based on `nixpacks.toml` no longer apply; the builder is Railpack.
+- Long-lived RAW payloads grow independently from the query workload. Railway Hobby currently exposes 5 GB of Volume Storage for a service, while Buckets allow up to 1 TB combined storage on Hobby; storing every source JSON inline with Postgres can therefore make the volume limit arrive years earlier than the actual relational workload requires.
 
 ## Operational Story
 
@@ -108,8 +109,13 @@ The team put api, web, cron and Postgres on Railway on the Hobby plan, and every
 | API URL baked into the frontend build | Unknown unknowns | M | L | Avoided: the SPA calls `/api/*` on its own origin (same-origin Caddy proxy), so there is no build-time `VITE_API_URL` and no cross-origin CORS to maintain. |
 | Service-to-service over IPv6 private network | Unknown unknowns | L | M | web→api goes over the private network via the Caddy `/api/*` reverse proxy, so the API binds `::` (`uvicorn --host ::`) and stays private (no public domain). For cron→Postgres, verify the driver connects to the IPv6 host. |
 | Python version change if `.python-version` is removed | Unknown unknowns | L | M | Keep `szczur-radar-api/.python-version` in the repo; optionally also `RAILPACK_PYTHON_VERSION=3.13`. |
+| RAW payload growth consumes the Postgres volume even though RAW is rarely queried | Research finding | M | M | Keep RAW behind a separate storage boundary, preserve it losslessly, and make compression transparent. Do not store full RAW JSON inline in the primary post row. Before production ingest, decide whether the initial backend is a separate DB representation or Railway Bucket; Bucket is the preferred candidate if it avoids consuming the 5 GB Hobby Postgres volume. Monitor RAW bytes and relational DB bytes separately. |
 | Cost above the Hobby estimate (~$5–15/mo; derived, not quoted) | Research finding | M | L | Set a usage limit in Railway; the Pro plan (~$20/mo) is acceptable given the DX preference and possibly required for backups. |
 | Only one EU region (Amsterdam) | Research finding | L | L | Acceptable (single region, small scale); all services and Postgres in the same region. |
+
+### Storage note (checked 2026-09-27)
+
+Railway documents Hobby Volume Storage at 5 GB and volume storage billing at $0.15/GB-month. Railway Buckets are S3-compatible, billed at $0.015/GB-month, and have a combined 1 TB capacity limit on Hobby. Buckets use the public network, so uploads from a Railway service count as service egress. Sources: https://docs.railway.com/volumes/reference, https://docs.railway.com/pricing/plans, https://docs.railway.com/storage-buckets/billing.
 
 ## Getting Started
 
