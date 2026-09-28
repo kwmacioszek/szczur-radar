@@ -1,9 +1,9 @@
 ---
 change_id: assessment-contract-harness
 title: Egzekwowany kontrakt oceny LLM V1 z harnessem na prawdziwych modelach
-status: planned
+status: plan_reviewed
 created: 2026-09-27
-updated: 2026-09-27
+updated: 2026-09-28
 archived_at: null
 ---
 

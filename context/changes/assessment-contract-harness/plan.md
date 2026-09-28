@@ -25,9 +25,9 @@ Weryfikacja: zielone CI na PR, raport w folderze zmiany, nagrania modelu domyśl
 
 ### Key Discoveries:
 
-- `szczur-radar-api/tests/test_health.py:24` — wzorzec podmiany zależności przez `monkeypatch.setattr` na module; sztuczny dostawca w fazie 2 idzie tą samą drogą (wstrzyknięcie przez parametr/port, nie sieć).
-- `szczur-radar-api/app/database.py:30` — konfiguracja z `os.environ` czytana leniwie przy pierwszym użyciu, więc import modułu nie wymaga zmiennych; konfiguracja modelu oceny powiela ten wzorzec (import bez kluczy API).
-- `.github/workflows/ci.yml:23` — `uv sync --locked`: nowe zależności muszą trafić do `uv.lock` w tym samym commicie.
+- `szczur-radar-api/tests/test_health.py:29` — wzorzec podmiany zależności przez `monkeypatch.setattr` na module; sztuczny dostawca w fazie 2 idzie tą samą drogą (wstrzyknięcie przez parametr/port, nie sieć).
+- `szczur-radar-api/app/database.py:38` — konfiguracja z `os.environ` czytana leniwie przy pierwszym użyciu, więc import modułu nie wymaga zmiennych; konfiguracja modelu oceny powiela ten wzorzec (import bez kluczy API).
+- `.github/workflows/ci.yml:25` — `uv sync --locked`: nowe zależności muszą trafić do `uv.lock` w tym samym commicie.
 - `contract-v1.md` §10 pkt 8 — „exact substring”: dopasowanie dosłowne, bez normalizacji białych znaków/Unicode; odstępstwo = `fabricated_evidence`, a trwale niezaliczany przypadek idzie ścieżką §14 (failing fixture → zmiana kontraktu), nie poluzowaniem walidatora.
 - `context/foundation/lessons.md` — „Jedna gałąź + jeden PR”: cała zmiana na jednej gałęzi `feature/assessment-contract-harness`, jeden PR, merge do `main` raz po fazie 3.
 
@@ -57,7 +57,7 @@ Jedna prawda o kształcie: modele Pydantic z fazy 1. Schemat wysyłany do dostaw
 
 **Pusty cytat.** `quote` o długości 0 jest podciągiem każdego tekstu, więc model wymaga `quote` niepustego (min. 1 znak) — inaczej sprawdzenie evidence byłoby puste.
 
-**Strukturyzowane wyjście per dostawca.** `with_structured_output(..., include_raw=True)` z metodą dobraną do dostawcy (json_schema tam, gdzie wspierane; function calling / tryb JSON dla DeepSeek). Metoda jest konfiguracją adaptera, nie kontraktem; wynik sparsowany przez LangChain jest ignorowany na rzecz walidacji surowej treści naszym modelem.
+**Strukturyzowane wyjście per dostawca.** `with_structured_output(..., include_raw=True)` z metodą ustaloną w adapterze dostawcy: json_schema dla OpenAI / Anthropic / Gemini (JSON w `raw.text`), function calling `strict=True` dla DeepSeek (JSON w `raw.tool_calls[0].args` lub `raw.invalid_tool_calls`). Metoda i odczyt są konfiguracją adaptera, nie kontraktem; wynik sparsowany przez LangChain (`parsed`) jest ignorowany na rzecz walidacji surowej treści naszym modelem. `parsing_error` łapie tylko błędy parsera — błędy API i timeouty nadal rzucają wyjątki i są mapowane w klasie bazowej.
 
 ## Phase 1: Kontrakt jako kod
 
@@ -112,7 +112,7 @@ Modele Pydantic 1:1 z kontraktem V1, walidator 16 niezmienników z klasyfikacją
 
 ### Overview
 
-Port dostawcy z jedną implementacją na LangChain, prompt V1 z wersją, funkcja `assess()` składająca wywołanie + walidację w wynik z pochodzeniem lub jawnym błędem. Testy wyłącznie na sztucznym dostawcy.
+Port dostawcy z adapterem per dostawca na LangChain, prompt V1 z wersją, funkcja `assess()` składająca wywołanie + walidację w wynik z pochodzeniem lub jawnym błędem. Testy wyłącznie na sztucznym dostawcy.
 
 ### Changes Required:
 
@@ -124,13 +124,25 @@ Port dostawcy z jedną implementacją na LangChain, prompt V1 z wersją, funkcja
 
 **Contract**: `uv add langchain langchain-openai langchain-anthropic langchain-google-genai langchain-deepseek`; `uv.lock` zaktualizowany w tym samym commicie (`uv sync --locked` w CI).
 
-#### 2. Port dostawcy i implementacja LangChain
+#### 1a. Ochrona kluczy API
 
-**File**: `szczur-radar-api/app/assessment/provider.py`
+**File**: `.gitignore`
 
-**Intent**: Oddzielić ocenę od konkretnego dostawcy, żeby porównywać modele konfiguracją i testować `assess()` bez sieci.
+**Intent**: Klucze dostawców trzymane lokalnie nie mogą trafić do repo, jeśli ktoś użyje pliku `.env`.
 
-**Contract**: Protokół `AssessmentProvider` z metodą `complete(system_prompt: str, input: AssessmentInputV1) -> ProviderResponse`; `ProviderResponse(raw_text: str | None, provider: str, model: str, input_tokens: int | None, output_tokens: int | None)`. Implementacja `LangChainProvider.from_spec("provider:model", timeout_s=...)` przez `init_chat_model` + `with_structured_output(AssessmentOutputV1 lub schemat z niego wyprowadzony, include_raw=True, method=<per dostawca>)`; surowa treść z `raw`, tokeny z `usage_metadata`. Błędy transportu/dostawcy (w tym odmowa) mapowane na wyjątek z klasą `provider_error`, przekroczenie czasu na `timeout`. Ponowienia wyłącznie transportowe wbudowane w klienta (429/5xx/połączenie).
+**Contract**: Dodane wpisy `.env` i `.env.*`.
+
+#### 2. Port dostawcy i adaptery per dostawca
+
+**File**: `szczur-radar-api/app/assessment/providers/__init__.py`, `providers/base.py`, `providers/openai.py`, `providers/anthropic.py`, `providers/gemini.py`, `providers/deepseek.py`
+
+**Intent**: Oddzielić ocenę od konkretnego dostawcy, żeby porównywać modele konfiguracją i testować `assess()` bez sieci. Każdy dostawca ma własny adapter, bo dostawcy oddają JSON w różnych miejscach odpowiedzi (json_schema → tekst; function calling → `tool_calls`), a DeepSeek nie ma json_schema w API (`langchain-deepseek` po cichu zamienia je na function calling).
+
+**Contract**: `base.py`: protokół `AssessmentProvider` z metodą `complete(system_prompt: str, input: AssessmentInputV1) -> ProviderResponse`; `ProviderResponse(raw_text: str | None, provider: str, model: str, input_tokens: int | None, output_tokens: int | None)`; klasa bazowa `LangChainProvider` — buduje model przez `init_chat_model`, woła `with_structured_output(AssessmentOutputV1 lub schemat z niego wyprowadzony, include_raw=True, method=self.method)`, bierze tokeny z `raw.usage_metadata`, mapuje błędy transportu/dostawcy (w tym odmowę) na `provider_error`, przekroczenie czasu na `timeout`; metoda abstrakcyjna `extract_raw(raw: AIMessage) -> str | None` (`None` = brak JSON → `invalid_structured_output`). Adaptery:
+- `openai.py`, `anthropic.py`, `gemini.py`: `method="json_schema"`; `extract_raw` zwraca `raw.text` (nie `raw.content` — treść może być listą bloków).
+- `deepseek.py`: `method="function_calling"`, `strict=True`; `extract_raw` zwraca `json.dumps(raw.tool_calls[0]["args"])`, albo surowy string z `raw.invalid_tool_calls[0]["args"]`, albo `None`.
+
+`__init__.py`: rejestr `from_spec("provider:model", timeout_s=...)` wybierający adapter po prefiksie (`openai`, `anthropic`, `google_genai`, `deepseek`); nieznany prefiks → błąd konfiguracji. Ponowienia wyłącznie transportowe wbudowane w klienta (429/5xx/połączenie), ustawione jawnie na `max_retries=2` w każdym adapterze (Gemini domyślnie ma 6). Timeout = `(langchain_core.exceptions.ModelTimeoutError, httpx.TimeoutException)` → `timeout` (Gemini zgłasza surowy `httpx.TimeoutException`, pozostali `ModelTimeoutError`).
 
 #### 3. Prompt V1
 
@@ -154,7 +166,7 @@ Port dostawcy z jedną implementacją na LangChain, prompt V1 z wersją, funkcja
 
 **Intent**: Udowodnić klasyfikację błędów i brak ponowień bez sieci.
 
-**Contract**: Sztuczny dostawca zwracający zadany surowy tekst lub rzucający błąd; przypadki: poprawny wynik → `ok` z wypełnionym pochodzeniem; błąd dostawcy → `provider_error`; timeout → `timeout`; nie-JSON → `invalid_structured_output`; obce pole → `schema_violation`; zmyślony cytat → `fabricated_evidence`; sztuczny dostawca wywołany dokładnie raz przy każdym błędzie; wiadomość do dostawcy zawiera tylko pola `AssessmentInputV1`.
+**Contract**: `extract_raw` każdego adaptera testowany na spreparowanych `AIMessage` (tekst, lista bloków, `tool_calls`, `invalid_tool_calls`, brak JSON). Sztuczny dostawca zwracający zadany surowy tekst lub rzucający błąd; przypadki: poprawny wynik → `ok` z wypełnionym pochodzeniem; błąd dostawcy → `provider_error`; timeout (zarówno `ModelTimeoutError`, jak i `httpx.TimeoutException`) → `timeout`; nie-JSON → `invalid_structured_output`; obce pole → `schema_violation`; zmyślony cytat → `fabricated_evidence`; sztuczny dostawca wywołany dokładnie raz przy każdym błędzie; wiadomość do dostawcy zawiera tylko pola `AssessmentInputV1`.
 
 ### Success Criteria:
 
@@ -201,7 +213,7 @@ Port dostawcy z jedną implementacją na LangChain, prompt V1 z wersją, funkcja
 - `sarcasm`: nie jest prawdą, że target → `bullish` bez flagi `possible_sarcasm`.
 - `non_investment_content`: `not_investment_related`, `targets = []`, `claims = []`, `modifiers = []`, `flags = []`.
 
-Przypadek zalicza się, gdy wynik `assess()` ma `status = ok` i predykat zwraca pustą listę.
+„Target z anchorem X” oznacza target, którego `anchor.quote` zawiera X jako podciąg (z rozróżnieniem wielkości liter), np. „KGHM” pasuje do „akcje KGHM”. Przypadek zalicza się, gdy wynik `assess()` ma `status = ok` i predykat zwraca pustą listę.
 
 #### 2. Macierz modeli i przebieg `live`
 
@@ -209,7 +221,7 @@ Przypadek zalicza się, gdy wynik `assess()` ma `status = ok` i predykat zwraca 
 
 **Intent**: Uruchamiać przypadki na prawdziwych modelach tylko na żądanie i zapisywać każdą odpowiedź jako nagranie.
 
-**Contract**: `live_models.toml` — lista wpisów `{spec = "provider:model", price_in_per_mtok, price_out_per_mtok}` (macierz + cennik do raportu; nadpisywalna env `ASSESSMENT_LIVE_MODELS`). `pyproject.toml`: `[tool.pytest.ini_options]` z markerem `live` i `addopts = "-m 'not live'"` (CI i domyślne `pytest` pomijają live; `uv run pytest -m live` je włącza). `test_live.py`: parametryzacja model × przypadek × uruchomienie 1..3; model bez klucza API w env → `skip` z nazwą brakującej zmiennej. Każde uruchomienie zapisuje nagranie `tests/assessment/recordings/<provider>__<model>/<case_id>__run<n>.json` = `{case_id, spec, run, prompt_version, contract_version, recorded_at, raw_text, input_tokens, output_tokens, duration_ms, status, failure_class, violations, semantic_failures}`. Nagrania zapisywane są także dla niezaliczonych uruchomień.
+**Contract**: `live_models.toml` — lista wpisów `{spec = "provider:model", price_in_per_mtok, price_out_per_mtok}` (macierz + cennik do raportu; nadpisywalna env `ASSESSMENT_LIVE_MODELS`). `pyproject.toml`: `[tool.pytest.ini_options]` z markerem `live` i `addopts = "-m 'not live'"` (CI i domyślne `pytest` pomijają live; `uv run pytest -m live` je włącza). `test_live.py`: parametryzacja model × przypadek × uruchomienie 1..3; model bez klucza API w env → `skip` z nazwą brakującej zmiennej. Env `ASSESSMENT_LIVE_MODELS` (lista `provider:model` po przecinku) zawęża macierz, np. do jednego modelu; bez niej leci cała lista z `live_models.toml`. Testy live tylko nagrywają (nie asertują zaliczenia) — werdykt ocenia test nagrań offline i raport. Każde uruchomienie zapisuje nagranie `tests/assessment/recordings/<provider>__<model>/<case_id>__run<n>.json` = `{case_id, spec, run, prompt_version, contract_version, recorded_at, raw_text, input_tokens, output_tokens, duration_ms, status, failure_class, violations, semantic_failures}`. Nagrania zapisywane są także dla niezaliczonych uruchomień.
 
 #### 3. Odtwarzanie nagrań offline (CI)
 
@@ -225,7 +237,7 @@ Przypadek zalicza się, gdy wynik `assess()` ma `status = ok` i predykat zwraca 
 
 **Intent**: Dać użytkownikowi podstawę do wyboru modelu: jakość, stabilność i koszt obok siebie.
 
-**Contract**: `uv run python scripts/assessment_report.py --recordings tests/assessment/recordings --models tests/assessment/live_models.toml --out <ścieżka>`. Raport Markdown: tabela model × (zaliczone uruchomienia /36, przypadki zaliczone 3/3, naruszenia wg klasy, średnie tokeny wej./wyj. na ocenę, szacowany koszt na ocenę i na 100 postów, mediana czasu), sekcja niezaliczonych przypadków per model z pierwszym naruszeniem lub asercją, wersja promptu i data.
+**Contract**: `uv run python scripts/assessment_report.py --recordings tests/assessment/recordings --models tests/assessment/live_models.toml --out <ścieżka>`. Raport Markdown: tabela model × (zaliczone uruchomienia /36, przypadki zaliczone 3/3, naruszenia wg klasy, średnie tokeny wej./wyj. na ocenę, szacowany koszt na ocenę i na 100 postów, mediana czasu), sekcja niezaliczonych przypadków per model z pierwszym naruszeniem lub asercją, wersja promptu i data. Raport liczy wyłącznie nagrania z bieżącym `PROMPT_VERSION`; nagrania ze starszą wersją wypisuje osobno jako nieaktualne (do ponownego uruchomienia). Tryb `--update-verdicts` przelicza zapisane `status` / `failure_class` / `violations` / `semantic_failures` wszystkich nagrań z ich `raw_text` (po świadomej zmianie walidatora lub asercji; zmiana widoczna w diffie).
 
 #### 5. Przebieg macierzy i wybór modelu domyślnego
 
@@ -233,7 +245,7 @@ Przypadek zalicza się, gdy wynik `assess()` ma `status = ok` i predykat zwraca 
 
 **Intent**: Wykonać właściwy dowód F-02 i ustalić model, którego użyje S-02.
 
-**Contract**: Przebieg `uv run pytest -m live` co najmniej na: modelu kandydującym na domyślny, DeepSeek i Gemini (pozostali dostawcy opcjonalnie). Model domyślny = model, który przeszedł 12×3, wybrany przez użytkownika po raporcie; wpisany do `DEFAULT_ASSESSMENT_MODEL`. Przypadek trwale niezaliczany przez wszystkie modele z powodu luki kontraktu → zachowane nagranie jako failing fixture + opis luki w raporcie (reguła §14), bez zmiany walidatora.
+**Contract**: Przebieg `uv run pytest -m live` co najmniej na: modelu kandydującym na domyślny, DeepSeek i Gemini (pozostali dostawcy opcjonalnie). Model domyślny = model, który przeszedł 12×3, wybrany przez użytkownika po raporcie; wpisany do `DEFAULT_ASSESSMENT_MODEL`. Przypadek trwale niezaliczany przez wszystkie modele z powodu luki kontraktu **blokuje done**: zachowane nagranie jako failing fixture + opis luki w raporcie, propozycja minimalnej zmiany `contract-v1.md` do akceptacji użytkownika, a po akceptacji — w tej samej zmianie — aktualizacja kontraktu, `examples.md`, modeli/walidatora/asercji i ponowny przebieg macierzy (reguła §14). Żaden przypadek nie jest wyłączany z 12×3.
 
 ### Success Criteria:
 
@@ -241,7 +253,7 @@ Przypadek zalicza się, gdy wynik `assess()` ma `status = ok` i predykat zwraca 
 
 - Domyślne `uv run pytest -q` pomija testy `live` i odtwarza wszystkie nagrania z identycznym werdyktem
 - Model domyślny ma komplet 12×3 nagrań z bieżącym `PROMPT_VERSION`, wszystkie zaliczone (walidator + asercje)
-- `uv run pytest -m live` dla modelu domyślnego kończy się 36/36 zaliczonymi uruchomieniami
+- `ASSESSMENT_LIVE_MODELS=<model-domyślny> uv run pytest -m live` nagrywa komplet 36 uruchomień wyłącznie modelu domyślnego
 - Raport generuje się bez błędów: `uv run python scripts/assessment_report.py ... --out ../context/changes/assessment-contract-harness/reports/live-<data>.md`
 - CI na PR (`backend` + `web-container-smoke`) jest zielone
 
@@ -249,7 +261,7 @@ Przypadek zalicza się, gdy wynik `assess()` ma `status = ok` i predykat zwraca 
 
 - Macierz została uruchomiona co najmniej na modelu domyślnym, DeepSeek i Gemini, a wyniki wszystkich trzech są w raporcie
 - Użytkownik przejrzał raport i zatwierdził model domyślny oraz szacowany koszt na ocenę
-- Każdy przypadek niezaliczany przez wszystkie modele jest opisany w raporcie jako luka kontraktu (reguła §14) albo naprawiony zmianą promptu z podbiciem `PROMPT_VERSION`
+- Każdy przypadek niezaliczany przez wszystkie modele został rozwiązany zmianą promptu z podbiciem `PROMPT_VERSION` albo zaakceptowaną zmianą `contract-v1.md` (reguła §14) z ponownym przebiegiem — bez wyłączania przypadków
 
 **Implementation Note**: Po fazie 3 PR z całą zmianą jest gotowy do jednego merge do `main`.
 
@@ -291,8 +303,8 @@ Brak zmian danych i infrastruktury. Nowe zależności Pythona zwiększają obraz
 - Przykłady: `context/foundation/llm-assessment/examples.md`
 - Stack: `context/foundation/tech-stack-api.md`
 - Lekcje: `context/foundation/lessons.md` (jedna gałąź + jeden PR)
-- Wzorzec testów: `szczur-radar-api/tests/test_health.py:24`
-- CI: `.github/workflows/ci.yml:23`
+- Wzorzec testów: `szczur-radar-api/tests/test_health.py:29`
+- CI: `.github/workflows/ci.yml:25`
 
 ## Progress
 
@@ -330,7 +342,7 @@ Brak zmian danych i infrastruktury. Nowe zależności Pythona zwiększają obraz
 
 - [ ] 3.1 Domyślne `uv run pytest -q` pomija testy `live` i odtwarza wszystkie nagrania z identycznym werdyktem
 - [ ] 3.2 Model domyślny ma komplet 12×3 nagrań z bieżącym `PROMPT_VERSION`, wszystkie zaliczone (walidator + asercje)
-- [ ] 3.3 `uv run pytest -m live` dla modelu domyślnego kończy się 36/36 zaliczonymi uruchomieniami
+- [ ] 3.3 `ASSESSMENT_LIVE_MODELS=<model-domyślny> uv run pytest -m live` nagrywa komplet 36 uruchomień wyłącznie modelu domyślnego
 - [ ] 3.4 Raport generuje się bez błędów: `uv run python scripts/assessment_report.py ... --out ../context/changes/assessment-contract-harness/reports/live-<data>.md`
 - [ ] 3.5 CI na PR (`backend` + `web-container-smoke`) jest zielone
 
@@ -338,4 +350,4 @@ Brak zmian danych i infrastruktury. Nowe zależności Pythona zwiększają obraz
 
 - [ ] 3.6 Macierz została uruchomiona co najmniej na modelu domyślnym, DeepSeek i Gemini, a wyniki wszystkich trzech są w raporcie
 - [ ] 3.7 Użytkownik przejrzał raport i zatwierdził model domyślny oraz szacowany koszt na ocenę
-- [ ] 3.8 Każdy przypadek niezaliczany przez wszystkie modele jest opisany w raporcie jako luka kontraktu (reguła §14) albo naprawiony zmianą promptu z podbiciem `PROMPT_VERSION`
+- [ ] 3.8 Każdy przypadek niezaliczany przez wszystkie modele został rozwiązany zmianą promptu z podbiciem `PROMPT_VERSION` albo zaakceptowaną zmianą `contract-v1.md` (reguła §14) z ponownym przebiegiem — bez wyłączania przypadków

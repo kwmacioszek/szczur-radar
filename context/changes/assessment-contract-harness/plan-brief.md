@@ -19,7 +19,7 @@ Roadmapa F-02: kontrakt oceny LLM V1 (`contract-v1.md`) ma być egzekwowany kode
 | Decyzja | Wybór | Dlaczego |
 | --- | --- | --- |
 | Dostawca LLM | Wielu dostawców (OpenAI / Gemini / DeepSeek / Claude), model z konfiguracji | Trzeba porównać, który działa najlepiej; nowy dostawca bez zmiany kodu |
-| Integracja | LangChain `init_chat_model` + `with_structured_output(include_raw=True)` za portem `AssessmentProvider` | Spójne z LangGraph ze stacku, jednolite zużycie tokenów do porównania |
+| Integracja | Port `AssessmentProvider` + adapter per dostawca na LangChain (`init_chat_model` + `with_structured_output(include_raw=True)`): json_schema dla OpenAI/Claude/Gemini, function calling strict dla DeepSeek | Spójne z LangGraph ze stacku; każdy dostawca oddaje JSON gdzie indziej, więc odczyt jest per adapter |
 | Gwarancja struktury | Surowa odpowiedź zawsze przez pełny model Pydantic + walidator | Dostawcy różnią się trybem strict (DeepSeek: tylko JSON) |
 | „Przechodzi na modelu” | Walidator + asercje semantyczne z `examples.md`, 3 uruchomienia, wszystkie zaliczone | Wykrywa niestabilność modelu przed S-02 |
 | Done przy wielu modelach | ≥1 model przechodzi 12×3 i zostaje domyślnym; macierz obowiązkowo także na DeepSeek i Gemini + raport | Odblokowuje S-02, porównanie zostaje jako dowód |
@@ -58,7 +58,7 @@ Roadmapa F-02: kontrakt oceny LLM V1 (`contract-v1.md`) ma być egzekwowany kode
 
 ## Open Risks & Assumptions
 
-- Część asercji (np. `ambiguous_target` dla „Apple”) może systematycznie nie przechodzić na wszystkich modelach — wtedy reguła §14 (luka kontraktu), nie poluzowanie asercji.
+- Część asercji (np. `ambiguous_target` dla „Apple”) może systematycznie nie przechodzić na wszystkich modelach — wtedy reguła §14: zmiana `contract-v1.md` zaakceptowana przez użytkownika w tej zmianie i ponowny przebieg; luka kontraktu blokuje done, żaden przypadek nie jest wyłączany.
 - DeepSeek bez strict schema może częściej zwracać `schema_violation` — to wynik do raportu, nie blokada done.
 - Koszt na ocenę nie ma jeszcze pułapu (Open Roadmap Question 5); raport go mierzy, decyzja o budżecie zostaje przy S-05.
 
