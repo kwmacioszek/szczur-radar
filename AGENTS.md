@@ -17,6 +17,7 @@ Szczur Radar collects investment posts (Wykop, later Reddit), classifies them wi
 - `szczur-radar-web/` — Vite + Vue 3 + TypeScript SPA with no router, store, or tests yet: @context/foundation/tech-stack-web.md.
 - `context/foundation/` — `prd.md` (requirements, FR priorities), `shape-notes.md`, `tech-stack-*.md`, `lessons.md`.
 - `context/changes/bootstrap-verification/` — scaffold and audit logs per module.
+- Whenever context/foundation/roadmap.md changes, update `tools/render_roadmap.swift` and regenerate `docs/visuals/roadmap-mvp.png`
 
 ## Build, Test, and Development Commands
 

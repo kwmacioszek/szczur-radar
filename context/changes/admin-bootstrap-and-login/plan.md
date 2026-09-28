@@ -478,16 +478,16 @@ Weryfikacja argon2 trwa dziesiątki milisekund — akceptowalne przy małej grup
 
 #### Automated
 
-- [x] 2.1 Testy backendu przechodzą z bazą testową: `TEST_DATABASE_URL=… REQUIRE_DB_TESTS=1 uv run pytest -q`
-- [x] 2.2 Test kompletności autoryzacji przechodzi i każda trasa spoza allowlisty zwraca 401 bez sesji
-- [x] 2.3 Testy logowania, limitu prób, Origin, tokenów i CLI przechodzą
-- [ ] 2.4 Job `backend` w CI jest zielony
+- [x] 2.1 Testy backendu przechodzą z bazą testową: `TEST_DATABASE_URL=… REQUIRE_DB_TESTS=1 uv run pytest -q` — 7c02cfb
+- [x] 2.2 Test kompletności autoryzacji przechodzi i każda trasa spoza allowlisty zwraca 401 bez sesji — 7c02cfb
+- [x] 2.3 Testy logowania, limitu prób, Origin, tokenów i CLI przechodzą — 7c02cfb
+- [x] 2.4 Job `backend` w CI jest zielony — 60f8df1
 
 #### Manual
 
-- [ ] 2.5 Lokalnie: `create-admin` tworzy admina z ukrytym promptem hasła, drugie wywołanie odmawia z kodem 1
-- [ ] 2.6 Lokalnie: `curl` na `/api/auth/login` zwraca ciasteczko z atrybutami `HttpOnly; Secure; SameSite=Strict; Path=/api`, a `/api/auth/me` z tym ciasteczkiem zwraca własne dane
-- [ ] 2.7 PR env ma własny `JWT_SECRET` i API w PR env startuje po pushu tej fazy
+- [x] 2.5 Lokalnie: `create-admin` tworzy admina z ukrytym promptem hasła, drugie wywołanie odmawia z kodem 1 — 7c02cfb
+- [x] 2.6 Lokalnie: `curl` na `/api/auth/login` zwraca ciasteczko z atrybutami `HttpOnly; Secure; SameSite=Strict; Path=/api`, a `/api/auth/me` z tym ciasteczkiem zwraca własne dane — 7c02cfb
+- [x] 2.7 PR env ma własny `JWT_SECRET` i API w PR env startuje po pushu tej fazy — 60f8df1
 
 ### Phase 3: Logowanie w SPA
 
