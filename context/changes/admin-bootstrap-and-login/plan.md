@@ -65,6 +65,8 @@ Kolejność: najpierw warstwa danych (model, migracja z downgrade, Postgres w CI
 
 **Pre-deploy i healthcheck.** Migracja musi zakończyć się przed startem nowej wersji API (`preDeploy`), bo nowy kod zakłada istnienie `users`; pre-deploy, który padnie, zatrzymuje deploy, a stara wersja dalej serwuje — to pożądane zachowanie.
 
+**Konfiguracja serwisu ≠ deploy kodu.** Zmiany w `.railway/railway.ts` (tu: `preDeploy`) nie wchodzą z merge — wymagają `railway config apply` (`context/deployment/deploy-plan.md:115`). Zanim cokolwiek zostanie zastosowane automatycznie, `railway.ts` musi odzwierciedlać produkcję (faza 1 §0) — dziś apply skasowałby bucket `Postgres-PITR` i wyłączył uśpienie serwisów. Kolejność zapewnia job CI `railway-config` (faza 1 §8, token workspace, środowisko przez `RAILWAY_PROJECT_ID` + `RAILWAY_ENVIRONMENT_ID`, bez `railway link`): Railway „Wait for CI” czeka na zakończenie całego workflow, więc konfiguracja jest zastosowana, zanim Railway zdeployuje kod — na `main` do `production`, na PR do środowiska `szczur-radar-pr-<N>` (PR env dziedziczy konfigurację po produkcji, ale zmiany z gałęzi PR trzeba zastosować do niego osobno). Job na PR nigdy nie może trafić w `production`, a `railway.ts` wskazuje `source` z gałęzi `main` — plan dla PR, który zmienia `source`/gałąź albo cokolwiek usuwa, musi zatrzymać job. Zapieczętowany `JWT_SECRET` się nie dziedziczy: w PR env ustawia się go ręcznie przed pushem fazy 2.
+
 ## Phase 1: Warstwa danych i migracje
 
 ### Overview
@@ -72,6 +74,14 @@ Kolejność: najpierw warstwa danych (model, migracja z downgrade, Postgres w CI
 Pierwszy model (`users`), Alembic z migracją odwracalną, uruchamianie migracji pre-deploy na Railway, Postgres w CI i fixture'y testów bazodanowych — fundament, z którego korzystają fazy 2–4 i kolejne wycinki.
 
 ### Changes Required:
+
+#### 0. Krok 0: `railway.ts` zgodny z produkcją (przed każdą inną zmianą IaC)
+
+**File**: `.railway/railway.ts`
+
+**Intent**: Dziś `railway config plan` na `production` pokazuje dryf: `sleepApplication (true → null)` na `postgres`, `szczur-radar-api`, `szczur-radar-web` oraz `Delete bucket Postgres-PITR` (ustawione w dashboardzie, nieobecne w pliku); plan na świeżym PR env też zawiera zmianę destrukcyjną. Automatyczny apply z §8 wyłączyłby uśpienie (koszty) i skasował bucket z backupami PITR — plik musi najpierw odzwierciedlać produkcję.
+
+**Contract**: Dopisać do `railway.ts` uśpienie (serverless) trzech serwisów i bucket `Postgres-PITR` w składni SDK (wzór: `railway config pull --json`, bez zapisywania sekretów — `preserve()`), bez żadnych innych zmian. Kryterium: `railway config plan --detailed-exit-code` na `production` kończy się kodem 0 (0 zmian), a plan na PR env tej zmiany nie zawiera zmian destrukcyjnych. Dopiero potem §4 (preDeploy) i §8 (job CI).
 
 #### 1. Zależności
 
@@ -103,7 +113,7 @@ Pierwszy model (`users`), Alembic z migracją odwracalną, uruchamianie migracji
 
 **Intent**: Uruchamiać migracje przed startem każdej nowej wersji API (produkcja i PR env), a nie przy starcie procesu.
 
-**Contract**: Serwis `szczur-radar-api` dostaje `preDeploy: "uv run alembic upgrade head"`; komentarz przy polu wyjaśnia, że nieudana migracja zatrzymuje deploy. Bez zmian w `env` (w szczególności brak `JWT_SECRET`). Walidacja: `railway config plan` pokazuje wyłącznie dodanie pre-deploy.
+**Contract**: Serwis `szczur-radar-api` dostaje `preDeploy: "uv run alembic upgrade head"`; komentarz przy polu wyjaśnia, że nieudana migracja zatrzymuje deploy. Bez zmian w `env` (w szczególności brak `JWT_SECRET`). Walidacja: `railway config plan` pokazuje wyłącznie dodanie pre-deploy. Zastosowanie konfiguracji robi job CI z §8, nie ręczny apply.
 
 #### 5. Postgres w CI i fixture'y testów
 
@@ -129,19 +139,32 @@ Pierwszy model (`users`), Alembic z migracją odwracalną, uruchamianie migracji
 
 **Contract**: Sekcje: „Baza lokalna”, „Migracje”, „Testy” (z opisem markera `db` i `REQUIRE_DB_TESTS`).
 
+#### 8. Job CI `railway-config` (plan + apply konfiguracji serwisów)
+
+**File**: `.github/workflows/ci.yml`, `context/deployment/deploy-plan.md`
+
+**Intent**: Zastosować konfigurację z `.railway/railway.ts` automatycznie i zawsze przed deployem kodu — dzięki „Wait for CI” — tak, żeby `preDeploy` (i każda przyszła zmiana IaC) nie zależał od ręcznego `railway config apply` ani od pamiętania o kolejności.
+
+**Contract**: Nowy job `railway-config` w tym samym workflow (bez filtrowania ścieżek), `npm ci` w katalogu głównym (SDK `railway/iac`), sekret `RAILWAY_API_TOKEN` = token **workspace** z GitHub Secrets (token projektu obejmuje tylko jedno środowisko, więc nie sięga do PR env). Środowisko docelowe zawsze jawne: `pull_request` → `szczur-radar-pr-${{ github.event.pull_request.number }}`; `push` na `main` → `production`; nigdy domyślne. Wybór środowiska **bez `railway link`** (z tokenem workspace `link`/`whoami` zwracają „Unauthorized”): env `RAILWAY_PROJECT_ID` (stała ID projektu) + `RAILWAY_ENVIRONMENT_ID` rozwiązane po nazwie przez `railway environment list --json` (działa z samym `RAILWAY_PROJECT_ID`); `RAILWAY_ENVIRONMENT` (nazwa) nie jest honorowane przez `config plan`. Kroki: `railway config plan --json` → job kończy się błędem, jeśli `changeSet.changes[]` zawiera `severity == "destructive"` lub `kind == "resource.delete"` albo (dla PR) zmianę `source`/gałęzi serwisu → `railway config apply --yes` (nigdy `--confirm-destructive`) dla tego środowiska. Brak środowiska PR (wyścig z jego tworzeniem) → krótkie ponawianie, potem błąd z czytelnym komunikatem. `deploy-plan.md`: nazwa sekretu `RAILWAY_API_TOKEN` (workspace) w GitHub (bez wartości), reguła „dodanie innego projektu do workspace poszerza zasięg tokena → przenieść szczur-radar do osobnego workspace” i opis joba w runbooku przy wpisie „IaC config change didn't take effect”.
+
+Zweryfikowane 2026-09-28 testem na tymczasowym PR #10 (tylko `plan`): token projektu (production) zawsze trafia w `production` i nie widzi PR env; token workspace robi `plan` na `production` i na `szczur-radar-pr-10`; fałszywy token daje „Unauthorized” (brak cichego fallbacku na sesję użytkownika); w katalogu bez linku `RAILWAY_PROJECT_ID` + `RAILWAY_ENVIRONMENT_ID` wybierają środowisko poprawnie.
+
 ### Success Criteria:
 
 #### Automated Verification:
 
 - Zablokowane zależności synchronizują się: `cd szczur-radar-api && uv sync --locked`
+- `railway config plan --detailed-exit-code` na `production` przed dodaniem preDeploy kończy się kodem 0 (railway.ts zgodny z produkcją)
 - Testy backendu przechodzą z bazą testową: `TEST_DATABASE_URL=… REQUIRE_DB_TESTS=1 uv run pytest -q`
 - Test migracji upgrade → downgrade → upgrade przechodzi na Postgresie
 - Testy sond przechodzą bez żadnej bazy: `uv run pytest -q tests/test_health.py` przy braku `DATABASE_URL`
 - Job `backend` w CI uruchamia testy `db` na kontenerze Postgres i jest zielony
+- Job `railway-config` na PR jest zielony: plan dla `szczur-radar-pr-<N>` bez usunięć i bez zmiany `source`, a apply trafia wyłącznie do środowiska PR
 
 #### Manual Verification:
 
 - `railway config plan` pokazuje dodanie pre-deploy dla `szczur-radar-api` i nie proponuje usunięcia żadnej zmiennej
+- W PR env ustawienia `szczur-radar-api` pokazują pre-deploy, deploy wykonał `alembic upgrade head`, a konfiguracja `production` pozostała bez zmian
 
 **Implementation Note**: After completing this phase and all automated verification passes, pause here for manual confirmation from the human that the manual testing was successful before proceeding to the next phase.
 
@@ -222,7 +245,7 @@ Własna warstwa auth (hash argon2, JWT w ciasteczku, `current_user`/`require_adm
 **Intent**: Udowodnić kontrakt auth i ustanowić test kompletności autoryzacji jako strażnika dla każdej przyszłej trasy.
 
 **Contract**:
-- `test_authz_completeness.py`: `PUBLIC_ROUTES = {("GET","/api/health"), ("GET","/api/ready"), ("POST","/api/auth/login"), ("POST","/api/auth/logout")}`. Test iteruje po wszystkich `APIRoute` w `app.routes` i każdej metodzie: trasa spoza allowlisty bez ciasteczka → 401; każdy wpis allowlisty musi istnieć w aplikacji (brak martwych wpisów). `ADMIN_ROUTES` — rejestr (na razie pusty) sprawdzany z ciasteczkiem użytkownika `role='user'` → 403; `require_admin` dodatkowo testowany na tymczasowej trasie w osobnej aplikacji testowej. Docstring opisuje regułę: nowa trasa albo wymaga sesji, albo trafia do allowlisty z uzasadnieniem.
+- `test_authz_completeness.py` (`db` — `current_user` zależy od sesji DB, a `get_engine()` wymaga `DATABASE_URL`, więc bez bazy test dawałby 500 zamiast 401; w CI zawsze uruchamiany dzięki `REQUIRE_DB_TESTS`). Parametry ścieżki przyszłych tras są wypełniane atrapą właściwego typu z sygnatury trasy (UUID → zerowy UUID, `int` → `1`, `str` → `"x"`), żeby walidacja ścieżki nie dawała 422 zamiast 401. `PUBLIC_ROUTES = {("GET","/api/health"), ("GET","/api/ready"), ("POST","/api/auth/login"), ("POST","/api/auth/logout")}`. Test iteruje po wszystkich `APIRoute` w `app.routes` i każdej metodzie: trasa spoza allowlisty bez ciasteczka → 401; każdy wpis allowlisty musi istnieć w aplikacji (brak martwych wpisów). `ADMIN_ROUTES` — rejestr (na razie pusty) sprawdzany z ciasteczkiem użytkownika `role='user'` → 403; `require_admin` dodatkowo testowany na tymczasowej trasie w osobnej aplikacji testowej. Docstring opisuje regułę: nowa trasa albo wymaga sesji, albo trafia do allowlisty z uzasadnieniem.
 - `test_auth.py` (`db`): login OK + atrybuty ciasteczka; e-mail wielkimi literami loguje; zły e-mail i złe hasło → identyczne 401; konto z `password_hash=NULL` → 401; `me` z ciasteczkiem zwraca tylko własne dane; podbicie `token_version` → 401; logout usuwa ciasteczko; 6. nieudana próba dla e-maila → 429 z `Retry-After`; 21. nieudana próba z jednego IP na różne e-maile → 429; udane logowanie zeruje licznik e-maila; body form-encoded → odrzucone.
 - `test_tokens.py`: wygasły token, zmieniony podpis, `alg=none`, brak `ver` → `InvalidToken`; brak/krótki `JWT_SECRET` → `RuntimeError`.
 - `test_security.py`: `POST` z obcym `Origin` → 403; z tym samym → przechodzi; bez `Origin` → przechodzi.
@@ -235,6 +258,14 @@ Własna warstwa auth (hash argon2, JWT w ciasteczku, `current_user`/`require_adm
 **Intent**: Zapisać w miejscu (edit-in-place), że uwierzytelnianie to własna cienka warstwa zamiast FastAPI Users, żeby kolejne zmiany nie dodały FastAPI Users na podstawie nieaktualnego opisu.
 
 **Contract**: Jeden akapit pod „Why this stack”: decyzja z 2026-09-27 (zmiana `admin-bootstrap-and-login`), powód (FastAPI Users w trybie maintenance; potrzeba `token_version`, roli i CLI bez rejestracji), składniki (PyJWT, pwdlib/argon2, `app/auth/`). Frontmatter bez zmian.
+
+#### 10. `JWT_SECRET` w PR env przed pushem tej fazy
+
+**File**: brak zmian w kodzie
+
+**Intent**: Od tej fazy API nie startuje bez `JWT_SECRET` (lifespan), a zapieczętowana wartość z produkcji nie jest dziedziczona przez PR env — bez tego kroku PR env przestaje działać aż do fazy 4.
+
+**Contract**: Operator ustawia w `szczur-radar-pr-<N>` na `szczur-radar-api` osobną, losową wartość `JWT_SECRET` (np. `openssl rand -hex 32`), różną od produkcyjnej, przed pushem commita fazy 2.
 
 ### Success Criteria:
 
@@ -249,6 +280,7 @@ Własna warstwa auth (hash argon2, JWT w ciasteczku, `current_user`/`require_adm
 
 - Lokalnie: `create-admin` tworzy admina z ukrytym promptem hasła, drugie wywołanie odmawia z kodem 1
 - Lokalnie: `curl` na `/api/auth/login` zwraca ciasteczko z atrybutami `HttpOnly; Secure; SameSite=Strict; Path=/api`, a `/api/auth/me` z tym ciasteczkiem zwraca własne dane
+- PR env ma własny `JWT_SECRET` i API w PR env startuje po pushu tej fazy
 
 **Implementation Note**: After completing this phase and all automated verification passes, pause here for manual confirmation from the human that the manual testing was successful before proceeding to the next phase.
 
@@ -264,11 +296,11 @@ Router z publicznym `/login` i chronioną resztą, klient API reagujący na 401,
 
 #### 1. Zależności i konfiguracja
 
-**File**: `szczur-radar-web/package.json`, `szczur-radar-web/package-lock.json`, `szczur-radar-web/vite.config.ts`
+**File**: `szczur-radar-web/package.json`, `szczur-radar-web/package-lock.json`, `szczur-radar-web/vite.config.ts`, `szczur-radar-web/vitest.config.ts`, `szczur-radar-web/tsconfig.node.json`
 
-**Intent**: Dodać routing i narzędzia testowe oraz zachować same-origin także lokalnie.
+**Intent**: Dodać routing i narzędzia testowe oraz zachować same-origin także lokalnie — bez łamania typechecku `vue-tsc -b` w buildzie Docker.
 
-**Contract**: `vue-router` (dependencies); `vitest`, `@vue/test-utils`, `jsdom` (devDependencies); skrypt `"test": "vitest run"`. `vite.config.ts`: `server.proxy['/api'] → http://localhost:8000` i `test.environment = 'jsdom'`. `npm run build` (vue-tsc) nadal przechodzi.
+**Contract**: `vue-router` (dependencies); `vitest`, `@vue/test-utils`, `jsdom` (devDependencies); skrypt `"test": "vitest run"`. `vite.config.ts`: tylko `server.proxy['/api'] → http://localhost:8000` (bez klucza `test` — `defineConfig` z `vite` go nie typuje). Osobny `vitest.config.ts`: `defineConfig`/`mergeConfig` z `vitest/config` na bazie `vite.config.ts`, `test.environment = 'jsdom'`; dopisany do `include` w `tsconfig.node.json`. Testy importują `describe/it/expect/vi` jawnie z `'vitest'` (bez globali), bo `src/**/*.test.ts` wchodzą do `tsconfig.app.json`. `npm run build` (vue-tsc) nadal przechodzi.
 
 #### 2. Klient API i stan sesji
 
@@ -341,7 +373,7 @@ Provisioning `JWT_SECRET`, pełna weryfikacja w Railway PR Environment, jeden me
 
 **Intent**: Dostarczyć losowy, niewyliczalny sekret do produkcji i osobny do PR env, bez umieszczania go w repo.
 
-**Contract**: Produkcja: operator ustawia na `szczur-radar-api` zmienną `JWT_SECRET` (np. `openssl rand -hex 32`) i ją pieczętuje (sealed). PR env: osobna wartość ustawiona w środowisku PR (sealed nie jest kopiowany). `railway config plan` nie proponuje usunięcia `JWT_SECRET`. `deploy-plan.md` dostaje wpis: nazwa zmiennej, sealed, sposób dostarczenia do PR env — bez wartości.
+**Contract**: Produkcja: operator ustawia na `szczur-radar-api` zmienną `JWT_SECRET` (np. `openssl rand -hex 32`) i ją pieczętuje (sealed) — **przed merge**, bo nowa wersja API bez sekretu nie przejdzie healthchecku. PR env: osobna wartość ustawiona już w fazie 2 (§10). `railway config plan` dla `production` nie proponuje usunięcia `JWT_SECRET`. `deploy-plan.md` dostaje wpis: nazwa zmiennej, sealed, sposób dostarczenia do PR env — bez wartości.
 
 #### 2. Weryfikacja w PR Environment
 
@@ -349,7 +381,7 @@ Provisioning `JWT_SECRET`, pełna weryfikacja w Railway PR Environment, jeden me
 
 **Intent**: Sprawdzić cały przepływ na izolowanej bazie przed produkcją.
 
-**Contract**: Na PR env: logi pre-deploy pokazują `alembic upgrade head` → `0001`; `/api/ready` = 200; `railway ssh` do API → `create-admin`; w przeglądarce logowanie, ochrona głębokiego linku, wylogowanie; `curl` z obcym `Origin` → 403; 6 złych prób → 429; w logach/odpowiedzi widoczny prawdziwy adres klienta z `X-Real-IP` (nie adres krawędzi Railway).
+**Contract**: Na PR env: logi pre-deploy pokazują `alembic upgrade head` → `0001`; `/api/ready` = 200; `railway ssh` do API → `create-admin`; w przeglądarce logowanie, ochrona głębokiego linku, wylogowanie; `curl` z obcym `Origin` → 403; 6 złych prób → 429; w logach/odpowiedzi widoczny prawdziwy adres klienta z `X-Real-IP` (nie adres krawędzi Railway); `curl -H 'X-Real-IP: 1.2.3.4'` → API nadal widzi prawdziwy adres, nie `1.2.3.4` (krawędź nadpisuje nagłówek klienta — inaczej limit per IP da się obejść).
 
 #### 3. Merge i bootstrap produkcji
 
@@ -357,7 +389,7 @@ Provisioning `JWT_SECRET`, pełna weryfikacja w Railway PR Environment, jeden me
 
 **Intent**: Jeden merge do `main`, migracja pre-deploy na produkcji i pierwszy admin.
 
-**Contract**: Merge PR → deploy (Wait for CI) → pre-deploy migracja na prod → `railway ssh` do `szczur-radar-api` → `uv run python -m app.cli create-admin --email <operator>` → logowanie na publicznym adresie. `deploy-plan.md`: wpis o wdrożeniu S-01 (deploy ID, wynik migracji, data utworzenia admina — bez sekretów i haseł).
+**Contract**: Merge PR → CI na `main`, w tym job `railway-config` stosujący konfigurację do `production` → deploy (Wait for CI) → pre-deploy migracja na prod → `railway ssh` do `szczur-radar-api` → `uv run python -m app.cli create-admin --email <operator>` → logowanie na publicznym adresie. `deploy-plan.md`: wpis o wdrożeniu S-01 (deploy ID, wynik migracji, data utworzenia admina — bez sekretów i haseł).
 
 ### Success Criteria:
 
@@ -372,6 +404,7 @@ Provisioning `JWT_SECRET`, pełna weryfikacja w Railway PR Environment, jeden me
 - Limit per IP w PR env używa prawdziwego adresu klienta z `X-Real-IP`
 - Po merge migracja na produkcji przeszła, pierwszy admin został utworzony przez `railway ssh` i loguje się na publicznym adresie
 - `deploy-plan.md` zawiera wpis o wdrożeniu S-01 i sekrecie (bez wartości)
+- Po merge job `railway-config` na `main` zastosował pre-deploy do `production` przed deployem kodu (widoczne w ustawieniach serwisu i w kolejności logów)
 
 **Implementation Note**: After completing this phase and all automated verification passes, pause here for manual confirmation from the human that the manual testing was successful before proceeding to the next phase.
 
@@ -429,14 +462,17 @@ Weryfikacja argon2 trwa dziesiątki milisekund — akceptowalne przy małej grup
 #### Automated
 
 - [ ] 1.1 Zablokowane zależności synchronizują się: `cd szczur-radar-api && uv sync --locked`
+- [ ] 1.9 `railway config plan --detailed-exit-code` na `production` przed dodaniem preDeploy kończy się kodem 0 (railway.ts zgodny z produkcją)
 - [ ] 1.2 Testy backendu przechodzą z bazą testową: `TEST_DATABASE_URL=… REQUIRE_DB_TESTS=1 uv run pytest -q`
 - [ ] 1.3 Test migracji upgrade → downgrade → upgrade przechodzi na Postgresie
 - [ ] 1.4 Testy sond przechodzą bez żadnej bazy: `uv run pytest -q tests/test_health.py` przy braku `DATABASE_URL`
 - [ ] 1.5 Job `backend` w CI uruchamia testy `db` na kontenerze Postgres i jest zielony
+- [ ] 1.7 Job `railway-config` na PR jest zielony: plan dla `szczur-radar-pr-<N>` bez usunięć i bez zmiany `source`, a apply trafia wyłącznie do środowiska PR
 
 #### Manual
 
 - [ ] 1.6 `railway config plan` pokazuje dodanie pre-deploy dla `szczur-radar-api` i nie proponuje usunięcia żadnej zmiennej
+- [ ] 1.8 W PR env ustawienia `szczur-radar-api` pokazują pre-deploy, deploy wykonał `alembic upgrade head`, a konfiguracja `production` pozostała bez zmian
 
 ### Phase 2: Uwierzytelnianie API i CLI bootstrapu
 
@@ -451,6 +487,7 @@ Weryfikacja argon2 trwa dziesiątki milisekund — akceptowalne przy małej grup
 
 - [ ] 2.5 Lokalnie: `create-admin` tworzy admina z ukrytym promptem hasła, drugie wywołanie odmawia z kodem 1
 - [ ] 2.6 Lokalnie: `curl` na `/api/auth/login` zwraca ciasteczko z atrybutami `HttpOnly; Secure; SameSite=Strict; Path=/api`, a `/api/auth/me` z tym ciasteczkiem zwraca własne dane
+- [ ] 2.7 PR env ma własny `JWT_SECRET` i API w PR env startuje po pushu tej fazy
 
 ### Phase 3: Logowanie w SPA
 
@@ -478,3 +515,4 @@ Weryfikacja argon2 trwa dziesiątki milisekund — akceptowalne przy małej grup
 - [ ] 4.4 Limit per IP w PR env używa prawdziwego adresu klienta z `X-Real-IP`
 - [ ] 4.5 Po merge migracja na produkcji przeszła, pierwszy admin został utworzony przez `railway ssh` i loguje się na publicznym adresie
 - [ ] 4.6 `deploy-plan.md` zawiera wpis o wdrożeniu S-01 i sekrecie (bez wartości)
+- [ ] 4.7 Po merge job `railway-config` na `main` zastosował pre-deploy do `production` przed deployem kodu (widoczne w ustawieniach serwisu i w kolejności logów)

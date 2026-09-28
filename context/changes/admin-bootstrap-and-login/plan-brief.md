@@ -26,6 +26,9 @@ API ma tylko sondy `/api/health` i `/api/ready` oraz leniwy async engine (`SELEC
 | Bootstrap CLI | Hasło 2× przez `getpass`; odmowa (kod 1), gdy jakikolwiek admin istnieje | Brak hasła w historii powłoki; recovery zostaje w S-07 |
 | Brute-force | Limit w pamięci: 5/15 min per e-mail, 20/15 min per IP (`X-Real-IP`) → 429 | Tania ochrona publicznego adresu przy 1 replice API |
 | Migracje | Alembic, pre-deploy na Railway, test upgrade→downgrade→upgrade | Nowy kod nie startuje bez schematu; każda migracja ma działające cofnięcie |
+| Zastosowanie konfiguracji IaC | Job CI `railway-config`: `config plan` (fail przy usunięciu / zmianie `source`) → `config apply`; PR → `szczur-radar-pr-<N>`, `main` → `production` | Merge nie stosuje `railway.ts` (deploy-plan.md:115); „Wait for CI” gwarantuje konfigurację przed kodem (z plan-review F1) |
+| Token CI | `RAILWAY_API_TOKEN` = token workspace; środowisko przez `RAILWAY_PROJECT_ID` + `RAILWAY_ENVIRONMENT_ID`, bez `railway link` | Token projektu obejmuje jedno środowisko; `link` z tokenem workspace zwraca „Unauthorized” (test na PR #10, 2026-09-28) |
+| Dryf IaC | Krok 0: `railway.ts` dopasowany do produkcji (uśpienie 3 serwisów + bucket `Postgres-PITR`), `plan` = 0 zmian | Inaczej apply skasowałby backupy PITR i wyłączył uśpienie |
 | Testy DB | Prawdziwy Postgres jako kontener usługi w CI | SQLite nie sprawdzi migracji ani ograniczeń Postgresa |
 | Testy web | Vitest + @vue/test-utils (guard, klient, widok logowania) | Wzorzec testów frontendu dla kolejnych wycinków |
 | Sekret JWT | Ustawiany ręcznie, sealed na prod, osobny w PR env; nigdy w `railway.ts` | `ctx.randomString` z SDK jest deterministyczny, więc wyliczalny |
@@ -34,7 +37,7 @@ API ma tylko sondy `/api/health` i `/api/ready` oraz leniwy async engine (`SELEC
 
 **In scope:**
 - Model `users` (UUID, e-mail lowercase unique, nullable `password_hash`, rola `user|admin`, `token_version`) + migracja z downgrade
-- Postgres w CI, fixture'y testów DB, pre-deploy migracji w `railway.ts`
+- Postgres w CI, fixture'y testów DB, pre-deploy migracji w `railway.ts`, job CI `railway-config` (plan + apply dla PR env i produkcji)
 - `/api/auth/login|logout|me`, `current_user`, `require_admin`, limit prób, middleware Origin
 - CLI `create-admin`, test kompletności autoryzacji, notka w `tech-stack-api.md`
 - SPA: vue-router, ekran logowania, guard, strona startowa z wylogowaniem, Vitest w CI, aktualizacja AGENTS.md
@@ -54,12 +57,12 @@ Przeglądarka → Caddy (`/api/*`) → FastAPI. `POST /api/auth/login` weryfikuj
 
 | Faza | Co dostarcza | Główne ryzyko |
 | --- | --- | --- |
-| 1. Warstwa danych i migracje | Model `users`, Alembic z downgrade, pre-deploy, Postgres w CI, fixture'y | Engine związany z pętlą zdarzeń w testach |
+| 1. Warstwa danych i migracje | Krok 0 (railway.ts = prod), model `users`, Alembic z downgrade, pre-deploy, Postgres w CI, fixture'y, job `railway-config` | Apply z PR trafia w `production` albo przestawia `source` PR env na `main` — blokowane w jobie |
 | 2. Uwierzytelnianie API i CLI | Trasy auth, zależności, limit, Origin, `create-admin`, test kompletności autoryzacji | Wyciek danych przez trasę spoza testu — łagodzone iteracją po wszystkich trasach |
 | 3. Logowanie w SPA | Router, guard, ekran logowania, wylogowanie, Vitest w CI | Otwarte przekierowanie przez `?redirect=` — sanitacja + test |
 | 4. Wdrożenie i pierwszy admin | Sekret, weryfikacja w PR env, merge, admin na produkcji | PR env bez `JWT_SECRET`; `X-Real-IP` inny niż zakładany |
 
-**Prerequisites:** lokalny Postgres (np. Docker) do testów DB; dostęp operatora do Railway (zmienne, `railway ssh`); jedna gałąź `feature/admin-bootstrap-and-login` + jeden PR (lessons.md).
+**Prerequisites:** lokalny Postgres (np. Docker) do testów DB; dostęp operatora do Railway (zmienne, `railway ssh`); `RAILWAY_API_TOKEN` (token workspace) w GitHub Secrets; `JWT_SECRET` w PR env przed pushem fazy 2; jedna gałąź `feature/admin-bootstrap-and-login` + jeden PR (lessons.md).
 **Estimated effort:** ~4 sesje, po jednej na fazę; faza 4 to głównie praca operatorska.
 
 ## Open Risks & Assumptions
@@ -67,6 +70,8 @@ Przeglądarka → Caddy (`/api/*`) → FastAPI. `POST /api/auth/login` weryfikuj
 - Zakładamy, że krawędź Railway ustawia `X-Real-IP` z prawdziwym adresem klienta; jeśli nie, limit per IP zbiega do jednego kubełka — weryfikacja w PR env (4.4), limit per e-mail działa niezależnie.
 - Zakładamy, że Caddy przekazuje oryginalny nagłówek `Host` (domyślne zachowanie v2) — inaczej middleware Origin odrzuci poprawne żądania; wykrywane w PR env.
 - PR env wymaga ręcznego ustawienia `JWT_SECRET` dla każdego nowego PR, dopóki nie powstanie lepszy mechanizm — aplikacja bez sekretu nie wystartuje (fail-fast).
+- Token workspace obejmuje wszystkie projekty w workspace; dziś jest tam tylko `szczur-radar`. Dodanie innego projektu poszerza zasięg tokena — wtedy przenieść szczur-radar do osobnego workspace.
+- Wybór środowiska w CI i zasięg tokenów zweryfikowane testem na PR #10 (tylko `plan`); samo `apply` w CI zostanie pierwszy raz wykonane na PR tej zmiany.
 - Kolizja z F-02 w `pyproject.toml`/`uv.lock` i konfiguracji pytest — scalić przy merge.
 
 ## Success Criteria (Summary)
