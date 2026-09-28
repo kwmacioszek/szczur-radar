@@ -22,7 +22,8 @@ from __future__ import annotations
 
 import asyncio
 import os
-from collections.abc import Iterator
+import uuid
+from collections.abc import Callable, Iterator
 from pathlib import Path
 
 import pytest
@@ -32,11 +33,16 @@ from sqlalchemy import Engine, create_engine, pool, text
 from sqlalchemy.engine import make_url
 
 from app import database
+from app.auth.passwords import hash_password
+from app.auth.rate_limit import login_limiter
 
 API_ROOT = Path(__file__).resolve().parents[1]
 
 # Tables emptied before every ``db`` test. Extend as migrations add tables.
 TABLES = ("users",)
+
+# 64 chars; only for tests. Real values come from Railway (sealed on production).
+TEST_JWT_SECRET = "test-only-jwt-secret-0123456789abcdef0123456789abcdef0123456789"
 
 
 def _test_database_url() -> str | None:
@@ -148,3 +154,45 @@ def _db_marker(request: pytest.FixtureRequest) -> None:
     """Give every ``@pytest.mark.db`` test the ``db`` fixture automatically."""
     if request.node.get_closest_marker("db"):
         request.getfixturevalue("db")
+
+
+@pytest.fixture(autouse=True)
+def _auth_env(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+    """Every test gets a valid JWT_SECRET and a fresh login rate limiter."""
+    monkeypatch.setenv("JWT_SECRET", TEST_JWT_SECRET)
+    login_limiter.reset()
+    yield
+    login_limiter.reset()
+
+
+CreateUser = Callable[..., uuid.UUID]
+
+
+@pytest.fixture
+def create_user(db: str) -> CreateUser:
+    """Insert a user directly (bypassing the app); returns its id.
+
+    ``password=None`` creates an account without a password (S-07 activation).
+    """
+
+    def _create(
+        email: str, password: str | None = None, role: str = "user"
+    ) -> uuid.UUID:
+        engine = sync_test_engine(db)
+        try:
+            with engine.begin() as conn:
+                return conn.execute(
+                    text(
+                        "INSERT INTO users (email, password_hash, role) "
+                        "VALUES (:email, :hash, :role) RETURNING id"
+                    ),
+                    {
+                        "email": email,
+                        "hash": hash_password(password) if password else None,
+                        "role": role,
+                    },
+                ).scalar_one()
+        finally:
+            engine.dispose()
+
+    return _create

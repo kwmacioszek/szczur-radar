@@ -478,9 +478,9 @@ Weryfikacja argon2 trwa dziesiątki milisekund — akceptowalne przy małej grup
 
 #### Automated
 
-- [ ] 2.1 Testy backendu przechodzą z bazą testową: `TEST_DATABASE_URL=… REQUIRE_DB_TESTS=1 uv run pytest -q`
-- [ ] 2.2 Test kompletności autoryzacji przechodzi i każda trasa spoza allowlisty zwraca 401 bez sesji
-- [ ] 2.3 Testy logowania, limitu prób, Origin, tokenów i CLI przechodzą
+- [x] 2.1 Testy backendu przechodzą z bazą testową: `TEST_DATABASE_URL=… REQUIRE_DB_TESTS=1 uv run pytest -q`
+- [x] 2.2 Test kompletności autoryzacji przechodzi i każda trasa spoza allowlisty zwraca 401 bez sesji
+- [x] 2.3 Testy logowania, limitu prób, Origin, tokenów i CLI przechodzą
 - [ ] 2.4 Job `backend` w CI jest zielony
 
 #### Manual
