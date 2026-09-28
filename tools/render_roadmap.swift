@@ -108,43 +108,45 @@ txt("2 fundamenty / 7 wycinków", 2300, 172, 320, 21, .regular, muted)
 let phaseX: [CGFloat] = [140, 755, 1370, 1985]
 let stageY: [CGFloat] = [290, 690, 1090, 1440]
 let stageTitle = ["01 / FUNDAMENTY I DOSTĘP", "02 / PIERWSZY SYGNAŁ", "03 / FUNKCJE MVP", "04 / NADZÓR AUTOMATU"]
+let stageSub = ["Prace mogą ruszyć równolegle", "Ocena LLM trafia do użytkownika", "Widoki i codzienny przebieg", "Historia i sygnał awarii"]
 for i in 0..<4 {
-    let accent = [amber, cyan, cyan, amber][i]
-    rounded(20, stageY[i] - 10, 455, 60, 16, color(0x1B3048), accent, line: 2)
-    rounded(20, stageY[i] - 10, 9, 60, 4, accent)
+    rounded(20, stageY[i] - 10, 455, 60, 16, color(0x1B3048), green, line: 2)
+    rounded(20, stageY[i] - 10, 9, 60, 4, green)
     txt(stageTitle[i], 47, stageY[i] + 2, 410, 25, .bold)
+    rounded(20, stageY[i] + 55, 455, 50, 14, color(0x152C2E), green, line: 2)
+    txt(stageSub[i], 43, stageY[i] + 64, 420, 21, .medium, white)
 }
 
 let cards: [Card] = [
-    Card(id:"F-01", title:"Bramka danych produkcyjnych", detail:"Limity kosztów, restore drill, sekrety", req:"—", status:"do startu", x:160, y:360, w:650, h:220, accent:amber, star:false),
-    Card(id:"F-02", title:"Kontrakt oceny LLM", detail:"Walidacja V1 i próby na rzeczywistym modelu", req:"—", status:"planowanie", x:1075, y:360, w:650, h:220, accent:violet, star:false),
-    Card(id:"S-01", title:"Admin i logowanie", detail:"CLI, sesja, ochrona tras i wylogowanie", req:"—", status:"planowanie", x:1990, y:360, w:650, h:220, accent:green, star:false),
-    Card(id:"S-02", title:"Ocenione posty z Wykopu", detail:"Pobranie → ocena LLM → lista postów", req:"S-01 + F-02", status:"propozycja", x:1075, y:760, w:650, h:230, accent:cyan, star:true),
-    Card(id:"S-07", title:"Onboarding przez CLI", detail:"Konto, link aktywacyjny, odzyskiwanie", req:"S-01", status:"propozycja", x:1990, y:760, w:650, h:220, accent:green, star:false),
-    Card(id:"S-05", title:"Codzienny automat", detail:"Harmonogram i data ostatniej aktualizacji", req:"S-02 + F-01", status:"propozycja", x:160, y:1160, w:650, h:220, accent:amber, star:false),
-    Card(id:"S-03", title:"Szczegóły posta", detail:"Tezy, cytaty, surowe dane, oryginał", req:"S-02", status:"propozycja", x:1075, y:1160, w:650, h:220, accent:cyan, star:false),
-    Card(id:"S-04", title:"Filtrowanie ocen", detail:"Spółka lub temat + stanowisko autora", req:"S-02", status:"propozycja", x:1990, y:1160, w:650, h:220, accent:cyan, star:false),
-    Card(id:"S-06", title:"Historia przebiegów", detail:"Dashboard admina i sygnał awarii", req:"S-05 + S-01", status:"propozycja", x:160, y:1510, w:650, h:220, accent:amber, star:false)
+    Card(id:"F-01", title:"Bramka danych produkcyjnych", detail:"Limity kosztów, restore drill, sekrety", req:"—", status:"do startu", x:160, y:410, w:650, h:220, accent:amber, star:false),
+    Card(id:"F-02", title:"Kontrakt oceny LLM", detail:"Walidacja V1 i próby na rzeczywistym modelu", req:"—", status:"planowanie", x:1075, y:410, w:650, h:220, accent:violet, star:false),
+    Card(id:"S-01", title:"Admin i logowanie", detail:"CLI, sesja, ochrona tras i wylogowanie", req:"—", status:"planowanie", x:1990, y:410, w:650, h:220, accent:green, star:false),
+    Card(id:"S-02", title:"Ocenione posty z Wykopu", detail:"Pobranie → ocena LLM → lista postów", req:"S-01 + F-02", status:"propozycja", x:1075, y:810, w:650, h:230, accent:cyan, star:true),
+    Card(id:"S-07", title:"Onboarding przez CLI", detail:"Konto, link aktywacyjny, odzyskiwanie", req:"S-01", status:"propozycja", x:1990, y:810, w:650, h:220, accent:green, star:false),
+    Card(id:"S-05", title:"Codzienny automat", detail:"Harmonogram i data ostatniej aktualizacji", req:"S-02 + F-01", status:"propozycja", x:160, y:1210, w:650, h:220, accent:amber, star:false),
+    Card(id:"S-03", title:"Szczegóły posta", detail:"Tezy, cytaty, surowe dane, oryginał", req:"S-02", status:"propozycja", x:1075, y:1210, w:650, h:220, accent:cyan, star:false),
+    Card(id:"S-04", title:"Filtrowanie ocen", detail:"Spółka lub temat + stanowisko autora", req:"S-02", status:"propozycja", x:1990, y:1210, w:650, h:220, accent:cyan, star:false),
+    Card(id:"S-06", title:"Historia przebiegów", detail:"Dashboard admina i sygnał awarii", req:"S-05 + S-01", status:"propozycja", x:160, y:1560, w:650, h:220, accent:amber, star:false)
 ]
 
 // Direct downward prerequisite arrows. Independent branches occupy separate columns.
-arrow([(485,580),(485,1160)], amber)
-arrow([(1400,580),(1400,760)], violet)
-arrow([(2315,580),(2315,760)], green)
-arrow([(2100,580),(1650,760)], green)
-arrow([(1170,990),(700,1160)], cyan)
-arrow([(1400,990),(1400,1160)], cyan)
-arrow([(1630,990),(2100,1160)], cyan)
-arrow([(485,1380),(485,1510)], amber)
+arrow([(485,630),(485,1210)], amber)
+arrow([(1400,630),(1400,810)], violet)
+arrow([(2315,630),(2315,810)], green)
+arrow([(2100,630),(1650,810)], green)
+arrow([(1170,1040),(700,1210)], cyan)
+arrow([(1400,1040),(1400,1210)], cyan)
+arrow([(1630,1040),(2100,1210)], cyan)
+arrow([(485,1430),(485,1560)], amber)
 // S-01 is an explicit additional prerequisite of S-06; its requirement is
 // printed on the S-06 card. The graph's transitive path already includes it.
 for c in cards { card(c) }
 
 // The four terminal slices converge at the release gate.
-arrow([(485,1730),(485,1830)], amber)
-arrow([(1400,1380),(1400,1830)], cyan)
-arrow([(2315,1380),(2315,1830)], cyan)
-arrow([(1990,980),(1810,1830)], green)
+arrow([(485,1780),(485,1830)], amber)
+arrow([(1400,1430),(1400,1830)], cyan)
+arrow([(2315,1430),(2315,1830)], cyan)
+arrow([(1990,1030),(1810,1830)], green)
 
 rounded(140, 1830, 2500, 160, 30, color(0x193148), cyan, line: 4)
 rounded(140, 1830, 14, 160, 6, cyan)
