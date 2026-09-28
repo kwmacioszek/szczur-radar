@@ -29,3 +29,10 @@
 - **Problem**: Rozbicie jednej pracy na wiele małych gałęzi/PR-ów mergowanych po kolei do `main` daje branch/commit/PR churn, zaśmieca historię i — co ważniejsze — każdy taki merge idzie na produkcję. W tej sesji scaffold deploy rozjechał się na ~7 PR-ów do prod, część pod drobne aktualizacje docsów.
 - **Rule**: Dla jednej całości pracy trzymaj JEDNĄ gałąź (`deploy/…` lub `feature/…`), dokładaj commity iteracyjnie, wystaw JEDEN PR i weryfikuj w izolowanym **Railway PR Environment** (własna baza, własne `/api/*`). Do `main` (=prod) merguj **raz**, gdy całość jest gotowa i sprawdzona — nie po każdym kroku. Aktualizacje dokumentacji (deploy-plan, lessons) dokładaj do tej samej gałęzi/PR, nie osobnymi PR-ami.
 - **Applies to**: plan, implement, deploy, infra
+
+## Railway IaC w CI: token workspace + ID środowiska, nigdy `railway link`; plan = 0 przed pierwszym apply
+
+- **Context**: Automatyzacja Railway IaC (`.railway/railway.ts`) w GitHub Actions — `railway config plan/apply` dla production i PR environments.
+- **Problem**: Token projektu obejmuje jedno środowisko i nie sięga do PR env; z tokenem workspace `railway link`/`whoami` dają „Unauthorized”, więc job CI pada. Dodatkowo `config apply` na pliku rozjechanym z produkcją wyzerowałby ustawienia z dashboardu (uśpienie) i skasował bucket Postgres-PITR z backupami (wykryte testem na PR #10, 2026-09-28).
+- **Rule**: Do CI obejmującego prod i PR env używaj tokena workspace jako `RAILWAY_API_TOKEN` i wybieraj środowisko przez `RAILWAY_PROJECT_ID` + `RAILWAY_ENVIRONMENT_ID` (ID z `railway environment list --json`), nigdy przez `railway link`. Przed pierwszym automatycznym apply doprowadź `railway config plan --detailed-exit-code` do 0, a w CI blokuj zmiany `destructive`/`resource.delete` i nigdy nie używaj `--confirm-destructive`.
+- **Applies to**: plan, plan-review, implement, infra, deploy
