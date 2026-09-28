@@ -1,9 +1,13 @@
 import AppKit
 
-// Renders the current M-1 dependency map from context/foundation/roadmap.md.
-// Run: swift tools/render_roadmap.swift
-let width = 2800
-let height = 3180
+// Snapshot of M-1 in context/foundation/roadmap.md, updated 2026-09-27.
+// Run on macOS: swift tools/render_roadmap.swift
+// With the installed Command Line Tools SDK:
+// CLANG_MODULE_CACHE_PATH=/private/tmp/szczur-clang-cache \
+// SWIFT_MODULE_CACHE_PATH=/private/tmp/szczur-swift-cache \
+// swift -sdk /Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk tools/render_roadmap.swift
+let width = 3200
+let height = 3740
 let output = "docs/visuals/roadmap-mvp.png"
 
 func color(_ hex: UInt32, _ alpha: CGFloat = 1) -> NSColor {
@@ -65,19 +69,46 @@ func arrow(_ points: [(CGFloat, CGFloat)], _ ink: NSColor, dashed: Bool = false)
 }
 struct Card {
     let id: String, title: String, detail: String, req: String, status: String
-    let x: CGFloat, y: CGFloat, w: CGFloat, h: CGFloat, accent: NSColor
-    let star: Bool
+    let column: Int, row: Int, accent: NSColor
+    var x: CGFloat { Layout.columns[column] }
+    var y: CGFloat { Layout.rows[row] }
+    var star: Bool { id == "S-02" }
+    func top(_ fraction: CGFloat = 0.5) -> (CGFloat, CGFloat) {
+        (x + Layout.cardWidth * fraction, y)
+    }
+    func bottom(_ fraction: CGFloat = 0.5) -> (CGFloat, CGFloat) {
+        (x + Layout.cardWidth * fraction, y + Layout.cardHeight)
+    }
+}
+
+// One grid controls every row, card and gap. Stage descriptions have their
+// own column; the outer account column keeps S-07's gate arrow clear.
+enum Layout {
+    static let margin: CGFloat = 100
+    static let contentWidth: CGFloat = 2960
+    static let stageWidth: CGFloat = 420
+    static let columns: [CGFloat] = (0..<4).map { 640 + CGFloat($0) * 630 }
+    static let rows: [CGFloat] = (0..<4).map { 440 + CGFloat($0) * 440 }
+    static let cardWidth: CGFloat = 530
+    static let cardHeight: CGFloat = 260
+    static let gateY: CGFloat = 2200
+    static let gateHeight: CGFloat = 220
+    static let futureY: CGFloat = 2600
+    static let futureWidth: CGFloat = 665
+    static let futureHeight: CGFloat = 600
+    static let futureColumns: [CGFloat] = (0..<4).map { 100 + CGFloat($0) * 765 }
 }
 func card(_ c: Card) {
-    if c.star { rounded(c.x - 11, c.y - 11, c.w + 22, c.h + 22, 30, cyan.withAlphaComponent(0.09), cyan.withAlphaComponent(0.32), line: 2) }
-    rounded(c.x, c.y, c.w, c.h, 23, panel, c.star ? cyan : stroke, line: c.star ? 3 : 2)
-    rounded(c.x, c.y, 10, c.h, 5, c.accent)
-    txt(c.id, c.x + 32, c.y + 22, 120, 28, .bold, c.accent)
-    txt(c.status.uppercased(), c.x + c.w - 153, c.y + 26, 130, 17, .semibold, muted)
-    txt(c.title, c.x + 32, c.y + 67, c.w - 58, 29, .bold)
-    txt(c.detail, c.x + 32, c.y + 115, c.w - 58, 22, .regular, muted)
-    rounded(c.x + 30, c.y + c.h - 51, c.w - 60, 1, 0, stroke)
-    txt("WYMAGA  " + c.req, c.x + 32, c.y + c.h - 38, c.w - 60, 18, .medium, c.accent)
+    let w = Layout.cardWidth, h = Layout.cardHeight
+    if c.star { rounded(c.x - 10, c.y - 10, w + 20, h + 20, 30, cyan.withAlphaComponent(0.08), cyan.withAlphaComponent(0.3), line: 2) }
+    rounded(c.x, c.y, w, h, 22, panel, c.star ? cyan : stroke, line: c.star ? 3 : 2)
+    rounded(c.x, c.y, 8, h, 4, c.accent)
+    txt(c.id, c.x + 30, c.y + 22, 110, 29, .bold, c.accent)
+    txt(c.status.uppercased(), c.x + w - 172, c.y + 29, 145, 18, .semibold, muted)
+    txt(c.title, c.x + 30, c.y + 74, w - 60, 30, .bold)
+    txt(c.detail, c.x + 30, c.y + 123, w - 60, 25, .regular, muted)
+    rounded(c.x + 30, c.y + 209, w - 60, 1, 0, stroke)
+    txt("WYMAGA  " + c.req, c.x + 30, c.y + 225, w - 60, 20, .medium, c.accent)
 }
 
 let bitmap = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: width, pixelsHigh: height,
@@ -97,125 +128,132 @@ for y in stride(from: CGFloat(80), through: CGFloat(height), by: 80) {
     path([(0, y), (CGFloat(width), y)], color(0x24354C, 0.21), 1)
 }
 
-rounded(112, 94, 12, 84, 5, cyan)
-txt("SZCZUR RADAR", 150, 94, 620, 25, .bold, cyan)
-txt("ROADMAP  /  MVP", 150, 126, 1500, 67, .heavy)
-txt("M-1  ·  Ocenione sygnały z Wykopu dla zaproszonych osób", 153, 215, 1950, 31, .medium, muted)
-rounded(2270, 105, 380, 120, 22, panel, stroke, line: 2)
-txt("9 ELEMENTÓW", 2300, 129, 320, 25, .bold)
-txt("2 fundamenty / 7 wycinków", 2300, 172, 320, 21, .regular, muted)
+rounded(100, 100, 10, 93, 5, cyan)
+txt("SZCZUR RADAR", 140, 94, 620, 26, .bold, cyan)
+txt("ROADMAP  /  MVP", 140, 130, 1800, 68, .heavy)
+txt("M-1  ·  Ocenione sygnały z Wykopu dla zaproszonych osób", 140, 224, 2300, 31, .medium, muted)
+rounded(2530, 105, 530, 130, 22, panel, stroke, line: 2)
+txt("9 ELEMENTÓW DO MVP", 2562, 129, 465, 29, .bold)
+txt("2 fundamenty  /  7 wycinków produktu", 2562, 180, 465, 23, .regular, muted)
 
-let phaseX: [CGFloat] = [140, 755, 1370, 1985]
-let stageY: [CGFloat] = [290, 690, 1090, 1440]
-let stageTitle = ["01 / FUNDAMENTY I DOSTĘP", "02 / PIERWSZY SYGNAŁ", "03 / FUNKCJE MVP", "04 / NADZÓR AUTOMATU"]
-let stageSub = ["Prace mogą ruszyć równolegle", "Ocena LLM trafia do użytkownika", "Widoki i codzienny przebieg", "Historia i sygnał awarii"]
+rounded(100, 300, 2960, 80, 18, color(0x101D30), stroke)
+txt("F = fundament", 126, 322, 260, 25, .bold, white)
+txt("Przygotowanie techniczne lub operacyjne", 390, 325, 730, 23, .regular, muted)
+txt("S = wycinek", 1240, 322, 230, 25, .bold, white)
+txt("Działająca funkcja od początku do końca", 1490, 325, 750, 23, .regular, muted)
+txt("CZYTAJ Z GÓRY NA DÓŁ ↓", 2600, 324, 430, 22, .bold, cyan)
+
+let stageTitle = ["Fundamenty\ni dostęp", "Pierwszy\nsygnał", "Funkcje\nMVP", "Nadzór\nautomatu"]
+let stageSub = ["Prace mogą ruszyć\nrównolegle", "Ocena LLM trafia\ndo użytkownika", "Widoki i codzienny\nprzebieg", "Historia i sygnał\nawarii"]
+path([(580,440),(580,2020)], stroke.withAlphaComponent(0.6), 1)
 for i in 0..<4 {
-    rounded(20, stageY[i] - 10, 455, 60, 16, color(0x1B3048), green, line: 2)
-    rounded(20, stageY[i] - 10, 9, 60, 4, green)
-    txt(stageTitle[i], 47, stageY[i] + 2, 410, 25, .bold)
-    rounded(20, stageY[i] + 55, 455, 50, 14, color(0x152C2E), green, line: 2)
-    txt(stageSub[i], 43, stageY[i] + 64, 420, 21, .medium, white)
+    let x = Layout.margin, y = Layout.rows[i]
+    rounded(x, y, Layout.stageWidth, Layout.cardHeight, 22, color(0x132B2D), green.withAlphaComponent(0.85), line: 2)
+    rounded(x + 26, y + 28, 66, 58, 13, green.withAlphaComponent(0.14))
+    txt(String(format:"%02d", i + 1), x + 37, y + 36, 60, 32, .bold, green)
+    txt(stageTitle[i], x + 116, y + 27, 275, 29, .bold)
+    rounded(x + 26, y + 118, 368, 1, 0, green.withAlphaComponent(0.3))
+    txt(stageSub[i], x + 28, y + 148, 365, 26, .medium, white)
 }
 
 let cards: [Card] = [
-    Card(id:"F-01", title:"Bramka danych produkcyjnych", detail:"Limity kosztów, restore drill, sekrety", req:"—", status:"do startu", x:160, y:410, w:650, h:220, accent:amber, star:false),
-    Card(id:"F-02", title:"Kontrakt oceny LLM", detail:"Walidacja V1 i próby na rzeczywistym modelu", req:"—", status:"planowanie", x:1075, y:410, w:650, h:220, accent:violet, star:false),
-    Card(id:"S-01", title:"Admin i logowanie", detail:"CLI, sesja, ochrona tras i wylogowanie", req:"—", status:"planowanie", x:1990, y:410, w:650, h:220, accent:green, star:false),
-    Card(id:"S-02", title:"Ocenione posty z Wykopu", detail:"Pobranie → ocena LLM → lista postów", req:"S-01 + F-02", status:"propozycja", x:1075, y:810, w:650, h:230, accent:cyan, star:true),
-    Card(id:"S-07", title:"Onboarding przez CLI", detail:"Konto, link aktywacyjny, odzyskiwanie", req:"S-01", status:"propozycja", x:1990, y:810, w:650, h:220, accent:green, star:false),
-    Card(id:"S-05", title:"Codzienny automat", detail:"Harmonogram i data ostatniej aktualizacji", req:"S-02 + F-01", status:"propozycja", x:160, y:1210, w:650, h:220, accent:amber, star:false),
-    Card(id:"S-03", title:"Szczegóły posta", detail:"Tezy, cytaty, surowe dane, oryginał", req:"S-02", status:"propozycja", x:1075, y:1210, w:650, h:220, accent:cyan, star:false),
-    Card(id:"S-04", title:"Filtrowanie ocen", detail:"Spółka lub temat + stanowisko autora", req:"S-02", status:"propozycja", x:1990, y:1210, w:650, h:220, accent:cyan, star:false),
-    Card(id:"S-06", title:"Historia przebiegów", detail:"Dashboard admina i sygnał awarii", req:"S-05 + S-01", status:"propozycja", x:160, y:1560, w:650, h:220, accent:amber, star:false)
+    Card(id:"F-01", title:"Gotowość produkcji", detail:"Koszty, odtworzenie backupu\ni ochrona sekretów", req:"—", status:"do startu", column:0, row:0, accent:amber),
+    Card(id:"F-02", title:"Kontrakt oceny LLM", detail:"Walidacja V1 i próby\nna rzeczywistym modelu", req:"—", status:"planowanie", column:1, row:0, accent:violet),
+    Card(id:"S-01", title:"Admin i logowanie", detail:"CLI, sesja, ochrona tras\ni wylogowanie", req:"—", status:"planowanie", column:3, row:0, accent:green),
+    Card(id:"S-02", title:"Pierwsze ocenione posty", detail:"Wykop → ocena LLM → lista\nRęczne uruchomienie przebiegu", req:"S-01 + F-02", status:"propozycja", column:1, row:1, accent:cyan),
+    Card(id:"S-07", title:"Onboarding przez CLI", detail:"Konto, link aktywacyjny\ni odzyskiwanie dostępu", req:"S-01", status:"propozycja", column:3, row:1, accent:green),
+    Card(id:"S-05", title:"Codzienny automat", detail:"Harmonogram i data\nostatniej udanej aktualizacji", req:"S-02 + F-01", status:"propozycja", column:0, row:2, accent:amber),
+    Card(id:"S-03", title:"Szczegóły posta", detail:"Tezy, cytaty, surowe dane\ni link do oryginału", req:"S-02", status:"propozycja", column:1, row:2, accent:cyan),
+    Card(id:"S-04", title:"Filtrowanie ocen", detail:"Spółka lub temat\ni stanowisko autora", req:"S-02", status:"propozycja", column:2, row:2, accent:cyan),
+    Card(id:"S-06", title:"Historia przebiegów", detail:"Dashboard admina\ni widoczny sygnał awarii", req:"S-05 + S-01", status:"propozycja", column:0, row:3, accent:amber)
 ]
+let byID = Dictionary(uniqueKeysWithValues: cards.map { ($0.id, $0) })
+func connect(_ source: String, _ target: String, from: CGFloat = 0.5, to: CGFloat = 0.5) {
+    let a = byID[source]!, b = byID[target]!
+    arrow([a.bottom(from), b.top(to)], a.accent)
+}
 
 // Direct downward prerequisite arrows. Independent branches occupy separate columns.
-arrow([(485,630),(485,1210)], amber)
-arrow([(1400,630),(1400,810)], violet)
-arrow([(2315,630),(2315,810)], green)
-arrow([(2100,630),(1650,810)], green)
-arrow([(1170,1040),(700,1210)], cyan)
-arrow([(1400,1040),(1400,1210)], cyan)
-arrow([(1630,1040),(2100,1210)], cyan)
-arrow([(485,1430),(485,1560)], amber)
+connect("F-01", "S-05")
+connect("F-02", "S-02")
+connect("S-01", "S-07")
+connect("S-01", "S-02", from:0.18, to:0.82)
+connect("S-02", "S-05", from:0.2, to:0.82)
+connect("S-02", "S-03")
+connect("S-02", "S-04", from:0.8, to:0.35)
+connect("S-05", "S-06")
 // S-01 is an explicit additional prerequisite of S-06; its requirement is
 // printed on the S-06 card. The graph's transitive path already includes it.
+// The four terminal slices converge at the release gate.
+for id in ["S-06", "S-03", "S-04", "S-07"] {
+    let c = byID[id]!, origin = byID[id]!.bottom()
+    arrow([origin, (origin.0, Layout.gateY)], c.accent)
+}
 for c in cards { card(c) }
 
-// The four terminal slices converge at the release gate.
-arrow([(485,1780),(485,1830)], amber)
-arrow([(1400,1430),(1400,1830)], cyan)
-arrow([(2315,1430),(2315,1830)], cyan)
-arrow([(1990,1030),(1810,1830)], green)
+rounded(100, Layout.gateY, Layout.contentWidth, Layout.gateHeight, 28, color(0x193148), cyan, line: 3)
+rounded(100, Layout.gateY, 10, Layout.gateHeight, 5, cyan)
+txt("BRAMKA WYDANIA MVP", 142, Layout.gateY + 30, 2100, 45, .heavy)
+txt("Warunek wydania: ukończenie wszystkich 9 elementów — F-01, F-02 oraz S-01–S-07.", 145, Layout.gateY + 103, 2150, 29, .medium)
+txt("Poniżej: odroczone kierunki rozwoju. Ich zakres i kolejność wymagają osobnego planu.", 145, Layout.gateY + 160, 2240, 25, .regular, muted)
+rounded(2530, Layout.gateY + 52, 485, 115, 20, color(0x0B2332), cyan.withAlphaComponent(0.65), line: 2)
+txt("0 / 9 UKOŃCZONYCH", 2562, Layout.gateY + 88, 430, 30, .bold, cyan)
 
-rounded(140, 1830, 2500, 160, 30, color(0x193148), cyan, line: 4)
-rounded(140, 1830, 14, 160, 6, cyan)
-txt("BRAMKA WYDANIA MVP", 190, 1850, 1280, 43, .heavy)
-txt("Otwiera się po ukończeniu F-01, F-02 oraz S-01–S-07. Cztery końcowe wycinki zbiegają się tutaj.",
-    192, 1920, 1740, 25, .medium, muted)
-txt("Dalej: niezależne kierunki rozwoju po MVP.", 192, 1954, 1550, 20, .regular, cyan)
-rounded(2220, 1862, 355, 90, 20, color(0x0B2332), cyan.withAlphaComponent(0.65), line: 2)
-txt("0 / 9 UKOŃCZONYCH", 2250, 1882, 300, 27, .bold, cyan)
-
-for x in [CGFloat(397), 1012, 1627, 2242] {
-    arrow([(x,1990),(x,2140)], violet)
+for x in Layout.futureColumns {
+    let center = x + Layout.futureWidth / 2
+    arrow([(center,Layout.gateY + Layout.gateHeight),(center,Layout.futureY)], violet)
 }
 
 struct Parked {
     let title: String, refs: String, description: String
 }
 let parked: [(label: String, first: Parked, second: Parked)] = [
-    ("01 / ŹRÓDŁA I JAKOŚĆ",
+    ("ŹRÓDŁA I JAKOŚĆ",
      Parked(title:"Reddit i komentarze", refs:"FR-023 + komentarze", description:"Drugie źródło postów oraz rozmowy pod postami, mapowane do wspólnego modelu."),
      Parked(title:"Bogatsza ocena sygnału", refs:"Poza MVP / przyszły pipeline", description:"Rozpoznawanie spółek, decyzja o wartości sygnału, nowość, zaangażowanie i modele ML.")),
-    ("02 / ANALIZA I ODKRYWANIE",
+    ("ANALIZA I ODKRYWANIE",
      Parked(title:"Wykresy i alerty", refs:"FR-024 / FR-025", description:"Trend sygnałów na wykresie giełdowym i powiadomienia o obiecującym trendzie."),
      Parked(title:"Ask szczur", refs:"FR-032", description:"Pytania do LLM o wybrany sygnał bez opuszczania widoku posta.")),
-    ("03 / OBSŁUGA UŻYTKOWNIKA",
+    ("OBSŁUGA UŻYTKOWNIKA",
      Parked(title:"Sortowanie i eksport", refs:"FR-008 / FR-011b / FR-031", description:"Porządkowanie listy po polach oceny, źródle i dacie oraz eksport CSV/JSON."),
      Parked(title:"Panel kont i e-mail", refs:"FR-016 / 017 / 019 / 020", description:"Zarządzanie kontami w aplikacji, e-mail z zaproszeniem i własna nazwa wyświetlana.")),
-    ("04 / OPERACJE I SKALA",
+    ("OPERACJE I SKALA",
      Parked(title:"Sterowanie i sesje", refs:"FR-022 / FR-029", description:"Ręczne uruchomienie pipeline’u z dashboardu i automatyczne wygasanie sesji."),
      Parked(title:"Ochrona i skala", refs:"Poza MVP / infrastruktura", description:"2FA, logowanie zewnętrzne, reset hasła, nowe role, HA i własne kopie zapasowe."))
 ]
 for (i, group) in parked.enumerated() {
-    let x = phaseX[i]
-    let y: CGFloat = 2140
-    rounded(x, y, 514, 590, 22, color(0x111E32), stroke, line: 2)
-    rounded(x, y, 8, 590, 4, violet.withAlphaComponent(0.8))
-    txt("PO MVP  ·  " + group.label, x + 28, y + 26, 458, 19, .bold, violet)
-    rounded(x + 28, y + 78, 458, 1, 0, stroke)
+    let x = Layout.futureColumns[i], y = Layout.futureY
+    let w = Layout.futureWidth, h = Layout.futureHeight
+    rounded(x, y, w, h, 22, color(0x111E32), stroke, line: 2)
+    rounded(x, y, 8, h, 4, violet.withAlphaComponent(0.8))
+    txt("PO MVP  ·  ODROCZONE", x + 30, y + 24, w - 60, 20, .bold, violet)
+    txt(group.label, x + 30, y + 61, w - 60, 25, .bold)
+    rounded(x + 30, y + 110, w - 60, 1, 0, stroke)
     let features = [group.first, group.second]
     for (j, p) in features.enumerated() {
-        let top = y + (j == 0 ? 108 : 340)
-        txt(p.title, x + 28, top, 458, 27, .bold)
-        txt(p.refs.uppercased(), x + 28, top + 43, 458, 17, .semibold, violet)
-        txt(p.description, x + 28, top + 82, 458, 21, .regular, muted)
+        let top = y + 144 + CGFloat(j) * 230
+        txt(p.title, x + 30, top, w - 60, 29, .bold)
+        txt(p.refs.uppercased(), x + 30, top + 47, w - 60, 19, .semibold, violet)
+        txt(p.description, x + 30, top + 90, w - 60, 25, .regular, muted)
     }
-    rounded(x + 28, y + 321, 458, 1, 0, stroke)
+    rounded(x + 30, y + 342, w - 60, 1, 0, stroke)
 }
 
-rounded(140, 2800, 2360, 268, 28, color(0x101D30), stroke, line: 2)
-txt("LEGENDA", 177, 2832, 250, 24, .bold)
-rounded(178, 2884, 62, 10, 5, violet)
-txt("Kontrakt LLM", 259, 2871, 270, 21, .medium)
-rounded(538, 2884, 62, 10, 5, green)
-txt("Dostęp i konta", 619, 2871, 290, 21, .medium)
-rounded(953, 2884, 62, 10, 5, cyan)
-txt("Przegląd sygnałów", 1034, 2871, 340, 21, .medium)
-rounded(1418, 2884, 62, 10, 5, amber)
-txt("Produkcja i automat", 1499, 2871, 340, 21, .medium)
-arrow([(1890,2889),(1960,2889)], muted)
-txt("Warunek wstępny", 1982, 2871, 330, 21, .medium)
-txt("Przed bramką: strzałka = warunek wstępny; bez strzałki prace mogą iść równolegle. Po bramce: strzałka = możliwy kierunek rozwoju.",
-    178, 2935, 2220, 20, .regular, muted)
-txt("S-02 to gwiazda przewodnia. Warunek S-01 → S-06 wynika także z łańcucha przez S-02 i S-05.",
-    178, 2974, 2220, 20, .regular, muted)
-txt("F = fundament: przygotowanie techniczne lub operacyjne.   S = wycinek: działająca funkcja produktu od początku do końca.",
-    178, 3013, 2220, 21, .medium, white)
+rounded(100, 3300, 2960, 300, 24, color(0x101D30), stroke, line: 2)
+txt("LEGENDA I ZASADY CZYTANIA", 136, 3328, 1300, 26, .bold)
+let keys: [(CGFloat, String, NSColor)] = [(136,"Kontrakt LLM",violet),(650,"Dostęp i konta",green),(1200,"Przegląd sygnałów",cyan),(1860,"Produkcja i automat",amber)]
+for (x, label, ink) in keys {
+    rounded(x, 3393, 54, 8, 4, ink)
+    txt(label, x + 74, 3379, 510, 24, .medium)
+}
+arrow([(2520,3396),(2590,3396)], muted)
+txt("Zależność", 2614, 3379, 400, 24, .medium)
+txt("S-02: gwiazda przewodnia — pierwszy pełny przepływ od Wykopu do użytkownika. Wyróżnia go obramowanie.", 136, 3445, 2850, 25, .medium)
+txt("Pracuj równolegle po spełnieniu warunków z kart. S-01 jest też warunkiem S-06 — wynika ze ścieżki przez S-02 i S-05.", 136, 3493, 2850, 24, .regular, muted)
+txt("Przed bramką strzałki pokazują zależności. Za bramką wskazują możliwe rozszerzenia, bez ustalonej kolejności.", 136, 3541, 2850, 24, .regular, muted)
 
-txt("Źródło: context/foundation/roadmap.md  ·  M-1 / v2  ·  27.09.2026  ·  Status: otwarty", 145, 3120, 1950, 19, .regular, muted)
-txt("KOLEJNOŚĆ WYNIKA Z ZALEŻNOŚCI, NIE Z DAT", 1850, 3120, 800, 18, .semibold, color(0x71849C))
+txt("Źródło: context/foundation/roadmap.md  ·  M-1 / v2  ·  Stan roadmapy: 27.09.2026  ·  Milestone otwarty", 100, 3660, 2200, 22, .regular, muted)
+txt("MAPA ZALEŻNOŚCI · BEZ TERMINÓW", 2520, 3660, 540, 20, .semibold, muted)
 
 context.flushGraphics()
 NSGraphicsContext.restoreGraphicsState()
