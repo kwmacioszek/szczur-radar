@@ -461,18 +461,18 @@ Weryfikacja argon2 trwa dziesiątki milisekund — akceptowalne przy małej grup
 
 #### Automated
 
-- [x] 1.1 Zablokowane zależności synchronizują się: `cd szczur-radar-api && uv sync --locked`
-- [x] 1.9 `railway config plan --detailed-exit-code` na `production` przed dodaniem preDeploy kończy się kodem 0 (railway.ts zgodny z produkcją)
-- [x] 1.2 Testy backendu przechodzą z bazą testową: `TEST_DATABASE_URL=… REQUIRE_DB_TESTS=1 uv run pytest -q`
-- [x] 1.3 Test migracji upgrade → downgrade → upgrade przechodzi na Postgresie
-- [x] 1.4 Testy sond przechodzą bez żadnej bazy: `uv run pytest -q tests/test_health.py` przy braku `DATABASE_URL`
-- [ ] 1.5 Job `backend` w CI uruchamia testy `db` na kontenerze Postgres i jest zielony
-- [ ] 1.7 Job `railway-config` na PR jest zielony: plan dla `szczur-radar-pr-<N>` bez usunięć i bez zmiany `source`, a apply trafia wyłącznie do środowiska PR
+- [x] 1.1 Zablokowane zależności synchronizują się: `cd szczur-radar-api && uv sync --locked` — 7139be8
+- [x] 1.9 `railway config plan --detailed-exit-code` na `production` przed dodaniem preDeploy kończy się kodem 0 (railway.ts zgodny z produkcją) — 7139be8
+- [x] 1.2 Testy backendu przechodzą z bazą testową: `TEST_DATABASE_URL=… REQUIRE_DB_TESTS=1 uv run pytest -q` — 7139be8
+- [x] 1.3 Test migracji upgrade → downgrade → upgrade przechodzi na Postgresie — 7139be8
+- [x] 1.4 Testy sond przechodzą bez żadnej bazy: `uv run pytest -q tests/test_health.py` przy braku `DATABASE_URL` — 7139be8
+- [x] 1.5 Job `backend` w CI uruchamia testy `db` na kontenerze Postgres i jest zielony — 7abc0d4
+- [x] 1.7 Job `railway-config` na PR jest zielony: plan dla `szczur-radar-pr-<N>` bez usunięć i bez zmiany `source`, a apply trafia wyłącznie do środowiska PR — 7abc0d4
 
 #### Manual
 
-- [ ] 1.6 `railway config plan` pokazuje dodanie pre-deploy dla `szczur-radar-api` i nie proponuje usunięcia żadnej zmiennej
-- [ ] 1.8 W PR env ustawienia `szczur-radar-api` pokazują pre-deploy, deploy wykonał `alembic upgrade head`, a konfiguracja `production` pozostała bez zmian
+- [x] 1.6 `railway config plan` pokazuje dodanie pre-deploy dla `szczur-radar-api` i nie proponuje usunięcia żadnej zmiennej — 7abc0d4
+- [x] 1.8 W PR env ustawienia `szczur-radar-api` pokazują pre-deploy, deploy wykonał `alembic upgrade head`, a konfiguracja `production` pozostała bez zmian — 7abc0d4
 
 ### Phase 2: Uwierzytelnianie API i CLI bootstrapu
 
