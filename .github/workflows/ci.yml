@@ -102,7 +102,9 @@ jobs:
       RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
       RAILWAY_PROJECT_ID: decf00e4-f5a4-43df-b338-6698be87c5a1
       TARGET_ENV: ${{ github.event_name == 'pull_request' && format('szczur-radar-pr-{0}', github.event.pull_request.number) || 'production' }}
-      IS_PR: ${{ github.event_name == 'pull_request' }}
+      # PR envs track the PR branch; .railway/railway.ts uses this for non-production
+      # envs so the apply does not rewrite source.branch. Empty on push to main.
+      IAC_SOURCE_BRANCH: ${{ github.event_name == 'pull_request' && github.head_ref || '' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -151,13 +153,12 @@ jobs:
           }
           # Never destroy anything automatically (e.g. the Postgres-PITR bucket).
           blocked=$(jq '[.changeSet.changes[]? | select(.severity == "destructive" or .kind == "resource.delete")]' plan.json)
-          # A PR env must not have its service source/branch rewritten.
-          if [ "$IS_PR" = "true" ]; then
-            blocked=$(jq --argjson b "$blocked" \
-              '$b + [.changeSet.changes[]? | select(
-                 ([.summary] + (.details // [])) | any(test("(^|[ ,])source([.]|$| )"))
-               )]' plan.json)
-          fi
+          # Never rewrite a service's source/branch automatically, in ANY env:
+          # PR envs track the PR branch (IAC_SOURCE_BRANCH), production tracks main.
+          blocked=$(jq --argjson b "$blocked" \
+            '$b + [.changeSet.changes[]? | select(
+               ([.summary] + (.details // [])) | any(test("(^|[ ,])source([.]|$| )"))
+             )]' plan.json)
           if [ "$(jq 'length' <<<"$blocked")" != "0" ]; then
             echo "::error::plan contains destructive or source changes; refusing to apply to $TARGET_ENV"
             jq . <<<"$blocked"

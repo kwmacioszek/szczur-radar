@@ -32,6 +32,14 @@ const REGION = "europe-west4"; // Railway "EU West (Amsterdam)"
 const API_INTERNAL_PORT = "8000";
 
 export default defineRailway(() => {
+  // Railway PR environments track the PR's branch, not `main`. CI sets
+  // IAC_SOURCE_BRANCH on pull_request events only, so an apply to a PR env
+  // does not rewrite `source.branch`; unset (push to main, local) → `main`.
+  // The IaC context does not reliably carry the target environment name, so
+  // the production safety net lives in CI: the railway-config job refuses ANY
+  // source change, in every environment.
+  const branch = process.env.IAC_SOURCE_BRANCH || "main";
+
   // Postgres. PITR was enabled by the operator (`railway postgres pitr
   // enable`, risk register item #1); the enable itself is not expressible
   // here, but its storage bucket is (below). `postgres()` takes no deploy
@@ -51,7 +59,7 @@ export default defineRailway(() => {
   // IPv6-only from the CLI, so the IPv4 healthcheck failed with "service
   // unavailable".) Railpack auto-detects uv + .python-version (3.13).
   const api = service("szczur-radar-api", {
-    source: github(REPO, { branch: "main", checkSuites: true }),
+    source: github(REPO, { branch, checkSuites: true }),
     rootDirectory: "szczur-radar-api",
     watchPatterns: ["szczur-radar-api/**"],
     start: 'uv run hypercorn main:app --bind "[::]:$PORT"',
@@ -72,7 +80,7 @@ export default defineRailway(() => {
   // public service. Caddy reads the API's private host + port from these
   // reference variables to reverse-proxy /api/* (see szczur-radar-web/Caddyfile).
   const web = service("szczur-radar-web", {
-    source: github(REPO, { branch: "main", checkSuites: true }),
+    source: github(REPO, { branch, checkSuites: true }),
     rootDirectory: "szczur-radar-web",
     watchPatterns: ["szczur-radar-web/**"],
     healthcheck: "/healthz",
