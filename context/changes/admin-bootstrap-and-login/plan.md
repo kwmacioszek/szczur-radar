@@ -121,7 +121,7 @@ Pierwszy model (`users`), Alembic z migracją odwracalną, uruchamianie migracji
 
 **Intent**: Uruchamiać testy bazodanowe na prawdziwym Postgresie w CI (kontener usługi), a lokalnie pozwolić je pominąć bez bazy — ale nigdy po cichu w CI.
 
-**Contract**: Job `backend` dostaje `services.postgres` (obraz `postgres` w wersji major zgodnej z Railway — sprawdź `SELECT version()` na produkcji) z healthcheckiem oraz env `TEST_DATABASE_URL` i `REQUIRE_DB_TESTS=1`. `conftest.py`: fixture sesyjny czyści schemat `public` bazy testowej i robi `alembic upgrade head`; ustawia `DATABASE_URL = TEST_DATABASE_URL` dla aplikacji; fixture per test czyści tabele (`TRUNCATE users`) i po teście robi `dispose` engine'u + zeruje `database._engine`. Bez `TEST_DATABASE_URL`: testy oznaczone markerem `db` są pomijane, chyba że `REQUIRE_DB_TESTS=1` — wtedy fail. Marker `db` zarejestrowany w `[tool.pytest.ini_options]` (scalić z konfiguracją F-02, jeśli już jest na `main`).
+**Contract**: Job `backend` dostaje `services.postgres` (Postgres **18** — ta sama wersja major co lokalny `compose.local.yaml`, obraz `ghcr.io/railwayapp-templates/postgres-ssl:18`, oraz Railway; potwierdź `SELECT version()` na produkcji; w CI wystarczy oficjalny `postgres:18`) z healthcheckiem oraz env `TEST_DATABASE_URL` i `REQUIRE_DB_TESTS=1`. `conftest.py`: fixture sesyjny czyści schemat `public` bazy testowej i robi `alembic upgrade head`; ustawia `DATABASE_URL = TEST_DATABASE_URL` dla aplikacji; fixture per test czyści tabele (`TRUNCATE users`) i po teście robi `dispose` engine'u + zeruje `database._engine`. Bez `TEST_DATABASE_URL`: testy oznaczone markerem `db` są pomijane, chyba że `REQUIRE_DB_TESTS=1` — wtedy fail. Marker `db` zarejestrowany w `[tool.pytest.ini_options]` (scalić z konfiguracją F-02, jeśli już jest na `main`).
 
 #### 6. Test migracji w obie strony
 
@@ -135,7 +135,7 @@ Pierwszy model (`users`), Alembic z migracją odwracalną, uruchamianie migracji
 
 **File**: `szczur-radar-api/README.md`
 
-**Intent**: Opisać, jak lokalnie postawić Postgres (np. `docker run postgres`), ustawić `DATABASE_URL`/`TEST_DATABASE_URL` i uruchomić migracje oraz testy DB.
+**Intent**: Opisać, jak lokalnie postawić Postgres (reużyć istniejący `compose.local.yaml` z głównego `README.md` — Postgres 18 na `127.0.0.1:5432`, osobna baza testowa w tej samej instancji), ustawić `DATABASE_URL`/`TEST_DATABASE_URL` i uruchomić migracje oraz testy DB.
 
 **Contract**: Sekcje: „Baza lokalna”, „Migracje”, „Testy” (z opisem markera `db` i `REQUIRE_DB_TESTS`).
 
@@ -461,11 +461,11 @@ Weryfikacja argon2 trwa dziesiątki milisekund — akceptowalne przy małej grup
 
 #### Automated
 
-- [ ] 1.1 Zablokowane zależności synchronizują się: `cd szczur-radar-api && uv sync --locked`
-- [ ] 1.9 `railway config plan --detailed-exit-code` na `production` przed dodaniem preDeploy kończy się kodem 0 (railway.ts zgodny z produkcją)
-- [ ] 1.2 Testy backendu przechodzą z bazą testową: `TEST_DATABASE_URL=… REQUIRE_DB_TESTS=1 uv run pytest -q`
-- [ ] 1.3 Test migracji upgrade → downgrade → upgrade przechodzi na Postgresie
-- [ ] 1.4 Testy sond przechodzą bez żadnej bazy: `uv run pytest -q tests/test_health.py` przy braku `DATABASE_URL`
+- [x] 1.1 Zablokowane zależności synchronizują się: `cd szczur-radar-api && uv sync --locked`
+- [x] 1.9 `railway config plan --detailed-exit-code` na `production` przed dodaniem preDeploy kończy się kodem 0 (railway.ts zgodny z produkcją)
+- [x] 1.2 Testy backendu przechodzą z bazą testową: `TEST_DATABASE_URL=… REQUIRE_DB_TESTS=1 uv run pytest -q`
+- [x] 1.3 Test migracji upgrade → downgrade → upgrade przechodzi na Postgresie
+- [x] 1.4 Testy sond przechodzą bez żadnej bazy: `uv run pytest -q tests/test_health.py` przy braku `DATABASE_URL`
 - [ ] 1.5 Job `backend` w CI uruchamia testy `db` na kontenerze Postgres i jest zielony
 - [ ] 1.7 Job `railway-config` na PR jest zielony: plan dla `szczur-radar-pr-<N>` bez usunięć i bez zmiany `source`, a apply trafia wyłącznie do środowiska PR
 

@@ -1,4 +1,4 @@
-import { defineRailway, github, postgres, project, service } from "railway/iac";
+import { bucket, defineRailway, github, postgres, project, service } from "railway/iac";
 
 // Infrastructure-as-Code for Szczur Radar. This is the source of truth for the
 // api, web, and Postgres services and replaces railway.toml for them.
@@ -15,6 +15,13 @@ import { defineRailway, github, postgres, project, service } from "railway/iac";
 // `checkSuites: true` on each source enables Railway "Wait for CI": deploys
 // wait for the whole GitHub Actions workflow conclusion. Declared here so IaC
 // does not reset the operator's toggle (a plan otherwise shows true → null).
+//
+// `sleepApplication: true` (serverless sleep) on all three services and the
+// `Postgres-PITR` bucket mirror what the operator set in the dashboard. They
+// MUST stay declared: without them an apply would switch sleep off (cost) and
+// DELETE the bucket holding the PITR backups. Keep this file in sync with
+// production — `railway config plan --detailed-exit-code` on `production`
+// must exit 0 before any automatic apply (lessons.md, Railway IaC in CI).
 
 const REPO = "kwmacioszek/szczur-radar";
 const REGION = "europe-west4"; // Railway "EU West (Amsterdam)"
@@ -25,9 +32,18 @@ const REGION = "europe-west4"; // Railway "EU West (Amsterdam)"
 const API_INTERNAL_PORT = "8000";
 
 export default defineRailway(() => {
-  // Postgres. Backups/PITR are enabled by the operator in the dashboard
-  // (risk register item #1) — that is not expressible here.
-  const db = postgres("postgres");
+  // Postgres. PITR was enabled by the operator (`railway postgres pitr
+  // enable`, risk register item #1); the enable itself is not expressible
+  // here, but its storage bucket is (below). `postgres()` takes no deploy
+  // options, so serverless sleep is set on the node directly (DatabaseNode
+  // carries `deploy`); Object.assign keeps the non-enumerable `env` refs.
+  const db = Object.assign(postgres("postgres"), {
+    deploy: { sleepApplication: true },
+  });
+
+  // Bucket created by `railway postgres pitr enable` (base backups + WAL
+  // archive). Declared so IaC never deletes it; region as provisioned.
+  const pitrBucket = bucket("Postgres-PITR", { region: "sjc" });
 
   // FastAPI backend. No public domain: reachable only through the web proxy
   // over the private network. Uses Hypercorn bound to :: for DUAL-STACK — IPv6
@@ -39,8 +55,13 @@ export default defineRailway(() => {
     rootDirectory: "szczur-radar-api",
     watchPatterns: ["szczur-radar-api/**"],
     start: 'uv run hypercorn main:app --bind "[::]:$PORT"',
+    // Alembic migrations run BEFORE each new API version starts (production and
+    // PR envs), not at process start. If the migration fails, Railway stops the
+    // deploy and the previous version keeps serving — the desired behavior.
+    preDeploy: "uv run alembic upgrade head",
     healthcheck: "/api/health",
     replicas: { [REGION]: 1 },
+    deploy: { sleepApplication: true },
     env: {
       PORT: API_INTERNAL_PORT,
       DATABASE_URL: db.env.DATABASE_URL,
@@ -56,6 +77,7 @@ export default defineRailway(() => {
     watchPatterns: ["szczur-radar-web/**"],
     healthcheck: "/healthz",
     replicas: { [REGION]: 1 },
+    deploy: { sleepApplication: true },
     env: {
       API_PRIVATE_DOMAIN: api.env.RAILWAY_PRIVATE_DOMAIN,
       API_PORT: API_INTERNAL_PORT,
@@ -63,6 +85,6 @@ export default defineRailway(() => {
   });
 
   return project("szczur-radar", {
-    resources: [db, api, web],
+    resources: [db, api, web, pitrBucket],
   });
 });

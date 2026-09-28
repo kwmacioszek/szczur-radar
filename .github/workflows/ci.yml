@@ -15,6 +15,27 @@ jobs:
     defaults:
       run:
         working-directory: szczur-radar-api
+    # Real Postgres for `@pytest.mark.db` tests (migrations round trip, and
+    # later auth/CLI). Same major version (18) as compose.local.yaml and Railway.
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: szczur_ci
+          POSTGRES_PASSWORD: ci_only
+          POSTGRES_DB: szczur_radar_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U szczur_ci -d szczur_radar_test"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgresql://szczur_ci:ci_only@localhost:5432/szczur_radar_test
+      # DB tests must never be silently skipped in CI: without
+      # TEST_DATABASE_URL the run fails (tests/conftest.py).
+      REQUIRE_DB_TESTS: "1"
     steps:
       - uses: actions/checkout@v4
       - name: Install uv
@@ -57,3 +78,94 @@ jobs:
       - name: Container logs
         if: always()
         run: docker logs web || true
+
+  railway-config:
+    name: railway config (plan + apply IaC)
+    runs-on: ubuntu-latest
+    # Applies .railway/railway.ts to the matching Railway environment. Because
+    # Railway "Wait for CI" waits for this whole workflow, the service config
+    # (e.g. preDeploy) is in place BEFORE Railway deploys the code.
+    #   pull_request -> szczur-radar-pr-<N>   (never production)
+    #   push to main -> production
+    # Fork PRs get no secrets and no Railway PR env: skipped deliberately.
+    if: >-
+      github.event_name == 'push' ||
+      github.event.pull_request.head.repo.full_name == github.repository
+    # One apply per environment at a time; never cancel a running apply.
+    concurrency:
+      group: railway-config-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || 'production' }}
+      cancel-in-progress: false
+    env:
+      # WORKSPACE token (a project token covers one environment only and cannot
+      # reach PR envs). Never `railway link`: with a workspace token it fails
+      # "Unauthorized"; the environment is selected by ID instead.
+      RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
+      RAILWAY_PROJECT_ID: decf00e4-f5a4-43df-b338-6698be87c5a1
+      TARGET_ENV: ${{ github.event_name == 'pull_request' && format('szczur-radar-pr-{0}', github.event.pull_request.number) || 'production' }}
+      IS_PR: ${{ github.event_name == 'pull_request' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Install railway/iac SDK (repo root)
+        run: npm ci
+      - name: Install Railway CLI (pinned)
+        run: npm install --global @railway/cli@5.62.1 && railway --version
+      - name: Check token
+        run: |
+          if [ -z "$RAILWAY_API_TOKEN" ]; then
+            echo "::error::secret RAILWAY_API_TOKEN (workspace token) is not available"
+            exit 1
+          fi
+      - name: Resolve environment ID for ${{ env.TARGET_ENV }}
+        run: |
+          # A new PR's Railway environment may still be being created: retry.
+          env_id=""
+          for attempt in $(seq 1 12); do
+            env_id=$(railway environment list --json \
+              | jq -r --arg name "$TARGET_ENV" \
+                  '[.environments[] | select(.name == $name) | .id] | if length == 1 then .[0] else "" end')
+            if [ -n "$env_id" ]; then break; fi
+            echo "Environment '$TARGET_ENV' not found yet (attempt $attempt/12); retrying in 15s"
+            sleep 15
+          done
+          if [ -z "$env_id" ]; then
+            echo "::error::Railway environment '$TARGET_ENV' not found in project $RAILWAY_PROJECT_ID. For a PR, check that Railway PR Environments are enabled and the PR env was created, then re-run this job."
+            exit 1
+          fi
+          echo "RAILWAY_ENVIRONMENT_ID=$env_id" >> "$GITHUB_ENV"
+      - name: Plan and gate
+        run: |
+          railway config plan --json > plan.json
+          jq -r '.diff // ""' plan.json
+          # The plan must target exactly the environment we resolved.
+          jq -e --arg env "$TARGET_ENV" --arg pid "$RAILWAY_PROJECT_ID" \
+            '.ok == true
+             and .currentEnvironment.environmentName == $env
+             and .currentEnvironment.projectId == $pid' plan.json >/dev/null || {
+            echo "::error::plan failed or targets the wrong environment (expected $TARGET_ENV)"
+            jq '{ok, currentEnvironment, diagnostics}' plan.json
+            exit 1
+          }
+          # Never destroy anything automatically (e.g. the Postgres-PITR bucket).
+          blocked=$(jq '[.changeSet.changes[]? | select(.severity == "destructive" or .kind == "resource.delete")]' plan.json)
+          # A PR env must not have its service source/branch rewritten.
+          if [ "$IS_PR" = "true" ]; then
+            blocked=$(jq --argjson b "$blocked" \
+              '$b + [.changeSet.changes[]? | select(
+                 ([.summary] + (.details // [])) | any(test("(^|[ ,])source([.]|$| )"))
+               )]' plan.json)
+          fi
+          if [ "$(jq 'length' <<<"$blocked")" != "0" ]; then
+            echo "::error::plan contains destructive or source changes; refusing to apply to $TARGET_ENV"
+            jq . <<<"$blocked"
+            exit 1
+          fi
+          echo "PENDING_CHANGES=$(jq '[.changeSet.changes[]?] | length' plan.json)" >> "$GITHUB_ENV"
+      - name: Apply to ${{ env.TARGET_ENV }}
+        if: env.PENDING_CHANGES != '0'
+        # Never --confirm-destructive: a non-interactive apply then refuses
+        # destructive changes even if the gate above missed one.
+        run: railway config apply --yes
