@@ -1,4 +1,4 @@
-import { bucket, defineRailway, github, postgres, project, service } from "railway/iac";
+import { bucket, defineRailway, github, postgres, preserve, project, service } from "railway/iac";
 
 // Infrastructure-as-Code for Szczur Radar. This is the source of truth for the
 // api, web, and Postgres services and replaces railway.toml for them.
@@ -73,6 +73,12 @@ export default defineRailway(() => {
     env: {
       PORT: API_INTERNAL_PORT,
       DATABASE_URL: db.env.DATABASE_URL,
+      // Session signing key, set per environment by the operator (sealed on
+      // production, a separate value per PR env) — NEVER a value here and never
+      // ctx.randomString() (deterministic from the env name). preserve() only
+      // declares the name so an apply keeps the existing value instead of
+      // deleting it. The API refuses to start without it (main.py lifespan).
+      JWT_SECRET: preserve(),
     },
   });
 
