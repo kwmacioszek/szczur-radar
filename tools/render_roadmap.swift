@@ -1,6 +1,6 @@
 import AppKit
 
-// Snapshot of M-1 in context/foundation/roadmap.md, updated 2026-09-27.
+// Snapshot of M-1 in context/foundation/roadmap.md, updated 2026-09-28.
 // Run on macOS: swift tools/render_roadmap.swift
 // With the installed Command Line Tools SDK:
 // CLANG_MODULE_CACHE_PATH=/private/tmp/szczur-clang-cache \
@@ -159,7 +159,7 @@ for i in 0..<4 {
 let cards: [Card] = [
     Card(id:"F-01", title:"Gotowość produkcji", detail:"Koszty, odtworzenie backupu\ni ochrona sekretów", req:"—", status:"do startu", column:0, row:0, accent:amber),
     Card(id:"F-02", title:"Kontrakt oceny LLM", detail:"Walidacja V1 i próby\nna rzeczywistym modelu", req:"—", status:"planowanie", column:1, row:0, accent:violet),
-    Card(id:"S-01", title:"Admin i logowanie", detail:"CLI, sesja, ochrona tras\ni wylogowanie", req:"—", status:"planowanie", column:3, row:0, accent:green),
+    Card(id:"S-01", title:"Admin i logowanie", detail:"CLI, sesja, ochrona tras\ni wylogowanie", req:"—", status:"w toku", column:3, row:0, accent:green),
     Card(id:"S-02", title:"Pierwsze ocenione posty", detail:"Wykop → ocena LLM → lista\nRęczne uruchomienie przebiegu", req:"S-01 + F-02", status:"propozycja", column:1, row:1, accent:cyan),
     Card(id:"S-07", title:"Onboarding przez CLI", detail:"Konto, link aktywacyjny\ni odzyskiwanie dostępu", req:"S-01", status:"propozycja", column:3, row:1, accent:green),
     Card(id:"S-05", title:"Codzienny automat", detail:"Harmonogram i data\nostatniej udanej aktualizacji", req:"S-02 + F-01", status:"propozycja", column:0, row:2, accent:amber),
@@ -252,7 +252,7 @@ txt("S-02: gwiazda przewodnia — pierwszy pełny przepływ od Wykopu do użytko
 txt("Pracuj równolegle po spełnieniu warunków z kart. S-01 jest też warunkiem S-06 — wynika ze ścieżki przez S-02 i S-05.", 136, 3493, 2850, 24, .regular, muted)
 txt("Przed bramką strzałki pokazują zależności. Za bramką wskazują możliwe rozszerzenia, bez ustalonej kolejności.", 136, 3541, 2850, 24, .regular, muted)
 
-txt("Źródło: context/foundation/roadmap.md  ·  M-1 / v2  ·  Stan roadmapy: 27.09.2026  ·  Milestone otwarty", 100, 3660, 2200, 22, .regular, muted)
+txt("Źródło: context/foundation/roadmap.md  ·  M-1 / v2  ·  Stan roadmapy: 28.09.2026  ·  Milestone otwarty", 100, 3660, 2200, 22, .regular, muted)
 txt("MAPA ZALEŻNOŚCI · BEZ TERMINÓW", 2520, 3660, 540, 20, .semibold, muted)
 
 context.flushGraphics()

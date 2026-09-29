@@ -1,4 +1,4 @@
-import { defineRailway, github, postgres, project, service } from "railway/iac";
+import { bucket, defineRailway, github, postgres, preserve, project, service } from "railway/iac";
 
 // Infrastructure-as-Code for Szczur Radar. This is the source of truth for the
 // api, web, and Postgres services and replaces railway.toml for them.
@@ -15,6 +15,13 @@ import { defineRailway, github, postgres, project, service } from "railway/iac";
 // `checkSuites: true` on each source enables Railway "Wait for CI": deploys
 // wait for the whole GitHub Actions workflow conclusion. Declared here so IaC
 // does not reset the operator's toggle (a plan otherwise shows true → null).
+//
+// `sleepApplication: true` (serverless sleep) on all three services and the
+// `Postgres-PITR` bucket mirror what the operator set in the dashboard. They
+// MUST stay declared: without them an apply would switch sleep off (cost) and
+// DELETE the bucket holding the PITR backups. Keep this file in sync with
+// production — `railway config plan --detailed-exit-code` on `production`
+// must exit 0 before any automatic apply (lessons.md, Railway IaC in CI).
 
 const REPO = "kwmacioszek/szczur-radar";
 const REGION = "europe-west4"; // Railway "EU West (Amsterdam)"
@@ -25,9 +32,26 @@ const REGION = "europe-west4"; // Railway "EU West (Amsterdam)"
 const API_INTERNAL_PORT = "8000";
 
 export default defineRailway(() => {
-  // Postgres. Backups/PITR are enabled by the operator in the dashboard
-  // (risk register item #1) — that is not expressible here.
-  const db = postgres("postgres");
+  // Railway PR environments track the PR's branch, not `main`. CI sets
+  // IAC_SOURCE_BRANCH on pull_request events only, so an apply to a PR env
+  // does not rewrite `source.branch`; unset (push to main, local) → `main`.
+  // The IaC context does not reliably carry the target environment name, so
+  // the production safety net lives in CI: the railway-config job refuses ANY
+  // source change, in every environment.
+  const branch = process.env.IAC_SOURCE_BRANCH || "main";
+
+  // Postgres. PITR was enabled by the operator (`railway postgres pitr
+  // enable`, risk register item #1); the enable itself is not expressible
+  // here, but its storage bucket is (below). `postgres()` takes no deploy
+  // options, so serverless sleep is set on the node directly (DatabaseNode
+  // carries `deploy`); Object.assign keeps the non-enumerable `env` refs.
+  const db = Object.assign(postgres("postgres"), {
+    deploy: { sleepApplication: true },
+  });
+
+  // Bucket created by `railway postgres pitr enable` (base backups + WAL
+  // archive). Declared so IaC never deletes it; region as provisioned.
+  const pitrBucket = bucket("Postgres-PITR", { region: "sjc" });
 
   // FastAPI backend. No public domain: reachable only through the web proxy
   // over the private network. Uses Hypercorn bound to :: for DUAL-STACK — IPv6
@@ -35,15 +59,26 @@ export default defineRailway(() => {
   // IPv6-only from the CLI, so the IPv4 healthcheck failed with "service
   // unavailable".) Railpack auto-detects uv + .python-version (3.13).
   const api = service("szczur-radar-api", {
-    source: github(REPO, { branch: "main", checkSuites: true }),
+    source: github(REPO, { branch, checkSuites: true }),
     rootDirectory: "szczur-radar-api",
     watchPatterns: ["szczur-radar-api/**"],
     start: 'uv run hypercorn main:app --bind "[::]:$PORT"',
+    // Alembic migrations run BEFORE each new API version starts (production and
+    // PR envs), not at process start. If the migration fails, Railway stops the
+    // deploy and the previous version keeps serving — the desired behavior.
+    preDeploy: "uv run alembic upgrade head",
     healthcheck: "/api/health",
     replicas: { [REGION]: 1 },
+    deploy: { sleepApplication: true },
     env: {
       PORT: API_INTERNAL_PORT,
       DATABASE_URL: db.env.DATABASE_URL,
+      // Session signing key, set per environment by the operator (sealed on
+      // production, a separate value per PR env) — NEVER a value here and never
+      // ctx.randomString() (deterministic from the env name). preserve() only
+      // declares the name so an apply keeps the existing value instead of
+      // deleting it. The API refuses to start without it (main.py lifespan).
+      JWT_SECRET: preserve(),
     },
   });
 
@@ -51,11 +86,12 @@ export default defineRailway(() => {
   // public service. Caddy reads the API's private host + port from these
   // reference variables to reverse-proxy /api/* (see szczur-radar-web/Caddyfile).
   const web = service("szczur-radar-web", {
-    source: github(REPO, { branch: "main", checkSuites: true }),
+    source: github(REPO, { branch, checkSuites: true }),
     rootDirectory: "szczur-radar-web",
     watchPatterns: ["szczur-radar-web/**"],
     healthcheck: "/healthz",
     replicas: { [REGION]: 1 },
+    deploy: { sleepApplication: true },
     env: {
       API_PRIVATE_DOMAIN: api.env.RAILWAY_PRIVATE_DOMAIN,
       API_PORT: API_INTERNAL_PORT,
@@ -63,6 +99,6 @@ export default defineRailway(() => {
   });
 
   return project("szczur-radar", {
-    resources: [db, api, web],
+    resources: [db, api, web, pitrBucket],
   });
 });

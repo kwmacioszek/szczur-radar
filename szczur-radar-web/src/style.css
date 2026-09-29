@@ -44,3 +44,36 @@ h1 {
     font-size: 32px;
   }
 }
+
+/* Centered single-card page (login, placeholder home). */
+.page {
+  min-height: 100svh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  box-sizing: border-box;
+}
+
+.card {
+  width: 100%;
+  max-width: 34rem;
+  text-align: center;
+}
+
+.eyebrow {
+  margin: 0 0 12px;
+  font-size: 14px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.card h1 {
+  margin: 0 0 16px;
+}
+
+.lead {
+  color: var(--text);
+  line-height: 1.5;
+}

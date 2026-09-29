@@ -121,7 +121,7 @@ Pierwszy model (`users`), Alembic z migracją odwracalną, uruchamianie migracji
 
 **Intent**: Uruchamiać testy bazodanowe na prawdziwym Postgresie w CI (kontener usługi), a lokalnie pozwolić je pominąć bez bazy — ale nigdy po cichu w CI.
 
-**Contract**: Job `backend` dostaje `services.postgres` (obraz `postgres` w wersji major zgodnej z Railway — sprawdź `SELECT version()` na produkcji) z healthcheckiem oraz env `TEST_DATABASE_URL` i `REQUIRE_DB_TESTS=1`. `conftest.py`: fixture sesyjny czyści schemat `public` bazy testowej i robi `alembic upgrade head`; ustawia `DATABASE_URL = TEST_DATABASE_URL` dla aplikacji; fixture per test czyści tabele (`TRUNCATE users`) i po teście robi `dispose` engine'u + zeruje `database._engine`. Bez `TEST_DATABASE_URL`: testy oznaczone markerem `db` są pomijane, chyba że `REQUIRE_DB_TESTS=1` — wtedy fail. Marker `db` zarejestrowany w `[tool.pytest.ini_options]` (scalić z konfiguracją F-02, jeśli już jest na `main`).
+**Contract**: Job `backend` dostaje `services.postgres` (Postgres **18** — ta sama wersja major co lokalny `compose.local.yaml`, obraz `ghcr.io/railwayapp-templates/postgres-ssl:18`, oraz Railway; potwierdź `SELECT version()` na produkcji; w CI wystarczy oficjalny `postgres:18`) z healthcheckiem oraz env `TEST_DATABASE_URL` i `REQUIRE_DB_TESTS=1`. `conftest.py`: fixture sesyjny czyści schemat `public` bazy testowej i robi `alembic upgrade head`; ustawia `DATABASE_URL = TEST_DATABASE_URL` dla aplikacji; fixture per test czyści tabele (`TRUNCATE users`) i po teście robi `dispose` engine'u + zeruje `database._engine`. Bez `TEST_DATABASE_URL`: testy oznaczone markerem `db` są pomijane, chyba że `REQUIRE_DB_TESTS=1` — wtedy fail. Marker `db` zarejestrowany w `[tool.pytest.ini_options]` (scalić z konfiguracją F-02, jeśli już jest na `main`).
 
 #### 6. Test migracji w obie strony
 
@@ -135,7 +135,7 @@ Pierwszy model (`users`), Alembic z migracją odwracalną, uruchamianie migracji
 
 **File**: `szczur-radar-api/README.md`
 
-**Intent**: Opisać, jak lokalnie postawić Postgres (np. `docker run postgres`), ustawić `DATABASE_URL`/`TEST_DATABASE_URL` i uruchomić migracje oraz testy DB.
+**Intent**: Opisać, jak lokalnie postawić Postgres (reużyć istniejący `compose.local.yaml` z głównego `README.md` — Postgres 18 na `127.0.0.1:5432`, osobna baza testowa w tej samej instancji), ustawić `DATABASE_URL`/`TEST_DATABASE_URL` i uruchomić migracje oraz testy DB.
 
 **Contract**: Sekcje: „Baza lokalna”, „Migracje”, „Testy” (z opisem markera `db` i `REQUIRE_DB_TESTS`).
 
@@ -461,46 +461,46 @@ Weryfikacja argon2 trwa dziesiątki milisekund — akceptowalne przy małej grup
 
 #### Automated
 
-- [ ] 1.1 Zablokowane zależności synchronizują się: `cd szczur-radar-api && uv sync --locked`
-- [ ] 1.9 `railway config plan --detailed-exit-code` na `production` przed dodaniem preDeploy kończy się kodem 0 (railway.ts zgodny z produkcją)
-- [ ] 1.2 Testy backendu przechodzą z bazą testową: `TEST_DATABASE_URL=… REQUIRE_DB_TESTS=1 uv run pytest -q`
-- [ ] 1.3 Test migracji upgrade → downgrade → upgrade przechodzi na Postgresie
-- [ ] 1.4 Testy sond przechodzą bez żadnej bazy: `uv run pytest -q tests/test_health.py` przy braku `DATABASE_URL`
-- [ ] 1.5 Job `backend` w CI uruchamia testy `db` na kontenerze Postgres i jest zielony
-- [ ] 1.7 Job `railway-config` na PR jest zielony: plan dla `szczur-radar-pr-<N>` bez usunięć i bez zmiany `source`, a apply trafia wyłącznie do środowiska PR
+- [x] 1.1 Zablokowane zależności synchronizują się: `cd szczur-radar-api && uv sync --locked` — 7139be8
+- [x] 1.9 `railway config plan --detailed-exit-code` na `production` przed dodaniem preDeploy kończy się kodem 0 (railway.ts zgodny z produkcją) — 7139be8
+- [x] 1.2 Testy backendu przechodzą z bazą testową: `TEST_DATABASE_URL=… REQUIRE_DB_TESTS=1 uv run pytest -q` — 7139be8
+- [x] 1.3 Test migracji upgrade → downgrade → upgrade przechodzi na Postgresie — 7139be8
+- [x] 1.4 Testy sond przechodzą bez żadnej bazy: `uv run pytest -q tests/test_health.py` przy braku `DATABASE_URL` — 7139be8
+- [x] 1.5 Job `backend` w CI uruchamia testy `db` na kontenerze Postgres i jest zielony — 7abc0d4
+- [x] 1.7 Job `railway-config` na PR jest zielony: plan dla `szczur-radar-pr-<N>` bez usunięć i bez zmiany `source`, a apply trafia wyłącznie do środowiska PR — 7abc0d4
 
 #### Manual
 
-- [ ] 1.6 `railway config plan` pokazuje dodanie pre-deploy dla `szczur-radar-api` i nie proponuje usunięcia żadnej zmiennej
-- [ ] 1.8 W PR env ustawienia `szczur-radar-api` pokazują pre-deploy, deploy wykonał `alembic upgrade head`, a konfiguracja `production` pozostała bez zmian
+- [x] 1.6 `railway config plan` pokazuje dodanie pre-deploy dla `szczur-radar-api` i nie proponuje usunięcia żadnej zmiennej — 7abc0d4
+- [x] 1.8 W PR env ustawienia `szczur-radar-api` pokazują pre-deploy, deploy wykonał `alembic upgrade head`, a konfiguracja `production` pozostała bez zmian — 7abc0d4
 
 ### Phase 2: Uwierzytelnianie API i CLI bootstrapu
 
 #### Automated
 
-- [ ] 2.1 Testy backendu przechodzą z bazą testową: `TEST_DATABASE_URL=… REQUIRE_DB_TESTS=1 uv run pytest -q`
-- [ ] 2.2 Test kompletności autoryzacji przechodzi i każda trasa spoza allowlisty zwraca 401 bez sesji
-- [ ] 2.3 Testy logowania, limitu prób, Origin, tokenów i CLI przechodzą
-- [ ] 2.4 Job `backend` w CI jest zielony
+- [x] 2.1 Testy backendu przechodzą z bazą testową: `TEST_DATABASE_URL=… REQUIRE_DB_TESTS=1 uv run pytest -q` — 7c02cfb
+- [x] 2.2 Test kompletności autoryzacji przechodzi i każda trasa spoza allowlisty zwraca 401 bez sesji — 7c02cfb
+- [x] 2.3 Testy logowania, limitu prób, Origin, tokenów i CLI przechodzą — 7c02cfb
+- [x] 2.4 Job `backend` w CI jest zielony — 60f8df1
 
 #### Manual
 
-- [ ] 2.5 Lokalnie: `create-admin` tworzy admina z ukrytym promptem hasła, drugie wywołanie odmawia z kodem 1
-- [ ] 2.6 Lokalnie: `curl` na `/api/auth/login` zwraca ciasteczko z atrybutami `HttpOnly; Secure; SameSite=Strict; Path=/api`, a `/api/auth/me` z tym ciasteczkiem zwraca własne dane
-- [ ] 2.7 PR env ma własny `JWT_SECRET` i API w PR env startuje po pushu tej fazy
+- [x] 2.5 Lokalnie: `create-admin` tworzy admina z ukrytym promptem hasła, drugie wywołanie odmawia z kodem 1 — 7c02cfb
+- [x] 2.6 Lokalnie: `curl` na `/api/auth/login` zwraca ciasteczko z atrybutami `HttpOnly; Secure; SameSite=Strict; Path=/api`, a `/api/auth/me` z tym ciasteczkiem zwraca własne dane — 7c02cfb
+- [x] 2.7 PR env ma własny `JWT_SECRET` i API w PR env startuje po pushu tej fazy — 60f8df1
 
 ### Phase 3: Logowanie w SPA
 
 #### Automated
 
-- [ ] 3.1 Testy web przechodzą: `cd szczur-radar-web && npm test`
-- [ ] 3.2 Typecheck i build przechodzą: `cd szczur-radar-web && npm run build`
-- [ ] 3.3 Jobs `web-unit` i `web-container-smoke` w CI są zielone (smoke nadal serwuje `index.html` dla głębokich ścieżek)
+- [x] 3.1 Testy web przechodzą: `cd szczur-radar-web && npm test` — f38ff8b
+- [x] 3.2 Typecheck i build przechodzą: `cd szczur-radar-web && npm run build` — f38ff8b
+- [x] 3.3 Jobs `web-unit` i `web-container-smoke` w CI są zielone (smoke nadal serwuje `index.html` dla głębokich ścieżek) — f38ff8b
 
 #### Manual
 
-- [ ] 3.4 Lokalnie (API + `npm run dev`): wejście na `/` bez sesji kończy się na `/login`, logowanie wraca na żądaną stronę, „Wyloguj” wraca na `/login`, a odświeżenie nie przywraca sesji
-- [ ] 3.5 Lokalnie: złe hasło pokazuje komunikat błędu, a po przekroczeniu limitu komunikat o ponownej próbie
+- [x] 3.4 Lokalnie (API + `npm run dev`): wejście na `/` bez sesji kończy się na `/login`, logowanie wraca na żądaną stronę, „Wyloguj” wraca na `/login`, a odświeżenie nie przywraca sesji — cd261e1
+- [x] 3.5 Lokalnie: złe hasło pokazuje komunikat błędu, a po przekroczeniu limitu komunikat o ponownej próbie — cd261e1
 
 ### Phase 4: Wdrożenie i pierwszy admin
 
@@ -510,9 +510,9 @@ Weryfikacja argon2 trwa dziesiątki milisekund — akceptowalne przy małej grup
 
 #### Manual
 
-- [ ] 4.2 `JWT_SECRET` jest ustawiony i zapieczętowany na produkcji, a PR env ma własną wartość
-- [ ] 4.3 W PR env migracja pre-deploy przeszła, a logowanie, ochrona tras, wylogowanie, 403 dla obcego Origin i 429 po limicie działają
-- [ ] 4.4 Limit per IP w PR env używa prawdziwego adresu klienta z `X-Real-IP`
+- [x] 4.2 `JWT_SECRET` jest ustawiony i zapieczętowany na produkcji, a PR env ma własną wartość
+- [x] 4.3 W PR env migracja pre-deploy przeszła, a logowanie, ochrona tras, wylogowanie, 403 dla obcego Origin i 429 po limicie działają
+- [x] 4.4 Limit per IP w PR env używa prawdziwego adresu klienta z `X-Real-IP`
 - [ ] 4.5 Po merge migracja na produkcji przeszła, pierwszy admin został utworzony przez `railway ssh` i loguje się na publicznym adresie
 - [ ] 4.6 `deploy-plan.md` zawiera wpis o wdrożeniu S-01 i sekrecie (bez wartości)
 - [ ] 4.7 Po merge job `railway-config` na `main` zastosował pre-deploy do `production` przed deployem kodu (widoczne w ustawieniach serwisu i w kolejności logów)
