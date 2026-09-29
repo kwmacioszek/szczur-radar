@@ -2,8 +2,14 @@
 
 from __future__ import annotations
 
+import asyncio
+
+import pytest
+from fastapi import HTTPException, Response
+from fastapi.responses import JSONResponse
 from starlette.requests import Request
 
+from app.auth import routes as auth_routes
 from app.auth.rate_limit import (
     EMAIL_LIMIT,
     IP_LIMIT,
@@ -60,6 +66,97 @@ def test_success_clears_email_counter_only() -> None:
     assert limiter.check("a@example.com", "10.0.0.2") is None
     # The IP counter is not reset by a success.
     assert limiter.check("a@example.com", "10.0.0.1") is not None
+
+
+def test_parallel_logins_cannot_all_pass_the_email_limit(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    limiter = LoginRateLimiter(clock=FakeClock())
+    monkeypatch.setattr(auth_routes, "login_limiter", limiter)
+    monkeypatch.setattr(auth_routes, "verify_password", lambda *_: False)
+
+    async def scenario() -> None:
+        entered = 0
+        all_entered = asyncio.Event()
+        release = asyncio.Event()
+
+        class PausedSession:
+            async def scalar(self, _statement: object) -> None:
+                nonlocal entered
+                entered += 1
+                if entered == EMAIL_LIMIT:
+                    all_entered.set()
+                await release.wait()
+
+        session = PausedSession()
+        body = auth_routes.LoginRequest(email="a@example.com", password="wrong")
+        request = _request({"X-Real-IP": "10.0.0.1"})
+        tasks = [
+            asyncio.create_task(auth_routes.login(body, request, Response(), session))
+            for _ in range(EMAIL_LIMIT)
+        ]
+        await asyncio.wait_for(all_entered.wait(), timeout=2)
+
+        blocked = await auth_routes.login(body, request, Response(), session)
+        assert isinstance(blocked, JSONResponse)
+        assert blocked.status_code == 429
+        assert entered == EMAIL_LIMIT
+
+        release.set()
+        failures = await asyncio.gather(*tasks, return_exceptions=True)
+        assert all(
+            isinstance(failure, HTTPException) and failure.status_code == 401
+            for failure in failures
+        )
+        assert limiter.check("a@example.com", "10.0.0.2") == WINDOW_SECONDS
+
+    asyncio.run(scenario())
+
+
+def test_cancelled_login_releases_its_reservation(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    limiter = LoginRateLimiter(clock=FakeClock(), email_limit=1)
+    monkeypatch.setattr(auth_routes, "login_limiter", limiter)
+
+    async def scenario() -> None:
+        entered = asyncio.Event()
+
+        class PausedSession:
+            async def scalar(self, _statement: object) -> None:
+                entered.set()
+                await asyncio.Event().wait()
+
+        email, ip = "a@example.com", "10.0.0.1"
+        task = asyncio.create_task(
+            auth_routes.login(
+                auth_routes.LoginRequest(email=email, password="wrong"),
+                _request({"X-Real-IP": ip}),
+                Response(),
+                PausedSession(),
+            )
+        )
+        await asyncio.wait_for(entered.wait(), timeout=2)
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+
+        assert limiter.reserve(email, ip) is None
+        limiter.finish(email, ip, "aborted")
+
+    asyncio.run(scenario())
+
+
+def test_expired_one_off_keys_are_swept_on_the_next_request() -> None:
+    clock = FakeClock()
+    limiter = LoginRateLimiter(clock=clock)
+    for i in range(50):
+        limiter.record_failure(f"user{i}@example.com", f"10.0.0.{i}")
+
+    clock.now += WINDOW_SECONDS
+    assert limiter.check("fresh@example.com", "10.0.1.1") is None
+    assert not limiter._by_email
+    assert not limiter._by_ip
 
 
 def _request(headers: dict[str, str], peer: str = "172.16.0.9") -> Request:

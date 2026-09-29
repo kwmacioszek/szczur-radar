@@ -1,7 +1,7 @@
 ---
 change_id: admin-bootstrap-and-login
 title: Pierwszy admin przez CLI, logowanie/wylogowanie i ochrona tras
-status: implementing
+status: impl_reviewed
 created: 2026-09-27
 updated: 2026-09-29
 archived_at: null

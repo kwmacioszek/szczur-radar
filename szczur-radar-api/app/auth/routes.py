@@ -75,7 +75,7 @@ async def login(
     email = normalize_email(body.email)
     ip = client_ip(request)
 
-    retry_after = login_limiter.check(email, ip)
+    retry_after = login_limiter.reserve(email, ip)
     if retry_after is not None:
         return JSONResponse(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
@@ -83,26 +83,31 @@ async def login(
             headers={"Retry-After": str(retry_after)},
         )
 
-    user = await session.scalar(select(User).where(User.email == email))
-    # argon2 is CPU-bound: keep it off the event loop. Unknown e-mail and
-    # password-less accounts verify against a dummy hash (same timing).
-    valid = await run_in_threadpool(
-        verify_password, body.password, user.password_hash if user else None
-    )
-    if user is None or not valid:
-        login_limiter.record_failure(email, ip)
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid_credentials"
+    outcome = "aborted"
+    try:
+        user = await session.scalar(select(User).where(User.email == email))
+        # argon2 is CPU-bound: keep it off the event loop. Unknown e-mail and
+        # password-less accounts verify against a dummy hash (same timing).
+        valid = await run_in_threadpool(
+            verify_password, body.password, user.password_hash if user else None
         )
+        if user is None or not valid:
+            outcome = "failure"
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid_credentials"
+            )
 
-    login_limiter.record_success(email)
-    response.set_cookie(
-        SESSION_COOKIE,
-        issue_token(user.id, user.token_version),
-        max_age=int(SESSION_TTL.total_seconds()),
-        **_cookie_attributes(),
-    )
-    return UserOut.of(user)
+        response.set_cookie(
+            SESSION_COOKIE,
+            issue_token(user.id, user.token_version),
+            max_age=int(SESSION_TTL.total_seconds()),
+            **_cookie_attributes(),
+        )
+        result = UserOut.of(user)
+        outcome = "success"
+        return result
+    finally:
+        login_limiter.finish(email, ip, outcome)
 
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
