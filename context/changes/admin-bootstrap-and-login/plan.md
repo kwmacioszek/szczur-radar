@@ -510,9 +510,9 @@ Weryfikacja argon2 trwa dziesiątki milisekund — akceptowalne przy małej grup
 
 #### Manual
 
-- [ ] 4.2 `JWT_SECRET` jest ustawiony i zapieczętowany na produkcji, a PR env ma własną wartość
-- [ ] 4.3 W PR env migracja pre-deploy przeszła, a logowanie, ochrona tras, wylogowanie, 403 dla obcego Origin i 429 po limicie działają
-- [ ] 4.4 Limit per IP w PR env używa prawdziwego adresu klienta z `X-Real-IP`
+- [x] 4.2 `JWT_SECRET` jest ustawiony i zapieczętowany na produkcji, a PR env ma własną wartość
+- [x] 4.3 W PR env migracja pre-deploy przeszła, a logowanie, ochrona tras, wylogowanie, 403 dla obcego Origin i 429 po limicie działają
+- [x] 4.4 Limit per IP w PR env używa prawdziwego adresu klienta z `X-Real-IP`
 - [ ] 4.5 Po merge migracja na produkcji przeszła, pierwszy admin został utworzony przez `railway ssh` i loguje się na publicznym adresie
 - [ ] 4.6 `deploy-plan.md` zawiera wpis o wdrożeniu S-01 i sekrecie (bez wartości)
 - [ ] 4.7 Po merge job `railway-config` na `main` zastosował pre-deploy do `production` przed deployem kodu (widoczne w ustawieniach serwisu i w kolejności logów)

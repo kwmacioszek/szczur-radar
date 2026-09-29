@@ -83,3 +83,7 @@
 
 - Planowane elementy faz 1–3 są obecne bez istotnych braków lub odchyleń. Dodatkowe pliki testów, helper przekierowania i stylów wspierają zaplanowaną funkcję.
 - Wcześniejsze, niezwiązane z funkcją niezatwierdzone zmiany w `.agents/`, `.claude/`, `AGENTS.md` i `CLAUDE.md` nie były częścią zakresu diffu `7139be8^..HEAD` i pozostały nietknięte.
+
+## Najnowszy przegląd — 2026-09-29
+
+Trzeci przegląd dla `8ecedd8`: **APPROVED** dla faz 1, 2, 3, bez nowych ustaleń. **Merge nadal oczekuje warunków fazy 4**, w tym potwierdzonego brakującego `JWT_SECRET` na produkcji. Pełne aktualne wyniki: [impl-review-rereview3-2026-09-29.md](impl-review-rereview3-2026-09-29.md). Wcześniejsze ustalenia i decyzje powyżej zachowano jako ślad planowania.
