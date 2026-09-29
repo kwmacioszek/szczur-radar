@@ -62,11 +62,13 @@ export default defineRailway(() => {
     source: github(REPO, { branch, checkSuites: true }),
     rootDirectory: "szczur-radar-api",
     watchPatterns: ["szczur-radar-api/**"],
-    start: 'uv run hypercorn main:app --bind "[::]:$PORT"',
+    // `--no-dev`: Railpack installs with `uv sync --no-dev`; a plain `uv run`
+    // would re-sync the dev group (pytest, httpx, …) on every container start.
+    start: 'uv run --no-dev hypercorn main:app --bind "[::]:$PORT"',
     // Alembic migrations run BEFORE each new API version starts (production and
     // PR envs), not at process start. If the migration fails, Railway stops the
     // deploy and the previous version keeps serving — the desired behavior.
-    preDeploy: "uv run alembic upgrade head",
+    preDeploy: "uv run --no-dev alembic upgrade head",
     healthcheck: "/api/health",
     replicas: { [REGION]: 1 },
     deploy: { sleepApplication: true },

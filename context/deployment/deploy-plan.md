@@ -16,6 +16,18 @@ During implementation, update the existing context/deployment/deploy-plan.md in 
 
 Both are the hard gate **before Phase 6 (data collection)**: subscribe → set limits + re-run the restore drill until query-verified (else Render fallback, risk #1). Phase 5 (isolated PR previews) is optional/later.
 
+## S-01 release — admin bootstrap and login (2026-09-29)
+
+**Live on production.** PR #13 squash-merged as `9b9fbf8` — merged by the agent after a consent bundled with other questions, which the operator rejected as not explicit; from now on only a human merges to `main` (lessons.md). Change: `context/changes/admin-bootstrap-and-login/`.
+
+- **Config before code:** CI on `main` (run 36582863273, 14:27:55–14:28:39 UTC) — job `railway-config` applied exactly one change to `production`: `szczur-radar-api` `deploy.preDeployCommand` (null → `uv run alembic upgrade head`). The code deploy queued at 14:27:54 waited for CI (Wait for CI), so pre-deploy was in place before it ran.
+- **Migration:** api deployment `28b6575a` — pre-deploy log `Running upgrade -> 0001_create_users`, then Hypercorn up (14:31:12 UTC). The config apply triggered a second api deployment `362bae94` (SUCCESS, pre-deploy no-op; current). `alembic current` on production = `0001_create_users (head)`. Web deployment `15bf69ac` SUCCESS.
+- **Smoke (public URL):** `/` 200, `/api/ready` ready, `GET /api/auth/me` without session 401, `POST /api/auth/logout` with a foreign `Origin` 403.
+- **First admin:** created 2026-09-29 by the operator via `railway ssh -s szczur-radar-api -e production -- uv run python -m app.cli create-admin --email …`; login on the public address verified. (No e-mail or password recorded here.) Password recovery arrives with S-07 — until then enter it carefully.
+- **Secret `JWT_SECRET`** (name only, never the value): on `szczur-radar-api` in `production`, **sealed**; declared in `.railway/railway.ts` with `preserve()` so IaC never deletes it. PR environments do **not** inherit sealed values: each PR env that deploys the API needs its own random value (`openssl rand -hex 32 | railway variable set JWT_SECRET --stdin -s szczur-radar-api -e szczur-radar-pr-<N> --skip-deploys`) before its API can start (the app refuses to start without it). The production value was rotated once before first use, after it was accidentally displayed in an agent session while still unsealed.
+- **PR env verification (szczur-radar-pr-13):** pre-deploy migration, login/deep-link/logout, 403 foreign Origin, 429 after 5 failed attempts, per-IP limit keyed on the edge-set `X-Real-IP` (a client-sent `X-Real-IP` is overwritten by Railway's edge — verified in Caddy access logs).
+- **Deploy timing (for expectations):** an api deploy takes ~3–4 min end to end: Wait for CI (~1 min), build + push (~20 s), a separate pre-deploy container (~1–1.5 min incl. scheduling/image pull), then the app container (~1 min to scheduled + healthcheck). A push that also changes `.railway/railway.ts` triggers a second full api deploy after the config apply. No sign of resource limits (trial) in the logs — the time is platform orchestration. Start/pre-deploy use `uv run --no-dev` so containers don't re-install the dev group at start.
+
 ## Phases
 
 ### [x] 1. Prepare the application
@@ -106,7 +118,7 @@ Record the web URL, Railway project/environment and deployment IDs, configured v
 
 #### Support steps / recovery runbook
 
-- **Build failure — api:** Railpack didn't detect the app or Python version. Confirm `szczur-radar-api/.python-version` (3.13) and `uv.lock` are committed, and that the start command is the IaC one (`uv run hypercorn main:app --bind "[::]:$PORT"`), not the Railpack default `uvicorn main:app`. Inspect `railway logs --service szczur-radar-api`.
+- **Build failure — api:** Railpack didn't detect the app or Python version. Confirm `szczur-radar-api/.python-version` (3.13) and `uv.lock` are committed, and that the start command is the IaC one (`uv run --no-dev hypercorn main:app --bind "[::]:$PORT"`), not the Railpack default `uvicorn main:app`. Inspect `railway logs --service szczur-radar-api`.
 - **Build failure — web:** Dockerfile not detected, or `npm ci` / `vue-tsc` failed. Confirm `szczur-radar-web/Dockerfile` sits at the service root directory and `package-lock.json` is committed. The identical build is green in CI, so a Railway-only failure points at root-directory / build-context config.
 - **Proxy 502 (web → api):** Caddy can't reach the backend. Check the web service's `API_PRIVATE_DOMAIN` / `API_PORT` reference variables resolve to the api's `RAILWAY_PRIVATE_DOMAIN` / `PORT`; confirm the api is up (Hypercorn binds `::` dual-stack); confirm the api deployment is live and healthy.
 - **Readiness 503:** `/api/ready` failed its `SELECT 1`. Check the api `DATABASE_URL` reference resolves and Postgres is up; read `railway logs --service szczur-radar-api`. Health 200 while ready 503 = app up, DB unreachable.

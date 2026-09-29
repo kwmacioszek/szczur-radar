@@ -36,3 +36,10 @@
 - **Problem**: Token projektu obejmuje jedno środowisko i nie sięga do PR env; z tokenem workspace `railway link`/`whoami` dają „Unauthorized”, więc job CI pada. Dodatkowo `config apply` na pliku rozjechanym z produkcją wyzerowałby ustawienia z dashboardu (uśpienie) i skasował bucket Postgres-PITR z backupami (wykryte testem na PR #10, 2026-09-28).
 - **Rule**: Do CI obejmującego prod i PR env używaj tokena workspace jako `RAILWAY_API_TOKEN` i wybieraj środowisko przez `RAILWAY_PROJECT_ID` + `RAILWAY_ENVIRONMENT_ID` (ID z `railway environment list --json`), nigdy przez `railway link`. Przed pierwszym automatycznym apply doprowadź `railway config plan --detailed-exit-code` do 0, a w CI blokuj zmiany `destructive`/`resource.delete` i nigdy nie używaj `--confirm-destructive`.
 - **Applies to**: plan, plan-review, implement, infra, deploy
+
+## Tylko człowiek merguje do main — agent nigdy
+
+- **Context**: Każdy PR i każda zmiana trafiająca do `main`, który autodeployuje się na produkcję Railway.
+- **Problem**: W `admin-bootstrap-and-login` (faza 4) agent zapytał o squash-merge PR #13 jako jedno z trzech pytań w jednym formularzu, warunkowo z wyprzedzeniem („gdy CI będzie zielone”), i po zielonym CI zmergował sam. Kod poszedł na produkcję bez świadomej decyzji człowieka w chwili merge'a.
+- **Rule**: Agent nigdy nie merguje do `main` (ani nie wykonuje `gh pr merge` czy pusha na `main`) — merge zawsze wykonuje człowiek. Agent przygotowuje PR, doprowadza CI i weryfikację do zielonego stanu, a potem zatrzymuje się i przekazuje merge użytkownikowi.
+- **Applies to**: all

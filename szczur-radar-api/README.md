@@ -50,7 +50,7 @@ Nowa migracja: `uv run alembic revision --autogenerate --rev-id 0002_<opis> -m "
 - ograniczenia mają jawne nazwy (`ck_…`, `uq_…`), żeby kolejne migracje mogły się do nich odwołać;
 - na produkcji po utworzeniu danych preferuj fix-forward (nowa migracja) zamiast downgrade.
 
-Na Railway migracje uruchamia **pre-deploy** serwisu API (`uv run alembic upgrade head`, `.railway/railway.ts`) przed startem każdej nowej wersji — nieudana migracja zatrzymuje deploy, a poprzednia wersja dalej działa.
+Na Railway migracje uruchamia **pre-deploy** serwisu API (`uv run --no-dev alembic upgrade head`, `.railway/railway.ts`) przed startem każdej nowej wersji — nieudana migracja zatrzymuje deploy, a poprzednia wersja dalej działa.
 
 ## Testy
 
