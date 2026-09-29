@@ -156,6 +156,28 @@ jobs:
             exit 1
           fi
           echo "RAILWAY_ENVIRONMENT_ID=$env_id" >> "$GITHUB_ENV"
+      - name: Ensure a PR-env JWT_SECRET
+        # Sealed production secrets are not copied into PR envs — and must not
+        # be: a shared signing key would let PR-env code mint production
+        # sessions. Give each PR env its own random value once (the API refuses
+        # to start without it). Never runs for production; the value is piped
+        # straight into Railway and never printed.
+        if: github.event_name == 'pull_request'
+        run: |
+          set -o pipefail
+          if [ "$TARGET_ENV" = "production" ]; then
+            echo "::error::refusing to set JWT_SECRET on production"
+            exit 1
+          fi
+          present=$(railway variable list -s szczur-radar-api -e "$TARGET_ENV" --json \
+            | jq -r 'has("JWT_SECRET")')
+          if [ "$present" = "true" ]; then
+            echo "JWT_SECRET already set in $TARGET_ENV"
+          else
+            openssl rand -hex 32 | tr -d '\n' \
+              | railway variable set JWT_SECRET --stdin -s szczur-radar-api -e "$TARGET_ENV" --skip-deploys >/dev/null
+            echo "Generated a new JWT_SECRET for $TARGET_ENV"
+          fi
       - name: Plan and gate
         run: |
           railway config plan --json > plan.json
