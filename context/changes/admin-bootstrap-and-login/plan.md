@@ -506,13 +506,13 @@ Weryfikacja argon2 trwa dziesiątki milisekund — akceptowalne przy małej grup
 
 #### Automated
 
-- [ ] 4.1 CI na PR jest zielony (backend z Postgresem, `web-unit`, `web-container-smoke`)
+- [x] 4.1 CI na PR jest zielony (backend z Postgresem, `web-unit`, `web-container-smoke`) — 2d4a248
 
 #### Manual
 
-- [x] 4.2 `JWT_SECRET` jest ustawiony i zapieczętowany na produkcji, a PR env ma własną wartość
-- [x] 4.3 W PR env migracja pre-deploy przeszła, a logowanie, ochrona tras, wylogowanie, 403 dla obcego Origin i 429 po limicie działają
-- [x] 4.4 Limit per IP w PR env używa prawdziwego adresu klienta z `X-Real-IP`
-- [ ] 4.5 Po merge migracja na produkcji przeszła, pierwszy admin został utworzony przez `railway ssh` i loguje się na publicznym adresie
-- [ ] 4.6 `deploy-plan.md` zawiera wpis o wdrożeniu S-01 i sekrecie (bez wartości)
-- [ ] 4.7 Po merge job `railway-config` na `main` zastosował pre-deploy do `production` przed deployem kodu (widoczne w ustawieniach serwisu i w kolejności logów)
+- [x] 4.2 `JWT_SECRET` jest ustawiony i zapieczętowany na produkcji, a PR env ma własną wartość — 2d4a248
+- [x] 4.3 W PR env migracja pre-deploy przeszła, a logowanie, ochrona tras, wylogowanie, 403 dla obcego Origin i 429 po limicie działają — 2d4a248
+- [x] 4.4 Limit per IP w PR env używa prawdziwego adresu klienta z `X-Real-IP` — 2d4a248
+- [x] 4.5 Po merge migracja na produkcji przeszła, pierwszy admin został utworzony przez `railway ssh` i loguje się na publicznym adresie — 9b9fbf8
+- [x] 4.6 `deploy-plan.md` zawiera wpis o wdrożeniu S-01 i sekrecie (bez wartości) — 44f9ac2
+- [x] 4.7 Po merge job `railway-config` na `main` zastosował pre-deploy do `production` przed deployem kodu (widoczne w ustawieniach serwisu i w kolejności logów) — 9b9fbf8
