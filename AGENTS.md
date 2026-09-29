@@ -1,99 +1,54 @@
-# Repository Guidelines
+@REPOSITORY_GUIDELINES.md
 
-Szczur Radar collects investment posts (Wykop, later Reddit), classifies them with an LLM, and serves them to invited users. One repo contains two independently deployed application modules — a FastAPI backend and a Vue 3 + TypeScript SPA — plus a separate scheduled pipeline job.
-
-## Hard Rules
-
-- `context/` is the planning trail: never overwrite or reformat it; never write to `context/archive/` (@CLAUDE.md). `context/foundation/` docs are edited in place (@context/foundation/README.md); `lessons.md` is append-only.
-- If code contradicts @context/foundation/prd.md, flag it — don't silently resolve it in code.
-- `szczur-radar-web/` talks to the backend only through its REST API: no direct DB access and no LLM calls from the browser (FR-032).
-- No public registration and no automated email in MVP. Accounts are created, bootstrapped, and recovered via backend CLI commands (PRD § Access Control, FR-026–028).
-- A new data source changes only acquisition and mapping to the shared model; evaluation, persistence, and API layers stay untouched (PRD § Non-Functional Requirements).
-- Check an FR's priority in the PRD before building it: `must-have` first, `nice-to-have` only when asked.
-
-## Project Structure & Module Organization
-
-- `szczur-radar-api/` — Python ≥3.13, managed by `uv`. FastAPI app in `main.py`; `app/models.py` (SQLAlchemy 2), `migrations/` (Alembic), `app/auth/` (own session auth: argon2, JWT in the `sr_session` HttpOnly cookie, `current_user`/`require_admin`), `app/cli.py` (operator CLI). Stack: @context/foundation/tech-stack-api.md. Local DB, migrations and tests: @szczur-radar-api/README.md.
-- `szczur-radar-web/` — Vite + Vue 3 + TypeScript SPA: `vue-router` with a session guard (`src/router/`), the single API client (`src/api/client.ts`), session state (`src/auth/session.ts`), views in `src/views/`; no store library. Stack: @context/foundation/tech-stack-web.md.
-- `context/foundation/` — `prd.md` (requirements, FR priorities), `shape-notes.md`, `tech-stack-*.md`, `lessons.md`.
-- `context/changes/bootstrap-verification/` — scaffold and audit logs per module.
-- Whenever context/foundation/roadmap.md changes, update `tools/render_roadmap.swift` and regenerate `docs/visuals/roadmap-mvp.png`
-
-## Build, Test, and Development Commands
-
-- Backend: `cd szczur-radar-api && uv sync`; add packages with `uv add <pkg>` (never `pip install`); run with `JWT_SECRET=<≥32 chars> DATABASE_URL=… uv run python main.py` (the app refuses to start without `JWT_SECRET`).
-- Migrations: `cd szczur-radar-api && uv run alembic upgrade head` (Railway runs it as the API pre-deploy); every migration needs a working `downgrade()`.
-- First admin: `uv run python -m app.cli create-admin --email <email>` (hidden password prompt; refuses if an admin exists).
-- Backend tests: `uv run pytest -q`; DB tests (`@pytest.mark.db`) need `TEST_DATABASE_URL`, and `REQUIRE_DB_TESTS=1` (set in CI) makes them fail instead of skip.
-- Frontend: `cd szczur-radar-web && npm run dev` (proxies `/api` to the API on :8000), `npm test` (Vitest), `npm run build` (vue-tsc typecheck + Vite); scripts in @szczur-radar-web/package.json.
-
-## Coding Style & Testing
-
-- Test runners: pytest (+ httpx `TestClient`) in `szczur-radar-api/tests/`, Vitest (+ `@vue/test-utils`, jsdom) as `src/**/*.test.ts` with explicit imports from `'vitest'` (no globals). No linter or formatter is configured — don't assume `ruff` or ESLint exist.
-- Every new API route either depends on `current_user`/`require_admin` or is added to `PUBLIC_ROUTES` (with a justification) in `szczur-radar-api/tests/test_authz_completeness.py`; that test calls every route without a session and fails on anything but 401.
-- Frontend TypeScript settings: @szczur-radar-web/tsconfig.app.json.
-
-## Deployment
-
-- Target platform: Railway. The platform decision is finalized in @context/foundation/infrastructure.md.
-- `szczur-radar-web` is the only publicly exposed Railway service and serves the Vue SPA.
-- Browser requests to `/api/*` on the web application's public origin are reverse-proxied to the private `szczur-radar-api` service over Railway private networking.
-- `szczur-radar-api` must not have its own public domain.
-- CI runs via `.github/workflows/ci.yml` on every push to `main` and PR: backend locked-dependency sync + tests (with a Postgres service), web unit tests (Vitest), a web container smoke test whose image build (the real Dockerfile) also covers frontend typecheck/build, and `railway-config` (plans + applies `.railway/railway.ts` to the PR env or production; see @context/deployment/deploy-plan.md). Do not path-filter this workflow — Railway's Wait for CI evaluates the whole workflow conclusion.
-- Production deployment is via Railway native GitHub autodeploy from `main`, gated by Wait for CI. Service topology and variables are declared as code in `.railway/railway.ts` (validate with `railway config plan` before `railway config apply`).
-- The scheduled LangGraph pipeline runs as a separate private Railway job/service and must not depend on the lifecycle of either the web or API service.
-- Before implementing authentication, document the selected transport, session or token storage, and CSRF handling in the change plan. Browser authentication requests follow the same-origin `/api/*` route above.
-- PR environments never inherit production's sealed `JWT_SECRET` (by design: a shared key would let PR-env code mint production sessions); each PR env gets its own random value, set by the `railway-config` CI job when missing.
-
-## Workflow: branches, PRs and GitHub issues
-
-- Only a human merges to `main` (= production deploy). Agents prepare the PR, get CI and PR-env verification green, then stop and hand the merge over — never `gh pr merge` or push to `main` (@context/foundation/lessons.md).
-- Roadmap slices are tracked as GitHub issues (`S-NN: …`). Keep each issue in sync with reality:
-  - when work on a slice starts: comment on its issue with the change id, branch and PR link; every PR body carries `Refs #<issue>`;
-  - while in progress: comment when a milestone lands (e.g. a phase verified in the PR env) or when something blocks it;
-  - after the human merges and production verification passes: close the issue with a short summary (merge commit, what was verified).
-- Never mark an issue done because code merged — only after production verification.
 <!-- BEGIN @przeprogramowani/10x-cli -->
 
-## Zestaw narzędzi AI 10xDevs — Moduł 2, Lekcja 3
+## Zestaw narzędzi AI 10xDevs — Moduł 2, Lekcja 4
 
-Przed scaleniem przejrzyj kod wygenerowany przez AI za pomocą **łańcucha przeglądu implementacji**:
+Przygotuj się na trudniejszy strumień implementacji z **łańcuchem planowania opartym na badaniach**:
 
 ```
-/10x-implement -> /10x-impl-review -> triage -> (/10x-lesson | fix | skip | disagree)
+internal research (/10x-research) + external research (exa.ai, Context7) -> /10x-plan -> /10x-implement -> success
 ```
 
-`/10x-impl-review` jest głównym tematem lekcji. Przegląd jest bramką jakości, a nie poleceniem naprawienia każdego znaleziska.
+Lekcja koncentruje się na odróżnianiu badań wewnętrznych od zewnętrznych oraz wykorzystywaniu dowodów do uzasadniania decyzji planistycznych.
 
 ### Router zadań — od czego zacząć
 
-| Umiejętność | Użyj jej, gdy |
+| Skill | Użyj, gdy |
 | --- | --- |
-| **Przegląd kodu (główny temat lekcji)** | |
-| `/10x-impl-review <change-id>` | Zaimplementowałeś kod i chcesz przeprowadzić ustrukturyzowany przegląd przed scaleniem. Umiejętność sprawdza zgodność z planem, dyscyplinę zakresu, bezpieczeństwo i jakość, architekturę, spójność wzorców oraz kryteria sukcesu, a następnie przedstawia znaleziska do triage. |
-| **Rezultat powtarzającej się lekcji** | |
-| `/10x-lesson` | Znalezisko ujawnia powtarzającą się regułę projektu lub wzorzec błędów agenta. Zapisz je w `context/foundation/lessons.md` zamiast traktować jako jednorazową notatkę. |
+| **Badania wewnętrzne (temat lekcji)** | |
+| `/10x-research <change-id>` | Potrzebujesz dowodów z istniejącego codebase’u — wzorców, konwencji, punktów integracji lub istniejących implementacji. Uruchamia równoległych sub-agentów w repozytorium i zapisuje ustrukturyzowane ustalenia w `research.md`. |
+| **Badania zewnętrzne (temat lekcji)** | |
+| exa.ai | Potrzebujesz wyszukiwania w sieci natywnie wspieranego przez AI do porównań bibliotek, najlepszych praktyk lub kontekstu ekosystemu, na które codebase nie potrafi odpowiedzieć. |
+| Context7 (`resolve-library-id` → `get-library-docs`) | Potrzebujesz aktualnej, bieżącej dokumentacji dla konkretnej biblioteki lub frameworka. Najpierw rozwiązuje ID biblioteki, a następnie pobiera odpowiednie strony dokumentacji. |
+| **Koło zapasowe do ramowania problemu** | |
+| `/10x-frame <change-id>` | Plan nie może się ustabilizować, plan nie daje oczekiwanych wyników albo uporczywy dryf stale psuje implementację. Użyj jako wyjścia awaryjnego dla osobnego problemu (zademonstrowanego na przykładzie Space Explorers), a nie jako rytuału przed badaniami. |
+| **Planowanie i wykonanie** | |
+| `/10x-plan <change-id>` / `/10x-implement <change-id> phase <n>` | Użyj tego samego łańcucha planowania i wykonania co w Lekcji 2, teraz z dowodami z wcześniejszych badań zasilającymi plan. |
 
-### Dyscyplina triage
+### Dyscyplina badawcza
 
-- Severity określa, jak poważne jest znalezisko. Impact określa, jak duże znaczenie ma teraz decyzja.
-- Prawidłowe rezultaty: napraw teraz, napraw inaczej, pomiń, zaakceptuj jako ryzyko, zapisz jako powtarzającą się regułę (`/10x-lesson`), nie zgódź się.
-- Napraw krytyczne znaleziska. Nie poświęcaj godzin na obserwacje o niskim wpływie tylko dlatego, że agent je znalazł.
-- Świadome pomijanie znalezisk o niskim wpływie jest prawidłowym wynikiem przeglądu, a nie zaniedbaniem.
-- Jeśli nie zgadzasz się ze znaleziskiem, zapisz dlaczego. Błędne rozumowanie agenta również jest sygnałem.
+- Badania wewnętrzne (`/10x-research`) odpowiadają na pytanie „co nasz codebase już robi?” — wzorce, schematy, konwencje, punkty integracji.
+- Badania zewnętrzne (exa.ai, Context7) odpowiadają na pytanie „co powinniśmy zrobić?” — możliwości bibliotek, dokumentacja API, najlepsze praktyki ekosystemu.
+- Połącz oba jako wkład oparty na dowodach dla `/10x-plan`. Plan bez dowodów badawczych w nietrywialnym strumieniu jest zgadywaniem.
+- Dokumentacja przyjazna agentom (`llms.txt`, markdown-for-agents, endpointy `/md`) jest sygnałem jakości przy wyborze bibliotek — biblioteki publikujące dokumentację czytelną dla agentów integrują się szybciej.
 
-### Granice przeglądu
+### `/10x-frame` jako koło zapasowe
 
-- Ta lekcja dotyczy przeglądu zaimplementowanego kodu. Nie tworzy planu, nie wykonuje nowych faz ani nie uczy przeglądu CI.
-- Strategia testowania i bramki jakości są wprowadzane w Module 3.
-- W tej lekcji nie używaj `/10x-contract` jako wyniku triage.
+Trzy sygnały, by sięgnąć po `/10x-frame`:
+1. Plan nie może się ustabilizować — badania stale otwierają kolejne pytania, zamiast zawężać się do kontraktu.
+2. Plan nie dostarcza rezultatów — implementacja wielokrotnie nie spełnia kryteriów sukcesu.
+3. Uporczywy dryf — implementacja stale odbiega od planu w sposób sugerujący, że problem został błędnie sformułowany.
+
+Zademonstrowano na przykładzie Space Explorers, a nie na ścieżce SRS. To wyjście awaryjne, a nie obowiązkowy krok.
 
 ### Ścieżki używane przez tę lekcję
 
-- `context/changes/<change-id>/plan.md` — oczekiwany kontrakt implementacji
-- `context/changes/<change-id>/reviews/` — wynik przeglądu
-- `context/foundation/lessons.md` — powtarzające się lekcje
+- `context/changes/<change-id>/research.md` - wynik badań wewnętrznych
+- `context/changes/<change-id>/frame.md` - wynik ramowania problemu, gdy jest potrzebny
+- `context/changes/<change-id>/plan.md` - kontrakt implementacyjny oparty na dowodach
+- `context/foundation/lessons.md` - powtarzające się reguły i pułapki
 
-Umiejętności nie mogą zapisywać do `context/archive/`. Zarchiwizowane zmiany są niezmienne; jeśli rozwiązana ścieżka docelowa zaczyna się od `context/archive/`, przerwij z komunikatem: „Ta zmiana jest zarchiwizowana. Zamiast tego otwórz nową zmianę za pomocą `/10x-new`.”
+Skills nie mogą zapisywać do `context/archive/`. Zarchiwizowane zmiany są niezmienne; jeśli rozstrzygnięta docelowa ścieżka zaczyna się od `context/archive/`, przerwij z komunikatem: „This change is archived. Open a new change with `/10x-new` instead.”
 
 <!-- END @przeprogramowani/10x-cli -->
