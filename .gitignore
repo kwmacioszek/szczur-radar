@@ -11,9 +11,8 @@ __pycache__/
 node_modules/
 .railway/node_modules/
 
-# AI tool profiles installed locally by 10x-cli (not used by this project's
-# workflow; .claude/ stays tracked, .github/ holds CI and must stay tracked)
-.agents/
+# Other AI tool profiles installed locally by 10x-cli (not used by this
+# project's workflow). .claude/ and .agents/ stay tracked; .github/ holds CI.
 .hermes/
 .pi/
 .qwen/

@@ -4,7 +4,7 @@ Szczur Radar collects investment posts (Wykop, later Reddit), classifies them wi
 
 ## Hard Rules
 
-- `context/` is the planning trail: never overwrite or reformat it; never write to `context/archive/` (see the 10x-cli block below). `context/foundation/` docs are edited in place (@context/foundation/README.md); `lessons.md` is append-only.
+- `context/` is the planning trail: never overwrite or reformat it; never write to `context/archive/` (archived changes are immutable — see the 10x-cli block in @CLAUDE.md / @AGENTS.md). `context/foundation/` docs are edited in place (@context/foundation/README.md); `lessons.md` is append-only.
 - If code contradicts @context/foundation/prd.md, flag it — don't silently resolve it in code.
 - `szczur-radar-web/` talks to the backend only through its REST API: no direct DB access and no LLM calls from the browser (FR-032).
 - No public registration and no automated email in MVP. Accounts are created, bootstrapped, and recovered via backend CLI commands (PRD § Access Control, FR-026–028).
