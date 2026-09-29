@@ -10,3 +10,10 @@ __pycache__/
 # Railway IaC deps
 node_modules/
 .railway/node_modules/
+
+# AI tool profiles installed locally by 10x-cli (not used by this project's
+# workflow; .claude/ stays tracked, .github/ holds CI and must stay tracked)
+.agents/
+.hermes/
+.pi/
+.qwen/
