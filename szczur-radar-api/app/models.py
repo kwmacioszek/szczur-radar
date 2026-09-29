@@ -16,6 +16,7 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 ROLE_USER = "user"
 ROLE_ADMIN = "admin"
+MAX_EMAIL_LENGTH = 320
 
 
 def normalize_email(email: str) -> str:

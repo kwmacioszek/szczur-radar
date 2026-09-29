@@ -18,16 +18,18 @@ import os
 import sys
 from getpass import getpass
 
-from sqlalchemy import exists, select
+from sqlalchemy import exists, select, text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
 from app.auth.passwords import hash_password, validate_password_policy
 from app.database import _normalize_async_url
-from app.models import ROLE_ADMIN, User, normalize_email
+from app.models import MAX_EMAIL_LENGTH, ROLE_ADMIN, User, normalize_email
 
 EXIT_OK = 0
 EXIT_REFUSED = 1
 EXIT_USAGE = 2
+# Stable PostgreSQL advisory lock key for the one-time admin bootstrap.
+ADMIN_BOOTSTRAP_LOCK_ID = 0x53525F41444D494E  # "SR_ADMIN"
 
 
 def _fail(message: str, code: int = EXIT_REFUSED) -> int:
@@ -41,6 +43,12 @@ async def _create_admin(database_url: str, email: str) -> int:
     engine = create_async_engine(_normalize_async_url(database_url))
     try:
         async with AsyncSession(engine, expire_on_commit=False) as session:
+            # Serialize separate CLI processes through the check and insert.
+            # The transaction releases this lock on commit or session close.
+            await session.execute(
+                text("SELECT pg_advisory_xact_lock(:lock_id)"),
+                {"lock_id": ADMIN_BOOTSTRAP_LOCK_ID},
+            )
             if await session.scalar(select(exists().where(User.role == ROLE_ADMIN))):
                 return _fail("Admin already exists — use the recovery command (S-07).")
             if await session.scalar(select(exists().where(User.email == email))):
@@ -84,7 +92,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "create-admin":
         email = normalize_email(args.email)
-        if "@" not in email:
+        if "@" not in email or len(email) > MAX_EMAIL_LENGTH:
             return _fail(f"Invalid e-mail address: {args.email!r}", EXIT_USAGE)
         return asyncio.run(_create_admin(database_url, email))
 

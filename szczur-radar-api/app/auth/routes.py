@@ -22,7 +22,7 @@ from app.auth.passwords import verify_password
 from app.auth.rate_limit import client_ip, login_limiter
 from app.auth.tokens import SESSION_TTL, issue_token
 from app.database import get_session
-from app.models import User, normalize_email
+from app.models import MAX_EMAIL_LENGTH, User, normalize_email
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -32,7 +32,7 @@ COOKIE_PATH = "/api"
 class LoginRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    email: str = Field(max_length=320)
+    email: str = Field(max_length=MAX_EMAIL_LENGTH)
     # Capped well above the policy maximum so huge inputs never reach argon2.
     password: str = Field(max_length=1024)
 
