@@ -493,8 +493,8 @@ Weryfikacja argon2 trwa dziesiątki milisekund — akceptowalne przy małej grup
 
 #### Automated
 
-- [ ] 3.1 Testy web przechodzą: `cd szczur-radar-web && npm test`
-- [ ] 3.2 Typecheck i build przechodzą: `cd szczur-radar-web && npm run build`
+- [x] 3.1 Testy web przechodzą: `cd szczur-radar-web && npm test`
+- [x] 3.2 Typecheck i build przechodzą: `cd szczur-radar-web && npm run build`
 - [ ] 3.3 Jobs `web-unit` i `web-container-smoke` w CI są zielone (smoke nadal serwuje `index.html` dla głębokich ścieżek)
 
 #### Manual

@@ -13,20 +13,24 @@ Szczur Radar collects investment posts (Wykop, later Reddit), classifies them wi
 
 ## Project Structure & Module Organization
 
-- `szczur-radar-api/` — Python ≥3.13, managed by `uv`. `main.py` is still the `uv init` stub; no FastAPI app is wired yet. Planned stack: @context/foundation/tech-stack-api.md.
-- `szczur-radar-web/` — Vite + Vue 3 + TypeScript SPA with no router, store, or tests yet: @context/foundation/tech-stack-web.md.
+- `szczur-radar-api/` — Python ≥3.13, managed by `uv`. FastAPI app in `main.py`; `app/models.py` (SQLAlchemy 2), `migrations/` (Alembic), `app/auth/` (own session auth: argon2, JWT in the `sr_session` HttpOnly cookie, `current_user`/`require_admin`), `app/cli.py` (operator CLI). Stack: @context/foundation/tech-stack-api.md. Local DB, migrations and tests: @szczur-radar-api/README.md.
+- `szczur-radar-web/` — Vite + Vue 3 + TypeScript SPA: `vue-router` with a session guard (`src/router/`), the single API client (`src/api/client.ts`), session state (`src/auth/session.ts`), views in `src/views/`; no store library. Stack: @context/foundation/tech-stack-web.md.
 - `context/foundation/` — `prd.md` (requirements, FR priorities), `shape-notes.md`, `tech-stack-*.md`, `lessons.md`.
 - `context/changes/bootstrap-verification/` — scaffold and audit logs per module.
 - Whenever context/foundation/roadmap.md changes, update `tools/render_roadmap.swift` and regenerate `docs/visuals/roadmap-mvp.png`
 
 ## Build, Test, and Development Commands
 
-- Backend: `cd szczur-radar-api && uv sync`; add packages with `uv add <pkg>` (never `pip install`); run with `uv run python main.py`.
-- Frontend development, build, preview, and related scripts are defined in @szczur-radar-web/package.json.
+- Backend: `cd szczur-radar-api && uv sync`; add packages with `uv add <pkg>` (never `pip install`); run with `JWT_SECRET=<≥32 chars> DATABASE_URL=… uv run python main.py` (the app refuses to start without `JWT_SECRET`).
+- Migrations: `cd szczur-radar-api && uv run alembic upgrade head` (Railway runs it as the API pre-deploy); every migration needs a working `downgrade()`.
+- First admin: `uv run python -m app.cli create-admin --email <email>` (hidden password prompt; refuses if an admin exists).
+- Backend tests: `uv run pytest -q`; DB tests (`@pytest.mark.db`) need `TEST_DATABASE_URL`, and `REQUIRE_DB_TESTS=1` (set in CI) makes them fail instead of skip.
+- Frontend: `cd szczur-radar-web && npm run dev` (proxies `/api` to the API on :8000), `npm test` (Vitest), `npm run build` (vue-tsc typecheck + Vite); scripts in @szczur-radar-web/package.json.
 
 ## Coding Style & Testing
 
-- No linter, formatter, or test runner is configured in either module. Don't assume `pytest`, `vitest`, `ruff`, or ESLint exist — add them explicitly with the change that needs them.
+- Test runners: pytest (+ httpx `TestClient`) in `szczur-radar-api/tests/`, Vitest (+ `@vue/test-utils`, jsdom) as `src/**/*.test.ts` with explicit imports from `'vitest'` (no globals). No linter or formatter is configured — don't assume `ruff` or ESLint exist.
+- Every new API route either depends on `current_user`/`require_admin` or is added to `PUBLIC_ROUTES` (with a justification) in `szczur-radar-api/tests/test_authz_completeness.py`; that test calls every route without a session and fails on anything but 401.
 - Frontend TypeScript settings: @szczur-radar-web/tsconfig.app.json.
 
 ## Deployment
@@ -35,7 +39,7 @@ Szczur Radar collects investment posts (Wykop, later Reddit), classifies them wi
 - `szczur-radar-web` is the only publicly exposed Railway service and serves the Vue SPA.
 - Browser requests to `/api/*` on the web application's public origin are reverse-proxied to the private `szczur-radar-api` service over Railway private networking.
 - `szczur-radar-api` must not have its own public domain.
-- CI runs via `.github/workflows/ci.yml` on every push to `main` and PR: backend locked-dependency sync + tests, and a web container smoke test whose image build (the real Dockerfile) also covers frontend typecheck/build. Do not path-filter this workflow — Railway's Wait for CI evaluates the whole workflow conclusion.
+- CI runs via `.github/workflows/ci.yml` on every push to `main` and PR: backend locked-dependency sync + tests (with a Postgres service), web unit tests (Vitest), a web container smoke test whose image build (the real Dockerfile) also covers frontend typecheck/build, and `railway-config` (plans + applies `.railway/railway.ts` to the PR env or production; see @context/deployment/deploy-plan.md). Do not path-filter this workflow — Railway's Wait for CI evaluates the whole workflow conclusion.
 - Production deployment is via Railway native GitHub autodeploy from `main`, gated by Wait for CI. Service topology and variables are declared as code in `.railway/railway.ts` (validate with `railway config plan` before `railway config apply`).
 - The scheduled LangGraph pipeline runs as a separate private Railway job/service and must not depend on the lifecycle of either the web or API service.
 - Before implementing authentication, document the selected transport, session or token storage, and CSRF handling in the change plan. Browser authentication requests follow the same-origin `/api/*` route above.
