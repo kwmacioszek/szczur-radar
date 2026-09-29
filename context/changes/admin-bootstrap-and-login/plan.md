@@ -493,14 +493,14 @@ Weryfikacja argon2 trwa dziesiątki milisekund — akceptowalne przy małej grup
 
 #### Automated
 
-- [x] 3.1 Testy web przechodzą: `cd szczur-radar-web && npm test`
-- [x] 3.2 Typecheck i build przechodzą: `cd szczur-radar-web && npm run build`
-- [ ] 3.3 Jobs `web-unit` i `web-container-smoke` w CI są zielone (smoke nadal serwuje `index.html` dla głębokich ścieżek)
+- [x] 3.1 Testy web przechodzą: `cd szczur-radar-web && npm test` — f38ff8b
+- [x] 3.2 Typecheck i build przechodzą: `cd szczur-radar-web && npm run build` — f38ff8b
+- [x] 3.3 Jobs `web-unit` i `web-container-smoke` w CI są zielone (smoke nadal serwuje `index.html` dla głębokich ścieżek) — f38ff8b
 
 #### Manual
 
-- [ ] 3.4 Lokalnie (API + `npm run dev`): wejście na `/` bez sesji kończy się na `/login`, logowanie wraca na żądaną stronę, „Wyloguj” wraca na `/login`, a odświeżenie nie przywraca sesji
-- [ ] 3.5 Lokalnie: złe hasło pokazuje komunikat błędu, a po przekroczeniu limitu komunikat o ponownej próbie
+- [x] 3.4 Lokalnie (API + `npm run dev`): wejście na `/` bez sesji kończy się na `/login`, logowanie wraca na żądaną stronę, „Wyloguj” wraca na `/login`, a odświeżenie nie przywraca sesji — cd261e1
+- [x] 3.5 Lokalnie: złe hasło pokazuje komunikat błędu, a po przekroczeniu limitu komunikat o ponownej próbie — cd261e1
 
 ### Phase 4: Wdrożenie i pierwszy admin
 
