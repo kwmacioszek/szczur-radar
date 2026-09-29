@@ -3,7 +3,7 @@ project: "Szczur Radar"
 version: 2
 status: draft # draft | active | locked
 created: 2026-09-27
-updated: 2026-09-28
+updated: 2026-09-29
 prd_version: 2
 main_goal: speed
 top_blocker: time # secondary: decisions (LLM contract, filter scope and signal decision resolved 2026-09-27 — PRD v2)
@@ -45,7 +45,7 @@ Na Wykopie (#gielda) i Reddicie codziennie pojawiają się setki postów o inwes
 | ---- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------- | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
 | F-01 | production-data-gate           | (foundation) produkcja jest gotowa na prawdziwe dane: limity kosztów, zweryfikowany restore, zapieczętowane sekrety             | —             | NFR (dane przechowywane bezterminowo; bezpieczeństwo przed utratą danych po stronie platformy), Open Question 4; guardrail kosztów LLM                                                   | ready    |
 | F-02 | assessment-contract-harness    | (foundation) kontrakt oceny LLM V1 jest egzekwowany kodem i sprawdzony na prawdziwym modelu na wymaganych przypadkach testowych | —             | FR-004, Open Question 2 (rozstrzygnięte przez kontrakt V1); guardrail jakości danych z LLM (bez halucynacji)                                                                             | planning |
-| S-01 | admin-bootstrap-and-login      | operator tworzy pierwszego admina przez CLI; admin loguje się i wylogowuje; niezalogowany widzi tylko ekran logowania           | —             | FR-012, FR-013, FR-014, FR-015, FR-026, NFR (każdy chroniony zasób wymaga uwierzytelnienia — komplet testów autoryzacji), NFR (brak wglądu w dane cudzych kont)                          | in-progress |
+| S-01 | admin-bootstrap-and-login      | operator tworzy pierwszego admina przez CLI; admin loguje się i wylogowuje; niezalogowany widzi tylko ekran logowania           | —             | FR-012, FR-013, FR-014, FR-015, FR-026, NFR (każdy chroniony zasób wymaga uwierzytelnienia — komplet testów autoryzacji), NFR (brak wglądu w dane cudzych kont)                          | done |
 | S-02 | first-assessed-wykop-feed      | zalogowany użytkownik widzi chronologiczną listę postów z Wykopu ocenionych przez LLM                                           | S-01, F-02    | US-01, FR-001, FR-003, FR-004, FR-005, FR-006, FR-007, NFR (surowy payload oddzielony od danych aplikacji, bezstratny i kompresowalny), NFR (nowe źródło = tylko pozyskanie + mapowanie) | proposed |
 | S-03 | post-detail-view               | użytkownik otwiera widok szczegółowy posta: ocena, surowe dane pod przełącznikiem, link do oryginału                            | S-02          | US-01, FR-009, FR-010                                                                                                                                                                    | proposed |
 | S-04 | filter-by-assessment           | użytkownik filtruje listę po spółce/temacie (tekstowo) i stanowisku autora wobec niej                                           | S-02          | US-01, FR-011a                                                                                                                                                                           | proposed |
@@ -118,7 +118,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Pierwszy wycinek, który wprowadza schemat bazy i migracje — ustala sposób ich bezpiecznego wdrażania (każda migracja z działającym cofnięciem) oraz wzorzec testów autoryzacji, z którego korzystają wszystkie kolejne trasy; bez niego żadne dane nie mogą trafić na publiczny adres.
-- **Status:** in-progress
+- **Status:** done
 
 ### S-02: Pierwsze ocenione posty z Wykopu na liście
 
@@ -205,7 +205,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 | ---------- | ------------------------------ | ---------------------------------------------------------------------------------------------- | --------------------- | -------------------------------------------------------------------------------- |
 | F-01       | production-data-gate           | Bramka produkcyjnych danych: subskrypcja, limity, restore drill, sekrety                       | yes                   | Praca operatorska; zrób równolegle                                               |
 | F-02       | assessment-contract-harness    | Kontrakt oceny LLM V1: modele, walidator niezmienników, przypadki testowe na prawdziwym modelu | yes                   | Run `/10x-plan assessment-contract-harness`; odblokowuje gwiazdę przewodnią S-02 |
-| S-01       | admin-bootstrap-and-login      | Pierwszy admin przez CLI + logowanie/wylogowanie + ochrona tras                                | yes                   | Run `/10x-plan admin-bootstrap-and-login`; równolegle z F-02                     |
+| S-01       | admin-bootstrap-and-login      | Pierwszy admin przez CLI + logowanie/wylogowanie + ochrona tras                                | —                     | Wdrożone na produkcji 2026-09-29 (PR #13); archiwizacja zmiany oczekuje (`/10x-archive`) |
 | S-02       | first-assessed-wykop-feed      | Lista postów z Wykopu ocenionych przez LLM (gwiazda przewodnia)                                | no                    | Po S-01 i F-02                                                                   |
 | S-03       | post-detail-view               | Widok szczegółowy posta z oceną, surowymi danymi i linkiem do oryginału                        | no                    | Po S-02                                                                          |
 | S-04       | filter-by-assessment           | Filtrowanie listy po spółce/temacie i stanowisku autora                                        | no                    | Po S-02                                                                          |

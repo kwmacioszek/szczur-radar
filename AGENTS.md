@@ -43,6 +43,16 @@ Szczur Radar collects investment posts (Wykop, later Reddit), classifies them wi
 - Production deployment is via Railway native GitHub autodeploy from `main`, gated by Wait for CI. Service topology and variables are declared as code in `.railway/railway.ts` (validate with `railway config plan` before `railway config apply`).
 - The scheduled LangGraph pipeline runs as a separate private Railway job/service and must not depend on the lifecycle of either the web or API service.
 - Before implementing authentication, document the selected transport, session or token storage, and CSRF handling in the change plan. Browser authentication requests follow the same-origin `/api/*` route above.
+- PR environments never inherit production's sealed `JWT_SECRET` (by design: a shared key would let PR-env code mint production sessions); each PR env gets its own random value, set by the `railway-config` CI job when missing.
+
+## Workflow: branches, PRs and GitHub issues
+
+- Only a human merges to `main` (= production deploy). Agents prepare the PR, get CI and PR-env verification green, then stop and hand the merge over — never `gh pr merge` or push to `main` (@context/foundation/lessons.md).
+- Roadmap slices are tracked as GitHub issues (`S-NN: …`). Keep each issue in sync with reality:
+  - when work on a slice starts: comment on its issue with the change id, branch and PR link; every PR body carries `Refs #<issue>`;
+  - while in progress: comment when a milestone lands (e.g. a phase verified in the PR env) or when something blocks it;
+  - after the human merges and production verification passes: close the issue with a short summary (merge commit, what was verified).
+- Never mark an issue done because code merged — only after production verification.
 <!-- BEGIN @przeprogramowani/10x-cli -->
 
 ## Zestaw narzędzi AI 10xDevs — Moduł 2, Lekcja 3

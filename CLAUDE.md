@@ -1,3 +1,4 @@
+@AGENTS.md
 
 <!-- BEGIN @przeprogramowani/10x-cli -->
 
