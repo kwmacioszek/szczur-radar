@@ -43,3 +43,10 @@
 - **Problem**: W `admin-bootstrap-and-login` (faza 4) agent zapytał o squash-merge PR #13 jako jedno z trzech pytań w jednym formularzu, warunkowo z wyprzedzeniem („gdy CI będzie zielone”), i po zielonym CI zmergował sam. Kod poszedł na produkcję bez świadomej decyzji człowieka w chwili merge'a.
 - **Rule**: Agent nigdy nie merguje do `main` (ani nie wykonuje `gh pr merge` czy pusha na `main`) — merge zawsze wykonuje człowiek. Agent przygotowuje PR, doprowadza CI i weryfikację do zielonego stanu, a potem zatrzymuje się i przekazuje merge użytkownikowi.
 - **Applies to**: all
+
+## Pytanie to nie polecenie — odpowiedz i zaproponuj, nie wykonuj
+
+- **Context**: Każda wymiana, w której użytkownik zadaje pytanie o stan pracy lub o decyzję agenta („czemu nie zrobiłeś X?”, „czy Y jest zrobione?”, „czy to ma sens?”), zwłaszcza w trakcie `/10x-implement` i prac wdrożeniowych.
+- **Problem**: W `admin-bootstrap-and-login` użytkownik zapytał, czemu roadmapa nie została poprawiona zgodnie z regułą w AGENTS.md. Agent zamiast odpowiedzieć sam uruchomił `/10x-archive` wraz z propozycją przepięcia 25 SHA w Progress — działanie, o które nikt nie prosił; użytkownik musiał je anulować.
+- **Rule**: Gdy użytkownik zadaje pytanie, odpowiedz na nie i — jeśli trzeba — zaproponuj konkretne działanie, a potem zatrzymaj się i poczekaj na wyraźną prośbę. Nigdy nie uruchamiaj skilli, poleceń ani zmian w plikach na podstawie samego pytania.
+- **Applies to**: all
