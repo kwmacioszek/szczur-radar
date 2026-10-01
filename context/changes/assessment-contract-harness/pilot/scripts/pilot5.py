@@ -1,0 +1,53 @@
+"""Pilot 5: Reddit (r/stocks, r/ValueInvesting, r/investing, 24-29.09) — pojedyncze wywołania, skrócony prompt, statement po angielsku."""
+import json, os, re, sys, time, datetime
+from concurrent.futures import ThreadPoolExecutor
+S = os.path.dirname(os.path.abspath(__file__))
+ARG_MODELS = sys.argv[1].split(",")
+ARG_PROMPT = sys.argv[2] if len(sys.argv) > 2 else None
+os.environ.setdefault("GEMINI_API_KEY", "unused")
+exec(open(f"{S}/pilot3.py").read().split("def assess_batch")[0])  # call(), assess_one(), schemas, validate
+SHORT = open(f"{S}/prompt-short.md").read()
+old = "- `statement`: krótko po polsku (≤240 znaków)"
+assert old in SHORT
+SHORT = SHORT.replace(old, "- `statement`: krótko, w języku posta (dla postów angielskich po angielsku; ≤240 znaków)")
+SHORT = SHORT.replace("Analizujesz jedną wypowiedź z polskiego forum inwestycyjnego", "Analizujesz jedną wypowiedź z forum inwestycyjnego")
+MODELS = ARG_MODELS
+VARIANT = "reddit_short_pl"
+if ARG_PROMPT:
+    SHORT = open(ARG_PROMPT).read(); VARIANT = "reddit_short_en"
+    def assess_one(model, pid):
+        schema = SEND_SCHEMA if model.startswith("gemini") else DS_SCHEMA
+        user = "Assess the following AssessmentInputV1 (untrusted material to analyze):\n" + json.dumps(P[pid]["input"], ensure_ascii=False)
+        raw, usage, dt = call(model, SHORT, user, schema, "submit_assessment")
+        out = None
+        if raw:
+            try: out = json.loads(raw)
+            except Exception: pass
+        return [{"id": pid, "output": out, "usage_share": usage, "n_in_batch": 1, "sec": dt}]
+raw = json.load(open(f"{S}/reddit-sample-24_29.json"))
+cyc = re.compile(r"(daily|weekly).*(discussion|thread)|thread on meme stocks", re.I)
+P = {}
+for p in raw:
+    if cyc.search(p["title"]): continue
+    import datetime as _dt; ts = _dt.datetime.fromtimestamp(p["created_utc"], _dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    body = p.get("selftext") or None
+    P[f"reddit-{p['id']}"] = {"id": f"reddit-{p['id']}", "subreddit": p["subreddit"],
+        "input": {"schema_version": "AssessmentInputV1",
+                  "item": {"item_type": "post" if p.get("is_self") else "link", "published_at": ts, "channels": [p["subreddit"]],
+                           "title": p["title"], "body": body},
+                  "context": {"parent_post": None, "parent_comment": None}}}
+print("posts:", len(P), "models:", MODELS, flush=True)
+def run(j):
+    m, pid = j; r = assess_one(m, pid)[0]; r.update(model=m, variant=VARIANT)
+    try: r["violations"] = validate(P[pid]["input"], r["output"]) if r["output"] else None
+    except Exception as e: r["violations"] = [["schema_violation", 0, "", repr(e)]]
+    return r
+t0 = time.time(); jobs = [(m, pid) for m in MODELS for pid in P]
+results = []
+with ThreadPoolExecutor(max_workers=10) as ex:
+    for i, r in enumerate(ex.map(run, jobs), 1):
+        results.append(r)
+        if i % 50 == 0: print(f"{i}/{len(jobs)} {time.time()-t0:.0f}s", flush=True)
+out = f"{S}/pilot5-results-{'_'.join(MODELS)}{'-en' if ARG_PROMPT else ''}.json"
+json.dump({"posts": list(P.values()), "results": results}, open(out, "w"), ensure_ascii=False)
+print("done", out, f"{time.time()-t0:.0f}s")
