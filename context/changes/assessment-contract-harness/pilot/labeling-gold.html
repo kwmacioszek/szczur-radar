@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zestaw wzorcowy #gielda</title>
+<style>
+  :root { --bg:#f7f7f5; --card:#fff; --fg:#1d1d1b; --muted:#6b6b66; --line:#e2e2dd; --accent:#2f6fde; --ok:#1f8a4c; --warn:#b26a00; --bad:#c0392b; --sel:#fff3b0; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg:#16171a; --card:#1f2125; --fg:#e8e8e6; --muted:#9a9a95; --line:#33353a; --accent:#6f9cf0; --ok:#4cc27f; --warn:#e0a040; --bad:#ff7a6b; --sel:#5a4d10; } }
+  :root[data-theme="dark"] { --bg:#16171a; --card:#1f2125; --fg:#e8e8e6; --muted:#9a9a95; --line:#33353a; --accent:#6f9cf0; --ok:#4cc27f; --warn:#e0a040; --bad:#ff7a6b; --sel:#5a4d10; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  header { position:sticky; top:0; z-index:2; background:var(--bg); border-bottom:1px solid var(--line); padding:10px 16px; display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+  header h1 { font-size:16px; margin:0 8px 0 0; }
+  .bar { flex:1; min-width:120px; height:8px; background:var(--line); border-radius:4px; overflow:hidden; }
+  .bar > div { height:100%; background:var(--ok); width:0; }
+  main { max-width:860px; margin:0 auto; padding:16px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:16px; margin-bottom:14px; }
+  .meta { color:var(--muted); font-size:13px; margin-bottom:8px; }
+  .post { white-space:pre-wrap; word-break:break-word; font-size:16px; padding:12px; border-radius:8px; background:var(--bg); border:1px solid var(--line); }
+  .post .t { font-weight:600; display:block; margin-bottom:6px; }
+  ::selection { background:var(--sel); }
+  h2 { font-size:14px; margin:0 0 8px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); }
+  .opts { display:flex; gap:8px; flex-wrap:wrap; }
+  .opts label { border:1px solid var(--line); border-radius:8px; padding:6px 10px; cursor:pointer; user-select:none; }
+  .opts input { margin-right:6px; }
+  .opts label:has(input:checked) { border-color:var(--accent); background:color-mix(in srgb, var(--accent) 12%, transparent); }
+  .row { display:flex; gap:8px; align-items:center; margin:6px 0; flex-wrap:wrap; }
+  .row input[type=text] { flex:1; min-width:160px; }
+  .row input[type=text].missing { border-color:var(--bad); }
+  .row .warn { color:var(--bad); font-size:12px; flex-basis:100%; }
+  input[type=text], select, textarea { font:inherit; color:var(--fg); background:var(--card); border:1px solid var(--line); border-radius:6px; padding:6px 8px; }
+  textarea { width:100%; min-height:56px; }
+  button { font:inherit; border:1px solid var(--line); background:var(--card); color:var(--fg); border-radius:6px; padding:6px 12px; cursor:pointer; }
+  button.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+  button:disabled { opacity:.5; cursor:default; }
+  .nav { display:flex; gap:8px; justify-content:space-between; align-items:center; flex-wrap:wrap; }
+  .hint { color:var(--muted); font-size:13px; }
+  details summary { cursor:pointer; color:var(--muted); }
+  .grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(38px,1fr)); gap:4px; margin-top:8px; }
+  .grid button { padding:4px 0; font-size:12px; }
+  .grid button.done { background:color-mix(in srgb, var(--ok) 25%, transparent); }
+  .grid button.skip { background:color-mix(in srgb, var(--warn) 25%, transparent); }
+  .grid button.cur { outline:2px solid var(--accent); }
+  table.def { border-collapse:collapse; font-size:13px; }
+  table.def td { padding:2px 8px 2px 0; vertical-align:top; }
+  #empty { text-align:center; padding:40px 16px; }
+  @media (max-width: 600px) { main { padding:16px 16px; } header { padding:8px 16px; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>#gielda — zestaw wzorcowy</h1>
+  <span id="count" class="hint"></span>
+  <div class="bar"><div id="prog"></div></div>
+  <button id="export" class="primary">Eksportuj labels.json</button>
+  <input type="file" id="loadPosts" accept="application/json" hidden>
+  <button onclick="document.getElementById('loadPosts').click()">Wczytaj posts.json</button>
+  <input type="file" id="import" accept="application/json" hidden>
+  <button onclick="document.getElementById('import').click()">Importuj etykiety</button>
+</header>
+<main>
+  <div id="empty" class="card">
+    <p>Wczytaj <b>posts.json</b> (<code>szczur-radar-api/tests/agents/assessor/gold/posts.json</code>).</p>
+    <p class="hint">Etykiety zapisują się w przeglądarce na bieżąco; na końcu „Eksportuj labels.json” i zapisz plik obok posts.json.</p>
+  </div>
+
+  <div id="app" hidden>
+  <details class="card" open>
+    <summary>Instrukcja v1.0 — skrót (pełne reguły: <code>contract-v2.md</code> §5–§7, <code>labeling-guidelines.md</code>)</summary>
+    <p><b>Trafność</b> (§5)</p>
+    <ul>
+      <li><b>inwestycyjny</b> — rynek / spółka / aktywo / sektor / makro w kontekście ceny, wyceny, transakcji, portfela, wyników; także krótko, żartem lub wulgarnie, jeśli wiadomo o czym. Pytanie o wydarzenie ruszające rynkiem → inwestycyjny, cel = wydarzenie/osoba, not_expressed.</li>
+      <li><b>nieinwestycyjny</b> — forum, żale, pozdrowienia; <b>żart bez aktywa i kierunku</b>; <b>narzekania na brokera/aplikację</b> (chyba że o akcjach/wynikach brokera). Wtedy <b>bez celów</b>.</li>
+      <li><b>nie da się rozstrzygnąć</b> — treść w obrazku, <b>sam link bez kierunku</b>, zbyt ogólne westchnienie. Nazwane cele zostają (not_expressed).</li>
+    </ul>
+    <p><b>Cele</b> (§6) — zaznacz w tekście <b>tylko nazwę</b>, dokładnie jak stoi (odmiana, slang, hashtag)</p>
+    <ul>
+      <li>Cel to <b>podmiot, nie teza</b>. <b>Każda nazwana spółka/aktywo</b> to cel — także bez stanowiska i w tle („odpalam XTB”).</li>
+      <li><b>Jeden cel na podmiot</b>: „Micron” i „mikrusie” w jednym poście = jeden cel.</li>
+      <li>Hashtag spółki (#wittchen, #xtb) może być celem; <b>tagi kanału (#gielda, #finanse…) nigdy</b>. „Śmieciuch” bez nazwy → cel ogólny. „Gruby”, „peron”, „pompa”, „zwała” → nie cele.</li>
+      <li>Slang: szczur = XTB · pamięciorze = producenci pamięci · mikrus = Micron · en wideo / jensen = NVIDIA · guglorz = Google · korłejw = CoreWeave · makdolan = McDonald's · redzi / wiedźminiarz = CD Projekt.</li>
+    </ul>
+    <p><b>Kierunek</b> (§7) — próg „szeroko + pewność”: kierunek także z sugestii („bańka na X” → bearish), wtedy zaznacz <b>niepewne</b></p>
+    <table class="def">
+      <tr><td><b>bullish</b></td><td>oczekuje wzrostu / ocenia pozytywnie / kupuje; pytanie retoryczne z nadzieją („kiedy kruk po 500?”); przyjęta nadzieja na dobre wydarzenie; „na peronie” → cel „rynek”, bullish</td></tr>
+      <tr><td><b>bearish</b></td><td>oczekuje spadku / ocenia negatywnie / sprzedaje</td></tr>
+      <tr><td><b>neutral</b></td><td>jawnie neutralnie („trzymam, nic nie robię”)</td></tr>
+      <tr><td><b>mixed</b></td><td>autor wyraża oba kierunki wobec tego samego celu (np. krótki vs długi termin)</td></tr>
+      <tr><td><b>not_expressed</b></td><td>cel jest, stanowiska brak (informacja, szczere pytanie, cel w tle)</td></tr>
+      <tr><td><b>unclear</b></td><td>stanowisko jest, kierunku nie da się ustalić; scenariusz dwustronny („albo 250 albo 150”)</td></tr>
+    </table>
+    <p>Ton ≠ stanowisko. Cudza opinia bez przyjęcia ≠ stanowisko autora. Wątpliwość po zastosowaniu reguł → <b>trudny</b> + notatka.</p>
+    <p class="hint">Skróty: 1/2/3 — trafność · ←/→ — nawigacja · T — cel z zaznaczenia. Post liczy się jako przejrzany po wybraniu trafności i przejściu dalej.</p>
+  </details>
+
+  <div class="card">
+    <div class="meta" id="meta"></div>
+    <div class="post" id="post"></div>
+  </div>
+
+  <div class="card">
+    <h2>Trafność</h2>
+    <div class="opts" id="rel">
+      <label><input type="radio" name="rel" value="investment_related">1 · inwestycyjny</label>
+      <label><input type="radio" name="rel" value="not_investment_related">2 · nieinwestycyjny</label>
+      <label><input type="radio" name="rel" value="unclear">3 · nie da się rozstrzygnąć</label>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Cele i stanowisko autora</h2>
+    <div id="targets"></div>
+    <div class="row">
+      <button id="addSel">+ Dodaj cel z zaznaczenia (T)</button>
+      <span class="hint">brak celów = zostaw puste</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Notatka (opcjonalnie)</h2>
+    <textarea id="note" placeholder="np. brakująca reguła, slang, wątpliwość"></textarea>
+    <label class="hint"><input type="checkbox" id="hard"> trudny / sam nie jestem pewien</label>
+  </div>
+
+  <div class="card nav">
+    <button id="prev">← Poprzedni</button>
+    <span class="hint" id="status"></span>
+    <button id="next" class="primary">Następny →</button>
+  </div>
+
+  <div class="card">
+    <details><summary>Lista postów</summary><div class="grid" id="grid"></div></details>
+  </div>
+  </div>
+</main>
+
+<script>
+const DIRS = ["bullish", "bearish", "neutral", "mixed", "not_expressed", "unclear"];
+const HEDGEABLE = new Set(["bullish", "bearish", "neutral"]);
+const KEY = "gielda-gold-v1";
+const store = {
+  get(k, fallback) { try { const v = localStorage.getItem(KEY + ":" + k); return v === null ? fallback : JSON.parse(v); } catch (e) { return fallback; } },
+  set(k, v) { try { localStorage.setItem(KEY + ":" + k, JSON.stringify(v)); } catch (e) {} },
+};
+let POSTS = store.get("posts", []);
+let labels = store.get("labels", {});
+let cur = Math.min(store.get("cur", 0), Math.max(POSTS.length - 1, 0));
+
+const $ = id => document.getElementById(id);
+// Same whitespace normalization as the contract (§10), for the anchor check only.
+const norm = s => (s || "").replace(/\s+/gu, " ").trim();
+function L() { const id = POSTS[cur].post_id; return labels[id] || (labels[id] = { relevance: null, targets: [], note: "", hard: false, reviewed: false }); }
+function touch() { L().reviewed = true; }
+function save() { store.set("labels", labels); store.set("cur", cur); renderProgress(); }
+function isDone(id) { const l = labels[id]; return l && l.relevance && l.reviewed; }
+function postText(p) { const it = p.input.item; return norm([it.title, it.body].filter(Boolean).join(" ")); }
+
+function renderTargets() {
+  const box = $("targets"); box.innerHTML = "";
+  const text = postText(POSTS[cur]);
+  L().targets.forEach((t, i) => {
+    const row = document.createElement("div"); row.className = "row";
+    const inp = document.createElement("input"); inp.type = "text"; inp.value = t.anchor; inp.placeholder = "nazwa celu dokładnie jak w tekście";
+    const warn = document.createElement("span"); warn.className = "warn";
+    const check = () => { const ok = norm(t.anchor) && text.includes(norm(t.anchor)); inp.classList.toggle("missing", !ok); warn.textContent = ok ? "" : "Tego fragmentu nie ma w treści posta — popraw albo zaznacz ponownie."; };
+    inp.oninput = () => { t.anchor = inp.value; touch(); save(); check(); };
+    const sel = document.createElement("select");
+    DIRS.forEach(d => { const o = document.createElement("option"); o.value = d; o.textContent = d; sel.appendChild(o); });
+    sel.value = t.direction;
+    const hedgedLabel = document.createElement("label"); hedgedLabel.className = "hint";
+    const hedged = document.createElement("input"); hedged.type = "checkbox"; hedged.checked = !!t.hedged;
+    hedgedLabel.append(hedged, " niepewne");
+    const syncHedge = () => { hedged.disabled = !HEDGEABLE.has(t.direction); if (hedged.disabled) { hedged.checked = false; t.hedged = false; } };
+    sel.onchange = () => { t.direction = sel.value; syncHedge(); touch(); save(); };
+    hedged.onchange = () => { t.hedged = hedged.checked; touch(); save(); };
+    const del = document.createElement("button"); del.textContent = "✕"; del.title = "usuń";
+    del.onclick = () => { L().targets.splice(i, 1); touch(); save(); renderTargets(); };
+    row.append(inp, sel, hedgedLabel, del, warn); box.appendChild(row);
+    syncHedge(); check();
+  });
+}
+function render() {
+  const has = POSTS.length > 0;
+  $("empty").hidden = has; $("app").hidden = !has;
+  if (!has) { renderProgress(); return; }
+  const p = POSTS[cur], l = L(), it = p.input.item;
+  $("meta").textContent = `${cur + 1}/${POSTS.length} · ${p.post_id} · ${it.item_type === "link" ? "znalezisko" : "wpis"} · ${it.published_at.replace("T", " ").slice(0, 16)}`;
+  const post = $("post"); post.innerHTML = "";
+  if (it.title) { const t = document.createElement("span"); t.className = "t"; t.textContent = it.title; post.appendChild(t); }
+  post.appendChild(document.createTextNode(it.body || ""));
+  document.querySelectorAll("#rel input").forEach(r => r.checked = r.value === l.relevance);
+  $("note").value = l.note; $("hard").checked = l.hard;
+  renderTargets(); renderProgress();
+  $("prev").disabled = cur === 0; $("next").textContent = cur === POSTS.length - 1 ? "Koniec" : "Następny →";
+  window.scrollTo(0, 0);
+}
+function renderProgress() {
+  const done = POSTS.filter(p => isDone(p.post_id)).length;
+  $("count").textContent = POSTS.length ? `${done}/${POSTS.length}` : "";
+  $("prog").style.width = POSTS.length ? (100 * done / POSTS.length) + "%" : "0";
+  if (!POSTS.length) return;
+  $("status").textContent = isDone(POSTS[cur].post_id) ? "✓ przejrzany" : (L().relevance ? "wybierz „Następny”, aby zatwierdzić" : "brak trafności");
+  const g = $("grid"); g.innerHTML = "";
+  POSTS.forEach((p, i) => { const b = document.createElement("button"); b.textContent = i + 1;
+    const l = labels[p.post_id]; b.className = (isDone(p.post_id) ? (l.hard ? "skip" : "done") : "") + (i === cur ? " cur" : "");
+    b.onclick = () => { cur = i; save(); render(); }; g.appendChild(b); });
+}
+function addFromSelection() {
+  const s = window.getSelection(); const txt = s ? s.toString() : "";
+  if (!(txt && $("post").contains(s.anchorNode))) { alert("Zaznacz najpierw nazwę celu w treści posta."); return; }
+  L().targets.push({ anchor: txt, direction: "not_expressed", hedged: false }); s.removeAllRanges(); touch(); save(); renderTargets();
+}
+document.querySelectorAll("#rel input").forEach(r => r.onchange = () => { L().relevance = r.value; touch(); save(); });
+$("note").oninput = e => { L().note = e.target.value; save(); };
+$("hard").onchange = e => { L().hard = e.target.checked; save(); };
+$("addSel").onmousedown = e => e.preventDefault();
+$("addSel").onclick = addFromSelection;
+$("prev").onclick = () => { if (cur > 0) { cur--; save(); render(); } };
+$("next").onclick = () => { if (L().relevance) touch(); if (cur < POSTS.length - 1) cur++; save(); render(); };
+document.addEventListener("keydown", e => {
+  if (!POSTS.length || ["INPUT", "TEXTAREA", "SELECT"].includes(e.target.tagName)) return;
+  if (e.key === "ArrowRight") $("next").click();
+  else if (e.key === "ArrowLeft") $("prev").click();
+  else if (["1", "2", "3"].includes(e.key)) { const r = document.querySelectorAll("#rel input")[+e.key - 1]; r.checked = true; r.onchange(); }
+  else if (e.key.toLowerCase() === "t") addFromSelection();
+});
+$("loadPosts").onchange = async e => {
+  const f = e.target.files[0]; if (!f) return;
+  try {
+    const data = JSON.parse(await f.text());
+    if (!Array.isArray(data) || !data.every(p => p.post_id && p.input && p.input.item)) throw new Error("to nie jest posts.json zestawu wzorcowego");
+    POSTS = data; store.set("posts", POSTS); cur = Math.min(cur, POSTS.length - 1); save(); render();
+  } catch (err) { alert("Nie udało się wczytać postów: " + err.message); }
+  e.target.value = "";
+};
+$("export").onclick = () => {
+  if (!POSTS.length) { alert("Najpierw wczytaj posts.json."); return; }
+  const missing = POSTS.filter(p => !isDone(p.post_id)).length;
+  if (missing && !confirm(`${missing} post(ów) nie jest jeszcze przejrzanych. Eksportować mimo to?`)) return;
+  // Format read by app/agents/assessor/evaluation.py (load_labels).
+  const out = POSTS.filter(p => labels[p.post_id] && labels[p.post_id].relevance).map(p => {
+    const l = labels[p.post_id];
+    return { post_id: p.post_id, relevance: l.relevance, hard: !!l.hard, note: l.note || "",
+      targets: (l.relevance === "not_investment_related" ? [] : l.targets).filter(t => norm(t.anchor))
+        .map(t => ({ anchor: t.anchor, direction: t.direction, hedged: HEDGEABLE.has(t.direction) && !!t.hedged })) };
+  });
+  const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([JSON.stringify(out, null, 1) + "\n"], { type: "application/json" }));
+  a.download = "labels.json"; a.click();
+};
+$("import").onchange = async e => {
+  const f = e.target.files[0]; if (!f) return;
+  try {
+    const d = JSON.parse(await f.text());
+    (Array.isArray(d) ? d : d.labels).forEach(l => { labels[l.post_id] = { relevance: l.relevance, targets: l.targets || [], note: l.note || "", hard: !!l.hard, reviewed: true }; });
+    save(); render();
+  } catch (err) { alert("Nie udało się wczytać etykiet: " + err.message); }
+  e.target.value = "";
+};
+render();
+</script>
+</body>
+</html>

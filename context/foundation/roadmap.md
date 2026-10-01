@@ -20,6 +20,7 @@ milestone_status: open
 > v2 (2026-09-27): kontrakt oceny LLM V1 rozstrzyga PRD Open Question 2 → S-02 odblokowane; warstwa kontraktu wydzielona jako F-02; S-04 zablokowane decyzją o filtrowaniu po spółce.
 > v2.1 (2026-09-27): PRD v2 — filtr po spółce tekstowy, „sentyment” = stanowisko wobec celu, rozpoznawanie spółek i decyzja „wartościowy sygnał” poza MVP → S-04 odblokowane.
 > v2.2 (2026-10-01): kontrakt oceny LLM V2 (`assessment-contract-harness`, po pilotażach na prawdziwych postach) zastępuje V1 — wynik oceny to trafność, cele ze stanowiskiem autora, tezy/opinie/fakty/pytania/działania z cytatem, flagi niepewności; bez grafu argumentów. F-02 mierzy modele na zestawie wzorcowym zamiast 12 wymyślonych przypadków.
+> v2.3 (2026-10-01): nowy fundament F-03 (`java-api-rewrite`) — backend przepisany z Pythona/FastAPI na Javę (Spring Boot), bo autor zna Javę i może rzetelnie oceniać kod agenta. F-02 po fazie 1 (kontrakt V2 i dokumenty) czeka na F-03; implementacja kontraktu (p2–p4) zostanie przeplanowana w Javie. S-07 też czeka na F-03, żeby nie dokładać kodu w Pythonie. PR #23 (Python F-02) zamknięty bez merge'a.
 
 ## Milestone
 
@@ -45,14 +46,15 @@ Na Wykopie (#gielda) i Reddicie codziennie pojawiają się setki postów o inwes
 | ID   | Change ID                      | Outcome (user can …)                                                                                                            | Prerequisites | PRD refs                                                                                                                                                                                 | Status   |
 | ---- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------- | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
 | F-01 | production-data-gate           | (foundation) produkcja jest gotowa na prawdziwe dane: limity kosztów, zweryfikowany restore, zapieczętowane sekrety             | —             | NFR (dane przechowywane bezterminowo; bezpieczeństwo przed utratą danych po stronie platformy), Open Question 4; guardrail kosztów LLM                                                   | ready    |
-| F-02 | assessment-contract-harness    | (foundation) kontrakt oceny LLM V2 jest egzekwowany kodem, a model domyślny spełnia progi jakości na zestawie wzorcowym | —             | FR-004, Open Question 2 (rozstrzygnięte przez kontrakt, obecnie V2); guardrail jakości danych z LLM (bez halucynacji)                                                                     | in-progress |
+| F-03 | java-api-rewrite               | (foundation) backend działa na Javie (Spring Boot) z niezmienionym zachowaniem S-01: logowanie, sesja, ochrona tras, CLI, migracje | S-01          | FR-012, FR-013, FR-014, FR-015, FR-026, NFR (każdy chroniony zasób wymaga uwierzytelnienia — komplet testów autoryzacji)                                                                 | planning |
+| F-02 | assessment-contract-harness    | (foundation) kontrakt oceny LLM V2 jest egzekwowany kodem, a model domyślny spełnia progi jakości na zestawie wzorcowym | F-03          | FR-004, Open Question 2 (rozstrzygnięte przez kontrakt, obecnie V2); guardrail jakości danych z LLM (bez halucynacji)                                                                     | in-progress |
 | S-01 | admin-bootstrap-and-login      | operator tworzy pierwszego admina przez CLI; admin loguje się i wylogowuje; niezalogowany widzi tylko ekran logowania           | —             | FR-012, FR-013, FR-014, FR-015, FR-026, NFR (każdy chroniony zasób wymaga uwierzytelnienia — komplet testów autoryzacji), NFR (brak wglądu w dane cudzych kont)                          | done |
 | S-02 | first-assessed-wykop-feed      | zalogowany użytkownik widzi chronologiczną listę postów z Wykopu ocenionych przez LLM                                           | S-01, F-02    | US-01, FR-001, FR-003, FR-004, FR-005, FR-006, FR-007, NFR (surowy payload oddzielony od danych aplikacji, bezstratny i kompresowalny), NFR (nowe źródło = tylko pozyskanie + mapowanie) | proposed |
 | S-03 | post-detail-view               | użytkownik otwiera widok szczegółowy posta: ocena, surowe dane pod przełącznikiem, link do oryginału                            | S-02          | US-01, FR-009, FR-010                                                                                                                                                                    | proposed |
 | S-04 | filter-by-assessment           | użytkownik filtruje listę po spółce/temacie (tekstowo) i stanowisku autora wobec niej                                           | S-02          | US-01, FR-011a                                                                                                                                                                           | proposed |
 | S-05 | daily-scheduled-run-freshness  | przepływ uruchamia się sam codziennie, a użytkownik widzi datę ostatniej udanej aktualizacji                                    | S-02, F-01    | US-01, FR-002, FR-030                                                                                                                                                                    | proposed |
 | S-06 | pipeline-run-history-dashboard | admin widzi historię przebiegów (kiedy, status, wynik) i wyraźny sygnał nieudanego przebiegu                                    | S-05, S-01    | FR-021, FR-015, NFR (operator dostaje widoczny sygnał awarii przebiegu)                                                                                                                  | proposed |
-| S-07 | cli-user-onboarding            | admin tworzy konto przez CLI, zaproszony ustawia hasło przez jednorazowy link i się loguje                                      | S-01          | US-02, FR-018, FR-027, FR-028                                                                                                                                                            | proposed |
+| S-07 | cli-user-onboarding            | admin tworzy konto przez CLI, zaproszony ustawia hasło przez jednorazowy link i się loguje                                      | S-01, F-03    | US-02, FR-018, FR-027, FR-028                                                                                                                                                            | proposed |
 
 ## Streams
 
@@ -60,8 +62,8 @@ Navigation aid — groups items that share a Prerequisites chain. Canonical orde
 
 | Stream | Theme             | Chain                             | Note                                                                                                                |
 | ------ | ----------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| A      | Dostęp i konta    | `S-01` → `S-07`                   | Otwiera dostęp do danych; S-07 może iść równolegle ze strumieniami B i C.                                           |
-| B      | Przegląd sygnałów | `F-02` → `S-02` → `S-03` → `S-04` | F-02 startuje od razu, równolegle z S-01; łączy się ze strumieniem A w `S-02`; S-03 i S-04 są wzajemnie równoległe. |
+| A      | Dostęp i konta    | `S-01` → `F-03` → `S-07`          | F-03 przenosi backend na Javę i otwiera całą dalszą pracę backendu; S-07 może potem iść równolegle ze strumieniami B i C. |
+| B      | Przegląd sygnałów | `F-03` → `F-02` → `S-02` → `S-03` → `S-04` | F-02 (faza 1 gotowa) wraca po F-03, już w Javie; S-03 i S-04 są wzajemnie równoległe.                               |
 | C      | Codzienny automat | `F-01` → `S-05` → `S-06`          | Dołącza do strumienia B w `S-05` (wymaga S-02); F-01 to praca operatorska, do zrobienia od razu, równolegle.        |
 
 ## Baseline
@@ -86,7 +88,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **PRD refs:** NFR (dane przechowywane bezterminowo; bezpieczeństwo przed utratą danych po stronie platformy), Open Question 4; guardrail kosztów LLM
 - **Unlocks:** S-05 (codzienne zbieranie prawdziwych danych na produkcji); ścieżka weryfikacji „odtworzenie backupu działa” wymagana przez `deploy-plan.md` przed fazą 6
 - **Prerequisites:** —
-- **Parallel with:** F-02, S-01, S-02, S-03, S-04, S-07
+- **Parallel with:** F-02, F-03, S-01, S-02, S-03, S-04, S-07
 - **Blockers:** —
 - **Unknowns:**
   - Czy czysty restore drill przejdzie po subskrypcji; jeśli nie — powrót do alternatywnej platformy z `infrastructure.md` (ryzyko nr 1). — Owner: user. Block: no.
@@ -99,13 +101,28 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Change ID:** assessment-contract-harness
 - **PRD refs:** FR-004, Open Question 2 (rozstrzygnięte przez kontrakt, obecnie V2); guardrail jakości danych z LLM (bez halucynacji)
 - **Unlocks:** S-02 (ocena każdego posta w przepływie); ścieżka weryfikacji „ocena spełnia kontrakt V2” wymagana przez S-02 i każdą przyszłą zmianę kontraktu (reguła zmiany: failing fixture → zmiana kontraktu → kod)
-- **Prerequisites:** —
-- **Parallel with:** F-01, S-01, S-07
-- **Blockers:** —
+- **Prerequisites:** F-03
+- **Parallel with:** F-01, S-07
+- **Blockers:** — (faza 1 — kontrakt V2 i dokumenty — zrobiona; fazy p2–p4 czekają na F-03 i zostaną przeplanowane w Javie, kod w Pythonie z PR #23 nie jest przenoszony)
 - **Unknowns:**
   - Wybór dostawcy i modelu LLM z obsługą ustrukturyzowanego wyjścia oraz akceptowalny koszt jednej oceny (powiązane z Open Roadmap Question 5). — Owner: user. Block: no.
+  - Biblioteka LLM w Javie (Spring AI vs LangChain4j) i jej wpływ na ustrukturyzowane wyjście — wymaga ponownego pomiaru na zestawie wzorcowym. — Owner: user. Block: no.
 - **Risk:** Zamyka ryzyko jakości oceny przed budową przepływu: jeśli żaden model nie spełnia progów na zestawie wzorcowym, dowiadujemy się tego bez pobierania, zapisu i UI; celowo NIE obejmuje zapisu, pobierania z Wykopu ani widoku — te wchodzą w S-02.
 - **Status:** in-progress
+
+### F-03: Backend w Javie
+
+- **Outcome:** (foundation) `szczur-radar-api` działa na Javie (Spring Boot) z niezmienionym zachowaniem z S-01 — logowanie i wylogowanie, sesja w ciasteczku `sr_session` z unieważnianiem przez `token_version`, ochrona każdej trasy (komplet testów autoryzacji), CLI do utworzenia pierwszego admina, migracje z działającym cofnięciem, sondy `/api/health` i `/api/ready`; zweryfikowane na produkcji, kod w Pythonie usunięty, dokumenty stacku zaktualizowane.
+- **Change ID:** java-api-rewrite
+- **PRD refs:** FR-012, FR-013, FR-014, FR-015, FR-026, NFR (każdy chroniony zasób wymaga uwierzytelnienia — komplet testów autoryzacji), NFR (brak wglądu w dane cudzych kont)
+- **Unlocks:** F-02 (fazy p2–p4 w Javie), S-07; pośrednio cała dalsza praca backendu
+- **Prerequisites:** S-01
+- **Parallel with:** F-01
+- **Blockers:** —
+- **Unknowns:**
+  - Czy istniejące konta i sesje produkcyjne przechodzą bez zmian (format skrótów argon2, claimy JWT) — rozstrzyga `/10x-research`. — Owner: user. Block: no.
+- **Risk:** Przepisanie bez nowej wartości dla użytkownika — uzasadnione tym, że autor może rzetelnie oceniać kod agenta w Javie; zakres celowo ograniczony do tego, co jest na `main` (S-01), żeby nie przepisywać niedokończonego F-02.
+- **Status:** planning
 
 ## Slices
 
@@ -192,7 +209,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Outcome:** admin może przez CLI utworzyć konto z rolą i dostać jednorazowy, wygasający link aktywacyjny; zaproszony może raz ustawić hasło i się zalogować; operator może wygenerować nowy link (unieważniając poprzedni) i odzyskać dostęp admina tym samym mechanizmem.
 - **Change ID:** cli-user-onboarding
 - **PRD refs:** US-02, FR-018, FR-027, FR-028
-- **Prerequisites:** S-01
+- **Prerequisites:** S-01, F-03
 - **Parallel with:** F-01, F-02, S-02, S-03, S-04, S-05, S-06
 - **Blockers:** —
 - **Unknowns:**
@@ -205,14 +222,15 @@ Foundations below assume these are present and do NOT re-scaffold them.
 | Roadmap ID | Change ID                      | Suggested issue title                                                                          | Ready for `/10x-plan` | Notes                                                                            |
 | ---------- | ------------------------------ | ---------------------------------------------------------------------------------------------- | --------------------- | -------------------------------------------------------------------------------- |
 | F-01       | production-data-gate           | Bramka produkcyjnych danych: subskrypcja, limity, restore drill, sekrety                       | yes                   | Praca operatorska; zrób równolegle                                               |
-| F-02       | assessment-contract-harness    | Kontrakt oceny LLM V2: modele, walidator, zestaw wzorcowy i wybór modelu                        | yes                   | Plan v2 (kontrakt V2 → kod → wzorzec → pomiar); odblokowuje gwiazdę przewodnią S-02 |
+| F-02       | assessment-contract-harness    | Kontrakt oceny LLM V2: modele, walidator, zestaw wzorcowy i wybór modelu                        | no                    | Faza 1 gotowa; p2–p4 do przeplanowania w Javie po F-03 (PR #23 zamknięty); odblokowuje gwiazdę przewodnią S-02 |
+| F-03       | java-api-rewrite               | Backend w Javie (Spring Boot) z zachowaniem S-01                                               | yes                   | Najpierw `/10x-research`; branch `feature/java-api-rewrite`                       |
 | S-01       | admin-bootstrap-and-login      | Pierwszy admin przez CLI + logowanie/wylogowanie + ochrona tras                                | —                     | Wdrożone na produkcji 2026-09-29 (PR #13, #21); zarchiwizowane 2026-09-29 → `context/archive/2026-09-27-admin-bootstrap-and-login/` |
 | S-02       | first-assessed-wykop-feed      | Lista postów z Wykopu ocenionych przez LLM (gwiazda przewodnia)                                | no                    | Po S-01 i F-02                                                                   |
 | S-03       | post-detail-view               | Widok szczegółowy posta z oceną, surowymi danymi i linkiem do oryginału                        | no                    | Po S-02                                                                          |
 | S-04       | filter-by-assessment           | Filtrowanie listy po spółce/temacie i stanowisku autora                                        | no                    | Po S-02                                                                          |
 | S-05       | daily-scheduled-run-freshness  | Codzienny automatyczny przebieg + etykieta świeżości danych                                    | no                    | Po S-02 i F-01                                                                   |
 | S-06       | pipeline-run-history-dashboard | Dashboard admina: historia przebiegów i sygnał awarii                                          | no                    | Po S-05                                                                          |
-| S-07       | cli-user-onboarding            | Tworzenie kont przez CLI + aktywacja linkiem + recovery admina                                 | no                    | Po S-01                                                                          |
+| S-07       | cli-user-onboarding            | Tworzenie kont przez CLI + aktywacja linkiem + recovery admina                                 | no                    | Po S-01 i F-03                                                                   |
 
 ## Open Roadmap Questions
 
