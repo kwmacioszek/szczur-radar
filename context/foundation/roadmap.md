@@ -3,7 +3,7 @@ project: "Szczur Radar"
 version: 2
 status: draft # draft | active | locked
 created: 2026-09-27
-updated: 2026-09-29
+updated: 2026-10-01
 prd_version: 2
 main_goal: speed
 top_blocker: time # secondary: decisions (LLM contract, filter scope and signal decision resolved 2026-09-27 — PRD v2)
@@ -14,24 +14,25 @@ milestone_status: open
 
 # Roadmap: Szczur Radar
 
-> Derived from `context/foundation/prd.md` (v2) + `context/foundation/llm-assessment/` (kontrakt oceny LLM V1, accepted) + `shape-notes.md` + `tech-stack-api.md` / `tech-stack-web.md` / `infrastructure.md` / `deploy-plan.md` + auto-researched codebase baseline.
+> Derived from `context/foundation/prd.md` (v2) + `context/foundation/llm-assessment/` (kontrakt oceny LLM V2 — `contract-v2.md`; V1 w archiwum) + `shape-notes.md` + `tech-stack-api.md` / `tech-stack-web.md` / `infrastructure.md` / `deploy-plan.md` + auto-researched codebase baseline.
 > Edit-in-place; archive when superseded.
 > Slices below are listed in dependency order. The "At a glance" table is the index.
 > v2 (2026-09-27): kontrakt oceny LLM V1 rozstrzyga PRD Open Question 2 → S-02 odblokowane; warstwa kontraktu wydzielona jako F-02; S-04 zablokowane decyzją o filtrowaniu po spółce.
 > v2.1 (2026-09-27): PRD v2 — filtr po spółce tekstowy, „sentyment” = stanowisko wobec celu, rozpoznawanie spółek i decyzja „wartościowy sygnał” poza MVP → S-04 odblokowane.
+> v2.2 (2026-10-01): kontrakt oceny LLM V2 (`assessment-contract-harness`, po pilotażach na prawdziwych postach) zastępuje V1 — wynik oceny to trafność, cele ze stanowiskiem autora, tezy/opinie/fakty/pytania/działania z cytatem, flagi niepewności; bez grafu argumentów. F-02 mierzy modele na zestawie wzorcowym zamiast 12 wymyślonych przypadków.
 
 ## Milestone
 
 **M-1: MVP — ocenione sygnały z Wykopu dla zaproszonych osób** — Status: open
 
 - **Intent:** Codzienny, automatyczny przepływ zamienia posty z Wykopu (#gielda) w ocenione przez LLM sygnały inwestycyjne, które zaproszeni, zalogowani użytkownicy przeglądają i filtrują w aplikacji webowej, a administrator zarządza dostępem przez CLI i widzi historię przebiegów.
-- **Source materials:** `context/foundation/prd.md` (v2); `context/foundation/llm-assessment/contract-v1.md` (V1, accepted — kształt wejścia/wyjścia oceny LLM dla FR-004 / FR-011a)
+- **Source materials:** `context/foundation/prd.md` (v2); `context/foundation/llm-assessment/contract-v2.md` (V2 — kształt wejścia/wyjścia oceny LLM dla FR-004 / FR-011a)
 - **Done when:** every F-NN and S-NN below is `done` — czyli wszystkie cztery główne kryteria sukcesu PRD (`## Success Criteria` → Primary) są spełnione na produkcji.
 - **Scope anchors:** wszystkie wymagania konieczne (must-have) PRD: FR-001–FR-007, FR-009, FR-010, FR-011a, FR-012–FR-015, FR-018, FR-021, FR-026–FR-028, FR-030; historyjki US-01, US-02. Wymagania nice-to-have są odroczone (patrz `## Parked`).
 
 ## Vision recap
 
-Na Wykopie (#gielda) i Reddicie codziennie pojawiają się setki postów o inwestowaniu; wartościowe informacje giną w szumie, a indywidualny inwestor nie ma czasu przeglądać obu platform ręcznie. Ogólne agregatory (RSS, alerty słów kluczowych) nie rozumieją treści, więc Szczur Radar ma własny przepływ: pobiera posty, a LLM według zamkniętego kontraktu opisuje ich znaczenie — czy treść dotyczy inwestowania, jakich spółek lub tematów dotyczy, jakie stanowisko autor zajmuje wobec każdej z nich i na jakich tezach i argumentach (z dosłownymi cytatami) je opiera. MVP startuje od jednego źródła — Wykopu; Reddit jest odroczonym rozszerzeniem.
+Na Wykopie (#gielda) i Reddicie codziennie pojawiają się setki postów o inwestowaniu; wartościowe informacje giną w szumie, a indywidualny inwestor nie ma czasu przeglądać obu platform ręcznie. Ogólne agregatory (RSS, alerty słów kluczowych) nie rozumieją treści, więc Szczur Radar ma własny przepływ: pobiera posty, a LLM według zamkniętego kontraktu opisuje ich znaczenie — czy treść dotyczy inwestowania, jakich spółek lub tematów dotyczy, jakie stanowisko autor zajmuje wobec każdej z nich oraz jakie tezy, opinie, fakty, pytania i działania przedstawia (każde z dosłownym cytatem). MVP startuje od jednego źródła — Wykopu; Reddit jest odroczonym rozszerzeniem.
 
 ## North star
 
@@ -44,7 +45,7 @@ Na Wykopie (#gielda) i Reddicie codziennie pojawiają się setki postów o inwes
 | ID   | Change ID                      | Outcome (user can …)                                                                                                            | Prerequisites | PRD refs                                                                                                                                                                                 | Status   |
 | ---- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------- | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
 | F-01 | production-data-gate           | (foundation) produkcja jest gotowa na prawdziwe dane: limity kosztów, zweryfikowany restore, zapieczętowane sekrety             | —             | NFR (dane przechowywane bezterminowo; bezpieczeństwo przed utratą danych po stronie platformy), Open Question 4; guardrail kosztów LLM                                                   | ready    |
-| F-02 | assessment-contract-harness    | (foundation) kontrakt oceny LLM V1 jest egzekwowany kodem i sprawdzony na prawdziwym modelu na wymaganych przypadkach testowych | —             | FR-004, Open Question 2 (rozstrzygnięte przez kontrakt V1); guardrail jakości danych z LLM (bez halucynacji)                                                                             | planning |
+| F-02 | assessment-contract-harness    | (foundation) kontrakt oceny LLM V2 jest egzekwowany kodem, a model domyślny spełnia progi jakości na zestawie wzorcowym | —             | FR-004, Open Question 2 (rozstrzygnięte przez kontrakt, obecnie V2); guardrail jakości danych z LLM (bez halucynacji)                                                                     | in-progress |
 | S-01 | admin-bootstrap-and-login      | operator tworzy pierwszego admina przez CLI; admin loguje się i wylogowuje; niezalogowany widzi tylko ekran logowania           | —             | FR-012, FR-013, FR-014, FR-015, FR-026, NFR (każdy chroniony zasób wymaga uwierzytelnienia — komplet testów autoryzacji), NFR (brak wglądu w dane cudzych kont)                          | done |
 | S-02 | first-assessed-wykop-feed      | zalogowany użytkownik widzi chronologiczną listę postów z Wykopu ocenionych przez LLM                                           | S-01, F-02    | US-01, FR-001, FR-003, FR-004, FR-005, FR-006, FR-007, NFR (surowy payload oddzielony od danych aplikacji, bezstratny i kompresowalny), NFR (nowe źródło = tylko pozyskanie + mapowanie) | proposed |
 | S-03 | post-detail-view               | użytkownik otwiera widok szczegółowy posta: ocena, surowe dane pod przełącznikiem, link do oryginału                            | S-02          | US-01, FR-009, FR-010                                                                                                                                                                    | proposed |
@@ -74,7 +75,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Auth:** absent — brak modelu użytkownika, sesji, ochrony tras, CLI.
 - **Deploy / infra:** present — infrastruktura jako kod (`.railway/railway.ts`), CI (`.github/workflows/ci.yml`), izolowane środowiska PR z własną bazą, PITR włączone; otwarte: limity kosztów i czysty restore drill (wymagają subskrypcji — `context/deployment/deploy-plan.md`), brak usługi harmonogramu.
 - **Observability:** absent — tylko healthchecki platformy i logi JSON proxy; brak rejestru przebiegów i sygnału awarii.
-- **Ocena LLM:** kontrakt — present (dokument `context/foundation/llm-assessment/contract-v1.md`, V1 accepted); kod — absent (brak integracji z LLM, modeli kontraktu, walidatora, przypadków testowych).
+- **Ocena LLM:** kontrakt — present (stan z 2026-09-27: V1 accepted; od 2026-10-01 zastąpiony przez `context/foundation/llm-assessment/contract-v2.md`); kod — absent (brak integracji z LLM, modeli kontraktu, walidatora, przypadków testowych).
 
 ## Foundations
 
@@ -94,17 +95,17 @@ Foundations below assume these are present and do NOT re-scaffold them.
 
 ### F-02: Egzekwowany kontrakt oceny LLM
 
-- **Outcome:** (foundation) wejście i wyjście oceny LLM V1 są odwzorowane jako zamknięte modele odrzucające obce pola; walidator sprawdza wszystkie 16 niezmienników kontraktu (cytaty jako dokładne fragmenty, referencje, acykliczny graf argumentów, reguły stanowiska); 12 wymaganych przypadków testowych przechodzi na prawdziwym modelu, a testy walidatora wykrywają każdy zabroniony przypadek; błędy są jawnie klasyfikowane.
+- **Outcome:** (foundation) kontrakt oceny LLM V2 (trafność, cele ze stanowiskiem autora, tezy/opinie/fakty/pytania/działania z cytatem, flagi niepewności) jest źródłem prawdy; wejście i wyjście są odwzorowane jako zamknięte modele odrzucające obce pola; walidator sprawdza reguły kontraktu (cytaty jako fragmenty po normalizacji białych znaków, referencje, reguły stanowiska) z jawną klasyfikacją błędów; wpisy bez treści są odsiewane bez wywołania modelu; model domyślny wybrany pomiarem GPT-6 Luna (flex), DeepSeek Flash i Gemini 3.1 Flash-Lite spełnia progi jakości na zestawie wzorcowym prawdziwych postów oznaczonych przez użytkownika.
 - **Change ID:** assessment-contract-harness
-- **PRD refs:** FR-004, Open Question 2 (rozstrzygnięte przez kontrakt V1); guardrail jakości danych z LLM (bez halucynacji)
-- **Unlocks:** S-02 (ocena każdego posta w przepływie); ścieżka weryfikacji „ocena spełnia kontrakt V1” wymagana przez S-02 i każdą przyszłą zmianę kontraktu (reguła zmiany: failing fixture → zmiana kontraktu → kod)
+- **PRD refs:** FR-004, Open Question 2 (rozstrzygnięte przez kontrakt, obecnie V2); guardrail jakości danych z LLM (bez halucynacji)
+- **Unlocks:** S-02 (ocena każdego posta w przepływie); ścieżka weryfikacji „ocena spełnia kontrakt V2” wymagana przez S-02 i każdą przyszłą zmianę kontraktu (reguła zmiany: failing fixture → zmiana kontraktu → kod)
 - **Prerequisites:** —
 - **Parallel with:** F-01, S-01, S-07
 - **Blockers:** —
 - **Unknowns:**
   - Wybór dostawcy i modelu LLM z obsługą ustrukturyzowanego wyjścia oraz akceptowalny koszt jednej oceny (powiązane z Open Roadmap Question 5). — Owner: user. Block: no.
-- **Risk:** Zamyka ryzyko jakości oceny przed budową przepływu: jeśli model nie trzyma kontraktu na przypadkach testowych, dowiadujemy się tego bez pobierania, zapisu i UI; celowo NIE obejmuje zapisu, pobierania z Wykopu ani widoku — te wchodzą w S-02.
-- **Status:** planning
+- **Risk:** Zamyka ryzyko jakości oceny przed budową przepływu: jeśli żaden model nie spełnia progów na zestawie wzorcowym, dowiadujemy się tego bez pobierania, zapisu i UI; celowo NIE obejmuje zapisu, pobierania z Wykopu ani widoku — te wchodzą w S-02.
+- **Status:** in-progress
 
 ## Slices
 
@@ -122,7 +123,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 
 ### S-02: Pierwsze ocenione posty z Wykopu na liście
 
-- **Outcome:** zalogowany użytkownik widzi chronologiczną, stronicowaną listę postów z Wykopu (#gielda) z zadanego zakresu dat, bez duplikatów, każdy z oceną LLM zgodną z kontraktem V1 (trafność, spółki/tematy ze stanowiskiem autora, streszczenie głównej tezy); przebieg jest uruchamiany ręcznie przez operatora.
+- **Outcome:** zalogowany użytkownik widzi chronologiczną, stronicowaną listę postów z Wykopu (#gielda) z zadanego zakresu dat, bez duplikatów, każdy z oceną LLM zgodną z kontraktem V2 (trafność, cele ze stanowiskiem autora, tezy/opinie/fakty/pytania/działania z cytatem, flagi niepewności); przebieg jest uruchamiany ręcznie przez operatora.
 - **Change ID:** first-assessed-wykop-feed
 - **PRD refs:** US-01, FR-001, FR-003, FR-004, FR-005, FR-006, FR-007, NFR (surowy payload oddzielony od danych aplikacji, bezstratny i kompresowalny), NFR (nowe źródło = tylko pozyskanie + mapowanie)
 - **Prerequisites:** S-01, F-02
@@ -131,20 +132,20 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Unknowns:**
   - Gdzie gwiazda przewodnia jest weryfikowana z prawdziwymi wywołaniami Wykopu/LLM, zanim F-01 otworzy produkcję (lokalnie vs środowisko PR bez produkcyjnych sekretów). — Owner: user. Block: no.
   - Warunki i limity dostępu do API Wykopu przy codziennym użyciu. — Owner: user. Block: no.
-  - Które typy zasobów Wykopu z #gielda wchodzą do MVP (wpis → `post`, znalezisko → `link`); komentarze są poza zakresem (PRD §Non-Goals), mimo że kontrakt je obsługuje. — Owner: user. Block: no.
+  - Które typy zasobów Wykopu z #gielda wchodzą do MVP (wpis → `post`, znalezisko → `link`); komentarze są poza zakresem (PRD §Non-Goals), mimo że kształt wejścia kontraktu je obsługuje. — Owner: user. Block: no.
 - **Risk:** Wciąż największy wycinek (pobranie, deduplikacja, ocena, zapis z pochodzeniem oceny, lista), ale ryzyko jakości oceny przeszło do F-02, więc tu zostaje integracja; jeśli `/10x-plan` uzna go za zbyt szeroki, może rozbić go na kilka zmian.
 - **Status:** proposed
 
 ### S-03: Widok szczegółowy posta
 
-- **Outcome:** użytkownik może otworzyć post i zobaczyć czytelną, przetworzoną ocenę (tezy, argumenty, stanowisko wobec każdej spółki/tematu z dosłownymi cytatami), surowe dane źródłowe pod opcjonalnym przełącznikiem oraz link do oryginału na Wykopie.
+- **Outcome:** użytkownik może otworzyć post i zobaczyć czytelną, przetworzoną ocenę (trafność, cele ze stanowiskiem autora, tezy/opinie/fakty/pytania/działania z dosłownym cytatem, flagi niepewności), surowe dane źródłowe pod opcjonalnym przełącznikiem oraz link do oryginału na Wykopie.
 - **Change ID:** post-detail-view
 - **PRD refs:** US-01, FR-009, FR-010
 - **Prerequisites:** S-02
 - **Parallel with:** F-01, S-04, S-05, S-06, S-07
 - **Blockers:** —
 - **Unknowns:** —
-- **Risk:** Pierwszy odczyt surowego payloadu przez aplikację — sprawdza w praktyce, że oddzielny magazyn surowych danych z S-02 daje bezstratny widok; bogata struktura kontraktu (graf argumentów) wymaga przemyślanej, ale prostej prezentacji.
+- **Risk:** Pierwszy odczyt surowego payloadu przez aplikację — sprawdza w praktyce, że oddzielny magazyn surowych danych z S-02 daje bezstratny widok; struktura oceny V2 (cele ze stanowiskiem, tezy z cytatem, flagi niepewności) wymaga czytelnej prezentacji obok surowego posta — bez grafu argumentów.
 - **Status:** proposed
 
 ### S-04: Filtrowanie po ocenie LLM
@@ -204,7 +205,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 | Roadmap ID | Change ID                      | Suggested issue title                                                                          | Ready for `/10x-plan` | Notes                                                                            |
 | ---------- | ------------------------------ | ---------------------------------------------------------------------------------------------- | --------------------- | -------------------------------------------------------------------------------- |
 | F-01       | production-data-gate           | Bramka produkcyjnych danych: subskrypcja, limity, restore drill, sekrety                       | yes                   | Praca operatorska; zrób równolegle                                               |
-| F-02       | assessment-contract-harness    | Kontrakt oceny LLM V1: modele, walidator niezmienników, przypadki testowe na prawdziwym modelu | yes                   | Run `/10x-plan assessment-contract-harness`; odblokowuje gwiazdę przewodnią S-02 |
+| F-02       | assessment-contract-harness    | Kontrakt oceny LLM V2: modele, walidator, zestaw wzorcowy i wybór modelu                        | yes                   | Plan v2 (kontrakt V2 → kod → wzorzec → pomiar); odblokowuje gwiazdę przewodnią S-02 |
 | S-01       | admin-bootstrap-and-login      | Pierwszy admin przez CLI + logowanie/wylogowanie + ochrona tras                                | —                     | Wdrożone na produkcji 2026-09-29 (PR #13, #21); zarchiwizowane 2026-09-29 → `context/archive/2026-09-27-admin-bootstrap-and-login/` |
 | S-02       | first-assessed-wykop-feed      | Lista postów z Wykopu ocenionych przez LLM (gwiazda przewodnia)                                | no                    | Po S-01 i F-02                                                                   |
 | S-03       | post-detail-view               | Widok szczegółowy posta z oceną, surowymi danymi i linkiem do oryginału                        | no                    | Po S-02                                                                          |
@@ -216,10 +217,10 @@ Foundations below assume these are present and do NOT re-scaffold them.
 ## Open Roadmap Questions
 
 1. **Czy `product_type` to "data-pipeline" czy "web-app"?** — Projekt to dwa moduły: pipeline+API jako rdzeń, pełnoprawna aplikacja webowa (logowanie, dashboard, lista/filtrowanie) jako warstwa konsumpcji. Wybrano `data-pipeline` jako najbliższą pojedynczą wartość; do doprecyzowania przy `/10x-tech-stack-selector`. Owner: użytkownik. Block: — (w praktyce rozstrzygnięte przez dwa osobne dokumenty stacku; nie wpływa na kolejność).
-2. **Dokładny kształt pól w JSON zwracanym przez ocenę LLM** — ROZSTRZYGNIĘTE 2026-09-27 przez `context/foundation/llm-assessment/contract-v1.md` (V1, accepted). Owner: użytkownik. Block: — (odblokowało S-02; PRD warto zaktualizować, by wskazywał kontrakt).
+2. **Dokładny kształt pól w JSON zwracanym przez ocenę LLM** — ROZSTRZYGNIĘTE 2026-09-27 przez kontrakt V1; od 2026-10-01 obowiązuje `context/foundation/llm-assessment/contract-v2.md` (V2, bez grafu argumentów). Owner: użytkownik. Block: — (odblokowało S-02; PRD wskazuje kontrakt V2).
 3. **Kanał i próg dla FR-025 (powiadomienia o obiecującym trendzie)** — nie ustalono jeszcze, czym jest "obiecujący trend" liczbowo ani gdzie ma trafiać powiadomienie. Owner: użytkownik. Block: — (FR-025 odroczone).
 4. **Backup/retencja na docelowej platformie hostingowej** — PITR włączone, ale czysty restore drill i limity kosztów czekają na subskrypcję (`deploy-plan.md`). Owner: użytkownik. Block: F-01 → S-05.
-5. **Budżet kosztów LLM na przebieg** — guardrail PRD każe minimalizować koszt zapytań, ale nie podaje pułapu (na dzień ani na post); kontrakt V1 wymaga zapisu zużycia tokenów, co pozwoli go mierzyć. Owner: użytkownik. Block: — (wpływa na F-02, S-02 i S-05, nie blokuje planowania).
+5. **Budżet kosztów LLM na przebieg** — guardrail PRD każe minimalizować koszt zapytań, ale nie podaje pułapu (na dzień ani na post); kontrakt V2 wymaga zapisu zużycia tokenów, a F-02 mierzy koszt kandydatów na zestawie wzorcowym. Owner: użytkownik. Block: — (wpływa na F-02, S-02 i S-05, nie blokuje planowania).
 6. **[ROZSTRZYGNIĘTE 2026-09-27 — PRD v2: bez automatycznej decyzji w MVP, §Business Logic + §Non-Goals]** **„Wartościowy sygnał” w MVP** — PRD §Business Logic mówi, że wynik oceny zawiera „czy jest wartościowy”, a kontrakt V1 zabrania LLM zwracania `is_valuable`/`is_signal` i przenosi decyzję o sygnale do osobnego, dalszego etapu, którego żaden FR nie opisuje. Czy MVP wystarcza trafność + stanowisko + teza z argumentami (bez decyzji „wartościowy”), czy potrzebna jest prosta reguła decyzji jako nowy FR? Owner: użytkownik. Block: — (S-02 może pokazać ocenę bez tej decyzji; wymaga aktualizacji PRD §Business Logic).
 7. **[ROZSTRZYGNIĘTE 2026-09-27 — PRD v2: poza MVP, filtr tekstowy w FR-011a]** **Rozpoznawanie spółek (entity resolution)** — kontrakt V1 przenosi ustalanie, o którą spółkę chodzi, poza LLM; PRD nie ma dla tego FR. Wpływa na filtr po spółce (S-04) i przyszły wykres per spółka (FR-024). Owner: użytkownik. Block: — (odblokowało S-04).
 
@@ -229,13 +230,13 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **FR-016 / FR-017 / FR-019 — panel kont w aplikacji + wysyłka maila z zaproszeniem** — Why parked: nice-to-have; CLI (S-07) daje ten sam efekt; PRD §Non-Goals wyklucza wymaganą wysyłkę e-maili.
 - **FR-020 — własna nazwa wyświetlana** — Why parked: nice-to-have; e-mail wystarcza w MVP.
 - **FR-022 — ręczne wywołanie przebiegu z dashboardu** — Why parked: nice-to-have; harmonogram (S-05) pokrywa potrzebę; wymaga API platformy (`infrastructure.md`).
-- **FR-023 — Reddit jako drugie źródło** — Why parked: nice-to-have; kolejny kamień milowy — kontrakt V1 już obejmuje Reddit po normalizacji, a S-02 projektuje wspólny model źródeł zgodnie z NFR.
+- **FR-023 — Reddit jako drugie źródło** — Why parked: nice-to-have; kolejny kamień milowy — kontrakt V2 już obejmuje Reddit po normalizacji (`statement` w języku posta), a S-02 projektuje wspólny model źródeł zgodnie z NFR.
 - **FR-024 / FR-025 — wykres giełdowy z trendem sygnałów i powiadomienia o trendzie** — Why parked: nice-to-have, poza MVP; wymaga integracji danych giełdowych, rozpoznawania spółek i rozstrzygnięcia Open Question 3.
 - **FR-029 — automatyczne wygasanie sesji** — Why parked: nice-to-have; krótki timeout uciążliwy przy czytaniu, ręczne wylogowanie wystarcza.
 - **FR-031 — eksport widocznej listy do CSV/JSON** — Why parked: nice-to-have, nie blokuje głównego przepływu.
 - **FR-032 — „Ask szczur” (pytanie do LLM o wybrany sygnał)** — Why parked: nice-to-have; dodatkowy koszt LLM wbrew guardrailowi kosztów.
-- **Przetwarzanie komentarzy pod postami** — Why parked: PRD §Non-Goals (kontrakt V1 obsługuje typ `comment` i kontekst rodzica — gotowe na przyszłość, nieużywane w MVP).
-- **Rozpoznawanie spółek, automatyczna decyzja „wartościowy sygnał”, nowość informacji, trend, zaangażowanie, raporty** — Why parked: PRD v2 §Non-Goals; kontrakt V1 §12 umieszcza je poza oceną LLM jako osobne, dalsze etapy.
+- **Przetwarzanie komentarzy pod postami** — Why parked: PRD §Non-Goals (kontrakt V2 zachowuje typ `comment` i kontekst rodzica w kształcie wejścia — gotowe na przyszłość, nieużywane w MVP).
+- **Rozpoznawanie spółek, automatyczna decyzja „wartościowy sygnał”, nowość informacji, trend, zaangażowanie, raporty** — Why parked: PRD v2 §Non-Goals; kontrakt V2 §15 umieszcza je poza oceną LLM jako osobne, dalsze etapy.
 - **2FA, logowanie przez zewnętrznego dostawcę, samodzielny reset hasła, dodatkowe role** — Why parked: PRD §Non-Goals.
 - **Wysoka dostępność / multi-region, własna logika backupu** — Why parked: PRD §Non-Goals; backup po stronie platformy (F-01).
 - **Lekkie modele ML, embeddingi, klasyfikatory w potoku** — Why parked: `shape-notes.md` §Forward: technical-roadmap — kierunek na przyszłość, nie zakres MVP.

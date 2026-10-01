@@ -1,14 +1,19 @@
-"""Pilot: kilka prawdziwych wpisów #gielda -> Gemini -> walidacja kontraktu V1. Tylko do eksperymentu (scratchpad)."""
+"""Pilot 1: kilka prawdziwych wpisów #gielda -> Gemini / DeepSeek -> walidacja kontraktu V1 (historyczny, V1 w archiwum).
+
+Użycie: python pilot.py MODELE[,…] [PLIK_WYNIKU] --p1 gielda-p1.json --p2 gielda-p2.json
+Pliki wejściowe (surowe strony Wykop API v3) nie są w repo. Wynik trafia do ../runs/.
+"""
 import json, os, sys, time, urllib.request, urllib.error
 from datetime import datetime
 
-S = os.path.dirname(os.path.abspath(__file__))
-REPO = "/Users/krzysztofmacioszek/Develop/Projects/10xDevs/szczur-radar"
-CONTRACT = open(f"{REPO}/context/foundation/llm-assessment/contract-v1.md").read()
+S = os.path.dirname(os.path.abspath(__file__))     # skrypty i prompty
+PILOT = os.path.dirname(S)                          # próbki i etykiety
+RUNS = os.path.join(PILOT, "runs")                  # wyniki przebiegów
+CONTRACT_V1 = os.path.normpath(os.path.join(PILOT, "..", "..", "..", "foundation", "archive",
+                                            "2026-10-01-llm-assessment-contract-v1.md"))
+CONTRACT = open(CONTRACT_V1).read()
 KEY = os.environ.get("GEMINI_API_KEY")
 DS_KEY = os.environ.get("DEEPSEEK_API_KEY")
-OUT = sys.argv[2] if len(sys.argv) > 2 else "pilot-results.json"
-MODELS = sys.argv[1].split(",")
 PICK = [3, 6, 7, 10, 12, 13, 15, 18, 22, 25, 34, 46, 47, 32, 54, 64, 76, 79, 84, 90, 92, 95, 96]
 
 SYSTEM = f"""Jesteś analitykiem treści inwestycyjnych. Zwracasz wyłącznie AssessmentOutputV1 zgodny z poniższym kontraktem.
@@ -171,7 +176,18 @@ def call(model, inp):
     return txt, r.get("usageMetadata", {}), time.time() - t0
 
 items = []
-for p in (1, 2): items += json.load(open(f"{S}/gielda-p{p}.json"))["data"]
+import argparse
+ap = argparse.ArgumentParser(description="Pilot 1 (kontrakt V1)")
+ap.add_argument("models", help="lista modeli rozdzielona przecinkami")
+ap.add_argument("out", nargs="?", default="pilot-results.json", help="nazwa pliku wyniku w ../runs/")
+ap.add_argument("--p1", required=True, help="gielda-p1.json — strona 1 surowego strumienia #gielda (Wykop API v3)")
+ap.add_argument("--p2", required=True, help="gielda-p2.json — strona 2 surowego strumienia #gielda (Wykop API v3)")
+args = ap.parse_args()
+for arg, path in (("--p1", args.p1), ("--p2", args.p2)):
+    if not os.path.isfile(path):
+        sys.exit(f"Brak pliku wejściowego {path!r} (argument {arg}, oczekiwany gielda-{arg[2:]}.json). Pliku nie ma w repo — podaj lokalną ścieżkę.")
+MODELS, OUT = args.models.split(","), args.out
+for path in (args.p1, args.p2): items += json.load(open(path))["data"]
 results = []
 for model in MODELS:
     for n in PICK:
@@ -192,4 +208,4 @@ for model in MODELS:
                 rec["status"] = "invalid_structured_output"; rec["error"] = repr(e)
         results.append(rec)
         print(f"{model:24} [{n:>2}] {rec['status']:28} {rec['sec']:>5}s in={usage.get('promptTokenCount')} out={usage.get('candidatesTokenCount')} think={usage.get('thoughtsTokenCount')}", flush=True)
-json.dump(results, open(f"{S}/{OUT}", "w"), ensure_ascii=False, indent=1)
+json.dump(results, open(os.path.join(RUNS, OUT), "w"), ensure_ascii=False, indent=1)

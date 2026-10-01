@@ -1,7 +1,9 @@
 import json, os, collections, statistics as st
-S = os.path.dirname(os.path.abspath(__file__))
+S = os.path.dirname(os.path.abspath(__file__))     # skrypty i prompty
+PILOT = os.path.dirname(S)                          # próbki i etykiety
+RUNS = os.path.join(PILOT, "runs")                  # wyniki przebiegów
 exec(open(f"{S}/analyze6.py").read().split('ids = [i for i in J')[0])   # G, DS, J (Jev), gold, net_llm, net_gold, norm
-R = json.load(open(f"{S}/pilot8-gpt6luna.json")); L = {r["id"]: r["output"] for r in R if r.get("output")}
+R = json.load(open(os.path.join(RUNS, "pilot8-gpt6luna.json"))); L = {r["id"]: r["output"] for r in R if r.get("output")}
 pct = lambda a, b: f"{100*a/max(b,1):.0f}%"
 stt = collections.Counter(r["status"] for r in R)
 print("GPT-6 Luna: zgodność z kontraktem", pct(stt["ok"], len(R)), dict(stt))

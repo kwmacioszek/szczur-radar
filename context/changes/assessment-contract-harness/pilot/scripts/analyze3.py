@@ -1,11 +1,13 @@
 import json, os, re, collections, statistics as st
-S = os.path.dirname(os.path.abspath(__file__))
+S = os.path.dirname(os.path.abspath(__file__))     # skrypty i prompty
+PILOT = os.path.dirname(S)                          # próbki i etykiety
+RUNS = os.path.join(PILOT, "runs")                  # wyniki przebiegów
 exec(open(f"{S}/analyze2.py").read().split("by = {")[0])  # norm, core, same_core, kept, PRICE, validate via pilot? (validate z pilot.py)
 import sys; sys.argv = ["pilot.py", "none"]
 exec(open(f"{S}/pilot.py").read().split("items = []")[0])
 
-R3 = json.load(open(f"{S}/pilot3-results.json"))
-p2 = json.load(open(f"{S}/pilot2-results.json"))["results"]
+R3 = json.load(open(os.path.join(RUNS, "pilot3-results.json")))
+p2 = json.load(open(os.path.join(RUNS, "pilot2-results.json")))["results"]
 def parsed(r):
     if r.get("output") is not None: return r["output"]
     try: return json.loads(r["raw"]) if r.get("raw") else None

@@ -2,7 +2,9 @@
 import json, os, random, sys, time, urllib.request, urllib.error
 from concurrent.futures import ThreadPoolExecutor
 
-S = os.path.dirname(os.path.abspath(__file__))
+S = os.path.dirname(os.path.abspath(__file__))     # skrypty i prompty
+PILOT = os.path.dirname(S)                          # próbki i etykiety
+RUNS = os.path.join(PILOT, "runs")                  # wyniki przebiegów
 sys.argv = ["pilot.py", "none"]
 exec(open(f"{S}/pilot.py").read().split("items = []")[0])  # SCHEMA, SEND_SCHEMA, DS_SCHEMA, validate
 
@@ -14,7 +16,7 @@ Otrzymujesz listę postów, każdy z własnym `post_id`. Oceń KAŻDY post nieza
 MODELS = ["gemini-3.1-flash-lite", "deepseek-flash"]
 GKEY, DKEY = os.environ["GEMINI_API_KEY"], os.environ["DEEPSEEK_API_KEY"]
 
-posts = sorted(json.load(open(f"{S}/pilot2-results.json"))["kept"], key=lambda p: p["input"]["item"]["published_at"])
+posts = sorted(json.load(open(os.path.join(RUNS, "pilot2-results.json")))["kept"], key=lambda p: p["input"]["item"]["published_at"])
 P = {p["id"]: p for p in posts}
 
 def wrap(schema):
@@ -113,5 +115,5 @@ with ThreadPoolExecutor(max_workers=10) as ex:
     for i, recs in enumerate(ex.map(run, jobs), 1):
         results += recs
         if i % 50 == 0: print(f"{i}/{len(jobs)} {time.time()-t0:.0f}s", flush=True)
-json.dump(results, open(f"{S}/pilot3-results.json", "w"), ensure_ascii=False)
+json.dump(results, open(os.path.join(RUNS, "pilot3-results.json"), "w"), ensure_ascii=False)
 print("done", len(results), f"{time.time()-t0:.0f}s")

@@ -2,9 +2,11 @@
 project: "Szczur Radar"
 document: "LLM Assessment Contract"
 version: 1
-status: accepted
+status: superseded
 updated: 2026-09-27
-source_of_truth: true
+superseded_at: 2026-10-01
+superseded_by: context/foundation/llm-assessment/contract-v2.md
+source_of_truth: false
 ---
 
 # LLM Assessment Contract V1

@@ -2,10 +2,12 @@
 import json, os, sys, time, urllib.request, urllib.error
 from concurrent.futures import ThreadPoolExecutor
 
-S = os.path.dirname(os.path.abspath(__file__))
+S = os.path.dirname(os.path.abspath(__file__))     # skrypty i prompty
+PILOT = os.path.dirname(S)                          # próbki i etykiety
+RUNS = os.path.join(PILOT, "runs")                  # wyniki przebiegów
 KEY = os.environ["OPENROUTER_API_KEY"]
 MODEL = "typesafe/jev-1.13"
-D = json.load(open(f"{S}/pilot2-results.json"))
+D = json.load(open(os.path.join(RUNS, "pilot2-results.json")))
 posts = D["kept"]
 def parsed(r):
     if r.get("output") is not None: return r["output"]
@@ -71,7 +73,7 @@ if __name__ == "__main__":
     if "error" in first: sys.exit(1)
     t0 = time.time()
     with ThreadPoolExecutor(max_workers=8) as ex: res = list(ex.map(call, subset))
-    json.dump(res, open(f"{S}/pilot6-jev-{run}.json", "w"), ensure_ascii=False)
+    json.dump(res, open(os.path.join(RUNS, f"pilot6-jev-{run}.json"), "w"), ensure_ascii=False)
     errs = [r for r in res if "error" in r]
     cost = sum((r.get("usage") or {}).get("cost") or 0 for r in res); tok = sum((r.get("usage") or {}).get("input_tokens") or 0 for r in res)
     print(f"done {len(res)} postów, błędy {len(errs)}, {time.time()-t0:.0f}s, tokeny wej. {tok}, koszt ${cost:.5f}")

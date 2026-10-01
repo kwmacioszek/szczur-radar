@@ -1,6 +1,6 @@
 """Porównanie wyników modeli (pilot 2 i 3) z ręcznym wzorcem użytkownika."""
 import json, os, re, sys, collections
-PILOT = "/Users/krzysztofmacioszek/Develop/Projects/10xDevs/szczur-radar/context/changes/assessment-contract-harness/pilot"
+PILOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))   # próbki i etykiety; wyniki w PILOT/runs
 LABELS = sys.argv[1] if len(sys.argv) > 1 else "labels-2026-09-28.json"
 gold_raw = json.load(open(f"{PILOT}/{LABELS}"))["labels"]
 sets = {s["post_id"]: s for s in json.load(open(f"{PILOT}/labeling-set-2026-09-28.json"))}

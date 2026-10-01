@@ -3,7 +3,7 @@ project: "Szczur Radar"
 version: 2
 status: draft
 created: 2026-09-26
-updated: 2026-09-27
+updated: 2026-10-01
 context_type: greenfield
 product_type: data-pipeline
 target_scale:
@@ -90,7 +90,7 @@ Administrator (operator wdrożenia) — zarządza dostępem: tworzy konta dla za
   > Socrates: Kontrargument rozważony: "prosta dedup po ID może przepuszczać duplikaty treściowe / odrzucać sam
   > sygnał." Rozwiązanie: doprecyzowane przez użytkownika — dedup celowo ogranicza się do ID posta; powtórki tej
   > samej treści od różnych autorów to zamierzenie, nie błąd.
-- FR-004: System przetwarza każdy post przez LLM według ustalonego, ustandaryzowanego schematu wejścia/wyjścia (prompt + JSON output ograniczony do schematu, żeby zminimalizować ryzyko halucynacji) i zapisuje wynik. Schemat definiuje kontrakt `context/foundation/llm-assessment/contract-v1.md` (V1). Priority: must-have
+- FR-004: System przetwarza każdy post przez LLM według ustalonego, ustandaryzowanego schematu wejścia/wyjścia (prompt + JSON output ograniczony do schematu, żeby zminimalizować ryzyko halucynacji) i zapisuje wynik. Schemat definiuje kontrakt `context/foundation/llm-assessment/contract-v2.md` (V2; V1 zastąpiony 2026-10-01 po pilotażach na prawdziwych postach). Priority: must-have
   > Socrates: Kontrargument rozważony: "zawartość schematu jeszcze nieznana — ryzyko pustego przepisania pól /
   > halucynacji." Rozwiązanie: potwierdzone jako wymóg — kontrakt JSON i ograniczenie halucynacji; dokładna
   > zawartość schematu ustalana downstream (patrz Open Questions).
@@ -122,7 +122,7 @@ Administrator (operator wdrożenia) — zarządza dostępem: tworzy konta dla za
   > "zależność od stabilności URL Wykopu/Reddita." Rozwiązanie: oba ryzyka zaakceptowane — link to dodatek do
   > już zapisanej, przetworzonej treści, nie krytyczna ścieżka; FR zostaje must-have.
 - FR-011a: Użytkownik może filtrować posty po podstawowych polach wynikających z oceny LLM: po spółce/temacie (dopasowanie tekstowe do fragmentu, którym post wskazuje cel, oraz rodzaju celu — bez rozpoznawania, o którą konkretnie spółkę chodzi) i po stanowisku autora wobec tego celu (pozytywne / negatywne / neutralne itd.; kontrakt oceny nie ma globalnego sentymentu posta). Priority: must-have
-  > Doprecyzowanie (2026-09-27, po przyjęciu kontraktu oceny LLM V1): „sentyment” = stanowisko wobec konkretnego
+  > Doprecyzowanie (2026-09-27, po przyjęciu kontraktu oceny LLM V1; obowiązuje bez zmian w V2): „sentyment” = stanowisko wobec konkretnego
   > celu; filtr po spółce jest tekstowy — „CDR” i „CD Projekt” mogą nie być w MVP traktowane jako ta sama spółka.
   > Rozpoznawanie spółek jest poza zakresem MVP (patrz Non-Goals).
   > Socrates: Kontrargument rozważony: "dokładny schemat klasyfikacji LLM jeszcze nieustalony." Rozwiązanie:
@@ -253,9 +253,9 @@ Administrator (operator wdrożenia) — zarządza dostępem: tworzy konta dla za
 
 ## Business Logic
 
-Aplikacja opisuje znaczenie każdego zebranego posta tak, by użytkownik mógł szybko ocenić, czy jest wartościowym sygnałem inwestycyjnym: czy treść dotyczy inwestowania, jakich spółek lub tematów dotyczy, jakie stanowisko autor zajmuje wobec każdej z nich (i czy je osłabia, np. „może”), oraz jakie tezy i argumenty przedstawia — każdą popartą dosłownym cytatem z posta.
+Aplikacja opisuje znaczenie każdego zebranego posta tak, by użytkownik mógł szybko ocenić, czy jest wartościowym sygnałem inwestycyjnym: czy treść dotyczy inwestowania, jakich spółek lub tematów dotyczy, jakie stanowisko autor zajmuje wobec każdej z nich (i czy je osłabia, np. „może”), oraz jakie tezy, opinie, fakty, pytania i działania przedstawia — każde poparte dosłownym cytatem z posta.
 
-Wejściem oceny jest wyłącznie treść posta (tytuł, treść; docelowo też komentarze z kontekstem rodzica). Metadane źródłowe (źródło, autor, link, zaangażowanie) nie trafiają do LLM — backend przechowuje je osobno. Wyjściem jest ustandaryzowany wynik oceny per post zgodny z kontraktem `context/foundation/llm-assessment/contract-v1.md` (V1): trafność inwestycyjna, cele ze stanowiskiem autora, tezy/opinie/fakty/pytania/działania z cytatami i powiązaniami argumentów oraz jawne flagi niepewności. LLM nie wydaje decyzji „wartościowy / niewartościowy” ani nie ocenia nowości — w MVP tę ocenę robi użytkownik na podstawie opisanej struktury; automatyczna decyzja o sygnale jest odroczona (patrz Non-Goals).
+Wejściem oceny jest wyłącznie treść posta (tytuł, treść; docelowo też komentarze z kontekstem rodzica). Metadane źródłowe (źródło, autor, link, zaangażowanie) nie trafiają do LLM — backend przechowuje je osobno. Wyjściem jest ustandaryzowany wynik oceny per post zgodny z kontraktem `context/foundation/llm-assessment/contract-v2.md` (V2): trafność, cele ze stanowiskiem autora, tezy/opinie/fakty/pytania/działania z cytatem, flagi niepewności. Kontrakt V2 nie zawiera grafu powiązań argumentów (zgłoszona rozbieżność z wcześniejszym opisem — rozstrzygnięta w zmianie `assessment-contract-harness`, 2026-10-01); wpisy bez treści (poza tagami, wzmiankami i linkami brak tekstu, np. samo zdjęcie z tagiem) dostają wynik bez wywołania modelu. LLM nie wydaje decyzji „wartościowy / niewartościowy” ani nie ocenia nowości — w MVP tę ocenę robi użytkownik na podstawie opisanej struktury; automatyczna decyzja o sygnale jest odroczona (patrz Non-Goals).
 
 Użytkownik spotyka tę ocenę na liście i w widoku szczegółowym w aplikacji webowej (z możliwością filtrowania po tych polach — FR-011a/b) i może przejść przez link do oryginalnego posta, żeby zweryfikować kontekst. W rozszerzeniu poza MVP (FR-024/FR-025) oceny są agregowane w czasie per spółka, nakładane na wykres notowań giełdowych, z alertami przy obiecującym trendzie.
 
@@ -286,13 +286,13 @@ Poza zakresem MVP (przyszłość): drugi czynnik uwierzytelniania, samodzielny r
 - **Custom logika archiwizacji/backupu danych** — bezpieczeństwo przed utratą danych to odpowiedzialność platformy hostingowej, nie kodu aplikacji.
 - **Wysoka dostępność / multi-region** — pojedyncza instancja na jednej platformie wystarcza dla małej, zapraszanej grupy userów.
 - **Dodatkowe źródła danych poza Wykop/Reddit** (np. Twitter/X, fora branżowe) — poza zakresem MVP i jego zaplanowanego rozszerzenia.
-- **Rozpoznawanie spółek (entity resolution) oraz automatyczna decyzja „wartościowy sygnał”** — MVP nie ustala, o którą konkretnie spółkę chodzi (ticker/ISIN), ani nie wylicza nowości, trendu czy końcowej decyzji o sygnale; kontrakt oceny LLM V1 umieszcza te kroki poza oceną jako osobne, dalsze etapy. Są warunkiem przyszłych FR-024/FR-025.
+- **Rozpoznawanie spółek (entity resolution) oraz automatyczna decyzja „wartościowy sygnał”** — MVP nie ustala, o którą konkretnie spółkę chodzi (ticker/ISIN), ani nie wylicza nowości, trendu czy końcowej decyzji o sygnale; kontrakt oceny LLM (V2) umieszcza te kroki poza oceną jako osobne, dalsze etapy. Są warunkiem przyszłych FR-024/FR-025.
 - **Personalizacja samej logiki oceny LLM** ("co znaczy wartościowy sygnał") per user — kryterium wartościowości pozostaje wspólne dla wszystkich; personalizowalne jest wyłącznie filtrowanie widoku na już obliczonej, wspólnej klasyfikacji (FR-011a/b), nie sama reguła oceny.
 - **Rozbudowany system zarządzania tożsamością poza modelem `user`/`admin`** — dodatkowe role, granularne uprawnienia, rozbudowana edycja/deaktywacja kont, publiczna rejestracja oraz samodzielny reset hasła przez użytkownika i zarządzanie kluczami dostępu pozostają poza zakresem MVP. (Nie wyklucza to FR-016/FR-017/FR-019 — panel webowy tworzenia kont i automatyczna wysyłka maila zaproszenia pozostają nice-to-have zgodnie z aktualnymi FR.)
 
 ## Open Questions
 
 1. **Czy `product_type` to "data-pipeline" czy "web-app"?** — Projekt to dwa moduły: pipeline+API jako rdzeń, pełnoprawna aplikacja webowa (logowanie, dashboard, lista/filtrowanie) jako warstwa konsumpcji. Wybrano `data-pipeline` jako najbliższą pojedynczą wartość; do doprecyzowania przy `/10x-tech-stack-selector`. Owner: użytkownik.
-2. **[ROZSTRZYGNIĘTE 2026-09-27 — kontrakt `context/foundation/llm-assessment/contract-v1.md` V1]** **Dokładny kształt pól w JSON zwracanym przez ocenę LLM** — ustalone kryteria (teza z uzasadnieniem, kierunek/siła wydźwięku, nowość, spółka/temat) trzeba jeszcze przełożyć na konkretne nazwy pól/typy i walidację schematu; wpływa też na dokładny zakres FR-011a/b. Owner: użytkownik. By: przed implementacją FR-004.
+2. **[ROZSTRZYGNIĘTE 2026-09-27 — kontrakt V1; zastąpiony 2026-10-01 kontraktem `context/foundation/llm-assessment/contract-v2.md` V2 (rdzeń: trafność, cele ze stanowiskiem autora, tezy z cytatem, flagi niepewności; bez grafu argumentów)]** **Dokładny kształt pól w JSON zwracanym przez ocenę LLM** — ustalone kryteria (teza z uzasadnieniem, kierunek/siła wydźwięku, nowość, spółka/temat) trzeba jeszcze przełożyć na konkretne nazwy pól/typy i walidację schematu; wpływa też na dokładny zakres FR-011a/b. Owner: użytkownik. By: przed implementacją FR-004.
 3. **Kanał i próg dla FR-025 (powiadomienia o obiecującym trendzie)** — nie ustalono jeszcze, czym jest "obiecujący trend" liczbowo ani gdzie ma trafiać powiadomienie. Owner: użytkownik. By: przy realizacji FR-025 (poza MVP).
 4. **Backup/retencja na docelowej platformie hostingowej** — sprawdzić realne możliwości managed backupu bazy danych na wybranej platformie przy `/10x-infra-research`, żeby "bezterminowe przechowywanie" (patrz Non-Functional Requirements) nie okazało się bez żadnej siatki bezpieczeństwa. Owner: użytkownik. By: przed `/10x-infra-research`.

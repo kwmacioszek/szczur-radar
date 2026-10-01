@@ -1,16 +1,17 @@
 import json, os, re, collections, statistics as st
-S = os.path.dirname(os.path.abspath(__file__))
-PILOT = "/Users/krzysztofmacioszek/Develop/Projects/10xDevs/szczur-radar/context/changes/assessment-contract-harness/pilot"
-D = json.load(open(f"{S}/pilot2-results.json"))
+S = os.path.dirname(os.path.abspath(__file__))     # skrypty i prompty
+PILOT = os.path.dirname(S)                          # próbki i etykiety
+RUNS = os.path.join(PILOT, "runs")                  # wyniki przebiegów
+D = json.load(open(os.path.join(RUNS, "pilot2-results.json")))
 def parsed(r):
     if r.get("output") is not None: return r["output"]
     try: return json.loads(r["raw"]) if r.get("raw") else None
     except Exception: return None
 def model(m): return {r["id"]: parsed(r) for r in D["results"] if r["model"] == m and r["variant"] == "short" and parsed(r)}
 G, DS = model("gemini-3.1-flash-lite"), model("deepseek-flash")
-J = {r["id"]: r["answers"] for r in json.load(open(f"{S}/pilot6-jev-run1.json")) if r.get("answers")}
-J2 = {r["id"]: r["answers"] for r in json.load(open(f"{S}/pilot6-jev-run2.json")) if r.get("answers")}
-gold = {g["post_id"]: g for g in json.load(open(f"{PILOT}/labels-2026-09-28.json"))["labels"] if g.get("relevance")}
+J = {r["id"]: r["answers"] for r in json.load(open(os.path.join(RUNS, "pilot6-jev-run1.json"))) if r.get("answers")}
+J2 = {r["id"]: r["answers"] for r in json.load(open(os.path.join(RUNS, "pilot6-jev-run2.json"))) if r.get("answers")}
+gold = {g["post_id"]: g for g in json.load(open(os.path.join(PILOT, "labels-2026-09-28.json")))["labels"] if g.get("relevance")}
 def norm(a): return re.sub(r"[^\w]", "", a.lower().lstrip("#$"))
 def net_llm(o):
     d = collections.Counter(t["stance"]["direction"] for t in o["targets"] if t["stance"]["direction"] in ("bullish", "bearish"))
@@ -66,5 +67,5 @@ print(f"mediana confidence gdy zgodne {st.median(confs_same):.2f}, gdy niezgodne
 print("\n== E. powtarzalność (40 postów powtórzonych) ==")
 r = [i for i in J2 if i in J]
 print(f"ta sama trafność {pct(sum(J[i]['relevance']['choice']==J2[i]['relevance']['choice'] for i in r),len(r))} | ten sam dominujący kierunek {pct(sum(J[i]['dominant']['choice']==J2[i]['dominant']['choice'] for i in r),len(r))} | średnia różnica has_stance {st.mean(abs(J[i]['has_stance']['noul']-J2[i]['has_stance']['noul']) for i in r):.3f}")
-res = json.load(open(f"{S}/pilot6-jev-run1.json"))
+res = json.load(open(os.path.join(RUNS, "pilot6-jev-run1.json")))
 print(f"\n== F. koszt i czas == tokeny wej./post {st.mean(x['usage']['input_tokens'] for x in res):.0f}; koszt/post ${st.mean(x['usage']['cost'] for x in res):.6f}; przy 12k postów/mies. ${12000*st.mean(x['usage']['cost'] for x in res):.2f}; mediana czasu {st.median(x['sec'] for x in res):.2f}s")

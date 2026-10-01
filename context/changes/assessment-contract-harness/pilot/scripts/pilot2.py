@@ -1,16 +1,28 @@
-"""Pilot 2: wszystkie posty #gielda z 28.09 × tanie modele × prompt pełny/skrócony."""
-import json, os, re, sys, time, urllib.error
+"""Pilot 2: wszystkie posty #gielda z 28.09 × tanie modele × prompt pełny/skrócony.
+
+Użycie: python pilot2.py --posts gielda-2026-09-28.json
+Plik wejściowy (surowe wpisy Wykop API v3 z 2026-09-28) nie jest w repo. Wynik: ../runs/pilot2-results.json
+(nadpisuje zachowany, zanonimizowany wynik — nowego wyniku nie commituj bez anonimizacji).
+"""
+import argparse, json, os, re, sys, time, urllib.error
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 
-S = os.path.dirname(os.path.abspath(__file__))
+S = os.path.dirname(os.path.abspath(__file__))     # skrypty i prompty
+PILOT = os.path.dirname(S)                          # próbki i etykiety
+RUNS = os.path.join(PILOT, "runs")                  # wyniki przebiegów
+ap = argparse.ArgumentParser(description="Pilot 2")
+ap.add_argument("--posts", required=True, help="gielda-2026-09-28.json — surowe wpisy #gielda z 2026-09-28")
+POSTS = ap.parse_args().posts
+if not os.path.isfile(POSTS):
+    sys.exit(f"Brak pliku wejściowego {POSTS!r} (argument --posts, oczekiwany gielda-2026-09-28.json). Pliku nie ma w repo — podaj lokalną ścieżkę.")
 sys.argv = ["pilot.py", "none"]
 exec(open(f"{S}/pilot.py").read().split("items = []")[0])  # SCHEMA, SYSTEM (pełny), validate, call, call_deepseek
 
 PROMPTS = {"long": SYSTEM, "short": open(f"{S}/prompt-short.md").read()}
 MODELS = ["deepseek-flash", "gemini-3.1-flash-lite", "gemini-3.5-flash-lite"]
 
-posts = json.load(open(f"{S}/gielda-2026-09-28.json"))
+posts = json.load(open(POSTS))
 strip = lambda t: re.sub(r"#\w+|@\w+|https?://\S+", "", t or "").strip()
 kept, skipped = [], 0
 for p in posts:
@@ -71,5 +83,5 @@ with ThreadPoolExecutor(max_workers=12) as ex:
     for i, rec in enumerate(ex.map(lambda j: run_one(*j), jobs), 1):
         results.append(rec)
         if i % 50 == 0: print(f"{i}/{len(jobs)} {time.time()-t0:.0f}s", flush=True)
-json.dump({"kept": kept, "skipped": skipped, "results": results}, open(f"{S}/pilot2-results.json", "w"), ensure_ascii=False)
+json.dump({"kept": kept, "skipped": skipped, "results": results}, open(os.path.join(RUNS, "pilot2-results.json"), "w"), ensure_ascii=False)
 print("done", len(results), f"{time.time()-t0:.0f}s")

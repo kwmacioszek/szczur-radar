@@ -465,17 +465,17 @@ Brak zmian danych i infrastruktury. Nowe zależności Pythona zwiększają obraz
 
 #### Automated
 
-- [ ] 1.1 `contract-v2.md` istnieje, a `contract-v1.md` jest tylko w archiwum: `test -f context/foundation/llm-assessment/contract-v2.md && ! test -f context/foundation/llm-assessment/contract-v1.md && ls context/foundation/archive/*llm-assessment-contract-v1.md`
-- [ ] 1.2 Dokumenty foundation poza archiwum nie odwołują się do ścieżki V1: `rg -n 'contract-v1\.md' context/foundation --glob '*.md' --glob '!**/archive/**'` zwraca kod 1 (brak trafień)
-- [ ] 1.3 W folderze zmiany nie ma kluczy API: `grep -rEn "sk-or-v1-[0-9a-f]{20}|sk-[0-9a-f]{32}|AQ\.Ab8|w5[0-9a-f]{30}" context/changes/assessment-contract-harness` nie zwraca nic
-- [ ] 1.4 Grafika roadmapy jest zregenerowana w tym samym commicie co `roadmap.md`: `git diff --name-only main -- docs/visuals/roadmap-mvp.png tools/render_roadmap.swift` zwraca oba pliki
-- [ ] 1.5 Testy backendu nadal przechodzą: `cd szczur-radar-api && uv run pytest -q`
+- [x] 1.1 `contract-v2.md` istnieje, a `contract-v1.md` jest tylko w archiwum: `test -f context/foundation/llm-assessment/contract-v2.md && ! test -f context/foundation/llm-assessment/contract-v1.md && ls context/foundation/archive/*llm-assessment-contract-v1.md`
+- [x] 1.2 Dokumenty foundation poza archiwum nie odwołują się do ścieżki V1: `rg -n 'contract-v1\.md' context/foundation --glob '*.md' --glob '!**/archive/**'` zwraca kod 1 (brak trafień)
+- [x] 1.3 W folderze zmiany nie ma kluczy API: `grep -rEn "sk-or-v1-[0-9a-f]{20}|sk-[0-9a-f]{32}|AQ\.Ab8|w5[0-9a-f]{30}" context/changes/assessment-contract-harness` nie zwraca nic
+- [x] 1.4 Grafika roadmapy jest zregenerowana w tym samym commicie co `roadmap.md`: `git diff --name-only main -- docs/visuals/roadmap-mvp.png tools/render_roadmap.swift` zwraca oba pliki
+- [x] 1.5 Testy backendu nadal przechodzą: `cd szczur-radar-api && uv run pytest -q`
 
 #### Manual
 
-- [ ] 1.6 Użytkownik przeczytał i zaakceptował tekst `contract-v2.md` (kształt wyjścia, definicja celu, próg stanowiska, reguła cytatu, reguła „brak treści”)
-- [ ] 1.7 Użytkownik potwierdził zmienione sformułowania w `prd.md` i `roadmap.md` (w tym opis S-03)
-- [ ] 1.8 Każdy przykład w `examples.md` ma kompletne wyjście i ręcznie sprawdzone cytaty względem swojego wejścia
+- [x] 1.6 Użytkownik przeczytał i zaakceptował tekst `contract-v2.md` (kształt wyjścia, definicja celu, próg stanowiska, reguła cytatu, reguła „brak treści”)
+- [x] 1.7 Użytkownik potwierdził zmienione sformułowania w `prd.md` i `roadmap.md` (w tym opis S-03)
+- [x] 1.8 Każdy przykład w `examples.md` ma kompletne wyjście i ręcznie sprawdzone cytaty względem swojego wejścia
 
 ### Phase 2: Kontrakt jako kod
 

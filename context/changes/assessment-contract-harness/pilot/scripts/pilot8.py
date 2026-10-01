@@ -1,11 +1,14 @@
 """Pilot 8: openai/gpt-6-luna przez OpenRouter na 143 postach #gielda z 28.09 — skrócony prompt, pojedyncze wywołania."""
 import json, os, sys, time, urllib.request, urllib.error
 from concurrent.futures import ThreadPoolExecutor
-S = os.path.dirname(os.path.abspath(__file__)); KEY = os.environ["OPENROUTER_API_KEY"]; MODEL = "openai/gpt-6-luna"
+S = os.path.dirname(os.path.abspath(__file__))     # skrypty i prompty
+PILOT = os.path.dirname(S)                          # próbki i etykiety
+RUNS = os.path.join(PILOT, "runs")                  # wyniki przebiegów
+KEY = os.environ["OPENROUTER_API_KEY"]; MODEL = "openai/gpt-6-luna"
 sys.argv = ["pilot.py", "none"]
 exec(open(f"{S}/pilot.py").read().split("items = []")[0])   # SCHEMA, DS_SCHEMA (bez limitów długości/liczności), validate
 KEY = os.environ["OPENROUTER_API_KEY"]; PROMPT = open(f"{S}/prompt-short.md").read()
-posts = json.load(open(f"{S}/pilot2-results.json"))["kept"]
+posts = json.load(open(os.path.join(RUNS, "pilot2-results.json")))["kept"]
 def call(post):
     body = {"model": MODEL, "temperature": 0, "usage": {"include": True},
             "messages": [{"role": "system", "content": PROMPT},
@@ -37,6 +40,6 @@ first = call(posts[0]); print("pierwsze:", first["status"], first.get("error") o
 if first["status"] == "provider_error": sys.exit(1)
 t0 = time.time()
 with ThreadPoolExecutor(max_workers=8) as ex: res = list(ex.map(call, posts))
-json.dump(res, open(f"{S}/pilot8-gpt6luna.json", "w"), ensure_ascii=False)
+json.dump(res, open(os.path.join(RUNS, "pilot8-gpt6luna.json"), "w"), ensure_ascii=False)
 import collections
 print("done", len(res), f"{time.time()-t0:.0f}s", dict(collections.Counter(r["status"] for r in res)))

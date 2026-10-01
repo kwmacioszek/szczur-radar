@@ -1,5 +1,7 @@
 import json, collections, re, statistics as st, sys, os
-S = os.path.dirname(os.path.abspath(__file__))
+S = os.path.dirname(os.path.abspath(__file__))     # skrypty i prompty
+PILOT = os.path.dirname(S)                          # próbki i etykiety
+RUNS = os.path.join(PILOT, "runs")                  # wyniki przebiegów
 def load(f): 
     D = json.load(open(f)); return D["results"], {p["id"]: p for p in D["posts"]}
 def norm(a): return re.sub(r"[^\w]", "", a.lower().lstrip("#$"))
@@ -48,9 +50,9 @@ def agree(a, b, label):
 if __name__ == "__main__":
     DS = (0.30, 0.006, 1.20); G31 = (0.10, 0.10, 0.40)
     runs = {}
-    for name, f, price in [("deepseek-flash · prompt PL", "pilot5-results-deepseek-flash.json", DS), ("deepseek-flash · prompt EN", "pilot5-results-deepseek-flash-en.json", DS),
-                           ("gemini-3.1-flash-lite · prompt EN", "pilot5-results-gemini-3.1-flash-lite-en.json", G31)]:
-        if os.path.exists(f"{S}/{f}"): runs[name] = summarize(name, f"{S}/{f}", price)
+    for name, f, price in [("deepseek-flash · prompt PL", "pilot5-reddit-deepseek-flash.json", DS), ("deepseek-flash · prompt EN", "pilot5-reddit-deepseek-flash-en.json", DS),
+                           ("gemini-3.1-flash-lite · prompt EN", "pilot5-reddit-gemini-3.1-flash-lite-en.json", G31)]:
+        if os.path.exists(os.path.join(RUNS, f)): runs[name] = summarize(name, os.path.join(RUNS, f), price)
     names = list(runs)
     for i in range(len(names)):
         for j in range(i + 1, len(names)): agree(runs[names[i]], runs[names[j]], f"{names[i]} vs {names[j]}")

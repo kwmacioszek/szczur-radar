@@ -1,6 +1,8 @@
 import json, os, re, collections, itertools
-S = os.path.dirname(os.path.abspath(__file__))
-D = json.load(open(f"{S}/pilot2-results.json"))
+S = os.path.dirname(os.path.abspath(__file__))     # skrypty i prompty
+PILOT = os.path.dirname(S)                          # próbki i etykiety
+RUNS = os.path.join(PILOT, "runs")                  # wyniki przebiegów
+D = json.load(open(os.path.join(RUNS, "pilot2-results.json")))
 R = D["results"]; kept = {p["id"]: p for p in D["kept"]}
 MODELS = ["deepseek-flash", "gemini-3.1-flash-lite", "gemini-3.5-flash-lite"]
 # $/1M: (input cache-miss, input cache-hit, output) — ceny z niezweryfikowanego streszczenia cenników

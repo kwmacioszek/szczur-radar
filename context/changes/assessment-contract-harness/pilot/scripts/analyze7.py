@@ -1,7 +1,9 @@
 import json, os, collections, statistics as st
-S = os.path.dirname(os.path.abspath(__file__))
+S = os.path.dirname(os.path.abspath(__file__))     # skrypty i prompty
+PILOT = os.path.dirname(S)                          # próbki i etykiety
+RUNS = os.path.join(PILOT, "runs")                  # wyniki przebiegów
 exec(open(f"{S}/analyze6.py").read().split('ids = [i for i in J')[0])   # G, DS, J (Jev), gold, net_llm, net_gold, net_jev
-def load(n): return {r["id"]: r["answers"] for r in json.load(open(f"{S}/pilot7-{n}.json")) if r.get("answers")}
+def load(n): return {r["id"]: r["answers"] for r in json.load(open(os.path.join(RUNS, f"pilot7-{n}.json"))) if r.get("answers")}
 A, L = load("span01"), load("span01lite")
 ids = [i for i in A if i in G and i in DS and i in J]
 pct = lambda a, b: f"{100*a/max(b,1):.0f}%"
@@ -41,5 +43,5 @@ for name, X in (("Span-01", A),):
     print(f"  mediana 'unclear' dla Twoich nierozstrzygalnych {st.median(X[i]['unclear'] for i in gu):.2f} vs pozostałych {st.median(X[i]['unclear'] for i in gid if i not in gu):.2f}")
     print("  -- pewność kierunku = |bullish − bearish| --")
     split(lambda i: abs(X[i]["bullish"] - X[i]["bearish"]), lambda i: net_llm(G[i]) != net_llm(DS[i]), "kierunek: gemini≠deepseek", ids)
-res = json.load(open(f"{S}/pilot7-span01.json"))
+res = json.load(open(os.path.join(RUNS, "pilot7-span01.json")))
 print(f"\nkoszt/post ${st.mean(x['usage']['cost'] for x in res):.7f}; przy 12k postów/mies. ${12000*st.mean(x['usage']['cost'] for x in res):.2f}; tokeny/post {st.mean(x['usage']['input_tokens'] for x in res):.0f}; mediana czasu {st.median(x['sec'] for x in res):.2f}s")

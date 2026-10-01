@@ -1,9 +1,23 @@
-"""Pilot 5: Reddit (r/stocks, r/ValueInvesting, r/investing, 24-29.09) — pojedyncze wywołania, skrócony prompt, statement po angielsku."""
-import json, os, re, sys, time, datetime
+"""Pilot 5: Reddit (r/stocks, r/ValueInvesting, r/investing, 24-29.09) — pojedyncze wywołania, skrócony prompt, statement po angielsku.
+
+Użycie: python pilot5.py MODELE[,…] [PROMPT_EN] --posts reddit-sample-24_29.json
+  np. python pilot5.py deepseek-flash prompt-short-en.md --posts /ścieżka/reddit-sample-24_29.json
+Plik wejściowy (posty Arctic Shift) nie jest w repo. Wynik: ../runs/pilot5-reddit-<modele>[-en].json
+"""
+import argparse, json, os, re, sys, time, datetime
 from concurrent.futures import ThreadPoolExecutor
-S = os.path.dirname(os.path.abspath(__file__))
-ARG_MODELS = sys.argv[1].split(",")
-ARG_PROMPT = sys.argv[2] if len(sys.argv) > 2 else None
+S = os.path.dirname(os.path.abspath(__file__))     # skrypty i prompty
+PILOT = os.path.dirname(S)                          # próbki i etykiety
+RUNS = os.path.join(PILOT, "runs")                  # wyniki przebiegów
+ap = argparse.ArgumentParser(description="Pilot 5 (Reddit)")
+ap.add_argument("models", help="lista modeli rozdzielona przecinkami")
+ap.add_argument("prompt", nargs="?", default=None, help="opcjonalny prompt angielski (np. prompt-short-en.md)")
+ap.add_argument("--posts", required=True, help="reddit-sample-24_29.json — posty Arctic Shift z 2026-09-24…29")
+_args = ap.parse_args()
+if not os.path.isfile(_args.posts):
+    sys.exit(f"Brak pliku wejściowego {_args.posts!r} (argument --posts, oczekiwany reddit-sample-24_29.json). Pliku nie ma w repo — podaj lokalną ścieżkę.")
+ARG_MODELS = _args.models.split(",")
+ARG_PROMPT = (_args.prompt if os.path.isfile(_args.prompt) else os.path.join(S, _args.prompt)) if _args.prompt else None
 os.environ.setdefault("GEMINI_API_KEY", "unused")
 exec(open(f"{S}/pilot3.py").read().split("def assess_batch")[0])  # call(), assess_one(), schemas, validate
 SHORT = open(f"{S}/prompt-short.md").read()
@@ -24,7 +38,7 @@ if ARG_PROMPT:
             try: out = json.loads(raw)
             except Exception: pass
         return [{"id": pid, "output": out, "usage_share": usage, "n_in_batch": 1, "sec": dt}]
-raw = json.load(open(f"{S}/reddit-sample-24_29.json"))
+raw = json.load(open(_args.posts))
 cyc = re.compile(r"(daily|weekly).*(discussion|thread)|thread on meme stocks", re.I)
 P = {}
 for p in raw:
@@ -48,6 +62,6 @@ with ThreadPoolExecutor(max_workers=10) as ex:
     for i, r in enumerate(ex.map(run, jobs), 1):
         results.append(r)
         if i % 50 == 0: print(f"{i}/{len(jobs)} {time.time()-t0:.0f}s", flush=True)
-out = f"{S}/pilot5-results-{'_'.join(MODELS)}{'-en' if ARG_PROMPT else ''}.json"
+out = os.path.join(RUNS, f"pilot5-reddit-{'_'.join(MODELS)}{'-en' if ARG_PROMPT else ''}.json")
 json.dump({"posts": list(P.values()), "results": results}, open(out, "w"), ensure_ascii=False)
 print("done", out, f"{time.time()-t0:.0f}s")

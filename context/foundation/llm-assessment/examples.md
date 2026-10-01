@@ -1,367 +1,354 @@
-# LLM Assessment V1 — Examples
+# LLM Assessment V2 — Examples
 
-Ten plik jest **pomocniczy**. Normatywnym źródłem prawdy jest [`contract-v1.md`](./contract-v1.md).
+Ten plik jest **pomocniczy**. Normatywnym źródłem prawdy jest [`contract-v2.md`](./contract-v2.md); przykłady nie rozszerzają enumów ani reguł kontraktu.
 
-Przykłady pokazują oczekiwane zachowanie; nie rozszerzają enumów ani zasad kontraktu.
+Wszystkie wejścia to **prawdziwe, zanonimizowane posty #gielda** z pilotaży (`context/changes/assessment-contract-harness/pilot/`): nicki → `@uzytkownikN`, adresy → `<url>`, białe znaki bez zmian (twarda spacja zapisana w JSON jako ` `). Każde wyjście jest kompletnym `AssessmentOutputV2` zgodnym z kontraktem: cytaty są podciągami wskazanych pól po normalizacji białych znaków (§10), referencje są spójne (§12). Etykiety rundy 1 (`labels-2026-09-28.json`) były oznaczane bez instrukcji i ostrożniej niż próg V2 — tam, gdzie się różnią, obowiązuje ten plik.
+
+Przykłady są danymi testowymi: kompletne wyjścia z sekcji 1–4 i 6–7 muszą przechodzić walidator bez naruszeń; przykład 5 sprawdza odsiew.
 
 ---
 
-# 1. Teza z argumentem
+# 1. Slang jako anchor
 
-Input body:
+Źródło: `labeling-set-2026-09-28.json`, `entry-87765763` (#58).
 
-```text
-CD Projekt wygląda ciekawie po ostatnich spadkach.
-Rynek moim zdaniem za mocno wycenia ryzyko opóźnienia Wiedźmina.
-Jeżeli premiera pójdzie zgodnie z planem, obecna wycena może być atrakcyjna.
+Wejście:
+
+```json
+{
+  "schema_version": "AssessmentInputV1",
+  "item": {
+    "item_type": "post",
+    "published_at": "2026-09-28T16:36:16+02:00",
+    "channels": ["gielda"],
+    "title": null,
+    "body": "to koniec dla pamięciorzy \n#gielda "
+  },
+  "context": {"parent_post": null, "parent_comment": null}
+}
 ```
 
-Istotne elementy output:
+Wyjście:
 
 ```json
 {
   "relevance": "investment_related",
+  "modifiers": [],
   "targets": [
     {
       "id": "t1",
-      "kind": "company",
+      "kind": "sector",
       "reference": "explicit",
-      "anchor": {
-        "document": "item",
-        "field": "body",
-        "quote": "CD Projekt"
-      },
-      "stance": {
-        "direction": "bullish",
-        "assertiveness": "hedged",
-        "claim_ids": ["c2"]
-      }
+      "anchor": {"document": "item", "field": "body", "quote": "pamięciorzy"},
+      "stance": {"direction": "bearish", "assertiveness": "unhedged", "claim_ids": ["c1"]}
     }
   ],
   "claims": [
     {
       "id": "c1",
-      "kind": "opinion",
-      "attribution": "author",
-      "target_ids": ["t1"],
-      "statement": "Zdaniem autora rynek nadmiernie wycenia ryzyko opóźnienia Wiedźmina.",
-      "evidence": [
-        {
-          "document": "item",
-          "field": "body",
-          "quote": "Rynek moim zdaniem za mocno wycenia ryzyko opóźnienia Wiedźmina."
-        }
-      ],
-      "supported_by_claim_ids": []
-    },
-    {
-      "id": "c2",
       "kind": "investment_thesis",
       "attribution": "author",
       "target_ids": ["t1"],
-      "statement": "Obecna wycena CD Projektu może być atrakcyjna, jeśli premiera odbędzie się zgodnie z planem.",
-      "evidence": [
-        {
-          "document": "item",
-          "field": "body",
-          "quote": "Jeżeli premiera pójdzie zgodnie z planem, obecna wycena może być atrakcyjna."
-        }
-      ],
-      "supported_by_claim_ids": ["c1"]
+      "statement": "Autor uważa, że to koniec dla producentów pamięci.",
+      "evidence": {"document": "item", "field": "body", "quote": "to koniec dla pamięciorzy"}
     }
-  ]
+  ],
+  "flags": []
 }
 ```
 
+Dlaczego: „pamięciorze” to slang na producentów pamięci — cel `sector`; anchor zostaje w oryginale i w tej odmianie, w jakiej stoi w tekście (§6.2, §6.5). `#gielda` to tag kanału, nigdy cel (§6.4). Stwierdzenie wprost → `unhedged`.
+
 ---
 
-# 2. Pytanie bez stance
+# 2. Twarda spacja w cytacie
 
-Input:
+Źródło: `wykop-gielda-sample-2026-09-29.json`, `gielda-2026-09-29-010`.
 
-```text
-Dlaczego KGHM dzisiaj tak mocno spada? Coś się wydarzyło?
+Wejście (pole `body` zawiera twardą spację U+00A0 między „myślałem” a „że”):
+
+```json
+{
+  "schema_version": "AssessmentInputV1",
+  "item": {
+    "item_type": "post",
+    "published_at": "2026-09-29T21:00:59+02:00",
+    "channels": ["gielda"],
+    "title": null,
+    "body": "czy mi sie wydaje czy micron zachowuje sie idealnie przed wynikami tak zeby w------c w kosmos? szarpniecia małe, myślałem że realizacja zyskow bardziej p--------e\n\n#gielda "
+  },
+  "context": {"parent_post": null, "parent_comment": null}
+}
 ```
 
-Kluczowe zachowanie:
+Wyjście:
 
 ```json
 {
   "relevance": "investment_related",
+  "modifiers": [],
   "targets": [
     {
       "id": "t1",
       "kind": "company",
       "reference": "explicit",
-      "anchor": {
-        "document": "item",
-        "field": "body",
-        "quote": "KGHM"
-      },
-      "stance": {
-        "direction": "not_expressed",
-        "assertiveness": null,
-        "claim_ids": []
-      }
+      "anchor": {"document": "item", "field": "body", "quote": "micron"},
+      "stance": {"direction": "bullish", "assertiveness": "hedged", "claim_ids": ["c1"]}
     }
   ],
   "claims": [
     {
       "id": "c1",
-      "kind": "question",
+      "kind": "investment_thesis",
       "attribution": "author",
       "target_ids": ["t1"],
-      "statement": "Autor pyta o przyczynę dzisiejszego spadku kursu KGHM.",
-      "evidence": [
-        {
-          "document": "item",
-          "field": "body",
-          "quote": "Dlaczego KGHM dzisiaj tak mocno spada? Coś się wydarzyło?"
-        }
-      ],
-      "supported_by_claim_ids": []
+      "statement": "Autor ma wrażenie, że Micron zachowuje się przed wynikami tak, jakby miał mocno wzrosnąć.",
+      "evidence": {"document": "item", "field": "body", "quote": "czy mi sie wydaje czy micron zachowuje sie idealnie przed wynikami tak zeby w------c w kosmos?"}
+    },
+    {
+      "id": "c2",
+      "kind": "opinion",
+      "attribution": "author",
+      "target_ids": ["t1"],
+      "statement": "Autor zauważa, że wahania kursu są małe, a realizacja zysków słabsza, niż się spodziewał.",
+      "evidence": {"document": "item", "field": "body", "quote": "szarpniecia małe, myślałem że realizacja zyskow bardziej p--------e"}
     }
-  ]
+  ],
+  "flags": []
 }
 ```
 
-Pytanie o spadek nie oznacza automatycznie `bearish`.
+Dlaczego: cytat `c2` ma zwykłą spację tam, gdzie pole ma twardą spację — po normalizacji białych znaków (§10) obie strony są równe, więc cytat przechodzi. W V1 ten sam cytat był odrzucany jako `fabricated_evidence` (pilot 1). Literówki („sie”, „zyskow”) i słowa ocenzurowane przez Wykop („w------c”) zostają w cytacie bez zmian. Pytanie retoryczne z oczekiwaniem wzrostu → `bullish` (§7.1.4), osłabione („czy mi sie wydaje”) → `hedged`.
 
 ---
 
-# 3. Dwa targety, przeciwne stance
+# 3. Mem bez aktywa
 
-Input:
+Źródło: `labeling-set-2026-09-28.json`, `entry-87763101` (#68).
 
-```text
-Sprzedaję Allegro, bo nie podoba mi się kierunek marż.
-Za to coraz bardziej podoba mi się XTB i dzisiaj zwiększyłem pozycję.
-```
-
-Oczekiwane:
-
-```text
-Allegro -> bearish
-XTB     -> bullish
-```
-
-Claims powinny oddzielić:
-
-```text
-trade_action Allegro
-opinion o marżach Allegro
-opinion o XTB
-trade_action XTB
-```
-
-Sama sprzedaż nie musi zawsze oznaczać bearish; w tym przykładzie dodatkową podstawą stance jest jawna negatywna ocena marż.
-
----
-
-# 4. Informacja bez opinii
-
-Input:
-
-```text
-Spółka podała dziś wyniki.
-Przychody wzrosły 18% r/r, EBITDA spadła 4%.
-```
-
-Oczekiwane:
-
-```text
-relevance = investment_related
-target.reference = unresolved
-stance.direction = not_expressed
-claims.kind = factual_claim
-```
-
-`factual_claim` oznacza „tekst przedstawia jako fakt”, a nie „LLM potwierdził prawdziwość”.
-
----
-
-# 5. Negatywny ton, bullish stance
-
-Input:
-
-```text
-Zarząd tej spółki to dramat, ale po spadku o 70% kupuję,
-bo wycena jest absurdalnie niska.
-```
-
-Oczekiwane:
-
-```text
-opinion: negatywna ocena zarządu
-investment_thesis / trade_action: pozytywne inwestycyjnie
-stance.direction: bullish
-```
-
-Nie używamy globalnego sentimentu emocjonalnego.
-
----
-
-# 6. Mocna teza bez argumentu
-
-Input:
-
-```text
-CDR 300 zł do końca roku 🚀
-```
-
-Oczekiwane:
-
-```text
-investment_thesis
-bullish
-supported_by_claim_ids = []
-```
-
-Brak argumentu pozostaje widoczny strukturalnie. Nie potrzebujemy pola `quality`.
-
----
-
-# 7. Reported claim ≠ stance autora
-
-Input:
-
-```text
-Analitycy twierdzą, że CDR wzrośnie o 30%.
-```
-
-Oczekiwane:
-
-```text
-claim.kind = factual_claim lub investment_thesis zależnie od zachowanej semantyki wypowiedzi
-claim.attribution = reported
-```
-
-Samo przytoczenie prognozy nie tworzy automatycznie `bullish` stance autora.
-
----
-
-# 8. Contextual target
-
-Parent:
-
-```text
-Dzisiaj dokupiłem XTB.
-```
-
-Item:
-
-```text
-Ja też.
-```
-
-Target:
+Wejście:
 
 ```json
 {
-  "reference": "contextual",
-  "anchor": {
-    "document": "parent_post",
-    "field": "body",
-    "quote": "XTB"
-  }
+  "schema_version": "AssessmentInputV1",
+  "item": {
+    "item_type": "post",
+    "published_at": "2026-09-28T10:33:56+02:00",
+    "channels": ["gielda"],
+    "title": null,
+    "body": "#gielda #gieldowegownowpisy\n\nPamietajcie, że mechanizm wygląda tak:\n-Jak rośnie to dorzucamy kasę \n-Jak spada to usredniamy\n-Jak spada mocniej, to pracujemy więcej i usredniamy bardziej \n-Jak odbija, to dalej usredniamy, tym razem w górę, przez chwilę ciesząc się zielenią. \n-nigdy nie wyciągamy kasy i umieramy biedni, przekazując dzieciom, żeby usredniali to co dostaną w spadku ( ͡º ͜ʖ͡º)"
+  },
+  "context": {"parent_post": null, "parent_comment": null}
 }
 ```
 
-Claim autora musi nadal mieć evidence z `item`, np.:
-
-```json
-[
-  {
-    "document": "item",
-    "field": "body",
-    "quote": "Ja też."
-  },
-  {
-    "document": "parent_post",
-    "field": "body",
-    "quote": "Dzisiaj dokupiłem XTB."
-  }
-]
-```
-
----
-
-# 9. Ambiguous vs unresolved
-
-## Ambiguous
-
-```text
-Apple wygląda teraz dobrze.
-```
-
-Jeżeli dostarczony kontekst nie rozstrzyga, do czego odnosi się `Apple`:
-
-```text
-reference = ambiguous
-```
-
-## Unresolved
-
-```text
-Ta spółka będzie rosła.
-```
-
-bez parent context:
-
-```text
-reference = unresolved
-stance.direction = bullish
-```
-
-Nierozwiązany target nie oznacza automatycznie niejasnego stance.
-
----
-
-# 10. Sarkazm
-
-Input:
-
-```text
-Świetna spółka, naprawdę.
-Trzeci profit warning w pół roku.
-To na pewno tym razem poleci na księżyc.
-```
-
-Jeżeli model prawidłowo rozpoznaje sarkazm, klasyfikuje semantykę bez dodatkowej flagi.
-
-Jeżeli sarkazm może materialnie zmieniać wynik i model nie może go rozstrzygnąć:
-
-```text
-possible_sarcasm
-```
-
----
-
-# 11. Treść nieinwestycyjna
-
-Input:
-
-```text
-Dzięki za odpowiedź!
-```
-
-Minimalny output:
+Wyjście:
 
 ```json
 {
   "relevance": "not_investment_related",
-  "modifiers": [],
+  "modifiers": ["humor"],
   "targets": [],
   "claims": [],
   "flags": []
 }
 ```
 
+Dlaczego: żart bez konkretnego aktywa i bez kierunku → `not_investment_related` (§5.1), więc `targets = []` i `claims = []` (§4, reguła D15). Modyfikator `humor` jest dozwolony przy każdej trafności.
+
 ---
 
-# 12. Anti-examples
+# 4. Sam link
 
-## Nie rób tego
+Źródło: `labeling-set-2026-09-28.json`, `entry-87764313` (#42).
+
+Wejście:
+
+```json
+{
+  "schema_version": "AssessmentInputV1",
+  "item": {
+    "item_type": "post",
+    "published_at": "2026-09-28T13:25:46+02:00",
+    "channels": ["gielda"],
+    "title": null,
+    "body": "#gielda śledzenie przepływów ropy\n<url>"
+  },
+  "context": {"parent_post": null, "parent_comment": null}
+}
+```
+
+Wyjście:
+
+```json
+{
+  "relevance": "unclear",
+  "modifiers": [],
+  "targets": [
+    {
+      "id": "t1",
+      "kind": "asset",
+      "reference": "explicit",
+      "anchor": {"document": "item", "field": "body", "quote": "ropy"},
+      "stance": {"direction": "not_expressed", "assertiveness": null, "claim_ids": []}
+    }
+  ],
+  "claims": [],
+  "flags": ["missing_context"]
+}
+```
+
+Dlaczego: link z komentarzem bez kierunku → `unclear`, bo sens jest w linku, którego model nie widzi (§5.3); `missing_context` to jawnie zaznacza. Nazwane aktywo („ropy”) pozostaje celem bez stanowiska (§6.3) — filtr po nazwie je znajdzie, filtr po stanowisku nie. `not_expressed` ⇒ `assertiveness = null` i `claim_ids = []` (§7.2); wpis nie ma tezy, więc `claims = []`.
+
+---
+
+# 5. Wpis bez treści (wynik bez wywołania modelu)
+
+Źródło: `wykop-gielda-sample-2026-09-29.json`, `gielda-2026-09-29-017` (wpis z osadzonym linkiem).
+
+Wejście:
+
+```json
+{
+  "schema_version": "AssessmentInputV1",
+  "item": {
+    "item_type": "post",
+    "published_at": "2026-09-29T20:35:22+02:00",
+    "channels": ["gielda"],
+    "title": null,
+    "body": "#gielda <url>"
+  },
+  "context": {"parent_post": null, "parent_comment": null}
+}
+```
+
+Odsiew (§11): po usunięciu tagu `#gielda` i znacznika `<url>` oraz obcięciu białych znaków zostaje 0 znaków (< 3) → wpis „bez treści”, model nie jest wywoływany.
+
+Wyjście (gotowe, z backendu):
+
+```json
+{
+  "relevance": "unclear",
+  "modifiers": [],
+  "targets": [],
+  "claims": [],
+  "flags": ["insufficient_content"]
+}
+```
+
+Pochodzenie oceny: źródło `prefilter`, bez dostawcy, modelu i tokenów (§11, §15).
+
+---
+
+# 6. Scenariusz dwustronny
+
+Źródło: `labeling-set-2026-09-28.json`, `entry-87769877` (#54).
+
+Wejście:
+
+```json
+{
+  "schema_version": "AssessmentInputV1",
+  "item": {
+    "item_type": "post",
+    "published_at": "2026-09-28T21:14:48+02:00",
+    "channels": ["gielda"],
+    "title": null,
+    "body": "Albo indeks w końcu poleci w kibel albo czeka nas pompa stulecia\n\n#gielda "
+  },
+  "context": {"parent_post": null, "parent_comment": null}
+}
+```
+
+Wyjście:
+
+```json
+{
+  "relevance": "investment_related",
+  "modifiers": [],
+  "targets": [
+    {
+      "id": "t1",
+      "kind": "asset",
+      "reference": "explicit",
+      "anchor": {"document": "item", "field": "body", "quote": "indeks"},
+      "stance": {"direction": "unclear", "assertiveness": null, "claim_ids": ["c1"]}
+    }
+  ],
+  "claims": [
+    {
+      "id": "c1",
+      "kind": "investment_thesis",
+      "attribution": "author",
+      "target_ids": ["t1"],
+      "statement": "Autor uważa, że indeks albo w końcu mocno spadnie, albo czeka go bardzo silny wzrost.",
+      "evidence": {"document": "item", "field": "body", "quote": "Albo indeks w końcu poleci w kibel albo czeka nas pompa stulecia"}
+    }
+  ],
+  "flags": []
+}
+```
+
+Dlaczego: autor przedstawia dwa skrajne scenariusze bez preferencji → `unclear`, nie `mixed` (§7.1.1). „Kibel” i „pompa” to slang ruchu ceny, nie cele (§6.5) — celem jest indeks. Przy `unclear` `assertiveness = null`, a `claim_ids` są dozwolone (§7.2) i tu wskazują tezę, z której wynika ocena.
+
+---
+
+# 7. Stanowisko odczytane z sugestii
+
+Źródło: `labeling-set-2026-09-28.json`, `entry-87767889` (#18).
+
+Wejście:
+
+```json
+{
+  "schema_version": "AssessmentInputV1",
+  "item": {
+    "item_type": "post",
+    "published_at": "2026-09-28T20:22:50+02:00",
+    "channels": ["gielda"],
+    "title": null,
+    "body": "#gielda Banka na cyber security "
+  },
+  "context": {"parent_post": null, "parent_comment": null}
+}
+```
+
+Wyjście:
+
+```json
+{
+  "relevance": "investment_related",
+  "modifiers": [],
+  "targets": [
+    {
+      "id": "t1",
+      "kind": "sector",
+      "reference": "explicit",
+      "anchor": {"document": "item", "field": "body", "quote": "cyber security"},
+      "stance": {"direction": "bearish", "assertiveness": "hedged", "claim_ids": ["c1"]}
+    }
+  ],
+  "claims": [
+    {
+      "id": "c1",
+      "kind": "investment_thesis",
+      "attribution": "author",
+      "target_ids": ["t1"],
+      "statement": "Autor sugeruje, że na spółkach cyberbezpieczeństwa jest bańka.",
+      "evidence": {"document": "item", "field": "body", "quote": "Banka na cyber security"}
+    }
+  ],
+  "flags": []
+}
+```
+
+Dlaczego: próg „szeroko + pewność” (§7.1.0) — „bańka na X” rozsądny czytelnik odczyta jako stanowisko niedźwiedzie, więc `bearish`; kierunek odczytany z sugestii, a nie wyrażony wprost → `hedged`. Cytat zachowuje pisownię autora („Banka” bez „ń”). W rundzie 1 ten post nie miał celu („za mało info, sama sugestia”) — to różnica progu, nie błąd modelu.
+
+---
+
+# 8. Anty-przykłady
+
+## Nie zwracaj ocen liczbowych ani decyzji o sygnale
 
 ```json
 {
@@ -371,28 +358,12 @@ Minimalny output:
 }
 ```
 
-Powody:
+Obce pola → `schema_violation`; ponadto zakazane przez §14 (pkt 1, 9).
 
-- miesza różne pojęcia;
-- skala jest niejednoznaczna;
-- utrudnia reinterpretację;
-- nie daje atomowych danych downstream.
+## Nie wymyślaj tożsamości encji
 
-## Nie wymyślaj canonical identity
+Dla `wykop-gielda-sample-2026-09-29.json` / `gielda-2026-09-29-025` (`"#gielda akcje makdolana może w końcu odbija "`) anchor to `"makdolana"`. Model nie dopisuje w anchorze ani w `statement` „McDonald's Corp.”, „NYSE:MCD”, ISIN ani identyfikatora encji — to zadanie resolvera poza MVP (§14 pkt 5–6, §15).
 
-Input:
+## Nie poprawiaj cytatu
 
-```text
-CDR wygląda dobrze.
-```
-
-LLM nie powinien sam dopisywać:
-
-```text
-CD Projekt S.A.
-WSE:CDR
-ISIN
-internal entity_id
-```
-
-To zadanie resolvera.
+Dla przykładu 6 cytat `"Albo indeks w końcu poleci w kibel [...] pompa stulecia"` (skrót) albo `"indeksu"` (zmieniona odmiana) jest naruszeniem `fabricated_evidence` (§10, reguła D6), mimo że sens się zgadza.
