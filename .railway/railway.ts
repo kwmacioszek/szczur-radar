@@ -1,4 +1,4 @@
-import { bucket, defineRailway, github, postgres, project, service } from "railway/iac";
+import { bucket, defineRailway, github, postgres, preserve, project, service } from "railway/iac";
 
 // Infrastructure-as-Code for Szczur Radar. This is the source of truth for the
 // api, web, and Postgres services and replaces railway.toml for them.
@@ -87,6 +87,10 @@ export default defineRailway(() => {
       // Nieużywane od F-03 (Java czyta PG*). Zostaje zadeklarowane, bo usunięcie
       // zmiennej to `variable.delete`, które bramka CI odrzuca jako destrukcyjne.
       DATABASE_URL: db.env.DATABASE_URL,
+      // Nieużywane od F-03 (sesje Spring Session JDBC zamiast JWT). Produkcja ma
+      // zapieczętowaną wartość; bez preserve() plan na main proponowałby
+      // `Delete variable JWT_SECRET`, które bramka CI odrzuca. Nigdy wartość tutaj.
+      JWT_SECRET: preserve(),
     },
   });
 
