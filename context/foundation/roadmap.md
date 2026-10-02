@@ -3,7 +3,7 @@ project: "Szczur Radar"
 version: 2
 status: draft # draft | active | locked
 created: 2026-09-27
-updated: 2026-10-01
+updated: 2026-10-02
 prd_version: 2
 main_goal: speed
 top_blocker: time # secondary: decisions (LLM contract, filter scope and signal decision resolved 2026-09-27 — PRD v2)
@@ -21,6 +21,7 @@ milestone_status: open
 > v2.1 (2026-09-27): PRD v2 — filtr po spółce tekstowy, „sentyment” = stanowisko wobec celu, rozpoznawanie spółek i decyzja „wartościowy sygnał” poza MVP → S-04 odblokowane.
 > v2.2 (2026-10-01): kontrakt oceny LLM V2 (`assessment-contract-harness`, po pilotażach na prawdziwych postach) zastępuje V1 — wynik oceny to trafność, cele ze stanowiskiem autora, tezy/opinie/fakty/pytania/działania z cytatem, flagi niepewności; bez grafu argumentów. F-02 mierzy modele na zestawie wzorcowym zamiast 12 wymyślonych przypadków.
 > v2.3 (2026-10-01): nowy fundament F-03 (`java-api-rewrite`) — backend przepisany z Pythona/FastAPI na Javę (Spring Boot), bo autor zna Javę i może rzetelnie oceniać kod agenta. F-02 po fazie 1 (kontrakt V2 i dokumenty) czeka na F-03; implementacja kontraktu (p2–p4) zostanie przeplanowana w Javie. S-07 też czeka na F-03, żeby nie dokładać kodu w Pythonie. PR #23 (Python F-02) zamknięty bez merge'a.
+> v2.4 (2026-10-02): triage planu F-03 — sesje Spring Session JDBC zamiast JWT/`token_version`, 30 dni bezczynności z odnawianiem ciasteczka, Flyway fix-forward, czysta baza i ponowne utworzenie admina; bez powrotu do Pythona. Szkielet Embabel z wyborem jednego dostawcy przez `LLM_API_PROVIDER`, `LLM_MODEL`, `LLM_API_KEY`: Gemini (Google AI Studio), DeepSeek bezpośrednio lub Luna przez OpenRouter. F-03 pozostaje w planowaniu; ocena jakości modeli nadal należy do F-02.
 
 ## Milestone
 
@@ -46,7 +47,7 @@ Na Wykopie (#gielda) i Reddicie codziennie pojawiają się setki postów o inwes
 | ID   | Change ID                      | Outcome (user can …)                                                                                                            | Prerequisites | PRD refs                                                                                                                                                                                 | Status   |
 | ---- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------- | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
 | F-01 | production-data-gate           | (foundation) produkcja jest gotowa na prawdziwe dane: limity kosztów, zweryfikowany restore, zapieczętowane sekrety             | —             | NFR (dane przechowywane bezterminowo; bezpieczeństwo przed utratą danych po stronie platformy), Open Question 4; guardrail kosztów LLM                                                   | ready    |
-| F-03 | java-api-rewrite               | (foundation) backend działa na Javie (Spring Boot) z niezmienionym zachowaniem S-01: logowanie, sesja, ochrona tras, CLI, migracje | S-01          | FR-012, FR-013, FR-014, FR-015, FR-026, NFR (każdy chroniony zasób wymaga uwierzytelnienia — komplet testów autoryzacji)                                                                 | planning |
+| F-03 | java-api-rewrite               | (foundation) backend w Javie obsługuje funkcje S-01 przez dotychczasowe API; sesje JDBC, migracje fix-forward i szkielet Embabel | S-01          | FR-012, FR-013, FR-014, FR-015, FR-026, NFR (każdy chroniony zasób wymaga uwierzytelnienia — komplet testów autoryzacji)                                                                 | in-progress |
 | F-02 | assessment-contract-harness    | (foundation) kontrakt oceny LLM V2 jest egzekwowany kodem, a model domyślny spełnia progi jakości na zestawie wzorcowym | F-03          | FR-004, Open Question 2 (rozstrzygnięte przez kontrakt, obecnie V2); guardrail jakości danych z LLM (bez halucynacji)                                                                     | in-progress |
 | S-01 | admin-bootstrap-and-login      | operator tworzy pierwszego admina przez CLI; admin loguje się i wylogowuje; niezalogowany widzi tylko ekran logowania           | —             | FR-012, FR-013, FR-014, FR-015, FR-026, NFR (każdy chroniony zasób wymaga uwierzytelnienia — komplet testów autoryzacji), NFR (brak wglądu w dane cudzych kont)                          | done |
 | S-02 | first-assessed-wykop-feed      | zalogowany użytkownik widzi chronologiczną listę postów z Wykopu ocenionych przez LLM                                           | S-01, F-02    | US-01, FR-001, FR-003, FR-004, FR-005, FR-006, FR-007, NFR (surowy payload oddzielony od danych aplikacji, bezstratny i kompresowalny), NFR (nowe źródło = tylko pozyskanie + mapowanie) | proposed |
@@ -97,7 +98,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 
 ### F-02: Egzekwowany kontrakt oceny LLM
 
-- **Outcome:** (foundation) kontrakt oceny LLM V2 (trafność, cele ze stanowiskiem autora, tezy/opinie/fakty/pytania/działania z cytatem, flagi niepewności) jest źródłem prawdy; wejście i wyjście są odwzorowane jako zamknięte modele odrzucające obce pola; walidator sprawdza reguły kontraktu (cytaty jako fragmenty po normalizacji białych znaków, referencje, reguły stanowiska) z jawną klasyfikacją błędów; wpisy bez treści są odsiewane bez wywołania modelu; model domyślny wybrany pomiarem GPT-6 Luna (flex), DeepSeek Flash i Gemini 3.1 Flash-Lite spełnia progi jakości na zestawie wzorcowym prawdziwych postów oznaczonych przez użytkownika.
+- **Outcome:** (foundation) kontrakt oceny LLM V2 (trafność, cele ze stanowiskiem autora, tezy/opinie/fakty/pytania/działania z cytatem, flagi niepewności) jest źródłem prawdy; wejście i wyjście są odwzorowane jako zamknięte modele odrzucające obce pola; walidator sprawdza reguły kontraktu (cytaty jako fragmenty po normalizacji białych znaków, referencje, reguły stanowiska) z jawną klasyfikacją błędów; wpisy bez treści są odsiewane bez wywołania modelu; model domyślny wybrany pomiarem GPT-6 Luna przez OpenRouter, DeepSeek Flash bezpośrednio u dostawcy i Gemini 3.1 Flash-Lite przez Google AI Studio spełnia progi jakości na zestawie wzorcowym prawdziwych postów oznaczonych przez użytkownika.
 - **Change ID:** assessment-contract-harness
 - **PRD refs:** FR-004, Open Question 2 (rozstrzygnięte przez kontrakt, obecnie V2); guardrail jakości danych z LLM (bez halucynacji)
 - **Unlocks:** S-02 (ocena każdego posta w przepływie); ścieżka weryfikacji „ocena spełnia kontrakt V2” wymagana przez S-02 i każdą przyszłą zmianę kontraktu (reguła zmiany: failing fixture → zmiana kontraktu → kod)
@@ -106,23 +107,24 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** — (faza 1 — kontrakt V2 i dokumenty — zrobiona; fazy p2–p4 czekają na F-03 i zostaną przeplanowane w Javie, kod w Pythonie z PR #23 nie jest przenoszony)
 - **Unknowns:**
   - Wybór dostawcy i modelu LLM z obsługą ustrukturyzowanego wyjścia oraz akceptowalny koszt jednej oceny (powiązane z Open Roadmap Question 5). — Owner: user. Block: no.
-  - Biblioteka LLM w Javie (Spring AI vs LangChain4j) i jej wpływ na ustrukturyzowane wyjście — wymaga ponownego pomiaru na zestawie wzorcowym. — Owner: user. Block: no.
+  - Jakość ustrukturyzowanego wyjścia przez Embabel (biblioteka wybrana w F-03) dla trzech kandydatów — wymaga ponownego pomiaru na zestawie wzorcowym; wybór dostawcy w konfiguracji szkieletu F-03 nie rozstrzyga tego pomiaru. — Owner: user. Block: no.
 - **Risk:** Zamyka ryzyko jakości oceny przed budową przepływu: jeśli żaden model nie spełnia progów na zestawie wzorcowym, dowiadujemy się tego bez pobierania, zapisu i UI; celowo NIE obejmuje zapisu, pobierania z Wykopu ani widoku — te wchodzą w S-02.
 - **Status:** in-progress
 
 ### F-03: Backend w Javie
 
-- **Outcome:** (foundation) `szczur-radar-api` działa na Javie (Spring Boot) z niezmienionym zachowaniem z S-01 — logowanie i wylogowanie, sesja w ciasteczku `sr_session` z unieważnianiem przez `token_version`, ochrona każdej trasy (komplet testów autoryzacji), CLI do utworzenia pierwszego admina, migracje z działającym cofnięciem, sondy `/api/health` i `/api/ready`; zweryfikowane na produkcji, kod w Pythonie usunięty, dokumenty stacku zaktualizowane.
+- **Outcome:** (foundation) `szczur-radar-api` działa na Javie (Spring Boot) i obsługuje funkcje S-01 przez dotychczasowe API dla SPA — logowanie i wylogowanie, ochrona każdej trasy (komplet testów autoryzacji), CLI do utworzenia pierwszego admina oraz sondy `/api/health` i `/api/ready`. Sesje w ciasteczku `sr_session` są przechowywane przez Spring Session JDBC, przeżywają restart API, wygasają po 30 dniach bezczynności z odnawianiem ciasteczka i są unieważniane przez usuwanie sesji użytkownika. Migracje Flyway działają według fix-forward. Embabel rejestruje szkieletowego agenta i wybrany model z prawdziwym kluczem, bez wywołań LLM. Całość zweryfikowana na produkcji po wyczyszczeniu bazy i ponownym utworzeniu admina; kod Pythona usunięty, dokumenty stacku i roadmapa zaktualizowane.
 - **Change ID:** java-api-rewrite
+- **Decisions:** `context/changes/java-api-rewrite/plan.md` i jego triage: bez migracji starych kont/sesji/hashy, bez `token_version`, bez powrotu do Pythona; awarie usuwane przez poprawkę Javy/konfiguracji i ponowne wdrożenie, PITR służy odzyskaniu danych. Jeden dostawca na uruchomienie: `LLM_API_PROVIDER` ∈ {`gemini`, `deepseek`, `openrouter`}, dokładne ID modelu w `LLM_MODEL`, prawdziwy klucz wybranego dostawcy w `LLM_API_KEY`; konfiguracja zapewniona od fazy 3 w CI i PR env, na produkcji przed merge. F-03 dostarcza szkielet Embabel, a logika i pomiary oceny pozostają w F-02.
 - **PRD refs:** FR-012, FR-013, FR-014, FR-015, FR-026, NFR (każdy chroniony zasób wymaga uwierzytelnienia — komplet testów autoryzacji), NFR (brak wglądu w dane cudzych kont)
 - **Unlocks:** F-02 (fazy p2–p4 w Javie), S-07; pośrednio cała dalsza praca backendu
 - **Prerequisites:** S-01
 - **Parallel with:** F-01
 - **Blockers:** —
 - **Unknowns:**
-  - Czy istniejące konta i sesje produkcyjne przechodzą bez zmian (format skrótów argon2, claimy JWT) — rozstrzyga `/10x-research`. — Owner: user. Block: no.
-- **Risk:** Przepisanie bez nowej wartości dla użytkownika — uzasadnione tym, że autor może rzetelnie oceniać kod agenta w Javie; zakres celowo ograniczony do tego, co jest na `main` (S-01), żeby nie przepisywać niedokończonego F-02.
-- **Status:** planning
+  - Czas zimnego startu JVM i Embabel po uśpieniu API — zmierzyć w PR env przed przełączeniem produkcji. — Owner: user. Block: no.
+- **Risk:** Przepisanie uzasadnione możliwością rzetelnej oceny kodu Javy przez autora; zakres obejmuje funkcje S-01 i szkielet Embabel, bez przepisywania niedokończonej logiki F-02. Wyczyszczenie schematu przed merge rozpoczyna przerwę w logowaniu; nieudane wdrożenie Javy wydłuża ją do skutecznej naprawy, ponieważ powrót do Pythona jest wykluczony.
+- **Status:** in-progress
 
 ## Slices
 
@@ -135,7 +137,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Parallel with:** F-01, F-02
 - **Blockers:** —
 - **Unknowns:** —
-- **Risk:** Pierwszy wycinek, który wprowadza schemat bazy i migracje — ustala sposób ich bezpiecznego wdrażania (każda migracja z działającym cofnięciem) oraz wzorzec testów autoryzacji, z którego korzystają wszystkie kolejne trasy; bez niego żadne dane nie mogą trafić na publiczny adres.
+- **Risk:** Pierwszy wycinek wprowadził schemat bazy, migracje Alembic z działającym cofnięciem i wzorzec testów autoryzacji. F-03 zastępuje mechanizm migracji przez Flyway fix-forward; wymóg kompletności ochrony tras pozostaje obowiązujący dla dalszych zmian.
 - **Status:** done
 
 ### S-02: Pierwsze ocenione posty z Wykopu na liście
@@ -223,7 +225,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 | ---------- | ------------------------------ | ---------------------------------------------------------------------------------------------- | --------------------- | -------------------------------------------------------------------------------- |
 | F-01       | production-data-gate           | Bramka produkcyjnych danych: subskrypcja, limity, restore drill, sekrety                       | yes                   | Praca operatorska; zrób równolegle                                               |
 | F-02       | assessment-contract-harness    | Kontrakt oceny LLM V2: modele, walidator, zestaw wzorcowy i wybór modelu                        | no                    | Faza 1 gotowa; p2–p4 do przeplanowania w Javie po F-03 (PR #23 zamknięty); odblokowuje gwiazdę przewodnią S-02 |
-| F-03       | java-api-rewrite               | Backend w Javie (Spring Boot) z zachowaniem S-01                                               | yes                   | Najpierw `/10x-research`; branch `feature/java-api-rewrite`                       |
+| F-03       | java-api-rewrite               | Backend w Javie: API S-01, sesje JDBC i szkielet Embabel                                       | yes                   | Research i plan gotowe; triage F1–F6 rozstrzygnięte; następny krok `/10x-implement java-api-rewrite phase 1`, branch `feature/java-api-rewrite` |
 | S-01       | admin-bootstrap-and-login      | Pierwszy admin przez CLI + logowanie/wylogowanie + ochrona tras                                | —                     | Wdrożone na produkcji 2026-09-29 (PR #13, #21); zarchiwizowane 2026-09-29 → `context/archive/2026-09-27-admin-bootstrap-and-login/` |
 | S-02       | first-assessed-wykop-feed      | Lista postów z Wykopu ocenionych przez LLM (gwiazda przewodnia)                                | no                    | Po S-01 i F-02                                                                   |
 | S-03       | post-detail-view               | Widok szczegółowy posta z oceną, surowymi danymi i linkiem do oryginału                        | no                    | Po S-02                                                                          |
@@ -250,7 +252,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **FR-022 — ręczne wywołanie przebiegu z dashboardu** — Why parked: nice-to-have; harmonogram (S-05) pokrywa potrzebę; wymaga API platformy (`infrastructure.md`).
 - **FR-023 — Reddit jako drugie źródło** — Why parked: nice-to-have; kolejny kamień milowy — kontrakt V2 już obejmuje Reddit po normalizacji (`statement` w języku posta), a S-02 projektuje wspólny model źródeł zgodnie z NFR.
 - **FR-024 / FR-025 — wykres giełdowy z trendem sygnałów i powiadomienia o trendzie** — Why parked: nice-to-have, poza MVP; wymaga integracji danych giełdowych, rozpoznawania spółek i rozstrzygnięcia Open Question 3.
-- **FR-029 — automatyczne wygasanie sesji** — Why parked: nice-to-have; krótki timeout uciążliwy przy czytaniu, ręczne wylogowanie wystarcza.
+- **FR-029 — automatyczne wygasanie krótkich sesji** — Why parked: nice-to-have; krótki timeout uciążliwy przy czytaniu. F-03 stosuje 30 dni bezczynności z odnawianiem ciasteczka; krótsze limity pozostają odroczone.
 - **FR-031 — eksport widocznej listy do CSV/JSON** — Why parked: nice-to-have, nie blokuje głównego przepływu.
 - **FR-032 — „Ask szczur” (pytanie do LLM o wybrany sygnał)** — Why parked: nice-to-have; dodatkowy koszt LLM wbrew guardrailowi kosztów.
 - **Przetwarzanie komentarzy pod postami** — Why parked: PRD §Non-Goals (kontrakt V2 zachowuje typ `comment` i kontekst rodzica w kształcie wejścia — gotowe na przyszłość, nieużywane w MVP).

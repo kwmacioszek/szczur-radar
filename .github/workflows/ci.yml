@@ -10,42 +10,24 @@ on:
 
 jobs:
   backend:
-    name: backend (lint-lock + tests)
+    name: backend (Maven verify)
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: szczur-radar-api
-    # Real Postgres for `@pytest.mark.db` tests (migrations round trip, and
-    # later auth/CLI). Same major version (18) as compose.local.yaml and Railway.
-    services:
-      postgres:
-        image: postgres:18
-        env:
-          POSTGRES_USER: szczur_ci
-          POSTGRES_PASSWORD: ci_only
-          POSTGRES_DB: szczur_radar_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U szczur_ci -d szczur_radar_test"
-          --health-interval 5s
-          --health-timeout 3s
-          --health-retries 10
-    env:
-      TEST_DATABASE_URL: postgresql://szczur_ci:ci_only@localhost:5432/szczur_radar_test
-      # DB tests must never be silently skipped in CI: without
-      # TEST_DATABASE_URL the run fails (tests/conftest.py).
-      REQUIRE_DB_TESTS: "1"
     steps:
       - uses: actions/checkout@v4
-      - name: Install uv
-        uses: astral-sh/setup-uv@v6
+      - uses: actions/setup-java@v4
         with:
-          version: "0.11.7"
-      - name: Sync locked dependencies
-        run: uv sync --locked
-      - name: Run tests
-        run: uv run pytest -q
+          distribution: temurin
+          java-version: "25"
+          cache: maven
+          cache-dependency-path: szczur-radar-api/pom.xml
+      # Unit tests (*Test, Surefire) + integration tests (*IT, Failsafe) against
+      # a Testcontainers PostgreSQL 18 (Docker is preinstalled on ubuntu-latest).
+      # Without Docker the integration tests fail rather than skip.
+      - name: Build and test
+        run: ./mvnw -B verify
 
   web-unit:
     name: web unit tests (Vitest)
@@ -156,28 +138,6 @@ jobs:
             exit 1
           fi
           echo "RAILWAY_ENVIRONMENT_ID=$env_id" >> "$GITHUB_ENV"
-      - name: Ensure a PR-env JWT_SECRET
-        # Sealed production secrets are not copied into PR envs — and must not
-        # be: a shared signing key would let PR-env code mint production
-        # sessions. Give each PR env its own random value once (the API refuses
-        # to start without it). Never runs for production; the value is piped
-        # straight into Railway and never printed.
-        if: github.event_name == 'pull_request'
-        run: |
-          set -o pipefail
-          if [ "$TARGET_ENV" = "production" ]; then
-            echo "::error::refusing to set JWT_SECRET on production"
-            exit 1
-          fi
-          present=$(railway variable list -s szczur-radar-api -e "$TARGET_ENV" --json \
-            | jq -r 'has("JWT_SECRET")')
-          if [ "$present" = "true" ]; then
-            echo "JWT_SECRET already set in $TARGET_ENV"
-          else
-            openssl rand -hex 32 | tr -d '\n' \
-              | railway variable set JWT_SECRET --stdin -s szczur-radar-api -e "$TARGET_ENV" --skip-deploys >/dev/null
-            echo "Generated a new JWT_SECRET for $TARGET_ENV"
-          fi
       - name: Plan and gate
         run: |
           railway config plan --json > plan.json

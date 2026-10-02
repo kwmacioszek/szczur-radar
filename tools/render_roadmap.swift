@@ -1,6 +1,6 @@
 import AppKit
 
-// Snapshot of M-1 in context/foundation/roadmap.md, updated 2026-10-01.
+// Snapshot of M-1 in context/foundation/roadmap.md, updated 2026-10-02.
 // Run on macOS: swift tools/render_roadmap.swift
 // With the installed Command Line Tools SDK:
 // CLANG_MODULE_CACHE_PATH=/private/tmp/szczur-clang-cache \
@@ -161,8 +161,8 @@ for i in 0..<4 {
 
 let cards: [Card] = [
     Card(id:"F-01", title:"Gotowość produkcji", detail:"Koszty, odtworzenie backupu\ni ochrona sekretów", req:"—", status:"do startu", column:0, row:0, accent:amber),
-    Card(id:"F-02", title:"Kontrakt oceny LLM", detail:"Kontrakt V2 gotowy; walidator\ni pomiar wzorca już w Javie", req:"F-03", status:"w toku", column:1, row:0, accent:violet),
-    Card(id:"F-03", title:"Backend w Javie", detail:"Spring Boot zamiast FastAPI\nzakres S-01, to samo API", req:"S-01", status:"planowanie", column:2, row:0, accent:coral),
+    Card(id:"F-02", title:"Kontrakt oceny LLM", detail:"Kontrakt V2; walidator i pomiar\nw Javie z Embabel", req:"F-03", status:"w toku", column:1, row:0, accent:violet),
+    Card(id:"F-03", title:"Backend w Javie", detail:"Sesje JDBC, Flyway fix-forward\nEmbabel; to samo API dla SPA", req:"S-01", status:"w toku", column:2, row:0, accent:coral),
     Card(id:"S-01", title:"Admin i logowanie", detail:"CLI, sesja, ochrona tras\ni wylogowanie", req:"—", status:"wdrożone", column:3, row:0, accent:green),
     Card(id:"S-02", title:"Pierwsze ocenione posty", detail:"Wykop → ocena LLM → lista\nRęczne uruchomienie przebiegu", req:"S-01 + F-02", status:"propozycja", column:1, row:1, accent:cyan),
     Card(id:"S-07", title:"Onboarding przez CLI", detail:"Konto, link aktywacyjny\ni odzyskiwanie dostępu", req:"S-01 + F-03", status:"propozycja", column:3, row:1, accent:green),
@@ -226,7 +226,7 @@ let parked: [(label: String, first: Parked, second: Parked)] = [
      Parked(title:"Sortowanie i eksport", refs:"FR-008 / FR-011b / FR-031", description:"Porządkowanie listy po polach oceny, źródle i dacie oraz eksport CSV/JSON."),
      Parked(title:"Panel kont i e-mail", refs:"FR-016 / 017 / 019 / 020", description:"Zarządzanie kontami w aplikacji, e-mail z zaproszeniem i własna nazwa wyświetlana.")),
     ("OPERACJE I SKALA",
-     Parked(title:"Sterowanie i sesje", refs:"FR-022 / FR-029", description:"Ręczne uruchomienie pipeline’u z dashboardu i automatyczne wygasanie sesji."),
+     Parked(title:"Sterowanie i sesje", refs:"FR-022 / FR-029", description:"Ręczne uruchomienie pipeline’u z dashboardu i krótsze limity bezczynności sesji."),
      Parked(title:"Ochrona i skala", refs:"Poza MVP / infrastruktura", description:"2FA, logowanie zewnętrzne, reset hasła, nowe role, HA i własne kopie zapasowe."))
 ]
 for (i, group) in parked.enumerated() {
@@ -260,7 +260,7 @@ txt("S-02: gwiazda przewodnia — pierwszy pełny przepływ od Wykopu do użytko
 txt("Pierwszy rząd czytaj od prawej: S-01 → F-03 → F-02. S-01 jest też warunkiem S-02 i S-06 — wynika z tej ścieżki.", 136, 3493, 2850, 24, .regular, muted)
 txt("Przed bramką strzałki pokazują zależności. Za bramką wskazują możliwe rozszerzenia, bez ustalonej kolejności.", 136, 3541, 2850, 24, .regular, muted)
 
-txt("Źródło: context/foundation/roadmap.md  ·  M-1 / v2.3  ·  Stan roadmapy: 01.10.2026  ·  Milestone otwarty", 100, 3660, 2200, 22, .regular, muted)
+txt("Źródło: context/foundation/roadmap.md  ·  M-1 / v2.4  ·  Stan roadmapy: 02.10.2026  ·  Milestone otwarty", 100, 3660, 2200, 22, .regular, muted)
 txt("MAPA ZALEŻNOŚCI · BEZ TERMINÓW", 2520, 3660, 540, 20, .semibold, muted)
 
 context.flushGraphics()
