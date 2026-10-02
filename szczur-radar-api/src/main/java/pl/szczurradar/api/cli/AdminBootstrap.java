@@ -8,7 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import pl.szczurradar.api.auth.Passwords;
-import pl.szczurradar.api.user.User;
+import pl.szczurradar.api.user.Role;
 import pl.szczurradar.api.user.UserRepository;
 
 /**
@@ -55,7 +55,7 @@ public class AdminBootstrap {
 	public int createAdmin(String email, PasswordPrompt prompt, PrintStream out, PrintStream err) {
 		Integer code = transaction.execute(status -> {
 			jdbc.sql("SELECT pg_advisory_xact_lock(?)").param(LOCK_ID).query((rs, row) -> true).single();
-			if (users.existsByRole(User.ROLE_ADMIN)) {
+			if (users.existsByRole(Role.ADMIN)) {
 				err.println("Admin already exists — use the recovery command (S-07).");
 				return REFUSED;
 			}
@@ -77,7 +77,7 @@ public class AdminBootstrap {
 				return REFUSED;
 			}
 
-			users.insert(email, passwordEncoder.encode(password), User.ROLE_ADMIN);
+			users.insert(email, passwordEncoder.encode(password), Role.ADMIN);
 			return CREATED;
 		});
 		if (code == CREATED) {

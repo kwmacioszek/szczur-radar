@@ -1,6 +1,5 @@
 package pl.szczurradar.api.auth;
 
-import java.util.Locale;
 import java.util.UUID;
 
 import org.springframework.security.core.userdetails.UserDetails;
@@ -44,7 +43,7 @@ class AccountDetailsService implements UserDetailsService {
 		String hash = user.passwordHash() != null ? user.passwordHash() : unusableHash;
 		return org.springframework.security.core.userdetails.User.withUsername(user.id().toString())
 				.password(hash)
-				.roles(user.role().toUpperCase(Locale.ROOT))
+				.roles(user.role().name())
 				.build();
 	}
 

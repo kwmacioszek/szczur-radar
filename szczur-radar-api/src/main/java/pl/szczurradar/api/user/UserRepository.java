@@ -19,7 +19,7 @@ public class UserRepository {
 			rs.getObject("id", UUID.class),
 			rs.getString("email"),
 			rs.getString("password_hash"),
-			rs.getString("role"),
+			Role.fromValue(rs.getString("role")),
 			rs.getObject("created_at", OffsetDateTime.class).toInstant());
 
 	private final JdbcClient jdbc;
@@ -36,8 +36,8 @@ public class UserRepository {
 		return jdbc.sql("SELECT " + COLUMNS + " FROM users WHERE id = ?").param(id).query(ROW).optional();
 	}
 
-	public boolean existsByRole(String role) {
-		return jdbc.sql("SELECT EXISTS (SELECT 1 FROM users WHERE role = ?)").param(role).query(Boolean.class).single();
+	public boolean existsByRole(Role role) {
+		return jdbc.sql("SELECT EXISTS (SELECT 1 FROM users WHERE role = ?)").param(role.value()).query(Boolean.class).single();
 	}
 
 	public boolean existsByEmail(String email) {
@@ -45,9 +45,9 @@ public class UserRepository {
 	}
 
 	/** Inserts an account and returns its generated id. */
-	public UUID insert(String email, @Nullable String passwordHash, String role) {
+	public UUID insert(String email, @Nullable String passwordHash, Role role) {
 		return jdbc.sql("INSERT INTO users (email, password_hash, role) VALUES (?, ?, ?) RETURNING id")
-				.params(email, passwordHash, role)
+				.params(email, passwordHash, role.value())
 				.query(UUID.class)
 				.single();
 	}

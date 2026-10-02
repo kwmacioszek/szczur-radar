@@ -9,7 +9,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -30,6 +29,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import pl.szczurradar.api.auth.LoginRateLimiter.Outcome;
 import pl.szczurradar.api.config.ApiError;
+import pl.szczurradar.api.config.ErrorCode;
 import pl.szczurradar.api.user.Emails;
 import pl.szczurradar.api.user.User;
 import pl.szczurradar.api.user.UserRepository;
@@ -77,9 +77,9 @@ class AuthController {
 
 		Optional<Duration> retryAfter = limiter.reserve(email, ip);
 		if (retryAfter.isPresent()) {
-			return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+			return ResponseEntity.status(ErrorCode.TOO_MANY_ATTEMPTS.status())
 				.header(HttpHeaders.RETRY_AFTER, Long.toString(retryAfter.get().toSeconds()))
-				.body(new ApiError("too_many_attempts"));
+				.body(new ApiError(ErrorCode.TOO_MANY_ATTEMPTS));
 		}
 
 		Outcome outcome = Outcome.ABORTED;
@@ -94,7 +94,7 @@ class AuthController {
 			}
 			catch (AuthenticationException ex) {
 				outcome = Outcome.FAILURE;
-				return ApiError.response(HttpStatus.UNAUTHORIZED, "invalid_credentials");
+				return ApiError.response(ErrorCode.INVALID_CREDENTIALS);
 			}
 			User user = users.findById(UUID.fromString(authentication.getName()))
 				.orElseThrow(() -> new IllegalStateException("authenticated account vanished"));
@@ -126,7 +126,7 @@ class AuthController {
 	ResponseEntity<?> me(Authentication authentication) {
 		return users.findById(UUID.fromString(authentication.getName()))
 			.<ResponseEntity<?>>map(user -> ResponseEntity.ok(UserResponse.of(user)))
-			.orElseGet(() -> ApiError.response(HttpStatus.UNAUTHORIZED, "not_authenticated"));
+			.orElseGet(() -> ApiError.response(ErrorCode.NOT_AUTHENTICATED));
 	}
 
 	/**

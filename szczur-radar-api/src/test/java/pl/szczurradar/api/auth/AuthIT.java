@@ -34,6 +34,7 @@ import org.springframework.test.web.servlet.assertj.MvcTestResult;
 import pl.szczurradar.api.TestcontainersConfiguration;
 import pl.szczurradar.api.cli.MigrateCommand;
 import pl.szczurradar.api.config.SessionConfig;
+import pl.szczurradar.api.user.Role;
 import pl.szczurradar.api.user.User;
 import pl.szczurradar.api.user.UserRepository;
 
@@ -84,7 +85,7 @@ class AuthIT {
 	@Test
 	void loginSetsTheSessionCookieAndReturnsTheUser() {
 		String email = newEmail();
-		UUID id = createUser(email, PASSWORD, User.ROLE_ADMIN);
+		UUID id = createUser(email, PASSWORD, Role.ADMIN);
 
 		MvcTestResult result = login(email, PASSWORD);
 
@@ -97,7 +98,7 @@ class AuthIT {
 	@Test
 	void loginNormalizesTheEmail() {
 		String email = newEmail();
-		createUser(email, PASSWORD, User.ROLE_USER);
+		createUser(email, PASSWORD, Role.USER);
 
 		assertThat(login("  " + email.toUpperCase(Locale.ROOT) + " ", PASSWORD)).hasStatusOk();
 	}
@@ -105,7 +106,7 @@ class AuthIT {
 	@Test
 	void unknownEmailAndWrongPasswordLookIdentical() {
 		String email = newEmail();
-		createUser(email, PASSWORD, User.ROLE_USER);
+		createUser(email, PASSWORD, Role.USER);
 
 		for (MvcTestResult result : List.of(login(email, WRONG_PASSWORD), login(newEmail(), PASSWORD))) {
 			assertThat(result).hasStatus(HttpStatus.UNAUTHORIZED)
@@ -118,7 +119,7 @@ class AuthIT {
 	@Test
 	void accountWithoutPasswordCannotLogIn() {
 		String email = newEmail();
-		createUser(email, null, User.ROLE_USER);
+		createUser(email, null, Role.USER);
 
 		MvcTestResult result = login(email, PASSWORD);
 
@@ -130,7 +131,7 @@ class AuthIT {
 	@Test
 	void loggingInAgainRotatesTheSessionId() {
 		String email = newEmail();
-		createUser(email, PASSWORD, User.ROLE_USER);
+		createUser(email, PASSWORD, Role.USER);
 		String first = singleSessionCookie(login(email, PASSWORD)).value();
 
 		MvcTestResult again = mvc.post()
@@ -150,7 +151,7 @@ class AuthIT {
 	@Test
 	void formEncodedLoginIsRejectedWithoutACookie() {
 		String email = newEmail();
-		createUser(email, PASSWORD, User.ROLE_USER);
+		createUser(email, PASSWORD, Role.USER);
 
 		MvcTestResult result = mvc.post()
 			.uri("/api/auth/login")
@@ -165,7 +166,7 @@ class AuthIT {
 	@Test
 	void unknownFieldsAreRejectedWithoutACookie() {
 		String email = newEmail();
-		createUser(email, PASSWORD, User.ROLE_USER);
+		createUser(email, PASSWORD, Role.USER);
 
 		MvcTestResult result = mvc.post()
 			.uri("/api/auth/login")
@@ -197,7 +198,7 @@ class AuthIT {
 	@Test
 	void sixthFailureForAnEmailIsTooManyAttempts() {
 		String email = newEmail();
-		createUser(email, PASSWORD, User.ROLE_USER);
+		createUser(email, PASSWORD, Role.USER);
 		for (int i = 0; i < LoginRateLimiter.EMAIL_LIMIT; i++) {
 			assertThat(login(email, WRONG_PASSWORD)).hasStatus(HttpStatus.UNAUTHORIZED);
 		}
@@ -225,7 +226,7 @@ class AuthIT {
 	@Test
 	void successfulLoginResetsTheEmailCounter() {
 		String email = newEmail();
-		createUser(email, PASSWORD, User.ROLE_USER);
+		createUser(email, PASSWORD, Role.USER);
 		for (int round = 0; round < 2; round++) {
 			for (int i = 0; i < LoginRateLimiter.EMAIL_LIMIT - 1; i++) {
 				assertThat(login(email, WRONG_PASSWORD)).hasStatus(HttpStatus.UNAUTHORIZED);
@@ -238,9 +239,9 @@ class AuthIT {
 
 	@Test
 	void meReturnsOnlyTheOwnAccount() {
-		createUser(newEmail(), "another password!", User.ROLE_USER);
+		createUser(newEmail(), "another password!", Role.USER);
 		String email = newEmail();
-		UUID id = createUser(email, PASSWORD, User.ROLE_USER);
+		UUID id = createUser(email, PASSWORD, Role.USER);
 		String cookie = loginCookie(email);
 
 		assertThat(me(cookie)).hasStatusOk()
@@ -266,7 +267,7 @@ class AuthIT {
 	@Test
 	void sessionOfADeletedUserIs401AndIsNotRenewed() {
 		String email = newEmail();
-		UUID id = createUser(email, PASSWORD, User.ROLE_USER);
+		UUID id = createUser(email, PASSWORD, Role.USER);
 		String cookie = loginCookie(email);
 		jdbc.sql("DELETE FROM users WHERE id = ?").param(id).update();
 
@@ -281,7 +282,7 @@ class AuthIT {
 	@Test
 	void deletingTheUsersSessionsRevokesThem() {
 		String email = newEmail();
-		UUID id = createUser(email, PASSWORD, User.ROLE_USER);
+		UUID id = createUser(email, PASSWORD, Role.USER);
 		String cookie = loginCookie(email);
 		assertThat(me(cookie)).hasStatusOk();
 
@@ -298,7 +299,7 @@ class AuthIT {
 	@Test
 	void logoutEndsTheSessionAndClearsTheCookie() {
 		String email = newEmail();
-		createUser(email, PASSWORD, User.ROLE_USER);
+		createUser(email, PASSWORD, Role.USER);
 		String cookie = loginCookie(email);
 
 		MvcTestResult result = mvc.post().uri("/api/auth/logout").cookie(sessionCookie(cookie)).exchange();
@@ -321,7 +322,7 @@ class AuthIT {
 	@Test
 	void meRenewsTheCookieWithTheSameIdAndAFullMaxAge() {
 		String email = newEmail();
-		createUser(email, PASSWORD, User.ROLE_USER);
+		createUser(email, PASSWORD, Role.USER);
 		String cookie = loginCookie(email);
 
 		SetCookie renewed = singleSessionCookie(me(cookie));
@@ -333,7 +334,7 @@ class AuthIT {
 	@Test
 	void probesDoNotRenewTheCookie() {
 		String email = newEmail();
-		createUser(email, PASSWORD, User.ROLE_USER);
+		createUser(email, PASSWORD, Role.USER);
 		String cookie = loginCookie(email);
 
 		for (String probe : List.of("/api/health", "/api/ready")) {
@@ -350,7 +351,7 @@ class AuthIT {
 	@Test
 	void anActiveSessionOutlivesTheFirstCookieTerm() {
 		String email = newEmail();
-		createUser(email, PASSWORD, User.ROLE_USER);
+		createUser(email, PASSWORD, Role.USER);
 		Browser browser = new Browser();
 		browser.store(singleSessionCookie(login(email, PASSWORD))); // day 0: cookie expires on day 30
 		String sessionCookie = browser.cookie();
@@ -370,7 +371,7 @@ class AuthIT {
 	@Test
 	void thirtyDaysOfInactivityEndTheSession() {
 		String email = newEmail();
-		createUser(email, PASSWORD, User.ROLE_USER);
+		createUser(email, PASSWORD, Role.USER);
 		String cookie = loginCookie(email);
 
 		ageSession(cookie, Duration.ofDays(30).plusMinutes(1));
@@ -390,7 +391,7 @@ class AuthIT {
 		return "user" + SEQUENCE.incrementAndGet() + "-" + UUID.randomUUID().toString().substring(0, 8) + "@example.com";
 	}
 
-	private UUID createUser(String email, @Nullable String password, String role) {
+	private UUID createUser(String email, @Nullable String password, Role role) {
 		return users.insert(email, password == null ? null : passwordEncoder.encode(password), role);
 	}
 

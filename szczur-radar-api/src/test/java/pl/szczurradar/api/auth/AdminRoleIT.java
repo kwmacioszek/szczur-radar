@@ -15,6 +15,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 
 import pl.szczurradar.api.TestcontainersConfiguration;
+import pl.szczurradar.api.user.Role;
 import pl.szczurradar.probe.AdminProbeController;
 
 /**
@@ -32,7 +33,7 @@ class AdminRoleIT {
 
 	@Test
 	void plainUserIsForbidden() {
-		assertThat(mvc.get().uri("/api/admin/probe").with(user(UUID.randomUUID().toString()).roles("USER")))
+		assertThat(mvc.get().uri("/api/admin/probe").with(user(UUID.randomUUID().toString()).roles(Role.USER.name())))
 			.hasStatus(HttpStatus.FORBIDDEN)
 			.bodyJson()
 			.isStrictlyEqualTo("{\"detail\":\"forbidden\"}");
@@ -40,7 +41,7 @@ class AdminRoleIT {
 
 	@Test
 	void adminIsAllowed() {
-		assertThat(mvc.get().uri("/api/admin/probe").with(user(UUID.randomUUID().toString()).roles("ADMIN")))
+		assertThat(mvc.get().uri("/api/admin/probe").with(user(UUID.randomUUID().toString()).roles(Role.ADMIN.name())))
 			.hasStatusOk();
 	}
 
@@ -55,7 +56,7 @@ class AdminRoleIT {
 			String[] methodAndPath = route.split(" ", 2);
 			assertThat(mvc.method(HttpMethod.valueOf(methodAndPath[0]))
 				.uri(methodAndPath[1])
-				.with(user(UUID.randomUUID().toString()).roles("USER"))).as(route).hasStatus(HttpStatus.FORBIDDEN);
+				.with(user(UUID.randomUUID().toString()).roles(Role.USER.name()))).as(route).hasStatus(HttpStatus.FORBIDDEN);
 		}
 	}
 

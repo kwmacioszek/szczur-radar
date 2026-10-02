@@ -27,6 +27,7 @@ import pl.szczurradar.api.auth.JsonAccessDeniedHandler;
 import pl.szczurradar.api.auth.JsonAuthenticationEntryPoint;
 import pl.szczurradar.api.auth.OriginGuardFilter;
 import pl.szczurradar.api.auth.SessionCookieRenewalFilter;
+import pl.szczurradar.api.user.Role;
 
 /**
  * Deny by default: every route needs a session except the public ones listed here — keep them in
@@ -53,7 +54,7 @@ public class SecurityConfig {
 				.dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
 				.requestMatchers(HttpMethod.GET, "/api/health", "/api/ready").permitAll()
 				.requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/logout").permitAll()
-				.requestMatchers("/api/admin/**").hasRole("ADMIN")
+				.requestMatchers("/api/admin/**").hasRole(Role.ADMIN.name())
 				.anyRequest().authenticated())
 			.csrf(AbstractHttpConfigurer::disable)
 			.formLogin(AbstractHttpConfigurer::disable)

@@ -11,10 +11,10 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import pl.szczurradar.api.config.ApiError;
+import pl.szczurradar.api.config.ErrorCode;
 
 /**
  * Cross-origin write protection (CSRF defence on top of {@code SameSite=Strict}; Spring's CSRF
@@ -41,7 +41,7 @@ public class OriginGuardFilter extends OncePerRequestFilter {
 			throws ServletException, IOException {
 		String origin = request.getHeader(HttpHeaders.ORIGIN);
 		if (origin != null && isCrossOrigin(origin, request.getHeader(HttpHeaders.HOST))) {
-			ApiError.write(response, HttpStatus.FORBIDDEN, "cross_origin");
+			ApiError.write(response, ErrorCode.CROSS_ORIGIN);
 			return;
 		}
 		chain.doFilter(request, response);
