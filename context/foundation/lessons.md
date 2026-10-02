@@ -64,3 +64,10 @@
 - **Problem**: W `assessment-contract-harness` (fazy 1–3) kod był dokładany fazami zgodnie z planem, a wspólna infrastruktura LLM (port dostawcy, ponowienia, adaptery) wylądowała w środku jednego agenta (`app/assessment/providers`) i importowała jego kontrakt. „Rozlanie” zauważył dopiero użytkownik, porównując z innym projektem; im później, tym droższe przenosiny.
 - **Rule**: Proaktywnie, przy każdej fazie — nie tylko na prośbę — szukaj okazji do abstrakcji i porządkowania: czy nowy kod nie miesza warstw (infrastruktura vs domena/agent), czy coś generycznego nie jest zaszyte w konkretnym module, czy nie powstaje duplikacja. Oceniaj też, czy obecnie napisany kod wytrzyma kolejne fazy i kroki roadmapy, czy już teraz potrzebuje abstrakcji, żeby dalej trzymać się wzorców projektowych i utrzymać kod w ryzach. Jeśli tak, zaproponuj porządkowanie wcześnie, póki kod jest mały: osobny commit refactor bez zmian zachowania, potwierdzony testami. Proponuj, nie przebudowuj bez zgody.
 - **Applies to**: plan, plan-review, implement, impl-review
+
+## Zamknięte zbiory wartości trzymaj w enumach, nie w wolnych stringach
+
+- **Context**: Kod backendu i frontendu, w którym pojawia się zamknięty zbiór wartości: nazwy komend CLI, role, typy, kody błędów, dostawcy, statusy — szczególnie interfejsy i rejestry, które każda implementacja wypełnia własnym literałem.
+- **Problem**: W `java-api-rewrite` interfejs `Command` miał metody `String name()` i `String description()`, więc każda komenda zwracała wolny literał (`"migrate"`, `"create-admin"`), a ta sama nazwa była powtórzona w komunikatach i testach. Literówka albo zmiana nazwy w jednym miejscu kompiluje się bez błędu i rozjeżdża się po cichu z resztą; kompilator i IDE nie pokazują pełnego zbioru wartości ani ich użyć.
+- **Rule**: Tam, gdzie zbiór wartości jest zamknięty (typy, role, kody, nazwy komend, dostawcy), trzymaj go w enumie, a nie jako wolne stringi w kodzie.
+- **Applies to**: implement, impl-review

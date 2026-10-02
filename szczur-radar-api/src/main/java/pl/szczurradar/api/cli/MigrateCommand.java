@@ -36,13 +36,8 @@ public final class MigrateCommand implements Command {
 	}
 
 	@Override
-	public String name() {
-		return "migrate";
-	}
-
-	@Override
-	public String description() {
-		return "apply pending database migrations and exit";
+	public CommandType type() {
+		return CommandType.MIGRATE;
 	}
 
 	@Override

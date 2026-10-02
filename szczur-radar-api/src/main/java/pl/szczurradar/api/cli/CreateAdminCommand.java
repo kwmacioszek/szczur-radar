@@ -52,20 +52,15 @@ public final class CreateAdminCommand implements Command {
 	}
 
 	@Override
-	public String name() {
-		return "create-admin";
-	}
-
-	@Override
-	public String description() {
-		return "create the first administrator (--email <e-mail>; password asked twice, hidden)";
+	public CommandType type() {
+		return CommandType.CREATE_ADMIN;
 	}
 
 	@Override
 	public int run(String[] args) {
 		String rawEmail = emailArgument(args);
 		if (rawEmail == null) {
-			err.println("usage: create-admin --email <e-mail>");
+			err.println("usage: " + type().cliName() + " --email <e-mail>");
 			return USAGE_ERROR;
 		}
 		String email = Emails.normalize(rawEmail);
@@ -80,7 +75,7 @@ public final class CreateAdminCommand implements Command {
 		}
 		PasswordPrompt prompt = promptFactory.get();
 		if (prompt == null) {
-			err.println("No interactive console: run create-admin in a terminal (e.g. railway ssh) to type the password.");
+			err.println("No interactive console: run " + type().cliName() + " in a terminal (e.g. railway ssh) to type the password.");
 			return USAGE_ERROR;
 		}
 
@@ -88,7 +83,7 @@ public final class CreateAdminCommand implements Command {
 			return context.getBean(AdminBootstrap.class).createAdmin(email, prompt, out, err);
 		}
 		catch (RuntimeException ex) {
-			err.println("create-admin failed: " + ex.getMessage());
+			err.println(type().cliName() + " failed: " + ex.getMessage());
 			return AdminBootstrap.REFUSED;
 		}
 	}

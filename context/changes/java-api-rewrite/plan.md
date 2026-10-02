@@ -523,9 +523,9 @@ Przełączenie produkcji (wykonuje operator, w tej kolejności):
 
 #### Automated
 
-- [x] 4.1 `./mvnw -B verify` przechodzi
-- [ ] 4.2 Cały workflow CI (backend, web-unit, web-container-smoke, railway-config) jest zielony na PR
-- [x] 4.3 `grep` po aktywnych instrukcjach nie zwraca `uv run|uv sync|alembic|pytest|hypercorn|JWT_SECRET` (poza komentarzem o nieużywanym `preserve()`); pliki: `REPOSITORY_GUIDELINES.md`, `README.md`, `szczur-radar-api/README.md`, `.railway/railway.ts`, `.github/workflows/ci.yml`
+- [x] 4.1 `./mvnw -B verify` przechodzi — 4c6fb00
+- [x] 4.2 Cały workflow CI (backend, web-unit, web-container-smoke, railway-config) jest zielony na PR — 4c6fb00
+- [x] 4.3 `grep` po aktywnych instrukcjach nie zwraca `uv run|uv sync|alembic|pytest|hypercorn|JWT_SECRET` (poza komentarzem o nieużywanym `preserve()`); pliki: `REPOSITORY_GUIDELINES.md`, `README.md`, `szczur-radar-api/README.md`, `.railway/railway.ts`, `.github/workflows/ci.yml` — 4c6fb00
 
 #### Manual
 

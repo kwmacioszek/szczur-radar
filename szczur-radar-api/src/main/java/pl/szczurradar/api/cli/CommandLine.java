@@ -2,7 +2,7 @@ package pl.szczurradar.api.cli;
 
 import java.io.PrintStream;
 import java.util.Arrays;
-import java.util.LinkedHashMap;
+import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 
@@ -15,14 +15,14 @@ public final class CommandLine {
 	/** Exit code for a missing or unknown command (usage error). */
 	public static final int USAGE_ERROR = 2;
 
-	private final Map<String, Command> commands = new LinkedHashMap<>();
+	private final Map<CommandType, Command> commands = new EnumMap<>(CommandType.class);
 
 	private final PrintStream err;
 
 	public CommandLine(List<Command> commands, PrintStream err) {
 		for (Command command : commands) {
-			if (this.commands.putIfAbsent(command.name(), command) != null) {
-				throw new IllegalArgumentException("duplicate command: " + command.name());
+			if (this.commands.putIfAbsent(command.type(), command) != null) {
+				throw new IllegalArgumentException("duplicate command: " + command.type().cliName());
 			}
 		}
 		this.err = err;
@@ -43,7 +43,7 @@ public final class CommandLine {
 			printUsage("no command given");
 			return USAGE_ERROR;
 		}
-		Command command = commands.get(args[0]);
+		Command command = CommandType.fromCliName(args[0]).map(commands::get).orElse(null);
 		if (command == null) {
 			printUsage("unknown command: " + args[0]);
 			return USAGE_ERROR;
@@ -56,7 +56,7 @@ public final class CommandLine {
 		err.println("usage: java -jar szczur-radar-api.jar [<command> [args]]");
 		err.println("  (no command)  start the HTTP server");
 		for (Command command : commands.values()) {
-			err.printf("  %-12s  %s%n", command.name(), command.description());
+			err.printf("  %-12s  %s%n", command.type().cliName(), command.type().description());
 		}
 	}
 
