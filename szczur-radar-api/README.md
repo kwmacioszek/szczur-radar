@@ -1,6 +1,28 @@
 # szczur-radar-api
 
-> **F-03 w toku:** backend jest już w Javie (Spring Boot 4, Java 25, Maven). Reszta tego pliku opisuje jeszcze Pythona i zostanie przepisana w fazie 4 (`context/changes/java-api-rewrite/plan.md`). Aktualna jest sekcja niżej.
+Backend Szczur Radar: **Spring Boot 4 na Javie 25**, budowany Mavenem przez wrapper (`./mvnw`, bez globalnego Mavena). Spring Security + Spring Session JDBC (sesja w Postgresie), Flyway, JdbcClient, Embabel (agenci LLM). Wszystkie polecenia poniżej uruchamiaj z katalogu `szczur-radar-api/` z JDK 25 (`export JAVA_HOME=$(/usr/libexec/java_home -v 25)` na macOS).
+
+```bash
+./mvnw -B verify                               # testy jednostkowe + integracyjne (wymaga Dockera)
+./mvnw -q -DskipTests package                  # target/szczur-radar-api.jar
+java -jar target/szczur-radar-api.jar migrate  # migracje Flyway i wyjście
+java -jar target/szczur-radar-api.jar          # serwer na :8000 (PORT)
+```
+
+## Struktura
+
+Pakiet bazowy `pl.szczurradar.api`, pakiety według funkcji — nie według warstw technicznych:
+
+| Pakiet | Zawartość |
+| --- | --- |
+| `health` | sondy `GET /api/health` (bez bazy) i `GET /api/ready` (`SELECT 1`, 503 przy błędzie) |
+| `user` | `User`, `UserRepository` (JdbcClient), `Emails` (jedna normalizacja e-maila) |
+| `auth` | logowanie JSON, `/me`, logout, limiter prób, filtr Origin, odnawianie ciasteczka sesji, argon2 (`Passwords`) |
+| `cli` | komendy operatora: `migrate`, `create-admin` (dyspozytor `CommandLine`) |
+| `config` | Spring Security, sesja i ciasteczko, format błędów `{"detail": …}`, konfiguracja dostawcy LLM |
+| `agents` | agenci Embabel (na razie `SkeletonAgent`, bez wywołań LLM) |
+
+Kolejne moduły (`llm`, `sources`) dochodzą obok, bez mieszania infrastruktury z domeną (`context/foundation/lessons.md`).
 
 ## Dostawca LLM (Embabel)
 
@@ -27,66 +49,66 @@ export LLM_API_PROVIDER=openrouter LLM_MODEL=<id-z-katalogu-openrouter> LLM_API_
 - CI (job `backend`): `LLM_API_PROVIDER` i `LLM_MODEL` jako GitHub Actions *variables*, `LLM_API_KEY` jako *secret*. Railway: te same trzy zmienne w serwisie `szczur-radar-api` każdego środowiska, ustawione **przed** deployem (`.railway/railway.ts` deklaruje je przez `preserve()`, które niczego nie tworzy). Klucz produkcyjny nie trafia do CI ani PR env.
 - Przy kodzie równoległym podawaj własny executor: Java 25 widzi limit CPU kontenera (`availableProcessors()` może być 1); rdzeń Embabel ma własny executor.
 
-Backend Szczur Radar: FastAPI + SQLAlchemy 2 (async, psycopg 3) + Alembic, zależności zarządzane przez `uv` (nigdy `pip`). Wszystkie polecenia poniżej uruchamiaj z katalogu `szczur-radar-api/`.
-
-```bash
-uv sync --locked          # zależności z uv.lock
-uv run python main.py     # lokalny serwer deweloperski na :8000
-```
-
 ## Baza lokalna
 
-Lokalny Postgres to ten sam `compose.local.yaml` co w głównym `README.md` — Postgres **18** (obraz Railway `postgres-ssl:18`) nasłuchujący tylko na `127.0.0.1:5432`:
+Lokalny Postgres to `compose.local.yaml` z głównego `README.md` — Postgres **18** nasłuchujący tylko na `127.0.0.1:5432`:
 
 ```bash
 # z katalogu głównego repozytorium
 docker compose -f compose.local.yaml up -d postgres
 ```
 
-Instancja ma bazę deweloperską `szczur_radar_local`. Testy używają **osobnej** bazy w tej samej instancji — utwórz ją raz:
+Aplikacja buduje URL JDBC z rozbitych zmiennych (jak na Railway, bez parsowania `DATABASE_URL`):
 
 ```bash
-docker compose -f compose.local.yaml exec postgres \
-  psql -U szczur_local -d szczur_radar_local -c 'CREATE DATABASE szczur_radar_test'
+export PGHOST=127.0.0.1 PGPORT=5432 PGDATABASE=szczur_radar_local PGUSER=szczur_local PGPASSWORD=local_only
 ```
 
-Zmienne środowiskowe (aplikacja i Alembic czytają ten sam `DATABASE_URL`; `postgresql://` jest automatycznie zamieniane na sterownik `postgresql+psycopg://`):
+Wszystkie pięć musi być ustawione: bez nich start się nie powiedzie (Spring Session sprawdza URL JDBC już przy starcie). Sama baza nie musi działać — pula łączy jest leniwa, `/api/health` odpowiada, a `/api/ready` zwraca 503.
+
+Lokalnie po `http://` (bez HTTPS) ustaw `COOKIE_SECURE=false`, jeśli przeglądarka nie zapisuje ciasteczka `Secure` (Chrome i Firefox akceptują je na `localhost`). Tylko wartości `0`, `false`, `no` wyłączają `Secure`.
+
+## Migracje (Flyway, fix-forward)
+
+Schemat należy wyłącznie do plików SQL w `src/main/resources/db/migration/` (`V<n>__<opis>.sql`). Serwer **nie** migruje przy starcie (`spring.flyway.enabled=false`); robi to komenda `migrate`:
 
 ```bash
-export DATABASE_URL=postgresql://szczur_local:local_only@127.0.0.1:5432/szczur_radar_local
-export TEST_DATABASE_URL=postgresql://szczur_local:local_only@127.0.0.1:5432/szczur_radar_test
+java -jar target/szczur-radar-api.jar migrate   # albo: ./mvnw spring-boot:run -Dspring-boot.run.arguments=migrate
 ```
 
-`DATABASE_URL` nie jest potrzebny do importu aplikacji ani do testów sond — engine powstaje leniwie przy pierwszym użyciu.
+- **Fix-forward:** wdrożonej migracji nigdy się nie edytuje; błąd naprawia kolejna migracja. Flyway Community nie ma `undo`; ostatecznością jest PITR bazy (`context/deployment/deploy-plan.md`).
+- Ograniczenia mają jawne nazwy (`ck_…`, `uq_…`), żeby kolejne migracje mogły się do nich odwołać.
+- `MigrationsIT` stosuje wszystkie migracje od zera na pustej bazie i sprawdza ograniczenia.
+- Na Railway migracje uruchamia **pre-deploy** serwisu API (`java -jar target/szczur-radar-api.jar migrate`, `.railway/railway.ts`) przed startem nowej wersji — nieudana migracja zatrzymuje deploy, a poprzednia wersja działa dalej.
 
-## Migracje
+## Komendy operatora
 
-Schemat bazy należy wyłącznie do migracji Alembic w `migrations/versions/` (`app/models.py` to modele ORM i `target_metadata`).
+Ten sam jar: bez argumentów startuje serwer, z nazwą komendy — komendę bez serwera WWW. Nieznana komenda → kod 2 i opis użycia na stderr.
 
 ```bash
-uv run alembic upgrade head      # zastosuj wszystkie migracje (na DATABASE_URL)
-uv run alembic downgrade -1      # cofnij ostatnią
-uv run alembic current           # bieżąca rewizja bazy
-uv run alembic heads             # musi być dokładnie jedna głowa
-uv run alembic check             # modele zgodne z migracjami?
+java -jar target/szczur-radar-api.jar create-admin --email admin@example.com
+# produkcja / PR env:
+railway ssh -s szczur-radar-api -e <środowisko> -- java -jar target/szczur-radar-api.jar create-admin --email …
 ```
 
-Nowa migracja: `uv run alembic revision --autogenerate --rev-id 0002_<opis> -m "<opis>"` (plik `migrations/versions/0002_<opis>.py`), potem ręczny przegląd pliku. Zasady:
-
-- każda migracja ma działający `downgrade()` — sprawdza go `tests/test_migrations.py` (upgrade → downgrade → upgrade na prawdziwym Postgresie);
-- ograniczenia mają jawne nazwy (`ck_…`, `uq_…`), żeby kolejne migracje mogły się do nich odwołać;
-- na produkcji po utworzeniu danych preferuj fix-forward (nowa migracja) zamiast downgrade.
-
-Na Railway migracje uruchamia **pre-deploy** serwisu API (`uv run --no-dev alembic upgrade head`, `.railway/railway.ts`) przed startem każdej nowej wersji — nieudana migracja zatrzymuje deploy, a poprzednia wersja dalej działa.
+`create-admin` tworzy **pierwszego** administratora (odmawia, gdy admin już istnieje — kolejne konta i odzyskiwanie to S-07). Hasło jest pobierane dwa razy z ukrytego promptu, nigdy z argumentu, i nie trafia do logów; polityka 12–128 znaków. Bootstrap jest serializowany blokadą `pg_advisory_xact_lock`, więc równoległe uruchomienia tworzą dokładnie jednego admina. Kody wyjścia: 0 utworzono, 1 odmowa, 2 błąd użycia lub konfiguracji (brak/zły e-mail, brak zmiennych `PG*`, brak konsoli). Komendy uruchamiają wspólny kontekst Springa, więc też potrzebują trzech ustawień LLM.
 
 ## Testy
 
 ```bash
-uv run pytest -q                                   # bez bazy: testy `db` są pomijane
-TEST_DATABASE_URL=… REQUIRE_DB_TESTS=1 uv run pytest -q   # pełny zestaw, jak w CI
+source ~/.config/szczur-radar/llm.env   # LLM_API_PROVIDER, LLM_MODEL, LLM_API_KEY
+./mvnw -B verify
 ```
 
-- Testy wymagające Postgresa mają marker `@pytest.mark.db`. Dostają automatycznie (`tests/conftest.py`): schemat zbudowany od zera migracjami (`alembic upgrade head` raz na sesję), `DATABASE_URL` ustawiony na `TEST_DATABASE_URL`, puste tabele przed każdym testem oraz zamknięty i wyzerowany engine aplikacji po teście.
-- Bez `TEST_DATABASE_URL` testy `db` są **pomijane** — chyba że ustawiono `REQUIRE_DB_TESTS=1`: wtedy uruchomienie **kończy się błędem**. CI (`.github/workflows/ci.yml`, job `backend`) ustawia oba i uruchamia testy na kontenerze `postgres:18`, więc testy bazodanowe nigdy nie są w nim cicho pomijane.
-- `TEST_DATABASE_URL` musi wskazywać **dedykowaną bazę testową** (nazwa zawiera `test`) — fixture usuwa i odtwarza jej schemat `public`.
-- Testy sond (`tests/test_health.py`) działają bez żadnej bazy i bez `DATABASE_URL`.
+- **`*Test`** (Surefire): testy jednostkowe bez kontekstu aplikacji i bez Dockera — JUnit, AssertJ, Mockito.
+- **`*IT`** (Failsafe): `@SpringBootTest` + `MockMvcTester` + Testcontainers Postgres 18 (`TestcontainersConfiguration`, `@ServiceConnection`). Brak Dockera **wywala** `verify` — testy nie są pomijane. CI (job `backend`) uruchamia to samo.
+- **Autoryzacja:** każda nowa trasa jest chroniona domyślnie (deny-by-default w `config/SecurityConfig`). Trasa publiczna wymaga wpisu w `SecurityConfig` **i** w `PUBLIC_ROUTES` w `AuthorizationCompletenessIT` z uzasadnieniem — test woła każde mapowanie bez sesji i oczekuje 401. Trasy admina idą pod `/api/admin/` (rola ADMIN, 403 `forbidden` dla zwykłego użytkownika).
+- **Fixture'y usług zewnętrznych** (Wykop, dostawcy LLM): prawdziwe odpowiedzi jako JSON w `src/test/resources/fixtures/<usługa>/`, bez wymyślanych przykładów.
+
+## API i sesja (kontrakt z SPA)
+
+- Trasy: `GET /api/health`, `GET /api/ready`, `POST /api/auth/login` (JSON `{email, password}`), `POST /api/auth/logout` (zawsze 204), `GET /api/auth/me` → `{id, email, role}`.
+- Błędy aplikacji mają kształt `{"detail": "<kod>"}`: `invalid_credentials`, `not_authenticated`, `forbidden`, `too_many_attempts` (+ `Retry-After`), `cross_origin`, `invalid_request`, `unsupported_media_type`. Nieznane pola w JSON są odrzucane.
+- Sesja: ciasteczko `sr_session` (`HttpOnly; Secure; SameSite=Strict; Path=/api; Max-Age=30 dni`), dane w tabelach `SPRING_SESSION*`; wygasa po 30 dniach bezczynności, ciasteczko jest odnawiane po każdym udanym, uwierzytelnionym żądaniu API. Unieważnienie wszystkich sesji użytkownika: `FindByIndexNameSessionRepository.findByPrincipalName(<uuid>)` (principal = UUID użytkownika).
+- CSRF: `SameSite=Strict` + `OriginGuardFilter` (obcy `Origin` przy zapisie → 403); tokeny CSRF Springa są wyłączone.
+- Limiter: 5 nieudanych prób / 15 min na e-mail i 20 na IP (`X-Real-IP` z krawędzi Railway), w pamięci procesu — poprawny przy jednej replice.

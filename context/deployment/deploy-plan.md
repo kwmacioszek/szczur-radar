@@ -28,6 +28,49 @@ Both are the hard gate **before Phase 6 (data collection)**: subscribe → set l
 - **PR env verification (szczur-radar-pr-13):** pre-deploy migration, login/deep-link/logout, 403 foreign Origin, 429 after 5 failed attempts, per-IP limit keyed on the edge-set `X-Real-IP` (a client-sent `X-Real-IP` is overwritten by Railway's edge — verified in Caddy access logs).
 - **Deploy timing (for expectations):** an api deploy takes ~3–4 min end to end: Wait for CI (~1 min), build + push (~20 s), a separate pre-deploy container (~1–1.5 min incl. scheduling/image pull), then the app container (~1 min to scheduled + healthcheck). A push that also changes `.railway/railway.ts` triggers a second full api deploy after the config apply. No sign of resource limits (trial) in the logs — the time is platform orchestration. Start/pre-deploy use `uv run --no-dev` so containers don't re-install the dev group at start.
 
+## F-03: przełączenie na Javę (java-api-rewrite)
+
+**Status (2026-10-02): verified in PR env `szczur-radar-pr-26` (PR #26); production switch pending — operator + human merge.** Change: `context/changes/java-api-rewrite/`, issue #25.
+
+The API is now a Spring Boot 4 jar on Java 25 (Railpack, `RAILPACK_JDK_VERSION=25`). Sessions live in Postgres (Spring Session JDBC); migrations are Flyway, fix-forward. There is **no way back to the Python backend** after the switch: failures are fixed in Java and redeployed; a bad migration is fixed by a new migration; PITR recovers data, not the Python runtime.
+
+### Operator commands (replace the `uv run …` ones above)
+
+- Migrations (pre-deploy, automatic): `java -jar target/szczur-radar-api.jar migrate`.
+- First admin: `railway ssh -s szczur-radar-api -e <env> -- java -jar target/szczur-radar-api.jar create-admin --email …` (password asked twice, hidden; refuses if an admin exists).
+- Variables on `szczur-radar-api` (names only): `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, `PGPASSWORD` (references to Postgres, from IaC), `PORT`, `RAILPACK_JDK_VERSION`, and operator-set `LLM_API_PROVIDER`, `LLM_MODEL`, `LLM_API_KEY` — **every environment has its own key**; production's is set before the merge and never copied to CI or PR envs. `DATABASE_URL` and `JWT_SECRET` stay declared in `.railway/railway.ts` only because the CI gate refuses `variable.delete`; both are unused since F-03.
+
+### PR env verification (szczur-radar-pr-26, 2026-10-02)
+
+- Pre-deploy `migrate` applied Flyway `V1` (users) and `V2` (spring_session) on the PR env's own Postgres; later deploys: "Schema is up to date".
+- `/api/health`, `/api/ready` 200 through the public PR-env domain; Railway's IPv4 healthcheck passes and the web→api proxy works (JVM dual-stack bind).
+- Login, refresh, deep link without a session → login screen, logout; foreign `Origin` → 403 `cross_origin`; 6th failed login → 429 with `Retry-After`; `create-admin` over `railway ssh`; Embabel startup log: profile `deepseek`, `Default LLM: deepseek-v4-flash`, `Deployed agent SkeletonAgent`.
+- Session survived >1 h of API sleep: `/api/auth/me` with the old cookie → 200 and a renewed cookie.
+- First web deploy of the PR env was `SKIPPED` (watch paths: only API files changed) → deployed by hand with `railway redeploy --from-source -s szczur-radar-web -e szczur-radar-pr-<N>`. Expect this on any PR that touches only `szczur-radar-api/`.
+
+### Cold start after sleep (measured 2026-10-02, PR env)
+
+- Spring context + Embabel start: **~6–8 s** on a warm container (logs: `Started … in 5.9–7.7 seconds`); the pre-deploy `migrate` container ~10.5 s.
+- From the first click after >1 h of sleep (web and API both asleep) to the SPA showing the logged-in screen: **~10–11 s** (web woke 15:24:42, API ready 15:24:52, `/api/auth/me` 200 at 15:24:53).
+- Before the proxy fix the first `/api/*` requests during the wake got **502** at once; since `86cd4ef` Caddy retries the upstream for up to 30 s (`lb_try_duration`), so the user sees a delay, not an error.
+- If ~10 s is too slow for production: AOT cache/CDS (Java 25) or `sleepApplication: false` for the API — a separate decision (cost vs latency).
+
+### Production switch — operator runbook (in this order)
+
+1. PR #26 green: whole CI workflow + PR-env checks above.
+2. Production LLM settings on `szczur-radar-api` (`production`): `LLM_API_PROVIDER`, `LLM_MODEL`, `LLM_API_KEY` (own key). Without them `migrate` and the server refuse to start.
+3. Confirm PITR: `railway postgres pitr status --json` (`archiverHealthy: true`, recent `maxRestoreTime`).
+4. Wipe the production schema: `railway connect postgres` (env `production`) → `DROP SCHEMA public CASCADE; CREATE SCHEMA public;`. From here the Python API cannot log anyone in until Java is deployed.
+5. A human merges PR #26 to `main`. CI on `main`: `railway-config` applies start/pre-deploy/variables to production, then the code deploys; pre-deploy `migrate` creates `V1`, `V2`.
+6. `railway ssh -s szczur-radar-api -e production -- java -jar target/szczur-radar-api.jar create-admin --email …`.
+7. Verify on the public address: `/api/health`, `/api/ready` 200; admin login, deep link, logout. Record deployment IDs here; close issue #25 only after this.
+
+### Troubleshooting (Java)
+
+- **Build fails on Railway:** check `RAILPACK_JDK_VERSION=25` on the service (Railpack defaults to 21 → `release 25 not supported`), that `mvnw` is executable and `.mvn/wrapper/maven-wrapper.properties` is committed. Railpack builds with `-DskipTests`; the same code is green in CI.
+- **Pre-deploy `migrate` fails:** read the pre-deploy logs. `Invalid LLM configuration: …` → set the three `LLM_*` variables; JDBC errors → check the `PG*` references; Flyway validation error → never edit an applied migration, add a new one.
+- **Healthcheck fails / proxy 502:** the API listens on `$PORT` (8000) dual-stack; a 502 only during the first seconds after sleep is the JVM starting (the proxy retries up to 30 s); a lasting 502 → API crashed, read its logs.
+
 ## Phases
 
 ### [x] 1. Prepare the application
@@ -118,17 +161,17 @@ Record the web URL, Railway project/environment and deployment IDs, configured v
 
 #### Support steps / recovery runbook
 
-- **Build failure — api:** Railpack didn't detect the app or Python version. Confirm `szczur-radar-api/.python-version` (3.13) and `uv.lock` are committed, and that the start command is the IaC one (`uv run --no-dev hypercorn main:app --bind "[::]:$PORT"`), not the Railpack default `uvicorn main:app`. Inspect `railway logs --service szczur-radar-api`.
+- **Build failure — api:** Railpack didn't detect Java or used the wrong JDK. Confirm `pom.xml`, `mvnw` and `.mvn/wrapper/` are committed, `RAILPACK_JDK_VERSION=25` is set, and the start command is the IaC one (`java $JAVA_OPTS -jar target/szczur-radar-api.jar`). Inspect `railway logs --service szczur-radar-api`. (Before F-03: Python/uv — see history above.)
 - **Build failure — web:** Dockerfile not detected, or `npm ci` / `vue-tsc` failed. Confirm `szczur-radar-web/Dockerfile` sits at the service root directory and `package-lock.json` is committed. The identical build is green in CI, so a Railway-only failure points at root-directory / build-context config.
-- **Proxy 502 (web → api):** Caddy can't reach the backend. Check the web service's `API_PRIVATE_DOMAIN` / `API_PORT` reference variables resolve to the api's `RAILWAY_PRIVATE_DOMAIN` / `PORT`; confirm the api is up (Hypercorn binds `::` dual-stack); confirm the api deployment is live and healthy.
-- **Readiness 503:** `/api/ready` failed its `SELECT 1`. Check the api `DATABASE_URL` reference resolves and Postgres is up; read `railway logs --service szczur-radar-api`. Health 200 while ready 503 = app up, DB unreachable.
+- **Proxy 502 (web → api):** Caddy can't reach the backend. Check the web service's `API_PRIVATE_DOMAIN` / `API_PORT` reference variables resolve to the api's `RAILWAY_PRIVATE_DOMAIN` / `PORT`; confirm the api is up (the JVM binds dual-stack); confirm the api deployment is live and healthy. A 502 only in the first seconds after the API slept is the JVM starting — Caddy retries for up to 30 s.
+- **Readiness 503:** `/api/ready` failed its `SELECT 1`. Check the api `PG*` references resolve and Postgres is up; read `railway logs --service szczur-radar-api`. Health 200 while ready 503 = app up, DB unreachable.
 - **CI wait / deploy stuck in `WAITING`:** Wait for CI is waiting on a workflow conclusion. Confirm the GitHub Actions run **concluded** (not skipped — do not path-filter the workflow) and the Railway GitHub app has repo permissions.
-- **Bad release:** roll back via dashboard → service → Deployments → Rollback (the CLI has no rollback). Code rollback does **not** roll back data — assess Postgres / migration state separately; every migration needs a tested downgrade or a fix-forward.
+- **Bad release:** roll back via dashboard → service → Deployments → Rollback (the CLI has no rollback). Code rollback does **not** roll back data — assess Postgres / migration state separately; migrations are fix-forward (Flyway, no undo) — repair with a new migration, PITR as the last resort.
 - **Backups/PITR can't be enabled or restore-tested:** **stop before collecting production data** and reopen the documented Render fallback (managed Postgres with PITR) — risk register #1.
 - **IaC config change didn't take effect (config ≠ merge):** changing `.railway/railway.ts` (start command, healthcheck, variables, region) needs `railway config apply` — git merge + autodeploy rebuilds **code**, not service **config**. Symptom: the deploy keeps running the OLD setting after a merged config change (here: the deploy still ran uvicorn until `railway config apply` pushed the Hypercorn start command). Fix: `railway config apply`, then redeploy.
   - **Since `admin-bootstrap-and-login` (2026-09-28) this is automated** by the CI job `railway-config` (`.github/workflows/ci.yml`): on every PR it plans + applies `.railway/railway.ts` to that PR's environment `szczur-radar-pr-<N>` (never `production`); on every push to `main` it applies to `production`. Railway "Wait for CI" waits for the whole workflow, so config (e.g. the API `preDeploy` migration) is applied **before** the code deploys. The job selects the environment with `RAILWAY_PROJECT_ID` + `RAILWAY_ENVIRONMENT_ID` (resolved by name from `railway environment list --json`) — never `railway link` — and **fails without applying** if the plan targets another environment, contains a `destructive` / `resource.delete` change, or changes a service `source`/branch in any environment; it never passes `--confirm-destructive`. PR envs track the PR branch, so on `pull_request` the job sets `IAC_SOURCE_BRANCH` (= the PR head branch) and `railway.ts` uses it instead of `main` — otherwise every PR plan would try to rewrite `source.branch`. Variables set by hand in Railway (e.g. `JWT_SECRET`) must be declared in `railway.ts` with `preserve()` (name only, never a value) — otherwise the plan proposes `Delete variable …` and the job refuses to apply. Fork PRs are skipped (no secret, no PR env). If the job fails: read its plan output; fix `.railway/railway.ts` so the plan is clean (drift from dashboard settings → mirror them in the file, see lessons.md), then re-run the job. A missing PR env (job retries ~3 min) → check PR Environments are enabled, then re-run.
   - `railway.ts` must mirror production: `railway config plan --detailed-exit-code` on `production` must exit **0** before any automatic apply (2026-09-28: sleep on all 3 services + bucket `Postgres-PITR` added to the file → exit 0).
-- **Healthcheck "service unavailable" while the app logs look healthy:** Railway's healthcheck uses **IPv4**. uvicorn `--host ::` is IPv6-only from the CLI and rejects it; bind dual-stack (Hypercorn on `::`) or `0.0.0.0` (but `0.0.0.0` breaks the IPv6 web→api private proxy). Also confirm the app listens on `$PORT` and does not block the `healthcheck.railway.app` host.
+- **Healthcheck "service unavailable" while the app logs look healthy:** Railway's healthcheck uses **IPv4**, the web→api proxy IPv6 — the listener must be dual-stack. The JVM's default wildcard bind is; do not set `server.address`. Also confirm the app listens on `$PORT` and does not block the `healthcheck.railway.app` host. (Before F-03 the Python API needed Hypercorn on `::` for this.)
 
 Before enabling PR previews, seal all production-only secrets. Verify that preview environments cannot inherit those values; add separate preview credentials only when needed. Railway does not copy sealed values into PR environments (https://docs.railway.com/variables).
 

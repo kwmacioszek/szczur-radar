@@ -3,10 +3,10 @@
 ## Local development on macOS
 
 Docker Compose runs a local Postgres and builds the web service from the same
-Dockerfile and Caddyfile used on Railway. The API runs on the Mac with reload
-enabled. The containers publish ports only on localhost. The API development
-server binds to all host interfaces so the web container can reach it through
-Docker Desktop; use this workflow on a trusted local network.
+Dockerfile and Caddyfile used on Railway. The API (Spring Boot, Java 25) runs on
+the Mac. The containers publish ports only on localhost. The API binds to all
+host interfaces so the web container can reach it through Docker Desktop; use
+this workflow on a trusted local network.
 
 Start the database and web container from the repository root:
 
@@ -14,12 +14,22 @@ Start the database and web container from the repository root:
 docker compose -f compose.local.yaml up -d --build
 ```
 
-Start the API in a second terminal:
+Start the API in a second terminal (JDK 25; the three LLM settings are described
+in `szczur-radar-api/README.md`, keep them outside the repo):
 
 ```sh
 cd szczur-radar-api
-DATABASE_URL=postgresql://szczur_local:local_only@127.0.0.1:5432/szczur_radar_local uv run python main.py
+export JAVA_HOME=$(/usr/libexec/java_home -v 25)
+export PGHOST=127.0.0.1 PGPORT=5432 PGDATABASE=szczur_radar_local PGUSER=szczur_local PGPASSWORD=local_only
+source ~/.config/szczur-radar/llm.env   # LLM_API_PROVIDER, LLM_MODEL, LLM_API_KEY
+./mvnw -q -DskipTests package
+java -jar target/szczur-radar-api.jar migrate   # once, and after new migrations
+java -jar target/szczur-radar-api.jar           # API on :8000
 ```
+
+Create the first local admin with
+`java -jar target/szczur-radar-api.jar create-admin --email <e-mail>` (same
+variables; the password is asked twice, hidden).
 
 Open `http://localhost:8080`. The web container proxies `/api/*` to the API
 through Docker Desktop's `host.docker.internal`. Check
