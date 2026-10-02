@@ -1,6 +1,6 @@
 # szczur-radar-api
 
-Backend Szczur Radar: **Spring Boot 4 na Javie 25**, budowany Mavenem przez wrapper (`./mvnw`, bez globalnego Mavena). Spring Security + Spring Session JDBC (sesja w Postgresie), Flyway, JdbcClient, Embabel (agenci LLM). Wszystkie polecenia poniżej uruchamiaj z katalogu `szczur-radar-api/` z JDK 25 (`export JAVA_HOME=$(/usr/libexec/java_home -v 25)` na macOS).
+Backend Szczur Radar: **Spring Boot 4 na Javie 25**, budowany Mavenem przez wrapper (`./mvnw`, bez globalnego Mavena). Spring Security + Spring Session JDBC (sesja w Postgresie), Spring Data JPA (Hibernate) na schemacie z Flyway, Embabel (agenci LLM). Wszystkie polecenia poniżej uruchamiaj z katalogu `szczur-radar-api/` z JDK 25 (`export JAVA_HOME=$(/usr/libexec/java_home -v 25)` na macOS).
 
 ```bash
 ./mvnw -B verify                               # testy jednostkowe + integracyjne (wymaga Dockera)
@@ -16,7 +16,7 @@ Pakiet bazowy `pl.szczurradar.api`, pakiety według funkcji — nie według wars
 | Pakiet | Zawartość |
 | --- | --- |
 | `health` | sondy `GET /api/health` (bez bazy) i `GET /api/ready` (`SELECT 1`, 503 przy błędzie) |
-| `user` | `User`, `UserRepository` (JdbcClient), `Emails` (jedna normalizacja e-maila) |
+| `user` | encja `User`, `UserRepository` (Spring Data JPA), `Role` (enum), `Emails` (jedna normalizacja e-maila) |
 | `auth` | logowanie JSON, `/me`, logout, limiter prób, filtr Origin, odnawianie ciasteczka sesji, argon2 (`Passwords`) |
 | `cli` | komendy operatora: `migrate`, `create-admin` (dyspozytor `CommandLine`) |
 | `config` | Spring Security, sesja i ciasteczko, format błędów `{"detail": …}`, konfiguracja dostawcy LLM |
@@ -79,6 +79,7 @@ java -jar target/szczur-radar-api.jar migrate   # albo: ./mvnw spring-boot:run -
 - **Fix-forward:** wdrożonej migracji nigdy się nie edytuje; błąd naprawia kolejna migracja. Flyway Community nie ma `undo`; ostatecznością jest PITR bazy (`context/deployment/deploy-plan.md`).
 - Ograniczenia mają jawne nazwy (`ck_…`, `uq_…`), żeby kolejne migracje mogły się do nich odwołać.
 - `MigrationsIT` stosuje wszystkie migracje od zera na pustej bazie i sprawdza ograniczenia.
+- **JPA nie zarządza schematem:** `spring.jpa.hibernate.ddl-auto=none`, a przy starcie Hibernate nie łączy się z bazą (jawny dialekt, `hibernate.boot.allow_jdbc_metadata_access=false`), więc serwer startuje bez bazy. Każda zmiana encji wymaga nowej migracji; `JpaSchemaIT` (`ddl-auto=validate` na schemacie z Flyway) wywala build, gdy encja i schemat się rozjadą.
 - Na Railway migracje uruchamia **pre-deploy** serwisu API (`java -jar target/szczur-radar-api.jar migrate`, `.railway/railway.ts`) przed startem nowej wersji — nieudana migracja zatrzymuje deploy, a poprzednia wersja działa dalej.
 
 ## Komendy operatora

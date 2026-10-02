@@ -82,9 +82,9 @@ class CreateAdminCommandIT {
 		assertThat(code).isZero();
 		assertThat(prompt.prompts).hasSize(2);
 		User admin = users.findByEmail("admin@example.com").orElseThrow();
-		assertThat(admin.role()).isEqualTo(Role.ADMIN);
-		assertThat(admin.passwordHash()).startsWith("$argon2id$");
-		assertThat(passwordEncoder.matches(PASSWORD, admin.passwordHash())).isTrue();
+		assertThat(admin.getRole()).isEqualTo(Role.ADMIN);
+		assertThat(admin.getPasswordHash()).startsWith("$argon2id$");
+		assertThat(passwordEncoder.matches(PASSWORD, admin.getPasswordHash())).isTrue();
 		assertThat(stdout()).contains("Created admin admin@example.com");
 		assertThat(stdout() + stderr()).doesNotContain(PASSWORD);
 	}
@@ -150,12 +150,12 @@ class CreateAdminCommandIT {
 
 	@Test
 	void refusesATakenEmail() {
-		users.insert("taken@example.com", passwordEncoder.encode("some password!!"), Role.USER);
+		users.save(new User("taken@example.com", passwordEncoder.encode("some password!!"), Role.USER));
 
 		int code = createAdmin("taken@example.com", new ScriptedPrompt(PASSWORD, PASSWORD));
 
 		assertThat(code).isEqualTo(AdminBootstrap.REFUSED);
-		assertThat(users.findByEmail("taken@example.com").orElseThrow().role()).isEqualTo(Role.USER);
+		assertThat(users.findByEmail("taken@example.com").orElseThrow().getRole()).isEqualTo(Role.USER);
 		assertThat(adminCount()).isZero();
 	}
 

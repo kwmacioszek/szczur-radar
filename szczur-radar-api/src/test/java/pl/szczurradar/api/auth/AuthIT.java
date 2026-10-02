@@ -392,7 +392,7 @@ class AuthIT {
 	}
 
 	private UUID createUser(String email, @Nullable String password, Role role) {
-		return users.insert(email, password == null ? null : passwordEncoder.encode(password), role);
+		return users.save(new User(email, password == null ? null : passwordEncoder.encode(password), role)).getId();
 	}
 
 	private MvcTestResult login(String email, String password) {

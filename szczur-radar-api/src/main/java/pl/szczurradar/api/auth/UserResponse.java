@@ -9,7 +9,7 @@ import pl.szczurradar.api.user.User;
 record UserResponse(UUID id, String email, Role role) {
 
 	static UserResponse of(User user) {
-		return new UserResponse(user.id(), user.email(), user.role());
+		return new UserResponse(user.getId(), user.getEmail(), user.getRole());
 	}
 
 }

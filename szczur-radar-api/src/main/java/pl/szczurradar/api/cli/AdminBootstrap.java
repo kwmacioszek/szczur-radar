@@ -9,6 +9,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import pl.szczurradar.api.auth.Passwords;
 import pl.szczurradar.api.user.Role;
+import pl.szczurradar.api.user.User;
 import pl.szczurradar.api.user.UserRepository;
 
 /**
@@ -77,7 +78,7 @@ public class AdminBootstrap {
 				return REFUSED;
 			}
 
-			users.insert(email, passwordEncoder.encode(password), Role.ADMIN);
+			users.save(new User(email, passwordEncoder.encode(password), Role.ADMIN));
 			return CREATED;
 		});
 		if (code == CREATED) {

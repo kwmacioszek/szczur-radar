@@ -40,10 +40,10 @@ class AccountDetailsService implements UserDetailsService {
 	public UserDetails loadUserByUsername(String email) {
 		User user = users.findByEmail(Emails.normalize(email))
 				.orElseThrow(() -> new UsernameNotFoundException("unknown account"));
-		String hash = user.passwordHash() != null ? user.passwordHash() : unusableHash;
-		return org.springframework.security.core.userdetails.User.withUsername(user.id().toString())
+		String hash = user.getPasswordHash() != null ? user.getPasswordHash() : unusableHash;
+		return org.springframework.security.core.userdetails.User.withUsername(user.getId().toString())
 				.password(hash)
-				.roles(user.role().name())
+				.roles(user.getRole().name())
 				.build();
 	}
 
