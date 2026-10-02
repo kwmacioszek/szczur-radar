@@ -47,7 +47,10 @@ class HealthIT {
 	@Nested
 	@SpringBootTest(properties = {
 			"spring.datasource.url=jdbc:postgresql://127.0.0.1:1/unavailable",
-			"spring.datasource.hikari.connection-timeout=250" })
+			"spring.datasource.hikari.connection-timeout=250",
+			// The refused connection is the point of these tests; keep its stack trace out of the log.
+			"logging.level.org.springframework.jdbc.support.SQLErrorCodesFactory=ERROR",
+			"logging.level.com.zaxxer.hikari=ERROR" })
 	@AutoConfigureMockMvc
 	class WithoutDatabase {
 

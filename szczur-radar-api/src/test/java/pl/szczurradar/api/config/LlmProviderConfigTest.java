@@ -151,6 +151,8 @@ class LlmProviderConfigTest {
 				apiKey == null ? "" : apiKey).entrySet()) {
 			args.add("--" + setting.getKey() + "=" + setting.getValue());
 		}
+		// The negative cases fail the start on purpose; don't let Spring log each one as a failure.
+		args.add("--logging.level.org.springframework.boot.SpringApplication=OFF");
 		SpringApplication application = new SpringApplication(ConfigurationOnly.class);
 		application.setWebApplicationType(WebApplicationType.NONE);
 		try (ConfigurableApplicationContext context = application.run(args.toArray(String[]::new))) {
