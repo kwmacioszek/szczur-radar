@@ -495,10 +495,10 @@ Przełączenie produkcji (wykonuje operator, w tej kolejności):
 
 #### Automated
 
-- [x] 2.1 `./mvnw -B verify` przechodzi, w tym `AuthIT`, `AuthorizationCompletenessIT`, `LoginRateLimiterTest`, `OriginGuardFilterTest`, `PasswordsTest`
-- [x] 2.2 `AuthIT` potwierdza atrybuty ciasteczka `HttpOnly; Secure; SameSite=Strict; Path=/api; Max-Age=2592000`
-- [x] 2.3 `AuthorizationCompletenessIT` sprawdza co najmniej jedną chronioną trasę (`GET /api/auth/me`) i nie znajduje niechronionych
-- [ ] 2.4 Job `backend` w CI jest zielony
+- [x] 2.1 `./mvnw -B verify` przechodzi, w tym `AuthIT`, `AuthorizationCompletenessIT`, `LoginRateLimiterTest`, `OriginGuardFilterTest`, `PasswordsTest` — e0c455c
+- [x] 2.2 `AuthIT` potwierdza atrybuty ciasteczka `HttpOnly; Secure; SameSite=Strict; Path=/api; Max-Age=2592000` — e0c455c
+- [x] 2.3 `AuthorizationCompletenessIT` sprawdza co najmniej jedną chronioną trasę (`GET /api/auth/me`) i nie znajduje niechronionych — e0c455c
+- [x] 2.4 Job `backend` w CI jest zielony — e0c455c
 
 #### Manual
 
@@ -510,7 +510,7 @@ Przełączenie produkcji (wykonuje operator, w tej kolejności):
 
 #### Automated
 
-- [ ] 3.1 `./mvnw -B verify` przechodzi, w tym `CreateAdminCommandIT` i `AgentSkeletonIT`
+- [x] 3.1 `./mvnw -B verify` przechodzi, w tym `CreateAdminCommandIT` i `AgentSkeletonIT`
 - [ ] 3.2 `AgentSkeletonIT` przechodzi w CI bez żadnych sekretów LLM
 - [ ] 3.3 Job `backend` w CI jest zielony
 

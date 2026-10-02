@@ -30,7 +30,7 @@ public final class CommandLine {
 
 	/** The commands shipped with the jar. */
 	public static CommandLine standard() {
-		return new CommandLine(List.of(new MigrateCommand()), System.err);
+		return new CommandLine(List.of(new MigrateCommand(), new CreateAdminCommand()), System.err);
 	}
 
 	/**

@@ -1,5 +1,32 @@
 # szczur-radar-api
 
+> **F-03 w toku:** backend jest już w Javie (Spring Boot 4, Java 25, Maven). Reszta tego pliku opisuje jeszcze Pythona i zostanie przepisana w fazie 4 (`context/changes/java-api-rewrite/plan.md`). Aktualna jest sekcja niżej.
+
+## Dostawca LLM (Embabel)
+
+Każde uruchomienie kontekstu Springa — serwer, komendy `migrate` i `create-admin` oraz testy `*IT` — startuje platformę Embabel z **jednym** dostawcą LLM. Wybierają go trzy ustawienia środowiska, zmieniane zawsze razem:
+
+| Zmienna | Znaczenie |
+| --- | --- |
+| `LLM_API_PROVIDER` | `gemini` (Google AI Studio, natywny Google GenAI), `deepseek` (DeepSeek bezpośrednio) albo `openrouter` (API zgodne z OpenAI) |
+| `LLM_MODEL` | dokładne ID modelu tego dostawcy |
+| `LLM_API_KEY` | prawdziwy klucz tego dostawcy — sekret: nigdy w repo, logach ani argumentach |
+
+```bash
+# DeepSeek bezpośrednio (modele w Embabel: deepseek-v4-flash, deepseek-v4-pro, deepseek-chat, deepseek-reasoner)
+export LLM_API_PROVIDER=deepseek LLM_MODEL=deepseek-v4-flash LLM_API_KEY=…
+# Gemini przez Google AI Studio (bez Vertex AI)
+export LLM_API_PROVIDER=gemini LLM_MODEL=gemini-3.1-flash-lite LLM_API_KEY=…
+# OpenRouter: LLM_MODEL to dokładne ID z katalogu OpenRouter (np. dla Luny), nie sama nazwa
+export LLM_API_PROVIDER=openrouter LLM_MODEL=<id-z-katalogu-openrouter> LLM_API_KEY=…
+```
+
+- Mapowanie na właściwości Embabel: `src/main/resources/application-<dostawca>.properties` (profil włączany przez `LLM_API_PROVIDER`). Pozostali dostawcy są wyłączeni, więc ich klucze nie są potrzebne. OpenRouter dostaje `base-url=https://openrouter.ai/api/v1`; SDK OpenAI dokleja `chat/completions`.
+- Brak lub błąd którejkolwiek z trzech wartości przerywa start z komunikatem (bez wartości klucza) — `config/LlmProviderProperties`. Start i szkieletowy agent (`agents/SkeletonAgent`) **nie wywołują LLM**, więc start nie sprawdza ważności klucza u dostawcy.
+- Lokalnie trzymaj ustawienia poza repo, np. w `~/.config/szczur-radar/llm.env` (`chmod 600`) i `source` przed `./mvnw verify` lub `java -jar`.
+- CI (job `backend`): `LLM_API_PROVIDER` i `LLM_MODEL` jako GitHub Actions *variables*, `LLM_API_KEY` jako *secret*. Railway: te same trzy zmienne w serwisie `szczur-radar-api` każdego środowiska, ustawione **przed** deployem (`.railway/railway.ts` deklaruje je przez `preserve()`, które niczego nie tworzy). Klucz produkcyjny nie trafia do CI ani PR env.
+- Przy kodzie równoległym podawaj własny executor: Java 25 widzi limit CPU kontenera (`availableProcessors()` może być 1); rdzeń Embabel ma własny executor.
+
 Backend Szczur Radar: FastAPI + SQLAlchemy 2 (async, psycopg 3) + Alembic, zależności zarządzane przez `uv` (nigdy `pip`). Wszystkie polecenia poniżej uruchamiaj z katalogu `szczur-radar-api/`.
 
 ```bash

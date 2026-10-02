@@ -91,6 +91,13 @@ export default defineRailway(() => {
       // zapieczętowaną wartość; bez preserve() plan na main proponowałby
       // `Delete variable JWT_SECRET`, które bramka CI odrzuca. Nigdy wartość tutaj.
       JWT_SECRET: preserve(),
+      // LLM provider for Embabel (szczur-radar-api/README.md): set by the operator
+      // in every environment BEFORE the API deploys — preserve() only keeps an
+      // existing value, it never creates one. The key is a secret of that
+      // environment (production's is never copied to PR envs). Never values here.
+      LLM_API_PROVIDER: preserve(),
+      LLM_MODEL: preserve(),
+      LLM_API_KEY: preserve(),
     },
   });
 

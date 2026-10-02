@@ -18,7 +18,20 @@
 		<java.version>25</java.version>
 		<!-- Not managed by the Spring Boot BOM; required by Argon2PasswordEncoder. -->
 		<bouncycastle.version>1.86</bouncycastle.version>
+		<embabel-agent.version>1.5.2</embabel-agent.version>
 	</properties>
+
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>com.embabel.agent</groupId>
+				<artifactId>embabel-agent-dependencies</artifactId>
+				<version>${embabel-agent.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
 
 	<dependencies>
 		<dependency>
@@ -60,6 +73,26 @@
 			<groupId>org.bouncycastle</groupId>
 			<artifactId>bcprov-jdk18on</artifactId>
 			<version>${bouncycastle.version}</version>
+		</dependency>
+		<!-- Embabel agent platform (F-02 builds on it) with the three supported LLM providers; one is
+		     active per run, chosen by LLM_API_PROVIDER (config/LlmProviderProperties). -->
+		<dependency>
+			<groupId>com.embabel.agent</groupId>
+			<artifactId>embabel-agent-starter</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>com.embabel.agent</groupId>
+			<artifactId>embabel-agent-starter-google-genai</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>com.embabel.agent</groupId>
+			<artifactId>embabel-agent-starter-deepseek</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>com.embabel.agent</groupId>
+			<artifactId>embabel-agent-starter-openai-custom</artifactId>
+			<!-- Not in the embabel-agent-dependencies BOM. -->
+			<version>${embabel-agent.version}</version>
 		</dependency>
 
 		<!-- Test: JUnit, AssertJ, Mockito and MockMvcTester come with the webmvc test starter. -->

@@ -23,10 +23,32 @@ jobs:
           java-version: "25"
           cache: maven
           cache-dependency-path: szczur-radar-api/pom.xml
+      # Every Spring context (server, commands, *IT) starts Embabel with the one
+      # LLM provider chosen by these three settings (szczur-radar-api/README.md).
+      # Provider and model are repository variables, the key a secret; nothing
+      # calls the LLM in CI. Missing settings fail the job, never skip tests.
+      - name: Check LLM configuration
+        env:
+          LLM_API_PROVIDER: ${{ vars.LLM_API_PROVIDER }}
+          LLM_MODEL: ${{ vars.LLM_MODEL }}
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+        run: |
+          missing=""
+          [ -n "$LLM_API_PROVIDER" ] || missing="$missing LLM_API_PROVIDER (variable)"
+          [ -n "$LLM_MODEL" ] || missing="$missing LLM_MODEL (variable)"
+          [ -n "$LLM_API_KEY" ] || missing="$missing LLM_API_KEY (secret)"
+          if [ -n "$missing" ]; then
+            echo "::error::GitHub Actions settings missing:$missing"
+            exit 1
+          fi
       # Unit tests (*Test, Surefire) + integration tests (*IT, Failsafe) against
       # a Testcontainers PostgreSQL 18 (Docker is preinstalled on ubuntu-latest).
       # Without Docker the integration tests fail rather than skip.
       - name: Build and test
+        env:
+          LLM_API_PROVIDER: ${{ vars.LLM_API_PROVIDER }}
+          LLM_MODEL: ${{ vars.LLM_MODEL }}
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
         run: ./mvnw -B verify
 
   web-unit:
