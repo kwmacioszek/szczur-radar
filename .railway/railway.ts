@@ -84,6 +84,9 @@ export default defineRailway(() => {
       PGUSER: db.env.PGUSER,
       PGPASSWORD: db.env.PGPASSWORD,
       PGDATABASE: db.env.PGDATABASE,
+      // Nieużywane od F-03 (Java czyta PG*). Zostaje zadeklarowane, bo usunięcie
+      // zmiennej to `variable.delete`, które bramka CI odrzuca jako destrukcyjne.
+      DATABASE_URL: db.env.DATABASE_URL,
     },
   });
 

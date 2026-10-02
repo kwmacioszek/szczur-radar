@@ -481,8 +481,8 @@ Przełączenie produkcji (wykonuje operator, w tej kolejności):
 
 #### Automated
 
-- [x] 1.1 `cd szczur-radar-api && ./mvnw -B verify` przechodzi (unit + IT z Testcontainers)
-- [x] 1.2 `git ls-files szczur-radar-api` nie zawiera plików Pythona ani `uv.lock`
+- [x] 1.1 `cd szczur-radar-api && ./mvnw -B verify` przechodzi (unit + IT z Testcontainers) — 75fe622
+- [x] 1.2 `git ls-files szczur-radar-api` nie zawiera plików Pythona ani `uv.lock` — 75fe622
 - [ ] 1.3 Job `backend` w CI jest zielony na PR
 - [ ] 1.4 `railway config plan` dla PR env przechodzi bramkę CI (job `railway-config` zielony)
 
