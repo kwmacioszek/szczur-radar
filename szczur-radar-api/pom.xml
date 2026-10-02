@@ -16,6 +16,8 @@
 
 	<properties>
 		<java.version>25</java.version>
+		<!-- Not managed by the Spring Boot BOM; required by Argon2PasswordEncoder. -->
+		<bouncycastle.version>1.86</bouncycastle.version>
 	</properties>
 
 	<dependencies>
@@ -44,6 +46,21 @@
 			<artifactId>postgresql</artifactId>
 			<scope>runtime</scope>
 		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-security</artifactId>
+		</dependency>
+		<!-- Spring Session JDBC with Boot's spring-boot-session module: without that module Boot 4
+		     ignores the session cookie settings (spring-session issue #3622). -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-session-jdbc</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.bouncycastle</groupId>
+			<artifactId>bcprov-jdk18on</artifactId>
+			<version>${bouncycastle.version}</version>
+		</dependency>
 
 		<!-- Test: JUnit, AssertJ, Mockito and MockMvcTester come with the webmvc test starter. -->
 		<dependency>
@@ -54,6 +71,11 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-webmvc-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-security-test</artifactId>
 			<scope>test</scope>
 		</dependency>
 		<dependency>
