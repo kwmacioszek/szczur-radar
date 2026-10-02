@@ -502,22 +502,22 @@ Przełączenie produkcji (wykonuje operator, w tej kolejności):
 
 #### Manual
 
-- [ ] 2.5 W PR env (po utworzeniu konta testowego przez SQL lub fazę 3): logowanie w SPA, odświeżenie strony zachowuje sesję, głęboki link bez sesji prowadzi na ekran logowania, wylogowanie działa
-- [ ] 2.6 `curl` z obcym `Origin` na `POST /api/auth/login` w PR env → 403 `cross_origin`; 6 złych prób na ten sam e-mail → 429 z `Retry-After`
-- [ ] 2.7 Sesja przeżywa uśpienie/restart API w PR env (zalogowany użytkownik nadal zalogowany po ponownym wybudzeniu)
+- [x] 2.5 W PR env (po utworzeniu konta testowego przez SQL lub fazę 3): logowanie w SPA, odświeżenie strony zachowuje sesję, głęboki link bez sesji prowadzi na ekran logowania, wylogowanie działa — e0c455c
+- [x] 2.6 `curl` z obcym `Origin` na `POST /api/auth/login` w PR env → 403 `cross_origin`; 6 złych prób na ten sam e-mail → 429 z `Retry-After` — e0c455c
+- [x] 2.7 Sesja przeżywa uśpienie/restart API w PR env (zalogowany użytkownik nadal zalogowany po ponownym wybudzeniu) — e0c455c
 
 ### Phase 3: CLI `create-admin` i szkielet Embabel
 
 #### Automated
 
-- [x] 3.1 `./mvnw -B verify` przechodzi, w tym `CreateAdminCommandIT` i `AgentSkeletonIT`
-- [ ] 3.2 `AgentSkeletonIT` przechodzi w CI bez żadnych sekretów LLM
-- [ ] 3.3 Job `backend` w CI jest zielony
+- [x] 3.1 `./mvnw -B verify` przechodzi, w tym `CreateAdminCommandIT` i `AgentSkeletonIT` — ecdbd42
+- [x] 3.2 `AgentSkeletonIT` przechodzi w CI bez żadnych sekretów LLM — ecdbd42
+- [x] 3.3 Job `backend` w CI jest zielony — ecdbd42
 
 #### Manual
 
-- [ ] 3.4 W PR env `railway ssh -s szczur-radar-api -e <pr-env> -- java -jar target/szczur-radar-api.jar create-admin --email …` pyta o hasło bez echa, tworzy admina, a admin loguje się w SPA PR env
-- [ ] 3.5 Logi startu API w PR env pokazują rejestrację platformy Embabel bez błędów o brakującym LLM
+- [x] 3.4 W PR env `railway ssh -s szczur-radar-api -e <pr-env> -- java -jar target/szczur-radar-api.jar create-admin --email …` pyta o hasło bez echa, tworzy admina, a admin loguje się w SPA PR env — ecdbd42
+- [x] 3.5 Logi startu API w PR env pokazują rejestrację platformy Embabel bez błędów o brakującym LLM — ecdbd42
 
 ### Phase 4: Dokumentacja, weryfikacja w PR env i przełączenie produkcji
 
