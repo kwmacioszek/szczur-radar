@@ -5,16 +5,18 @@ recommended_platform: Railway
 runner_up: Render
 context_type: mvp
 tech_stack:
-  language: Python 3.13 (backend) + TypeScript (frontend)
-  framework: FastAPI + LangGraph (szczur-radar-api) / Vue 3 SPA built with Vite (szczur-radar-web)
-  runtime: Python 3.13 via uv (container) + static SPA; PostgreSQL
+  language: Java 25 (backend, since F-03 — was Python 3.13) + TypeScript (frontend)
+  framework: Spring Boot 4 + Embabel (szczur-radar-api) / Vue 3 SPA built with Vite (szczur-radar-web)
+  runtime: Java 25 via Railpack (RAILPACK_JDK_VERSION=25, ./mvnw build) + static SPA; PostgreSQL
 ---
+
+> **Update 2026-10-01 (F-03, `java-api-rewrite`):** the backend is now Spring Boot 4 on Java 25. Railpack detects Java from `pom.xml`, builds with `./mvnw` (tests skipped; CI runs them) and uses the JDK from `RAILPACK_JDK_VERSION` (`25`, declared in `.railway/railway.ts`; Railpack's default is 21). Start `java $JAVA_OPTS -jar target/szczur-radar-api.jar`, pre-deploy `java -jar target/szczur-radar-api.jar migrate` (Flyway). The JVM binds the wildcard address dual-stack, so the IPv4 healthcheck and the IPv6 private proxy both reach it. The platform decision below is unchanged; Python/uv specifics in the original research are historical where this note differs.
 
 ## Recommendation
 
 **Deploy on Railway.**
 
-Railway runs both modules from one repo as separate services: `szczur-radar-api` (FastAPI + uv, auto-detected by Railpack), `szczur-radar-web` (Vite SPA served with SPA fallback), a cron service for the daily LangGraph pipeline, and Postgres in the same project and the same EU region (Amsterdam). It passes the agent-accessible docs (`llms.txt`), stable deploy API and MCP (GA) criteria. In the scoring, **Render came first** (4 Pass + 1 Partial vs Railway's 3 Pass + 2 Partial) mainly because its Postgres is genuinely managed, with point-in-time restore on Hobby. The user **consciously overrode** that after the anti-bias check, preferring Railway's build DX (Railpack auto-detection) and built-in PR environments. The price of that choice is that Railway's Postgres is officially "unmanaged" and its backups are opt-in and still under development. That weakness is the first item in the risk register, with a mandatory mitigation.
+Railway runs both modules from one repo as separate services: `szczur-radar-api` (since F-03 a Spring Boot jar built by Railpack from `pom.xml`; originally FastAPI + uv), `szczur-radar-web` (Vite SPA served with SPA fallback), a cron service for the daily LangGraph pipeline, and Postgres in the same project and the same EU region (Amsterdam). It passes the agent-accessible docs (`llms.txt`), stable deploy API and MCP (GA) criteria. In the scoring, **Render came first** (4 Pass + 1 Partial vs Railway's 3 Pass + 2 Partial) mainly because its Postgres is genuinely managed, with point-in-time restore on Hobby. The user **consciously overrode** that after the anti-bias check, preferring Railway's build DX (Railpack auto-detection) and built-in PR environments. The price of that choice is that Railway's Postgres is officially "unmanaged" and its backups are opt-in and still under development. That weakness is the first item in the risk register, with a mandatory mitigation.
 
 ## Platform Comparison
 
@@ -55,7 +57,7 @@ Hard filters: the backend needs a Python runtime able to run FastAPI + async SQL
 
 #### 1. Railway (Recommended)
 
-The whole topology (api, web, cron, Postgres) in one project, one region and one bill, with the least build configuration: Railpack reads `szczur-radar-api/.python-version` (3.13) and `uv.lock`, and serves the Vite build without extra setup. PR environments on every plan and a GA MCP server suit agent-driven work. It was chosen by the user over the scoring leader because of build DX and PR environments.
+The whole topology (api, web, cron, Postgres) in one project, one region and one bill, with the least build configuration: Railpack builds the API's Maven project (JDK from `RAILPACK_JDK_VERSION`; originally `.python-version` + `uv.lock`), and serves the Vite build without extra setup. PR environments on every plan and a GA MCP server suit agent-driven work. It was chosen by the user over the scoring leader because of build DX and PR environments.
 
 #### 2. Render
 
@@ -81,10 +83,10 @@ The team put api, web, cron and Postgres on Railway on the Hobby plan, and every
 
 ### Unknown Unknowns
 
-- Railpack reads the Python version from `.python-version`, not `requires-python`. The repo already has `3.13` in `szczur-radar-api/.python-version`; removing that file silently changes the runtime.
+- Railpack picks the JDK from `RAILPACK_JDK_VERSION`, defaulting to 21. The API needs 25 (`<java.version>25</java.version>` in `pom.xml`); dropping the variable from `.railway/railway.ts` silently builds with an older JDK and fails. (Before F-03 the same trap was `szczur-radar-api/.python-version`.)
 - `VITE_*` variables are compiled into the frontend build, so changing the API URL requires a rebuild of `szczur-radar-web`, not a restart.
 - The frontend is not a free CDN: Railpack serves `dist/` with Caddy in a usage-billed container.
-- Private networking is IPv6. Service-to-service connections require listening on `::` (Railway's FastAPI guide uses Hypercorn bound to `::`).
+- Private networking is IPv6 (environments created after 2025-10-16 also resolve IPv4). Service-to-service connections require a dual-stack listener; the JVM's default wildcard bind is dual-stack (before F-03 the Python API needed a dual-stack server explicitly).
 - Nixpacks is deprecated. Tutorials and config based on `nixpacks.toml` no longer apply; the builder is Railpack.
 - Long-lived RAW payloads grow independently from the query workload. Railway Hobby currently exposes 5 GB of Volume Storage for a service, while Buckets allow up to 1 TB combined storage on Hobby; storing every source JSON inline with Postgres can therefore make the volume limit arrive years earlier than the actual relational workload requires.
 
@@ -92,7 +94,7 @@ The team put api, web, cron and Postgres on Railway on the Hobby plan, and every
 
 - **Preview deploys**: Railway PR Environments enabled in project settings, in "Focused" mode (only services whose Watch Paths changed deploy). Bot PRs stay off. Before enabling, confirm the PR environment gets its own database, not a connection to production.
 - **Secrets**: Railway variables per service. The LLM key and shared settings are a shared variable used by `szczur-radar-api` and the cron service. `DATABASE_URL` is a reference variable to the Postgres service. GitHub holds only a project-scoped `RAILWAY_TOKEN` (not the account-wide `RAILWAY_API_TOKEN`). Rotation: change the variable in Railway, then redeploy the api and cron services.
-- **Rollback**: Railway dashboard → service → Deployments → Rollback on the previous deployment (the CLI has no rollback command). Rolling back code does not undo Alembic migrations: every migration must have a tested `downgrade`, or be fixed forward with a new migration.
+- **Rollback**: Railway dashboard → service → Deployments → Rollback on the previous deployment (the CLI has no rollback command). Rolling back code does not undo migrations: Flyway migrations are fix-forward (a new migration repairs a bad one; Flyway Community has no undo), and PITR is the last resort for data.
 - **Approval**: merging to `main` is the human gate for production (auto-deploy on merge). Human-only: deleting or restoring the database/volume, enabling or changing backups, rotating the LLM key, changing plan, region or domain. An agent may do, unattended: read logs and deployment lists, `railway up` to non-production environments, and read-only operations via MCP.
 - **Logs**: `railway logs -n 200 --service szczur-radar-api` (likewise for web and the cron service), `railway deployment list --json`, plus the Railway MCP server (GA, `railway mcp local` or `mcp.railway.com`) for structured reads. Log retention: 7 days on Hobby, 30 days on Pro.
 
@@ -101,14 +103,15 @@ The team put api, web, cron and Postgres on Railway on the Hobby plan, and every
 | Risk | Source | Likelihood | Impact | Mitigation |
 |---|---|---|---|---|
 | No usable backups for the "unmanaged" Postgres (opt-in, under development, possibly Pro-only) | Devil's advocate | H | H | Before the first production data: check whether backups and PITR are available on the chosen plan; if not, move to Pro. Enable backups and do one test restore. If neither works, fall back to Render (managed Postgres with PITR). |
-| Cron pipeline writes to a schema from an older or newer migration | Pre-mortem | M | H | Migrations run as a pre-deploy step of the api service. The cron service deploys from the same commit (same Watch Paths). The pipeline checks the Alembic revision at start and aborts on mismatch. |
+| Cron pipeline writes to a schema from an older or newer migration | Pre-mortem | M | H | Migrations run as a pre-deploy step of the api service. The cron service deploys from the same commit (same Watch Paths). The pipeline checks the Flyway schema version at start and aborts on mismatch. |
 | Manual pipeline run (FR-022) impossible without the Railway API | Devil's advocate | M | L | FR-022 is nice-to-have. When implemented, trigger through the Railway public API with a project-scoped token held only in backend variables, or as an internal job queued by the API. |
-| Unattended rollback impossible (dashboard-only) | Devil's advocate | M | M | Rollback is a documented human step in the operational story. Migrations always have a `downgrade`. |
+| Unattended rollback impossible (dashboard-only) | Devil's advocate | M | M | Rollback is a documented human step in the operational story. Migrations are fix-forward (Flyway); PITR covers data. |
 | Service config not applied (IaC field mismatch or wrong root directory) | Devil's advocate | M | M | Config is declared in `.railway/railway.ts` (Infrastructure as Code, replaces `railway.toml`). Run `railway config plan` and confirm it adds exactly the intended services and deletes nothing before `railway config apply`; after the first deploy, verify the api start command came from the file. |
-| First api deploy fails on the default `uvicorn main:app` | Devil's advocate | H | L | Explicit start command declared in `.railway/railway.ts` (`uv run uvicorn main:app --host :: --port $PORT`); the real FastAPI app now exists (`main.py` exposes `app`). |
+| First api deploy fails on Railpack's default start command | Devil's advocate | H | L | Explicit start and pre-deploy commands declared in `.railway/railway.ts` (`java $JAVA_OPTS -jar target/szczur-radar-api.jar`, `… migrate`); the jar has a fixed name (`<finalName>`). |
 | API URL baked into the frontend build | Unknown unknowns | M | L | Avoided: the SPA calls `/api/*` on its own origin (same-origin Caddy proxy), so there is no build-time `VITE_API_URL` and no cross-origin CORS to maintain. |
-| Service-to-service over IPv6 private network | Unknown unknowns | L | M | web→api goes over the private network via the Caddy `/api/*` reverse proxy, so the API binds `::` (`uvicorn --host ::`) and stays private (no public domain). For cron→Postgres, verify the driver connects to the IPv6 host. |
-| Python version change if `.python-version` is removed | Unknown unknowns | L | M | Keep `szczur-radar-api/.python-version` in the repo; optionally also `RAILPACK_PYTHON_VERSION=3.13`. |
+| Service-to-service over IPv6 private network | Unknown unknowns | L | M | web→api goes over the private network via the Caddy `/api/*` reverse proxy, so the API listens dual-stack (JVM default) and stays private (no public domain). For cron→Postgres, verify the driver connects to the IPv6 host. |
+| JDK version change if `RAILPACK_JDK_VERSION` is removed | Unknown unknowns | L | M | Keep `RAILPACK_JDK_VERSION: "25"` on `szczur-radar-api` in `.railway/railway.ts`. |
+| JVM cold start after `sleepApplication` (first request waits for Spring + Embabel) | F-03 | H | L | Caddy retries the upstream for up to 30 s while the API wakes (no 502); measured in `context/deployment/deploy-plan.md`. If too slow: AOT cache/CDS (Java 25) or disable sleep for the API — a separate decision. |
 | RAW payload growth consumes the Postgres volume even though RAW is rarely queried | Research finding | M | M | Keep RAW behind a separate storage boundary, preserve it losslessly, and make compression transparent. Do not store full RAW JSON inline in the primary post row. Before production ingest, decide whether the initial backend is a separate DB representation or Railway Bucket; Bucket is the preferred candidate if it avoids consuming the 5 GB Hobby Postgres volume. Monitor RAW bytes and relational DB bytes separately. |
 | Cost above the Hobby estimate (~$5–15/mo; derived, not quoted) | Research finding | M | L | Set a usage limit in Railway; the Pro plan (~$20/mo) is acceptable given the DX preference and possibly required for backups. |
 | Only one EU region (Amsterdam) | Research finding | L | L | Acceptable (single region, small scale); all services and Postgres in the same region. |
@@ -123,9 +126,9 @@ Railway documents Hobby Volume Storage at 5 GB and volume storage billing at $0.
 
 1. Install the Railway CLI (see https://docs.railway.com/cli), run `railway login`, create a project with the region set to EU West (Amsterdam), and add a Postgres service. **Right away**, check the availability of backups/PITR on your plan and enable them (the first item in the risk register).
 2. Add two services from the GitHub repo:
-   - `szczur-radar-api`: Root Directory `szczur-radar-api`, Watch Paths `/szczur-radar-api/**`, config `/szczur-radar-api/railway.toml`. Railpack picks up `.python-version` (3.13) and `uv.lock`.
+   - `szczur-radar-api`: Root Directory `szczur-radar-api`, Watch Paths `/szczur-radar-api/**`, config in `.railway/railway.ts`. Railpack detects Java from `pom.xml` and uses JDK 25 (`RAILPACK_JDK_VERSION`).
    - `szczur-radar-web`: Root Directory `szczur-radar-web`, Watch Paths `/szczur-radar-web/**`. Served by the committed multi-stage Dockerfile (Caddy): SPA fallback plus an `/api/*` reverse proxy to the private API — not Railpack static serving.
-3. In `szczur-radar-api/railway.toml`, set an explicit start command for the FastAPI app (e.g. `uv run uvicorn <module>:app --host 0.0.0.0 --port $PORT`). The current `main.py` is only a `uv init` stub, so this step makes sense once the first app module exists. Set `DATABASE_URL` as a reference variable to Postgres.
+3. Explicit start and pre-deploy commands for the API jar are declared in `.railway/railway.ts`; the API reads the Postgres reference variables `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, `PGPASSWORD` and the operator-set `LLM_API_PROVIDER`, `LLM_MODEL`, `LLM_API_KEY`.
 4. In `szczur-radar-web`, set `VITE_API_URL` to the public API domain (generate one in the api service — services have no public domain by default), and on the API side enable CORS for the frontend domain.
 5. Once the pipeline exists: add a cron service with Root Directory `szczur-radar-api`, a daily schedule (UTC) and a start command that runs the pipeline and exits, sharing variables with the api. For CI: a project-scoped `RAILWAY_TOKEN` in GitHub Secrets, and either Railway's native GitHub autodeploy **or** `railway up --service <name> --detach` in Actions (not both, to avoid double deploys).
 

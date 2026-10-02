@@ -1,11 +1,17 @@
-szczur-radar-api/.venv/
 szczur-radar-web/node_modules/
 .DS_Store
 
-# Python
-__pycache__/
-*.py[cod]
-.pytest_cache/
+# Java / Maven (szczur-radar-api)
+szczur-radar-api/target/
+szczur-radar-api/.mvn/wrapper/maven-wrapper.jar
+
+# Java IDEs
+.idea/
+*.iml
+.classpath
+.project
+.settings/
+.factorypath
 
 # Railway IaC deps
 node_modules/

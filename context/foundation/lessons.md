@@ -50,3 +50,24 @@
 - **Problem**: W `admin-bootstrap-and-login` użytkownik zapytał, czemu roadmapa nie została poprawiona zgodnie z regułą w AGENTS.md. Agent zamiast odpowiedzieć sam uruchomił `/10x-archive` wraz z propozycją przepięcia 25 SHA w Progress — działanie, o które nikt nie prosił; użytkownik musiał je anulować.
 - **Rule**: Gdy użytkownik zadaje pytanie, odpowiedz na nie i — jeśli trzeba — zaproponuj konkretne działanie, a potem zatrzymaj się i poczekaj na wyraźną prośbę. Nigdy nie uruchamiaj skilli, poleceń ani zmian w plikach na podstawie samego pytania.
 - **Applies to**: all
+
+## Przed zamrożeniem kontraktu LLM zrób tani pilot skryptem na żywych danych
+
+- **Context**: Każda zmiana, w której LLM ma oceniać lub ekstrahować treści według kontraktu (np. F-02 `assessment-contract-harness`) — zanim kontrakt zostanie uznany za „accepted”, a plan przejdzie przegląd.
+- **Problem**: W `assessment-contract-harness` kontrakt V1 i plan (12 przypadków × 3 × macierz 4 dostawców) powstały na czystych, wymyślonych przykładach i przeszły plan-review jako SOUND, zanim jakikolwiek model zobaczył prawdziwy post. Dopiero jednorazowe skrypty na żywych danych (Wykop #gielda, Reddit; koszt kilku dolarów; `context/changes/assessment-contract-harness/pilot/`) pokazały, że: realny materiał różni się od przykładów (slang, memy, obrazki, twarde spacje, markdown); „przechodzi walidację kontraktu” (95–98%) nie znaczy „jest poprawne” (zgodność treści ocen między modelami ~50% miarą ostrą, 74–78% łagodną); dobór miary zmienia wniosek; wzorzec oznaczony przez człowieka bez instrukcji mierzy różnicę definicji, nie jakość modelu; ograniczenia dostawców (odrzucane słowa kluczowe schematu, gubione pola wymagane, wpływ paczkowania) wychodzą tylko empirycznie.
+- **Rule**: Przy integracji LLM z produktem najpierw pobierz próbkę prawdziwych danych i przepuść ją jednorazowym skryptem przez 1–2 tanie modele — zanim zamrozisz kontrakt, zdefiniujesz „przechodzi” i zaplanujesz harness. Mierz zgodność z kontraktem ORAZ zgodność treści (między modelami, z powtórką i z człowiekiem oznaczającym według spisanej instrukcji), sprawdzaj więcej niż jedną miarę, a wyniki i skrypty zapisuj w folderze zmiany jako dowód dla `/10x-frame` i `/10x-plan`. Nie opieraj kryteriów akceptacji na wymyślonych przykładach ani na samej walidacji schematu.
+- **Applies to**: research, frame, plan, plan-review
+
+## Proaktywnie szukaj okazji do abstrakcji i porządkowania kodu, póki jest mały
+
+- **Context**: Każda faza lub zmiana dokładająca kod — backend i frontend (szczególnie nowe moduły, integracje z zewnętrznymi usługami jak LLM, źródła danych, pipeline, nowe widoki i warstwy komunikacji z API), zwłaszcza na wczesnym etapie, gdy kod jest jeszcze mały.
+- **Problem**: W `assessment-contract-harness` (fazy 1–3) kod był dokładany fazami zgodnie z planem, a wspólna infrastruktura LLM (port dostawcy, ponowienia, adaptery) wylądowała w środku jednego agenta (`app/assessment/providers`) i importowała jego kontrakt. „Rozlanie” zauważył dopiero użytkownik, porównując z innym projektem; im później, tym droższe przenosiny.
+- **Rule**: Proaktywnie, przy każdej fazie — nie tylko na prośbę — szukaj okazji do abstrakcji i porządkowania: czy nowy kod nie miesza warstw (infrastruktura vs domena/agent), czy coś generycznego nie jest zaszyte w konkretnym module, czy nie powstaje duplikacja. Oceniaj też, czy obecnie napisany kod wytrzyma kolejne fazy i kroki roadmapy, czy już teraz potrzebuje abstrakcji, żeby dalej trzymać się wzorców projektowych i utrzymać kod w ryzach. Jeśli tak, zaproponuj porządkowanie wcześnie, póki kod jest mały: osobny commit refactor bez zmian zachowania, potwierdzony testami. Proponuj, nie przebudowuj bez zgody.
+- **Applies to**: plan, plan-review, implement, impl-review
+
+## Zamknięte zbiory wartości trzymaj w enumach, nie w wolnych stringach
+
+- **Context**: Kod backendu i frontendu, w którym pojawia się zamknięty zbiór wartości: nazwy komend CLI, role, typy, kody błędów, dostawcy, statusy — szczególnie interfejsy i rejestry, które każda implementacja wypełnia własnym literałem.
+- **Problem**: W `java-api-rewrite` interfejs `Command` miał metody `String name()` i `String description()`, więc każda komenda zwracała wolny literał (`"migrate"`, `"create-admin"`), a ta sama nazwa była powtórzona w komunikatach i testach. Literówka albo zmiana nazwy w jednym miejscu kompiluje się bez błędu i rozjeżdża się po cichu z resztą; kompilator i IDE nie pokazują pełnego zbioru wartości ani ich użyć.
+- **Rule**: Tam, gdzie zbiór wartości jest zamknięty (typy, role, kody, nazwy komend, dostawcy), trzymaj go w enumie, a nie jako wolne stringi w kodzie.
+- **Applies to**: implement, impl-review

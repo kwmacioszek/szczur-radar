@@ -1,6 +1,6 @@
 import AppKit
 
-// Snapshot of M-1 in context/foundation/roadmap.md, updated 2026-09-29.
+// Snapshot of M-1 in context/foundation/roadmap.md, updated 2026-10-02.
 // Run on macOS: swift tools/render_roadmap.swift
 // With the installed Command Line Tools SDK:
 // CLANG_MODULE_CACHE_PATH=/private/tmp/szczur-clang-cache \
@@ -24,6 +24,7 @@ let cyan = color(0x59D8F7)
 let violet = color(0xAE8CFF)
 let amber = color(0xF4BC62)
 let green = color(0x66D9AC)
+let coral = color(0xF2889B)
 
 func rect(_ x: CGFloat, _ y: CGFloat, _ w: CGFloat, _ h: CGFloat) -> NSRect {
     NSRect(x: x, y: CGFloat(height) - y - h, width: w, height: h)
@@ -79,6 +80,8 @@ struct Card {
     func bottom(_ fraction: CGFloat = 0.5) -> (CGFloat, CGFloat) {
         (x + Layout.cardWidth * fraction, y + Layout.cardHeight)
     }
+    var left: (CGFloat, CGFloat) { (x, y + Layout.cardHeight / 2) }
+    var right: (CGFloat, CGFloat) { (x + Layout.cardWidth, y + Layout.cardHeight / 2) }
 }
 
 // One grid controls every row, card and gap. Stage descriptions have their
@@ -133,8 +136,8 @@ txt("SZCZUR RADAR", 140, 94, 620, 26, .bold, cyan)
 txt("ROADMAP  /  MVP", 140, 130, 1800, 68, .heavy)
 txt("M-1  ·  Ocenione sygnały z Wykopu dla zaproszonych osób", 140, 224, 2300, 31, .medium, muted)
 rounded(2530, 105, 530, 130, 22, panel, stroke, line: 2)
-txt("9 ELEMENTÓW DO MVP", 2562, 129, 465, 29, .bold)
-txt("2 fundamenty  /  7 wycinków produktu", 2562, 180, 465, 23, .regular, muted)
+txt("10 ELEMENTÓW DO MVP", 2562, 129, 465, 29, .bold)
+txt("3 fundamenty  /  7 wycinków produktu", 2562, 180, 465, 23, .regular, muted)
 
 rounded(100, 300, 2960, 80, 18, color(0x101D30), stroke)
 txt("F = fundament", 126, 322, 260, 25, .bold, white)
@@ -158,10 +161,11 @@ for i in 0..<4 {
 
 let cards: [Card] = [
     Card(id:"F-01", title:"Gotowość produkcji", detail:"Koszty, odtworzenie backupu\ni ochrona sekretów", req:"—", status:"do startu", column:0, row:0, accent:amber),
-    Card(id:"F-02", title:"Kontrakt oceny LLM", detail:"Walidacja V1 i próby\nna rzeczywistym modelu", req:"—", status:"planowanie", column:1, row:0, accent:violet),
+    Card(id:"F-02", title:"Kontrakt oceny LLM", detail:"Kontrakt V2; walidator i pomiar\nw Javie z Embabel", req:"F-03", status:"w toku", column:1, row:0, accent:violet),
+    Card(id:"F-03", title:"Backend w Javie", detail:"Sesje JDBC, Flyway fix-forward\nEmbabel; to samo API dla SPA", req:"S-01", status:"w toku", column:2, row:0, accent:coral),
     Card(id:"S-01", title:"Admin i logowanie", detail:"CLI, sesja, ochrona tras\ni wylogowanie", req:"—", status:"wdrożone", column:3, row:0, accent:green),
     Card(id:"S-02", title:"Pierwsze ocenione posty", detail:"Wykop → ocena LLM → lista\nRęczne uruchomienie przebiegu", req:"S-01 + F-02", status:"propozycja", column:1, row:1, accent:cyan),
-    Card(id:"S-07", title:"Onboarding przez CLI", detail:"Konto, link aktywacyjny\ni odzyskiwanie dostępu", req:"S-01", status:"propozycja", column:3, row:1, accent:green),
+    Card(id:"S-07", title:"Onboarding przez CLI", detail:"Konto, link aktywacyjny\ni odzyskiwanie dostępu", req:"S-01 + F-03", status:"propozycja", column:3, row:1, accent:green),
     Card(id:"S-05", title:"Codzienny automat", detail:"Harmonogram i data\nostatniej udanej aktualizacji", req:"S-02 + F-01", status:"propozycja", column:0, row:2, accent:amber),
     Card(id:"S-03", title:"Szczegóły posta", detail:"Tezy, cytaty, surowe dane\ni link do oryginału", req:"S-02", status:"propozycja", column:1, row:2, accent:cyan),
     Card(id:"S-04", title:"Filtrowanie ocen", detail:"Spółka lub temat\ni stanowisko autora", req:"S-02", status:"propozycja", column:2, row:2, accent:cyan),
@@ -177,7 +181,11 @@ func connect(_ source: String, _ target: String, from: CGFloat = 0.5, to: CGFloa
 connect("F-01", "S-05")
 connect("F-02", "S-02")
 connect("S-01", "S-07")
-connect("S-01", "S-02", from:0.18, to:0.82)
+connect("F-03", "S-07", from:0.8, to:0.2)
+// The first row reads right to left: S-01 → F-03 → F-02. S-01 → S-02 is
+// transitive through that chain, so it is not drawn.
+arrow([byID["S-01"]!.left, byID["F-03"]!.right], green)
+arrow([byID["F-03"]!.left, byID["F-02"]!.right], coral)
 connect("S-02", "S-05", from:0.2, to:0.82)
 connect("S-02", "S-03")
 connect("S-02", "S-04", from:0.8, to:0.35)
@@ -194,10 +202,10 @@ for c in cards { card(c) }
 rounded(100, Layout.gateY, Layout.contentWidth, Layout.gateHeight, 28, color(0x193148), cyan, line: 3)
 rounded(100, Layout.gateY, 10, Layout.gateHeight, 5, cyan)
 txt("BRAMKA WYDANIA MVP", 142, Layout.gateY + 30, 2100, 45, .heavy)
-txt("Warunek wydania: ukończenie wszystkich 9 elementów — F-01, F-02 oraz S-01–S-07.", 145, Layout.gateY + 103, 2150, 29, .medium)
+txt("Warunek wydania: ukończenie wszystkich 10 elementów — F-01–F-03 oraz S-01–S-07.", 145, Layout.gateY + 103, 2150, 29, .medium)
 txt("Poniżej: odroczone kierunki rozwoju. Ich zakres i kolejność wymagają osobnego planu.", 145, Layout.gateY + 160, 2240, 25, .regular, muted)
 rounded(2530, Layout.gateY + 52, 485, 115, 20, color(0x0B2332), cyan.withAlphaComponent(0.65), line: 2)
-txt("1 / 9 UKOŃCZONYCH", 2562, Layout.gateY + 88, 430, 30, .bold, cyan)
+txt("1 / 10 UKOŃCZONYCH", 2562, Layout.gateY + 88, 430, 30, .bold, cyan)
 
 for x in Layout.futureColumns {
     let center = x + Layout.futureWidth / 2
@@ -218,7 +226,7 @@ let parked: [(label: String, first: Parked, second: Parked)] = [
      Parked(title:"Sortowanie i eksport", refs:"FR-008 / FR-011b / FR-031", description:"Porządkowanie listy po polach oceny, źródle i dacie oraz eksport CSV/JSON."),
      Parked(title:"Panel kont i e-mail", refs:"FR-016 / 017 / 019 / 020", description:"Zarządzanie kontami w aplikacji, e-mail z zaproszeniem i własna nazwa wyświetlana.")),
     ("OPERACJE I SKALA",
-     Parked(title:"Sterowanie i sesje", refs:"FR-022 / FR-029", description:"Ręczne uruchomienie pipeline’u z dashboardu i automatyczne wygasanie sesji."),
+     Parked(title:"Sterowanie i sesje", refs:"FR-022 / FR-029", description:"Ręczne uruchomienie pipeline’u z dashboardu i krótsze limity bezczynności sesji."),
      Parked(title:"Ochrona i skala", refs:"Poza MVP / infrastruktura", description:"2FA, logowanie zewnętrzne, reset hasła, nowe role, HA i własne kopie zapasowe."))
 ]
 for (i, group) in parked.enumerated() {
@@ -241,18 +249,18 @@ for (i, group) in parked.enumerated() {
 
 rounded(100, 3300, 2960, 300, 24, color(0x101D30), stroke, line: 2)
 txt("LEGENDA I ZASADY CZYTANIA", 136, 3328, 1300, 26, .bold)
-let keys: [(CGFloat, String, NSColor)] = [(136,"Kontrakt LLM",violet),(650,"Dostęp i konta",green),(1200,"Przegląd sygnałów",cyan),(1860,"Produkcja i automat",amber)]
+let keys: [(CGFloat, String, NSColor)] = [(136,"Kontrakt LLM",violet),(590,"Dostęp i konta",green),(1060,"Przegląd sygnałów",cyan),(1580,"Produkcja i automat",amber),(2100,"Platforma backendu",coral)]
 for (x, label, ink) in keys {
     rounded(x, 3393, 54, 8, 4, ink)
     txt(label, x + 74, 3379, 510, 24, .medium)
 }
-arrow([(2520,3396),(2590,3396)], muted)
-txt("Zależność", 2614, 3379, 400, 24, .medium)
+arrow([(2640,3396),(2710,3396)], muted)
+txt("Zależność", 2734, 3379, 300, 24, .medium)
 txt("S-02: gwiazda przewodnia — pierwszy pełny przepływ od Wykopu do użytkownika. Wyróżnia go obramowanie.", 136, 3445, 2850, 25, .medium)
-txt("Pracuj równolegle po spełnieniu warunków z kart. S-01 jest też warunkiem S-06 — wynika ze ścieżki przez S-02 i S-05.", 136, 3493, 2850, 24, .regular, muted)
+txt("Pierwszy rząd czytaj od prawej: S-01 → F-03 → F-02. S-01 jest też warunkiem S-02 i S-06 — wynika z tej ścieżki.", 136, 3493, 2850, 24, .regular, muted)
 txt("Przed bramką strzałki pokazują zależności. Za bramką wskazują możliwe rozszerzenia, bez ustalonej kolejności.", 136, 3541, 2850, 24, .regular, muted)
 
-txt("Źródło: context/foundation/roadmap.md  ·  M-1 / v2  ·  Stan roadmapy: 29.09.2026  ·  Milestone otwarty", 100, 3660, 2200, 22, .regular, muted)
+txt("Źródło: context/foundation/roadmap.md  ·  M-1 / v2.4  ·  Stan roadmapy: 02.10.2026  ·  Milestone otwarty", 100, 3660, 2200, 22, .regular, muted)
 txt("MAPA ZALEŻNOŚCI · BEZ TERMINÓW", 2520, 3660, 540, 20, .semibold, muted)
 
 context.flushGraphics()

@@ -1,69 +1,86 @@
-# Egzekwowany kontrakt oceny LLM V1 — Plan Brief
+# Kontrakt oceny LLM V2 z walidatorem i pomiarem na wzorcu — Plan Brief
 
 > Full plan: `context/changes/assessment-contract-harness/plan.md`
+> Frame brief: `context/changes/assessment-contract-harness/frame.md`
+> Research: `context/changes/assessment-contract-harness/research.md`
 
 ## What & Why
 
-Roadmapa F-02: kontrakt oceny LLM V1 (`contract-v1.md`) ma być egzekwowany kodem i sprawdzony na prawdziwych modelach, zanim S-02 zbuduje przepływ pobierania, zapisu i widoku. Jeśli żaden model nie trzyma kontraktu (dosłowne cytaty, graf argumentów, stance per target), dowiadujemy się tego tanio — bez pipeline’u, bazy i UI.
+Roadmapa F-02. Rzeczywisty problem (z briefu ramowego, runda 2): nie źródło danych ani samo ocenianie pojedynczych postów, tylko brak definicji w kontrakcie — co jest celem i od kiedy wzmianka jest stanowiskiem — oraz brak kryterium „wystarczająco dobrej” oceny. Ta zmiana doprowadza kontrakt do wersji V2 opartej na pilotażach, zapisuje go jako kod z walidatorem i mierzy tanie modele względem wzorca z prawdziwych postów, zanim S-02 zbuduje przepływ.
 
 ## Starting Point
 
-`szczur-radar-api` to szkielet FastAPI z sondami `/api/health` i `/api/ready` oraz pytestem; brak jakiejkolwiek integracji z LLM. Kontrakt V1 jest kompletny i zaakceptowany (enumy, 16 niezmienników, limity, 12 wymaganych przypadków, klasy błędów), ale istnieje tylko jako dokumentacja.
+Kontrakt V1 został przyjęty bez kontaktu z modelem; pilotaże na Wykopie i Reddicie pokazały, że tanie modele przechodzą jego walidację w 95–98%, ale różnią się wyborem celów i progiem stanowiska, a większość odrzuceń cytatów to twarda spacja, nie zmyślenie. W `szczur-radar-api` jest już S-01 (auth, modele, migracje), ale żadnej integracji z LLM. Poprzedni plan (macierz 4 dostawców, 12 wymyślonych przypadków × 3) powstał przed pilotażami i jest zastąpiony.
 
 ## Desired End State
 
-`app/assessment/` zawiera zamknięte modele wejścia i wyjścia, walidator 16 niezmienników z klasyfikacją błędów i `assess()`, który woła dowolnego skonfigurowanego dostawcę (`provider:model`) i zwraca wynik z pochodzeniem albo jawny błąd. Co najmniej jeden model przechodzi 12 przypadków × 3 uruchomienia i jest domyślnym dla S-02; macierz uruchomiono też na DeepSeek i Gemini, a raport porównawczy (jakość, naruszenia, tokeny, koszt) leży w folderze zmiany. CI odtwarza nagrania prawdziwych odpowiedzi offline.
+`contract-v2.md` jest źródłem prawdy, a PRD i roadmapa są z nim zgodne. `app/assessment/` ma modele, walidator i jednoetapowe `assess()`, które S-02 może wywołać dla każdego posta i zapisać wynik z pochodzeniem. Model domyślny (pierwszy wybór: GPT-6 Luna w trybie flex; zapas: DeepSeek Flash) jest oceniony na ~120 postach oznaczonych przez użytkownika, a podstawowy raport pokazuje jakość i koszt w rozbiciu na kanały dla Luny, DeepSeek Flash i Gemini 3.1 Flash-Lite jako punktu odniesienia. Badanie eskalacji nie blokuje MVP.
 
 ## Key Decisions Made
 
-| Decyzja | Wybór | Dlaczego |
-| --- | --- | --- |
-| Dostawca LLM | Wielu dostawców (OpenAI / Gemini / DeepSeek / Claude), model z konfiguracji | Trzeba porównać, który działa najlepiej; nowy dostawca bez zmiany kodu |
-| Integracja | Port `AssessmentProvider` + adapter per dostawca na LangChain (`init_chat_model` + `with_structured_output(include_raw=True)`): json_schema dla OpenAI/Claude/Gemini, function calling strict dla DeepSeek | Spójne z LangGraph ze stacku; każdy dostawca oddaje JSON gdzie indziej, więc odczyt jest per adapter |
-| Gwarancja struktury | Surowa odpowiedź zawsze przez pełny model Pydantic + walidator | Dostawcy różnią się trybem strict (DeepSeek: tylko JSON) |
-| „Przechodzi na modelu” | Walidator + asercje semantyczne z `examples.md`, 3 uruchomienia, wszystkie zaliczone | Wykrywa niestabilność modelu przed S-02 |
-| Done przy wielu modelach | ≥1 model przechodzi 12×3 i zostaje domyślnym; macierz obowiązkowo także na DeepSeek i Gemini + raport | Odblokowuje S-02, porównanie zostaje jako dowód |
-| Testy live w CI | Opt-in marker `live`; nagrania w repo odtwarzane offline w CI | Brak sekretów, kosztów i flaków blokujących deploy |
-| Ponowienia | Brak — tylko transportowe; każde naruszenie to sklasyfikowany błąd | Testy mierzą prawdziwą niezawodność; retry wybierze S-02 na danych |
-| Niezmiennik 13 | Obejmuje `mixed`: wymaga ≥1 claimu autora | Cudze opinie nie mogą udawać stanowiska autora (filtry S-04) |
-| „Exact substring” | Dosłownie, bez normalizacji; niepusty cytat | Zgodnie z kontraktem; luki idą regułą zmiany §14 |
+| Decision | Choice | Why (1 sentence) | Source |
+| --- | --- | --- | --- |
+| Źródło i widok MVP | Wykop; lista postów (zbiorczo później) | Reddit nie ocenia się lepiej, ma tylko mniej szumu; zgodne z PRD | Frame |
+| Próg stanowiska | Szeroko + oznaczenie pewności (`hedged`) | Fałszywe stanowisko widać przy surowym poście, pominiętego filtr nie pokaże | Frame |
+| Kształt kontraktu | Rdzeń + tezy z jednym cytatem; bez grafu argumentów | Usuwa źródło większości naruszeń, zostawia cytat jako ochronę przed halucynacją | Plan |
+| Reguła cytatu | Normalizacja białych znaków, reszta znak w znak | Odrzucenia w pilotażu nie były halucynacjami | Plan |
+| Wersja kontraktu | Nowy `contract-v2.md`, V1 do archiwum | Zmiana kształtu ma być jawna | Plan |
+| PRD i roadmapa | Poprawione w tej samej zmianie | Dokumenty nie mogą rozjechać się z kontraktem | Plan |
+| Kryterium „przechodzi” | Progi na wzorcu: kontrakt 95%, trafność 80%, recall celów 80%, precision celów 70%, kierunek na dopasowanych celach ze stanowiskiem 75%, dominujący kierunek posta 75%, sprzeczności ≤3% | Walidacja formy i kierunek całego posta nie wykrywają pominiętych celów | Plan / triage F1 |
+| Wzorzec | ~120 świeżych postów z dwóch dni, instrukcja v1.0 | Niezależny od postów, z których powstały reguły | Plan |
+| Integracja | LangChain (Gemini, DeepSeek, OpenAI) + kontrola na żywo | Wybór użytkownika; ścieżka niesprawdzona w pilotażach, stąd wczesna kontrola | Plan |
+| Modele | GPT-6 Luna (flex) — pierwszy wybór; DeepSeek Flash — zapas; Gemini 3.1 Flash-Lite — punkt odniesienia | Luna: czyste cytaty i ~$3/mies. we flex przy nocnym przebiegu; DeepSeek najtańszy i najszybszy; Gemini najbardziej powtarzalny, ale po korekcie cen najdroższy | Decyzja użytkownika 2026-10-01 (zastępuje triage F2) |
+| Eskalacja | Pomiar i przełącznik w `assess()` odłożone po MVP | Rozstrzygnięcie kaskady nie blokuje pierwszego przepływu oceniania | Triage F2 |
+| Sygnały niepewności | Jev, Span-01 i niezgoda modeli odłożone po MVP | Pilotaże są zachowane jako dowód, ale nie są bramką F-02 | Triage F2 |
+| Wpisy bez treści | Odsiew w `assess()`, bez wywołania modelu | ~8% wywołań mniej, jedna definicja w kontrakcie | Plan |
+| Sposób wywołania | Pojedyncze posty, skrócony prompt; ponowienia wyłącznie transportowe (429, 5xx, timeout) | Paczkowanie zmienia co trzecią ocenę (pilot 3); flex odmawia przez 429 | Frame / Plan |
+| Flex i batch | Luna w trybie flex; `assess()` dzielony na przygotowanie zapytania i ocenę odpowiedzi; Batch API poza F-02 | Flex daje cenę batcha bez przebudowy przepływu; podział pozwala dodać batch w S-02 bez zmiany walidacji | Plan |
+| Dane pilotaży | Cały `pilot/` w repo | Pełny ślad dowodów | Plan |
 
 ## Scope
 
 **In scope:**
-- Modele kontraktu, walidator, klasy błędów, testy offline (10 przypadków zabronionych + przykłady)
-- Port dostawcy na LangChain, prompt V1 z wersją, `assess()` z pochodzeniem
-- 12 przypadków z asercjami, przebieg `live` na macierzy modeli, nagrania, test nagrań w CI, skrypt raportu, wybór modelu domyślnego
+- `contract-v2.md`, archiwizacja V1, przykłady, wytyczne, PRD, roadmapa z grafiką
+- Modele, walidator z normalizacją cytatów, odsiew, klasy błędów, testy offline
+- Adaptery LangChain dla Gemini, DeepSeek i OpenAI (z trybem flex i opcjonalnym OpenRouter), prompt V2, jednoetapowe `assess()` z pochodzeniem, podzielone na przygotowanie zapytania i ocenę odpowiedzi
+- Zestaw wzorcowy (próbka, arkusz, etykiety, miary), przebieg na żywo, nagrania w CI, raport, model domyślny
 
 **Out of scope:**
-- Zapis do bazy, pobieranie z Wykopu, mapowanie RAW, UI, trasy API, graf LangGraph, cron (S-02/S-05)
-- Ponowienia semantyczne i „naprawianie” outputu
-- Sekrety LLM w Railway/CI (F-01); testy live w CI
-- Entity resolution, novelty, trend, `is_signal`/`is_valuable`; rozszerzanie kontraktu w kodzie
+- Zapis do bazy, pobieranie w pipeline, UI, trasy API, LangGraph, harmonogram (S-02/S-05)
+- Reddit, komentarze, widok zbiorczy, rozpoznawanie spółek, graf argumentów
+- Paczkowanie, Batch API, model pomocniczy przed LLM, Gemini 3.8 Flash, Jev/Span-01 i analiza oraz wdrożenie eskalacji
+- Odłożone po MVP: embeddingi (widok zbiorczy, dopasowanie slangu), klasyfikator uczony na zapisanych ocenach, ekstraktor celów typu GLiNER, klasyfikatory „finansowe”
+- Sekrety LLM w Railway/CI, testy na żywych modelach w CI
 
 ## Architecture / Approach
 
-`AssessmentInputV1` → `prompt.py` (wersjonowany prompt, wejście jako niezaufane dane) → `AssessmentProvider` (LangChain, `provider:model`) → surowy tekst → parsowanie → pełny model Pydantic z limitami → walidator domenowy → `AssessmentResult` (`ok` + output + pochodzenie | `failed` + klasa + lista naruszeń). Harness testowy: przypadki JSON + predykaty → przebieg `live` zapisuje nagrania → CI odtwarza nagrania → skrypt tworzy raport porównawczy.
+`AssessmentInputV1` → odsiew (wpis bez treści → gotowy wynik bez modelu) → prompt V2 → `AssessmentProvider` (LangChain, `provider:model`) → surowa odpowiedź → pełny model Pydantic → walidator (cytaty po normalizacji białych znaków, referencje, reguły stanowiska) → `AssessmentResult` (`ok` + wynik + pochodzenie | `failed` + klasa + naruszenia). Pomiar: wzorzec → jeden przebieg `live` zapisuje nagrania Luny (flex), DeepSeek Flash i Gemini 3.1 Flash-Lite → CI odtwarza nagrania i sprawdza progi → skrypt tworzy podstawowy raport jakości i kosztu.
 
 ## Phases at a Glance
 
-| Faza | Co dostarcza | Główne ryzyko |
+| Phase | What it delivers | Key risk |
 | --- | --- | --- |
-| 1. Kontrakt jako kod | Modele, walidator 16 niezmienników, klasy błędów, testy offline | Rozjazd enumów/limitów z kontraktem |
-| 2. Dostawcy, prompt i `assess()` | Port LangChain, prompt V1, `assess()` z pochodzeniem, testy na sztucznym dostawcy | Różne metody structured output per dostawca |
-| 3. Przypadki na prawdziwych modelach i raport | 12×3 na macierzy, nagrania w CI, raport, model domyślny | Żaden model nie przechodzi 12×3 → prompt/§14 |
+| 1. Kontrakt V2 i dokumenty | `contract-v2.md`, V1 w archiwum, spójne PRD/roadmapa, `pilot/` w repo | Definicje nadal niejednoznaczne na nowych postach |
+| 2. Kontrakt jako kod | Modele, walidator, odsiew, testy offline | Rozjazd kodu z tekstem kontraktu |
+| 3. Dostawcy, prompt i `assess()` | Adaptery LangChain, prompt V2, jednoetapowe `assess()` | LangChain zachowuje się inaczej niż wywołania z pilotaży |
+| 4. Zestaw wzorcowy | ~120 oznaczonych postów, miary | Czas użytkownika; nowe reguły z notatek cofają do faz 1–2 |
+| 5. Pomiar, raport i model domyślny | Jeden przebieg trzech modeli, nagrania w CI, raport z kosztami per kanał, model domyślny | Ani Luna, ani DeepSeek nie spełnia progów; odmowy flex wydłużają przebieg |
 
-**Prerequisites:** klucze API do wybranych dostawców w lokalnej powłoce (co najmniej model kandydujący, DeepSeek i Gemini); jedna gałąź `feature/assessment-contract-harness` + jeden PR (lessons.md).
-**Estimated effort:** ~3 sesje, po jednej na fazę; faza 3 zależy od liczby iteracji promptu.
+**Prerequisites:** lokalne klucze API (Gemini, DeepSeek, OpenAI lub OpenRouter, Wykop); czas użytkownika na akceptację V2 i oznaczenie ~120 postów; gałąź `feature/assessment-contract-harness` (obecne pliki zmiany leżą niezacommitowane na `chore/archive-s01`).
+**Estimated effort:** ~5–6 sesji w 5 fazach; arkusz z fazy 4 można przygotować po akceptacji kontraktu w fazie 1, równolegle z fazą 2. Pobranie i przygotowanie próbki wymaga modeli wejścia i odsiewu z fazy 2; oznaczanie może iść równolegle z fazą 3.
 
 ## Open Risks & Assumptions
 
-- Część asercji (np. `ambiguous_target` dla „Apple”) może systematycznie nie przechodzić na wszystkich modelach — wtedy reguła §14: zmiana `contract-v1.md` zaakceptowana przez użytkownika w tej zmianie i ponowny przebieg; luka kontraktu blokuje done, żaden przypadek nie jest wyłączany.
-- DeepSeek bez strict schema może częściej zwracać `schema_violation` — to wynik do raportu, nie blokada done.
-- Koszt na ocenę nie ma jeszcze pułapu (Open Roadmap Question 5); raport go mierzy, decyzja o budżecie zostaje przy S-05.
+- Plan V2 przeszedł głęboki `/10x-plan-review` i triage 2026-09-30: F1–F5 poprawione, werdykt po poprawkach SOUND. Poprzedni `reviews/plan-review.md` nadal dotyczy wersji 1 planu.
+- Progi kontraktu/trafności/dominującego kierunku/sprzeczności (95 / 80 / 75 / 3) oparto na zgodności między modelami i etykietach rundy 1. Progi recall/precision celów i kierunku na dopasowanych celach (80 / 70 / 75) są decyzją akceptacyjną z triage F1, nie pomiarem z pilotażu; względem wzorca według instrukcji v1.0 wyniki mogą być inne. Przy ~120 postach jeden post waży ~1 punkt procentowy w miarach per-post, a pojedynczy cel może ważyć więcej.
+- LangChain dla DeepSeek wymaga wyłączenia myślenia i nie gwarantuje pól wymaganych; jeśli kontrola w fazie 3 nie przejdzie, potrzebna będzie decyzja o innej warstwie integracji dla tego dostawcy.
+- Ceny modeli i dostępność nazw (`gemini-3.1-flash-lite`, `deepseek-flash`, `gpt-6-luna`, dostawca `openai/flex`) sprawdzono 2026-09-29/30 przez API; rzeczywisty koszt zostanie zapisany w raporcie.
+- Zmiany z 2026-10-01 (role modeli, flex, ponowienia, podział `assess()`) przeszły przegląd `reviews/plan-review-2026-10-01.md`: F1–F5 poprawione, werdykt SOUND. Ponowienia tylko w adapterze (do 3 prób), po 3 odmowach flex powrót do trybu standardowego oznaczony w pochodzeniu (`flex_fallback`), konfiguracja wywołania zapisywana przy każdej ocenie. Zachowanie flex dla GPT-6 Luna (odsetek odmów, czas) nie zostało jeszcze zmierzone.
+- Usunięcie grafu argumentów zmienia opis S-03 w roadmapie i zdanie w PRD — wymaga potwierdzenia użytkownika w fazie 1.
+- Zaakceptowany wzorzec pochodzi od jednego oznaczającego.
 
 ## Success Criteria (Summary)
 
-- CI zielone: modele, walidator, `assess()` i wszystkie nagrania sprawdzane offline.
-- Model domyślny: 36/36 zaliczonych uruchomień; DeepSeek i Gemini uruchomione i opisane w raporcie.
-- Użytkownik zatwierdził model domyślny i szacowany koszt na podstawie raportu.
+- Użytkownik zaakceptował kontrakt V2, a PRD i roadmapa mówią to samo co kontrakt.
+- Wybrany model (Luna flex, a jeśli nie spełni progów — DeepSeek Flash) spełnia progi na wzorcu, a CI sprawdza to offline na nagraniach prawdziwych odpowiedzi.
+- Raport daje liczby do decyzji o modelu domyślnym i jego koszcie miesięcznym w wybranym kanale; analiza eskalacji jest odłożona po MVP.

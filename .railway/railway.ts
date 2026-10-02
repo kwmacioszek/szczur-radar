@@ -53,34 +53,51 @@ export default defineRailway(() => {
   // archive). Declared so IaC never deletes it; region as provisioned.
   const pitrBucket = bucket("Postgres-PITR", { region: "sjc" });
 
-  // FastAPI backend. No public domain: reachable only through the web proxy
-  // over the private network. Uses Hypercorn bound to :: for DUAL-STACK — IPv6
-  // for private networking AND IPv4 for Railway's healthcheck. (uvicorn's :: is
-  // IPv6-only from the CLI, so the IPv4 healthcheck failed with "service
-  // unavailable".) Railpack auto-detects uv + .python-version (3.13).
+  // Spring Boot backend (Java 25, Maven). No public domain: reachable only
+  // through the web proxy over the private network. The JVM binds the wildcard
+  // address DUAL-STACK by default — IPv6 for private networking AND IPv4 for
+  // Railway's healthcheck — so server.address is deliberately not set; the port
+  // comes from PORT (application.properties: server.port=${PORT:8000}).
+  // Railpack detects Java from pom.xml and builds with ./mvnw (tests skipped;
+  // CI runs them); RAILPACK_JDK_VERSION selects JDK 25 (Railpack default: 21).
   const api = service("szczur-radar-api", {
     source: github(REPO, { branch, checkSuites: true }),
     rootDirectory: "szczur-radar-api",
     watchPatterns: ["szczur-radar-api/**"],
-    // `--no-dev`: Railpack installs with `uv sync --no-dev`; a plain `uv run`
-    // would re-sync the dev group (pytest, httpx, …) on every container start.
-    start: 'uv run --no-dev hypercorn main:app --bind "[::]:$PORT"',
-    // Alembic migrations run BEFORE each new API version starts (production and
-    // PR envs), not at process start. If the migration fails, Railway stops the
-    // deploy and the previous version keeps serving — the desired behavior.
-    preDeploy: "uv run --no-dev alembic upgrade head",
+    // Fixed artifact name (pom.xml <finalName>). No arguments = HTTP server.
+    start: "java $JAVA_OPTS -jar target/szczur-radar-api.jar",
+    // Flyway migrations run BEFORE each new API version starts (production and
+    // PR envs), never at server start (spring.flyway.enabled=false there). If a
+    // migration fails, `migrate` exits non-zero, Railway stops the deploy and
+    // the previous version keeps serving — the desired behavior.
+    preDeploy: "java -jar target/szczur-radar-api.jar migrate",
     healthcheck: "/api/health",
     replicas: { [REGION]: 1 },
     deploy: { sleepApplication: true },
     env: {
       PORT: API_INTERNAL_PORT,
+      RAILPACK_JDK_VERSION: "25",
+      // Split Postgres variables for the JDBC URL
+      // (jdbc:postgresql://${PGHOST}:${PGPORT}/${PGDATABASE}) — no DATABASE_URL parsing.
+      PGHOST: db.env.PGHOST,
+      PGPORT: db.env.PGPORT,
+      PGUSER: db.env.PGUSER,
+      PGPASSWORD: db.env.PGPASSWORD,
+      PGDATABASE: db.env.PGDATABASE,
+      // Nieużywane od F-03 (Java czyta PG*). Zostaje zadeklarowane, bo usunięcie
+      // zmiennej to `variable.delete`, które bramka CI odrzuca jako destrukcyjne.
       DATABASE_URL: db.env.DATABASE_URL,
-      // Session signing key, set per environment by the operator (sealed on
-      // production, a separate value per PR env) — NEVER a value here and never
-      // ctx.randomString() (deterministic from the env name). preserve() only
-      // declares the name so an apply keeps the existing value instead of
-      // deleting it. The API refuses to start without it (main.py lifespan).
+      // Nieużywane od F-03 (sesje Spring Session JDBC zamiast JWT). Produkcja ma
+      // zapieczętowaną wartość; bez preserve() plan na main proponowałby
+      // `Delete variable JWT_SECRET`, które bramka CI odrzuca. Nigdy wartość tutaj.
       JWT_SECRET: preserve(),
+      // LLM provider for Embabel (szczur-radar-api/README.md): set by the operator
+      // in every environment BEFORE the API deploys — preserve() only keeps an
+      // existing value, it never creates one. The key is a secret of that
+      // environment (production's is never copied to PR envs). Never values here.
+      LLM_API_PROVIDER: preserve(),
+      LLM_MODEL: preserve(),
+      LLM_API_KEY: preserve(),
     },
   });
 

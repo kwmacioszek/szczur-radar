@@ -1,0 +1,679 @@
+{
+ "labeled_at": "2026-09-30T12:45:28.530Z",
+ "set": "labeling-set-2026-09-28",
+ "labels": [
+  {
+   "n": 1,
+   "post_id": "entry-87763327",
+   "relevance": "investment_related",
+   "targets": [
+    {
+     "anchor": "#inwestowanie",
+     "direction": "neutral"
+    },
+    {
+     "anchor": "raczej nie zobaczysz fire",
+     "direction": "bearish"
+    }
+   ],
+   "note": "",
+   "hard": false
+  },
+  {
+   "n": 2,
+   "post_id": "entry-87765833",
+   "relevance": "investment_related",
+   "targets": [
+    {
+     "anchor": "Promocja na pamięciorzach",
+     "direction": "bullish"
+    }
+   ],
+   "note": "",
+   "hard": false
+  },
+  {
+   "n": 3,
+   "post_id": "entry-87765527",
+   "relevance": "not_investment_related",
+   "targets": [
+    {
+     "anchor": "będziesz mnie zwodził, kiedy wysyłka krętaczu?!",
+     "direction": "not_expressed"
+    }
+   ],
+   "note": "",
+   "hard": false
+  },
+  {
+   "n": 4,
+   "post_id": "link-8021277",
+   "relevance": "not_investment_related",
+   "targets": [],
+   "note": "",
+   "hard": false
+  },
+  {
+   "n": 5,
+   "post_id": "entry-87762571",
+   "relevance": "not_investment_related",
+   "targets": [],
+   "note": "",
+   "hard": false
+  },
+  {
+   "n": 6,
+   "post_id": "entry-87772451",
+   "relevance": "not_investment_related",
+   "targets": [],
+   "note": "jakaś sugestia trumpem, jakby manipulował rynkiem",
+   "hard": false
+  },
+  {
+   "n": 7,
+   "post_id": "entry-87767977",
+   "relevance": "not_investment_related",
+   "targets": [],
+   "note": "jakaś sugestia trumpem, jakby manipulował rynkiem",
+   "hard": false
+  },
+  {
+   "n": 8,
+   "post_id": "entry-87769837",
+   "relevance": "unclear",
+   "targets": [],
+   "note": "",
+   "hard": true
+  },
+  {
+   "n": 9,
+   "post_id": "entry-87765439",
+   "relevance": "investment_related",
+   "targets": [
+    {
+     "anchor": "nvidia ogłosiła dodatkowe 150 miliardów dolarów buybacku, sumarycznie 235 miliardów.",
+     "direction": "bullish"
+    }
+   ],
+   "note": "",
+   "hard": false
+  },
+  {
+   "n": 10,
+   "post_id": "entry-87765093",
+   "relevance": "unclear",
+   "targets": [],
+   "note": "tutaj jest link do czegoś, do zastanowienia czy takie linki czasami maja sens czy to memy",
+   "hard": false
+  },
+  {
+   "n": 11,
+   "post_id": "entry-87764701",
+   "relevance": "investment_related",
+   "targets": [
+    {
+     "anchor": "zmarnowałeś hajs żeby podbić kurs o 2%",
+     "direction": "mixed"
+    }
+   ],
+   "note": "",
+   "hard": true
+  },
+  {
+   "n": 12,
+   "post_id": "entry-87764365",
+   "relevance": "investment_related",
+   "targets": [],
+   "note": "dosyć dobry post, ale sporo informacji jest",
+   "hard": true
+  },
+  {
+   "n": 13,
+   "post_id": "entry-87764183",
+   "relevance": "investment_related",
+   "targets": [],
+   "note": "przejawia się informacja o robotyce jako kolejnym celu na pompę tuż po AI",
+   "hard": false
+  },
+  {
+   "n": 14,
+   "post_id": "entry-87767995",
+   "relevance": "not_investment_related",
+   "targets": [],
+   "note": "żarcik z wykopu, do odsiania",
+   "hard": false
+  },
+  {
+   "n": 15,
+   "post_id": "entry-87766633",
+   "relevance": "investment_related",
+   "targets": [
+    {
+     "anchor": "Ropa to spółka cykliczna",
+     "direction": "neutral"
+    },
+    {
+     "anchor": "Przeciez to kiedys spadnie tak czy siak",
+     "direction": "bullish"
+    }
+   ],
+   "note": "autor sugeruje ze złamał system i wie jak grac na ropie",
+   "hard": false
+  },
+  {
+   "n": 16,
+   "post_id": "entry-87765825",
+   "relevance": "not_investment_related",
+   "targets": [],
+   "note": "",
+   "hard": false
+  },
+  {
+   "n": 17,
+   "post_id": "entry-87764241",
+   "relevance": "unclear",
+   "targets": [],
+   "note": "nie wiem jak to interpretować",
+   "hard": true
+  },
+  {
+   "n": 18,
+   "post_id": "entry-87767889",
+   "relevance": "investment_related",
+   "targets": [],
+   "note": "za mało info, sama sugestia ze jest bańka",
+   "hard": false
+  },
+  {
+   "n": 19,
+   "post_id": "entry-87766975",
+   "relevance": "investment_related",
+   "targets": [],
+   "note": "",
+   "hard": true
+  },
+  {
+   "n": 20,
+   "post_id": "entry-87764535",
+   "relevance": "not_investment_related",
+   "targets": [],
+   "note": "Nie jest to związane z giełda, tylko z pytaniem o używanie modelu MUSE",
+   "hard": false
+  },
+  {
+   "n": 21,
+   "post_id": "entry-87773743",
+   "relevance": "investment_related",
+   "targets": [
+    {
+     "anchor": "ostatni sprzedaje śmieciucha",
+     "direction": "bearish"
+    }
+   ],
+   "note": "",
+   "hard": false
+  },
+  {
+   "n": 22,
+   "post_id": "entry-87766947",
+   "relevance": "not_investment_related",
+   "targets": [],
+   "note": "Jakieś żale autora, do ubicia",
+   "hard": false
+  },
+  {
+   "n": 23,
+   "post_id": "entry-87762497",
+   "relevance": "not_investment_related",
+   "targets": [],
+   "note": "",
+   "hard": false
+  },
+  {
+   "n": 24,
+   "post_id": "entry-87761043",
+   "relevance": "investment_related",
+   "targets": [],
+   "note": "",
+   "hard": false
+  },
+  {
+   "n": 25,
+   "post_id": "entry-87764377",
+   "relevance": "investment_related",
+   "targets": [
+    {
+     "anchor": "te akcje zaraz beda po 150 zl xD ludzie maja po 25fpsow na kartach za 30k xD ",
+     "direction": "mixed"
+    }
+   ],
+   "note": "powiązanie z grą wiedźmin pewnie, albo inną grą",
+   "hard": false
+  },
+  {
+   "n": 26,
+   "post_id": "entry-87765359",
+   "relevance": "unclear",
+   "targets": [],
+   "note": "Nie wiem XD czy to chodzi o jakieś spadki czy co??",
+   "hard": false
+  },
+  {
+   "n": 27,
+   "post_id": "entry-87766271",
+   "relevance": "investment_related",
+   "targets": [
+    {
+     "anchor": "mamy dobry poziom na dokupienie akcji? ",
+     "direction": "bullish"
+    },
+    {
+     "anchor": "Kruk jest 23% niżej niż na początku roku ",
+     "direction": "bullish"
+    }
+   ],
+   "note": "",
+   "hard": false
+  },
+  {
+   "n": 28,
+   "post_id": "link-8020899",
+   "relevance": "investment_related",
+   "targets": [],
+   "note": "Sugestia ze mogą być spadki na Enel-Med. Tak to bym widział",
+   "hard": false
+  },
+  {
+   "n": 29,
+   "post_id": "entry-87772055",
+   "relevance": "investment_related",
+   "targets": [],
+   "note": "",
+   "hard": false
+  },
+  {
+   "n": 30,
+   "post_id": "entry-87764917",
+   "relevance": "unclear",
+   "targets": [],
+   "note": "",
+   "hard": false
+  },
+  {
+   "n": 31,
+   "post_id": "entry-87763419",
+   "relevance": "investment_related",
+   "targets": [
+    {
+     "anchor": "grubiej zapakuje sie w AMZN.",
+     "direction": "bullish"
+    }
+   ],
+   "note": "AMZN -> AMAZON?",
+   "hard": false
+  },
+  {
+   "n": 32,
+   "post_id": "entry-87765779",
+   "relevance": "investment_related",
+   "targets": [],
+   "note": "sugestia ze były wzrosty a leszcze zostały na peronie",
+   "hard": false
+  },
+  {
+   "n": 33,
+   "post_id": "entry-87764473",
+   "relevance": "unclear",
+   "targets": [],
+   "note": "",
+   "hard": false
+  },
+  {
+   "n": 34,
+   "post_id": "entry-87771195",
+   "relevance": "investment_related",
+   "targets": [
+    {
+     "anchor": "Przepowiadam przyszłość, 30 września Micron after hours pompuje 20%,",
+     "direction": "bullish"
+    },
+    {
+     "anchor": "hossa uratowana",
+     "direction": "bullish"
+    }
+   ],
+   "note": "",
+   "hard": false
+  },
+  {
+   "n": 35,
+   "post_id": "entry-87767219",
+   "relevance": "investment_related",
+   "targets": [],
+   "note": "",
+   "hard": false
+  },
+  {
+   "n": 36,
+   "post_id": "entry-87766413",
+   "relevance": "unclear",
+   "targets": [],
+   "note": "",
+   "hard": true
+  },
+  {
+   "n": 37,
+   "post_id": "entry-87765929",
+   "relevance": "unclear",
+   "targets": [],
+   "note": "",
+   "hard": false
+  },
+  {
+   "n": 38,
+   "post_id": "entry-87762943",
+   "relevance": "unclear",
+   "targets": [],
+   "note": "tak samo, co to za url?",
+   "hard": false
+  },
+  {
+   "n": 39,
+   "post_id": "entry-87762053",
+   "relevance": "investment_related",
+   "targets": [],
+   "note": "sugestia spadków ponieważ odrzucono porozumienie",
+   "hard": false
+  },
+  {
+   "n": 40,
+   "post_id": "entry-87763939",
+   "relevance": "investment_related",
+   "targets": [],
+   "note": "taki żarcik, że są spadki",
+   "hard": false
+  },
+  {
+   "n": 41,
+   "post_id": "entry-87766309",
+   "relevance": "investment_related",
+   "targets": [],
+   "note": "szczur == XTB",
+   "hard": false
+  },
+  {
+   "n": 42,
+   "post_id": "entry-87764313",
+   "relevance": "unclear",
+   "targets": [],
+   "note": "znowu url",
+   "hard": true
+  },
+  {
+   "n": 43,
+   "post_id": "entry-87764315",
+   "relevance": "investment_related",
+   "targets": [],
+   "note": "",
+   "hard": false
+  },
+  {
+   "n": 44,
+   "post_id": "entry-87763769",
+   "relevance": "unclear",
+   "targets": [],
+   "note": "",
+   "hard": false
+  },
+  {
+   "n": 45,
+   "post_id": "entry-87769525",
+   "relevance": "not_investment_related",
+   "targets": [],
+   "note": "",
+   "hard": false
+  },
+  {
+   "n": 46,
+   "post_id": "entry-87762513",
+   "relevance": "unclear",
+   "targets": [],
+   "note": "",
+   "hard": false
+  },
+  {
+   "n": 47,
+   "post_id": "entry-87767289",
+   "relevance": "investment_related",
+   "targets": [],
+   "note": "",
+   "hard": true
+  },
+  {
+   "n": 48,
+   "post_id": "entry-87762129",
+   "relevance": "investment_related",
+   "targets": [
+    {
+     "anchor": "nie ma po co się denerwować ",
+     "direction": "bearish"
+    }
+   ],
+   "note": "",
+   "hard": false
+  },
+  {
+   "n": 49,
+   "post_id": "entry-87763517",
+   "relevance": "unclear",
+   "targets": [],
+   "note": "",
+   "hard": false
+  },
+  {
+   "n": 50,
+   "post_id": "entry-87761525",
+   "relevance": "investment_related",
+   "targets": [],
+   "note": "",
+   "hard": true
+  },
+  {
+   "n": 51,
+   "post_id": "entry-87764633",
+   "relevance": "unclear",
+   "targets": [],
+   "note": "",
+   "hard": false
+  },
+  {
+   "n": 52,
+   "post_id": "entry-87761751",
+   "relevance": "not_investment_related",
+   "targets": [],
+   "note": "",
+   "hard": false
+  },
+  {
+   "n": 53,
+   "post_id": "entry-87765921",
+   "relevance": "unclear",
+   "targets": [],
+   "note": "",
+   "hard": false
+  },
+  {
+   "n": 54,
+   "post_id": "entry-87769877",
+   "relevance": "investment_related",
+   "targets": [
+    {
+     "anchor": "poleci w kibel",
+     "direction": "bearish"
+    },
+    {
+     "anchor": "pompa stulecia",
+     "direction": "bullish"
+    }
+   ],
+   "note": "",
+   "hard": false
+  },
+  {
+   "n": 55,
+   "post_id": "entry-87767439",
+   "relevance": "unclear",
+   "targets": [],
+   "note": "",
+   "hard": false
+  },
+  {
+   "n": 56,
+   "post_id": "entry-87763703",
+   "relevance": "not_investment_related",
+   "targets": [],
+   "note": "",
+   "hard": false
+  },
+  {
+   "n": 57,
+   "post_id": "entry-87762635",
+   "relevance": "not_investment_related",
+   "targets": [],
+   "note": "",
+   "hard": false
+  },
+  {
+   "n": 58,
+   "post_id": "entry-87765763",
+   "relevance": "investment_related",
+   "targets": [],
+   "note": "sugestia że są spadki na SEMI/MICRON?",
+   "hard": false
+  },
+  {
+   "n": 59,
+   "post_id": "entry-87763623",
+   "relevance": "investment_related",
+   "targets": [],
+   "note": "",
+   "hard": false
+  },
+  {
+   "n": 60,
+   "post_id": "entry-87765209",
+   "relevance": "investment_related",
+   "targets": [],
+   "note": "",
+   "hard": true
+  },
+  {
+   "n": 61,
+   "post_id": "entry-87769273",
+   "relevance": null,
+   "targets": [],
+   "note": "jakiś mem pewnie, obrazek nie załadował się",
+   "hard": false
+  },
+  {
+   "n": 62,
+   "post_id": "entry-87763145",
+   "relevance": "not_investment_related",
+   "targets": [],
+   "note": "",
+   "hard": false
+  },
+  {
+   "n": 63,
+   "post_id": "entry-87762663",
+   "relevance": "investment_related",
+   "targets": [
+    {
+     "anchor": "piękny dzień na uśrednianie",
+     "direction": "neutral"
+    },
+    {
+     "anchor": "Gruby zrobił promki wszechobecne",
+     "direction": "mixed"
+    }
+   ],
+   "note": "",
+   "hard": false
+  },
+  {
+   "n": 64,
+   "post_id": "entry-87763811",
+   "relevance": "unclear",
+   "targets": [],
+   "note": "spadki CD Projekt pewnie",
+   "hard": false
+  },
+  {
+   "n": 65,
+   "post_id": "entry-87761743",
+   "relevance": "unclear",
+   "targets": [],
+   "note": "",
+   "hard": false
+  },
+  {
+   "n": 66,
+   "post_id": "entry-87765893",
+   "relevance": "investment_related",
+   "targets": [
+    {
+     "anchor": "krach raptem 2%",
+     "direction": "bullish"
+    },
+    {
+     "anchor": "To jakaś popierdółka, a nie krach",
+     "direction": "bullish"
+    }
+   ],
+   "note": "",
+   "hard": false
+  },
+  {
+   "n": 67,
+   "post_id": "entry-87762111",
+   "relevance": "investment_related",
+   "targets": [
+    {
+     "anchor": "Q3 na pewno mniej zmienny niż pierwsza połowa roku,",
+     "direction": "mixed"
+    }
+   ],
+   "note": "#meczennicyxtb sugeruje ze wpis dotyczy XTB",
+   "hard": false
+  },
+  {
+   "n": 68,
+   "post_id": "entry-87763101",
+   "relevance": "not_investment_related",
+   "targets": [],
+   "note": "żarcik",
+   "hard": false
+  },
+  {
+   "n": 69,
+   "post_id": "entry-87764041",
+   "relevance": "investment_related",
+   "targets": [
+    {
+     "anchor": "jaki krach synek wystarczyło kupować akcje za usd/pln ",
+     "direction": "bullish"
+    }
+   ],
+   "note": "",
+   "hard": false
+  },
+  {
+   "n": 70,
+   "post_id": "entry-87767491",
+   "relevance": "unclear",
+   "targets": [],
+   "note": "",
+   "hard": false
+  }
+ ]
+}

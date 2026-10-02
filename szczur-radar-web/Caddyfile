@@ -23,8 +23,14 @@
 	# (/api/health -> upstream /api/health). Host and port come from Railway
 	# reference variables (set in .railway/railway.ts); the defaults only keep
 	# the container bootable in CI, where no upstream exists.
+	# The API sleeps when idle (sleepApplication); the first request wakes it,
+	# but the JVM needs a few seconds before it accepts connections. Retry the
+	# upstream for up to 30 s instead of answering 502 at once.
 	handle /api/* {
-		reverse_proxy {$API_PRIVATE_DOMAIN:api.railway.internal}:{$API_PORT:8000}
+		reverse_proxy {$API_PRIVATE_DOMAIN:api.railway.internal}:{$API_PORT:8000} {
+			lb_try_duration 30s
+			lb_try_interval 500ms
+		}
 	}
 
 	# SPA fallback: serve the built assets, route unknown paths to index.html.
