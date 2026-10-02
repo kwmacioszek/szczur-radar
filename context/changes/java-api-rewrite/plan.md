@@ -483,13 +483,13 @@ Przełączenie produkcji (wykonuje operator, w tej kolejności):
 
 - [x] 1.1 `cd szczur-radar-api && ./mvnw -B verify` przechodzi (unit + IT z Testcontainers) — 75fe622
 - [x] 1.2 `git ls-files szczur-radar-api` nie zawiera plików Pythona ani `uv.lock` — 75fe622
-- [ ] 1.3 Job `backend` w CI jest zielony na PR
-- [ ] 1.4 `railway config plan` dla PR env przechodzi bramkę CI (job `railway-config` zielony)
+- [x] 1.3 Job `backend` w CI jest zielony na PR — 383cfc5
+- [x] 1.4 `railway config plan` dla PR env przechodzi bramkę CI (job `railway-config` zielony) — 383cfc5
 
 #### Manual
 
-- [ ] 1.5 W PR env pre-deploy loguje zastosowanie migracji `V1` i `V2`, a `/api/health` i `/api/ready` przez publiczny adres PR env zwracają 200
-- [ ] 1.6 Healthcheck Railway (IPv4) przechodzi i proxy web→api działa (brak 502)
+- [x] 1.5 W PR env pre-deploy loguje zastosowanie migracji `V1` i `V2`, a `/api/health` i `/api/ready` przez publiczny adres PR env zwracają 200 — 383cfc5
+- [x] 1.6 Healthcheck Railway (IPv4) przechodzi i proxy web→api działa (brak 502) — 383cfc5
 
 ### Phase 2: Uwierzytelnianie i autoryzacja
 
