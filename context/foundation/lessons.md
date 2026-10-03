@@ -71,3 +71,10 @@
 - **Problem**: W `java-api-rewrite` interfejs `Command` miał metody `String name()` i `String description()`, więc każda komenda zwracała wolny literał (`"migrate"`, `"create-admin"`), a ta sama nazwa była powtórzona w komunikatach i testach. Literówka albo zmiana nazwy w jednym miejscu kompiluje się bez błędu i rozjeżdża się po cichu z resztą; kompilator i IDE nie pokazują pełnego zbioru wartości ani ich użyć.
 - **Rule**: Tam, gdzie zbiór wartości jest zamknięty (typy, role, kody, nazwy komend, dostawcy), trzymaj go w enumie, a nie jako wolne stringi w kodzie.
 - **Applies to**: implement, impl-review
+
+## Implementacja, przegląd i archiwizacja na jednej gałęzi — merge do main dopiero na końcu
+
+- **Context**: Każda zmiana z `/10x-implement` na Railway z autodeployem z `main` (doprecyzowanie lekcji „Jedna gałąź + jeden PR…”).
+- **Problem**: W `java-api-rewrite` główny PR #26 zmergowano przed `/10x-impl-review` i `/10x-archive`. Przegląd znalazł obejście filtra Origin, które było już na produkcji, a poprawki, przegląd i archiwizacja wymagały trzech kolejnych PR (#27–#29). Do tego Progress zawierał kroki możliwe dopiero po merge (przełączenie i weryfikacja produkcji), co uniemożliwiało archiwizację przed merge.
+- **Rule**: Na jednej gałęzi i w jednym PR wykonaj kolejno: `/10x-implement` (wszystkie fazy), weryfikację w Railway PR env, `/10x-impl-review` z poprawkami, `/10x-archive`. Człowiek merguje raz, na końcu. W planie nie umieszczaj w Progress kroków, które da się wykonać dopiero po merge (operacje i weryfikacja na produkcji): prowadź je jako runbook w `deploy-plan.md` i komentarze w issue, zamykane po weryfikacji produkcji, bez kolejnego PR.
+- **Applies to**: plan, plan-review, implement, impl-review
