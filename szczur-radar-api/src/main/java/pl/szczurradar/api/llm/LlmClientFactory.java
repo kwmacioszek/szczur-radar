@@ -55,14 +55,16 @@ public final class LlmClientFactory {
 	static LlmClient create(LlmProviderProperties properties, @Nullable String baseUrl,
 			TransportRetry.Sleeper sleeper) {
 		TransportRetry retry = new TransportRetry(sleeper);
+		ProviderMessages messages = new ProviderMessages(properties.apiKey());
 		return switch (properties.provider()) {
-			case GEMINI -> new GeminiClient(gemini(properties, baseUrl), properties.model(), retry);
+			case GEMINI -> new GeminiClient(gemini(properties, baseUrl), properties.model(), retry, messages);
 			case DEEPSEEK -> {
-				DeepSeekCacheUsage cacheUsage = new DeepSeekCacheUsage();
-				yield new DeepSeekClient(deepSeek(properties, baseUrl, cacheUsage), properties.model(), retry, cacheUsage);
+				DeepSeekRawResponse rawResponse = new DeepSeekRawResponse();
+				yield new DeepSeekClient(deepSeek(properties, baseUrl, rawResponse, messages), properties.model(), retry,
+						rawResponse, messages);
 			}
 			case OPENROUTER -> new OpenRouterClient(openRouter(properties, baseUrl), properties.model(),
-					properties.serviceTier(), properties.reasoningEffort(), properties.timeout(), retry);
+					properties.serviceTier(), properties.reasoningEffort(), properties.timeout(), retry, messages);
 		};
 	}
 
@@ -83,18 +85,18 @@ public final class LlmClientFactory {
 	}
 
 	private static DeepSeekChatModel deepSeek(LlmProviderProperties properties, @Nullable String baseUrl,
-			DeepSeekCacheUsage cacheUsage) {
+			DeepSeekRawResponse rawResponse, ProviderMessages messages) {
 		HttpClient http = HttpClient.newBuilder().connectTimeout(connectTimeout(properties.timeout())).build();
 		JdkClientHttpRequestFactory requestFactory = new JdkClientHttpRequestFactory(http);
 		requestFactory.setReadTimeout(properties.timeout());
 		RestClient.Builder restClient = RestClient.builder()
 			.requestFactory(new BufferingClientHttpRequestFactory(requestFactory))
-			.requestInterceptor(cacheUsage);
+			.requestInterceptor(rawResponse);
 		DeepSeekApi api = DeepSeekApi.builder()
 			.baseUrl(baseUrl != null ? baseUrl : DEEPSEEK_BASE_URL)
 			.apiKey(properties.apiKey())
 			.restClientBuilder(restClient)
-			.responseErrorHandler(new HttpStatusErrors())
+			.responseErrorHandler(new HttpStatusErrors(messages))
 			.build();
 		return DeepSeekChatModel.builder()
 			.deepSeekApi(api)

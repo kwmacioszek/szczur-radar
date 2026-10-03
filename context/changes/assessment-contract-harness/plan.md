@@ -542,16 +542,16 @@ Brak zmian danych i migracji Flyway. `SkeletonAgent` zastępuje `AssessorAgent`;
 
 #### Automated
 
-- [x] 3.1 Testy jednostkowe przechodzą offline: `cd szczur-radar-api && ./mvnw -B test`
-- [x] 3.2 Pełna weryfikacja przechodzi: `cd szczur-radar-api && ./mvnw -B verify`
-- [x] 3.3 Serwer testowy otrzymuje dokładnie tyle żądań, ile prób zgłasza `LlmResponse.attempts` / `LlmCallException` (brak ukrytych ponowień SDK i frameworka) dla każdego dostawcy
-- [x] 3.4 Schemat wysłany do Gemini nie zawiera `minItems`/`maxItems`, a do DeepSeek i OpenRouter także `minLength`/`maxLength` (test)
-- [x] 3.5 Błędne `LLM_SERVICE_TIER` / `LLM_REASONING_EFFORT` / `LLM_TIMEOUT` oraz `flex` dla dostawcy innego niż `openrouter` zatrzymują start z komunikatem bez klucza (test)
-- [ ] 3.6 Plan Railway nie proponuje usunięć: job `railway-config` na PR zielony
+- [x] 3.1 Testy jednostkowe przechodzą offline: `cd szczur-radar-api && ./mvnw -B test` — fdedac9
+- [x] 3.2 Pełna weryfikacja przechodzi: `cd szczur-radar-api && ./mvnw -B verify` — fdedac9
+- [x] 3.3 Serwer testowy otrzymuje dokładnie tyle żądań, ile prób zgłasza `LlmResponse.attempts` / `LlmCallException` (brak ukrytych ponowień SDK i frameworka) dla każdego dostawcy — fdedac9
+- [x] 3.4 Schemat wysłany do Gemini nie zawiera `minItems`/`maxItems`, a do DeepSeek i OpenRouter także `minLength`/`maxLength` (test) — fdedac9
+- [x] 3.5 Błędne `LLM_SERVICE_TIER` / `LLM_REASONING_EFFORT` / `LLM_TIMEOUT` oraz `flex` dla dostawcy innego niż `openrouter` zatrzymują start z komunikatem bez klucza (test) — fdedac9
+- [x] 3.6 Plan Railway nie proponuje usunięć: job `railway-config` na PR zielony — fdedac9
 
 #### Manual
 
-- [x] 3.7 Payloady w `fixtures/<dostawca>/` są prawdziwymi odpowiedziami API bez kluczy i danych osobowych
+- [x] 3.7 Payloady w `fixtures/<dostawca>/` są prawdziwymi odpowiedziami API bez kluczy i danych osobowych — fdedac9
 
 ### Phase 4: Prompt, Assessor i agent (dawniej 3B)
 

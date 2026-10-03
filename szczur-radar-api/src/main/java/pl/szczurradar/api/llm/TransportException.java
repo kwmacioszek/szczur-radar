@@ -83,18 +83,18 @@ public class TransportException extends RuntimeException {
 	 * An exception without an HTTP status: a time-out or I/O error found in its cause chain, otherwise
 	 * {@link Kind#REJECTED}.
 	 */
-	public static TransportException ofThrowable(Throwable error) {
+	static TransportException ofThrowable(Throwable error, ProviderMessages messages) {
 		for (Throwable cause = error; cause != null; cause = cause.getCause()) {
 			if (cause instanceof InterruptedIOException || cause instanceof HttpTimeoutException) {
-				return new TransportException(Kind.TIMEOUT, "time-out: " + cause, null, error);
+				return new TransportException(Kind.TIMEOUT, messages.clean("time-out: " + cause), null, error);
 			}
 		}
 		for (Throwable cause = error; cause != null; cause = cause.getCause()) {
 			if (cause instanceof IOException) {
-				return new TransportException(Kind.CONNECTION, "I/O error: " + cause, null, error);
+				return new TransportException(Kind.CONNECTION, messages.clean("I/O error: " + cause), null, error);
 			}
 		}
-		return new TransportException(Kind.REJECTED, String.valueOf(error), null, error);
+		return new TransportException(Kind.REJECTED, messages.clean(String.valueOf(error)), null, error);
 	}
 
 	/** {@code Retry-After} in seconds (the HTTP-date form is not used by the providers), or {@code null}. */

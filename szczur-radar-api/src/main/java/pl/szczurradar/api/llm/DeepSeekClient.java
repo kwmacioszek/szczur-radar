@@ -30,13 +30,17 @@ final class DeepSeekClient implements LlmClient {
 
 	private final TransportRetry retry;
 
-	private final DeepSeekCacheUsage cacheUsage;
+	private final DeepSeekRawResponse rawResponse;
 
-	DeepSeekClient(ChatModel chatModel, String model, TransportRetry retry, DeepSeekCacheUsage cacheUsage) {
+	private final ProviderMessages messages;
+
+	DeepSeekClient(ChatModel chatModel, String model, TransportRetry retry, DeepSeekRawResponse rawResponse,
+			ProviderMessages messages) {
 		this.chatModel = chatModel;
 		this.model = model;
 		this.retry = retry;
-		this.cacheUsage = cacheUsage;
+		this.rawResponse = rawResponse;
+		this.messages = messages;
 	}
 
 	@Override
@@ -56,7 +60,7 @@ final class DeepSeekClient implements LlmClient {
 				: ChatResponses.cachedTokens(response);
 		String reportedModel = ChatResponses.model(response);
 		return new LlmResponse(ChatResponses.text(response), Provider.DEEPSEEK,
-				reportedModel != null ? reportedModel : model, Provider.DEEPSEEK.id(), outcome.serviceTier(), false,
+				reportedModel != null ? reportedModel : model, Channel.DEEPSEEK, outcome.serviceTier(), false,
 				null, OutputMode.JSON_MODE, ChatResponses.inputTokens(response), ChatResponses.outputTokens(response),
 				cached, outcome.attempts());
 	}
@@ -65,23 +69,40 @@ final class DeepSeekClient implements LlmClient {
 	}
 
 	private Call call(Prompt prompt) {
-		cacheUsage.clear();
+		rawResponse.clear();
 		ChatResponse response;
 		try {
 			response = chatModel.call(prompt);
 		}
 		catch (TransportException ex) {
-			// an HTTP error status, already classified by DeepSeekErrors
+			// an HTTP error status, already classified and cleaned by HttpStatusErrors
 			throw ex;
 		}
 		catch (RuntimeException ex) {
-			throw TransportException.ofThrowable(ex);
+			// Spring AI cannot map DeepSeek's newer finish reasons; the raw answer says why it ended.
+			DeepSeekRawResponse.Observed observed = rawResponse.take();
+			if (observed.cutOffByServer()) {
+				throw serverCutOff(observed, ex);
+			}
+			throw TransportException.ofThrowable(ex, messages);
+		}
+		DeepSeekRawResponse.Observed observed = rawResponse.take();
+		if (observed.cutOffByServer()) {
+			throw serverCutOff(observed, null);
+		}
+		if (response.getResults().isEmpty()) {
+			throw new TransportException(TransportException.Kind.REJECTED, "no choices in the answer", null, null);
 		}
 		if (ChatResponses.finishReasons(response).contains("content_filter")) {
 			throw new TransportException(TransportException.Kind.REJECTED, "answer blocked by the content filter", null,
 					null);
 		}
-		return new Call(response, cacheUsage.take());
+		return new Call(response, observed.cacheHitTokens());
+	}
+
+	private static TransportException serverCutOff(DeepSeekRawResponse.Observed observed, @Nullable Throwable cause) {
+		return new TransportException(TransportException.Kind.SERVER_ERROR,
+				"answer cut off by the server, finish reason " + observed.finishReason(), null, cause);
 	}
 
 }

@@ -41,3 +41,21 @@ later phases. Each open check names the phase that closes it; `/10x-impl-review`
   in `usage.prompt_cache_hit_tokens` (Spring AI drops them, `DeepSeekCacheUsage` reads them).
 - `llm.CallFailure` (`provider_error` | `timeout`) instead of the contract's `FailureClass` in
   `LlmCallException`, so `llm` does not import `agents/assessor`; phase 4's `Assessor` maps it.
+
+### N4. Smaller deviations found by the phase 3 review — resolved
+
+- Gemini cannot honour `Retry-After`: the GenAI SDK's `ApiException` exposes no headers, so 429s
+  from Gemini wait `min(2^(n-1), 30)` s (1 s, 2 s). OpenRouter and DeepSeek use the header.
+- `ProviderSchemas` also inlines `$ref` (from `#/$defs/...`) and drops `$defs` and `$schema` for every
+  provider — Spring AI's Gemini mapping loses `$ref`, and one inlined form is simplest to send to all.
+- Error texts from providers go through `ProviderMessages` (key → `<hidden>`, capped at 500
+  characters) before they become exception messages: some 401 answers quote the key (review F1).
+- Test payloads: the success response per provider is a real recording; refusal, blocked answer,
+  thought parts and empty choices are that recording changed minimally in the test (review F3).
+- The DeepSeek fixture was re-recorded with the client's exact system prompt
+  (`DeepSeekClient.SCHEMA_INSTRUCTION`); token counts in `DeepSeekClientTest` follow it.
+- DeepSeek finish reasons `insufficient_system_resource` and `aborted` (documented in DeepSeek's
+  Chat Completions API) are missing from Spring AI's enum: such an answer failed deserialization
+  (`RestClientException`) and became a non-retried `provider_error`. `DeepSeekRawResponse` now
+  reads the raw finish reason and the client retries it as a server error (review F6).
+- `LlmResponse.channel` is the enum `Channel` (review F5); one `LlmClient` per run (review F8).

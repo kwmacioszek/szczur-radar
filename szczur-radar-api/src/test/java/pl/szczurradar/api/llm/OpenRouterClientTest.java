@@ -44,7 +44,7 @@ class OpenRouterClientTest {
 			assertThat(response.rawText()).isEqualTo(MAPPER.readTree(SUCCESS).at("/choices/0/message/content").asString());
 			assertThat(response.provider()).isEqualTo(Provider.OPENROUTER);
 			assertThat(response.model()).isEqualTo("openai/gpt-6-luna");
-			assertThat(response.channel()).isEqualTo("openai/flex");
+			assertThat(response.channel()).isEqualTo(Channel.OPENAI_FLEX);
 			assertThat(response.serviceTier()).isEqualTo(ServiceTier.FLEX);
 			assertThat(response.flexFallback()).isFalse();
 			assertThat(response.reasoningEffort()).isEqualTo(ReasoningEffort.LOW);
@@ -78,7 +78,7 @@ class OpenRouterClientTest {
 		try (ScriptedProviderServer server = new ScriptedProviderServer(Reply.ok(SUCCESS))) {
 			LlmResponse response = client(server, ServiceTier.DEFAULT, null).complete(REQUEST);
 
-			assertThat(response.channel()).isEqualTo("openrouter");
+			assertThat(response.channel()).isEqualTo(Channel.OPENROUTER);
 			JsonNode body = MAPPER.readTree(server.requests().getFirst().body());
 			assertThat(body.has("provider")).isFalse();
 			assertThat(body.has("reasoning_effort")).isFalse();
@@ -93,7 +93,7 @@ class OpenRouterClientTest {
 
 			assertThat(response.serviceTier()).isEqualTo(ServiceTier.DEFAULT);
 			assertThat(response.flexFallback()).isTrue();
-			assertThat(response.channel()).isEqualTo("openai");
+			assertThat(response.channel()).isEqualTo(Channel.OPENAI);
 			assertThat(response.attempts()).isEqualTo(4);
 			assertThat(server.requests()).extracting(request -> MAPPER.readTree(request.body()).at("/provider/only").toString())
 				.containsExactly("[\"openai/flex\"]", "[\"openai/flex\"]", "[\"openai/flex\"]", "[\"openai\"]");
@@ -113,6 +113,7 @@ class OpenRouterClientTest {
 
 	@Test
 	void refusalIsAProviderErrorWithoutRetry() {
+		// The real payload as a refusal: the answer replaced by the model's refusal text.
 		ObjectNode refused = (ObjectNode) MAPPER.readTree(SUCCESS);
 		((ObjectNode) refused.at("/choices/0/message")).put("refusal", "I can't help with that.").putNull("content");
 		try (ScriptedProviderServer server = new ScriptedProviderServer(Reply.ok(refused.toString()), Reply.ok(SUCCESS))) {
@@ -166,6 +167,48 @@ class OpenRouterClientTest {
 				});
 			assertThat(server.requests()).hasSize(3);
 		}
+	}
+
+	@Test
+	void unauthorizedFailsAfterOneRequestWithoutTheKeyInTheMessage() {
+		try (ScriptedProviderServer server = new ScriptedProviderServer(Reply.status(401,
+				"{\"error\":{\"message\":\"Incorrect API key provided: synthetic-key\",\"code\":401}}"))) {
+			assertThatExceptionOfType(LlmCallException.class)
+				.isThrownBy(() -> client(server, ServiceTier.DEFAULT, null).complete(REQUEST))
+				.satisfies(ex -> {
+					assertThat(ex.attempts()).isEqualTo(1);
+					assertThat(ex.getMessage()).contains("HTTP 401").doesNotContain("synthetic-key");
+				});
+		}
+	}
+
+	@Test
+	void answerWithoutChoicesIsAProviderErrorWithoutRetry() {
+		// The real payload with its choices removed.
+		ObjectNode empty = (ObjectNode) MAPPER.readTree(SUCCESS);
+		empty.putArray("choices");
+		try (ScriptedProviderServer server = new ScriptedProviderServer(Reply.ok(empty.toString()), Reply.ok(SUCCESS))) {
+			assertThatExceptionOfType(LlmCallException.class)
+				.isThrownBy(() -> client(server, ServiceTier.DEFAULT, null).complete(REQUEST))
+				.satisfies(ex -> {
+					assertThat(ex.failure()).isEqualTo(CallFailure.PROVIDER_ERROR);
+					assertThat(ex.attempts()).isEqualTo(1);
+				});
+			assertThat(server.requests()).hasSize(1);
+		}
+	}
+
+	@Test
+	void refusedConnectionIsRetriedThreeTimes() {
+		assertThatExceptionOfType(LlmCallException.class)
+			.isThrownBy(() -> LlmClientFactory.create(new LlmProviderProperties(Provider.OPENROUTER, "openai/gpt-6-luna",
+					"synthetic-key", ServiceTier.DEFAULT, null, Duration.ofSeconds(5)),
+					ScriptedProviderServer.refusingBaseUrl(), sleeps::add).complete(REQUEST))
+			.satisfies(ex -> {
+				assertThat(ex.failure()).isEqualTo(CallFailure.PROVIDER_ERROR);
+				assertThat(ex.attempts()).isEqualTo(3);
+			});
+		assertThat(sleeps).containsExactly(Duration.ofSeconds(1), Duration.ofSeconds(2));
 	}
 
 	private LlmClient client(ScriptedProviderServer server, ServiceTier tier, ReasoningEffort effort) {

@@ -30,10 +30,13 @@ final class GeminiClient implements LlmClient {
 
 	private final TransportRetry retry;
 
-	GeminiClient(ChatModel chatModel, String model, TransportRetry retry) {
+	private final ProviderMessages messages;
+
+	GeminiClient(ChatModel chatModel, String model, TransportRetry retry, ProviderMessages messages) {
 		this.chatModel = chatModel;
 		this.model = model;
 		this.retry = retry;
+		this.messages = messages;
 	}
 
 	@Override
@@ -50,7 +53,7 @@ final class GeminiClient implements LlmClient {
 		ChatResponse response = outcome.value();
 		String reportedModel = ChatResponses.model(response);
 		return new LlmResponse(ChatResponses.text(response), Provider.GEMINI,
-				reportedModel != null ? reportedModel : model, Provider.GEMINI.id(), outcome.serviceTier(), false, null,
+				reportedModel != null ? reportedModel : model, Channel.GEMINI, outcome.serviceTier(), false, null,
 				OutputMode.JSON_SCHEMA, ChatResponses.inputTokens(response), ChatResponses.outputTokens(response),
 				ChatResponses.cachedTokens(response), outcome.attempts());
 	}
@@ -75,13 +78,14 @@ final class GeminiClient implements LlmClient {
 	}
 
 	/** Spring AI wraps every GenAI error in {@code RuntimeException("Failed to generate content")}. */
-	private static TransportException classify(RuntimeException error) {
+	private TransportException classify(RuntimeException error) {
 		for (Throwable cause = error; cause != null; cause = cause.getCause()) {
 			if (cause instanceof ApiException api) {
-				return TransportException.ofStatus(api.code(), api.status() + " " + api.message(), null, error);
+				return TransportException.ofStatus(api.code(), messages.clean(api.status() + " " + api.message()), null,
+						error);
 			}
 		}
-		return TransportException.ofThrowable(error);
+		return TransportException.ofThrowable(error, messages);
 	}
 
 }

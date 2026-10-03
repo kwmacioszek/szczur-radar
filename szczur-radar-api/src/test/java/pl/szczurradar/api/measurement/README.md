@@ -8,6 +8,9 @@ into the repo, CI or Railway. Keep each provider's settings in its own file outs
 export LLM_API_PROVIDER=<gemini|deepseek|openrouter> LLM_MODEL=<model id> LLM_API_KEY=<key>
 ```
 
+A run creates one `LlmClient` (`LlmClientFactory.create(...)`) and reuses it for every post: the
+client's HTTP pools and threads are not closed (`llm/CLAUDE.md`).
+
 ## Recording provider payloads (`src/test/resources/fixtures/<provider>/`)
 
 The client tests (`llm/*ClientTest`) replay one real success response per provider on a local HTTP
@@ -42,12 +45,13 @@ print(json.dumps({"system": "Oceń wpis według kontraktu. Zwróć wyłącznie J
                  ensure_ascii=False))
 EOF
 
-# DeepSeek: JSON mode, thinking off, schema in the system prompt
+# DeepSeek: JSON mode, thinking off, schema in the system prompt after the client's fixed paragraph
+# (DeepSeekClient.SCHEMA_INSTRUCTION). Run it twice: the second answer reports prompt cache hits.
 ( source ~/.config/szczur-radar/deepseek.env; python3 - <<'EOF' |
 import json, os; r = json.load(open("/tmp/llm-request.json"))
 print(json.dumps({"model": os.environ["LLM_MODEL"], "temperature": 0,
   "response_format": {"type": "json_object"}, "thinking": {"type": "disabled"},
-  "messages": [{"role": "system", "content": r["system"] + "\n\nJSON Schema:\n" + json.dumps(r["deepseek"])},
+  "messages": [{"role": "system", "content": r["system"] + "\n\nReturn exactly one JSON object, with no other text, that conforms to this JSON Schema:\n" + json.dumps(r["deepseek"], ensure_ascii=False, separators=(",", ":"))},
                {"role": "user", "content": r["user"]}]}, ensure_ascii=False))
 EOF
   curl -sS https://api.deepseek.com/chat/completions -H "Authorization: Bearer $LLM_API_KEY" \

@@ -24,7 +24,7 @@ import pl.szczurradar.api.config.LlmProviderProperties.ServiceTier;
  * @param cachedTokens prompt tokens served from the provider's cache, {@code null} if not reported
  * @param attempts HTTP attempts made, including the successful one
  */
-public record LlmResponse(String rawText, Provider provider, String model, String channel, ServiceTier serviceTier,
+public record LlmResponse(String rawText, Provider provider, String model, Channel channel, ServiceTier serviceTier,
 		boolean flexFallback, @Nullable ReasoningEffort reasoningEffort, OutputMode outputMode,
 		@Nullable Integer inputTokens, @Nullable Integer outputTokens, @Nullable Integer cachedTokens, int attempts) {
 }

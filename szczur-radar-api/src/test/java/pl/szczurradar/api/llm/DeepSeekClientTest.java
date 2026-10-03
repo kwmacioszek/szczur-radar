@@ -10,6 +10,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.node.ObjectNode;
 
 import pl.szczurradar.api.agents.assessor.validation.OutputParser;
 import pl.szczurradar.api.config.LlmProviderProperties;
@@ -41,12 +42,12 @@ class DeepSeekClientTest {
 			assertThat(response.rawText()).isEqualTo(MAPPER.readTree(SUCCESS).at("/choices/0/message/content").asString());
 			assertThat(response.provider()).isEqualTo(Provider.DEEPSEEK);
 			assertThat(response.model()).isEqualTo("deepseek-flash");
-			assertThat(response.channel()).isEqualTo("deepseek");
+			assertThat(response.channel()).isEqualTo(Channel.DEEPSEEK);
 			assertThat(response.outputMode()).isEqualTo(OutputMode.JSON_MODE);
 			assertThat(response.serviceTier()).isEqualTo(ServiceTier.DEFAULT);
-			assertThat(response.inputTokens()).isEqualTo(825);
-			assertThat(response.outputTokens()).isEqualTo(152);
-			assertThat(response.cachedTokens()).isEqualTo(640);
+			assertThat(response.inputTokens()).isEqualTo(696);
+			assertThat(response.outputTokens()).isEqualTo(141);
+			assertThat(response.cachedTokens()).isEqualTo(512);
 			assertThat(response.attempts()).isEqualTo(1);
 
 			assertThat(server.requests()).singleElement().satisfies(request -> {
@@ -121,9 +122,71 @@ class DeepSeekClientTest {
 		}
 	}
 
+	@Test
+	void unauthorizedFailsAfterOneRequestWithoutTheKeyInTheMessage() {
+		try (ScriptedProviderServer server = new ScriptedProviderServer(Reply.status(401,
+				"{\"error\":{\"message\":\"Authentication Fails, Your api key: synthetic-key is invalid\"}}"))) {
+			assertThatExceptionOfType(LlmCallException.class)
+				.isThrownBy(() -> client(server, Duration.ofSeconds(5)).complete(REQUEST))
+				.satisfies(ex -> {
+					assertThat(ex.attempts()).isEqualTo(1);
+					assertThat(ex.getMessage()).contains("HTTP 401", "<hidden>").doesNotContain("synthetic-key");
+				});
+		}
+	}
+
+	@Test
+	void answerWithoutChoicesIsAProviderErrorWithoutRetry() {
+		// The real payload with its choices removed.
+		ObjectNode empty = (ObjectNode) MAPPER.readTree(SUCCESS);
+		empty.putArray("choices");
+		try (ScriptedProviderServer server = new ScriptedProviderServer(Reply.ok(empty.toString()), Reply.ok(SUCCESS))) {
+			assertThatExceptionOfType(LlmCallException.class)
+				.isThrownBy(() -> client(server, Duration.ofSeconds(5)).complete(REQUEST))
+				.satisfies(ex -> {
+					assertThat(ex.failure()).isEqualTo(CallFailure.PROVIDER_ERROR);
+					assertThat(ex.attempts()).isEqualTo(1);
+				});
+			assertThat(server.requests()).hasSize(1);
+		}
+	}
+
+	@Test
+	void answerCutOffByTheServerIsRetried() {
+		for (String reason : List.of("insufficient_system_resource", "aborted")) {
+			// The real payload as DeepSeek ends an answer it could not finish (api-docs.deepseek.com).
+			ObjectNode cutOff = (ObjectNode) MAPPER.readTree(SUCCESS);
+			((ObjectNode) cutOff.at("/choices/0")).put("finish_reason", reason);
+			sleeps.clear();
+			try (ScriptedProviderServer server = new ScriptedProviderServer(Reply.ok(cutOff.toString()),
+					Reply.ok(SUCCESS))) {
+				LlmResponse response = client(server, Duration.ofSeconds(5)).complete(REQUEST);
+
+				assertThat(response.attempts()).as(reason).isEqualTo(2);
+				assertThat(server.requests()).as(reason).hasSize(2);
+				assertThat(sleeps).as(reason).containsExactly(Duration.ofSeconds(1));
+			}
+		}
+	}
+
 	private LlmClient client(ScriptedProviderServer server, Duration timeout) {
+		return client(server.baseUrl(), timeout);
+	}
+
+	@Test
+	void refusedConnectionIsRetriedThreeTimes() {
+		assertThatExceptionOfType(LlmCallException.class)
+			.isThrownBy(() -> client(ScriptedProviderServer.refusingBaseUrl(), Duration.ofSeconds(5)).complete(REQUEST))
+			.satisfies(ex -> {
+				assertThat(ex.failure()).isEqualTo(CallFailure.PROVIDER_ERROR);
+				assertThat(ex.attempts()).isEqualTo(3);
+			});
+		assertThat(sleeps).containsExactly(Duration.ofSeconds(1), Duration.ofSeconds(2));
+	}
+
+	private LlmClient client(String baseUrl, Duration timeout) {
 		return LlmClientFactory.create(new LlmProviderProperties(Provider.DEEPSEEK, "deepseek-v4-flash",
-				"synthetic-key", ServiceTier.DEFAULT, null, timeout), server.baseUrl(), sleeps::add);
+				"synthetic-key", ServiceTier.DEFAULT, null, timeout), baseUrl, sleeps::add);
 	}
 
 }

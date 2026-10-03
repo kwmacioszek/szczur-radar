@@ -3,7 +3,9 @@ package pl.szczurradar.api.llm;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.ServerSocket;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
@@ -98,6 +100,17 @@ final class ScriptedProviderServer implements AutoCloseable {
 
 	String baseUrl() {
 		return "http://127.0.0.1:" + server.getAddress().getPort();
+	}
+
+	/** A local URL nothing listens on: every connection attempt is refused. */
+	static String refusingBaseUrl() {
+		try (ServerSocket socket = new ServerSocket(0, 0,
+				InetAddress.getLoopbackAddress())) {
+			return "http://127.0.0.1:" + socket.getLocalPort();
+		}
+		catch (IOException ex) {
+			throw new UncheckedIOException(ex);
+		}
 	}
 
 	List<Request> requests() {

@@ -43,10 +43,12 @@ class GeminiClientTest {
 				.isEqualTo(MAPPER.readTree(SUCCESS).at("/candidates/0/content/parts/0/text").asString());
 			assertThat(response.provider()).isEqualTo(Provider.GEMINI);
 			assertThat(response.model()).isEqualTo("gemini-3.1-flash-lite");
-			assertThat(response.channel()).isEqualTo("gemini");
+			assertThat(response.channel()).isEqualTo(Channel.GEMINI);
 			assertThat(response.outputMode()).isEqualTo(OutputMode.JSON_SCHEMA);
 			assertThat(response.inputTokens()).isEqualTo(112);
 			assertThat(response.outputTokens()).isEqualTo(278);
+			// The recording reports no cachedContentTokenCount.
+			assertThat(response.cachedTokens()).isNull();
 			assertThat(response.attempts()).isEqualTo(1);
 
 			assertThat(server.requests()).singleElement().satisfies(request -> {
@@ -71,6 +73,7 @@ class GeminiClientTest {
 
 	@Test
 	void thoughtPartsAreNotPartOfTheText() {
+		// The real payload with one thought part put in front of the answer.
 		ObjectNode withThought = (ObjectNode) MAPPER.readTree(SUCCESS);
 		ArrayNode parts = (ArrayNode) withThought.at("/candidates/0/content/parts");
 		parts.insert(0, MAPPER.createObjectNode().put("text", "Let me think…").put("thought", true));
@@ -84,9 +87,12 @@ class GeminiClientTest {
 
 	@Test
 	void blockedAnswerIsAProviderErrorWithoutRetry() {
-		String blocked = "{\"promptFeedback\":{\"blockReason\":\"SAFETY\"},\"modelVersion\":\"gemini-3.1-flash-lite\","
-				+ "\"usageMetadata\":{\"promptTokenCount\":112,\"totalTokenCount\":112}}";
-		try (ScriptedProviderServer server = new ScriptedProviderServer(Reply.ok(blocked), Reply.ok(SUCCESS))) {
+		// The real payload as Gemini returns a blocked prompt: no candidates, a block reason instead.
+		ObjectNode blocked = (ObjectNode) MAPPER.readTree(SUCCESS);
+		blocked.remove("candidates");
+		blocked.putObject("promptFeedback").put("blockReason", "SAFETY");
+		try (ScriptedProviderServer server = new ScriptedProviderServer(Reply.ok(blocked.toString()),
+				Reply.ok(SUCCESS))) {
 			assertThatExceptionOfType(LlmCallException.class)
 				.isThrownBy(() -> client(server, Duration.ofSeconds(5)).complete(REQUEST))
 				.satisfies(ex -> {
@@ -155,9 +161,37 @@ class GeminiClientTest {
 		return "{\"error\":{\"code\":" + code + ",\"message\":\"test\",\"status\":\"" + status + "\"}}";
 	}
 
+	@Test
+	void unauthorizedFailsAfterOneRequestWithoutTheKeyInTheMessage() {
+		try (ScriptedProviderServer server = new ScriptedProviderServer(Reply.status(401,
+				"{\"error\":{\"code\":401,\"message\":\"API key synthetic-key not valid\",\"status\":\"UNAUTHENTICATED\"}}"))) {
+			assertThatExceptionOfType(LlmCallException.class)
+				.isThrownBy(() -> client(server, Duration.ofSeconds(5)).complete(REQUEST))
+				.satisfies(ex -> {
+					assertThat(ex.attempts()).isEqualTo(1);
+					assertThat(ex.getMessage()).contains("HTTP 401", "<hidden>").doesNotContain("synthetic-key");
+				});
+		}
+	}
+
 	private LlmClient client(ScriptedProviderServer server, Duration timeout) {
+		return client(server.baseUrl(), timeout);
+	}
+
+	@Test
+	void refusedConnectionIsRetriedThreeTimes() {
+		assertThatExceptionOfType(LlmCallException.class)
+			.isThrownBy(() -> client(ScriptedProviderServer.refusingBaseUrl(), Duration.ofSeconds(5)).complete(REQUEST))
+			.satisfies(ex -> {
+				assertThat(ex.failure()).isEqualTo(CallFailure.PROVIDER_ERROR);
+				assertThat(ex.attempts()).isEqualTo(3);
+			});
+		assertThat(sleeps).containsExactly(Duration.ofSeconds(1), Duration.ofSeconds(2));
+	}
+
+	private LlmClient client(String baseUrl, Duration timeout) {
 		return LlmClientFactory.create(new LlmProviderProperties(Provider.GEMINI, "gemini-3.1-flash-lite",
-				"synthetic-key", ServiceTier.DEFAULT, null, timeout), server.baseUrl(), sleeps::add);
+				"synthetic-key", ServiceTier.DEFAULT, null, timeout), baseUrl, sleeps::add);
 	}
 
 }

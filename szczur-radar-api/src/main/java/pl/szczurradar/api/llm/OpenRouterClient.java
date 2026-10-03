@@ -27,10 +27,6 @@ import pl.szczurradar.api.config.LlmProviderProperties.ServiceTier;
  */
 final class OpenRouterClient implements LlmClient {
 
-	static final String FLEX_UPSTREAM = "openai/flex";
-
-	static final String DEFAULT_UPSTREAM = "openai";
-
 	private final ChatModel chatModel;
 
 	private final String model;
@@ -43,14 +39,18 @@ final class OpenRouterClient implements LlmClient {
 
 	private final TransportRetry retry;
 
+	private final ProviderMessages messages;
+
 	OpenRouterClient(ChatModel chatModel, String model, ServiceTier serviceTier,
-			@Nullable ReasoningEffort reasoningEffort, Duration timeout, TransportRetry retry) {
+			@Nullable ReasoningEffort reasoningEffort, Duration timeout, TransportRetry retry,
+			ProviderMessages messages) {
 		this.chatModel = chatModel;
 		this.model = model;
 		this.serviceTier = serviceTier;
 		this.reasoningEffort = reasoningEffort;
 		this.timeout = timeout;
 		this.retry = retry;
+		this.messages = messages;
 	}
 
 	@Override
@@ -78,17 +78,18 @@ final class OpenRouterClient implements LlmClient {
 			options.reasoningEffort(reasoningEffort.id());
 		}
 		if (serviceTier == ServiceTier.FLEX) {
-			options.extraBody(Map.of("provider", Map.of("only", List.of(upstream(tier)), "allow_fallbacks", false)));
+			options.extraBody(
+					Map.of("provider", Map.of("only", List.of(upstream(tier).value()), "allow_fallbacks", false)));
 		}
 		return options.build();
 	}
 
-	private String channel(ServiceTier tier) {
-		return serviceTier == ServiceTier.FLEX ? upstream(tier) : Provider.OPENROUTER.id();
+	private Channel channel(ServiceTier tier) {
+		return serviceTier == ServiceTier.FLEX ? upstream(tier) : Channel.OPENROUTER;
 	}
 
-	private static String upstream(ServiceTier tier) {
-		return tier == ServiceTier.FLEX ? FLEX_UPSTREAM : DEFAULT_UPSTREAM;
+	private static Channel upstream(ServiceTier tier) {
+		return tier == ServiceTier.FLEX ? Channel.OPENAI_FLEX : Channel.OPENAI;
 	}
 
 	private ChatResponse call(Prompt prompt) {
@@ -98,14 +99,16 @@ final class OpenRouterClient implements LlmClient {
 		}
 		catch (OpenAIServiceException ex) {
 			List<String> retryAfter = ex.headers().values("Retry-After");
-			throw TransportException.ofStatus(ex.statusCode(), String.valueOf(ex.getMessage()),
+			throw TransportException.ofStatus(ex.statusCode(), messages.clean(String.valueOf(ex.getMessage())),
 					TransportException.parseRetryAfter(retryAfter.isEmpty() ? null : retryAfter.getFirst()), ex);
 		}
 		catch (RuntimeException ex) {
-			throw TransportException.ofThrowable(ex);
+			throw TransportException.ofThrowable(ex, messages);
 		}
-		Object refusal = response.getResults().isEmpty() ? null
-				: response.getResults().getFirst().getOutput().getMetadata().get("refusal");
+		if (response.getResults().isEmpty()) {
+			throw new TransportException(TransportException.Kind.REJECTED, "no choices in the answer", null, null);
+		}
+		Object refusal = response.getResults().getFirst().getOutput().getMetadata().get("refusal");
 		if (refusal instanceof String text && !text.isBlank()) {
 			throw new TransportException(TransportException.Kind.REJECTED, "model refusal: " + text, null, null);
 		}

@@ -15,8 +15,11 @@ import org.springframework.web.client.ResponseErrorHandler;
  */
 final class HttpStatusErrors implements ResponseErrorHandler {
 
-	/** Error bodies are quoted in messages only up to this length. */
-	static final int MAX_BODY = 500;
+	private final ProviderMessages messages;
+
+	HttpStatusErrors(ProviderMessages messages) {
+		this.messages = messages;
+	}
 
 	@Override
 	public boolean hasError(ClientHttpResponse response) throws IOException {
@@ -26,8 +29,7 @@ final class HttpStatusErrors implements ResponseErrorHandler {
 	@Override
 	public void handleError(URI url, HttpMethod method, ClientHttpResponse response) throws IOException {
 		String body = StreamUtils.copyToString(response.getBody(), StandardCharsets.UTF_8);
-		throw TransportException.ofStatus(response.getStatusCode().value(),
-				body.length() > MAX_BODY ? body.substring(0, MAX_BODY) + "…" : body,
+		throw TransportException.ofStatus(response.getStatusCode().value(), messages.clean(body),
 				TransportException.parseRetryAfter(response.getHeaders().getFirst("Retry-After")), null);
 	}
 

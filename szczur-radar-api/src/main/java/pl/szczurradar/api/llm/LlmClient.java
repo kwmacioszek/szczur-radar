@@ -14,6 +14,9 @@ public interface LlmClient {
 	 * Calls the model.
 	 *
 	 * @throws LlmCallException when the provider refused the call or the last attempt failed
+	 *     — every provider or transport failure ends here. A bug in our own code during an attempt
+	 *     surfaces as the original {@code RuntimeException} on purpose: it is not a provider error
+	 *     and must not be recorded as one.
 	 */
 	LlmResponse complete(LlmRequest request);
 
