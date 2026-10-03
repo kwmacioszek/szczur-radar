@@ -1,0 +1,120 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AssessmentOutputV2",
+  "description": "Shape of the model output, contract-v2.md §3 and limits §9. Lengths count Unicode code points. Domain rules D1-D15 (§12) are checked after this schema.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["relevance", "modifiers", "targets", "claims", "flags"],
+  "properties": {
+    "relevance": {
+      "enum": ["investment_related", "not_investment_related", "unclear"]
+    },
+    "modifiers": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"enum": ["humor", "promotion"]}
+    },
+    "targets": {
+      "type": "array",
+      "maxItems": 12,
+      "items": {"$ref": "#/$defs/target"}
+    },
+    "claims": {
+      "type": "array",
+      "maxItems": 24,
+      "items": {"$ref": "#/$defs/claim"}
+    },
+    "flags": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"enum": ["missing_context", "possible_sarcasm", "insufficient_content", "extraction_limit"]}
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "document": {
+      "enum": ["item", "parent_post", "parent_comment"]
+    },
+    "field": {
+      "enum": ["title", "body"]
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "anchor", "stance", "reference"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"},
+        "kind": {
+          "enum": ["company", "asset", "sector", "macro_topic", "other", "unknown"]
+        },
+        "anchor": {"$ref": "#/$defs/anchor"},
+        "stance": {"$ref": "#/$defs/stance"},
+        "reference": {
+          "enum": ["explicit", "contextual", "ambiguous", "unresolved"]
+        }
+      }
+    },
+    "anchor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["document", "field", "quote"],
+      "properties": {
+        "document": {"$ref": "#/$defs/document"},
+        "field": {"$ref": "#/$defs/field"},
+        "quote": {"type": "string", "minLength": 1, "maxLength": 100}
+      }
+    },
+    "stance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["direction", "assertiveness", "claim_ids"],
+      "properties": {
+        "direction": {
+          "enum": ["bullish", "bearish", "neutral", "mixed", "not_expressed", "unclear"]
+        },
+        "assertiveness": {
+          "enum": ["hedged", "unhedged", null]
+        },
+        "claim_ids": {
+          "type": "array",
+          "maxItems": 4,
+          "items": {"$ref": "#/$defs/id"}
+        }
+      }
+    },
+    "claim": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "attribution", "target_ids", "evidence", "statement"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"},
+        "kind": {
+          "enum": ["factual_claim", "opinion", "investment_thesis", "question", "trade_action"]
+        },
+        "attribution": {
+          "enum": ["author", "reported", "unclear"]
+        },
+        "target_ids": {
+          "type": "array",
+          "maxItems": 12,
+          "items": {"$ref": "#/$defs/id"}
+        },
+        "evidence": {"$ref": "#/$defs/evidence"},
+        "statement": {"type": "string", "minLength": 1, "maxLength": 240}
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["document", "field", "quote"],
+      "properties": {
+        "document": {"$ref": "#/$defs/document"},
+        "field": {"$ref": "#/$defs/field"},
+        "quote": {"type": "string", "minLength": 1, "maxLength": 320}
+      }
+    }
+  }
+}

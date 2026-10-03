@@ -3,7 +3,7 @@ project: "Szczur Radar"
 document: "LLM Assessment Contract"
 version: 2
 status: accepted # zaakceptowany przez użytkownika 2026-10-01 (plan F-02, kryterium 1.6)
-updated: 2026-10-01
+updated: 2026-10-03
 source_of_truth: true
 supersedes: "V1 — context/foundation/archive/ (2026-10-01, llm-assessment contract V1)"
 ---
@@ -285,9 +285,9 @@ Jeżeli istotna treść nie mieści się w limitach, model MUSI zwrócić najwa�
 
 Dotyczy każdego `anchor.quote` i `evidence.quote`.
 
-**Normalizacja** `normalize_whitespace(text)`, stosowana do obu stron porównania:
+**Normalizacja białych znaków**, stosowana do obu stron porównania:
 
-1. każdy znak biały Unicode (znak, dla którego Python `str.isspace()` zwraca `True`: m.in. spacja, tabulator, łamania linii `\n` / `\r`, twarda spacja U+00A0, U+2007, U+202F, U+3000) → zwykła spacja;
+1. każdy znak biały → zwykła spacja. Znaki białe to dokładnie: U+0009–U+000D (tabulator, łamania linii `\n` / `\r` i pokrewne), U+001C–U+001F, U+0020 (spacja), U+0085, U+00A0 (twarda spacja), U+1680, U+2000–U+200A (m.in. U+2007), U+2028, U+2029, U+202F, U+205F, U+3000;
 2. ciągi spacji (w tym powstałe z łamania linii) → jedna spacja;
 3. obcięcie spacji na początku i końcu.
 
@@ -296,8 +296,8 @@ Nic więcej: bez zmiany wielkości liter, bez usuwania markdownu, bez normalizac
 **Niezmiennik:** dla cytatu `{document, field, quote}`:
 
 1. wskazany dokument istnieje w wejściu (`item` albo niepusty rodzic), a wskazane pole ma wartość różną od `null`;
-2. `normalize_whitespace(quote)` ma co najmniej 1 znak — cytat złożony wyłącznie z białych znaków jest odrzucany, nawet jeśli pole zawiera identyczne białe znaki;
-3. `normalize_whitespace(quote)` jest ciągłym podciągiem `normalize_whitespace(<wskazane pole>)`.
+2. cytat po normalizacji ma co najmniej 1 znak — cytat złożony wyłącznie z białych znaków jest odrzucany, nawet jeśli pole zawiera identyczne białe znaki;
+3. cytat po normalizacji jest ciągłym podciągiem wskazanego pola po normalizacji.
 
 Zgodne: cytat ze zwykłą spacją tam, gdzie pole ma twardą spację albo łamanie linii. Niezgodne (naruszenie): zmieniona odmiana („rynek” zamiast „rynku”), skrót „...” lub „[...]”, sklejenie dwóch fragmentów, poprawiona literówka, zmieniona wielkość liter, usunięty markdown, cytat z innego pola niż wskazane.
 
@@ -468,3 +468,7 @@ Podstawa: pilotaże na prawdziwych postach i ramowanie — `context/changes/asse
 | `extraction_limit` vs limity | niejasne | model mieści się w limitach i ustawia flagę; przekroczenie = `schema_violation` | niedookreślenie z rundy 1 |
 | Klasy błędów i kolejność walidacji | w dokumencie pomocniczym | §12, z przypisaniem klasy do każdej reguły | walidator nie może niczego dopowiadać |
 | Wyjście | `AssessmentOutputV1` | `AssessmentOutputV2`; wejście bez zmian (`AssessmentInputV1`) | — |
+
+**Zmiany redakcyjne V2** (bez zmiany znaczenia):
+
+- 2026-10-03 — §10: zbiór białych znaków wymieniony jawnie zamiast odwołania do funkcji języka programowania (ten sam zbiór znaków); normalizacja nazwana opisowo. Powód: implementacja w Javie (`assessment-contract-harness`, plan v3).

@@ -13,6 +13,9 @@ szczur-radar-api/.mvn/wrapper/maven-wrapper.jar
 .settings/
 .factorypath
 
+# Local MCP client config (e.g. the IntelliJ MCP server on a machine-specific port)
+.mcp.json
+
 # Railway IaC deps
 node_modules/
 .railway/node_modules/

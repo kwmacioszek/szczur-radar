@@ -526,17 +526,17 @@ Brak zmian danych i migracji Flyway. `SkeletonAgent` zastępuje `AssessorAgent`;
 
 #### Automated
 
-- [ ] 2.1 Testy jednostkowe przechodzą bez Dockera i bez zmiennych LLM: `cd szczur-radar-api && ./mvnw -B test`
-- [ ] 2.2 Pełna weryfikacja przechodzi: `cd szczur-radar-api && ./mvnw -B verify`
-- [ ] 2.3 Wyjścia przykładów 1–7 z `examples.md` przechodzą walidator bez naruszeń (test)
-- [ ] 2.4 Każda reguła D1–D15 ma test negatywny z asercją klasy i co najmniej jeden pozytywny; każda zabroniona kombinacja §7.2 ma test
-- [ ] 2.5 Cytat różniący się od pola wyłącznie znakami ze zbioru §10 przechodzi; zmieniona odmiana i „[...]” dają `fabricated_evidence`; limity liczone w code pointach (test „🚀”)
-- [ ] 2.6 `contract-v2.md` nie odwołuje się do Pythona: `! grep -n "isspace\|Python" context/foundation/llm-assessment/contract-v2.md`
+- [x] 2.1 Testy jednostkowe przechodzą bez Dockera i bez zmiennych LLM: `cd szczur-radar-api && ./mvnw -B test`
+- [x] 2.2 Pełna weryfikacja przechodzi: `cd szczur-radar-api && ./mvnw -B verify`
+- [x] 2.3 Wyjścia przykładów 1–7 z `examples.md` przechodzą walidator bez naruszeń (test)
+- [x] 2.4 Każda reguła D1–D15 ma test negatywny z asercją klasy i co najmniej jeden pozytywny; każda zabroniona kombinacja §7.2 ma test
+- [x] 2.5 Cytat różniący się od pola wyłącznie znakami ze zbioru §10 przechodzi; zmieniona odmiana i „[...]” dają `fabricated_evidence`; limity liczone w code pointach (test „🚀”)
+- [x] 2.6 `contract-v2.md` nie odwołuje się do Pythona: `! grep -n "isspace\|Python" context/foundation/llm-assessment/contract-v2.md`
 
 #### Manual
 
-- [ ] 2.7 Enumy, limity i reguły w kodzie oraz schemacie zgadzają się 1:1 z `contract-v2.md` (przegląd obok siebie)
-- [ ] 2.8 Użytkownik zaakceptował redakcyjną zmianę §10
+- [x] 2.7 Enumy, limity i reguły w kodzie oraz schemacie zgadzają się 1:1 z `contract-v2.md` (przegląd obok siebie)
+- [x] 2.8 Użytkownik zaakceptował redakcyjną zmianę §10
 
 ### Phase 3: Infrastruktura LLM (dawniej 3A)
 

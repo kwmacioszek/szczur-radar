@@ -21,6 +21,8 @@
 		<embabel-agent.version>1.5.2</embabel-agent.version>
 		<!-- The Spring AI line Embabel 1.5.2 depends on; keep in step when upgrading Embabel. -->
 		<spring-ai.version>2.0.1</spring-ai.version>
+		<!-- The version Spring AI 2.0.1 brings (Jackson 3); the assessor validates model output with it. -->
+		<json-schema-validator.version>3.0.1</json-schema-validator.version>
 	</properties>
 
 	<dependencyManagement>
@@ -104,6 +106,12 @@
 			<groupId>org.springframework.ai</groupId>
 			<artifactId>spring-ai-autoconfigure-model-tool</artifactId>
 			<version>${spring-ai.version}</version>
+		</dependency>
+		<!-- JSON Schema validation of raw model output (agents/assessor/validation/OutputParser). -->
+		<dependency>
+			<groupId>com.networknt</groupId>
+			<artifactId>json-schema-validator</artifactId>
+			<version>${json-schema-validator.version}</version>
 		</dependency>
 
 		<!-- Test: JUnit, AssertJ, Mockito and MockMvcTester come with the webmvc test starter. -->
