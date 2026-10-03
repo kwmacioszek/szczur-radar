@@ -1,10 +1,10 @@
 ---
 change_id: java-api-rewrite
 title: Przepisanie szczur-radar-api z Pythona/FastAPI na Javę (Spring Boot)
-status: impl_reviewed
+status: archived
 created: 2026-10-01
 updated: 2026-10-03
-archived_at: null
+archived_at: 2026-10-03T07:14:22Z
 ---
 
 ## Notes
