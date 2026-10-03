@@ -19,6 +19,8 @@
 		<!-- Not managed by the Spring Boot BOM; required by Argon2PasswordEncoder. -->
 		<bouncycastle.version>1.86</bouncycastle.version>
 		<embabel-agent.version>1.5.2</embabel-agent.version>
+		<!-- The Spring AI line Embabel 1.5.2 depends on; keep in step when upgrading Embabel. -->
+		<spring-ai.version>2.0.1</spring-ai.version>
 	</properties>
 
 	<dependencyManagement>
@@ -95,6 +97,13 @@
 			<artifactId>embabel-agent-starter-openai-custom</artifactId>
 			<!-- Not in the embabel-agent-dependencies BOM. -->
 			<version>${embabel-agent.version}</version>
+		</dependency>
+		<!-- Spring AI's ChatClientAutoConfiguration (pulled in by Embabel) references the tool-calling
+		     auto-configuration; without this module every start logs a TypeNotPresentException. -->
+		<dependency>
+			<groupId>org.springframework.ai</groupId>
+			<artifactId>spring-ai-autoconfigure-model-tool</artifactId>
+			<version>${spring-ai.version}</version>
 		</dependency>
 
 		<!-- Test: JUnit, AssertJ, Mockito and MockMvcTester come with the webmvc test starter. -->

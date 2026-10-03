@@ -529,8 +529,8 @@ Przełączenie produkcji (wykonuje operator, w tej kolejności):
 
 #### Manual
 
-- [ ] 4.4 PR env end-to-end: logowanie, ochrona głębokiego linku, wylogowanie, 403 dla obcego `Origin`, 429 po limicie, `X-Real-IP` liczy prawdziwy adres i nie da się go podrobić
-- [ ] 4.5 Zimny start API po uśpieniu w PR env zmierzony i zapisany w `deploy-plan.md`
-- [ ] 4.6 Operator wyczyścił schemat bazy produkcyjnej przed merge, PITR był włączony
-- [ ] 4.7 Po merge przez człowieka pre-deploy na produkcji zastosował `V1` i `V2`, a `/api/health` i `/api/ready` na publicznym adresie zwracają 200
-- [ ] 4.8 Admin produkcyjny utworzony przez `create-admin` loguje się na publicznym adresie; issue F-03 zamknięte z podsumowaniem dopiero po tej weryfikacji
+- [x] 4.4 PR env end-to-end: logowanie, ochrona głębokiego linku, wylogowanie, 403 dla obcego `Origin`, 429 po limicie, `X-Real-IP` liczy prawdziwy adres i nie da się go podrobić — 4c6fb00
+- [x] 4.5 Zimny start API po uśpieniu w PR env zmierzony i zapisany w `deploy-plan.md` — 4c6fb00
+- [x] 4.6 Operator wyczyścił schemat bazy produkcyjnej przed merge, PITR był włączony — 7a406f2
+- [x] 4.7 Po merge przez człowieka pre-deploy na produkcji zastosował `V1` i `V2`, a `/api/health` i `/api/ready` na publicznym adresie zwracają 200 — 7a406f2
+- [x] 4.8 Admin produkcyjny utworzony przez `create-admin` loguje się na publicznym adresie; issue F-03 zamknięte z podsumowaniem dopiero po tej weryfikacji — 7a406f2
