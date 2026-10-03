@@ -11,6 +11,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.HttpHeaders;
+import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import pl.szczurradar.api.config.ApiError;
@@ -31,9 +32,12 @@ public class OriginGuardFilter extends OncePerRequestFilter {
 
 	private static final Set<String> UNSAFE_METHODS = Set.of("POST", "PUT", "PATCH", "DELETE");
 
+	// Match decoded path segments just like SecurityConfig; raw URI prefixes miss /%61pi/.
+	private static final PathPatternRequestMatcher API_PATH = PathPatternRequestMatcher.pathPattern("/api/**");
+
 	@Override
 	protected boolean shouldNotFilter(HttpServletRequest request) {
-		return !UNSAFE_METHODS.contains(request.getMethod()) || !request.getRequestURI().startsWith("/api/");
+		return !UNSAFE_METHODS.contains(request.getMethod()) || !API_PATH.matches(request);
 	}
 
 	@Override

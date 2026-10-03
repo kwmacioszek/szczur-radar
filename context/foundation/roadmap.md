@@ -3,7 +3,7 @@ project: "Szczur Radar"
 version: 2
 status: draft # draft | active | locked
 created: 2026-09-27
-updated: 2026-10-02
+updated: 2026-10-03
 prd_version: 2
 main_goal: speed
 top_blocker: time # secondary: decisions (LLM contract, filter scope and signal decision resolved 2026-09-27 — PRD v2)
@@ -22,6 +22,8 @@ milestone_status: open
 > v2.2 (2026-10-01): kontrakt oceny LLM V2 (`assessment-contract-harness`, po pilotażach na prawdziwych postach) zastępuje V1 — wynik oceny to trafność, cele ze stanowiskiem autora, tezy/opinie/fakty/pytania/działania z cytatem, flagi niepewności; bez grafu argumentów. F-02 mierzy modele na zestawie wzorcowym zamiast 12 wymyślonych przypadków.
 > v2.3 (2026-10-01): nowy fundament F-03 (`java-api-rewrite`) — backend przepisany z Pythona/FastAPI na Javę (Spring Boot), bo autor zna Javę i może rzetelnie oceniać kod agenta. F-02 po fazie 1 (kontrakt V2 i dokumenty) czeka na F-03; implementacja kontraktu (p2–p4) zostanie przeplanowana w Javie. S-07 też czeka na F-03, żeby nie dokładać kodu w Pythonie. PR #23 (Python F-02) zamknięty bez merge'a.
 > v2.4 (2026-10-02): triage planu F-03 — sesje Spring Session JDBC zamiast JWT/`token_version`, 30 dni bezczynności z odnawianiem ciasteczka, Flyway fix-forward, czysta baza i ponowne utworzenie admina; bez powrotu do Pythona. Szkielet Embabel z wyborem jednego dostawcy przez `LLM_API_PROVIDER`, `LLM_MODEL`, `LLM_API_KEY`: Gemini (Google AI Studio), DeepSeek bezpośrednio lub Luna przez OpenRouter. F-03 pozostaje w planowaniu; ocena jakości modeli nadal należy do F-02.
+
+> v2.5 (2026-10-03): F-03 zakończone po wdrożeniu #26 (`7a406f2`) i #27 (`6bc15db`) oraz weryfikacji produkcji — migracje, gotowość API i logowanie admina potwierdzone w [podsumowaniu issue #25](https://github.com/kwmacioszek/szczur-radar/issues/25#issuecomment-5965517657). F-02 może przeplanować fazy p2–p4 w Javie, a warunek F-03 dla S-07 jest spełniony. Poprawki z przeglądu implementacji idą osobnym PR (gałąź `fix/java-api-rewrite-review-fixes`): `context/changes/java-api-rewrite/follow-ups/review-fixes.md`.
 
 ## Milestone
 
@@ -47,7 +49,7 @@ Na Wykopie (#gielda) i Reddicie codziennie pojawiają się setki postów o inwes
 | ID   | Change ID                      | Outcome (user can …)                                                                                                            | Prerequisites | PRD refs                                                                                                                                                                                 | Status   |
 | ---- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------- | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
 | F-01 | production-data-gate           | (foundation) produkcja jest gotowa na prawdziwe dane: limity kosztów, zweryfikowany restore, zapieczętowane sekrety             | —             | NFR (dane przechowywane bezterminowo; bezpieczeństwo przed utratą danych po stronie platformy), Open Question 4; guardrail kosztów LLM                                                   | ready    |
-| F-03 | java-api-rewrite               | (foundation) backend w Javie obsługuje funkcje S-01 przez dotychczasowe API; sesje JDBC, migracje fix-forward i szkielet Embabel | S-01          | FR-012, FR-013, FR-014, FR-015, FR-026, NFR (każdy chroniony zasób wymaga uwierzytelnienia — komplet testów autoryzacji)                                                                 | in-progress |
+| F-03 | java-api-rewrite               | (foundation) backend w Javie obsługuje funkcje S-01 przez dotychczasowe API; sesje JDBC, migracje fix-forward i szkielet Embabel | S-01          | FR-012, FR-013, FR-014, FR-015, FR-026, NFR (każdy chroniony zasób wymaga uwierzytelnienia — komplet testów autoryzacji)                                                                 | done |
 | F-02 | assessment-contract-harness    | (foundation) kontrakt oceny LLM V2 jest egzekwowany kodem, a model domyślny spełnia progi jakości na zestawie wzorcowym | F-03          | FR-004, Open Question 2 (rozstrzygnięte przez kontrakt, obecnie V2); guardrail jakości danych z LLM (bez halucynacji)                                                                     | in-progress |
 | S-01 | admin-bootstrap-and-login      | operator tworzy pierwszego admina przez CLI; admin loguje się i wylogowuje; niezalogowany widzi tylko ekran logowania           | —             | FR-012, FR-013, FR-014, FR-015, FR-026, NFR (każdy chroniony zasób wymaga uwierzytelnienia — komplet testów autoryzacji), NFR (brak wglądu w dane cudzych kont)                          | done |
 | S-02 | first-assessed-wykop-feed      | zalogowany użytkownik widzi chronologiczną listę postów z Wykopu ocenionych przez LLM                                           | S-01, F-02    | US-01, FR-001, FR-003, FR-004, FR-005, FR-006, FR-007, NFR (surowy payload oddzielony od danych aplikacji, bezstratny i kompresowalny), NFR (nowe źródło = tylko pozyskanie + mapowanie) | proposed |
@@ -104,7 +106,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Unlocks:** S-02 (ocena każdego posta w przepływie); ścieżka weryfikacji „ocena spełnia kontrakt V2” wymagana przez S-02 i każdą przyszłą zmianę kontraktu (reguła zmiany: failing fixture → zmiana kontraktu → kod)
 - **Prerequisites:** F-03
 - **Parallel with:** F-01, S-07
-- **Blockers:** — (faza 1 — kontrakt V2 i dokumenty — zrobiona; fazy p2–p4 czekają na F-03 i zostaną przeplanowane w Javie, kod w Pythonie z PR #23 nie jest przenoszony)
+- **Blockers:** — (faza 1 — kontrakt V2 i dokumenty — zrobiona; F-03 zakończone; fazy p2–p4 wymagają przeplanowania w Javie, kod w Pythonie z PR #23 nie jest przenoszony)
 - **Unknowns:**
   - Wybór dostawcy i modelu LLM z obsługą ustrukturyzowanego wyjścia oraz akceptowalny koszt jednej oceny (powiązane z Open Roadmap Question 5). — Owner: user. Block: no.
   - Jakość ustrukturyzowanego wyjścia przez Embabel (biblioteka wybrana w F-03) dla trzech kandydatów — wymaga ponownego pomiaru na zestawie wzorcowym; wybór dostawcy w konfiguracji szkieletu F-03 nie rozstrzyga tego pomiaru. — Owner: user. Block: no.
@@ -122,9 +124,10 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Parallel with:** F-01
 - **Blockers:** —
 - **Unknowns:**
-  - Czas zimnego startu JVM i Embabel po uśpieniu API — zmierzyć w PR env przed przełączeniem produkcji. — Owner: user. Block: no.
+  - ROZSTRZYGNIĘTE: zimny start po uśpieniu w PR env wyniósł ok. 10–11 s dla całej ścieżki web→API (Spring + Embabel ok. 6–8 s); pomiar w `context/deployment/deploy-plan.md`. Ewentualna optymalizacja to osobna decyzja. — Owner: user. Block: no.
 - **Risk:** Przepisanie uzasadnione możliwością rzetelnej oceny kodu Javy przez autora; zakres obejmuje funkcje S-01 i szkielet Embabel, bez przepisywania niedokończonej logiki F-02. Wyczyszczenie schematu przed merge rozpoczyna przerwę w logowaniu; nieudane wdrożenie Javy wydłuża ją do skutecznej naprawy, ponieważ powrót do Pythona jest wykluczony.
-- **Status:** in-progress
+- **Status:** done
+- **Verification:** produkcja po #26 (`7a406f2`) i #27 (`6bc15db`): V1/V2, `/api/ready` 200, admin utworzony przez CLI loguje się na publicznym adresie; [podsumowanie issue #25](https://github.com/kwmacioszek/szczur-radar/issues/25#issuecomment-5965517657). Poprawki przeglądu są śledzone oddzielnie w `context/changes/java-api-rewrite/follow-ups/review-fixes.md`.
 
 ## Slices
 
@@ -224,8 +227,8 @@ Foundations below assume these are present and do NOT re-scaffold them.
 | Roadmap ID | Change ID                      | Suggested issue title                                                                          | Ready for `/10x-plan` | Notes                                                                            |
 | ---------- | ------------------------------ | ---------------------------------------------------------------------------------------------- | --------------------- | -------------------------------------------------------------------------------- |
 | F-01       | production-data-gate           | Bramka produkcyjnych danych: subskrypcja, limity, restore drill, sekrety                       | yes                   | Praca operatorska; zrób równolegle                                               |
-| F-02       | assessment-contract-harness    | Kontrakt oceny LLM V2: modele, walidator, zestaw wzorcowy i wybór modelu                        | no                    | Faza 1 gotowa; p2–p4 do przeplanowania w Javie po F-03 (PR #23 zamknięty); odblokowuje gwiazdę przewodnią S-02 |
-| F-03       | java-api-rewrite               | Backend w Javie: API S-01, sesje JDBC i szkielet Embabel                                       | yes                   | Fazy 1–3 zweryfikowane w PR env (PR #26, issue #25); faza 4: dokumenty, pomiar zimnego startu i przełączenie produkcji (czyszczenie schematu + merge przez człowieka) |
+| F-02       | assessment-contract-harness    | Kontrakt oceny LLM V2: modele, walidator, zestaw wzorcowy i wybór modelu                        | no                    | Faza 1 gotowa; F-03 zakończone, p2–p4 do przeplanowania w Javie (PR #23 zamknięty); odblokowuje gwiazdę przewodnią S-02 |
+| F-03       | java-api-rewrite               | Backend w Javie: API S-01, sesje JDBC i szkielet Embabel                                       | — (done)              | Produkcja zweryfikowana po #26 i #27; issue #25 zamknięte. Poprawki przeglądu: `context/changes/java-api-rewrite/follow-ups/review-fixes.md` |
 | S-01       | admin-bootstrap-and-login      | Pierwszy admin przez CLI + logowanie/wylogowanie + ochrona tras                                | —                     | Wdrożone na produkcji 2026-09-29 (PR #13, #21); zarchiwizowane 2026-09-29 → `context/archive/2026-09-27-admin-bootstrap-and-login/` |
 | S-02       | first-assessed-wykop-feed      | Lista postów z Wykopu ocenionych przez LLM (gwiazda przewodnia)                                | no                    | Po S-01 i F-02                                                                   |
 | S-03       | post-detail-view               | Widok szczegółowy posta z oceną, surowymi danymi i linkiem do oryginału                        | no                    | Po S-02                                                                          |

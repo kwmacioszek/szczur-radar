@@ -30,7 +30,7 @@ Both are the hard gate **before Phase 6 (data collection)**: subscribe → set l
 
 ## F-03: przełączenie na Javę (java-api-rewrite)
 
-**Status (2026-10-02): verified in PR env `szczur-radar-pr-26` (PR #26); production switch pending — operator + human merge.** Change: `context/changes/java-api-rewrite/`, issue #25.
+**Status (2026-10-03): DONE — production switched to Java and verified after human merges of PR #26 (`7a406f2`) and follow-up PR #27 (`6bc15db`).** Change: `context/changes/java-api-rewrite/`, [issue #25 close-out](https://github.com/kwmacioszek/szczur-radar/issues/25#issuecomment-5965517657). The implementation-review fixes are tracked separately in `context/changes/java-api-rewrite/follow-ups/review-fixes.md`; they ship in their own PR (branch `fix/java-api-rewrite-review-fixes`).
 
 The API is now a Spring Boot 4 jar on Java 25 (Railpack, `RAILPACK_JDK_VERSION=25`). Sessions live in Postgres (Spring Session JDBC); migrations are Flyway, fix-forward. There is **no way back to the Python backend** after the switch: failures are fixed in Java and redeployed; a bad migration is fixed by a new migration; PITR recovers data, not the Python runtime.
 
@@ -61,7 +61,12 @@ The API is now a Spring Boot 4 jar on Java 25 (Railpack, `RAILPACK_JDK_VERSION=2
 - Two api deployments from the same commit (merge + `config apply`): `5f318400` and `5696cea3`. Their pre-deploy `migrate` ran in the same second; Flyway's lock serialized them — one applied `V1`, the other `V2` (schema at v2, nothing applied twice). Expected whenever a merge also changes `.railway/railway.ts`.
 - `5696cea3` SUCCESS: profile `deepseek`, `Default LLM: deepseek-v4-flash`, `Deployed agent SkeletonAgent`, started in 7.4 s; `/api/ready` 200 on the public domain.
 
-### Production switch — operator runbook (in this order)
+### Production verification close-out (2026-10-03)
+
+- The [final verification record in issue #25](https://github.com/kwmacioszek/szczur-radar/issues/25#issuecomment-5965517657) confirms Flyway V1/V2, production API deployment `35a33f82` (`deepseek-v4-flash`, startup 6.8 s, zero ERROR entries), `/api/ready` 200 and successful admin login on the public address after `create-admin`.
+- Production `LLM_API_KEY` is sealed; PR environments receive the CI key. Issue #25 is closed. These are recorded deployment results, not a new production verification performed during implementation-review triage.
+
+### Production switch — historical operator runbook (completed; do not repeat)
 
 1. PR #26 green: whole CI workflow + PR-env checks above.
 2. Production LLM settings on `szczur-radar-api` (`production`): `LLM_API_PROVIDER`, `LLM_MODEL`, `LLM_API_KEY` (own key). Without them `migrate` and the server refuse to start.
