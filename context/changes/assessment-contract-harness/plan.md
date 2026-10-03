@@ -526,32 +526,32 @@ Brak zmian danych i migracji Flyway. `SkeletonAgent` zastępuje `AssessorAgent`;
 
 #### Automated
 
-- [x] 2.1 Testy jednostkowe przechodzą bez Dockera i bez zmiennych LLM: `cd szczur-radar-api && ./mvnw -B test`
-- [x] 2.2 Pełna weryfikacja przechodzi: `cd szczur-radar-api && ./mvnw -B verify`
-- [x] 2.3 Wyjścia przykładów 1–7 z `examples.md` przechodzą walidator bez naruszeń (test)
-- [x] 2.4 Każda reguła D1–D15 ma test negatywny z asercją klasy i co najmniej jeden pozytywny; każda zabroniona kombinacja §7.2 ma test
-- [x] 2.5 Cytat różniący się od pola wyłącznie znakami ze zbioru §10 przechodzi; zmieniona odmiana i „[...]” dają `fabricated_evidence`; limity liczone w code pointach (test „🚀”)
-- [x] 2.6 `contract-v2.md` nie odwołuje się do Pythona: `! grep -n "isspace\|Python" context/foundation/llm-assessment/contract-v2.md`
+- [x] 2.1 Testy jednostkowe przechodzą bez Dockera i bez zmiennych LLM: `cd szczur-radar-api && ./mvnw -B test` — cb0c022
+- [x] 2.2 Pełna weryfikacja przechodzi: `cd szczur-radar-api && ./mvnw -B verify` — cb0c022
+- [x] 2.3 Wyjścia przykładów 1–7 z `examples.md` przechodzą walidator bez naruszeń (test) — cb0c022
+- [x] 2.4 Każda reguła D1–D15 ma test negatywny z asercją klasy i co najmniej jeden pozytywny; każda zabroniona kombinacja §7.2 ma test — cb0c022
+- [x] 2.5 Cytat różniący się od pola wyłącznie znakami ze zbioru §10 przechodzi; zmieniona odmiana i „[...]” dają `fabricated_evidence`; limity liczone w code pointach (test „🚀”) — cb0c022
+- [x] 2.6 `contract-v2.md` nie odwołuje się do Pythona: `! grep -n "isspace\|Python" context/foundation/llm-assessment/contract-v2.md` — cb0c022
 
 #### Manual
 
-- [x] 2.7 Enumy, limity i reguły w kodzie oraz schemacie zgadzają się 1:1 z `contract-v2.md` (przegląd obok siebie)
-- [x] 2.8 Użytkownik zaakceptował redakcyjną zmianę §10
+- [x] 2.7 Enumy, limity i reguły w kodzie oraz schemacie zgadzają się 1:1 z `contract-v2.md` (przegląd obok siebie) — cb0c022
+- [x] 2.8 Użytkownik zaakceptował redakcyjną zmianę §10 — cb0c022
 
 ### Phase 3: Infrastruktura LLM (dawniej 3A)
 
 #### Automated
 
-- [ ] 3.1 Testy jednostkowe przechodzą offline: `cd szczur-radar-api && ./mvnw -B test`
-- [ ] 3.2 Pełna weryfikacja przechodzi: `cd szczur-radar-api && ./mvnw -B verify`
-- [ ] 3.3 Serwer testowy otrzymuje dokładnie tyle żądań, ile prób zgłasza `LlmResponse.attempts` / `LlmCallException` (brak ukrytych ponowień SDK i frameworka) dla każdego dostawcy
-- [ ] 3.4 Schemat wysłany do Gemini nie zawiera `minItems`/`maxItems`, a do DeepSeek i OpenRouter także `minLength`/`maxLength` (test)
-- [ ] 3.5 Błędne `LLM_SERVICE_TIER` / `LLM_REASONING_EFFORT` / `LLM_TIMEOUT` oraz `flex` dla dostawcy innego niż `openrouter` zatrzymują start z komunikatem bez klucza (test)
+- [x] 3.1 Testy jednostkowe przechodzą offline: `cd szczur-radar-api && ./mvnw -B test`
+- [x] 3.2 Pełna weryfikacja przechodzi: `cd szczur-radar-api && ./mvnw -B verify`
+- [x] 3.3 Serwer testowy otrzymuje dokładnie tyle żądań, ile prób zgłasza `LlmResponse.attempts` / `LlmCallException` (brak ukrytych ponowień SDK i frameworka) dla każdego dostawcy
+- [x] 3.4 Schemat wysłany do Gemini nie zawiera `minItems`/`maxItems`, a do DeepSeek i OpenRouter także `minLength`/`maxLength` (test)
+- [x] 3.5 Błędne `LLM_SERVICE_TIER` / `LLM_REASONING_EFFORT` / `LLM_TIMEOUT` oraz `flex` dla dostawcy innego niż `openrouter` zatrzymują start z komunikatem bez klucza (test)
 - [ ] 3.6 Plan Railway nie proponuje usunięć: job `railway-config` na PR zielony
 
 #### Manual
 
-- [ ] 3.7 Payloady w `fixtures/<dostawca>/` są prawdziwymi odpowiedziami API bez kluczy i danych osobowych
+- [x] 3.7 Payloady w `fixtures/<dostawca>/` są prawdziwymi odpowiedziami API bez kluczy i danych osobowych
 
 ### Phase 4: Prompt, Assessor i agent (dawniej 3B)
 

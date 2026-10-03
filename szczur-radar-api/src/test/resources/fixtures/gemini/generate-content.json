@@ -1,0 +1,31 @@
+{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "{\n  \"relevance\": \"investment_related\",\n  \"modifiers\": [],\n  \"targets\": [\n    {\n      \"id\": \"memory_sector\",\n      \"kind\": \"sector\",\n      \"anchor\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"pamięciorzy\"\n      },\n      \"stance\": {\n        \"direction\": \"bearish\",\n        \"assertiveness\": \"unhedged\",\n        \"claim_ids\": [\n          \"c1\"\n        ]\n      },\n      \"reference\": \"explicit\"\n    }\n  ],\n  \"claims\": [\n    {\n      \"id\": \"c1\",\n      \"kind\": \"investment_thesis\",\n      \"attribution\": \"author\",\n      \"target_ids\": [\n        \"memory_sector\"\n      ],\n      \"evidence\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"to koniec dla pamięciorzy\"\n      },\n      \"statement\": \"Sektor producentów pamięci czeka załamanie.\"\n    }\n  ],\n  \"flags\": [\n    \"missing_context\"\n  ]\n}",
+            "thoughtSignature": "EnMKcQFpFH0TQcWOYDau+3cNKO75PH+ZxpEPBw7fZ7OEivdSsXIfYtMZksR+Zw12ZbVoJ0ifD1MGLtyMHIFFOfWaQiKvjsTrZsr5VTyy9f0yuVp5UklGT5rfqVIV4Sdid5+RQvORoi/hRNQdbmLwfz9pxLU8"
+          }
+        ],
+        "role": "model"
+      },
+      "finishReason": "STOP",
+      "index": 0
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 112,
+    "candidatesTokenCount": 278,
+    "totalTokenCount": 390,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 112
+      }
+    ],
+    "serviceTier": "standard"
+  },
+  "modelVersion": "gemini-3.1-flash-lite",
+  "responseId": "6gzBaoqeIpGunsEPqKr10Ac"
+}
