@@ -37,7 +37,7 @@ The API is now a Spring Boot 4 jar on Java 25 (Railpack, `RAILPACK_JDK_VERSION=2
 ### Operator commands (replace the `uv run …` ones above)
 
 - Migrations (pre-deploy, automatic): `java -jar target/szczur-radar-api.jar migrate`.
-- First admin: `railway ssh -s szczur-radar-api -e <env> -- java -jar target/szczur-radar-api.jar create-admin --email …` (password asked twice, hidden; refuses if an admin exists).
+- First admin: wake the API first (`curl https://<web-domain>/api/health`) — a sleeping service has no container, and `railway ssh` then lands on Railway's SSH gateway (it prints account info and runs nothing). Then `railway ssh -s szczur-radar-api -e <env>` and, inside the container shell (`/app`), `java -jar target/szczur-radar-api.jar create-admin --email you@example.com` — password asked twice, hidden (needs a real terminal, not an agent's `!`); refuses if an admin exists. Type the e-mail without `< >`: the shell reads `<` as a redirect.
 - Variables on `szczur-radar-api` (names only): `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, `PGPASSWORD` (references to Postgres, from IaC), `PORT`, `RAILPACK_JDK_VERSION`, and operator-set `LLM_API_PROVIDER`, `LLM_MODEL`, `LLM_API_KEY` — **every environment has its own key**; production's is set before the merge and never copied to CI or PR envs. `DATABASE_URL` and `JWT_SECRET` stay declared in `.railway/railway.ts` only because the CI gate refuses `variable.delete`; both are unused since F-03.
 
 ### PR env verification (szczur-radar-pr-26, 2026-10-02)
@@ -54,6 +54,12 @@ The API is now a Spring Boot 4 jar on Java 25 (Railpack, `RAILPACK_JDK_VERSION=2
 - From the first click after >1 h of sleep (web and API both asleep) to the SPA showing the logged-in screen: **~10–11 s** (web woke 15:24:42, API ready 15:24:52, `/api/auth/me` 200 at 15:24:53).
 - Before the proxy fix the first `/api/*` requests during the wake got **502** at once; since `86cd4ef` Caddy retries the upstream for up to 30 s (`lb_try_duration`), so the user sees a delay, not an error.
 - If ~10 s is too slow for production: AOT cache/CDS (Java 25) or `sleepApplication: false` for the API — a separate decision (cost vs latency).
+
+### Production switch — what happened (2026-10-02)
+
+- PR #26 squash-merged by the operator as `7a406f2` (21:02 UTC); CI on `main` green (backend 2 min). Production LLM settings set beforehand (own key); PITR healthy (`archiverHealthy: true`, 6 backup sets).
+- Two api deployments from the same commit (merge + `config apply`): `5f318400` and `5696cea3`. Their pre-deploy `migrate` ran in the same second; Flyway's lock serialized them — one applied `V1`, the other `V2` (schema at v2, nothing applied twice). Expected whenever a merge also changes `.railway/railway.ts`.
+- `5696cea3` SUCCESS: profile `deepseek`, `Default LLM: deepseek-v4-flash`, `Deployed agent SkeletonAgent`, started in 7.4 s; `/api/ready` 200 on the public domain.
 
 ### Production switch — operator runbook (in this order)
 

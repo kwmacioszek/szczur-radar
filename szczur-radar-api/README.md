@@ -88,8 +88,11 @@ Ten sam jar: bez argumentów startuje serwer, z nazwą komendy — komendę bez 
 
 ```bash
 java -jar target/szczur-radar-api.jar create-admin --email admin@example.com
-# produkcja / PR env:
-railway ssh -s szczur-radar-api -e <środowisko> -- java -jar target/szczur-radar-api.jar create-admin --email …
+# produkcja / PR env: najpierw obudź API (uśpiony serwis nie ma kontenera — `railway ssh`
+# trafia wtedy na bramkę Railway i nic nie uruchamia), potem w powłoce kontenera:
+curl https://<domena-web>/api/health
+railway ssh -s szczur-radar-api -e <środowisko>
+java -jar target/szczur-radar-api.jar create-admin --email ty@example.com   # e-mail bez < >
 ```
 
 `create-admin` tworzy **pierwszego** administratora (odmawia, gdy admin już istnieje — kolejne konta i odzyskiwanie to S-07). Hasło jest pobierane dwa razy z ukrytego promptu, nigdy z argumentu, i nie trafia do logów; polityka 12–128 znaków. Bootstrap jest serializowany blokadą `pg_advisory_xact_lock`, więc równoległe uruchomienia tworzą dokładnie jednego admina. Kody wyjścia: 0 utworzono, 1 odmowa, 2 błąd użycia lub konfiguracji (brak/zły e-mail, brak zmiennych `PG*`, brak konsoli). Komendy uruchamiają wspólny kontekst Springa, więc też potrzebują trzech ustawień LLM.
