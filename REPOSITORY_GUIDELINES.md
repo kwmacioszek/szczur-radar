@@ -45,7 +45,7 @@ Szczur Radar collects investment posts (Wykop, later Reddit), classifies them wi
 - Production deployment is via Railway native GitHub autodeploy from `main`, gated by Wait for CI. Service topology and variables are declared as code in `.railway/railway.ts` (validate with `railway config plan` before `railway config apply`).
 - The scheduled LangGraph pipeline runs as a separate private Railway job/service and must not depend on the lifecycle of either the web or API service.
 - Before implementing authentication, document the selected transport, session or token storage, and CSRF handling in the change plan. Browser authentication requests follow the same-origin `/api/*` route above.
-- Each environment has its own `LLM_API_KEY` (production's is never copied to CI or PR envs); the operator sets `LLM_API_PROVIDER`, `LLM_MODEL` and `LLM_API_KEY` on `szczur-radar-api` before the API deploys there (`.railway/railway.ts` only `preserve()`s them).
+- Production's `LLM_API_KEY` is sealed and set by the operator (with `LLM_API_PROVIDER`, `LLM_MODEL`) before the API deploys there; it is never copied to CI or PR envs. PR envs get the CI settings (GitHub variables + the `LLM_API_KEY` secret) from the `railway-config` job ("Ensure PR-env LLM settings"), which overwrites any copied value; `.railway/railway.ts` only `preserve()`s the names.
 
 ## Workflow: branches, PRs and GitHub issues
 
