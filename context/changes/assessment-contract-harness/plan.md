@@ -1,87 +1,77 @@
 # Kontrakt oceny LLM V2 z walidatorem i pomiarem na wzorcu — plan implementacji
 
-> Wersja 2 planu (2026-09-30). Zastępuje plan z 2026-09-28 (macierz 4 dostawców, 12 wymyślonych przypadków × 3), który powstał przed pilotażami na żywych danych. Podstawa: `frame.md` (runda 2 + dziennik pilotaży) i `research.md`. Przegląd `reviews/plan-review.md` dotyczy poprzedniej wersji.
+> Wersja 3 planu (2026-10-03): fazy 2–6 przeplanowane na backend w Javie (Spring Boot 4, Embabel 1.5.2, Spring AI 2.0.1) po F-03 (`java-api-rewrite`). Faza 1 (kontrakt V2 i dokumenty) jest zrobiona i zostaje bez zmian. Wersja 2 (2026-09-30, Python/LangChain) i jej przeglądy (`reviews/plan-review.md`, `reviews/plan-review-2026-10-01.md`) są historią; decyzje produktowe z nich (role modeli, progi, wzorzec, flex) obowiązują nadal. Podstawa: `frame.md`, `research.md` (w tym „Follow-up 2026-10-03”). Implementacja Pythonowa faz 2–4 leży na gałęzi `feature/assessment-contract-harness_old` (zamknięty PR #23) — nie jest przenoszona; może służyć wyłącznie jako materiał porównawczy (np. tekst promptu, wektory testowe).
 
 ## Overview
 
-Roadmapa F-02 (`assessment-contract-harness`). Pilotaże na prawdziwych postach z Wykopu i Reddita pokazały, że kontrakt V1 był niedookreślonym szkicem: nie definiował, co jest celem ani od kiedy wzmianka jest stanowiskiem, a jego graf argumentów i dosłowność cytatów generowały większość odrzuceń, które nie były błędami treści. Ta zmiana (1) doprowadza kontrakt do wersji V2 opartej na danych, (2) zapisuje go jako kod z walidatorem w `szczur-radar-api/app/assessment/`, (3) buduje zestaw wzorcowy z prawdziwych postów oznaczonych przez użytkownika i (4) mierzy na nim GPT-6 Luna w trybie flex (pierwszy wybór), DeepSeek Flash (zapas) i Gemini 3.1 Flash-Lite (punkt odniesienia), wybierając model domyślny dla S-02 (decyzja użytkownika 2026-10-01). Pomiar eskalacji do drugiego modelu jest odłożony po MVP.
+Roadmapa F-02 (`assessment-contract-harness`). Kontrakt V2 (`context/foundation/llm-assessment/contract-v2.md`, accepted) zostaje zapisany jako kod w Javie: ścisły model wejścia i wyjścia, walidator reguł D1–D15 zbudowany na wzorcu strategii, odsiew wpisów bez treści. Ocena posta to jedno wywołanie modelu przez własnych klientów Spring AI (Gemini, DeepSeek, OpenRouter), z pominięciem `createObject` Embabel, a Embabel dostaje cienkiego agenta `AssessorAgent` dla S-02. Zestaw wzorcowy (~120 postów oznaczonych przez użytkownika) i nagrania odpowiedzi trzech modeli — GPT-6 Luna flex (pierwszy wybór), DeepSeek Flash (zapas), Gemini 3.1 Flash-Lite (punkt odniesienia) — wybierają model domyślny dla S-02; CI sprawdza progi offline na nagraniach.
 
 ## Current State Analysis
 
-- **Kod.** S-01 jest na `main`: `szczur-radar-api/app/` ma `auth/`, `models.py`, `cli.py`, `database.py`, migracje Alembic; testy w `szczur-radar-api/tests/` (pytest + httpx, marker `db` w `pyproject.toml`). Brak jakiejkolwiek integracji z LLM: w `szczur-radar-api/pyproject.toml` nie ma `langchain*` ani `langgraph`; `psycopg[binary]>=3.2` jest obecny.
-- **Konfiguracja** czytana leniwie z `os.environ` przy pierwszym użyciu (`app/database.py:47`, `app/auth/tokens.py:34`) — import modułu nie wymaga zmiennych.
-- **CI** (`.github/workflows/ci.yml`, job `backend`): `uv sync --locked` + `uv run pytest -q` z usługą Postgres, bez sekretów dostawców LLM; workflow nie może być filtrowany ścieżkami; merge do `main` = deploy.
-- **Kontrakt V1** (`context/foundation/llm-assessment/contract-v1.md`, status accepted) — przyjęty bez kontaktu z modelem; jego jedyny pełny przykład łamie własny niezmiennik 8 (`contract-v1.md:43` vs `:129`, `:142`); ≥15 reguł niedookreślonych (`frame.md`, runda 1).
-- **Dowody z pilotaży** (`frame.md`, sekcje „Pilot …”; dane i skrypty w `pilot/`):
-  - tanie modele przechodzą walidację V1 w 95–98% (Wykop), koszt ~$2–10/mies. przy 12k postów (po korekcie cen — `frame.md`, „Korekta cen”); skrócony prompt nie pogarsza zgodności;
-  - zgodność dominującego kierunku posta między modelami 74–78%, sprzeczne kierunki 0–2%; niezgoda dotyczy wyboru celów i progu stanowiska (definicje), a na Wykopie dodatkowo trafności (memy, żale);
-  - odrzucenia `fabricated_evidence` to w większości twarda spacja z Wykopu, skróty „[...]” i zmiana odmiany, nie zmyślona treść;
-  - Gemini odrzuca schemat z `minItems`/`maxItems` (HTTP 400); DeepSeek w trybie myślenia odrzuca wymuszony `tool_choice`, a `deepseek-v4-pro` w trybie strict pomijał wymagane pole; paczkowanie postów zmienia co trzecią ocenę;
-  - GPT-6 Luna (pilot 8): 98% zgodności z kontraktem i zero przerobionych cytatów, ale treść nie lepsza od tanich modeli (trafność 73% względem etykiet rundy 1); domyślnie rozumuje (~700 tokenów na post, 8,7 s);
-  - modele decyzyjne przez OpenRouter — Jev (TypeSafe) i Span-01 (Respan) — nie poprawiają decyzji, ale jako sygnał niepewności wskazują posty sporne: ćwiartka o najniższym `confidence` Jev lub najwyższym „unclear” Span-01 zawiera ~47–50% postów, przy których tanie modele różnią się trafnością (piloty 6 i 7).
-- **Decyzje użytkownika po ramowaniu** (`frame.md`, runda 2): próg stanowiska „szeroko + pewność”, pierwszy ekran MVP = lista postów, źródło MVP = Wykop (Reddit drugi). Instrukcja oznaczania `pilot/labeling-guidelines.md` v0.3 zawiera rozstrzygnięte reguły.
-- **Etykiety rundy 1** (`pilot/labels-2026-09-28.json`) były oznaczane bez instrukcji i ostrożniej niż przyjęty próg — nie są wzorcem.
+- **Backend (F-03, na `main`).** `szczur-radar-api/` — Spring Boot 4.0.8, Java 25, Maven; pakiety `health`, `user`, `auth`, `cli`, `config`, `agents` (`SkeletonAgent` bez wywołań LLM). Zależności Embabel 1.5.2 + startery google-genai, deepseek, openai-custom; Spring AI 2.0.1; Jackson 3.1.5; networknt `json-schema-validator` 3.0.1 tranzytywnie (`research.md`, sekcja F).
+- **Konfiguracja LLM.** Jeden dostawca na uruchomienie: `LLM_API_PROVIDER` (`gemini` | `deepseek` | `openrouter`), `LLM_MODEL`, `LLM_API_KEY`; walidacja w `config/LlmProviderProperties.java:26-89`, błąd przy starcie przez `LlmConfigurationCheck`; profile `application-<provider>.properties` mapują je na Embabel i wyłączają pozostałych dostawców (`application.properties:36-46`). Każdy kontekst Springa wymaga tych zmiennych; testy `*Test` (bez Springa) — nie.
+- **Testy i CI.** `*Test` (Surefire, bez Springa/Dockera) i `*IT` (Failsafe, Testcontainers Postgres 18) (`pom.xml:145-174`). CI `backend` wymaga ustawień LLM, ale „nothing calls the LLM in CI” (`.github/workflows/ci.yml:26-52`). Wzorzec testu klienta na lokalnym serwerze HTTP: `config/LlmProviderConfigTest.java:72-110`. Folder `src/test/resources/fixtures/<service>/` (reguła `REPOSITORY_GUIDELINES.md`) jeszcze nie istnieje.
+- **Embabel/Spring AI — ustalenia z badania** (`research.md`, sekcje E–G): `createObject` dokleja schemat do promptu, parsuje pobłażliwie i domyślnie ponawia całe wywołanie do 10× także po błędzie parsowania; `Usage` bez tokenów cache. Ponowienia w warstwach: data-binding Embabel (10), `RetryTemplate` modelu (Gemini 10, DeepSeek 4), SDK (google-genai 5, openai-java 2). Gemini: `minItems`/`maxItems` dochodzą do API (HTTP 400 w pilocie), klient Embabel bez timeoutu. DeepSeek w Spring AI: tylko `JSON_OBJECT`; `prompt_cache_hit_tokens` gubione. OpenRouter przez openai-java: `extraBody` (routing `openai/flex`), `responseFormat` JSON_SCHEMA strict, cache w `getCacheReadInputTokens()`. Jackson 3 domyślnie przepuszcza obce i brakujące pola; `@Size` liczy UTF-16; `contract-v2.md:290` definiuje biały znak przez Pythonowe `str.isspace()`.
+- **Dowody z pilotaży** (`frame.md`): tanie modele 95–98% zgodności z kontraktem; odrzucenia cytatów to głównie twarda spacja; Luna (pilot 8) 98% i zero przerobionych cytatów; paczkowanie zmienia co trzecią ocenę. Wcześniejszy smoke (2026-10-01, 30 postów, prompt v2.2): Gemini 100%, DeepSeek w JSON mode 93,3% (strict tool calling 83,3%), Luna flex 96,7%; DeepSeek gubił nawiasy, gdy obiekt kończył się obiektem zagnieżdżonym.
+- **Railway.** `.railway/railway.ts:94-100` deklaruje `LLM_*` jako `preserve()`; niezadeklarowana zmienna ustawiona ręcznie daje w planie `Delete variable`, który bramka CI odrzuca.
 
 ## Desired End State
 
-- `context/foundation/llm-assessment/contract-v2.md` jest źródłem prawdy (accepted); V1 w archiwum; `examples.md`, `agent-implementation.md`, README kontraktu, PRD i roadmapa (z grafiką) są z nim spójne.
-- `szczur-radar-api/app/assessment/` udostępnia: modele wejścia/wyjścia V2, walidator z klasyfikacją naruszeń (cytaty z normalizacją białych znaków), odsiew wpisów bez treści oraz `assess(input) -> AssessmentResult` z pochodzeniem oceny, wykonujący najwyżej jedno wywołanie dostawcy przez LangChain.
-- `szczur-radar-api/tests/assessment/gold/` zawiera ~120 zanonimizowanych postów z dwóch dni (innych niż 2026-09-28) z etykietami użytkownika według instrukcji.
-- Raport w `context/changes/assessment-contract-harness/reports/` pokazuje dla Luny (flex), DeepSeek Flash i Gemini 3.1 Flash-Lite: zgodność z kontraktem, trafność, wykrywanie celów (recall i precision), kierunek dla dopasowanych celów ze stanowiskiem, dominujący kierunek posta, sprzeczne kierunki oraz koszt w rozbiciu na kanały wywołania (Luna: zwykły i flex; DeepSeek: bezpośrednio w szczycie i poza nim oraz OpenRouter z przypiętym dostawcą), a dla Luny flex także odsetek odmów i medianę czasu.
-- Model domyślny spełnia progi na wzorcu: zgodność z kontraktem ≥95%, trafność binarna ≥80%, recall celów ≥80%, precision celów ≥70%, kierunek dla dopasowanych celów ze stanowiskiem ≥75%, dominujący kierunek posta ≥75%, sprzeczne kierunki ≤3% — i jest wpisany jako `DEFAULT_ASSESSMENT_MODEL`.
-- `uv run pytest -q` (CI, offline, bez kluczy) sprawdza modele, walidator, `assess()` na sztucznym dostawcy, spójność wzorca oraz odtwarza nagrania prawdziwych odpowiedzi, w tym progi modelu domyślnego.
+- `contract-v2.md` §10 definiuje białe znaki jawną listą znaków (bez odwołania do Pythona); `agent-implementation.md` nie zawiera sformułowań Pythonowych.
+- `src/main/java/pl/szczurradar/api/`:
+  - `agents/assessor/` — rekordy i enumy kontraktu, schemat JSON wyjścia V2 jako zasób, ścisły parser, walidator D1–D15 jako zestaw strategii, odsiew §11, prompt z wersją, `Assessor` (przygotowanie żądania, ocena odpowiedzi, `assess`) i `AssessorAgent` (Embabel) zamiast `SkeletonAgent`;
+  - `llm/` — port `LlmClient` i klienci Gemini, DeepSeek, OpenRouter z wyłączonymi ponowieniami frameworka, własnymi 3 próbami transportowymi, powrotem z flex i odczytem zużycia;
+  - `sources/wykop/` — mapper Wykop → `AssessmentInputV1`.
+- `src/test/java/pl/szczurradar/api/measurement/` (kod tylko testowy, nigdy w jarze) — kontrola na żywo, pobranie próbki, nagrywanie, miary wzorca, raport; `README.md` opisuje uruchamianie. `CLAUDE.md` w `agents/assessor/` i `llm/`.
+- `src/test/resources/fixtures/`: prawdziwe payloady dostawców, wzorzec (`assessor/gold/posts.json`, `labels.json`), nagrania trzech modeli (`llm/recordings/…`), `llm/models.json` z trzema zmierzonymi konfiguracjami i wskazaniem domyślnej.
+- `./mvnw -B verify` (CI, bez wywołań LLM) sprawdza kontrakt, walidator, klientów na lokalnym serwerze HTTP, `Assessor`, agenta, miary oraz odtwarza nagrania z progami dla modelu domyślnego: zgodność z kontraktem ≥95%, trafność binarna ≥80%, recall celów ≥80%, precision celów ≥70%, kierunek na dopasowanych celach ze stanowiskiem ≥75%, dominujący kierunek posta ≥75%, sprzeczne kierunki ≤3%.
+- Raport `context/changes/assessment-contract-harness/reports/gold-<YYYY-MM-DD>.md` z jakością i kosztem trzech modeli; użytkownik zatwierdził model domyślny; runbook ustawienia go na produkcji jest w `context/deployment/deploy-plan.md`.
 
-Weryfikacja: zielone CI na PR, raport w folderze zmiany, zatwierdzenie przez użytkownika tekstu V2, modelu domyślnego i jego zmierzonego kosztu.
+Weryfikacja: zielone CI na PR, raport w folderze zmiany, zatwierdzenie modelu domyślnego i kosztu przez użytkownika.
 
 ### Key Discoveries:
 
-- `szczur-radar-api/app/database.py:47`, `app/auth/tokens.py:34` — leniwy odczyt `os.environ`; konfiguracja oceny powiela wzorzec (import bez kluczy API).
-- `szczur-radar-api/pyproject.toml` — istniejący marker `db` w `[tool.pytest.ini_options]`; nowy marker `live` dochodzi obok, a `addopts` nie może wyłączyć testów `db`.
-- `context/foundation/README.md` — dokument w pełni zastąpiony przenosi się do `context/foundation/archive/YYYY-MM-DD-<doc>.md`.
-- `REPOSITORY_GUIDELINES.md` — każda zmiana `roadmap.md` wymaga aktualizacji `tools/render_roadmap.swift` i regeneracji `docs/visuals/roadmap-mvp.png`; rozbieżność kodu z PRD zgłasza się, nie rozstrzyga po cichu.
-- `context/foundation/lessons.md` — „jedna gałąź + jeden PR”, „tylko człowiek merguje do main”, „przed zamrożeniem kontraktu LLM zrób tani pilot skryptem na żywych danych”.
-- `pilot/scripts/prompt-short.md`, `prompt-v2-rules.md`, `pilot.py` (schemat i walidator pilotażowy) — sprawdzony punkt wyjścia dla promptu, schematu i reguł walidacji.
+- `szczur-radar-api/src/main/java/pl/szczurradar/api/config/LlmProviderProperties.java:26-89` — wzorzec walidacji ustawień LLM (enum dostawców, komunikat bez klucza) do rozszerzenia o ustawienia kanału.
+- `szczur-radar-api/src/test/java/pl/szczurradar/api/config/LlmProviderConfigTest.java:72-110` — lokalny `HttpServer` + SDK zamiast sieci; wzorzec testów klientów.
+- `szczur-radar-api/src/test/java/pl/szczurradar/api/agents/AgentSkeletonIT.java:49-78` — uruchomienie agenta przez `AgentPlatform` i asercja braku wywołań LLM.
+- `user/Role.java:18-29`, `config/ErrorCode.java:47-50` — enumy z `@JsonValue` małymi literami (reguła enumów, `lessons.md`).
+- `embabel-agent-api-1.5.2:…/spi/support/LlmDataBindingProperties.kt:44`, `embabel-agent-google-genai-autoconfigure-1.5.2:…/GoogleGenAiModelsConfig.kt:90` — domyślne 10 prób; powód budowania własnych klientów.
+- `context/foundation/lessons.md` — jedna gałąź i jeden PR; tylko człowiek merguje; implementacja, przegląd i archiwizacja przed merge; kroki możliwe po merge do runbooka, nie do Progress; zamknięte zbiory jako enumy; proaktywne porządkowanie warstw.
 
 ## What We're NOT Doing
 
-- Zapis ocen do bazy, migracje, pobieranie z Wykopu w pipeline, mapowanie RAW, deduplikacja, UI, trasy API, harmonogram (S-02/S-03/S-05).
-- Graf LangGraph ani checkpointing — `assess()` to funkcja za portem dostawcy; S-02 zdecyduje o orkiestracji. Wskazówka dla S-02: `RetryPolicy` węzła oceny musi mieć jawne `retry_on` ograniczone do błędów transportu (429, 5xx, przekroczenie czasu) — nigdy naruszeń kontraktu — a liczba prób dobrana z uwzględnieniem ponowień klienta dostawcy (próby obu poziomów się mnożą). Wartości domyślne `RetryPolicy` (LangGraph 1.x): `max_attempts=3`, `initial_interval=0.5`, `backoff_factor=2.0`, `max_interval=128`, `jitter=True`; czy domyślne `retry_on` obejmuje 429 — do sprawdzenia w kodzie przy S-02.
-- Graf argumentów (`supported_by_claim_ids`), drugi cytat na claim, liczbowe score/confidence w wyniku oceny — poza V2.
-- Reddit jako źródło, komentarze i kontekst rodzica w użyciu, widok zbiorczy „o czym się mówi”, rozpoznawanie spółek (entity resolution) — poza MVP zgodnie z PRD.
-- Paczkowanie postów w jednym wywołaniu (odradzone pomiarem, pilot 3) i Batch API (decyzja pipeline'u, S-02/S-05; dla Luny tę samą obniżkę ceny daje flex, DeepSeek nie ma API batch). F-02 przygotowuje tylko podział `assess()` na przygotowanie zapytania i ocenę odpowiedzi, żeby tryb batch nie wymagał przebudowy walidacji.
+- Zapis ocen do bazy, migracje, pobieranie z Wykopu w pipeline, mapowanie RAW, deduplikacja, UI, trasy API, harmonogram, orkiestracja wielu postów (S-02/S-03/S-05). `AssessorAgent` ocenia jeden post.
+- `createObject`/`createObjectIfPossible` Embabel do oceny; natywny structured output Embabel; autokonfiguracja `spring.ai.retry`.
+- Przenoszenie kodu Pythonowego z `feature/assessment-contract-harness_old`.
 - Ponowienia semantyczne i „naprawianie” odpowiedzi; jedyne ponowienia to transportowe.
-- Pomiar i wdrożenie eskalacji do drugiego modelu, w tym przełącznik w `assess()`, sygnały Jev / Span-01, niezgoda dwóch modeli i przebieg Gemini 3.8 Flash — odłożone po MVP. F-02 wykonuje jedną ocenę na post.
-- **Odłożone na później (po MVP), świadomie nie teraz:**
-  - *Embeddingi* (np. Gemini Embedding, BGE-M3, Qwen3-Embedding) — pod widok zbiorczy „o czym dziś się mówi” (grupowanie podobnych postów), dopasowanie slangu do spółek dla filtra FR-011a („en wideo” → Nvidia) i wykrywanie podobnych wpisów; wymagają zapisanych ocen i decyzji produktowej o widoku zbiorczym.
-  - *Klasyfikator trafności/odsiewu szumu uczony na zapisanych ocenach LLM* (encoder lub embeddingi + prosty klasyfikator) — sensowny dopiero, gdy pipeline zbierze kilka tysięcy ocenionych postów; dałby powtarzalność w najsłabszym miejscu Wykopu (trafność).
-  - *Ekstraktor fragmentów typu GLiNER do wskazywania celów* — adresuje wybór celów dosłownymi fragmentami tekstu, ale brak dowodów dla polskiego i slangu, a model trzeba hostować samodzielnie.
-  - *Gotowe klasyfikatory „finansowe” (rodzina FinBERT)* — sentyment zdań z wiadomości, bez polskiego i nieprzeznaczone do mediów społecznościowych; w porównaniach przegrywają z LLM bez trenowania. Wracamy tylko, jeśli pojawi się model dla polskich treści giełdowych.
-  - *Podpięcie sygnału modelu decyzyjnego (Jev / Span-01) lub niezgody dwóch modeli do `assess()`* — część odłożonego badania eskalacji po MVP.
-- Adapter Anthropic; macierz 4 dostawców z poprzedniego planu.
-- Sekrety dostawców LLM w Railway i w CI (F-01); testy na żywych modelach w CI.
-- Używanie etykiet rundy 1 jako wzorca.
+- Paczkowanie postów i Batch API (podział `Assessor` na przygotowanie żądania i ocenę odpowiedzi zostawia na to miejsce w S-02).
+- Graf argumentów, liczbowe score/confidence, Reddit, komentarze, widok zbiorczy, rozpoznawanie spółek — poza V2/MVP.
+- Eskalacja do drugiego modelu, sygnały Jev/Span-01, Gemini 3.8 Flash; odłożone po MVP: embeddingi, klasyfikator uczony na ocenach, ekstraktor typu GLiNER, klasyfikatory „finansowe”.
+- Jeden przebieg pomiaru z trzema kluczami naraz i nowe zmienne kluczy per dostawca; wywołania LLM w CI.
+- Bezpośrednie API OpenAI (Luna tylko przez OpenRouter).
+- Ustawienie modelu domyślnego na produkcji w tej zmianie — to krok po merge (runbook w `deploy-plan.md`, komentarz w issue).
 
 ## Implementation Approach
 
-Pięć faz od dokumentu do pomiaru. Faza 1 ustala kontrakt V2 i spójność dokumentów — bez niej kod i wzorzec nie mają definicji. Faza 2 to czysty kod bez sieci (modele, walidator, odsiew). Faza 3 dokłada dostawców przez LangChain, prompt i `assess()` testowane sztucznym dostawcą, z jedną kontrolą na żywo, że ścieżka LangChain zachowuje się jak bezpośrednie wywołania z pilotaży. W fazie 4 (zestaw wzorcowy) przygotowanie arkusza zależy od akceptacji kontraktu w fazie 1 i może iść równolegle z fazą 2; pobranie i przygotowanie próbki wymaga modeli wejścia i odsiewu z fazy 2. Oznaczanie próbki przez użytkownika może iść równolegle z fazą 3. Faza 5 łączy wszystko: pojedynczy przebieg porównawczy dwóch tanich modeli i Luny, nagrania odtwarzane w CI, podstawowy raport i wybór modelu. Wynik jednego przebiegu zamyka F-02 po decyzji użytkownika; badanie kaskady nie blokuje S-02.
+Fazy idą od kodu bez sieci do pomiaru. Faza 2 to czysta domena (kontrakt, parser, walidator, odsiew) w testach `*Test`. Faza 3 (dawniej „3A”) to infrastruktura `llm` testowana na lokalnym serwerze HTTP z prawdziwymi payloadami. Faza 4 (dawniej „3B”) składa prompt, `Assessor` i `AssessorAgent` oraz kończy się kontrolą na żywo trzech dostawców. Faza 5 buduje zestaw wzorcowy (mapper Wykopu, próbka, arkusz, miary); oznaczanie przez użytkownika może iść równolegle z fazą 4, gdy próbka jest gotowa. Faza 6 nagrywa trzy modele, odtwarza nagrania w CI, generuje raport i zamyka wybór modelu.
 
-Jedna prawda o kształcie: modele Pydantic z fazy 2. Schemat wysyłany do dostawcy jest z nich wyprowadzany i upraszczany w adapterze, ale surowa odpowiedź zawsze przechodzi pełny model i walidator.
+Jedna prawda o kształcie wyjścia: plik JSON Schema wyjścia V2 (zasób) — z niego walidacja kształtu surowej odpowiedzi i schemat dla dostawców (uproszczony per dostawca); rekordy Javy odwzorowują ten sam kształt, a test pilnuje zgodności.
 
-Cała zmiana na jednej gałęzi `feature/assessment-contract-harness`, jeden PR, merge wykonuje użytkownik po fazie 5.
+Kod pomiarowy (kontrola na żywo, próbka, nagrywanie, miary, raport) leży w `src/test/java/.../measurement/` i uruchamia się wyłącznie w profilu Maven `measurement` (tag JUnit `measurement`), którego CI nie włącza. Wyjątek: test odtwarzania nagrań i progów jest zwykłym `*Test` uruchamianym w CI.
+
+Każdy przebieg na żywo korzysta z tej samej trójki `LLM_*` co produkcja; trzy modele = trzy przebiegi z różnymi ustawieniami. Klucze do przebiegów użytkownik generuje jednorazowo i usuwa po nagraniu; nigdy nie trafiają do repo, CI ani Railway.
+
+Cała zmiana na gałęzi `feature/assessment-contract-harness-java`, jeden PR z `Refs #24`. Kolejność: wszystkie fazy → `/10x-impl-review` z poprawkami → `/10x-archive`; merge do `main` wykonuje użytkownik, raz, na końcu.
 
 ## Critical Implementation Details
 
-**Ścieżka LangChain jest niesprawdzona — pilotaże szły bezpośrednio przez HTTP.** Znane pułapki do obsłużenia w adapterach: (a) Gemini zwraca HTTP 400 dla schematu z `minItems`/`maxItems`, więc schemat wysyłany do dostawcy nie zawiera ograniczeń liczności tablic; (b) `langchain-deepseek` po cichu zamienia `json_schema` na function calling, DeepSeek w trybie myślenia odrzuca wymuszony `tool_choice`, więc adapter musi wyłączyć myślenie; (c) tryb strict nie gwarantuje pól wymaganych (`deepseek-v4-pro` pomijał je w 12/23 odpowiedzi). Dlatego faza 3 kończy się kontrolą na żywo, a kompletność i limity egzekwuje wyłącznie nasz model Pydantic.
+**Ponowienia tylko w naszej warstwie.** Klienci budowani w `llm/` muszą mieć wyłączone wszystkie ponowienia poniżej: openai-java `maxRetries(0)`, google-genai `HttpRetryOptions.attempts(1)` (oraz jawny `HttpOptions` timeout — domyślnie brak), DeepSeek bez `RetryTemplate` z ponowieniami. Nasza pętla: do 3 prób na tryb przy 429, 5xx, przekroczeniu czasu i błędzie połączenia; `Retry-After`, jeśli dostępny (limit 60 s), inaczej odstęp wykładniczy `min(2^(n-1), 30)` s; każdy inny błąd → od razu `provider_error`. Flex: po 3 kolejnych odmowach 429 to samo wywołanie w trybie standardowym (`provider.only = ["openai"]`), `flex_fallback = true`. Naruszenia kontraktu i błędy parsowania nigdy nie są ponawiane. Embabel nadal rejestruje model z tej samej trójki `LLM_*` (start aplikacji), ale ocena nie przechodzi przez jego `LlmOperations`.
 
-**Normalizacja cytatów (niezmiennik cytatu w V2).** Porównanie `quote in field` wykonuje się po normalizacji obu stron: każdy znak biały Unicode (w tym twarda spacja ` `) → spacja, ciągi białych znaków (także łamania linii) → jedna spacja, obcięcie końców. Minimalna długość cytatu po normalizacji wynosi 1 znak; pusty wynik normalizacji dla anchor lub evidence jest odrzucany przed sprawdzeniem podciągu jako `domain_invariant_violation`. Nic więcej: bez zmiany wielkości liter, bez usuwania markdownu, bez normalizacji cudzysłowów. Zmieniona odmiana i skrót „[...]” nadal są naruszeniem.
+**Ścisłe parsowanie przez JSON Schema.** Surowy tekst → parsowanie JSON (`invalid_structured_output`: brak tekstu, niepoprawny JSON, nadmiarowe tokeny, duplikaty kluczy) → walidacja względem schematu V2 przez networknt (`schema_violation`: obce i brakujące klucze, typy, enumy, limity; `maxLength` w JSON Schema liczy code pointy — potwierdzić testem na „🚀”) → mapowanie na rekordy → walidator domenowy. Pobłażliwe parsery frameworków (Embabel `JacksonOutputConverter`, Spring AI `BeanOutputConverter`) nie mogą stać przed walidatorem.
 
-**Kolejność walidacji i klasyfikacja.** Surowa odpowiedź → parsowanie JSON (`invalid_structured_output`) → pełny model Pydantic z limitami (`schema_violation`) → walidator domenowy zbierający wszystkie naruszenia; klasa wyniku to klasa pierwszego naruszenia w porządku `invalid_reference` → `fabricated_evidence` → `domain_invariant_violation`.
+**Kolejność pól w schemacie.** Żaden obiekt w schemacie wysyłanym do modelu nie kończy się obiektem zagnieżdżonym (`Target`: `id, kind, anchor, stance, reference`; `Claim`: `id, kind, attribution, target_ids, evidence, statement`) — DeepSeek gubił zamykające nawiasy (smoke 2026-10-01). Kontrakt nie nadaje znaczenia kolejności kluczy.
 
-**Wynik bez wywołania modelu.** Wpis bez treści (po usunięciu tagów, wzmianek, adresów URL i używanego w zanonimizowanych próbkach znacznika `<url>` zostaje mniej niż 3 znaki w tytule i treści łącznie) dostaje gotowy wynik: `relevance = unclear`, puste listy, flaga `insufficient_content`, a pochodzenie jawnie oznacza źródło `prefilter` (bez dostawcy, modelu i tokenów). Reguła jest częścią kontraktu V2.
-
-**Granica F-02.** `assess()` wykonuje najwyżej jedno wywołanie modelu; nie ma przełącznika eskalacji ani drugiego dostawcy. Ewentualną kaskadę można zaplanować po MVP na podstawie danych z działającego produktu. Decyzja użytkownika z triage F2 świadomie odracza Gemini 3.8 Flash i modele decyzyjne. Role modeli: GPT-6 Luna w trybie flex — pierwszy wybór; DeepSeek Flash — zapas; Gemini 3.1 Flash-Lite — punkt odniesienia (decyzja użytkownika 2026-10-01; zastępuje ustalenie z triage F2, w którym Luna była wyłącznie punktem odniesienia).
-
-**Flex i ponowienia.** Tryb flex (OpenAI `service_tier="flex"` bezpośrednio albo dostawca `openai/flex` w OpenRouter) kosztuje połowę ceny, ale odpowiada wolniej i przy braku zasobów odmawia błędem 429. Adapter ma długi, konfigurowalny limit czasu wywołania. **Ponowienia żyją wyłącznie w adapterze** (przegląd 2026-10-01, F1): klienci LangChain/SDK wszystkich dostawców mają `max_retries=0`, a adapter wykonuje do 3 prób transportowych (429, 5xx, przekroczenie czasu, błąd połączenia) z wykładniczym odstępem i respektowaniem nagłówka `retry-after`. Naruszenia kontraktu i błędy parsowania nigdy nie są ponawiane (brak ponowień semantycznych). „Jedno wywołanie” w tym planie oznacza jedno wywołanie logiczne `complete()` na ocenialny post; liczba prób jest zapisywana osobno w pochodzeniu (`attempts`). **Powrót z flex** (F2): jeśli 3 kolejne próby w trybie flex kończą się odmową 429 z powodu braku zasobów, adapter wykonuje dla tego samego wywołania próbę w trybie standardowym (ten sam model, pełna cena — to nie jest eskalacja do innego modelu); pochodzenie zapisuje faktyczny tryb (`service_tier`: `flex` | `default`) i `flex_fallback: true`, a raport z fazy 5 liczy takie posty i ich koszt. S-02 zapisuje te pola w bazie razem z oceną.
+**Białe znaki.** Zbiór białych znaków §10 (po zmianie w fazie 2): U+0009–U+000D, U+001C–U+001F, U+0020, U+0085, U+00A0, U+1680, U+2000–U+200A, U+2028, U+2029, U+202F, U+205F, U+3000. Ani `Character.isWhitespace`, ani Apache `StringUtils.normalizeSpace` nie obejmuje całego zbioru (sprawdzone: pomijają U+2007, U+202F, U+0085).
 
 ## Phase 1: Kontrakt V2 i dokumenty
 
@@ -168,250 +158,303 @@ Nowy kontrakt V2 jako źródło prawdy, V1 w archiwum, spójne dokumenty pomocni
 
 ### Overview
 
-Modele Pydantic 1:1 z kontraktem V2, walidator z klasyfikacją naruszeń i normalizacją cytatów, odsiew wpisów bez treści, testy offline także na prawdziwych fragmentach z pilotaży.
+Zamknięty model kontraktu V2 w Javie, ścisły parser, walidator D1–D15 jako zestaw strategii, odsiew §11; poprawka §10 kontraktu. Wszystko bez sieci, w testach `*Test`.
 
 ### Changes Required:
 
-#### 1. Modele kontraktu
+#### 1. Kontrakt §10 i dokumenty pomocnicze
 
-**File**: `szczur-radar-api/app/assessment/__init__.py`, `szczur-radar-api/app/assessment/contract.py`
+**File**: `context/foundation/llm-assessment/contract-v2.md`, `context/foundation/llm-assessment/agent-implementation.md`, `REPOSITORY_GUIDELINES.md`
 
-**Intent**: Odwzorować wejście i wyjście V2 jako zamknięte modele, żeby obcy klucz, brak klucza, wartość spoza enumu i przekroczony limit były odrzucane u źródła.
+**Intent**: Uczynić kontrakt neutralnym językowo bez zmiany znaczenia i usunąć Pythonowe sformułowania, zanim kod je odwzoruje.
 
-**Contract**: `AssessmentInputV1`, `AssessmentOutputV2` z `extra="forbid"` na każdym obiekcie; enumy jako `Literal[...]` dokładnie z kontraktu; wszystkie klucze wymagane; limity kontraktu jako ograniczenia pól (długości liczone w znakach Unicode); walidacja wejścia (tytuł i treść nie oba puste). Stała `CONTRACT_VERSION = "V2"`. Brak pól `supported_by_claim_ids`, `score`, `confidence`, `is_signal`, `schema_version` w wyjściu.
+**Contract**: §10 pkt 1 wymienia jawnie zbiór białych znaków (lista z „Critical Implementation Details”) zamiast `str.isspace()`; nazwa funkcji opisowa („normalizacja białych znaków”); wpis w §17 jako zmiana redakcyjna 2026-10-03. `agent-implementation.md:13` („Pydantic, `extra="forbid"`”) → „zamknięte modele odrzucające obce i brakujące klucze”; `:18`, `:23` (OpenAI tylko przez OpenRouter), `:143-144` bez literałów Pythona. `REPOSITORY_GUIDELINES.md`: pakiety `llm`, `agents/assessor`, `sources`, kod `measurement` tylko testowy.
 
-#### 2. Walidator domenowy, normalizacja i klasy błędów
+#### 2. Model kontraktu i schemat V2
 
-**File**: `szczur-radar-api/app/assessment/validation.py`
+**File**: `szczur-radar-api/src/main/java/pl/szczurradar/api/agents/assessor/contract/*.java`, `szczur-radar-api/src/main/resources/assessor/assessment-output-v2.schema.json`
 
-**Intent**: Sprawdzić wszystko, czego schemat nie wyrazi, i zwrócić pełną listę naruszeń z klasami.
+**Intent**: Odwzorować wejście i wyjście 1:1 z kontraktem jako rekordy i enumy oraz trzymać jeden schemat kształtu wyjścia.
 
-**Contract**: `normalize_whitespace(text) -> str` (definicja z „Critical Implementation Details”); `validate_assessment(input, output) -> list[Violation]`; `Violation(failure_class, rule, path, message)`; `FailureClass` = `provider_error | timeout | invalid_structured_output | schema_violation | invalid_reference | fabricated_evidence | domain_invariant_violation`. Reguły: unikalność i istnienie ID, brak duplikatów w tablicach referencji, odrzucenie pustego wyniku normalizacji cytatu w anchor i evidence jako `domain_invariant_violation` przed sprawdzeniem podciągu, cytat i anchor jako podciąg wskazanego pola po normalizacji, cytat z nieistniejącego pola lub dokumentu, `explicit` → anchor z `item`, claim ma cytat z `item`, `stance.claim_ids` wskazują claimy z tym celem w `target_ids`, reguły `direction` × `assertiveness` × `claim_ids` z kontraktu V2, stanowisko kierunkowe oparte na claimie autora. Funkcja pomocnicza: surowy JSON → (`AssessmentOutputV2` | naruszenie `invalid_structured_output` / `schema_violation`).
+**Contract**: Rekordy `AssessmentInputV1`, `Item`, `Context`, `Parent`, `AssessmentOutputV2`, `Target`, `Anchor`, `Stance`, `Claim`, `Evidence`; enumy (wartości JSON małymi literami przez `@JsonValue`) dokładnie ze słownika §3 i typów elementów; `CONTRACT_VERSION = "V2"`. Schemat JSON (draft 2020-12): wszystkie klucze wymagane, `additionalProperties: false` na każdym obiekcie, enumy, limity §9 (`maxItems`, `minLength`/`maxLength`), `uniqueItems` dla `modifiers`/`flags`, `null` dozwolone tylko tam, gdzie kontrakt pozwala (`assertiveness`); kolejność właściwości według „Critical Implementation Details”. Walidacja wejścia: co najmniej jedno z `title`/`body` niepuste; tekst z samych białych znaków musi być `null`; `published_at` z przesunięciem strefy. Brak pól `supported_by_claim_ids`, `score`, `confidence`, `is_signal`, `schema_version` w wyjściu.
 
-#### 3. Odsiew wpisów bez treści
+#### 3. Białe znaki, parser i walidacja kształtu
 
-**File**: `szczur-radar-api/app/assessment/prefilter.py`
+**File**: `.../agents/assessor/text/Whitespace.java`, `.../agents/assessor/validation/OutputParser.java`, `FailureClass.java`, `Violation.java`
 
-**Intent**: Jedna definicja „brak treści” dla testów i produkcji, żeby nie płacić za ocenę wpisów typu zdjęcie + tag.
+**Intent**: Jedna normalizacja dla walidatora, odsiewu i miar oraz jedna ścieżka „surowy tekst → wyjście albo naruszenia”.
 
-**Contract**: `is_assessable(input) -> bool` według reguły kontraktu, w tym `<url>` jako zamiennik adresu w próbkach; `no_content_output() -> AssessmentOutputV2` (kształt z „Critical Implementation Details”).
+**Contract**: `Whitespace.normalize(String)` (zbiór §10 → spacja, ciągi → jedna spacja, obcięcie końców), `Whitespace.isWhitespace(int codePoint)`. `FailureClass` = `provider_error | timeout | invalid_structured_output | schema_violation | invalid_reference | fabricated_evidence | domain_invariant_violation` (enum). `Violation(FailureClass, String rule, String path, String message)`, ścieżki `$.claims[0].id`. `OutputParser.parse(String raw)` → wynik sukces (`AssessmentOutputV2`) albo lista naruszeń (`invalid_structured_output` / `schema_violation`), z kolejnością z „Critical Implementation Details”; własny ścisły `JsonMapper` (Jackson 3) niezależny od mappera Boota.
 
-#### 4. Testy
+#### 4. Walidator domenowy (wzorzec strategii)
 
-**File**: `szczur-radar-api/tests/assessment/__init__.py`, `test_contract.py`, `test_validation.py`, `test_prefilter.py`, `fixtures/real_posts.json`
+**File**: `.../agents/assessor/validation/ValidationRule.java`, `ContractV2Rules.java`, `RuleBasedValidator.java`, `StanceTable.java`, `rules/*.java`
 
-**Intent**: Udowodnić offline, że kod i kontrakt mają ten sam kształt oraz że każda reguła ma test pozytywny i negatywny, także na prawdziwych tekstach.
+**Intent**: Każda reguła D1–D15 to niezależna strategia, a walidator tylko uruchamia uporządkowany zestaw, żeby nowa reguła (zmiana kontraktu przez §16, inny przypadek, kolejna wersja kontraktu) była nową klasą dopisaną do zestawu, bez zmian walidatora i innych reguł.
 
-**Contract**: Pozytywne: kompletne wyjścia z `examples.md` przechodzą bez naruszeń. Negatywne, po jednym teście z asercją klasy: zmyślony cytat, cytat ze zmienioną odmianą, cytat ze skrótem „[...]”, brakujący cel, brakujący claim, duplikat ID, anchor `explicit` spoza `item`, claim bez cytatu z `item`, stanowisko kierunkowe bez claimu autora, każda zabroniona kombinacja `direction` × `assertiveness` × `claim_ids`, obce pole, wartość spoza enumu, przekroczony limit, pusty cytat, wejście z pustym tytułem i treścią. Normalizacja: cytat ze zwykłą spacją przechodzi dla pola z twardą spacją i z łamaniem linii. Testy parametryzowane dla anchor i evidence zawierających wyłącznie zwykłe spacje, twarde spacje, łamania linii lub ich mieszankę (w tym `"\u00a0\n"`) oczekują `domain_invariant_violation`, także gdy pole wejścia zawiera identyczne białe znaki. `fixtures/real_posts.json`: zanonimizowane fragmenty z `pilot/` (twarda spacja, „lenny face”, słowa ocenzurowane przez Wykop, emoji, sam tag, sam link oraz tag z samym `<url>`); ostatni przypadek musi być odrzucony przez odsiew.
+**Contract**: `ValidationRule` — `List<Violation> check(AssessmentInputV1, AssessmentOutputV2)` + identyfikator reguły (enum `RuleId` D1–D15). `ContractV2Rules` — uporządkowana lista strategii dla V2 (D5→D7→D6 jako jedna reguła cytatu: brak dokumentu/pola → `invalid_reference`, pusty po normalizacji → `domain_invariant_violation`, nie-podciąg → `fabricated_evidence`); walidator odrzuca zestaw z powtórzonym identyfikatorem. `RuleBasedValidator.validate(input, output)` zbiera wszystkie naruszenia; klasa wyniku = pierwsza obecna w porządku `invalid_reference → fabricated_evidence → domain_invariant_violation`. `StanceTable` — enum z danymi tabeli §7.2 (assertiveness: wymagane/null; claim_ids: wymagane/dozwolone/zabronione; teza autora: wymagana/nie); D12–D14 czytają z niej. Długości liczone `codePointCount`.
+
+#### 5. Odsiew wpisów bez treści
+
+**File**: `.../agents/assessor/Prefilter.java`
+
+**Intent**: Jedna definicja „wpisu bez treści” dla produkcji, próbki wzorca i testów.
+
+**Contract**: `boolean isAssessable(AssessmentInputV1)` według §11: usunięcie `https?://\S*`, `<url>`, `#` + znaki słowa, `@` + znaki słowa (URL przed tagiem; „znak słowa” = `[\p{L}\p{N}_]`), obcięcie białych znaków (`Whitespace`) każdego pola, połączenie, próg 3 code pointy; `AssessmentOutputV2 noContentOutput()` = kształt z §11.
+
+#### 6. Testy offline i dokumentacja pakietu
+
+**File**: `szczur-radar-api/src/test/java/pl/szczurradar/api/agents/assessor/**/*Test.java`, `src/test/resources/fixtures/assessor/real_posts.json`, `src/main/java/pl/szczurradar/api/agents/assessor/CLAUDE.md`
+
+**Intent**: Udowodnić, że kod ma kształt kontraktu, a każda reguła ma test pozytywny i negatywny, także na prawdziwych tekstach.
+
+**Contract**: Pozytywne: kompletne wyjścia przykładów 1–7 z `examples.md` (sekcje `# N.` z dwoma blokami ```json: wejście, wyjście) przechodzą bez naruszeń. Negatywne z asercją klasy — lista z `agent-implementation.md` §5 (m.in. zmyślony cytat, zmieniona odmiana, „[...]”, cytat z samych białych znaków w wariantach `" "`, `" \n"`, pole `null`, brakujący cel/teza, duplikat ID, powtórzenie, anchor `explicit` spoza `item`, evidence spoza `item`, teza bez celu w `claim_ids`, stanowisko kierunkowe bez tezy autora, każda zabroniona kombinacja §7.2, `not_investment_related` z celami, obce pole, wartość spoza enumu, przekroczony limit na „🚀”×(limit+1), puste wejście). Białe znaki: test na każdy znak zbioru §10 oraz U+200B jako znak niebiały. Parser: płotki markdown, nadmiarowe tokeny, duplikat klucza, liczba zamiast enumu → odrzucone. Zgodność rekordów ze schematem (te same nazwy i kolejność pól). `real_posts.json`: zanonimizowane fragmenty z `pilot/` (twarda spacja, „lenny face”, ocenzurowane słowa, emoji, sam tag, sam link, tag + `<url>`) z oczekiwanym `assessable`. `CLAUDE.md`: jak dodać regułę (nowa strategia + wpis w `ContractV2Rules` + test negatywny/pozytywny; najpierw zmiana kontraktu przez §16), białe znaki tylko przez `Whitespace`.
 
 ### Success Criteria:
 
 #### Automated Verification:
 
-- Wszystkie testy backendu przechodzą offline: `cd szczur-radar-api && uv run pytest -q`
-- Każda reguła walidatora z listy w `test_validation.py` ma test negatywny z asercją klasy błędu i co najmniej jeden test pozytywny
-- Kompletne wyjścia z `examples.md` przechodzą walidator bez naruszeń
-- Cytat różniący się od pola wyłącznie białymi znakami przechodzi, a cytat ze zmienioną odmianą lub skrótem „[...]” jest odrzucany jako `fabricated_evidence`
-- Wpisy bez treści z `fixtures/real_posts.json` dają `is_assessable == False`, a pozostałe `True`
-- Import `app.assessment` nie wymaga żadnej zmiennej środowiskowej
+- Testy jednostkowe przechodzą bez Dockera i bez zmiennych LLM: `cd szczur-radar-api && ./mvnw -B test`
+- Pełna weryfikacja przechodzi: `cd szczur-radar-api && ./mvnw -B verify`
+- Wyjścia przykładów 1–7 z `examples.md` przechodzą walidator bez naruszeń (test)
+- Każda reguła D1–D15 ma test negatywny z asercją klasy i co najmniej jeden pozytywny; każda zabroniona kombinacja §7.2 ma test
+- Cytat różniący się od pola wyłącznie znakami ze zbioru §10 przechodzi; zmieniona odmiana i „[...]” dają `fabricated_evidence`; limity liczone w code pointach (test „🚀”)
+- `contract-v2.md` nie odwołuje się do Pythona: `! grep -n "isspace\|Python" context/foundation/llm-assessment/contract-v2.md`
 
 #### Manual Verification:
 
-- Enumy, limity i reguły w `app/assessment/contract.py` i `validation.py` zgadzają się 1:1 z `contract-v2.md` (przegląd obok siebie)
+- Enumy, limity i reguły w kodzie oraz schemacie zgadzają się 1:1 z `contract-v2.md` (przegląd obok siebie)
+- Użytkownik zaakceptował redakcyjną zmianę §10
 
-**Implementation Note**: Po zielonej weryfikacji automatycznej zatrzymaj się na ręczne potwierdzenie przed fazą 3. Kryterium 2.4 dotyczy cytatów niepustych po normalizacji; cytaty złożone wyłącznie z białych znaków są odrzucane zgodnie z regułą minimum 1 znaku po normalizacji.
+**Implementation Note**: Po zielonej weryfikacji automatycznej zatrzymaj się na ręczne potwierdzenie przed fazą 3.
 
 ---
 
-## Phase 3: Dostawcy, prompt i `assess()`
+## Phase 3: Infrastruktura LLM (dawniej 3A)
 
 ### Overview
 
-Port dostawcy z adapterami LangChain dla Gemini, DeepSeek i OpenAI, prompt V2 z wersją, `assess()` składające odsiew, jedno wywołanie i walidację w wynik z pochodzeniem, testy na sztucznym dostawcy i kontrola na żywo zgodności ze ścieżką z pilotaży.
+Pakiet `llm`: port `LlmClient`, klienci trzech dostawców budowani z `LLM_*` z pełną kontrolą żądania, ponowień i odczytu zużycia; testy na lokalnym serwerze HTTP z prawdziwymi payloadami.
 
 ### Changes Required:
 
-#### 1. Zależności i ochrona kluczy
+#### 1. Ustawienia kanału
 
-**File**: `szczur-radar-api/pyproject.toml`, `szczur-radar-api/uv.lock`, `.gitignore`
+**File**: `.../config/LlmProviderProperties.java`, `szczur-radar-api/README.md`, `.railway/railway.ts`
 
-**Intent**: Dodać integracje LangChain dla trzech dostawców i upewnić się, że lokalne klucze nie trafią do repo.
+**Intent**: Wyrazić tryb flex, poziom rozumowania i limit czasu bez nowych sekretów i bez drugiej ścieżki konfiguracji.
 
-**Contract**: `uv add langchain langchain-google-genai langchain-deepseek langchain-openai`; `uv.lock` w tym samym commicie. `.gitignore`: `.env`, `.env.*`.
+**Contract**: Opcjonalne zmienne: `LLM_SERVICE_TIER` (enum `default` | `flex`; `flex` dozwolony tylko dla `openrouter`), `LLM_REASONING_EFFORT` (enum, tylko `openrouter`; brak = domyślne dostawcy), `LLM_TIMEOUT` (czas, domyślnie 120 s; dla flex zalecane dłuższe). Błędne wartości zatrzymują start z komunikatem jak dla trójki `LLM_*`. `railway.ts`: trzy nowe nazwy jako `preserve()`. README: opis zmiennych.
 
-#### 2. Port dostawcy i adaptery
+#### 2. Port i klienci dostawców
 
-**File**: `szczur-radar-api/app/assessment/providers/__init__.py`, `base.py`, `gemini.py`, `deepseek.py`, `openai.py`
+**File**: `szczur-radar-api/src/main/java/pl/szczurradar/api/llm/*.java` (`LlmClient`, `LlmRequest`, `LlmResponse`, `LlmCallException`, `LlmClientFactory`, `TransportRetry`, `ProviderSchemas`, `GeminiClient`, `DeepSeekClient`, `OpenRouterClient`, `LlmConfiguration`)
 
-**Intent**: Oddzielić ocenę od dostawcy, żeby wybierać model konfiguracją i testować `assess()` bez sieci; obsłużyć różnice dostawców w jednym miejscu.
+**Intent**: Oddzielić wywołanie modelu od oceny i obsłużyć różnice dostawców w jednym miejscu, z gwarancją surowego tekstu i dokładnie naszych ponowień.
 
-**Contract**: `base.py`: protokół `AssessmentProvider.complete(system_prompt, input) -> ProviderResponse`; `ProviderResponse(raw_text | None, provider, model, input_tokens, output_tokens, cached_tokens)`; klasa bazowa na `init_chat_model` + `with_structured_output(..., include_raw=True)`; schemat dla dostawcy wyprowadzany z `AssessmentOutputV2` przez funkcję upraszczającą (bez ograniczeń liczności tablic; dla DeepSeek także bez ograniczeń długości); mapowanie błędów transportu i odmowy na `provider_error`, przekroczenia czasu (`ModelTimeoutError`, `httpx.TimeoutException`) na `timeout` — po wyczerpaniu prób; klient z `max_retries=0`, a wspólna pętla ponowień transportowych i powrotu z flex w klasie bazowej (zasady w „Critical Implementation Details” → Flex i ponowienia); `ProviderResponse` dodatkowo `attempts`, `service_tier`, `flex_fallback`; `temperature=0`. `gemini.py`: metoda `json_schema`, odczyt z `raw.text`. `deepseek.py`: function calling strict z wyłączonym myśleniem, odczyt z `raw.tool_calls[0].args` albo `raw.invalid_tool_calls`. `openai.py`: metoda `json_schema` strict, odczyt z `raw.text`, schemat bez ograniczeń długości i liczności; parametry adaptera: poziom rozumowania, tryb obsługi (`default` | `flex`), opcjonalny `base_url` (OpenRouter, zgodny z OpenAI) z preferencjami dostawcy, limit czasu i liczba prób transportowych. Tryb flex: bezpośrednio u OpenAI przez `ChatOpenAI(service_tier="flex")`; przez OpenRouter przez `extra_body={"provider": {"only": ["openai/flex"], "allow_fallbacks": false}}` (punkty końcowe z sufiksem trybu wymagają jawnego wskazania; `service_tier` przez OpenRouter niepotwierdzony), a powrót z flex przełącza na `["openai"]`. DeepSeek przez OpenRouter: `provider.quantizations` jako lista dozwolona bez fp4 (np. `["fp8", "bf16", "fp16", "fp32"]` — OpenRouter nie ma flagi wykluczenia) i `require_parameters: true`, żeby pominąć dostawców bez wymuszanego schematu (F4). Rejestr `from_spec("provider:model", timeout_s=...)` dla prefiksów `google_genai`, `deepseek` i `openai`; nieznany prefiks → błąd konfiguracji.
+**Contract**: `LlmClient.complete(LlmRequest) -> LlmResponse` (rzuca `LlmCallException(FailureClass provider_error|timeout, message, attempts, serviceTier, flexFallback)` po wyczerpaniu prób). `LlmRequest(systemPrompt, userMessage, outputSchema)`. `LlmResponse(rawText, provider, model, channel, serviceTier, flexFallback, reasoningEffort, outputMode, inputTokens, outputTokens, cachedTokens, attempts)`. `LlmClientFactory.create(LlmProviderProperties)` buduje Spring AI `ChatModel` dostawcy z wyłączonymi ponowieniami i timeoutem (bez beanów modeli Embabel); `LlmConfiguration` wystawia leniwy bean `LlmClient` (start bez sieci). `temperature = 0`. Gemini: `GoogleGenAiChatModel` na własnym kliencie genai, `responseJsonSchema` bez `minItems`/`maxItems`, tekst = złączenie części z `isThought != true`, `includeThoughts` wyłączone. DeepSeek: `responseFormat = JSON_OBJECT`, myślenie wyłączone, schemat (bez limitów długości i liczności) dopisany do promptu systemowego stałym akapitem, `outputMode = json_mode`. OpenRouter: `responseFormat` JSON_SCHEMA strict (bez limitów długości i liczności), `extraBody.provider = {only: ["openai/flex"], allow_fallbacks: false}` przy `flex`, `["openai"]` po powrocie; `reasoningEffort` z ustawień. Zużycie: tokeny wejścia/wyjścia oraz cache (`getCacheReadInputTokens()`; dla DeepSeek — jeśli Spring AI nie mapuje `prompt_cache_hit_tokens`, odczyt z surowego `usage` przez interceptor `RestClient`). `ProviderSchemas.forProvider(Provider, schema)` usuwa słowa kluczowe per dostawca i nie zmienia kolejności właściwości. Odmowa modelu (`refusal`, zablokowana odpowiedź bez treści) → `provider_error` bez ponowień.
 
-#### 3. Prompt V2
+#### 3. Prawdziwe payloady i testy klientów
 
-**File**: `szczur-radar-api/app/assessment/prompt.py`
+**File**: `src/test/resources/fixtures/{gemini,deepseek,openrouter}/*.json`, `src/test/java/pl/szczurradar/api/llm/*Test.java`, `src/main/java/pl/szczurradar/api/llm/CLAUDE.md`, `src/test/java/pl/szczurradar/api/measurement/README.md`
 
-**Intent**: Jeden wersjonowany prompt systemowy zgodny z kontraktem V2, oparty na sprawdzonym w pilotażach skróconym prompcie.
+**Intent**: Sprawdzić offline prawdziwy kod Spring AI i SDK: co wysyłamy i jak czytamy odpowiedź, błędy i zużycie.
 
-**Contract**: `PROMPT_VERSION` i `SYSTEM_PROMPT` (skrócony prompt + reguły V2 + słownik slangu; bez przykładów z zestawu wzorcowego); funkcja budująca wiadomość użytkownika z `input.model_dump_json()` jako niezaufanego materiału. Do modelu trafiają wyłącznie pola wejścia kontraktu. Zmiana treści promptu = nowy `PROMPT_VERSION`.
-
-#### 4. Konfiguracja i `assess()`
-
-**File**: `szczur-radar-api/app/assessment/config.py`, `szczur-radar-api/app/assessment/service.py`
-
-**Intent**: Złożyć odsiew, pojedyncze wywołanie dostawcy i walidację w jeden wynik, który S-02 zapisze bez interpretacji.
-
-**Contract**: `config.py`: leniwy odczyt `ASSESSMENT_MODEL` (domyślnie `DEFAULT_ASSESSMENT_MODEL`, ustawiany w fazie 5) oraz ustawień kanału (tryb obsługi, `base_url`, preferencje dostawcy, limit czasu, liczba ponowień). `service.py`: `prepare_request(input) -> PreparedRequest | AssessmentResult` (odsiew; dla ocenialnego wpisu prompt, wiadomość użytkownika, schemat i wersje), `evaluate_response(input, prepared, provider_response) -> AssessmentResult` (parsowanie, walidacja, klasyfikacja, pochodzenie) oraz `assess(input, provider=None) -> AssessmentResult` składające oba kroki z jednym wywołaniem dostawcy; tryb wsadowy w S-02 może użyć tych samych dwóch kroków. `AssessmentResult(status: "ok" | "failed", output, failure_class, violations, provenance, raw_text)`; `Provenance(source: "model" | "prefilter", provider, model, channel, reasoning_effort, prompt_version, contract_version, assessed_at, input_tokens, output_tokens, cached_tokens, duration_ms, attempts, service_tier, flex_fallback)` — `channel` (np. `openai`, `openrouter`) i `reasoning_effort` zapisują konfigurację, z którą powstała ocena (F3); jakości nie zapisuje się per post. Wpis bez treści → wynik z `source = "prefilter"` bez wywołania dostawcy; pozostałe wpisy → dokładnie jedno wywołanie. Wynik z naruszeniami nigdy nie ma `status = "ok"`.
-
-#### 5. Testy offline
-
-**File**: `szczur-radar-api/tests/assessment/test_providers.py`, `test_service.py`
-
-**Intent**: Udowodnić klasyfikację błędów i liczbę wywołań bez sieci.
-
-**Contract**: Odczyt surowej odpowiedzi każdego adaptera na spreparowanych `AIMessage` (tekst, lista bloków, `tool_calls`, `invalid_tool_calls`, brak JSON); schemat dla dostawcy nie zawiera nieobsługiwanych słów kluczowych. Sztuczny dostawca: poprawny wynik → `ok` z pochodzeniem; każda klasa błędu (`provider_error`, oba typy `timeout`, `invalid_structured_output`, `schema_violation`, `fabricated_evidence`) → `failed` i jedno wywołanie; wpis bez treści → zero wywołań; wiadomość do dostawcy zawiera wyłącznie pola wejścia. Ponowienia (na poziomie adaptera, sztuczny model czatu pod adapterem): 429, potem poprawna odpowiedź → `ok` i `attempts = 2`; więcej niż 3 błędy transportu → `provider_error` po 3 próbach; 3 odmowy flex, potem poprawna odpowiedź w trybie standardowym → `ok`, `service_tier = "default"`, `flex_fallback = true`; odpowiedź naruszająca kontrakt nie jest ponawiana (`attempts = 1`). Na poziomie `assess()` sztuczny dostawca jest wywoływany raz na ocenialny post (wywołanie logiczne). Schemat dla OpenAI nie zawiera ograniczeń długości ani liczności (F5). `evaluate_response` na nagranej surowej odpowiedzi daje ten sam wynik co `assess()` na sztucznym dostawcy zwracającym tę odpowiedź.
-
-#### 6. Kontrola zgodności ze ścieżką z pilotaży (na żywo)
-
-**File**: `szczur-radar-api/scripts/assessment_smoke.py`
-
-**Intent**: Wcześnie wykryć, czy LangChain zachowuje się inaczej niż bezpośrednie wywołania, na których opierają się liczby z pilotaży.
-
-**Contract**: Skrypt jawnie mapuje rekordy `pilot/wykop-gielda-sample-2026-09-29.json` (`sample_id`, `resource`, `created_at`, `title`, `body`) na `AssessmentInputV1` (`entry` → `post`, `link` → `link`), zachowując zanonimizowany tekst i konwertując lokalny czas Wykopu przez `Europe/Warsaw` do RFC 3339 z offsetem. Po `is_assessable` wybiera pierwsze 30 ocenialnych postów i przepuszcza je przez `assess()` dla `google_genai:gemini-3.1-flash-lite` i `deepseek:deepseek-flash`; wypisuje liczbę wejść, odrzuceń przez odsiew i rzeczywistych wywołań jako mianownik zgodności z kontraktem, klasy błędów, tokeny i czas. Klucze z powłoki (`GOOGLE_API_KEY`, `DEEPSEEK_API_KEY`); adapter OpenAI sprawdzany tym samym skryptem z `openai:gpt-6-luna` w trybie flex (bezpośrednio z `OPENAI_API_KEY` albo przez OpenRouter z `OPENROUTER_API_KEY`) — jako pierwszy wybór jest obowiązkowy w tej kontroli; wynik wklejany do opisu PR, nie do repo.
+**Contract**: Po jednym prawdziwym, zanonimizowanym body odpowiedzi na dostawcę (sukces), zapisanym poleceniem `curl` opisanym w `measurement/README.md` (klucze użytkownika z powłoki). Testy `*Test` z lokalnym `HttpServer` (wzorzec `LlmProviderConfigTest`): wysłane żądanie zawiera właściwy schemat (Gemini bez `minItems`/`maxItems`; DeepSeek i OpenRouter bez limitów długości i liczności; `additionalProperties` i kolejność zachowane), `extraBody.provider` przy flex, wyłączone myślenie DeepSeek; odczyt surowego tekstu i zużycia (z cache) z prawdziwych payloadów; 429 → poprawna odpowiedź daje `attempts = 2`; więcej niż 3 błędy 5xx → `provider_error` po 3 próbach (serwer liczy żądania — dowód braku ukrytych ponowień SDK); przekroczenie czasu → `timeout`; 400 → `provider_error` po 1 próbie; 3× 429 w flex, potem sukces → `serviceTier = default`, `flexFallback = true`; `Retry-After` respektowany. `llm/CLAUDE.md`: jak dodać dostawcę, zakaz ponowień w SDK/frameworku, payloady testowe tylko prawdziwe.
 
 ### Success Criteria:
 
 #### Automated Verification:
 
-- Zależności zablokowane i zsynchronizowane: `cd szczur-radar-api && uv sync --locked`
-- Wszystkie testy backendu przechodzą offline, bez kluczy API: `uv run pytest -q`
-- Każda klasa błędu ma test na sztucznym dostawcy, a ocenialny wpis wywołuje dostawcę dokładnie raz
-- Wpis bez treści daje wynik z `source = "prefilter"` i zero wywołań dostawcy
-- Schemat wysyłany do Gemini nie zawiera `minItems`/`maxItems`, a do DeepSeek także `minLength`/`maxLength`
-- Import `app.assessment` nie wymaga żadnej zmiennej środowiskowej
-- Ponawiane są wyłącznie błędy transportu (429, 5xx, przekroczenie czasu); odpowiedź naruszająca kontrakt kończy się jednym wywołaniem
-- `evaluate_response` na surowej odpowiedzi daje wynik identyczny z `assess()` na sztucznym dostawcy zwracającym tę samą odpowiedź
+- Testy jednostkowe przechodzą offline: `cd szczur-radar-api && ./mvnw -B test`
+- Pełna weryfikacja przechodzi: `cd szczur-radar-api && ./mvnw -B verify`
+- Serwer testowy otrzymuje dokładnie tyle żądań, ile prób zgłasza `LlmResponse.attempts` / `LlmCallException` (brak ukrytych ponowień SDK i frameworka) dla każdego dostawcy
+- Schemat wysłany do Gemini nie zawiera `minItems`/`maxItems`, a do DeepSeek i OpenRouter także `minLength`/`maxLength` (test)
+- Błędne `LLM_SERVICE_TIER` / `LLM_REASONING_EFFORT` / `LLM_TIMEOUT` oraz `flex` dla dostawcy innego niż `openrouter` zatrzymują start z komunikatem bez klucza (test)
+- Plan Railway nie proponuje usunięć: job `railway-config` na PR zielony
 
 #### Manual Verification:
 
-- `assessment_smoke.py` na 30 ocenialnych postach (30 wywołań na model): dla obu modeli zgodność z kontraktem ≥90% i najwyżej jedno `provider_error` lub `invalid_structured_output` na model; wynik z licznikiem odrzuceń i mianownikiem w opisie PR
-- Wypełnione tokeny, wersja promptu i wersja kontraktu w pochodzeniu dla obu dostawców
+- Payloady w `fixtures/<dostawca>/` są prawdziwymi odpowiedziami API bez kluczy i danych osobowych
 
-**Implementation Note**: Kryterium 3.3 dotyczy wywołań logicznych (`complete()` raz na ocenialny post); próby transportowe są liczone osobno (F1). Kryterium 3.6 obejmuje także schemat wysyłany do OpenAI — bez ograniczeń długości i liczności (F5). Kryterium 3.10 obejmuje powrót z flex po 3 odmowach (F2). Kryteria 3.8 i 3.9 obejmują także `openai:gpt-6-luna` w trybie flex (pierwszy wybór, decyzja 2026-10-01); w opisie PR podaj dla niej również odsetek odmów 429 i medianę czasu. Jeśli kontrola na żywo nie spełnia progu dla któregoś dostawcy, zatrzymaj się i przedstaw użytkownikowi przyczynę oraz opcje (poprawka adaptera albo zmiana warstwy integracji dla tego dostawcy), zanim przejdziesz do fazy 5.
+**Implementation Note**: Przed zapisaniem payloadów poproś użytkownika o jednorazowe klucze trzech dostawców (podawane w powłoce, nigdy w repo). Po zielonej weryfikacji zatrzymaj się na ręczne potwierdzenie przed fazą 4.
 
 ---
 
-## Phase 4: Zestaw wzorcowy
+## Phase 4: Prompt, Assessor i agent (dawniej 3B)
 
 ### Overview
 
-Świeża, zanonimizowana próbka ~120 postów z dwóch dni, arkusz z instrukcją, etykiety użytkownika zapisane w repo oraz funkcje liczące miary względem wzorca. Przygotowanie arkusza zależy od akceptacji kontraktu w fazie 1; pobranie i przygotowanie próbki wymaga `AssessmentInputV1` i `is_assessable` z fazy 2. Oznaczanie próbki może iść równolegle z fazą 3.
+Prompt V2 z wersją, `Assessor` składający odsiew, jedno wywołanie i walidację w wynik z pochodzeniem, `AssessorAgent` zamiast `SkeletonAgent`, kontrola na żywo trzech dostawców.
 
 ### Changes Required:
 
-#### 1. Pobranie i anonimizacja próbki
+#### 1. Prompt V2
 
-**File**: `context/changes/assessment-contract-harness/pilot/scripts/fetch_wykop_sample.py`, `szczur-radar-api/tests/assessment/gold/posts.json`
+**File**: `.../agents/assessor/prompt/AssessmentPrompt.java`, `src/main/resources/assessor/system-prompt.md`
 
-**Intent**: Mieć próbkę niezależną od postów, z których powstały reguły (2026-09-28 i próbka z 2026-09-29 są wykluczone).
+**Intent**: Jeden wersjonowany prompt systemowy zgodny z kontraktem, oparty na sprawdzonym skróconym prompcie.
 
-**Contract**: Skrypt przyjmuje daty, pobiera `#gielda` przez Wykop API v3 (klucze z powłoki), pomija wpisy nieoceniane według `is_assessable`, losuje po ~60 na dzień ze stałym ziarnem, anonimizuje (nicki po `@` i nicki autorów → pseudonimy, URL → `<url>`, białe znaki bez zmian) i zapisuje `posts.json` jako listę `{post_id, day, input: AssessmentInputV1}`. Modele są później uruchamiane na tym zanonimizowanym tekście.
+**Contract**: `PROMPT_VERSION` (nowa wersja przy każdej zmianie treści) i tekst z zasobu: wymagania `agent-implementation.md` §2, reguły §5–§7.2, zasady cytatu, limity, słownik slangu z `pilot/labeling-guidelines.md`, jawna reguła `not_expressed` → puste `claim_ids`; materiał: `pilot/scripts/prompt-short.md`, `prompt-v2-rules.md` (tekst promptu v2.2 z gałęzi `_old` dopuszczalny jako punkt wyjścia). Wiadomość użytkownika = stały prefiks „niezaufany materiał” + kompaktowy JSON wejścia (tylko pola kontraktu, czas z przesunięciem strefy, znaki spoza ASCII bez escapowania).
 
-#### 2. Arkusz oznaczania
+#### 2. `Assessor`, wynik i pochodzenie
+
+**File**: `.../agents/assessor/Assessor.java`, `PreparedRequest.java`, `Preparation.java`, `AssessmentResult.java`, `Provenance.java`
+
+**Intent**: Złożyć odsiew, pojedyncze wywołanie i walidację w wynik, który S-02 zapisze bez interpretacji; zostawić podział na przygotowanie i ocenę dla trybu wsadowego.
+
+**Contract**: `Preparation prepare(AssessmentInputV1)` — sealed: `Prepared(PreparedRequest)` | `Decided(AssessmentResult)` (odsiew). `AssessmentResult evaluate(AssessmentInputV1, PreparedRequest, LlmResponse, Duration, Instant)`. `AssessmentResult assess(AssessmentInputV1)` — dokładnie jedno `LlmClient.complete` na ocenialny wpis, zero dla odsiewu; `LlmCallException` → wynik `failed` z klasą wyjątku. `AssessmentResult(Status ok|failed, @Nullable output, @Nullable failureClass, violations, provenance, @Nullable rawText)`; z jakimkolwiek naruszeniem nigdy `ok`. `Provenance(Source model|prefilter, provider, model, channel, serviceTier, flexFallback, reasoningEffort, outputMode, promptVersion, contractVersion, assessedAt, inputTokens, outputTokens, cachedTokens, durationMs, attempts)`; dla `prefilter` bez dostawcy, modelu i tokenów, `attempts = 0`.
+
+#### 3. Agent Embabel
+
+**File**: `.../agents/assessor/AssessorAgent.java`, usunięcie `agents/SkeletonAgent.java`, `src/test/java/.../agents/AssessorAgentIT.java` (zamiast `AgentSkeletonIT`), `szczur-radar-api/README.md`
+
+**Intent**: Dać S-02 gotowy krok agenta, z logiką w zwykłym serwisie testowalnym bez Embabel.
+
+**Contract**: `@Agent` z jedną `@Action` + `@AchievesGoal`: `AssessmentInputV1 → AssessmentResult`, delegacja do `Assessor`. IT: uruchomienie przez `AgentPlatform` dla wpisu bez treści daje `source = prefilter` i zero wywołań `LlmClient` oraz zero `LlmInvocation` Embabel; zachowane asercje rejestracji modelu z `AgentSkeletonIT`.
+
+#### 4. Testy `Assessor` i kontrola na żywo
+
+**File**: `src/test/java/.../agents/assessor/AssessorTest.java`, `src/test/java/.../measurement/LiveSmokeTest.java`, `szczur-radar-api/pom.xml`, `measurement/README.md`
+
+**Intent**: Udowodnić klasyfikację i liczbę wywołań offline oraz wcześnie sprawdzić na żywo, że trzej dostawcy zachowują się jak w pilotach.
+
+**Contract**: `AssessorTest` (sztuczny `LlmClient`): poprawna odpowiedź → `ok` z pochodzeniem; każda klasa błędu (`provider_error`, `timeout`, `invalid_structured_output`, `schema_violation`, `fabricated_evidence`, `invalid_reference`, `domain_invariant_violation`) → `failed` i jedno wywołanie; wpis bez treści → zero wywołań; wiadomość zawiera wyłącznie pola wejścia; `evaluate` na surowej odpowiedzi = `assess` na kliencie zwracającym tę odpowiedź. `pom.xml`: Surefire domyślnie wyklucza tag `measurement`; profil `measurement` uruchamia tylko ten tag (`./mvnw -Pmeasurement test -Dtest=<Klasa>`), bez Dockera i bez Springa. `LiveSmokeTest`: mapuje rekordy `pilot/wykop-gielda-sample-2026-09-29.json` na `AssessmentInputV1` (`entry` → `post`, `link` → `link`, czas Europe/Warsaw → RFC 3339), bierze pierwsze 30 ocenialnych, ocenia przez `Assessor` z klientem z `LLM_*`, wypisuje: wejścia, odrzucenia odsiewu, wywołania (mianownik), zgodność, klasy błędów, tokeny (z cache), medianę czasu, dla flex odsetek odmów 429 i liczbę powrotów; nic nie zapisuje do repo.
+
+### Success Criteria:
+
+#### Automated Verification:
+
+- Pełna weryfikacja przechodzi bez wywołań LLM: `cd szczur-radar-api && ./mvnw -B verify`
+- Każda klasa błędu ma test na sztucznym kliencie, a ocenialny wpis wywołuje klienta dokładnie raz; wpis bez treści — zero razy
+- `evaluate` na surowej odpowiedzi daje wynik identyczny z `assess` na kliencie zwracającym tę odpowiedź
+- `AssessorAgentIT` przechodzi; `SkeletonAgent` nie istnieje
+- Domyślne `./mvnw -B test` nie uruchamia testów z tagiem `measurement`
+
+#### Manual Verification:
+
+- `LiveSmokeTest` wykonany trzy razy (Gemini `gemini-3.1-flash-lite`, DeepSeek Flash, OpenRouter `openai/gpt-6-luna` z `LLM_SERVICE_TIER=flex`): dla każdego zgodność z kontraktem ≥90% i najwyżej jedno `provider_error` lub `invalid_structured_output`; wyniki (z mianownikiem i dla Luny odsetkiem odmów 429 i medianą czasu) w opisie PR
+- Pochodzenie ma wypełnione tokeny (w tym cache, gdy dostawca je zgłasza), wersję promptu i kontraktu dla wszystkich trzech; potwierdzona nazwa modelu DeepSeek Flash przyjmowana przez API
+
+**Implementation Note**: Jeśli kontrola na żywo nie spełnia progu dla któregoś dostawcy, zatrzymaj się i przedstaw przyczynę oraz opcje (poprawka klienta albo promptu) przed fazą 6. Po zielonej weryfikacji zatrzymaj się na ręczne potwierdzenie.
+
+---
+
+## Phase 5: Zestaw wzorcowy
+
+### Overview
+
+Mapper Wykopu w kodzie produkcyjnym, narzędzie pobrania i anonimizacji próbki, arkusz, oznaczanie przez użytkownika i miary wzorca. Pobranie próbki wymaga fazy 2 (wejście, odsiew); oznaczanie może iść równolegle z fazą 4.
+
+### Changes Required:
+
+#### 1. Mapper Wykopu
+
+**File**: `szczur-radar-api/src/main/java/pl/szczurradar/api/sources/wykop/WykopMapper.java`, `UnmappableItemException.java`, testy `*Test`, `src/test/resources/fixtures/wykop/*.json`
+
+**Intent**: Jedna definicja mapowania wpisu Wykopu na wejście kontraktu dla próbki wzorca i dla S-02.
+
+**Contract**: Wykop API v3: `entry` → `post` (`title = null`, `body = content`), `link` → `link` (`title`, `body = description`); inny zasób → `UnmappableItemException`; tekst pusty lub z samych białych znaków → `null`; brak tekstu → wyjątek; `created_at` (`yyyy-MM-dd HH:mm:ss`) jako czas Europe/Warsaw → `OffsetDateTime` (test zimą i latem, `+01:00`/`+02:00`); `channels` = kanał tagu; bez autora, URL i ID. Fixture: zanonimizowany prawdziwy element z `pilot/` w kształcie API.
+
+#### 2. Pobranie i anonimizacja próbki
+
+**File**: `src/test/java/.../measurement/WykopGoldSampler.java` (tag `measurement`), `src/test/resources/fixtures/assessor/gold/posts.json`
+
+**Intent**: Próbka niezależna od postów, z których powstały reguły (2026-09-28 i 2026-09-29 wykluczone).
+
+**Contract**: Uruchomienie: `./mvnw -Pmeasurement test -Dtest=WykopGoldSampler -Dgold.days=<d1>,<d2>` z `WYKOP_KEY`/`WYKOP_SECRET` w powłoce. Pobiera `#gielda` przez Wykop API v3 (auth, stream ze stronicowaniem), mapuje przez `WykopMapper`, pomija nieocenialne według `Prefilter`, losuje ~60 na dzień ze stałym ziarnem, anonimizuje (nicki po `@` i nicki autorów → `@uzytkownikN`, URL → `<url>`, białe znaki bez zmian), zapisuje `posts.json` jako listę `{post_id, day, input}`. Surowe odpowiedzi API poza repo.
+
+#### 3. Arkusz oznaczania
 
 **File**: `context/changes/assessment-contract-harness/pilot/labeling-gold.html`
 
-**Intent**: Pozwolić użytkownikowi oznaczyć rdzeń szybko i zgodnie z instrukcją, bez podglądu odpowiedzi modeli.
+**Intent**: Arkusz wskazuje nowe ścieżki Javy.
 
-**Contract**: Na bazie `pilot/labeling-r2.html`: skrót instrukcji v1.0, trafność, cele z zaznaczenia tekstu, kierunek, pewność stanowiska (pewne/niepewne), flaga „trudny”, notatka; zapis w przeglądarce; eksport `labels.json`.
+**Contract**: Ścieżka `posts.json` → `szczur-radar-api/src/test/resources/fixtures/assessor/gold/posts.json`; komentarz o formacie → `measurement/GoldLabels`; format eksportu bez zmian: `[{post_id, relevance, hard, note, targets: [{anchor, direction, hedged}]}]`.
 
-#### 3. Wzorzec i miary
+#### 4. Miary wzorca
 
-**File**: `szczur-radar-api/tests/assessment/gold/labels.json`, `szczur-radar-api/tests/assessment/gold_metrics.py`, `szczur-radar-api/tests/assessment/test_gold.py`
+**File**: `src/test/java/.../measurement/GoldLabels.java`, `AnchorMatcher.java`, `GoldMetrics.java`, `GoldMetricsTest.java`, `GoldDataTest.java`, `src/test/resources/fixtures/assessor/gold/labels.json`
 
-**Intent**: Jedna, przetestowana definicja miar, żeby progi znaczyły to samo w testach i w raporcie.
+**Intent**: Jedna, przetestowana definicja miar, żeby progi znaczyły to samo w teście CI i w raporcie.
 
-**Contract**: `labels.json`: etykiety użytkownika (`post_id`, `relevance`, `targets[{anchor, direction, hedged}]`, `hard`, `note`). `gold_metrics.py`: `contract_compliance`, `relevance_binary_accuracy` (posty ze wzorcowym `unclear` wyłączone), dopasowanie celów 1:1 na podstawie cytatów `anchor` po normalizacji białych znaków i wielkości liter oraz usunięciu początkowego `#` (równość albo zawieranie całego fragmentu z granicami słowa według reguły poniżej; wybierz dopasowanie o największej liczbie par, remisy rozstrzygnij kolejnością celów we wzorcu i odpowiedzi), `target_recall` (liczba dopasowanych celów / liczba celów we wzorcu), `target_precision` (liczba dopasowanych celów / liczba celów w odpowiedziach), `target_direction_accuracy` (poprawny `direction` wśród dopasowanych celów, których wzorcowy kierunek nie jest `not_expressed`), `dominant_direction(output | label)` (więcej `bullish` niż `bearish` → `bullish`, odwrotnie → `bearish`, inaczej → brak), `dominant_direction_agreement`, `contradiction_rate` (`bullish` ↔ `bearish`). Miary celów liczone globalnie z postów nie-„trudnych”; brak odpowiedzi lub wynik nieważny daje zero dopasowań, a brak niepustego mianownika we wzorcu dla miary kierunku jest błędem pomiaru, nie zaliczeniem progu. Posty „trudne” wyłączone z mianowników; stałe progów `95 / 80 / 80 / 70 / 75 / 75 / 3` odpowiednio dla wymienionych miar. `test_gold.py`: spójność wzorca (każdy `post_id` istnieje, każdy anchor jest podciągiem posta po normalizacji, brak nicków i URL, ≥100 postów nie-„trudnych”, dwa różne dni) i testy miar na danych syntetycznych, w tym modelu zwracającego zawsze `targets=[]`.
-
-**Granice dopasowania anchorów**: Oba znormalizowane anchory muszą być niepuste. Zawieranie jest symetryczne: krótszy fragment może wystąpić w dłuższym tylko wtedy, gdy bezpośrednio przed nim i po nim jest początek/koniec tekstu albo znak spoza Unicode `\w` (litery, cyfry i `_`). Odpowiednik w Pythonie: `re.search(r"(?<!\w)" + re.escape(shorter) + r"(?!\w)", longer)` bez `re.ASCII`. Fragment dopasowuje się dosłownie, wraz z wewnętrzną interpunkcją; reguła nie usuwa znaków wewnątrz nazwy. `test_gold.py` sprawdza w obu kolejnościach: `AI` ↔ `Taiwan` i `XTB` ↔ `XTBR` dają zero dopasowań; `CD Projekt` ↔ `akcje CD Projekt`, `#XTB` ↔ `xtb`, `XTB` ↔ `(XTB)` i `XTB` ↔ `$XTB` dają dopasowanie; pusty anchor po normalizacji nie daje dopasowania. Przed pomiarem na wzorcu sprawdź regułę na anchorach z pilotaży.
-
-**Puste mianowniki**: Gdy wzorzec ma cele, lecz model nie zwraca żadnego, `target_precision = 0` i `target_recall = 0`. Gdy wzorzec ma cele ze stanowiskiem, lecz żaden nie jest dopasowany, `target_direction_accuracy = 0`. Jeśli sam wzorzec nie ma celów albo celów ze stanowiskiem, `test_gold.py` zgłasza niewystarczający wzorzec zamiast zaliczać próg.
+**Contract**: Miary: `contractCompliance`, `relevanceBinaryAccuracy` (wzorcowe `unclear` wyłączone), `targetRecall` (dopasowane / cele we wzorcu), `targetPrecision` (dopasowane / cele w odpowiedziach; brak celów w odpowiedzi przy celach we wzorcu → 0), `targetDirectionAccuracy` (poprawny `direction` wśród celów wzorca z kierunkiem innym niż `not_expressed`; niedopasowany = błąd), `dominantDirection` (więcej `bullish` niż `bearish` → `bullish`, odwrotnie → `bearish`, inaczej brak), `dominantDirectionAgreement`, `contradictionRate` (`bullish` ↔ `bearish`). Posty „trudne” wyłączone z mianowników miar poza zgodnością; brak odpowiedzi lub wynik `failed` = zero dopasowań i błąd, nie znika z mianownika; pusty mianownik we wzorcu → błąd pomiaru (`InsufficientGoldException`), nie zaliczenie progu. Progi jako stałe: 95 / 80 / 80 / 70 / 75 / 75 / ≤3 %. `AnchorMatcher`: normalizacja (`Whitespace.normalize`, `toLowerCase(Locale.ROOT)`, usunięcie początkowych `#`), oba niepuste, równość albo zawieranie krótszego w dłuższym z granicami `(?<![\p{L}\p{N}_])…(?![\p{L}\p{N}_])` (fragment dosłownie, `Pattern.quote`); skojarzenie 1:1 o największej liczbie par, remisy kolejnością we wzorcu i odpowiedzi. `GoldMetricsTest`: dane syntetyczne z ręcznie policzonym wynikiem dla każdej miary, model zwracający zawsze `targets = []`, granice anchorów w obu kolejnościach (`AI`↔`Taiwan` i `XTB`↔`XTBR` — brak; `CD Projekt`↔`akcje CD Projekt`, `#XTB`↔`xtb`, `XTB`↔`(XTB)`, `XTB`↔`$XTB` — dopasowanie; pusty anchor — brak). `GoldDataTest` (pomijany, dopóki brak plików; potem obowiązkowy): każdy `post_id` istnieje, każdy anchor jest podciągiem posta po normalizacji, brak nicków i URL, ≥100 postów nie-„trudnych”, dwa różne dni spoza 2026-09-28/29.
 
 ### Success Criteria:
 
 #### Automated Verification:
 
-- Testy spójności wzorca i miar przechodzą: `cd szczur-radar-api && uv run pytest -q tests/assessment/test_gold.py`
-- Wzorzec ma co najmniej 100 postów nie-„trudnych” z dwóch różnych dni, żadnego z 2026-09-28 ani z próbki 2026-09-29
-- `posts.json` i `labels.json` nie zawierają nicków autorów ani adresów URL (test)
+- Testy mappera, miar i danych wzorca przechodzą: `cd szczur-radar-api && ./mvnw -B test`
+- Wzorzec ma co najmniej 100 postów nie-„trudnych” z dwóch różnych dni, żadnego z 2026-09-28 ani 2026-09-29 (`GoldDataTest`)
+- `posts.json` i `labels.json` nie zawierają nicków autorów ani adresów URL (`GoldDataTest`)
 - Każda miara ma test na danych syntetycznych z ręcznie policzonym wynikiem
 
 #### Manual Verification:
 
-- Użytkownik oznaczył wszystkie posty w arkuszu według instrukcji v1.0 i wyeksportował `labels.json`
-- Użytkownik przejrzał notatki i posty „trudne”; reguły, których zabrakło, zostały dopisane do `contract-v2.md` i instrukcji (z aktualizacją dotkniętych etykiet) albo świadomie odłożone
+- Użytkownik oznaczył wszystkie posty w `labeling-gold.html` według instrukcji v1.0 i wyeksportował `labels.json`
+- Użytkownik przejrzał notatki i posty „trudne”; brakujące reguły dopisane do `contract-v2.md` i instrukcji (z aktualizacją etykiet) albo świadomie odłożone
 
-**Implementation Note**: Oznaczanie to praca użytkownika (szacunkowo godzina lub więcej); można je rozłożyć na sesje. Zmiana kontraktu wynikła z notatek wymaga powrotu do odpowiednich kroków faz 1–2.
+**Implementation Note**: Przed pobraniem próbki poproś użytkownika o klucze Wykopu w powłoce. Oznaczanie to ~godzina pracy użytkownika, można je rozłożyć na sesje. Zmiana kontraktu z notatek wymaga powrotu do odpowiednich kroków fazy 2 (i nowej wersji promptu w fazie 4).
 
 ---
 
-## Phase 5: Pomiar, raport i model domyślny
+## Phase 6: Pomiar, raport i model domyślny
 
 ### Overview
 
-Jeden przebieg na żywo (na żądanie) dwóch tanich kandydatów i Luny jako punktu odniesienia, nagrania odtwarzane offline w CI, podstawowy raport jakości i kosztu oraz wybór modelu domyślnego.
+Trzy przebiegi nagrywania z `LLM_*`, nagrania odtwarzane w CI z progami dla modelu domyślnego, raport jakości i kosztu, wybór modelu i runbook produkcji.
 
 ### Changes Required:
 
-#### 1. Przebieg na żywo i nagrania
+#### 1. Konfiguracje zmierzone i nagrywanie
 
-**File**: `szczur-radar-api/tests/assessment/live_models.toml`, `szczur-radar-api/tests/assessment/test_live.py`, `szczur-radar-api/pyproject.toml`, `szczur-radar-api/tests/assessment/recordings/`
+**File**: `src/test/resources/fixtures/llm/models.json`, `src/test/java/.../measurement/GoldRecorder.java` (tag `measurement`), `src/test/resources/fixtures/llm/recordings/`
 
-**Intent**: Uruchamiać modele na wzorcu tylko na żądanie i zapisywać każdą odpowiedź jako nagranie.
+**Intent**: Nagrać każdą odpowiedź trzech modeli na wzorcu jako prawdziwy payload do odtwarzania i raportu.
 
-**Contract**: `live_models.toml`: wpisy `{spec, role: "preferred" | "fallback" | "reference", channel, price_in, price_cached_in, price_out}` — pierwszy wybór `openai:gpt-6-luna` w trybie flex, zapas `deepseek:deepseek-flash`, punkt odniesienia `google_genai:gemini-3.1-flash-lite` (decyzja użytkownika 2026-10-01); `channel` opisuje kanał i cennik użyty w pomiarze. Każdy wpis utrwala pełną konfigurację wywołania (kanał, tryb obsługi, poziom rozumowania — dla Luny domyślnie jak w pilocie 8), która trafia do każdego nagrania; `DEFAULT_ASSESSMENT_MODEL` wskazuje dokładnie zmierzoną konfigurację, a każda jej zmiana wymaga nowego pomiaru na wzorcu (F3). `pyproject.toml`: marker `live` obok `db`, `addopts = "-m 'not live'"` (testy `db` nadal działają w CI). `test_live.py`: każdy z trzech modeli × cały wzorzec, jedno uruchomienie; brak klucza → `skip` z nazwą zmiennej; zmienna `ASSESSMENT_LIVE_MODELS` zawęża listę; testy tylko nagrywają. Nagranie: `recordings/<provider>__<model>/<post_id>.json` = `{post_id, spec, channel, reasoning_effort, prompt_version, contract_version, recorded_at, raw_text, input_tokens, output_tokens, cached_tokens, duration_ms, attempts, service_tier, flex_fallback, status, failure_class, violations}`.
+**Contract**: `models.json`: `{default, models: [{id, role: preferred|fallback|reference, provider, model, serviceTier, reasoningEffort, prices: {input, cachedInput, output, perChannel…}}]}` — `openrouter` `openai/gpt-6-luna` flex (preferred), `deepseek` Flash (fallback), `gemini` `gemini-3.1-flash-lite` (reference); `default` ustawiany w kroku 4. `GoldRecorder` (`./mvnw -Pmeasurement test -Dtest=GoldRecorder`) czyta `LLM_*`, znajduje pasującą konfigurację w `models.json` (brak → błąd), ocenia każdy post wzorca przez `Assessor` i zapisuje `recordings/<id>/<post_id>.json` = `{post_id, configId, provider, model, channel, serviceTier, flexFallback, reasoningEffort, outputMode, promptVersion, contractVersion, recordedAt, rawText, inputTokens, outputTokens, cachedTokens, durationMs, attempts, status, failureClass, violations}`. Nadpisuje wyłącznie nagrania z tą samą konfiguracją.
 
 #### 2. Odtwarzanie nagrań i progi w CI
 
-**File**: `szczur-radar-api/tests/assessment/test_recordings.py`, `szczur-radar-api/app/assessment/config.py`
+**File**: `src/test/java/.../measurement/RecordingsReplayTest.java` (zwykły `*Test`, uruchamiany w CI)
 
-**Intent**: Zamienić prawdziwe odpowiedzi w test regresyjny walidatora i progów, działający bez sekretów.
+**Intent**: Zamienić prawdziwe odpowiedzi w test regresyjny walidatora i progów, bez sekretów.
 
-**Contract**: Nagrania do odtwarzania i pomiaru są wybierane według bieżących `PROMPT_VERSION` i `CONTRACT_VERSION` oraz konfiguracji wywołania z `live_models.toml` (kanał, tryb, poziom rozumowania; F3); starsze wersje nie trafiają do bieżącego pomiaru. Dla każdego bieżącego nagrania z `raw_text`: ponowne parsowanie i walidacja daje zapisane `status` i `failure_class`. Dla `DEFAULT_ASSESSMENT_MODEL`: komplet nagrań dla wszystkich postów wzorca z bieżącymi `PROMPT_VERSION` i `CONTRACT_VERSION` oraz miary z `gold_metrics.py` spełniają progi: zgodność 95%, trafność 80%, recall celów 80%, precision celów 70%, kierunek na dopasowanych celach ze stanowiskiem 75%, dominujący kierunek posta 75%, sprzeczności najwyżej 3%. Brak lub nieważna odpowiedź liczy się jako błąd w miarach jakości, nie znika z mianownika. `test_recordings.py` sprawdza również kwalifikowanie zestawów do tabeli porównawczej: starszy prompt, starszy kontrakt i brak nagrania dla posta wzorca czynią zestaw nieporównywalnym; kompletny zestaw bieżących nagrań zawierający wyniki `failed` pozostaje porównywalny, a błędy obniżają miary jakości.
+**Contract**: Bieżące nagrania = zgodne z bieżącymi `PROMPT_VERSION`, `CONTRACT_VERSION` i konfiguracją z `models.json`; starsze nie liczą się do pomiaru. Dla każdego bieżącego nagrania z `rawText`: `Assessor.evaluate` daje zapisane `status` i `failureClass`. Dla konfiguracji `default`: komplet nagrań dla wszystkich postów wzorca i miary `GoldMetrics` spełniają progi; brak lub nieważna odpowiedź liczy się jako błąd. Kwalifikacja do porównania: starszy prompt, starszy kontrakt lub brak nagrania czyni zestaw nieporównywalnym; komplet z wynikami `failed` pozostaje porównywalny.
 
 #### 3. Raport jakości i kosztu
 
-**File**: `szczur-radar-api/scripts/assessment_report.py`, `context/changes/assessment-contract-harness/reports/gold-<YYYY-MM-DD>.md`
+**File**: `src/test/java/.../measurement/GoldReport.java` (tag `measurement`), `context/changes/assessment-contract-harness/reports/gold-<YYYY-MM-DD>.md`
 
-**Intent**: Dać użytkownikowi liczby potrzebne do wyboru modelu dla S-02 bez kolejnej rundy analizy kaskady.
+**Intent**: Dać użytkownikowi liczby do wyboru modelu bez kolejnej rundy analizy.
 
-**Contract**: `uv run python scripts/assessment_report.py --recordings tests/assessment/recordings --gold tests/assessment/gold --models tests/assessment/live_models.toml --out <ścieżka>`. Raport Markdown: jedna tabela dla trzech modeli (z rolą każdego) z liczbą ocenionych postów, zgodnością z kontraktem, trafnością binarną, recall i precision celów, kierunkiem na dopasowanych celach ze stanowiskiem, dominującym kierunkiem posta, sprzecznymi kierunkami, naruszeniami wg klasy, tokenami, kosztem na post i na 12k postów oraz medianą czasu; dla Luny flex także odsetek odmów 429, liczbę ponowień oraz liczbę i koszt postów ocenionych po powrocie do trybu standardowego (`flex_fallback`); koszt miesięczny w rozbiciu na kanały (Luna: zwykły i flex; DeepSeek: bezpośrednio w szczycie i poza nim oraz OpenRouter z przypiętym dostawcą; Gemini: bezpośrednio); zaznacza spełnienie każdego progu, wersje promptu i kontraktu oraz datę. Model trafia do tabeli porównawczej tylko wtedy, gdy ma dokładnie jedno nagranie dla każdego posta z bieżącego `gold/posts.json`, z bieżącymi `PROMPT_VERSION` i `CONTRACT_VERSION`; wszystkie modele są więc mierzone na tym samym zestawie postów. Nagrania starszych wersji są wykluczone z tabeli, a model z niekompletnym zestawem jest jawnie oznaczony jako nieporównywalny wraz z listą brakujących `post_id`; raport nie zastępuje braków starszymi nagraniami ani nie zawęża wzorca do części wspólnej. Nagrane błędy dostawcy i nieważne odpowiedzi są uwzględniane jako błędy jakości zgodnie z `gold_metrics.py`. Raport nie uruchamia dodatkowych modeli.
+**Contract**: `./mvnw -Pmeasurement test -Dtest=GoldReport -Dreport.out=<ścieżka>`; bez wywołań modeli. Jedna tabela trzech modeli (z rolą): liczba ocenionych postów, zgodność z kontraktem, trafność binarna, recall i precision celów, kierunek na dopasowanych celach ze stanowiskiem, dominujący kierunek, sprzeczne kierunki, naruszenia wg klasy, tokeny (z cache), koszt na post i na 12k postów, mediana czasu; dla Luny flex odsetek odmów 429, liczba ponowień oraz liczba i koszt postów po powrocie z flex; koszt miesięczny w rozbiciu na kanały (Luna: standard i flex; DeepSeek: szczyt i poza szczytem; Gemini: bezpośrednio); spełnienie każdego progu, wersje promptu i kontraktu, data. Model trafia do tabeli tylko z kompletem bieżących nagrań; niekompletny jest jawnie oznaczony z listą brakujących `post_id`.
 
-#### 4. Wybór modelu
+#### 4. Wybór modelu i runbook produkcji
 
-**File**: `szczur-radar-api/app/assessment/config.py`, `context/changes/assessment-contract-harness/reports/`, `context/foundation/roadmap.md`
+**File**: `src/test/resources/fixtures/llm/models.json`, `context/changes/assessment-contract-harness/reports/`, `context/foundation/roadmap.md`, `context/deployment/deploy-plan.md`
 
-**Intent**: Zamknąć F-02 decyzją opartą na raporcie.
+**Intent**: Zamknąć F-02 decyzją opartą na raporcie i przygotować jej wdrożenie po merge.
 
-**Contract**: Po jednym pełnym przebiegu użytkownik wybiera `DEFAULT_ASSESSMENT_MODEL` według ról (decyzja użytkownika 2026-10-01): Luna w trybie flex, jeśli spełnia progi; w przeciwnym razie DeepSeek Flash, jeśli spełnia progi; Gemini 3.1 Flash-Lite jest punktem odniesienia, nie kandydatem na model domyślny. Wybór wymaga porównywalnych zestawów wszystkich trzech modeli według reguły raportu; po zmianie promptu lub kontraktu trzeba uzupełnić bieżące nagrania wszystkich trzech modeli przed decyzją. Jeśli ani Luna, ani DeepSeek nie spełnia progów, raport pokazuje odstępstwa i użytkownik podejmuje jedną jawną decyzję: poprawić prompt i powtórzyć pomiar albo zaakceptować konkretny kompromis jakościowy przez zmianę wskazanych progów w `gold_metrics.py` oraz kryterium 5.3; bez tej decyzji F-02 nie jest ukończone. Zmienione progi i uzasadnienie są w raporcie, a CI sprawdza zaakceptowane wartości. W `roadmap.md` pozycja „Unknowns” F-02 (wybór dostawcy i koszt) jest uzupełniona wynikiem; status F-02 zmienia dopiero `/10x-implement` i `/10x-archive`.
+**Contract**: Użytkownik wybiera `default` według ról: Luna flex, jeśli spełnia progi; inaczej DeepSeek Flash, jeśli spełnia; Gemini jest punktem odniesienia, nie kandydatem. Wymaga porównywalnych zestawów trzech modeli; po zmianie promptu lub kontraktu trzeba nagrać ponownie wszystkie trzy. Jeśli ani Luna, ani DeepSeek nie spełnia progów: jedna jawna decyzja użytkownika — poprawić prompt i powtórzyć pomiar albo zaakceptować konkretny kompromis (zmienione progi w `GoldMetrics` i kryterium 6.3, z uzasadnieniem w raporcie); bez niej F-02 nie jest ukończone. `roadmap.md`: „Unknowns” F-02 uzupełnione wynikiem (status zmieniają `/10x-implement` i `/10x-archive`). `deploy-plan.md`: runbook „F-02: model domyślny” — wartości `LLM_API_PROVIDER`, `LLM_MODEL`, `LLM_SERVICE_TIER`, `LLM_REASONING_EFFORT`, `LLM_TIMEOUT` dla produkcji, ustawiane przez operatora po merge, z weryfikacją w logu startu; kroki po merge prowadzone w runbooku i w issue #24, nie w Progress.
 
 ### Success Criteria:
 
 #### Automated Verification:
 
-- Domyślne `uv run pytest -q` pomija testy `live`, uruchamia testy `db` i odtwarza wszystkie nagrania z identycznym werdyktem
-- Model domyślny ma komplet nagrań dla wszystkich postów wzorca z bieżącym `PROMPT_VERSION`
-- Miary modelu domyślnego na wzorcu spełniają progi: zgodność z kontraktem ≥95%, trafność binarna ≥80%, recall celów ≥80%, precision celów ≥70%, kierunek na dopasowanych celach ze stanowiskiem ≥75%, dominujący kierunek posta ≥75%, sprzeczne kierunki ≤3% (test w `test_recordings.py`)
-- Raport generuje się bez błędów poleceniem z punktu 3 do `context/changes/assessment-contract-harness/reports/`
-- CI na PR (`backend` + `web-container-smoke`) jest zielone
+- Domyślne `cd szczur-radar-api && ./mvnw -B verify` nie uruchamia testów `measurement`, uruchamia `*IT` i odtwarza wszystkie bieżące nagrania z identycznym werdyktem
+- Konfiguracja `default` ma komplet nagrań dla wszystkich postów wzorca z bieżącymi `PROMPT_VERSION` i `CONTRACT_VERSION`
+- Miary konfiguracji `default` spełniają progi: zgodność z kontraktem ≥95%, trafność binarna ≥80%, recall celów ≥80%, precision celów ≥70%, kierunek na dopasowanych celach ze stanowiskiem ≥75%, dominujący kierunek posta ≥75%, sprzeczne kierunki ≤3% (`RecordingsReplayTest`)
+- Raport generuje się bez błędów do `context/changes/assessment-contract-harness/reports/`
+- CI na PR (`backend`, `web-unit`, `web-container-smoke`, `railway-config`) jest zielone
 
 #### Manual Verification:
 
-- Przebieg `uv run pytest -m live` wykonany dla obu kandydatów i `gpt-6-luna` na całym wzorcu; raport zawiera jedną tabelę jakości i kosztu tych trzech modeli
-- Użytkownik przejrzał raport i zatwierdził model domyślny oraz szacowany koszt miesięczny
-- Jeśli progi zostały zmienione albo żaden kandydat ich nie spełnił, decyzja użytkownika i jej uzasadnienie są w raporcie
+- `GoldRecorder` wykonany trzy razy (Luna flex, DeepSeek Flash, Gemini 3.1 Flash-Lite) na całym wzorcu; raport zawiera jedną tabelę jakości i kosztu tych trzech modeli
+- Użytkownik przejrzał raport i zatwierdził model domyślny oraz szacowany koszt miesięczny; jednorazowe klucze usunięte
+- Jeśli progi zostały zmienione albo żaden kandydat ich nie spełnił, decyzja użytkownika i uzasadnienie są w raporcie
 
-**Implementation Note**: Role modeli zmieniła decyzja użytkownika 2026-10-01 (Luna flex — pierwszy wybór, DeepSeek Flash — zapas, Gemini 3.1 Flash-Lite — punkt odniesienia); kryteria 5.6, 5.7 i 5.9 czyta się według tych ról: „oba kandydaci” = Luna i DeepSeek, „żaden kandydat” = ani Luna, ani DeepSeek. Kryterium 5.1 oznacza odtwarzanie wszystkich nagrań bieżących wersji promptu i kontraktu; starsze nagrania są wykluczone zgodnie z regułą wyboru nagrań. Kryterium 5.2 wymaga także bieżącego `CONTRACT_VERSION`, a tabela z kryterium 5.6 — kompletnych, porównywalnych zestawów wszystkich trzech modeli. Po fazie 5 PR z całą zmianą jest gotowy; merge do `main` wykonuje użytkownik.
+**Implementation Note**: Przed nagrywaniem poproś użytkownika o jednorazowe klucze trzech dostawców (deklaracja użytkownika z 2026-10-03); po nagraniu przypomnij o ich usunięciu. Po fazie 6: `/10x-impl-review`, poprawki, `/10x-archive` na tej samej gałęzi; PR gotowy, merge wykonuje użytkownik.
 
 ---
 
@@ -419,43 +462,45 @@ Jeden przebieg na żywo (na żądanie) dwóch tanich kandydatów i Luny jako pun
 
 ### Unit Tests:
 
-- Modele: obce pola, enumy, wymagane klucze, limity w znakach Unicode, walidacja wejścia.
-- Walidator: każda reguła V2 pozytywnie i negatywnie; normalizacja białych znaków na prawdziwych fragmentach (twarda spacja, łamania linii, „lenny face”, ocenzurowane słowa).
-- Odsiew: wpisy z samym tagiem, samym linkiem, samą wzmianką.
-- `assess()`: klasy błędów, liczba wywołań, pochodzenie, tylko pola wejścia w wiadomości.
-- Miary względem wzorca na danych syntetycznych.
+- Kontrakt: rekordy ↔ schemat, enumy, wymagane i obce klucze, limity w code pointach, walidacja wejścia.
+- Parser: niepoprawny JSON, płotki, nadmiarowe tokeny, duplikaty kluczy, liczby zamiast enumów.
+- Walidator: każda strategia D1–D15 pozytywnie i negatywnie, tabela §7.2, kolejność klas; białe znaki — każdy znak zbioru §10.
+- Odsiew: prawdziwe fragmenty z `real_posts.json`.
+- Klienci `llm`: lokalny `HttpServer` z prawdziwymi payloadami — żądanie, odczyt, zużycie, ponowienia, flex.
+- `Assessor`: klasy błędów, liczba wywołań, pochodzenie, tylko pola wejścia w wiadomości.
+- Mapper Wykopu (w tym czas letni/zimowy), miary wzorca na danych syntetycznych.
 
 ### Integration Tests:
 
-- `-m live`: Luna (flex), DeepSeek Flash i Gemini 3.1 Flash-Lite × cały wzorzec (na żądanie, lokalnie, z kluczami w powłoce).
-- Odtwarzanie nagrań w CI: regresja walidatora i progi modelu domyślnego.
+- `AssessorAgentIT`: agent przez `AgentPlatform`, odsiew bez wywołań LLM.
+- `RecordingsReplayTest` (CI): odtwarzanie nagrań i progi modelu domyślnego.
+- Profil `measurement` (lokalnie, z kluczami w powłoce): `LiveSmokeTest`, `WykopGoldSampler`, `GoldRecorder`, `GoldReport`.
 
 ### Manual Testing Steps:
 
-1. Wyeksportuj klucze w powłoce (`GOOGLE_API_KEY`, `DEEPSEEK_API_KEY`, `OPENAI_API_KEY` albo `OPENROUTER_API_KEY`, do pobrania próbki `WYKOP_KEY` / `WYKOP_SECRET`); nigdy do repo ani do Railway.
-2. Faza 3: `cd szczur-radar-api && uv run python scripts/assessment_smoke.py`.
-3. Faza 4: pobierz próbkę skryptem, oznacz w `labeling-gold.html`, zapisz `labels.json`.
-4. Faza 5: `uv run pytest -m live`, potem podstawowy raport; przejrzyj tabelę, wybierz model według ról, ustaw `DEFAULT_ASSESSMENT_MODEL`, uruchom `uv run pytest -q`.
+1. Faza 3: zapisz po jednej prawdziwej odpowiedzi dostawcy poleceniami z `measurement/README.md`.
+2. Faza 4: trzy przebiegi `./mvnw -Pmeasurement test -Dtest=LiveSmokeTest` z różnymi `LLM_*`; wyniki do opisu PR.
+3. Faza 5: `WykopGoldSampler` z `WYKOP_KEY`/`WYKOP_SECRET`; oznacz w `labeling-gold.html`, zapisz `labels.json`.
+4. Faza 6: trzy przebiegi `GoldRecorder`, `GoldReport`, wybór `default` w `models.json`, `./mvnw -B verify`.
 
 ## Performance Considerations
 
-Jedno wywołanie na ocenialny post; wpisy bez treści bez wywołania (~8% postów w pilotażach). Szacunek z pilotaży przy 12k postów miesięcznie i skróconym prompcie (ceny z katalogu OpenRouter i cennika DeepSeek, odczyt 2026-09-30): deepseek-flash ~$2–8 zależnie od kanału i pory (poza szczytem połowa stawki), gpt-6-luna ~$6 z domyślnym rozumowaniem, w trybie flex ~$3, gemini-3.1-flash-lite ~$10; ~1,3–2,2k tokenów wejścia na post, z czego większość to stały prompt objęty cache. Przebieg pomiarowy fazy 5 to ~120 postów × 3 modele na całym wzorcu — poniżej $1 według szacunku z pilotaży. Koszt rzeczywisty jest mierzony z `usage` i raportowany; to wejście do Open Roadmap Question 5 (budżet LLM).
+Jedno wywołanie na ocenialny post; wpisy bez treści bez wywołania (~8% w pilotażach). Szacunek przy 12k postów miesięcznie (`frame.md`, „Korekta cen”): DeepSeek Flash ~$2–8 zależnie od kanału i pory, Luna ~$6 standard / ~$3 flex, Gemini 3.1 Flash-Lite ~$10. Pomiar w fazie 6: ~120 postów × 3 modele, poniżej $1. Flex odpowiada wolniej i odmawia 429 — `LLM_TIMEOUT` i odstępy ponowień mogą wydłużyć przebieg; liczby trafiają do raportu.
 
 ## Migration Notes
 
-Brak zmian danych i infrastruktury. Nowe zależności Pythona zwiększają obraz API; kod oceny nie jest wywoływany przez żadną trasę, więc deploy po merge nie zmienia zachowania usługi. Przeniesienie `contract-v1.md` do archiwum zmienia ścieżkę pliku: dokumenty foundation są poprawiane w fazie 1, a odwołania w `frame.md`, `research.md` i archiwalnych zmianach pozostają jako zapis historyczny.
+Brak zmian danych i migracji Flyway. `SkeletonAgent` zastępuje `AssessorAgent`; kod oceny nie jest wywoływany przez żadną trasę, więc deploy po merge nie zmienia zachowania usługi. Nowe opcjonalne zmienne `LLM_*` są w `railway.ts` jako `preserve()`. Ustawienie modelu domyślnego na produkcji to krok operatora po merge (runbook w `deploy-plan.md`).
 
 ## References
 
+- Badanie (w tym follow-up 2026-10-03, Java/Embabel): `context/changes/assessment-contract-harness/research.md`
 - Brief ramowy i dziennik pilotaży: `context/changes/assessment-contract-harness/frame.md`
-- Badanie: `context/changes/assessment-contract-harness/research.md`
-- Instrukcja oznaczania: `context/changes/assessment-contract-harness/pilot/labeling-guidelines.md`
-- Prompty i skrypty pilotażowe: `context/changes/assessment-contract-harness/pilot/scripts/` (`prompt-short.md`, `prompt-v2-rules.md`, `pilot.py`, `pilot6.py`, `pilot7.py`, `pilot8.py`, `frame2_checks.py`)
-- Kontrakt V1 (do archiwizacji): `context/foundation/llm-assessment/contract-v1.md`
-- Roadmapa: `context/foundation/roadmap.md` (F-02, S-02, S-03); PRD: `context/foundation/prd.md` (FR-004, `:258`)
-- Lekcje: `context/foundation/lessons.md`
-- Wzorce w kodzie: `szczur-radar-api/app/database.py:47`, `szczur-radar-api/app/auth/tokens.py:34`, `szczur-radar-api/pyproject.toml` (marker `db`)
-- Poprzedni przegląd planu (dotyczy wersji 1): `context/changes/assessment-contract-harness/reviews/plan-review.md`
+- Kontrakt i dokumenty: `context/foundation/llm-assessment/contract-v2.md`, `examples.md`, `agent-implementation.md`
+- Instrukcja oznaczania i prompty pilotażowe: `context/changes/assessment-contract-harness/pilot/labeling-guidelines.md`, `pilot/scripts/prompt-short.md`, `pilot/scripts/prompt-v2-rules.md`
+- Zarchiwizowana zmiana F-03: `context/archive/2026-10-01-java-api-rewrite/` (research Embabel `research.md:175`, `:207-220`; review F5)
+- Wzorce w kodzie: `config/LlmProviderProperties.java:26-89`, `config/LlmProviderConfigTest.java:72-110`, `agents/AgentSkeletonIT.java:49-78`, `user/Role.java:18-29`
+- Materiał porównawczy (nieprzenoszony): gałąź `feature/assessment-contract-harness_old`
+- Lekcje: `context/foundation/lessons.md`; roadmapa F-02/S-02: `context/foundation/roadmap.md`
 
 ## Progress
 
@@ -481,61 +526,74 @@ Brak zmian danych i infrastruktury. Nowe zależności Pythona zwiększają obraz
 
 #### Automated
 
-- [ ] 2.1 Wszystkie testy backendu przechodzą offline: `cd szczur-radar-api && uv run pytest -q`
-- [ ] 2.2 Każda reguła walidatora z listy w `test_validation.py` ma test negatywny z asercją klasy błędu i co najmniej jeden test pozytywny
-- [ ] 2.3 Kompletne wyjścia z `examples.md` przechodzą walidator bez naruszeń
-- [ ] 2.4 Cytat różniący się od pola wyłącznie białymi znakami przechodzi, a cytat ze zmienioną odmianą lub skrótem „[...]” jest odrzucany jako `fabricated_evidence`
-- [ ] 2.5 Wpisy bez treści z `fixtures/real_posts.json` dają `is_assessable == False`, a pozostałe `True`
-- [ ] 2.6 Import `app.assessment` nie wymaga żadnej zmiennej środowiskowej
+- [ ] 2.1 Testy jednostkowe przechodzą bez Dockera i bez zmiennych LLM: `cd szczur-radar-api && ./mvnw -B test`
+- [ ] 2.2 Pełna weryfikacja przechodzi: `cd szczur-radar-api && ./mvnw -B verify`
+- [ ] 2.3 Wyjścia przykładów 1–7 z `examples.md` przechodzą walidator bez naruszeń (test)
+- [ ] 2.4 Każda reguła D1–D15 ma test negatywny z asercją klasy i co najmniej jeden pozytywny; każda zabroniona kombinacja §7.2 ma test
+- [ ] 2.5 Cytat różniący się od pola wyłącznie znakami ze zbioru §10 przechodzi; zmieniona odmiana i „[...]” dają `fabricated_evidence`; limity liczone w code pointach (test „🚀”)
+- [ ] 2.6 `contract-v2.md` nie odwołuje się do Pythona: `! grep -n "isspace\|Python" context/foundation/llm-assessment/contract-v2.md`
 
 #### Manual
 
-- [ ] 2.7 Enumy, limity i reguły w `app/assessment/contract.py` i `validation.py` zgadzają się 1:1 z `contract-v2.md` (przegląd obok siebie)
+- [ ] 2.7 Enumy, limity i reguły w kodzie oraz schemacie zgadzają się 1:1 z `contract-v2.md` (przegląd obok siebie)
+- [ ] 2.8 Użytkownik zaakceptował redakcyjną zmianę §10
 
-### Phase 3: Dostawcy, prompt i `assess()`
+### Phase 3: Infrastruktura LLM (dawniej 3A)
 
 #### Automated
 
-- [ ] 3.1 Zależności zablokowane i zsynchronizowane: `cd szczur-radar-api && uv sync --locked`
-- [ ] 3.2 Wszystkie testy backendu przechodzą offline, bez kluczy API: `uv run pytest -q`
-- [ ] 3.3 Każda klasa błędu ma test na sztucznym dostawcy, a ocenialny wpis wywołuje dostawcę dokładnie raz
-- [ ] 3.4 Wpis bez treści daje wynik z `source = "prefilter"` i zero wywołań dostawcy
-- [ ] 3.6 Schemat wysyłany do Gemini nie zawiera `minItems`/`maxItems`, a do DeepSeek także `minLength`/`maxLength`
-- [ ] 3.7 Import `app.assessment` nie wymaga żadnej zmiennej środowiskowej
-- [ ] 3.10 Ponawiane są wyłącznie błędy transportu (429, 5xx, przekroczenie czasu); odpowiedź naruszająca kontrakt kończy się jednym wywołaniem
-- [ ] 3.11 `evaluate_response` na surowej odpowiedzi daje wynik identyczny z `assess()` na sztucznym dostawcy zwracającym tę samą odpowiedź
+- [ ] 3.1 Testy jednostkowe przechodzą offline: `cd szczur-radar-api && ./mvnw -B test`
+- [ ] 3.2 Pełna weryfikacja przechodzi: `cd szczur-radar-api && ./mvnw -B verify`
+- [ ] 3.3 Serwer testowy otrzymuje dokładnie tyle żądań, ile prób zgłasza `LlmResponse.attempts` / `LlmCallException` (brak ukrytych ponowień SDK i frameworka) dla każdego dostawcy
+- [ ] 3.4 Schemat wysłany do Gemini nie zawiera `minItems`/`maxItems`, a do DeepSeek i OpenRouter także `minLength`/`maxLength` (test)
+- [ ] 3.5 Błędne `LLM_SERVICE_TIER` / `LLM_REASONING_EFFORT` / `LLM_TIMEOUT` oraz `flex` dla dostawcy innego niż `openrouter` zatrzymują start z komunikatem bez klucza (test)
+- [ ] 3.6 Plan Railway nie proponuje usunięć: job `railway-config` na PR zielony
 
 #### Manual
 
-- [ ] 3.8 `assessment_smoke.py` na 30 ocenialnych postach (30 wywołań na model): dla obu modeli zgodność z kontraktem ≥90% i najwyżej jedno `provider_error` lub `invalid_structured_output` na model; wynik z licznikiem odrzuceń i mianownikiem w opisie PR
-- [ ] 3.9 Wypełnione tokeny, wersja promptu i wersja kontraktu w pochodzeniu dla obu dostawców
+- [ ] 3.7 Payloady w `fixtures/<dostawca>/` są prawdziwymi odpowiedziami API bez kluczy i danych osobowych
 
-### Phase 4: Zestaw wzorcowy
+### Phase 4: Prompt, Assessor i agent (dawniej 3B)
 
 #### Automated
 
-- [ ] 4.1 Testy spójności wzorca i miar przechodzą: `cd szczur-radar-api && uv run pytest -q tests/assessment/test_gold.py`
-- [ ] 4.2 Wzorzec ma co najmniej 100 postów nie-„trudnych” z dwóch różnych dni, żadnego z 2026-09-28 ani z próbki 2026-09-29
-- [ ] 4.3 `posts.json` i `labels.json` nie zawierają nicków autorów ani adresów URL (test)
-- [ ] 4.4 Każda miara ma test na danych syntetycznych z ręcznie policzonym wynikiem
+- [ ] 4.1 Pełna weryfikacja przechodzi bez wywołań LLM: `cd szczur-radar-api && ./mvnw -B verify`
+- [ ] 4.2 Każda klasa błędu ma test na sztucznym kliencie, a ocenialny wpis wywołuje klienta dokładnie raz; wpis bez treści — zero razy
+- [ ] 4.3 `evaluate` na surowej odpowiedzi daje wynik identyczny z `assess` na kliencie zwracającym tę odpowiedź
+- [ ] 4.4 `AssessorAgentIT` przechodzi; `SkeletonAgent` nie istnieje
+- [ ] 4.5 Domyślne `./mvnw -B test` nie uruchamia testów z tagiem `measurement`
 
 #### Manual
 
-- [ ] 4.5 Użytkownik oznaczył wszystkie posty w arkuszu według instrukcji v1.0 i wyeksportował `labels.json`
-- [ ] 4.6 Użytkownik przejrzał notatki i posty „trudne”; reguły, których zabrakło, zostały dopisane do `contract-v2.md` i instrukcji (z aktualizacją dotkniętych etykiet) albo świadomie odłożone
+- [ ] 4.6 `LiveSmokeTest` wykonany trzy razy (Gemini `gemini-3.1-flash-lite`, DeepSeek Flash, OpenRouter `openai/gpt-6-luna` z `LLM_SERVICE_TIER=flex`): dla każdego zgodność z kontraktem ≥90% i najwyżej jedno `provider_error` lub `invalid_structured_output`; wyniki (z mianownikiem i dla Luny odsetkiem odmów 429 i medianą czasu) w opisie PR
+- [ ] 4.7 Pochodzenie ma wypełnione tokeny (w tym cache, gdy dostawca je zgłasza), wersję promptu i kontraktu dla wszystkich trzech; potwierdzona nazwa modelu DeepSeek Flash przyjmowana przez API
 
-### Phase 5: Pomiar, raport i model domyślny
+### Phase 5: Zestaw wzorcowy
 
 #### Automated
 
-- [ ] 5.1 Domyślne `uv run pytest -q` pomija testy `live`, uruchamia testy `db` i odtwarza wszystkie nagrania z identycznym werdyktem
-- [ ] 5.2 Model domyślny ma komplet nagrań dla wszystkich postów wzorca z bieżącym `PROMPT_VERSION`
-- [ ] 5.3 Miary modelu domyślnego na wzorcu spełniają progi: zgodność z kontraktem ≥95%, trafność binarna ≥80%, recall celów ≥80%, precision celów ≥70%, kierunek na dopasowanych celach ze stanowiskiem ≥75%, dominujący kierunek posta ≥75%, sprzeczne kierunki ≤3% (test w `test_recordings.py`)
-- [ ] 5.4 Raport generuje się bez błędów poleceniem z punktu 3 do `context/changes/assessment-contract-harness/reports/`
-- [ ] 5.5 CI na PR (`backend` + `web-container-smoke`) jest zielone
+- [ ] 5.1 Testy mappera, miar i danych wzorca przechodzą: `cd szczur-radar-api && ./mvnw -B test`
+- [ ] 5.2 Wzorzec ma co najmniej 100 postów nie-„trudnych” z dwóch różnych dni, żadnego z 2026-09-28 ani 2026-09-29 (`GoldDataTest`)
+- [ ] 5.3 `posts.json` i `labels.json` nie zawierają nicków autorów ani adresów URL (`GoldDataTest`)
+- [ ] 5.4 Każda miara ma test na danych syntetycznych z ręcznie policzonym wynikiem
 
 #### Manual
 
-- [ ] 5.6 Przebieg `uv run pytest -m live` wykonany dla obu kandydatów i `gpt-6-luna` na całym wzorcu; raport zawiera jedną tabelę jakości i kosztu tych trzech modeli
-- [ ] 5.7 Użytkownik przejrzał raport i zatwierdził model domyślny oraz szacowany koszt miesięczny
-- [ ] 5.9 Jeśli progi zostały zmienione albo żaden kandydat ich nie spełnił, decyzja użytkownika i jej uzasadnienie są w raporcie
+- [ ] 5.5 Użytkownik oznaczył wszystkie posty w `labeling-gold.html` według instrukcji v1.0 i wyeksportował `labels.json`
+- [ ] 5.6 Użytkownik przejrzał notatki i posty „trudne”; brakujące reguły dopisane do `contract-v2.md` i instrukcji (z aktualizacją etykiet) albo świadomie odłożone
+
+### Phase 6: Pomiar, raport i model domyślny
+
+#### Automated
+
+- [ ] 6.1 Domyślne `cd szczur-radar-api && ./mvnw -B verify` nie uruchamia testów `measurement`, uruchamia `*IT` i odtwarza wszystkie bieżące nagrania z identycznym werdyktem
+- [ ] 6.2 Konfiguracja `default` ma komplet nagrań dla wszystkich postów wzorca z bieżącymi `PROMPT_VERSION` i `CONTRACT_VERSION`
+- [ ] 6.3 Miary konfiguracji `default` spełniają progi: zgodność z kontraktem ≥95%, trafność binarna ≥80%, recall celów ≥80%, precision celów ≥70%, kierunek na dopasowanych celach ze stanowiskiem ≥75%, dominujący kierunek posta ≥75%, sprzeczne kierunki ≤3% (`RecordingsReplayTest`)
+- [ ] 6.4 Raport generuje się bez błędów do `context/changes/assessment-contract-harness/reports/`
+- [ ] 6.5 CI na PR (`backend`, `web-unit`, `web-container-smoke`, `railway-config`) jest zielone
+
+#### Manual
+
+- [ ] 6.6 `GoldRecorder` wykonany trzy razy (Luna flex, DeepSeek Flash, Gemini 3.1 Flash-Lite) na całym wzorcu; raport zawiera jedną tabelę jakości i kosztu tych trzech modeli
+- [ ] 6.7 Użytkownik przejrzał raport i zatwierdził model domyślny oraz szacowany koszt miesięczny; jednorazowe klucze usunięte
+- [ ] 6.8 Jeśli progi zostały zmienione albo żaden kandydat ich nie spełnił, decyzja użytkownika i uzasadnienie są w raporcie
