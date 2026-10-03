@@ -481,56 +481,56 @@ Przełączenie produkcji (wykonuje operator, w tej kolejności):
 
 #### Automated
 
-- [x] 1.1 `cd szczur-radar-api && ./mvnw -B verify` przechodzi (unit + IT z Testcontainers) — 75fe622
-- [x] 1.2 `git ls-files szczur-radar-api` nie zawiera plików Pythona ani `uv.lock` — 75fe622
-- [x] 1.3 Job `backend` w CI jest zielony na PR — 383cfc5
-- [x] 1.4 `railway config plan` dla PR env przechodzi bramkę CI (job `railway-config` zielony) — 383cfc5
+- [x] 1.1 `cd szczur-radar-api && ./mvnw -B verify` przechodzi (unit + IT z Testcontainers) — 7a406f2
+- [x] 1.2 `git ls-files szczur-radar-api` nie zawiera plików Pythona ani `uv.lock` — 7a406f2
+- [x] 1.3 Job `backend` w CI jest zielony na PR — 7a406f2
+- [x] 1.4 `railway config plan` dla PR env przechodzi bramkę CI (job `railway-config` zielony) — 7a406f2
 
 #### Manual
 
-- [x] 1.5 W PR env pre-deploy loguje zastosowanie migracji `V1` i `V2`, a `/api/health` i `/api/ready` przez publiczny adres PR env zwracają 200 — 383cfc5
-- [x] 1.6 Healthcheck Railway (IPv4) przechodzi i proxy web→api działa (brak 502) — 383cfc5
+- [x] 1.5 W PR env pre-deploy loguje zastosowanie migracji `V1` i `V2`, a `/api/health` i `/api/ready` przez publiczny adres PR env zwracają 200 — 7a406f2
+- [x] 1.6 Healthcheck Railway (IPv4) przechodzi i proxy web→api działa (brak 502) — 7a406f2
 
 ### Phase 2: Uwierzytelnianie i autoryzacja
 
 #### Automated
 
-- [x] 2.1 `./mvnw -B verify` przechodzi, w tym `AuthIT`, `AuthorizationCompletenessIT`, `LoginRateLimiterTest`, `OriginGuardFilterTest`, `PasswordsTest` — e0c455c
-- [x] 2.2 `AuthIT` potwierdza atrybuty ciasteczka `HttpOnly; Secure; SameSite=Strict; Path=/api; Max-Age=2592000` — e0c455c
-- [x] 2.3 `AuthorizationCompletenessIT` sprawdza co najmniej jedną chronioną trasę (`GET /api/auth/me`) i nie znajduje niechronionych — e0c455c
-- [x] 2.4 Job `backend` w CI jest zielony — e0c455c
+- [x] 2.1 `./mvnw -B verify` przechodzi, w tym `AuthIT`, `AuthorizationCompletenessIT`, `LoginRateLimiterTest`, `OriginGuardFilterTest`, `PasswordsTest` — 7a406f2
+- [x] 2.2 `AuthIT` potwierdza atrybuty ciasteczka `HttpOnly; Secure; SameSite=Strict; Path=/api; Max-Age=2592000` — 7a406f2
+- [x] 2.3 `AuthorizationCompletenessIT` sprawdza co najmniej jedną chronioną trasę (`GET /api/auth/me`) i nie znajduje niechronionych — 7a406f2
+- [x] 2.4 Job `backend` w CI jest zielony — 7a406f2
 
 #### Manual
 
-- [x] 2.5 W PR env (po utworzeniu konta testowego przez SQL lub fazę 3): logowanie w SPA, odświeżenie strony zachowuje sesję, głęboki link bez sesji prowadzi na ekran logowania, wylogowanie działa — e0c455c
-- [x] 2.6 `curl` z obcym `Origin` na `POST /api/auth/login` w PR env → 403 `cross_origin`; 6 złych prób na ten sam e-mail → 429 z `Retry-After` — e0c455c
-- [x] 2.7 Sesja przeżywa uśpienie/restart API w PR env (zalogowany użytkownik nadal zalogowany po ponownym wybudzeniu) — e0c455c
+- [x] 2.5 W PR env (po utworzeniu konta testowego przez SQL lub fazę 3): logowanie w SPA, odświeżenie strony zachowuje sesję, głęboki link bez sesji prowadzi na ekran logowania, wylogowanie działa — 7a406f2
+- [x] 2.6 `curl` z obcym `Origin` na `POST /api/auth/login` w PR env → 403 `cross_origin`; 6 złych prób na ten sam e-mail → 429 z `Retry-After` — 7a406f2
+- [x] 2.7 Sesja przeżywa uśpienie/restart API w PR env (zalogowany użytkownik nadal zalogowany po ponownym wybudzeniu) — 7a406f2
 
 ### Phase 3: CLI `create-admin` i szkielet Embabel
 
 #### Automated
 
-- [x] 3.1 `./mvnw -B verify` przechodzi, w tym `CreateAdminCommandIT` i `AgentSkeletonIT` — ecdbd42
-- [x] 3.2 `AgentSkeletonIT` przechodzi w CI bez żadnych sekretów LLM — ecdbd42
-- [x] 3.3 Job `backend` w CI jest zielony — ecdbd42
+- [x] 3.1 `./mvnw -B verify` przechodzi, w tym `CreateAdminCommandIT` i `AgentSkeletonIT` — 7a406f2
+- [x] 3.2 `AgentSkeletonIT` przechodzi w CI bez żadnych sekretów LLM — 7a406f2
+- [x] 3.3 Job `backend` w CI jest zielony — 7a406f2
 
 #### Manual
 
-- [x] 3.4 W PR env `railway ssh -s szczur-radar-api -e <pr-env> -- java -jar target/szczur-radar-api.jar create-admin --email …` pyta o hasło bez echa, tworzy admina, a admin loguje się w SPA PR env — ecdbd42
-- [x] 3.5 Logi startu API w PR env pokazują rejestrację platformy Embabel bez błędów o brakującym LLM — ecdbd42
+- [x] 3.4 W PR env `railway ssh -s szczur-radar-api -e <pr-env> -- java -jar target/szczur-radar-api.jar create-admin --email …` pyta o hasło bez echa, tworzy admina, a admin loguje się w SPA PR env — 7a406f2
+- [x] 3.5 Logi startu API w PR env pokazują rejestrację platformy Embabel bez błędów o brakującym LLM — 7a406f2
 
 ### Phase 4: Dokumentacja, weryfikacja w PR env i przełączenie produkcji
 
 #### Automated
 
-- [x] 4.1 `./mvnw -B verify` przechodzi — 4c6fb00
-- [x] 4.2 Cały workflow CI (backend, web-unit, web-container-smoke, railway-config) jest zielony na PR — 4c6fb00
-- [x] 4.3 `grep` po aktywnych instrukcjach nie zwraca `uv run|uv sync|alembic|pytest|hypercorn|JWT_SECRET` (poza komentarzem o nieużywanym `preserve()`); pliki: `REPOSITORY_GUIDELINES.md`, `README.md`, `szczur-radar-api/README.md`, `.railway/railway.ts`, `.github/workflows/ci.yml` — 4c6fb00
+- [x] 4.1 `./mvnw -B verify` przechodzi — 7a406f2
+- [x] 4.2 Cały workflow CI (backend, web-unit, web-container-smoke, railway-config) jest zielony na PR — 7a406f2
+- [x] 4.3 `grep` po aktywnych instrukcjach nie zwraca `uv run|uv sync|alembic|pytest|hypercorn|JWT_SECRET` (poza komentarzem o nieużywanym `preserve()`); pliki: `REPOSITORY_GUIDELINES.md`, `README.md`, `szczur-radar-api/README.md`, `.railway/railway.ts`, `.github/workflows/ci.yml` — 7a406f2
 
 #### Manual
 
-- [x] 4.4 PR env end-to-end: logowanie, ochrona głębokiego linku, wylogowanie, 403 dla obcego `Origin`, 429 po limicie, `X-Real-IP` liczy prawdziwy adres i nie da się go podrobić — 4c6fb00
-- [x] 4.5 Zimny start API po uśpieniu w PR env zmierzony i zapisany w `deploy-plan.md` — 4c6fb00
+- [x] 4.4 PR env end-to-end: logowanie, ochrona głębokiego linku, wylogowanie, 403 dla obcego `Origin`, 429 po limicie, `X-Real-IP` liczy prawdziwy adres i nie da się go podrobić — 7a406f2
+- [x] 4.5 Zimny start API po uśpieniu w PR env zmierzony i zapisany w `deploy-plan.md` — 7a406f2
 - [x] 4.6 Operator wyczyścił schemat bazy produkcyjnej przed merge, PITR był włączony — 7a406f2
 - [x] 4.7 Po merge przez człowieka pre-deploy na produkcji zastosował `V1` i `V2`, a `/api/health` i `/api/ready` na publicznym adresie zwracają 200 — 7a406f2
 - [x] 4.8 Admin produkcyjny utworzony przez `create-admin` loguje się na publicznym adresie; issue F-03 zamknięte z podsumowaniem dopiero po tej weryfikacji — 7a406f2

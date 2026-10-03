@@ -30,7 +30,7 @@ Both are the hard gate **before Phase 6 (data collection)**: subscribe → set l
 
 ## F-03: przełączenie na Javę (java-api-rewrite)
 
-**Status (2026-10-03): DONE — production switched to Java and verified after human merges of PR #26 (`7a406f2`) and follow-up PR #27 (`6bc15db`).** Change: `context/changes/java-api-rewrite/`, [issue #25 close-out](https://github.com/kwmacioszek/szczur-radar/issues/25#issuecomment-5965517657). The implementation-review fixes are tracked separately in `context/changes/java-api-rewrite/follow-ups/review-fixes.md`; they ship in their own PR (branch `fix/java-api-rewrite-review-fixes`).
+**Status (2026-10-03): DONE — production switched to Java and verified after human merges of PR #26 (`7a406f2`) and follow-up PR #27 (`6bc15db`).** Change: `context/archive/2026-10-01-java-api-rewrite/`, [issue #25 close-out](https://github.com/kwmacioszek/szczur-radar/issues/25#issuecomment-5965517657). The implementation-review fixes are tracked separately in `context/archive/2026-10-01-java-api-rewrite/follow-ups/review-fixes.md`; they ship in their own PR (branch `fix/java-api-rewrite-review-fixes`).
 
 The API is now a Spring Boot 4 jar on Java 25 (Railpack, `RAILPACK_JDK_VERSION=25`). Sessions live in Postgres (Spring Session JDBC); migrations are Flyway, fix-forward. There is **no way back to the Python backend** after the switch: failures are fixed in Java and redeployed; a bad migration is fixed by a new migration; PITR recovers data, not the Python runtime.
 
