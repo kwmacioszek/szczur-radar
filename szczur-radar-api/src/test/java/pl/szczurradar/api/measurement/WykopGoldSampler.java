@@ -14,7 +14,9 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -31,6 +33,7 @@ import pl.szczurradar.api.sources.wykop.WykopApiClient;
 import pl.szczurradar.api.sources.wykop.WykopItem;
 import pl.szczurradar.api.sources.wykop.WykopMapper;
 import pl.szczurradar.api.sources.wykop.WykopRepository;
+import pl.szczurradar.api.sources.wykop.WykopSearchResult;
 
 /**
  * Samples the gold set (plan phase 5): reads every #gielda entry and link of the requested days
@@ -47,26 +50,34 @@ import pl.szczurradar.api.sources.wykop.WykopRepository;
  * {@link GoldLabels#LOCAL_LINKS}, outside the repo: {@code {post_id: url}} for the labeling sheet).
  * Each post records whether it had a picture, embed or poll ({@code media}) — the model sees text only.
  *
- * <p>Anonymization: {@code @nick} mentions and authors' nicks (as whole words, ≥ 4 characters) become
- * {@code @uzytkownikN} (one number per nick in the whole sample), URLs become {@code <url>}; white
- * space is left as it is.
+ * <p>Anonymization: URLs become {@code <url>} and e-mail addresses {@code <email>}; {@code @nick}
+ * mentions and authors' nicks (as whole words, any case; only nicks of ≥ {@value #MIN_BARE_NICK_LENGTH}
+ * characters, so that short nicks do not replace ordinary words) become {@code @uzytkownikN} (one
+ * number per nick in the whole sample); white space is left as it is. The replaced bare nicks are
+ * printed for review. Only closed days (before today, Warsaw time) can be sampled: an open day is
+ * still changing while it is paged.
  */
 @Tag("measurement")
 class WykopGoldSampler {
 
 	static final String TAG = "gielda";
 
-	private static final Pattern MENTION = Pattern.compile("@([\\p{L}\\p{N}_-]+)");
+	/** Not preceded by a word character or a dot, so the domain part of an e-mail is not a mention. */
+	private static final Pattern MENTION = Pattern.compile("(?<![\\p{L}\\p{N}._-])@([\\p{L}\\p{N}_-]+)");
+
+	private static final Pattern EMAIL = Pattern.compile("[\\p{L}\\p{N}._%+-]+@[\\p{L}\\p{N}-]+(?:\\.[\\p{L}\\p{N}-]+)+");
 
 	private static final Pattern URL = Pattern.compile("(?i)(?:https?://|www\\.)[^" + Whitespace.regexClass() + "]*");
 
-	private static final int MIN_BARE_NICK_LENGTH = 4;
+	static final int MIN_BARE_NICK_LENGTH = 4;
 
 	@Test
 	void samplesTheGoldPosts() throws IOException {
 		List<LocalDate> days = Arrays.stream(required("gold.days").split(",")).map(String::strip).map(LocalDate::parse)
 			.sorted().distinct().toList();
 		assertThat(days).as("gold.days").isNotEmpty().doesNotContainAnyElementsOf(GoldLabels.EXCLUDED_DAYS);
+		assertThat(days).as("gold.days must be closed days").allSatisfy(
+				day -> assertThat(day).isBefore(LocalDate.now(WykopMapper.WYKOP_ZONE)));
 		int perDay = Integer.getInteger("gold.perDay", 60);
 		long seed = Long.getLong("gold.seed", 20261004L);
 		Path out = Path.of(System.getProperty("gold.out", GoldLabels.POSTS.toString()));
@@ -74,7 +85,12 @@ class WykopGoldSampler {
 
 		WykopRepository wykop = new WykopRepository(new WykopApiClient(env("WYKOP_KEY"), env("WYKOP_SECRET")));
 		Map<LocalDate, List<WykopItem>> byDay = new TreeMap<>();
-		days.forEach(day -> byDay.put(day, wykop.itemsOfDay(TAG, day)));
+		for (LocalDate day : days) {
+			WykopSearchResult result = wykop.itemsOfDay(TAG, day);
+			byDay.put(day, result.items());
+			System.out.printf("%s: %d elements read, %d skipped (unexpected shape)%n", day, result.items().size(),
+					result.skippedElements());
+		}
 
 		Anonymizer anonymizer = new Anonymizer(
 				byDay.values().stream().flatMap(List::stream).map(WykopGoldSampler::author).filter(nick -> nick != null).toList());
@@ -111,8 +127,10 @@ class WykopGoldSampler {
 					day.getKey(), day.getValue().size(), unmappable,
 					day.getValue().size() - unmappable - assessable.size(), assessable.size(), drawn.size());
 		}
-		System.out.printf("nicks replaced: %d mentions, %d bare author nicks; URLs replaced: %d%n",
-				anonymizer.mentions, anonymizer.bareNicks, anonymizer.urls);
+		System.out.printf("nicks replaced: %d mentions, %d bare author nicks; URLs: %d; e-mails: %d%n",
+				anonymizer.mentions, anonymizer.bareNicks, anonymizer.urls, anonymizer.emails);
+		System.out.println("bare author nicks replaced (check they are not ordinary words): "
+				+ anonymizer.replacedBareNicks);
 
 		GoldLabels.writePosts(out, posts);
 		System.out.println("wrote " + posts.size() + " posts to " + out.toAbsolutePath()
@@ -165,15 +183,20 @@ class WykopGoldSampler {
 
 		int urls;
 
+		int emails;
+
+		final Set<String> replacedBareNicks = new TreeSet<>();
+
 		Anonymizer(List<String> authors) {
 			List<String> nicks = authors.stream()
 				.filter(nick -> nick.length() >= MIN_BARE_NICK_LENGTH)
+				.map(nick -> nick.toLowerCase(Locale.ROOT))
 				.distinct()
 				.sorted(Comparator.comparingInt(String::length).reversed())
 				.map(Pattern::quote)
 				.toList();
 			this.bareAuthors = nicks.isEmpty() ? null
-					: Pattern.compile("(?<![\\p{L}\\p{N}_@-])(?:" + String.join("|", nicks) + ")(?![\\p{L}\\p{N}_-])");
+					: Pattern.compile("(?iu)(?<![\\p{L}\\p{N}_@-])(?:" + String.join("|", nicks) + ")(?![\\p{L}\\p{N}_-])");
 		}
 
 		WykopItem apply(WykopItem item) {
@@ -192,6 +215,13 @@ class WykopGoldSampler {
 				url.appendReplacement(out, "<url>");
 			}
 			url.appendTail(out);
+			Matcher email = EMAIL.matcher(out.toString());
+			out = new StringBuilder();
+			while (email.find()) {
+				emails++;
+				email.appendReplacement(out, "<email>");
+			}
+			email.appendTail(out);
 			Matcher mention = MENTION.matcher(out.toString());
 			out = new StringBuilder();
 			while (mention.find()) {
@@ -206,6 +236,7 @@ class WykopGoldSampler {
 			out = new StringBuilder();
 			while (bare.find()) {
 				bareNicks++;
+				replacedBareNicks.add(bare.group());
 				bare.appendReplacement(out, Matcher.quoteReplacement(alias(bare.group())));
 			}
 			bare.appendTail(out);

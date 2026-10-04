@@ -5,7 +5,7 @@
       "slug": "gielda",
       "author": {
         "username": "uzytkownik1",
-        "gender": "m",
+        "gender": null,
         "company": false,
         "avatar": "<url>",
         "status": "active",
@@ -61,7 +61,7 @@
         "users": [
           {
             "username": "uzytkownik2",
-            "gender": "m",
+            "gender": null,
             "company": false,
             "avatar": "<url>",
             "status": "active",
@@ -83,7 +83,7 @@
           },
           {
             "username": "uzytkownik3",
-            "gender": "m",
+            "gender": null,
             "company": false,
             "avatar": "<url>",
             "status": "active",
@@ -202,7 +202,7 @@
       "slug": "taka-ciekawostka-z-gpw-gielda",
       "author": {
         "username": "uzytkownik5",
-        "gender": "f",
+        "gender": null,
         "company": false,
         "avatar": "<url>",
         "status": "active",
@@ -258,7 +258,7 @@
         "users": [
           {
             "username": "uzytkownik6",
-            "gender": "m",
+            "gender": null,
             "company": true,
             "avatar": "<url>",
             "status": "active",
@@ -276,7 +276,7 @@
           },
           {
             "username": "uzytkownik7",
-            "gender": "f",
+            "gender": null,
             "company": false,
             "avatar": "<url>",
             "status": "active",
@@ -294,7 +294,7 @@
           },
           {
             "username": "uzytkownik8",
-            "gender": "m",
+            "gender": null,
             "company": false,
             "avatar": "<url>",
             "status": "active",
@@ -312,7 +312,7 @@
           },
           {
             "username": "uzytkownik9",
-            "gender": "m",
+            "gender": null,
             "company": false,
             "avatar": "<url>",
             "status": "active",
@@ -380,7 +380,7 @@
       "slug": "gielda-meczennicyalphabet",
       "author": {
         "username": "uzytkownik2",
-        "gender": "m",
+        "gender": null,
         "company": false,
         "avatar": "<url>",
         "status": "active",
@@ -472,7 +472,7 @@
       "slug": "gielda-podobienstwo-jest-uderzajace-a-co-ciekawe-o",
       "author": {
         "username": "uzytkownik11",
-        "gender": "m",
+        "gender": null,
         "company": false,
         "avatar": "<url>",
         "status": "active",
@@ -549,7 +549,7 @@
       "slug": "gielda-https-x-com-schwabnetwork-status-2105315437",
       "author": {
         "username": "uzytkownik1",
-        "gender": "m",
+        "gender": null,
         "company": false,
         "avatar": "<url>",
         "status": "active",
@@ -645,7 +645,7 @@
       "slug": "gielda-gieldowegownowpisy-to-uczucie-gdy-pozycja-w",
       "author": {
         "username": "uzytkownik13",
-        "gender": "m",
+        "gender": null,
         "company": false,
         "avatar": "<url>",
         "status": "active",
@@ -684,7 +684,7 @@
         "users": [
           {
             "username": "uzytkownik14",
-            "gender": "m",
+            "gender": null,
             "company": false,
             "avatar": "<url>",
             "status": "active",
@@ -720,7 +720,7 @@
           },
           {
             "username": "uzytkownik16",
-            "gender": "m",
+            "gender": null,
             "company": false,
             "avatar": "",
             "status": "active",
@@ -738,7 +738,7 @@
           },
           {
             "username": "uzytkownik17",
-            "gender": "m",
+            "gender": null,
             "company": false,
             "avatar": "<url>",
             "status": "active",
@@ -756,7 +756,7 @@
           },
           {
             "username": "uzytkownik8",
-            "gender": "m",
+            "gender": null,
             "company": false,
             "avatar": "<url>",
             "status": "active",
@@ -806,7 +806,7 @@
       "slug": "gielda",
       "author": {
         "username": "uzytkownik18",
-        "gender": "m",
+        "gender": null,
         "company": false,
         "avatar": "<url>",
         "status": "active",
@@ -844,7 +844,7 @@
         "users": [
           {
             "username": "uzytkownik19",
-            "gender": "m",
+            "gender": null,
             "company": false,
             "avatar": "<url>",
             "status": "active",
@@ -862,7 +862,7 @@
           },
           {
             "username": "uzytkownik20",
-            "gender": "m",
+            "gender": null,
             "company": true,
             "avatar": "<url>",
             "status": "active",
@@ -880,7 +880,7 @@
           },
           {
             "username": "uzytkownik14",
-            "gender": "m",
+            "gender": null,
             "company": false,
             "avatar": "<url>",
             "status": "active",
@@ -930,7 +930,7 @@
       "slug": "czy-zakladajac-optymistycznie-50-pozostalych-lat-z",
       "author": {
         "username": "uzytkownik3",
-        "gender": "m",
+        "gender": null,
         "company": false,
         "avatar": "<url>",
         "status": "active",
@@ -1046,7 +1046,7 @@
         "color": "orange",
         "verified": false,
         "rank": {
-          "position": 2040,
+          "position": null,
           "trend": 1
         },
         "blacklist": false,
@@ -1078,7 +1078,7 @@
         "users": [
           {
             "username": "uzytkownik22",
-            "gender": "m",
+            "gender": null,
             "company": false,
             "avatar": "<url>",
             "status": "active",
@@ -1185,7 +1185,7 @@
         "users": [
           {
             "username": "uzytkownik23",
-            "gender": "m",
+            "gender": null,
             "company": false,
             "avatar": "<url>",
             "status": "active",
@@ -1203,7 +1203,7 @@
           },
           {
             "username": "uzytkownik1",
-            "gender": "m",
+            "gender": null,
             "company": false,
             "avatar": "<url>",
             "status": "active",
@@ -1354,7 +1354,7 @@
           },
           {
             "username": "uzytkownik14",
-            "gender": "m",
+            "gender": null,
             "company": false,
             "avatar": "<url>",
             "status": "active",
@@ -1372,7 +1372,7 @@
           },
           {
             "username": "uzytkownik27",
-            "gender": "m",
+            "gender": null,
             "company": false,
             "avatar": "<url>",
             "status": "active",

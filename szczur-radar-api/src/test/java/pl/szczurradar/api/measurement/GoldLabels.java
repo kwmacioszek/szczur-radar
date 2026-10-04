@@ -83,6 +83,7 @@ public final class GoldLabels {
 		public Label {
 			Objects.requireNonNull(postId, "post_id");
 			Objects.requireNonNull(relevance, "relevance");
+			Objects.requireNonNull(note, "note");
 			targets = List.copyOf(targets);
 		}
 

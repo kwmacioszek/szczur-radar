@@ -10,18 +10,18 @@
         "label": "<media>",
         "url": "<url>",
         "type": "anchor",
-        "type_id": 8023027
+        "type_id": 1
       },
       "author": {
         "username": "uzytkownik28",
-        "gender": "m",
+        "gender": null,
         "company": false,
         "avatar": "<url>",
         "status": "active",
         "color": "burgundy",
         "verified": false,
         "rank": {
-          "position": 4,
+          "position": null,
           "trend": 0
         },
         "blacklist": false,
@@ -96,18 +96,18 @@
         "label": "<media>",
         "url": "<url>",
         "type": "anchor",
-        "type_id": 8022681
+        "type_id": 2
       },
       "author": {
         "username": "uzytkownik29",
-        "gender": "m",
+        "gender": null,
         "company": false,
         "avatar": "<url>",
         "status": "active",
         "color": "orange",
         "verified": false,
         "rank": {
-          "position": 1184,
+          "position": null,
           "trend": -1
         },
         "blacklist": false,
@@ -182,7 +182,7 @@
         "label": "<media>",
         "url": "<url>",
         "type": "anchor",
-        "type_id": 8022621
+        "type_id": 3
       },
       "author": {
         "username": "uzytkownik30",
@@ -269,11 +269,11 @@
         "label": "<media>",
         "url": "<url>",
         "type": "anchor",
-        "type_id": 8022567
+        "type_id": 4
       },
       "author": {
         "username": "uzytkownik31",
-        "gender": "m",
+        "gender": null,
         "company": false,
         "avatar": "<url>",
         "status": "active",

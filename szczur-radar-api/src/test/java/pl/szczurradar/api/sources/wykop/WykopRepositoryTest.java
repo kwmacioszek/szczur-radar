@@ -1,6 +1,7 @@
 package pl.szczurradar.api.sources.wykop;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 import java.time.Duration;
 import java.time.LocalDate;
@@ -26,14 +27,17 @@ class WykopRepositoryTest {
 
 	private static final String ENTRIES = LocalWykopServer.fixture("search-entries-page.json");
 
+	/** The real last page served as the whole day: {@code pagination.total} set to its 12 elements. */
+	private static final String WHOLE_DAY = withItems(ENTRIES, 12, 12);
+
 	private static final String LINKS = LocalWykopServer.fixture("search-links-page.json");
 
 	private final List<Duration> pauses = new ArrayList<>();
 
 	@Test
 	void readsEntriesAndLinksOfADayWithTheTagAndDateRange() {
-		try (LocalWykopServer server = new LocalWykopServer(request -> answer(request, ENTRIES))) {
-			List<WykopItem> items = repository(server).itemsOfDay("gielda", LocalDate.parse("2026-10-01"));
+		try (LocalWykopServer server = new LocalWykopServer(request -> answer(request, WHOLE_DAY))) {
+			List<WykopItem> items = repository(server).itemsOfDay("gielda", LocalDate.parse("2026-10-01")).items();
 
 			assertThat(items).hasSize(12 + 4);
 			assertThat(items.subList(0, 12)).allSatisfy(item -> assertThat(item.resource()).isEqualTo("entry"));
@@ -56,9 +60,10 @@ class WykopRepositoryTest {
 		// set to 150): the repository must ask for pages 1–3 and stop without a fourth request.
 		String fullPage = withItems(ENTRIES, 50, 150);
 		try (LocalWykopServer server = new LocalWykopServer(request -> answer(request, fullPage))) {
-			List<WykopItem> items = repository(server).itemsOfDay("gielda", LocalDate.parse("2026-10-01"));
+			List<WykopItem> items = repository(server).itemsOfDay("gielda", LocalDate.parse("2026-10-01")).items();
 
-			assertThat(items).hasSize(150 + 4);
+			// Repeated elements are kept once (12 distinct entries + 4 links).
+			assertThat(items).hasSize(12 + 4);
 			assertThat(searches(server)).extracting(request -> request.path() + " " + page(request))
 				.containsExactly("/api/v3/search/entries 1", "/api/v3/search/entries 2", "/api/v3/search/entries 3",
 						"/api/v3/search/links 1");
@@ -71,8 +76,55 @@ class WykopRepositoryTest {
 		ObjectNode noTotal = (ObjectNode) MAPPER.readTree(ENTRIES);
 		noTotal.remove("pagination");
 		try (LocalWykopServer server = new LocalWykopServer(request -> answer(request, noTotal.toString()))) {
-			assertThat(repository(server).itemsOfDay("gielda", LocalDate.parse("2026-10-01"))).hasSize(16);
+			assertThat(repository(server).itemsOfDay("gielda", LocalDate.parse("2026-10-01")).items()).hasSize(16);
 			assertThat(searches(server)).hasSize(2);
+		}
+	}
+
+	@Test
+	void anElementOfAnUnexpectedShapeIsSkippedAndCounted() {
+		ObjectNode page = (ObjectNode) MAPPER.readTree(WHOLE_DAY);
+		// The whole-day page with the first element's id changed to text (minimally changed recording).
+		((ObjectNode) page.get("data").get(0)).put("id", "not-a-number");
+		try (LocalWykopServer server = new LocalWykopServer(request -> answer(request, page.toString()))) {
+			WykopSearchResult result = repository(server).itemsOfDay("gielda", LocalDate.parse("2026-10-01"));
+
+			assertThat(result.skippedElements()).isEqualTo(1);
+			assertThat(result.items()).hasSize(11 + 4);
+		}
+	}
+
+	@Test
+	void aPageShortOfTheTotalIsAnErrorNotASilentlyCutDay() {
+		ObjectNode page = (ObjectNode) MAPPER.readTree(ENTRIES);
+		// The real 12-entry page claiming 100 entries in total (e.g. an API that capped the limit).
+		((ObjectNode) page.get("pagination")).put("total", 100);
+		try (LocalWykopServer server = new LocalWykopServer(request -> answer(request, page.toString()))) {
+			assertThatExceptionOfType(WykopApiException.class)
+				.isThrownBy(() -> repository(server).itemsOfDay("gielda", LocalDate.parse("2026-10-01")))
+				.satisfies(ex -> assertThat(ex.failure()).isEqualTo(WykopFailure.MALFORMED_ANSWER))
+				.withMessageContaining("12 of 100");
+		}
+	}
+
+	@Test
+	void anAnswerWithoutADataListIsMalformed() {
+		try (LocalWykopServer server = new LocalWykopServer(request -> answer(request, "{\"data\":{}}"))) {
+			assertThatExceptionOfType(WykopApiException.class)
+				.isThrownBy(() -> repository(server).itemsOfDay("gielda", LocalDate.parse("2026-10-01")))
+				.satisfies(ex -> assertThat(ex.failure()).isEqualTo(WykopFailure.MALFORMED_ANSWER));
+		}
+	}
+
+	@Test
+	void aSearchThatNeverEndsStopsAtThePageLimit() {
+		// Full pages of the real elements with a total that is never reached.
+		String endless = withItems(ENTRIES, 50, Integer.MAX_VALUE);
+		try (LocalWykopServer server = new LocalWykopServer(request -> answer(request, endless))) {
+			assertThatExceptionOfType(WykopApiException.class)
+				.isThrownBy(() -> repository(server).itemsOfDay("gielda", LocalDate.parse("2026-10-01")))
+				.satisfies(ex -> assertThat(ex.failure()).isEqualTo(WykopFailure.PAGE_LIMIT));
+			assertThat(searches(server)).hasSize(WykopRepository.MAX_PAGES);
 		}
 	}
 

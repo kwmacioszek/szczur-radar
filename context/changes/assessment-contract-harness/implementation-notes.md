@@ -146,3 +146,13 @@ later phases. Each open check names the phase that closes it; `/10x-impl-review`
   for following it. §6.4 gets the mood-tag example (`#krachsmieciuchindex`). Prompt v2.3 (hash in
   `AssessmentPromptTest`); `examples.md` example 6 stays valid (the move there concerns the named
   index). Phase 4's live smoke was on v2.2; phase 6 records v2.3.
+
+### N12. Phase 5 review fixes (2026-10-04, `reviews/impl-review-phase-5.md`)
+
+- Prompt v2.4: the slang dictionary had „peron … (NIE jest celem)” against §7.1.6/§6.5a; v2.3 was
+  never recorded. Phase 6 records v2.4.
+- `WykopRepository` returns `WykopSearchResult` (items once by resource and id, skipped count); a page
+  short of `pagination.total` is an error; `WykopApiException` carries `WykopFailure`.
+- Anonymizer: case-insensitive author nicks, e-mails → `<email>`; changes future samples only — the
+  committed `posts.json` was checked clean and is not re-drawn (its labels stay valid).
+- Wykop fixtures: `gender`, `rank.position` nulled, `type_id` renumbered.

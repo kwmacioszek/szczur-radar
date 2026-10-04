@@ -572,15 +572,15 @@ Brak zmian danych i migracji Flyway. `SkeletonAgent` zastępuje `AssessorAgent`;
 
 #### Automated
 
-- [x] 5.1 Testy mappera, miar i danych wzorca przechodzą: `cd szczur-radar-api && ./mvnw -B test`
-- [x] 5.2 Wzorzec ma co najmniej 100 postów nie-„trudnych” z dwóch różnych dni, żadnego z 2026-09-28 ani 2026-09-29 (`GoldDataTest`)
-- [x] 5.3 `posts.json` i `labels.json` nie zawierają nicków autorów ani adresów URL (`GoldDataTest`)
-- [x] 5.4 Każda miara ma test na danych syntetycznych z ręcznie policzonym wynikiem
+- [x] 5.1 Testy mappera, miar i danych wzorca przechodzą: `cd szczur-radar-api && ./mvnw -B test` — b21d084
+- [x] 5.2 Wzorzec ma co najmniej 100 postów nie-„trudnych” z dwóch różnych dni, żadnego z 2026-09-28 ani 2026-09-29 (`GoldDataTest`) — b21d084
+- [x] 5.3 `posts.json` i `labels.json` nie zawierają nicków autorów ani adresów URL (`GoldDataTest`) — b21d084
+- [x] 5.4 Każda miara ma test na danych syntetycznych z ręcznie policzonym wynikiem — b21d084
 
 #### Manual
 
-- [x] 5.5 Użytkownik oznaczył wszystkie posty w `labeling-gold.html` według instrukcji v1.0 i wyeksportował `labels.json`
-- [x] 5.6 Użytkownik przejrzał notatki i posty „trudne”; brakujące reguły dopisane do `contract-v2.md` i instrukcji (z aktualizacją etykiet) albo świadomie odłożone
+- [x] 5.5 Użytkownik oznaczył wszystkie posty w `labeling-gold.html` według instrukcji v1.0 i wyeksportował `labels.json` — b21d084
+- [x] 5.6 Użytkownik przejrzał notatki i posty „trudne”; brakujące reguły dopisane do `contract-v2.md` i instrukcji (z aktualizacją etykiet) albo świadomie odłożone — b21d084
 
 ### Phase 6: Pomiar, raport i model domyślny
 

@@ -78,6 +78,7 @@ class WykopApiClientTest {
 			assertThatExceptionOfType(WykopApiException.class)
 				.isThrownBy(() -> client(server).get("search/entries", Map.of()))
 				.satisfies(ex -> {
+					assertThat(ex.failure()).isEqualTo(WykopFailure.HTTP_STATUS);
 					assertThat(ex.status()).isEqualTo(403);
 					assertThat(ex.getMessage()).contains("auth", "403").doesNotContain(SECRET, KEY);
 				});
@@ -94,6 +95,29 @@ class WykopApiClientTest {
 				.satisfies(ex -> assertThat(ex.status()).isEqualTo(500));
 			assertThat(server.requests()).hasSize(2);
 		}
+	}
+
+	@Test
+	void invalidJsonIsAMalformedAnswer() {
+		try (LocalWykopServer server = new LocalWykopServer(request -> request.path().endsWith("/auth")
+				? Reply.ok(TOKEN_1) : Reply.ok("<html>maintenance</html>"))) {
+			assertThatExceptionOfType(WykopApiException.class)
+				.isThrownBy(() -> client(server).get("search/entries", Map.of()))
+				.satisfies(ex -> {
+					assertThat(ex.failure()).isEqualTo(WykopFailure.MALFORMED_ANSWER);
+					assertThat(ex.getCause()).isNotNull();
+				});
+		}
+	}
+
+	@Test
+	void aConnectionErrorIsATransportFailure() {
+		LocalWykopServer server = new LocalWykopServer(request -> Reply.ok(TOKEN_1));
+		WykopApiClient client = client(server);
+		server.close();
+
+		assertThatExceptionOfType(WykopApiException.class).isThrownBy(() -> client.get("search/entries", Map.of()))
+			.satisfies(ex -> assertThat(ex.failure()).isEqualTo(WykopFailure.TRANSPORT));
 	}
 
 	private static WykopApiClient client(LocalWykopServer server) {

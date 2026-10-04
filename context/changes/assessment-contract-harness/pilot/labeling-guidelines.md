@@ -58,7 +58,7 @@ Anchor zostaje w oryginale; słownik tylko pomaga rozpoznać, że to cel.
 | gierkorz | Take-Two (wniosek z jednego posta z `#ttwo` — do potwierdzenia) |
 | śmieciuch(y) | spekulacyjna spółka / spółki (znaczenie przybliżone — do potwierdzenia) |
 | gruby | duży gracz / animator rynku — **nie** cel |
-| peron, na peronie | pozostanie poza rynkiem / przegapienie wzrostu — **nie** cel (patrz 4.6) |
+| peron, na peronie | pozostanie poza rynkiem / przegapienie wzrostu — cel „rynek” (`macro_topic`), bullish (`contract-v2.md` §7.1.6, patrz 4.6) |
 | pompa / kiblage, zwała, kibel, bessa, krach | wzrost / spadek rynku — gdy post nie wiąże ruchu z nazwanym celem: cel „rynek” (`macro_topic`), anchor = ten fragment (`contract-v2.md` §6.5a); gdy ruch dotyczy nazwanego celu — **nie** osobny cel |
 
 ## 4. Kierunek stanowiska

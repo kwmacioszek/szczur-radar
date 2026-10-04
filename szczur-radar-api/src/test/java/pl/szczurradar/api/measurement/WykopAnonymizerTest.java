@@ -39,6 +39,23 @@ class WykopAnonymizerTest {
 	}
 
 	@Test
+	void authorsNicksAreReplacedInAnyCase() {
+		Anonymizer anonymizer = new Anonymizer(List.of("Szczurek99"));
+
+		assertThat(anonymizer.text("szczurek99 i SZCZUREK99")).isEqualTo("@uzytkownik1 i @uzytkownik1");
+		assertThat(anonymizer.replacedBareNicks).containsExactly("SZCZUREK99", "szczurek99");
+	}
+
+	@Test
+	void eMailAddressesAreReplacedWholeNotAsMentions() {
+		Anonymizer anonymizer = new Anonymizer(List.of());
+
+		assertThat(anonymizer.text("pisz na jan.kowalski@gmail.com albo @jan_k"))
+			.isEqualTo("pisz na <email> albo @uzytkownik1");
+		assertThat(anonymizer.text("kontakt:biuro@firma.pl.")).isEqualTo("kontakt:<email>.");
+	}
+
+	@Test
 	void anElementLosesItsAuthorAndKeepsEverythingElse() {
 		WykopItem raw = new WykopItem("link", 7L, "2026-10-01 10:00:00", null, "Tytuł @nick", "Opis https://x.pl",
 				List.of("gielda"), new WykopItem.Author("nick"), "tytul-nick", null);

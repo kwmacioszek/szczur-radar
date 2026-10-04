@@ -141,3 +141,21 @@ committing it. Then label every post in
 export as `src/test/resources/fixtures/assessor/gold/labels.json`. `GoldDataTest` is skipped until
 the files exist and mandatory from then on (≥ 100 posts not marked "hard", two days, no nicks or
 URLs, every anchor taken from its post). Metrics: `GoldMetrics` (thresholds in `GoldMetrics.Metric`).
+
+### Metric definitions (`GoldMetrics`, the same in CI and in the report)
+
+Every labeled post counts; a post without a valid output (`failed` or not recorded) has no relevance
+and no targets — it is wrong wherever it counts and never leaves a denominator. Posts labeled
+"hard" count only for compliance. Targets are paired one-to-one by `AnchorMatcher`. An empty gold
+denominator is a measurement error (`InsufficientGoldException`), never a passed threshold.
+
+| Metric | Numerator / denominator | Threshold |
+| --- | --- | --- |
+| contract compliance | valid outputs / all labeled posts | ≥ 95 % |
+| relevance (binary) | model relevance = gold / posts with gold relevance other than `unclear` (model `unclear` = wrong) | ≥ 80 % |
+| target recall | matched gold targets / gold targets | ≥ 80 % |
+| target precision | matched model targets / model targets (0 when the model returns none) | ≥ 70 % |
+| direction accuracy | gold targets with a direction other than `not_expressed` whose matched model target has the same direction / all such gold targets — **an unmatched gold target is wrong** (review of phase 5, F7: kept strict) | ≥ 75 % |
+| dominant direction | posts whose model dominant direction (more bullish than bearish targets or the reverse) equals the gold one / posts where gold has one | ≥ 75 % |
+| contradictions | gold bullish/bearish targets whose matched model target has the opposite direction / gold bullish/bearish targets (unmatched = not a contradiction) | ≤ 3 % |
+

@@ -71,9 +71,10 @@ public class WykopApiClient {
 	 */
 	public JsonNode get(String path, Map<String, ?> query) {
 		URI uri = baseUrl.resolve(path + queryString(query));
-		HttpResponse<String> response = send(authorized(uri, currentToken()));
+		String used = currentToken();
+		HttpResponse<String> response = send(authorized(uri, used));
 		if (response.statusCode() == 401) {
-			response = send(authorized(uri, refreshToken()));
+			response = send(authorized(uri, refreshToken(used)));
 		}
 		return parse(requireSuccess(response, "GET " + path), "GET " + path);
 	}
@@ -85,10 +86,18 @@ public class WykopApiClient {
 
 	private String currentToken() {
 		String current = token;
-		return current != null ? current : refreshToken();
+		return current != null ? current : refreshToken(null);
 	}
 
-	private synchronized String refreshToken() {
+	/**
+	 * A fresh token, unless another thread already replaced {@code stale} — then that one is reused,
+	 * so concurrent 401s cause one auth call.
+	 */
+	private synchronized String refreshToken(@Nullable String stale) {
+		String current = token;
+		if (current != null && !current.equals(stale)) {
+			return current;
+		}
 		ObjectNode credentials = json.createObjectNode().put("key", key).put("secret", secret);
 		String body = json.writeValueAsString(json.createObjectNode().set("data", credentials));
 		HttpRequest request = HttpRequest.newBuilder(baseUrl.resolve("auth"))
@@ -100,7 +109,7 @@ public class WykopApiClient {
 		JsonNode answer = parse(requireSuccess(send(request), "auth"), "auth");
 		String fresh = answer.path("data").path("token").asString("");
 		if (fresh.isEmpty()) {
-			throw new WykopApiException(200, "Wykop auth answered without data.token");
+			throw new WykopApiException(WykopFailure.MALFORMED_ANSWER, "Wykop auth answered without data.token");
 		}
 		token = fresh;
 		return fresh;
@@ -120,12 +129,13 @@ public class WykopApiClient {
 			return http.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
 		}
 		catch (IOException ex) {
-			throw new WykopApiException("Wykop " + request.method() + " " + request.uri().getPath() + " failed: " + ex,
+			throw new WykopApiException(WykopFailure.TRANSPORT,
+					"Wykop " + request.method() + " " + request.uri().getPath() + " failed: " + ex,
 					ex);
 		}
 		catch (InterruptedException ex) {
 			Thread.currentThread().interrupt();
-			throw new WykopApiException("interrupted during Wykop " + request.uri().getPath(), ex);
+			throw new WykopApiException(WykopFailure.INTERRUPTED, "interrupted during Wykop " + request.uri().getPath(), ex);
 		}
 	}
 
@@ -134,7 +144,7 @@ public class WykopApiClient {
 		if (status < 200 || status > 299) {
 			// The auth request holds the secret, but only the answer's body is quoted here.
 			String body = response.body() == null ? "" : response.body();
-			throw new WykopApiException(status, "Wykop " + call + " answered HTTP " + status + ": "
+			throw WykopApiException.httpStatus(status, "Wykop " + call + " answered HTTP " + status + ": "
 					+ body.substring(0, Math.min(MAX_ERROR_BODY, body.length())));
 		}
 		return response.body();
@@ -145,7 +155,8 @@ public class WykopApiClient {
 			return json.readTree(body);
 		}
 		catch (JacksonException ex) {
-			throw new WykopApiException(200, "Wykop " + call + " answered with invalid JSON: " + ex.getOriginalMessage());
+			throw new WykopApiException(WykopFailure.MALFORMED_ANSWER,
+					"Wykop " + call + " answered with invalid JSON: " + ex.getOriginalMessage(), ex);
 		}
 	}
 
