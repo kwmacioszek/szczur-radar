@@ -85,3 +85,36 @@ later phases. Each open check names the phase that closes it; `/10x-impl-review`
 - Luna flex: 28/30 = 93.3%, both failures `fabricated_evidence` in an anchor; 0 retries, 0 flex
   fallbacks (no 429 in 30 calls); median 9.1 s.
 - Cache: DeepSeek and OpenRouter report cached tokens on every call; Gemini reported none.
+
+## Phase 5 — gold set (2026-10-04)
+
+### N7. Wykop fixtures — resolved (real search answers)
+
+- First version: fixtures rebuilt from the pilot sample (no raw pages in the repo). Replaced on
+  2026-10-04 by real answers of the search API for #gielda, 2026-10-01, anonymized (nicks →
+  `uzytkownikN`, URLs → `<url>`, ids renumbered, media keys removed; checked: no real nick left):
+  `search-entries-page.json` (last page of the day, 12 of 262 entries), `search-links-page.json`
+  (all 4 links), `entry.json` / `link.json` (one element of each). Field names match the official
+  schemas (`doc.wykop.pl`, `components/schemas/entry.yaml`, `link.yaml`).
+
+### N8. `AnchorMatcherTest` separate from `GoldMetricsTest`
+
+- The plan put the anchor boundary cases into `GoldMetricsTest`; they live in `AnchorMatcherTest`
+  (same cases plus 1:1 maximum matching and tie order). `WykopAnonymizerTest` covers the sample's
+  anonymization offline, in CI.
+
+### N9. Wykop search API and a connector in `src/main` — decided with the user (2026-10-04)
+
+- **Endpoint:** user asked for the search API with a date range. Checked live (#gielda,
+  2026-10-01): `GET search/all` has no pages and returns a preview (entries: `total` 262, 3 items);
+  `GET search/entries` + `GET search/links` with `tags[]`, `date_from`/`date_to`, `sort=newest`,
+  `limit=50`, `page` return the whole day (5 × 50 + 12 = 262 entries; 4 links). Without `votes`
+  the search is not limited to popular elements (entries with 0 votes come back). User chose
+  entries + links.
+- **Connector:** user asked to split the connector out of `WykopGoldSampler`:
+  `sources/wykop/WykopApiClient` (auth with key/secret → token, re-auth once on 401, `GET`, errors
+  without secrets, no retries) and `WykopRepository` (search by tag and time range, paging to
+  `pagination.total`, pause between pages, page limit), plus `WykopResource` (enum) and
+  `sources/CLAUDE.md` (how to add a source). Production code beyond the plan's phase 5 (which put
+  only the mapper in `src/main`); not wired into any bean, route or schedule — S-02 does that, so the
+  deploy does not change the service's behaviour.

@@ -1,0 +1,352 @@
+{
+  "data": [
+    {
+      "id": 17,
+      "created_at": "2026-10-01 22:52:30",
+      "title": "Polski ElevenLabs wart 22 mld dolarów. Myśli o debiucie także na GPW",
+      "slug": "polski-elevenlabs-wart-22-mld-dolarow-mysli-o-debiucie-takze-na-gpw",
+      "description": "Startup Matiego Staniszewskiego i Piotra Dąbkowskiego pozyskał 300 mln dolarów, a jego wycena podwoiła się od początku roku. Firma zatrudnia ponad 800 osób, obsługuje 15 mln rozmów tygodniowo w 90 językach i za dwa lub trzy lata chce wejść na giełdę, być może równolegle na GPW.",
+      "source": {
+        "label": "<media>",
+        "url": "<url>",
+        "type": "anchor",
+        "type_id": 8023027
+      },
+      "author": {
+        "username": "uzytkownik28",
+        "gender": "m",
+        "company": false,
+        "avatar": "<url>",
+        "status": "active",
+        "color": "burgundy",
+        "verified": false,
+        "rank": {
+          "position": 4,
+          "trend": 0
+        },
+        "blacklist": false,
+        "follow": false,
+        "donation": null,
+        "note": false,
+        "online": true
+      },
+      "published_at": null,
+      "votes": {
+        "up": 20,
+        "down": 0,
+        "count": 20
+      },
+      "voted": 0,
+      "comments": {
+        "hot": false,
+        "count": 4
+      },
+      "tags": [
+        "technologia",
+        "ai",
+        "startupy",
+        "polska",
+        "gielda",
+        "elevenlabs"
+      ],
+      "hot": false,
+      "adult": false,
+      "media": {
+        "photo": {
+          "key": "<media>",
+          "label": "<media>",
+          "mime_type": "image/jpeg",
+          "url": "<url>",
+          "size": 211790,
+          "width": 831,
+          "height": 1084
+        },
+        "embed": null
+      },
+      "editable": false,
+      "deletable": false,
+      "resource": "link",
+      "actions": {
+        "create": false,
+        "update": false,
+        "delete": false,
+        "vote_up": false,
+        "vote_down": false,
+        "undo_vote": false,
+        "start_ama": false,
+        "finish_ama": false,
+        "create_favourite": false,
+        "delete_favourite": false,
+        "report": false
+      },
+      "archive": false,
+      "observed_discussion": false,
+      "parent": null,
+      "tag_pinned_content": false,
+      "pinnable": false,
+      "family_friendly": true
+    },
+    {
+      "id": 18,
+      "created_at": "2026-10-01 12:28:48",
+      "title": "Meta kontra Amazon. Kto zarobi, gdy AI zacznie robić za nas zakupy?",
+      "slug": "meta-kontra-amazon-kto-zarobi-gdy-ai-zacznie-robic-za-nas-zakupy",
+      "description": "We wrześniu Meta (Facebook) uruchomiła Muse agenta AI, który potrafi samodzielnie przeglądać strony, znajdować produkty, porównywać oferty i przejść przez kolejne etapy zakupu. Użytkownik musi jedynie na końcu zatwierdzić transakcję.",
+      "source": {
+        "label": "<media>",
+        "url": "<url>",
+        "type": "anchor",
+        "type_id": 8022681
+      },
+      "author": {
+        "username": "uzytkownik29",
+        "gender": "m",
+        "company": false,
+        "avatar": "<url>",
+        "status": "active",
+        "color": "orange",
+        "verified": false,
+        "rank": {
+          "position": 1184,
+          "trend": -1
+        },
+        "blacklist": false,
+        "follow": false,
+        "donation": null,
+        "note": false,
+        "online": false
+      },
+      "published_at": null,
+      "votes": {
+        "up": 17,
+        "down": 1,
+        "count": 16
+      },
+      "voted": 0,
+      "comments": {
+        "hot": false,
+        "count": 24
+      },
+      "tags": [
+        "gielda",
+        "xtb",
+        "inwestycje",
+        "sztucznainteligencja",
+        "ai",
+        "inwestowanie"
+      ],
+      "hot": false,
+      "adult": false,
+      "media": {
+        "photo": {
+          "key": "<media>",
+          "label": "<media>",
+          "mime_type": "image/webp",
+          "url": "<url>",
+          "size": 89110,
+          "width": 1672,
+          "height": 941
+        },
+        "embed": null
+      },
+      "editable": false,
+      "deletable": false,
+      "resource": "link",
+      "actions": {
+        "create": false,
+        "update": false,
+        "delete": false,
+        "vote_up": false,
+        "vote_down": false,
+        "undo_vote": false,
+        "start_ama": false,
+        "finish_ama": false,
+        "create_favourite": false,
+        "delete_favourite": false,
+        "report": false
+      },
+      "archive": false,
+      "observed_discussion": false,
+      "parent": null,
+      "tag_pinned_content": false,
+      "pinnable": false,
+      "family_friendly": true
+    },
+    {
+      "id": 19,
+      "created_at": "2026-10-01 11:09:55",
+      "title": "Na świecie zaczyna brakować miedzi. Szansa dla naszego KGHM",
+      "slug": "na-swiecie-zaczyna-brakowac-miedzi-szansa-dla-naszego-kghm",
+      "description": "Rosnące zapotrzebowanie na miedź zderza się z coraz większymi ograniczeniami po stronie podaży. Jakich cen metalu można spodziewać się w nadchodzącym kwartale? Prognozę dla rynku oraz akcji KGHM w rozmowie z @uzytkownik30 przedstawił Łukasz Wydra, analityk Cashify Gold. Na pierwszy rzut oka wrzesień 2026 ro",
+      "source": {
+        "label": "<media>",
+        "url": "<url>",
+        "type": "anchor",
+        "type_id": 8022621
+      },
+      "author": {
+        "username": "uzytkownik30",
+        "gender": null,
+        "company": true,
+        "avatar": "<url>",
+        "status": "active",
+        "color": "orange",
+        "verified": true,
+        "rank": {
+          "position": null,
+          "trend": 0
+        },
+        "blacklist": false,
+        "follow": false,
+        "donation": null,
+        "note": false,
+        "online": true
+      },
+      "published_at": "2026-10-01 13:20:35",
+      "votes": {
+        "up": 248,
+        "down": 7,
+        "count": 241
+      },
+      "voted": 0,
+      "comments": {
+        "hot": false,
+        "count": 45
+      },
+      "tags": [
+        "gielda",
+        "surowce",
+        "inwestowanie",
+        "polska",
+        "pieniadze",
+        "informacje"
+      ],
+      "hot": false,
+      "adult": false,
+      "media": {
+        "photo": {
+          "key": "<media>",
+          "label": "<media>",
+          "mime_type": "image/png",
+          "url": "<url>",
+          "size": 138159,
+          "width": 380,
+          "height": 192
+        },
+        "embed": null
+      },
+      "editable": false,
+      "deletable": false,
+      "resource": "link",
+      "actions": {
+        "create": false,
+        "update": false,
+        "delete": false,
+        "vote_up": false,
+        "vote_down": false,
+        "undo_vote": false,
+        "start_ama": false,
+        "finish_ama": false,
+        "create_favourite": false,
+        "delete_favourite": false,
+        "report": false
+      },
+      "archive": false,
+      "observed_discussion": false,
+      "parent": null,
+      "tag_pinned_content": false,
+      "pinnable": false,
+      "recommended": true,
+      "family_friendly": true
+    },
+    {
+      "id": 20,
+      "created_at": "2026-10-01 09:48:49",
+      "title": "Lista zakupów Przemysława Krala. Krótki przewodnik po aferze Zondacrypto",
+      "slug": "lista-zakupow-przemyslawa-krala-krotki-przewodnik-po-aferze-zondacrypto",
+      "description": "Przemysław Kral płacił politykom, fundacjom, agencjom PR, telewizji i federacjom sportowym. Na marketing w Polsce Zondacrypto przeznaczała około 10 mln zł rocznie.",
+      "source": {
+        "label": "<media>",
+        "url": "<url>",
+        "type": "anchor",
+        "type_id": 8022567
+      },
+      "author": {
+        "username": "uzytkownik31",
+        "gender": "m",
+        "company": false,
+        "avatar": "<url>",
+        "status": "active",
+        "color": "orange",
+        "verified": false,
+        "rank": {
+          "position": null,
+          "trend": 0
+        },
+        "blacklist": false,
+        "follow": false,
+        "donation": null,
+        "note": false,
+        "online": true
+      },
+      "published_at": null,
+      "votes": {
+        "up": 6,
+        "down": 0,
+        "count": 6
+      },
+      "voted": 0,
+      "comments": {
+        "hot": false,
+        "count": 0
+      },
+      "tags": [
+        "polityka",
+        "afera",
+        "zondacrypto",
+        "gielda",
+        "kryptowaluty"
+      ],
+      "hot": false,
+      "adult": false,
+      "media": {
+        "photo": {
+          "key": "<media>",
+          "label": "<media>",
+          "mime_type": "image/jpeg",
+          "url": "<url>",
+          "size": 92917,
+          "width": 938,
+          "height": 528
+        },
+        "embed": null
+      },
+      "editable": false,
+      "deletable": false,
+      "resource": "link",
+      "actions": {
+        "create": false,
+        "update": false,
+        "delete": false,
+        "vote_up": false,
+        "vote_down": false,
+        "undo_vote": false,
+        "start_ama": false,
+        "finish_ama": false,
+        "create_favourite": false,
+        "delete_favourite": false,
+        "report": false
+      },
+      "archive": false,
+      "observed_discussion": false,
+      "parent": null,
+      "tag_pinned_content": false,
+      "pinnable": false,
+      "family_friendly": true
+    }
+  ],
+  "pagination": {
+    "per_page": 50,
+    "total": 4
+  }
+}

@@ -1,0 +1,1425 @@
+{
+  "data": [
+    {
+      "id": 1,
+      "slug": "gielda",
+      "author": {
+        "username": "uzytkownik1",
+        "gender": "m",
+        "company": false,
+        "avatar": "<url>",
+        "status": "active",
+        "color": "orange",
+        "verified": false,
+        "rank": {
+          "position": null,
+          "trend": 0
+        },
+        "blacklist": false,
+        "follow": false,
+        "donation": null,
+        "note": false,
+        "online": true
+      },
+      "device": "",
+      "created_at": "2026-10-01 07:24:12",
+      "voted": 0,
+      "content": "#gielda ",
+      "media": {
+        "photo": {
+          "key": "<media>",
+          "label": "<media>",
+          "mime_type": "image/jpeg",
+          "url": "<url>",
+          "size": 272654,
+          "width": 1179,
+          "height": 1441
+        },
+        "embed": null,
+        "photos": [
+          {
+            "key": "<media>",
+            "label": "<media>",
+            "mime_type": "image/jpeg",
+            "url": "<url>",
+            "size": 272654,
+            "width": 1179,
+            "height": 1441
+          }
+        ],
+        "survey": null
+      },
+      "adult": false,
+      "tags": [
+        "gielda"
+      ],
+      "favourite": false,
+      "parent": null,
+      "votes": {
+        "up": 2,
+        "down": 0,
+        "users": [
+          {
+            "username": "uzytkownik2",
+            "gender": "m",
+            "company": false,
+            "avatar": "<url>",
+            "status": "active",
+            "color": "orange",
+            "verified": false,
+            "rank": {
+              "position": null,
+              "trend": 0
+            },
+            "blacklist": false,
+            "follow": false,
+            "donation": {
+              "url": "<url>",
+              "entries": true,
+              "links": true
+            },
+            "note": false,
+            "online": false
+          },
+          {
+            "username": "uzytkownik3",
+            "gender": "m",
+            "company": false,
+            "avatar": "<url>",
+            "status": "active",
+            "color": "orange",
+            "verified": false,
+            "rank": {
+              "position": null,
+              "trend": 0
+            },
+            "blacklist": false,
+            "follow": false,
+            "donation": null,
+            "note": false,
+            "online": false
+          }
+        ]
+      },
+      "editable": false,
+      "deletable": false,
+      "comments": {
+        "items": [],
+        "count": 4
+      },
+      "resource": "entry",
+      "actions": {
+        "create": false,
+        "update": false,
+        "delete": false,
+        "vote_up": false,
+        "undo_vote": false,
+        "create_favourite": false,
+        "delete_favourite": false,
+        "report": false,
+        "pin": false,
+        "unpin": false
+      },
+      "archive": false,
+      "observed_discussion": false,
+      "status": "visible",
+      "tag_pinned_content": false,
+      "pinnable": false,
+      "card": null,
+      "family_friendly": true
+    },
+    {
+      "id": 2,
+      "slug": "gielda-nasdaq-goni-ath-pewnie-dzisiaj-bedzie-atak-",
+      "author": {
+        "username": "uzytkownik4",
+        "gender": null,
+        "company": false,
+        "avatar": "<url>",
+        "status": "active",
+        "color": "orange",
+        "verified": false,
+        "rank": {
+          "position": null,
+          "trend": 0
+        },
+        "blacklist": false,
+        "follow": false,
+        "donation": null,
+        "note": false,
+        "online": true
+      },
+      "device": "",
+      "created_at": "2026-10-01 07:16:25",
+      "voted": 0,
+      "content": "#gielda \nNasdaq goni ATH, pewnie dzisiaj będzie atak. Zazwyczaj za trzecim razem przebija",
+      "media": {
+        "photo": null,
+        "embed": null,
+        "photos": [],
+        "survey": null
+      },
+      "adult": false,
+      "tags": [
+        "gielda"
+      ],
+      "favourite": false,
+      "parent": null,
+      "votes": {
+        "up": 0,
+        "down": 0,
+        "users": []
+      },
+      "editable": false,
+      "deletable": false,
+      "comments": {
+        "items": [],
+        "count": 2
+      },
+      "resource": "entry",
+      "actions": {
+        "create": false,
+        "update": false,
+        "delete": false,
+        "vote_up": false,
+        "undo_vote": false,
+        "create_favourite": false,
+        "delete_favourite": false,
+        "report": false,
+        "pin": false,
+        "unpin": false
+      },
+      "archive": false,
+      "observed_discussion": false,
+      "status": "visible",
+      "tag_pinned_content": false,
+      "pinnable": false,
+      "card": null,
+      "family_friendly": true
+    },
+    {
+      "id": 3,
+      "slug": "taka-ciekawostka-z-gpw-gielda",
+      "author": {
+        "username": "uzytkownik5",
+        "gender": "f",
+        "company": false,
+        "avatar": "<url>",
+        "status": "active",
+        "color": "orange",
+        "verified": false,
+        "rank": {
+          "position": null,
+          "trend": 0
+        },
+        "blacklist": false,
+        "follow": false,
+        "donation": null,
+        "note": false,
+        "online": false
+      },
+      "device": "",
+      "created_at": "2026-10-01 07:03:46",
+      "voted": 0,
+      "content": "Taka ciekawostka z GPW #gielda ",
+      "media": {
+        "photo": {
+          "key": "<media>",
+          "label": "<media>",
+          "mime_type": "image/jpeg",
+          "url": "<url>",
+          "size": 157765,
+          "width": 969,
+          "height": 944
+        },
+        "embed": null,
+        "photos": [
+          {
+            "key": "<media>",
+            "label": "<media>",
+            "mime_type": "image/jpeg",
+            "url": "<url>",
+            "size": 157765,
+            "width": 969,
+            "height": 944
+          }
+        ],
+        "survey": null
+      },
+      "adult": false,
+      "tags": [
+        "gielda"
+      ],
+      "favourite": false,
+      "parent": null,
+      "votes": {
+        "up": 9,
+        "down": 0,
+        "users": [
+          {
+            "username": "uzytkownik6",
+            "gender": "m",
+            "company": true,
+            "avatar": "<url>",
+            "status": "active",
+            "color": "orange",
+            "verified": false,
+            "rank": {
+              "position": null,
+              "trend": 0
+            },
+            "blacklist": false,
+            "follow": false,
+            "donation": null,
+            "note": false,
+            "online": false
+          },
+          {
+            "username": "uzytkownik7",
+            "gender": "f",
+            "company": false,
+            "avatar": "<url>",
+            "status": "active",
+            "color": "orange",
+            "verified": false,
+            "rank": {
+              "position": null,
+              "trend": 0
+            },
+            "blacklist": false,
+            "follow": false,
+            "donation": null,
+            "note": false,
+            "online": true
+          },
+          {
+            "username": "uzytkownik8",
+            "gender": "m",
+            "company": false,
+            "avatar": "<url>",
+            "status": "active",
+            "color": "orange",
+            "verified": false,
+            "rank": {
+              "position": null,
+              "trend": 0
+            },
+            "blacklist": false,
+            "follow": false,
+            "donation": null,
+            "note": false,
+            "online": false
+          },
+          {
+            "username": "uzytkownik9",
+            "gender": "m",
+            "company": false,
+            "avatar": "<url>",
+            "status": "active",
+            "color": "orange",
+            "verified": false,
+            "rank": {
+              "position": null,
+              "trend": 0
+            },
+            "blacklist": false,
+            "follow": false,
+            "donation": null,
+            "note": false,
+            "online": false
+          },
+          {
+            "username": "uzytkownik10",
+            "gender": null,
+            "company": false,
+            "avatar": "<url>",
+            "status": "active",
+            "color": "orange",
+            "verified": false,
+            "rank": {
+              "position": null,
+              "trend": 0
+            },
+            "blacklist": false,
+            "follow": false,
+            "donation": null,
+            "note": false,
+            "online": true
+          }
+        ]
+      },
+      "editable": false,
+      "deletable": false,
+      "comments": {
+        "items": [],
+        "count": 3
+      },
+      "resource": "entry",
+      "actions": {
+        "create": false,
+        "update": false,
+        "delete": false,
+        "vote_up": false,
+        "undo_vote": false,
+        "create_favourite": false,
+        "delete_favourite": false,
+        "report": false,
+        "pin": false,
+        "unpin": false
+      },
+      "archive": false,
+      "observed_discussion": false,
+      "status": "visible",
+      "tag_pinned_content": false,
+      "pinnable": false,
+      "card": null,
+      "family_friendly": true
+    },
+    {
+      "id": 4,
+      "slug": "gielda-meczennicyalphabet",
+      "author": {
+        "username": "uzytkownik2",
+        "gender": "m",
+        "company": false,
+        "avatar": "<url>",
+        "status": "active",
+        "color": "orange",
+        "verified": false,
+        "rank": {
+          "position": null,
+          "trend": 0
+        },
+        "blacklist": false,
+        "follow": false,
+        "donation": {
+          "url": "<url>",
+          "entries": true,
+          "links": true
+        },
+        "note": false,
+        "online": false
+      },
+      "device": "",
+      "created_at": "2026-10-01 07:00:05",
+      "voted": 0,
+      "content": "#gielda #meczennicyalphabet",
+      "media": {
+        "photo": {
+          "key": "<media>",
+          "label": "<media>",
+          "mime_type": "image/webp",
+          "url": "<url>",
+          "size": 144046,
+          "width": 1418,
+          "height": 1378
+        },
+        "embed": null,
+        "photos": [
+          {
+            "key": "<media>",
+            "label": "<media>",
+            "mime_type": "image/webp",
+            "url": "<url>",
+            "size": 144046,
+            "width": 1418,
+            "height": 1378
+          }
+        ],
+        "survey": null
+      },
+      "adult": false,
+      "tags": [
+        "gielda",
+        "meczennicyalphabet"
+      ],
+      "favourite": false,
+      "parent": null,
+      "votes": {
+        "up": 0,
+        "down": 0,
+        "users": []
+      },
+      "editable": false,
+      "deletable": false,
+      "comments": {
+        "items": [],
+        "count": 0
+      },
+      "resource": "entry",
+      "actions": {
+        "create": false,
+        "update": false,
+        "delete": false,
+        "vote_up": false,
+        "undo_vote": false,
+        "create_favourite": false,
+        "delete_favourite": false,
+        "report": false,
+        "pin": false,
+        "unpin": false
+      },
+      "archive": false,
+      "observed_discussion": false,
+      "status": "visible",
+      "tag_pinned_content": false,
+      "pinnable": false,
+      "card": null,
+      "family_friendly": true
+    },
+    {
+      "id": 5,
+      "slug": "gielda-podobienstwo-jest-uderzajace-a-co-ciekawe-o",
+      "author": {
+        "username": "uzytkownik11",
+        "gender": "m",
+        "company": false,
+        "avatar": "<url>",
+        "status": "active",
+        "color": "orange",
+        "verified": false,
+        "rank": {
+          "position": null,
+          "trend": 0
+        },
+        "blacklist": false,
+        "follow": false,
+        "donation": null,
+        "note": false,
+        "online": true
+      },
+      "device": "",
+      "created_at": "2026-10-01 06:38:52",
+      "voted": 0,
+      "content": "#gielda podobieństwo jest uderzające, a co ciekawe Oleg chyba z wykształcenia coś z ekonomią ma wspólnego, może podwójne życie jest prowadzone i nie wiecie ",
+      "media": {
+        "photo": null,
+        "embed": {
+          "key": "<media>",
+          "type": "youtube",
+          "thumbnail": "<url>",
+          "url": "<url>",
+          "age_category": "all",
+          "video_metadata": null,
+          "commercial": false
+        },
+        "photos": [],
+        "survey": null
+      },
+      "adult": true,
+      "tags": [
+        "gielda"
+      ],
+      "favourite": false,
+      "parent": null,
+      "votes": {
+        "up": 0,
+        "down": 0,
+        "users": []
+      },
+      "editable": false,
+      "deletable": false,
+      "comments": {
+        "items": [],
+        "count": 0
+      },
+      "resource": "entry",
+      "actions": {
+        "create": false,
+        "update": false,
+        "delete": false,
+        "vote_up": false,
+        "undo_vote": false,
+        "create_favourite": false,
+        "delete_favourite": false,
+        "report": false,
+        "pin": false,
+        "unpin": false
+      },
+      "archive": false,
+      "observed_discussion": false,
+      "status": "visible",
+      "tag_pinned_content": false,
+      "pinnable": false,
+      "card": null,
+      "family_friendly": true
+    },
+    {
+      "id": 6,
+      "slug": "gielda-https-x-com-schwabnetwork-status-2105315437",
+      "author": {
+        "username": "uzytkownik1",
+        "gender": "m",
+        "company": false,
+        "avatar": "<url>",
+        "status": "active",
+        "color": "orange",
+        "verified": false,
+        "rank": {
+          "position": null,
+          "trend": 0
+        },
+        "blacklist": false,
+        "follow": false,
+        "donation": null,
+        "note": false,
+        "online": true
+      },
+      "device": "",
+      "created_at": "2026-10-01 06:12:10",
+      "voted": 0,
+      "content": "#gielda \n\n<url>\n\nDobieram hujnixa, jak dla mnie ten boczniak to okazja po tych wynikach ",
+      "media": {
+        "photo": null,
+        "embed": {
+          "key": "<media>",
+          "type": "twitter",
+          "thumbnail": null,
+          "url": "<url>",
+          "age_category": null,
+          "video_metadata": null,
+          "commercial": false
+        },
+        "photos": [],
+        "survey": null
+      },
+      "adult": false,
+      "tags": [
+        "gielda"
+      ],
+      "favourite": false,
+      "parent": null,
+      "votes": {
+        "up": 1,
+        "down": 0,
+        "users": [
+          {
+            "username": "uzytkownik12",
+            "gender": null,
+            "company": false,
+            "avatar": "<url>",
+            "status": "active",
+            "color": "orange",
+            "verified": false,
+            "rank": {
+              "position": null,
+              "trend": 0
+            },
+            "blacklist": false,
+            "follow": false,
+            "donation": null,
+            "note": false,
+            "online": false
+          }
+        ]
+      },
+      "editable": false,
+      "deletable": false,
+      "comments": {
+        "items": [],
+        "count": 2
+      },
+      "resource": "entry",
+      "actions": {
+        "create": false,
+        "update": false,
+        "delete": false,
+        "vote_up": false,
+        "undo_vote": false,
+        "create_favourite": false,
+        "delete_favourite": false,
+        "report": false,
+        "pin": false,
+        "unpin": false
+      },
+      "archive": false,
+      "observed_discussion": false,
+      "status": "visible",
+      "tag_pinned_content": false,
+      "pinnable": false,
+      "card": null,
+      "family_friendly": true
+    },
+    {
+      "id": 7,
+      "slug": "gielda-gieldowegownowpisy-to-uczucie-gdy-pozycja-w",
+      "author": {
+        "username": "uzytkownik13",
+        "gender": "m",
+        "company": false,
+        "avatar": "<url>",
+        "status": "active",
+        "color": "orange",
+        "verified": false,
+        "rank": {
+          "position": null,
+          "trend": 0
+        },
+        "blacklist": false,
+        "follow": false,
+        "donation": null,
+        "note": false,
+        "online": true
+      },
+      "device": "",
+      "created_at": "2026-10-01 05:07:52",
+      "voted": 0,
+      "content": "#gielda #gieldowegownowpisy\n\nTo uczucie, gdy pozycja w CFD na micronie po wynikach jest stabilniejsza, niż niektóre pozycje w portfelu IKE xd\n\nDźwignia 5:1, to myślałem, że wstanę rano i będę wyzerowany, albo zarobiony, a tu boczniak. WTF.",
+      "media": {
+        "photo": null,
+        "embed": null,
+        "photos": [],
+        "survey": null
+      },
+      "adult": false,
+      "tags": [
+        "gielda",
+        "gieldowegownowpisy"
+      ],
+      "favourite": false,
+      "parent": null,
+      "votes": {
+        "up": 11,
+        "down": 0,
+        "users": [
+          {
+            "username": "uzytkownik14",
+            "gender": "m",
+            "company": false,
+            "avatar": "<url>",
+            "status": "active",
+            "color": "orange",
+            "verified": false,
+            "rank": {
+              "position": null,
+              "trend": 0
+            },
+            "blacklist": false,
+            "follow": false,
+            "donation": null,
+            "note": false,
+            "online": false
+          },
+          {
+            "username": "uzytkownik15",
+            "gender": null,
+            "company": false,
+            "avatar": "<url>",
+            "status": "active",
+            "color": "orange",
+            "verified": false,
+            "rank": {
+              "position": null,
+              "trend": 0
+            },
+            "blacklist": false,
+            "follow": false,
+            "donation": null,
+            "note": false,
+            "online": false
+          },
+          {
+            "username": "uzytkownik16",
+            "gender": "m",
+            "company": false,
+            "avatar": "",
+            "status": "active",
+            "color": "orange",
+            "verified": false,
+            "rank": {
+              "position": null,
+              "trend": 0
+            },
+            "blacklist": false,
+            "follow": false,
+            "donation": null,
+            "note": false,
+            "online": true
+          },
+          {
+            "username": "uzytkownik17",
+            "gender": "m",
+            "company": false,
+            "avatar": "<url>",
+            "status": "active",
+            "color": "orange",
+            "verified": false,
+            "rank": {
+              "position": null,
+              "trend": 0
+            },
+            "blacklist": false,
+            "follow": false,
+            "donation": null,
+            "note": false,
+            "online": false
+          },
+          {
+            "username": "uzytkownik8",
+            "gender": "m",
+            "company": false,
+            "avatar": "<url>",
+            "status": "active",
+            "color": "orange",
+            "verified": false,
+            "rank": {
+              "position": null,
+              "trend": 0
+            },
+            "blacklist": false,
+            "follow": false,
+            "donation": null,
+            "note": false,
+            "online": false
+          }
+        ]
+      },
+      "editable": false,
+      "deletable": false,
+      "comments": {
+        "items": [],
+        "count": 5
+      },
+      "resource": "entry",
+      "actions": {
+        "create": false,
+        "update": false,
+        "delete": false,
+        "vote_up": false,
+        "undo_vote": false,
+        "create_favourite": false,
+        "delete_favourite": false,
+        "report": false,
+        "pin": false,
+        "unpin": false
+      },
+      "archive": false,
+      "observed_discussion": false,
+      "status": "visible",
+      "tag_pinned_content": false,
+      "pinnable": false,
+      "card": null,
+      "family_friendly": true
+    },
+    {
+      "id": 8,
+      "slug": "gielda",
+      "author": {
+        "username": "uzytkownik18",
+        "gender": "m",
+        "company": false,
+        "avatar": "<url>",
+        "status": "active",
+        "color": "orange",
+        "verified": false,
+        "rank": {
+          "position": null,
+          "trend": 0
+        },
+        "blacklist": false,
+        "follow": false,
+        "donation": null,
+        "note": false,
+        "online": false
+      },
+      "device": "",
+      "created_at": "2026-10-01 03:28:24",
+      "voted": 0,
+      "content": "#gielda ",
+      "media": {
+        "photo": null,
+        "embed": null,
+        "photos": [],
+        "survey": null
+      },
+      "adult": false,
+      "tags": [
+        "gielda"
+      ],
+      "favourite": false,
+      "parent": null,
+      "votes": {
+        "up": 3,
+        "down": 0,
+        "users": [
+          {
+            "username": "uzytkownik19",
+            "gender": "m",
+            "company": false,
+            "avatar": "<url>",
+            "status": "active",
+            "color": "green",
+            "verified": false,
+            "rank": {
+              "position": null,
+              "trend": 0
+            },
+            "blacklist": false,
+            "follow": false,
+            "donation": null,
+            "note": false,
+            "online": true
+          },
+          {
+            "username": "uzytkownik20",
+            "gender": "m",
+            "company": true,
+            "avatar": "<url>",
+            "status": "active",
+            "color": "orange",
+            "verified": false,
+            "rank": {
+              "position": null,
+              "trend": 0
+            },
+            "blacklist": false,
+            "follow": false,
+            "donation": null,
+            "note": false,
+            "online": true
+          },
+          {
+            "username": "uzytkownik14",
+            "gender": "m",
+            "company": false,
+            "avatar": "<url>",
+            "status": "active",
+            "color": "orange",
+            "verified": false,
+            "rank": {
+              "position": null,
+              "trend": 0
+            },
+            "blacklist": false,
+            "follow": false,
+            "donation": null,
+            "note": false,
+            "online": false
+          }
+        ]
+      },
+      "editable": false,
+      "deletable": false,
+      "comments": {
+        "items": [],
+        "count": 0
+      },
+      "resource": "entry",
+      "actions": {
+        "create": false,
+        "update": false,
+        "delete": false,
+        "vote_up": false,
+        "undo_vote": false,
+        "create_favourite": false,
+        "delete_favourite": false,
+        "report": false,
+        "pin": false,
+        "unpin": false
+      },
+      "archive": false,
+      "observed_discussion": false,
+      "status": "visible",
+      "tag_pinned_content": false,
+      "pinnable": false,
+      "card": null,
+      "family_friendly": true
+    },
+    {
+      "id": 9,
+      "slug": "czy-zakladajac-optymistycznie-50-pozostalych-lat-z",
+      "author": {
+        "username": "uzytkownik3",
+        "gender": "m",
+        "company": false,
+        "avatar": "<url>",
+        "status": "active",
+        "color": "orange",
+        "verified": false,
+        "rank": {
+          "position": null,
+          "trend": 0
+        },
+        "blacklist": false,
+        "follow": false,
+        "donation": null,
+        "note": false,
+        "online": false
+      },
+      "device": "",
+      "created_at": "2026-10-01 00:30:05",
+      "voted": 0,
+      "content": "Czy zakładając optymistycznie 50 pozostałych lat życia doczekam się tego legendarnego $1500 na Micronie? \n\n#gielda #meczennicymu",
+      "media": {
+        "photo": null,
+        "embed": null,
+        "photos": [],
+        "survey": {
+          "key": "<media>",
+          "question": "$1500 na Micronie?",
+          "answers": [
+            {
+              "text": "Nie, isover",
+              "id": 10,
+              "count": 34,
+              "voted": 0
+            },
+            {
+              "text": "Tak, ale kiedy $1500 to będzie cena kebaba",
+              "id": 11,
+              "count": 36,
+              "voted": 0
+            },
+            {
+              "text": "Tak, przed 2027",
+              "id": 12,
+              "count": 25,
+              "voted": 0
+            },
+            {
+              "text": "Tak, jutro",
+              "id": 13,
+              "count": 21,
+              "voted": 0
+            }
+          ],
+          "voted": 0,
+          "count": 116,
+          "editable": false,
+          "deletable": false,
+          "actions": {
+            "create": false,
+            "update": false,
+            "delete": false,
+            "vote": false
+          }
+        }
+      },
+      "adult": false,
+      "tags": [
+        "gielda",
+        "meczennicymu"
+      ],
+      "favourite": false,
+      "parent": null,
+      "votes": {
+        "up": 0,
+        "down": 0,
+        "users": []
+      },
+      "editable": false,
+      "deletable": false,
+      "comments": {
+        "items": [],
+        "count": 1
+      },
+      "resource": "entry",
+      "actions": {
+        "create": false,
+        "update": false,
+        "delete": false,
+        "vote_up": false,
+        "undo_vote": false,
+        "create_favourite": false,
+        "delete_favourite": false,
+        "report": false,
+        "pin": false,
+        "unpin": false
+      },
+      "archive": false,
+      "observed_discussion": false,
+      "status": "visible",
+      "tag_pinned_content": false,
+      "pinnable": false,
+      "card": null,
+      "family_friendly": true
+    },
+    {
+      "id": 14,
+      "slug": "meczennicyunimlot-gielda-https-wykop-pl-wpis-87653",
+      "author": {
+        "username": "uzytkownik21",
+        "gender": null,
+        "company": false,
+        "avatar": "<url>",
+        "status": "active",
+        "color": "orange",
+        "verified": false,
+        "rank": {
+          "position": 2040,
+          "trend": 1
+        },
+        "blacklist": false,
+        "follow": false,
+        "donation": null,
+        "note": false,
+        "online": false
+      },
+      "device": "",
+      "created_at": "2026-10-01 00:15:22",
+      "voted": 0,
+      "content": "#meczennicyunimlot #gielda\n\n<url>\n\nWierzyć analitykom boś (260 zł) czy Pekao (140 zł) czy wykop (250 zł)?",
+      "media": {
+        "photo": null,
+        "embed": null,
+        "photos": [],
+        "survey": null
+      },
+      "adult": false,
+      "tags": [
+        "meczennicyunimlot",
+        "gielda"
+      ],
+      "favourite": false,
+      "parent": null,
+      "votes": {
+        "up": 1,
+        "down": 0,
+        "users": [
+          {
+            "username": "uzytkownik22",
+            "gender": "m",
+            "company": false,
+            "avatar": "<url>",
+            "status": "active",
+            "color": "orange",
+            "verified": false,
+            "rank": {
+              "position": null,
+              "trend": 0
+            },
+            "blacklist": false,
+            "follow": false,
+            "donation": null,
+            "note": false,
+            "online": true
+          }
+        ]
+      },
+      "editable": false,
+      "deletable": false,
+      "comments": {
+        "items": [],
+        "count": 3
+      },
+      "resource": "entry",
+      "actions": {
+        "create": false,
+        "update": false,
+        "delete": false,
+        "vote_up": false,
+        "undo_vote": false,
+        "create_favourite": false,
+        "delete_favourite": false,
+        "report": false,
+        "pin": false,
+        "unpin": false
+      },
+      "archive": false,
+      "observed_discussion": false,
+      "status": "visible",
+      "tag_pinned_content": false,
+      "pinnable": false,
+      "card": null,
+      "family_friendly": true
+    },
+    {
+      "id": 15,
+      "slug": "gielda-54-23-mld-to-przychody-microna-za-jeden-kwa",
+      "author": {
+        "username": "uzytkownik10",
+        "gender": null,
+        "company": false,
+        "avatar": "<url>",
+        "status": "active",
+        "color": "orange",
+        "verified": false,
+        "rank": {
+          "position": null,
+          "trend": 0
+        },
+        "blacklist": false,
+        "follow": false,
+        "donation": null,
+        "note": false,
+        "online": true
+      },
+      "device": "",
+      "created_at": "2026-10-01 00:09:47",
+      "voted": 0,
+      "content": "#gielda 54,23 mld to przychody Microna za jeden kwartał a to co widzicie to wyniki AMD\nZyski to totalna deklasacja\nA różnica w kapitalizacji spółek to około 10-15% \n \n#meczennicymicron",
+      "media": {
+        "photo": {
+          "key": "<media>",
+          "label": "<media>",
+          "mime_type": "image/png",
+          "url": "<url>",
+          "size": 37892,
+          "width": 1292,
+          "height": 370
+        },
+        "embed": null,
+        "photos": [
+          {
+            "key": "<media>",
+            "label": "<media>",
+            "mime_type": "image/png",
+            "url": "<url>",
+            "size": 37892,
+            "width": 1292,
+            "height": 370
+          }
+        ],
+        "survey": null
+      },
+      "adult": false,
+      "tags": [
+        "gielda",
+        "meczennicymicron"
+      ],
+      "favourite": false,
+      "parent": null,
+      "votes": {
+        "up": 2,
+        "down": 0,
+        "users": [
+          {
+            "username": "uzytkownik23",
+            "gender": "m",
+            "company": false,
+            "avatar": "<url>",
+            "status": "active",
+            "color": "orange",
+            "verified": false,
+            "rank": {
+              "position": null,
+              "trend": 0
+            },
+            "blacklist": false,
+            "follow": false,
+            "donation": null,
+            "note": false,
+            "online": true
+          },
+          {
+            "username": "uzytkownik1",
+            "gender": "m",
+            "company": false,
+            "avatar": "<url>",
+            "status": "active",
+            "color": "orange",
+            "verified": false,
+            "rank": {
+              "position": null,
+              "trend": 0
+            },
+            "blacklist": false,
+            "follow": false,
+            "donation": null,
+            "note": false,
+            "online": true
+          }
+        ]
+      },
+      "editable": false,
+      "deletable": false,
+      "comments": {
+        "items": [],
+        "count": 3
+      },
+      "resource": "entry",
+      "actions": {
+        "create": false,
+        "update": false,
+        "delete": false,
+        "vote_up": false,
+        "undo_vote": false,
+        "create_favourite": false,
+        "delete_favourite": false,
+        "report": false,
+        "pin": false,
+        "unpin": false
+      },
+      "archive": false,
+      "observed_discussion": false,
+      "status": "visible",
+      "tag_pinned_content": false,
+      "pinnable": false,
+      "card": null,
+      "family_friendly": true
+    },
+    {
+      "id": 16,
+      "slug": "podklad-muzyczny-dla-tagu-https-www-youtube-com-wa",
+      "author": {
+        "username": "uzytkownik24",
+        "gender": null,
+        "company": false,
+        "avatar": "<url>",
+        "status": "active",
+        "color": "orange",
+        "verified": false,
+        "rank": {
+          "position": null,
+          "trend": 0
+        },
+        "blacklist": false,
+        "follow": false,
+        "donation": null,
+        "note": false,
+        "online": false
+      },
+      "device": "",
+      "created_at": "2026-10-01 00:01:52",
+      "voted": 0,
+      "content": "Podkład muzyczny dla tagu\n\n<url>\n#gieldowegownowpisy #gielda",
+      "media": {
+        "photo": null,
+        "embed": {
+          "key": "<media>",
+          "type": "youtube",
+          "thumbnail": "<url>",
+          "url": "<url>",
+          "age_category": "all",
+          "video_metadata": null,
+          "commercial": false
+        },
+        "photos": [],
+        "survey": null
+      },
+      "adult": false,
+      "tags": [
+        "gieldowegownowpisy",
+        "gielda"
+      ],
+      "favourite": false,
+      "parent": null,
+      "votes": {
+        "up": 7,
+        "down": 0,
+        "users": [
+          {
+            "username": "uzytkownik25",
+            "gender": null,
+            "company": false,
+            "avatar": "",
+            "status": "active",
+            "color": "orange",
+            "verified": false,
+            "rank": {
+              "position": null,
+              "trend": 0
+            },
+            "blacklist": false,
+            "follow": false,
+            "donation": null,
+            "note": false,
+            "online": false
+          },
+          {
+            "username": "uzytkownik26",
+            "gender": null,
+            "company": false,
+            "avatar": "<url>",
+            "status": "active",
+            "color": "orange",
+            "verified": false,
+            "rank": {
+              "position": null,
+              "trend": 0
+            },
+            "blacklist": false,
+            "follow": false,
+            "donation": null,
+            "note": false,
+            "online": false
+          },
+          {
+            "username": "uzytkownik10",
+            "gender": null,
+            "company": false,
+            "avatar": "<url>",
+            "status": "active",
+            "color": "orange",
+            "verified": false,
+            "rank": {
+              "position": null,
+              "trend": 0
+            },
+            "blacklist": false,
+            "follow": false,
+            "donation": null,
+            "note": false,
+            "online": true
+          },
+          {
+            "username": "uzytkownik14",
+            "gender": "m",
+            "company": false,
+            "avatar": "<url>",
+            "status": "active",
+            "color": "orange",
+            "verified": false,
+            "rank": {
+              "position": null,
+              "trend": 0
+            },
+            "blacklist": false,
+            "follow": false,
+            "donation": null,
+            "note": false,
+            "online": false
+          },
+          {
+            "username": "uzytkownik27",
+            "gender": "m",
+            "company": false,
+            "avatar": "<url>",
+            "status": "active",
+            "color": "orange",
+            "verified": false,
+            "rank": {
+              "position": null,
+              "trend": 0
+            },
+            "blacklist": false,
+            "follow": false,
+            "donation": null,
+            "note": false,
+            "online": true
+          }
+        ]
+      },
+      "editable": false,
+      "deletable": false,
+      "comments": {
+        "items": [],
+        "count": 0
+      },
+      "resource": "entry",
+      "actions": {
+        "create": false,
+        "update": false,
+        "delete": false,
+        "vote_up": false,
+        "undo_vote": false,
+        "create_favourite": false,
+        "delete_favourite": false,
+        "report": false,
+        "pin": false,
+        "unpin": false
+      },
+      "archive": false,
+      "observed_discussion": false,
+      "status": "visible",
+      "tag_pinned_content": false,
+      "pinnable": false,
+      "card": null,
+      "family_friendly": true
+    }
+  ],
+  "pagination": {
+    "per_page": 50,
+    "total": 262
+  }
+}

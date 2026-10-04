@@ -557,25 +557,25 @@ Brak zmian danych i migracji Flyway. `SkeletonAgent` zastępuje `AssessorAgent`;
 
 #### Automated
 
-- [x] 4.1 Pełna weryfikacja przechodzi bez wywołań LLM: `cd szczur-radar-api && ./mvnw -B verify`
-- [x] 4.2 Każda klasa błędu ma test na sztucznym kliencie, a ocenialny wpis wywołuje klienta dokładnie raz; wpis bez treści — zero razy
-- [x] 4.3 `evaluate` na surowej odpowiedzi daje wynik identyczny z `assess` na kliencie zwracającym tę odpowiedź
-- [x] 4.4 `AssessorAgentIT` przechodzi; `SkeletonAgent` nie istnieje
-- [x] 4.5 Domyślne `./mvnw -B test` nie uruchamia testów z tagiem `measurement`
+- [x] 4.1 Pełna weryfikacja przechodzi bez wywołań LLM: `cd szczur-radar-api && ./mvnw -B verify` — 5732dde
+- [x] 4.2 Każda klasa błędu ma test na sztucznym kliencie, a ocenialny wpis wywołuje klienta dokładnie raz; wpis bez treści — zero razy — 5732dde
+- [x] 4.3 `evaluate` na surowej odpowiedzi daje wynik identyczny z `assess` na kliencie zwracającym tę odpowiedź — 5732dde
+- [x] 4.4 `AssessorAgentIT` przechodzi; `SkeletonAgent` nie istnieje — 5732dde
+- [x] 4.5 Domyślne `./mvnw -B test` nie uruchamia testów z tagiem `measurement` — 5732dde
 
 #### Manual
 
-- [x] 4.6 `LiveSmokeTest` wykonany trzy razy (Gemini `gemini-3.1-flash-lite`, DeepSeek Flash, OpenRouter `openai/gpt-6-luna` z `LLM_SERVICE_TIER=flex`): dla każdego zgodność z kontraktem ≥90% i najwyżej jedno `provider_error` lub `invalid_structured_output`; wyniki (z mianownikiem i dla Luny odsetkiem odmów 429 i medianą czasu) w opisie PR
-- [x] 4.7 Pochodzenie ma wypełnione tokeny (w tym cache, gdy dostawca je zgłasza), wersję promptu i kontraktu dla wszystkich trzech; potwierdzona nazwa modelu DeepSeek Flash przyjmowana przez API
+- [x] 4.6 `LiveSmokeTest` wykonany trzy razy (Gemini `gemini-3.1-flash-lite`, DeepSeek Flash, OpenRouter `openai/gpt-6-luna` z `LLM_SERVICE_TIER=flex`): dla każdego zgodność z kontraktem ≥90% i najwyżej jedno `provider_error` lub `invalid_structured_output`; wyniki (z mianownikiem i dla Luny odsetkiem odmów 429 i medianą czasu) w opisie PR — 5732dde
+- [x] 4.7 Pochodzenie ma wypełnione tokeny (w tym cache, gdy dostawca je zgłasza), wersję promptu i kontraktu dla wszystkich trzech; potwierdzona nazwa modelu DeepSeek Flash przyjmowana przez API — 5732dde
 
 ### Phase 5: Zestaw wzorcowy
 
 #### Automated
 
-- [ ] 5.1 Testy mappera, miar i danych wzorca przechodzą: `cd szczur-radar-api && ./mvnw -B test`
+- [x] 5.1 Testy mappera, miar i danych wzorca przechodzą: `cd szczur-radar-api && ./mvnw -B test`
 - [ ] 5.2 Wzorzec ma co najmniej 100 postów nie-„trudnych” z dwóch różnych dni, żadnego z 2026-09-28 ani 2026-09-29 (`GoldDataTest`)
 - [ ] 5.3 `posts.json` i `labels.json` nie zawierają nicków autorów ani adresów URL (`GoldDataTest`)
-- [ ] 5.4 Każda miara ma test na danych syntetycznych z ręcznie policzonym wynikiem
+- [x] 5.4 Każda miara ma test na danych syntetycznych z ręcznie policzonym wynikiem
 
 #### Manual
 

@@ -113,3 +113,28 @@ EOF
 
 The recordings only need to be real responses of the API shape; whether the model's answer meets
 the contract is measured separately (live smoke, gold recordings).
+
+## Gold sample (`WykopGoldSampler`, plan phase 5)
+
+Reads every #gielda entry and link added on the requested days through
+`sources/wykop/WykopRepository` (Wykop search API: `GET search/entries` and `GET search/links` with
+`tags[]`, `date_from`/`date_to`, 50 per page until `pagination.total`), maps
+each element with `sources/wykop/WykopMapper`, anonymizes it (`@nick` and authors' nicks →
+`@uzytkownikN`, URLs → `<url>`, white space untouched), drops entries without content (`Prefilter`),
+draws 60 posts per day with a fixed seed and writes
+`src/test/resources/fixtures/assessor/gold/posts.json` (`[{post_id, day, input}]`). Raw API answers
+are never written. Days 2026-09-28 and 2026-09-29 (the pilots) are refused.
+
+```bash
+# keys of a Wykop app (dev.wykop.pl), only in your shell
+( export WYKOP_KEY=… WYKOP_SECRET=… && \
+  ./mvnw -Pmeasurement test -Dtest=WykopGoldSampler -Dgold.days=<d1>,<d2> )
+# optional: -Dgold.perDay=60 -Dgold.seed=20261004 -Dgold.out=<path>
+```
+
+Check the printed counts and skim `posts.json` for nicks or names the anonymizer missed before
+committing it. Then label every post in
+`context/changes/assessment-contract-harness/pilot/labeling-gold.html` (guidelines v1.0) and save the
+export as `src/test/resources/fixtures/assessor/gold/labels.json`. `GoldDataTest` is skipped until
+the files exist and mandatory from then on (≥ 100 posts not marked "hard", two days, no nicks or
+URLs, every anchor taken from its post). Metrics: `GoldMetrics` (thresholds in `GoldMetrics.Metric`).

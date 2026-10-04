@@ -61,7 +61,7 @@
 </header>
 <main>
   <div id="empty" class="card">
-    <p>Wczytaj <b>posts.json</b> (<code>szczur-radar-api/tests/agents/assessor/gold/posts.json</code>).</p>
+    <p>Wczytaj <b>posts.json</b> (<code>szczur-radar-api/src/test/resources/fixtures/assessor/gold/posts.json</code>).</p>
     <p class="hint">Etykiety zapisują się w przeglądarce na bieżąco; na końcu „Eksportuj labels.json” i zapisz plik obok posts.json.</p>
   </div>
 
@@ -238,7 +238,7 @@ $("export").onclick = () => {
   if (!POSTS.length) { alert("Najpierw wczytaj posts.json."); return; }
   const missing = POSTS.filter(p => !isDone(p.post_id)).length;
   if (missing && !confirm(`${missing} post(ów) nie jest jeszcze przejrzanych. Eksportować mimo to?`)) return;
-  // Format read by app/agents/assessor/evaluation.py (load_labels).
+  // Format read by szczur-radar-api/src/test/java/pl/szczurradar/api/measurement/GoldLabels.java (readLabels).
   const out = POSTS.filter(p => labels[p.post_id] && labels[p.post_id].relevance).map(p => {
     const l = labels[p.post_id];
     return { post_id: p.post_id, relevance: l.relevance, hard: !!l.hard, note: l.note || "",

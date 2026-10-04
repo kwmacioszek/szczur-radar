@@ -6,10 +6,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Clock;
-import java.time.LocalDateTime;
-import java.time.OffsetDateTime;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
@@ -32,14 +28,12 @@ import pl.szczurradar.api.agents.assessor.Assessor;
 import pl.szczurradar.api.agents.assessor.Prefilter;
 import pl.szczurradar.api.agents.assessor.Provenance;
 import pl.szczurradar.api.agents.assessor.contract.AssessmentInputV1;
-import pl.szczurradar.api.agents.assessor.contract.Context;
-import pl.szczurradar.api.agents.assessor.contract.Item;
-import pl.szczurradar.api.agents.assessor.contract.ItemType;
-import pl.szczurradar.api.agents.assessor.text.Whitespace;
 import pl.szczurradar.api.agents.assessor.validation.FailureClass;
 import pl.szczurradar.api.agents.assessor.validation.Violation;
 import pl.szczurradar.api.config.LlmProviderProperties;
 import pl.szczurradar.api.llm.LlmClientFactory;
+import pl.szczurradar.api.sources.wykop.WykopItem;
+import pl.szczurradar.api.sources.wykop.WykopMapper;
 
 /**
  * Live check of one provider before the gold measurement (plan phase 4): the first
@@ -56,10 +50,6 @@ class LiveSmokeTest {
 	static final int ASSESSED = 30;
 
 	static final String DEFAULT_SAMPLE = "../context/changes/assessment-contract-harness/pilot/wykop-gielda-sample-2026-09-29.json";
-
-	private static final ZoneId WYKOP_ZONE = ZoneId.of("Europe/Warsaw");
-
-	private static final DateTimeFormatter WYKOP_TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
 	/** The pilot sample's record: a Wykop entry or link, anonymized. */
 	@JsonIgnoreProperties(ignoreUnknown = true)
@@ -106,23 +96,11 @@ class LiveSmokeTest {
 		assertThat(calls).as("assessable posts in the sample").hasSize(ASSESSED);
 	}
 
-	/** Maps a pilot record to the contract input: entry → post, link → link, Warsaw time with offset. */
+	/** A pilot record in the API's field names, mapped by {@link WykopMapper} like a live element. */
 	static AssessmentInputV1 input(SampleRecord record) {
-		ItemType type = switch (record.resource()) {
-			case "entry" -> ItemType.POST;
-			case "link" -> ItemType.LINK;
-			default -> throw new IllegalArgumentException("unsupported resource " + record.resource());
-		};
-		OffsetDateTime publishedAt = LocalDateTime.parse(record.createdAt(), WYKOP_TIME)
-			.atZone(WYKOP_ZONE)
-			.toOffsetDateTime();
-		return AssessmentInputV1.of(
-				new Item(type, publishedAt, List.of("gielda"), textOrNull(record.title()), textOrNull(record.body())),
-				Context.NONE);
-	}
-
-	private static @Nullable String textOrNull(@Nullable String text) {
-		return text == null || Whitespace.normalize(text).isEmpty() ? null : text;
+		boolean entry = "entry".equals(record.resource());
+		return WykopMapper.map(new WykopItem(record.resource(), null, record.createdAt(), entry ? record.body() : null,
+				entry ? null : record.title(), entry ? null : record.body(), null, null), "gielda");
 	}
 
 	private static void report(LlmProviderProperties properties, int inputs, int prefiltered,
