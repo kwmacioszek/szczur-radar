@@ -1,6 +1,6 @@
 import AppKit
 
-// Snapshot of M-1 in context/foundation/roadmap.md, updated 2026-10-03.
+// Snapshot of M-1 in context/foundation/roadmap.md, updated 2026-10-04.
 // Run on macOS: swift tools/render_roadmap.swift
 // With the installed Command Line Tools SDK:
 // CLANG_MODULE_CACHE_PATH=/private/tmp/szczur-clang-cache \
@@ -218,7 +218,7 @@ struct Parked {
 let parked: [(label: String, first: Parked, second: Parked)] = [
     ("ŹRÓDŁA I JAKOŚĆ",
      Parked(title:"Reddit i komentarze", refs:"FR-023 + komentarze", description:"Drugie źródło postów oraz rozmowy pod postami, mapowane do wspólnego modelu."),
-     Parked(title:"Bogatsza ocena sygnału", refs:"Poza MVP / przyszły pipeline", description:"Rozpoznawanie spółek, decyzja o wartości sygnału, nowość, zaangażowanie i modele ML.")),
+     Parked(title:"Bogatsza ocena sygnału", refs:"Poza MVP / przyszły pipeline", description:"Rozpoznawanie spółek, wartość sygnału, nowość, zaangażowanie, modele ML i ocena obrazków.")),
     ("ANALIZA I ODKRYWANIE",
      Parked(title:"Wykresy i alerty", refs:"FR-024 / FR-025", description:"Trend sygnałów na wykresie giełdowym i powiadomienia o obiecującym trendzie."),
      Parked(title:"Ask szczur", refs:"FR-032", description:"Pytania do LLM o wybrany sygnał bez opuszczania widoku posta.")),
@@ -260,7 +260,7 @@ txt("S-02: gwiazda przewodnia — pierwszy pełny przepływ od Wykopu do użytko
 txt("Pierwszy rząd czytaj od prawej: S-01 → F-03 → F-02. S-01 jest też warunkiem S-02 i S-06 — wynika z tej ścieżki.", 136, 3493, 2850, 24, .regular, muted)
 txt("Przed bramką strzałki pokazują zależności. Za bramką wskazują możliwe rozszerzenia, bez ustalonej kolejności.", 136, 3541, 2850, 24, .regular, muted)
 
-txt("Źródło: context/foundation/roadmap.md  ·  M-1 / v2.6  ·  Stan roadmapy: 03.10.2026  ·  Milestone otwarty", 100, 3660, 2200, 22, .regular, muted)
+txt("Źródło: context/foundation/roadmap.md  ·  M-1 / v2.7  ·  Stan roadmapy: 04.10.2026  ·  Milestone otwarty", 100, 3660, 2200, 22, .regular, muted)
 txt("MAPA ZALEŻNOŚCI · BEZ TERMINÓW", 2520, 3660, 540, 20, .semibold, muted)
 
 context.flushGraphics()

@@ -5,6 +5,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -31,6 +32,13 @@ public final class GoldLabels {
 
 	public static final Path LABELS = DIRECTORY.resolve("labels.json");
 
+	/**
+	 * Default place of the links to the sampled posts on wykop.pl ({@code {post_id: url}}): outside the
+	 * repo, because a link leads to the author.
+	 */
+	public static final Path LOCAL_LINKS = Path.of(System.getProperty("user.home"), ".config", "szczur-radar",
+			"gold-links.json");
+
 	/** Days whose posts shaped the contract's rules (pilots); never part of the gold set. */
 	public static final List<LocalDate> EXCLUDED_DAYS = List.of(LocalDate.parse("2026-09-28"),
 			LocalDate.parse("2026-09-29"));
@@ -38,15 +46,27 @@ public final class GoldLabels {
 	private GoldLabels() {
 	}
 
-	/** One sampled post: an anonymized, assessable contract input. */
-	@JsonPropertyOrder({ "post_id", "day", "input" })
-	public record Post(@JsonProperty("post_id") String postId, LocalDate day, AssessmentInputV1 input) {
+	/**
+	 * One sampled post: an anonymized, assessable contract input and which attachments the source
+	 * element had. {@code media} is a hint for the labeling sheet only — the model never sees it.
+	 */
+	@JsonPropertyOrder({ "post_id", "day", "media", "input" })
+	public record Post(@JsonProperty("post_id") String postId, LocalDate day, Media media, AssessmentInputV1 input) {
 
 		public Post {
 			Objects.requireNonNull(postId, "post_id");
 			Objects.requireNonNull(day, "day");
+			Objects.requireNonNull(media, "media");
 			Objects.requireNonNull(input, "input");
 		}
+
+	}
+
+	/** Whether the source element had a picture, an embed or a poll (their content is not in the input). */
+	@JsonPropertyOrder({ "photo", "embed", "survey" })
+	public record Media(boolean photo, boolean embed, boolean survey) {
+
+		public static final Media NONE = new Media(false, false, false);
 
 	}
 
@@ -91,10 +111,19 @@ public final class GoldLabels {
 
 	/** Writes {@code posts.json}: indented, non-ASCII text unescaped, one trailing newline. */
 	public static void writePosts(Path path, List<Post> posts) throws IOException {
+		write(path, posts);
+	}
+
+	/** Writes the local {@code {post_id: url}} file read by the labeling sheet. */
+	public static void writeLinks(Path path, Map<String, String> links) throws IOException {
+		write(path, links);
+	}
+
+	private static void write(Path path, Object value) throws IOException {
 		Files.createDirectories(path.toAbsolutePath().getParent());
 		Files.writeString(path, ContractJson.MAPPER.writer()
 			.with(SerializationFeature.INDENT_OUTPUT)
-			.writeValueAsString(posts) + "\n");
+			.writeValueAsString(value) + "\n");
 	}
 
 }

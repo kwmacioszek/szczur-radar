@@ -43,7 +43,9 @@ import pl.szczurradar.api.sources.wykop.WykopRepository;
  * </pre>
  *
  * Optional: {@code -Dgold.perDay=60}, {@code -Dgold.seed=20261004}, {@code -Dgold.out=<path>}
- * (default {@link GoldLabels#POSTS}).
+ * (default {@link GoldLabels#POSTS}), {@code -Dgold.links=<path>} (default
+ * {@link GoldLabels#LOCAL_LINKS}, outside the repo: {@code {post_id: url}} for the labeling sheet).
+ * Each post records whether it had a picture, embed or poll ({@code media}) — the model sees text only.
  *
  * <p>Anonymization: {@code @nick} mentions and authors' nicks (as whole words, ≥ 4 characters) become
  * {@code @uzytkownikN} (one number per nick in the whole sample), URLs become {@code <url>}; white
@@ -68,6 +70,7 @@ class WykopGoldSampler {
 		int perDay = Integer.getInteger("gold.perDay", 60);
 		long seed = Long.getLong("gold.seed", 20261004L);
 		Path out = Path.of(System.getProperty("gold.out", GoldLabels.POSTS.toString()));
+		Path linksOut = Path.of(System.getProperty("gold.links", GoldLabels.LOCAL_LINKS.toString()));
 
 		WykopRepository wykop = new WykopRepository(new WykopApiClient(env("WYKOP_KEY"), env("WYKOP_SECRET")));
 		Map<LocalDate, List<WykopItem>> byDay = new TreeMap<>();
@@ -76,26 +79,33 @@ class WykopGoldSampler {
 		Anonymizer anonymizer = new Anonymizer(
 				byDay.values().stream().flatMap(List::stream).map(WykopGoldSampler::author).filter(nick -> nick != null).toList());
 		List<Post> posts = new ArrayList<>();
+		Map<String, String> links = new LinkedHashMap<>();
 		for (Map.Entry<LocalDate, List<WykopItem>> day : byDay.entrySet()) {
-			List<AssessmentInputV1> assessable = new ArrayList<>();
+			List<Candidate> assessable = new ArrayList<>();
 			int unmappable = 0;
 			for (WykopItem raw : day.getValue()) {
 				try {
 					AssessmentInputV1 input = WykopMapper.map(anonymizer.apply(raw), TAG);
 					if (Prefilter.isAssessable(input)) {
-						assessable.add(input);
+						assessable.add(new Candidate(raw, input));
 					}
 				}
 				catch (UnmappableItemException ex) {
 					unmappable++;
 				}
 			}
-			List<AssessmentInputV1> drawn = new ArrayList<>(assessable);
+			List<Candidate> drawn = new ArrayList<>(assessable);
 			Collections.shuffle(drawn, new Random(seed + day.getKey().toEpochDay()));
 			drawn = new ArrayList<>(drawn.subList(0, Math.min(perDay, drawn.size())));
-			drawn.sort(Comparator.comparing(input -> input.item().publishedAt()));
+			drawn.sort(Comparator.comparing(candidate -> candidate.input().item().publishedAt()));
 			for (int i = 0; i < drawn.size(); i++) {
-				posts.add(new Post("%s-%s-%03d".formatted(TAG, day.getKey(), i), day.getKey(), drawn.get(i)));
+				Candidate candidate = drawn.get(i);
+				String postId = "%s-%s-%03d".formatted(TAG, day.getKey(), i);
+				posts.add(new Post(postId, day.getKey(), media(candidate.raw()), candidate.input()));
+				String url = candidate.raw().webUrl();
+				if (url != null) {
+					links.put(postId, url);
+				}
 			}
 			System.out.printf("%s: %d elements, %d unmappable, %d without content, %d assessable, %d drawn%n",
 					day.getKey(), day.getValue().size(), unmappable,
@@ -105,8 +115,21 @@ class WykopGoldSampler {
 				anonymizer.mentions, anonymizer.bareNicks, anonymizer.urls);
 
 		GoldLabels.writePosts(out, posts);
-		System.out.println("wrote " + posts.size() + " posts to " + out.toAbsolutePath());
+		System.out.println("wrote " + posts.size() + " posts to " + out.toAbsolutePath()
+				+ " (with a picture: " + posts.stream().filter(post -> post.media().photo()).count() + ")");
+		GoldLabels.writeLinks(linksOut, links);
+		System.out.println("wrote " + links.size() + " links to " + linksOut.toAbsolutePath() + " — outside the repo");
 		assertThat(posts).as("drawn posts").isNotEmpty();
+	}
+
+	/** A drawable post: the raw element (for media and the link) and its anonymized input. */
+	private record Candidate(WykopItem raw, AssessmentInputV1 input) {
+	}
+
+	private static GoldLabels.Media media(WykopItem item) {
+		WykopItem.Media media = item.media();
+		return media == null ? GoldLabels.Media.NONE
+				: new GoldLabels.Media(media.photo() != null, media.embed() != null, media.survey() != null);
 	}
 
 	private static @Nullable String author(WykopItem item) {
@@ -155,7 +178,7 @@ class WykopGoldSampler {
 
 		WykopItem apply(WykopItem item) {
 			return new WykopItem(item.resource(), item.id(), item.createdAt(), text(item.content()), text(item.title()),
-					text(item.description()), item.tags(), null);
+					text(item.description()), item.tags(), null, item.slug(), item.media());
 		}
 
 		@Nullable String text(@Nullable String text) {

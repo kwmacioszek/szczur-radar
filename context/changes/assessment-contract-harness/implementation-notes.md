@@ -118,3 +118,31 @@ later phases. Each open check names the phase that closes it; `/10x-impl-review`
   `sources/CLAUDE.md` (how to add a source). Production code beyond the plan's phase 5 (which put
   only the mapper in `src/main`); not wired into any bean, route or schedule — S-02 does that, so the
   deploy does not change the service's behaviour.
+
+### N10. Media flags and local links in the gold sample (2026-10-04)
+
+- The labeling sheet showed text only, so a post whose sense is in a picture (e.g. 2026-10-01-003
+  „Taka ciekawostka z GPW”) gave no hint; the pilot had `has_photo`, the gold sampler dropped it.
+  `posts.json` now has `media: {photo, embed, survey}` per post (34 photos, 4 embeds in 120) and the
+  sampler writes `{post_id: url}` to `~/.config/szczur-radar/gold-links.json` (outside the repo); the
+  sheet shows 📷/🎬 and „otwórz na Wykopie” and states the rule: label the text as the model sees it,
+  a picture only tells that the sense is elsewhere (§5.5). Re-sampled with the same days and seed:
+  all 120 `post_id`s and inputs identical, so labels made earlier still apply.
+- Pictures as model input: parked in the roadmap (v2.7) as nice-to-have after MVP; the gold set
+  (`media.photo` + labels) and the phase 6 report give the size of the gap.
+
+### N11. Gold set labeled; contract §6.5a and prompt v2.3 (2026-10-04)
+
+- `labels.json`: 120/120 posts labeled by the user (instructions v1.0 → v1.1), 8 "hard", 112 counted;
+  relevance 86 / 18 / 16 (investment / not / unclear); directions bearish 32, not_expressed 23,
+  bullish 22, unclear 13 (no neutral, no mixed left). `GoldDataTest` green.
+- Labeling went through a mechanical rule check (anchor is a fragment of the post, dictionary
+  non-targets, tags, one target per subject, `neutral`/`mixed` against their definitions); every
+  correction was the user's decision, asked post by post. The assistant did not judge the meaning
+  of posts, so the gold set stays the user's.
+- Contract change (§16), user's decision: slang of a whole-market move ("dzien kibla", "pompa",
+  "spadki", "bessa", "krach") without a named target → target "rynek" (`macro_topic`), as "na
+  peronie" (§7.1.6) — new §6.5a; the prompt said "NIE są celami", which would have penalized models
+  for following it. §6.4 gets the mood-tag example (`#krachsmieciuchindex`). Prompt v2.3 (hash in
+  `AssessmentPromptTest`); `examples.md` example 6 stays valid (the move there concerns the named
+  index). Phase 4's live smoke was on v2.2; phase 6 records v2.3.

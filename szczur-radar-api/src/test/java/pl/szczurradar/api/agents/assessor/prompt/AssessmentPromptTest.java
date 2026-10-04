@@ -19,8 +19,9 @@ class AssessmentPromptTest {
 	 * {@link AssessmentPrompt#PROMPT_VERSION} fails here: recordings of different texts must never
 	 * share a version.
 	 */
-	private static final Map<String, String> SYSTEM_PROMPT_SHA256 = Map.of("v2.2",
-			"6a8da2c865c3350788e39d3f7824b05044fdb935f30b851d5f08a54e623f9b90");
+	private static final Map<String, String> SYSTEM_PROMPT_SHA256 = Map.of(
+			"v2.2", "6a8da2c865c3350788e39d3f7824b05044fdb935f30b851d5f08a54e623f9b90",
+			"v2.3", "365d5ba296187d13cd09bd4bba2fe2e5a452cb2cb14469bed7835970b1c97eff");
 
 	@Test
 	void theSystemPromptTextBelongsToItsVersion() throws NoSuchAlgorithmException {

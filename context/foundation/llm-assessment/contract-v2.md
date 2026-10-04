@@ -3,7 +3,7 @@ project: "Szczur Radar"
 document: "LLM Assessment Contract"
 version: 2
 status: accepted # zaakceptowany przez użytkownika 2026-10-01 (plan F-02, kryterium 1.6)
-updated: 2026-10-03
+updated: 2026-10-04
 source_of_truth: true
 supersedes: "V1 — context/foundation/archive/ (2026-10-01, llm-assessment contract V1)"
 ---
@@ -218,8 +218,9 @@ Bez powtórzeń. Flagi nie dublują `reference = ambiguous | unresolved`, `direc
 - **6.1 Cel to podmiot, nie teza** (3.1): spółka, ticker, aktywo (ropa, złoto, BTC), indeks, sektor („cyber security”, „pamięciorze”), temat makro („stopy”, „pokój z Iranem”, „Trump”, „rynek”). Zdanie „te akcje zaraz będą po 150 zł” to teza o celu „CD Projekt”, nie cel.
 - **6.2 Anchor** (3.2) = najkrótszy ciągły fragment tekstu nazywający cel, dokładnie jak w tekście — także slang, odmiana, literówka i hashtag („pamięciorzach”, „korłejw”, „mikrusa”, „szczurze”, „#wittchen”). Nigdy całe zdanie. Anchor nie ujednolica nazwy i nie dopisuje pełnej nazwy ani tickera.
 - **6.3 Każda nazwana spółka lub aktywo jest celem** (3.3) — także bez stanowiska (pytanie, informacja: „ataku hakerów na Enel-Med” → `not_expressed`) i gdy występuje tylko w tle jako narzędzie („odpalam XTB i patrzę na konto” → cel XTB, `not_expressed`). Reguła dotyczy wpisów `investment_related` i `unclear`; przy `not_investment_related` obowiązuje §4.
-- **6.4 Hashtag jako anchor** (3.4). Hashtag nazywający spółkę lub aktywo (`#wittchen`, `#cdprojektred`, `#meczennicyxtb`) może być anchorem celu; czytany dosłownie (`#wittchen` to Wittchen, nie Wiedźmin). **Tagi kanału** — wartości `item.channels` oraz tagi tematyczne bez nazwy spółki lub aktywa (`#gielda`, `#gieldowegownowpisy`, `#finanse`, `#inwestowanie`) — **nigdy nie są celem**.
-- **6.5 Slang bez nazwy** (3.5) — spekulacyjna spółka nazwana tylko slangiem („śmieciuch”) → cel ogólny `kind = other` z anchorem w oryginale („śmieciucha”) i kierunkiem. Słowa, które nie nazywają podmiotu („gruby” = duży gracz, „peron”, „pompa”, „zwała”), nie są celami. Słownik slangu jest materiałem pomocniczym promptu i instrukcji oznaczania, nie częścią kontraktu.
+- **6.4 Hashtag jako anchor** (3.4). Hashtag nazywający spółkę lub aktywo (`#wittchen`, `#cdprojektred`, `#meczennicyxtb`) może być anchorem celu; czytany dosłownie (`#wittchen` to Wittchen, nie Wiedźmin). **Tagi kanału** — wartości `item.channels` oraz tagi tematyczne bez nazwy spółki lub aktywa (`#gielda`, `#gieldowegownowpisy`, `#finanse`, `#inwestowanie`), w tym tagi nastroju (`#krachsmieciuchindex`) — **nigdy nie są celem**.
+- **6.5 Slang bez nazwy** (3.5) — spekulacyjna spółka nazwana tylko slangiem („śmieciuch”) → cel ogólny `kind = other` z anchorem w oryginale („śmieciucha”) i kierunkiem. Słowa, które nie nazywają podmiotu („gruby” = duży gracz), nie są celami. Słownik slangu jest materiałem pomocniczym promptu i instrukcji oznaczania, nie częścią kontraktu.
+- **6.5a Ruch całego rynku slangiem.** Słowo o ruchu rynku („pompa”, „kibel” / „dzień kibla”, „zwała”, „spadki”, „bessa”, „krach”), gdy post nie wiąże tego ruchu z nazwanym celem, wskazuje cel „rynek” (`macro_topic`); anchor = najkrótszy fragment z tym słowem („dzien kibla”, „pompa”), kierunek według §7.1 — tak jak „na peronie” (§7.1.6). Gdy ruch dotyczy nazwanego celu („indeks w końcu poleci w kibel”), słowo slangu nie tworzy osobnego celu (§6.7).
 - **6.6 Przeglądy wiadomości i artykuły** (3.6): cele = podmioty, o których post mówi; fakty z artykułu bez komentarza autora → `factual_claim` z `attribution = reported` lub `author` (gdy autor sam je podaje) i stanowisko `not_expressed`. Stanowisko tylko, gdy autor je dodaje.
 - **6.7 Jeden cel na podmiot.** Kolejne wzmianki o tym samym podmiocie w tym samym poście (także inną nazwą: „Micron” i „mikrusie”) nie tworzą nowego celu; anchorem jest jedna z nich, wybrana według 6.2.
 - **6.8 Anchor a `reference`.** `explicit`, `ambiguous` i `unresolved` ⇒ anchor z `item` (dla `unresolved` — fragment odsyłający, np. „Ta spółka”); `contextual` ⇒ anchor z istniejącego rodzica (`parent_post` lub `parent_comment`). W MVP rodziców nie ma, więc `contextual` nie występuje.
@@ -469,6 +470,11 @@ Podstawa: pilotaże na prawdziwych postach i ramowanie — `context/changes/asse
 | Klasy błędów i kolejność walidacji | w dokumencie pomocniczym | §12, z przypisaniem klasy do każdej reguły | walidator nie może niczego dopowiadać |
 | Wyjście | `AssessmentOutputV1` | `AssessmentOutputV2`; wejście bez zmian (`AssessmentInputV1`) | — |
 
+**Zmiany V2 przez regułę zmiany (§16):**
+
+- 2026-10-04 — §6.5a: slang ruchu całego rynku bez nazwanego celu wskazuje cel „rynek” (`macro_topic`), jak „na peronie” (§7.1.6); wcześniej „pompa”, „zwała” były wymienione jako „nie cele”. Powód: zestaw wzorcowy F-02 (posty 2026-10-01/02, m.in. „dzien kibla dzisiaj sie szykuje”, „będzie pompa jakiej mój portfel…”) — oznaczający czyta je jako stanowisko wobec rynku; decyzja użytkownika (`context/changes/assessment-contract-harness/implementation-notes.md`, N11). Prompt v2.3.
+
 **Zmiany redakcyjne V2** (bez zmiany znaczenia):
 
 - 2026-10-03 — §10: zbiór białych znaków wymieniony jawnie zamiast odwołania do funkcji języka programowania (ten sam zbiór znaków); normalizacja nazwana opisowo. Powód: implementacja w Javie (`assessment-contract-harness`, plan v3).
+- 2026-10-04 — §6.4: przykład tagu nastroju (`#krachsmieciuchindex`) wśród tagów, które nigdy nie są celem.

@@ -20,12 +20,15 @@ import pl.szczurradar.api.agents.assessor.contract.ContractJson;
 public final class AssessmentPrompt {
 
 	/**
-	 * v2.2: the pilots' short prompt rewritten for contract V2 with the labeling guidelines' slang
-	 * dictionary; no object of the schema ends with a nested object (v2.1); explicit
-	 * {@code not_expressed} → empty {@code claim_ids} (v2.2). The text is the one measured in the smoke
-	 * run of 2026-10-01.
+	 * v2.3: slang of a whole-market move without a named target → target "rynek" ({@code macro_topic}),
+	 * mood tags are never targets (contract §6.5a, §6.4; gold set 2026-10-04).
+	 *
+	 * <p>Earlier: v2.2 — the pilots' short prompt rewritten for contract V2 with the labeling
+	 * guidelines' slang dictionary; no object of the schema ends with a nested object (v2.1); explicit
+	 * {@code not_expressed} → empty {@code claim_ids} (v2.2); measured in the smoke runs of 2026-10-01
+	 * and 2026-10-04 (phase 4).
 	 */
-	public static final String PROMPT_VERSION = "v2.2";
+	public static final String PROMPT_VERSION = "v2.3";
 
 	/** Classpath location of the system prompt. */
 	public static final String SYSTEM_PROMPT_RESOURCE = "/assessor/system-prompt.md";

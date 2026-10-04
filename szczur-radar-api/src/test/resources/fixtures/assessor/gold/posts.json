@@ -1,6 +1,11 @@
 [ {
   "post_id" : "gielda-2026-10-01-000",
   "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : true,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -18,6 +23,11 @@
 }, {
   "post_id" : "gielda-2026-10-01-001",
   "day" : "2026-10-01",
+  "media" : {
+    "photo" : true,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -35,6 +45,11 @@
 }, {
   "post_id" : "gielda-2026-10-01-002",
   "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : true,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -52,6 +67,11 @@
 }, {
   "post_id" : "gielda-2026-10-01-003",
   "day" : "2026-10-01",
+  "media" : {
+    "photo" : true,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -69,6 +89,11 @@
 }, {
   "post_id" : "gielda-2026-10-01-004",
   "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -86,6 +111,11 @@
 }, {
   "post_id" : "gielda-2026-10-01-005",
   "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -103,6 +133,11 @@
 }, {
   "post_id" : "gielda-2026-10-01-006",
   "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -120,6 +155,11 @@
 }, {
   "post_id" : "gielda-2026-10-01-007",
   "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -137,6 +177,11 @@
 }, {
   "post_id" : "gielda-2026-10-01-008",
   "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -154,6 +199,11 @@
 }, {
   "post_id" : "gielda-2026-10-01-009",
   "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -171,6 +221,11 @@
 }, {
   "post_id" : "gielda-2026-10-01-010",
   "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -188,6 +243,11 @@
 }, {
   "post_id" : "gielda-2026-10-01-011",
   "day" : "2026-10-01",
+  "media" : {
+    "photo" : true,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -205,6 +265,11 @@
 }, {
   "post_id" : "gielda-2026-10-01-012",
   "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -222,6 +287,11 @@
 }, {
   "post_id" : "gielda-2026-10-01-013",
   "day" : "2026-10-01",
+  "media" : {
+    "photo" : true,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -239,6 +309,11 @@
 }, {
   "post_id" : "gielda-2026-10-01-014",
   "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -256,6 +331,11 @@
 }, {
   "post_id" : "gielda-2026-10-01-015",
   "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -273,6 +353,11 @@
 }, {
   "post_id" : "gielda-2026-10-01-016",
   "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -290,6 +375,11 @@
 }, {
   "post_id" : "gielda-2026-10-01-017",
   "day" : "2026-10-01",
+  "media" : {
+    "photo" : true,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -307,6 +397,11 @@
 }, {
   "post_id" : "gielda-2026-10-01-018",
   "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -324,6 +419,11 @@
 }, {
   "post_id" : "gielda-2026-10-01-019",
   "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -341,6 +441,11 @@
 }, {
   "post_id" : "gielda-2026-10-01-020",
   "day" : "2026-10-01",
+  "media" : {
+    "photo" : true,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -358,6 +463,11 @@
 }, {
   "post_id" : "gielda-2026-10-01-021",
   "day" : "2026-10-01",
+  "media" : {
+    "photo" : true,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -375,6 +485,11 @@
 }, {
   "post_id" : "gielda-2026-10-01-022",
   "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -392,6 +507,11 @@
 }, {
   "post_id" : "gielda-2026-10-01-023",
   "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -409,6 +529,11 @@
 }, {
   "post_id" : "gielda-2026-10-01-024",
   "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -426,6 +551,11 @@
 }, {
   "post_id" : "gielda-2026-10-01-025",
   "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -443,6 +573,11 @@
 }, {
   "post_id" : "gielda-2026-10-01-026",
   "day" : "2026-10-01",
+  "media" : {
+    "photo" : true,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -460,6 +595,11 @@
 }, {
   "post_id" : "gielda-2026-10-01-027",
   "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -477,6 +617,11 @@
 }, {
   "post_id" : "gielda-2026-10-01-028",
   "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -494,6 +639,11 @@
 }, {
   "post_id" : "gielda-2026-10-01-029",
   "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -511,6 +661,11 @@
 }, {
   "post_id" : "gielda-2026-10-01-030",
   "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -528,6 +683,11 @@
 }, {
   "post_id" : "gielda-2026-10-01-031",
   "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -545,6 +705,11 @@
 }, {
   "post_id" : "gielda-2026-10-01-032",
   "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -562,6 +727,11 @@
 }, {
   "post_id" : "gielda-2026-10-01-033",
   "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -579,6 +749,11 @@
 }, {
   "post_id" : "gielda-2026-10-01-034",
   "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -596,6 +771,11 @@
 }, {
   "post_id" : "gielda-2026-10-01-035",
   "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -613,6 +793,11 @@
 }, {
   "post_id" : "gielda-2026-10-01-036",
   "day" : "2026-10-01",
+  "media" : {
+    "photo" : true,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -630,6 +815,11 @@
 }, {
   "post_id" : "gielda-2026-10-01-037",
   "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -647,6 +837,11 @@
 }, {
   "post_id" : "gielda-2026-10-01-038",
   "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -664,6 +859,11 @@
 }, {
   "post_id" : "gielda-2026-10-01-039",
   "day" : "2026-10-01",
+  "media" : {
+    "photo" : true,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -681,6 +881,11 @@
 }, {
   "post_id" : "gielda-2026-10-01-040",
   "day" : "2026-10-01",
+  "media" : {
+    "photo" : true,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -698,6 +903,11 @@
 }, {
   "post_id" : "gielda-2026-10-01-041",
   "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -715,6 +925,11 @@
 }, {
   "post_id" : "gielda-2026-10-01-042",
   "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -732,6 +947,11 @@
 }, {
   "post_id" : "gielda-2026-10-01-043",
   "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -749,6 +969,11 @@
 }, {
   "post_id" : "gielda-2026-10-01-044",
   "day" : "2026-10-01",
+  "media" : {
+    "photo" : true,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -766,6 +991,11 @@
 }, {
   "post_id" : "gielda-2026-10-01-045",
   "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -783,6 +1013,11 @@
 }, {
   "post_id" : "gielda-2026-10-01-046",
   "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -800,6 +1035,11 @@
 }, {
   "post_id" : "gielda-2026-10-01-047",
   "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -817,6 +1057,11 @@
 }, {
   "post_id" : "gielda-2026-10-01-048",
   "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -834,6 +1079,11 @@
 }, {
   "post_id" : "gielda-2026-10-01-049",
   "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -851,6 +1101,11 @@
 }, {
   "post_id" : "gielda-2026-10-01-050",
   "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -868,6 +1123,11 @@
 }, {
   "post_id" : "gielda-2026-10-01-051",
   "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -885,6 +1145,11 @@
 }, {
   "post_id" : "gielda-2026-10-01-052",
   "day" : "2026-10-01",
+  "media" : {
+    "photo" : true,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -902,6 +1167,11 @@
 }, {
   "post_id" : "gielda-2026-10-01-053",
   "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -919,6 +1189,11 @@
 }, {
   "post_id" : "gielda-2026-10-01-054",
   "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -936,6 +1211,11 @@
 }, {
   "post_id" : "gielda-2026-10-01-055",
   "day" : "2026-10-01",
+  "media" : {
+    "photo" : true,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -953,6 +1233,11 @@
 }, {
   "post_id" : "gielda-2026-10-01-056",
   "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : true,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -970,6 +1255,11 @@
 }, {
   "post_id" : "gielda-2026-10-01-057",
   "day" : "2026-10-01",
+  "media" : {
+    "photo" : true,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -987,6 +1277,11 @@
 }, {
   "post_id" : "gielda-2026-10-01-058",
   "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -1004,6 +1299,11 @@
 }, {
   "post_id" : "gielda-2026-10-01-059",
   "day" : "2026-10-01",
+  "media" : {
+    "photo" : true,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -1021,6 +1321,11 @@
 }, {
   "post_id" : "gielda-2026-10-02-000",
   "day" : "2026-10-02",
+  "media" : {
+    "photo" : true,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -1038,6 +1343,11 @@
 }, {
   "post_id" : "gielda-2026-10-02-001",
   "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -1055,6 +1365,11 @@
 }, {
   "post_id" : "gielda-2026-10-02-002",
   "day" : "2026-10-02",
+  "media" : {
+    "photo" : true,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -1072,6 +1387,11 @@
 }, {
   "post_id" : "gielda-2026-10-02-003",
   "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -1089,6 +1409,11 @@
 }, {
   "post_id" : "gielda-2026-10-02-004",
   "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -1106,6 +1431,11 @@
 }, {
   "post_id" : "gielda-2026-10-02-005",
   "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -1123,6 +1453,11 @@
 }, {
   "post_id" : "gielda-2026-10-02-006",
   "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -1140,6 +1475,11 @@
 }, {
   "post_id" : "gielda-2026-10-02-007",
   "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -1157,6 +1497,11 @@
 }, {
   "post_id" : "gielda-2026-10-02-008",
   "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -1174,6 +1519,11 @@
 }, {
   "post_id" : "gielda-2026-10-02-009",
   "day" : "2026-10-02",
+  "media" : {
+    "photo" : true,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -1191,6 +1541,11 @@
 }, {
   "post_id" : "gielda-2026-10-02-010",
   "day" : "2026-10-02",
+  "media" : {
+    "photo" : true,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -1208,6 +1563,11 @@
 }, {
   "post_id" : "gielda-2026-10-02-011",
   "day" : "2026-10-02",
+  "media" : {
+    "photo" : true,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -1225,6 +1585,11 @@
 }, {
   "post_id" : "gielda-2026-10-02-012",
   "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -1242,6 +1607,11 @@
 }, {
   "post_id" : "gielda-2026-10-02-013",
   "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -1259,6 +1629,11 @@
 }, {
   "post_id" : "gielda-2026-10-02-014",
   "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -1276,6 +1651,11 @@
 }, {
   "post_id" : "gielda-2026-10-02-015",
   "day" : "2026-10-02",
+  "media" : {
+    "photo" : true,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -1293,6 +1673,11 @@
 }, {
   "post_id" : "gielda-2026-10-02-016",
   "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -1310,6 +1695,11 @@
 }, {
   "post_id" : "gielda-2026-10-02-017",
   "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -1327,6 +1717,11 @@
 }, {
   "post_id" : "gielda-2026-10-02-018",
   "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -1344,6 +1739,11 @@
 }, {
   "post_id" : "gielda-2026-10-02-019",
   "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -1361,6 +1761,11 @@
 }, {
   "post_id" : "gielda-2026-10-02-020",
   "day" : "2026-10-02",
+  "media" : {
+    "photo" : true,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -1378,6 +1783,11 @@
 }, {
   "post_id" : "gielda-2026-10-02-021",
   "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -1395,6 +1805,11 @@
 }, {
   "post_id" : "gielda-2026-10-02-022",
   "day" : "2026-10-02",
+  "media" : {
+    "photo" : true,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -1412,6 +1827,11 @@
 }, {
   "post_id" : "gielda-2026-10-02-023",
   "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -1429,6 +1849,11 @@
 }, {
   "post_id" : "gielda-2026-10-02-024",
   "day" : "2026-10-02",
+  "media" : {
+    "photo" : true,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -1446,6 +1871,11 @@
 }, {
   "post_id" : "gielda-2026-10-02-025",
   "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -1463,6 +1893,11 @@
 }, {
   "post_id" : "gielda-2026-10-02-026",
   "day" : "2026-10-02",
+  "media" : {
+    "photo" : true,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -1480,6 +1915,11 @@
 }, {
   "post_id" : "gielda-2026-10-02-027",
   "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -1497,6 +1937,11 @@
 }, {
   "post_id" : "gielda-2026-10-02-028",
   "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -1514,6 +1959,11 @@
 }, {
   "post_id" : "gielda-2026-10-02-029",
   "day" : "2026-10-02",
+  "media" : {
+    "photo" : true,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -1531,6 +1981,11 @@
 }, {
   "post_id" : "gielda-2026-10-02-030",
   "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : true,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -1548,6 +2003,11 @@
 }, {
   "post_id" : "gielda-2026-10-02-031",
   "day" : "2026-10-02",
+  "media" : {
+    "photo" : true,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -1565,6 +2025,11 @@
 }, {
   "post_id" : "gielda-2026-10-02-032",
   "day" : "2026-10-02",
+  "media" : {
+    "photo" : true,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -1582,6 +2047,11 @@
 }, {
   "post_id" : "gielda-2026-10-02-033",
   "day" : "2026-10-02",
+  "media" : {
+    "photo" : true,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -1599,6 +2069,11 @@
 }, {
   "post_id" : "gielda-2026-10-02-034",
   "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -1616,6 +2091,11 @@
 }, {
   "post_id" : "gielda-2026-10-02-035",
   "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -1633,6 +2113,11 @@
 }, {
   "post_id" : "gielda-2026-10-02-036",
   "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -1650,6 +2135,11 @@
 }, {
   "post_id" : "gielda-2026-10-02-037",
   "day" : "2026-10-02",
+  "media" : {
+    "photo" : true,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -1667,6 +2157,11 @@
 }, {
   "post_id" : "gielda-2026-10-02-038",
   "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -1684,6 +2179,11 @@
 }, {
   "post_id" : "gielda-2026-10-02-039",
   "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -1701,6 +2201,11 @@
 }, {
   "post_id" : "gielda-2026-10-02-040",
   "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -1718,6 +2223,11 @@
 }, {
   "post_id" : "gielda-2026-10-02-041",
   "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -1735,6 +2245,11 @@
 }, {
   "post_id" : "gielda-2026-10-02-042",
   "day" : "2026-10-02",
+  "media" : {
+    "photo" : true,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -1752,6 +2267,11 @@
 }, {
   "post_id" : "gielda-2026-10-02-043",
   "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -1769,6 +2289,11 @@
 }, {
   "post_id" : "gielda-2026-10-02-044",
   "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -1786,6 +2311,11 @@
 }, {
   "post_id" : "gielda-2026-10-02-045",
   "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -1803,6 +2333,11 @@
 }, {
   "post_id" : "gielda-2026-10-02-046",
   "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -1820,6 +2355,11 @@
 }, {
   "post_id" : "gielda-2026-10-02-047",
   "day" : "2026-10-02",
+  "media" : {
+    "photo" : true,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -1837,6 +2377,11 @@
 }, {
   "post_id" : "gielda-2026-10-02-048",
   "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -1854,6 +2399,11 @@
 }, {
   "post_id" : "gielda-2026-10-02-049",
   "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -1871,6 +2421,11 @@
 }, {
   "post_id" : "gielda-2026-10-02-050",
   "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -1888,6 +2443,11 @@
 }, {
   "post_id" : "gielda-2026-10-02-051",
   "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -1905,6 +2465,11 @@
 }, {
   "post_id" : "gielda-2026-10-02-052",
   "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -1922,6 +2487,11 @@
 }, {
   "post_id" : "gielda-2026-10-02-053",
   "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -1939,6 +2509,11 @@
 }, {
   "post_id" : "gielda-2026-10-02-054",
   "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -1956,6 +2531,11 @@
 }, {
   "post_id" : "gielda-2026-10-02-055",
   "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -1973,6 +2553,11 @@
 }, {
   "post_id" : "gielda-2026-10-02-056",
   "day" : "2026-10-02",
+  "media" : {
+    "photo" : true,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -1990,6 +2575,11 @@
 }, {
   "post_id" : "gielda-2026-10-02-057",
   "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -2007,6 +2597,11 @@
 }, {
   "post_id" : "gielda-2026-10-02-058",
   "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {
@@ -2024,6 +2619,11 @@
 }, {
   "post_id" : "gielda-2026-10-02-059",
   "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
   "input" : {
     "schema_version" : "AssessmentInputV1",
     "item" : {

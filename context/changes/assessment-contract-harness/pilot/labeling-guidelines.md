@@ -1,6 +1,6 @@
-# Instrukcja oznaczania postów #gielda — v1.0
+# Instrukcja oznaczania postów #gielda — v1.1
 
-> Status: v1.0 (2026-10-01) — reguły v0.3 przejął kontrakt `context/foundation/llm-assessment/contract-v2.md`; ta instrukcja odsyła do jego sekcji zamiast powtarzać definicje. Zostają tu: zakres oznaczania, słownik slangu (materiał do promptu, nie część kontraktu), flaga „trudny” i praktyka arkusza. Numery reguł 2.x / 3.x / 4.x z v0.3 są zachowane, bo odwołują się do nich `frame.md` i `plan.md`.
+> Status: v1.1 (2026-10-04: slang ruchu rynku → cel „rynek”, `contract-v2.md` §6.5a; tagi nastroju nie są celem, §6.4). v1.0 (2026-10-01) — reguły v0.3 przejął kontrakt `context/foundation/llm-assessment/contract-v2.md`; ta instrukcja odsyła do jego sekcji zamiast powtarzać definicje. Zostają tu: zakres oznaczania, słownik slangu (materiał do promptu, nie część kontraktu), flaga „trudny” i praktyka arkusza. Numery reguł 2.x / 3.x / 4.x z v0.3 są zachowane, bo odwołują się do nich `frame.md` i `plan.md`.
 > Przy sprzeczności tej instrukcji z `contract-v2.md` obowiązuje kontrakt; brakującą regułę zgłasza się przez regułę zmiany kontraktu (§16), nie przez dopisanie jej tylko tutaj.
 
 Oznaczamy tylko rdzeń: **trafność**, **cele** i **kierunek stanowiska autora** wobec każdego celu (+ czy stanowisko jest pewne, czy osłabione / z sugestii). Tez i cytatów nie oznaczamy.
@@ -9,7 +9,7 @@ Oznaczamy tylko rdzeń: **trafność**, **cele** i **kierunek stanowiska autora*
 
 - Wyłącznie tekst posta (tytuł + treść), tak samo jak model (`contract-v2.md` §2). Obrazków, filmów i linków nie widzimy.
 - Wpisy bez treści (sam tag, wzmianka, link lub `<url>`) nie trafiają do oznaczania — odsiewa je reguła `contract-v2.md` §11.
-- Tagi kanału nie są treścią ani celem; tagi nazywające spółkę lub aktywo mogą być anchorem (`contract-v2.md` §6.4).
+- Tagi kanału i tagi nastroju (np. `#krachsmieciuchindex`) nie są treścią ani celem; tagi nazywające spółkę lub aktywo mogą być anchorem (`contract-v2.md` §6.4).
 
 ## 2. Trafność
 
@@ -59,7 +59,7 @@ Anchor zostaje w oryginale; słownik tylko pomaga rozpoznać, że to cel.
 | śmieciuch(y) | spekulacyjna spółka / spółki (znaczenie przybliżone — do potwierdzenia) |
 | gruby | duży gracz / animator rynku — **nie** cel |
 | peron, na peronie | pozostanie poza rynkiem / przegapienie wzrostu — **nie** cel (patrz 4.6) |
-| pompa / kiblage, zwała, kibel | wzrost / spadek — **nie** cel |
+| pompa / kiblage, zwała, kibel, bessa, krach | wzrost / spadek rynku — gdy post nie wiąże ruchu z nazwanym celem: cel „rynek” (`macro_topic`), anchor = ten fragment (`contract-v2.md` §6.5a); gdy ruch dotyczy nazwanego celu — **nie** osobny cel |
 
 ## 4. Kierunek stanowiska
 

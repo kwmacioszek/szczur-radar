@@ -123,7 +123,10 @@ each element with `sources/wykop/WykopMapper`, anonymizes it (`@nick` and author
 `@uzytkownikN`, URLs → `<url>`, white space untouched), drops entries without content (`Prefilter`),
 draws 60 posts per day with a fixed seed and writes
 `src/test/resources/fixtures/assessor/gold/posts.json` (`[{post_id, day, input}]`). Raw API answers
-are never written. Days 2026-09-28 and 2026-09-29 (the pilots) are refused.
+are never written. Days 2026-09-28 and 2026-09-29 (the pilots) are refused. Each post records
+`media: {photo, embed, survey}` (presence only) for the labeling sheet; the model sees text only.
+Links to the original posts go to `~/.config/szczur-radar/gold-links.json` (`-Dgold.links=<path>`),
+never into the repo — a link leads to the author; load them in the sheet with „Wczytaj linki”.
 
 ```bash
 # keys of a Wykop app (dev.wykop.pl), only in your shell

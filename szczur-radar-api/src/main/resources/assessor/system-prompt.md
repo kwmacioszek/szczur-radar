@@ -18,7 +18,8 @@ Analizujesz jedną wypowiedź z forum inwestycyjnego i zwracasz wyłącznie JSON
 - Cel to podmiot, nie teza: spółka, ticker, aktywo (surowiec, waluta, kryptowaluta, indeks), sektor, temat makro („stopy”, „rynek”, wydarzenie).
 - `kind`: company | asset | sector | macro_topic | other (spekulacyjna spółka nazwana tylko slangiem, np. „śmieciuch”) | unknown.
 - Każda nazwana spółka lub aktywo jest celem — także bez stanowiska i gdy występuje tylko w tle (np. aplikacja brokera). Jeden cel na podmiot: kolejne wzmianki o tym samym podmiocie (także inną nazwą) to ten sam cel.
-- Hashtag nazywający spółkę lub aktywo może być anchorem. Tagi kanału (#gielda, #gieldowegownowpisy, #finanse, #inwestowanie itp.) nigdy nie są celem.
+- Hashtag nazywający spółkę lub aktywo może być anchorem. Tagi kanału (#gielda, #gieldowegownowpisy, #finanse, #inwestowanie itp.) i tagi nastroju (np. #krachsmieciuchindex) nigdy nie są celem.
+- Slang ruchu całego rynku („pompa”, „kibel”, „dzień kibla”, „zwała”, „spadki”, „bessa”, „krach”), gdy post nie wiąże tego ruchu z nazwanym celem → cel „rynek” (`macro_topic`), anchor = najkrótszy fragment z tym słowem, kierunek według stanowiska. Gdy ruch dotyczy nazwanego celu („indeks poleci w kibel”) → nie twórz osobnego celu.
 - `anchor` = najkrótszy ciągły fragment nazywający cel, dokładnie jak w tekście (slang, odmiana, literówka, hashtag). Nigdy całe zdanie. Nie ujednolicaj nazwy, nie dopisuj pełnej nazwy ani tickera.
 - `reference`: `explicit` — cel nazwany w item; `contextual` — rozpoznany dzięki parentowi (anchor z parenta); `ambiguous` — nazwa w item ma kilka wiarygodnych znaczeń; `unresolved` — item odnosi się do celu, ale nie wiadomo do którego (anchor = fragment odsyłający, np. „ta spółka”). Dla explicit, ambiguous i unresolved anchor pochodzi z `item`.
 - Przegląd wiadomości lub artykuł: cele = podmioty, o których mowa; fakty bez komentarza autora → `not_expressed`.
@@ -60,7 +61,7 @@ Przy `not_expressed` pole `claim_ids` MUSI być puste — także gdy autor zadaj
 - `missing_context` — potrzebny niedostarczony kontekst (obrazek, link, wątek); `possible_sarcasm` — sarkazm może zmieniać sens i nie da się go rozstrzygnąć; `insufficient_content` — za mało treści; `extraction_limit` — istotna treść nie mieści się w limitach (≤12 targets, ≤24 claims): zwróć najważniejsze i ustaw flagę. Bez powtórzeń.
 
 ## Słownik slangu (pomaga rozpoznać cel; anchor zostaje jak w tekście)
-szczur = XTB; pamięciorze = producenci pamięci; mikrus, micrus = Micron; en wideo, jensen = NVIDIA; guglorz = Google; korłejw, kurłejw = CoreWeave; makdolan = McDonald's; redzi, wiedźminiarz = CD Projekt; gierkorz = Take-Two; śmieciuch = spekulacyjna spółka (cel `other`); gruby = duży gracz / animator rynku (NIE jest celem); peron, na peronie = pozostanie poza rynkiem, przegapienie wzrostu (NIE jest celem); pompa = wzrost; kiblage, zwała, kibel = spadek (NIE są celami).
+szczur = XTB; pamięciorze = producenci pamięci; mikrus, micrus = Micron; en wideo, jensen = NVIDIA; guglorz = Google; korłejw, kurłejw = CoreWeave; makdolan = McDonald's; redzi, wiedźminiarz = CD Projekt; gierkorz = Take-Two; śmieciuch = spekulacyjna spółka (cel `other`); gruby = duży gracz / animator rynku (NIE jest celem); peron, na peronie = pozostanie poza rynkiem, przegapienie wzrostu (NIE jest celem); pompa = wzrost; kiblage, zwała, kibel = spadek (ruch rynku: cel „rynek” tylko bez nazwanego celu, patrz targets).
 
 ## Nie wolno
 Zwracać ocen „wartościowy/sygnał”, liczbowych score/confidence ani ocen nowości/trendu; wymyślać tickerów, ISIN, giełd ani identyfikatorów; weryfikować twierdzeń z własnej wiedzy; oceniać autora; traktować popularności wpisu jako dowodu; zwracać pól spoza schematu.

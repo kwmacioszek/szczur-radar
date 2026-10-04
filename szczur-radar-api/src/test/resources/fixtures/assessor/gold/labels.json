@@ -1,0 +1,1367 @@
+[
+ {
+  "post_id": "gielda-2026-10-01-000",
+  "relevance": "not_investment_related",
+  "hard": false,
+  "note": "",
+  "targets": []
+ },
+ {
+  "post_id": "gielda-2026-10-01-001",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "Microna",
+    "direction": "unclear",
+    "hedged": false
+   },
+   {
+    "anchor": "AMD",
+    "direction": "unclear",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "gielda-2026-10-01-002",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "hujnix = Hynix tak podejrzewam xD",
+  "targets": [
+   {
+    "anchor": "hujnixa",
+    "direction": "bullish",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "gielda-2026-10-01-003",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "GPW",
+    "direction": "unclear",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "gielda-2026-10-01-004",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "MU - Micron",
+  "targets": [
+   {
+    "anchor": "MU",
+    "direction": "unclear",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "gielda-2026-10-01-005",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "krach",
+    "direction": "not_expressed",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "gielda-2026-10-01-006",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "złoto",
+    "direction": "bullish",
+    "hedged": true
+   }
+  ]
+ },
+ {
+  "post_id": "gielda-2026-10-01-007",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "ropy",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "nasdaq",
+    "direction": "not_expressed",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "gielda-2026-10-01-008",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "gruby = mityczny grubas kierujący rynkiem. Iran = powiązanie z ropą i wzrostami cen paliwa. Pokój = prawdopodobnie pompa na giełdzie.",
+  "targets": [
+   {
+    "anchor": "iranem",
+    "direction": "unclear",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "gielda-2026-10-01-009",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "Marvell",
+    "direction": "bullish",
+    "hedged": true
+   }
+  ]
+ },
+ {
+  "post_id": "gielda-2026-10-01-010",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "Szczur = XTB",
+  "targets": [
+   {
+    "anchor": "szczurze",
+    "direction": "unclear",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "gielda-2026-10-01-011",
+  "relevance": "not_investment_related",
+  "hard": false,
+  "note": "",
+  "targets": []
+ },
+ {
+  "post_id": "gielda-2026-10-01-012",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "takie posty sugerują żartobliwie że jesteśmy w dupie. Typowe dla wykopu.",
+  "targets": [
+   {
+    "anchor": "Rainbow",
+    "direction": "bearish",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "gielda-2026-10-01-013",
+  "relevance": "not_investment_related",
+  "hard": false,
+  "note": "",
+  "targets": []
+ },
+ {
+  "post_id": "gielda-2026-10-01-014",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "dzień kibla = spadki",
+  "targets": [
+   {
+    "anchor": "dzien kibla",
+    "direction": "bearish",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "gielda-2026-10-01-015",
+  "relevance": "investment_related",
+  "hard": true,
+  "note": "",
+  "targets": []
+ },
+ {
+  "post_id": "gielda-2026-10-01-016",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "czasami ludzie na wykopie wstawiają tagi, które sugerują nastrój. Np. #krachsmieciuchindex",
+  "targets": [
+   {
+    "anchor": "ACN",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "NKE",
+    "direction": "not_expressed",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "gielda-2026-10-01-017",
+  "relevance": "investment_related",
+  "hard": true,
+  "note": "Bez widocznego obrazka nie wiadomo jak ocenić, ale w kierunku bearish.",
+  "targets": []
+ },
+ {
+  "post_id": "gielda-2026-10-01-018",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "ETFBNQ3LV",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "Lewarek x3",
+    "direction": "bullish",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "gielda-2026-10-01-019",
+  "relevance": "unclear",
+  "hard": false,
+  "note": "",
+  "targets": []
+ },
+ {
+  "post_id": "gielda-2026-10-01-020",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "Meta",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "Amazon",
+    "direction": "not_expressed",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "gielda-2026-10-01-021",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "Apator",
+    "direction": "not_expressed",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "gielda-2026-10-01-022",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "dolarze",
+    "direction": "unclear",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "gielda-2026-10-01-023",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "pompa",
+    "direction": "bullish",
+    "hedged": true
+   }
+  ]
+ },
+ {
+  "post_id": "gielda-2026-10-01-024",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "ETFa",
+    "direction": "bullish",
+    "hedged": false
+   },
+   {
+    "anchor": "KRACHU",
+    "direction": "bearish",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "gielda-2026-10-01-025",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "NOW",
+    "direction": "unclear",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "gielda-2026-10-01-026",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "bawić się spółką = pewnie buja na wykresie",
+  "targets": [
+   {
+    "anchor": "mikrusem",
+    "direction": "unclear",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "gielda-2026-10-01-027",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "szczurzyska",
+    "direction": "bearish",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "gielda-2026-10-01-028",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "szczur",
+    "direction": "bearish",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "gielda-2026-10-01-029",
+  "relevance": "unclear",
+  "hard": true,
+  "note": "",
+  "targets": []
+ },
+ {
+  "post_id": "gielda-2026-10-01-030",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "w sumie trudno ocenić",
+  "targets": [
+   {
+    "anchor": "microna",
+    "direction": "bearish",
+    "hedged": false
+   },
+   {
+    "anchor": "alphabet",
+    "direction": "bearish",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "gielda-2026-10-01-031",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "micrus",
+    "direction": "bearish",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "gielda-2026-10-01-032",
+  "relevance": "unclear",
+  "hard": false,
+  "note": "",
+  "targets": []
+ },
+ {
+  "post_id": "gielda-2026-10-01-033",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "Sandisk",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "Hujnix",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "mikrus",
+    "direction": "not_expressed",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "gielda-2026-10-01-034",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "obligacje",
+    "direction": "bullish",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "gielda-2026-10-01-035",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "mikrusami",
+    "direction": "bearish",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "gielda-2026-10-01-036",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "BYD",
+    "direction": "bullish",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "gielda-2026-10-01-037",
+  "relevance": "not_investment_related",
+  "hard": false,
+  "note": "",
+  "targets": []
+ },
+ {
+  "post_id": "gielda-2026-10-01-038",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "nasdaqu",
+    "direction": "bearish",
+    "hedged": true
+   }
+  ]
+ },
+ {
+  "post_id": "gielda-2026-10-01-039",
+  "relevance": "not_investment_related",
+  "hard": false,
+  "note": "",
+  "targets": []
+ },
+ {
+  "post_id": "gielda-2026-10-01-040",
+  "relevance": "unclear",
+  "hard": false,
+  "note": "",
+  "targets": []
+ },
+ {
+  "post_id": "gielda-2026-10-01-041",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": []
+ },
+ {
+  "post_id": "gielda-2026-10-01-042",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "MICRON",
+    "direction": "bearish",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "gielda-2026-10-01-043",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": []
+ },
+ {
+  "post_id": "gielda-2026-10-01-044",
+  "relevance": "unclear",
+  "hard": false,
+  "note": "",
+  "targets": []
+ },
+ {
+  "post_id": "gielda-2026-10-01-045",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "banki",
+    "direction": "bearish",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "gielda-2026-10-01-046",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "pamięciorze = spółki dotyczące rynku pamięci, np. SEMI itd",
+  "targets": [
+   {
+    "anchor": "pamięciorzach",
+    "direction": "unclear",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "gielda-2026-10-01-047",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "Microsoft",
+    "direction": "bearish",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "gielda-2026-10-01-048",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "RSU",
+    "direction": "bullish",
+    "hedged": true
+   }
+  ]
+ },
+ {
+  "post_id": "gielda-2026-10-01-049",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "olejorza",
+    "direction": "bullish",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "gielda-2026-10-01-050",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "unimot",
+    "direction": "bearish",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "gielda-2026-10-01-051",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "olejorza",
+    "direction": "bearish",
+    "hedged": false
+   },
+   {
+    "anchor": "Synektika",
+    "direction": "bullish",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "gielda-2026-10-01-052",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "Orlenu",
+    "direction": "unclear",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "gielda-2026-10-01-053",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "Orlenie",
+    "direction": "unclear",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "gielda-2026-10-01-054",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": []
+ },
+ {
+  "post_id": "gielda-2026-10-01-055",
+  "relevance": "unclear",
+  "hard": false,
+  "note": "",
+  "targets": []
+ },
+ {
+  "post_id": "gielda-2026-10-01-056",
+  "relevance": "unclear",
+  "hard": false,
+  "note": "",
+  "targets": []
+ },
+ {
+  "post_id": "gielda-2026-10-01-057",
+  "relevance": "investment_related",
+  "hard": true,
+  "note": "",
+  "targets": []
+ },
+ {
+  "post_id": "gielda-2026-10-01-058",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "#ORLEN",
+    "direction": "bearish",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "gielda-2026-10-01-059",
+  "relevance": "unclear",
+  "hard": false,
+  "note": "",
+  "targets": []
+ },
+ {
+  "post_id": "gielda-2026-10-02-000",
+  "relevance": "not_investment_related",
+  "hard": false,
+  "note": "",
+  "targets": []
+ },
+ {
+  "post_id": "gielda-2026-10-02-001",
+  "relevance": "not_investment_related",
+  "hard": false,
+  "note": "",
+  "targets": []
+ },
+ {
+  "post_id": "gielda-2026-10-02-002",
+  "relevance": "not_investment_related",
+  "hard": false,
+  "note": "",
+  "targets": []
+ },
+ {
+  "post_id": "gielda-2026-10-02-003",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "orlenie",
+    "direction": "bearish",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "gielda-2026-10-02-004",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "Comperia",
+    "direction": "bullish",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "gielda-2026-10-02-005",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "midterms",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "spadki",
+    "direction": "bearish",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "gielda-2026-10-02-006",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "wigusia",
+    "direction": "bullish",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "gielda-2026-10-02-007",
+  "relevance": "unclear",
+  "hard": false,
+  "note": "",
+  "targets": []
+ },
+ {
+  "post_id": "gielda-2026-10-02-008",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "i właśnie jest jawnie w tekście wpisany #xtb, co tu zrobić?",
+  "targets": [
+   {
+    "anchor": "#xtb",
+    "direction": "bullish",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "gielda-2026-10-02-009",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "#orlen",
+    "direction": "bullish",
+    "hedged": true
+   }
+  ]
+ },
+ {
+  "post_id": "gielda-2026-10-02-010",
+  "relevance": "unclear",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "xtb",
+    "direction": "not_expressed",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "gielda-2026-10-02-011",
+  "relevance": "not_investment_related",
+  "hard": false,
+  "note": "",
+  "targets": []
+ },
+ {
+  "post_id": "gielda-2026-10-02-012",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "giełdzie",
+    "direction": "bearish",
+    "hedged": true
+   }
+  ]
+ },
+ {
+  "post_id": "gielda-2026-10-02-013",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "orlenie",
+    "direction": "unclear",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "gielda-2026-10-02-014",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "#xtb",
+    "direction": "not_expressed",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "gielda-2026-10-02-015",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "#orlen",
+    "direction": "not_expressed",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "gielda-2026-10-02-016",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": []
+ },
+ {
+  "post_id": "gielda-2026-10-02-017",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "Dino",
+    "direction": "not_expressed",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "gielda-2026-10-02-018",
+  "relevance": "not_investment_related",
+  "hard": false,
+  "note": "",
+  "targets": []
+ },
+ {
+  "post_id": "gielda-2026-10-02-019",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "XTB",
+    "direction": "bearish",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "gielda-2026-10-02-020",
+  "relevance": "unclear",
+  "hard": false,
+  "note": "",
+  "targets": []
+ },
+ {
+  "post_id": "gielda-2026-10-02-021",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "orlenu",
+    "direction": "bearish",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "gielda-2026-10-02-022",
+  "relevance": "not_investment_related",
+  "hard": false,
+  "note": "",
+  "targets": []
+ },
+ {
+  "post_id": "gielda-2026-10-02-023",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "XTB",
+    "direction": "not_expressed",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "gielda-2026-10-02-024",
+  "relevance": "not_investment_related",
+  "hard": false,
+  "note": "",
+  "targets": []
+ },
+ {
+  "post_id": "gielda-2026-10-02-025",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "xtb",
+    "direction": "bearish",
+    "hedged": true
+   }
+  ]
+ },
+ {
+  "post_id": "gielda-2026-10-02-026",
+  "relevance": "unclear",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "CFD",
+    "direction": "not_expressed",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "gielda-2026-10-02-027",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "xtb",
+    "direction": "bearish",
+    "hedged": true
+   }
+  ]
+ },
+ {
+  "post_id": "gielda-2026-10-02-028",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "xtb",
+    "direction": "bearish",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "gielda-2026-10-02-029",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "Szczurek",
+    "direction": "bullish",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "gielda-2026-10-02-030",
+  "relevance": "unclear",
+  "hard": false,
+  "note": "",
+  "targets": []
+ },
+ {
+  "post_id": "gielda-2026-10-02-031",
+  "relevance": "unclear",
+  "hard": false,
+  "note": "",
+  "targets": []
+ },
+ {
+  "post_id": "gielda-2026-10-02-032",
+  "relevance": "unclear",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "asbisa",
+    "direction": "not_expressed",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "gielda-2026-10-02-033",
+  "relevance": "not_investment_related",
+  "hard": false,
+  "note": "",
+  "targets": []
+ },
+ {
+  "post_id": "gielda-2026-10-02-034",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "xtb",
+    "direction": "bearish",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "gielda-2026-10-02-035",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "#xtb",
+    "direction": "bullish",
+    "hedged": false
+   },
+   {
+    "anchor": "#pdk",
+    "direction": "not_expressed",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "gielda-2026-10-02-036",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "szczurze",
+    "direction": "bullish",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "gielda-2026-10-02-037",
+  "relevance": "not_investment_related",
+  "hard": false,
+  "note": "",
+  "targets": []
+ },
+ {
+  "post_id": "gielda-2026-10-02-038",
+  "relevance": "not_investment_related",
+  "hard": false,
+  "note": "",
+  "targets": []
+ },
+ {
+  "post_id": "gielda-2026-10-02-039",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "XTB",
+    "direction": "not_expressed",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "gielda-2026-10-02-040",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "creotech",
+    "direction": "bullish",
+    "hedged": false
+   },
+   {
+    "anchor": "micron",
+    "direction": "bearish",
+    "hedged": true
+   }
+  ]
+ },
+ {
+  "post_id": "gielda-2026-10-02-041",
+  "relevance": "not_investment_related",
+  "hard": false,
+  "note": "",
+  "targets": []
+ },
+ {
+  "post_id": "gielda-2026-10-02-042",
+  "relevance": "not_investment_related",
+  "hard": false,
+  "note": "",
+  "targets": []
+ },
+ {
+  "post_id": "gielda-2026-10-02-043",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "stópki",
+    "direction": "bearish",
+    "hedged": false
+   },
+   {
+    "anchor": "Pompujemy",
+    "direction": "bullish",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "gielda-2026-10-02-044",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "rynek",
+    "direction": "not_expressed",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "gielda-2026-10-02-045",
+  "relevance": "investment_related",
+  "hard": true,
+  "note": "",
+  "targets": []
+ },
+ {
+  "post_id": "gielda-2026-10-02-046",
+  "relevance": "not_investment_related",
+  "hard": false,
+  "note": "",
+  "targets": []
+ },
+ {
+  "post_id": "gielda-2026-10-02-047",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "korłejw",
+    "direction": "bullish",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "gielda-2026-10-02-048",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "Samsung",
+    "direction": "bullish",
+    "hedged": false
+   },
+   {
+    "anchor": "Micron",
+    "direction": "bearish",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "gielda-2026-10-02-049",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": []
+ },
+ {
+  "post_id": "gielda-2026-10-02-050",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "szczur",
+    "direction": "bearish",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "gielda-2026-10-02-051",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": []
+ },
+ {
+  "post_id": "gielda-2026-10-02-052",
+  "relevance": "unclear",
+  "hard": true,
+  "note": "",
+  "targets": []
+ },
+ {
+  "post_id": "gielda-2026-10-02-053",
+  "relevance": "investment_related",
+  "hard": true,
+  "note": "",
+  "targets": []
+ },
+ {
+  "post_id": "gielda-2026-10-02-054",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "GPW",
+    "direction": "bearish",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "gielda-2026-10-02-055",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": []
+ },
+ {
+  "post_id": "gielda-2026-10-02-056",
+  "relevance": "investment_related",
+  "hard": true,
+  "note": "",
+  "targets": []
+ },
+ {
+  "post_id": "gielda-2026-10-02-057",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "bessa",
+    "direction": "bearish",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "gielda-2026-10-02-058",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "szczurzysko",
+    "direction": "bearish",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "gielda-2026-10-02-059",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": []
+ }
+]

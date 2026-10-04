@@ -106,7 +106,7 @@ class WykopMapperTest {
 	}
 
 	private static WykopItem item(String resource, String createdAt, String content, String title, String description) {
-		return new WykopItem(resource, 1L, createdAt, content, title, description, List.of("gielda"), null);
+		return new WykopItem(resource, 1L, createdAt, content, title, description, List.of("gielda"), null, null, null);
 	}
 
 	private static WykopItem fixture(String name) {

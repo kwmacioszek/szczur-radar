@@ -41,7 +41,7 @@ class WykopAnonymizerTest {
 	@Test
 	void anElementLosesItsAuthorAndKeepsEverythingElse() {
 		WykopItem raw = new WykopItem("link", 7L, "2026-10-01 10:00:00", null, "Tytuł @nick", "Opis https://x.pl",
-				List.of("gielda"), new WykopItem.Author("nick"));
+				List.of("gielda"), new WykopItem.Author("nick"), "tytul-nick", null);
 
 		WykopItem anonymized = new Anonymizer(List.of("nick")).apply(raw);
 

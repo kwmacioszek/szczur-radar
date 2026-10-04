@@ -100,7 +100,7 @@ class LiveSmokeTest {
 	static AssessmentInputV1 input(SampleRecord record) {
 		boolean entry = "entry".equals(record.resource());
 		return WykopMapper.map(new WykopItem(record.resource(), null, record.createdAt(), entry ? record.body() : null,
-				entry ? null : record.title(), entry ? null : record.body(), null, null), "gielda");
+				entry ? null : record.title(), entry ? null : record.body(), null, null, null, null), "gielda");
 	}
 
 	private static void report(LlmProviderProperties properties, int inputs, int prefiltered,

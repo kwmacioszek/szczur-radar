@@ -289,7 +289,7 @@ Wyjście:
 }
 ```
 
-Dlaczego: autor przedstawia dwa skrajne scenariusze bez preferencji → `unclear`, nie `mixed` (§7.1.1). „Kibel” i „pompa” to slang ruchu ceny, nie cele (§6.5) — celem jest indeks. Przy `unclear` `assertiveness = null`, a `claim_ids` są dozwolone (§7.2) i tu wskazują tezę, z której wynika ocena.
+Dlaczego: autor przedstawia dwa skrajne scenariusze bez preferencji → `unclear`, nie `mixed` (§7.1.1). „Kibel” i „pompa” to slang ruchu ceny; ruch dotyczy nazwanego celu, więc nie tworzą osobnego celu „rynek” (§6.5a) — celem jest indeks. Przy `unclear` `assertiveness = null`, a `claim_ids` są dozwolone (§7.2) i tu wskazują tezę, z której wynika ocena.
 
 ---
 
