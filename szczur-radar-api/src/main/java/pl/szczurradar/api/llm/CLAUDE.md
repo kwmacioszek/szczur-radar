@@ -26,8 +26,10 @@ call's metadata, or throws `LlmCallException` (`provider_error` | `timeout`).
   `DeepSeekRawResponse` reads them from the raw answer and they are retried as server errors.
 - `ProviderSchemas` sends each provider the schema subset it accepts; the full schema stays the
   caller's check. Known losses: Spring AI's Gemini mapping drops `additionalProperties` and
-  `uniqueItems`; OpenAI strict mode rejects `uniqueItems` (HTTP 400). Open check in phase 4:
-  `context/changes/assessment-contract-harness/implementation-notes.md` (N1, N2).
+  `uniqueItems`; OpenAI strict mode rejects `uniqueItems` (HTTP 400). Gemini gets a nullable enum
+  (`assertiveness`) as `anyOf` [string enum, `{"type": "null"}`]: with `{"enum": [..., null]}` it
+  never answered `null` (D12). See
+  `context/changes/assessment-contract-harness/implementation-notes.md` (N1, N2, N5).
 
 ## Adding a provider
 

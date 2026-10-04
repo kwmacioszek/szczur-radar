@@ -11,6 +11,36 @@ export LLM_API_PROVIDER=<gemini|deepseek|openrouter> LLM_MODEL=<model id> LLM_AP
 A run creates one `LlmClient` (`LlmClientFactory.create(...)`) and reuses it for every post: the
 client's HTTP pools and threads are not closed (`llm/CLAUDE.md`).
 
+Tests here are tagged `measurement`: the default `./mvnw test` / `verify` (and CI) skip them, and
+the `measurement` profile runs only them — no Spring context, no Docker:
+
+```bash
+( source ~/.config/szczur-radar/<provider>.env && ./mvnw -Pmeasurement test -Dtest=<Class> )
+```
+
+## Live smoke (`LiveSmokeTest`, plan phase 4)
+
+Assesses the first 30 assessable posts of
+`context/changes/assessment-contract-harness/pilot/wykop-gielda-sample-2026-09-29.json` through
+`Assessor` (prefilter, one call, parser, D1–D15) with the provider from `LLM_*`, and prints each
+result and a summary: inputs read, prefilter rejections, model calls (the denominator), contract
+compliance, failure classes, schema rules broken (`schema:additionalProperties`,
+`schema:uniqueItems` close checks N1/N2 of `implementation-notes.md`), the model ids reported,
+tokens (with cache), median time, retries and flex fallbacks. Nothing is written to the repo.
+`-Dsmoke.sample=<path>` reads another sample of the same shape.
+
+```bash
+# one run per provider; the three runs of the plan:
+#   gemini      LLM_MODEL=gemini-3.1-flash-lite
+#   deepseek    LLM_MODEL=deepseek-v4-flash
+#   openrouter  LLM_MODEL=openai/gpt-6-luna LLM_SERVICE_TIER=flex LLM_TIMEOUT=5m
+( source ~/.config/szczur-radar/gemini.env && ./mvnw -Pmeasurement test -Dtest=LiveSmokeTest )
+```
+
+Pass mark per provider (plan, phase 4): compliance ≥ 90 % and at most one `provider_error` or
+`invalid_structured_output`. Put the summaries (with the denominator; for Luna flex the retries,
+fallbacks and median time) in the PR description.
+
 ## Recording provider payloads (`src/test/resources/fixtures/<provider>/`)
 
 The client tests (`llm/*ClientTest`) replay one real success response per provider on a local HTTP

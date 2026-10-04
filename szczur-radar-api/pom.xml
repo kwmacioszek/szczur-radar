@@ -23,6 +23,9 @@
 		<spring-ai.version>2.0.1</spring-ai.version>
 		<!-- The version Spring AI 2.0.1 brings (Jackson 3); the assessor validates model output with it. -->
 		<json-schema-validator.version>3.0.1</json-schema-validator.version>
+		<!-- JUnit tags of the unit test run: everything except live LLM/API runs (profile measurement). -->
+		<surefire.groups></surefire.groups>
+		<surefire.excludedGroups>measurement</surefire.excludedGroups>
 	</properties>
 
 	<dependencyManagement>
@@ -150,7 +153,8 @@
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
 			</plugin>
-			<!-- Unit tests: *Test (no Spring context, no Docker). -->
+			<!-- Unit tests: *Test (no Spring context, no Docker). Tests tagged `measurement` call real
+			     LLM/source APIs and run only in the `measurement` profile, never in CI. -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-surefire-plugin</artifactId>
@@ -158,6 +162,8 @@
 					<includes>
 						<include>**/*Test.java</include>
 					</includes>
+					<groups>${surefire.groups}</groups>
+					<excludedGroups>${surefire.excludedGroups}</excludedGroups>
 				</configuration>
 			</plugin>
 			<!-- Integration tests: *IT (Spring + Testcontainers Postgres). Docker is required:
@@ -181,5 +187,17 @@
 			</plugin>
 		</plugins>
 	</build>
+
+	<profiles>
+		<!-- Live runs against real APIs with keys from the shell (src/test/java/.../measurement/README.md):
+		     ./mvnw -Pmeasurement test -Dtest=<Class>. Only tests tagged `measurement`; no Spring, no Docker. -->
+		<profile>
+			<id>measurement</id>
+			<properties>
+				<surefire.groups>measurement</surefire.groups>
+				<surefire.excludedGroups></surefire.excludedGroups>
+			</properties>
+		</profile>
+	</profiles>
 
 </project>

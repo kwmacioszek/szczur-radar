@@ -49,8 +49,24 @@ class ProviderSchemasTest {
 		assertThat(names(target.at("/properties/anchor/properties"))).containsExactly("document", "field", "quote");
 		assertThat(names(sent.at("/properties/claims/items/properties"))).containsExactly("id", "kind", "attribution",
 				"target_ids", "evidence", "statement");
-		assertThat(target.at("/properties/stance/properties/assertiveness/enum").toString())
-			.isEqualTo("[\"hedged\",\"unhedged\",null]");
+		assertThat(target.at("/properties/stance/properties/assertiveness").toString())
+			.isEqualTo("{\"anyOf\":[{\"type\":\"string\",\"enum\":[\"hedged\",\"unhedged\"]},{\"type\":\"null\"}]}");
+	}
+
+	@Test
+	void onlyGeminiGetsTheNullableEnumAsAnyOf() {
+		// Gemini never answered null to {"enum": [..., null]} (live smoke 2026-10-04, D12).
+		for (Provider provider : List.of(Provider.DEEPSEEK, Provider.OPENROUTER)) {
+			JsonNode sent = MAPPER.readTree(ProviderSchemas.forProvider(provider, V2));
+			assertThat(sent.at("/properties/targets/items/properties/stance/properties/assertiveness").toString())
+				.as(provider.id())
+				.isEqualTo("{\"enum\":[\"hedged\",\"unhedged\",null]}");
+		}
+		String schema = """
+				{"type":"object","properties":{"enum":{"enum":["a",null],"description":"d"},"n":{"enum":[1,null]}}}""";
+		assertThat(ProviderSchemas.forProvider(Provider.GEMINI, schema)).isEqualTo(
+				"{\"type\":\"object\",\"properties\":{\"enum\":{\"anyOf\":[{\"type\":\"string\",\"enum\":[\"a\"]},"
+						+ "{\"type\":\"null\"}],\"description\":\"d\"},\"n\":{\"enum\":[1,null]}}}");
 	}
 
 	@Test

@@ -20,9 +20,10 @@ Pakiet bazowy `pl.szczurradar.api`, pakiety według funkcji — nie według wars
 | `auth` | logowanie JSON, `/me`, logout, limiter prób, filtr Origin, odnawianie ciasteczka sesji, argon2 (`Passwords`) |
 | `cli` | komendy operatora: `migrate`, `create-admin` (dyspozytor `CommandLine`) |
 | `config` | Spring Security, sesja i ciasteczko, format błędów `{"detail": …}`, konfiguracja dostawcy LLM |
-| `agents` | agenci Embabel (na razie `SkeletonAgent`, bez wywołań LLM) |
+| `agents` | agenci Embabel; `agents/assessor` — kontrakt oceny V2 jako kod (model, schemat, parser, walidator D1–D15, odsiew), prompt z wersją, `Assessor` (jedno wywołanie modelu na wpis) i `AssessorAgent` |
+| `llm` | klienci dostawców LLM (`LlmClient`); jedyne ponowienia transportowe (`TransportRetry`) |
 
-Kolejne moduły (`llm`, `sources`) dochodzą obok, bez mieszania infrastruktury z domeną (`context/foundation/lessons.md`).
+Kolejne moduły (`sources`) dochodzą obok, bez mieszania infrastruktury z domeną (`context/foundation/lessons.md`).
 
 ## Dostawca LLM (Embabel)
 
@@ -55,7 +56,7 @@ Opcjonalne ustawienia wywołania klienta oceny (`llm/`), nie są sekretami:
 
 - Błędna wartość albo `flex`/`LLM_REASONING_EFFORT` z innym dostawcą niż `openrouter` przerywa start z komunikatem jak dla trzech zmiennych powyżej.
 - Ocena nie korzysta z `createObject` Embabel: klient z `llm/` (`LlmClientFactory`) buduje `ChatModel` Spring AI z tych samych zmiennych, z wyłączonymi ponowieniami frameworka i SDK; jedyne ponowienia (do 3 prób na 429, 5xx, przekroczenie czasu, błąd połączenia) są w `llm/TransportRetry`. Klient powstaje leniwie — start nie łączy się z dostawcą.
-- Brak lub błąd którejkolwiek z trzech wartości przerywa start z komunikatem (bez wartości klucza) — `config/LlmProviderProperties`. Start i szkieletowy agent (`agents/SkeletonAgent`) **nie wywołują LLM**, więc start nie sprawdza ważności klucza u dostawcy.
+- Brak lub błąd którejkolwiek z trzech wartości przerywa start z komunikatem (bez wartości klucza) — `config/LlmProviderProperties`. Start **nie wywołuje LLM** (klient powstaje przy pierwszej ocenie), więc nie sprawdza ważności klucza u dostawcy; `AssessorAgentIT` uruchamia agenta tylko na wpisie bez treści, który rozstrzyga odsiew.
 - Lokalnie trzymaj ustawienia poza repo, np. w `~/.config/szczur-radar/llm.env` (`chmod 600`) i `source` przed `./mvnw verify` lub `java -jar`.
 - CI (job `backend`): `LLM_API_PROVIDER` i `LLM_MODEL` jako GitHub Actions *variables*, `LLM_API_KEY` jako *secret*. PR env: job `railway-config` (krok „Ensure PR-env LLM settings”) ustawia w serwisie `szczur-radar-api` te same trzy wartości z CI — także nadpisuje klucz skopiowany przez Railway z produkcji. Produkcja: operator ustawia trzy zmienne **przed** deployem, a `LLM_API_KEY` jest **zapieczętowany** (sealed), żeby Railway nie kopiował go do nowych PR env. `.railway/railway.ts` deklaruje je przez `preserve()`, które niczego nie tworzy.
 - Przy kodzie równoległym podawaj własny executor: Java 25 widzi limit CPU kontenera (`availableProcessors()` może być 1); rdzeń Embabel ma własny executor.
@@ -118,6 +119,7 @@ source ~/.config/szczur-radar/llm.env   # LLM_API_PROVIDER, LLM_MODEL, LLM_API_K
 - **`*Test`** (Surefire): testy jednostkowe bez kontekstu aplikacji i bez Dockera — JUnit, AssertJ, Mockito.
 - **`*IT`** (Failsafe): `@SpringBootTest` + `MockMvcTester` + Testcontainers Postgres 18 (`TestcontainersConfiguration`, `@ServiceConnection`). Brak Dockera **wywala** `verify` — testy nie są pomijane. CI (job `backend`) uruchamia to samo.
 - **Autoryzacja:** każda nowa trasa jest chroniona domyślnie (deny-by-default w `config/SecurityConfig`). Trasa publiczna wymaga wpisu w `SecurityConfig` **i** w `PUBLIC_ROUTES` w `AuthorizationCompletenessIT` z uzasadnieniem — test woła każde mapowanie bez sesji i oczekuje 401. Trasy admina idą pod `/api/admin/` (rola ADMIN, 403 `forbidden` dla zwykłego użytkownika).
+- **`measurement`** (tag JUnit, kod tylko w `src/test/java/.../measurement/`): przebiegi na żywych API z kluczami z powłoki — domyślne `test`/`verify` (i CI) je pomijają; uruchomienie: `./mvnw -Pmeasurement test -Dtest=<Klasa>` (bez Springa i Dockera), opis w `src/test/java/pl/szczurradar/api/measurement/README.md`.
 - **Fixture'y usług zewnętrznych** (Wykop, dostawcy LLM): prawdziwe odpowiedzi jako JSON w `src/test/resources/fixtures/<usługa>/`, bez wymyślanych przykładów.
 
 ## API i sesja (kontrakt z SPA)

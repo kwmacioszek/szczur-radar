@@ -17,7 +17,12 @@ import pl.szczurradar.api.config.LlmProviderProperties.Provider;
  * <ul>
  *   <li>all providers: {@code $ref}s to {@code #/$defs/...} inlined, {@code $defs} and
  *       {@code $schema} dropped (Spring AI's Gemini mapping silently loses {@code $ref});
- *   <li>Gemini: no {@code minItems}/{@code maxItems} (HTTP 400 in the pilot);
+ *   <li>Gemini: no {@code minItems}/{@code maxItems} (HTTP 400 in the pilot); a nullable enum
+ *       ({@code {"enum": ["a", "b", null]}}) becomes {@code {"anyOf": [{"type": "string", "enum": ["a",
+ *       "b"]}, {"type": "null"}]}} — Gemini never answered {@code null} to the enum form (live smoke
+ *       2026-10-04: every {@code not_expressed} stance got an {@code assertiveness}, D12), and the
+ *       {@code anyOf} form is what Spring AI's mapping keeps ({@code "type": [..., "null"]} fails in the
+ *       GenAI SDK, {@code nullable} is dropped);
  *   <li>DeepSeek, OpenRouter: no {@code minItems}/{@code maxItems}/{@code minLength}/{@code maxLength};
  *   <li>OpenRouter (OpenAI strict mode): also no {@code uniqueItems} ("'uniqueItems' is not
  *       permitted", HTTP 400 on 2026-10-03).
@@ -47,7 +52,57 @@ public final class ProviderSchemas {
 			case DEEPSEEK -> COUNT_AND_LENGTH_LIMITS;
 			case OPENROUTER -> OPENAI_STRICT_UNSUPPORTED;
 		};
-		return MAPPER.writeValueAsString(simplify(root, root.path("$defs"), dropped, false));
+		JsonNode simplified = simplify(root, root.path("$defs"), dropped, false);
+		return MAPPER.writeValueAsString(provider == Provider.GEMINI ? nullableEnumsAsAnyOf(simplified, false) : simplified);
+	}
+
+	/** Rewrites every string enum that allows {@code null} as {@code anyOf} of the string enum and {@code null}. */
+	private static JsonNode nullableEnumsAsAnyOf(JsonNode node, boolean propertyMap) {
+		if (node.isArray()) {
+			ArrayNode copy = MAPPER.createArrayNode();
+			node.forEach(element -> copy.add(nullableEnumsAsAnyOf(element, false)));
+			return copy;
+		}
+		if (!node.isObject()) {
+			return node;
+		}
+		ObjectNode copy = MAPPER.createObjectNode();
+		JsonNode values = node.get("enum");
+		if (!propertyMap && values != null && values.isArray() && !node.has("type") && hasNullAndStrings(values)) {
+			ArrayNode strings = MAPPER.createArrayNode();
+			values.forEach(value -> {
+				if (!value.isNull()) {
+					strings.add(value);
+				}
+			});
+			ObjectNode stringEnum = MAPPER.createObjectNode().put("type", "string");
+			stringEnum.set("enum", strings);
+			copy.set("anyOf", MAPPER.createArrayNode().add(stringEnum).add(MAPPER.createObjectNode().put("type", "null")));
+			node.properties().forEach(property -> {
+				if (!property.getKey().equals("enum")) {
+					copy.set(property.getKey(), property.getValue());
+				}
+			});
+			return copy;
+		}
+		for (Map.Entry<String, JsonNode> property : node.properties()) {
+			copy.set(property.getKey(),
+					nullableEnumsAsAnyOf(property.getValue(), !propertyMap && property.getKey().equals("properties")));
+		}
+		return copy;
+	}
+
+	private static boolean hasNullAndStrings(JsonNode values) {
+		boolean hasNull = false;
+		for (JsonNode value : values) {
+			if (value.isNull()) {
+				hasNull = true;
+			}
+			else if (!value.isString()) {
+				return false;
+			}
+		}
+		return hasNull && values.size() > 1;
 	}
 
 	/**

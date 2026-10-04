@@ -1,6 +1,9 @@
 package pl.szczurradar.api.agents;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
 import java.util.Map;
 
@@ -18,11 +21,16 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.core.env.Environment;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import pl.szczurradar.api.TestcontainersConfiguration;
-import pl.szczurradar.api.agents.SkeletonAgent.Ping;
-import pl.szczurradar.api.agents.SkeletonAgent.Pong;
+import pl.szczurradar.api.agents.assessor.AssessmentResult;
+import pl.szczurradar.api.agents.assessor.AssessorAgent;
+import pl.szczurradar.api.agents.assessor.ContractFixtures;
+import pl.szczurradar.api.agents.assessor.Prefilter;
+import pl.szczurradar.api.agents.assessor.Provenance;
 import pl.szczurradar.api.config.LlmProviderProperties;
+import pl.szczurradar.api.llm.LlmClient;
 
 /**
  * Embabel inside the real application context, with the same configuration as the server and the
@@ -30,12 +38,14 @@ import pl.szczurradar.api.config.LlmProviderProperties;
  * no placeholder key, no fallback that disables the platform. Missing settings fail the context
  * start (LlmConfigurationCheck) — the test is never skipped.
  *
- * <p>Neither the start nor the skeleton action calls the LLM, so this confirms the local
- * registration of the platform, the selected model and the agent, not that the key works.
+ * <p>Nothing here calls the LLM: the start does not, and the assessor agent runs on an entry without
+ * content, which the prefilter decides. The {@link LlmClient} is a mock that proves it — so this
+ * confirms the local registration of the platform, the selected model and the agent, not that the
+ * key works.
  */
 @SpringBootTest
 @Import(TestcontainersConfiguration.class)
-class AgentSkeletonIT {
+class AssessorAgentIT {
 
 	@Autowired
 	AgentPlatform agentPlatform;
@@ -45,6 +55,9 @@ class AgentSkeletonIT {
 
 	@Autowired
 	Environment environment;
+
+	@MockitoBean
+	LlmClient llmClient;
 
 	@Test
 	void theSelectedModelIsTheDefaultLlm() {
@@ -63,17 +76,22 @@ class AgentSkeletonIT {
 	}
 
 	@Test
-	void theSkeletonAgentIsDeployedAndRunsWithoutCallingTheLlm() {
+	void theAssessorAgentIsDeployedAndAssessesAnEntryWithoutContentWithoutCallingTheLlm() {
 		Agent agent = agentPlatform.agents()
 			.stream()
-			.filter(candidate -> candidate.getName().equals(SkeletonAgent.class.getSimpleName()))
+			.filter(candidate -> candidate.getName().equals(AssessorAgent.class.getSimpleName()))
 			.findFirst()
-			.orElseThrow(() -> new AssertionError("SkeletonAgent not deployed: " + agentPlatform.agents()));
+			.orElseThrow(() -> new AssertionError("AssessorAgent not deployed: " + agentPlatform.agents()));
 
-		AgentProcess process = agentPlatform.runAgentFrom(agent, ProcessOptions.DEFAULT, Map.of("it", new Ping("hello")));
+		AgentProcess process = agentPlatform.runAgentFrom(agent, ProcessOptions.DEFAULT,
+				Map.of("it", ContractFixtures.post("#gielda https://example.com")));
 
 		assertThat(process.getStatus()).isEqualTo(AgentProcessStatusCode.COMPLETED);
-		assertThat(process.resultOfType(Pong.class)).isEqualTo(new Pong("pong: hello"));
+		AssessmentResult result = process.resultOfType(AssessmentResult.class);
+		assertThat(result.ok()).isTrue();
+		assertThat(result.output()).isEqualTo(Prefilter.noContentOutput());
+		assertThat(result.provenance().source()).isEqualTo(Provenance.Source.PREFILTER);
+		verify(llmClient, never()).complete(any());
 		assertThat(process.getLlmInvocations()).isEmpty();
 	}
 

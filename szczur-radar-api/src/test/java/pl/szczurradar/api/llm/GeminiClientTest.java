@@ -63,6 +63,9 @@ class GeminiClientTest {
 				// or uniqueItems: Gemini never sees them (OutputParser still enforces both).
 				assertThat(schema).doesNotContain("minItems", "maxItems", "$ref")
 					.contains("\"maxLength\":100", "\"required\":[\"id\",\"kind\",\"anchor\",\"stance\",\"reference\"]");
+				// The nullable enum reaches Gemini as anyOf with {"type": "null"} (ProviderSchemas).
+				assertThat(config.at("/responseJsonSchema/properties/targets/items/properties/stance/properties/assertiveness")
+					.toString()).isEqualTo("{\"anyOf\":[{\"enum\":[\"hedged\",\"unhedged\"],\"type\":\"string\"},{\"type\":\"null\"}]}");
 				assertThat(new ArrayList<>(config.at("/responseJsonSchema/properties/targets/items/properties")
 					.propertyNames())).containsExactly("id", "kind", "anchor", "stance", "reference");
 				assertThat(body.at("/systemInstruction/parts/0/text").asString()).isEqualTo("System prompt.");

@@ -557,16 +557,16 @@ Brak zmian danych i migracji Flyway. `SkeletonAgent` zastępuje `AssessorAgent`;
 
 #### Automated
 
-- [ ] 4.1 Pełna weryfikacja przechodzi bez wywołań LLM: `cd szczur-radar-api && ./mvnw -B verify`
-- [ ] 4.2 Każda klasa błędu ma test na sztucznym kliencie, a ocenialny wpis wywołuje klienta dokładnie raz; wpis bez treści — zero razy
-- [ ] 4.3 `evaluate` na surowej odpowiedzi daje wynik identyczny z `assess` na kliencie zwracającym tę odpowiedź
-- [ ] 4.4 `AssessorAgentIT` przechodzi; `SkeletonAgent` nie istnieje
-- [ ] 4.5 Domyślne `./mvnw -B test` nie uruchamia testów z tagiem `measurement`
+- [x] 4.1 Pełna weryfikacja przechodzi bez wywołań LLM: `cd szczur-radar-api && ./mvnw -B verify`
+- [x] 4.2 Każda klasa błędu ma test na sztucznym kliencie, a ocenialny wpis wywołuje klienta dokładnie raz; wpis bez treści — zero razy
+- [x] 4.3 `evaluate` na surowej odpowiedzi daje wynik identyczny z `assess` na kliencie zwracającym tę odpowiedź
+- [x] 4.4 `AssessorAgentIT` przechodzi; `SkeletonAgent` nie istnieje
+- [x] 4.5 Domyślne `./mvnw -B test` nie uruchamia testów z tagiem `measurement`
 
 #### Manual
 
-- [ ] 4.6 `LiveSmokeTest` wykonany trzy razy (Gemini `gemini-3.1-flash-lite`, DeepSeek Flash, OpenRouter `openai/gpt-6-luna` z `LLM_SERVICE_TIER=flex`): dla każdego zgodność z kontraktem ≥90% i najwyżej jedno `provider_error` lub `invalid_structured_output`; wyniki (z mianownikiem i dla Luny odsetkiem odmów 429 i medianą czasu) w opisie PR
-- [ ] 4.7 Pochodzenie ma wypełnione tokeny (w tym cache, gdy dostawca je zgłasza), wersję promptu i kontraktu dla wszystkich trzech; potwierdzona nazwa modelu DeepSeek Flash przyjmowana przez API
+- [x] 4.6 `LiveSmokeTest` wykonany trzy razy (Gemini `gemini-3.1-flash-lite`, DeepSeek Flash, OpenRouter `openai/gpt-6-luna` z `LLM_SERVICE_TIER=flex`): dla każdego zgodność z kontraktem ≥90% i najwyżej jedno `provider_error` lub `invalid_structured_output`; wyniki (z mianownikiem i dla Luny odsetkiem odmów 429 i medianą czasu) w opisie PR
+- [x] 4.7 Pochodzenie ma wypełnione tokeny (w tym cache, gdy dostawca je zgłasza), wersję promptu i kontraktu dla wszystkich trzech; potwierdzona nazwa modelu DeepSeek Flash przyjmowana przez API
 
 ### Phase 5: Zestaw wzorcowy
 

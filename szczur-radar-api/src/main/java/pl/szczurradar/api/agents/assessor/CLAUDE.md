@@ -7,6 +7,8 @@ Source of truth: `context/foundation/llm-assessment/contract-v2.md`. Code follow
 - `validation/OutputParser` — raw text → JSON (`invalid_structured_output`) → schema (`schema_violation`) → records. Never strip fences or repair output; no lenient framework converter may run before it.
 - `validation/` — domain rules D1–D15 as strategies (`rules/*`), run in order by `RuleBasedValidator` from `ContractV2Rules`; `StanceTable` is table §7.2 as data.
 - `Prefilter` — §11 no-content entries: no model call, `noContentOutput()`.
+- `prompt/AssessmentPrompt` — the system prompt (`src/main/resources/assessor/system-prompt.md`) and the user message (untrusted-material prefix + the input's contract JSON). Any change to either needs a new `PROMPT_VERSION`; `AssessmentPromptTest` pins the text's hash to the version.
+- `Assessor` — one assessment: `prepare` (prefilter → `Decided`, else the `PreparedRequest`), one `LlmClient.complete`, `evaluate` (parser → validator) into an `AssessmentResult` with `Provenance` (§15). Never retries, never repairs; a failed call is a `failed` result (`provider_error` / `timeout`), not an exception. `AssessorAgent` (Embabel) only delegates to it.
 - `text/Whitespace` — the §10 white space set. All white space handling (quotes, prefilter, input, metrics) goes through it; never `Character.isWhitespace`, `String.strip`/`trim`, `\s` or `\S`.
 
 ## Adding or changing a rule
