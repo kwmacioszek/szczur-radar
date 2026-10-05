@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-02-008",
+  "configId" : "gpt-4o-mini",
+  "provider" : "openrouter",
+  "model" : "openai/gpt-4o-mini",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T21:12:23.460760Z",
+  "rawText" : "{\"relevance\":\"investment_related\",\"modifiers\":[],\"targets\":[{\"id\":\"t1\",\"kind\":\"company\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"#xtb\"},\"stance\":{\"direction\":\"bearish\",\"assertiveness\":\"unhedged\",\"claim_ids\":[\"c1\"]},\"reference\":\"explicit\"}],\"claims\":[{\"id\":\"c1\",\"kind\":\"trade_action\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"sprzedawajcie wszyscy #xtb, śmiało, to sobie jeszcze taniej dokupię\"},\"statement\":\"Zalecam sprzedaż akcji XTB, aby dokupić je taniej.\"}],\"flags\":[]}",
+  "inputTokens" : 3337,
+  "outputTokens" : 155,
+  "cachedTokens" : 3200,
+  "durationMs" : 1621,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

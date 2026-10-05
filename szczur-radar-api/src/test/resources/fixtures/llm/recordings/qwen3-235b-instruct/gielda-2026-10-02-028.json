@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-02-028",
+  "configId" : "qwen3-235b-instruct",
+  "provider" : "openrouter",
+  "model" : "qwen/qwen3-235b-a22b-2507",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T21:16:55.302004Z",
+  "rawText" : "{\n  \"relevance\": \"investment_related\",\n  \"modifiers\": [],\n  \"targets\": [\n    {\n      \"id\": \"t1\",\n      \"kind\": \"company\",\n      \"anchor\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"xtb\"\n      },\n      \"stance\": {\n        \"direction\": \"bearish\",\n        \"assertiveness\": \"hedged\",\n        \"claim_ids\": [\n          \"c1\"\n        ]\n      },\n      \"reference\": \"explicit\"\n    }\n  ],\n  \"claims\": [\n    {\n      \"id\": \"c1\",\n      \"kind\": \"question\",\n      \"attribution\": \"author\",\n      \"target_ids\": [\n        \"t1\"\n      ],\n      \"evidence\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"#gielda serio xtb spada bo jakieś biuro dało prognozę 150-200mln zysku?\"\n      },\n      \"statement\": \"czy xtb spada z powodu prognozy zysku 150-200mln?\"\n    }\n  ],\n  \"flags\": []\n}",
+  "inputTokens" : 3209,
+  "outputTokens" : 257,
+  "cachedTokens" : 3104,
+  "durationMs" : 7134,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

@@ -1,0 +1,33 @@
+{
+  "post_id" : "gielda-2026-10-01-016",
+  "configId" : "qwen3-235b-instruct",
+  "provider" : "openrouter",
+  "model" : "qwen/qwen3-235b-a22b-2507",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T21:14:54.539025Z",
+  "rawText" : "{\n  \"claims\": [\n    {\n      \"attribution\": \"author\",\n      \"evidence\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"Dzisiaj raportują - 01.10.2026** (top 10 według kapitalizacji, > $10B, USA)\"\n      },\n      \"id\": \"c1\",\n      \"kind\": \"factual_claim\",\n      \"statement\": \"Dzisiaj, 01.10.2026, raportują spółki z top 10 według kapitalizacji, powyżej 10 mld USD, z rynku USA.\",\n      \"target_ids\": []\n    },\n    {\n      \"attribution\": \"author\",\n      \"evidence\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"[ACN](<url> (Accenture plc) — 🌅\"\n      },\n      \"id\": \"c2\",\n      \"kind\": \"factual_claim\",\n      \"statement\": \"Accenture plc (ACN) opublikuje wyniki przed otwarciem sesji.\",\n      \"target_ids\": [\n        \"t1\"\n      ]\n    },\n    {\n      \"attribution\": \"author\",\n      \"evidence\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"[NKE](<url> (Nike, Inc.) — 🌙\"\n      },\n      \"id\": \"c3\",\n      \"kind\": \"factual_claim\",\n      \"statement\": \"Nike, Inc. (NKE) opublikuje wyniki po zamknięciu sesji.\",\n      \"target_ids\": [\n        \"t2\"\n      ]\n    },\n    {\n      \"attribution\": \"author\",\n      \"evidence\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"Wyniki pojawią się na tagu po zamknięciu sesji.\"\n      },\n      \"id\": \"c4\",\n      \"kind\": \"factual_claim\",\n      \"statement\": \"Wyniki z publikacji pojawią się na tagu po zamknięciu sesji.\",\n      \"target_ids\": []\n    }\n  ],\n  \"flags\": [],\n  \"modifiers\": [],\n  \"relevance\": \"investment_related\",\n  \"targets\": [\n    {\n      \"anchor\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"ACN\"\n      },\n      \"id\": \"t1\",\n      \"kind\": \"company\",\n      \"reference\": \"explicit\"\n    ,\n      \"stance\": {\n        \"assertiveness\": \"hedged\",\n        \"claim_ids\": [],\n        \"direction\": \"not_expressed\"\n      }\n    },\n    {\n      \"anchor\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"NKE\"\n      },\n      \"id\": \"t2\",\n      \"kind\": \"company\",\n      \"reference\": \"explicit\"\n    ,\n      \"stance\": {\n        \"assertiveness\": \"hedged\",\n        \"claim_ids\": [],\n        \"direction\": \"not_expressed\"\n      }\n    }\n  ]\n}",
+  "inputTokens" : 3333,
+  "outputTokens" : 703,
+  "cachedTokens" : 0,
+  "durationMs" : 33493,
+  "attempts" : 1,
+  "status" : "failed",
+  "failureClass" : "domain_invariant_violation",
+  "violations" : [ {
+    "failureClass" : "domain_invariant_violation",
+    "rule" : "D12",
+    "path" : "$.targets[0].stance.assertiveness",
+    "message" : "direction not_expressed needs assertiveness null"
+  }, {
+    "failureClass" : "domain_invariant_violation",
+    "rule" : "D12",
+    "path" : "$.targets[1].stance.assertiveness",
+    "message" : "direction not_expressed needs assertiveness null"
+  } ]
+}

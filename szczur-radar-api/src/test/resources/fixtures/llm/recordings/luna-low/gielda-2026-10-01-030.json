@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-01-030",
+  "configId" : "luna-low",
+  "provider" : "openrouter",
+  "model" : "openai/gpt-6-luna",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : "low",
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T21:03:49.465840Z",
+  "rawText" : "{\"relevance\":\"investment_related\",\"modifiers\":[\"humor\"],\"targets\":[{\"id\":\"t1\",\"kind\":\"company\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"microna\"},\"stance\":{\"direction\":\"mixed\",\"assertiveness\":null,\"claim_ids\":[\"c1\",\"c3\"]},\"reference\":\"explicit\"},{\"id\":\"t2\",\"kind\":\"company\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"alphabet\"},\"stance\":{\"direction\":\"mixed\",\"assertiveness\":null,\"claim_ids\":[\"c2\",\"c3\"]},\"reference\":\"explicit\"}],\"claims\":[{\"id\":\"c1\",\"kind\":\"trade_action\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"kupił microna\"},\"statement\":\"Jeden chłopiec kupił Microna.\"},{\"id\":\"c2\",\"kind\":\"trade_action\",\"attribution\":\"author\",\"target_ids\":[\"t2\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"zainwestował stabilnie w alphabet pół roku temu\"},\"statement\":\"Drugi zainwestował stabilnie w Alphabet pół roku temu.\"},{\"id\":\"c3\",\"kind\":\"opinion\",\"attribution\":\"author\",\"target_ids\":[\"t1\",\"t2\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"Żaden, grubas przecwelił obydwu\"},\"statement\":\"Żaden nie jest szczęśliwy; grubas przecwelił obu.\"}],\"flags\":[]}",
+  "inputTokens" : 3355,
+  "outputTokens" : 768,
+  "cachedTokens" : 3215,
+  "durationMs" : 10023,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

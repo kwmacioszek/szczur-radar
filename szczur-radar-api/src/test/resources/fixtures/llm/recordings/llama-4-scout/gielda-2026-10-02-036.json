@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-02-036",
+  "configId" : "llama-4-scout",
+  "provider" : "openrouter",
+  "model" : "meta-llama/llama-4-scout",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T21:20:58.774858Z",
+  "rawText" : "{\n  \"relevance\": \"investment_related\",\n  \"modifiers\": [\n    \"humor\"\n  ],\n  \"targets\": [\n    {\n      \"id\": \"t1\",\n      \"kind\": \"company\",\n      \"anchor\": \t{\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"szczurze\"\n      },\n      \"stance\": {\n        \"direction\": \"bullish\",\n        \"assertiveness\": \"unhedged\",\n        \"claim_ids\": [\"c1\"]\n      },\n      \"reference\": \"explicit\"\n    }\n  ],\n  \"claims\": [\n    {\n      \"id\": \"c1\",\n      \"kind\": \"opinion\",\n      \"attribution\": \"author\",\n      \"target_ids\": [\"t1\"],\n      \"evidence\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"ale promocja na szczurze\"\n      },\n      \"statement\": \"ale promocja na szczurze\"\n    }\n  ],\n  \"flags\": []\n}",
+  "inputTokens" : 2679,
+  "outputTokens" : 222,
+  "cachedTokens" : 0,
+  "durationMs" : 15489,
+  "attempts" : 3,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

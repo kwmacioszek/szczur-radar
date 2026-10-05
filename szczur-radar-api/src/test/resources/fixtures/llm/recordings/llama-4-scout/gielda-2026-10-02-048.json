@@ -1,0 +1,28 @@
+{
+  "post_id" : "gielda-2026-10-02-048",
+  "configId" : "llama-4-scout",
+  "provider" : "openrouter",
+  "model" : null,
+  "channel" : null,
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : null,
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T21:21:38.996991Z",
+  "rawText" : null,
+  "inputTokens" : null,
+  "outputTokens" : null,
+  "cachedTokens" : null,
+  "durationMs" : 3785,
+  "attempts" : 3,
+  "status" : "failed",
+  "failureClass" : "provider_error",
+  "violations" : [ {
+    "failureClass" : "provider_error",
+    "rule" : "call",
+    "path" : "$",
+    "message" : "failed after 3 attempts: HTTP 429: 429: Provider returned error"
+  } ]
+}

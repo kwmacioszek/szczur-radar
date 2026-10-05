@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-01-012",
+  "configId" : "qwen3-235b-instruct",
+  "provider" : "openrouter",
+  "model" : "qwen/qwen3-235b-a22b-2507",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T21:14:21.040546Z",
+  "rawText" : "{\n  \"relevance\": \"not_investment_related\",\n  \"modifiers\": [],\n  \"targets\": [],\n  \"claims\": [],\n  \"flags\": []\n}",
+  "inputTokens" : 3186,
+  "outputTokens" : 34,
+  "cachedTokens" : 3120,
+  "durationMs" : 796,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

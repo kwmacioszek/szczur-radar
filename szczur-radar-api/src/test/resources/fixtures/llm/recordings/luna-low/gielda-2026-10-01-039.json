@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-01-039",
+  "configId" : "luna-low",
+  "provider" : "openrouter",
+  "model" : "openai/gpt-6-luna",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : "low",
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T21:04:56.446680Z",
+  "rawText" : "{\"relevance\":\"investment_related\",\"modifiers\":[\"promotion\"],\"targets\":[{\"id\":\"t1\",\"kind\":\"company\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"GPW\"},\"stance\":{\"direction\":\"not_expressed\",\"assertiveness\":null,\"claim_ids\":[]},\"reference\":\"explicit\"},{\"id\":\"t2\",\"kind\":\"other\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"WATS\"},\"stance\":{\"direction\":\"not_expressed\",\"assertiveness\":null,\"claim_ids\":[]},\"reference\":\"explicit\"},{\"id\":\"t3\",\"kind\":\"other\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"UTP\"},\"stance\":{\"direction\":\"not_expressed\",\"assertiveness\":null,\"claim_ids\":[]},\"reference\":\"explicit\"},{\"id\":\"t4\",\"kind\":\"asset\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"WDO\"},\"stance\":{\"direction\":\"not_expressed\",\"assertiveness\":null,\"claim_ids\":[]},\"reference\":\"explicit\"},{\"id\":\"t5\",\"kind\":\"company\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"mBank\"},\"stance\":{\"direction\":\"not_expressed\",\"assertiveness\":null,\"claim_ids\":[]},\"reference\":\"explicit\"},{\"id\":\"t6\",\"kind\":\"company\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"PKO BP\"},\"stance\":{\"direction\":\"not_expressed\",\"assertiveness\":null,\"claim_ids\":[]},\"reference\":\"explicit\"},{\"id\":\"t7\",\"kind\":\"asset\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"WIG20\"},\"stance\":{\"direction\":\"not_expressed\",\"assertiveness\":null,\"claim_ids\":[]},\"reference\":\"explicit\"}],\"claims\":[{\"id\":\"c1\",\"kind\":\"factual_claim\",\"attribution\":\"author\",\"target_ids\":[\"t1\",\"t2\",\"t3\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"GPW przechodzi z UTP na nowy system WATS:\"},\"statement\":\"GPW przechodzi z UTP na nowy system WATS.\"},{\"id\":\"c2\",\"kind\":\"factual_claim\",\"attribution\":\"author\",\"target_ids\":[\"t1\",\"t2\",\"t3\",\"t4\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"pt 2.10 ostatnia sesja na UTP. Po sesji GPW unieważni WSZYSTKIE niezrealizowane zlecenia, także WDO i te złożone z przyszłą datą.\"},\"statement\":\"Pt 2.10 ostatnia sesja na UTP; po sesji GPW unieważni niezrealizowane zlecenia, także WDO i te złożone z przyszłą datą.\"},{\"id\":\"c3\",\"kind\":\"factual_claim\",\"attribution\":\"author\",\"target_ids\":[\"t5\",\"t6\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"serwisy maklerskie mogą nie działać (mBank, PKO już uprzedzają)\"},\"statement\":\"Podczas migracji serwisy maklerskie mogą nie działać; mBank i PKO już uprzedzają.\"},{\"id\":\"c4\",\"kind\":\"factual_claim\",\"attribution\":\"author\",\"target_ids\":[\"t1\",\"t2\",\"t3\",\"t7\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"limit ceny dla spółek z WIG20 maks. ±40% od kursu odniesienia\"},\"statement\":\"Limit ceny dla spółek z WIG20 wynosi maks. ±40% od kursu odniesienia.\"},{\"id\":\"c5\",\"kind\":\"factual_claim\",\"attribution\":\"author\",\"target_ids\":[\"t1\",\"t2\",\"t3\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"Plan B GPW: sesje 5–8.10 pod nadzorem, przy poważnych problemach powrót do UTP w weekend 10–11.10 (sesja 9.10 odwołana).\"},\"statement\":\"Sesje 5–8.10 będą pod nadzorem; przy poważnych problemach GPW może wrócić do UTP w weekend 10–11.10, a sesja 9.10 będzie odwołana.\"},{\"id\":\"c6\",\"kind\":\"question\",\"attribution\":\"author\",\"target_ids\":[\"t4\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"Macie coś na WDO, co trzeba będzie wystawiać od nowa?\"},\"statement\":\"Macie coś na WDO, co trzeba będzie wystawiać od nowa?\"}],\"flags\":[]}",
+  "inputTokens" : 3804,
+  "outputTokens" : 1477,
+  "cachedTokens" : 3215,
+  "durationMs" : 14589,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

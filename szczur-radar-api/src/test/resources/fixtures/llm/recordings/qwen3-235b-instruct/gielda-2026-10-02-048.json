@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-02-048",
+  "configId" : "qwen3-235b-instruct",
+  "provider" : "openrouter",
+  "model" : "qwen/qwen3-235b-a22b-2507",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T21:17:42.016160Z",
+  "rawText" : "{\n  \"claims\": [\n    {\n      \"attribution\": \"author\",\n      \"evidence\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"Samsung robi +5% dzisiaj\"\n      },\n      \"id\": \"c1\",\n      \"kind\": \"factual_claim\",\n      \"statement\": \"Samsung robi +5% dzisiaj\",\n      \"target_ids\": [\n        \"t1\"\n      ]\n    },\n    {\n      \"attribution\": \"author\",\n      \"evidence\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"Micron na czerwono\"\n      },\n      \"id\": \"c2\",\n      \"kind\": \"factual_claim\",\n      \"statement\": \"Micron na czerwono\",\n      \"target_ids\": [\n        \"t2\"\n      ]\n    }\n  ],\n  \"flags\": [],\n  \"modifiers\": [],\n  \"relevance\": \"investment_related\",\n  \"targets\": [\n    {\n      \"anchor\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"Samsung\"\n      },\n      \"id\": \"t1\",\n      \"kind\": \"company\",\n      \"reference\": \"explicit\"\n    ,\n      \"stance\": {\n        \"assertiveness\": \"hedged\",\n        \"claim_ids\": [\n          \"c1\"\n        ],\n        \"direction\": \"bullish\"\n      }}\n    ,\n    {\n      \"anchor\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"Micron\"\n      },\n      \"id\": \"t2\",\n      \"kind\": \"company\",\n      \"reference\": \"explicit\"\n    ,\n      \"stance\": {\n        \"assertiveness\": \"hedged\",\n        \"claim_ids\": [\n          \"c2\"\n        ],\n        \"direction\": \"bearish\"\n      }}\n  ]\n}",
+  "inputTokens" : 3201,
+  "outputTokens" : 406,
+  "cachedTokens" : 0,
+  "durationMs" : 12338,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

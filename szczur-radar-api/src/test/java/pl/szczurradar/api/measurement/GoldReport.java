@@ -212,7 +212,7 @@ class GoldReport {
 		perChannel.forEach((channel, cost) -> md.append("  - `").append(channel).append("`: ").append(usd(cost)).append(" / ")
 			.append(usd(cost / Math.max(1, n))).append(" / **").append(usd(cost / Math.max(1, n) * POSTS_PER_MONTH))
 			.append("**\n"));
-		if (recordings.stream().allMatch(r -> billingChannel(model, r) != null)) {
+		if (recordings.stream().anyMatch(r -> billingChannel(model, r) != null)) {
 			double actual = recordings.stream().mapToDouble(r -> actualCost(model, r)).sum();
 			md.append("  - faktyczny kanał każdego wywołania: ").append(usd(actual)).append(" / ")
 				.append(usd(actual / Math.max(1, n))).append(" / **").append(usd(actual / Math.max(1, n) * POSTS_PER_MONTH))
@@ -279,7 +279,8 @@ class GoldReport {
 	}
 
 	private static double actualCost(Model model, Recording recording) {
-		Price price = model.prices().get(billingChannel(model, recording));
+		String channel = billingChannel(model, recording);
+		Price price = channel == null ? null : model.prices().get(channel);
 		return price == null ? 0 : price.cost(recording.inputTokens(), recording.cachedTokens(), recording.outputTokens());
 	}
 
@@ -288,6 +289,9 @@ class GoldReport {
 	 * {@code off_peak}) the time of day — peak is 01:00–04:00 and 06:00–10:00 UTC, Monday to Friday.
 	 */
 	static @Nullable String billingChannel(Model model, Recording recording) {
+		if (recording.rawText() == null) {
+			return null; // a call without an answer is not billed
+		}
 		if (recording.channel() != null && model.prices().containsKey(recording.channel())) {
 			return recording.channel();
 		}

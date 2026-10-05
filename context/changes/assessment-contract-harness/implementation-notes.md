@@ -198,3 +198,13 @@ later phases. Each open check names the phase that closes it; `/10x-impl-review`
 - OpenRouter routed DeepSeek between providers (cache hits ~54 %); pinning a provider
   (`provider.only`) would need a new `LLM_*` setting — not done, since reasoning did not pay off.
 - The report bills DeepSeek by the recording's time of day (peak 01–04 and 06–10 UTC on weekdays).
+
+### N15. Full run of luna-low and four more OpenRouter models (2026-10-05)
+
+- `luna-low` on all 120 posts: direction 63.5 %, dominant 66.7 %, contradictions 11.7 % — worse than
+  Luna medium (73.0 % / 76.2 % / 8.3 %); the 30-post screen had hidden it (noise).
+- 30-post screen: GPT-4o-mini compliance 93.3 %, direction 52.6 %; Qwen3 235B Instruct 2507 compliance
+  53.3 % (12 × `schema:additionalProperties` — OpenRouter's upstreams do not enforce strict schema);
+  Llama 4 Scout 25/30 `provider_error` (HTTP 429 from the provider after 3 attempts — rate limit, not
+  measured); Qwen3.5-9B not recorded (user: problems with the run).
+- The report no longer bills calls without an answer (`provider_error`, `timeout`).

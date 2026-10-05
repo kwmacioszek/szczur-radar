@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-02-038",
+  "configId" : "luna-low",
+  "provider" : "openrouter",
+  "model" : "openai/gpt-6-luna",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : "low",
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T21:09:29.627869Z",
+  "rawText" : "{\"relevance\":\"investment_related\",\"modifiers\":[],\"targets\":[{\"id\":\"t1\",\"kind\":\"company\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"XTB\"},\"stance\":{\"direction\":\"not_expressed\",\"assertiveness\":null,\"claim_ids\":[]},\"reference\":\"explicit\"}],\"claims\":[{\"id\":\"c1\",\"kind\":\"trade_action\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"żeby robic kółko na XTB\"},\"statement\":\"Chce robić kółko na XTB.\"}],\"flags\":[]}",
+  "inputTokens" : 3331,
+  "outputTokens" : 642,
+  "cachedTokens" : 3215,
+  "durationMs" : 8721,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

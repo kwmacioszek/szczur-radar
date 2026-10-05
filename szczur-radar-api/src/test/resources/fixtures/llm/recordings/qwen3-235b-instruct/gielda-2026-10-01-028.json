@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-01-028",
+  "configId" : "qwen3-235b-instruct",
+  "provider" : "openrouter",
+  "model" : "qwen/qwen3-235b-a22b-2507",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T21:15:31.714297Z",
+  "rawText" : "{\n  \"claims\": [\n    {\n      \"attribution\": \"author\",\n      \"evidence\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"#gielda szczur znowu dostał kare od KNF że dziś tak szoruje po dnie? \"\n      },\n      \"id\": \"c1\",\n      \"kind\": \"question\",\n      \"statement\": \"czy szczur znowu dostał karę od KNF, przez co dziś tak szoruje po dnie?\",\n      \"target_ids\": [\n        \"t1\"\n      ]\n    }\n  ],\n  \"flags\": [],\n  \"modifiers\": [],\n  \"relevance\": \"investment_related\",\n  \"targets\": [\n    {\n      \"anchor\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"szczur\"\n      },\n      \"id\": \"t1\",\n      \"kind\": \"company\",\n      \"reference\": \"explicit\"\n    ,\n      \"stance\": {\n        \"assertiveness\": \"hedged\",\n        \"claim_ids\": [\n          \"c1\"\n        ],\n        \"direction\": \"bearish\"\n      }}\n  ]\n}",
+  "inputTokens" : 3204,
+  "outputTokens" : 255,
+  "cachedTokens" : 0,
+  "durationMs" : 12856,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

@@ -156,6 +156,66 @@
           "output": 0.28
         }
       }
+    },
+    {
+      "id": "gpt-4o-mini",
+      "role": "candidate",
+      "provider": "openrouter",
+      "model": "openai/gpt-4o-mini",
+      "serviceTier": "default",
+      "reasoningEffort": null,
+      "prices": {
+        "openrouter": {
+          "input": 0.15,
+          "cachedInput": 0.075,
+          "output": 0.6
+        }
+      }
+    },
+    {
+      "id": "qwen3-235b-instruct",
+      "role": "candidate",
+      "provider": "openrouter",
+      "model": "qwen/qwen3-235b-a22b-2507",
+      "serviceTier": "default",
+      "reasoningEffort": null,
+      "prices": {
+        "openrouter": {
+          "input": 0.0875,
+          "cachedInput": 0.0175,
+          "output": 0.35
+        }
+      }
+    },
+    {
+      "id": "llama-4-scout",
+      "role": "candidate",
+      "provider": "openrouter",
+      "model": "meta-llama/llama-4-scout",
+      "serviceTier": "default",
+      "reasoningEffort": null,
+      "prices": {
+        "openrouter": {
+          "input": 0.1,
+          "cachedInput": 0.1,
+          "output": 0.3
+        }
+      }
+    },
+    {
+      "id": "qwen3.5-9b",
+      "role": "candidate",
+      "provider": "openrouter",
+      "model": "qwen/qwen3.5-9b",
+      "serviceTier": "default",
+      "reasoningEffort": null,
+      "prices": {
+        "openrouter": {
+          "input": 0.1,
+          "cachedInput": 0.1,
+          "output": 0.15
+        }
+      }
     }
   ]
 }

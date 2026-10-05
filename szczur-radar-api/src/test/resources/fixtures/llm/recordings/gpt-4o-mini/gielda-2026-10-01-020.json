@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-01-020",
+  "configId" : "gpt-4o-mini",
+  "provider" : "openrouter",
+  "model" : "openai/gpt-4o-mini",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T21:12:04.816027Z",
+  "rawText" : "{\"relevance\":\"investment_related\",\"modifiers\":[],\"targets\":[{\"id\":\"t1\",\"kind\":\"company\",\"anchor\":{\"document\":\"item\",\"field\":\"title\",\"quote\":\"Meta\"},\"stance\":{\"direction\":\"not_expressed\",\"assertiveness\":null,\"claim_ids\":[]},\"reference\":\"explicit\"},{\"id\":\"t2\",\"kind\":\"company\",\"anchor\":{\"document\":\"item\",\"field\":\"title\",\"quote\":\"Amazon\"},\"stance\":{\"direction\":\"not_expressed\",\"assertiveness\":null,\"claim_ids\":[]},\"reference\":\"explicit\"}],\"claims\":[],\"flags\":[] }",
+  "inputTokens" : 3399,
+  "outputTokens" : 113,
+  "cachedTokens" : 3200,
+  "durationMs" : 1317,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

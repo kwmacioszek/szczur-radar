@@ -1,0 +1,28 @@
+{
+  "post_id" : "gielda-2026-10-01-036",
+  "configId" : "qwen3-235b-instruct",
+  "provider" : "openrouter",
+  "model" : null,
+  "channel" : null,
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : null,
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T21:15:37.763787Z",
+  "rawText" : null,
+  "inputTokens" : null,
+  "outputTokens" : null,
+  "cachedTokens" : null,
+  "durationMs" : 1070,
+  "attempts" : 1,
+  "status" : "failed",
+  "failureClass" : "provider_error",
+  "violations" : [ {
+    "failureClass" : "provider_error",
+    "rule" : "call",
+    "path" : "$",
+    "message" : "HTTP 400: 400: Provider returned error"
+  } ]
+}

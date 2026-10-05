@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-02-057",
+  "configId" : "luna-low",
+  "provider" : "openrouter",
+  "model" : "openai/gpt-6-luna",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : "low",
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T21:11:07.329403Z",
+  "rawText" : "{\"relevance\":\"investment_related\",\"modifiers\":[\"humor\"],\"targets\":[{\"id\":\"t1\",\"kind\":\"macro_topic\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"bessa\"},\"stance\":{\"direction\":\"bearish\",\"assertiveness\":\"hedged\",\"claim_ids\":[\"c1\"]},\"reference\":\"explicit\"}],\"claims\":[{\"id\":\"c1\",\"kind\":\"factual_claim\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"jak przyjdzie bessa wszyscy skończymy na wycinaniu gąbek w parku trampolinowym\"},\"statement\":\"Jak przyjdzie bessa, wszyscy skończymy na wycinaniu gąbek w parku trampolinowym.\"}],\"flags\":[]}",
+  "inputTokens" : 3334,
+  "outputTokens" : 344,
+  "cachedTokens" : 3215,
+  "durationMs" : 5165,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

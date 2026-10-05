@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-01-004",
+  "configId" : "gpt-4o-mini",
+  "provider" : "openrouter",
+  "model" : "openai/gpt-4o-mini",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T21:11:59.156937Z",
+  "rawText" : "{\"relevance\":\"investment_related\",\"modifiers\":[],\"targets\":[{\"id\":\"t1\",\"kind\":\"other\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"MU PRICE TARGET: 1100\"},\"stance\":{\"direction\":\"not_expressed\",\"assertiveness\":null,\"claim_ids\":[]},\"reference\":\"explicit\"}],\"claims\":[{\"id\":\"c1\",\"kind\":\"factual_claim\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"MU PRICE TARGET: 1100\"},\"statement\":\"MU PRICE TARGET: 1100.\"},{\"id\":\"c2\",\"kind\":\"factual_claim\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"RATING: HOLD\"},\"statement\":\"RATING: HOLD.\"},{\"id\":\"c3\",\"kind\":\"factual_claim\",\"attribution\":\"reported\",\"target_ids\":[],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"ANALYST: @uzytkownik8 (WKP Research)\"},\"statement\":\"ANALYST: @uzytkownik8 (WKP Research).\"},{\"id\":\"c4\",\"kind\":\"factual_claim\",\"attribution\":\"author\",\"target_ids\":[],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"Rynki juz zareagowaly.\"},\"statement\":\"Rynki juz zareagowaly.\"}],\"flags\":[]}",
+  "inputTokens" : 3359,
+  "outputTokens" : 305,
+  "cachedTokens" : 3200,
+  "durationMs" : 2581,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

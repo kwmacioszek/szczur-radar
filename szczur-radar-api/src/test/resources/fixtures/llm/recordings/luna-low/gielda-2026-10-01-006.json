@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-01-006",
+  "configId" : "luna-low",
+  "provider" : "openrouter",
+  "model" : "openai/gpt-6-luna",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : "low",
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T21:01:54.169538Z",
+  "rawText" : "{\"relevance\":\"investment_related\",\"modifiers\":[\"humor\"],\"targets\":[{\"id\":\"t1\",\"kind\":\"asset\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"złoto\"},\"stance\":{\"direction\":\"bullish\",\"assertiveness\":\"unhedged\",\"claim_ids\":[\"c2\"]},\"reference\":\"explicit\"},{\"id\":\"t2\",\"kind\":\"macro_topic\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"W\"},\"stance\":{\"direction\":\"not_expressed\",\"assertiveness\":null,\"claim_ids\":[]},\"reference\":\"explicit\"}],\"claims\":[{\"id\":\"c1\",\"kind\":\"question\",\"attribution\":\"author\",\"target_ids\":[\"t1\",\"t2\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"Trzyma ktoś oprócz mnie złoto na wypadek W?\"},\"statement\":\"Trzyma ktoś oprócz mnie złoto na wypadek W?\"},{\"id\":\"c2\",\"kind\":\"trade_action\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"Miałem monety 1 uncjowe, ale sprzedałem je i wymieniłem na monety 1/4 uncji żeby łatwiej handlować w razie czego.\"},\"statement\":\"Miałem monety 1 uncjowe, ale sprzedałem je i wymieniłem na monety 1/4 uncji żeby łatwiej handlować w razie czego.\"},{\"id\":\"c3\",\"kind\":\"question\",\"attribution\":\"author\",\"target_ids\":[],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"Jakie aktywo jeszcze polecają eksperci?\"},\"statement\":\"Jakie aktywo jeszcze polecają eksperci?\"}],\"flags\":[]}",
+  "inputTokens" : 3400,
+  "outputTokens" : 673,
+  "cachedTokens" : 3215,
+  "durationMs" : 7479,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

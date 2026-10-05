@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-02-024",
+  "configId" : "qwen3-235b-instruct",
+  "provider" : "openrouter",
+  "model" : "qwen/qwen3-235b-a22b-2507",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T21:16:48.163742Z",
+  "rawText" : "{\n  \"relevance\": \"investment_related\",\n  \"modifiers\": [],\n  \"targets\": [\n    {\n      \"id\": \"t1\",\n      \"kind\": \"company\",\n      \"anchor\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"$XTB\"\n      },\n      \"stance\": {\n        \"direction\": \"not_expressed\",\n        \"assertiveness\": null,\n        \"claim_ids\": []\n      },\n      \"reference\": \"explicit\"\n    }\n  ],\n  \"claims\": [],\n  \"flags\": []\n}",
+  "inputTokens" : 3187,
+  "outputTokens" : 118,
+  "cachedTokens" : 0,
+  "durationMs" : 4784,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

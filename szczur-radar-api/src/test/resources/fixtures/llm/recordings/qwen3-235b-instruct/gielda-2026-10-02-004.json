@@ -1,0 +1,38 @@
+{
+  "post_id" : "gielda-2026-10-02-004",
+  "configId" : "qwen3-235b-instruct",
+  "provider" : "openrouter",
+  "model" : "qwen/qwen3-235b-a22b-2507",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T21:16:00.657318Z",
+  "rawText" : "{\n  \"schema_version\": \"AssessmentOutputV2\",\n  \"relevance\": \"investment_related\",\n  \"modifiers\": [],\n  \"targets\": [\n    {\n      \"id\": \"t1\",\n      \"kind\": \"company\",\n      \"anchor\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"Comperia\"\n      },\n      \"reference\": \"explicit\"\n    }\n  ],\n  \"claims\": [\n    {\n      \"id\": \"c1\",\n      \"kind\": \"factual_claim\",\n      \"attribution\": \"author\",\n      \"target_ids\": [\"t1\"],\n      \"statement\": \"Comperia już blisko po 10 PLN\",\n      \"evidence\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"Comperia już blisko po 10 PLN\"\n      }\n    }\n  ],\n  \"stance\": [\n    {\n      \"target_id\": \"t1\",\n      \"direction\": \"bullish\",\n      \"assertiveness\": \"hedged\",\n      \"claim_ids\": [\"c1\"]\n    }\n  ],\n  \"flags\": []\n}",
+  "inputTokens" : 2463,
+  "outputTokens" : 210,
+  "cachedTokens" : 0,
+  "durationMs" : 5029,
+  "attempts" : 1,
+  "status" : "failed",
+  "failureClass" : "schema_violation",
+  "violations" : [ {
+    "failureClass" : "schema_violation",
+    "rule" : "schema:required",
+    "path" : "$.targets[0]",
+    "message" : "nie znaleziono wymaganej właściwości „stance”."
+  }, {
+    "failureClass" : "schema_violation",
+    "rule" : "schema:additionalProperties",
+    "path" : "$",
+    "message" : "właściwość „schema_version” nie jest zdefiniowana w schemacie i schemat nie pozwala na dodatkowe właściwości"
+  }, {
+    "failureClass" : "schema_violation",
+    "rule" : "schema:additionalProperties",
+    "path" : "$",
+    "message" : "właściwość „stance” nie jest zdefiniowana w schemacie i schemat nie pozwala na dodatkowe właściwości"
+  } ]
+}
