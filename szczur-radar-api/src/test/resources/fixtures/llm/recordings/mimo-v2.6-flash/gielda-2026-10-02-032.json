@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-02-032",
+  "configId" : "mimo-v2.6-flash",
+  "provider" : "openrouter",
+  "model" : "xiaomi/mimo-v2.6-flash",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T20:16:52.477059Z",
+  "rawText" : "{\"relevance\":\"investment_related\",\"modifiers\":[],\"targets\":[{\"id\":\"t1\",\"kind\":\"company\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"asbisa\"},\"stance\":{\"direction\":\"bearish\",\"assertiveness\":\"hedged\",\"claim_ids\":[\"c1\"]},\"reference\":\"explicit\"}],\"claims\":[{\"id\":\"c1\",\"kind\":\"investment_thesis\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"chyba nie będzie drugiego asbisa\"},\"statement\":\"Autor sądzi, że nie będzie drugiego asbisa (powtórzenia wcześniejszego wzrostu / powtórki z Asbis)\"}],\"flags\":[]}",
+  "inputTokens" : 3189,
+  "outputTokens" : 306,
+  "cachedTokens" : 0,
+  "durationMs" : 9188,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-02-012",
+  "configId" : "deepseek-r-low",
+  "provider" : "openrouter",
+  "model" : "deepseek/deepseek-v4.1-flash",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : "low",
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T19:20:46.368022Z",
+  "rawText" : "{\n  \"relevance\": \"investment_related\",\n  \"modifiers\": [\"humor\"],\n  \"targets\": [\n    {\n      \"id\": \"t1\",\n      \"kind\": \"macro_topic\",\n      \"anchor\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"giełdzie\"\n      },\n      \"stance\": {\n        \"direction\": \"bearish\",\n        \"assertiveness\": \"hedged\",\n        \"claim_ids\": [\"c3\"]\n      },\n      \"reference\": \"explicit\"\n    },\n    {\n      \"id\": \"t2\",\n      \"kind\": \"company\",\n      \"anchor\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"moje spółki\"\n      },\n      \"stance\": {\n        \"direction\": \"mixed\",\n        \"assertiveness\": null,\n        \"claim_ids\": [\"c1\", \"c2\"]\n      },\n      \"reference\": \"unresolved\"\n    }\n  ],\n  \"claims\": [\n    {\n      \"id\": \"c1\",\n      \"kind\": \"trade_action\",\n      \"attribution\": \"author\",\n      \"target_ids\": [\"t2\"],\n      \"evidence\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"będę miał 12k do wydania w połowie października\"\n      },\n      \"statement\": \"Będę miał 12k do wydania w połowie października.\"\n    },\n    {\n      \"id\": \"c2\",\n      \"kind\": \"opinion\",\n      \"attribution\": \"author\",\n      \"target_ids\": [\"t2\"],\n      \"evidence\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"jak na złość wszystkie moje spółki rosną, ewentualnie boczniak, ale żadna nie chce spaść chociaż kilka procent...\"\n      },\n      \"statement\": \"Wszystkie moje spółki rosną, ewentualnie boczniak, ale żadna nie chce spaść chociaż kilka procent.\"\n    },\n    {\n      \"id\": \"c3\",\n      \"kind\": \"investment_thesis\",\n      \"attribution\": \"author\",\n      \"target_ids\": [\"t1\"],\n      \"evidence\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"Klimat pod spadki 10-15% na giełdzie jest, ale coś nie chce jebnąć :/\"\n      },\n      \"statement\": \"Klimat pod spadki 10-15% na giełdzie jest, ale coś nie chce jebnąć.\"\n    }\n  ],\n  \"flags\": []\n}",
+  "inputTokens" : 3159,
+  "outputTokens" : 11564,
+  "cachedTokens" : 2048,
+  "durationMs" : 68607,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

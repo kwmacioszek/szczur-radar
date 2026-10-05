@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-01-040",
+  "configId" : "deepseek-r-low",
+  "provider" : "openrouter",
+  "model" : "deepseek/deepseek-v4.1-flash",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : "low",
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T19:18:05.666651Z",
+  "rawText" : "{\n  \"relevance\": \"not_investment_related\",\n  \"modifiers\": [\"humor\"],\n  \"targets\": [],\n  \"claims\": [],\n  \"flags\": []\n}",
+  "inputTokens" : 3110,
+  "outputTokens" : 475,
+  "cachedTokens" : 2048,
+  "durationMs" : 4168,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

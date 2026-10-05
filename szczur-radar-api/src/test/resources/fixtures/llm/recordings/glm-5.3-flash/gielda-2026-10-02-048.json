@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-02-048",
+  "configId" : "glm-5.3-flash",
+  "provider" : "openrouter",
+  "model" : "z-ai/glm-5.3-flash",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : "low",
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T20:08:19.000912Z",
+  "rawText" : "{\"claims\":[{\"attribution\":\"author\",\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"ciekawe że Samsung robi +5% dzisiaj a Micron na czerwono\"},\"id\":\"c1\",\"kind\":\"factual_claim\",\"statement\":\"Samsung robi dziś +5%, a Micron jest na czerwono.\",\"target_ids\":[\"t1\",\"t2\"]}],\"flags\":[],\"modifiers\":[],\"relevance\":\"investment_related\",\"targets\":[{\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"Samsung\"},\"id\":\"t1\",\"kind\":\"company\",\"reference\":\"explicit\",\"stance\":{\"assertiveness\":\"hedged\",\"claim_ids\":[\"c1\"],\"direction\":\"bullish\"}},{\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"Micron\"},\"id\":\"t2\",\"kind\":\"company\",\"reference\":\"explicit\",\"stance\":{\"assertiveness\":\"hedged\",\"claim_ids\":[\"c1\"],\"direction\":\"bearish\"}}]}",
+  "inputTokens" : 3599,
+  "outputTokens" : 215,
+  "cachedTokens" : 3328,
+  "durationMs" : 19926,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

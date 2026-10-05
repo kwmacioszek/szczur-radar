@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-01-048",
+  "configId" : "deepseek-r-low",
+  "provider" : "openrouter",
+  "model" : "deepseek/deepseek-v4.1-flash",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : "low",
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T19:18:28.629648Z",
+  "rawText" : "{\n  \"relevance\": \"investment_related\",\n  \"modifiers\": [],\n  \"targets\": [\n    {\n      \"id\": \"t1\",\n      \"kind\": \"asset\",\n      \"anchor\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"akcje z RSU\"\n      },\n      \"stance\": {\n        \"direction\": \"not_expressed\",\n        \"assertiveness\": null,\n        \"claim_ids\": []\n      },\n      \"reference\": \"explicit\"\n    }\n  ],\n  \"claims\": [\n    {\n      \"id\": \"c1\",\n      \"kind\": \"question\",\n      \"attribution\": \"author\",\n      \"target_ids\": [\n        \"t1\"\n      ],\n      \"evidence\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"Dobrze ogarniam, że jeżeli dostanę akcje z RSU które od razu sprzedaje, to ze względu na to że jestem w drugim progu podatkowym 32% z tych akcji leci na podatki?\"\n      },\n      \"statement\": \"Pytanie, czy sprzedaż akcji z RSU przy drugim progu podatkowym 32% oznacza, że 32% z tych akcji idzie na podatki.\"\n    }\n  ],\n  \"flags\": []\n}",
+  "inputTokens" : 3157,
+  "outputTokens" : 3864,
+  "cachedTokens" : 2048,
+  "durationMs" : 21250,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

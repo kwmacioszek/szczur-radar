@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-02-052",
+  "configId" : "mimo-v2.6-flash",
+  "provider" : "openrouter",
+  "model" : "xiaomi/mimo-v2.6-flash",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T20:18:54.498290Z",
+  "rawText" : "{\"relevance\": \"investment_related\", \"modifiers\": [], \"targets\": [{\"id\": \"t1\", \"kind\": \"company\", \"anchor\": {\"document\": \"item\", \"field\": \"body\", \"quote\": \"#rklb\"}, \"stance\": {\"direction\": \"bearish\", \"assertiveness\": \"hedged\", \"claim_ids\": [\"c1\"]}, \"reference\": \"explicit\"}], \"claims\": [{\"id\": \"c1\", \"kind\": \"factual_claim\", \"attribution\": \"author\", \"target_ids\": [\"t1\"], \"evidence\": {\"document\": \"item\", \"field\": \"body\", \"quote\": \"Czuje niepokoj widzac ten zielony kolor. \"}, \"statement\": \"Autor czuje niepokój widząc zielony kolor (wzrost ceny RKLB).\"}], \"flags\": []}",
+  "inputTokens" : 3202,
+  "outputTokens" : 192,
+  "cachedTokens" : 3072,
+  "durationMs" : 1958,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

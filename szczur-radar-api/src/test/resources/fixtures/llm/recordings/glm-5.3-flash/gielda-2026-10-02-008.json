@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-02-008",
+  "configId" : "glm-5.3-flash",
+  "provider" : "openrouter",
+  "model" : "z-ai/glm-5.3-flash",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : "low",
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T20:03:28.783682Z",
+  "rawText" : "{\n  \"relevance\": \"investment_related\",\n  \"modifiers\": [\"humor\"],\n  \"targets\": [\n    {\n      \"id\": \"t1\",\n      \"kind\": \"company\",\n      \"anchor\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"#xtb\"\n      },\n      \"stance\": {\n        \"direction\": \"bullish\",\n        \"assertiveness\": \"unhedged\",\n        \"claim_ids\": [\"c1\"]\n      }\n   \n    ,\n      \"reference\": \"explicit\"\n    }\n  ],\n  \"claims\": [\n    {\n      \"id\": \"c1\",\n      \"kind\": \"trade_action\",\n      \"attribution\": \"author\",\n      \"target_ids\": [\"t1\"],\n      \"evidence\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"śmiało, to sobie jeszcze taniej dokupię\"\n      },\n      \"statement\": \"Jeśli wszyscy sprzedadzą #xtb, autor dokupi jeszcze taniej.\"\n    }\n  ],\n  \"flags\": []\n}",
+  "inputTokens" : 3046,
+  "outputTokens" : 2676,
+  "cachedTokens" : 0,
+  "durationMs" : 90439,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

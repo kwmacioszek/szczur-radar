@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-01-012",
+  "configId" : "mimo-v2.6-flash",
+  "provider" : "openrouter",
+  "model" : "xiaomi/mimo-v2.6-flash",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T20:11:38.256180Z",
+  "rawText" : "{\"relevance\":\"investment_related\",\"modifiers\":[],\"targets\":[{\"id\":\"t1\",\"kind\":\"other\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"Rainbow\"},\"stance\":{\"direction\":\"bullish\",\"assertiveness\":\"hedged\",\"claim_ids\":[\"c1\"]},\"reference\":\"ambiguous\"}],\"claims\":[{\"id\":\"c1\",\"kind\":\"trade_action\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"A my w Rainbow.\"},\"statement\":\"Autor trzyma pozycję w Rainbow.\"}],\"flags\":[\"missing_context\"]}",
+  "inputTokens" : 3184,
+  "outputTokens" : 622,
+  "cachedTokens" : 2048,
+  "durationMs" : 11593,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

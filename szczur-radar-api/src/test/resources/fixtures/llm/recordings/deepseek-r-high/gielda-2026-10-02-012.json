@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-02-012",
+  "configId" : "deepseek-r-high",
+  "provider" : "openrouter",
+  "model" : "deepseek/deepseek-v4.1-flash",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : "high",
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T19:42:09.868302Z",
+  "rawText" : "{\n  \"relevance\": \"investment_related\",\n  \"modifiers\": [],\n  \"targets\": [\n    {\n      \"id\": \"t1\",\n      \"kind\": \"macro_topic\",\n      \"anchor\": \t{ \"document\": \"item\", \"field\": \"body\", \"quote\": \"giełdzie\" },\n      \"stance\": {\n        \"direction\": \"bearish\",\n        \"assertiveness\": \"hedged\",\n        \"claim_ids\": [\"c3\"]\n      }\n    ,\n      \"reference\": \"explicit\"\n    },\n    {\n      \"id\": \"t2\",\n      \"kind\": \"unknown\",\n      \"anchor\": { \"document\": \"item\", \"field\": \"body\", \"quote\": \"moje spółki\" },\n      \"stance\": {\n        \"direction\": \"bullish\",\n        \"assertiveness\": \"hedged\",\n        \"claim_ids\": [\"c1\", \"c2\"]\n      },\n      \"reference\": \"unresolved\"\n    }\n  ],\n  \"claims\": [\n    {\n      \"id\": \"c1\",\n      \"kind\": \"trade_action\",\n      \"attribution\": \"author\",\n      \"target_ids\": [\"t2\"],\n      \"evidence\": { \"document\": \"item\", \"field\": \"body\", \"quote\": \"będę miał 12k do wydania w połowie października\" }\n    ,\n      \"statement\": \"Autor będzie miał 12k do wydania w połowie października.\"\n    },\n    {\n      \"id\": \"c2\",\n      \"kind\": \"factual_claim\",\n      \"attribution\": \"author\",\n      \"target_ids\": [\"t2\"],\n      \"evidence\": { \"document\": \"item\", \"field\": \"body\", \"quote\": \"wszystkie moje spółki rosną, ewentualnie boczniak, ale żadna nie chce spaść chociaż kilka procent\" }\n    ,\n      \"statement\": \"Wszystkie spółki autora rosną lub są w boczniaku; żadna nie chce spaść chociaż kilka procent.\"\n    },\n    {\n      \"id\": \"c3\",\n      \"kind\": \"investment_thesis\",\n      \"attribution\": \"author\",\n      \"target_ids\": [\"t1\"],\n      \"evidence\": { \"document\": \"item\", \"field\": \"body\", \"quote\": \"Klimat pod spadki 10-15% na giełdzie jest, ale coś nie chce jebnąć\" }\n    ,\n      \"statement\": \"Klimat pod spadki 10-15% na giełdzie jest, ale rynek nie chce spaść.\"\n    }\n  ],\n  \"flags\": []\n}",
+  "inputTokens" : 3159,
+  "outputTokens" : 3895,
+  "cachedTokens" : 2048,
+  "durationMs" : 21847,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

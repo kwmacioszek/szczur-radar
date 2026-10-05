@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-01-020",
+  "configId" : "luna-high",
+  "provider" : "openrouter",
+  "model" : "openai/gpt-6-luna",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : "high",
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T19:53:33.145463Z",
+  "rawText" : "{\"relevance\":\"investment_related\",\"modifiers\":[],\"targets\":[{\"id\":\"t1\",\"kind\":\"company\",\"anchor\":{\"document\":\"item\",\"field\":\"title\",\"quote\":\"Meta\"},\"stance\":{\"direction\":\"not_expressed\",\"assertiveness\":null,\"claim_ids\":[]},\"reference\":\"explicit\"},{\"id\":\"t2\",\"kind\":\"company\",\"anchor\":{\"document\":\"item\",\"field\":\"title\",\"quote\":\"Amazon\"},\"stance\":{\"direction\":\"not_expressed\",\"assertiveness\":null,\"claim_ids\":[]},\"reference\":\"explicit\"}],\"claims\":[{\"id\":\"c1\",\"kind\":\"question\",\"attribution\":\"author\",\"target_ids\":[\"t1\",\"t2\"],\"evidence\":{\"document\":\"item\",\"field\":\"title\",\"quote\":\"Kto zarobi, gdy AI zacznie robić za nas zakupy?\"},\"statement\":\"Kto zarobi, gdy AI zacznie robić za nas zakupy?\"},{\"id\":\"c2\",\"kind\":\"factual_claim\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"We wrześniu Meta (Facebook) uruchomiła Muse agenta AI, który potrafi samodzielnie przeglądać strony, znajdować produkty, porównywać oferty i przejść przez kolejne etapy zakupu. Użytkownik musi jedynie na końcu zatwierdzić transakcję.\"},\"statement\":\"We wrześniu Meta uruchomiła agenta AI Muse do samodzielnego przeglądania stron, wyszukiwania i porównywania produktów oraz przechodzenia przez etapy zakupu; użytkownik zatwierdza transakcję.\"}],\"flags\":[]}",
+  "inputTokens" : 3394,
+  "outputTokens" : 2153,
+  "cachedTokens" : 3215,
+  "durationMs" : 20109,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

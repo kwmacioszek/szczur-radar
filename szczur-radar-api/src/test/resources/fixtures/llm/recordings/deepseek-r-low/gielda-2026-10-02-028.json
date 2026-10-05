@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-02-028",
+  "configId" : "deepseek-r-low",
+  "provider" : "openrouter",
+  "model" : "deepseek/deepseek-v4.1-flash",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : "low",
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T19:21:41.794688Z",
+  "rawText" : "{\"relevance\":\"investment_related\",\"modifiers\":[],\"targets\":[{\"id\":\"t1\",\"kind\":\"company\",\"anchor\":\t\t{\t\t\"document\":\t\t\"item\",\t\t\"field\":\t\t\"body\",\t\t\"quote\":\"xtb\"},\"stance\":{\"direction\":\"bearish\",\"assertiveness\":\"hedged\",\"claim_ids\":[\"c1\"]},\"reference\":\"explicit\"}],\"claims\":[{\"id\":\"c1\",\"kind\":\"question\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"#gielda serio xtb spada bo jakieś biuro dało prognozę 150-200mln zysku?\"},\"statement\":\"Pyta, czy XTB spada, bo jakieś biuro dało prognozę 150-200 mln zysku.\"}],\"flags\":[]}",
+  "inputTokens" : 3100,
+  "outputTokens" : 2978,
+  "cachedTokens" : 2048,
+  "durationMs" : 17794,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

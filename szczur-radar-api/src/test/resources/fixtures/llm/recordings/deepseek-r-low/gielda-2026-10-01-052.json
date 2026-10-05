@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-01-052",
+  "configId" : "deepseek-r-low",
+  "provider" : "openrouter",
+  "model" : "deepseek/deepseek-v4.1-flash",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : "low",
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T19:18:52.434540Z",
+  "rawText" : "{\n  \"relevance\": \"investment_related\",\n  \"modifiers\": [],\n  \"targets\": [\n    {\n      \"id\": \"t1\",\n      \"kind\": \"company\",\n      \"anchor\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"Orlenu\"\n      },\n      \"stance\": {\n        \"direction\": \"bullish\",\n        \"assertiveness\": \"unhedged\",\n        \"claim_ids\": [\"c1\"]\n      },\n      \"reference\": \"explicit\"\n    }\n  ],\n  \"claims\": [\n    {\n      \"id\": \"c1\",\n      \"kind\": \"opinion\",\n      \"attribution\": \"author\",\n      \"target_ids\": [\"t1\"],\n      \"evidence\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"Jako akcjonariusz Orlenu uważam, że to dobrze że Pan Prezydent podpisał ustawę rządu o nadzwyczajnych zyskach Orlenu.\"\n      },\n      \"statement\": \"Jako akcjonariusz Orlenu autor uważa, że dobrze się stało, że Prezydent podpisał ustawę rządu o nadzwyczajnych zyskach Orlenu.\"\n    }\n  ],\n  \"flags\": []\n}",
+  "inputTokens" : 3139,
+  "outputTokens" : 3759,
+  "cachedTokens" : 2944,
+  "durationMs" : 23800,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

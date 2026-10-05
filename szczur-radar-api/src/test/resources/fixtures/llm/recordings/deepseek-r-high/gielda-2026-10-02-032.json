@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-02-032",
+  "configId" : "deepseek-r-high",
+  "provider" : "openrouter",
+  "model" : "deepseek/deepseek-v4.1-flash",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : "high",
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T19:45:08.727236Z",
+  "rawText" : "{\n  \"relevance\": \"investment_related\",\n  \"modifiers\": [],\n  \"targets\": [\n    {\n      \"id\": \"t1\",\n      \"kind\": \"company\",\n      \"anchor\": \t{\"document\": \"item\", \"field\": \"body\", \"quote\": \"asbisa\"},\n      \"stance\": {\n        \"direction\": \"not_expressed\",\n        \"assertiveness\": null,\n        \"claim_ids\": []\n      }\n    ,\n  \"reference\": \"explicit\"\n    }\n  ],\n  \"claims\": [\n    {\n      \"id\": \"c1\",\n      \"kind\": \"investment_thesis\",\n      \"attribution\": \"author\",\n      \"target_ids\": [\"t1\"],\n      \"evidence\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"chyba nie będzie drugiego asbisa\"\n      },\n      \"statement\": \"Autor wątpi, że pojawi się druga spółka podobna do Asbisa.\"\n    }\n  ],\n  \"flags\": [\"missing_context\"]\n}",
+  "inputTokens" : 3085,
+  "outputTokens" : 4529,
+  "cachedTokens" : 2944,
+  "durationMs" : 64019,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

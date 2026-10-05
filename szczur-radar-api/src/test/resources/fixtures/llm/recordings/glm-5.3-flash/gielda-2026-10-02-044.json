@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-02-044",
+  "configId" : "glm-5.3-flash",
+  "provider" : "openrouter",
+  "model" : "z-ai/glm-5.3-flash",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : "low",
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T20:07:59.069044Z",
+  "rawText" : "{\"claims\":[{\"attribution\":\"author\",\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"Wyniki z rynku pracy - dużo mniej nowych etatów (29k vs 89k przewidywane) oraz rewizja poprzednich danych (162k w dół do 133k).\"},\"id\":\"c1\",\"kind\":\"factual_claim\",\"statement\":\"Wyniki z rynku pracy: dużo mniej nowych etatów (29k vs 89k przewidywane) oraz rewizja poprzednich danych w dół (162k do 133k).\",\"target_ids\":[\"t1\"]},{\"attribution\":\"author\",\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"Do tego bezrobocie 4.2% względem 4.1% przewidywanego.\"},\"id\":\"c2\",\"kind\":\"factual_claim\",\"statement\":\"Bezrobocie wyniosło 4.2% względem 4.1% przewidywanego.\",\"target_ids\":[\"t1\"]},{\"attribution\":\"author\",\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"Co robi rynek? POMPA - może dlatego, że nie trzeba ludziom tyle płacić? xD\"},\"id\":\"c3\",\"kind\":\"factual_claim\",\"statement\":\"Rynek po słabszych danych z rynku pracy robi POMPA; autor ironicznie sugeruje, że może dlatego, że nie trzeba ludziom tyle płacić.\",\"target_ids\":[\"t1\"]}],\"flags\":[],\"modifiers\":[\"humor\"],\"relevance\":\"investment_related\",\"targets\":[{\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"POMPA\"},\"id\":\"t1\",\"kind\":\"macro_topic\",\"reference\":\"explicit\",\"stance\":{\"assertiveness\":\"hedged\",\"claim_ids\":[\"c3\"],\"direction\":\"bullish\"}}]}",
+  "inputTokens" : 3686,
+  "outputTokens" : 415,
+  "cachedTokens" : 3328,
+  "durationMs" : 36178,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

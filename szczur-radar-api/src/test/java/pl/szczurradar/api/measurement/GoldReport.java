@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -158,6 +159,8 @@ class GoldReport {
 			appendUsage(md, outcome);
 		}
 
+		appendSubsetComparison(md, complete, incomplete, labels, aliases);
+
 		if (!incomplete.isEmpty()) {
 			md.append("## Konfiguracje bez kompletu bieżących nagrań\n\n");
 			for (Replay.Outcome outcome : incomplete) {
@@ -209,7 +212,7 @@ class GoldReport {
 		perChannel.forEach((channel, cost) -> md.append("  - `").append(channel).append("`: ").append(usd(cost)).append(" / ")
 			.append(usd(cost / Math.max(1, n))).append(" / **").append(usd(cost / Math.max(1, n) * POSTS_PER_MONTH))
 			.append("**\n"));
-		if (recordings.stream().allMatch(r -> r.channel() != null && model.prices().containsKey(r.channel()))) {
+		if (recordings.stream().allMatch(r -> billingChannel(model, r) != null)) {
 			double actual = recordings.stream().mapToDouble(r -> actualCost(model, r)).sum();
 			md.append("  - faktyczny kanał każdego wywołania: ").append(usd(actual)).append(" / ")
 				.append(usd(actual / Math.max(1, n))).append(" / **").append(usd(actual / Math.max(1, n) * POSTS_PER_MONTH))
@@ -218,9 +221,84 @@ class GoldReport {
 		md.append('\n');
 	}
 
+	/**
+	 * Configurations recorded on a sample only ({@code -Dgold.sample}): every configuration that has
+	 * the same posts, measured on those posts — a cheap screen of variants, too small for a decision.
+	 */
+	private static void appendSubsetComparison(StringBuilder md, List<Replay.Outcome> complete,
+			List<Replay.Outcome> incomplete, List<Label> labels, Map<String, Map<String, List<String>>> aliases) {
+		Map<Set<String>, List<Replay.Outcome>> bySubset = new java.util.LinkedHashMap<>();
+		for (Replay.Outcome outcome : incomplete) {
+			if (!outcome.results().isEmpty()) {
+				bySubset.computeIfAbsent(Set.copyOf(outcome.results().keySet()), key -> new ArrayList<>()).add(outcome);
+			}
+		}
+		for (Map.Entry<Set<String>, List<Replay.Outcome>> entry : bySubset.entrySet()) {
+			Set<String> subset = entry.getKey();
+			List<Replay.Outcome> compared = new ArrayList<>();
+			complete.forEach(compared::add);
+			compared.addAll(entry.getValue());
+			List<Label> subsetLabels = labels.stream().filter(label -> subset.contains(label.postId())).toList();
+			md.append("## Porównanie na podzbiorze ").append(subset.size()).append(" postów\n\n")
+				.append("Te same posty dla każdej konfiguracji; przy tej liczbie postów różnica kilku punktów to szum — ")
+				.append("wynik służy do wyboru wariantów do pełnego pomiaru, nie do decyzji.\n\n| Miara |");
+			compared.forEach(outcome -> md.append(" `").append(outcome.model().id()).append("` |"));
+			md.append("\n|---|").append("---|".repeat(compared.size())).append("\n");
+			for (Metric metric : Metric.values()) {
+				md.append("| ").append(label(metric)).append(" |");
+				for (Replay.Outcome outcome : compared) {
+					Map<String, AssessmentOutputV2> outputs = outcome.outputs()
+						.entrySet()
+						.stream()
+						.filter(output -> subset.contains(output.getKey()))
+						.collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+					try {
+						Ratio ratio = GoldMetrics.compute(subsetLabels, outputs, aliases).ratio(metric);
+						md.append(' ').append(cell(ratio, metric.meets(ratio))).append(" |");
+					}
+					catch (InsufficientGoldException ex) {
+						md.append(" — |");
+					}
+				}
+				md.append('\n');
+			}
+			md.append("| mediana czasu / koszt na post (kanał nagrania) |");
+			for (Replay.Outcome outcome : compared) {
+				List<Recording> recordings = outcome.recordings()
+					.values()
+					.stream()
+					.filter(recording -> subset.contains(recording.postId()))
+					.toList();
+				List<Long> durations = recordings.stream().map(Recording::durationMs).sorted().toList();
+				double cost = recordings.stream().mapToDouble(r -> actualCost(outcome.model(), r)).sum();
+				md.append(' ').append(durations.isEmpty() ? "—" : durations.get(durations.size() / 2) + " ms").append(" / ")
+					.append(usd(cost / Math.max(1, recordings.size()))).append(" |");
+			}
+			md.append("\n\n");
+		}
+	}
+
 	private static double actualCost(Model model, Recording recording) {
-		Price price = recording.channel() == null ? null : model.prices().get(recording.channel());
+		Price price = model.prices().get(billingChannel(model, recording));
 		return price == null ? 0 : price.cost(recording.inputTokens(), recording.cachedTokens(), recording.outputTokens());
+	}
+
+	/**
+	 * The price key a call was billed at: the recorded channel, or for DeepSeek ({@code peak} /
+	 * {@code off_peak}) the time of day — peak is 01:00–04:00 and 06:00–10:00 UTC, Monday to Friday.
+	 */
+	static @Nullable String billingChannel(Model model, Recording recording) {
+		if (recording.channel() != null && model.prices().containsKey(recording.channel())) {
+			return recording.channel();
+		}
+		if (model.prices().containsKey("peak") && model.prices().containsKey("off_peak")) {
+			java.time.ZonedDateTime utc = recording.recordedAt().atZone(java.time.ZoneOffset.UTC);
+			int hour = utc.getHour();
+			boolean weekday = utc.getDayOfWeek().getValue() <= 5;
+			boolean peak = weekday && ((hour >= 1 && hour < 4) || (hour >= 6 && hour < 10));
+			return peak ? "peak" : "off_peak";
+		}
+		return null;
 	}
 
 	/** The labels without the targets of {@link #SECTION_6_5A_TARGETS}. */
@@ -275,7 +353,7 @@ class GoldReport {
 			| trafność (binarna) | trafność modelu = wzorcowej / posty z trafnością wzorcową inną niż `unclear` (`unclear` modelu = błąd) |
 			| recall celów | dopasowane cele wzorca / cele wzorca |
 			| precision celów | dopasowane cele modelu / cele modelu (0, gdy model nie zwrócił żadnego) |
-			| kierunek celów | cele wzorca z kierunkiem innym niż `not_expressed`, których dopasowany cel modelu ma ten sam kierunek / wszystkie takie cele — **niedopasowany cel wzorca = błąd** (decyzja z przeglądu fazy 5, F7) |
+			| kierunek celów | cele wzorca z kierunkiem innym niż `not_expressed`, których dopasowany cel modelu ma ten sam kierunek / wszystkie takie cele — **niedopasowany cel wzorca = błąd** (decyzja z przeglądu fazy 5, F7); `unclear` i `not_expressed` liczą się jako ta sama odpowiedź („brak użytecznego kierunku”, decyzja 2026-10-05) |
 			| dominujący kierunek posta | posty, w których przewaga bullish/bearish modelu = wzorcowej / posty z przewagą we wzorcu |
 			| sprzeczne kierunki | cele wzorca bullish/bearish, których dopasowany cel modelu ma kierunek przeciwny / cele wzorca bullish/bearish (niedopasowany = nie sprzeczny) |
 

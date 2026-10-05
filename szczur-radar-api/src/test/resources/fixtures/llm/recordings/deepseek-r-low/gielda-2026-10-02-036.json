@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-02-036",
+  "configId" : "deepseek-r-low",
+  "provider" : "openrouter",
+  "model" : "deepseek/deepseek-v4.1-flash",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : "low",
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T19:24:54.220514Z",
+  "rawText" : "{\n  \"targets\": [\n    {\n      \"stance\": {\n        \"direction\": \"bearish\",\n        \"claim_ids\": [\n          \"c1\"\n        ],\n        \"assertiveness\": \"hedged\"\n      },\n      \"reference\": \"explicit\",\n      \"kind\": \"company\",\n      \"id\": \"t1\",\n      \"anchor\": {\n        \"quote\": \"szczurze\",\n        \"field\": \"body\",\n        \"document\": \"item\"\n      }\n    }\n  ],\n  \"relevance\": \"investment_related\",\n  \"modifiers\": [\n    \"humor\"\n  ],\n  \"flags\": [],\n  \"claims\": [\n    {\n      \"target_ids\": [\n        \"t1\"\n      ],\n      \"statement\": \"Na XTB (szczurze) jest promocja, czyli spadek ceny; w tym roku gwiazdka wypadła wcześniej.\",\n      \"kind\": \"factual_claim\",\n      \"id\": \"c1\",\n      \"evidence\": {\n        \"quote\": \"ale promocja na szczurze, w tym roku gwiazdka wypadła wczesniej\",\n        \"field\": \"body\",\n        \"document\": \"item\"\n      },\n      \"attribution\": \"author\"\n    }\n  ]\n}",
+  "inputTokens" : 3096,
+  "outputTokens" : 4446,
+  "cachedTokens" : 0,
+  "durationMs" : 157298,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

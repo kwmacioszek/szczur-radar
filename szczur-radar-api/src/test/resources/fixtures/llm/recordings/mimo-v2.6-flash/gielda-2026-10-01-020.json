@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-01-020",
+  "configId" : "mimo-v2.6-flash",
+  "provider" : "openrouter",
+  "model" : "xiaomi/mimo-v2.6-flash",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T20:12:42.809680Z",
+  "rawText" : "{\"relevance\":\"investment_related\",\"modifiers\":[],\"targets\":[{\"id\":\"t1\",\"kind\":\"company\",\"anchor\":{\"document\":\"item\",\"field\":\"title\",\"quote\":\"Meta\"},\"stance\":{\"direction\":\"unclear\",\"assertiveness\":null,\"claim_ids\":[\"c1\",\"c2\",\"c3\"]},\"reference\":\"explicit\"},{\"id\":\"t2\",\"kind\":\"company\",\"anchor\":{\"document\":\"item\",\"field\":\"title\",\"quote\":\"Amazon\"},\"stance\":{\"direction\":\"unclear\",\"assertiveness\":null,\"claim_ids\":[\"c2\"]},\"reference\":\"explicit\"}],\"claims\":[{\"id\":\"c1\",\"kind\":\"factual_claim\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"We wrześniu Meta (Facebook) uruchomiła Muse agenta AI, który potrafi samodzielnie przeglądać strony, znajdować produkty, porównywać oferty i przejść przez kolejne etapy zakupu.\"},\"statement\":\"Meta uruchomiła w wrześniu agenta AI Muse, który samodzielnie przegląda strony, znajduje i porównuje produkty oraz przechodzi etapy zakupu.\"},{\"id\":\"c2\",\"kind\":\"question\",\"attribution\":\"author\",\"target_ids\":[\"t1\",\"t2\"],\"evidence\":{\"document\":\"item\",\"field\":\"title\",\"quote\":\"Kto zarobi, gdy AI zacznie robić za nas zakupy?\"},\"statement\":\"Kto zarobi, gdy AI zacznie robić za nas zakupy?\"},{\"id\":\"c3\",\"kind\":\"factual_claim\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"Użytkownik musi jedynie na końcu zatwierdzić transakcję.\"},\"statement\":\"W modelu zakupów z agentem AI użytkownik zatwierdza transakcję dopiero na końcu.\"}],\"flags\":[]}",
+  "inputTokens" : 3270,
+  "outputTokens" : 3449,
+  "cachedTokens" : 3072,
+  "durationMs" : 59670,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

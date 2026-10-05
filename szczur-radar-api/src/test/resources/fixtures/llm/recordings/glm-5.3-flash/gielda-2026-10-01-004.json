@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-01-004",
+  "configId" : "glm-5.3-flash",
+  "provider" : "openrouter",
+  "model" : "z-ai/glm-5.3-flash",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : "low",
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T19:59:47.902741Z",
+  "rawText" : "{\n  \"relevance\": \"investment_related\",\n  \"modifiers\": [],\n  \"targets\": [\n    {\n      \"id\": \"t1\",\n      \"kind\": \"company\",\n      \"anchor\": {\"document\": \"item\", \"field\": \"body\", \"quote\": \"MU PRICE TARGET: 1100\"},\n      \"stance\": {\n        \"direction\": \"neutral\",\n        \"assertiveness\": \"unhedged\",\n        \"claim_ids\": [\"c1\"]\n      },\n      \"reference\": \"explicit\"\n    }\n  ],\n  \"claims\": [\n    {\n      \"id\": \"c1\",\n      \"kind\": \"investment_thesis\",\n      \"attribution\": \"author\",\n      \"target_ids\": [\"t1\"],\n      \"evidence\": {\"document\": \"item\", \"field\": \"body\", \"quote\": \"MU PRICE TARGET: 1100\\n\\nRATING: HOLD\"},\n      \"statement\": \"Cena docelowa dla MU: 1100, rekomendacja HOLD.\"\n    },\n    {\n      \"id\": \"c2\",\n      \"kind\": \"factual_claim\",\n      \"attribution\": \"author\",\n      \"target_ids\": [],\n      \"evidence\": {\"document\": \"item\", \"field\": \"body\", \"quote\": \"Rynki juz zareagowaly.\"},\n      \"statement\": \"Rynki już zareagowały.\"\n    }\n  ],\n  \"flags\": []\n}",
+  "inputTokens" : 3068,
+  "outputTokens" : 395,
+  "cachedTokens" : 0,
+  "durationMs" : 6382,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

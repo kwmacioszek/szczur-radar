@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-02-004",
+  "configId" : "glm-5.3-flash",
+  "provider" : "openrouter",
+  "model" : "z-ai/glm-5.3-flash",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : "low",
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T20:01:58.338606Z",
+  "rawText" : "{\"relevance\":\"investment_related\",\"modifiers\":[],\"targets\":[{\"id\":\"t1\",\"kind\":\"company\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"Comperia\"},\"stance\":{\"direction\":\"bullish\",\"assertiveness\":\"hedged\",\"claim_ids\":[\"c1\"]},\"reference\":\"explicit\"}],\"claims\":[{\"id\":\"c1\",\"kind\":\"investment_thesis\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"Comperia już blisko po 10 PLN\"},\"statement\":\"Comperia jest już blisko kursu 10 PLN.\"}],\"flags\":[]}",
+  "inputTokens" : 3031,
+  "outputTokens" : 162,
+  "cachedTokens" : 2560,
+  "durationMs" : 9834,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

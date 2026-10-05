@@ -51,7 +51,9 @@ public final class GoldMetrics {
 
 		/**
 		 * Gold targets with a direction other than {@code not_expressed} whose matched model target has
-		 * the same direction / such gold targets (unmatched = wrong).
+		 * the same direction / such gold targets (unmatched = wrong). {@code unclear} and
+		 * {@code not_expressed} count as the same answer — "no usable direction" (user's decision
+		 * 2026-10-05, N14).
 		 */
 		TARGET_DIRECTION_ACCURACY(0.75, true),
 
@@ -178,7 +180,7 @@ public final class GoldMetrics {
 				Direction actual = matchOf[i] == null ? null : matchOf[i].stance().direction();
 				if (expected != Direction.NOT_EXPRESSED) {
 					directionTotal++;
-					if (expected == actual) {
+					if (sameDirection(expected, actual)) {
 						directionRight++;
 					}
 				}
@@ -226,6 +228,15 @@ public final class GoldMetrics {
 			return Optional.of(Direction.BEARISH);
 		}
 		return Optional.empty();
+	}
+
+	/** Equal, or both "no usable direction" ({@code unclear} / {@code not_expressed}). */
+	static boolean sameDirection(Direction expected, @Nullable Direction actual) {
+		return expected == actual || (noDirection(expected) && actual != null && noDirection(actual));
+	}
+
+	private static boolean noDirection(Direction direction) {
+		return direction == Direction.UNCLEAR || direction == Direction.NOT_EXPRESSED;
 	}
 
 	private static @Nullable Direction opposite(Direction direction) {

@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-01-032",
+  "configId" : "glm-5.3-flash",
+  "provider" : "openrouter",
+  "model" : "z-ai/glm-5.3-flash",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : "low",
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T20:00:40.151408Z",
+  "rawText" : "{\"relevance\":\"investment_related\",\"modifiers\":[],\"targets\":[{\"id\":\"t1\",\"kind\":\"company\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"szczurka\"},\"stance\":{\"direction\":\"unclear\",\"assertiveness\":null,\"claim_ids\":[\"c1\"]},\"reference\":\"explicit\"}],\"claims\":[{\"id\":\"c1\",\"kind\":\"question\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"#gielda można podjeść szczurka czy chory? \"},\"statement\":\"Autor pyta, czy można podjeść szczurka (XTB), czy jest chory.\"}],\"flags\":[]}",
+  "inputTokens" : 3805,
+  "outputTokens" : 293,
+  "cachedTokens" : 0,
+  "durationMs" : 9112,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-02-056",
+  "configId" : "deepseek-r-low",
+  "provider" : "openrouter",
+  "model" : "deepseek/deepseek-v4.1-flash",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : "low",
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T19:30:06.111985Z",
+  "rawText" : "{\"relevance\":\"investment_related\",\"modifiers\":[\"humor\"],\"targets\":[{\"id\":\"t1\",\"kind\":\"asset\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"kurs eurusd\"},\"stance\":{\"direction\":\"not_expressed\",\"assertiveness\":null,\"claim_ids\":[]},\"reference\":\"explicit\"},{\"id\":\"t2\",\"kind\":\"asset\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"USD\"},\"stance\":{\"direction\":\"not_expressed\",\"assertiveness\":null,\"claim_ids\":[]},\"reference\":\"explicit\"},{\"id\":\"t3\",\"kind\":\"asset\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"EUR\"},\"stance\":{\"direction\":\"not_expressed\",\"assertiveness\":null,\"claim_ids\":[]},\"reference\":\"explicit\"},{\"id\":\"t4\",\"kind\":\"company\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"xtb\"},\"stance\":{\"direction\":\"not_expressed\",\"assertiveness\":null,\"claim_ids\":[]},\"reference\":\"explicit\"}],\"claims\":[{\"id\":\"c1\",\"kind\":\"factual_claim\",\"attribution\":\"author\",\"target_ids\":[\"t2\",\"t3\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"Powszechnie sie uwaza ze jak kupujecie instrument na stocki z USA ktore sa wyceniane w USD to nie ma zadnego znaczenia czy instrument nominowany jest w EUR czy USD. jest to kompletna bzdura\"},\"statement\":\"Powszechne twierdzenie, że waluta nominału instrumentu (EUR czy USD) nie ma znaczenia przy akcjach USA, jest bzdurą.\"},{\"id\":\"c2\",\"kind\":\"factual_claim\",\"attribution\":\"author\",\"target_ids\":[\"t1\",\"t2\",\"t3\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"No i widzimy ze Haburger majacy USD kupujacy instrument w USD na stocki USA w USD zarabia +50%\"},\"statement\":\"W 2008, gdy kurs wybił na 1,5, Amerykanin z USD na instrumencie USD na akcje USA zarobił +50% względem Europejczyka z EUR.\"},{\"id\":\"c3\",\"kind\":\"investment_thesis\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"musimy zabezpieczyc sie instrumentami hedgowanymi\"},\"statement\":\"Aby nie spekulować dodatkowo na kursie walutowym, trzeba zabezpieczać się instrumentami hedgowanymi.\"},{\"id\":\"c4\",\"kind\":\"investment_thesis\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"realizujesz mniejszy zysk i jeszcze placisz dodatkowo koszty przewalutowania bo masz ike w xtb\"},\"statement\":\"Przy niekorzystnym kursie w momencie sprzedaży realizuje się mniejszy zysk i płaci dodatkowe koszty przewalutowania.\"},{\"id\":\"c5\",\"kind\":\"factual_claim\",\"attribution\":\"author\",\"target_ids\":[\"t4\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"bo masz ike w xtb hehe szczurish\"},\"statement\":\"Przy IKE w XTB ponosi się dodatkowe koszty przewalutowania.\"},{\"id\":\"c6\",\"kind\":\"factual_claim\",\"attribution\":\"author\",\"target_ids\":[\"t1\",\"t2\",\"t3\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"Ponizej symulacja zyskow jakby w 2025 nagle z pisdy kurs eurusd wyj3balo na 2,0.\"},\"statement\":\"Symulacja: gdyby w 2025 kurs EURUSD wybił na 2,0, po 25 latach oszczędzania zysk spadłby o połowę.\"}],\"flags\":[]}",
+  "inputTokens" : 3944,
+  "outputTokens" : 6022,
+  "cachedTokens" : 2048,
+  "durationMs" : 216314,
+  "attempts" : 2,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

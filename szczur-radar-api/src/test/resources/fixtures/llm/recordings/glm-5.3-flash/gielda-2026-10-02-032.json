@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-02-032",
+  "configId" : "glm-5.3-flash",
+  "provider" : "openrouter",
+  "model" : "z-ai/glm-5.3-flash",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : "low",
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T20:06:25.382059Z",
+  "rawText" : "{\"claims\":[{\"attribution\":\"author\",\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"chyba nie będzie drugiego asbisa\"},\"id\":\"c1\",\"kind\":\"investment_thesis\",\"statement\":\"Chyba nie będzie drugiego asbisa (drugiej spółki takiej jak ASBIS).\",\"target_ids\":[\"t1\"]}],\"flags\":[],\"modifiers\":[],\"relevance\":\"investment_related\",\"targets\":[{\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"asbisa\"},\"id\":\"t1\",\"kind\":\"company\",\"reference\":\"explicit\",\"stance\":{\"assertiveness\":\"hedged\",\"claim_ids\":[\"c1\"],\"direction\":\"bullish\"}}]}",
+  "inputTokens" : 3590,
+  "outputTokens" : 463,
+  "cachedTokens" : 3328,
+  "durationMs" : 54576,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

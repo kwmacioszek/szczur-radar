@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-02-008",
+  "configId" : "deepseek-r-high",
+  "provider" : "openrouter",
+  "model" : "deepseek/deepseek-v4.1-flash",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : "high",
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T19:41:48.015430Z",
+  "rawText" : "{\n  \"relevance\": \"investment_related\",\n  \"modifiers\": [\"humor\"],\n  \"targets\": [\n    {\n      \"id\": \"t1\",\n      \"kind\": \"company\",\n      \"anchor\": \t{\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"#xtb\"\n      },\n      \"stance\": {\n        \"direction\": \"bullish\",\n        \"assertiveness\": \"unhedged\"\n      ,\n      \"claim_ids\": [\"c1\", \"c2\"]\n      }\n    ,\n      \"reference\": \"explicit\"\n    }\n  ],\n  \"claims\": [\n    {\n      \"id\": \"c1\",\n      \"kind\": \"trade_action\",\n      \"attribution\": \"author\",\n      \"target_ids\": [\"t1\"],\n      \"evidence\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"to sobie jeszcze taniej dokupię\"\n      },\n      \"statement\": \"Autor planuje dokupić XTB jeszcze taniej.\"\n    },\n    {\n      \"id\": \"c2\",\n      \"kind\": \"opinion\",\n      \"attribution\": \"author\",\n      \"target_ids\": [\"t1\"],\n      \"evidence\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"sprzedawajcie wszyscy #xtb, śmiało\"\n      },\n      \"statement\": \"Autor ironicznie wzywa wszystkich do sprzedaży XTB.\"\n    }\n  ],\n  \"flags\": []\n}",
+  "inputTokens" : 3100,
+  "outputTokens" : 7541,
+  "cachedTokens" : 2944,
+  "durationMs" : 99918,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-01-000",
+  "configId" : "mimo-v2.6-flash",
+  "provider" : "openrouter",
+  "model" : "xiaomi/mimo-v2.6-flash",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T20:10:59.174826Z",
+  "rawText" : "{\"relevance\": \"not_investment_related\", \"modifiers\": [], \"targets\": [], \"claims\": [], \"flags\": [\"missing_context\"]}",
+  "inputTokens" : 3203,
+  "outputTokens" : 30,
+  "cachedTokens" : 0,
+  "durationMs" : 2390,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

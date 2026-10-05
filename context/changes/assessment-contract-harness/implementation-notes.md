@@ -182,3 +182,19 @@ later phases. Each open check names the phase that closes it; `/10x-impl-review`
   the report also prices the recorded tokens at the flex rate. Production can still run flex
   (`LLM_SERVICE_TIER`); its refusal rate (429) and latency were seen in phase 4 (0 refusals in 30
   calls, median 9 s) and in the v2.4 recording run (0 fallbacks in 120 calls).
+
+### N14. Direction metric, sample screen of six variants (2026-10-05)
+
+- Direction accuracy counts `unclear` and `not_expressed` as the same answer ("no usable direction"),
+  user's decision; contract unchanged (`unclear` keeps its meaning; merging it is a post-MVP §16
+  candidate). Prompt v2.5, full set: Luna 73.0 %, DeepSeek and Gemini 64.9 % (threshold 75 %).
+- `GoldRecorder -Dgold.sample=4` (every 4th post, 30) and the report's subset section screened six
+  OpenRouter variants: DeepSeek with reasoning low/high, Luna low/high, GLM 5.3 Flash (low),
+  MiMo v2.6 Flash. More reasoning did not improve direction or contradictions (DeepSeek high: 63 %
+  direction, 27 % contradictions) and costs 10–25× more; GLM and MiMo were weaker; Luna low matched
+  Luna medium at half the output tokens. No variant meets direction ≥ 75 % and contradictions ≤ 3 %
+  (irony on Wykop). Next: full run of `luna-low` (default tier, user's choice: flex is slow), then a
+  decision on thresholds and the default model.
+- OpenRouter routed DeepSeek between providers (cache hits ~54 %); pinning a provider
+  (`provider.only`) would need a new `LLM_*` setting — not done, since reasoning did not pay off.
+- The report bills DeepSeek by the recording's time of day (peak 01–04 and 06–10 UTC on weekdays).

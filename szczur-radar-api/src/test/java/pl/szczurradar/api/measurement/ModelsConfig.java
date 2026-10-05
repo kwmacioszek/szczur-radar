@@ -48,7 +48,10 @@ public record ModelsConfig(@JsonProperty("default") @Nullable String defaultId, 
 		FALLBACK,
 
 		/** Point of reference, not a candidate. */
-		REFERENCE;
+		REFERENCE,
+
+		/** An exploratory variant, measured on a sample first; may become the default after a full run. */
+		CANDIDATE;
 
 		@JsonValue
 		public String value() {

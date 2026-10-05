@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-02-056",
+  "configId" : "glm-5.3-flash",
+  "provider" : "openrouter",
+  "model" : "z-ai/glm-5.3-flash",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : "low",
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T20:10:52.825813Z",
+  "rawText" : "{\"claims\":[{\"attribution\":\"author\",\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"Powszechnie sie uwaza ze jak kupujecie instrument na stocki z USA ktore sa wyceniane w USD to nie ma zadnego znaczenia czy instrument nominowany jest w EUR czy USD. jest to kompletna bzdura\"},\"id\":\"c1\",\"kind\":\"investment_thesis\",\"statement\":\"Powszechny pogląd, że waluta nominowania instrumentu na stocki USA nie ma znaczenia, to zdaniem autora bzdura — kurs ma kolosalne znaczenie.\",\"target_ids\":[\"t1\"]},{\"attribution\":\"author\",\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"Haburger majacy USD kupujacy instrument w USD na stocki USA w USD zarabia +50% wzgledem tego eurpejczyka\"},\"id\":\"c2\",\"kind\":\"factual_claim\",\"statement\":\"W 2008 przy kursie 1,5 posiadacz USD kupujący instrument w USD zarabiał +50% względem Europejczyka kupującego w EUR.\",\"target_ids\":[\"t1\"]},{\"attribution\":\"author\",\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"musimy zabezpieczyc sie instrumentami hedgowanymi. To jest jedyny sposob na ta druga wymiane walutowa wewnatrz samego instrumentu\"},\"id\":\"c3\",\"kind\":\"investment_thesis\",\"statement\":\"Aby nie spekulować dodatkowo na kursie walut, trzeba zabezpieczyć się instrumentami hedgowanymi — to jedyny sposób na wewnętrzną wymianę walutową w instrumencie.\",\"target_ids\":[\"t1\"]},{\"attribution\":\"author\",\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"Nagle po 25 latach oszczedzania wasz zysk spadlby o polowe\"},\"id\":\"c4\",\"kind\":\"factual_claim\",\"statement\":\"Symulacja: gdyby w 2025 kurs eurusd poszedł na 2,0, po 25 latach oszczędzania zysk spadłby o połowę.\",\"target_ids\":[\"t1\"]},{\"attribution\":\"author\",\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"realizujesz mniejszy zysk i jeszcze placisz dodatkowo koszty przewalutowania bo masz ike w xtb\"},\"id\":\"c5\",\"kind\":\"opinion\",\"statement\":\"Niekorzystny kurs przy sprzedaży daje mniejszy zysk i dodatkowe koszty przewalutowania, np. na IKE w XTB.\",\"target_ids\":[\"t1\",\"t2\"]}],\"flags\":[],\"modifiers\":[],\"relevance\":\"investment_related\",\"targets\":[{\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"kurs eurusd\"},\"id\":\"t1\",\"kind\":\"macro_topic\",\"reference\":\"explicit\",\"stance\":{\"assertiveness\":null,\"claim_ids\":[],\"direction\":\"not_expressed\"}},{\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"ike w xtb\"},\"id\":\"t2\",\"kind\":\"company\",\"reference\":\"explicit\",\"stance\":{\"assertiveness\":null,\"claim_ids\":[],\"direction\":\"not_expressed\"}}]}",
+  "inputTokens" : 4441,
+  "outputTokens" : 1304,
+  "cachedTokens" : 3328,
+  "durationMs" : 129513,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

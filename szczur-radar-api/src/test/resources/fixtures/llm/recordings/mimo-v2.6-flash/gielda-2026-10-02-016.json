@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-02-016",
+  "configId" : "mimo-v2.6-flash",
+  "provider" : "openrouter",
+  "model" : "xiaomi/mimo-v2.6-flash",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T20:16:22.925164Z",
+  "rawText" : "{\n  \"relevance\": \"investment_related\",\n  \"modifiers\": [],\n  \"targets\": [\n    {\n      \"id\": \"t1\",\n      \"kind\": \"unknown\",\n      \"anchor\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"poniżej 140\"\n      },\n      \"stance\": {\n        \"direction\": \"bullish\",\n        \"assertiveness\": \"hedged\",\n        \"claim_ids\": [\n          \"c1\",\n          \"c2\"\n        ]\n      },\n      \"reference\": \"unresolved\"\n    }\n  ],\n  \"claims\": [\n    {\n      \"id\": \"c1\",\n      \"kind\": \"factual_claim\",\n      \"attribution\": \"author\",\n      \"target_ids\": [\n        \"t1\"\n      ],\n      \"evidence\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"i co @uzytkownik20 sówka i ja mieliśmy rację\"\n      },\n      \"statement\": \"Autor i inny użytkownik mieli rację co do spadku omawianej spółki (nazwa niepodana w poście).\"\n    },\n    {\n      \"id\": \"c2\",\n      \"kind\": \"trade_action\",\n      \"attribution\": \"author\",\n      \"target_ids\": [\n        \"t1\"\n      ],\n      \"evidence\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"Teraz se odkupię poniżej 140\"\n      },\n      \"statement\": \"Autor planuje odkupić omawiane aktywo, jeśli cena spadnie poniżej 140; długo czekał na ten spadek.\"\n    }\n  ],\n  \"flags\": [\n    \"missing_context\"\n  ]\n}",
+  "inputTokens" : 3240,
+  "outputTokens" : 2322,
+  "cachedTokens" : 3072,
+  "durationMs" : 40275,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

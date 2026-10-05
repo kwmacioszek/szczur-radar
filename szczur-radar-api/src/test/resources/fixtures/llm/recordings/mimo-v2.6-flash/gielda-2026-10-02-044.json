@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-02-044",
+  "configId" : "mimo-v2.6-flash",
+  "provider" : "openrouter",
+  "model" : "xiaomi/mimo-v2.6-flash",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T20:18:40.353795Z",
+  "rawText" : "{\"relevance\":\"investment_related\",\"modifiers\":[\"humor\"],\"targets\":[{\"id\":\"t1\",\"kind\":\"macro_topic\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"Co robi rynek? POMPA\"},\"stance\":{\"direction\":\"bullish\",\"assertiveness\":\"hedged\",\"claim_ids\":[\"c2\",\"c3\"]},\"reference\":\"explicit\"},{\"id\":\"t2\",\"kind\":\"macro_topic\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"rynku pracy\"},\"stance\":{\"direction\":\"not_expressed\",\"assertiveness\":null,\"claim_ids\":[]},\"reference\":\"explicit\"}],\"claims\":[{\"id\":\"c1\",\"kind\":\"factual_claim\",\"attribution\":\"author\",\"target_ids\":[\"t2\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"dużo mniej nowych etatów (29k vs 89k przewidywane) oraz rewizja poprzednich danych (162k w dół do 133k). Do tego bezrobocie 4.2% względem 4.1% przewidywanego.\"},\"statement\":\"Wyniki z rynku pracy rozczarowały: 29k nowych etatów wobec 89k prognozy, rewizja 162k w dół do 133k, bezrobocie 4.2% wobec 4.1% prognozy.\"},{\"id\":\"c2\",\"kind\":\"factual_claim\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"Co robi rynek? POMPA\"},\"statement\":\"Mimo słabych danych z rynku pracy rynek robi pompę, co autorowi wydaje się nie do zrozumienia.\"},{\"id\":\"c3\",\"kind\":\"opinion\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"może dlatego, że nie trzeba ludziom tyle płacić? xD\"},\"statement\":\"Autor żartobliwo sugeruje, że rynek rośnie, bo słabym rynkiem pracy nie trzeba tyle płacić ludziom.\"}],\"flags\":[]}",
+  "inputTokens" : 3304,
+  "outputTokens" : 2962,
+  "cachedTokens" : 2048,
+  "durationMs" : 86067,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

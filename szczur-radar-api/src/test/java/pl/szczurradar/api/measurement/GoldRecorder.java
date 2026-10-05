@@ -6,8 +6,10 @@ import java.io.IOException;
 import java.time.Clock;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -25,7 +27,8 @@ import pl.szczurradar.api.measurement.ModelsConfig.Model;
  * {@code models.json} matching {@code LLM_*} (none → error), every post assessed through
  * {@link Assessor}, each result written as a {@link Recording}. A post that already has a current
  * recording of this configuration is skipped, so an interrupted run resumes; {@code -Dgold.rerecord=true}
- * records everything again. Only this configuration's recordings are written.
+ * records everything again; {@code -Dgold.sample=N} records every N-th gold post only (a fixed subset
+ * for comparing variants). Only this configuration's recordings are written.
  *
  * <pre>
  * ( source ~/.config/szczur-radar/&lt;provider&gt;.env &amp;&amp; ./mvnw -Pmeasurement test -Dtest=GoldRecorder )
@@ -46,7 +49,13 @@ class GoldRecorder {
 			.stream()
 			.filter(Recording::current)
 			.collect(Collectors.toMap(Recording::postId, Function.identity()));
-		List<Post> posts = GoldLabels.readPosts(GoldLabels.POSTS);
+		int every = Integer.getInteger("gold.sample", 1);
+		List<Post> all = GoldLabels.readPosts(GoldLabels.POSTS);
+		// -Dgold.sample=N records every N-th post only (a fixed subset to compare variants cheaply).
+		List<Post> posts = IntStream.range(0, all.size())
+			.filter(i -> i % every == 0)
+			.mapToObj(all::get)
+			.toList();
 		// One client for the whole run (llm/CLAUDE.md).
 		Assessor assessor = new Assessor(LlmClientFactory.create(properties), Clock.systemUTC());
 
@@ -68,7 +77,9 @@ class GoldRecorder {
 		}
 		System.out.printf("recorded %d posts (%d ok), skipped %d with a current recording%n", recorded, ok,
 				posts.size() - recorded);
-		assertThat(Recording.readAll(model.id()).stream().filter(Recording::current).count())
+		Set<String> wanted = posts.stream().map(Post::postId).collect(Collectors.toSet());
+		assertThat(Recording.readAll(model.id()).stream().filter(Recording::current).map(Recording::postId)
+			.filter(wanted::contains).count())
 			.as("current recordings of " + model.id())
 			.isEqualTo(posts.size());
 	}

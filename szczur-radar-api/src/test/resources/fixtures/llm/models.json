@@ -2,7 +2,7 @@
   "default": null,
   "pricesCheckedAt": "2026-10-04",
   "priceSources": [
-    "OpenRouter catalog https://openrouter.ai/api/v1/models (openai/gpt-6-luna, openai/gpt-6-luna:batch, google/gemini-3.1-flash-lite)",
+    "OpenRouter catalog https://openrouter.ai/api/v1/models (openai/gpt-6-luna, openai/gpt-6-luna:batch, google/gemini-3.1-flash-lite, deepseek/deepseek-v4.1-flash, z-ai/glm-5.3-flash, xiaomi/mimo-v2.6-flash; read 2026-10-05)",
     "OpenAI flex processing: tokens at Batch API rates https://platform.openai.com/docs/guides/flex-processing",
     "DeepSeek pricing https://api-docs.deepseek.com/quick_start/pricing (deepseek-flash; off-peak = half of peak; peak 01-04 and 06-10 UTC Mon-Fri)"
   ],
@@ -64,6 +64,96 @@
           "input": 0.25,
           "cachedInput": 0.025,
           "output": 1.5
+        }
+      }
+    },
+    {
+      "id": "deepseek-r-low",
+      "role": "candidate",
+      "provider": "openrouter",
+      "model": "deepseek/deepseek-v4.1-flash",
+      "serviceTier": "default",
+      "reasoningEffort": "low",
+      "prices": {
+        "openrouter": {
+          "input": 0.3,
+          "cachedInput": 0.006,
+          "output": 1.2
+        }
+      }
+    },
+    {
+      "id": "deepseek-r-high",
+      "role": "candidate",
+      "provider": "openrouter",
+      "model": "deepseek/deepseek-v4.1-flash",
+      "serviceTier": "default",
+      "reasoningEffort": "high",
+      "prices": {
+        "openrouter": {
+          "input": 0.3,
+          "cachedInput": 0.006,
+          "output": 1.2
+        }
+      }
+    },
+    {
+      "id": "luna-low",
+      "role": "candidate",
+      "provider": "openrouter",
+      "model": "openai/gpt-6-luna",
+      "serviceTier": "default",
+      "reasoningEffort": "low",
+      "prices": {
+        "openrouter": {
+          "input": 0.1,
+          "cachedInput": 0.01,
+          "output": 0.5
+        }
+      }
+    },
+    {
+      "id": "luna-high",
+      "role": "candidate",
+      "provider": "openrouter",
+      "model": "openai/gpt-6-luna",
+      "serviceTier": "default",
+      "reasoningEffort": "high",
+      "prices": {
+        "openrouter": {
+          "input": 0.1,
+          "cachedInput": 0.01,
+          "output": 0.5
+        }
+      }
+    },
+    {
+      "id": "glm-5.3-flash",
+      "role": "candidate",
+      "provider": "openrouter",
+      "model": "z-ai/glm-5.3-flash",
+      "serviceTier": "default",
+      "reasoningEffort": "low",
+      "prices": {
+        "openrouter": {
+          "input": 0.15,
+          "cachedInput": 0.03,
+          "output": 0.5
+        }
+      }
+    },
+    {
+      "id": "mimo-v2.6-flash",
+      "role": "candidate",
+      "provider": "openrouter",
+      "model": "xiaomi/mimo-v2.6-flash",
+      "serviceTier": "default",
+      "reasoningEffort": null,
+      "prices": {
+        "openrouter": {
+          "input": 0.14,
+          "cachedInput": 0.0028,
+          "output": 0.28
         }
       }
     }

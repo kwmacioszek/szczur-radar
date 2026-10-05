@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-01-040",
+  "configId" : "glm-5.3-flash",
+  "provider" : "openrouter",
+  "model" : "z-ai/glm-5.3-flash",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : "low",
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T20:00:54.596297Z",
+  "rawText" : "{\"targets\":[],\"relevance\":\"not_investment_related\",\"modifiers\":[],\"flags\":[],\"claims\":[]}",
+  "inputTokens" : 3056,
+  "outputTokens" : 44,
+  "cachedTokens" : 0,
+  "durationMs" : 1628,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

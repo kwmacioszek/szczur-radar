@@ -126,6 +126,21 @@ class GoldMetricsTest {
 	}
 
 	@Test
+	void unclearAndNotExpressedCountAsTheSameDirection() {
+		List<Label> gold = List.of(
+				label("p", Relevance.INVESTMENT_RELATED, false, gold("XTB", Direction.UNCLEAR),
+						gold("CDR", Direction.UNCLEAR), gold("PKO", Direction.UNCLEAR)),
+				label("q", Relevance.INVESTMENT_RELATED, false, gold("KGHM", Direction.BULLISH)));
+		Map<String, AssessmentOutputV2> answers = Map.of(
+				"p", output(Relevance.INVESTMENT_RELATED, model("XTB", Direction.NOT_EXPRESSED),
+						model("CDR", Direction.UNCLEAR), model("PKO", Direction.BULLISH)),
+				"q", output(Relevance.INVESTMENT_RELATED, model("KGHM", Direction.NOT_EXPRESSED)));
+
+		// XTB (unclear ≈ not_expressed) and CDR right; PKO wrong; KGHM bullish ≠ not_expressed
+		assertThat(GoldMetrics.compute(gold, answers).ratio(Metric.TARGET_DIRECTION_ACCURACY)).isEqualTo(new Ratio(2, 4));
+	}
+
+	@Test
 	void anAliasPairsAModelThatNamedTheSubjectDifferently() {
 		List<Label> gold = List.of(label("p", Relevance.INVESTMENT_RELATED, false, gold("#ORLEN", Direction.BEARISH)));
 		Map<String, AssessmentOutputV2> onlyAlias = Map.of("p",

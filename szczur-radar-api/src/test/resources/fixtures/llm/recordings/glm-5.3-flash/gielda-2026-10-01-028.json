@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-01-028",
+  "configId" : "glm-5.3-flash",
+  "provider" : "openrouter",
+  "model" : "z-ai/glm-5.3-flash",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : "low",
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T20:00:31.034505Z",
+  "rawText" : "{\n\"relevance\": \"investment_related\",\n\"modifiers\": [],\n\"targets\": [\n{\n\"id\": \"t1\",\n\"kind\": \"company\",\n\"anchor\": {\"document\": \"item\", \"field\": \"body\", \"quote\": \"szczur\"},\n\"reference\": \"explicit\",\n\"stance\": {\n\"direction\": \"bearish\",\n\"assertiveness\": \"hedged\",\n\"claim_ids\": [\"c1\"]\n}\n}\n],\n\"claims\": [\n{\n\"id\": \"c1\",\n\"kind\": \"question\",\n\"attribution\": \"author\",\n\"target_ids\": [\"t1\"],\n\"statement\": \"Pytanie, czy XTB znowu dostał karę od KNF, że dziś szoruje po dnie.\",\n\"evidence\": {\"document\": \"item\", \"field\": \"body\", \"quote\": \"szczur znowu dostał kare od KNF że dziś tak szoruje po dnie?\"}\n}\n],\n\"flags\": []\n}",
+  "inputTokens" : 3044,
+  "outputTokens" : 246,
+  "cachedTokens" : 0,
+  "durationMs" : 7758,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}
