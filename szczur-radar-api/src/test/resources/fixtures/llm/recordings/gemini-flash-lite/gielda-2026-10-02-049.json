@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-02-049",
+  "configId" : "gemini-flash-lite",
+  "provider" : "gemini",
+  "model" : "gemini-3.1-flash-lite",
+  "channel" : "gemini",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T18:47:29.590457Z",
+  "rawText" : "{\n  \"relevance\": \"investment_related\",\n  \"modifiers\": [\"humor\"],\n  \"targets\": [\n    {\n      \"id\": \"t1\",\n      \"kind\": \"macro_topic\",\n      \"anchor\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"Portfel USA\"\n      },\n      \"stance\": {\n        \"direction\": \"bullish\",\n        \"assertiveness\": \"unhedged\",\n        \"claim_ids\": [\"c1\"]\n      },\n      \"reference\": \"explicit\"\n    },\n    {\n      \"id\": \"t2\",\n      \"kind\": \"macro_topic\",\n      \"anchor\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"portfel PL\"\n      },\n      \"stance\": {\n        \"direction\": \"bearish\",\n        \"assertiveness\": \"unhedged\",\n        \"claim_ids\": [\"c2\"]\n      },\n      \"reference\": \"explicit\"\n    }\n  ],\n  \"claims\": [\n    {\n      \"id\": \"c1\",\n      \"kind\": \"factual_claim\",\n      \"attribution\": \"author\",\n      \"target_ids\": [\"t1\"],\n      \"evidence\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"Portfel USA 100tys zł zysku\"\n      },\n      \"statement\": \"Portfel USA wygenerował 100 tys. zł zysku.\"\n    },\n    {\n      \"id\": \"c2\",\n      \"kind\": \"opinion\",\n      \"attribution\": \"author\",\n      \"target_ids\": [\"t2\"],\n      \"evidence\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"a portfel PL to k---a szkoda gadać\"\n      },\n      \"statement\": \"Wyniki portfela PL są bardzo słabe.\"\n    }\n  ],\n  \"flags\": []\n}",
+  "inputTokens" : 2901,
+  "outputTokens" : 478,
+  "cachedTokens" : null,
+  "durationMs" : 2048,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

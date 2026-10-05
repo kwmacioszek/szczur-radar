@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-02-055",
+  "configId" : "luna",
+  "provider" : "openrouter",
+  "model" : "openai/gpt-6-luna",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T19:05:14.601555Z",
+  "rawText" : "{\"relevance\":\"investment_related\",\"modifiers\":[\"humor\"],\"targets\":[{\"id\":\"t1\",\"kind\":\"macro_topic\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"pompa\"},\"stance\":{\"direction\":\"mixed\",\"assertiveness\":null,\"claim_ids\":[\"c1\",\"c2\"]},\"reference\":\"explicit\"}],\"claims\":[{\"id\":\"c1\",\"kind\":\"factual_claim\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"taka pompa na start\"},\"statement\":\"Na start była pompa.\"},{\"id\":\"c2\",\"kind\":\"factual_claim\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"i już zjazd\"},\"statement\":\"Potem nastąpił zjazd.\"},{\"id\":\"c3\",\"kind\":\"opinion\",\"attribution\":\"author\",\"target_ids\":[],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"pan grubas to jednak fachowiec jest\"},\"statement\":\"Pan grubas to fachowiec.\"}],\"flags\":[]}",
+  "inputTokens" : 3336,
+  "outputTokens" : 1061,
+  "cachedTokens" : 3215,
+  "durationMs" : 11310,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

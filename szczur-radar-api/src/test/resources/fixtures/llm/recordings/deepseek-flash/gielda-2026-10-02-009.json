@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-02-009",
+  "configId" : "deepseek-flash",
+  "provider" : "deepseek",
+  "model" : "deepseek-flash",
+  "channel" : "deepseek",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_mode",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T18:43:08.356754Z",
+  "rawText" : "{\"relevance\":\"investment_related\",\"modifiers\":[\"humor\"],\"targets\":[{\"id\":\"t1\",\"kind\":\"company\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"#orlen\"},\"stance\":{\"direction\":\"bullish\",\"assertiveness\":\"hedged\",\"claim_ids\":[\"c1\",\"c2\"]},\"reference\":\"explicit\"}],\"claims\":[{\"id\":\"c1\",\"kind\":\"trade_action\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"aktualnie jestem posiadaczem 750 akcji średnio po 150\"},\"statement\":\"Autor posiada 750 akcji Orlenu po średniej cenie 150.\"},{\"id\":\"c2\",\"kind\":\"trade_action\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"czas dokupić, gorzej już nie będzie prawda?\"},\"statement\":\"Autor planuje dokupić akcje Orlenu, licząc że dalej nie będą spadać.\"}],\"flags\":[]}",
+  "inputTokens" : 3784,
+  "outputTokens" : 239,
+  "cachedTokens" : 3584,
+  "durationMs" : 1314,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

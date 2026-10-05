@@ -22,7 +22,8 @@ class AssessmentPromptTest {
 	private static final Map<String, String> SYSTEM_PROMPT_SHA256 = Map.of(
 			"v2.2", "6a8da2c865c3350788e39d3f7824b05044fdb935f30b851d5f08a54e623f9b90",
 			"v2.3", "365d5ba296187d13cd09bd4bba2fe2e5a452cb2cb14469bed7835970b1c97eff",
-			"v2.4", "0faffa760663da6b186a46d18404ff4447397c96c52965d1bc1d5c6f8ef9f0da");
+			"v2.4", "0faffa760663da6b186a46d18404ff4447397c96c52965d1bc1d5c6f8ef9f0da",
+			"v2.5", "93aae1d5818dd9893bc1ae8fd11bdd77a447094064b2582d9a22deb6d6a3afbe");
 
 	@Test
 	void theSystemPromptTextBelongsToItsVersion() throws NoSuchAlgorithmException {

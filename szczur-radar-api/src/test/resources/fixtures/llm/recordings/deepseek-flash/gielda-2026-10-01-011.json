@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-01-011",
+  "configId" : "deepseek-flash",
+  "provider" : "deepseek",
+  "model" : "deepseek-flash",
+  "channel" : "deepseek",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_mode",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T18:41:50.605932Z",
+  "rawText" : "{\"relevance\":\"investment_related\",\"modifiers\":[\"humor\"],\"targets\":[{\"id\":\"t1\",\"kind\":\"company\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"mikrusami\"},\"stance\":{\"direction\":\"not_expressed\",\"assertiveness\":null,\"claim_ids\":[]},\"reference\":\"explicit\"},{\"id\":\"t2\",\"kind\":\"asset\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"hujnixy\"},\"stance\":{\"direction\":\"not_expressed\",\"assertiveness\":null,\"claim_ids\":[]},\"reference\":\"explicit\"}],\"claims\":[{\"id\":\"c1\",\"kind\":\"question\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"mam pytanie czy ktoś w niedzielę która była widział ten pana Marcina tańczącymi mikrusami\"},\"statement\":\"Autor pyta, czy ktoś widział w minioną niedzielę pana Marcina tańczącego mikrusami.\"},{\"id\":\"c2\",\"kind\":\"question\",\"attribution\":\"author\",\"target_ids\":[\"t2\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"warto też lubię hujnixy oglądać i się zastanawiam czy ten pan się w ogóle pojawia\"},\"statement\":\"Autor lubi oglądać hujnixy i zastanawia się, czy ten pan w ogóle się pojawia.\"}],\"flags\":[\"missing_context\"]}",
+  "inputTokens" : 3693,
+  "outputTokens" : 331,
+  "cachedTokens" : 3456,
+  "durationMs" : 1723,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

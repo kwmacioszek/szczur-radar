@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-02-012",
+  "configId" : "deepseek-flash",
+  "provider" : "deepseek",
+  "model" : "deepseek-flash",
+  "channel" : "deepseek",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_mode",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T18:43:12.180821Z",
+  "rawText" : "{\"relevance\":\"investment_related\",\"modifiers\":[\"humor\"],\"targets\":[{\"id\":\"t1\",\"kind\":\"macro_topic\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"giełdzie\"},\"stance\":{\"direction\":\"bullish\",\"assertiveness\":\"hedged\",\"claim_ids\":[\"c2\"]},\"reference\":\"explicit\"},{\"id\":\"t2\",\"kind\":\"macro_topic\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"Klimat pod spadki 10-15%\"},\"stance\":{\"direction\":\"bearish\",\"assertiveness\":\"hedged\",\"claim_ids\":[\"c3\"]},\"reference\":\"explicit\"}],\"claims\":[{\"id\":\"c1\",\"kind\":\"factual_claim\",\"attribution\":\"author\",\"target_ids\":[],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"będę miał 12k do wydania w połowie października\"},\"statement\":\"Autor będzie miał 12 tys. do zainwestowania w połowie października.\"},{\"id\":\"c2\",\"kind\":\"factual_claim\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"wszystkie moje spółki rosną, ewentualnie boczniak, ale żadna nie chce spaść chociaż kilka procent\"},\"statement\":\"Wszystkie spółki autora rosną lub stoją w miejscu, żadna nie spada o kilka procent.\"},{\"id\":\"c3\",\"kind\":\"investment_thesis\",\"attribution\":\"author\",\"target_ids\":[\"t2\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"Klimat pod spadki 10-15% na giełdzie jest, ale coś nie chce jebnąć :/\"},\"statement\":\"Autor ocenia, że klimat sprzyja spadkom o 10-15% na giełdzie, ale spadek nie następuje.\"}],\"flags\":[]}",
+  "inputTokens" : 3719,
+  "outputTokens" : 431,
+  "cachedTokens" : 3584,
+  "durationMs" : 1828,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

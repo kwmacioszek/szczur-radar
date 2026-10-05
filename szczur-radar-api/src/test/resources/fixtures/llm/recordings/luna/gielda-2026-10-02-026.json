@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-02-026",
+  "configId" : "luna",
+  "provider" : "openrouter",
+  "model" : "openai/gpt-6-luna",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T19:00:39.168197Z",
+  "rawText" : "{\"relevance\":\"investment_related\",\"modifiers\":[],\"targets\":[{\"id\":\"t1\",\"kind\":\"unknown\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"tym CFD\"},\"stance\":{\"direction\":\"not_expressed\",\"assertiveness\":null,\"claim_ids\":[]},\"reference\":\"unresolved\"},{\"id\":\"t2\",\"kind\":\"company\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"#xtb\"},\"stance\":{\"direction\":\"not_expressed\",\"assertiveness\":null,\"claim_ids\":[]},\"reference\":\"explicit\"}],\"claims\":[{\"id\":\"c1\",\"kind\":\"question\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"Ciekawe, kto jest stratny na tym CFD, skoro na wykopie 99% chwali się tylko zyskami.\"},\"statement\":\"Kto jest stratny na tym CFD, skoro na wykopie 99% chwali się tylko zyskami?\"}],\"flags\":[]}",
+  "inputTokens" : 3340,
+  "outputTokens" : 708,
+  "cachedTokens" : 3215,
+  "durationMs" : 8010,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

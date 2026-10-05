@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-01-021",
+  "configId" : "deepseek-flash",
+  "provider" : "deepseek",
+  "model" : "deepseek-flash",
+  "channel" : "deepseek",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_mode",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T18:42:02.553060Z",
+  "rawText" : "{\"relevance\":\"investment_related\",\"modifiers\":[],\"targets\":[{\"id\":\"t1\",\"kind\":\"company\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"Apator\"},\"stance\":{\"direction\":\"not_expressed\",\"assertiveness\":null,\"claim_ids\":[]},\"reference\":\"explicit\"}],\"claims\":[{\"id\":\"c1\",\"kind\":\"question\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"ktoś ma w portfelu Apator?\"},\"statement\":\"Czy ktoś ma w portfelu Apator?\"}],\"flags\":[]}",
+  "inputTokens" : 3644,
+  "outputTokens" : 137,
+  "cachedTokens" : 3456,
+  "durationMs" : 920,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

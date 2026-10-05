@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-02-025",
+  "configId" : "gemini-flash-lite",
+  "provider" : "gemini",
+  "model" : "gemini-3.1-flash-lite",
+  "channel" : "gemini",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T18:46:50.268619Z",
+  "rawText" : "{\n  \"relevance\": \"investment_related\",\n  \"modifiers\": [\n    \"humor\"\n  ],\n  \"targets\": [\n    {\n      \"id\": \"t1\",\n      \"kind\": \"company\",\n      \"anchor\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"xtb\"\n      },\n      \"stance\": {\n        \"direction\": \"bullish\",\n        \"assertiveness\": \"unhedged\",\n        \"claim_ids\": [\n          \"c1\"\n        ]\n      },\n      \"reference\": \"explicit\"\n    }\n  ],\n  \"claims\": [\n    {\n      \"id\": \"c1\",\n      \"kind\": \"factual_claim\",\n      \"attribution\": \"author\",\n      \"target_ids\": [\n        \"t1\"\n      ],\n      \"evidence\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"nie sadzilem ze kazdy wykopek jest po kule w xtb zaladowany\"\n      },\n      \"statement\": \"Użytkownicy forum są mocno zaangażowani (posiadają akcje) w spółkę XTB.\"\n    }\n  ],\n  \"flags\": []\n}",
+  "inputTokens" : 2883,
+  "outputTokens" : 298,
+  "cachedTokens" : null,
+  "durationMs" : 1821,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

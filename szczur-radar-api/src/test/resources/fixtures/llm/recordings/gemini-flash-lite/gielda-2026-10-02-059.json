@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-02-059",
+  "configId" : "gemini-flash-lite",
+  "provider" : "gemini",
+  "model" : "gemini-3.1-flash-lite",
+  "channel" : "gemini",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T18:47:50.458742Z",
+  "rawText" : "{\n  \"relevance\": \"investment_related\",\n  \"modifiers\": [],\n  \"targets\": [\n    {\n      \"id\": \"t1\",\n      \"kind\": \"other\",\n      \"anchor\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"31%\"\n      },\n      \"stance\": {\n        \"direction\": \"bullish\",\n        \"assertiveness\": \"unhedged\",\n        \"claim_ids\": [\n          \"c1\"\n        ]\n      },\n      \"reference\": \"explicit\"\n    }\n  ],\n  \"claims\": [\n    {\n      \"id\": \"c1\",\n      \"kind\": \"factual_claim\",\n      \"attribution\": \"author\",\n      \"target_ids\": [\n        \"t1\"\n      ],\n      \"evidence\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"31% w trochę ponad 60dni.\"\n      },\n      \"statement\": \"Autor osiągnął 31% zysku w nieco ponad 60 dni.\"\n    }\n  ],\n  \"flags\": []\n}",
+  "inputTokens" : 2899,
+  "outputTokens" : 272,
+  "cachedTokens" : null,
+  "durationMs" : 1753,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

@@ -3,7 +3,7 @@ project: "Szczur Radar"
 document: "LLM Assessment Contract"
 version: 2
 status: accepted # zaakceptowany przez użytkownika 2026-10-01 (plan F-02, kryterium 1.6)
-updated: 2026-10-04
+updated: 2026-10-05
 source_of_truth: true
 supersedes: "V1 — context/foundation/archive/ (2026-10-01, llm-assessment contract V1)"
 ---
@@ -161,7 +161,7 @@ Bez powtórzeń. Dozwolone przy każdej wartości `relevance`.
 
 | Pole | Kontrakt |
 |---|---|
-| `direction` | `bullish` — autor oczekuje wzrostu, ocenia pozytywnie, kupuje lub liczy na wzrost · `bearish` — oczekuje spadku, ocenia negatywnie lub sprzedaje · `neutral` — jawnie deklaruje neutralność („trzymam, nic nie robię”) · `mixed` — wyraża oba kierunki wobec tego samego celu (np. krótki i długi termin) · `not_expressed` — cel jest, stanowiska brak (informacja, szczere pytanie, cel w tle) · `unclear` — stanowisko jest, ale kierunku nie da się ustalić |
+| `direction` | `bullish` — autor oczekuje wzrostu, ocenia pozytywnie, kupuje lub liczy na wzrost, albo opisuje wzrost ceny celu lub pyta o jego przyczynę (§7.1.7) · `bearish` — oczekuje spadku, ocenia negatywnie lub sprzedaje, albo opisuje spadek ceny celu lub pyta o jego przyczynę (§7.1.7) · `neutral` — jawnie deklaruje neutralność („trzymam, nic nie robię”) · `mixed` — wyraża oba kierunki wobec tego samego celu (np. krótki i długi termin) · `not_expressed` — cel jest, stanowiska brak (informacja niedotycząca ruchu ceny, szczere pytanie niedotyczące ruchu ceny, cel w tle) · `unclear` — stanowisko jest, ale kierunku nie da się ustalić |
 | `assertiveness` | `unhedged` — stanowisko wyrażone wprost · `hedged` — autor je osłabia („może”, „chyba”, „wydaje mi się”) **albo** kierunek jest odczytany z sugestii lub pośrednio (§7.1) · `null` — gdy kierunek nie jest `bullish` / `bearish` / `neutral` (tabela §7.2) |
 | `claim_ids` | tezy, na których opiera się stanowisko; każda MUSI mieć ten cel w `target_ids`; reguły obecności — tabela §7.2 |
 
@@ -221,7 +221,7 @@ Bez powtórzeń. Flagi nie dublują `reference = ambiguous | unresolved`, `direc
 - **6.4 Hashtag jako anchor** (3.4). Hashtag nazywający spółkę lub aktywo (`#wittchen`, `#cdprojektred`, `#meczennicyxtb`) może być anchorem celu; czytany dosłownie (`#wittchen` to Wittchen, nie Wiedźmin). **Tagi kanału** — wartości `item.channels` oraz tagi tematyczne bez nazwy spółki lub aktywa (`#gielda`, `#gieldowegownowpisy`, `#finanse`, `#inwestowanie`), w tym tagi nastroju (`#krachsmieciuchindex`) — **nigdy nie są celem**.
 - **6.5 Slang bez nazwy** (3.5) — spekulacyjna spółka nazwana tylko slangiem („śmieciuch”) → cel ogólny `kind = other` z anchorem w oryginale („śmieciucha”) i kierunkiem. Słowa, które nie nazywają podmiotu („gruby” = duży gracz), nie są celami. Słownik slangu jest materiałem pomocniczym promptu i instrukcji oznaczania, nie częścią kontraktu.
 - **6.5a Ruch całego rynku slangiem.** Słowo o ruchu rynku („pompa”, „kibel” / „dzień kibla”, „zwała”, „spadki”, „bessa”, „krach”), gdy post nie wiąże tego ruchu z nazwanym celem, wskazuje cel „rynek” (`macro_topic`); anchor = najkrótszy fragment z tym słowem („dzien kibla”, „pompa”), kierunek według §7.1 — tak jak „na peronie” (§7.1.6). Gdy ruch dotyczy nazwanego celu („indeks w końcu poleci w kibel”), słowo slangu nie tworzy osobnego celu (§6.7).
-- **6.6 Przeglądy wiadomości i artykuły** (3.6): cele = podmioty, o których post mówi; fakty z artykułu bez komentarza autora → `factual_claim` z `attribution = reported` lub `author` (gdy autor sam je podaje) i stanowisko `not_expressed`. Stanowisko tylko, gdy autor je dodaje.
+- **6.6 Przeglądy wiadomości i artykuły** (3.6): cele = podmioty, o których post mówi; fakty z artykułu bez komentarza autora → `factual_claim` z `attribution = reported` lub `author` (gdy autor sam je podaje) i stanowisko `not_expressed` (ruch ceny celu — §7.1.7). Stanowisko tylko, gdy autor je dodaje.
 - **6.7 Jeden cel na podmiot.** Kolejne wzmianki o tym samym podmiocie w tym samym poście (także inną nazwą: „Micron” i „mikrusie”) nie tworzą nowego celu; anchorem jest jedna z nich, wybrana według 6.2.
 - **6.8 Anchor a `reference`.** `explicit`, `ambiguous` i `unresolved` ⇒ anchor z `item` (dla `unresolved` — fragment odsyłający, np. „Ta spółka”); `contextual` ⇒ anchor z istniejącego rodzica (`parent_post` lub `parent_comment`). W MVP rodziców nie ma, więc `contextual` nie występuje.
 
@@ -233,11 +233,12 @@ Bez powtórzeń. Flagi nie dublują `reference = ambiguous | unresolved`, `direc
 
 - **7.1.0 Próg: szeroko + pewność.** Kierunek przypisuje się, gdy rozsądny czytelnik odczyta go z tekstu — także z sugestii („bańka na X” → `bearish`, „X kusi” → `bullish`, „zapakowany w X pod wyniki” → `bullish`). Kierunek odczytany z sugestii lub pośrednio ma `assertiveness = hedged`. Uzasadnienie: surowy post stoi obok oceny, więc fałszywe stanowisko łatwo zweryfikować, a pominiętego filtr nie pokaże.
 - **7.1.1 Scenariusz dwustronny bez preferencji** („albo 250 albo 150”, „albo kibel albo pompa stulecia”) → `unclear`, nie `mixed`. `mixed` tylko, gdy autor wyraża oba kierunki (np. krótki i długi termin).
-- **7.1.2 Ironia i sarkazm** — oceniany jest zamierzony sens; jeśli nie da się go ustalić → `unclear` (opcjonalnie `possible_sarcasm`).
+- **7.1.2 Ironia i sarkazm** — oceniany jest zamierzony sens; jeśli nie da się go ustalić → `unclear` (opcjonalnie `possible_sarcasm`). Na forach inwestycyjnych częsta jest ironiczna pochwała własnej straty lub spadku („świetny pomysł”, „pięknie”, emotikona śmiechu przy spadku) — jej zamierzony sens to zwykle `bearish`, nie dosłowne `bullish`.
 - **7.1.3 Ton ≠ stanowisko** — „co za śmieciuch” przy spadku = `bearish`; „zarząd to dramat, ale kupuję” = `bullish`.
-- **7.1.4 Pytanie retoryczne z nadzieją lub oczekiwaniem** („kiedy kruk po 500?”) → kierunek tego oczekiwania. Szczere pytanie o informację („ktoś wie, co powiedział Trump?”) → `not_expressed`. Pytanie o ruch ceny nie jest automatycznie stanowiskiem, ale może nim być.
+- **7.1.4 Pytanie retoryczne z nadzieją lub oczekiwaniem** („kiedy kruk po 500?”) → kierunek tego oczekiwania. Szczere pytanie o informację („ktoś wie, co powiedział Trump?”) → `not_expressed`. Pytanie o przyczynę ruchu ceny („czemu X spada?”) → §7.1.7.
 - **7.1.5 Przyjęta cudza opinia / nadzieja na wydarzenie** („Cała nadzieja, że Trump o 20 ogłosi pokój”) → cel wydarzenia lub rynku (`macro_topic`), `bullish`, `hedged`; teza ma `attribution = author`. Cudza opinia przytoczona bez przyjęcia (analityk, artykuł) → teza `reported`, nie stanowisko autora.
 - **7.1.6 „Na peronie”** („a my na peronie od piątku”) → cel „rynek” (`macro_topic`, anchor = fragment z „peronie”), `bullish` — autor stwierdza wzrosty, które przegapił.
+- **7.1.7 Opis ruchu ceny.** Gdy post stwierdza ruch ceny nazwanego celu albo pyta o jego przyczynę („X dziś na czerwono”, „czemu X spada?”, „Y robi +5%”, „banki lecą na pysk”, „inflacja rosła”) i nie wyraża innego stanowiska autora, kierunek = kierunek tego ruchu (wzrost → `bullish`, spadek → `bearish`), `assertiveness = hedged`; teza autora w `claim_ids` = to stwierdzenie lub pytanie (`factual_claim` / `question`, `attribution = author`). Własne stanowisko autora, gdy jest, ma pierwszeństwo. Uzasadnienie: dla filtra sygnałów post o spadku celu niesie kierunek, nawet jeśli autor go nie ocenia.
 
 ### 7.2 `direction` × `assertiveness` × `claim_ids`
 
@@ -471,6 +472,8 @@ Podstawa: pilotaże na prawdziwych postach i ramowanie — `context/changes/asse
 | Wyjście | `AssessmentOutputV1` | `AssessmentOutputV2`; wejście bez zmian (`AssessmentInputV1`) | — |
 
 **Zmiany V2 przez regułę zmiany (§16):**
+
+- 2026-10-05 — §7.1.7 (nowa): opis ruchu ceny celu lub pytanie o jego przyczynę → kierunek tego ruchu, `hedged` (wcześniej `not_expressed`); §3 `direction`, §6.6, §7.1.4 dostosowane; §7.1.2 dopisuje ironiczną pochwałę straty. Powód: raport zestawu wzorcowego 2026-10-05 — oznaczający czyta „czemu X spada?”, „Y +5%, Z na czerwono” jako kierunek, modele trzymały się `not_expressed`; decyzja użytkownika (N13). Prompt v2.5.
 
 - 2026-10-04 — §6.5a: slang ruchu całego rynku bez nazwanego celu wskazuje cel „rynek” (`macro_topic`), jak „na peronie” (§7.1.6); wcześniej „pompa”, „zwała” były wymienione jako „nie cele”. Powód: zestaw wzorcowy F-02 (posty 2026-10-01/02, m.in. „dzien kibla dzisiaj sie szykuje”, „będzie pompa jakiej mój portfel…”) — oznaczający czyta je jako stanowisko wobec rynku; decyzja użytkownika (`context/changes/assessment-contract-harness/implementation-notes.md`, N11). Prompt v2.3.
 

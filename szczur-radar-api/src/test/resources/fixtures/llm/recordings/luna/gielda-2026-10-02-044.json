@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-02-044",
+  "configId" : "luna",
+  "provider" : "openrouter",
+  "model" : "openai/gpt-6-luna",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T19:02:53.441680Z",
+  "rawText" : "{\n  \"relevance\": \"investment_related\",\n  \"modifiers\": [\"humor\"],\n  \"targets\": [\n    {\n      \"id\": \"t1\",\n      \"kind\": \"macro_topic\",\n      \"anchor\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"rynku pracy\"\n      },\n      \"stance\": {\n        \"direction\": \"not_expressed\",\n        \"assertiveness\": null,\n        \"claim_ids\": []\n      },\n      \"reference\": \"explicit\"\n    },\n    {\n      \"id\": \"t2\",\n      \"kind\": \"macro_topic\",\n      \"anchor\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"bezrobocie\"\n      },\n      \"stance\": {\n        \"direction\": \"not_expressed\",\n        \"assertiveness\": null,\n        \"claim_ids\": []\n      },\n      \"reference\": \"explicit\"\n    },\n    {\n      \"id\": \"t3\",\n      \"kind\": \"macro_topic\",\n      \"anchor\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"rynek\"\n      },\n      \"stance\": {\n        \"direction\": \"bullish\",\n        \"assertiveness\": \"hedged\",\n        \"claim_ids\": [\"c2\", \"c3\"]\n      },\n      \"reference\": \"explicit\"\n    },\n    {\n      \"id\": \"t4\",\n      \"kind\": \"macro_topic\",\n      \"anchor\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"płacić\"\n      },\n      \"stance\": {\n        \"direction\": \"not_expressed\",\n        \"assertiveness\": null,\n        \"claim_ids\": []\n      },\n      \"reference\": \"explicit\"\n    }\n  ],\n  \"claims\": [\n    {\n      \"id\": \"c1\",\n      \"kind\": \"factual_claim\",\n      \"attribution\": \"author\",\n      \"target_ids\": [\"t1\", \"t2\"],\n      \"evidence\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"Wyniki z rynku pracy - dużo mniej nowych etatów (29k vs 89k przewidywane) oraz rewizja poprzednich danych (162k w dół do 133k). Do tego bezrobocie 4.2% względem 4.1% przewidywanego.\"\n      },\n      \"statement\": \"Nowych etatów było 29k wobec 89k przewidywanych, poprzednie dane zrewidowano z 162k do 133k, a bezrobocie wyniosło 4.2% wobec 4.1% przewidywanego.\"\n    },\n    {\n      \"id\": \"c2\",\n      \"kind\": \"factual_claim\",\n      \"attribution\": \"author\",\n      \"target_ids\": [\"t3\"],\n      \"evidence\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"Co robi rynek? POMPA\"\n      },\n      \"statement\": \"Rynek rośnie (POMPA).\"\n    },\n    {\n      \"id\": \"c3\",\n      \"kind\": \"question\",\n      \"attribution\": \"author\",\n      \"target_ids\": [\"t3\", \"t4\"],\n      \"evidence\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"może dlatego, że nie trzeba ludziom tyle płacić?\"\n      },\n      \"statement\": \"Czy rynek rośnie może dlatego, że nie trzeba ludziom tyle płacić?\"\n    }\n  ],\n  \"flags\": []\n}",
+  "inputTokens" : 3409,
+  "outputTokens" : 1758,
+  "cachedTokens" : 3215,
+  "durationMs" : 16406,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

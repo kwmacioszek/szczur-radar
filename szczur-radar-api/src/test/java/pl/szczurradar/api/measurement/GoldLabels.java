@@ -33,6 +33,12 @@ public final class GoldLabels {
 	public static final Path LABELS = DIRECTORY.resolve("labels.json");
 
 	/**
+	 * Other names of a gold target, {@code {post_id: {anchor: [alias, …]}}}: the same subject named
+	 * twice in one post (§6.7), so a model choosing the other name is not penalized.
+	 */
+	public static final Path ALIASES = DIRECTORY.resolve("aliases.json");
+
+	/**
 	 * Default place of the links to the sampled posts on wykop.pl ({@code {post_id: url}}): outside the
 	 * repo, because a link leads to the author.
 	 */
@@ -103,6 +109,16 @@ public final class GoldLabels {
 	public static List<Post> readPosts(Path path) throws IOException {
 		return ContractJson.MAPPER.readValue(Files.readString(path), new TypeReference<List<Post>>() {
 		});
+	}
+
+	/** The aliases file, or none when it does not exist. */
+	public static Map<String, Map<String, List<String>>> readAliases(Path path) throws IOException {
+		if (!Files.exists(path)) {
+			return Map.of();
+		}
+		return ContractJson.MAPPER.readValue(Files.readString(path),
+				new TypeReference<Map<String, Map<String, List<String>>>>() {
+				});
 	}
 
 	public static List<Label> readLabels(Path path) throws IOException {

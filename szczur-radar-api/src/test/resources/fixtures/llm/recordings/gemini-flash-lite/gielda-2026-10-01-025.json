@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-01-025",
+  "configId" : "gemini-flash-lite",
+  "provider" : "gemini",
+  "model" : "gemini-3.1-flash-lite",
+  "channel" : "gemini",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T18:45:05.827640Z",
+  "rawText" : "{\n  \"relevance\": \"investment_related\",\n  \"modifiers\": [],\n  \"targets\": [\n    {\n      \"id\": \"t1\",\n      \"kind\": \"company\",\n      \"anchor\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"NOW\"\n      },\n      \"stance\": {\n        \"direction\": \"not_expressed\",\n        \"assertiveness\": null,\n        \"claim_ids\": []\n      },\n      \"reference\": \"explicit\"\n    }\n  ],\n  \"claims\": [\n    {\n      \"id\": \"c1\",\n      \"kind\": \"question\",\n      \"attribution\": \"author\",\n      \"target_ids\": [\n        \"t1\"\n      ],\n      \"evidence\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"trzyma ktoś to jeszcze?\"\n      },\n      \"statement\": \"Autor pyta, czy ktoś jeszcze trzyma akcje spółki NOW.\"\n    }\n  ],\n  \"flags\": []\n}",
+  "inputTokens" : 2884,
+  "outputTokens" : 249,
+  "cachedTokens" : null,
+  "durationMs" : 1587,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

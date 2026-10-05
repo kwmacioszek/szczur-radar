@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-02-005",
+  "configId" : "deepseek-flash",
+  "provider" : "deepseek",
+  "model" : "deepseek-flash",
+  "channel" : "deepseek",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_mode",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T18:43:03.419340Z",
+  "rawText" : "{\"relevance\":\"investment_related\",\"modifiers\":[\"humor\"],\"targets\":[{\"id\":\"t1\",\"kind\":\"macro_topic\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"mocne spadki\"},\"stance\":{\"direction\":\"bearish\",\"assertiveness\":\"hedged\",\"claim_ids\":[\"c1\"]},\"reference\":\"explicit\"}],\"claims\":[{\"id\":\"c1\",\"kind\":\"investment_thesis\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"szykujcie gotówkę na mocne spadki XD\"},\"statement\":\"Autor oczekuje mocnych spadków i radzi przygotować gotówkę.\"}],\"flags\":[]}",
+  "inputTokens" : 3667,
+  "outputTokens" : 161,
+  "cachedTokens" : 3456,
+  "durationMs" : 1201,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

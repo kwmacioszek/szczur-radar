@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-02-050",
+  "configId" : "luna",
+  "provider" : "openrouter",
+  "model" : "openai/gpt-6-luna",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T19:03:42.500091Z",
+  "rawText" : "{\"relevance\":\"investment_related\",\"modifiers\":[\"humor\"],\"targets\":[{\"id\":\"t1\",\"kind\":\"company\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"szczur\"},\"stance\":{\"direction\":\"bearish\",\"assertiveness\":\"hedged\",\"claim_ids\":[\"c1\"]},\"reference\":\"explicit\"}],\"claims\":[{\"id\":\"c1\",\"kind\":\"question\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"czy zgodne z konstytucją jest to że szczur spada ?\"},\"statement\":\"Czy zgodne z konstytucją jest to, że szczur spada?\"}],\"flags\":[]}",
+  "inputTokens" : 3325,
+  "outputTokens" : 329,
+  "cachedTokens" : 3215,
+  "durationMs" : 4657,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-02-051",
+  "configId" : "deepseek-flash",
+  "provider" : "deepseek",
+  "model" : "deepseek-flash",
+  "channel" : "deepseek",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_mode",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T18:43:59.066500Z",
+  "rawText" : "{\"relevance\":\"investment_related\",\"modifiers\":[\"humor\"],\"targets\":[{\"id\":\"t1\",\"kind\":\"macro_topic\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"inwestowaniu w tym kasynie\"},\"stance\":{\"direction\":\"bearish\",\"assertiveness\":\"hedged\",\"claim_ids\":[\"c1\"]},\"reference\":\"explicit\"}],\"claims\":[{\"id\":\"c1\",\"kind\":\"investment_thesis\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"więcej zarobiłbym na grze w trzy kubki z menelem niż na inwestowaniu w tym kasynie\"},\"statement\":\"Autor twierdzi, że inwestowanie na rynku przynosi mu straty — więcej zarobiłby na grze w trzy kubki z menelem.\"}],\"flags\":[]}",
+  "inputTokens" : 3660,
+  "outputTokens" : 192,
+  "cachedTokens" : 3456,
+  "durationMs" : 1173,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

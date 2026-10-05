@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-01-036",
+  "configId" : "gemini-flash-lite",
+  "provider" : "gemini",
+  "model" : "gemini-3.1-flash-lite",
+  "channel" : "gemini",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T18:45:27.919480Z",
+  "rawText" : "{\n  \"relevance\": \"investment_related\",\n  \"modifiers\": [],\n  \"targets\": [\n    {\n      \"id\": \"t1\",\n      \"kind\": \"company\",\n      \"anchor\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"BYD\"\n      },\n      \"stance\": {\n        \"direction\": \"bullish\",\n        \"assertiveness\": \"unhedged\",\n        \"claim_ids\": [\n          \"c1\"\n        ]\n      },\n      \"reference\": \"explicit\"\n    }\n  ],\n  \"claims\": [\n    {\n      \"id\": \"c1\",\n      \"kind\": \"factual_claim\",\n      \"attribution\": \"author\",\n      \"target_ids\": [\n        \"t1\"\n      ],\n      \"evidence\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"BYD siódmy miesiąc z rzędu poprawia wynik sprzedaży. We wrześniu sprzedane globalnie 463,6 tys. samochodów, tj. wzrost o +17% r/r i +5,3% m/m\"\n      },\n      \"statement\": \"BYD poprawia wyniki sprzedaży siódmy miesiąc z rzędu, we wrześniu sprzedając 463,6 tys. samochodów, co oznacza wzrost o 17% r/r i 5,3% m/m.\"\n    }\n  ],\n  \"flags\": []\n}",
+  "inputTokens" : 2949,
+  "outputTokens" : 350,
+  "cachedTokens" : null,
+  "durationMs" : 2159,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-01-047",
+  "configId" : "luna",
+  "provider" : "openrouter",
+  "model" : "openai/gpt-6-luna",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T18:54:56.321931Z",
+  "rawText" : "{\"relevance\":\"investment_related\",\"modifiers\":[\"humor\"],\"targets\":[{\"id\":\"t1\",\"kind\":\"other\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"śmieciuchów\"},\"stance\":{\"direction\":\"not_expressed\",\"assertiveness\":null,\"claim_ids\":[]},\"reference\":\"explicit\"},{\"id\":\"t2\",\"kind\":\"company\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"Microsoft\"},\"stance\":{\"direction\":\"not_expressed\",\"assertiveness\":null,\"claim_ids\":[]},\"reference\":\"explicit\"}],\"claims\":[{\"id\":\"c1\",\"kind\":\"question\",\"attribution\":\"author\",\"target_ids\":[\"t1\",\"t2\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"Proszę o polecenie jakichś ciekawych śmieciuchów, byle nie Microsoft\"},\"statement\":\"Prosi o polecenie ciekawych śmieciuchów, z wyłączeniem Microsoft.\"}],\"flags\":[]}",
+  "inputTokens" : 3347,
+  "outputTokens" : 726,
+  "cachedTokens" : 3215,
+  "durationMs" : 6611,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

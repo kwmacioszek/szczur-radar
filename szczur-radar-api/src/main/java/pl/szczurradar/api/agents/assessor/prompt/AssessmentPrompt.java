@@ -20,7 +20,12 @@ import pl.szczurradar.api.agents.assessor.contract.ContractJson;
 public final class AssessmentPrompt {
 
 	/**
-	 * v2.4: the slang dictionary no longer calls "na peronie" a non-target (it is target "rynek",
+	 * v2.5: a described price move of a target (or a question about its cause) gives the move's
+	 * direction, hedged (contract §7.1.7); ironic praise of a loss is usually bearish (§7.1.2); do not
+	 * fall back to {@code not_expressed} when holding, buying or a loss points to a direction (gold
+	 * report 2026-10-05).
+	 *
+	 * <p>v2.4: the slang dictionary no longer calls "na peronie" a non-target (it is target "rynek",
 	 * contract §7.1.6; review of phase 5, F1).
 	 *
 	 * <p>v2.3: slang of a whole-market move without a named target → target "rynek" ({@code macro_topic}),
@@ -31,7 +36,7 @@ public final class AssessmentPrompt {
 	 * {@code not_expressed} → empty {@code claim_ids} (v2.2); measured in the smoke runs of 2026-10-01
 	 * and 2026-10-04 (phase 4).
 	 */
-	public static final String PROMPT_VERSION = "v2.4";
+	public static final String PROMPT_VERSION = "v2.5";
 
 	/** Classpath location of the system prompt. */
 	public static final String SYSTEM_PROMPT_RESOURCE = "/assessor/system-prompt.md";

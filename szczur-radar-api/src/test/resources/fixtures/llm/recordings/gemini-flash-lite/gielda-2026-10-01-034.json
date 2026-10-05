@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-01-034",
+  "configId" : "gemini-flash-lite",
+  "provider" : "gemini",
+  "model" : "gemini-3.1-flash-lite",
+  "channel" : "gemini",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T18:45:24.001798Z",
+  "rawText" : "{\n  \"relevance\": \"investment_related\",\n  \"modifiers\": [],\n  \"targets\": [\n    {\n      \"id\": \"t1\",\n      \"kind\": \"macro_topic\",\n      \"anchor\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"Nic nie rośnie\"\n      },\n      \"stance\": {\n        \"direction\": \"bearish\",\n        \"assertiveness\": \"unhedged\",\n        \"claim_ids\": [\n          \"c1\"\n        ]\n      },\n      \"reference\": \"explicit\"\n    },\n    {\n      \"id\": \"t2\",\n      \"kind\": \"asset\",\n      \"anchor\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"obligacje\"\n      },\n      \"stance\": {\n        \"direction\": \"bullish\",\n        \"assertiveness\": \"hedged\",\n        \"claim_ids\": [\n          \"c2\"\n        ]\n      },\n      \"reference\": \"explicit\"\n    }\n  ],\n  \"claims\": [\n    {\n      \"id\": \"c1\",\n      \"kind\": \"factual_claim\",\n      \"attribution\": \"author\",\n      \"target_ids\": [\n        \"t1\"\n      ],\n      \"evidence\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"Nic nie rośnie, kolejny dzień p---y.\"\n      },\n      \"statement\": \"Rynek nie rośnie, kolejny dzień spadków.\"\n    },\n    {\n      \"id\": \"c2\",\n      \"kind\": \"opinion\",\n      \"attribution\": \"author\",\n      \"target_ids\": [\n        \"t2\"\n      ],\n      \"evidence\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"Trzeba było se obligacje mieć tylko…\"\n      },\n      \"statement\": \"Posiadanie obligacji byłoby lepszą strategią w obecnych warunkach.\"\n    }\n  ],\n  \"flags\": []\n}",
+  "inputTokens" : 2887,
+  "outputTokens" : 493,
+  "cachedTokens" : null,
+  "durationMs" : 2745,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

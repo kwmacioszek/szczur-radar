@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.stream.Stream;
 
 import org.jspecify.annotations.Nullable;
 
@@ -122,6 +123,15 @@ public final class GoldMetrics {
 	 * @throws InsufficientGoldException if the gold set leaves a metric without a denominator
 	 */
 	public static GoldMetrics compute(List<Label> gold, Map<String, AssessmentOutputV2> outputs) {
+		return compute(gold, outputs, Map.of());
+	}
+
+	/**
+	 * @param aliases other names of a gold target, by post and anchor ({@code gold/aliases.json}): the
+	 *     same subject named differently in the post (§6.7), e.g. {@code #PKN} for {@code #ORLEN}
+	 */
+	public static GoldMetrics compute(List<Label> gold, Map<String, AssessmentOutputV2> outputs,
+			Map<String, Map<String, List<String>>> aliases) {
 		int valid = 0;
 		int relevanceRight = 0;
 		int relevanceTotal = 0;
@@ -153,7 +163,12 @@ public final class GoldMetrics {
 			goldTargets += labeled.size();
 			modelTargets += answered.size();
 			Target[] matchOf = new Target[labeled.size()];
-			for (AnchorMatcher.Pair pair : AnchorMatcher.match(labeled.stream().map(LabeledTarget::anchor).toList(),
+			Map<String, List<String>> postAliases = aliases.getOrDefault(label.postId(), Map.of());
+			List<List<String>> names = labeled.stream()
+				.map(target -> Stream.concat(Stream.of(target.anchor()),
+						postAliases.getOrDefault(target.anchor(), List.of()).stream()).toList())
+				.toList();
+			for (AnchorMatcher.Pair pair : AnchorMatcher.matchNames(names,
 					answered.stream().map(target -> target.anchor().quote()).toList())) {
 				matchOf[pair.gold()] = answered.get(pair.model());
 				matched++;

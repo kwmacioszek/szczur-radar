@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-02-015",
+  "configId" : "luna",
+  "provider" : "openrouter",
+  "model" : "openai/gpt-6-luna",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T18:59:29.075871Z",
+  "rawText" : "{\"relevance\":\"investment_related\",\"modifiers\":[\"humor\"],\"targets\":[{\"id\":\"t1\",\"kind\":\"company\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"#orlen\"},\"stance\":{\"direction\":\"not_expressed\",\"assertiveness\":null,\"claim_ids\":[]},\"reference\":\"explicit\"}],\"claims\":[{\"id\":\"c1\",\"kind\":\"opinion\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"Ale tak o-----ć jedno i drugie no to czapki z głów dla mnie proszę państwa. Szkoda że pozycja mała, no ale still wyczucie rynku 10/10 ( ͡° ͜ʖ ͡°)\"},\"statement\":\"Autor ironicznie ocenia swoje wyczucie momentów wejścia i wyjścia jako 10/10.\"}],\"flags\":[]}",
+  "inputTokens" : 3442,
+  "outputTokens" : 2427,
+  "cachedTokens" : 3215,
+  "durationMs" : 24070,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

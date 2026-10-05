@@ -1,0 +1,28 @@
+{
+  "post_id" : "gielda-2026-10-02-056",
+  "configId" : "deepseek-flash",
+  "provider" : "deepseek",
+  "model" : "deepseek-flash",
+  "channel" : "deepseek",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_mode",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T18:44:11.059784Z",
+  "rawText" : "{\"relevance\":\"investment_related\",\"modifiers\":[\"humor\"],\"targets\":[{\"id\":\"t1\",\"kind\":\"asset\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"kurs eurusd\"},\"stance\":{\"direction\":\"bearish\",\"assertiveness\":\"hedged\",\"claim_ids\":[\"c4\"]},\"reference\":\"explicit\"},{\"id\":\"t2\",\"kind\":\"company\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"xtb\"},\"stance\":{\"direction\":\"bearish\",\"assertiveness\":\"hedged\",\"claim_ids\":[\"c3\"]},\"reference\":\"explicit\"},{\"id\":\"t3\",\"kind\":\"macro_topic\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"instrumenty hedgowane\"},\"stance\":{\"direction\":\"bullish\",\"assertiveness\":\"hedged\",\"claim_ids\":[\"c5\"]},\"reference\":\"explicit\"}],\"claims\":[{\"id\":\"c1\",\"kind\":\"investment_thesis\",\"attribution\":\"author\",\"target_ids\":[],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"Powszechnie sie uwaza ze jak kupujecie instrument na stocki z USA ktore sa wyceniane w USD to nie ma zadnego znaczenia czy instrument nominowany jest w EUR czy USD. jest to kompletna bzdura\"},\"statement\":\"Przekonanie, że waluta nominacji instrumentu na akcje USA nie ma znaczenia, jest błędne.\"},{\"id\":\"c2\",\"kind\":\"factual_claim\",\"attribution\":\"author\",\"target_ids\":[],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"w 2008 roku kiedy kurs wyj3bal na 1,5\"},\"statement\":\"W 2008 roku kurs EUR/USD wzrósł do ok. 1,5, co dało inwestorowi z USD ok. +50% przewagi nad inwestorem z EUR.\"},{\"id\":\"c3\",\"kind\":\"opinion\",\"attribution\":\"author\",\"target_ids\":[\"t2\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"bo masz ike w xtb hehe szczurish\"},\"statement\":\"Posiadanie IKE w XTB wiąże się z dodatkowymi kosztami przewalutowania.\"},{\"id\":\"c4\",\"kind\":\"investment_thesis\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"jakby w 2025 nagle z pisdy kurs eurusd wyj3balo na 2,0. Nagle po 25 latach oszczedzania wasz zysk spadlby o polowe\"},\"statement\":\"Gdyby kurs EUR/USD wzrósł do 2,0, zysk oszczędzającego przez 25 lat spadłby o połowę.\"},{\"id\":\"c5\",\"kind\":\"investment_thesis\",\"attribution\":\"author\",\"target_ids\":[\"t3\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"musimy zabezpieczyc sie instrumentami hedgowanymi. To jest jedyny sposob na ta druga wymiane walutowa wewnatrz samego instrumentu\"},\"statement\":\"Aby nie spekulować dodatkowo na kursie walut, trzeba zabezpieczać się instrumentami hedgowanymi.\"}],\"flags\":[]}",
+  "inputTokens" : 4504,
+  "outputTokens" : 721,
+  "cachedTokens" : 3584,
+  "durationMs" : 3143,
+  "attempts" : 1,
+  "status" : "failed",
+  "failureClass" : "fabricated_evidence",
+  "violations" : [ {
+    "failureClass" : "fabricated_evidence",
+    "rule" : "D6",
+    "path" : "$.targets[2].anchor.quote",
+    "message" : "quote is not a fragment of item.body"
+  } ]
+}

@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-02-006",
+  "configId" : "luna",
+  "provider" : "openrouter",
+  "model" : "openai/gpt-6-luna",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T18:57:46.435355Z",
+  "rawText" : "{\"relevance\":\"investment_related\",\"modifiers\":[\"humor\"],\"targets\":[{\"id\":\"t1\",\"kind\":\"asset\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"wigusia\"},\"stance\":{\"direction\":\"bullish\",\"assertiveness\":\"hedged\",\"claim_ids\":[\"c1\"]},\"reference\":\"explicit\"}],\"claims\":[{\"id\":\"c1\",\"kind\":\"trade_action\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"~37% x 2 wigusia w portfelu\"},\"statement\":\"W portfelu jest ~37% x 2 wigusia.\"}],\"flags\":[]}",
+  "inputTokens" : 3335,
+  "outputTokens" : 1210,
+  "cachedTokens" : 3215,
+  "durationMs" : 12311,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

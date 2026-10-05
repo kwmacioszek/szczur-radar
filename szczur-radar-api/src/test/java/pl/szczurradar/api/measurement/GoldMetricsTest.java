@@ -125,6 +125,23 @@ class GoldMetricsTest {
 			.isThrownBy(() -> GoldMetrics.compute(List.of(), Map.of()));
 	}
 
+	@Test
+	void anAliasPairsAModelThatNamedTheSubjectDifferently() {
+		List<Label> gold = List.of(label("p", Relevance.INVESTMENT_RELATED, false, gold("#ORLEN", Direction.BEARISH)));
+		Map<String, AssessmentOutputV2> onlyAlias = Map.of("p",
+				output(Relevance.INVESTMENT_RELATED, model("#PKN", Direction.BEARISH)));
+		Map<String, AssessmentOutputV2> both = Map.of("p", output(Relevance.INVESTMENT_RELATED,
+				model("#PKN", Direction.BEARISH), model("#ORLEN", Direction.BEARISH)));
+		Map<String, Map<String, List<String>>> aliases = Map.of("p", Map.of("#ORLEN", List.of("#PKN")));
+
+		assertThat(GoldMetrics.compute(gold, onlyAlias).ratio(Metric.TARGET_RECALL)).isEqualTo(new Ratio(0, 1));
+		assertThat(GoldMetrics.compute(gold, onlyAlias, aliases).ratio(Metric.TARGET_RECALL)).isEqualTo(new Ratio(1, 1));
+		assertThat(GoldMetrics.compute(gold, onlyAlias, aliases).ratio(Metric.TARGET_DIRECTION_ACCURACY))
+			.isEqualTo(new Ratio(1, 1));
+		// Two targets for one subject (§6.7): one pairs, the other stays an extra.
+		assertThat(GoldMetrics.compute(gold, both, aliases).ratio(Metric.TARGET_PRECISION)).isEqualTo(new Ratio(1, 2));
+	}
+
 	@ParameterizedTest
 	@CsvSource({ "CONTRACT_COMPLIANCE, 95, 100, true", "CONTRACT_COMPLIANCE, 94, 100, false",
 			"TARGET_PRECISION, 70, 100, true", "TARGET_PRECISION, 69, 100, false", "CONTRADICTION_RATE, 3, 100, true",

@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-01-033",
+  "configId" : "gemini-flash-lite",
+  "provider" : "gemini",
+  "model" : "gemini-3.1-flash-lite",
+  "channel" : "gemini",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T18:45:21.252205Z",
+  "rawText" : "{\n  \"relevance\": \"investment_related\",\n  \"modifiers\": [\n    \"humor\"\n  ],\n  \"targets\": [\n    {\n      \"id\": \"t1\",\n      \"kind\": \"company\",\n      \"anchor\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"Sandisk\"\n      },\n      \"stance\": {\n        \"direction\": \"bullish\",\n        \"assertiveness\": \"hedged\",\n        \"claim_ids\": [\n          \"c1\"\n        ]\n      },\n      \"reference\": \"explicit\"\n    },\n    {\n      \"id\": \"t2\",\n      \"kind\": \"company\",\n      \"anchor\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"Hujnix\"\n      },\n      \"stance\": {\n        \"direction\": \"bearish\",\n        \"assertiveness\": \"hedged\",\n        \"claim_ids\": [\n          \"c2\"\n        ]\n      },\n      \"reference\": \"explicit\"\n    },\n    {\n      \"id\": \"t3\",\n      \"kind\": \"company\",\n      \"anchor\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"mikrus\"\n      },\n      \"stance\": {\n        \"direction\": \"bearish\",\n        \"assertiveness\": \"hedged\",\n        \"claim_ids\": [\n          \"c3\"\n        ]\n      },\n      \"reference\": \"explicit\"\n    }\n  ],\n  \"claims\": [\n    {\n      \"id\": \"c1\",\n      \"kind\": \"factual_claim\",\n      \"attribution\": \"author\",\n      \"target_ids\": [\n        \"t1\"\n      ],\n      \"evidence\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"Sandisk 0,14% na zielono\"\n      },\n      \"statement\": \"Sandisk rośnie o 0,14%.\"\n    },\n    {\n      \"id\": \"c2\",\n      \"kind\": \"factual_claim\",\n      \"attribution\": \"author\",\n      \"target_ids\": [\n        \"t2\"\n      ],\n      \"evidence\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"Hujnix -0,3%\"\n      },\n      \"statement\": \"Hujnix spada o 0,3%.\"\n    },\n    {\n      \"id\": \"c3\",\n      \"kind\": \"factual_claim\",\n      \"attribution\": \"author\",\n      \"target_ids\": [\n        \"t3\"\n      ],\n      \"evidence\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"mikrus -3%\"\n      },\n      \"statement\": \"Mikrus spada o 3%.\"\n    }\n  ],\n  \"flags\": []\n}",
+  "inputTokens" : 2894,
+  "outputTokens" : 704,
+  "cachedTokens" : null,
+  "durationMs" : 2559,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

@@ -156,3 +156,29 @@ later phases. Each open check names the phase that closes it; `/10x-impl-review`
 - Anonymizer: case-insensitive author nicks, e-mails → `<email>`; changes future samples only — the
   committed `posts.json` was checked clean and is not re-drawn (its labels stay valid).
 - Wykop fixtures: `gender`, `rank.position` nulled, `type_id` renumbered.
+
+## Phase 6 — measurement (2026-10-05)
+
+### N13. First gold report, gold completion and contract §7.1.7 (prompt v2.5)
+
+- Recordings on prompt v2.4 (120 posts × 3 models; Luna's 6 posts whose duration included the laptop
+  sleeping were recorded again). No model met all thresholds; compliance, relevance and recall
+  passed for all three.
+- Precision: models named targets the labels missed. Candidates found by ≥ 2 models (34) were put to
+  the user one by one (survey); each decision was the user's (add with direction / reject / alias /
+  relevance change) — 16 posts changed, 2 aliases (`gold/aliases.json`: „#PKN” = „#ORLEN”,
+  „ogłoszenie pokoju” = „iranem”, §6.7), rest rejected. Recomputed offline: precision 80–83 % for all.
+  The report states that the candidates came from models.
+- Direction: most disagreements were a definition gap, not model error — the user labels the price
+  move a post describes („czemu spadki na XTB?”, „Samsung +5%, Micron na czerwono”) as a direction,
+  the contract said `not_expressed`. User's decision: contract §7.1.7 (described move or question
+  about its cause → the move's direction, hedged), §7.1.2 ironic praise of a loss, guidelines v1.2;
+  prompt v2.5 also tells the model not to fall back to `not_expressed` when holding, buying or a loss
+  points to a direction (Luna's main error). These prompt rules come from analyzing disagreements on
+  the gold set itself; the next report must say so.
+- All three configurations are recorded again on v2.5 (older recordings no longer count).
+- Luna is measured on the default tier (`models.json` id `luna`, user's decision 2026-10-05: flex took
+  ~20 s per post and hours with retries). Same model; flex changes queueing and price, not answers —
+  the report also prices the recorded tokens at the flex rate. Production can still run flex
+  (`LLM_SERVICE_TIER`); its refusal rate (429) and latency were seen in phase 4 (0 refusals in 30
+  calls, median 9 s) and in the v2.4 recording run (0 fallbacks in 120 calls).

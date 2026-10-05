@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-01-028",
+  "configId" : "luna",
+  "provider" : "openrouter",
+  "model" : "openai/gpt-6-luna",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T18:51:52.720540Z",
+  "rawText" : "{\"relevance\":\"investment_related\",\"modifiers\":[],\"targets\":[{\"id\":\"t1\",\"kind\":\"company\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"szczur\"},\"stance\":{\"direction\":\"bearish\",\"assertiveness\":\"hedged\",\"claim_ids\":[\"c1\"]},\"reference\":\"explicit\"},{\"id\":\"t2\",\"kind\":\"other\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"KNF\"},\"stance\":{\"direction\":\"not_expressed\",\"assertiveness\":null,\"claim_ids\":[]},\"reference\":\"explicit\"}],\"claims\":[{\"id\":\"c1\",\"kind\":\"question\",\"attribution\":\"author\",\"target_ids\":[\"t1\",\"t2\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"#gielda szczur znowu dostał kare od KNF że dziś tak szoruje po dnie? \"},\"statement\":\"Czy szczur znowu dostał karę od KNF, dlatego że dziś tak szoruje po dnie?\"}],\"flags\":[]}",
+  "inputTokens" : 3330,
+  "outputTokens" : 737,
+  "cachedTokens" : 3215,
+  "durationMs" : 6558,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

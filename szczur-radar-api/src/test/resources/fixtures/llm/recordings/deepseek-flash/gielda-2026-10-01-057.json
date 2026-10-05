@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-01-057",
+  "configId" : "deepseek-flash",
+  "provider" : "deepseek",
+  "model" : "deepseek-flash",
+  "channel" : "deepseek",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_mode",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T18:42:53.262056Z",
+  "rawText" : "{\"relevance\":\"investment_related\",\"modifiers\":[],\"targets\":[{\"id\":\"t1\",\"kind\":\"company\",\"anchor\":{\"document\":\"item\",\"field\":\"title\",\"quote\":\"ElevenLabs\"},\"stance\":{\"direction\":\"not_expressed\",\"assertiveness\":null,\"claim_ids\":[]},\"reference\":\"explicit\"},{\"id\":\"t2\",\"kind\":\"macro_topic\",\"anchor\":{\"document\":\"item\",\"field\":\"title\",\"quote\":\"GPW\"},\"stance\":{\"direction\":\"not_expressed\",\"assertiveness\":null,\"claim_ids\":[]},\"reference\":\"explicit\"}],\"claims\":[{\"id\":\"c1\",\"kind\":\"factual_claim\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"Startup Matiego Staniszewskiego i Piotra Dąbkowskiego pozyskał 300 mln dolarów, a jego wycena podwoiła się od początku roku.\"},\"statement\":\"Startup ElevenLabs pozyskał 300 mln dolarów, a jego wycena podwoiła się od początku roku.\"},{\"id\":\"c2\",\"kind\":\"factual_claim\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"Firma zatrudnia ponad 800 osób, obsługuje 15 mln rozmów tygodniowo w 90 językach\"},\"statement\":\"Firma zatrudnia ponad 800 osób i obsługuje 15 mln rozmów tygodniowo w 90 językach.\"},{\"id\":\"c3\",\"kind\":\"factual_claim\",\"attribution\":\"author\",\"target_ids\":[\"t1\",\"t2\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"za dwa lub trzy lata chce wejść na giełdę, być może równolegle na GPW\"},\"statement\":\"Za dwa lub trzy lata firma chce wejść na giełdę, być może równolegle na GPW.\"}],\"flags\":[]}",
+  "inputTokens" : 3751,
+  "outputTokens" : 441,
+  "cachedTokens" : 3456,
+  "durationMs" : 2115,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

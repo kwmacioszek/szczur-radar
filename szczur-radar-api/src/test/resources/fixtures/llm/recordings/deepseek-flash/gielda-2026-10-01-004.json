@@ -1,0 +1,28 @@
+{
+  "post_id" : "gielda-2026-10-01-004",
+  "configId" : "deepseek-flash",
+  "provider" : "deepseek",
+  "model" : "deepseek-flash",
+  "channel" : "deepseek",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_mode",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T18:41:40.182167Z",
+  "rawText" : "{\"relevance\":\"investment_related\",\"modifiers\":[],\"targets\":[{\"id\":\"t1\",\"kind\":\"company\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"MU\"},\"stance\":{\"direction\":\"neutral\",\"assertiveness\":\"unhedged\",\"claim_ids\":[\"c1\",\"c2\"]}}],\"claims\":[{\"id\":\"c1\",\"kind\":\"investment_thesis\",\"attribution\":\"reported\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"MU PRICE TARGET: 1100\"},\"statement\":\"Cena docelowa dla MU wynosi 1100 (rekomendacja analityka @uzytkownik8 z WKP Research).\"},{\"id\":\"c2\",\"kind\":\"investment_thesis\",\"attribution\":\"reported\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"RATING: HOLD\"},\"statement\":\"Rekomendacja dla MU to HOLD.\"},{\"id\":\"c3\",\"kind\":\"factual_claim\",\"attribution\":\"author\",\"target_ids\":[],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"Rynki juz zareagowaly.\"},\"statement\":\"Rynki już zareagowały.\"}],\"flags\":[]}",
+  "inputTokens" : 3685,
+  "outputTokens" : 274,
+  "cachedTokens" : 3456,
+  "durationMs" : 1395,
+  "attempts" : 1,
+  "status" : "failed",
+  "failureClass" : "schema_violation",
+  "violations" : [ {
+    "failureClass" : "schema_violation",
+    "rule" : "schema:required",
+    "path" : "$.targets[0]",
+    "message" : "nie znaleziono wymaganej właściwości „reference”."
+  } ]
+}

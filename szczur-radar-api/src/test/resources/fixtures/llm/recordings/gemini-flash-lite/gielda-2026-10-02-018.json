@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-02-018",
+  "configId" : "gemini-flash-lite",
+  "provider" : "gemini",
+  "model" : "gemini-3.1-flash-lite",
+  "channel" : "gemini",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T18:46:39.381926Z",
+  "rawText" : "{\n  \"relevance\": \"investment_related\",\n  \"modifiers\": [\"humor\"],\n  \"targets\": [\n    {\n      \"id\": \"t1\",\n      \"kind\": \"company\",\n      \"anchor\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"xtb\"\n      },\n      \"stance\": {\n        \"direction\": \"bullish\",\n        \"assertiveness\": \"hedged\",\n        \"claim_ids\": [\"c1\"]\n      },\n      \"reference\": \"explicit\"\n    }\n  ],\n  \"claims\": [\n    {\n      \"id\": \"c1\",\n      \"kind\": \"opinion\",\n      \"attribution\": \"author\",\n      \"target_ids\": [\"t1\"],\n      \"evidence\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"Czytanie tagu dzisiaj to czysta przyjemność ( ͡° ͜ʖ ͡°)\"\n      },\n      \"statement\": \"Czytanie tagu o XTB sprawia autorowi przyjemność, co sugeruje pozytywny sentyment wobec spółki.\"\n    }\n  ],\n  \"flags\": [\"possible_sarcasm\"]\n}",
+  "inputTokens" : 2888,
+  "outputTokens" : 285,
+  "cachedTokens" : null,
+  "durationMs" : 1937,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

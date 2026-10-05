@@ -1,6 +1,6 @@
-# Instrukcja oznaczania postów #gielda — v1.1
+# Instrukcja oznaczania postów #gielda — v1.2
 
-> Status: v1.1 (2026-10-04: slang ruchu rynku → cel „rynek”, `contract-v2.md` §6.5a; tagi nastroju nie są celem, §6.4). v1.0 (2026-10-01) — reguły v0.3 przejął kontrakt `context/foundation/llm-assessment/contract-v2.md`; ta instrukcja odsyła do jego sekcji zamiast powtarzać definicje. Zostają tu: zakres oznaczania, słownik slangu (materiał do promptu, nie część kontraktu), flaga „trudny” i praktyka arkusza. Numery reguł 2.x / 3.x / 4.x z v0.3 są zachowane, bo odwołują się do nich `frame.md` i `plan.md`.
+> Status: v1.2 (2026-10-05: opis ruchu ceny → kierunek ruchu, `contract-v2.md` §7.1.7). v1.1 (2026-10-04: slang ruchu rynku → cel „rynek”, `contract-v2.md` §6.5a; tagi nastroju nie są celem, §6.4). v1.0 (2026-10-01) — reguły v0.3 przejął kontrakt `context/foundation/llm-assessment/contract-v2.md`; ta instrukcja odsyła do jego sekcji zamiast powtarzać definicje. Zostają tu: zakres oznaczania, słownik slangu (materiał do promptu, nie część kontraktu), flaga „trudny” i praktyka arkusza. Numery reguł 2.x / 3.x / 4.x z v0.3 są zachowane, bo odwołują się do nich `frame.md` i `plan.md`.
 > Przy sprzeczności tej instrukcji z `contract-v2.md` obowiązuje kontrakt; brakującą regułę zgłasza się przez regułę zmiany kontraktu (§16), nie przez dopisanie jej tylko tutaj.
 
 Oznaczamy tylko rdzeń: **trafność**, **cele** i **kierunek stanowiska autora** wobec każdego celu (+ czy stanowisko jest pewne, czy osłabione / z sugestii). Tez i cytatów nie oznaczamy.
@@ -74,6 +74,7 @@ Wartości `direction` i `assertiveness`: `contract-v2.md` §3 (`stance`); reguł
 | 4.4 Pytanie retoryczne z nadzieją | §7.1.4 | „kiedy kruk po 500?” → bullish; szczere pytanie → `not_expressed` |
 | 4.5 Przyjęta nadzieja / cudza opinia | §7.1.5 | „Cała nadzieja, że Trump ogłosi pokój” → `macro_topic`, bullish, niepewne |
 | 4.6 „Na peronie” | §7.1.6 | cel „rynek” (`macro_topic`), bullish |
+| 4.7 Opis ruchu ceny | §7.1.7 | „czemu X spada?”, „Y +5%” → kierunek ruchu, niepewne |
 
 Uwaga: etykiety rundy 1 (`labels-2026-09-28.json`) były oznaczane bez instrukcji i ostrożniej niż próg 4.0 — nie są wzorcem.
 

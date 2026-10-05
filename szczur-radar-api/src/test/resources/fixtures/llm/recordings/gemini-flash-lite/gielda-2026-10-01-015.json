@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-01-015",
+  "configId" : "gemini-flash-lite",
+  "provider" : "gemini",
+  "model" : "gemini-3.1-flash-lite",
+  "channel" : "gemini",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T18:44:48.574430Z",
+  "rawText" : "{\n  \"relevance\": \"investment_related\",\n  \"modifiers\": [],\n  \"targets\": [\n    {\n      \"id\": \"t1\",\n      \"kind\": \"asset\",\n      \"anchor\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"ike\"\n      },\n      \"stance\": {\n        \"direction\": \"not_expressed\",\n        \"assertiveness\": null,\n        \"claim_ids\": []\n      },\n      \"reference\": \"explicit\"\n    },\n    {\n      \"id\": \"t2\",\n      \"kind\": \"asset\",\n      \"anchor\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"oki\"\n      },\n      \"stance\": {\n        \"direction\": \"not_expressed\",\n        \"assertiveness\": null,\n        \"claim_ids\": []\n      },\n      \"reference\": \"explicit\"\n    }\n  ],\n  \"claims\": [\n    {\n      \"id\": \"c1\",\n      \"kind\": \"question\",\n      \"attribution\": \"author\",\n      \"target_ids\": [\n        \"t1\",\n        \"t2\"\n      ],\n      \"evidence\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"jakieś pomysły na pozyskanie 130k na styczeń 2027 aby wypełnić ike i oki?\"\n      },\n      \"statement\": \"Autor pyta o pomysły na pozyskanie 130 tys. zł na styczeń 2027 r. w celu wpłaty na IKE i OKE.\"\n    }\n  ],\n  \"flags\": []\n}",
+  "inputTokens" : 2910,
+  "outputTokens" : 406,
+  "cachedTokens" : null,
+  "durationMs" : 1964,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

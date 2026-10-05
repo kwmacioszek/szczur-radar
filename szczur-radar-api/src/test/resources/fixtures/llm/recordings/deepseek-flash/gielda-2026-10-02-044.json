@@ -1,0 +1,28 @@
+{
+  "post_id" : "gielda-2026-10-02-044",
+  "configId" : "deepseek-flash",
+  "provider" : "deepseek",
+  "model" : "deepseek-flash",
+  "channel" : "deepseek",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_mode",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T18:43:50.271917Z",
+  "rawText" : "{\"relevance\":\"investment_related\",\"modifiers\":[\"humor\"],\"targets\":[{\"id\":\"t1\",\"kind\":\"macro_topic\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"rynek\"},\"stance\":{\"direction\":\"bullish\",\"assertiveness\":\"hedged\",\"claim_ids\":[\"c2\"]},\"reference\":\"explicit\"},{\"id\":\"t2\",\"kind\":\"macro_topic\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"rynek pracy\"},\"stance\":{\"direction\":\"not_expressed\",\"assertiveness\":null,\"claim_ids\":[]},\"reference\":\"explicit\"}],\"claims\":[{\"id\":\"c1\",\"kind\":\"factual_claim\",\"attribution\":\"author\",\"target_ids\":[\"t2\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"Wyniki z rynku pracy - dużo mniej nowych etatów (29k vs 89k przewidywane) oraz rewizja poprzednich danych (162k w dół do 133k). Do tego bezrobocie 4.2% względem 4.1% przewidywanego.\"},\"statement\":\"Dane z rynku pracy wypadły słabo: 29k nowych etatów vs 89k oczekiwanych, rewizja w dół ze 162k do 133k, bezrobocie 4,2% vs 4,1% oczekiwane.\"},{\"id\":\"c2\",\"kind\":\"factual_claim\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"Co robi rynek? POMPA - może dlatego, że nie trzeba ludziom tyle płacić? xD\"},\"statement\":\"Rynek rośnie („POMPA”) mimo słabych danych z rynku pracy; autor ironicznie sugeruje, że powodem może być mniejsza presja na płace.\"}],\"flags\":[]}",
+  "inputTokens" : 3750,
+  "outputTokens" : 425,
+  "cachedTokens" : 3584,
+  "durationMs" : 1889,
+  "attempts" : 1,
+  "status" : "failed",
+  "failureClass" : "fabricated_evidence",
+  "violations" : [ {
+    "failureClass" : "fabricated_evidence",
+    "rule" : "D6",
+    "path" : "$.targets[1].anchor.quote",
+    "message" : "quote is not a fragment of item.body"
+  } ]
+}

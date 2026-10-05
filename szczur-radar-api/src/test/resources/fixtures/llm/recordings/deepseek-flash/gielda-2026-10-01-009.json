@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-01-009",
+  "configId" : "deepseek-flash",
+  "provider" : "deepseek",
+  "model" : "deepseek-flash",
+  "channel" : "deepseek",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_mode",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T18:41:47.524335Z",
+  "rawText" : "{\"relevance\":\"investment_related\",\"modifiers\":[],\"targets\":[{\"id\":\"t1\",\"kind\":\"company\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"Marvell\"},\"stance\":{\"direction\":\"unclear\",\"assertiveness\":null,\"claim_ids\":[\"c1\"]},\"reference\":\"explicit\"}],\"claims\":[{\"id\":\"c1\",\"kind\":\"question\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"Marvell już można kupowac czy doliero na ATH jak.się potwierdzi?\"},\"statement\":\"Czy Marvell już można kupować, czy lepiej dokupić na ATH po potwierdzeniu?\"}],\"flags\":[]}",
+  "inputTokens" : 3655,
+  "outputTokens" : 161,
+  "cachedTokens" : 3456,
+  "durationMs" : 1660,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

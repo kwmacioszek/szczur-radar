@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-01-031",
+  "configId" : "deepseek-flash",
+  "provider" : "deepseek",
+  "model" : "deepseek-flash",
+  "channel" : "deepseek",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_mode",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T18:42:16.278907Z",
+  "rawText" : "{\"relevance\":\"investment_related\",\"modifiers\":[\"humor\"],\"targets\":[{\"id\":\"t1\",\"kind\":\"company\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"micrus\"},\"stance\":{\"direction\":\"bearish\",\"assertiveness\":\"hedged\",\"claim_ids\":[\"c1\",\"c2\"]},\"reference\":\"explicit\"},{\"id\":\"t2\",\"kind\":\"macro_topic\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"kibel\"},\"stance\":{\"direction\":\"bearish\",\"assertiveness\":\"hedged\",\"claim_ids\":[\"c1\"]},\"reference\":\"explicit\"}],\"claims\":[{\"id\":\"c1\",\"kind\":\"factual_claim\",\"attribution\":\"author\",\"target_ids\":[\"t1\",\"t2\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"Jak złe wyniki to kibel, bo złe wyniki, a jak zajebiste wyniki do kibel, bo następne mogą być gorsze\"},\"statement\":\"Niezależnie od wyników Micron spada: złe wyniki to spadek, a dobre też, bo kolejne mogą być gorsze.\"},{\"id\":\"c2\",\"kind\":\"factual_claim\",\"attribution\":\"reported\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"Sanjaya mówi, że 2027 dalej będzie dobrym rokiem dla micrusa\"},\"statement\":\"Sanjaya twierdzi, że 2027 nadal będzie dobrym rokiem dla Microna.\"}],\"flags\":[\"possible_sarcasm\"]}",
+  "inputTokens" : 3715,
+  "outputTokens" : 346,
+  "cachedTokens" : 3456,
+  "durationMs" : 1801,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

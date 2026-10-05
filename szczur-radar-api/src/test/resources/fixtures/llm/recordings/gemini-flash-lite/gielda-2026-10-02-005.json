@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-02-005",
+  "configId" : "gemini-flash-lite",
+  "provider" : "gemini",
+  "model" : "gemini-3.1-flash-lite",
+  "channel" : "gemini",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T18:46:17.393409Z",
+  "rawText" : "{\n  \"relevance\": \"investment_related\",\n  \"modifiers\": [\"humor\"],\n  \"targets\": [\n    {\n      \"id\": \"t1\",\n      \"kind\": \"macro_topic\",\n      \"anchor\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"midterms\"\n      },\n      \"stance\": {\n        \"direction\": \"bearish\",\n        \"assertiveness\": \"unhedged\",\n        \"claim_ids\": [\"c1\"]\n      },\n      \"reference\": \"explicit\"\n    },\n    {\n      \"id\": \"t2\",\n      \"kind\": \"macro_topic\",\n      \"anchor\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"spadki\"\n      },\n      \"stance\": {\n        \"direction\": \"bearish\",\n        \"assertiveness\": \"unhedged\",\n        \"claim_ids\": [\"c1\"]\n      },\n      \"reference\": \"explicit\"\n    }\n  ],\n  \"claims\": [\n    {\n      \"id\": \"c1\",\n      \"kind\": \"investment_thesis\",\n      \"attribution\": \"author\",\n      \"target_ids\": [\"t1\", \"t2\"],\n      \"evidence\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"zobaczymy midterms jak świnia niebo, szykujcie gotówkę na mocne spadki XD\"\n      },\n      \"statement\": \"Autor oczekuje mocnych spadków w związku z wyborami midterms i zaleca przygotowanie gotówki.\"\n    }\n  ],\n  \"flags\": [\"possible_sarcasm\"]\n}",
+  "inputTokens" : 2892,
+  "outputTokens" : 402,
+  "cachedTokens" : null,
+  "durationMs" : 1986,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

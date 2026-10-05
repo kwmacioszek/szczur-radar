@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-01-006",
+  "configId" : "deepseek-flash",
+  "provider" : "deepseek",
+  "model" : "deepseek-flash",
+  "channel" : "deepseek",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_mode",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T18:41:43.031968Z",
+  "rawText" : "{\"relevance\":\"investment_related\",\"modifiers\":[\"humor\"],\"targets\":[{\"id\":\"t1\",\"kind\":\"asset\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"złoto\"},\"stance\":{\"direction\":\"bullish\",\"assertiveness\":\"hedged\",\"claim_ids\":[\"c1\",\"c2\"]},\"reference\":\"explicit\"},{\"id\":\"t2\",\"kind\":\"macro_topic\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"W\"},\"stance\":{\"direction\":\"not_expressed\",\"assertiveness\":null,\"claim_ids\":[]},\"reference\":\"ambiguous\"}],\"claims\":[{\"id\":\"c1\",\"kind\":\"trade_action\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"Trzyma ktoś oprócz mnie złoto na wypadek W?\"},\"statement\":\"Autor trzyma złoto na wypadek W i pyta, kto jeszcze je trzyma.\"},{\"id\":\"c2\",\"kind\":\"trade_action\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"Miałem monety 1 uncjowe, ale sprzedałem je i wymieniłem na monety 1/4 uncji żeby łatwiej handlować w razie czego.\"},\"statement\":\"Autor sprzedał monety 1-uncjowe i wymienił je na monety 1/4 uncji, by łatwiej handlować w razie czego.\"},{\"id\":\"c3\",\"kind\":\"question\",\"attribution\":\"author\",\"target_ids\":[],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"Jakie aktywo jeszcze polecają eksperci?\"},\"statement\":\"Autor pyta ekspertów, jakie jeszcze aktywo polecają.\"}],\"flags\":[\"missing_context\"]}",
+  "inputTokens" : 3736,
+  "outputTokens" : 405,
+  "cachedTokens" : 3584,
+  "durationMs" : 1937,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

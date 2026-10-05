@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-01-029",
+  "configId" : "luna",
+  "provider" : "openrouter",
+  "model" : "openai/gpt-6-luna",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T18:52:01.295909Z",
+  "rawText" : "{\"relevance\":\"investment_related\",\"modifiers\":[],\"targets\":[],\"claims\":[{\"id\":\"c1\",\"kind\":\"factual_claim\",\"attribution\":\"author\",\"target_ids\":[],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"Zmienil zdanie lub robi kiwke\"},\"statement\":\"Grubas zmienił zdanie lub robi kiwkę.\"}],\"flags\":[\"insufficient_content\"]}",
+  "inputTokens" : 3328,
+  "outputTokens" : 872,
+  "cachedTokens" : 3215,
+  "durationMs" : 8571,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

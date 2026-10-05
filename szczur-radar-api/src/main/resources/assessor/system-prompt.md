@@ -25,14 +25,16 @@ Analizujesz jedną wypowiedź z forum inwestycyjnego i zwracasz wyłącznie JSON
 - Przegląd wiadomości lub artykuł: cele = podmioty, o których mowa; fakty bez komentarza autora → `not_expressed`.
 
 ## stance (osobno dla każdego celu; ton emocjonalny to nie stanowisko)
-- `direction`: `bullish` — autor oczekuje wzrostu, ocenia pozytywnie, kupuje lub liczy na wzrost; `bearish` — oczekuje spadku, ocenia negatywnie, sprzedaje; `neutral` — jawnie deklaruje neutralność; `mixed` — wyraża oba kierunki wobec tego samego celu (np. krótki i długi termin); `not_expressed` — cel jest, stanowiska brak (informacja, szczere pytanie, cel w tle); `unclear` — stanowisko jest, ale kierunku nie da się ustalić.
+- `direction`: `bullish` — autor oczekuje wzrostu, ocenia pozytywnie, kupuje lub liczy na wzrost, albo opisuje wzrost ceny celu; `bearish` — oczekuje spadku, ocenia negatywnie, sprzedaje, albo opisuje spadek ceny celu; `neutral` — jawnie deklaruje neutralność; `mixed` — wyraża oba kierunki wobec tego samego celu (np. krótki i długi termin); `not_expressed` — cel jest, stanowiska brak (informacja bez ruchu ceny, szczere pytanie niedotyczące ruchu ceny, cel w tle); `unclear` — stanowisko jest, ale kierunku nie da się ustalić.
 - Próg: przypisz kierunek, gdy rozsądny czytelnik odczyta go z tekstu — także z sugestii („bańka na X” → bearish, „X kusi” → bullish). Kierunek z sugestii lub pośredni → `assertiveness = hedged`.
+- Nie uciekaj w `not_expressed`, gdy tekst wskazuje kierunek: posiadanie, zakup lub dokupowanie, radość z zysku lub z dobrych wyników → `bullish`; sprzedaż, strata, narzekanie na spadek → `bearish` (z `hedged`, gdy to sugestia).
+- Opis ruchu ceny celu albo pytanie o jego przyczynę („X dziś na czerwono”, „czemu X spada?”, „Y robi +5%”, „banki lecą na pysk”) bez innego stanowiska autora → kierunek tego ruchu (wzrost `bullish`, spadek `bearish`), `hedged`; claim = to zdanie lub pytanie (`factual_claim` / `question`, `attribution = author`).
 - `assertiveness`: `unhedged` — wprost; `hedged` — osłabione („może”, „chyba”, „wydaje mi się”) albo odczytane z sugestii.
 - Scenariusz dwustronny bez preferencji („albo X, albo Y”) → `unclear`, nie `mixed`.
-- Pytanie retoryczne z nadzieją lub oczekiwaniem ruchu („kiedy X po 500?”) → kierunek tego oczekiwania. Szczere pytanie o informację → `not_expressed`.
+- Pytanie retoryczne z nadzieją lub oczekiwaniem ruchu („kiedy X po 500?”) → kierunek tego oczekiwania. Szczere pytanie o informację niedotyczącą ruchu ceny → `not_expressed`.
 - Nadzieja autora na wydarzenie korzystne dla rynku → cel wydarzenia/rynku (`macro_topic`), `bullish`, `hedged`. Cudza opinia przytoczona bez przyjęcia nie jest stanowiskiem autora.
 - Autor „na peronie” podczas wzrostów → cel „rynek” (`macro_topic`, anchor = fragment z „peronie”), `bullish`.
-- Ironia: oceniaj zamierzony sens; jeśli nie da się go ustalić → `unclear` (opcjonalnie `possible_sarcasm`).
+- Ironia: oceniaj zamierzony sens; jeśli nie da się go ustalić → `unclear` (opcjonalnie `possible_sarcasm`). Na #gielda częsta jest ironiczna pochwała własnej straty lub spadku („świetny pomysł”, „pięknie”, „xD” przy spadku) — zamierzony sens to zwykle `bearish`, nie dosłowne `bullish`.
 
 Tabela (obowiązkowa):
 | direction | assertiveness | claim_ids |

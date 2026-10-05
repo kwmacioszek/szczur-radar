@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-02-009",
+  "configId" : "luna",
+  "provider" : "openrouter",
+  "model" : "openai/gpt-6-luna",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T18:58:22.494470Z",
+  "rawText" : "{\n  \"relevance\": \"investment_related\",\n  \"modifiers\": [\n    \"humor\"\n  ],\n  \"targets\": [\n    {\n      \"id\": \"t1\",\n      \"kind\": \"company\",\n      \"anchor\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"#orlen\"\n      },\n      \"stance\": {\n        \"direction\": \"mixed\",\n        \"assertiveness\": null,\n        \"claim_ids\": [\n          \"c1\",\n          \"c2\",\n          \"c3\"\n        ]\n      },\n      \"reference\": \"explicit\"\n    }\n  ],\n  \"claims\": [\n    {\n      \"id\": \"c1\",\n      \"kind\": \"factual_claim\",\n      \"attribution\": \"author\",\n      \"target_ids\": [\n        \"t1\"\n      ],\n      \"evidence\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"kupowanie #orlen jak trochę spadł i sprzedawanie jak trochę urósł. Do tej pory działało bezbłędnie.\"\n      },\n      \"statement\": \"Kupowanie Orlenu po spadkach i sprzedawanie po wzrostach do tej pory działało bezbłędnie.\"\n    },\n    {\n      \"id\": \"c2\",\n      \"kind\": \"factual_claim\",\n      \"attribution\": \"author\",\n      \"target_ids\": [\n        \"t1\"\n      ],\n      \"evidence\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"jestem posiadaczem 750 akcji średnio po 150\"\n      },\n      \"statement\": \"Autor posiada 750 akcji Orlenu ze średnią ceną 150.\"\n    },\n    {\n      \"id\": \"c3\",\n      \"kind\": \"question\",\n      \"attribution\": \"author\",\n      \"target_ids\": [\n        \"t1\"\n      ],\n      \"evidence\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"czas dokupić, gorzej już nie będzie prawda?\"\n      },\n      \"statement\": \"Autor ironicznie pyta, czy dokupić akcje, sugerując obawę, że sytuacja może się pogorszyć.\"\n    }\n  ],\n  \"flags\": []\n}",
+  "inputTokens" : 3442,
+  "outputTokens" : 1858,
+  "cachedTokens" : 3215,
+  "durationMs" : 20018,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

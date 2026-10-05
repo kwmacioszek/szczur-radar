@@ -78,6 +78,20 @@ class GoldDataTest {
 	}
 
 	@Test
+	void aliasesNameExistingTargetsWithFragmentsOfTheirPost() throws IOException {
+		Map<String, Post> posts = posts().stream().collect(Collectors.toMap(Post::postId, Function.identity()));
+		Map<String, Label> labels = labels().stream().collect(Collectors.toMap(Label::postId, Function.identity()));
+
+		GoldLabels.readAliases(GoldLabels.ALIASES).forEach((postId, byAnchor) -> byAnchor.forEach((anchor, names) -> {
+			assertThat(labels.get(postId).targets()).as("%s has target '%s'", postId, anchor)
+				.anySatisfy(target -> assertThat(target.anchor()).isEqualTo(anchor));
+			List<String> texts = texts(posts.get(postId).input().item()).map(Whitespace::normalize).toList();
+			names.forEach(name -> assertThat(texts).as("%s: alias '%s' in the post", postId, name)
+				.anySatisfy(text -> assertThat(text).contains(Whitespace.normalize(name))));
+		}));
+	}
+
+	@Test
 	void theGoldSetHasEnoughPostsThatAreNotHard() throws IOException {
 		Map<String, LocalDate> dayOf = posts().stream().collect(Collectors.toMap(Post::postId, Post::day));
 		List<Label> notHard = labels().stream().filter(label -> !label.hard()).toList();

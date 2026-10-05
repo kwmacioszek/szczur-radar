@@ -159,3 +159,30 @@ denominator is a measurement error (`InsufficientGoldException`), never a passed
 | dominant direction | posts whose model dominant direction (more bullish than bearish targets or the reverse) equals the gold one / posts where gold has one | ≥ 75 % |
 | contradictions | gold bullish/bearish targets whose matched model target has the opposite direction / gold bullish/bearish targets (unmatched = not a contradiction) | ≤ 3 % |
 
+## Recording, replay and report (plan phase 6)
+
+`src/test/resources/fixtures/llm/models.json` lists the measured configurations (`id`, `role`:
+preferred | fallback | reference, provider, model, tier, reasoning effort, prices per billing channel
+in USD per 1M tokens, with their sources and date) and `default` — the configuration S-02 uses, set
+after the report. A run with `LLM_*` belongs to the configuration with the same provider, model,
+tier and reasoning effort; add a configuration there before recording it.
+
+```bash
+# one run per configuration; resumes where it stopped (-Dgold.rerecord=true records everything again)
+( source ~/.config/szczur-radar/openrouter.env && ./mvnw -Pmeasurement test -Dtest=GoldRecorder )
+( source ~/.config/szczur-radar/deepseek.env   && ./mvnw -Pmeasurement test -Dtest=GoldRecorder )
+( source ~/.config/szczur-radar/gemini.env     && ./mvnw -Pmeasurement test -Dtest=GoldRecorder )
+
+# report (no model calls)
+./mvnw -Pmeasurement test -Dtest=GoldReport \
+  -Dreport.out=../context/changes/assessment-contract-harness/reports/gold-$(date +%F).md
+```
+
+Each assessment becomes `fixtures/llm/recordings/<configId>/<post_id>.json`: the raw answer exactly as
+returned and the call's metadata (tokens with cache, duration, attempts, tier, flex fallback, prompt
+and contract version) and the verdict. Only recordings with the current `PROMPT_VERSION` and
+`CONTRACT_VERSION` count; after a prompt or contract change all three configurations are recorded
+again. `RecordingsReplayTest` (a plain `*Test`, in CI, no secrets) judges every current recording
+again and fails on a changed verdict, and — once `default` is set — requires a current recording of
+every gold post for it and every `GoldMetrics` threshold met.
+

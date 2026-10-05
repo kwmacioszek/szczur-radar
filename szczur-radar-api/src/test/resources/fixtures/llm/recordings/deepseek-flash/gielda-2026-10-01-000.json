@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-01-000",
+  "configId" : "deepseek-flash",
+  "provider" : "deepseek",
+  "model" : "deepseek-flash",
+  "channel" : "deepseek",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_mode",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T18:41:35.161513Z",
+  "rawText" : "{\"relevance\":\"not_investment_related\",\"modifiers\":[],\"targets\":[],\"claims\":[],\"flags\":[\"insufficient_content\"]}",
+  "inputTokens" : 3658,
+  "outputTokens" : 33,
+  "cachedTokens" : 896,
+  "durationMs" : 1471,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

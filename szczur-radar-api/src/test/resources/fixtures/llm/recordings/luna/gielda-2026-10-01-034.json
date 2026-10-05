@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-01-034",
+  "configId" : "luna",
+  "provider" : "openrouter",
+  "model" : "openai/gpt-6-luna",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T18:52:52.603794Z",
+  "rawText" : "{\n  \"relevance\": \"investment_related\",\n  \"modifiers\": [],\n  \"targets\": [\n    {\n      \"id\": \"t1\",\n      \"kind\": \"macro_topic\",\n      \"anchor\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"Nic nie rośnie\"\n      },\n      \"stance\": {\n        \"direction\": \"bearish\",\n        \"assertiveness\": \"hedged\",\n        \"claim_ids\": [\"c1\"]\n      },\n      \"reference\": \"explicit\"\n    },\n    {\n      \"id\": \"t2\",\n      \"kind\": \"asset\",\n      \"anchor\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"obligacje\"\n      },\n      \"stance\": {\n        \"direction\": \"bullish\",\n        \"assertiveness\": \"hedged\",\n        \"claim_ids\": [\"c2\"]\n      },\n      \"reference\": \"explicit\"\n    }\n  ],\n  \"claims\": [\n    {\n      \"id\": \"c1\",\n      \"kind\": \"factual_claim\",\n      \"attribution\": \"author\",\n      \"target_ids\": [\"t1\"],\n      \"evidence\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"Nic nie rośnie, kolejny dzień p---y.\"\n      },\n      \"statement\": \"Nic nie rośnie; autor opisuje kolejny słaby dzień na rynku.\"\n    },\n    {\n      \"id\": \"c2\",\n      \"kind\": \"investment_thesis\",\n      \"attribution\": \"author\",\n      \"target_ids\": [\"t2\"],\n      \"evidence\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"Trzeba było se obligacje mieć tylko…\"\n      },\n      \"statement\": \"Autor żałuje, że nie miał obligacji.\"\n    }\n  ],\n  \"flags\": []\n}",
+  "inputTokens" : 3334,
+  "outputTokens" : 1566,
+  "cachedTokens" : 3215,
+  "durationMs" : 13665,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

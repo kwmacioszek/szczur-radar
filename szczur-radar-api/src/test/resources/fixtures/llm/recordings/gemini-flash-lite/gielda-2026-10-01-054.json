@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-01-054",
+  "configId" : "gemini-flash-lite",
+  "provider" : "gemini",
+  "model" : "gemini-3.1-flash-lite",
+  "channel" : "gemini",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T18:45:59.414023Z",
+  "rawText" : "{\n  \"relevance\": \"investment_related\",\n  \"modifiers\": [\"humor\"],\n  \"targets\": [\n    {\n      \"id\": \"t1\",\n      \"kind\": \"macro_topic\",\n      \"anchor\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"gielda\"\n      },\n      \"stance\": {\n        \"direction\": \"bearish\",\n        \"assertiveness\": \"unhedged\",\n        \"claim_ids\": [\"c1\"]\n      },\n      \"reference\": \"explicit\"\n    }\n  ],\n  \"claims\": [\n    {\n      \"id\": \"c1\",\n      \"kind\": \"investment_thesis\",\n      \"attribution\": \"author\",\n      \"target_ids\": [\"t1\"],\n      \"evidence\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"Mnie to już nie uśredniajta, od razu ze stratą  sprzedajta\"\n      },\n      \"statement\": \"Należy sprzedawać akcje ze stratą zamiast je uśredniać.\"\n    }\n  ],\n  \"flags\": [\"possible_sarcasm\"]\n}",
+  "inputTokens" : 2886,
+  "outputTokens" : 282,
+  "cachedTokens" : null,
+  "durationMs" : 1763,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

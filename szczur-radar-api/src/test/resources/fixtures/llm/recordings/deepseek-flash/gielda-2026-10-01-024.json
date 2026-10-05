@@ -1,0 +1,28 @@
+{
+  "post_id" : "gielda-2026-10-01-024",
+  "configId" : "deepseek-flash",
+  "provider" : "deepseek",
+  "model" : "deepseek-flash",
+  "channel" : "deepseek",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_mode",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T18:42:06.379333Z",
+  "rawText" : "{\"relevance\":\"investment_related\",\"modifiers\":[\"humor\"],\"targets\":[{\"id\":\"t1\",\"kind\":\"macro_topic\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"KRACHU\"},\"stance\":{\"direction\":\"bullish\",\"assertiveness\":\"hedged\",\"claim_ids\":[\"c1\",\"c2\"]}}],\"claims\":[{\"id\":\"c1\",\"kind\":\"investment_thesis\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"Po prostu potraktujcie to jako okazje do taniego dokupienia jakiegoś ETFa i zapomnijcie o tym KRACHU\"},\"statement\":\"Spadek rynku to okazja do taniego dokupienia ETF-a, a nie powód do paniki.\"},{\"id\":\"c2\",\"kind\":\"opinion\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"K@!# ale wy płaczecie xD\"},\"statement\":\"Autor ironizuje, że narzekanie na spadki jest przesadzone.\"}],\"flags\":[]}",
+  "inputTokens" : 3681,
+  "outputTokens" : 251,
+  "cachedTokens" : 3456,
+  "durationMs" : 1449,
+  "attempts" : 1,
+  "status" : "failed",
+  "failureClass" : "schema_violation",
+  "violations" : [ {
+    "failureClass" : "schema_violation",
+    "rule" : "schema:required",
+    "path" : "$.targets[0]",
+    "message" : "nie znaleziono wymaganej właściwości „reference”."
+  } ]
+}

@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-01-056",
+  "configId" : "gemini-flash-lite",
+  "provider" : "gemini",
+  "model" : "gemini-3.1-flash-lite",
+  "channel" : "gemini",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T18:46:01.616010Z",
+  "rawText" : "{\n  \"relevance\": \"not_investment_related\",\n  \"modifiers\": [],\n  \"targets\": [],\n  \"claims\": [],\n  \"flags\": []\n}",
+  "inputTokens" : 2887,
+  "outputTokens" : 40,
+  "cachedTokens" : null,
+  "durationMs" : 1094,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-02-013",
+  "configId" : "gemini-flash-lite",
+  "provider" : "gemini",
+  "model" : "gemini-3.1-flash-lite",
+  "channel" : "gemini",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T18:46:30.925853Z",
+  "rawText" : "{\n  \"relevance\": \"investment_related\",\n  \"modifiers\": [],\n  \"targets\": [\n    {\n      \"id\": \"t1\",\n      \"kind\": \"company\",\n      \"anchor\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"orlenie\"\n      },\n      \"stance\": {\n        \"direction\": \"bearish\",\n        \"assertiveness\": \"unhedged\",\n        \"claim_ids\": [\n          \"c1\"\n        ]\n      },\n      \"reference\": \"explicit\"\n    },\n    {\n      \"id\": \"t2\",\n      \"kind\": \"company\",\n      \"anchor\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"xtb\"\n      },\n      \"stance\": {\n        \"direction\": \"bearish\",\n        \"assertiveness\": \"unhedged\",\n        \"claim_ids\": [\n          \"c2\"\n        ]\n      },\n      \"reference\": \"explicit\"\n    }\n  ],\n  \"claims\": [\n    {\n      \"id\": \"c1\",\n      \"kind\": \"investment_thesis\",\n      \"attribution\": \"author\",\n      \"target_ids\": [\n        \"t1\"\n      ],\n      \"evidence\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"-5% to ja się spodziewałem na orlenie dzisiaj\"\n      },\n      \"statement\": \"Autor spodziewał się spadku o 5% na akcjach Orlenu.\"\n    },\n    {\n      \"id\": \"c2\",\n      \"kind\": \"investment_thesis\",\n      \"attribution\": \"author\",\n      \"target_ids\": [\n        \"t2\"\n      ],\n      \"evidence\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"nie xtb.\"\n      },\n      \"statement\": \"Autor nie spodziewał się spadku o 5% na akcjach XTB.\"\n    }\n  ],\n  \"flags\": []\n}",
+  "inputTokens" : 2880,
+  "outputTokens" : 500,
+  "cachedTokens" : null,
+  "durationMs" : 2209,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

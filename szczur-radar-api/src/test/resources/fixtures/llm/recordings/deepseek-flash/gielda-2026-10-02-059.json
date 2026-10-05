@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-02-059",
+  "configId" : "deepseek-flash",
+  "provider" : "deepseek",
+  "model" : "deepseek-flash",
+  "channel" : "deepseek",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_mode",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T18:44:14.962629Z",
+  "rawText" : "{\"relevance\":\"investment_related\",\"modifiers\":[],\"targets\":[{\"id\":\"t1\",\"kind\":\"macro_topic\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"31% w trochę ponad 60dni\"},\"stance\":{\"direction\":\"bullish\",\"assertiveness\":\"hedged\",\"claim_ids\":[\"c1\",\"c2\"]},\"reference\":\"unresolved\"}],\"claims\":[{\"id\":\"c1\",\"kind\":\"factual_claim\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"31% w trochę ponad 60dni\"},\"statement\":\"Autor osiągnął 31% zysku w trochę ponad 60 dni.\"},{\"id\":\"c2\",\"kind\":\"opinion\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"P----------e no ale kto nie ryzykuje ten nie pije szampana. A piłem go we Wrześniu sporo.\"},\"statement\":\"Ryzyko się opłaciło — autor świętował zyski we wrześniu.\"}],\"flags\":[\"missing_context\"]}",
+  "inputTokens" : 3676,
+  "outputTokens" : 261,
+  "cachedTokens" : 3456,
+  "durationMs" : 1588,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

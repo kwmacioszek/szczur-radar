@@ -56,10 +56,19 @@ public final class AnchorMatcher {
 	 * order), returned in gold order.
 	 */
 	public static List<Pair> match(List<String> gold, List<String> model) {
+		return matchNames(gold.stream().map(List::of).toList(), model);
+	}
+
+	/**
+	 * Like {@link #match}, but a gold target may have several names (its anchor and aliases from
+	 * {@code gold/aliases.json}): it pairs with a model target that matches any of them.
+	 */
+	public static List<Pair> matchNames(List<List<String>> gold, List<String> model) {
 		boolean[][] edges = new boolean[gold.size()][model.size()];
 		for (int g = 0; g < gold.size(); g++) {
 			for (int m = 0; m < model.size(); m++) {
-				edges[g][m] = matches(gold.get(g), model.get(m));
+				int target = m;
+				edges[g][m] = gold.get(g).stream().anyMatch(name -> matches(name, model.get(target)));
 			}
 		}
 		int[] goldOfModel = new int[model.size()];

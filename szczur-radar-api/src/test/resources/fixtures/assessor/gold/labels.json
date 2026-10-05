@@ -60,6 +60,11 @@
     "anchor": "MU",
     "direction": "unclear",
     "hedged": false
+   },
+   {
+    "anchor": "Rynki",
+    "direction": "not_expressed",
+    "hedged": false
    }
   ]
  },
@@ -168,10 +173,16 @@
  },
  {
   "post_id": "gielda-2026-10-01-013",
-  "relevance": "not_investment_related",
+  "relevance": "investment_related",
   "hard": false,
   "note": "",
-  "targets": []
+  "targets": [
+   {
+    "anchor": "Zondacrypto",
+    "direction": "not_expressed",
+    "hedged": false
+   }
+  ]
  },
  {
   "post_id": "gielda-2026-10-01-014",
@@ -232,6 +243,11 @@
    {
     "anchor": "Lewarek x3",
     "direction": "bullish",
+    "hedged": false
+   },
+   {
+    "anchor": "XTB",
+    "direction": "not_expressed",
     "hedged": false
    }
   ]
@@ -413,7 +429,13 @@
   "relevance": "unclear",
   "hard": false,
   "note": "",
-  "targets": []
+  "targets": [
+   {
+    "anchor": "szczurka",
+    "direction": "unclear",
+    "hedged": false
+   }
+  ]
  },
  {
   "post_id": "gielda-2026-10-01-033",
@@ -447,6 +469,11 @@
    {
     "anchor": "obligacje",
     "direction": "bullish",
+    "hedged": false
+   },
+   {
+    "anchor": "Nic nie rośnie",
+    "direction": "bearish",
     "hedged": false
    }
   ]
@@ -494,15 +521,41 @@
     "anchor": "nasdaqu",
     "direction": "bearish",
     "hedged": true
+   },
+   {
+    "anchor": "Inflacja",
+    "direction": "bearish",
+    "hedged": true
+   },
+   {
+    "anchor": "stopy",
+    "direction": "bearish",
+    "hedged": true
    }
   ]
  },
  {
   "post_id": "gielda-2026-10-01-039",
-  "relevance": "not_investment_related",
+  "relevance": "investment_related",
   "hard": false,
   "note": "",
-  "targets": []
+  "targets": [
+   {
+    "anchor": "GPW",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "mBank",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "PKO",
+    "direction": "not_expressed",
+    "hedged": false
+   }
+  ]
  },
  {
   "post_id": "gielda-2026-10-01-040",
@@ -581,6 +634,11 @@
     "anchor": "Microsoft",
     "direction": "bearish",
     "hedged": false
+   },
+   {
+    "anchor": "śmieciuchów",
+    "direction": "bullish",
+    "hedged": true
    }
   ]
  },
@@ -607,6 +665,11 @@
     "anchor": "olejorza",
     "direction": "bullish",
     "hedged": false
+   },
+   {
+    "anchor": "szczura",
+    "direction": "bullish",
+    "hedged": true
    }
   ]
  },
@@ -731,10 +794,16 @@
  },
  {
   "post_id": "gielda-2026-10-02-002",
-  "relevance": "not_investment_related",
+  "relevance": "investment_related",
   "hard": false,
   "note": "",
-  "targets": []
+  "targets": [
+   {
+    "anchor": "koncernów paliwowych",
+    "direction": "not_expressed",
+    "hedged": false
+   }
+  ]
  },
  {
   "post_id": "gielda-2026-10-02-003",
@@ -869,6 +938,11 @@
     "anchor": "orlenie",
     "direction": "unclear",
     "hedged": false
+   },
+   {
+    "anchor": "xtb",
+    "direction": "not_expressed",
+    "hedged": false
    }
   ]
  },
@@ -943,7 +1017,18 @@
   "relevance": "unclear",
   "hard": false,
   "note": "",
-  "targets": []
+  "targets": [
+   {
+    "anchor": "Orlen",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "XTB",
+    "direction": "not_expressed",
+    "hedged": false
+   }
+  ]
  },
  {
   "post_id": "gielda-2026-10-02-021",
@@ -1008,6 +1093,11 @@
     "anchor": "CFD",
     "direction": "not_expressed",
     "hedged": false
+   },
+   {
+    "anchor": "#xtb",
+    "direction": "not_expressed",
+    "hedged": false
    }
   ]
  },
@@ -1055,7 +1145,13 @@
   "relevance": "unclear",
   "hard": false,
   "note": "",
-  "targets": []
+  "targets": [
+   {
+    "anchor": "Scanway",
+    "direction": "not_expressed",
+    "hedged": false
+   }
+  ]
  },
  {
   "post_id": "gielda-2026-10-02-031",
@@ -1175,10 +1271,16 @@
  },
  {
   "post_id": "gielda-2026-10-02-041",
-  "relevance": "not_investment_related",
+  "relevance": "investment_related",
   "hard": false,
   "note": "",
-  "targets": []
+  "targets": [
+   {
+    "anchor": "jebło",
+    "direction": "bearish",
+    "hedged": false
+   }
+  ]
  },
  {
   "post_id": "gielda-2026-10-02-042",
@@ -1313,6 +1415,11 @@
    {
     "anchor": "GPW",
     "direction": "bearish",
+    "hedged": false
+   },
+   {
+    "anchor": "OKI",
+    "direction": "not_expressed",
     "hedged": false
    }
   ]

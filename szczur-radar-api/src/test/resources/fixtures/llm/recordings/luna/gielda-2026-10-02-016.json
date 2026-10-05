@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-02-016",
+  "configId" : "luna",
+  "provider" : "openrouter",
+  "model" : "openai/gpt-6-luna",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T18:59:43.599115Z",
+  "rawText" : "{\"relevance\":\"investment_related\",\"modifiers\":[],\"targets\":[{\"id\":\"t1\",\"kind\":\"unknown\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"odkupię\"},\"stance\":{\"direction\":\"bearish\",\"assertiveness\":\"hedged\",\"claim_ids\":[\"c1\",\"c2\"]},\"reference\":\"unresolved\"}],\"claims\":[{\"id\":\"c1\",\"kind\":\"investment_thesis\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"sówka i ja mieliśmy rację.\"},\"statement\":\"Sówka i autor mieli rację.\"},{\"id\":\"c2\",\"kind\":\"trade_action\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"Teraz se odkupię poniżej 140 i gitara.\"},\"statement\":\"Autor planuje odkupić poniżej 140.\"}],\"flags\":[\"missing_context\"]}",
+  "inputTokens" : 3365,
+  "outputTokens" : 1462,
+  "cachedTokens" : 3215,
+  "durationMs" : 14518,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

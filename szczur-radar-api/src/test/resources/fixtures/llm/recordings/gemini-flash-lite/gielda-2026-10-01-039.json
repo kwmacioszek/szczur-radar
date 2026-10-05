@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-01-039",
+  "configId" : "gemini-flash-lite",
+  "provider" : "gemini",
+  "model" : "gemini-3.1-flash-lite",
+  "channel" : "gemini",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T18:45:34.137390Z",
+  "rawText" : "{\n  \"relevance\": \"investment_related\",\n  \"modifiers\": [\"promotion\"],\n  \"targets\": [\n    {\n      \"id\": \"t1\",\n      \"kind\": \"macro_topic\",\n      \"anchor\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"GPW\"\n      },\n      \"stance\": {\n        \"direction\": \"not_expressed\",\n        \"assertiveness\": null,\n        \"claim_ids\": []\n      },\n      \"reference\": \"explicit\"\n    },\n    {\n      \"id\": \"t2\",\n      \"kind\": \"company\",\n      \"anchor\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"mBank\"\n      },\n      \"stance\": {\n        \"direction\": \"not_expressed\",\n        \"assertiveness\": null,\n        \"claim_ids\": []\n      },\n      \"reference\": \"explicit\"\n    },\n    {\n      \"id\": \"t3\",\n      \"kind\": \"company\",\n      \"anchor\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"PKO\"\n      },\n      \"stance\": {\n        \"direction\": \"not_expressed\",\n        \"assertiveness\": null,\n        \"claim_ids\": []\n      },\n      \"reference\": \"explicit\"\n    }\n  ],\n  \"claims\": [\n    {\n      \"id\": \"c1\",\n      \"kind\": \"factual_claim\",\n      \"attribution\": \"author\",\n      \"target_ids\": [\"t1\"],\n      \"evidence\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"GPW przechodzi z UTP na nowy system WATS\"\n      },\n      \"statement\": \"GPW przechodzi z systemu UTP na nowy system WATS.\"\n    },\n    {\n      \"id\": \"c2\",\n      \"kind\": \"factual_claim\",\n      \"attribution\": \"author\",\n      \"target_ids\": [\"t1\"],\n      \"evidence\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"Po sesji GPW unieważni WSZYSTKIE niezrealizowane zlecenia\"\n      },\n      \"statement\": \"Po sesji 2.10 GPW unieważni wszystkie niezrealizowane zlecenia.\"\n    },\n    {\n      \"id\": \"c3\",\n      \"kind\": \"question\",\n      \"attribution\": \"author\",\n      \"target_ids\": [],\n      \"evidence\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"Macie coś na WDO, co trzeba będzie wystawiać od nowa?\"\n      },\n      \"statement\": \"Pytanie o zlecenia WDO, które trzeba będzie wystawić od nowa.\"\n    }\n  ],\n  \"flags\": []\n}",
+  "inputTokens" : 3361,
+  "outputTokens" : 691,
+  "cachedTokens" : null,
+  "durationMs" : 2781,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}
