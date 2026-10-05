@@ -3,7 +3,7 @@ project: "Szczur Radar"
 version: 2
 status: draft # draft | active | locked
 created: 2026-09-27
-updated: 2026-10-03
+updated: 2026-10-04
 prd_version: 2
 main_goal: speed
 top_blocker: time # secondary: decisions (LLM contract, filter scope and signal decision resolved 2026-09-27 — PRD v2)
@@ -24,6 +24,8 @@ milestone_status: open
 > v2.4 (2026-10-02): triage planu F-03 — sesje Spring Session JDBC zamiast JWT/`token_version`, 30 dni bezczynności z odnawianiem ciasteczka, Flyway fix-forward, czysta baza i ponowne utworzenie admina; bez powrotu do Pythona. Szkielet Embabel z wyborem jednego dostawcy przez `LLM_API_PROVIDER`, `LLM_MODEL`, `LLM_API_KEY`: Gemini (Google AI Studio), DeepSeek bezpośrednio lub Luna przez OpenRouter. F-03 pozostaje w planowaniu; ocena jakości modeli nadal należy do F-02.
 
 > v2.5 (2026-10-03): F-03 zakończone po wdrożeniu #26 (`7a406f2`) i #27 (`6bc15db`) oraz weryfikacji produkcji — migracje, gotowość API i logowanie admina potwierdzone w [podsumowaniu issue #25](https://github.com/kwmacioszek/szczur-radar/issues/25#issuecomment-5965517657). F-02 może przeplanować fazy p2–p4 w Javie, a warunek F-03 dla S-07 jest spełniony. Poprawki z przeglądu implementacji idą osobnym PR (gałąź `fix/java-api-rewrite-review-fixes`): `context/archive/2026-10-01-java-api-rewrite/follow-ups/review-fixes.md`.
+
+> v2.7 (2026-10-04): S-05 — zajawka sposobu uruchamiania (cron woła wewnętrzny endpoint API zamiast startować kontener z obrazem API), z badania `api-docker-image`. (v2.6 należy do niescalonej gałęzi F-02 `assessment-contract-harness`.)
 
 ## Milestone
 
@@ -193,6 +195,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Unknowns:**
   - Godzina uruchomienia i domyślny zakres dat/godzin pobierania dla przebiegu dziennego. — Owner: user. Block: no.
   - Jak traktować przebieg, w którym część ocen nie przeszła walidacji kontraktu (udany, częściowy czy nieudany dla etykiety świeżości). — Owner: user. Block: no.
+  - Sposób uruchamiania (zajawka z `api-docker-image`, 2026-10-04): użytkownik nie chce, żeby cron startował kontener z obrazem API. Kandydat: mały serwis cron Railway (obraz z `curl`) wysyła `POST` przez sieć prywatną do wewnętrznego endpointu API z tokenem; API odpowiada `202` i uruchamia pipeline w tle (zapytanie z sieci prywatnej budzi uśpione API). Do rozstrzygnięcia: uwierzytelnianie tokenem obok sesji (`SecurityConfig`, `AuthorizationCompletenessIT`), ochrona przed równoległym przebiegiem, przerwanie przebiegu przez deploy API, wspólny endpoint z ręcznym uruchomieniem (FR-022). Zmienia regułę „pipeline nie zależy od cyklu życia API” (`REPOSITORY_GUIDELINES.md` § Deployment, `infrastructure.md:23`, `:133`, `deploy-plan.md:195`) — zaktualizować te dokumenty przy planie S-05. `@Scheduled` w API odpada przy `sleepApplication: true`. — Owner: user. Block: no.
 - **Risk:** Wprowadza zapis każdego przebiegu (potrzebny do etykiety świeżości) oraz sprawdzenie zgodności wersji schematu przed zapisem — chroni przed scenariuszem z pre-mortem w `infrastructure.md`, w którym automat po cichu zapisuje uszkodzone rekordy.
 - **Status:** proposed
 
