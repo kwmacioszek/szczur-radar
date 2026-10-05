@@ -586,14 +586,14 @@ Brak zmian danych i migracji Flyway. `SkeletonAgent` zastępuje `AssessorAgent`;
 
 #### Automated
 
-- [x] 6.1 Domyślne `cd szczur-radar-api && ./mvnw -B verify` nie uruchamia testów `measurement`, uruchamia `*IT` i odtwarza wszystkie bieżące nagrania z identycznym werdyktem
-- [x] 6.2 Konfiguracja `default` ma komplet nagrań dla wszystkich postów wzorca z bieżącymi `PROMPT_VERSION` i `CONTRACT_VERSION`
-- [x] 6.3 Miary konfiguracji `default` spełniają progi: zgodność z kontraktem ≥95%, trafność binarna ≥80%, recall celów ≥80%, precision celów ≥70%, kierunek na dopasowanych celach ze stanowiskiem ≥70%, dominujący kierunek posta ≥75%, sprzeczne kierunki ≤10% (kierunek i sprzeczności złagodzone z ≥75% / ≤3% decyzją użytkownika 2026-10-06, raport `gold-2026-10-06.md`) (`RecordingsReplayTest`)
-- [x] 6.4 Raport generuje się bez błędów do `context/changes/assessment-contract-harness/reports/`
+- [x] 6.1 Domyślne `cd szczur-radar-api && ./mvnw -B verify` nie uruchamia testów `measurement`, uruchamia `*IT` i odtwarza wszystkie bieżące nagrania z identycznym werdyktem — 6d65f19
+- [x] 6.2 Konfiguracja `default` ma komplet nagrań dla wszystkich postów wzorca z bieżącymi `PROMPT_VERSION` i `CONTRACT_VERSION` — 6d65f19
+- [x] 6.3 Miary konfiguracji `default` spełniają progi: zgodność z kontraktem ≥95%, trafność binarna ≥80%, recall celów ≥80%, precision celów ≥70%, kierunek na dopasowanych celach ze stanowiskiem ≥70%, dominujący kierunek posta ≥75%, sprzeczne kierunki ≤10% (kierunek i sprzeczności złagodzone z ≥75% / ≤3% decyzją użytkownika 2026-10-06, raport `gold-2026-10-06.md`) (`RecordingsReplayTest`) — 6d65f19
+- [x] 6.4 Raport generuje się bez błędów do `context/changes/assessment-contract-harness/reports/` — 6d65f19
 - [ ] 6.5 CI na PR (`backend`, `web-unit`, `web-container-smoke`, `railway-config`) jest zielone
 
 #### Manual
 
-- [x] 6.6 `GoldRecorder` wykonany trzy razy (Luna flex, DeepSeek Flash, Gemini 3.1 Flash-Lite) na całym wzorcu; raport zawiera jedną tabelę jakości i kosztu tych trzech modeli
+- [x] 6.6 `GoldRecorder` wykonany trzy razy (Luna flex, DeepSeek Flash, Gemini 3.1 Flash-Lite) na całym wzorcu; raport zawiera jedną tabelę jakości i kosztu tych trzech modeli — 6d65f19
 - [ ] 6.7 Użytkownik przejrzał raport i zatwierdził model domyślny oraz szacowany koszt miesięczny; jednorazowe klucze usunięte
-- [x] 6.8 Jeśli progi zostały zmienione albo żaden kandydat ich nie spełnił, decyzja użytkownika i uzasadnienie są w raporcie
+- [x] 6.8 Jeśli progi zostały zmienione albo żaden kandydat ich nie spełnił, decyzja użytkownika i uzasadnienie są w raporcie — 6d65f19
