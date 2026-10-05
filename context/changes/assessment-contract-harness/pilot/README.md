@@ -6,7 +6,7 @@ Dowody, na których oparto kontrakt V2 (`context/foundation/llm-assessment/contr
 
 | Miejsce | Zawartość |
 | --- | --- |
-| `./` | próbki i etykiety: `wykop-gielda-sample-2026-09-29.json`, `labeling-set-2026-09-28.json`, `labels-2026-09-28.json`, arkusze `labeling*.html`, instrukcja `labeling-guidelines.md` |
+| `./` | próbki i etykiety: `wykop-gielda-sample-2026-09-29.json`, `labeling-set-2026-09-28.json`, `labels-2026-09-28.json`, arkusze `labeling*.html`, instrukcja `labeling-guidelines.md`, etykiety ironii wzorca `irony-labels-gold.json` (z `labeling-irony.html`, pilot 9) |
 | `scripts/` | skrypty pilotaży i analiz oraz prompty (`prompt-short.md`, `prompt-short-en.md`, `prompt-v2-rules.md`) |
 | `runs/` | zachowane wyniki przebiegów (zanonimizowane) |
 
@@ -24,6 +24,7 @@ python3 $P/analyze5.py        # pilot 5: Reddit
 python3 $P/analyze6.py        # pilot 6: Jev (TypeSafe)
 python3 $P/analyze7.py        # pilot 7: Span-01 (Respan)
 python3 $P/analyze8.py        # pilot 8: GPT-6 Luna
+python3 $P/analyze9.py --proxy # pilot 9: Jev na wzorcu F-02 (kierunek, ironia); --day: pilot 9b
 python3 $P/compare_gold.py    # piloty 2–4 względem etykiet rundy 1
 python3 $P/frame2_checks.py   # ramowanie, runda 2
 ```
@@ -44,6 +45,7 @@ Klucze tylko w powłoce, nigdy w repo: `GEMINI_API_KEY`, `DEEPSEEK_API_KEY`, `OP
 | `pilot6.py [run1\|run2]` | — (`runs/pilot2-results.json`) | OpenRouter | `pilot6-jev-<run>.json` |
 | `pilot7.py` | — (`runs/pilot2-results.json`) | OpenRouter | `pilot7-span01*.json` |
 | `pilot8.py` | — (`runs/pilot2-results.json`) | OpenRouter | `pilot8-gpt6luna.json` |
+| `pilot9.py [day]` | — (wzorzec `szczur-radar-api/src/test/resources/fixtures/assessor/gold/`) | OpenRouter (`OPENROUTER_API_KEY` lub `LLM_API_KEY`) | `pilot9-jev-gold[-day].json` |
 
 `pilot.py`, `pilot2.py` i `pilot5.py` sprawdzają pliki wejściowe przed jakimkolwiek wywołaniem API; brak pliku kończy się komunikatem z nazwą argumentu i oczekiwanego pliku. Brak tych danych nie blokuje analiz historycznych — opierają się na zachowanych `runs/`. Zależności przez `exec`: `pilot2.py`, `pilot3.py`, `pilot8.py` → `pilot.py`; `pilot4.py`, `pilot5.py` → `pilot3.py`.
 

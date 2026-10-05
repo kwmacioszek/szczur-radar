@@ -369,6 +369,32 @@ Ceny **deepseek-flash** użyte w pilotach ($0,30 wejście bez cache, $0,006 z ca
 
 **Ranking kosztu po korekcie** (12k postów/mies., skrócony prompt, tokeny z pilotów na Wykopie): deepseek-flash przez OpenRouter ~$2; deepseek-flash bezpośrednio poza szczytem ~$4; gpt-6-luna ~$6,4 (zmierzone, z domyślnym rozumowaniem); deepseek-flash bezpośrednio w szczycie ~$7,6; gemini-3.1-flash-lite ~$10. Wniosek jakościowy bez zmian (tanie modele to kilka–kilkanaście dolarów miesięcznie), ale gemini-3.1-flash-lite nie jest najtańszym kandydatem, a oszczędność z paczkowania liczona w dolarach jest większa niż podano w pilocie 3 (~$4 zamiast ~$1,5/mies.) — nadal przy zmianie co trzeciej oceny. Wszędzie w tym pliku, gdzie pada zakres „~$3–8/mies.” dla tanich modeli, właściwy zakres to „~$2–10/mies.”.
 
+### Pilot 9: Jev na zestawie wzorcowym — kierunek i ironia (2026-10-05)
+
+Dopisane w fazie 6 (pomiar), po raporcie `reports/gold-2026-10-05.md`. Pytanie użytkownika: czy Jev sprawdzi się jako klasyfikator posta i czy wykryje sarkazm.
+
+**Przebieg.** Jev (`typesafe/jev-1.13-20260917`, OpenRouter `alpha/decisions`) na 120 postach wzorca: trafność, dominujący kierunek posta, kierunek wobec każdej kotwicy z etykiet użytkownika (Jev dostaje cele z wzorca — zadanie łatwiejsze niż dla LLM, które cele wskazują same), `noul` „czy wpis jest ironiczny lub sarkastyczny”. Pilot 9b: to samo, ale post oceniany na tle pozostałych 59 postów wzorca z tego dnia (`same_day_posts`, każdy przycięty do 1 500 znaków) — hipoteza użytkownika, że ironia na Wykopie opiera się na kontekście dnia. Wzorzec ironii: etykiety użytkownika tak / nie / nie wiem (`pilot/labeling-irony.html` → `pilot/irony-labels-gold.json`; 15 tak, 103 nie, 2 nie wiem), oznaczone przed obejrzeniem wyników Jev; użytkownik ocenił oznaczanie ironii jako bardzo trudne. Zastępczo (b): posty, w których któryś z nagranych LLM (luna, luna-low, deepseek-flash, gemini-flash-lite) odwraca kierunek wzorca. Koszt: $0,006 (9) i $0,034 (9b), po 5 s, bez błędów. Skrypty: `pilot/scripts/pilot9.py [day]`, `analyze9.py [--day] [--proxy]`; wyniki: `pilot/runs/pilot9-jev-gold*.json`.
+
+| Bez postów „trudnych” | Jev (9) | Jev z kontekstem dnia (9b) | luna | deepseek-flash | gemini-flash-lite |
+| --- | --- | --- | --- | --- | --- |
+| Kierunek wobec celów wzorca (n=74) | 60,8% | 60,8% | 70,3% | 64,9% | 66,2% |
+| Sprzeczny kierunek (n=60) | 16,7% | 13,3% | 8,3% | 10,0% | 13,3% |
+| Dominujący kierunek (n=42) | 64,3% | 66,7% | 73,8% | 76,2% | 78,6% |
+| Trafność binarna (n=98) | 75,5% | 82,7% | — | — | — |
+| Ironia (a), AUC względem etykiet użytkownika | 0,49 | 0,49 | — | — | — |
+| Ironia (b), AUC względem odwróceń LLM (15 / 34) | 0,64 | 0,66 | — | — | — |
+
+Wiersze LLM to przybliżenie (kotwice dopasowane przez zawieranie, bez aliasów) — dlatego luna ma tu 70,3%, a w raporcie 73,0%.
+
+**Ustalenia.**
+
+1. **Jev nie jest klasyfikatorem kierunku:** nawet z celami podanymi z wzorca jest słabszy od każdego z LLM i ma najwięcej sprzeczności; kontekst dnia nie zmienia kierunku wobec celów.
+2. **Wynik ironii Jev jest przypadkowy względem etykiet użytkownika (AUC 0,49), także z kontekstem dnia** — kontekst zwiększa liczbę postów uznanych za ironiczne (próg 0,5: 27 → 40), nie ich rozróżnienie. Względem odwróceń LLM słaby sygnał (0,64–0,66 na 15 przypadkach).
+3. **Kontekst dnia poprawia trafność Jev** (75,5% → 82,7%), co nie zmienia wniosku.
+4. **Ironia nie jest główną przyczyną sprzeczności LLM:** wg etykiet użytkownika większość sprzecznych kierunków pada na postach dosłownych (luna 4 z 5, gemini-flash-lite 8 z 8); na celach z postów ironicznych (n=9) luna ma kierunek 44%, na dosłownych (n=65) 74%.
+
+**Wniosek.** Jev zamknięty w F-02: ani klasyfikator kierunku, ani detektor ironii (próg decyzji: AUC ≳ 0,7 względem etykiet użytkownika — nieosiągnięty). Teza „sprzeczności głównie przez ironię” w `context/foundation/llm-assessment/hardening-sources.md` i w roadmapie (`## Parked`, „LLM hardening”) wymaga korekty. Zastrzeżenia: 15 postów ironicznych i trudność oznaczania (jeden oceniający) — przyszły zbiór ironii potrzebuje ostrzejszej definicji albo dwóch oceniających; kontekst dnia to tylko 60 postów wzorca, bez wątków i komentarzy.
+
 ## Otwarte pytania dla /10x-plan (koszt i sposób wywołania)
 
 Zgłoszone przez użytkownika 2026-09-30; nierozstrzygnięte — do decyzji w planie, najlepiej z pomiarem na zestawie wzorcowym.
