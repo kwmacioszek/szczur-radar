@@ -1,8 +1,8 @@
 {
-  "default": null,
+  "default": "luna",
   "pricesCheckedAt": "2026-10-04",
   "priceSources": [
-    "OpenRouter catalog https://openrouter.ai/api/v1/models (openai/gpt-6-luna, openai/gpt-6-luna:batch, google/gemini-3.1-flash-lite, deepseek/deepseek-v4.1-flash, z-ai/glm-5.3-flash, xiaomi/mimo-v2.6-flash; read 2026-10-05)",
+    "OpenRouter catalog https://openrouter.ai/api/v1/models (openai/gpt-6-luna, openai/gpt-6-luna:batch, google/gemini-3.1-flash-lite, deepseek/deepseek-v4.1-flash, z-ai/glm-5.3-flash, xiaomi/mimo-v2.6-flash; read 2026-10-05; openai/gpt-6.1-sol read 2026-10-06)",
     "OpenAI flex processing: tokens at Batch API rates https://platform.openai.com/docs/guides/flex-processing",
     "DeepSeek pricing https://api-docs.deepseek.com/quick_start/pricing (deepseek-flash; off-peak = half of peak; peak 01-04 and 06-10 UTC Mon-Fri)"
   ],
@@ -214,6 +214,26 @@
           "input": 0.1,
           "cachedInput": 0.1,
           "output": 0.15
+        }
+      }
+    },
+    {
+      "id": "gpt-6.1-sol",
+      "role": "candidate",
+      "provider": "openrouter",
+      "model": "openai/gpt-6.1-sol",
+      "serviceTier": "default",
+      "reasoningEffort": null,
+      "prices": {
+        "openrouter": {
+          "input": 2.0,
+          "cachedInput": 0.1,
+          "output": 10.0
+        },
+        "openai": {
+          "input": 2.0,
+          "cachedInput": 0.1,
+          "output": 10.0
         }
       }
     }

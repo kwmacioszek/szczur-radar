@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-02-036",
+  "configId" : "gpt-6.1-sol",
+  "provider" : "openrouter",
+  "model" : "openai/gpt-6.1-sol",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T22:11:18.427218Z",
+  "rawText" : "{\"relevance\":\"investment_related\",\"modifiers\":[\"humor\"],\"targets\":[{\"id\":\"t1\",\"kind\":\"company\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"szczurze\"},\"stance\":{\"direction\":\"bullish\",\"assertiveness\":\"hedged\",\"claim_ids\":[\"c1\"]},\"reference\":\"explicit\"}],\"claims\":[{\"id\":\"c1\",\"kind\":\"investment_thesis\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"ale promocja na szczurze, w tym roku gwiazdka wypadła wczesniej\"},\"statement\":\"Autor sugeruje, że szczur jest dostępny w atrakcyjnej cenie, porównując okazję do wcześniejszej gwiazdki.\"}],\"flags\":[]}",
+  "inputTokens" : 3331,
+  "outputTokens" : 222,
+  "cachedTokens" : 3215,
+  "durationMs" : 4900,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

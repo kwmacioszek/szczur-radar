@@ -31,7 +31,12 @@ import pl.szczurradar.api.measurement.GoldLabels.LabeledTarget;
  */
 public final class GoldMetrics {
 
-	/** The metrics and their thresholds (plan, phase 6, criterion 6.3). */
+	/**
+	 * The metrics and their thresholds (plan, phase 6, criterion 6.3). Direction accuracy (was 75 %) and
+	 * the contradiction rate (was 3 %) were relaxed by the user's decision of 2026-10-06 (report
+	 * {@code gold-2026-10-06.md}): no measured model met them, the default keeps a margin, and closing
+	 * the gap is post-MVP "LLM hardening".
+	 */
 	public enum Metric {
 
 		/** Posts with a valid output / all labeled posts. */
@@ -55,7 +60,7 @@ public final class GoldMetrics {
 		 * {@code not_expressed} count as the same answer — "no usable direction" (user's decision
 		 * 2026-10-05, N14).
 		 */
-		TARGET_DIRECTION_ACCURACY(0.75, true),
+		TARGET_DIRECTION_ACCURACY(0.70, true),
 
 		/** Posts whose model dominant direction equals the gold one / posts with a gold dominant direction. */
 		DOMINANT_DIRECTION_AGREEMENT(0.75, true),
@@ -64,7 +69,7 @@ public final class GoldMetrics {
 		 * Gold {@code bullish}/{@code bearish} targets whose matched model target has the opposite
 		 * direction / gold {@code bullish}/{@code bearish} targets.
 		 */
-		CONTRADICTION_RATE(0.03, false);
+		CONTRADICTION_RATE(0.10, false);
 
 		private final double threshold;
 

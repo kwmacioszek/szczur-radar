@@ -161,7 +161,7 @@ for i in 0..<4 {
 
 let cards: [Card] = [
     Card(id:"F-01", title:"Gotowość produkcji", detail:"Koszty, odtworzenie backupu\ni ochrona sekretów", req:"—", status:"do startu", column:0, row:0, accent:amber),
-    Card(id:"F-02", title:"Kontrakt oceny LLM", detail:"Kontrakt V2; walidator i pomiar\nw Javie z Embabel", req:"F-03", status:"w toku", column:1, row:0, accent:violet),
+    Card(id:"F-02", title:"Kontrakt oceny LLM", detail:"Kontrakt V2, walidator i pomiar\nmodel domyślny: GPT-6 Luna", req:"F-03", status:"w toku", column:1, row:0, accent:violet),
     Card(id:"F-03", title:"Backend w Javie", detail:"Sesje JDBC, Flyway fix-forward\nEmbabel; to samo API dla SPA", req:"S-01", status:"wdrożone", column:2, row:0, accent:coral),
     Card(id:"S-01", title:"Admin i logowanie", detail:"CLI, sesja, ochrona tras\ni wylogowanie", req:"—", status:"wdrożone", column:3, row:0, accent:green),
     Card(id:"S-02", title:"Pierwsze ocenione posty", detail:"Wykop → ocena LLM → lista\nRęczne uruchomienie przebiegu", req:"S-01 + F-02", status:"propozycja", column:1, row:1, accent:cyan),
@@ -218,7 +218,7 @@ struct Parked {
 let parked: [(label: String, first: Parked, second: Parked)] = [
     ("ŹRÓDŁA I JAKOŚĆ",
      Parked(title:"Reddit i komentarze", refs:"FR-023 + komentarze", description:"Drugie źródło postów oraz rozmowy pod postami, mapowane do wspólnego modelu."),
-     Parked(title:"Bogatsza ocena sygnału", refs:"Poza MVP / przyszły pipeline", description:"Spółki, wartość sygnału, nowość, modele ML, obrazki i hardening LLM (ironia).")),
+     Parked(title:"Bogatsza ocena sygnału", refs:"Poza MVP / przyszły pipeline", description:"Spółki, wartość sygnału, nowość, modele ML, obrazki i hardening LLM (kierunek, ironia).")),
     ("ANALIZA I ODKRYWANIE",
      Parked(title:"Wykresy i alerty", refs:"FR-024 / FR-025", description:"Trend sygnałów na wykresie giełdowym i powiadomienia o obiecującym trendzie."),
      Parked(title:"Ask szczur", refs:"FR-032", description:"Pytania do LLM o wybrany sygnał bez opuszczania widoku posta.")),
@@ -260,7 +260,7 @@ txt("S-02: gwiazda przewodnia — pierwszy pełny przepływ od Wykopu do użytko
 txt("Pierwszy rząd czytaj od prawej: S-01 → F-03 → F-02. S-01 jest też warunkiem S-02 i S-06 — wynika z tej ścieżki.", 136, 3493, 2850, 24, .regular, muted)
 txt("Przed bramką strzałki pokazują zależności. Za bramką wskazują możliwe rozszerzenia, bez ustalonej kolejności.", 136, 3541, 2850, 24, .regular, muted)
 
-txt("Źródło: context/foundation/roadmap.md  ·  M-1 / v2.8  ·  Stan roadmapy: 05.10.2026  ·  Milestone otwarty", 100, 3660, 2200, 22, .regular, muted)
+txt("Źródło: context/foundation/roadmap.md  ·  M-1 / v2.9  ·  Stan roadmapy: 06.10.2026  ·  Milestone otwarty", 100, 3660, 2200, 22, .regular, muted)
 txt("MAPA ZALEŻNOŚCI · BEZ TERMINÓW", 2520, 3660, 540, 20, .semibold, muted)
 
 context.flushGraphics()

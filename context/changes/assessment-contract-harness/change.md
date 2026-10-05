@@ -3,7 +3,7 @@ change_id: assessment-contract-harness
 title: Kontrakt oceny LLM V2 z walidatorem i pomiarem na zestawie wzorcowym
 status: impl_reviewed
 created: 2026-09-27
-updated: 2026-10-04
+updated: 2026-10-06
 archived_at: null
 ---
 

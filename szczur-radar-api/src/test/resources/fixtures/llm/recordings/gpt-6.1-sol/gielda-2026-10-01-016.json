@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-01-016",
+  "configId" : "gpt-6.1-sol",
+  "provider" : "openrouter",
+  "model" : "openai/gpt-6.1-sol",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T22:08:45.411875Z",
+  "rawText" : "{\"relevance\":\"investment_related\",\"modifiers\":[],\"targets\":[{\"id\":\"t1\",\"kind\":\"company\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"ACN\"},\"stance\":{\"direction\":\"not_expressed\",\"assertiveness\":null,\"claim_ids\":[]},\"reference\":\"explicit\"},{\"id\":\"t2\",\"kind\":\"company\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"NKE\"},\"stance\":{\"direction\":\"not_expressed\",\"assertiveness\":null,\"claim_ids\":[]},\"reference\":\"explicit\"}],\"claims\":[{\"id\":\"c1\",\"kind\":\"factual_claim\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"[ACN](<url> (Accenture plc) — 🌅\"},\"statement\":\"ACN raportuje dziś przed otwarciem sesji.\"},{\"id\":\"c2\",\"kind\":\"factual_claim\",\"attribution\":\"author\",\"target_ids\":[\"t2\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"[NKE](<url> (Nike, Inc.) — 🌙\"},\"statement\":\"NKE raportuje dziś po zamknięciu sesji.\"}],\"flags\":[]}",
+  "inputTokens" : 3446,
+  "outputTokens" : 390,
+  "cachedTokens" : 3215,
+  "durationMs" : 8920,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

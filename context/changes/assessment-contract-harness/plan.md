@@ -24,7 +24,7 @@ Roadmapa F-02 (`assessment-contract-harness`). Kontrakt V2 (`context/foundation/
   - `sources/wykop/` — mapper Wykop → `AssessmentInputV1`.
 - `src/test/java/pl/szczurradar/api/measurement/` (kod tylko testowy, nigdy w jarze) — kontrola na żywo, pobranie próbki, nagrywanie, miary wzorca, raport; `README.md` opisuje uruchamianie. `CLAUDE.md` w `agents/assessor/` i `llm/`.
 - `src/test/resources/fixtures/`: prawdziwe payloady dostawców, wzorzec (`assessor/gold/posts.json`, `labels.json`), nagrania trzech modeli (`llm/recordings/…`), `llm/models.json` z trzema zmierzonymi konfiguracjami i wskazaniem domyślnej.
-- `./mvnw -B verify` (CI, bez wywołań LLM) sprawdza kontrakt, walidator, klientów na lokalnym serwerze HTTP, `Assessor`, agenta, miary oraz odtwarza nagrania z progami dla modelu domyślnego: zgodność z kontraktem ≥95%, trafność binarna ≥80%, recall celów ≥80%, precision celów ≥70%, kierunek na dopasowanych celach ze stanowiskiem ≥75%, dominujący kierunek posta ≥75%, sprzeczne kierunki ≤3%.
+- `./mvnw -B verify` (CI, bez wywołań LLM) sprawdza kontrakt, walidator, klientów na lokalnym serwerze HTTP, `Assessor`, agenta, miary oraz odtwarza nagrania z progami dla modelu domyślnego: zgodność z kontraktem ≥95%, trafność binarna ≥80%, recall celów ≥80%, precision celów ≥70%, kierunek na dopasowanych celach ze stanowiskiem ≥70%, dominujący kierunek posta ≥75%, sprzeczne kierunki ≤10% (kierunek i sprzeczności złagodzone z ≥75% / ≤3% decyzją użytkownika 2026-10-06, raport `gold-2026-10-06.md`).
 - Raport `context/changes/assessment-contract-harness/reports/gold-<YYYY-MM-DD>.md` z jakością i kosztem trzech modeli; użytkownik zatwierdził model domyślny; runbook ustawienia go na produkcji jest w `context/deployment/deploy-plan.md`.
 
 Weryfikacja: zielone CI na PR, raport w folderze zmiany, zatwierdzenie modelu domyślnego i kosztu przez użytkownika.
@@ -444,7 +444,7 @@ Trzy przebiegi nagrywania z `LLM_*`, nagrania odtwarzane w CI z progami dla mode
 
 - Domyślne `cd szczur-radar-api && ./mvnw -B verify` nie uruchamia testów `measurement`, uruchamia `*IT` i odtwarza wszystkie bieżące nagrania z identycznym werdyktem
 - Konfiguracja `default` ma komplet nagrań dla wszystkich postów wzorca z bieżącymi `PROMPT_VERSION` i `CONTRACT_VERSION`
-- Miary konfiguracji `default` spełniają progi: zgodność z kontraktem ≥95%, trafność binarna ≥80%, recall celów ≥80%, precision celów ≥70%, kierunek na dopasowanych celach ze stanowiskiem ≥75%, dominujący kierunek posta ≥75%, sprzeczne kierunki ≤3% (`RecordingsReplayTest`)
+- Miary konfiguracji `default` spełniają progi: zgodność z kontraktem ≥95%, trafność binarna ≥80%, recall celów ≥80%, precision celów ≥70%, kierunek na dopasowanych celach ze stanowiskiem ≥70%, dominujący kierunek posta ≥75%, sprzeczne kierunki ≤10% (kierunek i sprzeczności złagodzone z ≥75% / ≤3% decyzją użytkownika 2026-10-06, raport `gold-2026-10-06.md`) (`RecordingsReplayTest`)
 - Raport generuje się bez błędów do `context/changes/assessment-contract-harness/reports/`
 - CI na PR (`backend`, `web-unit`, `web-container-smoke`, `railway-config`) jest zielone
 
@@ -586,14 +586,14 @@ Brak zmian danych i migracji Flyway. `SkeletonAgent` zastępuje `AssessorAgent`;
 
 #### Automated
 
-- [ ] 6.1 Domyślne `cd szczur-radar-api && ./mvnw -B verify` nie uruchamia testów `measurement`, uruchamia `*IT` i odtwarza wszystkie bieżące nagrania z identycznym werdyktem
-- [ ] 6.2 Konfiguracja `default` ma komplet nagrań dla wszystkich postów wzorca z bieżącymi `PROMPT_VERSION` i `CONTRACT_VERSION`
-- [ ] 6.3 Miary konfiguracji `default` spełniają progi: zgodność z kontraktem ≥95%, trafność binarna ≥80%, recall celów ≥80%, precision celów ≥70%, kierunek na dopasowanych celach ze stanowiskiem ≥75%, dominujący kierunek posta ≥75%, sprzeczne kierunki ≤3% (`RecordingsReplayTest`)
-- [ ] 6.4 Raport generuje się bez błędów do `context/changes/assessment-contract-harness/reports/`
+- [x] 6.1 Domyślne `cd szczur-radar-api && ./mvnw -B verify` nie uruchamia testów `measurement`, uruchamia `*IT` i odtwarza wszystkie bieżące nagrania z identycznym werdyktem
+- [x] 6.2 Konfiguracja `default` ma komplet nagrań dla wszystkich postów wzorca z bieżącymi `PROMPT_VERSION` i `CONTRACT_VERSION`
+- [x] 6.3 Miary konfiguracji `default` spełniają progi: zgodność z kontraktem ≥95%, trafność binarna ≥80%, recall celów ≥80%, precision celów ≥70%, kierunek na dopasowanych celach ze stanowiskiem ≥70%, dominujący kierunek posta ≥75%, sprzeczne kierunki ≤10% (kierunek i sprzeczności złagodzone z ≥75% / ≤3% decyzją użytkownika 2026-10-06, raport `gold-2026-10-06.md`) (`RecordingsReplayTest`)
+- [x] 6.4 Raport generuje się bez błędów do `context/changes/assessment-contract-harness/reports/`
 - [ ] 6.5 CI na PR (`backend`, `web-unit`, `web-container-smoke`, `railway-config`) jest zielone
 
 #### Manual
 
-- [ ] 6.6 `GoldRecorder` wykonany trzy razy (Luna flex, DeepSeek Flash, Gemini 3.1 Flash-Lite) na całym wzorcu; raport zawiera jedną tabelę jakości i kosztu tych trzech modeli
+- [x] 6.6 `GoldRecorder` wykonany trzy razy (Luna flex, DeepSeek Flash, Gemini 3.1 Flash-Lite) na całym wzorcu; raport zawiera jedną tabelę jakości i kosztu tych trzech modeli
 - [ ] 6.7 Użytkownik przejrzał raport i zatwierdził model domyślny oraz szacowany koszt miesięczny; jednorazowe klucze usunięte
-- [ ] 6.8 Jeśli progi zostały zmienione albo żaden kandydat ich nie spełnił, decyzja użytkownika i uzasadnienie są w raporcie
+- [x] 6.8 Jeśli progi zostały zmienione albo żaden kandydat ich nie spełnił, decyzja użytkownika i uzasadnienie są w raporcie

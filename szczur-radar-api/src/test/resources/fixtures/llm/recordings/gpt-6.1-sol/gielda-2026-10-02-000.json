@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-02-000",
+  "configId" : "gpt-6.1-sol",
+  "provider" : "openrouter",
+  "model" : "openai/gpt-6.1-sol",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T22:10:13.676084Z",
+  "rawText" : "{\"relevance\":\"unclear\",\"modifiers\":[],\"targets\":[],\"claims\":[],\"flags\":[\"insufficient_content\"]}",
+  "inputTokens" : 3312,
+  "outputTokens" : 32,
+  "cachedTokens" : 3215,
+  "durationMs" : 2256,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

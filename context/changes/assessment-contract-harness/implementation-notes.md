@@ -208,3 +208,26 @@ later phases. Each open check names the phase that closes it; `/10x-impl-review`
   Llama 4 Scout 25/30 `provider_error` (HTTP 429 from the provider after 3 attempts — rate limit, not
   measured); Qwen3.5-9B not recorded (user: problems with the run).
 - The report no longer bills calls without an answer (`provider_error`, `timeout`).
+
+### N16. Jev (pilot 9), default model and relaxed thresholds (2026-10-06)
+
+- Pilot 9 (`frame.md`): Jev as a direction classifier on the gold targets 60.8 % (Luna 70.3 % on the
+  same approximate matching), irony score vs the user's irony labels AUC 0.49, with the day's other
+  posts as context too (9b). Per the user's irony labels most contradictions are on literal posts, so
+  the "mostly irony" claim in `hardening-sources.md` and the roadmap was corrected.
+- User's decision (plan phase 6, step 4 compromise): `default` = `luna`; direction accuracy ≥ 70 %
+  (was 75 %) and contradiction rate ≤ 10 % (was 3 %) in `GoldMetrics` and criterion 6.3 — chosen over
+  a per-model exception as a margin, with the original thresholds as the post-MVP hardening goal.
+  Luna's margin is small: 2 targets on direction, 1 on contradictions.
+- Luna was recorded on the standard tier; flex is the same model at Batch prices, so the operator
+  picks the tier in production (`deploy-plan.md`, "F-02: model domyślny"). The app does not log the
+  `LLM_*` settings at start, so the runbook verifies them with `railway variable list` (adaptation of
+  "weryfikacja w logu startu").
+
+### N17. GPT-6.1 Sol on the 30-post sample (2026-10-06)
+
+- `gpt-6.1-sol` (OpenRouter, provider-default reasoning, $2 / $0.10 cached / $10 per 1M): compliance
+  100 %, direction 63.2 % vs Luna 73.7 %, contradictions 4/15 vs 2/15 on the same posts; $0.14 for 30
+  posts (92 % of input from cache, ~380 output tokens per post), ~$55/month at 12k posts. A stronger
+  model did not fix direction — consistent with N14/N15; not measured on the full set.
+- User approved Luna's cost (~$5.9/month standard, ~$2.9 flex) on 2026-10-06.

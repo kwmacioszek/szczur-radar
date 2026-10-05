@@ -109,9 +109,11 @@ Progi modelu domyślnego na zestawie wzorcowym:
 | trafność binarna (posty ze wzorcowym `unclear` wyłączone) | ≥ 80% |
 | recall celów | ≥ 80% |
 | precision celów | ≥ 70% |
-| kierunek na dopasowanych celach ze stanowiskiem | ≥ 75% |
+| kierunek na dopasowanych celach ze stanowiskiem | ≥ 70% ¹ |
 | dominujący kierunek posta | ≥ 75% |
-| sprzeczne kierunki (bullish ↔ bearish) | ≤ 3% |
+| sprzeczne kierunki (bullish ↔ bearish) | ≤ 10% ¹ |
+
+¹ Złagodzone z ≥ 75% i ≤ 3% decyzją użytkownika 2026-10-06: żaden zmierzony model nie spełnił pierwotnych progów (raport `context/changes/assessment-contract-harness/reports/gold-2026-10-06.md`); powrót do nich to „LLM hardening” po MVP (roadmapa, `## Parked`).
 
 Posty „trudne” są wyłączone z mianowników; brak odpowiedzi lub wynik nieważny liczy się jako błąd, nie znika z mianownika. Definicje miar i dopasowania celów: plan `assessment-contract-harness`, faza 5.
 

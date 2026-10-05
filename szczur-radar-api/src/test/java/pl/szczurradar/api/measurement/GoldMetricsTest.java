@@ -159,8 +159,8 @@ class GoldMetricsTest {
 
 	@ParameterizedTest
 	@CsvSource({ "CONTRACT_COMPLIANCE, 95, 100, true", "CONTRACT_COMPLIANCE, 94, 100, false",
-			"TARGET_PRECISION, 70, 100, true", "TARGET_PRECISION, 69, 100, false", "CONTRADICTION_RATE, 3, 100, true",
-			"CONTRADICTION_RATE, 4, 100, false", "CONTRADICTION_RATE, 0, 0, true" })
+			"TARGET_PRECISION, 70, 100, true", "TARGET_PRECISION, 69, 100, false", "CONTRADICTION_RATE, 10, 100, true",
+			"CONTRADICTION_RATE, 11, 100, false", "CONTRADICTION_RATE, 0, 0, true" })
 	void thresholdsAreInclusive(Metric metric, int numerator, int denominator, boolean meets) {
 		assertThat(metric.meets(new Ratio(numerator, denominator))).isEqualTo(meets);
 	}
@@ -168,7 +168,7 @@ class GoldMetricsTest {
 	@Test
 	void thresholdsAreThePlansValues() {
 		assertThat(List.of(Metric.values()).stream().map(Metric::threshold).toList())
-			.containsExactly(0.95, 0.80, 0.80, 0.70, 0.75, 0.75, 0.03);
+			.containsExactly(0.95, 0.80, 0.80, 0.70, 0.70, 0.75, 0.10);
 		assertThat(Metric.CONTRADICTION_RATE.atLeast()).isFalse();
 	}
 

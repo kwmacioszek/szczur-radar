@@ -155,9 +155,13 @@ denominator is a measurement error (`InsufficientGoldException`), never a passed
 | relevance (binary) | model relevance = gold / posts with gold relevance other than `unclear` (model `unclear` = wrong) | ≥ 80 % |
 | target recall | matched gold targets / gold targets | ≥ 80 % |
 | target precision | matched model targets / model targets (0 when the model returns none) | ≥ 70 % |
-| direction accuracy | gold targets with a direction other than `not_expressed` whose matched model target has the same direction / all such gold targets — **an unmatched gold target is wrong** (review of phase 5, F7: kept strict); `unclear` and `not_expressed` count as the same answer (2026-10-05) | ≥ 75 % |
+| direction accuracy | gold targets with a direction other than `not_expressed` whose matched model target has the same direction / all such gold targets — **an unmatched gold target is wrong** (review of phase 5, F7: kept strict); `unclear` and `not_expressed` count as the same answer (2026-10-05) | ≥ 70 % ¹ |
 | dominant direction | posts whose model dominant direction (more bullish than bearish targets or the reverse) equals the gold one / posts where gold has one | ≥ 75 % |
-| contradictions | gold bullish/bearish targets whose matched model target has the opposite direction / gold bullish/bearish targets (unmatched = not a contradiction) | ≤ 3 % |
+| contradictions | gold bullish/bearish targets whose matched model target has the opposite direction / gold bullish/bearish targets (unmatched = not a contradiction) | ≤ 10 % ¹ |
+
+¹ Relaxed from ≥ 75 % and ≤ 3 % by the user's decision of 2026-10-06: no measured model met them; the
+default (`luna`) keeps a margin and closing the gap is post-MVP "LLM hardening" (report
+`context/changes/assessment-contract-harness/reports/gold-2026-10-06.md`).
 
 ## Recording, replay and report (plan phase 6)
 

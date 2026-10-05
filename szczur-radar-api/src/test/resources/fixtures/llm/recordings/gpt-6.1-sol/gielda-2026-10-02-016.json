@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-02-016",
+  "configId" : "gpt-6.1-sol",
+  "provider" : "openrouter",
+  "model" : "openai/gpt-6.1-sol",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T22:10:51.259156Z",
+  "rawText" : "{\"relevance\":\"investment_related\",\"modifiers\":[],\"targets\":[{\"id\":\"t1\",\"kind\":\"unknown\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"odkupię\"},\"stance\":{\"direction\":\"mixed\",\"assertiveness\":null,\"claim_ids\":[\"c1\",\"c2\"]},\"reference\":\"unresolved\"}],\"claims\":[{\"id\":\"c1\",\"kind\":\"trade_action\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"Teraz se odkupię poniżej 140 i gitara.\"},\"statement\":\"Autor planuje odkupić niewskazane aktywo poniżej 140.\"},{\"id\":\"c2\",\"kind\":\"opinion\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"Długo na to wyczekiwałem jako spadź, czuję satysfakcję XD\"},\"statement\":\"Autor deklaruje, że długo czekał na spadek i odczuwa satysfakcję.\"}],\"flags\":[\"missing_context\"]}",
+  "inputTokens" : 3365,
+  "outputTokens" : 436,
+  "cachedTokens" : 3215,
+  "durationMs" : 10328,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

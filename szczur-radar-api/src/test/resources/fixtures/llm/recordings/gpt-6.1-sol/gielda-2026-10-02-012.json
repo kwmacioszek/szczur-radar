@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-02-012",
+  "configId" : "gpt-6.1-sol",
+  "provider" : "openrouter",
+  "model" : "openai/gpt-6.1-sol",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T22:10:40.925363Z",
+  "rawText" : "{\"relevance\":\"investment_related\",\"modifiers\":[],\"targets\":[{\"id\":\"t1\",\"kind\":\"company\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"moje spółki\"},\"stance\":{\"direction\":\"bullish\",\"assertiveness\":\"hedged\",\"claim_ids\":[\"c1\"]},\"reference\":\"unresolved\"},{\"id\":\"t2\",\"kind\":\"macro_topic\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"spadki\"},\"stance\":{\"direction\":\"bearish\",\"assertiveness\":\"hedged\",\"claim_ids\":[\"c2\"]},\"reference\":\"explicit\"}],\"claims\":[{\"id\":\"c1\",\"kind\":\"factual_claim\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"wszystkie moje spółki rosną, ewentualnie boczniak, ale żadna nie chce spaść chociaż kilka procent...\"},\"statement\":\"Spółki autora rosną lub poruszają się bokiem; żadna nie spada nawet o kilka procent.\"},{\"id\":\"c2\",\"kind\":\"investment_thesis\",\"attribution\":\"author\",\"target_ids\":[\"t2\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"Klimat pod spadki 10-15% na giełdzie jest, ale coś nie chce jebnąć :/\"},\"statement\":\"Zdaniem autora jest klimat sprzyjający spadkom na giełdzie o 10–15%, ale spadki nie następują.\"}],\"flags\":[]}",
+  "inputTokens" : 3389,
+  "outputTokens" : 521,
+  "cachedTokens" : 3215,
+  "durationMs" : 13313,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

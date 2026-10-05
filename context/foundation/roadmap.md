@@ -3,7 +3,7 @@ project: "Szczur Radar"
 version: 2
 status: draft # draft | active | locked
 created: 2026-09-27
-updated: 2026-10-05
+updated: 2026-10-06
 prd_version: 2
 main_goal: speed
 top_blocker: time # secondary: decisions (LLM contract, filter scope and signal decision resolved 2026-09-27 — PRD v2)
@@ -30,6 +30,8 @@ milestone_status: open
 > v2.7 (2026-10-04): W `## Parked` dopisana ocena obrazków w postach (model multimodalny) — nice-to-have po MVP, do sprawdzenia, czy ma sens, na podstawie zestawu wzorcowego F-02.
 
 > v2.8 (2026-10-05): W `## Parked` dopisany „LLM hardening: ironia i stanowisko” — nice-to-have po MVP, z pomiaru F-02 (żaden model nie spełnił progów kierunku i sprzeczności przez ironię Wykopu); źródła: `context/foundation/llm-assessment/hardening-sources.md`.
+
+> v2.9 (2026-10-06): F-02 — model domyślny wybrany: GPT-6 Luna (`medium`) przez OpenRouter, tryb flex/standard wybiera operator; progi kierunku celów i sprzeczności złagodzone decyzją użytkownika (≥70 % / ≤10 % zamiast ≥75 % / ≤3 %; raport `reports/gold-2026-10-06.md`). Uzasadnienie „LLM hardening” poprawione: pilot 9 pokazał, że większość sprzeczności pada na postach dosłownych, nie ironicznych — wpis obejmuje kierunek i stanowisko ogólnie, ironia jest jednym z wątków.
 
 ## Milestone
 
@@ -114,8 +116,8 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Parallel with:** F-01, S-07
 - **Blockers:** — (faza 1 — kontrakt V2 i dokumenty — zrobiona; F-03 zakończone; fazy p2–p4 wymagają przeplanowania w Javie, kod w Pythonie z PR #23 nie jest przenoszony)
 - **Unknowns:**
-  - Wybór dostawcy i modelu LLM z obsługą ustrukturyzowanego wyjścia oraz akceptowalny koszt jednej oceny (powiązane z Open Roadmap Question 5). — Owner: user. Block: no.
-  - Jakość ustrukturyzowanego wyjścia przez Embabel (biblioteka wybrana w F-03) dla trzech kandydatów — wymaga ponownego pomiaru na zestawie wzorcowym; wybór dostawcy w konfiguracji szkieletu F-03 nie rozstrzyga tego pomiaru. — Owner: user. Block: no.
+  - ~~Wybór dostawcy i modelu LLM z obsługą ustrukturyzowanego wyjścia oraz akceptowalny koszt jednej oceny (powiązane z Open Roadmap Question 5).~~ Rozstrzygnięte 2026-10-06: GPT-6 Luna (`medium`) przez OpenRouter, ~$5,9/mies. (standard) lub ~$2,9/mies. (flex) przy 12 000 postów; ustawienie na produkcji po merge — runbook „F-02: model domyślny” w `context/deployment/deploy-plan.md`. — Owner: user. Block: no.
+  - ~~Jakość ustrukturyzowanego wyjścia przez Embabel (biblioteka wybrana w F-03) dla trzech kandydatów.~~ Zmierzone na zestawie wzorcowym (13 konfiguracji, prompt v2.5; `context/changes/assessment-contract-harness/reports/gold-2026-10-06.md`): zgodność z kontraktem 96–100 %; żaden model nie spełnił pierwotnych progów kierunku (≥75 %) i sprzeczności (≤3 %) — użytkownik złagodził je do ≥70 % / ≤10 %, Luna spełnia wszystkie z małym zapasem (kierunek 73,0 %, sprzeczności 8,3 %). — Owner: user. Block: no.
 - **Risk:** Zamyka ryzyko jakości oceny przed budową przepływu: jeśli żaden model nie spełnia progów na zestawie wzorcowym, dowiadujemy się tego bez pobierania, zapisu i UI; celowo NIE obejmuje zapisu, pobierania z Wykopu ani widoku — te wchodzą w S-02.
 - **Status:** in-progress
 
@@ -269,7 +271,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **2FA, logowanie przez zewnętrznego dostawcę, samodzielny reset hasła, dodatkowe role** — Why parked: PRD §Non-Goals.
 - **Wysoka dostępność / multi-region, własna logika backupu** — Why parked: PRD §Non-Goals; backup po stronie platformy (F-01).
 - **Lekkie modele ML, embeddingi, klasyfikatory w potoku** — Why parked: `shape-notes.md` §Forward: technical-roadmap — kierunek na przyszłość, nie zakres MVP.
-- **LLM hardening: ironia i stanowisko** — Why parked: nice-to-have po MVP. Pomiar F-02 (`context/changes/assessment-contract-harness/reports/gold-2026-10-05.md`): żaden z 13 zmierzonych modeli/wariantów nie spełnił progów kierunku celów i sprzecznych kierunków — głównie przez ironię i sarkazm Wykopu; więcej rozumowania nie pomagało. Tor: większy organiczny polski wzorzec z osobnym zbiorem kontrolnym → kierunek → ironia → stanowisko dosłowne vs zamierzone → ablacje kontekstu i promptu → porównanie modeli → regresja kosztu. Źródła (niezweryfikowane): `context/foundation/llm-assessment/hardening-sources.md`.
+- **LLM hardening: kierunek i stanowisko (w tym ironia)** — Why parked: nice-to-have po MVP. Pomiar F-02 (`context/changes/assessment-contract-harness/reports/gold-2026-10-05.md`): żaden z 13 zmierzonych modeli/wariantów nie spełnił progów kierunku celów i sprzecznych kierunków — progi złagodzono do ≥70 % / ≤10 % (decyzja użytkownika 2026-10-06). Ironia (wg etykiet użytkownika 15 ze 120 postów) obniża trafność kierunku, ale większość sprzeczności pada na postach dosłownych (pilot 9 w `context/changes/assessment-contract-harness/frame.md`; Jev nie wykrywa ironii); więcej rozumowania nie pomagało. Cel: powrót do progów ≥75 % / ≤3 %. Tor: większy organiczny polski wzorzec z osobnym zbiorem kontrolnym → kierunek → ironia → stanowisko dosłowne vs zamierzone → ablacje kontekstu i promptu → porównanie modeli → regresja kosztu. Źródła (niezweryfikowane): `context/foundation/llm-assessment/hardening-sources.md`.
 - **Ocena obrazków w postach (model multimodalny)** — Why parked: nice-to-have po MVP, do sprawdzenia, czy ma sens. PRD v2 i kontrakt V2 oceniają wyłącznie tekst (`prd.md:258`); w pilotażu #gielda ~44% wpisów ma zdjęcie, a część ma sens tylko w obrazku (`frame.md`, „Znane luki”). Zestaw wzorcowy F-02 (flaga `media.photo`, etykiety `unclear` z powodu obrazka, raport fazy 6) pokaże skalę; wdrożenie wymagałoby zmiany PRD, kontraktu (V3: cytat/dowód z obrazka nie jest podciągiem tekstu), wyboru modeli z wejściem obrazkowym i ponownego pomiaru, a koszt wejścia rośnie o tokeny obrazków.
 - **Self-hosted runner CI dla PR (lokalny Docker), runnery GitHub Actions dla `main`** — Why parked: nice-to-have dla wygody developmentu, nie wymaganie PRD; odroczone po MVP, najwcześniej po F-02 ([issue #30](https://github.com/kwmacioszek/szczur-radar/issues/30)).
 
