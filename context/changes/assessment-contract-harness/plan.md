@@ -590,7 +590,7 @@ Brak zmian danych i migracji Flyway. `SkeletonAgent` zastępuje `AssessorAgent`;
 - [x] 6.2 Konfiguracja `default` ma komplet nagrań dla wszystkich postów wzorca z bieżącymi `PROMPT_VERSION` i `CONTRACT_VERSION` — 6d65f19
 - [x] 6.3 Miary konfiguracji `default` spełniają progi: zgodność z kontraktem ≥95%, trafność binarna ≥80%, recall celów ≥80%, precision celów ≥70%, kierunek na dopasowanych celach ze stanowiskiem ≥70%, dominujący kierunek posta ≥75%, sprzeczne kierunki ≤10% (kierunek i sprzeczności złagodzone z ≥75% / ≤3% decyzją użytkownika 2026-10-06, raport `gold-2026-10-06.md`) (`RecordingsReplayTest`) — 6d65f19
 - [x] 6.4 Raport generuje się bez błędów do `context/changes/assessment-contract-harness/reports/` — 6d65f19
-- [ ] 6.5 CI na PR (`backend`, `web-unit`, `web-container-smoke`, `railway-config`) jest zielone
+- [x] 6.5 CI na PR (`backend`, `web-unit`, `web-container-smoke`, `railway-config`) jest zielone (PR #31, run 37421759932) — fafc81f
 
 #### Manual
 

@@ -10,7 +10,7 @@ Items queued by `/10x-impl-review` triage that are not code fixes of the reviewe
   „pompa”, 10-01-024 „KRACHU”, 10-02-005 „spadki”, 10-02-043 „Pompujemy”, 10-02-057 „bessa”.
 - [x] **F7 → phase 6 report:** metric legend as in `measurement/README.md` („Metric definitions”);
   direction accuracy counts an unmatched gold target as wrong (user's decision).
-- [ ] **F5 → PR description:** „`sources/wykop` (`WykopApiClient`, `WykopRepository`) is ready but
+- [x] **F5 → PR description:** „`sources/wykop` (`WykopApiClient`, `WykopRepository`) is ready but
   not wired (no bean, route or schedule) — S-02 builds on it.” Comment the same on the S-02 issue
   when the PR is opened.
 - [x] **F9 → before merge:** remove the temporary links feature from `pilot/labeling-gold.html`
@@ -20,7 +20,7 @@ Items queued by `/10x-impl-review` triage that are not code fixes of the reviewe
 
 ## Phase 6 review (2026-10-06, `reviews/impl-review-phase-6.md`)
 
-- [ ] **F9 → PR description:** the direction and contradiction thresholds in `GoldMetrics` were relaxed
+- [x] **F9 → PR description:** the direction and contradiction thresholds in `GoldMetrics` were relaxed
   (≥75 % → ≥70 %, ≤3 % → ≤10 %) in the same phase and from the same report that chose `luna` (user's
   decision, report `gold-2026-10-06.md`). `RecordingsReplayTest` therefore guards Luna against
   regression (margin: 2 targets on direction, 1 on contradictions); it is not an independent quality
