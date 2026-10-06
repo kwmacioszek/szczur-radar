@@ -611,8 +611,8 @@ Odnotować ryzyko: przed F-01 brak backupu i limitów kosztów (lekcja: kroki po
 
 #### Automated
 
-- [x] 1.1 Testy jednostkowe assessora, LLM i Wykopu pokrywają F7, F8a–F8e (i F8f, jeśli dotyczy)
-- [x] 1.2 Pełna weryfikacja backendu przechodzi
+- [x] 1.1 Testy jednostkowe assessora, LLM i Wykopu pokrywają F7, F8a–F8e (i F8f, jeśli dotyczy) — 378b05b
+- [x] 1.2 Pełna weryfikacja backendu przechodzi — 378b05b
 
 #### Manual
 
