@@ -97,7 +97,7 @@ The API is now a Spring Boot 4 jar on Java 25 (Railpack, `RAILPACK_JDK_VERSION=2
 
 1. `railway variable set LLM_API_PROVIDER=openrouter LLM_MODEL=openai/gpt-6-luna LLM_SERVICE_TIER=<flex|default> [LLM_TIMEOUT=300s] -s szczur-radar-api -e production --skip-deploys`; the key via `--stdin` (never as an argument), then seal it in the dashboard.
 2. Redeploy `szczur-radar-api`. **Verify:** the pre-deploy `migrate` and the app start (both validate `LLM_*` and abort with `Invalid LLM configuration: …` on a bad value or `flex`/effort with another provider); `railway variable list -s szczur-radar-api -e production` shows the values above (the key masked). The app does not log the LLM settings at start, so the variable list is the record.
-3. A change of model, tier or effort later = a new measurement: add the configuration to `models.json`, record it with `GoldRecorder`, and change `default` only if it meets the thresholds in `GoldMetrics` (`RecordingsReplayTest` in CI).
+3. A change of model or effort later = a new measurement (the tier — `default` / `flex` — is assumed not to change the answers: the user accepted that risk on 2026-10-06, so flex runs the configuration measured on `default`): add the configuration to `models.json`, record it with `GoldRecorder`, and change `default` only if it meets the thresholds in `GoldMetrics` (`RecordingsReplayTest` in CI).
 
 ## Phases
 

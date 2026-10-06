@@ -594,6 +594,6 @@ Brak zmian danych i migracji Flyway. `SkeletonAgent` zastępuje `AssessorAgent`;
 
 #### Manual
 
-- [x] 6.6 `GoldRecorder` wykonany trzy razy (Luna flex, DeepSeek Flash, Gemini 3.1 Flash-Lite) na całym wzorcu; raport zawiera jedną tabelę jakości i kosztu tych trzech modeli — 6d65f19
+- [x] 6.6 `GoldRecorder` wykonany trzy razy (Luna flex, DeepSeek Flash, Gemini 3.1 Flash-Lite) na całym wzorcu; raport zawiera jedną tabelę jakości i kosztu tych trzech modeli (Luna nagrana w trybie standardowym; tryb uznany za obojętny dla odpowiedzi — N13/N16, przegląd fazy 6 F2) — 6d65f19
 - [ ] 6.7 Użytkownik przejrzał raport i zatwierdził model domyślny oraz szacowany koszt miesięczny; jednorazowe klucze usunięte
 - [x] 6.8 Jeśli progi zostały zmienione albo żaden kandydat ich nie spełnił, decyzja użytkownika i uzasadnienie są w raporcie — 6d65f19
