@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-02-059",
+  "configId" : "luna-low",
+  "provider" : "openrouter",
+  "model" : "openai/gpt-6-luna",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : "low",
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T21:11:18.541145Z",
+  "rawText" : "{\"relevance\":\"investment_related\",\"modifiers\":[\"humor\"],\"targets\":[],\"claims\":[{\"id\":\"c1\",\"kind\":\"factual_claim\",\"attribution\":\"author\",\"target_ids\":[],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"31% w trochę ponad 60dni.\"},\"statement\":\"31% w trochę ponad 60dni.\"},{\"id\":\"c2\",\"kind\":\"factual_claim\",\"attribution\":\"author\",\"target_ids\":[],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"A piłem go we Wrześniu sporo.\"},\"statement\":\"A piłem go we Wrześniu sporo.\"}],\"flags\":[]}",
+  "inputTokens" : 3348,
+  "outputTokens" : 560,
+  "cachedTokens" : 3215,
+  "durationMs" : 7026,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

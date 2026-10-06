@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-02-002",
+  "configId" : "luna-low",
+  "provider" : "openrouter",
+  "model" : "openai/gpt-6-luna",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : "low",
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T21:06:46.411540Z",
+  "rawText" : "{\"relevance\":\"investment_related\",\"modifiers\":[],\"targets\":[{\"id\":\"t1\",\"kind\":\"asset\",\"anchor\":{\"document\":\"item\",\"field\":\"title\",\"quote\":\"Ceny paliw\"},\"stance\":{\"direction\":\"not_expressed\",\"assertiveness\":null,\"claim_ids\":[]},\"reference\":\"explicit\"},{\"id\":\"t2\",\"kind\":\"sector\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"koncernów paliwowych\"},\"stance\":{\"direction\":\"not_expressed\",\"assertiveness\":null,\"claim_ids\":[]},\"reference\":\"explicit\"},{\"id\":\"t3\",\"kind\":\"macro_topic\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"Karol Nawrocki\"},\"stance\":{\"direction\":\"not_expressed\",\"assertiveness\":null,\"claim_ids\":[]},\"reference\":\"explicit\"}],\"claims\":[{\"id\":\"c1\",\"kind\":\"factual_claim\",\"attribution\":\"reported\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"title\",\"quote\":\"Ceny paliw spadną teraz od 30 gr. do 1,44 PLN.\"},\"statement\":\"Ceny paliw spadną teraz od 30 gr. do 1,44 PLN.\"},{\"id\":\"c2\",\"kind\":\"factual_claim\",\"attribution\":\"reported\",\"target_ids\":[\"t2\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"zdecydował się podpisać ustawę o podatku od nadmiarowych zysków koncernów paliwowych\"},\"statement\":\"Prezydent zdecydował się podpisać ustawę o podatku od nadmiarowych zysków koncernów paliwowych.\"}],\"flags\":[\"extraction_limit\"]}",
+  "inputTokens" : 3429,
+  "outputTokens" : 601,
+  "cachedTokens" : 3215,
+  "durationMs" : 7240,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

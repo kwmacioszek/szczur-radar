@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-01-036",
+  "configId" : "luna",
+  "provider" : "openrouter",
+  "model" : "openai/gpt-6-luna",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T18:53:08.578086Z",
+  "rawText" : "{\n  \"relevance\": \"investment_related\",\n  \"modifiers\": [],\n  \"targets\": [\n    {\n      \"id\": \"t1\",\n      \"kind\": \"company\",\n      \"anchor\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"BYD\"\n      },\n      \"stance\": {\n        \"direction\": \"bullish\",\n        \"assertiveness\": \"hedged\",\n        \"claim_ids\": [\"c1\", \"c2\"]\n      },\n      \"reference\": \"explicit\"\n    }\n  ],\n  \"claims\": [\n    {\n      \"id\": \"c1\",\n      \"kind\": \"factual_claim\",\n      \"attribution\": \"author\",\n      \"target_ids\": [\"t1\"],\n      \"evidence\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"BYD siódmy miesiąc z rzędu poprawia wynik sprzedaży.\"\n      },\n      \"statement\": \"BYD siódmy miesiąc z rzędu poprawia wynik sprzedaży.\"\n    },\n    {\n      \"id\": \"c2\",\n      \"kind\": \"factual_claim\",\n      \"attribution\": \"author\",\n      \"target_ids\": [\"t1\"],\n      \"evidence\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"We wrześniu sprzedane globalnie 463,6 tys. samochodów, tj. wzrost o +17% r/r i +5,3% m/m\"\n      },\n      \"statement\": \"We wrześniu sprzedane globalnie 463,6 tys. samochodów, tj. wzrost o +17% r/r i +5,3% m/m.\"\n    }\n  ],\n  \"flags\": []\n}",
+  "inputTokens" : 3400,
+  "outputTokens" : 732,
+  "cachedTokens" : 3215,
+  "durationMs" : 7470,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-02-009",
+  "configId" : "luna-low",
+  "provider" : "openrouter",
+  "model" : "openai/gpt-6-luna",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : "low",
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T21:07:24.938440Z",
+  "rawText" : "{\"relevance\":\"investment_related\",\"modifiers\":[],\"targets\":[{\"id\":\"t1\",\"kind\":\"company\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"#orlen\"},\"stance\":{\"direction\":\"bullish\",\"assertiveness\":\"hedged\",\"claim_ids\":[\"c2\",\"c3\"]},\"reference\":\"explicit\"}],\"claims\":[{\"id\":\"c1\",\"kind\":\"trade_action\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"kupowanie #orlen jak trochę spadł i sprzedawanie jak trochę urósł\"},\"statement\":\"Kupowałem #orlen po spadku i sprzedawałem po wzroście; dotychczas działało bezbłędnie.\"},{\"id\":\"c2\",\"kind\":\"factual_claim\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"jestem posiadaczem 750 akcji średnio po 150\"},\"statement\":\"Jestem posiadaczem 750 akcji, średnio po 150.\"},{\"id\":\"c3\",\"kind\":\"question\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"czas dokupić, gorzej już nie będzie prawda?\"},\"statement\":\"Czy czas dokupić? Gorzej już nie będzie, prawda?\"}],\"flags\":[]}",
+  "inputTokens" : 3442,
+  "outputTokens" : 598,
+  "cachedTokens" : 3215,
+  "durationMs" : 7724,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

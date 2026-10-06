@@ -1,0 +1,87 @@
+{
+  "id": 19,
+  "created_at": "2026-10-01 11:09:55",
+  "title": "Na świecie zaczyna brakować miedzi. Szansa dla naszego KGHM",
+  "slug": "na-swiecie-zaczyna-brakowac-miedzi-szansa-dla-naszego-kghm",
+  "description": "Rosnące zapotrzebowanie na miedź zderza się z coraz większymi ograniczeniami po stronie podaży. Jakich cen metalu można spodziewać się w nadchodzącym kwartale? Prognozę dla rynku oraz akcji KGHM w rozmowie z @uzytkownik30 przedstawił Łukasz Wydra, analityk Cashify Gold. Na pierwszy rzut oka wrzesień 2026 ro",
+  "source": {
+    "label": "<media>",
+    "url": "<url>",
+    "type": "anchor",
+    "type_id": 1
+  },
+  "author": {
+    "username": "uzytkownik30",
+    "gender": null,
+    "company": true,
+    "avatar": "<url>",
+    "status": "active",
+    "color": "orange",
+    "verified": true,
+    "rank": {
+      "position": null,
+      "trend": 0
+    },
+    "blacklist": false,
+    "follow": false,
+    "donation": null,
+    "note": false,
+    "online": true
+  },
+  "published_at": "2026-10-01 13:20:35",
+  "votes": {
+    "up": 248,
+    "down": 7,
+    "count": 241
+  },
+  "voted": 0,
+  "comments": {
+    "hot": false,
+    "count": 45
+  },
+  "tags": [
+    "gielda",
+    "surowce",
+    "inwestowanie",
+    "polska",
+    "pieniadze",
+    "informacje"
+  ],
+  "hot": false,
+  "adult": false,
+  "media": {
+    "photo": {
+      "key": "<media>",
+      "label": "<media>",
+      "mime_type": "image/png",
+      "url": "<url>",
+      "size": 138159,
+      "width": 380,
+      "height": 192
+    },
+    "embed": null
+  },
+  "editable": false,
+  "deletable": false,
+  "resource": "link",
+  "actions": {
+    "create": false,
+    "update": false,
+    "delete": false,
+    "vote_up": false,
+    "vote_down": false,
+    "undo_vote": false,
+    "start_ama": false,
+    "finish_ama": false,
+    "create_favourite": false,
+    "delete_favourite": false,
+    "report": false
+  },
+  "archive": false,
+  "observed_discussion": false,
+  "parent": null,
+  "tag_pinned_content": false,
+  "pinnable": false,
+  "recommended": true,
+  "family_friendly": true
+}

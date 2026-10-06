@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-01-023",
+  "configId" : "deepseek-flash",
+  "provider" : "deepseek",
+  "model" : "deepseek-flash",
+  "channel" : "deepseek",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_mode",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T18:42:04.926174Z",
+  "rawText" : "{\"relevance\":\"investment_related\",\"modifiers\":[\"humor\"],\"targets\":[{\"id\":\"t1\",\"kind\":\"macro_topic\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"pompa\"},\"stance\":{\"direction\":\"bullish\",\"assertiveness\":\"hedged\",\"claim_ids\":[\"c1\"]},\"reference\":\"explicit\"}],\"claims\":[{\"id\":\"c1\",\"kind\":\"investment_thesis\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"jak grubas do 15:30 nie zmieni zdania to będzie pompa jakiej mój portfel od pół roku nie widział\"},\"statement\":\"Jeśli duży gracz do 15:30 nie zmieni zdania, rynek czeka silny wzrost, jakiego portfel autora nie widział od pół roku.\"}],\"flags\":[]}",
+  "inputTokens" : 3665,
+  "outputTokens" : 194,
+  "cachedTokens" : 3456,
+  "durationMs" : 1183,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

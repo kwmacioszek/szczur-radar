@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-02-005",
+  "configId" : "luna-low",
+  "provider" : "openrouter",
+  "model" : "openai/gpt-6-luna",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : "low",
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T21:07:01.495446Z",
+  "rawText" : "{\"relevance\":\"investment_related\",\"modifiers\":[\"humor\"],\"targets\":[{\"id\":\"t1\",\"kind\":\"macro_topic\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"mocne spadki\"},\"stance\":{\"direction\":\"bearish\",\"assertiveness\":\"unhedged\",\"claim_ids\":[\"c1\"]},\"reference\":\"explicit\"}],\"claims\":[{\"id\":\"c1\",\"kind\":\"investment_thesis\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"szykujcie gotówkę na mocne spadki\"},\"statement\":\"Szykujcie gotówkę na mocne spadki.\"}],\"flags\":[]}",
+  "inputTokens" : 3339,
+  "outputTokens" : 611,
+  "cachedTokens" : 3215,
+  "durationMs" : 8627,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

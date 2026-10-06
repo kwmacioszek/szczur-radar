@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-02-056",
+  "configId" : "gemini-flash-lite",
+  "provider" : "gemini",
+  "model" : "gemini-3.1-flash-lite",
+  "channel" : "gemini",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T18:47:45.571044Z",
+  "rawText" : "{\n  \"relevance\": \"investment_related\",\n  \"modifiers\": [\"humor\"],\n  \"targets\": [\n    {\n      \"id\": \"t1\",\n      \"kind\": \"asset\",\n      \"anchor\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"USD\"\n      },\n      \"stance\": {\n        \"direction\": \"not_expressed\",\n        \"assertiveness\": null,\n        \"claim_ids\": []\n      },\n      \"reference\": \"explicit\"\n    },\n    {\n      \"id\": \"t2\",\n      \"kind\": \"asset\",\n      \"anchor\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"EUR\"\n      },\n      \"stance\": {\n        \"direction\": \"not_expressed\",\n        \"assertiveness\": null,\n        \"claim_ids\": []\n      },\n      \"reference\": \"explicit\"\n    },\n    {\n      \"id\": \"t3\",\n      \"kind\": \"company\",\n      \"anchor\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"xtb\"\n      },\n      \"stance\": {\n        \"direction\": \"bearish\",\n        \"assertiveness\": \"unhedged\",\n        \"claim_ids\": [\"c4\"]\n      },\n      \"reference\": \"explicit\"\n    }\n  ],\n  \"claims\": [\n    {\n      \"id\": \"c1\",\n      \"kind\": \"investment_thesis\",\n      \"attribution\": \"author\",\n      \"target_ids\": [\"t1\", \"t2\"],\n      \"evidence\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"Powszechnie sie uwaza ze jak kupujecie instrument na stocki z USA ktore sa wyceniane w USD to nie ma zadnego znaczenia czy instrument nominowany jest w EUR czy USD. jest to kompletna bzdura\"\n      },\n      \"statement\": \"To, czy instrument na akcje z USA jest nominowany w EUR czy USD, ma kluczowe znaczenie dla inwestora.\"\n    },\n    {\n      \"id\": \"c2\",\n      \"kind\": \"investment_thesis\",\n      \"attribution\": \"author\",\n      \"target_ids\": [\"t1\", \"t2\"],\n      \"evidence\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"jezeli nie chcemy dodatkowo oprocz spekulacji na gieldzie spekulowac na kursie wymiany walut musimy zabezpieczyc sie instrumentami hedgowanymi.\"\n      },\n      \"statement\": \"Aby uniknąć ryzyka walutowego, należy korzystać z instrumentów hedgowanych.\"\n    },\n    {\n      \"id\": \"c3\",\n      \"kind\": \"investment_thesis\",\n      \"attribution\": \"author\",\n      \"target_ids\": [\"t1\", \"t2\"],\n      \"evidence\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"Nagle po 25 latach oszczedzania wasz zysk spadlby o polowe\"\n      },\n      \"statement\": \"Niekorzystne zmiany kursów walutowych mogą drastycznie obniżyć zyski z inwestycji długoterminowych.\"\n    },\n    {\n      \"id\": \"c4\",\n      \"kind\": \"opinion\",\n      \"attribution\": \"author\",\n      \"target_ids\": [\"t3\"],\n      \"evidence\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"placisz dodatkowo koszty przewalutowania bo masz ike w xtb hehe szczurish.\"\n      },\n      \"statement\": \"Posiadanie IKE w XTB wiąże się z dodatkowymi kosztami przewalutowania.\"\n    }\n  ],\n  \"flags\": []\n}",
+  "inputTokens" : 3673,
+  "outputTokens" : 916,
+  "cachedTokens" : null,
+  "durationMs" : 3267,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-01-048",
+  "configId" : "luna",
+  "provider" : "openrouter",
+  "model" : "openai/gpt-6-luna",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T18:55:01.433257Z",
+  "rawText" : "{\"relevance\":\"investment_related\",\"modifiers\":[],\"targets\":[{\"id\":\"t1\",\"kind\":\"asset\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"akcje\"},\"stance\":{\"direction\":\"not_expressed\",\"assertiveness\":null,\"claim_ids\":[]},\"reference\":\"explicit\"}],\"claims\":[{\"id\":\"c1\",\"kind\":\"question\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"Dobrze ogarniam, że jeżeli dostanę akcje z RSU które od razu sprzedaje, to ze względu na to że jestem w drugim progu podatkowym 32% z tych akcji leci na podatki?\"},\"statement\":\"Czy przy otrzymaniu i natychmiastowej sprzedaży akcji z RSU 32% ich wartości idzie na podatki?\"}],\"flags\":[]}",
+  "inputTokens" : 3392,
+  "outputTokens" : 566,
+  "cachedTokens" : 3215,
+  "durationMs" : 5107,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

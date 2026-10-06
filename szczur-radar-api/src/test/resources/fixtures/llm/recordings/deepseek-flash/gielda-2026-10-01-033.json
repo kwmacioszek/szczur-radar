@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-01-033",
+  "configId" : "deepseek-flash",
+  "provider" : "deepseek",
+  "model" : "deepseek-flash",
+  "channel" : "deepseek",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_mode",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T18:42:19.405350Z",
+  "rawText" : "{\"relevance\":\"investment_related\",\"modifiers\":[\"humor\"],\"targets\":[{\"id\":\"t1\",\"kind\":\"company\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"Sandisk\"},\"stance\":{\"direction\":\"bullish\",\"assertiveness\":\"hedged\",\"claim_ids\":[\"c1\"]},\"reference\":\"explicit\"},{\"id\":\"t2\",\"kind\":\"company\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"Hujnix\"},\"stance\":{\"direction\":\"bearish\",\"assertiveness\":\"hedged\",\"claim_ids\":[\"c2\"]},\"reference\":\"explicit\"},{\"id\":\"t3\",\"kind\":\"company\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"mikrus\"},\"stance\":{\"direction\":\"bearish\",\"assertiveness\":\"hedged\",\"claim_ids\":[\"c3\"]},\"reference\":\"explicit\"}],\"claims\":[{\"id\":\"c1\",\"kind\":\"factual_claim\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"Sandisk 0,14% na zielono\"},\"statement\":\"Sandisk jest dziś na zielono, +0,14%.\"},{\"id\":\"c2\",\"kind\":\"factual_claim\",\"attribution\":\"author\",\"target_ids\":[\"t2\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"Hujnix -0,3%\"},\"statement\":\"Hujnix jest dziś na minusie, -0,3%.\"},{\"id\":\"c3\",\"kind\":\"factual_claim\",\"attribution\":\"author\",\"target_ids\":[\"t3\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"mikrus -3% XD\"},\"statement\":\"Mikrus spada dziś o 3%.\"},{\"id\":\"c4\",\"kind\":\"opinion\",\"attribution\":\"author\",\"target_ids\":[\"t1\",\"t2\",\"t3\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"i bądź tu mądry \"},\"statement\":\"Autor nie potrafi wyciągnąć wniosku z rozbieżnych ruchów tych spółek.\"}],\"flags\":[]}",
+  "inputTokens" : 3671,
+  "outputTokens" : 468,
+  "cachedTokens" : 3456,
+  "durationMs" : 1789,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

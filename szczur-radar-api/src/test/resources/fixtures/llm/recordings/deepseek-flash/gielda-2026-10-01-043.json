@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-01-043",
+  "configId" : "deepseek-flash",
+  "provider" : "deepseek",
+  "model" : "deepseek-flash",
+  "channel" : "deepseek",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_mode",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T18:42:35.223186Z",
+  "rawText" : "{\"relevance\":\"investment_related\",\"modifiers\":[],\"targets\":[{\"id\":\"t1\",\"kind\":\"macro_topic\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"zmyłka w połowie sesji\"},\"stance\":{\"direction\":\"bearish\",\"assertiveness\":\"hedged\",\"claim_ids\":[\"c1\"]},\"reference\":\"explicit\"}],\"claims\":[{\"id\":\"c1\",\"kind\":\"opinion\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"Piękna zmyłka w połowie sesji jak za starych dobrych czasów\"},\"statement\":\"Autor ironicznie ocenia ruch w połowie sesji jako zmyłkę, sugerując spadek po wcześniejszym wzroście.\"}],\"flags\":[\"possible_sarcasm\"]}",
+  "inputTokens" : 3659,
+  "outputTokens" : 185,
+  "cachedTokens" : 3456,
+  "durationMs" : 1356,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

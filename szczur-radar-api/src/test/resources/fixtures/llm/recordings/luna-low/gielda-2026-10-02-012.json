@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-02-012",
+  "configId" : "luna-low",
+  "provider" : "openrouter",
+  "model" : "openai/gpt-6-luna",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : "low",
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T19:51:05.150599Z",
+  "rawText" : "{\"relevance\":\"investment_related\",\"modifiers\":[],\"targets\":[{\"id\":\"t1\",\"kind\":\"unknown\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"moje spółki\"},\"stance\":{\"direction\":\"bullish\",\"assertiveness\":\"hedged\",\"claim_ids\":[\"c2\"]},\"reference\":\"unresolved\"},{\"id\":\"t2\",\"kind\":\"macro_topic\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"giełdzie\"},\"stance\":{\"direction\":\"bearish\",\"assertiveness\":\"hedged\",\"claim_ids\":[\"c3\"]},\"reference\":\"explicit\"}],\"claims\":[{\"id\":\"c1\",\"kind\":\"trade_action\",\"attribution\":\"author\",\"target_ids\":[],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"będę miał 12k do wydania w połowie października\"},\"statement\":\"Będę miał 12k do wydania w połowie października.\"},{\"id\":\"c2\",\"kind\":\"factual_claim\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"wszystkie moje spółki rosną\"},\"statement\":\"Wszystkie moje spółki rosną.\"},{\"id\":\"c3\",\"kind\":\"investment_thesis\",\"attribution\":\"author\",\"target_ids\":[\"t2\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"Klimat pod spadki 10-15% na giełdzie jest, ale coś nie chce jebnąć :/\"},\"statement\":\"Klimat pod spadki 10-15% na giełdzie jest, ale coś nie chce jebnąć :/\"}],\"flags\":[]}",
+  "inputTokens" : 3389,
+  "outputTokens" : 790,
+  "cachedTokens" : 3215,
+  "durationMs" : 9019,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

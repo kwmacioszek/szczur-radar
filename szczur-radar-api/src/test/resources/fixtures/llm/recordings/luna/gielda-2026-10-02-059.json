@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-02-059",
+  "configId" : "luna",
+  "provider" : "openrouter",
+  "model" : "openai/gpt-6-luna",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T19:06:18.510837Z",
+  "rawText" : "{\"relevance\":\"investment_related\",\"modifiers\":[],\"targets\":[],\"claims\":[{\"id\":\"c1\",\"kind\":\"factual_claim\",\"attribution\":\"author\",\"target_ids\":[],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"31% w trochę ponad 60dni.\"},\"statement\":\"31% w trochę ponad 60dni.\"}],\"flags\":[]}",
+  "inputTokens" : 3348,
+  "outputTokens" : 866,
+  "cachedTokens" : 3215,
+  "durationMs" : 11088,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

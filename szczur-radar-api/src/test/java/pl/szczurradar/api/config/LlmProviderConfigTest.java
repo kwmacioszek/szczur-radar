@@ -5,8 +5,10 @@ import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -140,17 +142,78 @@ class LlmProviderConfigTest {
 		assertThat(properties.toString()).doesNotContain("very-secret-key").contains("<hidden>");
 	}
 
+	@Test
+	void callSettingsDefaultToDefaultTierProviderEffortAnd120Seconds() {
+		LlmProviderProperties properties = LlmProviderProperties
+			.from(environment("openrouter", "openai/gpt-6-luna", "synthetic-key"));
+
+		assertThat(properties.serviceTier()).isEqualTo(LlmProviderProperties.ServiceTier.DEFAULT);
+		assertThat(properties.reasoningEffort()).isNull();
+		assertThat(properties.timeout()).isEqualTo(Duration.ofSeconds(120));
+	}
+
+	@Test
+	void openrouterAcceptsFlexReasoningEffortAndTimeout() {
+		LlmProviderProperties properties = LlmProviderProperties.from(environment("openrouter", "openai/gpt-6-luna",
+				"synthetic-key", "LLM_SERVICE_TIER=flex", "LLM_REASONING_EFFORT=low", "LLM_TIMEOUT=5m"));
+
+		assertThat(properties.serviceTier()).isEqualTo(LlmProviderProperties.ServiceTier.FLEX);
+		assertThat(properties.reasoningEffort()).isEqualTo(LlmProviderProperties.ReasoningEffort.LOW);
+		assertThat(properties.timeout()).isEqualTo(Duration.ofMinutes(5));
+	}
+
+	@Test
+	void invalidCallSettingsFailTheStartWithoutRevealingTheKey() {
+		assertThatIllegalStateException()
+			.isThrownBy(() -> environment("openrouter", "openai/gpt-6-luna", "very-secret-key", "LLM_SERVICE_TIER=cheap"))
+			.withMessageContaining("LLM_SERVICE_TIER must be one of default, flex (got 'cheap')")
+			.withMessageNotContaining("very-secret-key");
+		assertThatIllegalStateException()
+			.isThrownBy(() -> environment("openrouter", "openai/gpt-6-luna", "very-secret-key", "LLM_REASONING_EFFORT=max"))
+			.withMessageContaining("LLM_REASONING_EFFORT must be one of none, minimal, low, medium, high, xhigh (got 'max')")
+			.withMessageNotContaining("very-secret-key");
+		assertThatIllegalStateException()
+			.isThrownBy(() -> environment("openrouter", "openai/gpt-6-luna", "very-secret-key", "LLM_TIMEOUT=soon"))
+			.withMessageContaining("LLM_TIMEOUT must be a positive duration such as 120s or 5m (got 'soon')")
+			.withMessageNotContaining("very-secret-key");
+		assertThatIllegalStateException()
+			.isThrownBy(() -> environment("openrouter", "openai/gpt-6-luna", "very-secret-key", "LLM_TIMEOUT=0s"))
+			.withMessageContaining("LLM_TIMEOUT must be a positive duration");
+	}
+
+	@Test
+	void flexAndReasoningEffortAreOnlyForOpenrouter() {
+		assertThatIllegalStateException()
+			.isThrownBy(() -> environment("gemini", "gemini-3.1-flash-lite", "very-secret-key", "LLM_SERVICE_TIER=flex"))
+			.withMessageContaining("LLM_SERVICE_TIER=flex is only supported for LLM_API_PROVIDER=openrouter (got 'gemini')")
+			.withMessageNotContaining("very-secret-key");
+		assertThatIllegalStateException()
+			.isThrownBy(() -> environment("deepseek", "deepseek-v4-flash", "very-secret-key", "LLM_REASONING_EFFORT=high"))
+			.withMessageContaining("LLM_REASONING_EFFORT is only supported for LLM_API_PROVIDER=openrouter (got 'deepseek')");
+		assertThat(LlmProviderProperties
+			.from(environment("deepseek", "deepseek-v4-flash", "synthetic-key", "LLM_SERVICE_TIER=default"))
+			.serviceTier()).isEqualTo(LlmProviderProperties.ServiceTier.DEFAULT);
+	}
+
 	/**
 	 * Starts only the configuration of the application (its property files and the startup check),
-	 * with the given settings; {@code null} means "set to empty", overriding any real variable.
+	 * with the given settings; {@code null} means "set to empty", overriding any real variable. The
+	 * optional call settings are empty unless given as {@code NAME=value} in {@code callSettings}.
 	 */
-	private static ConfigurableEnvironment environment(String provider, String model, String apiKey) {
+	private static ConfigurableEnvironment environment(String provider, String model, String apiKey,
+			String... callSettings) {
 		List<String> args = new ArrayList<>();
 		for (Map.Entry<String, String> setting : Map.of(LlmProviderProperties.PROVIDER, provider,
 				LlmProviderProperties.MODEL, model == null ? "" : model, LlmProviderProperties.API_KEY,
 				apiKey == null ? "" : apiKey).entrySet()) {
 			args.add("--" + setting.getKey() + "=" + setting.getValue());
 		}
+		Map<String, String> calls = new HashMap<>(Map.of(LlmProviderProperties.SERVICE_TIER, "",
+				LlmProviderProperties.REASONING_EFFORT, "", LlmProviderProperties.TIMEOUT, ""));
+		for (String setting : callSettings) {
+			calls.put(setting.substring(0, setting.indexOf('=')), setting.substring(setting.indexOf('=') + 1));
+		}
+		calls.forEach((name, value) -> args.add("--" + name + "=" + value));
 		// The negative cases fail the start on purpose; don't let Spring log each one as a failure.
 		args.add("--logging.level.org.springframework.boot.SpringApplication=OFF");
 		SpringApplication application = new SpringApplication(ConfigurationOnly.class);

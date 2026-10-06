@@ -98,6 +98,13 @@ export default defineRailway(() => {
       LLM_API_PROVIDER: preserve(),
       LLM_MODEL: preserve(),
       LLM_API_KEY: preserve(),
+      // Optional call settings of the assessment client (szczur-radar-api/README.md):
+      // LLM_SERVICE_TIER (default | flex, flex only with openrouter),
+      // LLM_REASONING_EFFORT (openrouter only), LLM_TIMEOUT (default 120s). Not secrets;
+      // declared so that a value set by the operator is kept, never created here.
+      LLM_SERVICE_TIER: preserve(),
+      LLM_REASONING_EFFORT: preserve(),
+      LLM_TIMEOUT: preserve(),
     },
   });
 

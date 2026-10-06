@@ -2,9 +2,9 @@
 
 Ten plik jest **pomocniczy**. Normatywnym źródłem prawdy jest [`contract-v2.md`](./contract-v2.md); przykłady nie rozszerzają enumów ani reguł kontraktu.
 
-Wszystkie wejścia to **prawdziwe, zanonimizowane posty #gielda** z pilotaży (`context/changes/assessment-contract-harness/pilot/`): nicki → `@uzytkownikN`, adresy → `<url>`, białe znaki bez zmian (twarda spacja zapisana w JSON jako ` `). Każde wyjście jest kompletnym `AssessmentOutputV2` zgodnym z kontraktem: cytaty są podciągami wskazanych pól po normalizacji białych znaków (§10), referencje są spójne (§12). Etykiety rundy 1 (`labels-2026-09-28.json`) były oznaczane bez instrukcji i ostrożniej niż próg V2 — tam, gdzie się różnią, obowiązuje ten plik.
+Wszystkie wejścia to **prawdziwe, zanonimizowane posty #gielda** z pilotaży (`context/archive/2026-09-27-assessment-contract-harness/pilot/`) lub z zestawu wzorcowego F-02 (`szczur-radar-api/src/test/resources/fixtures/assessor/gold/posts.json`): nicki → `@uzytkownikN`, adresy → `<url>`, białe znaki bez zmian (twarda spacja zapisana w JSON jako ` `). Każde wyjście jest kompletnym `AssessmentOutputV2` zgodnym z kontraktem: cytaty są podciągami wskazanych pól po normalizacji białych znaków (§10), referencje są spójne (§12). Etykiety rundy 1 (`labels-2026-09-28.json`) były oznaczane bez instrukcji i ostrożniej niż próg V2 — tam, gdzie się różnią, obowiązuje ten plik.
 
-Przykłady są danymi testowymi: kompletne wyjścia z sekcji 1–4 i 6–7 muszą przechodzić walidator bez naruszeń; przykład 5 sprawdza odsiew.
+Przykłady są danymi testowymi: kompletne wyjścia z sekcji 1–4 i 6–10 muszą przechodzić walidator bez naruszeń; przykład 5 sprawdza odsiew.
 
 ---
 
@@ -289,7 +289,7 @@ Wyjście:
 }
 ```
 
-Dlaczego: autor przedstawia dwa skrajne scenariusze bez preferencji → `unclear`, nie `mixed` (§7.1.1). „Kibel” i „pompa” to slang ruchu ceny, nie cele (§6.5) — celem jest indeks. Przy `unclear` `assertiveness = null`, a `claim_ids` są dozwolone (§7.2) i tu wskazują tezę, z której wynika ocena.
+Dlaczego: autor przedstawia dwa skrajne scenariusze bez preferencji → `unclear`, nie `mixed` (§7.1.1). „Kibel” i „pompa” to slang ruchu ceny; ruch dotyczy nazwanego celu, więc nie tworzą osobnego celu „rynek” (§6.5a) — celem jest indeks. Przy `unclear` `assertiveness = null`, a `claim_ids` są dozwolone (§7.2) i tu wskazują tezę, z której wynika ocena.
 
 ---
 
@@ -346,7 +346,174 @@ Dlaczego: próg „szeroko + pewność” (§7.1.0) — „bańka na X” rozsą
 
 ---
 
-# 8. Anty-przykłady
+# 8. Slang ruchu całego rynku
+
+Źródło: zestaw wzorcowy F-02, `gielda-2026-10-01-014`.
+
+Wejście:
+
+```json
+{
+  "schema_version": "AssessmentInputV1",
+  "item": {
+    "item_type": "post",
+    "published_at": "2026-10-01T10:25:52+02:00",
+    "channels": ["gielda"],
+    "title": null,
+    "body": "#gielda \n\ndzien kibla dzisiaj sie szykuje"
+  },
+  "context": {"parent_post": null, "parent_comment": null}
+}
+```
+
+Wyjście:
+
+```json
+{
+  "relevance": "investment_related",
+  "modifiers": [],
+  "targets": [
+    {
+      "id": "t1",
+      "kind": "macro_topic",
+      "reference": "explicit",
+      "anchor": {"document": "item", "field": "body", "quote": "dzien kibla"},
+      "stance": {"direction": "bearish", "assertiveness": "unhedged", "claim_ids": ["c1"]}
+    }
+  ],
+  "claims": [
+    {
+      "id": "c1",
+      "kind": "investment_thesis",
+      "attribution": "author",
+      "target_ids": ["t1"],
+      "statement": "Autor oczekuje dziś spadków na rynku.",
+      "evidence": {"document": "item", "field": "body", "quote": "dzien kibla dzisiaj sie szykuje"}
+    }
+  ],
+  "flags": []
+}
+```
+
+Dlaczego: „dzień kibla” to slang ruchu całego rynku bez nazwanego celu → cel „rynek” (`macro_topic`, anchor = slang), jak „na peronie” (§6.5a, §7.1.6). Autor zapowiada spadki wprost („szykuje się”) → `bearish`, `unhedged`.
+
+---
+
+# 9. Opis ruchu ceny
+
+Źródło: `wykop-gielda-sample-2026-09-29.json`, `gielda-2026-09-29-071`.
+
+Wejście:
+
+```json
+{
+  "schema_version": "AssessmentInputV1",
+  "item": {
+    "item_type": "post",
+    "published_at": "2026-09-29T14:33:01+02:00",
+    "channels": ["gielda"],
+    "title": null,
+    "body": "#gielda FICO 50% spadku w 2 miesiące xD"
+  },
+  "context": {"parent_post": null, "parent_comment": null}
+}
+```
+
+Wyjście:
+
+```json
+{
+  "relevance": "investment_related",
+  "modifiers": [],
+  "targets": [
+    {
+      "id": "t1",
+      "kind": "company",
+      "reference": "explicit",
+      "anchor": {"document": "item", "field": "body", "quote": "FICO"},
+      "stance": {"direction": "bearish", "assertiveness": "hedged", "claim_ids": ["c1"]}
+    }
+  ],
+  "claims": [
+    {
+      "id": "c1",
+      "kind": "factual_claim",
+      "attribution": "author",
+      "target_ids": ["t1"],
+      "statement": "Kurs FICO spadł o 50% w dwa miesiące.",
+      "evidence": {"document": "item", "field": "body", "quote": "FICO 50% spadku w 2 miesiące"}
+    }
+  ],
+  "flags": []
+}
+```
+
+Dlaczego: post stwierdza spadek ceny nazwanego celu i nie wyraża innego stanowiska autora → kierunek tego ruchu, `bearish`, `hedged`; teza w `claim_ids` to samo stwierdzenie (`factual_claim`, `attribution = author`) (§7.1.7). „xD” to ton, nie stanowisko (§7.1.3).
+
+---
+
+# 10. Pozycja autora
+
+Źródło: `labeling-set-2026-09-28.json`, `entry-87765439` (#9).
+
+Wejście:
+
+```json
+{
+  "schema_version": "AssessmentInputV1",
+  "item": {
+    "item_type": "post",
+    "published_at": "2026-09-28T15:49:20+02:00",
+    "channels": ["gielda"],
+    "title": null,
+    "body": "Ach, nvidia ogłosiła dodatkowe 150 miliardów dolarów buybacku, sumarycznie 235 miliardów. Stąd ta pompa. No nic, chyba trzeba dokupić\n\n#gielda "
+  },
+  "context": {"parent_post": null, "parent_comment": null}
+}
+```
+
+Wyjście:
+
+```json
+{
+  "relevance": "investment_related",
+  "modifiers": [],
+  "targets": [
+    {
+      "id": "t1",
+      "kind": "company",
+      "reference": "explicit",
+      "anchor": {"document": "item", "field": "body", "quote": "nvidia"},
+      "stance": {"direction": "bullish", "assertiveness": "hedged", "claim_ids": ["c2"]}
+    }
+  ],
+  "claims": [
+    {
+      "id": "c1",
+      "kind": "factual_claim",
+      "attribution": "author",
+      "target_ids": ["t1"],
+      "statement": "Nvidia ogłosiła dodatkowy buyback za 150 mld USD.",
+      "evidence": {"document": "item", "field": "body", "quote": "nvidia ogłosiła dodatkowe 150 miliardów dolarów buybacku"}
+    },
+    {
+      "id": "c2",
+      "kind": "investment_thesis",
+      "attribution": "author",
+      "target_ids": ["t1"],
+      "statement": "Autor zamierza dokupić akcje Nvidii.",
+      "evidence": {"document": "item", "field": "body", "quote": "chyba trzeba dokupić"}
+    }
+  ],
+  "flags": []
+}
+```
+
+Dlaczego: zamiar dokupienia to pozycja autora → `bullish` (§7.1.8); „chyba” osłabia → `hedged`. Kierunek wynika z tezy `c2`; fakt o buybacku (`c1`) jest podany przez autora, więc `attribution = author` (§6.6).
+
+---
+
+# 11. Anty-przykłady
 
 ## Nie zwracaj ocen liczbowych ani decyzji o sygnale
 

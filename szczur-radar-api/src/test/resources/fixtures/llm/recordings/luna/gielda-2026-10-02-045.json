@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-02-045",
+  "configId" : "luna",
+  "provider" : "openrouter",
+  "model" : "openai/gpt-6-luna",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T19:03:14.213895Z",
+  "rawText" : "{\"relevance\":\"investment_related\",\"modifiers\":[\"promotion\"],\"targets\":[{\"id\":\"t1\",\"kind\":\"macro_topic\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"FX\"},\"stance\":{\"direction\":\"not_expressed\",\"assertiveness\":null,\"claim_ids\":[]},\"reference\":\"explicit\"}],\"claims\":[{\"id\":\"c1\",\"kind\":\"factual_claim\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"Uwaga dziś zaczęła sie emisja giełdowego anime FX Senshi Kurumi-chan\"},\"statement\":\"Dziś zaczęła się emisja giełdowego anime FX Senshi Kurumi-chan.\"}],\"flags\":[]}",
+  "inputTokens" : 3349,
+  "outputTokens" : 1943,
+  "cachedTokens" : 3215,
+  "durationMs" : 20768,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

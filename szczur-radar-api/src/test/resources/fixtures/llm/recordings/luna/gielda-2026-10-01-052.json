@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-01-052",
+  "configId" : "luna",
+  "provider" : "openrouter",
+  "model" : "openai/gpt-6-luna",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T18:55:39.686460Z",
+  "rawText" : "{\n  \"relevance\": \"investment_related\",\n  \"modifiers\": [],\n  \"targets\": [\n    {\n      \"id\": \"t1\",\n      \"kind\": \"company\",\n      \"anchor\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"Orlenu\"\n      },\n      \"stance\": {\n        \"direction\": \"bullish\",\n        \"assertiveness\": \"unhedged\",\n        \"claim_ids\": [\"c1\", \"c2\"]\n      },\n      \"reference\": \"explicit\"\n    }\n  ],\n  \"claims\": [\n    {\n      \"id\": \"c1\",\n      \"kind\": \"factual_claim\",\n      \"attribution\": \"author\",\n      \"target_ids\": [\"t1\"],\n      \"evidence\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"Jako akcjonariusz Orlenu\"\n      },\n      \"statement\": \"Autor jest akcjonariuszem Orlenu.\"\n    },\n    {\n      \"id\": \"c2\",\n      \"kind\": \"opinion\",\n      \"attribution\": \"author\",\n      \"target_ids\": [\"t1\"],\n      \"evidence\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"Jako akcjonariusz Orlenu uważam, że to dobrze że Pan Prezydent podpisał ustawę rządu o nadzwyczajnych zyskach Orlenu.\"\n      },\n      \"statement\": \"Autor uważa za dobre, że Pan Prezydent podpisał ustawę rządu o nadzwyczajnych zyskach Orlenu.\"\n    }\n  ],\n  \"flags\": []\n}",
+  "inputTokens" : 3372,
+  "outputTokens" : 1236,
+  "cachedTokens" : 3215,
+  "durationMs" : 11523,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

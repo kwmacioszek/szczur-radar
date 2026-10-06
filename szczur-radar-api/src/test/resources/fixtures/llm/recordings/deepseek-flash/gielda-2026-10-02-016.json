@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-02-016",
+  "configId" : "deepseek-flash",
+  "provider" : "deepseek",
+  "model" : "deepseek-flash",
+  "channel" : "deepseek",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_mode",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T18:43:16.888470Z",
+  "rawText" : "{\"relevance\":\"unclear\",\"modifiers\":[\"humor\"],\"targets\":[],\"claims\":[],\"flags\":[\"missing_context\",\"insufficient_content\"]}",
+  "inputTokens" : 3693,
+  "outputTokens" : 35,
+  "cachedTokens" : 3456,
+  "durationMs" : 832,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

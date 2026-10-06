@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-01-001",
+  "configId" : "deepseek-flash",
+  "provider" : "deepseek",
+  "model" : "deepseek-flash",
+  "channel" : "deepseek",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_mode",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T18:41:36.793591Z",
+  "rawText" : "{\"relevance\":\"investment_related\",\"modifiers\":[],\"targets\":[{\"id\":\"t1\",\"kind\":\"company\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"Microna\"},\"stance\":{\"direction\":\"bullish\",\"assertiveness\":\"hedged\",\"claim_ids\":[\"c1\",\"c3\"]},\"reference\":\"explicit\"},{\"id\":\"t2\",\"kind\":\"company\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"AMD\"},\"stance\":{\"direction\":\"bullish\",\"assertiveness\":\"hedged\",\"claim_ids\":[\"c2\",\"c3\"]},\"reference\":\"explicit\"}],\"claims\":[{\"id\":\"c1\",\"kind\":\"factual_claim\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"54,23 mld to przychody Microna za jeden kwartał\"},\"statement\":\"Micron miał 54,23 mld przychodów za jeden kwartał.\"},{\"id\":\"c2\",\"kind\":\"factual_claim\",\"attribution\":\"author\",\"target_ids\":[\"t2\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"a to co widzicie to wyniki AMD\"},\"statement\":\"Widoczne wyniki to wyniki AMD.\"},{\"id\":\"c3\",\"kind\":\"investment_thesis\",\"attribution\":\"author\",\"target_ids\":[\"t1\",\"t2\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"Zyski to totalna deklasacja\\nA różnica w kapitalizacji spółek to około 10-15%\"},\"statement\":\"Zyski obu spółek są bardzo dobre, a różnica w ich kapitalizacji to około 10-15%.\"}],\"flags\":[]}",
+  "inputTokens" : 3701,
+  "outputTokens" : 376,
+  "cachedTokens" : 3456,
+  "durationMs" : 1605,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

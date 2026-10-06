@@ -10,17 +10,17 @@ Ten plik jest pomocniczy dla agentów implementujących kontrakt.
 
 Agent implementujący `FR-004` MUST:
 
-1. odwzorować `AssessmentInputV1` i `AssessmentOutputV2` jako zamknięte modele (Pydantic, `extra="forbid"` na każdym obiekcie);
+1. odwzorować `AssessmentInputV1` i `AssessmentOutputV2` jako zamknięte modele odrzucające obce i brakujące klucze na każdym obiekcie;
 2. implementować enumy dokładnie jak w kontrakcie (§3);
 3. wymagać wszystkich kluczy; nie dodawać pól „dla wygody”;
 4. egzekwować limity §9 w znakach Unicode (code points);
 5. walidować ID, referencje i cytaty według §10 i §12 kontraktu;
-6. stosować jedną funkcję `normalize_whitespace` (§10) w walidatorze i w testach;
+6. stosować jedną normalizację białych znaków (§10) w walidatorze, odsiewie i testach;
 7. stosować jedną definicję „wpisu bez treści” (§11) w testach i produkcji;
 8. zachować jawne klasy błędów (§12) i nie „naprawiać” odpowiedzi po cichu;
 9. oddzielić ocenę od rozpoznawania encji, nowości, trendu i decyzji o sygnale.
 
-Schemat wysyłany do dostawcy może być uproszczony (np. bez `minItems`/`maxItems` dla Gemini, bez ograniczeń długości dla DeepSeek i OpenAI), ale surowa odpowiedź zawsze przechodzi pełny model i walidator.
+Schemat wysyłany do dostawcy może być uproszczony (np. bez `minItems`/`maxItems` dla Gemini, bez ograniczeń długości i liczności dla DeepSeek i dla modeli OpenAI przez OpenRouter), ale surowa odpowiedź zawsze przechodzi pełny model i walidator.
 
 ---
 
@@ -99,7 +99,7 @@ domain_invariant_violation
 
 # 5. Zestaw wzorcowy, progi i testy walidatora
 
-Zamiast wymyślonych przypadków testowych V1 jakość oceny mierzy się na **zestawie wzorcowym**: ~120 zanonimizowanych postów #gielda z dwóch dni (innych niż 2026-09-28 i próbka 2026-09-29), oznaczonych przez użytkownika według instrukcji oznaczania v1.0 (`context/changes/assessment-contract-harness/pilot/labeling-guidelines.md`), z co najmniej 100 postami nie-„trudnymi”.
+Zamiast wymyślonych przypadków testowych V1 jakość oceny mierzy się na **zestawie wzorcowym**: ~120 zanonimizowanych postów #gielda z dwóch dni (innych niż 2026-09-28 i próbka 2026-09-29), oznaczonych przez użytkownika według instrukcji oznaczania v1.2 (`context/archive/2026-09-27-assessment-contract-harness/pilot/labeling-guidelines.md`), z co najmniej 100 postami nie-„trudnymi”.
 
 Progi modelu domyślnego na zestawie wzorcowym:
 
@@ -109,11 +109,13 @@ Progi modelu domyślnego na zestawie wzorcowym:
 | trafność binarna (posty ze wzorcowym `unclear` wyłączone) | ≥ 80% |
 | recall celów | ≥ 80% |
 | precision celów | ≥ 70% |
-| kierunek na dopasowanych celach ze stanowiskiem | ≥ 75% |
+| kierunek na dopasowanych celach ze stanowiskiem | ≥ 70% ¹ |
 | dominujący kierunek posta | ≥ 75% |
-| sprzeczne kierunki (bullish ↔ bearish) | ≤ 3% |
+| sprzeczne kierunki (bullish ↔ bearish) | ≤ 10% ¹ |
 
-Posty „trudne” są wyłączone z mianowników; brak odpowiedzi lub wynik nieważny liczy się jako błąd, nie znika z mianownika. Definicje miar i dopasowania celów: plan `assessment-contract-harness`, faza 4.
+¹ Złagodzone z ≥ 75% i ≤ 3% decyzją użytkownika 2026-10-06: żaden zmierzony model nie spełnił pierwotnych progów (raport `context/archive/2026-09-27-assessment-contract-harness/reports/gold-2026-10-06.md`); powrót do nich to „LLM hardening” po MVP (roadmapa, `## Parked`).
+
+Posty „trudne” są wyłączone z mianowników; brak odpowiedzi lub wynik nieważny liczy się jako błąd, nie znika z mianownika. Definicje miar i dopasowania celów: plan `assessment-contract-harness`, faza 5.
 
 Testy walidatora (offline, każdy z asercją klasy błędu):
 
@@ -140,8 +142,8 @@ negatywne:
   obce pole / wartość spoza enumu / przekroczony limit   schema_violation
   wejście z pustym tytułem i treścią               odrzucone przez model wejścia
 odsiew:
-  sam tag, sam link, sama wzmianka, tag + <url>    is_assessable == False
-  prawdziwe posty z treścią                        is_assessable == True
+  sam tag, sam link, sama wzmianka, tag + <url>    wpis bez treści (nieoceniany)
+  prawdziwe posty z treścią                        wpis oceniany
 ```
 
 Fragmenty testowe pochodzą z prawdziwych, zanonimizowanych postów pilotażu (twarda spacja, „lenny face”, słowa ocenzurowane przez Wykop, emoji).

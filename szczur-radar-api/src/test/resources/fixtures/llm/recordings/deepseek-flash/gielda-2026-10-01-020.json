@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-01-020",
+  "configId" : "deepseek-flash",
+  "provider" : "deepseek",
+  "model" : "deepseek-flash",
+  "channel" : "deepseek",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_mode",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T18:42:01.628877Z",
+  "rawText" : "{\"relevance\":\"investment_related\",\"modifiers\":[],\"targets\":[{\"id\":\"t1\",\"kind\":\"company\",\"anchor\":{\"document\":\"item\",\"field\":\"title\",\"quote\":\"Meta\"},\"stance\":{\"direction\":\"not_expressed\",\"assertiveness\":null,\"claim_ids\":[]},\"reference\":\"explicit\"},{\"id\":\"t2\",\"kind\":\"company\",\"anchor\":{\"document\":\"item\",\"field\":\"title\",\"quote\":\"Amazon\"},\"stance\":{\"direction\":\"not_expressed\",\"assertiveness\":null,\"claim_ids\":[]},\"reference\":\"explicit\"},{\"id\":\"t3\",\"kind\":\"sector\",\"anchor\":{\"document\":\"item\",\"field\":\"title\",\"quote\":\"AI\"},\"stance\":{\"direction\":\"not_expressed\",\"assertiveness\":null,\"claim_ids\":[]},\"reference\":\"explicit\"}],\"claims\":[{\"id\":\"c1\",\"kind\":\"factual_claim\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"We wrześniu Meta (Facebook) uruchomiła Muse agenta AI, który potrafi samodzielnie przeglądać strony, znajdować produkty, porównywać oferty i przejść przez kolejne etapy zakupu.\"},\"statement\":\"We wrześniu Meta uruchomiła agenta AI Muse, który samodzielnie przegląda strony, znajduje produkty, porównuje oferty i przechodzi kolejne etapy zakupu.\"},{\"id\":\"c2\",\"kind\":\"factual_claim\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"Użytkownik musi jedynie na końcu zatwierdzić transakcję.\"},\"statement\":\"Użytkownik musi jedynie na końcu zatwierdzić transakcję.\"}],\"flags\":[]}",
+  "inputTokens" : 3726,
+  "outputTokens" : 399,
+  "cachedTokens" : 3456,
+  "durationMs" : 1675,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

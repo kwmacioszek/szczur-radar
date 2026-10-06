@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-01-031",
+  "configId" : "luna-low",
+  "provider" : "openrouter",
+  "model" : "openai/gpt-6-luna",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : "low",
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T21:03:59.033437Z",
+  "rawText" : "{\"relevance\":\"investment_related\",\"modifiers\":[\"humor\"],\"targets\":[{\"id\":\"t1\",\"kind\":\"company\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"micrusa\"},\"stance\":{\"direction\":\"bearish\",\"assertiveness\":\"unhedged\",\"claim_ids\":[\"c1\"]},\"reference\":\"explicit\"}],\"claims\":[{\"id\":\"c1\",\"kind\":\"investment_thesis\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"Jak złe wyniki to kibel, bo złe wyniki, a jak zajebiste wyniki do kibel, bo następne mogą być gorsze\"},\"statement\":\"Zarówno złe, jak i zajebiste wyniki mogą prowadzić do spadku micrusa.\"},{\"id\":\"c2\",\"kind\":\"factual_claim\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"Grubasowi znowu się micrus nie podoba.\"},\"statement\":\"Grubasowi znowu nie podoba się micrus.\"},{\"id\":\"c3\",\"kind\":\"factual_claim\",\"attribution\":\"reported\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"Sanjaya mówi, że 2027 dalej będzie dobrym rokiem dla micrusa\"},\"statement\":\"Sanjaya mówi, że 2027 dalej będzie dobrym rokiem dla micrusa.\"}],\"flags\":[]}",
+  "inputTokens" : 3384,
+  "outputTokens" : 721,
+  "cachedTokens" : 3215,
+  "durationMs" : 9563,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

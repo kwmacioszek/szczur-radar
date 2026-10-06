@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-01-057",
+  "configId" : "luna-low",
+  "provider" : "openrouter",
+  "model" : "openai/gpt-6-luna",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : "low",
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T21:06:22.542697Z",
+  "rawText" : "{\"relevance\":\"investment_related\",\"modifiers\":[],\"targets\":[{\"id\":\"t1\",\"kind\":\"company\",\"anchor\":{\"document\":\"item\",\"field\":\"title\",\"quote\":\"ElevenLabs\"},\"stance\":{\"direction\":\"not_expressed\",\"assertiveness\":null,\"claim_ids\":[]},\"reference\":\"explicit\"}],\"claims\":[{\"id\":\"c1\",\"kind\":\"factual_claim\",\"attribution\":\"reported\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"title\",\"quote\":\"Polski ElevenLabs wart 22 mld dolarów. Myśli o debiucie także na GPW\"},\"statement\":\"ElevenLabs jest wyceniany na 22 mld dolarów i rozważa debiut także na GPW.\"},{\"id\":\"c2\",\"kind\":\"factual_claim\",\"attribution\":\"reported\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"Startup Matiego Staniszewskiego i Piotra Dąbkowskiego pozyskał 300 mln dolarów, a jego wycena podwoiła się od początku roku.\"},\"statement\":\"Startup pozyskał 300 mln dolarów, a jego wycena podwoiła się od początku roku.\"},{\"id\":\"c3\",\"kind\":\"factual_claim\",\"attribution\":\"reported\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"Firma zatrudnia ponad 800 osób, obsługuje 15 mln rozmów tygodniowo w 90 językach i za dwa lub trzy lata chce wejść na giełdę, być może równolegle na GPW.\"},\"statement\":\"Firma zatrudnia ponad 800 osób, obsługuje 15 mln rozmów tygodniowo w 90 językach i za dwa lub trzy lata chce wejść na giełdę, być może równolegle na GPW.\"}],\"flags\":[]}",
+  "inputTokens" : 3417,
+  "outputTokens" : 591,
+  "cachedTokens" : 3215,
+  "durationMs" : 7085,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

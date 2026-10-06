@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-02-002",
+  "configId" : "luna",
+  "provider" : "openrouter",
+  "model" : "openai/gpt-6-luna",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T18:57:06.164417Z",
+  "rawText" : "{\"relevance\":\"investment_related\",\"modifiers\":[],\"targets\":[{\"id\":\"t1\",\"kind\":\"asset\",\"anchor\":{\"document\":\"item\",\"field\":\"title\",\"quote\":\"paliw\"},\"stance\":{\"direction\":\"bearish\",\"assertiveness\":\"hedged\",\"claim_ids\":[\"c1\"]},\"reference\":\"explicit\"},{\"id\":\"t2\",\"kind\":\"other\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"Karol Nawrocki\"},\"stance\":{\"direction\":\"not_expressed\",\"assertiveness\":null,\"claim_ids\":[]},\"reference\":\"explicit\"},{\"id\":\"t3\",\"kind\":\"macro_topic\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"ustawę o podatku od nadmiarowych zysków\"},\"stance\":{\"direction\":\"not_expressed\",\"assertiveness\":null,\"claim_ids\":[]},\"reference\":\"explicit\"},{\"id\":\"t4\",\"kind\":\"sector\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"koncernów paliwowych\"},\"stance\":{\"direction\":\"not_expressed\",\"assertiveness\":null,\"claim_ids\":[]},\"reference\":\"explicit\"}],\"claims\":[{\"id\":\"c1\",\"kind\":\"factual_claim\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"title\",\"quote\":\"Ceny paliw spadną teraz od 30 gr. do 1,44 PLN.\"},\"statement\":\"Ceny paliw spadną teraz od 30 gr. do 1,44 PLN.\"},{\"id\":\"c2\",\"kind\":\"factual_claim\",\"attribution\":\"reported\",\"target_ids\":[\"t1\",\"t2\",\"t3\",\"t4\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"Prezydent Polski Karol Nawrocki poinformował w trakcie czwartkowego orędzia, że zdecydował się podpisać ustawę o podatku od nadmiarowych zysków koncernów paliwowych, stawiając jednocześnie warunek: obniżki na stacjach mają nastąpić od razu.\"},\"statement\":\"Karol Nawrocki poinformował, że podpisał ustawę o podatku od nadmiarowych zysków koncernów paliwowych pod warunkiem natychmiastowych obniżek na stacjach.\"}],\"flags\":[]}",
+  "inputTokens" : 3429,
+  "outputTokens" : 2051,
+  "cachedTokens" : 3215,
+  "durationMs" : 17249,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

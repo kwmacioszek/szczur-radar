@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-01-058",
+  "configId" : "deepseek-flash",
+  "provider" : "deepseek",
+  "model" : "deepseek-flash",
+  "channel" : "deepseek",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_mode",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T18:42:55.079263Z",
+  "rawText" : "{\"relevance\":\"investment_related\",\"modifiers\":[],\"targets\":[{\"id\":\"t1\",\"kind\":\"company\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"#PKN\"},\"stance\":{\"direction\":\"bearish\",\"assertiveness\":\"hedged\",\"claim_ids\":[\"c1\",\"c2\"]},\"reference\":\"explicit\"},{\"id\":\"t2\",\"kind\":\"company\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"#ORLEN\"},\"stance\":{\"direction\":\"bearish\",\"assertiveness\":\"hedged\",\"claim_ids\":[\"c1\",\"c2\"]},\"reference\":\"explicit\"}],\"claims\":[{\"id\":\"c1\",\"kind\":\"trade_action\",\"attribution\":\"author\",\"target_ids\":[\"t1\",\"t2\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"Dobrze, że sprzedałem cały pakiet #PKN #ORLEN rok temu za 55 zł\"},\"statement\":\"Autor sprzedał cały pakiet PKN/ORLEN rok temu po 55 zł i dobrze ocenia tę decyzję.\"},{\"id\":\"c2\",\"kind\":\"investment_thesis\",\"attribution\":\"author\",\"target_ids\":[\"t1\",\"t2\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"bo tak czułem, że tutaj coś się odwali\"},\"statement\":\"Autor przeczuwał, że wokół PKN/ORLEN wydarzy się coś niekorzystnego.\"}],\"flags\":[]}",
+  "inputTokens" : 3684,
+  "outputTokens" : 323,
+  "cachedTokens" : 3456,
+  "durationMs" : 1815,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

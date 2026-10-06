@@ -82,6 +82,23 @@ The API is now a Spring Boot 4 jar on Java 25 (Railpack, `RAILPACK_JDK_VERSION=2
 - **Pre-deploy `migrate` fails:** read the pre-deploy logs. `Invalid LLM configuration: …` → set the three `LLM_*` variables; JDBC errors → check the `PG*` references; Flyway validation error → never edit an applied migration, add a new one.
 - **Healthcheck fails / proxy 502:** the API listens on `$PORT` (8000) dual-stack; a 502 only during the first seconds after sleep is the JVM starting (the proxy retries up to 30 s); a lasting 502 → API crashed, read its logs.
 
+## F-02: model domyślny (assessment-contract-harness)
+
+**Status (2026-10-06): decided, not yet set on production.** The user chose `luna` (report `context/archive/2026-09-27-assessment-contract-harness/reports/gold-2026-10-06.md`, `default` in `szczur-radar-api/src/test/resources/fixtures/llm/models.json`). F-02 adds no production caller of the assessor — S-02 does — so these values only have to be in place before S-02 deploys; the operator sets them after the F-02 PR is merged. Steps after merge are tracked in issue #24.
+
+| Variable (`szczur-radar-api`, `production`) | Value |
+| --- | --- |
+| `LLM_API_PROVIDER` | `openrouter` |
+| `LLM_MODEL` | `openai/gpt-6-luna` |
+| `LLM_API_KEY` | OpenRouter key of the production account — **sealed**, never copied to CI or PR envs |
+| `LLM_SERVICE_TIER` | `flex` (~$2.9/month at 12k posts, may wait/refuse; falls back to standard after three refusals) or `default` (~$5.9/month) — operator's choice |
+| `LLM_REASONING_EFFORT` | unset (provider default = `medium`, as measured) |
+| `LLM_TIMEOUT` | `300s` with `flex` (flex responses are slower); unset (`120s`) with `default` |
+
+1. `railway variable set LLM_API_PROVIDER=openrouter LLM_MODEL=openai/gpt-6-luna LLM_SERVICE_TIER=<flex|default> [LLM_TIMEOUT=300s] -s szczur-radar-api -e production --skip-deploys`; the key via `--stdin` (never as an argument), then seal it in the dashboard.
+2. Redeploy `szczur-radar-api`. **Verify:** the pre-deploy `migrate` and the app start (both validate `LLM_*` and abort with `Invalid LLM configuration: …` on a bad value or `flex`/effort with another provider); `railway variable list -s szczur-radar-api -e production` shows the values above (the key masked). The app does not log the LLM settings at start, so the variable list is the record.
+3. A change of model or effort later = a new measurement (the tier — `default` / `flex` — is assumed not to change the answers: the user accepted that risk on 2026-10-06, so flex runs the configuration measured on `default`): add the configuration to `models.json`, record it with `GoldRecorder`, and change `default` only if it meets the thresholds in `GoldMetrics` (`RecordingsReplayTest` in CI).
+
 ## Phases
 
 ### [x] 1. Prepare the application
