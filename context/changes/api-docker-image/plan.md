@@ -263,11 +263,11 @@ Brak danych do migracji. Produkcja przełącza się przy merge: `railway-config`
 
 - [x] 2.1 Bieżące dokumenty nie opisują Railpacka jako buildu API poza historią i komentarzem zmiennej
 - [x] 2.2 `REPOSITORY_GUIDELINES.md` wymienia nowy job `api-container-smoke`
-- [ ] 2.3 CI na PR jest zielone po zmianach dokumentów
+- [x] 2.3 CI na PR jest zielone po zmianach dokumentów
 - [x] 2.6 Stan backupu jest zapisany w dokumentach, a warunek przed S-05 zostaje; renderer i obraz roadmapy są aktualne
 
 #### Manual
 
-- [ ] 2.4 Użytkownik przeczytał zmienione fragmenty `deploy-plan.md`, `infrastructure.md` i `REPOSITORY_GUIDELINES.md` i potwierdził zgodność z wynikami z PR env
-- [ ] 2.5 Runbook przełączenia produkcji w `deploy-plan.md` jest kompletny
-- [ ] 2.7 Runbook wyłączenia PITR i usunięcia bucketa oraz opis dziennego backupu są spójne z IaC, wynikami z PR env i zakładką Backups
+- [x] 2.4 Użytkownik przeczytał zmienione fragmenty `deploy-plan.md`, `infrastructure.md` i `REPOSITORY_GUIDELINES.md` i potwierdził zgodność z wynikami z PR env
+- [x] 2.5 Runbook przełączenia produkcji w `deploy-plan.md` jest kompletny
+- [x] 2.7 Runbook wyłączenia PITR i usunięcia bucketa oraz opis dziennego backupu są spójne z IaC, wynikami z PR env i zakładką Backups
