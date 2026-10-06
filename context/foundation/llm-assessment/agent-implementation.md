@@ -99,7 +99,7 @@ domain_invariant_violation
 
 # 5. Zestaw wzorcowy, progi i testy walidatora
 
-Zamiast wymyślonych przypadków testowych V1 jakość oceny mierzy się na **zestawie wzorcowym**: ~120 zanonimizowanych postów #gielda z dwóch dni (innych niż 2026-09-28 i próbka 2026-09-29), oznaczonych przez użytkownika według instrukcji oznaczania v1.2 (`context/changes/assessment-contract-harness/pilot/labeling-guidelines.md`), z co najmniej 100 postami nie-„trudnymi”.
+Zamiast wymyślonych przypadków testowych V1 jakość oceny mierzy się na **zestawie wzorcowym**: ~120 zanonimizowanych postów #gielda z dwóch dni (innych niż 2026-09-28 i próbka 2026-09-29), oznaczonych przez użytkownika według instrukcji oznaczania v1.2 (`context/archive/2026-09-27-assessment-contract-harness/pilot/labeling-guidelines.md`), z co najmniej 100 postami nie-„trudnymi”.
 
 Progi modelu domyślnego na zestawie wzorcowym:
 
@@ -113,7 +113,7 @@ Progi modelu domyślnego na zestawie wzorcowym:
 | dominujący kierunek posta | ≥ 75% |
 | sprzeczne kierunki (bullish ↔ bearish) | ≤ 10% ¹ |
 
-¹ Złagodzone z ≥ 75% i ≤ 3% decyzją użytkownika 2026-10-06: żaden zmierzony model nie spełnił pierwotnych progów (raport `context/changes/assessment-contract-harness/reports/gold-2026-10-06.md`); powrót do nich to „LLM hardening” po MVP (roadmapa, `## Parked`).
+¹ Złagodzone z ≥ 75% i ≤ 3% decyzją użytkownika 2026-10-06: żaden zmierzony model nie spełnił pierwotnych progów (raport `context/archive/2026-09-27-assessment-contract-harness/reports/gold-2026-10-06.md`); powrót do nich to „LLM hardening” po MVP (roadmapa, `## Parked`).
 
 Posty „trudne” są wyłączone z mianowników; brak odpowiedzi lub wynik nieważny liczy się jako błąd, nie znika z mianownika. Definicje miar i dopasowania celów: plan `assessment-contract-harness`, faza 5.
 

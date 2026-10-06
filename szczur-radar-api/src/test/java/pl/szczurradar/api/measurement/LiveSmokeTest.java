@@ -49,7 +49,7 @@ class LiveSmokeTest {
 
 	static final int ASSESSED = 30;
 
-	static final String DEFAULT_SAMPLE = "../context/changes/assessment-contract-harness/pilot/wykop-gielda-sample-2026-09-29.json";
+	static final String DEFAULT_SAMPLE = "../context/archive/2026-09-27-assessment-contract-harness/pilot/wykop-gielda-sample-2026-09-29.json";
 
 	/** The pilot sample's record: a Wykop entry or link, anonymized. */
 	@JsonIgnoreProperties(ignoreUnknown = true)

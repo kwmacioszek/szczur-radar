@@ -35,7 +35,7 @@ import pl.szczurradar.api.measurement.ModelsConfig.Price;
  * {@code models.json} from its recordings, judged again with today's code — no model calls.
  *
  * <pre>
- * ./mvnw -Pmeasurement test -Dtest=GoldReport -Dreport.out=../context/changes/assessment-contract-harness/reports/gold-&lt;date&gt;.md
+ * ./mvnw -Pmeasurement test -Dtest=GoldReport -Dreport.out=../context/archive/2026-09-27-assessment-contract-harness/reports/gold-&lt;date&gt;.md
  * </pre>
  *
  * A configuration enters the main table only with a current recording of every gold post; an

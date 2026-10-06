@@ -21,7 +21,7 @@ the `measurement` profile runs only them — no Spring context, no Docker:
 ## Live smoke (`LiveSmokeTest`, plan phase 4)
 
 Assesses the first 30 assessable posts of
-`context/changes/assessment-contract-harness/pilot/wykop-gielda-sample-2026-09-29.json` through
+`context/archive/2026-09-27-assessment-contract-harness/pilot/wykop-gielda-sample-2026-09-29.json` through
 `Assessor` (prefilter, one call, parser, D1–D15) with the provider from `LLM_*`, and prints each
 result and a summary: inputs read, prefilter rejections, model calls (the denominator), contract
 compliance, failure classes, schema rules broken (`schema:additionalProperties`,
@@ -136,7 +136,7 @@ Links to the original posts are not written anywhere (a link leads to the author
 
 Check the printed counts and skim `posts.json` for nicks or names the anonymizer missed before
 committing it. Then label every post in
-`context/changes/assessment-contract-harness/pilot/labeling-gold.html` (guidelines v1.0) and save the
+`context/archive/2026-09-27-assessment-contract-harness/pilot/labeling-gold.html` (guidelines v1.0) and save the
 export as `src/test/resources/fixtures/assessor/gold/labels.json`. `GoldDataTest` is skipped until
 the files exist and mandatory from then on (≥ 100 posts not marked "hard", two days, no nicks or
 URLs, every anchor taken from its post). Metrics: `GoldMetrics` (thresholds in `GoldMetrics.Metric`).
@@ -160,7 +160,7 @@ denominator is a measurement error (`InsufficientGoldException`), never a passed
 
 ¹ Relaxed from ≥ 75 % and ≤ 3 % by the user's decision of 2026-10-06: no measured model met them; the
 default (`luna`) keeps a margin and closing the gap is post-MVP "LLM hardening" (report
-`context/changes/assessment-contract-harness/reports/gold-2026-10-06.md`).
+`context/archive/2026-09-27-assessment-contract-harness/reports/gold-2026-10-06.md`).
 
 ## Recording, replay and report (plan phase 6)
 
@@ -178,7 +178,7 @@ tier and reasoning effort; add a configuration there before recording it.
 
 # report (no model calls)
 ./mvnw -Pmeasurement test -Dtest=GoldReport \
-  -Dreport.out=../context/changes/assessment-contract-harness/reports/gold-$(date +%F).md
+  -Dreport.out=../context/archive/2026-09-27-assessment-contract-harness/reports/gold-$(date +%F).md
 ```
 
 Each assessment becomes `fixtures/llm/recordings/<configId>/<post_id>.json`: the raw answer exactly as

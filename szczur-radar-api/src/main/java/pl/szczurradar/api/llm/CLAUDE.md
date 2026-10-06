@@ -29,7 +29,7 @@ call's metadata, or throws `LlmCallException` (`provider_error` | `timeout`).
   `uniqueItems`; OpenAI strict mode rejects `uniqueItems` (HTTP 400). Gemini gets a nullable enum
   (`assertiveness`) as `anyOf` [string enum, `{"type": "null"}`]: with `{"enum": [..., null]}` it
   never answered `null` (D12). See
-  `context/changes/assessment-contract-harness/implementation-notes.md` (N1, N2, N5).
+  `context/archive/2026-09-27-assessment-contract-harness/implementation-notes.md` (N1, N2, N5).
 
 ## Adding a provider
 

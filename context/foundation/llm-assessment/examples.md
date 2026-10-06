@@ -2,7 +2,7 @@
 
 Ten plik jest **pomocniczy**. Normatywnym źródłem prawdy jest [`contract-v2.md`](./contract-v2.md); przykłady nie rozszerzają enumów ani reguł kontraktu.
 
-Wszystkie wejścia to **prawdziwe, zanonimizowane posty #gielda** z pilotaży (`context/changes/assessment-contract-harness/pilot/`) lub z zestawu wzorcowego F-02 (`szczur-radar-api/src/test/resources/fixtures/assessor/gold/posts.json`): nicki → `@uzytkownikN`, adresy → `<url>`, białe znaki bez zmian (twarda spacja zapisana w JSON jako ` `). Każde wyjście jest kompletnym `AssessmentOutputV2` zgodnym z kontraktem: cytaty są podciągami wskazanych pól po normalizacji białych znaków (§10), referencje są spójne (§12). Etykiety rundy 1 (`labels-2026-09-28.json`) były oznaczane bez instrukcji i ostrożniej niż próg V2 — tam, gdzie się różnią, obowiązuje ten plik.
+Wszystkie wejścia to **prawdziwe, zanonimizowane posty #gielda** z pilotaży (`context/archive/2026-09-27-assessment-contract-harness/pilot/`) lub z zestawu wzorcowego F-02 (`szczur-radar-api/src/test/resources/fixtures/assessor/gold/posts.json`): nicki → `@uzytkownikN`, adresy → `<url>`, białe znaki bez zmian (twarda spacja zapisana w JSON jako ` `). Każde wyjście jest kompletnym `AssessmentOutputV2` zgodnym z kontraktem: cytaty są podciągami wskazanych pól po normalizacji białych znaków (§10), referencje są spójne (§12). Etykiety rundy 1 (`labels-2026-09-28.json`) były oznaczane bez instrukcji i ostrożniej niż próg V2 — tam, gdzie się różnią, obowiązuje ten plik.
 
 Przykłady są danymi testowymi: kompletne wyjścia z sekcji 1–4 i 6–10 muszą przechodzić walidator bez naruszeń; przykład 5 sprawdza odsiew.
 

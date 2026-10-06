@@ -20,7 +20,7 @@ import pl.szczurradar.api.agents.assessor.contract.Relevance;
 
 /**
  * The gold set's files: {@code posts.json} written by {@link WykopGoldSampler} and {@code labels.json}
- * exported by {@code context/changes/assessment-contract-harness/pilot/labeling-gold.html}. Both are
+ * exported by {@code context/archive/2026-09-27-assessment-contract-harness/pilot/labeling-gold.html}. Both are
  * read with the strict contract mapper: an unknown or missing field fails instead of being ignored.
  */
 public final class GoldLabels {

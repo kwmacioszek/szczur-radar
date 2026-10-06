@@ -84,7 +84,7 @@ The API is now a Spring Boot 4 jar on Java 25 (Railpack, `RAILPACK_JDK_VERSION=2
 
 ## F-02: model domyślny (assessment-contract-harness)
 
-**Status (2026-10-06): decided, not yet set on production.** The user chose `luna` (report `context/changes/assessment-contract-harness/reports/gold-2026-10-06.md`, `default` in `szczur-radar-api/src/test/resources/fixtures/llm/models.json`). F-02 adds no production caller of the assessor — S-02 does — so these values only have to be in place before S-02 deploys; the operator sets them after the F-02 PR is merged. Steps after merge are tracked in issue #24.
+**Status (2026-10-06): decided, not yet set on production.** The user chose `luna` (report `context/archive/2026-09-27-assessment-contract-harness/reports/gold-2026-10-06.md`, `default` in `szczur-radar-api/src/test/resources/fixtures/llm/models.json`). F-02 adds no production caller of the assessor — S-02 does — so these values only have to be in place before S-02 deploys; the operator sets them after the F-02 PR is merged. Steps after merge are tracked in issue #24.
 
 | Variable (`szczur-radar-api`, `production`) | Value |
 | --- | --- |

@@ -16,7 +16,7 @@ Normatywny kontrakt pojedynczej oceny treści przez LLM: **rdzeń** (trafność,
 RAW -> Pipeline/adapter -> AssessmentInputV1 -> [odsiew §11] -> LLM -> AssessmentOutputV2 -> walidacja §12 -> downstream
 ```
 
-Zakres: Wykop (źródło MVP), Reddit / Arctic Shift i przyszłe źródła po normalizacji. Reguły w §5–§7 powstały z pilotaży na prawdziwych postach #gielda (`context/changes/assessment-contract-harness/frame.md`, instrukcja oznaczania `pilot/labeling-guidelines.md`).
+Zakres: Wykop (źródło MVP), Reddit / Arctic Shift i przyszłe źródła po normalizacji. Reguły w §5–§7 powstały z pilotaży na prawdziwych postach #gielda (`context/archive/2026-09-27-assessment-contract-harness/frame.md`, instrukcja oznaczania `pilot/labeling-guidelines.md`).
 
 Słowa MUSI / NIE WOLNO oznaczają wymagania sprawdzane przez backend (§12) albo — w regułach semantycznych §5–§7 — wymagania wobec modelu i osoby oznaczającej zestaw wzorcowy, mierzone na tym zestawie.
 
@@ -454,7 +454,7 @@ Jeżeli realny przypadek z Wykopu lub Reddita nie mieści się w V2:
 
 ## 17. Zmiany względem V1
 
-Podstawa: pilotaże na prawdziwych postach i ramowanie — `context/changes/assessment-contract-harness/frame.md` (runda 1: niedookreślenia V1 i błędny przykład normatywny; runda 2 i decyzje użytkownika z 2026-09-30; piloty 1–8). V1 (archiwum z 2026-10-01): `context/foundation/archive/`.
+Podstawa: pilotaże na prawdziwych postach i ramowanie — `context/archive/2026-09-27-assessment-contract-harness/frame.md` (runda 1: niedookreślenia V1 i błędny przykład normatywny; runda 2 i decyzje użytkownika z 2026-09-30; piloty 1–8). V1 (archiwum z 2026-10-01): `context/foundation/archive/`.
 
 | Obszar | V1 | V2 | Dlaczego |
 |---|---|---|---|
@@ -478,7 +478,7 @@ Podstawa: pilotaże na prawdziwych postach i ramowanie — `context/changes/asse
 
 - 2026-10-05 — §7.1.7 (nowa): opis ruchu ceny celu lub pytanie o jego przyczynę → kierunek tego ruchu, `hedged` (wcześniej `not_expressed`); §3 `direction`, §6.6, §7.1.4 dostosowane; §7.1.2 dopisuje ironiczną pochwałę straty. Powód: raport zestawu wzorcowego 2026-10-05 — oznaczający czyta „czemu X spada?”, „Y +5%, Z na czerwono” jako kierunek, modele trzymały się `not_expressed`; decyzja użytkownika (N13). Prompt v2.5.
 
-- 2026-10-04 — §6.5a: slang ruchu całego rynku bez nazwanego celu wskazuje cel „rynek” (`macro_topic`), jak „na peronie” (§7.1.6); wcześniej „pompa”, „zwała” były wymienione jako „nie cele”. Powód: zestaw wzorcowy F-02 (posty 2026-10-01/02, m.in. „dzien kibla dzisiaj sie szykuje”, „będzie pompa jakiej mój portfel…”) — oznaczający czyta je jako stanowisko wobec rynku; decyzja użytkownika (`context/changes/assessment-contract-harness/implementation-notes.md`, N11). Prompt v2.3.
+- 2026-10-04 — §6.5a: slang ruchu całego rynku bez nazwanego celu wskazuje cel „rynek” (`macro_topic`), jak „na peronie” (§7.1.6); wcześniej „pompa”, „zwała” były wymienione jako „nie cele”. Powód: zestaw wzorcowy F-02 (posty 2026-10-01/02, m.in. „dzien kibla dzisiaj sie szykuje”, „będzie pompa jakiej mój portfel…”) — oznaczający czyta je jako stanowisko wobec rynku; decyzja użytkownika (`context/archive/2026-09-27-assessment-contract-harness/implementation-notes.md`, N11). Prompt v2.3.
 
 **Zmiany redakcyjne V2** (bez zmiany znaczenia):
 
