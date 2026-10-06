@@ -13,7 +13,7 @@ Items queued by `/10x-impl-review` triage that are not code fixes of the reviewe
 - [ ] **F5 → PR description:** „`sources/wykop` (`WykopApiClient`, `WykopRepository`) is ready but
   not wired (no bean, route or schedule) — S-02 builds on it.” Comment the same on the S-02 issue
   when the PR is opened.
-- [ ] **F9 → before merge:** remove the temporary links feature from `pilot/labeling-gold.html`
+- [x] **F9 → before merge:** remove the temporary links feature from `pilot/labeling-gold.html`
   („Wczytaj linki”, the „otwórz na Wykopie” link, the `links` key in localStorage) and delete the local
   `~/.config/szczur-radar/gold-links.json` once labeling is final (user: „to powinno zostać
   wyczyszczone przed mergem PR”).

@@ -38,13 +38,6 @@ public final class GoldLabels {
 	 */
 	public static final Path ALIASES = DIRECTORY.resolve("aliases.json");
 
-	/**
-	 * Default place of the links to the sampled posts on wykop.pl ({@code {post_id: url}}): outside the
-	 * repo, because a link leads to the author.
-	 */
-	public static final Path LOCAL_LINKS = Path.of(System.getProperty("user.home"), ".config", "szczur-radar",
-			"gold-links.json");
-
 	/** Days whose posts shaped the contract's rules (pilots); never part of the gold set. */
 	public static final List<LocalDate> EXCLUDED_DAYS = List.of(LocalDate.parse("2026-09-28"),
 			LocalDate.parse("2026-09-29"));
@@ -129,11 +122,6 @@ public final class GoldLabels {
 	/** Writes {@code posts.json}: indented, non-ASCII text unescaped, one trailing newline. */
 	public static void writePosts(Path path, List<Post> posts) throws IOException {
 		write(path, posts);
-	}
-
-	/** Writes the local {@code {post_id: url}} file read by the labeling sheet. */
-	public static void writeLinks(Path path, Map<String, String> links) throws IOException {
-		write(path, links);
 	}
 
 	private static void write(Path path, Object value) throws IOException {

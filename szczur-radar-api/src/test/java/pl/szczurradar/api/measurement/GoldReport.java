@@ -12,7 +12,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.TreeMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -159,8 +158,6 @@ class GoldReport {
 			appendUsage(md, outcome);
 		}
 
-		appendSubsetComparison(md, complete, incomplete, labels, aliases);
-
 		if (!incomplete.isEmpty()) {
 			md.append("## Konfiguracje bez kompletu bieżących nagrań\n\n");
 			for (Replay.Outcome outcome : incomplete) {
@@ -219,63 +216,6 @@ class GoldReport {
 				.append("**\n");
 		}
 		md.append('\n');
-	}
-
-	/**
-	 * Configurations recorded on a sample only ({@code -Dgold.sample}): every configuration that has
-	 * the same posts, measured on those posts — a cheap screen of variants, too small for a decision.
-	 */
-	private static void appendSubsetComparison(StringBuilder md, List<Replay.Outcome> complete,
-			List<Replay.Outcome> incomplete, List<Label> labels, Map<String, Map<String, List<String>>> aliases) {
-		Map<Set<String>, List<Replay.Outcome>> bySubset = new java.util.LinkedHashMap<>();
-		for (Replay.Outcome outcome : incomplete) {
-			if (!outcome.results().isEmpty()) {
-				bySubset.computeIfAbsent(Set.copyOf(outcome.results().keySet()), key -> new ArrayList<>()).add(outcome);
-			}
-		}
-		for (Map.Entry<Set<String>, List<Replay.Outcome>> entry : bySubset.entrySet()) {
-			Set<String> subset = entry.getKey();
-			List<Replay.Outcome> compared = new ArrayList<>();
-			complete.forEach(compared::add);
-			compared.addAll(entry.getValue());
-			List<Label> subsetLabels = labels.stream().filter(label -> subset.contains(label.postId())).toList();
-			md.append("## Porównanie na podzbiorze ").append(subset.size()).append(" postów\n\n")
-				.append("Te same posty dla każdej konfiguracji; przy tej liczbie postów różnica kilku punktów to szum — ")
-				.append("wynik służy do wyboru wariantów do pełnego pomiaru, nie do decyzji.\n\n| Miara |");
-			compared.forEach(outcome -> md.append(" `").append(outcome.model().id()).append("` |"));
-			md.append("\n|---|").append("---|".repeat(compared.size())).append("\n");
-			for (Metric metric : Metric.values()) {
-				md.append("| ").append(label(metric)).append(" |");
-				for (Replay.Outcome outcome : compared) {
-					Map<String, AssessmentOutputV2> outputs = outcome.outputs()
-						.entrySet()
-						.stream()
-						.filter(output -> subset.contains(output.getKey()))
-						.collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-					try {
-						Ratio ratio = GoldMetrics.compute(subsetLabels, outputs, aliases).ratio(metric);
-						md.append(' ').append(cell(ratio, metric.meets(ratio))).append(" |");
-					}
-					catch (InsufficientGoldException ex) {
-						md.append(" — |");
-					}
-				}
-				md.append('\n');
-			}
-			md.append("| mediana czasu / koszt na post (kanał nagrania) |");
-			for (Replay.Outcome outcome : compared) {
-				List<Recording> recordings = outcome.recordings()
-					.values()
-					.stream()
-					.filter(recording -> subset.contains(recording.postId()))
-					.toList();
-				List<Long> durations = recordings.stream().map(Recording::durationMs).sorted().toList();
-				double cost = recordings.stream().mapToDouble(r -> actualCost(outcome.model(), r)).sum();
-				md.append(' ').append(durations.isEmpty() ? "—" : durations.get(durations.size() / 2) + " ms").append(" / ")
-					.append(usd(cost / Math.max(1, recordings.size()))).append(" |");
-			}
-			md.append("\n\n");
-		}
 	}
 
 	private static double actualCost(Model model, Recording recording) {

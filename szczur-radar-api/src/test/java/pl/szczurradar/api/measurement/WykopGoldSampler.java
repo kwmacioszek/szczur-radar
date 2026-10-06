@@ -46,8 +46,7 @@ import pl.szczurradar.api.sources.wykop.WykopSearchResult;
  * </pre>
  *
  * Optional: {@code -Dgold.perDay=60}, {@code -Dgold.seed=20261004}, {@code -Dgold.out=<path>}
- * (default {@link GoldLabels#POSTS}), {@code -Dgold.links=<path>} (default
- * {@link GoldLabels#LOCAL_LINKS}, outside the repo: {@code {post_id: url}} for the labeling sheet).
+ * (default {@link GoldLabels#POSTS}).
  * Each post records whether it had a picture, embed or poll ({@code media}) — the model sees text only.
  *
  * <p>Anonymization: URLs become {@code <url>} and e-mail addresses {@code <email>}; {@code @nick}
@@ -81,7 +80,6 @@ class WykopGoldSampler {
 		int perDay = Integer.getInteger("gold.perDay", 60);
 		long seed = Long.getLong("gold.seed", 20261004L);
 		Path out = Path.of(System.getProperty("gold.out", GoldLabels.POSTS.toString()));
-		Path linksOut = Path.of(System.getProperty("gold.links", GoldLabels.LOCAL_LINKS.toString()));
 
 		WykopRepository wykop = new WykopRepository(new WykopApiClient(env("WYKOP_KEY"), env("WYKOP_SECRET")));
 		Map<LocalDate, List<WykopItem>> byDay = new TreeMap<>();
@@ -95,7 +93,6 @@ class WykopGoldSampler {
 		Anonymizer anonymizer = new Anonymizer(
 				byDay.values().stream().flatMap(List::stream).map(WykopGoldSampler::author).filter(nick -> nick != null).toList());
 		List<Post> posts = new ArrayList<>();
-		Map<String, String> links = new LinkedHashMap<>();
 		for (Map.Entry<LocalDate, List<WykopItem>> day : byDay.entrySet()) {
 			List<Candidate> assessable = new ArrayList<>();
 			int unmappable = 0;
@@ -118,10 +115,6 @@ class WykopGoldSampler {
 				Candidate candidate = drawn.get(i);
 				String postId = "%s-%s-%03d".formatted(TAG, day.getKey(), i);
 				posts.add(new Post(postId, day.getKey(), media(candidate.raw()), candidate.input()));
-				String url = candidate.raw().webUrl();
-				if (url != null) {
-					links.put(postId, url);
-				}
 			}
 			System.out.printf("%s: %d elements, %d unmappable, %d without content, %d assessable, %d drawn%n",
 					day.getKey(), day.getValue().size(), unmappable,
@@ -135,8 +128,6 @@ class WykopGoldSampler {
 		GoldLabels.writePosts(out, posts);
 		System.out.println("wrote " + posts.size() + " posts to " + out.toAbsolutePath()
 				+ " (with a picture: " + posts.stream().filter(post -> post.media().photo()).count() + ")");
-		GoldLabels.writeLinks(linksOut, links);
-		System.out.println("wrote " + links.size() + " links to " + linksOut.toAbsolutePath() + " — outside the repo");
 		assertThat(posts).as("drawn posts").isNotEmpty();
 	}
 

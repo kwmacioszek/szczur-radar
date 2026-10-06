@@ -231,3 +231,19 @@ later phases. Each open check names the phase that closes it; `/10x-impl-review`
   posts (92 % of input from cache, ~380 output tokens per post), ~$55/month at 12k posts. A stronger
   model did not fix direction — consistent with N14/N15; not measured on the full set.
 - User approved Luna's cost (~$5.9/month standard, ~$2.9 flex) on 2026-10-06.
+
+### N18. Repository clean-up after the measurement (2026-10-06)
+
+User's request: remove what the model comparison left behind.
+
+- Removed the configurations measured only on the 30-post sample (`deepseek-r-low`, `deepseek-r-high`,
+  `luna-high`, `glm-5.3-flash`, `mimo-v2.6-flash`, `gpt-4o-mini`, `qwen3-235b-instruct`,
+  `llama-4-scout`, `gpt-6.1-sol`) with their recordings, and `qwen3.5-9b` (never recorded).
+  `models.json` keeps `luna` (default), `deepseek-flash`, `gemini-flash-lite`, `luna-low`. Their
+  results stay in `reports/gold-2026-10-06.md` and N14, N15, N17; the report is a snapshot and is no
+  longer reproduced 1:1 by `GoldReport`. The recordings are in git history (before this commit).
+- Removed `-Dgold.sample` from `GoldRecorder` and the subset comparison from `GoldReport`.
+- Removed the temporary links feature (phase 5 review F9): „Wczytaj linki” in `pilot/labeling-gold.html`,
+  `-Dgold.links` / `GoldLabels.LOCAL_LINKS` / `writeLinks` in `WykopGoldSampler`; the local
+  `~/.config/szczur-radar/gold-links.json` was deleted. `WykopItem.webUrl()` stays in `src/main` — the
+  link to the original post is product scope (S-03).
