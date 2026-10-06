@@ -1,10 +1,10 @@
 ---
 change_id: api-docker-image
 title: Api docker image i wyłączenie PITR
-status: impl_reviewed
+status: archived
 created: 2026-10-04
 updated: 2026-10-06
-archived_at: null
+archived_at: 2026-10-06T14:03:30Z
 ---
 
 ## Notes
