@@ -1,0 +1,15 @@
+package pl.szczurradar.api.posts;
+
+import jakarta.persistence.Converter;
+
+import pl.szczurradar.api.config.LlmProviderProperties.ReasoningEffort;
+import pl.szczurradar.api.persistence.EnumValueConverter;
+
+@Converter(autoApply = true)
+class ReasoningEffortConverter extends EnumValueConverter<ReasoningEffort> {
+
+	ReasoningEffortConverter() {
+		super(ReasoningEffort.class, ReasoningEffort::id);
+	}
+
+}

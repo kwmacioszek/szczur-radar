@@ -85,8 +85,8 @@ class WykopGoldSampler {
 		Map<LocalDate, List<WykopItem>> byDay = new TreeMap<>();
 		for (LocalDate day : days) {
 			WykopSearchResult result = wykop.itemsOfDay(TAG, day);
-			byDay.put(day, result.items());
-			System.out.printf("%s: %d elements read, %d skipped (unexpected shape)%n", day, result.items().size(),
+			byDay.put(day, result.elements().stream().map(WykopSearchResult.Element::item).toList());
+			System.out.printf("%s: %d elements read, %d skipped (unexpected shape)%n", day, result.elements().size(),
 					result.skippedElements());
 		}
 

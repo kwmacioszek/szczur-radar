@@ -22,7 +22,12 @@ Pakiet bazowy `pl.szczurradar.api`, pakiety według funkcji — nie według wars
 | `config` | Spring Security, sesja i ciasteczko, format błędów `{"detail": …}`, konfiguracja dostawcy LLM |
 | `agents` | agenci Embabel; `agents/assessor` — kontrakt oceny V2 jako kod (model, schemat, parser, walidator D1–D15, odsiew), prompt z wersją, `Assessor` (jedno wywołanie modelu na wpis) i `AssessorAgent` |
 | `llm` | klienci dostawców LLM (`LlmClient`); jedyne ponowienia transportowe (`TransportRetry`) |
-| `sources` | źródła danych → wejście kontraktu (jak dodać źródło: `sources/CLAUDE.md`); `sources/wykop` — `WykopApiClient` (autoryzacja, `GET`), `WykopRepository` (wyszukiwarka: wpisy i znaleziska z tagiem w zakresie dat), `WykopMapper` (wpis → `post`, znalezisko → `link`, czas Europe/Warsaw); w pipeline podłączane w S-02 |
+| `sources` | źródła danych → wejście kontraktu (jak dodać źródło: `sources/CLAUDE.md`); `sources/wykop` — `WykopApiClient` (autoryzacja, `GET`), `WykopRepository` (wyszukiwarka: wpisy i znaleziska z tagiem w zakresie dat), `WykopMapper` (wpis → `post`, znalezisko → `link`, czas Europe/Warsaw), `WykopConfiguration` (bean z `WYKOP_KEY`/`WYKOP_SECRET`); `Source` (enum źródeł) |
+| `pipeline` | przebiegi pipeline'u: encje `PipelineRun`, `PipelineRunStep` i ich repozytoria (S-02) |
+| `posts` | posty i każda próba oceny: encje `Post`, `Assessment`, repozytoria (lista od najnowszych, resztki do ponowienia, ostatnia ocena) |
+| `raw` | surowe payloady źródeł osobno od danych aplikacji: `RawPayloadStore` (gzip + SHA-256 w tabeli `raw_payloads`) |
+| `persistence` | wspólne klocki zapisu: `EnumValueConverter` (enum ↔ wartość z `CHECK`), `Sha256` |
+| `text` | `Whitespace` — zbiór białych znaków kontraktu (§10), wspólny dla `agents`, `llm` i `sources` |
 
 Kolejne moduły dochodzą obok, bez mieszania infrastruktury z domeną (`context/foundation/lessons.md`).
 
@@ -61,6 +66,19 @@ Opcjonalne ustawienia wywołania klienta oceny (`llm/`), nie są sekretami:
 - Lokalnie trzymaj ustawienia poza repo, np. w `~/.config/szczur-radar/llm.env` (`chmod 600`) i `source` przed `./mvnw verify` lub `java -jar`.
 - CI (job `backend`): `LLM_API_PROVIDER` i `LLM_MODEL` jako GitHub Actions *variables*, `LLM_API_KEY` jako *secret*. PR env: job `railway-config` (krok „Ensure PR-env LLM settings”) ustawia w serwisie `szczur-radar-api` te same trzy wartości z CI — także nadpisuje klucz skopiowany przez Railway z produkcji — i usuwa skopiowane z produkcji opcjonalne `LLM_SERVICE_TIER`, `LLM_REASONING_EFFORT`, `LLM_TIMEOUT` (pasują do dostawcy produkcji, a nie CI; np. `flex` tylko z `openrouter`). Produkcja: operator ustawia trzy zmienne **przed** deployem, a `LLM_API_KEY` jest **zapieczętowany** (sealed), żeby Railway nie kopiował go do nowych PR env. `.railway/railway.ts` deklaruje je przez `preserve()`, które niczego nie tworzy.
 - Przy kodzie równoległym podawaj własny executor: Java 25 widzi limit CPU kontenera (`availableProcessors()` może być 1); rdzeń Embabel ma własny executor.
+
+## Wykop
+
+Przebieg pipeline'u pobiera wpisy i znaleziska z Wykopu (S-02) kluczem aplikacji:
+
+| Zmienna | Znaczenie |
+| --- | --- |
+| `WYKOP_KEY` | klucz aplikacji Wykop API v3 — sekret: nigdy w repo, logach ani argumentach |
+| `WYKOP_SECRET` | sekret aplikacji — j.w. |
+
+- Obie są **opcjonalne**: bez nich serwer, komendy i testy startują normalnie, a przebieg zakresu dat kończy się błędem `wykop_not_configured` (`sources/wykop/WykopConfiguration`). Tylko jedna z dwóch przerywa start z komunikatem (bez wartości).
+- Start nie łączy się z Wykopem: token aplikacji jest pobierany przy pierwszym zapytaniu.
+- Lokalnie jak klucz LLM: poza repo, np. `~/.config/szczur-radar/wykop.env` (`chmod 600`), i `source` przed uruchomieniem.
 
 ## Baza lokalna
 

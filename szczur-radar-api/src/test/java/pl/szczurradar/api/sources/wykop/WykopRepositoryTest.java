@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
+import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.ObjectNode;
@@ -37,7 +38,7 @@ class WykopRepositoryTest {
 	@Test
 	void readsEntriesAndLinksOfADayWithTheTagAndDateRange() {
 		try (LocalWykopServer server = new LocalWykopServer(request -> answer(request, WHOLE_DAY))) {
-			List<WykopItem> items = repository(server).itemsOfDay("gielda", LocalDate.parse("2026-10-01")).items();
+			List<WykopItem> items = items(repository(server).itemsOfDay("gielda", LocalDate.parse("2026-10-01")));
 
 			assertThat(items).hasSize(12 + 4);
 			assertThat(items.subList(0, 12)).allSatisfy(item -> assertThat(item.resource()).isEqualTo("entry"));
@@ -55,12 +56,32 @@ class WykopRepositoryTest {
 	}
 
 	@Test
+	void eachElementKeepsItsRawFormWithEveryFieldOfTheAnswer() {
+		try (LocalWykopServer server = new LocalWykopServer(request -> answer(request, WHOLE_DAY))) {
+			List<WykopSearchResult.Element> elements = repository(server)
+				.itemsOfDay("gielda", LocalDate.parse("2026-10-01"))
+				.elements();
+
+			JsonNode firstEntry = MAPPER.readTree(WHOLE_DAY).get("data").get(0);
+			JsonNode firstLink = MAPPER.readTree(LINKS).get("data").get(0);
+			assertThat(elements.getFirst().raw()).isEqualTo(firstEntry);
+			assertThat(elements.get(12).raw()).isEqualTo(firstLink);
+			// Fields the assessment never reads are kept in the raw element.
+			assertThat(elements.getFirst().raw().has("votes")).isTrue();
+			assertThat(elements.getFirst().raw().has("comments")).isTrue();
+			assertThat(elements.get(12).raw().has("source")).isTrue();
+			assertThat(elements).allSatisfy(element -> assertThat(element.raw().get("id").asLong())
+				.isEqualTo(element.item().id()));
+		}
+	}
+
+	@Test
 	void pagesUntilTheTotalIsReached() {
 		// The real 12-entry page served as three full pages of 50 (the page's items repeated, total
 		// set to 150): the repository must ask for pages 1–3 and stop without a fourth request.
 		String fullPage = withItems(ENTRIES, 50, 150);
 		try (LocalWykopServer server = new LocalWykopServer(request -> answer(request, fullPage))) {
-			List<WykopItem> items = repository(server).itemsOfDay("gielda", LocalDate.parse("2026-10-01")).items();
+			List<WykopItem> items = items(repository(server).itemsOfDay("gielda", LocalDate.parse("2026-10-01")));
 
 			// Repeated elements are kept once (12 distinct entries + 4 links).
 			assertThat(items).hasSize(12 + 4);
@@ -76,7 +97,7 @@ class WykopRepositoryTest {
 		ObjectNode noTotal = (ObjectNode) MAPPER.readTree(ENTRIES);
 		noTotal.remove("pagination");
 		try (LocalWykopServer server = new LocalWykopServer(request -> answer(request, noTotal.toString()))) {
-			assertThat(repository(server).itemsOfDay("gielda", LocalDate.parse("2026-10-01")).items()).hasSize(16);
+			assertThat(items(repository(server).itemsOfDay("gielda", LocalDate.parse("2026-10-01")))).hasSize(16);
 			assertThat(searches(server)).hasSize(2);
 		}
 	}
@@ -90,7 +111,7 @@ class WykopRepositoryTest {
 			WykopSearchResult result = repository(server).itemsOfDay("gielda", LocalDate.parse("2026-10-01"));
 
 			assertThat(result.skippedElements()).isEqualTo(1);
-			assertThat(result.items()).hasSize(11 + 4);
+			assertThat(result.elements()).hasSize(11 + 4);
 		}
 	}
 
@@ -126,6 +147,10 @@ class WykopRepositoryTest {
 				.satisfies(ex -> assertThat(ex.failure()).isEqualTo(WykopFailure.PAGE_LIMIT));
 			assertThat(searches(server)).hasSize(WykopRepository.MAX_PAGES);
 		}
+	}
+
+	private static List<WykopItem> items(WykopSearchResult result) {
+		return result.elements().stream().map(WykopSearchResult.Element::item).toList();
 	}
 
 	private static Reply answer(Request request, String entries) {

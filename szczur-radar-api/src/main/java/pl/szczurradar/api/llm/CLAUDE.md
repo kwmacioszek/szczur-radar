@@ -37,7 +37,8 @@ blank answer) is judged with the shared `text/Whitespace`, never `isBlank`. An a
 ## Adding a provider
 
 1. A `Provider` constant in `config/LlmProviderProperties` (+ `application-<provider>.properties`
-   for Embabel's registry).
+   for Embabel's registry), and its value (and any new `Channel`) in the `CHECK` sets of
+   `assessments.provider` / `assessments.channel` through a new Flyway migration.
 2. A client class building its `ChatModel` in `LlmClientFactory` with every SDK/framework retry off
    and the timeout set; translate HTTP errors into `TransportException` (status + `Retry-After`).
 3. Its schema subset in `ProviderSchemas`.
