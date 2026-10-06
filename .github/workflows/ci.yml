@@ -146,12 +146,14 @@ jobs:
             exit 1
           fi
       # `-e NAME` (no value) passes the job's env through to the container.
+      # Exactly Railway's preDeploy (.railway/railway.ts): it replaces the image
+      # ENTRYPOINT and resolves target/… against WORKDIR /app.
       - name: Run migrations (Railway pre-deploy command)
         run: |
-          docker run --rm --network host \
+          docker run --rm --network host --entrypoint java \
             -e PGHOST -e PGPORT -e PGDATABASE -e PGUSER -e PGPASSWORD \
             -e LLM_API_PROVIDER -e LLM_MODEL -e LLM_API_KEY \
-            szczur-radar-api migrate
+            szczur-radar-api -jar target/szczur-radar-api.jar migrate
       - name: Run server
         run: |
           docker run -d --name api --network host -e PORT=8000 \
@@ -281,7 +283,7 @@ jobs:
             jq '{ok, currentEnvironment, diagnostics}' plan.json
             exit 1
           }
-          # Never destroy anything automatically (e.g. the Postgres-PITR bucket).
+          # Never destroy anything automatically (e.g. a database, bucket or variable).
           blocked=$(jq '[.changeSet.changes[]? | select(.severity == "destructive" or .kind == "resource.delete")]' plan.json)
           # Never rewrite a service's source/branch automatically, in ANY env:
           # PR envs track the PR branch (IAC_SOURCE_BRANCH), production tracks main.
