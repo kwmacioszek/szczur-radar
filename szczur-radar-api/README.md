@@ -59,7 +59,7 @@ Opcjonalne ustawienia wywołania klienta oceny (`llm/`), nie są sekretami:
 - Ocena nie korzysta z `createObject` Embabel: klient z `llm/` (`LlmClientFactory`) buduje `ChatModel` Spring AI z tych samych zmiennych, z wyłączonymi ponowieniami frameworka i SDK; jedyne ponowienia (do 3 prób na 429, 5xx, przekroczenie czasu, błąd połączenia) są w `llm/TransportRetry`. Klient powstaje leniwie — start nie łączy się z dostawcą.
 - Brak lub błąd którejkolwiek z trzech wartości przerywa start z komunikatem (bez wartości klucza) — `config/LlmProviderProperties`. Start **nie wywołuje LLM** (klient powstaje przy pierwszej ocenie), więc nie sprawdza ważności klucza u dostawcy; `AssessorAgentIT` uruchamia agenta tylko na wpisie bez treści, który rozstrzyga odsiew.
 - Lokalnie trzymaj ustawienia poza repo, np. w `~/.config/szczur-radar/llm.env` (`chmod 600`) i `source` przed `./mvnw verify` lub `java -jar`.
-- CI (job `backend`): `LLM_API_PROVIDER` i `LLM_MODEL` jako GitHub Actions *variables*, `LLM_API_KEY` jako *secret*. PR env: job `railway-config` (krok „Ensure PR-env LLM settings”) ustawia w serwisie `szczur-radar-api` te same trzy wartości z CI — także nadpisuje klucz skopiowany przez Railway z produkcji. Produkcja: operator ustawia trzy zmienne **przed** deployem, a `LLM_API_KEY` jest **zapieczętowany** (sealed), żeby Railway nie kopiował go do nowych PR env. `.railway/railway.ts` deklaruje je przez `preserve()`, które niczego nie tworzy.
+- CI (job `backend`): `LLM_API_PROVIDER` i `LLM_MODEL` jako GitHub Actions *variables*, `LLM_API_KEY` jako *secret*. PR env: job `railway-config` (krok „Ensure PR-env LLM settings”) ustawia w serwisie `szczur-radar-api` te same trzy wartości z CI — także nadpisuje klucz skopiowany przez Railway z produkcji — i usuwa skopiowane z produkcji opcjonalne `LLM_SERVICE_TIER`, `LLM_REASONING_EFFORT`, `LLM_TIMEOUT` (pasują do dostawcy produkcji, a nie CI; np. `flex` tylko z `openrouter`). Produkcja: operator ustawia trzy zmienne **przed** deployem, a `LLM_API_KEY` jest **zapieczętowany** (sealed), żeby Railway nie kopiował go do nowych PR env. `.railway/railway.ts` deklaruje je przez `preserve()`, które niczego nie tworzy.
 - Przy kodzie równoległym podawaj własny executor: Java 25 widzi limit CPU kontenera (`availableProcessors()` może być 1); rdzeń Embabel ma własny executor.
 
 ## Baza lokalna
@@ -89,11 +89,11 @@ Schemat należy wyłącznie do plików SQL w `src/main/resources/db/migration/` 
 java -jar target/szczur-radar-api.jar migrate   # albo: ./mvnw spring-boot:run -Dspring-boot.run.arguments=migrate
 ```
 
-- **Fix-forward:** wdrożonej migracji nigdy się nie edytuje; błąd naprawia kolejna migracja. Flyway Community nie ma `undo`; ostatecznością jest PITR bazy (`context/deployment/deploy-plan.md`).
+- **Fix-forward:** wdrożonej migracji nigdy się nie edytuje; błąd naprawia kolejna migracja. Flyway Community nie ma `undo`; ostatecznością jest odtworzenie backupu bazy — do czasu subskrypcji Railway backupu nie ma (`context/deployment/deploy-plan.md`).
 - Ograniczenia mają jawne nazwy (`ck_…`, `uq_…`), żeby kolejne migracje mogły się do nich odwołać.
 - `MigrationsIT` stosuje wszystkie migracje od zera na pustej bazie i sprawdza ograniczenia.
 - **JPA nie zarządza schematem:** `spring.jpa.hibernate.ddl-auto=none`, a przy starcie Hibernate nie łączy się z bazą (jawny dialekt, `hibernate.boot.allow_jdbc_metadata_access=false`), więc serwer startuje bez bazy. Każda zmiana encji wymaga nowej migracji; `JpaSchemaIT` (`ddl-auto=validate` na schemacie z Flyway) wywala build, gdy encja i schemat się rozjadą.
-- Na Railway migracje uruchamia **pre-deploy** serwisu API (`java -jar target/szczur-radar-api.jar migrate`, `.railway/railway.ts`) przed startem nowej wersji — nieudana migracja zatrzymuje deploy, a poprzednia wersja działa dalej.
+- Na Railway migracje uruchamia **pre-deploy** serwisu API (`java -jar target/szczur-radar-api.jar migrate`, `.railway/railway.ts`) w kontenerze z tego samego obrazu (katalog `/app`) przed startem nowej wersji — nieudana migracja zatrzymuje deploy, a poprzednia wersja działa dalej.
 
 ## Komendy operatora
 
@@ -109,6 +109,22 @@ java -jar target/szczur-radar-api.jar create-admin --email ty@example.com   # e-
 ```
 
 `create-admin` tworzy **pierwszego** administratora (odmawia, gdy admin już istnieje — kolejne konta i odzyskiwanie to S-07). Hasło jest pobierane dwa razy z ukrytego promptu, nigdy z argumentu, i nie trafia do logów; polityka 12–128 znaków. Bootstrap jest serializowany blokadą `pg_advisory_xact_lock`, więc równoległe uruchomienia tworzą dokładnie jednego admina. Kody wyjścia: 0 utworzono, 1 odmowa, 2 błąd użycia lub konfiguracji (brak/zły e-mail, brak zmiennych `PG*`, brak konsoli). Komendy uruchamiają wspólny kontekst Springa, więc też potrzebują trzech ustawień LLM.
+
+## Obraz Dockera (Railway, CI)
+
+`Dockerfile` w tym katalogu buduje API na Railway (wykrywany automatycznie, jak w `szczur-radar-web`) i w CI (job `api-container-smoke`) — ten sam obraz lokalnie:
+
+```bash
+docker build -t szczur-radar-api .
+# Postgres z compose.local.yaml; z kontenera host to host.docker.internal (macOS/Windows)
+docker run --rm -e PGHOST=host.docker.internal -e PGPORT=5432 -e PGDATABASE=… -e PGUSER=… -e PGPASSWORD=… \
+  -e LLM_API_PROVIDER -e LLM_MODEL -e LLM_API_KEY szczur-radar-api migrate
+docker run --rm -p 8000:8000 -e PORT=8000 … szczur-radar-api        # serwer
+```
+
+- Etap build: `eclipse-temurin:25-jdk-noble`, `./mvnw` (zależności w osobnej warstwie, testy pominięte — uruchamia je CI). Etap runtime: `eclipse-temurin:25-jre-noble`, użytkownik `app` bez roota, `WORKDIR /app`, jar w `/app/target/szczur-radar-api.jar`.
+- `ENTRYPOINT` uruchamia jar z `-XX:MaxRAMPercentage=75` (domyślnie JVM bierze na heap 25% pamięci kontenera). Dodatkowe flagi: zmienna `JAVA_TOOL_OPTIONS`. Bez `CMD`: argumenty `docker run` to nazwa komendy.
+- `.railway/railway.ts` nie ustawia komendy startowej (zastąpiłaby `ENTRYPOINT`, bez rozwijania zmiennych). Pre-deploy działa w kontenerze z tego obrazu względem `/app`. Powłoka `railway ssh` działa jako root, aplikacja jako `app`.
 
 ## Testy
 

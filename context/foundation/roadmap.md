@@ -35,6 +35,8 @@ milestone_status: open
 
 > v2.10 (2026-10-06): S-05 — zajawka sposobu uruchamiania (cron woła wewnętrzny endpoint API zamiast startować kontener z obrazem API), z badania `api-docker-image` (wpis z 2026-10-04, przenumerowany przy scaleniu z F-02).
 
+> v2.11 (2026-10-06): F-01 i pytanie 4 — PITR wyłączone, a jego bucket usunięty ze względu na koszty (`api-docker-image`). Backup bazy: brak do czasu subskrypcji; przed S-05 dzienna kopia wolumenu Railway i test odtwarzania (`Block: F-01 → S-05` bez zmian).
+
 ## Milestone
 
 **M-1: MVP — ocenione sygnały z Wykopu dla zaproszonych osób** — Status: open
@@ -96,7 +98,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 
 ### F-01: Bramka produkcyjnych danych
 
-- **Outcome:** (foundation) produkcja jest gotowa na zbieranie prawdziwych danych: aktywna subskrypcja, ustawione limity kosztów, restore drill zakończony zdrowym, odpytywalnym odtworzeniem, sekrety Wykopu/LLM zapieczętowane i niedostępne w środowiskach PR.
+- **Outcome:** (foundation) produkcja jest gotowa na zbieranie prawdziwych danych: aktywna subskrypcja, ustawione limity kosztów, włączona dzienna kopia wolumenu Postgres (zamiast PITR, wyłączonego 2026-10-06), restore drill zakończony zdrowym, odpytywalnym odtworzeniem, sekrety Wykopu/LLM zapieczętowane i niedostępne w środowiskach PR.
 - **Change ID:** production-data-gate
 - **PRD refs:** NFR (dane przechowywane bezterminowo; bezpieczeństwo przed utratą danych po stronie platformy), Open Question 4; guardrail kosztów LLM
 - **Unlocks:** S-05 (codzienne zbieranie prawdziwych danych na produkcji); ścieżka weryfikacji „odtworzenie backupu działa” wymagana przez `deploy-plan.md` przed fazą 6
@@ -105,6 +107,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:**
   - Czy czysty restore drill przejdzie po subskrypcji; jeśli nie — powrót do alternatywnej platformy z `infrastructure.md` (ryzyko nr 1). — Owner: user. Block: no.
+  - Backup bazy: brak do czasu subskrypcji (2026-10-06, `api-docker-image`): PITR wyłączone, bucket usunięty (koszty; baza bez prawdziwych danych). Po subskrypcji: dzienna kopia wolumenu Railway (Daily, 6 dni) i test odtwarzania zakończony odpytywalną bazą; kopie giną przy wyczyszczeniu wolumenu i odtwarzają się tylko w tym samym środowisku (`deploy-plan.md`, sekcja `api-docker-image`). — Owner: user. Block: no.
 - **Risk:** Praca operatorska bez kodu produktu; sekwencjonowana na starcie równolegle, żeby nie stała się niespodziewaną blokadą S-05 tuż przed terminem.
 - **Status:** ready
 
@@ -253,7 +256,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 1. **Czy `product_type` to "data-pipeline" czy "web-app"?** — Projekt to dwa moduły: pipeline+API jako rdzeń, pełnoprawna aplikacja webowa (logowanie, dashboard, lista/filtrowanie) jako warstwa konsumpcji. Wybrano `data-pipeline` jako najbliższą pojedynczą wartość; do doprecyzowania przy `/10x-tech-stack-selector`. Owner: użytkownik. Block: — (w praktyce rozstrzygnięte przez dwa osobne dokumenty stacku; nie wpływa na kolejność).
 2. **Dokładny kształt pól w JSON zwracanym przez ocenę LLM** — ROZSTRZYGNIĘTE 2026-09-27 przez kontrakt V1; od 2026-10-01 obowiązuje `context/foundation/llm-assessment/contract-v2.md` (V2, bez grafu argumentów). Owner: użytkownik. Block: — (odblokowało S-02; PRD wskazuje kontrakt V2).
 3. **Kanał i próg dla FR-025 (powiadomienia o obiecującym trendzie)** — nie ustalono jeszcze, czym jest "obiecujący trend" liczbowo ani gdzie ma trafiać powiadomienie. Owner: użytkownik. Block: — (FR-025 odroczone).
-4. **Backup/retencja na docelowej platformie hostingowej** — PITR włączone, ale czysty restore drill i limity kosztów czekają na subskrypcję (`deploy-plan.md`). Owner: użytkownik. Block: F-01 → S-05.
+4. **Backup/retencja na docelowej platformie hostingowej** — Backup bazy: brak do czasu subskrypcji. PITR wyłączone 2026-10-06 ze względu na koszty (`api-docker-image`); po subskrypcji dzienna kopia wolumenu Railway (Daily, 6 dni), czysty test odtwarzania i limity kosztów (`deploy-plan.md`). Owner: użytkownik. Block: F-01 → S-05.
 5. **Budżet kosztów LLM na przebieg** — guardrail PRD każe minimalizować koszt zapytań, ale nie podaje pułapu (na dzień ani na post); kontrakt V2 wymaga zapisu zużycia tokenów, a F-02 mierzy koszt kandydatów na zestawie wzorcowym. Owner: użytkownik. Block: — (wpływa na F-02, S-02 i S-05, nie blokuje planowania).
 6. **[ROZSTRZYGNIĘTE 2026-09-27 — PRD v2: bez automatycznej decyzji w MVP, §Business Logic + §Non-Goals]** **„Wartościowy sygnał” w MVP** — PRD §Business Logic mówi, że wynik oceny zawiera „czy jest wartościowy”, a kontrakt V1 zabrania LLM zwracania `is_valuable`/`is_signal` i przenosi decyzję o sygnale do osobnego, dalszego etapu, którego żaden FR nie opisuje. Czy MVP wystarcza trafność + stanowisko + teza z argumentami (bez decyzji „wartościowy”), czy potrzebna jest prosta reguła decyzji jako nowy FR? Owner: użytkownik. Block: — (S-02 może pokazać ocenę bez tej decyzji; wymaga aktualizacji PRD §Business Logic).
 7. **[ROZSTRZYGNIĘTE 2026-09-27 — PRD v2: poza MVP, filtr tekstowy w FR-011a]** **Rozpoznawanie spółek (entity resolution)** — kontrakt V1 przenosi ustalanie, o którą spółkę chodzi, poza LLM; PRD nie ma dla tego FR. Wpływa na filtr po spółce (S-04) i przyszły wykres per spółka (FR-024). Owner: użytkownik. Block: — (odblokowało S-04).

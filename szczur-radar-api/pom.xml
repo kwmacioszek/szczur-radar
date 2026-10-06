@@ -146,7 +146,7 @@
 	</dependencies>
 
 	<build>
-		<!-- Fixed artifact path for Railway start/pre-deploy: target/szczur-radar-api.jar -->
+		<!-- Fixed artifact path for the Dockerfile ENTRYPOINT and the Railway pre-deploy: target/szczur-radar-api.jar -->
 		<finalName>szczur-radar-api</finalName>
 		<plugins>
 			<plugin>

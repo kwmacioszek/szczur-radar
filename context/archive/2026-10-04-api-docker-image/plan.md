@@ -240,34 +240,34 @@ Brak danych do migracji. Produkcja przełącza się przy merge: `railway-config`
 
 #### Automated
 
-- [x] 1.1 Obraz buduje się lokalnie z czystego kontekstu: `docker build -t szczur-radar-api ./szczur-radar-api` — f96804a
-- [x] 1.2 Kontekst budowania nie zawiera `target/`: `grep -qx 'target' szczur-radar-api/.dockerignore` — f96804a
-- [x] 1.3 Testy backendu przechodzą: `cd szczur-radar-api && ./mvnw -B verify` — f96804a
-- [x] 1.4 Job CI `api-container-smoke` jest zielony na PR (non-root, `migrate` = 0, `/api/health` i `/api/ready` = 200) — f96804a
-- [x] 1.5 Job CI `railway-config` jest zielony na PR, a wypisany diff planu pokazuje wyczyszczenie komendy startowej API (lub fallback z `start` bez `$`) i żadnej zmiany destrukcyjnej ani `source` — f96804a
-- [x] 1.6 Pozostałe joby CI (`backend`, `web-unit`, `web-container-smoke`) są zielone na PR — f96804a
-- [x] 1.12 IaC nie deklaruje bucketa PITR: `rg -n 'pitrBucket|bucket\("Postgres-PITR"' .railway/railway.ts` nie znajduje trafień — f96804a
+- [x] 1.1 Obraz buduje się lokalnie z czystego kontekstu: `docker build -t szczur-radar-api ./szczur-radar-api` — 721bb8a
+- [x] 1.2 Kontekst budowania nie zawiera `target/`: `grep -qx 'target' szczur-radar-api/.dockerignore` — 721bb8a
+- [x] 1.3 Testy backendu przechodzą: `cd szczur-radar-api && ./mvnw -B verify` — 721bb8a
+- [x] 1.4 Job CI `api-container-smoke` jest zielony na PR (non-root, `migrate` = 0, `/api/health` i `/api/ready` = 200) — 721bb8a
+- [x] 1.5 Job CI `railway-config` jest zielony na PR, a wypisany diff planu pokazuje wyczyszczenie komendy startowej API (lub fallback z `start` bez `$`) i żadnej zmiany destrukcyjnej ani `source` — 721bb8a
+- [x] 1.6 Pozostałe joby CI (`backend`, `web-unit`, `web-container-smoke`) są zielone na PR — 721bb8a
+- [x] 1.12 IaC nie deklaruje bucketa PITR: `rg -n 'pitrBucket|bucket\("Postgres-PITR"' .railway/railway.ts` nie znajduje trafień — 721bb8a
 
 #### Manual
 
-- [x] 1.7 Log builda API w Railway PR env pokazuje build z Dockerfile'a („Using detected Dockerfile”), nie Railpacka — f96804a
-- [x] 1.8 Kontener pre-deploy w PR env wykonał `migrate` z kodem 0, a deploy przeszedł healthcheck `/api/health` — f96804a
-- [x] 1.9 Logowanie admina przez web w PR env działa end-to-end (proxy `/api/*` → API z obrazu) — f96804a
-- [x] 1.10 `railway ssh` do API w PR env: powłoka działa jako użytkownik bez roota, `java -jar target/szczur-radar-api.jar` z `/app` uruchamia komendę — f96804a
-- [x] 1.11 Zmierzone w PR env i zapisane w opisie PR: limit pamięci, heap i GC, rozmiar obrazu, czas builda, pierwsze wejście po uśpieniu — f96804a
-- [x] 1.13 W PR env PITR jest wyłączone, bucket `Postgres-PITR` nie istnieje, `/api/ready` i logowanie działają po cleanupie — f96804a
+- [x] 1.7 Log builda API w Railway PR env pokazuje build z Dockerfile'a („Using detected Dockerfile”), nie Railpacka — 721bb8a
+- [x] 1.8 Kontener pre-deploy w PR env wykonał `migrate` z kodem 0, a deploy przeszedł healthcheck `/api/health` — 721bb8a
+- [x] 1.9 Logowanie admina przez web w PR env działa end-to-end (proxy `/api/*` → API z obrazu) — 721bb8a
+- [x] 1.10 `railway ssh` do API w PR env: powłoka działa jako użytkownik bez roota, `java -jar target/szczur-radar-api.jar` z `/app` uruchamia komendę — 721bb8a
+- [x] 1.11 Zmierzone w PR env i zapisane w opisie PR: limit pamięci, heap i GC, rozmiar obrazu, czas builda, pierwsze wejście po uśpieniu — 721bb8a
+- [x] 1.13 W PR env PITR jest wyłączone, bucket `Postgres-PITR` nie istnieje, `/api/ready` i logowanie działają po cleanupie — 721bb8a
 
 ### Phase 2: Dokumentacja
 
 #### Automated
 
-- [ ] 2.1 Bieżące dokumenty nie opisują Railpacka jako buildu API poza historią i komentarzem zmiennej
-- [ ] 2.2 `REPOSITORY_GUIDELINES.md` wymienia nowy job `api-container-smoke`
-- [ ] 2.3 CI na PR jest zielone po zmianach dokumentów
-- [ ] 2.6 Stan backupu jest zapisany w dokumentach, a warunek przed S-05 zostaje; renderer i obraz roadmapy są aktualne
+- [x] 2.1 Bieżące dokumenty nie opisują Railpacka jako buildu API poza historią i komentarzem zmiennej — 90c49c9
+- [x] 2.2 `REPOSITORY_GUIDELINES.md` wymienia nowy job `api-container-smoke` — 90c49c9
+- [x] 2.3 CI na PR jest zielone po zmianach dokumentów — 90c49c9
+- [x] 2.6 Stan backupu jest zapisany w dokumentach, a warunek przed S-05 zostaje; renderer i obraz roadmapy są aktualne — 90c49c9
 
 #### Manual
 
-- [ ] 2.4 Użytkownik przeczytał zmienione fragmenty `deploy-plan.md`, `infrastructure.md` i `REPOSITORY_GUIDELINES.md` i potwierdził zgodność z wynikami z PR env
-- [ ] 2.5 Runbook przełączenia produkcji w `deploy-plan.md` jest kompletny
-- [ ] 2.7 Runbook wyłączenia PITR i usunięcia bucketa oraz opis dziennego backupu są spójne z IaC, wynikami z PR env i zakładką Backups
+- [x] 2.4 Użytkownik przeczytał zmienione fragmenty `deploy-plan.md`, `infrastructure.md` i `REPOSITORY_GUIDELINES.md` i potwierdził zgodność z wynikami z PR env — 90c49c9
+- [x] 2.5 Runbook przełączenia produkcji w `deploy-plan.md` jest kompletny — 90c49c9
+- [x] 2.7 Runbook wyłączenia PITR i usunięcia bucketa oraz opis dziennego backupu są spójne z IaC, wynikami z PR env i zakładką Backups — 90c49c9
