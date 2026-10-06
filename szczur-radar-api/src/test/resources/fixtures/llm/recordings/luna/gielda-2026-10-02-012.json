@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-02-012",
+  "configId" : "luna",
+  "provider" : "openrouter",
+  "model" : "openai/gpt-6-luna",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T18:58:50.706709Z",
+  "rawText" : "{\n  \"relevance\": \"investment_related\",\n  \"modifiers\": [],\n  \"targets\": [\n    {\n      \"id\": \"t1\",\n      \"kind\": \"unknown\",\n      \"anchor\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"wszystkie moje spółki\"\n      },\n      \"stance\": {\n        \"direction\": \"bullish\",\n        \"assertiveness\": \"hedged\",\n        \"claim_ids\": [\"c1\"]\n      },\n      \"reference\": \"unresolved\"\n    },\n    {\n      \"id\": \"t2\",\n      \"kind\": \"macro_topic\",\n      \"anchor\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"spadki\"\n      },\n      \"stance\": {\n        \"direction\": \"bearish\",\n        \"assertiveness\": \"hedged\",\n        \"claim_ids\": [\"c2\"]\n      },\n      \"reference\": \"explicit\"\n    }\n  ],\n  \"claims\": [\n    {\n      \"id\": \"c1\",\n      \"kind\": \"factual_claim\",\n      \"attribution\": \"author\",\n      \"target_ids\": [\"t1\"],\n      \"evidence\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"wszystkie moje spółki rosną, ewentualnie boczniak\"\n      },\n      \"statement\": \"Wszystkie moje spółki rosną albo poruszają się bocznie.\"\n    },\n    {\n      \"id\": \"c2\",\n      \"kind\": \"investment_thesis\",\n      \"attribution\": \"author\",\n      \"target_ids\": [\"t2\"],\n      \"evidence\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"Klimat pod spadki 10-15% na giełdzie jest, ale coś nie chce jebnąć :/\"\n      },\n      \"statement\": \"Jest klimat pod spadki 10-15% na giełdzie, ale rynek nie chce spaść.\"\n    },\n    {\n      \"id\": \"c3\",\n      \"kind\": \"trade_action\",\n      \"attribution\": \"author\",\n      \"target_ids\": [],\n      \"evidence\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"będę miał 12k do wydania w połowie października\"\n      },\n      \"statement\": \"Autor będzie miał 12k do wydania w połowie października.\"\n    }\n  ],\n  \"flags\": []\n}",
+  "inputTokens" : 3389,
+  "outputTokens" : 1860,
+  "cachedTokens" : 3215,
+  "durationMs" : 16915,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

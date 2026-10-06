@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-01-058",
+  "configId" : "luna",
+  "provider" : "openrouter",
+  "model" : "openai/gpt-6-luna",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T18:56:31.825696Z",
+  "rawText" : "{\"relevance\":\"investment_related\",\"modifiers\":[],\"targets\":[{\"id\":\"t1\",\"kind\":\"company\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"#PKN\"},\"stance\":{\"direction\":\"bearish\",\"assertiveness\":\"hedged\",\"claim_ids\":[\"c1\",\"c2\"]},\"reference\":\"explicit\"}],\"claims\":[{\"id\":\"c1\",\"kind\":\"trade_action\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"sprzedałem cały pakiet #PKN #ORLEN rok temu za 55 zł\"},\"statement\":\"Sprzedałem cały pakiet rok temu za 55 zł.\"},{\"id\":\"c2\",\"kind\":\"investment_thesis\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"Dobrze, że sprzedałem cały pakiet #PKN #ORLEN rok temu za 55 zł, bo tak czułem, że tutaj coś się odwali.\"},\"statement\":\"Czułem, że coś złego może się wydarzyć, i dobrze, że sprzedałem pakiet.\"}],\"flags\":[]}",
+  "inputTokens" : 3352,
+  "outputTokens" : 882,
+  "cachedTokens" : 3215,
+  "durationMs" : 8244,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

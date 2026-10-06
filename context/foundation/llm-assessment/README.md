@@ -64,3 +64,5 @@ Jeżeli realny przypadek z Wykopu lub Reddita nie mieści się w V2:
 2. opisz brak kontraktu;
 3. zaproponuj minimalną zmianę `contract-v2.md`;
 4. dopiero po zaakceptowaniu zmiany aktualizuj schema/code/tests (i instrukcję oznaczania, jeśli zmienia się semantyka).
+
+- [`hardening-sources.md`](./hardening-sources.md) — źródła do toru „LLM hardening” po MVP (ironia, sarkazm, stanowisko); niezweryfikowane.

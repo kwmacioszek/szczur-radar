@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-01-001",
+  "configId" : "luna",
+  "provider" : "openrouter",
+  "model" : "openai/gpt-6-luna",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T18:48:15.079760Z",
+  "rawText" : "{\n  \"relevance\": \"investment_related\",\n  \"modifiers\": [],\n  \"targets\": [\n    {\n      \"id\": \"t1\",\n      \"kind\": \"company\",\n      \"anchor\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"Microna\"\n      },\n      \"stance\": {\n        \"direction\": \"unclear\",\n        \"assertiveness\": null,\n        \"claim_ids\": [\"c1\", \"c2\", \"c3\"]\n      },\n      \"reference\": \"explicit\"\n    },\n    {\n      \"id\": \"t2\",\n      \"kind\": \"company\",\n      \"anchor\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"AMD\"\n      },\n      \"stance\": {\n        \"direction\": \"unclear\",\n        \"assertiveness\": null,\n        \"claim_ids\": [\"c1\", \"c2\", \"c3\"]\n      },\n      \"reference\": \"explicit\"\n    }\n  ],\n  \"claims\": [\n    {\n      \"id\": \"c1\",\n      \"kind\": \"factual_claim\",\n      \"attribution\": \"author\",\n      \"target_ids\": [\"t1\", \"t2\"],\n      \"evidence\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"54,23 mld to przychody Microna za jeden kwartał a to co widzicie to wyniki AMD\"\n      },\n      \"statement\": \"54,23 mld to przychody Microna za jeden kwartał, a widoczne wyniki dotyczą AMD.\"\n    },\n    {\n      \"id\": \"c2\",\n      \"kind\": \"opinion\",\n      \"attribution\": \"author\",\n      \"target_ids\": [\"t1\", \"t2\"],\n      \"evidence\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"Zyski to totalna deklasacja\"\n      },\n      \"statement\": \"Zyski to totalna deklasacja.\"\n    },\n    {\n      \"id\": \"c3\",\n      \"kind\": \"factual_claim\",\n      \"attribution\": \"author\",\n      \"target_ids\": [\"t1\", \"t2\"],\n      \"evidence\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"A różnica w kapitalizacji spółek to około 10-15%\"\n      },\n      \"statement\": \"Różnica w kapitalizacji spółek wynosi około 10-15%.\"\n    }\n  ],\n  \"flags\": [\"missing_context\"]\n}",
+  "inputTokens" : 3374,
+  "outputTokens" : 1777,
+  "cachedTokens" : 3215,
+  "durationMs" : 15921,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

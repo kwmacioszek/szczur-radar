@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-02-014",
+  "configId" : "gemini-flash-lite",
+  "provider" : "gemini",
+  "model" : "gemini-3.1-flash-lite",
+  "channel" : "gemini",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T18:46:32.601102Z",
+  "rawText" : "{\n  \"relevance\": \"investment_related\",\n  \"modifiers\": [],\n  \"targets\": [\n    {\n      \"id\": \"t1\",\n      \"kind\": \"company\",\n      \"anchor\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"xtb\"\n      },\n      \"stance\": {\n        \"direction\": \"not_expressed\",\n        \"assertiveness\": null,\n        \"claim_ids\": []\n      },\n      \"reference\": \"explicit\"\n    }\n  ],\n  \"claims\": [\n    {\n      \"id\": \"c1\",\n      \"kind\": \"question\",\n      \"attribution\": \"author\",\n      \"target_ids\": [],\n      \"evidence\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"skoro musze płacić podatek belki od zysków kapitałowych to jak dobrze rozumiem mogę odliczyć ulgę od dochodowego w przypadku strat kapitałowych?\"\n      },\n      \"statement\": \"Autor pyta, czy można odliczyć straty kapitałowe od podatku dochodowego.\"\n    }\n  ],\n  \"flags\": []\n}",
+  "inputTokens" : 2910,
+  "outputTokens" : 284,
+  "cachedTokens" : null,
+  "durationMs" : 1673,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

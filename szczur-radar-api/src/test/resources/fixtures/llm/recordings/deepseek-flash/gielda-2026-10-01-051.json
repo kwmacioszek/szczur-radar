@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-01-051",
+  "configId" : "deepseek-flash",
+  "provider" : "deepseek",
+  "model" : "deepseek-flash",
+  "channel" : "deepseek",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_mode",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T18:42:45.752781Z",
+  "rawText" : "{\"relevance\":\"investment_related\",\"modifiers\":[\"humor\"],\"targets\":[{\"id\":\"t1\",\"kind\":\"company\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"olejorza\"},\"stance\":{\"direction\":\"bearish\",\"assertiveness\":\"hedged\",\"claim_ids\":[\"c1\"]},\"reference\":\"explicit\"},{\"id\":\"t2\",\"kind\":\"company\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"Synektika\"},\"stance\":{\"direction\":\"bullish\",\"assertiveness\":\"hedged\",\"claim_ids\":[\"c2\"]},\"reference\":\"explicit\"}],\"claims\":[{\"id\":\"c1\",\"kind\":\"investment_thesis\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"jutro o 9:00 sprzedajecie olejorza\"},\"statement\":\"Jutro o 9:00 należy sprzedać olejorza.\"},{\"id\":\"c2\",\"kind\":\"investment_thesis\",\"attribution\":\"author\",\"target_ids\":[\"t2\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"kupujecie Synektika, bo roboty będą miały co operować po zawałach serca jakie wam olejorz dostarczy\"},\"statement\":\"Jutro o 9:00 należy kupić Synektika, bo roboty będą miały co operować po zawałach serca, jakie dostarczy olejorz.\"}],\"flags\":[\"possible_sarcasm\"]}",
+  "inputTokens" : 3703,
+  "outputTokens" : 331,
+  "cachedTokens" : 3456,
+  "durationMs" : 1710,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

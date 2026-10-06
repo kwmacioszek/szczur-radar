@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-02-015",
+  "configId" : "deepseek-flash",
+  "provider" : "deepseek",
+  "model" : "deepseek-flash",
+  "channel" : "deepseek",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_mode",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T18:43:16.055500Z",
+  "rawText" : "{\"relevance\":\"investment_related\",\"modifiers\":[\"humor\"],\"targets\":[{\"id\":\"t1\",\"kind\":\"company\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"#orlen\"},\"stance\":{\"direction\":\"bearish\",\"assertiveness\":\"hedged\",\"claim_ids\":[\"c1\",\"c2\"]},\"reference\":\"explicit\"}],\"claims\":[{\"id\":\"c1\",\"kind\":\"trade_action\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"Zdarza mi się dobrze wyczuć moment wejścia, czasem też moment wyjścia. Ale tak o-----ć jedno i drugie no to czapki z głów dla mnie proszę państwa.\"},\"statement\":\"Autor przyznaje, że źle wyczuł zarówno moment wejścia, jak i wyjścia z pozycji.\"},{\"id\":\"c2\",\"kind\":\"trade_action\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"tak, pisałem o tym wcześniej już, ale nie byłem jeszcze pewny czy to aż tak zajebisty moment na wyjście XD\"},\"statement\":\"Autor ironicznie komentuje, że nie był pewny, czy to dobry moment na wyjście z pozycji.\"}],\"flags\":[\"missing_context\"]}",
+  "inputTokens" : 3770,
+  "outputTokens" : 303,
+  "cachedTokens" : 3584,
+  "durationMs" : 1765,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

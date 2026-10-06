@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-01-002",
+  "configId" : "deepseek-flash",
+  "provider" : "deepseek",
+  "model" : "deepseek-flash",
+  "channel" : "deepseek",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_mode",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T18:41:38.066777Z",
+  "rawText" : "{\"relevance\":\"investment_related\",\"modifiers\":[],\"targets\":[{\"id\":\"t1\",\"kind\":\"company\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"hujnixa\"},\"stance\":{\"direction\":\"bullish\",\"assertiveness\":\"hedged\",\"claim_ids\":[\"c1\"]},\"reference\":\"ambiguous\"}],\"claims\":[{\"id\":\"c1\",\"kind\":\"investment_thesis\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"Dobieram hujnixa, jak dla mnie ten boczniak to okazja po tych wynikach \"},\"statement\":\"Autor dobiera (dokupuje) hujnixa, bo uważa obecną konsolidację za okazję po ostatnich wynikach.\"}],\"flags\":[\"missing_context\"]}",
+  "inputTokens" : 3668,
+  "outputTokens" : 181,
+  "cachedTokens" : 3456,
+  "durationMs" : 1259,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

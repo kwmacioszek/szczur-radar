@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-01-045",
+  "configId" : "luna",
+  "provider" : "openrouter",
+  "model" : "openai/gpt-6-luna",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T18:54:39.539854Z",
+  "rawText" : "{\"relevance\":\"investment_related\",\"modifiers\":[],\"targets\":[{\"id\":\"t1\",\"kind\":\"sector\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"banki\"},\"stance\":{\"direction\":\"bearish\",\"assertiveness\":\"hedged\",\"claim_ids\":[\"c1\"]},\"reference\":\"explicit\"}],\"claims\":[{\"id\":\"c1\",\"kind\":\"question\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"czemu od jakiegos tygodnia banki tak mocno lecą na pysk?\"},\"statement\":\"Czemu od jakiegoś tygodnia banki tak mocno lecą na pysk?\"}],\"flags\":[]}",
+  "inputTokens" : 3328,
+  "outputTokens" : 270,
+  "cachedTokens" : 3215,
+  "durationMs" : 3304,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

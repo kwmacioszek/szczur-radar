@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-01-020",
+  "configId" : "luna",
+  "provider" : "openrouter",
+  "model" : "openai/gpt-6-luna",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T18:50:56.471407Z",
+  "rawText" : "{\n  \"relevance\": \"investment_related\",\n  \"modifiers\": [],\n  \"targets\": [\n    {\n      \"id\": \"t1\",\n      \"kind\": \"company\",\n      \"anchor\": {\n        \"document\": \"item\",\n        \"field\": \"title\",\n        \"quote\": \"Meta\"\n      },\n      \"stance\": {\n        \"direction\": \"not_expressed\",\n        \"assertiveness\": null,\n        \"claim_ids\": []\n      },\n      \"reference\": \"explicit\"\n    },\n    {\n      \"id\": \"t2\",\n      \"kind\": \"company\",\n      \"anchor\": {\n        \"document\": \"item\",\n        \"field\": \"title\",\n        \"quote\": \"Amazon\"\n      },\n      \"stance\": {\n        \"direction\": \"not_expressed\",\n        \"assertiveness\": null,\n        \"claim_ids\": []\n      },\n      \"reference\": \"explicit\"\n    },\n    {\n      \"id\": \"t3\",\n      \"kind\": \"macro_topic\",\n      \"anchor\": {\n        \"document\": \"item\",\n        \"field\": \"title\",\n        \"quote\": \"AI\"\n      },\n      \"stance\": {\n        \"direction\": \"not_expressed\",\n        \"assertiveness\": null,\n        \"claim_ids\": []\n      },\n      \"reference\": \"explicit\"\n    },\n    {\n      \"id\": \"t4\",\n      \"kind\": \"other\",\n      \"anchor\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"Muse\"\n      },\n      \"stance\": {\n        \"direction\": \"not_expressed\",\n        \"assertiveness\": null,\n        \"claim_ids\": []\n      },\n      \"reference\": \"explicit\"\n    }\n  ],\n  \"claims\": [\n    {\n      \"id\": \"c1\",\n      \"kind\": \"question\",\n      \"attribution\": \"author\",\n      \"target_ids\": [\n        \"t1\",\n        \"t2\",\n        \"t3\"\n      ],\n      \"evidence\": {\n        \"document\": \"item\",\n        \"field\": \"title\",\n        \"quote\": \"Kto zarobi, gdy AI zacznie robić za nas zakupy?\"\n      },\n      \"statement\": \"Kto zarobi, gdy AI zacznie robić za nas zakupy?\"\n    },\n    {\n      \"id\": \"c2\",\n      \"kind\": \"factual_claim\",\n      \"attribution\": \"author\",\n      \"target_ids\": [\n        \"t1\",\n        \"t3\",\n        \"t4\"\n      ],\n      \"evidence\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"We wrześniu Meta (Facebook) uruchomiła Muse agenta AI, który potrafi samodzielnie przeglądać strony, znajdować produkty, porównywać oferty i przejść przez kolejne etapy zakupu.\"\n      },\n      \"statement\": \"We wrześniu Meta uruchomiła Muse, agenta AI do przeglądania stron, porównywania ofert i przechodzenia przez etapy zakupu.\"\n    },\n    {\n      \"id\": \"c3\",\n      \"kind\": \"factual_claim\",\n      \"attribution\": \"author\",\n      \"target_ids\": [\n        \"t4\"\n      ],\n      \"evidence\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"Użytkownik musi jedynie na końcu zatwierdzić transakcję.\"\n      },\n      \"statement\": \"Użytkownik musi jedynie na końcu zatwierdzić transakcję.\"\n    }\n  ],\n  \"flags\": []\n}",
+  "inputTokens" : 3394,
+  "outputTokens" : 1854,
+  "cachedTokens" : 3215,
+  "durationMs" : 16093,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

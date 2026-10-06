@@ -1,0 +1,254 @@
+[
+  {
+    "id": "gielda-2026-09-29-010",
+    "note": "twarda spacja (U+00A0) i słowa ocenzurowane przez Wykop",
+    "assessable": true,
+    "input": {
+      "schema_version": "AssessmentInputV1",
+      "item": {
+        "item_type": "post",
+        "published_at": "2026-09-29T21:00:59+02:00",
+        "channels": [
+          "gielda"
+        ],
+        "title": null,
+        "body": "czy mi sie wydaje czy micron zachowuje sie idealnie przed wynikami tak zeby w------c w kosmos? szarpniecia małe, myślałem że realizacja zyskow bardziej p--------e\n\n#gielda "
+      },
+      "context": {
+        "parent_post": null,
+        "parent_comment": null
+      }
+    }
+  },
+  {
+    "id": "gielda-2026-09-29-009",
+    "note": "„lenny face” po tagu",
+    "assessable": true,
+    "input": {
+      "schema_version": "AssessmentInputV1",
+      "item": {
+        "item_type": "post",
+        "published_at": "2026-09-29T21:10:00+02:00",
+        "channels": [
+          "gielda"
+        ],
+        "title": null,
+        "body": "#gielda \nEj koledzy pokażcie swoje Micron'y ( ͡° ͜ʖ ͡°)"
+      },
+      "context": {
+        "parent_post": null,
+        "parent_comment": null
+      }
+    }
+  },
+  {
+    "id": "gielda-2026-09-29-014",
+    "note": "kilka słów ocenzurowanych przez Wykop",
+    "assessable": true,
+    "input": {
+      "schema_version": "AssessmentInputV1",
+      "item": {
+        "item_type": "post",
+        "published_at": "2026-09-29T20:46:22+02:00",
+        "channels": [
+          "gielda"
+        ],
+        "title": null,
+        "body": "Popieprzone czasy koledzy. Czuje się jak na studiach w Londynie z których mnie w------i za wódkę i n-------i bo miałem je kompletnie w p-----e i zarabiałem po $2K dziennie. Jeszcze żebym miał na co wydawać tą kasę. Przestaje mieć to sens. Studia ostatecznie skończyłem. \n#gielda "
+      },
+      "context": {
+        "parent_post": null,
+        "parent_comment": null
+      }
+    }
+  },
+  {
+    "id": "gielda-2026-09-29-051",
+    "note": "emoji i krótka treść po tagu",
+    "assessable": true,
+    "input": {
+      "schema_version": "AssessmentInputV1",
+      "item": {
+        "item_type": "post",
+        "published_at": "2026-09-29T16:25:12+02:00",
+        "channels": [
+          "gielda"
+        ],
+        "title": null,
+        "body": "#gielda asbis ath xd 🤣 "
+      },
+      "context": {
+        "parent_post": null,
+        "parent_comment": null
+      }
+    }
+  },
+  {
+    "id": "gielda-2026-09-29-023",
+    "note": "tagi i wzmianka, potem pytanie",
+    "assessable": true,
+    "input": {
+      "schema_version": "AssessmentInputV1",
+      "item": {
+        "item_type": "post",
+        "published_at": "2026-09-29T19:47:29+02:00",
+        "channels": [
+          "gielda"
+        ],
+        "title": null,
+        "body": "#gielda #krachsmieciuchindex \n@uzytkownik3 \n\nJak rozumiem to w------o się po zmianach na wykopie?"
+      },
+      "context": {
+        "parent_post": null,
+        "parent_comment": null
+      }
+    }
+  },
+  {
+    "id": "gielda-2026-09-29-058",
+    "note": "krótka treść po tagu (10 znaków)",
+    "assessable": true,
+    "input": {
+      "schema_version": "AssessmentInputV1",
+      "item": {
+        "item_type": "post",
+        "published_at": "2026-09-29T15:53:44+02:00",
+        "channels": [
+          "gielda"
+        ],
+        "title": null,
+        "body": "#gielda kioxia wtf"
+      },
+      "context": {
+        "parent_post": null,
+        "parent_comment": null
+      }
+    }
+  },
+  {
+    "id": "gielda-2026-09-29-017",
+    "note": "tag + <url> (osadzony link)",
+    "assessable": false,
+    "input": {
+      "schema_version": "AssessmentInputV1",
+      "item": {
+        "item_type": "post",
+        "published_at": "2026-09-29T20:35:22+02:00",
+        "channels": [
+          "gielda"
+        ],
+        "title": null,
+        "body": "#gielda <url>"
+      },
+      "context": {
+        "parent_post": null,
+        "parent_comment": null
+      }
+    }
+  },
+  {
+    "id": "gielda-2026-09-29-047",
+    "note": "sam tag z końcową spacją",
+    "assessable": false,
+    "input": {
+      "schema_version": "AssessmentInputV1",
+      "item": {
+        "item_type": "post",
+        "published_at": "2026-09-29T16:41:59+02:00",
+        "channels": [
+          "gielda"
+        ],
+        "title": null,
+        "body": "#gielda "
+      },
+      "context": {
+        "parent_post": null,
+        "parent_comment": null
+      }
+    }
+  },
+  {
+    "id": "gielda-2026-09-29-088",
+    "note": "sam tag",
+    "assessable": false,
+    "input": {
+      "schema_version": "AssessmentInputV1",
+      "item": {
+        "item_type": "post",
+        "published_at": "2026-09-29T13:12:28+02:00",
+        "channels": [
+          "gielda"
+        ],
+        "title": null,
+        "body": "#gielda"
+      },
+      "context": {
+        "parent_post": null,
+        "parent_comment": null
+      }
+    }
+  },
+  {
+    "id": "gielda-2026-09-29-011",
+    "note": "same tagi",
+    "assessable": false,
+    "input": {
+      "schema_version": "AssessmentInputV1",
+      "item": {
+        "item_type": "post",
+        "published_at": "2026-09-29T20:56:48+02:00",
+        "channels": [
+          "gielda"
+        ],
+        "title": null,
+        "body": "#coinbase #gielda #kryptowaluty #bitcoin"
+      },
+      "context": {
+        "parent_post": null,
+        "parent_comment": null
+      }
+    }
+  },
+  {
+    "id": "gielda-2026-09-29-074",
+    "note": "łamanie linii i same tagi",
+    "assessable": false,
+    "input": {
+      "schema_version": "AssessmentInputV1",
+      "item": {
+        "item_type": "post",
+        "published_at": "2026-09-29T14:24:14+02:00",
+        "channels": [
+          "gielda"
+        ],
+        "title": null,
+        "body": "\n#przegryw #gielda #finanse"
+      },
+      "context": {
+        "parent_post": null,
+        "parent_comment": null
+      }
+    }
+  },
+  {
+    "id": "entry-87762513",
+    "note": "tag i krótka treść",
+    "assessable": true,
+    "input": {
+      "schema_version": "AssessmentInputV1",
+      "item": {
+        "item_type": "post",
+        "published_at": "2026-09-28T09:00:09+02:00",
+        "channels": [
+          "gielda"
+        ],
+        "title": null,
+        "body": "#gielda ale kibel "
+      },
+      "context": {
+        "parent_post": null,
+        "parent_comment": null
+      }
+    }
+  }
+]

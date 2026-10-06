@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ironia — zestaw wzorcowy #gielda</title>
+<style>
+  :root { --bg:#f7f7f5; --card:#fff; --fg:#1d1d1b; --muted:#6b6b66; --line:#e2e2dd; --accent:#2f6fde; --ok:#1f8a4c; --warn:#b26a00; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16171a; --card:#1f2125; --fg:#e8e8e6; --muted:#9a9a95; --line:#33353a; --accent:#6f9cf0; --ok:#4cc27f; --warn:#e0a040; } }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  header { position:sticky; top:0; z-index:2; background:var(--bg); border-bottom:1px solid var(--line); padding:10px 16px; display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+  header h1 { font-size:16px; margin:0 8px 0 0; }
+  .bar { flex:1; min-width:120px; height:8px; background:var(--line); border-radius:4px; overflow:hidden; }
+  .bar > div { height:100%; background:var(--ok); width:0; }
+  main { max-width:860px; margin:0 auto; padding:16px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:16px; margin-bottom:14px; }
+  .meta { color:var(--muted); font-size:13px; margin-bottom:8px; }
+  .media { display:inline-block; margin-left:8px; padding:1px 8px; border-radius:10px; background:#5a4a1a; color:#ffd98a; font-size:12px; }
+  .post { white-space:pre-wrap; word-break:break-word; font-size:16px; padding:12px; border-radius:8px; background:var(--bg); border:1px solid var(--line); }
+  .post .t { font-weight:600; display:block; margin-bottom:6px; }
+  .opts { display:flex; gap:8px; flex-wrap:wrap; margin:12px 0; }
+  .opts label { border:1px solid var(--line); border-radius:8px; padding:6px 10px; cursor:pointer; user-select:none; }
+  .opts input { margin-right:6px; }
+  .opts label:has(input:checked) { border-color:var(--accent); background:color-mix(in srgb, var(--accent) 12%, transparent); }
+  textarea { width:100%; min-height:48px; font:inherit; color:var(--fg); background:var(--card); border:1px solid var(--line); border-radius:6px; padding:6px 8px; }
+  button { font:inherit; border:1px solid var(--line); background:var(--card); color:var(--fg); border-radius:6px; padding:6px 12px; cursor:pointer; }
+  button.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+  .nav { display:flex; gap:8px; justify-content:space-between; align-items:center; }
+  .hint { color:var(--muted); font-size:13px; }
+  .grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(38px,1fr)); gap:4px; margin-top:8px; }
+  .grid button { padding:4px 0; font-size:12px; }
+  .grid button.done { background:color-mix(in srgb, var(--ok) 25%, transparent); }
+  .grid button.unsure { background:color-mix(in srgb, var(--warn) 25%, transparent); }
+  .grid button.cur { outline:2px solid var(--accent); }
+  #empty { text-align:center; padding:40px 16px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>#gielda — ironia</h1>
+  <span id="count" class="hint"></span>
+  <div class="bar"><div id="prog"></div></div>
+  <button id="export" class="primary">Eksportuj irony-labels.json</button>
+  <input type="file" id="loadPosts" accept="application/json" hidden>
+  <button onclick="document.getElementById('loadPosts').click()">Wczytaj posts.json</button>
+</header>
+<main>
+  <div class="card">
+    <details open>
+      <summary>Co oznaczamy</summary>
+      <p><b>Ironiczny / sarkastyczny</b> — autor mówi coś innego (zwykle odwrotnie) niż ma na myśli albo kpi, np. „no pięknie, kolejne -20%, idealna inwestycja”, „brawo geniusze, kupujcie dalej”. Dosłowny post z przekleństwem lub żartem bez odwrócenia znaczenia to <b>nie</b>.</p>
+      <p><b>Nie wiem</b> — nie da się rozstrzygnąć z samego tekstu (np. treść w obrazku).</p>
+      <p class="hint">Klawisze: 1 = tak, 2 = nie, 3 = nie wiem, ← / → = poprzedni / następny. Stan zapisuje się w przeglądarce.</p>
+    </details>
+  </div>
+  <div id="empty" class="card">Wczytaj <code>szczur-radar-api/src/test/resources/fixtures/assessor/gold/posts.json</code>.</div>
+  <div id="cardBox" class="card" hidden>
+    <div class="meta"><span id="pid"></span><span id="media"></span></div>
+    <div id="post" class="post"></div>
+    <div class="opts">
+      <label><input type="radio" name="ironic" value="yes">1 · ironiczny</label>
+      <label><input type="radio" name="ironic" value="no">2 · nieironiczny</label>
+      <label><input type="radio" name="ironic" value="unsure">3 · nie wiem</label>
+    </div>
+    <textarea id="note" placeholder="Notatka (opcjonalnie, bez nicków i adresów)"></textarea>
+    <div class="nav" style="margin-top:10px">
+      <button id="prev">← Poprzedni</button>
+      <span id="pos" class="hint"></span>
+      <button id="next">Następny →</button>
+    </div>
+    <div id="grid" class="grid"></div>
+  </div>
+</main>
+<script>
+const KEY = "szczur-irony-gold";
+const store = {
+  get(k, f) { try { const v = localStorage.getItem(KEY + ":" + k); return v === null ? f : JSON.parse(v); } catch (e) { return f; } },
+  set(k, v) { try { localStorage.setItem(KEY + ":" + k, JSON.stringify(v)); } catch (e) {} },
+};
+let posts = store.get("posts", []);
+let labels = store.get("labels", {});
+let cur = store.get("cur", 0);
+const $ = id => document.getElementById(id);
+
+function save() { store.set("labels", labels); store.set("cur", cur); }
+
+function render() {
+  const has = posts.length > 0;
+  $("empty").hidden = has; $("cardBox").hidden = !has;
+  const done = posts.filter(p => labels[p.post_id]?.ironic).length;
+  $("count").textContent = has ? `${done} / ${posts.length}` : "";
+  $("prog").style.width = has ? (100 * done / posts.length) + "%" : "0";
+  if (!has) return;
+  const p = posts[cur], it = p.input.item, l = labels[p.post_id] || {};
+  $("pid").textContent = `${p.post_id} · ${p.day}`;
+  const m = p.media || {};
+  $("media").innerHTML = ["photo", "embed", "survey"].filter(k => m[k]).map(k => `<span class="media">${k}</span>`).join("");
+  $("post").innerHTML = "";
+  if (it.title) { const t = document.createElement("span"); t.className = "t"; t.textContent = it.title; $("post").append(t); }
+  $("post").append(document.createTextNode(it.body || ""));
+  document.querySelectorAll("input[name=ironic]").forEach(r => r.checked = r.value === l.ironic);
+  $("note").value = l.note || "";
+  $("pos").textContent = `${cur + 1} / ${posts.length}`;
+  $("grid").innerHTML = "";
+  posts.forEach((q, i) => {
+    const b = document.createElement("button"), v = labels[q.post_id]?.ironic;
+    b.textContent = i + 1;
+    if (v) b.classList.add(v === "unsure" ? "unsure" : "done");
+    if (i === cur) b.classList.add("cur");
+    b.onclick = () => { cur = i; save(); render(); };
+    $("grid").append(b);
+  });
+}
+
+function setIronic(v) {
+  const id = posts[cur].post_id;
+  labels[id] = { ...(labels[id] || {}), ironic: v };
+  save(); render();
+}
+
+function go(d) { cur = Math.max(0, Math.min(posts.length - 1, cur + d)); save(); render(); }
+
+document.querySelectorAll("input[name=ironic]").forEach(r => r.onchange = () => setIronic(r.value));
+$("note").oninput = e => { const id = posts[cur].post_id; labels[id] = { ...(labels[id] || {}), note: e.target.value }; save(); };
+$("prev").onclick = () => go(-1);
+$("next").onclick = () => go(1);
+document.addEventListener("keydown", e => {
+  if (e.target.tagName === "TEXTAREA" || !posts.length) return;
+  if (e.key === "1") { setIronic("yes"); go(1); }
+  else if (e.key === "2") { setIronic("no"); go(1); }
+  else if (e.key === "3") { setIronic("unsure"); go(1); }
+  else if (e.key === "ArrowLeft") go(-1);
+  else if (e.key === "ArrowRight") go(1);
+});
+$("loadPosts").onchange = async e => {
+  const f = e.target.files[0]; if (!f) return;
+  posts = JSON.parse(await f.text()); store.set("posts", posts);
+  cur = Math.min(cur, posts.length - 1); save(); render();
+};
+$("export").onclick = () => {
+  const out = posts.map(p => ({ post_id: p.post_id, ironic: labels[p.post_id]?.ironic || null, note: labels[p.post_id]?.note || "" }));
+  const missing = out.filter(o => !o.ironic).length;
+  if (missing && !confirm(`${missing} postów bez oceny. Eksportować mimo to?`)) return;
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(out, null, 2) + "\n"], { type: "application/json" }));
+  a.download = "irony-labels.json"; a.click();
+};
+render();
+</script>
+</body>
+</html>

@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-02-009",
+  "configId" : "gemini-flash-lite",
+  "provider" : "gemini",
+  "model" : "gemini-3.1-flash-lite",
+  "channel" : "gemini",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T18:46:24.332497Z",
+  "rawText" : "{\n  \"relevance\": \"investment_related\",\n  \"modifiers\": [\"humor\"],\n  \"targets\": [\n    {\n      \"id\": \"t1\",\n      \"kind\": \"company\",\n      \"anchor\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"orlen\"\n      },\n      \"stance\": {\n        \"direction\": \"bullish\",\n        \"assertiveness\": \"hedged\",\n        \"claim_ids\": [\"c1\", \"c2\"]\n      },\n      \"reference\": \"explicit\"\n    }\n  ],\n  \"claims\": [\n    {\n      \"id\": \"c1\",\n      \"kind\": \"trade_action\",\n      \"attribution\": \"author\",\n      \"target_ids\": [\"t1\"],\n      \"evidence\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"aktualnie jestem posiadaczem 750 akcji średnio po 150\"\n      },\n      \"statement\": \"Autor posiada 750 akcji Orlenu ze średnią ceną 150.\"\n    },\n    {\n      \"id\": \"c2\",\n      \"kind\": \"investment_thesis\",\n      \"attribution\": \"author\",\n      \"target_ids\": [\"t1\"],\n      \"evidence\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"czas dokupić, gorzej już nie będzie prawda?\"\n      },\n      \"statement\": \"Autor sugeruje dokupienie akcji Orlenu, zakładając, że cena nie spadnie niżej.\"\n    }\n  ],\n  \"flags\": [\"possible_sarcasm\"]\n}",
+  "inputTokens" : 2995,
+  "outputTokens" : 402,
+  "cachedTokens" : null,
+  "durationMs" : 1844,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

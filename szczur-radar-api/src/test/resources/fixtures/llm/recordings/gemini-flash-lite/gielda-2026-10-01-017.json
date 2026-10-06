@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-01-017",
+  "configId" : "gemini-flash-lite",
+  "provider" : "gemini",
+  "model" : "gemini-3.1-flash-lite",
+  "channel" : "gemini",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T18:44:52.676024Z",
+  "rawText" : "{\n  \"relevance\": \"investment_related\",\n  \"modifiers\": [],\n  \"targets\": [\n    {\n      \"id\": \"t1\",\n      \"kind\": \"other\",\n      \"anchor\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"LLMy\"\n      },\n      \"stance\": {\n        \"direction\": \"not_expressed\",\n        \"assertiveness\": null,\n        \"claim_ids\": []\n      },\n      \"reference\": \"explicit\"\n    }\n  ],\n  \"claims\": [\n    {\n      \"id\": \"c1\",\n      \"kind\": \"opinion\",\n      \"attribution\": \"author\",\n      \"target_ids\": [\n        \"t1\"\n      ],\n      \"evidence\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"Tyle są warte LLMy w wycenie spółek bez dostępu do internetu.\"\n      },\n      \"statement\": \"LLMy w wycenie spółek bez dostępu do internetu mają ograniczoną wartość.\"\n    },\n    {\n      \"id\": \"c2\",\n      \"kind\": \"opinion\",\n      \"attribution\": \"author\",\n      \"target_ids\": [\n        \"t1\"\n      ],\n      \"evidence\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"najlepsze pomysły mam ja a nie LLM\"\n      },\n      \"statement\": \"Autor uważa, że jego pomysły inwestycyjne są lepsze niż te generowane przez LLM.\"\n    }\n  ],\n  \"flags\": []\n}",
+  "inputTokens" : 2916,
+  "outputTokens" : 389,
+  "cachedTokens" : null,
+  "durationMs" : 1970,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

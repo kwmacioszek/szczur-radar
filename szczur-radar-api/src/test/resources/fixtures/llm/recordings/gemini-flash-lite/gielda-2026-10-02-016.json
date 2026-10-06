@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-02-016",
+  "configId" : "gemini-flash-lite",
+  "provider" : "gemini",
+  "model" : "gemini-3.1-flash-lite",
+  "channel" : "gemini",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T18:46:36.157675Z",
+  "rawText" : "{\n  \"relevance\": \"investment_related\",\n  \"modifiers\": [\"humor\"],\n  \"targets\": [\n    {\n      \"id\": \"t1\",\n      \"kind\": \"other\",\n      \"anchor\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"140\"\n      },\n      \"stance\": {\n        \"direction\": \"bullish\",\n        \"assertiveness\": \"unhedged\",\n        \"claim_ids\": [\"c1\", \"c2\"]\n      },\n      \"reference\": \"explicit\"\n    }\n  ],\n  \"claims\": [\n    {\n      \"id\": \"c1\",\n      \"kind\": \"trade_action\",\n      \"attribution\": \"author\",\n      \"target_ids\": [\"t1\"],\n      \"evidence\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"Teraz se odkupię poniżej 140 i gitara.\"\n      },\n      \"statement\": \"Autor planuje odkupić aktywo poniżej poziomu 140.\"\n    },\n    {\n      \"id\": \"c2\",\n      \"kind\": \"opinion\",\n      \"attribution\": \"author\",\n      \"target_ids\": [\"t1\"],\n      \"evidence\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"Długo na to wyczekiwałem jako spadź, czuję satysfakcję XD\"\n      },\n      \"statement\": \"Autor odczuwa satysfakcję z powodu spadków ceny aktywa.\"\n    }\n  ],\n  \"flags\": []\n}",
+  "inputTokens" : 2915,
+  "outputTokens" : 391,
+  "cachedTokens" : null,
+  "durationMs" : 1901,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

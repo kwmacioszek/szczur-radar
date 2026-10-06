@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-02-014",
+  "configId" : "luna-low",
+  "provider" : "openrouter",
+  "model" : "openai/gpt-6-luna",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : "low",
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T21:07:48.531190Z",
+  "rawText" : "{\"relevance\":\"investment_related\",\"modifiers\":[],\"targets\":[{\"id\":\"t1\",\"kind\":\"macro_topic\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"podatek belki\"},\"stance\":{\"direction\":\"not_expressed\",\"assertiveness\":null,\"claim_ids\":[]},\"reference\":\"explicit\"},{\"id\":\"t2\",\"kind\":\"company\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"#xtb\"},\"stance\":{\"direction\":\"not_expressed\",\"assertiveness\":null,\"claim_ids\":[]},\"reference\":\"explicit\"}],\"claims\":[{\"id\":\"c1\",\"kind\":\"question\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"takie pytanie skoro musze płacić podatek belki od zysków kapitałowych to jak dobrze rozumiem mogę odliczyć ulgę od dochodowego w przypadku strat kapitałowych?\"},\"statement\":\"Czy przy stratach kapitałowych można odliczyć ulgę od dochodowego, skoro od zysków kapitałowych trzeba płacić podatek Belki?\"}],\"flags\":[]}",
+  "inputTokens" : 3361,
+  "outputTokens" : 476,
+  "cachedTokens" : 3215,
+  "durationMs" : 5930,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

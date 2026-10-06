@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-01-044",
+  "configId" : "luna",
+  "provider" : "openrouter",
+  "model" : "openai/gpt-6-luna",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T18:54:36.233121Z",
+  "rawText" : "{\"relevance\":\"unclear\",\"modifiers\":[],\"targets\":[],\"claims\":[],\"flags\":[\"insufficient_content\"]}",
+  "inputTokens" : 3315,
+  "outputTokens" : 417,
+  "cachedTokens" : 3215,
+  "durationMs" : 5356,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

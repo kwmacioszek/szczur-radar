@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-01-008",
+  "configId" : "gemini-flash-lite",
+  "provider" : "gemini",
+  "model" : "gemini-3.1-flash-lite",
+  "channel" : "gemini",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T18:44:36.863181Z",
+  "rawText" : "{\n  \"relevance\": \"investment_related\",\n  \"modifiers\": [],\n  \"targets\": [\n    {\n      \"id\": \"t1\",\n      \"kind\": \"macro_topic\",\n      \"anchor\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"iranem\"\n      },\n      \"stance\": {\n        \"direction\": \"unclear\",\n        \"assertiveness\": null,\n        \"claim_ids\": [\n          \"c1\"\n        ]\n      },\n      \"reference\": \"explicit\"\n    }\n  ],\n  \"claims\": [\n    {\n      \"id\": \"c1\",\n      \"kind\": \"question\",\n      \"attribution\": \"author\",\n      \"target_ids\": [\n        \"t1\"\n      ],\n      \"evidence\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"Gruby już wie że nie dogadali się z iranem czy robi półzmyłke i zaraz będzie ogłoszenie pokoju?\"\n      },\n      \"statement\": \"Autor pyta, czy brak porozumienia z Iranem jest faktem, czy tylko zagrywką rynkową przed ogłoszeniem pokoju.\"\n    }\n  ],\n  \"flags\": []\n}",
+  "inputTokens" : 2893,
+  "outputTokens" : 302,
+  "cachedTokens" : null,
+  "durationMs" : 1772,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

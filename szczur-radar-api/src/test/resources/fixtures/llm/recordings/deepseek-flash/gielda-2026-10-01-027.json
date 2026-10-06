@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-01-027",
+  "configId" : "deepseek-flash",
+  "provider" : "deepseek",
+  "model" : "deepseek-flash",
+  "channel" : "deepseek",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_mode",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T18:42:10.251302Z",
+  "rawText" : "{\"relevance\":\"investment_related\",\"modifiers\":[],\"targets\":[{\"id\":\"t1\",\"kind\":\"company\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"szczurzyska\"},\"stance\":{\"direction\":\"bearish\",\"assertiveness\":\"unhedged\",\"claim_ids\":[\"c1\",\"c2\"]},\"reference\":\"explicit\"},{\"id\":\"t2\",\"kind\":\"other\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"śmieci\"},\"stance\":{\"direction\":\"bearish\",\"assertiveness\":\"hedged\",\"claim_ids\":[\"c2\"]},\"reference\":\"explicit\"}],\"claims\":[{\"id\":\"c1\",\"kind\":\"opinion\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"mam dosyć tego szczurzyska\"},\"statement\":\"Autor ma dosyć szczurzyska (XTB).\"},{\"id\":\"c2\",\"kind\":\"trade_action\",\"attribution\":\"author\",\"target_ids\":[\"t1\",\"t2\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"wychodzi na 0 i w---------m do śmieci\"},\"statement\":\"Autor wychodzi na zero i wyrzuca szczurzysko do śmieci (spekulacyjnych spółek).\"}],\"flags\":[]}",
+  "inputTokens" : 3656,
+  "outputTokens" : 283,
+  "cachedTokens" : 3456,
+  "durationMs" : 1626,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

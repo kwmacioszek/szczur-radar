@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-01-042",
+  "configId" : "luna",
+  "provider" : "openrouter",
+  "model" : "openai/gpt-6-luna",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T18:54:15.773966Z",
+  "rawText" : "{\"relevance\":\"investment_related\",\"modifiers\":[\"humor\"],\"targets\":[{\"id\":\"t1\",\"kind\":\"company\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"MICRON\"},\"stance\":{\"direction\":\"unclear\",\"assertiveness\":null,\"claim_ids\":[\"c1\",\"c2\"]},\"reference\":\"explicit\"}],\"claims\":[{\"id\":\"c1\",\"kind\":\"factual_claim\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"nie o------m na 60% zysku i nie o----------------o 30%\"},\"statement\":\"nie o------m na 60% zysku i nie o----------------o 30%\"},{\"id\":\"c2\",\"kind\":\"opinion\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"MAM DŁONIE ZZKRYPTONITU MICRON N-------J\"},\"statement\":\"MAM DŁONIE ZZKRYPTONITU MICRON N-------J\"}],\"flags\":[]}",
+  "inputTokens" : 3348,
+  "outputTokens" : 1928,
+  "cachedTokens" : 3215,
+  "durationMs" : 18911,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

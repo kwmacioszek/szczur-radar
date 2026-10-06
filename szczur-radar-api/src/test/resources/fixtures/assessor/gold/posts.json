@@ -1,0 +1,2641 @@
+[ {
+  "post_id" : "gielda-2026-10-01-000",
+  "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : true,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-01T00:01:52+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "Podkład muzyczny dla tagu\n\n<url>\n#gieldowegownowpisy #gielda"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-01-001",
+  "day" : "2026-10-01",
+  "media" : {
+    "photo" : true,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-01T00:09:47+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "#gielda 54,23 mld to przychody Microna za jeden kwartał a to co widzicie to wyniki AMD\nZyski to totalna deklasacja\nA różnica w kapitalizacji spółek to około 10-15% \n \n#meczennicymicron"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-01-002",
+  "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : true,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-01T06:12:10+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "#gielda \n\n<url>\n\nDobieram hujnixa, jak dla mnie ten boczniak to okazja po tych wynikach "
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-01-003",
+  "day" : "2026-10-01",
+  "media" : {
+    "photo" : true,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-01T07:03:46+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "Taka ciekawostka z GPW #gielda "
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-01-004",
+  "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-01T08:11:51+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "#gielda \n\nMU PRICE TARGET: 1100\n\nRATING: HOLD\n\nANALYST: @uzytkownik8 (WKP Research)\n\n\nRynki juz zareagowaly."
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-01-005",
+  "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-01T08:27:09+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "#gielda Z czego wynika dzisiejszy krach?\n"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-01-006",
+  "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-01T09:08:58+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "Dobra eksperci.\nTrzyma ktoś oprócz mnie złoto na wypadek W? \nMiałem monety 1 uncjowe, ale sprzedałem je i wymieniłem na monety 1/4 uncji żeby łatwiej handlować w razie czego. \nJakie aktywo jeszcze polecają eksperci? Poza srajtaśmą i tuszonka. \n\n#gielda "
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-01-007",
+  "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-01T09:19:43+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "#gielda o c--j chodzi z wzrostem ropy i spadek nasdaq"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-01-008",
+  "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-01T09:30:07+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "Gruby już wie że nie dogadali się z iranem czy robi półzmyłke i zaraz będzie ogłoszenie pokoju?\n#gielda "
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-01-009",
+  "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-01T09:30:46+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "#gielda Marvell już można kupowac czy doliero na ATH jak.się potwierdzi?"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-01-010",
+  "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-01T09:35:10+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "#gielda pięknie zaczynamy 4q na szczurze xD "
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-01-011",
+  "day" : "2026-10-01",
+  "media" : {
+    "photo" : true,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-01T09:47:44+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "#gielda mam pytanie czy ktoś w niedzielę która była widział ten pana Marcina tańczącymi mikrusami warto też lubię hujnixy oglądać i się zastanawiam czy ten pan się w ogóle pojawia\n\n"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-01-012",
+  "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-01T09:48:36+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "A my w Rainbow.\n#gielda "
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-01-013",
+  "day" : "2026-10-01",
+  "media" : {
+    "photo" : true,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "link",
+      "published_at" : "2026-10-01T09:48:49+02:00",
+      "channels" : [ "gielda" ],
+      "title" : "Lista zakupów Przemysława Krala. Krótki przewodnik po aferze Zondacrypto",
+      "body" : "Przemysław Kral płacił politykom, fundacjom, agencjom PR, telewizji i federacjom sportowym. Na marketing w Polsce Zondacrypto przeznaczała około 10 mln zł rocznie."
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-01-014",
+  "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-01T10:25:52+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "#gielda \n\ndzien kibla dzisiaj sie szykuje"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-01-015",
+  "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-01T10:49:41+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "jakieś pomysły na pozyskanie 130k na styczeń 2027 aby wypełnić ike i oki? może jakaś pożyczka miesięcznej pensji od konowała? \n#gielda "
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-01-016",
+  "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-01T11:00:36+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "**Dzisiaj raportują - 01.10.2026** (top 10 według kapitalizacji, > $10B, USA)\n🌅  = przed otwarciem\n🌙 = po zamknięciu\n\n[ACN](<url> (Accenture plc) — 🌅\n[NKE](<url> (Nike, Inc.) — 🌙\n\nWyniki pojawią się na tagu po zamknięciu sesji.\nWszystkie wyniki z ostatnich 90 dni dostępne [na stronie](<url>\n\n#gielda #wykopindex #krachsmieciuchindex"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-01-017",
+  "day" : "2026-10-01",
+  "media" : {
+    "photo" : true,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-01T11:27:24+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "Tyle są warte LLMy w wycenie spółek bez dostępu do internetu. Owszem LLMy są przydatne do analiz spółek itd. ale weźcie pod uwagę, że najlepsze pomysły mam ja a nie LLM\n#gielda "
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-01-018",
+  "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-01T11:32:45+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "Inwestorki, co sądzicie o takim tworze jak ETFBNQ3LV dostępnym na XTB? Lewarek x3 kusi tanią dupą.\n#gielda #etf"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-01-019",
+  "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-01T12:17:17+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "#gielda niezły hejter kresek \n<url>"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-01-020",
+  "day" : "2026-10-01",
+  "media" : {
+    "photo" : true,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "link",
+      "published_at" : "2026-10-01T12:28:48+02:00",
+      "channels" : [ "gielda" ],
+      "title" : "Meta kontra Amazon. Kto zarobi, gdy AI zacznie robić za nas zakupy?",
+      "body" : "We wrześniu Meta (Facebook) uruchomiła Muse agenta AI, który potrafi samodzielnie przeglądać strony, znajdować produkty, porównywać oferty i przejść przez kolejne etapy zakupu. Użytkownik musi jedynie na końcu zatwierdzić transakcję."
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-01-021",
+  "day" : "2026-10-01",
+  "media" : {
+    "photo" : true,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-01T13:32:51+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "#gielda ktoś ma w portfelu Apator?"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-01-022",
+  "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-01T14:17:32+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "#gielda a my w dolarze"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-01-023",
+  "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-01T14:34:06+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "#gielda jak grubas do 15:30 nie zmieni zdania to będzie pompa jakiej mój portfel od pół roku nie widział "
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-01-024",
+  "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-01T15:27:29+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "K@!# ale wy płaczecie xD Po prostu potraktujcie to jako okazje do taniego dokupienia jakiegoś ETFa i zapomnijcie o tym KRACHU\n#gielda "
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-01-025",
+  "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-01T15:34:01+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "Dawno nie pisałem, ale my w NOW \ntrzyma ktoś to jeszcze? \n\n#gielda "
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-01-026",
+  "day" : "2026-10-01",
+  "media" : {
+    "photo" : true,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-01T15:34:34+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "#gielda ale bawią się mikrusem ( ͡° ͜ʖ ͡°)"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-01-027",
+  "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-01T15:36:18+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "#gielda mam dosyć tego szczurzyska wychodzi na 0 i w---------m do śmieci "
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-01-028",
+  "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-01T15:38:09+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "#gielda szczur znowu dostał kare od KNF że dziś tak szoruje po dnie? "
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-01-029",
+  "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-01T16:02:56+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "#gielda \n\nOho, grubas\nZmienil zdanie lub robi kiwke"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-01-030",
+  "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-01T16:08:44+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "Jeden chłopiec kupił microna, a drugi zainwestował stabilnie w alphabet pół roku temu. Zapytacie który jest szczęśliwy? Żaden, grubas przecwelił obydwu #gielda "
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-01-031",
+  "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-01T16:08:56+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "Grubasowi znowu się micrus nie podoba. Jak złe wyniki to kibel, bo złe wyniki, a jak zajebiste wyniki do kibel, bo następne mogą być gorsze nawet pomimo tego, że Sanjaya mówi, że 2027 dalej będzie dobrym rokiem dla micrusa xD\n#gielda "
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-01-032",
+  "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-01T16:13:30+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "#gielda można podjeść szczurka czy chory? "
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-01-033",
+  "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-01T16:15:01+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "#gielda Sandisk 0,14% na zielono Hujnix -0,3% a mikrus -3% XD i bądź tu mądry "
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-01-034",
+  "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-01T16:25:26+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "#gielda \n\nNic nie rośnie, kolejny dzień p---y. Trzeba było se obligacje mieć tylko…"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-01-035",
+  "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-01T16:36:20+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "Nie zadaje się już z mikrusami.\n\n#gielda "
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-01-036",
+  "day" : "2026-10-01",
+  "media" : {
+    "photo" : true,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-01T16:50:58+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "No i bez niespodzianki: BYD siódmy miesiąc z rzędu poprawia wynik sprzedaży. We wrześniu sprzedane globalnie 463,6 tys. samochodów, tj. wzrost o +17% r/r i +5,3% m/m (ʘ‿ʘ)\n<url>\n#byd #inwestycje #gielda #samochodyelektryczne"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-01-037",
+  "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-01T16:55:37+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "#gielda Czemu mam wrażenie, że na tym tagu zostały same moje konta? "
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-01-038",
+  "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-01T17:10:45+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "#gielda wszystko zaczyna przypominać 2022 rok . Inflacja rosła, stopy też i zwala na nasdaqu. Ktoś coś?"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-01-039",
+  "day" : "2026-10-01",
+  "media" : {
+    "photo" : true,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-01T17:57:42+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "Ogarnijcie zlecenia przed piątkiem. GPW przechodzi z UTP na nowy system WATS:\n\n- pt 2.10 ostatnia sesja na UTP. Po sesji GPW unieważni WSZYSTKIE niezrealizowane zlecenia, także WDO i te złożone z przyszłą datą. Kasa zablokowana pod nie wróci sama\n- sb–nd 3–4.10 migracja, serwisy maklerskie mogą nie działać (mBank, PKO już uprzedzają)\n- pon 5.10 pierwsza sesja na WATS. Zlecenia, które mają dalej czekać, trzeba złożyć od nowa\n\nCo się zmienia w samym handlu:\n- aukcja otwarcia kończy się losowo, do 30 s później (zamknięcie do 30 s wcześniej)\n- w czasie aukcji nie widać arkusza, tylko TKO i TWO. W poniedziałek rano to nie będzie awaria\n- PKC i PCR w notowaniach ciągłych nie czekają w arkuszu: wykonują się od razu albo przepadają\n- znikają PEG i MWW\n- nie zmienisz typu ani ważności zlecenia. Zmiana ceny albo zwiększenie liczby akcji = koniec kolejki\n- limit ceny dla spółek z WIG20 maks. ±40% od kursu odniesienia\n\nPlan B GPW: sesje 5–8.10 pod nadzorem, przy poważnych problemach powrót do UTP w weekend 10–11.10 (sesja 9.10 odwołana).\n\nŹródła: GPW (harmonogram + dokument porównawczy WATS vs UTP), gpwwats.pl, komunikaty BM PKO BP i mBanku. Szczegóły w swoim biurze.\n\nZrobiłem o tym film (6,5 min, wszystko po kolei, źródła w opisie): <url>\n\nMacie coś na WDO, co trzeba będzie wystawiać od nowa?\n\n#gielda #gpw #inwestycje #wats #finanse"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-01-040",
+  "day" : "2026-10-01",
+  "media" : {
+    "photo" : true,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-01T18:00:42+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "Julki zakładają kanały z poradami inwestycyjnymi\n\n#gielda #rozowepaski #bekazrozowychpaskow #redpill "
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-01-041",
+  "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-01T18:24:44+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "no tak źle to dawno nie było, ostatnio to chyba z 2 tygodnie temu \n\n#gielda"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-01-042",
+  "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-01T18:35:44+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "nie o------m na 60% zysku i nie o----------------o 30%\n\nMAM DŁONIE ZZKRYPTONITU MICRON N-------J\n\n#gielda "
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-01-043",
+  "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-01T19:07:14+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "#gielda \n\nPiękna zmyłka w połowie sesji jak za starych dobrych czasów "
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-01-044",
+  "day" : "2026-10-01",
+  "media" : {
+    "photo" : true,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-01T19:25:18+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "#gielda żydowskie kasyno "
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-01-045",
+  "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-01T19:37:55+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "#gielda czemu od jakiegos tygodnia banki tak mocno lecą na pysk?"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-01-046",
+  "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-01T20:01:52+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "#gielda\nAle zmyłkę z---------ł na pamięciorzach grubasek xD "
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-01-047",
+  "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-01T20:15:59+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "Proszę o polecenie jakichś ciekawych śmieciuchów, byle nie Microsoft ( ͡° ͜ʖ ͡°)\n#gielda"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-01-048",
+  "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-01T20:32:07+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "Dobrze ogarniam, że jeżeli dostanę akcje z RSU które od razu sprzedaje, to ze względu na to że jestem w drugim progu podatkowym 32% z tych akcji leci na podatki? ( ͡° ʖ̯ ͡°) #akcje #gielda #finanse #pytaniedoeksperta"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-01-049",
+  "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-01T21:05:12+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "#gielda oby jutro kapitał z olejorza popłynął na szczura "
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-01-050",
+  "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-01T21:05:49+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "#gielda\nK---a unimot to nie wiem ile będę uśredniał, Jezu Chryste "
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-01-051",
+  "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-01T21:07:43+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "#gielda \nsłuchajcie jutro o 9:00 sprzedajecie olejorza i kupujecie Synektika, bo roboty będą miały co operować po zawałach serca jakie wam olejorz dostarczy\n\nto nie jest porada inwestycyjna"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-01-052",
+  "day" : "2026-10-01",
+  "media" : {
+    "photo" : true,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-01T21:09:10+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "Jako akcjonariusz Orlenu uważam, że to dobrze że Pan Prezydent podpisał ustawę rządu o nadzwyczajnych zyskach Orlenu.\n\n#orlen #polska #gielda #inwestowanie #inwestycje #polityka"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-01-053",
+  "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-01T21:36:54+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "#gielda a kto mi zapłaci wyrównane od straconych zysków na Orlenie?"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-01-054",
+  "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-01T21:47:20+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "#gielda \n\nMnie to już nie uśredniajta, od razu ze stratą  sprzedajta"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-01-055",
+  "day" : "2026-10-01",
+  "media" : {
+    "photo" : true,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-01T22:08:05+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "#gielda #portfelgrubasa #inwestycje #pieniadze #chwalesie równowaga mocy została dzisiaj odzyskana"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-01-056",
+  "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : true,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-01T22:48:08+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "#gielda \n\nCierpliwości trzeba, a nie zmieniać zdanie co tydzień \n\n<url>"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-01-057",
+  "day" : "2026-10-01",
+  "media" : {
+    "photo" : true,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "link",
+      "published_at" : "2026-10-01T22:52:30+02:00",
+      "channels" : [ "gielda" ],
+      "title" : "Polski ElevenLabs wart 22 mld dolarów. Myśli o debiucie także na GPW",
+      "body" : "Startup Matiego Staniszewskiego i Piotra Dąbkowskiego pozyskał 300 mln dolarów, a jego wycena podwoiła się od początku roku. Firma zatrudnia ponad 800 osób, obsługuje 15 mln rozmów tygodniowo w 90 językach i za dwa lub trzy lata chce wejść na giełdę, być może równolegle na GPW."
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-01-058",
+  "day" : "2026-10-01",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-01T23:02:30+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "Dobrze, że sprzedałem cały pakiet #PKN #ORLEN rok temu za 55 zł, bo tak czułem, że tutaj coś się odwali. Miałem czutkę. #gielda "
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-01-059",
+  "day" : "2026-10-01",
+  "media" : {
+    "photo" : true,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-01T23:47:33+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "#gielda przepowiednia się prawie sprawdziła. Wiadomo jak to bywa, takie nagłe wizje potrafią być trudne do interpretacji ( ͡° ͜ʖ ͡°)"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-02-000",
+  "day" : "2026-10-02",
+  "media" : {
+    "photo" : true,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-02T01:12:55+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "#gielda  wtf"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-02-001",
+  "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-02T06:57:48+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "#gielda ma ktos ppk w esaliens24?"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-02-002",
+  "day" : "2026-10-02",
+  "media" : {
+    "photo" : true,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "link",
+      "published_at" : "2026-10-02T07:57:21+02:00",
+      "channels" : [ "gielda" ],
+      "title" : "Ustawa podpisana. Ceny paliw spadną teraz od 30 gr. do 1,44 PLN. Analiza ekspert",
+      "body" : "Prezydent Polski Karol Nawrocki poinformował w trakcie czwartkowego orędzia, że zdecydował się podpisać ustawę o podatku od nadmiarowych zysków koncernów paliwowych, stawiając jednocześnie warunek: obniżki na stacjach mają nastąpić od razu. Ustawa wchodzi w życie, ale równoległe skierowanie przepisó"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-02-003",
+  "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-02T08:03:08+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "#gielda a my w kiblu w orlenie #pdk"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-02-004",
+  "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-02T08:07:49+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "#gielda Comperia już blisko po 10 PLN"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-02-005",
+  "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-02T08:20:10+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "#gielda zobaczymy midterms jak świnia niebo, szykujcie gotówkę na mocne spadki XD\n\n<url>"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-02-006",
+  "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-02T09:17:35+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "Niewielki wymiar kary jak na ~37% x 2 wigusia w portfelu\n\n#gielda #gpw"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-02-007",
+  "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-02T09:20:04+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "#gielda \nDzisiaj nie ma co nawet tam wchodzić. To nic nie da. Nie dałoby nic."
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-02-008",
+  "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-02T09:23:19+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "#gielda sprzedawajcie wszyscy #xtb, śmiało, to sobie jeszcze taniej dokupię "
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-02-009",
+  "day" : "2026-10-02",
+  "media" : {
+    "photo" : true,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-02T09:26:28+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "Witam #gielda, to mój pierwszy wpis tutaj. Przyszedłem wam się do czegoś przyznać. Inwestuję od kilku lat ale zdecydowana większość moich ruchów giełdowych to było kupowanie #orlen jak trochę spadł i sprzedawanie jak trochę urósł. Do tej pory działało bezbłędnie. No ale aktualnie jestem posiadaczem 750 akcji średnio po 150 (╯°□°）╯︵ ┻━┻\n\n! czas dokupić, gorzej już nie będzie prawda?"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-02-010",
+  "day" : "2026-10-02",
+  "media" : {
+    "photo" : true,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-02T09:29:08+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "#gielda moje pieniądze pracują w xtb"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-02-011",
+  "day" : "2026-10-02",
+  "media" : {
+    "photo" : true,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-02T09:33:36+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "#gielda na tym polega odpowiedzialność ( ͡° ͜ʖ ͡°)"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-02-012",
+  "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-02T09:51:19+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "#gielda będę miał 12k do wydania w połowie października i jak na złość wszystkie moje spółki rosną, ewentualnie boczniak, ale żadna nie chce spaść chociaż kilka procent...\nKlimat pod spadki 10-15% na giełdzie jest, ale coś nie chce jebnąć :/"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-02-013",
+  "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-02T09:52:19+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "#gielda -5% to ja się spodziewałem na orlenie dzisiaj, nie xtb."
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-02-014",
+  "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-02T09:59:25+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "#gielda dzień dobry takie pytanie skoro musze płacić podatek belki od zysków kapitałowych to jak dobrze rozumiem mogę odliczyć ulgę od dochodowego w przypadku strat kapitałowych?\n#xtb"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-02-015",
+  "day" : "2026-10-02",
+  "media" : {
+    "photo" : true,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-02T09:59:49+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "Zdarza mi się dobrze wyczuć moment wejścia, czasem też moment wyjścia. Ale tak o-----ć jedno i drugie no to czapki z głów dla mnie proszę państwa. Szkoda że pozycja mała, no ale still wyczucie rynku 10/10 ( ͡° ͜ʖ ͡°)\n! tak, pisałem o tym wcześniej już, ale nie byłem jeszcze pewny czy to aż tak zajebisty moment na wyjście XD <url>\n#orlen #gielda #inwestycje #meczennicypkn"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-02-016",
+  "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-02T10:10:00+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "#gielda i co @uzytkownik20 sówka i ja mieliśmy rację. Teraz se odkupię poniżej 140 i gitara. Długo na to wyczekiwałem jako spadź, czuję satysfakcję XD"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-02-017",
+  "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-02T10:10:55+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "A my w Dino #gielda "
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-02-018",
+  "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-02T10:22:12+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "Czytanie tagu dzisiaj to czysta przyjemność ( ͡° ͜ʖ ͡°)\n\n#xtb #gielda"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-02-019",
+  "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-02T10:25:52+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "#gielda Czemu spadki na XTB dziś?"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-02-020",
+  "day" : "2026-10-02",
+  "media" : {
+    "photo" : true,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-02T10:27:34+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "#gielda \n\nOrlen ! \n\nXTB !\n"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-02-021",
+  "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-02T10:37:31+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "O------e orlenu za 100zł było zajebistym pomysłem patrząc na to co się dzieje\n#gielda "
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-02-022",
+  "day" : "2026-10-02",
+  "media" : {
+    "photo" : true,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-02T10:37:41+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "#gielda Jestem słowny. Nie to co @uzytkownik19 . Jak powiedział tak zrobił. \n\n"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-02-023",
+  "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-02T10:43:53+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "Dzisiaj odcięcie dywidendy na XTB? \n#gielda"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-02-024",
+  "day" : "2026-10-02",
+  "media" : {
+    "photo" : true,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-02T10:44:10+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "$XTB\n\n#gielda #xtb"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-02-025",
+  "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-02T10:48:44+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "#gielda nie sadzilem ze kazdy wykopek jest po kule w xtb zaladowany :D"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-02-026",
+  "day" : "2026-10-02",
+  "media" : {
+    "photo" : true,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-02T10:50:20+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "Ciekawe, kto jest stratny na tym CFD, skoro na wykopie 99% chwali się tylko zyskami. #gielda #xtb"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-02-027",
+  "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-02T10:58:06+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "Czy zabawa z xtb polega na podjadaniu na coraz niższych poziomach?\nPytam bo obserwuję od 180 i ciągle te same osoby podjadają ( ͡º ͜ʖ͡º)\n\n#gielda #xtb"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-02-028",
+  "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-02T11:01:49+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "#gielda serio xtb spada bo jakieś biuro dało prognozę 150-200mln zysku?"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-02-029",
+  "day" : "2026-10-02",
+  "media" : {
+    "photo" : true,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-02T11:07:03+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "Szczurek robi się buyable\n\n#gielda "
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-02-030",
+  "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : true,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-02T11:12:54+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "#gielda <url>\n\nScanway odpali?"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-02-031",
+  "day" : "2026-10-02",
+  "media" : {
+    "photo" : true,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-02T11:46:28+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "Guru przemówił to teraz kababiarze wyciągają kurs\n\n#gielda "
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-02-032",
+  "day" : "2026-10-02",
+  "media" : {
+    "photo" : true,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-02T11:55:05+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "#gielda chyba nie będzie drugiego asbisa "
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-02-033",
+  "day" : "2026-10-02",
+  "media" : {
+    "photo" : true,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-02T12:11:08+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "Czego wy się znowu boicie? xD \n\n#gielda "
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-02-034",
+  "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-02T12:13:22+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "#gielda Skąd ta r--ź na xtb? "
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-02-035",
+  "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-02T12:21:13+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "Świeży zakup 800 #xtb po 137 zł, teraz będę obserwował kurs #pdk\n\n#gielda"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-02-036",
+  "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-02T12:30:51+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "#gielda ale promocja na szczurze, w tym roku gwiazdka wypadła wczesniej"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-02-037",
+  "day" : "2026-10-02",
+  "media" : {
+    "photo" : true,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-02T12:51:23+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "#gielda czy ktoś widział i niedzielę to była pana walczącym mieszkankami bo bardzo lubię się zastanawiam czy się pojawia figurki"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-02-038",
+  "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-02T13:04:38+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "#gielda dobra mnie to interesuje gdzie jest @uzytkownik16 żeby robic kółko na XTB"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-02-039",
+  "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-02T13:15:52+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "#gielda Jak chodzi XTB?"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-02-040",
+  "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-02T14:04:21+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "#gielda creotech zrobi szybciej 1500 pln niż micron 1500 usd\n\nchange my mind"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-02-041",
+  "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-02T14:31:36+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "#gielda ale jebło"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-02-042",
+  "day" : "2026-10-02",
+  "media" : {
+    "photo" : true,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-02T14:36:41+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "Proszę o nagrodę za komplet pokemonów \n\n#gielda"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-02-043",
+  "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-02T15:01:35+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "Uwielbiam logikę giełdy. Mało pracy, bezrobocie rośnie? Ty no To stópki pójdą w dół!!! (Mimo, że urosły miesiąc temu) Pompujemy \n#gielda "
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-02-044",
+  "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-02T15:02:36+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "Ja czegoś nie rozumiem chyba. Wyniki z rynku pracy - dużo mniej nowych etatów (29k vs 89k przewidywane) oraz rewizja poprzednich danych (162k w dół do 133k). Do tego bezrobocie 4.2% względem 4.1% przewidywanego.\n\nCo robi rynek? POMPA - może dlatego, że nie trzeba ludziom tyle płacić? xD\n\n#gielda "
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-02-045",
+  "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-02T15:29:59+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "#anime #gielda \nUwaga dziś zaczęła sie emisja giełdowego anime FX Senshi Kurumi-chan można podpatrzec porady jak stonkować swoje zyski "
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-02-046",
+  "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-02T15:52:32+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "#gielda ide se zwalić konia "
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-02-047",
+  "day" : "2026-10-02",
+  "media" : {
+    "photo" : true,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-02T16:02:45+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "#gielda dzisiaj korłejw jest grany, siadł idealnie, 1k usd zysku i zamykam"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-02-048",
+  "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-02T16:18:33+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "#gielda ciekawe że Samsung robi +5% dzisiaj a Micron na czerwono"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-02-049",
+  "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-02T16:27:18+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "#gielda no i stało się. Portfel USA 100tys zł zysku 🫡\n\n! a portfel PL to k---a szkoda gadać 😅"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-02-050",
+  "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-02T16:34:30+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "#gielda czy zgodne z konstytucją jest to że szczur spada ?"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-02-051",
+  "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-02T16:44:15+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "#gielda więcej zarobiłbym na grze w trzy kubki z menelem niż na inwestowaniu w tym kasynie"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-02-052",
+  "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-02T16:54:48+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "#gielda #rklb\nCzuje niepokoj widzac ten zielony kolor. "
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-02-053",
+  "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-02T17:49:55+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "Skrót dzisiejszych wiadomości biznesowych #codziennybiznes #gielda #biznes #finanse #gruparatowaniapoziomu\nUwaga: Streszczenia i tłumaczenia mogą być niedokładne, dlatego zawsze podaję link do artykułów żródłowych.\n\n**Elizabeth Warren bada ulgi podatkowe w wysokości 19 mld dolarów dla firm Amazon, Google, Meta i Microsoft, podczas gdy sztuczna inteligencja powoduje spadek dochodów federalnych o 96 mld dolarów**\nSenator Elizabeth Warren bada znaczące ulgi podatkowe, z których skorzystały duże firmy technologiczne – Amazon, Google, Meta i Microsoft – które łącznie uzyskały prawie 19 miliardów dolarów ulg podatkowych związanych z inwestycjami w sztuczną inteligencję w ramach ustawy „One Big Beautiful Bill Act”. Te zachęty podatkowe, w tym przyspieszona amortyzacja i rozszerzone ulgi na badania i rozwój, przyczyniły się do straty w wysokości 96 miliardów dolarów w federalnych dochodach podatkowych w obliczu gwałtownego wzrostu zysków związanych ze sztuczną inteligencją, budząc obawy co do wpływu tej sytuacji na budżet federalny i usługi socjalne. Debata na temat ulg podatkowych dla branży technologicznej i potencjalnych reform nasila się w przededniu wyborów śródokresowych.\n[źródło: moneywise.com](<url>\n\n**Visa i Mastercard obsługują prawie połowę europejskich płatności kartowych. Cyfrowe euro ma to zmienić**\nEuropejski Bank Centralny uruchomi w 2027 r. pilotażowy program cyfrowego euro, aby zmniejszyć zależność Europy od zdominowanych przez Stany Zjednoczone systemów płatniczych, takich jak Visa i Mastercard, które w 2025 r. obsłużyły 47% płatności kartowych w strefie euro. Celem cyfrowego euro jest zapewnienie bezpłatnej, powszechnie akceptowanej opcji płatniczej, której akceptacja przez akceptantów będzie obowiązkowa do 2029 r., co wzmocni suwerenność finansową Europy i obniży opłaty transakcyjne dla przedsiębiorstw. Nadal jednak istnieją wyzwania związane z wdrożeniem, integracją oraz konkurencją z istniejącymi prywatnymi rozwiązaniami płatniczymi.\n[źródło: fortune.com](<url>\n\n**W Nowym Jorku wchodzi w życie zasada „kliknij, aby anulować”, dzięki której anulowanie subskrypcji jest tak samo łatwe jak jej zawarcie**\nMiasto Nowy Jork wprowadziło przepis „click-to-cancel”, zgodnie z którym przedsiębiorstwa muszą umożliwić anulowanie subskrypcji w sposób równie prosty jak jej zawarcie, przy użyciu tej samej metody. Przepis ten ma na celu ochronę konsumentów przed skomplikowanymi procedurami anulowania i ma zastosowanie do różnych usług subskrypcyjnych, a za jego naruszenie grożą kary. Ten przepis miejski pojawia się w kontekście trwających działań regulacyjnych na szczeblu federalnym oraz głośnych spraw, takich jak ugoda Amazona z Federalną Komisją Handlu (FTC) opiewająca na 2,5 miliarda dolarów w związku z praktykami dotyczącymi anulowania subskrypcji.\n[źródło: <url>\n\n**Mark Ruffalo krytykuje fuzję Paramount i Warner Bros., ostrzegając przed utratą miejsc pracy i ograniczeniem kreatywności**\nMark Ruffalo potępił fuzję Paramount i Warner Bros. o wartości 111 miliardów dolarów, argumentując, że zahamuje ona kreatywność, osłabi wolność słowa i doprowadzi do znacznej utraty miejsc pracy. Pomimo że sędzia federalny zatwierdził tę transakcję pod warunkiem utrzymania limitów produkcji filmowej oraz zabezpieczeń dotyczących konkurencji, Ruffalo i inne gwiazdy zapowiadają, że będą nadal sprzeciwiać się tej fuzji, przedstawiając ją jako walkę z oligarchią korporacyjną szkodzącą zwykłym ludziom.\n[źródło: <url>\n\n**Dlaczego cena telewizora wzrosła o 100 dolarów na parkingu Target? Kulisy debaty na temat ustalania cen w aplikacji Target**\nSieć Target spotkała się z zarzutami dotyczącymi stosowania dynamicznych i algorytmicznych cen, które mogą ulegać zmianom w zależności od lokalizacji kupującego lub danych o nim – czego przykładem jest wzrost ceny telewizora o 100 dolarów w momencie, gdy klient wjechał na parking sklepu. Chociaż Target zaprzecza, jakoby dostosowywał ceny na podstawie indywidualnych danych, nowojorska ustawa z 2025 r. dotycząca ujawniania informacji o cenach algorytmicznych nakłada na sprzedawców detalicznych obowiązek informowania konsumentów, gdy ceny są ustalane z wykorzystaniem ich danych osobowych, co ma na celu zwiększenie przejrzystości praktyk cenowych. Ustawa ta podkreśla rosnącą uwagę organów regulacyjnych poświęconą algorytmicznej wycenie oraz prawo konsumentów do zrozumienia, w jaki sposób ustalane są ceny.\n[źródło: <url>\n\n**Rynek pracy osłabł we wrześniu – liczba miejsc pracy wzrosła zaledwie o 29 000, a stopa bezrobocia wzrosła do 4,2%**\nWe wrześniu amerykański rynek pracy wykazał nieoczekiwaną słabość – przybyło zaledwie 29 000 miejsc pracy, a stopa bezrobocia wzrosła do 4,2%, co było poniżej prognoz ekonomistów. Pomimo korekt wskazujących na mniejszą liczbę miejsc pracy w poprzednich miesiącach, zatrudnienie w gospodarstwach domowych oraz wskaźnik aktywności zawodowej wzrosły, podczas gdy tempo wzrostu płac spadło do najniższego poziomu od pięciu lat. Słabe dane o zatrudnieniu skłoniły rynki do przewidywania, że Rezerwa Federalna utrzyma stopy procentowe na niezmienionym poziomie w październiku, a ewentualna podwyżka zostanie odłożona do grudnia.\n[źródło: <url>\n\n**Akcje Nike spadły o 10% po ogłoszeniu słabych prognoz dotyczących przychodów i planów zwolnień**\nAkcje firmy Nike gwałtownie spadły po opublikowaniu raportu wskazującego na 4-procentowy spadek przychodów oraz planów zwolnień, które mają rozpocząć się w 2027 roku w ramach nowego programu oszczędnościowego o nazwie „Pace”, mającego na celu zaoszczędzenie 2,5 mld dolarów do 2031 roku. Firma boryka się z trudnościami na rynku chińskim oraz w odniesieniu do marek Sportswear i Jordan, gdzie spodziewany jest spadek przychodów w 2027 roku, a także trwa restrukturyzacja obejmująca modernizację łańcucha dostaw i usprawnienie organizacji.\n[źródło: <url>\n\n**SEC zarzuca oszustwa w programach inwestycyjnych przed debiutem giełdowym dotyczącym akcji OpenAI i SpaceX**\nKomisja Papierów Wartościowych i Giełd (SEC) postawiła zarzuty doradcom funduszy prywatnych w związku z oszukaniem inwestorów poprzez fałszywe twierdzenia o oferowaniu akcji przed debiutem giełdowym (pre-IPO) takich spółek jak OpenAI i SpaceX. Doradcy sprzeniewierzyli miliony dolarów na osobiste wydatki, w tym na kluby ze striptizem oraz zakupy luksusowych towarów. W dwóch sprawach doradcy oszukali inwestorów, w tym weteranów marynarki wojennej, za pomocą fałszywych oświadczeń i sprzeniewierzyli środki, co doprowadziło do postawienia im zarzutów oszustwa papierów wartościowych oraz oszustwa elektronicznego. SEC domaga się nałożenia kar i zakazu wykonywania zawodu na oskarżonych, podkreślając trwającą kontrolę programów inwestycyjnych przed debiutem giełdowym w następstwie ogromnej oferty publicznej SpaceX.\n[źródło: fortune.com](<url>"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-02-054",
+  "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-02T18:10:38+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "Trwa dokręcanie śruby na GPW. Mieliśmy zbyt dobrze. Jak oni chcą promować OKI, jak każde sektory będą skubać.\n\n<url>\n\n#gielda "
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-02-055",
+  "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-02T18:29:26+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "Ehh, pan grubas to jednak fachowiec jest,\n\ntaka pompa na start i już zjazd\n\n#gielda "
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-02-056",
+  "day" : "2026-10-02",
+  "media" : {
+    "photo" : true,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-02T19:06:42+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "#gielda #ekonomia #pieniadze #inwestycje #waluty\n\nCiekawostka ze swiata gieldy o ktorej nikt nie pisze i nikt nie wie zaden wasz cymcyk srymcyk iwuc inwestomat zawod inwestor wam o tym nie powie, a jeden mireczek chcial ciekawostke wiec ja wam powiem, mozecie podziekowac albo shejtowac @uzytkownik15\n\nPowszechnie sie uwaza ze jak kupujecie instrument na stocki z USA ktore sa wyceniane w USD to nie ma zadnego znaczenia czy instrument nominowany jest w EUR czy USD. jest to kompletna bzdura i pi3rdolenie gadacie tak tylko i wylacznie dlatego ze nigdy sie nad tym nie zastanowiliscie, a guru inwestowania tak gadaja bo kurs oprocz fluktuacji jak w 2008 lata w okolicy 1,1\n\nA teraz przyjrzyjmy sie wlasnie co sie stalo z wykresem dwoch identycznych indeksow w 2008 roku kiedy kurs wyj3bal na 1,5. No i widzimy ze Haburger majacy USD kupujacy instrument w USD na stocki USA w USD zarabia +50% wzgledem tego eurpejczyka ktory ma EUR za ktore kupil instrument w EUR na stocki z USA za USD. Wyglada ze to nie ma znaczenia, bo mimo ze to jest 50% to w longrunie procent skladany mocno ukrywa to na wykresie, a to ze dazy z powrotem do mniej wiecej tego samego zalezy tylko i wylacznie od farta, ze kurs lata w tym samym zakresie, a nie ze mozna miec to w d00pie gleboko bo tak juz bedzie zawsze\n\nTen kurs ma w pisde znaczenie dla was co chcecie na rynku byc przez 30 lat a w ogole macie to w pisdzie jak w sumie wszystko oplaty, spready, przewalutowania hehe jest spoko. Nic nie jest spoko drodzy Panstwo\n\nDlatego wnioski jakie mozna wyciagnac: jezeli nie chcemy dodatkowo oprocz spekulacji na gieldzie spekulowac na kursie wymiany walut musimy zabezpieczyc sie instrumentami hedgowanymi. To jest jedyny sposob na ta druga wymiane walutowa wewnatrz samego instrumentu: kurs waluty nominowanej do waluty w ktorej kupowane sa stocki wewnatrz\n\nNatomiast pierwsza wymiana: waluty za ktora kupujecie do waluty instrumentu bazowego rowniez ma kolosalne znaczenie. Jezeliwyniki twojego instrumentu rosna i chcesz sprzedac, a jednoczesnie kurs waluty za ktora placiles do waluty w jakiej nominowany jest instrument w momencie sprzedazy jest niekorzystny to realizujesz mniejszy zysk i jeszcze placisz dodatkowo koszty przewalutowania bo masz ike w xtb hehe szczurish. Analogicznie jakbys kupowal w instrumencie nominowanym to bys mial mozliwosc przewalutowania z powrotem na PLN w momencie ktory uznasz za stosowny i ryzyko kursu walutowego by bylo ograniczone albo przynajmniej kontrolowane\n\nPonizej symulacja zyskow jakby w 2025 nagle z pisdy kurs eurusd wyj3balo na 2,0. Nagle po 25 latach oszczedzania wasz zysk spadlby o polowe"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-02-057",
+  "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-02T19:52:28+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "#gielda jak przyjdzie bessa wszyscy skończymy na wycinaniu gąbek w parku trampolinowym "
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-02-058",
+  "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-02T20:03:03+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "#gielda \n\nCzy szczurzysko wstanie? "
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+}, {
+  "post_id" : "gielda-2026-10-02-059",
+  "day" : "2026-10-02",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-02T20:52:51+02:00",
+      "channels" : [ "gielda" ],
+      "title" : null,
+      "body" : "31% w trochę ponad 60dni. P----------e no ale kto nie ryzykuje ten nie pije szampana. A piłem go we Wrześniu sporo. #gielda"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  }
+} ]

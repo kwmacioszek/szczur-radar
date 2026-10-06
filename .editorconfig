@@ -1,0 +1,52 @@
+# Shared editor settings. IntelliJ IDEA reads this file natively (including the ij_* keys), so
+# everyone opening the repo gets the same code style; VS Code and others honour the basic keys.
+# It describes the style the code already has — no formatter runs in CI.
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
+
+# Java (szczur-radar-api): tabs, Spring style.
+[*.java]
+indent_style = tab
+indent_size = 4
+tab_width = 4
+max_line_length = 120
+ij_continuation_indent_size = 8
+ij_java_use_single_class_imports = true
+ij_java_class_count_to_use_import_on_demand = 999
+ij_java_names_count_to_use_import_on_demand = 999
+ij_java_layout_static_imports_separately = true
+ij_java_imports_layout = $*, |, java.**, |, *, |, pl.szczurradar.**
+
+[{pom.xml,*.xml}]
+indent_style = tab
+indent_size = 4
+tab_width = 4
+
+[Caddyfile]
+indent_style = tab
+tab_width = 4
+
+[{*.sql,*.swift,*.sh}]
+indent_size = 4
+
+[*.properties]
+indent_size = 4
+
+# Markdown: a trailing double space is a line break.
+[*.md]
+trim_trailing_whitespace = false
+
+# The planning trail is never reformatted (REPOSITORY_GUIDELINES.md, Hard Rules); pilot data and
+# fixtures keep their bytes as recorded.
+[{context/**,**/src/test/resources/fixtures/**}]
+trim_trailing_whitespace = false
+insert_final_newline = unset
+indent_style = unset
+indent_size = unset

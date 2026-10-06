@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-01-046",
+  "configId" : "luna-low",
+  "provider" : "openrouter",
+  "model" : "openai/gpt-6-luna",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : "low",
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T21:05:27.463914Z",
+  "rawText" : "{\"relevance\":\"investment_related\",\"modifiers\":[\"humor\"],\"targets\":[{\"id\":\"t1\",\"kind\":\"sector\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"pamięciorzach\"},\"stance\":{\"direction\":\"not_expressed\",\"assertiveness\":null,\"claim_ids\":[]},\"reference\":\"explicit\"}],\"claims\":[{\"id\":\"c1\",\"kind\":\"factual_claim\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"Ale zmyłkę z---------ł na pamięciorzach grubasek xD\"},\"statement\":\"Grubasek zrobił zmyłkę na pamięciorzach.\"}],\"flags\":[]}",
+  "inputTokens" : 3329,
+  "outputTokens" : 554,
+  "cachedTokens" : 3215,
+  "durationMs" : 7293,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

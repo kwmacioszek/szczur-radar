@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-01-013",
+  "configId" : "deepseek-flash",
+  "provider" : "deepseek",
+  "model" : "deepseek-flash",
+  "channel" : "deepseek",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_mode",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T18:41:53.281656Z",
+  "rawText" : "{\"relevance\":\"investment_related\",\"modifiers\":[],\"targets\":[{\"id\":\"t1\",\"kind\":\"company\",\"anchor\":{\"document\":\"item\",\"field\":\"title\",\"quote\":\"Zondacrypto\"},\"stance\":{\"direction\":\"not_expressed\",\"assertiveness\":null,\"claim_ids\":[]},\"reference\":\"explicit\"}],\"claims\":[{\"id\":\"c1\",\"kind\":\"factual_claim\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"Przemysław Kral płacił politykom, fundacjom, agencjom PR, telewizji i federacjom sportowym.\"},\"statement\":\"Przemysław Kral płacił politykom, fundacjom, agencjom PR, telewizji i federacjom sportowym.\"},{\"id\":\"c2\",\"kind\":\"factual_claim\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"Na marketing w Polsce Zondacrypto przeznaczała około 10 mln zł rocznie.\"},\"statement\":\"Na marketing w Polsce Zondacrypto przeznaczała około 10 mln zł rocznie.\"}],\"flags\":[\"missing_context\"]}",
+  "inputTokens" : 3714,
+  "outputTokens" : 278,
+  "cachedTokens" : 3328,
+  "durationMs" : 1519,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

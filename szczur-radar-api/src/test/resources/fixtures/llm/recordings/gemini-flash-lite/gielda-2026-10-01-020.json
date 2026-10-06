@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-01-020",
+  "configId" : "gemini-flash-lite",
+  "provider" : "gemini",
+  "model" : "gemini-3.1-flash-lite",
+  "channel" : "gemini",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T18:44:57.507434Z",
+  "rawText" : "{\n  \"relevance\": \"investment_related\",\n  \"modifiers\": [],\n  \"targets\": [\n    {\n      \"id\": \"t1\",\n      \"kind\": \"company\",\n      \"anchor\": {\n        \"document\": \"item\",\n        \"field\": \"title\",\n        \"quote\": \"Meta\"\n      },\n      \"stance\": {\n        \"direction\": \"not_expressed\",\n        \"assertiveness\": null,\n        \"claim_ids\": []\n      },\n      \"reference\": \"explicit\"\n    },\n    {\n      \"id\": \"t2\",\n      \"kind\": \"company\",\n      \"anchor\": {\n        \"document\": \"item\",\n        \"field\": \"title\",\n        \"quote\": \"Amazon\"\n      },\n      \"stance\": {\n        \"direction\": \"not_expressed\",\n        \"assertiveness\": null,\n        \"claim_ids\": []\n      },\n      \"reference\": \"explicit\"\n    }\n  ],\n  \"claims\": [\n    {\n      \"id\": \"c1\",\n      \"kind\": \"factual_claim\",\n      \"attribution\": \"author\",\n      \"target_ids\": [\n        \"t1\"\n      ],\n      \"evidence\": {\n        \"document\": \"item\",\n        \"field\": \"body\",\n        \"quote\": \"We wrześniu Meta (Facebook) uruchomiła Muse agenta AI, który potrafi samodzielnie przeglądać strony, znajdować produkty, porównywać oferty i przejść przez kolejne etapy zakupu.\"\n      },\n      \"statement\": \"Meta uruchomiła agenta AI o nazwie Muse, który potrafi samodzielnie przeglądać strony i przeprowadzać proces zakupu produktów.\"\n    }\n  ],\n  \"flags\": []\n}",
+  "inputTokens" : 2936,
+  "outputTokens" : 406,
+  "cachedTokens" : null,
+  "durationMs" : 1891,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

@@ -1,12 +1,15 @@
 package pl.szczurradar.api.config;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.jspecify.annotations.Nullable;
+import org.springframework.boot.convert.DurationStyle;
 import org.springframework.core.env.PropertyResolver;
 
 /**
@@ -20,16 +23,36 @@ import org.springframework.core.env.PropertyResolver;
  *   <li>{@code LLM_API_KEY}: a real key of that provider (a secret: never logged or echoed).
  * </ul>
  *
+ * <p>Optional call settings of the assessment client ({@code llm/}), never secrets:
+ *
+ * <ul>
+ *   <li>{@code LLM_SERVICE_TIER}: {@code default} or {@code flex} (cheaper, may be refused with 429;
+ *       only {@code openrouter}, which routes it to OpenAI's flex tier);
+ *   <li>{@code LLM_REASONING_EFFORT}: {@code none}, {@code minimal}, {@code low}, {@code medium},
+ *       {@code high} or {@code xhigh} (only {@code openrouter}); unset = the provider's default;
+ *   <li>{@code LLM_TIMEOUT}: time limit of one HTTP attempt, e.g. {@code 120s} or {@code 5m}
+ *       (default {@code 120s}; flex is slower, give it more).
+ * </ul>
+ *
  * <p>The provider name also activates the Spring profile {@code application-<provider>.properties},
  * which maps these settings onto Embabel's properties and switches the other providers off.
  */
-public record LlmProviderProperties(Provider provider, String model, String apiKey) {
+public record LlmProviderProperties(Provider provider, String model, String apiKey, ServiceTier serviceTier,
+		@Nullable ReasoningEffort reasoningEffort, Duration timeout) {
 
 	public static final String PROVIDER = "LLM_API_PROVIDER";
 
 	public static final String MODEL = "LLM_MODEL";
 
 	public static final String API_KEY = "LLM_API_KEY";
+
+	public static final String SERVICE_TIER = "LLM_SERVICE_TIER";
+
+	public static final String REASONING_EFFORT = "LLM_REASONING_EFFORT";
+
+	public static final String TIMEOUT = "LLM_TIMEOUT";
+
+	public static final Duration DEFAULT_TIMEOUT = Duration.ofSeconds(120);
 
 	/** The supported providers; {@link #id()} is the {@code LLM_API_PROVIDER} value and profile name. */
 	public enum Provider {
@@ -46,14 +69,43 @@ public record LlmProviderProperties(Provider provider, String model, String apiK
 
 	}
 
+	/** {@code LLM_SERVICE_TIER}; {@link #id()} is the setting's value. */
+	public enum ServiceTier {
+
+		DEFAULT, FLEX;
+
+		public String id() {
+			return name().toLowerCase(Locale.ROOT);
+		}
+
+	}
+
+	/** {@code LLM_REASONING_EFFORT}; {@link #id()} is the setting's value and the API value. */
+	public enum ReasoningEffort {
+
+		NONE, MINIMAL, LOW, MEDIUM, HIGH, XHIGH;
+
+		public String id() {
+			return name().toLowerCase(Locale.ROOT);
+		}
+
+	}
+
+	/** The three required settings with default call settings. */
+	public LlmProviderProperties(Provider provider, String model, String apiKey) {
+		this(provider, model, apiKey, ServiceTier.DEFAULT, null, DEFAULT_TIMEOUT);
+	}
+
 	/** Never prints the key. */
 	@Override
 	public String toString() {
-		return "LlmProviderProperties[provider=" + provider.id() + ", model=" + model + ", apiKey=<hidden>]";
+		return "LlmProviderProperties[provider=" + provider.id() + ", model=" + model + ", apiKey=<hidden>, serviceTier="
+				+ serviceTier.id() + ", reasoningEffort=" + (reasoningEffort == null ? "<default>" : reasoningEffort.id())
+				+ ", timeout=" + timeout + "]";
 	}
 
 	/**
-	 * Reads and validates the three settings.
+	 * Reads and validates the settings.
 	 *
 	 * @throws IllegalStateException listing every problem; the message never contains the key
 	 */
@@ -61,6 +113,9 @@ public record LlmProviderProperties(Provider provider, String model, String apiK
 		String providerId = trimmed(environment.getProperty(PROVIDER));
 		String model = trimmed(environment.getProperty(MODEL));
 		String apiKey = trimmed(environment.getProperty(API_KEY));
+		String serviceTierId = trimmed(environment.getProperty(SERVICE_TIER));
+		String reasoningEffortId = trimmed(environment.getProperty(REASONING_EFFORT));
+		String timeoutText = trimmed(environment.getProperty(TIMEOUT));
 
 		List<String> problems = new ArrayList<>();
 		Provider provider = Provider.fromId(providerId);
@@ -75,11 +130,50 @@ public record LlmProviderProperties(Provider provider, String model, String apiK
 		if (apiKey.isEmpty()) {
 			problems.add(API_KEY + " is not set (a real key of the selected provider)");
 		}
+		ServiceTier serviceTier = serviceTierId.isEmpty() ? ServiceTier.DEFAULT
+				: oneOf(ServiceTier.values(), ServiceTier::id, SERVICE_TIER, serviceTierId, problems);
+		if (serviceTier == ServiceTier.FLEX && provider != null && provider != Provider.OPENROUTER) {
+			problems.add(SERVICE_TIER + "=flex is only supported for " + PROVIDER + "=openrouter (got '" + provider.id()
+					+ "')");
+		}
+		ReasoningEffort reasoningEffort = reasoningEffortId.isEmpty() ? null
+				: oneOf(ReasoningEffort.values(), ReasoningEffort::id, REASONING_EFFORT, reasoningEffortId, problems);
+		if (reasoningEffort != null && provider != null && provider != Provider.OPENROUTER) {
+			problems.add(REASONING_EFFORT + " is only supported for " + PROVIDER + "=openrouter (got '" + provider.id()
+					+ "')");
+		}
+		Duration timeout = timeoutText.isEmpty() ? DEFAULT_TIMEOUT : timeout(timeoutText, problems);
 		if (!problems.isEmpty()) {
 			throw new IllegalStateException("Invalid LLM configuration: " + String.join("; ", problems)
 					+ ". See szczur-radar-api/README.md (LLM provider).");
 		}
-		return new LlmProviderProperties(provider, model, apiKey);
+		return new LlmProviderProperties(provider, model, apiKey, serviceTier, reasoningEffort, timeout);
+	}
+
+	private static <E extends Enum<E>> @Nullable E oneOf(E[] values, Function<E, String> id,
+			String setting, String value, List<String> problems) {
+		for (E candidate : values) {
+			if (id.apply(candidate).equals(value)) {
+				return candidate;
+			}
+		}
+		String allowed = Arrays.stream(values).map(id).collect(Collectors.joining(", "));
+		problems.add(setting + " must be one of " + allowed + " (got '" + value + "')");
+		return null;
+	}
+
+	private static @Nullable Duration timeout(String text, List<String> problems) {
+		try {
+			Duration timeout = DurationStyle.detectAndParse(text);
+			if (!timeout.isNegative() && !timeout.isZero()) {
+				return timeout;
+			}
+		}
+		catch (IllegalArgumentException ex) {
+			// reported below
+		}
+		problems.add(TIMEOUT + " must be a positive duration such as 120s or 5m (got '" + text + "')");
+		return null;
 	}
 
 	private static String trimmed(@Nullable String value) {

@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-01-054",
+  "configId" : "luna",
+  "provider" : "openrouter",
+  "model" : "openai/gpt-6-luna",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : null,
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T18:55:56.109615Z",
+  "rawText" : "{\"relevance\":\"investment_related\",\"modifiers\":[\"humor\"],\"targets\":[],\"claims\":[{\"id\":\"c1\",\"kind\":\"investment_thesis\",\"attribution\":\"author\",\"target_ids\":[],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"Mnie to już nie uśredniajta, od razu ze stratą  sprzedajta\"},\"statement\":\"Nie uśredniać, tylko od razu sprzedać ze stratą.\"}],\"flags\":[]}",
+  "inputTokens" : 3334,
+  "outputTokens" : 760,
+  "cachedTokens" : 3215,
+  "durationMs" : 8357,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}

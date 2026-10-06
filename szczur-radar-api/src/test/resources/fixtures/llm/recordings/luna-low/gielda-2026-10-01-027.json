@@ -1,0 +1,23 @@
+{
+  "post_id" : "gielda-2026-10-01-027",
+  "configId" : "luna-low",
+  "provider" : "openrouter",
+  "model" : "openai/gpt-6-luna",
+  "channel" : "openrouter",
+  "serviceTier" : "default",
+  "flexFallback" : false,
+  "reasoningEffort" : "low",
+  "outputMode" : "json_schema",
+  "promptVersion" : "v2.5",
+  "contractVersion" : "V2",
+  "recordedAt" : "2026-10-05T21:03:32.753493Z",
+  "rawText" : "{\"relevance\":\"investment_related\",\"modifiers\":[],\"targets\":[{\"id\":\"t1\",\"kind\":\"company\",\"anchor\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"szczurzyska\"},\"stance\":{\"direction\":\"bearish\",\"assertiveness\":\"unhedged\",\"claim_ids\":[\"c1\",\"c2\"]},\"reference\":\"explicit\"}],\"claims\":[{\"id\":\"c1\",\"kind\":\"opinion\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"mam dosyć tego szczurzyska\"},\"statement\":\"Mam dosyć XTB.\"},{\"id\":\"c2\",\"kind\":\"trade_action\",\"attribution\":\"author\",\"target_ids\":[\"t1\"],\"evidence\":{\"document\":\"item\",\"field\":\"body\",\"quote\":\"szczurzyska wychodzi na 0 i w---------m do śmieci\"},\"statement\":\"Wychodzi z XTB na 0 i w---------m do śmieci.\"}],\"flags\":[]}",
+  "inputTokens" : 3330,
+  "outputTokens" : 386,
+  "cachedTokens" : 3215,
+  "durationMs" : 5102,
+  "attempts" : 1,
+  "status" : "ok",
+  "failureClass" : null,
+  "violations" : [ ]
+}
