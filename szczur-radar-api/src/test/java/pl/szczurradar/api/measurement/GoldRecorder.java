@@ -48,7 +48,8 @@ class GoldRecorder {
 			.collect(Collectors.toMap(Recording::postId, Function.identity()));
 		List<Post> posts = GoldLabels.readPosts(GoldLabels.POSTS);
 		// One client for the whole run (llm/CLAUDE.md).
-		Assessor assessor = new Assessor(LlmClientFactory.create(properties), Clock.systemUTC());
+		Assessor assessor = new Assessor(LlmClientFactory.create(properties), properties.provider(), properties.model(),
+				Clock.systemUTC());
 
 		System.out.println("Recording " + model.id() + " (" + properties + ") on " + posts.size() + " posts");
 		int recorded = 0;

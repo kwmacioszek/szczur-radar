@@ -2,6 +2,7 @@ package pl.szczurradar.api.llm;
 
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
@@ -29,6 +30,10 @@ import pl.szczurradar.api.config.LlmProviderProperties.Provider;
  * </ul>
  *
  * Property order is kept (a provider dropped closing braces when an object ended with a nested one).
+ *
+ * <p>Each {@code (provider, schema text)} pair is transformed once and cached (thread-safe), so
+ * concurrent assessments do not parse and rewrite the schema on every call. The cache holds one
+ * entry per distinct schema text: the application sends one schema, tests a handful.
  */
 public final class ProviderSchemas {
 
@@ -42,10 +47,20 @@ public final class ProviderSchemas {
 	private static final Set<String> OPENAI_STRICT_UNSUPPORTED = Set.of("minItems", "maxItems", "minLength",
 			"maxLength", "uniqueItems");
 
+	private static final Map<Key, String> CACHE = new ConcurrentHashMap<>();
+
 	private ProviderSchemas() {
 	}
 
+	/** A cache key: the full schema text, never its hash alone. */
+	private record Key(Provider provider, String schema) {
+	}
+
 	public static String forProvider(Provider provider, String schema) {
+		return CACHE.computeIfAbsent(new Key(provider, schema), key -> transform(key.provider(), key.schema()));
+	}
+
+	private static String transform(Provider provider, String schema) {
 		JsonNode root = MAPPER.readTree(schema);
 		Set<String> dropped = switch (provider) {
 			case GEMINI -> COUNT_LIMITS;

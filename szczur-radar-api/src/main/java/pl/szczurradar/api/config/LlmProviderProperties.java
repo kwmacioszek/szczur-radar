@@ -8,6 +8,7 @@ import java.util.Locale;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import com.fasterxml.jackson.annotation.JsonValue;
 import org.jspecify.annotations.Nullable;
 import org.springframework.boot.convert.DurationStyle;
 import org.springframework.core.env.PropertyResolver;
@@ -31,7 +32,7 @@ import org.springframework.core.env.PropertyResolver;
  *   <li>{@code LLM_REASONING_EFFORT}: {@code none}, {@code minimal}, {@code low}, {@code medium},
  *       {@code high} or {@code xhigh} (only {@code openrouter}); unset = the provider's default;
  *   <li>{@code LLM_TIMEOUT}: time limit of one HTTP attempt, e.g. {@code 120s} or {@code 5m}
- *       (default {@code 120s}; flex is slower, give it more).
+ *       (default {@code 120s}, at most {@code 30m}; flex is slower, give it more).
  * </ul>
  *
  * <p>The provider name also activates the Spring profile {@code application-<provider>.properties},
@@ -54,11 +55,18 @@ public record LlmProviderProperties(Provider provider, String model, String apiK
 
 	public static final Duration DEFAULT_TIMEOUT = Duration.ofSeconds(120);
 
-	/** The supported providers; {@link #id()} is the {@code LLM_API_PROVIDER} value and profile name. */
+	/** The longest accepted {@code LLM_TIMEOUT}; the Gemini SDK takes it as {@code int} milliseconds. */
+	public static final Duration MAX_TIMEOUT = Duration.ofMinutes(30);
+
+	/**
+	 * The supported providers; {@link #id()} is the {@code LLM_API_PROVIDER} value, the profile name
+	 * and the JSON value.
+	 */
 	public enum Provider {
 
 		GEMINI, DEEPSEEK, OPENROUTER;
 
+		@JsonValue
 		public String id() {
 			return name().toLowerCase(Locale.ROOT);
 		}
@@ -69,22 +77,24 @@ public record LlmProviderProperties(Provider provider, String model, String apiK
 
 	}
 
-	/** {@code LLM_SERVICE_TIER}; {@link #id()} is the setting's value. */
+	/** {@code LLM_SERVICE_TIER}; {@link #id()} is the setting's value and the JSON value. */
 	public enum ServiceTier {
 
 		DEFAULT, FLEX;
 
+		@JsonValue
 		public String id() {
 			return name().toLowerCase(Locale.ROOT);
 		}
 
 	}
 
-	/** {@code LLM_REASONING_EFFORT}; {@link #id()} is the setting's value and the API value. */
+	/** {@code LLM_REASONING_EFFORT}; {@link #id()} is the setting's value, the API value and the JSON value. */
 	public enum ReasoningEffort {
 
 		NONE, MINIMAL, LOW, MEDIUM, HIGH, XHIGH;
 
+		@JsonValue
 		public String id() {
 			return name().toLowerCase(Locale.ROOT);
 		}
@@ -165,11 +175,15 @@ public record LlmProviderProperties(Provider provider, String model, String apiK
 	private static @Nullable Duration timeout(String text, List<String> problems) {
 		try {
 			Duration timeout = DurationStyle.detectAndParse(text);
+			if (timeout.compareTo(MAX_TIMEOUT) > 0) {
+				problems.add(TIMEOUT + " must be at most 30m (got '" + text + "')");
+				return null;
+			}
 			if (!timeout.isNegative() && !timeout.isZero()) {
 				return timeout;
 			}
 		}
-		catch (IllegalArgumentException ex) {
+		catch (IllegalArgumentException | ArithmeticException ex) {
 			// reported below
 		}
 		problems.add(TIMEOUT + " must be a positive duration such as 120s or 5m (got '" + text + "')");

@@ -611,12 +611,12 @@ Odnotować ryzyko: przed F-01 brak backupu i limitów kosztów (lekcja: kroki po
 
 #### Automated
 
-- [ ] 1.1 Testy jednostkowe assessora, LLM i Wykopu pokrywają F7, F8a–F8e (i F8f, jeśli dotyczy)
-- [ ] 1.2 Pełna weryfikacja backendu przechodzi
+- [x] 1.1 Testy jednostkowe assessora, LLM i Wykopu pokrywają F7, F8a–F8e (i F8f, jeśli dotyczy)
+- [x] 1.2 Pełna weryfikacja backendu przechodzi
 
 #### Manual
 
-- [ ] 1.3 Wynik sprawdzenia F8f (znaki obecne lub nie) jest zapisany i zaakceptowany przez użytkownika
+- [x] 1.3 Wynik sprawdzenia F8f (znaki obecne lub nie) jest zapisany i zaakceptowany przez użytkownika
 
 ### Phase 2: Model danych, magazyn RAW i źródło Wykopu jako komponent
 

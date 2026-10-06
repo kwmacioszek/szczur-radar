@@ -18,14 +18,14 @@ import pl.szczurradar.api.llm.OutputMode;
  * model's output — never part of it.
  *
  * <p>For {@link Source#PREFILTER} (§11) there is no call: no provider, model, channel, tier, tokens or
- * prompt, {@code attempts = 0}. For a model call that produced no text the call fields the client
- * reports ({@code serviceTier}, {@code flexFallback}, {@code attempts}) are kept and the fields that
- * come with a response ({@code provider}, {@code model}, {@code channel}, {@code reasoningEffort},
- * {@code outputMode}, tokens) are {@code null}.
+ * prompt, {@code attempts = 0}. For a model call that produced no text the configured
+ * {@code provider} and {@code model} and the call fields the client reports ({@code serviceTier},
+ * {@code flexFallback}, {@code attempts}) are kept, and the fields that come with a response
+ * ({@code channel}, {@code reasoningEffort}, {@code outputMode}, tokens) are {@code null}.
  *
  * @param source {@code model} or {@code prefilter}
  * @param provider the API called
- * @param model the model id the provider reported
+ * @param model the model id the provider reported (the configured one when the call produced no text)
  * @param channel the route inside the provider
  * @param serviceTier the tier of the last attempt
  * @param flexFallback whether flex was refused and the call fell back to the default tier

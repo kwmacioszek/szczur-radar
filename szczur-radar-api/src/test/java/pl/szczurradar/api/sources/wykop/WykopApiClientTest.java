@@ -87,6 +87,44 @@ class WykopApiClientTest {
 	}
 
 	@Test
+	void anAuthErrorQuotingTheKeyAndSecretIsMasked() {
+		try (LocalWykopServer server = new LocalWykopServer(request -> new Reply(400,
+				"{\"error\":{\"code\":400,\"message\":\"Invalid key " + KEY + " or secret " + SECRET + "\"}}"))) {
+			assertThatExceptionOfType(WykopApiException.class)
+				.isThrownBy(() -> client(server).get("search/entries", Map.of()))
+				.satisfies(ex -> assertThat(ex.getMessage()).contains("HTTP 400", "Invalid key <hidden> or secret <hidden>")
+					.doesNotContain(KEY, SECRET));
+		}
+	}
+
+	@Test
+	void anErrorQuotingTheTokenIsMasked() {
+		try (LocalWykopServer server = new LocalWykopServer(request -> request.path().endsWith("/auth")
+				? Reply.ok(TOKEN_1) : new Reply(403, "{\"error\":{\"code\":403,\"message\":\"token token-1 lacks scope\"}}"))) {
+			assertThatExceptionOfType(WykopApiException.class)
+				.isThrownBy(() -> client(server).get("search/entries", Map.of()))
+				.satisfies(ex -> assertThat(ex.getMessage()).contains("HTTP 403", "token <hidden> lacks scope")
+					.doesNotContain("token-1"));
+		}
+	}
+
+	@Test
+	void aLongErrorBodyIsCappedAfterMasking() {
+		// "Wykop auth answered HTTP 500: " (30) + "{\"error\":\"" (10) + 455 = the secret starts at 495,
+		// across the 500-character cut.
+		String body = "{\"error\":\"" + "x".repeat(455) + SECRET + "y".repeat(600) + "\"}";
+		try (LocalWykopServer server = new LocalWykopServer(request -> new Reply(500, body))) {
+			assertThatExceptionOfType(WykopApiException.class)
+				.isThrownBy(() -> client(server).get("search/entries", Map.of()))
+				.satisfies(ex -> {
+					assertThat(ex.getMessage()).hasSize(501).endsWith("…").doesNotContain(SECRET);
+					// Masked before the cap: no prefix of the secret survives at the cut.
+					assertThat(ex.getMessage()).doesNotContain(SECRET.substring(0, 4));
+				});
+		}
+	}
+
+	@Test
 	void anErrorAnswerIsAnExceptionAfterOneRequestWithoutRetries() {
 		try (LocalWykopServer server = new LocalWykopServer(request -> request.path().endsWith("/auth")
 				? Reply.ok(TOKEN_1) : new Reply(500, "{\"error\":{\"code\":500}}"))) {

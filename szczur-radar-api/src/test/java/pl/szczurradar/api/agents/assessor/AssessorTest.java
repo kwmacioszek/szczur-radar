@@ -49,12 +49,17 @@ class AssessorTest {
 
 	private static final AssessmentInputV1 INPUT = ContractFixtures.validInput();
 
+	/** The configured provider and model, recorded only when a call produced no answer. */
+	private static final Provider PROVIDER = Provider.GEMINI;
+
+	private static final String MODEL = "gemini-3.1-flash-lite";
+
 	@Test
 	void aValidAnswerIsOkWithItsProvenance() {
 		String raw = json(ContractFixtures.validOutput());
 		ScriptedClient client = ScriptedClient.answering(raw);
 
-		AssessmentResult result = new Assessor(client, CLOCK).assess(INPUT);
+		AssessmentResult result = assessor(client).assess(INPUT);
 
 		assertThat(client.requests).hasSize(1);
 		assertThat(result.status()).isEqualTo(AssessmentResult.Status.OK);
@@ -73,7 +78,7 @@ class AssessorTest {
 		ScriptedClient client = ScriptedClient.failing(new LlmCallException(failure, "HTTP 503 after 3 attempts", 3,
 				ServiceTier.DEFAULT, true, null));
 
-		AssessmentResult result = new Assessor(client, CLOCK).assess(INPUT);
+		AssessmentResult result = assessor(client).assess(INPUT);
 
 		assertThat(client.requests).hasSize(1);
 		assertThat(result.status()).isEqualTo(AssessmentResult.Status.FAILED);
@@ -91,8 +96,27 @@ class AssessorTest {
 		assertThat(provenance.serviceTier()).isEqualTo(ServiceTier.DEFAULT);
 		assertThat(provenance.flexFallback()).isTrue();
 		assertThat(provenance.promptVersion()).isEqualTo(AssessmentPrompt.PROMPT_VERSION);
-		assertThat(provenance.provider()).isNull();
+		// No answer, so the configured provider and model say whom the attempt was for (§15).
+		assertThat(provenance.provider()).isEqualTo(PROVIDER);
+		assertThat(provenance.model()).isEqualTo(MODEL);
+		assertThat(provenance.channel()).isNull();
+		assertThat(provenance.outputMode()).isNull();
 		assertThat(provenance.inputTokens()).isNull();
+	}
+
+	@Test
+	void failedOnAPreparedRequestEqualsAssessOnAClientFailingIt() {
+		LlmCallException failure = new LlmCallException(CallFailure.TIMEOUT, "timed out after 3 attempts", 3,
+				ServiceTier.DEFAULT, false, null);
+		Assessor assessor = assessor(ScriptedClient.failing(failure));
+		PreparedRequest prepared = ((Preparation.Prepared) assessor.prepare(INPUT)).request();
+
+		AssessmentResult failed = assessor.failed(prepared, failure, Duration.ZERO);
+
+		assertThat(failed).isEqualTo(assessor.assess(INPUT));
+		assertThat(failed.failureClass()).isEqualTo(FailureClass.TIMEOUT);
+		assertThat(failed.provenance().provider()).isEqualTo(PROVIDER);
+		assertThat(failed.provenance().model()).isEqualTo(MODEL);
 	}
 
 	@Test
@@ -130,7 +154,7 @@ class AssessorTest {
 	void anEntryWithoutContentIsDecidedByThePrefilterWithoutACall() {
 		ScriptedClient client = ScriptedClient.answering("unused");
 
-		AssessmentResult result = new Assessor(client, CLOCK).assess(ContractFixtures.post("#gielda @uzytkownik1 <url>"));
+		AssessmentResult result = assessor(client).assess(ContractFixtures.post("#gielda @uzytkownik1 <url>"));
 
 		assertThat(client.requests).isEmpty();
 		assertThat(result.ok()).isTrue();
@@ -143,7 +167,7 @@ class AssessorTest {
 	void theRequestCarriesThePromptTheInputFieldsOnlyAndTheFullSchema() {
 		ScriptedClient client = ScriptedClient.answering(json(ContractFixtures.validOutput()));
 
-		new Assessor(client, CLOCK).assess(INPUT);
+		assessor(client).assess(INPUT);
 
 		LlmRequest request = client.requests.getFirst();
 		assertThat(request.systemPrompt()).isEqualTo(AssessmentPrompt.systemPrompt());
@@ -163,7 +187,7 @@ class AssessorTest {
 			case "fabricated" -> json(investment(List.of(), List.of(claim("c1", Attribution.AUTHOR, "nie ma tego w poście"))));
 			default -> answer;
 		};
-		Assessor assessor = new Assessor(ScriptedClient.answering(raw), CLOCK);
+		Assessor assessor = assessor(ScriptedClient.answering(raw));
 		PreparedRequest prepared = ((Preparation.Prepared) assessor.prepare(INPUT)).request();
 
 		AssessmentResult evaluated = assessor.evaluate(INPUT, prepared, response(raw), Duration.ZERO, NOW);
@@ -173,7 +197,7 @@ class AssessorTest {
 
 	@Test
 	void prepareDecidesAnEntryWithoutContentAndPreparesAnAssessableOne() {
-		Assessor assessor = new Assessor(ScriptedClient.answering("unused"), CLOCK);
+		Assessor assessor = assessor(ScriptedClient.answering("unused"));
 
 		assertThat(assessor.prepare(ContractFixtures.post("#gielda"))).isInstanceOf(Preparation.Decided.class);
 		assertThat(assessor.prepare(INPUT)).isInstanceOfSatisfying(Preparation.Prepared.class,
@@ -183,7 +207,7 @@ class AssessorTest {
 	private static void assertFailsAfterOneCall(String raw, FailureClass expected) {
 		ScriptedClient client = ScriptedClient.answering(raw);
 
-		AssessmentResult result = new Assessor(client, CLOCK).assess(INPUT);
+		AssessmentResult result = assessor(client).assess(INPUT);
 
 		assertThat(client.requests).hasSize(1);
 		assertThat(result.status()).isEqualTo(AssessmentResult.Status.FAILED);
@@ -192,6 +216,10 @@ class AssessorTest {
 		assertThat(result.output()).isNull();
 		assertThat(result.rawText()).isEqualTo(raw);
 		assertThat(result.provenance().provider()).isEqualTo(Provider.OPENROUTER);
+	}
+
+	private static Assessor assessor(LlmClient client) {
+		return new Assessor(client, PROVIDER, MODEL, CLOCK);
 	}
 
 	private static String json(AssessmentOutputV2 output) {

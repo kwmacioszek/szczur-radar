@@ -8,6 +8,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ArrayNode;
@@ -102,6 +104,26 @@ class GeminiClientTest {
 				.satisfies(ex -> {
 					assertThat(ex.failure()).isEqualTo(CallFailure.PROVIDER_ERROR);
 					assertThat(ex.attempts()).isEqualTo(1);
+				});
+			assertThat(server.requests()).hasSize(1);
+		}
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = { "", " \n", "  " })
+	void blankTextWithFinishReasonStopIsAProviderErrorWithoutRetry(String blank) {
+		// The real payload (finish reason STOP) with its answer text replaced by white space of the
+		// contract's set — U+00A0 and U+2007 are not blank for String.isBlank.
+		ObjectNode empty = (ObjectNode) MAPPER.readTree(SUCCESS);
+		((ObjectNode) empty.at("/candidates/0/content/parts/0")).put("text", blank);
+		try (ScriptedProviderServer server = new ScriptedProviderServer(Reply.ok(empty.toString()),
+				Reply.ok(SUCCESS))) {
+			assertThatExceptionOfType(LlmCallException.class)
+				.isThrownBy(() -> client(server, Duration.ofSeconds(5)).complete(REQUEST))
+				.satisfies(ex -> {
+					assertThat(ex.failure()).isEqualTo(CallFailure.PROVIDER_ERROR);
+					assertThat(ex.attempts()).isEqualTo(1);
+					assertThat(ex.getMessage()).contains("no text", "stop");
 				});
 			assertThat(server.requests()).hasSize(1);
 		}

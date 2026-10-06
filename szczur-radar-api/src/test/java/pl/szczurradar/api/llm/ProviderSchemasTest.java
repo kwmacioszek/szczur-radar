@@ -3,7 +3,14 @@ package pl.szczurradar.api.llm;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.JsonNode;
@@ -75,6 +82,50 @@ class ProviderSchemasTest {
 				{"type":"object","properties":{"maxLength":{"type":"integer","maxItems":3}},"required":["maxLength"]}""";
 		assertThat(ProviderSchemas.forProvider(Provider.OPENROUTER, schema))
 			.isEqualTo("{\"type\":\"object\",\"properties\":{\"maxLength\":{\"type\":\"integer\"}},\"required\":[\"maxLength\"]}");
+	}
+
+	@Test
+	void eachProviderAndSchemaIsTransformedOnceAndReused() {
+		String first = ProviderSchemas.forProvider(Provider.DEEPSEEK, V2);
+
+		assertThat(ProviderSchemas.forProvider(Provider.DEEPSEEK, V2)).isSameAs(first);
+		assertThat(OutputParser.schemaText()).isSameAs(V2);
+	}
+
+	@Test
+	void concurrentCallsWithDifferentSchemasAndProvidersGetTheirOwnResults() throws Exception {
+		List<String> schemas = List.of(V2, """
+				{"type":"object","properties":{"enum":{"enum":["a",null],"description":"d"},"n":{"enum":[1,null]}}}""",
+				"""
+				{"type":"object","properties":{"maxLength":{"type":"integer","maxItems":3}},"required":["maxLength"]}""");
+		Map<String, String> expected = new HashMap<>();
+		for (Provider provider : Provider.values()) {
+			for (int i = 0; i < schemas.size(); i++) {
+				expected.put(provider.id() + i, ProviderSchemas.forProvider(provider, schemas.get(i)));
+			}
+		}
+		// Different schemas of one provider never share a result.
+		assertThat(Set.of(expected.get("gemini0"), expected.get("gemini1"), expected.get("gemini2"))).hasSize(3);
+
+		ExecutorService executor = Executors.newFixedThreadPool(8);
+		try {
+			List<Callable<Boolean>> calls = new ArrayList<>();
+			for (int round = 0; round < 50; round++) {
+				for (Provider provider : Provider.values()) {
+					for (int i = 0; i < schemas.size(); i++) {
+						String schema = schemas.get(i);
+						String key = provider.id() + i;
+						calls.add(() -> ProviderSchemas.forProvider(provider, schema).equals(expected.get(key)));
+					}
+				}
+			}
+			for (Future<Boolean> result : executor.invokeAll(calls)) {
+				assertThat(result.get()).isTrue();
+			}
+		}
+		finally {
+			executor.shutdownNow();
+		}
 	}
 
 	private static List<String> names(JsonNode object) {

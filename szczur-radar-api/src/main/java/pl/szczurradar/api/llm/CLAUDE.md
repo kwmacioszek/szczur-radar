@@ -2,7 +2,8 @@
 
 Infrastructure only: no assessment contract here (the contract lives in `agents/assessor`; this
 package must not import it). `LlmClient.complete(LlmRequest)` returns the model's raw text and the
-call's metadata, or throws `LlmCallException` (`provider_error` | `timeout`).
+call's metadata, or throws `LlmCallException` (`provider_error` | `timeout`). White space (e.g. a
+blank answer) is judged with the shared `text/Whitespace`, never `isBlank`.
 
 - One provider per run from `LLM_*` (`config/LlmProviderProperties`); `LlmClientFactory` builds a
   Spring AI `ChatModel` outside Embabel's model beans. Embabel's `createObject` is never used for

@@ -2,7 +2,8 @@ package pl.szczurradar.api.text;
 
 /**
  * The white space of contract-v2.md §10 — the one definition used by the validator (quote
- * invariant), the prefilter (§11), the input model and the gold metrics.
+ * invariant), the prefilter (§11), the input model, the source mappers, the LLM clients (blank
+ * answers) and the gold metrics.
  *
  * <p>Neither {@link Character#isWhitespace(int)} nor Apache {@code StringUtils.normalizeSpace}
  * matches the contract's set (both miss U+2007, U+202F and U+0085), so the set is listed here.

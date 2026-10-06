@@ -53,7 +53,7 @@ Opcjonalne ustawienia wywołania klienta oceny (`llm/`), nie są sekretami:
 | --- | --- |
 | `LLM_SERVICE_TIER` | `default` (domyślnie) albo `flex` — tańszy tryb OpenAI, może odmawiać (429); tylko z `openrouter` (routing `provider.only=["openai/flex"]`, po trzech odmowach to samo wywołanie w trybie standardowym) |
 | `LLM_REASONING_EFFORT` | `none`, `minimal`, `low`, `medium`, `high`, `xhigh`; tylko z `openrouter`; brak = domyślne dostawcy |
-| `LLM_TIMEOUT` | limit jednej próby HTTP, np. `120s`, `5m` (domyślnie `120s`; dla flex dłuższy) |
+| `LLM_TIMEOUT` | limit jednej próby HTTP, np. `120s`, `5m` (domyślnie `120s`, maks. `30m`; dla flex dłuższy) |
 
 - Błędna wartość albo `flex`/`LLM_REASONING_EFFORT` z innym dostawcą niż `openrouter` przerywa start z komunikatem jak dla trzech zmiennych powyżej.
 - Ocena nie korzysta z `createObject` Embabel: klient z `llm/` (`LlmClientFactory`) buduje `ChatModel` Spring AI z tych samych zmiennych, z wyłączonymi ponowieniami frameworka i SDK; jedyne ponowienia (do 3 prób na 429, 5xx, przekroczenie czasu, błąd połączenia) są w `llm/TransportRetry`. Klient powstaje leniwie — start nie łączy się z dostawcą.
