@@ -616,7 +616,7 @@ Odnotować ryzyko: przed F-01 brak backupu i limitów kosztów (lekcja: kroki po
 
 #### Manual
 
-- [x] 1.3 Wynik sprawdzenia F8f (znaki obecne lub nie) jest zapisany i zaakceptowany przez użytkownika
+- [x] 1.3 Wynik sprawdzenia F8f (znaki obecne lub nie) jest zapisany i zaakceptowany przez użytkownika — 378b05b
 
 ### Phase 2: Model danych, magazyn RAW i źródło Wykopu jako komponent
 
