@@ -1,4 +1,4 @@
-package pl.szczurradar.api.agents.assessor.text;
+package pl.szczurradar.api.text;
 
 /**
  * The white space of contract-v2.md §10 — the one definition used by the validator (quote

@@ -13,7 +13,7 @@ import pl.szczurradar.api.agents.assessor.contract.AssessmentInputV1;
 import pl.szczurradar.api.agents.assessor.contract.Context;
 import pl.szczurradar.api.agents.assessor.contract.Item;
 import pl.szczurradar.api.agents.assessor.contract.ItemType;
-import pl.szczurradar.api.agents.assessor.text.Whitespace;
+import pl.szczurradar.api.text.Whitespace;
 
 /**
  * A Wykop API v3 element → {@link AssessmentInputV1} (contract-v2.md §2), one definition for the gold

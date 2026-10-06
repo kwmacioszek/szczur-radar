@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.regex.Pattern;
 
-import pl.szczurradar.api.agents.assessor.text.Whitespace;
+import pl.szczurradar.api.text.Whitespace;
 
 /**
  * Pairs gold targets with a model's targets by anchor. Anchors are normalized (§10 white space,

@@ -7,7 +7,7 @@ import pl.szczurradar.api.agents.assessor.contract.AssessmentInputV1;
 import pl.szczurradar.api.agents.assessor.contract.AssessmentOutputV2;
 import pl.szczurradar.api.agents.assessor.contract.Flag;
 import pl.szczurradar.api.agents.assessor.contract.Relevance;
-import pl.szczurradar.api.agents.assessor.text.Whitespace;
+import pl.szczurradar.api.text.Whitespace;
 
 /**
  * The no-content prefilter of contract-v2.md §11 — one definition for production, the gold sample and

@@ -17,7 +17,7 @@ Reference implementation: `sources/wykop/`.
 | `<Source>Mapper` | `<Source>Item` → `AssessmentInputV1`: item type (`post`, `link`, `comment`), title/body, `published_at` with the zone offset, `channels` | pass author, URL or source id to the input; drop an unsupported element silently (`UnmappableItemException`) |
 
 - Text goes to the model unchanged (hard spaces, line breaks, emoji); empty or white-space-only text
-  becomes `null` via `agents/assessor/text/Whitespace`, never `String.strip`/`trim`.
+  becomes `null` via `text/Whitespace`, never `String.strip`/`trim`.
 - Closed value sets of a source (resource types, endpoints) are enums, not free strings.
 - Keys come from the environment (`<SOURCE>_KEY`, …), never from the repo.
 - Raw payloads, when the pipeline stores them (S-02), go to separate storage from the normalized

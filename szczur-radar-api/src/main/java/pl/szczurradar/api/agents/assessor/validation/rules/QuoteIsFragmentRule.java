@@ -4,10 +4,10 @@ import java.util.List;
 
 import pl.szczurradar.api.agents.assessor.contract.AssessmentInputV1;
 import pl.szczurradar.api.agents.assessor.contract.AssessmentOutputV2;
-import pl.szczurradar.api.agents.assessor.text.Whitespace;
 import pl.szczurradar.api.agents.assessor.validation.RuleId;
 import pl.szczurradar.api.agents.assessor.validation.ValidationRule;
 import pl.szczurradar.api.agents.assessor.validation.Violation;
+import pl.szczurradar.api.text.Whitespace;
 
 /**
  * {@link RuleId#D6} — nothing more lenient: case, inflection, "[...]" and markdown must match.

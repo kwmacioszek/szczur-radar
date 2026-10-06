@@ -1,4 +1,4 @@
-package pl.szczurradar.api.agents.assessor.text;
+package pl.szczurradar.api.text;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
