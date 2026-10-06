@@ -261,10 +261,10 @@ Brak danych do migracji. Produkcja przełącza się przy merge: `railway-config`
 
 #### Automated
 
-- [ ] 2.1 Bieżące dokumenty nie opisują Railpacka jako buildu API poza historią i komentarzem zmiennej
-- [ ] 2.2 `REPOSITORY_GUIDELINES.md` wymienia nowy job `api-container-smoke`
+- [x] 2.1 Bieżące dokumenty nie opisują Railpacka jako buildu API poza historią i komentarzem zmiennej
+- [x] 2.2 `REPOSITORY_GUIDELINES.md` wymienia nowy job `api-container-smoke`
 - [ ] 2.3 CI na PR jest zielone po zmianach dokumentów
-- [ ] 2.6 Stan backupu jest zapisany w dokumentach, a warunek przed S-05 zostaje; renderer i obraz roadmapy są aktualne
+- [x] 2.6 Stan backupu jest zapisany w dokumentach, a warunek przed S-05 zostaje; renderer i obraz roadmapy są aktualne
 
 #### Manual
 

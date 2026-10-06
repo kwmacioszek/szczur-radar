@@ -16,6 +16,8 @@ During implementation, update the existing context/deployment/deploy-plan.md in 
 
 Both are the hard gate **before Phase 6 (data collection)**: subscribe → set limits + re-run the restore drill until query-verified (else Render fallback, risk #1). Phase 5 (isolated PR previews) is optional/later.
 
+> **Update 2026-10-06 (`api-docker-image`):** PITR is **disabled** on production and its `Postgres-PITR` bucket is gone (cost, user decision). **Backup bazy: brak do czasu subskrypcji** — details in the `api-docker-image` section below. The gate above still holds: a working backup and a query-verified restore before data collection.
+
 ## S-01 release — admin bootstrap and login (2026-09-29)
 
 **Live on production.** PR #13 squash-merged as `9b9fbf8` — merged by the agent after a consent bundled with other questions, which the operator rejected as not explicit; from now on only a human merges to `main` (lessons.md). Change: `context/changes/admin-bootstrap-and-login/`.
@@ -32,13 +34,13 @@ Both are the hard gate **before Phase 6 (data collection)**: subscribe → set l
 
 **Status (2026-10-03): DONE — production switched to Java and verified after human merges of PR #26 (`7a406f2`) and follow-up PR #27 (`6bc15db`).** Change: `context/archive/2026-10-01-java-api-rewrite/`, [issue #25 close-out](https://github.com/kwmacioszek/szczur-radar/issues/25#issuecomment-5965517657). The implementation-review fixes are tracked separately in `context/archive/2026-10-01-java-api-rewrite/follow-ups/review-fixes.md`; they ship in their own PR (branch `fix/java-api-rewrite-review-fixes`).
 
-The API is now a Spring Boot 4 jar on Java 25 (Railpack, `RAILPACK_JDK_VERSION=25`). Sessions live in Postgres (Spring Session JDBC); migrations are Flyway, fix-forward. There is **no way back to the Python backend** after the switch: failures are fixed in Java and redeployed; a bad migration is fixed by a new migration; PITR recovers data, not the Python runtime.
+The API is now a Spring Boot 4 jar on Java 25, built from `szczur-radar-api/Dockerfile` since `api-docker-image` (2026-10-06; before: Railpack with `RAILPACK_JDK_VERSION=25`). Sessions live in Postgres (Spring Session JDBC); migrations are Flyway, fix-forward. There is **no way back to the Python backend** after the switch: failures are fixed in Java and redeployed; a bad migration is fixed by a new migration; a database backup restores data, not the Python runtime (no backup until the subscription — see `api-docker-image` below).
 
 ### Operator commands (replace the `uv run …` ones above)
 
 - Migrations (pre-deploy, automatic): `java -jar target/szczur-radar-api.jar migrate`.
-- First admin: wake the API first (`curl https://<web-domain>/api/health`) — a sleeping service has no container, and `railway ssh` then lands on Railway's SSH gateway (it prints account info and runs nothing). Then `railway ssh -s szczur-radar-api -e <env>` and, inside the container shell (`/app`), `java -jar target/szczur-radar-api.jar create-admin --email you@example.com` — password asked twice, hidden (needs a real terminal, not an agent's `!`); refuses if an admin exists. Type the e-mail without `< >`: the shell reads `<` as a redirect.
-- Variables on `szczur-radar-api` (names only): `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, `PGPASSWORD` (references to Postgres, from IaC), `PORT`, `RAILPACK_JDK_VERSION`, and operator-set `LLM_API_PROVIDER`, `LLM_MODEL`, `LLM_API_KEY` — production's key is the operator's and must be **sealed** (Railway copies unsealed variables into new PR envs: on 2026-10-02 PR env #27 started with production's key). PR envs get the CI settings (variables + `LLM_API_KEY` secret) from the `railway-config` CI step "Ensure PR-env LLM settings", which overwrites a copied value and never runs on production. `DATABASE_URL` and `JWT_SECRET` stay declared in `.railway/railway.ts` only because the CI gate refuses `variable.delete`; both are unused since F-03.
+- First admin: wake the API first (`curl https://<web-domain>/api/health`) — a sleeping service has no container, and `railway ssh` then lands on Railway's SSH gateway (it prints account info and runs nothing). Then `railway ssh -s szczur-radar-api -e <env>` and, inside the container shell (`/app`), `java -jar target/szczur-radar-api.jar create-admin --email you@example.com` — password asked twice, hidden (needs a real terminal, not an agent's `!`); refuses if an admin exists. Type the e-mail without `< >`: the shell reads `<` as a redirect. The `railway ssh` shell runs as **root** (Railway SSH ignores the image's `USER`); the app itself runs as the non-root `app` user, and the jar commands work the same in both. In a checkout without `railway link`, prefix CLI commands with `RAILWAY_PROJECT_ID=<project-id>`.
+- Variables on `szczur-radar-api` (names only): `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, `PGPASSWORD` (references to Postgres, from IaC), `PORT`, and operator-set `LLM_API_PROVIDER`, `LLM_MODEL`, `LLM_API_KEY` — production's key is the operator's and must be **sealed** (Railway copies unsealed variables into new PR envs: on 2026-10-02 PR env #27 started with production's key). PR envs get the CI settings (variables + `LLM_API_KEY` secret) from the `railway-config` CI step "Ensure PR-env LLM settings", which overwrites a copied value and never runs on production. `DATABASE_URL`, `JWT_SECRET` and `RAILPACK_JDK_VERSION` stay declared in `.railway/railway.ts` only because the CI gate refuses `variable.delete`; the first two are unused since F-03, `RAILPACK_JDK_VERSION` since `api-docker-image` (the JDK comes from the image). Optional: `JAVA_TOOL_OPTIONS` for extra JVM flags (the image already passes `-XX:MaxRAMPercentage=75`).
 
 ### PR env verification (szczur-radar-pr-26, 2026-10-02)
 
@@ -78,9 +80,63 @@ The API is now a Spring Boot 4 jar on Java 25 (Railpack, `RAILPACK_JDK_VERSION=2
 
 ### Troubleshooting (Java)
 
-- **Build fails on Railway:** check `RAILPACK_JDK_VERSION=25` on the service (Railpack defaults to 21 → `release 25 not supported`), that `mvnw` is executable and `.mvn/wrapper/maven-wrapper.properties` is committed. Railpack builds with `-DskipTests`; the same code is green in CI.
+- **Build fails on Railway:** the API builds from `szczur-radar-api/Dockerfile` (the build log starts with `load build definition from szczur-radar-api/Dockerfile`): stage `eclipse-temurin:25-jdk-noble` runs `./mvnw -B dependency:go-offline`, then `./mvnw -B -DskipTests package`; runtime `eclipse-temurin:25-jre-noble`. Check that `mvnw` is executable, `.mvn/wrapper/maven-wrapper.properties` is committed and `.dockerignore` does not exclude `mvnw`, `.mvn/`, `pom.xml` or `src/`; reproduce with `docker build -t szczur-radar-api ./szczur-radar-api` (CI `api-container-smoke` builds the same file). The Temurin tags move (`25-jdk-noble`, `25-jre-noble`): a failure on an unchanged commit points at a new base image. (Before `api-docker-image`: Railpack with `RAILPACK_JDK_VERSION=25`.)
 - **Pre-deploy `migrate` fails:** read the pre-deploy logs. `Invalid LLM configuration: …` → set the three `LLM_*` variables; JDBC errors → check the `PG*` references; Flyway validation error → never edit an applied migration, add a new one.
 - **Healthcheck fails / proxy 502:** the API listens on `$PORT` (8000) dual-stack; a 502 only during the first seconds after sleep is the JVM starting (the proxy retries up to 30 s); a lasting 502 → API crashed, read its logs.
+
+## api-docker-image: obraz Dockera dla API i wyłączenie PITR
+
+**Status (2026-10-06): live on production** after the human merge of PR #33 (`721bb8a`); production verified (issue #32). Change: `context/changes/api-docker-image/`.
+
+### How the API is built and run
+
+- Railway auto-detects `szczur-radar-api/Dockerfile` in the service root directory (like web). Build stage `eclipse-temurin:25-jdk-noble`: `./mvnw` with dependencies in their own layer, tests skipped (CI runs them). Runtime stage `eclipse-temurin:25-jre-noble`: user `app` (uid 999, non-root), `WORKDIR /app`, jar at `/app/target/szczur-radar-api.jar`, `ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75", "-jar", "/app/target/szczur-radar-api.jar"]`, no `CMD`.
+- `.railway/railway.ts` sets no start command (the `ENTRYPOINT` starts the server). The pre-deploy `java -jar target/szczur-radar-api.jar migrate` is unchanged: Railway runs it in a container of the same image, replacing the `ENTRYPOINT`, relative to `/app` (verified in the PR env and on production).
+- Same image locally and in CI: `docker build -t szczur-radar-api ./szczur-radar-api`; `docker run <image>` = server, `docker run <image> migrate` = migrations. CI job `api-container-smoke` builds the Dockerfile, checks the non-root user, runs the exact pre-deploy command against Postgres 18, then `/api/health` and `/api/ready`.
+- `railway ssh` lands in a **root** shell (Railway SSH ignores `USER`); the app process runs as `app`.
+
+### Memory, build and cold start (measured 2026-10-06)
+
+| | |
+| --- | --- |
+| Container memory limit (`/sys/fs/cgroup/memory.max`) | 999997440 B ≈ 954 MiB |
+| Max heap with `-XX:MaxRAMPercentage=75` | ≈ 716 MiB (the JDK default of 25 % would give ≈ 238 MiB) |
+| GC | SerialGC (G1 needs ≥ 2 CPUs and ≥ 1792 MB) |
+| `nproc` in the container | 48 (host CPUs) |
+| Image size | 508 MB (local `docker image ls`) |
+| Build on Railway | without cache ~1:25 min (`dependency:go-offline` 54 s, `package` 11 s) + push ~40 s; with cached dependency layer ~7 s + push ~32 s |
+| Server start | 7.9–8.3 s warm; pre-deploy `migrate` container ~12 s |
+| First request after sleep | ~9.6–10.5 s (Railpack: ~10–11 s to logged-in) — no regression |
+
+### PITR disabled; database backup
+
+- 2026-10-06: PITR disabled with `railway postgres pitr disable` in `szczur-radar-pr-33` and on production → `enabled: false`, `bucketWired: false`; the `Postgres-PITR` bucket is removed from `.railway/railway.ts`. The operator had deleted the production bucket earlier: it no longer appeared in `railway bucket list`, yet production kept archiving WAL until the disable — check `pitr status`, not the bucket list. The CLI reports that existing backups are kept: check Usage that the old PITR storage is no longer billed.
+- **Backup bazy: brak do czasu subskrypcji.** User decision 2026-10-06: the production database holds no real data (one admin), cost first.
+- Before collecting real data (S-05), after subscribing: Postgres → Backups → enable the **Daily** schedule (kept 6 days, incremental, billed at the volume price), take a manual backup, then restore it (Backups → Restore) and query-verify the result. Limits: backups are lost if the volume is wiped, and restore works only within the same environment. Migrations stay fix-forward.
+
+### Runbook — PITR cleanup (done 2026-10-06; for any other environment)
+
+0. Production only: decide the backup first — Daily schedule + manual backup, or an explicit "no backup" decision as on 2026-10-06.
+1. `railway postgres pitr status -p <project-id> -e <env> -s postgres --json`; if `enabled: true` → `railway postgres pitr disable -p <project-id> -e <env> -s postgres` (confirm in the prompt; Postgres redeploys). Re-check: `enabled: false`, `bucketWired: false`; `/api/ready` 200 through web.
+2. If `railway bucket list -e <env>` still shows `Postgres-PITR`: `railway bucket -e <env> -b <bucket-id> delete`. Never delete the database service or its volume.
+3. `railway config plan` for that environment: no bucket delete, nothing destructive.
+
+### Production switch (2026-10-06)
+
+- PR #33 merged by the operator as `721bb8a` (10:10 UTC); CI on `main` green; `railway-config` applied one change to `szczur-radar-api` (`deploy.startCommand` cleared) before the deploy.
+- Deployment `1e339712` SUCCESS: build log `load build definition from szczur-radar-api/Dockerfile`; pre-deploy `migrate` `started by app in /app`, "Schema … is up to date"; healthcheck passed; `/api/ready` 200; admin login on the public address verified.
+- Observation: Hikari `Failed to validate connection … (This connection has been closed.)` warnings after a few idle minutes, on production and in the PR env — follow-up F4 in `context/changes/api-docker-image/follow-ups/review-fixes.md` (separate change).
+
+### Runbook — after a merge that changes the API image
+
+1. CI on `main` green; the `railway-config` diff shows only the expected changes.
+2. The API build log starts with `load build definition from szczur-radar-api/Dockerfile`; the pre-deploy log shows `started by app in /app` and `migrate` exits 0; the healthcheck passes.
+3. `/api/ready` 200 on the public address; admin login works.
+4. Comment the result on the change's issue; the human closes the issue after this verification.
+
+### Rollback
+
+Revert only the image switch: delete `szczur-radar-api/Dockerfile` (Railpack takes over again) and restore `start: "java $JAVA_OPTS -jar target/szczur-radar-api.jar"` in `.railway/railway.ts`; check the plan before the apply. Do not restore the `Postgres-PITR` bucket declaration: PITR stays disabled — re-enabling it is a separate decision and does not bring back deleted backups.
 
 ## F-02: model domyślny (assessment-contract-harness)
 
@@ -189,16 +245,16 @@ Record the web URL, Railway project/environment and deployment IDs, configured v
 
 #### Support steps / recovery runbook
 
-- **Build failure — api:** Railpack didn't detect Java or used the wrong JDK. Confirm `pom.xml`, `mvnw` and `.mvn/wrapper/` are committed, `RAILPACK_JDK_VERSION=25` is set, and the start command is the IaC one (`java $JAVA_OPTS -jar target/szczur-radar-api.jar`). Inspect `railway logs --service szczur-radar-api`. (Before F-03: Python/uv — see history above.)
+- **Build failure — api:** since `api-docker-image` the API builds from `szczur-radar-api/Dockerfile` — see Troubleshooting (Java) above; reproduce with a local `docker build`, CI `api-container-smoke` builds the same image. IaC sets no start command: the image `ENTRYPOINT` runs the jar, and a start command set by hand in the dashboard would replace it (exec form, no `$VAR` expansion). Inspect `railway logs --service szczur-radar-api`. (Before: Railpack with `RAILPACK_JDK_VERSION=25`; before F-03: Python/uv — see history above.)
 - **Build failure — web:** Dockerfile not detected, or `npm ci` / `vue-tsc` failed. Confirm `szczur-radar-web/Dockerfile` sits at the service root directory and `package-lock.json` is committed. The identical build is green in CI, so a Railway-only failure points at root-directory / build-context config.
 - **Proxy 502 (web → api):** Caddy can't reach the backend. Check the web service's `API_PRIVATE_DOMAIN` / `API_PORT` reference variables resolve to the api's `RAILWAY_PRIVATE_DOMAIN` / `PORT`; confirm the api is up (the JVM binds dual-stack); confirm the api deployment is live and healthy. A 502 only in the first seconds after the API slept is the JVM starting — Caddy retries for up to 30 s.
 - **Readiness 503:** `/api/ready` failed its `SELECT 1`. Check the api `PG*` references resolve and Postgres is up; read `railway logs --service szczur-radar-api`. Health 200 while ready 503 = app up, DB unreachable.
 - **CI wait / deploy stuck in `WAITING`:** Wait for CI is waiting on a workflow conclusion. Confirm the GitHub Actions run **concluded** (not skipped — do not path-filter the workflow) and the Railway GitHub app has repo permissions.
-- **Bad release:** roll back via dashboard → service → Deployments → Rollback (the CLI has no rollback). Code rollback does **not** roll back data — assess Postgres / migration state separately; migrations are fix-forward (Flyway, no undo) — repair with a new migration, PITR as the last resort.
-- **Backups/PITR can't be enabled or restore-tested:** **stop before collecting production data** and reopen the documented Render fallback (managed Postgres with PITR) — risk register #1.
+- **Bad release:** roll back via dashboard → service → Deployments → Rollback (the CLI has no rollback). Code rollback does **not** roll back data — assess Postgres / migration state separately; migrations are fix-forward (Flyway, no undo) — repair with a new migration; restoring a database backup is the last resort — there is none until the subscription (see `api-docker-image`).
+- **Backups can't be enabled or restore-tested** (since 2026-10-06 the planned backup is Railway's daily volume backup, not PITR): **stop before collecting production data** and reopen the documented Render fallback (managed Postgres with PITR) — risk register #1.
 - **IaC config change didn't take effect (config ≠ merge):** changing `.railway/railway.ts` (start command, healthcheck, variables, region) needs `railway config apply` — git merge + autodeploy rebuilds **code**, not service **config**. Symptom: the deploy keeps running the OLD setting after a merged config change (here: the deploy still ran uvicorn until `railway config apply` pushed the Hypercorn start command). Fix: `railway config apply`, then redeploy.
   - **Since `admin-bootstrap-and-login` (2026-09-28) this is automated** by the CI job `railway-config` (`.github/workflows/ci.yml`): on every PR it plans + applies `.railway/railway.ts` to that PR's environment `szczur-radar-pr-<N>` (never `production`); on every push to `main` it applies to `production`. Railway "Wait for CI" waits for the whole workflow, so config (e.g. the API `preDeploy` migration) is applied **before** the code deploys. The job selects the environment with `RAILWAY_PROJECT_ID` + `RAILWAY_ENVIRONMENT_ID` (resolved by name from `railway environment list --json`) — never `railway link` — and **fails without applying** if the plan targets another environment, contains a `destructive` / `resource.delete` change, or changes a service `source`/branch in any environment; it never passes `--confirm-destructive`. PR envs track the PR branch, so on `pull_request` the job sets `IAC_SOURCE_BRANCH` (= the PR head branch) and `railway.ts` uses it instead of `main` — otherwise every PR plan would try to rewrite `source.branch`. Variables set by hand in Railway (e.g. `JWT_SECRET`) must be declared in `railway.ts` with `preserve()` (name only, never a value) — otherwise the plan proposes `Delete variable …` and the job refuses to apply. Fork PRs are skipped (no secret, no PR env). If the job fails: read its plan output; fix `.railway/railway.ts` so the plan is clean (drift from dashboard settings → mirror them in the file, see lessons.md), then re-run the job. A missing PR env (job retries ~3 min) → check PR Environments are enabled, then re-run.
-  - `railway.ts` must mirror production: `railway config plan --detailed-exit-code` on `production` must exit **0** before any automatic apply (2026-09-28: sleep on all 3 services + bucket `Postgres-PITR` added to the file → exit 0).
+  - `railway.ts` must mirror production: `railway config plan --detailed-exit-code` on `production` must exit **0** before any automatic apply (2026-09-28: sleep on all 3 services + bucket `Postgres-PITR` added to the file → exit 0). Since `api-docker-image` (2026-10-06) the bucket is no longer declared: PITR was disabled and the bucket deleted in each environment before the apply.
 - **Healthcheck "service unavailable" while the app logs look healthy:** Railway's healthcheck uses **IPv4**, the web→api proxy IPv6 — the listener must be dual-stack. The JVM's default wildcard bind is; do not set `server.address`. Also confirm the app listens on `$PORT` and does not block the `healthcheck.railway.app` host. (Before F-03 the Python API needed Hypercorn on `::` for this.)
 
 Before enabling PR previews, seal all production-only secrets. Verify that preview environments cannot inherit those values; add separate preview credentials only when needed. Railway does not copy sealed values into PR environments (https://docs.railway.com/variables).
