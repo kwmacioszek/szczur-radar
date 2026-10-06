@@ -57,6 +57,7 @@ class GeminiClientTest {
 				JsonNode config = body.get("generationConfig");
 				assertThat(config.get("responseMimeType").asString()).isEqualTo("application/json");
 				assertThat(config.get("temperature").asDouble()).isZero();
+				assertThat(config.get("maxOutputTokens").asInt()).isEqualTo(LlmClient.MAX_OUTPUT_TOKENS);
 				assertThat(config.at("/thinkingConfig/includeThoughts").asBoolean(true)).isFalse();
 				String schema = config.get("responseJsonSchema").toString();
 				// Spring AI maps the schema through GenAI's Schema type, which has no additionalProperties

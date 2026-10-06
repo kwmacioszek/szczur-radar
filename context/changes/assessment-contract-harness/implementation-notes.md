@@ -247,3 +247,25 @@ User's request: remove what the model comparison left behind.
   `-Dgold.links` / `GoldLabels.LOCAL_LINKS` / `writeLinks` in `WykopGoldSampler`; the local
   `~/.config/szczur-radar/gold-links.json` was deleted. `WykopItem.webUrl()` stays in `src/main` — the
   link to the original post is product scope (S-03).
+
+### N19. Full-plan review: prompt vs contract (2026-10-06)
+
+- Known gap, accepted (review F1): prompt v2.5 line „fakty bez komentarza autora → `not_expressed`”
+  lacks the contract §6.6 exception for a price move of the target (§7.1.7), which line 31 of the
+  prompt states. Left as is to keep the v2.5 recordings and thresholds valid; fix it with the next
+  prompt change (S-02 or LLM hardening) together with a new recording of all configurations.
+- Contract §7.1.8 added (review F2): the author's position (holding, buying, profit → `bullish`;
+  selling, loss → `bearish`; `hedged` when only the position gives the direction; explicit
+  „trzymam, nic nie robię” stays `neutral`). The prompt has applied this since v2.5 (N13); the user
+  decided that „trzymam X” alone is `bullish`, `hedged`. No prompt change, no re-recording.
+- Production code hardened (review F3–F5): output cap `LlmClient.MAX_OUTPUT_TOKENS` = 16 000 for every
+  provider (measured maximum ~4 500, Luna `medium`; the parameter names are checked against the
+  local server only — keys were deleted, the first live call is in the PR env or S-02);
+  `ProviderMessages.toString()` hides the key; `Assessor.evaluate` decides on `ValidationResult.valid()`
+  and an unknown violation class still fails the result.
+- Examples 8–10 added to `examples.md` (§6.5a, §7.1.7, §7.1.8; real anonymized posts, approved by the
+  user) and read by `ContractExamplesTest`.
+- Gold label `gielda-2026-10-01-005` („Z czego wynika dzisiejszy krach?”): `krach` `not_expressed` →
+  `bearish`, hedged (user's decision, §7.1.7 — a question about the cause of a move). Luna on the full
+  set after the change: direction 73.3 % (55/75), dominant 76.7 %, contradictions 8.2 % (5/61); the
+  report `gold-2026-10-06.md` keeps the numbers from before this change.

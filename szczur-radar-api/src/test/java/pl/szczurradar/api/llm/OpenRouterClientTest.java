@@ -59,6 +59,7 @@ class OpenRouterClientTest {
 				JsonNode body = MAPPER.readTree(request.body());
 				assertThat(body.at("/model").asString()).isEqualTo("openai/gpt-6-luna");
 				assertThat(body.at("/temperature").asDouble()).isZero();
+				assertThat(body.at("/max_tokens").asInt()).isEqualTo(LlmClient.MAX_OUTPUT_TOKENS);
 				assertThat(body.at("/reasoning_effort").asString()).isEqualTo("low");
 				assertThat(body.at("/provider/only").toString()).isEqualTo("[\"openai/flex\"]");
 				assertThat(body.at("/provider/allow_fallbacks").asBoolean(true)).isFalse();

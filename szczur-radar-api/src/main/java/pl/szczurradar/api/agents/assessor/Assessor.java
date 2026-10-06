@@ -83,10 +83,9 @@ public class Assessor {
 				AssessmentResult.failed(rejected.failureClass(), rejected.violations(), provenance, rawText);
 			case OutputParser.Parsed parsed -> {
 				ValidationResult validation = validator.validate(input, parsed.output());
-				yield validation.failureClass()
-					.map(failureClass -> AssessmentResult.failed(failureClass, validation.violations(), provenance,
-							rawText))
-					.orElseGet(() -> AssessmentResult.ok(parsed.output(), provenance, rawText));
+				yield validation.valid() ? AssessmentResult.ok(parsed.output(), provenance, rawText)
+						: AssessmentResult.failed(validation.failureClass().orElseThrow(), validation.violations(),
+								provenance, rawText);
 			}
 		};
 	}

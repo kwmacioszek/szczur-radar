@@ -46,6 +46,7 @@ final class GeminiClient implements LlmClient {
 				GoogleGenAiChatOptions.builder()
 					.model(model)
 					.temperature(0.0)
+					.maxOutputTokens(MAX_OUTPUT_TOKENS)
 					.outputSchema(ProviderSchemas.forProvider(Provider.GEMINI, request.outputSchema()))
 					.includeThoughts(false)
 					.build());

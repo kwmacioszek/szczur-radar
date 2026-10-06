@@ -25,3 +25,23 @@ Items queued by `/10x-impl-review` triage that are not code fixes of the reviewe
   decision, report `gold-2026-10-06.md`). `RecordingsReplayTest` therefore guards Luna against
   regression (margin: 2 targets on direction, 1 on contradictions); it is not an independent quality
   check. The original thresholds are the goal of post-MVP "LLM hardening".
+
+## Full-plan review (2026-10-06, `reviews/impl-review.md`)
+
+Before S-02 (results persisted, assessment unattended) — none blocks F-02; tracked on issue S-02 (#14):
+
+- [ ] **F7:** a failed call (`LlmCallException`) records provider and model as `null` in `Provenance`
+  (`Assessor.callFailed`); pass the configured provider and model to `Assessor` and fill them in.
+- [ ] **F8a:** `LlmProviderProperties.Provider` / `ServiceTier` / `ReasoningEffort` have no
+  `@JsonValue` — a serialized `Provenance` gives `"GEMINI"` while `Channel` / `OutputMode` give lower
+  case; add `@JsonValue` on `id()` (and consider moving the enums to `llm`).
+- [ ] **F8b:** `LLM_TIMEOUT` has no upper bound (Gemini's `toIntExact` overflows above ~24.8 days on
+  the first call); validate a maximum in `LlmProviderProperties.from`.
+- [ ] **F8c:** a blank Gemini answer with finish reason `stop` passes as success (others → `provider_error`);
+  treat blank text as `REJECTED`, use `Whitespace` instead of `isBlank`.
+- [ ] **F8d:** Wykop error bodies (incl. `auth`) are quoted unmasked; mask key, secret and token as
+  `ProviderMessages` does.
+- [ ] **F8e:** the output schema is re-read and re-transformed on every call; cache both.
+- [ ] **F8f:** invisible characters (U+200B, U+00AD, U+FEFF) are outside contract §10 — a model that
+  drops one fails D6; check Wykop data, change §10 via §16 if needed.
+

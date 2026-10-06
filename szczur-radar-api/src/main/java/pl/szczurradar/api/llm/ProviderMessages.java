@@ -14,4 +14,10 @@ record ProviderMessages(String apiKey) {
 		return cleaned.length() > MAX_LENGTH ? cleaned.substring(0, MAX_LENGTH) + "…" : cleaned;
 	}
 
+	/** Never the key: every client holds one of these, and a client may end up in a log or dump. */
+	@Override
+	public String toString() {
+		return "ProviderMessages[apiKey=<hidden>]";
+	}
+
 }

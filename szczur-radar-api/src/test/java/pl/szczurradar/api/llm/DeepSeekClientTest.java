@@ -57,6 +57,7 @@ class DeepSeekClientTest {
 				assertThat(body.at("/response_format/type").asString()).isEqualTo("json_object");
 				assertThat(body.at("/thinking/type").asString()).isEqualTo("disabled");
 				assertThat(body.at("/temperature").asDouble()).isZero();
+				assertThat(body.at("/max_tokens").asInt()).isEqualTo(LlmClient.MAX_OUTPUT_TOKENS);
 				String system = body.at("/messages/0/content").asString();
 				assertThat(system).startsWith("System prompt." + DeepSeekClient.SCHEMA_INSTRUCTION)
 					.contains("\"additionalProperties\":false")

@@ -11,6 +11,14 @@ package pl.szczurradar.api.llm;
 public interface LlmClient {
 
 	/**
+	 * Cap on the output tokens of one call, reasoning included: a guard against a runaway answer
+	 * (e.g. a repetition loop), not a size target. The measured maximum is ~4 500 (Luna, reasoning
+	 * {@code medium}); a cut-off answer fails parsing as {@code invalid_structured_output} and is not
+	 * retried.
+	 */
+	int MAX_OUTPUT_TOKENS = 16_000;
+
+	/**
 	 * Calls the model.
 	 *
 	 * @throws LlmCallException when the provider refused the call or the last attempt failed

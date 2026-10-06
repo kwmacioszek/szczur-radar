@@ -99,7 +99,7 @@ domain_invariant_violation
 
 # 5. Zestaw wzorcowy, progi i testy walidatora
 
-Zamiast wymyślonych przypadków testowych V1 jakość oceny mierzy się na **zestawie wzorcowym**: ~120 zanonimizowanych postów #gielda z dwóch dni (innych niż 2026-09-28 i próbka 2026-09-29), oznaczonych przez użytkownika według instrukcji oznaczania v1.0 (`context/changes/assessment-contract-harness/pilot/labeling-guidelines.md`), z co najmniej 100 postami nie-„trudnymi”.
+Zamiast wymyślonych przypadków testowych V1 jakość oceny mierzy się na **zestawie wzorcowym**: ~120 zanonimizowanych postów #gielda z dwóch dni (innych niż 2026-09-28 i próbka 2026-09-29), oznaczonych przez użytkownika według instrukcji oznaczania v1.2 (`context/changes/assessment-contract-harness/pilot/labeling-guidelines.md`), z co najmniej 100 postami nie-„trudnymi”.
 
 Progi modelu domyślnego na zestawie wzorcowym:
 

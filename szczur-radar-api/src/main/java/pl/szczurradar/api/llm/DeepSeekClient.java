@@ -51,6 +51,7 @@ final class DeepSeekClient implements LlmClient {
 				DeepSeekChatOptions.builder()
 					.model(model)
 					.temperature(0.0)
+					.maxTokens(MAX_OUTPUT_TOKENS)
 					.responseFormat(ResponseFormat.builder().type(ResponseFormat.Type.JSON_OBJECT).build())
 					.disableThinking()
 					.build());

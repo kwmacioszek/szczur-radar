@@ -81,6 +81,14 @@ class RuleBasedValidatorTest {
 	}
 
 	@Test
+	void aViolationOutsideTheContractTableStillFailsTheResult() {
+		ValidationResult result = new ValidationResult(
+				List.of(new Violation(FailureClass.SCHEMA_VIOLATION, "X1", "$", "rule outside the table")));
+		assertThat(result.valid()).isFalse();
+		assertThat(result.failureClass()).contains(FailureClass.SCHEMA_VIOLATION);
+	}
+
+	@Test
 	void fabricatedEvidenceOutranksDomainViolations() {
 		AssessmentOutputV2 output = investment(List.of(target("t1", "XTB", Direction.BULLISH, null, "c1")),
 				List.of(claim("c1", Attribution.AUTHOR, "zmyślony cytat", "t1")));

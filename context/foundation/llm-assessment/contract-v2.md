@@ -161,7 +161,7 @@ Bez powtórzeń. Dozwolone przy każdej wartości `relevance`.
 
 | Pole | Kontrakt |
 |---|---|
-| `direction` | `bullish` — autor oczekuje wzrostu, ocenia pozytywnie, kupuje lub liczy na wzrost, albo opisuje wzrost ceny celu lub pyta o jego przyczynę (§7.1.7) · `bearish` — oczekuje spadku, ocenia negatywnie lub sprzedaje, albo opisuje spadek ceny celu lub pyta o jego przyczynę (§7.1.7) · `neutral` — jawnie deklaruje neutralność („trzymam, nic nie robię”) · `mixed` — wyraża oba kierunki wobec tego samego celu (np. krótki i długi termin) · `not_expressed` — cel jest, stanowiska brak (informacja niedotycząca ruchu ceny, szczere pytanie niedotyczące ruchu ceny, cel w tle) · `unclear` — stanowisko jest, ale kierunku nie da się ustalić |
+| `direction` | `bullish` — autor oczekuje wzrostu, ocenia pozytywnie, kupuje, trzyma lub liczy na wzrost (§7.1.8), albo opisuje wzrost ceny celu lub pyta o jego przyczynę (§7.1.7) · `bearish` — oczekuje spadku, ocenia negatywnie, sprzedaje lub ponosi stratę (§7.1.8), albo opisuje spadek ceny celu lub pyta o jego przyczynę (§7.1.7) · `neutral` — jawnie deklaruje neutralność („trzymam, nic nie robię”) · `mixed` — wyraża oba kierunki wobec tego samego celu (np. krótki i długi termin) · `not_expressed` — cel jest, stanowiska brak (informacja niedotycząca ruchu ceny, szczere pytanie niedotyczące ruchu ceny, cel w tle) · `unclear` — stanowisko jest, ale kierunku nie da się ustalić |
 | `assertiveness` | `unhedged` — stanowisko wyrażone wprost · `hedged` — autor je osłabia („może”, „chyba”, „wydaje mi się”) **albo** kierunek jest odczytany z sugestii lub pośrednio (§7.1) · `null` — gdy kierunek nie jest `bullish` / `bearish` / `neutral` (tabela §7.2) |
 | `claim_ids` | tezy, na których opiera się stanowisko; każda MUSI mieć ten cel w `target_ids`; reguły obecności — tabela §7.2 |
 
@@ -239,6 +239,7 @@ Bez powtórzeń. Flagi nie dublują `reference = ambiguous | unresolved`, `direc
 - **7.1.5 Przyjęta cudza opinia / nadzieja na wydarzenie** („Cała nadzieja, że Trump o 20 ogłosi pokój”) → cel wydarzenia lub rynku (`macro_topic`), `bullish`, `hedged`; teza ma `attribution = author`. Cudza opinia przytoczona bez przyjęcia (analityk, artykuł) → teza `reported`, nie stanowisko autora.
 - **7.1.6 „Na peronie”** („a my na peronie od piątku”) → cel „rynek” (`macro_topic`, anchor = fragment z „peronie”), `bullish` — autor stwierdza wzrosty, które przegapił.
 - **7.1.7 Opis ruchu ceny.** Gdy post stwierdza ruch ceny nazwanego celu albo pyta o jego przyczynę („X dziś na czerwono”, „czemu X spada?”, „Y robi +5%”, „banki lecą na pysk”, „inflacja rosła”) i nie wyraża innego stanowiska autora, kierunek = kierunek tego ruchu (wzrost → `bullish`, spadek → `bearish`), `assertiveness = hedged`; teza autora w `claim_ids` = to stwierdzenie lub pytanie (`factual_claim` / `question`, `attribution = author`). Własne stanowisko autora, gdy jest, ma pierwszeństwo. Uzasadnienie: dla filtra sygnałów post o spadku celu niesie kierunek, nawet jeśli autor go nie ocenia.
+- **7.1.8 Pozycja autora.** Posiadanie celu („trzymam X”, „mam X w portfelu”), zakup lub dokupowanie, radość z zysku albo z dobrych wyników → `bullish`; sprzedaż, strata, narzekanie na spadek celu → `bearish`. Gdy kierunek wynika tylko z pozycji, nie z oceny → `assertiveness = hedged`. Jawna deklaracja bezczynności lub neutralności („trzymam, nic nie robię”, „czekam, bez zdania”) zostaje `neutral` (§3). Własna ocena autora, gdy jest, ma pierwszeństwo. Uzasadnienie: pozycja autora jest dla filtra sygnałem kierunku; reguła była w prompcie od v2.5 (pomiar F-02), kontrakt ją dogania.
 
 ### 7.2 `direction` × `assertiveness` × `claim_ids`
 
@@ -472,6 +473,8 @@ Podstawa: pilotaże na prawdziwych postach i ramowanie — `context/changes/asse
 | Wyjście | `AssessmentOutputV1` | `AssessmentOutputV2`; wejście bez zmian (`AssessmentInputV1`) | — |
 
 **Zmiany V2 przez regułę zmiany (§16):**
+
+- 2026-10-06 — §7.1.8 (nowa): pozycja autora (posiadanie, zakup, zysk → `bullish`; sprzedaż, strata → `bearish`; `hedged`, gdy kierunek wynika tylko z pozycji); jawne „trzymam, nic nie robię” zostaje `neutral`; §3 `direction` dostosowany. Powód: prompt v2.5 stosował tę regułę bez podstawy w kontrakcie (przegląd implementacji F-02, F2); decyzja użytkownika: samo „trzymam X” = `bullish`, `hedged`. Prompt bez zmian.
 
 - 2026-10-05 — §7.1.7 (nowa): opis ruchu ceny celu lub pytanie o jego przyczynę → kierunek tego ruchu, `hedged` (wcześniej `not_expressed`); §3 `direction`, §6.6, §7.1.4 dostosowane; §7.1.2 dopisuje ironiczną pochwałę straty. Powód: raport zestawu wzorcowego 2026-10-05 — oznaczający czyta „czemu X spada?”, „Y +5%, Z na czerwono” jako kierunek, modele trzymały się `not_expressed`; decyzja użytkownika (N13). Prompt v2.5.
 

@@ -72,6 +72,7 @@ final class OpenRouterClient implements LlmClient {
 		OpenAiChatOptions.Builder options = OpenAiChatOptions.builder()
 			.model(model)
 			.temperature(0.0)
+			.maxTokens(MAX_OUTPUT_TOKENS)
 			.timeout(timeout)
 			.responseFormat(OpenAiChatModel.ResponseFormat.builder().jsonSchema(schema).strict(true).build());
 		if (reasoningEffort != null) {

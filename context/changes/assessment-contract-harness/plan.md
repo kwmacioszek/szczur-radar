@@ -510,17 +510,17 @@ Brak zmian danych i migracji Flyway. `SkeletonAgent` zastępuje `AssessorAgent`;
 
 #### Automated
 
-- [x] 1.1 `contract-v2.md` istnieje, a `contract-v1.md` jest tylko w archiwum: `test -f context/foundation/llm-assessment/contract-v2.md && ! test -f context/foundation/llm-assessment/contract-v1.md && ls context/foundation/archive/*llm-assessment-contract-v1.md`
-- [x] 1.2 Dokumenty foundation poza archiwum nie odwołują się do ścieżki V1: `rg -n 'contract-v1\.md' context/foundation --glob '*.md' --glob '!**/archive/**'` zwraca kod 1 (brak trafień)
-- [x] 1.3 W folderze zmiany nie ma kluczy API: `grep -rEn "sk-or-v1-[0-9a-f]{20}|sk-[0-9a-f]{32}|AQ\.Ab8|w5[0-9a-f]{30}" context/changes/assessment-contract-harness` nie zwraca nic
-- [x] 1.4 Grafika roadmapy jest zregenerowana w tym samym commicie co `roadmap.md`: `git diff --name-only main -- docs/visuals/roadmap-mvp.png tools/render_roadmap.swift` zwraca oba pliki
-- [x] 1.5 Testy backendu nadal przechodzą: `cd szczur-radar-api && uv run pytest -q`
+- [x] 1.1 `contract-v2.md` istnieje, a `contract-v1.md` jest tylko w archiwum: `test -f context/foundation/llm-assessment/contract-v2.md && ! test -f context/foundation/llm-assessment/contract-v1.md && ls context/foundation/archive/*llm-assessment-contract-v1.md` — 7a406f2
+- [x] 1.2 Dokumenty foundation poza archiwum nie odwołują się do ścieżki V1: `rg -n 'contract-v1\.md' context/foundation --glob '*.md' --glob '!**/archive/**'` zwraca kod 1 (brak trafień) — 7a406f2
+- [x] 1.3 W folderze zmiany nie ma kluczy API: `grep -rEn "sk-or-v1-[0-9a-f]{20}|sk-[0-9a-f]{32}|AQ\.Ab8|w5[0-9a-f]{30}" context/changes/assessment-contract-harness` nie zwraca nic — 7a406f2
+- [x] 1.4 Grafika roadmapy jest zregenerowana w tym samym commicie co `roadmap.md`: `git diff --name-only main -- docs/visuals/roadmap-mvp.png tools/render_roadmap.swift` zwraca oba pliki — 7a406f2
+- [x] 1.5 Testy backendu nadal przechodzą: `cd szczur-radar-api && uv run pytest -q` (historyczne: backend w Pythonie usunięty w F-03; testy backendu teraz `./mvnw -B verify`) — 7a406f2
 
 #### Manual
 
-- [x] 1.6 Użytkownik przeczytał i zaakceptował tekst `contract-v2.md` (kształt wyjścia, definicja celu, próg stanowiska, reguła cytatu, reguła „brak treści”)
-- [x] 1.7 Użytkownik potwierdził zmienione sformułowania w `prd.md` i `roadmap.md` (w tym opis S-03)
-- [x] 1.8 Każdy przykład w `examples.md` ma kompletne wyjście i ręcznie sprawdzone cytaty względem swojego wejścia
+- [x] 1.6 Użytkownik przeczytał i zaakceptował tekst `contract-v2.md` (kształt wyjścia, definicja celu, próg stanowiska, reguła cytatu, reguła „brak treści”) — 7a406f2
+- [x] 1.7 Użytkownik potwierdził zmienione sformułowania w `prd.md` i `roadmap.md` (w tym opis S-03) — 7a406f2
+- [x] 1.8 Każdy przykład w `examples.md` ma kompletne wyjście i ręcznie sprawdzone cytaty względem swojego wejścia — 7a406f2
 
 ### Phase 2: Kontrakt jako kod
 
@@ -565,8 +565,8 @@ Brak zmian danych i migracji Flyway. `SkeletonAgent` zastępuje `AssessorAgent`;
 
 #### Manual
 
-- [x] 4.6 `LiveSmokeTest` wykonany trzy razy (Gemini `gemini-3.1-flash-lite`, DeepSeek Flash, OpenRouter `openai/gpt-6-luna` z `LLM_SERVICE_TIER=flex`): dla każdego zgodność z kontraktem ≥90% i najwyżej jedno `provider_error` lub `invalid_structured_output`; wyniki (z mianownikiem i dla Luny odsetkiem odmów 429 i medianą czasu) w opisie PR — 5732dde
-- [x] 4.7 Pochodzenie ma wypełnione tokeny (w tym cache, gdy dostawca je zgłasza), wersję promptu i kontraktu dla wszystkich trzech; potwierdzona nazwa modelu DeepSeek Flash przyjmowana przez API — 5732dde
+- [x] 4.6 `LiveSmokeTest` wykonany trzy razy (Gemini `gemini-3.1-flash-lite`, DeepSeek Flash, OpenRouter `openai/gpt-6-luna` z `LLM_SERVICE_TIER=flex`): dla każdego zgodność z kontraktem ≥90% i najwyżej jedno `provider_error` lub `invalid_structured_output`; wyniki (z mianownikiem i dla Luny odsetkiem odmów 429 i medianą czasu) w opisie PR (wyniki: implementation-notes N5/N6 i opis PR #31) — 5732dde
+- [x] 4.7 Pochodzenie ma wypełnione tokeny (w tym cache, gdy dostawca je zgłasza), wersję promptu i kontraktu dla wszystkich trzech; potwierdzona nazwa modelu DeepSeek Flash przyjmowana przez API (wyniki: implementation-notes N5/N6 i opis PR #31) — 5732dde
 
 ### Phase 5: Zestaw wzorcowy
 

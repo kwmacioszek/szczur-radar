@@ -20,12 +20,14 @@ public record ValidationResult(List<Violation> violations) {
 
 	/**
 	 * The result's class: the first class present in the order {@code invalid_reference →
-	 * fabricated_evidence → domain_invariant_violation}; empty when valid.
+	 * fabricated_evidence → domain_invariant_violation}, else the first violation's class (a rule
+	 * outside the contract table never makes an invalid output pass); empty when valid.
 	 */
 	public Optional<FailureClass> failureClass() {
 		return PRECEDENCE.stream()
 			.filter(failureClass -> violations.stream().anyMatch(v -> v.failureClass() == failureClass))
-			.findFirst();
+			.findFirst()
+			.or(() -> violations.stream().map(Violation::failureClass).findFirst());
 	}
 
 }

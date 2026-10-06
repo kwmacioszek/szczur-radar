@@ -15,7 +15,7 @@ import pl.szczurradar.api.agents.assessor.validation.RuleBasedValidator;
 
 /**
  * The examples of {@code context/foundation/llm-assessment/examples.md} are test data: outputs of
- * examples 1–4 and 6–7 pass the parser and validator with no violation; example 5 is the prefilter.
+ * examples 1–4 and 6–10 pass the parser and validator with no violation; example 5 is the prefilter.
  */
 class ContractExamplesTest {
 
@@ -30,8 +30,9 @@ class ContractExamplesTest {
 	}
 
 	@Test
-	void examplesOneToSevenAreRead() {
-		assertThat(ContractExamples.load()).extracting(ContractExamples::number).containsExactly(1, 2, 3, 4, 5, 6, 7);
+	void examplesOneToTenAreRead() {
+		assertThat(ContractExamples.load()).extracting(ContractExamples::number)
+			.containsExactly(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
 	}
 
 	@ParameterizedTest(name = "{0}")
