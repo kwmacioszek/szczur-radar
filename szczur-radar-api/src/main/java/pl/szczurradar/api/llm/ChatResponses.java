@@ -8,6 +8,8 @@ import org.jspecify.annotations.Nullable;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.model.Generation;
 
+import pl.szczurradar.api.text.Whitespace;
+
 /** Reading a Spring AI {@link ChatResponse} the same way for every provider. */
 final class ChatResponses {
 
@@ -22,6 +24,17 @@ final class ChatResponses {
 			.map(generation -> generation.getOutput().getText())
 			.filter(Objects::nonNull)
 			.collect(Collectors.joining());
+	}
+
+	/**
+	 * Rejects an answer without text — empty or only white space of the contract's set (§10) — whatever
+	 * the finish reason: a {@code stop} with no text is no answer either. Never retried.
+	 */
+	static void requireText(ChatResponse response) {
+		if (Whitespace.strip(text(response)).isEmpty()) {
+			throw new TransportException(TransportException.Kind.REJECTED,
+					"no text, finish reason " + finishReasons(response), null, null);
+		}
 	}
 
 	/** The finish reasons of all generations, lower case, e.g. {@code stop} or {@code content_filter}. */

@@ -117,6 +117,7 @@ final class OpenRouterClient implements LlmClient {
 			throw new TransportException(TransportException.Kind.REJECTED, "answer blocked by the content filter", null,
 					null);
 		}
+		ChatResponses.requireText(response);
 		return response;
 	}
 

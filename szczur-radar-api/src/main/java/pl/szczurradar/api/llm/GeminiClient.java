@@ -12,7 +12,6 @@ import org.springframework.ai.google.genai.GoogleGenAiChatOptions;
 
 import pl.szczurradar.api.config.LlmProviderProperties.Provider;
 import pl.szczurradar.api.config.LlmProviderProperties.ServiceTier;
-import pl.szczurradar.api.text.Whitespace;
 
 /**
  * Gemini (Google AI Studio) through Spring AI's {@code GoogleGenAiChatModel} on our own GenAI client:
@@ -72,12 +71,7 @@ final class GeminiClient implements LlmClient {
 			throw new TransportException(TransportException.Kind.REJECTED, "no candidates: the answer was blocked",
 					null, null);
 		}
-		// Blank by the contract's white space set (§10), whatever the finish reason: an empty answer
-		// with "stop" is no answer either, as for the other providers.
-		if (Whitespace.strip(ChatResponses.text(response)).isEmpty()) {
-			throw new TransportException(TransportException.Kind.REJECTED,
-					"no text, finish reason " + ChatResponses.finishReasons(response), null, null);
-		}
+		ChatResponses.requireText(response);
 		return response;
 	}
 
