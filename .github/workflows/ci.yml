@@ -101,6 +101,82 @@ jobs:
         if: always()
         run: docker logs web || true
 
+  api-container-smoke:
+    name: api container smoke test
+    runs-on: ubuntu-latest
+    # Builds the real szczur-radar-api/Dockerfile (the one Railway builds) and
+    # runs it the way Railway does: the pre-deploy command (`migrate`) against
+    # PostgreSQL 18, then the server (image ENTRYPOINT, no arguments) until
+    # /api/health and /api/ready answer. Catches a wrong jar path, missing
+    # resources or a root user before Railway deploys the image.
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: szczur_ci
+          POSTGRES_PASSWORD: ci_only
+          POSTGRES_DB: szczur_radar_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U szczur_ci -d szczur_radar_test"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      PGHOST: localhost
+      PGPORT: "5432"
+      PGDATABASE: szczur_radar_test
+      PGUSER: szczur_ci
+      PGPASSWORD: ci_only
+      # Same LLM settings as the backend job: every Spring context needs them.
+      LLM_API_PROVIDER: ${{ vars.LLM_API_PROVIDER }}
+      LLM_MODEL: ${{ vars.LLM_MODEL }}
+      LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build API image
+        run: docker build -t szczur-radar-api ./szczur-radar-api
+      - name: Image runs as a non-root user
+        run: |
+          uid=$(docker run --rm --entrypoint id szczur-radar-api -u)
+          echo "image user uid: $uid"
+          if [ "$uid" = "0" ]; then
+            echo "::error::API image runs as root"
+            exit 1
+          fi
+      # `-e NAME` (no value) passes the job's env through to the container.
+      # Exactly Railway's preDeploy (.railway/railway.ts): it replaces the image
+      # ENTRYPOINT and resolves target/… against WORKDIR /app.
+      - name: Run migrations (Railway pre-deploy command)
+        run: |
+          docker run --rm --network host --entrypoint java \
+            -e PGHOST -e PGPORT -e PGDATABASE -e PGUSER -e PGPASSWORD \
+            -e LLM_API_PROVIDER -e LLM_MODEL -e LLM_API_KEY \
+            szczur-radar-api -jar target/szczur-radar-api.jar migrate
+      - name: Run server
+        run: |
+          docker run -d --name api --network host -e PORT=8000 \
+            -e PGHOST -e PGPORT -e PGDATABASE -e PGUSER -e PGPASSWORD \
+            -e LLM_API_PROVIDER -e LLM_MODEL -e LLM_API_KEY \
+            szczur-radar-api
+      - name: Smoke test /api/health and /api/ready
+        run: |
+          ready=0
+          for _ in $(seq 1 90); do
+            if curl -fsS http://localhost:8000/api/health >/dev/null; then ready=1; break; fi
+            sleep 1
+          done
+          if [ "$ready" != "1" ]; then
+            echo "::error::api container did not become ready"
+            docker logs api
+            exit 1
+          fi
+          curl -fsS http://localhost:8000/api/ready
+      - name: Container logs
+        if: always()
+        run: docker logs api || true
+
   railway-config:
     name: railway config (plan + apply IaC)
     runs-on: ubuntu-latest
@@ -207,7 +283,7 @@ jobs:
             jq '{ok, currentEnvironment, diagnostics}' plan.json
             exit 1
           }
-          # Never destroy anything automatically (e.g. the Postgres-PITR bucket).
+          # Never destroy anything automatically (e.g. a database, bucket or variable).
           blocked=$(jq '[.changeSet.changes[]? | select(.severity == "destructive" or .kind == "resource.delete")]' plan.json)
           # Never rewrite a service's source/branch automatically, in ANY env:
           # PR envs track the PR branch (IAC_SOURCE_BRANCH), production tracks main.

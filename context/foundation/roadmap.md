@@ -33,6 +33,8 @@ milestone_status: open
 
 > v2.9 (2026-10-06): F-02 — model domyślny wybrany: GPT-6 Luna (`medium`) przez OpenRouter, tryb flex/standard wybiera operator; progi kierunku celów i sprzeczności złagodzone decyzją użytkownika (≥70 % / ≤10 % zamiast ≥75 % / ≤3 %; raport `reports/gold-2026-10-06.md`). Uzasadnienie „LLM hardening” poprawione: pilot 9 pokazał, że większość sprzeczności pada na postach dosłownych, nie ironicznych — wpis obejmuje kierunek i stanowisko ogólnie, ironia jest jednym z wątków.
 
+> v2.10 (2026-10-06): S-05 — zajawka sposobu uruchamiania (cron woła wewnętrzny endpoint API zamiast startować kontener z obrazem API), z badania `api-docker-image` (wpis z 2026-10-04, przenumerowany przy scaleniu z F-02).
+
 ## Milestone
 
 **M-1: MVP — ocenione sygnały z Wykopu dla zaproszonych osób** — Status: open
@@ -201,6 +203,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Unknowns:**
   - Godzina uruchomienia i domyślny zakres dat/godzin pobierania dla przebiegu dziennego. — Owner: user. Block: no.
   - Jak traktować przebieg, w którym część ocen nie przeszła walidacji kontraktu (udany, częściowy czy nieudany dla etykiety świeżości). — Owner: user. Block: no.
+  - Sposób uruchamiania (zajawka z `api-docker-image`, 2026-10-04): użytkownik nie chce, żeby cron startował kontener z obrazem API. Kandydat: mały serwis cron Railway (obraz z `curl`) wysyła `POST` przez sieć prywatną do wewnętrznego endpointu API z tokenem; API odpowiada `202` i uruchamia pipeline w tle (zapytanie z sieci prywatnej budzi uśpione API). Do rozstrzygnięcia: uwierzytelnianie tokenem obok sesji (`SecurityConfig`, `AuthorizationCompletenessIT`), ochrona przed równoległym przebiegiem, przerwanie przebiegu przez deploy API, wspólny endpoint z ręcznym uruchomieniem (FR-022). Zmienia regułę „pipeline nie zależy od cyklu życia API” (`REPOSITORY_GUIDELINES.md` § Deployment, `infrastructure.md:23`, `:133`, `deploy-plan.md:195`) — zaktualizować te dokumenty przy planie S-05. `@Scheduled` w API odpada przy `sleepApplication: true`. — Owner: user. Block: no.
 - **Risk:** Wprowadza zapis każdego przebiegu (potrzebny do etykiety świeżości) oraz sprawdzenie zgodności wersji schematu przed zapisem — chroni przed scenariuszem z pre-mortem w `infrastructure.md`, w którym automat po cichu zapisuje uszkodzone rekordy.
 - **Status:** proposed
 

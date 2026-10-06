@@ -1,4 +1,4 @@
-import { bucket, defineRailway, github, postgres, preserve, project, service } from "railway/iac";
+import { defineRailway, github, postgres, preserve, project, service } from "railway/iac";
 
 // Infrastructure-as-Code for Szczur Radar. This is the source of truth for the
 // api, web, and Postgres services and replaces railway.toml for them.
@@ -16,12 +16,17 @@ import { bucket, defineRailway, github, postgres, preserve, project, service } f
 // wait for the whole GitHub Actions workflow conclusion. Declared here so IaC
 // does not reset the operator's toggle (a plan otherwise shows true → null).
 //
-// `sleepApplication: true` (serverless sleep) on all three services and the
-// `Postgres-PITR` bucket mirror what the operator set in the dashboard. They
-// MUST stay declared: without them an apply would switch sleep off (cost) and
-// DELETE the bucket holding the PITR backups. Keep this file in sync with
-// production — `railway config plan --detailed-exit-code` on `production`
-// must exit 0 before any automatic apply (lessons.md, Railway IaC in CI).
+// `sleepApplication: true` (serverless sleep) on all three services mirrors
+// what the operator set in the dashboard. It MUST stay declared: without it an
+// apply would switch sleep off (cost). Keep this file in sync with production —
+// `railway config plan --detailed-exit-code` on `production` must exit 0 before
+// any automatic apply (lessons.md, Railway IaC in CI).
+//
+// PITR is disabled since `api-docker-image` (cost): the operator runs
+// `railway postgres pitr disable` and deletes the `Postgres-PITR` bucket in each
+// environment BEFORE an apply of this file — otherwise the plan shows a bucket
+// delete, which the CI gate refuses. Database backup: Railway's daily volume
+// backup on production (context/deployment/deploy-plan.md).
 
 const REPO = "kwmacioszek/szczur-radar";
 const REGION = "europe-west4"; // Railway "EU West (Amsterdam)"
@@ -40,42 +45,41 @@ export default defineRailway(() => {
   // source change, in every environment.
   const branch = process.env.IAC_SOURCE_BRANCH || "main";
 
-  // Postgres. PITR was enabled by the operator (`railway postgres pitr
-  // enable`, risk register item #1); the enable itself is not expressible
-  // here, but its storage bucket is (below). `postgres()` takes no deploy
-  // options, so serverless sleep is set on the node directly (DatabaseNode
-  // carries `deploy`); Object.assign keeps the non-enumerable `env` refs.
+  // Postgres. `postgres()` takes no deploy options, so serverless sleep is set
+  // on the node directly (DatabaseNode carries `deploy`); Object.assign keeps
+  // the non-enumerable `env` refs.
   const db = Object.assign(postgres("postgres"), {
     deploy: { sleepApplication: true },
   });
-
-  // Bucket created by `railway postgres pitr enable` (base backups + WAL
-  // archive). Declared so IaC never deletes it; region as provisioned.
-  const pitrBucket = bucket("Postgres-PITR", { region: "sjc" });
 
   // Spring Boot backend (Java 25, Maven). No public domain: reachable only
   // through the web proxy over the private network. The JVM binds the wildcard
   // address DUAL-STACK by default — IPv6 for private networking AND IPv4 for
   // Railway's healthcheck — so server.address is deliberately not set; the port
   // comes from PORT (application.properties: server.port=${PORT:8000}).
-  // Railpack detects Java from pom.xml and builds with ./mvnw (tests skipped;
-  // CI runs them); RAILPACK_JDK_VERSION selects JDK 25 (Railpack default: 21).
+  // Built from szczur-radar-api/Dockerfile (auto-detected in rootDirectory, like
+  // web): JDK 25 build stage with ./mvnw (tests skipped; CI runs them), JRE 25
+  // runtime as a non-root user in /app. No `start`: the image ENTRYPOINT runs
+  // the jar (no arguments = HTTP server); a Railway start command would replace
+  // it and run without shell expansion.
   const api = service("szczur-radar-api", {
     source: github(REPO, { branch, checkSuites: true }),
     rootDirectory: "szczur-radar-api",
     watchPatterns: ["szczur-radar-api/**"],
-    // Fixed artifact name (pom.xml <finalName>). No arguments = HTTP server.
-    start: "java $JAVA_OPTS -jar target/szczur-radar-api.jar",
     // Flyway migrations run BEFORE each new API version starts (production and
     // PR envs), never at server start (spring.flyway.enabled=false there). If a
     // migration fails, `migrate` exits non-zero, Railway stops the deploy and
-    // the previous version keeps serving — the desired behavior.
+    // the previous version keeps serving — the desired behavior. Runs in a
+    // container of the same image; the path is relative to WORKDIR /app.
     preDeploy: "java -jar target/szczur-radar-api.jar migrate",
     healthcheck: "/api/health",
     replicas: { [REGION]: 1 },
     deploy: { sleepApplication: true },
     env: {
       PORT: API_INTERNAL_PORT,
+      // Nieużywane od `api-docker-image` (JDK pochodzi z obrazu Dockera). Zostaje
+      // zadeklarowane, bo usunięcie zmiennej to `variable.delete`, które bramka CI
+      // odrzuca jako destrukcyjne.
       RAILPACK_JDK_VERSION: "25",
       // Split Postgres variables for the JDBC URL
       // (jdbc:postgresql://${PGHOST}:${PGPORT}/${PGDATABASE}) — no DATABASE_URL parsing.
@@ -125,6 +129,6 @@ export default defineRailway(() => {
   });
 
   return project("szczur-radar", {
-    resources: [db, api, web, pitrBucket],
+    resources: [db, api, web],
   });
 });

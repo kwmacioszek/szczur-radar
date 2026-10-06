@@ -51,8 +51,12 @@ Szczur Radar collects investment posts (Wykop, later Reddit), classifies them wi
 ## Workflow: branches, PRs and GitHub issues
 
 - Only a human merges to `main` (= production deploy). Agents prepare the PR, get CI and PR-env verification green, then stop and hand the merge over — never `gh pr merge` or push to `main` (@context/foundation/lessons.md).
-- Roadmap slices are tracked as GitHub issues (`S-NN: …`). Keep each issue in sync with reality:
-  - when work on a slice starts: comment on its issue with the change id, branch and PR link; every PR body carries `Refs #<issue>`;
+- Every change (`context/changes/<change-id>/`) has one branch, one PR and one GitHub issue, all created at the start of `/10x-implement` phase 1, before the first code commit:
+  - branch `feature/<change-id>` from a freshly fetched `origin/main` (`git fetch` first) — never from a local `main`, which may be stale, nor from another change's branch;
+  - issue: a roadmap slice uses its existing `S-NN: …` issue; a change outside the roadmap gets a new issue titled `<change-id>: …`;
+  - the change folder (`research.md`, `plan.md`, `plan-brief.md`, `change.md`) goes into the first commit on that branch.
+- Roadmap slices are tracked as GitHub issues (`S-NN: …`). Keep each issue (slice or not) in sync with reality:
+  - when work starts: comment on the issue with the change id, branch and PR link; every PR body carries `Refs #<issue>`;
   - while in progress: comment when a milestone lands (e.g. a phase verified in the PR env) or when something blocks it;
   - after the human merges and production verification passes: close the issue with a short summary (merge commit, what was verified).
 - Never mark an issue done because code merged — only after production verification.
