@@ -622,10 +622,10 @@ Odnotować ryzyko: przed F-01 brak backupu i limitów kosztów (lekcja: kroki po
 
 #### Automated
 
-- [x] 2.1 Migracja V3 przechodzi, a MigrationsIT sprawdza nowe ograniczenia
-- [x] 2.2 JpaSchemaIT waliduje nowe encje i round-trip
-- [x] 2.3 Testy RawPayloadStore (round-trip bajtowy i polowy) i WykopRepository (surowy element) przechodzą
-- [x] 2.4 Pełna weryfikacja backendu przechodzi
+- [x] 2.1 Migracja V3 przechodzi, a MigrationsIT sprawdza nowe ograniczenia — 9fcd166
+- [x] 2.2 JpaSchemaIT waliduje nowe encje i round-trip — 9fcd166
+- [x] 2.3 Testy RawPayloadStore (round-trip bajtowy i polowy) i WykopRepository (surowy element) przechodzą — 9fcd166
+- [x] 2.4 Pełna weryfikacja backendu przechodzi — 9fcd166
 
 ### Phase 3: Pipeline przebiegu (Embabel GOAP + trwały stan)
 
