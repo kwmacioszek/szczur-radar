@@ -243,19 +243,19 @@ Brak danych do migracji. Produkcja przełącza się przy merge: `railway-config`
 - [x] 1.1 Obraz buduje się lokalnie z czystego kontekstu: `docker build -t szczur-radar-api ./szczur-radar-api`
 - [x] 1.2 Kontekst budowania nie zawiera `target/`: `grep -qx 'target' szczur-radar-api/.dockerignore`
 - [x] 1.3 Testy backendu przechodzą: `cd szczur-radar-api && ./mvnw -B verify`
-- [ ] 1.4 Job CI `api-container-smoke` jest zielony na PR (non-root, `migrate` = 0, `/api/health` i `/api/ready` = 200)
-- [ ] 1.5 Job CI `railway-config` jest zielony na PR, a wypisany diff planu pokazuje wyczyszczenie komendy startowej API (lub fallback z `start` bez `$`) i żadnej zmiany destrukcyjnej ani `source`
-- [ ] 1.6 Pozostałe joby CI (`backend`, `web-unit`, `web-container-smoke`) są zielone na PR
+- [x] 1.4 Job CI `api-container-smoke` jest zielony na PR (non-root, `migrate` = 0, `/api/health` i `/api/ready` = 200)
+- [x] 1.5 Job CI `railway-config` jest zielony na PR, a wypisany diff planu pokazuje wyczyszczenie komendy startowej API (lub fallback z `start` bez `$`) i żadnej zmiany destrukcyjnej ani `source`
+- [x] 1.6 Pozostałe joby CI (`backend`, `web-unit`, `web-container-smoke`) są zielone na PR
 - [x] 1.12 IaC nie deklaruje bucketa PITR: `rg -n 'pitrBucket|bucket\("Postgres-PITR"' .railway/railway.ts` nie znajduje trafień
 
 #### Manual
 
-- [ ] 1.7 Log builda API w Railway PR env pokazuje build z Dockerfile'a („Using detected Dockerfile”), nie Railpacka
-- [ ] 1.8 Kontener pre-deploy w PR env wykonał `migrate` z kodem 0, a deploy przeszedł healthcheck `/api/health`
-- [ ] 1.9 Logowanie admina przez web w PR env działa end-to-end (proxy `/api/*` → API z obrazu)
-- [ ] 1.10 `railway ssh` do API w PR env: powłoka działa jako użytkownik bez roota, `java -jar target/szczur-radar-api.jar` z `/app` uruchamia komendę
-- [ ] 1.11 Zmierzone w PR env i zapisane w opisie PR: limit pamięci, heap i GC, rozmiar obrazu, czas builda, pierwsze wejście po uśpieniu
-- [ ] 1.13 W PR env PITR jest wyłączone, bucket `Postgres-PITR` nie istnieje, `/api/ready` i logowanie działają po cleanupie
+- [x] 1.7 Log builda API w Railway PR env pokazuje build z Dockerfile'a („Using detected Dockerfile”), nie Railpacka
+- [x] 1.8 Kontener pre-deploy w PR env wykonał `migrate` z kodem 0, a deploy przeszedł healthcheck `/api/health`
+- [x] 1.9 Logowanie admina przez web w PR env działa end-to-end (proxy `/api/*` → API z obrazu)
+- [x] 1.10 `railway ssh` do API w PR env: powłoka działa jako użytkownik bez roota, `java -jar target/szczur-radar-api.jar` z `/app` uruchamia komendę
+- [x] 1.11 Zmierzone w PR env i zapisane w opisie PR: limit pamięci, heap i GC, rozmiar obrazu, czas builda, pierwsze wejście po uśpieniu
+- [x] 1.13 W PR env PITR jest wyłączone, bucket `Postgres-PITR` nie istnieje, `/api/ready` i logowanie działają po cleanupie
 
 ### Phase 2: Dokumentacja
 
