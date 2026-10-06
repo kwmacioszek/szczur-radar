@@ -161,7 +161,7 @@ for i in 0..<4 {
 
 let cards: [Card] = [
     Card(id:"F-01", title:"Gotowość produkcji", detail:"Koszty, odtworzenie backupu\ni ochrona sekretów", req:"—", status:"do startu", column:0, row:0, accent:amber),
-    Card(id:"F-02", title:"Kontrakt oceny LLM", detail:"Kontrakt V2, walidator i pomiar\nmodel domyślny: GPT-6 Luna", req:"F-03", status:"w toku", column:1, row:0, accent:violet),
+    Card(id:"F-02", title:"Kontrakt oceny LLM", detail:"Kontrakt V2, walidator i pomiar\nmodel domyślny: GPT-6 Luna", req:"F-03", status:"ukończone", column:1, row:0, accent:violet),
     Card(id:"F-03", title:"Backend w Javie", detail:"Sesje JDBC, Flyway fix-forward\nEmbabel; to samo API dla SPA", req:"S-01", status:"wdrożone", column:2, row:0, accent:coral),
     Card(id:"S-01", title:"Admin i logowanie", detail:"CLI, sesja, ochrona tras\ni wylogowanie", req:"—", status:"wdrożone", column:3, row:0, accent:green),
     Card(id:"S-02", title:"Pierwsze ocenione posty", detail:"Wykop → ocena LLM → lista\nRęczne uruchomienie przebiegu", req:"S-01 + F-02", status:"propozycja", column:1, row:1, accent:cyan),
@@ -205,7 +205,7 @@ txt("BRAMKA WYDANIA MVP", 142, Layout.gateY + 30, 2100, 45, .heavy)
 txt("Warunek wydania: ukończenie wszystkich 10 elementów — F-01–F-03 oraz S-01–S-07.", 145, Layout.gateY + 103, 2150, 29, .medium)
 txt("Poniżej: odroczone kierunki rozwoju. Ich zakres i kolejność wymagają osobnego planu.", 145, Layout.gateY + 160, 2240, 25, .regular, muted)
 rounded(2530, Layout.gateY + 52, 485, 115, 20, color(0x0B2332), cyan.withAlphaComponent(0.65), line: 2)
-txt("2 / 10 UKOŃCZONYCH", 2562, Layout.gateY + 88, 430, 30, .bold, cyan)
+txt("3 / 10 UKOŃCZONYCH", 2562, Layout.gateY + 88, 430, 30, .bold, cyan)
 
 for x in Layout.futureColumns {
     let center = x + Layout.futureWidth / 2
