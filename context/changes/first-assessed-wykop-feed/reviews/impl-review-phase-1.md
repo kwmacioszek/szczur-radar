@@ -31,7 +31,7 @@ Oba ostrzeżenia dotyczą niepełnego domknięcia F8d i wymagają poprawki przed
 - **Location**: szczur-radar-api/src/main/java/pl/szczurradar/api/sources/wykop/WykopApiClient.java:158
 - **Detail**: F8d wymaga maskowania klucza, sekretu i tokenu w błędach, również z `auth`. `parse()` maskuje komunikat nadrzędny przez `clean()`, ale przekazuje oryginalny `JacksonException` jako `cause`. Przy niepoprawnym JSON zawierającym skonfigurowany sekret Jackson umieszcza ten sekret w swoim komunikacie, więc `getCause().getMessage()` i `printStackTrace()` nadal go ujawniają. Analogicznie `send()` zachowuje surowy `IOException` jako przyczynę na linii 135. Zachowywanie przyczyn było obecne przed tą fazą; nowa redakcja F8d pozostawiła tę ścieżkę niezabezpieczoną. Niezależna reprodukcja na skompilowanym kliencie i rzeczywistym Jacksonie, wyłącznie z syntetycznym sekretem, dała `wrapperLeaksSecret=false`, `causeLeaksSecret=true`, `stackTraceLeaksSecret=true`. Obecne testy maskowania sprawdzają tylko `getMessage()`.
 - **Fix**: Po zbudowaniu bezpiecznego komunikatu nie dołączać surowych przyczyn z `parse()` i `send()`; dodać test całego `printStackTrace()` dla odpowiedzi zawierającej syntetyczny sekret/klucz/token, również podczas `auth`.
-- **Decision**: PENDING
+- **Decision**: FIXED (Fix now, 2026-10-07): `parse()`/`send()` no longer attach the raw cause; tests check the whole stack trace for a secret and a token quoted by Jackson.
 
 ### F2 — Odświeżenie tokenu wyłącza maskowanie wcześniejszego żądania
 
@@ -41,7 +41,7 @@ Oba ostrzeżenia dotyczą niepełnego domknięcia F8d i wymagają poprawki przed
 - **Location**: szczur-radar-api/src/main/java/pl/szczurradar/api/sources/wykop/WykopApiClient.java:168
 - **Detail**: F8d obejmuje tokeny w komunikatach błędów, a klient deklaruje obsługę współbieżnych wywołań. `get()` zachowuje użyty bearer w lokalnej zmiennej `used` (linia 76), lecz `clean()` maskuje wyłącznie aktualną wartość współdzielonego pola `token` (linie 168–170). Inny wątek może odświeżyć to pole (linia 116), zanim nadejdzie odpowiedź pierwszego żądania. Potwierdzono rzeczywisty scenariusz HTTP na lokalnym serwerze: A wysyła opóźnione żądanie z `token1`; B dostaje 401, wykonuje drugie `auth` i ponawia z `token2`; następnie odpowiedź A zwraca 403 z `token1 rejected`. Rezultat: `AUTHS=2`, komunikat `Wykop GET lagged answered HTTP 403: token1 rejected`, reprodukcja zakończona kodem 0. Maskowanie już zna tylko `token2` i przepuszcza wcześniejszy bearer. To luka nowego sanitizatora, a nie regresja samego mechanizmu odświeżania.
 - **Fix**: Przekazywać do maskowania błędów HTTP, parsowania i transportu token użyty przez dane żądanie, aktualizować go przy ponowieniu po 401 i dodać test opóźnionej odpowiedzi podczas równoległego odświeżenia.
-- **Decision**: PENDING
+- **Decision**: FIXED (Fix now, 2026-10-07): `clean()` also masks the bearer the request used; test of a delayed answer after another thread refreshed the token.
 
 ## Review scope and execution state
 
@@ -102,4 +102,4 @@ Logi tego przeglądu: `/private/tmp/szczur-first-assessed-wykop-feed-phase-1-uni
 
 ## Triage
 
-F1 i F2 oczekują na decyzję. Przegląd nie wprowadził poprawek w kodzie. Wznowienie: `/10x-impl-review context/changes/first-assessed-wykop-feed/reviews/impl-review-phase-1.md`.
+Triage 2026-10-07: F1 i F2 naprawione (Fix now).

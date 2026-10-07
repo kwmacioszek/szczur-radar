@@ -10,13 +10,16 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.function.Function;
 
 import com.sun.net.httpserver.HttpServer;
 
 /**
  * A local HTTP server in place of {@code https://wykop.pl/api/v3/}: every request is recorded and
- * answered by a test-supplied function.
+ * answered by a test-supplied function, each on its own thread (an answer may wait for another
+ * request).
  */
 final class LocalWykopServer implements AutoCloseable {
 
@@ -34,6 +37,8 @@ final class LocalWykopServer implements AutoCloseable {
 	}
 
 	private final HttpServer server;
+
+	private final ExecutorService executor = Executors.newCachedThreadPool();
 
 	private final List<Request> requests = Collections.synchronizedList(new ArrayList<>());
 
@@ -58,6 +63,7 @@ final class LocalWykopServer implements AutoCloseable {
 			exchange.getResponseBody().write(body);
 			exchange.close();
 		});
+		server.setExecutor(executor);
 		server.start();
 	}
 
@@ -82,6 +88,7 @@ final class LocalWykopServer implements AutoCloseable {
 	@Override
 	public void close() {
 		server.stop(0);
+		executor.shutdownNow();
 	}
 
 }

@@ -3,11 +3,14 @@ package pl.szczurradar.api.sources.wykop;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.JsonNode;
@@ -125,6 +128,60 @@ class WykopApiClientTest {
 	}
 
 	@Test
+	void anInvalidAuthAnswerQuotingTheSecretLeavesItOutOfTheWholeStackTrace() {
+		// Jackson quotes an unrecognized token in its own message, up to the first character that
+		// cannot be part of an identifier — so this secret has none.
+		String secret = "SyntheticSecret123";
+		try (LocalWykopServer server = new LocalWykopServer(request -> Reply.ok("{\"data\": " + secret + "}"))) {
+			assertThatExceptionOfType(WykopApiException.class)
+				.isThrownBy(() -> new WykopApiClient(server.baseUrl(), KEY, secret, Duration.ofSeconds(5))
+					.get("search/entries", Map.of()))
+				.satisfies(ex -> {
+					assertThat(ex.failure()).isEqualTo(WykopFailure.MALFORMED_ANSWER);
+					assertThat(stackTrace(ex)).contains("auth", "invalid JSON").doesNotContain(secret);
+				});
+		}
+	}
+
+	@Test
+	void anInvalidAnswerQuotingTheTokenLeavesItOutOfTheWholeStackTrace() {
+		try (LocalWykopServer server = new LocalWykopServer(request -> request.path().endsWith("/auth")
+				? Reply.ok("{\"data\":{\"token\":\"SyntheticToken123\"}}") : Reply.ok("{\"data\": SyntheticToken123}"))) {
+			assertThatExceptionOfType(WykopApiException.class)
+				.isThrownBy(() -> client(server).get("search/entries", Map.of()))
+				.satisfies(ex -> assertThat(stackTrace(ex)).contains("invalid JSON").doesNotContain("SyntheticToken123"));
+		}
+	}
+
+	@Test
+	void anAnswerQuotingTheTokenItsRequestUsedIsMaskedAfterAnotherThreadRefreshedIt() {
+		// The answer to "lagged" (sent with token-1) comes only after another call got 401 for
+		// token-1 and replaced it with token-2; it then quotes token-1.
+		AtomicInteger auths = new AtomicInteger();
+		AtomicReference<WykopApiClient> client = new AtomicReference<>();
+		try (LocalWykopServer server = new LocalWykopServer(request -> {
+			if (request.path().endsWith("/auth")) {
+				return Reply.ok("{\"data\":{\"token\":\"token-" + auths.incrementAndGet() + "\"}}");
+			}
+			boolean oldToken = "Bearer token-1".equals(request.authorization());
+			if (request.path().endsWith("/lagged")) {
+				client.get().get("other", Map.of());
+				return new Reply(403, "{\"error\":{\"code\":403,\"message\":\"token-1 rejected\"}}");
+			}
+			return oldToken ? new Reply(401, "{\"error\":{\"code\":401}}") : Reply.ok("{\"data\":[]}");
+		})) {
+			client.set(client(server));
+
+			assertThatExceptionOfType(WykopApiException.class).isThrownBy(() -> client.get().get("lagged", Map.of()))
+				.satisfies(ex -> {
+					assertThat(ex.status()).isEqualTo(403);
+					assertThat(ex.getMessage()).contains("<hidden> rejected").doesNotContain("token-1");
+				});
+			assertThat(auths).hasValue(2);
+		}
+	}
+
+	@Test
 	void anErrorAnswerIsAnExceptionAfterOneRequestWithoutRetries() {
 		try (LocalWykopServer server = new LocalWykopServer(request -> request.path().endsWith("/auth")
 				? Reply.ok(TOKEN_1) : new Reply(500, "{\"error\":{\"code\":500}}"))) {
@@ -143,7 +200,7 @@ class WykopApiClientTest {
 				.isThrownBy(() -> client(server).get("search/entries", Map.of()))
 				.satisfies(ex -> {
 					assertThat(ex.failure()).isEqualTo(WykopFailure.MALFORMED_ANSWER);
-					assertThat(ex.getCause()).isNotNull();
+					assertThat(ex.getMessage()).contains("invalid JSON");
 				});
 		}
 	}
@@ -156,6 +213,12 @@ class WykopApiClientTest {
 
 		assertThatExceptionOfType(WykopApiException.class).isThrownBy(() -> client.get("search/entries", Map.of()))
 			.satisfies(ex -> assertThat(ex.failure()).isEqualTo(WykopFailure.TRANSPORT));
+	}
+
+	private static String stackTrace(Throwable error) {
+		StringWriter trace = new StringWriter();
+		error.printStackTrace(new PrintWriter(trace));
+		return trace.toString();
 	}
 
 	private static WykopApiClient client(LocalWykopServer server) {
