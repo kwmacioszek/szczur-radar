@@ -61,16 +61,8 @@ class RawPayload {
 		return id;
 	}
 
-	Source getSource() {
-		return source;
-	}
-
 	ContentEncoding getContentEncoding() {
 		return contentEncoding;
-	}
-
-	RawMediaType getMediaType() {
-		return mediaType;
 	}
 
 	byte[] getPayload() {

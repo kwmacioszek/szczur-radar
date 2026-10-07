@@ -40,6 +40,15 @@ import pl.szczurradar.api.text.Nul;
  * <p>The JSON columns hold contract JSON written and read by {@link ContractJson#MAPPER} (strict and
  * independent of Boot's mapper), not by Hibernate's JSON mapping. U+0000, which the database rejects,
  * is stored as U+FFFD in the JSON and the raw text ({@link Nul}).
+ *
+ * <ul>
+ *   <li>{@code jsonb} keeps the values but not the text: key order and white space are normalized, so
+ *       {@link #getInputHash()} — the hash of the text sent — cannot be recomputed from the stored
+ *       {@code input}.
+ *   <li>Hibernate passes the {@code String} fields through unchanged, but it still resolves its JSON
+ *       format mapper at start-up, and in Hibernate 7.2 that is Jackson 2 ({@code jackson-databind}
+ *       2.x, today on the classpath through other dependencies). Without it the context fails.
+ * </ul>
  */
 @Entity
 @Table(name = "assessments")
@@ -191,7 +200,7 @@ public class Assessment {
 		return ContractJson.MAPPER.readValue(input, AssessmentInputV1.class);
 	}
 
-	/** Hex SHA-256 of the input's contract JSON. */
+	/** Hex SHA-256 of the input's contract JSON as sent to the model (not of the normalized jsonb). */
 	public String getInputHash() {
 		return inputHash;
 	}

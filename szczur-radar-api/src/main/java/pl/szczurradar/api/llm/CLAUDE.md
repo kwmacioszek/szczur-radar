@@ -38,7 +38,10 @@ blank answer) is judged with the shared `text/Whitespace`, never `isBlank`. An a
 
 1. A `Provider` constant in `config/LlmProviderProperties` (+ `application-<provider>.properties`
    for Embabel's registry), and its value (and any new `Channel`) in the `CHECK` sets of
-   `assessments.provider` / `assessments.channel` through a new Flyway migration.
+   `assessments.provider` / `assessments.channel` through a new Flyway migration. Constants whose
+   values are stored (`Provider`, `Channel`, `ServiceTier`, `ReasoningEffort`, `OutputMode`) are
+   append-only: never rename or remove one — old `assessments` rows would no longer load
+   (`persistence/EnumValueConverter` rejects unknown values).
 2. A client class building its `ChatModel` in `LlmClientFactory` with every SDK/framework retry off
    and the timeout set; translate HTTP errors into `TransportException` (status + `Retry-After`).
 3. Its schema subset in `ProviderSchemas`.

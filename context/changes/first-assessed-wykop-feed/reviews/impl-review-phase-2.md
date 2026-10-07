@@ -89,7 +89,7 @@ Context: V3 is already applied in the Railway PR env database (PR #37, deploy of
 - **Location**: posts/Assessment.java:65-78; V3__create_pipeline_and_posts.sql:135
 - **Detail**: jsonb normalizes key order and white space, so `input_hash` ("of the input's contract JSON as sent") cannot be recomputed from the stored column. The hash is right when written; only re-verification is impossible. Hibernate 7.2 passes a `String` through unchanged, but it resolves its JSON format mapper (Jackson 2 only) at bootstrap. Dropping jackson-databind 2.x from the classpath could break the JSON columns.
 - **Fix**: Say both in `Assessment`'s Javadoc (`getInputHash`: hash of the text sent, not of the stored jsonb; the Jackson 2 dependency of the JSON columns).
-- **Decision**: PENDING
+- **Decision**: FIXED (Fix now, 2026-10-07): `Assessment` Javadoc (jsonb normalization vs `input_hash`; Hibernate 7.2 needs Jackson 2 for its JSON format mapper).
 
 ### F6 — `findKeys` IN list and unbounded `findLeftoverIds` need limits in phase 3
 
@@ -99,7 +99,7 @@ Context: V3 is already applied in the Railway PR env database (PR #37, deploy of
 - **Location**: posts/PostRepository.java:26-40
 - **Detail**: A search may return up to 200 pages × 50 × 2 resources (20,000 ids), which makes one huge IN list. `findLeftoverIds` returns every leftover, so one RETRY could send an unbounded number of LLM calls. Typical days (~270 posts) are far from both.
 - **Fix**: Queue for phase 3: `PostStore` asks `findKeys` in chunks of 1,000; decide whether RETRY has a per-run cap.
-- **Decision**: PENDING
+- **Decision**: FIXED (Fix now, 2026-10-07): phase 3 requirement queued in `follow-ups/review-fixes.md` (chunked `findKeys`, RETRY cap decision).
 
 ### F7 — Stored provider/channel values require append-only enum constants
 
@@ -109,7 +109,7 @@ Context: V3 is already applied in the Railway PR env database (PR #37, deploy of
 - **Location**: posts/*Converter.java; persistence/EnumValueConverter.java:38-45
 - **Detail**: `EnumValueConverter` throws on an unknown value. Removing or renaming a `Provider`/`Channel`/`ServiceTier`/`ReasoningEffort`/`OutputMode`/`FailureClass` constant later would make old `assessments` rows unreadable.
 - **Fix**: Add to `llm/CLAUDE.md` ("Adding a provider") and `agents/assessor/CLAUDE.md`: stored constants are append-only; a value once stored stays.
-- **Decision**: PENDING
+- **Decision**: FIXED (Fix now, 2026-10-07): append-only rule for stored enum constants in `llm/CLAUDE.md` and `agents/assessor/CLAUDE.md`.
 
 ### F8 — `RawPayload.getSource()`/`getMediaType()` have no production caller
 
@@ -119,4 +119,8 @@ Context: V3 is already applied in the Railway PR env database (PR #37, deploy of
 - **Location**: raw/RawPayload.java:64-74
 - **Detail**: Only `PostgresRawPayloadStoreTest` uses the two package-private getters; `load` switches on the encoding only. The user does not want code without a caller. The plan's `store(String source, …)` also differs from the code's `store(Source, …)`, a justified ADAPT that is not recorded anywhere.
 - **Fix**: Assert source and media type in `JpaSchemaIT` via JDBC and remove the two getters. Note the `Source` parameter in `follow-ups/review-fixes.md`.
-- **Decision**: PENDING
+- **Decision**: FIXED (Fix now, 2026-10-07): getters removed; `JpaSchemaIT` checks source, encoding and media type via JDBC.
+
+## Triage
+
+Triage 2026-10-07: F1–F8 fixed (F1 Fix A, F3 option C after discussion, the rest Fix now). Commits `291d3af` (F1–F4) and the F5–F8 commit.

@@ -45,9 +45,7 @@ class PostgresRawPayloadStoreTest {
 
 		assertThat(store.load(ref)).isEqualTo(json);
 		RawPayload row = rows.get(ref.id());
-		assertThat(row.getSource()).isEqualTo(Source.WYKOP);
 		assertThat(row.getContentEncoding()).isEqualTo(ContentEncoding.GZIP);
-		assertThat(row.getMediaType()).isEqualTo(RawMediaType.JSON);
 		assertThat(row.getSha256()).isEqualTo(Sha256.hex(json));
 	}
 

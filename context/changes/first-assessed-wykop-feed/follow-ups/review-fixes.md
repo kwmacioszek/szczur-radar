@@ -16,3 +16,6 @@ Items queued by `/10x-impl-review` triage that are not code fixes of the reviewe
   says `resource` (e.g. the API element's `resource` field becomes the item type).
 - [ ] **Plan ADAPT (phase 2) → record:** `RawPayloadStore.store(Source, byte[])` instead of the plan's
   `store(String source, …)` (closed sets as enums).
+- [ ] **F6 → phase 3:** `PostStore` asks `PostRepository.findKeys` in chunks of 1,000 ids (a search may
+  return up to 200 pages × 50 × 2 resources); decide in phase 3 whether a RETRY run has a per-run cap
+  on leftovers (`findLeftoverIds` returns all of them).

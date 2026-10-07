@@ -136,8 +136,11 @@ class JpaSchemaIT {
 		assertThat(loadedPost.getContentHash()).hasSize(64);
 		assertThat(rawPayloads.load(loadedPost.getRawPayload())).isEqualTo(rawJson);
 		// RAW stays out of the post row: the post holds only the reference.
-		assertThat(jdbc.queryForObject("SELECT octet_length(payload) FROM raw_payloads WHERE id = ?", Integer.class,
-				raw.id())).isPositive();
+		assertThat(jdbc.queryForMap("SELECT source, content_encoding, media_type, octet_length(payload) AS length"
+				+ " FROM raw_payloads WHERE id = ?", raw.id())).containsEntry("source", "wykop")
+			.containsEntry("content_encoding", "gzip")
+			.containsEntry("media_type", "application/json")
+			.hasEntrySatisfying("length", length -> assertThat((Integer) length).isPositive());
 
 		Assessment loadedOk = assessments.findById(savedOk.getId()).orElseThrow();
 		assertThat(loadedOk.getStatus()).isEqualTo(AssessmentResult.Status.OK);

@@ -19,3 +19,7 @@ Source of truth: `context/foundation/llm-assessment/contract-v2.md`. Code follow
 4. Tests: a negative case asserting the rule, path and class, and a positive case (`ContractV2RulesTest`); update `examples.md` (and `ContractExamplesTest` keeps them valid).
 
 Lengths are Unicode code points (`codePointCount`), never `String.length()`.
+
+`FailureClass`, `AssessmentResult.Status`, `Provenance.Source` and `ItemType` values are stored in
+`assessments`/`posts` (`posts/*Converter`): append-only — never rename or remove a constant, or old rows
+no longer load.
