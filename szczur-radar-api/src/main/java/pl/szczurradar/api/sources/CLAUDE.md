@@ -25,7 +25,9 @@ Reference implementation: `sources/wykop/`.
   `context/foundation/lessons.md`, RAW vs. operational data): the repository hands out the raw
   element, the pipeline stores it.
 - A new source adds a constant to `sources/Source` (the stored `source` value, + the `CHECK` sets of
-  `posts.source` and `raw_payloads.source` in a new migration).
+  `posts.source` and `raw_payloads.source` in a new migration) and nothing else outside `sources/`.
+  Its own types (Wykop: `entry`, `link`) map onto the shared `ItemType` (`post`, `link`, `comment`),
+  which is what `posts.item_type` stores; the source's names stay in the raw payload.
 - The no-content prefilter (`agents/assessor/Prefilter`) runs after mapping and is the same for
   every source; a source adds no own content filter.
 - Not in a source: scheduling, deduplication, persistence (pipeline slices S-02/S-03).

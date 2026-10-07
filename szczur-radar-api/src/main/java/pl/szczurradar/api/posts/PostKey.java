@@ -1,6 +1,8 @@
 package pl.szczurradar.api.posts;
 
-/** The source-side identity of a post within one source: its resource type and source id. */
-public record PostKey(PostResource resource, String sourceItemId) {
+import pl.szczurradar.api.agents.assessor.contract.ItemType;
+
+/** The identity of a post within one source: its type in the shared model and its source id. */
+public record PostKey(ItemType itemType, String sourceItemId) {
 
 }

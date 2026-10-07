@@ -29,6 +29,7 @@ import pl.szczurradar.api.config.LlmProviderProperties.ServiceTier;
 import pl.szczurradar.api.llm.Channel;
 import pl.szczurradar.api.llm.OutputMode;
 import pl.szczurradar.api.persistence.Sha256;
+import pl.szczurradar.api.text.Nul;
 
 /**
  * One assessment attempt of a post ({@code assessments}, owned by Flyway,
@@ -37,7 +38,8 @@ import pl.szczurradar.api.persistence.Sha256;
  * §15). Never changed after it is stored.
  *
  * <p>The JSON columns hold contract JSON written and read by {@link ContractJson#MAPPER} (strict and
- * independent of Boot's mapper), not by Hibernate's JSON mapping.
+ * independent of Boot's mapper), not by Hibernate's JSON mapping. U+0000, which the database rejects,
+ * is stored as U+FFFD in the JSON and the raw text ({@link Nul}).
  */
 @Entity
 @Table(name = "assessments")
@@ -138,11 +140,13 @@ public class Assessment {
 		this.runId = Objects.requireNonNull(runId, "runId");
 		this.status = result.status();
 		this.failureClass = result.failureClass();
-		this.input = ContractJson.MAPPER.writeValueAsString(input);
-		this.inputHash = Sha256.hex(this.input);
-		this.output = result.output() == null ? null : ContractJson.MAPPER.writeValueAsString(result.output());
-		this.violations = ContractJson.MAPPER.writeValueAsString(result.violations());
-		this.rawText = result.rawText();
+		String sent = ContractJson.MAPPER.writeValueAsString(input);
+		this.input = Nul.replacedInJson(sent);
+		this.inputHash = Sha256.hex(sent);
+		this.output = result.output() == null ? null
+				: Nul.replacedInJson(ContractJson.MAPPER.writeValueAsString(result.output()));
+		this.violations = Nul.replacedInJson(ContractJson.MAPPER.writeValueAsString(result.violations()));
+		this.rawText = Nul.replaced(result.rawText());
 		Provenance provenance = result.provenance();
 		this.resultSource = provenance.source();
 		this.provider = provenance.provider();

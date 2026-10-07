@@ -40,7 +40,7 @@ Context: V3 is already applied in the Railway PR env database (PR #37, deploy of
   - Tradeoff: New column and rules in phase 3; the post's content is still never stored.
   - Confidence: MEDIUM — changes the plan's attempt model.
   - Blind spot: Other persistent technical errors are not known yet.
-- **Decision**: PENDING
+- **Decision**: FIXED (Fix A, 2026-10-07, done in the triage rather than phase 3): `text/Nul`; `WykopMapper` and `Post` remove U+0000, `Assessment` stores U+FFFD in `raw_text` and the JSON columns. Tests: `NulTest`, `WykopMapperTest`, `PostRepositoryIT.textsWithNulAreStoredWithoutIt`.
 
 ### F2 — `posts.updated_at` is not maintained by the pipeline's conditional updates
 
@@ -50,7 +50,7 @@ Context: V3 is already applied in the Railway PR env database (PR #37, deploy of
 - **Location**: szczur-radar-api/src/main/java/pl/szczurradar/api/posts/Post.java:90
 - **Detail**: `@UpdateTimestamp` fires only on an entity flush. Stage and attempts change through conditional `UPDATE`s (plan, Critical Implementation Details), and V3 has no trigger, so `updated_at` would stay at the insert time.
 - **Fix**: Say in `Post`'s Javadoc that every conditional update sets `updated_at = now()`, and queue that as a phase 3 requirement in `follow-ups/review-fixes.md`.
-- **Decision**: PENDING
+- **Decision**: FIXED (Fix now, 2026-10-07): `Post` Javadoc; phase 3 requirement queued in `follow-ups/review-fixes.md`.
 
 ### F3 — CHECKs on `posts.source`/`resource` and `PostResource` in `posts` make a new source touch persistence
 
@@ -69,7 +69,7 @@ Context: V3 is already applied in the Railway PR env database (PR #37, deploy of
   - Tradeoff: Changes a hard rule and contradicts the PRD wording.
   - Confidence: MEDIUM — depends on how strictly the NFR is read.
   - Blind spot: None significant.
-- **Decision**: PENDING
+- **Decision**: FIXED (option C, agreed in discussion 2026-10-07 — neither A nor B): V4 replaces `posts.resource` (Wykop names) with `posts.item_type` from the shared model (`ItemType`: post | link | comment, CHECK kept — it is the shared model), unique `(source, item_type, source_item_id)`; `PostResource` removed. The `source` CHECKs stay (user's choice): registering a source = its `Source` constant + one migration, now stated in the PRD NFR note, `REPOSITORY_GUIDELINES.md` and `sources/CLAUDE.md`.
 
 ### F4 — `ck_pipeline_runs_range` lets a non-range run carry half a range
 
@@ -79,7 +79,7 @@ Context: V3 is already applied in the Railway PR env database (PR #37, deploy of
 - **Location**: V3__create_pipeline_and_posts.sql:32-34
 - **Detail**: `(kind = 'range') = (range_from IS NOT NULL AND range_to IS NOT NULL)` passes for a `retry` run with only `range_from` set (false = false). `PipelineRun`'s factories never do that, so this is only the database guard.
 - **Fix**: Tighten it to `(kind = 'range') = (range_from IS NOT NULL) AND (range_from IS NULL) = (range_to IS NULL) AND …`, in the same migration as F3 (or V3 + PR env reset), with a MigrationsIT case.
-- **Decision**: PENDING
+- **Decision**: FIXED (2026-10-07): tightened in V4; MigrationsIT rejects a retry run with only one end of a range.
 
 ### F5 — Stored `input` is not byte-exact, and the JSON columns depend on Hibernate's Jackson 2 mapper
 

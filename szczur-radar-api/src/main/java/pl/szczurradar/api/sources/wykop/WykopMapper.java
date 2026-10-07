@@ -13,6 +13,7 @@ import pl.szczurradar.api.agents.assessor.contract.AssessmentInputV1;
 import pl.szczurradar.api.agents.assessor.contract.Context;
 import pl.szczurradar.api.agents.assessor.contract.Item;
 import pl.szczurradar.api.agents.assessor.contract.ItemType;
+import pl.szczurradar.api.text.Nul;
 import pl.szczurradar.api.text.Whitespace;
 
 /**
@@ -77,8 +78,10 @@ public final class WykopMapper {
 		}
 	}
 
+	/** {@code text} without U+0000 ({@link Nul}), or {@code null} when nothing but white space is left. */
 	private static @Nullable String textOrNull(@Nullable String text) {
-		return text == null || Whitespace.normalize(text).isEmpty() ? null : text;
+		String stored = Nul.removed(text);
+		return stored == null || Whitespace.normalize(stored).isEmpty() ? null : stored;
 	}
 
 }

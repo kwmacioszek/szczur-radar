@@ -17,6 +17,7 @@ import pl.szczurradar.api.agents.assessor.AssessmentResult;
 import pl.szczurradar.api.agents.assessor.ContractFixtures;
 import pl.szczurradar.api.agents.assessor.Provenance;
 import pl.szczurradar.api.agents.assessor.contract.AssessmentInputV1;
+import pl.szczurradar.api.agents.assessor.contract.ItemType;
 import pl.szczurradar.api.agents.assessor.validation.FailureClass;
 import pl.szczurradar.api.agents.assessor.validation.Violation;
 import pl.szczurradar.api.cli.MigrateCommand;
@@ -37,7 +38,6 @@ import pl.szczurradar.api.posts.Assessment;
 import pl.szczurradar.api.posts.AssessmentRepository;
 import pl.szczurradar.api.posts.Post;
 import pl.szczurradar.api.posts.PostRepository;
-import pl.szczurradar.api.posts.PostResource;
 import pl.szczurradar.api.posts.PostStage;
 import pl.szczurradar.api.raw.RawPayloadRef;
 import pl.szczurradar.api.raw.RawPayloadStore;
@@ -103,7 +103,7 @@ class JpaSchemaIT {
 		steps.save(new PipelineRunStep(run.getId(), RunStep.FETCH));
 		byte[] rawJson = "{\"id\":70001, \"votes\":{\"up\":3}}".getBytes(StandardCharsets.UTF_8);
 		RawPayloadRef raw = rawPayloads.store(Source.WYKOP, rawJson);
-		Post post = posts.save(new Post(Source.WYKOP, PostResource.ENTRY, "70001", Instant.parse("2026-10-01T08:15:00Z"),
+		Post post = posts.save(new Post(Source.WYKOP, ItemType.POST, "70001", Instant.parse("2026-10-01T08:15:00Z"),
 				null, "Treść wpisu #gielda", "uzytkownik1", "tresc-wpisu", "https://wykop.pl/wpis/70001/tresc-wpisu",
 				List.of("gielda", "inwestycje"), raw, run.getId()));
 		AssessmentInputV1 input = ContractFixtures.validInput();

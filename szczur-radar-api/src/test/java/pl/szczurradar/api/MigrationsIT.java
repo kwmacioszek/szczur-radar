@@ -34,7 +34,7 @@ class MigrationsIT {
 	void allMigrationsApplyOnEmptyDatabase() {
 		List<Map<String, Object>> history = jdbc.queryForList(
 				"SELECT version, success FROM flyway_schema_history WHERE version IS NOT NULL ORDER BY installed_rank");
-		assertThat(history).extracting(row -> row.get("version")).containsExactly("1", "2", "3");
+		assertThat(history).extracting(row -> row.get("version")).containsExactly("1", "2", "3", "4");
 		assertThat(history).allSatisfy(row -> assertThat(row.get("success")).isEqualTo(true));
 	}
 
@@ -92,7 +92,9 @@ class MigrationsIT {
 		assertThat(constraintsOf("pipeline_runs")).contains("ck_pipeline_runs_kind", "ck_pipeline_runs_status",
 				"ck_pipeline_runs_range", "ck_pipeline_runs_requested_posts", "fk_pipeline_runs_requested_by");
 		assertThat(constraintsOf("posts")).contains("uq_posts_source_item", "uq_posts_raw_payload", "ck_posts_stage",
-				"ck_posts_stage_attempts", "ck_posts_assessing_owner", "fk_posts_raw_payload");
+				"ck_posts_stage_attempts", "ck_posts_assessing_owner", "fk_posts_raw_payload", "ck_posts_item_type",
+				"ck_posts_source")
+			.doesNotContain("ck_posts_resource");
 		assertThat(constraintsOf("assessments")).contains("ck_assessments_outcome", "ck_assessments_failure_class",
 				"ck_assessments_provider", "fk_assessments_post", "fk_assessments_run");
 		assertThat(constraintsOf("raw_payloads")).contains("ck_raw_payloads_content_encoding", "ck_raw_payloads_sha256");
@@ -120,33 +122,40 @@ class MigrationsIT {
 				"ck_pipeline_runs_range");
 		assertRejected("INSERT INTO pipeline_runs (kind, requested_by, range_from, range_to) VALUES ('range', '" + admin
 				+ "', '2026-10-02T00:00:00Z', '2026-10-01T00:00:00Z')", "ck_pipeline_runs_range");
+		// A run of another kind carries no half of a range (V4).
+		assertRejected("INSERT INTO pipeline_runs (kind, requested_by, range_from) VALUES ('retry', '" + admin
+				+ "', '2026-10-01T00:00:00Z')", "ck_pipeline_runs_range");
+		assertRejected("INSERT INTO pipeline_runs (kind, requested_by, range_to) VALUES ('retry', '" + admin
+				+ "', '2026-10-01T00:00:00Z')", "ck_pipeline_runs_range");
 	}
 
 	@Test
 	void aPostIsStoredOncePerSourceResourceAndId() {
 		UUID run = run(user("post-key@example.com"), "queued");
-		insertPost("entry", "70001", "stored", 0, null, run);
+		insertPost("post", "70001", "stored", 0, null, run);
 		// The same id as a link is another post.
 		insertPost("link", "70001", "stored", 0, null, run);
-		assertRejected(postInsert("entry", "70001", "stored", 0, null, run), "uq_posts_source_item");
+		assertRejected(postInsert("post", "70001", "stored", 0, null, run), "uq_posts_source_item");
+		// The shared model's types only (V4), never a source's own names.
+		assertRejected(postInsert("entry", "70002", "stored", 0, null, run), "ck_posts_item_type");
 	}
 
 	@Test
 	void aPostsStageAgreesWithItsAttemptsAndItsOwner() {
 		UUID run = run(user("post-stage@example.com"), "queued");
-		assertRejected(postInsert("entry", "70101", "dead", 2, null, run), "ck_posts_stage_attempts");
-		assertRejected(postInsert("entry", "70102", "failed", 0, null, run), "ck_posts_stage_attempts");
-		assertRejected(postInsert("entry", "70103", "stored", 1, null, run), "ck_posts_stage_attempts");
-		assertRejected(postInsert("entry", "70104", "assessing", 0, null, run), "ck_posts_assessing_owner");
-		assertRejected(postInsert("entry", "70105", "stored", 0, run, run), "ck_posts_assessing_owner");
-		insertPost("entry", "70106", "assessing", 1, run, run);
-		insertPost("entry", "70107", "dead", 3, null, run);
+		assertRejected(postInsert("post", "70101", "dead", 2, null, run), "ck_posts_stage_attempts");
+		assertRejected(postInsert("post", "70102", "failed", 0, null, run), "ck_posts_stage_attempts");
+		assertRejected(postInsert("post", "70103", "stored", 1, null, run), "ck_posts_stage_attempts");
+		assertRejected(postInsert("post", "70104", "assessing", 0, null, run), "ck_posts_assessing_owner");
+		assertRejected(postInsert("post", "70105", "stored", 0, run, run), "ck_posts_assessing_owner");
+		insertPost("post", "70106", "assessing", 1, run, run);
+		insertPost("post", "70107", "dead", 3, null, run);
 	}
 
 	@Test
 	void anAssessmentIsOkWithAnOutputOrFailedWithAClass() {
 		UUID run = run(user("assessment@example.com"), "queued");
-		UUID post = insertPost("entry", "70201", "stored", 0, null, run);
+		UUID post = insertPost("post", "70201", "stored", 0, null, run);
 		String insert = "INSERT INTO assessments (post_id, run_id, status, failure_class, input, input_hash, output,"
 				+ " violations, result_source, flex_fallback, contract_version, assessed_at, duration_ms, attempts)"
 				+ " VALUES ('" + post + "', '" + run + "', '%s', %s, '{}', '" + "0".repeat(64) + "', %s, '[]', 'prefilter',"
@@ -173,20 +182,20 @@ class MigrationsIT {
 				status, requestedBy);
 	}
 
-	private UUID insertPost(String resource, String sourceItemId, String stage, int attempts, UUID assessingRun,
+	private UUID insertPost(String itemType, String sourceItemId, String stage, int attempts, UUID assessingRun,
 			UUID firstRun) {
-		return jdbc.queryForObject(postInsert(resource, sourceItemId, stage, attempts, assessingRun, firstRun) + " RETURNING id",
+		return jdbc.queryForObject(postInsert(itemType, sourceItemId, stage, attempts, assessingRun, firstRun) + " RETURNING id",
 				UUID.class);
 	}
 
 	/** A post with its own raw payload, inserted by the same statement. */
-	private String postInsert(String resource, String sourceItemId, String stage, int attempts, UUID assessingRun,
+	private String postInsert(String itemType, String sourceItemId, String stage, int attempts, UUID assessingRun,
 			UUID firstRun) {
 		String hash = "'" + "0".repeat(64) + "'";
 		return "WITH raw AS (INSERT INTO raw_payloads (source, content_encoding, media_type, payload, sha256)"
 				+ " VALUES ('wykop', 'gzip', 'application/json', '\\x00', " + hash + ") RETURNING id)"
-				+ " INSERT INTO posts (source, resource, source_item_id, published_at, raw_payload_id, content_hash,"
-				+ " stage, assessment_attempts, assessing_run_id, first_run_id) SELECT 'wykop', '" + resource + "', '"
+				+ " INSERT INTO posts (source, item_type, source_item_id, published_at, raw_payload_id, content_hash,"
+				+ " stage, assessment_attempts, assessing_run_id, first_run_id) SELECT 'wykop', '" + itemType + "', '"
 				+ sourceItemId + "', now(), raw.id, " + hash + ", '" + stage + "', " + attempts + ", "
 				+ (assessingRun == null ? "NULL" : "'" + assessingRun + "'") + ", '" + firstRun + "' FROM raw";
 	}

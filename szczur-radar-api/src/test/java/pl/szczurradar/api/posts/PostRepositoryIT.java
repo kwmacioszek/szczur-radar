@@ -21,6 +21,7 @@ import pl.szczurradar.api.TestcontainersConfiguration;
 import pl.szczurradar.api.agents.assessor.AssessmentResult;
 import pl.szczurradar.api.agents.assessor.ContractFixtures;
 import pl.szczurradar.api.agents.assessor.Provenance;
+import pl.szczurradar.api.agents.assessor.contract.ItemType;
 import pl.szczurradar.api.agents.assessor.validation.FailureClass;
 import pl.szczurradar.api.agents.assessor.validation.Violation;
 import pl.szczurradar.api.cli.MigrateCommand;
@@ -74,31 +75,31 @@ class PostRepositoryIT {
 
 	@Test
 	void findKeysReturnsTheStoredKeysOfTheSourceOnly() {
-		post(PostResource.ENTRY, "80001", "2026-10-01T08:00:00Z");
-		post(PostResource.LINK, "80002", "2026-10-01T08:00:00Z");
+		post(ItemType.POST, "80001", "2026-10-01T08:00:00Z");
+		post(ItemType.LINK, "80002", "2026-10-01T08:00:00Z");
 
 		assertThat(posts.findKeys(Source.WYKOP, List.of("80001", "80002", "80003"))).containsExactlyInAnyOrder(
-				new PostKey(PostResource.ENTRY, "80001"), new PostKey(PostResource.LINK, "80002"));
+				new PostKey(ItemType.POST, "80001"), new PostKey(ItemType.LINK, "80002"));
 	}
 
 	@Test
 	void leftoversAreStoredAndRetryableFailedPostsOldestFirst() {
-		UUID stored = post(PostResource.ENTRY, "80101", "2026-10-01T10:00:00Z");
-		UUID failedOnce = stage(post(PostResource.ENTRY, "80102", "2026-10-01T09:00:00Z"), PostStage.FAILED, 1);
-		UUID failedTwice = stage(post(PostResource.ENTRY, "80103", "2026-10-01T11:00:00Z"), PostStage.FAILED, 2);
-		stage(post(PostResource.ENTRY, "80104", "2026-10-01T08:00:00Z"), PostStage.DEAD, 3);
-		stage(post(PostResource.ENTRY, "80105", "2026-10-01T08:00:00Z"), PostStage.ASSESSED, 0);
-		assessing(post(PostResource.ENTRY, "80106", "2026-10-01T08:00:00Z"));
+		UUID stored = post(ItemType.POST, "80101", "2026-10-01T10:00:00Z");
+		UUID failedOnce = stage(post(ItemType.POST, "80102", "2026-10-01T09:00:00Z"), PostStage.FAILED, 1);
+		UUID failedTwice = stage(post(ItemType.POST, "80103", "2026-10-01T11:00:00Z"), PostStage.FAILED, 2);
+		stage(post(ItemType.POST, "80104", "2026-10-01T08:00:00Z"), PostStage.DEAD, 3);
+		stage(post(ItemType.POST, "80105", "2026-10-01T08:00:00Z"), PostStage.ASSESSED, 0);
+		assessing(post(ItemType.POST, "80106", "2026-10-01T08:00:00Z"));
 
 		assertThat(posts.findLeftoverIds()).containsExactly(failedOnce, stored, failedTwice);
 	}
 
 	@Test
 	void aPageIsNewestFirstWithTiesByIdAndCountsTheTotal() {
-		UUID older = stage(post(PostResource.ENTRY, "80201", "2026-10-01T08:00:00Z"), PostStage.ASSESSED, 0);
-		UUID tieA = stage(post(PostResource.ENTRY, "80202", "2026-10-01T09:00:00Z"), PostStage.ASSESSED, 0);
-		UUID tieB = stage(post(PostResource.LINK, "80203", "2026-10-01T09:00:00Z"), PostStage.ASSESSED, 0);
-		post(PostResource.ENTRY, "80204", "2026-10-01T12:00:00Z");
+		UUID older = stage(post(ItemType.POST, "80201", "2026-10-01T08:00:00Z"), PostStage.ASSESSED, 0);
+		UUID tieA = stage(post(ItemType.POST, "80202", "2026-10-01T09:00:00Z"), PostStage.ASSESSED, 0);
+		UUID tieB = stage(post(ItemType.LINK, "80203", "2026-10-01T09:00:00Z"), PostStage.ASSESSED, 0);
+		post(ItemType.POST, "80204", "2026-10-01T12:00:00Z");
 		List<UUID> ties = greater(tieA, tieB) == tieA ? List.of(tieA, tieB) : List.of(tieB, tieA);
 
 		Page<Post> first = posts.findPage(List.of(PostStage.ASSESSED), 0, 2);
@@ -111,7 +112,7 @@ class PostRepositoryIT {
 
 	@Test
 	void theLatestAttemptBreaksEqualTimesByTheGreatestId() {
-		UUID post = post(PostResource.ENTRY, "80301", "2026-10-01T08:00:00Z");
+		UUID post = post(ItemType.POST, "80301", "2026-10-01T08:00:00Z");
 		Instant at = Instant.parse("2026-10-06T10:00:00Z");
 		Assessment okEarlier = assess(post, ok(at.minusSeconds(60)));
 		Assessment okA = assess(post, ok(at));
@@ -128,9 +129,9 @@ class PostRepositoryIT {
 
 	@Test
 	void theLatestAttemptIsChosenPerPost() {
-		UUID first = post(PostResource.ENTRY, "80401", "2026-10-01T08:00:00Z");
-		UUID second = post(PostResource.ENTRY, "80402", "2026-10-01T08:00:00Z");
-		UUID withoutOk = post(PostResource.ENTRY, "80403", "2026-10-01T08:00:00Z");
+		UUID first = post(ItemType.POST, "80401", "2026-10-01T08:00:00Z");
+		UUID second = post(ItemType.POST, "80402", "2026-10-01T08:00:00Z");
+		UUID withoutOk = post(ItemType.POST, "80403", "2026-10-01T08:00:00Z");
 		Instant at = Instant.parse("2026-10-06T10:00:00Z");
 		assess(first, ok(at));
 		assess(second, ok(at.plusSeconds(1)));
@@ -138,6 +139,30 @@ class PostRepositoryIT {
 
 		assertThat(assessments.findLatestOk(List.of(first, second, withoutOk))).extracting(Assessment::getPostId)
 			.containsExactlyInAnyOrder(first, second);
+	}
+
+	@Test
+	void textsWithNulAreStoredWithoutIt() {
+		// PostgreSQL rejects U+0000 in TEXT and jsonb; the entities keep it out (text/Nul).
+		Post saved = posts.save(new Post(Source.WYKOP, ItemType.POST, "80501", Instant.parse("2026-10-01T08:00:00Z"),
+				"tytuł\u0000", "treść\u0000wpisu", "autor\u0000", null, null, List.of("gi\u0000elda"),
+				rawPayloads.store(Source.WYKOP, "{\"id\":80501}".getBytes(StandardCharsets.UTF_8)), runId));
+		AssessmentResult failed = new AssessmentResult(AssessmentResult.Status.FAILED, null, FailureClass.SCHEMA_VIOLATION,
+				List.of(new Violation(FailureClass.SCHEMA_VIOLATION, "schema:type", "$", "bad \u0000 value")),
+				new Provenance(Provenance.Source.MODEL, Provider.GEMINI, "gemini-3.1-flash-lite", null, ServiceTier.DEFAULT,
+						false, null, null, "p1", "V2", Instant.parse("2026-10-06T10:00:00Z"), null, null, null, 1_000, 1),
+				"{\"x\":\"\u0000\"}");
+		Assessment assessment = assess(saved.getId(), failed);
+		entityManager.clear();
+
+		Post loaded = posts.findById(saved.getId()).orElseThrow();
+		assertThat(loaded.getTitle()).isEqualTo("tytuł");
+		assertThat(loaded.getBody()).isEqualTo("treśćwpisu");
+		assertThat(loaded.getTags()).containsExactly("gielda");
+		Assessment loadedAssessment = assessments.findById(assessment.getId()).orElseThrow();
+		assertThat(loadedAssessment.getRawText()).isEqualTo("{\"x\":\"\uFFFD\"}");
+		assertThat(loadedAssessment.getViolations()).singleElement()
+			.satisfies(violation -> assertThat(violation.message()).isEqualTo("bad \uFFFD value"));
 	}
 
 	/**
@@ -148,8 +173,8 @@ class PostRepositoryIT {
 		return a.toString().compareTo(b.toString()) > 0 ? a : b;
 	}
 
-	private UUID post(PostResource resource, String sourceItemId, String publishedAt) {
-		Post post = posts.save(new Post(Source.WYKOP, resource, sourceItemId, Instant.parse(publishedAt), null, "treść",
+	private UUID post(ItemType itemType, String sourceItemId, String publishedAt) {
+		Post post = posts.save(new Post(Source.WYKOP, itemType, sourceItemId, Instant.parse(publishedAt), null, "treść",
 				null, null, null, List.of("gielda"),
 				rawPayloads.store(Source.WYKOP, ("{\"id\":" + sourceItemId + "}").getBytes(StandardCharsets.UTF_8)),
 				runId));

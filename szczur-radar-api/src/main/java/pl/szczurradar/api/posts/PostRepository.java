@@ -22,8 +22,8 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
 	/** Newest first, ties broken by id. */
 	Sort NEWEST_FIRST = Sort.by(Sort.Order.desc("publishedAt"), Sort.Order.desc("id"));
 
-	/** The keys among {@code sourceItemIds} already stored for {@code source} (any resource type). */
-	@Query("select new pl.szczurradar.api.posts.PostKey(p.resource, p.sourceItemId) from Post p"
+	/** The keys among {@code sourceItemIds} already stored for {@code source} (any item type). */
+	@Query("select new pl.szczurradar.api.posts.PostKey(p.itemType, p.sourceItemId) from Post p"
 			+ " where p.source = :source and p.sourceItemId in :sourceItemIds")
 	List<PostKey> findKeys(Source source, Collection<String> sourceItemIds);
 

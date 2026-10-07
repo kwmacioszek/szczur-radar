@@ -245,6 +245,7 @@ Administrator (operator wdrożenia) — zarządza dostępem: tworzy konta dla za
 
 - Operator otrzymuje jednoznaczny, widoczny sygnał, gdy zaplanowany dzienny przebieg zbierania/przetwarzania nie powiedzie się lub zakończy częściowym błędem — nie dowiaduje się o tym pośrednio, przez brak nowych danych.
 - Dodanie nowego źródła danych ogranicza się do nowego pozyskania i mapowania do wspólnego modelu; warstwa oceny, zapisu i udostępniania danych pozostaje niezmieniona.
+  > Doprecyzowanie (2026-10-07, S-02 `first-assessed-wykop-feed`, przegląd fazy 2): rejestracja źródła — jego stała (`sources/Source`) i dopisanie jej do reguły `CHECK` kolumny `source` jedną migracją — jest częścią dodania źródła. Model danych, encje i zapytania warstwy zapisu się nie zmieniają: typ posta to typ wspólnego modelu (`post` / `link` / `comment`), na który źródło mapuje własne typy.
 - Każda chroniona funkcja lub zasób konsekwentnie wymaga uwierzytelnienia — żadna ścieżka dostępu do danych lub funkcji nie pozostaje przypadkowo niezabezpieczona (weryfikowalne przez kompletny zestaw testów autoryzacji).
 - Użytkownik nie ma wglądu w dane kont innych userów (e-maile, aktywność) — widoczne wspólnie są wyłącznie przetworzone posty; dane kontowe ograniczone do własnego konta.
 - Aplikacja webowa nie ma sztywnego wymogu czasu odpowiedzi w MVP — kilkusekundowe ładowanie przy normalnym obciążeniu jest akceptowalne.
