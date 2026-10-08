@@ -1,12 +1,13 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, ref } from 'vue'
+import { RouterLink, useRouter } from 'vue-router'
 import { logout } from '../api/auth'
 import { clearSession, currentUser } from '../auth/session'
 
 const router = useRouter()
 const loggingOut = ref(false)
 const error = ref<string | null>(null)
+const isAdmin = computed(() => currentUser.value?.role === 'admin')
 
 async function signOut(): Promise<void> {
   if (loggingOut.value) return
@@ -27,51 +28,50 @@ async function signOut(): Promise<void> {
 
 <template>
   <header class="topbar">
+    <nav class="nav">
+      <RouterLink :to="{ name: 'home' }">Posty</RouterLink>
+      <RouterLink v-if="isAdmin" :to="{ name: 'admin' }">Panel admina</RouterLink>
+    </nav>
     <span class="who">{{ currentUser?.email }}</span>
     <button type="button" :disabled="loggingOut" @click="signOut">Wyloguj</button>
   </header>
   <p v-if="error" class="error" role="alert">{{ error }}</p>
-  <main class="page">
-    <section class="card" aria-labelledby="title">
-      <p class="eyebrow">Szczur Radar</p>
-      <h1 id="title">W przygotowaniu</h1>
-      <p class="lead">Trwają prace nad serwisem. Zapraszamy wkrótce.</p>
-    </section>
-  </main>
 </template>
 
 <style scoped>
 .topbar {
   display: flex;
-  justify-content: flex-end;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 16px;
+  gap: 8px 16px;
   padding: 12px 16px;
+  border-bottom: 1px solid color-mix(in srgb, var(--text) 25%, transparent);
+}
+
+.nav {
+  display: flex;
+  gap: 16px;
+  margin-right: auto;
+}
+
+.nav a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.nav a.router-link-exact-active {
+  color: var(--text-h);
+  font-weight: 600;
 }
 
 .who {
   color: var(--text-h);
   font-size: 16px;
-}
-
-button {
-  font: inherit;
-  font-size: 16px;
-  padding: 6px 14px;
-  border: 1px solid var(--accent);
-  border-radius: 8px;
-  background: transparent;
-  color: var(--accent);
-  cursor: pointer;
-}
-
-button:disabled {
-  opacity: 0.6;
-  cursor: progress;
+  overflow-wrap: anywhere;
 }
 
 .error {
-  margin: 0 16px;
+  margin: 8px 16px;
   text-align: right;
   color: #d93025;
 }

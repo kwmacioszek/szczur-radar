@@ -58,6 +58,7 @@ class AuthorizationCompletenessIT {
 	static final Set<String> ADMIN_ROUTES = Set.of(
 			"POST /api/admin/pipeline-runs",
 			"GET /api/admin/pipeline-runs",
+			"GET /api/admin/pipeline-runs/sources",
 			"GET /api/admin/posts/failed");
 
 	private static final Pattern PATH_VARIABLE = Pattern.compile("\\{(\\w+)(?::[^}]*)?}");

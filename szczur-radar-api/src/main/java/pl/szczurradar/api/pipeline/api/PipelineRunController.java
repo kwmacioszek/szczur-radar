@@ -38,6 +38,7 @@ import pl.szczurradar.api.pipeline.run.RunKind;
 import pl.szczurradar.api.pipeline.run.RunStatus;
 import pl.szczurradar.api.pipeline.run.RunStep;
 import pl.szczurradar.api.pipeline.run.StepStatus;
+import pl.szczurradar.api.pipeline.step.SourceIngest;
 import pl.szczurradar.api.sources.Source;
 
 /** The admin's pipeline runs: start them and see their history (admin only: {@code /api/admin/**}). */
@@ -57,10 +58,14 @@ class PipelineRunController {
 
 	private final PipelineRunStepRepository steps;
 
-	PipelineRunController(PipelineRunService service, PipelineRunRepository runs, PipelineRunStepRepository steps) {
+	private final SourceIngest sources;
+
+	PipelineRunController(PipelineRunService service, PipelineRunRepository runs, PipelineRunStepRepository steps,
+			SourceIngest sources) {
 		this.service = service;
 		this.runs = runs;
 		this.steps = steps;
+		this.sources = sources;
 	}
 
 	/**
@@ -91,6 +96,15 @@ class PipelineRunController {
 			.collect(Collectors.groupingBy(PipelineRunStep::getRunId));
 		return new RunPage(found.map(run -> RunView.of(run, stepsByRun.getOrDefault(run.getId(), List.of()))).getContent(),
 				page, size, found.getTotalElements());
+	}
+
+	/**
+	 * The sources a range request may name, and which are configured here (keys set) — the admin form
+	 * offers them and checks the configured ones; the SPA knows no source by name.
+	 */
+	@GetMapping("/sources")
+	List<SourceIngest.SourceState> sources() {
+		return sources.states();
 	}
 
 	@ExceptionHandler(PipelineBusyException.class)

@@ -49,6 +49,19 @@ public class SourceIngest {
 		return sources.stream().sorted(Comparator.naturalOrder()).toList();
 	}
 
+	/** Every known source (one per {@link SourceFetcher} bean), in {@link Source} order, and whether it is configured. */
+	public List<SourceState> states() {
+		return fetchers.values()
+			.stream()
+			.sorted(Comparator.comparing(SourceFetcher::source))
+			.map(fetcher -> new SourceState(fetcher.source(), fetcher.configured()))
+			.toList();
+	}
+
+	/** A source and whether a range run can fetch it here. */
+	public record SourceState(Source source, boolean configured) {
+	}
+
 	/** Every named source's posts in the range, one source after another; a failing source fails the step. */
 	public FetchedBatch fetch(RangeTarget target) {
 		List<SourcePost> posts = new ArrayList<>();

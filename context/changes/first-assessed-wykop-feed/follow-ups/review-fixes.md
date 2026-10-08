@@ -31,7 +31,7 @@ Items queued by `/10x-impl-review` triage that are not code fixes of the reviewe
   `wykop_not_configured` (503) becomes `source_not_configured` (503), raised when a named source or
   every source is not configured (`SourceNotConfiguredException`). `GET /api/admin/pipeline-runs`
   shows each run's `sources`.
-- [ ] **→ phase 5:** the admin form offers the sources (all checked by default); the
+- [x] **→ phase 5 (done):** the admin form offers the sources (configured ones checked by default); the
   `source_not_configured` message in Polish.
 - [x] **Readability refactor after phase 3 (user's request, 2026-10-08):** package layout `pipeline/{run,flow,step,assess,state}`,
   every enum converter in `persistence/converters/`; the dispatcher calls `Assessor.assess` (it duplicated
@@ -42,3 +42,28 @@ Items queued by `/10x-impl-review` triage that are not code fixes of the reviewe
   plan's `posts/PostController.java`, `pipeline/PipelineRunController.java`), keeping the domain packages
   small; the feed item's `resource` is `itemType` (shared `ItemType`); the pipeline's exceptions are
   mapped in `PipelineRunController`, so `config` does not depend on `pipeline`.
+- [x] **Phase 5 addition (backend):** `GET /api/admin/pipeline-runs/sources` → `[{source, configured}]` (from the
+  `SourceFetcher` beans), so the SPA knows no source by name and a new source needs no SPA change; in
+  `ADMIN_ROUTES`, tested in `PipelineRunControllerIT` and `PipelineRunWithoutSourceIT`. `HomeView` is
+  replaced by `FeedView`; the top bar is the shared `AppHeader`.
+
+## For the final review (2026-10-08, user's manual check 5.3 locally)
+
+- [ ] **Run-wide provider errors burn every post's attempts:** with a revoked DeepSeek key every post got
+  `provider_error` (HTTP 401) as a counted `failed` attempt (155 of 163 in one range run); three such runs
+  would make every post `dead`. Decide in `/10x-impl-review`: an authentication/authorization answer
+  (401/403) from the provider stops the run (run `failed`, posts released without an attempt) instead of
+  counting per post.
+- [ ] **UI hardening (last phase or with the review fixes, user's decision):** buttons disabled while a
+  request is pending; clear messages for 409 `pipeline_busy` and 503 `source_not_configured`; form
+  labels and focus; an expired session mid-work (401 → login); narrow screens; plus the user's own list
+  from the manual check.
+  From the check: the failed-posts list shows only its first page (~50 of 155) with no paging and no
+  sign that more exist; no "select all" for retry; the run's counters need a short explanation
+  (e.g. "ocenione" includes no-content posts decided by the prefilter without a model call).
+  The admin did not expect the retry run that a range request queues before the range (leftovers
+  first), nor that a range over stored posts assesses nothing ("nowe 0"): the form should say what a
+  start will queue (e.g. "first a retry of N failed posts").
+- [ ] **UI visual redesign (user's decision, 2026-10-08):** after the last phase (6), on this branch and PR,
+  before the hand-over: a new look for the feed, admin panel and login, together with the hardening above;
+  direction and styling approach to be decided then.

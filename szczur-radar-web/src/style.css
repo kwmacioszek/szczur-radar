@@ -77,3 +77,30 @@ h1 {
   color: var(--text);
   line-height: 1.5;
 }
+
+/* Buttons and form fields of the signed-in views (header, feed, admin panel). */
+button {
+  font: inherit;
+  font-size: 16px;
+  padding: 6px 14px;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--accent);
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+input[type='date'] {
+  font: inherit;
+  font-size: 16px;
+  padding: 4px 8px;
+  border: 1px solid var(--text);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-h);
+}

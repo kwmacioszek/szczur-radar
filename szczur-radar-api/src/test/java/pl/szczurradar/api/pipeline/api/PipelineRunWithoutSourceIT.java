@@ -55,6 +55,9 @@ class PipelineRunWithoutSourceIT {
 				.isStrictlyEqualTo("{\"detail\":\"source_not_configured\"}");
 		}
 		assertThat(jdbc.queryForObject("SELECT count(*) FROM pipeline_runs", Integer.class)).isEqualTo(before);
+		assertThat(mvc.get().uri("/api/admin/pipeline-runs/sources").with(user(admin.toString()).roles(Role.ADMIN.name())))
+			.bodyJson()
+			.isStrictlyEqualTo("[{\"source\":\"wykop\",\"configured\":false}]");
 	}
 
 }

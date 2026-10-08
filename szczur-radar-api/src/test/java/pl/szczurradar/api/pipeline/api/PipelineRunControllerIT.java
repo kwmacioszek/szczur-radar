@@ -141,6 +141,13 @@ class PipelineRunControllerIT {
 	}
 
 	@Test
+	void theSourcesListSaysWhichAreConfigured() {
+		assertThat(mvc.get().uri("/api/admin/pipeline-runs/sources").with(asAdmin())).hasStatusOk()
+			.bodyJson()
+			.isStrictlyEqualTo("[{\"source\":\"wykop\",\"configured\":true}]");
+	}
+
+	@Test
 	void aRangeIsQueuedAfterARetryRunWhenThereAreLeftovers() {
 		UUID leftover = seeds.post(PostStage.FAILED, 1, "2026-10-01T08:00:00Z");
 
