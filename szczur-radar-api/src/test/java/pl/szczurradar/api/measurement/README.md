@@ -50,7 +50,7 @@ printed). Check the saved body for keys and personal data before committing.
 
 ```bash
 # request body: system prompt + example 1 input + the V2 schema simplified per provider exactly as
-# llm/ProviderSchemas does ($ref inlined; Gemini without count limits; DeepSeek also without
+# llm/transport/ProviderSchemas does ($ref inlined; Gemini without count limits; DeepSeek also without
 # lengths; OpenRouter also without uniqueItems, which OpenAI strict mode rejects)
 python3 - <<'EOF' > /tmp/llm-request.json
 import json

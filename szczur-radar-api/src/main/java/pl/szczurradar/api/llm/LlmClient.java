@@ -1,5 +1,7 @@
 package pl.szczurradar.api.llm;
 
+import pl.szczurradar.api.llm.transport.TransportRetry;
+
 /**
  * One logical model call: a system prompt, a user message and the JSON Schema of the expected output
  * go in, the model's raw text and the call's metadata come out. The text is never parsed, repaired

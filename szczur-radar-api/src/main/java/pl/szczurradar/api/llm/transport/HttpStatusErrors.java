@@ -1,4 +1,4 @@
-package pl.szczurradar.api.llm;
+package pl.szczurradar.api.llm.transport;
 
 import java.io.IOException;
 import java.net.URI;
@@ -13,11 +13,11 @@ import org.springframework.web.client.ResponseErrorHandler;
  * Turns an HTTP error status of a {@code RestClient}-based provider API into a classified
  * {@link TransportException} with {@code Retry-After} — Spring AI's default handler keeps neither.
  */
-final class HttpStatusErrors implements ResponseErrorHandler {
+public final class HttpStatusErrors implements ResponseErrorHandler {
 
 	private final ProviderMessages messages;
 
-	HttpStatusErrors(ProviderMessages messages) {
+	public HttpStatusErrors(ProviderMessages messages) {
 		this.messages = messages;
 	}
 

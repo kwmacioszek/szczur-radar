@@ -1,4 +1,4 @@
-package pl.szczurradar.api.llm;
+package pl.szczurradar.api.llm.transport;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

@@ -2,6 +2,8 @@ package pl.szczurradar.api.llm;
 
 import java.util.Objects;
 
+import pl.szczurradar.api.llm.transport.ProviderSchemas;
+
 /**
  * Input of {@link LlmClient#complete(LlmRequest)}.
  *

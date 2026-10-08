@@ -1,5 +1,7 @@
-package pl.szczurradar.api.llm;
+package pl.szczurradar.api.llm.deepseek;
 
+import java.net.http.HttpClient;
+import java.time.Duration;
 import java.util.List;
 
 import org.jspecify.annotations.Nullable;
@@ -8,20 +10,39 @@ import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.ai.deepseek.DeepSeekChatModel;
 import org.springframework.ai.deepseek.DeepSeekChatOptions;
+import org.springframework.ai.deepseek.api.DeepSeekApi;
 import org.springframework.ai.deepseek.api.ResponseFormat;
+import org.springframework.http.client.BufferingClientHttpRequestFactory;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
+import org.springframework.web.client.RestClient;
 
+import pl.szczurradar.api.config.LlmProviderProperties;
 import pl.szczurradar.api.config.LlmProviderProperties.Provider;
 import pl.szczurradar.api.config.LlmProviderProperties.ServiceTier;
+import pl.szczurradar.api.llm.Channel;
+import pl.szczurradar.api.llm.LlmClient;
+import pl.szczurradar.api.llm.LlmRequest;
+import pl.szczurradar.api.llm.LlmResponse;
+import pl.szczurradar.api.llm.OutputMode;
+import pl.szczurradar.api.llm.transport.ChatResponses;
+import pl.szczurradar.api.llm.transport.HttpStatusErrors;
+import pl.szczurradar.api.llm.transport.ProviderMessages;
+import pl.szczurradar.api.llm.transport.ProviderSchemas;
+import pl.szczurradar.api.llm.transport.TransportException;
+import pl.szczurradar.api.llm.transport.TransportRetry;
 
 /**
  * DeepSeek directly through Spring AI's {@code DeepSeekChatModel}: JSON mode (the API takes no
  * schema), thinking off, temperature 0, and the schema appended to the system prompt. JSON mode beat
  * strict tool calling in the 2026-10-01 smoke (96.7% vs 83.3% contract compliance).
  */
-final class DeepSeekClient implements LlmClient {
+public final class DeepSeekClient implements LlmClient {
 
 	/** Fixed paragraph before the schema in the system prompt. */
+	static final String BASE_URL = "https://api.deepseek.com";
+
 	static final String SCHEMA_INSTRUCTION = "\n\nReturn exactly one JSON object, with no other text, that conforms to this JSON Schema:\n";
 
 	private final ChatModel chatModel;
@@ -41,6 +62,41 @@ final class DeepSeekClient implements LlmClient {
 		this.retry = retry;
 		this.rawResponse = rawResponse;
 		this.messages = messages;
+	}
+
+	/**
+	 * The client on Spring AI's {@code DeepSeekChatModel} over a JDK {@code RestClient} without retry: the
+	 * connect phase at most 30 s, every read the {@code LLM_TIMEOUT} limit; the raw answer is read too
+	 * ({@link DeepSeekRawResponse}).
+	 *
+	 * @param baseUrl the API root instead of DeepSeek's (tests), {@code null} = the real one
+	 */
+	public static LlmClient create(LlmProviderProperties properties, @Nullable String baseUrl, TransportRetry retry,
+			ProviderMessages messages) {
+		DeepSeekRawResponse rawResponse = new DeepSeekRawResponse();
+		HttpClient http = HttpClient.newBuilder().connectTimeout(connectTimeout(properties.timeout())).build();
+		JdkClientHttpRequestFactory requestFactory = new JdkClientHttpRequestFactory(http);
+		requestFactory.setReadTimeout(properties.timeout());
+		RestClient.Builder restClient = RestClient.builder()
+			.requestFactory(new BufferingClientHttpRequestFactory(requestFactory))
+			.requestInterceptor(rawResponse);
+		DeepSeekApi api = DeepSeekApi.builder()
+			.baseUrl(baseUrl != null ? baseUrl : BASE_URL)
+			.apiKey(properties.apiKey())
+			.restClientBuilder(restClient)
+			.responseErrorHandler(new HttpStatusErrors(messages))
+			.build();
+		ChatModel chatModel = DeepSeekChatModel.builder()
+			.deepSeekApi(api)
+			.options(DeepSeekChatOptions.builder().model(properties.model()).build())
+			.retryTemplate(TransportRetry.SPRING_AI_OFF)
+			.build();
+		return new DeepSeekClient(chatModel, properties.model(), retry, rawResponse, messages);
+	}
+
+	private static Duration connectTimeout(Duration timeout) {
+		Duration max = Duration.ofSeconds(30);
+		return timeout.compareTo(max) < 0 ? timeout : max;
 	}
 
 	@Override

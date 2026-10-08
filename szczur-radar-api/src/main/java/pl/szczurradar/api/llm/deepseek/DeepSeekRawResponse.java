@@ -1,4 +1,4 @@
-package pl.szczurradar.api.llm;
+package pl.szczurradar.api.llm.deepseek;
 
 import java.io.IOException;
 import java.util.Set;

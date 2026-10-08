@@ -1,4 +1,4 @@
-package pl.szczurradar.api.llm;
+package pl.szczurradar.api.llm.gemini;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -19,6 +19,15 @@ import pl.szczurradar.api.agents.assessor.validation.OutputParser;
 import pl.szczurradar.api.config.LlmProviderProperties;
 import pl.szczurradar.api.config.LlmProviderProperties.Provider;
 import pl.szczurradar.api.config.LlmProviderProperties.ServiceTier;
+import pl.szczurradar.api.llm.CallFailure;
+import pl.szczurradar.api.llm.Channel;
+import pl.szczurradar.api.llm.LlmCallException;
+import pl.szczurradar.api.llm.LlmClient;
+import pl.szczurradar.api.llm.LlmClientFactory;
+import pl.szczurradar.api.llm.LlmRequest;
+import pl.szczurradar.api.llm.LlmResponse;
+import pl.szczurradar.api.llm.OutputMode;
+import pl.szczurradar.api.llm.ScriptedProviderServer;
 import pl.szczurradar.api.llm.ScriptedProviderServer.Reply;
 
 /**

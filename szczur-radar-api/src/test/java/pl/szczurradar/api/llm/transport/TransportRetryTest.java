@@ -1,4 +1,4 @@
-package pl.szczurradar.api.llm;
+package pl.szczurradar.api.llm.transport;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -12,7 +12,9 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 import pl.szczurradar.api.config.LlmProviderProperties.ServiceTier;
-import pl.szczurradar.api.llm.TransportException.Kind;
+import pl.szczurradar.api.llm.CallFailure;
+import pl.szczurradar.api.llm.LlmCallException;
+import pl.szczurradar.api.llm.transport.TransportException.Kind;
 
 /** The retry loop on scripted attempts: counts, waits, classes and the flex fallback. */
 class TransportRetryTest {

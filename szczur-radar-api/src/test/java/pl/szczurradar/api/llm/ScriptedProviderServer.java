@@ -22,31 +22,31 @@ import com.sun.net.httpserver.HttpServer;
  * reply and records every request it receives — the count proves no SDK or framework retried
  * behind our back.
  */
-final class ScriptedProviderServer implements AutoCloseable {
+public final class ScriptedProviderServer implements AutoCloseable {
 
 	/** One scripted answer; {@code delay} keeps the client waiting first (time-out tests). */
-	record Reply(int status, String body, Map<String, String> headers, Duration delay) {
+	public record Reply(int status, String body, Map<String, String> headers, Duration delay) {
 
-		static Reply ok(String body) {
+		public static Reply ok(String body) {
 			return new Reply(200, body, Map.of(), Duration.ZERO);
 		}
 
-		static Reply status(int status, String body) {
+		public static Reply status(int status, String body) {
 			return new Reply(status, body, Map.of(), Duration.ZERO);
 		}
 
-		Reply withHeader(String name, String value) {
+		public Reply withHeader(String name, String value) {
 			return new Reply(status, body, Map.of(name, value), delay);
 		}
 
-		Reply after(Duration wait) {
+		public Reply after(Duration wait) {
 			return new Reply(status, body, headers, wait);
 		}
 
 	}
 
 	/** A request as received. */
-	record Request(String method, String path, String query, String body) {
+	public record Request(String method, String path, String query, String body) {
 	}
 
 	private final HttpServer server;
@@ -57,7 +57,7 @@ final class ScriptedProviderServer implements AutoCloseable {
 
 	private final List<Request> requests = new CopyOnWriteArrayList<>();
 
-	ScriptedProviderServer(Reply... script) {
+	public ScriptedProviderServer(Reply... script) {
 		replies.addAll(List.of(script));
 		try {
 			server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
@@ -98,12 +98,12 @@ final class ScriptedProviderServer implements AutoCloseable {
 		server.start();
 	}
 
-	String baseUrl() {
+	public String baseUrl() {
 		return "http://127.0.0.1:" + server.getAddress().getPort();
 	}
 
 	/** A local URL nothing listens on: every connection attempt is refused. */
-	static String refusingBaseUrl() {
+	public static String refusingBaseUrl() {
 		try (ServerSocket socket = new ServerSocket(0, 0,
 				InetAddress.getLoopbackAddress())) {
 			return "http://127.0.0.1:" + socket.getLocalPort();
@@ -113,7 +113,7 @@ final class ScriptedProviderServer implements AutoCloseable {
 		}
 	}
 
-	List<Request> requests() {
+	public List<Request> requests() {
 		return requests;
 	}
 
@@ -124,7 +124,7 @@ final class ScriptedProviderServer implements AutoCloseable {
 	}
 
 	/** A real recorded payload from {@code src/test/resources/fixtures/}. */
-	static String fixture(String path) {
+	public static String fixture(String path) {
 		try (InputStream in = ScriptedProviderServer.class.getResourceAsStream("/fixtures/" + path)) {
 			if (in == null) {
 				throw new IllegalStateException("missing fixture " + path);

@@ -1,8 +1,13 @@
-package pl.szczurradar.api.llm;
+package pl.szczurradar.api.llm.transport;
 
 import java.time.Duration;
 
+import org.springframework.core.retry.RetryPolicy;
+import org.springframework.core.retry.RetryTemplate;
+
 import pl.szczurradar.api.config.LlmProviderProperties.ServiceTier;
+import pl.szczurradar.api.llm.CallFailure;
+import pl.szczurradar.api.llm.LlmCallException;
 
 /**
  * The only retry loop of a model call. Up to {@value #ATTEMPTS_PER_TIER} attempts per tier on
@@ -12,6 +17,9 @@ import pl.szczurradar.api.config.LlmProviderProperties.ServiceTier;
  * Contract violations and parse errors never reach this loop — they are not retried.
  */
 public final class TransportRetry {
+
+	/** Spring AI's own retry layer, off: every chat model is built with it (only this class retries). */
+	public static final RetryTemplate SPRING_AI_OFF = new RetryTemplate(RetryPolicy.withMaxRetries(0));
 
 	public static final int ATTEMPTS_PER_TIER = 3;
 

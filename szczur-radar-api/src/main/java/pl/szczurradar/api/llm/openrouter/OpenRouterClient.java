@@ -1,9 +1,13 @@
-package pl.szczurradar.api.llm;
+package pl.szczurradar.api.llm.openrouter;
 
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 
+import com.openai.client.OpenAIClient;
+import com.openai.client.OpenAIClientAsync;
+import com.openai.client.okhttp.OpenAIOkHttpClient;
+import com.openai.client.okhttp.OpenAIOkHttpClientAsync;
 import com.openai.errors.OpenAIServiceException;
 import org.jspecify.annotations.Nullable;
 import org.springframework.ai.chat.messages.SystemMessage;
@@ -14,9 +18,20 @@ import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.ai.openai.OpenAiChatOptions;
 
+import pl.szczurradar.api.config.LlmProviderProperties;
 import pl.szczurradar.api.config.LlmProviderProperties.Provider;
 import pl.szczurradar.api.config.LlmProviderProperties.ReasoningEffort;
 import pl.szczurradar.api.config.LlmProviderProperties.ServiceTier;
+import pl.szczurradar.api.llm.Channel;
+import pl.szczurradar.api.llm.LlmClient;
+import pl.szczurradar.api.llm.LlmRequest;
+import pl.szczurradar.api.llm.LlmResponse;
+import pl.szczurradar.api.llm.OutputMode;
+import pl.szczurradar.api.llm.transport.ChatResponses;
+import pl.szczurradar.api.llm.transport.ProviderMessages;
+import pl.szczurradar.api.llm.transport.ProviderSchemas;
+import pl.szczurradar.api.llm.transport.TransportException;
+import pl.szczurradar.api.llm.transport.TransportRetry;
 
 /**
  * OpenRouter's OpenAI-compatible API through Spring AI's {@code OpenAiChatModel} on our own
@@ -25,7 +40,9 @@ import pl.szczurradar.api.config.LlmProviderProperties.ServiceTier;
  * tier only ({@code provider.only = ["openai/flex"]}, no fallbacks); after three 429 refusals
  * {@link TransportRetry} retries it on {@code ["openai"]}.
  */
-final class OpenRouterClient implements LlmClient {
+public final class OpenRouterClient implements LlmClient {
+
+	static final String BASE_URL = "https://openrouter.ai/api/v1";
 
 	private final ChatModel chatModel;
 
@@ -51,6 +68,36 @@ final class OpenRouterClient implements LlmClient {
 		this.timeout = timeout;
 		this.retry = retry;
 		this.messages = messages;
+	}
+
+	/**
+	 * The client on Spring AI's {@code OpenAiChatModel} over openai-java clients with no retries and the
+	 * {@code LLM_TIMEOUT} limit; the SDK appends {@code chat/completions} to the base URL.
+	 *
+	 * @param baseUrl the API root instead of OpenRouter's (tests), {@code null} = the real one
+	 */
+	public static LlmClient create(LlmProviderProperties properties, @Nullable String baseUrl, TransportRetry retry,
+			ProviderMessages messages) {
+		String url = baseUrl != null ? baseUrl : BASE_URL;
+		OpenAIClient client = OpenAIOkHttpClient.builder()
+			.baseUrl(url)
+			.apiKey(properties.apiKey())
+			.maxRetries(0)
+			.timeout(properties.timeout())
+			.build();
+		OpenAIClientAsync clientAsync = OpenAIOkHttpClientAsync.builder()
+			.baseUrl(url)
+			.apiKey(properties.apiKey())
+			.maxRetries(0)
+			.timeout(properties.timeout())
+			.build();
+		ChatModel chatModel = OpenAiChatModel.builder()
+			.openAiClient(client)
+			.openAiClientAsync(clientAsync)
+			.options(OpenAiChatOptions.builder().model(properties.model()).build())
+			.build();
+		return new OpenRouterClient(chatModel, properties.model(), properties.serviceTier(), properties.reasoningEffort(),
+				properties.timeout(), retry, messages);
 	}
 
 	@Override

@@ -1,4 +1,4 @@
-package pl.szczurradar.api.llm;
+package pl.szczurradar.api.llm.transport;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -83,7 +83,7 @@ public class TransportException extends RuntimeException {
 	 * An exception without an HTTP status: a time-out or I/O error found in its cause chain, otherwise
 	 * {@link Kind#REJECTED}.
 	 */
-	static TransportException ofThrowable(Throwable error, ProviderMessages messages) {
+	public static TransportException ofThrowable(Throwable error, ProviderMessages messages) {
 		for (Throwable cause = error; cause != null; cause = cause.getCause()) {
 			if (cause instanceof InterruptedIOException || cause instanceof HttpTimeoutException) {
 				return new TransportException(Kind.TIMEOUT, messages.clean("time-out: " + cause), null, error);

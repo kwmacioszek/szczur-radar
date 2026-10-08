@@ -1,4 +1,4 @@
-package pl.szczurradar.api.llm;
+package pl.szczurradar.api.llm.transport;
 
 import java.util.Locale;
 import java.util.Objects;
@@ -11,13 +11,13 @@ import org.springframework.ai.chat.model.Generation;
 import pl.szczurradar.api.text.Whitespace;
 
 /** Reading a Spring AI {@link ChatResponse} the same way for every provider. */
-final class ChatResponses {
+public final class ChatResponses {
 
 	private ChatResponses() {
 	}
 
 	/** The text of all generations, without thought parts (Gemini marks them {@code isThought}). */
-	static String text(ChatResponse response) {
+	public static String text(ChatResponse response) {
 		return response.getResults()
 			.stream()
 			.filter(generation -> !Boolean.TRUE.equals(generation.getOutput().getMetadata().get("isThought")))
@@ -30,7 +30,7 @@ final class ChatResponses {
 	 * Rejects an answer without text — empty or only white space of the contract's set (§10) — whatever
 	 * the finish reason: a {@code stop} with no text is no answer either. Never retried.
 	 */
-	static void requireText(ChatResponse response) {
+	public static void requireText(ChatResponse response) {
 		if (Whitespace.strip(text(response)).isEmpty()) {
 			throw new TransportException(TransportException.Kind.REJECTED,
 					"no text, finish reason " + finishReasons(response), null, null);
@@ -38,7 +38,7 @@ final class ChatResponses {
 	}
 
 	/** The finish reasons of all generations, lower case, e.g. {@code stop} or {@code content_filter}. */
-	static String finishReasons(ChatResponse response) {
+	public static String finishReasons(ChatResponse response) {
 		return response.getResults()
 			.stream()
 			.map(Generation::getMetadata)
@@ -46,20 +46,20 @@ final class ChatResponses {
 			.collect(Collectors.joining(","));
 	}
 
-	static @Nullable String model(ChatResponse response) {
+	public static @Nullable String model(ChatResponse response) {
 		String model = response.getMetadata().getModel();
 		return model.isBlank() ? null : model;
 	}
 
-	static @Nullable Integer inputTokens(ChatResponse response) {
+	public static @Nullable Integer inputTokens(ChatResponse response) {
 		return positiveOrNull(response.getMetadata().getUsage().getPromptTokens());
 	}
 
-	static @Nullable Integer outputTokens(ChatResponse response) {
+	public static @Nullable Integer outputTokens(ChatResponse response) {
 		return positiveOrNull(response.getMetadata().getUsage().getCompletionTokens());
 	}
 
-	static @Nullable Integer cachedTokens(ChatResponse response) {
+	public static @Nullable Integer cachedTokens(ChatResponse response) {
 		Long cached = response.getMetadata().getUsage().getCacheReadInputTokens();
 		return cached == null ? null : Math.toIntExact(cached);
 	}
