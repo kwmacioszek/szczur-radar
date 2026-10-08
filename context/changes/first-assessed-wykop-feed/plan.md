@@ -641,10 +641,10 @@ Odnotować ryzyko: przed F-01 brak backupu i limitów kosztów (lekcja: kroki po
 
 #### Automated
 
-- [x] 4.1 AuthorizationCompletenessIT i AdminRoleIT przechodzą dla nowych tras
-- [x] 4.2 IT GET /api/posts: kolejność, stronicowanie, total, brak FAILED/DEAD, błędne parametry
-- [x] 4.3 IT POST /api/admin/pipeline-runs: 202, 409, 400, 503
-- [x] 4.4 IT GET /api/admin/posts/failed: FAILED i DEAD z ostatnią próbą
+- [x] 4.1 AuthorizationCompletenessIT i AdminRoleIT przechodzą dla nowych tras — 1438827
+- [x] 4.2 IT GET /api/posts: kolejność, stronicowanie, total, brak FAILED/DEAD, błędne parametry — 1438827
+- [x] 4.3 IT POST /api/admin/pipeline-runs: 202, 409, 400, 503 — 1438827
+- [x] 4.4 IT GET /api/admin/posts/failed: FAILED i DEAD z ostatnią próbą — 1438827
 
 ### Phase 5: SPA — lista postów i panel admina
 
