@@ -650,12 +650,12 @@ Odnotować ryzyko: przed F-01 brak backupu i limitów kosztów (lekcja: kroki po
 
 #### Automated
 
-- [x] 5.1 Testy Vitest: klient, FeedView, AdminView, guard admina
-- [x] 5.2 Typecheck i build przechodzą
+- [x] 5.1 Testy Vitest: klient, FeedView, AdminView, guard admina — 65e321f
+- [x] 5.2 Typecheck i build przechodzą — 65e321f
 
 #### Manual
 
-- [x] 5.3 Lokalnie lista, stronicowanie, panel admina i ponowienie działają, także na wąskim ekranie (2026-10-08 lokalnie: prawdziwy Wykop i DeepSeek; wąski ekran i dopracowanie UI odłożone — `follow-ups/review-fixes.md`, „For the final review”)
+- [x] 5.3 Lokalnie lista, stronicowanie, panel admina i ponowienie działają, także na wąskim ekranie (2026-10-08 lokalnie: prawdziwy Wykop i DeepSeek; wąski ekran i dopracowanie UI odłożone — `follow-ups/review-fixes.md`, „For the final review”) — 65e321f
 
 ### Phase 6: Dokumenty, konfiguracja Railway i weryfikacja w PR env
 
