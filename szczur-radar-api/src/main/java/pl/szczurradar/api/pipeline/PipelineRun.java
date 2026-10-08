@@ -16,6 +16,8 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 import org.jspecify.annotations.Nullable;
 
+import pl.szczurradar.api.sources.Source;
+
 /**
  * One pipeline run ({@code pipeline_runs}, owned by Flyway, {@code V3__create_pipeline_and_posts.sql}).
  * Created {@code queued}; its status and counters change only through conditional updates that
@@ -42,6 +44,11 @@ public class PipelineRun {
 	/** End of the range, inclusive; only {@link RunKind#RANGE}. */
 	@Column(name = "range_to", updatable = false)
 	private @Nullable Instant rangeTo;
+
+	/** The sources to fetch, as stored values; only {@link RunKind#RANGE}. */
+	@JdbcTypeCode(SqlTypes.ARRAY)
+	@Column(updatable = false)
+	private @Nullable List<String> sources;
 
 	/** The posts to assess; only {@link RunKind#POSTS}. */
 	@JdbcTypeCode(SqlTypes.ARRAY)
@@ -90,26 +97,30 @@ public class PipelineRun {
 	}
 
 	private PipelineRun(RunKind kind, @Nullable Instant rangeFrom, @Nullable Instant rangeTo,
-			@Nullable List<UUID> requestedPostIds, UUID requestedBy) {
+			@Nullable List<Source> sources, @Nullable List<UUID> requestedPostIds, UUID requestedBy) {
 		this.kind = kind;
 		this.status = RunStatus.QUEUED;
 		this.rangeFrom = rangeFrom;
 		this.rangeTo = rangeTo;
+		this.sources = sources == null ? null : sources.stream().map(Source::value).toList();
 		this.requestedPostIds = requestedPostIds;
 		this.requestedBy = Objects.requireNonNull(requestedBy, "requestedBy");
 	}
 
-	/** A queued run over the source's posts added between {@code from} and {@code to} (inclusive). */
-	public static PipelineRun range(Instant from, Instant to, UUID requestedBy) {
+	/** A queued run over the posts of {@code sources} added between {@code from} and {@code to} (inclusive). */
+	public static PipelineRun range(Instant from, Instant to, List<Source> sources, UUID requestedBy) {
 		if (from.isAfter(to)) {
 			throw new IllegalArgumentException("range from " + from + " is after " + to);
 		}
-		return new PipelineRun(RunKind.RANGE, from, to, null, requestedBy);
+		if (sources.isEmpty()) {
+			throw new IllegalArgumentException("a range run needs at least one source");
+		}
+		return new PipelineRun(RunKind.RANGE, from, to, List.copyOf(sources), null, requestedBy);
 	}
 
 	/** A queued run over the leftovers of earlier runs. */
 	public static PipelineRun retry(UUID requestedBy) {
-		return new PipelineRun(RunKind.RETRY, null, null, null, requestedBy);
+		return new PipelineRun(RunKind.RETRY, null, null, null, null, requestedBy);
 	}
 
 	/** A queued run over the given posts. */
@@ -117,7 +128,7 @@ public class PipelineRun {
 		if (postIds.isEmpty()) {
 			throw new IllegalArgumentException("a posts run needs at least one post");
 		}
-		return new PipelineRun(RunKind.POSTS, null, null, List.copyOf(postIds), requestedBy);
+		return new PipelineRun(RunKind.POSTS, null, null, null, List.copyOf(postIds), requestedBy);
 	}
 
 	public UUID getId() {
@@ -138,6 +149,11 @@ public class PipelineRun {
 
 	public @Nullable Instant getRangeTo() {
 		return rangeTo;
+	}
+
+	/** The sources a range run fetches; empty for other runs. */
+	public List<Source> getSources() {
+		return sources == null ? List.of() : sources.stream().map(Source::fromValue).toList();
 	}
 
 	public @Nullable List<UUID> getRequestedPostIds() {

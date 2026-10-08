@@ -13,8 +13,9 @@ import org.springframework.core.type.AnnotatedTypeMetadata;
 /**
  * The application's {@link WykopRepository}, from {@code WYKOP_KEY} and {@code WYKOP_SECRET} (secrets:
  * never logged or echoed). Both are optional: without them the API, CI and tests start and there is
- * simply no {@link WykopRepository} bean — consumers inject {@code Optional<WykopRepository>}, and a
- * range run fails with {@code wykop_not_configured}. Only one of the two set is a configuration error
+ * simply no {@link WykopRepository} bean — {@link WykopFetcher} injects {@code Optional<WykopRepository>}
+ * and reports Wykop as not configured, so a range run that needs it is refused
+ * ({@code source_not_configured}). Only one of the two set is a configuration error
  * that fails the start.
  */
 @Configuration(proxyBeanMethods = false)

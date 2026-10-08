@@ -19,18 +19,18 @@ import com.sun.net.httpserver.HttpServer;
 /**
  * A local HTTP server in place of {@code https://wykop.pl/api/v3/}: every request is recorded and
  * answered by a test-supplied function, each on its own thread (an answer may wait for another
- * request).
+ * request). Public for the pipeline's integration tests.
  */
-final class LocalWykopServer implements AutoCloseable {
+public final class LocalWykopServer implements AutoCloseable {
 
 	/** One recorded request; {@code query} is URL-decoded. */
-	record Request(String method, String path, String query, String authorization, String body) {
+	public record Request(String method, String path, String query, String authorization, String body) {
 	}
 
 	/** The answer to a request. */
-	record Reply(int status, String body) {
+	public record Reply(int status, String body) {
 
-		static Reply ok(String body) {
+		public static Reply ok(String body) {
 			return new Reply(200, body);
 		}
 
@@ -42,7 +42,7 @@ final class LocalWykopServer implements AutoCloseable {
 
 	private final List<Request> requests = Collections.synchronizedList(new ArrayList<>());
 
-	LocalWykopServer(Function<Request, Reply> answers) {
+	public LocalWykopServer(Function<Request, Reply> answers) {
 		try {
 			server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
 		}
@@ -67,16 +67,16 @@ final class LocalWykopServer implements AutoCloseable {
 		server.start();
 	}
 
-	URI baseUrl() {
+	public URI baseUrl() {
 		return URI.create("http://127.0.0.1:" + server.getAddress().getPort() + "/api/v3/");
 	}
 
-	List<Request> requests() {
+	public List<Request> requests() {
 		return List.copyOf(requests);
 	}
 
 	/** A real, anonymized Wykop answer from {@code fixtures/wykop/}. */
-	static String fixture(String name) {
+	public static String fixture(String name) {
 		try (InputStream in = LocalWykopServer.class.getResourceAsStream("/fixtures/wykop/" + name)) {
 			return new String(in.readAllBytes(), StandardCharsets.UTF_8);
 		}

@@ -39,6 +39,10 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
 			+ " order by p.publishedAt, p.id")
 	List<UUID> findIdsInStageOrFailedBelow(PostStage stage, PostStage failed, int maxAttempts);
 
+	/** The ids of the posts {@code runId} stored first that are in {@code stage}, oldest first. */
+	@Query("select p.id from Post p where p.firstRunId = :runId and p.stage = :stage order by p.publishedAt, p.id")
+	List<UUID> findIdsFirstStoredBy(UUID runId, PostStage stage);
+
 	/** A page of posts in {@code stages}, newest first. */
 	default Page<Post> findPage(Collection<PostStage> stages, int page, int size) {
 		return findByStageIn(stages, PageRequest.of(page, size, NEWEST_FIRST));

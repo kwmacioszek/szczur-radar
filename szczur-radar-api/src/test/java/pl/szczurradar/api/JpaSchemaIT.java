@@ -98,7 +98,8 @@ class JpaSchemaIT {
 	void aRunAPostWithItsRawPayloadAndItsAssessmentsRoundTrip() {
 		User admin = users.save(new User("pipeline-schema@example.com", null, Role.ADMIN));
 		Instant from = Instant.parse("2026-09-30T22:00:00Z");
-		PipelineRun run = runs.save(PipelineRun.range(from, from.plus(1, ChronoUnit.DAYS).minusSeconds(1), admin.getId()));
+		PipelineRun run = runs.save(PipelineRun.range(from, from.plus(1, ChronoUnit.DAYS).minusSeconds(1),
+				List.of(Source.WYKOP), admin.getId()));
 		PipelineRun postsRun = runs.save(PipelineRun.posts(List.of(run.getId()), admin.getId()));
 		steps.save(new PipelineRunStep(run.getId(), RunStep.FETCH));
 		byte[] rawJson = "{\"id\":70001, \"votes\":{\"up\":3}}".getBytes(StandardCharsets.UTF_8);
@@ -121,6 +122,7 @@ class JpaSchemaIT {
 		assertThat(loadedRun.getKind()).isEqualTo(RunKind.RANGE);
 		assertThat(loadedRun.getStatus()).isEqualTo(RunStatus.QUEUED);
 		assertThat(loadedRun.getRangeFrom()).isEqualTo(from);
+		assertThat(loadedRun.getSources()).containsExactly(Source.WYKOP);
 		assertThat(loadedRun.getRequestedBy()).isEqualTo(admin.getId());
 		assertThat(loadedRun.getCreatedAt()).isNotNull();
 		assertThat(runs.findById(postsRun.getId()).orElseThrow().getRequestedPostIds()).containsExactly(run.getId());

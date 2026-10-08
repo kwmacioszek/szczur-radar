@@ -34,7 +34,7 @@ class MigrationsIT {
 	void allMigrationsApplyOnEmptyDatabase() {
 		List<Map<String, Object>> history = jdbc.queryForList(
 				"SELECT version, success FROM flyway_schema_history WHERE version IS NOT NULL ORDER BY installed_rank");
-		assertThat(history).extracting(row -> row.get("version")).containsExactly("1", "2", "3", "4");
+		assertThat(history).extracting(row -> row.get("version")).containsExactly("1", "2", "3", "4", "5");
 		assertThat(history).allSatisfy(row -> assertThat(row.get("success")).isEqualTo(true));
 	}
 
@@ -122,6 +122,13 @@ class MigrationsIT {
 				"ck_pipeline_runs_range");
 		assertRejected("INSERT INTO pipeline_runs (kind, requested_by, range_from, range_to) VALUES ('range', '" + admin
 				+ "', '2026-10-02T00:00:00Z', '2026-10-01T00:00:00Z')", "ck_pipeline_runs_range");
+		// A range run names its sources (V5), only registered ones; other runs name none.
+		assertRejected("INSERT INTO pipeline_runs (kind, requested_by, range_from, range_to, sources) VALUES ('range', '"
+				+ admin + "', '2026-10-01T00:00:00Z', '2026-10-01T23:59:59Z', ARRAY['reddit'])", "ck_pipeline_runs_sources");
+		assertRejected("INSERT INTO pipeline_runs (kind, requested_by, range_from, range_to, sources) VALUES ('range', '"
+				+ admin + "', '2026-10-01T00:00:00Z', '2026-10-01T23:59:59Z', ARRAY[]::TEXT[])", "ck_pipeline_runs_sources");
+		assertRejected("INSERT INTO pipeline_runs (kind, requested_by, sources) VALUES ('retry', '" + admin
+				+ "', ARRAY['wykop'])", "ck_pipeline_runs_sources");
 		// A run of another kind carries no half of a range (V4).
 		assertRejected("INSERT INTO pipeline_runs (kind, requested_by, range_from) VALUES ('retry', '" + admin
 				+ "', '2026-10-01T00:00:00Z')", "ck_pipeline_runs_range");

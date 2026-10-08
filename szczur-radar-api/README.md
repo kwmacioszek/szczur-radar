@@ -23,7 +23,7 @@ Pakiet bazowy `pl.szczurradar.api`, pakiety według funkcji — nie według wars
 | `agents` | agenci Embabel; `agents/assessor` — kontrakt oceny V2 jako kod (model, schemat, parser, walidator D1–D15, odsiew), prompt z wersją, `Assessor` (jedno wywołanie modelu na wpis) i `AssessorAgent` |
 | `llm` | klienci dostawców LLM (`LlmClient`); jedyne ponowienia transportowe (`TransportRetry`) |
 | `sources` | źródła danych → wejście kontraktu (jak dodać źródło: `sources/CLAUDE.md`); `sources/wykop` — `WykopApiClient` (autoryzacja, `GET`), `WykopRepository` (wyszukiwarka: wpisy i znaleziska z tagiem w zakresie dat), `WykopMapper` (wpis → `post`, znalezisko → `link`, czas Europe/Warsaw), `WykopConfiguration` (bean z `WYKOP_KEY`/`WYKOP_SECRET`); `Source` (enum źródeł) |
-| `pipeline` | przebiegi pipeline'u: encje `PipelineRun`, `PipelineRunStep` i ich repozytoria (S-02) |
+| `pipeline` | przebiegi pipeline'u (S-02): agent Embabel `PipelineAgent` (GOAP), kolejka `PipelineRunService`, kroki i dispatcher ocen; mapa w `pipeline/CLAUDE.md` |
 | `posts` | posty i każda próba oceny: encje `Post`, `Assessment`, repozytoria (lista od najnowszych, resztki do ponowienia, ostatnia ocena) |
 | `raw` | surowe payloady źródeł osobno od danych aplikacji: `RawPayloadStore` (gzip + SHA-256 w tabeli `raw_payloads`) |
 | `persistence` | wspólne klocki zapisu: `EnumValueConverter` (enum ↔ wartość z `CHECK`), `Sha256` |
@@ -76,7 +76,7 @@ Przebieg pipeline'u pobiera wpisy i znaleziska z Wykopu (S-02) kluczem aplikacji
 | `WYKOP_KEY` | klucz aplikacji Wykop API v3 — sekret: nigdy w repo, logach ani argumentach |
 | `WYKOP_SECRET` | sekret aplikacji — j.w. |
 
-- Obie są **opcjonalne**: bez nich serwer, komendy i testy startują normalnie, a przebieg zakresu dat kończy się błędem `wykop_not_configured` (`sources/wykop/WykopConfiguration`). Tylko jedna z dwóch przerywa start z komunikatem (bez wartości).
+- Obie są **opcjonalne**: bez nich serwer, komendy i testy startują normalnie, a Wykop nie jest skonfigurowanym źródłem — przebieg zakresu dat, który go wymaga (domyślnie: wszystkie skonfigurowane źródła), jest odrzucany jako `source_not_configured` (`sources/wykop/WykopConfiguration`, `pipeline/SourceIngest`). Tylko jedna z dwóch przerywa start z komunikatem (bez wartości).
 - Start nie łączy się z Wykopem: token aplikacji jest pobierany przy pierwszym zapytaniu.
 - Lokalnie jak klucz LLM: poza repo, np. `~/.config/szczur-radar/wykop.env` (`chmod 600`), i `source` przed uruchomieniem.
 
