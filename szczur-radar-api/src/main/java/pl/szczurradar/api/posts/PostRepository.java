@@ -39,6 +39,18 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
 			+ " order by p.publishedAt, p.id")
 	List<UUID> findIdsInStageOrFailedBelow(PostStage stage, PostStage failed, int maxAttempts);
 
+	/** Whether there is any leftover ({@link #findLeftoverIds()} is not empty). */
+	default boolean existsLeftover() {
+		return existsInStageOrFailedBelow(PostStage.STORED, PostStage.FAILED, Post.MAX_ASSESSMENT_ATTEMPTS);
+	}
+
+	@Query("select count(p) > 0 from Post p where p.stage = :stage or (p.stage = :failed and p.assessmentAttempts < :maxAttempts)")
+	boolean existsInStageOrFailedBelow(PostStage stage, PostStage failed, int maxAttempts);
+
+	/** Those of {@code ids} in {@code stage}. */
+	@Query("select p.id from Post p where p.id in :ids and p.stage = :stage order by p.id")
+	List<UUID> findIdsInStage(Collection<UUID> ids, PostStage stage);
+
 	/** The ids of the posts {@code runId} stored first that are in {@code stage}, oldest first. */
 	@Query("select p.id from Post p where p.firstRunId = :runId and p.stage = :stage order by p.publishedAt, p.id")
 	List<UUID> findIdsFirstStoredBy(UUID runId, PostStage stage);

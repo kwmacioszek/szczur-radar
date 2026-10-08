@@ -21,5 +21,5 @@ Source of truth: `context/foundation/llm-assessment/contract-v2.md`. Code follow
 Lengths are Unicode code points (`codePointCount`), never `String.length()`.
 
 `FailureClass`, `AssessmentResult.Status`, `Provenance.Source` and `ItemType` values are stored in
-`assessments`/`posts` (`posts/*Converter`): append-only — never rename or remove a constant, or old rows
+`assessments`/`posts` (`persistence/converters/`): append-only — never rename or remove a constant, or old rows
 no longer load.

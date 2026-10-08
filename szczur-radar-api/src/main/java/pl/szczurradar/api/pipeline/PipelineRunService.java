@@ -3,7 +3,6 @@ package pl.szczurradar.api.pipeline;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -22,7 +21,17 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
-import pl.szczurradar.api.posts.Post;
+import pl.szczurradar.api.pipeline.flow.RunFlow.RunRequest;
+import pl.szczurradar.api.pipeline.flow.RunFlow.RunSummary;
+import pl.szczurradar.api.pipeline.run.PipelineRun;
+import pl.szczurradar.api.pipeline.run.PipelineRunRepository;
+import pl.szczurradar.api.pipeline.run.RunKind;
+import pl.szczurradar.api.pipeline.run.RunStatus;
+import pl.szczurradar.api.pipeline.state.PostTransitions;
+import pl.szczurradar.api.pipeline.state.RunRecorder;
+import pl.szczurradar.api.pipeline.step.SourceIngest;
+import pl.szczurradar.api.posts.PostRepository;
+import pl.szczurradar.api.posts.PostStage;
 import pl.szczurradar.api.sources.Source;
 
 /**
@@ -54,6 +63,8 @@ public class PipelineRunService {
 
 	private final PipelineRunRepository runs;
 
+	private final PostRepository posts;
+
 	private final SourceIngest sources;
 
 	private final RunRecorder recorder;
@@ -72,9 +83,10 @@ public class PipelineRunService {
 	/** The runs this instance queued and has not finished. */
 	private final Set<UUID> own = ConcurrentHashMap.newKeySet();
 
-	PipelineRunService(PipelineRunRepository runs, SourceIngest sources, RunRecorder recorder, PostTransitions transitions,
+	PipelineRunService(PipelineRunRepository runs, PostRepository posts, SourceIngest sources, RunRecorder recorder, PostTransitions transitions,
 			AgentPlatform agentPlatform, JdbcClient jdbc, TransactionTemplate transaction) {
 		this.runs = runs;
+		this.posts = posts;
 		this.sources = sources;
 		this.recorder = recorder;
 		this.transitions = transitions;
@@ -96,14 +108,7 @@ public class PipelineRunService {
 		PipelineRun range = PipelineRun.range(from.atStartOfDay(ZONE).toInstant(),
 				to.atTime(LocalTime.of(23, 59, 59)).atZone(ZONE).toInstant(), sources.resolve(requestedSources),
 				requestedBy);
-		return queue(() -> {
-			List<PipelineRun> created = new ArrayList<>();
-			if (hasLeftovers()) {
-				created.add(runs.save(PipelineRun.retry(requestedBy)));
-			}
-			created.add(runs.save(range));
-			return created;
-		});
+		return queue(() -> posts.existsLeftover() ? List.of(PipelineRun.retry(requestedBy), range) : List.of(range));
 	}
 
 	/**
@@ -114,40 +119,28 @@ public class PipelineRunService {
 	 */
 	public List<PipelineRun> startPosts(List<UUID> postIds, UUID requestedBy) {
 		return queue(() -> {
-			List<UUID> dead = jdbc.sql("SELECT id FROM posts WHERE id = ANY(:ids) AND stage = 'dead' ORDER BY id")
-				.param("ids", postIds.toArray(UUID[]::new))
-				.query(UUID.class)
-				.list();
+			List<UUID> dead = posts.findIdsInStage(postIds, PostStage.DEAD);
 			if (!dead.isEmpty()) {
 				throw new PostDeadException(dead);
 			}
-			return List.of(runs.save(PipelineRun.posts(postIds, requestedBy)));
+			return List.of(PipelineRun.posts(postIds, requestedBy));
 		});
 	}
 
-	private List<PipelineRun> queue(Supplier<List<PipelineRun>> create) {
+	/**
+	 * In one transaction under the advisory lock: refuses while a run is active, saves the runs
+	 * {@code toCreate} returns; after the commit (the run thread must see them) queues them in order.
+	 */
+	private List<PipelineRun> queue(Supplier<List<PipelineRun>> toCreate) {
 		List<PipelineRun> created = transaction.execute(status -> {
 			jdbc.sql("SELECT pg_advisory_xact_lock(:lock)").param("lock", LOCK_ID).query((rs, row) -> true).single();
-			boolean busy = jdbc
-				.sql("SELECT EXISTS (SELECT 1 FROM pipeline_runs WHERE status IN ('queued', 'running'))")
-				.query(Boolean.class)
-				.single();
-			if (busy) {
+			if (runs.existsActive()) {
 				throw new PipelineBusyException();
 			}
-			return create.get();
+			return runs.saveAll(toCreate.get());
 		});
-		// Submitted only after the commit: the run thread must see the queued rows.
 		created.forEach(run -> submit(run.getId()));
 		return created;
-	}
-
-	private boolean hasLeftovers() {
-		return jdbc.sql("SELECT EXISTS (SELECT 1 FROM posts WHERE stage = 'stored'"
-				+ " OR (stage = 'failed' AND assessment_attempts < :max))")
-			.param("max", Post.MAX_ASSESSMENT_ATTEMPTS)
-			.query(Boolean.class)
-			.single();
 	}
 
 	private void submit(UUID runId) {
@@ -163,7 +156,7 @@ public class PipelineRunService {
 			}
 			PipelineRun run = runs.findById(runId).orElseThrow();
 			try {
-				AgentInvocation.create(agentPlatform, RunFlow.RunSummary.class).invoke(RunFlow.RunRequest.of(run));
+				AgentInvocation.create(agentPlatform, RunSummary.class).invoke(RunRequest.of(run));
 			}
 			catch (RuntimeException ex) {
 				log.error("Pipeline run {} failed", runId, ex);

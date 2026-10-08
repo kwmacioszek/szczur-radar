@@ -11,6 +11,9 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import pl.szczurradar.api.pipeline.state.PostTransitions;
+import pl.szczurradar.api.pipeline.state.RunRecorder;
+
 /**
  * At start-up, runs that nobody finished (queued or running when a deploy or restart stopped their
  * instance) become {@code interrupted} and their posts still {@code assessing} are put back without an

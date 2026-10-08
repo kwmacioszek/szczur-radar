@@ -37,10 +37,10 @@ import pl.szczurradar.api.llm.Channel;
 import pl.szczurradar.api.llm.LlmClient;
 import pl.szczurradar.api.llm.LlmResponse;
 import pl.szczurradar.api.llm.OutputMode;
-import pl.szczurradar.api.pipeline.PostTransitions;
-import pl.szczurradar.api.pipeline.RunFlow;
-import pl.szczurradar.api.pipeline.RunRecorder;
-import pl.szczurradar.api.pipeline.RunStatus;
+import pl.szczurradar.api.pipeline.flow.RunFlow.AssessedBatch;
+import pl.szczurradar.api.pipeline.run.RunStatus;
+import pl.szczurradar.api.pipeline.state.PostTransitions;
+import pl.szczurradar.api.pipeline.state.RunRecorder;
 import pl.szczurradar.api.posts.Assessment;
 import pl.szczurradar.api.posts.Post;
 import pl.szczurradar.api.posts.PostRepository;
@@ -93,7 +93,7 @@ class ConcurrentAssessmentDispatcherTest {
 		}
 		UUID broken = ids.get(5);
 
-		RunFlow.AssessedBatch batch = dispatcher().dispatch(RUN, ids);
+		AssessedBatch batch = dispatcher().dispatch(RUN, ids);
 
 		assertThat(recorded).extracting(Assessment::getPostId).doesNotHaveDuplicates()
 			.containsExactlyInAnyOrderElementsOf(ids.stream().filter(id -> !id.equals(broken)).toList());
@@ -120,11 +120,11 @@ class ConcurrentAssessmentDispatcherTest {
 		UUID assessed = post(ContractFixtures.validInput().item().body());
 		stages.put(assessed, PostStage.ASSESSED);
 
-		RunFlow.AssessedBatch batch = dispatcher().dispatch(RUN, List.of(assessed));
+		AssessedBatch batch = dispatcher().dispatch(RUN, List.of(assessed));
 
 		assertThat(recorded).isEmpty();
 		assertThat(calls).hasValue(0);
-		assertThat(batch).isEqualTo(new RunFlow.AssessedBatch(RUN, 0, 0, 0, List.of()));
+		assertThat(batch).isEqualTo(new AssessedBatch(RUN, 0, 0, 0, List.of()));
 	}
 
 	private UUID post(String body) {
@@ -156,9 +156,8 @@ class ConcurrentAssessmentDispatcherTest {
 				inFlight.decrementAndGet();
 			}
 		};
-		return new ConcurrentAssessmentDispatcher(posts(), rawPayloads(), List.of(inputMapper()),
-				new Assessor(llm, Provider.GEMINI, "gemini-3.1-flash-lite", clock), llm, transitions(), recorder(), executor,
-				clock);
+		return new ConcurrentAssessmentDispatcher(posts(), new AssessmentInputs(rawPayloads(), List.of(inputMapper())),
+				new Assessor(llm, Provider.GEMINI, "gemini-3.1-flash-lite", clock), transitions(), recorder(), executor);
 	}
 
 	private PostRepository posts() {

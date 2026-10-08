@@ -13,8 +13,8 @@ Spring beans (`List<…>` injected, keyed by `source()`). It never names a sourc
 
 | Interface | Called by | Contract |
 | --- | --- | --- |
-| `SourceFetcher` | fetch step of a range run (`pipeline/SourceIngest`) | `source()`; `configured()` (e.g. keys set — an unconfigured source is never fetched and a request naming it is refused); `fetch(from, to)` → `Fetched(posts, fetched, skipped)`: the posts added in the range as `SourcePost`s, each once; elements that cannot become a post are counted as `skipped`, never thrown; a failure of the source itself is thrown (the run fails) |
-| `RawInputMapper` | assess step, for new and retried posts alike (`pipeline/assess/ConcurrentAssessmentDispatcher`) | `source()`; `map(raw)` → the `AssessmentInputV1` of a stored post, rebuilt from the raw payload the fetcher put in `SourcePost.raw` — so a retry gets exactly the input of the first attempt |
+| `SourceFetcher` | fetch step of a range run (`pipeline/step/SourceIngest`) | `source()`; `configured()` (e.g. keys set — an unconfigured source is never fetched and a request naming it is refused); `fetch(from, to)` → `Fetched(posts, fetched, skipped)`: the posts added in the range as `SourcePost`s, each once; elements that cannot become a post are counted as `skipped`, never thrown; a failure of the source itself is thrown (the run fails) |
+| `RawInputMapper` | assess step, for new and retried posts alike (`pipeline/assess/AssessmentInputs`) | `source()`; `map(raw)` → the `AssessmentInputV1` of a stored post, rebuilt from the raw payload the fetcher put in `SourcePost.raw` — so a retry gets exactly the input of the first attempt |
 
 `SourcePost` (`sources/SourcePost`): the shared fields, already mapped — `itemType` (shared
 `ItemType`: `post`/`link`/`comment`, never the source's own names), `sourceItemId` (unique per source
@@ -23,7 +23,7 @@ blank → `null`), `author`, `slug`, `webUrl`, `tags`, and `raw` — the element
 what `RawInputMapper.map` will get back.
 
 Who chooses the sources: a range run stores its list (`pipeline_runs.sources`); the admin names it or
-leaves it empty for every configured source (`SourceIngest.resolve`). Retry and posts runs fetch
+leaves it empty for every configured source (`pipeline/step/SourceIngest.resolve`). Retry and posts runs fetch
 nothing.
 
 ## Adding a source (e.g. Reddit)

@@ -33,3 +33,8 @@ Items queued by `/10x-impl-review` triage that are not code fixes of the reviewe
   shows each run's `sources`.
 - [ ] **→ phase 5:** the admin form offers the sources (all checked by default); the
   `source_not_configured` message in Polish.
+- [x] **Readability refactor after phase 3 (user's request, 2026-10-08):** package layout `pipeline/{run,flow,step,assess,state}`,
+  every enum converter in `persistence/converters/`; the dispatcher calls `Assessor.assess` (it duplicated
+  prepare → call → evaluate/failed; the `AssessmentDispatcher` port stays the Batch API seam — ADAPT of
+  the plan's "prepare + LlmClient + evaluate"), input building in `assess/AssessmentInputs`; run-creation
+  queries in the repositories; `AssessedBatch.errorSummary`. No behavior change.

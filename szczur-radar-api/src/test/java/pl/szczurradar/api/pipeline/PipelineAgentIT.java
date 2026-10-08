@@ -41,6 +41,11 @@ import pl.szczurradar.api.llm.LlmClient;
 import pl.szczurradar.api.llm.LlmRequest;
 import pl.szczurradar.api.llm.LlmResponse;
 import pl.szczurradar.api.llm.OutputMode;
+import pl.szczurradar.api.pipeline.run.PipelineRun;
+import pl.szczurradar.api.pipeline.run.RunKind;
+import pl.szczurradar.api.pipeline.run.RunStatus;
+import pl.szczurradar.api.pipeline.state.PostTransitions;
+import pl.szczurradar.api.pipeline.state.RunRecorder;
 import pl.szczurradar.api.posts.Assessment;
 import pl.szczurradar.api.sources.Source;
 import pl.szczurradar.api.sources.wykop.LocalWykopServer;
@@ -178,7 +183,7 @@ class PipelineAgentIT {
 		assertThat((String) retry.get("error")).contains(leftover.toString(), "IllegalStateException");
 		assertThat(finished(runs.get(1).getId())).containsEntry("status", "succeeded").containsEntry("new_posts", 0);
 		// One attempt per request: the range run did not take it again; no attempt was counted.
-		assertThat(jdbc.queryForMap("SELECT stage, assessment_attempts, assessing_run_id FROM posts WHERE id = ?", leftover))
+		assertThat(post(leftover))
 			.containsEntry("stage", "stored")
 			.containsEntry("assessment_attempts", 0)
 			.containsEntry("assessing_run_id", null);
@@ -190,24 +195,24 @@ class PipelineAgentIT {
 		assertThat(next).extracting(PipelineRun::getKind).containsExactly(RunKind.RETRY, RunKind.RANGE);
 		assertThat(finished(next.get(0).getId())).containsEntry("status", "succeeded").containsEntry("assessed_ok", 1);
 		finished(next.get(1).getId());
-		assertThat(jdbc.queryForObject("SELECT stage FROM posts WHERE id = ?", String.class, leftover)).isEqualTo("assessed");
+		assertThat(post(leftover).get("stage")).isEqualTo("assessed");
 	}
 
 	@Test
 	@Order(4)
 	void recoveryInterruptsUnfinishedRunsAndALateWorkerChangesNothing() {
-		UUID post = jdbc.queryForObject("SELECT id FROM posts ORDER BY id LIMIT 1", UUID.class);
+		UUID taken = jdbc.queryForObject("SELECT id FROM posts ORDER BY id LIMIT 1", UUID.class);
 		UUID other = jdbc.queryForObject("SELECT id FROM posts ORDER BY id DESC LIMIT 1", UUID.class);
-		jdbc.update("UPDATE posts SET stage = 'stored' WHERE id IN (?, ?)", post, other);
+		jdbc.update("UPDATE posts SET stage = 'stored' WHERE id IN (?, ?)", taken, other);
 		UUID oldRun = jdbc.queryForObject("INSERT INTO pipeline_runs (kind, status, requested_by, started_at)"
 				+ " VALUES ('retry', 'running', ?, now()) RETURNING id", UUID.class, admin);
-		assertThat(transitions.claim(post, oldRun)).contains(0);
+		assertThat(transitions.claim(taken, oldRun)).contains(0);
 
 		assertThat(recovery.recover()).containsExactly(oldRun);
 
-		assertThat(jdbc.queryForObject("SELECT status FROM pipeline_runs WHERE id = ?", String.class, oldRun))
+		assertThat(run(oldRun).get("status"))
 			.isEqualTo("interrupted");
-		assertThat(jdbc.queryForMap("SELECT stage, assessing_run_id FROM posts WHERE id = ?", post))
+		assertThat(post(taken))
 			.containsEntry("stage", "stored")
 			.containsEntry("assessing_run_id", null);
 		// The old worker, still alive: it takes no new post, and its summary changes nothing.
@@ -217,17 +222,17 @@ class PipelineAgentIT {
 		// A new run takes the post; the old worker's late result, clean-up and release leave it alone.
 		UUID newRun = jdbc.queryForObject("INSERT INTO pipeline_runs (kind, status, requested_by, started_at)"
 				+ " VALUES ('retry', 'running', ?, now()) RETURNING id", UUID.class, admin);
-		assertThat(transitions.claim(post, newRun)).contains(0);
+		assertThat(transitions.claim(taken, newRun)).contains(0);
 		int assessments = count("SELECT count(*) FROM assessments", null);
-		Assessment late = new Assessment(post, oldRun, ContractFixtures.validInput(),
+		Assessment late = new Assessment(taken, oldRun, ContractFixtures.validInput(),
 				new AssessmentResult(AssessmentResult.Status.OK, Prefilter.noContentOutput(), null, List.of(),
 						Provenance.prefilter("V2", Instant.now()), null));
-		assertThat(transitions.record(post, oldRun, 0, late)).isFalse();
-		transitions.release(post, oldRun);
+		assertThat(transitions.record(taken, oldRun, 0, late)).isFalse();
+		transitions.release(taken, oldRun);
 		assertThat(transitions.releaseAll(oldRun)).isZero();
 
 		assertThat(count("SELECT count(*) FROM assessments", null)).isEqualTo(assessments);
-		assertThat(jdbc.queryForMap("SELECT stage, assessing_run_id, assessment_attempts FROM posts WHERE id = ?", post))
+		assertThat(post(taken))
 			.containsEntry("stage", "assessing")
 			.containsEntry("assessing_run_id", newRun)
 			.containsEntry("assessment_attempts", 0);
@@ -236,11 +241,19 @@ class PipelineAgentIT {
 		assertThat(transitions.releaseAll(newRun)).isEqualTo(1);
 	}
 
+	private Map<String, Object> post(UUID postId) {
+		return jdbc.queryForMap("SELECT * FROM posts WHERE id = ?", postId);
+	}
+
+	private Map<String, Object> run(UUID runId) {
+		return jdbc.queryForMap("SELECT * FROM pipeline_runs WHERE id = ?", runId);
+	}
+
 	/** Waits for the run to finish (the queue runs in the background) and returns its row. */
 	private Map<String, Object> finished(UUID runId) {
 		long deadline = System.nanoTime() + Duration.ofSeconds(60).toNanos();
 		while (System.nanoTime() < deadline) {
-			Map<String, Object> run = jdbc.queryForMap("SELECT * FROM pipeline_runs WHERE id = ?", runId);
+			Map<String, Object> run = run(runId);
 			if (!List.of("queued", "running").contains(run.get("status"))) {
 				return run;
 			}
@@ -252,8 +265,7 @@ class PipelineAgentIT {
 				throw new IllegalStateException(ex);
 			}
 		}
-		throw new AssertionError("run " + runId + " did not finish: "
-				+ jdbc.queryForMap("SELECT * FROM pipeline_runs WHERE id = ?", runId));
+		throw new AssertionError("run " + runId + " did not finish: " + run(runId));
 	}
 
 	private int count(String sql, Object arg) {
