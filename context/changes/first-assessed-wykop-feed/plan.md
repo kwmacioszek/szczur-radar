@@ -631,11 +631,11 @@ Odnotować ryzyko: przed F-01 brak backupu i limitów kosztów (lekcja: kroki po
 
 #### Automated
 
-- [x] 3.1 Testy jednostkowe serwisów: deduplikacja, wybór postów, limit 3 prób → DEAD, prefiltr jako ok, status RunSummary
-- [x] 3.2 Test współbieżny ConcurrentAssessmentDispatcher
-- [x] 3.3 PipelineAgentIT przechodzi cały graf RANGE i RETRY na stubach
-- [x] 3.4 IT drugiego przebiegu tego samego zakresu: zero nowych postów i zero ocen dla ASSESSED
-- [x] 3.5 IT recovery: przebieg RUNNING i post ASSESSING po starcie kontekstu są oznaczone/cofnięte
+- [x] 3.1 Testy jednostkowe serwisów: deduplikacja, wybór postów, limit 3 prób → DEAD, prefiltr jako ok, status RunSummary — d13f849
+- [x] 3.2 Test współbieżny ConcurrentAssessmentDispatcher — d13f849
+- [x] 3.3 PipelineAgentIT przechodzi cały graf RANGE i RETRY na stubach — d13f849
+- [x] 3.4 IT drugiego przebiegu tego samego zakresu: zero nowych postów i zero ocen dla ASSESSED — d13f849
+- [x] 3.5 IT recovery: przebieg RUNNING i post ASSESSING po starcie kontekstu są oznaczone/cofnięte — d13f849
 
 ### Phase 4: REST API
 

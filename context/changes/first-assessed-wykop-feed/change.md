@@ -3,7 +3,7 @@ change_id: first-assessed-wykop-feed
 title: First assessed Wykop feed
 status: impl_reviewed
 created: 2026-10-06
-updated: 2026-10-06
+updated: 2026-10-08
 archived_at: null
 ---
 
