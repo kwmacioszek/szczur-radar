@@ -54,8 +54,11 @@ class AuthorizationCompletenessIT {
 			"POST /api/auth/login", "obtaining a session cannot require one",
 			"POST /api/auth/logout", "idempotent session end and cookie removal");
 
-	/** Routes that a plain user must get 403 on (see {@code AdminRoleIT}). Empty until S-06. */
-	static final Set<String> ADMIN_ROUTES = Set.of();
+	/** Routes that a plain user must get 403 on (see {@code AdminRoleIT}). */
+	static final Set<String> ADMIN_ROUTES = Set.of(
+			"POST /api/admin/pipeline-runs",
+			"GET /api/admin/pipeline-runs",
+			"GET /api/admin/posts/failed");
 
 	private static final Pattern PATH_VARIABLE = Pattern.compile("\\{(\\w+)(?::[^}]*)?}");
 

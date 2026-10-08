@@ -26,7 +26,7 @@ Items queued by `/10x-impl-review` triage that are not code fixes of the reviewe
   (`WykopFetcher`), assessing through `sources/RawInputMapper` (`WykopPosts`); `pipeline` names no
   source. A range run stores the sources it fetches (`pipeline_runs.sources`, V5): the admin's list,
   or every configured source when it is empty. Guide: `sources/CLAUDE.md`, `pipeline/CLAUDE.md`.
-- [ ] **→ phase 4 (API contract change vs. the plan):** `POST /api/admin/pipeline-runs` with a range
+- [x] **→ phase 4 (API contract change vs. the plan; done, `PipelineRunControllerIT`, `PipelineRunWithoutSourceIT`):** `POST /api/admin/pipeline-runs` with a range
   takes an optional `"sources": ["wykop", …]` (empty or absent = every configured source); the error
   `wykop_not_configured` (503) becomes `source_not_configured` (503), raised when a named source or
   every source is not configured (`SourceNotConfiguredException`). `GET /api/admin/pipeline-runs`
@@ -38,3 +38,7 @@ Items queued by `/10x-impl-review` triage that are not code fixes of the reviewe
   prepare → call → evaluate/failed; the `AssessmentDispatcher` port stays the Batch API seam — ADAPT of
   the plan's "prepare + LlmClient + evaluate"), input building in `assess/AssessmentInputs`; run-creation
   queries in the repositories; `AssessedBatch.errorSummary`. No behavior change.
+- [x] **Phase 4 ADAPT:** controllers and their DTOs live in `posts/api/` and `pipeline/api/` (not the
+  plan's `posts/PostController.java`, `pipeline/PipelineRunController.java`), keeping the domain packages
+  small; the feed item's `resource` is `itemType` (shared `ItemType`); the pipeline's exceptions are
+  mapped in `PipelineRunController`, so `config` does not depend on `pipeline`.

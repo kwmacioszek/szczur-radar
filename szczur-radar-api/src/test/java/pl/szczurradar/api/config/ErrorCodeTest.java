@@ -2,9 +2,9 @@ package pl.szczurradar.api.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.Arrays;
 import java.util.Map;
 import java.util.stream.Collectors;
-import java.util.Arrays;
 
 import org.junit.jupiter.api.Test;
 
@@ -23,7 +23,10 @@ class ErrorCodeTest {
 				"too_many_attempts", 429,
 				"cross_origin", 403,
 				"invalid_request", 400,
-				"unsupported_media_type", 415));
+				"unsupported_media_type", 415,
+				"pipeline_busy", 409,
+				"post_dead", 400,
+				"source_not_configured", 503));
 	}
 
 }
