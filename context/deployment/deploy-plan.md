@@ -190,6 +190,8 @@ Both Wykop keys are optional and must be set together (only one of them fails th
 
 `railway status --json` shows `postgres` in **`sfo`** (US West) in `production` and in `szczur-radar-pr-37`, while `szczur-radar-api` and `szczur-radar-web` run in `europe-west4`. Every database round trip crosses the Atlantic (~140 ms): the store step took 1 min 44 s for 244 posts, and every API request pays it through the JDBC session. `.railway/railway.ts` now declares `postgres("postgres", { region: REGION })`, but **IaC does not move an existing database** (a dry-run plan with it shows no change); the region applies when a database is created.
 
+**Done 2026-10-09:** the operator moved `postgres` to `europe-west4` in `production` and in `szczur-radar-pr-37` (`railway status --json`: `europe-west4-drams3a`; production `/api/ready` 200 after the move). The steps below stay for any other environment.
+
 Move it per environment (operator; decided in the review, downtime accepted — production holds only accounts and sessions):
 
 1. Not while a run is `RUNNING` (`/admin`).
