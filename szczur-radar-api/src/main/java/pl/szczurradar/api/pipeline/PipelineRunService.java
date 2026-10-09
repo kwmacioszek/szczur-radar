@@ -26,7 +26,6 @@ import pl.szczurradar.api.pipeline.flow.RunFlow.RunSummary;
 import pl.szczurradar.api.pipeline.run.PipelineRun;
 import pl.szczurradar.api.pipeline.run.PipelineRunRepository;
 import pl.szczurradar.api.pipeline.run.RunKind;
-import pl.szczurradar.api.pipeline.run.RunStatus;
 import pl.szczurradar.api.pipeline.state.PostTransitions;
 import pl.szczurradar.api.pipeline.state.RunRecorder;
 import pl.szczurradar.api.pipeline.step.SourceIngest;
@@ -43,8 +42,9 @@ import pl.szczurradar.api.sources.Source;
  *       queued or running is refused ({@link PipelineBusyException}); the check and the insert hold
  *       a PostgreSQL advisory lock, so two concurrent requests never create two sets of runs.
  *   <li>A run starts only from {@code queued} (a conditional update); it ends with the agent's
- *       summary, as {@code failed} on an exception, and in every case its posts still
- *       {@code assessing} are put back.
+ *       summary, as {@code failed} on any exception (also one before it started, so a run never
+ *       stays queued or running without a thread and blocks the queue), and in every case its posts
+ *       still {@code assessing} are put back.
  *   <li>When the context closes, this instance marks its own queued and running runs
  *       {@code interrupted} first, then stops its thread; a newer deployment's start-up recovery
  *       does the same for runs nobody finished ({@link PipelineStartupRecovery}).
@@ -150,25 +150,35 @@ public class PipelineRunService {
 
 	/** Runs one queued run to its end; package-private for tests. */
 	void execute(UUID runId) {
+		String error = "the run ended without a summary";
 		try {
-			if (!recorder.start(runId)) {
-				return;
-			}
-			PipelineRun run = runs.findById(runId).orElseThrow();
-			try {
+			if (recorder.start(runId)) {
+				PipelineRun run = runs.findById(runId).orElseThrow();
 				AgentInvocation.create(agentPlatform, RunSummary.class).invoke(RunRequest.of(run));
 			}
-			catch (RuntimeException ex) {
-				log.error("Pipeline run {} failed", runId, ex);
-				recorder.finish(runId, RunStatus.FAILED, ex.getClass().getSimpleName() + ": " + ex.getMessage());
-			}
-			if (recorder.isRunning(runId)) {
-				recorder.finish(runId, RunStatus.FAILED, "the run ended without a summary");
-			}
+		}
+		catch (RuntimeException ex) {
+			log.error("Pipeline run {} failed", runId, ex);
+			error = ex.getClass().getSimpleName() + ": " + ex.getMessage();
 		}
 		finally {
-			transitions.releaseAll(runId);
+			close(runId, error);
 			own.remove(runId);
+		}
+	}
+
+	/**
+	 * A run that is still queued or running here has failed with {@code error} (no change when its
+	 * summary or an interruption ended it); its posts still {@code assessing} go back. When even this
+	 * fails (the database is gone), start-up recovery does it.
+	 */
+	private void close(UUID runId, String error) {
+		try {
+			recorder.fail(runId, error);
+			transitions.releaseAll(runId);
+		}
+		catch (RuntimeException ex) {
+			log.error("Pipeline run {} could not be closed; the next start-up recovery closes it", runId, ex);
 		}
 	}
 

@@ -8,6 +8,7 @@ import org.springframework.core.retry.RetryTemplate;
 import pl.szczurradar.api.config.LlmProviderProperties.ServiceTier;
 import pl.szczurradar.api.llm.CallFailure;
 import pl.szczurradar.api.llm.LlmCallException;
+import pl.szczurradar.api.llm.LlmConfigurationException;
 
 /**
  * The only retry loop of a model call. Up to {@value #ATTEMPTS_PER_TIER} attempts per tier on
@@ -59,7 +60,8 @@ public final class TransportRetry {
 	 * Runs {@code attempt} until it succeeds or the attempts are used up.
 	 *
 	 * @throws LlmCallException with {@link CallFailure#TIMEOUT} if the last attempt timed out,
-	 *     otherwise {@link CallFailure#PROVIDER_ERROR}
+	 *     otherwise {@link CallFailure#PROVIDER_ERROR}; an {@link LlmConfigurationException} when the
+	 *     provider refused the key, the credit or the model
 	 */
 	public <T> Outcome<T> run(ServiceTier requested, Attempt<T> attempt) {
 		ServiceTier tier = requested;
@@ -75,6 +77,9 @@ public final class TransportRetry {
 				}
 				catch (TransportException ex) {
 					last = ex;
+					if (ex.kind() == TransportException.Kind.CONFIGURATION) {
+						throw new LlmConfigurationException(ex.getMessage(), attempts, tier, flexFallback, ex);
+					}
 					if (!ex.kind().retryable()) {
 						throw new LlmCallException(CallFailure.PROVIDER_ERROR, ex.getMessage(), attempts, tier,
 								flexFallback, ex);

@@ -7,6 +7,7 @@ import java.util.function.ToIntFunction;
 
 import org.jspecify.annotations.Nullable;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.jdbc.core.simple.JdbcClient.StatementSpec;
 import org.springframework.stereotype.Component;
 
 import pl.szczurradar.api.pipeline.flow.RunFlow.AssessedBatch;
@@ -17,7 +18,8 @@ import pl.szczurradar.api.pipeline.run.StepStatus;
 /**
  * Writes a run's state, steps and counters. Every change of a run is one conditional {@code UPDATE}
  * that requires the expected status (no row locks), so a run that was interrupted meanwhile — e.g. by
- * a newer deployment's recovery — never changes again, and another run is never touched.
+ * a newer deployment's recovery — never changes again, and another run is never touched. Status
+ * values are bound from {@link RunStatus}, never written into the SQL.
  */
 @Component
 public class RunRecorder {
@@ -33,14 +35,15 @@ public class RunRecorder {
 
 	/** {@code queued} → {@code running}; {@code false} when the run is no longer queued (then it must not run). */
 	public boolean start(UUID runId) {
-		return jdbc.sql("UPDATE pipeline_runs SET status = 'running', started_at = now() WHERE id = :id AND status = 'queued'")
+		return statuses(jdbc.sql("UPDATE pipeline_runs SET status = :running, started_at = now()"
+				+ " WHERE id = :id AND status = :queued"))
 			.param("id", runId)
 			.update() == 1;
 	}
 
 	/** Whether the run is still running here (not finished or interrupted). */
 	public boolean isRunning(UUID runId) {
-		return jdbc.sql("SELECT count(*) FROM pipeline_runs WHERE id = :id AND status = 'running'")
+		return statuses(jdbc.sql("SELECT count(*) FROM pipeline_runs WHERE id = :id AND status = :running"))
 			.param("id", runId)
 			.query(Integer.class)
 			.single() == 1;
@@ -48,21 +51,35 @@ public class RunRecorder {
 
 	/** {@code running} → {@code status}; {@code false} when the run was not running anymore. */
 	public boolean finish(UUID runId, RunStatus status, @Nullable String error) {
-		return jdbc
+		return statuses(jdbc
 			.sql("UPDATE pipeline_runs SET status = :status, finished_at = now(), error = COALESCE(:error, error)"
-					+ " WHERE id = :id AND status = 'running'")
+					+ " WHERE id = :id AND status = :running"))
 			.param("status", status.value())
 			.param("error", error == null ? null : truncate(error))
 			.param("id", runId)
 			.update() == 1;
 	}
 
+	/**
+	 * {@code queued} or {@code running} → {@code failed} with {@code error}: a run that cannot go on,
+	 * e.g. after an exception, or one that ended without a summary. No change for a run already
+	 * finished or interrupted.
+	 */
+	public void fail(UUID runId, String error) {
+		statuses(jdbc.sql("UPDATE pipeline_runs SET status = :failed, finished_at = now(), error = :error"
+				+ " WHERE id = :id AND status IN (:queued, :running)"))
+			.param("failed", RunStatus.FAILED.value())
+			.param("error", truncate(error))
+			.param("id", runId)
+			.update();
+	}
+
 	/** Adds to the run's counters while it is running. */
 	public void count(UUID runId, Counters delta) {
-		jdbc.sql("UPDATE pipeline_runs SET fetched = fetched + :fetched, new_posts = new_posts + :newPosts,"
+		statuses(jdbc.sql("UPDATE pipeline_runs SET fetched = fetched + :fetched, new_posts = new_posts + :newPosts,"
 				+ " assessed_ok = assessed_ok + :ok, assessed_failed = assessed_failed + :failed,"
 				+ " processing_errors = processing_errors + :errors, dead = dead + :dead, skipped = skipped + :skipped"
-				+ " WHERE id = :id AND status = 'running'")
+				+ " WHERE id = :id AND status = :running"))
 			.param("fetched", delta.fetched())
 			.param("newPosts", delta.newPosts())
 			.param("ok", delta.assessedOk())
@@ -76,7 +93,7 @@ public class RunRecorder {
 
 	/** Sets the run's error text while it is running (e.g. the summary of technical errors). */
 	public void error(UUID runId, String error) {
-		jdbc.sql("UPDATE pipeline_runs SET error = :error WHERE id = :id AND status = 'running'")
+		statuses(jdbc.sql("UPDATE pipeline_runs SET error = :error WHERE id = :id AND status = :running"))
 			.param("error", truncate(error))
 			.param("id", runId)
 			.update();
@@ -111,9 +128,9 @@ public class RunRecorder {
 		if (runIds.isEmpty()) {
 			return List.of();
 		}
-		return jdbc
-			.sql("UPDATE pipeline_runs SET status = 'interrupted', finished_at = now(), error = :reason"
-					+ " WHERE id = ANY(:ids) AND status IN ('queued', 'running') RETURNING id")
+		return statuses(jdbc
+			.sql("UPDATE pipeline_runs SET status = :interrupted, finished_at = now(), error = :reason"
+					+ " WHERE id = ANY(:ids) AND status IN (:queued, :running) RETURNING id"))
 			.param("reason", reason)
 			.param("ids", runIds.toArray(UUID[]::new))
 			.query(UUID.class)
@@ -122,9 +139,9 @@ public class RunRecorder {
 
 	/** Every queued or running run, now {@code interrupted} (start-up recovery). */
 	public List<UUID> interruptAll(String reason) {
-		return jdbc
-			.sql("UPDATE pipeline_runs SET status = 'interrupted', finished_at = now(), error = :reason"
-					+ " WHERE status IN ('queued', 'running') RETURNING id")
+		return statuses(jdbc
+			.sql("UPDATE pipeline_runs SET status = :interrupted, finished_at = now(), error = :reason"
+					+ " WHERE status IN (:queued, :running) RETURNING id"))
 			.param("reason", reason)
 			.query(UUID.class)
 			.list();
@@ -142,6 +159,13 @@ public class RunRecorder {
 
 	private static String truncate(String text) {
 		return text.length() > MAX_ERROR ? text.substring(0, MAX_ERROR) + "…" : text;
+	}
+
+	/** Binds the statuses the statements above name. */
+	private static StatementSpec statuses(StatementSpec statement) {
+		return statement.param("queued", RunStatus.QUEUED.value())
+			.param("running", RunStatus.RUNNING.value())
+			.param("interrupted", RunStatus.INTERRUPTED.value());
 	}
 
 	/** Additions to a run's counters. */

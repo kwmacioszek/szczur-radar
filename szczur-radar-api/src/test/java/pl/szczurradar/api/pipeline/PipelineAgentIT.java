@@ -3,6 +3,7 @@ package pl.szczurradar.api.pipeline;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.when;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -10,8 +11,11 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
+import com.embabel.agent.core.AgentPlatform;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
@@ -23,7 +27,9 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.transaction.support.TransactionTemplate;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ObjectNode;
 
@@ -38,15 +44,20 @@ import pl.szczurradar.api.config.LlmProviderProperties.Provider;
 import pl.szczurradar.api.config.LlmProviderProperties.ServiceTier;
 import pl.szczurradar.api.llm.Channel;
 import pl.szczurradar.api.llm.LlmClient;
+import pl.szczurradar.api.llm.LlmConfigurationException;
 import pl.szczurradar.api.llm.LlmRequest;
 import pl.szczurradar.api.llm.LlmResponse;
 import pl.szczurradar.api.llm.OutputMode;
+import pl.szczurradar.api.llm.transport.TransportException;
 import pl.szczurradar.api.pipeline.run.PipelineRun;
+import pl.szczurradar.api.pipeline.run.PipelineRunRepository;
 import pl.szczurradar.api.pipeline.run.RunKind;
 import pl.szczurradar.api.pipeline.run.RunStatus;
 import pl.szczurradar.api.pipeline.state.PostTransitions;
 import pl.szczurradar.api.pipeline.state.RunRecorder;
+import pl.szczurradar.api.pipeline.step.SourceIngest;
 import pl.szczurradar.api.posts.Assessment;
+import pl.szczurradar.api.posts.PostRepository;
 import pl.szczurradar.api.sources.Source;
 import pl.szczurradar.api.sources.wykop.LocalWykopServer;
 import pl.szczurradar.api.sources.wykop.LocalWykopServer.Reply;
@@ -73,9 +84,15 @@ class PipelineAgentIT {
 	/** The real last entries page served as the whole day ({@code pagination.total} set to its 12). */
 	private static final String ENTRIES = withTotal(LocalWykopServer.fixture("search-entries-page.json"), 12);
 
+	/** When set, Wykop's search answers 503 (a short synthetic error body in Wykop's shape). */
+	private static volatile boolean wykopDown;
+
 	private static final LocalWykopServer WYKOP = new LocalWykopServer(request -> {
 		if (request.path().endsWith("/auth")) {
 			return Reply.ok("{\"data\":{\"token\":\"t\"}}");
+		}
+		if (wykopDown) {
+			return new Reply(503, "{\"error\":{\"code\":503,\"message\":\"Service unavailable\"}}");
 		}
 		return Reply.ok(request.path().endsWith("/search/entries") ? ENTRIES
 				: LocalWykopServer.fixture("search-links-page.json"));
@@ -104,6 +121,24 @@ class PipelineAgentIT {
 
 	@Autowired
 	JdbcTemplate jdbc;
+
+	@Autowired
+	PipelineRunRepository runs;
+
+	@Autowired
+	PostRepository posts;
+
+	@Autowired
+	SourceIngest sources;
+
+	@Autowired
+	AgentPlatform agentPlatform;
+
+	@Autowired
+	JdbcClient jdbcClient;
+
+	@Autowired
+	TransactionTemplate transaction;
 
 	private UUID admin;
 
@@ -239,6 +274,108 @@ class PipelineAgentIT {
 		// Clean up: the new run ends; nothing stays assessing.
 		assertThat(recorder.finish(newRun, RunStatus.SUCCEEDED, null)).isTrue();
 		assertThat(transitions.releaseAll(newRun)).isEqualTo(1);
+	}
+
+	@Test
+	@Order(5)
+	void aFailingSourceFailsTheRunAndTheQueueTakesTheNextRequest() {
+		List<PipelineRun> runs;
+		wykopDown = true;
+		try {
+			runs = service.startRange(DAY, DAY, List.of(), admin);
+			Map<String, Object> range = finished(runs.getLast().getId());
+
+			assertThat(range).containsEntry("status", "failed").containsEntry("fetched", 0);
+			assertThat((String) range.get("error")).isNotBlank();
+			assertThat(jdbc.queryForList("SELECT step || ':' || status FROM pipeline_run_steps WHERE run_id = ?"
+					+ " ORDER BY started_at, id", String.class, runs.getLast().getId())).containsExactly("fetch:failed");
+		}
+		finally {
+			wykopDown = false;
+		}
+
+		List<PipelineRun> next = service.startRange(DAY, DAY, List.of(), admin);
+
+		assertThat(finished(next.getLast().getId())).containsEntry("status", "succeeded");
+	}
+
+	@Test
+	@Order(6)
+	void recoveryPutsBackAPostClaimedJustAsItsRunWasInterrupted() {
+		UUID claimed = jdbc.queryForObject("SELECT id FROM posts ORDER BY id LIMIT 1", UUID.class);
+		jdbc.update("UPDATE posts SET stage = 'failed', assessment_attempts = 1 WHERE id = ?", claimed);
+		UUID run = jdbc.queryForObject("INSERT INTO pipeline_runs (kind, status, requested_by, started_at)"
+				+ " VALUES ('retry', 'running', ?, now()) RETURNING id", UUID.class, admin);
+		assertThat(transitions.claim(claimed, run)).contains(1);
+		// The stopping instance interrupted the run and put its posts back just before this claim
+		// committed, then stopped before the worker could put the post back itself.
+		jdbc.update("UPDATE pipeline_runs SET status = 'interrupted', finished_at = now() WHERE id = ?", run);
+
+		assertThat(recovery.recover()).isEmpty();
+
+		assertThat(post(claimed))
+			.containsEntry("stage", "failed")
+			.containsEntry("assessment_attempts", 1)
+			.containsEntry("assessing_run_id", null);
+	}
+
+	@Test
+	@Order(7)
+	void aStoppingInstanceInterruptsItsRunAndPutsItsPostsBack() throws InterruptedException {
+		UUID post = jdbc.queryForObject("SELECT id FROM posts WHERE stage = 'assessed' ORDER BY id DESC LIMIT 1",
+				UUID.class);
+		jdbc.update("UPDATE posts SET stage = 'stored' WHERE id = ?", post);
+		CountDownLatch called = new CountDownLatch(1);
+		CountDownLatch answered = new CountDownLatch(1);
+		answer(request -> {
+			called.countDown();
+			try {
+				answered.await(30, TimeUnit.SECONDS);
+			}
+			catch (InterruptedException ex) {
+				Thread.currentThread().interrupt();
+			}
+			return response(VALID);
+		});
+		// A second instance of the service, as during a deployment overlap; the shared one keeps running.
+		PipelineRunService stopping = new PipelineRunService(runs, posts, sources, recorder, transitions, agentPlatform,
+				jdbcClient, transaction);
+		try {
+			UUID run = stopping.startPosts(List.of(post), admin).getFirst().getId();
+			assertThat(called.await(30, TimeUnit.SECONDS)).isTrue();
+			assertThat(post(post)).containsEntry("stage", "assessing").containsEntry("assessing_run_id", run);
+
+			stopping.onClose();
+
+			assertThat(run(run).get("status")).isEqualTo("interrupted");
+			assertThat(post(post)).containsEntry("stage", "stored").containsEntry("assessing_run_id", null);
+		}
+		finally {
+			answered.countDown();
+		}
+	}
+
+	@Test
+	@Order(8)
+	void aRefusedLlmKeyFailsTheRunWithoutUsingAnAttempt() {
+		UUID post = jdbc.queryForObject("SELECT id FROM posts WHERE stage = 'assessed' ORDER BY id LIMIT 1", UUID.class);
+		jdbc.update("UPDATE posts SET stage = 'failed', assessment_attempts = 2 WHERE id = ?", post);
+		int assessments = count("SELECT count(*) FROM assessments", null);
+		when(llmClient.check()).thenThrow(new LlmConfigurationException("HTTP 401: Authentication Fails", 1,
+				ServiceTier.DEFAULT, false,
+				new TransportException(TransportException.Kind.CONFIGURATION, "HTTP 401", null, null)));
+
+		UUID run = service.startPosts(List.of(post), admin).getFirst().getId();
+
+		Map<String, Object> finished = finished(run);
+		assertThat(finished).containsEntry("status", "failed").containsEntry("assessed_failed", 0);
+		assertThat((String) finished.get("error")).contains("the LLM check failed", "HTTP 401");
+		// Its last attempt is not spent on a bad key.
+		assertThat(post(post))
+			.containsEntry("stage", "failed")
+			.containsEntry("assessment_attempts", 2)
+			.containsEntry("assessing_run_id", null);
+		assertThat(count("SELECT count(*) FROM assessments", null)).isEqualTo(assessments);
 	}
 
 	private Map<String, Object> post(UUID postId) {

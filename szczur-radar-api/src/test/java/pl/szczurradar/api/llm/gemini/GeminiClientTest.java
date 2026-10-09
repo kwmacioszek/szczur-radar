@@ -22,6 +22,7 @@ import pl.szczurradar.api.config.LlmProviderProperties.ServiceTier;
 import pl.szczurradar.api.llm.CallFailure;
 import pl.szczurradar.api.llm.Channel;
 import pl.szczurradar.api.llm.LlmCallException;
+import pl.szczurradar.api.llm.LlmConfigurationException;
 import pl.szczurradar.api.llm.LlmClient;
 import pl.szczurradar.api.llm.LlmClientFactory;
 import pl.szczurradar.api.llm.LlmRequest;
@@ -200,7 +201,7 @@ class GeminiClientTest {
 	void unauthorizedFailsAfterOneRequestWithoutTheKeyInTheMessage() {
 		try (ScriptedProviderServer server = new ScriptedProviderServer(Reply.status(401,
 				"{\"error\":{\"code\":401,\"message\":\"API key synthetic-key not valid\",\"status\":\"UNAUTHENTICATED\"}}"))) {
-			assertThatExceptionOfType(LlmCallException.class)
+			assertThatExceptionOfType(LlmConfigurationException.class)
 				.isThrownBy(() -> client(server, Duration.ofSeconds(5)).complete(REQUEST))
 				.satisfies(ex -> {
 					assertThat(ex.attempts()).isEqualTo(1);

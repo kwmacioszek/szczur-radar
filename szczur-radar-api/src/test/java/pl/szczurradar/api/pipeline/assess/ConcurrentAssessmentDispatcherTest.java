@@ -21,7 +21,9 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -35,8 +37,10 @@ import pl.szczurradar.api.config.LlmProviderProperties.Provider;
 import pl.szczurradar.api.config.LlmProviderProperties.ServiceTier;
 import pl.szczurradar.api.llm.Channel;
 import pl.szczurradar.api.llm.LlmClient;
+import pl.szczurradar.api.llm.LlmConfigurationException;
 import pl.szczurradar.api.llm.LlmResponse;
 import pl.szczurradar.api.llm.OutputMode;
+import pl.szczurradar.api.llm.transport.TransportException;
 import pl.szczurradar.api.pipeline.flow.RunFlow.AssessedBatch;
 import pl.szczurradar.api.pipeline.run.RunStatus;
 import pl.szczurradar.api.pipeline.state.PostTransitions;
@@ -62,6 +66,9 @@ class ConcurrentAssessmentDispatcherTest {
 
 	private static final String BOOM = "this post breaks the client";
 
+	/** A post whose call finds the key revoked (HTTP 401). */
+	private static final String REVOKED = "this post finds the key revoked";
+
 	private final ExecutorService executor = Executors.newFixedThreadPool(THREADS);
 
 	/** Each post's body, by id; the raw payload is the body's bytes. */
@@ -78,6 +85,9 @@ class ConcurrentAssessmentDispatcherTest {
 	private final AtomicInteger inFlight = new AtomicInteger();
 
 	private final AtomicInteger maxInFlight = new AtomicInteger();
+
+	/** What the check call ({@link LlmClient#CHECK_REQUEST}) throws, if anything. */
+	private final AtomicReference<@Nullable RuntimeException> checkFailure = new AtomicReference<>();
 
 	@AfterEach
 	void stop() {
@@ -124,7 +134,42 @@ class ConcurrentAssessmentDispatcherTest {
 
 		assertThat(recorded).isEmpty();
 		assertThat(calls).hasValue(0);
-		assertThat(batch).isEqualTo(new AssessedBatch(RUN, 0, 0, 0, List.of()));
+		assertThat(batch).isEqualTo(new AssessedBatch(RUN, 0, 0, 0, List.of(), null));
+	}
+
+	@Test
+	void aFailedCheckTakesNoPostAndStopsTheStep() {
+		List<UUID> ids = List.of(post(ContractFixtures.validInput().item().body()), post(BOOM));
+		checkFailure.set(revoked());
+
+		AssessedBatch batch = dispatcher().dispatch(RUN, ids);
+
+		assertThat(calls).hasValue(0);
+		assertThat(recorded).isEmpty();
+		assertThat(stages).allSatisfy((id, stage) -> assertThat(stage).isEqualTo(PostStage.STORED));
+		assertThat(batch.stoppedBy()).contains("the LLM check failed", "HTTP 401");
+		assertThat(batch.status()).isEqualTo(RunStatus.FAILED);
+	}
+
+	@Test
+	void aRefusedConfigurationStopsTheStepWithoutAnAttempt() {
+		List<UUID> ids = new ArrayList<>();
+		ids.add(post(REVOKED));
+		for (int i = 0; i < 9; i++) {
+			ids.add(post(ContractFixtures.validInput().item().body()));
+		}
+
+		AssessedBatch batch = dispatcher().dispatch(RUN, ids);
+
+		// Posts already in flight may finish; the refused one and every post not yet taken stay stored.
+		assertThat(recorded).extracting(Assessment::getPostId).doesNotContain(ids.getFirst());
+		assertThat(stages.get(ids.getFirst())).isEqualTo(PostStage.STORED);
+		assertThat(stages).allSatisfy((id, stage) -> assertThat(stage).isIn(PostStage.ASSESSED, PostStage.STORED));
+		assertThat(attempts).allSatisfy((id, count) -> assertThat(count).isZero());
+		assertThat(recorded).hasSizeLessThan(ids.size() - 1);
+		assertThat(batch.processingErrors()).isEmpty();
+		assertThat(batch.stoppedBy()).contains("refused the configuration", "HTTP 401");
+		assertThat(batch.status()).isEqualTo(RunStatus.FAILED);
 	}
 
 	private UUID post(String body) {
@@ -138,6 +183,13 @@ class ConcurrentAssessmentDispatcherTest {
 	private ConcurrentAssessmentDispatcher dispatcher() {
 		Clock clock = Clock.fixed(Instant.parse("2026-10-08T10:00:00Z"), ZoneOffset.UTC);
 		LlmClient llm = request -> {
+			if (request.equals(LlmClient.CHECK_REQUEST)) {
+				RuntimeException failure = checkFailure.get();
+				if (failure != null) {
+					throw failure;
+				}
+				return response("{\"ok\":true}");
+			}
 			calls.incrementAndGet();
 			maxInFlight.accumulateAndGet(inFlight.incrementAndGet(), Math::max);
 			try {
@@ -145,9 +197,10 @@ class ConcurrentAssessmentDispatcherTest {
 				if (request.userMessage().contains(BOOM)) {
 					throw new IllegalStateException("a bug in the client");
 				}
-				return new LlmResponse(ContractJson.MAPPER.writeValueAsString(ContractFixtures.validOutput()),
-						Provider.GEMINI, "gemini-3.1-flash-lite", Channel.GEMINI, ServiceTier.DEFAULT, false, null,
-						OutputMode.JSON_SCHEMA, 100, 50, null, 1);
+				if (request.userMessage().contains(REVOKED)) {
+					throw revoked();
+				}
+				return response(ContractJson.MAPPER.writeValueAsString(ContractFixtures.validOutput()));
 			}
 			catch (InterruptedException ex) {
 				throw new IllegalStateException(ex);
@@ -157,7 +210,18 @@ class ConcurrentAssessmentDispatcherTest {
 			}
 		};
 		return new ConcurrentAssessmentDispatcher(posts(), new AssessmentInputs(rawPayloads(), List.of(inputMapper())),
-				new Assessor(llm, Provider.GEMINI, "gemini-3.1-flash-lite", clock), transitions(), recorder(), executor);
+				new Assessor(llm, Provider.GEMINI, "gemini-3.1-flash-lite", clock), transitions(), recorder(), llm,
+				executor);
+	}
+
+	private static LlmResponse response(String raw) {
+		return new LlmResponse(raw, Provider.GEMINI, "gemini-3.1-flash-lite", Channel.GEMINI, ServiceTier.DEFAULT, false,
+				null, OutputMode.JSON_SCHEMA, 100, 50, null, 1);
+	}
+
+	private static LlmConfigurationException revoked() {
+		return new LlmConfigurationException("HTTP 401: invalid api key", 1, ServiceTier.DEFAULT, false,
+				new TransportException(TransportException.Kind.CONFIGURATION, "HTTP 401: invalid api key", null, null));
 	}
 
 	private PostRepository posts() {

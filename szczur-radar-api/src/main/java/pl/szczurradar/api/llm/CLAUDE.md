@@ -4,8 +4,10 @@
 
 ```
 llm/            the API — the only part the rest of the application imports
-  LlmClient, LlmRequest, LlmResponse, LlmCallException, CallFailure, Channel, OutputMode,
-  LlmConfiguration (the lazy bean), LlmClientFactory (a switch over the provider)
+  LlmClient (complete, check), LlmRequest, LlmResponse, LlmCallException, LlmConfigurationException,
+  CallFailure, Channel, OutputMode, LlmConfiguration (the lazy bean), LlmClientFactory (a switch over
+  the provider)
+  api/          LlmCheckController — GET /api/admin/llm/check (admin)
   gemini/       GeminiClient       — create(): GenAI client, 1 attempt, timeout
   deepseek/     DeepSeekClient, DeepSeekRawResponse — create(): RestClient, no retry, timeouts
   openrouter/   OpenRouterClient   — create(): openai-java clients, 0 retries, timeout
@@ -32,6 +34,16 @@ blank answer) is judged with the shared `text/Whitespace`, never `isBlank`. An a
   429s. Everything below is off and must stay off: Spring AI `RetryTemplate` (`TransportRetry.SPRING_AI_OFF`),
   google-genai `HttpRetryOptions.attempts(1)`, openai-java `maxRetries(0)`, DeepSeek `RestClient`
   without retry. Parse errors and contract violations are never retried.
+- **A refused configuration is not a failed request:** HTTP 401 (key), 402 (credit) and 404 (model)
+  are `TransportException.Kind.CONFIGURATION`, never retried, and end as `LlmConfigurationException`
+  (a subclass of `LlmCallException`). `Assessor` rethrows it instead of recording a `failed` result,
+  and the pipeline stops the run (`pipeline/CLAUDE.md`), so a revoked key never uses up posts'
+  attempts. 403 stays `REJECTED`: a provider may refuse one request's content with it (OpenRouter
+  moderation). Gemini answers an invalid key with 400 — `REJECTED` per call, caught by the check below.
+- `LlmClient.check()`: one tiny real call (`CHECK_REQUEST`, a few dozen tokens) through the same path
+  as an assessment — it proves the key, the model and the credit together. Listing models would not:
+  DeepSeek accepts model ids it does not list (e.g. `deepseek-v4-flash`). Used before every pipeline
+  assess step and by `GET /api/admin/llm/check`.
 - Every HTTP attempt has the `LLM_TIMEOUT` limit (the Gemini SDK has none by default). For DeepSeek
   the connect phase (≤ 30 s) comes on top of it, so one attempt can last slightly longer.
 - Known re-send below our loop: OkHttp (inside the GenAI and openai-java SDKs) may resend a

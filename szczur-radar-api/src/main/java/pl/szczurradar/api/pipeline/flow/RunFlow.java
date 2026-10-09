@@ -1,6 +1,7 @@
 package pl.szczurradar.api.pipeline.flow;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -114,25 +115,45 @@ public final class RunFlow {
 	 * @param dead posts whose third failed attempt made them dead
 	 * @param processingErrors posts with a technical error and no stored assessment
 	 */
-	public record AssessedBatch(UUID runId, int ok, int failed, int dead, List<ProcessingError> processingErrors) {
+	/**
+	 * What the assess step did.
+	 *
+	 * @param stoppedBy why the step stopped before assessing every post — the LLM check failed or the
+	 *     provider refused the configuration — or {@code null}
+	 */
+	public record AssessedBatch(UUID runId, int ok, int failed, int dead, List<ProcessingError> processingErrors,
+			@Nullable String stoppedBy) {
 
 		public AssessedBatch {
 			processingErrors = List.copyOf(processingErrors);
 		}
 
-		/** The run's error text when posts had technical errors: how many, and each post with its error. */
+		/**
+		 * The run's error text: why the step stopped, and when posts had technical errors, how many and
+		 * each post with its error.
+		 */
 		public Optional<String> errorSummary() {
-			if (processingErrors.isEmpty()) {
-				return Optional.empty();
+			List<String> parts = new ArrayList<>();
+			if (stoppedBy != null) {
+				parts.add("stopped, the remaining posts were put back: " + stoppedBy);
 			}
-			return Optional.of(processingErrors.size() + " post(s) with a technical error, no assessment stored: "
-					+ processingErrors.stream()
-						.map(error -> error.postId() + " (" + error.message() + ")")
-						.collect(Collectors.joining("; ")));
+			if (!processingErrors.isEmpty()) {
+				parts.add(processingErrors.size() + " post(s) with a technical error, no assessment stored: "
+						+ processingErrors.stream()
+							.map(error -> error.postId() + " (" + error.message() + ")")
+							.collect(Collectors.joining("; ")));
+			}
+			return parts.isEmpty() ? Optional.empty() : Optional.of(String.join(" | ", parts));
 		}
 
-		/** {@code succeeded} without failed or dead posts and technical errors, otherwise {@code partial}. */
+		/**
+		 * {@code failed} when the step stopped; {@code succeeded} without failed or dead posts and
+		 * technical errors; otherwise {@code partial}.
+		 */
 		public RunStatus status() {
+			if (stoppedBy != null) {
+				return RunStatus.FAILED;
+			}
 			return failed == 0 && dead == 0 && processingErrors.isEmpty() ? RunStatus.SUCCEEDED : RunStatus.PARTIAL;
 		}
 

@@ -78,3 +78,10 @@
 - **Problem**: W `java-api-rewrite` główny PR #26 zmergowano przed `/10x-impl-review` i `/10x-archive`. Przegląd znalazł obejście filtra Origin, które było już na produkcji, a poprawki, przegląd i archiwizacja wymagały trzech kolejnych PR (#27–#29). Do tego Progress zawierał kroki możliwe dopiero po merge (przełączenie i weryfikacja produkcji), co uniemożliwiało archiwizację przed merge.
 - **Rule**: Na jednej gałęzi i w jednym PR wykonaj kolejno: `/10x-implement` (wszystkie fazy), weryfikację w Railway PR env, `/10x-impl-review` z poprawkami, `/10x-archive`. Człowiek merguje raz, na końcu. W planie nie umieszczaj w Progress kroków, które da się wykonać dopiero po merge (operacje i weryfikacja na produkcji): prowadź je jako runbook w `deploy-plan.md` i komentarze w issue, zamykane po weryfikacji produkcji, bez kolejnego PR.
 - **Applies to**: plan, plan-review, implement, impl-review
+
+## Akcje Embabel domyślnie się ponawiają — akcje ze skutkami ubocznymi oznaczaj FIRE_ONCE
+
+- **Context**: Agenci Embabel (`@Agent`, `@Action`), szczególnie akcje, które zapisują stan, wołają zewnętrzne API lub LLM (pipeline S-02, przyszłe etapy ML, harmonogram S-05).
+- **Problem**: `@Action` bez parametrów używa domyślnej polityki ponowień: po większości wyjątków (poza m.in. IllegalArgument/IllegalState) akcja jest wykonywana ponownie z rosnącą przerwą. W S-02 nieudany `fetch` z Wykopu szedł kilka razy co ≥10 s, przebieg nie kończył się w 60 s, a każdy ponowny krok zapisywałby się drugi raz. Wyszło dopiero przy teście z awarią źródła (przegląd końcowy `first-assessed-wykop-feed`, 2026-10-09).
+- **Rule**: Każda akcja ze skutkami ubocznymi dostaje `@Action(actionRetryPolicy = ActionRetryPolicy.FIRE_ONCE)`; ponowienia żyją tylko w warstwie transportu (`llm/transport/TransportRetry`). Dla każdego agenta napisz test, w którym akcja rzuca wyjątek, i sprawdź, że wykonała się raz.
+- **Applies to**: plan, plan-review, implement, impl-review

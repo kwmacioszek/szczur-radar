@@ -46,14 +46,21 @@ class PostStoreTest {
 
 	private final List<Post> saved = new ArrayList<>();
 
+	/** Each transaction, with what was stored in it in order ("raw" or the post's source id). */
+	private final List<List<String>> transactions = new ArrayList<>();
+
 	private final PostStore store = new PostStore(posts, raw, transaction());
 
 	PostStoreTest() {
-		when(raw.store(any(), any())).thenAnswer(invocation -> new RawPayloadRef(UUID.randomUUID()));
+		when(raw.store(any(), any())).thenAnswer(invocation -> {
+			transactions.getLast().add("raw");
+			return new RawPayloadRef(UUID.randomUUID());
+		});
 		when(posts.save(any(Post.class))).thenAnswer(invocation -> {
 			Post post = invocation.getArgument(0);
 			setId(post);
 			saved.add(post);
+			transactions.getLast().add(post.getSourceItemId());
 			return post;
 		});
 	}
@@ -84,6 +91,45 @@ class PostStoreTest {
 	}
 
 	@Test
+	void newPostsAreStoredInChunksRawPayloadsFirst() {
+		when(posts.findKeys(eq(Source.WYKOP), anyCollection())).thenReturn(List.of());
+		List<SourcePost> many = IntStream.range(0, PostStore.STORE_CHUNK + 2)
+			.mapToObj(i -> post(ItemType.POST, String.valueOf(i)))
+			.toList();
+
+		StoredBatch batch = store.store(new FetchedBatch(RUN, many, many.size(), 0));
+
+		assertThat(batch.newPostIds()).hasSize(many.size());
+		assertThat(transactions).hasSize(2);
+		assertThat(transactions.getLast()).containsExactly("raw", "raw", String.valueOf(PostStore.STORE_CHUNK),
+				String.valueOf(PostStore.STORE_CHUNK + 1));
+	}
+
+	@Test
+	void aChunkThatHitsAPostStoredMeanwhileIsStoredPostByPost() {
+		when(posts.findKeys(eq(Source.WYKOP), anyCollection())).thenReturn(List.of());
+		when(posts.save(any(Post.class))).thenAnswer(invocation -> {
+			Post post = invocation.getArgument(0);
+			if (post.getSourceItemId().equals("7")) {
+				throw new DataIntegrityViolationException("uq_posts_source_item");
+			}
+			setId(post);
+			saved.add(post);
+			return post;
+		});
+
+		StoredBatch batch = store.store(new FetchedBatch(RUN,
+				List.of(post(ItemType.POST, "6"), post(ItemType.POST, "7"), post(ItemType.POST, "8")), 3, 0));
+
+		// The chunk's transaction rolled back (its "6" with it); stored one by one, "7" is not new.
+		assertThat(transactions).hasSize(4);
+		assertThat(batch.newPostIds()).hasSize(2)
+			.containsExactlyElementsOf(saved.subList(saved.size() - 2, saved.size()).stream().map(Post::getId).toList());
+		assertThat(saved.subList(saved.size() - 2, saved.size())).extracting(Post::getSourceItemId)
+			.containsExactly("6", "8");
+	}
+
+	@Test
 	void keysAreLookedUpInChunks() {
 		List<List<String>> lookups = new ArrayList<>();
 		when(posts.findKeys(eq(Source.WYKOP), anyCollection())).thenAnswer(invocation -> {
@@ -102,11 +148,12 @@ class PostStoreTest {
 				null, null, List.of("gielda"), ("{\"id\":" + id + "}").getBytes());
 	}
 
-	private static TransactionTemplate transaction() {
+	private TransactionTemplate transaction() {
 		return new TransactionTemplate() {
 
 			@Override
 			public <T> T execute(TransactionCallback<T> action) {
+				transactions.add(new ArrayList<>());
 				return action.doInTransaction(new SimpleTransactionStatus());
 			}
 

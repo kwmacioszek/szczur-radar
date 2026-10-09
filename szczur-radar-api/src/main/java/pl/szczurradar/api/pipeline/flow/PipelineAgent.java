@@ -5,6 +5,7 @@ import java.util.List;
 import com.embabel.agent.api.annotation.AchievesGoal;
 import com.embabel.agent.api.annotation.Action;
 import com.embabel.agent.api.annotation.Agent;
+import com.embabel.agent.core.ActionRetryPolicy;
 
 import pl.szczurradar.api.pipeline.PipelineRunService;
 import pl.szczurradar.api.pipeline.assess.AssessmentDispatcher;
@@ -34,6 +35,11 @@ import pl.szczurradar.api.pipeline.step.SourceIngest;
  * <p>Started by {@link PipelineRunService} through
  * {@code AgentInvocation.create(agentPlatform, RunSummary.class)}; the run's durable state is in the
  * database, not in Embabel.
+ *
+ * <p>Every action fires once ({@link ActionRetryPolicy#FIRE_ONCE}): Embabel's default policy retries
+ * an action after most exceptions, with growing pauses, which would repeat a failed fetch, store or
+ * assessment step and record it again. A failed step fails the run; retries of a call live only
+ * below it (e.g. {@code llm/transport/TransportRetry}).
  */
 @Agent(description = "Runs one Szczur Radar pipeline run: fetch and store a range of the sources' posts, or pick"
 		+ " leftovers or given posts, then assess them and summarize the run")
@@ -58,7 +64,7 @@ public class PipelineAgent {
 		this.recorder = recorder;
 	}
 
-	@Action
+	@Action(actionRetryPolicy = ActionRetryPolicy.FIRE_ONCE)
 	public RouteRun route(RunRequest request) {
 		return switch (request.kind()) {
 			case RANGE -> new RouteRun(
@@ -68,7 +74,7 @@ public class PipelineAgent {
 		};
 	}
 
-	@Action
+	@Action(actionRetryPolicy = ActionRetryPolicy.FIRE_ONCE)
 	public FetchedBatch fetch(RangeTarget target) {
 		FetchedBatch batch = recorder.step(target.runId(), RunStep.FETCH, null, () -> ingest.fetch(target),
 				FetchedBatch::fetched);
@@ -76,7 +82,7 @@ public class PipelineAgent {
 		return batch;
 	}
 
-	@Action
+	@Action(actionRetryPolicy = ActionRetryPolicy.FIRE_ONCE)
 	public StoredBatch store(FetchedBatch batch) {
 		StoredBatch stored = recorder.step(batch.runId(), RunStep.STORE, batch.posts().size(), () -> store.store(batch),
 				result -> result.newPostIds().size());
@@ -84,19 +90,19 @@ public class PipelineAgent {
 		return stored;
 	}
 
-	@Action
+	@Action(actionRetryPolicy = ActionRetryPolicy.FIRE_ONCE)
 	public PendingAssessments selectFromStored(StoredBatch batch) {
 		return recorder.step(batch.runId(), RunStep.SELECT, batch.newPostIds().size(), () -> selection.fromStored(batch),
 				pending -> pending.postIds().size());
 	}
 
-	@Action
+	@Action(actionRetryPolicy = ActionRetryPolicy.FIRE_ONCE)
 	public PendingAssessments selectFromTargets(SelectionTarget target) {
 		return recorder.step(target.runId(), RunStep.SELECT, null, () -> selection.fromTargets(target),
 				pending -> pending.postIds().size());
 	}
 
-	@Action
+	@Action(actionRetryPolicy = ActionRetryPolicy.FIRE_ONCE)
 	public AssessedBatch assess(PendingAssessments pending) {
 		AssessedBatch assessed = recorder.step(pending.runId(), RunStep.ASSESS, pending.postIds().size(),
 				() -> dispatcher.dispatch(pending.runId(), pending.postIds()),
@@ -106,7 +112,7 @@ public class PipelineAgent {
 		return assessed;
 	}
 
-	@Action
+	@Action(actionRetryPolicy = ActionRetryPolicy.FIRE_ONCE)
 	@AchievesGoal(description = "The run was summarized and its final status written")
 	public RunSummary summarize(AssessedBatch assessed) {
 		return recorder.step(assessed.runId(), RunStep.SUMMARIZE, null, () -> {

@@ -28,6 +28,12 @@ public class TransportException extends RuntimeException {
 		/** No connection or a broken one. Retried. */
 		CONNECTION(true),
 
+		/**
+		 * HTTP 401 (key), 402 (credit) or 404 (model): the configuration is refused, every call would
+		 * fail the same way. Never retried; ends as {@code LlmConfigurationException}.
+		 */
+		CONFIGURATION(false),
+
 		/** Any other error, including a model refusal or a blocked answer. Never retried. */
 		REJECTED(false);
 
@@ -69,6 +75,9 @@ public class TransportException extends RuntimeException {
 		}
 		if (status == 408) {
 			return Kind.TIMEOUT;
+		}
+		if (status == 401 || status == 402 || status == 404) {
+			return Kind.CONFIGURATION;
 		}
 		return status >= 500 ? Kind.SERVER_ERROR : Kind.REJECTED;
 	}

@@ -21,6 +21,7 @@ import pl.szczurradar.api.config.LlmProviderProperties.ServiceTier;
 import pl.szczurradar.api.llm.CallFailure;
 import pl.szczurradar.api.llm.Channel;
 import pl.szczurradar.api.llm.LlmCallException;
+import pl.szczurradar.api.llm.LlmConfigurationException;
 import pl.szczurradar.api.llm.LlmClient;
 import pl.szczurradar.api.llm.LlmClientFactory;
 import pl.szczurradar.api.llm.LlmRequest;
@@ -138,7 +139,7 @@ class DeepSeekClientTest {
 	void unauthorizedFailsAfterOneRequestWithoutTheKeyInTheMessage() {
 		try (ScriptedProviderServer server = new ScriptedProviderServer(Reply.status(401,
 				"{\"error\":{\"message\":\"Authentication Fails, Your api key: synthetic-key is invalid\"}}"))) {
-			assertThatExceptionOfType(LlmCallException.class)
+			assertThatExceptionOfType(LlmConfigurationException.class)
 				.isThrownBy(() -> client(server, Duration.ofSeconds(5)).complete(REQUEST))
 				.satisfies(ex -> {
 					assertThat(ex.attempts()).isEqualTo(1);

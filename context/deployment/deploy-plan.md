@@ -182,9 +182,24 @@ Both Wykop keys are optional and must be set together (only one of them fails th
 
 0. Standing rule: no merge to `main` (= production deploy) while a run is `RUNNING` in `/admin`.
 1. Set `WYKOP_KEY` and `WYKOP_SECRET` on production with `--stdin` (never as arguments), then seal both: `railway variable set WYKOP_KEY --stdin -s szczur-radar-api -e production --skip-deploys` (same for `WYKOP_SECRET`). Redeploy the API; the pre-deploy `migrate` applies `V3`–`V5`.
-2. Log in as admin, open `/admin`: Wykop is checked as configured. Start a run for one day (yesterday).
+2. Log in as admin. Check the LLM first: `GET /api/admin/llm/check` (in the browser, logged in) must say `"ok":true` — one tiny call with production's sealed key and model; a run makes the same check before it assesses and fails without touching posts when it does not pass. Open `/admin`: Wykop is checked as configured. Start a run for one day (yesterday).
 3. Refresh the runs list until it ends: status `succeeded` or `partial`, steps `fetch`, `store`, `select`, `assess`, `summarize` with counters; `/` lists the day's posts newest first; failed posts (if any) appear under "Nieudane posty".
 4. Close issue #14 with the result (merge commit, run counters, cost from `assessments` tokens).
+
+### Postgres region (found in the final review, 2026-10-09)
+
+`railway status --json` shows `postgres` in **`sfo`** (US West) in `production` and in `szczur-radar-pr-37`, while `szczur-radar-api` and `szczur-radar-web` run in `europe-west4`. Every database round trip crosses the Atlantic (~140 ms): the store step took 1 min 44 s for 244 posts, and every API request pays it through the JDBC session. `.railway/railway.ts` now declares `postgres("postgres", { region: REGION })`, but **IaC does not move an existing database** (a dry-run plan with it shows no change); the region applies when a database is created.
+
+Move it per environment (operator; decided in the review, downtime accepted — production holds only accounts and sessions):
+
+1. Not while a run is `RUNNING` (`/admin`).
+2. Railway dashboard → environment → `postgres` → Settings → Scale → Regions: `europe-west4` only → apply the staged change. Railway migrates the volume; the database is down meanwhile (https://docs.railway.com/deployments/regions#volumes).
+3. Verify: `railway status --json` shows `postgres` in `europe-west4`; `/api/ready` → 200; log in (sessions survive: same volume).
+4. PR envs: an existing one keeps its own region (move it the same way or close it); check a new PR env's `postgres` region once — it should follow production.
+
+### PR-env verification: the web deployment's commit
+
+On `szczur-radar-pr-37` a push deployed `szczur-radar-web` from an older commit (`154bed8` instead of the branch head), and the next push was `SKIPPED` (no web paths changed), so `/admin` was missing until a redeploy. Before checking the UI in a PR env: `railway deployment list -s szczur-radar-web -e szczur-radar-pr-<N> --json` — the latest `SUCCESS` deployment's `meta.commitHash` must be the branch head; otherwise `railway redeploy --from-source -s szczur-radar-web -e szczur-radar-pr-<N>`. Why Railway picked the older commit is not known yet.
 
 **Risk accepted:** before F-01 there is no database backup and no enforceable spend limit (`lessons.md`, Railway trial). A day is about 270 posts; the cost of a run follows the F-02 estimate for the production model (section above).
 

@@ -59,7 +59,8 @@ class AuthorizationCompletenessIT {
 			"POST /api/admin/pipeline-runs",
 			"GET /api/admin/pipeline-runs",
 			"GET /api/admin/pipeline-runs/sources",
-			"GET /api/admin/posts/failed");
+			"GET /api/admin/posts/failed",
+			"GET /api/admin/llm/check");
 
 	private static final Pattern PATH_VARIABLE = Pattern.compile("\\{(\\w+)(?::[^}]*)?}");
 

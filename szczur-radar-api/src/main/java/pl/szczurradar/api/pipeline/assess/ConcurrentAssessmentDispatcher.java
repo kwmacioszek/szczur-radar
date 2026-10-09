@@ -11,17 +11,23 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
 import pl.szczurradar.api.agents.assessor.AssessmentResult;
 import pl.szczurradar.api.agents.assessor.Assessor;
 import pl.szczurradar.api.agents.assessor.contract.AssessmentInputV1;
+import pl.szczurradar.api.llm.LlmCallException;
+import pl.szczurradar.api.llm.LlmClient;
+import pl.szczurradar.api.llm.LlmConfigurationException;
 import pl.szczurradar.api.pipeline.flow.RunFlow.AssessedBatch;
 import pl.szczurradar.api.pipeline.flow.RunFlow.ProcessingError;
 import pl.szczurradar.api.pipeline.state.PostTransitions;
@@ -32,17 +38,24 @@ import pl.szczurradar.api.posts.PostRepository;
 
 /**
  * {@link AssessmentDispatcher} on its own pool of {@code PIPELINE_LLM_CONCURRENCY} threads (default 4;
- * never {@code availableProcessors()}, which a container may report as 1). Each post, on a pool thread:
+ * never {@code availableProcessors()}, which a container may report as 1). First one tiny call checks
+ * the LLM's key, model and credit ({@link LlmClient#check()}); when it fails, no post is taken and the
+ * step stops. Then each post, on a pool thread:
  *
  * <ol>
  *   <li>taken for the run ({@link PostTransitions#claim}) — when that fails because the run is no
  *       longer running, the remaining posts are left alone;
  *   <li>assessed: {@link Assessor#assess} on the input rebuilt from its raw payload — a failed call is
- *       a {@code failed} result, never an exception;
+ *       a {@code failed} result, never an exception; a refused configuration
+ *       ({@link LlmConfigurationException}, e.g. a revoked key) stops the step: no attempt is stored
+ *       and the remaining posts are not taken;
  *   <li>stored with its next stage ({@link PostTransitions#record}), only while the run owns it;
  *   <li>otherwise put back without an attempt ({@link PostTransitions#release}); any exception there
  *       (a bug, a failed write) is a technical error of this post, and the other posts go on.
  * </ol>
+ *
+ * A stopped step makes the run {@code failed} ({@link AssessedBatch#stoppedBy}), so a bad key never
+ * uses up the posts' attempts.
  */
 @Component
 public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher, DisposableBean {
@@ -59,30 +72,45 @@ public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher, Dis
 
 	private final RunRecorder recorder;
 
+	private final LlmClient llm;
+
 	private final ExecutorService executor;
 
 	@Autowired
 	ConcurrentAssessmentDispatcher(PostRepository posts, AssessmentInputs inputs, Assessor assessor,
-			PostTransitions transitions, RunRecorder recorder, @Value("${PIPELINE_LLM_CONCURRENCY:4}") int concurrency) {
-		this(posts, inputs, assessor, transitions, recorder, pool(concurrency));
+			PostTransitions transitions, RunRecorder recorder, @Lazy LlmClient llm,
+			@Value("${PIPELINE_LLM_CONCURRENCY:4}") int concurrency) {
+		this(posts, inputs, assessor, transitions, recorder, llm, pool(concurrency));
 	}
 
 	ConcurrentAssessmentDispatcher(PostRepository posts, AssessmentInputs inputs, Assessor assessor,
-			PostTransitions transitions, RunRecorder recorder, ExecutorService executor) {
+			PostTransitions transitions, RunRecorder recorder, LlmClient llm, ExecutorService executor) {
 		this.posts = posts;
 		this.inputs = inputs;
 		this.assessor = assessor;
 		this.transitions = transitions;
 		this.recorder = recorder;
+		this.llm = llm;
 		this.executor = executor;
 	}
 
 	@Override
 	public AssessedBatch dispatch(UUID runId, List<UUID> postIds) {
+		if (postIds.isEmpty()) {
+			return new AssessedBatch(runId, 0, 0, 0, List.of(), null);
+		}
+		try {
+			llm.check();
+		}
+		catch (LlmCallException ex) {
+			log.error("The LLM check before run {} failed; no post is assessed", runId, ex);
+			return new AssessedBatch(runId, 0, 0, 0, List.of(), "the LLM check failed: " + ex.getMessage());
+		}
 		AtomicBoolean runStopped = new AtomicBoolean();
+		AtomicReference<@Nullable String> stoppedBy = new AtomicReference<>();
 		List<Future<Outcome>> outcomes = new ArrayList<>();
 		for (UUID postId : postIds) {
-			outcomes.add(executor.submit(() -> assess(runId, postId, runStopped)));
+			outcomes.add(executor.submit(() -> assess(runId, postId, runStopped, stoppedBy)));
 		}
 		int ok = 0;
 		int failed = 0;
@@ -100,10 +128,10 @@ public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher, Dis
 				}
 			}
 		}
-		return new AssessedBatch(runId, ok, failed, dead, errors);
+		return new AssessedBatch(runId, ok, failed, dead, errors, stoppedBy.get());
 	}
 
-	private Outcome assess(UUID runId, UUID postId, AtomicBoolean runStopped) {
+	private Outcome assess(UUID runId, UUID postId, AtomicBoolean runStopped, AtomicReference<@Nullable String> stoppedBy) {
 		if (runStopped.get()) {
 			return new Outcome.NotTaken();
 		}
@@ -124,6 +152,12 @@ public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher, Dis
 				return new Outcome.NotTaken();
 			}
 			return new Outcome.Stored(result.ok(), !result.ok() && attempts.get() + 1 >= Post.MAX_ASSESSMENT_ATTEMPTS);
+		}
+		catch (LlmConfigurationException ex) {
+			// Every later call would fail the same way: stop taking posts, count no attempt.
+			runStopped.set(true);
+			stoppedBy.compareAndSet(null, "the LLM provider refused the configuration: " + ex.getMessage());
+			return new Outcome.NotTaken();
 		}
 		catch (RuntimeException ex) {
 			log.error("Assessing post {} in run {} failed; the post is put back without an attempt", postId, runId, ex);

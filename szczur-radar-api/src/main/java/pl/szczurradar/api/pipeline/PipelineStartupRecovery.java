@@ -16,10 +16,11 @@ import pl.szczurradar.api.pipeline.state.RunRecorder;
 
 /**
  * At start-up, runs that nobody finished (queued or running when a deploy or restart stopped their
- * instance) become {@code interrupted} and their posts still {@code assessing} are put back without an
- * attempt — {@code stored} when they never failed, otherwise {@code failed} — in one transaction.
- * Without it the "one running run" index would block every later run. The posts are taken by the next
- * retry run.
+ * instance) become {@code interrupted}, and every post still {@code assessing} without a queued or
+ * running run is put back without an attempt — {@code stored} when it never failed, otherwise
+ * {@code failed} — in one transaction. That includes a post claimed just as its run was interrupted
+ * by a stopping instance. Without it the "one running run" index would block every later run. The
+ * posts are taken by the next retry run.
  *
  * <p>Only in the server (a web application): operator commands such as the pre-deploy {@code migrate}
  * start the same context without a web server, and must neither interrupt the run an older instance is
@@ -52,7 +53,10 @@ public class PipelineStartupRecovery {
 		try {
 			interrupted = transaction.execute(status -> {
 				List<UUID> ids = recorder.interruptAll("interrupted: the application restarted");
-				ids.forEach(transitions::releaseAll);
+				int released = transitions.releaseOrphans();
+				if (released > 0) {
+					log.warn("Put back {} post(s) left assessing by unfinished runs", released);
+				}
 				return ids;
 			});
 		}

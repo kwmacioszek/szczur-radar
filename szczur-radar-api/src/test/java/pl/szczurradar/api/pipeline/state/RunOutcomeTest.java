@@ -32,13 +32,21 @@ class RunOutcomeTest {
 	@Test
 	void aRunSucceedsOnlyWithoutFailedDeadAndTechnicalErrors() {
 		UUID run = UUID.randomUUID();
-		assertThat(new AssessedBatch(run, 5, 0, 0, List.of()).status()).isEqualTo(RunStatus.SUCCEEDED);
-		assertThat(new AssessedBatch(run, 0, 0, 0, List.of()).status()).isEqualTo(RunStatus.SUCCEEDED);
-		assertThat(new AssessedBatch(run, 5, 1, 0, List.of()).status()).isEqualTo(RunStatus.PARTIAL);
-		assertThat(new AssessedBatch(run, 5, 1, 1, List.of()).status()).isEqualTo(RunStatus.PARTIAL);
+		assertThat(new AssessedBatch(run, 5, 0, 0, List.of(), null).status()).isEqualTo(RunStatus.SUCCEEDED);
+		assertThat(new AssessedBatch(run, 0, 0, 0, List.of(), null).status()).isEqualTo(RunStatus.SUCCEEDED);
+		assertThat(new AssessedBatch(run, 5, 1, 0, List.of(), null).status()).isEqualTo(RunStatus.PARTIAL);
+		assertThat(new AssessedBatch(run, 5, 1, 1, List.of(), null).status()).isEqualTo(RunStatus.PARTIAL);
 		assertThat(new AssessedBatch(run, 5, 0, 0,
-				List.of(new ProcessingError(UUID.randomUUID(), "IllegalStateException: x"))).status())
+				List.of(new ProcessingError(UUID.randomUUID(), "IllegalStateException: x")), null).status())
 			.isEqualTo(RunStatus.PARTIAL);
+	}
+
+	@Test
+	void aStoppedStepFailsTheRunAndSaysWhy() {
+		AssessedBatch stopped = new AssessedBatch(UUID.randomUUID(), 3, 0, 0, List.of(), "the LLM check failed: HTTP 401");
+
+		assertThat(stopped.status()).isEqualTo(RunStatus.FAILED);
+		assertThat(stopped.errorSummary()).hasValueSatisfying(error -> assertThat(error).contains("HTTP 401"));
 	}
 
 }

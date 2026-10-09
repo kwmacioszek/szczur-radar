@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import pl.szczurradar.api.config.LlmProviderProperties.ServiceTier;
 import pl.szczurradar.api.llm.CallFailure;
 import pl.szczurradar.api.llm.LlmCallException;
+import pl.szczurradar.api.llm.LlmConfigurationException;
 import pl.szczurradar.api.llm.transport.TransportException.Kind;
 
 /** The retry loop on scripted attempts: counts, waits, classes and the flex fallback. */
@@ -68,6 +69,23 @@ class TransportRetryTest {
 				assertThat(ex.attempts()).isEqualTo(1);
 			});
 		assertThat(sleeps).isEmpty();
+	}
+
+	@Test
+	void aRefusedConfigurationFailsAtOnceAsItsOwnException() {
+		assertThatExceptionOfType(LlmConfigurationException.class)
+			.isThrownBy(() -> retry.run(ServiceTier.DEFAULT, script(failure(Kind.CONFIGURATION), "never")))
+			.satisfies(ex -> assertThat(ex.attempts()).isEqualTo(1));
+		assertThat(sleeps).isEmpty();
+	}
+
+	@Test
+	void keyCreditAndModelStatusesAreConfigurationOthersAreRejected() {
+		assertThat(List.of(401, 402, 404)).allSatisfy(status -> assertThat(TransportException.kindOf(status))
+			.isEqualTo(Kind.CONFIGURATION));
+		// 403 may refuse one request's content (e.g. OpenRouter moderation): not the configuration.
+		assertThat(List.of(400, 403, 422)).allSatisfy(status -> assertThat(TransportException.kindOf(status))
+			.isEqualTo(Kind.REJECTED));
 	}
 
 	@Test

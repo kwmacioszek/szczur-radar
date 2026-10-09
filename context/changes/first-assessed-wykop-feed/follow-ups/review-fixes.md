@@ -83,3 +83,40 @@ Items queued by `/10x-impl-review` triage that are not code fixes of the reviewe
 - [ ] **UI visual redesign (user's decision, 2026-10-08):** after the last phase (6), on this branch and PR,
   before the hand-over: a new look for the feed, admin panel and login, together with the hardening above;
   direction and styling approach to be decided then.
+
+## Final review (2026-10-09, `reviews/impl-review.md`) — queued fixes
+
+- [x] **F1:** LLM configuration failure (401/403, 404 for a wrong model) as its own class: no attempt
+  counted, the post released, the run stops as `failed` with the cause; plus a preflight check of key
+  and model at the start of the assess step, and `GET /api/admin/llm/check` (provider, model, ok/error).
+  ADAPT: the check is one tiny real call (`LlmClient.check()`), not a model listing — DeepSeek's
+  `GET /models` does not list the alias `deepseek-v4-flash` it accepts. 403 stays per request
+  (OpenRouter moderation). The panel button comes with the UI change.
+- [x] **F2:** Postgres to `europe-west4` (operator action per environment; IaC does not move it —
+  dry-run plan with `postgres("postgres", { region })` shows no change). `railway.ts` declares the
+  region; `deploy-plan.md` documents the move; check the next PR env's region.
+- [x] **F3:** chunked store step. ADAPT: chunks of 500 in one transaction each, raw payloads then
+  posts sent as JDBC batches (`hibernate.jdbc.batch_size`, `reWriteBatchedInserts`), a chunk hitting
+  the unique key stored again post by post — instead of native `ON CONFLICT … RETURNING`, so the
+  `Post` constructor (NUL removal, content hash) stays the only way a post is built.
+- [x] **F4:** catch-all in `PipelineRunService.execute`; recovery and `onClose` release `assessing`
+  posts whose run is not `queued`/`running`.
+- [x] **F5:** `PIPELINE_LLM_CONCURRENCY: preserve()` in `railway.ts`.
+- [x] **F6:** tests for a `failed` run (source failing) and for `onClose`.
+- [x] **F7:** record the unplanned additions (below) and list them in the PR body.
+- [x] **F8:** stage/status values bound as enum parameters in `PostTransitions` and `RunRecorder`.
+- [x] **F9:** S-05 unknown in `roadmap.md`: Wykop paging can skip an element when the result shrinks
+  between pages; the daily run needs an overlap or a second pass of the previous day.
+- [x] **F10:** the UI items above ("UI hardening", "UI visual redesign", SPA nits, 5.3 narrow screen) move
+  to a new change (`/10x-new`, then `/10x-ui` per view); here only the deploy-plan check that the web
+  deployment's commit is the branch head.
+- [x] **Found while fixing F6:** Embabel retried a failed pipeline action by default (a failed Wykop
+  fetch every 10 s and more): every `PipelineAgent` action is now `FIRE_ONCE`.
+- [ ] **F2, operator:** move `postgres` to `europe-west4` in production (and the PR env) —
+  `deploy-plan.md`, section `first-assessed-wykop-feed`, "Postgres region".
+
+Unplanned additions (F7): the `llm` package split into `gemini/`, `deepseek/`, `openrouter/`,
+`transport/` (user's request, no behavior change, `ab90652`); startup recovery only in a web context
+(`@ConditionalOnWebApplication`, so the pre-deploy `migrate` never interrupts the old instance's run)
+and logged instead of failing the start; the PRD NFR clarification on registering a source; `skipped`
+counted in the fetch step (a consequence of the source ports).
