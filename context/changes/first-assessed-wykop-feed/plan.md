@@ -661,13 +661,13 @@ Odnotować ryzyko: przed F-01 brak backupu i limitów kosztów (lekcja: kroki po
 
 #### Automated
 
-- [ ] 6.1 CI zielone na PR, w tym railway-config z rozszerzonym krokiem i api-container-smoke z migracją V3
-- [ ] 6.2 railway config plan dla produkcji nie pokazuje zmian destrukcyjnych
+- [x] 6.1 CI zielone na PR, w tym railway-config z rozszerzonym krokiem i api-container-smoke z migracją V3 — b29748c
+- [x] 6.2 railway config plan dla produkcji nie pokazuje zmian destrukcyjnych — b29748c
 
 #### Manual
 
-- [ ] 6.3 Sekrety GitHub WYKOP_KEY/WYKOP_SECRET dodane, PR env ma zmienne Wykopu
-- [ ] 6.4 W PR env przebieg jednego dnia z SPA kończy się succeeded lub partial, kroki i liczniki widoczne, API nie zasypia
-- [ ] 6.5 Lista postów w PR env chronologiczna i bez duplikatów; ponowny przebieg nie dodaje postów
-- [ ] 6.6 Nieudane posty widoczne w panelu admina, ponowienie tworzy przebieg POSTS
-- [ ] 6.7 Koszt przebiegu w PR env zgodny z szacunkiem i zaakceptowany przez użytkownika
+- [x] 6.3 Sekrety GitHub WYKOP_KEY/WYKOP_SECRET dodane, PR env ma zmienne Wykopu — b29748c
+- [x] 6.4 W PR env przebieg jednego dnia z SPA kończy się succeeded lub partial, kroki i liczniki widoczne, API nie zasypia — b29748c
+- [x] 6.5 Lista postów w PR env chronologiczna i bez duplikatów; ponowny przebieg nie dodaje postów — b29748c
+- [x] 6.6 Nieudane posty widoczne w panelu admina, ponowienie tworzy przebieg POSTS — b29748c
+- [x] 6.7 Koszt przebiegu w PR env zgodny z szacunkiem i zaakceptowany przez użytkownika — b29748c

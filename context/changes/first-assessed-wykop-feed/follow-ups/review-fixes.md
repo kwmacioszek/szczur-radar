@@ -64,6 +64,22 @@ Items queued by `/10x-impl-review` triage that are not code fixes of the reviewe
   The admin did not expect the retry run that a range request queues before the range (leftovers
   first), nor that a range over stored posts assesses nothing ("nowe 0"): the form should say what a
   start will queue (e.g. "first a retry of N failed posts").
+  From the PR-env check (2026-10-09): the runs list does not show a range run's dates (the API already
+  returns `rangeFrom`/`rangeTo`); a running run shows only its finished steps' counters (e.g. "pobrane 244"
+  while `assess` works for minutes) — show the current step and progress; while a run is active the start
+  button should say why a second run is refused (one run at a time, 409 `pipeline_busy`) instead of only
+  failing.
+  A failed post queued for retry or being assessed should leave the failed list (or show "w kolejce" /
+  "oceniany") instead of staying there unchanged until the run ends.
+- [ ] **Store step is slow in the PR env:** `store` of 244 posts took 1 min 44 s (≈0.4 s per post over Railway's
+  private network) — check for per-post round trips (one `INSERT`/`SELECT` per post and RAW) and batch them.
+- [ ] **Investigate: the PR env web deployed an old commit (2026-10-09):** on the phase 5 push (`65e321f` +
+  `7d280d1`, 22:56) Railway deployed `szczur-radar-web` in `szczur-radar-pr-37` from `154bed8` (phase 4)
+  with status SUCCESS, so `/admin` was missing; the phase 6 push was SKIPPED (no web paths changed) and the
+  stale SPA stayed until `railway redeploy --from-source -s szczur-radar-web -e szczur-radar-pr-37`. Find why
+  (Wait for CI picking the previous commit's check suite? two commits in one push? watch paths?), and add a
+  check to the PR-env verification / `deploy-plan.md` troubleshooting: the web deployment's commit equals the
+  branch head.
 - [ ] **UI visual redesign (user's decision, 2026-10-08):** after the last phase (6), on this branch and PR,
   before the hand-over: a new look for the feed, admin panel and login, together with the hardening above;
   direction and styling approach to be decided then.
