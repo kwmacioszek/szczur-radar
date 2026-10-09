@@ -109,6 +109,12 @@ export default defineRailway(() => {
       LLM_SERVICE_TIER: preserve(),
       LLM_REASONING_EFFORT: preserve(),
       LLM_TIMEOUT: preserve(),
+      // Wykop application keys for the pipeline (szczur-radar-api/README.md, Wykop):
+      // optional — without them Wykop is a not-configured source. Production's are
+      // set and sealed by the operator; PR envs get the same keys from the GitHub
+      // secrets (CI step "Ensure PR-env Wykop keys"). Never values here.
+      WYKOP_KEY: preserve(),
+      WYKOP_SECRET: preserve(),
     },
   });
 

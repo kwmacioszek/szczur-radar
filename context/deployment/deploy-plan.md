@@ -157,6 +157,42 @@ Revert only the image switch: delete `szczur-radar-api/Dockerfile` (Railpack tak
 2. Redeploy `szczur-radar-api`. **Verify:** the pre-deploy `migrate` and the app start (both validate `LLM_*` and abort with `Invalid LLM configuration: …` on a bad value or `flex`/effort with another provider); `railway variable list -s szczur-radar-api -e production` shows the values above (the key masked). The app does not log the LLM settings at start, so the variable list is the record.
 3. A change of model or effort later = a new measurement (the tier — `default` / `flex` — is assumed not to change the answers: the user accepted that risk on 2026-10-06, so flex runs the configuration measured on `default`): add the configuration to `models.json`, record it with `GoldRecorder`, and change `default` only if it meets the thresholds in `GoldMetrics` (`RecordingsReplayTest` in CI).
 
+## first-assessed-wykop-feed: pierwszy oceniony feed z Wykopu (S-02)
+
+**Status (2026-10-09): in the PR env (#37), not merged.** S-02 adds the pipeline (fetch Wykop → store posts and RAW → assess with the LLM), the feed `GET /api/posts` and the admin panel `/admin`. Issue #14.
+
+### How the pipeline runs
+
+- **Inside the API process**, in the background — no separate cron service (this replaces "a separate Railway cron service" in phase 6 below and in `infrastructure.md`). An admin starts a run in `/admin` (`POST /api/admin/pipeline-runs`, 202): a date range (queued after a retry of leftover failed posts, if any) or chosen failed posts. Runs are queued and executed one at a time; their state is in Postgres (`pipeline_runs`, `pipeline_run_steps`, `posts`, `assessments`, `raw_payloads`).
+- **A deploy or sleep interrupts a running run.** On start the API marks unfinished runs `interrupted` and puts their claimed posts back; a later run (or a retry) picks them up. Rule: **do not merge to `main` while `/admin` shows a run `RUNNING`**, and do not push to a PR branch while testing a run in its PR env.
+- The daily automatic trigger is S-05 (`daily-scheduled-run-freshness`).
+
+### Variables (`szczur-radar-api`, names only)
+
+| Variable | Production | PR env |
+| --- | --- | --- |
+| `WYKOP_KEY`, `WYKOP_SECRET` | set by the operator, **sealed** | the same application keys, from the GitHub secrets `WYKOP_KEY` / `WYKOP_SECRET`, set by the `railway-config` step "Ensure PR-env Wykop keys" (only when they differ, never printed, never on production); without the secrets the step warns and the PR env runs without Wykop (a range run → 503 `source_not_configured`) |
+| `PIPELINE_LLM_CONCURRENCY` | optional, default `4` (parallel LLM calls per run; with `flex` more threads mean more 429s and fallbacks to the standard tier) | unset |
+
+Both Wykop keys are optional and must be set together (only one of them fails the start). `.railway/railway.ts` declares them with `preserve()`, which never creates a value.
+
+**Decision (2026-10-09):** real Wykop and LLM calls are allowed in PR environments (replaces "Keep them out of PR previews", phase 6 below). The PR env uses the CI LLM settings (a non-production key) and the **same Wykop application keys** as production — a deliberate exception to F-01's "secrets unavailable in PR environments" (`roadmap.md`, F-01).
+
+### Runbook — after the merge (operator; tracked in issue #14, not in the plan's Progress)
+
+0. Standing rule: no merge to `main` (= production deploy) while a run is `RUNNING` in `/admin`.
+1. Set `WYKOP_KEY` and `WYKOP_SECRET` on production with `--stdin` (never as arguments), then seal both: `railway variable set WYKOP_KEY --stdin -s szczur-radar-api -e production --skip-deploys` (same for `WYKOP_SECRET`). Redeploy the API; the pre-deploy `migrate` applies `V3`–`V5`.
+2. Log in as admin, open `/admin`: Wykop is checked as configured. Start a run for one day (yesterday).
+3. Refresh the runs list until it ends: status `succeeded` or `partial`, steps `fetch`, `store`, `select`, `assess`, `summarize` with counters; `/` lists the day's posts newest first; failed posts (if any) appear under "Nieudane posty".
+4. Close issue #14 with the result (merge commit, run counters, cost from `assessments` tokens).
+
+**Risk accepted:** before F-01 there is no database backup and no enforceable spend limit (`lessons.md`, Railway trial). A day is about 270 posts; the cost of a run follows the F-02 estimate for the production model (section above).
+
+### Local run
+
+- `compose.local.yaml` (Postgres 18) + `java -jar target/szczur-radar-api.jar` with `PG*`, `COOKIE_SECURE=false`, `LLM_*` (`~/.config/szczur-radar/llm.env`) and optionally `WYKOP_*` (`~/.config/szczur-radar/wykop.env`), sourced **in the same terminal** that starts the jar; `npm run dev` in `szczur-radar-web` (http://localhost:5173).
+- A volume from before F-03 (Python era) makes `migrate` fail with "Found non-empty schema(s) … but no schema history table": reset it with `docker compose -f compose.local.yaml down -v` (deletes local data), then `migrate` and `create-admin` again (password 12–128 characters).
+
 ## Phases
 
 ### [x] 1. Prepare the application
@@ -266,6 +302,8 @@ Enable full isolated PR environments after production works. Verify a preview ha
 Add support steps to the plan: for a build failure check Python version or Dockerfile detection; for a proxy 502 check the referenced hostname, port, and API bind address; for readiness 503 check the database reference and API logs; for a CI wait inspect GitHub permissions and workflow conclusions. For a bad release, use Railway’s deployment rollback, then assess database state separately. If backups or PITR cannot be enabled and restore-tested, stop before data collection and reopen the documented Render fallback decision.
 
 ### [ ] 6. Gate later external integrations
+
+> **Update 2026-10-09 (S-02):** superseded — the pipeline runs inside the API process, started by an admin; real Wykop and LLM calls are allowed in PR environments (section `first-assessed-wykop-feed` above). The daily trigger is S-05.
 
 When the MVP pipeline exists, add it as a separate Railway cron service from the backend codebase. Give it only the database and required Wykop/LLM credentials, make it exit after each run, and check its schema revision before writing. Railway uses UTC and skips a run while the previous run remains active (https://docs.railway.com/cron-jobs).
 

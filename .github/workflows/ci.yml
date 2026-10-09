@@ -280,6 +280,38 @@ jobs:
               echo "Removed $name copied into $TARGET_ENV"
             fi
           done
+      - name: Ensure PR-env Wykop keys
+        # The pipeline fetches Wykop with WYKOP_KEY / WYKOP_SECRET (optional:
+        # without them Wykop is a not-configured source and a range run is refused
+        # with 503 source_not_configured). PR envs use the same application keys as
+        # production, from the GitHub secrets: written only when they differ, never
+        # printed, never on production. Missing secrets only warn.
+        if: github.event_name == 'pull_request'
+        env:
+          CI_WYKOP_KEY: ${{ secrets.WYKOP_KEY }}
+          CI_WYKOP_SECRET: ${{ secrets.WYKOP_SECRET }}
+        run: |
+          set -o pipefail
+          if [ "$TARGET_ENV" = "production" ]; then
+            echo "::error::refusing to set Wykop keys on production"
+            exit 1
+          fi
+          if [ -z "$CI_WYKOP_KEY" ] || [ -z "$CI_WYKOP_SECRET" ]; then
+            echo "::warning::GitHub secrets WYKOP_KEY/WYKOP_SECRET missing: $TARGET_ENV runs without Wykop (range runs are refused)"
+            exit 0
+          fi
+          current=$(railway variable list -s szczur-radar-api -e "$TARGET_ENV" --json)
+          for name in WYKOP_KEY WYKOP_SECRET; do
+            desired_var="CI_$name"
+            desired="${!desired_var}"
+            if [ "$(printf '%s' "$current" | jq -r --arg n "$name" '.[$n] // ""')" = "$desired" ]; then
+              echo "$name already set in $TARGET_ENV"
+            else
+              printf '%s' "$desired" \
+                | railway variable set "$name" --stdin -s szczur-radar-api -e "$TARGET_ENV" --skip-deploys >/dev/null
+              echo "Set $name in $TARGET_ENV"
+            fi
+          done
       - name: Plan and gate
         run: |
           railway config plan --json > plan.json

@@ -3,7 +3,7 @@ project: "Szczur Radar"
 version: 2
 status: draft # draft | active | locked
 created: 2026-09-27
-updated: 2026-10-06
+updated: 2026-10-09
 prd_version: 2
 main_goal: speed
 top_blocker: time # secondary: decisions (LLM contract, filter scope and signal decision resolved 2026-09-27 — PRD v2)
@@ -98,7 +98,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 
 ### F-01: Bramka produkcyjnych danych
 
-- **Outcome:** (foundation) produkcja jest gotowa na zbieranie prawdziwych danych: aktywna subskrypcja, ustawione limity kosztów, włączona dzienna kopia wolumenu Postgres (zamiast PITR, wyłączonego 2026-10-06), restore drill zakończony zdrowym, odpytywalnym odtworzeniem, sekrety Wykopu/LLM zapieczętowane i niedostępne w środowiskach PR.
+- **Outcome:** (foundation) produkcja jest gotowa na zbieranie prawdziwych danych: aktywna subskrypcja, ustawione limity kosztów, włączona dzienna kopia wolumenu Postgres (zamiast PITR, wyłączonego 2026-10-06), restore drill zakończony zdrowym, odpytywalnym odtworzeniem, sekret LLM produkcji zapieczętowany i niedostępny w środowiskach PR; klucze Wykopu zapieczętowane na produkcji, ale te same klucze aplikacji świadomie używane w PR env (odstępstwo od pierwotnego zakresu, decyzja S-02 `first-assessed-wykop-feed`, 2026-10-09).
 - **Change ID:** production-data-gate
 - **PRD refs:** NFR (dane przechowywane bezterminowo; bezpieczeństwo przed utratą danych po stronie platformy), Open Question 4; guardrail kosztów LLM
 - **Unlocks:** S-05 (codzienne zbieranie prawdziwych danych na produkcji); ścieżka weryfikacji „odtworzenie backupu działa” wymagana przez `deploy-plan.md` przed fazą 6
@@ -206,7 +206,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Unknowns:**
   - Godzina uruchomienia i domyślny zakres dat/godzin pobierania dla przebiegu dziennego. — Owner: user. Block: no.
   - Jak traktować przebieg, w którym część ocen nie przeszła walidacji kontraktu (udany, częściowy czy nieudany dla etykiety świeżości). — Owner: user. Block: no.
-  - Sposób uruchamiania (zajawka z `api-docker-image`, 2026-10-04): użytkownik nie chce, żeby cron startował kontener z obrazem API. Kandydat: mały serwis cron Railway (obraz z `curl`) wysyła `POST` przez sieć prywatną do wewnętrznego endpointu API z tokenem; API odpowiada `202` i uruchamia pipeline w tle (zapytanie z sieci prywatnej budzi uśpione API). Do rozstrzygnięcia: uwierzytelnianie tokenem obok sesji (`SecurityConfig`, `AuthorizationCompletenessIT`), ochrona przed równoległym przebiegiem, przerwanie przebiegu przez deploy API, wspólny endpoint z ręcznym uruchomieniem (FR-022). Zmienia regułę „pipeline nie zależy od cyklu życia API” (`REPOSITORY_GUIDELINES.md` § Deployment, `infrastructure.md:23`, `:133`, `deploy-plan.md:195`) — zaktualizować te dokumenty przy planie S-05. `@Scheduled` w API odpada przy `sleepApplication: true`. — Owner: user. Block: no.
+  - Sposób uruchamiania (zajawka z `api-docker-image`, 2026-10-04): użytkownik nie chce, żeby cron startował kontener z obrazem API. Kandydat: mały serwis cron Railway (obraz z `curl`) wysyła `POST` przez sieć prywatną do wewnętrznego endpointu API z tokenem; API odpowiada `202` i uruchamia pipeline w tle (zapytanie z sieci prywatnej budzi uśpione API). Do rozstrzygnięcia: uwierzytelnianie tokenem obok sesji (`SecurityConfig`, `AuthorizationCompletenessIT`), ochrona przed równoległym przebiegiem, przerwanie przebiegu przez deploy API, wspólny endpoint z ręcznym uruchomieniem (FR-022). Od S-02 (`first-assessed-wykop-feed`, 2026-10-09) pipeline już działa w procesie API, uruchamiany przez admina (`POST /api/admin/pipeline-runs`, kolejka, jeden przebieg naraz, odzyskiwanie po restarcie), a reguła o niezależności od cyklu życia API jest zastąpiona w `REPOSITORY_GUIDELINES.md` § Deployment, `infrastructure.md` i `deploy-plan.md`; S-05 rozstrzyga tylko wyzwalacz dzienny. `@Scheduled` w API odpada przy `sleepApplication: true`. — Owner: user. Block: no.
 - **Risk:** Wprowadza zapis każdego przebiegu (potrzebny do etykiety świeżości) oraz sprawdzenie zgodności wersji schematu przed zapisem — chroni przed scenariuszem z pre-mortem w `infrastructure.md`, w którym automat po cichu zapisuje uszkodzone rekordy.
 - **Status:** proposed
 

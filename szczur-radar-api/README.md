@@ -79,6 +79,18 @@ Przebieg pipeline'u pobiera wpisy i znaleziska z Wykopu (S-02) kluczem aplikacji
 - Obie są **opcjonalne**: bez nich serwer, komendy i testy startują normalnie, a Wykop nie jest skonfigurowanym źródłem — przebieg zakresu dat, który go wymaga (domyślnie: wszystkie skonfigurowane źródła), jest odrzucany jako `source_not_configured` (`sources/wykop/WykopConfiguration`, `pipeline/step/SourceIngest`). Tylko jedna z dwóch przerywa start z komunikatem (bez wartości).
 - Start nie łączy się z Wykopem: token aplikacji jest pobierany przy pierwszym zapytaniu.
 - Lokalnie jak klucz LLM: poza repo, np. `~/.config/szczur-radar/wykop.env` (`chmod 600`), i `source` przed uruchomieniem.
+- PR env: job `railway-config` (krok „Ensure PR-env Wykop keys”) ustawia te same klucze aplikacji z sekretów GitHub `WYKOP_KEY`/`WYKOP_SECRET` (bez nich ostrzega, a PR env działa bez Wykopu). Produkcja: operator ustawia obie i je pieczętuje; `.railway/railway.ts` deklaruje je przez `preserve()` (`context/deployment/deploy-plan.md`, sekcja `first-assessed-wykop-feed`).
+
+## Pipeline
+
+Przebieg działa w procesie API, w tle (mapa: `src/main/java/pl/szczurradar/api/pipeline/CLAUDE.md`). Admin uruchamia go w `/admin` albo endpointem; przebiegi trafiają do kolejki i idą po jednym. Restart lub deploy przerywa trwający przebieg: przy starcie API oznacza go jako `interrupted` i oddaje jego posty do ponowienia.
+
+| Zmienna | Znaczenie |
+| --- | --- |
+| `PIPELINE_LLM_CONCURRENCY` | liczba równoległych ocen LLM w przebiegu (domyślnie `4`, min. `1`) |
+
+- Zakres dat: najpierw (jeśli są) ponowienie nieudanych postów, potem pobranie zakresu z wybranych źródeł (puste = wszystkie skonfigurowane), zapis nowych postów i ocena tylko tych, które ten przebieg zapisał pierwszy. Ponowny zakres tego samego dnia nie dodaje postów.
+- Post ma do 3 policzonych prób oceny (`failed`); trzecia nieudana robi z niego `dead` (bez ponawiania). Błąd techniczny nie zużywa próby.
 
 ## Baza lokalna
 
@@ -98,6 +110,8 @@ export PGHOST=127.0.0.1 PGPORT=5432 PGDATABASE=szczur_radar_local PGUSER=szczur_
 Wszystkie pięć musi być ustawione: bez nich start się nie powiedzie (Spring Session sprawdza URL JDBC już przy starcie). Sama baza nie musi działać — pula łączy jest leniwa, `/api/health` odpowiada, a `/api/ready` zwraca 503.
 
 Lokalnie po `http://` (bez HTTPS) ustaw `COOKIE_SECURE=false`, jeśli przeglądarka nie zapisuje ciasteczka `Secure` (Chrome i Firefox akceptują je na `localhost`). Tylko wartości `0`, `false`, `no` wyłączają `Secure`.
+
+Wolumen sprzed F-03 (baza z czasów Pythona) daje przy `migrate` błąd „Found non-empty schema(s) … but no schema history table”: wyzeruj go `docker compose -f compose.local.yaml down -v` (kasuje lokalne dane), potem `migrate` i `create-admin`. Zmienne (`PG*`, `LLM_*`, `WYKOP_*`) ustawiaj w tym samym terminalu, w którym startuje jar.
 
 ## Migracje (Flyway, fix-forward)
 
@@ -160,7 +174,8 @@ source ~/.config/szczur-radar/llm.env   # LLM_API_PROVIDER, LLM_MODEL, LLM_API_K
 ## API i sesja (kontrakt z SPA)
 
 - Trasy: `GET /api/health`, `GET /api/ready`, `POST /api/auth/login` (JSON `{email, password}`), `POST /api/auth/logout` (zawsze 204), `GET /api/auth/me` → `{id, email, role}`.
-- Błędy aplikacji mają kształt `{"detail": "<kod>"}`: `invalid_credentials`, `not_authenticated`, `forbidden`, `too_many_attempts` (+ `Retry-After`), `cross_origin`, `invalid_request`, `unsupported_media_type`. Nieznane pola w JSON są odrzucane.
+- Feed i pipeline (S-02): `GET /api/posts?page&size` (ocenione posty od najnowszych), admin: `POST /api/admin/pipeline-runs` (`{from, to, sources?}` albo `{postIds}` → 202), `GET /api/admin/pipeline-runs` (przebiegi z krokami i licznikami), `GET /api/admin/pipeline-runs/sources` (`[{source, configured}]`), `GET /api/admin/posts/failed` (nieudane i martwe z ostatnią próbą).
+- Błędy aplikacji mają kształt `{"detail": "<kod>"}`: `invalid_credentials`, `not_authenticated`, `forbidden`, `too_many_attempts` (+ `Retry-After`), `cross_origin`, `invalid_request`, `unsupported_media_type`, `pipeline_busy` (409), `post_dead` (400), `source_not_configured` (503). Nieznane pola w JSON są odrzucane.
 - Sesja: ciasteczko `sr_session` (`HttpOnly; Secure; SameSite=Strict; Path=/api; Max-Age=30 dni`), dane w tabelach `SPRING_SESSION*`; wygasa po 30 dniach bezczynności, ciasteczko jest odnawiane po każdym udanym, uwierzytelnionym żądaniu API. Unieważnienie wszystkich sesji użytkownika: `FindByIndexNameSessionRepository.findByPrincipalName(<uuid>)` (principal = UUID użytkownika).
 - CSRF: `SameSite=Strict` + `OriginGuardFilter` (obcy `Origin` przy zapisie → 403); tokeny CSRF Springa są wyłączone.
 - Limiter: 5 nieudanych prób / 15 min na e-mail i 20 na IP (`X-Real-IP` z krawędzi Railway), w pamięci procesu — poprawny przy jednej replice.
