@@ -17,6 +17,7 @@ import pl.szczurradar.api.agents.assessor.Preparation;
 import pl.szczurradar.api.agents.assessor.Provenance;
 import pl.szczurradar.api.agents.assessor.contract.AssessmentOutputV2;
 import pl.szczurradar.api.agents.assessor.validation.FailureClass;
+import pl.szczurradar.api.config.LlmProviderProperties.Provider;
 import pl.szczurradar.api.config.LlmProviderProperties.ServiceTier;
 import pl.szczurradar.api.llm.LlmResponse;
 import pl.szczurradar.api.measurement.GoldLabels.Post;
@@ -29,10 +30,14 @@ import pl.szczurradar.api.measurement.ModelsConfig.Model;
  */
 final class Replay {
 
-	/** Never called: replaying only evaluates recorded answers. */
+	/**
+	 * Never calls its client: replaying only evaluates recorded answers, whose provenance comes from
+	 * the recorded response. The provider and model are fixed placeholders (they would only label a
+	 * failed call, which a replay never makes), so no key, environment or network is needed.
+	 */
 	private static final Assessor ASSESSOR = new Assessor(request -> {
 		throw new IllegalStateException("a replay makes no model calls");
-	}, Clock.systemUTC());
+	}, Provider.OPENROUTER, "replay-makes-no-calls", Clock.systemUTC());
 
 	/**
 	 * @param results today's verdict per post with a current recording

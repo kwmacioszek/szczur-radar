@@ -60,7 +60,8 @@ class LiveSmokeTest {
 	@Test
 	void assessesThePilotSample() throws IOException {
 		LlmProviderProperties properties = LlmProviderProperties.from(new StandardEnvironment());
-		Assessor assessor = new Assessor(LlmClientFactory.create(properties), Clock.systemUTC());
+		Assessor assessor = new Assessor(LlmClientFactory.create(properties), properties.provider(), properties.model(),
+				Clock.systemUTC());
 		List<SampleRecord> sample = JsonMapper.shared()
 			.readValue(Files.readString(Path.of(System.getProperty("smoke.sample", DEFAULT_SAMPLE))),
 					new TypeReference<List<SampleRecord>>() {

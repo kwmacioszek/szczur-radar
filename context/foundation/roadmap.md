@@ -3,7 +3,7 @@ project: "Szczur Radar"
 version: 2
 status: draft # draft | active | locked
 created: 2026-09-27
-updated: 2026-10-06
+updated: 2026-10-09
 prd_version: 2
 main_goal: speed
 top_blocker: time # secondary: decisions (LLM contract, filter scope and signal decision resolved 2026-09-27 — PRD v2)
@@ -64,7 +64,7 @@ Na Wykopie (#gielda) i Reddicie codziennie pojawiają się setki postów o inwes
 | F-03 | java-api-rewrite               | (foundation) backend w Javie obsługuje funkcje S-01 przez dotychczasowe API; sesje JDBC, migracje fix-forward i szkielet Embabel | S-01          | FR-012, FR-013, FR-014, FR-015, FR-026, NFR (każdy chroniony zasób wymaga uwierzytelnienia — komplet testów autoryzacji)                                                                 | done |
 | F-02 | assessment-contract-harness    | (foundation) kontrakt oceny LLM V2 jest egzekwowany kodem, a model domyślny spełnia progi jakości na zestawie wzorcowym | F-03          | FR-004, Open Question 2 (rozstrzygnięte przez kontrakt, obecnie V2); guardrail jakości danych z LLM (bez halucynacji)                                                                     | done        |
 | S-01 | admin-bootstrap-and-login      | operator tworzy pierwszego admina przez CLI; admin loguje się i wylogowuje; niezalogowany widzi tylko ekran logowania           | —             | FR-012, FR-013, FR-014, FR-015, FR-026, NFR (każdy chroniony zasób wymaga uwierzytelnienia — komplet testów autoryzacji), NFR (brak wglądu w dane cudzych kont)                          | done |
-| S-02 | first-assessed-wykop-feed      | zalogowany użytkownik widzi chronologiczną listę postów z Wykopu ocenionych przez LLM                                           | S-01, F-02    | US-01, FR-001, FR-003, FR-004, FR-005, FR-006, FR-007, NFR (surowy payload oddzielony od danych aplikacji, bezstratny i kompresowalny), NFR (nowe źródło = tylko pozyskanie + mapowanie) | proposed |
+| S-02 | first-assessed-wykop-feed      | zalogowany użytkownik widzi chronologiczną listę postów z Wykopu ocenionych przez LLM                                           | S-01, F-02    | US-01, FR-001, FR-003, FR-004, FR-005, FR-006, FR-007, NFR (surowy payload oddzielony od danych aplikacji, bezstratny i kompresowalny), NFR (nowe źródło = tylko pozyskanie + mapowanie) | in-progress |
 | S-03 | post-detail-view               | użytkownik otwiera widok szczegółowy posta: ocena, surowe dane pod przełącznikiem, link do oryginału                            | S-02          | US-01, FR-009, FR-010                                                                                                                                                                    | proposed |
 | S-04 | filter-by-assessment           | użytkownik filtruje listę po spółce/temacie (tekstowo) i stanowisku autora wobec niej                                           | S-02          | US-01, FR-011a                                                                                                                                                                           | proposed |
 | S-05 | daily-scheduled-run-freshness  | przepływ uruchamia się sam codziennie, a użytkownik widzi datę ostatniej udanej aktualizacji                                    | S-02, F-01    | US-01, FR-002, FR-030                                                                                                                                                                    | proposed |
@@ -98,7 +98,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 
 ### F-01: Bramka produkcyjnych danych
 
-- **Outcome:** (foundation) produkcja jest gotowa na zbieranie prawdziwych danych: aktywna subskrypcja, ustawione limity kosztów, włączona dzienna kopia wolumenu Postgres (zamiast PITR, wyłączonego 2026-10-06), restore drill zakończony zdrowym, odpytywalnym odtworzeniem, sekrety Wykopu/LLM zapieczętowane i niedostępne w środowiskach PR.
+- **Outcome:** (foundation) produkcja jest gotowa na zbieranie prawdziwych danych: aktywna subskrypcja, ustawione limity kosztów, włączona dzienna kopia wolumenu Postgres (zamiast PITR, wyłączonego 2026-10-06), restore drill zakończony zdrowym, odpytywalnym odtworzeniem, sekret LLM produkcji zapieczętowany i niedostępny w środowiskach PR; klucze Wykopu zapieczętowane na produkcji, ale te same klucze aplikacji świadomie używane w PR env (odstępstwo od pierwotnego zakresu, decyzja S-02 `first-assessed-wykop-feed`, 2026-10-09).
 - **Change ID:** production-data-gate
 - **PRD refs:** NFR (dane przechowywane bezterminowo; bezpieczeństwo przed utratą danych po stronie platformy), Open Question 4; guardrail kosztów LLM
 - **Unlocks:** S-05 (codzienne zbieranie prawdziwych danych na produkcji); ścieżka weryfikacji „odtworzenie backupu działa” wymagana przez `deploy-plan.md` przed fazą 6
@@ -169,7 +169,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
   - Warunki i limity dostępu do API Wykopu przy codziennym użyciu. — Owner: user. Block: no.
   - Które typy zasobów Wykopu z #gielda wchodzą do MVP (wpis → `post`, znalezisko → `link`); komentarze są poza zakresem (PRD §Non-Goals), mimo że kształt wejścia kontraktu je obsługuje. — Owner: user. Block: no.
 - **Risk:** Wciąż największy wycinek (pobranie, deduplikacja, ocena, zapis z pochodzeniem oceny, lista), ale ryzyko jakości oceny przeszło do F-02, więc tu zostaje integracja; jeśli `/10x-plan` uzna go za zbyt szeroki, może rozbić go na kilka zmian.
-- **Status:** proposed
+- **Status:** in-progress
 
 ### S-03: Widok szczegółowy posta
 
@@ -205,8 +205,9 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:**
   - Godzina uruchomienia i domyślny zakres dat/godzin pobierania dla przebiegu dziennego. — Owner: user. Block: no.
+  - Kompletność dnia: stronicowanie wyszukiwarki Wykopu może pominąć wpis, gdy między stronami coś zniknie (`WykopRepository.search` liczy pobrane do `total`), a dociąga go dopiero ponowny przebieg tego samego dnia (deduplikacja pomija resztę). Przebieg dzienny potrzebuje zakładki (np. ponownie poprzedni dzień) albo drugiego przejścia — przegląd S-02, F9 (2026-10-09). — Owner: user. Block: no.
   - Jak traktować przebieg, w którym część ocen nie przeszła walidacji kontraktu (udany, częściowy czy nieudany dla etykiety świeżości). — Owner: user. Block: no.
-  - Sposób uruchamiania (zajawka z `api-docker-image`, 2026-10-04): użytkownik nie chce, żeby cron startował kontener z obrazem API. Kandydat: mały serwis cron Railway (obraz z `curl`) wysyła `POST` przez sieć prywatną do wewnętrznego endpointu API z tokenem; API odpowiada `202` i uruchamia pipeline w tle (zapytanie z sieci prywatnej budzi uśpione API). Do rozstrzygnięcia: uwierzytelnianie tokenem obok sesji (`SecurityConfig`, `AuthorizationCompletenessIT`), ochrona przed równoległym przebiegiem, przerwanie przebiegu przez deploy API, wspólny endpoint z ręcznym uruchomieniem (FR-022). Zmienia regułę „pipeline nie zależy od cyklu życia API” (`REPOSITORY_GUIDELINES.md` § Deployment, `infrastructure.md:23`, `:133`, `deploy-plan.md:195`) — zaktualizować te dokumenty przy planie S-05. `@Scheduled` w API odpada przy `sleepApplication: true`. — Owner: user. Block: no.
+  - Sposób uruchamiania (zajawka z `api-docker-image`, 2026-10-04): użytkownik nie chce, żeby cron startował kontener z obrazem API. Kandydat: mały serwis cron Railway (obraz z `curl`) wysyła `POST` przez sieć prywatną do wewnętrznego endpointu API z tokenem; API odpowiada `202` i uruchamia pipeline w tle (zapytanie z sieci prywatnej budzi uśpione API). Do rozstrzygnięcia: uwierzytelnianie tokenem obok sesji (`SecurityConfig`, `AuthorizationCompletenessIT`), ochrona przed równoległym przebiegiem, przerwanie przebiegu przez deploy API, wspólny endpoint z ręcznym uruchomieniem (FR-022). Od S-02 (`first-assessed-wykop-feed`, 2026-10-09) pipeline już działa w procesie API, uruchamiany przez admina (`POST /api/admin/pipeline-runs`, kolejka, jeden przebieg naraz, odzyskiwanie po restarcie), a reguła o niezależności od cyklu życia API jest zastąpiona w `REPOSITORY_GUIDELINES.md` § Deployment, `infrastructure.md` i `deploy-plan.md`; S-05 rozstrzyga tylko wyzwalacz dzienny. `@Scheduled` w API odpada przy `sleepApplication: true`. — Owner: user. Block: no.
 - **Risk:** Wprowadza zapis każdego przebiegu (potrzebny do etykiety świeżości) oraz sprawdzenie zgodności wersji schematu przed zapisem — chroni przed scenariuszem z pre-mortem w `infrastructure.md`, w którym automat po cichu zapisuje uszkodzone rekordy.
 - **Status:** proposed
 

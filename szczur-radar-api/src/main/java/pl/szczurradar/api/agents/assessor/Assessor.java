@@ -4,6 +4,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Objects;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
@@ -17,8 +18,11 @@ import pl.szczurradar.api.agents.assessor.validation.OutputParser;
 import pl.szczurradar.api.agents.assessor.validation.RuleBasedValidator;
 import pl.szczurradar.api.agents.assessor.validation.ValidationResult;
 import pl.szczurradar.api.agents.assessor.validation.Violation;
+import pl.szczurradar.api.config.LlmProviderProperties;
+import pl.szczurradar.api.config.LlmProviderProperties.Provider;
 import pl.szczurradar.api.llm.LlmCallException;
 import pl.szczurradar.api.llm.LlmClient;
+import pl.szczurradar.api.llm.LlmConfigurationException;
 import pl.szczurradar.api.llm.LlmRequest;
 import pl.szczurradar.api.llm.LlmResponse;
 
@@ -35,6 +39,10 @@ public class Assessor {
 
 	private final LlmClient llmClient;
 
+	private final Provider provider;
+
+	private final String model;
+
 	private final Clock clock;
 
 	private final OutputParser parser = new OutputParser();
@@ -43,13 +51,19 @@ public class Assessor {
 
 	/** The client is built on the first assessment, not at start-up ({@code llm/LlmConfiguration}). */
 	@Autowired
-	public Assessor(@Lazy LlmClient llmClient) {
-		this(llmClient, Clock.systemUTC());
+	public Assessor(@Lazy LlmClient llmClient, LlmProviderProperties properties) {
+		this(llmClient, properties.provider(), properties.model(), Clock.systemUTC());
 	}
 
-	public Assessor(LlmClient llmClient, Clock clock) {
-		this.llmClient = llmClient;
-		this.clock = clock;
+	/**
+	 * @param provider the configured provider, recorded for a call that produced no answer
+	 * @param model the configured model id, recorded for a call that produced no answer
+	 */
+	public Assessor(LlmClient llmClient, Provider provider, String model, Clock clock) {
+		this.llmClient = Objects.requireNonNull(llmClient, "llmClient");
+		this.provider = Objects.requireNonNull(provider, "provider");
+		this.model = Objects.requireNonNull(model, "model");
+		this.clock = Objects.requireNonNull(clock, "clock");
 	}
 
 	/** The model call for {@code input}, or the prefilter's result when the entry has no content. */
@@ -93,7 +107,9 @@ public class Assessor {
 	/**
 	 * Assesses {@code input}: no model call for an entry without content, exactly one
 	 * {@link LlmClient#complete} otherwise. A failed call is a {@code failed} result with
-	 * {@code provider_error} or {@code timeout}, never an exception.
+	 * {@code provider_error} or {@code timeout}, never an exception — except an
+	 * {@link LlmConfigurationException}: a refused key, credit or model says nothing about this entry,
+	 * so it is thrown and no attempt is recorded.
 	 */
 	public AssessmentResult assess(AssessmentInputV1 input) {
 		return switch (prepare(input)) {
@@ -108,19 +124,30 @@ public class Assessor {
 		try {
 			response = llmClient.complete(request.request());
 		}
+		catch (LlmConfigurationException ex) {
+			throw ex;
+		}
 		catch (LlmCallException ex) {
-			return callFailed(request, ex, Duration.between(start, clock.instant()));
+			return failed(request, ex, Duration.between(start, clock.instant()));
 		}
 		Instant end = clock.instant();
 		return evaluate(input, request, response, Duration.between(start, end), end);
 	}
 
-	private AssessmentResult callFailed(PreparedRequest request, LlmCallException ex, Duration duration) {
+	/**
+	 * The {@code failed} result of a call to {@code request} that produced no answer:
+	 * {@code provider_error} or {@code timeout}, with the configured provider and model (§15) and
+	 * the call fields the client reported. The only place such a result is built — {@link #assess}
+	 * and callers sending prepared requests themselves both use it.
+	 *
+	 * @param duration wall time of the call
+	 */
+	public AssessmentResult failed(PreparedRequest request, LlmCallException ex, Duration duration) {
 		FailureClass failureClass = switch (ex.failure()) {
 			case PROVIDER_ERROR -> FailureClass.PROVIDER_ERROR;
 			case TIMEOUT -> FailureClass.TIMEOUT;
 		};
-		Provenance provenance = new Provenance(Provenance.Source.MODEL, null, null, null, ex.serviceTier(),
+		Provenance provenance = new Provenance(Provenance.Source.MODEL, provider, model, null, ex.serviceTier(),
 				ex.flexFallback(), null, null, request.promptVersion(), AssessmentOutputV2.CONTRACT_VERSION,
 				clock.instant(), null, null, null, duration.toMillis(), ex.attempts());
 		String message = ex.getMessage() != null ? ex.getMessage() : failureClass.value();

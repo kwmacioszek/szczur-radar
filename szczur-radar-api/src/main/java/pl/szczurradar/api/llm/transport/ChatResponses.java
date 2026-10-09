@@ -1,0 +1,72 @@
+package pl.szczurradar.api.llm.transport;
+
+import java.util.Locale;
+import java.util.Objects;
+import java.util.stream.Collectors;
+
+import org.jspecify.annotations.Nullable;
+import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.ai.chat.model.Generation;
+
+import pl.szczurradar.api.text.Whitespace;
+
+/** Reading a Spring AI {@link ChatResponse} the same way for every provider. */
+public final class ChatResponses {
+
+	private ChatResponses() {
+	}
+
+	/** The text of all generations, without thought parts (Gemini marks them {@code isThought}). */
+	public static String text(ChatResponse response) {
+		return response.getResults()
+			.stream()
+			.filter(generation -> !Boolean.TRUE.equals(generation.getOutput().getMetadata().get("isThought")))
+			.map(generation -> generation.getOutput().getText())
+			.filter(Objects::nonNull)
+			.collect(Collectors.joining());
+	}
+
+	/**
+	 * Rejects an answer without text — empty or only white space of the contract's set (§10) — whatever
+	 * the finish reason: a {@code stop} with no text is no answer either. Never retried.
+	 */
+	public static void requireText(ChatResponse response) {
+		if (Whitespace.strip(text(response)).isEmpty()) {
+			throw new TransportException(TransportException.Kind.REJECTED,
+					"no text, finish reason " + finishReasons(response), null, null);
+		}
+	}
+
+	/** The finish reasons of all generations, lower case, e.g. {@code stop} or {@code content_filter}. */
+	public static String finishReasons(ChatResponse response) {
+		return response.getResults()
+			.stream()
+			.map(Generation::getMetadata)
+			.map(metadata -> String.valueOf(metadata.getFinishReason()).toLowerCase(Locale.ROOT))
+			.collect(Collectors.joining(","));
+	}
+
+	public static @Nullable String model(ChatResponse response) {
+		String model = response.getMetadata().getModel();
+		return model.isBlank() ? null : model;
+	}
+
+	public static @Nullable Integer inputTokens(ChatResponse response) {
+		return positiveOrNull(response.getMetadata().getUsage().getPromptTokens());
+	}
+
+	public static @Nullable Integer outputTokens(ChatResponse response) {
+		return positiveOrNull(response.getMetadata().getUsage().getCompletionTokens());
+	}
+
+	public static @Nullable Integer cachedTokens(ChatResponse response) {
+		Long cached = response.getMetadata().getUsage().getCacheReadInputTokens();
+		return cached == null ? null : Math.toIntExact(cached);
+	}
+
+	/** Spring AI reports a missing count as 0; a real call always has prompt and completion tokens. */
+	private static @Nullable Integer positiveOrNull(@Nullable Integer tokens) {
+		return tokens == null || tokens <= 0 ? null : tokens;
+	}
+
+}

@@ -47,8 +47,12 @@ export default defineRailway(() => {
 
   // Postgres. `postgres()` takes no deploy options, so serverless sleep is set
   // on the node directly (DatabaseNode carries `deploy`); Object.assign keeps
-  // the non-enumerable `env` refs.
-  const db = Object.assign(postgres("postgres"), {
+  // the non-enumerable `env` refs. The region applies when the database is
+  // created: IaC does not move an existing one (a plan with it shows no
+  // change). Until 2026-10 production's and the PR envs' Postgres ran in `sfo`
+  // — moving it is an operator action per environment (deploy-plan.md,
+  // section first-assessed-wykop-feed).
+  const db = Object.assign(postgres("postgres", { region: REGION }), {
     deploy: { sleepApplication: true },
   });
 
@@ -109,6 +113,15 @@ export default defineRailway(() => {
       LLM_SERVICE_TIER: preserve(),
       LLM_REASONING_EFFORT: preserve(),
       LLM_TIMEOUT: preserve(),
+      // Wykop application keys for the pipeline (szczur-radar-api/README.md, Wykop):
+      // optional — without them Wykop is a not-configured source. Production's are
+      // set and sealed by the operator; PR envs get the same keys from the GitHub
+      // secrets (CI step "Ensure PR-env Wykop keys"). Never values here.
+      WYKOP_KEY: preserve(),
+      WYKOP_SECRET: preserve(),
+      // Optional: parallel LLM calls of a pipeline run (default 4). Not a secret;
+      // declared so that a value set by the operator is kept, never created here.
+      PIPELINE_LLM_CONCURRENCY: preserve(),
     },
   });
 

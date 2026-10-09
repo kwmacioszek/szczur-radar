@@ -19,7 +19,8 @@ import tools.jackson.databind.json.JsonMapper;
  * ({@code GET search/entries}) and links ({@code GET search/links}) with a tag, added within a time
  * range, newest first, {@value #PAGE_SIZE} per page until the answer's {@code pagination.total} is
  * reached; each element is kept once (by resource and id) and an element of an unexpected shape is
- * skipped and counted ({@link WykopSearchResult}). Elements come back in the source's shape ({@link WykopItem}); mapping is
+ * skipped and counted ({@link WykopSearchResult}). Elements come back in the source's shape: the
+ * fields the assessment needs ({@link WykopItem}) next to the raw element; mapping is
  * {@link WykopMapper}'s job.
  *
  * <p>{@code GET search/all} is not used: it has no pages and returns only a preview (e.g. 3 of 262
@@ -92,17 +93,17 @@ public class WykopRepository {
 	 *     the page limit is reached or the API fails
 	 */
 	public WykopSearchResult itemsAddedBetween(String tag, LocalDateTime from, LocalDateTime to) {
-		Map<String, WykopItem> items = new LinkedHashMap<>();
+		Map<String, WykopSearchResult.Element> elements = new LinkedHashMap<>();
 		int skipped = 0;
 		for (Resource resource : Resource.values()) {
-			skipped += search(resource, tag, from, to, items);
+			skipped += search(resource, tag, from, to, elements);
 		}
-		return new WykopSearchResult(new ArrayList<>(items.values()), skipped);
+		return new WykopSearchResult(new ArrayList<>(elements.values()), skipped);
 	}
 
-	/** Adds the resource's elements to {@code items} (keyed by resource and id); returns the skipped count. */
+	/** Adds the resource's elements to {@code elements} (keyed by resource and id); returns the skipped count. */
 	private int search(Resource resource, String tag, LocalDateTime from, LocalDateTime to,
-			Map<String, WykopItem> items) {
+			Map<String, WykopSearchResult.Element> elements) {
 		int received = 0;
 		int skipped = 0;
 		for (int page = 1; page <= MAX_PAGES; page++) {
@@ -134,7 +135,7 @@ public class WykopRepository {
 					continue;
 				}
 				// Pages shift when elements are added or removed while paging: keep each element once.
-				items.putIfAbsent(key(item, items.size()), item);
+				elements.putIfAbsent(key(item, elements.size()), new WykopSearchResult.Element(item, element));
 			}
 			int total = answer.path("pagination").path("total").asInt(-1);
 			if (data.isEmpty() || (total >= 0 && received >= total)) {

@@ -19,10 +19,10 @@ import org.junit.jupiter.api.Test;
 import pl.szczurradar.api.agents.assessor.Prefilter;
 import pl.szczurradar.api.agents.assessor.contract.Item;
 import pl.szczurradar.api.agents.assessor.contract.Relevance;
-import pl.szczurradar.api.agents.assessor.text.Whitespace;
 import pl.szczurradar.api.measurement.GoldLabels.Label;
 import pl.szczurradar.api.measurement.GoldLabels.LabeledTarget;
 import pl.szczurradar.api.measurement.GoldLabels.Post;
+import pl.szczurradar.api.text.Whitespace;
 
 /**
  * The gold set's files ({@code fixtures/assessor/gold/}). Skipped while a file does not exist yet —

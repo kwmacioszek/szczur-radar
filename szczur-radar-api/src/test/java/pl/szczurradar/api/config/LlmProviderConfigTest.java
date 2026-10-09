@@ -182,6 +182,21 @@ class LlmProviderConfigTest {
 	}
 
 	@Test
+	void timeoutAbove30MinutesFailsTheStart() {
+		// Gemini takes the timeout as int milliseconds (Math.toIntExact): an unbounded value overflows.
+		assertThat(LlmProviderProperties
+			.from(environment("gemini", "gemini-3.1-flash-lite", "synthetic-key", "LLM_TIMEOUT=30m"))
+			.timeout()).isEqualTo(LlmProviderProperties.MAX_TIMEOUT);
+		assertThatIllegalStateException()
+			.isThrownBy(() -> environment("gemini", "gemini-3.1-flash-lite", "very-secret-key", "LLM_TIMEOUT=31m"))
+			.withMessageContaining("LLM_TIMEOUT must be at most 30m (got '31m')")
+			.withMessageNotContaining("very-secret-key");
+		assertThatIllegalStateException()
+			.isThrownBy(() -> environment("gemini", "gemini-3.1-flash-lite", "synthetic-key", "LLM_TIMEOUT=30d"))
+			.withMessageContaining("LLM_TIMEOUT must be at most 30m (got '30d')");
+	}
+
+	@Test
 	void flexAndReasoningEffortAreOnlyForOpenrouter() {
 		assertThatIllegalStateException()
 			.isThrownBy(() -> environment("gemini", "gemini-3.1-flash-lite", "very-secret-key", "LLM_SERVICE_TIER=flex"))

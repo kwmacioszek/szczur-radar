@@ -81,6 +81,19 @@ class WykopMapperTest {
 	}
 
 	@Test
+	void nulIsRemovedFromTheTextAndATextOfOnlyNulIsEmpty() {
+		// The real entry with a NUL put into its content (minimally changed recording); the database
+		// rejects U+0000, and it carries no meaning in a post.
+		WykopItem entry = fixture("entry.json");
+		WykopItem withNul = new WykopItem(entry.resource(), entry.id(), entry.createdAt(),
+				entry.content() + "\u0000", null, null, entry.tags(), entry.author(), entry.slug(), entry.media());
+
+		assertThat(WykopMapper.map(withNul, "gielda").item().body()).isEqualTo(entry.content());
+		assertThat(WykopMapper.map(item("link", "2026-09-29 20:00:00", null, "\u0000 ", "Opis"), "gielda").item().title())
+			.isNull();
+	}
+
+	@Test
 	void anElementWithoutTextIsRejected() {
 		assertThatExceptionOfType(UnmappableItemException.class)
 			.isThrownBy(() -> WykopMapper.map(item("entry", "2026-09-29 20:00:00", " \n", null, null), "gielda"))

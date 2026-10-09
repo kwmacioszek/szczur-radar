@@ -40,8 +40,12 @@ public final class OutputParser {
 		this.schema = registry.getSchema(schemaText(), InputFormat.JSON);
 	}
 
-	/** The V2 output schema as stored in the resource. */
+	/** The V2 output schema as stored in the resource, read once (thread-safe: class initialization). */
 	public static String schemaText() {
+		return SchemaText.TEXT;
+	}
+
+	private static String readSchemaText() {
 		try (InputStream in = OutputParser.class.getResourceAsStream(SCHEMA_RESOURCE)) {
 			if (in == null) {
 				throw new IllegalStateException("missing classpath resource " + SCHEMA_RESOURCE);
@@ -51,6 +55,13 @@ public final class OutputParser {
 		catch (IOException ex) {
 			throw new UncheckedIOException(ex);
 		}
+	}
+
+	/** Holder of the schema text: read on first use, never again. */
+	private static final class SchemaText {
+
+		static final String TEXT = readSchemaText();
+
 	}
 
 	/** Parses {@code raw} strictly; never throws for bad model output. */

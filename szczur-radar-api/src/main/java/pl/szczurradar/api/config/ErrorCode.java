@@ -31,7 +31,16 @@ public enum ErrorCode {
 	INVALID_REQUEST(HttpStatus.BAD_REQUEST),
 
 	/** A body in a format other than JSON. */
-	UNSUPPORTED_MEDIA_TYPE(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
+	UNSUPPORTED_MEDIA_TYPE(HttpStatus.UNSUPPORTED_MEDIA_TYPE),
+
+	/** A pipeline run is already queued or running; the request created nothing. */
+	PIPELINE_BUSY(HttpStatus.CONFLICT),
+
+	/** A posts run named a dead post (3 failed attempts); reviving one is outside S-02. */
+	POST_DEAD(HttpStatus.BAD_REQUEST),
+
+	/** A range run needs a source that is not configured here (e.g. no keys), or no source is. */
+	SOURCE_NOT_CONFIGURED(HttpStatus.SERVICE_UNAVAILABLE);
 
 	private final HttpStatus status;
 

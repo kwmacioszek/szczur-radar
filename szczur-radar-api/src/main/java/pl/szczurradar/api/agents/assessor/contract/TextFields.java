@@ -1,6 +1,6 @@
 package pl.szczurradar.api.agents.assessor.contract;
 
-import pl.szczurradar.api.agents.assessor.text.Whitespace;
+import pl.szczurradar.api.text.Whitespace;
 
 /** A document with the two quotable text fields of contract-v2.md §2: {@code title} and {@code body}. */
 public sealed interface TextFields permits Item, Parent {

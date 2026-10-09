@@ -1,0 +1,70 @@
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { ApiError } from './client'
+import { fetchRuns, fetchSources, retryPosts, startErrorMessage, startRange } from './pipeline'
+import { fetchFailedPosts, fetchPosts } from './posts'
+
+function respond(status: number, body: unknown) {
+  // A new Response per call: a body can be read only once.
+  const fetchMock = vi.fn().mockImplementation(
+    async () =>
+      new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } }),
+  )
+  vi.stubGlobal('fetch', fetchMock)
+  return fetchMock
+}
+
+function sent(fetchMock: ReturnType<typeof respond>): { path: string; method?: string; body?: unknown } {
+  const [path, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+  return { path, method: init.method, body: init.body ? JSON.parse(init.body as string) : undefined }
+}
+
+describe('pipeline and posts API', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('starts a range with the chosen sources', async () => {
+    const fetchMock = respond(202, [])
+    await startRange('2026-10-01', '2026-10-02', ['wykop'])
+    expect(sent(fetchMock)).toEqual({
+      path: '/api/admin/pipeline-runs',
+      method: 'POST',
+      body: { from: '2026-10-01', to: '2026-10-02', sources: ['wykop'] },
+    })
+  })
+
+  it('retries the given posts', async () => {
+    const fetchMock = respond(202, [])
+    await retryPosts(['a', 'b'])
+    expect(sent(fetchMock).body).toEqual({ postIds: ['a', 'b'] })
+  })
+
+  it('reads pages of posts, failed posts and runs, and the sources', async () => {
+    const fetchMock = respond(200, { items: [], page: 2, size: 50, total: 0 })
+    await fetchPosts(2)
+    await fetchFailedPosts()
+    await fetchRuns()
+    await fetchSources()
+    expect(fetchMock.mock.calls.map((call) => call[0])).toEqual([
+      '/api/posts?page=2&size=50',
+      '/api/admin/posts/failed?page=0&size=50',
+      '/api/admin/pipeline-runs?page=0&size=20',
+      '/api/admin/pipeline-runs/sources',
+    ])
+  })
+
+  it.each([
+    ['pipeline_busy', 'Przebieg już trwa.'],
+    ['post_dead', 'nie można już ponowić'],
+    ['source_not_configured', 'nie jest skonfigurowane'],
+    ['invalid_request', 'maks. 7 dni'],
+  ])('explains %s in Polish', (detail, text) => {
+    expect(startErrorMessage(new ApiError(400, detail))).toContain(text)
+  })
+
+  it('falls back to a generic message', () => {
+    expect(startErrorMessage(new TypeError('Failed to fetch'))).toBe(
+      'Nie udało się uruchomić przebiegu. Spróbuj ponownie.',
+    )
+  })
+})

@@ -25,8 +25,13 @@ import tools.jackson.databind.node.ObjectNode;
  * app key and secret, then authorized {@code GET}s returning the JSON answer. The token is kept and
  * fetched again once when a call answers 401. No retries otherwise — the caller decides.
  *
- * <p>The key and secret are secrets: they are only sent to {@code auth} and never appear in an
- * exception message or {@link #toString()}. One instance per run; it is thread-safe.
+ * <p>The key, secret and token are secrets: the key and secret are only sent to {@code auth}, and
+ * none of them appears in an exception message or {@link #toString()} — every message passes
+ * through {@link #clean} (each secret → {@code <hidden>}, at most {@value #MAX_MESSAGE} characters),
+ * also when Wykop quotes them in an error body, and including the token a request used when another
+ * thread has replaced it since. The original transport or parse exception is never attached as the
+ * cause: its message (e.g. Jackson quoting the answer) would bypass the masking in a stack trace. One
+ * instance per run; it is thread-safe.
  */
 public class WykopApiClient {
 
@@ -34,7 +39,7 @@ public class WykopApiClient {
 
 	public static final Duration DEFAULT_TIMEOUT = Duration.ofSeconds(30);
 
-	private static final int MAX_ERROR_BODY = 300;
+	private static final int MAX_MESSAGE = 500;
 
 	private final URI baseUrl;
 
@@ -71,12 +76,14 @@ public class WykopApiClient {
 	 */
 	public JsonNode get(String path, Map<String, ?> query) {
 		URI uri = baseUrl.resolve(path + queryString(query));
+		String call = "GET " + path;
 		String used = currentToken();
-		HttpResponse<String> response = send(authorized(uri, used));
+		HttpResponse<String> response = send(authorized(uri, used), used);
 		if (response.statusCode() == 401) {
-			response = send(authorized(uri, refreshToken(used)));
+			used = refreshToken(used);
+			response = send(authorized(uri, used), used);
 		}
-		return parse(requireSuccess(response, "GET " + path), "GET " + path);
+		return parse(requireSuccess(response, call, used), call, used);
 	}
 
 	@Override
@@ -106,7 +113,7 @@ public class WykopApiClient {
 			.header("Content-Type", "application/json")
 			.POST(HttpRequest.BodyPublishers.ofString(body))
 			.build();
-		JsonNode answer = parse(requireSuccess(send(request), "auth"), "auth");
+		JsonNode answer = parse(requireSuccess(send(request, null), "auth", null), "auth", null);
 		String fresh = answer.path("data").path("token").asString("");
 		if (fresh.isEmpty()) {
 			throw new WykopApiException(WykopFailure.MALFORMED_ANSWER, "Wykop auth answered without data.token");
@@ -124,14 +131,14 @@ public class WykopApiClient {
 			.build();
 	}
 
-	private HttpResponse<String> send(HttpRequest request) {
+	/** @param bearer the token the request sent, {@code null} for {@code auth} */
+	private HttpResponse<String> send(HttpRequest request, @Nullable String bearer) {
 		try {
 			return http.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
 		}
 		catch (IOException ex) {
 			throw new WykopApiException(WykopFailure.TRANSPORT,
-					"Wykop " + request.method() + " " + request.uri().getPath() + " failed: " + ex,
-					ex);
+					clean("Wykop " + request.method() + " " + request.uri().getPath() + " failed: " + ex, bearer));
 		}
 		catch (InterruptedException ex) {
 			Thread.currentThread().interrupt();
@@ -139,25 +146,39 @@ public class WykopApiClient {
 		}
 	}
 
-	private static String requireSuccess(HttpResponse<String> response, String call) {
+	private String requireSuccess(HttpResponse<String> response, String call, @Nullable String bearer) {
 		int status = response.statusCode();
 		if (status < 200 || status > 299) {
-			// The auth request holds the secret, but only the answer's body is quoted here.
 			String body = response.body() == null ? "" : response.body();
-			throw WykopApiException.httpStatus(status, "Wykop " + call + " answered HTTP " + status + ": "
-					+ body.substring(0, Math.min(MAX_ERROR_BODY, body.length())));
+			throw WykopApiException.httpStatus(status,
+					clean("Wykop " + call + " answered HTTP " + status + ": " + body, bearer));
 		}
 		return response.body();
 	}
 
-	private JsonNode parse(String body, String call) {
+	private JsonNode parse(String body, String call, @Nullable String bearer) {
 		try {
 			return json.readTree(body);
 		}
 		catch (JacksonException ex) {
 			throw new WykopApiException(WykopFailure.MALFORMED_ANSWER,
-					"Wykop " + call + " answered with invalid JSON: " + ex.getOriginalMessage(), ex);
+					clean("Wykop " + call + " answered with invalid JSON: " + ex.getOriginalMessage(), bearer));
 		}
+	}
+
+	/**
+	 * {@code text} with the key, the secret, the current token and {@code bearer} (the token the
+	 * request used, which another thread may already have replaced) replaced by {@code <hidden>} — an
+	 * error body may quote them — capped at {@value #MAX_MESSAGE} characters after masking.
+	 */
+	private String clean(String text, @Nullable String bearer) {
+		String cleaned = text.replace(key, "<hidden>").replace(secret, "<hidden>");
+		for (String used : new String[] { token, bearer }) {
+			if (used != null && !used.isEmpty()) {
+				cleaned = cleaned.replace(used, "<hidden>");
+			}
+		}
+		return cleaned.length() > MAX_MESSAGE ? cleaned.substring(0, MAX_MESSAGE) + "…" : cleaned;
 	}
 
 	private static String queryString(Map<String, ?> query) {
