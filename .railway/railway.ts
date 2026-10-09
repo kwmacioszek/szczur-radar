@@ -16,9 +16,9 @@ import { defineRailway, github, postgres, preserve, project, service } from "rai
 // wait for the whole GitHub Actions workflow conclusion. Declared here so IaC
 // does not reset the operator's toggle (a plan otherwise shows true → null).
 //
-// `sleepApplication: true` (serverless sleep) on all three services mirrors
-// what the operator set in the dashboard. It MUST stay declared: without it an
-// apply would switch sleep off (cost). Keep this file in sync with production —
+// `sleepApplication: true` (serverless sleep) on api and web mirrors what the
+// operator set in the dashboard; Postgres declares `false` (see below). The
+// setting MUST stay declared on all three: without it an apply would change it. Keep this file in sync with production —
 // `railway config plan --detailed-exit-code` on `production` must exit 0 before
 // any automatic apply (lessons.md, Railway IaC in CI).
 //
@@ -52,8 +52,15 @@ export default defineRailway(() => {
   // change). Until 2026-10 production's and the PR envs' Postgres ran in `sfo`
   // — moving it is an operator action per environment (deploy-plan.md,
   // section first-assessed-wykop-feed).
+  // Serverless sleep is OFF for Postgres since 2026-10-09: after its move to
+  // europe-west4 the sleeping database did not wake on private-network traffic
+  // (logs end at "Mounting volume"), so the pre-deploy `migrate` timed out and
+  // production lost its database until a manual redeploy — Railway warns a
+  // slept service "may require a rebuild to re-live" (docs: Serverless,
+  // Caveats). The API and web still sleep. The setting applies to a container
+  // when it is created: redeploy Postgres after the apply.
   const db = Object.assign(postgres("postgres", { region: REGION }), {
-    deploy: { sleepApplication: true },
+    deploy: { sleepApplication: false },
   });
 
   // Spring Boot backend (Java 25, Maven). No public domain: reachable only
