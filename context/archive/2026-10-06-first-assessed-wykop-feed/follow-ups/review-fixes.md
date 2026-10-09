@@ -112,7 +112,8 @@ Items queued by `/10x-impl-review` triage that are not code fixes of the reviewe
   deployment's commit is the branch head.
 - [x] **Found while fixing F6:** Embabel retried a failed pipeline action by default (a failed Wykop
   fetch every 10 s and more): every `PipelineAgent` action is now `FIRE_ONCE`.
-- [ ] **F2, operator:** move `postgres` to `europe-west4` in production (and the PR env) —
+- [x] **F2, operator (done 2026-10-09):** `postgres` moved to `europe-west4` in production and in
+  `szczur-radar-pr-37` (`railway status`: `europe-west4-drams3a`; production `/api/ready` 200) —
   `deploy-plan.md`, section `first-assessed-wykop-feed`, "Postgres region".
 
 Unplanned additions (F7): the `llm` package split into `gemini/`, `deepseek/`, `openrouter/`,

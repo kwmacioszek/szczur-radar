@@ -190,12 +190,19 @@ Both Wykop keys are optional and must be set together (only one of them fails th
 
 `railway status --json` shows `postgres` in **`sfo`** (US West) in `production` and in `szczur-radar-pr-37`, while `szczur-radar-api` and `szczur-radar-web` run in `europe-west4`. Every database round trip crosses the Atlantic (~140 ms): the store step took 1 min 44 s for 244 posts, and every API request pays it through the JDBC session. `.railway/railway.ts` now declares `postgres("postgres", { region: REGION })`, but **IaC does not move an existing database** (a dry-run plan with it shows no change); the region applies when a database is created.
 
+**Done 2026-10-09:** the operator moved `postgres` to `europe-west4` in `production` and in `szczur-radar-pr-37` (`railway status --json`: `europe-west4-drams3a`; production `/api/ready` 200 after the move). The steps below stay for any other environment.
+
 Move it per environment (operator; decided in the review, downtime accepted — production holds only accounts and sessions):
 
 1. Not while a run is `RUNNING` (`/admin`).
 2. Railway dashboard → environment → `postgres` → Settings → Scale → Regions: `europe-west4` only → apply the staged change. Railway migrates the volume; the database is down meanwhile (https://docs.railway.com/deployments/regions#volumes).
 3. Verify: `railway status --json` shows `postgres` in `europe-west4`; `/api/ready` → 200; log in (sessions survive: same volume).
 4. PR envs: an existing one keeps its own region (move it the same way or close it); check a new PR env's `postgres` region once — it should follow production.
+
+### First production deploy (2026-10-09): sleeping Postgres, LLM key
+
+- **The merge deploy of #37 failed** (`szczur-radar-api` `399a5d0e`): the pre-deploy `migrate` timed out connecting to Postgres, which had gone to sleep at 13:45 UTC after its move to `europe-west4` and did not wake (its log ended at `Mounting volume on …`). The old API (`eb1ab54`) kept serving but `/api/ready` was 503 too. Fixed by redeploying `postgres`, then `szczur-radar-api`. Railway warns that a slept service "in remote cases, may require a rebuild to re-live" (docs: Serverless → Caveats). **Postgres serverless sleep is off** since then (`.railway/railway.ts`, `deploy.sleepApplication: false`; plan: one `safe` update); the setting applies to a new container, so after CI applies it, redeploy `postgres` once (`railway redeploy -s postgres -e production -y`). The API and web still sleep.
+- **The first production run failed safely:** the LLM check before the assess step answered `HTTP 401: Missing Authentication header`, so the run ended `failed` with 42 posts stored and no attempt used (the next range or retry run assesses them). OpenRouter gives this message when the bearer token is not an OpenRouter key — another provider's key, quotes or a `Bearer ` prefix in the value (a revoked `sk-or-v1-…` key answers `User not found.`). Production's sealed `LLM_API_KEY` must be replaced with a valid `sk-or-v1-…` key (`--stdin`, then seal, then redeploy the API) and `GET /api/admin/llm/check` must say `"ok":true` before the next run.
 
 ### PR-env verification: the web deployment's commit
 
