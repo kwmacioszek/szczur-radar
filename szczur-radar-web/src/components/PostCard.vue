@@ -95,11 +95,11 @@ const output = computed(() => props.post.assessment?.output)
 }
 
 .stance.bullish {
-  color: #188038;
+  color: var(--success);
 }
 
 .stance.bearish {
-  color: #d93025;
+  color: var(--destructive);
 }
 
 .flag {

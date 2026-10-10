@@ -440,27 +440,27 @@ Brak danych do migracji. Wycofanie = revert commitów tej gałęzi; tokeny są w
 
 #### Automated
 
-- [x] 1.1 Testy web przechodzą, w tym nowy przypadek `/kitchen-sink`
-- [x] 1.2 Build produkcyjny przechodzi i nie zawiera kitchen sink
-- [x] 1.3 `index.html` ma `lang="pl"`
-- [x] 1.4 `dev/mock-api.js` parsuje się jako funkcja i nie zawiera `transport_error` ani `quote_not_fragment`
+- [x] 1.1 Testy web przechodzą, w tym nowy przypadek `/kitchen-sink` — 75bd1a6
+- [x] 1.2 Build produkcyjny przechodzi i nie zawiera kitchen sink — 75bd1a6
+- [x] 1.3 `index.html` ma `lang="pl"` — 75bd1a6
+- [x] 1.4 `dev/mock-api.js` parsuje się jako funkcja i nie zawiera `transport_error` ani `quote_not_fragment` — 75bd1a6
 
 #### Manual
 
-- [x] 1.5 `/kitchen-sink` otwiera się bez logowania; `/admin` z `dev/mock-api.js` wygląda jak `ui-before/desktop-light.png`
+- [x] 1.5 `/kitchen-sink` otwiera się bez logowania; `/admin` z `dev/mock-api.js` wygląda jak `ui-before/desktop-light.png` — 75bd1a6
 
 ### Phase 2: Wartości tokenów
 
 #### Automated
 
-- [ ] 2.1 Testy web przechodzą, w tym test kontrastu tokenów w obu motywach
-- [ ] 2.2 Typecheck i build przechodzą
-- [ ] 2.3 Skan literałów na `FeedView.vue`, `LoginView.vue`, `PostCard.vue` zwraca 0 linii
+- [x] 2.1 Testy web przechodzą, w tym test kontrastu tokenów w obu motywach
+- [x] 2.2 Typecheck i build przechodzą
+- [x] 2.3 Skan literałów na `FeedView.vue`, `LoginView.vue`, `PostCard.vue` zwraca 0 linii
 
 #### Manual
 
-- [ ] 2.4 Zrzuty `/` i `/login` w obu motywach: ten sam ton, przycisk logowania czytelny w ciemnym, układ bez zmian
-- [ ] 2.5 Tab przez `/admin` i `/` w obu motywach: pierścień fokusu w kolorze akcentu, hover widoczny
+- [x] 2.4 Zrzuty `/` i `/login` w obu motywach: ten sam ton, przycisk logowania czytelny w ciemnym, układ bez zmian
+- [x] 2.5 Tab przez `/admin` i `/` w obu motywach: pierścień fokusu w kolorze akcentu, hover widoczny
 
 ### Phase 3: Panel na komponentach
 

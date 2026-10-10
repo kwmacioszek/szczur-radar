@@ -8,6 +8,9 @@ export default mergeConfig(
   defineConfig({
     test: {
       environment: 'jsdom',
+      // Vitest empties every CSS import by default, `?raw` ones too; keep the text of `?raw`
+      // imports so src/styleContract.test.ts can read the tokens of style.css.
+      css: { include: /\.css\?raw$/ },
     },
   }),
 )
