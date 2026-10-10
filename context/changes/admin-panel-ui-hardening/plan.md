@@ -491,11 +491,11 @@ Brak danych do migracji. Wycofanie = revert commitów tej gałęzi; tokeny są w
 
 #### Automated
 
-- [x] 5.1 `REPOSITORY_GUIDELINES.md` zawiera blok UI
-- [x] 5.2 Testy i build web przechodzą
-- [x] 5.3 CI na PR jest zielone
+- [x] 5.1 `REPOSITORY_GUIDELINES.md` zawiera blok UI — c88fa29
+- [x] 5.2 Testy i build web przechodzą — c88fa29
+- [x] 5.3 CI na PR jest zielone — c88fa29
 
 #### Manual
 
-- [x] 5.4 `ui-after/README.md` zawiera odhaczoną listę `ui-quality-checklist`
-- [x] 5.5 `/admin` w Railway PR env w obu motywach i przy 375 px; `/` i `/login` w tym samym tonie
+- [x] 5.4 `ui-after/README.md` zawiera odhaczoną listę `ui-quality-checklist` — c88fa29
+- [x] 5.5 `/admin` w Railway PR env w obu motywach i przy 375 px; `/` i `/login` w tym samym tonie — c88fa29
