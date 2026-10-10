@@ -198,8 +198,8 @@ Brak zmian schematu. Produkcja do merge'a działa na `LLM_SERVICE_TIER=default` 
 
 #### Automated
 
-- [x] 1.1 Testy klienta OpenRouter przechodzą, w tym nowe przypadki błędów w treści
-- [x] 1.2 Pełna weryfikacja backendu przechodzi
+- [x] 1.1 Testy klienta OpenRouter przechodzą, w tym nowe przypadki błędów w treści — 2208adf
+- [x] 1.2 Pełna weryfikacja backendu przechodzi — 2208adf
 
 ### Phase 2: Wdrożenie i powrót do flex
 
