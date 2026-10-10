@@ -10,7 +10,8 @@ llm/            the API — the only part the rest of the application imports
   api/          LlmCheckController — GET /api/admin/llm/check (admin)
   gemini/       GeminiClient       — create(): GenAI client, 1 attempt, timeout
   deepseek/     DeepSeekClient, DeepSeekRawResponse — create(): RestClient, no retry, timeouts
-  openrouter/   OpenRouterClient   — create(): openai-java clients, 0 retries, timeout
+  openrouter/   OpenRouterClient, OpenRouterRawResponse — create(): openai-java clients (the sync one
+                on OpenRouterRawResponse), 0 retries, timeout
   transport/    shared by the clients: TransportRetry (the only retries), TransportException,
                 HttpStatusErrors, ProviderMessages, ChatResponses, ProviderSchemas
 ```
@@ -56,6 +57,14 @@ blank answer) is judged with the shared `text/Whitespace`, never `isBlank`. An a
   before they become exception messages.
 - DeepSeek: Spring AI's finish-reason enum lacks `insufficient_system_resource` and `aborted`;
   `DeepSeekRawResponse` reads them from the raw answer and they are retried as server errors.
+- OpenRouter reports an error that occurs once the model has started on the request in the body of
+  an **HTTP 200**: `{"error":{"code","message","metadata":{"error_type"}}}` instead of `choices`
+  (openrouter.ai/docs/api/reference/errors-and-debugging) — e.g. a flex refusal (seen on production,
+  2026-10-09). openai-java then fails with "`choices` is not set". `OpenRouterRawResponse` (an
+  openai-java `HttpClient` around its OkHttp client; the SDK builder has no interceptor) keeps the raw
+  2xx answer per thread, and `OpenRouterClient` classifies `error.code` like the HTTP status (429
+  retried and flex → default, 5xx retried, 401/402/404 the configuration, other 4xx `REJECTED`). A
+  2xx answer without `choices` and without an error (missing or empty list) is retried like a 5xx.
 - `ProviderSchemas` sends each provider the schema subset it accepts; the full schema stays the
   caller's check. Known losses: Spring AI's Gemini mapping drops `additionalProperties` and
   `uniqueItems`; OpenAI strict mode rejects `uniqueItems` (HTTP 400). Gemini gets a nullable enum
