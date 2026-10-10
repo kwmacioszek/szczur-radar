@@ -68,6 +68,10 @@ async function mountAdmin() {
   return wrapper
 }
 
+function never<T>(): Promise<T> {
+  return new Promise(() => {})
+}
+
 describe('AdminView', () => {
   beforeEach(() => {
     resetSession()
@@ -107,6 +111,15 @@ describe('AdminView', () => {
     expect(wrapper.find('form button').attributes('disabled')).toBeUndefined()
   })
 
+  it('says the run is starting while the server answers', async () => {
+    vi.mocked(startRange).mockReturnValue(never())
+    const wrapper = await mountAdmin()
+    await wrapper.find('form').trigger('submit')
+    const button = wrapper.find('form button')
+    expect(button.text()).toBe('Uruchamianie…')
+    expect(button.attributes('aria-busy')).toBe('true')
+  })
+
   it('says a run is already going on', async () => {
     vi.mocked(startRange).mockRejectedValue(new ApiError(409, 'pipeline_busy'))
     const wrapper = await mountAdmin()
@@ -122,6 +135,56 @@ describe('AdminView', () => {
     expect((box.element as HTMLInputElement).checked).toBe(false)
     expect(box.attributes('disabled')).toBeDefined()
     expect(wrapper.find('form button').attributes('disabled')).toBeDefined()
+    expect(wrapper.find('#start-hint').text()).toBe('Żadne źródło nie jest skonfigurowane na serwerze.')
+  })
+
+  it('says why Uruchom is disabled when no source is checked', async () => {
+    const wrapper = await mountAdmin()
+    const button = wrapper.find('form button')
+    expect(wrapper.find('#start-hint').exists()).toBe(false)
+    expect(button.attributes('aria-describedby')).toBeUndefined()
+
+    await wrapper.find('input[type="checkbox"][value="wykop"]').setValue(false)
+
+    expect(button.attributes('disabled')).toBeDefined()
+    expect(wrapper.find('#start-hint').text()).toBe('Wybierz co najmniej jedno źródło.')
+    expect(button.attributes('aria-describedby')).toBe('start-hint')
+  })
+
+  it('says it is loading, not that there is nothing, until the API answers', async () => {
+    vi.mocked(fetchSources).mockReturnValue(never())
+    vi.mocked(fetchRuns).mockReturnValue(never())
+    vi.mocked(fetchFailedPosts).mockReturnValue(never())
+    const wrapper = await mountAdmin()
+    expect(wrapper.text()).not.toContain('Jeszcze nie było przebiegu.')
+    expect(wrapper.text()).not.toContain('Brak nieudanych postów.')
+    expect(wrapper.findAll('.loading').map((shown) => shown.text())).toEqual(['Wczytywanie…', 'Wczytywanie…', 'Wczytywanie…'])
+    expect(wrapper.findAll('[aria-busy="true"]')).toHaveLength(3)
+    expect(wrapper.find('#start-hint').exists()).toBe(false)
+  })
+
+  it('keeps the runs on screen while refreshing', async () => {
+    vi.mocked(fetchRuns).mockResolvedValueOnce({ items: [run()], page: 0, size: 20, total: 1 }).mockReturnValue(never())
+    const wrapper = await mountAdmin()
+    await wrapper.findAll('button').find((button) => button.text() === 'Odśwież')!.trigger('click')
+    expect(fetchRuns).toHaveBeenCalledTimes(2)
+    expect(wrapper.findAll('.run')).toHaveLength(1)
+    expect(wrapper.find('.loading').exists()).toBe(false)
+  })
+
+  it.each(['Spróbuj ponownie', 'Odśwież'])('loads the sources again after an error with %s', async (name) => {
+    vi.mocked(fetchSources).mockRejectedValueOnce(new ApiError(500, 'internal_error'))
+    const wrapper = await mountAdmin()
+    expect(wrapper.find('.sources [role="alert"]').text()).toBe('Nie udało się wczytać listy źródeł.')
+    expect(wrapper.find('form button[type="submit"]').attributes('disabled')).toBeDefined()
+
+    await wrapper.findAll('button').find((button) => button.text() === name)!.trigger('click')
+    await flushPromises()
+
+    expect(fetchSources).toHaveBeenCalledTimes(2)
+    expect(wrapper.find('[role="alert"]').exists()).toBe(false)
+    expect((wrapper.find('input[type="checkbox"][value="wykop"]').element as HTMLInputElement).checked).toBe(true)
+    expect(wrapper.find('form button[type="submit"]').attributes('disabled')).toBeUndefined()
   })
 
   it('shows a partial run with its technical errors and error text', async () => {
@@ -200,5 +263,16 @@ describe('AdminView', () => {
 
     expect(retryPosts).toHaveBeenCalledWith(['a', 'c'])
     expect(wrapper.find('[role="status"]').text()).toContain('Ponowienie 2')
+  })
+
+  it('says the retry is under way while the server answers', async () => {
+    vi.mocked(fetchFailedPosts).mockResolvedValue({ items: [failed('a', 'failed')], page: 0, size: 50, total: 1 })
+    vi.mocked(retryPosts).mockReturnValue(never())
+    const wrapper = await mountAdmin()
+    await wrapper.find('.failed-posts input[type="checkbox"]').setValue(true)
+    const retry = wrapper.findAll('button').find((button) => button.text() === 'Ponów zaznaczone')!
+    await retry.trigger('click')
+    expect(retry.text()).toBe('Ponawianie…')
+    expect(retry.attributes('aria-busy')).toBe('true')
   })
 })

@@ -466,26 +466,26 @@ Brak danych do migracji. Wycofanie = revert commitów tej gałęzi; tokeny są w
 
 #### Automated
 
-- [x] 3.1 Testy web przechodzą (komponenty, `AdminView`, test skanujący, kontrast)
-- [x] 3.2 Typecheck i build przechodzą
-- [x] 3.3 Skan literałów na `AdminView.vue` i `AppHeader.vue` zwraca 0 linii
+- [x] 3.1 Testy web przechodzą (komponenty, `AdminView`, test skanujący, kontrast) — 44b468f
+- [x] 3.2 Typecheck i build przechodzą — 44b468f
+- [x] 3.3 Skan literałów na `AdminView.vue` i `AppHeader.vue` zwraca 0 linii — 44b468f
 
 #### Manual
 
-- [x] 3.4 Kitchen sink w obu motywach: każdy komponent w każdym stanie; zrzuty w `ui-after/`
-- [x] 3.5 `/admin` z mockiem w obu motywach i przy 375 px: „Uruchom” wyróżniony, statusy z tekstem, `failureClass` po polsku
+- [x] 3.4 Kitchen sink w obu motywach: każdy komponent w każdym stanie; zrzuty w `ui-after/` — 44b468f
+- [x] 3.5 `/admin` z mockiem w obu motywach i przy 375 px: „Uruchom” wyróżniony, statusy z tekstem, `failureClass` po polsku — 44b468f
 
 ### Phase 4: Stany widoku
 
 #### Automated
 
-- [ ] 4.1 Testy web przechodzą, w tym nowe testy stanów `AdminView`
-- [ ] 4.2 Typecheck i build przechodzą
+- [x] 4.1 Testy web przechodzą, w tym nowe testy stanów `AdminView`
+- [x] 4.2 Typecheck i build przechodzą
 
 #### Manual
 
-- [ ] 4.3 `ui-after/README.md` pokazuje 7 komórek macierzy w obu motywach i przy 375 px
-- [ ] 4.4 Brak skoku układu między trybem `loading` i `data` przy 1280×900
+- [x] 4.3 `ui-after/README.md` pokazuje 7 komórek macierzy w obu motywach i przy 375 px
+- [x] 4.4 Brak skoku układu między trybem `loading` i `data` przy 1280×900
 
 ### Phase 5: Utrwalenie i weryfikacja
 
