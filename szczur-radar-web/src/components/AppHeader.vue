@@ -3,6 +3,8 @@ import { computed, ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { logout } from '../api/auth'
 import { clearSession, currentUser } from '../auth/session'
+import AppButton from './AppButton.vue'
+import StatusMessage from './StatusMessage.vue'
 
 const router = useRouter()
 const loggingOut = ref(false)
@@ -33,9 +35,11 @@ async function signOut(): Promise<void> {
       <RouterLink v-if="isAdmin" :to="{ name: 'admin' }">Panel admina</RouterLink>
     </nav>
     <span class="who">{{ currentUser?.email }}</span>
-    <button type="button" :disabled="loggingOut" @click="signOut">Wyloguj</button>
+    <AppButton :busy="loggingOut" @click="signOut">Wyloguj</AppButton>
   </header>
-  <p v-if="error" class="error" role="alert">{{ error }}</p>
+  <div v-if="error" class="notice">
+    <StatusMessage tone="error">{{ error }}</StatusMessage>
+  </div>
 </template>
 
 <style scoped>
@@ -43,14 +47,14 @@ async function signOut(): Promise<void> {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px 16px;
-  padding: 12px 16px;
-  border-bottom: 1px solid color-mix(in srgb, var(--text) 25%, transparent);
+  gap: var(--space-2) var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border);
 }
 
 .nav {
   display: flex;
-  gap: 16px;
+  gap: var(--space-4);
   margin-right: auto;
 }
 
@@ -66,13 +70,11 @@ async function signOut(): Promise<void> {
 
 .who {
   color: var(--text-h);
-  font-size: 16px;
+  font-size: var(--font-size-md);
   overflow-wrap: anywhere;
 }
 
-.error {
-  margin: 8px 16px;
-  text-align: right;
-  color: #d93025;
+.notice {
+  padding: 0 var(--space-4);
 }
 </style>

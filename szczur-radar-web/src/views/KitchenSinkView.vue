@@ -4,6 +4,10 @@
   screenshots. Fixed data: no API calls, no session, no AppHeader.
 -->
 <script setup lang="ts">
+import AppButton from '../components/AppButton.vue'
+import StatusBadge, { type BadgeTone } from '../components/StatusBadge.vue'
+import StatusMessage from '../components/StatusMessage.vue'
+
 /** The colour roles of :root in src/style.css, in the order of the plan's token table. */
 const colourRoles = [
   '--bg',
@@ -26,6 +30,20 @@ function swatchStyle(role: ColourRole): Record<string, string> {
     ? { background: 'var(--accent)', color: 'var(--on-accent)' }
     : { background: `var(${role})` }
 }
+
+const variants = [
+  { name: 'primary', title: 'Główny' },
+  { name: 'secondary', title: 'Pomocniczy' },
+] as const
+
+/** Every tone with the run status the admin panel shows in it. */
+const badges: { tone: BadgeTone; text: string }[] = [
+  { tone: 'success', text: 'zakończony' },
+  { tone: 'warning', text: 'częściowo' },
+  { tone: 'destructive', text: 'błąd' },
+  { tone: 'info', text: 'trwa' },
+  { tone: 'neutral', text: 'w kolejce' },
+]
 </script>
 
 <template>
@@ -47,22 +65,35 @@ function swatchStyle(role: ColourRole): Record<string, string> {
 
     <section aria-labelledby="buttons-title">
       <h2 id="buttons-title">Przyciski</h2>
-      <p>Wypełniane w kolejnych fazach: wariant główny i pomocniczy — domyślny, wyłączony, w toku.</p>
+      <div v-for="variant in variants" :key="variant.name" class="row">
+        <span class="row-title">{{ variant.title }}</span>
+        <AppButton :variant="variant.name">Domyślny</AppButton>
+        <AppButton :variant="variant.name" disabled>Wyłączony</AppButton>
+        <AppButton :variant="variant.name" busy busy-label="W toku…">W toku</AppButton>
+      </div>
     </section>
 
     <section aria-labelledby="messages-title">
       <h2 id="messages-title">Komunikaty</h2>
-      <p>Wypełniane w kolejnych fazach: komunikat powodzenia i błędu.</p>
+      <StatusMessage tone="ok">Uruchomiono: zakres dat.</StatusMessage>
+      <StatusMessage tone="error">Przebieg już trwa. Poczekaj, aż się zakończy, i spróbuj ponownie.</StatusMessage>
     </section>
 
     <section aria-labelledby="badges-title">
       <h2 id="badges-title">Znaczniki</h2>
-      <p>Wypełniane w kolejnych fazach: znaczniki stanu we wszystkich tonach.</p>
+      <div class="row">
+        <StatusBadge v-for="badge in badges" :key="badge.tone" :tone="badge.tone">{{ badge.text }}</StatusBadge>
+      </div>
     </section>
 
     <section aria-labelledby="fields-title">
       <h2 id="fields-title">Pola</h2>
-      <p>Wypełniane w kolejnych fazach: pole daty i pole wyboru — zaznaczone, wyłączone.</p>
+      <div class="row">
+        <label>Od <input type="date" value="2026-10-09" /></label>
+        <label><input type="checkbox" /> Niezaznaczone</label>
+        <label><input type="checkbox" checked /> Zaznaczone</label>
+        <label><input type="checkbox" disabled /> Wyłączone</label>
+      </div>
     </section>
   </main>
 </template>
@@ -71,18 +102,30 @@ function swatchStyle(role: ColourRole): Record<string, string> {
 .kitchen-sink {
   max-width: 56rem;
   margin: 0 auto;
-  padding: 16px;
+  padding: var(--space-4);
   box-sizing: border-box;
 }
 
 h1 {
-  margin: 8px 0 16px;
-  font-size: 32px;
+  margin: var(--space-2) 0 var(--space-4);
 }
 
 h2 {
-  margin: 24px 0 8px;
-  font-size: 20px;
+  margin: var(--space-5) 0 var(--space-2);
+  font-size: var(--font-size-lg);
+  color: var(--text-h);
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.row-title {
+  min-width: 7rem;
   color: var(--text-h);
 }
 

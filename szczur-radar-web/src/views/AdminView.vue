@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import {
   type Run,
+  type RunStatus,
   type SourceState,
   fetchRuns,
   fetchSources,
@@ -10,7 +11,10 @@ import {
   startRange,
 } from '../api/pipeline'
 import { type FailedPost, fetchFailedPosts } from '../api/posts'
+import AppButton from '../components/AppButton.vue'
 import AppHeader from '../components/AppHeader.vue'
+import StatusBadge, { type BadgeTone } from '../components/StatusBadge.vue'
+import StatusMessage from '../components/StatusMessage.vue'
 import { formatDateTime, label } from '../labels'
 
 /** Yesterday in Warsaw, the usual day to run. */
@@ -47,6 +51,16 @@ async function start(): Promise<void> {
 // --- runs -------------------------------------------------------------------------------
 const runs = ref<Run[]>([])
 const runsError = ref<string | null>(null)
+
+/** The badge tone of a run status; a step uses the same tones. */
+const runTone: Record<RunStatus, BadgeTone> = {
+  queued: 'neutral',
+  running: 'info',
+  succeeded: 'success',
+  partial: 'warning',
+  interrupted: 'warning',
+  failed: 'destructive',
+}
 
 async function loadRuns(): Promise<void> {
   runsError.value = null
@@ -146,24 +160,26 @@ onMounted(async () => {
             {{ label('source', source.source) }}<template v-if="!source.configured"> (nieskonfigurowane)</template>
           </label>
         </fieldset>
-        <button type="submit" :disabled="starting || chosenSources.length === 0">Uruchom</button>
+        <AppButton type="submit" variant="primary" :disabled="chosenSources.length === 0" :busy="starting">
+          Uruchom
+        </AppButton>
       </form>
-      <p v-if="startMessage" class="ok" role="status">{{ startMessage }}</p>
-      <p v-if="startError" class="error" role="alert">{{ startError }}</p>
+      <StatusMessage v-if="startMessage" tone="ok">{{ startMessage }}</StatusMessage>
+      <StatusMessage v-if="startError" tone="error">{{ startError }}</StatusMessage>
     </section>
 
     <section aria-labelledby="runs-title">
       <div class="section-head">
         <h2 id="runs-title">Ostatnie przebiegi</h2>
-        <button type="button" @click="refresh">Odśwież</button>
+        <AppButton @click="refresh">Odśwież</AppButton>
       </div>
-      <p v-if="runsError" class="error" role="alert">{{ runsError }}</p>
+      <StatusMessage v-if="runsError" tone="error">{{ runsError }}</StatusMessage>
       <p v-else-if="runs.length === 0" class="empty">Jeszcze nie było przebiegu.</p>
       <ul v-else class="runs">
         <li v-for="run in runs" :key="run.id" class="run" :data-status="run.status">
           <p class="run-head">
             <strong>{{ label('runKind', run.kind) }}</strong>
-            <span class="status" :class="run.status">{{ label('runStatus', run.status) }}</span>
+            <StatusBadge class="status" :tone="runTone[run.status]">{{ label('runStatus', run.status) }}</StatusBadge>
             <span>{{ formatDateTime(run.createdAt) }}</span>
             <span v-if="run.sources.length">{{ run.sources.map((s) => label('source', s)).join(', ') }}</span>
           </p>
@@ -172,9 +188,14 @@ onMounted(async () => {
             · <span :class="{ alarm: run.processingErrors > 0 }">błędy techniczne {{ run.processingErrors }}</span>
           </p>
           <p v-if="run.steps.length" class="steps">
-            <span v-for="step in run.steps" :key="step.step + step.startedAt" :class="step.status">
-              {{ label('step', step.step) }}<template v-if="step.itemsOut !== null"> ({{ step.itemsOut }})</template>
-            </span>
+            <template v-for="step in run.steps" :key="step.step + step.startedAt">
+              <span v-if="step.status === 'succeeded'">
+                {{ label('step', step.step) }}<template v-if="step.itemsOut !== null"> ({{ step.itemsOut }})</template>
+              </span>
+              <StatusBadge v-else :tone="runTone[step.status]">
+                {{ label('step', step.step) }} ({{ label('runStatus', step.status) }})
+              </StatusBadge>
+            </template>
           </p>
           <p v-if="run.error" class="run-error">{{ run.error }}</p>
         </li>
@@ -183,7 +204,7 @@ onMounted(async () => {
 
     <section aria-labelledby="failed-title">
       <h2 id="failed-title">Nieudane posty</h2>
-      <p v-if="failedError" class="error" role="alert">{{ failedError }}</p>
+      <StatusMessage v-if="failedError" tone="error">{{ failedError }}</StatusMessage>
       <p v-else-if="failed.length === 0" class="empty">Brak nieudanych postów.</p>
       <template v-else>
         <ul class="failed-posts">
@@ -200,16 +221,18 @@ onMounted(async () => {
             <span class="attempt">
               <template v-if="post.stage === 'dead'"><strong>martwy</strong> · </template>
               próby {{ post.assessmentAttempts }}
-              <template v-if="post.lastAttempt?.failureClass"> · {{ post.lastAttempt.failureClass }}</template>
+              <template v-if="post.lastAttempt?.failureClass">
+                · {{ label('failureClass', post.lastAttempt.failureClass) }}
+              </template>
             </span>
           </li>
         </ul>
-        <button type="button" :disabled="retrying || selected.length === 0" @click="retry">
+        <AppButton :disabled="selected.length === 0" :busy="retrying" @click="retry">
           Ponów zaznaczone
-        </button>
+        </AppButton>
       </template>
-      <p v-if="retryMessage" class="ok" role="status">{{ retryMessage }}</p>
-      <p v-if="retryError" class="error" role="alert">{{ retryError }}</p>
+      <StatusMessage v-if="retryMessage" tone="ok">{{ retryMessage }}</StatusMessage>
+      <StatusMessage v-if="retryError" tone="error">{{ retryError }}</StatusMessage>
     </section>
   </main>
 </template>
@@ -218,18 +241,17 @@ onMounted(async () => {
 .admin {
   max-width: 56rem;
   margin: 0 auto;
-  padding: 16px;
+  padding: var(--space-4);
   box-sizing: border-box;
 }
 
 h1 {
-  margin: 8px 0 16px;
-  font-size: 32px;
+  margin: var(--space-2) 0 var(--space-4);
 }
 
 h2 {
-  margin: 24px 0 8px;
-  font-size: 20px;
+  margin: var(--space-5) 0 var(--space-2);
+  font-size: var(--font-size-lg);
   color: var(--text-h);
 }
 
@@ -237,16 +259,16 @@ h2 {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 12px 16px;
+  gap: var(--space-3) var(--space-4);
 }
 
 .sources {
   display: flex;
-  gap: 12px;
+  gap: var(--space-3);
   margin: 0;
-  padding: 4px 8px;
-  border: 1px solid color-mix(in srgb, var(--text) 30%, transparent);
-  border-radius: 6px;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
 }
 
 .section-head {
@@ -264,52 +286,35 @@ h2 {
 
 .run,
 .failed-posts li {
-  padding: 8px 0;
-  border-bottom: 1px solid color-mix(in srgb, var(--text) 20%, transparent);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--border);
 }
 
 .run p {
-  margin: 2px 0;
+  margin: var(--space-0) 0;
 }
 
-.run-head {
+.run-head,
+.steps {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px 12px;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-3);
 }
 
-.status.succeeded {
-  color: #188038;
-}
-
-.status.partial,
-.status.interrupted {
-  color: #b06000;
-}
-
-.status.failed,
 .alarm,
-.run-error,
-.error {
-  color: #d93025;
+.run-error {
+  color: var(--destructive);
 }
 
 .counters,
 .steps,
 .attempt {
-  font-size: 14px;
-}
-
-.steps span {
-  margin-right: 8px;
-}
-
-.steps .failed {
-  color: #d93025;
+  font-size: var(--font-size-sm);
 }
 
 .run-error {
-  font-size: 14px;
+  font-size: var(--font-size-sm);
   overflow-wrap: anywhere;
 }
 
@@ -317,14 +322,10 @@ h2 {
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
-  gap: 4px 12px;
+  gap: var(--space-1) var(--space-3);
 }
 
 .excerpt {
   overflow-wrap: anywhere;
-}
-
-.ok {
-  color: #188038;
 }
 </style>

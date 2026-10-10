@@ -139,6 +139,45 @@ describe('AdminView', () => {
     expect(shown.text()).toContain('pobranie (270)')
   })
 
+  it.each([
+    ['succeeded', 'zakończony', 'success'],
+    ['partial', 'częściowo', 'warning'],
+    ['interrupted', 'przerwany', 'warning'],
+    ['failed', 'błąd', 'destructive'],
+    ['running', 'trwa', 'info'],
+    ['queued', 'w kolejce', 'neutral'],
+  ] as const)('marks a %s run with the %s badge in the %s tone', async (status, text, tone) => {
+    vi.mocked(fetchRuns).mockResolvedValue({ items: [run({ status })], page: 0, size: 20, total: 1 })
+    const wrapper = await mountAdmin()
+    const badge = wrapper.find('.run .status')
+    expect(badge.text()).toBe(text)
+    expect(badge.attributes('data-tone')).toBe(tone)
+  })
+
+  it('says in text which step failed and which is running', async () => {
+    const step = (name: 'fetch' | 'assess', status: 'succeeded' | 'failed' | 'running') => ({
+      step: name, status, startedAt: '2026-10-02T06:00:01Z', finishedAt: null, itemsIn: null, itemsOut: null, error: null,
+    })
+    vi.mocked(fetchRuns).mockResolvedValue({
+      items: [run({ id: 'r1', status: 'failed', steps: [step('fetch', 'failed')] }), run({ id: 'r2', status: 'running', steps: [step('assess', 'running')] })],
+      page: 0,
+      size: 20,
+      total: 2,
+    })
+    const wrapper = await mountAdmin()
+    const [failedRun, runningRun] = wrapper.findAll('.run')
+    expect(failedRun!.find('.steps').text()).toBe('pobranie (błąd)')
+    expect(runningRun!.find('.steps').text()).toBe('ocena (trwa)')
+  })
+
+  it('names the failure class of the last attempt in Polish', async () => {
+    vi.mocked(fetchFailedPosts).mockResolvedValue({ items: [failed('a', 'failed')], page: 0, size: 50, total: 1 })
+    const wrapper = await mountAdmin()
+    const attempt = wrapper.find('.failed-posts .attempt').text()
+    expect(attempt).toContain('przekroczony czas')
+    expect(attempt).not.toContain('timeout')
+  })
+
   it('retries the checked posts, never a dead one', async () => {
     vi.mocked(fetchFailedPosts).mockResolvedValue({
       items: [failed('a', 'failed'), failed('b', 'dead'), failed('c', 'failed')],

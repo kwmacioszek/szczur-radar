@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest'
+import appButton from './components/AppButton.vue?raw'
+import appHeader from './components/AppHeader.vue?raw'
+import postCard from './components/PostCard.vue?raw'
+import statusBadge from './components/StatusBadge.vue?raw'
+import statusMessage from './components/StatusMessage.vue?raw'
 import css from './style.css?raw'
+import adminView from './views/AdminView.vue?raw'
+import feedView from './views/FeedView.vue?raw'
+import kitchenSinkView from './views/KitchenSinkView.vue?raw'
+import loginView from './views/LoginView.vue?raw'
 
 type Theme = 'light' | 'dark'
 
@@ -69,12 +78,39 @@ function contrast(a: string, b: string): number {
   return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05)
 }
 
+/**
+ * Files whose colours all come from the roles of style.css. Add a view or component here once it
+ * is cleaned; style.css itself, the token source, is never on the list.
+ */
+const CLEANED: Record<string, string> = {
+  'src/views/AdminView.vue': adminView,
+  'src/components/AppHeader.vue': appHeader,
+  'src/components/AppButton.vue': appButton,
+  'src/components/StatusMessage.vue': statusMessage,
+  'src/components/StatusBadge.vue': statusBadge,
+  'src/views/KitchenSinkView.vue': kitchenSinkView,
+  'src/views/FeedView.vue': feedView,
+  'src/views/LoginView.vue': loginView,
+  'src/components/PostCard.vue': postCard,
+}
+
+/** The hardcoded-value scan of /10x-ui: colour literals, arbitrary values and palette classes. */
+const LITERAL =
+  /#[0-9a-fA-F]{3,8}\b|rgba?\(|hsla?\(|oklch\(|-\[[0-9.]+(px|rem)\]|\b(bg|text|border|ring|outline|from|via|to|fill|stroke|shadow|divide)-(slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose|white|black)\b/
+
 describe('style contract', () => {
   describe('colour roles', () => {
     const cases = THEMES.flatMap((theme) => PAIRS.map(([fg, bg]) => ({ theme, fg, bg })))
 
     it.each(cases)(`$fg on $bg ($theme) ≥ ${MIN_CONTRAST}:1`, ({ theme, fg, bg }) => {
       expect(contrast(role(theme, fg), role(theme, bg))).toBeGreaterThanOrEqual(MIN_CONTRAST)
+    })
+  })
+
+  describe('no literals', () => {
+    it.each(Object.entries(CLEANED))('%s takes its values from the tokens', (file, text) => {
+      const hits = text.split('\n').flatMap((line, at) => (LITERAL.test(line) ? [`${file}:${at + 1}: ${line.trim()}`] : []))
+      expect(hits).toEqual([])
     })
   })
 })

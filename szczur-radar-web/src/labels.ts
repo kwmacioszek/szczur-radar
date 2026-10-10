@@ -30,6 +30,15 @@ const labels: Record<string, Record<string, string>> = {
     interrupted: 'przerwany',
   },
   step: { fetch: 'pobranie', store: 'zapis', select: 'wybór', assess: 'ocena', summarize: 'podsumowanie' },
+  failureClass: {
+    provider_error: 'błąd dostawcy',
+    timeout: 'przekroczony czas',
+    invalid_structured_output: 'niepoprawna struktura odpowiedzi',
+    schema_violation: 'niezgodność ze schematem',
+    invalid_reference: 'błędne odwołanie',
+    fabricated_evidence: 'zmyślony cytat',
+    domain_invariant_violation: 'naruszenie reguł kontraktu',
+  },
   source: { wykop: 'Wykop' },
 }
 

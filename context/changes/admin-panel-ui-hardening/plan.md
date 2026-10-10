@@ -453,27 +453,27 @@ Brak danych do migracji. Wycofanie = revert commitów tej gałęzi; tokeny są w
 
 #### Automated
 
-- [x] 2.1 Testy web przechodzą, w tym test kontrastu tokenów w obu motywach
-- [x] 2.2 Typecheck i build przechodzą
-- [x] 2.3 Skan literałów na `FeedView.vue`, `LoginView.vue`, `PostCard.vue` zwraca 0 linii
+- [x] 2.1 Testy web przechodzą, w tym test kontrastu tokenów w obu motywach — 243c0e1
+- [x] 2.2 Typecheck i build przechodzą — 243c0e1
+- [x] 2.3 Skan literałów na `FeedView.vue`, `LoginView.vue`, `PostCard.vue` zwraca 0 linii — 243c0e1
 
 #### Manual
 
-- [x] 2.4 Zrzuty `/` i `/login` w obu motywach: ten sam ton, przycisk logowania czytelny w ciemnym, układ bez zmian
-- [x] 2.5 Tab przez `/admin` i `/` w obu motywach: pierścień fokusu w kolorze akcentu, hover widoczny
+- [x] 2.4 Zrzuty `/` i `/login` w obu motywach: ten sam ton, przycisk logowania czytelny w ciemnym, układ bez zmian — 243c0e1
+- [x] 2.5 Tab przez `/admin` i `/` w obu motywach: pierścień fokusu w kolorze akcentu, hover widoczny — 243c0e1
 
 ### Phase 3: Panel na komponentach
 
 #### Automated
 
-- [ ] 3.1 Testy web przechodzą (komponenty, `AdminView`, test skanujący, kontrast)
-- [ ] 3.2 Typecheck i build przechodzą
-- [ ] 3.3 Skan literałów na `AdminView.vue` i `AppHeader.vue` zwraca 0 linii
+- [x] 3.1 Testy web przechodzą (komponenty, `AdminView`, test skanujący, kontrast)
+- [x] 3.2 Typecheck i build przechodzą
+- [x] 3.3 Skan literałów na `AdminView.vue` i `AppHeader.vue` zwraca 0 linii
 
 #### Manual
 
-- [ ] 3.4 Kitchen sink w obu motywach: każdy komponent w każdym stanie; zrzuty w `ui-after/`
-- [ ] 3.5 `/admin` z mockiem w obu motywach i przy 375 px: „Uruchom” wyróżniony, statusy z tekstem, `failureClass` po polsku
+- [x] 3.4 Kitchen sink w obu motywach: każdy komponent w każdym stanie; zrzuty w `ui-after/`
+- [x] 3.5 `/admin` z mockiem w obu motywach i przy 375 px: „Uruchom” wyróżniony, statusy z tekstem, `failureClass` po polsku
 
 ### Phase 4: Stany widoku
 

@@ -51,6 +51,16 @@ export interface Page<T> {
 
 export type PostStage = 'failed' | 'dead'
 
+/** Why an assessment attempt failed — szczur-radar-api agents/assessor/validation/FailureClass. */
+export type FailureClass =
+  | 'provider_error'
+  | 'timeout'
+  | 'invalid_structured_output'
+  | 'schema_violation'
+  | 'invalid_reference'
+  | 'fabricated_evidence'
+  | 'domain_invariant_violation'
+
 export interface FailedPost {
   id: string
   itemType: ItemType
@@ -61,8 +71,8 @@ export interface FailedPost {
   stage: PostStage
   assessmentAttempts: number
   lastAttempt: {
-    failureClass: string | null
-    violations: { failureClass: string; rule: string; path: string; message: string }[]
+    failureClass: FailureClass | null
+    violations: { failureClass: FailureClass; rule: string; path: string; message: string }[]
     assessedAt: string
     provider: string | null
     model: string | null
