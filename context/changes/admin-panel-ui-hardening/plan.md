@@ -479,23 +479,23 @@ Brak danych do migracji. Wycofanie = revert commitów tej gałęzi; tokeny są w
 
 #### Automated
 
-- [x] 4.1 Testy web przechodzą, w tym nowe testy stanów `AdminView`
-- [x] 4.2 Typecheck i build przechodzą
+- [x] 4.1 Testy web przechodzą, w tym nowe testy stanów `AdminView` — a65ae7e
+- [x] 4.2 Typecheck i build przechodzą — a65ae7e
 
 #### Manual
 
-- [x] 4.3 `ui-after/README.md` pokazuje 7 komórek macierzy w obu motywach i przy 375 px
-- [x] 4.4 Brak skoku układu między trybem `loading` i `data` przy 1280×900
+- [x] 4.3 `ui-after/README.md` pokazuje 7 komórek macierzy w obu motywach i przy 375 px — a65ae7e
+- [x] 4.4 Brak skoku układu między trybem `loading` i `data` przy 1280×900 — a65ae7e
 
 ### Phase 5: Utrwalenie i weryfikacja
 
 #### Automated
 
-- [ ] 5.1 `REPOSITORY_GUIDELINES.md` zawiera blok UI
-- [ ] 5.2 Testy i build web przechodzą
-- [ ] 5.3 CI na PR jest zielone
+- [x] 5.1 `REPOSITORY_GUIDELINES.md` zawiera blok UI
+- [x] 5.2 Testy i build web przechodzą
+- [x] 5.3 CI na PR jest zielone
 
 #### Manual
 
-- [ ] 5.4 `ui-after/README.md` zawiera odhaczoną listę `ui-quality-checklist`
-- [ ] 5.5 `/admin` w Railway PR env w obu motywach i przy 375 px; `/` i `/login` w tym samym tonie
+- [x] 5.4 `ui-after/README.md` zawiera odhaczoną listę `ui-quality-checklist`
+- [x] 5.5 `/admin` w Railway PR env w obu motywach i przy 375 px; `/` i `/login` w tym samym tonie

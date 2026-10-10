@@ -37,6 +37,14 @@ Szczur Radar collects investment posts (Wykop, later Reddit), classifies them wi
 - Code that runs work in parallel passes its own executor: on Java 25 the container's CPU limit may make `availableProcessors()` return 1.
 - Frontend TypeScript settings: @szczur-radar-web/tsconfig.app.json.
 
+## UI (szczur-radar-web)
+
+- Tokens: colour roles and the type, space and radius scales live in `:root` of `szczur-radar-web/src/style.css`; the dark theme redefines only the colour roles there (`prefers-color-scheme`). Text on `--accent` is always `--on-accent`. A new text colour role gets a contrast pair in `src/styleContract.test.ts` (≥4.5:1 in both themes).
+- Shared components live in `src/components/`: `AppButton` (primary / secondary, `busy`), `StatusMessage` (ok → `role="status"`, error → `role="alert"`), `StatusBadge` (the state as text, the tone as colour). Check there before writing a button, message or badge in a view; a new shared component goes there and onto the kitchen sink.
+- No colour literals (hex, `rgb()`, `hsl()`, `oklch()`), palette classes or arbitrary values in views and components; spacing and font sizes come from the scale (`--space-*`, `--font-size-*`). The `no literals` scan in `src/styleContract.test.ts` enforces this for the files on its list — add a file once it is cleaned.
+- Visual check: `/kitchen-sink` (dev only, `npm run dev`, not in the production build) shows every role and component in every state; real views are screenshotted with `szczur-radar-web/dev/mock-api.js` + `playwright-cli` (procedure in its header), in both themes and at 375 px. Each of the 7 states (default, hover, focus-visible, disabled, error, empty, loading) gets a screenshot or an N/A with a reason.
+- UI work on an existing view goes through `/10x-ui`.
+
 ## Deployment
 
 - Target platform: Railway. The platform decision is finalized in @context/foundation/infrastructure.md.

@@ -49,3 +49,43 @@ Pilnuje tego `szczur-radar-web/src/styleContract.test.ts` (opis „no literals�
 
 - Wyłączony checkbox w jasnym motywie jest bardzo blady (`p3-kitchen-light.png`, martwy post w `p4-admin-data-1280-light.png`): to domyślny wygląd przeglądarki, `accent-color` go nie zmienia.
 - W trybie `error` przy 1280 px fieldset z komunikatem i „Spróbuj ponownie” jest szerszy, więc „Uruchom” przechodzi do drugiego wiersza formularza.
+
+## Lista kontrolna `ui-quality-checklist`
+
+Z `.claude/skills/10x-ui/references/ui-quality-checklist.md`, po fazach 1–5.
+
+### Charges
+
+- [x] Zmiana zaczęła się od `## Charges` w `research.md`: C1–C4, każdy z plikiem, linią i skutkiem dla admina.
+- [x] Brakujące tokeny: literały kolorów w widoku zastąpione rolami z `:root` w `src/style.css`; skan spadł z 11 linii do 0 (tabela wyżej).
+- [x] Brakujący współdzielony komponent: `/admin` i `AppHeader` używają `AppButton`, `StatusMessage`, `StatusBadge`; drugiego przycisku w panelu nie ma. Własny przycisk `LoginView` i globalne przyciski `FeedView` mają już ten sam wygląd (gwarancje 1–2 planu); ich przejście na komponent to odłożone zmiany niżej.
+- [x] Przypadkowa architektura: wejścia sprawdzone w researchu (bez sesji → `/login`, bez danych, z linku; `router/index.ts`); `/kitchen-sink` publiczny tylko w dev i nieobecny w `dist/`.
+- [x] Zarzuty poza planem zapisane jako odłożone, nie porzucone (sekcja niżej).
+
+### Contract
+
+- [x] Tokeny: kolory, odstępy i pismo z `:root` w `src/style.css`, nie literały w widoku.
+- [x] Warstwa komponentów: repo nie miało żadnej; trzy komponenty w `src/components/` bez nowych zależności (bez shadcn, plan: „żadnych nowych zależności”).
+- [x] Macierz 7 stanów: każdy pokazany albo N/A z powodem (tabela wyżej).
+- [x] Desktop (1280×900) i jedna szerokość mobilna (375×812).
+- [x] Widoczny fokus i nazwy kontrolek: pierścień `--ring` na każdej kontrolce (`p2-admin-focus-*.png`, `p3-kitchen-hover-focus-*.png`); każda kontrolka ma etykietę albo tekst przycisku, „Uruchom” ma przyczynę wyłączenia przez `aria-describedby`.
+- [x] Ciemny motyw zmieniony na warstwie tokenów (blok `prefers-color-scheme` w `style.css`) i sprawdzony w obu motywach; kontrast ról pilnowany testem.
+
+### Guard
+
+- [x] Plik reguł agenta (`REPOSITORY_GUIDELINES.md`, sekcja „UI (szczur-radar-web)”) wskazuje źródło tokenów i katalog komponentów i zakazuje literałów w widokach; reguł zapraszających do jednorazowych wartości nie było.
+- [x] N/A dla lintera i hooka pre-commit — repo nie ma ani jednego, ani drugiego. W ich miejsce skan literałów w `src/styleContract.test.ts` biegnie w CI (job „web unit tests”) na oczyszczonych plikach.
+
+### Gate
+
+- [x] Kitchen sink (`/kitchen-sink`) i zrzuty `/admin` z mockiem; `toHaveScreenshot` N/A — bez Playwright Test (bez nowych zależności), więc bez bazowych zrzutów do aktualizacji.
+- [ ] `/10x-impl-review` — uruchamiany po fazie 5 na tej gałęzi, przed `/10x-archive`; wynik i triaż uwag UI dopisuję tutaj.
+- [x] Zakres utrzymany: jeden widok (`AdminView` + `AppHeader`) plus globalne tokeny; Feed, Login i PostCard tylko z mechaniczną podmianą 5 literałów.
+
+## Odłożone
+
+- **D1 → S-06** (`pipeline-run-history-dashboard`): układ listy przebiegów, zagregowany sygnał awarii, automatyczne odświeżanie przebiegu w toku.
+- **`feed-view-ui-hardening`** (przed S-03 i S-04): FeedView + PostCard na `AppButton` / `StatusBadge` („wzrostowo” / „spadkowo”), `px` na skalę.
+- **`login-view-ui-hardening`**: przycisk logowania jako `AppButton` wariant główny, błąd jako `StatusMessage`.
+- **`admin-failed-posts-table`** (prośba z weryfikacji fazy 3): nieudane posty jako tabela z wierszami i kolumnami zamiast listy; wspólny wygląd tabeli do użycia też w historii przebiegów S-06.
+- Wyłączony checkbox w jasnym motywie (domyślny wygląd przeglądarki) — do decyzji w jednej z powyższych zmian.
