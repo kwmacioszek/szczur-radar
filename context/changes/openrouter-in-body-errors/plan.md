@@ -205,8 +205,8 @@ Brak zmian schematu. Produkcja do merge'a działa na `LLM_SERVICE_TIER=default` 
 
 #### Automated
 
-- [ ] 2.1 CI zielone na PR
+- [x] 2.1 CI zielone na PR — 66bf7f0
 
 #### Manual
 
-- [ ] 2.2 Opcjonalny test na żywo przed merge'em: bez „choices is not set”
+- [x] 2.2 Opcjonalny test na żywo przed merge'em: bez „choices is not set” (pominięty decyzją użytkownika 2026-10-10: weryfikacja po merge'u według runbooka w `deploy-plan.md`, issue #39) — 66bf7f0
