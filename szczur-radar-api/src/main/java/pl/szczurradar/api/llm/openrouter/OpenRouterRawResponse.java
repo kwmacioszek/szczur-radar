@@ -19,7 +19,8 @@ import tools.jackson.databind.json.JsonMapper;
 /**
  * Reads what openai-java and Spring AI lose from OpenRouter's raw 2xx answer: an error OpenRouter
  * reports in the body of an HTTP 200 once the model has started on the request
- * ({@code {"error":{"code","message","metadata":{"error_type"}}}} instead of {@code choices}; docs:
+ * ({@code {"error":{"code","message","metadata":{"error_type"}}}} instead of {@code choices}, or
+ * {@code choices[0].error} after partial output; docs:
  * openrouter.ai/docs/api/reference/errors-and-debugging), e.g. a flex refusal. Wraps openai-java's
  * synchronous HTTP client and keeps what the last 2xx answer reported per thread — a call and its
  * attempts run on the caller's thread. The body is buffered (a chat answer is a few KB) and handed on
@@ -33,7 +34,7 @@ final class OpenRouterRawResponse implements HttpClient {
 	 * What one 2xx answer reported.
 	 *
 	 * @param answered whether a 2xx answer arrived at all (not after a time-out or I/O error)
-	 * @param errorCode {@code error.code}, the status the error would have had
+	 * @param errorCode {@code error.code} or {@code choices[0].error.code}, the status the error would have had
 	 * @param choices whether the answer has a non-empty {@code choices} list
 	 */
 	record Observed(boolean answered, @Nullable Integer errorCode, @Nullable String errorMessage,
@@ -94,6 +95,9 @@ final class OpenRouterRawResponse implements HttpClient {
 		try {
 			JsonNode root = MAPPER.readTree(body);
 			JsonNode error = root.path("error");
+			if (!error.isObject()) {
+				error = root.path("choices").path(0).path("error");
+			}
 			JsonNode code = error.path("code");
 			JsonNode message = error.path("message");
 			JsonNode type = error.path("metadata").path("error_type");

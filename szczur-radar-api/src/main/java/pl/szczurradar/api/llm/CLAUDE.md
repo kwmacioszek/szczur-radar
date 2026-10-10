@@ -65,6 +65,8 @@ blank answer) is judged with the shared `text/Whitespace`, never `isBlank`. An a
   2xx answer per thread, and `OpenRouterClient` classifies `error.code` like the HTTP status (429
   retried and flex → default, 5xx retried, 401/402/404 the configuration, other 4xx `REJECTED`). A
   2xx answer without `choices` and without an error (missing or empty list) is retried like a 5xx.
+  If generation fails after partial output, the error is in `choices[0].error`; it is classified
+  before accepting the result, and the partial text is discarded.
 - `ProviderSchemas` sends each provider the schema subset it accepts; the full schema stays the
   caller's check. Known losses: Spring AI's Gemini mapping drops `additionalProperties` and
   `uniqueItems`; OpenAI strict mode rejects `uniqueItems` (HTTP 400). Gemini gets a nullable enum

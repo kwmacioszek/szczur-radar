@@ -304,6 +304,51 @@ class OpenRouterClientTest {
 	}
 
 	@Test
+	void aServerErrorAfterPartialOutputIsRetriedWithoutAcceptingThatOutput() {
+		try (ScriptedProviderServer server = new ScriptedProviderServer(
+				partialAnswerError(502, "Provider disconnected mid-stream", "provider_unavailable"),
+				Reply.ok(SUCCESS))) {
+			LlmResponse response = client(server, ServiceTier.DEFAULT, null).complete(REQUEST);
+
+			assertThat(response.rawText()).isEqualTo(MAPPER.readTree(SUCCESS).at("/choices/0/message/content").asString());
+			assertThat(response.attempts()).isEqualTo(2);
+			assertThat(server.requests()).hasSize(2);
+			assertThat(sleeps).containsExactly(Duration.ofSeconds(1));
+		}
+	}
+
+	@Test
+	void serverErrorsAfterPartialOutputStopAfterThreeRequests() {
+		Reply error = partialAnswerError(502, "Provider disconnected mid-stream", "provider_unavailable");
+		try (ScriptedProviderServer server = new ScriptedProviderServer(error, error, error, Reply.ok(SUCCESS))) {
+			assertThatExceptionOfType(LlmCallException.class)
+				.isThrownBy(() -> client(server, ServiceTier.DEFAULT, null).complete(REQUEST))
+				.satisfies(ex -> {
+					assertThat(ex.failure()).isEqualTo(CallFailure.PROVIDER_ERROR);
+					assertThat(ex.attempts()).isEqualTo(3);
+					assertThat(ex.getMessage()).contains("HTTP 502", "Provider disconnected mid-stream", "provider_unavailable");
+				});
+			assertThat(server.requests()).hasSize(3);
+			assertThat(sleeps).containsExactly(Duration.ofSeconds(1), Duration.ofSeconds(2));
+		}
+	}
+
+	@Test
+	void anAuthenticationErrorAfterPartialOutputStopsWithoutTheKey() {
+		try (ScriptedProviderServer server = new ScriptedProviderServer(
+				partialAnswerError(401, "Invalid key synthetic-key", "authentication_error"), Reply.ok(SUCCESS))) {
+			assertThatExceptionOfType(LlmConfigurationException.class)
+				.isThrownBy(() -> client(server, ServiceTier.DEFAULT, null).complete(REQUEST))
+				.satisfies(ex -> {
+					assertThat(ex.attempts()).isEqualTo(1);
+					assertThat(ex.getMessage()).contains("HTTP 401", "<hidden>").doesNotContain("synthetic-key");
+				});
+			assertThat(server.requests()).hasSize(1);
+			assertThat(sleeps).isEmpty();
+		}
+	}
+
+	@Test
 	void refusedConnectionIsRetriedThreeTimes() {
 		assertThatExceptionOfType(LlmCallException.class)
 			.isThrownBy(() -> LlmClientFactory.create(new LlmProviderProperties(Provider.OPENROUTER, "openai/gpt-6-luna",
@@ -314,6 +359,18 @@ class OpenRouterClientTest {
 				assertThat(ex.attempts()).isEqualTo(3);
 			});
 		assertThat(sleeps).containsExactly(Duration.ofSeconds(1), Duration.ofSeconds(2));
+	}
+
+	/** The real payload changed to OpenRouter's documented error after partial output. */
+	private static Reply partialAnswerError(int code, String message, String errorType) {
+		ObjectNode partial = (ObjectNode) MAPPER.readTree(SUCCESS);
+		ObjectNode choice = (ObjectNode) partial.at("/choices/0");
+		choice.put("finish_reason", "error");
+		((ObjectNode) choice.path("message")).put("content", "partial output...");
+		ObjectNode error = choice.putObject("error");
+		error.put("code", code).put("message", message);
+		error.putObject("metadata").put("error_type", errorType);
+		return Reply.ok(partial.toString());
 	}
 
 	/** An error reported in the body of an HTTP 200, in OpenRouter's documented shape. */

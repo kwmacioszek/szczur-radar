@@ -48,6 +48,7 @@ import pl.szczurradar.api.llm.transport.TransportRetry;
  * "{@code choices} is not set". {@link OpenRouterRawResponse} keeps the raw answer, so such an error is
  * classified by its {@code code} like an HTTP status — a flex refusal is a 429 — and an answer without
  * {@code choices} is retried like a 5xx.
+ * An error after partial output ({@code choices[0].error}) is classified before that output is accepted.
  */
 public final class OpenRouterClient implements LlmClient {
 
@@ -172,8 +173,12 @@ public final class OpenRouterClient implements LlmClient {
 			// e.g. openai-java's "`choices` is not set" on an error reported in a 200 answer
 			throw failedAnswer(rawResponse.take(), ex).orElseGet(() -> TransportException.ofThrowable(ex, messages));
 		}
+		Optional<TransportException> failure = failedAnswer(rawResponse.take(), null);
+		if (failure.isPresent()) {
+			throw failure.get();
+		}
 		if (response.getResults().isEmpty()) {
-			throw failedAnswer(rawResponse.take(), null).orElseGet(() -> withoutChoices(null));
+			throw withoutChoices(null);
 		}
 		Object refusal = response.getResults().getFirst().getOutput().getMetadata().get("refusal");
 		if (refusal instanceof String text && !text.isBlank()) {
