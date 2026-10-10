@@ -3,11 +3,14 @@ package pl.szczurradar.api.llm.openrouter;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import com.openai.client.OpenAIClient;
 import com.openai.client.OpenAIClientAsync;
-import com.openai.client.okhttp.OpenAIOkHttpClient;
+import com.openai.client.OpenAIClientImpl;
+import com.openai.client.okhttp.OkHttpClient;
 import com.openai.client.okhttp.OpenAIOkHttpClientAsync;
+import com.openai.core.ClientOptions;
 import com.openai.errors.OpenAIServiceException;
 import org.jspecify.annotations.Nullable;
 import org.springframework.ai.chat.messages.SystemMessage;
@@ -39,6 +42,13 @@ import pl.szczurradar.api.llm.transport.TransportRetry;
  * optional reasoning effort. With {@code LLM_SERVICE_TIER=flex} the call is routed to OpenAI's flex
  * tier only ({@code provider.only = ["openai/flex"]}, no fallbacks); after three 429 refusals
  * {@link TransportRetry} retries it on {@code ["openai"]}.
+ *
+ * <p>OpenRouter reports an error that occurs once the model has started on the request in the body of
+ * an HTTP 200 ({@code {"error":{"code",…}}} instead of {@code choices}); openai-java then fails with
+ * "{@code choices} is not set". {@link OpenRouterRawResponse} keeps the raw answer, so such an error is
+ * classified by its {@code code} like an HTTP status — a flex refusal is a 429 — and an answer without
+ * {@code choices} is retried like a 5xx.
+ * An error after partial output ({@code choices[0].error}) is classified before that output is accepted.
  */
 public final class OpenRouterClient implements LlmClient {
 
@@ -56,17 +66,20 @@ public final class OpenRouterClient implements LlmClient {
 
 	private final TransportRetry retry;
 
+	private final OpenRouterRawResponse rawResponse;
+
 	private final ProviderMessages messages;
 
 	OpenRouterClient(ChatModel chatModel, String model, ServiceTier serviceTier,
 			@Nullable ReasoningEffort reasoningEffort, Duration timeout, TransportRetry retry,
-			ProviderMessages messages) {
+			OpenRouterRawResponse rawResponse, ProviderMessages messages) {
 		this.chatModel = chatModel;
 		this.model = model;
 		this.serviceTier = serviceTier;
 		this.reasoningEffort = reasoningEffort;
 		this.timeout = timeout;
 		this.retry = retry;
+		this.rawResponse = rawResponse;
 		this.messages = messages;
 	}
 
@@ -79,12 +92,17 @@ public final class OpenRouterClient implements LlmClient {
 	public static LlmClient create(LlmProviderProperties properties, @Nullable String baseUrl, TransportRetry retry,
 			ProviderMessages messages) {
 		String url = baseUrl != null ? baseUrl : BASE_URL;
-		OpenAIClient client = OpenAIOkHttpClient.builder()
+		// The synchronous client on our raw-answer reader around openai-java's OkHttp client (the SDK's
+		// builder has no interceptor), with the same base URL, key, time limit and no retries.
+		OpenRouterRawResponse rawResponse = new OpenRouterRawResponse(
+				OkHttpClient.builder().timeout(properties.timeout()).build());
+		OpenAIClient client = new OpenAIClientImpl(ClientOptions.builder()
+			.httpClient(rawResponse)
 			.baseUrl(url)
 			.apiKey(properties.apiKey())
 			.maxRetries(0)
 			.timeout(properties.timeout())
-			.build();
+			.build());
 		OpenAIClientAsync clientAsync = OpenAIOkHttpClientAsync.builder()
 			.baseUrl(url)
 			.apiKey(properties.apiKey())
@@ -97,7 +115,7 @@ public final class OpenRouterClient implements LlmClient {
 			.options(OpenAiChatOptions.builder().model(properties.model()).build())
 			.build();
 		return new OpenRouterClient(chatModel, properties.model(), properties.serviceTier(), properties.reasoningEffort(),
-				properties.timeout(), retry, messages);
+				properties.timeout(), retry, rawResponse, messages);
 	}
 
 	@Override
@@ -141,6 +159,7 @@ public final class OpenRouterClient implements LlmClient {
 	}
 
 	private ChatResponse call(Prompt prompt) {
+		rawResponse.clear();
 		ChatResponse response;
 		try {
 			response = chatModel.call(prompt);
@@ -151,10 +170,15 @@ public final class OpenRouterClient implements LlmClient {
 					TransportException.parseRetryAfter(retryAfter.isEmpty() ? null : retryAfter.getFirst()), ex);
 		}
 		catch (RuntimeException ex) {
-			throw TransportException.ofThrowable(ex, messages);
+			// e.g. openai-java's "`choices` is not set" on an error reported in a 200 answer
+			throw failedAnswer(rawResponse.take(), ex).orElseGet(() -> TransportException.ofThrowable(ex, messages));
+		}
+		Optional<TransportException> failure = failedAnswer(rawResponse.take(), null);
+		if (failure.isPresent()) {
+			throw failure.get();
 		}
 		if (response.getResults().isEmpty()) {
-			throw new TransportException(TransportException.Kind.REJECTED, "no choices in the answer", null, null);
+			throw withoutChoices(null);
 		}
 		Object refusal = response.getResults().getFirst().getOutput().getMetadata().get("refusal");
 		if (refusal instanceof String text && !text.isBlank()) {
@@ -166,6 +190,28 @@ public final class OpenRouterClient implements LlmClient {
 		}
 		ChatResponses.requireText(response);
 		return response;
+	}
+
+	/**
+	 * The failure a 2xx answer reported, if it did: an {@code error} object is classified as the HTTP
+	 * status in its {@code code} (429 retried and, after three, flex → default; 5xx retried; 401/402/404
+	 * the configuration); an answer without {@code choices} and without an error is retried like a 5xx.
+	 */
+	private Optional<TransportException> failedAnswer(OpenRouterRawResponse.Observed answer,
+			@Nullable Throwable cause) {
+		if (!answer.answered()) {
+			return Optional.empty();
+		}
+		if (answer.errorCode() != null) {
+			String type = answer.errorType() != null ? " (" + answer.errorType() + ")" : "";
+			return Optional.of(TransportException.ofStatus(answer.errorCode(),
+					messages.clean("error in a 200 answer: " + answer.errorMessage() + type), null, cause));
+		}
+		return answer.choices() ? Optional.empty() : Optional.of(withoutChoices(cause));
+	}
+
+	private static TransportException withoutChoices(@Nullable Throwable cause) {
+		return new TransportException(TransportException.Kind.SERVER_ERROR, "answer without choices", null, cause);
 	}
 
 }

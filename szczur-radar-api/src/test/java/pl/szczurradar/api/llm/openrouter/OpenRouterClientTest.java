@@ -216,18 +216,135 @@ class OpenRouterClientTest {
 	}
 
 	@Test
-	void answerWithoutChoicesIsAProviderErrorWithoutRetry() {
-		// The real payload with its choices removed.
+	void anEmptyChoicesListIsRetriedLikeAServerError() {
+		// The real payload with an empty choices list.
 		ObjectNode empty = (ObjectNode) MAPPER.readTree(SUCCESS);
 		empty.putArray("choices");
 		try (ScriptedProviderServer server = new ScriptedProviderServer(Reply.ok(empty.toString()), Reply.ok(SUCCESS))) {
+			LlmResponse response = client(server, ServiceTier.DEFAULT, null).complete(REQUEST);
+
+			assertThat(response.attempts()).isEqualTo(2);
+			assertThat(server.requests()).hasSize(2);
+			assertThat(sleeps).containsExactly(Duration.ofSeconds(1));
+		}
+	}
+
+	@Test
+	void anAnswerWithoutChoicesAndWithoutAnErrorIsRetriedLikeAServerError() {
+		// The real payload with its choices field removed: openai-java fails with "`choices` is not set".
+		ObjectNode missing = (ObjectNode) MAPPER.readTree(SUCCESS);
+		missing.remove("choices");
+		try (ScriptedProviderServer server = new ScriptedProviderServer(Reply.ok(missing.toString()), Reply.ok(SUCCESS))) {
+			LlmResponse response = client(server, ServiceTier.DEFAULT, null).complete(REQUEST);
+
+			assertThat(response.attempts()).isEqualTo(2);
+			assertThat(server.requests()).hasSize(2);
+		}
+	}
+
+	@Test
+	void threeFlexRefusalsReportedInA200AnswerFallBackToTheDefaultTier() {
+		// OpenRouter reports an error that occurs once the model has started in the body of an HTTP 200
+		// (docs: errors-and-debugging); synthetic, in that shape.
+		Reply refused = inBodyError(429, "Rate limit exceeded", "rate_limit_exceeded");
+		try (ScriptedProviderServer server = new ScriptedProviderServer(refused, refused, refused, Reply.ok(SUCCESS))) {
+			LlmResponse response = client(server, ServiceTier.FLEX, null).complete(REQUEST);
+
+			assertThat(response.serviceTier()).isEqualTo(ServiceTier.DEFAULT);
+			assertThat(response.flexFallback()).isTrue();
+			assertThat(response.attempts()).isEqualTo(4);
+			assertThat(server.requests()).extracting(request -> MAPPER.readTree(request.body()).at("/provider/only").toString())
+				.containsExactly("[\"openai/flex\"]", "[\"openai/flex\"]", "[\"openai/flex\"]", "[\"openai\"]");
+		}
+	}
+
+	@Test
+	void aServerErrorReportedInA200AnswerStopsAfterThreeRequests() {
+		Reply error = inBodyError(502, "Upstream error", "provider_error");
+		try (ScriptedProviderServer server = new ScriptedProviderServer(error, error, error, error)) {
+			assertThatExceptionOfType(LlmCallException.class)
+				.isThrownBy(() -> client(server, ServiceTier.DEFAULT, null).complete(REQUEST))
+				.satisfies(ex -> {
+					assertThat(ex).isNotInstanceOf(LlmConfigurationException.class);
+					assertThat(ex.failure()).isEqualTo(CallFailure.PROVIDER_ERROR);
+					assertThat(ex.attempts()).isEqualTo(3);
+					assertThat(ex.getMessage()).contains("HTTP 502", "Upstream error", "provider_error");
+				});
+			assertThat(server.requests()).hasSize(3);
+		}
+	}
+
+	@Test
+	void anAuthenticationErrorReportedInA200AnswerIsTheConfigurationWithoutTheKey() {
+		try (ScriptedProviderServer server = new ScriptedProviderServer(
+				inBodyError(401, "Invalid key synthetic-key", "authentication_error"), Reply.ok(SUCCESS))) {
+			assertThatExceptionOfType(LlmConfigurationException.class)
+				.isThrownBy(() -> client(server, ServiceTier.DEFAULT, null).complete(REQUEST))
+				.satisfies(ex -> {
+					assertThat(ex.attempts()).isEqualTo(1);
+					assertThat(ex.getMessage()).contains("HTTP 401", "<hidden>").doesNotContain("synthetic-key");
+				});
+			assertThat(server.requests()).hasSize(1);
+		}
+	}
+
+	@Test
+	void aBadRequestReportedInA200AnswerFailsAfterOneRequest() {
+		try (ScriptedProviderServer server = new ScriptedProviderServer(
+				inBodyError(400, "Provider returned error", "invalid_request"), Reply.ok(SUCCESS))) {
+			assertThatExceptionOfType(LlmCallException.class)
+				.isThrownBy(() -> client(server, ServiceTier.DEFAULT, null).complete(REQUEST))
+				.satisfies(ex -> {
+					assertThat(ex).isNotInstanceOf(LlmConfigurationException.class);
+					assertThat(ex.attempts()).isEqualTo(1);
+					assertThat(ex.getMessage()).contains("HTTP 400");
+				});
+			assertThat(server.requests()).hasSize(1);
+		}
+	}
+
+	@Test
+	void aServerErrorAfterPartialOutputIsRetriedWithoutAcceptingThatOutput() {
+		try (ScriptedProviderServer server = new ScriptedProviderServer(
+				partialAnswerError(502, "Provider disconnected mid-stream", "provider_unavailable"),
+				Reply.ok(SUCCESS))) {
+			LlmResponse response = client(server, ServiceTier.DEFAULT, null).complete(REQUEST);
+
+			assertThat(response.rawText()).isEqualTo(MAPPER.readTree(SUCCESS).at("/choices/0/message/content").asString());
+			assertThat(response.attempts()).isEqualTo(2);
+			assertThat(server.requests()).hasSize(2);
+			assertThat(sleeps).containsExactly(Duration.ofSeconds(1));
+		}
+	}
+
+	@Test
+	void serverErrorsAfterPartialOutputStopAfterThreeRequests() {
+		Reply error = partialAnswerError(502, "Provider disconnected mid-stream", "provider_unavailable");
+		try (ScriptedProviderServer server = new ScriptedProviderServer(error, error, error, Reply.ok(SUCCESS))) {
 			assertThatExceptionOfType(LlmCallException.class)
 				.isThrownBy(() -> client(server, ServiceTier.DEFAULT, null).complete(REQUEST))
 				.satisfies(ex -> {
 					assertThat(ex.failure()).isEqualTo(CallFailure.PROVIDER_ERROR);
+					assertThat(ex.attempts()).isEqualTo(3);
+					assertThat(ex.getMessage()).contains("HTTP 502", "Provider disconnected mid-stream", "provider_unavailable");
+				});
+			assertThat(server.requests()).hasSize(3);
+			assertThat(sleeps).containsExactly(Duration.ofSeconds(1), Duration.ofSeconds(2));
+		}
+	}
+
+	@Test
+	void anAuthenticationErrorAfterPartialOutputStopsWithoutTheKey() {
+		try (ScriptedProviderServer server = new ScriptedProviderServer(
+				partialAnswerError(401, "Invalid key synthetic-key", "authentication_error"), Reply.ok(SUCCESS))) {
+			assertThatExceptionOfType(LlmConfigurationException.class)
+				.isThrownBy(() -> client(server, ServiceTier.DEFAULT, null).complete(REQUEST))
+				.satisfies(ex -> {
 					assertThat(ex.attempts()).isEqualTo(1);
+					assertThat(ex.getMessage()).contains("HTTP 401", "<hidden>").doesNotContain("synthetic-key");
 				});
 			assertThat(server.requests()).hasSize(1);
+			assertThat(sleeps).isEmpty();
 		}
 	}
 
@@ -242,6 +359,24 @@ class OpenRouterClientTest {
 				assertThat(ex.attempts()).isEqualTo(3);
 			});
 		assertThat(sleeps).containsExactly(Duration.ofSeconds(1), Duration.ofSeconds(2));
+	}
+
+	/** The real payload changed to OpenRouter's documented error after partial output. */
+	private static Reply partialAnswerError(int code, String message, String errorType) {
+		ObjectNode partial = (ObjectNode) MAPPER.readTree(SUCCESS);
+		ObjectNode choice = (ObjectNode) partial.at("/choices/0");
+		choice.put("finish_reason", "error");
+		((ObjectNode) choice.path("message")).put("content", "partial output...");
+		ObjectNode error = choice.putObject("error");
+		error.put("code", code).put("message", message);
+		error.putObject("metadata").put("error_type", errorType);
+		return Reply.ok(partial.toString());
+	}
+
+	/** An error reported in the body of an HTTP 200, in OpenRouter's documented shape. */
+	private static Reply inBodyError(int code, String message, String errorType) {
+		return Reply.ok("{\"id\":\"gen-synthetic\",\"object\":\"chat.completion\",\"error\":{\"code\":" + code
+				+ ",\"message\":\"" + message + "\",\"metadata\":{\"error_type\":\"" + errorType + "\"}}}");
 	}
 
 	private LlmClient client(ScriptedProviderServer server, ServiceTier tier, ReasoningEffort effort) {

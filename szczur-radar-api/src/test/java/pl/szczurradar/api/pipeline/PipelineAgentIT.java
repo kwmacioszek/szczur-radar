@@ -322,8 +322,10 @@ class PipelineAgentIT {
 	@Test
 	@Order(7)
 	void aStoppingInstanceInterruptsItsRunAndPutsItsPostsBack() throws InterruptedException {
-		UUID post = jdbc.queryForObject("SELECT id FROM posts WHERE stage = 'assessed' ORDER BY id DESC LIMIT 1",
-				UUID.class);
+		// Assessed by the model (not decided by the prefilter), so the client is called for it.
+		UUID post = jdbc.queryForObject("SELECT p.id FROM posts p WHERE p.stage = 'assessed' AND EXISTS"
+				+ " (SELECT 1 FROM assessments a WHERE a.post_id = p.id AND a.result_source = 'model')"
+				+ " ORDER BY p.id DESC LIMIT 1", UUID.class);
 		jdbc.update("UPDATE posts SET stage = 'stored' WHERE id = ?", post);
 		CountDownLatch called = new CountDownLatch(1);
 		CountDownLatch answered = new CountDownLatch(1);
