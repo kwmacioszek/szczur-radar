@@ -1,10 +1,10 @@
 ---
 change_id: openrouter-in-body-errors
 title: Openrouter in body errors
-status: impl_reviewed
+status: archived
 created: 2026-10-10
 updated: 2026-10-10
-archived_at: null
+archived_at: 2026-10-10T13:30:39Z
 ---
 
 ## Notes
