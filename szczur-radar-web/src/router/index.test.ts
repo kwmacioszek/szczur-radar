@@ -65,6 +65,11 @@ describe('route guard', () => {
     expect(await navigate('/admin')).toBe('/login?redirect=/admin')
   })
 
+  it('lets an anonymous visitor into the dev-only /kitchen-sink', async () => {
+    vi.mocked(fetchMe).mockRejectedValue(new ApiError(401, 'not_authenticated'))
+    expect(await navigate('/kitchen-sink')).toBe('/kitchen-sink')
+  })
+
   it('asks the server for the session only once', async () => {
     vi.mocked(fetchMe).mockResolvedValue(ADMIN)
     const router = createAppRouter(createMemoryHistory())

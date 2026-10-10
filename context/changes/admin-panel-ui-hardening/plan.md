@@ -440,14 +440,14 @@ Brak danych do migracji. Wycofanie = revert commitów tej gałęzi; tokeny są w
 
 #### Automated
 
-- [ ] 1.1 Testy web przechodzą, w tym nowy przypadek `/kitchen-sink`
-- [ ] 1.2 Build produkcyjny przechodzi i nie zawiera kitchen sink
-- [ ] 1.3 `index.html` ma `lang="pl"`
-- [ ] 1.4 `dev/mock-api.js` parsuje się jako funkcja i nie zawiera `transport_error` ani `quote_not_fragment`
+- [x] 1.1 Testy web przechodzą, w tym nowy przypadek `/kitchen-sink`
+- [x] 1.2 Build produkcyjny przechodzi i nie zawiera kitchen sink
+- [x] 1.3 `index.html` ma `lang="pl"`
+- [x] 1.4 `dev/mock-api.js` parsuje się jako funkcja i nie zawiera `transport_error` ani `quote_not_fragment`
 
 #### Manual
 
-- [ ] 1.5 `/kitchen-sink` otwiera się bez logowania; `/admin` z `dev/mock-api.js` wygląda jak `ui-before/desktop-light.png`
+- [x] 1.5 `/kitchen-sink` otwiera się bez logowania; `/admin` z `dev/mock-api.js` wygląda jak `ui-before/desktop-light.png`
 
 ### Phase 2: Wartości tokenów
 
