@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import {
   type Run,
+  type RunStatus,
   type SourceState,
   fetchRuns,
   fetchSources,
@@ -10,7 +11,10 @@ import {
   startRange,
 } from '../api/pipeline'
 import { type FailedPost, fetchFailedPosts } from '../api/posts'
+import AppButton from '../components/AppButton.vue'
 import AppHeader from '../components/AppHeader.vue'
+import StatusBadge, { type BadgeTone } from '../components/StatusBadge.vue'
+import StatusMessage from '../components/StatusMessage.vue'
 import { formatDateTime, label } from '../labels'
 
 /** Yesterday in Warsaw, the usual day to run. */
@@ -23,10 +27,36 @@ function yesterday(): string {
 const from = ref(yesterday())
 const to = ref(yesterday())
 const sources = ref<SourceState[]>([])
+/** True until the first answer about the sources. */
+const sourcesLoading = ref(true)
+const sourcesError = ref<string | null>(null)
 const chosenSources = ref<string[]>([])
 const starting = ref(false)
 const startMessage = ref<string | null>(null)
 const startError = ref<string | null>(null)
+
+/** Why "Uruchom" is disabled, once the sources are known; null when it is not. */
+const startHint = computed(() => {
+  if (sourcesLoading.value || sourcesError.value) return null
+  if (!sources.value.some((source) => source.configured)) return 'Żadne źródło nie jest skonfigurowane na serwerze.'
+  if (chosenSources.value.length === 0) return 'Wybierz co najmniej jedno źródło.'
+  return null
+})
+
+// Loaded until the first success (on mount, "Spróbuj ponownie", "Odśwież" after an error), so the
+// configured sources are checked by default once and the admin's later choice is kept.
+async function loadSources(): Promise<void> {
+  sourcesLoading.value = true
+  sourcesError.value = null
+  try {
+    sources.value = await fetchSources()
+    chosenSources.value = sources.value.filter((s) => s.configured).map((s) => s.source)
+  } catch {
+    sourcesError.value = 'Nie udało się wczytać listy źródeł.'
+  } finally {
+    sourcesLoading.value = false
+  }
+}
 
 async function start(): Promise<void> {
   if (starting.value) return
@@ -46,14 +76,29 @@ async function start(): Promise<void> {
 
 // --- runs -------------------------------------------------------------------------------
 const runs = ref<Run[]>([])
+/** Loading without a list; a refresh keeps existing runs on screen. */
+const runsLoading = ref(true)
 const runsError = ref<string | null>(null)
 
+/** The badge tone of a run status; a step uses the same tones. */
+const runTone: Record<RunStatus, BadgeTone> = {
+  queued: 'neutral',
+  running: 'info',
+  succeeded: 'success',
+  partial: 'warning',
+  interrupted: 'warning',
+  failed: 'destructive',
+}
+
 async function loadRuns(): Promise<void> {
+  runsLoading.value = runs.value.length === 0
   runsError.value = null
   try {
     runs.value = (await fetchRuns()).items
   } catch {
     runsError.value = 'Nie udało się wczytać przebiegów.'
+  } finally {
+    runsLoading.value = false
   }
 }
 
@@ -70,6 +115,8 @@ function counters(run: Run): string {
 
 // --- failed posts -----------------------------------------------------------------------
 const failed = ref<FailedPost[]>([])
+/** Loading without a list; a refresh keeps existing failed posts on screen. */
+const failedLoading = ref(true)
 const failedError = ref<string | null>(null)
 const selected = ref<string[]>([])
 const retrying = ref(false)
@@ -78,12 +125,15 @@ const retryError = ref<string | null>(null)
 const retryable = computed(() => failed.value.filter((post) => post.stage !== 'dead'))
 
 async function loadFailed(): Promise<void> {
+  failedLoading.value = failed.value.length === 0
   failedError.value = null
   try {
     failed.value = (await fetchFailedPosts()).items
     selected.value = selected.value.filter((id) => retryable.value.some((post) => post.id === id))
   } catch {
     failedError.value = 'Nie udało się wczytać nieudanych postów.'
+  } finally {
+    failedLoading.value = false
   }
 }
 
@@ -110,17 +160,11 @@ function excerpt(post: FailedPost): string {
 }
 
 async function refresh(): Promise<void> {
-  await Promise.all([loadRuns(), loadFailed()])
+  await Promise.all([loadRuns(), loadFailed(), sourcesError.value ? loadSources() : undefined])
 }
 
 onMounted(async () => {
-  try {
-    sources.value = await fetchSources()
-    chosenSources.value = sources.value.filter((s) => s.configured).map((s) => s.source)
-  } catch {
-    startError.value = 'Nie udało się wczytać listy źródeł.'
-  }
-  await refresh()
+  await Promise.all([loadSources(), loadRuns(), loadFailed()])
 })
 </script>
 
@@ -134,36 +178,54 @@ onMounted(async () => {
       <form class="start" @submit.prevent="start">
         <label>Od <input v-model="from" type="date" required /></label>
         <label>Do <input v-model="to" type="date" required /></label>
-        <fieldset class="sources">
+        <fieldset class="sources" :aria-busy="sourcesLoading ? 'true' : undefined">
           <legend>Źródła</legend>
-          <label v-for="source in sources" :key="source.source">
-            <input
-              v-model="chosenSources"
-              type="checkbox"
-              :value="source.source"
-              :disabled="!source.configured"
-            />
-            {{ label('source', source.source) }}<template v-if="!source.configured"> (nieskonfigurowane)</template>
-          </label>
+          <span v-if="sourcesLoading" class="loading">Wczytywanie…</span>
+          <template v-else-if="sourcesError">
+            <StatusMessage tone="error" class="sources-error">{{ sourcesError }}</StatusMessage>
+            <AppButton @click="loadSources">Spróbuj ponownie</AppButton>
+          </template>
+          <template v-else>
+            <label v-for="source in sources" :key="source.source">
+              <input
+                v-model="chosenSources"
+                type="checkbox"
+                :value="source.source"
+                :disabled="!source.configured"
+              />
+              {{ label('source', source.source) }}<template v-if="!source.configured"> (nieskonfigurowane)</template>
+            </label>
+          </template>
         </fieldset>
-        <button type="submit" :disabled="starting || chosenSources.length === 0">Uruchom</button>
+        <AppButton
+          type="submit"
+          variant="primary"
+          :disabled="chosenSources.length === 0"
+          :busy="starting"
+          busy-label="Uruchamianie…"
+          :aria-describedby="startHint ? 'start-hint' : undefined"
+        >
+          Uruchom
+        </AppButton>
       </form>
-      <p v-if="startMessage" class="ok" role="status">{{ startMessage }}</p>
-      <p v-if="startError" class="error" role="alert">{{ startError }}</p>
+      <p v-if="startHint" id="start-hint" class="hint">{{ startHint }}</p>
+      <StatusMessage v-if="startMessage" tone="ok">{{ startMessage }}</StatusMessage>
+      <StatusMessage v-if="startError" tone="error">{{ startError }}</StatusMessage>
     </section>
 
-    <section aria-labelledby="runs-title">
+    <section aria-labelledby="runs-title" :aria-busy="runsLoading ? 'true' : undefined">
       <div class="section-head">
         <h2 id="runs-title">Ostatnie przebiegi</h2>
-        <button type="button" @click="refresh">Odśwież</button>
+        <AppButton @click="refresh">Odśwież</AppButton>
       </div>
-      <p v-if="runsError" class="error" role="alert">{{ runsError }}</p>
+      <p v-if="runsLoading" class="loading">Wczytywanie…</p>
+      <StatusMessage v-else-if="runsError" tone="error">{{ runsError }}</StatusMessage>
       <p v-else-if="runs.length === 0" class="empty">Jeszcze nie było przebiegu.</p>
       <ul v-else class="runs">
         <li v-for="run in runs" :key="run.id" class="run" :data-status="run.status">
           <p class="run-head">
             <strong>{{ label('runKind', run.kind) }}</strong>
-            <span class="status" :class="run.status">{{ label('runStatus', run.status) }}</span>
+            <StatusBadge class="status" :tone="runTone[run.status]">{{ label('runStatus', run.status) }}</StatusBadge>
             <span>{{ formatDateTime(run.createdAt) }}</span>
             <span v-if="run.sources.length">{{ run.sources.map((s) => label('source', s)).join(', ') }}</span>
           </p>
@@ -172,18 +234,24 @@ onMounted(async () => {
             · <span :class="{ alarm: run.processingErrors > 0 }">błędy techniczne {{ run.processingErrors }}</span>
           </p>
           <p v-if="run.steps.length" class="steps">
-            <span v-for="step in run.steps" :key="step.step + step.startedAt" :class="step.status">
-              {{ label('step', step.step) }}<template v-if="step.itemsOut !== null"> ({{ step.itemsOut }})</template>
-            </span>
+            <template v-for="step in run.steps" :key="step.step + step.startedAt">
+              <span v-if="step.status === 'succeeded'">
+                {{ label('step', step.step) }}<template v-if="step.itemsOut !== null"> ({{ step.itemsOut }})</template>
+              </span>
+              <StatusBadge v-else :tone="runTone[step.status]">
+                {{ label('step', step.step) }} ({{ label('runStatus', step.status) }})
+              </StatusBadge>
+            </template>
           </p>
           <p v-if="run.error" class="run-error">{{ run.error }}</p>
         </li>
       </ul>
     </section>
 
-    <section aria-labelledby="failed-title">
+    <section aria-labelledby="failed-title" :aria-busy="failedLoading ? 'true' : undefined">
       <h2 id="failed-title">Nieudane posty</h2>
-      <p v-if="failedError" class="error" role="alert">{{ failedError }}</p>
+      <p v-if="failedLoading" class="loading">Wczytywanie…</p>
+      <StatusMessage v-else-if="failedError" tone="error">{{ failedError }}</StatusMessage>
       <p v-else-if="failed.length === 0" class="empty">Brak nieudanych postów.</p>
       <template v-else>
         <ul class="failed-posts">
@@ -200,16 +268,18 @@ onMounted(async () => {
             <span class="attempt">
               <template v-if="post.stage === 'dead'"><strong>martwy</strong> · </template>
               próby {{ post.assessmentAttempts }}
-              <template v-if="post.lastAttempt?.failureClass"> · {{ post.lastAttempt.failureClass }}</template>
+              <template v-if="post.lastAttempt?.failureClass">
+                · {{ label('failureClass', post.lastAttempt.failureClass) }}
+              </template>
             </span>
           </li>
         </ul>
-        <button type="button" :disabled="retrying || selected.length === 0" @click="retry">
+        <AppButton :disabled="selected.length === 0" :busy="retrying" busy-label="Ponawianie…" @click="retry">
           Ponów zaznaczone
-        </button>
+        </AppButton>
       </template>
-      <p v-if="retryMessage" class="ok" role="status">{{ retryMessage }}</p>
-      <p v-if="retryError" class="error" role="alert">{{ retryError }}</p>
+      <StatusMessage v-if="retryMessage" tone="ok">{{ retryMessage }}</StatusMessage>
+      <StatusMessage v-if="retryError" tone="error">{{ retryError }}</StatusMessage>
     </section>
   </main>
 </template>
@@ -218,18 +288,17 @@ onMounted(async () => {
 .admin {
   max-width: 56rem;
   margin: 0 auto;
-  padding: 16px;
+  padding: var(--space-4);
   box-sizing: border-box;
 }
 
 h1 {
-  margin: 8px 0 16px;
-  font-size: 32px;
+  margin: var(--space-2) 0 var(--space-4);
 }
 
 h2 {
-  margin: 24px 0 8px;
-  font-size: 20px;
+  margin: var(--space-5) 0 var(--space-2);
+  font-size: var(--font-size-lg);
   color: var(--text-h);
 }
 
@@ -237,16 +306,27 @@ h2 {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 12px 16px;
+  gap: var(--space-3) var(--space-4);
 }
 
 .sources {
   display: flex;
-  gap: 12px;
+  align-items: center;
+  gap: var(--space-3);
   margin: 0;
-  padding: 4px 8px;
-  border: 1px solid color-mix(in srgb, var(--text) 30%, transparent);
-  border-radius: 6px;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+/* The parent's selector outranks the message's own margin, so it sits in the fieldset row. */
+.sources .sources-error {
+  margin: 0;
+}
+
+.hint {
+  margin: var(--space-2) 0 0;
+  font-size: var(--font-size-sm);
 }
 
 .section-head {
@@ -264,52 +344,35 @@ h2 {
 
 .run,
 .failed-posts li {
-  padding: 8px 0;
-  border-bottom: 1px solid color-mix(in srgb, var(--text) 20%, transparent);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--border);
 }
 
 .run p {
-  margin: 2px 0;
+  margin: var(--space-0) 0;
 }
 
-.run-head {
+.run-head,
+.steps {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px 12px;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-3);
 }
 
-.status.succeeded {
-  color: #188038;
-}
-
-.status.partial,
-.status.interrupted {
-  color: #b06000;
-}
-
-.status.failed,
 .alarm,
-.run-error,
-.error {
-  color: #d93025;
+.run-error {
+  color: var(--destructive);
 }
 
 .counters,
 .steps,
 .attempt {
-  font-size: 14px;
-}
-
-.steps span {
-  margin-right: 8px;
-}
-
-.steps .failed {
-  color: #d93025;
+  font-size: var(--font-size-sm);
 }
 
 .run-error {
-  font-size: 14px;
+  font-size: var(--font-size-sm);
   overflow-wrap: anywhere;
 }
 
@@ -317,14 +380,10 @@ h2 {
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
-  gap: 4px 12px;
+  gap: var(--space-1) var(--space-3);
 }
 
 .excerpt {
   overflow-wrap: anywhere;
-}
-
-.ok {
-  color: #188038;
 }
 </style>

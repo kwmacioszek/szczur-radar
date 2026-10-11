@@ -1,4 +1,4 @@
-// Every route except /login requires a session; a logged-in user never sees
+// Every route except /login (and the dev-only /kitchen-sink) requires a session; a logged-in user never sees
 // /login, and only an admin sees /admin. History mode: Caddy (and Vite) serve index.html for deep links.
 import {
   createRouter,
@@ -28,6 +28,18 @@ export const routes: RouteRecordRaw[] = [
   { path: '/login', name: 'login', component: LoginView, meta: { public: true } },
   { path: '/', name: 'home', component: FeedView },
   { path: '/admin', name: 'admin', component: AdminView, meta: { admin: true } },
+  // Every component in every state, for screenshots. `npm run build` replaces import.meta.env.DEV
+  // with false, so the route and its chunk are not in dist/.
+  ...(import.meta.env.DEV
+    ? [
+        {
+          path: '/kitchen-sink',
+          name: 'kitchen-sink',
+          component: () => import('../views/KitchenSinkView.vue'),
+          meta: { public: true },
+        },
+      ]
+    : []),
   { path: '/:pathMatch(.*)*', redirect: '/' },
 ]
 

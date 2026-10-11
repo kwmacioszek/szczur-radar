@@ -78,7 +78,7 @@ h1 {
 }
 
 .error {
-  color: #d93025;
+  color: var(--destructive);
 }
 
 .pager {

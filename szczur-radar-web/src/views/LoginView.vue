@@ -101,7 +101,7 @@ button {
   border: 0;
   border-radius: 8px;
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   cursor: pointer;
 }
 
@@ -112,6 +112,6 @@ button:disabled {
 
 .error {
   margin: 0;
-  color: #d93025;
+  color: var(--destructive);
 }
 </style>

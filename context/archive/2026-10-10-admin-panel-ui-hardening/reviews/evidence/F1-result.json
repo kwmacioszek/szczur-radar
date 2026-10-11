@@ -1,0 +1,11 @@
+{
+  "scenario": "initial GET 500 -> refresh with both second GETs held pending",
+  "requests": {
+    "/api/admin/pipeline-runs": 2,
+    "/api/admin/posts/failed": 2
+  },
+  "falseEmptyRuns": true,
+  "falseEmptyPosts": true,
+  "busySections": 0,
+  "loadingMessages": 0
+}
