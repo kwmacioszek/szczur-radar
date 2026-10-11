@@ -25,3 +25,8 @@ node_modules/
 .hermes/
 .pi/
 .qwen/
+# Playwright CLI output (may contain credentials)
+.playwright-cli/
+
+# Local Codex config (IntelliJ MCP port, machine-specific like .mcp.json)
+.codex/
