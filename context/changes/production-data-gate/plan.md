@@ -611,21 +611,21 @@ Treść akceptuje użytkownik w przeglądzie PR.
 
 #### Automated
 
-- [x] 2.1 `bash -n tools/db-backup/*.sh` przechodzi bez błędów
-- [x] 2.2 `docker build -t szczur-radar-db-backup tools/db-backup` kończy się sukcesem
-- [x] 2.3 `docker run --rm --entrypoint pg_dump szczur-radar-db-backup --version` pokazuje wersję 18.x
-- [x] 2.4 `tools/db-backup/test.sh` przechodzi (dump bez danych sesji, `restore-check` OK, retencja 14 z 20, obcięty dump → porażka bez wysyłki, `nas-retention --dry-run`)
+- [x] 2.1 `bash -n tools/db-backup/*.sh` przechodzi bez błędów — 0cd1f10
+- [x] 2.2 `docker build -t szczur-radar-db-backup tools/db-backup` kończy się sukcesem — 0cd1f10
+- [x] 2.3 `docker run --rm --entrypoint pg_dump szczur-radar-db-backup --version` pokazuje wersję 18.x — 0cd1f10
+- [x] 2.4 `tools/db-backup/test.sh` przechodzi (dump bez danych sesji, `restore-check` OK, retencja 14 z 20, obcięty dump → porażka bez wysyłki, `nas-retention --dry-run`) — 0cd1f10
 
 #### Manual
 
-- [x] 2.5 W logu z `test.sh` nie ma haseł ani kluczy (przegląd wyjścia)
+- [x] 2.5 W logu z `test.sh` nie ma haseł ani kluczy (przegląd wyjścia) — 0cd1f10
 
 ### Phase 3: Serwis cron i bucket w IaC, bramka CI, weryfikacja w PR env
 
 #### Automated
 
-- [ ] 3.1 `railway config plan` dla PR env (dry run, `IAC_SOURCE_BRANCH=feature/production-data-gate`) pokazuje tylko utworzenie bucketu `db-backups` i serwisu `db-backup` z jego zmiennymi, bez zmian destrukcyjnych
-- [ ] 3.2 Filtr bramki uruchomiony lokalnie (`jq`) na tym planie przepuszcza go, a na planie ze zmianą źródła istniejącego serwisu (np. dry run z innym `IAC_SOURCE_BRANCH`) odmawia
+- [x] 3.1 `railway config plan` dla PR env (dry run, `IAC_SOURCE_BRANCH=feature/production-data-gate`) pokazuje tylko utworzenie bucketu `db-backups` i serwisu `db-backup` z jego zmiennymi, bez zmian destrukcyjnych
+- [x] 3.2 Filtr bramki uruchomiony lokalnie (`jq`) na tym planie przepuszcza go, a na planie ze zmianą źródła istniejącego serwisu (np. dry run z innym `IAC_SOURCE_BRANCH`) odmawia
 - [ ] 3.3 CI na PR jest zielone, łącznie z `railway-config` (apply do PR env)
 
 #### Manual

@@ -236,7 +236,7 @@ On `szczur-radar-pr-37` a push deployed `szczur-radar-web` from an older commit 
 | Workspace usage limits | soft $5 / hard $10. `railway usage limit status --json`: `softLimit: 5`, `hardLimit: 10`, `isOverLimit: false`. The billing period started 2026-10-10 13:39 UTC. These replace the $15 / $25 assumed in the sections above. |
 | Sealed on `szczur-radar-api` (production; names only) | `LLM_API_KEY`, `WYKOP_KEY`, `WYKOP_SECRET`, `JWT_SECRET` (the CLI lists them without a value). `LLM_API_PROVIDER`, `LLM_MODEL`, `LLM_SERVICE_TIER`, `LLM_REASONING_EFFORT` and `LLM_TIMEOUT` are plain settings. |
 | Database backups | none: no backup schedule, no backup, PITR `enabled: false` |
-| Resource cap | 2 vCPU / 4 GB on `postgres`, `szczur-radar-api` and `szczur-radar-web`, set by the operator in the dashboard after the move to Hobby. Since F-01 it is declared in `.railway/railway.ts` (`RESOURCE_LIMITS`): without the declaration, the plan on production showed `limitOverride` 2 → null and 4000000000 → null on all three services, which the next apply from `main` would have removed. |
+| Resource cap | 2 vCPU / 4 GB on `postgres`, `szczur-radar-api` and `szczur-radar-web`, set by the operator in the dashboard after the move to Hobby. Since F-01 it is declared in `.railway/railway.ts` (`RESOURCE_LIMITS`, also on `db-backup`), so the plan matches the environment. Without the declaration the plan showed `limitOverride` 2 → null and 4000000000 → null on all three services. The cap does not depend on it, though: CI applied those nulls to `szczur-radar-pr-44` (commit `81e9aed`) and the cap stayed there. |
 
 ### Volume resize (2026-10-11)
 
@@ -248,7 +248,7 @@ The operator ran Live Resize from the dashboard (`production` → `postgres-volu
 | `df -h /var/lib/postgresql/data` (size / used / use%) | 434M / 129M / 31 % | 4.4G / 129M / 3 % |
 
 - `df` reports GiB after filesystem overhead. 5000 MB (SI) is 4.66 GiB, shown as 4.4G; 500 MB was 434M the same way. Railway's `currentSizeMB` (191.88) counts more than `df`'s used space.
-- `railway config plan` on production was identical before and after the resize: one `safe` change, `postgres deploy.sleepApplication (null → false)`. This is known drift. CI on `main` applied `false` on 2026-10-10, and the dashboard edit of the resource cap most likely put back null. The next apply from `main` sets it again.
+- `railway config plan` on production was identical before and after the resize: one `safe` change, `postgres deploy.sleepApplication (null → false)`. It is permanent: Railway stores `false` as no value, so the plan shows it again after every apply (`main` on 2026-10-10, `szczur-radar-pr-44` on 2026-10-11). Postgres does not sleep either way. The declaration stays: if serverless sleep were switched on in the dashboard, an apply would switch it off.
 
 ### Database measurements (production, 2026-10-11, read-only)
 
@@ -263,6 +263,56 @@ The operator ran Live Resize from the dashboard (`production` → `postgres-volu
 
 - **WAL:** the data is a small part of the volume. WAL alone takes 10 times the database and may grow up to `max_wal_size` (1 GB) before a checkpoint, more than the old 434M filesystem. The 5 GB volume removes that risk without changing Postgres settings.
 - **Growth (rough; small tables are padded by page and index minimums):** about 2.8 kB per post (post + RAW) and about 3.8 kB per assessment, so roughly 6–7 kB per assessed post. That is within the 5–10 kB estimated in the research. At about 270 posts a day this is around 2 MB a day, or well under 1 GB a year. A dump of today's database is a few MB.
+
+### How the backup works
+
+- **Service `db-backup`** (`.railway/railway.ts`). It is built from `tools/db-backup/Dockerfile`: `postgres:18` plus `rclone` and `jq`. It runs as a Railway cron service: `0 2 * * *` (UTC), `restartPolicyType: NEVER`, the same 2 vCPU / 4 GB cap. A run is `tools/db-backup/backup.sh` (details in `tools/db-backup/README.md`):
+  1. `pg_dump` in custom format, without the session rows (`public.spring_session*`);
+  2. a full restore of that dump into a throwaway Postgres 18 cluster inside the container, with named checks (tables, empty sessions, Flyway version, row counts between the counts taken before and after the dump);
+  3. only then the upload.
+  - A run ends with exit code 0 only if every step passed. Anything else fails the cron run, and Railway e-mails a failed deploy (account notification settings).
+- **Bucket `db-backups`** (region `ams`), one per environment with its own keys: a PR env backs up its own database and never sees production's dumps. The S3 name is the display name plus a hash (variable `BUCKET`). Objects:
+  - `daily/szczur-radar-<yyyymmddThhmmssZ>.dump`, each with a `.manifest.json` (time, sha256, size, server and `pg_dump` versions, Flyway version, row counts, restore check result);
+  - `monthly/szczur-radar-<yyyy-mm>.dump` with its manifest: a server-side copy of the first successful dump of each UTC month;
+  - retention: 14 daily and 12 monthly copies.
+- **No manual trigger in Railway.** A cron service runs only on its schedule. To run it sooner, set a temporary schedule in the dashboard (`db-backup` → Settings → Cron Schedule, e.g. `*/5 * * * *`, minimum 5 minutes) and set it back to `0 2 * * *` afterwards:
+  - in a PR env, the next push's apply restores it from IaC;
+  - on production nothing restores it until the next merge.
+- **What a restore loses:** everything written after the dump, up to about 24 h. The sessions are not in the dump, so everyone logs in again. Missing posts can be fetched again with a range run for the missing days, but assessing them again costs LLM calls.
+- **Cost:** today a dump is a few MB. The upload counts as service egress ($0.05/GB) and the bucket costs $0.015 per GB-month, so 26 copies cost cents a month.
+- **Deleting the bucket** stages a change. After deploy the bucket is restorable for 52 hours, then its objects are destroyed (`docs.railway.com/storage-buckets`). The NAS copy (runbook after the merge) does not depend on it.
+
+### Runbook — restore the database from a dump (human only)
+
+Restoring a database is an operator action (`infrastructure.md`). The agent prepares the commands and verifies read-only.
+
+0. No run is `RUNNING` in `/admin`; the API is unavailable during the restore.
+1. Pick the dump: normally the newest `daily/…dump`. Download it with its manifest, from the bucket in the dashboard (`db-backups` → Files) or from the NAS.
+2. Check it locally:
+   ```bash
+   docker build -t szczur-radar-db-backup tools/db-backup
+   docker run --rm -v "$PWD/dumps:/dumps:ro" szczur-radar-db-backup restore-check.sh /dumps/<name>.dump /dumps/<name>.manifest.json
+   ```
+   It must end with `restore-check: OK`.
+3. Optional, to be able to undo: take a dump of the current database first (step 4's tunnel, then `pg_dump -Fc -f before-restore.dump …`).
+4. Open a tunnel in its own terminal and keep it open:
+   ```bash
+   railway connect postgres -e <env> --tunnel-only -P 15432
+   ```
+   It prints the user, password and database.
+5. Restore in one transaction (all or nothing):
+   ```bash
+   pg_restore --clean --if-exists --no-owner --no-acl --single-transaction --exit-on-error \
+     -h 127.0.0.1 -p 15432 -U <user> -d <database> <name>.dump
+   ```
+   `--clean` drops only the objects that are in the dump. If the current schema is newer than the dump's Flyway version (a table from a later migration), first run `DROP SCHEMA public CASCADE; CREATE SCHEMA public;` in `railway connect postgres -e <env>`, then run the same command without `--clean --if-exists`.
+6. Redeploy the API: `railway redeploy -s szczur-radar-api -e <env> -y`. The pre-deploy `migrate` applies the migrations newer than the dump (fix-forward), and the new container gets fresh connections.
+7. Verify:
+   - `/api/ready` returns 200;
+   - admin login works (everyone logs in again);
+   - `total` from `/api/posts` matches the state at the time of the dump.
+
+   Record the result in the issue.
 
 ## Phases
 
