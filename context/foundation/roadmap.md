@@ -3,7 +3,7 @@ project: "Szczur Radar"
 version: 2
 status: draft # draft | active | locked
 created: 2026-09-27
-updated: 2026-10-09
+updated: 2026-10-11
 prd_version: 2
 main_goal: speed
 top_blocker: time # secondary: decisions (LLM contract, filter scope and signal decision resolved 2026-09-27 — PRD v2)
@@ -60,7 +60,7 @@ Na Wykopie (#gielda) i Reddicie codziennie pojawiają się setki postów o inwes
 
 | ID   | Change ID                      | Outcome (user can …)                                                                                                            | Prerequisites | PRD refs                                                                                                                                                                                 | Status   |
 | ---- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------- | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
-| F-01 | production-data-gate           | (foundation) produkcja jest gotowa na prawdziwe dane: limity kosztów, zweryfikowany restore, zapieczętowane sekrety             | —             | NFR (dane przechowywane bezterminowo; bezpieczeństwo przed utratą danych po stronie platformy), Open Question 4; guardrail kosztów LLM                                                   | ready    |
+| F-01 | production-data-gate           | (foundation) produkcja jest gotowa na prawdziwe dane: limity kosztów, zweryfikowany restore, zapieczętowane sekrety             | —             | NFR (dane przechowywane bezterminowo; bezpieczeństwo przed utratą danych po stronie platformy), Open Question 4; guardrail kosztów LLM                                                   | in-progress |
 | F-03 | java-api-rewrite               | (foundation) backend w Javie obsługuje funkcje S-01 przez dotychczasowe API; sesje JDBC, migracje fix-forward i szkielet Embabel | S-01          | FR-012, FR-013, FR-014, FR-015, FR-026, NFR (każdy chroniony zasób wymaga uwierzytelnienia — komplet testów autoryzacji)                                                                 | done |
 | F-02 | assessment-contract-harness    | (foundation) kontrakt oceny LLM V2 jest egzekwowany kodem, a model domyślny spełnia progi jakości na zestawie wzorcowym | F-03          | FR-004, Open Question 2 (rozstrzygnięte przez kontrakt, obecnie V2); guardrail jakości danych z LLM (bez halucynacji)                                                                     | done        |
 | S-01 | admin-bootstrap-and-login      | operator tworzy pierwszego admina przez CLI; admin loguje się i wylogowuje; niezalogowany widzi tylko ekran logowania           | —             | FR-012, FR-013, FR-014, FR-015, FR-026, NFR (każdy chroniony zasób wymaga uwierzytelnienia — komplet testów autoryzacji), NFR (brak wglądu w dane cudzych kont)                          | done |
@@ -109,7 +109,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
   - Czy czysty restore drill przejdzie po subskrypcji; jeśli nie — powrót do alternatywnej platformy z `infrastructure.md` (ryzyko nr 1). — Owner: user. Block: no.
   - Backup bazy: brak do czasu subskrypcji (2026-10-06, `api-docker-image`): PITR wyłączone, bucket usunięty (koszty; baza bez prawdziwych danych). Po subskrypcji: dzienna kopia wolumenu Railway (Daily, 6 dni) i test odtwarzania zakończony odpytywalną bazą; kopie giną przy wyczyszczeniu wolumenu i odtwarzają się tylko w tym samym środowisku (`deploy-plan.md`, sekcja `api-docker-image`). — Owner: user. Block: no.
 - **Risk:** Praca operatorska bez kodu produktu; sekwencjonowana na starcie równolegle, żeby nie stała się niespodziewaną blokadą S-05 tuż przed terminem.
-- **Status:** ready
+- **Status:** in-progress
 
 ### F-02: Egzekwowany kontrakt oceny LLM
 
