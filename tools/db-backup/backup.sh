@@ -87,14 +87,14 @@ list_files() {
 prune() {
     local dir=$1 keep=$2 files old manifest
     local -a dumps
-    files=$(list_files "$dir")
+    files=$(list_files "$dir") || fail "cannot list $dir/"
     mapfile -t dumps < <(grep -E '\.dump$' <<<"$files" || true)
     local excess=$(( ${#dumps[@]} - keep ))
     for old in "${dumps[@]:0:$(( excess > 0 ? excess : 0 ))}"; do
-        rclone deletefile "$remote/$dir/$old"
+        rclone deletefile "$remote/$dir/$old" || fail "retention: delete $dir/$old"
         manifest=${old%.dump}.manifest.json
         if grep -qxF "$manifest" <<<"$files"; then
-            rclone deletefile "$remote/$dir/$manifest"
+            rclone deletefile "$remote/$dir/$manifest" || fail "retention: delete $dir/$manifest"
         fi
         log "retention: deleted $dir/$old"
     done
@@ -115,15 +115,16 @@ monthly="$PREFIX-$(date -u -d "@$now" +%Y-%m)"
 dump=$work/$name.dump
 manifest=$work/$name.manifest.json
 
-server_version=$(sql 'show server_version')
+server_version=$(sql 'show server_version') || fail "cannot query the database"
 flyway_version=$(sql "select version from flyway_schema_history
-    where success and version is not null order by installed_rank desc limit 1")
+    where success and version is not null order by installed_rank desc limit 1") \
+    || fail "cannot read flyway_schema_history (has the API's migrate run?)"
 [[ -n $flyway_version ]] || fail "flyway_schema_history has no successful migration"
 
-counts_before=$(count_rows)
+counts_before=$(count_rows) || fail "cannot count the rows of ${COUNTED_TABLES[*]}"
 log "dumping database $PGDATABASE on $PGHOST (server $server_version, Flyway V$flyway_version)"
-pg_dump --format=custom --no-owner "--exclude-table-data=$EXCLUDED_DATA" --file="$dump"
-counts_after=$(count_rows)
+pg_dump --format=custom --no-owner "--exclude-table-data=$EXCLUDED_DATA" --file="$dump" || fail "pg_dump"
+counts_after=$(count_rows) || fail "cannot count the rows after the dump"
 
 # --exclude-table-data does not complain when its pattern matches nothing: check the dump's contents.
 toc=$(pg_restore --list "$dump") || fail "pg_restore cannot read the dump"
@@ -158,15 +159,16 @@ jq --argjson seconds $(( SECONDS - started )) '.restore_check = {ok: true, secon
 mv "$manifest.tmp" "$manifest"
 
 # The dump first, its manifest second: a manifest next to a dump means the pair is complete.
-rclone copyto "$dump" "$remote/daily/$name.dump"
-rclone copyto "$manifest" "$remote/daily/$name.manifest.json"
+rclone copyto "$dump" "$remote/daily/$name.dump" || fail "upload of daily/$name.dump"
+rclone copyto "$manifest" "$remote/daily/$name.manifest.json" || fail "upload of daily/$name.manifest.json"
 log "uploaded daily/$name.dump and its manifest"
 
 # The first successful dump of a UTC month becomes its monthly copy (a server-side copy: no upload).
-existing_monthly=$(list_files monthly)
+existing_monthly=$(list_files monthly) || fail "cannot list monthly/"
 if ! grep -qxF "$monthly.dump" <<<"$existing_monthly"; then
-    rclone copyto "$remote/daily/$name.dump" "$remote/monthly/$monthly.dump"
-    rclone copyto "$remote/daily/$name.manifest.json" "$remote/monthly/$monthly.manifest.json"
+    rclone copyto "$remote/daily/$name.dump" "$remote/monthly/$monthly.dump" || fail "monthly copy"
+    rclone copyto "$remote/daily/$name.manifest.json" "$remote/monthly/$monthly.manifest.json" \
+        || fail "monthly copy of the manifest"
     log "monthly copy: monthly/$monthly.dump"
 fi
 

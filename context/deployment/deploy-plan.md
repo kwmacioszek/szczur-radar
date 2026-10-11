@@ -270,7 +270,7 @@ The operator ran Live Resize from the dashboard (`production` → `postgres-volu
   1. `pg_dump` in custom format, without the session rows (`public.spring_session*`);
   2. a full restore of that dump into a throwaway Postgres 18 cluster inside the container, with named checks (tables, empty sessions, Flyway version, row counts between the counts taken before and after the dump);
   3. only then the upload.
-  - A run ends with exit code 0 only if every step passed. Anything else fails the cron run, and Railway e-mails a failed deploy (account notification settings).
+  - A run ends with exit code 0 only if every step passed. Anything else fails the cron run (status `CRASHED`), and Railway e-mails every failed run, in PR envs too (verified 2026-10-11). Each scheduled run shows up as a new deployment of the service.
 - **Bucket `db-backups`** (region `ams`), one per environment with its own keys: a PR env backs up its own database and never sees production's dumps. The S3 name is the display name plus a hash (variable `BUCKET`). Objects:
   - `daily/szczur-radar-<yyyymmddThhmmssZ>.dump`, each with a `.manifest.json` (time, sha256, size, server and `pg_dump` versions, Flyway version, row counts, restore check result);
   - `monthly/szczur-radar-<yyyy-mm>.dump` with its manifest: a server-side copy of the first successful dump of each UTC month;
@@ -313,6 +313,35 @@ Restoring a database is an operator action (`infrastructure.md`). The agent prep
    - `total` from `/api/posts` matches the state at the time of the dump.
 
    Record the result in the issue.
+
+### PR-env verification (szczur-radar-pr-44, 2026-10-11)
+
+- **IaC and CI.** CI on `c97a64e` was green. `railway-config` applied three changes: it created the bucket `db-backups` and the service `db-backup` with 12 variables, and applied the known `sleepApplication`. The gate let both creates through. A dry-run plan of the same environment with `IAC_SOURCE_BRANCH=main` was refused twice:
+  - by the gate: `source.branch` of api and web;
+  - by Railway itself: `ok: false`, "pins branch main but this PR environment deploys feature/production-data-gate".
+- **The PR env had no database.** In this PR env Railway deployed nothing but `db-backup`: the PR changes no file of the API or the web. There was also no Postgres volume, and a deploy of `postgres` failed at once because the service requires a volume at `/var/lib/postgresql/data`.
+  - Fixed by hand: the operator attached a volume in the dashboard. Two other attempts failed: `railway volume add` panicked in CLI 5.64.2, and Railway MCP `create-volume` returned an id but created nothing.
+  - Then `railway redeploy --from-source` of `postgres`, `szczur-radar-api` (its pre-deploy `migrate` created V1–V5) and `szczur-radar-web`.
+  - Expect the same in a PR env of any PR that changes neither the API nor the web. Until its database runs, its `db-backup` fails at every scheduled run.
+- **The first deployment of the cron service stayed `QUEUED`** for about 11 minutes, with no region assigned. It was replaced when the operator saved a temporary schedule in the dashboard; the new one was built from `tools/db-backup/Dockerfile` within a minute. The cause is not known.
+- **Runs**, on a temporary schedule (`*/5`, then `*/10`):
+  - 20:16 UTC, no database: `backup: FAILED: database postgres.railway.internal:5432 is not accepting connections`, status `CRASHED`.
+  - 20:22, empty database (before `migrate`): a psql error on `flyway_schema_history`. Since then the log names the step: "cannot read flyway_schema_history (has the API's migrate run?)".
+  - Railway e-mailed the operator about both failures.
+  - 20:31, after a one-day pipeline run in the PR env: dump 112 KB, `restore-check` OK, upload, monthly copy.
+    - The bucket held `daily/szczur-radar-20261011T203143Z.dump` and `monthly/szczur-radar-2026-10.dump`, each with its manifest.
+    - The manifest counts were equal before and after: `users` 1, `pipeline_runs` 1, `posts` 39, `assessments` 39, `raw_payloads` 39. It also had `restore_check.ok: true`.
+    - rclone 1.60 (Debian) works with the bucket's virtual-hosted URLs.
+- **Test with the application.** The 20:31 dump was downloaded; its sha256 matches the manifest.
+  - `restore-check.sh … --serve` locally, then `migrate` said "Schema "public" is up to date. No migration necessary."
+  - The API started in 7.8 s, and admin login worked with a new session.
+  - `/api/posts` `total` was 39, the same as in the PR env.
+- **Restore runbook rehearsal on the PR env's database:**
+  1. A canary row (`users`, `dr-canary@example.com`) written after the dump.
+  2. `pg_restore --clean --if-exists --no-owner --no-acl --single-transaction --exit-on-error` of the 20:31 dump through `railway connect postgres -e szczur-radar-pr-44 --tunnel-only`.
+  3. `railway redeploy` of the API (`7681b96c`, SUCCESS).
+
+  Afterwards `/api/ready` returned 200 and login worked (the sessions were gone, as expected). `total` was 39 and the canary row was gone. The next run (20:41) backed up the restored database: restore check OK, and no second monthly copy.
 
 ## Phases
 

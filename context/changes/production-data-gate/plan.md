@@ -626,15 +626,15 @@ Treść akceptuje użytkownik w przeglądzie PR.
 
 - [x] 3.1 `railway config plan` dla PR env (dry run, `IAC_SOURCE_BRANCH=feature/production-data-gate`) pokazuje tylko utworzenie bucketu `db-backups` i serwisu `db-backup` z jego zmiennymi, bez zmian destrukcyjnych
 - [x] 3.2 Filtr bramki uruchomiony lokalnie (`jq`) na tym planie przepuszcza go, a na planie ze zmianą źródła istniejącego serwisu (np. dry run z innym `IAC_SOURCE_BRANCH`) odmawia
-- [ ] 3.3 CI na PR jest zielone, łącznie z `railway-config` (apply do PR env)
+- [x] 3.3 CI na PR jest zielone, łącznie z `railway-config` (apply do PR env)
 
 #### Manual
 
-- [ ] 3.4 W PR env `db-backup` zbudował się z `tools/db-backup/Dockerfile`, a przebieg (harmonogram tymczasowo `*/5 * * * *`) skończył się kodem 0; log pokazuje rozmiar dumpa, `restore-check` OK i wysyłkę
-- [ ] 3.5 Bucket PR env zawiera `daily/…dump` z manifestem, a w manifeście liczby wierszy mieszczą się w przedziale [przed, po]
+- [x] 3.4 W PR env `db-backup` zbudował się z `tools/db-backup/Dockerfile`, a przebieg (harmonogram tymczasowo `*/5 * * * *`) skończył się kodem 0; log pokazuje rozmiar dumpa, `restore-check` OK i wysyłkę
+- [x] 3.5 Bucket PR env zawiera `daily/…dump` z manifestem, a w manifeście liczby wierszy mieszczą się w przedziale [przed, po]
 - [ ] 3.6 Celowo zepsuty przebieg w PR env (np. tymczasowo zły `S3_BUCKET`) kończy się kodem ≠ 0 i przychodzi e-mail Railway; potem przywrócenie wartości i harmonogramu z IaC
-- [ ] 3.7 Test z aplikacją na dumpie z PR env: `restore-check.sh --serve` lokalnie, potem `java -jar target/szczur-radar-api.jar migrate` mówi „Schema … is up to date”, API startuje, logowanie admina działa, a `/api/posts` ma `total` równy temu w PR env
-- [ ] 3.8 Próba runbooka odtworzenia awaryjnego na bazie PR env: po `pg_restore --clean …` `/api/ready` daje 200, logowanie działa, a `/api/posts` ma ten sam `total`
+- [x] 3.7 Test z aplikacją na dumpie z PR env: `restore-check.sh --serve` lokalnie, potem `java -jar target/szczur-radar-api.jar migrate` mówi „Schema … is up to date”, API startuje, logowanie admina działa, a `/api/posts` ma `total` równy temu w PR env
+- [x] 3.8 Próba runbooka odtworzenia awaryjnego na bazie PR env: po `pg_restore --clean …` `/api/ready` daje 200, logowanie działa, a `/api/posts` ma ten sam `total`
 
 ### Phase 4: Limit kosztów OpenRouter
 
