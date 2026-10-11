@@ -597,15 +597,15 @@ Treść akceptuje użytkownik w przeglądzie PR.
 
 #### Automated
 
-- [ ] 1.1 `railway volume -e <production-env-id> list --json` pokazuje `postgres-volume` z `sizeMB: 5000`
-- [ ] 1.2 `railway config plan` dla `production` (dry run, bez apply) nie pokazuje żadnej zmiany (`--detailed-exit-code` = 0)
-- [ ] 1.3 `curl -s https://szczur-radar-web-production.up.railway.app/api/ready` zwraca 200
+- [x] 1.1 `railway volume -e <production-env-id> list --json` pokazuje `postgres-volume` z `sizeMB: 5000`
+- [x] 1.2 `railway config plan` dla `production` (dry run, bez apply) nie pokazuje żadnej zmiany (`--detailed-exit-code` = 0)
+- [x] 1.3 `curl -s https://szczur-radar-web-production.up.railway.app/api/ready` zwraca 200
 
 #### Manual
 
-- [ ] 1.4 `df -h /var/lib/postgresql/data` w kontenerze `postgres` (produkcja) pokazuje ~4,6–4,7 GB rozmiaru, nie ~434 MB
-- [ ] 1.5 Logowanie admina na produkcji działa po zmianie rozmiaru
-- [ ] 1.6 Sekcja F-01 w `deploy-plan.md` zawiera pomiary bazy, wynik `df -h` i stan limitów oraz sekretów (same nazwy)
+- [x] 1.4 `df -h /var/lib/postgresql/data` w kontenerze `postgres` (produkcja) pokazuje ~4,6–4,7 GB rozmiaru, nie ~434 MB
+- [x] 1.5 Logowanie admina na produkcji działa po zmianie rozmiaru
+- [x] 1.6 Sekcja F-01 w `deploy-plan.md` zawiera pomiary bazy, wynik `df -h` i stan limitów oraz sekretów (same nazwy)
 
 ### Phase 2: Narzędzie kopii `tools/db-backup/`
 

@@ -224,6 +224,46 @@ On `szczur-radar-pr-37` a push deployed `szczur-radar-web` from an older commit 
 - `compose.local.yaml` (Postgres 18) + `java -jar target/szczur-radar-api.jar` with `PG*`, `COOKIE_SECURE=false`, `LLM_*` (`~/.config/szczur-radar/llm.env`) and optionally `WYKOP_*` (`~/.config/szczur-radar/wykop.env`), sourced **in the same terminal** that starts the jar; `npm run dev` in `szczur-radar-web` (http://localhost:5173).
 - A volume from before F-03 (Python era) makes `migrate` fail with "Found non-empty schema(s) … but no schema history table": reset it with `docker compose -f compose.local.yaml down -v` (deletes local data), then `migrate` and `create-admin` again (password 12–128 characters).
 
+## F-01: bramka produkcyjnych danych (production-data-gate)
+
+**Status (2026-10-11): in progress** in PR #44, issue #43. Change: `context/changes/production-data-gate/`. Production runs on Railway **Hobby**, which has no built-in volume backups and no PITR (both are Pro). The database is therefore protected by a daily logical dump (`pg_dump`) from a separate cron service, checked by a full restore before upload. That service is described here once phase 3 of the plan lands.
+
+### Starting state (2026-10-11, read-only)
+
+| | |
+| --- | --- |
+| Plan | Hobby (operator's decision; no Pro) |
+| Workspace usage limits | soft $5 / hard $10. `railway usage limit status --json`: `softLimit: 5`, `hardLimit: 10`, `isOverLimit: false`. The billing period started 2026-10-10 13:39 UTC. These replace the $15 / $25 assumed in the sections above. |
+| Sealed on `szczur-radar-api` (production; names only) | `LLM_API_KEY`, `WYKOP_KEY`, `WYKOP_SECRET`, `JWT_SECRET` (the CLI lists them without a value). `LLM_API_PROVIDER`, `LLM_MODEL`, `LLM_SERVICE_TIER`, `LLM_REASONING_EFFORT` and `LLM_TIMEOUT` are plain settings. |
+| Database backups | none: no backup schedule, no backup, PITR `enabled: false` |
+| Resource cap | 2 vCPU / 4 GB on `postgres`, `szczur-radar-api` and `szczur-radar-web`, set by the operator in the dashboard after the move to Hobby. Since F-01 it is declared in `.railway/railway.ts` (`RESOURCE_LIMITS`): without the declaration, the plan on production showed `limitOverride` 2 → null and 4000000000 → null on all three services, which the next apply from `main` would have removed. |
+
+### Volume resize (2026-10-11)
+
+The operator ran Live Resize from the dashboard (`production` → `postgres-volume` → Settings) while no run was `RUNNING`. Afterwards, admin login worked and the existing session was kept.
+
+| | Before | After |
+| --- | --- | --- |
+| `railway volume list --json` `sizeMB` | 500 | 5000 |
+| `df -h /var/lib/postgresql/data` (size / used / use%) | 434M / 129M / 31 % | 4.4G / 129M / 3 % |
+
+- `df` reports GiB after filesystem overhead. 5000 MB (SI) is 4.66 GiB, shown as 4.4G; 500 MB was 434M the same way. Railway's `currentSizeMB` (191.88) counts more than `df`'s used space.
+- `railway config plan` on production was identical before and after the resize: one `safe` change, `postgres deploy.sleepApplication (null → false)`. This is known drift. CI on `main` applied `false` on 2026-10-10, and the dashboard edit of the resource cap most likely put back null. The next apply from `main` sets it again.
+
+### Database measurements (production, 2026-10-11, read-only)
+
+| Measure | Value |
+| --- | --- |
+| `pg_database_size` | 9478 kB (~9.3 MB) |
+| Tables (`pg_total_relation_size`) | `raw_payloads` 408 kB, `posts` 376 kB, `assessments` 208 kB, `spring_session` 104 kB, `pipeline_runs` 64 kB, `pipeline_run_steps` 48 kB, `flyway_schema_history` 48 kB, `users` 48 kB, `spring_session_attributes` 32 kB |
+| Rows | `posts` 282, `assessments` 55, `raw_payloads` 282, `pipeline_runs` 4, `users` 1 |
+| Flyway | V5 |
+| WAL (`pg_ls_waldir()`) | 7 files, 96 MB |
+| Settings | `max_wal_size` 1024 MB, `min_wal_size` 80 MB, `shared_buffers` 128 MB (16384 × 8 kB) |
+
+- **WAL:** the data is a small part of the volume. WAL alone takes 10 times the database and may grow up to `max_wal_size` (1 GB) before a checkpoint, more than the old 434M filesystem. The 5 GB volume removes that risk without changing Postgres settings.
+- **Growth (rough; small tables are padded by page and index minimums):** about 2.8 kB per post (post + RAW) and about 3.8 kB per assessment, so roughly 6–7 kB per assessed post. That is within the 5–10 kB estimated in the research. At about 270 posts a day this is around 2 MB a day, or well under 1 GB a year. A dump of today's database is a few MB.
+
 ## Phases
 
 ### [x] 1. Prepare the application

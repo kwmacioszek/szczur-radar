@@ -35,6 +35,11 @@ const REGION = "europe-west4"; // Railway "EU West (Amsterdam)"
 // pin it: the API binds it and the web Caddy proxy targets it deterministically
 // over the private network.
 const API_INTERNAL_PORT = "8000";
+// Per-service resource cap (2 vCPU, 4 GB; Railway counts memory in SI bytes),
+// a cost guard the operator set in the dashboard on all three services after
+// the move to Hobby (F-01, production-data-gate). Declared so an apply keeps
+// it: without it a plan shows `limitOverride` 2 → null and 4000000000 → null.
+const RESOURCE_LIMITS = { containers: { cpu: 2, memoryBytes: 4_000_000_000 } };
 
 export default defineRailway(() => {
   // Railway PR environments track the PR's branch, not `main`. CI sets
@@ -60,7 +65,7 @@ export default defineRailway(() => {
   // Caveats). The API and web still sleep. The setting applies to a container
   // when it is created: redeploy Postgres after the apply.
   const db = Object.assign(postgres("postgres", { region: REGION }), {
-    deploy: { sleepApplication: false },
+    deploy: { sleepApplication: false, limitOverride: RESOURCE_LIMITS },
   });
 
   // Spring Boot backend (Java 25, Maven). No public domain: reachable only
@@ -85,7 +90,7 @@ export default defineRailway(() => {
     preDeploy: "java -jar target/szczur-radar-api.jar migrate",
     healthcheck: "/api/health",
     replicas: { [REGION]: 1 },
-    deploy: { sleepApplication: true },
+    deploy: { sleepApplication: true, limitOverride: RESOURCE_LIMITS },
     env: {
       PORT: API_INTERNAL_PORT,
       // Nieużywane od `api-docker-image` (JDK pochodzi z obrazu Dockera). Zostaje
@@ -141,7 +146,7 @@ export default defineRailway(() => {
     watchPatterns: ["szczur-radar-web/**"],
     healthcheck: "/healthz",
     replicas: { [REGION]: 1 },
-    deploy: { sleepApplication: true },
+    deploy: { sleepApplication: true, limitOverride: RESOURCE_LIMITS },
     env: {
       API_PRIVATE_DOMAIN: api.env.RAILWAY_PRIVATE_DOMAIN,
       API_PORT: API_INTERNAL_PORT,
