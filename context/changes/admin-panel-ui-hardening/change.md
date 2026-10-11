@@ -1,9 +1,9 @@
 ---
 change_id: admin-panel-ui-hardening
 title: Hardening UI panelu admina — tokeny, współdzielone komponenty i stany
-status: implemented
+status: impl_reviewed
 created: 2026-10-10
-updated: 2026-10-10
+updated: 2026-10-11
 archived_at: null
 ---
 

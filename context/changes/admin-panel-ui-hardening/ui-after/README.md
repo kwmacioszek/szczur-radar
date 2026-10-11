@@ -79,7 +79,7 @@ Z `.claude/skills/10x-ui/references/ui-quality-checklist.md`, po fazach 1–5.
 ### Gate
 
 - [x] Kitchen sink (`/kitchen-sink`) i zrzuty `/admin` z mockiem; `toHaveScreenshot` N/A — bez Playwright Test (bez nowych zależności), więc bez bazowych zrzutów do aktualizacji.
-- [ ] `/10x-impl-review` — uruchamiany po fazie 5 na tej gałęzi, przed `/10x-archive`; wynik i triaż uwag UI dopisuję tutaj.
+- [x] `/10x-impl-review` — [raport](../reviews/impl-review.md), fazy 1–5, werdykt APPROVED po triage. F1 naprawione w kodzie z testami regresji; F2 zamknięte dowodem PR env poniżej. Oba ustalenia FIXED, bez pominiętych uwag.
 - [x] Zakres utrzymany: jeden widok (`AdminView` + `AppHeader`) plus globalne tokeny; Feed, Login i PostCard tylko z mechaniczną podmianą 5 literałów.
 
 ## Odłożone
@@ -89,3 +89,35 @@ Z `.claude/skills/10x-ui/references/ui-quality-checklist.md`, po fazach 1–5.
 - **`login-view-ui-hardening`**: przycisk logowania jako `AppButton` wariant główny, błąd jako `StatusMessage`.
 - **`admin-failed-posts-table`** (prośba z weryfikacji fazy 3): nieudane posty jako tabela z wierszami i kolumnami zamiast listy; wspólny wygląd tabeli do użycia też w historii przebiegów S-06.
 - Wyłączony checkbox w jasnym motywie (domyślny wygląd przeglądarki) — do decyzji w jednej z powyższych zmian.
+
+## Weryfikacja w Railway PR #42 — 2026-10-11
+
+Dowód kroku 5.5 i rozwiązania F2 z przeglądu implementacji. Sprawdzono rzeczywiste [środowisko PR #42](https://szczur-radar-web-szczur-radar-pr-42.up.railway.app) od 2026-10-11 18:38:27 UTC, w Chromium przez `playwright-cli`. `/admin` i `/` w sesji administratora po zalogowaniu przez użytkownika; `/login` w osobnym kontekście anonimowym. Bez mocka API.
+
+- **Wersja web**: `79706bc56b8822b7d22f14da1c2d2893a12ebfdf`, gałąź `feature/admin-panel-ui-hardening`.
+- **Deployment**: `d69cf8b3-5d56-4975-922d-52f57733b181`, stan SUCCESS potwierdzony przez Railway MCP po kontroli.
+- **Środowisko**: `be97133f-1962-44e8-95b5-739319a0a0b1` (`szczur-radar-pr-42`).
+- **Sesja**: `/api/auth/me` zwraca HTTP 200 i `role: admin`; w kontekście anonimowym HTTP 401.
+- **Dane**: API źródeł, przebiegów, nieudanych postów i feedu zwraca HTTP 200. Wczytano 1 źródło, 1 przebieg, 5 nieudanych postów i 34 posty w feedzie.
+- **Rozmiary viewportu**: 1280×900 oraz 375×812; motywy `light` i `dark` przez `emulateMedia`.
+- **Wynik**: PASS. Wszystkie trzy widoki zachowują ten sam kobalt i chłodne szarości co zrzuty z mocka; „Uruchom” i „Zaloguj się” mają zgodne kolory tła/tekstu (`--accent` / `--on-accent`), pozostałe przyciski wariant pomocniczy. Status przebiegu i klasy porażek są po polsku. Treść zawija się przy 375 px, bez poziomego przewijania. W żadnym z 12 wariantów nie pojawił się komunikat `role="alert"`.
+
+### Zrzuty całych stron
+
+| Widok | 1280 jasny | 1280 ciemny | 375 jasny | 375 ciemny |
+| --- | --- | --- | --- | --- |
+| `/admin` | [zrzut](pr42-admin-1280-light.png) | [zrzut](pr42-admin-1280-dark.png) | [zrzut](pr42-admin-375-light.png) | [zrzut](pr42-admin-375-dark.png) |
+| `/` | [zrzut](pr42-feed-1280-light.png) | [zrzut](pr42-feed-1280-dark.png) | [zrzut](pr42-feed-375-light.png) | [zrzut](pr42-feed-375-dark.png) |
+| `/login` | [zrzut](pr42-login-1280-light.png) | [zrzut](pr42-login-1280-dark.png) | [zrzut](pr42-login-375-light.png) | [zrzut](pr42-login-375-dark.png) |
+
+Feed ma długą listę prawdziwych postów; do oceny czytelności zapisano też cztery zrzuty widocznej części: [1280 jasny](pr42-feed-1280-light-viewport.png), [1280 ciemny](pr42-feed-1280-dark-viewport.png), [375 jasny](pr42-feed-375-light-viewport.png), [375 ciemny](pr42-feed-375-dark-viewport.png).
+
+### Dowód i porównanie
+
+[Wynik kontroli w JSON](../reviews/evidence/F2-pr-env-result.json) zawiera czas, adres, wersję deploymentu, statusy API, liczności danych, zmierzone role CSS, geometrię i nazwy zrzutów. Procedura: [F2-capture.js](../reviews/evidence/F2-capture.js) oraz [F2-feed-viewport.js](../reviews/evidence/F2-feed-viewport.js).
+
+Obejrzano wszystkie cztery warianty panelu i logowania oraz cztery zrzuty viewportu feedu. Porównanie z `p4-admin-data-*`, `p2-feed-*` i `p2-login-*`: te same role kolorów, obramowania, znaczniki i wygląd przycisków. Różnią się dane, liczba przebiegów/postów oraz naturalna długość i zawijanie treści. Nagłówek i formularz zachowują układ z wcześniejszych zrzutów.
+
+W tej widocznej sesji Chromium pionowy pasek przewijania zajmuje 15 px, więc w panelu/feedzie obszar treści ma 1265/360 px przy viewportach 1280/375 px. To uwzględniono w pomiarach; w feedzie `scrollWidth = clientWidth` dla obu szerokości i motywów.
+
+Weryfikacja F2 dotyczy wdrożonego `79706bc`. Poprawkę F1 zweryfikowano lokalnie przez testy 105/105 i build; te zrzuty nie są dowodem jej wdrożenia.

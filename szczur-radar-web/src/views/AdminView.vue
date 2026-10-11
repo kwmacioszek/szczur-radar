@@ -76,7 +76,7 @@ async function start(): Promise<void> {
 
 // --- runs -------------------------------------------------------------------------------
 const runs = ref<Run[]>([])
-/** True until the first answer; a refresh keeps the list on screen. */
+/** Loading without a list; a refresh keeps existing runs on screen. */
 const runsLoading = ref(true)
 const runsError = ref<string | null>(null)
 
@@ -91,6 +91,7 @@ const runTone: Record<RunStatus, BadgeTone> = {
 }
 
 async function loadRuns(): Promise<void> {
+  runsLoading.value = runs.value.length === 0
   runsError.value = null
   try {
     runs.value = (await fetchRuns()).items
@@ -114,7 +115,7 @@ function counters(run: Run): string {
 
 // --- failed posts -----------------------------------------------------------------------
 const failed = ref<FailedPost[]>([])
-/** True until the first answer; a refresh keeps the list on screen. */
+/** Loading without a list; a refresh keeps existing failed posts on screen. */
 const failedLoading = ref(true)
 const failedError = ref<string | null>(null)
 const selected = ref<string[]>([])
@@ -124,6 +125,7 @@ const retryError = ref<string | null>(null)
 const retryable = computed(() => failed.value.filter((post) => post.stage !== 'dead'))
 
 async function loadFailed(): Promise<void> {
+  failedLoading.value = failed.value.length === 0
   failedError.value = null
   try {
     failed.value = (await fetchFailedPosts()).items

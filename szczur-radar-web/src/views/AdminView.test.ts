@@ -163,12 +163,63 @@ describe('AdminView', () => {
     expect(wrapper.find('#start-hint').exists()).toBe(false)
   })
 
-  it('keeps the runs on screen while refreshing', async () => {
+  it.each(['empty', 'data'] as const)('shows loading while recovering from an error, then the %s response', async (response) => {
+    let answerRuns: (value: Awaited<ReturnType<typeof fetchRuns>>) => void = () => {}
+    let answerFailed: (value: Awaited<ReturnType<typeof fetchFailedPosts>>) => void = () => {}
+    vi.mocked(fetchRuns)
+      .mockRejectedValueOnce(new ApiError(500, 'internal_error'))
+      .mockReturnValueOnce(new Promise((resolve) => (answerRuns = resolve)))
+    vi.mocked(fetchFailedPosts)
+      .mockRejectedValueOnce(new ApiError(500, 'internal_error'))
+      .mockReturnValueOnce(new Promise((resolve) => (answerFailed = resolve)))
+    const wrapper = await mountAdmin()
+    const runsSection = wrapper.find('section[aria-labelledby="runs-title"]')
+    const failedSection = wrapper.find('section[aria-labelledby="failed-title"]')
+    expect(runsSection.find('[role="alert"]').text()).toBe('Nie udało się wczytać przebiegów.')
+    expect(failedSection.find('[role="alert"]').text()).toBe('Nie udało się wczytać nieudanych postów.')
+
+    await wrapper.findAll('button').find((button) => button.text() === 'Odśwież')!.trigger('click')
+
+    expect(fetchRuns).toHaveBeenCalledTimes(2)
+    expect(fetchFailedPosts).toHaveBeenCalledTimes(2)
+    for (const section of [runsSection, failedSection]) {
+      expect(section.find('.loading').text()).toBe('Wczytywanie…')
+      expect(section.attributes('aria-busy')).toBe('true')
+      expect(section.find('.empty').exists()).toBe(false)
+      expect(section.find('[role="alert"]').exists()).toBe(false)
+    }
+
+    const hasItems = response === 'data'
+    answerRuns({ items: hasItems ? [run()] : [], page: 0, size: 20, total: hasItems ? 1 : 0 })
+    await flushPromises()
+
+    expect(runsSection.find('.loading').exists()).toBe(false)
+    expect(runsSection.attributes('aria-busy')).toBeUndefined()
+    expect(runsSection.findAll('.run')).toHaveLength(hasItems ? 1 : 0)
+    expect(runsSection.find('.empty').exists()).toBe(!hasItems)
+    expect(failedSection.find('.loading').text()).toBe('Wczytywanie…')
+    expect(failedSection.attributes('aria-busy')).toBe('true')
+    expect(failedSection.find('.empty').exists()).toBe(false)
+
+    answerFailed({ items: hasItems ? [failed('a', 'failed')] : [], page: 0, size: 50, total: hasItems ? 1 : 0 })
+    await flushPromises()
+
+    expect(failedSection.find('.loading').exists()).toBe(false)
+    expect(failedSection.attributes('aria-busy')).toBeUndefined()
+    expect(failedSection.findAll('.failed-posts li')).toHaveLength(hasItems ? 1 : 0)
+    expect(failedSection.find('.empty').exists()).toBe(!hasItems)
+    wrapper.unmount()
+  })
+
+  it('keeps the runs and failed posts on screen while refreshing', async () => {
     vi.mocked(fetchRuns).mockResolvedValueOnce({ items: [run()], page: 0, size: 20, total: 1 }).mockReturnValue(never())
+    vi.mocked(fetchFailedPosts).mockResolvedValueOnce({ items: [failed('a', 'failed')], page: 0, size: 50, total: 1 }).mockReturnValue(never())
     const wrapper = await mountAdmin()
     await wrapper.findAll('button').find((button) => button.text() === 'Odśwież')!.trigger('click')
     expect(fetchRuns).toHaveBeenCalledTimes(2)
+    expect(fetchFailedPosts).toHaveBeenCalledTimes(2)
     expect(wrapper.findAll('.run')).toHaveLength(1)
+    expect(wrapper.findAll('.failed-posts li')).toHaveLength(1)
     expect(wrapper.find('.loading').exists()).toBe(false)
   })
 
