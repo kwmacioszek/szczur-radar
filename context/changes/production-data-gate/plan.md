@@ -624,30 +624,30 @@ Treść akceptuje użytkownik w przeglądzie PR.
 
 #### Automated
 
-- [x] 3.1 `railway config plan` dla PR env (dry run, `IAC_SOURCE_BRANCH=feature/production-data-gate`) pokazuje tylko utworzenie bucketu `db-backups` i serwisu `db-backup` z jego zmiennymi, bez zmian destrukcyjnych
-- [x] 3.2 Filtr bramki uruchomiony lokalnie (`jq`) na tym planie przepuszcza go, a na planie ze zmianą źródła istniejącego serwisu (np. dry run z innym `IAC_SOURCE_BRANCH`) odmawia
-- [x] 3.3 CI na PR jest zielone, łącznie z `railway-config` (apply do PR env)
+- [x] 3.1 `railway config plan` dla PR env (dry run, `IAC_SOURCE_BRANCH=feature/production-data-gate`) pokazuje tylko utworzenie bucketu `db-backups` i serwisu `db-backup` z jego zmiennymi, bez zmian destrukcyjnych — fb49846
+- [x] 3.2 Filtr bramki uruchomiony lokalnie (`jq`) na tym planie przepuszcza go, a na planie ze zmianą źródła istniejącego serwisu (np. dry run z innym `IAC_SOURCE_BRANCH`) odmawia — fb49846
+- [x] 3.3 CI na PR jest zielone, łącznie z `railway-config` (apply do PR env) — fb49846
 
 #### Manual
 
-- [x] 3.4 W PR env `db-backup` zbudował się z `tools/db-backup/Dockerfile`, a przebieg (harmonogram tymczasowo `*/5 * * * *`) skończył się kodem 0; log pokazuje rozmiar dumpa, `restore-check` OK i wysyłkę
-- [x] 3.5 Bucket PR env zawiera `daily/…dump` z manifestem, a w manifeście liczby wierszy mieszczą się w przedziale [przed, po]
-- [ ] 3.6 Celowo zepsuty przebieg w PR env (np. tymczasowo zły `S3_BUCKET`) kończy się kodem ≠ 0 i przychodzi e-mail Railway; potem przywrócenie wartości i harmonogramu z IaC
-- [x] 3.7 Test z aplikacją na dumpie z PR env: `restore-check.sh --serve` lokalnie, potem `java -jar target/szczur-radar-api.jar migrate` mówi „Schema … is up to date”, API startuje, logowanie admina działa, a `/api/posts` ma `total` równy temu w PR env
-- [x] 3.8 Próba runbooka odtworzenia awaryjnego na bazie PR env: po `pg_restore --clean …` `/api/ready` daje 200, logowanie działa, a `/api/posts` ma ten sam `total`
+- [x] 3.4 W PR env `db-backup` zbudował się z `tools/db-backup/Dockerfile`, a przebieg (harmonogram tymczasowo `*/5 * * * *`) skończył się kodem 0; log pokazuje rozmiar dumpa, `restore-check` OK i wysyłkę — fb49846
+- [x] 3.5 Bucket PR env zawiera `daily/…dump` z manifestem, a w manifeście liczby wierszy mieszczą się w przedziale [przed, po] — fb49846
+- [x] 3.6 Celowo zepsuty przebieg w PR env (np. tymczasowo zły `S3_BUCKET`) kończy się kodem ≠ 0 i przychodzi e-mail Railway; potem przywrócenie wartości i harmonogramu z IaC — fb49846
+- [x] 3.7 Test z aplikacją na dumpie z PR env: `restore-check.sh --serve` lokalnie, potem `java -jar target/szczur-radar-api.jar migrate` mówi „Schema … is up to date”, API startuje, logowanie admina działa, a `/api/posts` ma `total` równy temu w PR env — fb49846
+- [x] 3.8 Próba runbooka odtworzenia awaryjnego na bazie PR env: po `pg_restore --clean …` `/api/ready` daje 200, logowanie działa, a `/api/posts` ma ten sam `total` — fb49846
 
 ### Phase 4: Limit kosztów OpenRouter
 
 #### Automated
 
-- [ ] 4.1 `./mvnw -B test -Dtest=OpenRouterClientTest` przechodzi (przypadki a–d)
-- [ ] 4.2 `./mvnw -B verify` przechodzi
+- [x] 4.1 `./mvnw -B test -Dtest=OpenRouterClientTest` przechodzi (przypadki a–d)
+- [x] 4.2 `./mvnw -B verify` przechodzi
 - [ ] 4.3 CI na PR jest zielone
 
 #### Manual
 
-- [ ] 4.4 Panel OpenRouter pokazuje na kluczu produkcji limit $10 z resetem miesięcznym
-- [ ] 4.5 `GET /api/admin/llm/check` na produkcji (zalogowany admin) zwraca `"ok":true` po ustawieniu limitu
+- [x] 4.4 Panel OpenRouter pokazuje na kluczu produkcji limit $10 z resetem miesięcznym
+- [x] 4.5 `GET /api/admin/llm/check` na produkcji (zalogowany admin) zwraca `"ok":true` po ustawieniu limitu
 
 ### Phase 5: Dokumenty i zamknięcie bramki
 

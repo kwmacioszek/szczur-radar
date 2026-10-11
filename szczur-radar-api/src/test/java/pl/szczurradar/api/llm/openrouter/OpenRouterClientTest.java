@@ -46,6 +46,9 @@ class OpenRouterClientTest {
 
 	private static final Reply RATE_LIMITED = Reply.status(429, "{\"error\":{\"message\":\"Rate limit exceeded\",\"code\":429}}");
 
+	private static final String KEY_LIMIT_MESSAGE = "Key limit exceeded (monthly limit). $10.02 of $10.00 used; "
+			+ "resets 2026-11-01T00:00:00.000Z.";
+
 	private final List<Duration> sleeps = new ArrayList<>();
 
 	@Test
@@ -216,6 +219,59 @@ class OpenRouterClientTest {
 	}
 
 	@Test
+	void aSpentKeyLimitIsTheConfigurationAfterOneRequest() {
+		// OpenRouter refuses a key whose credit limit is spent with 403 "Key limit exceeded"
+		// (docs: capping-shared-agent-keys); synthetic, in that shape.
+		try (ScriptedProviderServer server = new ScriptedProviderServer(
+				Reply.status(403, forbidden(KEY_LIMIT_MESSAGE, null).toString()), Reply.ok(SUCCESS))) {
+			assertThatExceptionOfType(LlmConfigurationException.class)
+				.isThrownBy(() -> client(server, ServiceTier.DEFAULT, null).complete(REQUEST))
+				.satisfies(ex -> {
+					assertThat(ex.attempts()).isEqualTo(1);
+					assertThat(ex.getMessage()).contains("HTTP 403", "Key limit exceeded");
+				});
+			assertThat(server.requests()).hasSize(1);
+			assertThat(sleeps).isEmpty();
+		}
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = { "openrouter_key_limit", "openrouter_workspace_budget", "openrouter_guardrail_budget" })
+	void aSpentBudgetNamedByItsLimitSourceIsTheConfigurationAfterOneRequest(String limitSource) {
+		// A 403 whose metadata names a spent budget (docs: limits), whatever its message says.
+		try (ScriptedProviderServer server = new ScriptedProviderServer(
+				Reply.status(403, forbidden("Budget limit exceeded (monthly limit).", limitSource).toString()),
+				Reply.ok(SUCCESS))) {
+			assertThatExceptionOfType(LlmConfigurationException.class)
+				.isThrownBy(() -> client(server, ServiceTier.DEFAULT, null).complete(REQUEST))
+				.satisfies(ex -> {
+					assertThat(ex.attempts()).isEqualTo(1);
+					assertThat(ex.getMessage()).contains("HTTP 403");
+				});
+			assertThat(server.requests()).hasSize(1);
+		}
+	}
+
+	@Test
+	void aModerationRefusalIsAProviderErrorAfterOneRequest() {
+		// OpenRouter refuses flagged input with 403 and the moderation reasons (docs: errors-and-debugging).
+		try (ScriptedProviderServer server = new ScriptedProviderServer(Reply.status(403,
+				"{\"error\":{\"code\":403,\"message\":\"Your input was flagged by moderation\","
+						+ "\"metadata\":{\"reasons\":[\"harassment\"],\"flagged_input\":\"...\"}}}"),
+				Reply.ok(SUCCESS))) {
+			assertThatExceptionOfType(LlmCallException.class)
+				.isThrownBy(() -> client(server, ServiceTier.DEFAULT, null).complete(REQUEST))
+				.satisfies(ex -> {
+					assertThat(ex).isNotInstanceOf(LlmConfigurationException.class);
+					assertThat(ex.failure()).isEqualTo(CallFailure.PROVIDER_ERROR);
+					assertThat(ex.attempts()).isEqualTo(1);
+					assertThat(ex.getMessage()).contains("HTTP 403", "moderation");
+				});
+			assertThat(server.requests()).hasSize(1);
+		}
+	}
+
+	@Test
 	void anEmptyChoicesListIsRetriedLikeAServerError() {
 		// The real payload with an empty choices list.
 		ObjectNode empty = (ObjectNode) MAPPER.readTree(SUCCESS);
@@ -304,6 +360,32 @@ class OpenRouterClientTest {
 	}
 
 	@Test
+	void aSpentKeyLimitReportedInA200AnswerIsTheConfiguration() {
+		try (ScriptedProviderServer server = new ScriptedProviderServer(
+				Reply.ok(inBody(forbidden(KEY_LIMIT_MESSAGE, null))), Reply.ok(SUCCESS))) {
+			assertThatExceptionOfType(LlmConfigurationException.class)
+				.isThrownBy(() -> client(server, ServiceTier.DEFAULT, null).complete(REQUEST))
+				.satisfies(ex -> {
+					assertThat(ex.attempts()).isEqualTo(1);
+					assertThat(ex.getMessage()).contains("HTTP 403", "Key limit exceeded");
+				});
+			assertThat(server.requests()).hasSize(1);
+		}
+	}
+
+	@Test
+	void aSpentBudgetNamedByItsLimitSourceInA200AnswerIsTheConfiguration() {
+		try (ScriptedProviderServer server = new ScriptedProviderServer(
+				Reply.ok(inBody(forbidden("Budget limit exceeded (monthly limit).", "openrouter_workspace_budget"))),
+				Reply.ok(SUCCESS))) {
+			assertThatExceptionOfType(LlmConfigurationException.class)
+				.isThrownBy(() -> client(server, ServiceTier.DEFAULT, null).complete(REQUEST))
+				.satisfies(ex -> assertThat(ex.attempts()).isEqualTo(1));
+			assertThat(server.requests()).hasSize(1);
+		}
+	}
+
+	@Test
 	void aServerErrorAfterPartialOutputIsRetriedWithoutAcceptingThatOutput() {
 		try (ScriptedProviderServer server = new ScriptedProviderServer(
 				partialAnswerError(502, "Provider disconnected mid-stream", "provider_unavailable"),
@@ -377,6 +459,24 @@ class OpenRouterClientTest {
 	private static Reply inBodyError(int code, String message, String errorType) {
 		return Reply.ok("{\"id\":\"gen-synthetic\",\"object\":\"chat.completion\",\"error\":{\"code\":" + code
 				+ ",\"message\":\"" + message + "\",\"metadata\":{\"error_type\":\"" + errorType + "\"}}}");
+	}
+
+	/**
+	 * OpenRouter's 403 for a spent budget (docs: limits), synthetic; {@code limitSource} {@code null} =
+	 * without metadata.
+	 */
+	private static ObjectNode forbidden(String message, String limitSource) {
+		ObjectNode body = MAPPER.createObjectNode();
+		ObjectNode error = body.putObject("error").put("code", 403).put("message", message);
+		if (limitSource != null) {
+			error.putObject("metadata").put("limit_source", limitSource);
+		}
+		return body;
+	}
+
+	/** An error body as reported in an HTTP 200, with the completion's id and object. */
+	private static String inBody(ObjectNode errorBody) {
+		return errorBody.put("id", "gen-synthetic").put("object", "chat.completion").toString();
 	}
 
 	private LlmClient client(ScriptedProviderServer server, ServiceTier tier, ReasoningEffort effort) {

@@ -4,6 +4,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import com.openai.client.OpenAIClient;
 import com.openai.client.OpenAIClientAsync;
@@ -11,6 +12,9 @@ import com.openai.client.OpenAIClientImpl;
 import com.openai.client.okhttp.OkHttpClient;
 import com.openai.client.okhttp.OpenAIOkHttpClientAsync;
 import com.openai.core.ClientOptions;
+import com.openai.core.JsonObject;
+import com.openai.core.JsonString;
+import com.openai.core.JsonValue;
 import com.openai.errors.OpenAIServiceException;
 import org.jspecify.annotations.Nullable;
 import org.springframework.ai.chat.messages.SystemMessage;
@@ -49,10 +53,27 @@ import pl.szczurradar.api.llm.transport.TransportRetry;
  * classified by its {@code code} like an HTTP status — a flex refusal is a 429 — and an answer without
  * {@code choices} is retried like a 5xx.
  * An error after partial output ({@code choices[0].error}) is classified before that output is accepted.
+ *
+ * <p>A 403 — as the HTTP status or an error's {@code code} — for a spent budget (the key's credit limit,
+ * a workspace or a guardrail budget) is the configuration: every later call fails the same way until the
+ * budget resets. Any other 403 (e.g. moderation) refuses one request and stays rejected.
  */
 public final class OpenRouterClient implements LlmClient {
 
 	static final String BASE_URL = "https://openrouter.ai/api/v1";
+
+	/**
+	 * How OpenRouter's 403 message starts once the key's own credit limit is spent
+	 * (openrouter.ai/docs/guides/best-practices/capping-shared-agent-keys).
+	 */
+	static final String KEY_LIMIT_EXCEEDED = "Key limit exceeded";
+
+	/**
+	 * {@code error.metadata.limit_source} of a 403 for a spent budget: the key's credit limit, a workspace
+	 * budget or a guardrail budget (openrouter.ai/docs/api_reference/limits).
+	 */
+	static final Set<String> BUDGET_LIMIT_SOURCES = Set.of("openrouter_key_limit", "openrouter_workspace_budget",
+			"openrouter_guardrail_budget");
 
 	private final ChatModel chatModel;
 
@@ -166,7 +187,9 @@ public final class OpenRouterClient implements LlmClient {
 		}
 		catch (OpenAIServiceException ex) {
 			List<String> retryAfter = ex.headers().values("Retry-After");
-			throw TransportException.ofStatus(ex.statusCode(), messages.clean(String.valueOf(ex.getMessage())),
+			JsonValue error = ex.body(); // openai-java keeps the answer's error object
+			throw statusFailure(ex.statusCode(), text(error, "message"), text(error, "metadata", "limit_source"),
+					messages.clean(String.valueOf(ex.getMessage())),
 					TransportException.parseRetryAfter(retryAfter.isEmpty() ? null : retryAfter.getFirst()), ex);
 		}
 		catch (RuntimeException ex) {
@@ -195,7 +218,8 @@ public final class OpenRouterClient implements LlmClient {
 	/**
 	 * The failure a 2xx answer reported, if it did: an {@code error} object is classified as the HTTP
 	 * status in its {@code code} (429 retried and, after three, flex → default; 5xx retried; 401/402/404
-	 * the configuration); an answer without {@code choices} and without an error is retried like a 5xx.
+	 * and a 403 for a spent budget the configuration); an answer without {@code choices} and without an
+	 * error is retried like a 5xx.
 	 */
 	private Optional<TransportException> failedAnswer(OpenRouterRawResponse.Observed answer,
 			@Nullable Throwable cause) {
@@ -204,10 +228,40 @@ public final class OpenRouterClient implements LlmClient {
 		}
 		if (answer.errorCode() != null) {
 			String type = answer.errorType() != null ? " (" + answer.errorType() + ")" : "";
-			return Optional.of(TransportException.ofStatus(answer.errorCode(),
+			return Optional.of(statusFailure(answer.errorCode(), answer.errorMessage(), answer.limitSource(),
 					messages.clean("error in a 200 answer: " + answer.errorMessage() + type), null, cause));
 		}
 		return answer.choices() ? Optional.empty() : Optional.of(withoutChoices(cause));
+	}
+
+	/**
+	 * {@link TransportException#ofStatus}, except that a 403 for a spent budget is the configuration.
+	 *
+	 * @param errorMessage the provider's {@code error.message}, as received
+	 * @param limitSource the provider's {@code error.metadata.limit_source}
+	 * @param message the cleaned text for the exception
+	 */
+	private static TransportException statusFailure(int status, @Nullable String errorMessage,
+			@Nullable String limitSource, String message, @Nullable Duration retryAfter, @Nullable Throwable cause) {
+		if (status == 403 && budgetSpent(errorMessage, limitSource)) {
+			return new TransportException(TransportException.Kind.CONFIGURATION, "HTTP 403: " + message, retryAfter,
+					cause);
+		}
+		return TransportException.ofStatus(status, message, retryAfter, cause);
+	}
+
+	private static boolean budgetSpent(@Nullable String errorMessage, @Nullable String limitSource) {
+		return errorMessage != null && errorMessage.startsWith(KEY_LIMIT_EXCEEDED)
+				|| limitSource != null && BUDGET_LIMIT_SOURCES.contains(limitSource);
+	}
+
+	/** The string at {@code path} in an HTTP error's {@code error} object, or {@code null}. */
+	private static @Nullable String text(JsonValue error, String... path) {
+		JsonValue value = error;
+		for (String name : path) {
+			value = value instanceof JsonObject object ? object.values().get(name) : null;
+		}
+		return value instanceof JsonString string ? string.value() : null;
 	}
 
 	private static TransportException withoutChoices(@Nullable Throwable cause) {

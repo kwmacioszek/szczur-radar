@@ -29,8 +29,9 @@ public class TransportException extends RuntimeException {
 		CONNECTION(true),
 
 		/**
-		 * HTTP 401 (key), 402 (credit) or 404 (model): the configuration is refused, every call would
-		 * fail the same way. Never retried; ends as {@code LlmConfigurationException}.
+		 * HTTP 401 (key), 402 (credit) or 404 (model), and OpenRouter's 403 for a spent budget
+		 * ({@code OpenRouterClient}): the configuration is refused, every call would fail the same way.
+		 * Never retried; ends as {@code LlmConfigurationException}.
 		 */
 		CONFIGURATION(false),
 
