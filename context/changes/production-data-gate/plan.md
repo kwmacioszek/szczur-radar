@@ -597,28 +597,28 @@ Treść akceptuje użytkownik w przeglądzie PR.
 
 #### Automated
 
-- [x] 1.1 `railway volume -e <production-env-id> list --json` pokazuje `postgres-volume` z `sizeMB: 5000`
-- [x] 1.2 `railway config plan` dla `production` (dry run, bez apply) nie pokazuje żadnej zmiany (`--detailed-exit-code` = 0)
-- [x] 1.3 `curl -s https://szczur-radar-web-production.up.railway.app/api/ready` zwraca 200
+- [x] 1.1 `railway volume -e <production-env-id> list --json` pokazuje `postgres-volume` z `sizeMB: 5000` — e4f3166
+- [x] 1.2 `railway config plan` dla `production` (dry run, bez apply) nie pokazuje żadnej zmiany (`--detailed-exit-code` = 0) — e4f3166
+- [x] 1.3 `curl -s https://szczur-radar-web-production.up.railway.app/api/ready` zwraca 200 — e4f3166
 
 #### Manual
 
-- [x] 1.4 `df -h /var/lib/postgresql/data` w kontenerze `postgres` (produkcja) pokazuje ~4,6–4,7 GB rozmiaru, nie ~434 MB
-- [x] 1.5 Logowanie admina na produkcji działa po zmianie rozmiaru
-- [x] 1.6 Sekcja F-01 w `deploy-plan.md` zawiera pomiary bazy, wynik `df -h` i stan limitów oraz sekretów (same nazwy)
+- [x] 1.4 `df -h /var/lib/postgresql/data` w kontenerze `postgres` (produkcja) pokazuje ~4,6–4,7 GB rozmiaru, nie ~434 MB — e4f3166
+- [x] 1.5 Logowanie admina na produkcji działa po zmianie rozmiaru — e4f3166
+- [x] 1.6 Sekcja F-01 w `deploy-plan.md` zawiera pomiary bazy, wynik `df -h` i stan limitów oraz sekretów (same nazwy) — e4f3166
 
 ### Phase 2: Narzędzie kopii `tools/db-backup/`
 
 #### Automated
 
-- [ ] 2.1 `bash -n tools/db-backup/*.sh` przechodzi bez błędów
-- [ ] 2.2 `docker build -t szczur-radar-db-backup tools/db-backup` kończy się sukcesem
-- [ ] 2.3 `docker run --rm --entrypoint pg_dump szczur-radar-db-backup --version` pokazuje wersję 18.x
-- [ ] 2.4 `tools/db-backup/test.sh` przechodzi (dump bez danych sesji, `restore-check` OK, retencja 14 z 20, obcięty dump → porażka bez wysyłki, `nas-retention --dry-run`)
+- [x] 2.1 `bash -n tools/db-backup/*.sh` przechodzi bez błędów
+- [x] 2.2 `docker build -t szczur-radar-db-backup tools/db-backup` kończy się sukcesem
+- [x] 2.3 `docker run --rm --entrypoint pg_dump szczur-radar-db-backup --version` pokazuje wersję 18.x
+- [x] 2.4 `tools/db-backup/test.sh` przechodzi (dump bez danych sesji, `restore-check` OK, retencja 14 z 20, obcięty dump → porażka bez wysyłki, `nas-retention --dry-run`)
 
 #### Manual
 
-- [ ] 2.5 W logu z `test.sh` nie ma haseł ani kluczy (przegląd wyjścia)
+- [x] 2.5 W logu z `test.sh` nie ma haseł ani kluczy (przegląd wyjścia)
 
 ### Phase 3: Serwis cron i bucket w IaC, bramka CI, weryfikacja w PR env
 
