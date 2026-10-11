@@ -13,9 +13,10 @@ import { bucket, defineRailway, github, postgres, preserve, project, ref, servic
 // against the installed SDK version — the plan gate exists to catch exactly
 // that before anything is applied.
 //
-// `checkSuites: true` on each source enables Railway "Wait for CI": deploys
-// wait for the whole GitHub Actions workflow conclusion. Declared here so IaC
-// does not reset the operator's toggle (a plan otherwise shows true → null).
+// `checkSuites: true` on the api and web sources enables Railway "Wait for CI":
+// deploys wait for the whole GitHub Actions workflow conclusion. Declared here
+// so IaC does not reset the operator's toggle (a plan otherwise shows true →
+// null). db-backup does not declare it (see there).
 //
 // `sleepApplication: true` (serverless sleep) on api and web mirrors what the
 // operator set in the dashboard; Postgres declares `false` (see below). The
@@ -166,8 +167,13 @@ export default defineRailway(() => {
   // is UTC; S-05 (daily run) may move it. A cron run's status is its exit code,
   // and restartPolicyType NEVER keeps a failed run visible instead of retrying it.
   const backups = bucket("db-backups", { region: "ams" });
+  // No `checkSuites` (Wait for CI): Railway leaves it unset on a service that
+  // IaC creates, so every later plan would show `source.checkSuites (null →
+  // true)`, which the CI gate refuses as a source change — on main that would
+  // turn CI red and stop the API and web deploys. CI does not test
+  // tools/db-backup anyway (tools/db-backup/test.sh does, locally).
   const dbBackup = service("db-backup", {
-    source: github(REPO, { branch, checkSuites: true }),
+    source: github(REPO, { branch }),
     rootDirectory: "tools/db-backup",
     watchPatterns: ["tools/db-backup/**"],
     replicas: { [REGION]: 1 },

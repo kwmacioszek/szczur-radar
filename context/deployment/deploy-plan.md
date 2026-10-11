@@ -323,6 +323,7 @@ Restoring a database is an operator action (`infrastructure.md`). The agent prep
   - Fixed by hand: the operator attached a volume in the dashboard. Two other attempts failed: `railway volume add` panicked in CLI 5.64.2, and Railway MCP `create-volume` returned an id but created nothing.
   - Then `railway redeploy --from-source` of `postgres`, `szczur-radar-api` (its pre-deploy `migrate` created V1–V5) and `szczur-radar-web`.
   - Expect the same in a PR env of any PR that changes neither the API nor the web. Until its database runs, its `db-backup` fails at every scheduled run.
+- **Wait for CI is not set on a created service.** Railway left `checkSuites` unset on the `db-backup` that IaC created. The next plan showed `source.checkSuites (null → true)`, and the gate refused it as a source change (CI on `2b21c4a`, `railway-config` red). On `main` this would have turned every CI run after the first one red and stopped the API and web deploys. Fix: `db-backup` no longer declares `checkSuites`. CI does not test `tools/db-backup` anyway; `test.sh` does, locally.
 - **The first deployment of the cron service stayed `QUEUED`** for about 11 minutes, with no region assigned. It was replaced when the operator saved a temporary schedule in the dashboard; the new one was built from `tools/db-backup/Dockerfile` within a minute. The cause is not known.
 - **Runs**, on a temporary schedule (`*/5`, then `*/10`):
   - 20:16 UTC, no database: `backup: FAILED: database postgres.railway.internal:5432 is not accepting connections`, status `CRASHED`.
