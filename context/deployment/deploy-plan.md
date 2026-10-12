@@ -472,7 +472,7 @@ The pre-deploy `migrate` adds the table `activation_tokens` (`V6__create_activat
 
 ### PR-env verification (szczur-radar-pr-49)
 
-Verified 2026-10-12 on commit `a21169f` (CI run 38297600946: all six jobs green).
+Verified 2026-10-12 on commit `a21169f` (CI run 38297600946: all six jobs green). After the rebase on `main` (#52) the same change is commit `74ee3fe`.
 
 - **IaC.** `railway-config` planned and applied exactly one change: `~ Set variable szczur-radar-api.WEB_PUBLIC_URL`. `ACTIVATION_LINK_TTL` (`preserve()`) changed nothing.
   - A second `railway config plan` of the PR env, run locally with `IAC_SOURCE_BRANCH=feature/cli-user-onboarding`, returned `ok`, 0 changes ("No changes"). The template string is stored as written, so there is no permanent diff and no fallback is needed.

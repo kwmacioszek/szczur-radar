@@ -572,59 +572,59 @@ Zdanie „Password recovery arrives with S-07” (`deploy-plan.md:35`) dostaje o
 
 #### Automated
 
-- [x] 1.1 MigrationsIT z wersjami 1–6 i ograniczeniami activation_tokens — 0b772ea
-- [x] 1.2 JpaSchemaIT z encją ActivationToken — 0b772ea
-- [x] 1.3 ActivationSettingsTest — 0b772ea
-- [x] 1.4 ActivationLinksIT — 0b772ea
-- [x] 1.5 ./mvnw -B verify — 0b772ea
+- [x] 1.1 MigrationsIT z wersjami 1–6 i ograniczeniami activation_tokens — 1d70266
+- [x] 1.2 JpaSchemaIT z encją ActivationToken — 1d70266
+- [x] 1.3 ActivationSettingsTest — 1d70266
+- [x] 1.4 ActivationLinksIT — 1d70266
+- [x] 1.5 ./mvnw -B verify — 1d70266
 
 ### Phase 2: Komendy CLI create-user i reset-password
 
 #### Automated
 
-- [x] 2.1 Testy create-admin i CommandLine bez zmian po refaktorze — 5f374c1
-- [x] 2.2 CreateUserCommandTest i ResetPasswordCommandTest — 5f374c1
-- [x] 2.3 IT komend create-user i reset-password — 5f374c1
-- [x] 2.4 ./mvnw -B verify — 5f374c1
-- [x] 2.6 Warunkowo: odmowa dla konta systemowego S-05 — N/A: S-05 nie jest w main, odmowę dopisuje S-05 — 5f374c1
+- [x] 2.1 Testy create-admin i CommandLine bez zmian po refaktorze — 6624088
+- [x] 2.2 CreateUserCommandTest i ResetPasswordCommandTest — 6624088
+- [x] 2.3 IT komend create-user i reset-password — 6624088
+- [x] 2.4 ./mvnw -B verify — 6624088
+- [x] 2.6 Warunkowo: odmowa dla konta systemowego S-05 — N/A: S-05 nie jest w main, odmowę dopisuje S-05 — 6624088
 
 #### Manual
 
-- [x] 2.5 Lokalny przebieg komend bez tokenu w logu startu — 5f374c1
+- [x] 2.5 Lokalny przebieg komend bez tokenu w logu startu — 6624088
 
 ### Phase 3: Publiczne API aktywacji
 
 #### Automated
 
-- [x] 3.1 AuthorizationCompletenessIT z nowymi PUBLIC_ROUTES — 2616e83
-- [x] 3.2 ActivationIT — 2616e83
-- [x] 3.3 ./mvnw -B verify — 2616e83
+- [x] 3.1 AuthorizationCompletenessIT z nowymi PUBLIC_ROUTES — 678a044
+- [x] 3.2 ActivationIT — 678a044
+- [x] 3.3 ./mvnw -B verify — 678a044
 
 ### Phase 4: Widok aktywacji w SPA
 
 #### Automated
 
-- [x] 4.1 npm test (ActivateView, LoginView, router, styleContract) — be3af28
-- [x] 4.2 npm run build — be3af28
+- [x] 4.1 npm test (ActivateView, LoginView, router, styleContract) — ee7d53a
+- [x] 4.2 npm run build — ee7d53a
 
 #### Manual
 
-- [x] 4.3 Zrzuty /activate i /login w obu motywach i przy 375 px — be3af28
-- [x] 4.4 Tabela 7 stanów — be3af28
+- [x] 4.3 Zrzuty /activate i /login w obu motywach i przy 375 px — ee7d53a
+- [x] 4.4 Tabela 7 stanów — ee7d53a
 
 ### Phase 5: Wdrożenie, dokumentacja i weryfikacja w PR env
 
 #### Automated
 
-- [x] 5.1 CI na PR zielone w całości — 9a9c9b0
-- [x] 5.2 railway-config stosuje tylko WEB_PUBLIC_URL, ponowny plan pusty — 9a9c9b0
-- [x] 5.9 Rebase na świeży origin/main i ponowna pełna weryfikacja — 9a9c9b0
+- [x] 5.1 CI na PR zielone w całości — d2e6c1f
+- [x] 5.2 railway-config stosuje tylko WEB_PUBLIC_URL, ponowny plan pusty — d2e6c1f
+- [x] 5.9 Rebase na świeży origin/main i ponowna pełna weryfikacja — d2e6c1f
 
 #### Manual
 
-- [x] 5.3 WEB_PUBLIC_URL rozwiązany w PR env i web z głowy gałęzi — 9a9c9b0
-- [x] 5.4 PR env: create-user, link, hasło, logowanie — 9a9c9b0
-- [x] 5.5 PR env: zużyty i zastąpiony link nieważny — 9a9c9b0
-- [x] 5.6 PR env: reset-password admina wylogowuje i odzyskuje dostęp — 9a9c9b0
-- [x] 5.7 PR env: logi Caddy bez tokenu — 9a9c9b0
-- [x] 5.8 Dokumenty i PNG roadmapy zaktualizowane — 9a9c9b0
+- [x] 5.3 WEB_PUBLIC_URL rozwiązany w PR env i web z głowy gałęzi — d2e6c1f
+- [x] 5.4 PR env: create-user, link, hasło, logowanie — d2e6c1f
+- [x] 5.5 PR env: zużyty i zastąpiony link nieważny — d2e6c1f
+- [x] 5.6 PR env: reset-password admina wylogowuje i odzyskuje dostęp — d2e6c1f
+- [x] 5.7 PR env: logi Caddy bez tokenu — d2e6c1f
+- [x] 5.8 Dokumenty i PNG roadmapy zaktualizowane — d2e6c1f

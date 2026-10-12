@@ -7,6 +7,7 @@
 - **Date**: 2026-10-12
 - **Verdict**: NEEDS ATTENTION (triage 2026-10-12: 7 fixed — F1, F2, F3, F5, F6, F7, F8; 1 deferred — F4)
 - **Findings**: 0 critical, 3 warnings, 5 observations
+- **Rebased**: 2026-10-12 onto `002da67` (#52). Commit SHAs of the change were renamed (e.g. `5f374c1` → `6624088`). The CI run and the `origin/main` tip quoted below are those at review time.
 
 ## Verdicts
 
@@ -49,7 +50,7 @@ All are harmless refinements within the plan's intent:
 ### Manual criteria
 
 Each has evidence:
-- 2.5: the commit message of `5f374c1`;
+- 2.5: the commit message of `6624088`;
 - 4.3 and 4.4: `ui/README.md` and 32 PNGs;
 - 5.3–5.8: `deploy-plan.md`, section S-07.
 
@@ -204,10 +205,10 @@ Each has evidence:
 - **Location**: context/changes/cli-user-onboarding/plan.md:589
 - **Detail**:
   - The success criterion (plan.md:287) asks for the row to be closed "jako N/A z adnotacją" when S-05 is not in `main`.
-  - The row reads `- [x] 2.6 … — 5f374c1`; the N/A reason is only in the commit message.
+  - The row reads `- [x] 2.6 … — 6624088`; the N/A reason is only in the commit message.
   - Anyone reading Progress or `/10x-status`, including S-05 when it merges second, would think the system-account refusal exists.
 - **Fix**: Change the row to `- [x] 2.6 Warunkowo: odmowa dla konta systemowego S-05 — N/A: S-05 nie jest w main, odmowę dopisuje S-05 (5f374c1)`.
-- **Decision**: FIXED. The row now carries the N/A annotation and keeps the SHA last (` — 5f374c1`), as the Progress format expects.
+- **Decision**: FIXED. The row now carries the N/A annotation and keeps the SHA last (` — 6624088`), as the Progress format expects.
 
 ### F8 — The switch from "checking" to the form is not announced
 
