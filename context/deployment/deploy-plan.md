@@ -288,7 +288,7 @@ The operator ran Live Resize from the dashboard (`production` → `postgres-volu
   - on production nothing restores it until the next merge.
 - **What a restore loses:** everything written after the dump, up to about 24 h. The sessions are not in the dump, so everyone logs in again. Missing posts can be fetched again with a range run for the missing days, but assessing them again costs LLM calls.
 - **Cost:** today a dump is a few MB. The upload counts as service egress ($0.05/GB) and the bucket costs $0.015 per GB-month, so 26 copies cost cents a month.
-- **Deleting the bucket** stages a change. After deploy the bucket is restorable for 52 hours, then its objects are destroyed (`docs.railway.com/storage-buckets`). The NAS copy (runbook after the merge) does not depend on it.
+- **Deleting the bucket** stages a change. After deploy the bucket is restorable for 52 hours, then its objects are destroyed (`docs.railway.com/storage-buckets`). The copies on the NAS and in Google Drive (runbook after the merge) do not depend on it.
 
 ### Runbook — restore the database from a dump (human only)
 
@@ -402,17 +402,19 @@ PR #44 was squash-merged as `b7ee254` (11:25 UTC). CI on `main` applied `+ Creat
    4. `/api/posts` `total` matches production at the time of the dump.
 
    Delete the local copy afterwards: it is real data.
-4. **Synology Cloud Sync.** Create a new task with an S3-compatible storage (custom server). Take the endpoint, bucket name, access key and secret from production's `db-backups` → Credentials. Use the URL style that tab names: virtual-hosted for new buckets.
-   - Direction: download remote changes only.
-   - Keep the files removed at the source: the option "don't remove files in the destination folder when they are removed in the source". An emptied bucket then never empties the NAS copy.
-   - Target: a local folder such as `/volume1/backups/szczur-radar`, which gets `daily/` and `monthly/`.
+4. **Synology Cloud Sync, bucket → NAS.** Create a task with an S3-compatible storage (custom server). Take the endpoint, bucket name, access key and secret from production's `db-backups` → Credentials. Use the URL style that tab names: virtual-hosted for new buckets.
+   - Direction: download remote changes only, into a local folder that gets `daily/` and `monthly/`.
+   - This direction has **no** option to keep files removed at the source; that option exists only for "upload local changes only". The NAS folder is therefore a mirror of the bucket, 14 daily + 12 monthly dumps: the bucket's retention also prunes the NAS. It also means that an emptied bucket would empty the NAS copy (step 5 covers this).
    - The keys give full access to production's bucket. If the NAS is compromised, reset them in Railway (bucket → Credentials).
-5. **NAS retention.** Copy `tools/db-backup/nas-retention.sh` to the NAS. In DSM, Control Panel → Task Scheduler, add a user-defined script that runs daily after the sync (e.g. 08:00 local), as a user who may delete in the folder:
-   ```
-   bash /volume1/backups/scripts/nas-retention.sh /volume1/backups/szczur-radar
-   ```
-   Run it once with `--dry-run` first and check what it would delete. It keeps 14 daily and 12 monthly dumps with their manifests.
+5. **Archive outside both: Synology Cloud Sync, NAS → Google Drive.** A second task, direction "upload local changes only", with the option "don't remove files in the destination folder when they are removed in the source folder" on. Google Drive keeps every dump ever pulled, so an emptied bucket or NAS folder does not remove it.
+   - It grows: today about 0.5 MB a day. Check the Drive usage now and then and delete old daily dumps there by hand; keep the monthly ones.
+   - `nas-retention.sh` and its DSM task are not needed with this setup, because the NAS already mirrors the bucket's retention. It is still the tool for a NAS folder that keeps deleted files (a different setup); a dry run on the mirror is harmless.
 6. **Record and close.** Write the results here: first run, the test with the application, the NAS folder with today's dump. Comment them on issue #43, then close it.
+
+**State 2026-10-12 (operator):**
+- Cloud Sync bucket → NAS is set up (download remote changes only) into `/volume2/ProxmoxBackup/szczur-radar/s3`, which holds `daily/` and `monthly/`.
+- Cloud Sync NAS → Google Drive is set up (upload local changes only), to be switched to keep the files removed at the source (step 5).
+- A DSM dry run of `nas-retention.sh` on that folder saw 1 daily and 1 monthly dump and deleted nothing. The DSM task is not needed (step 5).
 
 ## Phases
 

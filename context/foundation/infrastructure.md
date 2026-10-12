@@ -18,7 +18,7 @@ tech_stack:
 
 > **Update 2026-10-11 (F-01, `production-data-gate`):** production runs on Railway **Hobby**, which has no built-in volume backups and no PITR (both are Pro, `railway.com/pricing`). The database is backed up by the cron service `db-backup` (`tools/db-backup/`, declared in `.railway/railway.ts`). It is the only cron service; the pipeline still runs in the API.
 > - **Each run** (daily at 02:00 UTC, production only: PR envs get the cron as a copy of production but skip it): `pg_dump` without the session rows, a full restore check in a throwaway cluster, then the upload to the bucket `db-backups`.
-> - **Storage:** one bucket per environment, region `ams`; 14 daily and 12 monthly copies. The operator's Synology pulls the bucket with Cloud Sync, so a copy also lives outside Railway.
+> - **Storage:** one bucket per environment, region `ams`; 14 daily and 12 monthly copies. The operator's Synology mirrors the bucket with Cloud Sync and uploads it to Google Drive, which keeps every dump: a copy lives outside Railway even if the bucket is emptied.
 > - **Other settings:** the Postgres volume is 5 GB, and the workspace usage limits are $5 (alert) and $10 (hard). Production's OpenRouter key has a $10/month limit: when it is spent, a run stops as a configuration error.
 >
 > The service, the restore runbook and the PR-env drill are in `context/deployment/deploy-plan.md`, section F-01.
