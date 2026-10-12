@@ -616,15 +616,15 @@ Zdanie „Password recovery arrives with S-07” (`deploy-plan.md:35`) dostaje o
 
 #### Automated
 
-- [x] 5.1 CI na PR zielone w całości
-- [x] 5.2 railway-config stosuje tylko WEB_PUBLIC_URL, ponowny plan pusty
-- [x] 5.9 Rebase na świeży origin/main i ponowna pełna weryfikacja
+- [x] 5.1 CI na PR zielone w całości — 9a9c9b0
+- [x] 5.2 railway-config stosuje tylko WEB_PUBLIC_URL, ponowny plan pusty — 9a9c9b0
+- [x] 5.9 Rebase na świeży origin/main i ponowna pełna weryfikacja — 9a9c9b0
 
 #### Manual
 
-- [x] 5.3 WEB_PUBLIC_URL rozwiązany w PR env i web z głowy gałęzi
-- [x] 5.4 PR env: create-user, link, hasło, logowanie
-- [x] 5.5 PR env: zużyty i zastąpiony link nieważny
-- [x] 5.6 PR env: reset-password admina wylogowuje i odzyskuje dostęp
-- [x] 5.7 PR env: logi Caddy bez tokenu
-- [x] 5.8 Dokumenty i PNG roadmapy zaktualizowane
+- [x] 5.3 WEB_PUBLIC_URL rozwiązany w PR env i web z głowy gałęzi — 9a9c9b0
+- [x] 5.4 PR env: create-user, link, hasło, logowanie — 9a9c9b0
+- [x] 5.5 PR env: zużyty i zastąpiony link nieważny — 9a9c9b0
+- [x] 5.6 PR env: reset-password admina wylogowuje i odzyskuje dostęp — 9a9c9b0
+- [x] 5.7 PR env: logi Caddy bez tokenu — 9a9c9b0
+- [x] 5.8 Dokumenty i PNG roadmapy zaktualizowane — 9a9c9b0
