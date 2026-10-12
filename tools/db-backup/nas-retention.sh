@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# Retention of the backup copies on the NAS (F-01, production-data-gate; see README.md). Synology Cloud
-# Sync downloads the bucket without deleting the files removed there, so an emptied bucket does not
-# empty the NAS copy. This script, run daily by the DSM Task Scheduler after the sync, keeps the newest
+# Retention of the backup copies in a folder that keeps the files removed from the bucket (F-01,
+# production-data-gate; see README.md). Not needed when Synology Cloud Sync mirrors the bucket
+# ("download remote changes only" deletes what the bucket deletes; the operator's setup since
+# 2026-10-12). Run daily by the DSM Task Scheduler after the sync, it keeps the newest
 # BACKUP_KEEP_DAILY (default 14) dumps in <dir>/daily and the newest BACKUP_KEEP_MONTHLY (default 12)
 # in <dir>/monthly, each with its manifest, and deletes the older ones. The newest dump is never
 # deleted. Plain bash and coreutils: no rclone, no Docker.

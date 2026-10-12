@@ -95,3 +95,10 @@
   - `pg_dump --exclude-table-data` po cichu nic nie robi, gdy wzorzec nie pasuje. Dump, który się nie odtwarza, wygląda tak samo jak dobry.
 - **Rule**: Przed planowaniem backupu sprawdź tabelę funkcji planu (`railway.com/pricing`), a nie samą dokumentację funkcji, i rozmiar wolumenu po zmianie planu (`df -h` w kontenerze, nie panel). Na Hobby kopią jest `pg_dump` z osobnego serwisu (cron), z kopią poza platformą. Kopię logiczną uznawaj za ważną dopiero wtedy, gdy przeszła pełne odtworzenie do tymczasowej bazy: kontrole tabel, wersji Flyway i liczby wierszy, a raz test z aplikacją. Zawartość dumpa (np. wykluczone dane) sprawdzaj przez `pg_restore --list`.
 - **Applies to**: infra, plan, plan-review
+
+## Nowy bucket w Railway IaC sprawdzaj na produkcji, a stałe diffy usuwaj z railway.ts
+
+- **Context**: Zmiana w `.railway/railway.ts`, która dodaje nowy zasób projektu (np. bucket) albo deklaruje ustawienie usługi, oraz każde (ponowne) uruchomienie apply IaC na produkcji (F-01 `production-data-gate`, 2026-10-12).
+- **Problem**: CI stosuje IaC najpierw do PR env, więc nowy bucket powstał w projekcie tylko z instancją w PR env; apply na produkcji po merge'u zalogował `✓ bucket.…`, ale go tam nie wdrożył — referencje `${{db-backups.*}}` były puste i pierwsza kopia padła. Ponowny apply ze stałym diffem (`sleepApplication null → false`) zrestartował produkcyjnego Postgresa, który zawisł na „Mounting volume” na 9 min.
+- **Rule**: Zmianę dodającą bucket w IaC planuj z krokiem produkcyjnym: po pierwszym apply na produkcji sprawdź `railway bucket list -e production` i długości zmiennych z referencjami (nie sam log CI), a brakujący bucket utwórz tam pod tą samą nazwą. Nie trzymaj w `railway.ts` deklaracji dającej stały diff i przed każdym apply na produkcji sprawdź w planie, które usługi zrestartuje.
+- **Applies to**: plan, plan-review, implement, impl-review, infra, deploy

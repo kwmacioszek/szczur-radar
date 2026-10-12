@@ -233,7 +233,7 @@ On `szczur-radar-pr-37` a push deployed `szczur-radar-web` from an older commit 
 
 ## F-01: bramka produkcyjnych danych (production-data-gate)
 
-**Status (2026-10-11): in progress** in PR #44, issue #43. Change: `context/changes/production-data-gate/`. Production runs on Railway **Hobby**, which has no built-in volume backups and no PITR (both are Pro). The database is therefore protected by a daily logical dump (`pg_dump`) from a separate cron service, checked by a full restore before upload ("How the backup works" below). Verified in a PR env; the production steps after the merge are in the last runbook of this section.
+**Status (2026-10-12): done** — merged as `b7ee254` (PR #44), production verified (first backup, test with the application on a production dump, NAS and Google Drive copies); follow-ups in PR #46; issue #43. Change: `context/changes/production-data-gate/`. Production runs on Railway **Hobby**, which has no built-in volume backups and no PITR (both are Pro). The database is therefore protected by a daily logical dump (`pg_dump`) from a separate cron service, checked by a full restore before upload ("How the backup works" below). Verified in a PR env; the production steps after the merge are in the last runbook of this section.
 
 ### Starting state (2026-10-11, read-only)
 
@@ -255,7 +255,7 @@ The operator ran Live Resize from the dashboard (`production` → `postgres-volu
 | `df -h /var/lib/postgresql/data` (size / used / use%) | 434M / 129M / 31 % | 4.4G / 129M / 3 % |
 
 - `df` reports GiB after filesystem overhead. 5000 MB (SI) is 4.66 GiB, shown as 4.4G; 500 MB was 434M the same way. Railway's `currentSizeMB` (191.88) counts more than `df`'s used space.
-- `railway config plan` on production was identical before and after the resize: one `safe` change, `postgres deploy.sleepApplication (null → false)`. It is permanent: Railway stores `false` as no value, so the plan shows it again after every apply (`main` on 2026-10-10, `szczur-radar-pr-44` on 2026-10-11). Postgres does not sleep either way. The declaration stays: if serverless sleep were switched on in the dashboard, an apply would switch it off.
+- `railway config plan` on production was identical before and after the resize: one `safe` change, `postgres deploy.sleepApplication (null → false)`. It is permanent: Railway stores `false` as no value, so the plan shows it again after every apply (`main` on 2026-10-10, `szczur-radar-pr-44` on 2026-10-11). Postgres does not sleep either way. The declaration stays: if serverless sleep were switched on in the dashboard, an apply would switch it off. **Update 2026-10-12:** the declaration is gone. Every apply with this diff restarted the production database, and on 2026-10-12 one such restart hung (see "Production after the merge" below).
 
 ### Database measurements (production, 2026-10-11, read-only)
 
@@ -288,7 +288,7 @@ The operator ran Live Resize from the dashboard (`production` → `postgres-volu
   - on production nothing restores it until the next merge.
 - **What a restore loses:** everything written after the dump, up to about 24 h. The sessions are not in the dump, so everyone logs in again. Missing posts can be fetched again with a range run for the missing days, but assessing them again costs LLM calls.
 - **Cost:** today a dump is a few MB. The upload counts as service egress ($0.05/GB) and the bucket costs $0.015 per GB-month, so 26 copies cost cents a month.
-- **Deleting the bucket** stages a change. After deploy the bucket is restorable for 52 hours, then its objects are destroyed (`docs.railway.com/storage-buckets`). The NAS copy (runbook after the merge) does not depend on it.
+- **Deleting the bucket** stages a change. After deploy the bucket is restorable for 52 hours, then its objects are destroyed (`docs.railway.com/storage-buckets`). The copies on the NAS and in Google Drive (runbook after the merge) do not depend on it.
 
 ### Runbook — restore the database from a dump (human only)
 
@@ -361,6 +361,32 @@ Restoring a database is an operator action (`infrastructure.md`). The agent prep
 
   Afterwards `/api/ready` returned 200 and login worked (the sessions were gone, as expected). `total` was 39 and the canary row was gone. The next run (20:41) backed up the restored database: restore check OK, and no second monthly copy.
 
+### Production after the merge (2026-10-12)
+
+PR #44 was squash-merged as `b7ee254` (11:25 UTC). CI on `main` applied `+ Create bucket db-backups` and `+ Create service db-backup`.
+
+- **The bucket was not deployed in production.** IaC had first created the bucket `db-backups` in `szczur-radar-pr-44`, because PR CI runs before `main`. The production apply reused that project-wide bucket (`f77db03b…`) but did not provision it in `production`:
+  - `railway bucket info -b db-backups -e production`: "not deployed in environment production";
+  - a re-run of `railway-config` changed nothing.
+
+  Railway reference variables address a bucket by its project-wide **name** (`${{db-backups.BUCKET}}`), so every `S3_*` of `db-backup` resolved to an empty string. The first run (started by hand) failed with `backup: FAILED: set BACKUP_REMOTE or S3_BUCKET`.
+
+  Fixed by hand, nothing deleted:
+  1. `railway bucket create -r ams -e production` created a new bucket (`dc439cb9…`). Its name came out random because `db-backups` was taken.
+  2. The old bucket was renamed `db-backups-pr44-old` and the new one `db-backups` (Railway MCP `update-bucket`).
+  3. The five `S3_*` references were set again as IaC declares them (`railway variable set 'S3_BUCKET=${{db-backups.BUCKET}}' … --skip-deploys`).
+
+  Afterwards the variables resolve, and `railway config plan` on production shows no bucket or variable change. The old bucket (`db-backups-pr44-old`, deployed nowhere) was deleted on 2026-10-12 (Railway MCP `delete-bucket`, operator's decision). Production and the PR envs keep `db-backups` (`dc439cb9…`).
+- **The re-run apply restarted the production database, and the restart hung.** The re-run also applied the permanent `postgres deploy.sleepApplication (null → false)`, which redeploys Postgres. The new container stayed at `Mounting volume on …` from 11:38:17 (`/api/ready` 503), the same symptom as 2026-10-09. `railway redeploy -s postgres -e production -y` at 11:43 brought it back: `ready to accept connections` at 11:47:23, `/api/ready` 200, same volume.
+
+  Fix in the closeout PR: `.railway/railway.ts` no longer declares `sleepApplication` for Postgres (no value means no sleep). The production plan is then empty, so merges stop restarting the database.
+- **First production backup: OK** (12:43 UTC, run started by hand).
+  - The dump is `szczur-radar-20261012T124334Z.dump`, 444 KB; `restore-check` passed (9 tables, no session rows, Flyway V5).
+  - `daily/` and `monthly/szczur-radar-2026-10.dump` each hold a dump with its manifest.
+  - The manifest counts before = after: `users` 1, `pipeline_runs` 4, `posts` 282, `assessments` 55, `raw_payloads` 282, the same as the measurements of 2026-10-11.
+  - Step 2 of the runbook below is done; steps 3–6 remain.
+- **Lesson for the next IaC-created bucket** (e.g. a later cron): after the first apply to production, check `railway bucket list -e production` and the referencing variables (lengths only), not just the CI log's `✓ bucket.…`.
+
 ### Runbook — after the merge (operator; tracked in issue #43, not in the plan's Progress)
 
 0. Standing rule: no merge to `main` while a run is `RUNNING` in `/admin`.
@@ -376,17 +402,26 @@ Restoring a database is an operator action (`infrastructure.md`). The agent prep
    4. `/api/posts` `total` matches production at the time of the dump.
 
    Delete the local copy afterwards: it is real data.
-4. **Synology Cloud Sync.** Create a new task with an S3-compatible storage (custom server). Take the endpoint, bucket name, access key and secret from production's `db-backups` → Credentials. Use the URL style that tab names: virtual-hosted for new buckets.
-   - Direction: download remote changes only.
-   - Keep the files removed at the source: the option "don't remove files in the destination folder when they are removed in the source". An emptied bucket then never empties the NAS copy.
-   - Target: a local folder such as `/volume1/backups/szczur-radar`, which gets `daily/` and `monthly/`.
+4. **Synology Cloud Sync, bucket → NAS.** Create a task with an S3-compatible storage (custom server). Take the endpoint, bucket name, access key and secret from production's `db-backups` → Credentials. Use the URL style that tab names: virtual-hosted for new buckets.
+   - Direction: download remote changes only, into a local folder that gets `daily/` and `monthly/`.
+   - This direction has **no** option to keep files removed at the source; that option exists only for "upload local changes only". The NAS folder is therefore a mirror of the bucket, 14 daily + 12 monthly dumps: the bucket's retention also prunes the NAS. It also means that an emptied bucket would empty the NAS copy (step 5 covers this).
    - The keys give full access to production's bucket. If the NAS is compromised, reset them in Railway (bucket → Credentials).
-5. **NAS retention.** Copy `tools/db-backup/nas-retention.sh` to the NAS. In DSM, Control Panel → Task Scheduler, add a user-defined script that runs daily after the sync (e.g. 08:00 local), as a user who may delete in the folder:
-   ```
-   bash /volume1/backups/scripts/nas-retention.sh /volume1/backups/szczur-radar
-   ```
-   Run it once with `--dry-run` first and check what it would delete. It keeps 14 daily and 12 monthly dumps with their manifests.
+5. **Archive outside both: Synology Cloud Sync, NAS → Google Drive.** A second task, direction "upload local changes only", with the option "don't remove files in the destination folder when they are removed in the source folder" on. Google Drive keeps every dump ever pulled, so an emptied bucket or NAS folder does not remove it.
+   - It grows by every daily dump (today about 0.5 MB). With about 200 GB free on the operator's Drive this needs no attention for years. If it ever does, delete old daily dumps there by hand and keep the monthly ones.
+   - `nas-retention.sh` and its DSM task are not needed with this setup, because the NAS already mirrors the bucket's retention. It is still the tool for a NAS folder that keeps deleted files (a different setup); a dry run on the mirror is harmless.
 6. **Record and close.** Write the results here: first run, the test with the application, the NAS folder with today's dump. Comment them on issue #43, then close it.
+
+**State 2026-10-12 (operator):**
+- Cloud Sync bucket → NAS is set up (download remote changes only) into `/volume2/ProxmoxBackup/szczur-radar/s3`, which holds `daily/` and `monthly/`.
+- Cloud Sync NAS → Google Drive is set up (upload local changes only), with "don't remove files in the destination folder when they are removed in the source folder" on (step 5).
+- A DSM dry run of `nas-retention.sh` on that folder saw 1 daily and 1 monthly dump and deleted nothing. The DSM task was then deleted, because the NAS mirrors the bucket's retention (step 5).
+- **Step 3, the test with the application on a production dump: passed.**
+  - The dump was `szczur-radar-20261012T124334Z.dump`, downloaded from the bucket; its sha256 matches the manifest.
+  - `restore-check.sh … --serve` (only on `127.0.0.1`) passed: 9 tables, no session rows, Flyway V5, row counts within [before, after].
+  - `migrate` said "Schema "public" is up to date. No migration necessary".
+  - The API started in 7.3 s, and the admin logged in locally with the production account.
+  - `/api/posts` `total` was 30, locally and on production alike.
+  - The local copy was deleted afterwards.
 
 ## Phases
 

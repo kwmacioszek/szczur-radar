@@ -108,6 +108,6 @@ Ctrl-C zatrzymuje kontener i usuwa odtworzoną bazę.
 
 ## Retencja na NAS
 
-Cloud Sync pobiera bucket bez usuwania plików skasowanych w źródle, więc wyczyszczony bucket nie czyści kopii na NAS.
+Synology Cloud Sync w kierunku „pobierz wyłącznie zmiany zdalne” nie ma opcji zachowania plików usuniętych w źródle. Folder na NAS jest więc lustrem bucketu (14 + 12), a retencja bucketu czyści też NAS. Archiwum, które przetrwa opróżnienie bucketu, to drugie zadanie Cloud Sync z NAS-a na Google Drive („prześlij wyłącznie zmiany lokalne” z opcją „nie usuwaj plików w miejscu docelowym”). Szczegóły są w runbooku w `deploy-plan.md`.
 
-`nas-retention.sh <katalog> [--dry-run]` uruchamiany codziennie z Harmonogramu zadań DSM, po synchronizacji, zostawia w `<katalog>/daily` 14 najnowszych dumpów, a w `<katalog>/monthly` 12, każdy z manifestem. Liczy tylko dokładne nazwy z `backup.sh` i pomija pliki z datą w przyszłości: plik wgrany do bucketu pod obcą lub „późniejszą” nazwą nie wypchnie prawdziwych kopii. Najnowszego dumpa nigdy nie usuwa. `--dry-run` tylko wypisuje, co by usunął.
+`nas-retention.sh` przydaje się tylko w folderze, który zachowuje usunięte pliki (inne ustawienie niż powyżej). Przy lustrze nie jest potrzebny. `nas-retention.sh <katalog> [--dry-run]` uruchamiany codziennie z Harmonogramu zadań DSM, po synchronizacji, zostawia w `<katalog>/daily` 14 najnowszych dumpów, a w `<katalog>/monthly` 12, każdy z manifestem. Liczy tylko dokładne nazwy z `backup.sh` i pomija pliki z datą w przyszłości: plik wgrany do bucketu pod obcą lub „późniejszą” nazwą nie wypchnie prawdziwych kopii. Najnowszego dumpa nigdy nie usuwa. `--dry-run` tylko wypisuje, co by usunął.
