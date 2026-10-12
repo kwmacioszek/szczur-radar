@@ -572,11 +572,11 @@ Zdanie „Password recovery arrives with S-07” (`deploy-plan.md:35`) dostaje o
 
 #### Automated
 
-- [ ] 1.1 MigrationsIT z wersjami 1–6 i ograniczeniami activation_tokens
-- [ ] 1.2 JpaSchemaIT z encją ActivationToken
-- [ ] 1.3 ActivationSettingsTest
-- [ ] 1.4 ActivationLinksIT
-- [ ] 1.5 ./mvnw -B verify
+- [x] 1.1 MigrationsIT z wersjami 1–6 i ograniczeniami activation_tokens
+- [x] 1.2 JpaSchemaIT z encją ActivationToken
+- [x] 1.3 ActivationSettingsTest
+- [x] 1.4 ActivationLinksIT
+- [x] 1.5 ./mvnw -B verify
 
 ### Phase 2: Komendy CLI create-user i reset-password
 

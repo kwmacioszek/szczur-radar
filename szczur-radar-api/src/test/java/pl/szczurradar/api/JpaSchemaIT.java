@@ -20,6 +20,8 @@ import pl.szczurradar.api.agents.assessor.contract.AssessmentInputV1;
 import pl.szczurradar.api.agents.assessor.contract.ItemType;
 import pl.szczurradar.api.agents.assessor.validation.FailureClass;
 import pl.szczurradar.api.agents.assessor.validation.Violation;
+import pl.szczurradar.api.auth.activation.ActivationToken;
+import pl.szczurradar.api.auth.activation.ActivationTokenRepository;
 import pl.szczurradar.api.cli.MigrateCommand;
 import pl.szczurradar.api.config.LlmProviderProperties.Provider;
 import pl.szczurradar.api.config.LlmProviderProperties.ReasoningEffort;
@@ -76,6 +78,9 @@ class JpaSchemaIT {
 
 	@Autowired
 	AssessmentRepository assessments;
+
+	@Autowired
+	ActivationTokenRepository tokens;
 
 	@Autowired
 	JdbcTemplate jdbc;
@@ -161,6 +166,20 @@ class JpaSchemaIT {
 		assertThat(jdbc.queryForMap("SELECT status, result_source, provider, channel, service_tier, reasoning_effort,"
 				+ " output_mode FROM assessments WHERE id = ?", savedOk.getId())).containsValues("ok", "model",
 						"openrouter", "openai/flex", "flex", "low", "json_schema");
+	}
+
+	@Test
+	void anActivationTokenRoundTrips() {
+		User account = users.save(new User("token-schema@example.com", null, Role.USER));
+		Instant expiresAt = Instant.parse("2026-10-13T06:00:00Z");
+		tokens.upsert(account.getId(), "ab".repeat(32), expiresAt);
+
+		ActivationToken loaded = tokens.findById(account.getId()).orElseThrow();
+
+		assertThat(loaded.getUserId()).isEqualTo(account.getId());
+		assertThat(loaded.getTokenHash()).isEqualTo("ab".repeat(32));
+		assertThat(loaded.getExpiresAt()).isEqualTo(expiresAt);
+		assertThat(loaded.getCreatedAt()).isNotNull();
 	}
 
 	private static Provenance modelProvenance() {

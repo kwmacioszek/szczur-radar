@@ -34,7 +34,7 @@ class MigrationsIT {
 	void allMigrationsApplyOnEmptyDatabase() {
 		List<Map<String, Object>> history = jdbc.queryForList(
 				"SELECT version, success FROM flyway_schema_history WHERE version IS NOT NULL ORDER BY installed_rank");
-		assertThat(history).extracting(row -> row.get("version")).containsExactly("1", "2", "3", "4", "5");
+		assertThat(history).extracting(row -> row.get("version")).containsExactly("1", "2", "3", "4", "5", "6");
 		assertThat(history).allSatisfy(row -> assertThat(row.get("success")).isEqualTo(true));
 	}
 
@@ -172,6 +172,49 @@ class MigrationsIT {
 		assertRejected(insert.formatted("failed", "'refused'", "NULL"), "ck_assessments_failure_class");
 		jdbc.update(insert.formatted("ok", "NULL", "'{}'"));
 		jdbc.update(insert.formatted("failed", "'timeout'", "NULL"));
+	}
+
+	@Test
+	void activationTokensHaveNamedConstraints() {
+		assertThat(constraintsOf("activation_tokens")).contains("activation_tokens_pkey", "fk_activation_tokens_user",
+				"uq_activation_tokens_token_hash", "ck_activation_tokens_token_hash");
+	}
+
+	@Test
+	void anActivationTokenHashIsLowerCaseHexSha256() {
+		UUID account = user("token-format@example.com");
+		assertRejected(tokenInsert(account, "abc"), "ck_activation_tokens_token_hash");
+		assertRejected(tokenInsert(account, "A".repeat(64)), "ck_activation_tokens_token_hash");
+		assertRejected(tokenInsert(account, "0".repeat(65)), "ck_activation_tokens_token_hash");
+		jdbc.update(tokenInsert(account, "0123456789abcdef".repeat(4)));
+	}
+
+	@Test
+	void anActivationTokenIsUniqueAndAnAccountHasAtMostOne() {
+		UUID first = user("token-first@example.com");
+		UUID second = user("token-second@example.com");
+		jdbc.update(tokenInsert(first, "1".repeat(64)));
+		assertRejected(tokenInsert(second, "1".repeat(64)), "uq_activation_tokens_token_hash");
+		assertRejected(tokenInsert(first, "2".repeat(64)), "activation_tokens_pkey");
+		assertRejected(tokenInsert(UUID.randomUUID(), "3".repeat(64)), "fk_activation_tokens_user");
+	}
+
+	@Test
+	void deletingAnAccountDeletesItsActivationToken() {
+		UUID account = user("token-cascade@example.com");
+		jdbc.update(tokenInsert(account, "4".repeat(64)));
+		assertThat(jdbc.queryForObject("SELECT created_at IS NOT NULL FROM activation_tokens WHERE user_id = ?",
+				Boolean.class, account)).as("created_at default").isTrue();
+
+		jdbc.update("DELETE FROM users WHERE id = ?", account);
+
+		assertThat(jdbc.queryForObject("SELECT count(*) FROM activation_tokens WHERE user_id = ?", Integer.class,
+				account)).isZero();
+	}
+
+	private static String tokenInsert(UUID userId, String tokenHash) {
+		return "INSERT INTO activation_tokens (user_id, token_hash, expires_at) VALUES ('" + userId + "', '" + tokenHash
+				+ "', now() + interval '12 hours')";
 	}
 
 	private List<String> constraintsOf(String table) {

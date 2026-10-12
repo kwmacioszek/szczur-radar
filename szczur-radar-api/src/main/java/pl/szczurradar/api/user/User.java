@@ -1,6 +1,7 @@
 package pl.szczurradar.api.user;
 
 import java.time.Instant;
+import java.util.Objects;
 import java.util.UUID;
 
 import jakarta.persistence.Column;
@@ -67,6 +68,25 @@ public class User {
 
 	public Instant getCreatedAt() {
 		return createdAt;
+	}
+
+	/**
+	 * Sets the password when the account is activated through a one-time link (S-07,
+	 * {@code auth/activation}). Activation and {@link #clearPassword() reset} are the only ways a
+	 * password changes after the account exists.
+	 *
+	 * @param passwordHash an argon2 hash ({@code auth/Passwords}), never the plain password
+	 */
+	public void setPassword(String passwordHash) {
+		this.passwordHash = Objects.requireNonNull(passwordHash, "passwordHash");
+	}
+
+	/**
+	 * Removes the password (operator reset, S-07): the account cannot log in until it is activated
+	 * again through a new link.
+	 */
+	public void clearPassword() {
+		this.passwordHash = null;
 	}
 
 }
