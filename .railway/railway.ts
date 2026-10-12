@@ -1,7 +1,8 @@
-import { defineRailway, github, postgres, preserve, project, service } from "railway/iac";
+import { bucket, defineRailway, github, postgres, preserve, project, ref, service } from "railway/iac";
 
 // Infrastructure-as-Code for Szczur Radar. This is the source of truth for the
-// api, web, and Postgres services and replaces railway.toml for them.
+// api, web, and Postgres services, the db-backup cron service and its bucket,
+// and replaces railway.toml for them.
 // Validate with `railway config plan` (dry run, deletes nothing) before
 // `railway config apply` — see context/deployment/deploy-plan.md, phase 3.
 // The `railway/iac` SDK resolves from node_modules at the REPO ROOT (see the
@@ -12,21 +13,23 @@ import { defineRailway, github, postgres, preserve, project, service } from "rai
 // against the installed SDK version — the plan gate exists to catch exactly
 // that before anything is applied.
 //
-// `checkSuites: true` on each source enables Railway "Wait for CI": deploys
-// wait for the whole GitHub Actions workflow conclusion. Declared here so IaC
-// does not reset the operator's toggle (a plan otherwise shows true → null).
+// `checkSuites: true` on the api and web sources enables Railway "Wait for CI":
+// deploys wait for the whole GitHub Actions workflow conclusion. Declared here
+// so IaC does not reset the operator's toggle (a plan otherwise shows true →
+// null). db-backup does not declare it (see there).
 //
 // `sleepApplication: true` (serverless sleep) on api and web mirrors what the
 // operator set in the dashboard; Postgres declares `false` (see below). The
-// setting MUST stay declared on all three: without it an apply would change it. Keep this file in sync with production —
+// setting MUST stay declared on these three: without it an apply would change it
+// (the db-backup cron does not sleep and declares nothing). Keep this file in sync with production —
 // `railway config plan --detailed-exit-code` on `production` must exit 0 before
 // any automatic apply (lessons.md, Railway IaC in CI).
 //
 // PITR is disabled since `api-docker-image` (cost): the operator runs
 // `railway postgres pitr disable` and deletes the `Postgres-PITR` bucket in each
 // environment BEFORE an apply of this file — otherwise the plan shows a bucket
-// delete, which the CI gate refuses. Database backup: Railway's daily volume
-// backup on production (context/deployment/deploy-plan.md).
+// delete, which the CI gate refuses. Database backup since F-01: the db-backup
+// cron service below (Railway Hobby has no volume backups; deploy-plan.md, F-01).
 
 const REPO = "kwmacioszek/szczur-radar";
 const REGION = "europe-west4"; // Railway "EU West (Amsterdam)"
@@ -35,14 +38,22 @@ const REGION = "europe-west4"; // Railway "EU West (Amsterdam)"
 // pin it: the API binds it and the web Caddy proxy targets it deterministically
 // over the private network.
 const API_INTERNAL_PORT = "8000";
+// Per-service resource cap (2 vCPU, 4 GB; Railway counts memory in SI bytes),
+// a cost guard the operator set in the dashboard on all services after the
+// move to Hobby (F-01, production-data-gate); db-backup gets it too. Declared
+// so the plan matches the environment: without it a plan shows `limitOverride`
+// 2 → null and 4000000000 → null (an apply of those nulls left the cap in place
+// in szczur-radar-pr-44 on 2026-10-11, so the diff was noise, not a removal).
+const RESOURCE_LIMITS = { containers: { cpu: 2, memoryBytes: 4_000_000_000 } };
 
 export default defineRailway(() => {
   // Railway PR environments track the PR's branch, not `main`. CI sets
   // IAC_SOURCE_BRANCH on pull_request events only, so an apply to a PR env
   // does not rewrite `source.branch`; unset (push to main, local) → `main`.
   // The IaC context does not reliably carry the target environment name, so
-  // the production safety net lives in CI: the railway-config job refuses ANY
-  // source change, in every environment.
+  // the production safety net lives in CI: the railway-config job refuses a
+  // source change of an existing service, in every environment (creating a new
+  // service, e.g. db-backup, is allowed since F-01).
   const branch = process.env.IAC_SOURCE_BRANCH || "main";
 
   // Postgres. `postgres()` takes no deploy options, so serverless sleep is set
@@ -60,7 +71,7 @@ export default defineRailway(() => {
   // Caveats). The API and web still sleep. The setting applies to a container
   // when it is created: redeploy Postgres after the apply.
   const db = Object.assign(postgres("postgres", { region: REGION }), {
-    deploy: { sleepApplication: false },
+    deploy: { sleepApplication: false, limitOverride: RESOURCE_LIMITS },
   });
 
   // Spring Boot backend (Java 25, Maven). No public domain: reachable only
@@ -85,7 +96,7 @@ export default defineRailway(() => {
     preDeploy: "java -jar target/szczur-radar-api.jar migrate",
     healthcheck: "/api/health",
     replicas: { [REGION]: 1 },
-    deploy: { sleepApplication: true },
+    deploy: { sleepApplication: true, limitOverride: RESOURCE_LIMITS },
     env: {
       PORT: API_INTERNAL_PORT,
       // Nieużywane od `api-docker-image` (JDK pochodzi z obrazu Dockera). Zostaje
@@ -141,14 +152,54 @@ export default defineRailway(() => {
     watchPatterns: ["szczur-radar-web/**"],
     healthcheck: "/healthz",
     replicas: { [REGION]: 1 },
-    deploy: { sleepApplication: true },
+    deploy: { sleepApplication: true, limitOverride: RESOURCE_LIMITS },
     env: {
       API_PRIVATE_DOMAIN: api.env.RAILWAY_PRIVATE_DOMAIN,
       API_PORT: API_INTERNAL_PORT,
     },
   });
 
+  // Daily database backup (F-01, production-data-gate; tools/db-backup/README.md).
+  // Railway Hobby has no volume backups or PITR, so a cron service runs pg_dump,
+  // checks the dump by restoring it into a throwaway cluster, and only then
+  // uploads it to the bucket below (14 daily + 12 monthly copies); the operator's
+  // Synology pulls the bucket with Cloud Sync, so a copy also lives outside
+  // Railway. Every environment gets its own bucket with its own keys (a PR env is
+  // a copy of production, so it gets the cron too), but backup.sh runs only in
+  // production: elsewhere it logs "skipped" and exits 0 (BACKUP_IN_ANY_ENVIRONMENT
+  // =true on the service runs it, to try a change of the tool in a PR env). The schedule
+  // is UTC; S-05 (daily run) may move it. A cron run's status is its exit code,
+  // and restartPolicyType NEVER keeps a failed run visible instead of retrying it.
+  const backups = bucket("db-backups", { region: "ams" });
+  // No `checkSuites` (Wait for CI): Railway leaves it unset on a service that
+  // IaC creates, so every later plan would show `source.checkSuites (null →
+  // true)`, which the CI gate refuses as a source change — on main that would
+  // turn CI red and stop the API and web deploys. CI does not test
+  // tools/db-backup anyway (tools/db-backup/test.sh does, locally).
+  const dbBackup = service("db-backup", {
+    source: github(REPO, { branch }),
+    rootDirectory: "tools/db-backup",
+    watchPatterns: ["tools/db-backup/**"],
+    replicas: { [REGION]: 1 },
+    deploy: { cronSchedule: "0 2 * * *", restartPolicyType: "NEVER", limitOverride: RESOURCE_LIMITS },
+    env: {
+      PGHOST: db.env.PGHOST,
+      PGPORT: db.env.PGPORT,
+      PGUSER: db.env.PGUSER,
+      PGPASSWORD: db.env.PGPASSWORD,
+      PGDATABASE: db.env.PGDATABASE,
+      // backup.sh builds its rclone remote (`:s3:<bucket>`) from S3_BUCKET.
+      S3_ENDPOINT: ref(backups, "ENDPOINT"),
+      S3_BUCKET: ref(backups, "BUCKET"),
+      S3_ACCESS_KEY_ID: ref(backups, "ACCESS_KEY_ID"),
+      S3_SECRET_ACCESS_KEY: ref(backups, "SECRET_ACCESS_KEY"),
+      S3_REGION: ref(backups, "REGION"),
+      BACKUP_KEEP_DAILY: "14",
+      BACKUP_KEEP_MONTHLY: "12",
+    },
+  });
+
   return project("szczur-radar", {
-    resources: [db, api, web],
+    resources: [db, api, web, backups, dbBackup],
   });
 });

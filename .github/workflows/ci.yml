@@ -177,6 +177,19 @@ jobs:
         if: always()
         run: docker logs api || true
 
+  db-backup-test:
+    name: db backup test (tools/db-backup)
+    runs-on: ubuntu-latest
+    # The backup cron (F-01) restores every dump and checks the app's tables by
+    # name (tools/db-backup/restore-check.sh, backup.sh). tools/db-backup/test.sh
+    # applies the repo's Flyway migrations to Postgres 18, runs a backup, its
+    # restore check, the retention and nas-retention.sh in Docker, so a migration
+    # that breaks the backup fails this PR instead of the 02:00 run on production.
+    steps:
+      - uses: actions/checkout@v4
+      - name: Backup tool end to end
+        run: tools/db-backup/test.sh
+
   railway-config:
     name: railway config (plan + apply IaC)
     runs-on: ubuntu-latest
@@ -327,11 +340,17 @@ jobs:
           }
           # Never destroy anything automatically (e.g. a database, bucket or variable).
           blocked=$(jq '[.changeSet.changes[]? | select(.severity == "destructive" or .kind == "resource.delete")]' plan.json)
-          # Never rewrite a service's source/branch automatically, in ANY env:
-          # PR envs track the PR branch (IAC_SOURCE_BRANCH), production tracks main.
+          # Never rewrite an existing service's source/branch automatically, in ANY
+          # env: PR envs track the PR branch (IAC_SOURCE_BRANCH), production tracks
+          # main. Creating a resource is allowed (F-01: the db-backup cron service
+          # and its bucket; later e.g. S-05's): it rewrites nothing that exists. A
+          # create carries no details today, so it would pass anyway; skipping
+          # resource.create keeps that if the plan starts listing a new service's
+          # source. Deletes and destructive changes stay blocked above.
           blocked=$(jq --argjson b "$blocked" \
             '$b + [.changeSet.changes[]? | select(
-               ([.summary] + (.details // [])) | any(test("(^|[ ,])source([.]|$| )"))
+               .kind != "resource.create"
+               and (([.summary] + (.details // [])) | any(test("(^|[ ,])source([.]|$| )")))
              )]' plan.json)
           if [ "$(jq 'length' <<<"$blocked")" != "0" ]; then
             echo "::error::plan contains destructive or source changes; refusing to apply to $TARGET_ENV"

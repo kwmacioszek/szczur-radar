@@ -40,7 +40,13 @@ blank answer) is judged with the shared `text/Whitespace`, never `isBlank`. An a
   (a subclass of `LlmCallException`). `Assessor` rethrows it instead of recording a `failed` result,
   and the pipeline stops the run (`pipeline/CLAUDE.md`), so a revoked key never uses up posts'
   attempts. 403 stays `REJECTED`: a provider may refuse one request's content with it (OpenRouter
-  moderation). Gemini answers an invalid key with 400 — `REJECTED` per call, caught by the check below.
+  moderation). The exception is OpenRouter's 403 for a spent budget — `error.message` starting with
+  "Key limit exceeded", or `error.metadata.limit_source` `openrouter_key_limit` /
+  `openrouter_workspace_budget` / `openrouter_guardrail_budget` (openrouter.ai/docs/api_reference/limits,
+  openrouter.ai/docs/guides/best-practices/capping-shared-agent-keys): `OpenRouterClient` makes it
+  `CONFIGURATION`, so a key whose credit limit runs out stops the run until the limit resets;
+  `TransportException.kindOf` stays generic. The docs also list a spent key limit under 402, already the
+  configuration. Gemini answers an invalid key with 400 — `REJECTED` per call, caught by the check below.
 - `LlmClient.check()`: one tiny real call (`CHECK_REQUEST`, a few dozen tokens) through the same path
   as an assessment — it proves the key, the model and the credit together. Listing models would not:
   DeepSeek accepts model ids it does not list (e.g. `deepseek-v4-flash`). Used before every pipeline
@@ -63,10 +69,10 @@ blank answer) is judged with the shared `text/Whitespace`, never `isBlank`. An a
   2026-10-09). openai-java then fails with "`choices` is not set". `OpenRouterRawResponse` (an
   openai-java `HttpClient` around its OkHttp client; the SDK builder has no interceptor) keeps the raw
   2xx answer per thread, and `OpenRouterClient` classifies `error.code` like the HTTP status (429
-  retried and flex → default, 5xx retried, 401/402/404 the configuration, other 4xx `REJECTED`). A
-  2xx answer without `choices` and without an error (missing or empty list) is retried like a 5xx.
-  If generation fails after partial output, the error is in `choices[0].error`; it is classified
-  before accepting the result, and the partial text is discarded.
+  retried and flex → default, 5xx retried, 401/402/404 and a 403 for a spent budget the configuration,
+  other 4xx `REJECTED`). A 2xx answer without `choices` and without an error (missing or empty list) is
+  retried like a 5xx. If generation fails after partial output, the error is in `choices[0].error`; it
+  is classified before accepting the result, and the partial text is discarded.
 - `ProviderSchemas` sends each provider the schema subset it accepts; the full schema stays the
   caller's check. Known losses: Spring AI's Gemini mapping drops `additionalProperties` and
   `uniqueItems`; OpenAI strict mode rejects `uniqueItems` (HTTP 400). Gemini gets a nullable enum

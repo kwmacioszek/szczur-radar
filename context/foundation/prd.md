@@ -3,7 +3,7 @@ project: "Szczur Radar"
 version: 2
 status: draft
 created: 2026-09-26
-updated: 2026-10-01
+updated: 2026-10-11
 context_type: greenfield
 product_type: data-pipeline
 target_scale:
@@ -249,7 +249,8 @@ Administrator (operator wdrożenia) — zarządza dostępem: tworzy konta dla za
 - Każda chroniona funkcja lub zasób konsekwentnie wymaga uwierzytelnienia — żadna ścieżka dostępu do danych lub funkcji nie pozostaje przypadkowo niezabezpieczona (weryfikowalne przez kompletny zestaw testów autoryzacji).
 - Użytkownik nie ma wglądu w dane kont innych userów (e-maile, aktywność) — widoczne wspólnie są wyłącznie przetworzone posty; dane kontowe ograniczone do własnego konta.
 - Aplikacja webowa nie ma sztywnego wymogu czasu odpowiedzi w MVP — kilkusekundowe ładowanie przy normalnym obciążeniu jest akceptowalne.
-- Dane (posty, konta) są przechowywane bezterminowo w MVP — brak automatycznej retencji/czyszczenia. Bezpieczeństwo przed utratą danych jest odpowiedzialnością platformy hostingowej, nie logiki aplikacji.
+- Dane (posty, konta) są przechowywane bezterminowo w MVP — brak automatycznej retencji/czyszczenia. Przed utratą danych chroni codzienna kopia logiczna bazy, którą robi osobny serwis infrastruktury, a nie logika aplikacji. Każda kopia jest sprawdzana pełnym odtworzeniem, a jedna kopia leży też poza platformą hostingową. Utracić można najwyżej dane z ostatniej doby.
+  > Zmiana (2026-10-11, F-01 `production-data-gate`): wcześniej „bezpieczeństwo przed utratą danych jest odpowiedzialnością platformy hostingowej”. Plan Railway Hobby nie ma jednak kopii wolumenu ani PITR (to funkcje planu Pro), więc kopie robi serwis cron `db-backup` (`tools/db-backup/`): `pg_dump` sprawdzany odtworzeniem, bucket Railway (14 dziennych + 12 miesięcznych kopii) i NAS operatora. Szczegóły i runbook odtworzenia: `context/deployment/deploy-plan.md`, sekcja F-01.
 - Oryginalny payload źródłowy każdego zebranego posta pozostaje dostępny bez utraty informacji, ale jest utrzymywany niezależnie od znormalizowanych danych używanych przez aplikację. Sposób jego przechowywania musi pozwalać na niezależną, bezstratną kompresję lub przeniesienie surowych danych bez zmiany zachowania aplikacji ani utraty dostępu do widoku surowego posta.
 
 ## Business Logic
@@ -284,7 +285,7 @@ Poza zakresem MVP (przyszłość): drugi czynnik uwierzytelniania, samodzielny r
 - **Automatyczna wysyłka e-maili jako wymagany element MVP** — ścieżka must-have (CLI, FR-028) nie wymaga integracji z dostawcą poczty; link aktywacyjny generuje CLI, a operator przekazuje go zaproszonej osobie poza systemem. Automatyczna wysyłka maila z panelu webowego (FR-017) pozostaje możliwym, nice-to-have rozszerzeniem — nie jest tu wykluczona całkowicie, tylko nie jest wymagana do działania MVP.
 - **Drugi czynnik uwierzytelniania oraz logowanie przez zewnętrznego dostawcę tożsamości** — login e-mailem i hasłem wystarcza na start MVP.
 - **Przetwarzanie komentarzy pod postami** — MVP ocenia wyłącznie posty; komentarze to jawnie odroczone rozszerzenie na przyszłość.
-- **Custom logika archiwizacji/backupu danych** — bezpieczeństwo przed utratą danych to odpowiedzialność platformy hostingowej, nie kodu aplikacji.
+- **Logika archiwizacji/backupu danych w kodzie aplikacji** — kopię bazy robi osobny serwis infrastruktury (serwis cron `db-backup`, `tools/db-backup/`), a nie API ani pipeline (od F-01, 2026-10-11; wcześniej: „odpowiedzialność platformy hostingowej”).
 - **Wysoka dostępność / multi-region** — pojedyncza instancja na jednej platformie wystarcza dla małej, zapraszanej grupy userów.
 - **Dodatkowe źródła danych poza Wykop/Reddit** (np. Twitter/X, fora branżowe) — poza zakresem MVP i jego zaplanowanego rozszerzenia.
 - **Rozpoznawanie spółek (entity resolution) oraz automatyczna decyzja „wartościowy sygnał”** — MVP nie ustala, o którą konkretnie spółkę chodzi (ticker/ISIN), ani nie wylicza nowości, trendu czy końcowej decyzji o sygnale; kontrakt oceny LLM (V2) umieszcza te kroki poza oceną jako osobne, dalsze etapy. Są warunkiem przyszłych FR-024/FR-025.
@@ -296,4 +297,4 @@ Poza zakresem MVP (przyszłość): drugi czynnik uwierzytelniania, samodzielny r
 1. **Czy `product_type` to "data-pipeline" czy "web-app"?** — Projekt to dwa moduły: pipeline+API jako rdzeń, pełnoprawna aplikacja webowa (logowanie, dashboard, lista/filtrowanie) jako warstwa konsumpcji. Wybrano `data-pipeline` jako najbliższą pojedynczą wartość; do doprecyzowania przy `/10x-tech-stack-selector`. Owner: użytkownik.
 2. **[ROZSTRZYGNIĘTE 2026-09-27 — kontrakt V1; zastąpiony 2026-10-01 kontraktem `context/foundation/llm-assessment/contract-v2.md` V2 (rdzeń: trafność, cele ze stanowiskiem autora, tezy z cytatem, flagi niepewności; bez grafu argumentów)]** **Dokładny kształt pól w JSON zwracanym przez ocenę LLM** — ustalone kryteria (teza z uzasadnieniem, kierunek/siła wydźwięku, nowość, spółka/temat) trzeba jeszcze przełożyć na konkretne nazwy pól/typy i walidację schematu; wpływa też na dokładny zakres FR-011a/b. Owner: użytkownik. By: przed implementacją FR-004.
 3. **Kanał i próg dla FR-025 (powiadomienia o obiecującym trendzie)** — nie ustalono jeszcze, czym jest "obiecujący trend" liczbowo ani gdzie ma trafiać powiadomienie. Owner: użytkownik. By: przy realizacji FR-025 (poza MVP).
-4. **Backup/retencja na docelowej platformie hostingowej** — sprawdzić realne możliwości managed backupu bazy danych na wybranej platformie przy `/10x-infra-research`, żeby "bezterminowe przechowywanie" (patrz Non-Functional Requirements) nie okazało się bez żadnej siatki bezpieczeństwa. Owner: użytkownik. By: przed `/10x-infra-research`.
+4. **[ROZSTRZYGNIĘTE 2026-10-11 — F-01 `production-data-gate`: Railway Hobby nie ma kopii platformy (kopie wolumenu i PITR to plan Pro). Kopię robi codzienny `pg_dump` z serwisu cron, sprawdzany odtworzeniem, do bucketu Railway (14 dziennych + 12 miesięcznych) i na NAS operatora. Odtworzenie przećwiczone w PR env (`context/deployment/deploy-plan.md`, sekcja F-01)]** **Backup/retencja na docelowej platformie hostingowej** — sprawdzić realne możliwości managed backupu bazy danych na wybranej platformie przy `/10x-infra-research`, żeby "bezterminowe przechowywanie" (patrz Non-Functional Requirements) nie okazało się bez żadnej siatki bezpieczeństwa. Owner: użytkownik. By: przed `/10x-infra-research`.

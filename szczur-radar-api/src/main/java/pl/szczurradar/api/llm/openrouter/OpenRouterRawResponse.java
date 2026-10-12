@@ -35,12 +35,13 @@ final class OpenRouterRawResponse implements HttpClient {
 	 *
 	 * @param answered whether a 2xx answer arrived at all (not after a time-out or I/O error)
 	 * @param errorCode {@code error.code} or {@code choices[0].error.code}, the status the error would have had
+	 * @param limitSource the error's {@code metadata.limit_source}: the budget that refused the request
 	 * @param choices whether the answer has a non-empty {@code choices} list
 	 */
 	record Observed(boolean answered, @Nullable Integer errorCode, @Nullable String errorMessage,
-			@Nullable String errorType, boolean choices) {
+			@Nullable String errorType, @Nullable String limitSource, boolean choices) {
 
-		static final Observed NONE = new Observed(false, null, null, null, false);
+		static final Observed NONE = new Observed(false, null, null, null, null, false);
 
 	}
 
@@ -101,13 +102,14 @@ final class OpenRouterRawResponse implements HttpClient {
 			JsonNode code = error.path("code");
 			JsonNode message = error.path("message");
 			JsonNode type = error.path("metadata").path("error_type");
+			JsonNode limitSource = error.path("metadata").path("limit_source");
 			JsonNode choices = root.path("choices");
 			return new Observed(true, code.isIntegralNumber() ? code.asInt() : null,
 					message.isString() ? message.asString() : null, type.isString() ? type.asString() : null,
-					choices.isArray() && !choices.isEmpty());
+					limitSource.isString() ? limitSource.asString() : null, choices.isArray() && !choices.isEmpty());
 		}
 		catch (JacksonException ex) {
-			return new Observed(true, null, null, null, false);
+			return new Observed(true, null, null, null, null, false);
 		}
 	}
 
