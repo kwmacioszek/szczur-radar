@@ -43,6 +43,7 @@ import pl.szczurradar.api.raw.RawPayloadRef;
 import pl.szczurradar.api.raw.RawPayloadStore;
 import pl.szczurradar.api.sources.Source;
 import pl.szczurradar.api.user.Role;
+import pl.szczurradar.api.user.SystemAccount;
 import pl.szczurradar.api.user.User;
 import pl.szczurradar.api.user.UserRepository;
 
@@ -89,9 +90,13 @@ class JpaSchemaIT {
 		assertThat(loaded.getEmail()).isEqualTo("schema@example.com");
 		assertThat(loaded.getPasswordHash()).isNull();
 		assertThat(loaded.getRole()).isEqualTo(Role.ADMIN);
+		assertThat(loaded.isLoginEnabled()).isTrue();
 		assertThat(loaded.getCreatedAt()).isNotNull();
 		assertThat(users.existsByRole(Role.ADMIN)).isTrue();
 		assertThat(users.existsByEmail("schema@example.com")).isTrue();
+		User scheduler = users.findById(SystemAccount.SCHEDULER.id()).orElseThrow();
+		assertThat(scheduler.getEmail()).isEqualTo(SystemAccount.SCHEDULER.email());
+		assertThat(scheduler.isLoginEnabled()).isFalse();
 	}
 
 	@Test

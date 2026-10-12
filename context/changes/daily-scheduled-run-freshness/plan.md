@@ -618,17 +618,17 @@ Dokumenty fundamentów i wdrożenia odzwierciedlają decyzje S-05, a cały łań
 
 #### Automated
 
-- [ ] 1.1 MigrationsIT z nową wersją, kontem systemowym i CHECK
-- [ ] 1.2 JpaSchemaIT, AuthIT i CreateAdminCommandIT z kontem systemowym
-- [ ] 1.3 InternalPipelineRunIT
-- [ ] 1.4 Test kolejności odzyskiwania i test ustawień tokenu
-- [ ] 1.5 AuthorizationCompletenessIT bez zmian list
-- [ ] 1.6 ./mvnw -B verify
-- [ ] 1.7 Wymaganie dla S-07 obsłużone (test albo komentarz w issue #20)
+- [x] 1.1 MigrationsIT z nową wersją, kontem systemowym i CHECK
+- [x] 1.2 JpaSchemaIT, AuthIT i CreateAdminCommandIT z kontem systemowym
+- [x] 1.3 InternalPipelineRunIT
+- [x] 1.4 Test kolejności odzyskiwania i test ustawień tokenu
+- [x] 1.5 AuthorizationCompletenessIT bez zmian list
+- [x] 1.6 ./mvnw -B verify
+- [x] 1.7 Wymaganie dla S-07 obsłużone (test albo komentarz w issue #20)
 
 #### Manual
 
-- [ ] 1.8 Lokalny curl na /internal/pipeline-runs/daily; ścieżka przez Vite nie trafia do API
+- [x] 1.8 Lokalny curl na /internal/pipeline-runs/daily; ścieżka przez Vite nie trafia do API
 
 ### Phase 2: Odczyt świeżości dla użytkownika
 
