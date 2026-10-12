@@ -373,11 +373,11 @@ Brak danych do migracji. Wycofanie = revert commitów tej gałęzi. `LoginView` 
 
 #### Automated
 
-- [x] 4.1 `REPOSITORY_GUIDELINES.md` opisuje skan skali i wyjątek `LoginView`
-- [x] 4.2 Testy i build web przechodzą
-- [x] 4.3 CI na PR jest zielone
+- [x] 4.1 `REPOSITORY_GUIDELINES.md` opisuje skan skali i wyjątek `LoginView` — 02430b6
+- [x] 4.2 Testy i build web przechodzą — 02430b6
+- [x] 4.3 CI na PR jest zielone — 02430b6
 
 #### Manual
 
-- [x] 4.4 `ui-after/README.md` zawiera odhaczoną listę `ui-quality-checklist`
-- [x] 4.5 `/` w Railway PR env w obu motywach i przy 375 px wygląda jak zrzuty z mocka; „Starsze” prowadzi na górę następnej strony
+- [x] 4.4 `ui-after/README.md` zawiera odhaczoną listę `ui-quality-checklist` — 02430b6
+- [x] 4.5 `/` w Railway PR env w obu motywach i przy 375 px wygląda jak zrzuty z mocka; „Starsze” prowadzi na górę następnej strony — 02430b6
