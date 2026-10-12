@@ -604,13 +604,13 @@ Zdanie „Password recovery arrives with S-07” (`deploy-plan.md:35`) dostaje o
 
 #### Automated
 
-- [x] 4.1 npm test (ActivateView, LoginView, router, styleContract)
-- [x] 4.2 npm run build
+- [x] 4.1 npm test (ActivateView, LoginView, router, styleContract) — be3af28
+- [x] 4.2 npm run build — be3af28
 
 #### Manual
 
-- [x] 4.3 Zrzuty /activate i /login w obu motywach i przy 375 px
-- [x] 4.4 Tabela 7 stanów
+- [x] 4.3 Zrzuty /activate i /login w obu motywach i przy 375 px — be3af28
+- [x] 4.4 Tabela 7 stanów — be3af28
 
 ### Phase 5: Wdrożenie, dokumentacja i weryfikacja w PR env
 

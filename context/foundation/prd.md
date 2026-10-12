@@ -3,7 +3,7 @@ project: "Szczur Radar"
 version: 2
 status: draft
 created: 2026-09-26
-updated: 2026-10-11
+updated: 2026-10-12
 context_type: greenfield
 product_type: data-pipeline
 target_scale:
@@ -202,6 +202,12 @@ Administrator (operator wdrożenia) — zarządza dostępem: tworzy konta dla za
   > generuje i wypisuje link aktywacyjny bez wysyłki maila — operator przekazuje go poza systemem; usuwa to
   > zależność od poczty elektronicznej z MVP i unika ryzyka pojedynczego użytkownika bez potrzeby budowania
   > panelu webowego.
+  > Doprecyzowanie (2026-10-12, S-07 `cli-user-onboarding`; dotyczy FR-027, FR-028 i US-02): operator może przez
+  > CLI zresetować dowolne konto, także aktywne i konto admina, nie tylko jeszcze nieaktywowane (decyzja
+  > użytkownika). Reset kasuje hasło, usuwa wszystkie sesje konta i wydaje nowy link, unieważniając poprzedni;
+  > ta sama komenda daje recovery admina z FR-027. Nie jest to samodzielny reset hasła z `## Non-Goals` — robi go
+  > wyłącznie operator z dostępem do CLI. Link jest ważny domyślnie 12 h (parametr wdrożenia, od 1 min do 7 dni)
+  > i działa raz.
 
 ### Świeżość danych
 - FR-030: Użytkownik widzi datę/godzinę ostatniej udanej aktualizacji danych (np. etykieta nad listą postów:

@@ -38,8 +38,8 @@ import pl.szczurradar.api.user.Role;
  * session cookie is {@code SameSite=Strict} and {@link OriginGuardFilter} rejects cross-origin
  * writes (S-01 contract, no changes in the SPA).
  *
- * <p>The filter chain exists only with the web server: operator commands ({@code migrate},
- * {@code create-admin}) run the same context without one.
+ * <p>The filter chain exists only with the web server: every operator command ({@code migrate},
+ * {@code create-admin}, {@code create-user}, {@code reset-password}) runs the same context without one.
  */
 @Configuration(proxyBeanMethods = false)
 public class SecurityConfig {

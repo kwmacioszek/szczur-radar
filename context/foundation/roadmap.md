@@ -39,6 +39,8 @@ milestone_status: open
 
 > v2.12 (2026-10-11): F-01 (`production-data-gate`) — Railway Hobby nie ma kopii wolumenu ani PITR, więc codzienny `pg_dump` z serwisu cron `db-backup`, sprawdzany odtworzeniem, w buckecie Railway i na NAS; wolumen 5 GB; limity $5/$10; limit $10/mies. na kluczu OpenRouter (pytanie 5). Pytanie 4 rozstrzygnięte; PRD (NFR, Non-Goal, pytanie 4) zaktualizowany.
 
+> v2.13 (2026-10-12): S-07 (`cli-user-onboarding`) — link aktywacyjny ważny domyślnie 12 h (parametr `ACTIVATION_LINK_TTL`), a `reset-password` operatora działa dla dowolnego konta, także admina (doprecyzowanie FR-027/FR-028 w PRD). Unknown S-07 rozstrzygnięte; wiersz S-07 w Backlog Handoff zgodny ze stanem.
+
 ## Milestone
 
 **M-1: MVP — ocenione sygnały z Wykopu dla zaproszonych osób** — Status: open
@@ -243,7 +245,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Parallel with:** F-01, F-02, S-02, S-03, S-04, S-05, S-06
 - **Blockers:** —
 - **Unknowns:**
-  - Czas ważności linku aktywacyjnego (PRD sugeruje np. 24h). — Owner: user. Block: no.
+  - ROZSTRZYGNIĘTE 2026-10-12 (`cli-user-onboarding`): Czas ważności linku aktywacyjnego (PRD sugeruje np. 24h). Domyślnie 12 h; operator zmienia go parametrem wdrożenia `ACTIVATION_LINK_TTL` (z jednostką, od `1m` do `7d`; `deploy-plan.md`, sekcja S-07). — Owner: user. Block: no.
 - **Risk:** Niezależny od potoku — dobry kandydat do równoległej pracy agenta przy ograniczonym czasie; bez niego MVP ma tylko jednego użytkownika.
 - **Status:** in-progress
 
@@ -260,7 +262,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 | S-04       | filter-by-assessment           | Filtrowanie listy po spółce/temacie i stanowisku autora                                        | no                    | Po S-02                                                                          |
 | S-05       | daily-scheduled-run-freshness  | Codzienny automatyczny przebieg + etykieta świeżości danych                                    | no                    | Po S-02 i F-01                                                                   |
 | S-06       | pipeline-run-history-dashboard | Dashboard admina: historia przebiegów i sygnał awarii                                          | no                    | Po S-05                                                                          |
-| S-07       | cli-user-onboarding            | Tworzenie kont przez CLI + aktywacja linkiem + recovery admina                                 | no                    | Po S-01 i F-03                                                                   |
+| S-07       | cli-user-onboarding            | Tworzenie kont przez CLI + aktywacja linkiem + recovery admina                                 | — (zaplanowane)       | W realizacji: plan `context/changes/cli-user-onboarding/plan.md`, PR #49, issue #20 |
 
 ## Open Roadmap Questions
 

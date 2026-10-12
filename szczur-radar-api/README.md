@@ -17,7 +17,7 @@ Pakiet bazowy `pl.szczurradar.api`, pakiety według funkcji — nie według wars
 | --- | --- |
 | `health` | sondy `GET /api/health` (bez bazy) i `GET /api/ready` (`SELECT 1`, 503 przy błędzie) |
 | `user` | encja `User`, `UserRepository` (Spring Data JPA), `Role` (enum), `Emails` (jedna normalizacja e-maila) |
-| `auth` | logowanie JSON, `/me`, logout, limiter prób, filtr Origin, odnawianie ciasteczka sesji, argon2 (`Passwords`) |
+| `auth` | logowanie JSON, `/me`, logout, limiter prób, filtr Origin, odnawianie ciasteczka sesji, argon2 (`Passwords`); `auth/activation` — jednorazowe linki aktywacyjne (S-07): `ActivationLinks` (wydanie, reset konta, sprawdzenie i użycie linku), `ActivationSettings` (`WEB_PUBLIC_URL`, `ACTIVATION_LINK_TTL`), encja tokenu (w bazie tylko SHA-256) i publiczny `ActivationController` |
 | `cli` | komendy operatora: `migrate`, `create-admin`, `create-user`, `reset-password` (dyspozytor `CommandLine`; sprawdzenia przed startem Springa w `CommandChecks`; dwie komendy z linkiem aktywacyjnym na wspólnym `LinkCommand`) |
 | `config` | Spring Security, sesja i ciasteczko, format błędów `{"detail": …}`, konfiguracja dostawcy LLM |
 | `agents` | agenci Embabel; `agents/assessor` — kontrakt oceny V2 jako kod (model, schemat, parser, walidator D1–D15, odsiew), prompt z wersją, `Assessor` (jedno wywołanie modelu na wpis) i `AssessorAgent` |
@@ -33,7 +33,7 @@ Kolejne moduły dochodzą obok, bez mieszania infrastruktury z domeną (`context
 
 ## Dostawca LLM (Embabel)
 
-Każde uruchomienie kontekstu Springa — serwer, komendy `migrate` i `create-admin` oraz testy `*IT` — startuje platformę Embabel z **jednym** dostawcą LLM. Wybierają go trzy ustawienia środowiska, zmieniane zawsze razem:
+Każde uruchomienie kontekstu Springa — serwer, komendy operatora (`migrate`, `create-admin`, `create-user`, `reset-password`) oraz testy `*IT` — startuje platformę Embabel z **jednym** dostawcą LLM. Wybierają go trzy ustawienia środowiska, zmieniane zawsze razem:
 
 | Zmienna | Znaczenie |
 | --- | --- |
@@ -167,6 +167,8 @@ Na stdout: jedna linia opisu (konto, rola, ważność do czasu UTC, jednorazowo�
 
 Obie zmienne czytają tylko te dwie komendy, przed startem Springa, więc zła wartość nie zatrzymuje serwera.
 
+Na Railway `WEB_PUBLIC_URL` pochodzi z `.railway/railway.ts`: referencja `https://${{szczur-radar-web.RAILWAY_PUBLIC_DOMAIN}}` daje w każdym środowisku adres jego własnego serwisu web (produkcja — domena produkcji, PR env — domena PR env). `ACTIVATION_LINK_TTL` jest opcjonalna: bez niej link jest ważny 12 h, a operator ustawia ją tylko, żeby to zmienić (IaC ją zachowuje przez `preserve()`). Szczegóły wdrożenia i runbook po merge'u: `context/deployment/deploy-plan.md`, sekcja S-07.
+
 Kody wyjścia:
 
 - 0: link wydany;
@@ -213,6 +215,6 @@ source ~/.config/szczur-radar/llm.env   # LLM_API_PROVIDER, LLM_MODEL, LLM_API_K
 - Aktywacja linkiem (S-07), trasy publiczne: `POST /api/auth/activation/lookup` (`{token}` → 200 `{email}`) i `POST /api/auth/activation` (`{token, password}` → 204). Token SPA bierze z fragmentu linku i wysyła tylko w body. Obie trasy nie tworzą sesji i nie ustawiają ciasteczka; po aktywacji osoba loguje się przez `POST /api/auth/login`. Hasło spoza polityki (`password_policy`) nie zużywa linku.
 - Feed i pipeline (S-02): `GET /api/posts?page&size` (ocenione posty od najnowszych), admin: `POST /api/admin/pipeline-runs` (`{from, to, sources?}` albo `{postIds}` → 202), `GET /api/admin/pipeline-runs` (przebiegi z krokami i licznikami), `GET /api/admin/pipeline-runs/sources` (`[{source, configured}]`), `GET /api/admin/posts/failed` (nieudane i martwe z ostatnią próbą), `GET /api/admin/llm/check` (jedno małe, prawdziwe wywołanie skonfigurowanym kluczem i modelem: `{provider, model, ok, refused, answeredBy, error}`).
 - Błędy aplikacji mają kształt `{"detail": "<kod>"}`: `invalid_credentials`, `not_authenticated`, `forbidden`, `too_many_attempts` (+ `Retry-After`), `cross_origin`, `invalid_request`, `unsupported_media_type`, `activation_link_invalid` (400: link nieznany, użyty, wygasły albo zastąpiony nowszym — nieodróżnialnie), `password_policy` (400: hasło spoza 12–128 znaków), `pipeline_busy` (409), `post_dead` (400), `source_not_configured` (503). Nieznane pola w JSON są odrzucane.
-- Sesja: ciasteczko `sr_session` (`HttpOnly; Secure; SameSite=Strict; Path=/api; Max-Age=30 dni`), dane w tabelach `SPRING_SESSION*`; wygasa po 30 dniach bezczynności, ciasteczko jest odnawiane po każdym udanym, uwierzytelnionym żądaniu API. Unieważnienie wszystkich sesji użytkownika: `FindByIndexNameSessionRepository.findByPrincipalName(<uuid>)` (principal = UUID użytkownika).
+- Sesja: ciasteczko `sr_session` (`HttpOnly; Secure; SameSite=Strict; Path=/api; Max-Age=30 dni`), dane w tabelach `SPRING_SESSION*`; wygasa po 30 dniach bezczynności, ciasteczko jest odnawiane po każdym udanym, uwierzytelnionym żądaniu API. Unieważnienie wszystkich sesji użytkownika: `FindByIndexNameSessionRepository.findByPrincipalName(<uuid>)` (principal = UUID użytkownika); komendy CLI nie mają repozytorium sesji, więc `reset-password` usuwa wiersze `spring_session` tego konta SQL-em.
 - CSRF: `SameSite=Strict` + `OriginGuardFilter` (obcy `Origin` przy zapisie → 403); tokeny CSRF Springa są wyłączone.
 - Limiter: 5 nieudanych prób / 15 min na e-mail i 20 na IP (`X-Real-IP` z krawędzi Railway), w pamięci procesu — poprawny przy jednej replice.

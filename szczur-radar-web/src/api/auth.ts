@@ -1,4 +1,4 @@
-// /api/auth/* — the contract of szczur-radar-api/app/auth/routes.py.
+// /api/auth/* — the contract of szczur-radar-api/src/main/java/pl/szczurradar/api/auth/AuthController.java.
 import { apiFetch } from './client'
 
 export interface User {
