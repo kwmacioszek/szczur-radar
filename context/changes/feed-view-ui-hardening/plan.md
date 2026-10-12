@@ -327,13 +327,13 @@ Brak danych do migracji. Wycofanie = revert commitów tej gałęzi. `LoginView` 
 
 #### Automated
 
-- [ ] 1.1 Testy web przechodzą
-- [ ] 1.2 Typecheck i build przechodzą, a `dist/` nie zawiera kitchen sink
-- [ ] 1.3 `dev/mock-api.js` parsuje się i obsługuje `/api/posts`
+- [x] 1.1 Testy web przechodzą
+- [x] 1.2 Typecheck i build przechodzą, a `dist/` nie zawiera kitchen sink
+- [x] 1.3 `dev/mock-api.js` parsuje się i obsługuje `/api/posts`
 
 #### Manual
 
-- [ ] 1.4 `/` z `dev/mock-api.js` wygląda jak `ui-before/feed-data-1280-light-viewport.png`; kitchen sink pokazuje sekcję „Posty” w obu motywach
+- [x] 1.4 `/` z `dev/mock-api.js` wygląda jak `ui-before/feed-data-1280-light-viewport.png`; kitchen sink pokazuje sekcję „Posty” w obu motywach
 
 ### Phase 2: Karta i widok na kontrakcie
 

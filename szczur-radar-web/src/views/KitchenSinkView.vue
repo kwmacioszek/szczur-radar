@@ -4,7 +4,9 @@
   screenshots. Fixed data: no API calls, no session, no AppHeader.
 -->
 <script setup lang="ts">
+import type { Direction, Flag, PostItem, Target } from '../api/posts'
 import AppButton from '../components/AppButton.vue'
+import PostCard from '../components/PostCard.vue'
 import StatusBadge, { type BadgeTone } from '../components/StatusBadge.vue'
 import StatusMessage from '../components/StatusMessage.vue'
 
@@ -43,6 +45,94 @@ const badges: { tone: BadgeTone; text: string }[] = [
   { tone: 'destructive', text: 'błąd' },
   { tone: 'info', text: 'trwa' },
   { tone: 'neutral', text: 'w kolejce' },
+]
+
+/** A company named in the body; assertiveness is null for mixed and not_expressed (table §7.2 of the contract). */
+function target(id: string, quote: string, direction: Direction, assertiveness: Target['stance']['assertiveness']): Target {
+  return {
+    id,
+    kind: 'company',
+    anchor: { document: 'item', field: 'body', quote },
+    stance: { direction, assertiveness, claim_ids: [] },
+    reference: 'explicit',
+  }
+}
+
+function modelAssessment(targets: Target[], flags: Flag[]): PostItem['assessment'] {
+  return {
+    output: { relevance: 'investment_related', modifiers: [], targets, claims: [], flags },
+    resultSource: 'model',
+    assessedAt: '2026-10-12T21:00:00Z',
+  }
+}
+
+/** Every variant of the feed's card, newest first. */
+const posts: PostItem[] = [
+  {
+    id: 'model',
+    itemType: 'post',
+    publishedAt: '2026-10-12T19:45:00Z',
+    title: null,
+    body: 'CDR po wynikach -8% na otwarciu, ja ostrożnie dobieram, bo guidance na Q4 nie zmieniło się mimo opóźnienia premiery. Allegro za to sprzedałem w całości: marże lecą w dół, a „rekordowy kwartał” widać chyba tylko w prezentacji dla akcjonariuszy.',
+    author: 'ostrozny_byk',
+    webUrl: 'https://wykop.pl/wpis/81234567',
+    assessment: modelAssessment(
+      [target('t1', 'CDR', 'bullish', 'hedged'), target('t2', 'Allegro', 'bearish', 'unhedged')],
+      ['possible_sarcasm', 'missing_context'],
+    ),
+  },
+  {
+    id: 'link',
+    itemType: 'link',
+    publishedAt: '2026-10-12T18:10:00Z',
+    title: 'Orlen ogłasza buyback za 4 mld zł',
+    body: 'PGE bez zmian, Enea z plusami i minusami, Tauron podał dziś wyniki, a Orlen powinien na skupie akcji zyskać.',
+    author: 'dywidendowy_zbyszek',
+    webUrl: 'https://wykop.pl/link/7712345',
+    assessment: modelAssessment(
+      [
+        target('t1', 'PGE', 'neutral', 'unhedged'),
+        target('t2', 'Enea', 'mixed', null),
+        target('t3', 'Tauron', 'not_expressed', null),
+        target('t4', 'Orlen', 'bullish', 'unhedged'),
+      ],
+      [],
+    ),
+  },
+  {
+    id: 'prefilter',
+    itemType: 'comment',
+    publishedAt: '2026-10-12T17:30:00Z',
+    title: null,
+    body: '@ostrozny_byk #gielda #orlen',
+    author: 'wykresiarz',
+    webUrl: 'https://wykop.pl/wpis/81234567#comment-81234601',
+    assessment: {
+      output: { relevance: 'unclear', modifiers: [], targets: [], claims: [], flags: ['insufficient_content'] },
+      resultSource: 'prefilter',
+      assessedAt: '2026-10-12T21:00:00Z',
+    },
+  },
+  {
+    id: 'no-assessment',
+    itemType: 'comment',
+    publishedAt: '2026-10-12T16:05:00Z',
+    title: null,
+    body: 'Ten wykres XTB to klasyczna głowa z ramionami, ja bym uważał.',
+    author: 'wykresiarz',
+    webUrl: 'https://wykop.pl/wpis/81230011#comment-81230042',
+    assessment: null,
+  },
+  {
+    id: 'long-url',
+    itemType: 'post',
+    publishedAt: '2026-10-12T15:20:00Z',
+    title: null,
+    body: 'Analiza skupu akcji Orlenu: https://www.bankier.pl/wiadomosc/Orlen-oglasza-skup-akcji-wlasnych-za-4-mld-zl-analitycy-licza-wplyw-na-dywidende-8812345.html?utm_source=wykop&utm_medium=social',
+    author: 'dywidendowy_zbyszek',
+    webUrl: 'https://wykop.pl/wpis/81229876',
+    assessment: modelAssessment([target('t1', 'Orlen', 'not_expressed', null)], ['missing_context']),
+  },
 ]
 </script>
 
@@ -94,6 +184,11 @@ const badges: { tone: BadgeTone; text: string }[] = [
         <label><input type="checkbox" checked /> Zaznaczone</label>
         <label><input type="checkbox" disabled /> Wyłączone</label>
       </div>
+    </section>
+
+    <section aria-labelledby="posts-title">
+      <h2 id="posts-title">Posty</h2>
+      <PostCard v-for="post in posts" :key="post.id" :post="post" />
     </section>
   </main>
 </template>
