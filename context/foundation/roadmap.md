@@ -37,6 +37,8 @@ milestone_status: open
 
 > v2.11 (2026-10-06): F-01 i pytanie 4 — PITR wyłączone, a jego bucket usunięty ze względu na koszty (`api-docker-image`). Backup bazy: brak do czasu subskrypcji; przed S-05 dzienna kopia wolumenu Railway i test odtwarzania (`Block: F-01 → S-05` bez zmian).
 
+> v2.12 (2026-10-11): F-01 (`production-data-gate`) — Railway Hobby nie ma kopii wolumenu ani PITR, więc codzienny `pg_dump` z serwisu cron `db-backup`, sprawdzany odtworzeniem, w buckecie Railway i na NAS; wolumen 5 GB; limity $5/$10; limit $10/mies. na kluczu OpenRouter (pytanie 5). Pytanie 4 rozstrzygnięte; PRD (NFR, Non-Goal, pytanie 4) zaktualizowany.
+
 ## Milestone
 
 **M-1: MVP — ocenione sygnały z Wykopu dla zaproszonych osób** — Status: open
@@ -60,7 +62,7 @@ Na Wykopie (#gielda) i Reddicie codziennie pojawiają się setki postów o inwes
 
 | ID   | Change ID                      | Outcome (user can …)                                                                                                            | Prerequisites | PRD refs                                                                                                                                                                                 | Status   |
 | ---- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------- | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
-| F-01 | production-data-gate           | (foundation) produkcja jest gotowa na prawdziwe dane: limity kosztów, zweryfikowany restore, zapieczętowane sekrety             | —             | NFR (dane przechowywane bezterminowo; bezpieczeństwo przed utratą danych po stronie platformy), Open Question 4; guardrail kosztów LLM                                                   | in-progress |
+| F-01 | production-data-gate           | (foundation) produkcja jest gotowa na prawdziwe dane: limity kosztów, zweryfikowany restore, zapieczętowane sekrety             | —             | NFR (dane przechowywane bezterminowo; codzienna kopia sprawdzana odtworzeniem, od F-01), Open Question 4; guardrail kosztów LLM                                                          | in-progress |
 | F-03 | java-api-rewrite               | (foundation) backend w Javie obsługuje funkcje S-01 przez dotychczasowe API; sesje JDBC, migracje fix-forward i szkielet Embabel | S-01          | FR-012, FR-013, FR-014, FR-015, FR-026, NFR (każdy chroniony zasób wymaga uwierzytelnienia — komplet testów autoryzacji)                                                                 | done |
 | F-02 | assessment-contract-harness    | (foundation) kontrakt oceny LLM V2 jest egzekwowany kodem, a model domyślny spełnia progi jakości na zestawie wzorcowym | F-03          | FR-004, Open Question 2 (rozstrzygnięte przez kontrakt, obecnie V2); guardrail jakości danych z LLM (bez halucynacji)                                                                     | done        |
 | S-01 | admin-bootstrap-and-login      | operator tworzy pierwszego admina przez CLI; admin loguje się i wylogowuje; niezalogowany widzi tylko ekran logowania           | —             | FR-012, FR-013, FR-014, FR-015, FR-026, NFR (każdy chroniony zasób wymaga uwierzytelnienia — komplet testów autoryzacji), NFR (brak wglądu w dane cudzych kont)                          | done |
@@ -98,17 +100,25 @@ Foundations below assume these are present and do NOT re-scaffold them.
 
 ### F-01: Bramka produkcyjnych danych
 
-- **Outcome:** (foundation) produkcja jest gotowa na zbieranie prawdziwych danych: aktywna subskrypcja, ustawione limity kosztów, włączona dzienna kopia wolumenu Postgres (zamiast PITR, wyłączonego 2026-10-06), restore drill zakończony zdrowym, odpytywalnym odtworzeniem, sekret LLM produkcji zapieczętowany i niedostępny w środowiskach PR; klucze Wykopu zapieczętowane na produkcji, ale te same klucze aplikacji świadomie używane w PR env (odstępstwo od pierwotnego zakresu, decyzja S-02 `first-assessed-wykop-feed`, 2026-10-09).
+- **Outcome:** (foundation) produkcja jest gotowa na zbieranie prawdziwych danych:
+  - plan Railway Hobby z limitami kosztów $5 (alert) / $10 (twardy);
+  - wolumen Postgresa 5 GB;
+  - codzienna kopia logiczna (`pg_dump` z serwisu cron `db-backup`), sprawdzana pełnym odtworzeniem, w buckecie Railway (14 dziennych + 12 miesięcznych) i na NAS operatora (Synology Cloud Sync);
+  - restore drill przećwiczony do odpytywalnej bazy;
+  - limit $10/mies. na kluczu OpenRouter produkcji: wyczerpany limit zatrzymuje przebieg i nie zużywa prób postów;
+  - sekret LLM produkcji zapieczętowany i niedostępny w środowiskach PR; klucze Wykopu zapieczętowane na produkcji, ale te same klucze aplikacji świadomie używane w PR env (odstępstwo od pierwotnego zakresu, decyzja S-02 `first-assessed-wykop-feed`, 2026-10-09).
+
+  Kopie wolumenu i PITR Railway to plan Pro, dlatego zamiast „dziennej kopii wolumenu” jest `pg_dump` (decyzja 2026-10-11, `production-data-gate`).
 - **Change ID:** production-data-gate
-- **PRD refs:** NFR (dane przechowywane bezterminowo; bezpieczeństwo przed utratą danych po stronie platformy), Open Question 4; guardrail kosztów LLM
-- **Unlocks:** S-05 (codzienne zbieranie prawdziwych danych na produkcji); ścieżka weryfikacji „odtworzenie backupu działa” wymagana przez `deploy-plan.md` przed fazą 6
+- **PRD refs:** NFR (dane przechowywane bezterminowo; codzienna kopia sprawdzana odtworzeniem, od F-01), Open Question 4; guardrail kosztów LLM
+- **Unlocks:** S-05 (codzienne zbieranie prawdziwych danych na produkcji); weryfikacja „odtworzenie backupu działa” wymagana przed S-05
 - **Prerequisites:** —
 - **Parallel with:** F-02, F-03, S-01, S-02, S-03, S-04, S-07
 - **Blockers:** —
 - **Unknowns:**
-  - Czy czysty restore drill przejdzie po subskrypcji; jeśli nie — powrót do alternatywnej platformy z `infrastructure.md` (ryzyko nr 1). — Owner: user. Block: no.
-  - Backup bazy: brak do czasu subskrypcji (2026-10-06, `api-docker-image`): PITR wyłączone, bucket usunięty (koszty; baza bez prawdziwych danych). Po subskrypcji: dzienna kopia wolumenu Railway (Daily, 6 dni) i test odtwarzania zakończony odpytywalną bazą; kopie giną przy wyczyszczeniu wolumenu i odtwarzają się tylko w tym samym środowisku (`deploy-plan.md`, sekcja `api-docker-image`). — Owner: user. Block: no.
-- **Risk:** Praca operatorska bez kodu produktu; sekwencjonowana na starcie równolegle, żeby nie stała się niespodziewaną blokadą S-05 tuż przed terminem.
+  - ROZSTRZYGNIĘTE 2026-10-11: Czy czysty restore drill przejdzie po subskrypcji; jeśli nie — powrót do alternatywnej platformy z `infrastructure.md` (ryzyko nr 1). Przeszedł w PR env: test z aplikacją na odtworzonym dumpie i próba runbooka odtworzenia (`deploy-plan.md`, sekcja F-01). Bez zmiany platformy. — Owner: user. Block: no.
+  - ROZSTRZYGNIĘTE 2026-10-11 (Hobby nie ma kopii wolumenu; codzienny `pg_dump` sprawdzany odtworzeniem, bucket + NAS, `deploy-plan.md` F-01): Backup bazy: brak do czasu subskrypcji (2026-10-06, `api-docker-image`): PITR wyłączone, bucket usunięty (koszty; baza bez prawdziwych danych). Po subskrypcji: dzienna kopia wolumenu Railway (Daily, 6 dni) i test odtwarzania zakończony odpytywalną bazą; kopie giną przy wyczyszczeniu wolumenu i odtwarzają się tylko w tym samym środowisku (`deploy-plan.md`, sekcja `api-docker-image`). — Owner: user. Block: no.
+- **Risk:** Głównie praca operatorska plus narzędzie kopii (`tools/db-backup/`) i obsługa limitu OpenRouter. Kroki produkcyjne po merge'u są w runbooku `deploy-plan.md` (sekcja F-01): pierwszy przebieg kopii, test z aplikacją na dumpie produkcji i Cloud Sync na NAS. Sekwencjonowana na starcie równolegle, żeby nie stała się niespodziewaną blokadą S-05 tuż przed terminem.
 - **Status:** in-progress
 
 ### F-02: Egzekwowany kontrakt oceny LLM
@@ -257,8 +267,8 @@ Foundations below assume these are present and do NOT re-scaffold them.
 1. **Czy `product_type` to "data-pipeline" czy "web-app"?** — Projekt to dwa moduły: pipeline+API jako rdzeń, pełnoprawna aplikacja webowa (logowanie, dashboard, lista/filtrowanie) jako warstwa konsumpcji. Wybrano `data-pipeline` jako najbliższą pojedynczą wartość; do doprecyzowania przy `/10x-tech-stack-selector`. Owner: użytkownik. Block: — (w praktyce rozstrzygnięte przez dwa osobne dokumenty stacku; nie wpływa na kolejność).
 2. **Dokładny kształt pól w JSON zwracanym przez ocenę LLM** — ROZSTRZYGNIĘTE 2026-09-27 przez kontrakt V1; od 2026-10-01 obowiązuje `context/foundation/llm-assessment/contract-v2.md` (V2, bez grafu argumentów). Owner: użytkownik. Block: — (odblokowało S-02; PRD wskazuje kontrakt V2).
 3. **Kanał i próg dla FR-025 (powiadomienia o obiecującym trendzie)** — nie ustalono jeszcze, czym jest "obiecujący trend" liczbowo ani gdzie ma trafiać powiadomienie. Owner: użytkownik. Block: — (FR-025 odroczone).
-4. **Backup/retencja na docelowej platformie hostingowej** — Backup bazy: brak do czasu subskrypcji. PITR wyłączone 2026-10-06 ze względu na koszty (`api-docker-image`); po subskrypcji dzienna kopia wolumenu Railway (Daily, 6 dni), czysty test odtwarzania i limity kosztów (`deploy-plan.md`). Owner: użytkownik. Block: F-01 → S-05.
-5. **Budżet kosztów LLM na przebieg** — guardrail PRD każe minimalizować koszt zapytań, ale nie podaje pułapu (na dzień ani na post); kontrakt V2 wymaga zapisu zużycia tokenów, a F-02 mierzy koszt kandydatów na zestawie wzorcowym. Owner: użytkownik. Block: — (wpływa na F-02, S-02 i S-05, nie blokuje planowania).
+4. **[ROZSTRZYGNIĘTE 2026-10-11 — F-01 `production-data-gate`: Railway Hobby nie ma kopii platformy (Pro). Kopię robi codzienny `pg_dump` z serwisu cron, sprawdzany odtworzeniem, do bucketu Railway (14 + 12) i na NAS. Restore drill przeszedł w PR env (`deploy-plan.md`, sekcja F-01)]** **Backup/retencja na docelowej platformie hostingowej** — Backup bazy: brak do czasu subskrypcji. PITR wyłączone 2026-10-06 ze względu na koszty (`api-docker-image`); po subskrypcji dzienna kopia wolumenu Railway (Daily, 6 dni), czysty test odtwarzania i limity kosztów (`deploy-plan.md`). Owner: użytkownik. Block: F-01 → S-05.
+5. **Budżet kosztów LLM na przebieg** — guardrail PRD każe minimalizować koszt zapytań, ale nie podaje pułapu (na dzień ani na post); kontrakt V2 wymaga zapisu zużycia tokenów, a F-02 mierzy koszt kandydatów na zestawie wzorcowym. Twardy pułap od 2026-10-11 (F-01): limit $10/mies. na kluczu OpenRouter produkcji; budżet na przebieg nadal nieustalony. Owner: użytkownik. Block: — (wpływa na F-02, S-02 i S-05, nie blokuje planowania).
 6. **[ROZSTRZYGNIĘTE 2026-09-27 — PRD v2: bez automatycznej decyzji w MVP, §Business Logic + §Non-Goals]** **„Wartościowy sygnał” w MVP** — PRD §Business Logic mówi, że wynik oceny zawiera „czy jest wartościowy”, a kontrakt V1 zabrania LLM zwracania `is_valuable`/`is_signal` i przenosi decyzję o sygnale do osobnego, dalszego etapu, którego żaden FR nie opisuje. Czy MVP wystarcza trafność + stanowisko + teza z argumentami (bez decyzji „wartościowy”), czy potrzebna jest prosta reguła decyzji jako nowy FR? Owner: użytkownik. Block: — (S-02 może pokazać ocenę bez tej decyzji; wymaga aktualizacji PRD §Business Logic).
 7. **[ROZSTRZYGNIĘTE 2026-09-27 — PRD v2: poza MVP, filtr tekstowy w FR-011a]** **Rozpoznawanie spółek (entity resolution)** — kontrakt V1 przenosi ustalanie, o którą spółkę chodzi, poza LLM; PRD nie ma dla tego FR. Wpływa na filtr po spółce (S-04) i przyszły wykres per spółka (FR-024). Owner: użytkownik. Block: — (odblokowało S-04).
 

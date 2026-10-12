@@ -85,3 +85,13 @@
 - **Problem**: `@Action` bez parametrów używa domyślnej polityki ponowień: po większości wyjątków (poza m.in. IllegalArgument/IllegalState) akcja jest wykonywana ponownie z rosnącą przerwą. W S-02 nieudany `fetch` z Wykopu szedł kilka razy co ≥10 s, przebieg nie kończył się w 60 s, a każdy ponowny krok zapisywałby się drugi raz. Wyszło dopiero przy teście z awarią źródła (przegląd końcowy `first-assessed-wykop-feed`, 2026-10-09).
 - **Rule**: Każda akcja ze skutkami ubocznymi dostaje `@Action(actionRetryPolicy = ActionRetryPolicy.FIRE_ONCE)`; ponowienia żyją tylko w warstwie transportu (`llm/transport/TransportRetry`). Dla każdego agenta napisz test, w którym akcja rzuca wyjątek, i sprawdź, że wykonała się raz.
 - **Applies to**: plan, plan-review, implement, impl-review
+
+## Railway Hobby nie ma kopii bazy — sprawdź tabelę funkcji planu i każdą kopię logiczną odtwarzaj w całości
+
+- **Context**: Planowanie i wdrażanie ochrony danych Postgresa na Railway (F-01 `production-data-gate`, 2026-10-11), szczególnie po przejściu z trialu na płatny plan.
+- **Problem**:
+  - Plan z 2026-10-06 zakładał, że po subskrypcji wystarczy włączyć dzienną kopię wolumenu Railway. Tymczasem kopie wolumenu i PITR są tylko w planie Pro (tabela „Compare features” na `railway.com/pricing`), a projekt jest na Hobby.
+  - Wolumen z trialu (500 MB, ~434 MB systemu plików) nie urósł sam przy zmianie planu. Domyślny `max_wal_size` 1 GB mógł go zapełnić samym WAL-em („No space left on device” zabiło też drill PITR z 2026-09-27).
+  - `pg_dump --exclude-table-data` po cichu nic nie robi, gdy wzorzec nie pasuje. Dump, który się nie odtwarza, wygląda tak samo jak dobry.
+- **Rule**: Przed planowaniem backupu sprawdź tabelę funkcji planu (`railway.com/pricing`), a nie samą dokumentację funkcji, i rozmiar wolumenu po zmianie planu (`df -h` w kontenerze, nie panel). Na Hobby kopią jest `pg_dump` z osobnego serwisu (cron), z kopią poza platformą. Kopię logiczną uznawaj za ważną dopiero wtedy, gdy przeszła pełne odtworzenie do tymczasowej bazy: kontrole tabel, wersji Flyway i liczby wierszy, a raz test z aplikacją. Zawartość dumpa (np. wykluczone dane) sprawdzaj przez `pg_restore --list`.
+- **Applies to**: infra, plan, plan-review
