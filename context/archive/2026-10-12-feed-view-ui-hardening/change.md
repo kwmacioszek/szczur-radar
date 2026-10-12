@@ -1,10 +1,10 @@
 ---
 change_id: feed-view-ui-hardening
 title: Hardening UI feedu — tokeny, współdzielone komponenty i stany
-status: impl_reviewed
+status: archived
 created: 2026-10-12
 updated: 2026-10-12
-archived_at: null
+archived_at: 2026-10-12T20:21:25Z
 ---
 
 ## Notes
