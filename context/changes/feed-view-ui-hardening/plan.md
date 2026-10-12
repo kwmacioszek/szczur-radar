@@ -6,6 +6,8 @@ Feed `/` (`FeedView` + `PostCard`) przechodzi z literałów i ręcznych element�
 
 Źródło: `research.md` (zarzuty C1–C4, deferred D1–D4, macierz 7 stanów „przed”, zrzuty `ui-before/`, mock `mock-feed.js`). Decyzje wizualne poparte przebiegiem `design-taste-frontend` w trybie „redesign — preserve” (odczyt: feed produktowy dla zaproszonych inwestorów, spokojny, czytelny; pokrętła VARIANCE 2 / MOTION 1 / DENSITY 5).
 
+Rewizja 2026-10-12 (po fazie 1): użytkownik uznał samą zmianę skali za zbyt skromną („strasznie prosto”). Z trzech kierunków (karty, lista z paskiem, dwie kolumny) wybrał dwie kolumny i z dwóch prototypów tego kierunku wariant **C2 — karty dwukolumnowe**, z datą i godziną w jednej linii i trafnością jako znacznikiem. Prototyp i zrzuty: `ui-proto/` (`c-boxed-final-*.png`, źródło `PostCardPrototype.vue.txt`); porzucone warianty `c-list-*`, `c-boxed-*` zostają tam jako ślad wyboru.
+
 ## Current State Analysis
 
 - Kolory feedu są już rolami (skan `/10x-ui`: 0 trafień), ale pismo i odstępy to 23 linie `px` (FeedView 5, PostCard 18); w karcie 3 z 4 rozmiarów pisma są spoza skali (13/15/18 px), odstęp 6 px spoza skali, linia między postami z własnego `color-mix` (`research.md`, C1).
@@ -18,7 +20,8 @@ Feed `/` (`FeedView` + `PostCard`) przechodzi z literałów i ręcznych element�
 ## Desired End State
 
 - `FeedView.vue` i `PostCard.vue` biorą pismo, odstępy, promienie i kolory wyłącznie z `:root` w `src/style.css`; błąd, przyciski i flagi to `StatusMessage`, `AppButton`, `StatusBadge`.
-- Karta ma dwa kroki skali: nagłówek `--font-size-md`, waga 600, `--text-h`; treść oceny `--font-size-md`; metadane, notka i flagi `--font-size-sm`. Typ posta to zwykła metadana obok daty (`--text`, bez wersalików i akcentu). Stanowisko to tekst: nazwa celu `--text-h` 600, „wzrostowo” `--success`, „spadkowo” `--destructive`, pozostałe `--text`.
+- Każdy post to karta (układ C2): obwódka `--border`, promień `--radius`, odstęp `--space-4` między kartami. Od 40rem szerokości dwie kolumny — metadane (ok. 9rem) oddzielone pionową kreską od treści; poniżej jedna kolumna z metadanymi w jednym wierszu nad poziomą kreską. Wygląd jak `ui-proto/c-boxed-final-*.png`.
+- Karta ma dwa kroki skali: nagłówek `--font-size-md`, waga 600, `--text-h`; treść oceny `--font-size-md`; metadane, notka i znaczniki `--font-size-sm`. Metadane: data i godzina w jednej linii (`--text-h` 600), typ posta zwykłym tekstem (`--text`, bez wersalików i akcentu), trafność jako `StatusBadge neutral`, notka prefiltra. Cele w siatce „spółka | stanowisko”: nazwa celu `--text-h` 600, stanowisko tekstem — „wzrostowo” `--success`, „spadkowo” `--destructive`, pozostałe `--text`. Flagi jako `StatusBadge neutral`.
 - Etykieta stronicowania, lista i liczba stron pochodzą z jednej, ostatniej żądanej odpowiedzi. Zmiana strony: od razu przewinięcie na górę, zamiast listy „Wczytywanie strony N…” z `aria-busy`, po wczytaniu fokus na nagłówku „Posty”. Strona poza zakresem: komunikat i przycisk do ostatniej strony. Błąd: `StatusMessage` z „Spróbuj ponownie”.
 - Skan `no literals` odrzuca `px`/`rem` w piśmie, odstępach i promieniach plików z listy `CLEANED`; `LoginView` jest poza listą do `login-view-ui-hardening`; `REPOSITORY_GUIDELINES.md` mówi to samo.
 - Weryfikacja: `npm test` i `npm run build` zielone; `ui-after/README.md` z macierzą 7 stanów w obu motywach przy 1280 i 375 px; feed w Railway PR env na prawdziwych danych.
@@ -31,6 +34,8 @@ Feed `/` (`FeedView` + `PostCard`) przechodzi z literałów i ręcznych element�
 - API dla strony poza zakresem: 200, `items: []`, prawdziwy `total` (`PostController.java:45-52`).
 - Istniejący test stronicowania mockuje stałą odpowiedź `page: 1` niezależnie od żądanej strony (`FeedView.test.ts:80-94`) — stan widoku musi być kluczowany żądaną stroną, nie polem `page` odpowiedzi.
 - Rozszerzony skan na obecnej liście `CLEANED` trafia `px` w piśmie i odstępach tylko w `LoginView.vue` (`:77`, `:84`, `:86`, `:91`, `:100`) poza plikami feedu (`research.md`, C1).
+- `style.css:90-94` ma globalną klasę `.card` (karta logowania: `max-width: 34rem`, `text-align: center`); `<style scoped>` jej nie wyłącza. Pierwszy prototyp C2 z klasą `card` rozjechał się przez to (wyśrodkowany tekst, węższa karta) — karta posta potrzebuje innej nazwy klasy.
+- Prototyp C2 (`ui-proto/PostCardPrototype.vue.txt`) używa wyłącznie `--border`, `--radius`, `--space-*`, `--font-size-*`, ról kolorów i `StatusBadge`; przeszedł w feedzie z mockiem przy 1280 i 375 px w obu motywach bez poziomego przewijania (data „12.10.2026, 22:00” 127 px w kolumnie 144 px).
 
 ## What We're NOT Doing
 
@@ -45,7 +50,7 @@ Feed `/` (`FeedView` + `PostCard`) przechodzi z literałów i ręcznych element�
 
 ## Implementation Approach
 
-Kolejność z `/10x-ui`: środowisko → wartości tokenów → jeden widok → stany → utrwalenie. **Faza „wartości tokenów” jest N/A**: po decyzjach (dwa kroki skali + waga, stanowisko tekstem w kolorze roli, typ w `--text`) widok potrzebuje wyłącznie istniejących ról i kroków skali; `style.css` się nie zmienia. Faza 1 nie zmienia wyglądu aplikacji, tylko daje bramce dane feedu. Faza 2 przenosi kartę i widok na kontrakt i włącza ostrzejszy skan. Faza 3 przebudowuje stan stronicowania i domyka macierz 7 stanów. Faza 4 zostawia regułę, listę kontrolną i weryfikację w PR env.
+Kolejność z `/10x-ui`: środowisko → wartości tokenów → jeden widok → stany → utrwalenie. **Faza „wartości tokenów” jest N/A**: po decyzjach (dwa kroki skali + waga, stanowisko tekstem w kolorze roli, typ w `--text`, karty C2 na `--border`, `--radius`, `--space-*`) widok potrzebuje wyłącznie istniejących ról i kroków skali; `style.css` się nie zmienia. Faza 1 nie zmienia wyglądu aplikacji, tylko daje bramce dane feedu. Faza 2 przenosi kartę i widok na kontrakt w układzie C2 i włącza ostrzejszy skan. Faza 3 przebudowuje stan stronicowania i domyka macierz 7 stanów. Faza 4 zostawia regułę, listę kontrolną i weryfikację w PR env.
 
 Proces (reguły repo, nie wiersze Progress): gałąź `feature/feed-view-ui-hardening` istnieje w tym worktree na `6bebf82`; na starcie fazy 1 `/10x-implement` robi `git fetch` i potwierdza, że gałąź stoi na aktualnym `origin/main` (inaczej rebase przed pierwszym commitem), zakłada issue `feed-view-ui-hardening: …` (zmiana poza roadmapą) i PR z `Refs #<issue>`; folder zmiany idzie w pierwszym commicie. Implementacja, weryfikacja w PR env, `/10x-impl-review` z poprawkami i `/10x-archive` na tej samej gałęzi; merge robi człowiek.
 
@@ -100,24 +105,24 @@ Bramka dostaje dane feedu bez zmiany wyglądu aplikacji: utrzymywany mock zna `/
 
 ### Overview
 
-Zarzuty C1 i C2 oraz poprawki treści: karta i widok na skali i komponentach, nowa hierarchia karty, ostrzejsza kontrola.
+Zarzuty C1 i C2 oraz poprawki treści: karta i widok na skali i komponentach, karty dwukolumnowe C2 z nową hierarchią, ostrzejsza kontrola.
 
 ### Changes Required:
 
-#### 1. `PostCard` na skali, rolach i `StatusBadge`
+#### 1. `PostCard` jako karta C2 na skali, rolach i `StatusBadge`
 
 **File**: `szczur-radar-web/src/components/PostCard.vue`
 
-**Intent**: Hierarchia wagą i kolorem zamiast czterech rozmiarów pisma; treść oceny czytelna (16 zamiast 15 px), flagi i notka nie mniejsze niż najmniejszy krok skali; jedna implementacja znacznika w aplikacji.
+**Intent**: Każdy post jako wyraźna całość z metadanymi obok treści (decyzja z prototypu `ui-proto/c-boxed-final-*`); hierarchia wagą i kolorem zamiast czterech rozmiarów pisma; ocena czytelna (16 zamiast 15 px), znaczniki i notka nie mniejsze niż najmniejszy krok skali; jedna implementacja znacznika w aplikacji. Wzorzec: `ui-proto/PostCardPrototype.vue.txt` (wariant `boxed`).
 
 **Contract**:
-- Metadane (`time` + typ): `--font-size-sm`, `--text`; typ to tekst z `label('itemType', …)` bez `text-transform`, `letter-spacing` i `--accent`.
-- Nagłówek `h2`: `--font-size-md`, `font-weight: 600`, `--text-h`; skracanie do 200 znaków bez zmian (`:9-12`).
-- Trafność i lista celów: `--font-size-md`; notka prefiltra: `--font-size-sm`.
-- Cel: nazwa `--text-h`, `font-weight: 600`; stanowisko tekstem, kolor `--success` dla `bullish`, `--destructive` dla `bearish`, dziedziczony `--text` dla pozostałych; „(ostrożnie)” bez zmian.
-- Flagi: każda jako `StatusBadge tone="neutral"`, tekst z `label('flag', …)`; klasa `.flag` znika.
-- Linia między postami: `border-bottom: 1px solid var(--border)`.
-- Odstępy, odstępy siatki i promienie wyłącznie z `--space-*` i `--radius-sm`; 6 px zastąpione najbliższym krokiem skali.
+- Kontener `article`: obwódka `1px solid var(--border)`, `border-radius: var(--radius)`, wcięcie `--space-4` (pion) / `--space-5` (poziom), odstęp `--space-4` do następnej karty; nazwa klasy inna niż globalne `.card` (`style.css:90-94`). Linia `border-bottom` między postami znika.
+- Układ: od 40rem szerokości siatka dwóch kolumn — metadane ok. 9rem | treść (`min-width: 0`), odstęp kolumn `--space-5`, kolumna metadanych z prawą kreską `--border` i wcięciem `--space-4`. Poniżej 40rem jedna kolumna; metadane w jednym zawijanym wierszu nad treścią, oddzielone dolną kreską `--border` zamiast prawej.
+- Metadane (`--font-size-sm`), w kolejności: `time` z datą i godziną w jednej linii (`formatDateTime`, `--text-h`, waga 600); typ jako tekst z `label('itemType', …)` w `--text`, bez `text-transform`, `letter-spacing` i `--accent`; trafność jako `StatusBadge tone="neutral"` z `label('relevance', …)` (tylko gdy jest ocena); notka prefiltra „bez treści, bez oceny modelu” w `--text` (tylko dla `resultSource === 'prefilter'`).
+- Nagłówek `h2`: `--font-size-md`, `font-weight: 600`, `--text-h`, łamanie długich słów jak dziś (`overflow-wrap: anywhere`); skracanie do 200 znaków bez zmian (`:9-12`).
+- Cele: lista definicji `dl` w siatce dwóch kolumn (`max-content` | reszta), `--font-size-md`; `dt` = cytat celu, `--text-h`, waga 600; `dd` = stanowisko tekstem, klasa kierunku, kolor `--success` dla `bullish`, `--destructive` dla `bearish`, dziedziczony `--text` dla pozostałych; „(ostrożnie)” bez zmian.
+- Flagi: każda jako `StatusBadge tone="neutral"`, tekst z `label('flag', …)`, w zawijanym wierszu z odstępem `--space-2`; klasa `.flag` znika.
+- Odstępy, odstępy siatki i promienie wyłącznie z `--space-*`, `--radius`, `--radius-sm`; 6 px zastąpione najbliższym krokiem skali. Karta nadal bez kontrolek (link i hover → S-03).
 
 #### 2. `FeedView` na skali i komponentach
 
@@ -126,7 +131,7 @@ Zarzuty C1 i C2 oraz poprawki treści: karta i widok na skali i komponentach, no
 **Intent**: Usunąć literały i ręczne elementy; nowy tekst stanu pustego bez żargonu panelu admina.
 
 **Contract**:
-- `.feed` i `.pager`: odstępy z `--space-*`; `max-width: 48rem` zostaje (szerokość układu, nie skala).
+- `.feed` i `.pager`: odstępy z `--space-*`; `max-width: 48rem` zostaje (szerokość układu, nie skala). Między kartami tylko odstęp z karty (bez kresek); stronicowanie pod ostatnią kartą.
 - `h1`: bez własnego `font-size`; marginesy z `--space-*`.
 - Błąd: `StatusMessage tone="error"` (tekst w fazie 3); klasy `.error` i `.status` znikają.
 - Stronicowanie: `AppButton` (wariant pomocniczy) dla „Nowsze” i „Starsze”, `nav aria-label="Strony"` i `.position` bez zmian.
@@ -146,7 +151,7 @@ Zarzuty C1 i C2 oraz poprawki treści: karta i widok na skali i komponentach, no
 
 **Intent**: Utrwalić zachowanie karty po zmianie hierarchii i znaczników.
 
-**Contract**: `PostCard.test.ts`: typ posta jako tekst etykiety („wpis”), stanowisko z klasą kierunku i tekstem „wzrostowo (ostrożnie)”, flagi jako `StatusBadge` (`[data-tone="neutral"]`) z polskimi etykietami, notka prefiltra, karta bez oceny renderuje datę i nagłówek. `FeedView.test.ts`: dotychczasowe przypadki z tymi samymi selektorami (`article`, `.empty`, `.position`, `.pager button`, `[role="alert"]`); stan pusty z nowym tekstem.
+**Contract**: `PostCard.test.ts`: data i godzina w jednym `time` („1.10.2026, 09:15” dla `2026-10-01T07:15:00Z`), typ posta jako tekst etykiety („wpis”), trafność jako `StatusBadge` (`[data-tone="neutral"]`) z „inwestycyjny”, cele jako pary `dt`/`dd` (`dt` „XTB”, `dd` z klasą kierunku i tekstem „wzrostowo (ostrożnie)”), flagi jako `StatusBadge neutral` z polskimi etykietami, notka prefiltra, karta bez oceny renderuje datę, typ i nagłówek bez znacznika trafności. `FeedView.test.ts`: dotychczasowe przypadki z tymi samymi selektorami (`article`, `.empty`, `.position`, `.pager button`, `[role="alert"]`); stan pusty z nowym tekstem.
 
 ### Success Criteria:
 
@@ -161,6 +166,7 @@ Zarzuty C1 i C2 oraz poprawki treści: karta i widok na skali i komponentach, no
 
 - `/` z mockiem (tryb `data`) w obu motywach przy 1280 i 375 px: nagłówek posta wyróżniony wagą i kolorem, ocena 16 px, metadane i flagi 14 px, typ posta bez akcentu, stanowiska w kolorze roli, flagi jako znaczniki; bez poziomego przewijania przy 375 px; zrzuty w `ui-after/`
 - Kitchen sink, sekcja „Posty”, w obu motywach: każdy wariant karty zgodny z powyższym
+- Układ C2 przy 1280 i 375 px w obu motywach jak `ui-proto/c-boxed-final-*.png`: karta w obwódce, dwie kolumny z kreską na desktopie, metadane w jednym wierszu na telefonie, data i godzina w jednej linii, trafność jako znacznik
 
 **Implementation Note**: Po fazie i zielonej weryfikacji automatycznej zatrzymaj się na potwierdzenie weryfikacji ręcznej przez człowieka.
 
@@ -287,7 +293,7 @@ Reguła dla następnego agenta, lista kontrolna `/10x-ui` i sprawdzenie na prawd
 ### Unit Tests:
 
 - `styleContract.test.ts`: kontrast par ról w obu motywach (bez zmian); `no literals` z wzorcem kolorów i skali dla plików `CLEANED` bez `LoginView`.
-- `PostCard.test.ts`: typ jako tekst, stanowisko (klasa i tekst), flagi jako `StatusBadge neutral`, notka prefiltra, karta bez oceny.
+- `PostCard.test.ts`: data i godzina w jednej linii, typ jako tekst, trafność jako `StatusBadge neutral`, cele jako `dt`/`dd` (klasa i tekst stanowiska), flagi jako `StatusBadge neutral`, notka prefiltra, karta bez oceny.
 - `FeedView.test.ts`: dotychczasowe przypadki z tymi samymi selektorami; stan pusty z nowym tekstem; (a)–(f) z fazy 3.
 
 ### Integration Tests:
@@ -313,6 +319,7 @@ Brak danych do migracji. Wycofanie = revert commitów tej gałęzi. `LoginView` 
 ## References
 
 - Research: `context/changes/feed-view-ui-hardening/research.md` (C1–C4, D1–D4, macierz „przed”, zrzuty `ui-before/`, `mock-feed.js`)
+- Prototyp układu karty (rewizja po fazie 1): `context/changes/feed-view-ui-hardening/ui-proto/` — wybrany `c-boxed-final-*.png`, źródło `PostCardPrototype.vue.txt`; porzucone `c-list-*`, `c-boxed-*`
 - Kontrakt UI: `.claude/skills/10x-ui/SKILL.md`, `.claude/skills/10x-ui/references/ui-quality-checklist.md`
 - Poprzednia zmiana `/10x-ui`: `context/archive/2026-10-10-admin-panel-ui-hardening/plan.md` (tokeny, komponenty, kontrola, kitchen sink)
 - Wzorzec ładowania i ponowienia: `szczur-radar-web/src/views/AdminView.vue:185-186`, `:216-222`
@@ -327,27 +334,28 @@ Brak danych do migracji. Wycofanie = revert commitów tej gałęzi. `LoginView` 
 
 #### Automated
 
-- [x] 1.1 Testy web przechodzą
-- [x] 1.2 Typecheck i build przechodzą, a `dist/` nie zawiera kitchen sink
-- [x] 1.3 `dev/mock-api.js` parsuje się i obsługuje `/api/posts`
+- [x] 1.1 Testy web przechodzą — 7b7f9b5
+- [x] 1.2 Typecheck i build przechodzą, a `dist/` nie zawiera kitchen sink — 7b7f9b5
+- [x] 1.3 `dev/mock-api.js` parsuje się i obsługuje `/api/posts` — 7b7f9b5
 
 #### Manual
 
-- [x] 1.4 `/` z `dev/mock-api.js` wygląda jak `ui-before/feed-data-1280-light-viewport.png`; kitchen sink pokazuje sekcję „Posty” w obu motywach
+- [x] 1.4 `/` z `dev/mock-api.js` wygląda jak `ui-before/feed-data-1280-light-viewport.png`; kitchen sink pokazuje sekcję „Posty” w obu motywach — 7b7f9b5
 
 ### Phase 2: Karta i widok na kontrakcie
 
 #### Automated
 
-- [ ] 2.1 Testy web przechodzą, w tym rozszerzony skan `no literals` i `PostCard.test.ts`
-- [ ] 2.2 Typecheck i build przechodzą
-- [ ] 2.3 Brak `px`/`rem` w piśmie i odstępach feedu
-- [ ] 2.4 `FeedView` i `PostCard` importują komponenty
+- [x] 2.1 Testy web przechodzą, w tym rozszerzony skan `no literals` i `PostCard.test.ts`
+- [x] 2.2 Typecheck i build przechodzą
+- [x] 2.3 Brak `px`/`rem` w piśmie i odstępach feedu
+- [x] 2.4 `FeedView` i `PostCard` importują komponenty
 
 #### Manual
 
-- [ ] 2.5 `/` z mockiem w obu motywach przy 1280 i 375 px: nowa hierarchia karty, typ bez akcentu, stanowiska w kolorze roli, flagi jako znaczniki; zrzuty w `ui-after/`
-- [ ] 2.6 Kitchen sink, sekcja „Posty”, w obu motywach: każdy wariant karty zgodny
+- [x] 2.5 `/` z mockiem w obu motywach przy 1280 i 375 px: nowa hierarchia karty, typ bez akcentu, stanowiska w kolorze roli, flagi jako znaczniki; zrzuty w `ui-after/`
+- [x] 2.6 Kitchen sink, sekcja „Posty”, w obu motywach: każdy wariant karty zgodny
+- [x] 2.7 Układ C2 przy 1280 i 375 px w obu motywach jak `ui-proto/c-boxed-final-*.png`
 
 ### Phase 3: Stany i stronicowanie
 

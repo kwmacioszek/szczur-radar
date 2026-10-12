@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import type { PostItem } from '../api/posts'
 import { formatDateTime, label } from '../labels'
+import StatusBadge from './StatusBadge.vue'
 
 const props = defineProps<{ post: PostItem }>()
 
@@ -15,99 +16,126 @@ const output = computed(() => props.post.assessment?.output)
 </script>
 
 <template>
-  <article class="post">
-    <p class="meta">
-      <time :datetime="post.publishedAt">{{ formatDateTime(post.publishedAt) }}</time>
+  <article class="post-card">
+    <div class="meta">
+      <time class="date" :datetime="post.publishedAt">{{ formatDateTime(post.publishedAt) }}</time>
       <span class="type">{{ label('itemType', post.itemType) }}</span>
-    </p>
-    <h2 class="heading">{{ heading }}</h2>
-    <template v-if="output">
-      <p class="relevance">
-        Trafność: <strong>{{ label('relevance', output.relevance) }}</strong>
-        <span v-if="post.assessment?.resultSource === 'prefilter'" class="note">(bez treści, bez oceny modelu)</span>
-      </p>
-      <ul v-if="output.targets.length" class="targets">
-        <li v-for="target in output.targets" :key="target.id">
-          <span class="target">{{ target.anchor.quote }}</span>
-          <span class="stance" :class="target.stance.direction">
-            {{ label('direction', target.stance.direction) }}<template v-if="target.stance.assertiveness === 'hedged'"> (ostrożnie)</template>
-          </span>
-        </li>
-      </ul>
-      <p v-if="output.flags.length" class="flags">
-        <span v-for="flag in output.flags" :key="flag" class="flag">{{ label('flag', flag) }}</span>
-      </p>
-    </template>
+      <StatusBadge v-if="output" class="relevance" tone="neutral">{{ label('relevance', output.relevance) }}</StatusBadge>
+      <span v-if="post.assessment?.resultSource === 'prefilter'" class="note">bez treści, bez oceny modelu</span>
+    </div>
+    <div class="content">
+      <h2 class="heading">{{ heading }}</h2>
+      <template v-if="output">
+        <dl v-if="output.targets.length" class="targets">
+          <template v-for="target in output.targets" :key="target.id">
+            <dt>{{ target.anchor.quote }}</dt>
+            <dd :class="target.stance.direction">
+              {{ label('direction', target.stance.direction) }}<template v-if="target.stance.assertiveness === 'hedged'"> (ostrożnie)</template>
+            </dd>
+          </template>
+        </dl>
+        <p v-if="output.flags.length" class="flags">
+          <StatusBadge v-for="flag in output.flags" :key="flag" tone="neutral">{{ label('flag', flag) }}</StatusBadge>
+        </p>
+      </template>
+    </div>
   </article>
 </template>
 
 <style scoped>
-.post {
-  padding: 16px 0;
-  border-bottom: 1px solid color-mix(in srgb, var(--text) 20%, transparent);
+/* Not `.card`: style.css has a global one (the centred login card) that a scoped style does not undo. */
+.post-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-2) var(--space-5);
+  margin-bottom: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
 }
 
+/* Narrow screens: the metadata in one wrapping line above the content. */
 .meta {
   display: flex;
-  gap: 12px;
-  margin: 0 0 4px;
-  font-size: 14px;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-3);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--border);
+  font-size: var(--font-size-sm);
 }
 
-.type {
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  color: var(--accent);
+/* Date and time stay on one line. */
+.date {
+  color: var(--text-h);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
 }
 
 .heading {
-  margin: 0 0 8px;
-  font-size: 18px;
-  font-weight: 500;
+  margin: 0;
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  line-height: 1.45;
   color: var(--text-h);
   overflow-wrap: anywhere;
 }
 
-.relevance,
-.flags {
-  margin: 4px 0;
-  font-size: 15px;
-}
-
-.note {
-  margin-left: 6px;
-  font-size: 13px;
-}
-
+/* A target and its stance per row; a long quote wraps at half the width instead of overflowing. */
 .targets {
-  margin: 4px 0;
-  padding: 0;
-  list-style: none;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 12px;
-  font-size: 15px;
+  display: grid;
+  grid-template-columns: fit-content(50%) minmax(0, 1fr);
+  gap: var(--space-1) var(--space-4);
+  margin: 0;
+  font-size: var(--font-size-md);
 }
 
-.target {
+.targets dt {
+  font-weight: 600;
   color: var(--text-h);
-  margin-right: 4px;
+  overflow-wrap: anywhere;
 }
 
-.stance.bullish {
+.targets dd {
+  margin: 0;
+}
+
+.targets .bullish {
   color: var(--success);
 }
 
-.stance.bearish {
+.targets .bearish {
   color: var(--destructive);
 }
 
-.flag {
-  display: inline-block;
-  margin-right: 6px;
-  padding: 0 6px;
-  border: 1px solid var(--text);
-  border-radius: 6px;
-  font-size: 13px;
+.flags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+/* From 40rem: the metadata in their own column beside the content. */
+@media (min-width: 40rem) {
+  .post-card {
+    grid-template-columns: 9rem minmax(0, 1fr);
+  }
+
+  .meta {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: flex-start;
+    gap: var(--space-1);
+    padding: 0 var(--space-4) 0 0;
+    border-bottom: none;
+    border-right: 1px solid var(--border);
+  }
 }
 </style>

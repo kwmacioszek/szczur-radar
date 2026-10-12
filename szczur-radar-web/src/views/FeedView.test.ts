@@ -73,7 +73,7 @@ describe('FeedView', () => {
   it('shows an empty state, not an error, when there are no posts', async () => {
     vi.mocked(fetchPosts).mockResolvedValue({ items: [], page: 0, size: 50, total: 0 })
     const { wrapper } = await mountFeed()
-    expect(wrapper.find('.empty').text()).toContain('Brak ocenionych postów')
+    expect(wrapper.find('.empty').text()).toBe('Brak ocenionych postów. Pojawią się po najbliższej aktualizacji danych.')
     expect(wrapper.find('[role="alert"]').exists()).toBe(false)
   })
 

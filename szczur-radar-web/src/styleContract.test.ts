@@ -8,7 +8,6 @@ import css from './style.css?raw'
 import adminView from './views/AdminView.vue?raw'
 import feedView from './views/FeedView.vue?raw'
 import kitchenSinkView from './views/KitchenSinkView.vue?raw'
-import loginView from './views/LoginView.vue?raw'
 
 type Theme = 'light' | 'dark'
 
@@ -79,8 +78,11 @@ function contrast(a: string, b: string): number {
 }
 
 /**
- * Files whose colours all come from the roles of style.css. Add a view or component here once it
- * is cleaned; style.css itself, the token source, is never on the list.
+ * Files without colour literals and without values off the scale: colours come from the roles of
+ * style.css, spacing, type and radii from its --space-*, --font-size-* and --radius tokens. Add a
+ * view or component here once it is cleaned; style.css itself, the token source, is never on the
+ * list. src/views/LoginView.vue is off it until the change login-view-ui-hardening: px in its
+ * spacing, type and radii (LoginView.vue:77-102).
  */
 const CLEANED: Record<string, string> = {
   'src/views/AdminView.vue': adminView,
@@ -90,13 +92,22 @@ const CLEANED: Record<string, string> = {
   'src/components/StatusBadge.vue': statusBadge,
   'src/views/KitchenSinkView.vue': kitchenSinkView,
   'src/views/FeedView.vue': feedView,
-  'src/views/LoginView.vue': loginView,
   'src/components/PostCard.vue': postCard,
 }
 
 /** The hardcoded-value scan of /10x-ui: colour literals, arbitrary values and palette classes. */
 const LITERAL =
   /#[0-9a-fA-F]{3,8}\b|rgba?\(|hsla?\(|oklch\(|-\[[0-9.]+(px|rem)\]|\b(bg|text|border|ring|outline|from|via|to|fill|stroke|shadow|divide)-(slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose|white|black)\b/
+
+/**
+ * A px or rem value in type, spacing or radius, which take the scale's tokens. Anchored to the
+ * property name, so borders (`border: 1px …`), layout widths (`max-width`, `grid-template-columns`),
+ * media queries and the token names themselves (`--space-4`) stay out of it.
+ */
+const OFF_SCALE =
+  /(?:^|[\s{;"'])(?:font-size|margin(?:-[a-z]+)*|padding(?:-[a-z]+)*|(?:row-|column-)?gap|letter-spacing|border-radius)\s*:[^;{}]*\d(?:px|rem)\b/
+
+const PATTERNS = [LITERAL, OFF_SCALE]
 
 describe('style contract', () => {
   describe('colour roles', () => {
@@ -109,7 +120,9 @@ describe('style contract', () => {
 
   describe('no literals', () => {
     it.each(Object.entries(CLEANED))('%s takes its values from the tokens', (file, text) => {
-      const hits = text.split('\n').flatMap((line, at) => (LITERAL.test(line) ? [`${file}:${at + 1}: ${line.trim()}`] : []))
+      const hits = text
+        .split('\n')
+        .flatMap((line, at) => (PATTERNS.some((pattern) => pattern.test(line)) ? [`${file}:${at + 1}: ${line.trim()}`] : []))
       expect(hits).toEqual([])
     })
   })

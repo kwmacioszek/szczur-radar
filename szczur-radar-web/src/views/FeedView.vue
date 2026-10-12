@@ -2,8 +2,10 @@
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { type Page, type PostItem, fetchPosts } from '../api/posts'
+import AppButton from '../components/AppButton.vue'
 import AppHeader from '../components/AppHeader.vue'
 import PostCard from '../components/PostCard.vue'
+import StatusMessage from '../components/StatusMessage.vue'
 
 const PAGE_SIZE = 50
 
@@ -44,17 +46,17 @@ watch(page, load, { immediate: true })
   <AppHeader />
   <main class="feed">
     <h1>Posty</h1>
-    <p v-if="error" class="error" role="alert">{{ error }}</p>
-    <p v-else-if="loading && !result" class="status">Wczytywanie…</p>
-    <p v-else-if="result && result.total === 0" class="status empty">
-      Brak ocenionych postów. Pojawią się po pierwszym przebiegu.
+    <StatusMessage v-if="error" tone="error">{{ error }}</StatusMessage>
+    <p v-else-if="loading && !result" class="loading">Wczytywanie…</p>
+    <p v-else-if="result && result.total === 0" class="empty">
+      Brak ocenionych postów. Pojawią się po najbliższej aktualizacji danych.
     </p>
     <template v-else-if="result">
       <PostCard v-for="post in result.items" :key="post.id" :post="post" />
       <nav class="pager" aria-label="Strony">
-        <button type="button" :disabled="page === 0 || loading" @click="goTo(page - 1)">Nowsze</button>
+        <AppButton :disabled="page === 0 || loading" @click="goTo(page - 1)">Nowsze</AppButton>
         <span class="position">Strona {{ page + 1 }} z {{ pages }}</span>
-        <button type="button" :disabled="page + 1 >= pages || loading" @click="goTo(page + 1)">Starsze</button>
+        <AppButton :disabled="page + 1 >= pages || loading" @click="goTo(page + 1)">Starsze</AppButton>
       </nav>
     </template>
   </main>
@@ -64,28 +66,20 @@ watch(page, load, { immediate: true })
 .feed {
   max-width: 48rem;
   margin: 0 auto;
-  padding: 16px;
+  padding: var(--space-4);
   box-sizing: border-box;
 }
 
 h1 {
-  margin: 8px 0 16px;
-  font-size: 32px;
+  margin: var(--space-2) 0 var(--space-4);
 }
 
-.status {
-  color: var(--text);
-}
-
-.error {
-  color: var(--destructive);
-}
-
+/* The cards keep their own spacing; the pager sits under the last one. */
 .pager {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 16px 0;
+  gap: var(--space-3);
+  padding: var(--space-4) 0;
 }
 </style>

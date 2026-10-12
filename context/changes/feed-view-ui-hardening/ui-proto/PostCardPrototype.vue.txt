@@ -1,0 +1,147 @@
+<script setup lang="ts">
+// TEMPORARY design spike (direction C, two columns) — not committed; removed after the choice.
+import { computed } from 'vue'
+import type { PostItem } from '../api/posts'
+import { formatDateTime, label } from '../labels'
+import StatusBadge from './StatusBadge.vue'
+
+const props = defineProps<{ post: PostItem; variant: 'list' | 'boxed' }>()
+
+const heading = computed(() => {
+  const text = props.post.title ?? props.post.body ?? ''
+  return text.length > 200 ? `${text.slice(0, 200)}…` : text
+})
+
+const output = computed(() => props.post.assessment?.output)
+</script>
+
+<template>
+  <article class="post" :class="variant">
+    <div class="meta">
+      <time :datetime="post.publishedAt" class="date">{{ formatDateTime(post.publishedAt) }}</time>
+      <span class="type">{{ label('itemType', post.itemType) }}</span>
+      <StatusBadge v-if="output" class="relevance" tone="neutral">{{ label('relevance', output.relevance) }}</StatusBadge>
+      <span v-if="post.assessment?.resultSource === 'prefilter'" class="note">bez oceny modelu</span>
+    </div>
+    <div class="content">
+      <h2 class="heading">{{ heading }}</h2>
+      <dl v-if="output?.targets.length" class="targets">
+        <template v-for="target in output.targets" :key="target.id">
+          <dt>{{ target.anchor.quote }}</dt>
+          <dd :class="target.stance.direction">
+            {{ label('direction', target.stance.direction) }}<template v-if="target.stance.assertiveness === 'hedged'"> (ostrożnie)</template>
+          </dd>
+        </template>
+      </dl>
+      <p v-if="output?.flags.length" class="flags">
+        <StatusBadge v-for="flag in output.flags" :key="flag" tone="neutral">{{ label('flag', flag) }}</StatusBadge>
+      </p>
+    </div>
+  </article>
+</template>
+
+<style scoped>
+.post {
+  display: grid;
+  grid-template-columns: 8rem 1fr;
+  gap: var(--space-2) var(--space-5);
+}
+
+.list {
+  padding: var(--space-5) 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.boxed {
+  margin-bottom: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.boxed .meta {
+  padding-right: var(--space-4);
+  border-right: 1px solid var(--border);
+}
+
+.meta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: var(--font-size-sm);
+  color: var(--text);
+}
+
+.relevance {
+  align-self: flex-start;
+}
+
+.date {
+  color: var(--text-h);
+  font-weight: 600;
+}
+
+.content {
+  min-width: 0;
+}
+
+.heading {
+  margin: 0 0 var(--space-3);
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  line-height: 1.45;
+  color: var(--text-h);
+  overflow-wrap: anywhere;
+}
+
+.targets {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--space-1) var(--space-4);
+  margin: 0 0 var(--space-3);
+  font-size: var(--font-size-md);
+}
+
+.targets dt {
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.targets dd {
+  margin: 0;
+}
+
+.targets .bullish {
+  color: var(--success);
+}
+
+.targets .bearish {
+  color: var(--destructive);
+}
+
+.flags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+@media (max-width: 40rem) {
+  .post {
+    grid-template-columns: 1fr;
+  }
+
+  .meta {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-1) var(--space-3);
+  }
+
+  .boxed .meta {
+    padding: 0 0 var(--space-2);
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+}
+</style>
