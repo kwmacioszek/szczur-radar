@@ -346,28 +346,28 @@ Brak danych do migracji. Wycofanie = revert commitów tej gałęzi. `LoginView` 
 
 #### Automated
 
-- [x] 2.1 Testy web przechodzą, w tym rozszerzony skan `no literals` i `PostCard.test.ts`
-- [x] 2.2 Typecheck i build przechodzą
-- [x] 2.3 Brak `px`/`rem` w piśmie i odstępach feedu
-- [x] 2.4 `FeedView` i `PostCard` importują komponenty
+- [x] 2.1 Testy web przechodzą, w tym rozszerzony skan `no literals` i `PostCard.test.ts` — aeccc4f
+- [x] 2.2 Typecheck i build przechodzą — aeccc4f
+- [x] 2.3 Brak `px`/`rem` w piśmie i odstępach feedu — aeccc4f
+- [x] 2.4 `FeedView` i `PostCard` importują komponenty — aeccc4f
 
 #### Manual
 
-- [x] 2.5 `/` z mockiem w obu motywach przy 1280 i 375 px: nowa hierarchia karty, typ bez akcentu, stanowiska w kolorze roli, flagi jako znaczniki; zrzuty w `ui-after/`
-- [x] 2.6 Kitchen sink, sekcja „Posty”, w obu motywach: każdy wariant karty zgodny
-- [x] 2.7 Układ C2 przy 1280 i 375 px w obu motywach jak `ui-proto/c-boxed-final-*.png`
+- [x] 2.5 `/` z mockiem w obu motywach przy 1280 i 375 px: nowa hierarchia karty, typ bez akcentu, stanowiska w kolorze roli, flagi jako znaczniki; zrzuty w `ui-after/` — aeccc4f
+- [x] 2.6 Kitchen sink, sekcja „Posty”, w obu motywach: każdy wariant karty zgodny — aeccc4f
+- [x] 2.7 Układ C2 przy 1280 i 375 px w obu motywach jak `ui-proto/c-boxed-final-*.png` — aeccc4f
 
 ### Phase 3: Stany i stronicowanie
 
 #### Automated
 
-- [ ] 3.1 Testy web przechodzą, w tym przypadki (a)–(f)
-- [ ] 3.2 Typecheck i build przechodzą
+- [x] 3.1 Testy web przechodzą, w tym przypadki (a)–(f)
+- [x] 3.2 Typecheck i build przechodzą
 
 #### Manual
 
-- [ ] 3.3 `ui-after/README.md` pokazuje 7 komórek macierzy w obu motywach i przy 375 px
-- [ ] 3.4 Zmiana strony z mockiem: góra strony, „Wczytywanie strony 2…”, fokus na „Posty”; `/?page=9` z przyciskiem; `error-next` z „Spróbuj ponownie”
+- [x] 3.3 `ui-after/README.md` pokazuje 7 komórek macierzy w obu motywach i przy 375 px
+- [x] 3.4 Zmiana strony z mockiem: góra strony, „Wczytywanie strony 2…”, fokus na „Posty”; `/?page=9` z przyciskiem; `error-next` z „Spróbuj ponownie”
 
 ### Phase 4: Utrwalenie i weryfikacja
 
