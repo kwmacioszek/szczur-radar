@@ -582,23 +582,23 @@ Zdanie „Password recovery arrives with S-07” (`deploy-plan.md:35`) dostaje o
 
 #### Automated
 
-- [x] 2.1 Testy create-admin i CommandLine bez zmian po refaktorze
-- [x] 2.2 CreateUserCommandTest i ResetPasswordCommandTest
-- [x] 2.3 IT komend create-user i reset-password
-- [x] 2.4 ./mvnw -B verify
-- [x] 2.6 Warunkowo: odmowa dla konta systemowego S-05
+- [x] 2.1 Testy create-admin i CommandLine bez zmian po refaktorze — 5f374c1
+- [x] 2.2 CreateUserCommandTest i ResetPasswordCommandTest — 5f374c1
+- [x] 2.3 IT komend create-user i reset-password — 5f374c1
+- [x] 2.4 ./mvnw -B verify — 5f374c1
+- [x] 2.6 Warunkowo: odmowa dla konta systemowego S-05 — 5f374c1
 
 #### Manual
 
-- [x] 2.5 Lokalny przebieg komend bez tokenu w logu startu
+- [x] 2.5 Lokalny przebieg komend bez tokenu w logu startu — 5f374c1
 
 ### Phase 3: Publiczne API aktywacji
 
 #### Automated
 
-- [ ] 3.1 AuthorizationCompletenessIT z nowymi PUBLIC_ROUTES
-- [ ] 3.2 ActivationIT
-- [ ] 3.3 ./mvnw -B verify
+- [x] 3.1 AuthorizationCompletenessIT z nowymi PUBLIC_ROUTES
+- [x] 3.2 ActivationIT
+- [x] 3.3 ./mvnw -B verify
 
 ### Phase 4: Widok aktywacji w SPA
 

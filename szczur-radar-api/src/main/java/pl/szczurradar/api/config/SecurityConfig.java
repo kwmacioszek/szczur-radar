@@ -54,6 +54,8 @@ public class SecurityConfig {
 				.dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
 				.requestMatchers(HttpMethod.GET, "/api/health", "/api/ready").permitAll()
 				.requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/logout").permitAll()
+				// Activation links (S-07): the one-time token in the body is the credential.
+				.requestMatchers(HttpMethod.POST, "/api/auth/activation", "/api/auth/activation/lookup").permitAll()
 				.requestMatchers("/api/admin/**").hasRole(Role.ADMIN.name())
 				.anyRequest().authenticated())
 			.csrf(AbstractHttpConfigurer::disable)
