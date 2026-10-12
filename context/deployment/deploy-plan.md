@@ -376,7 +376,7 @@ PR #44 was squash-merged as `b7ee254` (11:25 UTC). CI on `main` applied `+ Creat
   2. The old bucket was renamed `db-backups-pr44-old` and the new one `db-backups` (Railway MCP `update-bucket`).
   3. The five `S3_*` references were set again as IaC declares them (`railway variable set 'S3_BUCKET=${{db-backups.BUCKET}}' … --skip-deploys`).
 
-  Afterwards the variables resolve, and `railway config plan` on production shows no bucket or variable change. The old bucket is not deployed anywhere; the operator may delete it (`db-backups-pr44-old`).
+  Afterwards the variables resolve, and `railway config plan` on production shows no bucket or variable change. The old bucket (`db-backups-pr44-old`, deployed nowhere) was deleted on 2026-10-12 (Railway MCP `delete-bucket`, operator's decision). Production and the PR envs keep `db-backups` (`dc439cb9…`).
 - **The re-run apply restarted the production database, and the restart hung.** The re-run also applied the permanent `postgres deploy.sleepApplication (null → false)`, which redeploys Postgres. The new container stayed at `Mounting volume on …` from 11:38:17 (`/api/ready` 503), the same symptom as 2026-10-09. `railway redeploy -s postgres -e production -y` at 11:43 brought it back: `ready to accept connections` at 11:47:23, `/api/ready` 200, same volume.
 
   Fix in the closeout PR: `.railway/railway.ts` no longer declares `sleepApplication` for Postgres (no value means no sleep). The production plan is then empty, so merges stop restarting the database.
