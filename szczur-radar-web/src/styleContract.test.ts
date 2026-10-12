@@ -8,7 +8,6 @@ import css from './style.css?raw'
 import adminView from './views/AdminView.vue?raw'
 import feedView from './views/FeedView.vue?raw'
 import kitchenSinkView from './views/KitchenSinkView.vue?raw'
-import loginView from './views/LoginView.vue?raw'
 
 type Theme = 'light' | 'dark'
 
@@ -79,8 +78,11 @@ function contrast(a: string, b: string): number {
 }
 
 /**
- * Files whose colours all come from the roles of style.css. Add a view or component here once it
- * is cleaned; style.css itself, the token source, is never on the list.
+ * Files without colour literals and without values off the scale: colours come from the roles of
+ * style.css, spacing, type and radii from its --space-*, --font-size-* and --radius tokens. Add a
+ * view or component here once it is cleaned; style.css itself, the token source, is never on the
+ * list. src/views/LoginView.vue is off it until the change login-view-ui-hardening: px in its
+ * spacing, type and radii (LoginView.vue:77-102).
  */
 const CLEANED: Record<string, string> = {
   'src/views/AdminView.vue': adminView,
@@ -90,13 +92,35 @@ const CLEANED: Record<string, string> = {
   'src/components/StatusBadge.vue': statusBadge,
   'src/views/KitchenSinkView.vue': kitchenSinkView,
   'src/views/FeedView.vue': feedView,
-  'src/views/LoginView.vue': loginView,
   'src/components/PostCard.vue': postCard,
 }
 
 /** The hardcoded-value scan of /10x-ui: colour literals, arbitrary values and palette classes. */
 const LITERAL =
   /#[0-9a-fA-F]{3,8}\b|rgba?\(|hsla?\(|oklch\(|-\[[0-9.]+(px|rem)\]|\b(bg|text|border|ring|outline|from|via|to|fill|stroke|shadow|divide)-(slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose|white|black)\b/
+
+/**
+ * A px or rem value in type, spacing or radius, which take the scale's tokens. Anchored to the
+ * property name, so borders (`border: 1px …`), layout widths (`max-width`, `grid-template-columns`),
+ * media queries and the token names themselves (`--space-4`) stay out of it.
+ */
+const OFF_SCALE =
+  /(?:^|[\s{;"'])(?:font-size|margin(?:-[a-z]+)*|padding(?:-[a-z]+)*|(?:row-|column-)?gap|letter-spacing|border-radius)\s*:[^;{}]*\d(?:px|rem)\b/
+
+const PATTERNS = [LITERAL, OFF_SCALE]
+
+function literalHits(file: string, text: string): string[] {
+  const lines = text.split('\n')
+  const hits = new Set<number>()
+  for (const pattern of PATTERNS) {
+    for (const match of text.matchAll(new RegExp(pattern.source, 'g'))) {
+      // OFF_SCALE includes a boundary; report the property, not a preceding brace or newline.
+      const start = match.index + match[0].search(/[^\s{;"']/)
+      hits.add(text.slice(0, start).split('\n').length - 1)
+    }
+  }
+  return [...hits].sort((a, b) => a - b).map((at) => `${file}:${at + 1}: ${lines[at].trim()}`)
+}
 
 describe('style contract', () => {
   describe('colour roles', () => {
@@ -109,8 +133,46 @@ describe('style contract', () => {
 
   describe('no literals', () => {
     it.each(Object.entries(CLEANED))('%s takes its values from the tokens', (file, text) => {
-      const hits = text.split('\n').flatMap((line, at) => (LITERAL.test(line) ? [`${file}:${at + 1}: ${line.trim()}`] : []))
-      expect(hits).toEqual([])
+      expect(literalHits(file, text)).toEqual([])
+    })
+
+    it('rejects multiline spacing and type values and reports the property line', () => {
+      const text = '.card {\n  padding:\n    16px\n    1rem;\n  font-size:\n    13px;\n}'
+      expect(literalHits('Example.vue', text)).toEqual([
+        'Example.vue:2: padding:',
+        'Example.vue:5: font-size:',
+      ])
+    })
+
+    it('rejects a multiline radius when the property follows a brace on the previous line', () => {
+      expect(literalHits('Example.vue', '{\n  border-radius:\n    1rem;\n}')).toEqual([
+        'Example.vue:2: border-radius:',
+      ])
+    })
+
+    it('still rejects colour literals and palette classes and reports each line once', () => {
+      const text = '<div class="text-red-500">\n.card { font-size: 13px; color: #fff; }'
+      expect(literalHits('Example.vue', text)).toEqual([
+        'Example.vue:1: <div class="text-red-500">',
+        'Example.vue:2: .card { font-size: 13px; color: #fff; }',
+      ])
+    })
+
+    it('allows multiline token values, borders, layout widths and media queries', () => {
+      const text = `@media (min-width: 40rem) {
+  .card {
+    padding:
+      var(--space-4)
+      var(--space-5);
+    font-size: var(--font-size-md);
+    border-radius: var(--radius);
+    color: var(--text);
+    border: 1px solid var(--border);
+    max-width: 48rem;
+    grid-template-columns: 9rem minmax(0, 1fr);
+  }
+}`
+      expect(literalHits('Example.vue', text)).toEqual([])
     })
   })
 })
