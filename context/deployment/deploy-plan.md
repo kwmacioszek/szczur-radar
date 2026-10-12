@@ -472,7 +472,29 @@ The pre-deploy `migrate` adds the table `activation_tokens` (`V6__create_activat
 
 ### PR-env verification (szczur-radar-pr-49)
 
-To be filled in after the PR-env verification.
+Verified 2026-10-12 on commit `a21169f` (CI run 38297600946: all six jobs green).
+
+- **IaC.** `railway-config` planned and applied exactly one change: `~ Set variable szczur-radar-api.WEB_PUBLIC_URL`. `ACTIVATION_LINK_TTL` (`preserve()`) changed nothing.
+  - A second `railway config plan` of the PR env, run locally with `IAC_SOURCE_BRANCH=feature/cli-user-onboarding`, returned `ok`, 0 changes ("No changes"). The template string is stored as written, so there is no permanent diff and no fallback is needed.
+  - `railway variable list` shows the resolved value: `WEB_PUBLIC_URL` = `https://szczur-radar-web-szczur-radar-pr-49.up.railway.app`.
+- **Deploys.**
+  - web `28239162` SUCCESS from `a21169f`;
+  - api `42b159f2` (the push) REMOVED, then `308c7f38` (the variable apply) SUCCESS. These are the expected two deploys.
+  - `/api/ready` returned 200.
+- **A `user` account.**
+  1. `railway ssh … -- java -jar target/szczur-radar-api.jar create-user --email s07-user@example.com` exited 0. It printed a link on the PR env's own domain.
+  2. The page showed "Ustaw hasło dla s07-user@example.com.".
+  3. After the password was set, `/login` showed "Hasło ustawione. Zaloguj się." with the e-mail filled in.
+  4. Login went to `/`, and `/admin` redirected to `/`.
+  5. The same link opened again showed "Link jest nieważny lub wygasł. Poproś administratora o nowy."
+- **Admin recovery.**
+  1. `create-user --role admin` created an admin, who activated the link, logged in and opened `/admin` ("Panel admina").
+  2. With that session still open, `reset-password` ran twice.
+  3. Reloading `/admin` went to `/login`: the session was gone.
+  4. The old password returned "Nieprawidłowy e-mail lub hasło.".
+  5. The link from the first reset showed "Link jest nieważny…", because the second reset replaced it.
+  6. The link from the second reset set a new password, and `/admin` worked again.
+- **Logs.** None of the four tokens appears in the web service's (Caddy) logs. Caddy records `"uri":"/activate"` and `Referer` `…/activate`: the fragment never reaches the server. The links, the test passwords and the command output were deleted after the check. The test accounts exist only in the PR env database.
 
 ### Runbook — after the merge (operator; tracked in issue #20, not in the plan's Progress)
 
