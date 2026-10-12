@@ -74,7 +74,7 @@ Według `.claude/skills/10x-ui/references/ui-quality-checklist.md`.
 ### Gate
 
 - [x] Kitchen sink (sekcja „Posty”) i zrzuty widoku z mockiem w obu motywach i przy 375 px; narzędzia `toHaveScreenshot` w repo nie ma, więc baseline N/A.
-- [ ] `/10x-impl-review` — następny krok po fazie 4; ustalenia UI triażowane według wpływu na użytkownika.
+- [x] `/10x-impl-review` — fazy 1–4 sprawdzone; APPROVED; F1 (skan wielowierszowego CSS) i F2 (dowód rzeczywistej drugiej strony) naprawione w triage. Raport: `../reviews/impl-review.md`.
 - [x] Zakres: jeden widok (`FeedView`) z kartą `PostCard`, bez zmian tokenów globalnych; poza widokiem tylko reguła, kontrola, mock i kitchen sink.
 
 ## Weryfikacja w Railway PR env (2026-10-12)
@@ -83,3 +83,20 @@ Według `.claude/skills/10x-ui/references/ui-quality-checklist.md`.
 - Dane: konto admina utworzone przez operatora (`create-admin` przez `railway ssh`), jeden przebieg zakresu dat w `/admin` — `partial`, 34 ocenione, 1 nieudany; feed `total` 34.
 - `/` przy 1280×900 i 375×812 w obu motywach: 34 karty C2, bez poziomego przewijania (`scrollWidth` = `clientWidth`), bez alertów, „Strona 1 z 1” z oboma przyciskami wyłączonymi. Zrzuty: `pr48-feed-{1280,375}-{light,dark}.png`.
 - Zmiana strony na prawdziwych danych: 34 posty mieszczą się na jednej stronie, więc „Starsze” jest wyłączone; tę samą ścieżkę (zmiana `?page`) sprawdzono przez `/?page=1` → „Nie ma strony 2. Posty kończą się na stronie 1.” (`pr48-feed-out-of-range-1280-light.png`) → „Przejdź do strony 1” → `scrollY` 0, fokus na `H1#feed-title`, 34 karty. „Starsze” z dołu pełnej strony sprawdzone na mocku (`p3-feed-paging-loading-*`, pomiar w sekcji „Pomiary”).
+
+## Uzupełnienie po implementation review — F2 (2026-10-12)
+
+**F2 FIXED — 2026-10-12, 20:09 UTC.** Po odblokowaniu uprawnień i zalogowaniu konta admina w headed Playwright wykonano rzeczywiste przejście „Starsze” na stronę 2. Środowisko i adres jak wyżej; Railway MCP potwierdził web deployment `fb3b49bc-575c-48f9-99aa-1a5b98957e1b` z **df6213a602a4d49fe1fdc53b2362f0135bd4848b**, stan **SUCCESS**.
+
+Dane: początkowo 34 ocenione posty, brak aktywnego przebiegu. Przez `/admin` uruchomiono dodatkowy dzień Wykopu **2026-10-10**: run `e92a403a-73d2-4476-b67f-2fa66ffb04af` zakończony `partial` (39 pobranych, 37 ocenionych, 2 nieudane). Automatyczny retry `85edf5a0-5614-493d-84ee-3d9033a9b3d9` zakończył się `succeeded` (1 oceniony). Po zakończeniu obu: **total 72**, pierwsza strona 50, druga 22. Dane rzeczywiste, bez zmiany PAGE_SIZE i mockowania API.
+
+Wykonany skrypt: `../follow-ups/verify-pr-env-paging.js`. Każdy wariant uruchamia „Starsze” klawiszem Enter z dołu pierwszej strony, sprawdza HTTP 200 oraz `page=1, size=50`, odrębność rekordów obu stron i zgodność wszystkich nagłówków kart z odpowiedzią. Wszystkie cztery warianty pokazały **Strona 2 z 2**, **22 karty**, **scrollY 0** i **document.activeElement = H1#feed-title**. Obejrzano wszystkie nowe PNG; układ, zawijanie, znaczniki i widoczny fokus poprawne.
+
+| Wariant | scrollY przed → po | scrollWidth = clientWidth | Zrzut |
+| --- | --- | --- | --- |
+| 1280×900, jasny | 7936 → 0 | 1265 | `f2-pr48-starsze-1280-light-2026-10-12T20-09-14-963Z.png` |
+| 1280×900, ciemny | 7936 → 0 | 1265 | `f2-pr48-starsze-1280-dark-2026-10-12T20-09-14-963Z.png` |
+| 375×812, jasny | 12708.5 → 0 | 360 | `f2-pr48-starsze-375-light-2026-10-12T20-09-14-963Z.png` |
+| 375×812, ciemny | 12708.5 → 0 | 360 | `f2-pr48-starsze-375-dark-2026-10-12T20-09-14-963Z.png` |
+
+Szerokość viewportu zawiera pasek przewijania; identyczne scrollWidth i clientWidth potwierdzają brak poziomego przepełnienia. Pełne pomiary, ID postów, dane przebiegów i deployment: `f2-pr48-starsze-2026-10-12T20-09-14-963Z.json`. Początkowy dowód 34 postów zachowano wyżej jako historię weryfikacji.

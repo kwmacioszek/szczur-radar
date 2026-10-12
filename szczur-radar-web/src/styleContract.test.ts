@@ -109,6 +109,19 @@ const OFF_SCALE =
 
 const PATTERNS = [LITERAL, OFF_SCALE]
 
+function literalHits(file: string, text: string): string[] {
+  const lines = text.split('\n')
+  const hits = new Set<number>()
+  for (const pattern of PATTERNS) {
+    for (const match of text.matchAll(new RegExp(pattern.source, 'g'))) {
+      // OFF_SCALE includes a boundary; report the property, not a preceding brace or newline.
+      const start = match.index + match[0].search(/[^\s{;"']/)
+      hits.add(text.slice(0, start).split('\n').length - 1)
+    }
+  }
+  return [...hits].sort((a, b) => a - b).map((at) => `${file}:${at + 1}: ${lines[at].trim()}`)
+}
+
 describe('style contract', () => {
   describe('colour roles', () => {
     const cases = THEMES.flatMap((theme) => PAIRS.map(([fg, bg]) => ({ theme, fg, bg })))
@@ -120,10 +133,46 @@ describe('style contract', () => {
 
   describe('no literals', () => {
     it.each(Object.entries(CLEANED))('%s takes its values from the tokens', (file, text) => {
-      const hits = text
-        .split('\n')
-        .flatMap((line, at) => (PATTERNS.some((pattern) => pattern.test(line)) ? [`${file}:${at + 1}: ${line.trim()}`] : []))
-      expect(hits).toEqual([])
+      expect(literalHits(file, text)).toEqual([])
+    })
+
+    it('rejects multiline spacing and type values and reports the property line', () => {
+      const text = '.card {\n  padding:\n    16px\n    1rem;\n  font-size:\n    13px;\n}'
+      expect(literalHits('Example.vue', text)).toEqual([
+        'Example.vue:2: padding:',
+        'Example.vue:5: font-size:',
+      ])
+    })
+
+    it('rejects a multiline radius when the property follows a brace on the previous line', () => {
+      expect(literalHits('Example.vue', '{\n  border-radius:\n    1rem;\n}')).toEqual([
+        'Example.vue:2: border-radius:',
+      ])
+    })
+
+    it('still rejects colour literals and palette classes and reports each line once', () => {
+      const text = '<div class="text-red-500">\n.card { font-size: 13px; color: #fff; }'
+      expect(literalHits('Example.vue', text)).toEqual([
+        'Example.vue:1: <div class="text-red-500">',
+        'Example.vue:2: .card { font-size: 13px; color: #fff; }',
+      ])
+    })
+
+    it('allows multiline token values, borders, layout widths and media queries', () => {
+      const text = `@media (min-width: 40rem) {
+  .card {
+    padding:
+      var(--space-4)
+      var(--space-5);
+    font-size: var(--font-size-md);
+    border-radius: var(--radius);
+    color: var(--text);
+    border: 1px solid var(--border);
+    max-width: 48rem;
+    grid-template-columns: 9rem minmax(0, 1fr);
+  }
+}`
+      expect(literalHits('Example.vue', text)).toEqual([])
     })
   })
 })
