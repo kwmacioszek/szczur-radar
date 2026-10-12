@@ -1,6 +1,6 @@
 import AppKit
 
-// Snapshot of M-1 in context/foundation/roadmap.md, updated 2026-10-12 (F-01 deployed: #44 b7ee254, production verified).
+// Snapshot of M-1 in context/foundation/roadmap.md, updated 2026-10-12 (F-01 deployed: #44 b7ee254, production verified; S-07 planning).
 // Run on macOS: swift tools/render_roadmap.swift
 // With the installed Command Line Tools SDK:
 // CLANG_MODULE_CACHE_PATH=/private/tmp/szczur-clang-cache \
@@ -165,7 +165,7 @@ let cards: [Card] = [
     Card(id:"F-03", title:"Backend w Javie", detail:"Sesje JDBC, Flyway fix-forward\nEmbabel; to samo API dla SPA", req:"S-01", status:"wdrożone", column:2, row:0, accent:coral),
     Card(id:"S-01", title:"Admin i logowanie", detail:"CLI, sesja, ochrona tras\ni wylogowanie", req:"—", status:"wdrożone", column:3, row:0, accent:green),
     Card(id:"S-02", title:"Pierwsze ocenione posty", detail:"Wykop → ocena LLM → lista\nRęczne uruchomienie przebiegu", req:"S-01 + F-02", status:"wdrożone", column:1, row:1, accent:cyan),
-    Card(id:"S-07", title:"Onboarding przez CLI", detail:"Konto, link aktywacyjny\ni odzyskiwanie dostępu", req:"S-01 + F-03", status:"propozycja", column:3, row:1, accent:green),
+    Card(id:"S-07", title:"Onboarding przez CLI", detail:"Konto, link aktywacyjny\ni odzyskiwanie dostępu", req:"S-01 + F-03", status:"planowanie", column:3, row:1, accent:green),
     Card(id:"S-05", title:"Codzienny automat", detail:"Harmonogram i data\nostatniej udanej aktualizacji", req:"S-02 + F-01", status:"propozycja", column:0, row:2, accent:amber),
     Card(id:"S-03", title:"Szczegóły posta", detail:"Tezy, cytaty, surowe dane\ni link do oryginału", req:"S-02", status:"propozycja", column:1, row:2, accent:cyan),
     Card(id:"S-04", title:"Filtrowanie ocen", detail:"Spółka lub temat\ni stanowisko autora", req:"S-02", status:"propozycja", column:2, row:2, accent:cyan),

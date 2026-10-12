@@ -71,7 +71,7 @@ Na Wykopie (#gielda) i Reddicie codziennie pojawiają się setki postów o inwes
 | S-04 | filter-by-assessment           | użytkownik filtruje listę po spółce/temacie (tekstowo) i stanowisku autora wobec niej                                           | S-02          | US-01, FR-011a                                                                                                                                                                           | proposed |
 | S-05 | daily-scheduled-run-freshness  | przepływ uruchamia się sam codziennie, a użytkownik widzi datę ostatniej udanej aktualizacji                                    | S-02, F-01    | US-01, FR-002, FR-030                                                                                                                                                                    | proposed |
 | S-06 | pipeline-run-history-dashboard | admin widzi historię przebiegów (kiedy, status, wynik) i wyraźny sygnał nieudanego przebiegu                                    | S-05, S-01    | FR-021, FR-015, NFR (operator dostaje widoczny sygnał awarii przebiegu)                                                                                                                  | proposed |
-| S-07 | cli-user-onboarding            | admin tworzy konto przez CLI, zaproszony ustawia hasło przez jednorazowy link i się loguje                                      | S-01, F-03    | US-02, FR-018, FR-027, FR-028                                                                                                                                                            | proposed |
+| S-07 | cli-user-onboarding            | admin tworzy konto przez CLI, zaproszony ustawia hasło przez jednorazowy link i się loguje                                      | S-01, F-03    | US-02, FR-018, FR-027, FR-028                                                                                                                                                            | planning |
 
 ## Streams
 
@@ -245,7 +245,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Unknowns:**
   - Czas ważności linku aktywacyjnego (PRD sugeruje np. 24h). — Owner: user. Block: no.
 - **Risk:** Niezależny od potoku — dobry kandydat do równoległej pracy agenta przy ograniczonym czasie; bez niego MVP ma tylko jednego użytkownika.
-- **Status:** proposed
+- **Status:** planning
 
 ## Backlog Handoff
 
