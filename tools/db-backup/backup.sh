@@ -23,6 +23,28 @@ readonly COUNTED_TABLES=(users pipeline_runs posts assessments raw_payloads)
 log() { printf '%s backup: %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*" >&2; }
 fail() { log "FAILED: $*"; exit 1; }
 
+# Backups run in production only: Railway creates this cron in every environment (a PR env is a copy
+# of production), but a PR env's database needs no backup, and a PR env without a database would
+# e-mail a failure every night. BACKUP_IN_ANY_ENVIRONMENT=true runs it anyway (to try a change of
+# this tool in a PR env). Outside Railway (test.sh, by hand) the variable is unset and it runs.
+if [[ -n ${RAILWAY_ENVIRONMENT_NAME:-} && $RAILWAY_ENVIRONMENT_NAME != production
+        && ${BACKUP_IN_ANY_ENVIRONMENT:-} != true ]]; then
+    log "skipped: backups run only in production (this is $RAILWAY_ENVIRONMENT_NAME)"
+    exit 0
+fi
+
+# A run that hangs (a lock, a stalled connection) would never fail, and Railway skips every later run
+# while one is still active: the whole run gets a hard time limit and fails when it is exceeded.
+if [[ -z ${BACKUP_TIME_LIMITED:-} ]]; then
+    export BACKUP_TIME_LIMITED=1
+    status=0
+    timeout --kill-after=60s "${BACKUP_TIMEOUT:-2h}" "${BASH_SOURCE[0]}" || status=$?
+    if (( status == 124 || status == 137 )); then
+        log "FAILED: the run exceeded ${BACKUP_TIMEOUT:-2h}"
+    fi
+    exit "$status"
+fi
+
 for name in PGHOST PGPORT PGUSER PGPASSWORD PGDATABASE; do
     [[ -n ${!name:-} ]] || fail "$name is not set"
 done
@@ -68,35 +90,51 @@ count_rows() {
     sql "$query)"
 }
 
-# The backup files in a directory of the remote, one name per line, oldest first (the names sort by
-# time). A directory that does not exist yet is empty.
+# The exact names this tool writes: daily/<PREFIX>-<yyyymmddThhmmssZ>, monthly/<PREFIX>-<yyyy-mm>, each
+# a .dump and a .manifest.json. Retention counts and deletes only these, so the names sort by time.
+name_pattern() {
+    case $1 in
+        daily) echo "^$PREFIX-[0-9]{8}T[0-9]{6}Z\\.(dump|manifest\\.json)\$" ;;
+        monthly) echo "^$PREFIX-[0-9]{4}-[0-9]{2}\\.(dump|manifest\\.json)\$" ;;
+    esac
+}
+
+# The backup files in a directory of the remote, one name per line, oldest first. A directory that
+# does not exist yet is empty. Any other file there is left alone and logged.
 list_files() {
-    local listing
-    if ! listing=$(rclone lsf --files-only "$remote/$1" 2>"$work/lsf.err"); then
-        if grep -q 'directory not found' "$work/lsf.err"; then
-            return 0
-        fi
+    local listing other status=0
+    listing=$(rclone lsf --files-only "$remote/$1" 2>"$work/lsf.err") || status=$?
+    if (( status == 3 )); then
+        return 0 # rclone's exit code for "directory not found"
+    fi
+    if (( status != 0 )); then
         cat "$work/lsf.err" >&2
         return 1
     fi
-    grep -E "^$PREFIX-.+\.(dump|manifest\.json)\$" <<<"$listing" | LC_ALL=C sort || true
+    while IFS= read -r other; do
+        [[ -z $other ]] || log "ignoring $1/$other (not a name this tool writes)"
+    done < <(grep -vE "$(name_pattern "$1")" <<<"$listing" || true)
+    grep -E "$(name_pattern "$1")" <<<"$listing" | LC_ALL=C sort || true
 }
 
 # Keeps the newest $2 dumps in directory $1 of the remote and deletes the older ones with their
-# manifests. keep >= 1, so the newest dump is never deleted.
+# manifests. keep >= 1, and $3 (this run's dump in that directory) is never deleted.
 prune() {
-    local dir=$1 keep=$2 files old manifest
+    local dir=$1 keep=$2 current=$3 files old manifest
     local -a dumps
     files=$(list_files "$dir") || fail "cannot list $dir/"
     mapfile -t dumps < <(grep -E '\.dump$' <<<"$files" || true)
     local excess=$(( ${#dumps[@]} - keep ))
-    for old in "${dumps[@]:0:$(( excess > 0 ? excess : 0 ))}"; do
+    for old in "${dumps[@]}"; do
+        (( excess > 0 )) || break
+        [[ $old != "$current" ]] || continue
         rclone deletefile "$remote/$dir/$old" || fail "retention: delete $dir/$old"
         manifest=${old%.dump}.manifest.json
         if grep -qxF "$manifest" <<<"$files"; then
             rclone deletefile "$remote/$dir/$manifest" || fail "retention: delete $dir/$manifest"
         fi
         log "retention: deleted $dir/$old"
+        excess=$(( excess - 1 ))
     done
 }
 
@@ -123,7 +161,9 @@ flyway_version=$(sql "select version from flyway_schema_history
 
 counts_before=$(count_rows) || fail "cannot count the rows of ${COUNTED_TABLES[*]}"
 log "dumping database $PGDATABASE on $PGHOST (server $server_version, Flyway V$flyway_version)"
-pg_dump --format=custom --no-owner "--exclude-table-data=$EXCLUDED_DATA" --file="$dump" || fail "pg_dump"
+# A lock held by a migration must not stall the run: pg_dump gives up after the lock wait.
+pg_dump --format=custom --no-owner --lock-wait-timeout=5min "--exclude-table-data=$EXCLUDED_DATA" \
+    --file="$dump" || fail "pg_dump"
 counts_after=$(count_rows) || fail "cannot count the rows after the dump"
 
 # --exclude-table-data does not complain when its pattern matches nothing: check the dump's contents.
@@ -153,7 +193,9 @@ jq -n \
 
 log "dump $name.dump: $(numfmt --to=iec "$size")B, sha256 $sha256; checking the restore"
 started=$SECONDS
-restore-check.sh "$dump" "$manifest" || fail "restore-check failed; nothing uploaded"
+# The restore runs code from the dump as a superuser: the S3 keys stay out of its environment.
+env -u RCLONE_S3_ACCESS_KEY_ID -u RCLONE_S3_SECRET_ACCESS_KEY -u S3_ACCESS_KEY_ID -u S3_SECRET_ACCESS_KEY \
+    restore-check.sh "$dump" "$manifest" || fail "restore-check failed; nothing uploaded"
 jq --argjson seconds $(( SECONDS - started )) '.restore_check = {ok: true, seconds: $seconds}' \
     "$manifest" >"$manifest.tmp"
 mv "$manifest.tmp" "$manifest"
@@ -164,14 +206,16 @@ rclone copyto "$manifest" "$remote/daily/$name.manifest.json" || fail "upload of
 log "uploaded daily/$name.dump and its manifest"
 
 # The first successful dump of a UTC month becomes its monthly copy (a server-side copy: no upload).
+# If an earlier run left only half of the month's pair (a failed copy), this run's pair replaces it.
 existing_monthly=$(list_files monthly) || fail "cannot list monthly/"
-if ! grep -qxF "$monthly.dump" <<<"$existing_monthly"; then
+if ! grep -qxF "$monthly.dump" <<<"$existing_monthly" \
+        || ! grep -qxF "$monthly.manifest.json" <<<"$existing_monthly"; then
     rclone copyto "$remote/daily/$name.dump" "$remote/monthly/$monthly.dump" || fail "monthly copy"
     rclone copyto "$remote/daily/$name.manifest.json" "$remote/monthly/$monthly.manifest.json" \
         || fail "monthly copy of the manifest"
     log "monthly copy: monthly/$monthly.dump"
 fi
 
-prune daily "$keep_daily"
-prune monthly "$keep_monthly"
+prune daily "$keep_daily" "$name.dump"
+prune monthly "$keep_monthly" "$monthly.dump"
 log "OK: daily/$name.dump; keeping $keep_daily daily and $keep_monthly monthly dumps"

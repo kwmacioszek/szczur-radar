@@ -1,7 +1,7 @@
 ---
 change_id: production-data-gate
 title: Bramka produkcyjnych danych — backup, restore drill, limity kosztów i sekrety
-status: implemented
+status: impl_reviewed
 created: 2026-10-11
 updated: 2026-10-12
 archived_at: null

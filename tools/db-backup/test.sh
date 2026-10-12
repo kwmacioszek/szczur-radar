@@ -4,9 +4,12 @@
 # flyway_schema_history like Flyway's and sample rows including a session; then:
 #   1. backup.sh into a local rclone remote: dump and manifest uploaded, no session data in the dump,
 #      restore check passed, monthly copy made;
-#   2. retention: 20 older daily and 15 older monthly dumps are cut to 14 and 12;
-#   3. a truncated dump fails restore-check.sh, and a failing restore check uploads nothing;
+#   2. retention: 20 older daily and 15 older monthly dumps are cut to 14 and 12; a file with another
+#      name is left alone;
+#   3. a truncated dump fails restore-check.sh, a failing restore check uploads nothing, a run over
+#      its time limit fails, and outside production (RAILWAY_ENVIRONMENT_NAME) a run is skipped;
 #   4. nas-retention.sh --dry-run names the right files and deletes nothing, then a real run prunes;
+#      other names and future-dated dumps are left alone;
 #   5. the throwaway database password never appears in the logs.
 # Needs Docker. Run from anywhere: tools/db-backup/test.sh
 set -euo pipefail
@@ -27,7 +30,8 @@ pass() { printf 'PASS %s\n' "$*"; }
 die() { printf 'FAIL %s\n' "$*" >&2; exit 1; }
 
 cleanup() {
-    docker rm -f "$db" >/dev/null 2>&1 || true
+    # Every container of this test is named "$id-…" (the database and each backup run).
+    docker ps -aq --filter "name=$id-" | xargs docker rm -f >/dev/null 2>&1 || true
     docker volume rm "$out" >/dev/null 2>&1 || true
     docker network rm "$net" >/dev/null 2>&1 || true
     rm -rf "$tmp"
@@ -43,7 +47,7 @@ in_image() { docker run --rm -i -v "$out:/out" --entrypoint bash "$image" -s -- 
 run_backup() {
     local log=$tmp/$1.log
     shift
-    PGPASSWORD=$db_password docker run --rm --network "$net" -v "$out:/out" \
+    PGPASSWORD=$db_password docker run --rm --name "$id-$(basename "$log" .log)" --network "$net" -v "$out:/out" \
         -e PGHOST="$db" -e PGPORT=5432 -e PGUSER="$db_user" -e PGPASSWORD -e PGDATABASE="$db_name" \
         -e BACKUP_REMOTE=:local:/out "$@" "$image" >"$log" 2>&1
 }
@@ -165,12 +169,14 @@ for i in $(seq 0 14); do
     month="$(( 2019 + i / 12 ))-$(printf %02d $(( i % 12 + 1 )))"
     touch "/out/monthly/szczur-radar-$month.dump" "/out/monthly/szczur-radar-$month.manifest.json"
 done
+# A hand-copied file sorts after every timestamped name ('b' > '2'): it must not count as the newest.
+touch /out/daily/szczur-radar-before-restore.dump
 SH
 run_backup run2 || { cat "$tmp/run2.log"; die "the second backup failed"; }
 in_image <<'SH' || die "retention"
 set -euo pipefail
 shopt -s nullglob
-daily=(/out/daily/*.dump) daily_manifests=(/out/daily/*.manifest.json)
+daily=(/out/daily/szczur-radar-*T*Z.dump) daily_manifests=(/out/daily/*.manifest.json)
 monthly=(/out/monthly/*.dump) monthly_manifests=(/out/monthly/*.manifest.json)
 real=()
 for dump in "${daily[@]}"; do [[ $dump == */szczur-radar-2020* ]] || real+=("$dump"); done
@@ -184,18 +190,32 @@ for dump in "${daily[@]}"; do [[ $dump == */szczur-radar-2020* ]] || real+=("$du
 [[ -s /out/monthly/szczur-radar-$(date -u +%Y-%m).dump ]] || { echo "the current monthly copy is gone"; exit 1; }
 [[ ! -e /out/monthly/szczur-radar-2019-04.dump && -e /out/monthly/szczur-radar-2019-05.dump ]] \
     || { echo "the wrong monthly dumps were deleted"; exit 1; }
+[[ -e /out/daily/szczur-radar-before-restore.dump ]] || { echo "a file with another name was deleted"; exit 1; }
 SH
-pass "daily 22 → 14 (both real dumps kept), monthly 16 → 12 (current month kept, not copied twice)"
+grep -q 'ignoring daily/szczur-radar-before-restore.dump' "$tmp/run2.log" \
+    || { cat "$tmp/run2.log"; die "the other file is not logged as ignored"; }
+pass "daily 22 → 14 (both real dumps kept), monthly 16 → 12 (current month kept, not copied twice), other names left alone"
 
 step "3. a broken dump fails, and a failed restore check uploads nothing"
 in_image <<'SH' || die "a truncated dump passed restore-check.sh"
 set -uo pipefail
-dump=$(ls /out/daily/*.dump | grep -v '/szczur-radar-2020' | tail -n 1)
+dump=$(ls /out/daily/szczur-radar-*T*Z.dump | grep -v '/szczur-radar-2020' | tail -n 1)
 head -c "$(( $(stat -c %s "$dump") / 2 ))" "$dump" >/tmp/truncated.dump
 if restore-check.sh /tmp/truncated.dump; then exit 1; fi
 SH
 pass "restore-check.sh fails on a truncated dump"
 before=$(in_image <<<'ls /out/daily /out/monthly')
+if run_backup run4 -e BACKUP_TIMEOUT=1s; then
+    cat "$tmp/run4.log"
+    die "a run over its time limit exited 0"
+fi
+grep -q 'backup: FAILED: the run exceeded 1s' "$tmp/run4.log" || { cat "$tmp/run4.log"; die "the time limit is not named"; }
+pass "a run over its time limit (BACKUP_TIMEOUT=1s) fails and says so"
+run_backup run5 -e RAILWAY_ENVIRONMENT_NAME=szczur-radar-pr-1 || { cat "$tmp/run5.log"; die "a skipped run failed"; }
+grep -q 'skipped: backups run only in production (this is szczur-radar-pr-1)' "$tmp/run5.log" \
+    || { cat "$tmp/run5.log"; die "outside production the run was not skipped"; }
+[ "$(in_image <<<'ls /out/daily /out/monthly')" = "$before" ] || die "a skipped or timed-out run changed the backups"
+pass "outside production the run is skipped (exit 0, nothing written)"
 db_psql -c 'drop table pipeline_run_steps'
 if run_backup run3; then
     cat "$tmp/run3.log"
@@ -219,6 +239,8 @@ for i in $(seq 0 14); do
     month="$(( 2019 + i / 12 ))-$(printf %02d $(( i % 12 + 1 )))"
     touch "$nas/monthly/szczur-radar-$month.dump" "$nas/monthly/szczur-radar-$month.manifest.json"
 done
+# Neither may count as the newest: another name, and a dump dated in the future.
+touch "$nas/daily/szczur-radar-before-restore.dump" "$nas/daily/szczur-radar-29991231T020000Z.dump"
 expected=$(
     for day in 01 02 03 04 05 06; do
         for ext in dump manifest.json; do echo "would delete $nas/daily/szczur-radar-202001${day}T020000Z.$ext"; done
@@ -229,13 +251,15 @@ expected=$(
 )
 actual=$(nas-retention.sh "$nas" --dry-run 2>/dev/null)
 [[ $actual == "$expected" ]] || { echo "dry run:"; echo "$actual"; exit 1; }
-[[ $(ls "$nas/daily" | wc -l) == 40 && $(ls "$nas/monthly" | wc -l) == 30 ]] || { echo "the dry run deleted files"; exit 1; }
+[[ $(ls "$nas/daily" | wc -l) == 42 && $(ls "$nas/monthly" | wc -l) == 30 ]] || { echo "the dry run deleted files"; exit 1; }
 nas-retention.sh "$nas" >/dev/null 2>&1
-[[ $(ls "$nas/daily" | wc -l) == 28 && $(ls "$nas/monthly" | wc -l) == 24 ]] || { echo "after the run:"; ls "$nas"/*; exit 1; }
+[[ $(ls "$nas/daily" | wc -l) == 30 && $(ls "$nas/monthly" | wc -l) == 24 ]] || { echo "after the run:"; ls "$nas"/*; exit 1; }
+[[ -e $nas/daily/szczur-radar-before-restore.dump && -e $nas/daily/szczur-radar-29991231T020000Z.dump ]] \
+    || { echo "another name or a future-dated dump was deleted"; exit 1; }
 [[ -e $nas/daily/szczur-radar-20200120T020000Z.dump && ! -e $nas/daily/szczur-radar-20200106T020000Z.dump ]] \
     || { echo "the wrong NAS files were deleted"; exit 1; }
 SH
-pass "--dry-run lists the 6 oldest daily and 3 oldest monthly pairs and deletes nothing; the run keeps 14 + 12"
+pass "--dry-run lists the 6 oldest daily and 3 oldest monthly pairs and deletes nothing; the run keeps 14 + 12; other names and future dates are left alone"
 
 step "5. no secrets in the logs"
 if grep -lF "$db_password" "$tmp"/*.log; then

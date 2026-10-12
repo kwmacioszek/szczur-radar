@@ -86,7 +86,13 @@ public class TransportException extends RuntimeException {
 	/** An HTTP error status as a transport failure. */
 	public static TransportException ofStatus(int status, String message, @Nullable Duration retryAfter,
 			@Nullable Throwable cause) {
-		return new TransportException(kindOf(status), "HTTP " + status + ": " + message, retryAfter, cause);
+		return ofStatus(status, kindOf(status), message, retryAfter, cause);
+	}
+
+	/** An HTTP error status as a transport failure of a kind the provider client decided. */
+	public static TransportException ofStatus(int status, Kind kind, String message, @Nullable Duration retryAfter,
+			@Nullable Throwable cause) {
+		return new TransportException(kind, "HTTP " + status + ": " + message, retryAfter, cause);
 	}
 
 	/**

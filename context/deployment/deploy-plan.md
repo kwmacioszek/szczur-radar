@@ -125,7 +125,7 @@ The API is now a Spring Boot 4 jar on Java 25, built from `szczur-radar-api/Dock
 
 ### Runbook — PITR cleanup (done 2026-10-06; for any other environment)
 
-0. Production only: decide the backup first — Daily schedule + manual backup, or an explicit "no backup" decision as on 2026-10-06.
+0. Production only: decide the backup first — Daily schedule + manual backup, or an explicit "no backup" decision as on 2026-10-06. **Update 2026-10-11 (F-01):** on Hobby the backup is the `db-backup` cron (section F-01); there are no Railway volume backups to schedule.
 1. `railway postgres pitr status -p <project-id> -e <env> -s postgres --json`; if `enabled: true` → `railway postgres pitr disable -p <project-id> -e <env> -s postgres` (confirm in the prompt; Postgres redeploys). Re-check: `enabled: false`, `bucketWired: false`; `/api/ready` 200 through web.
 2. If `railway bucket list -e <env>` still shows `Postgres-PITR`: `railway bucket -e <env> -b <bucket-id> delete`. Never delete the database service or its volume.
 3. `railway config plan` for that environment: no bucket delete, nothing destructive.
@@ -277,8 +277,9 @@ The operator ran Live Resize from the dashboard (`production` → `postgres-volu
   1. `pg_dump` in custom format, without the session rows (`public.spring_session*`);
   2. a full restore of that dump into a throwaway Postgres 18 cluster inside the container, with named checks (tables, empty sessions, Flyway version, row counts between the counts taken before and after the dump);
   3. only then the upload.
+  - Production only: outside `production` (`RAILWAY_ENVIRONMENT_NAME`) a run logs "skipped" and exits 0, unless `BACKUP_IN_ANY_ENVIRONMENT=true` is set on the service (to try a change in a PR env). The whole run has a time limit (`BACKUP_TIMEOUT`, default 2 h) and `pg_dump` waits at most 5 min for a lock: a hung run fails instead of blocking every later run (Railway skips a cron run while the previous one is active). Retention counts only the exact names the tool writes.
   - A run ends with exit code 0 only if every step passed. Anything else fails the cron run (status `CRASHED`), and Railway e-mails every failed run, in PR envs too (verified 2026-10-11). Each scheduled run shows up as a new deployment of the service.
-- **Bucket `db-backups`** (region `ams`), one per environment with its own keys: a PR env backs up its own database and never sees production's dumps. The S3 name is the display name plus a hash (variable `BUCKET`). Objects:
+- **Bucket `db-backups`** (region `ams`), one per environment with its own keys: a PR env never sees production's dumps (and since the review it does not back up at all, see above). The S3 name is the display name plus a hash (variable `BUCKET`). Objects:
   - `daily/szczur-radar-<yyyymmddThhmmssZ>.dump`, each with a `.manifest.json` (time, sha256, size, server and `pg_dump` versions, Flyway version, row counts, restore check result);
   - `monthly/szczur-radar-<yyyy-mm>.dump` with its manifest: a server-side copy of the first successful dump of each UTC month;
   - retention: 14 daily and 12 monthly copies.
@@ -300,19 +301,28 @@ Restoring a database is an operator action (`infrastructure.md`). The agent prep
    docker build -t szczur-radar-db-backup tools/db-backup
    docker run --rm -v "$PWD/dumps:/dumps:ro" szczur-radar-db-backup restore-check.sh /dumps/<name>.dump /dumps/<name>.manifest.json
    ```
-   It must end with `restore-check: OK`.
-3. Optional, to be able to undo: take a dump of the current database first (step 4's tunnel, then `pg_dump -Fc -f before-restore.dump …`).
-4. Open a tunnel in its own terminal and keep it open:
+   It must end with `restore-check: OK`. Run every client below from this image as well: it always has PostgreSQL 18, and an older host `pg_dump` or `pg_restore` refuses a version 18 server or archive.
+3. Open a tunnel in its own terminal and keep it open:
    ```bash
    railway connect postgres -e <env> --tunnel-only -P 15432
    ```
-   It prints the user, password and database.
+   It prints the user, password and database. In the commands below, `PGPASSWORD` comes from your shell (`read -rs PGPASSWORD; export PGPASSWORD`), never from the command line.
+4. **Always** dump the current database first, so the restore can be undone:
+   ```bash
+   docker run --rm -e PGPASSWORD -v "$PWD/dumps:/dumps" szczur-radar-db-backup \
+     pg_dump -h host.docker.internal -p 15432 -U <user> -d <database> -Fc -f /dumps/before-restore.dump
+   ```
 5. Restore in one transaction (all or nothing):
    ```bash
-   pg_restore --clean --if-exists --no-owner --no-acl --single-transaction --exit-on-error \
-     -h 127.0.0.1 -p 15432 -U <user> -d <database> <name>.dump
+   docker run --rm -e PGPASSWORD -v "$PWD/dumps:/dumps:ro" szczur-radar-db-backup \
+     pg_restore --clean --if-exists --no-owner --no-acl --single-transaction --exit-on-error \
+     -h host.docker.internal -p 15432 -U <user> -d <database> /dumps/<name>.dump
    ```
-   `--clean` drops only the objects that are in the dump. If the current schema is newer than the dump's Flyway version (a table from a later migration), first run `DROP SCHEMA public CASCADE; CREATE SCHEMA public;` in `railway connect postgres -e <env>`, then run the same command without `--clean --if-exists`.
+   `--clean` drops only the objects that are in the dump. If the current schema is newer than the dump's Flyway version (a table from a later migration), empty the schema and restore in **one** transaction instead, so that a failed restore leaves the database as it was:
+   ```bash
+   docker run --rm -i -e PGPASSWORD -v "$PWD/dumps:/dumps:ro" szczur-radar-db-backup bash -c \
+     'pg_restore --no-owner --no-acl -f - /dumps/<name>.dump | psql -1 -v ON_ERROR_STOP=1 -h host.docker.internal -p 15432 -U <user> -d <database> -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;" -f -'
+   ```
 6. Redeploy the API: `railway redeploy -s szczur-radar-api -e <env> -y`. The pre-deploy `migrate` applies the migrations newer than the dump (fix-forward), and the new container gets fresh connections.
 7. Verify:
    - `/api/ready` returns 200;
@@ -329,7 +339,7 @@ Restoring a database is an operator action (`infrastructure.md`). The agent prep
 - **The PR env had no database.** In this PR env Railway deployed nothing but `db-backup`: the PR changes no file of the API or the web. There was also no Postgres volume, and a deploy of `postgres` failed at once because the service requires a volume at `/var/lib/postgresql/data`.
   - Fixed by hand: the operator attached a volume in the dashboard. Two other attempts failed: `railway volume add` panicked in CLI 5.64.2, and Railway MCP `create-volume` returned an id but created nothing.
   - Then `railway redeploy --from-source` of `postgres`, `szczur-radar-api` (its pre-deploy `migrate` created V1–V5) and `szczur-radar-web`.
-  - Expect the same in a PR env of any PR that changes neither the API nor the web. Until its database runs, its `db-backup` fails at every scheduled run.
+  - Expect the same in a PR env of any PR that changes neither the API nor the web. Its `db-backup` used to fail at every scheduled run; since the implementation review it skips every environment but production.
 - **Wait for CI is not set on a created service.** Railway left `checkSuites` unset on the `db-backup` that IaC created. The next plan showed `source.checkSuites (null → true)`, and the gate refused it as a source change (CI on `2b21c4a`, `railway-config` red). On `main` this would have turned every CI run after the first one red and stopped the API and web deploys. Fix: `db-backup` no longer declares `checkSuites`. CI does not test `tools/db-backup` anyway; `test.sh` does, locally.
 - **The first deployment of the cron service stayed `QUEUED`** for about 11 minutes, with no region assigned. It was replaced when the operator saved a temporary schedule in the dashboard; the new one was built from `tools/db-backup/Dockerfile` within a minute. The cause is not known.
 - **Runs**, on a temporary schedule (`*/5`, then `*/10`):
@@ -476,7 +486,7 @@ Record the web URL, Railway project/environment and deployment IDs, configured v
 - **Bad release:** roll back via dashboard → service → Deployments → Rollback (the CLI has no rollback). Code rollback does **not** roll back data — assess Postgres / migration state separately; migrations are fix-forward (Flyway, no undo) — repair with a new migration; restoring a database backup is the last resort — there is none until the subscription (see `api-docker-image`). **Update 2026-10-11 (F-01):** the daily dump and its restore runbook (section F-01).
 - **Backups can't be enabled or restore-tested** (since 2026-10-06 the planned backup is Railway's daily volume backup, not PITR): **stop before collecting production data** and reopen the documented Render fallback (managed Postgres with PITR) — risk register #1. **Update 2026-10-11 (F-01):** obsolete: backups are the `db-backup` cron. If its runs fail (`CRASHED` plus a Railway e-mail), read its log, where every failure names its step, and fix it before the next run. If no dump can be made and restored, stop collecting data and reopen the Render fallback.
 - **IaC config change didn't take effect (config ≠ merge):** changing `.railway/railway.ts` (start command, healthcheck, variables, region) needs `railway config apply` — git merge + autodeploy rebuilds **code**, not service **config**. Symptom: the deploy keeps running the OLD setting after a merged config change (here: the deploy still ran uvicorn until `railway config apply` pushed the Hypercorn start command). Fix: `railway config apply`, then redeploy.
-  - **Since `admin-bootstrap-and-login` (2026-09-28) this is automated** by the CI job `railway-config` (`.github/workflows/ci.yml`): on every PR it plans + applies `.railway/railway.ts` to that PR's environment `szczur-radar-pr-<N>` (never `production`); on every push to `main` it applies to `production`. Railway "Wait for CI" waits for the whole workflow, so config (e.g. the API `preDeploy` migration) is applied **before** the code deploys. The job selects the environment with `RAILWAY_PROJECT_ID` + `RAILWAY_ENVIRONMENT_ID` (resolved by name from `railway environment list --json`) — never `railway link` — and **fails without applying** if the plan targets another environment, contains a `destructive` / `resource.delete` change, or changes a service `source`/branch in any environment; it never passes `--confirm-destructive`. PR envs track the PR branch, so on `pull_request` the job sets `IAC_SOURCE_BRANCH` (= the PR head branch) and `railway.ts` uses it instead of `main` — otherwise every PR plan would try to rewrite `source.branch`. Variables set by hand in Railway (e.g. `JWT_SECRET`) must be declared in `railway.ts` with `preserve()` (name only, never a value) — otherwise the plan proposes `Delete variable …` and the job refuses to apply. Fork PRs are skipped (no secret, no PR env). If the job fails: read its plan output; fix `.railway/railway.ts` so the plan is clean (drift from dashboard settings → mirror them in the file, see lessons.md), then re-run the job. A missing PR env (job retries ~3 min) → check PR Environments are enabled, then re-run.
+  - **Since `admin-bootstrap-and-login` (2026-09-28) this is automated** by the CI job `railway-config` (`.github/workflows/ci.yml`): on every PR it plans + applies `.railway/railway.ts` to that PR's environment `szczur-radar-pr-<N>` (never `production`); on every push to `main` it applies to `production`. Railway "Wait for CI" waits for the whole workflow, so config (e.g. the API `preDeploy` migration) is applied **before** the code deploys. The job selects the environment with `RAILWAY_PROJECT_ID` + `RAILWAY_ENVIRONMENT_ID` (resolved by name from `railway environment list --json`) — never `railway link` — and **fails without applying** if the plan targets another environment, contains a `destructive` / `resource.delete` change, or changes a service `source`/branch in any environment; it never passes `--confirm-destructive`. **Update 2026-10-11 (F-01):** creating a resource (`resource.create`) passes the source check, so IaC can add a service such as `db-backup`. The check relies on `.kind`, because a create carries no details in today's plan. A change to an existing service's source is still refused. PR envs track the PR branch, so on `pull_request` the job sets `IAC_SOURCE_BRANCH` (= the PR head branch) and `railway.ts` uses it instead of `main` — otherwise every PR plan would try to rewrite `source.branch`. Variables set by hand in Railway (e.g. `JWT_SECRET`) must be declared in `railway.ts` with `preserve()` (name only, never a value) — otherwise the plan proposes `Delete variable …` and the job refuses to apply. Fork PRs are skipped (no secret, no PR env). If the job fails: read its plan output; fix `.railway/railway.ts` so the plan is clean (drift from dashboard settings → mirror them in the file, see lessons.md), then re-run the job. A missing PR env (job retries ~3 min) → check PR Environments are enabled, then re-run.
   - `railway.ts` must mirror production: `railway config plan --detailed-exit-code` on `production` must exit **0** before any automatic apply (2026-09-28: sleep on all 3 services + bucket `Postgres-PITR` added to the file → exit 0). Since `api-docker-image` (2026-10-06) the bucket is no longer declared: PITR was disabled and the bucket deleted in each environment before the apply.
 - **Healthcheck "service unavailable" while the app logs look healthy:** Railway's healthcheck uses **IPv4**, the web→api proxy IPv6 — the listener must be dual-stack. The JVM's default wildcard bind is; do not set `server.address`. Also confirm the app listens on `$PORT` and does not block the `healthcheck.railway.app` host. (Before F-03 the Python API needed Hypercorn on `::` for this.)
 

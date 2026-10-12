@@ -20,7 +20,8 @@ import { bucket, defineRailway, github, postgres, preserve, project, ref, servic
 //
 // `sleepApplication: true` (serverless sleep) on api and web mirrors what the
 // operator set in the dashboard; Postgres declares `false` (see below). The
-// setting MUST stay declared on all three: without it an apply would change it. Keep this file in sync with production —
+// setting MUST stay declared on these three: without it an apply would change it
+// (the db-backup cron does not sleep and declares nothing). Keep this file in sync with production —
 // `railway config plan --detailed-exit-code` on `production` must exit 0 before
 // any automatic apply (lessons.md, Railway IaC in CI).
 //
@@ -50,8 +51,9 @@ export default defineRailway(() => {
   // IAC_SOURCE_BRANCH on pull_request events only, so an apply to a PR env
   // does not rewrite `source.branch`; unset (push to main, local) → `main`.
   // The IaC context does not reliably carry the target environment name, so
-  // the production safety net lives in CI: the railway-config job refuses ANY
-  // source change, in every environment.
+  // the production safety net lives in CI: the railway-config job refuses a
+  // source change of an existing service, in every environment (creating a new
+  // service, e.g. db-backup, is allowed since F-01).
   const branch = process.env.IAC_SOURCE_BRANCH || "main";
 
   // Postgres. `postgres()` takes no deploy options, so serverless sleep is set
@@ -162,8 +164,10 @@ export default defineRailway(() => {
   // checks the dump by restoring it into a throwaway cluster, and only then
   // uploads it to the bucket below (14 daily + 12 monthly copies); the operator's
   // Synology pulls the bucket with Cloud Sync, so a copy also lives outside
-  // Railway. Every environment gets its own bucket with its own keys, so a PR env
-  // backs up its own database and never sees production's dumps. The schedule
+  // Railway. Every environment gets its own bucket with its own keys (a PR env is
+  // a copy of production, so it gets the cron too), but backup.sh runs only in
+  // production: elsewhere it logs "skipped" and exits 0 (BACKUP_IN_ANY_ENVIRONMENT
+  // =true on the service runs it, to try a change of the tool in a PR env). The schedule
   // is UTC; S-05 (daily run) may move it. A cron run's status is its exit code,
   // and restartPolicyType NEVER keeps a failed run visible instead of retrying it.
   const backups = bucket("db-backups", { region: "ams" });

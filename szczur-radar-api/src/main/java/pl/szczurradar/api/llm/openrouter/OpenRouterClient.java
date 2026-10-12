@@ -244,8 +244,7 @@ public final class OpenRouterClient implements LlmClient {
 	private static TransportException statusFailure(int status, @Nullable String errorMessage,
 			@Nullable String limitSource, String message, @Nullable Duration retryAfter, @Nullable Throwable cause) {
 		if (status == 403 && budgetSpent(errorMessage, limitSource)) {
-			return new TransportException(TransportException.Kind.CONFIGURATION, "HTTP 403: " + message, retryAfter,
-					cause);
+			return TransportException.ofStatus(status, TransportException.Kind.CONFIGURATION, message, retryAfter, cause);
 		}
 		return TransportException.ofStatus(status, message, retryAfter, cause);
 	}

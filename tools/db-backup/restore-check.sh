@@ -74,6 +74,8 @@ unix_socket_directories = '$base'
 fsync = off
 full_page_writes = off
 synchronous_commit = off
+wal_level = minimal
+max_wal_senders = 0
 EOF
 as_postgres pg_ctl --pgdata="$data" --log="$base/server.log" --wait --silent start \
     || { cat "$base/server.log" >&2; fail "the temporary server did not start"; }
@@ -117,12 +119,17 @@ fi
 log "OK in $(( SECONDS - started )) s: ${#REQUIRED_TABLES[@]} tables, no session rows, Flyway V$flyway${manifest:+, row counts within [before, after]}"
 
 if $serve; then
-    psql -X -q -v ON_ERROR_STOP=1 -d postgres -v password="$RESTORE_CHECK_PASSWORD" \
-        <<<"alter role postgres password :'password';" || fail "serve: set the password"
+    # The password comes from the environment (psql \getenv), never from a command line.
+    psql -X -q -v ON_ERROR_STOP=1 -d postgres <<'SQL' || fail "serve: set the password"
+\getenv password RESTORE_CHECK_PASSWORD
+alter role postgres password :'password';
+SQL
     as_postgres pg_ctl --pgdata="$data" --mode=fast --wait --silent stop
-    # Later lines win: listen on every interface of the container, with a password from outside it.
+    # The last listen_addresses in postgresql.conf wins: every interface of the container. pg_hba.conf
+    # takes the first matching line, so it is rewritten: the socket stays trusted (this script), every
+    # TCP connection, loopback included, needs the password.
     echo "listen_addresses = '*'" >>"$data/postgresql.conf"
-    echo "host all all all scram-sha-256" >>"$data/pg_hba.conf"
+    printf '%s\n' 'local all all trust' 'host all all all scram-sha-256' >"$data/pg_hba.conf"
     trap - EXIT
     log "serving database '$DB' on port 5432 (user postgres); stop the container to end"
     if (( EUID == 0 )); then

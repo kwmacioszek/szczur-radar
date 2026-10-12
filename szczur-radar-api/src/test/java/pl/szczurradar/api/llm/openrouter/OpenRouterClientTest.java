@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -253,6 +254,21 @@ class OpenRouterClientTest {
 	}
 
 	@Test
+	void aRateLimitNamingTheKeyLimitIsStillRetried() {
+		// Only a 403 for a spent budget is the configuration: a 429 stays a rate limit whatever its
+		// metadata says.
+		try (ScriptedProviderServer server = new ScriptedProviderServer(
+				Reply.status(429, errorBody(429, "Rate limit exceeded", Map.of("limit_source", "openrouter_key_limit"))
+					.toString()),
+				Reply.ok(SUCCESS))) {
+			LlmResponse response = client(server, ServiceTier.DEFAULT, null).complete(REQUEST);
+
+			assertThat(response.attempts()).isEqualTo(2);
+			assertThat(server.requests()).hasSize(2);
+		}
+	}
+
+	@Test
 	void aModerationRefusalIsAProviderErrorAfterOneRequest() {
 		// OpenRouter refuses flagged input with 403 and the moderation reasons (docs: errors-and-debugging).
 		try (ScriptedProviderServer server = new ScriptedProviderServer(Reply.status(403,
@@ -431,6 +447,20 @@ class OpenRouterClientTest {
 	}
 
 	@Test
+	void aSpentKeyLimitAfterPartialOutputIsTheConfiguration() {
+		try (ScriptedProviderServer server = new ScriptedProviderServer(
+				partialAnswerError(403, KEY_LIMIT_MESSAGE, "provider_error"), Reply.ok(SUCCESS))) {
+			assertThatExceptionOfType(LlmConfigurationException.class)
+				.isThrownBy(() -> client(server, ServiceTier.DEFAULT, null).complete(REQUEST))
+				.satisfies(ex -> {
+					assertThat(ex.attempts()).isEqualTo(1);
+					assertThat(ex.getMessage()).contains("HTTP 403", "Key limit exceeded");
+				});
+			assertThat(server.requests()).hasSize(1);
+		}
+	}
+
+	@Test
 	void refusedConnectionIsRetriedThreeTimes() {
 		assertThatExceptionOfType(LlmCallException.class)
 			.isThrownBy(() -> LlmClientFactory.create(new LlmProviderProperties(Provider.OPENROUTER, "openai/gpt-6-luna",
@@ -457,8 +487,7 @@ class OpenRouterClientTest {
 
 	/** An error reported in the body of an HTTP 200, in OpenRouter's documented shape. */
 	private static Reply inBodyError(int code, String message, String errorType) {
-		return Reply.ok("{\"id\":\"gen-synthetic\",\"object\":\"chat.completion\",\"error\":{\"code\":" + code
-				+ ",\"message\":\"" + message + "\",\"metadata\":{\"error_type\":\"" + errorType + "\"}}}");
+		return Reply.ok(inBody(errorBody(code, message, Map.of("error_type", errorType))));
 	}
 
 	/**
@@ -466,10 +495,16 @@ class OpenRouterClientTest {
 	 * without metadata.
 	 */
 	private static ObjectNode forbidden(String message, String limitSource) {
+		return errorBody(403, message, limitSource == null ? Map.of() : Map.of("limit_source", limitSource));
+	}
+
+	/** {@code {"error":{"code","message","metadata"}}}, OpenRouter's error shape; no metadata when empty. */
+	private static ObjectNode errorBody(int code, String message, Map<String, String> metadata) {
 		ObjectNode body = MAPPER.createObjectNode();
-		ObjectNode error = body.putObject("error").put("code", 403).put("message", message);
-		if (limitSource != null) {
-			error.putObject("metadata").put("limit_source", limitSource);
+		ObjectNode error = body.putObject("error").put("code", code).put("message", message);
+		if (!metadata.isEmpty()) {
+			ObjectNode meta = error.putObject("metadata");
+			metadata.forEach(meta::put);
 		}
 		return body;
 	}
