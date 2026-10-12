@@ -2,7 +2,7 @@ import { bucket, defineRailway, github, postgres, preserve, project, ref, servic
 
 // Infrastructure-as-Code for Szczur Radar. This is the source of truth for the
 // api, web, and Postgres services, the db-backup cron service and its bucket,
-// and replaces railway.toml for them.
+// the pipeline-trigger cron service, and replaces railway.toml for them.
 // Validate with `railway config plan` (dry run, deletes nothing) before
 // `railway config apply` — see context/deployment/deploy-plan.md, phase 3.
 // The `railway/iac` SDK resolves from node_modules at the REPO ROOT (see the
@@ -16,11 +16,12 @@ import { bucket, defineRailway, github, postgres, preserve, project, ref, servic
 // `checkSuites: true` on the api and web sources enables Railway "Wait for CI":
 // deploys wait for the whole GitHub Actions workflow conclusion. Declared here
 // so IaC does not reset the operator's toggle (a plan otherwise shows true →
-// null). db-backup does not declare it (see there).
+// null). The cron services (db-backup, pipeline-trigger) do not declare it (see
+// db-backup).
 //
 // `sleepApplication: true` (serverless sleep) on api and web mirrors what the
 // operator set in the dashboard. The setting MUST stay declared on these two:
-// without it an apply would change it. Postgres and the db-backup cron declare
+// without it an apply would change it. Postgres and the cron services declare
 // nothing (Postgres: see below). Keep this file in sync with production —
 // `railway config plan --detailed-exit-code` on `production` must exit 0 before
 // any automatic apply (lessons.md, Railway IaC in CI).
@@ -151,6 +152,12 @@ export default defineRailway(() => {
       // Optional: parallel LLM calls of a pipeline run (default 4). Not a secret;
       // declared so that a value set by the operator is kept, never created here.
       PIPELINE_LLM_CONCURRENCY: preserve(),
+      // Shared secret of the daily cron (pipeline-trigger below) on /internal/**
+      // (internal/PipelineTriggerToken.java). Optional: unset, every /internal/** request
+      // is 401. Set by the operator with --stdin (`openssl rand -hex 32`, at least
+      // 32 characters) and sealed on production; a PR env gets one only for a
+      // verification of the cron. The cron reads it by reference. Never a value here.
+      PIPELINE_TRIGGER_TOKEN: preserve(),
     },
   });
 
@@ -179,8 +186,10 @@ export default defineRailway(() => {
   // a copy of production, so it gets the cron too), but backup.sh runs only in
   // production: elsewhere it logs "skipped" and exits 0 (BACKUP_IN_ANY_ENVIRONMENT
   // =true on the service runs it, to try a change of the tool in a PR env). The schedule
-  // is UTC; S-05 (daily run) may move it. A cron run's status is its exit code,
-  // and restartPolicyType NEVER keeps a failed run visible instead of retrying it.
+  // is UTC and stays at 02:00 with S-05: the daily run (pipeline-trigger below,
+  // 00:30 UTC) normally ends before it, and a dump taken while a run writes is
+  // still consistent (pg_dump reads one snapshot). A cron run's status is its exit
+  // code, and restartPolicyType NEVER keeps a failed run visible instead of retrying it.
   const backups = bucket("db-backups", { region: "ams" });
   // No `checkSuites` (Wait for CI): Railway leaves it unset on a service that
   // IaC creates, so every later plan would show `source.checkSuites (null →
@@ -210,7 +219,36 @@ export default defineRailway(() => {
     },
   });
 
+  // Daily pipeline run (S-05, daily-scheduled-run-freshness;
+  // tools/pipeline-trigger/README.md). A cron service wakes the sleeping API over
+  // the private network (straight to its port, not through the web's Caddy, which
+  // serves only /api/*), starts the daily run with
+  // POST /internal/pipeline-runs/daily (the day before yesterday and yesterday,
+  // Warsaw calendar) and waits for its result: it exits non-zero when a run failed
+  // or was interrupted, so Railway marks the cron run failed and e-mails it.
+  // 00:30 UTC is 01:30 (winter) or 02:30 (summer) in Warsaw: always after
+  // midnight, so yesterday is complete, and a normal run ends before the 02:00
+  // backup. The token is the API's PIPELINE_TRIGGER_TOKEN by reference: one value,
+  // set (and on production sealed) by the operator on the API only. Like db-backup,
+  // Railway creates it in every environment, but trigger.sh runs only in
+  // production: elsewhere it logs "skipped" and exits 0 without a request
+  // (TRIGGER_IN_ANY_ENVIRONMENT=true on the service runs it, to verify it in a PR
+  // env; preserve() keeps that hand-set value). No `checkSuites`: see db-backup.
+  const pipelineTrigger = service("pipeline-trigger", {
+    source: github(REPO, { branch }),
+    rootDirectory: "tools/pipeline-trigger",
+    watchPatterns: ["tools/pipeline-trigger/**"],
+    replicas: { [REGION]: 1 },
+    deploy: { cronSchedule: "30 0 * * *", restartPolicyType: "NEVER", limitOverride: RESOURCE_LIMITS },
+    env: {
+      API_PRIVATE_DOMAIN: api.env.RAILWAY_PRIVATE_DOMAIN,
+      API_PORT: API_INTERNAL_PORT,
+      PIPELINE_TRIGGER_TOKEN: api.env.PIPELINE_TRIGGER_TOKEN,
+      TRIGGER_IN_ANY_ENVIRONMENT: preserve(),
+    },
+  });
+
   return project("szczur-radar", {
-    resources: [db, api, web, backups, dbBackup],
+    resources: [db, api, web, backups, dbBackup, pipelineTrigger],
   });
 });

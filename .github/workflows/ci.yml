@@ -190,6 +190,18 @@ jobs:
       - name: Backup tool end to end
         run: tools/db-backup/test.sh
 
+  pipeline-trigger-test:
+    name: pipeline trigger test (tools/pipeline-trigger)
+    runs-on: ubuntu-latest
+    # The daily-run cron (S-05) reports a failed night only through its exit code, and Railway gives
+    # it no manual trigger. tools/pipeline-trigger/test.sh runs the image against a stub API in Docker
+    # (wake-up retries, 409 busy, 401, every time limit, the result of each run as the exit code), so
+    # a broken trigger fails this PR instead of the 00:30 UTC run on production.
+    steps:
+      - uses: actions/checkout@v4
+      - name: Trigger tool against a stub API
+        run: tools/pipeline-trigger/test.sh
+
   railway-config:
     name: railway config (plan + apply IaC)
     runs-on: ubuntu-latest

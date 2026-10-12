@@ -634,15 +634,15 @@ Dokumenty fundamentów i wdrożenia odzwierciedlają decyzje S-05, a cały łań
 
 #### Automated
 
-- [x] 2.1 FreshnessIT z przypadkami z wywiadu
-- [x] 2.2 AuthorizationCompletenessIT bez zmian list
-- [x] 2.3 ./mvnw -B verify
+- [x] 2.1 FreshnessIT z przypadkami z wywiadu — b442721
+- [x] 2.2 AuthorizationCompletenessIT bez zmian list — b442721
+- [x] 2.3 ./mvnw -B verify — b442721
 
 ### Phase 3: Serwis cron pipeline-trigger i IaC
 
 #### Automated
 
-- [ ] 3.1 tools/pipeline-trigger/test.sh ze wszystkimi scenariuszami
+- [x] 3.1 tools/pipeline-trigger/test.sh ze wszystkimi scenariuszami
 - [ ] 3.2 CI na PR zielone z pipeline-trigger-test i railway-config
 - [ ] 3.3 railway-config tworzy pipeline-trigger bez zmian destrukcyjnych, ponowny plan pusty
 
