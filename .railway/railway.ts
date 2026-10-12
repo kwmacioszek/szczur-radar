@@ -43,7 +43,8 @@ const API_INTERNAL_PORT = "8000";
 // the operator sets in the dashboard, first 2 vCPU / 4 GB on every service after
 // the move to Hobby (F-01, production-data-gate), lowered per service on
 // 2026-10-12. db-backup keeps 1 vCPU / 1 GB: it restores every dump into a
-// throwaway Postgres cluster inside its own container. Declared so the plan
+// throwaway Postgres cluster inside its own container. pipeline-trigger only
+// runs curl and jq while it waits for the run. Declared so the plan
 // matches production: CI applies this file on every merge, so a cap changed
 // only in the dashboard would be reset here. (An apply of `limitOverride` →
 // null left the cap in place in szczur-radar-pr-44 on 2026-10-11, so a missing
@@ -53,6 +54,7 @@ const POSTGRES_LIMITS = limits(1, 1_000_000_000);
 const API_LIMITS = limits(2, 2_000_000_000);
 const WEB_LIMITS = limits(1, 1_000_000_000);
 const DB_BACKUP_LIMITS = limits(1, 1_000_000_000);
+const PIPELINE_TRIGGER_LIMITS = limits(0.5, 500_000_000);
 
 export default defineRailway(() => {
   // Railway PR environments track the PR's branch, not `main`. CI sets
@@ -239,7 +241,7 @@ export default defineRailway(() => {
     rootDirectory: "tools/pipeline-trigger",
     watchPatterns: ["tools/pipeline-trigger/**"],
     replicas: { [REGION]: 1 },
-    deploy: { cronSchedule: "30 0 * * *", restartPolicyType: "NEVER", limitOverride: RESOURCE_LIMITS },
+    deploy: { cronSchedule: "30 0 * * *", restartPolicyType: "NEVER", limitOverride: PIPELINE_TRIGGER_LIMITS },
     env: {
       API_PRIVATE_DOMAIN: api.env.RAILWAY_PRIVATE_DOMAIN,
       API_PORT: API_INTERNAL_PORT,
