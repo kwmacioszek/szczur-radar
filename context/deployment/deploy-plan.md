@@ -233,7 +233,7 @@ On `szczur-radar-pr-37` a push deployed `szczur-radar-web` from an older commit 
 
 ## F-01: bramka produkcyjnych danych (production-data-gate)
 
-**Status (2026-10-11): in progress** in PR #44, issue #43. Change: `context/changes/production-data-gate/`. Production runs on Railway **Hobby**, which has no built-in volume backups and no PITR (both are Pro). The database is therefore protected by a daily logical dump (`pg_dump`) from a separate cron service, checked by a full restore before upload ("How the backup works" below). Verified in a PR env; the production steps after the merge are in the last runbook of this section.
+**Status (2026-10-12): done** — merged as `b7ee254` (PR #44), production verified (first backup, test with the application on a production dump, NAS and Google Drive copies); follow-ups in PR #46; issue #43. Change: `context/changes/production-data-gate/`. Production runs on Railway **Hobby**, which has no built-in volume backups and no PITR (both are Pro). The database is therefore protected by a daily logical dump (`pg_dump`) from a separate cron service, checked by a full restore before upload ("How the backup works" below). Verified in a PR env; the production steps after the merge are in the last runbook of this section.
 
 ### Starting state (2026-10-11, read-only)
 
@@ -407,14 +407,21 @@ PR #44 was squash-merged as `b7ee254` (11:25 UTC). CI on `main` applied `+ Creat
    - This direction has **no** option to keep files removed at the source; that option exists only for "upload local changes only". The NAS folder is therefore a mirror of the bucket, 14 daily + 12 monthly dumps: the bucket's retention also prunes the NAS. It also means that an emptied bucket would empty the NAS copy (step 5 covers this).
    - The keys give full access to production's bucket. If the NAS is compromised, reset them in Railway (bucket → Credentials).
 5. **Archive outside both: Synology Cloud Sync, NAS → Google Drive.** A second task, direction "upload local changes only", with the option "don't remove files in the destination folder when they are removed in the source folder" on. Google Drive keeps every dump ever pulled, so an emptied bucket or NAS folder does not remove it.
-   - It grows: today about 0.5 MB a day. Check the Drive usage now and then and delete old daily dumps there by hand; keep the monthly ones.
+   - It grows by every daily dump (today about 0.5 MB). With about 200 GB free on the operator's Drive this needs no attention for years. If it ever does, delete old daily dumps there by hand and keep the monthly ones.
    - `nas-retention.sh` and its DSM task are not needed with this setup, because the NAS already mirrors the bucket's retention. It is still the tool for a NAS folder that keeps deleted files (a different setup); a dry run on the mirror is harmless.
 6. **Record and close.** Write the results here: first run, the test with the application, the NAS folder with today's dump. Comment them on issue #43, then close it.
 
 **State 2026-10-12 (operator):**
 - Cloud Sync bucket → NAS is set up (download remote changes only) into `/volume2/ProxmoxBackup/szczur-radar/s3`, which holds `daily/` and `monthly/`.
-- Cloud Sync NAS → Google Drive is set up (upload local changes only), to be switched to keep the files removed at the source (step 5).
-- A DSM dry run of `nas-retention.sh` on that folder saw 1 daily and 1 monthly dump and deleted nothing. The DSM task is not needed (step 5).
+- Cloud Sync NAS → Google Drive is set up (upload local changes only), with "don't remove files in the destination folder when they are removed in the source folder" on (step 5).
+- A DSM dry run of `nas-retention.sh` on that folder saw 1 daily and 1 monthly dump and deleted nothing. The DSM task was then deleted, because the NAS mirrors the bucket's retention (step 5).
+- **Step 3, the test with the application on a production dump: passed.**
+  - The dump was `szczur-radar-20261012T124334Z.dump`, downloaded from the bucket; its sha256 matches the manifest.
+  - `restore-check.sh … --serve` (only on `127.0.0.1`) passed: 9 tables, no session rows, Flyway V5, row counts within [before, after].
+  - `migrate` said "Schema "public" is up to date. No migration necessary".
+  - The API started in 7.3 s, and the admin logged in locally with the production account.
+  - `/api/posts` `total` was 30, locally and on production alike.
+  - The local copy was deleted afterwards.
 
 ## Phases
 
