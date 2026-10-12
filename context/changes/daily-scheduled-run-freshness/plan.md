@@ -642,15 +642,15 @@ Dokumenty fundamentów i wdrożenia odzwierciedlają decyzje S-05, a cały łań
 
 #### Automated
 
-- [x] 3.1 tools/pipeline-trigger/test.sh ze wszystkimi scenariuszami
-- [ ] 3.2 CI na PR zielone z pipeline-trigger-test i railway-config
-- [ ] 3.3 railway-config tworzy pipeline-trigger bez zmian destrukcyjnych, ponowny plan pusty
+- [x] 3.1 tools/pipeline-trigger/test.sh ze wszystkimi scenariuszami — d61bbc7
+- [x] 3.2 CI na PR zielone z pipeline-trigger-test i railway-config — d61bbc7
+- [x] 3.3 railway-config tworzy pipeline-trigger bez zmian destrukcyjnych, ponowny plan pusty — d61bbc7
 
 #### Manual
 
-- [ ] 3.4 PR env: cron budzi uśpione API, przebieg D-2…D-1, kod 0
-- [ ] 3.5 PR env: zły token kończy się CRASHED i e-mailem
-- [ ] 3.6 PR env bez nadpisania środowiska: skipped bez żądań
+- [x] 3.4 PR env: cron budzi uśpione API, przebieg D-2…D-1, kod 0 — d61bbc7
+- [x] 3.5 PR env: zły token kończy się CRASHED i e-mailem — d61bbc7
+- [x] 3.6 PR env bez nadpisania środowiska: skipped bez żądań — d61bbc7
 
 ### Phase 4: Etykieta świeżości w FeedView
 
