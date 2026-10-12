@@ -653,13 +653,13 @@ Treść akceptuje użytkownik w przeglądzie PR.
 
 #### Automated
 
-- [x] 5.1 `grep -n "there is none until the Railway subscription" REPOSITORY_GUIDELINES.md` nic nie zwraca
-- [x] 5.2 `grep -n "do czasu subskrypcji Railway backupu nie ma" szczur-radar-api/README.md` nic nie zwraca
-- [x] 5.3 `swift tools/render_roadmap.swift` generuje `docs/visuals/roadmap-mvp.png` bez błędu
-- [x] 5.4 `git diff --stat context/foundation/lessons.md` pokazuje tylko dodane linie
+- [x] 5.1 `grep -n "there is none until the Railway subscription" REPOSITORY_GUIDELINES.md` nic nie zwraca — cedc525
+- [x] 5.2 `grep -n "do czasu subskrypcji Railway backupu nie ma" szczur-radar-api/README.md` nic nie zwraca — cedc525
+- [x] 5.3 `swift tools/render_roadmap.swift` generuje `docs/visuals/roadmap-mvp.png` bez błędu — cedc525
+- [x] 5.4 `git diff --stat context/foundation/lessons.md` pokazuje tylko dodane linie — cedc525
 
 #### Manual
 
-- [x] 5.5 Użytkownik akceptuje w przeglądzie PR nowe brzmienie NFR, Non-Goal i OQ4 w PRD
-- [x] 5.6 Karta F-01 na `docs/visuals/roadmap-mvp.png` pokazuje nowy opis
-- [x] 5.7 Runbook po merge'u w `deploy-plan.md` jest kompletny: produkcyjny przebieg, test z aplikacją, Cloud Sync, retencja na NAS, issue
+- [x] 5.5 Użytkownik akceptuje w przeglądzie PR nowe brzmienie NFR, Non-Goal i OQ4 w PRD — cedc525
+- [x] 5.6 Karta F-01 na `docs/visuals/roadmap-mvp.png` pokazuje nowy opis — cedc525
+- [x] 5.7 Runbook po merge'u w `deploy-plan.md` jest kompletny: produkcyjny przebieg, test z aplikacją, Cloud Sync, retencja na NAS, issue — cedc525
