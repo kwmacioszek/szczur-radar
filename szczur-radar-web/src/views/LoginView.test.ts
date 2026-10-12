@@ -75,6 +75,30 @@ describe('LoginView', () => {
     expect(router.currentRoute.value.fullPath).toBe('/?tab=2')
   })
 
+  it('fills in the e-mail and confirms the password after an activation', async () => {
+    const router = createAppRouter(createMemoryHistory())
+    await router.replace({ name: 'login', state: { activatedEmail: 'jan@example.com' } })
+    const wrapper = mount(LoginView, { global: { plugins: [router] } })
+    expect((wrapper.find('input[type="email"]').element as HTMLInputElement).value).toBe('jan@example.com')
+    expect(wrapper.find('[role="status"]').text()).toBe('Hasło ustawione. Zaloguj się.')
+    expect(router.currentRoute.value.fullPath).toBe('/login')
+  })
+
+  it('drops the activation notice once the person tries to log in', async () => {
+    vi.mocked(login).mockRejectedValue(new ApiError(401, 'invalid_credentials'))
+    const router = createAppRouter(createMemoryHistory())
+    await router.replace({ name: 'login', state: { activatedEmail: 'jan@example.com' } })
+    const wrapper = mount(LoginView, { global: { plugins: [router] } })
+    await submit(wrapper)
+    expect(wrapper.find('[role="status"]').exists()).toBe(false)
+    expect(wrapper.find('[role="alert"]').text()).toBe('Nieprawidłowy e-mail lub hasło.')
+  })
+
+  it('shows no activation notice on a plain visit', async () => {
+    const { wrapper } = await mountLogin()
+    expect(wrapper.find('[role="status"]').exists()).toBe(false)
+  })
+
   it('ignores an off-site redirect after login', async () => {
     vi.mocked(login).mockResolvedValue({ id: '1', email: 'admin@example.com', role: 'admin' })
     const { wrapper, router } = await mountLogin('/login?redirect=//evil.com')

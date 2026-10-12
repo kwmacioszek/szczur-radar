@@ -1,6 +1,6 @@
 /*
- * Mock /api/* for screenshots of /admin and the feed (/) without a running API (playwright-cli run-code), kept for
- * /10x-ui changes. Another mode = run a copy of this file with MODE replaced.
+ * Mock /api/* for screenshots of /admin, the feed (/) and /activate without a running API (playwright-cli run-code),
+ * kept for /10x-ui changes. Another mode = run a copy of this file with MODE, AUTH or ACTIVATION replaced.
  * MODE: 'data'         runs + failed posts; the feed has 120 posts (3 pages of 50),
  *       'loading'      admin calls and /api/posts hang 60 s,
  *       'error'        admin calls and /api/posts answer 500,
@@ -9,9 +9,14 @@
  *       'error-next'   feed page 0 answers, later pages answer 500 (admin as in 'data').
  * /api/posts answers like posts/api/PostController.java: page, size, total; a page past the end (e.g. /?page=9)
  * is 200 with items [] and the real total.
+ * AUTH: 'admin' (/api/auth/me → the admin) or 'anonymous' (/api/auth/me → 401), for the public /activate and /login.
+ * ACTIVATION (/activate#<any token>; the token is not checked): 'valid' (lookup → e-mail, activation → 204, then
+ *   /login with the "password set" notice), 'invalid' (both → 400 activation_link_invalid), 'policy' (activation →
+ *   400 password_policy), 'checking' (lookup hangs 60 s), 'sending' (activation hangs 60 s), 'error' (both → 500).
+ *   Client-side validation errors need no mode: submit a short or mismatched password.
  * Only paths starting with /api/ are mocked — a '**\/api/**' glob would also catch Vite's /src/api/*.ts modules.
  * failureClass values are the API's FailureClass (agents/assessor/validation/FailureClass.java), lower case.
- * /api/auth/me is an admin, so the header shows "Panel admina" on both views.
+ * With AUTH = 'admin' the header shows "Panel admina" on /admin and the feed.
  * /kitchen-sink needs no mock: dev only, no session, fixed data.
  *
  *   cd szczur-radar-web && npx vite --port 5173 --strictPort &
@@ -19,7 +24,8 @@
  *                    # not in git, so from a git worktree add --config=<main checkout>/.playwright/cli.config.json
  *   playwright-cli open && playwright-cli resize 1280 900
  *   playwright-cli run-code --filename=szczur-radar-web/dev/mock-api.js
- *   playwright-cli goto http://localhost:5173/admin   # the feed: http://localhost:5173/ (?page=N, from 0)
+ *   playwright-cli goto http://localhost:5173/admin   # the feed: http://localhost:5173/ (?page=N, from 0);
+ *                                                    # /activate#token with AUTH = 'anonymous'
  *   playwright-cli set-color-scheme light|dark && playwright-cli screenshot --full-page --filename=<png>
  */
 async page => {
@@ -80,13 +86,31 @@ async page => {
     }
   }
   const MODE = 'data'
+  const AUTH = 'admin'
+  const ACTIVATION = 'valid'
+  const hang = () => new Promise((r) => setTimeout(r, 60000))
   const json = (route, body, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) })
   await page.unrouteAll().catch(() => {})
   await page.route((u) => u.pathname.startsWith('/api/'), async (route) => {
     const url = new URL(route.request().url())
     const p = url.pathname
-    if (p === '/api/auth/me') return json(route, { id: 'u1', email: 'admin@szczur-radar.pl', role: 'admin' })
-    if (MODE === 'loading' && p.startsWith('/api/admin')) await new Promise((r) => setTimeout(r, 60000))
+    if (p === '/api/auth/me') {
+      return AUTH === 'anonymous'
+        ? json(route, { detail: 'not_authenticated' }, 401)
+        : json(route, { id: 'u1', email: 'admin@szczur-radar.pl', role: 'admin' })
+    }
+    if (p === '/api/auth/logout') return route.fulfill({ status: 204 })
+    if (p.startsWith('/api/auth/activation')) {
+      const lookup = p === '/api/auth/activation/lookup'
+      if (ACTIVATION === 'checking' && lookup) await hang()
+      if (ACTIVATION === 'sending' && !lookup) await hang()
+      if (ACTIVATION === 'error') return json(route, { detail: 'internal_error' }, 500)
+      if (ACTIVATION === 'invalid') return json(route, { detail: 'activation_link_invalid' }, 400)
+      if (lookup) return json(route, { email: 'jan.kowalski@example.com' })
+      if (ACTIVATION === 'policy') return json(route, { detail: 'password_policy' }, 400)
+      return route.fulfill({ status: 204 })
+    }
+    if (MODE === 'loading' && p.startsWith('/api/admin')) await hang()
     if (MODE === 'error' && p.startsWith('/api/admin')) return json(route, { detail: 'internal_error' }, 500)
     if (p === '/api/admin/pipeline-runs/sources') return json(route, [{ source: 'wykop', configured: true }])
     if (p === '/api/admin/pipeline-runs' && route.request().method() === 'GET') return json(route, { items: MODE === 'empty' ? [] : runs, page: 0, size: 20, total: MODE === 'empty' ? 0 : runs.length })

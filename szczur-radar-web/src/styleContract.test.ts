@@ -5,6 +5,7 @@ import postCard from './components/PostCard.vue?raw'
 import statusBadge from './components/StatusBadge.vue?raw'
 import statusMessage from './components/StatusMessage.vue?raw'
 import css from './style.css?raw'
+import activateView from './views/ActivateView.vue?raw'
 import adminView from './views/AdminView.vue?raw'
 import feedView from './views/FeedView.vue?raw'
 import kitchenSinkView from './views/KitchenSinkView.vue?raw'
@@ -93,6 +94,7 @@ const CLEANED: Record<string, string> = {
   'src/views/KitchenSinkView.vue': kitchenSinkView,
   'src/views/FeedView.vue': feedView,
   'src/components/PostCard.vue': postCard,
+  'src/views/ActivateView.vue': activateView,
 }
 
 /** The hardcoded-value scan of /10x-ui: colour literals, arbitrary values and palette classes. */

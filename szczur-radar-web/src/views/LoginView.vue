@@ -4,15 +4,23 @@ import { useRoute, useRouter } from 'vue-router'
 import { login } from '../api/auth'
 import { ApiError } from '../api/client'
 import { setSession } from '../auth/session'
+import StatusMessage from '../components/StatusMessage.vue'
 import { safeRedirect } from '../router/redirect'
 
 const route = useRoute()
 const router = useRouter()
 
-const email = ref('')
+// ActivateView arrives here with the account in the router's history state (never in the query, which
+// would stay in the address and reach the proxy's log): fill in the e-mail and confirm the password.
+const { activatedEmail: fromActivation } = router.options.history.state
+const activatedEmail = typeof fromActivation === 'string' ? fromActivation : null
+
+const email = ref(activatedEmail ?? '')
 const password = ref('')
 const submitting = ref(false)
 const error = ref<string | null>(null)
+/** The "password set" notice, until the first login attempt. */
+const activated = ref(activatedEmail !== null)
 
 function errorMessage(err: unknown): string {
   if (err instanceof ApiError && err.status === 401) {
@@ -30,6 +38,7 @@ async function submit(): Promise<void> {
   if (submitting.value) return
   submitting.value = true
   error.value = null
+  activated.value = false
   try {
     setSession(await login(email.value, password.value))
     await router.replace(safeRedirect(route.query.redirect))
@@ -47,6 +56,7 @@ async function submit(): Promise<void> {
       <p class="eyebrow">Szczur Radar</p>
       <h1 id="login-title">Logowanie</h1>
       <form class="form" novalidate @submit.prevent="submit">
+        <StatusMessage v-if="activated" tone="ok" class="notice">Hasło ustawione. Zaloguj się.</StatusMessage>
         <label>
           E-mail
           <input v-model="email" type="email" name="email" autocomplete="username" required />
@@ -113,5 +123,10 @@ button:disabled {
 .error {
   margin: 0;
   color: var(--destructive);
+}
+
+/* The form's gap spaces the notice; the parent's selector outranks the message's own margin. */
+.form .notice {
+  margin: 0;
 }
 </style>

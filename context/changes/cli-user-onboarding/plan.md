@@ -596,21 +596,21 @@ Zdanie „Password recovery arrives with S-07” (`deploy-plan.md:35`) dostaje o
 
 #### Automated
 
-- [x] 3.1 AuthorizationCompletenessIT z nowymi PUBLIC_ROUTES
-- [x] 3.2 ActivationIT
-- [x] 3.3 ./mvnw -B verify
+- [x] 3.1 AuthorizationCompletenessIT z nowymi PUBLIC_ROUTES — 2616e83
+- [x] 3.2 ActivationIT — 2616e83
+- [x] 3.3 ./mvnw -B verify — 2616e83
 
 ### Phase 4: Widok aktywacji w SPA
 
 #### Automated
 
-- [ ] 4.1 npm test (ActivateView, LoginView, router, styleContract)
-- [ ] 4.2 npm run build
+- [x] 4.1 npm test (ActivateView, LoginView, router, styleContract)
+- [x] 4.2 npm run build
 
 #### Manual
 
-- [ ] 4.3 Zrzuty /activate i /login w obu motywach i przy 375 px
-- [ ] 4.4 Tabela 7 stanów
+- [x] 4.3 Zrzuty /activate i /login w obu motywach i przy 375 px
+- [x] 4.4 Tabela 7 stanów
 
 ### Phase 5: Wdrożenie, dokumentacja i weryfikacja w PR env
 
