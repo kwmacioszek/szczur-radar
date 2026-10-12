@@ -107,7 +107,8 @@ pass "$rank migrations, Flyway V$last_version"
 db_psql <<SQL
 insert into users (email, password_hash, role) values ('admin@example.com', 'not-a-hash', 'admin');
 insert into pipeline_runs (kind, status, range_from, range_to, sources, requested_by, started_at, finished_at)
-    select 'range', 'succeeded', now() - interval '1 day', now(), array['wykop'], id, now(), now() from users;
+    select 'range', 'succeeded', now() - interval '1 day', now(), array['wykop'], id, now(), now()
+    from users where email = 'admin@example.com';
 insert into pipeline_run_steps (run_id, step, status, finished_at)
     select id, 'fetch', 'succeeded', now() from pipeline_runs;
 with raw as (
@@ -132,24 +133,27 @@ insert into spring_session values ('00000000-0000-0000-0000-000000000001',
 insert into spring_session_attributes values ('00000000-0000-0000-0000-000000000001',
     'SPRING_SECURITY_CONTEXT', decode('00', 'hex'));
 SQL
-pass "sample rows: 1 user, 1 run, $posts posts with RAW and assessments, 1 session"
+# The migrations add system accounts (V6: the daily run's scheduler), so count the users instead of
+# assuming one.
+users=$(db_psql -Atc 'select count(*) from users')
+pass "sample rows: 1 admin ($users users with the migrations' system accounts), 1 run, $posts posts with RAW and assessments, 1 session"
 
 step "1. backup.sh into :local:/out"
 run_backup run1 || { cat "$tmp/run1.log"; die "the first backup failed"; }
 grep -q 'restore-check: .*OK' "$tmp/run1.log" || { cat "$tmp/run1.log"; die "no restore-check OK in the log"; }
-in_image "$posts" "$last_version" <<'SH' || die "backup contents"
+in_image "$posts" "$last_version" "$users" <<'SH' || die "backup contents"
 set -euo pipefail
-posts=$1 version=$2
+posts=$1 version=$2 users=$3
 dumps=(/out/daily/*.dump) manifests=(/out/daily/*.manifest.json)
 [[ ${#dumps[@]} == 1 && ${#manifests[@]} == 1 ]] || { echo "daily: ${#dumps[@]} dumps, ${#manifests[@]} manifests"; exit 1; }
 [[ ${dumps[0]%.dump} == "${manifests[0]%.manifest.json}" ]] || { echo "dump and manifest names differ"; exit 1; }
 toc=$(pg_restore --list "${dumps[0]}")
 if grep -E ' TABLE DATA public spring_session' <<<"$toc"; then echo "session data in the dump"; exit 1; fi
 grep -qE ' TABLE DATA public posts( |$)' <<<"$toc" || { echo "no posts data in the dump"; exit 1; }
-jq -e --argjson posts "$posts" --arg version "$version" --arg file "$(basename "${dumps[0]}")" \
+jq -e --argjson posts "$posts" --argjson users "$users" --arg version "$version" --arg file "$(basename "${dumps[0]}")" \
     --arg sha "$(sha256sum "${dumps[0]}" | cut -d ' ' -f 1)" \
     '.file == $file and .sha256 == $sha and .flyway_version == $version and .restore_check.ok == true
-     and .counts_before.posts == $posts and .counts_after.posts == $posts and .counts_after.users == 1' \
+     and .counts_before.posts == $posts and .counts_after.posts == $posts and .counts_after.users == $users' \
     "${manifests[0]}" >/dev/null || { echo "manifest:"; cat "${manifests[0]}"; exit 1; }
 month=$(date -u +%Y-%m)
 [[ -s /out/monthly/szczur-radar-$month.dump && -s /out/monthly/szczur-radar-$month.manifest.json ]] \
