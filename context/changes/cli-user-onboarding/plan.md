@@ -586,7 +586,7 @@ Zdanie „Password recovery arrives with S-07” (`deploy-plan.md:35`) dostaje o
 - [x] 2.2 CreateUserCommandTest i ResetPasswordCommandTest — 5f374c1
 - [x] 2.3 IT komend create-user i reset-password — 5f374c1
 - [x] 2.4 ./mvnw -B verify — 5f374c1
-- [x] 2.6 Warunkowo: odmowa dla konta systemowego S-05 — 5f374c1
+- [x] 2.6 Warunkowo: odmowa dla konta systemowego S-05 — N/A: S-05 nie jest w main, odmowę dopisuje S-05 — 5f374c1
 
 #### Manual
 

@@ -2,7 +2,7 @@
 // Setting the first (or a reset) password through the link the operator's CLI prints:
 // <web>/activate#<token>. The fragment never reaches a server or a Referer header; the token goes to
 // the API only in a JSON body, and nothing here logs it.
-import { computed, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { activate, activationFailure, lookupActivation } from '../api/activation'
 import { logout } from '../api/auth'
@@ -39,6 +39,7 @@ const password = ref('')
 const repeat = ref('')
 const submitting = ref(false)
 const problem = ref<FormProblem | null>(null)
+const passwordInput = ref<HTMLInputElement | null>(null)
 
 const passwordInvalid = computed(
   () => problem.value === 'too_short' || problem.value === 'too_long' || problem.value === 'password_policy',
@@ -58,10 +59,14 @@ async function check(): Promise<void> {
   phase.value = 'checking'
   try {
     email.value = (await lookupActivation(token)).email
-    phase.value = 'form'
   } catch (err) {
     phase.value = activationFailure(err) === 'link_invalid' ? 'invalid' : 'lookup_failed'
+    return
   }
+  phase.value = 'form'
+  // The form replaces the "checking" line: take the focus there, so a screen reader announces it.
+  await nextTick()
+  passwordInput.value?.focus()
 }
 
 /**
@@ -98,7 +103,12 @@ async function submit(): Promise<void> {
 }
 
 onMounted(() => {
-  if (token) void check()
+  if (!token) return
+  // From here the token lives only in this page, not in the address bar or the tab's back/forward
+  // entry, where it would stay usable until it expires. (A browser's global history may still have
+  // recorded the visit.) A reload needs the operator's link again.
+  void router.replace({ path: route.path, query: route.query })
+  void check()
 })
 </script>
 
@@ -126,6 +136,7 @@ onMounted(() => {
             <label>
               Nowe hasło
               <input
+                ref="passwordInput"
                 v-model="password"
                 type="password"
                 name="password"

@@ -122,6 +122,34 @@ class ActivationLinksIT {
 	}
 
 	@Test
+	void anEmailTakenWhileCreatingIsRefused() throws Exception {
+		String email = newEmail();
+		ExecutorService executor = Executors.newSingleThreadExecutor();
+		Future<IssueOutcome> outcome;
+		try (Connection other = dataSource.getConnection()) {
+			// Another command has inserted the e-mail but not committed: this check passes, and the insert
+			// waits on the unique index until the other account is there.
+			other.setAutoCommit(false);
+			try (PreparedStatement insert = other.prepareStatement("INSERT INTO users (email) VALUES (?)")) {
+				insert.setString(1, email);
+				insert.executeUpdate();
+			}
+			outcome = executor.submit(() -> links.createUser(email, Role.ADMIN, TTL));
+			awaitLockWaiters("users", 1);
+			other.commit();
+		}
+		finally {
+			executor.shutdown();
+		}
+
+		assertThat(outcome.get(30, TimeUnit.SECONDS))
+			.isEqualTo(new IssueOutcome.Refused(IssueOutcome.Reason.EMAIL_TAKEN));
+		User user = users.findByEmail(email).orElseThrow();
+		assertThat(user.getRole()).isEqualTo(Role.USER);
+		assertThat(tokens.findById(user.getId())).isEmpty();
+	}
+
+	@Test
 	void resetOfAnUnknownEmailIsRefused() {
 		String email = newEmail();
 
@@ -255,6 +283,22 @@ class ActivationLinksIT {
 			.isTrue();
 	}
 
+	@Test
+	void activationLogsTheAccountOutEverywhere() {
+		String email = newEmail();
+		UUID id = activatedAccount(email);
+		UUID otherId = activatedAccount(newEmail());
+		IssuedLink link = issued(links.resetPassword(email, TTL));
+		// A login past its password check when the reset committed stores its session after the reset.
+		createSession(sessions, id);
+		String otherSession = createSession(sessions, otherId);
+
+		assertThat(links.activate(link.token(), PASSWORD)).isEqualTo(ActivationResult.ACTIVATED);
+
+		assertThat(sessions.findByPrincipalName(id.toString())).isEmpty();
+		assertThat(sessions.findByPrincipalName(otherId.toString())).containsOnlyKeys(otherSession);
+	}
+
 	// --- concurrency ----------------------------------------------------------------------------
 
 	@Test
@@ -277,7 +321,7 @@ class ActivationLinksIT {
 			for (String password : passwords) {
 				results.add(executor.submit(() -> links.activate(link.token(), password)));
 			}
-			awaitLockWaiters(2);
+			awaitLockWaiters("activation_tokens", 2);
 			lockHolder.commit(); // releases the lock
 		}
 		finally {
@@ -340,14 +384,15 @@ class ActivationLinksIT {
 			.single();
 	}
 
-	/** Waits until {@code count} database sessions wait for a row lock on {@code activation_tokens}. */
-	private void awaitLockWaiters(int count) throws InterruptedException {
+	/** Waits until {@code count} database sessions wait for a lock in a statement on {@code table}. */
+	private void awaitLockWaiters(String table, int count) throws InterruptedException {
 		long deadline = System.nanoTime() + Duration.ofSeconds(10).toNanos();
 		long waiting;
 		do {
 			waiting = jdbc
 				.sql("SELECT count(*) FROM pg_stat_activity WHERE datname = current_database()"
-						+ " AND wait_event_type = 'Lock' AND query LIKE '%activation_tokens%'")
+						+ " AND wait_event_type = 'Lock' AND query LIKE :table")
+				.param("table", "%" + table + "%")
 				.query(Long.class)
 				.single();
 			if (waiting >= count) {
@@ -356,7 +401,7 @@ class ActivationLinksIT {
 			Thread.sleep(20);
 		}
 		while (System.nanoTime() < deadline);
-		assertThat(waiting).as("activations waiting for the token's row lock").isEqualTo(count);
+		assertThat(waiting).as("statements on " + table + " waiting for a lock").isEqualTo(count);
 	}
 
 }

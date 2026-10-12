@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -22,6 +23,7 @@ import org.springframework.test.web.servlet.assertj.MvcTestResult;
 import pl.szczurradar.api.TestcontainersConfiguration;
 import pl.szczurradar.api.auth.Passwords;
 import pl.szczurradar.api.cli.MigrateCommand;
+import pl.szczurradar.api.config.SessionConfig;
 import pl.szczurradar.api.persistence.Sha256;
 import pl.szczurradar.api.user.Role;
 
@@ -129,6 +131,21 @@ class ActivationIT {
 		assertThat(login(email, PASSWORD)).hasStatusOk();
 	}
 
+	@Test
+	void aBrowserLoggedInAsAnotherAccountGetsNoCookie() {
+		// /activate stays open to a logged-in browser; the routes must not renew that account's cookie.
+		String otherEmail = newEmail();
+		assertThat(activate(newLink(otherEmail), PASSWORD)).hasStatus(HttpStatus.NO_CONTENT);
+		Cookie otherSession = sessionCookie(login(otherEmail, PASSWORD));
+		String token = newLink(newEmail());
+
+		assertThat(activationCall(mvc.post().uri(LOOKUP).cookie(otherSession), LOOKUP, tokenJson(token)))
+			.hasStatusOk();
+		assertThat(activationCall(mvc.post().uri(ACTIVATE).cookie(otherSession), ACTIVATE,
+				activationJson(token, PASSWORD)))
+			.hasStatus(HttpStatus.NO_CONTENT);
+	}
+
 	// --- request shape and origin ---------------------------------------------------------------
 
 	@Test
@@ -222,6 +239,19 @@ class ActivationIT {
 		return json(mvc.post().uri("/api/auth/login").header("X-Real-IP", CLIENT_IP),
 				"{\"email\":\"%s\",\"password\":\"%s\"}".formatted(email, password))
 			.exchange();
+	}
+
+	/** The session cookie a successful login sets. */
+	private static Cookie sessionCookie(MvcTestResult login) {
+		assertThat(login).hasStatusOk();
+		String prefix = SessionConfig.COOKIE_NAME + "=";
+		String header = login.getResponse()
+			.getHeaders("Set-Cookie")
+			.stream()
+			.filter(value -> value.startsWith(prefix))
+			.findFirst()
+			.orElseThrow();
+		return new Cookie(SessionConfig.COOKIE_NAME, header.substring(prefix.length(), header.indexOf(';')));
 	}
 
 	private static MockMvcRequestBuilder json(MockMvcRequestBuilder request, String json) {

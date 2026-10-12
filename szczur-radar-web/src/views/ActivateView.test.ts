@@ -62,6 +62,21 @@ describe('ActivateView', () => {
     expect(lookupActivation).not.toHaveBeenCalled()
   })
 
+  it('drops the token from the address once it has read it', async () => {
+    const { router } = await mountActivate()
+    expect(lookupActivation).toHaveBeenCalledWith(TOKEN)
+    expect(router.currentRoute.value.fullPath).toBe('/activate')
+  })
+
+  it('moves the focus to the new password once the form shows', async () => {
+    const router = createAppRouter(createMemoryHistory())
+    await router.push(`/activate#${TOKEN}`)
+    const wrapper = mount(ActivateView, { global: { plugins: [router] }, attachTo: document.body })
+    await flushPromises()
+    expect(document.activeElement).toBe(wrapper.find('input[name="password"]').element)
+    wrapper.unmount()
+  })
+
   it('shows the check of the link while it runs', async () => {
     vi.mocked(lookupActivation).mockReturnValue(never())
     const { wrapper } = await mountActivate()

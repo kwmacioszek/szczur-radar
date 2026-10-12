@@ -1,7 +1,7 @@
 ---
 change_id: cli-user-onboarding
 title: Cli user onboarding
-status: implemented
+status: impl_reviewed
 created: 2026-10-12
 updated: 2026-10-12
 archived_at: null

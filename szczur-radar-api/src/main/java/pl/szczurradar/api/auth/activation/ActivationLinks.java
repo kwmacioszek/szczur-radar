@@ -9,6 +9,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -34,7 +35,7 @@ import pl.szczurradar.api.user.UserRepository;
  * </ul>
  *
  * <p>Works in the server and in the operator commands, which have no Spring Session repository: a
- * reset deletes the account's sessions with SQL.
+ * reset and an activation delete the account's sessions with SQL.
  */
 @Service
 public class ActivationLinks {
@@ -69,18 +70,28 @@ public class ActivationLinks {
 	 * Creates an account without a password and its link, in one transaction.
 	 *
 	 * @param email an already normalized and validated address
-	 * @return the link, or {@link IssueOutcome.Reason#EMAIL_TAKEN} with nothing written
+	 * @return the link, or {@link IssueOutcome.Reason#EMAIL_TAKEN} with nothing written, also when another
+	 *     command takes the e-mail between the check and the insert
 	 */
 	public IssueOutcome createUser(String email, Role role, Duration ttl) {
 		requirePositive(ttl);
-		return inTransaction(status -> {
+		try {
+			return inTransaction(status -> {
+				if (users.existsByEmail(email)) {
+					return new IssueOutcome.Refused(IssueOutcome.Reason.EMAIL_TAKEN);
+				}
+				// Flushed now: the token row references the account.
+				User user = users.saveAndFlush(new User(email, null, role));
+				return issue(user, ttl);
+			});
+		}
+		catch (DataIntegrityViolationException ex) {
+			// The transaction has rolled back; a concurrent command's account is what took the e-mail.
 			if (users.existsByEmail(email)) {
 				return new IssueOutcome.Refused(IssueOutcome.Reason.EMAIL_TAKEN);
 			}
-			// Flushed now: the token row references the account.
-			User user = users.saveAndFlush(new User(email, null, role));
-			return issue(user, ttl);
-		});
+			throw ex;
+		}
 	}
 
 	/**
@@ -121,7 +132,8 @@ public class ActivationLinks {
 	 *   <li>the valid token, locked until the end of the transaction: of two uses of one link, the
 	 *       second waits and then finds nothing;
 	 *   <li>only then argon2 (16 MB), so invalid links never cost a hash;
-	 *   <li>the account's password set and the token deleted, in the same transaction.
+	 *   <li>the account's password set, the token deleted and the account's sessions deleted, in the same
+	 *       transaction.
 	 * </ol>
 	 */
 	public ActivationResult activate(String token, String password) {
@@ -140,6 +152,9 @@ public class ActivationLinks {
 			User user = users.findById(valid.get().getUserId()).orElseThrow();
 			user.setPassword(passwordEncoder.encode(password));
 			tokens.delete(valid.get());
+			// A login already past its password check when a reset committed stores its session after the
+			// reset's DELETE: a new password ends every session of the account, so that one ends here.
+			deleteSessions(user.getId());
 			return ActivationResult.ACTIVATED;
 		});
 	}

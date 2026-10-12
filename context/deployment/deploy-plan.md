@@ -435,7 +435,7 @@ PR #44 was squash-merged as `b7ee254` (11:25 UTC). CI on `main` applied `+ Creat
   - deletes every session of the account (signed out everywhere);
   - replaces its link, so an earlier link stops working.
 
-  The role stays.
+  The role stays. Setting the password through the link deletes the account's sessions again: a login that was already past its password check when the reset committed saves its session after the reset, and that session ends at the activation at the latest. Closing that window completely is parked after the MVP (`roadmap.md`, Parked).
 - `create-admin` stays the first-admin bootstrap. When an admin exists, it refuses and points to `reset-password` (lost access) or `create-user --role admin` (another admin).
 - Run them in the API container:
   1. Wake the API: `curl https://<web-domain>/api/health`. A sleeping service has no container, and `railway ssh` then lands on Railway's SSH gateway and runs nothing.
