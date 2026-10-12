@@ -38,13 +38,18 @@ const REGION = "europe-west4"; // Railway "EU West (Amsterdam)"
 // pin it: the API binds it and the web Caddy proxy targets it deterministically
 // over the private network.
 const API_INTERNAL_PORT = "8000";
-// Per-service resource cap (2 vCPU, 4 GB; Railway counts memory in SI bytes),
-// a cost guard the operator set in the dashboard on all services after the
-// move to Hobby (F-01, production-data-gate); db-backup gets it too. Declared
-// so the plan matches the environment: without it a plan shows `limitOverride`
-// 2 → null and 4000000000 → null (an apply of those nulls left the cap in place
-// in szczur-radar-pr-44 on 2026-10-11, so the diff was noise, not a removal).
-const RESOURCE_LIMITS = { containers: { cpu: 2, memoryBytes: 4_000_000_000 } };
+// Per-service resource caps (Railway counts memory in SI bytes): a cost guard
+// the operator sets in the dashboard, first 2 vCPU / 4 GB on every service after
+// the move to Hobby (F-01, production-data-gate), lowered per service on
+// 2026-10-12. Declared so the plan matches production: CI applies this file on
+// every merge, so a cap changed only in the dashboard would be reset here. (An
+// apply of `limitOverride` → null left the cap in place in szczur-radar-pr-44 on
+// 2026-10-11, so a missing declaration is plan noise, not a removal.)
+const limits = (cpu: number, memoryBytes: number) => ({ containers: { cpu, memoryBytes } });
+const POSTGRES_LIMITS = limits(1, 1_000_000_000);
+const API_LIMITS = limits(2, 2_000_000_000);
+const WEB_LIMITS = limits(1, 1_000_000_000);
+const DB_BACKUP_LIMITS = limits(0.5, 500_000_000);
 
 export default defineRailway(() => {
   // Railway PR environments track the PR's branch, not `main`. CI sets
@@ -75,7 +80,7 @@ export default defineRailway(() => {
   // database. On 2026-10-12 such a restart hung at "Mounting volume" for 9 min
   // until a manual redeploy (deploy-plan.md, F-01). No value means no sleep.
   const db = Object.assign(postgres("postgres", { region: REGION }), {
-    deploy: { limitOverride: RESOURCE_LIMITS },
+    deploy: { limitOverride: POSTGRES_LIMITS },
   });
 
   // Spring Boot backend (Java 25, Maven). No public domain: reachable only
@@ -100,7 +105,7 @@ export default defineRailway(() => {
     preDeploy: "java -jar target/szczur-radar-api.jar migrate",
     healthcheck: "/api/health",
     replicas: { [REGION]: 1 },
-    deploy: { sleepApplication: true, limitOverride: RESOURCE_LIMITS },
+    deploy: { sleepApplication: true, limitOverride: API_LIMITS },
     env: {
       PORT: API_INTERNAL_PORT,
       // Nieużywane od `api-docker-image` (JDK pochodzi z obrazu Dockera). Zostaje
@@ -156,7 +161,7 @@ export default defineRailway(() => {
     watchPatterns: ["szczur-radar-web/**"],
     healthcheck: "/healthz",
     replicas: { [REGION]: 1 },
-    deploy: { sleepApplication: true, limitOverride: RESOURCE_LIMITS },
+    deploy: { sleepApplication: true, limitOverride: WEB_LIMITS },
     env: {
       API_PRIVATE_DOMAIN: api.env.RAILWAY_PRIVATE_DOMAIN,
       API_PORT: API_INTERNAL_PORT,
@@ -185,7 +190,7 @@ export default defineRailway(() => {
     rootDirectory: "tools/db-backup",
     watchPatterns: ["tools/db-backup/**"],
     replicas: { [REGION]: 1 },
-    deploy: { cronSchedule: "0 2 * * *", restartPolicyType: "NEVER", limitOverride: RESOURCE_LIMITS },
+    deploy: { cronSchedule: "0 2 * * *", restartPolicyType: "NEVER", limitOverride: DB_BACKUP_LIMITS },
     env: {
       PGHOST: db.env.PGHOST,
       PGPORT: db.env.PGPORT,
