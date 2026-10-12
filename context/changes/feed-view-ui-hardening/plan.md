@@ -361,23 +361,23 @@ Brak danych do migracji. Wycofanie = revert commitów tej gałęzi. `LoginView` 
 
 #### Automated
 
-- [x] 3.1 Testy web przechodzą, w tym przypadki (a)–(f)
-- [x] 3.2 Typecheck i build przechodzą
+- [x] 3.1 Testy web przechodzą, w tym przypadki (a)–(f) — a371271
+- [x] 3.2 Typecheck i build przechodzą — a371271
 
 #### Manual
 
-- [x] 3.3 `ui-after/README.md` pokazuje 7 komórek macierzy w obu motywach i przy 375 px
-- [x] 3.4 Zmiana strony z mockiem: góra strony, „Wczytywanie strony 2…”, fokus na „Posty”; `/?page=9` z przyciskiem; `error-next` z „Spróbuj ponownie”
+- [x] 3.3 `ui-after/README.md` pokazuje 7 komórek macierzy w obu motywach i przy 375 px — a371271
+- [x] 3.4 Zmiana strony z mockiem: góra strony, „Wczytywanie strony 2…”, fokus na „Posty”; `/?page=9` z przyciskiem; `error-next` z „Spróbuj ponownie” — a371271
 
 ### Phase 4: Utrwalenie i weryfikacja
 
 #### Automated
 
-- [ ] 4.1 `REPOSITORY_GUIDELINES.md` opisuje skan skali i wyjątek `LoginView`
-- [ ] 4.2 Testy i build web przechodzą
-- [ ] 4.3 CI na PR jest zielone
+- [x] 4.1 `REPOSITORY_GUIDELINES.md` opisuje skan skali i wyjątek `LoginView`
+- [x] 4.2 Testy i build web przechodzą
+- [x] 4.3 CI na PR jest zielone
 
 #### Manual
 
-- [ ] 4.4 `ui-after/README.md` zawiera odhaczoną listę `ui-quality-checklist`
-- [ ] 4.5 `/` w Railway PR env w obu motywach i przy 375 px wygląda jak zrzuty z mocka; „Starsze” prowadzi na górę następnej strony
+- [x] 4.4 `ui-after/README.md` zawiera odhaczoną listę `ui-quality-checklist`
+- [x] 4.5 `/` w Railway PR env w obu motywach i przy 375 px wygląda jak zrzuty z mocka; „Starsze” prowadzi na górę następnej strony

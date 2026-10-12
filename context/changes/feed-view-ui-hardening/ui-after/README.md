@@ -44,3 +44,42 @@ Karta posta nie ma kontrolek, więc jej hover i fokus są N/A do S-03 (link do w
 | `feed-error-next-1280-light.png`, `feed-error-1280-light.png` | `p3-feed-paging-error-1280-light.png`, `p3-feed-error-1280-light.png` | `StatusMessage` z tłem i krawędzią oraz „Spróbuj ponownie” zamiast gołej czerwonej linii z radą odświeżenia (C2, C4) |
 | `feed-loading-1280-light.png` | `p3-feed-loading-1280-light.png` | Ten sam tekst „Wczytywanie…”, teraz z `aria-busy` na regionie listy (C4) |
 | `feed-empty-1280-light.png` | `p3-feed-empty-1280-light.png` | „…po najbliższej aktualizacji danych.” zamiast „…po pierwszym przebiegu.” |
+
+## Lista kontrolna `/10x-ui`
+
+Według `.claude/skills/10x-ui/references/ui-quality-checklist.md`.
+
+### Charges
+
+- [x] Zmiana wyszła z `## Charges` w `research.md`: 4 zarzuty (C1–C4), każdy z plikiem, linią i wpływem na użytkownika.
+- [x] Brakujące tokeny: literałów kolorów, klas palety i wartości arbitralnych było 0 przed i jest 0 po; `px`/`rem` w piśmie, odstępach i promieniach 23 → 0 (tabela „Liczniki skanu”).
+- [x] Brakujący współdzielony komponent: feed używa `AppButton`, `StatusMessage`, `StatusBadge`; ręczny znacznik `.flag` i goły `<p role="alert">` zniknęły; nowy prymityw nie powstał.
+- [x] Przypadkowa architektura, wejścia: bez sesji → `/login?redirect=…` (guard bez zmian; w PR env `/api/posts` bez sesji = 401); bez danych → stan pusty (`p3-feed-empty-*`); prosto z linku → `/?page=9` z komunikatem i przyciskiem (`p3-feed-out-of-range-*`).
+- [x] Zarzuty poza planem zapisane jako deferred w `research.md`: D1 link i widok posta → S-03, D2 filtry → S-04 (data świeżości → S-05), D3 pasek stronicowania nad listą → S-04, D4 `AppHeader` przy 375 px → poza zakresem.
+
+### Contract
+
+- [x] Tokeny: pismo, odstępy, promienie i kolory z `:root` w `szczur-radar-web/src/style.css`; `style.css` bez zmian (faza „wartości tokenów” N/A).
+- [x] Warstwa komponentów repo (`src/components/`): `PostCard` przebudowany w miejscu (karta C2), bez drugiego przycisku, karty ani pola; sekcja „Posty” w kitchen sink.
+- [x] Macierz 7 stanów: tabela wyżej, każda komórka ze zrzutem albo N/A z powodem.
+- [x] Desktop i jedna szerokość mobilna: 1280×900 i 375×812.
+- [x] Fokus i nazwy: pierścień `--ring` na każdej kontrolce widoku („Posty”, „Wyloguj”, „Nowsze”, „Starsze”, „Spróbuj ponownie”, „Przejdź do strony N”) i na nagłówku „Posty” po zmianie strony; nazwy z tekstu kontrolek. Znacznik trafności pokazuje samą wartość („inwestycyjny”) bez prefiksu „Trafność:” — decyzja użytkownika przy fazie 2.
+- [x] Ciemny motyw wyłącznie na warstwie tokenów; oba motywy na zrzutach; brak nowych par kolorów (test kontrastu bez zmian).
+
+### Guard
+
+- [x] Plik reguł agenta (`REPOSITORY_GUIDELINES.md`, sekcja „UI”, dołączany przez `CLAUDE.md` / `AGENTS.md`): źródło tokenów, katalog komponentów (z `PostCard`), zakaz literałów i wartości spoza skali, kitchen sink, mock `/admin` i `/`; brak reguł zachęcających do jednorazowych wartości.
+- [x] Kontrola: lintera nie ma; jest nią `src/styleContract.test.ts` (Vitest, job „web unit tests” w CI) — skan kolorów i skali na liście `CLEANED`; `LoginView.vue` poza listą do `login-view-ui-hardening`.
+
+### Gate
+
+- [x] Kitchen sink (sekcja „Posty”) i zrzuty widoku z mockiem w obu motywach i przy 375 px; narzędzia `toHaveScreenshot` w repo nie ma, więc baseline N/A.
+- [ ] `/10x-impl-review` — następny krok po fazie 4; ustalenia UI triażowane według wpływu na użytkownika.
+- [x] Zakres: jeden widok (`FeedView`) z kartą `PostCard`, bez zmian tokenów globalnych; poza widokiem tylko reguła, kontrola, mock i kitchen sink.
+
+## Weryfikacja w Railway PR env (2026-10-12)
+
+- Środowisko `szczur-radar-pr-48`, adres `https://szczur-radar-web-szczur-radar-pr-48.up.railway.app`; web wdrożony z `a371271` (głowa gałęzi z kodem widoku; commit fazy 4 zmienia tylko dokumenty), CI na `a371271` zielone we wszystkich jobach.
+- Dane: konto admina utworzone przez operatora (`create-admin` przez `railway ssh`), jeden przebieg zakresu dat w `/admin` — `partial`, 34 ocenione, 1 nieudany; feed `total` 34.
+- `/` przy 1280×900 i 375×812 w obu motywach: 34 karty C2, bez poziomego przewijania (`scrollWidth` = `clientWidth`), bez alertów, „Strona 1 z 1” z oboma przyciskami wyłączonymi. Zrzuty: `pr48-feed-{1280,375}-{light,dark}.png`.
+- Zmiana strony na prawdziwych danych: 34 posty mieszczą się na jednej stronie, więc „Starsze” jest wyłączone; tę samą ścieżkę (zmiana `?page`) sprawdzono przez `/?page=1` → „Nie ma strony 2. Posty kończą się na stronie 1.” (`pr48-feed-out-of-range-1280-light.png`) → „Przejdź do strony 1” → `scrollY` 0, fokus na `H1#feed-title`, 34 karty. „Starsze” z dołu pełnej strony sprawdzone na mocku (`p3-feed-paging-loading-*`, pomiar w sekcji „Pomiary”).
