@@ -14,7 +14,7 @@ import org.junit.jupiter.api.Test;
 /** The checks every operator command runs before its Spring context starts. */
 class CommandChecksTest {
 
-	private static final Set<String> NAMES = Set.of("email", "role");
+	private static final Set<Option> ACCEPTED = Set.of(Option.EMAIL, Option.ROLE);
 
 	private final ByteArrayOutputStream errBytes = new ByteArrayOutputStream();
 
@@ -22,23 +22,26 @@ class CommandChecksTest {
 
 	@Test
 	void readsBothOptionForms() {
-		assertThat(CommandChecks.options(new String[] { "--email", "a@example.com", "--role=admin" }, NAMES))
-			.containsExactlyInAnyOrderEntriesOf(Map.of("email", "a@example.com", "role", "admin"));
-		assertThat(CommandChecks.options(new String[] { "--email=" }, NAMES)).containsExactly(Map.entry("email", ""));
-		assertThat(CommandChecks.options(new String[0], NAMES)).isEmpty();
+		assertThat(CommandChecks.options(new String[] { "--email", "a@example.com", "--role=admin" }, ACCEPTED))
+			.containsExactlyInAnyOrderEntriesOf(Map.of(Option.EMAIL, "a@example.com", Option.ROLE, "admin"));
+		assertThat(CommandChecks.options(new String[] { "--email=" }, ACCEPTED)).containsExactly(Map.entry(Option.EMAIL, ""));
+		assertThat(CommandChecks.options(new String[0], ACCEPTED)).isEmpty();
 	}
 
 	@Test
 	void anythingElseIsAUsageError() {
-		assertThat(CommandChecks.options(new String[] { "--name", "x" }, NAMES)).as("unknown option").isNull();
-		assertThat(CommandChecks.options(new String[] { "--email" }, NAMES)).as("no value").isNull();
-		assertThat(CommandChecks.options(new String[] { "--email", "a@example.com", "--email=b@example.com" }, NAMES))
+		assertThat(CommandChecks.options(new String[] { "--name", "x" }, ACCEPTED)).as("unknown option").isNull();
+		assertThat(CommandChecks.options(new String[] { "--role", "admin" }, Set.of(Option.EMAIL)))
+			.as("an option the command does not accept")
+			.isNull();
+		assertThat(CommandChecks.options(new String[] { "--email" }, ACCEPTED)).as("no value").isNull();
+		assertThat(CommandChecks.options(new String[] { "--email", "a@example.com", "--email=b@example.com" }, ACCEPTED))
 			.as("repeated")
 			.isNull();
-		assertThat(CommandChecks.options(new String[] { "--email", "a@example.com", "extra" }, NAMES))
+		assertThat(CommandChecks.options(new String[] { "--email", "a@example.com", "extra" }, ACCEPTED))
 			.as("not an option")
 			.isNull();
-		assertThat(CommandChecks.options(new String[] { "-email", "a@example.com" }, NAMES)).as("single dash").isNull();
+		assertThat(CommandChecks.options(new String[] { "-email", "a@example.com" }, ACCEPTED)).as("single dash").isNull();
 	}
 
 	@Test

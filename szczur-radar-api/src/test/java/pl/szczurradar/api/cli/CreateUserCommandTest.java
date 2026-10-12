@@ -121,9 +121,9 @@ class CreateUserCommandTest {
 		when(links.createUser("jan@example.com", Role.ADMIN, Duration.ofHours(2)))
 			.thenReturn(new IssuedLink("jan@example.com", Role.ADMIN, TOKEN, EXPIRES_AT));
 
-		int code = command.run(new String[] { "--email= Jan@Example.com", "--role=admin" });
+		ExitCode code = command.run(new String[] { "--email= Jan@Example.com", "--role=admin" });
 
-		assertThat(code).isZero();
+		assertThat(code).isEqualTo(ExitCode.OK);
 		assertThat(stdout().lines()).containsExactly(
 				"Created account jan@example.com (role admin) without a password. One-time activation link,"
 						+ " valid until 2026-10-13T08:15:30Z:",
@@ -138,7 +138,7 @@ class CreateUserCommandTest {
 		when(links.createUser("jan@example.com", Role.USER, ActivationSettings.DEFAULT_LINK_TTL))
 			.thenReturn(new IssuedLink("jan@example.com", Role.USER, TOKEN, EXPIRES_AT));
 
-		assertThat(command.run(new String[] { "--email", "jan@example.com" })).isZero();
+		assertThat(command.run(new String[] { "--email", "jan@example.com" })).isEqualTo(ExitCode.OK);
 		assertThat(stdout()).contains("(role user)");
 	}
 
@@ -148,9 +148,9 @@ class CreateUserCommandTest {
 		when(links.createUser("jan@example.com", Role.USER, ActivationSettings.DEFAULT_LINK_TTL))
 			.thenReturn(new IssueOutcome.Refused(IssueOutcome.Reason.EMAIL_TAKEN));
 
-		int code = command.run(new String[] { "--email", "jan@example.com" });
+		ExitCode code = command.run(new String[] { "--email", "jan@example.com" });
 
-		assertThat(code).isOne();
+		assertThat(code).isEqualTo(ExitCode.REFUSED);
 		assertThat(stderr()).contains("An account with e-mail jan@example.com already exists")
 			.contains("reset-password --email jan@example.com");
 		assertThat(stdout()).isEmpty();
@@ -159,9 +159,9 @@ class CreateUserCommandTest {
 
 	@Test
 	void aFailedContextStartIsReported() {
-		int code = command.run(new String[] { "--email", "jan@example.com" });
+		ExitCode code = command.run(new String[] { "--email", "jan@example.com" });
 
-		assertThat(code).isOne();
+		assertThat(code).isEqualTo(ExitCode.FAILED);
 		assertThat(contextStarts).hasValue(1);
 		assertThat(stderr()).contains("create-user failed: no database in a unit test");
 		assertThat(stdout()).isEmpty();
@@ -175,7 +175,7 @@ class CreateUserCommandTest {
 	}
 
 	private void assertUsageError(String[] args, String message) {
-		assertThat(command.run(args)).isEqualTo(2);
+		assertThat(command.run(args)).isEqualTo(ExitCode.USAGE);
 		assertThat(stderr()).contains(message);
 		assertThat(contextStarts).as("no database work on usage errors").hasValue(0);
 		assertThat(stdout()).isEmpty();

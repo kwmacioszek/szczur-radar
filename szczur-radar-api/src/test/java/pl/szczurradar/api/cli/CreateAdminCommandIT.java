@@ -77,9 +77,9 @@ class CreateAdminCommandIT {
 	void createsAnAdminWithAnArgon2Hash() {
 		ScriptedPrompt prompt = new ScriptedPrompt(PASSWORD, PASSWORD);
 
-		int code = createAdmin("admin@example.com", prompt);
+		ExitCode code = createAdmin("admin@example.com", prompt);
 
-		assertThat(code).isZero();
+		assertThat(code).isEqualTo(ExitCode.OK);
 		assertThat(prompt.prompts).hasSize(2);
 		User admin = users.findByEmail("admin@example.com").orElseThrow();
 		assertThat(admin.getRole()).isEqualTo(Role.ADMIN);
@@ -91,7 +91,7 @@ class CreateAdminCommandIT {
 
 	@Test
 	void theCreatedAdminCanLogIn() {
-		assertThat(createAdmin("admin@example.com", new ScriptedPrompt(PASSWORD, PASSWORD))).isZero();
+		assertThat(createAdmin("admin@example.com", new ScriptedPrompt(PASSWORD, PASSWORD))).isEqualTo(ExitCode.OK);
 
 		assertThat(mvc.post()
 			.uri("/api/auth/login")
@@ -106,12 +106,12 @@ class CreateAdminCommandIT {
 
 	@Test
 	void refusesASecondAdminBeforeAskingForAPassword() {
-		assertThat(createAdmin("first@example.com", new ScriptedPrompt(PASSWORD, PASSWORD))).isZero();
+		assertThat(createAdmin("first@example.com", new ScriptedPrompt(PASSWORD, PASSWORD))).isEqualTo(ExitCode.OK);
 		ScriptedPrompt prompt = new ScriptedPrompt(PASSWORD, PASSWORD);
 
-		int code = createAdmin("second@example.com", prompt);
+		ExitCode code = createAdmin("second@example.com", prompt);
 
-		assertThat(code).isEqualTo(AdminBootstrap.REFUSED);
+		assertThat(code).isEqualTo(ExitCode.REFUSED);
 		assertThat(prompt.prompts).isEmpty();
 		assertThat(adminCount()).isOne();
 		assertThat(stderr()).contains("Admin already exists");
@@ -121,7 +121,7 @@ class CreateAdminCommandIT {
 	void concurrentBootstrapsCreateExactlyOneAdmin() throws Exception {
 		ScriptedPrompt prompt = new ScriptedPrompt(PASSWORD, PASSWORD, PASSWORD, PASSWORD);
 		ExecutorService executor = Executors.newFixedThreadPool(2);
-		List<Future<Integer>> results = new ArrayList<>();
+		List<Future<ExitCode>> results = new ArrayList<>();
 		try (Connection lockHolder = dataSource.getConnection()) {
 			// Hold the bootstrap lock so that both bootstraps queue up behind it.
 			lockHolder.setAutoCommit(false);
@@ -137,13 +137,13 @@ class CreateAdminCommandIT {
 			assertThat(prompt.prompts).as("both wait before the admin check").isEmpty();
 			lockHolder.commit(); // releases the lock
 		}
-		List<Integer> codes = new ArrayList<>();
-		for (Future<Integer> result : results) {
+		List<ExitCode> codes = new ArrayList<>();
+		for (Future<ExitCode> result : results) {
 			codes.add(result.get(30, TimeUnit.SECONDS));
 		}
 		executor.shutdown();
 
-		assertThat(codes).containsExactlyInAnyOrder(AdminBootstrap.CREATED, AdminBootstrap.REFUSED);
+		assertThat(codes).containsExactlyInAnyOrder(ExitCode.OK, ExitCode.REFUSED);
 		assertThat(prompt.prompts).hasSize(2);
 		assertThat(adminCount()).isOne();
 	}
@@ -152,32 +152,32 @@ class CreateAdminCommandIT {
 	void refusesATakenEmail() {
 		users.save(new User("taken@example.com", passwordEncoder.encode("some password!!"), Role.USER));
 
-		int code = createAdmin("taken@example.com", new ScriptedPrompt(PASSWORD, PASSWORD));
+		ExitCode code = createAdmin("taken@example.com", new ScriptedPrompt(PASSWORD, PASSWORD));
 
-		assertThat(code).isEqualTo(AdminBootstrap.REFUSED);
+		assertThat(code).isEqualTo(ExitCode.REFUSED);
 		assertThat(users.findByEmail("taken@example.com").orElseThrow().getRole()).isEqualTo(Role.USER);
 		assertThat(adminCount()).isZero();
 	}
 
 	@Test
 	void mismatchedPasswordsCreateNothing() {
-		int code = createAdmin("admin@example.com", new ScriptedPrompt(PASSWORD, PASSWORD + "x"));
+		ExitCode code = createAdmin("admin@example.com", new ScriptedPrompt(PASSWORD, PASSWORD + "x"));
 
-		assertThat(code).isEqualTo(AdminBootstrap.REFUSED);
+		assertThat(code).isEqualTo(ExitCode.REFUSED);
 		assertThat(userCount()).isZero();
 		assertThat(stderr()).contains("do not match");
 	}
 
 	@Test
 	void tooShortPasswordCreatesNothing() {
-		int code = createAdmin("admin@example.com", new ScriptedPrompt("short", "short"));
+		ExitCode code = createAdmin("admin@example.com", new ScriptedPrompt("short", "short"));
 
-		assertThat(code).isEqualTo(AdminBootstrap.REFUSED);
+		assertThat(code).isEqualTo(ExitCode.REFUSED);
 		assertThat(userCount()).isZero();
 		assertThat(stderr()).contains("at least 12 characters");
 	}
 
-	private int createAdmin(String email, PasswordPrompt prompt) {
+	private ExitCode createAdmin(String email, PasswordPrompt prompt) {
 		return bootstrap.createAdmin(email, prompt, new PrintStream(outBytes, true, StandardCharsets.UTF_8),
 				new PrintStream(errBytes, true, StandardCharsets.UTF_8));
 	}

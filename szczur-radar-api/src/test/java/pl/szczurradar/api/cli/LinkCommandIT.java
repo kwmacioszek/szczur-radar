@@ -98,10 +98,10 @@ class LinkCommandIT {
 		String email = newEmail();
 		int logBefore = log.getAll().length();
 
-		int code = run(CreateUserCommand::new, "--email", " " + email.toUpperCase(Locale.ROOT) + " ");
+		ExitCode code = run(CreateUserCommand::new, "--email", " " + email.toUpperCase(Locale.ROOT) + " ");
 
 		String commandLog = log.getAll().substring(logBefore);
-		assertThat(code).isZero();
+		assertThat(code).isEqualTo(ExitCode.OK);
 		User user = users.findByEmail(email).orElseThrow();
 		assertThat(user.getRole()).isEqualTo(Role.USER);
 		assertThat(user.getPasswordHash()).isNull();
@@ -120,7 +120,7 @@ class LinkCommandIT {
 	void createUserWithRoleAdminMakesAnAdmin() {
 		String email = newEmail();
 
-		assertThat(run(CreateUserCommand::new, "--email", email, "--role", "admin")).isZero();
+		assertThat(run(CreateUserCommand::new, "--email", email, "--role", "admin")).isEqualTo(ExitCode.OK);
 
 		User admin = users.findByEmail(email).orElseThrow();
 		assertThat(admin.getRole()).isEqualTo(Role.ADMIN);
@@ -134,9 +134,9 @@ class LinkCommandIT {
 		String email = newEmail();
 		UUID id = users.save(new User(email, passwordEncoder.encode(PASSWORD), Role.USER)).getId();
 
-		int code = run(CreateUserCommand::new, "--email", email, "--role", "admin");
+		ExitCode code = run(CreateUserCommand::new, "--email", email, "--role", "admin");
 
-		assertThat(code).isEqualTo(LinkCommand.REFUSED);
+		assertThat(code).isEqualTo(ExitCode.REFUSED);
 		assertThat(stderr()).contains("already exists").contains("reset-password --email " + email);
 		assertThat(stdout()).isEmpty();
 		User user = users.findById(id).orElseThrow();
@@ -151,9 +151,9 @@ class LinkCommandIT {
 	void resetPasswordOfAnUnknownEmailIsRefused() {
 		String email = newEmail();
 
-		int code = run(ResetPasswordCommand::new, "--email", email);
+		ExitCode code = run(ResetPasswordCommand::new, "--email", email);
 
-		assertThat(code).isEqualTo(LinkCommand.REFUSED);
+		assertThat(code).isEqualTo(ExitCode.REFUSED);
 		assertThat(stderr()).contains("No account with e-mail " + email).contains("create-user --email " + email);
 		assertThat(stdout()).isEmpty();
 		assertThat(users.findByEmail(email)).isEmpty();
@@ -166,9 +166,9 @@ class LinkCommandIT {
 		createSession(sessions, id);
 		assertThat(sessionRows(id)).isOne();
 
-		int code = run(ResetPasswordCommand::new, "--email", email);
+		ExitCode code = run(ResetPasswordCommand::new, "--email", email);
 
-		assertThat(code).isZero();
+		assertThat(code).isEqualTo(ExitCode.OK);
 		assertThat(sessionRows(id)).isZero();
 		User admin = users.findById(id).orElseThrow();
 		assertThat(admin.getRole()).isEqualTo(Role.ADMIN);
@@ -180,7 +180,7 @@ class LinkCommandIT {
 	// --- helpers ----------------------------------------------------------------------------------
 
 	/** Runs a command as the jar does, with its own context on this test's database. */
-	private int run(CommandFactory factory, String... args) {
+	private ExitCode run(CommandFactory factory, String... args) {
 		Command command = factory.create(ENVIRONMENT::get, this::startCommandContext,
 				new PrintStream(outBytes, true, StandardCharsets.UTF_8),
 				new PrintStream(errBytes, true, StandardCharsets.UTF_8));

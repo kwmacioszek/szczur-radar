@@ -1,7 +1,7 @@
 package pl.szczurradar.api.cli;
 
 import java.io.PrintStream;
-import java.util.HashMap;
+import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -14,13 +14,10 @@ import pl.szczurradar.api.user.Emails;
 /**
  * What the operator commands check before their Spring context starts, so that a usage or
  * configuration error never reaches the database: the options, the e-mail and the database settings.
- * A failed check is a usage error ({@link CommandLine#USAGE_ERROR}); the checks that print say why on
+ * A failed check is a usage error ({@link ExitCode#USAGE}); the checks that print say why on
  * {@code err}.
  */
 final class CommandChecks {
-
-	/** {@code --email}: the account a command works on. */
-	static final String EMAIL = "email";
 
 	/** The database settings the JDBC URL is built from (application.properties). */
 	static final List<String> DATABASE_VARIABLES = List.of("PGHOST", "PGPORT", "PGDATABASE", "PGUSER", "PGPASSWORD");
@@ -31,12 +28,12 @@ final class CommandChecks {
 	/**
 	 * Reads options given as {@code --name value} or {@code --name=value}, each at most once.
 	 *
-	 * @param names the options the command accepts, without {@code --}
-	 * @return the value of each option given, or {@code null} for a usage error: an unknown or repeated
-	 *     option, an option without a value, or an argument that is not an option
+	 * @param accepted the options the command accepts
+	 * @return the value of each option given, or {@code null} for a usage error: an unknown, not accepted
+	 *     or repeated option, an option without a value, or an argument that is not an option
 	 */
-	static @Nullable Map<String, String> options(String[] args, Set<String> names) {
-		Map<String, String> values = new HashMap<>();
+	static @Nullable Map<Option, String> options(String[] args, Set<Option> accepted) {
+		Map<Option, String> values = new EnumMap<>(Option.class);
 		for (int i = 0; i < args.length; i++) {
 			if (!args[i].startsWith("--")) {
 				return null;
@@ -56,7 +53,8 @@ final class CommandChecks {
 			else {
 				return null;
 			}
-			if (!names.contains(name) || values.putIfAbsent(name, value) != null) {
+			Option given = Option.fromCliName(name).filter(accepted::contains).orElse(null);
+			if (given == null || values.putIfAbsent(given, value) != null) {
 				return null;
 			}
 		}

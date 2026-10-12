@@ -22,8 +22,8 @@ import pl.szczurradar.api.auth.activation.IssuedLink;
  * <ol>
  *   <li>Before the Spring context starts: the options, the e-mail and the database settings
  *       ({@link CommandChecks}), then the link settings ({@link ActivationSettings}: {@code WEB_PUBLIC_URL},
- *       {@code ACTIVATION_LINK_TTL}). An error exits {@link CommandLine#USAGE_ERROR} and names the option
- *       or setting.
+ *       {@code ACTIVATION_LINK_TTL}). An error exits {@link ExitCode#USAGE} and names the option or
+ *       setting.
  *   <li>One call of {@link ActivationLinks} in the command's own Spring context.
  *   <li>After the context is closed, on stdout: one line about the account and the link's validity, then
  *       the link alone on the last line.
@@ -32,19 +32,15 @@ import pl.szczurradar.api.auth.activation.IssuedLink;
  * <p>The link is a secret: it is printed only there, never to stderr or a log, and the line before it
  * does not contain it. Neither command asks for a password, so neither needs an interactive console.
  *
- * <p>Exit codes: 0 link issued, 1 refused (nothing written) or failed, 2 usage or configuration error.
+ * <p>Exit codes: {@link ExitCode#OK} link issued, {@link ExitCode#REFUSED} (an {@link IssueOutcome.Refused},
+ * nothing written), {@link ExitCode#FAILED} (e.g. the database is unreachable), {@link ExitCode#USAGE}
+ * for a usage or configuration error.
  */
 abstract sealed class LinkCommand implements Command permits CreateUserCommand, ResetPasswordCommand {
 
-	/** Exit code: the link was issued and printed. */
-	static final int ISSUED = 0;
-
-	/** Exit code: refused (an {@link IssueOutcome.Refused}, nothing written) or failed. */
-	static final int REFUSED = 1;
-
 	private final String usage;
 
-	private final Set<String> options;
+	private final Set<Option> options;
 
 	private final Function<String, @Nullable String> environment;
 
@@ -56,9 +52,9 @@ abstract sealed class LinkCommand implements Command permits CreateUserCommand, 
 
 	/**
 	 * @param usage the arguments shown after the command name in the usage message
-	 * @param options the options the command accepts, {@link CommandChecks#EMAIL} included
+	 * @param options the options the command accepts, {@link Option#EMAIL} included
 	 */
-	LinkCommand(String usage, Set<String> options, Function<String, @Nullable String> environment,
+	LinkCommand(String usage, Set<Option> options, Function<String, @Nullable String> environment,
 			Function<String[], ConfigurableApplicationContext> contextStarter, PrintStream out, PrintStream err) {
 		this.usage = usage;
 		this.options = options;
@@ -83,30 +79,30 @@ abstract sealed class LinkCommand implements Command permits CreateUserCommand, 
 	 * @param given every option given, {@code --email} included
 	 * @return the call, or {@code null} after printing a usage error on {@code err}
 	 */
-	abstract @Nullable LinkRequest request(String email, Map<String, String> given, PrintStream err);
+	abstract @Nullable LinkRequest request(String email, Map<Option, String> given, PrintStream err);
 
 	/** The start of the line before the link: what happened to which account. Never the token. */
 	abstract String describe(IssuedLink link);
 
 	@Override
-	public final int run(String[] args) {
-		Map<String, String> given = CommandChecks.options(args, options);
-		String rawEmail = given == null ? null : given.get(CommandChecks.EMAIL);
+	public final ExitCode run(String[] args) {
+		Map<Option, String> given = CommandChecks.options(args, options);
+		String rawEmail = given == null ? null : given.get(Option.EMAIL);
 		if (given == null || rawEmail == null) {
 			err.println("usage: " + type().cliName() + " " + usage);
-			return CommandLine.USAGE_ERROR;
+			return ExitCode.USAGE;
 		}
 		String email = CommandChecks.email(rawEmail, err);
 		if (email == null) {
-			return CommandLine.USAGE_ERROR;
+			return ExitCode.USAGE;
 		}
 		LinkRequest request = request(email, given, err);
 		if (request == null || !CommandChecks.databaseConfigured(environment, err)) {
-			return CommandLine.USAGE_ERROR;
+			return ExitCode.USAGE;
 		}
 		ActivationSettings settings = settings();
 		if (settings == null) {
-			return CommandLine.USAGE_ERROR;
+			return ExitCode.USAGE;
 		}
 
 		IssueOutcome outcome;
@@ -115,17 +111,17 @@ abstract sealed class LinkCommand implements Command permits CreateUserCommand, 
 		}
 		catch (RuntimeException ex) {
 			err.println(type().cliName() + " failed: " + ex.getMessage());
-			return REFUSED;
+			return ExitCode.FAILED;
 		}
 		return switch (outcome) {
 			case IssuedLink link -> {
 				out.println(describe(link) + " One-time activation link, valid until " + link.expiresAt() + ":");
 				out.println(settings.link(link.token()));
-				yield ISSUED;
+				yield ExitCode.OK;
 			}
 			case IssueOutcome.Refused(IssueOutcome.Reason reason) -> {
 				err.println(refusal(reason, email));
-				yield REFUSED;
+				yield ExitCode.REFUSED;
 			}
 		};
 	}
@@ -145,9 +141,10 @@ abstract sealed class LinkCommand implements Command permits CreateUserCommand, 
 	private static String refusal(IssueOutcome.Reason reason, String email) {
 		return switch (reason) {
 			case EMAIL_TAKEN -> "An account with e-mail " + email + " already exists; nothing was changed."
-					+ " To issue it a new link: " + CommandType.RESET_PASSWORD.cliName() + " --email " + email;
+					+ " To issue it a new link: " + CommandType.RESET_PASSWORD.cliName() + " "
+					+ Option.EMAIL.flag() + " " + email;
 			case NO_ACCOUNT -> "No account with e-mail " + email + "; nothing was changed. To create one: "
-					+ CommandType.CREATE_USER.cliName() + " --email " + email;
+					+ CommandType.CREATE_USER.cliName() + " " + Option.EMAIL.flag() + " " + email;
 		};
 	}
 

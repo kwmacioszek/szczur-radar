@@ -25,9 +25,6 @@ import pl.szczurradar.api.user.Role;
  */
 public final class CreateUserCommand extends LinkCommand {
 
-	/** {@code --role}: one of {@link Role}'s values, {@code user} by default. */
-	static final String ROLE = "role";
-
 	private static final List<String> ROLE_VALUES = Arrays.stream(Role.values()).map(Role::value).toList();
 
 	public CreateUserCommand() {
@@ -36,8 +33,8 @@ public final class CreateUserCommand extends LinkCommand {
 
 	CreateUserCommand(Function<String, @Nullable String> environment,
 			Function<String[], ConfigurableApplicationContext> contextStarter, PrintStream out, PrintStream err) {
-		super("--email <e-mail> [--" + ROLE + " " + String.join("|", ROLE_VALUES) + "]",
-				Set.of(CommandChecks.EMAIL, ROLE), environment, contextStarter, out, err);
+		super(Option.EMAIL.flag() + " <e-mail> [" + Option.ROLE.flag() + " " + String.join("|", ROLE_VALUES) + "]",
+				Set.of(Option.EMAIL, Option.ROLE), environment, contextStarter, out, err);
 	}
 
 	@Override
@@ -46,8 +43,8 @@ public final class CreateUserCommand extends LinkCommand {
 	}
 
 	@Override
-	@Nullable LinkRequest request(String email, Map<String, String> given, PrintStream err) {
-		Role role = role(given.getOrDefault(ROLE, Role.USER.value()), err);
+	@Nullable LinkRequest request(String email, Map<Option, String> given, PrintStream err) {
+		Role role = role(given.getOrDefault(Option.ROLE, Role.USER.value()), err);
 		if (role == null) {
 			return null;
 		}

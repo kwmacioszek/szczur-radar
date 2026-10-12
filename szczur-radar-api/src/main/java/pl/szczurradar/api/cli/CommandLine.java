@@ -7,13 +7,10 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Dispatcher for operator commands. Returns an exit code instead of calling {@link System#exit} so
- * it can be tested without Spring or Docker; {@code main} exits with the returned code.
+ * Dispatcher for operator commands. Returns an {@link ExitCode} instead of calling {@link System#exit}
+ * so it can be tested without Spring or Docker; {@code main} exits with its code.
  */
 public final class CommandLine {
-
-	/** Exit code for a missing or unknown command (usage error). */
-	public static final int USAGE_ERROR = 2;
 
 	/** A usage line: the name, padded to the longest ({@code reset-password}), and the description. */
 	private static final String USAGE_LINE = "  %-14s  %s%n";
@@ -40,17 +37,17 @@ public final class CommandLine {
 	/**
 	 * Runs the command named by {@code args[0]} with the remaining arguments.
 	 *
-	 * @return the command's exit code, or {@link #USAGE_ERROR} for a missing or unknown command
+	 * @return the command's exit code, or {@link ExitCode#USAGE} for a missing or unknown command
 	 */
-	public int run(String[] args) {
+	public ExitCode run(String[] args) {
 		if (args.length == 0) {
 			printUsage("no command given");
-			return USAGE_ERROR;
+			return ExitCode.USAGE;
 		}
 		Command command = CommandType.fromCliName(args[0]).map(commands::get).orElse(null);
 		if (command == null) {
 			printUsage("unknown command: " + args[0]);
-			return USAGE_ERROR;
+			return ExitCode.USAGE;
 		}
 		return command.run(Arrays.copyOfRange(args, 1, args.length));
 	}

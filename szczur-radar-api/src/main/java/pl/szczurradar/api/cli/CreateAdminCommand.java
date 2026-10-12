@@ -16,13 +16,12 @@ import pl.szczurradar.api.SzczurRadarApiApplication;
  * (in production through {@code railway ssh}). The password comes from a hidden prompt, never from
  * an argument, so it stays out of shell history and logs.
  *
- * <p>Exit codes: 0 created, 1 refused (see {@link AdminBootstrap}) or failed, 2 usage or
- * configuration error (missing/invalid e-mail, no database configuration, no interactive console).
- * Usage errors are detected before any database work.
+ * <p>Exit codes: {@link ExitCode#OK} created, {@link ExitCode#REFUSED} (see {@link AdminBootstrap}) or
+ * {@link ExitCode#FAILED}, {@link ExitCode#USAGE} for a usage or configuration error (missing/invalid
+ * e-mail, no database configuration, no interactive console). Usage errors are detected before any
+ * database work.
  */
 public final class CreateAdminCommand implements Command {
-
-	static final int USAGE_ERROR = CommandLine.USAGE_ERROR;
 
 	private final Function<String, @Nullable String> environment;
 
@@ -54,24 +53,24 @@ public final class CreateAdminCommand implements Command {
 	}
 
 	@Override
-	public int run(String[] args) {
-		Map<String, String> options = CommandChecks.options(args, Set.of(CommandChecks.EMAIL));
-		String rawEmail = options == null ? null : options.get(CommandChecks.EMAIL);
+	public ExitCode run(String[] args) {
+		Map<Option, String> options = CommandChecks.options(args, Set.of(Option.EMAIL));
+		String rawEmail = options == null ? null : options.get(Option.EMAIL);
 		if (rawEmail == null) {
-			err.println("usage: " + type().cliName() + " --email <e-mail>");
-			return USAGE_ERROR;
+			err.println("usage: " + type().cliName() + " " + Option.EMAIL.flag() + " <e-mail>");
+			return ExitCode.USAGE;
 		}
 		String email = CommandChecks.email(rawEmail, err);
 		if (email == null) {
-			return USAGE_ERROR;
+			return ExitCode.USAGE;
 		}
 		if (!CommandChecks.databaseConfigured(environment, err)) {
-			return USAGE_ERROR;
+			return ExitCode.USAGE;
 		}
 		PasswordPrompt prompt = promptFactory.get();
 		if (prompt == null) {
 			err.println("No interactive console: run " + type().cliName() + " in a terminal (e.g. railway ssh) to type the password.");
-			return USAGE_ERROR;
+			return ExitCode.USAGE;
 		}
 
 		try (ConfigurableApplicationContext context = contextStarter.apply(new String[0])) {
@@ -79,7 +78,7 @@ public final class CreateAdminCommand implements Command {
 		}
 		catch (RuntimeException ex) {
 			err.println(type().cliName() + " failed: " + ex.getMessage());
-			return AdminBootstrap.REFUSED;
+			return ExitCode.FAILED;
 		}
 	}
 

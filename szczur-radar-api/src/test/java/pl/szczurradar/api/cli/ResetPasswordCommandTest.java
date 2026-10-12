@@ -113,9 +113,9 @@ class ResetPasswordCommandTest {
 		when(links.resetPassword("admin@example.com", Duration.ofMinutes(90)))
 			.thenReturn(new IssuedLink("admin@example.com", Role.ADMIN, TOKEN, EXPIRES_AT));
 
-		int code = command.run(new String[] { "--email", "Admin@Example.com" });
+		ExitCode code = command.run(new String[] { "--email", "Admin@Example.com" });
 
-		assertThat(code).isZero();
+		assertThat(code).isEqualTo(ExitCode.OK);
 		assertThat(stdout().lines()).containsExactly(
 				"Reset account admin@example.com (role admin): password removed, signed out everywhere, earlier links"
 						+ " invalid. One-time activation link, valid until 2026-10-13T08:15:30Z:",
@@ -130,9 +130,9 @@ class ResetPasswordCommandTest {
 		when(links.resetPassword("jan@example.com", ActivationSettings.DEFAULT_LINK_TTL))
 			.thenReturn(new IssueOutcome.Refused(IssueOutcome.Reason.NO_ACCOUNT));
 
-		int code = command.run(new String[] { "--email=jan@example.com" });
+		ExitCode code = command.run(new String[] { "--email=jan@example.com" });
 
-		assertThat(code).isOne();
+		assertThat(code).isEqualTo(ExitCode.REFUSED);
 		assertThat(stderr()).contains("No account with e-mail jan@example.com")
 			.contains("create-user --email jan@example.com");
 		assertThat(stdout()).isEmpty();
@@ -140,9 +140,9 @@ class ResetPasswordCommandTest {
 
 	@Test
 	void aFailedContextStartIsReported() {
-		int code = command.run(new String[] { "--email", "jan@example.com" });
+		ExitCode code = command.run(new String[] { "--email", "jan@example.com" });
 
-		assertThat(code).isOne();
+		assertThat(code).isEqualTo(ExitCode.FAILED);
 		assertThat(contextStarts).hasValue(1);
 		assertThat(stderr()).contains("reset-password failed: no database in a unit test");
 		assertThat(stdout()).isEmpty();
@@ -156,7 +156,7 @@ class ResetPasswordCommandTest {
 	}
 
 	private void assertUsageError(String[] args, String message) {
-		assertThat(command.run(args)).isEqualTo(2);
+		assertThat(command.run(args)).isEqualTo(ExitCode.USAGE);
 		assertThat(stderr()).contains(message);
 		assertThat(contextStarts).as("no database work on usage errors").hasValue(0);
 		assertThat(stdout()).isEmpty();

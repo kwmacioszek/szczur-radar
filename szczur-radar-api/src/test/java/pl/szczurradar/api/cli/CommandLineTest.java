@@ -17,32 +17,32 @@ class CommandLineTest {
 
 	private final PrintStream err = new PrintStream(errBytes, true, StandardCharsets.UTF_8);
 
-	private final RecordingCommand migrate = new RecordingCommand(CommandType.MIGRATE, 0);
+	private final RecordingCommand migrate = new RecordingCommand(CommandType.MIGRATE, ExitCode.OK);
 
 	private final CommandLine commandLine = new CommandLine(List.of(migrate), err);
 
 	@Test
 	void unknownCommandExitsWithUsageError() {
-		int code = commandLine.run(new String[] { "frobnicate" });
+		ExitCode code = commandLine.run(new String[] { "frobnicate" });
 
-		assertThat(code).isEqualTo(CommandLine.USAGE_ERROR).isEqualTo(2);
+		assertThat(code).isEqualTo(ExitCode.USAGE);
 		assertThat(stderr()).contains("unknown command: frobnicate").contains("usage:").contains(CommandType.MIGRATE.cliName());
 		assertThat(migrate.calls).isEmpty();
 	}
 
 	@Test
 	void missingCommandExitsWithUsageError() {
-		assertThat(commandLine.run(new String[0])).isEqualTo(2);
+		assertThat(commandLine.run(new String[0])).isEqualTo(ExitCode.USAGE);
 		assertThat(stderr()).contains("usage:");
 	}
 
 	@Test
 	void dispatchesToNamedCommandWithRemainingArgs() {
-		RecordingCommand failing = new RecordingCommand(CommandType.CREATE_ADMIN, 7);
+		RecordingCommand failing = new RecordingCommand(CommandType.CREATE_ADMIN, ExitCode.REFUSED);
 		CommandLine cli = new CommandLine(List.of(migrate, failing), err);
 
-		assertThat(cli.run(new String[] { CommandType.MIGRATE.cliName(), "--x=1" })).isZero();
-		assertThat(cli.run(new String[] { CommandType.CREATE_ADMIN.cliName() })).isEqualTo(7);
+		assertThat(cli.run(new String[] { CommandType.MIGRATE.cliName(), "--x=1" })).isEqualTo(ExitCode.OK);
+		assertThat(cli.run(new String[] { CommandType.CREATE_ADMIN.cliName() })).isEqualTo(ExitCode.REFUSED);
 
 		assertThat(migrate.calls).containsExactly(List.of("--x=1"));
 		assertThat(failing.calls).containsExactly(List.of());
@@ -51,14 +51,14 @@ class CommandLineTest {
 
 	@Test
 	void knownButUnregisteredCommandIsUnknown() {
-		assertThat(commandLine.run(new String[] { CommandType.CREATE_ADMIN.cliName() })).isEqualTo(2);
+		assertThat(commandLine.run(new String[] { CommandType.CREATE_ADMIN.cliName() })).isEqualTo(ExitCode.USAGE);
 		assertThat(stderr()).contains("unknown command: " + CommandType.CREATE_ADMIN.cliName());
 	}
 
 	@Test
 	void duplicateRegistrationIsRejected() {
 		assertThatIllegalArgumentException()
-			.isThrownBy(() -> new CommandLine(List.of(migrate, new RecordingCommand(CommandType.MIGRATE, 0)), err));
+			.isThrownBy(() -> new CommandLine(List.of(migrate, new RecordingCommand(CommandType.MIGRATE, ExitCode.OK)), err));
 	}
 
 	@Test
@@ -68,7 +68,7 @@ class CommandLineTest {
 		PrintStream original = System.err;
 		try {
 			System.setErr(new PrintStream(bytes, true, StandardCharsets.UTF_8));
-			assertThat(CommandLine.standard().run(new String[] { "nope" })).isEqualTo(2);
+			assertThat(CommandLine.standard().run(new String[] { "nope" })).isEqualTo(ExitCode.USAGE);
 		}
 		finally {
 			System.setErr(original);
@@ -86,11 +86,11 @@ class CommandLineTest {
 
 		private final CommandType type;
 
-		private final int exitCode;
+		private final ExitCode exitCode;
 
 		final List<List<String>> calls = new ArrayList<>();
 
-		RecordingCommand(CommandType type, int exitCode) {
+		RecordingCommand(CommandType type, ExitCode exitCode) {
 			this.type = type;
 			this.exitCode = exitCode;
 		}
@@ -101,7 +101,7 @@ class CommandLineTest {
 		}
 
 		@Override
-		public int run(String[] args) {
+		public ExitCode run(String[] args) {
 			calls.add(List.of(args));
 			return exitCode;
 		}

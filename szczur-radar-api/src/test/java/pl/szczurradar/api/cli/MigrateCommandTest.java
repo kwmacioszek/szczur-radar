@@ -22,9 +22,9 @@ class MigrateCommandTest {
 	void successExitsZeroAndClosesContext() {
 		ConfigurableApplicationContext context = mock(ConfigurableApplicationContext.class);
 
-		int code = new MigrateCommand(args -> context, err).run(new String[0]);
+		ExitCode code = new MigrateCommand(args -> context, err).run(new String[0]);
 
-		assertThat(code).isZero();
+		assertThat(code).isEqualTo(ExitCode.OK);
 		verify(context).close();
 	}
 
@@ -34,7 +34,7 @@ class MigrateCommandTest {
 			throw new IllegalStateException("Migration V2 failed");
 		}, err);
 
-		assertThat(command.run(new String[0])).isNotZero();
+		assertThat(command.run(new String[0])).isEqualTo(ExitCode.FAILED);
 		assertThat(errBytes.toString(StandardCharsets.UTF_8)).contains("migrate failed").contains("Migration V2 failed");
 	}
 

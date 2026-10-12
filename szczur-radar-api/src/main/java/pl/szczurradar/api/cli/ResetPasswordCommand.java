@@ -29,7 +29,7 @@ public final class ResetPasswordCommand extends LinkCommand {
 
 	ResetPasswordCommand(Function<String, @Nullable String> environment,
 			Function<String[], ConfigurableApplicationContext> contextStarter, PrintStream out, PrintStream err) {
-		super("--email <e-mail>", Set.of(CommandChecks.EMAIL), environment, contextStarter, out, err);
+		super(Option.EMAIL.flag() + " <e-mail>", Set.of(Option.EMAIL), environment, contextStarter, out, err);
 	}
 
 	@Override
@@ -38,7 +38,7 @@ public final class ResetPasswordCommand extends LinkCommand {
 	}
 
 	@Override
-	LinkRequest request(String email, Map<String, String> given, PrintStream err) {
+	LinkRequest request(String email, Map<Option, String> given, PrintStream err) {
 		return (links, ttl) -> links.resetPassword(email, ttl);
 	}
 
