@@ -72,6 +72,12 @@ CLI (kontekst bez serwera WWW) → `ActivationLinks`, który w jednej transakcji
 - Jeśli domena web pojawi się w PR env po pierwszym deployu API, `WEB_PUBLIC_URL` może być chwilowo `https://`. Komenda to wykryje i odmówi (kod 2); wystarczy redeploy API.
 - Link widziany w transkrypcie agenta przy testach PR env to dane testowe. Na produkcji linki generuje operator.
 - Merge zmienia `railway.ts`, więc będą dwa deploye API; nie merge'ować przy przebiegu `RUNNING`.
+- Równoległy S-05 dzieli z S-07 migrację, `User.java`, `SecurityConfig`, `railway.ts`, `mock-api.js`, dokumenty i PNG roadmapy. Zmiana wchodząca druga:
+  - przenumerowuje migrację;
+  - dopisuje odmowę dla konta systemowego, jeśli S-05 je wprowadzi;
+  - przed weryfikacją końcową robi rebase i ponowny `verify`.
+
+  Szczegóły w planie: „Koordynacja z S-05”.
 
 ## Success Criteria (Summary)
 

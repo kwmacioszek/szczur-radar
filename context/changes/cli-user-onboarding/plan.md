@@ -107,6 +107,27 @@ Argon2 (16 MB, ~dziesiątki ms) liczy się dopiero po zablokowaniu ważnego toke
 
 **E-mail do `/login` przez stan routera, nie query.** `router.replace({ name: 'login', state: { activatedEmail } })`. Query zostałoby w adresie i przy odświeżeniu trafiłoby do logu Caddy.
 
+### Koordynacja z S-05 (daily-scheduled-run-freshness)
+
+S-05 jest planowany równolegle w osobnym worktree (2026-10-12: ma tylko `research.md`). Punkty 2 i 5 opierają się na jego zapowiadanym projekcie: kolumna `users.login_enabled`, konto systemowe automatu, przebieg dzienny o 00:30 UTC. Jeśli plan S-05 wyjdzie inaczej, trzeba je dopasować.
+
+1. **Numer migracji.** S-07 planuje `V6__create_activation_tokens.sql`, a S-05 też doda migrację. Flyway nie zastosuje migracji o numerze niższym niż już zastosowana. Dlatego zmiana, która wchodzi do `main` druga, przed merge'em przenumerowuje swoją migrację na następny wolny numer i poprawia listę wersji w `MigrationsIT`. Nigdy po deployu (fix-forward).
+2. **Konto systemowe a komendy S-07.** Jeśli S-05 wprowadzi konto z `login_enabled = false`:
+   - `create-user` i `reset-password` odmawiają takiemu kontu (kod 1, komunikat „konto systemowe”);
+   - `lookup` i `activate` traktują je jak nieważny link.
+
+   Kod tej odmowy dopisuje zmiana, która wchodzi druga, bo dopiero wtedy istnieją i kolumna, i `ActivationLinks` (faza 2, zmiana 5).
+3. **Wspólne pliki, czyli konflikty przy rebase:**
+   - `SecurityConfig.java` i `AuthorizationCompletenessIT.java`: publiczne trasy aktywacji tutaj, trasy na token w S-05;
+   - `User.java`: `setPassword`/`clearPassword` tutaj, pole `loginEnabled` w S-05;
+   - `.railway/railway.ts`: oba dopisują zmienne w `env` API;
+   - `dev/mock-api.js`: także `feed-view-ui-hardening`;
+   - dokumenty: `deploy-plan.md`, `REPOSITORY_GUIDELINES.md`, `prd.md`, `roadmap.md`.
+
+   Przed weryfikacją końcową: rebase na świeży `origin/main` i ponowne uruchomienie całej weryfikacji (faza 5).
+4. **PNG roadmapy.** Obie zmiany generują `docs/visuals/roadmap-mvp.png` na nowo. Przy konflikcie nie scalać pliku binarnego, tylko po rebase uruchomić `tools/render_roadmap.swift` jeszcze raz.
+5. **Okno merge'a.** Gdy S-05 jest na produkcji, przebieg dzienny startuje o 00:30 UTC i trwa ok. 15–50 min. Reguła „nie merge'uj przy `RUNNING`” oznacza wtedy w praktyce brak merge'a w godzinach ok. 00:30–01:30 UTC.
+
 ## Phase 1: Schemat i logika linków aktywacyjnych
 
 ### Overview
@@ -244,6 +265,17 @@ Komendy nie potrzebują konsoli, bo nie pytają o hasło.
 
 **Contract**: sekcje `## Struktura` (wiersz `cli`) i `## Komendy operatora`.
 
+#### 5. Odmowa dla konta systemowego (warunkowo, gdy S-05 jest już w `main`)
+
+**File**: `szczur-radar-api/src/main/java/pl/szczurradar/api/auth/activation/ActivationLinks.java`, `cli/CreateUserCommand.java`, `cli/ResetPasswordCommand.java`
+
+**Intent**: Konto automatu z S-05 (`login_enabled = false`) nie może dostać linku ani hasła („Koordynacja z S-05”, punkt 2). Jeśli S-05 wejdzie do `main` po S-07, ten kod dopisuje S-05, a ta zmiana jest tu N/A.
+
+**Contract**:
+
+- `createUser` i `resetPassword` zwracają wynik „konto systemowe”, a komendy kończą się kodem 1 z tym komunikatem;
+- `lookup` i `activate` dla takiego konta zachowują się jak przy nieważnym linku.
+
 ### Success Criteria:
 
 #### Automated Verification:
@@ -252,6 +284,7 @@ Komendy nie potrzebują konsoli, bo nie pytają o hasło.
 - `CreateUserCommandTest` i `ResetPasswordCommandTest` przechodzą: brak lub zły e-mail, nieznana rola, nieznana opcja, brak `PG*`, brak lub zły `WEB_PUBLIC_URL`, `ACTIVATION_LINK_TTL` bez jednostki → kod 2 bez startu kontekstu
 - IT komend przechodzi: `create-user` wypisuje link `<WEB_PUBLIC_URL>/activate#<43 znaki>` i tworzy konto `user` bez hasła; `--role admin` tworzy admina; zajęty e-mail → 1; `reset-password` nieznanego e-maila → 1; reset konta z sesją usuwa jej wiersz
 - `./mvnw -B verify` przechodzi w całości
+- Warunkowo (S-05 już w `main`): testy odmowy dla konta z `login_enabled = false` przechodzą: `create-user`/`reset-password` → kod 1, `lookup`/`activate` → `activation_link_invalid`; w przeciwnym razie wiersz zamknięty jako N/A z adnotacją
 
 #### Manual Verification:
 
@@ -473,6 +506,7 @@ Zdanie „Password recovery arrives with S-07” (`deploy-plan.md:35`) dostaje o
 
 - CI na PR zielone w całości (backend `verify`, web, smoke kontenerów, `railway-config`)
 - `railway-config` na PR stosuje jedną nową zmienną `WEB_PUBLIC_URL` bez zmian destrukcyjnych ani zmian źródła, a ponowny plan PR env jest pusty
+- Przed weryfikacją końcową gałąź jest po rebase na świeży `origin/main`: numer migracji wolny (przenumerowana razem z `MigrationsIT`, jeśli S-05 jest już w `main`), PNG roadmapy wygenerowany ponownie, a `./mvnw -B verify`, `npm test` i `npm run build` znowu zielone
 
 #### Manual Verification:
 
@@ -516,6 +550,7 @@ Zdanie „Password recovery arrives with S-07” (`deploy-plan.md:35`) dostaje o
 ## Migration Notes
 
 - V6 tylko dodaje tabelę. Istniejące konta (admin produkcji) się nie zmieniają. Fix-forward: błąd poprawia nowa migracja.
+- Numer V6 jest roboczy: jeśli S-05 wejdzie do `main` pierwszy, S-07 przed merge'em przenumerowuje migrację na następny wolny numer („Koordynacja z S-05”, punkt 1).
 - Kopia `pg_dump` obejmie `activation_tokens` (hashe, wygasające). `restore-check.sh` i `COUNTED_TABLES` bez zmian; starsze dumpy przechodzą sprawdzenie jak dotąd.
 - Merge zmienia `.railway/railway.ts`, więc API wdroży się dwa razy (znane zachowanie, `deploy-plan.md`, Troubleshooting (Java)). Zasada: nie merge'ować przy przebiegu `RUNNING`.
 
@@ -551,6 +586,7 @@ Zdanie „Password recovery arrives with S-07” (`deploy-plan.md:35`) dostaje o
 - [ ] 2.2 CreateUserCommandTest i ResetPasswordCommandTest
 - [ ] 2.3 IT komend create-user i reset-password
 - [ ] 2.4 ./mvnw -B verify
+- [ ] 2.6 Warunkowo: odmowa dla konta systemowego S-05
 
 #### Manual
 
@@ -582,6 +618,7 @@ Zdanie „Password recovery arrives with S-07” (`deploy-plan.md:35`) dostaje o
 
 - [ ] 5.1 CI na PR zielone w całości
 - [ ] 5.2 railway-config stosuje tylko WEB_PUBLIC_URL, ponowny plan pusty
+- [ ] 5.9 Rebase na świeży origin/main i ponowna pełna weryfikacja
 
 #### Manual
 
