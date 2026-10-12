@@ -19,9 +19,9 @@ import { bucket, defineRailway, github, postgres, preserve, project, ref, servic
 // null). db-backup does not declare it (see there).
 //
 // `sleepApplication: true` (serverless sleep) on api and web mirrors what the
-// operator set in the dashboard; Postgres declares `false` (see below). The
-// setting MUST stay declared on these three: without it an apply would change it
-// (the db-backup cron does not sleep and declares nothing). Keep this file in sync with production —
+// operator set in the dashboard. The setting MUST stay declared on these two:
+// without it an apply would change it. Postgres and the db-backup cron declare
+// nothing (Postgres: see below). Keep this file in sync with production —
 // `railway config plan --detailed-exit-code` on `production` must exit 0 before
 // any automatic apply (lessons.md, Railway IaC in CI).
 //
@@ -56,8 +56,8 @@ export default defineRailway(() => {
   // service, e.g. db-backup, is allowed since F-01).
   const branch = process.env.IAC_SOURCE_BRANCH || "main";
 
-  // Postgres. `postgres()` takes no deploy options, so serverless sleep is set
-  // on the node directly (DatabaseNode carries `deploy`); Object.assign keeps
+  // Postgres. `postgres()` takes no deploy options, so its deploy settings are
+  // set on the node directly (DatabaseNode carries `deploy`); Object.assign keeps
   // the non-enumerable `env` refs. The region applies when the database is
   // created: IaC does not move an existing one (a plan with it shows no
   // change). Until 2026-10 production's and the PR envs' Postgres ran in `sfo`
@@ -68,10 +68,14 @@ export default defineRailway(() => {
   // (logs end at "Mounting volume"), so the pre-deploy `migrate` timed out and
   // production lost its database until a manual redeploy — Railway warns a
   // slept service "may require a rebuild to re-live" (docs: Serverless,
-  // Caveats). The API and web still sleep. The setting applies to a container
-  // when it is created: redeploy Postgres after the apply.
+  // Caveats). The API and web still sleep.
+  // `sleepApplication` is NOT declared for Postgres (since 2026-10-12): Railway
+  // stores `false` as no value, so a declared `false` showed `null → false` in
+  // every plan, and every apply (each merge to main) restarted the production
+  // database. On 2026-10-12 such a restart hung at "Mounting volume" for 9 min
+  // until a manual redeploy (deploy-plan.md, F-01). No value means no sleep.
   const db = Object.assign(postgres("postgres", { region: REGION }), {
-    deploy: { sleepApplication: false, limitOverride: RESOURCE_LIMITS },
+    deploy: { limitOverride: RESOURCE_LIMITS },
   });
 
   // Spring Boot backend (Java 25, Maven). No public domain: reachable only

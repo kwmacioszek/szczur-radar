@@ -255,7 +255,7 @@ The operator ran Live Resize from the dashboard (`production` → `postgres-volu
 | `df -h /var/lib/postgresql/data` (size / used / use%) | 434M / 129M / 31 % | 4.4G / 129M / 3 % |
 
 - `df` reports GiB after filesystem overhead. 5000 MB (SI) is 4.66 GiB, shown as 4.4G; 500 MB was 434M the same way. Railway's `currentSizeMB` (191.88) counts more than `df`'s used space.
-- `railway config plan` on production was identical before and after the resize: one `safe` change, `postgres deploy.sleepApplication (null → false)`. It is permanent: Railway stores `false` as no value, so the plan shows it again after every apply (`main` on 2026-10-10, `szczur-radar-pr-44` on 2026-10-11). Postgres does not sleep either way. The declaration stays: if serverless sleep were switched on in the dashboard, an apply would switch it off.
+- `railway config plan` on production was identical before and after the resize: one `safe` change, `postgres deploy.sleepApplication (null → false)`. It is permanent: Railway stores `false` as no value, so the plan shows it again after every apply (`main` on 2026-10-10, `szczur-radar-pr-44` on 2026-10-11). Postgres does not sleep either way. The declaration stays: if serverless sleep were switched on in the dashboard, an apply would switch it off. **Update 2026-10-12:** the declaration is gone. Every apply with this diff restarted the production database, and on 2026-10-12 one such restart hung (see "Production after the merge" below).
 
 ### Database measurements (production, 2026-10-11, read-only)
 
@@ -360,6 +360,32 @@ Restoring a database is an operator action (`infrastructure.md`). The agent prep
   3. `railway redeploy` of the API (`7681b96c`, SUCCESS).
 
   Afterwards `/api/ready` returned 200 and login worked (the sessions were gone, as expected). `total` was 39 and the canary row was gone. The next run (20:41) backed up the restored database: restore check OK, and no second monthly copy.
+
+### Production after the merge (2026-10-12)
+
+PR #44 was squash-merged as `b7ee254` (11:25 UTC). CI on `main` applied `+ Create bucket db-backups` and `+ Create service db-backup`.
+
+- **The bucket was not deployed in production.** IaC had first created the bucket `db-backups` in `szczur-radar-pr-44`, because PR CI runs before `main`. The production apply reused that project-wide bucket (`f77db03b…`) but did not provision it in `production`:
+  - `railway bucket info -b db-backups -e production`: "not deployed in environment production";
+  - a re-run of `railway-config` changed nothing.
+
+  Railway reference variables address a bucket by its project-wide **name** (`${{db-backups.BUCKET}}`), so every `S3_*` of `db-backup` resolved to an empty string. The first run (started by hand) failed with `backup: FAILED: set BACKUP_REMOTE or S3_BUCKET`.
+
+  Fixed by hand, nothing deleted:
+  1. `railway bucket create -r ams -e production` created a new bucket (`dc439cb9…`). Its name came out random because `db-backups` was taken.
+  2. The old bucket was renamed `db-backups-pr44-old` and the new one `db-backups` (Railway MCP `update-bucket`).
+  3. The five `S3_*` references were set again as IaC declares them (`railway variable set 'S3_BUCKET=${{db-backups.BUCKET}}' … --skip-deploys`).
+
+  Afterwards the variables resolve, and `railway config plan` on production shows no bucket or variable change. The old bucket is not deployed anywhere; the operator may delete it (`db-backups-pr44-old`).
+- **The re-run apply restarted the production database, and the restart hung.** The re-run also applied the permanent `postgres deploy.sleepApplication (null → false)`, which redeploys Postgres. The new container stayed at `Mounting volume on …` from 11:38:17 (`/api/ready` 503), the same symptom as 2026-10-09. `railway redeploy -s postgres -e production -y` at 11:43 brought it back: `ready to accept connections` at 11:47:23, `/api/ready` 200, same volume.
+
+  Fix in the closeout PR: `.railway/railway.ts` no longer declares `sleepApplication` for Postgres (no value means no sleep). The production plan is then empty, so merges stop restarting the database.
+- **First production backup: OK** (12:43 UTC, run started by hand).
+  - The dump is `szczur-radar-20261012T124334Z.dump`, 444 KB; `restore-check` passed (9 tables, no session rows, Flyway V5).
+  - `daily/` and `monthly/szczur-radar-2026-10.dump` each hold a dump with its manifest.
+  - The manifest counts before = after: `users` 1, `pipeline_runs` 4, `posts` 282, `assessments` 55, `raw_payloads` 282, the same as the measurements of 2026-10-11.
+  - Step 2 of the runbook below is done; steps 3–6 remain.
+- **Lesson for the next IaC-created bucket** (e.g. a later cron): after the first apply to production, check `railway bucket list -e production` and the referencing variables (lengths only), not just the CI log's `✓ bucket.…`.
 
 ### Runbook — after the merge (operator; tracked in issue #43, not in the plan's Progress)
 
