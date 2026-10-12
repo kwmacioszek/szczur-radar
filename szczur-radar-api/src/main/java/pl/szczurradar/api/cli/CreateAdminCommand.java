@@ -1,7 +1,8 @@
 package pl.szczurradar.api.cli;
 
 import java.io.PrintStream;
-import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -9,7 +10,6 @@ import org.jspecify.annotations.Nullable;
 import org.springframework.context.ConfigurableApplicationContext;
 
 import pl.szczurradar.api.SzczurRadarApiApplication;
-import pl.szczurradar.api.user.Emails;
 
 /**
  * {@code create-admin --email <e-mail>}: bootstraps the first administrator without the web server
@@ -23,9 +23,6 @@ import pl.szczurradar.api.user.Emails;
 public final class CreateAdminCommand implements Command {
 
 	static final int USAGE_ERROR = CommandLine.USAGE_ERROR;
-
-	/** The database settings the JDBC URL is built from (application.properties). */
-	static final List<String> DATABASE_VARIABLES = List.of("PGHOST", "PGPORT", "PGDATABASE", "PGUSER", "PGPASSWORD");
 
 	private final Function<String, @Nullable String> environment;
 
@@ -58,19 +55,17 @@ public final class CreateAdminCommand implements Command {
 
 	@Override
 	public int run(String[] args) {
-		String rawEmail = emailArgument(args);
+		Map<String, String> options = CommandChecks.options(args, Set.of(CommandChecks.EMAIL));
+		String rawEmail = options == null ? null : options.get(CommandChecks.EMAIL);
 		if (rawEmail == null) {
 			err.println("usage: " + type().cliName() + " --email <e-mail>");
 			return USAGE_ERROR;
 		}
-		String email = Emails.normalize(rawEmail);
-		if (!email.contains("@") || email.length() > Emails.MAX_EMAIL_LENGTH) {
-			err.println("Invalid e-mail address: '" + rawEmail + "'");
+		String email = CommandChecks.email(rawEmail, err);
+		if (email == null) {
 			return USAGE_ERROR;
 		}
-		List<String> missing = DATABASE_VARIABLES.stream().filter(name -> isBlank(environment.apply(name))).toList();
-		if (!missing.isEmpty()) {
-			err.println("Database is not configured: set " + String.join(", ", missing) + ".");
+		if (!CommandChecks.databaseConfigured(environment, err)) {
 			return USAGE_ERROR;
 		}
 		PasswordPrompt prompt = promptFactory.get();
@@ -86,21 +81,6 @@ public final class CreateAdminCommand implements Command {
 			err.println(type().cliName() + " failed: " + ex.getMessage());
 			return AdminBootstrap.REFUSED;
 		}
-	}
-
-	/** {@code --email <value>} or {@code --email=<value>}; null when absent or anything else is passed. */
-	private static @Nullable String emailArgument(String[] args) {
-		if (args.length == 2 && args[0].equals("--email")) {
-			return args[1];
-		}
-		if (args.length == 1 && args[0].startsWith("--email=")) {
-			return args[0].substring("--email=".length());
-		}
-		return null;
-	}
-
-	private static boolean isBlank(@Nullable String value) {
-		return value == null || value.isBlank();
 	}
 
 }
