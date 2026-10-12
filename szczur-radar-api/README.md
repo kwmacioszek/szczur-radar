@@ -18,7 +18,7 @@ Pakiet bazowy `pl.szczurradar.api`, pakiety według funkcji — nie według wars
 | `health` | sondy `GET /api/health` (bez bazy) i `GET /api/ready` (`SELECT 1`, 503 przy błędzie) |
 | `user` | encja `User`, `UserRepository` (Spring Data JPA), `Role` (enum), `Emails` (jedna normalizacja e-maila) |
 | `auth` | logowanie JSON, `/me`, logout, limiter prób, filtr Origin, odnawianie ciasteczka sesji, argon2 (`Passwords`) |
-| `cli` | komendy operatora: `migrate`, `create-admin` (dyspozytor `CommandLine`) |
+| `cli` | komendy operatora: `migrate`, `create-admin`, `create-user`, `reset-password` (dyspozytor `CommandLine`; sprawdzenia przed startem Springa w `CommandChecks`; dwie komendy z linkiem aktywacyjnym na wspólnym `LinkCommand`) |
 | `config` | Spring Security, sesja i ciasteczko, format błędów `{"detail": …}`, konfiguracja dostawcy LLM |
 | `agents` | agenci Embabel; `agents/assessor` — kontrakt oceny V2 jako kod (model, schemat, parser, walidator D1–D15, odsiew), prompt z wersją, `Assessor` (jedno wywołanie modelu na wpis) i `AssessorAgent` |
 | `llm` | klienci dostawców LLM: w korzeniu API (`LlmClient` i typy wywołania, `LlmClientFactory`), po podpakiecie na dostawcę (`gemini/`, `deepseek/`, `openrouter/`), `transport/` — jedyne ponowienia (`TransportRetry`), schematy, maskowanie; mapa w `llm/CLAUDE.md` |
@@ -134,14 +134,49 @@ Ten sam jar: bez argumentów startuje serwer, z nazwą komendy — komendę bez 
 
 ```bash
 java -jar target/szczur-radar-api.jar create-admin --email admin@example.com
+java -jar target/szczur-radar-api.jar create-user --email jan@example.com --role admin   # bez --role: user
+java -jar target/szczur-radar-api.jar reset-password --email jan@example.com
 # produkcja / PR env: najpierw obudź API (uśpiony serwis nie ma kontenera — `railway ssh`
 # trafia wtedy na bramkę Railway i nic nie uruchamia), potem w powłoce kontenera:
 curl https://<domena-web>/api/health
 railway ssh -s szczur-radar-api -e <środowisko>
-java -jar target/szczur-radar-api.jar create-admin --email ty@example.com   # e-mail bez < >
+java -jar target/szczur-radar-api.jar create-user --email jan@example.com   # e-mail bez < >
 ```
 
-`create-admin` tworzy **pierwszego** administratora (odmawia, gdy admin już istnieje — kolejne konta i odzyskiwanie to S-07). Hasło jest pobierane dwa razy z ukrytego promptu, nigdy z argumentu, i nie trafia do logów; polityka 12–128 znaków. Bootstrap jest serializowany blokadą `pg_advisory_xact_lock`, więc równoległe uruchomienia tworzą dokładnie jednego admina. Kody wyjścia: 0 utworzono, 1 odmowa, 2 błąd użycia lub konfiguracji (brak/zły e-mail, brak zmiennych `PG*`, brak konsoli). Komendy uruchamiają wspólny kontekst Springa, więc też potrzebują trzech ustawień LLM.
+Opcje podaje się jako `--nazwa wartość` albo `--nazwa=wartość`; nieznana lub powtórzona opcja to błąd użycia. Argumenty, e-mail i zmienne `PG*` są sprawdzane przed startem kontekstu Springa, więc błąd użycia nie dotyka bazy. Komendy uruchamiają wspólny kontekst Springa, więc też potrzebują trzech ustawień LLM.
+
+### `create-admin`
+
+`create-admin` tworzy **pierwszego** administratora i odmawia, gdy admin już istnieje: kolejnego admina zakłada `create-user --email <e-mail> --role admin`, a utracony dostęp przywraca `reset-password --email <e-mail>`. Hasło jest pobierane dwa razy z ukrytego promptu, nigdy z argumentu, i nie trafia do logów; polityka 12–128 znaków. Bootstrap jest serializowany blokadą `pg_advisory_xact_lock`, więc równoległe uruchomienia tworzą dokładnie jednego admina. Kody wyjścia: 0 utworzono, 1 odmowa, 2 błąd użycia lub konfiguracji (brak/zły e-mail, brak zmiennych `PG*`, brak konsoli).
+
+### `create-user` i `reset-password` (S-07)
+
+Obie komendy wydają jednorazowy link do ustawienia hasła. Nie pytają o hasło, więc nie potrzebują konsoli.
+
+- `create-user --email <e-mail> [--role user|admin]` zakłada konto bez hasła (domyślnie rola `user`) i wypisuje jego link. Zajęty e-mail → odmowa z podpowiedzią `reset-password`.
+- `reset-password --email <e-mail>` przywraca dowolne istniejące konto, także admina, do stanu „czeka na aktywację”. W jednej transakcji kasuje hasło, usuwa wszystkie sesje konta (wylogowanie wszędzie) i wydaje nowy link; poprzedni link przestaje działać, rola zostaje. Nieznany e-mail → odmowa z podpowiedzią `create-user`.
+
+Na stdout: jedna linia opisu (konto, rola, ważność do czasu UTC, jednorazowość), a w ostatniej linii sam link `<WEB_PUBLIC_URL>/activate#<token>`. Osoba otwiera link, ustawia hasło (12–128 znaków) i loguje się na `/login`. Link działa raz, a nowy link tego samego konta unieważnia poprzedni.
+
+**Link jest sekretem:** kto go ma, ustawia hasło konta. Przekaż go osobie poza systemem i nie wklejaj go do issue, PR, czatu ani logów. Komenda wypisuje go tylko na stdout, nigdy na stderr ani do logu. Token jest we fragmencie adresu (`#`), więc nie trafia do logów serwera, a baza trzyma tylko jego SHA-256.
+
+| Zmienna | Znaczenie |
+| --- | --- |
+| `WEB_PUBLIC_URL` | wymagana: publiczny adres aplikacji web — sam schemat, host i opcjonalny port, bez ścieżki (np. `https://szczur-radar-web-production.up.railway.app`); lokalnie `http://localhost:5173` (`npm run dev`) |
+| `ACTIVATION_LINK_TTL` | opcjonalna: ważność linku z jednostką, np. `12h`, `90m` (domyślnie `12h`, od `1m` do `7d`); goła liczba jest odrzucana, bo Spring czytałby ją jako milisekundy |
+
+Obie zmienne czytają tylko te dwie komendy, przed startem Springa, więc zła wartość nie zatrzymuje serwera.
+
+Kody wyjścia:
+
+- 0: link wydany;
+- 1: odmowa (zajęty e-mail albo brak konta; nic nie zapisano) albo błąd;
+- 2: błąd użycia lub konfiguracji (brak/zły e-mail, nieznana rola lub opcja, brak zmiennych `PG*`, brak/zły `WEB_PUBLIC_URL`, `ACTIVATION_LINK_TTL` bez jednostki lub poza zakresem); komunikat nazywa opcję albo zmienną.
+
+```bash
+# lokalnie: Postgres z compose.local.yaml, PG* i LLM_* jak wyżej, w tym samym terminalu
+WEB_PUBLIC_URL=http://localhost:5173 java -jar target/szczur-radar-api.jar create-user --email jan@example.com
+```
 
 ## Obraz Dockera (Railway, CI)
 

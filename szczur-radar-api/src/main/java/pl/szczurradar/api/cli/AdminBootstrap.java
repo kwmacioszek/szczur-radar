@@ -14,7 +14,8 @@ import pl.szczurradar.api.user.UserRepository;
 
 /**
  * Creates the first administrator (FR-026), ported from the Python {@code app/cli.py}. Refuses when
- * any admin exists — further admins and recovery belong to S-07.
+ * any admin exists: further admins come from {@code create-user --role admin}, and a lost admin
+ * password is recovered with {@code reset-password} (S-07).
  *
  * <p>Everything runs in one transaction holding a PostgreSQL advisory lock, so separate CLI
  * processes are serialized through the check and the insert: two concurrent bootstraps create
@@ -57,7 +58,9 @@ public class AdminBootstrap {
 		Integer code = transaction.execute(status -> {
 			jdbc.sql("SELECT pg_advisory_xact_lock(?)").param(LOCK_ID).query((rs, row) -> true).single();
 			if (users.existsByRole(Role.ADMIN)) {
-				err.println("Admin already exists — use the recovery command (S-07).");
+				err.println("Admin already exists — to recover access use " + CommandType.RESET_PASSWORD.cliName()
+						+ " --email <e-mail>; for another admin use " + CommandType.CREATE_USER.cliName()
+						+ " --email <e-mail> --role admin.");
 				return REFUSED;
 			}
 			if (users.existsByEmail(email)) {

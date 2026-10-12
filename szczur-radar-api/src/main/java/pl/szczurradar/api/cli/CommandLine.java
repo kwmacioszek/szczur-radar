@@ -15,6 +15,9 @@ public final class CommandLine {
 	/** Exit code for a missing or unknown command (usage error). */
 	public static final int USAGE_ERROR = 2;
 
+	/** A usage line: the name, padded to the longest ({@code reset-password}), and the description. */
+	private static final String USAGE_LINE = "  %-14s  %s%n";
+
 	private final Map<CommandType, Command> commands = new EnumMap<>(CommandType.class);
 
 	private final PrintStream err;
@@ -30,7 +33,8 @@ public final class CommandLine {
 
 	/** The commands shipped with the jar. */
 	public static CommandLine standard() {
-		return new CommandLine(List.of(new MigrateCommand(), new CreateAdminCommand()), System.err);
+		return new CommandLine(List.of(new MigrateCommand(), new CreateAdminCommand(), new CreateUserCommand(),
+				new ResetPasswordCommand()), System.err);
 	}
 
 	/**
@@ -54,9 +58,9 @@ public final class CommandLine {
 	private void printUsage(String problem) {
 		err.println(problem);
 		err.println("usage: java -jar szczur-radar-api.jar [<command> [args]]");
-		err.println("  (no command)  start the HTTP server");
+		err.printf(USAGE_LINE, "(no command)", "start the HTTP server");
 		for (Command command : commands.values()) {
-			err.printf("  %-12s  %s%n", command.type().cliName(), command.type().description());
+			err.printf(USAGE_LINE, command.type().cliName(), command.type().description());
 		}
 	}
 

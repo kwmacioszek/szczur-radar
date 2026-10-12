@@ -572,25 +572,25 @@ Zdanie „Password recovery arrives with S-07” (`deploy-plan.md:35`) dostaje o
 
 #### Automated
 
-- [x] 1.1 MigrationsIT z wersjami 1–6 i ograniczeniami activation_tokens
-- [x] 1.2 JpaSchemaIT z encją ActivationToken
-- [x] 1.3 ActivationSettingsTest
-- [x] 1.4 ActivationLinksIT
-- [x] 1.5 ./mvnw -B verify
+- [x] 1.1 MigrationsIT z wersjami 1–6 i ograniczeniami activation_tokens — 0b772ea
+- [x] 1.2 JpaSchemaIT z encją ActivationToken — 0b772ea
+- [x] 1.3 ActivationSettingsTest — 0b772ea
+- [x] 1.4 ActivationLinksIT — 0b772ea
+- [x] 1.5 ./mvnw -B verify — 0b772ea
 
 ### Phase 2: Komendy CLI create-user i reset-password
 
 #### Automated
 
-- [ ] 2.1 Testy create-admin i CommandLine bez zmian po refaktorze
-- [ ] 2.2 CreateUserCommandTest i ResetPasswordCommandTest
-- [ ] 2.3 IT komend create-user i reset-password
-- [ ] 2.4 ./mvnw -B verify
-- [ ] 2.6 Warunkowo: odmowa dla konta systemowego S-05
+- [x] 2.1 Testy create-admin i CommandLine bez zmian po refaktorze
+- [x] 2.2 CreateUserCommandTest i ResetPasswordCommandTest
+- [x] 2.3 IT komend create-user i reset-password
+- [x] 2.4 ./mvnw -B verify
+- [x] 2.6 Warunkowo: odmowa dla konta systemowego S-05
 
 #### Manual
 
-- [ ] 2.5 Lokalny przebieg komend bez tokenu w logu startu
+- [x] 2.5 Lokalny przebieg komend bez tokenu w logu startu
 
 ### Phase 3: Publiczne API aktywacji
 
