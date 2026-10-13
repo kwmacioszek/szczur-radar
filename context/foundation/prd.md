@@ -187,6 +187,11 @@ Administrator (operator wdrożenia) — zarządza dostępem: tworzy konta dla za
   > Socrates: Kontrargument rozważony (przez użytkownika wprost): "automatyczny harmonogram (FR-002) już
   > istnieje; ręczne odpalenie pipeline'u było wcześniej słusznie nice-to-have." Rozwiązanie: zostaje
   > nice-to-have.
+  > Doprecyzowanie (2026-10-13, S-05 `daily-scheduled-run-freshness`): zrealizowane w S-02
+  > (`first-assessed-wykop-feed`). Admin uruchamia przebieg w `/admin` (`POST /api/admin/pipeline-runs`,
+  > odpowiedź 202, przebieg działa w tle), a jego status widzi na liście przebiegów w `/admin`. Pipeline działa
+  > w procesie API, więc API platformy Railway nie jest potrzebne. Tej samej ścieżki startu używa codzienny cron
+  > (S-05). Zapisy „dostępne, jeśli to nice-to-have zostanie zrealizowane” przy FR-015 i rolach są więc spełnione.
 
 ### Administracja operacyjna
 - FR-026: Operator może utworzyć pierwsze konto administratora poza interfejsem webowym przy użyciu prostego mechanizmu CLI. Priority: must-have
