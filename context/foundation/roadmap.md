@@ -3,7 +3,7 @@ project: "Szczur Radar"
 version: 2
 status: draft # draft | active | locked
 created: 2026-09-27
-updated: 2026-10-12
+updated: 2026-10-13
 prd_version: 2
 main_goal: speed
 top_blocker: time # secondary: decisions (LLM contract, filter scope and signal decision resolved 2026-09-27 — PRD v2)
@@ -75,7 +75,7 @@ Na Wykopie (#gielda) i Reddicie codziennie pojawiają się setki postów o inwes
 | S-04 | filter-by-assessment           | użytkownik filtruje listę po spółce/temacie (tekstowo) i stanowisku autora wobec niej                                           | S-02          | US-01, FR-011a                                                                                                                                                                           | proposed |
 | S-05 | daily-scheduled-run-freshness  | przepływ uruchamia się sam codziennie, a użytkownik widzi datę ostatniej udanej aktualizacji                                    | S-02, F-01    | US-01, FR-002, FR-030                                                                                                                                                                    | proposed |
 | S-06 | pipeline-run-history-dashboard | admin widzi historię przebiegów (kiedy, status, wynik) i wyraźny sygnał nieudanego przebiegu                                    | S-05, S-01    | FR-021, FR-015, NFR (operator dostaje widoczny sygnał awarii przebiegu)                                                                                                                  | proposed |
-| S-07 | cli-user-onboarding            | admin tworzy konto przez CLI, zaproszony ustawia hasło przez jednorazowy link i się loguje                                      | S-01, F-03    | US-02, FR-018, FR-027, FR-028                                                                                                                                                            | in-progress |
+| S-07 | cli-user-onboarding            | admin tworzy konto przez CLI, zaproszony ustawia hasło przez jednorazowy link i się loguje                                      | S-01, F-03    | US-02, FR-018, FR-027, FR-028                                                                                                                                                            | done        |
 
 ## Streams
 
@@ -249,7 +249,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Unknowns:**
   - ROZSTRZYGNIĘTE 2026-10-12 (`cli-user-onboarding`): Czas ważności linku aktywacyjnego (PRD sugeruje np. 24h). Domyślnie 12 h; operator zmienia go parametrem wdrożenia `ACTIVATION_LINK_TTL` (z jednostką, od `1m` do `7d`; `deploy-plan.md`, sekcja S-07). — Owner: user. Block: no.
 - **Risk:** Niezależny od potoku — dobry kandydat do równoległej pracy agenta przy ograniczonym czasie; bez niego MVP ma tylko jednego użytkownika.
-- **Status:** in-progress
+- **Status:** done
 
 ## Backlog Handoff
 
@@ -310,3 +310,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **F-02: (foundation) kontrakt oceny LLM V2 (trafność, cele ze stanowiskiem autora, tezy/opinie/fakty/pytania/działania z cytatem, flagi niepewności) jest źródłem prawdy; wejście i wyjście są odwzorowane jako zamknięte modele odrzucające obce pola; walidator sprawdza reguły kontraktu (cytaty jako fragmenty po normalizacji białych znaków, referencje, reguły stanowiska) z jawną klasyfikacją błędów; wpisy bez treści są odsiewane bez wywołania modelu; model domyślny wybrany pomiarem GPT-6 Luna przez OpenRouter, DeepSeek Flash bezpośrednio u dostawcy i Gemini 3.1 Flash-Lite przez Google AI Studio spełnia progi jakości na zestawie wzorcowym prawdziwych postów oznaczonych przez użytkownika.** — Archived 2026-10-06 → `context/archive/2026-09-27-assessment-contract-harness/`. Lesson: —.
 - **S-02: zalogowany użytkownik widzi chronologiczną, stronicowaną listę postów z Wykopu (#gielda) z zadanego zakresu dat, bez duplikatów, każdy z oceną LLM zgodną z kontraktem V2 (trafność, cele ze stanowiskiem autora, tezy/opinie/fakty/pytania/działania z cytatem, flagi niepewności); przebieg jest uruchamiany ręcznie przez operatora.** — Archived 2026-10-09 → `context/archive/2026-10-06-first-assessed-wykop-feed/`. Lesson: Akcje Embabel domyślnie się ponawiają — akcje ze skutkami ubocznymi oznaczaj FIRE_ONCE.
 - **F-01: (foundation) produkcja jest gotowa na zbieranie prawdziwych danych: plan Railway Hobby z limitami kosztów $5 (alert) / $10 (twardy); wolumen Postgresa 5 GB; codzienna kopia logiczna (`pg_dump` z serwisu cron `db-backup`, tylko na produkcji) sprawdzana pełnym odtworzeniem, w buckecie Railway (14 dziennych + 12 miesięcznych) i na NAS operatora (Synology Cloud Sync); restore drill przećwiczony do odpytywalnej bazy; limit $10/mies. na kluczu OpenRouter produkcji (wyczerpany limit zatrzymuje przebieg bez zużycia prób postów); sekret LLM produkcji zapieczętowany i niedostępny w środowiskach PR; klucze Wykopu zapieczętowane na produkcji, te same klucze aplikacji świadomie używane w PR env.** — Archived 2026-10-12 → `context/archive/2026-10-11-production-data-gate/`. Lesson: Railway Hobby nie ma kopii bazy — sprawdź tabelę funkcji planu i każdą kopię logiczną odtwarzaj w całości.
+- **S-07: admin może przez CLI utworzyć konto z rolą i dostać jednorazowy, wygasający link aktywacyjny; zaproszony może raz ustawić hasło i się zalogować; operator może wygenerować nowy link (unieważniając poprzedni) i odzyskać dostęp admina tym samym mechanizmem.** — Archived 2026-10-13 → `context/archive/2026-10-12-cli-user-onboarding/`. Lesson: —.
