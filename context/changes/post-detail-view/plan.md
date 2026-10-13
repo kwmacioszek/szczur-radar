@@ -558,7 +558,7 @@ Brak migracji i zmian danych. `post_not_found` dopisuje się do zamkniętego zbi
 
 #### Manual
 
-- [ ] 1.2 W Railway PR env zalogowany użytkownik otwiera w przeglądarce `/api/posts/<id ocenionego posta>/raw` i widzi sformatowany JSON z polskimi znakami; `/api/posts/<losowy UUID>` odpowiada 404 `{"detail":"post_not_found"}`
+- [x] 1.2 W Railway PR env zalogowany użytkownik otwiera w przeglądarce `/api/posts/<id ocenionego posta>/raw` i widzi sformatowany JSON z polskimi znakami; `/api/posts/<losowy UUID>` odpowiada 404 `{"detail":"post_not_found"}`
 
 ### Phase 2: Ocena posta jako komponenty
 
@@ -575,23 +575,23 @@ Brak migracji i zmian danych. `post_not_found` dopisuje się do zamkniętego zbi
 
 #### Automated
 
-- [x] 3.1 Testy i build web przechodzą: `cd szczur-radar-web && npm test && npm run build` (w tym `PostDetailView.test.ts`, `scroll.test.ts`, nowe przypadki routera, karty, klienta i FeedView)
-- [x] 3.2 `PostDetailView.vue` jest na liście `CLEANED`: `grep -c "PostDetailView.vue" szczur-radar-web/src/styleContract.test.ts` zwraca co najmniej 1
+- [x] 3.1 Testy i build web przechodzą: `cd szczur-radar-web && npm test && npm run build` (w tym `PostDetailView.test.ts`, `scroll.test.ts`, nowe przypadki routera, karty, klienta i FeedView) — 16fe2de
+- [x] 3.2 `PostDetailView.vue` jest na liście `CLEANED`: `grep -c "PostDetailView.vue" szczur-radar-web/src/styleContract.test.ts` zwraca co najmniej 1 — 16fe2de
 
 #### Manual
 
-- [x] 3.3 Lokalnie z mockiem (`dev/mock-api.js`, procedura w nagłówku): z drugiej strony listy, przewiniętej w dół, wejście w post i „← Posty” (a także Wstecz przeglądarki) wracają na tę samą stronę i to samo miejsce; „Dane dla nerdów” pokazują JSON dopiero po rozwinięciu; nieznane id pokazuje komunikat „nie ma takiego posta” z linkiem do listy
+- [x] 3.3 Lokalnie z mockiem (`dev/mock-api.js`, procedura w nagłówku): z drugiej strony listy, przewiniętej w dół, wejście w post i „← Posty” (a także Wstecz przeglądarki) wracają na tę samą stronę i to samo miejsce; „Dane dla nerdów” pokazują JSON dopiero po rozwinięciu; nieznane id pokazuje komunikat „nie ma takiego posta” z linkiem do listy — 16fe2de
 
 ### Phase 4: Weryfikacja wizualna, dokumenty i PR env
 
 #### Automated
 
-- [ ] 4.1 Testy i build web przechodzą: `cd szczur-radar-web && npm test && npm run build`
-- [ ] 4.2 Testy backendu przechodzą: `cd szczur-radar-api && ./mvnw -B verify`
-- [ ] 4.3 `REPOSITORY_GUIDELINES.md` wymienia nowe komponenty: `grep -c "PostAssessment" REPOSITORY_GUIDELINES.md` zwraca co najmniej 1
+- [x] 4.1 Testy i build web przechodzą: `cd szczur-radar-web && npm test && npm run build`
+- [x] 4.2 Testy backendu przechodzą: `cd szczur-radar-api && ./mvnw -B verify`
+- [x] 4.3 `REPOSITORY_GUIDELINES.md` wymienia nowe komponenty: `grep -c "PostAssessment" REPOSITORY_GUIDELINES.md` zwraca co najmniej 1
 - [ ] 4.4 CI na PR jest zielone: `gh pr checks <PR>`
 
 #### Manual
 
-- [ ] 4.5 `ui/README.md` ma tabelę 7 stanów z plikami albo N/A z powodem, w obu motywach i przy 375 px, bez poziomego przewijania strony
-- [ ] 4.6 W Railway PR env (prawdziwe dane, zalogowany użytkownik): wejście w post z listy i powrót na to samo miejsce, JSON źródła z polskimi znakami po rozwinięciu, link otwiera oryginał na Wykopie, anonimowy głęboki link `/posts/<id>` prowadzi przez logowanie z powrotem do posta, nieznane id pokazuje komunikat „nie ma takiego posta”
+- [x] 4.5 `ui/README.md` ma tabelę 7 stanów z plikami albo N/A z powodem, w obu motywach i przy 375 px, bez poziomego przewijania strony
+- [x] 4.6 W Railway PR env (prawdziwe dane, zalogowany użytkownik): wejście w post z listy i powrót na to samo miejsce, JSON źródła z polskimi znakami po rozwinięciu, link otwiera oryginał na Wykopie, anonimowy głęboki link `/posts/<id>` prowadzi przez logowanie z powrotem do posta, nieznane id pokazuje komunikat „nie ma takiego posta”
