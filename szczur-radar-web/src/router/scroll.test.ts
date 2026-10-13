@@ -32,6 +32,37 @@ describe('scrollBehavior', () => {
     await expect(result).resolves.toEqual(SAVED)
   })
 
+  it('back from a post to the feed focuses the link of the post just left, once the feed reports its page', async () => {
+    const link = document.createElement('a')
+    link.setAttribute('href', '/posts/1')
+    document.body.append(link)
+    try {
+      const result = Promise.resolve(scrollBehavior(at('home', '/'), at('post', '/posts/1'), SAVED))
+      expect(document.activeElement).not.toBe(link)
+
+      reportFeedLoaded('ok')
+
+      await expect(result).resolves.toEqual(SAVED)
+      expect(document.activeElement).toBe(link)
+    } finally {
+      link.remove()
+    }
+  })
+
+  it('leaves the focus alone when the feed fails to load', async () => {
+    const link = document.createElement('a')
+    link.setAttribute('href', '/posts/1')
+    document.body.append(link)
+    try {
+      const result = Promise.resolve(scrollBehavior(at('home', '/'), at('post', '/posts/1'), SAVED))
+      reportFeedLoaded('error')
+      await expect(result).resolves.toBe(false)
+      expect(document.activeElement).not.toBe(link)
+    } finally {
+      link.remove()
+    }
+  })
+
   it('back from a post to the feed does not scroll when the feed fails to load', async () => {
     const result = Promise.resolve(scrollBehavior(at('home', '/'), at('post', '/posts/1'), SAVED))
     reportFeedLoaded('error')

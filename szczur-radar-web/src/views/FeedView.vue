@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, ref, useTemplateRef, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref, useTemplateRef, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { type Freshness, fetchFreshness } from '../api/freshness'
 import { type Page, type PostItem, fetchPosts } from '../api/posts'
@@ -76,6 +76,12 @@ async function load(target: number, { moveFocus = false } = {}): Promise<void> {
     reportFeedLoaded('error')
   }
 }
+
+// A load that ends after the view is gone (e.g. forward to a post mid-load) is dropped like an
+// overtaken one, so it never reports to a later return to the feed (router/scroll.ts).
+onBeforeUnmount(() => {
+  latestLoad++
+})
 
 /** The retry button disappears while loading, so the focus goes to the heading afterwards. */
 function retry(): void {

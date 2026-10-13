@@ -12,6 +12,7 @@ import { formatDateTime, label } from '../labels'
 const route = useRoute()
 const router = useRouter()
 const heading = useTemplateRef<HTMLHeadingElement>('post-title')
+const rawSummary = useTemplateRef<HTMLElement>('raw-summary')
 
 /** `missing`: 404 or 400, an id that is not an assessed post; `failed`: any other error. */
 type LoadState = 'loading' | 'failed' | 'missing' | 'loaded'
@@ -88,6 +89,12 @@ async function loadRaw(): Promise<void> {
   }
 }
 
+/** The retry button disappears while loading, so the focus moves to the section's summary first. */
+function retryRaw(): void {
+  rawSummary.value?.focus()
+  void loadRaw()
+}
+
 /** The first opening fetches the source JSON; a later one shows what is there (retry is a button). */
 function onRawToggle(event: Event): void {
   if ((event.target as HTMLDetailsElement).open && rawState.value === 'idle') void loadRaw()
@@ -130,7 +137,7 @@ watch(
 <template>
   <AppHeader />
   <main class="post-detail">
-    <a class="back" :href="listHref" @click="toList">← Posty</a>
+    <a class="back" :href="listHref" @click="toList"><span aria-hidden="true">←</span> Posty</a>
     <section aria-labelledby="post-title" :aria-busy="state === 'loading' ? 'true' : undefined">
       <h1 id="post-title" ref="post-title" tabindex="-1">{{ title }}</h1>
       <p v-if="state === 'loading'" class="loading">Wczytywanie posta…</p>
@@ -149,7 +156,14 @@ watch(
           <span v-if="post.author" class="author">{{ post.author }}</span>
         </p>
         <p v-if="original">
-          <a class="original" :href="original.href" target="_blank" rel="noopener noreferrer">Otwórz oryginał na {{ original.host }}</a>
+          <a
+            class="original"
+            :href="original.href"
+            target="_blank"
+            rel="noopener noreferrer"
+            :aria-label="`Otwórz oryginał na ${original.host} (otwiera się w nowej karcie)`"
+            >Otwórz oryginał na {{ original.host }}</a
+          >
         </p>
         <p v-if="post.body" class="body">{{ post.body }}</p>
 
@@ -160,11 +174,11 @@ watch(
         </section>
 
         <details class="part raw" @toggle="onRawToggle">
-          <summary>Dane dla nerdów: surowy JSON źródła</summary>
+          <summary ref="raw-summary">Dane dla nerdów: surowy JSON źródła</summary>
           <p v-if="rawState === 'loading'" class="loading">Wczytywanie danych…</p>
           <template v-else-if="rawState === 'failed'">
             <StatusMessage tone="error">Nie udało się wczytać danych źródła.</StatusMessage>
-            <AppButton @click="loadRaw">Spróbuj ponownie</AppButton>
+            <AppButton @click="retryRaw">Spróbuj ponownie</AppButton>
           </template>
           <pre v-else-if="rawState === 'loaded'">{{ raw }}</pre>
         </details>

@@ -241,6 +241,18 @@ describe('FeedView', () => {
     expect(reportFeedLoaded).toHaveBeenCalledExactlyOnceWith('error')
   })
 
+  it('stays silent about a load that ends after it was unmounted', async () => {
+    let finish: (value: Page<PostItem>) => void = () => {}
+    vi.mocked(fetchPosts).mockImplementation(() => new Promise((resolve) => (finish = resolve)))
+    const { wrapper } = await mountFeed()
+
+    wrapper.unmount()
+    finish(answer([post('1')], 1))
+    await flushPromises()
+
+    expect(reportFeedLoaded).not.toHaveBeenCalled()
+  })
+
   it('does not report a load overtaken by a later one', async () => {
     const answers = new Map<number, (value: Page<PostItem>) => void>()
     vi.mocked(fetchPosts)

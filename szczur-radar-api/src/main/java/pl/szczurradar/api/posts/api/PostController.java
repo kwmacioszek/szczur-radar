@@ -84,8 +84,9 @@ class PostController {
 	}
 
 	/**
-	 * The raw payload of one assessed post with every value as stored, indented for reading. Bytes with
-	 * an explicit JSON type, so neither a message converter nor a charset default changes the content.
+	 * The raw payload of one assessed post, indented for reading: the values are unchanged, though a number may
+	 * change notation and an escape comes back as its character. Bytes with an explicit JSON type, so neither a
+	 * message converter nor a charset default changes the content.
 	 */
 	@GetMapping("/api/posts/{id}/raw")
 	ResponseEntity<byte[]> raw(@PathVariable UUID id) {

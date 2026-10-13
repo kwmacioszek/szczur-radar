@@ -22,7 +22,7 @@ const labels: Record<string, Record<string, string>> = {
   },
   modifier: { humor: 'humor', promotion: 'promocja' },
   claimKind: {
-    factual_claim: 'fakt',
+    factual_claim: 'informacja',
     opinion: 'opinia',
     investment_thesis: 'teza inwestycyjna',
     question: 'pytanie',

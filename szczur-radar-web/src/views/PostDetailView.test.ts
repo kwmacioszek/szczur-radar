@@ -198,6 +198,7 @@ describe('PostDetailView', () => {
     expect(link.attributes('href')).toBe('https://wykop.pl/wpis/81234567')
     expect(link.attributes('target')).toBe('_blank')
     expect(link.attributes('rel')).toBe('noopener noreferrer')
+    expect(link.attributes('aria-label')).toBe('Otwórz oryginał na wykop.pl (otwiera się w nowej karcie)')
   })
 
   it.each([null, 'javascript:alert(1)', 'ftp://wykop.pl/wpis/1', 'not a url'])(
@@ -284,6 +285,19 @@ describe('PostDetailView', () => {
       expect(wrapper.find('details [role="alert"]').exists()).toBe(false)
       expect(wrapper.find('pre').element.textContent).toBe(RAW)
     })
+
+    it('keeps the focus in the section when the retry button goes away', async () => {
+      vi.mocked(fetchPost).mockResolvedValue(post())
+      vi.mocked(fetchPostRaw).mockRejectedValueOnce(new TypeError('Failed to fetch')).mockReturnValue(new Promise(() => {}))
+      const { wrapper } = await mountPost('/posts/1', { attachTo: document.body })
+      await toggleRaw(wrapper, true)
+
+      await wrapper.find('details button').trigger('click')
+      await flushPromises()
+
+      expect(wrapper.find('details .loading').exists()).toBe(true)
+      expect(document.activeElement).toBe(wrapper.find('summary').element)
+    })
   })
 
   describe('the link back to the list', () => {
@@ -293,6 +307,7 @@ describe('PostDetailView', () => {
       const back = vi.spyOn(router, 'back').mockImplementation(() => {})
       const link = wrapper.find('a.back')
       expect(link.text()).toBe('← Posty')
+      expect(link.find('span[aria-hidden="true"]').text()).toBe('←')
       expect(link.attributes('href')).toBe('/?page=1')
 
       await link.trigger('click')

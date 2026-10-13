@@ -90,8 +90,8 @@ describe('PostAssessment', () => {
     const claims = mountAssessment().findAll('.claim')
     expect(claims.map((item) => item.find('.claim-meta').text())).toEqual([
       'teza inwestycyjna · autor · podstawa stanowiska',
-      'fakt · przytoczone',
-      'fakt · przytoczone · podstawa stanowiska',
+      'informacja · przytoczone',
+      'informacja · przytoczone · podstawa stanowiska',
       'opinia · nie wiadomo czyje',
     ])
     expect(claims[0]!.find('blockquote').text()).toBe('cytat c1')
