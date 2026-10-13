@@ -51,6 +51,8 @@ milestone_status: open
 
 > v2.18 (2026-10-12; numer po scaleniu z S-05): W `## Parked` dopisane unieważnianie sesji wersją poświadczeń — po MVP, z przeglądu implementacji S-07 (F1): logowanie w toku może przetrwać `reset-password` do aktywacji.
 
+> v2.19 (2026-10-13): S-06 — dopisek z pierwszego przebiegu crona na produkcji: hardening monitorowania (postęp trwającego przebiegu w `/admin`, ostrzeżenie o braku postępu, linie postępu w logach API i crona), bo dziś trwającego przebiegu nie da się obserwować bez czytania bazy. W `## Parked` dopisany przybliżony czas zakończenia trwającego przebiegu (nice-to-have po MVP, na bazie postępu z S-06).
+
 ## Milestone
 
 **M-1: MVP — ocenione sygnały z Wykopu dla zaproszonych osób** — Status: open
@@ -246,6 +248,15 @@ Foundations below assume these are present and do NOT re-scaffold them.
   - Czy dashboard wystarcza jako „jednoznaczny, widoczny sygnał” awarii, czy potrzebne jest aktywne powiadomienie operatora. — Owner: user. Block: no.
 - **Risk:** Pierwsza funkcja wyłącznie dla admina — weryfikuje rozdział ról na prawdziwej trasie; bez niej automat z S-05 działa bez nadzoru.
   - Dopisek (2026-10-13, przegląd S-05, F3): odzyskiwanie przy starcie API (`PipelineStartupRecovery`) oznacza jako `interrupted` każdy przebieg `queued`/`running`, także ten, który trwa jeszcze w starym kontenerze podczas deployu. S-05 naprawiło tylko wyścig z żądaniem budzącym API. Przed tym chroni dziś wyłącznie reguła „bez merge'a ok. 00:30–01:30 UTC”. Przebieg przerwany deployem dashboard powinien pokazywać jako przerwany przez wdrożenie, a nie jak zwykłą awarię; trwałe rozwiązanie (np. właściciel przebiegu po instancji) to osobna decyzja.
+  - Dopisek (2026-10-13, pierwszy przebieg crona na produkcji; decyzja użytkownika: hardening monitorowania): trwającego przebiegu nie da się dziś obserwować bez czytania bazy produkcyjnej. Uruchomiony ręcznie przebieg RETRY stał w kroku `assess` ponad 7 minut bez żadnego śladu:
+    - `trigger.sh` loguje tylko start i zmiany statusu;
+    - API nie loguje pojedynczych wywołań LLM;
+    - panel Railway nie pokazał nawet linii startowych crona, bo zaczyna widok od „Starting Container”.
+
+    Zakres do S-06:
+    - postęp trwającego przebiegu w `/admin`: bieżący krok, czas od startu, postęp oceny (gotowe / nieudane / w toku z N), próby, ponowienia i powroty flex → standard, czas ostatniej aktywności;
+    - ostrzeżenie, gdy przebieg nie robi postępu dłużej niż X minut;
+    - linia postępu w logu API (np. co N postów lub co minutę) i okresowy heartbeat crona z krokiem i postępem.
 - **Status:** proposed
 
 ### S-07: Onboarding użytkownika przez CLI
@@ -306,6 +317,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Self-hosted runner CI dla PR (lokalny Docker), runnery GitHub Actions dla `main`** — Why parked: nice-to-have dla wygody developmentu, nie wymaganie PRD; odroczone po MVP, najwcześniej po F-02 ([issue #30](https://github.com/kwmacioszek/szczur-radar/issues/30)).
 - **Komunikat, gdy nie udało się odczytać daty aktualizacji danych** — Why parked: nice-to-have po MVP (decyzja użytkownika 2026-10-13, S-05 `daily-scheduled-run-freshness`, faza 4). Dziś przy błędzie `GET /api/freshness` etykieta „Dane zaktualizowane: …” nad feedem po prostu znika, a lista działa (`FeedView.vue`; `context/changes/daily-scheduled-run-freshness/ui/README.md`), więc użytkownik nie odróżni „nie udało się sprawdzić” od braku etykiety. Pomysł: osobny, neutralny komunikat treści w miejscu etykiety (nie czerwony alert, bo posty są w porządku), np. „Nie udało się sprawdzić daty aktualizacji.”, ewentualnie z ponowieniem.
 - **Unieważnianie sesji wersją poświadczeń** — Why parked: po MVP, z przeglądu implementacji S-07 (`cli-user-onboarding`, F1). Logowanie, które sprawdziło hasło przed zatwierdzeniem `reset-password`, zapisuje sesję już po `DELETE` resetu, więc ta sesja działa aż do aktywacji (najwyżej `ACTIVATION_LINK_TTL`, domyślnie 12 h); od S-07 kończy ją aktywacja. Pełne zamknięcie: wersja poświadczeń konta (np. `password_changed_at`), zapisana w sesji przy logowaniu i sprawdzana przy każdym uwierzytelnionym żądaniu — migracja i sprawdzenie w łańcuchu filtrów.
+- **Przybliżony czas zakończenia trwającego przebiegu** — Why parked: nice-to-have po MVP (decyzja użytkownika 2026-10-13, po pierwszym przebiegu crona na produkcji). Buduje na postępie przebiegu z S-06 (dopisek o monitorowaniu): bez liczników postępu nie ma z czego liczyć. Pomysł: w `/admin` przy przebiegu `running` szacowany koniec i odliczanie, np. średni czas oceny posta z ostatnich przebiegów (z `pipeline_run_steps` i `assessments`) × liczba postów do oceny + typowy czas pobrania, albo tempo bieżącego przebiegu, gdy ma już kilka ocen. Niepewność: tier flex, ponowienia i powroty do standardu mocno wydłużają pojedyncze oceny, więc to przybliżenie, nie obietnica.
 
 ## Milestone History
 
