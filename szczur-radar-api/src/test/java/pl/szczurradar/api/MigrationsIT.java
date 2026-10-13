@@ -15,6 +15,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import pl.szczurradar.api.cli.MigrateCommand;
+import pl.szczurradar.api.user.SystemAccount;
 
 /**
  * Migrations from scratch on an empty database (replaces the Python upgrade/downgrade round trip:
@@ -34,7 +35,7 @@ class MigrationsIT {
 	void allMigrationsApplyOnEmptyDatabase() {
 		List<Map<String, Object>> history = jdbc.queryForList(
 				"SELECT version, success FROM flyway_schema_history WHERE version IS NOT NULL ORDER BY installed_rank");
-		assertThat(history).extracting(row -> row.get("version")).containsExactly("1", "2", "3", "4", "5");
+		assertThat(history).extracting(row -> row.get("version")).containsExactly("1", "2", "3", "4", "5", "6");
 		assertThat(history).allSatisfy(row -> assertThat(row.get("success")).isEqualTo(true));
 	}
 
@@ -42,16 +43,19 @@ class MigrationsIT {
 	void usersTableHasNamedConstraints() {
 		List<String> constraints = jdbc.queryForList(
 				"SELECT conname FROM pg_constraint WHERE conrelid = 'public.users'::regclass", String.class);
-		assertThat(constraints).contains("uq_users_email", "ck_users_email_lower", "ck_users_role");
+		assertThat(constraints).contains("uq_users_email", "ck_users_email_lower", "ck_users_role",
+				"ck_users_login_password");
 	}
 
 	@Test
 	void usersDefaultsAndNoTokenVersion() {
 		Map<String, Object> row = jdbc.queryForMap(
-				"INSERT INTO users (email) VALUES ('defaults@example.com') RETURNING id, role, password_hash, created_at");
+				"INSERT INTO users (email) VALUES ('defaults@example.com')"
+						+ " RETURNING id, role, password_hash, login_enabled, created_at");
 		assertThat(row.get("id")).isNotNull();
 		assertThat(row.get("role")).isEqualTo("user");
 		assertThat(row.get("password_hash")).isNull();
+		assertThat(row.get("login_enabled")).isEqualTo(true);
 		assertThat(row.get("created_at")).isNotNull();
 
 		Integer tokenVersionColumns = jdbc.queryForObject(
@@ -74,6 +78,22 @@ class MigrationsIT {
 	void duplicateEmailIsRejected() {
 		jdbc.update("INSERT INTO users (email) VALUES ('dup@example.com')");
 		assertRejected("INSERT INTO users (email) VALUES ('dup@example.com')", "uq_users_email");
+	}
+
+	@Test
+	void theSchedulerIsASystemAccountThatCannotLogInNorGetAPassword() {
+		SystemAccount scheduler = SystemAccount.SCHEDULER;
+		Map<String, Object> row = jdbc.queryForMap(
+				"SELECT email, role, password_hash, login_enabled FROM users WHERE id = ?", scheduler.id());
+		assertThat(row).containsEntry("email", scheduler.email())
+			.containsEntry("role", "user")
+			.containsEntry("password_hash", null)
+			.containsEntry("login_enabled", false);
+
+		assertRejected("UPDATE users SET password_hash = '$argon2id$x' WHERE id = '" + scheduler.id() + "'",
+				"ck_users_login_password");
+		assertRejected("INSERT INTO users (email, password_hash, login_enabled)"
+				+ " VALUES ('no-login@example.com', '$argon2id$x', false)", "ck_users_login_password");
 	}
 
 	@Test

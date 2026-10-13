@@ -1,5 +1,6 @@
 package pl.szczurradar.api.config;
 
+import static java.util.Map.entry;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Arrays;
@@ -16,17 +17,18 @@ class ErrorCodeTest {
 		Map<String, Integer> contract = Arrays.stream(ErrorCode.values())
 			.collect(Collectors.toMap(ErrorCode::code, code -> code.status().value()));
 
-		assertThat(contract).containsExactlyInAnyOrderEntriesOf(Map.of(
-				"invalid_credentials", 401,
-				"not_authenticated", 401,
-				"forbidden", 403,
-				"too_many_attempts", 429,
-				"cross_origin", 403,
-				"invalid_request", 400,
-				"unsupported_media_type", 415,
-				"pipeline_busy", 409,
-				"post_dead", 400,
-				"source_not_configured", 503));
+		assertThat(contract).containsExactlyInAnyOrderEntriesOf(Map.ofEntries(
+				entry("invalid_credentials", 401),
+				entry("not_authenticated", 401),
+				entry("forbidden", 403),
+				entry("too_many_attempts", 429),
+				entry("cross_origin", 403),
+				entry("invalid_request", 400),
+				entry("unsupported_media_type", 415),
+				entry("pipeline_busy", 409),
+				entry("post_dead", 400),
+				entry("source_not_configured", 503),
+				entry("not_found", 404)));
 	}
 
 }

@@ -68,9 +68,13 @@ class CreateAdminCommandIT {
 
 	private final ByteArrayOutputStream errBytes = new ByteArrayOutputStream();
 
+	/**
+	 * Removes every account that can log in; the system accounts of the migrations stay (runs they
+	 * requested reference them, and no test here creates or counts them).
+	 */
 	@BeforeEach
 	void emptyDatabase() {
-		jdbc.sql("DELETE FROM users").update();
+		jdbc.sql("DELETE FROM users WHERE login_enabled").update();
 	}
 
 	@Test
@@ -187,7 +191,7 @@ class CreateAdminCommandIT {
 	}
 
 	private long userCount() {
-		return jdbc.sql("SELECT count(*) FROM users").query(Long.class).single();
+		return jdbc.sql("SELECT count(*) FROM users WHERE login_enabled").query(Long.class).single();
 	}
 
 	private String stdout() {

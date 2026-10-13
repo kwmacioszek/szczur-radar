@@ -172,7 +172,7 @@ Revert only the image switch: delete `szczur-radar-api/Dockerfile` (Railpack tak
 
 - **Inside the API process**, in the background — no separate cron service (this replaces "a separate Railway cron service" in phase 6 below and in `infrastructure.md`). An admin starts a run in `/admin` (`POST /api/admin/pipeline-runs`, 202): a date range (queued after a retry of leftover failed posts, if any) or chosen failed posts. Runs are queued and executed one at a time; their state is in Postgres (`pipeline_runs`, `pipeline_run_steps`, `posts`, `assessments`, `raw_payloads`).
 - **A deploy or sleep interrupts a running run.** On start the API marks unfinished runs `interrupted` and puts their claimed posts back; a later run (or a retry) picks them up. Rule: **do not merge to `main` while `/admin` shows a run `RUNNING`**, and do not push to a PR branch while testing a run in its PR env.
-- The daily automatic trigger is S-05 (`daily-scheduled-run-freshness`).
+- The daily automatic trigger is S-05 (`daily-scheduled-run-freshness`). **Update (S-05, 2026-10-13):** the cron service `pipeline-trigger` starts the daily run every night at 00:30 UTC through `POST /internal/pipeline-runs/daily`; the pipeline still runs in the API process (section S-05 below).
 
 ### Variables (`szczur-radar-api`, names only)
 
@@ -279,6 +279,9 @@ The operator ran Live Resize from the dashboard (`production` → `postgres-volu
   3. only then the upload.
   - Production only: outside `production` (`RAILWAY_ENVIRONMENT_NAME`) a run logs "skipped" and exits 0, unless `BACKUP_IN_ANY_ENVIRONMENT=true` is set on the service (to try a change in a PR env). The whole run has a time limit (`BACKUP_TIMEOUT`, default 2 h) and `pg_dump` waits at most 5 min for a lock: a hung run fails instead of blocking every later run (Railway skips a cron run while the previous one is active). Retention counts only the exact names the tool writes.
   - A run ends with exit code 0 only if every step passed. Anything else fails the cron run (status `CRASHED`), and Railway e-mails every failed run, in PR envs too (verified 2026-10-11). Each scheduled run shows up as a new deployment of the service.
+  - **Update (S-05, 2026-10-13):** two corrections from the S-05 PR-env test (2026-10-12, section S-05 below).
+    - No e-mail came for a crashed cron run, and no in-app notification either. The signal now relies on a custom notification rule the operator added in Railway Account Settings (event "deployment crashed", scope: all environments): a failed run then arrives as an in-app and push notification ("… deployment crashed"). Without that rule a failed `db-backup` run is silent. The e-mails of 2026-10-11 stay recorded as they happened.
+    - A scheduled run reuses the cron service's existing deployment; it does not create a new one. The deployment's status is that of its latest run.
 - **Bucket `db-backups`** (region `ams`), one per environment with its own keys: a PR env never sees production's dumps (and since the review it does not back up at all, see above). The S3 name is the display name plus a hash (variable `BUCKET`). Objects:
   - `daily/szczur-radar-<yyyymmddThhmmssZ>.dump`, each with a `.manifest.json` (time, sha256, size, server and `pg_dump` versions, Flyway version, row counts, restore check result);
   - `monthly/szczur-radar-<yyyy-mm>.dump` with its manifest: a server-side copy of the first successful dump of each UTC month;
@@ -423,6 +426,96 @@ PR #44 was squash-merged as `b7ee254` (11:25 UTC). CI on `main` applied `+ Creat
   - `/api/posts` `total` was 30, locally and on production alike.
   - The local copy was deleted afterwards.
 
+## S-05: codzienny przebieg (daily-scheduled-run-freshness)
+
+**Status (2026-10-13): in the PR env (#50), not merged.** S-05 adds the cron service `pipeline-trigger`, which starts the pipeline every night, and the label "Dane zaktualizowane: …" above the feed. Change: `context/changes/daily-scheduled-run-freshness/`, issue #18.
+
+### How the daily run works
+
+- **Schedule.** `pipeline-trigger` (`tools/pipeline-trigger/`, declared in `.railway/railway.ts`) runs at `30 0 * * *` (UTC). In Warsaw that is 01:30 (winter) or 02:30 (summer), always after midnight, so yesterday is a complete day. Railway may start a cron run a few minutes late.
+- **Start.** `trigger.sh` calls the API over the private network, straight to its port (`http://<API_PRIVATE_DOMAIN>:8000/internal/…`), not through the web's Caddy, which forwards only `/api/*`. The request `POST /internal/pipeline-runs/daily` carries `Authorization: Bearer <PIPELINE_TRIGGER_TOKEN>` and no body.
+  - The API creates the same runs as the admin's button (`PipelineRunService.startRange`): a RETRY run first when posts are left over, then a RANGE run for D-2…D-1 of the Warsaw calendar, from every configured source.
+  - The requester (`requested_by`) is the system account `scheduler@system.invalid` (migration `V6`, `user/SystemAccount.SCHEDULER`). It has `login_enabled = false` and no password, so it can never log in.
+  - D-2 is fetched a second time. That catches posts the Wykop pagination missed the night before (S-02 review, F9). Posts already stored cost no LLM call, only about 7 more Wykop requests a night.
+- **Answers of `/internal/**`.** The token is the only credential there: the chain is stateless, reads no session and sets no cookie, and the token means nothing on `/api/**`.
+  - `POST /internal/pipeline-runs/daily`: 202 `[{id, kind}]` in execution order; 409 `pipeline_busy` while a run is queued or running; 503 `source_not_configured`; 401 without the token, with a wrong one, and always when the API has no `PIPELINE_TRIGGER_TOKEN`.
+  - `GET /internal/pipeline-runs/{id}`: 200 `{id, kind, status, finishedAt, fetched, newPosts, assessedOk, assessedFailed, processingErrors, dead}`, or 404 `not_found`. The counters are for the cron's last log line.
+- **Retries and limits** (`trigger.sh`, defaults; `tools/pipeline-trigger/README.md`):
+  - no connection or 502/503/504 (the API waking takes about 10 s, or the cron container's private network is not ready yet): every 2 s, up to `TRIGGER_WAKE_TIMEOUT` (`3m`). A 503 `source_not_configured` is not retried. Only a start request that never connected is retried: no answer after the connection was made (e.g. `TRIGGER_REQUEST_TIMEOUT`, `60s`) means the API may have queued the run, so the cron exits 1 ("the run may have started; check /admin") instead of starting a second run whose result would hide the first one's (implementation review F1);
+  - 409 `pipeline_busy` (e.g. an admin's run): every `TRIGGER_BUSY_INTERVAL` (`60s`), up to `TRIGGER_BUSY_TIMEOUT` (`60m`);
+  - polling every `TRIGGER_POLL_INTERVAL` (`30s`), up to `TRIGGER_RUN_TIMEOUT` (`90m`) for all runs together;
+  - the whole cron run: `TRIGGER_TIMEOUT` (`3h`). A hung run fails instead of blocking later nights (Railway skips a cron run while the previous one is active).
+- **Exit code.** 0 when every run is `succeeded` or `partial`; 1 when one is `failed` or `interrupted`, on 401 or another 4xx, on 503 `source_not_configured` or a timeout; 2 on a configuration error. The token goes to `curl` as a config on stdin, never as an argument, and is never logged.
+- **Failure signal.** A non-zero exit makes the cron's deployment `CRASHED`. Railway reports that **only through a notification rule**: in the PR-env test (2026-10-12) a crashed run sent no e-mail and no in-app notification. After the operator added a custom rule in Railway Account Settings (event "deployment crashed", scope: all environments), the next failed run arrived as an in-app and push notification "Pipeline-trigger deployment crashed". The same rule covers `db-backup` (section F-01). A `partial` run exits 0: its failed posts show in `/admin` and the next run retries them; an active signal for `partial` is S-06.
+- **Environment guard.** Railway creates the cron in every environment (a PR env is a copy of production). Outside `production` (`RAILWAY_ENVIRONMENT_NAME`) `trigger.sh` logs "skipped" and exits 0 without a request, unless `TRIGGER_IN_ANY_ENVIRONMENT=true` is set on the service.
+- **Recovery before the port.** The cron's request is often the one that wakes the API. Start-up recovery of unfinished runs (`PipelineStartupRecovery`) now runs in `SmartInitializingSingleton.afterSingletonsInstantiated`, before the web server opens its port, so it cannot mark the cron's new run `interrupted`.
+- **What Railway shows for a cron (seen 2026-10-12).** A scheduled run reuses the service's existing deployment; it does not create a new one. Railway shows what a cron writes to stderr at level `error`, and `trigger.sh` logs every line to stderr, so a normal run looks red in the log view. The exit code says whether it failed, not the colour.
+- **The label.** `GET /api/freshness` (any logged-in role) → `{"lastUpdatedAt": "<ISO-8601 UTC>" | null}`: the `finished_at` of a RANGE run, scheduled or an admin's, that ended `succeeded` or `partial`: of those, the one whose range reaches furthest, and of them the latest. An admin's run over older days leaves the date (implementation review F4). The feed shows "Dane zaktualizowane: <date, time in Warsaw>", "Dane nie były jeszcze aktualizowane." before the first such run, and nothing when the read fails (the list still works).
+- **Time and cost.** About 270 posts a night, 12–25 min with 4 threads; about $0.13 a night on tier `default` and $0.07 on `flex` (F-02 estimate). A night after a provider failure (RETRY without a limit, then RANGE) takes up to about 50 min, still before the 02:00 UTC backup. A dump taken while a run writes is still consistent (`pg_dump` reads one snapshot).
+
+### Variables (names only)
+
+| Service | Variable | Production | PR env |
+| --- | --- | --- | --- |
+| `szczur-radar-api` | `PIPELINE_TRIGGER_TOKEN` | set by the operator with `--stdin` (`openssl rand -hex 32`), **sealed**. At least 32 characters, otherwise the server does not start; unset, every `/internal/**` request is 401 | unset; set by hand only to verify the cron. `.railway/railway.ts` declares it with `preserve()` |
+| `pipeline-trigger` | `PIPELINE_TRIGGER_TOKEN` | a reference to the API's variable (IaC), never a value | the same |
+| `pipeline-trigger` | `API_PRIVATE_DOMAIN`, `API_PORT` | references from IaC (`RAILWAY_PRIVATE_DOMAIN` of the API, `8000`) | the same |
+| `pipeline-trigger` | `TRIGGER_IN_ANY_ENVIRONMENT` | unset | `true` only during a verification; `preserve()` keeps a hand-set value |
+| `pipeline-trigger` | `TRIGGER_*` durations | defaults | defaults |
+
+- `pipeline-trigger` has its own resource cap `PIPELINE_TRIGGER_LIMITS` (0.5 vCPU / 0.5 GB; caps are per service since #52) and no `checkSuites`, for the same reason as `db-backup`.
+- Not known before production: whether a reference to a **sealed** variable of another service resolves (Railway's docs do not say). Step 2 of the runbook checks it.
+
+### No merge at night
+
+- A merge to `main` deploys the API, and a deploy interrupts a running run. The rule "no merge while `/admin` shows a run `RUNNING`" now covers the night: **do not merge between about 00:30 and 01:30 UTC**, and longer when the night's run is still running.
+- A run interrupted by a deploy ends `interrupted`, so the cron exits 1 and Railway notifies. The next night fetches that day again as D-2.
+- The merge of this change deploys the API twice, because it also changes `.railway/railway.ts` (Troubleshooting (Java)).
+
+### Merge notes
+
+- **Migration number vs S-07.** This change adds `V6__users_login_enabled_scheduler.sql`; `cli-user-onboarding` (S-07, PR #49, not merged) plans its own `V6`. Flyway refuses a migration numbered below one already applied, so whichever change lands on `main` second renumbers its migration to the next free number and fixes the version list in `MigrationsIT` before its merge, never after a deploy.
+- **System account vs S-07.** S-07's commands (`create-user`, `reset-password`, `lookup`, `activate`) must refuse an account with `login_enabled = false`; the change that lands second adds that code (posted on issue #20). The constraint `ck_users_login_password` already refuses a password for such an account.
+- **Backup manifest.** `V6` inserts one row into `users`, so the `users` count in the `db-backup` manifest grows by one after the merge.
+
+### PR-env verification (szczur-radar-pr-50)
+
+Phase 3 (2026-10-12):
+- **IaC.** `railway-config` created `pipeline-trigger` with nothing destructive and no source change of other services; the next plan was empty. `railway config plan` on production (2026-10-12, after the rebase onto #52) shows exactly one change: `+ Create service pipeline-trigger`.
+- **Token.** The API's `PIPELINE_TRIGGER_TOKEN` was set with `--stdin` and kept.
+- **Without the override (3.6):** the cron logged "skipped" and its deployment was `SUCCESS`, with no request to the API.
+- **From a sleeping API (3.4):** with `TRIGGER_IN_ANY_ENVIRONMENT=true` and a temporary schedule, the cron woke the sleeping API in about 9 s. The API created a RANGE run for D-2…D-1, which ended `partial` (74 fetched, 71 assessed ok, 3 failed), and the cron exited 0.
+- **Wrong token (3.5):** a different token as a value on the cron gave 401, exit 1 and the deployment `CRASHED`. No e-mail and no notification came. Only after the operator added the custom rule "deployment crashed" (all environments) did the next failed run arrive as an in-app and push notification.
+- **Afterwards** the override was removed and the schedule is back to `30 0 * * *`.
+- **Railway CLI quirks:** `railway redeploy` of the cron service hung or refused ("cannot be redeployed"); Railway MCP `redeploy` with an earlier deployment id worked. `railway variable delete` has no `--skip-deploys`, and with it the command failed without a message.
+
+Phase 5, the whole chain (2026-10-13, head `0969307`):
+- **Deploys.** The push deployed `szczur-radar-web` from the older commit `c0b3433` again (see "PR-env verification: the web deployment's commit" in `first-assessed-wykop-feed`); `railway redeploy --from-source` gave `c9e9b963` from `0969307`. The API (`994c3737`) was at the head.
+- **A `user` account.** The PR env's database held only the system account (no admin). A test account `freshness-check@example.com` with role `user` was inserted by SQL, with a random password hashed by `Passwords.encoder()` (argon2id) and never printed.
+- **The cron from a sleeping API.** `TRIGGER_IN_ANY_ENVIRONMENT=true` and a one-off schedule `40 6 * * *`; the API was `SLEEPING` at 06:38. The cron started at 06:42:10 UTC (2 min late). The first request found no listener ("Could not connect to server"), and the API answered after 6 s. Logged:
+  - `started: retry …, range …`: a RETRY run for the 3 posts left over from phase 3 → `partial` (assessed ok 1, failed 2);
+  - the RANGE run for 2026-10-11…2026-10-12 (Warsaw; `range_from` 2026-10-10 22:00 UTC, `range_to` 2026-10-12 21:59:59 UTC) → `partial` (fetched 248, new posts 213, assessed ok 209, failed 4), finished 06:43:51 UTC;
+  - `OK: retry partial, range partial`, deployment `SUCCESS` (exit 0). Both runs have `requested_by` = `scheduler@system.invalid`.
+- **The label for a `user`.** Logged in on the public PR-env domain as `freshness-check@example.com`: `/api/auth/me` → role `user`; `GET /api/freshness` → `{"lastUpdatedAt":"2026-10-13T06:43:51.489405Z"}`; `/` shows "Dane zaktualizowane: 13.10.2026, 08:43" with `<time datetime="2026-10-13T06:43:51.489405Z">` above 50 posts (screenshots `context/changes/daily-scheduled-run-freshness/ui/pr-env-user-*.png`).
+- **Afterwards** the schedule is back to `30 0 * * *` and `TRIGGER_IN_ANY_ENVIRONMENT` is deleted. Deleting a variable did not redeploy the cron, and a cron run reuses its deployment, so the old deployment would still have run with the override at night; a redeploy (Railway MCP) gave a deployment without it. The test account stays in the PR env until the PR env is closed.
+
+### Runbook — after the merge (operator; tracked in issue #18, not in the plan's Progress)
+
+0. **Before the merge**, not while `/admin` shows a run `RUNNING` and not between about 00:30 and 01:30 UTC:
+   1. Set the token on production and seal it in the dashboard; the merge's deploy picks it up. Without it every night ends in 401 and a crashed cron.
+      ```bash
+      openssl rand -hex 32 | railway variable set PIPELINE_TRIGGER_TOKEN --stdin -s szczur-radar-api -e production --skip-deploys
+      ```
+   2. Check that Railway Account Settings → Notifications has the custom rule "deployment crashed" for all environments (added 2026-10-12). Without it a failed `pipeline-trigger` or `db-backup` run is silent.
+1. **CI on `main`:** `railway-config` applies `+ Create service pipeline-trigger` and nothing else. If the plan shows anything else, stop and investigate.
+2. **The cron on production** (on the merge day, before 00:30 UTC, so a token that does not resolve shows before the first night): `pipeline-trigger` exists (`railway status --json`), and its `PIPELINE_TRIGGER_TOKEN` resolves: `railway variable list -s pipeline-trigger -e production --json`, checking only the value's length (64), never printing it. If the reference to the sealed variable does not resolve, set the token on the cron too (the same value, sealed) and record it here (`lessons.md`: a new IaC resource is checked on production, not in the CI log).
+   - That fix alone does not last. `.railway/railway.ts` declares the cron's token as a reference (`PIPELINE_TRIGGER_TOKEN: api.env.PIPELINE_TRIGGER_TOKEN`), and CI applies the file on every merge, so the next merge would put the reference back, and the nights would fail again. In that case, open a follow-up change right away: on `pipeline-trigger`, declare `PIPELINE_TRIGGER_TOKEN: preserve()` instead of the reference. The operator then sets the same sealed value on both services, and rotates it on both.
+3. **First run:** wait for the first night, or set a temporary schedule (`production` → `pipeline-trigger` → Settings → Cron Schedule, e.g. `*/5 * * * *`) and set `30 0 * * *` back right after the run: on production nothing restores it until the next merge.
+   - The cron's deployment is `SUCCESS` and its log ends with `OK: …`.
+   - `/admin` shows a RANGE run for D-2…D-1 (and a RETRY run before it when posts were left over).
+   - `/` shows "Dane zaktualizowane: …" with that run's end time (Warsaw).
+4. **Record and close:** comment the result on issue #18, then close it after this production verification.
+
 ## Phases
 
 ### [x] 1. Prepare the application
@@ -519,7 +612,7 @@ Record the web URL, Railway project/environment and deployment IDs, configured v
 - **Readiness 503:** `/api/ready` failed its `SELECT 1`. Check the api `PG*` references resolve and Postgres is up; read `railway logs --service szczur-radar-api`. Health 200 while ready 503 = app up, DB unreachable.
 - **CI wait / deploy stuck in `WAITING`:** Wait for CI is waiting on a workflow conclusion. Confirm the GitHub Actions run **concluded** (not skipped — do not path-filter the workflow) and the Railway GitHub app has repo permissions.
 - **Bad release:** roll back via dashboard → service → Deployments → Rollback (the CLI has no rollback). Code rollback does **not** roll back data — assess Postgres / migration state separately; migrations are fix-forward (Flyway, no undo) — repair with a new migration; restoring a database backup is the last resort — there is none until the subscription (see `api-docker-image`). **Update 2026-10-11 (F-01):** the daily dump and its restore runbook (section F-01).
-- **Backups can't be enabled or restore-tested** (since 2026-10-06 the planned backup is Railway's daily volume backup, not PITR): **stop before collecting production data** and reopen the documented Render fallback (managed Postgres with PITR) — risk register #1. **Update 2026-10-11 (F-01):** obsolete: backups are the `db-backup` cron. If its runs fail (`CRASHED` plus a Railway e-mail), read its log, where every failure names its step, and fix it before the next run. If no dump can be made and restored, stop collecting data and reopen the Render fallback.
+- **Backups can't be enabled or restore-tested** (since 2026-10-06 the planned backup is Railway's daily volume backup, not PITR): **stop before collecting production data** and reopen the documented Render fallback (managed Postgres with PITR) — risk register #1. **Update 2026-10-11 (F-01):** obsolete: backups are the `db-backup` cron. If its runs fail (`CRASHED` plus a Railway e-mail; **update (S-05, 2026-10-13):** a Railway notification, which needs the custom rule "deployment crashed", section F-01), read its log, where every failure names its step, and fix it before the next run. If no dump can be made and restored, stop collecting data and reopen the Render fallback.
 - **IaC config change didn't take effect (config ≠ merge):** changing `.railway/railway.ts` (start command, healthcheck, variables, region) needs `railway config apply` — git merge + autodeploy rebuilds **code**, not service **config**. Symptom: the deploy keeps running the OLD setting after a merged config change (here: the deploy still ran uvicorn until `railway config apply` pushed the Hypercorn start command). Fix: `railway config apply`, then redeploy.
   - **Since `admin-bootstrap-and-login` (2026-09-28) this is automated** by the CI job `railway-config` (`.github/workflows/ci.yml`): on every PR it plans + applies `.railway/railway.ts` to that PR's environment `szczur-radar-pr-<N>` (never `production`); on every push to `main` it applies to `production`. Railway "Wait for CI" waits for the whole workflow, so config (e.g. the API `preDeploy` migration) is applied **before** the code deploys. The job selects the environment with `RAILWAY_PROJECT_ID` + `RAILWAY_ENVIRONMENT_ID` (resolved by name from `railway environment list --json`) — never `railway link` — and **fails without applying** if the plan targets another environment, contains a `destructive` / `resource.delete` change, or changes a service `source`/branch in any environment; it never passes `--confirm-destructive`. **Update 2026-10-11 (F-01):** creating a resource (`resource.create`) passes the source check, so IaC can add a service such as `db-backup`. The check relies on `.kind`, because a create carries no details in today's plan. A change to an existing service's source is still refused. PR envs track the PR branch, so on `pull_request` the job sets `IAC_SOURCE_BRANCH` (= the PR head branch) and `railway.ts` uses it instead of `main` — otherwise every PR plan would try to rewrite `source.branch`. Variables set by hand in Railway (e.g. `JWT_SECRET`) must be declared in `railway.ts` with `preserve()` (name only, never a value) — otherwise the plan proposes `Delete variable …` and the job refuses to apply. Fork PRs are skipped (no secret, no PR env). If the job fails: read its plan output; fix `.railway/railway.ts` so the plan is clean (drift from dashboard settings → mirror them in the file, see lessons.md), then re-run the job. A missing PR env (job retries ~3 min) → check PR Environments are enabled, then re-run.
   - `railway.ts` must mirror production: `railway config plan --detailed-exit-code` on `production` must exit **0** before any automatic apply (2026-09-28: sleep on all 3 services + bucket `Postgres-PITR` added to the file → exit 0). Since `api-docker-image` (2026-10-06) the bucket is no longer declared: PITR was disabled and the bucket deleted in each environment before the apply.
@@ -533,7 +626,7 @@ Add support steps to the plan: for a build failure check Python version or Docke
 
 ### [ ] 6. Gate later external integrations
 
-> **Update 2026-10-09 (S-02):** superseded — the pipeline runs inside the API process, started by an admin; real Wykop and LLM calls are allowed in PR environments (section `first-assessed-wykop-feed` above). The daily trigger is S-05.
+> **Update 2026-10-09 (S-02):** superseded — the pipeline runs inside the API process, started by an admin; real Wykop and LLM calls are allowed in PR environments (section `first-assessed-wykop-feed` above). The daily trigger is S-05. **Update (S-05, 2026-10-13):** the cron `pipeline-trigger` only triggers the run in the API, it does not run the pipeline (section S-05 above).
 
 When the MVP pipeline exists, add it as a separate Railway cron service from the backend codebase. Give it only the database and required Wykop/LLM credentials, make it exit after each run, and check its schema revision before writing. Railway uses UTC and skips a run while the previous run remains active (https://docs.railway.com/cron-jobs).
 

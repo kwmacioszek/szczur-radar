@@ -12,10 +12,16 @@ import org.springframework.http.HttpStatus;
  */
 public enum ErrorCode {
 
-	/** Unknown e-mail, wrong password or an account without a password (indistinguishable). */
+	/**
+	 * Unknown e-mail, wrong password, an account without a password or one that cannot log in (a
+	 * system account) — indistinguishable.
+	 */
 	INVALID_CREDENTIALS(HttpStatus.UNAUTHORIZED),
 
-	/** No valid session, or the session's account no longer exists. */
+	/**
+	 * No valid session, or the session's account no longer exists; on {@code /internal/**} no valid
+	 * trigger token.
+	 */
 	NOT_AUTHENTICATED(HttpStatus.UNAUTHORIZED),
 
 	/** Logged in but lacking the role. */
@@ -40,7 +46,10 @@ public enum ErrorCode {
 	POST_DEAD(HttpStatus.BAD_REQUEST),
 
 	/** A range run needs a source that is not configured here (e.g. no keys), or no source is. */
-	SOURCE_NOT_CONFIGURED(HttpStatus.SERVICE_UNAVAILABLE);
+	SOURCE_NOT_CONFIGURED(HttpStatus.SERVICE_UNAVAILABLE),
+
+	/** The addressed resource (e.g. a pipeline run by its id) does not exist. */
+	NOT_FOUND(HttpStatus.NOT_FOUND);
 
 	private final HttpStatus status;
 

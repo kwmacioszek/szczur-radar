@@ -18,10 +18,12 @@ import pl.szczurradar.api.user.UserRepository;
  * <p>The principal name is the user's UUID, not the e-mail: it is what the session stores and
  * indexes ({@code SPRING_SESSION.PRINCIPAL_NAME} is {@code VARCHAR(100)}, an e-mail may be 320).
  *
- * <p>An account without a password is NOT reported as disabled: the provider checks that flag
- * before the password, which would answer faster and reveal that the account exists. It gets an
- * unusable hash instead, so it costs a full argon2 verification and always fails like a wrong
- * password. Unknown e-mails are timing-equalized by the provider itself.
+ * <p>Two kinds of account can never log in: an account without a password (activation pending) and
+ * an account with {@code login_enabled = false} (a system account, {@code user/SystemAccount}).
+ * Neither is reported as disabled: the provider checks that flag before the password, which would
+ * answer faster and reveal that the account exists. Both get an unusable hash instead, so they cost
+ * a full argon2 verification and always fail like a wrong password. Unknown e-mails are
+ * timing-equalized by the provider itself.
  */
 @Service
 class AccountDetailsService implements UserDetailsService {
@@ -40,7 +42,7 @@ class AccountDetailsService implements UserDetailsService {
 	public UserDetails loadUserByUsername(String email) {
 		User user = users.findByEmail(Emails.normalize(email))
 				.orElseThrow(() -> new UsernameNotFoundException("unknown account"));
-		String hash = user.getPasswordHash() != null ? user.getPasswordHash() : unusableHash;
+		String hash = user.isLoginEnabled() && user.getPasswordHash() != null ? user.getPasswordHash() : unusableHash;
 		return org.springframework.security.core.userdetails.User.withUsername(user.getId().toString())
 				.password(hash)
 				.roles(user.getRole().name())

@@ -3,7 +3,7 @@ project: "Szczur Radar"
 version: 2
 status: draft
 created: 2026-09-26
-updated: 2026-10-11
+updated: 2026-10-13
 context_type: greenfield
 product_type: data-pipeline
 target_scale:
@@ -187,6 +187,11 @@ Administrator (operator wdrożenia) — zarządza dostępem: tworzy konta dla za
   > Socrates: Kontrargument rozważony (przez użytkownika wprost): "automatyczny harmonogram (FR-002) już
   > istnieje; ręczne odpalenie pipeline'u było wcześniej słusznie nice-to-have." Rozwiązanie: zostaje
   > nice-to-have.
+  > Doprecyzowanie (2026-10-13, S-05 `daily-scheduled-run-freshness`): zrealizowane w S-02
+  > (`first-assessed-wykop-feed`). Admin uruchamia przebieg w `/admin` (`POST /api/admin/pipeline-runs`,
+  > odpowiedź 202, przebieg działa w tle), a jego status widzi na liście przebiegów w `/admin`. Pipeline działa
+  > w procesie API, więc API platformy Railway nie jest potrzebne. Tej samej ścieżki startu używa codzienny cron
+  > (S-05). Zapisy „dostępne, jeśli to nice-to-have zostanie zrealizowane” przy FR-015 i rolach są więc spełnione.
 
 ### Administracja operacyjna
 - FR-026: Operator może utworzyć pierwsze konto administratora poza interfejsem webowym przy użyciu prostego mechanizmu CLI. Priority: must-have
@@ -211,6 +216,7 @@ Administrator (operator wdrożenia) — zarządza dostępem: tworzy konta dla za
   > widzi starą datę bez wyjaśnienia dlaczego." Rozwiązanie (przez użytkownika wprost): pokazywać zawsze datę
   > ostatniego POMYŚLNEGO przebiegu, nigdy nieudanego — to naturalnie eliminuje mylące komunikaty bez potrzeby
   > dodatkowego statusu w widoku usera (status szczegółowy zostaje w dashboardzie admina, FR-021).
+  > Doprecyzowanie (2026-10-12, S-05 `daily-scheduled-run-freshness`): udana aktualizacja to przebieg zakresu dat (RANGE), zaplanowany albo ręczny, zakończony statusem `succeeded` albo `partial`. `partial` się liczy, bo przebieg pobrał dane, a jego nieudane posty ponawia kolejny przebieg. „Przebieg zakończony błędem” to `failed` albo `interrupted`: taki przebieg nie zmienia daty. Przebiegi ponowienia (RETRY) i wybranych postów (POSTS) nie pobierają nowych danych, więc się nie liczą. Pokazywany czas to koniec przebiegu (`finished_at`) w strefie warszawskiej. Spośród udanych przebiegów liczy się ten, którego zakres sięga najdalej (najpóźniejszy koniec zakresu), a z nich ten zakończony najpóźniej: ręczne przeliczenie starszych dni przez admina nie przesuwa daty, a przebieg za te same najnowsze dni ją przesuwa (przegląd implementacji S-05, F4, 2026-10-13). Bez żadnej udanej aktualizacji etykieta mówi „Dane nie były jeszcze aktualizowane.”; gdy odczytu nie da się wykonać, etykiety nie ma, a lista działa. Trasa `GET /api/freshness` jest dostępna dla każdej zalogowanej roli i nie ujawnia szczegółów przebiegów.
 
 ### Eksport danych
 - FR-031: Użytkownik może wyeksportować aktualnie widoczną (przefiltrowaną) listę przetworzonych postów do pliku
@@ -244,6 +250,7 @@ Administrator (operator wdrożenia) — zarządza dostępem: tworzy konta dla za
 ## Non-Functional Requirements
 
 - Operator otrzymuje jednoznaczny, widoczny sygnał, gdy zaplanowany dzienny przebieg zbierania/przetwarzania nie powiedzie się lub zakończy częściowym błędem — nie dowiaduje się o tym pośrednio, przez brak nowych danych.
+  > Doprecyzowanie (2026-10-12, S-05 `daily-scheduled-run-freshness`): przebieg zaplanowany uruchamia serwis cron `pipeline-trigger`, który czeka na jego wynik. Przy `failed` albo `interrupted` cron kończy się błędem, a Railway wysyła operatorowi powiadomienie (w aplikacji i push). Wymaga to reguły powiadomień „deployment crashed” dla wszystkich środowisk w ustawieniach konta Railway: w teście z 2026-10-12 bez niej nie przyszedł ani e-mail, ani powiadomienie. Przebieg `partial` kończy crona sukcesem; jego nieudane posty widać w `/admin`, a aktywny sygnał dla częściowego błędu (dashboard i ewentualne powiadomienie) to S-06. Szczegóły: `context/deployment/deploy-plan.md`, sekcja S-05.
 - Dodanie nowego źródła danych ogranicza się do nowego pozyskania i mapowania do wspólnego modelu; warstwa oceny, zapisu i udostępniania danych pozostaje niezmieniona.
   > Doprecyzowanie (2026-10-07, S-02 `first-assessed-wykop-feed`, przegląd fazy 2): rejestracja źródła — jego stała (`sources/Source`) i dopisanie jej do reguły `CHECK` kolumny `source` jedną migracją — jest częścią dodania źródła. Model danych, encje i zapytania warstwy zapisu się nie zmieniają: typ posta to typ wspólnego modelu (`post` / `link` / `comment`), na który źródło mapuje własne typy.
 - Każda chroniona funkcja lub zasób konsekwentnie wymaga uwierzytelnienia — żadna ścieżka dostępu do danych lub funkcji nie pozostaje przypadkowo niezabezpieczona (weryfikowalne przez kompletny zestaw testów autoryzacji).
@@ -277,6 +284,8 @@ Role:
   (FR-022) jest opcjonalne — dostępne, jeśli to nice-to-have zostanie zrealizowane, nie gwarantowane w MVP.
 
 Niezalogowany użytkownik nie ma dostępu do żadnych chronionych danych ani funkcji — trafia na ekran logowania.
+
+> Doprecyzowanie (2026-10-12, S-05 `daily-scheduled-run-freshness`): poza kontami osób istnieje konto systemowe `scheduler@system.invalid`, utworzone migracją, a nie przez CLI. Jest zleceniodawcą przebiegu dziennego. Ma `login_enabled = false` i nie ma hasła (wymusza to ograniczenie bazy), więc nigdy się nie zaloguje, a komendy CLI kont (S-07) muszą je odrzucać. Cron uruchamia przebieg wewnętrzną trasą `/internal/**`, osiągalną tylko z sieci prywatnej platformy i tylko z tokenem; trasa nie przyjmuje sesji, a token nie działa na trasach aplikacji (`/api/**`).
 
 Poza zakresem MVP (przyszłość): drugi czynnik uwierzytelniania, samodzielny reset hasła, logowanie przez zewnętrznego dostawcę tożsamości, programistyczne klucze dostępu.
 

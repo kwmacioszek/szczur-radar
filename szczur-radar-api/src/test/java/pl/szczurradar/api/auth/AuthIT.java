@@ -35,6 +35,7 @@ import pl.szczurradar.api.TestcontainersConfiguration;
 import pl.szczurradar.api.cli.MigrateCommand;
 import pl.szczurradar.api.config.SessionConfig;
 import pl.szczurradar.api.user.Role;
+import pl.szczurradar.api.user.SystemAccount;
 import pl.szczurradar.api.user.User;
 import pl.szczurradar.api.user.UserRepository;
 
@@ -126,6 +127,22 @@ class AuthIT {
 		assertThat(result).hasStatus(HttpStatus.UNAUTHORIZED)
 			.bodyJson()
 			.isStrictlyEqualTo("{\"detail\":\"invalid_credentials\"}");
+	}
+
+	@Test
+	void theSystemAccountCannotLogInAndLooksLikeAWrongPassword() {
+		String email = newEmail();
+		createUser(email, PASSWORD, Role.USER);
+
+		MvcTestResult system = login(SystemAccount.SCHEDULER.email(), PASSWORD);
+		MvcTestResult wrongPassword = login(email, WRONG_PASSWORD);
+
+		for (MvcTestResult result : List.of(system, wrongPassword)) {
+			assertThat(result).hasStatus(HttpStatus.UNAUTHORIZED)
+				.bodyJson()
+				.isStrictlyEqualTo("{\"detail\":\"invalid_credentials\"}");
+			assertThat(result.getResponse().getHeaders("Set-Cookie")).isEmpty();
+		}
 	}
 
 	@Test

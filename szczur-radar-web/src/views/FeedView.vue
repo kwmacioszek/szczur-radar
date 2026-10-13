@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { computed, ref, useTemplateRef, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { type Freshness, fetchFreshness } from '../api/freshness'
 import { type Page, type PostItem, fetchPosts } from '../api/posts'
 import AppButton from '../components/AppButton.vue'
 import AppHeader from '../components/AppHeader.vue'
 import PostCard from '../components/PostCard.vue'
 import StatusMessage from '../components/StatusMessage.vue'
+import { formatDateTime } from '../labels'
 
 const PAGE_SIZE = 50
 
@@ -36,6 +38,17 @@ const loadingText = computed(() =>
     ? 'Wczytywanie…'
     : `Wczytywanie strony ${(loadingPage.value ?? 0) + 1}…`,
 )
+
+/**
+ * When the data was last updated, read once on entry alongside the first page, not on every page
+ * change. Null while loading and after an error: the label is then left out and the list stays.
+ */
+const freshness = ref<Freshness | null>(null)
+fetchFreshness()
+  .then((result) => {
+    freshness.value = result
+  })
+  .catch(() => {})
 
 /** `moveFocus`: after a successful load, focus the heading, the start of the new list. */
 async function load(target: number, { moveFocus = false } = {}): Promise<void> {
@@ -80,29 +93,39 @@ watch(
 <template>
   <AppHeader />
   <main class="feed">
-    <section aria-labelledby="feed-title" :aria-busy="loadingPage !== null ? 'true' : undefined">
+    <section aria-labelledby="feed-title">
       <h1 id="feed-title" ref="feed-title" tabindex="-1">Posty</h1>
-      <p v-if="loadingPage !== null" class="loading">{{ loadingText }}</p>
-      <template v-else-if="failed">
-        <StatusMessage tone="error">Nie udało się wczytać postów.</StatusMessage>
-        <AppButton @click="retry">Spróbuj ponownie</AppButton>
-      </template>
-      <p v-else-if="shown && shown.result.total === 0" class="empty">
-        Brak ocenionych postów. Pojawią się po najbliższej aktualizacji danych.
+      <p v-if="freshness" class="freshness">
+        <template v-if="freshness.lastUpdatedAt">
+          Dane zaktualizowane:
+          <time :datetime="freshness.lastUpdatedAt">{{ formatDateTime(freshness.lastUpdatedAt) }}</time>
+        </template>
+        <template v-else>Dane nie były jeszcze aktualizowane.</template>
       </p>
-      <!-- An old link past the last page: the API answers with no items and the real total. -->
-      <template v-else-if="shown && shown.result.items.length === 0">
-        <p class="empty">Nie ma strony {{ shown.page + 1 }}. Posty kończą się na stronie {{ pages }}.</p>
-        <AppButton @click="goTo(pages - 1)">Przejdź do strony {{ pages }}</AppButton>
-      </template>
-      <template v-else-if="shown">
-        <PostCard v-for="post in shown.result.items" :key="post.id" :post="post" />
-        <nav class="pager" aria-label="Strony">
-          <AppButton :disabled="shown.page === 0" @click="goTo(shown.page - 1)">Nowsze</AppButton>
-          <span class="position">Strona {{ shown.page + 1 }} z {{ pages }}</span>
-          <AppButton :disabled="shown.page + 1 >= pages" @click="goTo(shown.page + 1)">Starsze</AppButton>
-        </nav>
-      </template>
+      <!-- Only the list is busy while a page loads: the heading and the label do not change. -->
+      <div class="posts" :aria-busy="loadingPage !== null ? 'true' : undefined">
+        <p v-if="loadingPage !== null" class="loading">{{ loadingText }}</p>
+        <template v-else-if="failed">
+          <StatusMessage tone="error">Nie udało się wczytać postów.</StatusMessage>
+          <AppButton @click="retry">Spróbuj ponownie</AppButton>
+        </template>
+        <p v-else-if="shown && shown.result.total === 0" class="empty">
+          Brak ocenionych postów. Pojawią się po najbliższej aktualizacji danych.
+        </p>
+        <!-- An old link past the last page: the API answers with no items and the real total. -->
+        <template v-else-if="shown && shown.result.items.length === 0">
+          <p class="empty">Nie ma strony {{ shown.page + 1 }}. Posty kończą się na stronie {{ pages }}.</p>
+          <AppButton @click="goTo(pages - 1)">Przejdź do strony {{ pages }}</AppButton>
+        </template>
+        <template v-else-if="shown">
+          <PostCard v-for="post in shown.result.items" :key="post.id" :post="post" />
+          <nav class="pager" aria-label="Strony">
+            <AppButton :disabled="shown.page === 0" @click="goTo(shown.page - 1)">Nowsze</AppButton>
+            <span class="position">Strona {{ shown.page + 1 }} z {{ pages }}</span>
+            <AppButton :disabled="shown.page + 1 >= pages" @click="goTo(shown.page + 1)">Starsze</AppButton>
+          </nav>
+        </template>
+      </div>
     </section>
   </main>
 </template>
@@ -117,6 +140,17 @@ watch(
 
 h1 {
   margin: var(--space-2) 0 var(--space-4);
+}
+
+/* Closer to the heading than to the list it describes. */
+h1:has(+ .freshness) {
+  margin-bottom: var(--space-2);
+}
+
+.freshness {
+  margin: 0 0 var(--space-4);
+  font-size: var(--font-size-sm);
+  color: var(--text);
 }
 
 .loading,

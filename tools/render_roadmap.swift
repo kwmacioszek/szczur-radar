@@ -1,6 +1,6 @@
 import AppKit
 
-// Snapshot of M-1 in context/foundation/roadmap.md, updated 2026-10-12 (F-01 deployed: #44 b7ee254, production verified).
+// Snapshot of M-1 in context/foundation/roadmap.md, updated 2026-10-13 (v2.16: S-05 archived (done), FR-022 done in S-02; S-06 risk note).
 // Run on macOS: swift tools/render_roadmap.swift
 // With the installed Command Line Tools SDK:
 // CLANG_MODULE_CACHE_PATH=/private/tmp/szczur-clang-cache \
@@ -166,7 +166,7 @@ let cards: [Card] = [
     Card(id:"S-01", title:"Admin i logowanie", detail:"CLI, sesja, ochrona tras\ni wylogowanie", req:"—", status:"wdrożone", column:3, row:0, accent:green),
     Card(id:"S-02", title:"Pierwsze ocenione posty", detail:"Wykop → ocena LLM → lista\nRęczne uruchomienie przebiegu", req:"S-01 + F-02", status:"wdrożone", column:1, row:1, accent:cyan),
     Card(id:"S-07", title:"Onboarding przez CLI", detail:"Konto, link aktywacyjny\ni odzyskiwanie dostępu", req:"S-01 + F-03", status:"propozycja", column:3, row:1, accent:green),
-    Card(id:"S-05", title:"Codzienny automat", detail:"Harmonogram i data\nostatniej udanej aktualizacji", req:"S-02 + F-01", status:"propozycja", column:0, row:2, accent:amber),
+    Card(id:"S-05", title:"Codzienny automat", detail:"Cron o 00:30 UTC (dni D-2…D-1)\ni data ostatniej aktualizacji", req:"S-02 + F-01", status:"wdrożone", column:0, row:2, accent:amber),
     Card(id:"S-03", title:"Szczegóły posta", detail:"Tezy, cytaty, surowe dane\ni link do oryginału", req:"S-02", status:"propozycja", column:1, row:2, accent:cyan),
     Card(id:"S-04", title:"Filtrowanie ocen", detail:"Spółka lub temat\ni stanowisko autora", req:"S-02", status:"propozycja", column:2, row:2, accent:cyan),
     Card(id:"S-06", title:"Historia przebiegów", detail:"Dashboard admina\ni widoczny sygnał awarii", req:"S-05 + S-01", status:"propozycja", column:0, row:3, accent:amber)
@@ -205,7 +205,7 @@ txt("BRAMKA WYDANIA MVP", 142, Layout.gateY + 30, 2100, 45, .heavy)
 txt("Warunek wydania: ukończenie wszystkich 10 elementów — F-01–F-03 oraz S-01–S-07.", 145, Layout.gateY + 103, 2150, 29, .medium)
 txt("Poniżej: odroczone kierunki rozwoju. Ich zakres i kolejność wymagają osobnego planu.", 145, Layout.gateY + 160, 2240, 25, .regular, muted)
 rounded(2530, Layout.gateY + 52, 485, 115, 20, color(0x0B2332), cyan.withAlphaComponent(0.65), line: 2)
-txt("5 / 10 UKOŃCZONYCH", 2562, Layout.gateY + 88, 430, 30, .bold, cyan)
+txt("6 / 10 UKOŃCZONYCH", 2562, Layout.gateY + 88, 430, 30, .bold, cyan)
 
 for x in Layout.futureColumns {
     let center = x + Layout.futureWidth / 2
@@ -226,7 +226,7 @@ let parked: [(label: String, first: Parked, second: Parked)] = [
      Parked(title:"Sortowanie i eksport", refs:"FR-008 / FR-011b / FR-031", description:"Porządkowanie listy po polach oceny, źródle i dacie oraz eksport CSV/JSON."),
      Parked(title:"Panel kont i e-mail", refs:"FR-016 / 017 / 019 / 020", description:"Zarządzanie kontami w aplikacji, e-mail z zaproszeniem i własna nazwa wyświetlana.")),
     ("OPERACJE I SKALA",
-     Parked(title:"Sterowanie i sesje", refs:"FR-022 / FR-029", description:"Ręczne uruchomienie pipeline’u z dashboardu i krótsze limity bezczynności sesji."),
+     Parked(title:"Sesje", refs:"FR-029", description:"Krótsze limity bezczynności sesji. Ręczne uruchomienie przebiegu (FR-022) jest już w S-02."),
      Parked(title:"Ochrona i skala", refs:"Poza MVP / infrastruktura", description:"2FA, logowanie zewnętrzne, reset hasła, nowe role, HA, kopie zapasowe, lokalny runner CI."))
 ]
 for (i, group) in parked.enumerated() {
@@ -260,7 +260,7 @@ txt("S-02: gwiazda przewodnia — pierwszy pełny przepływ od Wykopu do użytko
 txt("Pierwszy rząd czytaj od prawej: S-01 → F-03 → F-02. S-01 jest też warunkiem S-02 i S-06 — wynika z tej ścieżki.", 136, 3493, 2850, 24, .regular, muted)
 txt("Przed bramką strzałki pokazują zależności. Za bramką wskazują możliwe rozszerzenia, bez ustalonej kolejności.", 136, 3541, 2850, 24, .regular, muted)
 
-txt("Źródło: context/foundation/roadmap.md  ·  M-1 / v2.12  ·  Stan roadmapy: 12.10.2026  ·  Milestone otwarty", 100, 3660, 2200, 22, .regular, muted)
+txt("Źródło: context/foundation/roadmap.md  ·  M-1 / v2.16  ·  Stan roadmapy: 13.10.2026  ·  Milestone otwarty", 100, 3660, 2200, 22, .regular, muted)
 txt("MAPA ZALEŻNOŚCI · BEZ TERMINÓW", 2520, 3660, 540, 20, .semibold, muted)
 
 context.flushGraphics()

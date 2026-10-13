@@ -5,16 +5,20 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplicat
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication.Type;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
+import org.springframework.core.env.Environment;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.intercept.AuthorizationFilter;
+import org.springframework.security.web.authentication.AnonymousAuthenticationFilter;
 import org.springframework.security.web.context.DelegatingSecurityContextRepository;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.security.web.context.RequestAttributeSecurityContextRepository;
@@ -27,24 +31,66 @@ import pl.szczurradar.api.auth.JsonAccessDeniedHandler;
 import pl.szczurradar.api.auth.JsonAuthenticationEntryPoint;
 import pl.szczurradar.api.auth.OriginGuardFilter;
 import pl.szczurradar.api.auth.SessionCookieRenewalFilter;
+import pl.szczurradar.api.internal.PipelineTriggerToken;
+import pl.szczurradar.api.internal.PipelineTriggerTokenFilter;
 import pl.szczurradar.api.user.Role;
 
 /**
- * Deny by default: every route needs a session except the public ones listed here — keep them in
- * sync with {@code PUBLIC_ROUTES} in {@code AuthorizationCompletenessIT}, which calls every mapped
- * route without a session. Routes under {@code /api/admin/} additionally need the admin role.
+ * Two filter chains, each deny by default; {@code AuthorizationCompletenessIT} calls every mapped
+ * route without credentials and expects 401.
+ *
+ * <ul>
+ *   <li>{@link #internalSecurity}, first: {@code /internal/**}, the daily cron's routes. Reachable only
+ *       over Railway's private network (the web proxy forwards nothing but {@code /api/*}). They accept
+ *       only the trigger token ({@link PipelineTriggerTokenFilter}), never a session: the chain is
+ *       stateless — it neither reads nor creates a session and sets no cookie. Without a valid token,
+ *       or without {@code PIPELINE_TRIGGER_TOKEN} on the server, every request is 401.
+ *   <li>{@link #apiSecurity}: everything else. Every route needs a session except the public ones
+ *       listed here — keep them in sync with {@code PUBLIC_ROUTES} in {@code AuthorizationCompletenessIT}.
+ *       Routes under {@code /api/admin/} additionally need the admin role. The trigger token means
+ *       nothing here.
+ * </ul>
  *
  * <p>Answers are JSON ({@link ApiError}), never redirects or login pages. CSRF tokens are off: the
  * session cookie is {@code SameSite=Strict} and {@link OriginGuardFilter} rejects cross-origin
- * writes (S-01 contract, no changes in the SPA).
+ * writes (S-01 contract, no changes in the SPA); {@code /internal/**} uses no cookie at all.
  *
- * <p>The filter chain exists only with the web server: operator commands ({@code migrate},
- * {@code create-admin}) run the same context without one.
+ * <p>The filter chains and the trigger token exist only with the web server: operator commands
+ * ({@code migrate}, {@code create-admin}) run the same context without one.
  */
 @Configuration(proxyBeanMethods = false)
 public class SecurityConfig {
 
+	/**
+	 * The cron's routes: the trigger token's authority on every request, no session, no cookie, no
+	 * saved request.
+	 */
 	@Bean
+	@Order(1)
+	@ConditionalOnWebApplication(type = Type.SERVLET)
+	SecurityFilterChain internalSecurity(HttpSecurity http, PipelineTriggerToken pipelineTriggerToken)
+			throws Exception {
+		http
+			.securityMatcher("/internal/**")
+			.authorizeHttpRequests(auth -> auth.anyRequest().hasAuthority(PipelineTriggerTokenFilter.AUTHORITY))
+			.csrf(AbstractHttpConfigurer::disable)
+			.formLogin(AbstractHttpConfigurer::disable)
+			.httpBasic(AbstractHttpConfigurer::disable)
+			.logout(AbstractHttpConfigurer::disable)
+			.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+			.requestCache(cache -> cache.requestCache(new NullRequestCache()))
+			// The authentication lives in this request only, never in the HTTP session.
+			.securityContext(
+					context -> context.securityContextRepository(new RequestAttributeSecurityContextRepository()))
+			.exceptionHandling(errors -> errors
+				.authenticationEntryPoint(new JsonAuthenticationEntryPoint())
+				.accessDeniedHandler(new JsonAccessDeniedHandler()))
+			.addFilterBefore(new PipelineTriggerTokenFilter(pipelineTriggerToken), AnonymousAuthenticationFilter.class);
+		return http.build();
+	}
+
+	@Bean
+	@Order(2)
 	@ConditionalOnWebApplication(type = Type.SERVLET)
 	SecurityFilterChain apiSecurity(HttpSecurity http, SecurityContextRepository securityContextRepository,
 			HttpSessionIdResolver sessionIdResolver) throws Exception {
@@ -69,6 +115,13 @@ public class SecurityConfig {
 			.addFilterBefore(new OriginGuardFilter(), SecurityContextHolderFilter.class)
 			.addFilterAfter(new SessionCookieRenewalFilter(sessionIdResolver), AuthorizationFilter.class);
 		return http.build();
+	}
+
+	/** {@code PIPELINE_TRIGGER_TOKEN}, validated when the server starts (a too short token fails the start). */
+	@Bean
+	@ConditionalOnWebApplication(type = Type.SERVLET)
+	PipelineTriggerToken pipelineTriggerToken(Environment environment) {
+		return PipelineTriggerToken.from(environment);
 	}
 
 	/** Where the login controller saves the authenticated context: the (JDBC-backed) HTTP session. */
