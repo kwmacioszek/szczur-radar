@@ -274,7 +274,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 | S-04       | filter-by-assessment           | Filtrowanie listy po spółce/temacie i stanowisku autora                                        | no                    | Po S-02                                                                          |
 | S-05       | daily-scheduled-run-freshness  | Codzienny automatyczny przebieg + etykieta świeżości danych                                    | no                    | Po S-02 i F-01                                                                   |
 | S-06       | pipeline-run-history-dashboard | Dashboard admina: historia przebiegów i sygnał awarii                                          | no                    | Po S-05                                                                          |
-| S-07       | cli-user-onboarding            | Tworzenie kont przez CLI + aktywacja linkiem + recovery admina                                 | —                     | Zarchiwizowane 2026-10-13 → `context/archive/2026-10-12-cli-user-onboarding/`; PR #49 czeka na merge, potem weryfikacja produkcji (runbook w `deploy-plan.md`, sekcja S-07; issue #20) |
+| S-07       | cli-user-onboarding            | Tworzenie kont przez CLI + aktywacja linkiem + recovery admina                                 | —                     | Wdrożone na produkcji 2026-10-13 (PR #49, `54c4fc2`; issue #20 zamknięte); zarchiwizowane 2026-10-13 → `context/archive/2026-10-12-cli-user-onboarding/` |
 
 ## Open Roadmap Questions
 

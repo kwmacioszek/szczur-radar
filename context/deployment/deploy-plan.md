@@ -519,7 +519,7 @@ Phase 5, the whole chain (2026-10-13, head `0969307`):
 
 ## S-07: onboarding przez CLI (cli-user-onboarding)
 
-**Status (2026-10-12): in the PR env (#49), not merged.** S-07 adds two operator commands that print a one-time link to set a password, and the SPA page `/activate` that opens it. Issue #20. Change: `context/changes/cli-user-onboarding/`. The commands in detail: `szczur-radar-api/README.md`, section "Komendy operatora".
+**Status (2026-10-13): live on production** after the human merge of PR #49 (`54c4fc2`); production verified, including a first account created and logged in (section "Production after the merge" below); issue #20 closed. S-07 adds two operator commands that print a one-time link to set a password, and the SPA page `/activate` that opens it. Change: `context/archive/2026-10-12-cli-user-onboarding/`. The commands in detail: `szczur-radar-api/README.md`, section "Komendy operatora".
 
 **Update 2026-10-13:** S-05 (#50) reached `main` first, so this change took on what was agreed on issue #20 for the change that lands second: its migration is `V7` (not `V6`), and S-05's system account gets no link (below).
 
@@ -538,6 +538,8 @@ Phase 5, the whole chain (2026-10-13, head `0969307`):
   1. Wake the API: `curl https://<web-domain>/api/health`. A sleeping service has no container, and `railway ssh` then lands on Railway's SSH gateway and runs nothing.
   2. `railway ssh -s szczur-radar-api -e <env>`. In a checkout without `railway link`, prefix it with `RAILWAY_PROJECT_ID=<project-id>`.
   3. In the container shell (`/app`): `java -jar target/szczur-radar-api.jar create-user --email jan@example.com`. Type the e-mail without `< >`: the shell reads `<` as a redirect.
+
+  Steps 2 and 3 also work as one command, without an interactive shell: `railway ssh -s szczur-radar-api -e <env> -- java -jar /app/target/szczur-radar-api.jar create-user --email jan@example.com`. Run it in your own terminal, not through an AI agent's session (e.g. `!` in Claude Code): the output, link included, would land in the agent's transcript. A link that was shown there counts as shared: if it is not used yet, replace it with `reset-password`.
 
   Neither command asks for a password, so neither needs an interactive terminal (unlike `create-admin`). Both start the full Spring context (~6–8 s) with the container's `PG*` and `LLM_*` settings.
 - Output on stdout: one line with the account, its role, "One-time activation link, valid until `<UTC time>`", then the link alone on the last line: `<WEB_PUBLIC_URL>/activate#<token>`.
@@ -593,7 +595,27 @@ Verified 2026-10-12 on commit `a21169f` (CI run 38297600946: all six jobs green)
   6. The link from the second reset set a new password, and `/admin` worked again.
 - **Logs.** None of the four tokens appears in the web service's (Caddy) logs. Caddy records `"uri":"/activate"` and `Referer` `…/activate`: the fragment never reaches the server. The links, the test passwords and the command output were deleted after the check. The test accounts exist only in the PR env database.
 
+### Production after the merge (2026-10-13)
+
+PR #49 was squash-merged as `54c4fc2` (13:22 UTC), after S-05 (#50).
+
+- **IaC.** CI on `main` (run 38404494243, all seven jobs green): `railway-config` applied exactly one change, `~ Set variable szczur-radar-api.WEB_PUBLIC_URL`. A later `railway config plan --environment production` from `main` said "already up to date". `railway variable list` shows `WEB_PUBLIC_URL` = `https://szczur-radar-web-production.up.railway.app`; `ACTIVATION_LINK_TTL` is unset (12 h).
+- **Deploys and migration.** Two API deploys from `54c4fc2`, as expected:
+  - `2a07fd5e` (the merge, REMOVED): its pre-deploy `migrate` went from version 6 to "7 - create activation tokens";
+  - `0fd012bb` (the variable apply, SUCCESS): "Schema … is up to date", started in 6.7 s.
+
+  Web `e950bd1e` SUCCESS from `54c4fc2`. No pipeline run was interrupted (the only `interrupted` run is from 2026-10-09).
+- **Public address.** `/api/health`, `/api/ready` and `/activate` 200; `/api/auth/me` without a session 401; `POST /api/auth/activation/lookup` with a made-up token 400 `activation_link_invalid`.
+- **System account.** `reset-password --email scheduler@system.invalid` in the production container exited 1 ("… is a system account …"), printed no link and wrote nothing (no token, the password still empty).
+- **First account.** The operator created a `user` account with `create-user` and passed the link on. The page showed the account's e-mail, the password was set, the login worked, and the same link opened again was refused. Afterwards the account has an argon2id hash, no activation token and one session.
+  - The first attempt, in an interactive `railway ssh` shell, ended with "Connection to ssh.railway.com closed." while Spring was still starting. The command died before any database work (no account, no token), and the server container kept running (no restart, 0.54 of 2 GB memory). The cause is not known. The rerun as the one-command form above worked.
+  - The rerun ran through an agent session (`!`), so the link also landed in that session's transcript. The account is activated, so that copy no longer works; hence the note above.
+- **PR env #49 after S-05.** Once `main` with S-05 was merged into the branch (`6e89c4a`), the PR env's API deploy failed at `migrate` ("Migration checksum mismatch for migration version 6"): its database had `V6` = activation tokens from before the renumbering. Left as it was (operator's decision). Production was not affected: it had S-05's `V6` and applied only `V7`.
+
 ### Runbook — after the merge (operator; tracked in issue #20, not in the plan's Progress)
+
+**Done 2026-10-13** (section above).
+
 
 0. Standing rule: no merge to `main` while a run is `RUNNING` in `/admin`, and not between about 00:30 and 01:30 UTC (S-05's nightly run, section S-05).
 1. **The production plan adds one variable.** Before the merge, a dry run from the PR branch (`railway config plan --environment production`) shows only `WEB_PUBLIC_URL` added on `szczur-radar-api`, with nothing destructive and no other service touched (lessons.md: check what an apply restarts). After the merge, the `railway-config` log on `main` shows the same change, and the next `railway config plan --environment production` is empty. If either plan shows anything else, stop and investigate before going on.
