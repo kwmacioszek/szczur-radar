@@ -1,6 +1,6 @@
 import AppKit
 
-// Snapshot of M-1 in context/foundation/roadmap.md, updated 2026-10-13 (v2.16: S-05 archived (done), FR-022 done in S-02; S-06 risk note; S-07 deployed (#49 54c4fc2, production verified), v2.17: link valid 12 h by default; v2.18: session revocation by credentials version parked; v2.19: S-06 run-monitoring note, run ETA parked; S-03 in progress: post-detail-view).
+// Snapshot of M-1 in context/foundation/roadmap.md, updated 2026-10-13 (v2.16: S-05 archived (done), FR-022 done in S-02; S-06 risk note; S-07 deployed (#49 54c4fc2, production verified), v2.17: link valid 12 h by default; v2.18: session revocation by credentials version parked; v2.19: S-06 run-monitoring note, run ETA parked; S-03 done and archived before merge (PR #53)).
 // Run on macOS: swift tools/render_roadmap.swift
 // With the installed Command Line Tools SDK:
 // CLANG_MODULE_CACHE_PATH=/private/tmp/szczur-clang-cache \
@@ -167,7 +167,7 @@ let cards: [Card] = [
     Card(id:"S-02", title:"Pierwsze ocenione posty", detail:"Wykop → ocena LLM → lista\nRęczne uruchomienie przebiegu", req:"S-01 + F-02", status:"wdrożone", column:1, row:1, accent:cyan),
     Card(id:"S-07", title:"Onboarding przez CLI", detail:"Konto, link aktywacyjny\ni odzyskiwanie dostępu", req:"S-01 + F-03", status:"wdrożone", column:3, row:1, accent:green),
     Card(id:"S-05", title:"Codzienny automat", detail:"Cron o 00:30 UTC (dni D-2…D-1)\ni data ostatniej aktualizacji", req:"S-02 + F-01", status:"wdrożone", column:0, row:2, accent:amber),
-    Card(id:"S-03", title:"Szczegóły posta", detail:"Tezy, cytaty, surowe dane\ni link do oryginału", req:"S-02", status:"w realizacji", column:1, row:2, accent:cyan),
+    Card(id:"S-03", title:"Szczegóły posta", detail:"Tezy, cytaty, surowe dane\ni link do oryginału", req:"S-02", status:"gotowe", column:1, row:2, accent:cyan),
     Card(id:"S-04", title:"Filtrowanie ocen", detail:"Spółka lub temat\ni stanowisko autora", req:"S-02", status:"propozycja", column:2, row:2, accent:cyan),
     Card(id:"S-06", title:"Historia przebiegów", detail:"Dashboard admina\ni widoczny sygnał awarii", req:"S-05 + S-01", status:"propozycja", column:0, row:3, accent:amber)
 ]

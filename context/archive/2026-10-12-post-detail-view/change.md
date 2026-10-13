@@ -1,10 +1,10 @@
 ---
 change_id: post-detail-view
 title: Post detail view
-status: impl_reviewed
+status: archived
 created: 2026-10-12
 updated: 2026-10-13
-archived_at: null
+archived_at: 2026-10-13T10:23:32Z
 ---
 
 ## Notes
