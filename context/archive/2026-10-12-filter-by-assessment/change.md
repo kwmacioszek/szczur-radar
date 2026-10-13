@@ -1,10 +1,10 @@
 ---
 change_id: filter-by-assessment
 title: Filter by assessment
-status: impl_reviewed
+status: archived
 created: 2026-10-12
 updated: 2026-10-13
-archived_at: null
+archived_at: 2026-10-13T19:22:39Z
 ---
 
 ## Notes
