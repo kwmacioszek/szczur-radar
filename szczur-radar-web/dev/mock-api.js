@@ -23,6 +23,11 @@
  *   /login with the "password set" notice), 'invalid' (both → 400 activation_link_invalid), 'policy' (activation →
  *   400 password_policy), 'checking' (lookup hangs 60 s), 'sending' (activation hangs 60 s), 'error' (both → 500).
  *   Client-side validation errors need no mode: submit a short or mismatched password.
+ * The filter (FR-011a) has the API's meaning: q, kind and direction keep the posts with one target meeting every
+ * given condition — its quote contains q (Polish lower case, q trimmed, blank = no condition), its kind, its stance's
+ * direction; total counts them; an unknown kind or direction (or a q over 100 characters) is 400 invalid_request.
+ * E.g. /?q=orlen&direction=bullish, /?kind=macro_topic, and an empty filter result: /?q=zzz. In 'empty' mode total is
+ * 0 with or without a filter.
  * Only paths starting with /api/ are mocked — a '**\/api/**' glob would also catch Vite's /src/api/*.ts modules.
  * failureClass values are the API's FailureClass (agents/assessor/validation/FailureClass.java), lower case.
  * With AUTH = 'admin' the header shows "Panel admina" on every view.
@@ -61,19 +66,20 @@ async page => {
     { id: 'p3', itemType: 'post', publishedAt: '2026-10-07T18:00:00Z', title: null, body: 'Kupiłem PKO, zobaczymy', webUrl: 'https://wykop.pl/wpis/3', stage: 'dead', assessmentAttempts: 3, lastAttempt: { failureClass: 'fabricated_evidence', violations: [], assessedAt: '2026-10-09T05:02:00Z', provider: 'openrouter', model: 'luna' } },
   ]
   // The feed: post n is variant n % 6 — a long text (cut at 200 characters), a link without a body, a short post,
-  // a comment with two targets, a bare URL without spaces (no content: the prefilter's output) and a link with four
-  // (a card shows a link's title, so its body is seen only on the post's page).
+  // a comment with two targets, a bare URL without spaces (no content: the prefilter's output) and a link with five
+  // (a card shows a link's title, so its body is seen only on the post's page). The targets cover four kinds:
+  // company, macro_topic (rynek), asset (ropa) and sector (banki).
   const FEED_TOTAL = 120
   const feedTexts = [
     { itemType: 'post', title: null, body: 'CDR po wynikach -8% na otwarciu, ktoś jeszcze trzyma? Ja dobieram, bo wycena po spadku wygląda rozsądnie, a guidance na Q4 nie zmieniło się mimo opóźnienia premiery. Zobaczymy, czy rynek to doceni przed świętami, bo historycznie grudzień był dla nich mocny, a sentyment na forum jest teraz fatalny.' },
     { itemType: 'link', title: 'KNF ostrzega przed nowym schematem piramidy finansowej', body: null },
-    { itemType: 'post', title: null, body: 'Kupiłem PKO, zobaczymy' },
+    { itemType: 'post', title: null, body: 'Kupiłem PKO, zobaczymy, banki i tak zarobią na stopach' },
     { itemType: 'comment', title: null, body: 'Ten wykres XTB to klasyczna głowa z ramionami, ja bym uważał. Allegro też słabo.' },
     { itemType: 'post', title: null, body: 'https://stooq.pl/q/?s=cdr&c=1d&t=l&a=lg&b=0&d=20261012&f=20261012&l=0&z=1&i=1&n=1&r=1' },
-    { itemType: 'link', title: 'Orlen ogłasza buyback za 4 mld zł', body: 'Zarząd rekomenduje skup akcji własnych.\nDla Orlenu to dobra wiadomość, PKN wyceniam bez zmian, Lotos to już historia, a PGE ma swoje plusy i minusy.\nRynek i tak żyje teraz tylko stopami.' },
+    { itemType: 'link', title: 'Orlen ogłasza buyback za 4 mld zł', body: 'Zarząd rekomenduje skup akcji własnych, ropa tanieje.\nDla Orlenu to dobra wiadomość, PKN wyceniam bez zmian, Lotos to już historia, a PGE ma swoje plusy i minusy.\nRynek i tak żyje teraz tylko stopami.' },
   ]
-  const target = (id, quote, direction, assertiveness, claimIds = []) => ({
-    id, kind: 'company', anchor: { document: 'item', field: 'body', quote },
+  const target = (id, quote, direction, assertiveness, claimIds = [], kind = 'company') => ({
+    id, kind, anchor: { document: 'item', field: 'body', quote },
     stance: { direction, assertiveness, claim_ids: claimIds }, reference: 'explicit',
   })
   const claim = (id, kind, attribution, targetIds, quote, statement, field = 'body') => ({
@@ -85,7 +91,7 @@ async page => {
   const feedAssessments = [
     {
       relevance: 'investment_related',
-      targets: [target('t1', 'CDR', 'bullish', 'hedged', ['c1', 'c2'])],
+      targets: [target('t1', 'CDR', 'bullish', 'hedged', ['c1', 'c2']), target('t2', 'rynek', 'unclear', null, [], 'macro_topic')],
       claims: [
         claim('c1', 'trade_action', 'author', ['t1'], 'Ja dobieram', 'Autor dokupuje akcje CDR po spadku.'),
         claim('c2', 'investment_thesis', 'author', ['t1'], 'wycena po spadku wygląda rozsądnie', 'Wycena CDR po spadku jest rozsądna.'),
@@ -101,8 +107,11 @@ async page => {
     },
     {
       relevance: 'investment_related',
-      targets: [target('t1', 'PKO', 'bullish', 'unhedged', ['c1'])],
-      claims: [claim('c1', 'trade_action', 'author', ['t1'], 'Kupiłem PKO', 'Autor kupił akcje PKO.')],
+      targets: [target('t1', 'PKO', 'bullish', 'unhedged', ['c1']), target('t2', 'banki', 'bullish', 'hedged', ['c2'], 'sector')],
+      claims: [
+        claim('c1', 'trade_action', 'author', ['t1'], 'Kupiłem PKO', 'Autor kupił akcje PKO.'),
+        claim('c2', 'opinion', 'author', ['t2'], 'banki i tak zarobią na stopach', 'Banki i tak zarobią na stopach procentowych.'),
+      ],
       flags: ['insufficient_content'],
     },
     {
@@ -122,6 +131,7 @@ async page => {
         target('t2', 'PKN', 'neutral', 'unhedged', ['c2']),
         target('t3', 'Lotos', 'not_expressed', null),
         target('t4', 'PGE', 'mixed', null, ['c3']),
+        target('t5', 'ropa', 'bearish', 'unhedged', ['c5'], 'asset'),
       ],
       claims: [
         claim('c1', 'factual_claim', 'author', ['t1'], 'Orlen ogłasza buyback za 4 mld zł', 'Orlen ogłosił skup akcji własnych za 4 mld zł.', 'title'),
@@ -130,6 +140,7 @@ async page => {
         claim('c3', 'opinion', 'author', ['t4'], 'PGE ma swoje plusy i minusy', 'PGE ma zarówno zalety, jak i wady.'),
         // A general claim: no target.
         claim('c4', 'opinion', 'author', [], 'Rynek i tak żyje teraz tylko stopami', 'Rynek reaguje teraz wyłącznie na stopy procentowe.'),
+        claim('c5', 'factual_claim', 'author', ['t5'], 'ropa tanieje', 'Ropa tanieje.'),
       ],
       flags: [],
     },
@@ -159,6 +170,13 @@ async page => {
       comments: { items: [], count: 3 }, resource: item.itemType === 'link' ? 'link' : 'entry', status: 'visible',
     }, null, 2)
   }
+  const KINDS = ['company', 'asset', 'sector', 'macro_topic', 'other', 'unknown']
+  const DIRECTIONS = ['bullish', 'bearish', 'neutral', 'mixed', 'not_expressed', 'unclear']
+  // One target meets every given condition, as in posts/PostRepository.java (null = no condition).
+  const matches = (item, q, kind, direction) => item.assessment.output.targets.some((t) =>
+    (q === null || t.anchor.quote.toLocaleLowerCase('pl').includes(q))
+    && (kind === null || t.kind === kind)
+    && (direction === null || t.stance.direction === direction))
   const MODE = 'data'
   const AUTH = 'admin'
   const ACTIVATION = 'valid'
@@ -201,10 +219,17 @@ async page => {
       const later = pageNumber > 0
       if (MODE === 'loading' || (MODE === 'loading-next' && later)) await new Promise((r) => setTimeout(r, 60000))
       if (MODE === 'error' || (MODE === 'error-next' && later)) return json(route, { detail: 'internal_error' }, 500)
-      const total = MODE === 'empty' ? 0 : FEED_TOTAL
-      const items = []
-      for (let n = pageNumber * size; n < Math.min(total, (pageNumber + 1) * size); n++) items.push(feedItem(n))
-      return json(route, { items, page: pageNumber, size, total })
+      const rawQ = url.searchParams.get('q')
+      const kind = url.searchParams.get('kind')
+      const direction = url.searchParams.get('direction')
+      if ((kind !== null && !KINDS.includes(kind)) || (direction !== null && !DIRECTIONS.includes(direction))
+        || (rawQ !== null && rawQ.length > 100)) return json(route, { detail: 'invalid_request' }, 400)
+      const q = rawQ === null || rawQ.trim() === '' ? null : rawQ.trim().toLocaleLowerCase('pl')
+      const all = []
+      for (let n = 0; n < (MODE === 'empty' ? 0 : FEED_TOTAL); n++) all.push(feedItem(n))
+      const filtered = q === null && kind === null && direction === null ? all : all.filter((item) => matches(item, q, kind, direction))
+      const items = filtered.slice(pageNumber * size, (pageNumber + 1) * size)
+      return json(route, { items, page: pageNumber, size, total: filtered.length })
     }
     const detail = p.match(/^\/api\/posts\/([^/]+)(\/raw)?$/)
     if (detail) {

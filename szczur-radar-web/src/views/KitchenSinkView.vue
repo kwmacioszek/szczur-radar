@@ -4,8 +4,20 @@
   screenshots. Fixed data: no API calls, no session, no AppHeader.
 -->
 <script setup lang="ts">
-import type { AssessmentOutput, Claim, ClaimKind, Direction, Flag, PostItem, Stance, Target } from '../api/posts'
+import type {
+  AssessmentOutput,
+  Claim,
+  ClaimKind,
+  Direction,
+  Flag,
+  PostFilter,
+  PostItem,
+  Stance,
+  Target,
+  TargetKind,
+} from '../api/posts'
 import AppButton from '../components/AppButton.vue'
+import FeedFilter from '../components/FeedFilter.vue'
 import PostAssessment from '../components/PostAssessment.vue'
 import PostCard from '../components/PostCard.vue'
 import StanceText from '../components/StanceText.vue'
@@ -50,8 +62,9 @@ const badges: { tone: BadgeTone; text: string }[] = [
 ]
 
 /**
- * A company named in the body, as table §7.2 of the contract allows: assertiveness is null for mixed and
- * not_expressed; a bullish, bearish, neutral or mixed stance rests on claims (`claimIds`), not_expressed on none.
+ * A target named in the body (a company unless `kind` says otherwise), as table §7.2 of the contract allows:
+ * assertiveness is null for mixed and not_expressed; a bullish, bearish, neutral or mixed stance rests on claims
+ * (`claimIds`), not_expressed on none.
  */
 function target(
   id: string,
@@ -59,10 +72,11 @@ function target(
   direction: Direction,
   assertiveness: Target['stance']['assertiveness'],
   claimIds: string[] = [],
+  kind: TargetKind = 'company',
 ): Target {
   return {
     id,
-    kind: 'company',
+    kind,
     anchor: { document: 'item', field: 'body', quote },
     stance: { direction, assertiveness, claim_ids: claimIds },
     reference: 'explicit',
@@ -83,7 +97,10 @@ function modelAssessment(targets: Target[], flags: Flag[], claims: Claim[] = [])
   }
 }
 
-/** Every variant of the feed's card, newest first. */
+/** The feed filter as applied from the address, every field set. */
+const activeFilter: PostFilter = { q: 'orlen', kind: 'company', direction: 'bullish' }
+
+/** Every variant of the feed's card, newest first; the targets cover four kinds. */
 const posts: PostItem[] = [
   {
     id: 'model',
@@ -94,7 +111,11 @@ const posts: PostItem[] = [
     author: 'ostrozny_byk',
     webUrl: 'https://wykop.pl/wpis/81234567',
     assessment: modelAssessment(
-      [target('t1', 'CDR', 'bullish', 'hedged', ['c1']), target('t2', 'Allegro', 'bearish', 'unhedged', ['c2'])],
+      [
+        target('t1', 'CDR', 'bullish', 'hedged', ['c1']),
+        target('t2', 'Allegro', 'bearish', 'unhedged', ['c2']),
+        target('t3', 'guidance na Q4', 'unclear', null, [], 'macro_topic'),
+      ],
       ['possible_sarcasm', 'missing_context'],
       [
         authorClaim('c1', 'trade_action', ['t1'], 'ja ostrożnie dobieram', 'Autor ostrożnie dokupuje akcje CDR po spadku.'),
@@ -107,7 +128,7 @@ const posts: PostItem[] = [
     itemType: 'link',
     publishedAt: '2026-10-12T18:10:00Z',
     title: 'Orlen ogłasza buyback za 4 mld zł',
-    body: 'PGE bez zmian, Enea z plusami i minusami, Tauron podał dziś wyniki, a Orlen powinien na skupie akcji zyskać.',
+    body: 'PGE bez zmian, Enea z plusami i minusami, Tauron podał dziś wyniki, a Orlen powinien na skupie akcji zyskać. Cała energetyka może to odczuć.',
     author: 'dywidendowy_zbyszek',
     webUrl: 'https://wykop.pl/link/7712345',
     assessment: modelAssessment(
@@ -116,12 +137,14 @@ const posts: PostItem[] = [
         target('t2', 'Enea', 'mixed', null, ['c2']),
         target('t3', 'Tauron', 'not_expressed', null),
         target('t4', 'Orlen', 'bullish', 'unhedged', ['c3']),
+        target('t5', 'energetyka', 'bullish', 'hedged', ['c4'], 'sector'),
       ],
       [],
       [
         authorClaim('c1', 'opinion', ['t1'], 'PGE bez zmian', 'PGE nie zmienia się.'),
         authorClaim('c2', 'opinion', ['t2'], 'Enea z plusami i minusami', 'Enea ma zarówno zalety, jak i wady.'),
         authorClaim('c3', 'investment_thesis', ['t4'], 'Orlen powinien na skupie akcji zyskać', 'Skup akcji powinien podnieść kurs Orlenu.'),
+        authorClaim('c4', 'opinion', ['t5'], 'Cała energetyka może to odczuć', 'Skup akcji Orlenu może odczuć cały sektor energetyczny.'),
       ],
     ),
   },
@@ -154,10 +177,14 @@ const posts: PostItem[] = [
     itemType: 'post',
     publishedAt: '2026-10-12T15:20:00Z',
     title: null,
-    body: 'Analiza skupu akcji Orlenu: https://www.bankier.pl/wiadomosc/Orlen-oglasza-skup-akcji-wlasnych-za-4-mld-zl-analitycy-licza-wplyw-na-dywidende-8812345.html?utm_source=wykop&utm_medium=social',
+    body: 'Analiza skupu akcji Orlenu przy spadku ceny ropy: https://www.bankier.pl/wiadomosc/Orlen-oglasza-skup-akcji-wlasnych-za-4-mld-zl-analitycy-licza-wplyw-na-dywidende-8812345.html?utm_source=wykop&utm_medium=social',
     author: 'dywidendowy_zbyszek',
     webUrl: 'https://wykop.pl/wpis/81229876',
-    assessment: modelAssessment([target('t1', 'Orlen', 'not_expressed', null)], ['missing_context']),
+    assessment: modelAssessment(
+      [target('t1', 'Orlen', 'not_expressed', null), target('t2', 'ropy', 'bearish', 'hedged', ['c1'], 'asset')],
+      ['missing_context'],
+      [authorClaim('c1', 'factual_claim', ['t2'], 'przy spadku ceny ropy', 'Cena ropy spada.')],
+    ),
   },
 ]
 
@@ -457,6 +484,33 @@ const assessments: { id: string; title: string; assessment: NonNullable<PostItem
         <label><input type="checkbox" checked /> Zaznaczone</label>
         <label><input type="checkbox" disabled /> Wyłączone</label>
       </div>
+      <div class="row">
+        <label>Puste <input type="search" /></label>
+        <label>Z tekstem <input type="search" value="CD Projekt" /></label>
+      </div>
+      <div class="row">
+        <label>
+          Wybór
+          <select>
+            <option>dowolny</option>
+            <option>spółka</option>
+          </select>
+        </label>
+        <label>
+          Wyłączony
+          <select disabled>
+            <option>dowolne</option>
+          </select>
+        </label>
+      </div>
+    </section>
+
+    <section aria-labelledby="filter-title">
+      <h2 id="filter-title">Filtr</h2>
+      <h3>Bez filtra</h3>
+      <FeedFilter :filter="{}" />
+      <h3>Aktywny filtr</h3>
+      <FeedFilter :filter="activeFilter" />
     </section>
 
     <section aria-labelledby="posts-title">
@@ -501,6 +555,12 @@ h1 {
 h2 {
   margin: var(--space-5) 0 var(--space-2);
   font-size: var(--font-size-lg);
+  color: var(--text-h);
+}
+
+h3 {
+  margin: var(--space-4) 0 var(--space-2);
+  font-size: var(--font-size-md);
   color: var(--text-h);
 }
 

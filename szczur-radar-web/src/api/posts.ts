@@ -5,12 +5,19 @@ import { apiFetch, apiFetchText } from './client'
 export type ItemType = 'post' | 'link' | 'comment'
 
 export type Relevance = 'investment_related' | 'not_investment_related' | 'unclear'
-export type Direction = 'bullish' | 'bearish' | 'neutral' | 'mixed' | 'not_expressed' | 'unclear'
+
+/** `target.kind` (contract V2 §3), in the contract's order; also the options of the feed filter. */
+export const TARGET_KINDS = ['company', 'asset', 'sector', 'macro_topic', 'other', 'unknown'] as const
+export type TargetKind = (typeof TARGET_KINDS)[number]
+
+/** `stance.direction` (contract V2 §3), in the contract's order; also the options of the feed filter. */
+export const DIRECTIONS = ['bullish', 'bearish', 'neutral', 'mixed', 'not_expressed', 'unclear'] as const
+export type Direction = (typeof DIRECTIONS)[number]
+
 export type Flag = 'missing_context' | 'possible_sarcasm' | 'insufficient_content' | 'extraction_limit'
 export type Modifier = 'humor' | 'promotion'
 export type ClaimKind = 'factual_claim' | 'opinion' | 'investment_thesis' | 'question' | 'trade_action'
 export type Attribution = 'author' | 'reported' | 'unclear'
-export type TargetKind = 'company' | 'asset' | 'sector' | 'macro_topic' | 'other' | 'unknown'
 export type Reference = 'explicit' | 'contextual' | 'ambiguous' | 'unresolved'
 /** `null` where the direction has none (table §7.2 of the contract). */
 export type Assertiveness = 'hedged' | 'unhedged' | null
@@ -110,9 +117,23 @@ export interface FailedPost {
   } | null
 }
 
-/** The feed: assessed posts, newest first. `page` from 0. */
-export function fetchPosts(page: number, size = 50): Promise<Page<PostItem>> {
-  return apiFetch<Page<PostItem>>(`/api/posts?page=${page}&size=${size}`)
+/**
+ * The feed filter (FR-011a): one target of the latest assessment meets every given condition. `q` is
+ * contained in the target's quote (case-insensitive, at most 100 characters); an absent key is no condition.
+ */
+export interface PostFilter {
+  q?: string
+  kind?: TargetKind
+  direction?: Direction
+}
+
+/** The feed: assessed posts, newest first. `page` from 0; only the given keys of `filter` are sent. */
+export function fetchPosts(page: number, size = 50, filter: PostFilter = {}): Promise<Page<PostItem>> {
+  const params = new URLSearchParams({ page: String(page), size: String(size) })
+  if (filter.q) params.set('q', filter.q)
+  if (filter.kind) params.set('kind', filter.kind)
+  if (filter.direction) params.set('direction', filter.direction)
+  return apiFetch<Page<PostItem>>(`/api/posts?${params}`)
 }
 
 /** One assessed post, shaped like a feed item; 404 `post_not_found` for any other id, 400 for a malformed one. */

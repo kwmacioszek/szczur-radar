@@ -352,26 +352,26 @@ Brak migracji i zmian danych. Kształt odpowiedzi `/api/posts` bez zmian, nowe p
 
 #### Automated
 
-- [x] 1.1 Testy backendu przechodzą, w tym przypadki (a)–(h)
-- [x] 1.2 Istniejące testy feedu bez zmian przechodzą
-- [x] 1.3 Trasa nadal wymaga sesji: `AuthorizationCompletenessIT` przechodzi bez zmian listy tras
+- [x] 1.1 Testy backendu przechodzą, w tym przypadki (a)–(h) — 089023b
+- [x] 1.2 Istniejące testy feedu bez zmian przechodzą — 089023b
+- [x] 1.3 Trasa nadal wymaga sesji: `AuthorizationCompletenessIT` przechodzi bez zmian listy tras — 089023b
 
 #### Manual
 
-- [ ] 1.4 Lokalnie `curl` z sesją: `q` i `direction` dają oczekiwane posty i `total`, `kind=xyz` → 400
+- [x] 1.4 Lokalnie `curl` z sesją: `q` i `direction` dają oczekiwane posty i `total`, `kind=xyz` → 400 — 089023b
 
 ### Phase 2: SPA — filtr w feedzie
 
 #### Automated
 
-- [ ] 2.1 Testy web przechodzą, w tym `feedFilter.test.ts`, `FeedFilter.test.ts`, przypadki (a)–(g) i skan `no literals` z `FeedFilter.vue`
-- [ ] 2.2 Typecheck i build przechodzą, a `dist/` nie zawiera kitchen sink
-- [ ] 2.3 `dev/mock-api.js` parsuje się
+- [x] 2.1 Testy web przechodzą, w tym `feedFilter.test.ts`, `FeedFilter.test.ts`, przypadki (a)–(g) i skan `no literals` z `FeedFilter.vue`
+- [x] 2.2 Typecheck i build przechodzą, a `dist/` nie zawiera kitchen sink
+- [x] 2.3 `dev/mock-api.js` parsuje się
 
 #### Manual
 
-- [ ] 2.4 `/` z mockiem przy 1280 i 375 px w obu motywach: formularz, linia wyniku, zawężanie, pusty wynik filtra, rodzaj na karcie, bez poziomego przewijania
-- [ ] 2.5 Kitchen sink „Pola”, „Filtr” i „Posty” w obu motywach
+- [x] 2.4 `/` z mockiem przy 1280 i 375 px w obu motywach: formularz, linia wyniku, zawężanie, pusty wynik filtra, rodzaj na karcie, bez poziomego przewijania
+- [x] 2.5 Kitchen sink „Pola”, „Filtr” i „Posty” w obu motywach
 
 ### Phase 3: Stany, zrzuty i weryfikacja w PR env
 

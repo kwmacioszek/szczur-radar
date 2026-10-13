@@ -53,6 +53,18 @@ describe('pipeline and posts API', () => {
     ])
   })
 
+  it('sends only the given conditions of the feed filter, encoded', async () => {
+    const fetchMock = respond(200, { items: [], page: 0, size: 50, total: 0 })
+    await fetchPosts(0, 50, { q: 'żabka', kind: 'company', direction: 'bullish' })
+    await fetchPosts(1, 50, { direction: 'not_expressed' })
+    await fetchPosts(0, 50, {})
+    expect(fetchMock.mock.calls.map((call) => call[0])).toEqual([
+      '/api/posts?page=0&size=50&q=%C5%BCabka&kind=company&direction=bullish',
+      '/api/posts?page=1&size=50&direction=not_expressed',
+      '/api/posts?page=0&size=50',
+    ])
+  })
+
   it.each([
     ['pipeline_busy', 'Przebieg już trwa.'],
     ['post_dead', 'nie można już ponowić'],

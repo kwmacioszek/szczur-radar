@@ -1,7 +1,7 @@
 import { mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
 import { createMemoryHistory, createRouter } from 'vue-router'
-import type { PostItem } from '../api/posts'
+import type { PostItem, Target } from '../api/posts'
 import { routes } from '../router'
 import PostCard from './PostCard.vue'
 
@@ -70,10 +70,41 @@ describe('PostCard', () => {
 
   it('lists each target as a term with its stance', () => {
     const wrapper = mountCard()
-    expect(wrapper.findAll('dl dt').map((term) => term.text())).toEqual(['XTB'])
+    expect(wrapper.findAll('dl dt').map((term) => term.text())).toEqual(['XTB · spółka'])
     const stance = wrapper.find('dl dd')
     expect(stance.classes()).toContain('bullish')
     expect(stance.text()).toBe('wzrostowo (ostrożnie)')
+  })
+
+  it('shows the kind of each target after its quote, as secondary text', () => {
+    const base = post()
+    const output = base.assessment!.output
+    const wrapper = mountCard(
+      post({
+        assessment: {
+          ...base.assessment!,
+          output: {
+            ...output,
+            targets: [
+              { ...output.targets[0]!, id: 't1', kind: 'macro_topic', anchor: { ...output.targets[0]!.anchor, quote: 'rynek' } },
+              { ...output.targets[0]!, id: 't2', kind: 'asset', anchor: { ...output.targets[0]!.anchor, quote: 'ropa' } },
+            ],
+          },
+        },
+      }),
+    )
+    const terms = wrapper.findAll('dl dt')
+    expect(terms.map((term) => term.text())).toEqual(['rynek · makro i rynek', 'ropa · aktywo'])
+    expect(terms[0]!.find('.kind').text()).toBe('· makro i rynek')
+  })
+
+  it('shows an unknown kind as it came', () => {
+    const base = post()
+    const output = base.assessment!.output
+    // A value the contract may add later: the type does not know it, the card still shows it.
+    const target = { ...output.targets[0]!, kind: 'crypto_exchange' } as unknown as Target
+    const wrapper = mountCard(post({ assessment: { ...base.assessment!, output: { ...output, targets: [target] } } }))
+    expect(wrapper.find('dl dt').text()).toBe('XTB · crypto_exchange')
   })
 
   it('shows each flag as a neutral badge with its Polish label', () => {
