@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { computed, ref, useTemplateRef, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { type Freshness, fetchFreshness } from '../api/freshness'
 import { type Page, type PostItem, fetchPosts } from '../api/posts'
 import AppButton from '../components/AppButton.vue'
 import AppHeader from '../components/AppHeader.vue'
 import PostCard from '../components/PostCard.vue'
 import StatusMessage from '../components/StatusMessage.vue'
+import { formatDateTime } from '../labels'
 
 const PAGE_SIZE = 50
 
@@ -36,6 +38,17 @@ const loadingText = computed(() =>
     ? 'Wczytywanie…'
     : `Wczytywanie strony ${(loadingPage.value ?? 0) + 1}…`,
 )
+
+/**
+ * When the data was last updated, read once on entry alongside the first page, not on every page
+ * change. Null while loading and after an error: the label is then left out and the list stays.
+ */
+const freshness = ref<Freshness | null>(null)
+fetchFreshness()
+  .then((result) => {
+    freshness.value = result
+  })
+  .catch(() => {})
 
 /** `moveFocus`: after a successful load, focus the heading, the start of the new list. */
 async function load(target: number, { moveFocus = false } = {}): Promise<void> {
@@ -80,8 +93,16 @@ watch(
 <template>
   <AppHeader />
   <main class="feed">
+    <!-- The heading and the label sit outside the list's busy region: paging does not change them. -->
+    <h1 id="feed-title" ref="feed-title" tabindex="-1">Posty</h1>
+    <p v-if="freshness" class="freshness">
+      <template v-if="freshness.lastUpdatedAt">
+        Dane zaktualizowane:
+        <time :datetime="freshness.lastUpdatedAt">{{ formatDateTime(freshness.lastUpdatedAt) }}</time>
+      </template>
+      <template v-else>Dane nie były jeszcze aktualizowane.</template>
+    </p>
     <section aria-labelledby="feed-title" :aria-busy="loadingPage !== null ? 'true' : undefined">
-      <h1 id="feed-title" ref="feed-title" tabindex="-1">Posty</h1>
       <p v-if="loadingPage !== null" class="loading">{{ loadingText }}</p>
       <template v-else-if="failed">
         <StatusMessage tone="error">Nie udało się wczytać postów.</StatusMessage>
@@ -117,6 +138,17 @@ watch(
 
 h1 {
   margin: var(--space-2) 0 var(--space-4);
+}
+
+/* Closer to the heading than to the list it describes. */
+h1:has(+ .freshness) {
+  margin-bottom: var(--space-2);
+}
+
+.freshness {
+  margin: 0 0 var(--space-4);
+  font-size: var(--font-size-sm);
+  color: var(--text);
 }
 
 .loading,

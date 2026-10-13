@@ -618,50 +618,50 @@ Dokumenty fundamentów i wdrożenia odzwierciedlają decyzje S-05, a cały łań
 
 #### Automated
 
-- [x] 1.1 MigrationsIT z nową wersją, kontem systemowym i CHECK — 6e9d4e2
-- [x] 1.2 JpaSchemaIT, AuthIT i CreateAdminCommandIT z kontem systemowym — 6e9d4e2
-- [x] 1.3 InternalPipelineRunIT — 6e9d4e2
-- [x] 1.4 Test kolejności odzyskiwania i test ustawień tokenu — 6e9d4e2
-- [x] 1.5 AuthorizationCompletenessIT bez zmian list — 6e9d4e2
-- [x] 1.6 ./mvnw -B verify — 6e9d4e2
-- [x] 1.7 Wymaganie dla S-07 obsłużone (test albo komentarz w issue #20) — 6e9d4e2
+- [x] 1.1 MigrationsIT z nową wersją, kontem systemowym i CHECK — e5420cb
+- [x] 1.2 JpaSchemaIT, AuthIT i CreateAdminCommandIT z kontem systemowym — e5420cb
+- [x] 1.3 InternalPipelineRunIT — e5420cb
+- [x] 1.4 Test kolejności odzyskiwania i test ustawień tokenu — e5420cb
+- [x] 1.5 AuthorizationCompletenessIT bez zmian list — e5420cb
+- [x] 1.6 ./mvnw -B verify — e5420cb
+- [x] 1.7 Wymaganie dla S-07 obsłużone (test albo komentarz w issue #20) — e5420cb
 
 #### Manual
 
-- [x] 1.8 Lokalny curl na /internal/pipeline-runs/daily; ścieżka przez Vite nie trafia do API — 6e9d4e2
+- [x] 1.8 Lokalny curl na /internal/pipeline-runs/daily; ścieżka przez Vite nie trafia do API — e5420cb
 
 ### Phase 2: Odczyt świeżości dla użytkownika
 
 #### Automated
 
-- [x] 2.1 FreshnessIT z przypadkami z wywiadu — b442721
-- [x] 2.2 AuthorizationCompletenessIT bez zmian list — b442721
-- [x] 2.3 ./mvnw -B verify — b442721
+- [x] 2.1 FreshnessIT z przypadkami z wywiadu — e8f383e
+- [x] 2.2 AuthorizationCompletenessIT bez zmian list — e8f383e
+- [x] 2.3 ./mvnw -B verify — e8f383e
 
 ### Phase 3: Serwis cron pipeline-trigger i IaC
 
 #### Automated
 
-- [x] 3.1 tools/pipeline-trigger/test.sh ze wszystkimi scenariuszami — d61bbc7
-- [x] 3.2 CI na PR zielone z pipeline-trigger-test i railway-config — d61bbc7
-- [x] 3.3 railway-config tworzy pipeline-trigger bez zmian destrukcyjnych, ponowny plan pusty — d61bbc7
+- [x] 3.1 tools/pipeline-trigger/test.sh ze wszystkimi scenariuszami — 01242a1
+- [x] 3.2 CI na PR zielone z pipeline-trigger-test i railway-config — 01242a1
+- [x] 3.3 railway-config tworzy pipeline-trigger bez zmian destrukcyjnych, ponowny plan pusty — 01242a1
 
 #### Manual
 
-- [x] 3.4 PR env: cron budzi uśpione API, przebieg D-2…D-1, kod 0 — d61bbc7
-- [x] 3.5 PR env: zły token kończy się CRASHED i e-mailem — d61bbc7
-- [x] 3.6 PR env bez nadpisania środowiska: skipped bez żądań — d61bbc7
+- [x] 3.4 PR env: cron budzi uśpione API, przebieg D-2…D-1, kod 0 — 01242a1
+- [x] 3.5 PR env: zły token kończy się CRASHED i e-mailem — 01242a1
+- [x] 3.6 PR env bez nadpisania środowiska: skipped bez żądań — 01242a1
 
 ### Phase 4: Etykieta świeżości w FeedView
 
 #### Automated
 
-- [ ] 4.1 npm test z trzema stanami etykiety i skanem no literals
-- [ ] 4.2 npm run build
+- [x] 4.1 npm test z trzema stanami etykiety i skanem no literals
+- [x] 4.2 npm run build
 
 #### Manual
 
-- [ ] 4.3 Zrzuty etykiety w obu motywach i przy 375 px, tabela 7 stanów
+- [x] 4.3 Zrzuty etykiety w obu motywach i przy 375 px, tabela 7 stanów
 
 ### Phase 5: Dokumenty i weryfikacja końcowa w PR env
 

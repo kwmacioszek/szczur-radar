@@ -2,6 +2,7 @@ import { type VueWrapper, enableAutoUnmount, flushPromises, mount } from '@vue/t
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMemoryHistory } from 'vue-router'
 import { fetchMe } from '../api/auth'
+import { fetchFreshness } from '../api/freshness'
 import { type Page, type PostItem, fetchPosts } from '../api/posts'
 import { resetSession } from '../auth/session'
 import { createAppRouter } from '../router'
@@ -9,6 +10,7 @@ import FeedView from './FeedView.vue'
 
 vi.mock('../api/auth', () => ({ fetchMe: vi.fn(), login: vi.fn(), logout: vi.fn() }))
 vi.mock('../api/posts', () => ({ fetchPosts: vi.fn(), fetchFailedPosts: vi.fn() }))
+vi.mock('../api/freshness', () => ({ fetchFreshness: vi.fn() }))
 
 function post(id: string, overrides: Partial<PostItem> = {}): PostItem {
   return {
@@ -73,6 +75,7 @@ describe('FeedView', () => {
     resetSession()
     vi.mocked(fetchMe).mockReset().mockResolvedValue({ id: '1', email: 'user@example.com', role: 'user' })
     vi.mocked(fetchPosts).mockReset()
+    vi.mocked(fetchFreshness).mockReset().mockResolvedValue({ lastUpdatedAt: '2026-10-13T03:12:00Z' })
     // jsdom does not implement scrolling.
     vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
   })
@@ -230,5 +233,54 @@ describe('FeedView', () => {
     expect(fetchPosts).toHaveBeenLastCalledWith(0, 50)
     expect(wrapper.find('[role="alert"]').exists()).toBe(false)
     expect(wrapper.find('article').text()).toContain('Wpis 1 o XTB')
+  })
+
+  describe('freshness label', () => {
+    it('says when the data was last updated, with the instant from the API', async () => {
+      vi.mocked(fetchPosts).mockResolvedValue(answer([post('1')], 1))
+      const { wrapper } = await mountFeed()
+      const label = wrapper.find('.freshness')
+      expect(label.text()).toContain('Dane zaktualizowane:')
+      expect(label.find('time').attributes('datetime')).toBe('2026-10-13T03:12:00Z')
+      expect(label.find('time').text()).toBe('13.10.2026, 05:12')
+      expect(label.attributes('role')).toBeUndefined()
+    })
+
+    it('says the data was never updated before the first update', async () => {
+      vi.mocked(fetchFreshness).mockResolvedValue({ lastUpdatedAt: null })
+      vi.mocked(fetchPosts).mockResolvedValue(answer([], 0))
+      const { wrapper } = await mountFeed()
+      expect(wrapper.find('.freshness').text()).toBe('Dane nie były jeszcze aktualizowane.')
+      expect(wrapper.find('.freshness time').exists()).toBe(false)
+    })
+
+    it('shows nothing while loading', async () => {
+      vi.mocked(fetchFreshness).mockReturnValue(never())
+      vi.mocked(fetchPosts).mockResolvedValue(answer([post('1')], 1))
+      const { wrapper } = await mountFeed()
+      expect(wrapper.find('.freshness').exists()).toBe(false)
+    })
+
+    it('shows nothing when it cannot be read, and the posts still render', async () => {
+      vi.mocked(fetchFreshness).mockRejectedValue(new TypeError('Failed to fetch'))
+      vi.mocked(fetchPosts).mockResolvedValue(answer([post('1')], 1))
+      const { wrapper } = await mountFeed()
+      expect(wrapper.find('.freshness').exists()).toBe(false)
+      expect(wrapper.find('[role="alert"]').exists()).toBe(false)
+      expect(wrapper.find('article').text()).toContain('Wpis 1 o XTB')
+    })
+
+    it('is read once on entry, not again when the page changes', async () => {
+      vi.mocked(fetchPosts).mockResolvedValue(answer([post('1')], 120))
+      const { wrapper } = await mountFeed()
+      expect(fetchFreshness).toHaveBeenCalledTimes(1)
+
+      await button(wrapper, 'Starsze').trigger('click')
+      await flushPromises()
+
+      expect(fetchPosts).toHaveBeenLastCalledWith(1, 50)
+      expect(fetchFreshness).toHaveBeenCalledTimes(1)
+      expect(wrapper.find('.freshness').exists()).toBe(true)
+    })
   })
 })
