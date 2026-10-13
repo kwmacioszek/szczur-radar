@@ -43,9 +43,10 @@ const loadingText = computed(() =>
 /**
  * When the data was last updated, read once on entry alongside the first page, not on every page
  * change. Null while loading and after an error: the label is then left out and the list stays.
+ * `freshnessSettled` resolves (never rejects) once the label is shown or left out.
  */
 const freshness = ref<Freshness | null>(null)
-fetchFreshness()
+const freshnessSettled = fetchFreshness()
   .then((result) => {
     freshness.value = result
   })
@@ -54,7 +55,9 @@ fetchFreshness()
 /**
  * `moveFocus`: after a successful load, focus the heading, the start of the new list. Each load
  * that is still the latest one reports how it ended, so a return from a post can restore the
- * position once the list is on screen (router/scroll.ts).
+ * position once the list is on screen (router/scroll.ts). A list is reported only after the
+ * freshness label is settled: the label sits above the list, so the page then has the height the
+ * saved position was taken at.
  */
 async function load(target: number, { moveFocus = false } = {}): Promise<void> {
   const id = ++latestLoad
@@ -66,6 +69,7 @@ async function load(target: number, { moveFocus = false } = {}): Promise<void> {
     shown.value = { page: target, result }
     loadingPage.value = null
     if (moveFocus) heading.value?.focus()
+    await freshnessSettled
     await nextTick()
     if (id !== latestLoad) return
     reportFeedLoaded('ok')

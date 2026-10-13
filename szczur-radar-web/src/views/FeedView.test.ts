@@ -235,6 +235,31 @@ describe('FeedView', () => {
     expect(listShown).toBe(true)
   })
 
+  it('reports a loaded page only once the freshness label is settled', async () => {
+    let settle: (value: { lastUpdatedAt: string | null }) => void = () => {}
+    vi.mocked(fetchFreshness).mockImplementation(() => new Promise((resolve) => (settle = resolve)))
+    vi.mocked(fetchPosts).mockResolvedValue(answer([post('1')], 1))
+    let labelShown = false
+    vi.mocked(reportFeedLoaded).mockImplementation(() => {
+      labelShown = document.querySelector('.freshness') !== null
+    })
+    const { wrapper } = await mountFeed('/', document.body)
+    expect(wrapper.find('article').exists()).toBe(true)
+    expect(reportFeedLoaded).not.toHaveBeenCalled()
+
+    settle({ lastUpdatedAt: '2026-10-13T03:12:00Z' })
+    await flushPromises()
+    expect(reportFeedLoaded).toHaveBeenCalledExactlyOnceWith('ok')
+    expect(labelShown).toBe(true)
+  })
+
+  it('reports a loaded page when the freshness label fails', async () => {
+    vi.mocked(fetchFreshness).mockRejectedValue(new TypeError('Failed to fetch'))
+    vi.mocked(fetchPosts).mockResolvedValue(answer([post('1')], 1))
+    await mountFeed()
+    expect(reportFeedLoaded).toHaveBeenCalledExactlyOnceWith('ok')
+  })
+
   it('reports a failed load', async () => {
     vi.mocked(fetchPosts).mockRejectedValue(new TypeError('Failed to fetch'))
     await mountFeed()
