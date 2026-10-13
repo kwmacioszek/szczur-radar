@@ -1,6 +1,6 @@
 import AppKit
 
-// Snapshot of M-1 in context/foundation/roadmap.md, updated 2026-10-12 (F-01 deployed: #44 b7ee254, production verified).
+// Snapshot of M-1 in context/foundation/roadmap.md, updated 2026-10-13 (v2.14: S-05 in progress, its unknowns decided).
 // Run on macOS: swift tools/render_roadmap.swift
 // With the installed Command Line Tools SDK:
 // CLANG_MODULE_CACHE_PATH=/private/tmp/szczur-clang-cache \
@@ -166,7 +166,7 @@ let cards: [Card] = [
     Card(id:"S-01", title:"Admin i logowanie", detail:"CLI, sesja, ochrona tras\ni wylogowanie", req:"—", status:"wdrożone", column:3, row:0, accent:green),
     Card(id:"S-02", title:"Pierwsze ocenione posty", detail:"Wykop → ocena LLM → lista\nRęczne uruchomienie przebiegu", req:"S-01 + F-02", status:"wdrożone", column:1, row:1, accent:cyan),
     Card(id:"S-07", title:"Onboarding przez CLI", detail:"Konto, link aktywacyjny\ni odzyskiwanie dostępu", req:"S-01 + F-03", status:"propozycja", column:3, row:1, accent:green),
-    Card(id:"S-05", title:"Codzienny automat", detail:"Harmonogram i data\nostatniej udanej aktualizacji", req:"S-02 + F-01", status:"propozycja", column:0, row:2, accent:amber),
+    Card(id:"S-05", title:"Codzienny automat", detail:"Cron o 00:30 UTC (dni D-2…D-1)\ni data ostatniej aktualizacji", req:"S-02 + F-01", status:"w realizacji", column:0, row:2, accent:amber),
     Card(id:"S-03", title:"Szczegóły posta", detail:"Tezy, cytaty, surowe dane\ni link do oryginału", req:"S-02", status:"propozycja", column:1, row:2, accent:cyan),
     Card(id:"S-04", title:"Filtrowanie ocen", detail:"Spółka lub temat\ni stanowisko autora", req:"S-02", status:"propozycja", column:2, row:2, accent:cyan),
     Card(id:"S-06", title:"Historia przebiegów", detail:"Dashboard admina\ni widoczny sygnał awarii", req:"S-05 + S-01", status:"propozycja", column:0, row:3, accent:amber)
@@ -260,7 +260,7 @@ txt("S-02: gwiazda przewodnia — pierwszy pełny przepływ od Wykopu do użytko
 txt("Pierwszy rząd czytaj od prawej: S-01 → F-03 → F-02. S-01 jest też warunkiem S-02 i S-06 — wynika z tej ścieżki.", 136, 3493, 2850, 24, .regular, muted)
 txt("Przed bramką strzałki pokazują zależności. Za bramką wskazują możliwe rozszerzenia, bez ustalonej kolejności.", 136, 3541, 2850, 24, .regular, muted)
 
-txt("Źródło: context/foundation/roadmap.md  ·  M-1 / v2.12  ·  Stan roadmapy: 12.10.2026  ·  Milestone otwarty", 100, 3660, 2200, 22, .regular, muted)
+txt("Źródło: context/foundation/roadmap.md  ·  M-1 / v2.14  ·  Stan roadmapy: 13.10.2026  ·  Milestone otwarty", 100, 3660, 2200, 22, .regular, muted)
 txt("MAPA ZALEŻNOŚCI · BEZ TERMINÓW", 2520, 3660, 540, 20, .semibold, muted)
 
 context.flushGraphics()

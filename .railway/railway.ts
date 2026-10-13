@@ -227,7 +227,9 @@ export default defineRailway(() => {
   // serves only /api/*), starts the daily run with
   // POST /internal/pipeline-runs/daily (the day before yesterday and yesterday,
   // Warsaw calendar) and waits for its result: it exits non-zero when a run failed
-  // or was interrupted, so Railway marks the cron run failed and e-mails it.
+  // or was interrupted, so Railway marks the cron run failed (CRASHED) and sends a
+  // notification — only with the account's custom notification rule "deployment
+  // crashed" for all environments; without it the failure is silent (no e-mail).
   // 00:30 UTC is 01:30 (winter) or 02:30 (summer) in Warsaw: always after
   // midnight, so yesterday is complete, and a normal run ends before the 02:00
   // backup. The token is the API's PIPELINE_TRIGGER_TOKEN by reference: one value,

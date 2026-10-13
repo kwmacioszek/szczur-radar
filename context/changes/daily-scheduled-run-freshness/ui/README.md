@@ -36,3 +36,7 @@ Przy błędzie odczytu lista działa normalnie: na zrzucie `error` jest 50 kart 
 ## Struktura
 
 `<h1>` i etykieta stoją bezpośrednio w `<main>`, przed `<section aria-labelledby="feed-title">` z `aria-busy`. W widoku po `feed-view-ui-hardening` nagłówek był wewnątrz sekcji. Przeniesienie pozwala trzymać etykietę tuż pod nagłówkiem, a jednocześnie poza regionem, który przy zmianie strony jest `aria-busy`. Sekcja nadal ma nazwę „Posty” przez `aria-labelledby`, a fokus po zmianie strony wraca na `h1`.
+
+## PR env (faza 5)
+
+`pr-env-user-1280-light.png` i `pr-env-user-375-dark.png`: `/` w `szczur-radar-pr-50` po przebiegu uruchomionym przez crona (2026-10-13, start 06:42 UTC), zalogowany `freshness-check@example.com` z rolą `user` (nagłówek bez „Panel admina”). Etykieta „Dane zaktualizowane: 13.10.2026, 08:43” to koniec przebiegu RANGE (`2026-10-13T06:43:51Z`). Przebieg opisuje `context/deployment/deploy-plan.md`, sekcja S-05.

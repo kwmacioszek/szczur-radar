@@ -3,8 +3,8 @@
 # Wakes the API over Railway's private network, starts the daily run (POST /internal/pipeline-runs/daily
 # with the trigger token), waits until every run it created has ended and exits with their result:
 # 0 when each one is succeeded or partial, 1 when one failed or was interrupted or the trigger itself
-# failed, 2 on a configuration error. Railway marks a cron run that exits non-zero as failed and
-# e-mails it.
+# failed, 2 on a configuration error. Railway marks a cron run that exits non-zero as crashed and
+# notifies it (needs the account's custom notification rule "deployment crashed", all environments).
 # Never `set -x`: PIPELINE_TRIGGER_TOKEN is the API's shared secret and is never printed.
 set -euo pipefail
 

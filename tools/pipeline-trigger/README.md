@@ -1,6 +1,6 @@
 # pipeline-trigger
 
-Codzienny przebieg pipeline'u Szczur Radar (S-05, `daily-scheduled-run-freshness`). Serwis cron `pipeline-trigger` w Railway codziennie o 00:30 UTC budzi API przez sieć prywatną i zleca przebieg dzienny. Potem czeka na jego wynik i kończy się kodem wyjścia, który go opisuje. Nieudany przebieg crona Railway oznacza jako `CRASHED` i wysyła e-mail.
+Codzienny przebieg pipeline'u Szczur Radar (S-05, `daily-scheduled-run-freshness`). Serwis cron `pipeline-trigger` w Railway codziennie o 00:30 UTC budzi API przez sieć prywatną i zleca przebieg dzienny. Potem czeka na jego wynik i kończy się kodem wyjścia, który go opisuje. Nieudany przebieg crona Railway oznacza jako `CRASHED` i wysyła powiadomienie (w aplikacji i push), ale tylko gdy konto Railway ma własną regułę powiadomień „deployment crashed” dla wszystkich środowisk (Account Settings). Bez niej porażka jest cicha: w teście w PR env (2026-10-12) nie przyszedł ani e-mail, ani powiadomienie.
 
 Przebieg dzienny obejmuje dni D-2 i D-1 według kalendarza warszawskiego, ze wszystkich skonfigurowanych źródeł. Jeśli zostały posty z wcześniejszych przebiegów, najpierw idzie przebieg RETRY. API startuje go tym samym kodem co przycisk admina, a zleceniodawcą jest konto systemowe `scheduler@system.invalid`. Trasy wywoływane przez crona są w `szczur-radar-api` (`pipeline/api/InternalPipelineRunController.java`).
 
@@ -18,7 +18,7 @@ Komenda startu Railway nie rozwija zmiennych, więc cała logika jest w skrypcie
 
 ## Przebieg `trigger.sh`
 
-0. **Straż środowiska.** Poza produkcją skrypt nic nie robi. Jeśli `RAILWAY_ENVIRONMENT_NAME` jest ustawione i różne od `production`, zapisuje „skipped” i kończy się kodem 0 bez żadnego żądania. PR env dostaje ten cron jako kopia produkcji, ale nie potrzebuje nocnego przebiegu, a bez tokenu na API wysyłałby co noc e-mail o porażce. Wyjątek: `TRIGGER_IN_ANY_ENVIRONMENT=true` na serwisie, do sprawdzenia narzędzia w PR env. Lokalnie (`test.sh`, ręcznie) zmiennej nie ma, więc przebieg rusza.
+0. **Straż środowiska.** Poza produkcją skrypt nic nie robi. Jeśli `RAILWAY_ENVIRONMENT_NAME` jest ustawione i różne od `production`, zapisuje „skipped” i kończy się kodem 0 bez żadnego żądania. PR env dostaje ten cron jako kopia produkcji, ale nie potrzebuje nocnego przebiegu, a bez tokenu na API co noc kończyłby się porażką i powiadomieniem. Wyjątek: `TRIGGER_IN_ANY_ENVIRONMENT=true` na serwisie, do sprawdzenia narzędzia w PR env. Lokalnie (`test.sh`, ręcznie) zmiennej nie ma, więc przebieg rusza.
 1. **Limit czasu całości.** Cały przebieg ma twardy limit `TRIGGER_TIMEOUT` (domyślnie `3h`, więcej niż suma limitów niżej). Zawieszony przebieg kończy się więc porażką (`FAILED: the run exceeded …`), zamiast blokować kolejne noce: Railway pomija przebieg cron, dopóki poprzedni trwa.
 2. **Zmienne.** Wymagane są `API_PRIVATE_DOMAIN`, `API_PORT` i `PIPELINE_TRIGGER_TOKEN`. Brak którejś daje kod 2 z nazwą zmiennej, bez wartości. Zła wartość czasu też daje kod 2.
 3. **Start.** `POST http://<API_PRIVATE_DOMAIN>:<API_PORT>/internal/pipeline-runs/daily` z nagłówkiem `Authorization: Bearer <token>`, bez treści. Żądanie idzie wprost do API przez sieć prywatną, z pominięciem Caddy (ten przekazuje tylko `/api/*`).
@@ -55,6 +55,8 @@ Jedna linia na zdarzenie, z czasem UTC:
 ```
 
 Liczniki znaczą to samo co na liście przebiegów w `/admin`. Porażka kończy się linią `FAILED: …` z przyczyną.
+
+Skrypt pisze logi na stderr, a Railway pokazuje stderr crona na poziomie `error`, więc w widoku logów każda linia jest czerwona, także w udanym przebiegu. O wyniku mówi kod wyjścia (status deploymentu), nie kolor.
 
 ## Zmienne
 
@@ -104,7 +106,7 @@ Cron jest w każdym PR env, ale tam się pomija. Żeby sprawdzić go w PR env `s
    railway redeploy -s szczur-radar-api -e szczur-radar-pr-<N> -y
    ```
 2. Na serwisie `pipeline-trigger` ustaw `TRIGGER_IN_ANY_ENVIRONMENT=true`. W panelu ustaw tymczasowy harmonogram (Settings → Cron Schedule, np. `*/5 * * * *`, minimum 5 minut). Railway nie ma ręcznego wyzwolenia crona. Kolejny push przywraca harmonogram z IaC.
-3. Log wykonania kończy się `OK: …` albo `FAILED: …`, a deployment crona ma status `SUCCESS` albo `CRASHED`. Przebieg widać w `/admin` PR env.
+3. Log wykonania kończy się `OK: …` albo `FAILED: …`, a deployment crona ma status `SUCCESS` albo `CRASHED`. Wykonanie z harmonogramu nie tworzy nowego deploymentu, tylko używa istniejącego, więc status deploymentu to wynik ostatniego wykonania. Przebieg widać w `/admin` PR env.
 4. Po sprawdzeniu usuń `TRIGGER_IN_ANY_ENVIRONMENT` (`preserve()` niczego nie tworzy, więc plan tego nie cofnie).
 
 Na produkcji tymczasowy harmonogram trzeba przywrócić na `30 0 * * *` ręcznie: do następnego merge'a nic go nie przywróci.

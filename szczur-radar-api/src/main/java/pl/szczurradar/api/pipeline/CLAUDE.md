@@ -10,14 +10,26 @@ decides the flow. The durable state is in Postgres (`pipeline_runs`, `pipeline_r
 ```
 pipeline/            entry points — start here
   PipelineRunService       create runs (advisory lock, refuse while busy), queue them, run one at a time
-  PipelineStartupRecovery  server start: unfinished runs → interrupted, their posts put back
+  PipelineStartupRecovery  server start, before the port opens: unfinished runs → interrupted, their posts put back
   PipelineBusyException, PostDeadException, SourceNotConfiguredException
+  api/     the HTTP entries (below)
   run/     the run model: PipelineRun, PipelineRunStep, RunKind, RunStatus, RunStep, StepStatus, repositories
   flow/    the graph: PipelineAgent (thin actions), RunFlow (the blackboard types)
   step/    the steps: SourceIngest (fetch), PostStore (store), AssessmentSelection (select)
   assess/  assessing posts: AssessmentDispatcher (port), ConcurrentAssessmentDispatcher, AssessmentInputs
   state/   conditional state writes: RunRecorder (runs, steps, counters), PostTransitions (posts)
 ```
+
+## Entries (`api/`)
+
+Every route starts runs only through `PipelineRunService`; none has its own start logic.
+
+| Class | Route | Who |
+| --- | --- | --- |
+| `PipelineRunController` | `/api/admin/pipeline-runs/**`: start a range or chosen posts, list runs, sources, failed posts | admin session |
+| `InternalPipelineRunController` | `POST /internal/pipeline-runs/daily` (D-2…D-1 of `ZONE` from the injected `Clock`, every configured source, requester `SystemAccount.SCHEDULER`; 202 `[{id, kind}]`), `GET /internal/pipeline-runs/{id}` (status, `finishedAt`, counters) | the daily cron `pipeline-trigger`, token `PIPELINE_TRIGGER_TOKEN` only (`internal/`, `config/SecurityConfig`), never a session |
+| `FreshnessController` | `GET /api/freshness` → `{lastUpdatedAt}`: `max(finished_at)` of RANGE runs `succeeded`/`partial` (`run/PipelineRunRepository.findLastUpdate`) — the feed's label (FR-030); nothing else about runs | any session |
+| `PipelineRunExceptionHandler` | the service's refusals for both run controllers: 409 `pipeline_busy`, 400 `post_dead`, 503 `source_not_configured` | — |
 
 ```
 PipelineRunService.startRange / startPosts → queue → PipelineAgent:
@@ -58,6 +70,11 @@ PipelineRunService.startRange / startPosts → queue → PipelineAgent:
   any exception; start-up recovery interrupts unfinished runs and puts back every post `assessing`
   without a queued or running run (`PostTransitions.releaseOrphans`), also one claimed just as its run
   was interrupted by a stopping instance.
+- Start-up recovery runs before the web server opens its port (`SmartInitializingSingleton`, not
+  `ApplicationReadyEvent`): it interrupts every queued or running run without asking who created it,
+  and the cron's `POST` is often the very request that wakes the API, so a later recovery would
+  interrupt the run that request just queued. `PipelineStartupRecoveryIT` checks the order; keep it
+  before `WebServerInitializedEvent`.
 - The root package holds only what other packages (the API in S-02 phase 4) call; the subpackages are
   the run's internals.
 
@@ -66,6 +83,9 @@ PipelineRunService.startRange / startPosts → queue → PipelineAgent:
 - Unit (`*Test`, no Spring): `state/RunOutcomeTest`, `step/PostStoreTest`,
   `step/AssessmentSelectionTest`, `step/SourceIngestTest`, `assess/ConcurrentAssessmentDispatcherTest`
   (threads, one client, a technical error).
+- `api/InternalPipelineRunIT` (+ `InternalPipelineRunWithoutTokenIT`): the token, no session and no
+  cookie on `/internal/**`, the D-2…D-1 range for a fixed `Clock` (also a DST day), 409, 404.
+  `api/FreshnessIT`: which runs move the label. `PipelineStartupRecoveryIT`: recovery before the port.
 - `PipelineAgentIT`: the whole graph on Postgres with a source on a local server and a scripted
   `LlmClient` — range, the same range again, a leftover's one attempt per request, recovery and a late
   worker, a failing source (`failed`, the queue takes the next request), an orphaned `assessing` post,
