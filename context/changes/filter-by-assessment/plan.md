@@ -352,9 +352,9 @@ Brak migracji i zmian danych. Kształt odpowiedzi `/api/posts` bez zmian, nowe p
 
 #### Automated
 
-- [ ] 1.1 Testy backendu przechodzą, w tym przypadki (a)–(h)
-- [ ] 1.2 Istniejące testy feedu bez zmian przechodzą
-- [ ] 1.3 Trasa nadal wymaga sesji: `AuthorizationCompletenessIT` przechodzi bez zmian listy tras
+- [x] 1.1 Testy backendu przechodzą, w tym przypadki (a)–(h)
+- [x] 1.2 Istniejące testy feedu bez zmian przechodzą
+- [x] 1.3 Trasa nadal wymaga sesji: `AuthorizationCompletenessIT` przechodzi bez zmian listy tras
 
 #### Manual
 
