@@ -35,6 +35,13 @@ public class User {
 	@Column(nullable = false)
 	private Role role;
 
+	/**
+	 * {@code false} for an account that is not a person ({@link SystemAccount}): it never logs in and
+	 * never has a password ({@code ck_users_login_password}).
+	 */
+	@Column(name = "login_enabled", nullable = false)
+	private boolean loginEnabled = true;
+
 	@CreationTimestamp
 	@Column(name = "created_at", nullable = false, updatable = false)
 	private Instant createdAt;
@@ -64,6 +71,11 @@ public class User {
 
 	public Role getRole() {
 		return role;
+	}
+
+	/** {@code false} for a system account, which cannot log in whatever its password. */
+	public boolean isLoginEnabled() {
+		return loginEnabled;
 	}
 
 	public Instant getCreatedAt() {

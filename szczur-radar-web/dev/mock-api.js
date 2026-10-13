@@ -7,6 +7,11 @@
  *       'empty'        no runs, no failed posts, the feed's total is 0,
  *       'loading-next' feed page 0 answers, later pages hang 60 s (admin as in 'data'),
  *       'error-next'   feed page 0 answers, later pages answer 500 (admin as in 'data').
+ * FRESHNESS (independent of MODE; another variant = a copy of this file with FRESHNESS replaced), the label above the
+ * feed — /api/freshness answers like pipeline/api/FreshnessController.java:
+ *       'date'  { lastUpdatedAt: '2026-10-13T03:12:00Z' } (05:12 in Warsaw), the default,
+ *       'none'  { lastUpdatedAt: null }: no update yet,
+ *       'error' 500; every other route answers as MODE says.
  * /api/posts answers like posts/api/PostController.java: page, size, total; a page past the end (e.g. /?page=9)
  * is 200 with items [] and the real total.
  * AUTH: 'admin' (/api/auth/me → the admin) or 'anonymous' (/api/auth/me → 401), for the public /activate and /login.
@@ -88,6 +93,7 @@ async page => {
   const MODE = 'data'
   const AUTH = 'admin'
   const ACTIVATION = 'valid'
+  const FRESHNESS = 'date'
   const hang = () => new Promise((r) => setTimeout(r, 60000))
   const json = (route, body, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) })
   await page.unrouteAll().catch(() => {})
@@ -116,6 +122,10 @@ async page => {
     if (p === '/api/admin/pipeline-runs' && route.request().method() === 'GET') return json(route, { items: MODE === 'empty' ? [] : runs, page: 0, size: 20, total: MODE === 'empty' ? 0 : runs.length })
     if (p === '/api/admin/pipeline-runs') return json(route, { detail: 'pipeline_busy' }, 409)
     if (p === '/api/admin/posts/failed') return json(route, { items: MODE === 'empty' ? [] : failed, page: 0, size: 50, total: MODE === 'empty' ? 0 : failed.length })
+    if (p === '/api/freshness') {
+      if (FRESHNESS === 'error') return json(route, { detail: 'internal_error' }, 500)
+      return json(route, { lastUpdatedAt: FRESHNESS === 'none' ? null : '2026-10-13T03:12:00Z' })
+    }
     if (p === '/api/posts') {
       const pageNumber = Number(url.searchParams.get('page') ?? 0)
       const size = Number(url.searchParams.get('size') ?? 50)

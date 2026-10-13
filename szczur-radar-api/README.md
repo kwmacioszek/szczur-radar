@@ -16,9 +16,10 @@ Pakiet bazowy `pl.szczurradar.api`, pakiety według funkcji — nie według wars
 | Pakiet | Zawartość |
 | --- | --- |
 | `health` | sondy `GET /api/health` (bez bazy) i `GET /api/ready` (`SELECT 1`, 503 przy błędzie) |
-| `user` | encja `User`, `UserRepository` (Spring Data JPA), `Role` (enum), `Emails` (jedna normalizacja e-maila) |
+| `user` | encja `User`, `UserRepository` (Spring Data JPA), `Role` (enum), `Emails` (jedna normalizacja e-maila), `SystemAccount` (konta, które nie są osobami: `SCHEDULER`) |
 | `auth` | logowanie JSON, `/me`, logout, limiter prób, filtr Origin, odnawianie ciasteczka sesji, argon2 (`Passwords`); `auth/activation` — jednorazowe linki aktywacyjne (S-07): `ActivationLinks` (wydanie, reset konta, sprawdzenie i użycie linku), `ActivationSettings` (`WEB_PUBLIC_URL`, `ACTIVATION_LINK_TTL`), encja tokenu (w bazie tylko SHA-256) i publiczny `ActivationController` |
 | `cli` | komendy operatora: `migrate`, `create-admin`, `create-user`, `reset-password` (dyspozytor `CommandLine`; sprawdzenia przed startem Springa w `CommandChecks`; dwie komendy z linkiem aktywacyjnym na wspólnym `LinkCommand`) |
+| `internal` | token crona `PIPELINE_TRIGGER_TOKEN` (`PipelineTriggerToken`) i jego filtr dla tras `/internal/**` (`PipelineTriggerTokenFilter`) |
 | `config` | Spring Security, sesja i ciasteczko, format błędów `{"detail": …}`, konfiguracja dostawcy LLM |
 | `agents` | agenci Embabel; `agents/assessor` — kontrakt oceny V2 jako kod (model, schemat, parser, walidator D1–D15, odsiew), prompt z wersją, `Assessor` (jedno wywołanie modelu na wpis) i `AssessorAgent` |
 | `llm` | klienci dostawców LLM: w korzeniu API (`LlmClient` i typy wywołania, `LlmClientFactory`), po podpakiecie na dostawcę (`gemini/`, `deepseek/`, `openrouter/`), `transport/` — jedyne ponowienia (`TransportRetry`), schematy, maskowanie; mapa w `llm/CLAUDE.md` |
@@ -83,11 +84,24 @@ Przebieg pipeline'u pobiera wpisy i znaleziska z Wykopu (S-02) kluczem aplikacji
 
 ## Pipeline
 
-Przebieg działa w procesie API, w tle (mapa: `src/main/java/pl/szczurradar/api/pipeline/CLAUDE.md`). Admin uruchamia go w `/admin` albo endpointem; przebiegi trafiają do kolejki i idą po jednym. Restart lub deploy przerywa trwający przebieg: przy starcie API oznacza go jako `interrupted` i oddaje jego posty do ponowienia.
+Przebieg działa w procesie API, w tle (mapa: `src/main/java/pl/szczurradar/api/pipeline/CLAUDE.md`). Admin uruchamia go w `/admin` albo endpointem; co noc uruchamia go serwis cron `pipeline-trigger` (S-05, `tools/pipeline-trigger/`). Przebiegi trafiają do kolejki i idą po jednym. Restart lub deploy przerywa trwający przebieg: przy starcie API, zanim otworzy port, oznacza go jako `interrupted` i oddaje jego posty do ponowienia.
 
 | Zmienna | Znaczenie |
 | --- | --- |
 | `PIPELINE_LLM_CONCURRENCY` | liczba równoległych ocen LLM w przebiegu (domyślnie `4`, min. `1`) |
+| `PIPELINE_TRIGGER_TOKEN` | token crona dla tras `/internal/**` — sekret: nigdy w repo, logach ani argumentach. Opcjonalny: bez niego każde żądanie `/internal/**` dostaje 401. Ustawiony musi mieć co najmniej 32 znaki (np. `openssl rand -hex 32`), inaczej serwer nie startuje (komunikat bez wartości). Czyta go tylko serwer, nie `migrate` ani `create-admin` |
+
+- **Przebieg dzienny:** `POST /internal/pipeline-runs/daily` z nagłówkiem `Authorization: Bearer <token>`, bez treści, uruchamia ten sam start co przycisk admina dla dni D-2…D-1 (kalendarz warszawski) ze wszystkich skonfigurowanych źródeł. Zleceniodawcą jest konto systemowe `scheduler@system.invalid` (migracja `V6`, `login_enabled = false`, bez hasła — nie zaloguje się). Odpowiedzi: 202 `[{id, kind}]`, 409 `pipeline_busy`, 503 `source_not_configured`, 401 bez tokenu lub z innym. `GET /internal/pipeline-runs/{id}` zwraca status przebiegu z licznikami (404 `not_found` dla nieznanego id).
+- Trasy `/internal/**` mają osobny, bezstanowy łańcuch filtrów (`config/SecurityConfig`): tylko token, nigdy sesja, bez ciasteczek; token nie działa na `/api/**`. Na Railway osiąga je tylko sieć prywatna, bo Caddy przekazuje wyłącznie `/api/*`.
+- Lokalnie (token tylko dla lokalnej bazy; `PG*`, `LLM_*`, `WYKOP_*` jak niżej, w tym samym terminalu co jar):
+  ```bash
+  export PIPELINE_TRIGGER_TOKEN=$(openssl rand -hex 32)
+  java -jar target/szczur-radar-api.jar
+  # w drugim terminalu, z tym samym PIPELINE_TRIGGER_TOKEN (token przez stdin, nie w argumentach):
+  printf 'header = "Authorization: Bearer %s"\n' "$PIPELINE_TRIGGER_TOKEN" \
+    | curl -sS -X POST --config - http://localhost:8000/internal/pipeline-runs/daily
+  ```
+  Przebieg widać w `/admin`. Przez `npm run dev` (`http://localhost:5173/internal/…`) żądanie nie trafia do API: Vite przekazuje tylko `/api`. Cały cron lokalnie: `tools/pipeline-trigger/test.sh` (atrapa API, bez Railway).
 
 - Zakres dat: najpierw (jeśli są) ponowienie nieudanych postów, potem pobranie zakresu z wybranych źródeł (puste = wszystkie skonfigurowane), zapis nowych postów i ocena tylko tych, które ten przebieg zapisał pierwszy. Ponowny zakres tego samego dnia nie dodaje postów.
 - Post ma do 3 policzonych prób oceny (`failed`); trzecia nieudana robi z niego `dead` (bez ponawiania). Błąd techniczny nie zużywa próby.
@@ -205,7 +219,7 @@ source ~/.config/szczur-radar/llm.env   # LLM_API_PROVIDER, LLM_MODEL, LLM_API_K
 
 - **`*Test`** (Surefire): testy jednostkowe bez kontekstu aplikacji i bez Dockera — JUnit, AssertJ, Mockito.
 - **`*IT`** (Failsafe): `@SpringBootTest` + `MockMvcTester` + Testcontainers Postgres 18 (`TestcontainersConfiguration`, `@ServiceConnection`). Brak Dockera **wywala** `verify` — testy nie są pomijane. CI (job `backend`) uruchamia to samo.
-- **Autoryzacja:** każda nowa trasa jest chroniona domyślnie (deny-by-default w `config/SecurityConfig`). Trasa publiczna wymaga wpisu w `SecurityConfig` **i** w `PUBLIC_ROUTES` w `AuthorizationCompletenessIT` z uzasadnieniem — test woła każde mapowanie bez sesji i oczekuje 401. Trasy admina idą pod `/api/admin/` (rola ADMIN, 403 `forbidden` dla zwykłego użytkownika).
+- **Autoryzacja:** każda nowa trasa jest chroniona domyślnie (deny-by-default w `config/SecurityConfig`). Trasa publiczna wymaga wpisu w `SecurityConfig` **i** w `PUBLIC_ROUTES` w `AuthorizationCompletenessIT` z uzasadnieniem — test woła każde mapowanie bez sesji i oczekuje 401. Trasy admina idą pod `/api/admin/` (rola ADMIN, 403 `forbidden` dla zwykłego użytkownika). Trasy `/internal/**` (cron) bez tokenu dają 401, więc nie trafiają do `PUBLIC_ROUTES`.
 - **`measurement`** (tag JUnit, kod tylko w `src/test/java/.../measurement/`): przebiegi na żywych API z kluczami z powłoki — domyślne `test`/`verify` (i CI) je pomijają; uruchomienie: `./mvnw -Pmeasurement test -Dtest=<Klasa>` (bez Springa i Dockera), opis w `src/test/java/pl/szczurradar/api/measurement/README.md`.
 - **Fixture'y usług zewnętrznych** (Wykop, dostawcy LLM): prawdziwe odpowiedzi jako JSON w `src/test/resources/fixtures/<usługa>/`, bez wymyślanych przykładów.
 
@@ -213,8 +227,8 @@ source ~/.config/szczur-radar/llm.env   # LLM_API_PROVIDER, LLM_MODEL, LLM_API_K
 
 - Trasy: `GET /api/health`, `GET /api/ready`, `POST /api/auth/login` (JSON `{email, password}`), `POST /api/auth/logout` (zawsze 204), `GET /api/auth/me` → `{id, email, role}`.
 - Aktywacja linkiem (S-07), trasy publiczne: `POST /api/auth/activation/lookup` (`{token}` → 200 `{email}`) i `POST /api/auth/activation` (`{token, password}` → 204). Token SPA bierze z fragmentu linku i wysyła tylko w body. Obie trasy nie tworzą sesji i nie ustawiają ciasteczka; aktywacja usuwa wszystkie sesje konta, a potem osoba loguje się przez `POST /api/auth/login`. Hasło spoza polityki (`password_policy`) nie zużywa linku.
-- Feed i pipeline (S-02): `GET /api/posts?page&size` (ocenione posty od najnowszych), admin: `POST /api/admin/pipeline-runs` (`{from, to, sources?}` albo `{postIds}` → 202), `GET /api/admin/pipeline-runs` (przebiegi z krokami i licznikami), `GET /api/admin/pipeline-runs/sources` (`[{source, configured}]`), `GET /api/admin/posts/failed` (nieudane i martwe z ostatnią próbą), `GET /api/admin/llm/check` (jedno małe, prawdziwe wywołanie skonfigurowanym kluczem i modelem: `{provider, model, ok, refused, answeredBy, error}`).
-- Błędy aplikacji mają kształt `{"detail": "<kod>"}`: `invalid_credentials`, `not_authenticated`, `forbidden`, `too_many_attempts` (+ `Retry-After`), `cross_origin`, `invalid_request`, `unsupported_media_type`, `activation_link_invalid` (400: link nieznany, użyty, wygasły albo zastąpiony nowszym — nieodróżnialnie), `password_policy` (400: hasło spoza 12–128 znaków), `pipeline_busy` (409), `post_dead` (400), `source_not_configured` (503). Nieznane pola w JSON są odrzucane.
+- Feed i pipeline (S-02): `GET /api/posts?page&size` (ocenione posty od najnowszych), `GET /api/freshness` (S-05, każda zalogowana rola: `{lastUpdatedAt}` — koniec przebiegu RANGE `succeeded`/`partial` z najdalej sięgającym zakresem albo `null`), admin: `POST /api/admin/pipeline-runs` (`{from, to, sources?}` albo `{postIds}` → 202), `GET /api/admin/pipeline-runs` (przebiegi z krokami i licznikami), `GET /api/admin/pipeline-runs/sources` (`[{source, configured}]`), `GET /api/admin/posts/failed` (nieudane i martwe z ostatnią próbą), `GET /api/admin/llm/check` (jedno małe, prawdziwe wywołanie skonfigurowanym kluczem i modelem: `{provider, model, ok, refused, answeredBy, error}`).
+- Błędy aplikacji mają kształt `{"detail": "<kod>"}`: `invalid_credentials`, `not_authenticated`, `forbidden`, `too_many_attempts` (+ `Retry-After`), `cross_origin`, `invalid_request`, `unsupported_media_type`, `activation_link_invalid` (400: link nieznany, użyty, wygasły albo zastąpiony nowszym — nieodróżnialnie), `password_policy` (400: hasło spoza 12–128 znaków), `pipeline_busy` (409), `post_dead` (400), `source_not_configured` (503), `not_found` (404, status przebiegu na `/internal/**`). Nieznane pola w JSON są odrzucane.
 - Sesja: ciasteczko `sr_session` (`HttpOnly; Secure; SameSite=Strict; Path=/api; Max-Age=30 dni`), dane w tabelach `SPRING_SESSION*`; wygasa po 30 dniach bezczynności, ciasteczko jest odnawiane po każdym udanym, uwierzytelnionym żądaniu API. Unieważnienie wszystkich sesji użytkownika: `FindByIndexNameSessionRepository.findByPrincipalName(<uuid>)` (principal = UUID użytkownika); komendy CLI nie mają repozytorium sesji, więc `reset-password` usuwa wiersze `spring_session` tego konta SQL-em.
 - CSRF: `SameSite=Strict` + `OriginGuardFilter` (obcy `Origin` przy zapisie → 403); tokeny CSRF Springa są wyłączone.
 - Limiter: 5 nieudanych prób / 15 min na e-mail i 20 na IP (`X-Real-IP` z krawędzi Railway), w pamięci procesu — poprawny przy jednej replice.

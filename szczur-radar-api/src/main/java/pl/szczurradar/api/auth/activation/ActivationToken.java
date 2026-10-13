@@ -10,7 +10,7 @@ import jakarta.persistence.Table;
 
 /**
  * The one-time activation link of an account ({@code activation_tokens}, owned by Flyway,
- * {@code V6__create_activation_tokens.sql}): at most one per account, holding only the hex SHA-256 of
+ * {@code V7__create_activation_tokens.sql}): at most one per account, holding only the hex SHA-256 of
  * the token. Rows are written by {@link ActivationTokenRepository#upsert} (a new link replaces the
  * previous one) and deleted when the link is used; JPA only reads and deletes them.
  */

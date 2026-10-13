@@ -1,5 +1,6 @@
 package pl.szczurradar.api.pipeline.api;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
@@ -16,7 +17,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -26,10 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import pl.szczurradar.api.config.ApiError;
 import pl.szczurradar.api.config.ErrorCode;
-import pl.szczurradar.api.pipeline.PipelineBusyException;
 import pl.szczurradar.api.pipeline.PipelineRunService;
-import pl.szczurradar.api.pipeline.PostDeadException;
-import pl.szczurradar.api.pipeline.SourceNotConfiguredException;
 import pl.szczurradar.api.pipeline.run.PipelineRun;
 import pl.szczurradar.api.pipeline.run.PipelineRunRepository;
 import pl.szczurradar.api.pipeline.run.PipelineRunStep;
@@ -41,7 +38,10 @@ import pl.szczurradar.api.pipeline.run.StepStatus;
 import pl.szczurradar.api.pipeline.step.SourceIngest;
 import pl.szczurradar.api.sources.Source;
 
-/** The admin's pipeline runs: start them and see their history (admin only: {@code /api/admin/**}). */
+/**
+ * The admin's pipeline runs: start them and see their history (admin only: {@code /api/admin/**}).
+ * The service's refusals become API errors in {@link PipelineRunExceptionHandler}.
+ */
 @RestController
 @RequestMapping("/api/admin/pipeline-runs")
 class PipelineRunController {
@@ -60,12 +60,15 @@ class PipelineRunController {
 
 	private final SourceIngest sources;
 
+	private final Clock clock;
+
 	PipelineRunController(PipelineRunService service, PipelineRunRepository runs, PipelineRunStepRepository steps,
-			SourceIngest sources) {
+			SourceIngest sources, Clock clock) {
 		this.service = service;
 		this.runs = runs;
 		this.steps = steps;
 		this.sources = sources;
+		this.clock = clock;
 	}
 
 	/**
@@ -75,7 +78,7 @@ class PipelineRunController {
 	 */
 	@PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
 	ResponseEntity<?> start(@RequestBody StartRequest request, Authentication authentication) {
-		if (!request.valid(LocalDate.now(PipelineRunService.ZONE))) {
+		if (!request.valid(LocalDate.ofInstant(clock.instant(), PipelineRunService.ZONE))) {
 			return ApiError.response(ErrorCode.INVALID_REQUEST);
 		}
 		UUID admin = UUID.fromString(authentication.getName());
@@ -105,21 +108,6 @@ class PipelineRunController {
 	@GetMapping("/sources")
 	List<SourceIngest.SourceState> sources() {
 		return sources.states();
-	}
-
-	@ExceptionHandler(PipelineBusyException.class)
-	ResponseEntity<ApiError> busy() {
-		return ApiError.response(ErrorCode.PIPELINE_BUSY);
-	}
-
-	@ExceptionHandler(PostDeadException.class)
-	ResponseEntity<ApiError> dead() {
-		return ApiError.response(ErrorCode.POST_DEAD);
-	}
-
-	@ExceptionHandler(SourceNotConfiguredException.class)
-	ResponseEntity<ApiError> sourceNotConfigured() {
-		return ApiError.response(ErrorCode.SOURCE_NOT_CONFIGURED);
 	}
 
 	/**
