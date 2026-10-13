@@ -17,7 +17,14 @@ public sealed interface IssueOutcome permits IssuedLink, IssueOutcome.Refused {
 		EMAIL_TAKEN,
 
 		/** {@code resetPassword}: there is no account with this e-mail. */
-		NO_ACCOUNT
+		NO_ACCOUNT,
+
+		/**
+		 * {@code createUser}, {@code resetPassword}: the e-mail belongs to a system account
+		 * ({@code login_enabled = false}, {@code user/SystemAccount}), which never logs in, so it never
+		 * gets a link.
+		 */
+		SYSTEM_ACCOUNT
 
 	}
 

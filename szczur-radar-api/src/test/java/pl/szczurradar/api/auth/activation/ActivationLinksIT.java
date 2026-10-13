@@ -33,6 +33,7 @@ import pl.szczurradar.api.auth.Passwords;
 import pl.szczurradar.api.cli.MigrateCommand;
 import pl.szczurradar.api.persistence.Sha256;
 import pl.szczurradar.api.user.Role;
+import pl.szczurradar.api.user.SystemAccount;
 import pl.szczurradar.api.user.User;
 import pl.szczurradar.api.user.UserRepository;
 
@@ -156,6 +157,21 @@ class ActivationLinksIT {
 		assertThat(links.resetPassword(email, TTL))
 			.isEqualTo(new IssueOutcome.Refused(IssueOutcome.Reason.NO_ACCOUNT));
 		assertThat(users.findByEmail(email)).isEmpty();
+	}
+
+	@Test
+	void aSystemAccountGetsNoLinkAndNothingChanges() {
+		SystemAccount scheduler = SystemAccount.SCHEDULER;
+		IssueOutcome refused = new IssueOutcome.Refused(IssueOutcome.Reason.SYSTEM_ACCOUNT);
+
+		assertThat(links.createUser(scheduler.email(), Role.ADMIN, TTL)).isEqualTo(refused);
+		assertThat(links.resetPassword(scheduler.email(), TTL)).isEqualTo(refused);
+
+		User account = users.findById(scheduler.id()).orElseThrow();
+		assertThat(account.isLoginEnabled()).isFalse();
+		assertThat(account.getRole()).isEqualTo(Role.USER);
+		assertThat(account.getPasswordHash()).isNull();
+		assertThat(tokens.findById(scheduler.id())).isEmpty();
 	}
 
 	@Test

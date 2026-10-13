@@ -21,7 +21,7 @@ import pl.szczurradar.api.user.Role;
  * like {@code create-admin}; the steps and exit codes are in {@link LinkCommand}.
  *
  * <p>An e-mail that already has an account is refused (exit 1): {@code reset-password} issues a new
- * link to an existing account.
+ * link to an existing account, except a system account ({@code user/SystemAccount}), which never gets one.
  */
 public final class CreateUserCommand extends LinkCommand {
 

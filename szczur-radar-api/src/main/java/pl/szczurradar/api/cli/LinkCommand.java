@@ -145,6 +145,8 @@ abstract sealed class LinkCommand implements Command permits CreateUserCommand, 
 					+ Option.EMAIL.flag() + " " + email;
 			case NO_ACCOUNT -> "No account with e-mail " + email + "; nothing was changed. To create one: "
 					+ CommandType.CREATE_USER.cliName() + " " + Option.EMAIL.flag() + " " + email;
+			case SYSTEM_ACCOUNT -> "The account " + email + " is a system account: it never logs in, so it gets"
+					+ " no activation link; nothing was changed.";
 		};
 	}
 

@@ -36,6 +36,7 @@ import pl.szczurradar.api.auth.activation.ActivationToken;
 import pl.szczurradar.api.auth.activation.ActivationTokenRepository;
 import pl.szczurradar.api.persistence.Sha256;
 import pl.szczurradar.api.user.Role;
+import pl.szczurradar.api.user.SystemAccount;
 import pl.szczurradar.api.user.User;
 import pl.szczurradar.api.user.UserRepository;
 
@@ -143,6 +144,21 @@ class LinkCommandIT {
 		assertThat(user.getRole()).isEqualTo(Role.USER);
 		assertThat(passwordEncoder.matches(PASSWORD, user.getPasswordHash())).isTrue();
 		assertThat(tokens.findById(id)).isEmpty();
+	}
+
+	@Test
+	void bothCommandsRefuseASystemAccount() {
+		SystemAccount scheduler = SystemAccount.SCHEDULER;
+
+		ExitCode created = run(CreateUserCommand::new, "--email", scheduler.email());
+		ExitCode reset = run(ResetPasswordCommand::new, "--email", scheduler.email());
+
+		assertThat(created).isEqualTo(ExitCode.REFUSED);
+		assertThat(reset).isEqualTo(ExitCode.REFUSED);
+		assertThat(stderr().lines().filter(line -> line.contains("is a system account")).count()).isEqualTo(2);
+		assertThat(stdout()).isEmpty();
+		assertThat(users.findById(scheduler.id()).orElseThrow().getPasswordHash()).isNull();
+		assertThat(tokens.findById(scheduler.id())).isEmpty();
 	}
 
 	// --- reset-password ---------------------------------------------------------------------------

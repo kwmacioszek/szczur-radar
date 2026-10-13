@@ -169,6 +169,7 @@ Obie komendy wydają jednorazowy link do ustawienia hasła. Nie pytają o hasło
 
 - `create-user --email <e-mail> [--role user|admin]` zakłada konto bez hasła (domyślnie rola `user`) i wypisuje jego link. Zajęty e-mail → odmowa z podpowiedzią `reset-password`.
 - `reset-password --email <e-mail>` przywraca dowolne istniejące konto, także admina, do stanu „czeka na aktywację”. W jednej transakcji kasuje hasło, usuwa wszystkie sesje konta (wylogowanie wszędzie) i wydaje nowy link; poprzedni link przestaje działać, rola zostaje. Nieznany e-mail → odmowa z podpowiedzią `create-user`. Ustawienie hasła linkiem jeszcze raz usuwa sesje konta: logowanie, które sprawdziło hasło przed zatwierdzeniem resetu, zapisuje sesję już po nim, więc ta sesja kończy się najpóźniej przy aktywacji.
+- Konto systemowe (`login_enabled = false`, np. `scheduler@system.invalid` z S-05, `user/SystemAccount`) nigdy się nie loguje, więc nie dostaje linku: obie komendy odmawiają (kod 1, „… is a system account …”) i nic nie zapisują, a link do takiego konta jest nieważny.
 
 Na stdout: jedna linia opisu (konto, rola, ważność do czasu UTC, jednorazowość), a w ostatniej linii sam link `<WEB_PUBLIC_URL>/activate#<token>`. Osoba otwiera link, ustawia hasło (12–128 znaków) i loguje się na `/login`. Link działa raz, a nowy link tego samego konta unieważnia poprzedni.
 
@@ -186,7 +187,7 @@ Na Railway `WEB_PUBLIC_URL` pochodzi z `.railway/railway.ts`: referencja `https:
 Kody wyjścia:
 
 - 0: link wydany;
-- 1: odmowa (zajęty e-mail albo brak konta; nic nie zapisano) albo błąd;
+- 1: odmowa (zajęty e-mail, brak konta albo konto systemowe; nic nie zapisano) albo błąd;
 - 2: błąd użycia lub konfiguracji (brak/zły e-mail, nieznana rola lub opcja, brak zmiennych `PG*`, brak/zły `WEB_PUBLIC_URL`, `ACTIVATION_LINK_TTL` bez jednostki lub poza zakresem); komunikat nazywa opcję albo zmienną.
 
 ```bash

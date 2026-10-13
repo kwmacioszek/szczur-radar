@@ -31,6 +31,8 @@ import pl.szczurradar.api.user.UserRepository;
  *       the previous, which stops working.
  *   <li>A token is 32 random bytes in base64url without padding (43 characters). The database holds
  *       only its hex SHA-256; the raw token leaves this class only in an {@link IssuedLink}.
+ *   <li>A system account ({@code login_enabled = false}, {@code user/SystemAccount}) never gets a link:
+ *       issuing one is refused, and a link to one is invalid.
  *   <li>Nothing here logs a token, a link or a password.
  * </ul>
  *
@@ -70,15 +72,17 @@ public class ActivationLinks {
 	 * Creates an account without a password and its link, in one transaction.
 	 *
 	 * @param email an already normalized and validated address
-	 * @return the link, or {@link IssueOutcome.Reason#EMAIL_TAKEN} with nothing written, also when another
-	 *     command takes the e-mail between the check and the insert
+	 * @return the link, or with nothing written {@link IssueOutcome.Reason#EMAIL_TAKEN} (also when another
+	 *     command takes the e-mail between the check and the insert) or
+	 *     {@link IssueOutcome.Reason#SYSTEM_ACCOUNT}
 	 */
 	public IssueOutcome createUser(String email, Role role, Duration ttl) {
 		requirePositive(ttl);
 		try {
 			return inTransaction(status -> {
-				if (users.existsByEmail(email)) {
-					return new IssueOutcome.Refused(IssueOutcome.Reason.EMAIL_TAKEN);
+				Optional<User> existing = users.findByEmail(email);
+				if (existing.isPresent()) {
+					return takenBy(existing.get());
 				}
 				// Flushed now: the token row references the account.
 				User user = users.saveAndFlush(new User(email, null, role));
@@ -87,8 +91,9 @@ public class ActivationLinks {
 		}
 		catch (DataIntegrityViolationException ex) {
 			// The transaction has rolled back; a concurrent command's account is what took the e-mail.
-			if (users.existsByEmail(email)) {
-				return new IssueOutcome.Refused(IssueOutcome.Reason.EMAIL_TAKEN);
+			Optional<User> existing = users.findByEmail(email);
+			if (existing.isPresent()) {
+				return takenBy(existing.get());
 			}
 			throw ex;
 		}
@@ -100,7 +105,8 @@ public class ActivationLinks {
 	 * is logged out everywhere and its old password no longer works.
 	 *
 	 * @param email an already normalized and validated address
-	 * @return the link, or {@link IssueOutcome.Reason#NO_ACCOUNT} with nothing written
+	 * @return the link, or {@link IssueOutcome.Reason#NO_ACCOUNT} or {@link IssueOutcome.Reason#SYSTEM_ACCOUNT}
+	 *     with nothing written
 	 */
 	public IssueOutcome resetPassword(String email, Duration ttl) {
 		requirePositive(ttl);
@@ -110,6 +116,9 @@ public class ActivationLinks {
 				return new IssueOutcome.Refused(IssueOutcome.Reason.NO_ACCOUNT);
 			}
 			User user = found.get();
+			if (!user.isLoginEnabled()) {
+				return new IssueOutcome.Refused(IssueOutcome.Reason.SYSTEM_ACCOUNT);
+			}
 			// The token row before the account row: the order activate() locks them in, so a reset and an
 			// activation of the same account never deadlock. The account's update is flushed at commit.
 			IssuedLink link = issue(user, ttl);
@@ -119,7 +128,7 @@ public class ActivationLinks {
 		});
 	}
 
-	/** The e-mail of the account a valid link activates; changes nothing. */
+	/** The e-mail of the account a valid link activates; changes nothing. A system account has none. */
 	public Optional<String> lookup(String token) {
 		return tokens.findEmailOfValid(Sha256.hex(token), Instant.now());
 	}
@@ -130,7 +139,7 @@ public class ActivationLinks {
 	 * <ol>
 	 *   <li>the password policy, before any database work: a refused password leaves the link usable;
 	 *   <li>the valid token, locked until the end of the transaction: of two uses of one link, the
-	 *       second waits and then finds nothing;
+	 *       second waits and then finds nothing. A token of a system account is invalid;
 	 *   <li>only then argon2 (16 MB), so invalid links never cost a hash;
 	 *   <li>the account's password set, the token deleted and the account's sessions deleted, in the same
 	 *       transaction.
@@ -150,6 +159,11 @@ public class ActivationLinks {
 				return ActivationResult.LINK_INVALID;
 			}
 			User user = users.findById(valid.get().getUserId()).orElseThrow();
+			if (!user.isLoginEnabled()) {
+				// Never issued (createUser and resetPassword refuse it), and ck_users_login_password would
+				// refuse the password anyway: answered as any invalid link, nothing changes.
+				return ActivationResult.LINK_INVALID;
+			}
 			user.setPassword(passwordEncoder.encode(password));
 			tokens.delete(valid.get());
 			// A login already past its password check when a reset committed stores its session after the
@@ -157,6 +171,12 @@ public class ActivationLinks {
 			deleteSessions(user.getId());
 			return ActivationResult.ACTIVATED;
 		});
+	}
+
+	/** Why an existing account gets no new account with its e-mail. */
+	private static IssueOutcome.Refused takenBy(User existing) {
+		return new IssueOutcome.Refused(existing.isLoginEnabled() ? IssueOutcome.Reason.EMAIL_TAKEN
+				: IssueOutcome.Reason.SYSTEM_ACCOUNT);
 	}
 
 	/** A new token for {@code user}, replacing its previous one; call inside a transaction. */

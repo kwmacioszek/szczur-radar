@@ -26,6 +26,7 @@ import pl.szczurradar.api.cli.MigrateCommand;
 import pl.szczurradar.api.config.SessionConfig;
 import pl.szczurradar.api.persistence.Sha256;
 import pl.szczurradar.api.user.Role;
+import pl.szczurradar.api.user.SystemAccount;
 
 /**
  * The public activation API over HTTP ({@link ActivationController}): checking a link, setting the
@@ -129,6 +130,28 @@ class ActivationIT {
 		assertThat(lookup(token)).hasStatusOk();
 		assertThat(activate(token, PASSWORD)).hasStatus(HttpStatus.NO_CONTENT);
 		assertThat(login(email, PASSWORD)).hasStatusOk();
+	}
+
+	@Test
+	void aLinkToASystemAccountIsInvalid() {
+		// The commands never issue one; a token row for it must still not set a password.
+		UUID scheduler = SystemAccount.SCHEDULER.id();
+		String token = "system-" + UUID.randomUUID();
+		jdbc.sql("INSERT INTO activation_tokens (user_id, token_hash, expires_at)"
+				+ " VALUES (?, ?, now() + interval '1 hour')")
+			.params(scheduler, Sha256.hex(token))
+			.update();
+		try {
+			assertLinkInvalid(lookup(token));
+			assertLinkInvalid(activate(token, PASSWORD));
+			assertThat(jdbc.sql("SELECT password_hash IS NULL FROM users WHERE id = ?")
+				.param(scheduler)
+				.query(Boolean.class)
+				.single()).isTrue();
+		}
+		finally {
+			jdbc.sql("DELETE FROM activation_tokens WHERE user_id = ?").param(scheduler).update();
+		}
 	}
 
 	@Test

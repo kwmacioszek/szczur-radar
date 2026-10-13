@@ -13,13 +13,14 @@ import pl.szczurradar.api.auth.activation.ActivationLinks;
 import pl.szczurradar.api.auth.activation.IssuedLink;
 
 /**
- * {@code reset-password --email <e-mail>}: puts any existing account, an admin's too, back to
+ * {@code reset-password --email <e-mail>}: puts any existing account that can log in, an admin's too, back to
  * "waiting for activation" and prints a new one-time activation link (S-07, FR-028). In one
  * transaction ({@link ActivationLinks#resetPassword}) it removes the password, deletes the account's
  * sessions, so it is signed out everywhere, and replaces its earlier link. This is also how an admin
  * who lost the password gets back in. The steps and exit codes are in {@link LinkCommand}.
  *
- * <p>An e-mail without an account is refused (exit 1): {@code create-user} creates one.
+ * <p>An e-mail without an account is refused (exit 1): {@code create-user} creates one. So is a system
+ * account ({@code user/SystemAccount}), which never logs in.
  */
 public final class ResetPasswordCommand extends LinkCommand {
 

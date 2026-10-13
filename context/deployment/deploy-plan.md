@@ -477,6 +477,7 @@ PR #44 was squash-merged as `b7ee254` (11:25 UTC). CI on `main` applied `+ Creat
 - **Migration number vs S-07.** This change adds `V6__users_login_enabled_scheduler.sql`; `cli-user-onboarding` (S-07, PR #49, not merged) plans its own `V6`. Flyway refuses a migration numbered below one already applied, so whichever change lands on `main` second renumbers its migration to the next free number and fixes the version list in `MigrationsIT` before its merge, never after a deploy.
 - **System account vs S-07.** S-07's commands (`create-user`, `reset-password`, `lookup`, `activate`) must refuse an account with `login_enabled = false`; the change that lands second adds that code (posted on issue #20). The constraint `ck_users_login_password` already refuses a password for such an account.
 - **Backup manifest.** `V6` inserts one row into `users`, so the `users` count in the `db-backup` manifest grows by one after the merge.
+- **Update 2026-10-13 (S-07):** this change landed first. S-07 (PR #49) handles both points before its merge: its migration is now `V7__create_activation_tokens.sql`, and its commands and links refuse the system account (section S-07).
 
 ### PR-env verification (szczur-radar-pr-50)
 
@@ -520,6 +521,8 @@ Phase 5, the whole chain (2026-10-13, head `0969307`):
 
 **Status (2026-10-12): in the PR env (#49), not merged.** S-07 adds two operator commands that print a one-time link to set a password, and the SPA page `/activate` that opens it. Issue #20. Change: `context/changes/cli-user-onboarding/`. The commands in detail: `szczur-radar-api/README.md`, section "Komendy operatora".
 
+**Update 2026-10-13:** S-05 (#50) reached `main` first, so this change took on what was agreed on issue #20 for the change that lands second: its migration is `V7` (not `V6`), and S-05's system account gets no link (below).
+
 ### How accounts are created and recovered
 
 - `create-user --email <e-mail> [--role user|admin]` creates an account without a password (role `user` by default) and prints its link.
@@ -529,6 +532,7 @@ Phase 5, the whole chain (2026-10-13, head `0969307`):
   - replaces its link, so an earlier link stops working.
 
   The role stays. Setting the password through the link deletes the account's sessions again: a login that was already past its password check when the reset committed saves its session after the reset, and that session ends at the activation at the latest. Closing that window completely is parked after the MVP (`roadmap.md`, Parked).
+- A system account (`login_enabled = false`, today S-05's `scheduler@system.invalid`) never logs in, so it never gets a link: `create-user` and `reset-password` refuse it with exit 1 ("… is a system account …") and write nothing, and a link to one is invalid like an expired one. `ck_users_login_password` would refuse its password anyway.
 - `create-admin` stays the first-admin bootstrap. When an admin exists, it refuses and points to `reset-password` (lost access) or `create-user --role admin` (another admin).
 - Run them in the API container:
   1. Wake the API: `curl https://<web-domain>/api/health`. A sleeping service has no container, and `railway ssh` then lands on Railway's SSH gateway and runs nothing.
@@ -539,7 +543,7 @@ Phase 5, the whole chain (2026-10-13, head `0969307`):
 - Output on stdout: one line with the account, its role, "One-time activation link, valid until `<UTC time>`", then the link alone on the last line: `<WEB_PUBLIC_URL>/activate#<token>`.
 - Exit codes:
   - 0: link issued;
-  - 1: refused (e-mail taken, or no such account; nothing written) or failed;
+  - 1: refused (e-mail taken, no such account, or a system account; nothing written) or failed;
   - 2: usage or configuration error; the message names the option or variable (e.g. `Activation links are not configured: WEB_PUBLIC_URL …`).
 - The person opens the link and sees "Ustaw hasło dla `<e-mail>`". After setting a password (12–128 characters), they land on `/login` with "Hasło ustawione. Zaloguj się." and the e-mail filled in. The page creates no session: they log in as usual.
 - A used, expired or replaced link shows "Link jest nieważny lub wygasł. Poproś administratora o nowy." The fix is a new link: `reset-password` for that e-mail.
@@ -591,9 +595,9 @@ Verified 2026-10-12 on commit `a21169f` (CI run 38297600946: all six jobs green)
 
 ### Runbook — after the merge (operator; tracked in issue #20, not in the plan's Progress)
 
-0. Standing rule: no merge to `main` while a run is `RUNNING` in `/admin`.
+0. Standing rule: no merge to `main` while a run is `RUNNING` in `/admin`, and not between about 00:30 and 01:30 UTC (S-05's nightly run, section S-05).
 1. **The production plan adds one variable.** Before the merge, a dry run from the PR branch (`railway config plan --environment production`) shows only `WEB_PUBLIC_URL` added on `szczur-radar-api`, with nothing destructive and no other service touched (lessons.md: check what an apply restarts). After the merge, the `railway-config` log on `main` shows the same change, and the next `railway config plan --environment production` is empty. If either plan shows anything else, stop and investigate before going on.
-2. **The variable on production.** `railway variable list -s szczur-radar-api -e production` shows `WEB_PUBLIC_URL` = `https://szczur-radar-web-production.up.railway.app`. Check the resolved value there, not only the CI log (lessons.md). The pre-deploy log shows `migrate` applying the `activation_tokens` migration, and `/api/ready` returns 200 on the public address.
+2. **The variable on production.** `railway variable list -s szczur-radar-api -e production` shows `WEB_PUBLIC_URL` = `https://szczur-radar-web-production.up.railway.app`. Check the resolved value there, not only the CI log (lessons.md). The pre-deploy log shows `migrate` applying `V7` (`create activation tokens`), and `/api/ready` returns 200 on the public address.
 3. **First use on production** (section "How accounts are created and recovered"): wake the API, `railway ssh`, then one of:
    - `create-user --email <e-mail>` for an invitee (the likely first use);
    - `reset-password --email <admin e-mail>` to recover or test the admin. This signs the admin out everywhere and blocks the old password at once, so open the new link right away.

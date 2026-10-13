@@ -28,9 +28,12 @@ public interface ActivationTokenRepository extends JpaRepository<ActivationToken
 	@Query("select t from ActivationToken t where t.tokenHash = :tokenHash and t.expiresAt > :now")
 	Optional<ActivationToken> findValidForUpdate(String tokenHash, Instant now);
 
-	/** The e-mail of the account whose valid token has this hash; reads only. */
+	/**
+	 * The e-mail of the account whose valid token has this hash; reads only. A system account
+	 * ({@code login_enabled = false}) has none.
+	 */
 	@Query("select u.email from ActivationToken t join User u on u.id = t.userId"
-			+ " where t.tokenHash = :tokenHash and t.expiresAt > :now")
+			+ " where t.tokenHash = :tokenHash and t.expiresAt > :now and u.loginEnabled = true")
 	Optional<String> findEmailOfValid(String tokenHash, Instant now);
 
 	/**
