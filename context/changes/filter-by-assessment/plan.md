@@ -344,6 +344,41 @@ Brak migracji i zmian danych. Kształt odpowiedzi `/api/posts` bez zmian, nowe p
 - Wzorzec formularza: `szczur-radar-web/src/views/AdminView.vue:178-211`
 - PR env: `context/deployment/deploy-plan.md` („PR-env verification: the web deployment's commit”)
 
+## Adaptacje w trakcie implementacji
+
+Dopisane po `/10x-impl-review` (F4, `reviews/impl-review.md`). Bloki faz powyżej zostają jak zatwierdzono; to jest zapis tego, co zbudowano inaczej i dlaczego.
+
+### Faza 1
+
+1. **Wiązanie `kind` i `direction`.** Zamiast `config/WebConfig.java` z `addFormatters` powstał `config/ContractValueBinding.java`: `@ControllerAdvice` z `@InitBinder`, który rejestruje `PropertyEditor` po `value()` dla `TargetKind` i `Direction`.
+   - **Powód:** gdy konwerter odrzucał wartość, Spring wracał do `Enum.valueOf` i przyjmował `BULLISH`.
+   - **Zachowanie:** puste = brak warunku, nieznana wartość = 400 `invalid_request` (test `badFilterValuesAreAnInvalidRequest`, także `kind=COMPANY`).
+2. **Znak ucieczki w `ILIKE`.** Jest nim `!` (`PostFilter.LIKE_ESCAPE`, `ESCAPE '!'`), a nie `\` z `research.md`, bo Hibernate parsuje backslashe w natywnym SQL. `quotePattern()` najpierw ucieka sam `!`, potem `%` i `_`.
+3. **`PostFilter`.** Normalizację tekstu (`Whitespace.strip`, pusty = `null`) robi kompaktowy konstruktor rekordu, a nie fabryka `PostFilter.of`. Każdy `PostFilter` jest więc znormalizowany.
+4. **Weryfikacja 1.4.** Zamiast lokalnego `curl` sprawdzono API w Railway PR env `szczur-radar-pr-54`: `fetch` w zalogowanej przeglądarce, z wynikiem porównanym z pełnym feedem. Decyzja użytkownika; wyniki są w `ui-after/README.md`, sekcja „PR env”.
+
+### Faza 2
+
+5. **Układ `FeedView`.** Formularz i linia wyniku `role="status"` są poza regionem `aria-busy`. Po rebase na `main` (S-03 i S-05) kolejność to `h1` → etykieta świeżości → `FeedFilter` → linia wyniku → `div.posts` z `aria-busy` i stanami, wszystko w sekcji „Posty”. `aria-busy` stoi na samej liście, jak w S-05, więc `h1` nie musi już wychodzić z sekcji.
+6. **Pusty wynik filtra.** Tekst „Żaden post nie pasuje do filtra.” jest tylko w linii wyniku. W łańcuchu stanów stoi sam przycisk „Wyczyść filtry”, żeby czytnik nie czytał tego tekstu dwa razy.
+7. **Fokus po wyczyszczeniu.**
+   - „Wyczyść filtry” z pustego wyniku przenosi fokus na nagłówek „Posty”, bo przycisk znika na czas wczytywania, jak „Spróbuj ponownie”.
+   - „Wyczyść filtry” w formularzu przenosi fokus na pole „Spółka lub temat”, bo przycisk znika razem z filtrem (impl-review F2).
+8. **Wysokość pól.** Wspólna reguła pól w `style.css` (`date`, `search`, `select`) ustawia wysokość przycisku przy każdej szerokości: `calc(1.45rem + 14px)`.
+   - Decyzja użytkownika przy weryfikacji fazy 2: pola miały 36 i 30 px przy przyciskach 40 px. Wzór poprawiono w impl-review F3.
+   - Rozwinięta lista wyboru dostaje tło `--bg` i tekst `--text-h`.
+9. **Eksport z `feedFilter.ts`.** Plik eksportuje też `normalizeQuery` i `MAX_QUERY_LENGTH`, z których korzysta `FeedFilter`, więc reguła przycinania i limit istnieją raz.
+
+### Po impl-review
+
+10. **NUL w `q`.** `q` ze znakiem NUL daje 400 `invalid_request` (`@Pattern(regexp = "[^\\x00]*")`), a nie 500: Postgres nie przyjmuje 0x00 w tekście (F1).
+11. **Ponowne „Filtruj” na dalszej stronie.** Zatwierdzenie niezmienionego filtra na stronie > 0 wraca na pierwszą stronę bez przewijania i bez fokusu na nagłówku: nawigacja formularza to akcja filtra, a nie zmiana strony (F5).
+
+### Po rebase na `main` (S-03, S-05, S-07)
+
+12. **Etykiety rodzajów celu.** S-03 dodało zbiór `targetKind` („makro i rynek”, „inne”, „nieokreślony”), a plan tej zmiany zbiór `kind` („temat makro”, „inny”, „nieustalony”). Został jeden zbiór, `targetKind` z S-03, i używają go karta, formularz filtra i widok posta. Zrzuty w `ui-after/` pokazują jeszcze dawne nazwy.
+13. **Dane pokazowe zgodne z kontraktem.** Mock i kitchen sink z S-03 mają tezy, na których opiera się każde stanowisko kierunkowe. Dodane tu cele innych rodzajów (`rynek`, `banki`, `ropa`, `guidance na Q4`, `energetyka`, `ropy`) mają swoje tezy z dosłownymi cytatami.
+
 ## Progress
 
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles. See `references/progress-format.md`.
@@ -352,36 +387,36 @@ Brak migracji i zmian danych. Kształt odpowiedzi `/api/posts` bez zmian, nowe p
 
 #### Automated
 
-- [x] 1.1 Testy backendu przechodzą, w tym przypadki (a)–(h) — 089023b
-- [x] 1.2 Istniejące testy feedu bez zmian przechodzą — 089023b
-- [x] 1.3 Trasa nadal wymaga sesji: `AuthorizationCompletenessIT` przechodzi bez zmian listy tras — 089023b
+- [x] 1.1 Testy backendu przechodzą, w tym przypadki (a)–(h) — d2225c9
+- [x] 1.2 Istniejące testy feedu bez zmian przechodzą — d2225c9
+- [x] 1.3 Trasa nadal wymaga sesji: `AuthorizationCompletenessIT` przechodzi bez zmian listy tras — d2225c9
 
 #### Manual
 
-- [x] 1.4 Lokalnie `curl` z sesją: `q` i `direction` dają oczekiwane posty i `total`, `kind=xyz` → 400 — 089023b
+- [x] 1.4 Lokalnie `curl` z sesją: `q` i `direction` dają oczekiwane posty i `total`, `kind=xyz` → 400 — d2225c9
 
 ### Phase 2: SPA — filtr w feedzie
 
 #### Automated
 
-- [x] 2.1 Testy web przechodzą, w tym `feedFilter.test.ts`, `FeedFilter.test.ts`, przypadki (a)–(g) i skan `no literals` z `FeedFilter.vue` — d1930d7
-- [x] 2.2 Typecheck i build przechodzą, a `dist/` nie zawiera kitchen sink — d1930d7
-- [x] 2.3 `dev/mock-api.js` parsuje się — d1930d7
+- [x] 2.1 Testy web przechodzą, w tym `feedFilter.test.ts`, `FeedFilter.test.ts`, przypadki (a)–(g) i skan `no literals` z `FeedFilter.vue` — 1cb9e4b
+- [x] 2.2 Typecheck i build przechodzą, a `dist/` nie zawiera kitchen sink — 1cb9e4b
+- [x] 2.3 `dev/mock-api.js` parsuje się — 1cb9e4b
 
 #### Manual
 
-- [x] 2.4 `/` z mockiem przy 1280 i 375 px w obu motywach: formularz, linia wyniku, zawężanie, pusty wynik filtra, rodzaj na karcie, bez poziomego przewijania — d1930d7
-- [x] 2.5 Kitchen sink „Pola”, „Filtr” i „Posty” w obu motywach — d1930d7
+- [x] 2.4 `/` z mockiem przy 1280 i 375 px w obu motywach: formularz, linia wyniku, zawężanie, pusty wynik filtra, rodzaj na karcie, bez poziomego przewijania — 1cb9e4b
+- [x] 2.5 Kitchen sink „Pola”, „Filtr” i „Posty” w obu motywach — 1cb9e4b
 
 ### Phase 3: Stany, zrzuty i weryfikacja w PR env
 
 #### Automated
 
-- [x] 3.1 `REPOSITORY_GUIDELINES.md` wymienia `FeedFilter`
-- [x] 3.2 Testy i build backendu i web przechodzą
-- [ ] 3.3 CI na PR jest zielone
+- [x] 3.1 `REPOSITORY_GUIDELINES.md` wymienia `FeedFilter` — 0290396
+- [x] 3.2 Testy i build backendu i web przechodzą — 0290396
+- [x] 3.3 CI na PR jest zielone — 0290396
 
 #### Manual
 
-- [x] 3.4 `ui-after/README.md` pokazuje 7 komórek macierzy w obu motywach i przy 375 px, z listą `ui-quality-checklist`
-- [x] 3.5 Railway PR env na prawdziwych danych: polska wielka litera, „ten sam cel”, pusty wynik i wyczyszczenie, lokalizacja bazy zapisana
+- [x] 3.4 `ui-after/README.md` pokazuje 7 komórek macierzy w obu motywach i przy 375 px, z listą `ui-quality-checklist` — 0290396
+- [x] 3.5 Railway PR env na prawdziwych danych: polska wielka litera, „ten sam cel”, pusty wynik i wyczyszczenie, lokalizacja bazy zapisana — 0290396

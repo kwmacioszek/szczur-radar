@@ -17,11 +17,23 @@ function oneOf<T extends string>(values: readonly T[], value: string | undefined
 }
 
 /**
+ * White space at either end, from the set of contract-v2.md §10 that the API strips
+ * (`text/Whitespace.java`). `String.trim()` is a different set: it keeps U+0085 and U+001C–U+001F and
+ * drops U+FEFF, so a link with one of them would be a filter here and none in the API.
+ */
+const WHITE_SPACE = '\\t-\\r\\x1C-\\x20\\x85\\xA0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000'
+const EDGE_WHITE_SPACE = new RegExp(`^[${WHITE_SPACE}]+|[${WHITE_SPACE}]+$`, 'g')
+
+function strip(text: string): string {
+  return text.replace(EDGE_WHITE_SPACE, '')
+}
+
+/**
  * The text as the API matches it: white space at both ends dropped, at most 100 characters, and
  * undefined when nothing is left (blank is no condition).
  */
 export function normalizeQuery(text: string | undefined): string | undefined {
-  const trimmed = text?.trim().slice(0, MAX_QUERY_LENGTH).trim()
+  const trimmed = text === undefined ? undefined : strip(strip(text).slice(0, MAX_QUERY_LENGTH))
   return trimmed ? trimmed : undefined
 }
 

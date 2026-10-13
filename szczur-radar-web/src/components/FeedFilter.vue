@@ -2,7 +2,7 @@
 // The feed filter (FR-011a): text in a target's quote, the target's kind and the author's stance on
 // that same target. `filter` is the applied one (from the address); the fields are a draft until
 // "Filtruj" or Enter. The fields follow `filter` whenever it changes (back/forward, clearing).
-import { ref, watch } from 'vue'
+import { ref, useTemplateRef, watch } from 'vue'
 import { DIRECTIONS, type Direction, type PostFilter, TARGET_KINDS, type TargetKind } from '../api/posts'
 import { MAX_QUERY_LENGTH, isFilterActive, normalizeQuery, sameFilter } from '../feedFilter'
 import { label } from '../labels'
@@ -20,6 +20,7 @@ const text = ref('')
 /** '' = any. */
 const kind = ref<TargetKind | ''>('')
 const direction = ref<Direction | ''>('')
+const textField = useTemplateRef<HTMLInputElement>('text-field')
 
 watch(
   () => props.filter,
@@ -41,13 +42,19 @@ function submit(): void {
   if (direction.value) filter.direction = direction.value
   emit('apply', filter)
 }
+
+/** The button disappears with the filter, so the focus stays in the form, on the text field. */
+function clear(): void {
+  textField.value?.focus()
+  emit('clear')
+}
 </script>
 
 <template>
   <form class="feed-filter" role="search" aria-label="Filtr postów" @submit.prevent="submit">
     <label class="field text">
       Spółka lub temat
-      <input v-model="text" type="search" :maxlength="MAX_QUERY_LENGTH" />
+      <input ref="text-field" v-model="text" type="search" :maxlength="MAX_QUERY_LENGTH" />
     </label>
     <label class="field">
       Rodzaj celu
@@ -65,7 +72,7 @@ function submit(): void {
     </label>
     <div class="actions">
       <AppButton type="submit" variant="primary">Filtruj</AppButton>
-      <AppButton v-if="isFilterActive(filter)" @click="emit('clear')">Wyczyść filtry</AppButton>
+      <AppButton v-if="isFilterActive(filter)" @click="clear">Wyczyść filtry</AppButton>
     </div>
   </form>
 </template>

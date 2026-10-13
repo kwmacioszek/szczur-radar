@@ -407,6 +407,28 @@ describe('FeedView', () => {
       expect(document.activeElement).not.toBe(heading)
     })
 
+    it('submits an unchanged filter from a later page without scrolling or moving the focus', async () => {
+      vi.mocked(fetchPosts).mockResolvedValue(answer([post('101')], 120))
+      const { wrapper, router } = await mountFeed('/?q=xtb&page=2', document.body)
+      const heading = wrapper.find('h1').element
+      const text = wrapper.find('form input[type="search"]').element as HTMLInputElement
+      text.focus()
+
+      await wrapper.find('form button[type="submit"]').trigger('click')
+      await flushPromises()
+
+      expect(router.currentRoute.value.query).toEqual({ q: 'xtb' })
+      expect(fetchPosts).toHaveBeenLastCalledWith(0, 50, { q: 'xtb' })
+      expect(window.scrollTo).not.toHaveBeenCalled()
+      expect(document.activeElement).not.toBe(heading)
+
+      // The pager still goes to the top afterwards.
+      await button(wrapper, 'Starsze').trigger('click')
+      await flushPromises()
+      expect(window.scrollTo).toHaveBeenCalledWith({ top: 0 })
+      expect(document.activeElement).toBe(heading)
+    })
+
     it('keeps the filter when paging', async () => {
       vi.mocked(fetchPosts).mockResolvedValue(answer([post('1')], 120))
       const { wrapper, router } = await mountFeed('/?q=xtb&kind=company')

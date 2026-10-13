@@ -114,9 +114,20 @@ function goTo(target: number): void {
   void router.push({ query: { ...route.query, page: target > 0 ? String(target) : undefined } })
 }
 
+/**
+ * Set while the form's navigation is in flight: its return to the first page is a filter action, even
+ * when the filter itself is unchanged, so it neither scrolls nor takes the focus.
+ */
+let fromForm = false
+
 /** A new filter starts at the first page: `page` leaves the address. */
-function applyFilter(next: PostFilter): void {
-  void router.push({ query: filterToQuery(next) })
+async function applyFilter(next: PostFilter): Promise<void> {
+  fromForm = true
+  try {
+    await router.push({ query: filterToQuery(next) })
+  } finally {
+    fromForm = false
+  }
 }
 
 function clearFilter(): void {
@@ -143,7 +154,7 @@ watch(
     const pageChanged = !first && nextPage !== previousPage
     // Another query key changed (or none: the filter is recomputed for every change of the address).
     if (!first && !filterChanged && !pageChanged) return
-    const pageOnly = pageChanged && !filterChanged
+    const pageOnly = pageChanged && !filterChanged && !fromForm
     if (pageOnly) window.scrollTo({ top: 0 })
     const moveFocus = pageOnly || focusAfterClear
     focusAfterClear = false

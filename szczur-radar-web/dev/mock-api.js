@@ -24,8 +24,9 @@
  *   400 password_policy), 'checking' (lookup hangs 60 s), 'sending' (activation hangs 60 s), 'error' (both → 500).
  *   Client-side validation errors need no mode: submit a short or mismatched password.
  * The filter (FR-011a) has the API's meaning: q, kind and direction keep the posts with one target meeting every
- * given condition — its quote contains q (Polish lower case, q trimmed, blank = no condition), its kind, its stance's
- * direction; total counts them; an unknown kind or direction (or a q over 100 characters) is 400 invalid_request.
+ * given condition — its quote contains q (Polish lower case, q stripped of the contract §10 white space, blank = no
+ * condition), its kind, its stance's direction (an empty kind or direction = no condition); total counts them; an
+ * unknown kind or direction, or a q over 100 characters or with a NUL, is 400 invalid_request.
  * E.g. /?q=orlen&direction=bullish, /?kind=macro_topic, and an empty filter result: /?q=zzz. In 'empty' mode total is
  * 0 with or without a filter.
  * Only paths starting with /api/ are mocked — a '**\/api/**' glob would also catch Vite's /src/api/*.ts modules.
@@ -220,11 +221,14 @@ async page => {
       if (MODE === 'loading' || (MODE === 'loading-next' && later)) await new Promise((r) => setTimeout(r, 60000))
       if (MODE === 'error' || (MODE === 'error-next' && later)) return json(route, { detail: 'internal_error' }, 500)
       const rawQ = url.searchParams.get('q')
-      const kind = url.searchParams.get('kind')
-      const direction = url.searchParams.get('direction')
+      // Like the API: an empty kind or direction is no condition; q loses the contract §10 white space at both ends.
+      const kind = url.searchParams.get('kind') || null
+      const direction = url.searchParams.get('direction') || null
       if ((kind !== null && !KINDS.includes(kind)) || (direction !== null && !DIRECTIONS.includes(direction))
-        || (rawQ !== null && rawQ.length > 100)) return json(route, { detail: 'invalid_request' }, 400)
-      const q = rawQ === null || rawQ.trim() === '' ? null : rawQ.trim().toLocaleLowerCase('pl')
+        || (rawQ !== null && (rawQ.length > 100 || rawQ.includes('\0')))) return json(route, { detail: 'invalid_request' }, 400)
+      const WS = '\\t-\\r\\x1C-\\x20\\x85\\xA0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000'
+      const stripped = rawQ === null ? '' : rawQ.replace(new RegExp(`^[${WS}]+|[${WS}]+$`, 'g'), '')
+      const q = stripped === '' ? null : stripped.toLocaleLowerCase('pl')
       const all = []
       for (let n = 0; n < (MODE === 'empty' ? 0 : FEED_TOTAL); n++) all.push(feedItem(n))
       const filtered = q === null && kind === null && direction === null ? all : all.filter((item) => matches(item, q, kind, direction))

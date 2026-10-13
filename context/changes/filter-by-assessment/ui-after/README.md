@@ -35,10 +35,12 @@ Uwagi do macierzy:
 | „Rodzaj celu” company, potem „Starsze” (Enter) | `/?kind=company&page=1` | `H1#feed-title` | „Pasujące do filtra: 80”, „Strona 2 z 2”, 30 kart (`p3-feed-filter-paging-1280-light.png`) |
 | Wstecz | poprzedni filtr | — | wyniki poprzedniego filtra |
 | „Wyczyść filtry” w pustym wyniku | `/` | `H1#feed-title` | „Ocenione posty: 120”, „Strona 1 z 3” |
+| „Filtruj” z niezmienionym filtrem na `/?kind=company&page=1` (po impl-review F5) | `/?kind=company` | zostaje na „Filtruj” | „Strona 1 z 2”, bez przewinięcia |
+| „Wyczyść filtry” w formularzu (po impl-review F2) | `/` | pole „Spółka lub temat” | „Ocenione posty: 120” |
 
 - Enter w polu tekstowym zatwierdza formularz w prawdziwej przeglądarce. W jsdom test sprawdza tylko warunki zatwierdzenia.
 - Przy 375 px w każdym trybie i stanie nie ma poziomego przewijania (`scrollWidth` = `clientWidth` = 375).
-- Wysokość kontrolek w wierszu formularza przy 1280: pole tekstowe, obie listy wyboru i oba przyciski mają po 40 px i stoją w jednej linii. Przed poprawką w fazie 2 było odpowiednio 36, 30 i 40 px. Pola daty w `/admin` mają teraz również 40 px, jak przycisk obok.
+- Wysokość kontrolek: pole tekstowe, obie listy wyboru i przyciski mają wysokość przycisku przy każdej szerokości (`calc(1.45rem + 14px)`, po impl-review F3): 40,1 px przy 1280 (jedna linia) i 37,2 px przy 800 (przyciski zawijają się pod pola), tak samo pola daty i przycisk w `/admin`. Przed poprawką w fazie 2 przy 1280 było 36, 30 i 40 px.
 
 ## Liczniki skanu
 

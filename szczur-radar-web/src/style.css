@@ -150,14 +150,15 @@ button:disabled {
 
 /*
  * Text, date and choice fields share one look; a view gives them no style of its own. They are as
- * tall as a button (6px padding twice, a 26px line and 2px of border: 40px), so a row of fields and
- * buttons lines up; without it a select (whose line height the browser fixes) is lower than a text field.
+ * tall as a button at every width: its line is 145% of the root font size (1.45rem, 18px or 16px), plus
+ * 6px padding twice and 2px of border. Without it a select (whose line height the browser fixes) is
+ * lower than a text field.
  */
 input[type='date'],
 input[type='search'],
 select {
   box-sizing: border-box;
-  height: 40px;
+  height: calc(1.45rem + 14px);
   font: inherit;
   font-size: var(--font-size-md);
   padding: var(--space-1) var(--space-2);

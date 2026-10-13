@@ -97,6 +97,16 @@ describe('FeedFilter', () => {
     expect(wrapper.emitted('apply')).toBeUndefined()
   })
 
+  it('keeps the focus in the form, on the text field, when "Wyczyść filtry" clears the filter', async () => {
+    const wrapper = mountFilter({ q: 'orlen' }, document.body)
+    const clear = wrapper.findAll('button').find((button) => button.text() === 'Wyczyść filtry')!
+    ;(clear.element as HTMLButtonElement).focus()
+    await clear.trigger('click')
+    await wrapper.setProps({ filter: {} })
+    expect(buttonTexts(wrapper)).toEqual(['Filtruj'])
+    expect(document.activeElement).toBe(fields(wrapper).text.element)
+  })
+
   it('fills the fields from the applied filter and follows its changes', async () => {
     const wrapper = mountFilter({ q: 'cdr', kind: 'company', direction: 'bearish' })
     const { text, kind, direction } = fields(wrapper)

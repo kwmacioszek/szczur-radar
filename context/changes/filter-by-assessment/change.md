@@ -1,7 +1,7 @@
 ---
 change_id: filter-by-assessment
 title: Filter by assessment
-status: implementing
+status: impl_reviewed
 created: 2026-10-12
 updated: 2026-10-13
 archived_at: null

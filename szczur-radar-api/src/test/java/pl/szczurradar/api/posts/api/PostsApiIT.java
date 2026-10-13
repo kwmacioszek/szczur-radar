@@ -349,7 +349,8 @@ class PostsApiIT {
 	@Test
 	void badFilterValuesAreAnInvalidRequest() {
 		for (String[] query : List.of(new String[] { "kind", "spolka" }, new String[] { "direction", "BULLISH" },
-				new String[] { "kind", "COMPANY" }, new String[] { "q", "a".repeat(101) })) {
+				new String[] { "kind", "COMPANY" }, new String[] { "q", "a".repeat(101) },
+				new String[] { "q", "or\u0000len" })) {
 			assertThat(feed(query)).as(String.join("=", query))
 				.hasStatus(HttpStatus.BAD_REQUEST)
 				.bodyJson()

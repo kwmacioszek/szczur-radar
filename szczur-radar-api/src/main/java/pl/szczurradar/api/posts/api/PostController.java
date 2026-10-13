@@ -9,6 +9,7 @@ import java.util.stream.Collectors;
 
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import org.jspecify.annotations.Nullable;
 import org.springframework.data.domain.Page;
@@ -76,13 +77,14 @@ class PostController {
 	 * {@code q} — its {@code anchor.quote} contains the text, case-insensitively (white space at both ends
 	 * ignored; blank = no condition; at most 100 characters); {@code kind} — its kind; {@code direction} —
 	 * the direction of the author's stance on it. {@code kind} and {@code direction} take contract values
-	 * ({@code macro_topic}, {@code bullish}). An unknown value or a longer {@code q} is a 400
-	 * {@code invalid_request}. Without a condition the feed is every assessed post.
+	 * ({@code macro_topic}, {@code bullish}). An unknown value, a longer {@code q} or one with a NUL
+	 * character (which Postgres text cannot hold) is a 400 {@code invalid_request}. Without a condition the
+	 * feed is every assessed post.
 	 */
 	@GetMapping("/api/posts")
 	PostPage list(@RequestParam(defaultValue = "0") @Min(0) int page,
 			@RequestParam(defaultValue = "50") @Min(1) @Max(100) int size,
-			@RequestParam(required = false) @Size(max = 100) @Nullable String q,
+			@RequestParam(required = false) @Size(max = 100) @Pattern(regexp = "[^\\x00]*") @Nullable String q,
 			@RequestParam(required = false) @Nullable TargetKind kind,
 			@RequestParam(required = false) @Nullable Direction direction) {
 		Page<Post> found = posts.findAssessedPage(new PostFilter(q, kind, direction), page, size);

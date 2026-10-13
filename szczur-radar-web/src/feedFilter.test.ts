@@ -22,6 +22,14 @@ describe('feed filter in the address', () => {
     expect(filterFromQuery({ q: null })).toEqual({})
   })
 
+  it('trims the white space the API trims (contract §10), not what String.trim() does', () => {
+    expect(normalizeQuery('\u0085\u2007orlen\u001F\u3000')).toBe('orlen')
+    expect(normalizeQuery('\u0085')).toBeUndefined()
+    // The API keeps U+FEFF, so it is part of the text.
+    expect(normalizeQuery('\uFEFForlen')).toBe('\uFEFForlen')
+    expect(normalizeQuery('or len')).toBe('or len')
+  })
+
   it('cuts the text to 100 characters', () => {
     expect(filterFromQuery({ q: 'a'.repeat(101) }).q).toBe('a'.repeat(100))
     expect(normalizeQuery(`${'a'.repeat(99)} b`)).toBe('a'.repeat(99))
