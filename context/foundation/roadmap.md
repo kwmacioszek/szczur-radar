@@ -51,6 +51,8 @@ milestone_status: open
 
 > v2.18 (2026-10-12; numer po scaleniu z S-05): W `## Parked` dopisane unieważnianie sesji wersją poświadczeń — po MVP, z przeglądu implementacji S-07 (F1): logowanie w toku może przetrwać `reset-password` do aktywacji.
 
+> v2.19 (2026-10-13): S-06 — dopisek z pierwszego przebiegu crona na produkcji: hardening monitorowania (postęp trwającego przebiegu w `/admin`, ostrzeżenie o braku postępu, linie postępu w logach API i crona), bo dziś trwającego przebiegu nie da się obserwować bez czytania bazy.
+
 ## Milestone
 
 **M-1: MVP — ocenione sygnały z Wykopu dla zaproszonych osób** — Status: open
@@ -246,6 +248,15 @@ Foundations below assume these are present and do NOT re-scaffold them.
   - Czy dashboard wystarcza jako „jednoznaczny, widoczny sygnał” awarii, czy potrzebne jest aktywne powiadomienie operatora. — Owner: user. Block: no.
 - **Risk:** Pierwsza funkcja wyłącznie dla admina — weryfikuje rozdział ról na prawdziwej trasie; bez niej automat z S-05 działa bez nadzoru.
   - Dopisek (2026-10-13, przegląd S-05, F3): odzyskiwanie przy starcie API (`PipelineStartupRecovery`) oznacza jako `interrupted` każdy przebieg `queued`/`running`, także ten, który trwa jeszcze w starym kontenerze podczas deployu. S-05 naprawiło tylko wyścig z żądaniem budzącym API. Przed tym chroni dziś wyłącznie reguła „bez merge'a ok. 00:30–01:30 UTC”. Przebieg przerwany deployem dashboard powinien pokazywać jako przerwany przez wdrożenie, a nie jak zwykłą awarię; trwałe rozwiązanie (np. właściciel przebiegu po instancji) to osobna decyzja.
+  - Dopisek (2026-10-13, pierwszy przebieg crona na produkcji; decyzja użytkownika: hardening monitorowania): trwającego przebiegu nie da się dziś obserwować bez czytania bazy produkcyjnej. Uruchomiony ręcznie przebieg RETRY stał w kroku `assess` ponad 7 minut bez żadnego śladu:
+    - `trigger.sh` loguje tylko start i zmiany statusu;
+    - API nie loguje pojedynczych wywołań LLM;
+    - panel Railway nie pokazał nawet linii startowych crona, bo zaczyna widok od „Starting Container”.
+
+    Zakres do S-06:
+    - postęp trwającego przebiegu w `/admin`: bieżący krok, czas od startu, postęp oceny (gotowe / nieudane / w toku z N), próby, ponowienia i powroty flex → standard, czas ostatniej aktywności;
+    - ostrzeżenie, gdy przebieg nie robi postępu dłużej niż X minut;
+    - linia postępu w logu API (np. co N postów lub co minutę) i okresowy heartbeat crona z krokiem i postępem.
 - **Status:** proposed
 
 ### S-07: Onboarding użytkownika przez CLI
