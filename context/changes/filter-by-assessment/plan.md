@@ -364,24 +364,24 @@ Brak migracji i zmian danych. Kształt odpowiedzi `/api/posts` bez zmian, nowe p
 
 #### Automated
 
-- [x] 2.1 Testy web przechodzą, w tym `feedFilter.test.ts`, `FeedFilter.test.ts`, przypadki (a)–(g) i skan `no literals` z `FeedFilter.vue`
-- [x] 2.2 Typecheck i build przechodzą, a `dist/` nie zawiera kitchen sink
-- [x] 2.3 `dev/mock-api.js` parsuje się
+- [x] 2.1 Testy web przechodzą, w tym `feedFilter.test.ts`, `FeedFilter.test.ts`, przypadki (a)–(g) i skan `no literals` z `FeedFilter.vue` — d1930d7
+- [x] 2.2 Typecheck i build przechodzą, a `dist/` nie zawiera kitchen sink — d1930d7
+- [x] 2.3 `dev/mock-api.js` parsuje się — d1930d7
 
 #### Manual
 
-- [x] 2.4 `/` z mockiem przy 1280 i 375 px w obu motywach: formularz, linia wyniku, zawężanie, pusty wynik filtra, rodzaj na karcie, bez poziomego przewijania
-- [x] 2.5 Kitchen sink „Pola”, „Filtr” i „Posty” w obu motywach
+- [x] 2.4 `/` z mockiem przy 1280 i 375 px w obu motywach: formularz, linia wyniku, zawężanie, pusty wynik filtra, rodzaj na karcie, bez poziomego przewijania — d1930d7
+- [x] 2.5 Kitchen sink „Pola”, „Filtr” i „Posty” w obu motywach — d1930d7
 
 ### Phase 3: Stany, zrzuty i weryfikacja w PR env
 
 #### Automated
 
-- [ ] 3.1 `REPOSITORY_GUIDELINES.md` wymienia `FeedFilter`
-- [ ] 3.2 Testy i build backendu i web przechodzą
+- [x] 3.1 `REPOSITORY_GUIDELINES.md` wymienia `FeedFilter`
+- [x] 3.2 Testy i build backendu i web przechodzą
 - [ ] 3.3 CI na PR jest zielone
 
 #### Manual
 
-- [ ] 3.4 `ui-after/README.md` pokazuje 7 komórek macierzy w obu motywach i przy 375 px, z listą `ui-quality-checklist`
-- [ ] 3.5 Railway PR env na prawdziwych danych: polska wielka litera, „ten sam cel”, pusty wynik i wyczyszczenie, lokalizacja bazy zapisana
+- [x] 3.4 `ui-after/README.md` pokazuje 7 komórek macierzy w obu motywach i przy 375 px, z listą `ui-quality-checklist`
+- [x] 3.5 Railway PR env na prawdziwych danych: polska wielka litera, „ten sam cel”, pusty wynik i wyczyszczenie, lokalizacja bazy zapisana
