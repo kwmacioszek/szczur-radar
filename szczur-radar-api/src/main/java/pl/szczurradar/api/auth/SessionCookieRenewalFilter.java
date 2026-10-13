@@ -24,7 +24,8 @@ import org.springframework.web.filter.OncePerRequestFilter;
  *
  * <p>Renews only when the response is 2xx, the request is authenticated (not anonymous) and its
  * session is still valid ({@code getSession(false)}); never creates a session or rotates its id.
- * Skips the probes, login (which issues the cookie itself) and logout (which clears it). The cookie
+ * Skips the probes, login (which issues the cookie itself), logout (which clears it) and the two public
+ * activation routes, which set no cookie even for a browser logged in as another account. The cookie
  * is written through Spring Session's own {@link HttpSessionIdResolver}, before the response is
  * committed; the resolver skips the write if the same session id was already written in this
  * request, so there is never a second {@code sr_session} cookie.
@@ -32,7 +33,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 public class SessionCookieRenewalFilter extends OncePerRequestFilter {
 
 	private static final Set<String> EXCLUDED_PATHS = Set.of("/api/health", "/api/ready", "/api/auth/login",
-			"/api/auth/logout");
+			"/api/auth/logout", "/api/auth/activation", "/api/auth/activation/lookup");
 
 	private final HttpSessionIdResolver sessionIdResolver;
 

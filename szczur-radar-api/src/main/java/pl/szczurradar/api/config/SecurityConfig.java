@@ -55,8 +55,9 @@ import pl.szczurradar.api.user.Role;
  * session cookie is {@code SameSite=Strict} and {@link OriginGuardFilter} rejects cross-origin
  * writes (S-01 contract, no changes in the SPA); {@code /internal/**} uses no cookie at all.
  *
- * <p>The filter chains and the trigger token exist only with the web server: operator commands
- * ({@code migrate}, {@code create-admin}) run the same context without one.
+ * <p>The filter chains and the trigger token exist only with the web server: every operator command
+ * ({@code migrate}, {@code create-admin}, {@code create-user}, {@code reset-password}) runs the same
+ * context without one.
  */
 @Configuration(proxyBeanMethods = false)
 public class SecurityConfig {
@@ -100,6 +101,8 @@ public class SecurityConfig {
 				.dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
 				.requestMatchers(HttpMethod.GET, "/api/health", "/api/ready").permitAll()
 				.requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/logout").permitAll()
+				// Activation links (S-07): the one-time token in the body is the credential.
+				.requestMatchers(HttpMethod.POST, "/api/auth/activation", "/api/auth/activation/lookup").permitAll()
 				.requestMatchers("/api/admin/**").hasRole(Role.ADMIN.name())
 				.anyRequest().authenticated())
 			.csrf(AbstractHttpConfigurer::disable)

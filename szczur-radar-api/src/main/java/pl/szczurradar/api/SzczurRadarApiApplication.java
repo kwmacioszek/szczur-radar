@@ -25,7 +25,7 @@ public class SzczurRadarApiApplication {
 			SpringApplication.run(SzczurRadarApiApplication.class, args);
 			return;
 		}
-		System.exit(CommandLine.standard().run(args));
+		System.exit(CommandLine.standard().run(args).code());
 	}
 
 	/**

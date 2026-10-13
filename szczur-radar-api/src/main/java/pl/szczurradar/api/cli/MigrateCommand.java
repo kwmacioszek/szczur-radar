@@ -14,8 +14,8 @@ import pl.szczurradar.api.SzczurRadarApiApplication;
  * <p>The server runs with {@code spring.flyway.enabled=false}; this command starts a non-web Spring
  * context with Flyway switched on, so Spring Boot's Flyway auto-configuration migrates the
  * database during startup with the same datasource and {@code spring.flyway.*} settings as the
- * server. A failed migration fails the context start, which maps to a non-zero exit code and
- * stops the Railway deploy (the previous version keeps serving).
+ * server. A failed migration fails the context start, which maps to {@link ExitCode#FAILED} (a non-zero
+ * exit code) and stops the Railway deploy (the previous version keeps serving).
  */
 public final class MigrateCommand implements Command {
 
@@ -41,13 +41,13 @@ public final class MigrateCommand implements Command {
 	}
 
 	@Override
-	public int run(String[] args) {
+	public ExitCode run(String[] args) {
 		try (ConfigurableApplicationContext ignored = contextStarter.apply(args)) {
-			return 0;
+			return ExitCode.OK;
 		}
 		catch (RuntimeException ex) {
 			err.println("migrate failed: " + ex.getMessage());
-			return 1;
+			return ExitCode.FAILED;
 		}
 	}
 

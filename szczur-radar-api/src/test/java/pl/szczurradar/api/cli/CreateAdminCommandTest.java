@@ -61,15 +61,15 @@ class CreateAdminCommandTest {
 
 	@Test
 	void validInputStartsTheContextAndReportsItsFailure() {
-		int code = command.run(new String[] { "--email", "admin@example.com" });
+		ExitCode code = command.run(new String[] { "--email", "admin@example.com" });
 
-		assertThat(code).isEqualTo(AdminBootstrap.REFUSED);
+		assertThat(code).isEqualTo(ExitCode.FAILED);
 		assertThat(contextStarts).hasValue(1);
 		assertThat(stderr()).contains("create-admin failed: no database in a unit test");
 	}
 
 	private void assertUsageError(String[] args, String message) {
-		assertThat(command.run(args)).isEqualTo(2);
+		assertThat(command.run(args)).isEqualTo(ExitCode.USAGE);
 		assertThat(stderr()).contains(message);
 		assertThat(contextStarts).as("no database work on usage errors").hasValue(0);
 	}

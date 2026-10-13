@@ -8,7 +8,15 @@ public enum CommandType {
 
 	MIGRATE("migrate", "apply pending database migrations and exit"),
 
-	CREATE_ADMIN("create-admin", "create the first administrator (--email <e-mail>; password asked twice, hidden)");
+	CREATE_ADMIN("create-admin", "create the first administrator (--email <e-mail>; password asked twice, hidden)"),
+
+	CREATE_USER("create-user",
+			"create an account without a password and print its one-time activation link"
+					+ " (--email <e-mail> [--role user|admin])"),
+
+	RESET_PASSWORD("reset-password",
+			"remove an account's password, end its sessions and print a new one-time activation link"
+					+ " (--email <e-mail>)");
 
 	private final String cliName;
 

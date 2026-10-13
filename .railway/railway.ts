@@ -160,6 +160,19 @@ export default defineRailway(() => {
       // 32 characters) and sealed on production; a PR env gets one only for a
       // verification of the cron. The cron reads it by reference. Never a value here.
       PIPELINE_TRIGGER_TOKEN: preserve(),
+      // Activation links (S-07; szczur-radar-api/README.md, Komendy operatora). Only
+      // the operator commands create-user and reset-password read these two, never
+      // the server, so a bad value never stops the API.
+      // WEB_PUBLIC_URL: this environment's public web address, a Railway template
+      // reference resolved per environment (production → its web domain, a PR env →
+      // its own). Plain double quotes on purpose: a JS template literal would
+      // interpolate `${…}`, and ref()/web.env cannot carry the `https://` prefix. A
+      // plain string also does not depend on web being declared below.
+      WEB_PUBLIC_URL: "https://${{szczur-radar-web.RAILWAY_PUBLIC_DOMAIN}}",
+      // Optional link validity with a unit (default 12h, from 1m to 7d; a bare
+      // number is refused). Declared so that a value set by the operator is kept,
+      // never created here.
+      ACTIVATION_LINK_TTL: preserve(),
     },
   });
 

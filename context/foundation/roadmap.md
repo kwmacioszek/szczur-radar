@@ -47,6 +47,10 @@ milestone_status: open
 
 > v2.16 (2026-10-13): S-06 — dopisek do ryzyka z przeglądu S-05 (F3): odzyskiwanie przy starcie przerywa przebieg trwający w starym kontenerze podczas deployu; dziś chroni tylko okno bez merge'a.
 
+> v2.17 (2026-10-12; numer po scaleniu z S-05): S-07 (`cli-user-onboarding`) — link aktywacyjny ważny domyślnie 12 h (parametr `ACTIVATION_LINK_TTL`), a `reset-password` operatora działa dla dowolnego konta, także admina (doprecyzowanie FR-027/FR-028 w PRD). Unknown S-07 rozstrzygnięte; wiersz S-07 w Backlog Handoff zgodny ze stanem.
+
+> v2.18 (2026-10-12; numer po scaleniu z S-05): W `## Parked` dopisane unieważnianie sesji wersją poświadczeń — po MVP, z przeglądu implementacji S-07 (F1): logowanie w toku może przetrwać `reset-password` do aktywacji.
+
 ## Milestone
 
 **M-1: MVP — ocenione sygnały z Wykopu dla zaproszonych osób** — Status: open
@@ -79,7 +83,7 @@ Na Wykopie (#gielda) i Reddicie codziennie pojawiają się setki postów o inwes
 | S-04 | filter-by-assessment           | użytkownik filtruje listę po spółce/temacie (tekstowo) i stanowisku autora wobec niej                                           | S-02          | US-01, FR-011a                                                                                                                                                                           | proposed |
 | S-05 | daily-scheduled-run-freshness  | przepływ uruchamia się sam codziennie, a użytkownik widzi datę ostatniej udanej aktualizacji                                    | S-02, F-01    | US-01, FR-002, FR-030                                                                                                                                                                    | done        |
 | S-06 | pipeline-run-history-dashboard | admin widzi historię przebiegów (kiedy, status, wynik) i wyraźny sygnał nieudanego przebiegu                                    | S-05, S-01    | FR-021, FR-015, NFR (operator dostaje widoczny sygnał awarii przebiegu)                                                                                                                  | proposed |
-| S-07 | cli-user-onboarding            | admin tworzy konto przez CLI, zaproszony ustawia hasło przez jednorazowy link i się loguje                                      | S-01, F-03    | US-02, FR-018, FR-027, FR-028                                                                                                                                                            | proposed |
+| S-07 | cli-user-onboarding            | admin tworzy konto przez CLI, zaproszony ustawia hasło przez jednorazowy link i się loguje                                      | S-01, F-03    | US-02, FR-018, FR-027, FR-028                                                                                                                                                            | done        |
 
 ## Streams
 
@@ -253,9 +257,9 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Parallel with:** F-01, F-02, S-02, S-03, S-04, S-05, S-06
 - **Blockers:** —
 - **Unknowns:**
-  - Czas ważności linku aktywacyjnego (PRD sugeruje np. 24h). — Owner: user. Block: no.
+  - ROZSTRZYGNIĘTE 2026-10-12 (`cli-user-onboarding`): Czas ważności linku aktywacyjnego (PRD sugeruje np. 24h). Domyślnie 12 h; operator zmienia go parametrem wdrożenia `ACTIVATION_LINK_TTL` (z jednostką, od `1m` do `7d`; `deploy-plan.md`, sekcja S-07). — Owner: user. Block: no.
 - **Risk:** Niezależny od potoku — dobry kandydat do równoległej pracy agenta przy ograniczonym czasie; bez niego MVP ma tylko jednego użytkownika.
-- **Status:** proposed
+- **Status:** done
 
 ## Backlog Handoff
 
@@ -270,7 +274,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 | S-04       | filter-by-assessment           | Filtrowanie listy po spółce/temacie i stanowisku autora                                        | no                    | Po S-02                                                                          |
 | S-05       | daily-scheduled-run-freshness  | Codzienny automatyczny przebieg + etykieta świeżości danych                                    | no                    | Po S-02 i F-01                                                                   |
 | S-06       | pipeline-run-history-dashboard | Dashboard admina: historia przebiegów i sygnał awarii                                          | no                    | Po S-05                                                                          |
-| S-07       | cli-user-onboarding            | Tworzenie kont przez CLI + aktywacja linkiem + recovery admina                                 | no                    | Po S-01 i F-03                                                                   |
+| S-07       | cli-user-onboarding            | Tworzenie kont przez CLI + aktywacja linkiem + recovery admina                                 | —                     | Zarchiwizowane 2026-10-13 → `context/archive/2026-10-12-cli-user-onboarding/`; PR #49 czeka na merge, potem weryfikacja produkcji (runbook w `deploy-plan.md`, sekcja S-07; issue #20) |
 
 ## Open Roadmap Questions
 
@@ -301,6 +305,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Ocena obrazków w postach (model multimodalny)** — Why parked: nice-to-have po MVP, do sprawdzenia, czy ma sens. PRD v2 i kontrakt V2 oceniają wyłącznie tekst (`prd.md:258`); w pilotażu #gielda ~44% wpisów ma zdjęcie, a część ma sens tylko w obrazku (`frame.md`, „Znane luki”). Zestaw wzorcowy F-02 (flaga `media.photo`, etykiety `unclear` z powodu obrazka, raport fazy 6) pokaże skalę; wdrożenie wymagałoby zmiany PRD, kontraktu (V3: cytat/dowód z obrazka nie jest podciągiem tekstu), wyboru modeli z wejściem obrazkowym i ponownego pomiaru, a koszt wejścia rośnie o tokeny obrazków.
 - **Self-hosted runner CI dla PR (lokalny Docker), runnery GitHub Actions dla `main`** — Why parked: nice-to-have dla wygody developmentu, nie wymaganie PRD; odroczone po MVP, najwcześniej po F-02 ([issue #30](https://github.com/kwmacioszek/szczur-radar/issues/30)).
 - **Komunikat, gdy nie udało się odczytać daty aktualizacji danych** — Why parked: nice-to-have po MVP (decyzja użytkownika 2026-10-13, S-05 `daily-scheduled-run-freshness`, faza 4). Dziś przy błędzie `GET /api/freshness` etykieta „Dane zaktualizowane: …” nad feedem po prostu znika, a lista działa (`FeedView.vue`; `context/changes/daily-scheduled-run-freshness/ui/README.md`), więc użytkownik nie odróżni „nie udało się sprawdzić” od braku etykiety. Pomysł: osobny, neutralny komunikat treści w miejscu etykiety (nie czerwony alert, bo posty są w porządku), np. „Nie udało się sprawdzić daty aktualizacji.”, ewentualnie z ponowieniem.
+- **Unieważnianie sesji wersją poświadczeń** — Why parked: po MVP, z przeglądu implementacji S-07 (`cli-user-onboarding`, F1). Logowanie, które sprawdziło hasło przed zatwierdzeniem `reset-password`, zapisuje sesję już po `DELETE` resetu, więc ta sesja działa aż do aktywacji (najwyżej `ACTIVATION_LINK_TTL`, domyślnie 12 h); od S-07 kończy ją aktywacja. Pełne zamknięcie: wersja poświadczeń konta (np. `password_changed_at`), zapisana w sesji przy logowaniu i sprawdzana przy każdym uwierzytelnionym żądaniu — migracja i sprawdzenie w łańcuchu filtrów.
 
 ## Milestone History
 
@@ -316,3 +321,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **S-02: zalogowany użytkownik widzi chronologiczną, stronicowaną listę postów z Wykopu (#gielda) z zadanego zakresu dat, bez duplikatów, każdy z oceną LLM zgodną z kontraktem V2 (trafność, cele ze stanowiskiem autora, tezy/opinie/fakty/pytania/działania z cytatem, flagi niepewności); przebieg jest uruchamiany ręcznie przez operatora.** — Archived 2026-10-09 → `context/archive/2026-10-06-first-assessed-wykop-feed/`. Lesson: Akcje Embabel domyślnie się ponawiają — akcje ze skutkami ubocznymi oznaczaj FIRE_ONCE. Obejmuje też FR-022 (ręczne uruchomienie przebiegu z `/admin`; stwierdzone 2026-10-13, wpis usunięty z `## Parked`).
 - **F-01: (foundation) produkcja jest gotowa na zbieranie prawdziwych danych: plan Railway Hobby z limitami kosztów $5 (alert) / $10 (twardy); wolumen Postgresa 5 GB; codzienna kopia logiczna (`pg_dump` z serwisu cron `db-backup`, tylko na produkcji) sprawdzana pełnym odtworzeniem, w buckecie Railway (14 dziennych + 12 miesięcznych) i na NAS operatora (Synology Cloud Sync); restore drill przećwiczony do odpytywalnej bazy; limit $10/mies. na kluczu OpenRouter produkcji (wyczerpany limit zatrzymuje przebieg bez zużycia prób postów); sekret LLM produkcji zapieczętowany i niedostępny w środowiskach PR; klucze Wykopu zapieczętowane na produkcji, te same klucze aplikacji świadomie używane w PR env.** — Archived 2026-10-12 → `context/archive/2026-10-11-production-data-gate/`. Lesson: Railway Hobby nie ma kopii bazy — sprawdź tabelę funkcji planu i każdą kopię logiczną odtwarzaj w całości.
 - **S-05: przepływ uruchamia się sam codziennie o ustalonej godzinie na produkcji, a użytkownik widzi nad listą datę i godzinę ostatniej UDANEJ aktualizacji danych.** — Archived 2026-10-13 → `context/archive/2026-10-12-daily-scheduled-run-freshness/`. Lesson: —.
+- **S-07: admin może przez CLI utworzyć konto z rolą i dostać jednorazowy, wygasający link aktywacyjny; zaproszony może raz ustawić hasło i się zalogować; operator może wygenerować nowy link (unieważniając poprzedni) i odzyskać dostęp admina tym samym mechanizmem.** — Archived 2026-10-13 → `context/archive/2026-10-12-cli-user-onboarding/`. Lesson: —.

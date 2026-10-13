@@ -10,8 +10,8 @@ public interface Command {
 	 * Runs the command.
 	 *
 	 * @param args arguments after the command name
-	 * @return process exit code: 0 on success, non-zero on failure
+	 * @return how the command ended; {@code main} exits with its code
 	 */
-	int run(String[] args);
+	ExitCode run(String[] args);
 
 }

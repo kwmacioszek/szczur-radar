@@ -52,7 +52,11 @@ class AuthorizationCompletenessIT {
 			"GET /api/health", "liveness probe (Railway healthcheck)",
 			"GET /api/ready", "readiness probe, reveals only up/down",
 			"POST /api/auth/login", "obtaining a session cannot require one",
-			"POST /api/auth/logout", "idempotent session end and cookie removal");
+			"POST /api/auth/logout", "idempotent session end and cookie removal",
+			"POST /api/auth/activation",
+			"setting the first password cannot require a session; the one-time token is the credential",
+			"POST /api/auth/activation/lookup",
+			"checks a one-time link before the password form; reveals only the e-mail to the link holder");
 
 	/** Routes that a plain user must get 403 on (see {@code AdminRoleIT}). */
 	static final Set<String> ADMIN_ROUTES = Set.of(

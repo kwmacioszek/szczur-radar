@@ -1,7 +1,8 @@
 package pl.szczurradar.api.cli;
 
 import java.io.PrintStream;
-import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -9,23 +10,18 @@ import org.jspecify.annotations.Nullable;
 import org.springframework.context.ConfigurableApplicationContext;
 
 import pl.szczurradar.api.SzczurRadarApiApplication;
-import pl.szczurradar.api.user.Emails;
 
 /**
  * {@code create-admin --email <e-mail>}: bootstraps the first administrator without the web server
  * (in production through {@code railway ssh}). The password comes from a hidden prompt, never from
  * an argument, so it stays out of shell history and logs.
  *
- * <p>Exit codes: 0 created, 1 refused (see {@link AdminBootstrap}) or failed, 2 usage or
- * configuration error (missing/invalid e-mail, no database configuration, no interactive console).
- * Usage errors are detected before any database work.
+ * <p>Exit codes: {@link ExitCode#OK} created, {@link ExitCode#REFUSED} (see {@link AdminBootstrap}) or
+ * {@link ExitCode#FAILED}, {@link ExitCode#USAGE} for a usage or configuration error (missing/invalid
+ * e-mail, no database configuration, no interactive console). Usage errors are detected before any
+ * database work.
  */
 public final class CreateAdminCommand implements Command {
-
-	static final int USAGE_ERROR = CommandLine.USAGE_ERROR;
-
-	/** The database settings the JDBC URL is built from (application.properties). */
-	static final List<String> DATABASE_VARIABLES = List.of("PGHOST", "PGPORT", "PGDATABASE", "PGUSER", "PGPASSWORD");
 
 	private final Function<String, @Nullable String> environment;
 
@@ -57,26 +53,24 @@ public final class CreateAdminCommand implements Command {
 	}
 
 	@Override
-	public int run(String[] args) {
-		String rawEmail = emailArgument(args);
+	public ExitCode run(String[] args) {
+		Map<Option, String> options = CommandChecks.options(args, Set.of(Option.EMAIL));
+		String rawEmail = options == null ? null : options.get(Option.EMAIL);
 		if (rawEmail == null) {
-			err.println("usage: " + type().cliName() + " --email <e-mail>");
-			return USAGE_ERROR;
+			err.println("usage: " + type().cliName() + " " + Option.EMAIL.flag() + " <e-mail>");
+			return ExitCode.USAGE;
 		}
-		String email = Emails.normalize(rawEmail);
-		if (!email.contains("@") || email.length() > Emails.MAX_EMAIL_LENGTH) {
-			err.println("Invalid e-mail address: '" + rawEmail + "'");
-			return USAGE_ERROR;
+		String email = CommandChecks.email(rawEmail, err);
+		if (email == null) {
+			return ExitCode.USAGE;
 		}
-		List<String> missing = DATABASE_VARIABLES.stream().filter(name -> isBlank(environment.apply(name))).toList();
-		if (!missing.isEmpty()) {
-			err.println("Database is not configured: set " + String.join(", ", missing) + ".");
-			return USAGE_ERROR;
+		if (!CommandChecks.databaseConfigured(environment, err)) {
+			return ExitCode.USAGE;
 		}
 		PasswordPrompt prompt = promptFactory.get();
 		if (prompt == null) {
 			err.println("No interactive console: run " + type().cliName() + " in a terminal (e.g. railway ssh) to type the password.");
-			return USAGE_ERROR;
+			return ExitCode.USAGE;
 		}
 
 		try (ConfigurableApplicationContext context = contextStarter.apply(new String[0])) {
@@ -84,23 +78,8 @@ public final class CreateAdminCommand implements Command {
 		}
 		catch (RuntimeException ex) {
 			err.println(type().cliName() + " failed: " + ex.getMessage());
-			return AdminBootstrap.REFUSED;
+			return ExitCode.FAILED;
 		}
-	}
-
-	/** {@code --email <value>} or {@code --email=<value>}; null when absent or anything else is passed. */
-	private static @Nullable String emailArgument(String[] args) {
-		if (args.length == 2 && args[0].equals("--email")) {
-			return args[1];
-		}
-		if (args.length == 1 && args[0].startsWith("--email=")) {
-			return args[0].substring("--email=".length());
-		}
-		return null;
-	}
-
-	private static boolean isBlank(@Nullable String value) {
-		return value == null || value.isBlank();
 	}
 
 }

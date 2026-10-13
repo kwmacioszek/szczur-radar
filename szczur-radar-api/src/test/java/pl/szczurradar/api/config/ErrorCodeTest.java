@@ -25,6 +25,8 @@ class ErrorCodeTest {
 				entry("cross_origin", 403),
 				entry("invalid_request", 400),
 				entry("unsupported_media_type", 415),
+				entry("activation_link_invalid", 400),
+				entry("password_policy", 400),
 				entry("pipeline_busy", 409),
 				entry("post_dead", 400),
 				entry("source_not_configured", 503),

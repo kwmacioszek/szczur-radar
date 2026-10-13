@@ -17,8 +17,8 @@ Pakiet bazowy `pl.szczurradar.api`, pakiety według funkcji — nie według wars
 | --- | --- |
 | `health` | sondy `GET /api/health` (bez bazy) i `GET /api/ready` (`SELECT 1`, 503 przy błędzie) |
 | `user` | encja `User`, `UserRepository` (Spring Data JPA), `Role` (enum), `Emails` (jedna normalizacja e-maila), `SystemAccount` (konta, które nie są osobami: `SCHEDULER`) |
-| `auth` | logowanie JSON, `/me`, logout, limiter prób, filtr Origin, odnawianie ciasteczka sesji, argon2 (`Passwords`) |
-| `cli` | komendy operatora: `migrate`, `create-admin` (dyspozytor `CommandLine`) |
+| `auth` | logowanie JSON, `/me`, logout, limiter prób, filtr Origin, odnawianie ciasteczka sesji, argon2 (`Passwords`); `auth/activation` — jednorazowe linki aktywacyjne (S-07): `ActivationLinks` (wydanie, reset konta, sprawdzenie i użycie linku), `ActivationSettings` (`WEB_PUBLIC_URL`, `ACTIVATION_LINK_TTL`), encja tokenu (w bazie tylko SHA-256) i publiczny `ActivationController` |
+| `cli` | komendy operatora: `migrate`, `create-admin`, `create-user`, `reset-password` (dyspozytor `CommandLine`; sprawdzenia przed startem Springa w `CommandChecks`; dwie komendy z linkiem aktywacyjnym na wspólnym `LinkCommand`) |
 | `internal` | token crona `PIPELINE_TRIGGER_TOKEN` (`PipelineTriggerToken`) i jego filtr dla tras `/internal/**` (`PipelineTriggerTokenFilter`) |
 | `config` | Spring Security, sesja i ciasteczko, format błędów `{"detail": …}`, konfiguracja dostawcy LLM |
 | `agents` | agenci Embabel; `agents/assessor` — kontrakt oceny V2 jako kod (model, schemat, parser, walidator D1–D15, odsiew), prompt z wersją, `Assessor` (jedno wywołanie modelu na wpis) i `AssessorAgent` |
@@ -34,7 +34,7 @@ Kolejne moduły dochodzą obok, bez mieszania infrastruktury z domeną (`context
 
 ## Dostawca LLM (Embabel)
 
-Każde uruchomienie kontekstu Springa — serwer, komendy `migrate` i `create-admin` oraz testy `*IT` — startuje platformę Embabel z **jednym** dostawcą LLM. Wybierają go trzy ustawienia środowiska, zmieniane zawsze razem:
+Każde uruchomienie kontekstu Springa — serwer, komendy operatora (`migrate`, `create-admin`, `create-user`, `reset-password`) oraz testy `*IT` — startuje platformę Embabel z **jednym** dostawcą LLM. Wybierają go trzy ustawienia środowiska, zmieniane zawsze razem:
 
 | Zmienna | Znaczenie |
 | --- | --- |
@@ -148,14 +148,52 @@ Ten sam jar: bez argumentów startuje serwer, z nazwą komendy — komendę bez 
 
 ```bash
 java -jar target/szczur-radar-api.jar create-admin --email admin@example.com
+java -jar target/szczur-radar-api.jar create-user --email jan@example.com --role admin   # bez --role: user
+java -jar target/szczur-radar-api.jar reset-password --email jan@example.com
 # produkcja / PR env: najpierw obudź API (uśpiony serwis nie ma kontenera — `railway ssh`
 # trafia wtedy na bramkę Railway i nic nie uruchamia), potem w powłoce kontenera:
 curl https://<domena-web>/api/health
 railway ssh -s szczur-radar-api -e <środowisko>
-java -jar target/szczur-radar-api.jar create-admin --email ty@example.com   # e-mail bez < >
+java -jar target/szczur-radar-api.jar create-user --email jan@example.com   # e-mail bez < >
 ```
 
-`create-admin` tworzy **pierwszego** administratora (odmawia, gdy admin już istnieje — kolejne konta i odzyskiwanie to S-07). Hasło jest pobierane dwa razy z ukrytego promptu, nigdy z argumentu, i nie trafia do logów; polityka 12–128 znaków. Bootstrap jest serializowany blokadą `pg_advisory_xact_lock`, więc równoległe uruchomienia tworzą dokładnie jednego admina. Kody wyjścia: 0 utworzono, 1 odmowa, 2 błąd użycia lub konfiguracji (brak/zły e-mail, brak zmiennych `PG*`, brak konsoli). Komendy uruchamiają wspólny kontekst Springa, więc też potrzebują trzech ustawień LLM.
+Opcje podaje się jako `--nazwa wartość` albo `--nazwa=wartość`; nieznana lub powtórzona opcja to błąd użycia. Argumenty, e-mail i zmienne `PG*` są sprawdzane przed startem kontekstu Springa, więc błąd użycia nie dotyka bazy. Komendy uruchamiają wspólny kontekst Springa, więc też potrzebują trzech ustawień LLM.
+
+### `create-admin`
+
+`create-admin` tworzy **pierwszego** administratora i odmawia, gdy admin już istnieje: kolejnego admina zakłada `create-user --email <e-mail> --role admin`, a utracony dostęp przywraca `reset-password --email <e-mail>`. Hasło jest pobierane dwa razy z ukrytego promptu, nigdy z argumentu, i nie trafia do logów; polityka 12–128 znaków. Bootstrap jest serializowany blokadą `pg_advisory_xact_lock`, więc równoległe uruchomienia tworzą dokładnie jednego admina. Kody wyjścia: 0 utworzono, 1 odmowa, 2 błąd użycia lub konfiguracji (brak/zły e-mail, brak zmiennych `PG*`, brak konsoli).
+
+### `create-user` i `reset-password` (S-07)
+
+Obie komendy wydają jednorazowy link do ustawienia hasła. Nie pytają o hasło, więc nie potrzebują konsoli.
+
+- `create-user --email <e-mail> [--role user|admin]` zakłada konto bez hasła (domyślnie rola `user`) i wypisuje jego link. Zajęty e-mail → odmowa z podpowiedzią `reset-password`.
+- `reset-password --email <e-mail>` przywraca dowolne istniejące konto, także admina, do stanu „czeka na aktywację”. W jednej transakcji kasuje hasło, usuwa wszystkie sesje konta (wylogowanie wszędzie) i wydaje nowy link; poprzedni link przestaje działać, rola zostaje. Nieznany e-mail → odmowa z podpowiedzią `create-user`. Ustawienie hasła linkiem jeszcze raz usuwa sesje konta: logowanie, które sprawdziło hasło przed zatwierdzeniem resetu, zapisuje sesję już po nim, więc ta sesja kończy się najpóźniej przy aktywacji.
+- Konto systemowe (`login_enabled = false`, np. `scheduler@system.invalid` z S-05, `user/SystemAccount`) nigdy się nie loguje, więc nie dostaje linku: obie komendy odmawiają (kod 1, „… is a system account …”) i nic nie zapisują, a link do takiego konta jest nieważny.
+
+Na stdout: jedna linia opisu (konto, rola, ważność do czasu UTC, jednorazowość), a w ostatniej linii sam link `<WEB_PUBLIC_URL>/activate#<token>`. Osoba otwiera link, ustawia hasło (12–128 znaków) i loguje się na `/login`. Link działa raz, a nowy link tego samego konta unieważnia poprzedni.
+
+**Link jest sekretem:** kto go ma, ustawia hasło konta. Przekaż go osobie poza systemem i nie wklejaj go do issue, PR, czatu ani logów. Komenda wypisuje go tylko na stdout, nigdy na stderr ani do logu. Token jest we fragmencie adresu (`#`), więc nie trafia do logów serwera, a baza trzyma tylko jego SHA-256.
+
+| Zmienna | Znaczenie |
+| --- | --- |
+| `WEB_PUBLIC_URL` | wymagana: publiczny adres aplikacji web — sam schemat, host i opcjonalny port, bez ścieżki (np. `https://szczur-radar-web-production.up.railway.app`); lokalnie `http://localhost:5173` (`npm run dev`) |
+| `ACTIVATION_LINK_TTL` | opcjonalna: ważność linku z jednostką, np. `12h`, `90m` (domyślnie `12h`, od `1m` do `7d`); goła liczba jest odrzucana, bo Spring czytałby ją jako milisekundy |
+
+Obie zmienne czytają tylko te dwie komendy, przed startem Springa, więc zła wartość nie zatrzymuje serwera.
+
+Na Railway `WEB_PUBLIC_URL` pochodzi z `.railway/railway.ts`: referencja `https://${{szczur-radar-web.RAILWAY_PUBLIC_DOMAIN}}` daje w każdym środowisku adres jego własnego serwisu web (produkcja — domena produkcji, PR env — domena PR env). `ACTIVATION_LINK_TTL` jest opcjonalna: bez niej link jest ważny 12 h, a operator ustawia ją tylko, żeby to zmienić (IaC ją zachowuje przez `preserve()`). Szczegóły wdrożenia i runbook po merge'u: `context/deployment/deploy-plan.md`, sekcja S-07.
+
+Kody wyjścia:
+
+- 0: link wydany;
+- 1: odmowa (zajęty e-mail, brak konta albo konto systemowe; nic nie zapisano) albo błąd;
+- 2: błąd użycia lub konfiguracji (brak/zły e-mail, nieznana rola lub opcja, brak zmiennych `PG*`, brak/zły `WEB_PUBLIC_URL`, `ACTIVATION_LINK_TTL` bez jednostki lub poza zakresem); komunikat nazywa opcję albo zmienną.
+
+```bash
+# lokalnie: Postgres z compose.local.yaml, PG* i LLM_* jak wyżej, w tym samym terminalu
+WEB_PUBLIC_URL=http://localhost:5173 java -jar target/szczur-radar-api.jar create-user --email jan@example.com
+```
 
 ## Obraz Dockera (Railway, CI)
 
@@ -189,8 +227,9 @@ source ~/.config/szczur-radar/llm.env   # LLM_API_PROVIDER, LLM_MODEL, LLM_API_K
 ## API i sesja (kontrakt z SPA)
 
 - Trasy: `GET /api/health`, `GET /api/ready`, `POST /api/auth/login` (JSON `{email, password}`), `POST /api/auth/logout` (zawsze 204), `GET /api/auth/me` → `{id, email, role}`.
+- Aktywacja linkiem (S-07), trasy publiczne: `POST /api/auth/activation/lookup` (`{token}` → 200 `{email}`) i `POST /api/auth/activation` (`{token, password}` → 204). Token SPA bierze z fragmentu linku i wysyła tylko w body. Obie trasy nie tworzą sesji i nie ustawiają ciasteczka; aktywacja usuwa wszystkie sesje konta, a potem osoba loguje się przez `POST /api/auth/login`. Hasło spoza polityki (`password_policy`) nie zużywa linku.
 - Feed i pipeline (S-02): `GET /api/posts?page&size` (ocenione posty od najnowszych), `GET /api/freshness` (S-05, każda zalogowana rola: `{lastUpdatedAt}` — koniec przebiegu RANGE `succeeded`/`partial` z najdalej sięgającym zakresem albo `null`), admin: `POST /api/admin/pipeline-runs` (`{from, to, sources?}` albo `{postIds}` → 202), `GET /api/admin/pipeline-runs` (przebiegi z krokami i licznikami), `GET /api/admin/pipeline-runs/sources` (`[{source, configured}]`), `GET /api/admin/posts/failed` (nieudane i martwe z ostatnią próbą), `GET /api/admin/llm/check` (jedno małe, prawdziwe wywołanie skonfigurowanym kluczem i modelem: `{provider, model, ok, refused, answeredBy, error}`).
-- Błędy aplikacji mają kształt `{"detail": "<kod>"}`: `invalid_credentials`, `not_authenticated`, `forbidden`, `too_many_attempts` (+ `Retry-After`), `cross_origin`, `invalid_request`, `unsupported_media_type`, `pipeline_busy` (409), `post_dead` (400), `source_not_configured` (503), `not_found` (404, status przebiegu na `/internal/**`). Nieznane pola w JSON są odrzucane.
-- Sesja: ciasteczko `sr_session` (`HttpOnly; Secure; SameSite=Strict; Path=/api; Max-Age=30 dni`), dane w tabelach `SPRING_SESSION*`; wygasa po 30 dniach bezczynności, ciasteczko jest odnawiane po każdym udanym, uwierzytelnionym żądaniu API. Unieważnienie wszystkich sesji użytkownika: `FindByIndexNameSessionRepository.findByPrincipalName(<uuid>)` (principal = UUID użytkownika).
+- Błędy aplikacji mają kształt `{"detail": "<kod>"}`: `invalid_credentials`, `not_authenticated`, `forbidden`, `too_many_attempts` (+ `Retry-After`), `cross_origin`, `invalid_request`, `unsupported_media_type`, `activation_link_invalid` (400: link nieznany, użyty, wygasły albo zastąpiony nowszym — nieodróżnialnie), `password_policy` (400: hasło spoza 12–128 znaków), `pipeline_busy` (409), `post_dead` (400), `source_not_configured` (503), `not_found` (404, status przebiegu na `/internal/**`). Nieznane pola w JSON są odrzucane.
+- Sesja: ciasteczko `sr_session` (`HttpOnly; Secure; SameSite=Strict; Path=/api; Max-Age=30 dni`), dane w tabelach `SPRING_SESSION*`; wygasa po 30 dniach bezczynności, ciasteczko jest odnawiane po każdym udanym, uwierzytelnionym żądaniu API. Unieważnienie wszystkich sesji użytkownika: `FindByIndexNameSessionRepository.findByPrincipalName(<uuid>)` (principal = UUID użytkownika); komendy CLI nie mają repozytorium sesji, więc `reset-password` usuwa wiersze `spring_session` tego konta SQL-em.
 - CSRF: `SameSite=Strict` + `OriginGuardFilter` (obcy `Origin` przy zapisie → 403); tokeny CSRF Springa są wyłączone.
 - Limiter: 5 nieudanych prób / 15 min na e-mail i 20 na IP (`X-Real-IP` z krawędzi Railway), w pamięci procesu — poprawny przy jednej replice.

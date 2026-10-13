@@ -39,6 +39,12 @@ public enum ErrorCode {
 	/** A body in a format other than JSON. */
 	UNSUPPORTED_MEDIA_TYPE(HttpStatus.UNSUPPORTED_MEDIA_TYPE),
 
+	/** An activation link that is unknown, used, expired or replaced by a newer one (indistinguishable). */
+	ACTIVATION_LINK_INVALID(HttpStatus.BAD_REQUEST),
+
+	/** A new password outside the policy: 12–128 characters (code points, {@code auth/Passwords}). */
+	PASSWORD_POLICY(HttpStatus.BAD_REQUEST),
+
 	/** A pipeline run is already queued or running; the request created nothing. */
 	PIPELINE_BUSY(HttpStatus.CONFLICT),
 

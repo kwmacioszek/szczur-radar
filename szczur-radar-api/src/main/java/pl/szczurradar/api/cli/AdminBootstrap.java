@@ -1,6 +1,7 @@
 package pl.szczurradar.api.cli;
 
 import java.io.PrintStream;
+import java.util.Objects;
 
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -14,7 +15,8 @@ import pl.szczurradar.api.user.UserRepository;
 
 /**
  * Creates the first administrator (FR-026), ported from the Python {@code app/cli.py}. Refuses when
- * any admin exists — further admins and recovery belong to S-07.
+ * any admin exists: further admins come from {@code create-user --role admin}, and a lost admin
+ * password is recovered with {@code reset-password} (S-07).
  *
  * <p>Everything runs in one transaction holding a PostgreSQL advisory lock, so separate CLI
  * processes are serialized through the check and the insert: two concurrent bootstraps create
@@ -23,12 +25,6 @@ import pl.szczurradar.api.user.UserRepository;
  */
 @Service
 public class AdminBootstrap {
-
-	/** Exit code: the admin was created. */
-	public static final int CREATED = 0;
-
-	/** Exit code: refused (admin exists, e-mail taken, passwords differ, policy); nothing written. */
-	public static final int REFUSED = 1;
 
 	/** Stable advisory lock key for the one-time admin bootstrap ("SR_ADMIN"). */
 	static final long LOCK_ID = 0x53525F41444D494EL;
@@ -51,37 +47,41 @@ public class AdminBootstrap {
 
 	/**
 	 * @param email an already normalized and validated address
-	 * @return {@link #CREATED} or {@link #REFUSED}
+	 * @return {@link ExitCode#OK} when the admin was created, {@link ExitCode#REFUSED} when an admin or the
+	 *     e-mail exists, the passwords differ or break the policy; nothing is written then
 	 */
-	public int createAdmin(String email, PasswordPrompt prompt, PrintStream out, PrintStream err) {
-		Integer code = transaction.execute(status -> {
+	public ExitCode createAdmin(String email, PasswordPrompt prompt, PrintStream out, PrintStream err) {
+		ExitCode code = Objects.requireNonNull(transaction.execute(status -> {
 			jdbc.sql("SELECT pg_advisory_xact_lock(?)").param(LOCK_ID).query((rs, row) -> true).single();
 			if (users.existsByRole(Role.ADMIN)) {
-				err.println("Admin already exists — use the recovery command (S-07).");
-				return REFUSED;
+				err.println("Admin already exists — to recover access use " + CommandType.RESET_PASSWORD.cliName() + " "
+						+ Option.EMAIL.flag() + " <e-mail>; for another admin use " + CommandType.CREATE_USER.cliName()
+						+ " " + Option.EMAIL.flag() + " <e-mail> " + Option.ROLE.flag() + " " + Role.ADMIN.value()
+						+ ".");
+				return ExitCode.REFUSED;
 			}
 			if (users.existsByEmail(email)) {
 				err.println("An account with e-mail " + email + " already exists.");
-				return REFUSED;
+				return ExitCode.REFUSED;
 			}
 
 			String password = prompt.read("Password: ");
 			if (!password.equals(prompt.read("Repeat password: "))) {
 				err.println("Passwords do not match. Nothing was created.");
-				return REFUSED;
+				return ExitCode.REFUSED;
 			}
 			try {
 				Passwords.validatePolicy(password);
 			}
 			catch (IllegalArgumentException ex) {
 				err.println(ex.getMessage() + " Nothing was created.");
-				return REFUSED;
+				return ExitCode.REFUSED;
 			}
 
 			users.save(new User(email, passwordEncoder.encode(password), Role.ADMIN));
-			return CREATED;
-		});
-		if (code == CREATED) {
+			return ExitCode.OK;
+		}), "transaction result");
+		if (code == ExitCode.OK) {
 			out.println("Created admin " + email);
 		}
 		return code;

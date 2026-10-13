@@ -1,5 +1,7 @@
-// Every route except /login (and the dev-only /kitchen-sink) requires a session; a logged-in user never sees
-// /login, and only an admin sees /admin. History mode: Caddy (and Vite) serve index.html for deep links.
+// Every route except /login, /activate (and the dev-only /kitchen-sink) requires a session; a logged-in
+// user never sees /login, and only an admin sees /admin. /activate stays open to a logged-in user: the
+// link may be for another account (ActivateView ends that session after setting the password).
+// History mode: Caddy (and Vite) serve index.html for deep links.
 import {
   createRouter,
   createWebHistory,
@@ -9,6 +11,7 @@ import {
 } from 'vue-router'
 import { onUnauthorized } from '../api/client'
 import { ensureSession } from '../auth/session'
+import ActivateView from '../views/ActivateView.vue'
 import AdminView from '../views/AdminView.vue'
 import FeedView from '../views/FeedView.vue'
 import LoginView from '../views/LoginView.vue'
@@ -26,6 +29,8 @@ declare module 'vue-router' {
 
 export const routes: RouteRecordRaw[] = [
   { path: '/login', name: 'login', component: LoginView, meta: { public: true } },
+  // The link of the operator's CLI: /activate#<token>, the token only in the fragment.
+  { path: '/activate', name: 'activate', component: ActivateView, meta: { public: true } },
   { path: '/', name: 'home', component: FeedView },
   { path: '/admin', name: 'admin', component: AdminView, meta: { admin: true } },
   // Every component in every state, for screenshots. `npm run build` replaces import.meta.env.DEV

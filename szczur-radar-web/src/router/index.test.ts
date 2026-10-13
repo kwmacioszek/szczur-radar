@@ -65,6 +65,16 @@ describe('route guard', () => {
     expect(await navigate('/admin')).toBe('/login?redirect=/admin')
   })
 
+  it('lets an anonymous visitor open an activation link', async () => {
+    vi.mocked(fetchMe).mockRejectedValue(new ApiError(401, 'not_authenticated'))
+    expect(await navigate('/activate#token')).toBe('/activate#token')
+  })
+
+  it('lets a logged-in user open an activation link for another account', async () => {
+    vi.mocked(fetchMe).mockResolvedValue(ADMIN)
+    expect(await navigate('/activate#token')).toBe('/activate#token')
+  })
+
   it('lets an anonymous visitor into the dev-only /kitchen-sink', async () => {
     vi.mocked(fetchMe).mockRejectedValue(new ApiError(401, 'not_authenticated'))
     expect(await navigate('/kitchen-sink')).toBe('/kitchen-sink')
