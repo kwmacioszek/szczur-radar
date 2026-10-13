@@ -554,7 +554,7 @@ Brak migracji i zmian danych. `post_not_found` dopisuje się do zamkniętego zbi
 
 #### Automated
 
-- [x] 1.1 Testy backendu przechodzą: `cd szczur-radar-api && ./mvnw -B verify` (w tym nowe przypadki `PostsApiIT`, `ErrorCodeTest` z `post_not_found` 404 i `AuthorizationCompletenessIT` z obiema nowymi trasami)
+- [x] 1.1 Testy backendu przechodzą: `cd szczur-radar-api && ./mvnw -B verify` (w tym nowe przypadki `PostsApiIT`, `ErrorCodeTest` z `post_not_found` 404 i `AuthorizationCompletenessIT` z obiema nowymi trasami) — 25c388b
 
 #### Manual
 
@@ -564,12 +564,12 @@ Brak migracji i zmian danych. `post_not_found` dopisuje się do zamkniętego zbi
 
 #### Automated
 
-- [ ] 2.1 Testy i build web przechodzą: `cd szczur-radar-web && npm test && npm run build`
-- [ ] 2.2 `StanceText.vue` i `PostAssessment.vue` są na liście `CLEANED`: `grep -c "StanceText.vue\|PostAssessment.vue" szczur-radar-web/src/styleContract.test.ts` zwraca co najmniej 2
+- [x] 2.1 Testy i build web przechodzą: `cd szczur-radar-web && npm test && npm run build`
+- [x] 2.2 `StanceText.vue` i `PostAssessment.vue` są na liście `CLEANED`: `grep -c "StanceText.vue\|PostAssessment.vue" szczur-radar-web/src/styleContract.test.ts` zwraca co najmniej 2
 
 #### Manual
 
-- [ ] 2.3 `/kitchen-sink` (`npm run dev`): sekcje „Stanowisko” i „Ocena posta” czytelne w obu motywach i przy 375 px, bez poziomego przewijania; sekcja „Posty” wygląda jak przed zmianą
+- [x] 2.3 `/kitchen-sink` (`npm run dev`): sekcje „Stanowisko” i „Ocena posta” czytelne w obu motywach i przy 375 px, bez poziomego przewijania; sekcja „Posty” wygląda jak przed zmianą
 
 ### Phase 3: Widok posta i nawigacja
 

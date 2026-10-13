@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import type { PostItem } from '../api/posts'
 import { formatDateTime, label } from '../labels'
+import StanceText from './StanceText.vue'
 import StatusBadge from './StatusBadge.vue'
 
 const props = defineProps<{ post: PostItem }>()
@@ -29,9 +30,7 @@ const output = computed(() => props.post.assessment?.output)
         <dl v-if="output.targets.length" class="targets">
           <template v-for="target in output.targets" :key="target.id">
             <dt>{{ target.anchor.quote }}</dt>
-            <dd :class="target.stance.direction">
-              {{ label('direction', target.stance.direction) }}<template v-if="target.stance.assertiveness === 'hedged'"> (ostrożnie)</template>
-            </dd>
+            <StanceText tag="dd" :stance="target.stance" />
           </template>
         </dl>
         <p v-if="output.flags.length" class="flags">
@@ -105,14 +104,6 @@ const output = computed(() => props.post.assessment?.output)
 
 .targets dd {
   margin: 0;
-}
-
-.targets .bullish {
-  color: var(--success);
-}
-
-.targets .bearish {
-  color: var(--destructive);
 }
 
 .flags {

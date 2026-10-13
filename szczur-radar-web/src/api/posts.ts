@@ -7,22 +7,53 @@ export type ItemType = 'post' | 'link' | 'comment'
 export type Relevance = 'investment_related' | 'not_investment_related' | 'unclear'
 export type Direction = 'bullish' | 'bearish' | 'neutral' | 'mixed' | 'not_expressed' | 'unclear'
 export type Flag = 'missing_context' | 'possible_sarcasm' | 'insufficient_content' | 'extraction_limit'
+export type Modifier = 'humor' | 'promotion'
+export type ClaimKind = 'factual_claim' | 'opinion' | 'investment_thesis' | 'question' | 'trade_action'
+export type Attribution = 'author' | 'reported' | 'unclear'
+export type TargetKind = 'company' | 'asset' | 'sector' | 'macro_topic' | 'other' | 'unknown'
+export type Reference = 'explicit' | 'contextual' | 'ambiguous' | 'unresolved'
+/** `null` where the direction has none (table §7.2 of the contract). */
+export type Assertiveness = 'hedged' | 'unhedged' | null
 
-/** A target of the assessment with the author's stance (contract V2 §3, the fields the list shows). */
-export interface Target {
-  id: string
-  kind: string
-  anchor: { document: string; field: string; quote: string }
-  stance: { direction: Direction; assertiveness: 'hedged' | 'unhedged' | null; claim_ids: string[] }
-  reference: string
+/** A verbatim fragment of one text field of the input (contract V2 §3, §10). */
+export interface Quote {
+  document: 'item' | 'parent_post' | 'parent_comment'
+  field: 'title' | 'body'
+  quote: string
 }
 
-/** The model's output, contract V2 (the fields the list shows; claims are for the detail view, S-03). */
+/** The author's stance on one target; `claim_ids` are the claims it rests on (contract V2 §3, §7). */
+export interface Stance {
+  direction: Direction
+  assertiveness: Assertiveness
+  claim_ids: string[]
+}
+
+/** A target of the assessment with the author's stance (contract V2 §3). */
+export interface Target {
+  id: string
+  kind: TargetKind
+  anchor: Quote
+  stance: Stance
+  reference: Reference
+}
+
+/** What the author states, with one quote from the post; a general claim has no `target_ids` (contract V2 §3). */
+export interface Claim {
+  id: string
+  kind: ClaimKind
+  attribution: Attribution
+  target_ids: string[]
+  evidence: Quote
+  statement: string
+}
+
+/** The model's output, contract V2 — szczur-radar-api agents/assessor/contract/AssessmentOutputV2. */
 export interface AssessmentOutput {
   relevance: Relevance
-  modifiers: string[]
+  modifiers: Modifier[]
   targets: Target[]
-  claims: unknown[]
+  claims: Claim[]
   flags: Flag[]
 }
 
