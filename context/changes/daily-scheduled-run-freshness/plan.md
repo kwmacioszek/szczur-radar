@@ -656,12 +656,12 @@ Dokumenty fundamentów i wdrożenia odzwierciedlają decyzje S-05, a cały łań
 
 #### Automated
 
-- [x] 4.1 npm test z trzema stanami etykiety i skanem no literals
-- [x] 4.2 npm run build
+- [x] 4.1 npm test z trzema stanami etykiety i skanem no literals — 6f24403
+- [x] 4.2 npm run build — 6f24403
 
 #### Manual
 
-- [x] 4.3 Zrzuty etykiety w obu motywach i przy 375 px, tabela 7 stanów
+- [x] 4.3 Zrzuty etykiety w obu motywach i przy 375 px, tabela 7 stanów — 6f24403
 
 ### Phase 5: Dokumenty i weryfikacja końcowa w PR env
 
