@@ -1,6 +1,6 @@
 import AppKit
 
-// Snapshot of M-1 in context/foundation/roadmap.md, updated 2026-10-13 (v2.16: S-05 archived (done), FR-022 done in S-02; S-06 risk note; S-07 deployed (#49 54c4fc2, production verified), v2.17: link valid 12 h by default; v2.18: session revocation by credentials version parked; v2.19: S-06 run-monitoring note).
+// Snapshot of M-1 in context/foundation/roadmap.md, updated 2026-10-13 (v2.16: S-05 archived (done), FR-022 done in S-02; S-06 risk note; S-07 deployed (#49 54c4fc2, production verified), v2.17: link valid 12 h by default; v2.18: session revocation by credentials version parked; v2.19: S-06 run-monitoring note, run ETA parked).
 // Run on macOS: swift tools/render_roadmap.swift
 // With the installed Command Line Tools SDK:
 // CLANG_MODULE_CACHE_PATH=/private/tmp/szczur-clang-cache \
