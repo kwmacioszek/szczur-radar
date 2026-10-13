@@ -1,6 +1,6 @@
 import AppKit
 
-// Snapshot of M-1 in context/foundation/roadmap.md, updated 2026-10-13 (v2.16: S-05 in progress, its unknowns decided; FR-022 done in S-02; S-06 risk note).
+// Snapshot of M-1 in context/foundation/roadmap.md, updated 2026-10-13 (v2.16: S-05 archived (done), FR-022 done in S-02; S-06 risk note).
 // Run on macOS: swift tools/render_roadmap.swift
 // With the installed Command Line Tools SDK:
 // CLANG_MODULE_CACHE_PATH=/private/tmp/szczur-clang-cache \
@@ -166,7 +166,7 @@ let cards: [Card] = [
     Card(id:"S-01", title:"Admin i logowanie", detail:"CLI, sesja, ochrona tras\ni wylogowanie", req:"—", status:"wdrożone", column:3, row:0, accent:green),
     Card(id:"S-02", title:"Pierwsze ocenione posty", detail:"Wykop → ocena LLM → lista\nRęczne uruchomienie przebiegu", req:"S-01 + F-02", status:"wdrożone", column:1, row:1, accent:cyan),
     Card(id:"S-07", title:"Onboarding przez CLI", detail:"Konto, link aktywacyjny\ni odzyskiwanie dostępu", req:"S-01 + F-03", status:"propozycja", column:3, row:1, accent:green),
-    Card(id:"S-05", title:"Codzienny automat", detail:"Cron o 00:30 UTC (dni D-2…D-1)\ni data ostatniej aktualizacji", req:"S-02 + F-01", status:"w realizacji", column:0, row:2, accent:amber),
+    Card(id:"S-05", title:"Codzienny automat", detail:"Cron o 00:30 UTC (dni D-2…D-1)\ni data ostatniej aktualizacji", req:"S-02 + F-01", status:"wdrożone", column:0, row:2, accent:amber),
     Card(id:"S-03", title:"Szczegóły posta", detail:"Tezy, cytaty, surowe dane\ni link do oryginału", req:"S-02", status:"propozycja", column:1, row:2, accent:cyan),
     Card(id:"S-04", title:"Filtrowanie ocen", detail:"Spółka lub temat\ni stanowisko autora", req:"S-02", status:"propozycja", column:2, row:2, accent:cyan),
     Card(id:"S-06", title:"Historia przebiegów", detail:"Dashboard admina\ni widoczny sygnał awarii", req:"S-05 + S-01", status:"propozycja", column:0, row:3, accent:amber)
@@ -205,7 +205,7 @@ txt("BRAMKA WYDANIA MVP", 142, Layout.gateY + 30, 2100, 45, .heavy)
 txt("Warunek wydania: ukończenie wszystkich 10 elementów — F-01–F-03 oraz S-01–S-07.", 145, Layout.gateY + 103, 2150, 29, .medium)
 txt("Poniżej: odroczone kierunki rozwoju. Ich zakres i kolejność wymagają osobnego planu.", 145, Layout.gateY + 160, 2240, 25, .regular, muted)
 rounded(2530, Layout.gateY + 52, 485, 115, 20, color(0x0B2332), cyan.withAlphaComponent(0.65), line: 2)
-txt("5 / 10 UKOŃCZONYCH", 2562, Layout.gateY + 88, 430, 30, .bold, cyan)
+txt("6 / 10 UKOŃCZONYCH", 2562, Layout.gateY + 88, 430, 30, .bold, cyan)
 
 for x in Layout.futureColumns {
     let center = x + Layout.futureWidth / 2
