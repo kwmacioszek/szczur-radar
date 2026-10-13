@@ -667,10 +667,10 @@ Dokumenty fundamentów i wdrożenia odzwierciedlają decyzje S-05, a cały łań
 
 #### Automated
 
-- [ ] 5.1 CI na PR zielone w całości
-- [x] 5.2 verify, npm test i npm run build po rebase na origin/main
+- [x] 5.1 CI na PR zielone w całości — e3761a4
+- [x] 5.2 verify, npm test i npm run build po rebase na origin/main — e3761a4
 
 #### Manual
 
-- [x] 5.3 PR env: cron → przebieg → etykieta dla roli user
-- [x] 5.4 Dokumenty i PNG roadmapy zaktualizowane
+- [x] 5.3 PR env: cron → przebieg → etykieta dla roli user — e3761a4
+- [x] 5.4 Dokumenty i PNG roadmapy zaktualizowane — e3761a4
