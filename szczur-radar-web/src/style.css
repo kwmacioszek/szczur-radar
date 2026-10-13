@@ -37,6 +37,8 @@
   --radius-sm: 6px;
 
   --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
+  /* Machine text shown as is, e.g. a post's source JSON. */
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
   font: 18px/145% var(--sans);
   letter-spacing: 0.18px;

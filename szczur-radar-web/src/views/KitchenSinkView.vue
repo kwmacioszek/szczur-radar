@@ -4,7 +4,7 @@
   screenshots. Fixed data: no API calls, no session, no AppHeader.
 -->
 <script setup lang="ts">
-import type { AssessmentOutput, Claim, Direction, Flag, PostItem, Stance, Target } from '../api/posts'
+import type { AssessmentOutput, Claim, ClaimKind, Direction, Flag, PostItem, Stance, Target } from '../api/posts'
 import AppButton from '../components/AppButton.vue'
 import PostAssessment from '../components/PostAssessment.vue'
 import PostCard from '../components/PostCard.vue'
@@ -49,20 +49,35 @@ const badges: { tone: BadgeTone; text: string }[] = [
   { tone: 'neutral', text: 'w kolejce' },
 ]
 
-/** A company named in the body; assertiveness is null for mixed and not_expressed (table §7.2 of the contract). */
-function target(id: string, quote: string, direction: Direction, assertiveness: Target['stance']['assertiveness']): Target {
+/**
+ * A company named in the body, as table §7.2 of the contract allows: assertiveness is null for mixed and
+ * not_expressed; a bullish, bearish, neutral or mixed stance rests on claims (`claimIds`), not_expressed on none.
+ */
+function target(
+  id: string,
+  quote: string,
+  direction: Direction,
+  assertiveness: Target['stance']['assertiveness'],
+  claimIds: string[] = [],
+): Target {
   return {
     id,
     kind: 'company',
     anchor: { document: 'item', field: 'body', quote },
-    stance: { direction, assertiveness, claim_ids: [] },
+    stance: { direction, assertiveness, claim_ids: claimIds },
     reference: 'explicit',
   }
 }
 
-function modelAssessment(targets: Target[], flags: Flag[]): PostItem['assessment'] {
+/** The author's claim about the targets, quoting the body; a directional stance rests on one of these. */
+function authorClaim(id: string, kind: ClaimKind, targetIds: string[], evidence: string, statement: string): Claim {
+  return { id, kind, attribution: 'author', target_ids: targetIds, evidence: quote(evidence), statement }
+}
+
+/** The card shows no claims; they are here so that each stance has the claims it rests on. */
+function modelAssessment(targets: Target[], flags: Flag[], claims: Claim[] = []): PostItem['assessment'] {
   return {
-    output: { relevance: 'investment_related', modifiers: [], targets, claims: [], flags },
+    output: { relevance: 'investment_related', modifiers: [], targets, claims, flags },
     resultSource: 'model',
     assessedAt: '2026-10-12T21:00:00Z',
   }
@@ -79,8 +94,12 @@ const posts: PostItem[] = [
     author: 'ostrozny_byk',
     webUrl: 'https://wykop.pl/wpis/81234567',
     assessment: modelAssessment(
-      [target('t1', 'CDR', 'bullish', 'hedged'), target('t2', 'Allegro', 'bearish', 'unhedged')],
+      [target('t1', 'CDR', 'bullish', 'hedged', ['c1']), target('t2', 'Allegro', 'bearish', 'unhedged', ['c2'])],
       ['possible_sarcasm', 'missing_context'],
+      [
+        authorClaim('c1', 'trade_action', ['t1'], 'ja ostrożnie dobieram', 'Autor ostrożnie dokupuje akcje CDR po spadku.'),
+        authorClaim('c2', 'trade_action', ['t2'], 'Allegro za to sprzedałem w całości', 'Autor sprzedał wszystkie akcje Allegro.'),
+      ],
     ),
   },
   {
@@ -93,12 +112,17 @@ const posts: PostItem[] = [
     webUrl: 'https://wykop.pl/link/7712345',
     assessment: modelAssessment(
       [
-        target('t1', 'PGE', 'neutral', 'unhedged'),
-        target('t2', 'Enea', 'mixed', null),
+        target('t1', 'PGE', 'neutral', 'unhedged', ['c1']),
+        target('t2', 'Enea', 'mixed', null, ['c2']),
         target('t3', 'Tauron', 'not_expressed', null),
-        target('t4', 'Orlen', 'bullish', 'unhedged'),
+        target('t4', 'Orlen', 'bullish', 'unhedged', ['c3']),
       ],
       [],
+      [
+        authorClaim('c1', 'opinion', ['t1'], 'PGE bez zmian', 'PGE nie zmienia się.'),
+        authorClaim('c2', 'opinion', ['t2'], 'Enea z plusami i minusami', 'Enea ma zarówno zalety, jak i wady.'),
+        authorClaim('c3', 'investment_thesis', ['t4'], 'Orlen powinien na skupie akcji zyskać', 'Skup akcji powinien podnieść kurs Orlenu.'),
+      ],
     ),
   },
   {

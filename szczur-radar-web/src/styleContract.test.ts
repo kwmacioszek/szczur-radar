@@ -11,6 +11,7 @@ import activateView from './views/ActivateView.vue?raw'
 import adminView from './views/AdminView.vue?raw'
 import feedView from './views/FeedView.vue?raw'
 import kitchenSinkView from './views/KitchenSinkView.vue?raw'
+import postDetailView from './views/PostDetailView.vue?raw'
 
 type Theme = 'light' | 'dark'
 
@@ -99,6 +100,7 @@ const CLEANED: Record<string, string> = {
   'src/views/ActivateView.vue': activateView,
   'src/components/StanceText.vue': stanceText,
   'src/components/PostAssessment.vue': postAssessment,
+  'src/views/PostDetailView.vue': postDetailView,
 }
 
 /** The hardcoded-value scan of /10x-ui: colour literals, arbitrary values and palette classes. */

@@ -564,23 +564,23 @@ Brak migracji i zmian danych. `post_not_found` dopisuje się do zamkniętego zbi
 
 #### Automated
 
-- [x] 2.1 Testy i build web przechodzą: `cd szczur-radar-web && npm test && npm run build`
-- [x] 2.2 `StanceText.vue` i `PostAssessment.vue` są na liście `CLEANED`: `grep -c "StanceText.vue\|PostAssessment.vue" szczur-radar-web/src/styleContract.test.ts` zwraca co najmniej 2
+- [x] 2.1 Testy i build web przechodzą: `cd szczur-radar-web && npm test && npm run build` — 04883a2
+- [x] 2.2 `StanceText.vue` i `PostAssessment.vue` są na liście `CLEANED`: `grep -c "StanceText.vue\|PostAssessment.vue" szczur-radar-web/src/styleContract.test.ts` zwraca co najmniej 2 — 04883a2
 
 #### Manual
 
-- [x] 2.3 `/kitchen-sink` (`npm run dev`): sekcje „Stanowisko” i „Ocena posta” czytelne w obu motywach i przy 375 px, bez poziomego przewijania; sekcja „Posty” wygląda jak przed zmianą
+- [x] 2.3 `/kitchen-sink` (`npm run dev`): sekcje „Stanowisko” i „Ocena posta” czytelne w obu motywach i przy 375 px, bez poziomego przewijania; sekcja „Posty” wygląda jak przed zmianą — 04883a2
 
 ### Phase 3: Widok posta i nawigacja
 
 #### Automated
 
-- [ ] 3.1 Testy i build web przechodzą: `cd szczur-radar-web && npm test && npm run build` (w tym `PostDetailView.test.ts`, `scroll.test.ts`, nowe przypadki routera, karty, klienta i FeedView)
-- [ ] 3.2 `PostDetailView.vue` jest na liście `CLEANED`: `grep -c "PostDetailView.vue" szczur-radar-web/src/styleContract.test.ts` zwraca co najmniej 1
+- [x] 3.1 Testy i build web przechodzą: `cd szczur-radar-web && npm test && npm run build` (w tym `PostDetailView.test.ts`, `scroll.test.ts`, nowe przypadki routera, karty, klienta i FeedView)
+- [x] 3.2 `PostDetailView.vue` jest na liście `CLEANED`: `grep -c "PostDetailView.vue" szczur-radar-web/src/styleContract.test.ts` zwraca co najmniej 1
 
 #### Manual
 
-- [ ] 3.3 Lokalnie z mockiem (`dev/mock-api.js`, procedura w nagłówku): z drugiej strony listy, przewiniętej w dół, wejście w post i „← Posty” (a także Wstecz przeglądarki) wracają na tę samą stronę i to samo miejsce; „Dane dla nerdów” pokazują JSON dopiero po rozwinięciu; nieznane id pokazuje komunikat „nie ma takiego posta” z linkiem do listy
+- [x] 3.3 Lokalnie z mockiem (`dev/mock-api.js`, procedura w nagłówku): z drugiej strony listy, przewiniętej w dół, wejście w post i „← Posty” (a także Wstecz przeglądarki) wracają na tę samą stronę i to samo miejsce; „Dane dla nerdów” pokazują JSON dopiero po rozwinięciu; nieznane id pokazuje komunikat „nie ma takiego posta” z linkiem do listy
 
 ### Phase 4: Weryfikacja wizualna, dokumenty i PR env
 

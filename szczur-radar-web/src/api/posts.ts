@@ -1,5 +1,5 @@
-// /api/posts and /api/admin/posts/failed — the contract of szczur-radar-api posts/api/*Controller.
-import { apiFetch } from './client'
+// /api/posts, /api/posts/{id}, /api/posts/{id}/raw and /api/admin/posts/failed — the contract of szczur-radar-api posts/api/*Controller.
+import { apiFetch, apiFetchText } from './client'
 
 /** The shared model's type of a post. */
 export type ItemType = 'post' | 'link' | 'comment'
@@ -113,6 +113,16 @@ export interface FailedPost {
 /** The feed: assessed posts, newest first. `page` from 0. */
 export function fetchPosts(page: number, size = 50): Promise<Page<PostItem>> {
   return apiFetch<Page<PostItem>>(`/api/posts?page=${page}&size=${size}`)
+}
+
+/** One assessed post, shaped like a feed item; 404 `post_not_found` for any other id, 400 for a malformed one. */
+export function fetchPost(id: string): Promise<PostItem> {
+  return apiFetch<PostItem>(`/api/posts/${encodeURIComponent(id)}`)
+}
+
+/** The post's source item exactly as fetched, as indented JSON text; the same 404 and 400 as `fetchPost`. */
+export function fetchPostRaw(id: string): Promise<string> {
+  return apiFetchText(`/api/posts/${encodeURIComponent(id)}/raw`)
 }
 
 /** Failed and dead posts with their latest attempt (admin). */

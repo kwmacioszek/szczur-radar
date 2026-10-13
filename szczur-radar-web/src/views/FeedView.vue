@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, useTemplateRef, watch } from 'vue'
+import { computed, nextTick, ref, useTemplateRef, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { type Freshness, fetchFreshness } from '../api/freshness'
 import { type Page, type PostItem, fetchPosts } from '../api/posts'
@@ -8,6 +8,7 @@ import AppHeader from '../components/AppHeader.vue'
 import PostCard from '../components/PostCard.vue'
 import StatusMessage from '../components/StatusMessage.vue'
 import { formatDateTime } from '../labels'
+import { reportFeedLoaded } from '../router/scroll'
 
 const PAGE_SIZE = 50
 
@@ -50,7 +51,11 @@ fetchFreshness()
   })
   .catch(() => {})
 
-/** `moveFocus`: after a successful load, focus the heading, the start of the new list. */
+/**
+ * `moveFocus`: after a successful load, focus the heading, the start of the new list. Each load
+ * that is still the latest one reports how it ended, so a return from a post can restore the
+ * position once the list is on screen (router/scroll.ts).
+ */
 async function load(target: number, { moveFocus = false } = {}): Promise<void> {
   const id = ++latestLoad
   loadingPage.value = target
@@ -61,10 +66,14 @@ async function load(target: number, { moveFocus = false } = {}): Promise<void> {
     shown.value = { page: target, result }
     loadingPage.value = null
     if (moveFocus) heading.value?.focus()
+    await nextTick()
+    if (id !== latestLoad) return
+    reportFeedLoaded('ok')
   } catch {
     if (id !== latestLoad) return
     failed.value = true
     loadingPage.value = null
+    reportFeedLoaded('error')
   }
 }
 
