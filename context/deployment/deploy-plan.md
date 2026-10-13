@@ -632,6 +632,20 @@ PR #49 was squash-merged as `54c4fc2` (13:22 UTC), after S-05 (#50).
    4. Open the same link again: "Link jest nieważny lub wygasł."
 5. **Record and close.** Write the results here. Comment them on issue #20: the merge commit, deployment IDs, the plan output, the variable check, the command used and the login result — never the link, the token or an invitee's e-mail. Close the issue only after this verification.
 
+## S-03: widok szczegółowy posta (post-detail-view)
+
+**Status (2026-10-13): live on production** after the human merge of PR #53 (`4fdd51a`); production verified (below); issue #16 closed. S-03 adds the post page `/posts/:id`: the assessment, the raw source data on request ("Dane dla nerdów") and a link to the original on Wykop. It also adds two API routes behind the session, `GET /api/posts/{id}` and `GET /api/posts/{id}/raw`, which answer 404 `post_not_found` for any post that is not assessed. No migration, no variable, no IaC change. Change: `context/archive/2026-10-12-post-detail-view/`.
+
+### Production after the merge (2026-10-13)
+
+- **Deployments** `93a1a800` (api) and `e93ca697` (web), both from `4fdd51a`. The pre-deploy `migrate` said "Schema "public" is up to date" (7 migrations). The API started in 6.9 s with no ERROR in its log.
+- **Without a session:** `/api/posts/{id}` and `/raw` answer 401 `not_authenticated`; a deep link `/posts/{id}` serves the SPA.
+- **Logged in** (the operator logged in; the agent drove the browser):
+  - 131 assessed posts. `/api/posts/{id}` equals the same post in the feed. `/raw` is indented `application/json` that parses, with Polish letters as characters (no `\u` escapes).
+  - An unknown id → 404 `post_not_found` on both routes; `abc` → 400.
+  - From the feed, scrolled down, to a post and back, through "← Posty" and through the browser's back button: the card came back to the same place (144 px from the top, under the freshness label), with the focus on its link.
+  - "Dane dla nerdów" shows the raw JSON. The link to the original goes to `wykop.pl` in a new tab (`rel="noopener noreferrer"`).
+
 ## Phases
 
 ### [x] 1. Prepare the application
