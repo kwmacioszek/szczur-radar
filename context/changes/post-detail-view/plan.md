@@ -558,7 +558,7 @@ Brak migracji i zmian danych. `post_not_found` dopisuje się do zamkniętego zbi
 
 #### Manual
 
-- [x] 1.2 W Railway PR env zalogowany użytkownik otwiera w przeglądarce `/api/posts/<id ocenionego posta>/raw` i widzi sformatowany JSON z polskimi znakami; `/api/posts/<losowy UUID>` odpowiada 404 `{"detail":"post_not_found"}`
+- [x] 1.2 W Railway PR env zalogowany użytkownik otwiera w przeglądarce `/api/posts/<id ocenionego posta>/raw` i widzi sformatowany JSON z polskimi znakami; `/api/posts/<losowy UUID>` odpowiada 404 `{"detail":"post_not_found"}` — add170b
 
 ### Phase 2: Ocena posta jako komponenty
 
@@ -586,12 +586,12 @@ Brak migracji i zmian danych. `post_not_found` dopisuje się do zamkniętego zbi
 
 #### Automated
 
-- [x] 4.1 Testy i build web przechodzą: `cd szczur-radar-web && npm test && npm run build`
-- [x] 4.2 Testy backendu przechodzą: `cd szczur-radar-api && ./mvnw -B verify`
-- [x] 4.3 `REPOSITORY_GUIDELINES.md` wymienia nowe komponenty: `grep -c "PostAssessment" REPOSITORY_GUIDELINES.md` zwraca co najmniej 1
-- [ ] 4.4 CI na PR jest zielone: `gh pr checks <PR>`
+- [x] 4.1 Testy i build web przechodzą: `cd szczur-radar-web && npm test && npm run build` — add170b
+- [x] 4.2 Testy backendu przechodzą: `cd szczur-radar-api && ./mvnw -B verify` — add170b
+- [x] 4.3 `REPOSITORY_GUIDELINES.md` wymienia nowe komponenty: `grep -c "PostAssessment" REPOSITORY_GUIDELINES.md` zwraca co najmniej 1 — add170b
+- [x] 4.4 CI na PR jest zielone: `gh pr checks <PR>` — add170b
 
 #### Manual
 
-- [x] 4.5 `ui/README.md` ma tabelę 7 stanów z plikami albo N/A z powodem, w obu motywach i przy 375 px, bez poziomego przewijania strony
-- [x] 4.6 W Railway PR env (prawdziwe dane, zalogowany użytkownik): wejście w post z listy i powrót na to samo miejsce, JSON źródła z polskimi znakami po rozwinięciu, link otwiera oryginał na Wykopie, anonimowy głęboki link `/posts/<id>` prowadzi przez logowanie z powrotem do posta, nieznane id pokazuje komunikat „nie ma takiego posta”
+- [x] 4.5 `ui/README.md` ma tabelę 7 stanów z plikami albo N/A z powodem, w obu motywach i przy 375 px, bez poziomego przewijania strony — add170b
+- [x] 4.6 W Railway PR env (prawdziwe dane, zalogowany użytkownik): wejście w post z listy i powrót na to samo miejsce, JSON źródła z polskimi znakami po rozwinięciu, link otwiera oryginał na Wykopie, anonimowy głęboki link `/posts/<id>` prowadzi przez logowanie z powrotem do posta, nieznane id pokazuje komunikat „nie ma takiego posta” — add170b
