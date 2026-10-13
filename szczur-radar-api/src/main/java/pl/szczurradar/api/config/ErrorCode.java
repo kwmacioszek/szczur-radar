@@ -51,6 +51,9 @@ public enum ErrorCode {
 	/** A posts run named a dead post (3 failed attempts); reviving one is outside S-02. */
 	POST_DEAD(HttpStatus.BAD_REQUEST),
 
+	/** No assessed post has this id (an unknown id, or a stage other than {@code assessed}). */
+	POST_NOT_FOUND(HttpStatus.NOT_FOUND),
+
 	/** A range run needs a source that is not configured here (e.g. no keys), or no source is. */
 	SOURCE_NOT_CONFIGURED(HttpStatus.SERVICE_UNAVAILABLE),
 

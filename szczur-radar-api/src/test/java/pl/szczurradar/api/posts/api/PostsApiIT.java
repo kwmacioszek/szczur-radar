@@ -3,6 +3,7 @@ package pl.szczurradar.api.posts.api;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
 
@@ -14,13 +15,18 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.transaction.annotation.Transactional;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
 
 import pl.szczurradar.api.TestcontainersConfiguration;
+import pl.szczurradar.api.agents.assessor.ContractFixtures;
+import pl.szczurradar.api.agents.assessor.contract.ContractJson;
 import pl.szczurradar.api.agents.assessor.validation.FailureClass;
 import pl.szczurradar.api.cli.MigrateCommand;
 import pl.szczurradar.api.pipeline.run.PipelineRunRepository;
@@ -33,14 +39,19 @@ import pl.szczurradar.api.user.Role;
 import pl.szczurradar.api.user.UserRepository;
 
 /**
- * {@code GET /api/posts} (the feed) and {@code GET /api/admin/posts/failed}: order, pages, totals, which
- * posts, and the latest attempt with its tie rule. Each test rolls back.
+ * {@code GET /api/posts} (the feed), {@code GET /api/posts/{id}} and {@code /raw} (one assessed post and its
+ * raw payload) and {@code GET /api/admin/posts/failed}: order, pages, totals, which posts, the latest
+ * attempt with its tie rule, and the raw payload shown without a changed value. Each test rolls back.
  */
 @SpringBootTest(properties = MigrateCommand.ENABLE_FLYWAY)
 @AutoConfigureMockMvc
 @Import(TestcontainersConfiguration.class)
 @Transactional
 class PostsApiIT {
+
+	private static final JsonMapper JSON = JsonMapper.builder().build();
+
+	private static final String POST_NOT_FOUND = "{\"detail\":\"post_not_found\"}";
 
 	@Autowired
 	MockMvcTester mvc;
@@ -142,6 +153,89 @@ class PostsApiIT {
 	}
 
 	@Test
+	void anAssessedPostIsTheFeedItemWithItsLatestOkAssessment() {
+		UUID post = seeds.post(PostStage.ASSESSED, 1, "2026-10-01T09:00:00Z");
+		seeds.failed(post, "2026-10-02T08:00:00Z", FailureClass.SCHEMA_VIOLATION);
+		seeds.ok(post, "2026-10-02T09:00:00Z");
+
+		MvcTestResult result = mvc.get().uri("/api/posts/" + post).with(asUser()).exchange();
+
+		assertThat(result).hasStatusOk();
+		assertThat(result).bodyJson().extractingPath("$.id").isEqualTo(post.toString());
+		assertThat(result).bodyJson().extractingPath("$.assessment.assessedAt").isEqualTo("2026-10-02T09:00:00Z");
+		JsonNode detail = tree(result);
+		assertThat(detail.at("/assessment/output/claims"))
+			.isEqualTo(ContractJson.MAPPER.valueToTree(ContractFixtures.validOutput().claims()));
+		JsonNode listItem = tree(mvc.get().uri("/api/posts").with(asUser()).exchange()).get("items").get(0);
+		assertThat(detail).isEqualTo(listItem);
+	}
+
+	@Test
+	void aPostThatIsNotAssessedIsNotFoundWithItsRawPayload() {
+		for (PostStage stage : List.of(PostStage.STORED, PostStage.FAILED, PostStage.DEAD)) {
+			int attempts = switch (stage) {
+				case STORED -> 0;
+				case DEAD -> 3;
+				default -> 1;
+			};
+			UUID post = seeds.post(stage, attempts, "2026-10-01T09:00:00Z");
+			for (String uri : List.of("/api/posts/" + post, "/api/posts/" + post + "/raw")) {
+				assertThat(mvc.get().uri(uri).with(asUser())).as(stage + " " + uri)
+					.hasStatus(HttpStatus.NOT_FOUND)
+					.bodyJson()
+					.isStrictlyEqualTo(POST_NOT_FOUND);
+			}
+		}
+	}
+
+	@Test
+	void anUnknownPostIsNotFoundAndAMalformedIdIsAnInvalidRequest() {
+		UUID unknown = UUID.randomUUID();
+		for (String uri : List.of("/api/posts/" + unknown, "/api/posts/" + unknown + "/raw")) {
+			assertThat(mvc.get().uri(uri).with(asUser())).as(uri)
+				.hasStatus(HttpStatus.NOT_FOUND)
+				.bodyJson()
+				.isStrictlyEqualTo(POST_NOT_FOUND);
+		}
+		for (String uri : List.of("/api/posts/abc", "/api/posts/abc/raw")) {
+			assertThat(mvc.get().uri(uri).with(asUser())).as(uri)
+				.hasStatus(HttpStatus.BAD_REQUEST)
+				.bodyJson()
+				.isStrictlyEqualTo("{\"detail\":\"invalid_request\"}");
+		}
+	}
+
+	@Test
+	void theRawPayloadIsTheStoredJsonIndented() {
+		UUID post = seeds.post(PostStage.ASSESSED, 0, "2026-10-01T09:00:00Z");
+		seeds.ok(post, "2026-10-02T08:00:00Z");
+
+		MvcTestResult result = mvc.get().uri("/api/posts/" + post + "/raw").with(asUser()).exchange();
+
+		assertThat(result).hasStatusOk().hasContentType(MediaType.APPLICATION_JSON);
+		String body = body(result);
+		assertThat(body).contains("\n").contains("będzie");
+		assertThat(JSON.readTree(body)).isEqualTo(JSON.readTree(PostSeeds.entry()));
+	}
+
+	@Test
+	void theRawPayloadKeepsEveryNumberAndCharacterLiterally() {
+		String raw = "{\"big\":12345678901234567890,\"pi\":3.14159265358979323846264338327950288,"
+				+ "\"price\":1.50,\"text\":\"zażółć gęślą jaźń\"}";
+		UUID post = seeds.post(PostStage.ASSESSED, 0, "2026-10-01T09:00:00Z", raw.getBytes(StandardCharsets.UTF_8));
+		seeds.ok(post, "2026-10-02T08:00:00Z");
+
+		MvcTestResult result = mvc.get().uri("/api/posts/" + post + "/raw").with(asUser()).exchange();
+
+		assertThat(result).hasStatusOk();
+		assertThat(body(result)).contains("\n")
+			.contains("12345678901234567890")
+			.contains("3.14159265358979323846264338327950288")
+			.contains("1.50")
+			.contains("zażółć gęślą jaźń");
+	}
+
+	@Test
 	void theFailedListHasFailedAndDeadPostsWithTheirLatestAttempt() {
 		UUID failed = seeds.post(PostStage.FAILED, 1, "2026-10-01T09:00:00Z");
 		UUID dead = seeds.post(PostStage.DEAD, 3, "2026-10-01T10:00:00Z");
@@ -166,6 +260,14 @@ class PostsApiIT {
 		assertThat(result).bodyJson().extractingPath("$.items[1].lastAttempt.failureClass").isEqualTo("timeout");
 		assertThat(result).bodyJson().extractingPath("$.items[1].lastAttempt.violations[0].rule").isEqualTo("rule");
 		assertThat(result).bodyJson().extractingPath("$.total").isEqualTo(2);
+	}
+
+	private static String body(MvcTestResult result) {
+		return new String(result.getResponse().getContentAsByteArray(), StandardCharsets.UTF_8);
+	}
+
+	private static JsonNode tree(MvcTestResult result) {
+		return JSON.readTree(body(result));
 	}
 
 	private static RequestPostProcessor asUser() {

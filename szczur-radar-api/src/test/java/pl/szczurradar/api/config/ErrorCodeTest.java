@@ -29,6 +29,7 @@ class ErrorCodeTest {
 				entry("password_policy", 400),
 				entry("pipeline_busy", 409),
 				entry("post_dead", 400),
+				entry("post_not_found", 404),
 				entry("source_not_configured", 503),
 				entry("not_found", 404)));
 	}

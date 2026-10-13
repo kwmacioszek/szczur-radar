@@ -554,7 +554,7 @@ Brak migracji i zmian danych. `post_not_found` dopisuje się do zamkniętego zbi
 
 #### Automated
 
-- [ ] 1.1 Testy backendu przechodzą: `cd szczur-radar-api && ./mvnw -B verify` (w tym nowe przypadki `PostsApiIT`, `ErrorCodeTest` z `post_not_found` 404 i `AuthorizationCompletenessIT` z obiema nowymi trasami)
+- [x] 1.1 Testy backendu przechodzą: `cd szczur-radar-api && ./mvnw -B verify` (w tym nowe przypadki `PostsApiIT`, `ErrorCodeTest` z `post_not_found` 404 i `AuthorizationCompletenessIT` z obiema nowymi trasami)
 
 #### Manual
 
