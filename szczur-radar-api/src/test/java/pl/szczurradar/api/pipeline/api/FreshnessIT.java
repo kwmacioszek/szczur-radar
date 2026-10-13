@@ -58,6 +58,12 @@ class FreshnessIT {
 
 	private static final String LATER = "2026-10-12T00:39:52Z";
 
+	/** The end of the range of {@link #run}'s range runs, unless a test passes another. */
+	private static final String RANGE_TO = "2026-10-10T21:59:59Z";
+
+	/** The end of a range a week older, as an admin's backfill. */
+	private static final String OLDER_RANGE_TO = "2026-10-03T21:59:59Z";
+
 	@Autowired
 	MockMvcTester mvc;
 
@@ -130,6 +136,22 @@ class FreshnessIT {
 	}
 
 	@Test
+	void anAdminsLaterRunOverAnOlderRangeLeavesTheDate() {
+		run(RunKind.RANGE, RunStatus.SUCCEEDED, SystemAccount.SCHEDULER.id(), FIRST);
+		run(RunKind.RANGE, RunStatus.SUCCEEDED, admin, LATER, OLDER_RANGE_TO);
+
+		assertFreshness(FIRST);
+	}
+
+	@Test
+	void aRunOverANewerRangeIsTheUpdateEvenIfAnOlderRangeEndedLater() {
+		run(RunKind.RANGE, RunStatus.SUCCEEDED, admin, LATER, OLDER_RANGE_TO);
+		run(RunKind.RANGE, RunStatus.PARTIAL, SystemAccount.SCHEDULER.id(), FIRST);
+
+		assertFreshness(FIRST);
+	}
+
+	@Test
 	void everyLoggedInRoleMayReadItAndNobodyElse() {
 		run(RunKind.RANGE, RunStatus.SUCCEEDED, SystemAccount.SCHEDULER.id(), FIRST);
 		String email = "freshness-user-" + UUID.randomUUID() + "@example.com";
@@ -155,9 +177,14 @@ class FreshnessIT {
 
 	/** A run of {@code kind} requested by {@code requestedBy}, ended {@code status} at {@code finishedAt}. */
 	private void run(RunKind kind, RunStatus status, UUID requestedBy, String finishedAt) {
+		run(kind, status, requestedBy, finishedAt, RANGE_TO);
+	}
+
+	/** As above; a range run covers the two days up to {@code rangeTo}. */
+	private void run(RunKind kind, RunStatus status, UUID requestedBy, String finishedAt, String rangeTo) {
+		Instant to = Instant.parse(rangeTo);
 		PipelineRun run = switch (kind) {
-			case RANGE -> PipelineRun.range(Instant.parse("2026-10-08T22:00:00Z"), Instant.parse("2026-10-10T21:59:59Z"),
-					List.of(Source.WYKOP), requestedBy);
+			case RANGE -> PipelineRun.range(to.minusSeconds(2 * 86_400 - 1), to, List.of(Source.WYKOP), requestedBy);
 			case RETRY -> PipelineRun.retry(requestedBy);
 			case POSTS -> PipelineRun.posts(List.of(UUID.randomUUID()), requestedBy);
 		};

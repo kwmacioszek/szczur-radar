@@ -25,6 +25,7 @@ fi
 # Durations: a positive whole number with an optional unit s, m or h (a bare number is seconds).
 : "${TRIGGER_TIMEOUT:=3h}" "${TRIGGER_WAKE_TIMEOUT:=3m}" "${TRIGGER_BUSY_TIMEOUT:=60m}"
 : "${TRIGGER_BUSY_INTERVAL:=60s}" "${TRIGGER_POLL_INTERVAL:=30s}" "${TRIGGER_RUN_TIMEOUT:=90m}"
+: "${TRIGGER_REQUEST_TIMEOUT:=60s}"
 
 # Sets REPLY to the seconds of the duration in the variable named $1.
 seconds() {
@@ -60,6 +61,7 @@ seconds TRIGGER_BUSY_TIMEOUT; readonly busy_timeout=$REPLY
 seconds TRIGGER_BUSY_INTERVAL; readonly busy_interval=$REPLY
 seconds TRIGGER_POLL_INTERVAL; readonly poll_interval=$REPLY
 seconds TRIGGER_RUN_TIMEOUT; readonly run_timeout=$REPLY
+seconds TRIGGER_REQUEST_TIMEOUT; readonly request_timeout=$REPLY
 # Between attempts while the API wakes (Railway's private network may also need a few seconds after
 # this container starts).
 readonly wake_interval=2
@@ -80,13 +82,20 @@ unset token PIPELINE_TRIGGER_TOKEN
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 
-# One request to the API: sets REPLY to the HTTP status (000: no answer) and leaves the body in
-# $work/body and curl's error in $work/error. `--disable` first: no .curlrc is read.
+# One request to the API: sets REPLY to the HTTP status (000: no answer) and CONNECTED to whether a
+# connection was made (an answer may then be missing although the API got the request), and leaves the
+# body in $work/body and curl's error in $work/error. `--disable` first: no .curlrc is read.
 request() {
+    local out time_connect
     : >"$work/body"
-    REPLY=$(curl --disable --silent --show-error --request "$1" --output "$work/body" --write-out '%{http_code}' \
-        --connect-timeout 10 --max-time 60 --config - "$base_url$2" <<<"$curl_auth" 2>"$work/error") || true
+    out=$(curl --disable --silent --show-error --request "$1" --output "$work/body" \
+        --write-out '%{http_code} %{time_connect}' --connect-timeout 10 --max-time "$request_timeout" \
+        --config - "$base_url$2" <<<"$curl_auth" 2>"$work/error") || true
+    read -r REPLY time_connect <<<"$out" || true
     [[ $REPLY =~ ^[0-9]{3}$ ]] || REPLY=000
+    CONNECTED=1
+    [[ ${time_connect:-0} =~ ^0(\.0*)?$ ]] && CONNECTED=0
+    return 0
 }
 
 # The `detail` of an API error body ({"detail":"<code>"}), empty when the body is not one.
@@ -150,6 +159,12 @@ while true; do
             # 503 is also the API's refusal source_not_configured, which no retry changes.
             if [[ $REPLY == 503 && $(detail) == source_not_configured ]]; then
                 fail "the API refused the run: $(outcome)"
+            fi
+            # No answer although the connection was made: the API may have queued the run. A second
+            # POST would then wait for that run as "busy" and start another one, and the first run's
+            # result would never reach the exit code. Only a request that never connected is retried.
+            if [[ $REPLY == 000 && $CONNECTED == 1 ]]; then
+                fail "no answer to the start after the request was sent ($(outcome)): the run may have started; check /admin"
             fi
             unreachable "waking the API"
             sleep "$wake_interval"

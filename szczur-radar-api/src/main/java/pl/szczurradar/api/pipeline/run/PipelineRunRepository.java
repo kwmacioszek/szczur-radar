@@ -28,17 +28,23 @@ public interface PipelineRunRepository extends JpaRepository<PipelineRun, UUID> 
 	}
 
 	/**
-	 * When the data was last updated: the latest end of a {@link RunKind#RANGE} run, the daily one or an
+	 * When the newest data was last updated: among the {@link RunKind#RANGE} runs, the daily one or an
 	 * admin's, that {@link RunStatus#SUCCEEDED succeeded} or ended {@link RunStatus#PARTIAL partial}
-	 * (it fetched and stored its range; only some posts were not assessed). Runs over leftovers or
+	 * (they fetched and stored their range; only some posts were not assessed), the end of the one whose
+	 * range reaches furthest, and of those the latest. An admin's run over an older range therefore
+	 * leaves the date as it was, while a run over the same newest days moves it. Runs over leftovers or
 	 * chosen posts fetch nothing new, so they never count; neither does a failed, interrupted or
 	 * unfinished run. Empty before the first such run.
 	 */
 	default Optional<Instant> findLastUpdate() {
-		return findLatestFinishedAt(RunKind.RANGE, List.of(RunStatus.SUCCEEDED, RunStatus.PARTIAL));
+		return findFinishedAtOfNewestRange(RunKind.RANGE, List.of(RunStatus.SUCCEEDED, RunStatus.PARTIAL));
 	}
 
-	@Query("select max(r.finishedAt) from PipelineRun r where r.kind = :kind and r.status in :statuses")
-	Optional<Instant> findLatestFinishedAt(RunKind kind, Collection<RunStatus> statuses);
+	@Query("""
+			select r.finishedAt from PipelineRun r
+			where r.kind = :kind and r.status in :statuses and r.finishedAt is not null
+			order by r.rangeTo desc, r.finishedAt desc
+			limit 1""")
+	Optional<Instant> findFinishedAtOfNewestRange(RunKind kind, Collection<RunStatus> statuses);
 
 }

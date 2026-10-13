@@ -28,7 +28,7 @@ Every route starts runs only through `PipelineRunService`; none has its own star
 | --- | --- | --- |
 | `PipelineRunController` | `/api/admin/pipeline-runs/**`: start a range or chosen posts, list runs, sources, failed posts | admin session |
 | `InternalPipelineRunController` | `POST /internal/pipeline-runs/daily` (D-2…D-1 of `ZONE` from the injected `Clock`, every configured source, requester `SystemAccount.SCHEDULER`; 202 `[{id, kind}]`), `GET /internal/pipeline-runs/{id}` (status, `finishedAt`, counters) | the daily cron `pipeline-trigger`, token `PIPELINE_TRIGGER_TOKEN` only (`internal/`, `config/SecurityConfig`), never a session |
-| `FreshnessController` | `GET /api/freshness` → `{lastUpdatedAt}`: `max(finished_at)` of RANGE runs `succeeded`/`partial` (`run/PipelineRunRepository.findLastUpdate`) — the feed's label (FR-030); nothing else about runs | any session |
+| `FreshnessController` | `GET /api/freshness` → `{lastUpdatedAt}`: `finished_at` of the RANGE run `succeeded`/`partial` whose range reaches furthest, the latest of those (`run/PipelineRunRepository.findLastUpdate`; an admin's run over older days leaves it) — the feed's label (FR-030); nothing else about runs | any session |
 | `PipelineRunExceptionHandler` | the service's refusals for both run controllers: 409 `pipeline_busy`, 400 `post_dead`, 503 `source_not_configured` | — |
 
 ```

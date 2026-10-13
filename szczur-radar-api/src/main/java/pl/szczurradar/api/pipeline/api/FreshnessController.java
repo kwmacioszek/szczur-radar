@@ -16,7 +16,8 @@ import pl.szczurradar.api.pipeline.run.PipelineRunRepository;
  * <p>An update is the end of a range run, the daily one or an admin's, that succeeded or ended
  * partial ({@link PipelineRunRepository#findLastUpdate()}): only such a run brings new posts in.
  * FR-030 shows only the last successful update, never a failed one, so a failed or interrupted run
- * leaves the date as it was.
+ * leaves the date as it was. Of those runs the one over the newest days counts, so an admin's run over
+ * older days leaves it too.
  */
 @RestController
 class FreshnessController {

@@ -22,7 +22,8 @@ Komenda startu Railway nie rozwija zmiennych, więc cała logika jest w skrypcie
 1. **Limit czasu całości.** Cały przebieg ma twardy limit `TRIGGER_TIMEOUT` (domyślnie `3h`, więcej niż suma limitów niżej). Zawieszony przebieg kończy się więc porażką (`FAILED: the run exceeded …`), zamiast blokować kolejne noce: Railway pomija przebieg cron, dopóki poprzedni trwa.
 2. **Zmienne.** Wymagane są `API_PRIVATE_DOMAIN`, `API_PORT` i `PIPELINE_TRIGGER_TOKEN`. Brak którejś daje kod 2 z nazwą zmiennej, bez wartości. Zła wartość czasu też daje kod 2.
 3. **Start.** `POST http://<API_PRIVATE_DOMAIN>:<API_PORT>/internal/pipeline-runs/daily` z nagłówkiem `Authorization: Bearer <token>`, bez treści. Żądanie idzie wprost do API przez sieć prywatną, z pominięciem Caddy (ten przekazuje tylko `/api/*`).
-   - Brak połączenia albo 502/503/504 (poza 503 `source_not_configured`): API się budzi (uśpione odpowiada tak przez ok. 10 s) albo sieć prywatna kontenera crona nie jest jeszcze gotowa. Ponowienie co 2 s, najwyżej przez `TRIGGER_WAKE_TIMEOUT` (domyślnie `3m`).
+   - Brak połączenia albo 502/503/504 (poza 503 `source_not_configured`): API się budzi (uśpione odpowiada tak przez ok. 10 s) albo sieć prywatna kontenera crona nie jest jeszcze gotowa. Ponowienie co 2 s, najwyżej przez `TRIGGER_WAKE_TIMEOUT` (domyślnie `3m`). Ponawiane jest tylko żądanie, które nie nawiązało połączenia.
+   - Brak odpowiedzi mimo nawiązanego połączenia (np. po `TRIGGER_REQUEST_TIMEOUT`, domyślnie `60s`): API mogło już zakolejkować przebieg, więc drugi `POST` czekałby na niego jak na cudzy i uruchomiłby kolejny, a wynik pierwszego nie trafiłby do kodu wyjścia. Od razu kod 1 z komunikatem „the run may have started; check /admin”.
    - 409 `pipeline_busy`: trwa albo czeka inny przebieg, np. admina. Ponowienie co `TRIGGER_BUSY_INTERVAL` (domyślnie `60s`), najwyżej przez `TRIGGER_BUSY_TIMEOUT` (domyślnie `60m`).
    - 401 `not_authenticated` (brak tokenu na API albo inny token), 503 `source_not_configured` i każde inne 4xx: od razu kod 1 z kodem błędu z odpowiedzi.
    - 202: lista utworzonych przebiegów w kolejności wykonania (`[{"id", "kind"}]`).
@@ -69,6 +70,7 @@ Skrypt pisze logi na stderr, a Railway pokazuje stderr crona na poziomie `error`
 | `TRIGGER_BUSY_TIMEOUT`, `TRIGGER_BUSY_INTERVAL` | jak długo i jak często ponawiać przy 409, domyślnie `60m` i `60s` |
 | `TRIGGER_POLL_INTERVAL` | co ile odpytywać przebiegi, domyślnie `30s` |
 | `TRIGGER_RUN_TIMEOUT` | jak długo czekać na koniec wszystkich przebiegów, domyślnie `90m` |
+| `TRIGGER_REQUEST_TIMEOUT` | limit jednego żądania do API, domyślnie `60s` |
 | `TRIGGER_TIMEOUT` | limit czasu całego przebiegu crona, domyślnie `3h` |
 | `RAILWAY_ENVIRONMENT_NAME`, `TRIGGER_IN_ANY_ENVIRONMENT` | środowisko Railway (ustawia je Railway); poza `production` przebieg jest pomijany, chyba że `TRIGGER_IN_ANY_ENVIRONMENT=true` |
 
@@ -90,6 +92,7 @@ Wymaga Dockera. Test buduje obraz i dla każdego przypadku uruchamia go w sieci 
 - odmowę połączenia przez pierwsze sekundy, potem 503 bez treści, potem 202 → kod 0;
 - 409, potem 202 → kod 0;
 - 401 i 503 `source_not_configured` → kod 1 po jednym żądaniu;
+- brak odpowiedzi na `POST`, który dotarł do API (`TRIGGER_REQUEST_TIMEOUT`) → kod 1 bez drugiego `POST`;
 - każdy limit czasu (`TRIGGER_WAKE_TIMEOUT`, `TRIGGER_BUSY_TIMEOUT`, `TRIGGER_RUN_TIMEOUT`, `TRIGGER_TIMEOUT`) → kod 1;
 - brak `PIPELINE_TRIGGER_TOKEN` → kod 2;
 - brak tokenów w logach.

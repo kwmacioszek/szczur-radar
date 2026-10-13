@@ -137,8 +137,8 @@ describe('FeedView', () => {
   it('replaces the list with the loading of the next page, not the old posts under a new number', async () => {
     vi.mocked(fetchPosts).mockResolvedValueOnce(answer([post('1')], 120)).mockReturnValue(never())
     const { wrapper } = await mountFeed()
-    const section = wrapper.find('section[aria-labelledby="feed-title"]')
-    expect(section.attributes('aria-busy')).toBeUndefined()
+    const list = wrapper.find('section[aria-labelledby="feed-title"] .posts')
+    expect(list.attributes('aria-busy')).toBeUndefined()
 
     await button(wrapper, 'Starsze').trigger('click')
     await flushPromises()
@@ -146,7 +146,7 @@ describe('FeedView', () => {
     expect(fetchPosts).toHaveBeenLastCalledWith(1, 50)
     expect(wrapper.find('article').exists()).toBe(false)
     expect(wrapper.find('.loading').text()).toBe('Wczytywanie strony 2…')
-    expect(section.attributes('aria-busy')).toBe('true')
+    expect(list.attributes('aria-busy')).toBe('true')
     expect(wrapper.find('.pager').exists()).toBe(false)
   })
 
@@ -154,7 +154,7 @@ describe('FeedView', () => {
     vi.mocked(fetchPosts).mockReturnValue(never())
     const { wrapper } = await mountFeed()
     expect(wrapper.find('.loading').text()).toBe('Wczytywanie…')
-    expect(wrapper.find('section').attributes('aria-busy')).toBe('true')
+    expect(wrapper.find('.posts').attributes('aria-busy')).toBe('true')
   })
 
   it('scrolls to the top when the page changes, not on the first entry', async () => {
@@ -215,7 +215,7 @@ describe('FeedView', () => {
     expect(wrapper.findAll('article')).toHaveLength(1)
     expect(wrapper.find('article').text()).toContain('Wpis 101 o XTB')
     expect(wrapper.find('.position').text()).toBe('Strona 3 z 3')
-    expect(wrapper.find('section').attributes('aria-busy')).toBeUndefined()
+    expect(wrapper.find('.posts').attributes('aria-busy')).toBeUndefined()
   })
 
   it('offers a retry after an error and shows the posts when it succeeds', async () => {
@@ -244,6 +244,9 @@ describe('FeedView', () => {
       expect(label.find('time').attributes('datetime')).toBe('2026-10-13T03:12:00Z')
       expect(label.find('time').text()).toBe('13.10.2026, 05:12')
       expect(label.attributes('role')).toBeUndefined()
+      // The region "Posty" starts with its heading; only the list under the label is busy while paging.
+      expect(wrapper.find('section[aria-labelledby="feed-title"] > h1#feed-title + .freshness').exists()).toBe(true)
+      expect(wrapper.find('[aria-busy] .freshness').exists()).toBe(false)
     })
 
     it('says the data was never updated before the first update', async () => {

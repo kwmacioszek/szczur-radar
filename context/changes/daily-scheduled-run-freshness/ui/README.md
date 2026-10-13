@@ -35,7 +35,9 @@ Przy błędzie odczytu lista działa normalnie: na zrzucie `error` jest 50 kart 
 
 ## Struktura
 
-`<h1>` i etykieta stoją bezpośrednio w `<main>`, przed `<section aria-labelledby="feed-title">` z `aria-busy`. W widoku po `feed-view-ui-hardening` nagłówek był wewnątrz sekcji. Przeniesienie pozwala trzymać etykietę tuż pod nagłówkiem, a jednocześnie poza regionem, który przy zmianie strony jest `aria-busy`. Sekcja nadal ma nazwę „Posty” przez `aria-labelledby`, a fokus po zmianie strony wraca na `h1`.
+`<section aria-labelledby="feed-title">` (region „Posty”) zaczyna się od `<h1>`, pod nim etykieta, a pod nią `<div class="posts">` z listą i stronicowaniem. Tylko ten `div` dostaje `aria-busy` przy wczytywaniu strony, więc nagłówek i etykieta nie są „zajęte”, a skok do regionu trafia na nagłówek. Fokus po zmianie strony wraca na `h1`.
+
+Pierwsza wersja tej fazy wyniosła `h1` i etykietę przed sekcję (z `aria-busy` na całej sekcji); przegląd implementacji (F5, 2026-10-13) przywrócił nagłówek do regionu. Wygląd się nie zmienił (sekcja i `div` nie mają stylów), więc zrzuty wyżej są aktualne.
 
 ## PR env (faza 5)
 

@@ -1,7 +1,7 @@
 ---
 change_id: daily-scheduled-run-freshness
 title: Daily scheduled run freshness
-status: implemented
+status: impl_reviewed
 created: 2026-10-12
 updated: 2026-10-13
 archived_at: null

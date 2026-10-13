@@ -8,7 +8,8 @@
 #      exit 1;
 #   3. refused connections, then 503 without a body, then 202 (the API waking up): exit 0; 409
 #      pipeline_busy, then 202: exit 0;
-#   4. 401 (a wrong token) and 503 source_not_configured: exit 1 after one request; every time limit
+#   4. 401 (a wrong token) and 503 source_not_configured: exit 1 after one request; no answer to a POST
+#      the API got (TRIGGER_REQUEST_TIMEOUT): exit 1 without a second POST; every time limit
 #      (TRIGGER_WAKE_TIMEOUT, TRIGGER_BUSY_TIMEOUT, TRIGGER_RUN_TIMEOUT, the whole run's
 #      TRIGGER_TIMEOUT): exit 1; a missing variable: exit 2;
 #   5. the tokens never appear in the logs.
@@ -40,7 +41,8 @@ trap 'exit 130' INT TERM
 
 # The stub API. STUB_CASE (JSON) scripts it:
 #   post: the answers to POST /daily in turn, the last one repeating: 202 (the runs below), 409, 503
-#         (with their API error codes) or "503-empty" (no JSON body, as while the API wakes);
+#         (with their API error codes), "503-empty" (no JSON body, as while the API wakes) or "hang"
+#         (the request is logged, then no answer for 30 s);
 #   runs: [{kind, statuses}]: GET /{id} answers the statuses in turn, the last one repeating;
 #   listen_after: seconds before it accepts connections (until then they are refused).
 # Every request without "Bearer $STUB_TOKEN" gets 401 not_authenticated. One line per request on
@@ -84,6 +86,10 @@ class Api(BaseHTTPRequestHandler):
             return self.answer(404, {"detail": "not_found"})
         status = posts[min(post_count[0], len(posts) - 1)]
         post_count[0] += 1
+        if status == "hang":
+            print(f"{self.command} {self.path} hang", flush=True)
+            time.sleep(30)
+            return
         if status == 202:
             return self.answer(202, [{"id": run["id"], "kind": run["kind"]} for run in runs])
         if status == "503-empty":
@@ -230,6 +236,12 @@ check_case no-source 1 '{"post": [503]}' "$token"
 log_says no-source 'FAILED: the API refused the run: HTTP 503 source_not_configured'
 requests_were no-source 1 0
 pass "503 source_not_configured → exit 1, no retry"
+check_case no-answer 1 '{"post": ["hang", 202], "runs": [{"kind": "range", "statuses": ["succeeded"]}]}' \
+    "$token" -e TRIGGER_REQUEST_TIMEOUT=2s
+log_says no-answer 'FAILED: no answer to the start after the request was sent (curl: (28)'
+log_says no-answer 'the run may have started; check /admin'
+requests_were no-answer 1 0
+pass "no answer to a POST the API got (TRIGGER_REQUEST_TIMEOUT=2s) → exit 1, no second POST"
 check_case wake-timeout 1 '{"listen_after": 60}' "$token" -e TRIGGER_WAKE_TIMEOUT=3s
 log_says wake-timeout 'FAILED: waking the API: the API did not answer within 3s (curl: (7)'
 pass "connections still refused after TRIGGER_WAKE_TIMEOUT=3s → exit 1"
