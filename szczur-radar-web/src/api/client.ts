@@ -53,11 +53,15 @@ async function readDetail(response: Response): Promise<string | null> {
   return null
 }
 
-export async function apiFetch<T>(
+/**
+ * The one request path of `apiFetch` and `apiFetchText`: same-origin, `Accept: application/json`
+ * (the API's errors are JSON, and so is every body it sends), and an `ApiError` for anything but 2xx.
+ */
+async function request(
   path: string,
-  init: RequestInit = {},
-  { handleUnauthorized = true }: ApiFetchOptions = {},
-): Promise<T> {
+  init: RequestInit,
+  { handleUnauthorized = true }: ApiFetchOptions,
+): Promise<Response> {
   const headers = new Headers(init.headers)
   headers.set('Accept', 'application/json')
   if (init.body !== undefined && !headers.has('Content-Type')) {
@@ -76,7 +80,17 @@ export async function apiFetch<T>(
       parseRetryAfter(response.headers.get('Retry-After')),
     )
   }
+  return response
+}
 
+export async function apiFetch<T>(path: string, init: RequestInit = {}, options: ApiFetchOptions = {}): Promise<T> {
+  const response = await request(path, init, options)
   if (response.status === 204) return undefined as T
   return (await response.json()) as T
+}
+
+/** The body as text, unparsed: for an answer shown as is (e.g. a post's raw source JSON). */
+export async function apiFetchText(path: string, init: RequestInit = {}, options: ApiFetchOptions = {}): Promise<string> {
+  const response = await request(path, init, options)
+  return response.text()
 }

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMemoryHistory } from 'vue-router'
 import { fetchMe, type User } from '../api/auth'
 import { ApiError } from '../api/client'
@@ -23,6 +23,12 @@ describe('route guard', () => {
   beforeEach(() => {
     resetSession()
     vi.mocked(fetchMe).mockReset()
+    // The router scrolls to the top on a path change (router/scroll.ts); jsdom does not implement scrolling.
+    vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
+  })
+
+  afterEach(() => {
+    vi.mocked(window.scrollTo).mockRestore()
   })
 
   it('sends an anonymous visitor on / to /login with a redirect back', async () => {
@@ -48,6 +54,19 @@ describe('route guard', () => {
   it('sends a logged-in user away from /login', async () => {
     vi.mocked(fetchMe).mockResolvedValue(ADMIN)
     expect(await navigate('/login')).toBe('/')
+  })
+
+  it('sends an anonymous visitor on a post to /login with a redirect back', async () => {
+    vi.mocked(fetchMe).mockRejectedValue(new ApiError(401, 'not_authenticated'))
+    expect(await navigate('/posts/x')).toBe('/login?redirect=/posts/x')
+  })
+
+  it('lets a logged-in user into a post', async () => {
+    vi.mocked(fetchMe).mockResolvedValue(ADMIN)
+    const router = createAppRouter(createMemoryHistory())
+    await router.push('/posts/x')
+    expect(router.currentRoute.value.name).toBe('post')
+    expect(router.currentRoute.value.params.id).toBe('x')
   })
 
   it('lets an admin into /admin', async () => {

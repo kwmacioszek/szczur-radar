@@ -1,5 +1,5 @@
 import { flushPromises, mount } from '@vue/test-utils'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMemoryHistory } from 'vue-router'
 import { fetchMe } from '../api/auth'
 import { ApiError } from '../api/client'
@@ -81,6 +81,12 @@ describe('AdminView', () => {
     vi.mocked(fetchFailedPosts).mockReset().mockResolvedValue({ items: [], page: 0, size: 50, total: 0 })
     vi.mocked(startRange).mockReset()
     vi.mocked(retryPosts).mockReset()
+    // The router scrolls to the top on a path change (router/scroll.ts); jsdom does not implement scrolling.
+    vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
+  })
+
+  afterEach(() => {
+    vi.mocked(window.scrollTo).mockRestore()
   })
 
   it('starts a range with the configured sources checked by default', async () => {

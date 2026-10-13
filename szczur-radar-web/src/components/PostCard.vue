@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { RouterLink } from 'vue-router'
 import type { PostItem } from '../api/posts'
 import { formatDateTime, label } from '../labels'
+import StanceText from './StanceText.vue'
 import StatusBadge from './StatusBadge.vue'
 
 const props = defineProps<{ post: PostItem }>()
@@ -24,14 +26,13 @@ const output = computed(() => props.post.assessment?.output)
       <span v-if="post.assessment?.resultSource === 'prefilter'" class="note">bez treści, bez oceny modelu</span>
     </div>
     <div class="content">
-      <h2 class="heading">{{ heading }}</h2>
+      <!-- The card's one link: the heading leads to the post's page; the card itself is not clickable. -->
+      <h2 class="heading"><RouterLink :to="{ name: 'post', params: { id: post.id } }">{{ heading }}</RouterLink></h2>
       <template v-if="output">
         <dl v-if="output.targets.length" class="targets">
           <template v-for="target in output.targets" :key="target.id">
             <dt>{{ target.anchor.quote }}</dt>
-            <dd :class="target.stance.direction">
-              {{ label('direction', target.stance.direction) }}<template v-if="target.stance.assertiveness === 'hedged'"> (ostrożnie)</template>
-            </dd>
+            <StanceText tag="dd" :stance="target.stance" />
           </template>
         </dl>
         <p v-if="output.flags.length" class="flags">
@@ -88,6 +89,16 @@ const output = computed(() => props.post.assessment?.output)
   overflow-wrap: anywhere;
 }
 
+/* The accent marks the link as a control; the focus ring is the global :focus-visible. */
+.heading a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.heading a:hover {
+  text-decoration: underline;
+}
+
 /* A target and its stance per row; a long quote wraps at half the width instead of overflowing. */
 .targets {
   display: grid;
@@ -105,14 +116,6 @@ const output = computed(() => props.post.assessment?.output)
 
 .targets dd {
   margin: 0;
-}
-
-.targets .bullish {
-  color: var(--success);
-}
-
-.targets .bearish {
-  color: var(--destructive);
 }
 
 .flags {

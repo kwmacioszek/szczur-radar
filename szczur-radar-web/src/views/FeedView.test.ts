@@ -6,11 +6,16 @@ import { fetchFreshness } from '../api/freshness'
 import { type Page, type PostItem, fetchPosts } from '../api/posts'
 import { resetSession } from '../auth/session'
 import { createAppRouter } from '../router'
+import { reportFeedLoaded } from '../router/scroll'
 import FeedView from './FeedView.vue'
 
 vi.mock('../api/auth', () => ({ fetchMe: vi.fn(), login: vi.fn(), logout: vi.fn() }))
 vi.mock('../api/posts', () => ({ fetchPosts: vi.fn(), fetchFailedPosts: vi.fn() }))
 vi.mock('../api/freshness', () => ({ fetchFreshness: vi.fn() }))
+vi.mock('../router/scroll', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../router/scroll')>()),
+  reportFeedLoaded: vi.fn(),
+}))
 
 function post(id: string, overrides: Partial<PostItem> = {}): PostItem {
   return {
@@ -76,6 +81,7 @@ describe('FeedView', () => {
     vi.mocked(fetchMe).mockReset().mockResolvedValue({ id: '1', email: 'user@example.com', role: 'user' })
     vi.mocked(fetchPosts).mockReset()
     vi.mocked(fetchFreshness).mockReset().mockResolvedValue({ lastUpdatedAt: '2026-10-13T03:12:00Z' })
+    vi.mocked(reportFeedLoaded).mockReset()
     // jsdom does not implement scrolling.
     vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
   })
@@ -216,6 +222,81 @@ describe('FeedView', () => {
     expect(wrapper.find('article').text()).toContain('Wpis 101 o XTB')
     expect(wrapper.find('.position').text()).toBe('Strona 3 z 3')
     expect(wrapper.find('.posts').attributes('aria-busy')).toBeUndefined()
+  })
+
+  it('reports a loaded page once its list is on screen', async () => {
+    vi.mocked(fetchPosts).mockResolvedValue(answer([post('1')], 1))
+    let listShown = false
+    vi.mocked(reportFeedLoaded).mockImplementation(() => {
+      listShown = document.querySelector('article') !== null
+    })
+    await mountFeed('/', document.body)
+    expect(reportFeedLoaded).toHaveBeenCalledExactlyOnceWith('ok')
+    expect(listShown).toBe(true)
+  })
+
+  it('reports a loaded page only once the freshness label is settled', async () => {
+    let settle: (value: { lastUpdatedAt: string | null }) => void = () => {}
+    vi.mocked(fetchFreshness).mockImplementation(() => new Promise((resolve) => (settle = resolve)))
+    vi.mocked(fetchPosts).mockResolvedValue(answer([post('1')], 1))
+    let labelShown = false
+    vi.mocked(reportFeedLoaded).mockImplementation(() => {
+      labelShown = document.querySelector('.freshness') !== null
+    })
+    const { wrapper } = await mountFeed('/', document.body)
+    expect(wrapper.find('article').exists()).toBe(true)
+    expect(reportFeedLoaded).not.toHaveBeenCalled()
+
+    settle({ lastUpdatedAt: '2026-10-13T03:12:00Z' })
+    await flushPromises()
+    expect(reportFeedLoaded).toHaveBeenCalledExactlyOnceWith('ok')
+    expect(labelShown).toBe(true)
+  })
+
+  it('reports a loaded page when the freshness label fails', async () => {
+    vi.mocked(fetchFreshness).mockRejectedValue(new TypeError('Failed to fetch'))
+    vi.mocked(fetchPosts).mockResolvedValue(answer([post('1')], 1))
+    await mountFeed()
+    expect(reportFeedLoaded).toHaveBeenCalledExactlyOnceWith('ok')
+  })
+
+  it('reports a failed load', async () => {
+    vi.mocked(fetchPosts).mockRejectedValue(new TypeError('Failed to fetch'))
+    await mountFeed()
+    expect(reportFeedLoaded).toHaveBeenCalledExactlyOnceWith('error')
+  })
+
+  it('stays silent about a load that ends after it was unmounted', async () => {
+    let finish: (value: Page<PostItem>) => void = () => {}
+    vi.mocked(fetchPosts).mockImplementation(() => new Promise((resolve) => (finish = resolve)))
+    const { wrapper } = await mountFeed()
+
+    wrapper.unmount()
+    finish(answer([post('1')], 1))
+    await flushPromises()
+
+    expect(reportFeedLoaded).not.toHaveBeenCalled()
+  })
+
+  it('does not report a load overtaken by a later one', async () => {
+    const answers = new Map<number, (value: Page<PostItem>) => void>()
+    vi.mocked(fetchPosts)
+      .mockResolvedValueOnce(answer([post('1')], 120))
+      .mockImplementation((page) => new Promise((resolve) => answers.set(page, resolve)))
+    const { router } = await mountFeed()
+    vi.mocked(reportFeedLoaded).mockClear()
+
+    await router.push('/?page=1')
+    await flushPromises()
+    await router.push('/?page=2')
+    await flushPromises()
+    answers.get(1)!(answer([post('51')], 120))
+    await flushPromises()
+    expect(reportFeedLoaded).not.toHaveBeenCalled()
+
+    answers.get(2)!(answer([post('101')], 120))
+    await flushPromises()
+    expect(reportFeedLoaded).toHaveBeenCalledExactlyOnceWith('ok')
   })
 
   it('offers a retry after an error and shows the posts when it succeeds', async () => {

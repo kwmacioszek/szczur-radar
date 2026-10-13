@@ -63,10 +63,15 @@ public final class PostSeeds {
 
 	/** A post in {@code stage} with {@code attempts} failed attempts, published at {@code publishedAt}. */
 	public UUID post(PostStage stage, int attempts, String publishedAt) {
+		return post(stage, attempts, publishedAt, ENTRY);
+	}
+
+	/** As {@link #post(PostStage, int, String)}, with {@code raw} (UTF-8 JSON) as its raw payload. */
+	public UUID post(PostStage stage, int attempts, String publishedAt, byte[] raw) {
 		String id = UUID.randomUUID().toString();
 		Post post = posts.save(new Post(Source.WYKOP, ItemType.POST, id, Instant.parse(publishedAt), null, "treść " + id,
 				"uzytkownik1", null, "https://wykop.pl/wpis/" + id, List.of("gielda"),
-				rawPayloads.store(Source.WYKOP, ENTRY), runId));
+				rawPayloads.store(Source.WYKOP, raw), runId));
 		posts.flush();
 		jdbc.update("UPDATE posts SET stage = ?, assessment_attempts = ? WHERE id = ?", stage.value(), attempts,
 				post.getId());
@@ -92,7 +97,8 @@ public final class PostSeeds {
 						"{}")));
 	}
 
-	private static byte[] entry() {
+	/** The bytes of {@code fixtures/wykop/entry.json}, the raw payload of {@link #post(PostStage, int, String)}. */
+	public static byte[] entry() {
 		try (InputStream in = PostSeeds.class.getResourceAsStream("/fixtures/wykop/entry.json")) {
 			return in.readAllBytes();
 		}

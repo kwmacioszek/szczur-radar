@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, useTemplateRef, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref, useTemplateRef, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { type Freshness, fetchFreshness } from '../api/freshness'
 import { type Page, type PostItem, fetchPosts } from '../api/posts'
@@ -8,6 +8,7 @@ import AppHeader from '../components/AppHeader.vue'
 import PostCard from '../components/PostCard.vue'
 import StatusMessage from '../components/StatusMessage.vue'
 import { formatDateTime } from '../labels'
+import { reportFeedLoaded } from '../router/scroll'
 
 const PAGE_SIZE = 50
 
@@ -42,15 +43,22 @@ const loadingText = computed(() =>
 /**
  * When the data was last updated, read once on entry alongside the first page, not on every page
  * change. Null while loading and after an error: the label is then left out and the list stays.
+ * `freshnessSettled` resolves (never rejects) once the label is shown or left out.
  */
 const freshness = ref<Freshness | null>(null)
-fetchFreshness()
+const freshnessSettled = fetchFreshness()
   .then((result) => {
     freshness.value = result
   })
   .catch(() => {})
 
-/** `moveFocus`: after a successful load, focus the heading, the start of the new list. */
+/**
+ * `moveFocus`: after a successful load, focus the heading, the start of the new list. Each load
+ * that is still the latest one reports how it ended, so a return from a post can restore the
+ * position once the list is on screen (router/scroll.ts). A list is reported only after the
+ * freshness label is settled: the label sits above the list, so the page then has the height the
+ * saved position was taken at.
+ */
 async function load(target: number, { moveFocus = false } = {}): Promise<void> {
   const id = ++latestLoad
   loadingPage.value = target
@@ -61,12 +69,23 @@ async function load(target: number, { moveFocus = false } = {}): Promise<void> {
     shown.value = { page: target, result }
     loadingPage.value = null
     if (moveFocus) heading.value?.focus()
+    await freshnessSettled
+    await nextTick()
+    if (id !== latestLoad) return
+    reportFeedLoaded('ok')
   } catch {
     if (id !== latestLoad) return
     failed.value = true
     loadingPage.value = null
+    reportFeedLoaded('error')
   }
 }
+
+// A load that ends after the view is gone (e.g. forward to a post mid-load) is dropped like an
+// overtaken one, so it never reports to a later return to the feed (router/scroll.ts).
+onBeforeUnmount(() => {
+  latestLoad++
+})
 
 /** The retry button disappears while loading, so the focus goes to the heading afterwards. */
 function retry(): void {

@@ -1,6 +1,8 @@
 import { mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
+import { createMemoryHistory, createRouter } from 'vue-router'
 import type { PostItem } from '../api/posts'
+import { routes } from '../router'
 import PostCard from './PostCard.vue'
 
 function post(overrides: Partial<PostItem> = {}): PostItem {
@@ -35,8 +37,10 @@ function post(overrides: Partial<PostItem> = {}): PostItem {
   }
 }
 
+/** In the app's routes, so the heading's link resolves as it does in the feed. */
 function mountCard(item: PostItem = post()) {
-  return mount(PostCard, { props: { post: item } })
+  const router = createRouter({ history: createMemoryHistory(), routes })
+  return mount(PostCard, { props: { post: item }, global: { plugins: [router] } })
 }
 
 describe('PostCard', () => {
@@ -45,6 +49,14 @@ describe('PostCard', () => {
     expect(time).toHaveLength(1)
     expect(time[0]!.attributes('datetime')).toBe('2026-10-01T07:15:00Z')
     expect(time[0]!.text()).toBe('1.10.2026, 09:15')
+  })
+
+  it('links the heading, and only the heading, to the post', () => {
+    const links = mountCard().findAll('a')
+    expect(links).toHaveLength(1)
+    expect(links[0]!.element.closest('h2')).not.toBeNull()
+    expect(links[0]!.attributes('href')).toBe('/posts/1')
+    expect(links[0]!.text()).toBe('Wpis o XTB')
   })
 
   it('shows the post type as the text of its label', () => {

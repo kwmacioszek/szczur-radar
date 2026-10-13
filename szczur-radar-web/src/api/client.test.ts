@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { currentUser, resetSession, setSession } from '../auth/session'
-import { ApiError, apiFetch, onUnauthorized } from './client'
+import { ApiError, apiFetch, apiFetchText, onUnauthorized } from './client'
 
 function respond(status: number, body?: unknown, headers: Record<string, string> = {}) {
   const fetchMock = vi.fn().mockResolvedValue(
@@ -80,5 +80,47 @@ describe('apiFetch', () => {
       vi.fn().mockResolvedValue(new Response('<html>502</html>', { status: 502 })),
     )
     await expect(apiFetch('/api/x')).rejects.toMatchObject({ status: 502, detail: null })
+  })
+})
+
+describe('apiFetchText', () => {
+  let handler: ReturnType<typeof vi.fn<() => void>>
+  let unsubscribe: () => void
+
+  beforeEach(() => {
+    resetSession()
+    setSession({ id: '1', email: 'admin@example.com', role: 'admin' })
+    handler = vi.fn<() => void>()
+    unsubscribe = onUnauthorized(handler)
+  })
+
+  afterEach(() => {
+    unsubscribe()
+    vi.unstubAllGlobals()
+  })
+
+  it('returns the body as it came, unparsed', async () => {
+    const body = '{\n  "id" : 81234567,\n  "content" : "Zażółć gęślą jaźń"\n}'
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(body, { status: 200, headers: { 'Content-Type': 'application/json' } }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    await expect(apiFetchText('/api/posts/1/raw')).resolves.toBe(body)
+    const [path, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(path).toBe('/api/posts/1/raw')
+    expect(init.credentials).toBe('same-origin')
+  })
+
+  it('throws an ApiError with the detail on 404', async () => {
+    respond(404, { detail: 'post_not_found' })
+    await expect(apiFetchText('/api/posts/x/raw')).rejects.toMatchObject({ status: 404, detail: 'post_not_found' })
+    expect(handler).not.toHaveBeenCalled()
+  })
+
+  it('on 401 calls the handler', async () => {
+    respond(401, { detail: 'not_authenticated' })
+    await expect(apiFetchText('/api/posts/1/raw')).rejects.toBeInstanceOf(ApiError)
+    expect(currentUser.value).toBeNull()
+    expect(handler).toHaveBeenCalledTimes(1)
   })
 })

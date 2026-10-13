@@ -1,5 +1,5 @@
 import { flushPromises, mount } from '@vue/test-utils'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMemoryHistory } from 'vue-router'
 import { fetchMe, login } from '../api/auth'
 import { ApiError } from '../api/client'
@@ -32,6 +32,12 @@ describe('LoginView', () => {
     resetSession()
     vi.mocked(fetchMe).mockReset().mockRejectedValue(new ApiError(401, 'not_authenticated'))
     vi.mocked(login).mockReset()
+    // The router scrolls to the top on a path change (router/scroll.ts); jsdom does not implement scrolling.
+    vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
+  })
+
+  afterEach(() => {
+    vi.mocked(window.scrollTo).mockRestore()
   })
 
   it('shows a generic message for wrong credentials', async () => {

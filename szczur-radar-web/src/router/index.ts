@@ -15,6 +15,8 @@ import ActivateView from '../views/ActivateView.vue'
 import AdminView from '../views/AdminView.vue'
 import FeedView from '../views/FeedView.vue'
 import LoginView from '../views/LoginView.vue'
+import PostDetailView from '../views/PostDetailView.vue'
+import { scrollBehavior } from './scroll'
 
 export { safeRedirect } from './redirect'
 
@@ -32,6 +34,7 @@ export const routes: RouteRecordRaw[] = [
   // The link of the operator's CLI: /activate#<token>, the token only in the fragment.
   { path: '/activate', name: 'activate', component: ActivateView, meta: { public: true } },
   { path: '/', name: 'home', component: FeedView },
+  { path: '/posts/:id', name: 'post', component: PostDetailView },
   { path: '/admin', name: 'admin', component: AdminView, meta: { admin: true } },
   // Every component in every state, for screenshots. `npm run build` replaces import.meta.env.DEV
   // with false, so the route and its chunk are not in dist/.
@@ -49,7 +52,7 @@ export const routes: RouteRecordRaw[] = [
 ]
 
 export function createAppRouter(history: RouterHistory = createWebHistory()): Router {
-  const router = createRouter({ history, routes })
+  const router = createRouter({ history, routes, scrollBehavior })
 
   router.beforeEach(async (to) => {
     const user = await ensureSession()
