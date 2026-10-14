@@ -148,7 +148,17 @@ button:disabled {
   outline-offset: 2px;
 }
 
-input[type='date'] {
+/*
+ * Text, date and choice fields share one look; a view gives them no style of its own. They are as
+ * tall as a button at every width: its line is 145% of the root font size (1.45rem, 18px or 16px), plus
+ * 6px padding twice and 2px of border. Without it a select (whose line height the browser fixes) is
+ * lower than a text field.
+ */
+input[type='date'],
+input[type='search'],
+select {
+  box-sizing: border-box;
+  height: calc(1.45rem + 14px);
   font: inherit;
   font-size: var(--font-size-md);
   padding: var(--space-1) var(--space-2);
@@ -156,6 +166,18 @@ input[type='date'] {
   border-radius: var(--radius);
   background: transparent;
   color: var(--text-h);
+}
+
+/* The open list of a select is drawn by the system on its own background, not the page's. */
+select option {
+  background: var(--bg);
+  color: var(--text-h);
+}
+
+/* Readable as a disabled button. */
+select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 input[type='checkbox'] {

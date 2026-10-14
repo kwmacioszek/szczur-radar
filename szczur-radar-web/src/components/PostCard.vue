@@ -31,7 +31,7 @@ const output = computed(() => props.post.assessment?.output)
       <template v-if="output">
         <dl v-if="output.targets.length" class="targets">
           <template v-for="target in output.targets" :key="target.id">
-            <dt>{{ target.anchor.quote }}</dt>
+            <dt>{{ target.anchor.quote }}<span class="kind"> · {{ label('targetKind', target.kind) }}</span></dt>
             <StanceText tag="dd" :stance="target.stance" />
           </template>
         </dl>
@@ -99,7 +99,7 @@ const output = computed(() => props.post.assessment?.output)
   text-decoration: underline;
 }
 
-/* A target and its stance per row; a long quote wraps at half the width instead of overflowing. */
+/* A target (quote · kind) and its stance per row; a long quote wraps at half the width instead of overflowing. */
 .targets {
   display: grid;
   grid-template-columns: fit-content(50%) minmax(0, 1fr);
@@ -112,6 +112,12 @@ const output = computed(() => props.post.assessment?.output)
   font-weight: 600;
   color: var(--text-h);
   overflow-wrap: anywhere;
+}
+
+/* The target's kind: secondary to the quote it follows. */
+.targets .kind {
+  font-weight: 400;
+  color: var(--text);
 }
 
 .targets dd {

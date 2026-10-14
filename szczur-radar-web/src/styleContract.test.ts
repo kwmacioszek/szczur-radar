@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import appButton from './components/AppButton.vue?raw'
 import appHeader from './components/AppHeader.vue?raw'
+import feedFilter from './components/FeedFilter.vue?raw'
 import postAssessment from './components/PostAssessment.vue?raw'
 import postCard from './components/PostCard.vue?raw'
 import stanceText from './components/StanceText.vue?raw'
@@ -101,6 +102,7 @@ const CLEANED: Record<string, string> = {
   'src/components/StanceText.vue': stanceText,
   'src/components/PostAssessment.vue': postAssessment,
   'src/views/PostDetailView.vue': postDetailView,
+  'src/components/FeedFilter.vue': feedFilter,
 }
 
 /** The hardcoded-value scan of /10x-ui: colour literals, arbitrary values and palette classes. */

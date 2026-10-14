@@ -13,6 +13,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import pl.szczurradar.api.agents.assessor.AssessmentResult;
 import pl.szczurradar.api.agents.assessor.ContractFixtures;
 import pl.szczurradar.api.agents.assessor.Provenance;
+import pl.szczurradar.api.agents.assessor.contract.AssessmentOutputV2;
 import pl.szczurradar.api.agents.assessor.contract.ItemType;
 import pl.szczurradar.api.agents.assessor.validation.FailureClass;
 import pl.szczurradar.api.agents.assessor.validation.Violation;
@@ -79,10 +80,15 @@ public final class PostSeeds {
 		return post.getId();
 	}
 
-	/** An {@code ok} attempt of {@code postId} at {@code assessedAt}. */
+	/** An {@code ok} attempt of {@code postId} at {@code assessedAt}, with {@link ContractFixtures#validOutput()}. */
 	public Assessment ok(UUID postId, String assessedAt) {
+		return ok(postId, assessedAt, ContractFixtures.validOutput());
+	}
+
+	/** An {@code ok} attempt of {@code postId} at {@code assessedAt}, with {@code output}. */
+	public Assessment ok(UUID postId, String assessedAt, AssessmentOutputV2 output) {
 		return assessments.saveAndFlush(new Assessment(postId, runId, ContractFixtures.validInput(),
-				new AssessmentResult(AssessmentResult.Status.OK, ContractFixtures.validOutput(), null, List.of(),
+				new AssessmentResult(AssessmentResult.Status.OK, output, null, List.of(),
 						Provenance.prefilter("V2", Instant.parse(assessedAt)), null)));
 	}
 

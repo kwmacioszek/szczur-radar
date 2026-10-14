@@ -2,11 +2,13 @@
 import { computed, nextTick, onBeforeUnmount, ref, useTemplateRef, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { type Freshness, fetchFreshness } from '../api/freshness'
-import { type Page, type PostItem, fetchPosts } from '../api/posts'
+import { type Page, type PostFilter, type PostItem, fetchPosts } from '../api/posts'
 import AppButton from '../components/AppButton.vue'
 import AppHeader from '../components/AppHeader.vue'
+import FeedFilter from '../components/FeedFilter.vue'
 import PostCard from '../components/PostCard.vue'
 import StatusMessage from '../components/StatusMessage.vue'
+import { filterFromQuery, filterToQuery, isFilterActive, sameFilter } from '../feedFilter'
 import { formatDateTime } from '../labels'
 import { reportFeedLoaded } from '../router/scroll'
 
@@ -17,10 +19,11 @@ const router = useRouter()
 const heading = useTemplateRef<HTMLHeadingElement>('feed-title')
 
 /**
- * The page on screen: the requested page number with its answer. The label, the list and the
- * pager are all read from it, never from the address, so they always belong to the same answer.
+ * The page on screen: the requested page number and filter with their answer. The result line, the
+ * list and the pager are all read from it, never from the address, so they always belong to the same
+ * answer.
  */
-const shown = ref<{ page: number; result: Page<PostItem> } | null>(null)
+const shown = ref<{ page: number; filter: PostFilter; result: Page<PostItem> } | null>(null)
 /** The page being loaded (from 0); null when no load is in progress. */
 const loadingPage = ref<number | null>(null)
 const failed = ref(false)
@@ -32,13 +35,27 @@ const page = computed(() => {
   const value = Number.parseInt(String(route.query.page ?? '0'), 10)
   return Number.isFinite(value) && value > 0 ? value : 0
 })
+/** The filter in the address (`?q=&kind=&direction=`); unknown values are dropped. */
+const filter = computed(() => filterFromQuery(route.query))
 const pages = computed(() => (shown.value ? Math.max(1, Math.ceil(shown.value.result.total / PAGE_SIZE)) : 1))
+/** The answer on screen has no post for its filter. */
+const noMatch = computed(
+  () => shown.value !== null && shown.value.result.total === 0 && isFilterActive(shown.value.filter),
+)
 
 const loadingText = computed(() =>
   shown.value === null && loadingPage.value === 0
     ? 'Wczytywanie…'
     : `Wczytywanie strony ${(loadingPage.value ?? 0) + 1}…`,
 )
+
+/** The line over the list, announced by its status region; empty while loading and after an error. */
+const resultText = computed(() => {
+  if (loadingPage.value !== null || failed.value || !shown.value) return ''
+  const { total } = shown.value.result
+  if (!isFilterActive(shown.value.filter)) return total > 0 ? `Ocenione posty: ${total}` : ''
+  return total > 0 ? `Pasujące do filtra: ${total}` : 'Żaden post nie pasuje do filtra.'
+})
 
 /**
  * When the data was last updated, read once on entry alongside the first page, not on every page
@@ -59,14 +76,14 @@ const freshnessSettled = fetchFreshness()
  * freshness label is settled: the label sits above the list, so the page then has the height the
  * saved position was taken at.
  */
-async function load(target: number, { moveFocus = false } = {}): Promise<void> {
+async function load(target: number, conditions: PostFilter, { moveFocus = false } = {}): Promise<void> {
   const id = ++latestLoad
   loadingPage.value = target
   failed.value = false
   try {
-    const result = await fetchPosts(target, PAGE_SIZE)
+    const result = await fetchPosts(target, PAGE_SIZE, conditions)
     if (id !== latestLoad) return
-    shown.value = { page: target, result }
+    shown.value = { page: target, filter: conditions, result }
     loadingPage.value = null
     if (moveFocus) heading.value?.focus()
     await freshnessSettled
@@ -89,21 +106,59 @@ onBeforeUnmount(() => {
 
 /** The retry button disappears while loading, so the focus goes to the heading afterwards. */
 function retry(): void {
-  void load(page.value, { moveFocus: true })
+  void load(page.value, filter.value, { moveFocus: true })
 }
 
+/** The filter keys stay in the address. */
 function goTo(target: number): void {
   void router.push({ query: { ...route.query, page: target > 0 ? String(target) : undefined } })
 }
 
-// The first entry neither scrolls nor takes the focus (e.g. from the header link); a page change
-// (pager, back/forward) goes to the top at once and focuses the heading once the page is loaded.
+/**
+ * Set while the form's navigation is in flight: its return to the first page is a filter action, even
+ * when the filter itself is unchanged, so it neither scrolls nor takes the focus.
+ */
+let fromForm = false
+
+/** A new filter starts at the first page: `page` leaves the address. */
+async function applyFilter(next: PostFilter): Promise<void> {
+  fromForm = true
+  try {
+    await router.push({ query: filterToQuery(next) })
+  } finally {
+    fromForm = false
+  }
+}
+
+function clearFilter(): void {
+  void router.push({ query: {} })
+}
+
+/** Set by the empty result's own button: it disappears while loading, like the retry button. */
+let focusAfterClear = false
+
+function clearFromEmptyResult(): void {
+  focusAfterClear = true
+  clearFilter()
+}
+
+// The first entry neither scrolls nor takes the focus (e.g. from the header link). A page change
+// (pager, back/forward) goes to the top at once and focuses the heading once the page is loaded. A
+// filter change does neither: the focus stays in the form and the result line announces the count.
 watch(
-  page,
-  (next, previous) => {
-    const changed = previous !== undefined
-    if (changed) window.scrollTo({ top: 0 })
-    void load(next, { moveFocus: changed })
+  [page, filter],
+  ([nextPage, nextFilter], [previousPage, previousFilter]) => {
+    // The first call has no previous values.
+    const first = previousPage === undefined || previousFilter === undefined
+    const filterChanged = !first && !sameFilter(nextFilter, previousFilter)
+    const pageChanged = !first && nextPage !== previousPage
+    // Another query key changed (or none: the filter is recomputed for every change of the address).
+    if (!first && !filterChanged && !pageChanged) return
+    const pageOnly = pageChanged && !filterChanged && !fromForm
+    if (pageOnly) window.scrollTo({ top: 0 })
+    const moveFocus = pageOnly || focusAfterClear
+    focusAfterClear = false
+    void load(nextPage, nextFilter, { moveFocus })
   },
   { immediate: true },
 )
@@ -121,13 +176,18 @@ watch(
         </template>
         <template v-else>Dane nie były jeszcze aktualizowane.</template>
       </p>
-      <!-- Only the list is busy while a page loads: the heading and the label do not change. -->
+      <FeedFilter :filter="filter" @apply="applyFilter" @clear="clearFilter" />
+      <!-- In the document from the start, so a screen reader announces each new count. -->
+      <p class="result" role="status">{{ resultText }}</p>
+      <!-- Only the list is busy while a page loads: the heading, the label, the form and the count do not change. -->
       <div class="posts" :aria-busy="loadingPage !== null ? 'true' : undefined">
         <p v-if="loadingPage !== null" class="loading">{{ loadingText }}</p>
         <template v-else-if="failed">
           <StatusMessage tone="error">Nie udało się wczytać postów.</StatusMessage>
           <AppButton @click="retry">Spróbuj ponownie</AppButton>
         </template>
+        <!-- The result line says that nothing matches; the way out stays next to it. -->
+        <AppButton v-else-if="noMatch" @click="clearFromEmptyResult">Wyczyść filtry</AppButton>
         <p v-else-if="shown && shown.result.total === 0" class="empty">
           Brak ocenionych postów. Pojawią się po najbliższej aktualizacji danych.
         </p>
@@ -170,6 +230,11 @@ h1:has(+ .freshness) {
   margin: 0 0 var(--space-4);
   font-size: var(--font-size-sm);
   color: var(--text);
+}
+
+.result {
+  margin: var(--space-4) 0;
+  color: var(--text-h);
 }
 
 .loading,

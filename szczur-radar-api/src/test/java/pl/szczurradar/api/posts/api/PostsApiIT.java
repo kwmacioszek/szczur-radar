@@ -2,8 +2,10 @@ package pl.szczurradar.api.posts.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static pl.szczurradar.api.agents.assessor.ContractFixtures.target;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
@@ -26,7 +28,13 @@ import tools.jackson.databind.json.JsonMapper;
 
 import pl.szczurradar.api.TestcontainersConfiguration;
 import pl.szczurradar.api.agents.assessor.ContractFixtures;
+import pl.szczurradar.api.agents.assessor.Prefilter;
+import pl.szczurradar.api.agents.assessor.contract.Assertiveness;
+import pl.szczurradar.api.agents.assessor.contract.AssessmentOutputV2;
 import pl.szczurradar.api.agents.assessor.contract.ContractJson;
+import pl.szczurradar.api.agents.assessor.contract.Direction;
+import pl.szczurradar.api.agents.assessor.contract.Target;
+import pl.szczurradar.api.agents.assessor.contract.TargetKind;
 import pl.szczurradar.api.agents.assessor.validation.FailureClass;
 import pl.szczurradar.api.cli.MigrateCommand;
 import pl.szczurradar.api.pipeline.run.PipelineRunRepository;
@@ -41,7 +49,8 @@ import pl.szczurradar.api.user.UserRepository;
 /**
  * {@code GET /api/posts} (the feed), {@code GET /api/posts/{id}} and {@code /raw} (one assessed post and its
  * raw payload) and {@code GET /api/admin/posts/failed}: order, pages, totals, which posts, the latest
- * attempt with its tie rule, and the raw payload shown without a changed value. Each test rolls back.
+ * attempt with its tie rule, the raw payload shown without a changed value, and the feed filter (FR-011a).
+ * Each test rolls back.
  */
 @SpringBootTest(properties = MigrateCommand.ENABLE_FLYWAY)
 @AutoConfigureMockMvc
@@ -236,6 +245,121 @@ class PostsApiIT {
 	}
 
 	@Test
+	void theFilterMatchesTextAndDirectionOfTheSameTarget() {
+		// validOutput(): XTB bullish, CDR not_expressed.
+		UUID post = seeds.post(PostStage.ASSESSED, 0, "2026-10-01T09:00:00Z");
+		seeds.ok(post, "2026-10-02T08:00:00Z");
+
+		assertFeed(feed("q", "cdr", "direction", "bullish"), 0);
+		assertFeed(feed("q", "xtb", "direction", "bullish"), 1, post);
+		assertFeed(feed("q", "CDR", "direction", "not_expressed"), 1, post);
+	}
+
+	@Test
+	void theTextIgnoresCaseButNotPolishLetters() {
+		UUID post = seeds.post(PostStage.ASSESSED, 0, "2026-10-01T09:00:00Z");
+		seeds.ok(post, "2026-10-02T08:00:00Z",
+				output(target("t1", TargetKind.COMPANY, "ŻABKA", Direction.NOT_EXPRESSED, null)));
+
+		assertFeed(feed("q", "żabka"), 1, post);
+		// No unaccent: a query without Polish letters does not find a quote with them.
+		assertFeed(feed("q", "zabka"), 0);
+	}
+
+	@Test
+	void theKindIsACondition() {
+		UUID market = seeds.post(PostStage.ASSESSED, 0, "2026-10-01T09:00:00Z");
+		UUID orlen = seeds.post(PostStage.ASSESSED, 0, "2026-10-01T10:00:00Z");
+		seeds.ok(market, "2026-10-02T08:00:00Z",
+				output(target("t1", TargetKind.MACRO_TOPIC, "rynek", Direction.BEARISH, Assertiveness.HEDGED)));
+		seeds.ok(orlen, "2026-10-02T08:00:00Z",
+				output(target("t1", TargetKind.COMPANY, "Orlen", Direction.NOT_EXPRESSED, null)));
+
+		assertFeed(feed("kind", "macro_topic"), 1, market);
+		assertFeed(feed("q", "orlen"), 1, orlen);
+		assertFeed(feed("q", "orlen", "kind", "macro_topic"), 0);
+	}
+
+	@Test
+	void wildcardsInTheTextMatchOnlyThemselves() {
+		UUID plain = seeds.post(PostStage.ASSESSED, 0, "2026-10-01T09:00:00Z");
+		UUID percent = seeds.post(PostStage.ASSESSED, 0, "2026-10-01T10:00:00Z");
+		UUID exclamation = seeds.post(PostStage.ASSESSED, 0, "2026-10-01T11:00:00Z");
+		seeds.ok(plain, "2026-10-02T08:00:00Z");
+		seeds.ok(percent, "2026-10-02T08:00:00Z",
+				output(target("t1", TargetKind.MACRO_TOPIC, "WIG20 +5%", Direction.BULLISH, Assertiveness.UNHEDGED)));
+		seeds.ok(exclamation, "2026-10-02T08:00:00Z",
+				output(target("t1", TargetKind.COMPANY, "Kupuj PKO!", Direction.BULLISH, Assertiveness.UNHEDGED)));
+
+		assertFeed(feed("q", "%"), 1, percent);
+		assertFeed(feed("q", "_"), 0);
+		// The escape character itself.
+		assertFeed(feed("q", "!"), 1, exclamation);
+	}
+
+	@Test
+	void theFilterLooksOnlyAtTheLatestOkAssessment() {
+		UUID post = seeds.post(PostStage.ASSESSED, 0, "2026-10-01T09:00:00Z");
+		seeds.ok(post, "2026-10-02T08:00:00Z",
+				output(target("t1", TargetKind.COMPANY, "CDR", Direction.BEARISH, Assertiveness.UNHEDGED)));
+		seeds.ok(post, "2026-10-02T09:00:00Z",
+				output(target("t1", TargetKind.COMPANY, "XTB", Direction.BULLISH, Assertiveness.UNHEDGED)));
+
+		assertFeed(feed("q", "cdr"), 0);
+		assertFeed(feed("q", "xtb"), 1, post);
+	}
+
+	@Test
+	void filteredPagesAreNewestFirstAndCountOnlyMatches() {
+		UUID oldest = seeds.post(PostStage.ASSESSED, 0, "2026-10-01T08:00:00Z");
+		UUID other = seeds.post(PostStage.ASSESSED, 0, "2026-10-01T09:00:00Z");
+		UUID middle = seeds.post(PostStage.ASSESSED, 0, "2026-10-01T10:00:00Z");
+		UUID newest = seeds.post(PostStage.ASSESSED, 0, "2026-10-01T11:00:00Z");
+		List.of(oldest, middle, newest).forEach(post -> seeds.ok(post, "2026-10-02T08:00:00Z"));
+		seeds.ok(other, "2026-10-02T08:00:00Z",
+				output(target("t1", TargetKind.COMPANY, "Orlen", Direction.BULLISH, Assertiveness.UNHEDGED)));
+
+		MvcTestResult page0 = feed("q", "xtb", "page", "0", "size", "2");
+		MvcTestResult page1 = feed("q", "xtb", "page", "1", "size", "2");
+
+		assertFeed(page0, 3, newest, middle);
+		assertFeed(page1, 3, oldest);
+		assertThat(page1).bodyJson().extractingPath("$.page").isEqualTo(1);
+		assertThat(page1).bodyJson().extractingPath("$.size").isEqualTo(2);
+	}
+
+	@Test
+	void postsWithoutTargetsAndPostsNotAssessedNeverMatch() {
+		UUID match = seeds.post(PostStage.ASSESSED, 0, "2026-10-01T09:00:00Z");
+		UUID noContent = seeds.post(PostStage.ASSESSED, 0, "2026-10-01T10:00:00Z");
+		// Not assessed, yet with a matching ok attempt: only the stage keeps them out.
+		UUID stored = seeds.post(PostStage.STORED, 0, "2026-10-01T11:00:00Z");
+		UUID failed = seeds.post(PostStage.FAILED, 1, "2026-10-01T12:00:00Z");
+		List.of(match, stored, failed).forEach(post -> seeds.ok(post, "2026-10-02T08:00:00Z"));
+		seeds.ok(noContent, "2026-10-02T08:00:00Z", Prefilter.noContentOutput());
+
+		for (String[] filter : List.of(new String[] { "q", "xtb" }, new String[] { "kind", "company" },
+				new String[] { "direction", "bullish" }, new String[] { "direction", "not_expressed" })) {
+			assertFeed(feed(filter), 1, match);
+		}
+		// White space only is no filter: the feed as without one.
+		assertFeed(feed("q", " "), 2, noContent, match);
+	}
+
+	@Test
+	void badFilterValuesAreAnInvalidRequest() {
+		for (String[] query : List.of(new String[] { "kind", "spolka" }, new String[] { "direction", "BULLISH" },
+				new String[] { "kind", "COMPANY" }, new String[] { "q", "a".repeat(101) },
+				new String[] { "q", "or\u0000len" })) {
+			assertThat(feed(query)).as(String.join("=", query))
+				.hasStatus(HttpStatus.BAD_REQUEST)
+				.bodyJson()
+				.isStrictlyEqualTo("{\"detail\":\"invalid_request\"}");
+		}
+		assertThat(feed("q", "a".repeat(100))).hasStatusOk();
+	}
+
+	@Test
 	void theFailedListHasFailedAndDeadPostsWithTheirLatestAttempt() {
 		UUID failed = seeds.post(PostStage.FAILED, 1, "2026-10-01T09:00:00Z");
 		UUID dead = seeds.post(PostStage.DEAD, 3, "2026-10-01T10:00:00Z");
@@ -268,6 +392,26 @@ class PostsApiIT {
 
 	private static JsonNode tree(MvcTestResult result) {
 		return JSON.readTree(body(result));
+	}
+
+	/** {@code GET /api/posts} as a user, with {@code params} as name–value pairs. */
+	private MvcTestResult feed(String... params) {
+		MockMvcTester.MockMvcRequestBuilder request = mvc.get().uri("/api/posts").with(asUser());
+		for (int i = 0; i < params.length; i += 2) {
+			request = request.param(params[i], params[i + 1]);
+		}
+		return request.exchange();
+	}
+
+	private static void assertFeed(MvcTestResult result, int total, UUID... ids) {
+		assertThat(result).hasStatusOk();
+		assertThat(result).bodyJson().extractingPath("$.items[*].id").asArray()
+			.containsExactly(Arrays.stream(ids).map(UUID::toString).toArray());
+		assertThat(result).bodyJson().extractingPath("$.total").isEqualTo(total);
+	}
+
+	private static AssessmentOutputV2 output(Target... targets) {
+		return ContractFixtures.investment(List.of(targets), List.of());
 	}
 
 	private static RequestPostProcessor asUser() {

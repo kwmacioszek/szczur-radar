@@ -10,7 +10,12 @@ import { reportFeedLoaded } from '../router/scroll'
 import FeedView from './FeedView.vue'
 
 vi.mock('../api/auth', () => ({ fetchMe: vi.fn(), login: vi.fn(), logout: vi.fn() }))
-vi.mock('../api/posts', () => ({ fetchPosts: vi.fn(), fetchFailedPosts: vi.fn() }))
+// The value sets (TARGET_KINDS, DIRECTIONS) stay real: the filter reads the address against them.
+vi.mock('../api/posts', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../api/posts')>()),
+  fetchPosts: vi.fn(),
+  fetchFailedPosts: vi.fn(),
+}))
 vi.mock('../api/freshness', () => ({ fetchFreshness: vi.fn() }))
 vi.mock('../router/scroll', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../router/scroll')>()),
@@ -113,13 +118,13 @@ describe('FeedView', () => {
   it('reads the page from the address and pages through the results', async () => {
     vi.mocked(fetchPosts).mockResolvedValue({ items: [post('51')], page: 1, size: 50, total: 120 })
     const { wrapper, router } = await mountFeed('/?page=1')
-    expect(fetchPosts).toHaveBeenLastCalledWith(1, 50)
+    expect(fetchPosts).toHaveBeenLastCalledWith(1, 50, {})
     expect(wrapper.find('.position').text()).toBe('Strona 2 z 3')
 
     await wrapper.findAll('.pager button')[1]!.trigger('click')
     await flushPromises()
     expect(router.currentRoute.value.query.page).toBe('2')
-    expect(fetchPosts).toHaveBeenLastCalledWith(2, 50)
+    expect(fetchPosts).toHaveBeenLastCalledWith(2, 50, {})
 
     await wrapper.findAll('.pager button')[0]!.trigger('click')
     await flushPromises()
@@ -149,7 +154,7 @@ describe('FeedView', () => {
     await button(wrapper, 'Starsze').trigger('click')
     await flushPromises()
 
-    expect(fetchPosts).toHaveBeenLastCalledWith(1, 50)
+    expect(fetchPosts).toHaveBeenLastCalledWith(1, 50, {})
     expect(wrapper.find('article').exists()).toBe(false)
     expect(wrapper.find('.loading').text()).toBe('Wczytywanie strony 2…')
     expect(list.attributes('aria-busy')).toBe('true')
@@ -199,7 +204,7 @@ describe('FeedView', () => {
     await flushPromises()
 
     expect(router.currentRoute.value.query.page).toBe('2')
-    expect(fetchPosts).toHaveBeenLastCalledWith(2, 50)
+    expect(fetchPosts).toHaveBeenLastCalledWith(2, 50, {})
   })
 
   it('ignores the answer of an earlier load that arrives after the latest one', async () => {
@@ -311,7 +316,7 @@ describe('FeedView', () => {
     await flushPromises()
 
     expect(fetchPosts).toHaveBeenCalledTimes(2)
-    expect(fetchPosts).toHaveBeenLastCalledWith(0, 50)
+    expect(fetchPosts).toHaveBeenLastCalledWith(0, 50, {})
     expect(wrapper.find('[role="alert"]').exists()).toBe(false)
     expect(wrapper.find('article').text()).toContain('Wpis 1 o XTB')
   })
@@ -362,9 +367,171 @@ describe('FeedView', () => {
       await button(wrapper, 'Starsze').trigger('click')
       await flushPromises()
 
-      expect(fetchPosts).toHaveBeenLastCalledWith(1, 50)
+      expect(fetchPosts).toHaveBeenLastCalledWith(1, 50, {})
       expect(fetchFreshness).toHaveBeenCalledTimes(1)
       expect(wrapper.find('.freshness').exists()).toBe(true)
+    })
+  })
+
+  describe('filter', () => {
+    function field(wrapper: VueWrapper, selector: string): HTMLInputElement | HTMLSelectElement {
+      return wrapper.find(`form[role="search"] ${selector}`).element as HTMLInputElement | HTMLSelectElement
+    }
+
+    it('reads the filter from the address and fills the form', async () => {
+      vi.mocked(fetchPosts).mockResolvedValue(answer([post('1')], 3))
+      const { wrapper } = await mountFeed('/?q=cdr&direction=bullish')
+      expect(fetchPosts).toHaveBeenLastCalledWith(0, 50, { q: 'cdr', direction: 'bullish' })
+      expect(field(wrapper, 'input[type="search"]').value).toBe('cdr')
+      expect(wrapper.findAll('form select').map((select) => (select.element as HTMLSelectElement).value)).toEqual([
+        '',
+        'bullish',
+      ])
+    })
+
+    it('applies a filter from the first page, without scrolling or moving the focus', async () => {
+      vi.mocked(fetchPosts).mockResolvedValue(answer([post('101')], 120))
+      const { wrapper, router } = await mountFeed('/?page=2', document.body)
+      const heading = wrapper.find('h1').element
+
+      const text = wrapper.find('form input[type="search"]')
+      await text.setValue('xtb')
+      await wrapper.findAll('form select')[0]!.setValue('company')
+      ;(text.element as HTMLInputElement).focus()
+      await wrapper.find('form button[type="submit"]').trigger('click')
+      await flushPromises()
+
+      expect(router.currentRoute.value.query).toEqual({ q: 'xtb', kind: 'company' })
+      expect(fetchPosts).toHaveBeenLastCalledWith(0, 50, { q: 'xtb', kind: 'company' })
+      expect(window.scrollTo).not.toHaveBeenCalled()
+      expect(document.activeElement).not.toBe(heading)
+    })
+
+    it('submits an unchanged filter from a later page without scrolling or moving the focus', async () => {
+      vi.mocked(fetchPosts).mockResolvedValue(answer([post('101')], 120))
+      const { wrapper, router } = await mountFeed('/?q=xtb&page=2', document.body)
+      const heading = wrapper.find('h1').element
+      const text = wrapper.find('form input[type="search"]').element as HTMLInputElement
+      text.focus()
+
+      await wrapper.find('form button[type="submit"]').trigger('click')
+      await flushPromises()
+
+      expect(router.currentRoute.value.query).toEqual({ q: 'xtb' })
+      expect(fetchPosts).toHaveBeenLastCalledWith(0, 50, { q: 'xtb' })
+      expect(window.scrollTo).not.toHaveBeenCalled()
+      expect(document.activeElement).not.toBe(heading)
+
+      // The pager still goes to the top afterwards.
+      await button(wrapper, 'Starsze').trigger('click')
+      await flushPromises()
+      expect(window.scrollTo).toHaveBeenCalledWith({ top: 0 })
+      expect(document.activeElement).toBe(heading)
+    })
+
+    it('keeps the filter when paging', async () => {
+      vi.mocked(fetchPosts).mockResolvedValue(answer([post('1')], 120))
+      const { wrapper, router } = await mountFeed('/?q=xtb&kind=company')
+
+      await button(wrapper, 'Starsze').trigger('click')
+      await flushPromises()
+
+      expect(router.currentRoute.value.query).toEqual({ q: 'xtb', kind: 'company', page: '1' })
+      expect(fetchPosts).toHaveBeenLastCalledWith(1, 50, { q: 'xtb', kind: 'company' })
+    })
+
+    it('says how many posts there are, or how many match the filter, in a status region', async () => {
+      vi.mocked(fetchPosts).mockResolvedValueOnce(answer([post('1')], 120)).mockResolvedValueOnce(answer([post('1')], 3))
+      const { wrapper, router } = await mountFeed()
+      const status = wrapper.find('[role="status"]')
+      expect(status.text()).toBe('Ocenione posty: 120')
+
+      await router.push('/?q=xtb')
+      await flushPromises()
+
+      // The same element: a region added together with its text is not announced reliably.
+      expect(wrapper.find('[role="status"]').element).toBe(status.element)
+      expect(status.text()).toBe('Pasujące do filtra: 3')
+    })
+
+    it('keeps the status region empty while loading and after an error', async () => {
+      vi.mocked(fetchPosts).mockReturnValue(never())
+      const { wrapper } = await mountFeed('/?q=xtb')
+      expect(wrapper.find('[role="status"]').exists()).toBe(true)
+      expect(wrapper.find('[role="status"]').text()).toBe('')
+
+      vi.mocked(fetchPosts).mockRejectedValue(new TypeError('Failed to fetch'))
+      const failed = await mountFeed('/?q=xtb')
+      expect(failed.wrapper.find('[role="status"]').text()).toBe('')
+      expect(failed.wrapper.find('[role="alert"]').text()).toBe('Nie udało się wczytać postów.')
+    })
+
+    it('tells an empty filter result from an empty feed and clears the filter', async () => {
+      vi.mocked(fetchPosts).mockResolvedValueOnce(answer([], 0)).mockResolvedValueOnce(answer([post('1')], 120))
+      const { wrapper, router } = await mountFeed('/?q=zzz&kind=asset', document.body)
+      expect(wrapper.find('[role="status"]').text()).toBe('Żaden post nie pasuje do filtra.')
+      expect(wrapper.find('.empty').exists()).toBe(false)
+      const clear = wrapper.findAll('.posts button')
+      expect(clear.map((candidate) => candidate.text())).toEqual(['Wyczyść filtry'])
+
+      await clear[0]!.trigger('click')
+      await flushPromises()
+
+      expect(router.currentRoute.value.fullPath).toBe('/')
+      expect(fetchPosts).toHaveBeenLastCalledWith(0, 50, {})
+      expect(wrapper.find('[role="status"]').text()).toBe('Ocenione posty: 120')
+      expect(field(wrapper, 'input[type="search"]').value).toBe('')
+      // The button is gone with the empty result: the focus goes to the start of the list.
+      expect(document.activeElement).toBe(wrapper.find('h1').element)
+    })
+
+    it('clears the filter from the form', async () => {
+      vi.mocked(fetchPosts).mockResolvedValue(answer([post('1')], 3))
+      const { wrapper, router } = await mountFeed('/?q=xtb&page=1')
+
+      await wrapper.findAll('form button').find((candidate) => candidate.text() === 'Wyczyść filtry')!.trigger('click')
+      await flushPromises()
+
+      expect(router.currentRoute.value.fullPath).toBe('/')
+      expect(fetchPosts).toHaveBeenLastCalledWith(0, 50, {})
+      expect(wrapper.findAll('form button').map((candidate) => candidate.text())).toEqual(['Filtruj'])
+    })
+
+    it('drops an unknown value from the address instead of sending it', async () => {
+      vi.mocked(fetchPosts).mockResolvedValue(answer([post('1')], 120))
+      const { wrapper } = await mountFeed('/?kind=xyz')
+      expect(fetchPosts).toHaveBeenLastCalledWith(0, 50, {})
+      expect(wrapper.find('[role="status"]').text()).toBe('Ocenione posty: 120')
+    })
+
+    it('ignores the answer of an earlier filter that arrives after the latest one', async () => {
+      const answers = new Map<string, (value: Page<PostItem>) => void>()
+      vi.mocked(fetchPosts)
+        .mockResolvedValueOnce(answer([post('1')], 120))
+        .mockImplementation((_page, _size, filter) => new Promise((resolve) => answers.set(filter?.q ?? '', resolve)))
+      const { wrapper, router } = await mountFeed()
+
+      await router.push('/?q=cdr')
+      await flushPromises()
+      await router.push('/?q=xtb')
+      await flushPromises()
+      answers.get('xtb')!(answer([post('x')], 1))
+      await flushPromises()
+      answers.get('cdr')!(answer([post('c1'), post('c2')], 2))
+      await flushPromises()
+
+      expect(wrapper.findAll('article')).toHaveLength(1)
+      expect(wrapper.find('article').text()).toContain('Wpis x o XTB')
+      expect(wrapper.find('[role="status"]').text()).toBe('Pasujące do filtra: 1')
+      expect(wrapper.find('.posts').attributes('aria-busy')).toBeUndefined()
+    })
+
+    it('does not reload when the address changes outside the page and the filter', async () => {
+      vi.mocked(fetchPosts).mockResolvedValue(answer([post('1')], 120))
+      const { router } = await mountFeed('/?q=xtb')
+      await router.push('/?q=xtb&utm_source=link')
+      await flushPromises()
+      expect(fetchPosts).toHaveBeenCalledTimes(1)
     })
   })
 })

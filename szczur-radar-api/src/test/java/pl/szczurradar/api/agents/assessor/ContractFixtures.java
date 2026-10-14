@@ -64,14 +64,24 @@ public final class ContractFixtures {
 	/** An explicit company target anchored in {@code item.body}. */
 	public static Target target(String id, String anchor, Direction direction, Assertiveness assertiveness,
 			String... claimIds) {
-		return target(id, new Anchor(Document.ITEM, Field.BODY, anchor), Reference.EXPLICIT, direction, assertiveness,
-				claimIds);
+		return target(id, TargetKind.COMPANY, anchor, direction, assertiveness, claimIds);
+	}
+
+	/** An explicit target of {@code kind} anchored in {@code item.body}. */
+	public static Target target(String id, TargetKind kind, String anchor, Direction direction,
+			Assertiveness assertiveness, String... claimIds) {
+		return target(id, kind, new Anchor(Document.ITEM, Field.BODY, anchor), Reference.EXPLICIT, direction,
+				assertiveness, claimIds);
 	}
 
 	public static Target target(String id, Anchor anchor, Reference reference, Direction direction,
 			Assertiveness assertiveness, String... claimIds) {
-		return new Target(id, TargetKind.COMPANY, anchor, new Stance(direction, assertiveness, List.of(claimIds)),
-				reference);
+		return target(id, TargetKind.COMPANY, anchor, reference, direction, assertiveness, claimIds);
+	}
+
+	private static Target target(String id, TargetKind kind, Anchor anchor, Reference reference, Direction direction,
+			Assertiveness assertiveness, String... claimIds) {
+		return new Target(id, kind, anchor, new Stance(direction, assertiveness, List.of(claimIds)), reference);
 	}
 
 	/** An investment thesis quoting {@code item.body}. */

@@ -646,6 +646,34 @@ PR #49 was squash-merged as `54c4fc2` (13:22 UTC), after S-05 (#50).
   - From the feed, scrolled down, to a post and back, through "← Posty" and through the browser's back button: the card came back to the same place (144 px from the top, under the freshness label), with the focus on its link.
   - "Dane dla nerdów" shows the raw JSON. The link to the original goes to `wykop.pl` in a new tab (`rel="noopener noreferrer"`).
 
+## filter-by-assessment: filtr feedu (S-04)
+
+**Status (2026-10-13): verified in the PR env (#54), not merged.** The feed `/` gets a filter by target text, target kind and author stance on the same target (FR-011a). Change: `context/changes/filter-by-assessment/`, issue #17.
+
+- **Nothing to set up.** No migration, no new variable, no IaC change. `GET /api/posts` takes the optional `q`, `kind` and `direction`; without them the answer is unchanged.
+- **The database locale matters.** The text match is `ILIKE`, which folds the case of Polish letters only under a suitable `LC_CTYPE`.
+  - Testcontainers and the PR env have `en_US.utf8` (libc): `KĘTY` finds `Kęty`.
+  - Production was not checked before the merge; step 2 below checks it.
+- **PR-env verification:** results, screenshots and the 7-state matrix are in `context/changes/filter-by-assessment/ui-after/README.md`.
+
+### Runbook — after the merge (operator + agent; tracked in issue #17, not in the plan's Progress)
+
+0. Standing rule: no merge to `main` while a run is `RUNNING` in `/admin`.
+1. CI on `main` is green, and the API and web deploys succeed. The API pre-deploy `migrate` says the schema is up to date, because S-04 adds no migration.
+2. **Database locale** (read-only):
+   ```bash
+   railway ssh -s postgres -e production -- 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -tAc "SELECT datlocprovider, datcollate, datctype FROM pg_database WHERE datname = current_database()"'
+   ```
+   Expected: `c|en_US.utf8|en_US.utf8`, or another UTF-8 locale that folds Polish letters.
+   - If it is `C` or `POSIX`, `ILIKE` folds only ASCII letters, so `KĘTY` does not find `Kęty`.
+   - In that case, stop, record it in issue #17 and decide on a fix there (e.g. `lower()` on both sides with an ICU collation). Do not rewrite the database.
+3. **On the public address, logged in**, pick fragments from real posts on `/`:
+   - a quote written with a Polish letter, searched in the other case (e.g. `Żabka` as `ŻABKA`): the post is found;
+   - the same-target check: a post with two targets of different directions; the text of one target with the direction of the other gives "Żaden post nie pasuje do filtra.", and with its own direction it finds the post;
+   - `/?q=zzz`: the empty filter result, and "Wyczyść filtry" brings the whole feed back;
+   - `GET /api/posts?kind=xyz` and `GET /api/posts?q=%00` give 400 `{"detail":"invalid_request"}`.
+4. Record the locale and the results in issue #17 and close it with the merge commit.
+
 ## Phases
 
 ### [x] 1. Prepare the application

@@ -4,6 +4,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
+import org.jspecify.annotations.Nullable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -11,6 +12,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
+import pl.szczurradar.api.agents.assessor.AssessmentResult;
 import pl.szczurradar.api.sources.Source;
 
 /**
@@ -61,5 +63,41 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
 	}
 
 	Page<Post> findByStageIn(Collection<PostStage> stages, Pageable page);
+
+	/**
+	 * A page of the feed (FR-011a), newest first, with {@code total} counted after the filter. Without a
+	 * condition it is every assessed post ({@link #findPage}). With one, an assessed post is in only if
+	 * its latest {@code ok} assessment (the one the feed shows: latest {@code assessed_at}, then greatest
+	 * id, as {@link AssessmentRepository#findLatestOk}) has a target that meets every given condition
+	 * itself — the same element of {@code targets[]}, so a quote of one target and the direction of
+	 * another never make a match. A post without targets (the prefilter's output) never matches.
+	 */
+	default Page<Post> findAssessedPage(PostFilter filter, int page, int size) {
+		if (filter.isEmpty()) {
+			return findPage(List.of(PostStage.ASSESSED), page, size);
+		}
+		return findMatching(PostStage.ASSESSED.value(), AssessmentResult.Status.OK.value(), filter.quotePattern(),
+				filter.kind() == null ? null : filter.kind().value(),
+				filter.direction() == null ? null : filter.direction().value(), PageRequest.of(page, size));
+	}
+
+	/**
+	 * Posts in {@code stage} joined with their latest assessment in {@code status}, and the target condition
+	 * of {@link #findAssessedPage}: a {@code null} parameter is no condition (cast, so Postgres knows its
+	 * type even when it is {@code null}).
+	 */
+	String MATCHING = " FROM posts p CROSS JOIN LATERAL (SELECT a.output FROM assessments a"
+			+ " WHERE a.post_id = p.id AND a.status = :status ORDER BY a.assessed_at DESC, a.id DESC LIMIT 1) latest"
+			+ " WHERE p.stage = :stage AND EXISTS (SELECT 1 FROM jsonb_array_elements(latest.output -> 'targets') t"
+			+ " WHERE (CAST(:pattern AS text) IS NULL"
+			+ " OR t -> 'anchor' ->> 'quote' ILIKE CAST(:pattern AS text) ESCAPE '" + PostFilter.LIKE_ESCAPE + "')"
+			+ " AND (CAST(:kind AS text) IS NULL OR t ->> 'kind' = CAST(:kind AS text))"
+			+ " AND (CAST(:direction AS text) IS NULL OR t -> 'stance' ->> 'direction' = CAST(:direction AS text)))";
+
+	/** Unsorted {@code page} only: the order is the query's own (native SQL knows no entity field names). */
+	@Query(value = "SELECT p.*" + MATCHING + " ORDER BY p.published_at DESC, p.id DESC",
+			countQuery = "SELECT count(*)" + MATCHING, nativeQuery = true)
+	Page<Post> findMatching(String stage, String status, @Nullable String pattern, @Nullable String kind,
+			@Nullable String direction, Pageable page);
 
 }
