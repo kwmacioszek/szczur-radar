@@ -429,7 +429,7 @@ PR #44 was squash-merged as `b7ee254` (11:25 UTC). CI on `main` applied `+ Creat
 
 ## S-05: codzienny przebieg (daily-scheduled-run-freshness)
 
-**Status (2026-10-13): in the PR env (#50), not merged.** S-05 adds the cron service `pipeline-trigger`, which starts the pipeline every night, and the label "Dane zaktualizowane: …" above the feed. Change: `context/changes/daily-scheduled-run-freshness/`, issue #18.
+**Status (2026-10-15): live on production** after the human merge of PR #50 (`13e371a`, 2026-10-13); the first night's run passed (section "Production after the merge" below); issue #18 closed. S-05 adds the cron service `pipeline-trigger`, which starts the pipeline every night, and the label "Dane zaktualizowane: …" above the feed. Change: `context/archive/2026-10-12-daily-scheduled-run-freshness/`.
 
 ### How the daily run works
 
@@ -465,7 +465,7 @@ PR #44 was squash-merged as `b7ee254` (11:25 UTC). CI on `main` applied `+ Creat
 | `pipeline-trigger` | `TRIGGER_*` durations | defaults | defaults |
 
 - `pipeline-trigger` has its own resource cap `PIPELINE_TRIGGER_LIMITS` (0.5 vCPU / 0.5 GB; caps are per service since #52) and no `checkSuites`, for the same reason as `db-backup`.
-- Not known before production: whether a reference to a **sealed** variable of another service resolves (Railway's docs do not say). Step 2 of the runbook checks it.
+- Not known before production: whether a reference to a **sealed** variable of another service resolves (Railway's docs do not say). Step 2 of the runbook checks it. **Update 2026-10-14:** it resolves. The CLI cannot show it (a sealed value is `null` on the API and the cron's reference reads as an empty string), but at run time the cron sends the right token: the API answered 202 to the manual run and to the first night's run. No `preserve()` fallback is needed.
 
 ### No merge at night
 
@@ -498,10 +498,30 @@ Phase 5, the whole chain (2026-10-13, head `0969307`):
   - `started: retry …, range …`: a RETRY run for the 3 posts left over from phase 3 → `partial` (assessed ok 1, failed 2);
   - the RANGE run for 2026-10-11…2026-10-12 (Warsaw; `range_from` 2026-10-10 22:00 UTC, `range_to` 2026-10-12 21:59:59 UTC) → `partial` (fetched 248, new posts 213, assessed ok 209, failed 4), finished 06:43:51 UTC;
   - `OK: retry partial, range partial`, deployment `SUCCESS` (exit 0). Both runs have `requested_by` = `scheduler@system.invalid`.
-- **The label for a `user`.** Logged in on the public PR-env domain as `freshness-check@example.com`: `/api/auth/me` → role `user`; `GET /api/freshness` → `{"lastUpdatedAt":"2026-10-13T06:43:51.489405Z"}`; `/` shows "Dane zaktualizowane: 13.10.2026, 08:43" with `<time datetime="2026-10-13T06:43:51.489405Z">` above 50 posts (screenshots `context/changes/daily-scheduled-run-freshness/ui/pr-env-user-*.png`).
+- **The label for a `user`.** Logged in on the public PR-env domain as `freshness-check@example.com`: `/api/auth/me` → role `user`; `GET /api/freshness` → `{"lastUpdatedAt":"2026-10-13T06:43:51.489405Z"}`; `/` shows "Dane zaktualizowane: 13.10.2026, 08:43" with `<time datetime="2026-10-13T06:43:51.489405Z">` above 50 posts (screenshots `context/archive/2026-10-12-daily-scheduled-run-freshness/ui/pr-env-user-*.png`).
 - **Afterwards** the schedule is back to `30 0 * * *` and `TRIGGER_IN_ANY_ENVIRONMENT` is deleted. Deleting a variable did not redeploy the cron, and a cron run reuses its deployment, so the old deployment would still have run with the override at night; a redeploy (Railway MCP) gave a deployment without it. The test account stays in the PR env until the PR env is closed.
 
+### Production after the merge (2026-10-13 – 2026-10-14)
+
+PR #50 was squash-merged as `13e371a` (2026-10-13 12:30 UTC), after the operator set `PIPELINE_TRIGGER_TOKEN` on the API with `--stdin` and sealed it, and checked the custom notification rule "deployment crashed".
+
+- **Service.** `pipeline-trigger` exists on production (cron `30 0 * * *`). Its token reference resolves only at run time (Variables above).
+- **Manual run, 2026-10-13** (deployment `c72e20b3`, started by the operator at 17:41:47 UTC): the cron got 202 and started RETRY `faba1678` and RANGE `b1995b4e`. Both were then interrupted, not by the run itself:
+  - the docs-only merge #55 at 17:55 UTC redeployed every service, because production had no watch paths (Troubleshooting (Java), "Every merge redeploys every service", PR #58);
+  - the new API marked both runs `interrupted` at start (17:58:47, 4 posts put back);
+  - the cron's container was replaced by the same merge ("Stopping Container") before it could log the result. No failure signal came: a replaced deployment is not `CRASHED`. A run interrupted this way shows only in `/admin`.
+- **Observability gap.** While the RETRY run assessed, nothing was logged for more than 7 minutes: `trigger.sh` logs only status changes and the API does not log single LLM calls. Recorded for S-06 in the roadmap (#56: run progress in `/admin`, a no-progress warning, progress lines in the API and cron logs).
+- **First night, 2026-10-14** (deployment `e379f584`):
+  - 00:32:41 UTC start (2 min late); the API was asleep and answered after 19 s;
+  - RETRY `fe22e327` → `partial` at 00:43:02 (assessed ok 148, failed 3, dead 0): the 151 posts are mostly the interrupted manual run's;
+  - RANGE `355ca0fd` (D-2…D-1) → `partial` at 01:19:04 (fetched 469, new posts 469, assessed ok 458, failed 11);
+  - `OK: retry partial, range partial`, deployment `SUCCESS` (exit 0). The 14 failed posts go to the next night's RETRY.
+- **Time.** 46 min, not the 12–25 min estimated above: a catch-up night (151 leftovers, then 469 posts, all new). It ended at 01:19 UTC, inside the no-merge window and before the 02:00 backup. A night after an interrupted or failed run can run past 01:30, so check `/admin` before merging.
+- **Label.** `GET /api/freshness` on production returns that run's end, checked by the operator (2026-10-15).
+
 ### Runbook — after the merge (operator; tracked in issue #18, not in the plan's Progress)
+
+**Done 2026-10-15** (section above).
 
 0. **Before the merge**, not while `/admin` shows a run `RUNNING` and not between about 00:30 and 01:30 UTC:
    1. Set the token on production and seal it in the dashboard; the merge's deploy picks it up. Without it every night ends in 401 and a crashed cron.
