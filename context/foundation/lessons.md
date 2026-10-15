@@ -102,3 +102,10 @@
 - **Problem**: CI stosuje IaC najpierw do PR env, więc nowy bucket powstał w projekcie tylko z instancją w PR env; apply na produkcji po merge'u zalogował `✓ bucket.…`, ale go tam nie wdrożył — referencje `${{db-backups.*}}` były puste i pierwsza kopia padła. Ponowny apply ze stałym diffem (`sleepApplication null → false`) zrestartował produkcyjnego Postgresa, który zawisł na „Mounting volume” na 9 min.
 - **Rule**: Zmianę dodającą bucket w IaC planuj z krokiem produkcyjnym: po pierwszym apply na produkcji sprawdź `railway bucket list -e production` i długości zmiennych z referencjami (nie sam log CI), a brakujący bucket utwórz tam pod tą samą nazwą. Nie trzymaj w `railway.ts` deklaracji dającej stały diff i przed każdym apply na produkcji sprawdź w planie, które usługi zrestartuje.
 - **Applies to**: plan, plan-review, implement, impl-review, infra, deploy
+
+## Pole w railway.ts, którego SDK nie zna, znika bez błędu — sprawdzaj żywą konfigurację usługi
+
+- **Context**: Każda deklaracja ustawienia usługi w `.railway/railway.ts` (SDK `railway` 3.11), szczególnie nowe pole albo pole przepisane z dokumentacji lub panelu (2026-10-15, po pierwszym nocnym przebiegu S-05).
+- **Problem**: `watchPatterns` stało na najwyższym poziomie `service(...)`, a SDK ma je tylko w `build.watchPatterns`. Pole zniknęło bez błędu: plan był pusty, produkcja nie miała ścieżek obserwowanych i każdy commit na `main`, także sama dokumentacja, przedeployował wszystkie usługi. Merge dokumentacji #55 zrestartował API i przerwał trwający przebieg pipeline'u. PR envy tego nie pokazały, bo tam Railway sam pomija usługi poza zmienionym katalogiem.
+- **Rule**: Nowe pole w `railway.ts` sprawdź z typem `IntentServiceConfig` w `node_modules/railway/dist/*.d.ts`, a po apply — w żywej konfiguracji usługi na produkcji (MCP `get-service-config` albo panel), nie po pustym planie. Pusty plan po dodaniu pola znaczy, że pole nic nie robi.
+- **Applies to**: plan, implement, impl-review, infra, deploy

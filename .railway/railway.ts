@@ -101,7 +101,11 @@ export default defineRailway(() => {
   const api = service("szczur-radar-api", {
     source: github(REPO, { branch, checkSuites: true }),
     rootDirectory: "szczur-radar-api",
-    watchPatterns: ["szczur-radar-api/**"],
+    // Watch paths belong under `build`: SDK 3.11 has no top-level
+    // `watchPatterns` and silently dropped it, so until 2026-10-15 every commit
+    // on main redeployed every service (and interrupted a running pipeline run).
+    // Patterns match from the repo root, not from rootDirectory.
+    build: { watchPatterns: ["szczur-radar-api/**"] },
     // Flyway migrations run BEFORE each new API version starts (production and
     // PR envs), never at server start (spring.flyway.enabled=false there). If a
     // migration fails, `migrate` exits non-zero, Railway stops the deploy and
@@ -182,7 +186,7 @@ export default defineRailway(() => {
   const web = service("szczur-radar-web", {
     source: github(REPO, { branch, checkSuites: true }),
     rootDirectory: "szczur-radar-web",
-    watchPatterns: ["szczur-radar-web/**"],
+    build: { watchPatterns: ["szczur-radar-web/**"] },
     healthcheck: "/healthz",
     replicas: { [REGION]: 1 },
     deploy: { sleepApplication: true, limitOverride: WEB_LIMITS },
@@ -214,7 +218,7 @@ export default defineRailway(() => {
   const dbBackup = service("db-backup", {
     source: github(REPO, { branch }),
     rootDirectory: "tools/db-backup",
-    watchPatterns: ["tools/db-backup/**"],
+    build: { watchPatterns: ["tools/db-backup/**"] },
     replicas: { [REGION]: 1 },
     deploy: { cronSchedule: "0 2 * * *", restartPolicyType: "NEVER", limitOverride: DB_BACKUP_LIMITS },
     env: {
@@ -254,7 +258,7 @@ export default defineRailway(() => {
   const pipelineTrigger = service("pipeline-trigger", {
     source: github(REPO, { branch }),
     rootDirectory: "tools/pipeline-trigger",
-    watchPatterns: ["tools/pipeline-trigger/**"],
+    build: { watchPatterns: ["tools/pipeline-trigger/**"] },
     replicas: { [REGION]: 1 },
     deploy: { cronSchedule: "30 0 * * *", restartPolicyType: "NEVER", limitOverride: PIPELINE_TRIGGER_LIMITS },
     env: {
