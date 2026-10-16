@@ -778,7 +778,23 @@ Repair a bad S-06 release with a new commit, never by a rollback; never edit `V8
 
 ### PR-env verification (szczur-radar-pr-60)
 
-(filled in by the PR-env verification, plan phase 6 §3)
+Verified 2026-10-16 on `fa87f19` (CI run 38966942987: all seven jobs green; `railway-config` applied nothing destructive).
+
+- **Deploys.** api `1256c44e` and web `e1656579` SUCCESS from `fa87f19`; the web is at the branch head. The cron (`pipeline-trigger`) was last built from `87e92c3` (heartbeat for `running` runs only); later pushes left it `SKIPPED` (watch paths).
+- **Setup.**
+  - `PIPELINE_TRIGGER_TOKEN` was set on the PR env's API with `--stdin` (64 characters); the cron's reference resolves to the same length.
+  - Test accounts `s06-admin@example.com` (admin) and `s06-user@example.com` (user) were created with `create-user` over `railway ssh` and activated through `/api/auth/activation` with random passwords. The links and passwords were never printed and are deleted; the accounts stay in the PR env's database.
+- **The cron's run.** With `TRIGGER_IN_ANY_ENVIRONMENT=true`, `TRIGGER_HEARTBEAT_INTERVAL=1m`, a one-off schedule `16 21 * * *` and a redeploy of the cron (Railway MCP), the cron started RANGE `5d2af0bf` at 21:16:29 UTC (D-2…D-1 = 2026-10-14…15; no leftovers, so no RETRY run).
+  - API log: `Pipeline run 5d2af0bf… (range) started`; `step fetch succeeded (out 864) in 11.6s`, `store … in 426ms`, `select … in 19ms`, `step assess started (in 864)`; at 21:17:44 `assess: 152/864 (ok 150, failed 2, dead 0, errors 0), in flight 3, retries 0, flex fallbacks 0`.
+  - Cron log: heartbeats at 21:17:30 (`assessed 108/864`), 21:18:30 (`281/864`) and 21:19:30 (`444/864`), each with `step assess` and `last activity …`.
+  - `/admin/runs/5d2af0bf…`: "Krok: ocena", the bar at 33/864 (21:16:58), then 217/864 (21:18:09), "Ostatnia aktywność: przed chwilą". `/admin`: the range 14.10–15.10.2026, "uruchomił cron", the duration and the counters.
+- **Interruption by a deploy.** A redeploy of the API at about 21:18 (`7c1ef5ec`, Railway MCP) during the assessment. The old instance kept assessing until the new one took over (about 1.5 min), then:
+  - the new instance's recovery marked the run `interrupted` with cause `deploy`; step `assess` is `interrupted`, no `summarize` step was added; 472 assessed ok, 14 failed;
+  - the cron logged `interrupted (fetched 864, new posts 864, assessed ok 472, assessed failed 14, processing errors 0, dead 0) (cause deploy)` and `FAILED: a run did not succeed: range interrupted`, exit 1, deployment `CRASHED` (the custom rule's crash notification is expected here);
+  - the admin's bell showed 1 unread, "nowe · przerwany — nowe wdrożenie"; a click opened `/admin/runs/5d2af0bf…` ("przerwany — nowe wdrożenie") and the count dropped to 0 (`readAt` set).
+- **A `user`** (`s06-user@example.com`): no bell and no "Panel admina" link; `/admin/runs/<id>` sent it to `/`; `GET /api/admin/notifications` and `GET /api/admin/pipeline-runs/<id>` answered 403.
+- **Afterwards.** `TRIGGER_IN_ANY_ENVIRONMENT` and `TRIGGER_HEARTBEAT_INTERVAL` deleted, the schedule back to `30 0 * * *`, the cron redeployed (`b89f6390`); its variables are again `API_PORT`, `API_PRIVATE_DOMAIN` and `PIPELINE_TRIGGER_TOKEN`. The API keeps its `PIPELINE_TRIGGER_TOKEN` (`preserve()`). Screenshots: `context/changes/pipeline-run-history-dashboard/ui-after/pr-env-*.png`.
+- **Not forced:** the watchdog's stop, which would need a really hung run. `RunWatchdogIT` covers the stop; the local run with `PIPELINE_STALL_TIMEOUT=1m` (plan step 2.4) showed it leaves a run with progress alone.
 
 ### Runbook — after the merge (operator; tracked in issue #19, not in the plan's Progress)
 

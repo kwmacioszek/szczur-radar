@@ -112,4 +112,13 @@ Według `.claude/skills/10x-ui/references/ui-quality-checklist.md`.
 
 ## PR env
 
-(uzupełnia weryfikacja w Railway PR env, kroki 6.7–6.10)
+`szczur-radar-pr-60`, 2026-10-16, commit `fa87f19` (szczegóły i logi: `context/deployment/deploy-plan.md`, sekcja S-06, „PR-env verification”).
+
+| Krok | Wynik | Zrzut |
+| --- | --- | --- |
+| 6.7 postęp na żywo | przebieg RANGE z crona (864 posty): strona przebiegu 33/864 → 217/864, „Ostatnia aktywność: przed chwilą”; `/admin`: zakres, „uruchomił cron”, czas, liczniki; w logu API linia `assess: 152/864 (…)` | `pr-env-run-progress-1.png`, `pr-env-run-progress-2.png`, `pr-env-admin-running.png` |
+| 6.8 heartbeat crona | linie co minutę (`TRIGGER_HEARTBEAT_INTERVAL=1m`): `assessed 108/864`, `281/864`, `444/864` ze `step assess` i `last activity` | — (log Railway) |
+| 6.9 przerwanie redeployem | przebieg `interrupted`, przyczyna `deploy`, krok `assess` przerwany, bez kroku `summarize`; cron: `(cause deploy)`, exit 1; dzwoneczek 1 nieprzeczytane, kliknięcie → strona przebiegu „przerwany — nowe wdrożenie”, licznik 0 | `pr-env-bell-open.png`, `pr-env-run-interrupted-deploy.png` |
+| 6.10 konto `user` | bez dzwoneczka i linku „Panel admina”; `/admin/runs/:id` → `/`; `GET /api/admin/notifications` i `GET /api/admin/pipeline-runs/:id` → 403 | `pr-env-user-feed.png` |
+
+Po weryfikacji zmienne testowe crona są usunięte, harmonogram wrócił do `30 0 * * *`, a cron jest zredeployowany.
