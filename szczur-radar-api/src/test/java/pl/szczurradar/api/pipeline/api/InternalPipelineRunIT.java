@@ -60,7 +60,8 @@ import pl.szczurradar.api.user.UserRepository;
 /**
  * The daily cron's routes ({@code /internal/pipeline-runs}) against the real queue: the trigger token
  * and only the token (no session accepted, none created, no cookie set), the token meaning nothing on
- * {@code /api/**}, the daily range on a fixed clock, and the admin's refusals. Runs execute in the
+ * {@code /api/**}, the daily range on a fixed clock, a run's state with its step and progress, and the
+ * admin's refusals. Runs execute in the
  * background with Wykop on a local server answering an empty day, which a test can hold to keep a run
  * active. Every test waits until no run is active before it ends.
  */
@@ -210,23 +211,73 @@ class InternalPipelineRunIT {
 		assertThat(run.getRequestedBy()).isEqualTo(SystemAccount.SCHEDULER.id());
 
 		awaitIdle();
+		// The summarize step closes just after the run's status is written.
+		awaitStepsClosed(UUID.fromString(id));
 		MvcTestResult status = internal(HttpMethod.GET, "/internal/pipeline-runs/" + id, bearer(TOKEN), null);
 		assertThat(status).hasStatusOk();
 		Map<String, Object> body = JsonPath.read(status.getResponse().getContentAsString(), "$");
 		PipelineRun finished = runs.findById(UUID.fromString(id)).orElseThrow();
 		assertThat(body)
-			.containsOnlyKeys("id", "kind", "status", "finishedAt", "fetched", "newPosts", "assessedOk", "assessedFailed",
-					"processingErrors", "dead")
+			.containsOnlyKeys("id", "kind", "status", "startedAt", "finishedAt", "lastActivityAt", "interruptionCause",
+					"step", "assessTotal", "fetched", "newPosts", "assessedOk", "assessedFailed", "processingErrors",
+					"dead")
 			.containsEntry("id", id)
 			.containsEntry("kind", "range")
 			.containsEntry("status", "succeeded")
+			.containsEntry("interruptionCause", null)
+			.containsEntry("step", null)
+			// An empty day: the assess step took no post.
+			.containsEntry("assessTotal", 0)
 			.containsEntry("fetched", finished.getFetched())
 			.containsEntry("newPosts", finished.getNewPosts())
 			.containsEntry("assessedOk", finished.getAssessedOk())
 			.containsEntry("assessedFailed", finished.getAssessedFailed())
 			.containsEntry("processingErrors", finished.getProcessingErrors())
 			.containsEntry("dead", finished.getDead());
+		assertThat(Instant.parse((String) body.get("startedAt"))).isEqualTo(finished.getStartedAt());
 		assertThat(Instant.parse((String) body.get("finishedAt"))).isEqualTo(finished.getFinishedAt());
+		assertThat(Instant.parse((String) body.get("lastActivityAt"))).isEqualTo(finished.getLastActivityAt());
+	}
+
+	@Test
+	void whileARunAssessesItsStateNamesTheStepAndItsTotalAndAnInterruptionItsCause() throws Exception {
+		UUID run = jdbc.queryForObject("INSERT INTO pipeline_runs (kind, status, requested_by, started_at,"
+				+ " last_activity_at, assessed_ok, assessed_failed) VALUES ('retry', 'running', ?,"
+				+ " '2026-10-26T00:30:05Z', '2026-10-26T00:35:00Z', 3, 1) RETURNING id", UUID.class,
+				SystemAccount.SCHEDULER.id());
+		try {
+			jdbc.update("INSERT INTO pipeline_run_steps (run_id, step, status, started_at, finished_at, items_out)"
+					+ " VALUES (?, 'select', 'succeeded', '2026-10-26T00:30:06Z', '2026-10-26T00:30:07Z', 10)", run);
+			jdbc.update("INSERT INTO pipeline_run_steps (run_id, step, started_at, items_in)"
+					+ " VALUES (?, 'assess', '2026-10-26T00:30:08Z', 10)", run);
+
+			Map<String, Object> during = state(run);
+
+			assertThat(during).containsEntry("status", "running")
+				.containsEntry("step", "assess")
+				.containsEntry("assessTotal", 10)
+				.containsEntry("assessedOk", 3)
+				.containsEntry("assessedFailed", 1)
+				.containsEntry("interruptionCause", null)
+				.containsEntry("finishedAt", null);
+			assertThat(Instant.parse((String) during.get("startedAt"))).isEqualTo("2026-10-26T00:30:05Z");
+			assertThat(Instant.parse((String) during.get("lastActivityAt"))).isEqualTo("2026-10-26T00:35:00Z");
+
+			// A new deployment's recovery interrupts it and closes its step.
+			jdbc.update("UPDATE pipeline_runs SET status = 'interrupted', finished_at = now(), interruption_cause ="
+					+ " 'deploy' WHERE id = ?", run);
+			jdbc.update("UPDATE pipeline_run_steps SET status = 'interrupted', finished_at = now() WHERE run_id = ?"
+					+ " AND status = 'running'", run);
+
+			assertThat(state(run)).containsEntry("status", "interrupted")
+				.containsEntry("interruptionCause", "deploy")
+				.containsEntry("step", null)
+				.containsEntry("assessTotal", 10);
+		}
+		finally {
+			jdbc.update("UPDATE pipeline_runs SET status = 'failed', finished_at = now() WHERE id = ?"
+					+ " AND status = 'running'", run);
+		}
 	}
 
 	@Test
@@ -267,6 +318,23 @@ class InternalPipelineRunIT {
 		assertThat(result.getResponse().getHeaders(HttpHeaders.SET_COOKIE)).as(method + " " + uri).isEmpty();
 		assertThat(sessionRows()).as(method + " " + uri).isEqualTo(sessionsBefore);
 		return result;
+	}
+
+	/** The cron's view of {@code runId}. */
+	private Map<String, Object> state(UUID runId) throws Exception {
+		MvcTestResult status = internal(HttpMethod.GET, "/internal/pipeline-runs/" + runId, bearer(TOKEN), null);
+		assertThat(status).hasStatusOk();
+		return JsonPath.read(status.getResponse().getContentAsString(), "$");
+	}
+
+	/** Waits until none of the run's steps is running. */
+	private void awaitStepsClosed(UUID runId) {
+		long deadline = System.nanoTime() + Duration.ofSeconds(10).toNanos();
+		while (jdbc.queryForObject("SELECT count(*) FROM pipeline_run_steps WHERE run_id = ? AND status = 'running'",
+				Integer.class, runId) > 0) {
+			assertThat(System.nanoTime()).as("steps still running").isLessThan(deadline);
+			sleep(50);
+		}
 	}
 
 	private static String bearer(String token) {

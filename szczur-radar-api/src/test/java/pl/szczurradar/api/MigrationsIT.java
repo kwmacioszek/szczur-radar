@@ -36,7 +36,7 @@ class MigrationsIT {
 		List<Map<String, Object>> history = jdbc.queryForList(
 				"SELECT version, success FROM flyway_schema_history WHERE version IS NOT NULL ORDER BY installed_rank");
 		assertThat(history).extracting(row -> row.get("version")).containsExactly("1", "2", "3", "4", "5", "6", "7",
-				"8");
+				"8", "9");
 		assertThat(history).allSatisfy(row -> assertThat(row.get("success")).isEqualTo(true));
 	}
 
@@ -264,6 +264,49 @@ class MigrationsIT {
 
 		assertThat(jdbc.queryForObject("SELECT count(*) FROM activation_tokens WHERE user_id = ?", Integer.class,
 				account)).isZero();
+	}
+
+	@Test
+	void notificationsHaveNamedConstraintsAndTheirIndex() {
+		assertThat(constraintsOf("notifications")).contains("notifications_pkey", "fk_notifications_recipient",
+				"fk_notifications_run", "ck_notifications_kind", "ck_notifications_run",
+				"uq_notifications_recipient_kind_run");
+		assertThat(jdbc.queryForList("SELECT indexname FROM pg_indexes WHERE schemaname = 'public'", String.class))
+			.contains("ix_notifications_recipient_created");
+	}
+
+	@Test
+	void aRunNotificationNamesItsRunAndARecipientHasOneOfAKindPerRun() {
+		UUID recipient = user("notified@example.com");
+		UUID run = run(user("notified-run@example.com"), "failed");
+		Map<String, Object> row = jdbc.queryForMap("INSERT INTO notifications (recipient_id, kind, run_id)"
+				+ " VALUES (?, 'run_attention', ?) RETURNING id, created_at, read_at", recipient, run);
+		assertThat(row.get("id")).isNotNull();
+		assertThat(row.get("created_at")).isNotNull();
+		assertThat(row.get("read_at")).isNull();
+
+		assertRejected(notificationInsert(recipient, "run_attention", run), "uq_notifications_recipient_kind_run");
+		assertRejected(notificationInsert(recipient, "run_failed", run), "ck_notifications_kind");
+		assertRejected(notificationInsert(recipient, "run_attention", null), "ck_notifications_run");
+		assertRejected(notificationInsert(recipient, "run_attention", UUID.randomUUID()), "fk_notifications_run");
+		assertRejected(notificationInsert(UUID.randomUUID(), "run_attention", run), "fk_notifications_recipient");
+	}
+
+	@Test
+	void deletingAnAccountDeletesItsNotifications() {
+		UUID recipient = user("notification-cascade@example.com");
+		UUID run = run(user("notification-cascade-run@example.com"), "interrupted");
+		jdbc.update(notificationInsert(recipient, "run_attention", run));
+
+		jdbc.update("DELETE FROM users WHERE id = ?", recipient);
+
+		assertThat(jdbc.queryForObject("SELECT count(*) FROM notifications WHERE run_id = ?", Integer.class, run))
+			.isZero();
+	}
+
+	private static String notificationInsert(UUID recipientId, String kind, UUID runId) {
+		return "INSERT INTO notifications (recipient_id, kind, run_id) VALUES ('" + recipientId + "', '" + kind + "', "
+				+ (runId == null ? "NULL" : "'" + runId + "'") + ")";
 	}
 
 	private static String tokenInsert(UUID userId, String tokenHash) {

@@ -54,6 +54,7 @@ import pl.szczurradar.api.llm.LlmRequest;
 import pl.szczurradar.api.llm.LlmResponse;
 import pl.szczurradar.api.llm.OutputMode;
 import pl.szczurradar.api.llm.transport.TransportException;
+import pl.szczurradar.api.notifications.RunNotifications;
 import pl.szczurradar.api.pipeline.run.PipelineRun;
 import pl.szczurradar.api.pipeline.run.PipelineRunRepository;
 import pl.szczurradar.api.pipeline.run.RunKind;
@@ -74,8 +75,9 @@ import pl.szczurradar.api.user.UserRepository;
 
 /**
  * The whole run graph on the Embabel platform and Postgres: Wykop is a local server answering the
- * real, anonymized #gielda answers of 2026-10-01 (12 entries, 4 links), the LLM a scripted client.
- * The methods share one database and run in order.
+ * real, anonymized #gielda answers of 2026-10-01 (12 entries, 4 links), the LLM a scripted client. The
+ * admin is notified about the runs that need attention, as their end, a failure or a closing instance
+ * reports them. The methods share one database and run in order.
  */
 @SpringBootTest(properties = MigrateCommand.ENABLE_FLYWAY)
 @Import({ TestcontainersConfiguration.class, PipelineAgentIT.LocalWykop.class })
@@ -118,6 +120,9 @@ class PipelineAgentIT {
 
 	@Autowired
 	PostTransitions transitions;
+
+	@Autowired
+	RunNotifications notifications;
 
 	@Autowired
 	RunRecorder recorder;
@@ -227,6 +232,10 @@ class PipelineAgentIT {
 		assertThat(retry).containsEntry("status", "partial").containsEntry("processing_errors", 1);
 		assertThat((String) retry.get("error")).contains(leftover.toString(), "IllegalStateException");
 		assertThat(finished(runs.get(1).getId())).containsEntry("status", "succeeded").containsEntry("new_posts", 0);
+		// The technical error needs attention; the run that succeeded does not.
+		awaitClosed(runs.get(1).getId());
+		assertThat(notified(runs.get(0).getId())).isOne();
+		assertThat(notified(runs.get(1).getId())).isZero();
 		// One attempt per request: the range run did not take it again; no attempt was counted.
 		assertThat(post(leftover))
 			.containsEntry("stage", "stored")
@@ -301,6 +310,9 @@ class PipelineAgentIT {
 			assertThat((String) range.get("error")).isNotBlank();
 			assertThat(jdbc.queryForList("SELECT step || ':' || status FROM pipeline_run_steps WHERE run_id = ?"
 					+ " ORDER BY started_at, id", String.class, runs.getLast().getId())).containsExactly("fetch:failed");
+			// The admin is notified once the run is closed.
+			awaitClosed(runs.getLast().getId());
+			assertThat(notified(runs.getLast().getId())).isOne();
 		}
 		finally {
 			wykopDown = false;
@@ -309,6 +321,8 @@ class PipelineAgentIT {
 		List<PipelineRun> next = service.startRange(DAY, DAY, List.of(), admin);
 
 		assertThat(finished(next.getLast().getId())).containsEntry("status", "succeeded");
+		awaitClosed(next.getLast().getId());
+		assertThat(notified(next.getLast().getId())).isZero();
 	}
 
 	@Test
@@ -352,8 +366,8 @@ class PipelineAgentIT {
 			return response(VALID);
 		});
 		// A second instance of the service, as during a deployment overlap; the shared one keeps running.
-		PipelineRunService stopping = new PipelineRunService(runs, posts, sources, recorder, transitions, agentPlatform,
-				jdbcClient, transaction, "deployment-stopping");
+		PipelineRunService stopping = new PipelineRunService(runs, posts, sources, recorder, transitions, notifications,
+				agentPlatform, jdbcClient, transaction, "deployment-stopping");
 		try {
 			UUID run = stopping.startPosts(List.of(post), admin).getFirst().getId();
 			assertThat(called.await(30, TimeUnit.SECONDS)).isTrue();
@@ -370,6 +384,8 @@ class PipelineAgentIT {
 			assertThat(jdbc.queryForObject("SELECT finished_at IS NOT NULL FROM pipeline_run_steps WHERE run_id = ?"
 					+ " AND step = 'assess'", Boolean.class, run)).isTrue();
 			assertThat(post(post)).containsEntry("stage", "stored").containsEntry("assessing_run_id", null);
+			// The admin is notified while the instance closes.
+			assertThat(notified(run)).isOne();
 		}
 		finally {
 			answered.countDown();
@@ -471,6 +487,23 @@ class PipelineAgentIT {
 		}
 		finally {
 			answered.countDown();
+		}
+	}
+
+	/** The admin's notifications about {@code runId}. */
+	private int notified(UUID runId) {
+		return jdbc.queryForObject("SELECT count(*) FROM notifications WHERE run_id = ? AND recipient_id = ?",
+				Integer.class, runId, admin);
+	}
+
+	/** Waits until the shared service has closed {@code runId}: its end was reported to the notifications. */
+	private void awaitClosed(UUID runId) {
+		long deadline = System.nanoTime() + Duration.ofSeconds(30).toNanos();
+		while (service.ownRuns().contains(runId)) {
+			if (System.nanoTime() > deadline) {
+				throw new AssertionError("run " + runId + " was never closed");
+			}
+			pause();
 		}
 	}
 

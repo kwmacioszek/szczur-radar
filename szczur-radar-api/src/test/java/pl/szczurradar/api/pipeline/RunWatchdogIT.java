@@ -55,11 +55,11 @@ import pl.szczurradar.api.user.UserRepository;
 
 /**
  * The watchdog on the whole run graph and Postgres with {@code PIPELINE_STALL_TIMEOUT=2s} (checked
- * every 400 ms): a run waiting for an LLM call that does not end is stopped and the run queued behind
- * it goes on; the stopped run's action, once its call ends, writes nothing; a slow run with progress is
- * not stopped; another instance's run is left alone. Wykop is a local server answering the real,
- * anonymized #gielda answers of 2026-10-01, the LLM a scripted client. The methods share one database
- * and run in order.
+ * every 400 ms): a run waiting for an LLM call that does not end is stopped (the admin notified once) and
+ * the run queued behind it goes on; the stopped run's action, once its call ends, writes nothing; a slow
+ * run with progress is not stopped; another instance's run is left alone. Wykop is a local server
+ * answering the real, anonymized #gielda answers of 2026-10-01, the LLM a scripted client. The methods
+ * share one database and run in order.
  */
 @SpringBootTest(properties = { MigrateCommand.ENABLE_FLYWAY, PipelineStallSettings.NAME + "=2s",
 		// The stopped run's action holds one thread until its call ends; the next run assesses on the other.
@@ -170,6 +170,11 @@ class RunWatchdogIT {
 				.containsEntry("new_posts", 4)
 				.containsEntry("assessed_ok", 4);
 			assertThat(answered.getCount()).isOne();
+			// The admin is notified about the stopped run once, though both the watchdog and the run's own
+			// end report it; not about the run that succeeded.
+			awaitClosed(range);
+			assertThat(notified(retry)).isOne();
+			assertThat(notified(range)).isZero();
 
 			Supplier<List<Object>> retryState = () -> List.of(run(retry), steps(retry), post(leftover),
 					count("SELECT count(*) FROM assessments WHERE post_id = ? OR run_id = ?", leftover, retry));
@@ -235,6 +240,22 @@ class RunWatchdogIT {
 		}
 		finally {
 			jdbc.update("UPDATE pipeline_runs SET status = 'failed', finished_at = now() WHERE id = ?", foreign);
+		}
+	}
+
+	/** The admin's notifications about {@code runId}. */
+	private int notified(UUID runId) {
+		return count("SELECT count(*) FROM notifications WHERE run_id = ? AND recipient_id = ?", runId, admin);
+	}
+
+	/** Waits until the service has closed {@code runId}: its end was reported to the notifications. */
+	private void awaitClosed(UUID runId) {
+		long deadline = System.nanoTime() + Duration.ofSeconds(30).toNanos();
+		while (service.ownRuns().contains(runId)) {
+			if (System.nanoTime() > deadline) {
+				throw new AssertionError("run " + runId + " was never closed");
+			}
+			pause(Duration.ofMillis(100));
 		}
 	}
 

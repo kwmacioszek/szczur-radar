@@ -18,6 +18,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -27,6 +28,7 @@ import org.springframework.web.bind.annotation.RestController;
 import pl.szczurradar.api.config.ApiError;
 import pl.szczurradar.api.config.ErrorCode;
 import pl.szczurradar.api.pipeline.PipelineRunService;
+import pl.szczurradar.api.pipeline.run.InterruptionCause;
 import pl.szczurradar.api.pipeline.run.PipelineRun;
 import pl.szczurradar.api.pipeline.run.PipelineRunRepository;
 import pl.szczurradar.api.pipeline.run.PipelineRunStep;
@@ -35,12 +37,14 @@ import pl.szczurradar.api.pipeline.run.RunKind;
 import pl.szczurradar.api.pipeline.run.RunStatus;
 import pl.szczurradar.api.pipeline.run.RunStep;
 import pl.szczurradar.api.pipeline.run.StepStatus;
+import pl.szczurradar.api.pipeline.state.RunRecorder;
 import pl.szczurradar.api.pipeline.step.SourceIngest;
 import pl.szczurradar.api.sources.Source;
+import pl.szczurradar.api.user.SystemAccount;
 
 /**
- * The admin's pipeline runs: start them and see their history (admin only: {@code /api/admin/**}).
- * The service's refusals become API errors in {@link PipelineRunExceptionHandler}.
+ * The admin's pipeline runs: start them, see their history and one run's page (admin only:
+ * {@code /api/admin/**}). The service's refusals become API errors in {@link PipelineRunExceptionHandler}.
  */
 @RestController
 @RequestMapping("/api/admin/pipeline-runs")
@@ -58,15 +62,18 @@ class PipelineRunController {
 
 	private final PipelineRunStepRepository steps;
 
+	private final RunRecorder recorder;
+
 	private final SourceIngest sources;
 
 	private final Clock clock;
 
 	PipelineRunController(PipelineRunService service, PipelineRunRepository runs, PipelineRunStepRepository steps,
-			SourceIngest sources, Clock clock) {
+			RunRecorder recorder, SourceIngest sources, Clock clock) {
 		this.service = service;
 		this.runs = runs;
 		this.steps = steps;
+		this.recorder = recorder;
 		this.sources = sources;
 		this.clock = clock;
 	}
@@ -85,7 +92,8 @@ class PipelineRunController {
 		List<PipelineRun> created = request.postIds() != null ? service.startPosts(request.postIds(), admin)
 				: service.startRange(request.from(), request.to(),
 						request.sources() == null ? List.of() : request.sources(), admin);
-		return ResponseEntity.status(HttpStatus.ACCEPTED).body(created.stream().map(run -> RunView.of(run, List.of())).toList());
+		return ResponseEntity.status(HttpStatus.ACCEPTED)
+			.body(created.stream().map(run -> view(run, List.of())).toList());
 	}
 
 	/** The latest runs with their steps, newest first (equal creation times by id). */
@@ -97,8 +105,16 @@ class PipelineRunController {
 			.findByRunIdInOrderByStartedAtAscIdAsc(found.map(PipelineRun::getId).getContent())
 			.stream()
 			.collect(Collectors.groupingBy(PipelineRunStep::getRunId));
-		return new RunPage(found.map(run -> RunView.of(run, stepsByRun.getOrDefault(run.getId(), List.of()))).getContent(),
+		return new RunPage(found.map(run -> view(run, stepsByRun.getOrDefault(run.getId(), List.of()))).getContent(),
 				page, size, found.getTotalElements());
+	}
+
+	/** One run with its steps, for its page; 404 {@code not_found} for an unknown id. */
+	@GetMapping("/{id}")
+	ResponseEntity<?> run(@PathVariable UUID id) {
+		return runs.findById(id)
+			.<ResponseEntity<?>>map(run -> ResponseEntity.ok(view(run, steps.findByRunIdOrderByStartedAtAscIdAsc(id))))
+			.orElseGet(() -> ApiError.response(ErrorCode.NOT_FOUND));
 	}
 
 	/**
@@ -132,32 +148,52 @@ class PipelineRunController {
 
 	}
 
+	/**
+	 * {@code run} with {@code runSteps}; the posts it holds in assessment are counted only while it is
+	 * running (at most one run is).
+	 */
+	private RunView view(PipelineRun run, List<PipelineRunStep> runSteps) {
+		return RunView.of(run, runSteps, run.getStatus() == RunStatus.RUNNING ? recorder.inFlight(run.getId()) : 0);
+	}
+
 	/** A page of runs. */
 	record RunPage(List<RunView> items, int page, int size, long total) {
 	}
 
 	/**
-	 * A run with its counters and steps.
+	 * A run with its counters, progress and steps.
 	 *
+	 * @param interruptionCause why an interrupted run stopped; {@code null} for any other run, and for one
+	 *     interrupted before the cause was recorded
+	 * @param needsAttention whether it needs the admin's attention ({@link PipelineRun#needsAttention()})
+	 * @param scheduled whether the daily cron requested it ({@link SystemAccount#SCHEDULER}), not an admin
+	 * @param lastActivityAt the last change while it was running
 	 * @param processingErrors posts with a technical error and no stored assessment (not failed attempts)
+	 * @param llmRetries HTTP attempts beyond the first of the assessments' LLM calls
+	 * @param flexFallbacks assessments whose call fell back from the flex tier to the default one
+	 * @param inFlight the posts it is assessing now; 0 unless it is running
 	 * @param error the reason of a failed or interrupted run, or the summary of technical errors
 	 */
-	record RunView(UUID id, RunKind kind, RunStatus status, @Nullable Instant rangeFrom, @Nullable Instant rangeTo,
+	record RunView(UUID id, RunKind kind, RunStatus status, @Nullable InterruptionCause interruptionCause,
+			boolean needsAttention, boolean scheduled, @Nullable Instant rangeFrom, @Nullable Instant rangeTo,
 			List<Source> sources, @Nullable List<UUID> requestedPostIds, Instant createdAt, @Nullable Instant startedAt,
-			@Nullable Instant finishedAt, int fetched, int newPosts, int assessedOk, int assessedFailed,
-			int processingErrors, int dead, int skipped, @Nullable String error, List<StepView> steps) {
+			@Nullable Instant finishedAt, @Nullable Instant lastActivityAt, int fetched, int newPosts, int assessedOk,
+			int assessedFailed, int processingErrors, int dead, int skipped, int llmRetries, int flexFallbacks,
+			int inFlight, @Nullable String error, List<StepView> steps) {
 
-		static RunView of(PipelineRun run, List<PipelineRunStep> steps) {
-			return new RunView(run.getId(), run.getKind(), run.getStatus(), run.getRangeFrom(), run.getRangeTo(),
-					run.getSources(), run.getRequestedPostIds(), run.getCreatedAt(), run.getStartedAt(), run.getFinishedAt(),
+		static RunView of(PipelineRun run, List<PipelineRunStep> steps, int inFlight) {
+			return new RunView(run.getId(), run.getKind(), run.getStatus(), run.getInterruptionCause(),
+					run.needsAttention(), SystemAccount.SCHEDULER.id().equals(run.getRequestedBy()),
+					run.getRangeFrom(), run.getRangeTo(), run.getSources(), run.getRequestedPostIds(),
+					run.getCreatedAt(), run.getStartedAt(), run.getFinishedAt(), run.getLastActivityAt(),
 					run.getFetched(), run.getNewPosts(), run.getAssessedOk(), run.getAssessedFailed(),
-					run.getProcessingErrors(), run.getDead(), run.getSkipped(), run.getError(),
-					steps.stream().map(StepView::of).toList());
+					run.getProcessingErrors(), run.getDead(), run.getSkipped(), run.getLlmRetries(),
+					run.getFlexFallbacks(), inFlight, run.getError(), steps.stream().map(StepView::of).toList());
 		}
 
 	}
 
-	/** One step of a run. */
+	/** One step of a run; {@code interrupted} when its run was interrupted while it was running. */
 	record StepView(RunStep step, StepStatus status, Instant startedAt, @Nullable Instant finishedAt,
 			@Nullable Integer itemsIn, @Nullable Integer itemsOut, @Nullable String error) {
 

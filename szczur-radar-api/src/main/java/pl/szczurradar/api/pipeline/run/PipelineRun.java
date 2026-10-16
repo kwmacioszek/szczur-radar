@@ -268,4 +268,24 @@ public class PipelineRun {
 		return error;
 	}
 
+	/**
+	 * Whether the run needs an admin's attention — the one rule for the notifications, the run list, the
+	 * run's page and the cron: it {@link RunStatus#FAILED failed} or was {@link RunStatus#INTERRUPTED
+	 * interrupted}, or it ended {@link RunStatus#PARTIAL partial} with a dead post or a post with a
+	 * technical error. A partial run whose only failures are posts with attempts left does not: the next
+	 * run retries them. A run that is queued, running or succeeded never does.
+	 */
+	public boolean needsAttention() {
+		return needsAttention(status, dead, processingErrors);
+	}
+
+	/** {@link #needsAttention()} of a run in {@code status} with these counters; package-private for tests. */
+	static boolean needsAttention(RunStatus status, int dead, int processingErrors) {
+		return switch (status) {
+			case FAILED, INTERRUPTED -> true;
+			case PARTIAL -> dead > 0 || processingErrors > 0;
+			case QUEUED, RUNNING, SUCCEEDED -> false;
+		};
+	}
+
 }

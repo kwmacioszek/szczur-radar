@@ -28,6 +28,9 @@ import pl.szczurradar.api.config.LlmProviderProperties.ReasoningEffort;
 import pl.szczurradar.api.config.LlmProviderProperties.ServiceTier;
 import pl.szczurradar.api.llm.Channel;
 import pl.szczurradar.api.llm.OutputMode;
+import pl.szczurradar.api.notifications.Notification;
+import pl.szczurradar.api.notifications.NotificationKind;
+import pl.szczurradar.api.notifications.NotificationRepository;
 import pl.szczurradar.api.pipeline.run.InterruptionCause;
 import pl.szczurradar.api.pipeline.run.PipelineRun;
 import pl.szczurradar.api.pipeline.run.PipelineRunRepository;
@@ -83,6 +86,9 @@ class JpaSchemaIT {
 
 	@Autowired
 	ActivationTokenRepository tokens;
+
+	@Autowired
+	NotificationRepository notifications;
 
 	@Autowired
 	JdbcTemplate jdbc;
@@ -205,6 +211,33 @@ class JpaSchemaIT {
 		assertThat(loaded.getTokenHash()).isEqualTo("ab".repeat(32));
 		assertThat(loaded.getExpiresAt()).isEqualTo(expiresAt);
 		assertThat(loaded.getCreatedAt()).isNotNull();
+	}
+
+	@Test
+	void aNotificationRoundTripsAndIsReadOnce() {
+		User admin = users.save(new User("notification-schema@example.com", null, Role.ADMIN));
+		PipelineRun run = runs.save(PipelineRun.retry(admin.getId(), null));
+		jdbc.update("UPDATE pipeline_runs SET status = 'failed', finished_at = now() WHERE id = ?", run.getId());
+
+		assertThat(notifications.notifyAdmins(NotificationKind.RUN_ATTENTION, run.getId())).isPositive();
+		assertThat(notifications.notifyAdmins(NotificationKind.RUN_ATTENTION, run.getId())).isZero();
+
+		Notification loaded = notifications.findLatest(admin.getId(), 10).getFirst();
+		assertThat(loaded.getRecipientId()).isEqualTo(admin.getId());
+		assertThat(loaded.getKind()).isEqualTo(NotificationKind.RUN_ATTENTION);
+		assertThat(loaded.getRunId()).isEqualTo(run.getId());
+		assertThat(loaded.getCreatedAt()).isNotNull();
+		assertThat(loaded.getReadAt()).isNull();
+		assertThat(notifications.countByRecipientIdAndReadAtIsNull(admin.getId())).isOne();
+		assertThat(jdbc.queryForObject("SELECT kind FROM notifications WHERE id = ?", String.class, loaded.getId()))
+			.isEqualTo("run_attention");
+
+		assertThat(notifications.markRead(loaded.getId(), admin.getId())).isOne();
+		Instant readAt = notifications.findById(loaded.getId()).orElseThrow().getReadAt();
+		assertThat(readAt).isNotNull();
+		assertThat(notifications.markRead(loaded.getId(), admin.getId())).isOne();
+		assertThat(notifications.findById(loaded.getId()).orElseThrow().getReadAt()).isEqualTo(readAt);
+		assertThat(notifications.countByRecipientIdAndReadAtIsNull(admin.getId())).isZero();
 	}
 
 	private static Provenance modelProvenance() {

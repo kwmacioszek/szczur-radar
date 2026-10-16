@@ -30,6 +30,7 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import pl.szczurradar.api.notifications.RunNotifications;
 import pl.szczurradar.api.pipeline.flow.RunFlow.RunRequest;
 import pl.szczurradar.api.pipeline.flow.RunFlow.RunSummary;
 import pl.szczurradar.api.pipeline.run.InterruptionCause;
@@ -67,6 +68,9 @@ import pl.szczurradar.api.sources.Source;
  *       {@code interrupted} ({@link InterruptionCause#SHUTDOWN}) first, then stops its thread; a newer
  *       deployment's start-up recovery does the same for runs nobody finished
  *       ({@link PipelineStartupRecovery}).
+ *   <li>Every way a run ends here — its own end, the watchdog's stop, the instance closing — reports it
+ *       to {@link RunNotifications#runEnded}, which notifies the admins when it needs attention (a run
+ *       reported twice is notified once).
  *   <li>The log gets a line when a run starts and when it ends, with its counters.
  * </ul>
  */
@@ -91,6 +95,8 @@ public class PipelineRunService {
 
 	private final PostTransitions transitions;
 
+	private final RunNotifications notifications;
+
 	private final AgentPlatform agentPlatform;
 
 	private final JdbcClient jdbc;
@@ -109,14 +115,15 @@ public class PipelineRunService {
 	/** The agent's future of the run this instance is waiting for; {@link #stopStalled} cancels it. */
 	private final Map<UUID, Future<?>> waiting = new ConcurrentHashMap<>();
 
-	PipelineRunService(PipelineRunRepository runs, PostRepository posts, SourceIngest sources, RunRecorder recorder, PostTransitions transitions,
-			AgentPlatform agentPlatform, JdbcClient jdbc, TransactionTemplate transaction,
-			@Value("${RAILWAY_DEPLOYMENT_ID:}") @Nullable String deploymentId) {
+	PipelineRunService(PipelineRunRepository runs, PostRepository posts, SourceIngest sources, RunRecorder recorder,
+			PostTransitions transitions, RunNotifications notifications, AgentPlatform agentPlatform, JdbcClient jdbc,
+			TransactionTemplate transaction, @Value("${RAILWAY_DEPLOYMENT_ID:}") @Nullable String deploymentId) {
 		this.runs = runs;
 		this.posts = posts;
 		this.sources = sources;
 		this.recorder = recorder;
 		this.transitions = transitions;
+		this.notifications = notifications;
 		this.agentPlatform = agentPlatform;
 		this.jdbc = jdbc;
 		this.transaction = transaction;
@@ -227,6 +234,7 @@ public class PipelineRunService {
 		finally {
 			waiting.remove(runId);
 			close(runId, error, started);
+			notifications.runEnded(runId);
 			own.remove(runId);
 			if (interrupted) {
 				// Restored after the clean-up, whose database calls an interrupted thread may not get.
@@ -237,8 +245,8 @@ public class PipelineRunService {
 
 	/**
 	 * Stops a run of this instance that made no progress for {@code threshold} ({@link RunWatchdog}):
-	 * ends it {@code failed} with its open steps ({@link RunRecorder#stall}), puts its posts back, then
-	 * cancels the wait for its agent, so this queue takes the next run.
+	 * ends it {@code failed} with its open steps ({@link RunRecorder#stall}), puts its posts back, notifies
+	 * the admins, then cancels the wait for its agent, so this queue takes the next run.
 	 *
 	 * <p>The agent's action goes on in Embabel's thread until its current call ends (holding a thread
 	 * of the LLM pool meanwhile), but changes nothing: claiming a post needs a running run, storing a
@@ -254,6 +262,7 @@ public class PipelineRunService {
 		}
 		transitions.releaseAll(runId);
 		log.warn("Pipeline run {} made no progress for {}; stopped", runId, Durations.format(threshold));
+		notifications.runEnded(runId);
 		Future<?> agent = waiting.get(runId);
 		if (agent != null) {
 			agent.cancel(false);
@@ -295,12 +304,13 @@ public class PipelineRunService {
 	/**
 	 * This instance stops: its own queued and running runs become {@code interrupted} (before the
 	 * thread is stopped, so a run interrupted mid-step is not marked {@code failed}), their posts are
-	 * put back, then the thread is stopped.
+	 * put back and the admins notified, then the thread is stopped.
 	 */
 	@EventListener(ContextClosedEvent.class)
 	void onClose() {
 		for (UUID runId : recorder.interrupt(List.copyOf(own), InterruptionCause.SHUTDOWN)) {
 			transitions.releaseAll(runId);
+			notifications.runEnded(runId);
 		}
 		executor.shutdownNow();
 	}

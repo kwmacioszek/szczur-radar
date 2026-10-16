@@ -59,13 +59,14 @@ import pl.szczurradar.api.sources.wykop.LocalWykopServer.Reply;
 import pl.szczurradar.api.sources.wykop.WykopApiClient;
 import pl.szczurradar.api.sources.wykop.WykopRepository;
 import pl.szczurradar.api.user.Role;
+import pl.szczurradar.api.user.SystemAccount;
 import pl.szczurradar.api.user.User;
 import pl.szczurradar.api.user.UserRepository;
 
 /**
- * {@code POST} and {@code GET /api/admin/pipeline-runs} against the real queue: runs execute in the
- * background with Wykop on a local server (which a test can hold, to keep a run active) and a stubbed
- * LLM. Every test waits until no run is active before it ends.
+ * {@code POST} and {@code GET /api/admin/pipeline-runs}, and one run's page, against the real queue: runs
+ * execute in the background with Wykop on a local server (which a test can hold, to keep a run active)
+ * and a stubbed LLM. Every test waits until no run is active before it ends.
  */
 @SpringBootTest(properties = MigrateCommand.ENABLE_FLYWAY)
 @AutoConfigureMockMvc
@@ -169,6 +170,10 @@ class PipelineRunControllerIT {
 		assertThat(result).hasStatus(HttpStatus.ACCEPTED);
 		assertThat(result).bodyJson().extractingPath("$[*].kind").asArray().containsExactly("range");
 		assertThat(result).bodyJson().extractingPath("$[0].status").isEqualTo("queued");
+		// An admin's run, which needs nothing yet and assesses nothing yet.
+		assertThat(result).bodyJson().extractingPath("$[0].scheduled").isEqualTo(false);
+		assertThat(result).bodyJson().extractingPath("$[0].needsAttention").isEqualTo(false);
+		assertThat(result).bodyJson().extractingPath("$[0].inFlight").isEqualTo(0);
 	}
 
 	@Test
@@ -285,9 +290,84 @@ class PipelineRunControllerIT {
 		assertThat(page0).bodyJson().extractingPath("$.items[0].steps[*].step").asArray().containsExactly("select", "assess");
 		assertThat(page0).bodyJson().extractingPath("$.items[0].steps[1].itemsOut").isEqualTo(4);
 		assertThat(page0).bodyJson().extractingPath("$.items[1].steps").asArray().isEmpty();
+		// A technical error needs attention; a run that succeeded does not.
+		assertThat(page0).bodyJson().extractingPath("$.items[*].needsAttention").asArray().containsExactly(true, false);
+		assertThat(page0).bodyJson().extractingPath("$.items[*].scheduled").asArray().containsExactly(false, false);
 		assertThat(mvc.get().uri("/api/admin/pipeline-runs?size=101").with(asAdmin())).hasStatus(HttpStatus.BAD_REQUEST);
 		jdbc.update("DELETE FROM pipeline_run_steps WHERE run_id = ANY(?)", (Object) ids.toArray(UUID[]::new));
 		jdbc.update("DELETE FROM pipeline_runs WHERE id = ANY(?)", (Object) ids.toArray(UUID[]::new));
+	}
+
+	@Test
+	void aRunsPageShowsTheScheduledRunWithItsInterruptionProgressAndSteps() {
+		UUID run = jdbc.queryForObject("INSERT INTO pipeline_runs (kind, status, requested_by, range_from, range_to,"
+				+ " sources, started_at, finished_at, last_activity_at, fetched, new_posts, assessed_ok,"
+				+ " assessed_failed, llm_retries, flex_fallbacks, deployment_id, interruption_cause, error)"
+				+ " VALUES ('range', 'interrupted', ?, '2026-10-13T22:00:00Z', '2026-10-15T21:59:59Z', ARRAY['wykop'],"
+				+ " '2026-10-16T00:30:05Z', '2026-10-16T00:41:00Z', '2026-10-16T00:40:30Z', 250, 200, 120, 2, 5, 3,"
+				+ " 'deployment-a', 'deploy', 'interrupted: a new deployment took over') RETURNING id", UUID.class,
+				SystemAccount.SCHEDULER.id());
+		jdbc.update("INSERT INTO pipeline_run_steps (run_id, step, status, started_at, finished_at, items_out) VALUES"
+				+ " (?, 'fetch', 'succeeded', '2026-10-16T00:30:06Z', '2026-10-16T00:31:00Z', 250)", run);
+		jdbc.update("INSERT INTO pipeline_run_steps (run_id, step, status, started_at, finished_at, items_in) VALUES"
+				+ " (?, 'assess', 'interrupted', '2026-10-16T00:32:00Z', '2026-10-16T00:41:00Z', 200)", run);
+
+		MvcTestResult page = mvc.get().uri("/api/admin/pipeline-runs/" + run).with(asAdmin()).exchange();
+
+		assertThat(page).hasStatusOk();
+		assertThat(page).bodyJson().extractingPath("$.id").isEqualTo(run.toString());
+		assertThat(page).bodyJson().extractingPath("$.status").isEqualTo("interrupted");
+		assertThat(page).bodyJson().extractingPath("$.interruptionCause").isEqualTo("deploy");
+		assertThat(page).bodyJson().extractingPath("$.needsAttention").isEqualTo(true);
+		assertThat(page).bodyJson().extractingPath("$.scheduled").isEqualTo(true);
+		assertThat(page).bodyJson().extractingPath("$.lastActivityAt").isEqualTo("2026-10-16T00:40:30Z");
+		assertThat(page).bodyJson().extractingPath("$.llmRetries").isEqualTo(5);
+		assertThat(page).bodyJson().extractingPath("$.flexFallbacks").isEqualTo(3);
+		assertThat(page).bodyJson().extractingPath("$.assessedOk").isEqualTo(120);
+		assertThat(page).bodyJson().extractingPath("$.inFlight").isEqualTo(0);
+		assertThat(page).bodyJson().extractingPath("$.error").isEqualTo("interrupted: a new deployment took over");
+		assertThat(page).bodyJson().extractingPath("$.steps[*].step").asArray().containsExactly("fetch", "assess");
+		assertThat(page).bodyJson().extractingPath("$.steps[*].status").asArray()
+			.containsExactly("succeeded", "interrupted");
+		assertThat(page).bodyJson().extractingPath("$.steps[1].itemsIn").isEqualTo(200);
+	}
+
+	@Test
+	void aRunningRunCountsThePostsItIsAssessing() {
+		UUID post = seeds.post(PostStage.STORED, 0, "2026-10-01T08:00:00Z");
+		UUID run = jdbc.queryForObject("INSERT INTO pipeline_runs (kind, status, requested_by, started_at,"
+				+ " last_activity_at) VALUES ('retry', 'running', ?, now(), now()) RETURNING id", UUID.class, admin);
+		try {
+			jdbc.update("UPDATE posts SET stage = 'assessing', assessing_run_id = ? WHERE id = ?", run, post);
+
+			MvcTestResult page = mvc.get().uri("/api/admin/pipeline-runs/" + run).with(asAdmin()).exchange();
+			MvcTestResult list = mvc.get().uri("/api/admin/pipeline-runs").with(asAdmin()).exchange();
+
+			assertThat(page).bodyJson().extractingPath("$.status").isEqualTo("running");
+			assertThat(page).bodyJson().extractingPath("$.inFlight").isEqualTo(1);
+			assertThat(page).bodyJson().extractingPath("$.needsAttention").isEqualTo(false);
+			assertThat(page).bodyJson().extractingPath("$.scheduled").isEqualTo(false);
+			assertThat(page).bodyJson().extractingPath("$.interruptionCause").isNull();
+			assertThat(page).bodyJson().extractingPath("$.lastActivityAt").isNotNull();
+			assertThat(list).bodyJson().extractingPath("$.items[?(@.id == '" + run + "')].inFlight").asArray()
+				.containsExactly(1);
+		}
+		finally {
+			jdbc.update("UPDATE posts SET stage = 'stored', assessing_run_id = NULL WHERE id = ?", post);
+			jdbc.update("UPDATE pipeline_runs SET status = 'failed', finished_at = now() WHERE id = ?", run);
+		}
+	}
+
+	@Test
+	void anUnknownRunIsNotFoundAndAMalformedIdInvalid() {
+		assertThat(mvc.get().uri("/api/admin/pipeline-runs/" + UUID.randomUUID()).with(asAdmin()))
+			.hasStatus(HttpStatus.NOT_FOUND)
+			.bodyJson()
+			.isStrictlyEqualTo("{\"detail\":\"not_found\"}");
+		assertThat(mvc.get().uri("/api/admin/pipeline-runs/not-a-uuid").with(asAdmin()))
+			.hasStatus(HttpStatus.BAD_REQUEST)
+			.bodyJson()
+			.isStrictlyEqualTo("{\"detail\":\"invalid_request\"}");
 	}
 
 	private MvcTestResult start(String body) {

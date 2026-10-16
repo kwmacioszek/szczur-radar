@@ -12,6 +12,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplicat
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import pl.szczurradar.api.notifications.RunNotifications;
 import pl.szczurradar.api.pipeline.run.InterruptionCause;
 import pl.szczurradar.api.pipeline.state.PostTransitions;
 import pl.szczurradar.api.pipeline.state.RunRecorder;
@@ -27,7 +28,9 @@ import pl.szczurradar.api.pipeline.state.RunRecorder;
  * <p>A run queued by another deployment than this one ({@code RAILWAY_DEPLOYMENT_ID}) was interrupted
  * by a new deployment ({@link InterruptionCause#DEPLOY}: Railway stops the old one only once the new one
  * runs); any other — the same deployment, or an unknown one — by a restart
- * ({@link InterruptionCause#RESTART}).
+ * ({@link InterruptionCause#RESTART}). After the transaction is committed, every run it interrupted is
+ * reported to {@link RunNotifications#runEnded}, which notifies the admins; a failure there is logged
+ * and never stops the start.
  *
  * <p>It runs before the web server accepts its first connection: it marks every queued or running
  * run interrupted without asking who created it, so a run created by an earlier request — e.g. the
@@ -53,15 +56,18 @@ public class PipelineStartupRecovery implements SmartInitializingSingleton {
 
 	private final PostTransitions transitions;
 
+	private final RunNotifications notifications;
+
 	private final TransactionTemplate transaction;
 
 	/** This instance's deployment, {@code null} when unknown (locally, in tests). */
 	private final @Nullable String deploymentId;
 
-	PipelineStartupRecovery(RunRecorder recorder, PostTransitions transitions, TransactionTemplate transaction,
-			@Value("${RAILWAY_DEPLOYMENT_ID:}") @Nullable String deploymentId) {
+	PipelineStartupRecovery(RunRecorder recorder, PostTransitions transitions, RunNotifications notifications,
+			TransactionTemplate transaction, @Value("${RAILWAY_DEPLOYMENT_ID:}") @Nullable String deploymentId) {
 		this.recorder = recorder;
 		this.transitions = transitions;
+		this.notifications = notifications;
 		this.transaction = transaction;
 		this.deploymentId = deploymentId == null || deploymentId.isBlank() ? null : deploymentId;
 	}
@@ -93,6 +99,8 @@ public class PipelineStartupRecovery implements SmartInitializingSingleton {
 		if (!interrupted.isEmpty()) {
 			log.warn("Marked {} unfinished pipeline run(s) interrupted: {}", interrupted.size(), interrupted);
 		}
+		// After the commit: the notifications read the interrupted runs.
+		interrupted.forEach(notifications::runEnded);
 		return interrupted;
 	}
 

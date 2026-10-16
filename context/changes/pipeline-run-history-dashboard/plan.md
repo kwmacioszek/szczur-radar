@@ -798,25 +798,25 @@ Strażnik w PR env nie jest wymuszany (wymagałby zawieszenia prawdziwego przebi
 
 #### Automated
 
-- [x] 2.1 Walidacja `PIPELINE_STALL_TIMEOUT`: `PipelineStallSettingsTest`
-- [x] 2.2 Zatrzymanie zawieszonego przebiegu, zamknięte kroki, oddane posty, kolejny przebieg rusza, brak fałszywego zatrzymania: `RunWatchdogIT`
-- [x] 2.3 Cały backend zielony: `cd szczur-radar-api && ./mvnw -B verify`
+- [x] 2.1 Walidacja `PIPELINE_STALL_TIMEOUT`: `PipelineStallSettingsTest` — 9063c36
+- [x] 2.2 Zatrzymanie zawieszonego przebiegu, zamknięte kroki, oddane posty, kolejny przebieg rusza, brak fałszywego zatrzymania: `RunWatchdogIT` — 9063c36
+- [x] 2.3 Cały backend zielony: `cd szczur-radar-api && ./mvnw -B verify` — 9063c36
 
 #### Manual
 
-- [x] 2.4 Lokalny przebieg jednego dnia z `PIPELINE_STALL_TIMEOUT=1m` kończy się normalnie (strażnik nie zatrzymuje przebiegu z postępem), a serwer z `PIPELINE_STALL_TIMEOUT=15` nie startuje i komunikat nazywa zmienną
+- [x] 2.4 Lokalny przebieg jednego dnia z `PIPELINE_STALL_TIMEOUT=1m` kończy się normalnie (strażnik nie zatrzymuje przebiegu z postępem), a serwer z `PIPELINE_STALL_TIMEOUT=15` nie startuje i komunikat nazywa zmienną — 9063c36
 
 ### Phase 3: Powiadomienia i API admina
 
 #### Automated
 
-- [ ] 3.1 Migracja `V9` i jej ograniczenia: `MigrationsIT`, `JpaSchemaIT`
-- [ ] 3.2 Reguła „wymaga uwagi” dla wszystkich statusów: test jednostkowy `PipelineRun.needsAttention`
-- [ ] 3.3 Powiadomienia: odbiorcy, idempotencja, lista, przeczytanie, 404 cudzego: `NotificationsIT`
-- [ ] 3.4 Powiadomienie z każdej drogi końca przebiegu: `PipelineStartupRecoveryIT`, `PipelineAgentIT`, `RunWatchdogIT`
-- [ ] 3.5 Strona przebiegu, nowe pola, `RunState` dla crona: `PipelineRunControllerIT`, `InternalPipelineRunIT`
-- [ ] 3.6 Nowe trasy chronione (401 bez sesji, 403 dla `user`): `AuthorizationCompletenessIT`, `AdminRoleIT`
-- [ ] 3.7 Cały backend zielony: `cd szczur-radar-api && ./mvnw -B verify`
+- [x] 3.1 Migracja `V9` i jej ograniczenia: `MigrationsIT`, `JpaSchemaIT`
+- [x] 3.2 Reguła „wymaga uwagi” dla wszystkich statusów: test jednostkowy `PipelineRun.needsAttention`
+- [x] 3.3 Powiadomienia: odbiorcy, idempotencja, lista, przeczytanie, 404 cudzego: `NotificationsIT`
+- [x] 3.4 Powiadomienie z każdej drogi końca przebiegu: `PipelineStartupRecoveryIT`, `PipelineAgentIT`, `RunWatchdogIT`
+- [x] 3.5 Strona przebiegu, nowe pola, `RunState` dla crona: `PipelineRunControllerIT`, `InternalPipelineRunIT`
+- [x] 3.6 Nowe trasy chronione (401 bez sesji, 403 dla `user`): `AuthorizationCompletenessIT`, `AdminRoleIT`
+- [x] 3.7 Cały backend zielony: `cd szczur-radar-api && ./mvnw -B verify`
 
 ### Phase 4: Heartbeat crona
 

@@ -25,8 +25,9 @@ import pl.szczurradar.api.user.SystemAccount;
  * Start-up recovery ends before the web server accepts connections: a run left queued by a stopped
  * instance is already {@code interrupted} when the server has opened its port
  * ({@link WebServerInitializedEvent}). Otherwise the request that wakes the API (the daily cron's
- * start) could create a run that recovery interrupts a moment later. A real server on a random port,
- * as deployment {@value #DEPLOYMENT} ({@code RAILWAY_DEPLOYMENT_ID}).
+ * start) could create a run that recovery interrupts a moment later. Every run it interrupts notifies
+ * the admins. A real server on a random port, as deployment {@value #DEPLOYMENT}
+ * ({@code RAILWAY_DEPLOYMENT_ID}).
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
 		properties = { MigrateCommand.ENABLE_FLYWAY, "RAILWAY_DEPLOYMENT_ID=" + PipelineStartupRecoveryIT.DEPLOYMENT })
@@ -64,6 +65,20 @@ class PipelineStartupRecoveryIT {
 			.isEqualTo(List.of("select:succeeded:true", "assess:interrupted:true"));
 	}
 
+	@Test
+	void everyInterruptedRunNotifiesTheAdminButNotTheScheduler() {
+		for (UUID run : List.of(unfinishedRun.runId, unfinishedRun.ofAnotherDeployment,
+				unfinishedRun.ofThisDeployment)) {
+			assertThat(jdbc.queryForObject("SELECT count(*) FROM notifications WHERE run_id = ? AND recipient_id = ?"
+					+ " AND kind = 'run_attention' AND read_at IS NULL", Integer.class, run, unfinishedRun.admin))
+				.as(run.toString())
+				.isOne();
+		}
+		// The runs' requester is a system account, not an admin.
+		assertThat(jdbc.queryForObject("SELECT count(*) FROM notifications WHERE recipient_id = ?", Integer.class,
+				SystemAccount.SCHEDULER.id())).isZero();
+	}
+
 	private Map<String, Object> run(UUID runId) {
 		return jdbc.queryForMap("SELECT status, interruption_cause, error FROM pipeline_runs WHERE id = ?", runId);
 	}
@@ -82,7 +97,8 @@ class PipelineStartupRecoveryIT {
 	 * A queued run written when this bean is created — after the migrations (Spring Boot creates the
 	 * {@link JdbcTemplate} after Flyway) and before start-up recovery (every singleton is created before
 	 * any of them is told that all exist) — and its status when the web server has started. With it, a
-	 * run of another deployment left running in its assess step, and a queued run of this deployment.
+	 * run of another deployment left running in its assess step, a queued run of this deployment, and an
+	 * admin to notify.
 	 */
 	static final class UnfinishedRun implements ApplicationListener<WebServerInitializedEvent> {
 
@@ -93,6 +109,8 @@ class PipelineStartupRecoveryIT {
 		private final UUID ofAnotherDeployment;
 
 		private final UUID ofThisDeployment;
+
+		private final UUID admin;
 
 		volatile @Nullable String statusWhenTheServerStarted;
 
@@ -109,6 +127,8 @@ class PipelineStartupRecoveryIT {
 			jdbc.update("INSERT INTO pipeline_run_steps (run_id, step) VALUES (?, 'assess')", ofAnotherDeployment);
 			this.ofThisDeployment = jdbc.queryForObject("INSERT INTO pipeline_runs (kind, requested_by, deployment_id)"
 					+ " VALUES ('retry', ?, ?) RETURNING id", UUID.class, SystemAccount.SCHEDULER.id(), DEPLOYMENT);
+			this.admin = jdbc.queryForObject("INSERT INTO users (email, role) VALUES ('recovery-admin@example.com',"
+					+ " 'admin') RETURNING id", UUID.class);
 		}
 
 		@Override
