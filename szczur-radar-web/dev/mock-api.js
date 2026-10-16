@@ -1,11 +1,11 @@
 /*
- * Mock /api/* for screenshots of /admin, the feed (/), a post (/posts/:id) and /activate without a running API
- * (playwright-cli run-code), kept for /10x-ui changes. Another mode = run a copy of this file with MODE, AUTH or
- * ACTIVATION replaced.
+ * Mock /api/* for screenshots of /admin, a run (/admin/runs/:id), the feed (/), a post (/posts/:id) and /activate
+ * without a running API (playwright-cli run-code), kept for /10x-ui changes. Another mode = run a copy of this file
+ * with MODE, NOTIFICATIONS, AUTH, ACTIVATION or FRESHNESS replaced.
  * MODE: 'data'         runs + failed posts; the feed has 120 posts (3 pages of 50), each with its page and raw data,
- *       'loading'      admin calls, /api/posts and /api/posts/:id (with /raw) hang 60 s,
- *       'error'        admin calls, /api/posts and /api/posts/:id (with /raw) answer 500,
- *       'empty'        no runs, no failed posts, the feed's total is 0, every post id is 404,
+ *       'loading'      admin calls (the notification bell's too), /api/posts and /api/posts/:id (with /raw) hang 60 s,
+ *       'error'        admin calls (the bell's too), /api/posts and /api/posts/:id (with /raw) answer 500,
+ *       'empty'        no runs, no failed posts, the feed's total is 0, every post id and run id is 404,
  *       'loading-next' feed page 0 answers, later pages hang 60 s (admin as in 'data'),
  *       'error-next'   feed page 0 answers, later pages answer 500 (admin as in 'data'),
  *       'raw-loading'  /api/posts/:id/raw hangs 60 s (the rest as in 'data'),
@@ -15,6 +15,19 @@
  *       'date'  { lastUpdatedAt: '2026-10-13T03:12:00Z' } (05:12 in Warsaw), the default,
  *       'none'  { lastUpdatedAt: null }: no update yet,
  *       'error' 500; every other route answers as MODE says.
+ * Runs (/api/admin/pipeline-runs?page&size, 28 in all: "Pokaż starsze" has a second page of 20) answer like
+ * pipeline/api/PipelineRunController.java, the newest first:
+ *       r-running  an admin's range, assessing now (19 of 41, 4 in flight, last activity 20 s ago),
+ *       r-deploy   the cron's night, interrupted by a new deployment, its assess step interrupted,
+ *       r-stalled  the cron's night, failed: "no progress for 39m 00s: the run was stopped" (the watchdog),
+ *       r-dead     the cron's night, partial with 1 dead post (needs attention),
+ *       r-ok       the cron's night, succeeded; then older nights, some partial with failed posts only.
+ *   /api/admin/pipeline-runs/<id> is that run (e.g. /admin/runs/r-running); any other id is 404 {"detail":"not_found"}.
+ * NOTIFICATIONS (the bell; MODE 'loading' and 'error' apply first), like notifications/api/NotificationController.java:
+ *       'unread' 2 unread (r-deploy, r-stalled) and 1 read (r-dead), the default; a read one stays read until the
+ *                mock is installed again (POST /api/admin/notifications/<id>/read and …/notifications/read → 204),
+ *       'none'   no notifications (unread 0),
+ *       'error'  500.
  * /api/posts answers like posts/api/PostController.java: page, size, total; a page past the end (e.g. /?page=9)
  * is 200 with items [] and the real total. /api/posts/feed-<n> (n from 0 to 119) is the feed's post n, any other
  * id is 404 {"detail":"post_not_found"}; /api/posts/feed-<n>/raw is indented JSON text shaped like a Wykop entry.
@@ -31,7 +44,7 @@
  * 0 with or without a filter.
  * Only paths starting with /api/ are mocked — a '**\/api/**' glob would also catch Vite's /src/api/*.ts modules.
  * failureClass values are the API's FailureClass (agents/assessor/validation/FailureClass.java), lower case.
- * With AUTH = 'admin' the header shows "Panel admina" on every view.
+ * With AUTH = 'admin' the header shows "Panel admina" and the notification bell on every view.
  * /kitchen-sink needs no mock: dev only, no session, fixed data.
  *
  *   cd szczur-radar-web && npx vite --port 5173 --strictPort &
@@ -40,27 +53,85 @@
  *   playwright-cli open && playwright-cli resize 1280 900
  *   playwright-cli run-code --filename=szczur-radar-web/dev/mock-api.js
  *   playwright-cli goto http://localhost:5173/admin   # the feed: http://localhost:5173/ (?page=N, from 0);
+ *                                                    # a run: http://localhost:5173/admin/runs/r-running;
  *                                                    # a post: http://localhost:5173/posts/feed-5;
  *                                                    # /activate#token with AUTH = 'anonymous'
  *   playwright-cli set-color-scheme light|dark && playwright-cli screenshot --full-page --filename=<png>
  */
 async page => {
-  const steps = (fail) => [
-    { step: 'fetch', status: 'succeeded', startedAt: '2026-10-09T05:00:01Z', finishedAt: '2026-10-09T05:00:20Z', itemsIn: null, itemsOut: 270, error: null },
-    { step: 'store', status: 'succeeded', startedAt: '2026-10-09T05:00:20Z', finishedAt: '2026-10-09T05:00:22Z', itemsIn: 270, itemsOut: 41, error: null },
-    { step: 'select', status: 'succeeded', startedAt: '2026-10-09T05:00:22Z', finishedAt: '2026-10-09T05:00:22Z', itemsIn: 41, itemsOut: 41, error: null },
-    { step: 'assess', status: fail ? 'failed' : 'succeeded', startedAt: '2026-10-09T05:00:22Z', finishedAt: '2026-10-09T05:03:40Z', itemsIn: 41, itemsOut: fail ? null : 38, error: fail ? 'boom' : null },
+  // Runs as pipeline/api/PipelineRunController.java answers them: range instants (Warsaw days), steps with their
+  // statuses, progress counters. Built per request, so the running run's times stay "a moment ago".
+  const MIN = 60000
+  const ago = (ms) => new Date(Date.now() - ms).toISOString()
+  const step = (name, status, startedAt, finishedAt, itemsIn, itemsOut, error = null) =>
+    ({ step: name, status, startedAt, finishedAt, itemsIn, itemsOut, error })
+  // A night's steps from 00:30 UTC of `day` (YYYY-MM-DD) with `posts` to assess; `assess` ends with `last`.
+  const night = (day, posts, last = 'succeeded', error = null) => [
+    step('fetch', 'succeeded', `${day}T00:30:02Z`, `${day}T00:30:40Z`, null, 470),
+    step('store', 'succeeded', `${day}T00:30:40Z`, `${day}T00:30:44Z`, 470, posts),
+    step('select', 'succeeded', `${day}T00:30:44Z`, `${day}T00:30:44Z`, posts, posts),
+    step('assess', last, `${day}T00:30:44Z`, `${day}T00:52:10Z`, posts, last === 'succeeded' ? posts : null, error),
+    ...(last === 'succeeded' ? [step('summarize', 'succeeded', `${day}T00:52:10Z`, `${day}T00:52:10Z`, null, null)] : []),
   ]
-  const run = (o) => ({ id: o.id, kind: 'range', status: 'succeeded', rangeFrom: '2026-10-08', rangeTo: '2026-10-08', sources: ['wykop'], requestedPostIds: null,
-    createdAt: '2026-10-09T05:00:00Z', startedAt: '2026-10-09T05:00:01Z', finishedAt: '2026-10-09T05:04:00Z',
-    fetched: 270, newPosts: 41, assessedOk: 38, assessedFailed: 3, processingErrors: 0, dead: 0, skipped: 0, error: null, steps: steps(false), ...o })
-  const runs = [
-    run({ id: 'r5', kind: 'range', status: 'running', createdAt: '2026-10-10T07:12:00Z', finishedAt: null, fetched: 120, newPosts: 18, assessedOk: 4, assessedFailed: 0, steps: steps(false).slice(0, 3) }),
-    run({ id: 'r4', kind: 'retry', status: 'queued', createdAt: '2026-10-10T07:12:00Z', startedAt: null, finishedAt: null, fetched: 0, newPosts: 0, assessedOk: 0, assessedFailed: 0, steps: [] , sources: []}),
-    run({ id: 'r3', status: 'partial', processingErrors: 1, error: 'java.lang.IllegalStateException: Post 9f1c… has no content after NUL stripping (pl.szczurradar.api.pipeline.step.PostStore.store:88)', steps: steps(true) }),
-    run({ id: 'r2', status: 'failed', fetched: 0, newPosts: 0, assessedOk: 0, assessedFailed: 0, error: 'Wykop GET search answered HTTP 503', steps: [{ step: 'fetch', status: 'failed', startedAt: '2026-10-08T05:00:01Z', finishedAt: '2026-10-08T05:00:31Z', itemsIn: null, itemsOut: null, error: 'HTTP 503' }], createdAt: '2026-10-08T05:00:00Z' }),
-    run({ id: 'r1', status: 'interrupted', createdAt: '2026-10-07T05:00:00Z', assessedOk: 12, assessedFailed: 0 }),
+  // The cron's run of the night of `day`: D-2…D-1 in Warsaw (22:00 UTC of D-3 to 21:59:59 UTC of D-1, summer time).
+  const nightly = (id, day, o) => {
+    const d = new Date(`${day}T00:00:00Z`)
+    const back = (days) => new Date(d.getTime() - days * 24 * 60 * MIN).toISOString().slice(0, 10)
+    return {
+      id, kind: 'range', status: 'succeeded', interruptionCause: null, needsAttention: false, scheduled: true,
+      rangeFrom: `${back(3)}T22:00:00Z`, rangeTo: `${back(1)}T21:59:59Z`, sources: ['wykop'], requestedPostIds: null,
+      createdAt: `${day}T00:30:00Z`, startedAt: `${day}T00:30:01Z`, finishedAt: `${day}T00:52:10Z`,
+      lastActivityAt: `${day}T00:52:10Z`, fetched: 470, newPosts: 400, assessedOk: 400, assessedFailed: 0,
+      processingErrors: 0, dead: 0, skipped: 0, llmRetries: 9, flexFallbacks: 2, inFlight: 0, error: null,
+      steps: night(day, 400), ...o,
+    }
+  }
+  const allRuns = () => [
+    // An admin's range run, assessing now: 19 of 41 done, 4 in flight.
+    {
+      ...nightly('r-running', '2026-10-15', { scheduled: false, status: 'running', fetched: 270, newPosts: 41,
+        assessedOk: 17, assessedFailed: 2, llmRetries: 3, flexFallbacks: 1, inFlight: 4 }),
+      createdAt: ago(12 * MIN), startedAt: ago(12 * MIN), finishedAt: null, lastActivityAt: ago(20 * 1000),
+      steps: [
+        step('fetch', 'succeeded', ago(12 * MIN), ago(11.5 * MIN), null, 270),
+        step('store', 'succeeded', ago(11.5 * MIN), ago(11.4 * MIN), 270, 41),
+        step('select', 'succeeded', ago(11.4 * MIN), ago(11.4 * MIN), 41, 41),
+        step('assess', 'running', ago(11.4 * MIN), null, 41, null),
+      ],
+    },
+    nightly('r-deploy', '2026-10-15', { status: 'interrupted', interruptionCause: 'deploy', needsAttention: true,
+      finishedAt: '2026-10-15T00:41:10Z', lastActivityAt: '2026-10-15T00:41:02Z', assessedOk: 212, assessedFailed: 3,
+      error: 'interrupted: a new deployment took over',
+      steps: night('2026-10-15', 400).slice(0, 3).concat(
+        step('assess', 'interrupted', '2026-10-15T00:30:44Z', '2026-10-15T00:41:10Z', 400, null)) }),
+    nightly('r-stalled', '2026-10-14', { status: 'failed', needsAttention: true, finishedAt: '2026-10-14T01:20:31Z',
+      lastActivityAt: '2026-10-14T00:41:31Z', assessedOk: 160, assessedFailed: 1,
+      error: 'no progress for 39m 00s: the run was stopped',
+      steps: night('2026-10-14', 400, 'failed', 'no progress for 39m 00s: the run was stopped') }),
+    nightly('r-dead', '2026-10-13', { status: 'partial', needsAttention: true, assessedOk: 462, assessedFailed: 7, dead: 1,
+      newPosts: 469, steps: night('2026-10-13', 469) }),
+    nightly('r-ok', '2026-10-12'),
+    // Older nights: 23 more, so the list has a second page ("Pokaż starsze"); every third one partial without a
+    // dead post (nothing to attend to).
+    ...Array.from({ length: 23 }, (_, n) => {
+      const day = new Date(Date.UTC(2026, 9, 11 - n)).toISOString().slice(0, 10)
+      return nightly(`r-${day}`, day, n % 3 === 0 ? { status: 'partial', assessedOk: 393, assessedFailed: 7 } : {})
+    }),
   ]
+  // Notifications as notifications/api/NotificationController.java answers them, about the runs above; reading one
+  // (or all) is kept until the mock is installed again.
+  const readIds = new Set()
+  const notifiedRun = (r) => ({ id: r.id, kind: r.kind, status: r.status, interruptionCause: r.interruptionCause,
+    finishedAt: r.finishedAt, assessedFailed: r.assessedFailed, dead: r.dead, processingErrors: r.processingErrors,
+    error: r.error })
+  const allNotifications = () => {
+    const byId = Object.fromEntries(allRuns().map((r) => [r.id, r]))
+    return [
+      { id: 'n-deploy', createdAt: '2026-10-15T00:41:12Z', readAt: null, run: notifiedRun(byId['r-deploy']) },
+      { id: 'n-stalled', createdAt: '2026-10-14T01:20:31Z', readAt: null, run: notifiedRun(byId['r-stalled']) },
+      { id: 'n-dead', createdAt: '2026-10-13T00:52:11Z', readAt: '2026-10-13T06:10:00Z', run: notifiedRun(byId['r-dead']) },
+    ].map((n) => ({ kind: 'run_attention', ...n, readAt: n.readAt ?? (readIds.has(n.id) ? new Date().toISOString() : null) }))
+  }
   const failed = [
     { id: 'p1', itemType: 'post', publishedAt: '2026-10-08T12:00:00Z', title: null, body: 'CDR po wynikach -8% na otwarciu, ktoś jeszcze trzyma? Ja dobieram, bo wycena po spadku wygląda rozsądnie, a guidance na Q4 nie zmieniło się mimo opóźnienia premiery.', webUrl: 'https://wykop.pl/wpis/1', stage: 'failed', assessmentAttempts: 1, lastAttempt: { failureClass: 'schema_violation', violations: [], assessedAt: '2026-10-09T05:02:00Z', provider: 'openrouter', model: 'luna' } },
     { id: 'p2', itemType: 'link', publishedAt: '2026-10-08T09:00:00Z', title: 'KNF ostrzega przed nowym schematem piramidy finansowej', body: null, webUrl: 'https://wykop.pl/link/2', stage: 'failed', assessmentAttempts: 2, lastAttempt: { failureClass: 'provider_error', violations: [], assessedAt: '2026-10-09T05:02:00Z', provider: 'openrouter', model: 'luna' } },
@@ -179,6 +250,7 @@ async page => {
     && (kind === null || t.kind === kind)
     && (direction === null || t.stance.direction === direction))
   const MODE = 'data'
+  const NOTIFICATIONS = 'unread'
   const AUTH = 'admin'
   const ACTIVATION = 'valid'
   const FRESHNESS = 'date'
@@ -207,8 +279,34 @@ async page => {
     if (MODE === 'loading' && p.startsWith('/api/admin')) await hang()
     if (MODE === 'error' && p.startsWith('/api/admin')) return json(route, { detail: 'internal_error' }, 500)
     if (p === '/api/admin/pipeline-runs/sources') return json(route, [{ source: 'wykop', configured: true }])
-    if (p === '/api/admin/pipeline-runs' && route.request().method() === 'GET') return json(route, { items: MODE === 'empty' ? [] : runs, page: 0, size: 20, total: MODE === 'empty' ? 0 : runs.length })
+    if (p === '/api/admin/pipeline-runs' && route.request().method() === 'GET') {
+      const runs = MODE === 'empty' ? [] : allRuns()
+      const pageNumber = Number(url.searchParams.get('page') ?? 0)
+      const size = Number(url.searchParams.get('size') ?? 20)
+      return json(route, { items: runs.slice(pageNumber * size, (pageNumber + 1) * size), page: pageNumber, size, total: runs.length })
+    }
     if (p === '/api/admin/pipeline-runs') return json(route, { detail: 'pipeline_busy' }, 409)
+    const runPath = p.match(/^\/api\/admin\/pipeline-runs\/([^/]+)$/)
+    if (runPath) {
+      const found = MODE === 'empty' ? undefined : allRuns().find((r) => r.id === decodeURIComponent(runPath[1]))
+      return found ? json(route, found) : json(route, { detail: 'not_found' }, 404)
+    }
+    if (p === '/api/admin/notifications') {
+      if (NOTIFICATIONS === 'error') return json(route, { detail: 'internal_error' }, 500)
+      const items = NOTIFICATIONS === 'none' ? [] : allNotifications()
+      return json(route, { unread: items.filter((n) => !n.readAt).length, items })
+    }
+    if (p === '/api/admin/notifications/read') {
+      allNotifications().forEach((n) => readIds.add(n.id))
+      return route.fulfill({ status: 204 })
+    }
+    const readPath = p.match(/^\/api\/admin\/notifications\/([^/]+)\/read$/)
+    if (readPath) {
+      const id = decodeURIComponent(readPath[1])
+      if (NOTIFICATIONS === 'none' || !allNotifications().some((n) => n.id === id)) return json(route, { detail: 'not_found' }, 404)
+      readIds.add(id)
+      return route.fulfill({ status: 204 })
+    }
     if (p === '/api/admin/posts/failed') return json(route, { items: MODE === 'empty' ? [] : failed, page: 0, size: 50, total: MODE === 'empty' ? 0 : failed.length })
     if (p === '/api/freshness') {
       if (FRESHNESS === 'error') return json(route, { detail: 'internal_error' }, 500)

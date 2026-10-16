@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, ref, useTemplateRef } from 'vue'
 import {
   type Run,
-  type RunStatus,
   type SourceState,
   fetchRuns,
   fetchSources,
@@ -13,9 +12,11 @@ import {
 import { type FailedPost, fetchFailedPosts } from '../api/posts'
 import AppButton from '../components/AppButton.vue'
 import AppHeader from '../components/AppHeader.vue'
-import StatusBadge, { type BadgeTone } from '../components/StatusBadge.vue'
+import StatusBadge from '../components/StatusBadge.vue'
 import StatusMessage from '../components/StatusMessage.vue'
-import { formatDateTime, label } from '../labels'
+import { formatDateTime, formatDuration, label } from '../labels'
+import { useEvery } from '../polling'
+import { isActive, requester, runDuration, runRange, runStatusLabel, runTone, stepTone } from '../runs'
 
 /** Yesterday in Warsaw, the usual day to run. */
 function yesterday(): string {
@@ -75,31 +76,100 @@ async function start(): Promise<void> {
 }
 
 // --- runs -------------------------------------------------------------------------------
+/** Rows per page of "Pokaż starsze". */
+const PAGE_SIZE = 20
+/** The API's largest page: a refresh reads at most this many of the newest rows again. */
+const MAX_PAGE_SIZE = 100
+/** How often the list is read again while a run is queued or running. */
+const REFRESH_MS = 10 * 1000
+
+const runsSection = useTemplateRef<HTMLElement>('runs-section')
 const runs = ref<Run[]>([])
+/** All runs in the API, from the latest answer. */
+const runsTotal = ref(0)
 /** Loading without a list; a refresh keeps existing runs on screen. */
 const runsLoading = ref(true)
 const runsError = ref<string | null>(null)
+const olderLoading = ref(false)
+const olderError = ref<string | null>(null)
+/** The time durations of running runs count to: the last read. */
+const now = ref(Date.now())
+/** Pages of PAGE_SIZE read so far (the next "Pokaż starsze" reads this page number). */
+let pagesLoaded = 0
+/** The number of the latest refresh; the answer or error of any earlier one is dropped. */
+let latestRefresh = 0
+let refreshing = false
 
-/** The badge tone of a run status; a step uses the same tones. */
-const runTone: Record<RunStatus, BadgeTone> = {
-  queued: 'neutral',
-  running: 'info',
-  succeeded: 'success',
-  partial: 'warning',
-  interrupted: 'warning',
-  failed: 'destructive',
+const hasOlder = computed(() => runs.value.length < runsTotal.value)
+
+/** `fresh` (the newest runs) first, then the rows read before that it does not hold, in their order. */
+function mergeRuns(fresh: Run[], shown: Run[]): Run[] {
+  const ids = new Set(fresh.map((run) => run.id))
+  return [...fresh, ...shown.filter((run) => !ids.has(run.id))]
 }
 
+/**
+ * Reads the newest runs again: page 0 as large as the rows on screen (at most MAX_PAGE_SIZE; older rows stay), so
+ * the pages read with "Pokaż starsze" do not disappear. Rows are merged by id: a new run shifts the pages.
+ */
 async function loadRuns(): Promise<void> {
+  const current = ++latestRefresh
+  refreshing = true
   runsLoading.value = runs.value.length === 0
   runsError.value = null
   try {
-    runs.value = (await fetchRuns()).items
+    const page = await fetchRuns(0, Math.min(Math.max(runs.value.length, PAGE_SIZE), MAX_PAGE_SIZE))
+    if (current !== latestRefresh) return
+    runs.value = mergeRuns(page.items, runs.value)
+    runsTotal.value = page.total
+    pagesLoaded = Math.max(pagesLoaded, 1)
+    now.value = Date.now()
   } catch {
+    if (current !== latestRefresh) return
     runsError.value = 'Nie udało się wczytać przebiegów.'
   } finally {
-    runsLoading.value = false
+    if (current === latestRefresh) {
+      runsLoading.value = false
+      refreshing = false
+    }
   }
+}
+
+/** The next page of older runs, appended without the rows already shown. */
+async function loadOlder(): Promise<void> {
+  if (olderLoading.value) return
+  olderLoading.value = true
+  olderError.value = null
+  let firstAdded: string | null = null
+  try {
+    const page = await fetchRuns(pagesLoaded, PAGE_SIZE)
+    const ids = new Set(runs.value.map((run) => run.id))
+    const added = page.items.filter((run) => !ids.has(run.id))
+    runs.value = [...runs.value, ...added]
+    firstAdded = added[0]?.id ?? null
+    // An empty page means nothing is left, whatever the total said.
+    runsTotal.value = page.items.length === 0 ? runs.value.length : page.total
+    pagesLoaded++
+  } catch {
+    olderError.value = 'Nie udało się wczytać starszych przebiegów.'
+  } finally {
+    olderLoading.value = false
+  }
+  // Once everything is read the button goes away; the focus goes to the first row it added.
+  if (!hasOlder.value && firstAdded !== null) {
+    await nextTick()
+    const at = runs.value.findIndex((run) => run.id === firstAdded)
+    runsSection.value?.querySelectorAll<HTMLElement>('.run .details')[at]?.focus()
+  }
+}
+
+useEvery(REFRESH_MS, () => {
+  if (!refreshing && runs.value.some(isActive)) void loadRuns()
+})
+
+function duration(run: Run): string | null {
+  const ms = runDuration(run, now.value)
+  return ms === null ? null : formatDuration(ms)
 }
 
 function counters(run: Run): string {
@@ -213,7 +283,7 @@ onMounted(async () => {
       <StatusMessage v-if="startError" tone="error">{{ startError }}</StatusMessage>
     </section>
 
-    <section aria-labelledby="runs-title" :aria-busy="runsLoading ? 'true' : undefined">
+    <section ref="runs-section" aria-labelledby="runs-title" :aria-busy="runsLoading ? 'true' : undefined">
       <div class="section-head">
         <h2 id="runs-title">Ostatnie przebiegi</h2>
         <AppButton @click="refresh">Odśwież</AppButton>
@@ -221,31 +291,50 @@ onMounted(async () => {
       <p v-if="runsLoading" class="loading">Wczytywanie…</p>
       <StatusMessage v-else-if="runsError" tone="error">{{ runsError }}</StatusMessage>
       <p v-else-if="runs.length === 0" class="empty">Jeszcze nie było przebiegu.</p>
-      <ul v-else class="runs">
-        <li v-for="run in runs" :key="run.id" class="run" :data-status="run.status">
-          <p class="run-head">
-            <strong>{{ label('runKind', run.kind) }}</strong>
-            <StatusBadge class="status" :tone="runTone[run.status]">{{ label('runStatus', run.status) }}</StatusBadge>
-            <span>{{ formatDateTime(run.createdAt) }}</span>
-            <span v-if="run.sources.length">{{ run.sources.map((s) => label('source', s)).join(', ') }}</span>
-          </p>
-          <p class="counters">
-            {{ counters(run) }}
-            · <span :class="{ alarm: run.processingErrors > 0 }">błędy techniczne {{ run.processingErrors }}</span>
-          </p>
-          <p v-if="run.steps.length" class="steps">
-            <template v-for="step in run.steps" :key="step.step + step.startedAt">
-              <span v-if="step.status === 'succeeded'">
-                {{ label('step', step.step) }}<template v-if="step.itemsOut !== null"> ({{ step.itemsOut }})</template>
-              </span>
-              <StatusBadge v-else :tone="runTone[step.status]">
-                {{ label('step', step.step) }} ({{ label('runStatus', step.status) }})
-              </StatusBadge>
-            </template>
-          </p>
-          <p v-if="run.error" class="run-error">{{ run.error }}</p>
-        </li>
-      </ul>
+      <template v-else>
+        <ul class="runs">
+          <li v-for="run in runs" :key="run.id" class="run" :data-status="run.status">
+            <p class="run-head">
+              <strong>{{ label('runKind', run.kind) }}</strong>
+              <StatusBadge class="status" :tone="runTone(run)">{{ runStatusLabel(run) }}</StatusBadge>
+              <StatusBadge v-if="run.needsAttention" class="attention" tone="destructive">wymaga uwagi</StatusBadge>
+              <span>{{ formatDateTime(run.createdAt) }}</span>
+              <span v-if="run.sources.length">{{ run.sources.map((s) => label('source', s)).join(', ') }}</span>
+              <RouterLink
+                class="details"
+                :to="{ name: 'admin-run', params: { id: run.id } }"
+                :aria-label="`Szczegóły przebiegu z ${formatDateTime(run.createdAt)}`"
+              >
+                Szczegóły
+              </RouterLink>
+            </p>
+            <p class="run-meta">
+              <span v-if="runRange(run)" class="range">zakres {{ runRange(run) }}</span>
+              <span class="requester">uruchomił {{ requester(run) }}</span>
+              <span v-if="duration(run)" class="duration">czas {{ duration(run) }}</span>
+            </p>
+            <p class="counters">
+              {{ counters(run) }}
+              · <span :class="{ alarm: run.processingErrors > 0 }">błędy techniczne {{ run.processingErrors }}</span>
+            </p>
+            <p v-if="run.steps.length" class="steps">
+              <template v-for="step in run.steps" :key="step.step + step.startedAt">
+                <span v-if="step.status === 'succeeded'">
+                  {{ label('step', step.step) }}<template v-if="step.itemsOut !== null"> ({{ step.itemsOut }})</template>
+                </span>
+                <StatusBadge v-else :tone="stepTone(step.status, run.interruptionCause)">
+                  {{ label('step', step.step) }} ({{ label('stepStatus', step.status) }})
+                </StatusBadge>
+              </template>
+            </p>
+            <p v-if="run.error" class="run-error">{{ run.error }}</p>
+          </li>
+        </ul>
+        <AppButton v-if="hasOlder" class="older" :busy="olderLoading" busy-label="Wczytywanie…" @click="loadOlder">
+          Pokaż starsze
+        </AppButton>
+        <StatusMessage v-if="olderError" tone="error">{{ olderError }}</StatusMessage>
+      </template>
     </section>
 
     <section aria-labelledby="failed-title" :aria-busy="failedLoading ? 'true' : undefined">
@@ -353,6 +442,7 @@ h2 {
 }
 
 .run-head,
+.run-meta,
 .steps {
   display: flex;
   flex-wrap: wrap;
@@ -365,10 +455,24 @@ h2 {
   color: var(--destructive);
 }
 
+.run-meta,
 .counters,
 .steps,
 .attempt {
   font-size: var(--font-size-sm);
+}
+
+.details {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.details:hover {
+  text-decoration: underline;
+}
+
+.older {
+  margin-top: var(--space-3);
 }
 
 .run-error {

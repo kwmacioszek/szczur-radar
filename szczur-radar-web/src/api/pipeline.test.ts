@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from './client'
-import { fetchRuns, fetchSources, retryPosts, startErrorMessage, startRange } from './pipeline'
+import { fetchRun, fetchRuns, fetchSources, retryPosts, startErrorMessage, startRange } from './pipeline'
 import { fetchFailedPosts, fetchPosts } from './posts'
 
 function respond(status: number, body: unknown) {
@@ -51,6 +51,21 @@ describe('pipeline and posts API', () => {
       '/api/admin/pipeline-runs?page=0&size=20',
       '/api/admin/pipeline-runs/sources',
     ])
+  })
+
+  it('reads a page of runs of the given size and one run by its encoded id', async () => {
+    const fetchMock = respond(200, { items: [], page: 1, size: 40, total: 0 })
+    await fetchRuns(1, 40)
+    await fetchRun('3f2a/..?x')
+    expect(fetchMock.mock.calls.map((call) => call[0])).toEqual([
+      '/api/admin/pipeline-runs?page=1&size=40',
+      '/api/admin/pipeline-runs/3f2a%2F..%3Fx',
+    ])
+  })
+
+  it('says an unknown run is not found', async () => {
+    respond(404, { detail: 'not_found' })
+    await expect(fetchRun('r1')).rejects.toMatchObject({ status: 404, detail: 'not_found' })
   })
 
   it('sends only the given conditions of the feed filter, encoded', async () => {

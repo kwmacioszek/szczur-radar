@@ -4,6 +4,7 @@ import { RouterLink, useRouter } from 'vue-router'
 import { logout } from '../api/auth'
 import { clearSession, currentUser } from '../auth/session'
 import AppButton from './AppButton.vue'
+import NotificationBell from './NotificationBell.vue'
 import StatusMessage from './StatusMessage.vue'
 
 const router = useRouter()
@@ -35,6 +36,7 @@ async function signOut(): Promise<void> {
       <RouterLink v-if="isAdmin" :to="{ name: 'admin' }">Panel admina</RouterLink>
     </nav>
     <span class="who">{{ currentUser?.email }}</span>
+    <NotificationBell v-if="isAdmin" />
     <AppButton :busy="loggingOut" @click="signOut">Wyloguj</AppButton>
   </header>
   <div v-if="error" class="notice">
@@ -43,7 +45,9 @@ async function signOut(): Promise<void> {
 </template>
 
 <style scoped>
+/* Positioned: the bell's panel opens below the bar, aligned to its right edge. */
 .topbar {
+  position: relative;
   display: flex;
   flex-wrap: wrap;
   align-items: center;

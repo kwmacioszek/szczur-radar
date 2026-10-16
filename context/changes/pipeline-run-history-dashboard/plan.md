@@ -822,20 +822,20 @@ Strażnik w PR env nie jest wymuszany (wymagałby zawieszenia prawdziwego przebi
 
 #### Automated
 
-- [x] 4.1 Test crona z heartbeatem, przyczyną przerwania i niezmienioną liczbą żądań: `tools/pipeline-trigger/test.sh`
+- [x] 4.1 Test crona z heartbeatem, przyczyną przerwania i niezmienioną liczbą żądań: `tools/pipeline-trigger/test.sh` — 4dfabf1
 
 ### Phase 5: SPA — dzwoneczek, strona przebiegu i historia
 
 #### Automated
 
-- [ ] 5.1 Testy SPA: `cd szczur-radar-web && npm test`
-- [ ] 5.2 Typy i build: `cd szczur-radar-web && npm run build`
-- [ ] 5.3 Skan `no literals` obejmuje nowe pliki: `styleContract.test.ts` w `npm test`
+- [x] 5.1 Testy SPA: `cd szczur-radar-web && npm test`
+- [x] 5.2 Typy i build: `cd szczur-radar-web && npm run build`
+- [x] 5.3 Skan `no literals` obejmuje nowe pliki: `styleContract.test.ts` w `npm test`
 
 #### Manual
 
-- [ ] 5.4 Lokalnie z `dev/mock-api.js`: dzwoneczek z licznikiem otwiera listę, kliknięcie prowadzi do `/admin/runs/:id`, strona trwającego przebiegu pokazuje postęp, `/admin` pokazuje zakres, czas, cron/admin i „Pokaż starsze”
-- [ ] 5.5 Klawiatura: Tab do dzwoneczka, Enter otwiera, Tab po pozycjach, Escape zamyka i zwraca focus
+- [x] 5.4 Lokalnie z `dev/mock-api.js`: dzwoneczek z licznikiem otwiera listę, kliknięcie prowadzi do `/admin/runs/:id`, strona trwającego przebiegu pokazuje postęp, `/admin` pokazuje zakres, czas, cron/admin i „Pokaż starsze”
+- [x] 5.5 Klawiatura: Tab do dzwoneczka, Enter otwiera, Tab po pozycjach, Escape zamyka i zwraca focus
 
 ### Phase 6: Stany, dokumentacja i weryfikacja w PR env
 
