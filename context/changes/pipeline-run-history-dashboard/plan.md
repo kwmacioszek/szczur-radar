@@ -784,15 +784,15 @@ Strażnik w PR env nie jest wymuszany (wymagałby zawieszenia prawdziwego przebi
 
 #### Automated
 
-- [ ] 1.1 Migracja `V8` stosuje się na pustej bazie i odrzuca złą przyczynę i przyczynę przy statusie innym niż `interrupted`: `MigrationsIT`
-- [ ] 1.2 Encje zgodne ze schematem: `JpaSchemaIT`
-- [ ] 1.3 Liczniki po poście z ponowieniami i powrotami flex, bez podwójnego liczenia: `ConcurrentAssessmentDispatcherTest`, `PipelineAgentIT`
-- [ ] 1.4 Przyczyna przerwania `deploy` / `restart` / `shutdown` i kroki `interrupted`: `PipelineStartupRecoveryIT`, `PipelineAgentIT`
-- [ ] 1.5 Cały backend zielony: `cd szczur-radar-api && ./mvnw -B verify`
+- [x] 1.1 Migracja `V8` stosuje się na pustej bazie i odrzuca złą przyczynę i przyczynę przy statusie innym niż `interrupted`: `MigrationsIT`
+- [x] 1.2 Encje zgodne ze schematem: `JpaSchemaIT`
+- [x] 1.3 Liczniki po poście z ponowieniami i powrotami flex, bez podwójnego liczenia: `ConcurrentAssessmentDispatcherTest`, `PipelineAgentIT`
+- [x] 1.4 Przyczyna przerwania `deploy` / `restart` / `shutdown` i kroki `interrupted`: `PipelineStartupRecoveryIT`, `PipelineAgentIT`
+- [x] 1.5 Cały backend zielony: `cd szczur-radar-api && ./mvnw -B verify`
 
 #### Manual
 
-- [ ] 1.6 Lokalny przebieg jednego dnia (Postgres z `compose.local.yaml`, jar, prawdziwe `LLM_*` i `WYKOP_*`) loguje start, kroki, postęp oceny co najwyżej co minutę i koniec, a `pipeline_runs` w trakcie oceny ma rosnące `assessed_ok` i świeże `last_activity_at`
+- [x] 1.6 Lokalny przebieg jednego dnia (Postgres z `compose.local.yaml`, jar, prawdziwe `LLM_*` i `WYKOP_*`) loguje start, kroki, postęp oceny co najwyżej co minutę i koniec, a `pipeline_runs` w trakcie oceny ma rosnące `assessed_ok` i świeże `last_activity_at`
 
 ### Phase 2: Strażnik zawieszonego przebiegu
 

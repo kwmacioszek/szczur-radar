@@ -1,5 +1,6 @@
 package pl.szczurradar.api.pipeline.assess;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -11,7 +12,9 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.LongSupplier;
 
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
@@ -32,6 +35,7 @@ import pl.szczurradar.api.pipeline.flow.RunFlow.AssessedBatch;
 import pl.szczurradar.api.pipeline.flow.RunFlow.ProcessingError;
 import pl.szczurradar.api.pipeline.state.PostTransitions;
 import pl.szczurradar.api.pipeline.state.RunRecorder;
+import pl.szczurradar.api.pipeline.state.RunRecorder.Counters;
 import pl.szczurradar.api.posts.Assessment;
 import pl.szczurradar.api.posts.Post;
 import pl.szczurradar.api.posts.PostRepository;
@@ -51,14 +55,20 @@ import pl.szczurradar.api.posts.PostRepository;
  *       and the remaining posts are not taken;
  *   <li>stored with its next stage ({@link PostTransitions#record}), only while the run owns it;
  *   <li>otherwise put back without an attempt ({@link PostTransitions#release}); any exception there
- *       (a bug, a failed write) is a technical error of this post, and the other posts go on.
+ *       (a bug, a failed write) is a technical error of this post, and the other posts go on;
+ *   <li>counted in the run's counters ({@link RunRecorder#count}): a stored result with its call's
+ *       retries and flex fallback, or a technical error; a post not taken counts nothing.
  * </ol>
  *
  * A stopped step makes the run {@code failed} ({@link AssessedBatch#stoppedBy}), so a bad key never
- * uses up the posts' attempts.
+ * uses up the posts' attempts. The log gets a progress line at most every {@link #PROGRESS_INTERVAL}
+ * as posts finish, and one after the last.
  */
 @Component
 public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher, DisposableBean {
+
+	/** The shortest time between two progress lines in the log. */
+	static final Duration PROGRESS_INTERVAL = Duration.ofMinutes(1);
 
 	private static final Logger log = LoggerFactory.getLogger(ConcurrentAssessmentDispatcher.class);
 
@@ -76,15 +86,19 @@ public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher, Dis
 
 	private final ExecutorService executor;
 
+	/** {@link System#nanoTime()}, or a test's clock for the progress lines. */
+	private final LongSupplier nanoTime;
+
 	@Autowired
 	ConcurrentAssessmentDispatcher(PostRepository posts, AssessmentInputs inputs, Assessor assessor,
 			PostTransitions transitions, RunRecorder recorder, @Lazy LlmClient llm,
 			@Value("${PIPELINE_LLM_CONCURRENCY:4}") int concurrency) {
-		this(posts, inputs, assessor, transitions, recorder, llm, pool(concurrency));
+		this(posts, inputs, assessor, transitions, recorder, llm, pool(concurrency), System::nanoTime);
 	}
 
 	ConcurrentAssessmentDispatcher(PostRepository posts, AssessmentInputs inputs, Assessor assessor,
-			PostTransitions transitions, RunRecorder recorder, LlmClient llm, ExecutorService executor) {
+			PostTransitions transitions, RunRecorder recorder, LlmClient llm, ExecutorService executor,
+			LongSupplier nanoTime) {
 		this.posts = posts;
 		this.inputs = inputs;
 		this.assessor = assessor;
@@ -92,6 +106,7 @@ public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher, Dis
 		this.recorder = recorder;
 		this.llm = llm;
 		this.executor = executor;
+		this.nanoTime = nanoTime;
 	}
 
 	@Override
@@ -108,16 +123,22 @@ public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher, Dis
 		}
 		AtomicBoolean runStopped = new AtomicBoolean();
 		AtomicReference<@Nullable String> stoppedBy = new AtomicReference<>();
+		Progress progress = new Progress(runId, postIds.size());
 		List<Future<Outcome>> outcomes = new ArrayList<>();
 		for (UUID postId : postIds) {
-			outcomes.add(executor.submit(() -> assess(runId, postId, runStopped, stoppedBy)));
+			outcomes.add(executor.submit(() -> {
+				Outcome outcome = assess(runId, postId, runStopped, stoppedBy);
+				count(runId, outcome);
+				progress.finished(outcome);
+				return outcome;
+			}));
 		}
 		int ok = 0;
 		int failed = 0;
 		int dead = 0;
 		List<ProcessingError> errors = new ArrayList<>();
 		for (int i = 0; i < outcomes.size(); i++) {
-			switch (await(runId, outcomes, i)) {
+			switch (await(runId, outcomes, i, progress)) {
 				case Outcome.Stored stored when stored.ok() -> ok++;
 				case Outcome.Stored stored -> {
 					failed++;
@@ -128,6 +149,7 @@ public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher, Dis
 				}
 			}
 		}
+		progress.line();
 		return new AssessedBatch(runId, ok, failed, dead, errors, stoppedBy.get());
 	}
 
@@ -151,12 +173,17 @@ public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher, Dis
 				// The run lost the post (interrupted, post put back): not this run's error.
 				return new Outcome.NotTaken();
 			}
-			return new Outcome.Stored(result.ok(), !result.ok() && attempts.get() + 1 >= Post.MAX_ASSESSMENT_ATTEMPTS);
+			// The prefilter makes no call (attempts 0).
+			return new Outcome.Stored(result.ok(), !result.ok() && attempts.get() + 1 >= Post.MAX_ASSESSMENT_ATTEMPTS,
+					Math.max(result.provenance().attempts() - 1, 0), result.provenance().flexFallback());
 		}
 		catch (LlmConfigurationException ex) {
 			// Every later call would fail the same way: stop taking posts, count no attempt.
 			runStopped.set(true);
-			stoppedBy.compareAndSet(null, "the LLM provider refused the configuration: " + ex.getMessage());
+			if (stoppedBy.compareAndSet(null, "the LLM provider refused the configuration: " + ex.getMessage())) {
+				log.warn("The LLM provider refused the configuration in run {}; no further post is taken: {}", runId,
+						ex.getMessage());
+			}
 			return new Outcome.NotTaken();
 		}
 		catch (RuntimeException ex) {
@@ -170,7 +197,21 @@ public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher, Dis
 		}
 	}
 
-	private static Outcome await(UUID runId, List<Future<Outcome>> outcomes, int index) {
+	/** Adds a post's outcome to the run's counters. */
+	private void count(UUID runId, Outcome outcome) {
+		switch (outcome) {
+			case Outcome.Stored stored when stored.ok() ->
+				recorder.count(runId, Counters.assessedOk(stored.llmRetries(), stored.flexFallback()));
+			case Outcome.Stored stored ->
+				recorder.count(runId,
+						Counters.assessedFailed(stored.dead(), stored.llmRetries(), stored.flexFallback()));
+			case Outcome.Error error -> recorder.count(runId, Counters.processingError());
+			case Outcome.NotTaken notTaken -> {
+			}
+		}
+	}
+
+	private Outcome await(UUID runId, List<Future<Outcome>> outcomes, int index, Progress progress) {
 		try {
 			return outcomes.get(index).get();
 		}
@@ -180,8 +221,12 @@ public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher, Dis
 			throw new IllegalStateException("interrupted while assessing run " + runId, ex);
 		}
 		catch (ExecutionException | CancellationException ex) {
-			// assess() catches what it can; this is a task the pool never ran.
-			return new Outcome.Error(String.valueOf(ex));
+			// assess() catches what it can; this is a task the pool never ran, or one that failed outside
+			// it (e.g. taking the post or counting it), so it was not counted.
+			Outcome error = new Outcome.Error(String.valueOf(ex));
+			count(runId, error);
+			progress.finished(error);
+			return error;
 		}
 	}
 
@@ -203,8 +248,13 @@ public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher, Dis
 	/** What happened to one post. */
 	private sealed interface Outcome {
 
-		/** An assessment was stored. */
-		record Stored(boolean ok, boolean dead) implements Outcome {
+		/**
+		 * An assessment was stored.
+		 *
+		 * @param llmRetries HTTP attempts of its call beyond the first
+		 * @param flexFallback whether its call fell back from the flex tier to the default one
+		 */
+		record Stored(boolean ok, boolean dead, int llmRetries, boolean flexFallback) implements Outcome {
 		}
 
 		/** A technical error: no assessment, the post put back. */
@@ -213,6 +263,76 @@ public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher, Dis
 
 		/** Not taken by this run (not assessable, the run stopped, or the post lost to recovery). */
 		record NotTaken() implements Outcome {
+		}
+
+	}
+
+	/**
+	 * The step's progress for the log: what its posts did so far, as they finish. A post finishing
+	 * writes a line when {@link #PROGRESS_INTERVAL} has passed since the last one (or the step's
+	 * start); {@link #line()} writes one at the end. Never fails a post.
+	 */
+	private final class Progress {
+
+		private final UUID runId;
+
+		private final int total;
+
+		private final AtomicInteger ok = new AtomicInteger();
+
+		private final AtomicInteger failed = new AtomicInteger();
+
+		private final AtomicInteger dead = new AtomicInteger();
+
+		private final AtomicInteger errors = new AtomicInteger();
+
+		private final AtomicInteger retries = new AtomicInteger();
+
+		private final AtomicInteger fallbacks = new AtomicInteger();
+
+		/** When the last line was written ({@link #nanoTime}). */
+		private final AtomicLong lastLine;
+
+		Progress(UUID runId, int total) {
+			this.runId = runId;
+			this.total = total;
+			this.lastLine = new AtomicLong(nanoTime.getAsLong());
+		}
+
+		void finished(Outcome outcome) {
+			switch (outcome) {
+				case Outcome.Stored stored -> {
+					(stored.ok() ? ok : failed).incrementAndGet();
+					dead.addAndGet(stored.dead() ? 1 : 0);
+					retries.addAndGet(stored.llmRetries());
+					fallbacks.addAndGet(stored.flexFallback() ? 1 : 0);
+				}
+				case Outcome.Error error -> errors.incrementAndGet();
+				case Outcome.NotTaken notTaken -> {
+				}
+			}
+			long now = nanoTime.getAsLong();
+			long last = lastLine.get();
+			// One thread writes the line of each interval.
+			if (now - last >= PROGRESS_INTERVAL.toNanos() && lastLine.compareAndSet(last, now)) {
+				line();
+			}
+		}
+
+		/**
+		 * {@code Run <id> assess: <done>/<N> (ok …, failed …, dead …, errors …), in flight …, retries …,
+		 * flex fallbacks …}; no post content.
+		 */
+		void line() {
+			try {
+				int done = ok.get() + failed.get() + errors.get();
+				log.info("Run {} assess: {}/{} (ok {}, failed {}, dead {}, errors {}), in flight {}, retries {},"
+						+ " flex fallbacks {}", runId, done, total, ok.get(), failed.get(), dead.get(), errors.get(),
+						recorder.inFlight(runId), retries.get(), fallbacks.get());
+			}
+			catch (RuntimeException ex) {
+				log.warn("The progress of run {} could not be logged", runId, ex);
+			}
 		}
 
 	}

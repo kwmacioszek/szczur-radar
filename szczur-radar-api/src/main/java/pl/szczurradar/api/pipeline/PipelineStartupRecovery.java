@@ -3,23 +3,31 @@ package pl.szczurradar.api.pipeline;
 import java.util.List;
 import java.util.UUID;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.SmartInitializingSingleton;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import pl.szczurradar.api.pipeline.run.InterruptionCause;
 import pl.szczurradar.api.pipeline.state.PostTransitions;
 import pl.szczurradar.api.pipeline.state.RunRecorder;
 
 /**
  * At start-up, runs that nobody finished (queued or running when a deploy or restart stopped their
- * instance) become {@code interrupted}, and every post still {@code assessing} without a queued or
- * running run is put back without an attempt — {@code stored} when it never failed, otherwise
- * {@code failed} — in one transaction. That includes a post claimed just as its run was interrupted
- * by a stopping instance. Without it the "one running run" index would block every later run. The
- * posts are taken by the next retry run.
+ * instance) become {@code interrupted} with their open steps closed, and every post still
+ * {@code assessing} without a queued or running run is put back without an attempt — {@code stored}
+ * when it never failed, otherwise {@code failed} — in one transaction. That includes a post claimed
+ * just as its run was interrupted by a stopping instance. Without it the "one running run" index would
+ * block every later run. The posts are taken by the next retry run.
+ *
+ * <p>A run queued by another deployment than this one ({@code RAILWAY_DEPLOYMENT_ID}) was interrupted
+ * by a new deployment ({@link InterruptionCause#DEPLOY}: Railway stops the old one only once the new one
+ * runs); any other — the same deployment, or an unknown one — by a restart
+ * ({@link InterruptionCause#RESTART}).
  *
  * <p>It runs before the web server accepts its first connection: it marks every queued or running
  * run interrupted without asking who created it, so a run created by an earlier request — e.g. the
@@ -47,10 +55,15 @@ public class PipelineStartupRecovery implements SmartInitializingSingleton {
 
 	private final TransactionTemplate transaction;
 
-	PipelineStartupRecovery(RunRecorder recorder, PostTransitions transitions, TransactionTemplate transaction) {
+	/** This instance's deployment, {@code null} when unknown (locally, in tests). */
+	private final @Nullable String deploymentId;
+
+	PipelineStartupRecovery(RunRecorder recorder, PostTransitions transitions, TransactionTemplate transaction,
+			@Value("${RAILWAY_DEPLOYMENT_ID:}") @Nullable String deploymentId) {
 		this.recorder = recorder;
 		this.transitions = transitions;
 		this.transaction = transaction;
+		this.deploymentId = deploymentId == null || deploymentId.isBlank() ? null : deploymentId;
 	}
 
 	/** At start-up, before the web server opens its port. */
@@ -64,7 +77,7 @@ public class PipelineStartupRecovery implements SmartInitializingSingleton {
 		List<UUID> interrupted;
 		try {
 			interrupted = transaction.execute(status -> {
-				List<UUID> ids = recorder.interruptAll("interrupted: the application restarted");
+				List<UUID> ids = recorder.interruptAll(deploymentId);
 				int released = transitions.releaseOrphans();
 				if (released > 0) {
 					log.warn("Put back {} post(s) left assessing by unfinished runs", released);

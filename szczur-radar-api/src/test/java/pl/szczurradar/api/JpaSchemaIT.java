@@ -28,6 +28,7 @@ import pl.szczurradar.api.config.LlmProviderProperties.ReasoningEffort;
 import pl.szczurradar.api.config.LlmProviderProperties.ServiceTier;
 import pl.szczurradar.api.llm.Channel;
 import pl.szczurradar.api.llm.OutputMode;
+import pl.szczurradar.api.pipeline.run.InterruptionCause;
 import pl.szczurradar.api.pipeline.run.PipelineRun;
 import pl.szczurradar.api.pipeline.run.PipelineRunRepository;
 import pl.szczurradar.api.pipeline.run.PipelineRunStep;
@@ -109,8 +110,8 @@ class JpaSchemaIT {
 		User admin = users.save(new User("pipeline-schema@example.com", null, Role.ADMIN));
 		Instant from = Instant.parse("2026-09-30T22:00:00Z");
 		PipelineRun run = runs.save(PipelineRun.range(from, from.plus(1, ChronoUnit.DAYS).minusSeconds(1),
-				List.of(Source.WYKOP), admin.getId()));
-		PipelineRun postsRun = runs.save(PipelineRun.posts(List.of(run.getId()), admin.getId()));
+				List.of(Source.WYKOP), admin.getId(), "deployment-1"));
+		PipelineRun postsRun = runs.save(PipelineRun.posts(List.of(run.getId()), admin.getId(), null));
 		steps.save(new PipelineRunStep(run.getId(), RunStep.FETCH));
 		byte[] rawJson = "{\"id\":70001, \"votes\":{\"up\":3}}".getBytes(StandardCharsets.UTF_8);
 		RawPayloadRef raw = rawPayloads.store(Source.WYKOP, rawJson);
@@ -135,11 +136,30 @@ class JpaSchemaIT {
 		assertThat(loadedRun.getSources()).containsExactly(Source.WYKOP);
 		assertThat(loadedRun.getRequestedBy()).isEqualTo(admin.getId());
 		assertThat(loadedRun.getCreatedAt()).isNotNull();
+		assertThat(loadedRun.getDeploymentId()).isEqualTo("deployment-1");
+		// Progress and interruption are written by conditional updates only (pipeline/state/RunRecorder).
+		assertThat(loadedRun.getLlmRetries()).isZero();
+		assertThat(loadedRun.getFlexFallbacks()).isZero();
+		assertThat(loadedRun.getLastActivityAt()).isNull();
+		assertThat(loadedRun.getInterruptionCause()).isNull();
 		assertThat(runs.findById(postsRun.getId()).orElseThrow().getRequestedPostIds()).containsExactly(run.getId());
+		assertThat(runs.findById(postsRun.getId()).orElseThrow().getDeploymentId()).isNull();
 		assertThat(steps.findByRunIdOrderByStartedAtAscIdAsc(run.getId())).singleElement().satisfies(step -> {
 			assertThat(step.getStep()).isEqualTo(RunStep.FETCH);
 			assertThat(step.getStatus()).isEqualTo(StepStatus.RUNNING);
 		});
+		jdbc.update("UPDATE pipeline_runs SET status = 'interrupted', interruption_cause = 'deploy', llm_retries = 2,"
+				+ " flex_fallbacks = 1, last_activity_at = now() WHERE id = ?", run.getId());
+		jdbc.update("UPDATE pipeline_run_steps SET status = 'interrupted', finished_at = now() WHERE run_id = ?",
+				run.getId());
+		PipelineRun interrupted = runs.findById(run.getId()).orElseThrow();
+		assertThat(interrupted.getStatus()).isEqualTo(RunStatus.INTERRUPTED);
+		assertThat(interrupted.getInterruptionCause()).isEqualTo(InterruptionCause.DEPLOY);
+		assertThat(interrupted.getLlmRetries()).isEqualTo(2);
+		assertThat(interrupted.getFlexFallbacks()).isEqualTo(1);
+		assertThat(interrupted.getLastActivityAt()).isNotNull();
+		assertThat(steps.findByRunIdOrderByStartedAtAscIdAsc(run.getId())).singleElement()
+			.satisfies(step -> assertThat(step.getStatus()).isEqualTo(StepStatus.INTERRUPTED));
 
 		Post loadedPost = posts.findById(post.getId()).orElseThrow();
 		assertThat(loadedPost.getStage()).isEqualTo(PostStage.STORED);

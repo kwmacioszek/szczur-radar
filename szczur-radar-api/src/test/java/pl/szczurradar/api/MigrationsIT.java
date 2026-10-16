@@ -35,7 +35,8 @@ class MigrationsIT {
 	void allMigrationsApplyOnEmptyDatabase() {
 		List<Map<String, Object>> history = jdbc.queryForList(
 				"SELECT version, success FROM flyway_schema_history WHERE version IS NOT NULL ORDER BY installed_rank");
-		assertThat(history).extracting(row -> row.get("version")).containsExactly("1", "2", "3", "4", "5", "6", "7");
+		assertThat(history).extracting(row -> row.get("version")).containsExactly("1", "2", "3", "4", "5", "6", "7",
+				"8");
 		assertThat(history).allSatisfy(row -> assertThat(row.get("success")).isEqualTo(true));
 	}
 
@@ -110,7 +111,8 @@ class MigrationsIT {
 	@Test
 	void pipelineTablesHaveNamedConstraintsAndIndexes() {
 		assertThat(constraintsOf("pipeline_runs")).contains("ck_pipeline_runs_kind", "ck_pipeline_runs_status",
-				"ck_pipeline_runs_range", "ck_pipeline_runs_requested_posts", "fk_pipeline_runs_requested_by");
+				"ck_pipeline_runs_range", "ck_pipeline_runs_requested_posts", "fk_pipeline_runs_requested_by",
+				"ck_pipeline_runs_interruption_cause", "ck_pipeline_runs_interruption_status");
 		assertThat(constraintsOf("posts")).contains("uq_posts_source_item", "uq_posts_raw_payload", "ck_posts_stage",
 				"ck_posts_stage_attempts", "ck_posts_assessing_owner", "fk_posts_raw_payload", "ck_posts_item_type",
 				"ck_posts_source")
@@ -120,7 +122,39 @@ class MigrationsIT {
 		assertThat(constraintsOf("raw_payloads")).contains("ck_raw_payloads_content_encoding", "ck_raw_payloads_sha256");
 		assertThat(jdbc.queryForList("SELECT indexname FROM pg_indexes WHERE schemaname = 'public'", String.class))
 			.contains("uq_pipeline_runs_one_running", "ix_pipeline_runs_created", "ix_posts_stage_published",
-					"ix_assessments_post_latest", "ix_pipeline_run_steps_run");
+					"ix_assessments_post_latest", "ix_pipeline_run_steps_run", "ix_posts_assessing_run");
+	}
+
+	@Test
+	void aRunsProgressStartsAtZeroAndOnlyAnInterruptedRunHasACause() {
+		UUID admin = user("run-progress@example.com");
+		UUID run = run(admin, "queued");
+		assertThat(jdbc.queryForMap("SELECT llm_retries, flex_fallbacks, last_activity_at, deployment_id,"
+				+ " interruption_cause FROM pipeline_runs WHERE id = ?", run)).containsEntry("llm_retries", 0)
+			.containsEntry("flex_fallbacks", 0)
+			.containsEntry("last_activity_at", null)
+			.containsEntry("deployment_id", null)
+			.containsEntry("interruption_cause", null);
+
+		assertRejected("INSERT INTO pipeline_runs (kind, status, requested_by, interruption_cause) VALUES ('retry',"
+				+ " 'interrupted', '" + admin + "', 'crash')", "ck_pipeline_runs_interruption_cause");
+		assertRejected("INSERT INTO pipeline_runs (kind, status, requested_by, interruption_cause) VALUES ('retry',"
+				+ " 'failed', '" + admin + "', 'deploy')", "ck_pipeline_runs_interruption_status");
+		assertRejected("UPDATE pipeline_runs SET interruption_cause = 'restart' WHERE id = '" + run + "'",
+				"ck_pipeline_runs_interruption_status");
+		for (String cause : List.of("deploy", "restart", "shutdown")) {
+			jdbc.update("INSERT INTO pipeline_runs (kind, status, requested_by, interruption_cause, deployment_id)"
+					+ " VALUES ('retry', 'interrupted', ?, ?, 'deployment-1')", admin, cause);
+		}
+	}
+
+	@Test
+	void anInterruptedRunsStepIsInterrupted() {
+		UUID run = run(user("step-status@example.com"), "interrupted");
+		jdbc.update("INSERT INTO pipeline_run_steps (run_id, step, status, finished_at) VALUES (?, 'assess',"
+				+ " 'interrupted', now())", run);
+		assertRejected("INSERT INTO pipeline_run_steps (run_id, step, status) VALUES ('" + run + "', 'assess',"
+				+ " 'stopped')", "ck_pipeline_run_steps_status");
 	}
 
 	@Test

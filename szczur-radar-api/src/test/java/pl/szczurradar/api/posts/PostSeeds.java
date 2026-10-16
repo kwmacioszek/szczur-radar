@@ -58,7 +58,7 @@ public final class PostSeeds {
 		this.jdbc = jdbc;
 		this.entityManager = entityManager;
 		UUID admin = users.save(new User("seed-" + UUID.randomUUID() + "@example.com", null, Role.ADMIN)).getId();
-		this.runId = runs.saveAndFlush(PipelineRun.retry(admin)).getId();
+		this.runId = runs.saveAndFlush(PipelineRun.retry(admin, null)).getId();
 		jdbc.update("UPDATE pipeline_runs SET status = 'succeeded' WHERE id = ?", runId);
 	}
 

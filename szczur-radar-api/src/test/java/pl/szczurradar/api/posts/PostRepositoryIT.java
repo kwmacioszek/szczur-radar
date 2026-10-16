@@ -70,7 +70,7 @@ class PostRepositoryIT {
 	@BeforeEach
 	void run() {
 		User admin = users.save(new User("posts-" + UUID.randomUUID() + "@example.com", null, Role.ADMIN));
-		runId = runs.save(PipelineRun.retry(admin.getId())).getId();
+		runId = runs.save(PipelineRun.retry(admin.getId(), null)).getId();
 	}
 
 	@Test

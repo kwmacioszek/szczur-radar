@@ -108,16 +108,13 @@ public final class RunFlow {
 	}
 
 	/**
-	 * What the assess step did.
+	 * What the assess step did: the run's status and error come from it. The run's counters are not
+	 * written from it — the dispatcher counts each post as it finishes.
 	 *
 	 * @param ok posts with a stored {@code ok} assessment
 	 * @param failed posts with a stored {@code failed} assessment (including those that became dead)
 	 * @param dead posts whose third failed attempt made them dead
 	 * @param processingErrors posts with a technical error and no stored assessment
-	 */
-	/**
-	 * What the assess step did.
-	 *
 	 * @param stoppedBy why the step stopped before assessing every post — the LLM check failed or the
 	 *     provider refused the configuration — or {@code null}
 	 */

@@ -102,12 +102,12 @@ public class PipelineAgent {
 				pending -> pending.postIds().size());
 	}
 
+	/** The dispatcher counts each post as it finishes (the run's progress), so the step counts nothing itself. */
 	@Action(actionRetryPolicy = ActionRetryPolicy.FIRE_ONCE)
 	public AssessedBatch assess(PendingAssessments pending) {
 		AssessedBatch assessed = recorder.step(pending.runId(), RunStep.ASSESS, pending.postIds().size(),
 				() -> dispatcher.dispatch(pending.runId(), pending.postIds()),
 				batch -> batch.ok() + batch.failed());
-		recorder.count(pending.runId(), RunRecorder.Counters.assessed(assessed));
 		assessed.errorSummary().ifPresent(summary -> recorder.error(pending.runId(), summary));
 		return assessed;
 	}
