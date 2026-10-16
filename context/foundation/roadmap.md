@@ -3,7 +3,7 @@ project: "Szczur Radar"
 version: 2
 status: draft # draft | active | locked
 created: 2026-09-27
-updated: 2026-10-13
+updated: 2026-10-16
 prd_version: 2
 main_goal: speed
 top_blocker: time # secondary: decisions (LLM contract, filter scope and signal decision resolved 2026-09-27 — PRD v2)
@@ -55,6 +55,8 @@ milestone_status: open
 
 > v2.20 (2026-10-13): S-04 (`filter-by-assessment`) w realizacji. Do Parked dopisany TODO na przyszłość z impl-review S-04: wydajność filtra feedu przy dużej liczbie postów (pomiar i projekcja celów po ~20k postów).
 
+> v2.21 (2026-10-16): Do Parked dopisany przebieg pipeline'u bez Embabel (prosta orkiestracja) — z przeglądu planu S-06 (F1), do sprawdzenia po MVP.
+
 ## Milestone
 
 **M-1: MVP — ocenione sygnały z Wykopu dla zaproszonych osób** — Status: open
@@ -86,7 +88,7 @@ Na Wykopie (#gielda) i Reddicie codziennie pojawiają się setki postów o inwes
 | S-03 | post-detail-view               | użytkownik otwiera widok szczegółowy posta: ocena, surowe dane pod przełącznikiem, link do oryginału                            | S-02          | US-01, FR-009, FR-010                                                                                                                                                                    | done |
 | S-04 | filter-by-assessment           | użytkownik filtruje listę po spółce/temacie (tekstowo) i stanowisku autora wobec niej                                           | S-02          | US-01, FR-011a                                                                                                                                                                           | done |
 | S-05 | daily-scheduled-run-freshness  | przepływ uruchamia się sam codziennie, a użytkownik widzi datę ostatniej udanej aktualizacji                                    | S-02, F-01    | US-01, FR-002, FR-030                                                                                                                                                                    | done        |
-| S-06 | pipeline-run-history-dashboard | admin widzi historię przebiegów (kiedy, status, wynik) i wyraźny sygnał nieudanego przebiegu                                    | S-05, S-01    | FR-021, FR-015, NFR (operator dostaje widoczny sygnał awarii przebiegu)                                                                                                                  | proposed |
+| S-06 | pipeline-run-history-dashboard | admin widzi historię przebiegów (kiedy, status, wynik) i wyraźny sygnał nieudanego przebiegu                                    | S-05, S-01    | FR-021, FR-015, NFR (operator dostaje widoczny sygnał awarii przebiegu)                                                                                                                  | in-progress |
 | S-07 | cli-user-onboarding            | admin tworzy konto przez CLI, zaproszony ustawia hasło przez jednorazowy link i się loguje                                      | S-01, F-03    | US-02, FR-018, FR-027, FR-028                                                                                                                                                            | done        |
 
 ## Streams
@@ -259,7 +261,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
     - postęp trwającego przebiegu w `/admin`: bieżący krok, czas od startu, postęp oceny (gotowe / nieudane / w toku z N), próby, ponowienia i powroty flex → standard, czas ostatniej aktywności;
     - ostrzeżenie, gdy przebieg nie robi postępu dłużej niż X minut;
     - linia postępu w logu API (np. co N postów lub co minutę) i okresowy heartbeat crona z krokiem i postępem.
-- **Status:** proposed
+- **Status:** in-progress
 
 ### S-07: Onboarding użytkownika przez CLI
 
@@ -321,6 +323,10 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Komunikat, gdy nie udało się odczytać daty aktualizacji danych** — Why parked: nice-to-have po MVP (decyzja użytkownika 2026-10-13, S-05 `daily-scheduled-run-freshness`, faza 4). Dziś przy błędzie `GET /api/freshness` etykieta „Dane zaktualizowane: …” nad feedem po prostu znika, a lista działa (`FeedView.vue`; `context/changes/daily-scheduled-run-freshness/ui/README.md`), więc użytkownik nie odróżni „nie udało się sprawdzić” od braku etykiety. Pomysł: osobny, neutralny komunikat treści w miejscu etykiety (nie czerwony alert, bo posty są w porządku), np. „Nie udało się sprawdzić daty aktualizacji.”, ewentualnie z ponowieniem.
 - **Unieważnianie sesji wersją poświadczeń** — Why parked: po MVP, z przeglądu implementacji S-07 (`cli-user-onboarding`, F1). Logowanie, które sprawdziło hasło przed zatwierdzeniem `reset-password`, zapisuje sesję już po `DELETE` resetu, więc ta sesja działa aż do aktywacji (najwyżej `ACTIVATION_LINK_TTL`, domyślnie 12 h); od S-07 kończy ją aktywacja. Pełne zamknięcie: wersja poświadczeń konta (np. `password_changed_at`), zapisana w sesji przy logowaniu i sprawdzana przy każdym uwierzytelnionym żądaniu — migracja i sprawdzenie w łańcuchu filtrów.
 - **Przybliżony czas zakończenia trwającego przebiegu** — Why parked: nice-to-have po MVP (decyzja użytkownika 2026-10-13, po pierwszym przebiegu crona na produkcji). Buduje na postępie przebiegu z S-06 (dopisek o monitorowaniu): bez liczników postępu nie ma z czego liczyć. Pomysł: w `/admin` przy przebiegu `running` szacowany koniec i odliczanie, np. średni czas oceny posta z ostatnich przebiegów (z `pipeline_run_steps` i `assessments`) × liczba postów do oceny + typowy czas pobrania, albo tempo bieżącego przebiegu, gdy ma już kilka ocen. Niepewność: tier flex, ponowienia i powroty do standardu mocno wydłużają pojedyncze oceny, więc to przybliżenie, nie obietnica.
+- **Przebieg pipeline'u bez Embabel (prosta orkiestracja)** — Why parked: po MVP, do sprawdzenia; z przeglądu planu S-06 (`pipeline-run-history-dashboard`, F1, 2026-10-16).
+  - Co boli: `PipelineAgent` to liniowy przepływ sześciu akcji, w którym planowanie GOAP niczego nie wybiera. Każda akcja musi mieć `FIRE_ONCE`, bo Embabel domyślnie ponawia akcje (lekcja z S-02). Akcje działają w puli wątków Embabel (`invoke()` = `invokeAsync().get()`), więc przerwanie wątku przebiegu do nich nie dociera; strażnik S-06 obchodzi to anulowaniem przyszłości przebiegu. Sama ocena i tak omija Embabel: klient z `llm/` sam buduje `ChatModel`.
+  - Do sprawdzenia przed decyzją: co jeszcze daje Embabel (autokonfiguracja dostawców w `application-*.properties`, `AssessorAgent`, start platformy), czy wyjąć go tylko z przebiegu, czy z całego API, i zmiana decyzji w `tech-stack-api.md`.
+  - Pomysł: zwykła sekwencja kroków na wątku `pipeline-run` (te same serwisy kroków i `RunRecorder.step`). Przerwanie dotrze wtedy do oceny, a strażnik S-06 się uprości. Osobna zmiana z researchem.
 
 ## Milestone History
 
