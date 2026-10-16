@@ -841,16 +841,16 @@ Strażnik w PR env nie jest wymuszany (wymagałby zawieszenia prawdziwego przebi
 
 #### Automated
 
-- [x] 6.1 Cały backend: `cd szczur-radar-api && ./mvnw -B verify`
-- [x] 6.2 SPA: `cd szczur-radar-web && npm test && npm run build`
-- [x] 6.3 Cron: `tools/pipeline-trigger/test.sh`
-- [x] 6.4 Plan IaC dla PR env bez zmian destrukcyjnych: job `railway-config` zielony
-- [x] 6.5 CI na PR zielone (cały workflow)
+- [x] 6.1 Cały backend: `cd szczur-radar-api && ./mvnw -B verify` — 35a9e56
+- [x] 6.2 SPA: `cd szczur-radar-web && npm test && npm run build` — 35a9e56
+- [x] 6.3 Cron: `tools/pipeline-trigger/test.sh` — 35a9e56
+- [x] 6.4 Plan IaC dla PR env bez zmian destrukcyjnych: job `railway-config` zielony — 35a9e56
+- [x] 6.5 CI na PR zielone (cały workflow) — 35a9e56
 
 #### Manual
 
-- [x] 6.6 `ui-after/README.md` pokazuje 7 komórek macierzy w obu motywach i przy 375 px, z listą `ui-quality-checklist`
-- [x] 6.7 PR env: postęp przebiegu na żywo w `/admin` i na stronie przebiegu, linie postępu w logu API
-- [x] 6.8 PR env: heartbeat crona w logu Railway
-- [x] 6.9 PR env: redeploy w trakcie oceny daje „przerwany — nowe wdrożenie” i powiadomienie w dzwoneczku
-- [x] 6.10 PR env: konto `user` bez dzwoneczka i bez dostępu do stron i tras przebiegów
+- [x] 6.6 `ui-after/README.md` pokazuje 7 komórek macierzy w obu motywach i przy 375 px, z listą `ui-quality-checklist` — 35a9e56
+- [x] 6.7 PR env: postęp przebiegu na żywo w `/admin` i na stronie przebiegu, linie postępu w logu API — 35a9e56
+- [x] 6.8 PR env: heartbeat crona w logu Railway — 35a9e56
+- [x] 6.9 PR env: redeploy w trakcie oceny daje „przerwany — nowe wdrożenie” i powiadomienie w dzwoneczku — 35a9e56
+- [x] 6.10 PR env: konto `user` bez dzwoneczka i bez dostępu do stron i tras przebiegów — 35a9e56
