@@ -373,9 +373,13 @@ progress {
   list-style: none;
 }
 
+/* A line between steps only: the section below ("Błąd przebiegu") draws its own. */
 .step {
   padding: var(--space-2) 0;
-  border-bottom: 1px solid var(--border);
+}
+
+.step + .step {
+  border-top: 1px solid var(--border);
 }
 
 .step p {

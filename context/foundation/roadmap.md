@@ -57,6 +57,8 @@ milestone_status: open
 
 > v2.21 (2026-10-16): Do Parked dopisany przebieg pipeline'u bez Embabel (prosta orkiestracja) — z przeglądu planu S-06 (F1), do sprawdzenia po MVP.
 
+> v2.22 (2026-10-16): S-06 (`pipeline-run-history-dashboard`) — Unknown rozstrzygnięte: sygnał awarii to powiadomienia w aplikacji dla adminów (dzwoneczek w nagłówku, strona przebiegu), bez pusha i e-maila; `partial` z samymi postami `failed` do ponowienia nie daje powiadomienia (PRD, doprecyzowanie NFR o sygnale awarii). W zakresie S-06 ostrzeżenie o braku postępu zastąpione strażnikiem, który kończy przebieg jako `failed` po `PIPELINE_STALL_TIMEOUT` (decyzja 2026-10-15).
+
 ## Milestone
 
 **M-1: MVP — ocenione sygnały z Wykopu dla zaproszonych osób** — Status: open
@@ -249,7 +251,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Parallel with:** S-03, S-04, S-07
 - **Blockers:** —
 - **Unknowns:**
-  - Czy dashboard wystarcza jako „jednoznaczny, widoczny sygnał” awarii, czy potrzebne jest aktywne powiadomienie operatora. — Owner: user. Block: no.
+  - ROZSTRZYGNIĘTE 2026-10-16 (powiadomienia w aplikacji dla adminów: dzwoneczek w nagłówku z liczbą nieprzeczytanych i strona przebiegu `/admin/runs/:id`; bez pusha i e-maila. Powiadomienie daje przebieg `failed`, `interrupted` oraz `partial` z martwym postem albo błędem technicznym; `partial` z samymi postami `failed` do ponowienia go nie daje, bo ponawia je kolejny przebieg. Kody wyjścia crona bez zmian; PRD, doprecyzowanie NFR o sygnale awarii; `deploy-plan.md`, sekcja S-06): Czy dashboard wystarcza jako „jednoznaczny, widoczny sygnał” awarii, czy potrzebne jest aktywne powiadomienie operatora. — Owner: user. Block: no.
 - **Risk:** Pierwsza funkcja wyłącznie dla admina — weryfikuje rozdział ról na prawdziwej trasie; bez niej automat z S-05 działa bez nadzoru.
   - Dopisek (2026-10-13, przegląd S-05, F3): odzyskiwanie przy starcie API (`PipelineStartupRecovery`) oznacza jako `interrupted` każdy przebieg `queued`/`running`, także ten, który trwa jeszcze w starym kontenerze podczas deployu. S-05 naprawiło tylko wyścig z żądaniem budzącym API. Przed tym chroni dziś wyłącznie reguła „bez merge'a ok. 00:30–01:30 UTC”. Przebieg przerwany deployem dashboard powinien pokazywać jako przerwany przez wdrożenie, a nie jak zwykłą awarię; trwałe rozwiązanie (np. właściciel przebiegu po instancji) to osobna decyzja.
   - Dopisek (2026-10-13, pierwszy przebieg crona na produkcji; decyzja użytkownika: hardening monitorowania): trwającego przebiegu nie da się dziś obserwować bez czytania bazy produkcyjnej. Uruchomiony ręcznie przebieg RETRY stał w kroku `assess` ponad 7 minut bez żadnego śladu:
@@ -259,7 +261,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 
     Zakres do S-06:
     - postęp trwającego przebiegu w `/admin`: bieżący krok, czas od startu, postęp oceny (gotowe / nieudane / w toku z N), próby, ponowienia i powroty flex → standard, czas ostatniej aktywności;
-    - ostrzeżenie, gdy przebieg nie robi postępu dłużej niż X minut;
+    - ostrzeżenie, gdy przebieg nie robi postępu dłużej niż X minut; zmienione 2026-10-15 (decyzja użytkownika przy planie S-06): zamiast ostrzeżenia strażnik w API kończy jako `failed` przebieg bez postępu dłużej niż `PIPELINE_STALL_TIMEOUT` (domyślnie najdłuższe pojedyncze wywołanie LLM + 5 min, co najmniej 15 min; na produkcji 39 min), oddaje jego posty, zwalnia kolejkę i daje adminom powiadomienie;
     - linia postępu w logu API (np. co N postów lub co minutę) i okresowy heartbeat crona z krokiem i postępem.
 - **Status:** in-progress
 

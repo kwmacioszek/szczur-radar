@@ -828,22 +828,22 @@ Strażnik w PR env nie jest wymuszany (wymagałby zawieszenia prawdziwego przebi
 
 #### Automated
 
-- [x] 5.1 Testy SPA: `cd szczur-radar-web && npm test`
-- [x] 5.2 Typy i build: `cd szczur-radar-web && npm run build`
-- [x] 5.3 Skan `no literals` obejmuje nowe pliki: `styleContract.test.ts` w `npm test`
+- [x] 5.1 Testy SPA: `cd szczur-radar-web && npm test` — 5be417e
+- [x] 5.2 Typy i build: `cd szczur-radar-web && npm run build` — 5be417e
+- [x] 5.3 Skan `no literals` obejmuje nowe pliki: `styleContract.test.ts` w `npm test` — 5be417e
 
 #### Manual
 
-- [x] 5.4 Lokalnie z `dev/mock-api.js`: dzwoneczek z licznikiem otwiera listę, kliknięcie prowadzi do `/admin/runs/:id`, strona trwającego przebiegu pokazuje postęp, `/admin` pokazuje zakres, czas, cron/admin i „Pokaż starsze”
-- [x] 5.5 Klawiatura: Tab do dzwoneczka, Enter otwiera, Tab po pozycjach, Escape zamyka i zwraca focus
+- [x] 5.4 Lokalnie z `dev/mock-api.js`: dzwoneczek z licznikiem otwiera listę, kliknięcie prowadzi do `/admin/runs/:id`, strona trwającego przebiegu pokazuje postęp, `/admin` pokazuje zakres, czas, cron/admin i „Pokaż starsze” — 5be417e
+- [x] 5.5 Klawiatura: Tab do dzwoneczka, Enter otwiera, Tab po pozycjach, Escape zamyka i zwraca focus — 5be417e
 
 ### Phase 6: Stany, dokumentacja i weryfikacja w PR env
 
 #### Automated
 
-- [ ] 6.1 Cały backend: `cd szczur-radar-api && ./mvnw -B verify`
-- [ ] 6.2 SPA: `cd szczur-radar-web && npm test && npm run build`
-- [ ] 6.3 Cron: `tools/pipeline-trigger/test.sh`
+- [x] 6.1 Cały backend: `cd szczur-radar-api && ./mvnw -B verify`
+- [x] 6.2 SPA: `cd szczur-radar-web && npm test && npm run build`
+- [x] 6.3 Cron: `tools/pipeline-trigger/test.sh`
 - [ ] 6.4 Plan IaC dla PR env bez zmian destrukcyjnych: job `railway-config` zielony
 - [ ] 6.5 CI na PR zielone (cały workflow)
 

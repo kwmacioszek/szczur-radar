@@ -112,17 +112,19 @@ public class PipelineAgent {
 		return assessed;
 	}
 
+	/**
+	 * The step closes before the run's final status is written, so whoever sees the run ended (the
+	 * run page, the list, the cron) sees every step closed too.
+	 */
 	@Action(actionRetryPolicy = ActionRetryPolicy.FIRE_ONCE)
 	@AchievesGoal(description = "The run was summarized and its final status written")
 	public RunSummary summarize(AssessedBatch assessed) {
-		return recorder.step(assessed.runId(), RunStep.SUMMARIZE, null, () -> {
-			RunStatus status = assessed.status();
-			if (!recorder.finish(assessed.runId(), status, null)) {
-				// Interrupted meanwhile: the interruption stays.
-				return new RunSummary(assessed.runId(), RunStatus.INTERRUPTED);
-			}
-			return new RunSummary(assessed.runId(), status);
-		}, summary -> 1);
+		RunStatus status = recorder.step(assessed.runId(), RunStep.SUMMARIZE, null, assessed::status, summary -> 1);
+		if (!recorder.finish(assessed.runId(), status, null)) {
+			// Interrupted meanwhile: the interruption stays.
+			return new RunSummary(assessed.runId(), RunStatus.INTERRUPTED);
+		}
+		return new RunSummary(assessed.runId(), status);
 	}
 
 }
