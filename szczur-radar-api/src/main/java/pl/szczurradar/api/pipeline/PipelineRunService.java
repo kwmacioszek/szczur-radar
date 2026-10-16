@@ -1,16 +1,21 @@
 package pl.szczurradar.api.pipeline;
 
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.function.Supplier;
 
 import com.embabel.agent.api.invocation.AgentInvocation;
@@ -55,6 +60,9 @@ import pl.szczurradar.api.sources.Source;
  *       stays queued or running without a thread and blocks the queue), and in every case its posts
  *       still {@code assessing} are put back. A run that stopped elsewhere meanwhile (interrupted)
  *       ends quietly: its next step is not started ({@link RunNoLongerRunningException}).
+ *   <li>A run of this instance without progress for {@code PIPELINE_STALL_TIMEOUT} is stopped by
+ *       {@link RunWatchdog} ({@link #stopStalled}): {@code failed}, its posts put back, and the queue
+ *       goes on with the next run.
  *   <li>When the context closes, this instance marks its own queued and running runs
  *       {@code interrupted} ({@link InterruptionCause#SHUTDOWN}) first, then stops its thread; a newer
  *       deployment's start-up recovery does the same for runs nobody finished
@@ -97,6 +105,9 @@ public class PipelineRunService {
 
 	/** The runs this instance queued and has not finished. */
 	private final Set<UUID> own = ConcurrentHashMap.newKeySet();
+
+	/** The agent's future of the run this instance is waiting for; {@link #stopStalled} cancels it. */
+	private final Map<UUID, Future<?>> waiting = new ConcurrentHashMap<>();
 
 	PipelineRunService(PipelineRunRepository runs, PostRepository posts, SourceIngest sources, RunRecorder recorder, PostTransitions transitions,
 			AgentPlatform agentPlatform, JdbcClient jdbc, TransactionTemplate transaction,
@@ -166,12 +177,18 @@ public class PipelineRunService {
 		executor.execute(() -> execute(runId));
 	}
 
+	/** The runs this instance queued and has not finished (the watchdog's; in memory, no database query). */
+	List<UUID> ownRuns() {
+		return List.copyOf(own);
+	}
+
 	/**
 	 * Runs one queued run to its end; package-private for tests.
 	 *
-	 * <p>The agent's actions run on Embabel's threads; this one waits for them. {@code invoke()} does
-	 * not declare the checked exceptions of that wait: an action's exception arrives wrapped in an
-	 * {@link ExecutionException}, and this thread being stopped as an {@link InterruptedException}.
+	 * <p>The agent's actions run on Embabel's threads; this one waits for the agent's future, kept in
+	 * {@link #waiting} meanwhile. An action's exception arrives wrapped in an {@link ExecutionException};
+	 * this thread being stopped (the instance closing) as an {@link InterruptedException}; the future
+	 * cancelled by {@link #stopStalled} as a {@link CancellationException}.
 	 */
 	void execute(UUID runId) {
 		String error = "the run ended without a summary";
@@ -182,16 +199,23 @@ public class PipelineRunService {
 				started = System.nanoTime();
 				PipelineRun run = runs.findById(runId).orElseThrow();
 				log.info("Pipeline run {} ({}) started", runId, run.getKind().value());
-				AgentInvocation.create(agentPlatform, RunSummary.class).invoke(RunRequest.of(run));
+				CompletableFuture<RunSummary> agent = AgentInvocation.create(agentPlatform, RunSummary.class)
+					.invokeAsync(RunRequest.of(run));
+				waiting.put(runId, agent);
+				agent.get();
 			}
 		}
+		catch (InterruptedException ex) {
+			// The instance is stopping: onClose interrupted its runs first.
+			interrupted = true;
+			log.info("Pipeline run {}: stopped waiting, the application is stopping", runId);
+		}
+		catch (CancellationException ex) {
+			// stopStalled ended the run and put its posts back; its action may still run, changing nothing.
+			log.info("Pipeline run {}: stopped waiting, the watchdog stopped the run", runId);
+		}
 		catch (Exception ex) {
-			if (ex instanceof InterruptedException) {
-				// The instance is stopping: onClose interrupted its runs first.
-				interrupted = true;
-				log.info("Pipeline run {}: stopped waiting, the application is stopping", runId);
-			}
-			else if (RunNoLongerRunningException.isCauseOf(ex)) {
+			if (RunNoLongerRunningException.isCauseOf(ex)) {
 				log.info("Pipeline run {} is no longer running here; its remaining steps were not started", runId);
 			}
 			else {
@@ -201,6 +225,7 @@ public class PipelineRunService {
 			}
 		}
 		finally {
+			waiting.remove(runId);
 			close(runId, error, started);
 			own.remove(runId);
 			if (interrupted) {
@@ -208,6 +233,32 @@ public class PipelineRunService {
 				Thread.currentThread().interrupt();
 			}
 		}
+	}
+
+	/**
+	 * Stops a run of this instance that made no progress for {@code threshold} ({@link RunWatchdog}):
+	 * ends it {@code failed} with its open steps ({@link RunRecorder#stall}), puts its posts back, then
+	 * cancels the wait for its agent, so this queue takes the next run.
+	 *
+	 * <p>The agent's action goes on in Embabel's thread until its current call ends (holding a thread
+	 * of the LLM pool meanwhile), but changes nothing: claiming a post needs a running run, storing a
+	 * result needs the post still held by the run, and its counters and steps are conditional. The
+	 * cancelled wait is temporary — it goes with Embabel out of the run.
+	 *
+	 * @return whether the run was stopped; nothing happens to a run that is not running (still queued,
+	 *     finished) or made progress meanwhile
+	 */
+	boolean stopStalled(UUID runId, Duration threshold) {
+		if (!recorder.stall(runId, threshold)) {
+			return false;
+		}
+		transitions.releaseAll(runId);
+		log.warn("Pipeline run {} made no progress for {}; stopped", runId, Durations.format(threshold));
+		Future<?> agent = waiting.get(runId);
+		if (agent != null) {
+			agent.cancel(false);
+		}
+		return true;
 	}
 
 	/**

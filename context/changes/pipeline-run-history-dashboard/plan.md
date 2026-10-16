@@ -784,27 +784,27 @@ Strażnik w PR env nie jest wymuszany (wymagałby zawieszenia prawdziwego przebi
 
 #### Automated
 
-- [x] 1.1 Migracja `V8` stosuje się na pustej bazie i odrzuca złą przyczynę i przyczynę przy statusie innym niż `interrupted`: `MigrationsIT`
-- [x] 1.2 Encje zgodne ze schematem: `JpaSchemaIT`
-- [x] 1.3 Liczniki po poście z ponowieniami i powrotami flex, bez podwójnego liczenia: `ConcurrentAssessmentDispatcherTest`, `PipelineAgentIT`
-- [x] 1.4 Przyczyna przerwania `deploy` / `restart` / `shutdown` i kroki `interrupted`: `PipelineStartupRecoveryIT`, `PipelineAgentIT`
-- [x] 1.5 Cały backend zielony: `cd szczur-radar-api && ./mvnw -B verify`
+- [x] 1.1 Migracja `V8` stosuje się na pustej bazie i odrzuca złą przyczynę i przyczynę przy statusie innym niż `interrupted`: `MigrationsIT` — 18323b5
+- [x] 1.2 Encje zgodne ze schematem: `JpaSchemaIT` — 18323b5
+- [x] 1.3 Liczniki po poście z ponowieniami i powrotami flex, bez podwójnego liczenia: `ConcurrentAssessmentDispatcherTest`, `PipelineAgentIT` — 18323b5
+- [x] 1.4 Przyczyna przerwania `deploy` / `restart` / `shutdown` i kroki `interrupted`: `PipelineStartupRecoveryIT`, `PipelineAgentIT` — 18323b5
+- [x] 1.5 Cały backend zielony: `cd szczur-radar-api && ./mvnw -B verify` — 18323b5
 
 #### Manual
 
-- [x] 1.6 Lokalny przebieg jednego dnia (Postgres z `compose.local.yaml`, jar, prawdziwe `LLM_*` i `WYKOP_*`) loguje start, kroki, postęp oceny co najwyżej co minutę i koniec, a `pipeline_runs` w trakcie oceny ma rosnące `assessed_ok` i świeże `last_activity_at`
+- [x] 1.6 Lokalny przebieg jednego dnia (Postgres z `compose.local.yaml`, jar, prawdziwe `LLM_*` i `WYKOP_*`) loguje start, kroki, postęp oceny co najwyżej co minutę i koniec, a `pipeline_runs` w trakcie oceny ma rosnące `assessed_ok` i świeże `last_activity_at` — 18323b5
 
 ### Phase 2: Strażnik zawieszonego przebiegu
 
 #### Automated
 
-- [ ] 2.1 Walidacja `PIPELINE_STALL_TIMEOUT`: `PipelineStallSettingsTest`
-- [ ] 2.2 Zatrzymanie zawieszonego przebiegu, zamknięte kroki, oddane posty, kolejny przebieg rusza, brak fałszywego zatrzymania: `RunWatchdogIT`
-- [ ] 2.3 Cały backend zielony: `cd szczur-radar-api && ./mvnw -B verify`
+- [x] 2.1 Walidacja `PIPELINE_STALL_TIMEOUT`: `PipelineStallSettingsTest`
+- [x] 2.2 Zatrzymanie zawieszonego przebiegu, zamknięte kroki, oddane posty, kolejny przebieg rusza, brak fałszywego zatrzymania: `RunWatchdogIT`
+- [x] 2.3 Cały backend zielony: `cd szczur-radar-api && ./mvnw -B verify`
 
 #### Manual
 
-- [ ] 2.4 Lokalny przebieg jednego dnia z `PIPELINE_STALL_TIMEOUT=1m` kończy się normalnie (strażnik nie zatrzymuje przebiegu z postępem), a serwer z `PIPELINE_STALL_TIMEOUT=15` nie startuje i komunikat nazywa zmienną
+- [x] 2.4 Lokalny przebieg jednego dnia z `PIPELINE_STALL_TIMEOUT=1m` kończy się normalnie (strażnik nie zatrzymuje przebiegu z postępem), a serwer z `PIPELINE_STALL_TIMEOUT=15` nie startuje i komunikat nazywa zmienną
 
 ### Phase 3: Powiadomienia i API admina
 

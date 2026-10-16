@@ -1,5 +1,6 @@
 package pl.szczurradar.api.pipeline.state;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -27,7 +28,8 @@ import pl.szczurradar.api.posts.PostStage;
  * while the run is running also moves its {@code last_activity_at}.
  *
  * <p>A step is opened only in a running run and closed only once: an interruption closes the steps
- * its runs left open ({@code interrupted}), and a worker that finishes later leaves them as they are.
+ * its runs left open ({@code interrupted}), the watchdog those of a run it stops ({@code failed}), and a
+ * worker that finishes later leaves them as they are.
  * Status values are bound from their enums, never written into the SQL.
  */
 @Component
@@ -172,7 +174,29 @@ public class RunRecorder {
 			.param("reason", cause.error())
 			.param("ids", runIds.toArray(UUID[]::new))
 			.query(UUID.class)
-			.list()));
+			.list(), StepStatus.INTERRUPTED, null));
+	}
+
+	/**
+	 * {@code running} → {@code failed} when the run made no progress for {@code threshold} (its last
+	 * activity, or its start, is older), with its open steps closed as {@code failed} with the same
+	 * error, in one transaction (the watchdog). The age is measured by the database's clock, which also
+	 * wrote the activity.
+	 *
+	 * @return whether the run was stopped; {@code false} when it is not running or made progress meanwhile
+	 */
+	public boolean stall(UUID runId, Duration threshold) {
+		String error = "no progress for " + Durations.format(threshold) + ": the run was stopped";
+		return !inTransaction(() -> closeSteps(statuses(jdbc
+			.sql("UPDATE pipeline_runs SET status = :failed, finished_at = now(), error = :error WHERE id = :id"
+					+ " AND status = :running AND COALESCE(last_activity_at, started_at)"
+					+ " < now() - CAST(:millis AS BIGINT) * INTERVAL '1 millisecond' RETURNING id"))
+			.param("failed", RunStatus.FAILED.value())
+			.param("error", error)
+			.param("id", runId)
+			.param("millis", threshold.toMillis())
+			.query(UUID.class)
+			.list(), StepStatus.FAILED, error)).isEmpty();
 	}
 
 	/**
@@ -193,7 +217,7 @@ public class RunRecorder {
 			.param("deployError", InterruptionCause.DEPLOY.error())
 			.param("restartError", InterruptionCause.RESTART.error())
 			.query(UUID.class)
-			.list()));
+			.list(), StepStatus.INTERRUPTED, null));
 	}
 
 	/**
@@ -240,12 +264,16 @@ public class RunRecorder {
 				itemsOut == null ? "" : " (out " + itemsOut + ")", Durations.since(startedNanos));
 	}
 
-	/** Closes the steps {@code runIds} left {@code running} as {@code interrupted}; returns {@code runIds}. */
-	private List<UUID> closeSteps(List<UUID> runIds) {
+	/**
+	 * Closes the steps {@code runIds} left {@code running} as {@code status} with {@code error}; returns
+	 * {@code runIds}.
+	 */
+	private List<UUID> closeSteps(List<UUID> runIds, StepStatus status, @Nullable String error) {
 		if (!runIds.isEmpty()) {
-			steps(jdbc.sql("UPDATE pipeline_run_steps SET status = :stepInterrupted, finished_at = now()"
+			steps(jdbc.sql("UPDATE pipeline_run_steps SET status = :status, finished_at = now(), error = :error"
 					+ " WHERE run_id = ANY(:ids) AND status = :stepRunning"))
-				.param("stepInterrupted", StepStatus.INTERRUPTED.value())
+				.param("status", status.value())
+				.param("error", error == null ? null : truncate(error))
 				.param("ids", runIds.toArray(UUID[]::new))
 				.update();
 		}

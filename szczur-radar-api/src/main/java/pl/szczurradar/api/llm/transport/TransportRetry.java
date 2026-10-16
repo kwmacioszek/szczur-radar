@@ -57,6 +57,19 @@ public final class TransportRetry {
 	}
 
 	/**
+	 * The longest one call can take when each attempt is limited to {@code timeout}
+	 * ({@code LLM_TIMEOUT}): every attempt of a tier runs out its time and each wait is the longest
+	 * {@code Retry-After} — {@value #ATTEMPTS_PER_TIER} attempts and two waits per tier; with flex, three
+	 * refusals add the default tier's attempts (no wait at the switch). A connection phase outside the
+	 * attempt's limit (DeepSeek) is not included.
+	 */
+	public static Duration maxCallDuration(Duration timeout, ServiceTier tier) {
+		Duration perTier = timeout.multipliedBy(ATTEMPTS_PER_TIER)
+			.plus(MAX_RETRY_AFTER.multipliedBy(ATTEMPTS_PER_TIER - 1));
+		return tier == ServiceTier.FLEX ? perTier.multipliedBy(2) : perTier;
+	}
+
+	/**
 	 * Runs {@code attempt} until it succeeds or the attempts are used up.
 	 *
 	 * @throws LlmCallException with {@link CallFailure#TIMEOUT} if the last attempt timed out,

@@ -123,6 +123,19 @@ class TransportRetryTest {
 	}
 
 	@Test
+	void theLongestCallIsEveryAttemptTimingOutWithTheLongestWaitsBetweenThem() {
+		// 3 × 120 s + 2 × 60 s
+		assertThat(TransportRetry.maxCallDuration(Duration.ofSeconds(120), ServiceTier.DEFAULT))
+			.isEqualTo(Duration.ofMinutes(8));
+		// 3 × 300 s + 2 × 60 s
+		assertThat(TransportRetry.maxCallDuration(Duration.ofSeconds(300), ServiceTier.DEFAULT))
+			.isEqualTo(Duration.ofMinutes(17));
+		// Flex falls back to the default tier after three refusals: twice that (production).
+		assertThat(TransportRetry.maxCallDuration(Duration.ofSeconds(300), ServiceTier.FLEX))
+			.isEqualTo(Duration.ofMinutes(34));
+	}
+
+	@Test
 	void flexFailingOtherwiseDoesNotFallBack() {
 		assertThatExceptionOfType(LlmCallException.class)
 			.isThrownBy(() -> retry.run(ServiceTier.FLEX, script(failure(Kind.RATE_LIMITED), failure(Kind.SERVER_ERROR),
