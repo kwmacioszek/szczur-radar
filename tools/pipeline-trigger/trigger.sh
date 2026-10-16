@@ -5,6 +5,8 @@
 # 0 when each one is succeeded or partial, 1 when one failed or was interrupted or the trigger itself
 # failed, 2 on a configuration error. Railway marks a cron run that exits non-zero as crashed and
 # notifies it (needs the account's custom notification rule "deployment crashed", all environments).
+# While a run is active it logs a heartbeat with its step and progress (S-06,
+# pipeline-run-history-dashboard), from the answers it polls anyway.
 # Never `set -x`: PIPELINE_TRIGGER_TOKEN is the API's shared secret and is never printed.
 set -euo pipefail
 
@@ -25,7 +27,7 @@ fi
 # Durations: a positive whole number with an optional unit s, m or h (a bare number is seconds).
 : "${TRIGGER_TIMEOUT:=3h}" "${TRIGGER_WAKE_TIMEOUT:=3m}" "${TRIGGER_BUSY_TIMEOUT:=60m}"
 : "${TRIGGER_BUSY_INTERVAL:=60s}" "${TRIGGER_POLL_INTERVAL:=30s}" "${TRIGGER_RUN_TIMEOUT:=90m}"
-: "${TRIGGER_REQUEST_TIMEOUT:=60s}"
+: "${TRIGGER_REQUEST_TIMEOUT:=60s}" "${TRIGGER_HEARTBEAT_INTERVAL:=5m}"
 
 # Sets REPLY to the seconds of the duration in the variable named $1.
 seconds() {
@@ -62,6 +64,7 @@ seconds TRIGGER_BUSY_INTERVAL; readonly busy_interval=$REPLY
 seconds TRIGGER_POLL_INTERVAL; readonly poll_interval=$REPLY
 seconds TRIGGER_RUN_TIMEOUT; readonly run_timeout=$REPLY
 seconds TRIGGER_REQUEST_TIMEOUT; readonly request_timeout=$REPLY
+seconds TRIGGER_HEARTBEAT_INTERVAL; readonly heartbeat_interval=$REPLY
 # Between attempts while the API wakes (Railway's private network may also need a few seconds after
 # this container starts).
 readonly wake_interval=2
@@ -134,14 +137,26 @@ answered() {
     fi
 }
 
-# The run statuses of the API (RunStatus), named only here: sets REPLY to ok, failed or active.
+# The run statuses of the API (RunStatus), named only here: sets REPLY to ok, failed, interrupted (a
+# failure whose log line gives the cause) or active.
 classify() {
     case $1 in
         succeeded | partial) REPLY=ok ;;
-        failed | interrupted) REPLY=failed ;;
+        failed) REPLY=failed ;;
+        interrupted) REPLY=interrupted ;;
         queued | running) REPLY=active ;;
         *) return 1 ;;
     esac
+}
+
+# The heartbeat of the run in $work/body (an object: its status was read): its status, step and
+# progress. A field the API does not send (an older API) or sends as null shows as "?".
+progress() {
+    jq -r '(if (.assessedOk | type) == "number" and (.assessedFailed | type) == "number"
+            then .assessedOk + .assessedFailed else "?" end) as $assessed
+        | "\(.status), step \(.step // "?"), assessed \($assessed)/\(.assessTotal // "?")"
+            + " (ok \(.assessedOk // "?"), failed \(.assessedFailed // "?"), errors \(.processingErrors // "?")),"
+            + " last activity \(.lastActivityAt // "?")"' "$work/body" 2>/dev/null || true
 }
 
 # 1. Start the daily run. 409 pipeline_busy (e.g. an admin's run) is retried until it is free; every
@@ -199,9 +214,10 @@ while read -r id kind; do
 done <<<"$runs"
 log "started: $(jq -r 'map("\(.kind) \(.id)") | join(", ")' "$work/body")"
 
-# 2. Wait until every run has ended, polling each one that has not.
+# 2. Wait until every run has ended, polling each one that has not. An active run logs its status when
+# it changes, then a heartbeat every TRIGGER_HEARTBEAT_INTERVAL (beat: when it last logged a line).
 deadline=$(( SECONDS + run_timeout ))
-declare -A seen=() ended=()
+declare -A seen=() ended=() beat=()
 pending=${#ids[@]}
 failed=0
 while true; do
@@ -222,16 +238,23 @@ while true; do
         if [[ $REPLY == active ]]; then
             if [[ ${seen[$id]:-} != "$status" ]]; then
                 log "$kind $id: $status"
-                seen[$id]=$status
+                seen[$id]=$status beat[$id]=$SECONDS
+            elif (( SECONDS - ${beat[$id]} >= heartbeat_interval )); then
+                log "$kind $id: $(progress)"
+                beat[$id]=$SECONDS
             fi
             continue
         fi
         ended[$id]=$status
         pending=$(( pending - 1 ))
-        if [[ $REPLY == failed ]]; then
+        cause=""
+        if [[ $REPLY == interrupted ]]; then
+            cause=" (cause $(jq -r '.interruptionCause // "?"' "$work/body" 2>/dev/null || true))"
+        fi
+        if [[ $REPLY != ok ]]; then
             failed=1
         fi
-        log "$kind $id: $status ($(jq -r '"fetched \(.fetched), new posts \(.newPosts), assessed ok \(.assessedOk), assessed failed \(.assessedFailed), processing errors \(.processingErrors), dead \(.dead)"' "$work/body"))"
+        log "$kind $id: $status ($(jq -r '"fetched \(.fetched), new posts \(.newPosts), assessed ok \(.assessedOk), assessed failed \(.assessedFailed), processing errors \(.processingErrors), dead \(.dead)"' "$work/body"))$cause"
     done
     (( pending > 0 )) || break
     remaining=$(( deadline - SECONDS ))

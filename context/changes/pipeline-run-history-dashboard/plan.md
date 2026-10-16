@@ -810,19 +810,19 @@ Strażnik w PR env nie jest wymuszany (wymagałby zawieszenia prawdziwego przebi
 
 #### Automated
 
-- [x] 3.1 Migracja `V9` i jej ograniczenia: `MigrationsIT`, `JpaSchemaIT`
-- [x] 3.2 Reguła „wymaga uwagi” dla wszystkich statusów: test jednostkowy `PipelineRun.needsAttention`
-- [x] 3.3 Powiadomienia: odbiorcy, idempotencja, lista, przeczytanie, 404 cudzego: `NotificationsIT`
-- [x] 3.4 Powiadomienie z każdej drogi końca przebiegu: `PipelineStartupRecoveryIT`, `PipelineAgentIT`, `RunWatchdogIT`
-- [x] 3.5 Strona przebiegu, nowe pola, `RunState` dla crona: `PipelineRunControllerIT`, `InternalPipelineRunIT`
-- [x] 3.6 Nowe trasy chronione (401 bez sesji, 403 dla `user`): `AuthorizationCompletenessIT`, `AdminRoleIT`
-- [x] 3.7 Cały backend zielony: `cd szczur-radar-api && ./mvnw -B verify`
+- [x] 3.1 Migracja `V9` i jej ograniczenia: `MigrationsIT`, `JpaSchemaIT` — 3661f99
+- [x] 3.2 Reguła „wymaga uwagi” dla wszystkich statusów: test jednostkowy `PipelineRun.needsAttention` — 3661f99
+- [x] 3.3 Powiadomienia: odbiorcy, idempotencja, lista, przeczytanie, 404 cudzego: `NotificationsIT` — 3661f99
+- [x] 3.4 Powiadomienie z każdej drogi końca przebiegu: `PipelineStartupRecoveryIT`, `PipelineAgentIT`, `RunWatchdogIT` — 3661f99
+- [x] 3.5 Strona przebiegu, nowe pola, `RunState` dla crona: `PipelineRunControllerIT`, `InternalPipelineRunIT` — 3661f99
+- [x] 3.6 Nowe trasy chronione (401 bez sesji, 403 dla `user`): `AuthorizationCompletenessIT`, `AdminRoleIT` — 3661f99
+- [x] 3.7 Cały backend zielony: `cd szczur-radar-api && ./mvnw -B verify` — 3661f99
 
 ### Phase 4: Heartbeat crona
 
 #### Automated
 
-- [ ] 4.1 Test crona z heartbeatem, przyczyną przerwania i niezmienioną liczbą żądań: `tools/pipeline-trigger/test.sh`
+- [x] 4.1 Test crona z heartbeatem, przyczyną przerwania i niezmienioną liczbą żądań: `tools/pipeline-trigger/test.sh`
 
 ### Phase 5: SPA — dzwoneczek, strona przebiegu i historia
 
