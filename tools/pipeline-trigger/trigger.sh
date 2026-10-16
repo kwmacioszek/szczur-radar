@@ -5,7 +5,7 @@
 # 0 when each one is succeeded or partial, 1 when one failed or was interrupted or the trigger itself
 # failed, 2 on a configuration error. Railway marks a cron run that exits non-zero as crashed and
 # notifies it (needs the account's custom notification rule "deployment crashed", all environments).
-# While a run is active it logs a heartbeat with its step and progress (S-06,
+# While a run is running it logs a heartbeat with its step and progress (S-06,
 # pipeline-run-history-dashboard), from the answers it polls anyway.
 # Never `set -x`: PIPELINE_TRIGGER_TOKEN is the API's shared secret and is never printed.
 set -euo pipefail
@@ -138,13 +138,14 @@ answered() {
 }
 
 # The run statuses of the API (RunStatus), named only here: sets REPLY to ok, failed, interrupted (a
-# failure whose log line gives the cause) or active.
+# failure whose log line gives the cause), waiting (queued) or active (running).
 classify() {
     case $1 in
         succeeded | partial) REPLY=ok ;;
         failed) REPLY=failed ;;
         interrupted) REPLY=interrupted ;;
-        queued | running) REPLY=active ;;
+        queued) REPLY=waiting ;;
+        running) REPLY=active ;;
         *) return 1 ;;
     esac
 }
@@ -214,8 +215,9 @@ while read -r id kind; do
 done <<<"$runs"
 log "started: $(jq -r 'map("\(.kind) \(.id)") | join(", ")' "$work/body")"
 
-# 2. Wait until every run has ended, polling each one that has not. An active run logs its status when
-# it changes, then a heartbeat every TRIGGER_HEARTBEAT_INTERVAL (beat: when it last logged a line).
+# 2. Wait until every run has ended, polling each one that has not. An unfinished run logs its status
+# when it changes; a running one then a heartbeat every TRIGGER_HEARTBEAT_INTERVAL (beat: when it last
+# logged a line). A queued run has no progress to show: the run before it logs the heartbeats.
 deadline=$(( SECONDS + run_timeout ))
 declare -A seen=() ended=() beat=()
 pending=${#ids[@]}
@@ -235,11 +237,11 @@ while true; do
         esac
         status=$(jq -r 'if (.status | type) == "string" then .status else "" end' "$work/body" 2>/dev/null) || status=""
         classify "$status" || fail "$kind $id: unexpected status '$status'"
-        if [[ $REPLY == active ]]; then
+        if [[ $REPLY == waiting || $REPLY == active ]]; then
             if [[ ${seen[$id]:-} != "$status" ]]; then
                 log "$kind $id: $status"
                 seen[$id]=$status beat[$id]=$SECONDS
-            elif (( SECONDS - ${beat[$id]} >= heartbeat_interval )); then
+            elif [[ $REPLY == active ]] && (( SECONDS - ${beat[$id]} >= heartbeat_interval )); then
                 log "$kind $id: $(progress)"
                 beat[$id]=$SECONDS
             fi

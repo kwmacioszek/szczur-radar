@@ -247,6 +247,14 @@ beats=$(grep -c ', step ' "$tmp/heartbeat.log" || true)
 [[ $beats == 2 ]] || { show heartbeat; die "heartbeat: $beats heartbeat lines, expected 2"; }
 requests_were heartbeat 1 4
 pass "TRIGGER_HEARTBEAT_INTERVAL=1s: a heartbeat with step and progress at each later poll, no extra request"
+check_case queued-heartbeat 0 '{"runs": [{"kind": "range", "statuses": ["queued", "queued", "queued", "succeeded"]}]}' \
+    "$token" -e TRIGGER_HEARTBEAT_INTERVAL=1s
+log_says queued-heartbeat ': queued'
+# A queued run has no progress to show: the run before it logs the heartbeats.
+beats=$(grep -c ', step ' "$tmp/queued-heartbeat.log" || true)
+[[ $beats == 0 ]] || { show queued-heartbeat; die "queued-heartbeat: $beats heartbeat lines, expected none"; }
+requests_were queued-heartbeat 1 4
+pass "a queued run logs its status once and no heartbeat"
 check_case old-api 1 '{"old_api": true, "runs": [{"kind": "range", "statuses": ["running", "running", "interrupted"]}]}' \
     "$token" -e TRIGGER_HEARTBEAT_INTERVAL=1s
 log_says old-api ': running, step ?, assessed 251/? (ok 249, failed 2, errors 0), last activity ?'
