@@ -795,6 +795,10 @@ Verified 2026-10-16 on `fa87f19` (CI run 38966942987: all seven jobs green; `rai
   - the admin's bell showed 1 unread, "nowe · przerwany — nowe wdrożenie"; a click opened `/admin/runs/5d2af0bf…` ("przerwany — nowe wdrożenie") and the count dropped to 0 (`readAt` set).
 - **A `user`** (`s06-user@example.com`): no bell and no "Panel admina" link; `/admin/runs/<id>` sent it to `/`; `GET /api/admin/notifications` and `GET /api/admin/pipeline-runs/<id>` answered 403.
 - **Afterwards.** `TRIGGER_IN_ANY_ENVIRONMENT` and `TRIGGER_HEARTBEAT_INTERVAL` deleted, the schedule back to `30 0 * * *`, the cron redeployed (`b89f6390`); its variables are again `API_PORT`, `API_PRIVATE_DOMAIN` and `PIPELINE_TRIGGER_TOKEN`. The API keeps its `PIPELINE_TRIGGER_TOKEN` (`preserve()`). Screenshots: `context/changes/pipeline-run-history-dashboard/ui-after/pr-env-*.png`.
+- **The bell after the implementation-review fixes** (2026-10-17, `373ad6a`; CI run 39034495398 green; api and web at the head). The admin's password was reset with `reset-password` (link and password kept only in temporary files, deleted). Requests to `GET /api/admin/notifications`, counted in the browser:
+  - 14:51:15 the first load on `/`; 14:51:30 one refresh on navigating to a post (the data was 15 s old); going back within seconds fetched nothing, and the bell kept its count without a loading state;
+  - 75 s idle on `/`: no request (no polling outside `/admin*`);
+  - 14:53:14 one refresh on opening `/admin`, then 14:54:13 the 60 s poll.
 - **Not forced:** the watchdog's stop, which would need a really hung run. `RunWatchdogIT` covers the stop; the local run with `PIPELINE_STALL_TIMEOUT=1m` (plan step 2.4) showed it leaves a run with progress alone.
 
 ### Runbook — after the merge (operator; tracked in issue #19, not in the plan's Progress)
