@@ -4,14 +4,16 @@
 # answers /internal/pipeline-runs like the API, with answers scripted per case. Checks:
 #   1. the image runs as a non-root user; outside production (RAILWAY_ENVIRONMENT_NAME) a run is
 #      skipped without a request;
-#   2. 202 → succeeded or partial: exit 0; failed, or a failed retry run before a succeeded range run:
-#      exit 1;
+#   2. 202 → succeeded or partial: exit 0; failed, interrupted (the log gives its cause), or a failed
+#      retry run before a succeeded range run: exit 1; a running run logs a heartbeat with its step and
+#      progress every TRIGGER_HEARTBEAT_INTERVAL, without an extra request, and an API without those
+#      fields gives "?" in their place;
 #   3. refused connections, then 503 without a body, then 202 (the API waking up): exit 0; 409
 #      pipeline_busy, then 202: exit 0;
 #   4. 401 (a wrong token) and 503 source_not_configured: exit 1 after one request; no answer to a POST
 #      the API got (TRIGGER_REQUEST_TIMEOUT): exit 1 without a second POST; every time limit
 #      (TRIGGER_WAKE_TIMEOUT, TRIGGER_BUSY_TIMEOUT, TRIGGER_RUN_TIMEOUT, the whole run's
-#      TRIGGER_TIMEOUT): exit 1; a missing variable: exit 2;
+#      TRIGGER_TIMEOUT): exit 1; a missing variable or a bad duration: exit 2;
 #   5. the tokens never appear in the logs.
 # Needs Docker. Run from anywhere: tools/pipeline-trigger/test.sh
 set -euo pipefail
@@ -43,7 +45,10 @@ trap 'exit 130' INT TERM
 #   post: the answers to POST /daily in turn, the last one repeating: 202 (the runs below), 409, 503
 #         (with their API error codes), "503-empty" (no JSON body, as while the API wakes) or "hang"
 #         (the request is logged, then no answer for 30 s);
-#   runs: [{kind, statuses}]: GET /{id} answers the statuses in turn, the last one repeating;
+#   runs: [{kind, statuses}]: GET /{id} answers the statuses in turn, the last one repeating; a status
+#         is its name, or an object {status, <field>: <value>, …} whose fields replace the answer's;
+#   old_api: true leaves out the fields the API added in S-06 (startedAt, lastActivityAt,
+#         interruptionCause, step, assessTotal), as an API from before them;
 #   listen_after: seconds before it accepts connections (until then they are refused).
 # Every request without "Bearer $STUB_TOKEN" gets 401 not_authenticated. One line per request on
 # stdout: "<method> <path> <status>".
@@ -103,12 +108,24 @@ class Api(BaseHTTPRequestHandler):
         if run is None:
             return self.answer(404, {"detail": "not_found"})
         statuses = run["statuses"]
-        status = statuses.pop(0) if len(statuses) > 1 else statuses[0]
-        ended = status not in ("queued", "running")
-        self.answer(200, {"id": run["id"], "kind": run["kind"], "status": status,
-                          "finishedAt": "2026-10-12T00:41:07Z" if ended else None, "fetched": 270,
-                          "newPosts": 251, "assessedOk": 249, "assessedFailed": 2, "processingErrors": 0,
-                          "dead": 0})
+        entry = statuses.pop(0) if len(statuses) > 1 else statuses[0]
+        fields = entry if isinstance(entry, dict) else {"status": entry}
+        status = fields["status"]
+        queued, running = status == "queued", status == "running"
+        ended = not (queued or running)
+        body = {"id": run["id"], "kind": run["kind"], "status": status,
+                "startedAt": None if queued else "2026-10-12T00:30:09Z",
+                "finishedAt": "2026-10-12T00:41:07Z" if ended else None,
+                "lastActivityAt": None if queued else "2026-10-12T00:40:58Z" if running else "2026-10-12T00:41:07Z",
+                "interruptionCause": "deploy" if status == "interrupted" else None,
+                "step": "assess" if running else None, "assessTotal": None if queued else 251,
+                "fetched": 270, "newPosts": 251, "assessedOk": 249, "assessedFailed": 2, "processingErrors": 0,
+                "dead": 0}
+        body.update(fields)
+        if case.get("old_api"):
+            for name in ("startedAt", "lastActivityAt", "interruptionCause", "step", "assessTotal"):
+                del body[name]
+        self.answer(200, body)
 
 
 time.sleep(case.get("listen_after", 0))
@@ -196,7 +213,7 @@ log_says skipped 'skipped: the daily run is started only in production (this is 
 requests_were skipped 0 0
 pass "RAILWAY_ENVIRONMENT_NAME=szczur-radar-pr-1: skipped, exit 0, no request"
 
-step "2. the runs' result is the exit code"
+step "2. the runs' result is the exit code, and a heartbeat while they run"
 check_case succeeded 0 '{"runs": [{"kind": "range", "statuses": ["queued", "running", "succeeded"]}]}' "$token" \
     -e RAILWAY_ENVIRONMENT_NAME=production
 log_says succeeded ': succeeded (fetched 270, new posts 251, assessed ok 249, assessed failed 2, processing errors 0, dead 0)'
@@ -214,6 +231,37 @@ check_case retry-failed 1 '{"runs": [{"kind": "retry", "statuses": ["running", "
     {"kind": "range", "statuses": ["queued", "queued", "running", "succeeded"]}]}' "$token"
 log_says retry-failed 'FAILED: a run did not succeed: retry failed, range succeeded'
 pass "retry failed, range succeeded → both awaited, exit 1"
+check_case interrupted 1 '{"runs": [{"kind": "range", "statuses": ["running", "interrupted"]}]}' "$token"
+log_says interrupted ': interrupted (fetched 270, new posts 251, assessed ok 249, assessed failed 2, processing errors 0, dead 0) (cause deploy)'
+log_says interrupted 'FAILED: a run did not succeed: range interrupted'
+requests_were interrupted 1 2
+pass "interrupted → its cause in the log, exit 1"
+check_case heartbeat 0 '{"runs": [{"kind": "range", "statuses": ["running",
+    {"status": "running", "step": "assess", "assessTotal": 10, "assessedOk": 2, "assessedFailed": 1},
+    {"status": "running", "step": "assess", "assessTotal": 10, "assessedOk": 2, "assessedFailed": 1},
+    "succeeded"]}]}' "$token" -e TRIGGER_HEARTBEAT_INTERVAL=1s
+log_says heartbeat ': running, step assess, assessed 3/10 (ok 2, failed 1, errors 0), last activity 2026-10-12T00:40:58Z'
+log_says heartbeat 'OK: range succeeded'
+# None at the status change (the first answer), one at each later answer while it runs.
+beats=$(grep -c ', step ' "$tmp/heartbeat.log" || true)
+[[ $beats == 2 ]] || { show heartbeat; die "heartbeat: $beats heartbeat lines, expected 2"; }
+requests_were heartbeat 1 4
+pass "TRIGGER_HEARTBEAT_INTERVAL=1s: a heartbeat with step and progress at each later poll, no extra request"
+check_case queued-heartbeat 0 '{"runs": [{"kind": "range", "statuses": ["queued", "queued", "queued", "succeeded"]}]}' \
+    "$token" -e TRIGGER_HEARTBEAT_INTERVAL=1s
+log_says queued-heartbeat ': queued'
+# A queued run has no progress to show: the run before it logs the heartbeats.
+beats=$(grep -c ', step ' "$tmp/queued-heartbeat.log" || true)
+[[ $beats == 0 ]] || { show queued-heartbeat; die "queued-heartbeat: $beats heartbeat lines, expected none"; }
+requests_were queued-heartbeat 1 4
+pass "a queued run logs its status once and no heartbeat"
+check_case old-api 1 '{"old_api": true, "runs": [{"kind": "range", "statuses": ["running", "running", "interrupted"]}]}' \
+    "$token" -e TRIGGER_HEARTBEAT_INTERVAL=1s
+log_says old-api ': running, step ?, assessed 251/? (ok 249, failed 2, errors 0), last activity ?'
+log_says old-api ': interrupted (fetched 270, new posts 251, assessed ok 249, assessed failed 2, processing errors 0, dead 0) (cause ?)'
+log_says old-api 'FAILED: a run did not succeed: range interrupted'
+requests_were old-api 1 3
+pass "an API without the step and progress fields: \"?\" in the heartbeat and the cause, exit 1"
 
 step "3. waking the API, and a busy pipeline"
 check_case wake 0 '{"listen_after": 4, "post": ["503-empty", 202],
@@ -260,6 +308,11 @@ check_case missing-token 2 '{"runs": [{"kind": "range", "statuses": ["succeeded"
 log_says missing-token 'FAILED: PIPELINE_TRIGGER_TOKEN is not set'
 requests_were missing-token 0 0
 pass "PIPELINE_TRIGGER_TOKEN unset → exit 2, no request"
+check_case bad-heartbeat 2 '{"runs": [{"kind": "range", "statuses": ["succeeded"]}]}' "$token" \
+    -e TRIGGER_HEARTBEAT_INTERVAL=5x
+log_says bad-heartbeat 'FAILED: TRIGGER_HEARTBEAT_INTERVAL must be a duration such as 30s, 3m or 2h'
+requests_were bad-heartbeat 0 0
+pass "TRIGGER_HEARTBEAT_INTERVAL=5x → exit 2, no request"
 
 step "5. no secrets in the logs"
 if grep -lF -e "$token" -e "$wrong_token" "$tmp"/*.log; then

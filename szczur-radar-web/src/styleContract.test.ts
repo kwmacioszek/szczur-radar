@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import appButton from './components/AppButton.vue?raw'
 import appHeader from './components/AppHeader.vue?raw'
 import feedFilter from './components/FeedFilter.vue?raw'
+import notificationBell from './components/NotificationBell.vue?raw'
+import notificationMenu from './components/NotificationMenu.vue?raw'
 import postAssessment from './components/PostAssessment.vue?raw'
 import postCard from './components/PostCard.vue?raw'
 import stanceText from './components/StanceText.vue?raw'
@@ -13,6 +15,7 @@ import adminView from './views/AdminView.vue?raw'
 import feedView from './views/FeedView.vue?raw'
 import kitchenSinkView from './views/KitchenSinkView.vue?raw'
 import postDetailView from './views/PostDetailView.vue?raw'
+import runDetailView from './views/RunDetailView.vue?raw'
 
 type Theme = 'light' | 'dark'
 
@@ -103,6 +106,9 @@ const CLEANED: Record<string, string> = {
   'src/components/PostAssessment.vue': postAssessment,
   'src/views/PostDetailView.vue': postDetailView,
   'src/components/FeedFilter.vue': feedFilter,
+  'src/components/NotificationBell.vue': notificationBell,
+  'src/components/NotificationMenu.vue': notificationMenu,
+  'src/views/RunDetailView.vue': runDetailView,
 }
 
 /** The hardcoded-value scan of /10x-ui: colour literals, arbitrary values and palette classes. */

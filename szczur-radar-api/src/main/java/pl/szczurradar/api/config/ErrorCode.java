@@ -57,7 +57,10 @@ public enum ErrorCode {
 	/** A range run needs a source that is not configured here (e.g. no keys), or no source is. */
 	SOURCE_NOT_CONFIGURED(HttpStatus.SERVICE_UNAVAILABLE),
 
-	/** The addressed resource (e.g. a pipeline run by its id) does not exist. */
+	/**
+	 * The addressed resource (e.g. a pipeline run by its id) does not exist; a notification also when it is
+	 * another admin's.
+	 */
 	NOT_FOUND(HttpStatus.NOT_FOUND);
 
 	private final HttpStatus status;

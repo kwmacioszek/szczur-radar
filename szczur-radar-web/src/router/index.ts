@@ -1,6 +1,7 @@
 // Every route except /login, /activate (and the dev-only /kitchen-sink) requires a session; a logged-in
-// user never sees /login, and only an admin sees /admin. /activate stays open to a logged-in user: the
-// link may be for another account (ActivateView ends that session after setting the password).
+// user never sees /login, and only an admin sees /admin and /admin/runs/:id. /activate stays open to a
+// logged-in user: the link may be for another account (ActivateView ends that session after setting the
+// password).
 // History mode: Caddy (and Vite) serve index.html for deep links.
 import {
   createRouter,
@@ -16,6 +17,7 @@ import AdminView from '../views/AdminView.vue'
 import FeedView from '../views/FeedView.vue'
 import LoginView from '../views/LoginView.vue'
 import PostDetailView from '../views/PostDetailView.vue'
+import RunDetailView from '../views/RunDetailView.vue'
 import { scrollBehavior } from './scroll'
 
 export { safeRedirect } from './redirect'
@@ -36,6 +38,7 @@ export const routes: RouteRecordRaw[] = [
   { path: '/', name: 'home', component: FeedView },
   { path: '/posts/:id', name: 'post', component: PostDetailView },
   { path: '/admin', name: 'admin', component: AdminView, meta: { admin: true } },
+  { path: '/admin/runs/:id', name: 'admin-run', component: RunDetailView, meta: { admin: true } },
   // Every component in every state, for screenshots. `npm run build` replaces import.meta.env.DEV
   // with false, so the route and its chunk are not in dist/.
   ...(import.meta.env.DEV

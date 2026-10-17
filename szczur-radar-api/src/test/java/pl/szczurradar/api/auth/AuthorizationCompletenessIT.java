@@ -63,8 +63,12 @@ class AuthorizationCompletenessIT {
 			"POST /api/admin/pipeline-runs",
 			"GET /api/admin/pipeline-runs",
 			"GET /api/admin/pipeline-runs/sources",
+			"GET /api/admin/pipeline-runs/{id}",
 			"GET /api/admin/posts/failed",
-			"GET /api/admin/llm/check");
+			"GET /api/admin/llm/check",
+			"GET /api/admin/notifications",
+			"POST /api/admin/notifications/{id}/read",
+			"POST /api/admin/notifications/read");
 
 	private static final Pattern PATH_VARIABLE = Pattern.compile("\\{(\\w+)(?::[^}]*)?}");
 
@@ -78,7 +82,7 @@ class AuthorizationCompletenessIT {
 	@Test
 	void allowlistsReferenceExistingRoutes() {
 		Set<String> declared = new TreeSet<>();
-		routes().forEach(route -> declared.add(route.key()));
+		routes(handlerMapping).forEach(route -> declared.add(route.key()));
 
 		assertThat(declared).as("dead PUBLIC_ROUTES").containsAll(PUBLIC_ROUTES.keySet());
 		assertThat(declared).as("dead ADMIN_ROUTES").containsAll(ADMIN_ROUTES);
@@ -89,7 +93,7 @@ class AuthorizationCompletenessIT {
 	void everyNonPublicRouteRequiresASession() {
 		List<String> checked = new ArrayList<>();
 		List<String> unprotected = new ArrayList<>();
-		for (Route route : routes()) {
+		for (Route route : routes(handlerMapping)) {
 			if (PUBLIC_ROUTES.containsKey(route.key())) {
 				continue;
 			}
@@ -110,7 +114,11 @@ class AuthorizationCompletenessIT {
 			.isEmpty();
 	}
 
-	private List<Route> routes() {
+	/**
+	 * Every route of {@code handlerMapping}, one per method and pattern; a mapping without a method stands
+	 * for every write and read method. Also for {@code AdminRoleIT}.
+	 */
+	static List<Route> routes(RequestMappingHandlerMapping handlerMapping) {
 		List<Route> routes = new ArrayList<>();
 		for (Map.Entry<RequestMappingInfo, HandlerMethod> entry : handlerMapping.getHandlerMethods().entrySet()) {
 			RequestMappingInfo info = entry.getKey();
@@ -128,12 +136,15 @@ class AuthorizationCompletenessIT {
 		return routes;
 	}
 
-	private record Route(String method, String pattern, HandlerMethod handler) {
+	/** A route: its method, its path pattern and the handler that serves it. */
+	record Route(String method, String pattern, HandlerMethod handler) {
 
+		/** {@code "<METHOD> <pattern>"}, as {@code PUBLIC_ROUTES} and {@code ADMIN_ROUTES} list it. */
 		String key() {
 			return method + " " + pattern;
 		}
 
+		/** The pattern with every path variable filled with a dummy of its parameter's type. */
 		String concretePath() {
 			Matcher matcher = PATH_VARIABLE.matcher(pattern);
 			StringBuilder path = new StringBuilder();

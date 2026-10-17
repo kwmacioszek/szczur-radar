@@ -79,6 +79,24 @@ describe('route guard', () => {
     expect(await navigate('/admin')).toBe('/')
   })
 
+  it("lets an admin into a run's page", async () => {
+    vi.mocked(fetchMe).mockResolvedValue(ADMIN)
+    const router = createAppRouter(createMemoryHistory())
+    await router.push('/admin/runs/x')
+    expect(router.currentRoute.value.name).toBe('admin-run')
+    expect(router.currentRoute.value.params.id).toBe('x')
+  })
+
+  it("sends a plain user away from a run's page to the feed", async () => {
+    vi.mocked(fetchMe).mockResolvedValue({ ...ADMIN, role: 'user' })
+    expect(await navigate('/admin/runs/x')).toBe('/')
+  })
+
+  it("sends an anonymous visitor on a run's page to /login with a redirect back", async () => {
+    vi.mocked(fetchMe).mockRejectedValue(new ApiError(401, 'not_authenticated'))
+    expect(await navigate('/admin/runs/x')).toBe('/login?redirect=/admin/runs/x')
+  })
+
   it('sends an anonymous visitor on /admin to /login', async () => {
     vi.mocked(fetchMe).mockRejectedValue(new ApiError(401, 'not_authenticated'))
     expect(await navigate('/admin')).toBe('/login?redirect=/admin')

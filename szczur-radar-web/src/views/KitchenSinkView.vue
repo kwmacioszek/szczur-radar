@@ -4,6 +4,8 @@
   screenshots. Fixed data: no API calls, no session, no AppHeader.
 -->
 <script setup lang="ts">
+import { reactive } from 'vue'
+import type { AdminNotification } from '../api/notifications'
 import type {
   AssessmentOutput,
   Claim,
@@ -18,6 +20,7 @@ import type {
 } from '../api/posts'
 import AppButton from '../components/AppButton.vue'
 import FeedFilter from '../components/FeedFilter.vue'
+import NotificationMenu from '../components/NotificationMenu.vue'
 import PostAssessment from '../components/PostAssessment.vue'
 import PostCard from '../components/PostCard.vue'
 import StanceText from '../components/StanceText.vue'
@@ -52,14 +55,88 @@ const variants = [
   { name: 'secondary', title: 'Pomocniczy' },
 ] as const
 
-/** Every tone with the run status the admin panel shows in it. */
+/** Every tone with the run statuses and markers the admin panel shows in it (src/runs.ts). */
 const badges: { tone: BadgeTone; text: string }[] = [
   { tone: 'success', text: 'zakończony' },
   { tone: 'warning', text: 'częściowo' },
+  { tone: 'warning', text: 'przerwany' },
+  { tone: 'neutral', text: 'przerwany — nowe wdrożenie' },
   { tone: 'destructive', text: 'błąd' },
+  { tone: 'destructive', text: 'wymaga uwagi' },
   { tone: 'info', text: 'trwa' },
   { tone: 'neutral', text: 'w kolejce' },
 ]
+
+/** The time the bell's relative times count from: 2026-10-15, 10:00 in Warsaw. */
+const BELL_NOW = Date.parse('2026-10-15T08:00:00Z')
+
+/** One notification about a run that needs attention, as the API lists it. */
+function notification(
+  id: string,
+  createdAt: string,
+  readAt: string | null,
+  run: Partial<NonNullable<AdminNotification['run']>> & Pick<NonNullable<AdminNotification['run']>, 'status'>,
+): AdminNotification {
+  return {
+    id,
+    kind: 'run_attention',
+    createdAt,
+    readAt,
+    run: {
+      id: `run-${id}`,
+      kind: 'range',
+      interruptionCause: null,
+      finishedAt: createdAt,
+      assessedFailed: 0,
+      dead: 0,
+      processingErrors: 0,
+      error: null,
+      ...run,
+    },
+  }
+}
+
+/** Two unread (newest), then two read; every reason the API notifies about. */
+const notifications: AdminNotification[] = [
+  notification('n1', '2026-10-15T07:59:30Z', null, {
+    status: 'failed',
+    error: 'no progress for 39m 00s: the run was stopped',
+  }),
+  notification('n2', '2026-10-15T07:12:00Z', null, {
+    status: 'interrupted',
+    kind: 'retry',
+    interruptionCause: 'deploy',
+    error: 'interrupted: a new deployment took over',
+  }),
+  notification('n3', '2026-10-15T01:05:00Z', '2026-10-15T06:00:00Z', { status: 'partial', dead: 1, assessedFailed: 7 }),
+  notification('n4', '2026-10-13T00:58:00Z', '2026-10-13T07:00:00Z', {
+    status: 'interrupted',
+    interruptionCause: 'restart',
+    error: 'interrupted: the application restarted',
+  }),
+]
+
+const readNotifications = notifications.map((item) => ({ ...item, readAt: item.readAt ?? '2026-10-15T08:00:00Z' }))
+
+/** The bell in each state; `open` is each sample's own, so every one can be opened and closed. */
+const bells: {
+  id: string
+  title: string
+  state: 'loading' | 'error' | 'loaded'
+  unread: number | null
+  items: AdminNotification[]
+}[] = [
+  { id: 'closed-unread', title: 'Zamknięty, 2 nieprzeczytane', state: 'loaded', unread: 2, items: notifications },
+  { id: 'closed-read', title: 'Zamknięty, bez nieprzeczytanych', state: 'loaded', unread: 0, items: readNotifications },
+  { id: 'open-list', title: 'Otwarty z listą', state: 'loaded', unread: 2, items: notifications },
+  { id: 'open-empty', title: 'Otwarty, pusty', state: 'loaded', unread: 0, items: [] },
+  { id: 'open-error', title: 'Otwarty, błąd', state: 'error', unread: null, items: [] },
+  { id: 'open-loading', title: 'Otwarty, ładowanie', state: 'loading', unread: null, items: [] },
+]
+
+const bellOpen = reactive<Record<string, boolean>>(
+  Object.fromEntries(bells.map((bell) => [bell.id, bell.id.startsWith('open')])),
+)
 
 /**
  * A target named in the body (a company unless `kind` says otherwise), as table §7.2 of the contract allows:
@@ -472,8 +549,26 @@ const assessments: { id: string; title: string; assessment: NonNullable<PostItem
     <section aria-labelledby="badges-title">
       <h2 id="badges-title">Znaczniki</h2>
       <div class="row">
-        <StatusBadge v-for="badge in badges" :key="badge.tone" :tone="badge.tone">{{ badge.text }}</StatusBadge>
+        <StatusBadge v-for="badge in badges" :key="badge.text" :tone="badge.tone">{{ badge.text }}</StatusBadge>
       </div>
+    </section>
+
+    <section aria-labelledby="bell-title">
+      <h2 id="bell-title">Dzwoneczek</h2>
+      <ul class="samples">
+        <li v-for="bell in bells" :key="bell.id" class="bell-sample" :class="{ open: bellOpen[bell.id] }">
+          <p class="sample-title">{{ bell.title }}</p>
+          <div class="bell-bar">
+            <NotificationMenu
+              v-model:open="bellOpen[bell.id]"
+              :state="bell.state"
+              :unread="bell.unread"
+              :items="bell.items"
+              :now="BELL_NOW"
+            />
+          </div>
+        </li>
+      </ul>
     </section>
 
     <section aria-labelledby="fields-title">
@@ -596,6 +691,25 @@ h3 {
   color: var(--text-h);
   font-size: var(--font-size-sm);
   font-weight: 600;
+}
+
+/* An open bell keeps room below its bar for the panel, which overlays the page. */
+.bell-sample {
+  margin-bottom: var(--space-4);
+}
+
+.bell-sample.open {
+  min-height: 24rem;
+}
+
+/* A bar like AppHeader's: positioned, so the panel opens below it, aligned to its right edge. */
+.bell-bar {
+  position: relative;
+  display: flex;
+  justify-content: flex-end;
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
 }
 
 .swatches {

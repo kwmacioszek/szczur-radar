@@ -19,10 +19,15 @@ import org.springframework.web.bind.annotation.RestController;
 import pl.szczurradar.api.config.ApiError;
 import pl.szczurradar.api.config.ErrorCode;
 import pl.szczurradar.api.pipeline.PipelineRunService;
+import pl.szczurradar.api.pipeline.run.InterruptionCause;
 import pl.szczurradar.api.pipeline.run.PipelineRun;
 import pl.szczurradar.api.pipeline.run.PipelineRunRepository;
+import pl.szczurradar.api.pipeline.run.PipelineRunStep;
+import pl.szczurradar.api.pipeline.run.PipelineRunStepRepository;
 import pl.szczurradar.api.pipeline.run.RunKind;
 import pl.szczurradar.api.pipeline.run.RunStatus;
+import pl.szczurradar.api.pipeline.run.RunStep;
+import pl.szczurradar.api.pipeline.run.StepStatus;
 
 /**
  * The daily cron's routes ({@code /internal/**}: the trigger token only, the system account
@@ -38,11 +43,15 @@ class InternalPipelineRunController {
 
 	private final PipelineRunRepository runs;
 
+	private final PipelineRunStepRepository steps;
+
 	private final Clock clock;
 
-	InternalPipelineRunController(PipelineRunService service, PipelineRunRepository runs, Clock clock) {
+	InternalPipelineRunController(PipelineRunService service, PipelineRunRepository runs,
+			PipelineRunStepRepository steps, Clock clock) {
 		this.service = service;
 		this.runs = runs;
+		this.steps = steps;
 		this.clock = clock;
 	}
 
@@ -61,11 +70,15 @@ class InternalPipelineRunController {
 		return ResponseEntity.status(HttpStatus.ACCEPTED).body(created.stream().map(StartedRun::of).toList());
 	}
 
-	/** A run's status, for polling until it ends; 404 {@code not_found} for an unknown id. */
+	/**
+	 * A run's status with its step and progress, for polling until it ends (and the cron's heartbeat
+	 * meanwhile); 404 {@code not_found} for an unknown id.
+	 */
 	@GetMapping("/{id}")
 	ResponseEntity<?> status(@PathVariable UUID id) {
 		return runs.findById(id)
-			.<ResponseEntity<?>>map(run -> ResponseEntity.ok(RunState.of(run)))
+			.<ResponseEntity<?>>map(
+					run -> ResponseEntity.ok(RunState.of(run, steps.findByRunIdOrderByStartedAtAscIdAsc(id))))
 			.orElseGet(() -> ApiError.response(ErrorCode.NOT_FOUND));
 	}
 
@@ -80,13 +93,32 @@ class InternalPipelineRunController {
 
 	/**
 	 * A run's state; {@code finishedAt} is set once it has ended. The counters are for the cron's log
-	 * line (meaning as in the admin's run list).
+	 * lines (meaning as in the admin's run list).
+	 *
+	 * @param lastActivityAt the last change while it was running
+	 * @param interruptionCause why an interrupted run stopped; {@code null} for any other run
+	 * @param step the step running now; {@code null} between steps and once the run has ended
+	 * @param assessTotal the posts its assess step took ({@code items_in}); {@code null} before that step
 	 */
-	record RunState(UUID id, RunKind kind, RunStatus status, @Nullable Instant finishedAt, int fetched, int newPosts,
-			int assessedOk, int assessedFailed, int processingErrors, int dead) {
+	record RunState(UUID id, RunKind kind, RunStatus status, @Nullable Instant startedAt, @Nullable Instant finishedAt,
+			@Nullable Instant lastActivityAt, @Nullable InterruptionCause interruptionCause, @Nullable RunStep step,
+			@Nullable Integer assessTotal, int fetched, int newPosts, int assessedOk, int assessedFailed,
+			int processingErrors, int dead) {
 
-		static RunState of(PipelineRun run) {
-			return new RunState(run.getId(), run.getKind(), run.getStatus(), run.getFinishedAt(), run.getFetched(),
+		/** {@code run} with {@code steps}, its steps in the order they started. */
+		static RunState of(PipelineRun run, List<PipelineRunStep> steps) {
+			RunStep running = steps.stream()
+				.filter(step -> step.getStatus() == StepStatus.RUNNING)
+				.map(PipelineRunStep::getStep)
+				.reduce((earlier, later) -> later)
+				.orElse(null);
+			Integer assessTotal = steps.stream()
+				.filter(step -> step.getStep() == RunStep.ASSESS)
+				.findFirst()
+				.map(PipelineRunStep::getItemsIn)
+				.orElse(null);
+			return new RunState(run.getId(), run.getKind(), run.getStatus(), run.getStartedAt(), run.getFinishedAt(),
+					run.getLastActivityAt(), run.getInterruptionCause(), running, assessTotal, run.getFetched(),
 					run.getNewPosts(), run.getAssessedOk(), run.getAssessedFailed(), run.getProcessingErrors(),
 					run.getDead());
 		}

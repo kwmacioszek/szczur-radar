@@ -184,9 +184,10 @@ class FreshnessIT {
 	private void run(RunKind kind, RunStatus status, UUID requestedBy, String finishedAt, String rangeTo) {
 		Instant to = Instant.parse(rangeTo);
 		PipelineRun run = switch (kind) {
-			case RANGE -> PipelineRun.range(to.minusSeconds(2 * 86_400 - 1), to, List.of(Source.WYKOP), requestedBy);
-			case RETRY -> PipelineRun.retry(requestedBy);
-			case POSTS -> PipelineRun.posts(List.of(UUID.randomUUID()), requestedBy);
+			case RANGE ->
+				PipelineRun.range(to.minusSeconds(2 * 86_400 - 1), to, List.of(Source.WYKOP), requestedBy, null);
+			case RETRY -> PipelineRun.retry(requestedBy, null);
+			case POSTS -> PipelineRun.posts(List.of(UUID.randomUUID()), requestedBy, null);
 		};
 		UUID id = runs.saveAndFlush(run).getId();
 		jdbc.update("UPDATE pipeline_runs SET status = ?, finished_at = ?::timestamptz WHERE id = ?", status.value(),

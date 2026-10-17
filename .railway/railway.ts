@@ -158,6 +158,11 @@ export default defineRailway(() => {
       // Optional: parallel LLM calls of a pipeline run (default 4). Not a secret;
       // declared so that a value set by the operator is kept, never created here.
       PIPELINE_LLM_CONCURRENCY: preserve(),
+      // Optional: how long a run may go without progress before the watchdog
+      // stops it, with a unit (default: the longest single LLM call + 5m, at
+      // least 15m — 39m with production's flex and 300s). Not a secret; declared
+      // so that a value set by the operator is kept, never created here.
+      PIPELINE_STALL_TIMEOUT: preserve(),
       // Shared secret of the daily cron (pipeline-trigger below) on /internal/**
       // (internal/PipelineTriggerToken.java). Optional: unset, every /internal/** request
       // is 401. Set by the operator with --stdin (`openssl rand -hex 32`, at least

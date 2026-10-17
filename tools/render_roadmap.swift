@@ -1,6 +1,6 @@
 import AppKit
 
-// Snapshot of M-1 in context/foundation/roadmap.md, updated 2026-10-13 (v2.16: S-05 archived (done), FR-022 done in S-02; S-06 risk note; S-07 deployed (#49 54c4fc2, production verified), v2.17: link valid 12 h by default; v2.18: session revocation by credentials version parked; v2.19: S-06 run-monitoring note, run ETA parked; S-03 deployed (#53 4fdd51a, production verified); S-04 done and archived before merge (PR #54); v2.20: S-04 filter performance at scale parked as a TODO).
+// Snapshot of M-1 in context/foundation/roadmap.md, updated 2026-10-13 (v2.16: S-05 archived (done), FR-022 done in S-02; S-06 risk note; S-07 deployed (#49 54c4fc2, production verified), v2.17: link valid 12 h by default; v2.18: session revocation by credentials version parked; v2.19: S-06 run-monitoring note, run ETA parked; S-03 deployed (#53 4fdd51a, production verified); S-04 done and archived before merge (PR #54); v2.20: S-04 filter performance at scale parked as a TODO); 2026-10-15: S-06 planning; v2.21 (2026-10-16): pipeline without Embabel parked; S-06 in progress; v2.22: S-06 unknown resolved; 2026-10-17: S-06 done and archived before merge (PR #60) (in-app notifications for admins, no push; no-progress warning became a watchdog).
 // Run on macOS: swift tools/render_roadmap.swift
 // With the installed Command Line Tools SDK:
 // CLANG_MODULE_CACHE_PATH=/private/tmp/szczur-clang-cache \
@@ -169,7 +169,7 @@ let cards: [Card] = [
     Card(id:"S-05", title:"Codzienny automat", detail:"Cron o 00:30 UTC (dni D-2…D-1)\ni data ostatniej aktualizacji", req:"S-02 + F-01", status:"wdrożone", column:0, row:2, accent:amber),
     Card(id:"S-03", title:"Szczegóły posta", detail:"Tezy, cytaty, surowe dane\ni link do oryginału", req:"S-02", status:"wdrożone", column:1, row:2, accent:cyan),
     Card(id:"S-04", title:"Filtrowanie ocen", detail:"Spółka lub temat\ni stanowisko autora", req:"S-02", status:"gotowe", column:2, row:2, accent:cyan),
-    Card(id:"S-06", title:"Historia przebiegów", detail:"Dashboard admina\ni widoczny sygnał awarii", req:"S-05 + S-01", status:"propozycja", column:0, row:3, accent:amber)
+    Card(id:"S-06", title:"Historia przebiegów", detail:"Dashboard admina\ni widoczny sygnał awarii", req:"S-05 + S-01", status:"gotowe", column:0, row:3, accent:amber)
 ]
 let byID = Dictionary(uniqueKeysWithValues: cards.map { ($0.id, $0) })
 func connect(_ source: String, _ target: String, from: CGFloat = 0.5, to: CGFloat = 0.5) {
@@ -227,7 +227,7 @@ let parked: [(label: String, first: Parked, second: Parked)] = [
      Parked(title:"Panel kont i e-mail", refs:"FR-016 / 017 / 019 / 020", description:"Zarządzanie kontami w aplikacji, e-mail z zaproszeniem i własna nazwa wyświetlana.")),
     ("OPERACJE I SKALA",
      Parked(title:"Sesje", refs:"FR-029", description:"Krótsze limity bezczynności sesji. Ręczne uruchomienie przebiegu (FR-022) jest już w S-02."),
-     Parked(title:"Ochrona i skala", refs:"Poza MVP / infrastruktura", description:"2FA, logowanie zewnętrzne, reset hasła, nowe role, HA, kopie zapasowe, lokalny runner CI, wersja sesji, wydajność filtra przy skali."))
+     Parked(title:"Ochrona i skala", refs:"Poza MVP / infrastruktura", description:"2FA, logowanie zewnętrzne, reset hasła, nowe role, HA, kopie zapasowe, lokalny runner CI, wersja sesji, wydajność filtra, pipeline bez Embabel."))
 ]
 for (i, group) in parked.enumerated() {
     let x = Layout.futureColumns[i], y = Layout.futureY
@@ -260,7 +260,7 @@ txt("S-02: gwiazda przewodnia — pierwszy pełny przepływ od Wykopu do użytko
 txt("Pierwszy rząd czytaj od prawej: S-01 → F-03 → F-02. S-01 jest też warunkiem S-02 i S-06 — wynika z tej ścieżki.", 136, 3493, 2850, 24, .regular, muted)
 txt("Przed bramką strzałki pokazują zależności. Za bramką wskazują możliwe rozszerzenia, bez ustalonej kolejności.", 136, 3541, 2850, 24, .regular, muted)
 
-txt("Źródło: context/foundation/roadmap.md  ·  M-1 / v2.20  ·  Stan roadmapy: 13.10.2026  ·  Milestone otwarty", 100, 3660, 2200, 22, .regular, muted)
+txt("Źródło: context/foundation/roadmap.md  ·  M-1 / v2.22  ·  Stan roadmapy: 17.10.2026  ·  Milestone otwarty", 100, 3660, 2200, 22, .regular, muted)
 txt("MAPA ZALEŻNOŚCI · BEZ TERMINÓW", 2520, 3660, 540, 20, .semibold, muted)
 
 context.flushGraphics()

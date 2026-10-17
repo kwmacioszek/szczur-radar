@@ -102,27 +102,29 @@ public class PipelineAgent {
 				pending -> pending.postIds().size());
 	}
 
+	/** The dispatcher counts each post as it finishes (the run's progress), so the step counts nothing itself. */
 	@Action(actionRetryPolicy = ActionRetryPolicy.FIRE_ONCE)
 	public AssessedBatch assess(PendingAssessments pending) {
 		AssessedBatch assessed = recorder.step(pending.runId(), RunStep.ASSESS, pending.postIds().size(),
 				() -> dispatcher.dispatch(pending.runId(), pending.postIds()),
 				batch -> batch.ok() + batch.failed());
-		recorder.count(pending.runId(), RunRecorder.Counters.assessed(assessed));
 		assessed.errorSummary().ifPresent(summary -> recorder.error(pending.runId(), summary));
 		return assessed;
 	}
 
+	/**
+	 * The step closes before the run's final status is written, so whoever sees the run ended (the
+	 * run page, the list, the cron) sees every step closed too.
+	 */
 	@Action(actionRetryPolicy = ActionRetryPolicy.FIRE_ONCE)
 	@AchievesGoal(description = "The run was summarized and its final status written")
 	public RunSummary summarize(AssessedBatch assessed) {
-		return recorder.step(assessed.runId(), RunStep.SUMMARIZE, null, () -> {
-			RunStatus status = assessed.status();
-			if (!recorder.finish(assessed.runId(), status, null)) {
-				// Interrupted meanwhile: the interruption stays.
-				return new RunSummary(assessed.runId(), RunStatus.INTERRUPTED);
-			}
-			return new RunSummary(assessed.runId(), status);
-		}, summary -> 1);
+		RunStatus status = recorder.step(assessed.runId(), RunStep.SUMMARIZE, null, assessed::status, summary -> 1);
+		if (!recorder.finish(assessed.runId(), status, null)) {
+			// Interrupted meanwhile: the interruption stays.
+			return new RunSummary(assessed.runId(), RunStatus.INTERRUPTED);
+		}
+		return new RunSummary(assessed.runId(), status);
 	}
 
 }

@@ -1,8 +1,9 @@
-import { flushPromises, mount } from '@vue/test-utils'
+import { enableAutoUnmount, flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMemoryHistory } from 'vue-router'
 import { fetchMe } from '../api/auth'
 import { ApiError } from '../api/client'
+import { fetchNotifications } from '../api/notifications'
 import { type Run, fetchRuns, fetchSources, retryPosts, startRange } from '../api/pipeline'
 import { type FailedPost, fetchFailedPosts } from '../api/posts'
 import { resetSession } from '../auth/session'
@@ -11,6 +12,12 @@ import AdminView from './AdminView.vue'
 
 vi.mock('../api/auth', () => ({ fetchMe: vi.fn(), login: vi.fn(), logout: vi.fn() }))
 vi.mock('../api/posts', () => ({ fetchPosts: vi.fn(), fetchFailedPosts: vi.fn() }))
+// The header shows an admin the notification bell.
+vi.mock('../api/notifications', () => ({
+  fetchNotifications: vi.fn(),
+  markNotificationRead: vi.fn(),
+  markAllNotificationsRead: vi.fn(),
+}))
 vi.mock('../api/pipeline', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../api/pipeline')>()),
   startRange: vi.fn(),
@@ -24,6 +31,9 @@ function run(overrides: Partial<Run> = {}): Run {
     id: 'r1',
     kind: 'range',
     status: 'succeeded',
+    interruptionCause: null,
+    needsAttention: false,
+    scheduled: false,
     rangeFrom: '2026-09-30T22:00:00Z',
     rangeTo: '2026-10-01T21:59:59Z',
     sources: ['wykop'],
@@ -31,6 +41,7 @@ function run(overrides: Partial<Run> = {}): Run {
     createdAt: '2026-10-02T06:00:00Z',
     startedAt: '2026-10-02T06:00:01Z',
     finishedAt: '2026-10-02T06:20:00Z',
+    lastActivityAt: '2026-10-02T06:20:00Z',
     fetched: 270,
     newPosts: 268,
     assessedOk: 260,
@@ -38,6 +49,9 @@ function run(overrides: Partial<Run> = {}): Run {
     processingErrors: 0,
     dead: 0,
     skipped: 2,
+    llmRetries: 0,
+    flexFallbacks: 0,
+    inFlight: 0,
     error: null,
     steps: [
       { step: 'fetch', status: 'succeeded', startedAt: '2026-10-02T06:00:01Z', finishedAt: null, itemsIn: null, itemsOut: 270, error: null },
@@ -60,10 +74,11 @@ function failed(id: string, stage: FailedPost['stage']): FailedPost {
   }
 }
 
-async function mountAdmin() {
+/** `attachTo`: in the document, for focus. */
+async function mountAdmin({ attachTo }: { attachTo?: HTMLElement } = {}) {
   const router = createAppRouter(createMemoryHistory())
   await router.push('/admin')
-  const wrapper = mount(AdminView, { global: { plugins: [router] } })
+  const wrapper = mount(AdminView, { global: { plugins: [router] }, attachTo })
   await flushPromises()
   return wrapper
 }
@@ -72,6 +87,19 @@ function never<T>(): Promise<T> {
   return new Promise(() => {})
 }
 
+/** `count` succeeded runs `r<from>`, `r<from+1>`, …, created a minute apart, newest first. */
+function runsFrom(from: number, count: number): Run[] {
+  return Array.from({ length: count }, (_, at) =>
+    run({ id: `r${from + at}`, createdAt: new Date(Date.UTC(2026, 9, 2, 6) - (from + at) * 60_000).toISOString() }),
+  )
+}
+
+function page(items: Run[], total: number, size = 20) {
+  return { items, page: 0, size, total }
+}
+
+enableAutoUnmount(afterEach)
+
 describe('AdminView', () => {
   beforeEach(() => {
     resetSession()
@@ -79,6 +107,7 @@ describe('AdminView', () => {
     vi.mocked(fetchSources).mockReset().mockResolvedValue([{ source: 'wykop', configured: true }])
     vi.mocked(fetchRuns).mockReset().mockResolvedValue({ items: [], page: 0, size: 20, total: 0 })
     vi.mocked(fetchFailedPosts).mockReset().mockResolvedValue({ items: [], page: 0, size: 50, total: 0 })
+    vi.mocked(fetchNotifications).mockReset().mockResolvedValue({ unread: 0, items: [] })
     vi.mocked(startRange).mockReset()
     vi.mocked(retryPosts).mockReset()
     // The router scrolls to the top on a path change (router/scroll.ts); jsdom does not implement scrolling.
@@ -214,7 +243,6 @@ describe('AdminView', () => {
     expect(failedSection.attributes('aria-busy')).toBeUndefined()
     expect(failedSection.findAll('.failed-posts li')).toHaveLength(hasItems ? 1 : 0)
     expect(failedSection.find('.empty').exists()).toBe(!hasItems)
-    wrapper.unmount()
   })
 
   it('keeps the runs and failed posts on screen while refreshing', async () => {
@@ -331,5 +359,185 @@ describe('AdminView', () => {
     await retry.trigger('click')
     expect(retry.text()).toBe('Ponawianie…')
     expect(retry.attributes('aria-busy')).toBe('true')
+  })
+
+  describe('run history', () => {
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    it('shows the range, the duration and who started a run', async () => {
+      vi.mocked(fetchRuns).mockResolvedValue(
+        page(
+          [
+            run({ id: 'r1', scheduled: true }),
+            run({ id: 'r2', rangeFrom: '2026-09-28T22:00:00Z', rangeTo: '2026-10-01T21:59:59Z' }),
+            run({ id: 'r3', kind: 'retry', rangeFrom: null, rangeTo: null, startedAt: null, finishedAt: null, status: 'queued' }),
+          ],
+          3,
+        ),
+      )
+      const wrapper = await mountAdmin()
+      const [cron, admin, queued] = wrapper.findAll('.run')
+      expect(cron!.find('.range').text()).toBe('zakres 1.10.2026')
+      expect(cron!.find('.requester').text()).toBe('uruchomił cron')
+      expect(cron!.find('.duration').text()).toBe('czas 19 min 59 s')
+      expect(admin!.find('.range').text()).toBe('zakres 29.09.2026 – 1.10.2026')
+      expect(admin!.find('.requester').text()).toBe('uruchomił admin')
+      expect(queued!.find('.range').exists()).toBe(false)
+      expect(queued!.find('.duration').exists()).toBe(false)
+    })
+
+    it('marks a run that needs attention, names the cause of an interruption and links the run', async () => {
+      vi.mocked(fetchRuns).mockResolvedValue(
+        page(
+          [
+            run({ id: 'r1', status: 'interrupted', interruptionCause: 'deploy', needsAttention: true }),
+            run({ id: 'r2', status: 'partial' }),
+          ],
+          2,
+        ),
+      )
+      const wrapper = await mountAdmin()
+      const [interrupted, partial] = wrapper.findAll('.run')
+      expect(interrupted!.find('.status').text()).toBe('przerwany — nowe wdrożenie')
+      expect(interrupted!.find('.status').attributes('data-tone')).toBe('neutral')
+      expect(interrupted!.find('.attention').text()).toBe('wymaga uwagi')
+      expect(interrupted!.find('.attention').attributes('data-tone')).toBe('destructive')
+      const link = interrupted!.find('a.details')
+      expect(link.text()).toBe('Szczegóły')
+      expect(link.attributes('href')).toBe('/admin/runs/r1')
+      expect(link.attributes('aria-label')).toBe('Szczegóły przebiegu z 2.10.2026, 08:00')
+      expect(partial!.find('.attention').exists()).toBe(false)
+    })
+
+    it('shows an interrupted step in words', async () => {
+      vi.mocked(fetchRuns).mockResolvedValue(
+        page(
+          [
+            run({
+              status: 'interrupted',
+              interruptionCause: 'restart',
+              steps: [
+                { step: 'assess', status: 'interrupted', startedAt: '2026-10-02T06:00:01Z', finishedAt: '2026-10-02T06:05:00Z', itemsIn: 41, itemsOut: null, error: null },
+              ],
+            }),
+          ],
+          1,
+        ),
+      )
+      const wrapper = await mountAdmin()
+      expect(wrapper.find('.run .steps').text()).toBe('ocena (przerwany)')
+      expect(wrapper.find('.run .steps [data-tone]').attributes('data-tone')).toBe('warning')
+    })
+
+    it('reads older runs with Pokaż starsze until all are on screen', async () => {
+      vi.mocked(fetchRuns)
+        .mockResolvedValueOnce(page(runsFrom(1, 20), 25))
+        .mockResolvedValueOnce({ items: runsFrom(21, 5), page: 1, size: 20, total: 25 })
+      const wrapper = await mountAdmin({ attachTo: document.body })
+      expect(fetchRuns).toHaveBeenLastCalledWith(0, 20)
+      const older = wrapper.findAll('button').find((button) => button.text() === 'Pokaż starsze')!
+      expect(wrapper.findAll('.run')).toHaveLength(20)
+
+      await older.trigger('click')
+      await flushPromises()
+
+      expect(fetchRuns).toHaveBeenLastCalledWith(1, 20)
+      expect(wrapper.findAll('.run').map((row) => row.find('a.details').attributes('href'))).toEqual(
+        Array.from({ length: 25 }, (_, at) => `/admin/runs/r${at + 1}`),
+      )
+      expect(wrapper.findAll('button').some((button) => button.text() === 'Pokaż starsze')).toBe(false)
+      // The button is gone: the focus goes to the first row it added.
+      expect(document.activeElement).toBe(wrapper.findAll('.run')[20]!.find('a.details').element)
+    })
+
+    it('has no Pokaż starsze when every run is on screen', async () => {
+      vi.mocked(fetchRuns).mockResolvedValue(page(runsFrom(1, 3), 3))
+      const wrapper = await mountAdmin()
+      expect(wrapper.findAll('button').some((button) => button.text() === 'Pokaż starsze')).toBe(false)
+    })
+
+    it('says older runs failed to load and keeps the list', async () => {
+      vi.mocked(fetchRuns)
+        .mockResolvedValueOnce(page(runsFrom(1, 20), 25))
+        .mockRejectedValueOnce(new ApiError(500, 'internal_error'))
+      const wrapper = await mountAdmin()
+      await wrapper.findAll('button').find((button) => button.text() === 'Pokaż starsze')!.trigger('click')
+      await flushPromises()
+      expect(wrapper.find('section[aria-labelledby="runs-title"] [role="alert"]').text()).toBe(
+        'Nie udało się wczytać starszych przebiegów.',
+      )
+      expect(wrapper.findAll('.run')).toHaveLength(20)
+      expect(wrapper.findAll('button').some((button) => button.text() === 'Pokaż starsze')).toBe(true)
+    })
+
+    it('refreshes every 10 s while a run is queued or running, and stops when none is', async () => {
+      vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval', 'setTimeout', 'clearTimeout'] })
+      vi.mocked(fetchRuns)
+        .mockResolvedValueOnce(page([run({ status: 'running', finishedAt: null })], 1))
+        .mockResolvedValueOnce(page([run({ status: 'running', finishedAt: null, assessedOk: 30 })], 1))
+        .mockResolvedValue(page([run({ status: 'succeeded' })], 1))
+      const wrapper = await mountAdmin()
+      expect(fetchRuns).toHaveBeenCalledTimes(1)
+
+      await vi.advanceTimersByTimeAsync(10_000)
+      await flushPromises()
+      expect(fetchRuns).toHaveBeenCalledTimes(2)
+      expect(wrapper.find('.run .counters').text()).toContain('ocenione 30')
+
+      await vi.advanceTimersByTimeAsync(10_000)
+      await flushPromises()
+      expect(fetchRuns).toHaveBeenCalledTimes(3)
+      expect(wrapper.find('.run .status').text()).toBe('zakończony')
+
+      await vi.advanceTimersByTimeAsync(60_000)
+      await flushPromises()
+      expect(fetchRuns).toHaveBeenCalledTimes(3)
+    })
+
+    it('does not refresh when no run is queued or running', async () => {
+      vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval', 'setTimeout', 'clearTimeout'] })
+      vi.mocked(fetchRuns).mockResolvedValue(page([run({ status: 'partial' }), run({ id: 'r2', status: 'failed' })], 2))
+      await mountAdmin()
+      await vi.advanceTimersByTimeAsync(60_000)
+      await flushPromises()
+      expect(fetchRuns).toHaveBeenCalledTimes(1)
+    })
+
+    it('keeps the older rows on a refresh, without duplicates, when a new run shifts the pages', async () => {
+      vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval', 'setTimeout', 'clearTimeout'] })
+      const running = run({ id: 'r1', status: 'running', finishedAt: null, createdAt: '2026-10-02T06:00:00Z' })
+      const first = [running, ...runsFrom(2, 19)]
+      const newRun = run({ id: 'r0', status: 'queued', startedAt: null, finishedAt: null, createdAt: '2026-10-02T07:00:00Z' })
+      vi.mocked(fetchRuns)
+        .mockResolvedValueOnce(page(first, 25))
+        .mockResolvedValueOnce({ items: runsFrom(21, 5), page: 1, size: 20, total: 25 })
+        // Page 0 as large as the rows on screen: the new run first, so the last of the 25 falls off it.
+        .mockResolvedValueOnce(page([newRun, ...first, ...runsFrom(21, 4)], 26, 25))
+      const wrapper = await mountAdmin()
+      await wrapper.findAll('button').find((button) => button.text() === 'Pokaż starsze')!.trigger('click')
+      await flushPromises()
+      expect(wrapper.findAll('.run')).toHaveLength(25)
+
+      await vi.advanceTimersByTimeAsync(10_000)
+      await flushPromises()
+
+      expect(fetchRuns).toHaveBeenLastCalledWith(0, 25)
+      expect(wrapper.findAll('.run').map((row) => row.find('a.details').attributes('href'))).toEqual(
+        ['r0', ...Array.from({ length: 25 }, (_, at) => `r${at + 1}`)].map((id) => `/admin/runs/${id}`),
+      )
+      expect(wrapper.findAll('button').some((button) => button.text() === 'Pokaż starsze')).toBe(false)
+    })
+
+    it('stops refreshing when the view is left', async () => {
+      vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval', 'setTimeout', 'clearTimeout'] })
+      vi.mocked(fetchRuns).mockResolvedValue(page([run({ status: 'running', finishedAt: null })], 1))
+      const wrapper = await mountAdmin()
+      wrapper.unmount()
+      await vi.advanceTimersByTimeAsync(30_000)
+      await flushPromises()
+      expect(fetchRuns).toHaveBeenCalledTimes(1)
+    })
   })
 })

@@ -440,14 +440,14 @@ PR #44 was squash-merged as `b7ee254` (11:25 UTC). CI on `main` applied `+ Creat
   - D-2 is fetched a second time. That catches posts the Wykop pagination missed the night before (S-02 review, F9). Posts already stored cost no LLM call, only about 7 more Wykop requests a night.
 - **Answers of `/internal/**`.** The token is the only credential there: the chain is stateless, reads no session and sets no cookie, and the token means nothing on `/api/**`.
   - `POST /internal/pipeline-runs/daily`: 202 `[{id, kind}]` in execution order; 409 `pipeline_busy` while a run is queued or running; 503 `source_not_configured`; 401 without the token, with a wrong one, and always when the API has no `PIPELINE_TRIGGER_TOKEN`.
-  - `GET /internal/pipeline-runs/{id}`: 200 `{id, kind, status, finishedAt, fetched, newPosts, assessedOk, assessedFailed, processingErrors, dead}`, or 404 `not_found`. The counters are for the cron's last log line.
+  - `GET /internal/pipeline-runs/{id}`: 200 `{id, kind, status, finishedAt, fetched, newPosts, assessedOk, assessedFailed, processingErrors, dead}`, or 404 `not_found`. The counters are for the cron's last log line. **Update (S-06, 2026-10-16):** the answer also has `startedAt`, `lastActivityAt`, `interruptionCause`, `step` (the running step, or `null`) and `assessTotal` (the posts the `assess` step took in, or `null`); the cron's heartbeat and an interrupted run's cause come from them (section S-06).
 - **Retries and limits** (`trigger.sh`, defaults; `tools/pipeline-trigger/README.md`):
   - no connection or 502/503/504 (the API waking takes about 10 s, or the cron container's private network is not ready yet): every 2 s, up to `TRIGGER_WAKE_TIMEOUT` (`3m`). A 503 `source_not_configured` is not retried. Only a start request that never connected is retried: no answer after the connection was made (e.g. `TRIGGER_REQUEST_TIMEOUT`, `60s`) means the API may have queued the run, so the cron exits 1 ("the run may have started; check /admin") instead of starting a second run whose result would hide the first one's (implementation review F1);
   - 409 `pipeline_busy` (e.g. an admin's run): every `TRIGGER_BUSY_INTERVAL` (`60s`), up to `TRIGGER_BUSY_TIMEOUT` (`60m`);
   - polling every `TRIGGER_POLL_INTERVAL` (`30s`), up to `TRIGGER_RUN_TIMEOUT` (`90m`) for all runs together;
   - the whole cron run: `TRIGGER_TIMEOUT` (`3h`). A hung run fails instead of blocking later nights (Railway skips a cron run while the previous one is active).
 - **Exit code.** 0 when every run is `succeeded` or `partial`; 1 when one is `failed` or `interrupted`, on 401 or another 4xx, on 503 `source_not_configured` or a timeout; 2 on a configuration error. The token goes to `curl` as a config on stdin, never as an argument, and is never logged.
-- **Failure signal.** A non-zero exit makes the cron's deployment `CRASHED`. Railway reports that **only through a notification rule**: in the PR-env test (2026-10-12) a crashed run sent no e-mail and no in-app notification. After the operator added a custom rule in Railway Account Settings (event "deployment crashed", scope: all environments), the next failed run arrived as an in-app and push notification "Pipeline-trigger deployment crashed". The same rule covers `db-backup` (section F-01). A `partial` run exits 0: its failed posts show in `/admin` and the next run retries them; an active signal for `partial` is S-06.
+- **Failure signal.** A non-zero exit makes the cron's deployment `CRASHED`. Railway reports that **only through a notification rule**: in the PR-env test (2026-10-12) a crashed run sent no e-mail and no in-app notification. After the operator added a custom rule in Railway Account Settings (event "deployment crashed", scope: all environments), the next failed run arrived as an in-app and push notification "Pipeline-trigger deployment crashed". The same rule covers `db-backup` (section F-01). A `partial` run exits 0: its failed posts show in `/admin` and the next run retries them; an active signal for `partial` is S-06. **Update (S-06, 2026-10-16):** the signal is an in-app notification for every admin (the bell in the header), given by a `partial` run with a dead post or a technical error and by every `failed` or `interrupted` run; a `partial` run with only retryable `failed` posts gives none. The cron's exit codes are unchanged (section S-06).
 - **Environment guard.** Railway creates the cron in every environment (a PR env is a copy of production). Outside `production` (`RAILWAY_ENVIRONMENT_NAME`) `trigger.sh` logs "skipped" and exits 0 without a request, unless `TRIGGER_IN_ANY_ENVIRONMENT=true` is set on the service.
 - **Recovery before the port.** The cron's request is often the one that wakes the API. Start-up recovery of unfinished runs (`PipelineStartupRecovery`) now runs in `SmartInitializingSingleton.afterSingletonsInstantiated`, before the web server opens its port, so it cannot mark the cron's new run `interrupted`.
 - **What Railway shows for a cron (seen 2026-10-12).** A scheduled run reuses the service's existing deployment; it does not create a new one. Railway shows what a cron writes to stderr at level `error`, and `trigger.sh` logs every line to stderr, so a normal run looks red in the log view. The exit code says whether it failed, not the colour.
@@ -510,7 +510,7 @@ PR #50 was squash-merged as `13e371a` (2026-10-13 12:30 UTC), after the operator
   - the docs-only merge #55 at 17:55 UTC redeployed every service, because production had no watch paths (Troubleshooting (Java), "Every merge redeploys every service", PR #58);
   - the new API marked both runs `interrupted` at start (17:58:47, 4 posts put back);
   - the cron's container was replaced by the same merge ("Stopping Container") before it could log the result. No failure signal came: a replaced deployment is not `CRASHED`. A run interrupted this way shows only in `/admin`.
-- **Observability gap.** While the RETRY run assessed, nothing was logged for more than 7 minutes: `trigger.sh` logs only status changes and the API does not log single LLM calls. Recorded for S-06 in the roadmap (#56: run progress in `/admin`, a no-progress warning, progress lines in the API and cron logs).
+- **Observability gap.** While the RETRY run assessed, nothing was logged for more than 7 minutes: `trigger.sh` logs only status changes and the API does not log single LLM calls. Recorded for S-06 in the roadmap (#56: run progress in `/admin`, a no-progress warning, progress lines in the API and cron logs). **Update (S-06, 2026-10-16):** the API logs every step and the assessment's progress (at most once a minute), the cron logs a heartbeat every 5 min and `/admin` shows the progress; the no-progress warning became a watchdog that stops the run, and a run interrupted by a deploy now names its cause and notifies the admins in the app (section S-06).
 - **First night, 2026-10-14** (deployment `e379f584`):
   - 00:32:41 UTC start (2 min late); the API was asleep and answered after 19 s;
   - RETRY `fe22e327` → `partial` at 00:43:02 (assessed ok 148, failed 3, dead 0): the 151 posts are mostly the interrupted manual run's;
@@ -694,6 +694,136 @@ PR #49 was squash-merged as `54c4fc2` (13:22 UTC), after S-05 (#50).
    - `/?q=zzz`: the empty filter result, and "Wyczyść filtry" brings the whole feed back;
    - `GET /api/posts?kind=xyz` and `GET /api/posts?q=%00` give 400 `{"detail":"invalid_request"}`.
 4. Record the locale and the results in issue #17 and close it with the merge commit.
+
+## S-06: historia przebiegów i powiadomienia (pipeline-run-history-dashboard)
+
+**Status (2026-10-16): in the PR env (#60), not merged.** S-06 shows the admin what a run is doing and tells them when one needs attention: the live progress of a running run, a watchdog that stops a run without progress, the cause of an interruption, in-app notifications for admins (a bell in the header) and a page per run (`/admin/runs/:id`). The cron logs a heartbeat. Change: `context/changes/pipeline-run-history-dashboard/`, issue #19.
+
+### What it adds
+
+- **Progress.** A running run's counters (ok, failed, dead, technical errors, LLM retries, flex fallbacks) grow after every post, together with its `last_activity_at`; the start and end of every step move `last_activity_at` too. Before S-06 the counters were written only when the `assess` step ended. `/admin` and the run page read a queued or running run again every 10 s.
+- **Watchdog** (`pipeline/RunWatchdog`, in the API process). A run of this instance without activity for `PIPELINE_STALL_TIMEOUT` (production: `39m`) ends `failed` with the error `no progress for 39m 00s: the run was stopped`.
+  - Its open steps are closed `failed`, its posts go back without an attempt, and the next queued run starts (e.g. the RANGE run behind a RETRY). Before S-06 a hung run blocked every later start (the run of 2026-10-09 "lasted" about 22 h).
+  - It checks every minute. While the instance has no run it asks the database nothing, so the API can still sleep.
+  - A step without progress inside (`fetch`, `store`) moves the activity only at its start and end, so it is stopped too if it alone lasts longer than the timeout.
+  - The stopped run's agent action goes on in Embabel's thread but changes nothing (conditional writes; `pipeline/CLAUDE.md`). The stop interrupts its LLM calls in flight (the log says `Run <id> assess: stopped, N post task(s) not finished were cancelled`), so they free their threads at once, or within one `LLM_TIMEOUT` attempt when blocked in a read, without another attempt.
+  - Every database call has an end too: the driver fails a statement that waits more than 300 s for the database's answer (`socketTimeout`, `szczur-radar-api/src/main/resources/application.properties`). A hung call fails after 5 min with a JDBC error (`An I/O error occurred while sending to the backend`, caused by `SocketTimeoutException: Read timed out`) instead of holding its thread until a restart. Nothing legitimate in the app or in `migrate` waits that long; only a second `create-admin` started while the first one waits for its password fails after 5 min instead of waiting.
+- **Interruption cause.** An `interrupted` run has `interruption_cause`, and its open steps become `interrupted`:
+  - `deploy`: a new deployment took over. Every run stores the `RAILWAY_DEPLOYMENT_ID` of the instance that queued it, and the new instance's start-up recovery sees another id;
+  - `restart`: the same deployment, or an unknown one;
+  - `shutdown`: the instance was stopping.
+
+  The SPA shows "przerwany — nowe wdrożenie" (a neutral tone: expected after a merge), "przerwany — restart aplikacji" or "przerwany — zatrzymanie aplikacji".
+- **Notifications** (in the app only). A run that ends `failed`, `interrupted`, or `partial` with a dead post or a technical error gives every admin who can log in one notification.
+  - A `partial` run whose only failures are `failed` posts with attempts left gives none: the next run retries them. A usual night (about 2% failed posts, no dead post) therefore gives none.
+  - No push, e-mail or webhook. The cron's exit codes are unchanged, so Railway's "deployment crashed" rule still reports exactly what it reported before (a cron run exits 1 when a run ends `failed` or `interrupted`, never for `partial`).
+- **The admin's views.**
+  - The bell: the unread count, the 10 newest, "Oznacz wszystkie jako przeczytane"; a click marks one read and opens its run's page. Its list is kept across pages and read again on a page change and when the tab becomes visible (not within 10 s of the last read), and every 60 s only on `/admin` and `/admin/runs/:id` while the tab is visible, so an open feed tab lets the API sleep.
+  - The run page `/admin/runs/:id`: the status with its cause, why it needs attention, who started it (cron / admin), the range, times, counters, and the steps with their times and errors. While the run is running, also its progress: a bar, posts in flight, "Ostatnia aktywność: N temu".
+  - `/admin`: every run with its range, duration, "cron" / "admin", a "wymaga uwagi" badge and a "Szczegóły" link; "Pokaż starsze" below the list.
+  - A `user` sees no bell and is sent from `/admin/**` to `/`; the routes answer 403.
+- **Cron heartbeat.** While a run is `running`, `trigger.sh` logs its step and progress every `TRIGGER_HEARTBEAT_INTERVAL` (`5m`), from the poll it makes anyway (no extra request). The last line of an `interrupted` run ends with `(cause …)`. Exit codes unchanged (`tools/pipeline-trigger/README.md`).
+- **Migrations.** Both only add, so the old instance keeps writing during the deploy window.
+  - `V8__pipeline_run_progress.sql`: on `pipeline_runs` the columns `last_activity_at`, `llm_retries`, `flex_fallbacks`, `deployment_id` and `interruption_cause` (with two `CHECK`s); the step status `interrupted`; the index `ix_posts_assessing_run`. A data fix closes, as `interrupted`, the steps left `running` in every run that already ended, whatever its final status (any run not `queued` or `running`, e.g. the run of 2026-10-09).
+  - `V9__create_notifications.sql`: the table `notifications`, with one row per admin and run and its own read time.
+  - Runs interrupted before `V8` have no cause and show "przerwany" alone. Runs that ended before `V9` give no notification.
+
+### Variables (names only)
+
+| Service | Variable | Production | PR env |
+| --- | --- | --- | --- |
+| `szczur-radar-api` | `PIPELINE_STALL_TIMEOUT` | unset: the default follows the LLM settings, `max(15m, the longest single LLM call + 5m)`, which is `39m` with `LLM_TIMEOUT=300s` and `flex`. Optional, always with a unit. A bare number, zero or less, or more than `24h` stops the server's start (the message names the variable); a value below that bound starts with a WARN. `.railway/railway.ts` declares it with `preserve()`, which never creates a value | unset: `15m`, since the PR env runs without `LLM_TIMEOUT` and `LLM_SERVICE_TIER` (section F-03) |
+| `szczur-radar-api` | `RAILWAY_DEPLOYMENT_ID` | set by Railway in every deployment, never by hand; not declared in IaC | the same |
+| `pipeline-trigger` | `TRIGGER_HEARTBEAT_INTERVAL` | unset (default `5m`); not declared, like the other `TRIGGER_*` durations | unset. Set by hand only for a verification, and deleted before the next push: an undeclared variable makes the IaC plan propose `Delete variable`, which the CI gate refuses (`tools/pipeline-trigger/README.md`) |
+
+Only the server reads `PIPELINE_STALL_TIMEOUT`; the pre-deploy `migrate` and the operator commands do not.
+
+### What the operator sees
+
+**In the API log** (INFO unless marked; `Durations` format: `38.2s`, `22m 10s`, `1h 05m`):
+
+```text
+Pipeline watchdog: a run without progress for 39m 00s is stopped (checked every 1m 00s)    ← at start-up
+Pipeline run 4f0c… (range) started
+Run 4f0c… step fetch started
+Run 4f0c… step fetch succeeded (out 470) in 38.2s
+Run 4f0c… step assess started (in 251)
+Run 4f0c… assess: 97/251 (ok 96, failed 1, dead 0, errors 0), in flight 4, retries 3, flex fallbacks 1
+Run 4f0c… step assess succeeded (out 251) in 21m 26s
+Pipeline run 4f0c… (range) ended partial in 22m 10s: fetched 470, new 251, ok 249, failed 2, dead 0, errors 0, retries 9, flex fallbacks 2
+```
+
+- The `assess:` progress line comes at most once a minute as posts finish, and once after the last post.
+- A stopped run gives WARN `Pipeline run <id> made no progress for 39m 00s; stopped`.
+- A run that needs attention gives `Pipeline run <id> (<kind>) ended <status> and needs attention: N admin(s) notified`.
+- Start-up recovery still logs WARN `Marked N unfinished pipeline run(s) interrupted: […]`.
+- No post text and no secret is logged.
+
+**In the cron's log**, a heartbeat every 5 min while the run is `running`:
+
+```text
+… trigger: range 4f0c…: running, step assess, assessed 97/251 (ok 96, failed 1, errors 0), last activity 2026-10-17T00:40:43.207Z
+… trigger: range 4f0c…: interrupted (fetched 270, new posts 251, …) (cause deploy)
+```
+
+**In the app** (admin): the bell with the unread count on every page, the run page `/admin/runs/:id` and the history in `/admin`. The screenshots and the 7-state matrix are in `context/changes/pipeline-run-history-dashboard/ui-after/README.md`.
+
+### Rollback: fix-forward only
+
+A code rollback to a version before S-06 (Railway → Deployments → Rollback) breaks `/admin`'s run list after `V8`.
+- `GET /api/admin/pipeline-runs` answers 500: the old `StepStatus` does not know `interrupted`, which `V8`'s data fix has already written, and `EnumValueConverter` throws.
+- The pipeline itself and the cron keep working on the new schema (every new column has a default or allows `NULL`).
+- The same 500 is expected for the 1–2 min of the merge's own deploy window, while the old instance still serves.
+
+Repair a bad S-06 release with a new commit, never by a rollback; never edit `V8` or `V9`.
+
+### PR-env verification (szczur-radar-pr-60)
+
+Verified 2026-10-16 on `fa87f19` (CI run 38966942987: all seven jobs green; `railway-config` applied nothing destructive).
+
+- **Deploys.** api `1256c44e` and web `e1656579` SUCCESS from `fa87f19`; the web is at the branch head. The cron (`pipeline-trigger`) was last built from `87e92c3` (heartbeat for `running` runs only); later pushes left it `SKIPPED` (watch paths).
+- **Setup.**
+  - `PIPELINE_TRIGGER_TOKEN` was set on the PR env's API with `--stdin` (64 characters); the cron's reference resolves to the same length.
+  - Test accounts `s06-admin@example.com` (admin) and `s06-user@example.com` (user) were created with `create-user` over `railway ssh` and activated through `/api/auth/activation` with random passwords. The links and passwords were never printed and are deleted; the accounts stay in the PR env's database.
+- **The cron's run.** With `TRIGGER_IN_ANY_ENVIRONMENT=true`, `TRIGGER_HEARTBEAT_INTERVAL=1m`, a one-off schedule `16 21 * * *` and a redeploy of the cron (Railway MCP), the cron started RANGE `5d2af0bf` at 21:16:29 UTC (D-2…D-1 = 2026-10-14…15; no leftovers, so no RETRY run).
+  - API log: `Pipeline run 5d2af0bf… (range) started`; `step fetch succeeded (out 864) in 11.6s`, `store … in 426ms`, `select … in 19ms`, `step assess started (in 864)`; at 21:17:44 `assess: 152/864 (ok 150, failed 2, dead 0, errors 0), in flight 3, retries 0, flex fallbacks 0`.
+  - Cron log: heartbeats at 21:17:30 (`assessed 108/864`), 21:18:30 (`281/864`) and 21:19:30 (`444/864`), each with `step assess` and `last activity …`.
+  - `/admin/runs/5d2af0bf…`: "Krok: ocena", the bar at 33/864 (21:16:58), then 217/864 (21:18:09), "Ostatnia aktywność: przed chwilą". `/admin`: the range 14.10–15.10.2026, "uruchomił cron", the duration and the counters.
+- **Interruption by a deploy.** A redeploy of the API at about 21:18 (`7c1ef5ec`, Railway MCP) during the assessment. The old instance kept assessing until the new one took over (about 1.5 min), then:
+  - the new instance's recovery marked the run `interrupted` with cause `deploy`; step `assess` is `interrupted`, no `summarize` step was added; 472 assessed ok, 14 failed;
+  - the cron logged `interrupted (fetched 864, new posts 864, assessed ok 472, assessed failed 14, processing errors 0, dead 0) (cause deploy)` and `FAILED: a run did not succeed: range interrupted`, exit 1, deployment `CRASHED` (the custom rule's crash notification is expected here);
+  - the admin's bell showed 1 unread, "nowe · przerwany — nowe wdrożenie"; a click opened `/admin/runs/5d2af0bf…` ("przerwany — nowe wdrożenie") and the count dropped to 0 (`readAt` set).
+- **A `user`** (`s06-user@example.com`): no bell and no "Panel admina" link; `/admin/runs/<id>` sent it to `/`; `GET /api/admin/notifications` and `GET /api/admin/pipeline-runs/<id>` answered 403.
+- **Afterwards.** `TRIGGER_IN_ANY_ENVIRONMENT` and `TRIGGER_HEARTBEAT_INTERVAL` deleted, the schedule back to `30 0 * * *`, the cron redeployed (`b89f6390`); its variables are again `API_PORT`, `API_PRIVATE_DOMAIN` and `PIPELINE_TRIGGER_TOKEN`. The API keeps its `PIPELINE_TRIGGER_TOKEN` (`preserve()`). Screenshots: `context/changes/pipeline-run-history-dashboard/ui-after/pr-env-*.png`.
+- **The bell after the implementation-review fixes** (2026-10-17, `373ad6a`; CI run 39034495398 green; api and web at the head). The admin's password was reset with `reset-password` (link and password kept only in temporary files, deleted). Requests to `GET /api/admin/notifications`, counted in the browser:
+  - 14:51:15 the first load on `/`; 14:51:30 one refresh on navigating to a post (the data was 15 s old); going back within seconds fetched nothing, and the bell kept its count without a loading state;
+  - 75 s idle on `/`: no request (no polling outside `/admin*`);
+  - 14:53:14 one refresh on opening `/admin`, then 14:54:13 the 60 s poll.
+- **Not forced:** the watchdog's stop, which would need a really hung run. `RunWatchdogIT` covers the stop; the local run with `PIPELINE_STALL_TIMEOUT=1m` (plan step 2.4) showed it leaves a run with progress alone.
+
+### Runbook — after the merge (operator; tracked in issue #19, not in the plan's Progress)
+
+0. **Standing rules.**
+   - No merge to `main` while `/admin` shows a run `RUNNING`, and not between about 00:30 and 01:30 UTC (section S-05).
+   - Wait longer when the night's run is still running. Since S-06, `/admin` shows its progress and the run page shows its last activity.
+1. **CI on `main`.** `railway-config` plans either nothing or only the `PIPELINE_STALL_TIMEOUT` declaration on `szczur-radar-api`. `preserve()` creates no value, so most likely there is no change at all, as with `ACTIVATION_LINK_TTL` in S-07.
+   - Nothing destructive and no other service.
+   - If the plan shows anything else, stop and investigate.
+   - Do not set `PIPELINE_STALL_TIMEOUT` on production: its default follows the LLM settings.
+2. **Migrations and start.**
+   - The API's pre-deploy `migrate` applies `V8` (pipeline run progress) and `V9` (create notifications), and `/api/ready` returns 200.
+   - A run started before the merge has no `deployment_id` (the column comes with `V8`). If the merge's own deploy interrupts it, its cause shows `restart` ("przerwany — restart aplikacji"), not `deploy`; only this first deploy, later runs store their deployment.
+   - The API's start-up log has `Pipeline watchdog: a run without progress for 39m 00s is stopped (checked every 1m 00s)` and no WARN from `PipelineStallSettings`.
+   - `/admin` lists the runs with their range, duration and "cron" / "admin". Old interrupted runs show "przerwany" without a cause. A 500 on the list during the deploy window is expected (Rollback above).
+3. **First night**, or a manual cron run on a temporary schedule as in section S-05, runbook step 3 (then set `30 0 * * *` back):
+   - the cron's log has heartbeat lines (`…: running, step assess, assessed N/M (…), last activity …`) every 5 min and ends `OK: …`;
+   - the API's log has the run's start, its steps, the `assess:` progress lines (at most one a minute) and its end line;
+   - `/admin` shows the night's runs with the range D-2…D-1, their duration and "cron". While one runs, `/admin/runs/<id>` shows its progress and "Ostatnia aktywność".
+4. **Notifications.**
+   - A usual night ends `partial` with a few retryable `failed` posts and no dead post: no notification, and the bell shows no count.
+   - A run that ends `failed`, `interrupted`, or `partial` with a dead post or a technical error gives each admin one notification. A click opens the run's page and the count drops.
+   - Record which case the first nights were.
+5. **Record and close.** Comment the results on issue #19: the merge commit, deployment IDs, the plan output, the first night's heartbeat and progress lines, the notifications seen. Close the issue only after this production verification.
 
 ## Phases
 

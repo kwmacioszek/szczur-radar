@@ -4,10 +4,18 @@ import type { Page } from './posts'
 
 export type RunKind = 'range' | 'retry' | 'posts'
 export type RunStatus = 'queued' | 'running' | 'succeeded' | 'partial' | 'failed' | 'interrupted'
+export type RunStepName = 'fetch' | 'store' | 'select' | 'assess' | 'summarize'
+/** `interrupted`: its run was interrupted (or stopped) while the step was running. */
+export type StepStatus = 'running' | 'succeeded' | 'failed' | 'interrupted'
+/**
+ * Why an interrupted run stopped — pipeline/run/InterruptionCause: another deployment took over (`deploy`), the
+ * application restarted (`restart`) or the instance was stopping (`shutdown`).
+ */
+export type InterruptionCause = 'deploy' | 'restart' | 'shutdown'
 
 export interface RunStep {
-  step: 'fetch' | 'store' | 'select' | 'assess' | 'summarize'
-  status: 'running' | 'succeeded' | 'failed'
+  step: RunStepName
+  status: StepStatus
   startedAt: string
   finishedAt: string | null
   itemsIn: number | null
@@ -19,6 +27,12 @@ export interface Run {
   id: string
   kind: RunKind
   status: RunStatus
+  /** Why an interrupted run stopped; null for any other run and for one interrupted before causes were recorded. */
+  interruptionCause: InterruptionCause | null
+  /** Failed, interrupted, or partial with a dead post or a technical error (the API's rule). */
+  needsAttention: boolean
+  /** Requested by the daily cron, not by an admin. */
+  scheduled: boolean
   rangeFrom: string | null
   rangeTo: string | null
   sources: string[]
@@ -26,6 +40,8 @@ export interface Run {
   createdAt: string
   startedAt: string | null
   finishedAt: string | null
+  /** The last change while it was running. */
+  lastActivityAt: string | null
   fetched: number
   newPosts: number
   assessedOk: number
@@ -34,6 +50,12 @@ export interface Run {
   processingErrors: number
   dead: number
   skipped: number
+  /** HTTP attempts beyond the first of the assessments' LLM calls. */
+  llmRetries: number
+  /** Assessments whose call fell back from the flex tier to the default one. */
+  flexFallbacks: number
+  /** The posts it is assessing now; 0 unless it is running. */
+  inFlight: number
   error: string | null
   steps: RunStep[]
 }
@@ -60,8 +82,14 @@ export function retryPosts(postIds: string[]): Promise<Run[]> {
   })
 }
 
+/** The runs, newest first; `page` from 0, `size` at most 100. */
 export function fetchRuns(page = 0, size = 20): Promise<Page<Run>> {
   return apiFetch<Page<Run>>(`/api/admin/pipeline-runs?page=${page}&size=${size}`)
+}
+
+/** One run with its steps; 404 `not_found` for an unknown id, 400 `invalid_request` for a malformed one. */
+export function fetchRun(id: string): Promise<Run> {
+  return apiFetch<Run>(`/api/admin/pipeline-runs/${encodeURIComponent(id)}`)
 }
 
 export function fetchSources(): Promise<SourceState[]> {

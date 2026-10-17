@@ -35,7 +35,8 @@ class MigrationsIT {
 	void allMigrationsApplyOnEmptyDatabase() {
 		List<Map<String, Object>> history = jdbc.queryForList(
 				"SELECT version, success FROM flyway_schema_history WHERE version IS NOT NULL ORDER BY installed_rank");
-		assertThat(history).extracting(row -> row.get("version")).containsExactly("1", "2", "3", "4", "5", "6", "7");
+		assertThat(history).extracting(row -> row.get("version")).containsExactly("1", "2", "3", "4", "5", "6", "7",
+				"8", "9");
 		assertThat(history).allSatisfy(row -> assertThat(row.get("success")).isEqualTo(true));
 	}
 
@@ -110,7 +111,8 @@ class MigrationsIT {
 	@Test
 	void pipelineTablesHaveNamedConstraintsAndIndexes() {
 		assertThat(constraintsOf("pipeline_runs")).contains("ck_pipeline_runs_kind", "ck_pipeline_runs_status",
-				"ck_pipeline_runs_range", "ck_pipeline_runs_requested_posts", "fk_pipeline_runs_requested_by");
+				"ck_pipeline_runs_range", "ck_pipeline_runs_requested_posts", "fk_pipeline_runs_requested_by",
+				"ck_pipeline_runs_interruption_cause", "ck_pipeline_runs_interruption_status");
 		assertThat(constraintsOf("posts")).contains("uq_posts_source_item", "uq_posts_raw_payload", "ck_posts_stage",
 				"ck_posts_stage_attempts", "ck_posts_assessing_owner", "fk_posts_raw_payload", "ck_posts_item_type",
 				"ck_posts_source")
@@ -120,7 +122,39 @@ class MigrationsIT {
 		assertThat(constraintsOf("raw_payloads")).contains("ck_raw_payloads_content_encoding", "ck_raw_payloads_sha256");
 		assertThat(jdbc.queryForList("SELECT indexname FROM pg_indexes WHERE schemaname = 'public'", String.class))
 			.contains("uq_pipeline_runs_one_running", "ix_pipeline_runs_created", "ix_posts_stage_published",
-					"ix_assessments_post_latest", "ix_pipeline_run_steps_run");
+					"ix_assessments_post_latest", "ix_pipeline_run_steps_run", "ix_posts_assessing_run");
+	}
+
+	@Test
+	void aRunsProgressStartsAtZeroAndOnlyAnInterruptedRunHasACause() {
+		UUID admin = user("run-progress@example.com");
+		UUID run = run(admin, "queued");
+		assertThat(jdbc.queryForMap("SELECT llm_retries, flex_fallbacks, last_activity_at, deployment_id,"
+				+ " interruption_cause FROM pipeline_runs WHERE id = ?", run)).containsEntry("llm_retries", 0)
+			.containsEntry("flex_fallbacks", 0)
+			.containsEntry("last_activity_at", null)
+			.containsEntry("deployment_id", null)
+			.containsEntry("interruption_cause", null);
+
+		assertRejected("INSERT INTO pipeline_runs (kind, status, requested_by, interruption_cause) VALUES ('retry',"
+				+ " 'interrupted', '" + admin + "', 'crash')", "ck_pipeline_runs_interruption_cause");
+		assertRejected("INSERT INTO pipeline_runs (kind, status, requested_by, interruption_cause) VALUES ('retry',"
+				+ " 'failed', '" + admin + "', 'deploy')", "ck_pipeline_runs_interruption_status");
+		assertRejected("UPDATE pipeline_runs SET interruption_cause = 'restart' WHERE id = '" + run + "'",
+				"ck_pipeline_runs_interruption_status");
+		for (String cause : List.of("deploy", "restart", "shutdown")) {
+			jdbc.update("INSERT INTO pipeline_runs (kind, status, requested_by, interruption_cause, deployment_id)"
+					+ " VALUES ('retry', 'interrupted', ?, ?, 'deployment-1')", admin, cause);
+		}
+	}
+
+	@Test
+	void anInterruptedRunsStepIsInterrupted() {
+		UUID run = run(user("step-status@example.com"), "interrupted");
+		jdbc.update("INSERT INTO pipeline_run_steps (run_id, step, status, finished_at) VALUES (?, 'assess',"
+				+ " 'interrupted', now())", run);
+		assertRejected("INSERT INTO pipeline_run_steps (run_id, step, status) VALUES ('" + run + "', 'assess',"
+				+ " 'stopped')", "ck_pipeline_run_steps_status");
 	}
 
 	@Test
@@ -230,6 +264,49 @@ class MigrationsIT {
 
 		assertThat(jdbc.queryForObject("SELECT count(*) FROM activation_tokens WHERE user_id = ?", Integer.class,
 				account)).isZero();
+	}
+
+	@Test
+	void notificationsHaveNamedConstraintsAndTheirIndex() {
+		assertThat(constraintsOf("notifications")).contains("notifications_pkey", "fk_notifications_recipient",
+				"fk_notifications_run", "ck_notifications_kind", "ck_notifications_run",
+				"uq_notifications_recipient_kind_run");
+		assertThat(jdbc.queryForList("SELECT indexname FROM pg_indexes WHERE schemaname = 'public'", String.class))
+			.contains("ix_notifications_recipient_created");
+	}
+
+	@Test
+	void aRunNotificationNamesItsRunAndARecipientHasOneOfAKindPerRun() {
+		UUID recipient = user("notified@example.com");
+		UUID run = run(user("notified-run@example.com"), "failed");
+		Map<String, Object> row = jdbc.queryForMap("INSERT INTO notifications (recipient_id, kind, run_id)"
+				+ " VALUES (?, 'run_attention', ?) RETURNING id, created_at, read_at", recipient, run);
+		assertThat(row.get("id")).isNotNull();
+		assertThat(row.get("created_at")).isNotNull();
+		assertThat(row.get("read_at")).isNull();
+
+		assertRejected(notificationInsert(recipient, "run_attention", run), "uq_notifications_recipient_kind_run");
+		assertRejected(notificationInsert(recipient, "run_failed", run), "ck_notifications_kind");
+		assertRejected(notificationInsert(recipient, "run_attention", null), "ck_notifications_run");
+		assertRejected(notificationInsert(recipient, "run_attention", UUID.randomUUID()), "fk_notifications_run");
+		assertRejected(notificationInsert(UUID.randomUUID(), "run_attention", run), "fk_notifications_recipient");
+	}
+
+	@Test
+	void deletingAnAccountDeletesItsNotifications() {
+		UUID recipient = user("notification-cascade@example.com");
+		UUID run = run(user("notification-cascade-run@example.com"), "interrupted");
+		jdbc.update(notificationInsert(recipient, "run_attention", run));
+
+		jdbc.update("DELETE FROM users WHERE id = ?", recipient);
+
+		assertThat(jdbc.queryForObject("SELECT count(*) FROM notifications WHERE run_id = ?", Integer.class, run))
+			.isZero();
+	}
+
+	private static String notificationInsert(UUID recipientId, String kind, UUID runId) {
+		return "INSERT INTO notifications (recipient_id, kind, run_id) VALUES ('" + recipientId + "', '" + kind + "', "
+				+ (runId == null ? "NULL" : "'" + runId + "'") + ")";
 	}
 
 	private static String tokenInsert(UUID userId, String tokenHash) {

@@ -19,9 +19,11 @@ import org.jspecify.annotations.Nullable;
 import pl.szczurradar.api.sources.Source;
 
 /**
- * One pipeline run ({@code pipeline_runs}, owned by Flyway, {@code V3__create_pipeline_and_posts.sql}).
- * Created {@code queued}; its status and counters change only through conditional updates that
- * require the run to be {@code running}, so an interrupted run never changes again.
+ * One pipeline run ({@code pipeline_runs}, owned by Flyway, {@code V3__create_pipeline_and_posts.sql},
+ * progress and interruption from {@code V8__pipeline_run_progress.sql}). Created {@code queued}; its
+ * status and counters change only through conditional updates that require the run to be
+ * {@code running}, so an interrupted run never changes again. The entity writes only what a new run
+ * has: the progress and the interruption columns are read-only here.
  */
 @Entity
 @Table(name = "pipeline_runs")
@@ -90,6 +92,29 @@ public class PipelineRun {
 	@Column(nullable = false)
 	private int skipped;
 
+	/**
+	 * HTTP attempts beyond the first of each assessment's LLM call ({@code max(attempts − 1, 0)}: a post
+	 * decided by the prefilter makes no call).
+	 */
+	@Column(name = "llm_retries", nullable = false, insertable = false, updatable = false)
+	private int llmRetries;
+
+	/** Assessments whose call was refused on the flex tier and fell back to the default one. */
+	@Column(name = "flex_fallbacks", nullable = false, insertable = false, updatable = false)
+	private int flexFallbacks;
+
+	/** The last change while it was running (its start, a step starting or ending, a post counted). */
+	@Column(name = "last_activity_at", insertable = false, updatable = false)
+	private @Nullable Instant lastActivityAt;
+
+	/** The Railway deployment ({@code RAILWAY_DEPLOYMENT_ID}) that queued it; {@code null} when unknown. */
+	@Column(name = "deployment_id", updatable = false)
+	private @Nullable String deploymentId;
+
+	/** Why it was interrupted; only an {@link RunStatus#INTERRUPTED interrupted} run has one. */
+	@Column(name = "interruption_cause", insertable = false, updatable = false)
+	private @Nullable InterruptionCause interruptionCause;
+
 	private @Nullable String error;
 
 	/** For JPA. */
@@ -97,7 +122,8 @@ public class PipelineRun {
 	}
 
 	private PipelineRun(RunKind kind, @Nullable Instant rangeFrom, @Nullable Instant rangeTo,
-			@Nullable List<Source> sources, @Nullable List<UUID> requestedPostIds, UUID requestedBy) {
+			@Nullable List<Source> sources, @Nullable List<UUID> requestedPostIds, UUID requestedBy,
+			@Nullable String deploymentId) {
 		this.kind = kind;
 		this.status = RunStatus.QUEUED;
 		this.rangeFrom = rangeFrom;
@@ -105,30 +131,44 @@ public class PipelineRun {
 		this.sources = sources == null ? null : sources.stream().map(Source::value).toList();
 		this.requestedPostIds = requestedPostIds;
 		this.requestedBy = Objects.requireNonNull(requestedBy, "requestedBy");
+		this.deploymentId = deploymentId;
 	}
 
-	/** A queued run over the posts of {@code sources} added between {@code from} and {@code to} (inclusive). */
-	public static PipelineRun range(Instant from, Instant to, List<Source> sources, UUID requestedBy) {
+	/**
+	 * A queued run over the posts of {@code sources} added between {@code from} and {@code to} (inclusive).
+	 *
+	 * @param deploymentId the deployment queueing it, {@code null} when unknown
+	 */
+	public static PipelineRun range(Instant from, Instant to, List<Source> sources, UUID requestedBy,
+			@Nullable String deploymentId) {
 		if (from.isAfter(to)) {
 			throw new IllegalArgumentException("range from " + from + " is after " + to);
 		}
 		if (sources.isEmpty()) {
 			throw new IllegalArgumentException("a range run needs at least one source");
 		}
-		return new PipelineRun(RunKind.RANGE, from, to, List.copyOf(sources), null, requestedBy);
+		return new PipelineRun(RunKind.RANGE, from, to, List.copyOf(sources), null, requestedBy, deploymentId);
 	}
 
-	/** A queued run over the leftovers of earlier runs. */
-	public static PipelineRun retry(UUID requestedBy) {
-		return new PipelineRun(RunKind.RETRY, null, null, null, null, requestedBy);
+	/**
+	 * A queued run over the leftovers of earlier runs.
+	 *
+	 * @param deploymentId the deployment queueing it, {@code null} when unknown
+	 */
+	public static PipelineRun retry(UUID requestedBy, @Nullable String deploymentId) {
+		return new PipelineRun(RunKind.RETRY, null, null, null, null, requestedBy, deploymentId);
 	}
 
-	/** A queued run over the given posts. */
-	public static PipelineRun posts(List<UUID> postIds, UUID requestedBy) {
+	/**
+	 * A queued run over the given posts.
+	 *
+	 * @param deploymentId the deployment queueing it, {@code null} when unknown
+	 */
+	public static PipelineRun posts(List<UUID> postIds, UUID requestedBy, @Nullable String deploymentId) {
 		if (postIds.isEmpty()) {
 			throw new IllegalArgumentException("a posts run needs at least one post");
 		}
-		return new PipelineRun(RunKind.POSTS, null, null, null, List.copyOf(postIds), requestedBy);
+		return new PipelineRun(RunKind.POSTS, null, null, null, List.copyOf(postIds), requestedBy, deploymentId);
 	}
 
 	public UUID getId() {
@@ -204,8 +244,48 @@ public class PipelineRun {
 		return skipped;
 	}
 
+	public int getLlmRetries() {
+		return llmRetries;
+	}
+
+	public int getFlexFallbacks() {
+		return flexFallbacks;
+	}
+
+	public @Nullable Instant getLastActivityAt() {
+		return lastActivityAt;
+	}
+
+	public @Nullable String getDeploymentId() {
+		return deploymentId;
+	}
+
+	public @Nullable InterruptionCause getInterruptionCause() {
+		return interruptionCause;
+	}
+
 	public @Nullable String getError() {
 		return error;
+	}
+
+	/**
+	 * Whether the run needs an admin's attention — the one rule for the notifications, the run list, the
+	 * run's page and the cron: it {@link RunStatus#FAILED failed} or was {@link RunStatus#INTERRUPTED
+	 * interrupted}, or it ended {@link RunStatus#PARTIAL partial} with a dead post or a post with a
+	 * technical error. A partial run whose only failures are posts with attempts left does not: the next
+	 * run retries them. A run that is queued, running or succeeded never does.
+	 */
+	public boolean needsAttention() {
+		return needsAttention(status, dead, processingErrors);
+	}
+
+	/** {@link #needsAttention()} of a run in {@code status} with these counters; package-private for tests. */
+	static boolean needsAttention(RunStatus status, int dead, int processingErrors) {
+		return switch (status) {
+			case FAILED, INTERRUPTED -> true;
+			case PARTIAL -> dead > 0 || processingErrors > 0;
+			case QUEUED, RUNNING, SUCCEEDED -> false;
+		};
 	}
 
 }

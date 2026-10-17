@@ -13,7 +13,9 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 import com.embabel.agent.core.AgentPlatform;
 import org.junit.jupiter.api.BeforeEach;
@@ -21,9 +23,12 @@ import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -49,6 +54,8 @@ import pl.szczurradar.api.llm.LlmRequest;
 import pl.szczurradar.api.llm.LlmResponse;
 import pl.szczurradar.api.llm.OutputMode;
 import pl.szczurradar.api.llm.transport.TransportException;
+import pl.szczurradar.api.notifications.RunNotifications;
+import pl.szczurradar.api.pipeline.assess.AssessmentDispatcher;
 import pl.szczurradar.api.pipeline.run.PipelineRun;
 import pl.szczurradar.api.pipeline.run.PipelineRunRepository;
 import pl.szczurradar.api.pipeline.run.RunKind;
@@ -69,12 +76,14 @@ import pl.szczurradar.api.user.UserRepository;
 
 /**
  * The whole run graph on the Embabel platform and Postgres: Wykop is a local server answering the
- * real, anonymized #gielda answers of 2026-10-01 (12 entries, 4 links), the LLM a scripted client.
- * The methods share one database and run in order.
+ * real, anonymized #gielda answers of 2026-10-01 (12 entries, 4 links), the LLM a scripted client. The
+ * admin is notified about the runs that need attention, as their end, a failure or a closing instance
+ * reports them. The methods share one database and run in order.
  */
 @SpringBootTest(properties = MigrateCommand.ENABLE_FLYWAY)
 @Import({ TestcontainersConfiguration.class, PipelineAgentIT.LocalWykop.class })
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
+@ExtendWith(OutputCaptureExtension.class)
 class PipelineAgentIT {
 
 	private static final JsonMapper MAPPER = JsonMapper.builder().build();
@@ -114,6 +123,9 @@ class PipelineAgentIT {
 	PostTransitions transitions;
 
 	@Autowired
+	RunNotifications notifications;
+
+	@Autowired
 	RunRecorder recorder;
 
 	@Autowired
@@ -130,6 +142,9 @@ class PipelineAgentIT {
 
 	@Autowired
 	SourceIngest sources;
+
+	@Autowired
+	AssessmentDispatcher dispatcher;
 
 	@Autowired
 	AgentPlatform agentPlatform;
@@ -165,7 +180,11 @@ class PipelineAgentIT {
 			.containsEntry("assessed_ok", 16)
 			.containsEntry("assessed_failed", 0)
 			.containsEntry("processing_errors", 0)
-			.containsEntry("skipped", 0);
+			.containsEntry("skipped", 0)
+			.containsEntry("llm_retries", 0)
+			.containsEntry("flex_fallbacks", 0)
+			.containsEntry("interruption_cause", null);
+		assertThat(run.get("last_activity_at")).isNotNull();
 		assertThat(jdbc.queryForList("SELECT step || ':' || status FROM pipeline_run_steps WHERE run_id = ?"
 				+ " ORDER BY started_at, id", String.class, runs.getFirst().getId())).containsExactly("fetch:succeeded",
 						"store:succeeded", "select:succeeded", "assess:succeeded", "summarize:succeeded");
@@ -217,6 +236,10 @@ class PipelineAgentIT {
 		assertThat(retry).containsEntry("status", "partial").containsEntry("processing_errors", 1);
 		assertThat((String) retry.get("error")).contains(leftover.toString(), "IllegalStateException");
 		assertThat(finished(runs.get(1).getId())).containsEntry("status", "succeeded").containsEntry("new_posts", 0);
+		// The technical error needs attention; the run that succeeded does not.
+		awaitClosed(runs.get(1).getId());
+		assertThat(notified(runs.get(0).getId())).isOne();
+		assertThat(notified(runs.get(1).getId())).isZero();
 		// One attempt per request: the range run did not take it again; no attempt was counted.
 		assertThat(post(leftover))
 			.containsEntry("stage", "stored")
@@ -245,8 +268,10 @@ class PipelineAgentIT {
 
 		assertThat(recovery.recover()).containsExactly(oldRun);
 
-		assertThat(run(oldRun).get("status"))
-			.isEqualTo("interrupted");
+		// No deployment ids here (neither the run's nor this instance's): a restart.
+		assertThat(run(oldRun)).containsEntry("status", "interrupted")
+			.containsEntry("interruption_cause", "restart")
+			.containsEntry("error", "interrupted: the application restarted");
 		assertThat(post(taken))
 			.containsEntry("stage", "stored")
 			.containsEntry("assessing_run_id", null);
@@ -289,6 +314,9 @@ class PipelineAgentIT {
 			assertThat((String) range.get("error")).isNotBlank();
 			assertThat(jdbc.queryForList("SELECT step || ':' || status FROM pipeline_run_steps WHERE run_id = ?"
 					+ " ORDER BY started_at, id", String.class, runs.getLast().getId())).containsExactly("fetch:failed");
+			// The admin is notified once the run is closed.
+			awaitClosed(runs.getLast().getId());
+			assertThat(notified(runs.getLast().getId())).isOne();
 		}
 		finally {
 			wykopDown = false;
@@ -297,6 +325,8 @@ class PipelineAgentIT {
 		List<PipelineRun> next = service.startRange(DAY, DAY, List.of(), admin);
 
 		assertThat(finished(next.getLast().getId())).containsEntry("status", "succeeded");
+		awaitClosed(next.getLast().getId());
+		assertThat(notified(next.getLast().getId())).isZero();
 	}
 
 	@Test
@@ -321,7 +351,7 @@ class PipelineAgentIT {
 
 	@Test
 	@Order(7)
-	void aStoppingInstanceInterruptsItsRunAndPutsItsPostsBack() throws InterruptedException {
+	void aStoppingInstanceInterruptsItsRunAndPutsItsPostsBack(CapturedOutput output) throws InterruptedException {
 		// Assessed by the model (not decided by the prefilter), so the client is called for it.
 		UUID post = jdbc.queryForObject("SELECT p.id FROM posts p WHERE p.stage = 'assessed' AND EXISTS"
 				+ " (SELECT 1 FROM assessments a WHERE a.post_id = p.id AND a.result_source = 'model')"
@@ -340,8 +370,8 @@ class PipelineAgentIT {
 			return response(VALID);
 		});
 		// A second instance of the service, as during a deployment overlap; the shared one keeps running.
-		PipelineRunService stopping = new PipelineRunService(runs, posts, sources, recorder, transitions, agentPlatform,
-				jdbcClient, transaction);
+		PipelineRunService stopping = new PipelineRunService(runs, posts, sources, recorder, transitions, notifications,
+				dispatcher, agentPlatform, jdbcClient, transaction, "deployment-stopping");
 		try {
 			UUID run = stopping.startPosts(List.of(post), admin).getFirst().getId();
 			assertThat(called.await(30, TimeUnit.SECONDS)).isTrue();
@@ -349,8 +379,28 @@ class PipelineAgentIT {
 
 			stopping.onClose();
 
-			assertThat(run(run).get("status")).isEqualTo("interrupted");
+			assertThat(run(run)).containsEntry("status", "interrupted")
+				.containsEntry("interruption_cause", "shutdown")
+				.containsEntry("error", "interrupted: the application stopped")
+				.containsEntry("deployment_id", "deployment-stopping");
+			// The step it was in is closed, not left running.
+			assertThat(steps(run)).containsExactly("select:succeeded", "assess:interrupted");
+			assertThat(jdbc.queryForObject("SELECT finished_at IS NOT NULL FROM pipeline_run_steps WHERE run_id = ?"
+					+ " AND step = 'assess'", Boolean.class, run)).isTrue();
 			assertThat(post(post)).containsEntry("stage", "stored").containsEntry("assessing_run_id", null);
+			// The admin is notified while the instance closes.
+			assertThat(notified(run)).isOne();
+
+			// Its queue thread stops waiting and leaves the run as onClose left it: no second close or report,
+			// which would race the database's shutdown.
+			awaitLog(output, "Pipeline run " + run + ": stopped waiting, the application is stopping");
+			long deadline = System.nanoTime() + Duration.ofSeconds(30).toNanos();
+			while (stopping.ownRuns().contains(run)) {
+				assertThat(System.nanoTime()).isLessThan(deadline);
+				pause();
+			}
+			// close() would log the run's end line.
+			assertThat(output.getAll()).doesNotContain("Pipeline run " + run + " (posts) ended interrupted in");
 		}
 		finally {
 			answered.countDown();
@@ -378,6 +428,155 @@ class PipelineAgentIT {
 			.containsEntry("assessment_attempts", 2)
 			.containsEntry("assessing_run_id", null);
 		assertThat(count("SELECT count(*) FROM assessments", null)).isEqualTo(assessments);
+	}
+
+	@Test
+	@Order(9)
+	void aRunCountsEachPostAsItIsAssessed() {
+		List<UUID> ids = modelAssessedPosts(2);
+		jdbc.update("UPDATE posts SET stage = 'stored' WHERE id IN (?, ?)", ids.get(0), ids.get(1));
+		// The first call answers at once (after 3 HTTP attempts and a flex fallback), the second waits.
+		AtomicInteger calls = new AtomicInteger();
+		CountDownLatch answered = new CountDownLatch(1);
+		answer(request -> {
+			if (calls.getAndIncrement() > 0) {
+				await(answered);
+			}
+			return response(VALID, 3, true);
+		});
+		try {
+			UUID run = service.startPosts(ids, admin).getFirst().getId();
+
+			// One post counted, the other one taken and waiting for its answer.
+			Map<String, Object> during = until(run, row -> (int) row.get("assessed_ok") == 1 && calls.get() == 2);
+			assertThat(during).containsEntry("status", "running")
+				.containsEntry("assessed_failed", 0)
+				.containsEntry("llm_retries", 2)
+				.containsEntry("flex_fallbacks", 1);
+			assertThat(during.get("last_activity_at")).isNotNull();
+			assertThat(steps(run)).containsExactly("select:succeeded", "assess:running");
+			assertThat(recorder.inFlight(run)).isEqualTo(1);
+
+			answered.countDown();
+
+			// Counted once each: the step adds no total at its end.
+			assertThat(finished(run)).containsEntry("status", "succeeded")
+				.containsEntry("assessed_ok", 2)
+				.containsEntry("llm_retries", 4)
+				.containsEntry("flex_fallbacks", 2);
+			assertThat(recorder.inFlight(run)).isZero();
+		}
+		finally {
+			answered.countDown();
+		}
+	}
+
+	@Test
+	@Order(10)
+	void aRunInterruptedWhileAssessingGetsNoFurtherStepAndLogsNoError(CapturedOutput output) {
+		UUID post = modelAssessedPosts(1).getFirst();
+		jdbc.update("UPDATE posts SET stage = 'stored' WHERE id = ?", post);
+		CountDownLatch called = new CountDownLatch(1);
+		CountDownLatch answered = new CountDownLatch(1);
+		answer(request -> {
+			called.countDown();
+			await(answered);
+			return response(VALID);
+		});
+		try {
+			UUID run = service.startPosts(List.of(post), admin).getFirst().getId();
+			await(called);
+
+			// A newer instance's recovery takes over while this one is still assessing (deployment overlap).
+			assertThat(recovery.recover()).containsExactly(run);
+			answered.countDown();
+
+			awaitLog(output, "Pipeline run " + run + " is no longer running here");
+			assertThat(run(run)).containsEntry("status", "interrupted").containsEntry("interruption_cause", "restart");
+			// The late worker neither reopened the closed step nor added the summarize step.
+			assertThat(steps(run)).containsExactly("select:succeeded", "assess:interrupted");
+			assertThat(output.getAll()).contains("Pipeline run " + run + " (posts) ended interrupted in")
+				.doesNotContain("Run " + run + " step summarize")
+				.doesNotContain("Exception in thread");
+			assertThat(output.getAll().lines().filter(line -> line.contains(" ERROR "))).isEmpty();
+		}
+		finally {
+			answered.countDown();
+		}
+	}
+
+	/** The admin's notifications about {@code runId}. */
+	private int notified(UUID runId) {
+		return jdbc.queryForObject("SELECT count(*) FROM notifications WHERE run_id = ? AND recipient_id = ?",
+				Integer.class, runId, admin);
+	}
+
+	/** Waits until the shared service has closed {@code runId}: its end was reported to the notifications. */
+	private void awaitClosed(UUID runId) {
+		long deadline = System.nanoTime() + Duration.ofSeconds(30).toNanos();
+		while (service.ownRuns().contains(runId)) {
+			if (System.nanoTime() > deadline) {
+				throw new AssertionError("run " + runId + " was never closed");
+			}
+			pause();
+		}
+	}
+
+	/** {@code limit} posts now {@code assessed} whose assessment was made by the model (so a run calls the client). */
+	private List<UUID> modelAssessedPosts(int limit) {
+		return jdbc.queryForList("SELECT p.id FROM posts p WHERE p.stage = 'assessed' AND EXISTS"
+				+ " (SELECT 1 FROM assessments a WHERE a.post_id = p.id AND a.result_source = 'model')"
+				+ " ORDER BY p.id LIMIT ?", UUID.class, limit);
+	}
+
+	/** The run's steps as {@code step:status}, in the order they started. */
+	private List<String> steps(UUID runId) {
+		return jdbc.queryForList("SELECT step || ':' || status FROM pipeline_run_steps WHERE run_id = ?"
+				+ " ORDER BY started_at, id", String.class, runId);
+	}
+
+	/** Waits until the run's row matches {@code condition} and returns it. */
+	private Map<String, Object> until(UUID runId, Predicate<Map<String, Object>> condition) {
+		long deadline = System.nanoTime() + Duration.ofSeconds(30).toNanos();
+		while (System.nanoTime() < deadline) {
+			Map<String, Object> run = run(runId);
+			if (condition.test(run)) {
+				return run;
+			}
+			pause();
+		}
+		throw new AssertionError("run " + runId + " never matched: " + run(runId));
+	}
+
+	/** Waits until the log has a line containing {@code text}. */
+	private static void awaitLog(CapturedOutput output, String text) {
+		long deadline = System.nanoTime() + Duration.ofSeconds(30).toNanos();
+		while (!output.getAll().contains(text)) {
+			if (System.nanoTime() > deadline) {
+				throw new AssertionError("the log never said: " + text);
+			}
+			pause();
+		}
+	}
+
+	private static void await(CountDownLatch latch) {
+		try {
+			assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
+		}
+		catch (InterruptedException ex) {
+			Thread.currentThread().interrupt();
+			throw new IllegalStateException(ex);
+		}
+	}
+
+	private static void pause() {
+		try {
+			Thread.sleep(100);
+		}
+		catch (InterruptedException ex) {
+			Thread.currentThread().interrupt();
+			throw new IllegalStateException(ex);
+		}
 	}
 
 	private Map<String, Object> post(UUID postId) {
@@ -416,8 +615,13 @@ class PipelineAgentIT {
 	}
 
 	private static LlmResponse response(String raw) {
-		return new LlmResponse(raw, Provider.GEMINI, "gemini-3.1-flash-lite", Channel.GEMINI, ServiceTier.DEFAULT, false,
-				null, OutputMode.JSON_SCHEMA, 100, 50, null, 1);
+		return response(raw, 1, false);
+	}
+
+	/** An answer after {@code attempts} HTTP attempts; after a refusal on the flex tier when {@code flexFallback}. */
+	private static LlmResponse response(String raw, int attempts, boolean flexFallback) {
+		return new LlmResponse(raw, Provider.GEMINI, "gemini-3.1-flash-lite", Channel.GEMINI, ServiceTier.DEFAULT,
+				flexFallback, null, OutputMode.JSON_SCHEMA, 100, 50, null, attempts);
 	}
 
 	private static String withTotal(String page, int total) {
