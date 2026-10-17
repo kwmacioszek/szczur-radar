@@ -1,22 +1,23 @@
 ---
 project: "Szczur Radar"
-version: 2
+version: 3
 status: draft # draft | active | locked
 created: 2026-09-27
 updated: 2026-10-17
 prd_version: 2
-main_goal: speed
-top_blocker: time # secondary: decisions (LLM contract, filter scope and signal decision resolved 2026-09-27 — PRD v2)
-milestone_id: mvp-wykop-signal-radar
-milestone_seq: 1
+main_goal: quality
+top_blocker: decisions # 5 decyzji produktowych z audytu (context/archive/2026-10-17-post-mvp-pipeline-audit/research.md, Open Questions); najdroższa: kanał alarmowy poza aplikacją (F-04)
+milestone_id: mvp-quality-reliability-hardening
+milestone_seq: 2
 milestone_status: open
 ---
 
 # Roadmap: Szczur Radar
 
-> Derived from `context/foundation/prd.md` (v2) + `context/foundation/llm-assessment/` (kontrakt oceny LLM V2 — `contract-v2.md`; V1 w archiwum) + `shape-notes.md` + `tech-stack-api.md` / `tech-stack-web.md` / `infrastructure.md` / `deploy-plan.md` + auto-researched codebase baseline.
-> Edit-in-place; archive when superseded.
+> Derived from (M-2) the user's milestone description + `context/map/repo-map.md` (mapa projektu, 2026-10-17) + `context/archive/2026-10-17-post-mvp-pipeline-audit/research.md` (audyt diagnostyczny pipeline'u i operacji, HEAD `5b6eabb`) + PRD v2 NFRs + auto-researched codebase baseline (z mapy i audytu). M-1 derived from `context/foundation/prd.md` (v2) + `context/foundation/llm-assessment/` + `shape-notes.md` + `tech-stack-api.md` / `tech-stack-web.md` / `infrastructure.md` / `deploy-plan.md`.
+> Edit-in-place; the next milestone continues this file. Archive only when an independent roadmap replaces it.
 > Slices below are listed in dependency order. The "At a glance" table is the index.
+> ID-y kontynuują numerację M-1 (F-04, S-08 …), bo `## Done` i issues GitHuba (`S-NN: …`) już używają F-01–F-03 i S-01–S-07.
 > v2 (2026-09-27): kontrakt oceny LLM V1 rozstrzyga PRD Open Question 2 → S-02 odblokowane; warstwa kontraktu wydzielona jako F-02; S-04 zablokowane decyzją o filtrowaniu po spółce.
 > v2.1 (2026-09-27): PRD v2 — filtr po spółce tekstowy, „sentyment” = stanowisko wobec celu, rozpoznawanie spółek i decyzja „wartościowy sygnał” poza MVP → S-04 odblokowane.
 > v2.2 (2026-10-01): kontrakt oceny LLM V2 (`assessment-contract-harness`, po pilotażach na prawdziwych postach) zastępuje V1 — wynik oceny to trafność, cele ze stanowiskiem autora, tezy/opinie/fakty/pytania/działania z cytatem, flagi niepewności; bez grafu argumentów. F-02 mierzy modele na zestawie wzorcowym zamiast 12 wymyślonych przypadków.
@@ -59,280 +60,298 @@ milestone_status: open
 
 > v2.22 (2026-10-16): S-06 (`pipeline-run-history-dashboard`) — Unknown rozstrzygnięte: sygnał awarii to powiadomienia w aplikacji dla adminów (dzwoneczek w nagłówku, strona przebiegu), bez pusha i e-maila; `partial` z samymi postami `failed` do ponowienia nie daje powiadomienia (PRD, doprecyzowanie NFR o sygnale awarii). W zakresie S-06 ostrzeżenie o braku postępu zastąpione strażnikiem, który kończy przebieg jako `failed` po `PIPELINE_STALL_TIMEOUT` (decyzja 2026-10-15).
 
+> v3 (2026-10-17): M-1 zamknięty (wszystkie F-01–F-03 i S-01–S-07 `done`). Otwarty M-2 „MVP Quality & Reliability Hardening” z opisu użytkownika i audytu `post-mvp-pipeline-audit`: fundament F-04 i wycinki S-08–S-19. Pozycja Parked „przebieg bez Embabel” przeszła do S-17. Nowe PRD niepotrzebne: M-2 utwardza istniejące NFR (m.in. sygnał awarii przebiegu, `prd.md:258`); wycinek, który zmieni ich rozumienie, dopisuje `> Doprecyzowanie` w PRD.
+
 ## Milestone
 
-**M-1: MVP — ocenione sygnały z Wykopu dla zaproszonych osób** — Status: open
+**M-2: MVP Quality & Reliability Hardening** — Status: open
 
-- **Intent:** Codzienny, automatyczny przepływ zamienia posty z Wykopu (#gielda) w ocenione przez LLM sygnały inwestycyjne, które zaproszeni, zalogowani użytkownicy przeglądają i filtrują w aplikacji webowej, a administrator zarządza dostępem przez CLI i widzi historię przebiegów.
-- **Source materials:** `context/foundation/prd.md` (v2); `context/foundation/llm-assessment/contract-v2.md` (V2 — kształt wejścia/wyjścia oceny LLM dla FR-004 / FR-011a)
-- **Done when:** every F-NN and S-NN below is `done` — czyli wszystkie cztery główne kryteria sukcesu PRD (`## Success Criteria` → Primary) są spełnione na produkcji.
-- **Scope anchors:** wszystkie wymagania konieczne (must-have) PRD: FR-001–FR-007, FR-009, FR-010, FR-011a, FR-012–FR-015, FR-018, FR-021, FR-026–FR-028, FR-030; historyjki US-01, US-02. Wymagania nice-to-have są odroczone (patrz `## Parked`).
+- **Intent:** Istniejące MVP działa niezawodnie i nie milczy: złe noce, awarie dostawców i błędne wdrożenia są widoczne dla operatora, nie niszczą danych ani nie blokują pracy, a testy chronią te ścieżki — zanim ruszy kolejna roadmapa funkcjonalna.
+- **Source materials:** opis użytkownika (kotwice poniżej); `context/map/repo-map.md`; `context/archive/2026-10-17-post-mvp-pipeline-audit/research.md` (ustalenia A1–A8, B1–B11, C1–C15, sekcje D–F); NFR z `context/foundation/prd.md` (v2).
+- **Done when:** every F-NN and S-NN below is `done`.
+- **Scope anchors** (z opisu: „poprawić niezawodność, bezpieczeństwo wdrożeń, jakość testów i obserwowalność istniejącego MVP przed rozpoczęciem kolejnej roadmapy funkcjonalnej”):
+  - MS-01: niezawodność — przebiegi, posty i powiadomienia nie gubią się ani nie utykają przy awariach dostawców, instancji i źródła.
+  - MS-02: bezpieczeństwo wdrożeń — merge do `main` nie wdroży czerwonego commita, nie zrestartuje produkcji po cichu i nie zablokuje kolejnych wdrożeń.
+  - MS-03: jakość testów — ścieżki awarii z audytu mają testy, a testy silnika są skupione i niezależne od kolejności.
+  - MS-04: obserwowalność — każda zła noc i każdy błąd, który wymaga reakcji, daje operatorowi jednoznaczny sygnał, nie wykrywany pośrednio przez brak danych.
 
 ## Vision recap
 
-Na Wykopie (#gielda) i Reddicie codziennie pojawiają się setki postów o inwestowaniu; wartościowe informacje giną w szumie, a indywidualny inwestor nie ma czasu przeglądać obu platform ręcznie. Ogólne agregatory (RSS, alerty słów kluczowych) nie rozumieją treści, więc Szczur Radar ma własny przepływ: pobiera posty, a LLM według zamkniętego kontraktu opisuje ich znaczenie — czy treść dotyczy inwestowania, jakich spółek lub tematów dotyczy, jakie stanowisko autor zajmuje wobec każdej z nich oraz jakie tezy, opinie, fakty, pytania i działania przedstawia (każde z dosłownym cytatem). MVP startuje od jednego źródła — Wykopu; Reddit jest odroczonym rozszerzeniem.
+Na Wykopie (#gielda) i Reddicie codziennie pojawiają się setki postów o inwestowaniu; wartościowe informacje giną w szumie, a indywidualny inwestor nie ma czasu przeglądać obu platform ręcznie. Ogólne agregatory (RSS, alerty słów kluczowych) nie rozumieją treści, więc Szczur Radar ma własny przepływ: pobiera posty, a LLM według zamkniętego kontraktu opisuje ich znaczenie — czy treść dotyczy inwestowania, jakich spółek lub tematów dotyczy, jakie stanowisko autor zajmuje wobec każdej z nich oraz jakie tezy, opinie, fakty, pytania i działania przedstawia (każde z dosłownym cytatem). MVP (M-1) dostarczył to dla Wykopu; M-2 utwardza je, zanim dojdą nowe źródła i funkcje.
 
 ## North star
 
-**S-02: Zalogowany użytkownik widzi chronologiczną listę postów z Wykopu ocenionych przez LLM** — to pierwszy moment, w którym widać, czy ocena LLM faktycznie oddziela sygnał od szumu; przy celu `speed` wszystko inne (filtry, harmonogram, dashboard) ma sens tylko wtedy, gdy to działa.
+**S-08: Operator dostaje sygnał, gdy przebieg nic nie pobrał albo pominął elementy, a etykieta świeżości się wtedy nie przesuwa** — to jedyne ustalenie audytu o wadze wysokiej i wprost łamie NFR „operator nie dowiaduje się o awarii pośrednio, przez brak nowych danych” (`prd.md:258`); przy celu `quality` dowodzi, że utwardzanie domyka luki, które dziś pozwalają produktowi milczeć.
 
-> „Gwiazda przewodnia” (north star) oznacza tu najmniejszy wycinek od początku do końca, którego udane dostarczenie potwierdza główną hipotezę produktu — dlatego stoi tak wcześnie, jak pozwalają jego warunki wstępne.
+> „Gwiazda przewodnia” (north star) oznacza tu najmniejszy wycinek od początku do końca, którego udane dostarczenie potwierdza cel kamienia milowego — dlatego stoi tak wcześnie, jak pozwalają jego warunki wstępne.
 
 ## At a glance
 
-| ID   | Change ID                      | Outcome (user can …)                                                                                                            | Prerequisites | PRD refs                                                                                                                                                                                 | Status   |
-| ---- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------- | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
-| F-01 | production-data-gate           | (foundation) produkcja jest gotowa na prawdziwe dane: limity kosztów, zweryfikowany restore, zapieczętowane sekrety             | —             | NFR (dane przechowywane bezterminowo; codzienna kopia sprawdzana odtworzeniem, od F-01), Open Question 4; guardrail kosztów LLM                                                          | done        |
-| F-03 | java-api-rewrite               | (foundation) backend w Javie obsługuje funkcje S-01 przez dotychczasowe API; sesje JDBC, migracje fix-forward i szkielet Embabel | S-01          | FR-012, FR-013, FR-014, FR-015, FR-026, NFR (każdy chroniony zasób wymaga uwierzytelnienia — komplet testów autoryzacji)                                                                 | done |
-| F-02 | assessment-contract-harness    | (foundation) kontrakt oceny LLM V2 jest egzekwowany kodem, a model domyślny spełnia progi jakości na zestawie wzorcowym | F-03          | FR-004, Open Question 2 (rozstrzygnięte przez kontrakt, obecnie V2); guardrail jakości danych z LLM (bez halucynacji)                                                                     | done        |
-| S-01 | admin-bootstrap-and-login      | operator tworzy pierwszego admina przez CLI; admin loguje się i wylogowuje; niezalogowany widzi tylko ekran logowania           | —             | FR-012, FR-013, FR-014, FR-015, FR-026, NFR (każdy chroniony zasób wymaga uwierzytelnienia — komplet testów autoryzacji), NFR (brak wglądu w dane cudzych kont)                          | done |
-| S-02 | first-assessed-wykop-feed      | zalogowany użytkownik widzi chronologiczną listę postów z Wykopu ocenionych przez LLM                                           | S-01, F-02    | US-01, FR-001, FR-003, FR-004, FR-005, FR-006, FR-007, NFR (surowy payload oddzielony od danych aplikacji, bezstratny i kompresowalny), NFR (nowe źródło = tylko pozyskanie + mapowanie) | done        |
-| S-03 | post-detail-view               | użytkownik otwiera widok szczegółowy posta: ocena, surowe dane pod przełącznikiem, link do oryginału                            | S-02          | US-01, FR-009, FR-010                                                                                                                                                                    | done |
-| S-04 | filter-by-assessment           | użytkownik filtruje listę po spółce/temacie (tekstowo) i stanowisku autora wobec niej                                           | S-02          | US-01, FR-011a                                                                                                                                                                           | done |
-| S-05 | daily-scheduled-run-freshness  | przepływ uruchamia się sam codziennie, a użytkownik widzi datę ostatniej udanej aktualizacji                                    | S-02, F-01    | US-01, FR-002, FR-030                                                                                                                                                                    | done        |
-| S-06 | pipeline-run-history-dashboard | admin widzi historię przebiegów (kiedy, status, wynik) i wyraźny sygnał nieudanego przebiegu                                    | S-05, S-01    | FR-021, FR-015, NFR (operator dostaje widoczny sygnał awarii przebiegu)                                                                                                                  | done |
-| S-07 | cli-user-onboarding            | admin tworzy konto przez CLI, zaproszony ustawia hasło przez jednorazowy link i się loguje                                      | S-01, F-03    | US-02, FR-018, FR-027, FR-028                                                                                                                                                            | done        |
+| ID   | Change ID                   | Outcome (user can …)                                                                                                   | Prerequisites | PRD refs                                                   | Status   |
+| ---- | --------------------------- | ---------------------------------------------------------------------------------------------------------------------- | ------------- | ---------------------------------------------------------- | -------- |
+| F-04 | out-of-app-alert-channel    | (foundation) jeden kanał alarmowy poza aplikacją, w limicie kosztów, do którego API i crony mogą wysłać sygnał          | —             | MS-04, NFR (sygnał awarii przebiegu); audyt C2, C11         | blocked  |
+| S-08 | empty-run-signal            | operator dostaje sygnał, gdy przebieg nic nie pobrał albo pominął elementy; etykieta świeżości wtedy stoi              | —             | MS-04, MS-01, NFR (sygnał awarii przebiegu); audyt C1, B5  | ready    |
+| S-09 | attempt-accounting          | awaria dostawcy LLM ani błąd naszego kodu nie zabija postów; post z powtarzalnym błędem technicznym ma limit           | —             | MS-01, MS-03; audyt B2, B3, B9, A1                          | ready    |
+| S-10 | llm-config-fail-fast        | operator dostaje błąd startu przy `LLM_TIMEOUT` bez jednostki; czasy są parsowane jedną regułą                        | —             | MS-01, MS-02; audyt B1, E                                   | ready    |
+| S-11 | stuck-run-self-heals        | przebieg po martwej instancji i post z wyścigu claim wracają do obiegu bez restartu API                                | —             | MS-01, MS-03; audyt A2, A4                                  | ready    |
+| S-12 | reliable-run-notifications  | admin dostaje każde należne powiadomienie o przebiegu, a stan kroków zgadza się ze statusem przebiegu                  | S-08          | MS-04, MS-01, NFR (sygnał awarii przebiegu); audyt A3, A5, A6 | proposed |
+| S-13 | missed-night-detection      | operator dowie się, że nocny przebieg albo backup nie wystartował, i widzi dni bez danych                              | F-04          | MS-04, NFR (sygnał awarii przebiegu, kopia bazy); audyt C2, C3 | proposed |
+| S-14 | safe-deploy-gate            | merge nie wdroży czerwonego commita, crony czekają na CI, po apply jest kontrola zdrowia, ręczne zmienne nie blokują wdrożeń | —        | MS-02, MS-03; audyt C4, C5, C6, C7                          | ready    |
+| S-15 | backup-check-completeness   | sprawdzenie kopii bazy obejmuje wszystkie tabele i odrzuca kopię pustej bazy                                           | —             | MS-01, MS-03, NFR (kopia sprawdzana odtworzeniem); audyt C9 | ready    |
+| S-16 | wykop-ingest-completeness   | stronicowanie Wykopu nie gubi elementów po cichu, a chwilowy błąd Wykopu nie zabija nocy                               | —             | MS-01, MS-03; audyt B5, B6                                  | ready    |
+| S-17 | pipeline-without-embabel    | przebieg działa bez Embabel, przerwanie dociera do oceny, a testy silnika są skupione i niezależne od kolejności       | S-09          | MS-01, MS-03; audyt E, A7, D                                | proposed |
+| S-18 | error-visibility            | błędy wymagające reakcji (ERROR, `/api/ready`, awaria ścieżki alarmowej) docierają do operatora; klucze nie trafiają do logów | F-04     | MS-04; audyt C10, C11, B7                                   | proposed |
+| S-19 | ops-docs-debt               | operator czyta prawdziwe runbooki i stan; zbędne zmienne IaC usunięte; otwarty dług operacyjny domknięty               | —             | MS-02, MS-04; audyt F, C12, C13                             | ready    |
 
 ## Streams
 
 Navigation aid — groups items that share a Prerequisites chain. Canonical ordering still lives in the dependency graph below; this table is the proposed reading order across parallel tracks.
 
-| Stream | Theme             | Chain                             | Note                                                                                                                |
-| ------ | ----------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| A      | Dostęp i konta    | `S-01` → `F-03` → `S-07`          | F-03 przenosi backend na Javę i otwiera całą dalszą pracę backendu; S-07 może potem iść równolegle ze strumieniami B i C. |
-| B      | Przegląd sygnałów | `F-03` → `F-02` → `S-02` → `S-03` → `S-04` | F-02 (faza 1 gotowa) wraca po F-03, już w Javie; S-03 i S-04 są wzajemnie równoległe.                               |
-| C      | Codzienny automat | `F-01` → `S-05` → `S-06`          | Dołącza do strumienia B w `S-05` (wymaga S-02); F-01 to praca operatorska, do zrobienia od razu, równolegle.        |
+| Stream | Theme                   | Chain                                          | Note                                                                                                   |
+| ------ | ----------------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| A      | Sygnał w aplikacji      | `S-08` → `S-12`                                | Gwiazda przewodnia; sygnały w dzwonku nie czekają na decyzję o kanale zewnętrznym (F-04).             |
+| B      | Kanał poza aplikacją    | `F-04` → `S-13` → `S-18`                        | Rusza po decyzji o kanale; przy celu `quality` fundament obserwowalności nie jest odkładany.          |
+| C      | Próby i silnik          | `S-09` → `S-17` · `S-10` · `S-11` · `S-16`     | `S-10`, `S-11`, `S-16` są niezależne i równoległe; `S-17` przepisuje silnik po nowej semantyce prób.  |
+| D      | Wdrożenia i dane        | `S-14` · `S-15` · `S-19`                       | Niezależne; `S-14` warto zrobić wcześnie, bo chroni każdy kolejny merge tego kamienia.                |
 
 ## Baseline
 
-What's already in place in the codebase as of `2026-09-27` (auto-researched + user-confirmed).
+What's already in place in the codebase as of `2026-10-17` (HEAD `5b6eabb`; z mapy projektu i audytu, potwierdzone przez użytkownika).
 Foundations below assume these are present and do NOT re-scaffold them.
 
-- **Frontend:** partial — SPA z neutralną stroną „W przygotowaniu” (`szczur-radar-web/src/App.vue`); brak routingu, klienta API, testów.
-- **Backend / API:** partial — tylko sondy `/api/health` i `/api/ready` (`szczur-radar-api/app/routes.py`); brak tras danych i administracyjnych.
-- **Data:** partial — Postgres działa na Railway, jest połączenie do bazy (`szczur-radar-api/app/database.py`, tylko `SELECT 1`); brak modeli, migracji, magazynu surowych payloadów.
-- **Auth:** absent — brak modelu użytkownika, sesji, ochrony tras, CLI.
-- **Deploy / infra:** present — infrastruktura jako kod (`.railway/railway.ts`), CI (`.github/workflows/ci.yml`), izolowane środowiska PR z własną bazą, PITR włączone; otwarte: limity kosztów i czysty restore drill (wymagają subskrypcji — `context/deployment/deploy-plan.md`), brak usługi harmonogramu.
-- **Observability:** absent — tylko healthchecki platformy i logi JSON proxy; brak rejestru przebiegów i sygnału awarii.
-- **Ocena LLM:** kontrakt — present (stan z 2026-09-27: V1 accepted; od 2026-10-01 zastąpiony przez `context/foundation/llm-assessment/contract-v2.md`); kod — absent (brak integracji z LLM, modeli kontraktu, walidatora, przypadków testowych).
+- **Frontend:** present — SPA Vue z feedem, filtrem, widokiem posta, `/admin`, stroną przebiegu i dzwonkiem (`szczur-radar-web/src/views/`, `src/components/NotificationBell.vue`).
+- **Backend / API:** present — Spring Boot 4, silnik przebiegów z kolejką, watchdogiem i odzyskiwaniem przy starcie (`szczur-radar-api/src/main/java/pl/szczurradar/api/pipeline/`).
+- **Data:** present — Postgres 18, Flyway V1–V9, RAW osobno (`raw_payloads`), warunkowe zapisy stanu (`pipeline/state/`).
+- **Auth:** present — sesje JDBC, deny-by-default, token crona dla `/internal/**` (`config/SecurityConfig.java`).
+- **Deploy / infra:** present z lukami — IaC (`.railway/railway.ts`), CI (`.github/workflows/ci.yml`), PR env, crony `pipeline-trigger` i `db-backup`; luki: `railway-config` bez czekania na testy, crony bez Wait for CI, brak kontroli zdrowia po apply (audyt C4–C7).
+- **Observability:** partial — logi tekstowe, powiadomienia admina w aplikacji (S-06), reguła Railway „deployment crashed” (ustawienie konta, poza IaC); brak kanału poza aplikacją, error trackera, metryk i sygnału „cron nie wystartował” (audyt C2, C11).
 
 ## Foundations
 
-### F-01: Bramka produkcyjnych danych
+### F-04: Kanał alarmowy poza aplikacją
 
-- **Outcome:** (foundation) produkcja jest gotowa na zbieranie prawdziwych danych:
-  - plan Railway Hobby z limitami kosztów $5 (alert) / $10 (twardy);
-  - wolumen Postgresa 5 GB;
-  - codzienna kopia logiczna (`pg_dump` z serwisu cron `db-backup`), sprawdzana pełnym odtworzeniem, w buckecie Railway (14 dziennych + 12 miesięcznych) i na NAS operatora (Synology Cloud Sync);
-  - restore drill przećwiczony do odpytywalnej bazy;
-  - limit $10/mies. na kluczu OpenRouter produkcji: wyczerpany limit zatrzymuje przebieg i nie zużywa prób postów;
-  - sekret LLM produkcji zapieczętowany i niedostępny w środowiskach PR; klucze Wykopu zapieczętowane na produkcji, ale te same klucze aplikacji świadomie używane w PR env (odstępstwo od pierwotnego zakresu, decyzja S-02 `first-assessed-wykop-feed`, 2026-10-09).
-
-  Kopie wolumenu i PITR Railway to plan Pro, dlatego zamiast „dziennej kopii wolumenu” jest `pg_dump` (decyzja 2026-10-11, `production-data-gate`).
-- **Change ID:** production-data-gate
-- **PRD refs:** NFR (dane przechowywane bezterminowo; codzienna kopia sprawdzana odtworzeniem, od F-01), Open Question 4; guardrail kosztów LLM
-- **Unlocks:** S-05 (codzienne zbieranie prawdziwych danych na produkcji); weryfikacja „odtworzenie backupu działa” wymagana przed S-05
+- **Outcome:** (foundation) jest jeden wybrany kanał alarmowy poza aplikacją (np. push, e-mail lub usługa nadzoru cyklicznych zadań), mieszczący się w limitach kosztów, do którego API i oba crony mogą wysłać sygnał, a jego działanie jest raz sprawdzone na produkcji. Tylko minimalne podłączenie: kontrakt wysyłki i jeden sygnał testowy; konkretne alarmy dodają S-13 i S-18.
+- **Change ID:** out-of-app-alert-channel
+- **PRD refs:** MS-04, NFR (sygnał awarii przebiegu); audyt C2, C11
+- **Unlocks:** S-13 (wykrycie nocy, w której cron lub backup w ogóle nie wystartował — aplikacja śpi, więc sama tego nie zgłosi), S-18 (błędy wymagające reakcji poza dzwonkiem)
 - **Prerequisites:** —
-- **Parallel with:** F-02, F-03, S-01, S-02, S-03, S-04, S-07
+- **Parallel with:** S-08–S-12, S-14–S-17, S-19
 - **Blockers:** —
 - **Unknowns:**
-  - ROZSTRZYGNIĘTE 2026-10-11: Czy czysty restore drill przejdzie po subskrypcji; jeśli nie — powrót do alternatywnej platformy z `infrastructure.md` (ryzyko nr 1). Przeszedł w PR env: test z aplikacją na odtworzonym dumpie i próba runbooka odtworzenia (`deploy-plan.md`, sekcja F-01). Bez zmiany platformy. — Owner: user. Block: no.
-  - ROZSTRZYGNIĘTE 2026-10-11 (Hobby nie ma kopii wolumenu; codzienny `pg_dump` sprawdzany odtworzeniem, bucket + NAS, `deploy-plan.md` F-01): Backup bazy: brak do czasu subskrypcji (2026-10-06, `api-docker-image`): PITR wyłączone, bucket usunięty (koszty; baza bez prawdziwych danych). Po subskrypcji: dzienna kopia wolumenu Railway (Daily, 6 dni) i test odtwarzania zakończony odpytywalną bazą; kopie giną przy wyczyszczeniu wolumenu i odtwarzają się tylko w tym samym środowisku (`deploy-plan.md`, sekcja `api-docker-image`). — Owner: user. Block: no.
-- **Risk:** Głównie praca operatorska plus narzędzie kopii (`tools/db-backup/`) i obsługa limitu OpenRouter. Kroki produkcyjne po merge'u są w runbooku `deploy-plan.md` (sekcja F-01): pierwszy przebieg kopii, test z aplikacją na dumpie produkcji i Cloud Sync na NAS. Sekwencjonowana na starcie równolegle, żeby nie stała się niespodziewaną blokadą S-05 tuż przed terminem.
-- **Status:** done
-
-### F-02: Egzekwowany kontrakt oceny LLM
-
-- **Outcome:** (foundation) kontrakt oceny LLM V2 (trafność, cele ze stanowiskiem autora, tezy/opinie/fakty/pytania/działania z cytatem, flagi niepewności) jest źródłem prawdy; wejście i wyjście są odwzorowane jako zamknięte modele odrzucające obce pola; walidator sprawdza reguły kontraktu (cytaty jako fragmenty po normalizacji białych znaków, referencje, reguły stanowiska) z jawną klasyfikacją błędów; wpisy bez treści są odsiewane bez wywołania modelu; model domyślny wybrany pomiarem GPT-6 Luna przez OpenRouter, DeepSeek Flash bezpośrednio u dostawcy i Gemini 3.1 Flash-Lite przez Google AI Studio spełnia progi jakości na zestawie wzorcowym prawdziwych postów oznaczonych przez użytkownika.
-- **Change ID:** assessment-contract-harness
-- **PRD refs:** FR-004, Open Question 2 (rozstrzygnięte przez kontrakt, obecnie V2); guardrail jakości danych z LLM (bez halucynacji)
-- **Unlocks:** S-02 (ocena każdego posta w przepływie); ścieżka weryfikacji „ocena spełnia kontrakt V2” wymagana przez S-02 i każdą przyszłą zmianę kontraktu (reguła zmiany: failing fixture → zmiana kontraktu → kod)
-- **Prerequisites:** F-03
-- **Parallel with:** F-01, S-07
-- **Blockers:** — (faza 1 — kontrakt V2 i dokumenty — zrobiona; F-03 zakończone; fazy p2–p4 wymagają przeplanowania w Javie, kod w Pythonie z PR #23 nie jest przenoszony)
-- **Unknowns:**
-  - ~~Wybór dostawcy i modelu LLM z obsługą ustrukturyzowanego wyjścia oraz akceptowalny koszt jednej oceny (powiązane z Open Roadmap Question 5).~~ Rozstrzygnięte 2026-10-06: GPT-6 Luna (`medium`) przez OpenRouter, ~$5,9/mies. (standard) lub ~$2,9/mies. (flex) przy 12 000 postów; ustawienie na produkcji po merge — runbook „F-02: model domyślny” w `context/deployment/deploy-plan.md`. — Owner: user. Block: no.
-  - ~~Jakość ustrukturyzowanego wyjścia przez Embabel (biblioteka wybrana w F-03) dla trzech kandydatów.~~ Zmierzone na zestawie wzorcowym (13 konfiguracji: 4 na pełnym wzorcu, 9 na próbce 30 postów, w tym GPT-6.1 Sol; prompt v2.5; `context/archive/2026-09-27-assessment-contract-harness/reports/gold-2026-10-06.md`): zgodność z kontraktem 96–100 %; żaden model nie spełnił pierwotnych progów kierunku (≥75 %) i sprzeczności (≤3 %) — użytkownik złagodził je do ≥70 % / ≤10 %, Luna spełnia wszystkie z małym zapasem (kierunek 73,0 %, sprzeczności 8,3 %). — Owner: user. Block: no.
-- **Risk:** Zamyka ryzyko jakości oceny przed budową przepływu: jeśli żaden model nie spełnia progów na zestawie wzorcowym, dowiadujemy się tego bez pobierania, zapisu i UI; celowo NIE obejmuje zapisu, pobierania z Wykopu ani widoku — te wchodzą w S-02.
-- **Status:** done
-
-### F-03: Backend w Javie
-
-- **Outcome:** (foundation) `szczur-radar-api` działa na Javie (Spring Boot) i obsługuje funkcje S-01 przez dotychczasowe API dla SPA — logowanie i wylogowanie, ochrona każdej trasy (komplet testów autoryzacji), CLI do utworzenia pierwszego admina oraz sondy `/api/health` i `/api/ready`. Sesje w ciasteczku `sr_session` są przechowywane przez Spring Session JDBC, przeżywają restart API, wygasają po 30 dniach bezczynności z odnawianiem ciasteczka i są unieważniane przez usuwanie sesji użytkownika. Migracje Flyway działają według fix-forward. Embabel rejestruje szkieletowego agenta i wybrany model z prawdziwym kluczem, bez wywołań LLM. Całość zweryfikowana na produkcji po wyczyszczeniu bazy i ponownym utworzeniu admina; kod Pythona usunięty, dokumenty stacku i roadmapa zaktualizowane.
-- **Change ID:** java-api-rewrite
-- **Decisions:** `context/archive/2026-10-01-java-api-rewrite/plan.md` i jego triage: bez migracji starych kont/sesji/hashy, bez `token_version`, bez powrotu do Pythona; awarie usuwane przez poprawkę Javy/konfiguracji i ponowne wdrożenie, PITR służy odzyskaniu danych. Jeden dostawca na uruchomienie: `LLM_API_PROVIDER` ∈ {`gemini`, `deepseek`, `openrouter`}, dokładne ID modelu w `LLM_MODEL`, prawdziwy klucz wybranego dostawcy w `LLM_API_KEY`; konfiguracja zapewniona od fazy 3 w CI i PR env, na produkcji przed merge. F-03 dostarcza szkielet Embabel, a logika i pomiary oceny pozostają w F-02.
-- **PRD refs:** FR-012, FR-013, FR-014, FR-015, FR-026, NFR (każdy chroniony zasób wymaga uwierzytelnienia — komplet testów autoryzacji), NFR (brak wglądu w dane cudzych kont)
-- **Unlocks:** F-02 (fazy p2–p4 w Javie), S-07; pośrednio cała dalsza praca backendu
-- **Prerequisites:** S-01
-- **Parallel with:** F-01
-- **Blockers:** —
-- **Unknowns:**
-  - ROZSTRZYGNIĘTE: zimny start po uśpieniu w PR env wyniósł ok. 10–11 s dla całej ścieżki web→API (Spring + Embabel ok. 6–8 s); pomiar w `context/deployment/deploy-plan.md`. Ewentualna optymalizacja to osobna decyzja. — Owner: user. Block: no.
-- **Risk:** Przepisanie uzasadnione możliwością rzetelnej oceny kodu Javy przez autora; zakres obejmuje funkcje S-01 i szkielet Embabel, bez przepisywania niedokończonej logiki F-02. Wyczyszczenie schematu przed merge rozpoczyna przerwę w logowaniu; nieudane wdrożenie Javy wydłuża ją do skutecznej naprawy, ponieważ powrót do Pythona jest wykluczony.
-- **Status:** done
-- **Verification:** produkcja po #26 (`7a406f2`) i #27 (`6bc15db`): V1/V2, `/api/ready` 200, admin utworzony przez CLI loguje się na publicznym adresie; [podsumowanie issue #25](https://github.com/kwmacioszek/szczur-radar/issues/25#issuecomment-5965517657). Poprawki przeglądu są śledzone oddzielnie w `context/archive/2026-10-01-java-api-rewrite/follow-ups/review-fixes.md`.
+  - Jaki kanał (push, e-mail, zewnętrzna usługa „dead-man's switch” — czyli taka, która alarmuje, gdy oczekiwany sygnał NIE przyjdzie) i czy dopuszczamy zewnętrzną usługę przy limitach $10 (Railway) i $10/mies. (OpenRouter)? PRD §Non-Goals wyklucza wymaganą wysyłkę e-maili do użytkowników, ale nie alarmów dla operatora. — Owner: user. Block: yes.
+- **Risk:** sekwencjonowane przed S-13 i S-18, bo bez kanału poza aplikacją nie da się zgłosić zdarzenia, którego aplikacja nie widzi (nieodpalony cron, uśpione API); ryzyko: nowa usługa zewnętrzna i jej sekret.
+- **Status:** blocked
 
 ## Slices
 
-### S-01: Pierwszy admin i logowanie
+### S-08: Pusty przebieg daje sygnał
 
-- **Outcome:** operator może utworzyć pierwsze konto administratora przez CLI; admin może zalogować się e-mailem i hasłem oraz wylogować; niezalogowany użytkownik trafia wyłącznie na ekran logowania.
-- **Change ID:** admin-bootstrap-and-login
-- **PRD refs:** FR-012, FR-013, FR-014, FR-015, FR-026, NFR (każdy chroniony zasób wymaga uwierzytelnienia — komplet testów autoryzacji), NFR (brak wglądu w dane cudzych kont)
+- **Outcome:** operator dostaje sygnał (powiadomienie w aplikacji i niezerowe wyjście crona), gdy przebieg nic nie pobrał albo pominął elementy o nieoczekiwanym kształcie; etykieta „Dane zaktualizowane” nie przesuwa się na takim przebiegu.
+- **Change ID:** empty-run-signal
+- **PRD refs:** MS-04, MS-01, NFR (sygnał awarii przebiegu); audyt C1, B5
 - **Prerequisites:** —
-- **Parallel with:** F-01, F-02
+- **Parallel with:** F-04, S-09, S-10, S-11, S-13–S-19
+- **Blockers:** —
+- **Unknowns:**
+  - Co jest „pustym” przebiegiem: 0 pobranych, 0 nowych czy udział pominiętych powyżej progu — i czy pusty dzień na tagu jest w ogóle możliwy (wtedy ostrzeżenie zamiast błędu)? — Owner: user. Block: no (rozstrzyga wywiad `/10x-plan`).
+- **Risk:** najpierw, bo to jedyne ustalenie H i łamie NFR; zmienia status przebiegu, `needsAttention`, odpowiedź `/internal`, wyjście crona i regułę świeżości naraz — kontrakt crona trzeba zmienić po obu stronach.
+- **Status:** ready
+
+### S-09: Awaria dostawcy nie zabija postów
+
+- **Outcome:** awaria dostawcy LLM (seria 5xx/timeoutów, mieszane odmowy flex) zatrzymuje przebieg bez zużywania prób postów, flex przechodzi na tryb standardowy także przy mieszanych błędach, błąd naszego kodu w kliencie nie udaje odmowy modelu, a post z powtarzalnym błędem technicznym ma limit i trafia na listę nieudanych.
+- **Change ID:** attempt-accounting
+- **PRD refs:** MS-01, MS-03; audyt B2, B3, B9, A1
+- **Prerequisites:** —
+- **Parallel with:** F-04, S-08, S-10–S-16, S-18, S-19
+- **Blockers:** —
+- **Unknowns:**
+  - Czy awaria dostawcy ma w ogóle zużywać próby, a jeśli nie — jaki próg bezpiecznika zatrzymuje przebieg (liczba kolejnych błędów, udział)? — Owner: user. Block: no.
+- **Risk:** zmienia model „próba = zapisany wynik `failed`” (`PostTransitions.Outcome`) i liczniki przebiegu — wspólna przyczyna czterech ustaleń, więc jedna zmiana zamiast czterech łat; przed S-17, żeby przepisany silnik niósł nową semantykę.
+- **Status:** ready
+
+### S-10: Zła konfiguracja LLM zatrzymuje start
+
+- **Outcome:** operator dostaje czytelny błąd startu (serwer i `migrate`), gdy `LLM_TIMEOUT` nie ma jednostki albo jest absurdalnie krótki; wszystkie ustawienia czasu w API są parsowane jedną regułą, a enumy dostawcy nie żyją w klasie konfiguracji.
+- **Change ID:** llm-config-fail-fast
+- **PRD refs:** MS-01, MS-02; audyt B1, E
+- **Prerequisites:** —
+- **Parallel with:** F-04, S-08, S-09, S-11–S-19
 - **Blockers:** —
 - **Unknowns:** —
-- **Risk:** Pierwszy wycinek wprowadził schemat bazy, migracje Alembic z działającym cofnięciem i wzorzec testów autoryzacji. F-03 zastępuje mechanizm migracji przez Flyway fix-forward; wymóg kompletności ochrony tras pozostaje obowiązujący dla dalszych zmian.
-- **Status:** done
+- **Risk:** mały, ale zamyka klasę incydentu z 2026-10-06 (`LLM_TIMEOUT=120` = 120 ms); nowa reguła może odrzucić wartość dziś ustawioną na produkcji — sprawdzić zmienne przed merge'em.
+- **Status:** ready
 
-### S-02: Pierwsze ocenione posty z Wykopu na liście
+### S-11: Utknięty przebieg sam wraca do obiegu
 
-- **Outcome:** zalogowany użytkownik widzi chronologiczną, stronicowaną listę postów z Wykopu (#gielda) z zadanego zakresu dat, bez duplikatów, każdy z oceną LLM zgodną z kontraktem V2 (trafność, cele ze stanowiskiem autora, tezy/opinie/fakty/pytania/działania z cytatem, flagi niepewności); przebieg jest uruchamiany ręcznie przez operatora.
-- **Change ID:** first-assessed-wykop-feed
-- **PRD refs:** US-01, FR-001, FR-003, FR-004, FR-005, FR-006, FR-007, NFR (surowy payload oddzielony od danych aplikacji, bezstratny i kompresowalny), NFR (nowe źródło = tylko pozyskanie + mapowanie)
-- **Prerequisites:** S-01, F-02
-- **Parallel with:** F-01, S-07
+- **Outcome:** przebieg `running` po instancji, która zniknęła bez zamknięcia, oraz post przejęty w wyścigu z odzyskiwaniem wracają do obiegu bez restartu API, więc nocny cron nie dostaje godzinami `409 pipeline_busy`.
+- **Change ID:** stuck-run-self-heals
+- **PRD refs:** MS-01, MS-03; audyt A2, A4
+- **Prerequisites:** —
+- **Parallel with:** F-04, S-08–S-10, S-12–S-19
 - **Blockers:** —
 - **Unknowns:**
-  - Gdzie gwiazda przewodnia jest weryfikowana z prawdziwymi wywołaniami Wykopu/LLM, zanim F-01 otworzy produkcję (lokalnie vs środowisko PR bez produkcyjnych sekretów). — Owner: user. Block: no.
-  - Warunki i limity dostępu do API Wykopu przy codziennym użyciu. — Owner: user. Block: no.
-  - Które typy zasobów Wykopu z #gielda wchodzą do MVP (wpis → `post`, znalezisko → `link`); komentarze są poza zakresem (PRD §Non-Goals), mimo że kształt wejścia kontraktu je obsługuje. — Owner: user. Block: no.
-- **Risk:** Wciąż największy wycinek (pobranie, deduplikacja, ocena, zapis z pochodzeniem oceny, lista), ale ryzyko jakości oceny przeszło do F-02, więc tu zostaje integracja; jeśli `/10x-plan` uzna go za zbyt szeroki, może rozbić go na kilka zmian.
-- **Status:** done
+  - Jak długo Railway kieruje ruch do starej instancji po starcie nowej i jakie jest okno SIGTERM→SIGKILL? — Owner: operator. Block: no (plan może przyjąć ostrożne założenie).
+- **Risk:** dotyka kolejki i odzyskiwania, które działają dziś przy jednej instancji; scenariusze trudne do odtworzenia bez testu na bazie — test wyścigu jest częścią wycinka.
+- **Status:** ready
 
-### S-03: Widok szczegółowy posta
+### S-12: Powiadomienia o przebiegach nie giną
 
-- **Outcome:** użytkownik może otworzyć post i zobaczyć czytelną, przetworzoną ocenę (trafność, cele ze stanowiskiem autora, tezy/opinie/fakty/pytania/działania z dosłownym cytatem, flagi niepewności), surowe dane źródłowe pod opcjonalnym przełącznikiem oraz link do oryginału na Wykopie.
-- **Change ID:** post-detail-view
-- **PRD refs:** US-01, FR-009, FR-010
-- **Prerequisites:** S-02
-- **Parallel with:** F-01, S-04, S-05, S-06, S-07
+- **Outcome:** admin dostaje każde należne powiadomienie o przebiegu także po chwilowym błędzie bazy, decyzja „wymaga uwagi” zgadza się z wynikiem przebiegu, a krok oceny nie jest `succeeded` w przebiegu `failed`.
+- **Change ID:** reliable-run-notifications
+- **PRD refs:** MS-04, MS-01, NFR (sygnał awarii przebiegu); audyt A3, A5, A6
+- **Prerequisites:** S-08
+- **Parallel with:** F-04, S-09–S-11, S-13–S-19
 - **Blockers:** —
 - **Unknowns:** —
-- **Risk:** Pierwszy odczyt surowego payloadu przez aplikację — sprawdza w praktyce, że oddzielny magazyn surowych danych z S-02 daje bezstratny widok; struktura oceny V2 (cele ze stanowiskiem, tezy z cytatem, flagi niepewności) wymaga czytelnej prezentacji obok surowego posta — bez grafu argumentów.
-- **Status:** done
+- **Risk:** po S-08, bo ten dodaje nowy powód powiadomienia i zmienia `needsAttention`; obie zmiany w tym samym miejscu naraz dałyby konflikt.
+- **Status:** proposed
 
-### S-04: Filtrowanie po ocenie LLM
+### S-13: Brakująca noc nie przechodzi niezauważona
 
-- **Outcome:** użytkownik może zawęzić listę postów po spółce/temacie (dopasowanie tekstowe do fragmentu wskazującego cel i rodzaju celu) oraz po stanowisku autora wobec tego celu (np. pozytywne / negatywne); brak wyników pokazuje czytelny stan pusty.
-- **Change ID:** filter-by-assessment
-- **PRD refs:** US-01, FR-011a
-- **Prerequisites:** S-02
-- **Parallel with:** F-01, S-03, S-05, S-06, S-07
+- **Outcome:** operator dostaje alarm przez kanał z F-04, gdy nocny przebieg albo backup nie wystartował lub nie zgłosił końca na czas, a dni bez pobranych danych są widoczne (lub uzupełniane).
+- **Change ID:** missed-night-detection
+- **PRD refs:** MS-04, NFR (sygnał awarii przebiegu, kopia bazy); audyt C2, C3
+- **Prerequisites:** F-04
+- **Parallel with:** S-08–S-12, S-14–S-19
+- **Blockers:** —
+- **Unknowns:**
+  - Czy automatycznie uzupełniać dni starsze niż D-2, czy tylko je pokazywać i zostawić ręczny przebieg zakresu adminowi? — Owner: user. Block: no.
+- **Risk:** aplikacja i crony nie mogą same zgłosić, że się nie uruchomiły — dlatego zależy od kanału zewnętrznego; obejmuje też synchronizację NAS → Google Drive tylko wtedy, gdy kanał to umożliwia.
+- **Status:** proposed
+
+### S-14: Bezpieczna bramka wdrożeń
+
+- **Outcome:** merge do `main` nie wdroży commita z czerwonymi testami (IaC stosowane dopiero po testach), crony czekają na CI, po apply i deployu jest automatyczna kontrola zdrowia produkcji, a zmienna ustawiona ręcznie nie blokuje kolejnych wdrożeń; logika bramki ma testy.
+- **Change ID:** safe-deploy-gate
+- **PRD refs:** MS-02, MS-03; audyt C4, C5, C6, C7
+- **Prerequisites:** —
+- **Parallel with:** F-04, S-08–S-13, S-15–S-19
+- **Blockers:** —
+- **Unknowns:**
+  - Czy deploy wywołany przez `railway config apply` czeka na Wait for CI (audyt C4)? — Owner: operator (żywy Railway). Block: no (kolejność jobów w CI naprawia to niezależnie od odpowiedzi).
+- **Risk:** zmienia CI, który bramkuje każdy deploy — błąd tu może zatrzymać wszystkie wdrożenia; warto wcześnie, bo chroni każdy kolejny merge tego kamienia (lekcje Railway IaC w `lessons.md`).
+- **Status:** ready
+
+### S-15: Kopia bazy sprawdzana w całości
+
+- **Outcome:** codzienne sprawdzenie kopii bazy zna wszystkie tabele z migracji (także `activation_tokens` i `notifications`) i odrzuca kopię bazy, która jest podejrzanie pusta, zanim wyprze dobre kopie z retencji.
+- **Change ID:** backup-check-completeness
+- **PRD refs:** MS-01, MS-03, NFR (kopia sprawdzana odtworzeniem); audyt C9
+- **Prerequisites:** —
+- **Parallel with:** F-04, S-08–S-14, S-16–S-19
 - **Blockers:** —
 - **Unknowns:** —
-- **Risk:** Filtr tekstowy bez rozpoznawania spółek (PRD v2) oznacza, że „CDR” i „CD Projekt” mogą dawać różne wyniki — świadomie przyjęte w MVP; stanowisko jest per cel, więc filtr musi łączyć cel i stanowisko tego samego celu, a nie dowolnego celu w poście.
-- **Status:** done
+- **Risk:** mały; dotyka jedynej kopii danych — zmiana musi przejść `db-backup-test` i jeden przebieg w PR env (`BACKUP_IN_ANY_ENVIRONMENT`).
+- **Status:** ready
 
-### S-05: Codzienny automatyczny przebieg i świeżość danych
+### S-16: Wykop nie gubi postów po cichu
 
-- **Outcome:** przepływ uruchamia się sam codziennie o ustalonej godzinie na produkcji, a użytkownik widzi nad listą datę i godzinę ostatniej UDANEJ aktualizacji danych.
-- **Change ID:** daily-scheduled-run-freshness
-- **PRD refs:** US-01, FR-002, FR-030
-- **Prerequisites:** S-02, F-01
-- **Parallel with:** S-03, S-04, S-07
+- **Outcome:** pobieranie z Wykopu wykrywa niekompletne stronicowanie (zamiast kończyć się „kompletne” przy brakach), a chwilowy błąd Wykopu (429, 5xx, transport) jest ponawiany, zamiast kończyć całą noc `failed`.
+- **Change ID:** wykop-ingest-completeness
+- **PRD refs:** MS-01, MS-03; audyt B5, B6
+- **Prerequisites:** —
+- **Parallel with:** F-04, S-08–S-15, S-17–S-19
 - **Blockers:** —
 - **Unknowns:**
-  - ROZSTRZYGNIĘTE 2026-10-12 (codziennie o 00:30 UTC, czyli 01:30 zimą i 02:30 latem w Warszawie, zawsze po północy; zwykły przebieg kończy się przed kopią bazy o 02:00 UTC; zakres D-2…D-1 czasu warszawskiego): Godzina uruchomienia i domyślny zakres dat/godzin pobierania dla przebiegu dziennego. — Owner: user. Block: no.
-  - ROZSTRZYGNIĘTE 2026-10-12 (zakładka: przebieg dzienny pobiera D-2 drugi raz; posty już zapisane nie kosztują wywołań LLM, tylko ok. 7 zapytań do Wykopu): Kompletność dnia: stronicowanie wyszukiwarki Wykopu może pominąć wpis, gdy między stronami coś zniknie (`WykopRepository.search` liczy pobrane do `total`), a dociąga go dopiero ponowny przebieg tego samego dnia (deduplikacja pomija resztę). Przebieg dzienny potrzebuje zakładki (np. ponownie poprzedni dzień) albo drugiego przejścia — przegląd S-02, F9 (2026-10-09). — Owner: user. Block: no.
-  - ROZSTRZYGNIĘTE 2026-10-12 (`partial` się liczy: etykieta pokazuje koniec przebiegu RANGE, zaplanowanego lub ręcznego, zakończonego `succeeded` albo `partial` — spośród nich tego z najdalej sięgającym zakresem, a z nich najpóźniej zakończonego (przegląd S-05, F4: przeliczenie starszych dni nie przesuwa daty); `failed` i `interrupted` nie zmieniają daty; PRD, doprecyzowanie FR-030): Jak traktować przebieg, w którym część ocen nie przeszła walidacji kontraktu (udany, częściowy czy nieudany dla etykiety świeżości). — Owner: user. Block: no.
-  - ROZSTRZYGNIĘTE 2026-10-12 (serwis cron Railway `pipeline-trigger`, `tools/pipeline-trigger/`, budzi API przez sieć prywatną i woła `POST /internal/pipeline-runs/daily` z tokenem `PIPELINE_TRIGGER_TOKEN`. `/internal/**` jest poza proxy Caddy, bezstanowe i tylko na token; zleceniodawcą jest konto systemowe bez logowania. Start idzie tym samym kodem co przycisk admina, z 409 przy trwającym przebiegu. Cron czeka na wynik i kończy się błędem przy `failed`/`interrupted`, a Railway powiadamia operatora, jeśli konto ma regułę „deployment crashed”. Odzyskiwanie po starcie API działa przed otwarciem portu. Osobnego workera nie ma: pipeline zostaje w procesie API. Szczegóły: `deploy-plan.md`, sekcja S-05): Sposób uruchamiania (zajawka z `api-docker-image`, 2026-10-04): użytkownik nie chce, żeby cron startował kontener z obrazem API. Kandydat: mały serwis cron Railway (obraz z `curl`) wysyła `POST` przez sieć prywatną do wewnętrznego endpointu API z tokenem; API odpowiada `202` i uruchamia pipeline w tle (zapytanie z sieci prywatnej budzi uśpione API). Do rozstrzygnięcia: uwierzytelnianie tokenem obok sesji (`SecurityConfig`, `AuthorizationCompletenessIT`), ochrona przed równoległym przebiegiem, przerwanie przebiegu przez deploy API, wspólny endpoint z ręcznym uruchomieniem (FR-022). Od S-02 (`first-assessed-wykop-feed`, 2026-10-09) pipeline już działa w procesie API, uruchamiany przez admina (`POST /api/admin/pipeline-runs`, kolejka, jeden przebieg naraz, odzyskiwanie po restarcie), a reguła o niezależności od cyklu życia API jest zastąpiona w `REPOSITORY_GUIDELINES.md` § Deployment, `infrastructure.md` i `deploy-plan.md`; S-05 rozstrzyga tylko wyzwalacz dzienny. `@Scheduled` w API odpada przy `sleepApplication: true`. — Owner: user. Block: no.
-- **Risk:** Wprowadza zapis każdego przebiegu (potrzebny do etykiety świeżości) oraz sprawdzenie zgodności wersji schematu przed zapisem — chroni przed scenariuszem z pre-mortem w `infrastructure.md`, w którym automat po cichu zapisuje uszkodzone rekordy.
-  - Poprawka (2026-10-12): zapis każdego przebiegu istnieje od S-02 (`pipeline_runs`). Sprawdzenia wersji schematu nie ma i nie będzie: scenariusz z pre-mortem zakładał crona zbudowanego ze starszego commita, a pipeline działa w procesie API, z obrazu, którego pre-deploy `migrate` stosuje migracje przed startem. Cron tylko wywołuje API i nie pisze do bazy. Zostaje okno nakładania się deployu (stara instancja kończy przebieg na nowym schemacie); pokrywa je zasada fix-forward: migracja musi być zgodna z poprzednią wersją kodu (`infrastructure.md`, rejestr ryzyk). Ryzyko S-05 to teraz budzenie uśpionego API przez sieć prywatną i przerwanie nocnego przebiegu przez deploy (okno bez merge'a ok. 00:30–01:30 UTC).
-- **Status:** done
+  - Czy wyszukiwarka Wykopu zwraca usunięte elementy i w jakim kształcie? — Owner: team. Block: no (do zbadania w `/10x-research` na prawdziwych odpowiedziach).
+- **Risk:** zmienia źródło, ale nie silnik (zgodnie z NFR „nowe źródło = tylko pozyskanie + mapowanie”); ponowienia nie mogą przekroczyć limitów Wykopu ani progu watchdoga.
+- **Status:** ready
 
-### S-06: Dashboard historii przebiegów dla admina
+### S-17: Przebieg bez Embabel
 
-- **Outcome:** admin widzi historię przebiegów (data/godzina, status, wynik) i jednoznaczny sygnał nieudanego lub częściowo nieudanego przebiegu; użytkownik z rolą `user` nie ma do tego dostępu.
-- **Change ID:** pipeline-run-history-dashboard
-- **PRD refs:** FR-021, FR-015, NFR (operator dostaje widoczny sygnał awarii przebiegu)
-- **Prerequisites:** S-05, S-01
-- **Parallel with:** S-03, S-04, S-07
+- **Outcome:** przebieg pipeline'u działa jako zwykła sekwencja kroków bez Embabel, przerwanie i watchdog docierają do oceny bez „zombie” akcji, a testy silnika są skupione (zapisy stanu na bazie, logika bez Springa) i niezależne od kolejności.
+- **Change ID:** pipeline-without-embabel
+- **PRD refs:** MS-01, MS-03; audyt E, A7, D
+- **Prerequisites:** S-09
+- **Parallel with:** F-04, S-08, S-10–S-16, S-18, S-19
 - **Blockers:** —
 - **Unknowns:**
-  - ROZSTRZYGNIĘTE 2026-10-16 (powiadomienia w aplikacji dla adminów: dzwoneczek w nagłówku z liczbą nieprzeczytanych i strona przebiegu `/admin/runs/:id`; bez pusha i e-maila. Powiadomienie daje przebieg `failed`, `interrupted` oraz `partial` z martwym postem albo błędem technicznym; `partial` z samymi postami `failed` do ponowienia go nie daje, bo ponawia je kolejny przebieg. Kody wyjścia crona bez zmian; PRD, doprecyzowanie NFR o sygnale awarii; `deploy-plan.md`, sekcja S-06): Czy dashboard wystarcza jako „jednoznaczny, widoczny sygnał” awarii, czy potrzebne jest aktywne powiadomienie operatora. — Owner: user. Block: no.
-- **Risk:** Pierwsza funkcja wyłącznie dla admina — weryfikuje rozdział ról na prawdziwej trasie; bez niej automat z S-05 działa bez nadzoru.
-  - Dopisek (2026-10-13, przegląd S-05, F3): odzyskiwanie przy starcie API (`PipelineStartupRecovery`) oznacza jako `interrupted` każdy przebieg `queued`/`running`, także ten, który trwa jeszcze w starym kontenerze podczas deployu. S-05 naprawiło tylko wyścig z żądaniem budzącym API. Przed tym chroni dziś wyłącznie reguła „bez merge'a ok. 00:30–01:30 UTC”. Przebieg przerwany deployem dashboard powinien pokazywać jako przerwany przez wdrożenie, a nie jak zwykłą awarię; trwałe rozwiązanie (np. właściciel przebiegu po instancji) to osobna decyzja.
-  - Dopisek (2026-10-13, pierwszy przebieg crona na produkcji; decyzja użytkownika: hardening monitorowania): trwającego przebiegu nie da się dziś obserwować bez czytania bazy produkcyjnej. Uruchomiony ręcznie przebieg RETRY stał w kroku `assess` ponad 7 minut bez żadnego śladu:
-    - `trigger.sh` loguje tylko start i zmiany statusu;
-    - API nie loguje pojedynczych wywołań LLM;
-    - panel Railway nie pokazał nawet linii startowych crona, bo zaczyna widok od „Starting Container”.
+  - Wyjąć Embabel tylko z przebiegu czy z całego API (autokonfiguracja dostawców, `AssessorAgent`, wymóg `LLM_*` w `migrate`) — i zmiana decyzji w `tech-stack-api.md`? — Owner: user. Block: no (rozstrzyga research zmiany; dawna pozycja Parked z plan-review S-06).
+- **Risk:** największa zmiana kamienia — przepisuje rdzeń, który działa na produkcji; po S-09, żeby nie przepisywać semantyki prób dwa razy; wymaga pełnej weryfikacji w PR env z przerwaniem przez deploy.
+- **Status:** proposed
 
-    Zakres do S-06:
-    - postęp trwającego przebiegu w `/admin`: bieżący krok, czas od startu, postęp oceny (gotowe / nieudane / w toku z N), próby, ponowienia i powroty flex → standard, czas ostatniej aktywności;
-    - ostrzeżenie, gdy przebieg nie robi postępu dłużej niż X minut; zmienione 2026-10-15 (decyzja użytkownika przy planie S-06): zamiast ostrzeżenia strażnik w API kończy jako `failed` przebieg bez postępu dłużej niż `PIPELINE_STALL_TIMEOUT` (domyślnie najdłuższe pojedyncze wywołanie LLM + 5 min, co najmniej 15 min; na produkcji 39 min), oddaje jego posty, zwalnia kolejkę i daje adminom powiadomienie;
-    - linia postępu w logu API (np. co N postów lub co minutę) i okresowy heartbeat crona z krokiem i postępem.
-- **Status:** done
+### S-18: Błędy wymagające reakcji docierają do operatora
 
-### S-07: Onboarding użytkownika przez CLI
-
-- **Outcome:** admin może przez CLI utworzyć konto z rolą i dostać jednorazowy, wygasający link aktywacyjny; zaproszony może raz ustawić hasło i się zalogować; operator może wygenerować nowy link (unieważniając poprzedni) i odzyskać dostęp admina tym samym mechanizmem.
-- **Change ID:** cli-user-onboarding
-- **PRD refs:** US-02, FR-018, FR-027, FR-028
-- **Prerequisites:** S-01, F-03
-- **Parallel with:** F-01, F-02, S-02, S-03, S-04, S-05, S-06
+- **Outcome:** błędy wymagające reakcji — linie ERROR (odzyskiwanie, watchdog, zamykanie przebiegu, nieudane powiadomienie), nieudane `/api/ready` z przyczyną w logu — docierają do operatora przez kanał z F-04, a łańcuch przyczyn wyjątków dostawców nie wynosi kluczy do logów.
+- **Change ID:** error-visibility
+- **PRD refs:** MS-04; audyt C10, C11, B7
+- **Prerequisites:** F-04
+- **Parallel with:** S-08–S-17, S-19
 - **Blockers:** —
 - **Unknowns:**
-  - ROZSTRZYGNIĘTE 2026-10-12 (`cli-user-onboarding`): Czas ważności linku aktywacyjnego (PRD sugeruje np. 24h). Domyślnie 12 h; operator zmienia go parametrem wdrożenia `ACTIVATION_LINK_TTL` (z jednostką, od `1m` do `7d`; `deploy-plan.md`, sekcja S-07). — Owner: user. Block: no.
-- **Risk:** Niezależny od potoku — dobry kandydat do równoległej pracy agenta przy ograniczonym czasie; bez niego MVP ma tylko jednego użytkownika.
-- **Status:** done
+  - Error tracker (zewnętrzna usługa) czy alarm z logów przez kanał F-04 — i jaki koszt jest akceptowalny? — Owner: user. Block: no (wynika z decyzji F-04).
+- **Risk:** łatwo zalać operatora alarmami — każdy alarm musi wymagać reakcji; maskowanie sekretów w logach to osobne, łatwe do pominięcia ryzyko.
+- **Status:** proposed
+
+### S-19: Dokumenty operatora mówią prawdę
+
+- **Outcome:** operator czyta aktualne runbooki i stan: `deploy-plan.md` bez nieaktualnych statusów (S-02, S-04, S-06) i linków do przeniesionych zmian, prawdziwe pomiary JVM, `infrastructure.md` bez LangGraph; zbędne zmienne IaC (`RAILPACK_JDK_VERSION`, `DATABASE_URL`, `JWT_SECRET`) usunięte bez czerwonej bramki; ostrzeżenia Hikari (#36) rozstrzygnięte; nieaktualne issues (#51) zamknięte.
+- **Change ID:** ops-docs-debt
+- **PRD refs:** MS-02, MS-04; audyt F, C12, C13
+- **Prerequisites:** —
+- **Parallel with:** F-04, S-08–S-18
+- **Blockers:** —
+- **Unknowns:** —
+- **Risk:** niski; usunięcie zmiennych wymaga kolejności „najpierw operator w Railway, potem plik”, inaczej bramka odmówi `variable.delete`; `context/archive/` zostaje nietknięte (archiwum jest niezmienne).
+- **Status:** ready
 
 ## Backlog Handoff
 
-| Roadmap ID | Change ID                      | Suggested issue title                                                                          | Ready for `/10x-plan` | Notes                                                                            |
-| ---------- | ------------------------------ | ---------------------------------------------------------------------------------------------- | --------------------- | -------------------------------------------------------------------------------- |
-| F-01       | production-data-gate           | Bramka produkcyjnych danych: subskrypcja, limity, restore drill, sekrety                       | yes                   | Praca operatorska; zrób równolegle                                               |
-| F-02       | assessment-contract-harness    | Kontrakt oceny LLM V2: modele, walidator, zestaw wzorcowy i wybór modelu                        | no                    | Faza 1 gotowa; F-03 zakończone, p2–p4 do przeplanowania w Javie (PR #23 zamknięty); odblokowuje gwiazdę przewodnią S-02 |
-| F-03       | java-api-rewrite               | Backend w Javie: API S-01, sesje JDBC i szkielet Embabel                                       | — (done)              | Produkcja zweryfikowana po #26 i #27; issue #25 zamknięte. Poprawki przeglądu: `context/archive/2026-10-01-java-api-rewrite/follow-ups/review-fixes.md` |
-| S-01       | admin-bootstrap-and-login      | Pierwszy admin przez CLI + logowanie/wylogowanie + ochrona tras                                | —                     | Wdrożone na produkcji 2026-09-29 (PR #13, #21); zarchiwizowane 2026-09-29 → `context/archive/2026-09-27-admin-bootstrap-and-login/` |
-| S-02       | first-assessed-wykop-feed      | Lista postów z Wykopu ocenionych przez LLM (gwiazda przewodnia)                                | no                    | Po S-01 i F-02                                                                   |
-| S-03       | post-detail-view               | Widok szczegółowy posta z oceną, surowymi danymi i linkiem do oryginału                        | —                     | Wdrożone na produkcji 2026-10-13 (PR #53, `4fdd51a`; issue #16 zamknięte); zarchiwizowane 2026-10-13 → `context/archive/2026-10-12-post-detail-view/` |
-| S-04       | filter-by-assessment           | Filtrowanie listy po spółce/temacie i stanowisku autora                                        | no                    | Po S-02                                                                          |
-| S-05       | daily-scheduled-run-freshness  | Codzienny automatyczny przebieg + etykieta świeżości danych                                    | no                    | Po S-02 i F-01                                                                   |
-| S-06       | pipeline-run-history-dashboard | Dashboard admina: historia przebiegów i sygnał awarii                                          | no                    | Po S-05                                                                          |
-| S-07       | cli-user-onboarding            | Tworzenie kont przez CLI + aktywacja linkiem + recovery admina                                 | —                     | Wdrożone na produkcji 2026-10-13 (PR #49, `54c4fc2`; issue #20 zamknięte); zarchiwizowane 2026-10-13 → `context/archive/2026-10-12-cli-user-onboarding/` |
+| Roadmap ID | Change ID                   | Suggested issue title                                                     | Ready for `/10x-plan` | Notes                                                    |
+| ---------- | --------------------------- | ------------------------------------------------------------------------- | --------------------- | -------------------------------------------------------- |
+| F-04       | out-of-app-alert-channel    | F-04: kanał alarmowy poza aplikacją                                        | no                    | Zablokowane decyzją o kanale i koszcie (Owner: user)     |
+| S-08       | empty-run-signal            | S-08: pusty przebieg daje sygnał (gwiazda przewodnia M-2)                  | yes                   | Run `/10x-plan empty-run-signal`                         |
+| S-09       | attempt-accounting          | S-09: awaria dostawcy LLM nie zużywa prób postów                           | yes                   | Run `/10x-plan attempt-accounting`                       |
+| S-10       | llm-config-fail-fast        | S-10: zła konfiguracja LLM zatrzymuje start                                | yes                   | Run `/10x-plan llm-config-fail-fast`                     |
+| S-11       | stuck-run-self-heals        | S-11: utknięty przebieg sam wraca do obiegu                                | yes                   | Run `/10x-plan stuck-run-self-heals`                     |
+| S-12       | reliable-run-notifications  | S-12: powiadomienia o przebiegach nie giną                                 | no                    | Po S-08                                                  |
+| S-13       | missed-night-detection      | S-13: brakująca noc nie przechodzi niezauważona                            | no                    | Po F-04                                                  |
+| S-14       | safe-deploy-gate            | S-14: bezpieczna bramka wdrożeń                                            | yes                   | Run `/10x-plan safe-deploy-gate`; warto wcześnie          |
+| S-15       | backup-check-completeness   | S-15: kopia bazy sprawdzana w całości                                      | yes                   | Run `/10x-plan backup-check-completeness`                |
+| S-16       | wykop-ingest-completeness   | S-16: Wykop nie gubi postów po cichu                                       | yes                   | Run `/10x-plan wykop-ingest-completeness`                |
+| S-17       | pipeline-without-embabel    | S-17: przebieg bez Embabel                                                 | no                    | Po S-09                                                  |
+| S-18       | error-visibility            | S-18: błędy wymagające reakcji docierają do operatora                      | no                    | Po F-04                                                  |
+| S-19       | ops-docs-debt               | S-19: dokumenty operatora mówią prawdę                                     | yes                   | Run `/10x-plan ops-docs-debt`                            |
 
 ## Open Roadmap Questions
 
-1. **Czy `product_type` to "data-pipeline" czy "web-app"?** — Projekt to dwa moduły: pipeline+API jako rdzeń, pełnoprawna aplikacja webowa (logowanie, dashboard, lista/filtrowanie) jako warstwa konsumpcji. Wybrano `data-pipeline` jako najbliższą pojedynczą wartość; do doprecyzowania przy `/10x-tech-stack-selector`. Owner: użytkownik. Block: — (w praktyce rozstrzygnięte przez dwa osobne dokumenty stacku; nie wpływa na kolejność).
-2. **Dokładny kształt pól w JSON zwracanym przez ocenę LLM** — ROZSTRZYGNIĘTE 2026-09-27 przez kontrakt V1; od 2026-10-01 obowiązuje `context/foundation/llm-assessment/contract-v2.md` (V2, bez grafu argumentów). Owner: użytkownik. Block: — (odblokowało S-02; PRD wskazuje kontrakt V2).
-3. **Kanał i próg dla FR-025 (powiadomienia o obiecującym trendzie)** — nie ustalono jeszcze, czym jest "obiecujący trend" liczbowo ani gdzie ma trafiać powiadomienie. Owner: użytkownik. Block: — (FR-025 odroczone).
-4. **[ROZSTRZYGNIĘTE 2026-10-11 — F-01 `production-data-gate`: Railway Hobby nie ma kopii platformy (Pro). Kopię robi codzienny `pg_dump` z serwisu cron, sprawdzany odtworzeniem, do bucketu Railway (14 + 12) i na NAS. Restore drill przeszedł w PR env (`deploy-plan.md`, sekcja F-01)]** **Backup/retencja na docelowej platformie hostingowej** — Backup bazy: brak do czasu subskrypcji. PITR wyłączone 2026-10-06 ze względu na koszty (`api-docker-image`); po subskrypcji dzienna kopia wolumenu Railway (Daily, 6 dni), czysty test odtwarzania i limity kosztów (`deploy-plan.md`). Owner: użytkownik. Block: F-01 → S-05.
-5. **Budżet kosztów LLM na przebieg** — guardrail PRD każe minimalizować koszt zapytań, ale nie podaje pułapu (na dzień ani na post); kontrakt V2 wymaga zapisu zużycia tokenów, a F-02 mierzy koszt kandydatów na zestawie wzorcowym. Twardy pułap od 2026-10-11 (F-01): limit $10/mies. na kluczu OpenRouter produkcji; budżet na przebieg nadal nieustalony. Owner: użytkownik. Block: — (wpływa na F-02, S-02 i S-05, nie blokuje planowania).
-6. **[ROZSTRZYGNIĘTE 2026-09-27 — PRD v2: bez automatycznej decyzji w MVP, §Business Logic + §Non-Goals]** **„Wartościowy sygnał” w MVP** — PRD §Business Logic mówi, że wynik oceny zawiera „czy jest wartościowy”, a kontrakt V1 zabrania LLM zwracania `is_valuable`/`is_signal` i przenosi decyzję o sygnale do osobnego, dalszego etapu, którego żaden FR nie opisuje. Czy MVP wystarcza trafność + stanowisko + teza z argumentami (bez decyzji „wartościowy”), czy potrzebna jest prosta reguła decyzji jako nowy FR? Owner: użytkownik. Block: — (S-02 może pokazać ocenę bez tej decyzji; wymaga aktualizacji PRD §Business Logic).
-7. **[ROZSTRZYGNIĘTE 2026-09-27 — PRD v2: poza MVP, filtr tekstowy w FR-011a]** **Rozpoznawanie spółek (entity resolution)** — kontrakt V1 przenosi ustalanie, o którą spółkę chodzi, poza LLM; PRD nie ma dla tego FR. Wpływa na filtr po spółce (S-04) i przyszły wykres per spółka (FR-024). Owner: użytkownik. Block: — (odblokowało S-04).
+1. **Czy awaria dostawcy LLM w ogóle zużywa próby postów?** — decyzja produktowa z audytu; od niej zależy semantyka prób w S-09 i to, co przepisze S-17. Owner: user. Block: — (rozstrzyga wywiad `/10x-plan attempt-accounting`).
+2. **Weryfikacja produkcji z M-1:** lokalizacja bazy dla filtra S-04 (runbook z issue #17, krok 2: `C`/`POSIX` po cichu psuje `KĘTY`→`Kęty`) i pierwsza noc S-06 (runbook z issue #19, 2026-10-18). Owner: operator. Block: — (runbooki w `deploy-plan.md`; wynik `C`/`POSIX` dałby nowy wycinek).
+3. **Ustalenia z żywego Railway** (audyt, Open Questions 2–7): czy deploy po `config apply` czeka na CI (S-14); czy merge samej dokumentacji po #58 jest `SKIPPED`; czy reguła „deployment crashed” obejmuje crash loop API (F-04); okno SIGTERM→SIGKILL (S-11); aktualne ostrzeżenia Hikari (S-19); przyczyna przebiegu „trwającego” 22 h z 2026-10-09. Owner: operator. Block: — (każdy wycinek przyjmie ostrożne założenie, jeśli odpowiedzi nie będzie).
+4. **Kanał i próg dla FR-025 (powiadomienia o obiecującym trendzie)** — nie ustalono jeszcze, czym jest "obiecujący trend" liczbowo ani gdzie ma trafiać powiadomienie; F-04 może wybrać kanał, który później obsłuży też FR-025. Owner: użytkownik. Block: — (FR-025 odroczone).
+5. **Budżet kosztów LLM na przebieg** — guardrail PRD każe minimalizować koszt zapytań, ale nie podaje pułapu (na dzień ani na post). Twardy pułap od 2026-10-11 (F-01): limit $10/mies. na kluczu OpenRouter produkcji; budżet na przebieg nadal nieustalony. Dotyczy progu bezpiecznika w S-09 i wczesnego ostrzeżenia o koszcie. Owner: użytkownik. Block: — (nie blokuje planowania).
 
 ## Parked
 
 - **FR-008 / FR-011b — sortowanie po dacie, źródle i polach oceny** — Why parked: nice-to-have; chronologia wystarcza na start (cel `speed`).
 - **FR-016 / FR-017 / FR-019 — panel kont w aplikacji + wysyłka maila z zaproszeniem** — Why parked: nice-to-have; CLI (S-07) daje ten sam efekt; PRD §Non-Goals wyklucza wymaganą wysyłkę e-maili.
 - **FR-020 — własna nazwa wyświetlana** — Why parked: nice-to-have; e-mail wystarcza w MVP.
-- **FR-023 — Reddit jako drugie źródło** — Why parked: nice-to-have; kolejny kamień milowy — kontrakt V2 już obejmuje Reddit po normalizacji (`statement` w języku posta), a S-02 projektuje wspólny model źródeł zgodnie z NFR.
-- **FR-024 / FR-025 — wykres giełdowy z trendem sygnałów i powiadomienia o trendzie** — Why parked: nice-to-have, poza MVP; wymaga integracji danych giełdowych, rozpoznawania spółek i rozstrzygnięcia Open Question 3.
+- **FR-023 — Reddit jako drugie źródło** — Why parked: nice-to-have; kolejny kamień milowy funkcjonalny (po M-2) — kontrakt V2 już obejmuje Reddit po normalizacji (`statement` w języku posta), a S-02 projektuje wspólny model źródeł zgodnie z NFR.
+- **FR-024 / FR-025 — wykres giełdowy z trendem sygnałów i powiadomienia o trendzie** — Why parked: nice-to-have, poza MVP; wymaga integracji danych giełdowych, rozpoznawania spółek i rozstrzygnięcia Open Question 4.
 - **FR-029 — automatyczne wygasanie krótkich sesji** — Why parked: nice-to-have; krótki timeout uciążliwy przy czytaniu. F-03 stosuje 30 dni bezczynności z odnawianiem ciasteczka; krótsze limity pozostają odroczone.
 - **FR-031 — eksport widocznej listy do CSV/JSON** — Why parked: nice-to-have, nie blokuje głównego przepływu.
 - **FR-032 — „Ask szczur” (pytanie do LLM o wybrany sygnał)** — Why parked: nice-to-have; dodatkowy koszt LLM wbrew guardrailowi kosztów.
 - **Przetwarzanie komentarzy pod postami** — Why parked: PRD §Non-Goals (kontrakt V2 zachowuje typ `comment` i kontekst rodzica w kształcie wejścia — gotowe na przyszłość, nieużywane w MVP).
 - **Rozpoznawanie spółek, automatyczna decyzja „wartościowy sygnał”, nowość informacji, trend, zaangażowanie, raporty** — Why parked: PRD v2 §Non-Goals; kontrakt V2 §15 umieszcza je poza oceną LLM jako osobne, dalsze etapy.
 - **2FA, logowanie przez zewnętrznego dostawcę, samodzielny reset hasła, dodatkowe role** — Why parked: PRD §Non-Goals.
-- **Wysoka dostępność / multi-region, własna logika backupu** — Why parked: PRD §Non-Goals; backup po stronie platformy (F-01).
+- **Wysoka dostępność / multi-region, logika backupu w kodzie aplikacji** — Why parked: PRD §Non-Goals; kopię bazy robi osobny serwis infrastruktury (cron `db-backup`, F-01), nie API ani pipeline.
 - **Lekkie modele ML, embeddingi, klasyfikatory w potoku** — Why parked: `shape-notes.md` §Forward: technical-roadmap — kierunek na przyszłość, nie zakres MVP.
 - **LLM hardening: kierunek i stanowisko (w tym ironia)** — Why parked: nice-to-have po MVP. Pomiar F-02 (`context/archive/2026-09-27-assessment-contract-harness/reports/gold-2026-10-05.md`): żaden z 12 zmierzonych modeli/wariantów (pełny wzorzec lub próbka 30 postów; dodany później GPT-6.1 Sol też nie) nie spełnił progów kierunku celów i sprzecznych kierunków — progi złagodzono do ≥70 % / ≤10 % (decyzja użytkownika 2026-10-06). Ironia (wg etykiet użytkownika 15 ze 120 postów) obniża trafność kierunku, ale większość sprzeczności pada na postach dosłownych (pilot 9 w `context/archive/2026-09-27-assessment-contract-harness/frame.md`; Jev nie wykrywa ironii); więcej rozumowania nie pomagało. Cel: powrót do progów ≥75 % / ≤3 %. Tor: większy organiczny polski wzorzec z osobnym zbiorem kontrolnym → kierunek → ironia → stanowisko dosłowne vs zamierzone → ablacje kontekstu i promptu → porównanie modeli → regresja kosztu. Źródła (niezweryfikowane): `context/foundation/llm-assessment/hardening-sources.md`.
+- **Ochrona przed dryfem modelu (alarm na rosnący udział `schema_violation` / `fabricated_evidence`, cicha zmiana modelu u dostawcy)** — Why parked: z audytu M-2 (B4); poza zakresem M-2, bo wymaga punktu odniesienia jakości, który buduje dopiero „LLM hardening”; `RecordingsReplayTest` w CI łapie dziś dryf parsera, schematu i walidatora.
+- **Izolacja źródeł i świeżość per źródło** — Why parked: z audytu M-2 (sekcja E): dziś awaria jednego źródła zawala krok pobrania wszystkich, a etykieta świeżości jest wspólna; przy jednym źródle (Wykop) to bez znaczenia. Pierwszy wycinek kamienia milowego z Redditem (FR-023).
+- **Porządki granic pakietów: cykl `pipeline` ↔ `notifications`, dwa mechanizmy zapisu `posts` (JPA i SQL), konwertery zależne od `pipeline.run`, duplikaty reguł („najnowsza ocena `ok`”, predykat resztek)** — Why parked: z audytu M-2 (sekcja E, L); nie wpływają dziś na niezawodność. Część zniknie przy S-17; reguła „najnowsza ocena `ok`” idzie z pozycją o wydajności filtra.
+- **Drobne ryzyka z audytu M-2 (L): przebieg `queued` przy zamkniętym executorze i koniec zakresu `23:59:59` (A8), brak limitów schematu dla OpenRouter i 3 płatne wywołania przy deterministycznym naruszeniu kontraktu (B8), dodatkowa próba po przerwaniu przy przejściu flex→standard (B10), offset w powtórzonej jesiennej godzinie (B11), okno ponowień Caddy 30 s (C14), fałszywy alarm crona po 90 min (C8)** — Why parked: niska waga; wracają, gdy dotknie ich wycinek z tego samego obszaru.
 - **Ocena obrazków w postach (model multimodalny)** — Why parked: nice-to-have po MVP, do sprawdzenia, czy ma sens. PRD v2 i kontrakt V2 oceniają wyłącznie tekst (`prd.md:258`); w pilotażu #gielda ~44% wpisów ma zdjęcie, a część ma sens tylko w obrazku (`frame.md`, „Znane luki”). Zestaw wzorcowy F-02 (flaga `media.photo`, etykiety `unclear` z powodu obrazka, raport fazy 6) pokaże skalę; wdrożenie wymagałoby zmiany PRD, kontraktu (V3: cytat/dowód z obrazka nie jest podciągiem tekstu), wyboru modeli z wejściem obrazkowym i ponownego pomiaru, a koszt wejścia rośnie o tokeny obrazków.
 - **Wydajność filtra feedu przy dużej liczbie postów (TODO na przyszłość)** — Why parked: dziś zbędne (~300 postów, zapytania filtra w milisekundach). Pomiar z impl-review S-04 (folder zmiany `filter-by-assessment`, `reviews/impl-review.md`, F6): przy 100k ocenionych postów zapytanie strony z rzadkim filtrem trwa 44 ms, ale zliczanie wyników 0,6–0,95 s (sekwencyjny skan `posts`, najnowsza ocena `ok` i `jsonb_array_elements` dla każdego wiersza); filtr bez trafień płaci ten sam skan. Przy ~270 postach dziennie to ok. rok. TODO: po ~20k postów zmierzyć `EXPLAIN ANALYZE` na produkcji; jeśli zwalnia, projekcja celów (kolumna `latest_ok_assessment_id` w `posts` albo tabela `post_targets`) z indeksem `pg_trgm` — usunie też drugą kopię reguły „najnowsza ocena `ok`” (`PostRepository.findMatching` i `AssessmentRepository.findLatestOk`). Osobna zmiana z pomiarem.
 - **Self-hosted runner CI dla PR (lokalny Docker), runnery GitHub Actions dla `main`** — Why parked: nice-to-have dla wygody developmentu, nie wymaganie PRD; odroczone po MVP, najwcześniej po F-02 ([issue #30](https://github.com/kwmacioszek/szczur-radar/issues/30)).
-- **Komunikat, gdy nie udało się odczytać daty aktualizacji danych** — Why parked: nice-to-have po MVP (decyzja użytkownika 2026-10-13, S-05 `daily-scheduled-run-freshness`, faza 4). Dziś przy błędzie `GET /api/freshness` etykieta „Dane zaktualizowane: …” nad feedem po prostu znika, a lista działa (`FeedView.vue`; `context/changes/daily-scheduled-run-freshness/ui/README.md`), więc użytkownik nie odróżni „nie udało się sprawdzić” od braku etykiety. Pomysł: osobny, neutralny komunikat treści w miejscu etykiety (nie czerwony alert, bo posty są w porządku), np. „Nie udało się sprawdzić daty aktualizacji.”, ewentualnie z ponowieniem.
+- **Komunikat, gdy nie udało się odczytać daty aktualizacji danych** — Why parked: nice-to-have po MVP (decyzja użytkownika 2026-10-13, S-05 `daily-scheduled-run-freshness`, faza 4). Dziś przy błędzie `GET /api/freshness` etykieta „Dane zaktualizowane: …” nad feedem po prostu znika, a lista działa (`FeedView.vue`; `context/archive/2026-10-12-daily-scheduled-run-freshness/ui/README.md`), więc użytkownik nie odróżni „nie udało się sprawdzić” od braku etykiety. Pomysł: osobny, neutralny komunikat treści w miejscu etykiety (nie czerwony alert, bo posty są w porządku), np. „Nie udało się sprawdzić daty aktualizacji.”, ewentualnie z ponowieniem.
 - **Unieważnianie sesji wersją poświadczeń** — Why parked: po MVP, z przeglądu implementacji S-07 (`cli-user-onboarding`, F1). Logowanie, które sprawdziło hasło przed zatwierdzeniem `reset-password`, zapisuje sesję już po `DELETE` resetu, więc ta sesja działa aż do aktywacji (najwyżej `ACTIVATION_LINK_TTL`, domyślnie 12 h); od S-07 kończy ją aktywacja. Pełne zamknięcie: wersja poświadczeń konta (np. `password_changed_at`), zapisana w sesji przy logowaniu i sprawdzana przy każdym uwierzytelnionym żądaniu — migracja i sprawdzenie w łańcuchu filtrów.
 - **Przybliżony czas zakończenia trwającego przebiegu** — Why parked: nice-to-have po MVP (decyzja użytkownika 2026-10-13, po pierwszym przebiegu crona na produkcji). Buduje na postępie przebiegu z S-06 (dopisek o monitorowaniu): bez liczników postępu nie ma z czego liczyć. Pomysł: w `/admin` przy przebiegu `running` szacowany koniec i odliczanie, np. średni czas oceny posta z ostatnich przebiegów (z `pipeline_run_steps` i `assessments`) × liczba postów do oceny + typowy czas pobrania, albo tempo bieżącego przebiegu, gdy ma już kilka ocen. Niepewność: tier flex, ponowienia i powroty do standardu mocno wydłużają pojedyncze oceny, więc to przybliżenie, nie obietnica.
-- **Przebieg pipeline'u bez Embabel (prosta orkiestracja)** — Why parked: po MVP, do sprawdzenia; z przeglądu planu S-06 (`pipeline-run-history-dashboard`, F1, 2026-10-16).
-  - Co boli: `PipelineAgent` to liniowy przepływ sześciu akcji, w którym planowanie GOAP niczego nie wybiera. Każda akcja musi mieć `FIRE_ONCE`, bo Embabel domyślnie ponawia akcje (lekcja z S-02). Akcje działają w puli wątków Embabel (`invoke()` = `invokeAsync().get()`), więc przerwanie wątku przebiegu do nich nie dociera; strażnik S-06 obchodzi to anulowaniem przyszłości przebiegu. Sama ocena i tak omija Embabel: klient z `llm/` sam buduje `ChatModel`.
-  - Do sprawdzenia przed decyzją: co jeszcze daje Embabel (autokonfiguracja dostawców w `application-*.properties`, `AssessorAgent`, start platformy), czy wyjąć go tylko z przebiegu, czy z całego API, i zmiana decyzji w `tech-stack-api.md`.
-  - Pomysł: zwykła sekwencja kroków na wątku `pipeline-run` (te same serwisy kroków i `RunRecorder.step`). Przerwanie dotrze wtedy do oceny, a strażnik S-06 się uprości. Osobna zmiana z researchem.
 
 ## Milestone History
 
-(Pusta — to pierwszy kamień milowy. Wpisy dopisuje zamknięcie kamienia milowego.)
+- **M-1: MVP — ocenione sygnały z Wykopu dla zaproszonych osób** (`mvp-wykop-signal-radar`) — closed 2026-10-17. Wszystkie konieczne FR i historyjki US-01, US-02 dostarczone na produkcji (F-01–F-03, S-01–S-07); domknięcie runbooków produkcji S-04 (#17) i S-06 (#19) przeniesione do Open Roadmap Questions M-2.
 
 ## Done
 
