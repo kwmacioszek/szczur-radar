@@ -2,13 +2,26 @@
 
 <!-- BEGIN @przeprogramowani/10x-cli -->
 
-## Zestaw narzędzi AI 10xDevs — Moduł 2, Lekcja 5 (10xDevs 4.0 UI)
+## Zestaw narzędzi AI 10xDevs — Moduł 4, Lekcja 2 (Mapa projektu)
 
-**W przypadku pracy nad UI w widoku, który już się renderuje, użyj `/10x-ui`.** Przeprowadza ono zmianę wizualną przez ten sam łańcuch co każdą inną zmianę (`/10x-new` → `/10x-research` →
-`/10x-plan` → `/10x-implement` → `/10x-impl-review`) i obejmuje zasady:
-kiedy rozpocząć pracę i którego widoku dotyczy, audyt pod kątem opłat, kontrakt systemu projektowego w formie, w jakiej realizuje go to repozytorium, stany komponentów, bramkę zrzutu ekranu oraz regułę, która utrzymuje kolejnego agenta przy kontrakcie. W jego `references/` znajduje się lista kontrolna jakości.
+Zapoznaj się z nieznanym lub starszym repozytorium na podstawie dowodów, a nie drzew katalogów: **najpierw szerokie skanowanie, później głębokie skupienie.**
 
-Tworzenie widoku po raz pierwszy nie jest zadaniem dla `/10x-ui` — zbuduj go poprzez
-zwykły łańcuch, a następnie wróć do niego z `/10x-ui`.
+```
+git history + dependency graph + contributors -> context/map/repo-map.md -> focused /10x-research
+```
+
+### Router zadań — od czego zacząć
+
+| Umiejętność / prompt | Użyj, gdy |
+| --- | --- |
+| `/10x-repo-map` | Mapa projektu w jednym przebiegu. Klasyfikuje możliwości biznesowe według krytyczności × rozgłosu, przechowuje dowody w `context/map/evidence/` i zapisuje `context/map/repo-map.md` ze strefami ryzyka, listą lektur na pierwszy dzień oraz wyraźnie wskazanymi niewiadomymi. Użyj `--replace`, aby odświeżyć; poprzedni przebieg zostanie przeniesiony do `context/archive/`. |
+| `m4l2-1-territory-git-history` -> `m4l2-2-structure-dependency-cruiser` -> `m4l2-3-contributors-git` -> `m4l2-repo-map-synthesis` | Ta sama mapa budowana krok po kroku, po jednym artefakcie naraz, aby zobaczyć, co dodaje każde źródło dowodów. |
+| `/10x-research` | Pytanie dotyczące jednej funkcji lub obszaru. Mapa obejmuje szerokość i nie przyjmuje celu; głębia należy do badań. |
+
+### Twarde zasady
+
+- **Pozwól narzędziom zbierać dowody poza oknem kontekstu.** Używaj narzędzi git, forge i grafowych do gromadzenia danych, a następnie interpretuj wyłącznie ich skondensowane wyniki. Nigdy nie czytaj repozytorium plik po pliku.
+- **Wyklucz szum.** Podczas klasyfikowania aktywności pomijaj lockfile'y, wygenerowany kod, commity masowego formatowania, commity botów oraz commity utworzone przez agentów.
+- **Niewiadome są częścią mapy.** Oznaczaj jako niewiadome to, czego dowody nie mogą pokazać, zamiast wypełniać lukę zgadywaniem.
 
 <!-- END @przeprogramowani/10x-cli -->
