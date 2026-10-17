@@ -30,7 +30,7 @@ import pl.szczurradar.api.pipeline.state.Durations;
  *   <li>No database query while this instance has no run (an in-memory check): Railway counts every
  *       outgoing packet, a query to Postgres too, as activity, so a query every minute would keep the
  *       API from sleeping and bring the plan's hard spending limit closer.
- *   <li>A failed check is logged; the next one runs as planned.
+ *   <li>A failed check is logged, whatever was thrown; the next one runs as planned.
  *   <li>Only in the server, like {@link PipelineStartupRecovery}: the operator commands start the same
  *       context, and only the server reads {@code PIPELINE_STALL_TIMEOUT} ({@link PipelineStallSettings},
  *       validated when it starts).
@@ -83,13 +83,17 @@ public class RunWatchdog implements InitializingBean, DisposableBean {
 				Durations.format(settings.timeout()), Durations.format(checkInterval(settings.timeout())));
 	}
 
-	/** One check of this instance's runs; package-private for tests. */
+	/**
+	 * One check of this instance's runs; package-private for tests. Any failure, an {@link Error} too,
+	 * is logged here: one escaping to {@code scheduleWithFixedDelay} would cancel every later check
+	 * without a word.
+	 */
 	void check() {
 		for (UUID runId : service.ownRuns()) {
 			try {
 				service.stopStalled(runId, settings.timeout());
 			}
-			catch (RuntimeException ex) {
+			catch (Throwable ex) {
 				log.error("The pipeline watchdog could not check run {}; it checks again in {}", runId,
 						Durations.format(checkInterval(settings.timeout())), ex);
 			}

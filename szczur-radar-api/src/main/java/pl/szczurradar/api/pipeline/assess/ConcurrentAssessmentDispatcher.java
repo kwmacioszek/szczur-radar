@@ -3,9 +3,12 @@ package pl.szczurradar.api.pipeline.assess;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CancellationException;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -57,12 +60,14 @@ import pl.szczurradar.api.posts.PostRepository;
  *   <li>otherwise put back without an attempt ({@link PostTransitions#release}); any exception there
  *       (a bug, a failed write) is a technical error of this post, and the other posts go on;
  *   <li>counted in the run's counters ({@link RunRecorder#count}): a stored result with its call's
- *       retries and flex fallback, or a technical error; a post not taken counts nothing.
+ *       retries and flex fallback, or a technical error; a post not taken counts nothing. A failed count
+ *       is logged and leaves the post's outcome as it is.
  * </ol>
  *
  * A stopped step makes the run {@code failed} ({@link AssessedBatch#stoppedBy}), so a bad key never
  * uses up the posts' attempts. The log gets a progress line at most every {@link #PROGRESS_INTERVAL}
- * as posts finish, and one after the last.
+ * as posts finish, and one after the last. {@link #cancel} (the watchdog stopped the run) interrupts the
+ * run's post tasks, so a stopped run never keeps threads of the pool waiting.
  */
 @Component
 public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher, DisposableBean {
@@ -88,6 +93,9 @@ public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher, Dis
 
 	/** {@link System#nanoTime()}, or a test's clock for the progress lines. */
 	private final LongSupplier nanoTime;
+
+	/** The post tasks of each run while {@link #dispatch} waits for them; {@link #cancel} interrupts them. */
+	private final Map<UUID, Tasks> dispatching = new ConcurrentHashMap<>();
 
 	@Autowired
 	ConcurrentAssessmentDispatcher(PostRepository posts, AssessmentInputs inputs, Assessor assessor,
@@ -124,37 +132,64 @@ public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher, Dis
 		AtomicBoolean runStopped = new AtomicBoolean();
 		AtomicReference<@Nullable String> stoppedBy = new AtomicReference<>();
 		Progress progress = new Progress(runId, postIds.size());
-		List<Future<Outcome>> outcomes = new ArrayList<>();
-		for (UUID postId : postIds) {
-			outcomes.add(executor.submit(() -> {
-				Outcome outcome = assess(runId, postId, runStopped, stoppedBy);
-				count(runId, outcome);
-				progress.finished(outcome);
-				return outcome;
-			}));
-		}
-		int ok = 0;
-		int failed = 0;
-		int dead = 0;
-		List<ProcessingError> errors = new ArrayList<>();
-		for (int i = 0; i < outcomes.size(); i++) {
-			switch (await(runId, outcomes, i, progress)) {
-				case Outcome.Stored stored when stored.ok() -> ok++;
-				case Outcome.Stored stored -> {
-					failed++;
-					dead += stored.dead() ? 1 : 0;
-				}
-				case Outcome.Error error -> errors.add(new ProcessingError(postIds.get(i), error.message()));
-				case Outcome.NotTaken notTaken -> {
+		// Registered before the first task, so a cancel while they are submitted reaches every one.
+		Tasks tasks = new Tasks(new CopyOnWriteArrayList<>(), new AtomicBoolean());
+		dispatching.put(runId, tasks);
+		try {
+			for (UUID postId : postIds) {
+				tasks.futures().add(executor.submit(() -> {
+					Outcome outcome = assess(runId, postId, runStopped, stoppedBy, tasks.cancelled());
+					count(runId, postId, outcome);
+					progress.finished(outcome);
+					return outcome;
+				}));
+			}
+			int ok = 0;
+			int failed = 0;
+			int dead = 0;
+			List<ProcessingError> errors = new ArrayList<>();
+			for (int i = 0; i < postIds.size(); i++) {
+				switch (await(runId, postIds.get(i), tasks, i, progress)) {
+					case Outcome.Stored stored when stored.ok() -> ok++;
+					case Outcome.Stored stored -> {
+						failed++;
+						dead += stored.dead() ? 1 : 0;
+					}
+					case Outcome.Error error -> errors.add(new ProcessingError(postIds.get(i), error.message()));
+					case Outcome.NotTaken notTaken -> {
+					}
 				}
 			}
+			progress.line();
+			return new AssessedBatch(runId, ok, failed, dead, errors, stoppedBy.get());
 		}
-		progress.line();
-		return new AssessedBatch(runId, ok, failed, dead, errors, stoppedBy.get());
+		finally {
+			dispatching.remove(runId, tasks);
+		}
 	}
 
-	private Outcome assess(UUID runId, UUID postId, AtomicBoolean runStopped, AtomicReference<@Nullable String> stoppedBy) {
-		if (runStopped.get()) {
+	/**
+	 * Interrupts the post tasks of {@code runId}: one not started yet never runs, and one in flight gets
+	 * an interrupt — an LLM call waiting for its answer or between attempts ends at once, one blocked in a
+	 * socket read at the latest when its attempt's {@code LLM_TIMEOUT} runs out, and it is not tried again
+	 * ({@code TransportRetry}'s wait fails on the pending interrupt). Its result is never stored (the
+	 * stopped run no longer holds its posts), a failure it ends with is not the post's technical error, and
+	 * nothing is counted. Called by {@code PipelineRunService.stopStalled} after the stop is written.
+	 */
+	@Override
+	public void cancel(UUID runId) {
+		Tasks tasks = dispatching.get(runId);
+		if (tasks == null) {
+			return;
+		}
+		tasks.cancelled().set(true);
+		long cancelled = tasks.futures().stream().filter(future -> future.cancel(true)).count();
+		log.info("Run {} assess: stopped, {} post task(s) not finished were cancelled", runId, cancelled);
+	}
+
+	private Outcome assess(UUID runId, UUID postId, AtomicBoolean runStopped, AtomicReference<@Nullable String> stoppedBy,
+			AtomicBoolean cancelled) {
+		if (runStopped.get() || cancelled.get()) {
 			return new Outcome.NotTaken();
 		}
 		Optional<Integer> attempts = transitions.claim(postId, runId);
@@ -187,6 +222,11 @@ public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher, Dis
 			return new Outcome.NotTaken();
 		}
 		catch (RuntimeException ex) {
+			if (cancelled.get()) {
+				// cancel() interrupted it: the run was stopped, this is not the post's technical error.
+				log.info("Assessing post {} in run {} ended with its stopped run: {}", postId, runId, ex.toString());
+				return new Outcome.NotTaken();
+			}
 			log.error("Assessing post {} in run {} failed; the post is put back without an attempt", postId, runId, ex);
 			return new Outcome.Error(ex.getClass().getSimpleName() + ": " + ex.getMessage());
 		}
@@ -197,34 +237,47 @@ public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher, Dis
 		}
 	}
 
-	/** Adds a post's outcome to the run's counters. */
-	private void count(UUID runId, Outcome outcome) {
-		switch (outcome) {
-			case Outcome.Stored stored when stored.ok() ->
-				recorder.count(runId, Counters.assessedOk(stored.llmRetries(), stored.flexFallback()));
-			case Outcome.Stored stored ->
-				recorder.count(runId,
-						Counters.assessedFailed(stored.dead(), stored.llmRetries(), stored.flexFallback()));
-			case Outcome.Error error -> recorder.count(runId, Counters.processingError());
-			case Outcome.NotTaken notTaken -> {
+	/**
+	 * Adds a post's outcome to the run's counters. A failure (e.g. the database for a moment) is logged
+	 * and changes nothing else: a stored result stays stored, never a technical error.
+	 */
+	private void count(UUID runId, UUID postId, Outcome outcome) {
+		try {
+			switch (outcome) {
+				case Outcome.Stored stored when stored.ok() ->
+					recorder.count(runId, Counters.assessedOk(stored.llmRetries(), stored.flexFallback()));
+				case Outcome.Stored stored ->
+					recorder.count(runId,
+							Counters.assessedFailed(stored.dead(), stored.llmRetries(), stored.flexFallback()));
+				case Outcome.Error error -> recorder.count(runId, Counters.processingError());
+				case Outcome.NotTaken notTaken -> {
+				}
 			}
+		}
+		catch (RuntimeException ex) {
+			log.warn("The outcome of post {} could not be added to the counters of run {}; the post keeps it", postId,
+					runId, ex);
 		}
 	}
 
-	private Outcome await(UUID runId, List<Future<Outcome>> outcomes, int index, Progress progress) {
+	private Outcome await(UUID runId, UUID postId, Tasks tasks, int index, Progress progress) {
 		try {
-			return outcomes.get(index).get();
+			return tasks.futures().get(index).get();
 		}
 		catch (InterruptedException ex) {
 			Thread.currentThread().interrupt();
-			outcomes.forEach(outcome -> outcome.cancel(true));
+			tasks.futures().forEach(outcome -> outcome.cancel(true));
 			throw new IllegalStateException("interrupted while assessing run " + runId, ex);
 		}
 		catch (ExecutionException | CancellationException ex) {
+			if (tasks.cancelled().get()) {
+				// cancel(): the run was stopped and its posts put back; nothing to count.
+				return new Outcome.NotTaken();
+			}
 			// assess() catches what it can; this is a task the pool never ran, or one that failed outside
-			// it (e.g. taking the post or counting it), so it was not counted.
+			// it (e.g. taking the post), so it was not counted.
 			Outcome error = new Outcome.Error(String.valueOf(ex));
-			count(runId, error);
+			count(runId, postId, error);
 			progress.finished(error);
 			return error;
 		}
@@ -243,6 +296,14 @@ public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher, Dis
 	@Override
 	public void destroy() {
 		executor.shutdownNow();
+	}
+
+	/**
+	 * A run's post tasks while {@link #dispatch} waits for them.
+	 *
+	 * @param cancelled whether {@link #cancel} stopped them
+	 */
+	private record Tasks(List<Future<Outcome>> futures, AtomicBoolean cancelled) {
 	}
 
 	/** What happened to one post. */

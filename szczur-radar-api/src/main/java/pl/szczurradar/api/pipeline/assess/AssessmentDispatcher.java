@@ -18,4 +18,11 @@ public interface AssessmentDispatcher {
 	 */
 	AssessedBatch dispatch(UUID runId, List<UUID> postIds);
 
+	/**
+	 * Stops the work {@link #dispatch} still does for {@code runId} (the watchdog stopped the run, its
+	 * posts are already back): no further post is taken, a call in flight is interrupted, and nothing more
+	 * is counted. No effect when the run's posts are not being dispatched.
+	 */
+	void cancel(UUID runId);
+
 }

@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -22,8 +23,12 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
@@ -89,6 +94,9 @@ class ConcurrentAssessmentDispatcherTest {
 	/** Added to a post: its call takes longer than {@link ConcurrentAssessmentDispatcher#PROGRESS_INTERVAL}. */
 	private static final String SLOW = " assessed slowly";
 
+	/** Added to a post: its call waits for {@link #release} (or an interrupt), like an answer that does not come. */
+	private static final String HELD = " held until released";
+
 	private final ExecutorService executor = Executors.newFixedThreadPool(THREADS);
 
 	/** Each post's body, by id; the raw payload is the body's bytes. */
@@ -112,10 +120,20 @@ class ConcurrentAssessmentDispatcherTest {
 	/** The dispatcher's clock for the progress lines, in nanoseconds; only a {@link #SLOW} call moves it. */
 	private final AtomicLong nanoTime = new AtomicLong();
 
+	/** A permit for each {@link #HELD} call that started waiting. */
+	private final Semaphore holding = new Semaphore(0);
+
+	/** Lets the {@link #HELD} calls answer. */
+	private final CountDownLatch release = new CountDownLatch(1);
+
+	/** The user messages of the calls that were interrupted. */
+	private final List<String> interrupted = new CopyOnWriteArrayList<>();
+
 	private final RunRecorder recorder = recorder();
 
 	@AfterEach
 	void stop() {
+		release.countDown();
 		executor.shutdownNow();
 	}
 
@@ -249,6 +267,80 @@ class ConcurrentAssessmentDispatcherTest {
 			.satisfies(line -> assertThat(line).contains("refused the configuration in run " + RUN, "HTTP 401"));
 	}
 
+	@Test
+	void aFailedCountLeavesAStoredPostStored(CapturedOutput output) {
+		List<UUID> ids = List.of(post(ContractFixtures.BODY), post(ContractFixtures.BODY));
+		doThrow(new IllegalStateException("the database is gone for a moment")).when(recorder)
+			.count(eq(RUN), any(Counters.class));
+
+		AssessedBatch batch = dispatcher().dispatch(RUN, ids);
+
+		// Both are assessed and stored; the counters missed them, which is logged, not a technical error.
+		assertThat(batch).isEqualTo(new AssessedBatch(RUN, 2, 0, 0, List.of(), null));
+		assertThat(stages).allSatisfy((id, stage) -> assertThat(stage).isEqualTo(PostStage.ASSESSED));
+		verify(recorder, times(2)).count(RUN, Counters.assessedOk(0, false));
+		verify(recorder, never()).count(RUN, Counters.processingError());
+		assertThat(output.getAll().lines().filter(line -> line.contains(" WARN "))).hasSize(2)
+			.allSatisfy(line -> assertThat(line).contains("could not be added to the counters of run " + RUN))
+			.anySatisfy(line -> assertThat(line).contains("post " + ids.get(0)))
+			.anySatisfy(line -> assertThat(line).contains("post " + ids.get(1)));
+		assertThat(output.getAll().lines().filter(line -> line.contains(" ERROR "))).isEmpty();
+	}
+
+	@Test
+	void cancellingARunInterruptsItsCallInFlightAndLeavesAnotherRunAlone(CapturedOutput output) throws Exception {
+		UUID other = UUID.randomUUID();
+		UUID going = post(ContractFixtures.BODY + HELD + " (the other run's)");
+		UUID stopped = post(ContractFixtures.BODY + HELD + " (the stopped run's)");
+		UUID notStarted = post(ContractFixtures.BODY + " (the stopped run's, never started)");
+		// Two threads: the other run's call holds one, the stopped run's call the other, and the stopped run's
+		// second post waits for a thread.
+		ExecutorService twoThreads = Executors.newFixedThreadPool(2);
+		ExecutorService callers = Executors.newFixedThreadPool(2);
+		ConcurrentAssessmentDispatcher dispatcher = dispatcher(twoThreads);
+		try {
+			Future<AssessedBatch> otherRun = callers.submit(() -> dispatcher.dispatch(other, List.of(going)));
+			assertThat(holding.tryAcquire(10, TimeUnit.SECONDS)).isTrue();
+			Future<AssessedBatch> stoppedRun = callers.submit(() -> dispatcher.dispatch(RUN, List.of(stopped, notStarted)));
+			assertThat(holding.tryAcquire(10, TimeUnit.SECONDS)).isTrue();
+
+			dispatcher.cancel(RUN);
+
+			// The stopped run's step returns at once, with nothing taken or counted; its call saw the interrupt.
+			assertThat(stoppedRun.get(10, TimeUnit.SECONDS)).isEqualTo(new AssessedBatch(RUN, 0, 0, 0, List.of(), null));
+			assertThat(otherRun.isDone()).isFalse();
+			release.countDown();
+			assertThat(otherRun.get(10, TimeUnit.SECONDS)).isEqualTo(new AssessedBatch(other, 1, 0, 0, List.of(), null));
+			twoThreads.shutdown();
+			assertThat(twoThreads.awaitTermination(10, TimeUnit.SECONDS)).isTrue();
+		}
+		finally {
+			twoThreads.shutdownNow();
+			callers.shutdownNow();
+		}
+
+		assertThat(interrupted).singleElement().satisfies(message -> assertThat(message).contains("the stopped run's"));
+		// Its posts are back without an attempt, and the one not started was never taken.
+		assertThat(stages.get(stopped)).isEqualTo(PostStage.STORED);
+		assertThat(stages.get(notStarted)).isEqualTo(PostStage.STORED);
+		assertThat(attempts.get(stopped)).isZero();
+		assertThat(recorded).extracting(Assessment::getPostId).containsExactly(going);
+		verify(recorder, never()).count(eq(RUN), any(Counters.class));
+		verify(recorder).count(other, Counters.assessedOk(0, false));
+		assertThat(output.getAll()).contains("Run " + RUN + " assess: stopped, 2 post task(s) not finished were cancelled");
+		assertThat(output.getAll().lines().filter(line -> line.contains(" ERROR "))).isEmpty();
+	}
+
+	@Test
+	void cancellingARunThatIsNotDispatchedChangesNothingForItsLaterStep() {
+		ConcurrentAssessmentDispatcher dispatcher = dispatcher();
+		dispatcher.cancel(RUN);
+
+		AssessedBatch batch = dispatcher.dispatch(RUN, List.of(post(ContractFixtures.BODY)));
+
+		assertThat(batch).isEqualTo(new AssessedBatch(RUN, 1, 0, 0, List.of(), null));
+	}
+
 	private UUID post(String body) {
 		UUID id = UUID.randomUUID();
 		bodies.put(id, body);
@@ -274,6 +366,10 @@ class ConcurrentAssessmentDispatcherTest {
 			calls.incrementAndGet();
 			maxInFlight.accumulateAndGet(inFlight.incrementAndGet(), Math::max);
 			try {
+				if (request.userMessage().contains(HELD)) {
+					holding.release();
+					release.await();
+				}
 				Thread.sleep(50);
 				if (request.userMessage().contains(BOOM)) {
 					throw new IllegalStateException("a bug in the client");
@@ -291,7 +387,10 @@ class ConcurrentAssessmentDispatcherTest {
 				return request.userMessage().contains(RETRIED) ? response(valid, 3, true) : response(valid);
 			}
 			catch (InterruptedException ex) {
-				throw new IllegalStateException(ex);
+				// As the HTTP client of a call in flight: an interrupt ends the call.
+				interrupted.add(request.userMessage());
+				Thread.currentThread().interrupt();
+				throw new IllegalStateException("the call was interrupted", ex);
 			}
 			finally {
 				inFlight.decrementAndGet();

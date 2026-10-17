@@ -1,9 +1,9 @@
 ---
 change_id: pipeline-run-history-dashboard
 title: Pipeline run history dashboard
-status: implemented
+status: impl_reviewed
 created: 2026-10-15
-updated: 2026-10-16
+updated: 2026-10-17
 archived_at: null
 ---
 

@@ -706,7 +706,8 @@ PR #49 was squash-merged as `54c4fc2` (13:22 UTC), after S-05 (#50).
   - Its open steps are closed `failed`, its posts go back without an attempt, and the next queued run starts (e.g. the RANGE run behind a RETRY). Before S-06 a hung run blocked every later start (the run of 2026-10-09 "lasted" about 22 h).
   - It checks every minute. While the instance has no run it asks the database nothing, so the API can still sleep.
   - A step without progress inside (`fetch`, `store`) moves the activity only at its start and end, so it is stopped too if it alone lasts longer than the timeout.
-  - The stopped run's agent action goes on in Embabel's thread until its current LLM call ends, but changes nothing (conditional writes; `pipeline/CLAUDE.md`).
+  - The stopped run's agent action goes on in Embabel's thread but changes nothing (conditional writes; `pipeline/CLAUDE.md`). The stop interrupts its LLM calls in flight (the log says `Run <id> assess: stopped, N post task(s) not finished were cancelled`), so they free their threads at once, or within one `LLM_TIMEOUT` attempt when blocked in a read, without another attempt.
+  - Every database call has an end too: the driver fails a statement that waits more than 300 s for the database's answer (`socketTimeout`, `szczur-radar-api/src/main/resources/application.properties`). A hung call fails after 5 min with a JDBC error (`An I/O error occurred while sending to the backend`, caused by `SocketTimeoutException: Read timed out`) instead of holding its thread until a restart. Nothing legitimate in the app or in `migrate` waits that long; only a second `create-admin` started while the first one waits for its password fails after 5 min instead of waiting.
 - **Interruption cause.** An `interrupted` run has `interruption_cause`, and its open steps become `interrupted`:
   - `deploy`: a new deployment took over. Every run stores the `RAILWAY_DEPLOYMENT_ID` of the instance that queued it, and the new instance's start-up recovery sees another id;
   - `restart`: the same deployment, or an unknown one;
@@ -717,13 +718,13 @@ PR #49 was squash-merged as `54c4fc2` (13:22 UTC), after S-05 (#50).
   - A `partial` run whose only failures are `failed` posts with attempts left gives none: the next run retries them. A usual night (about 2% failed posts, no dead post) therefore gives none.
   - No push, e-mail or webhook. The cron's exit codes are unchanged, so Railway's "deployment crashed" rule still reports exactly what it reported before (a cron run exits 1 when a run ends `failed` or `interrupted`, never for `partial`).
 - **The admin's views.**
-  - The bell: the unread count, the 10 newest, "Oznacz wszystkie jako przeczytane"; a click marks one read and opens its run's page. It is read every 60 s while the tab is visible.
+  - The bell: the unread count, the 10 newest, "Oznacz wszystkie jako przeczytane"; a click marks one read and opens its run's page. Its list is kept across pages and read again on a page change and when the tab becomes visible (not within 10 s of the last read), and every 60 s only on `/admin` and `/admin/runs/:id` while the tab is visible, so an open feed tab lets the API sleep.
   - The run page `/admin/runs/:id`: the status with its cause, why it needs attention, who started it (cron / admin), the range, times, counters, and the steps with their times and errors. While the run is running, also its progress: a bar, posts in flight, "Ostatnia aktywność: N temu".
   - `/admin`: every run with its range, duration, "cron" / "admin", a "wymaga uwagi" badge and a "Szczegóły" link; "Pokaż starsze" below the list.
   - A `user` sees no bell and is sent from `/admin/**` to `/`; the routes answer 403.
 - **Cron heartbeat.** While a run is `running`, `trigger.sh` logs its step and progress every `TRIGGER_HEARTBEAT_INTERVAL` (`5m`), from the poll it makes anyway (no extra request). The last line of an `interrupted` run ends with `(cause …)`. Exit codes unchanged (`tools/pipeline-trigger/README.md`).
 - **Migrations.** Both only add, so the old instance keeps writing during the deploy window.
-  - `V8__pipeline_run_progress.sql`: on `pipeline_runs` the columns `last_activity_at`, `llm_retries`, `flex_fallbacks`, `deployment_id` and `interruption_cause` (with two `CHECK`s); the step status `interrupted`; the index `ix_posts_assessing_run`. A data fix closes the steps left `running` in runs that already ended as `interrupted` (e.g. the run of 2026-10-09).
+  - `V8__pipeline_run_progress.sql`: on `pipeline_runs` the columns `last_activity_at`, `llm_retries`, `flex_fallbacks`, `deployment_id` and `interruption_cause` (with two `CHECK`s); the step status `interrupted`; the index `ix_posts_assessing_run`. A data fix closes, as `interrupted`, the steps left `running` in every run that already ended, whatever its final status (any run not `queued` or `running`, e.g. the run of 2026-10-09).
   - `V9__create_notifications.sql`: the table `notifications`, with one row per admin and run and its own read time.
   - Runs interrupted before `V8` have no cause and show "przerwany" alone. Runs that ended before `V9` give no notification.
 
@@ -807,6 +808,7 @@ Verified 2026-10-16 on `fa87f19` (CI run 38966942987: all seven jobs green; `rai
    - Do not set `PIPELINE_STALL_TIMEOUT` on production: its default follows the LLM settings.
 2. **Migrations and start.**
    - The API's pre-deploy `migrate` applies `V8` (pipeline run progress) and `V9` (create notifications), and `/api/ready` returns 200.
+   - A run started before the merge has no `deployment_id` (the column comes with `V8`). If the merge's own deploy interrupts it, its cause shows `restart` ("przerwany — restart aplikacji"), not `deploy`; only this first deploy, later runs store their deployment.
    - The API's start-up log has `Pipeline watchdog: a run without progress for 39m 00s is stopped (checked every 1m 00s)` and no WARN from `PipelineStallSettings`.
    - `/admin` lists the runs with their range, duration and "cron" / "admin". Old interrupted runs show "przerwany" without a cause. A 500 on the list during the deploy window is expected (Rollback above).
 3. **First night**, or a manual cron run on a temporary schedule as in section S-05, runbook step 3 (then set `30 0 * * *` back):

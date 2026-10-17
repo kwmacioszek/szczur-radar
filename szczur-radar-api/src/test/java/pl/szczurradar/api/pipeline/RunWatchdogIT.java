@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 
+import java.sql.Connection;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.util.List;
@@ -27,6 +28,7 @@ import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
+import org.springframework.jdbc.core.ConnectionCallback;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import tools.jackson.databind.json.JsonMapper;
@@ -54,25 +56,26 @@ import pl.szczurradar.api.user.User;
 import pl.szczurradar.api.user.UserRepository;
 
 /**
- * The watchdog on the whole run graph and Postgres with {@code PIPELINE_STALL_TIMEOUT=2s} (checked
- * every 400 ms): a run waiting for an LLM call that does not end is stopped (the admin notified once) and
- * the run queued behind it goes on; the stopped run's action, once its call ends, writes nothing; a slow
- * run with progress is not stopped; another instance's run is left alone. Wykop is a local server
- * answering the real, anonymized #gielda answers of 2026-10-01, the LLM a scripted client. The methods
- * share one database and run in order.
+ * The watchdog on the whole run graph and Postgres with {@code PIPELINE_STALL_TIMEOUT=5s} (checked
+ * every second): a run waiting for an LLM call that does not end is stopped (the admin notified once),
+ * its call is interrupted and the run queued behind it goes on; the stopped run's action writes nothing;
+ * a slow run with progress is not stopped; another instance's run is left alone; a database call has an
+ * end too. Wykop is a local server answering the real, anonymized #gielda answers of 2026-10-01, the LLM
+ * a scripted client. The methods share one database and run in order.
  */
-@SpringBootTest(properties = { MigrateCommand.ENABLE_FLYWAY, PipelineStallSettings.NAME + "=2s",
-		// The stopped run's action holds one thread until its call ends; the next run assesses on the other.
-		"PIPELINE_LLM_CONCURRENCY=2" })
+@SpringBootTest(properties = { MigrateCommand.ENABLE_FLYWAY, PipelineStallSettings.NAME + "=5s",
+		// One thread of the LLM pool: the run queued behind a stopped one assesses only once the stop has
+		// interrupted the stopped run's call and freed the thread.
+		"PIPELINE_LLM_CONCURRENCY=1" })
 @Import({ TestcontainersConfiguration.class, RunWatchdogIT.LocalWykop.class })
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @ExtendWith(OutputCaptureExtension.class)
 class RunWatchdogIT {
 
-	private static final Duration TIMEOUT = Duration.ofSeconds(2);
+	private static final Duration TIMEOUT = Duration.ofSeconds(5);
 
 	/** The run's and its open step's error after the watchdog stopped it ({@code Durations.format}). */
-	private static final String STALLED = "no progress for 2.0s: the run was stopped";
+	private static final String STALLED = "no progress for 5.0s: the run was stopped";
 
 	private static final JsonMapper MAPPER = JsonMapper.builder().build();
 
@@ -136,10 +139,19 @@ class RunWatchdogIT {
 				String.class, leftover)).replaceAll("^\"|\"$", "");
 		CountDownLatch called = new CountDownLatch(1);
 		CountDownLatch answered = new CountDownLatch(1);
+		CountDownLatch interrupted = new CountDownLatch(1);
 		answer(request -> {
 			if (request.userMessage().contains(body)) {
 				called.countDown();
-				await(answered);
+				try {
+					answered.await(30, TimeUnit.SECONDS);
+				}
+				catch (InterruptedException ex) {
+					// As the HTTP client of a call in flight: an interrupt ends the call.
+					interrupted.countDown();
+					Thread.currentThread().interrupt();
+					throw new IllegalStateException("the call was interrupted", ex);
+				}
 			}
 			return response(VALID);
 		});
@@ -160,35 +172,36 @@ class RunWatchdogIT {
 			assertThat(post(leftover)).containsEntry("stage", "failed")
 				.containsEntry("assessment_attempts", 1)
 				.containsEntry("assessing_run_id", null);
-			awaitLog(output, "Pipeline run " + retry + " made no progress for 2.0s; stopped");
+			awaitLog(output, "Pipeline run " + retry + " made no progress for 5.0s; stopped");
 			awaitLog(output, "Pipeline run " + retry + ": stopped waiting, the watchdog stopped the run");
+			Supplier<List<Object>> retryState = () -> List.of(run(retry), steps(retry), post(leftover),
+					count("SELECT count(*) FROM assessments WHERE post_id = ? OR run_id = ?", leftover, retry));
+			List<Object> stopped = retryState.get();
 
-			// The range run queued behind it starts and assesses its new posts (the links), while the
-			// stopped run's call still holds a thread of the LLM pool.
+			// The stop interrupts the call that did not end, so its thread of the LLM pool is free again,
+			// before the call has an answer.
+			await(interrupted);
+			assertThat(answered.getCount()).isOne();
+			// The range run queued behind it starts and assesses its new posts (the links) on that thread.
 			assertThat(finished(range)).containsEntry("status", "succeeded")
 				.containsEntry("fetched", 16)
 				.containsEntry("new_posts", 4)
 				.containsEntry("assessed_ok", 4);
-			assertThat(answered.getCount()).isOne();
 			// The admin is notified about the stopped run once, though both the watchdog and the run's own
 			// end report it; not about the run that succeeded.
 			awaitClosed(range);
 			assertThat(notified(retry)).isOne();
 			assertThat(notified(range)).isZero();
 
-			Supplier<List<Object>> retryState = () -> List.of(run(retry), steps(retry), post(leftover),
-					count("SELECT count(*) FROM assessments WHERE post_id = ? OR run_id = ?", leftover, retry));
-			List<Object> stopped = retryState.get();
-			answered.countDown();
-
-			// The stopped run's action gets its answer and ends its step, but writes nothing: no
-			// assessment, counter, error or step.
+			// The stopped run's action ends its step without the answer, and writes nothing: no assessment,
+			// counter, error or step; the interrupted call is not the post's technical error.
 			awaitLog(output, "Run " + retry + " step assess ended in");
 			assertUnchanged(retryState, stopped);
 			assertThat(run(retry)).containsEntry("assessed_ok", 0)
 				.containsEntry("assessed_failed", 0)
 				.containsEntry("processing_errors", 0);
-			assertThat(output.getAll()).doesNotContain("Pipeline run " + retry + " failed");
+			assertThat(output.getAll()).doesNotContain("Pipeline run " + retry + " failed")
+				.doesNotContain("Assessing post " + leftover + " in run " + retry + " failed");
 		}
 		finally {
 			answered.countDown();
@@ -204,10 +217,10 @@ class RunWatchdogIT {
 				+ " ORDER BY p.id LIMIT 6", UUID.class);
 		assertThat(posts).hasSize(6);
 		posts.forEach(post -> jdbc.update("UPDATE posts SET stage = 'stored' WHERE id = ?", post));
-		// Every answer takes half the timeout: on two threads a post is counted about every second, and
-		// the whole run takes about three.
+		// Every answer takes 1.5 s, under a third of the timeout: on the one thread a post is counted every
+		// 1.5 s, and the whole run takes about 9 s.
 		answer(request -> {
-			pause(TIMEOUT.dividedBy(2));
+			pause(Duration.ofMillis(1500));
 			return response(VALID);
 		});
 
@@ -241,6 +254,14 @@ class RunWatchdogIT {
 		finally {
 			jdbc.update("UPDATE pipeline_runs SET status = 'failed', finished_at = now() WHERE id = ?", foreign);
 		}
+	}
+
+	@Test
+	@Order(4)
+	void aDatabaseCallWaitsAtMostFiveMinutesForItsAnswer() {
+		// pgjdbc's socketTimeout (application.properties): a hung statement fails instead of holding its thread.
+		assertThat(jdbc.execute((ConnectionCallback<Integer>) Connection::getNetworkTimeout))
+			.isEqualTo((int) Duration.ofMinutes(5).toMillis());
 	}
 
 	/** The admin's notifications about {@code runId}. */

@@ -55,6 +55,7 @@ import pl.szczurradar.api.llm.LlmResponse;
 import pl.szczurradar.api.llm.OutputMode;
 import pl.szczurradar.api.llm.transport.TransportException;
 import pl.szczurradar.api.notifications.RunNotifications;
+import pl.szczurradar.api.pipeline.assess.AssessmentDispatcher;
 import pl.szczurradar.api.pipeline.run.PipelineRun;
 import pl.szczurradar.api.pipeline.run.PipelineRunRepository;
 import pl.szczurradar.api.pipeline.run.RunKind;
@@ -141,6 +142,9 @@ class PipelineAgentIT {
 
 	@Autowired
 	SourceIngest sources;
+
+	@Autowired
+	AssessmentDispatcher dispatcher;
 
 	@Autowired
 	AgentPlatform agentPlatform;
@@ -347,7 +351,7 @@ class PipelineAgentIT {
 
 	@Test
 	@Order(7)
-	void aStoppingInstanceInterruptsItsRunAndPutsItsPostsBack() throws InterruptedException {
+	void aStoppingInstanceInterruptsItsRunAndPutsItsPostsBack(CapturedOutput output) throws InterruptedException {
 		// Assessed by the model (not decided by the prefilter), so the client is called for it.
 		UUID post = jdbc.queryForObject("SELECT p.id FROM posts p WHERE p.stage = 'assessed' AND EXISTS"
 				+ " (SELECT 1 FROM assessments a WHERE a.post_id = p.id AND a.result_source = 'model')"
@@ -367,7 +371,7 @@ class PipelineAgentIT {
 		});
 		// A second instance of the service, as during a deployment overlap; the shared one keeps running.
 		PipelineRunService stopping = new PipelineRunService(runs, posts, sources, recorder, transitions, notifications,
-				agentPlatform, jdbcClient, transaction, "deployment-stopping");
+				dispatcher, agentPlatform, jdbcClient, transaction, "deployment-stopping");
 		try {
 			UUID run = stopping.startPosts(List.of(post), admin).getFirst().getId();
 			assertThat(called.await(30, TimeUnit.SECONDS)).isTrue();
@@ -386,6 +390,17 @@ class PipelineAgentIT {
 			assertThat(post(post)).containsEntry("stage", "stored").containsEntry("assessing_run_id", null);
 			// The admin is notified while the instance closes.
 			assertThat(notified(run)).isOne();
+
+			// Its queue thread stops waiting and leaves the run as onClose left it: no second close or report,
+			// which would race the database's shutdown.
+			awaitLog(output, "Pipeline run " + run + ": stopped waiting, the application is stopping");
+			long deadline = System.nanoTime() + Duration.ofSeconds(30).toNanos();
+			while (stopping.ownRuns().contains(run)) {
+				assertThat(System.nanoTime()).isLessThan(deadline);
+				pause();
+			}
+			// close() would log the run's end line.
+			assertThat(output.getAll()).doesNotContain("Pipeline run " + run + " (posts) ended interrupted in");
 		}
 		finally {
 			answered.countDown();

@@ -131,6 +131,8 @@ export PGHOST=127.0.0.1 PGPORT=5432 PGDATABASE=szczur_radar_local PGUSER=szczur_
 
 Wszystkie pięć musi być ustawione: bez nich start się nie powiedzie (Spring Session sprawdza URL JDBC już przy starcie). Sama baza nie musi działać — pula łączy jest leniwa, `/api/health` odpowiada, a `/api/ready` zwraca 503.
 
+Każde zapytanie ma koniec: sterownik przerywa instrukcję, która czeka na odpowiedź bazy dłużej niż 300 s (`socketTimeout` w `application.properties`; serwer, komendy, `migrate` i testy), więc zawieszone połączenie nie trzyma wątku na zawsze.
+
 Lokalnie po `http://` (bez HTTPS) ustaw `COOKIE_SECURE=false`, jeśli przeglądarka nie zapisuje ciasteczka `Secure` (Chrome i Firefox akceptują je na `localhost`). Tylko wartości `0`, `false`, `no` wyłączają `Secure`.
 
 Wolumen sprzed F-03 (baza z czasów Pythona) daje przy `migrate` błąd „Found non-empty schema(s) … but no schema history table”: wyzeruj go `docker compose -f compose.local.yaml down -v` (kasuje lokalne dane), potem `migrate` i `create-admin`. Zmienne (`PG*`, `LLM_*`, `WYKOP_*`) ustawiaj w tym samym terminalu, w którym startuje jar.

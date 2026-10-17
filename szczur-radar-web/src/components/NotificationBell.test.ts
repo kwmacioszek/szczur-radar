@@ -10,7 +10,8 @@ import {
   markAllNotificationsRead,
   markNotificationRead,
 } from '../api/notifications'
-import { resetSession } from '../auth/session'
+import { clearSession, resetSession, setSession } from '../auth/session'
+import { loadNotifications } from '../notificationsStore'
 import { createAppRouter } from '../router'
 import NotificationBell from './NotificationBell.vue'
 
@@ -52,13 +53,19 @@ function never<T>(): Promise<T> {
   return new Promise(() => {})
 }
 
-/** `attachTo`: in the document, for focus. */
-async function mountBell({ attachTo }: { attachTo?: HTMLElement } = {}) {
+/** `attachTo`: in the document, for focus; `path`: the page it is mounted on. */
+async function mountBell({ attachTo, path = '/admin' }: { attachTo?: HTMLElement; path?: string } = {}) {
   const router = createAppRouter(createMemoryHistory())
-  await router.push('/admin')
+  await router.push(path)
   const wrapper = mount(NotificationBell, { global: { plugins: [router] }, attachTo })
   await flushPromises()
   return { wrapper, router }
+}
+
+/** The tab becomes visible (or hidden) and says so. */
+function showTab(state: DocumentVisibilityState): void {
+  vi.spyOn(document, 'visibilityState', 'get').mockReturnValue(state)
+  document.dispatchEvent(new Event('visibilitychange'))
 }
 
 function bell(wrapper: VueWrapper) {
@@ -94,6 +101,7 @@ describe('NotificationBell', () => {
 
   afterEach(() => {
     vi.mocked(window.scrollTo).mockRestore()
+    vi.restoreAllMocks()
     vi.useRealTimers()
     document.body.innerHTML = ''
   })
@@ -311,10 +319,11 @@ describe('NotificationBell', () => {
 
   describe('reading again', () => {
     beforeEach(() => {
-      vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval', 'setTimeout', 'clearTimeout'] })
+      // Date too: a list is fresh for 10 s after it was read.
+      vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval', 'setTimeout', 'clearTimeout', 'Date'] })
     })
 
-    it('reads the list on mount, then every 60 s while the tab is visible', async () => {
+    it('reads the list on mount, then every 60 s on an admin page while the tab is visible', async () => {
       vi.mocked(fetchNotifications)
         .mockResolvedValueOnce(list([notification('a')]))
         .mockResolvedValue(list([notification('b'), notification('a')]))
@@ -360,5 +369,117 @@ describe('NotificationBell', () => {
       expect(panel(wrapper).find('[role="alert"]').exists()).toBe(false)
       expect(bell(wrapper).find('.count').text()).toBe('1')
     })
+
+    it('shows the list at once when it is mounted again on the next page, and reads it only once it is not fresh', async () => {
+      vi.mocked(fetchNotifications).mockResolvedValue(list([notification('a')]))
+      const first = await mountBell()
+      first.wrapper.unmount()
+      await vi.advanceTimersByTimeAsync(5_000)
+
+      // The next view's header: the same list, no loading state, no request.
+      const again = mount(NotificationBell, { global: { plugins: [first.router] } })
+      expect(bell(again).attributes('aria-label')).toBe('Powiadomienia, 1 nieprzeczytane')
+      await flushPromises()
+      expect(fetchNotifications).toHaveBeenCalledTimes(1)
+      again.unmount()
+
+      await vi.advanceTimersByTimeAsync(6_000)
+      let answer: (value: NotificationList) => void = () => {}
+      vi.mocked(fetchNotifications).mockReturnValueOnce(new Promise((resolve) => (answer = resolve)))
+      const later = mount(NotificationBell, { global: { plugins: [first.router] } })
+      // Read again, and the old list stays on screen meanwhile.
+      expect(fetchNotifications).toHaveBeenCalledTimes(2)
+      expect(bell(later).attributes('aria-label')).toBe('Powiadomienia, 1 nieprzeczytane')
+      answer(list([notification('b'), notification('a')]))
+      await flushPromises()
+      expect(bell(later).attributes('aria-label')).toBe('Powiadomienia, 2 nieprzeczytane')
+    })
+
+    it('reads the list again after a page change, unless it is fresh', async () => {
+      const { router } = await mountBell()
+      expect(fetchNotifications).toHaveBeenCalledTimes(1)
+
+      await router.push('/')
+      await flushPromises()
+      expect(fetchNotifications).toHaveBeenCalledTimes(1)
+
+      await vi.advanceTimersByTimeAsync(10_000)
+      await router.push('/admin/runs/r1')
+      await flushPromises()
+      expect(fetchNotifications).toHaveBeenCalledTimes(2)
+    })
+
+    it('reads the list every 60 s only on the admin pages', async () => {
+      const { router } = await mountBell({ path: '/' })
+      expect(fetchNotifications).toHaveBeenCalledTimes(1)
+
+      // The feed: no reads on a timer, so an open tab lets the API sleep.
+      await vi.advanceTimersByTimeAsync(180_000)
+      expect(fetchNotifications).toHaveBeenCalledTimes(1)
+      await router.push('/posts/p1')
+      await flushPromises()
+      expect(fetchNotifications).toHaveBeenCalledTimes(2)
+      await vi.advanceTimersByTimeAsync(180_000)
+      expect(fetchNotifications).toHaveBeenCalledTimes(2)
+
+      // A run's page: read on the way in, then every 60 s.
+      await router.push('/admin/runs/r1')
+      await flushPromises()
+      expect(fetchNotifications).toHaveBeenCalledTimes(3)
+      await vi.advanceTimersByTimeAsync(60_000)
+      await flushPromises()
+      expect(fetchNotifications).toHaveBeenCalledTimes(4)
+    })
+
+    it('reads the list again when the tab becomes visible, unless it is fresh', async () => {
+      await mountBell({ path: '/' })
+      showTab('visible')
+      await flushPromises()
+      expect(fetchNotifications).toHaveBeenCalledTimes(1)
+
+      await vi.advanceTimersByTimeAsync(10_000)
+      showTab('hidden')
+      await flushPromises()
+      expect(fetchNotifications).toHaveBeenCalledTimes(1)
+      showTab('visible')
+      await flushPromises()
+      expect(fetchNotifications).toHaveBeenCalledTimes(2)
+    })
+
+    it('stops reading on page changes and tab changes when it is unmounted', async () => {
+      const { wrapper, router } = await mountBell()
+      wrapper.unmount()
+      await vi.advanceTimersByTimeAsync(10_000)
+
+      await router.push('/')
+      showTab('visible')
+      await flushPromises()
+
+      expect(fetchNotifications).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  it('forgets the list when the session ends, so the next admin never sees it', async () => {
+    let answer: (value: NotificationList) => void = () => {}
+    vi.mocked(fetchNotifications)
+      .mockResolvedValueOnce(list([notification('a')]))
+      .mockReturnValueOnce(new Promise((resolve) => (answer = resolve)))
+      .mockResolvedValue(list([]))
+    const first = await mountBell()
+    expect(bell(first.wrapper).attributes('aria-label')).toBe('Powiadomienia, 1 nieprzeczytane')
+    // A read still under way when the admin logs out.
+    void loadNotifications()
+    first.wrapper.unmount()
+
+    clearSession()
+    answer(list([notification('late')]))
+    setSession({ id: '2', email: 'other-admin@example.com', role: 'admin' })
+    const next = mount(NotificationBell, { global: { plugins: [first.router] } })
+
+    expect(bell(next).attributes('aria-label')).toBe('Powiadomienia')
+    await flushPromises()
+    expect(bell(next).attributes('aria-label')).toBe('Powiadomienia, 0 nieprzeczytanych')
+    await open(next)
+    expect(panel(next).find('.empty').text()).toBe('Brak powiadomień.')
   })
 })

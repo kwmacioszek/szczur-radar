@@ -31,6 +31,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import pl.szczurradar.api.notifications.RunNotifications;
+import pl.szczurradar.api.pipeline.assess.AssessmentDispatcher;
 import pl.szczurradar.api.pipeline.flow.RunFlow.RunRequest;
 import pl.szczurradar.api.pipeline.flow.RunFlow.RunSummary;
 import pl.szczurradar.api.pipeline.run.InterruptionCause;
@@ -62,8 +63,8 @@ import pl.szczurradar.api.sources.Source;
  *       still {@code assessing} are put back. A run that stopped elsewhere meanwhile (interrupted)
  *       ends quietly: its next step is not started ({@link RunNoLongerRunningException}).
  *   <li>A run of this instance without progress for {@code PIPELINE_STALL_TIMEOUT} is stopped by
- *       {@link RunWatchdog} ({@link #stopStalled}): {@code failed}, its posts put back, and the queue
- *       goes on with the next run.
+ *       {@link RunWatchdog} ({@link #stopStalled}): {@code failed}, its posts put back, its post tasks
+ *       interrupted, and the queue goes on with the next run.
  *   <li>When the context closes, this instance marks its own queued and running runs
  *       {@code interrupted} ({@link InterruptionCause#SHUTDOWN}) first, then stops its thread; a newer
  *       deployment's start-up recovery does the same for runs nobody finished
@@ -97,6 +98,8 @@ public class PipelineRunService {
 
 	private final RunNotifications notifications;
 
+	private final AssessmentDispatcher dispatcher;
+
 	private final AgentPlatform agentPlatform;
 
 	private final JdbcClient jdbc;
@@ -116,14 +119,16 @@ public class PipelineRunService {
 	private final Map<UUID, Future<?>> waiting = new ConcurrentHashMap<>();
 
 	PipelineRunService(PipelineRunRepository runs, PostRepository posts, SourceIngest sources, RunRecorder recorder,
-			PostTransitions transitions, RunNotifications notifications, AgentPlatform agentPlatform, JdbcClient jdbc,
-			TransactionTemplate transaction, @Value("${RAILWAY_DEPLOYMENT_ID:}") @Nullable String deploymentId) {
+			PostTransitions transitions, RunNotifications notifications, AssessmentDispatcher dispatcher,
+			AgentPlatform agentPlatform, JdbcClient jdbc, TransactionTemplate transaction,
+			@Value("${RAILWAY_DEPLOYMENT_ID:}") @Nullable String deploymentId) {
 		this.runs = runs;
 		this.posts = posts;
 		this.sources = sources;
 		this.recorder = recorder;
 		this.transitions = transitions;
 		this.notifications = notifications;
+		this.dispatcher = dispatcher;
 		this.agentPlatform = agentPlatform;
 		this.jdbc = jdbc;
 		this.transaction = transaction;
@@ -195,7 +200,9 @@ public class PipelineRunService {
 	 * <p>The agent's actions run on Embabel's threads; this one waits for the agent's future, kept in
 	 * {@link #waiting} meanwhile. An action's exception arrives wrapped in an {@link ExecutionException};
 	 * this thread being stopped (the instance closing) as an {@link InterruptedException}; the future
-	 * cancelled by {@link #stopStalled} as a {@link CancellationException}.
+	 * cancelled by {@link #stopStalled} as a {@link CancellationException}. After an interruption the
+	 * run is not closed or reported here: {@link #onClose} already did both, and the database may be
+	 * closing.
 	 */
 	void execute(UUID runId) {
 		String error = "the run ended without a summary";
@@ -233,8 +240,10 @@ public class PipelineRunService {
 		}
 		finally {
 			waiting.remove(runId);
-			close(runId, error, started);
-			notifications.runEnded(runId);
+			if (!interrupted) {
+				close(runId, error, started);
+				notifications.runEnded(runId);
+			}
 			own.remove(runId);
 			if (interrupted) {
 				// Restored after the clean-up, whose database calls an interrupted thread may not get.
@@ -245,28 +254,39 @@ public class PipelineRunService {
 
 	/**
 	 * Stops a run of this instance that made no progress for {@code threshold} ({@link RunWatchdog}):
-	 * ends it {@code failed} with its open steps ({@link RunRecorder#stall}), puts its posts back, notifies
-	 * the admins, then cancels the wait for its agent, so this queue takes the next run.
+	 * ends it {@code failed} with its open steps ({@link RunRecorder#stall}) and puts its posts back, in
+	 * one transaction; then notifies the admins, cancels the wait for its agent, so this queue takes the
+	 * next run, and interrupts its post tasks ({@link AssessmentDispatcher#cancel}), so their threads of
+	 * the LLM pool are freed.
 	 *
-	 * <p>The agent's action goes on in Embabel's thread until its current call ends (holding a thread
-	 * of the LLM pool meanwhile), but changes nothing: claiming a post needs a running run, storing a
-	 * result needs the post still held by the run, and its counters and steps are conditional. The
-	 * cancelled wait is temporary — it goes with Embabel out of the run.
+	 * <p>The agent's action goes on in Embabel's thread until its current call ends, but changes
+	 * nothing: claiming a post needs a running run, storing a result needs the post still held by the
+	 * run, and its counters and steps are conditional. The cancelled wait is temporary — it goes with
+	 * Embabel out of the run.
 	 *
 	 * @return whether the run was stopped; nothing happens to a run that is not running (still queued,
 	 *     finished) or made progress meanwhile
 	 */
 	boolean stopStalled(UUID runId, Duration threshold) {
-		if (!recorder.stall(runId, threshold)) {
+		// As in start-up recovery: the run ends and its posts go back together.
+		boolean stopped = Boolean.TRUE.equals(transaction.execute(status -> {
+			if (!recorder.stall(runId, threshold)) {
+				return false;
+			}
+			transitions.releaseAll(runId);
+			return true;
+		}));
+		if (!stopped) {
 			return false;
 		}
-		transitions.releaseAll(runId);
 		log.warn("Pipeline run {} made no progress for {}; stopped", runId, Durations.format(threshold));
+		// After the commit: the notifications read the stopped run.
 		notifications.runEnded(runId);
 		Future<?> agent = waiting.get(runId);
 		if (agent != null) {
 			agent.cancel(false);
 		}
+		dispatcher.cancel(runId);
 		return true;
 	}
 
@@ -303,14 +323,19 @@ public class PipelineRunService {
 
 	/**
 	 * This instance stops: its own queued and running runs become {@code interrupted} (before the
-	 * thread is stopped, so a run interrupted mid-step is not marked {@code failed}), their posts are
-	 * put back and the admins notified, then the thread is stopped.
+	 * thread is stopped, so a run interrupted mid-step is not marked {@code failed}) and their posts are
+	 * put back, in one transaction; then the admins are notified and the thread is stopped.
 	 */
 	@EventListener(ContextClosedEvent.class)
 	void onClose() {
-		for (UUID runId : recorder.interrupt(List.copyOf(own), InterruptionCause.SHUTDOWN)) {
-			transitions.releaseAll(runId);
-			notifications.runEnded(runId);
+		List<UUID> interrupted = transaction.execute(status -> {
+			List<UUID> ids = recorder.interrupt(List.copyOf(own), InterruptionCause.SHUTDOWN);
+			ids.forEach(transitions::releaseAll);
+			return ids;
+		});
+		// After the commit: the notifications read the interrupted runs.
+		if (interrupted != null) {
+			interrupted.forEach(notifications::runEnded);
 		}
 		executor.shutdownNow();
 	}

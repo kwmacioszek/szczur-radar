@@ -53,8 +53,8 @@ PipelineRunService.startRange / startPosts → queue → PipelineAgent:
 | `step/SourceIngest` | which sources a range run fetches (default: every configured one) and the fetch over them |
 | `step/PostStore` | new posts with their raw payload, once per `(source, item_type, source_item_id)`; `findKeys` in chunks of 1,000; stores chunks of 500 in one transaction each (raw payloads, then posts: JDBC batches), a chunk hitting the unique key again post by post |
 | `step/AssessmentSelection` | one attempt per post and request: range → only the posts it stored first; retry → every leftover; posts → the given ones still assessable |
-| `assess/AssessmentDispatcher` | the port of the assess step; a Batch API version may replace the concurrent one |
-| `assess/ConcurrentAssessmentDispatcher` | first `LlmClient.check()` (fails → no post taken, run `failed`); own pool (`PIPELINE_LLM_CONCURRENCY`, default 4); per post: claim → `Assessor.assess` on `AssessmentInputs.of(post)` → record, or release, then the post's result goes into the run's counters at once (`RunRecorder.count`, below); an `LlmConfigurationException` (revoked key, no credit, unknown model) stops taking posts (WARN with the provider's reason), counts no attempt and fails the run (`AssessedBatch.stoppedBy`); a progress line in the log at most once a minute and after the last post |
+| `assess/AssessmentDispatcher` | the port of the assess step (`dispatch`, and `cancel` for a run the watchdog stopped); a Batch API version may replace the concurrent one |
+| `assess/ConcurrentAssessmentDispatcher` | first `LlmClient.check()` (fails → no post taken, run `failed`); own pool (`PIPELINE_LLM_CONCURRENCY`, default 4); per post: claim → `Assessor.assess` on `AssessmentInputs.of(post)` → record, or release, then the post's result goes into the run's counters at once (`RunRecorder.count`, below); an `LlmConfigurationException` (revoked key, no credit, unknown model) stops taking posts (WARN with the provider's reason), counts no attempt and fails the run (`AssessedBatch.stoppedBy`); a failed `count` is a WARN and leaves the post's outcome (a stored post is never a technical error); `cancel(runId)` interrupts the run's post tasks (below); a progress line in the log at most once a minute and after the last post |
 | `assess/AssessmentInputs` | a stored post's assessment input, rebuilt from its raw payload by its source's `RawInputMapper` |
 | `state/PostTransitions` | the post's stage changes, each a conditional `UPDATE` with `updated_at = now()`: claim (only while the run is running), record (only while the run owns the post), release (back without an attempt) |
 | `state/RunRecorder` | run status, steps, counters, error, `last_activity_at` — every change conditional on the expected status; a step opens only in a running run and closes only once; `interrupt` / `interruptAll` (with the cause) and `stall` (the watchdog) close the open steps in the same transaction; status and stage values are bound from their enums, never written into the SQL |
@@ -94,23 +94,34 @@ PipelineRunService.startRange / startPosts → queue → PipelineAgent:
   `PIPELINE_STALL_TIMEOUT`, at most a minute, it hands each run of this instance (`PipelineRunService.own`,
   in memory) to `stopStalled`; while `own` is empty it asks the database nothing, so the API can still
   sleep on Railway. `stopStalled`, in this order:
-  1. `RunRecorder.stall`: `running` → `failed` with `no progress for <timeout>: the run was stopped`, only
-     when `last_activity_at` (or `started_at`) is still older than the timeout, and the open steps
-     closed `failed` with the same error, in one transaction;
-  2. `PostTransitions.releaseAll` — the posts go back without an attempt;
-  3. WARN `Pipeline run <id> made no progress for <timeout>; stopped`, then `RunNotifications.runEnded`;
-  4. `future.cancel(false)` on the agent's future, so `execute` stops waiting (`CancellationException`)
-     and the same single-thread queue takes the next run (e.g. the RANGE run behind a RETRY).
+  1. in one transaction (as recovery pairs `interruptAll` with `releaseOrphans`): `RunRecorder.stall`
+     (`running` → `failed` with `no progress for <timeout>: the run was stopped`, only when
+     `last_activity_at` (or `started_at`) is still older than the timeout, and the open steps closed
+     `failed` with the same error) and `PostTransitions.releaseAll` — the posts go back without an attempt;
+  2. after the commit, WARN `Pipeline run <id> made no progress for <timeout>; stopped`, then
+     `RunNotifications.runEnded`;
+  3. `future.cancel(false)` on the agent's future, so `execute` stops waiting (`CancellationException`)
+     and the same single-thread queue takes the next run (e.g. the RANGE run behind a RETRY);
+  4. `AssessmentDispatcher.cancel(runId)`: the run's post futures are cancelled with `cancel(true)`, so a
+     post not started never runs and a call in flight gets an interrupt (INFO `Run <id> assess: stopped,
+     N post task(s) not finished were cancelled`).
   Writing first matters: cancelling first would let `execute` close the run `failed` with another error.
+  `onClose` likewise interrupts its runs and puts their posts back in one transaction, then notifies.
 - **Why a future, not the queue thread.** Embabel runs the agent's actions on its own pool
   (`embabel-platform-N`; `invoke()` is `invokeAsync().get()`), so the `pipeline-run` thread only waits:
   interrupting it never reaches the action or the dispatcher's `await`. `execute` therefore starts the
   agent with `invokeAsync` and keeps its future in `waiting` while it waits. The cancelled action goes
-  on in Embabel's thread (a "zombie", holding a slot of the LLM pool until its current call ends) but
-  changes nothing: `claim` needs a running run, `record` needs the post still held by the run (not after
-  `releaseAll`), and counters and steps are conditional. This is temporary: it goes away with Embabel
-  out of the run (`roadmap.md`, `## Parked`). `execute` catches `InterruptedException` (the instance
-  closing) on its own and restores the thread's interrupt flag after the clean-up.
+  on in Embabel's thread (a "zombie") but changes nothing: `claim` needs a running run, `record` needs
+  the post still held by the run (not after `releaseAll`), and counters and steps are conditional. It
+  holds no thread for good: its post futures are cancelled with an interrupt (`cancel(true)`), so its
+  `await` returns at once (a cancelled task counts nothing) and its calls end — an LLM call waiting for
+  its answer or between attempts at once, one blocked in a socket read within its attempt's
+  `LLM_TIMEOUT`, without another attempt (`TransportRetry`'s wait fails on the pending interrupt); a
+  failure a cancelled task ends with is logged at INFO, never as the post's technical error. A database
+  call ends within the driver's `socketTimeout` (300 s, `application.properties`). This is temporary: it
+  goes away with Embabel out of the run (`roadmap.md`, `## Parked`). `execute` catches
+  `InterruptedException` (the instance closing) on its own: it neither closes nor reports that run
+  (`onClose` did both, and the database may be closing), and restores the thread's interrupt flag.
 - **`PIPELINE_STALL_TIMEOUT`** (`PipelineStallSettings`, read only by the server): optional, with a unit;
   default `max(15m, TransportRetry.maxCallDuration(LLM_TIMEOUT, LLM_SERVICE_TIER) + 5m)` — the LLM
   check, a run's last posts and a small retry run have one call in flight, which moves nothing until it
@@ -119,7 +130,8 @@ PipelineRunService.startRange / startPosts → queue → PipelineAgent:
   number, zero or less, or more than `24h` stops the server's start.
 - **Notifications.** Every way a run ends calls `RunNotifications.runEnded(runId)` directly (not through
   Spring events: recovery runs before listeners are known to be registered), four places:
-  1. `PipelineRunService.execute`, in `finally` after `close` (its own end, an exception);
+  1. `PipelineRunService.execute`, in `finally` after `close` (its own end, an exception; not after an
+     `InterruptedException`, which `onClose` already reported);
   2. `PipelineRunService.onClose`, for each run it interrupted (`shutdown`);
   3. `PipelineStartupRecovery.recover`, for each run it interrupted, after its transaction commits;
   4. `PipelineRunService.stopStalled`, after the watchdog's stop.
@@ -127,7 +139,9 @@ PipelineRunService.startRange / startPosts → queue → PipelineAgent:
   `partial` with a `dead` post or a technical error (a `partial` run with only retryable `failed` posts
   does not: the next run retries them) — one row per admin with `login_enabled`, `ON CONFLICT DO
   NOTHING`, so a run reported twice is notified once. It never throws: a failure is logged (ERROR) and
-  the run's ending, or the server's start, goes on.
+  the run's ending, or the server's start, goes on. The unique key `uq_notifications_recipient_kind_run`
+  (`V9`) treats a `NULL` `run_id` as distinct: a future kind without a run needs a new migration with
+  `UNIQUE NULLS NOT DISTINCT` (never an edit of `V9`), or its `ON CONFLICT` never fires.
 
 ## Rules
 
@@ -162,26 +176,32 @@ PipelineRunService.startRange / startPosts → queue → PipelineAgent:
 - Unit (`*Test`, no Spring): `state/RunOutcomeTest`, `state/DurationsTest`, `step/PostStoreTest`,
   `step/AssessmentSelectionTest`, `step/SourceIngestTest`, `assess/ConcurrentAssessmentDispatcherTest`
   (threads, one client, a technical error; one `count` per stored post with its retries and flex
-  fallback, `processingError`, nothing for a post not taken; the progress line), `run/PipelineRunTest`
-  (`needsAttention` for every status), `PipelineStallSettingsTest` (default from the LLM settings, WARN
-  below it, units, refusals), `RunWatchdogTest` (no database call without a run of its own, the check
-  interval); `llm/transport/TransportRetryTest` covers `maxCallDuration`.
+  fallback, `processingError`, nothing for a post not taken; a failed `count` keeps a stored post
+  stored; `cancel` interrupts the run's call in flight, skips its post not started and leaves another
+  run's call alone; the progress line), `run/PipelineRunTest` (`needsAttention` for every status),
+  `PipelineStallSettingsTest` (default from the LLM settings, WARN below it, units, refusals),
+  `RunWatchdogTest` (no database call without a run of its own, a failure and an `Error` logged, the
+  checks going on after an `Error`, the check interval); `llm/transport/TransportRetryTest` covers
+  `maxCallDuration`.
 - `api/InternalPipelineRunIT` (+ `InternalPipelineRunWithoutTokenIT`): the token, no session and no
   cookie on `/internal/**`, the D-2…D-1 range for a fixed `Clock` (also a DST day), 409, 404, the exact
   keys of `GET /internal/pipeline-runs/{id}` with `step` and `assessTotal` during the assessment.
   `api/PipelineRunControllerIT`: the run page, 404, the new fields, `scheduled` for the cron's run.
   `api/FreshnessIT`: which runs move the label. `PipelineStartupRecoveryIT`: recovery before the port,
   the cause `deploy` / `restart`, steps `interrupted`, notifications.
-- `RunWatchdogIT` (`PIPELINE_STALL_TIMEOUT=2s`, a scripted `LlmClient` held on a latch): a hanging run
-  ends `failed` with its `assess` step closed and its posts back without an attempt, the run queued behind
-  it runs, the zombie action stores nothing once released, a slow run with progress is not stopped,
-  another instance's run is left alone, and the admins are notified.
+- `RunWatchdogIT` (`PIPELINE_STALL_TIMEOUT=5s`, `PIPELINE_LLM_CONCURRENCY=1`, a scripted `LlmClient`
+  held on a latch): a hanging run ends `failed` with its `assess` step closed and its posts back without
+  an attempt, its held call is interrupted, so the run queued behind it assesses on the only LLM thread,
+  the zombie action stores nothing, a slow run with progress (a post every 1.5 s) is not stopped, another
+  instance's run is left alone, the admins are notified, and a database connection has the 300 s
+  `socketTimeout`.
 - `notifications/api/NotificationsIT`: recipients (admins only), idempotence, which run endings notify,
   the list, marking one and all read, 404 for another admin's.
 - `PipelineAgentIT`: the whole graph on Postgres with a source on a local server and a scripted
   `LlmClient` — range, the same range again, a leftover's one attempt per request, recovery and a late
   worker, a failing source (`failed`, the queue takes the next request), an orphaned `assessing` post,
-  a stopping instance (`onClose`, cause `shutdown`, step `interrupted`) and a refused LLM key (`failed`,
+  a stopping instance (`onClose`, cause `shutdown`, step `interrupted`, its queue thread neither closes
+  nor reports the run again) and a refused LLM key (`failed`,
   no attempt); counters and `last_activity_at` growing during the assessment; no new step in an
   interrupted run and no ERROR in the log. Re-stub the `@MockitoBean` with `doAnswer(…).when(…)`, not `when(…)` (which calls the old
   answer with `null`).

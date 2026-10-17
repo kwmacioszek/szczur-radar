@@ -1,7 +1,9 @@
 package pl.szczurradar.api.pipeline;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
@@ -22,7 +24,8 @@ import pl.szczurradar.api.config.LlmProviderProperties.Provider;
 
 /**
  * One check of the watchdog, without its thread: nothing but an in-memory look while this instance has
- * no run, every run of its own handed to the stop, a failure logged.
+ * no run, every run of its own handed to the stop, a failure logged, an {@link Error} too; and on its
+ * thread, the checks going on after an {@link Error}.
  */
 @ExtendWith(OutputCaptureExtension.class)
 class RunWatchdogTest {
@@ -74,6 +77,40 @@ class RunWatchdogTest {
 
 		verify(service).stopStalled(next, TIMEOUT);
 		assertThat(output).contains("ERROR", "could not check run " + failing, "the database is gone");
+	}
+
+	@Test
+	void anErrorIsLoggedAndTheOtherRunsAreStillChecked(CapturedOutput output) {
+		UUID failing = UUID.randomUUID();
+		UUID next = UUID.randomUUID();
+		when(service.ownRuns()).thenReturn(List.of(failing, next));
+		when(service.stopStalled(failing, TIMEOUT)).thenThrow(new NoClassDefFoundError("pl/szczurradar/Missing"));
+
+		watchdog.check();
+
+		verify(service).stopStalled(next, TIMEOUT);
+		assertThat(output).contains("ERROR", "could not check run " + failing, "NoClassDefFoundError");
+	}
+
+	@Test
+	void anErrorInOneCheckDoesNotEndTheLaterChecks() {
+		UUID run = UUID.randomUUID();
+		Duration timeout = Duration.ofMillis(500);
+		when(service.ownRuns()).thenReturn(List.of(run));
+		when(service.stopStalled(run, timeout)).thenThrow(new NoClassDefFoundError("pl/szczurradar/Missing"))
+			.thenReturn(false);
+		// Checked every 100 ms on its own thread.
+		RunWatchdog scheduled = new RunWatchdog(service, PipelineStallSettings.from(
+				new MockEnvironment().withProperty(PipelineStallSettings.NAME, "500ms"),
+				new LlmProviderProperties(Provider.GEMINI, "model", "key")));
+		try {
+			scheduled.afterPropertiesSet();
+
+			verify(service, timeout(5_000).atLeast(3)).stopStalled(run, timeout);
+		}
+		finally {
+			scheduled.destroy();
+		}
 	}
 
 	@Test
