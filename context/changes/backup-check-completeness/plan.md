@@ -502,7 +502,7 @@ Porażka przed dumpem skraca przebieg zamiast go wydłużać.
 
 - [x] 3.4 PR env ma bazę z postami (wolumen, redeploy, dane przykładowe SQL-em)
 - [x] 3.5 Dwa przebiegi OK w PR env, drugi z compared_with pierwszego, manifest z notifications i pipeline_run_steps
-- [ ] 3.6 Spadek w PR env daje CRASHED z gotową wartością BACKUP_ACCEPT_SHRINK, powiadomienie i bucket bez zmian
+- [x] 3.6 Spadek w PR env daje CRASHED z gotową wartością BACKUP_ACCEPT_SHRINK, powiadomienie i bucket bez zmian
 - [x] 3.7 Zgoda BACKUP_ACCEPT_SHRINK z redeployem daje przebieg OK z accepted_shrink true
 - [x] 3.8 Push przy ustawionych zmiennych zostawia railway-config zielone
 - [x] 3.9 Sprzątanie PR env i zapis wyniku w deploy-plan (S-15) oraz w issue
