@@ -12,13 +12,13 @@ if (( $# > 0 )); then
     exec "$@"
 fi
 
+# TABLES, counted_tables: the classification lives next to this script.
+source "$(dirname "${BASH_SOURCE[0]}")/tables.sh"
+
 readonly PREFIX=szczur-radar
 # Session rows are not backed up: their ids would let whoever holds a dump take over a live session.
 # After a restore everyone logs in again.
 readonly EXCLUDED_DATA='public.spring_session*'
-# Rows counted before and after the dump (restore-check.sh compares them); none of these tables has a
-# delete path in the application, so the counts only grow while the dump runs.
-readonly COUNTED_TABLES=(users pipeline_runs posts assessments raw_payloads)
 
 log() { printf '%s backup: %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*" >&2; }
 fail() { log "FAILED: $*"; exit 1; }
@@ -80,10 +80,10 @@ trap 'rm -rf "$work"' EXIT
 
 sql() { psql -X -A -t -q -v ON_ERROR_STOP=1 -c "$1"; }
 
-# Row counts of COUNTED_TABLES as a JSON object.
+# Row counts of the counted tables (tables.sh) as a JSON object; restore-check.sh compares them.
 count_rows() {
     local query="select json_build_object(" separator="" table
-    for table in "${COUNTED_TABLES[@]}"; do
+    for table in "${counted[@]}"; do
         query+="$separator'$table', (select count(*) from public.$table)"
         separator=", "
     done
@@ -158,8 +158,11 @@ flyway_version=$(sql "select version from flyway_schema_history
     where success and version is not null order by installed_rank desc limit 1") \
     || fail "cannot read flyway_schema_history (has the API's migrate run?)"
 [[ -n $flyway_version ]] || fail "flyway_schema_history has no successful migration"
+# Only the tables this schema has: a counted table newer than the source's Flyway version is skipped.
+counted=$(counted_tables "$flyway_version") || fail "Flyway V$flyway_version is not a version tables.sh can compare"
+mapfile -t counted <<<"$counted"
 
-counts_before=$(count_rows) || fail "cannot count the rows of ${COUNTED_TABLES[*]}"
+counts_before=$(count_rows) || fail "cannot count the rows of ${counted[*]}"
 log "dumping database $PGDATABASE on $PGHOST (server $server_version, Flyway V$flyway_version)"
 # A lock held by a migration must not stall the run: pg_dump gives up after the lock wait.
 pg_dump --format=custom --no-owner --lock-wait-timeout=5min "--exclude-table-data=$EXCLUDED_DATA" \

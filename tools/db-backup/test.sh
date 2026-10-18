@@ -1,13 +1,18 @@
 #!/usr/bin/env bash
 # Local end-to-end test of the backup tool, without Railway and S3 (F-01, production-data-gate; see
 # README.md). A Postgres 18 database (production's image) gets the repo's Flyway migrations, a
-# flyway_schema_history like Flyway's and sample rows including a session; then:
-#   1. backup.sh into a local rclone remote: dump and manifest uploaded, no session data in the dump,
-#      restore check passed, monthly copy made;
+# flyway_schema_history like Flyway's and sample rows including an activation link, a notification and
+# a session; then:
+#   1. backup.sh into a local rclone remote: dump and manifest uploaded (counts of every counted table
+#      in tables.sh, notifications and pipeline_run_steps among them, never activation_tokens), no
+#      session data in the dump, restore check passed (so every migrated table is classified), monthly
+#      copy made;
 #   2. retention: 20 older daily and 15 older monthly dumps are cut to 14 and 12; a file with another
 #      name is left alone;
-#   3. a truncated dump fails restore-check.sh, a failing restore check uploads nothing, a run over
-#      its time limit fails, and outside production (RAILWAY_ENVIRONMENT_NAME) a run is skipped;
+#   3. a dump of a second database at Flyway V5 (before activation_tokens and notifications) passes
+#      restore-check.sh; a truncated dump fails it; a run over its time limit fails; outside production
+#      (RAILWAY_ENVIRONMENT_NAME) a run is skipped; a table tables.sh does not classify (tables: unknown)
+#      and a missing required table (tables: missing) fail the restore check, which uploads nothing;
 #   4. nas-retention.sh --dry-run names the right files and deletes nothing, then a real run prunes;
 #      other names and future-dated dumps are left alone;
 #   5. the throwaway database password never appears in the logs.
@@ -39,8 +44,51 @@ cleanup() {
 trap cleanup EXIT
 trap 'exit 130' INT TERM
 
-# psql in the database container (local socket, trust).
-db_psql() { docker exec -i "$db" psql -X -q -v ON_ERROR_STOP=1 -U "$db_user" -d "$db_name" "$@"; }
+# psql in the database container (local socket, trust): psql_in <database> …, db_psql … on the test database.
+psql_in() {
+    local database=$1
+    shift
+    docker exec -i "$db" psql -X -q -v ON_ERROR_STOP=1 -U "$db_user" -d "$database" "$@"
+}
+db_psql() { psql_in "$db_name" "$@"; }
+# The repo's migrations in database $1 (up to version $2 if given), with a flyway_schema_history like
+# the one `migrate` fills (Flyway 11, PostgreSQL). Sets rank (the number applied) and last_version.
+migrate() {
+    local database=$1 up_to=${2:-} file script version description
+    psql_in "$database" <<'SQL'
+CREATE TABLE flyway_schema_history (
+    installed_rank INTEGER       NOT NULL,
+    version        VARCHAR(50),
+    description    VARCHAR(200)  NOT NULL,
+    type           VARCHAR(20)   NOT NULL,
+    script         VARCHAR(1000) NOT NULL,
+    checksum       INTEGER,
+    installed_by   VARCHAR(100)  NOT NULL,
+    installed_on   TIMESTAMP     NOT NULL DEFAULT now(),
+    execution_time INTEGER       NOT NULL,
+    success        BOOLEAN       NOT NULL,
+    CONSTRAINT flyway_schema_history_pk PRIMARY KEY (installed_rank)
+);
+SQL
+    rank=0
+    last_version=""
+    for file in $(ls "$migrations" | grep -E '^V[0-9]+__.+\.sql$' | sed -E 's/^V([0-9]+)__/\1 &/' | sort -n | cut -d ' ' -f 2); do
+        script=${file%.sql}
+        version=${script%%__*}
+        version=${version#V}
+        if [ -n "$up_to" ] && [ "$version" -gt "$up_to" ]; then
+            break
+        fi
+        rank=$((rank + 1))
+        last_version=$version
+        description=$(printf '%s' "${script#*__}" | tr _ ' ')
+        psql_in "$database" <"$migrations/$file"
+        psql_in "$database" -c "insert into flyway_schema_history (installed_rank, version, description, type,
+            script, checksum, installed_by, execution_time, success)
+            values ($rank, '$last_version', '$description', 'SQL', '$file', 0, '$db_user', 0, true)"
+    done
+    [ "$rank" -gt 0 ] || die "no migrations in $migrations"
+}
 # A bash script (stdin) in the image, with the backup volume at /out.
 in_image() { docker run --rm -i -v "$out:/out" --entrypoint bash "$image" -s -- "$@"; }
 # One backup run against the test database; output in $tmp/$1.log, returns backup.sh's exit code.
@@ -72,36 +120,7 @@ for attempt in $(seq 1 60); do
     sleep 1
 done
 
-# The table Flyway creates (Flyway 11, PostgreSQL), filled the way `migrate` would fill it.
-db_psql <<'SQL'
-CREATE TABLE flyway_schema_history (
-    installed_rank INTEGER       NOT NULL,
-    version        VARCHAR(50),
-    description    VARCHAR(200)  NOT NULL,
-    type           VARCHAR(20)   NOT NULL,
-    script         VARCHAR(1000) NOT NULL,
-    checksum       INTEGER,
-    installed_by   VARCHAR(100)  NOT NULL,
-    installed_on   TIMESTAMP     NOT NULL DEFAULT now(),
-    execution_time INTEGER       NOT NULL,
-    success        BOOLEAN       NOT NULL,
-    CONSTRAINT flyway_schema_history_pk PRIMARY KEY (installed_rank)
-);
-SQL
-rank=0
-last_version=""
-for file in $(ls "$migrations" | grep -E '^V[0-9]+__.+\.sql$' | sed -E 's/^V([0-9]+)__/\1 &/' | sort -n | cut -d ' ' -f 2); do
-    rank=$((rank + 1))
-    script=${file%.sql}
-    last_version=${script%%__*}
-    last_version=${last_version#V}
-    description=$(printf '%s' "${script#*__}" | tr _ ' ')
-    db_psql <"$migrations/$file"
-    db_psql -c "insert into flyway_schema_history (installed_rank, version, description, type, script,
-        checksum, installed_by, execution_time, success)
-        values ($rank, '$last_version', '$description', 'SQL', '$file', 0, '$db_user', 0, true)"
-done
-[ "$rank" -gt 0 ] || die "no migrations in $migrations"
+migrate "$db_name"
 pass "$rank migrations, Flyway V$last_version"
 
 db_psql <<SQL
@@ -128,6 +147,11 @@ insert into assessments (post_id, run_id, status, input, input_hash, output, vio
     select id, first_run_id, 'ok', '{}', repeat('c', 64), '{}', '[]', 'model', 'openrouter', 'test-model',
         'openrouter', 'default', false, 'json_schema', 'test', 'v2', now(), 1, 1
     from posts;
+insert into activation_tokens (user_id, token_hash, expires_at)
+    select id, repeat('d', 64), now() + interval '1 day' from users where email = 'admin@example.com';
+insert into notifications (recipient_id, kind, run_id)
+    select users.id, 'run_attention', pipeline_runs.id from users, pipeline_runs
+    where users.email = 'admin@example.com';
 insert into spring_session values ('00000000-0000-0000-0000-000000000001',
     '00000000-0000-0000-0000-000000000002', 0, 0, 1800, 0, 'admin@example.com');
 insert into spring_session_attributes values ('00000000-0000-0000-0000-000000000001',
@@ -136,7 +160,7 @@ SQL
 # The migrations add system accounts (V6: the daily run's scheduler), so count the users instead of
 # assuming one.
 users=$(db_psql -Atc 'select count(*) from users')
-pass "sample rows: 1 admin ($users users with the migrations' system accounts), 1 run, $posts posts with RAW and assessments, 1 session"
+pass "sample rows: 1 admin ($users users with the migrations' system accounts), 1 run with 1 step, $posts posts with RAW and assessments, 1 activation link, 1 notification, 1 session"
 
 step "1. backup.sh into :local:/out"
 run_backup run1 || { cat "$tmp/run1.log"; die "the first backup failed"; }
@@ -153,13 +177,15 @@ grep -qE ' TABLE DATA public posts( |$)' <<<"$toc" || { echo "no posts data in t
 jq -e --argjson posts "$posts" --argjson users "$users" --arg version "$version" --arg file "$(basename "${dumps[0]}")" \
     --arg sha "$(sha256sum "${dumps[0]}" | cut -d ' ' -f 1)" \
     '.file == $file and .sha256 == $sha and .flyway_version == $version and .restore_check.ok == true
-     and .counts_before.posts == $posts and .counts_after.posts == $posts and .counts_after.users == $users' \
+     and .counts_before.posts == $posts and .counts_after.posts == $posts and .counts_after.users == $users
+     and .counts_before.notifications == 1 and .counts_after.pipeline_run_steps == 1
+     and (.counts_before | has("activation_tokens") | not)' \
     "${manifests[0]}" >/dev/null || { echo "manifest:"; cat "${manifests[0]}"; exit 1; }
 month=$(date -u +%Y-%m)
 [[ -s /out/monthly/szczur-radar-$month.dump && -s /out/monthly/szczur-radar-$month.manifest.json ]] \
     || { echo "no monthly copy for $month"; ls -l /out/monthly || true; exit 1; }
 SH
-pass "dump + manifest in daily/ (sha256, Flyway, counts, restore_check), no session data, monthly copy"
+pass "dump + manifest in daily/ (sha256, Flyway, counts with notifications and pipeline_run_steps, no activation_tokens, restore_check), no session data, monthly copy"
 echo "backup.sh log (what Railway shows for a cron run):"
 sed 's/^/    /' "$tmp/run1.log"
 
@@ -200,7 +226,7 @@ grep -q 'ignoring daily/szczur-radar-before-restore.dump' "$tmp/run2.log" \
     || { cat "$tmp/run2.log"; die "the other file is not logged as ignored"; }
 pass "daily 22 → 14 (both real dumps kept), monthly 16 → 12 (current month kept, not copied twice), other names left alone"
 
-step "3. a broken dump fails, and a failed restore check uploads nothing"
+step "3. an older dump passes, a broken dump or schema fails, and a failed restore check uploads nothing"
 in_image <<'SH' || die "a truncated dump passed restore-check.sh"
 set -uo pipefail
 dump=$(ls /out/daily/szczur-radar-*T*Z.dump | grep -v '/szczur-radar-2020' | tail -n 1)
@@ -208,6 +234,18 @@ head -c "$(( $(stat -c %s "$dump") / 2 ))" "$dump" >/tmp/truncated.dump
 if restore-check.sh /tmp/truncated.dump; then exit 1; fi
 SH
 pass "restore-check.sh fails on a truncated dump"
+# Production's oldest copies (the monthly one of 2026-10) are from Flyway V5: before activation_tokens
+# (V7) and notifications (V9). A second database gets V1–V5 only; its dump must pass without a manifest.
+db_psql -c 'create database backup_test_v5'
+migrate backup_test_v5 5
+[ "$last_version" = 5 ] || die "the V5 database got Flyway V$last_version"
+docker exec "$db" pg_dump --format=custom -U "$db_user" -d backup_test_v5 >"$tmp/v5.dump" \
+    || die "pg_dump of the V5 database"
+docker run --rm -i --name "$id-v5" --entrypoint bash "$image" \
+    -c 'cat >/tmp/v5.dump && restore-check.sh /tmp/v5.dump' <"$tmp/v5.dump" >"$tmp/v5.log" 2>&1 \
+    || { cat "$tmp/v5.log"; die "a Flyway V5 dump failed restore-check.sh"; }
+grep -qE 'restore-check: OK .*Flyway V5([^0-9]|$)' "$tmp/v5.log" || { cat "$tmp/v5.log"; die "no Flyway V5 in the OK line"; }
+pass "a Flyway V5 dump (no activation_tokens, no notifications) passes restore-check.sh"
 before=$(in_image <<<'ls /out/daily /out/monthly')
 if run_backup run4 -e BACKUP_TIMEOUT=1s; then
     cat "$tmp/run4.log"
@@ -220,13 +258,26 @@ grep -q 'skipped: backups run only in production (this is szczur-radar-pr-1)' "$
     || { cat "$tmp/run5.log"; die "outside production the run was not skipped"; }
 [ "$(in_image <<<'ls /out/daily /out/monthly')" = "$before" ] || die "a skipped or timed-out run changed the backups"
 pass "outside production the run is skipped (exit 0, nothing written)"
-db_psql -c 'drop table pipeline_run_steps'
+# Before the missing table below: restore-check.sh checks missing tables before unknown ones.
+db_psql -c 'create table stray (id int)'
+if run_backup run6; then
+    cat "$tmp/run6.log"
+    die "a backup with an unclassified table exited 0"
+fi
+grep -q 'restore-check failed; nothing uploaded' "$tmp/run6.log" \
+    && grep -q 'tables: unknown stray' "$tmp/run6.log" \
+    || { cat "$tmp/run6.log"; die "the failed run does not name the unclassified table"; }
+[ "$(in_image <<<'ls /out/daily /out/monthly')" = "$before" ] || die "the run with an unclassified table changed the backups"
+db_psql -c 'drop table stray'
+pass "unclassified table → restore check fails (tables: unknown), exit ≠ 0, backups unchanged"
+# A required table that is not counted (counting would fail before the dump): activation_tokens (V7).
+db_psql -c 'drop table activation_tokens'
 if run_backup run3; then
     cat "$tmp/run3.log"
     die "a backup whose restore check fails exited 0"
 fi
 grep -q 'restore-check failed; nothing uploaded' "$tmp/run3.log" \
-    && grep -q 'tables: missing pipeline_run_steps' "$tmp/run3.log" \
+    && grep -q 'tables: missing activation_tokens' "$tmp/run3.log" \
     || { cat "$tmp/run3.log"; die "the failed run does not name the failed check"; }
 [ "$(in_image <<<'ls /out/daily /out/monthly')" = "$before" ] || die "the failed run changed the backups"
 pass "missing table → restore check fails, exit ≠ 0, backups unchanged"
