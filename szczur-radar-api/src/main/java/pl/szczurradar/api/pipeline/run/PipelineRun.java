@@ -270,21 +270,26 @@ public class PipelineRun {
 
 	/**
 	 * Whether the run needs an admin's attention — the one rule for the notifications, the run list, the
-	 * run's page and the cron: it {@link RunStatus#FAILED failed} or was {@link RunStatus#INTERRUPTED
+	 * run's page and the bell: it {@link RunStatus#FAILED failed} or was {@link RunStatus#INTERRUPTED
 	 * interrupted}, or it ended {@link RunStatus#PARTIAL partial} with a dead post or a post with a
-	 * technical error. A partial run whose only failures are posts with attempts left does not: the next
-	 * run retries them. A run that is queued, running or succeeded never does.
+	 * technical error, or it ended {@link RunStatus#SUCCEEDED succeeded} or partial with skipped elements
+	 * (fetched, but they could not become a post). A partial run whose only failures are posts with
+	 * attempts left does not: the next run retries them. A run that is queued or running never does.
+	 *
+	 * <p>The daily cron does not use it: it looks only at the status ({@code failed} / {@code interrupted}
+	 * → exit 1), so a dead post or skipped elements do not fail it.
 	 */
 	public boolean needsAttention() {
-		return needsAttention(status, dead, processingErrors);
+		return needsAttention(status, dead, processingErrors, skipped);
 	}
 
 	/** {@link #needsAttention()} of a run in {@code status} with these counters; package-private for tests. */
-	static boolean needsAttention(RunStatus status, int dead, int processingErrors) {
+	static boolean needsAttention(RunStatus status, int dead, int processingErrors, int skipped) {
 		return switch (status) {
 			case FAILED, INTERRUPTED -> true;
-			case PARTIAL -> dead > 0 || processingErrors > 0;
-			case QUEUED, RUNNING, SUCCEEDED -> false;
+			case PARTIAL -> dead > 0 || processingErrors > 0 || skipped > 0;
+			case SUCCEEDED -> skipped > 0;
+			case QUEUED, RUNNING -> false;
 		};
 	}
 

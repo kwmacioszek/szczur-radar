@@ -125,7 +125,7 @@ class NotificationsIT {
 		UUID newest = runs.getLast();
 		jdbc.update("UPDATE pipeline_runs SET status = 'interrupted', interruption_cause = 'deploy',"
 				+ " finished_at = '2026-10-16T00:41:00Z', assessed_failed = 2, dead = 1, processing_errors = 3,"
-				+ " error = 'interrupted: a new deployment took over' WHERE id = ?", newest);
+				+ " skipped = 4, error = 'interrupted: a new deployment took over' WHERE id = ?", newest);
 
 		MvcTestResult list = list(admin);
 
@@ -143,7 +143,7 @@ class NotificationsIT {
 			.containsEntry("readAt", null);
 		assertThat(JsonPath.<Map<String, Object>>read(content(list), "$.items[0].run"))
 			.containsOnlyKeys("id", "kind", "status", "interruptionCause", "finishedAt", "assessedFailed", "dead",
-					"processingErrors", "error")
+					"processingErrors", "skipped", "error")
 			.containsEntry("id", newest.toString())
 			.containsEntry("kind", "retry")
 			.containsEntry("status", "interrupted")
@@ -152,6 +152,7 @@ class NotificationsIT {
 			.containsEntry("assessedFailed", 2)
 			.containsEntry("dead", 1)
 			.containsEntry("processingErrors", 3)
+			.containsEntry("skipped", 4)
 			.containsEntry("error", "interrupted: a new deployment took over");
 	}
 

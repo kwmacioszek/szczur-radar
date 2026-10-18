@@ -7,8 +7,11 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import pl.szczurradar.api.pipeline.NoPostsFetchedException;
 import pl.szczurradar.api.pipeline.SourceNotConfiguredException;
 import pl.szczurradar.api.pipeline.flow.RunFlow.FetchedBatch;
 import pl.szczurradar.api.pipeline.flow.RunFlow.RangeTarget;
@@ -22,6 +25,8 @@ import pl.szczurradar.api.sources.SourcePost;
  */
 @Service
 public class SourceIngest {
+
+	private static final Logger log = LoggerFactory.getLogger(SourceIngest.class);
 
 	private final Map<Source, SourceFetcher> fetchers;
 
@@ -62,9 +67,18 @@ public class SourceIngest {
 	public record SourceState(Source source, boolean configured) {
 	}
 
-	/** Every named source's posts in the range, one source after another; a failing source fails the step. */
+	/**
+	 * Every named source's posts in the range, one source after another; a failing source fails the
+	 * step. A source with skipped elements gets a WARN line with its counts (only this loop knows them
+	 * per source).
+	 *
+	 * @throws NoPostsFetchedException after every source was fetched, when one of them gave no post to
+	 *     store (no element in the range, or only elements that could not become a post): an empty
+	 *     source fails the step, and so the run, with the counters of every source
+	 */
 	public FetchedBatch fetch(RangeTarget target) {
 		List<SourcePost> posts = new ArrayList<>();
+		List<NoPostsFetchedException.EmptySource> empty = new ArrayList<>();
 		int fetched = 0;
 		int skipped = 0;
 		for (Source source : target.sources()) {
@@ -72,9 +86,19 @@ public class SourceIngest {
 				throw new SourceNotConfiguredException(List.of(source));
 			}
 			SourceFetcher.Fetched result = fetchers.get(source).fetch(target.from(), target.to());
+			if (result.skipped() > 0) {
+				log.warn("Run {}: {} skipped {} of {} elements (unexpected shape or not mappable)", target.runId(),
+						source.value(), result.skipped(), result.fetched());
+			}
+			if (result.posts().isEmpty()) {
+				empty.add(new NoPostsFetchedException.EmptySource(source, result.fetched(), result.skipped()));
+			}
 			posts.addAll(result.posts());
 			fetched += result.fetched();
 			skipped += result.skipped();
+		}
+		if (!empty.isEmpty()) {
+			throw new NoPostsFetchedException(empty, fetched, skipped);
 		}
 		return new FetchedBatch(target.runId(), posts, fetched, skipped);
 	}

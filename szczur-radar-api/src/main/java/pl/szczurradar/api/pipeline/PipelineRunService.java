@@ -304,10 +304,11 @@ public class PipelineRunService {
 			transitions.releaseAll(runId);
 			if (startedNanos != null) {
 				runs.findById(runId).ifPresent(run -> log.info("Pipeline run {} ({}) ended {} in {}: fetched {},"
-						+ " new {}, ok {}, failed {}, dead {}, errors {}, retries {}, flex fallbacks {}", runId,
-						run.getKind().value(), run.getStatus().value(), Durations.since(startedNanos), run.getFetched(),
-						run.getNewPosts(), run.getAssessedOk(), run.getAssessedFailed(), run.getDead(),
-						run.getProcessingErrors(), run.getLlmRetries(), run.getFlexFallbacks()));
+						+ " skipped {}, new {}, ok {}, failed {}, dead {}, errors {}, retries {}, flex fallbacks {}",
+						runId, run.getKind().value(), run.getStatus().value(), Durations.since(startedNanos),
+						run.getFetched(), run.getSkipped(), run.getNewPosts(), run.getAssessedOk(),
+						run.getAssessedFailed(), run.getDead(), run.getProcessingErrors(), run.getLlmRetries(),
+						run.getFlexFallbacks()));
 			}
 		}
 		catch (RuntimeException ex) {

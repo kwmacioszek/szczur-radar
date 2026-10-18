@@ -7,6 +7,7 @@ import com.embabel.agent.api.annotation.Action;
 import com.embabel.agent.api.annotation.Agent;
 import com.embabel.agent.core.ActionRetryPolicy;
 
+import pl.szczurradar.api.pipeline.NoPostsFetchedException;
 import pl.szczurradar.api.pipeline.PipelineRunService;
 import pl.szczurradar.api.pipeline.assess.AssessmentDispatcher;
 import pl.szczurradar.api.pipeline.flow.RunFlow.AssessedBatch;
@@ -74,10 +75,21 @@ public class PipelineAgent {
 		};
 	}
 
+	/**
+	 * A source without a post fails the step; its counters are written before the run fails, so the
+	 * run's page shows what was fetched and skipped ({@link RunRecorder#count} needs a running run).
+	 */
 	@Action(actionRetryPolicy = ActionRetryPolicy.FIRE_ONCE)
 	public FetchedBatch fetch(RangeTarget target) {
-		FetchedBatch batch = recorder.step(target.runId(), RunStep.FETCH, null, () -> ingest.fetch(target),
-				FetchedBatch::fetched);
+		FetchedBatch batch;
+		try {
+			batch = recorder.step(target.runId(), RunStep.FETCH, null, () -> ingest.fetch(target),
+					FetchedBatch::fetched);
+		}
+		catch (NoPostsFetchedException ex) {
+			recorder.count(target.runId(), RunRecorder.Counters.fetched(ex.fetched(), ex.skipped()));
+			throw ex;
+		}
 		recorder.count(target.runId(), RunRecorder.Counters.fetched(batch.fetched(), batch.skipped()));
 		return batch;
 	}

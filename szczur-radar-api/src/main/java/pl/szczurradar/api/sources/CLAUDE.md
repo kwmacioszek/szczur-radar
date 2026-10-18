@@ -38,6 +38,11 @@ nothing.
 4. `<Source>Posts implements RawInputMapper` (`@Component`) with a static `post(element)` →
    `SourcePost`; both go through `<Source>Mapper`, so storing and assessing map the same way.
 5. Tests: `<Source>FetcherTest` and the mapper/client/repository tests below, on real fixtures.
+6. The second source adds to `pipeline/step/SourceIngestTest` the case of two sources, one of them
+   without a post: `NoPostsFetchedException` names only the empty source, and its counters are the sum
+   of both. It cannot be written with one source (`SourceIngest` keys its fetchers by `Source`). Today an
+   empty source fails the whole `fetch` step, also the other sources' posts; isolating the sources is
+   Parked (`context/foundation/roadmap.md`, `## Parked`).
 
 Nothing in `pipeline/`, `posts/`, `raw/`, `agents/` or the API changes. If a step seems to need it,
 the port is missing something: change the port (and the plan), don't special-case a source.

@@ -10,6 +10,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -35,6 +36,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.support.TransactionTemplate;
+import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ObjectNode;
 
@@ -96,6 +98,12 @@ class PipelineAgentIT {
 	/** When set, Wykop's search answers 503 (a short synthetic error body in Wykop's shape). */
 	private static volatile boolean wykopDown;
 
+	/** When set, Wykop's searches find nothing in the range (an empty page, {@code total} 0). */
+	private static volatile boolean wykopEmpty;
+
+	/** The first elements of each search page that lose their text (unmappable: skipped); 0 = none. */
+	private static volatile int wykopTextless;
+
 	private static final LocalWykopServer WYKOP = new LocalWykopServer(request -> {
 		if (request.path().endsWith("/auth")) {
 			return Reply.ok("{\"data\":{\"token\":\"t\"}}");
@@ -103,8 +111,11 @@ class PipelineAgentIT {
 		if (wykopDown) {
 			return new Reply(503, "{\"error\":{\"code\":503,\"message\":\"Service unavailable\"}}");
 		}
-		return Reply.ok(request.path().endsWith("/search/entries") ? ENTRIES
-				: LocalWykopServer.fixture("search-links-page.json"));
+		if (wykopEmpty) {
+			return Reply.ok("{\"data\":[],\"pagination\":{\"per_page\":50,\"total\":0}}");
+		}
+		return Reply.ok(withoutText(request.path().endsWith("/search/entries") ? ENTRIES
+				: LocalWykopServer.fixture("search-links-page.json"), wykopTextless));
 	});
 
 	/** A valid V2 output without quotes: valid for any post. */
@@ -505,6 +516,106 @@ class PipelineAgentIT {
 		}
 	}
 
+	@Test
+	@Order(11)
+	void aRangeWithoutAnyElementFailsTheRunAtTheFetchStep() {
+		Optional<Instant> lastUpdate = runs.findLastUpdate();
+		int searches = searches();
+		List<PipelineRun> created;
+		wykopEmpty = true;
+		try {
+			created = service.startRange(DAY, DAY, List.of(), admin);
+			UUID range = created.getLast().getId();
+			Map<String, Object> run = finished(range);
+
+			assertThat(run).containsEntry("status", "failed").containsEntry("fetched", 0).containsEntry("skipped", 0);
+			assertThat((String) run.get("error"))
+				.isEqualTo("NoPostsFetchedException: wykop gave no post to store (fetched 0, skipped 0)");
+			// The fetch step failed with the reason; nothing was stored, selected or assessed.
+			assertThat(steps(range)).containsExactly("fetch:failed");
+			assertThat(jdbc.queryForObject("SELECT error FROM pipeline_run_steps WHERE run_id = ? AND step = 'fetch'",
+					String.class, range)).isEqualTo("wykop gave no post to store (fetched 0, skipped 0)");
+			// The action fired once: one search of entries and one of links, no repeated fetch.
+			assertThat(searches() - searches).isEqualTo(2);
+			awaitClosed(range);
+			assertThat(notified(range)).isOne();
+			// A failed run leaves the feed's date as it was.
+			assertThat(runs.findLastUpdate()).isEqualTo(lastUpdate);
+		}
+		finally {
+			wykopEmpty = false;
+		}
+
+		List<PipelineRun> next = service.startRange(DAY, DAY, List.of(), admin);
+
+		assertThat(finished(next.getLast().getId())).containsEntry("status", "succeeded");
+		awaitClosed(next.getLast().getId());
+		assertThat(notified(next.getLast().getId())).isZero();
+	}
+
+	@Test
+	@Order(12)
+	void aRangeWhoseElementsAreAllUnmappableFailsTheRunWithItsCounters() {
+		wykopTextless = Integer.MAX_VALUE;
+		try {
+			UUID range = service.startRange(DAY, DAY, List.of(), admin).getLast().getId();
+			Map<String, Object> run = finished(range);
+
+			// The day's 12 entries and 4 links, none with text.
+			assertThat(run).containsEntry("status", "failed")
+				.containsEntry("fetched", 16)
+				.containsEntry("skipped", 16)
+				.containsEntry("new_posts", 0);
+			assertThat((String) run.get("error"))
+				.isEqualTo("NoPostsFetchedException: wykop gave no post to store (fetched 16, skipped 16)");
+			assertThat(steps(range)).containsExactly("fetch:failed");
+			awaitClosed(range);
+			assertThat(notified(range)).isOne();
+		}
+		finally {
+			wykopTextless = 0;
+		}
+	}
+
+	@Test
+	@Order(13)
+	void aRangeWithSomeSkippedElementsEndsAsBeforeButNeedsAttention(CapturedOutput output) {
+		wykopTextless = 1;
+		try {
+			UUID range = service.startRange(DAY, DAY, List.of(), admin).getLast().getId();
+			Map<String, Object> run = finished(range);
+
+			// One entry and one link without text; the day's other posts are stored already.
+			assertThat(run).containsEntry("status", "succeeded")
+				.containsEntry("fetched", 16)
+				.containsEntry("skipped", 2)
+				.containsEntry("new_posts", 0);
+			assertThat(steps(range)).containsExactly("fetch:succeeded", "store:succeeded", "select:succeeded",
+					"assess:succeeded", "summarize:succeeded");
+			assertThat(runs.findById(range).orElseThrow().needsAttention()).isTrue();
+			awaitClosed(range);
+			assertThat(notified(range)).isOne();
+			awaitLog(output, "Run " + range + ": wykop skipped 2 of 16 elements (unexpected shape or not mappable)");
+			// The end line names the skipped elements right after the fetched ones.
+			String ended = "Pipeline run " + range + " (range) ended succeeded in";
+			assertThat(output.getAll().lines().filter(line -> line.contains(ended)))
+				.singleElement()
+				.asString()
+				.contains(": fetched 16, skipped 2, new 0,");
+		}
+		finally {
+			wykopTextless = 0;
+		}
+	}
+
+	/** Wykop's searches so far (entries and links, every page). */
+	private static int searches() {
+		return (int) WYKOP.requests()
+			.stream()
+			.filter(request -> request.path().endsWith("/search/entries") || request.path().endsWith("/search/links"))
+			.count();
+	}
+
 	/** The admin's notifications about {@code runId}. */
 	private int notified(UUID runId) {
 		return jdbc.queryForObject("SELECT count(*) FROM notifications WHERE run_id = ? AND recipient_id = ?",
@@ -622,6 +733,32 @@ class PipelineAgentIT {
 	private static LlmResponse response(String raw, int attempts, boolean flexFallback) {
 		return new LlmResponse(raw, Provider.GEMINI, "gemini-3.1-flash-lite", Channel.GEMINI, ServiceTier.DEFAULT,
 				flexFallback, null, OutputMode.JSON_SCHEMA, 100, 50, null, attempts);
+	}
+
+	/**
+	 * {@code page} with its first {@code count} elements without text (an entry's {@code content}, a
+	 * link's {@code title} and {@code description} blank), so they cannot become a post.
+	 */
+	private static String withoutText(String page, int count) {
+		if (count == 0) {
+			return page;
+		}
+		ObjectNode answer = (ObjectNode) MAPPER.readTree(page);
+		int blanked = 0;
+		for (JsonNode element : answer.get("data")) {
+			if (blanked++ >= count) {
+				break;
+			}
+			ObjectNode item = (ObjectNode) element;
+			if (item.has("content")) {
+				item.put("content", "");
+			}
+			if (item.has("title")) {
+				item.put("title", "");
+				item.put("description", "");
+			}
+		}
+		return answer.toString();
 	}
 
 	private static String withTotal(String page, int total) {

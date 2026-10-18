@@ -62,8 +62,9 @@ import pl.szczurradar.api.user.UserRepository;
  * and only the token (no session accepted, none created, no cookie set), the token meaning nothing on
  * {@code /api/**}, the daily range on a fixed clock, a run's state with its step and progress, and the
  * admin's refusals. Runs execute in the
- * background with Wykop on a local server answering an empty day, which a test can hold to keep a run
- * active. Every test waits until no run is active before it ends.
+ * background with Wykop on a local server answering an empty day, so a run fails at its fetch step (no
+ * post to store); a test can hold the answer to keep a run active. Every test waits until no run is
+ * active before it ends.
  */
 @SpringBootTest(properties = { MigrateCommand.ENABLE_FLYWAY,
 		PipelineTriggerToken.NAME + "=" + InternalPipelineRunIT.TOKEN })
@@ -220,20 +221,22 @@ class InternalPipelineRunIT {
 		assertThat(body)
 			.containsOnlyKeys("id", "kind", "status", "startedAt", "finishedAt", "lastActivityAt", "interruptionCause",
 					"step", "assessTotal", "fetched", "newPosts", "assessedOk", "assessedFailed", "processingErrors",
-					"dead")
+					"dead", "skipped")
 			.containsEntry("id", id)
 			.containsEntry("kind", "range")
-			.containsEntry("status", "succeeded")
+			// An empty day: the source gave no post, so the fetch step fails the run (the cron exits 1).
+			.containsEntry("status", "failed")
 			.containsEntry("interruptionCause", null)
 			.containsEntry("step", null)
-			// An empty day: the assess step took no post.
-			.containsEntry("assessTotal", 0)
+			// No assess step.
+			.containsEntry("assessTotal", null)
 			.containsEntry("fetched", finished.getFetched())
 			.containsEntry("newPosts", finished.getNewPosts())
 			.containsEntry("assessedOk", finished.getAssessedOk())
 			.containsEntry("assessedFailed", finished.getAssessedFailed())
 			.containsEntry("processingErrors", finished.getProcessingErrors())
-			.containsEntry("dead", finished.getDead());
+			.containsEntry("dead", finished.getDead())
+			.containsEntry("skipped", finished.getSkipped());
 		assertThat(Instant.parse((String) body.get("startedAt"))).isEqualTo(finished.getStartedAt());
 		assertThat(Instant.parse((String) body.get("finishedAt"))).isEqualTo(finished.getFinishedAt());
 		assertThat(Instant.parse((String) body.get("lastActivityAt"))).isEqualTo(finished.getLastActivityAt());
