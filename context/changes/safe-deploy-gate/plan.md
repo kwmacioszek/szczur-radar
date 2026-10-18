@@ -753,8 +753,8 @@ Dokumentacja opisuje nową bramkę, a runbook — co robić, gdy strażnik czeka
 
 #### Automated
 
-- [ ] 6.1 Pełne CI na PR zielone (wszystkie joby, w tym `deploy-gate-test` i `railway-config`)
-- [x] 6.2 `grep -rn "deploy-gate\|deploy-safety\|deploy-verify" REPOSITORY_GUIDELINES.md context/deployment/deploy-plan.md` pokazuje opisane elementy
+- [x] 6.1 Pełne CI na PR zielone (wszystkie joby, w tym `deploy-gate-test` i `railway-config`) — 1ea5771
+- [x] 6.2 `grep -rn "deploy-gate\|deploy-safety\|deploy-verify" REPOSITORY_GUIDELINES.md context/deployment/deploy-plan.md` pokazuje opisane elementy — 1ea5771
 
 #### Manual
 
