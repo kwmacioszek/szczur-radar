@@ -1,10 +1,10 @@
 ---
 change_id: llm-config-fail-fast
 title: Llm config fail fast
-status: impl_reviewed
+status: archived
 created: 2026-10-18
 updated: 2026-10-18
-archived_at: null
+archived_at: 2026-10-18T19:42:36Z
 ---
 
 ## Notes
