@@ -451,7 +451,7 @@ Brak: parsowanie raz przy starcie.
 
 #### Manual
 
-- [ ] 1.4 Przegląd diffu: tylko przenosiny i importy, bez zmiany logiki
+- [x] 1.4 Przegląd diffu: tylko przenosiny i importy, bez zmiany logiki — dowód agenta (2026-10-18): poza importami i pakietami tylko trzy enumy przeniesione bez zmian i `Provider.fromId` zastąpione `oneOf` z gałęzią „(not set)” (ten sam komunikat; gałąź osiągalna tylko dla `LLM_API_PROVIDER`); potwierdzone przez człowieka 2026-10-18
 
 ### Phase 2: Jedna reguła czasu
 
@@ -464,7 +464,7 @@ Brak: parsowanie raz przy starcie.
 
 #### Manual
 
-- [ ] 2.5 Lokalnie `LLM_TIMEOUT=120` zatrzymuje `migrate` z „LLM_TIMEOUT needs a unit”, a `300s` przechodzi (`java -jar target/szczur-radar-api.jar migrate`, lokalna baza z `README.md`)
+- [x] 2.5 Lokalnie `LLM_TIMEOUT=120` zatrzymuje `migrate` z „LLM_TIMEOUT needs a unit”, a `300s` przechodzi (`java -jar target/szczur-radar-api.jar migrate`, lokalna baza z `README.md`) — 2026-10-18 lokalnie (Postgres 18 w Dockerze, syntetyczny klucz): `120` → kod 2, „LLM_TIMEOUT needs a unit”, brak `flyway_schema_history`; `300s` → kod 0, 9 migracji (v9)
 
 ### Phase 3: Czytelny błąd startu
 
@@ -475,8 +475,8 @@ Brak: parsowanie raz przy starcie.
 
 #### Manual
 
-- [ ] 3.3 Lokalnie `migrate` z `LLM_TIMEOUT=120` pokazuje blok `APPLICATION FAILED TO START` bez stack trace'u i kończy się kodem `2` (`echo $?`)
-- [ ] 3.4 Lokalnie serwer z `LLM_TIMEOUT=120` pokazuje ten sam blok i nie startuje (`java -jar target/szczur-radar-api.jar`, brak nasłuchu na porcie)
+- [x] 3.3 Lokalnie `migrate` z `LLM_TIMEOUT=120` pokazuje blok `APPLICATION FAILED TO START` bez stack trace'u i kończy się kodem `2` (`echo $?`) — 2026-10-18: blok na stdout, linia `migrate: invalid configuration: …` na stderr, 0 linii stack trace'u, kod 2, klucz nie w wyjściu
+- [x] 3.4 Lokalnie serwer z `LLM_TIMEOUT=120` pokazuje ten sam blok i nie startuje (`java -jar target/szczur-radar-api.jar`, brak nasłuchu na porcie) — 2026-10-18: ten sam blok, 0 linii stack trace'u, proces kończy się (kod 1) bez `Tomcat started`; kontrolnie `300s` startuje, `/api/health` → ok
 
 ### Phase 4: Dokumentacja i weryfikacja przed merge'em
 
