@@ -26,8 +26,8 @@ Jeden obraz służy trzem celom: przebiegowi cron w Railway, testowi lokalnemu i
 3. Kontrola wiarygodności, przed dumpem (S-15): kopia wyczyszczonej albo okrojonej bazy nie może trafić do bucketu, gdzie retencja i lustro NAS wyparłyby nią dobre kopie. Porażka kończy się komunikatem z „nothing dumped”, bez dumpa i bez wysyłki, więc retencja zostaje nietknięta.
    - Minimum: `posts` musi mieć wiersze (`posts is empty: refusing to back up an empty database`), zawsze, także przy zgodzie.
    - Brak spadku: żadna liczona tabela nie może mieć mniej wierszy niż w `counts_after` najnowszego manifestu w `daily/` (`rows lost since daily/<manifest>: posts 35 < 40`). Porównanie obejmuje tabele, które mają liczbę w obu; tabela nowsza niż ten manifest jest pomijana. Manifest z nazwą późniejszą niż bieżący przebieg (data z przyszłości) jest pomijany i logowany jako „ignoring”. Brak manifestu to nie błąd, tylko pierwsza kopia w buckecie.
-   - Zgoda: komunikat spadku podaje gotową wartość `BACKUP_ACCEPT_SHRINK=szczur-radar-<ts>`, czyli nazwę najnowszego manifestu bez rozszerzenia. Ustawiona na serwisie (i po redeployu `db-backup`) przepuszcza spadek tylko względem tego manifestu, z logiem `accepted: …`. Po pierwszej udanej kopii najnowszym manifestem jest już nowy, więc zgoda sama wygasa: następny przebieg loguje `ignoring BACKUP_ACCEPT_SHRINK=…` i sprawdza normalnie.
-   - Najnowszy manifest, którego nie da się przeczytać albo którego `counts_after` nie jest obiektem liczb, kończy przebieg błędem z jego nazwą, bo spadku nie da się wtedy sprawdzić. Zgoda tego nie obejmuje. Jeśli manifest jest uszkodzony, zmiana jego nazwy na taką spoza wzorca (np. `….manifest.json.broken`) sprawia, że narzędzie go pomija.
+   - Zgoda: komunikat spadku podaje gotową wartość `BACKUP_ACCEPT_SHRINK=szczur-radar-<ts>`, czyli nazwę najnowszego manifestu bez rozszerzenia. Ustawiona na serwisie (i po redeployu `db-backup`; białe znaki są obcinane) przepuszcza spadek tylko względem tego manifestu, z logiem `accepted: …`. Gdy zgoda pasuje, ale nic nie spadło, przebieg loguje `BACKUP_ACCEPT_SHRINK=… not needed` i zapisuje `accepted_shrink: false`; gdy w `daily/` nie ma manifestu, loguje `ignoring BACKUP_ACCEPT_SHRINK=…: there is no manifest in daily/`. Po pierwszej udanej kopii najnowszym manifestem jest już nowy, więc zgoda sama wygasa: następny przebieg loguje `ignoring BACKUP_ACCEPT_SHRINK=…` i sprawdza normalnie, także nowy spadek.
+   - Najnowszy manifest, którego nie da się przeczytać albo którego `counts_after` nie jest obiektem liczb z liczbą `posts`, kończy przebieg błędem z jego nazwą, bo spadku nie da się wtedy sprawdzić. Zgoda tego nie obejmuje. Jeśli manifest jest uszkodzony, zmiana jego nazwy na taką spoza wzorca (np. `….manifest.json.broken`) sprawia, że narzędzie go pomija. Retencja usuwa tylko dokładne nazwy, więc plik `.broken` zostaje w buckecie (i w lustrze NAS): usuń go ręcznie, gdy jego dump wypadnie z retencji. Tak samo kończy się przebieg, gdy wszystkie manifesty w `daily/` mają datę późniejszą niż bieżący przebieg (zły zegar albo ręcznie zrobione nazwy): to nie jest pierwsza kopia.
 4. Uruchamia `pg_dump --format=custom --no-owner --exclude-table-data='public.spring_session*'`. Danych sesji nie ma w kopii, bo identyfikator sesji z dumpa pozwoliłby ją przejąć. Po odtworzeniu wszyscy logują się ponownie.
 5. Ponownie liczy wiersze. `pg_dump` czyta jeden snapshot, więc liczby w kopii mieszczą się między pomiarem przed dumpem a pomiarem po nim.
 6. Sprawdza `pg_restore --list`: muszą być dane `posts`, nie może być danych `spring_session*`. `--exclude-table-data` nie zgłasza błędu, gdy wzorzec nic nie pasuje.
@@ -81,12 +81,13 @@ Wymaga Dockera. Test:
 - uruchamia `backup.sh` z `BACKUP_REMOTE=:local:/out` (wolumen Dockera).
 
 Sprawdza:
+- `tables.sh`: przy V9 11 wymaganych i 7 liczonych tabel, a błędny wpis (wersja `9x`, czwarte pole) kończy się błędem zamiast po cichu pominąć tabelę;
 - dump i manifest (liczby wszystkich tabel `counted`, z `notifications` i `pipeline_run_steps`, bez `activation_tokens`; `compared_with: null` i `accepted_shrink: false` przy pierwszej kopii);
 - brak danych sesji w dumpie;
 - kopię miesięczną;
 - retencję (20 starszych dziennych → 14, 15 miesięcznych → 12; plik o innej nazwie zostaje) i porównanie drugiego przebiegu z manifestem pierwszego;
 - pominięcie manifestu z datą w przyszłości;
-- odrzucenie spadku przed dumpem (5 usuniętych postów: `posts 35 < 40`) z gotową wartością `BACKUP_ACCEPT_SHRINK`, bez zmian w kopiach; przebieg z tą zgodą (`accepted_shrink: true`) i jej wygaśnięcie w następnym przebiegu;
+- odrzucenie spadku przed dumpem (5 usuniętych postów: `posts 35 < 40`) z gotową wartością `BACKUP_ACCEPT_SHRINK`, bez zmian w kopiach; przebieg z tą zgodą (`accepted_shrink: true`) i jej wygaśnięcie w następnym przebiegu: stara wartość nie przepuszcza nowego spadku;
 - przejście dumpa z Flyway V5 (bez `activation_tokens` i `notifications`) przez `restore-check.sh`;
 - porażkę na obciętym dumpie;
 - porażkę po przekroczeniu limitu czasu (`BACKUP_TIMEOUT=1s`);

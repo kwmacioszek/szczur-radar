@@ -96,7 +96,7 @@ flyway=$(sql "select version from flyway_schema_history
     where success and version is not null order by installed_rank desc limit 1") \
     || fail "flyway: cannot read flyway_schema_history"
 [[ -n $flyway ]] || fail "flyway: no successful migration in flyway_schema_history"
-required=$(required_tables "$flyway") || fail "flyway: V$flyway is not a version tables.sh can compare"
+required=$(required_tables "$flyway") || fail "flyway: tables.sh cannot list the tables of V$flyway (see above)"
 mapfile -t required <<<"$required"
 
 table_list=$(printf "'%s'," "${required[@]}")
@@ -106,11 +106,11 @@ missing=$(sql "select coalesce(string_agg(t, ', '), '') from unnest(array[${tabl
 
 # A table without a classification (a new migration's) would be backed up but never checked.
 mapfile -t known < <(classified_tables)
-known=$(printf "'%s'," "${known[@]}")
+known_list=$(printf "'%s'," "${known[@]}")
 unknown=$(sql "select coalesce(string_agg(table_name::text, ', ' order by table_name::text), '')
     from information_schema.tables
     where table_schema = 'public' and table_type = 'BASE TABLE'
-        and table_name::text <> all (array[${known%,}])") || fail "tables: query"
+        and table_name::text <> all (array[${known_list%,}])") || fail "tables: query"
 [[ -z $unknown ]] || fail "tables: unknown $unknown; classify it in tables.sh"
 
 sessions=$(sql "select (select count(*) from spring_session) + (select count(*) from spring_session_attributes)")

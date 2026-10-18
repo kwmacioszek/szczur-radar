@@ -2,7 +2,8 @@
 # Local end-to-end test of the backup tool, without Railway and S3 (F-01, production-data-gate; see
 # README.md). A Postgres 18 database (production's image) gets the repo's Flyway migrations, a
 # flyway_schema_history like Flyway's and sample rows including an activation link, a notification and
-# a session; then:
+# a session (tables.sh is checked first: 11 required and 7 counted tables at V9, a malformed entry
+# fails); then:
 #   1. backup.sh into a local rclone remote: dump and manifest uploaded (counts of every counted table
 #      in tables.sh, notifications and pipeline_run_steps among them, never activation_tokens; compared
 #      with no earlier manifest), no session data in the dump, restore check passed (so every migrated
@@ -11,7 +12,9 @@
 #      name is left alone; the run compares its counts with the first run's manifest;
 #   3. shrink and consent: a manifest dated in the future is skipped; 5 deleted posts fail the run before
 #      the dump (posts 35 < 40) with the BACKUP_ACCEPT_SHRINK value to set; that value lets the next run
-#      through (accepted_shrink); the run after it ignores the stale value;
+#      through (accepted_shrink); the run after it ignores the stale value, which lets no new shrink through;
+#      a bucket with only future-dated manifests, or a newest manifest without counts, fails the run, and
+#      renaming that manifest .broken lets the next run through;
 #   4. a dump of a second database at Flyway V5 (before activation_tokens and notifications) passes
 #      restore-check.sh; a truncated dump fails it; a run over its time limit fails; outside production
 #      (RAILWAY_ENVIRONMENT_NAME) a run is skipped; a table tables.sh does not classify (tables: unknown)
@@ -125,6 +128,16 @@ newest_manifest() { in_image <<<'cd /out/daily && LC_ALL=C ls | grep -E "^szczur
 step "build $image"
 docker build --quiet --tag "$image" "$here" >/dev/null
 pass "image built"
+# tables.sh: V9's classification, and a malformed entry fails instead of dropping its table.
+tables_v9=$(docker run --rm --entrypoint bash "$image" -c 'source /usr/local/bin/tables.sh
+    echo "$(required_tables 9 | wc -l) $(counted_tables 9 | wc -l)"')
+[[ $tables_v9 == "11 7" ]] || die "tables.sh at V9: $tables_v9 required and counted tables, not 11 7"
+for bad in 's/"notifications 9 counted"/"notifications 9x counted"/' 's/"users 1 counted"/"users 1 counted 12"/'; do
+    docker run --rm -e BAD="$bad" --entrypoint bash "$image" -c 'sed "$BAD" /usr/local/bin/tables.sh >/tmp/t.sh
+        grep -q "9x counted\|counted 12" /tmp/t.sh && source /tmp/t.sh && ! counted_tables 9 >/dev/null 2>&1' \
+        || die "tables.sh accepts a malformed entry ($bad)"
+done
+pass "tables.sh: 11 required and 7 counted tables at V9; a malformed entry fails"
 
 step "test database ($db_image) with the repo migrations"
 docker network create "$net" >/dev/null
@@ -283,7 +296,8 @@ grep -qF "posts $(( posts - 5 )) < $posts" "$tmp/run8.log" \
     || { cat "$tmp/run8.log"; die "the failed run does not name the shrink and the BACKUP_ACCEPT_SHRINK value"; }
 [ "$(in_image <<<'ls /out/daily /out/monthly')" = "$before" ] || die "the run with fewer posts changed the backups"
 pass "fewer posts → fails before the dump (posts $(( posts - 5 )) < $posts), names BACKUP_ACCEPT_SHRINK=$accept, backups unchanged"
-run_backup run9 -e BACKUP_ACCEPT_SHRINK="$accept" || { cat "$tmp/run9.log"; die "the run with the consent failed"; }
+# Pasted with a trailing space, as from a log line: the value is trimmed.
+run_backup run9 -e BACKUP_ACCEPT_SHRINK="$accept " || { cat "$tmp/run9.log"; die "the run with the consent failed"; }
 grep -qF "accepted: posts $(( posts - 5 )) < $posts" "$tmp/run9.log" \
     || { cat "$tmp/run9.log"; die "the accepted shrink is not logged"; }
 check_manifest run9 '.compared_with == $previous and .accepted_shrink == true and .counts_before.posts == $posts' \
@@ -295,6 +309,47 @@ grep -qF "ignoring BACKUP_ACCEPT_SHRINK=$accept: the newest manifest is daily/$(
 check_manifest run10 '.compared_with == $previous and .accepted_shrink == false' \
     --arg previous "$(uploaded run9).manifest.json" || die "the run after the consent's manifest"
 pass "the same BACKUP_ACCEPT_SHRINK on the next run is ignored (accepted_shrink: false): the consent expires"
+# The expired value must not let a new shrink through: one more post goes.
+db_psql <<'SQL'
+delete from assessments where post_id in (select id from posts order by id limit 1);
+delete from posts where id in (select id from posts order by id limit 1);
+SQL
+before=$(in_image <<<'ls /out/daily /out/monthly')
+if run_backup run12 -e BACKUP_ACCEPT_SHRINK="$accept"; then
+    cat "$tmp/run12.log"
+    die "a stale BACKUP_ACCEPT_SHRINK let a new shrink through"
+fi
+grep -qF "rows lost since daily/$(uploaded run10).manifest.json: posts $(( posts - 6 )) < $(( posts - 5 ))" "$tmp/run12.log" \
+    && grep -qF "set BACKUP_ACCEPT_SHRINK=$(uploaded run10) on db-backup" "$tmp/run12.log" \
+    || { cat "$tmp/run12.log"; die "the run with a stale BACKUP_ACCEPT_SHRINK does not name the new shrink"; }
+[ "$(in_image <<<'ls /out/daily /out/monthly')" = "$before" ] || die "the run with a stale consent changed the backups"
+# The new value lets it through, so the newest manifest matches the database again for the next steps.
+run_backup run13 -e BACKUP_ACCEPT_SHRINK="$(uploaded run10)" || { cat "$tmp/run13.log"; die "the run with the new consent failed"; }
+check_manifest run13 '.accepted_shrink == true' || die "the new consent's manifest"
+pass "a stale BACKUP_ACCEPT_SHRINK does not let a new shrink through (posts $(( posts - 6 )) < $(( posts - 5 ))); the new value does"
+# A bucket whose manifests cannot be compared fails instead of passing as a first copy. Its own remote
+# (/out/alt), so the backups above stay as they are; removed afterwards.
+in_image <<<'mkdir -p /out/alt/daily && echo "{\"counts_after\": {\"posts\": 1}}" >/out/alt/daily/szczur-radar-29991231T020000Z.manifest.json'
+if run_backup run14 -e BACKUP_REMOTE=:local:/out/alt; then
+    cat "$tmp/run14.log"
+    die "a run whose every manifest is dated in the future exited 0"
+fi
+grep -q 'every manifest in daily/ is dated after this run' "$tmp/run14.log" \
+    || { cat "$tmp/run14.log"; die "the run with only future-dated manifests does not say so"; }
+in_image <<<'echo "{\"counts_after\": {}}" >/out/alt/daily/szczur-radar-20200101T000000Z.manifest.json'
+if run_backup run15 -e BACKUP_REMOTE=:local:/out/alt; then
+    cat "$tmp/run15.log"
+    die "a run whose newest manifest has no counts exited 0"
+fi
+grep -qF 'daily/szczur-radar-20200101T000000Z.manifest.json has no counts_after of numbers (if it is broken, rename it outside the name pattern (e.g. szczur-radar-20200101T000000Z.manifest.json.broken)' "$tmp/run15.log" \
+    || { cat "$tmp/run15.log"; die "the run with a broken manifest does not name it and the rename"; }
+# The documented way out: the renamed file is skipped, and the run is the bucket's first copy.
+in_image <<<'cd /out/alt/daily && mv szczur-radar-20200101T000000Z.manifest.json szczur-radar-20200101T000000Z.manifest.json.broken && rm szczur-radar-29991231T020000Z.manifest.json'
+run_backup run16 -e BACKUP_REMOTE=:local:/out/alt || { cat "$tmp/run16.log"; die "the run after renaming the broken manifest failed"; }
+in_image "$(uploaded run16)" <<<'jq -e ".compared_with == null" "/out/alt/daily/$1.manifest.json" >/dev/null' \
+    || die "the run after renaming the broken manifest compared with something"
+in_image <<<'rm -r /out/alt'
+pass "only future-dated manifests, or a newest manifest without counts, fail the run; renaming it .broken lets the next run through"
 
 step "4. an older dump passes, a broken dump or schema fails, and a failed restore check uploads nothing"
 in_image <<'SH' || die "a truncated dump passed restore-check.sh"

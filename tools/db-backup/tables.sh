@@ -7,7 +7,8 @@
 # A migration that adds a table adds it here, in the same PR: restore-check.sh rejects a restored table
 # that is not listed (`tables: unknown`), and test.sh applies every migration.
 # Entries are never removed: a table that a later migration drops gets a fourth field, the last Flyway
-# version that has it (and the functions below learn to read it). Without its entry, the older dumps
+# version that has it (and the functions below learn to read it; until then such an entry, like any
+# malformed one, makes them fail). Without its entry, the older dumps
 # that still have the table (monthly copies are kept 12 months) would fail with `tables: unknown`.
 # Counted tables have no delete path in the application, so their counts only grow while the dump
 # runs (and a counted table that shrinks is a lost row, given the PRD's indefinite retention).
@@ -30,13 +31,18 @@ readonly TABLES=(
 # The tables of TABLES that a database at Flyway version $1 has, one per line, whose mode is $2
 # (counted or present; `any` for both).
 tables_at() {
-    local version=$1 want=$2 entry table since mode
+    local version=$1 want=$2 entry table since mode until
     if [[ ! $version =~ ^[0-9]+$ ]]; then
         printf 'tables.sh: Flyway version "%s" is not a whole number\n' "$version" >&2
         return 1
     fi
     for entry in "${TABLES[@]}"; do
-        read -r table since mode <<<"$entry"
+        read -r table since mode until <<<"$entry"
+        # A typo must stop the run, not drop the table from the checks. No entry has a fourth field yet.
+        if [[ ! $since =~ ^[0-9]+$ || ! $mode =~ ^(counted|present)$ || -n $until ]]; then
+            printf 'tables.sh: entry "%s" is not <table> <version> <counted|present>\n' "$entry" >&2
+            return 1
+        fi
         # As numbers, never as text: as text '10' < '2', and the next migration is V10 (10#: no octal).
         if (( 10#$since <= 10#$version )) && [[ $want == any || $mode == "$want" ]]; then
             printf '%s\n' "$table"

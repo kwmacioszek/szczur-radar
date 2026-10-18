@@ -162,7 +162,7 @@ flyway_version=$(sql "select version from flyway_schema_history
     || fail "cannot read flyway_schema_history (has the API's migrate run?)"
 [[ -n $flyway_version ]] || fail "flyway_schema_history has no successful migration"
 # Only the tables this schema has: a counted table newer than the source's Flyway version is skipped.
-counted=$(counted_tables "$flyway_version") || fail "Flyway V$flyway_version is not a version tables.sh can compare"
+counted=$(counted_tables "$flyway_version") || fail "tables.sh cannot list the tables of Flyway V$flyway_version (see above)"
 mapfile -t counted <<<"$counted"
 
 counts_before=$(count_rows) || fail "cannot count the rows of ${counted[*]}"
@@ -176,15 +176,22 @@ jq -e '.posts > 0' <<<"$counts_before" >/dev/null \
 # skipped, as nas-retention.sh does). No manifest: the bucket's first copy, nothing to compare.
 daily_files=$(list_files daily) || fail "cannot list daily/; nothing dumped"
 previous=""
+skipped=0
 while IFS= read -r file; do
     [[ $file == *.manifest.json ]] || continue
     if [[ ${file%.manifest.json} > $name ]]; then
         log "ignoring daily/$file (dated after this run)"
+        skipped=$(( skipped + 1 ))
     else
         previous=$file
     fi
 done <<<"$daily_files"
+# Manifests that are all dated later are not a first copy: the clock or the names are wrong.
+[[ -n $previous || $skipped -eq 0 ]] || fail "every manifest in daily/ is dated after this run ($name):" \
+    "check the clock, or rename them outside the name pattern (e.g. <name>.manifest.json.broken); nothing dumped"
 accept=${BACKUP_ACCEPT_SHRINK:-}
+# A pasted value may carry spaces or a newline; a manifest name has none.
+accept=${accept//[[:space:]]/}
 accepted_shrink=false
 if [[ -z $previous ]]; then
     [[ -z $accept ]] || log "ignoring BACKUP_ACCEPT_SHRINK=$accept: there is no manifest in daily/"
@@ -193,7 +200,9 @@ else
     broken="if it is broken, rename it outside the name pattern (e.g. $previous.broken) and this tool skips it"
     previous_json=$(rclone cat "$remote/daily/$previous" 2>"$work/cat.err") \
         || { cat "$work/cat.err" >&2; fail "cannot read daily/$previous ($broken); nothing dumped"; }
-    jq -e '.counts_after | type == "object" and all(.[]; type == "number")' <<<"$previous_json" \
+    # posts is always counted, so a manifest without it has nothing worth comparing.
+    jq -e '.counts_after | type == "object" and all(.[]; type == "number") and (.posts | type == "number")' \
+        <<<"$previous_json" \
         >/dev/null 2>&1 || fail "daily/$previous has no counts_after of numbers ($broken); nothing dumped"
     # Every table counted now and in that manifest (a table newer than the manifest is skipped).
     shrunk=$(jq -r --argjson current "$counts_before" '.counts_after as $before
