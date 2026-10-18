@@ -741,7 +741,7 @@ Dokumentacja opisuje nową bramkę, a runbook — co robić, gdy strażnik czeka
 #### Automated
 
 - [x] 5.1 `tools/deploy-gate/test.sh` przechodzi z przypadkami `verify-deploy.sh` — 6a0603b
-- [ ] 5.2 Push na PR uruchamia `deploy-verify` po deployu PR env, a run kończy się na zielono
+- [x] 5.2 Push na PR uruchamia `deploy-verify` po deployu PR env, a run kończy się na zielono — 6a0603b
 
 #### Manual
 
