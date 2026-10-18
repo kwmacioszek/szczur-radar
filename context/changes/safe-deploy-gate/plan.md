@@ -740,7 +740,7 @@ Dokumentacja opisuje nową bramkę, a runbook — co robić, gdy strażnik czeka
 
 #### Automated
 
-- [x] 5.1 `tools/deploy-gate/test.sh` przechodzi z przypadkami `verify-deploy.sh`
+- [x] 5.1 `tools/deploy-gate/test.sh` przechodzi z przypadkami `verify-deploy.sh` — 6a0603b
 - [ ] 5.2 Push na PR uruchamia `deploy-verify` po deployu PR env, a run kończy się na zielono
 
 #### Manual
@@ -754,7 +754,7 @@ Dokumentacja opisuje nową bramkę, a runbook — co robić, gdy strażnik czeka
 #### Automated
 
 - [ ] 6.1 Pełne CI na PR zielone (wszystkie joby, w tym `deploy-gate-test` i `railway-config`)
-- [ ] 6.2 `grep -rn "deploy-gate\|deploy-safety\|deploy-verify" REPOSITORY_GUIDELINES.md context/deployment/deploy-plan.md` pokazuje opisane elementy
+- [x] 6.2 `grep -rn "deploy-gate\|deploy-safety\|deploy-verify" REPOSITORY_GUIDELINES.md context/deployment/deploy-plan.md` pokazuje opisane elementy
 
 #### Manual
 
