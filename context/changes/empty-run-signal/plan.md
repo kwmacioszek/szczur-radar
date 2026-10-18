@@ -428,10 +428,10 @@ Brak migracji: kolumna `skipped` istnieje od V3. Wdrożenie API i crona następu
 
 #### Automated
 
-- [x] 1.1 Pusty zakres, same niemapowalne i część pominiętych dają oczekiwany status, liczniki, krok i powiadomienie: `PipelineAgentIT`, `SourceIngestTest`
-- [x] 1.2 `needsAttention` z `skipped` dla każdego statusu: `PipelineRunTest`
-- [x] 1.3 Kontrakt `/internal` (pusty dzień `failed`, `skipped` w kluczach) i `NotifiedRun` (`skipped` w kluczach): `InternalPipelineRunIT`, `NotificationsIT`
-- [x] 1.4 Cały backend zielony: `cd szczur-radar-api && ./mvnw -B verify`
+- [x] 1.1 Pusty zakres, same niemapowalne i część pominiętych dają oczekiwany status, liczniki, krok i powiadomienie: `PipelineAgentIT`, `SourceIngestTest` — d1a906c
+- [x] 1.2 `needsAttention` z `skipped` dla każdego statusu: `PipelineRunTest` — d1a906c
+- [x] 1.3 Kontrakt `/internal` (pusty dzień `failed`, `skipped` w kluczach) i `NotifiedRun` (`skipped` w kluczach): `InternalPipelineRunIT`, `NotificationsIT` — d1a906c
+- [x] 1.4 Cały backend zielony: `cd szczur-radar-api && ./mvnw -B verify` — d1a906c
 
 #### Manual
 
@@ -441,7 +441,7 @@ Brak migracji: kolumna `skipped` istnieje od V3. Wdrożenie API i crona następu
 
 #### Automated
 
-- [ ] 2.1 Wszystkie przypadki atrapy, w tym `empty` (exit 1) i `skipped-warning` (exit 0): `tools/pipeline-trigger/test.sh`
+- [x] 2.1 Wszystkie przypadki atrapy, w tym `empty` (exit 1) i `skipped-warning` (exit 0): `tools/pipeline-trigger/test.sh`
 
 #### Manual
 
