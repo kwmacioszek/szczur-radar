@@ -672,10 +672,10 @@ Dokumentacja opisuje nową bramkę, a runbook — co robić, gdy strażnik czeka
 
 #### Automated
 
-- [x] 1.1 `tools/deploy-gate/test.sh` przechodzi lokalnie (każda reguła z przypadkiem pozytywnym i negatywnym)
-- [ ] 1.2 Job `deploy-gate-test` zielony w CI na PR
-- [ ] 1.3 `railway-config` na PR startuje dopiero po zakończeniu wszystkich jobów testowych (widać w grafie runu) i jest zielony
-- [x] 1.4 `grep -n "needs:" .github/workflows/ci.yml` pokazuje `needs:` na `railway-config`
+- [x] 1.1 `tools/deploy-gate/test.sh` przechodzi lokalnie (każda reguła z przypadkiem pozytywnym i negatywnym) — a98e9d1
+- [x] 1.2 Job `deploy-gate-test` zielony w CI na PR — a98e9d1
+- [x] 1.3 `railway-config` na PR startuje dopiero po zakończeniu wszystkich jobów testowych (widać w grafie runu) i jest zielony — a98e9d1
+- [x] 1.4 `grep -n "needs:" .github/workflows/ci.yml` pokazuje `needs:` na `railway-config` — a98e9d1
 
 #### Manual
 

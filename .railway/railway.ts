@@ -1,4 +1,4 @@
-import { bucket, defineRailway, github, postgres, preserve, project, ref, service } from "railway/iac";
+import { bucket, defineRailway, github, postgres, preserve, project, ref, service, type ProjectDefinition } from "railway/iac";
 
 // Infrastructure-as-Code for Szczur Radar. This is the source of truth for the
 // api, web, and Postgres services, the db-backup cron service and its bucket,
@@ -13,11 +13,14 @@ import { bucket, defineRailway, github, postgres, preserve, project, ref, servic
 // against the installed SDK version — the plan gate exists to catch exactly
 // that before anything is applied.
 //
-// `checkSuites: true` on the api and web sources enables Railway "Wait for CI":
-// deploys wait for the whole GitHub Actions workflow conclusion. Declared here
-// so IaC does not reset the operator's toggle (a plan otherwise shows true →
-// null). The cron services (db-backup, pipeline-trigger) do not declare it (see
-// db-backup).
+// `checkSuites: true` on every GitHub source (api, web and the cron services
+// db-backup, pipeline-trigger) enables Railway "Wait for CI": deploys wait for
+// the whole GitHub Actions workflow conclusion, so a red test skips the deploy
+// (CI tests both cron tools: db-backup-test, pipeline-trigger-test). Declared
+// here so IaC does not reset the operator's toggle (a plan otherwise shows true
+// → null). The CI gate (tools/deploy-gate) refuses every source change of an
+// existing service except this one: `source.checkSuites → true` and nothing
+// else (S-14, safe-deploy-gate).
 //
 // `sleepApplication: true` (serverless sleep) on api and web mirrors what the
 // operator set in the dashboard. The setting MUST stay declared on these two:
@@ -63,7 +66,8 @@ export default defineRailway(() => {
   // The IaC context does not reliably carry the target environment name, so
   // the production safety net lives in CI: the railway-config job refuses a
   // source change of an existing service, in every environment (creating a new
-  // service, e.g. db-backup, is allowed since F-01).
+  // service, e.g. db-backup, is allowed since F-01; turning on Wait for CI,
+  // `source.checkSuites → true`, since S-14).
   const branch = process.env.IAC_SOURCE_BRANCH || "main";
 
   // Postgres. `postgres()` takes no deploy options, so its deploy settings are
@@ -209,19 +213,20 @@ export default defineRailway(() => {
   // Railway. Every environment gets its own bucket with its own keys (a PR env is
   // a copy of production, so it gets the cron too), but backup.sh runs only in
   // production: elsewhere it logs "skipped" and exits 0 (BACKUP_IN_ANY_ENVIRONMENT
-  // =true on the service runs it, to try a change of the tool in a PR env). The schedule
+  // =true on the service runs it, to try a change of the tool in a PR env; IaC
+  // ignores that hand-set value, see `variables.ignore` below). The schedule
   // is UTC and stays at 02:00 with S-05: the daily run (pipeline-trigger below,
   // 00:30 UTC) normally ends before it, and a dump taken while a run writes is
   // still consistent (pg_dump reads one snapshot). A cron run's status is its exit
   // code, and restartPolicyType NEVER keeps a failed run visible instead of retrying it.
   const backups = bucket("db-backups", { region: "ams" });
-  // No `checkSuites` (Wait for CI): Railway leaves it unset on a service that
-  // IaC creates, so every later plan would show `source.checkSuites (null →
-  // true)`, which the CI gate refuses as a source change — on main that would
-  // turn CI red and stop the API and web deploys. CI does not test
-  // tools/db-backup anyway (tools/db-backup/test.sh does, locally).
+  // `checkSuites: true` (Wait for CI, since S-14): a merge that changes
+  // tools/db-backup with a red `db-backup-test` job does not deploy the cron.
+  // Railway leaves it unset on a service that IaC creates, so the first plan
+  // after S-14 shows `source.checkSuites (null → true)`; the CI gate lets
+  // exactly that source change through (tools/deploy-gate/README.md).
   const dbBackup = service("db-backup", {
-    source: github(REPO, { branch }),
+    source: github(REPO, { branch, checkSuites: true }),
     rootDirectory: "tools/db-backup",
     build: { watchPatterns: ["tools/db-backup/**"] },
     replicas: { [REGION]: 1 },
@@ -259,9 +264,11 @@ export default defineRailway(() => {
   // Railway creates it in every environment, but trigger.sh runs only in
   // production: elsewhere it logs "skipped" and exits 0 without a request
   // (TRIGGER_IN_ANY_ENVIRONMENT=true on the service runs it, to verify it in a PR
-  // env; preserve() keeps that hand-set value). No `checkSuites`: see db-backup.
+  // env; IaC ignores that hand-set value, see `variables.ignore` below).
+  // `checkSuites: true` like db-backup: a red `pipeline-trigger-test` job does
+  // not deploy the cron.
   const pipelineTrigger = service("pipeline-trigger", {
-    source: github(REPO, { branch }),
+    source: github(REPO, { branch, checkSuites: true }),
     rootDirectory: "tools/pipeline-trigger",
     build: { watchPatterns: ["tools/pipeline-trigger/**"] },
     replicas: { [REGION]: 1 },
@@ -270,11 +277,40 @@ export default defineRailway(() => {
       API_PRIVATE_DOMAIN: api.env.RAILWAY_PRIVATE_DOMAIN,
       API_PORT: API_INTERNAL_PORT,
       PIPELINE_TRIGGER_TOKEN: api.env.PIPELINE_TRIGGER_TOKEN,
-      TRIGGER_IN_ANY_ENVIRONMENT: preserve(),
     },
   });
 
-  return project("szczur-radar", {
+  // Tuning variables the operator may set by hand on a service
+  // (tools/db-backup/README.md, tools/pipeline-trigger/README.md,
+  // szczur-radar-api/README.md). IaC neither sets nor deletes them: the CLI
+  // removes an ignored key from both sides before the diff, so a hand-set value
+  // never shows up as `variable.delete`, which the CI gate refuses (S-14). A
+  // pattern is `<service>/<KEY>`, `*` is its only wildcard (whole key,
+  // case-sensitive). Ignore only keys this file does not declare: a key both
+  // declared and ignored is a plan error, and an ignored literal (e.g.
+  // BACKUP_KEEP_*) would vanish from both sides of the diff. A pattern that
+  // matches no variable is only a plan warning. A new hand-set tuning variable
+  // needs its pattern here (or a declaration above).
+  //
+  // The project `variables` policy needs Railway CLI >= 5.64.0
+  // (railwayapp/cli#1256). railway@3.11.0's ProjectDefinition type has no
+  // `variables` field, so the definition is typed wider below; project()
+  // passes it through at runtime. `managed` is left out: it defaults to true
+  // (this file owns every other variable). A field unknown to the SDK may
+  // vanish silently (lessons.md): `railway config plan --json` must show
+  // `variablePolicy` with these patterns.
+  type VariablePolicy = { managed?: boolean; ignore?: string[] };
+  const definition: Omit<ProjectDefinition, "name"> & { variables: VariablePolicy } = {
+    variables: {
+      ignore: [
+        `${dbBackup.name}/BACKUP_IN_ANY_ENVIRONMENT`,
+        `${dbBackup.name}/BACKUP_TIMEOUT`,
+        `${dbBackup.name}/S3_FORCE_PATH_STYLE`,
+        `${pipelineTrigger.name}/TRIGGER_*`,
+        `${api.name}/JAVA_TOOL_OPTIONS`,
+      ],
+    },
     resources: [db, api, web, backups, dbBackup, pipelineTrigger],
-  });
+  };
+  return project("szczur-radar", definition);
 });
