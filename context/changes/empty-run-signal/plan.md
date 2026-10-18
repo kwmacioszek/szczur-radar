@@ -451,8 +451,8 @@ Brak migracji: kolumna `skipped` istnieje od V3. Wdrożenie API i crona następu
 
 #### Automated
 
-- [x] 3.1 Ton, etykieta i powody pominiętych oraz spójne fixture'y: `cd szczur-radar-web && npm test`
-- [x] 3.2 Typecheck i build (w tym kitchen sink i mock z `skipped`): `cd szczur-radar-web && npm run build`
+- [x] 3.1 Ton, etykieta i powody pominiętych oraz spójne fixture'y: `cd szczur-radar-web && npm test` — f6999e8
+- [x] 3.2 Typecheck i build (w tym kitchen sink i mock z `skipped`): `cd szczur-radar-web && npm run build` — f6999e8
 
 #### Manual
 
@@ -463,7 +463,7 @@ Brak migracji: kolumna `skipped` istnieje od V3. Wdrożenie API i crona następu
 
 #### Automated
 
-- [ ] 4.1 Pełna bramka po zmianach dokumentacji: `cd szczur-radar-api && ./mvnw -B verify`, `tools/pipeline-trigger/test.sh`, `cd szczur-radar-web && npm test && npm run build`
+- [x] 4.1 Pełna bramka po zmianach dokumentacji: `cd szczur-radar-api && ./mvnw -B verify`, `tools/pipeline-trigger/test.sh`, `cd szczur-radar-web && npm test && npm run build`
 - [ ] 4.2 CI na PR zielone (wszystkie joby `.github/workflows/ci.yml`)
 
 #### Manual
