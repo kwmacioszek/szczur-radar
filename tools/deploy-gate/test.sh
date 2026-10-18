@@ -13,8 +13,22 @@
 #   6. a change without deployEffect is a restart of the desiredGraph resource its summary (or address)
 #      names; deployEffect "none" is not; a restart whose resource cannot be resolved is refused.
 # Also: the step summary (number of changes, the changes, the restarts), the restarts file
-# (GATE_RESTARTS_FILE, resource names), the `::error::` lines, and exit code 2 for a bad invocation or
-# an unreadable plan. Needs bash and jq only. Run from anywhere: tools/deploy-gate/test.sh
+# (GATE_RESTARTS_FILE, names of services and databases only: a bucket has no deployment), the
+# `::error::` lines, and exit code 2 for a bad invocation or an unreadable plan.
+# Then, without Railway or GitHub (9–11):
+#   9.  web-url.sh: production, szczur-radar-pr-<N>, an unknown name (exit 2);
+#   10. wait-safe.sh against a stub API (a small Python HTTP server with answers scripted per case):
+#       safe; busy → safe; busy until the timeout and until a deadline shorter than it (exit 1); a
+#       deadline passed at the start (exit 1, no request); 401 and 404 (exit 0, warning); refused
+#       connections → 200; an API that stays unavailable, refused or 503 (exit 0, warning); a 200
+#       without a verdict (exit 1); DEPLOY_GUARD=off; bad values (exit 2);
+#   11. verify-apply.sh against a stub `railway` in PATH (scripted `deployment list --json`) and the
+#       stub API: the snapshot; SUCCESS; FAILED, CRASHED, SKIPPED (exit 1); WAITING (handed over);
+#       DEPLOYING → SUCCESS; REMOVED → a newer SUCCESS; the same ID until the limit (exit 1, "did not
+#       trigger a deploy"); DEPLOYING until the limit (exit 1); /api/ready 503 (exit 1); an empty
+#       restarts list (only /api/ready); bad invocations (exit 2).
+# Needs bash, jq, curl and python3 (no Docker). Short limits (1–3 s) keep it under a minute.
+# Run from anywhere: tools/deploy-gate/test.sh
 set -euo pipefail
 
 here=$(cd "$(dirname "$0")" && pwd)
@@ -148,8 +162,10 @@ log_says unknown-kind-safe '::error::Delete domain szczur-radar-web-production.u
 pass "an unknown kind (domain.delete) marked safe: exit 1"
 check_gate resource-create 0
 summary_says resource-create '**Changes: 2**'
-restarts_are resource-create db-backups db-backup
-pass "resource.create of a bucket and a service (with its branch line): exit 0, both announced (no deployEffect)"
+summary_says resource-create '| Create bucket db-backups | `resource.create` |  | safe | `db-backups` (bucket: no deploy) | allowed |'
+summary_says resource-create '**Restarts:** `db-backup` (an apply redeploys them)'
+restarts_are resource-create db-backup
+pass "resource.create of a bucket and a service (no deployEffect): exit 0, only the service listed (a bucket has no deployment)"
 check_gate domain-create 0
 restarts_are domain-create szczur-radar-web
 pass "domain.create: exit 0, its service announced"
@@ -237,6 +253,417 @@ step "8. runnable from any directory"
 (cd / && GATE_RESTARTS_FILE=$tmp/elsewhere.restarts "$gate" "$fixtures/empty.json" production "$project_id" >/dev/null 2>&1) \
     || die "gate.sh fails when run from /"
 pass "gate.sh runs from /"
+
+step "9. web-url.sh: the web address of an environment"
+[[ $("$here/web-url.sh" production) == https://szczur-radar-web-production.up.railway.app ]] \
+    || die "web-url.sh production"
+pass "production → https://szczur-radar-web-production.up.railway.app"
+[[ $("$here/web-url.sh" szczur-radar-pr-81) == https://szczur-radar-web-szczur-radar-pr-81.up.railway.app ]] \
+    || die "web-url.sh szczur-radar-pr-81"
+pass "szczur-radar-pr-81 → https://szczur-radar-web-szczur-radar-pr-81.up.railway.app"
+for name in staging szczur-radar-pr-0 szczur-radar-pr-7x ""; do
+    status=0
+    "$here/web-url.sh" "$name" >"$tmp/web-url.out" 2>"$tmp/web-url.log" || status=$?
+    [[ $status == 2 && ! -s $tmp/web-url.out ]] || die "web-url.sh '$name': exit $status, expected 2 and no output"
+done
+grep -qF "::error::web-url: unknown environment '' (expected production or szczur-radar-pr-<N>)" "$tmp/web-url.log" \
+    || die "web-url.sh: no ::error:: line for an unknown name"
+status=0
+"$here/web-url.sh" >/dev/null 2>&1 || status=$?
+[[ $status == 2 ]] || die "web-url.sh without an argument: exit $status, expected 2"
+pass "an unknown name (staging, pr-0, pr-7x, empty) or no argument: exit 2, nothing printed"
+
+command -v python3 >/dev/null || die "python3 is not installed"
+command -v curl >/dev/null || die "curl is not installed"
+
+# The stub API. STUB_CASE (JSON) scripts it:
+#   paths: {"<path>": [answer, …]}: GET <path> gives the answers in turn, the last one repeating; an
+#          answer is {"status": <code>, "body": <JSON, or a string sent as text>}; any other path: 404;
+#   listen_after: seconds before it accepts connections (until then they are refused).
+# One line per request on stdout: "GET <path> <status>".
+read -r -d '' stub_code <<'PY' || true
+import json, os, time
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+case = json.loads(os.environ["STUB_CASE"])
+paths = {path: list(answers) for path, answers in case.get("paths", {}).items()}
+
+
+class Api(BaseHTTPRequestHandler):
+    def log_message(self, *args):
+        pass
+
+    def do_GET(self):
+        answers = paths.get(self.path)
+        if answers is None:
+            entry = {"status": 404, "body": {"detail": "not_found"}}
+        else:
+            entry = answers.pop(0) if len(answers) > 1 else answers[0]
+        body = entry.get("body")
+        text = isinstance(body, str)
+        data = b"" if body is None else (body if text else json.dumps(body)).encode()
+        self.send_response(entry["status"])
+        self.send_header("Content-Type", "text/plain" if text else "application/json")
+        self.send_header("Content-Length", str(len(data)))
+        self.end_headers()
+        self.wfile.write(data)
+        print(f"GET {self.path} {entry['status']}", flush=True)
+
+
+time.sleep(case.get("listen_after", 0))
+server = ThreadingHTTPServer(("127.0.0.1", int(os.environ["STUB_PORT"])), Api)
+print("listening", flush=True)
+server.serve_forever()
+PY
+
+# A local TCP port nothing listens on (yet).
+free_port() {
+    python3 -c 'import socket; s = socket.socket(); s.bind(("127.0.0.1", 0)); print(s.getsockname()[1]); s.close()'
+}
+
+# Starts the stub API of case $1 answering $2 (STUB_CASE) and sets STUB_URL. Its requests go to
+# $tmp/$1.requests. Waits until it listens, unless the case makes it listen late.
+stub_pid=""
+start_stub() {
+    local name=$1 case=$2 port
+    port=$(free_port)
+    STUB_URL=http://127.0.0.1:$port
+    STUB_CASE=$case STUB_PORT=$port python3 -u -c "$stub_code" >"$tmp/$name.requests" 2>"$tmp/$name.stub-errors" &
+    stub_pid=$!
+    [[ $case != *listen_after* ]] || return 0
+    for _ in $(seq 1 50); do
+        grep -qx listening "$tmp/$name.requests" && return 0
+        sleep 0.1
+    done
+    cat "$tmp/$name.stub-errors" >&2
+    die "$name: the stub API did not start"
+}
+
+# Stops the stub API of case $1.
+stop_stub() {
+    if [[ -n $stub_pid ]]; then
+        kill "$stub_pid" 2>/dev/null || true
+        wait "$stub_pid" 2>/dev/null || true
+    fi
+    stub_pid=""
+}
+trap 'stop_stub; rm -rf "$tmp"' EXIT
+
+show_run() {
+    printf -- '--- log (%s)\n' "$1"
+    cat "$tmp/$1.log"
+    if [[ -s $tmp/$1.out ]]; then
+        printf -- '--- stdout\n'
+        cat "$tmp/$1.out"
+    fi
+    if [[ -f $tmp/$1.requests ]]; then
+        printf -- '--- requests to the stub API\n'
+        grep -vx listening "$tmp/$1.requests" || true
+    fi
+    if [[ -f $tmp/$1.railway/calls ]]; then
+        printf -- '--- railway calls\n'
+        cat "$tmp/$1.railway/calls"
+    fi
+}
+
+# Case $1's log (stderr) says $2.
+run_says() {
+    grep -qF -- "$2" "$tmp/$1.log" || { show_run "$1"; die "$1: the log does not say '$2'"; }
+}
+
+# Case $1's stdout says $2.
+out_says() {
+    grep -qF -- "$2" "$tmp/$1.out" || { show_run "$1"; die "$1: stdout does not say '$2'"; }
+}
+
+# Case $1's stub API got $2 requests.
+api_requests_were() {
+    local count
+    count=$(grep -c '^GET ' "$tmp/$1.requests" || true)
+    [[ $count == "$2" ]] || { show_run "$1"; die "$1: $count requests to the stub API, expected $2"; }
+}
+
+# Case $1: wait-safe.sh against $3 (a URL) with the variables after it (NAME=value) must exit with $2.
+# Every DEPLOY_GUARD* variable of the caller is dropped; the interval is 1 s unless the case sets it.
+run_guard() {
+    local name=$1 expected=$2 url=$3 status=0
+    shift 3
+    env -u DEPLOY_GUARD -u DEPLOY_GUARD_TIMEOUT -u DEPLOY_GUARD_WAKE_TIMEOUT -u DEPLOY_GUARD_DEADLINE \
+        DEPLOY_GUARD_INTERVAL=1s "$@" "$here/wait-safe.sh" "$url" >"$tmp/$name.out" 2>"$tmp/$name.log" || status=$?
+    [[ $status == "$expected" ]] || { show_run "$name"; die "$name: exit code $status, expected $expected"; }
+}
+
+# Case $1: wait-safe.sh against a stub API whose /api/deploy-safety answers $3 (a JSON list of
+# answers), with the variables after it, must exit with $2. STUB_LISTEN_AFTER=<s> makes the stub
+# refuse connections for that long first.
+guard_case() {
+    local name=$1 expected=$2 answers=$3
+    shift 3
+    start_stub "$name" "{${STUB_LISTEN_AFTER:+\"listen_after\": $STUB_LISTEN_AFTER, }\"paths\": {\"/api/deploy-safety\": $answers}}"
+    run_guard "$name" "$expected" "$STUB_URL" "$@"
+    stop_stub
+}
+
+readonly safe='{"status": 200, "body": {"safe": true, "reason": null}}'
+readonly running='{"status": 200, "body": {"safe": false, "reason": "pipeline_running"}}'
+readonly queued='{"status": 200, "body": {"safe": false, "reason": "pipeline_queued"}}'
+readonly unavailable='{"status": 503, "body": {"status": "unavailable"}}'
+
+step "10. wait-safe.sh: the deploy guard"
+guard_case safe 0 "[$safe]"
+run_says safe 'deploy guard: safe, no pipeline run is queued or running'
+api_requests_were safe 1
+pass "safe: exit 0 after one request"
+guard_case busy-then-safe 0 "[$queued, $running, $safe]"
+run_says busy-then-safe 'deploy guard: not safe: pipeline_queued; asking again every 1s for up to 90m'
+run_says busy-then-safe 'deploy guard: still pipeline_running'
+run_says busy-then-safe 'deploy guard: safe, no pipeline run is queued or running (after waiting'
+api_requests_were busy-then-safe 3
+pass "queued, running, then safe (DEPLOY_GUARD_INTERVAL=1s): exit 0, each reason in the log"
+guard_case busy-timeout 1 "[$running]" DEPLOY_GUARD_TIMEOUT=2s
+run_says busy-timeout '::error::deploy guard: the pipeline is still pipeline_running after 2s; nothing applied or deployed. If no run is really progressing (a zombie run), restart the API, then push again or run `railway redeploy`'
+run_says busy-timeout 'DEPLOY_GUARD=off (repository variable) turns the guard off. Runbook S-14'
+pass "running until DEPLOY_GUARD_TIMEOUT=2s: exit 1, the runbook in the error"
+# The timeout is longer than the deadline but short enough that a guard ignoring the deadline fails
+# this case (with the timeout's error) instead of hanging the test.
+guard_case busy-deadline 1 "[$running]" DEPLOY_GUARD_TIMEOUT=20s DEPLOY_GUARD_DEADLINE=$(( $(date +%s) + 2 ))
+run_says busy-deadline '::error::deploy guard: the Wait for CI window (2 h) is closing (deadline '
+run_says busy-deadline ', the pipeline still pipeline_running): Railway will not deploy the code of this commit. Push again or run `railway redeploy`'
+pass "running until a DEPLOY_GUARD_DEADLINE 2 s away (shorter than DEPLOY_GUARD_TIMEOUT=20s): exit 1, the Wait for CI window error"
+guard_case deadline-passed 1 "[$safe]" DEPLOY_GUARD_DEADLINE=$(( $(date +%s) - 1 ))
+run_says deadline-passed '::error::deploy guard: the Wait for CI window (2 h) is closing'
+api_requests_were deadline-passed 0
+pass "a DEPLOY_GUARD_DEADLINE passed at the start: exit 1 without a request"
+guard_case old-api-401 0 '[{"status": 401, "body": {"detail": "not_authenticated"}}]'
+run_says old-api-401 '::warning::deploy guard: '
+run_says old-api-401 'answered HTTP 401: the API has no deploy-safety route yet (an older version'
+pass "401 (an API before S-14: the route needs a session there): exit 0 with a warning"
+guard_case old-api-404 0 '[{"status": 404, "body": {"detail": "not_found"}}]'
+run_says old-api-404 '::warning::deploy guard: '
+run_says old-api-404 'answered HTTP 404: the API has no deploy-safety route yet'
+pass "404: exit 0 with a warning"
+STUB_LISTEN_AFTER=1 guard_case wake 0 "[$unavailable, $safe]"
+run_says wake 'deploy guard: no answer yet (curl: (7)'
+run_says wake 'deploy guard: safe'
+api_requests_were wake 2
+pass "connections refused for 1 s, then 503, then safe: exit 0"
+guard_case unavailable 0 "[$unavailable]" DEPLOY_GUARD_WAKE_TIMEOUT=2s
+run_says unavailable 'deploy guard: no answer yet (HTTP 503); retrying for up to 2s (the API may be waking up)'
+run_says unavailable '::warning::deploy guard: the API did not answer within 2s (HTTP 503): it is unavailable, so no pipeline run can be running. Not waiting'
+pass "503 until DEPLOY_GUARD_WAKE_TIMEOUT=2s: exit 0 with a warning"
+run_guard refused 0 "http://127.0.0.1:$(free_port)" DEPLOY_GUARD_WAKE_TIMEOUT=2s
+run_says refused '::warning::deploy guard: the API did not answer within 2s (curl: (7)'
+pass "connections refused until DEPLOY_GUARD_WAKE_TIMEOUT=2s: exit 0 with a warning"
+guard_case unreadable 1 '[{"status": 200, "body": "<html>Application not found</html>"}]'
+run_says unreadable '::error::deploy guard: '
+run_says unreadable 'answered 200 without a readable verdict: <html>Application not found</html>'
+guard_case no-reason 1 '[{"status": 200, "body": {"safe": false, "reason": null}}]'
+run_says no-reason 'answered 200 without a readable verdict'
+pass "a 200 that is not a verdict (HTML; safe:false without a reason): exit 1"
+guard_case forbidden 1 '[{"status": 403, "body": {"detail": "forbidden"}}]'
+run_says forbidden '::error::deploy guard: unexpected answer from '
+pass "any other answer (403): exit 1"
+run_guard off 0 "http://127.0.0.1:$(free_port)" DEPLOY_GUARD=off DEPLOY_GUARD_TIMEOUT=bad
+run_says off '::warning::deploy guard: off (DEPLOY_GUARD=off)'
+pass "DEPLOY_GUARD=off: exit 0 with a warning, no request"
+run_guard bad-timeout 2 "http://127.0.0.1:1" DEPLOY_GUARD_TIMEOUT=90x
+run_says bad-timeout "::error::deploy guard: DEPLOY_GUARD_TIMEOUT must be a duration such as 30s, 3m or 2h (it is '90x')"
+run_guard bad-interval 2 "http://127.0.0.1:1" DEPLOY_GUARD_INTERVAL=0s
+run_says bad-interval 'DEPLOY_GUARD_INTERVAL must be a duration'
+run_guard bad-switch 2 "http://127.0.0.1:1" DEPLOY_GUARD=no
+run_says bad-switch "::error::deploy guard: DEPLOY_GUARD must be off, on or empty (it is 'no')"
+run_guard bad-deadline 2 "http://127.0.0.1:1" DEPLOY_GUARD_DEADLINE=2026-10-18T12:00:00Z
+run_says bad-deadline 'DEPLOY_GUARD_DEADLINE must be a time in seconds since the epoch'
+run_guard bad-url 2 "szczur-radar-web-production.up.railway.app/api"
+run_says bad-url 'the web address must be an http(s) origin'
+pass "a bad duration (90x, 0s), switch, deadline or web address: exit 2"
+
+# The stub `railway`: answers `railway deployment list --json --limit 1 -s <service> -p <project> -e
+# <environment>` of the project and environment below from $RAILWAY_STUB/<service>, one answer per
+# call, the last one repeating: "<id> <STATUS>" (a list with that deployment), "none" (an empty list)
+# or "fail" (the CLI fails). A service without a file is unknown (the CLI's error). Every call goes to
+# $RAILWAY_STUB/calls; any other command or option fails with exit 3.
+readonly environment_id=00000000-0000-4000-8000-000000000001
+mkdir -p "$tmp/bin"
+cat >"$tmp/bin/railway" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+printf '%s\n' "$*" >>"$RAILWAY_STUB/calls"
+[[ ${1:-} == deployment && ${2:-} == list ]] || { echo "stub railway: unexpected command: $*" >&2; exit 3; }
+shift 2
+json="" limit="" service="" project="" environment=""
+while (( $# > 0 )); do
+    case $1 in
+        --json) json=1; shift ;;
+        --limit) limit=$2; shift 2 ;;
+        -s) service=$2; shift 2 ;;
+        -p) project=$2; shift 2 ;;
+        -e) environment=$2; shift 2 ;;
+        *) echo "stub railway: unexpected option $1" >&2; exit 3 ;;
+    esac
+done
+[[ $json == 1 && $limit == 1 && $project == "$STUB_PROJECT_ID" && $environment == "$STUB_ENVIRONMENT_ID" ]] \
+    || { echo "stub railway: unexpected arguments" >&2; exit 3; }
+answers=$RAILWAY_STUB/$service
+[[ -f $answers ]] || { echo "Service '$service' not found" >&2; exit 1; }
+answer=$(head -n 1 "$answers")
+if (( $(wc -l <"$answers") > 1 )); then
+    tail -n +2 "$answers" >"$answers.next"
+    mv "$answers.next" "$answers"
+fi
+case $answer in
+    fail) echo "Failed to fetch: error sending request" >&2; exit 1 ;;
+    none) echo "[]" ;;
+    *)
+        read -r id status <<<"$answer"
+        printf '[\n  {\n    "id": "%s",\n    "status": "%s",\n    "createdAt": "2026-10-18T12:00:00Z",\n    "meta": {}\n  }\n]\n' "$id" "$status"
+        ;;
+esac
+SH
+chmod +x "$tmp/bin/railway"
+
+# The stub railway of case $1 answers `deployment list -s $2` with the answers after it, in turn.
+railway_answers() {
+    mkdir -p "$tmp/$1.railway"
+    printf '%s\n' "${@:3}" >"$tmp/$1.railway/$2"
+}
+
+# Case $1: verify-apply.sh with the variables (NAME=value) before `--` and the arguments after it must
+# exit with $2. Its stdout goes to $tmp/$1.out, its log to $tmp/$1.log.
+run_verify() {
+    local name=$1 expected=$2 status=0 vars=()
+    shift 2
+    while [[ $1 != -- ]]; do
+        vars+=("$1")
+        shift
+    done
+    shift
+    mkdir -p "$tmp/$name.railway"
+    env -u DEPLOY_VERIFY_TIMEOUT -u DEPLOY_GUARD_WAKE_TIMEOUT PATH="$tmp/bin:$PATH" \
+        RAILWAY_STUB="$tmp/$name.railway" STUB_PROJECT_ID=$project_id STUB_ENVIRONMENT_ID=$environment_id \
+        RAILWAY_PROJECT_ID=$project_id RAILWAY_ENVIRONMENT_ID=$environment_id DEPLOY_VERIFY_INTERVAL=1s \
+        "${vars[@]}" "$here/verify-apply.sh" "$@" >"$tmp/$name.out" 2>"$tmp/$name.log" || status=$?
+    [[ $status == "$expected" ]] || { show_run "$name"; die "$name: exit code $status, expected $expected"; }
+}
+
+readonly ready='{"status": 200, "body": {"status": "ok"}}'
+
+# Case $1: `verify-apply.sh check` of the services $3 (space-separated) with the snapshot $4 (JSON),
+# while the stub API's /api/ready answers $5 (a JSON list), with the variables after it, must exit
+# with $2. The stub railway's answers are set before (railway_answers).
+check_case() {
+    local name=$1 expected=$2 services=$3 before=$4 answers=$5
+    shift 5
+    printf '%s\n' $services >"$tmp/$name.restarts"
+    printf '%s\n' "$before" >"$tmp/$name.before.json"
+    start_stub "$name" "{\"paths\": {\"/api/ready\": $answers}}"
+    run_verify "$name" "$expected" "$@" -- check "$tmp/$name.restarts" "$tmp/$name.before.json" "$STUB_URL"
+    stop_stub
+}
+
+step "11. verify-apply.sh: the check after the apply"
+railway_answers snapshot postgres "p1 SUCCESS"
+railway_answers snapshot db-backup none
+railway_answers snapshot szczur-radar-api fail "a1 SLEEPING"
+printf '%s\n' postgres db-backup szczur-radar-api pipeline-trigger "" >"$tmp/snapshot.restarts"
+run_verify snapshot 0 -- snapshot "$tmp/snapshot.restarts"
+jq -e '. == {"postgres": "p1", "db-backup": null, "szczur-radar-api": "a1", "pipeline-trigger": null}' \
+    "$tmp/snapshot.out" >/dev/null || { show_run snapshot; die "snapshot: not the expected deployment IDs"; }
+grep -qxF "deployment list --json --limit 1 -s postgres -p $project_id -e $environment_id" "$tmp/snapshot.railway/calls" \
+    || { show_run snapshot; die "snapshot: railway was not called with the project and environment IDs"; }
+run_says snapshot '::warning::post-apply check: no deployment of pipeline-trigger is known before the apply'
+pass "snapshot: each service's newest deployment ID (null: none, or unknown to Railway after 3 attempts; a failed call retried), by project and environment ID"
+
+railway_answers success postgres "p2 SUCCESS"
+check_case success 0 postgres '{"postgres": "p1"}' "[$ready]"
+out_says success '| `postgres` | `p2` | deployed (SUCCESS) |'
+out_says success '| `/api/ready` | — | 200 |'
+run_says success 'post-apply check: /api/ready answers 200'
+pass "a new deployment SUCCESS, then /api/ready 200: exit 0"
+for status in FAILED CRASHED SKIPPED NEEDS_APPROVAL BOGUS; do
+    railway_answers "ended-$status" postgres "p2 $status"
+    check_case "ended-$status" 1 postgres '{"postgres": "p1"}' "[$ready]"
+    case $status in
+        NEEDS_APPROVAL) run_says "ended-$status" '::error::post-apply check: the deployment p2 of postgres needs an approval in Railway' ;;
+        BOGUS) run_says "ended-$status" '::error::post-apply check: the deployment p2 of postgres has a status this check does not know: BOGUS' ;;
+        *) run_says "ended-$status" "::error::post-apply check: the deployment p2 of postgres ended $status after the apply" ;;
+    esac
+    out_says "ended-$status" "| \`postgres\` | \`p2\` | **$status** |"
+    api_requests_were "ended-$status" 0
+done
+pass "a new deployment FAILED, CRASHED, SKIPPED, NEEDS_APPROVAL or an unknown status: exit 1, /api/ready not asked"
+railway_answers sleeping szczur-radar-api "a2 SLEEPING"
+check_case sleeping 0 szczur-radar-api '{"szczur-radar-api": "a1"}' "[$ready]"
+pass "SLEEPING (deployed, then asleep): exit 0"
+railway_answers waiting db-backup "b2 WAITING"
+check_case waiting 0 db-backup '{"db-backup": "b1"}' "[$ready]"
+run_says waiting '::notice::post-apply check: the deployment of db-backup waits (WAITING; Wait for CI holds it until this workflow ends): handed over to deploy-verify'
+out_says waiting '| `db-backup` | `b2` | WAITING: handed over to deploy-verify |'
+pass "WAITING (Wait for CI): exit 0, handed over to deploy-verify"
+railway_answers deploying postgres "p1 SUCCESS" "p2 INITIALIZING" "p2 DEPLOYING" "p2 SUCCESS"
+check_case deploying 0 postgres '{"postgres": "p1"}' "[$ready]"
+run_says deploying 'post-apply check: postgres deployment p2: DEPLOYING'
+out_says deploying '| `postgres` | `p2` | deployed (SUCCESS) |'
+pass "the old ID, INITIALIZING, DEPLOYING, then SUCCESS: exit 0"
+railway_answers removed db-backup "b2 REMOVED" "b3 SUCCESS"
+check_case removed 0 db-backup '{"db-backup": "b1"}' "[$ready]"
+out_says removed '| `db-backup` | `b3` | deployed (SUCCESS) |'
+pass "REMOVED (replaced), then the newer deployment SUCCESS: exit 0"
+railway_answers several db-backup "b2 QUEUED"
+railway_answers several postgres "p2 BUILDING" "p2 SUCCESS"
+railway_answers several pipeline-trigger none "t1 SUCCESS"
+check_case several 0 "db-backup postgres pipeline-trigger" '{"db-backup": "b1", "postgres": "p1", "pipeline-trigger": null}' "[$ready]"
+out_says several '| `db-backup` | `b2` | QUEUED: handed over to deploy-verify |'
+out_says several '| `pipeline-trigger` | `t1` | deployed (SUCCESS) |'
+pass "three services, one created by the apply (null before): exit 0"
+railway_answers same-id postgres "p1 SUCCESS"
+check_case same-id 1 postgres '{"postgres": "p1"}' "[$ready]" DEPLOY_VERIFY_TIMEOUT=2s
+run_says same-id '::error::post-apply check: the apply did not trigger a deploy of postgres within 2s (its newest deployment is still p1)'
+out_says same-id '| `postgres` | — | **no new deployment** |'
+pass "the same deployment ID until DEPLOY_VERIFY_TIMEOUT=2s: exit 1, the apply did not trigger a deploy"
+railway_answers cli-fails postgres fail
+check_case cli-fails 1 postgres '{"postgres": "p1"}' "[$ready]" DEPLOY_VERIFY_TIMEOUT=2s
+run_says cli-fails 'post-apply check: railway deployment list -s postgres failed: Failed to fetch'
+run_says cli-fails 'the last railway deployment list failed'
+pass "railway failing until the limit: exit 1, the failure in the log"
+railway_answers limit postgres "p2 DEPLOYING"
+check_case limit 1 postgres '{"postgres": "p1"}' "[$ready]" DEPLOY_VERIFY_TIMEOUT=2s
+run_says limit '::error::post-apply check: the deployment p2 of postgres did not finish within 2s (last status DEPLOYING)'
+pass "DEPLOYING until DEPLOY_VERIFY_TIMEOUT=2s: exit 1"
+railway_answers not-ready postgres "p2 SUCCESS"
+check_case not-ready 1 postgres '{"postgres": "p1"}' "[$unavailable]" DEPLOY_GUARD_WAKE_TIMEOUT=2s
+run_says not-ready '::error::post-apply check: /api/ready did not answer 200 within 2s (HTTP 503): the API does not reach its database or is down'
+out_says not-ready '| `/api/ready` | — | **HTTP 503** |'
+pass "/api/ready 503 until DEPLOY_GUARD_WAKE_TIMEOUT=2s: exit 1"
+check_case ready-wakes 0 "" '{}' "[$unavailable, $ready]"
+run_says ready-wakes 'post-apply check: /api/ready: HTTP 503; retrying'
+out_says ready-wakes 'No service to redeploy.'
+[[ ! -f $tmp/ready-wakes.railway/calls ]] || { show_run ready-wakes; die "ready-wakes: railway was called"; }
+pass "an empty restarts list: only /api/ready (503, then 200), no railway call: exit 0"
+
+printf 'postgres\n' >"$tmp/bad.restarts"
+printf '{"postgres": "p1"}\n' >"$tmp/bad.before.json"
+run_verify no-arguments 2 --
+run_says no-arguments 'usage: verify-apply.sh snapshot <restarts.txt> | check'
+run_verify bad-mode 2 -- apply "$tmp/bad.restarts"
+run_verify no-restarts 2 -- snapshot "$tmp/no-such-restarts.txt"
+run_says no-restarts 'is not a readable file'
+printf '["p1"]\n' >"$tmp/not-a-snapshot.json"
+run_verify not-in-snapshot 2 -- check "$tmp/bad.restarts" "$tmp/not-a-snapshot.json" "http://127.0.0.1:1"
+run_says not-in-snapshot 'is not a snapshot of verify-apply.sh'
+printf '{"db-backup": "b1"}\n' >"$tmp/other.before.json"
+run_verify missing-service 2 -- check "$tmp/bad.restarts" "$tmp/other.before.json" "http://127.0.0.1:1"
+run_says missing-service 'has no deployment of postgres (no snapshot before the apply)'
+run_verify no-environment 2 RAILWAY_ENVIRONMENT_ID= -- snapshot "$tmp/bad.restarts"
+run_says no-environment 'RAILWAY_ENVIRONMENT_ID is not set (the environment is selected by ID, never by railway link)'
+run_verify bad-duration 2 DEPLOY_VERIFY_TIMEOUT=15min -- snapshot "$tmp/bad.restarts"
+run_says bad-duration 'DEPLOY_VERIFY_TIMEOUT must be a duration'
+printf 'service:postgres\n' >"$tmp/bad-name.restarts"
+run_verify bad-name 2 -- snapshot "$tmp/bad-name.restarts"
+run_says bad-name 'is not a service name'
+run_verify bad-url 2 -- check "$tmp/bad.restarts" "$tmp/bad.before.json" "https://example.test/api"
+run_says bad-url 'the web address must be an http(s) origin'
+pass "bad invocations (arguments, files, snapshot, RAILWAY_ENVIRONMENT_ID, duration, service name, web address): exit 2"
 
 echo
 echo "gate.sh step summary of the real szczur-radar-pr-81 plan (what the railway-config job shows):"

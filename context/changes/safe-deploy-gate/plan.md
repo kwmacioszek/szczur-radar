@@ -700,9 +700,9 @@ Dokumentacja opisuje nową bramkę, a runbook — co robić, gdy strażnik czeka
 
 #### Automated
 
-- [ ] 2.1 `railway-config` w PR env zielony; bramka przepuszcza zmianę `checkSuites → true` na obu cronach i stosuje ją
-- [ ] 2.2 Plan `--json` w PR env zawiera `variablePolicy` z wzorcami z `railway.ts`
-- [ ] 2.3 `tools/deploy-gate/test.sh` dalej przechodzi (fixture `checkSuites` odpowiada prawdziwej zmianie z PR env)
+- [x] 2.1 `railway-config` w PR env zielony; bramka przepuszcza zmianę `checkSuites → true` na obu cronach i stosuje ją — 8649223, 754dadb
+- [x] 2.2 Plan `--json` w PR env zawiera `variablePolicy` z wzorcami z `railway.ts` — 8649223, 754dadb
+- [x] 2.3 `tools/deploy-gate/test.sh` dalej przechodzi (fixture `checkSuites` odpowiada prawdziwej zmianie z PR env) — 8649223, 754dadb
 
 #### Manual
 
@@ -715,8 +715,8 @@ Dokumentacja opisuje nową bramkę, a runbook — co robić, gdy strażnik czeka
 
 #### Automated
 
-- [x] 3.1 `cd szczur-radar-api && ./mvnw -B verify` przechodzi (w tym `DeploySafetyIT` i `AuthorizationCompletenessIT`)
-- [ ] 3.2 Job `backend` zielony w CI
+- [x] 3.1 `cd szczur-radar-api && ./mvnw -B verify` przechodzi (w tym `DeploySafetyIT` i `AuthorizationCompletenessIT`) — 40287f9
+- [x] 3.2 Job `backend` zielony w CI — 40287f9
 
 #### Manual
 
@@ -727,7 +727,7 @@ Dokumentacja opisuje nową bramkę, a runbook — co robić, gdy strażnik czeka
 
 #### Automated
 
-- [ ] 4.1 `tools/deploy-gate/test.sh` przechodzi ze wszystkimi przypadkami strażnika i kontroli
+- [x] 4.1 `tools/deploy-gate/test.sh` przechodzi ze wszystkimi przypadkami strażnika i kontroli
 - [ ] 4.2 `railway-config` w PR env zielony; w logu kolejno: strażnik (`safe`), plan i gate, apply, kontrola po apply
 
 #### Manual

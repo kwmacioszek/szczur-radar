@@ -9,7 +9,7 @@
 #
 # stdout: a markdown summary (number of changes, the changes, the resources the apply restarts).
 # stderr: the log, with a GitHub `::error::` line per refusal (stdout goes to the step summary).
-# GATE_RESTARTS_FILE (optional): the name of every resource the apply redeploys (desiredGraph
+# GATE_RESTARTS_FILE (optional): the name of every service or database the apply redeploys (desiredGraph
 # resources[].name), one per line; emptied first and written only for an allowed plan, so a refused or
 # unreadable plan leaves it empty.
 # Exit codes: 0 the plan may be applied, 1 refused, 2 a bad invocation or an unreadable plan.
@@ -57,7 +57,9 @@ jq -r --arg env "$target_env" '
         (.changes[] | "| \(.label | cell) | \(.change.kind | code) "
             + "| \(if (.change.details | type) == "array" then .change.details | map(code) | join("<br>") else "" end) "
             + "| \(.change.severity // "?" | cell) "
-            + "| \(if .restarts then (.target // "?" | code) else "none" end) "
+            + "| \(if .deploys then (.target | code) elif .restarts and .target != null
+                   then "\(.target | code) (\(.targetType // "?" | cell): no deploy)" elif .restarts then "`?`"
+                   else "none" end) "
             + "| \(if (.reasons | length) > 0 then "refused: " + (.reasons | join("; ") | cell) else "allowed" end) |"),
         ""
     else empty end,

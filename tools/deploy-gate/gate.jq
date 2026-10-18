@@ -1,8 +1,11 @@
 # The deploy gate's rules (S-14, safe-deploy-gate; see README.md), run by gate.sh as
 #   jq --arg env <target-env> --arg pid <project-id> -f gate.jq plan.json
 # Input: the output of `railway config plan --json`. Output: one report object
-#   {envProblems: [text], readable: bool, count, changes: [{change, label, restarts, target, reasons}],
+#   {envProblems: [text], readable: bool, count,
+#    changes: [{change, label, restarts, target, targetType, deploys, reasons}],
 #    rejected: <number of changes with a reason>, restarts: [resource name]}
+# restarts lists only the resources that have deployments (deployable_types): the input of
+# verify-apply.sh, which waits for each one's new deployment.
 # The CLI's --json (5.67.1) gives each change only kind, severity, summary and details (its runner
 # keeps no other field), so the rules read those: kind and severity as values, details and summary in
 # the CLI's own fixed formats (src/iac/change_set.rs). Optional structured fields (field, deployEffect,
@@ -35,6 +38,11 @@ def enables_wait_for_ci_only:
 # Does applying the change redeploy its resource? Missing deployEffect counts as a deploy.
 def restarts: .deployEffect != "none";
 
+# The desiredGraph resource types that have deployments in Railway (a database is a service there).
+# Any other type (a bucket, a volume) has none to wait for: its change is shown, never listed as a
+# restart for verify-apply.sh.
+def deployable_types: ["service", "database"];
+
 # The address of a desiredGraph resource (the CLI writes `<type>.<name>` when it gives none).
 def resource_address: .address // "\(.type).\(.name)";
 
@@ -60,16 +68,16 @@ def names_resource($r):
       any($s | splits("[ ,()]+"); . == $n)
     else false end;
 
-# The name of the one desiredGraph resource the change redeploys, or null when it is not exactly one:
-# by the change's address when the CLI gives one, else by its summary.
+# The one desiredGraph resource ({name, type}) the change redeploys, or null when it is not exactly
+# one name: by the change's address when the CLI gives one, else by its summary.
 def target($resources):
   . as $change
   | [ $resources[]
       | select(if ($change.address | type) == "string" then resource_address == $change.address
                elif ($change.summary | type) == "string" then . as $r | $change | names_resource($r)
                else false end)
-      | .name ]
-  | unique
+      | {name, type} ]
+  | unique_by(.name)
   | if length == 1 then .[0] else null end;
 
 # Why the gate refuses the change (empty: allowed).
@@ -114,7 +122,10 @@ def ordered_unique: reduce .[] as $item ([]; if index([$item]) == null then . + 
 | ($plan.changeSet.changes | type == "array" and all(.[]; type == "object")) as $readable
 | (if $readable then $plan.changeSet.changes else [] end
    | map((if restarts then target($resources) else null end) as $target
-         | {change: ., label: describe, restarts: restarts, target: $target, reasons: reasons($target)})
+         | {change: ., label: describe, restarts: restarts, target: $target.name, targetType: $target.type,
+            deploys: (restarts and $target != null
+                      and ($target.type as $type | deployable_types | index([$type])) != null),
+            reasons: reasons($target)})
   ) as $changes
 | {
     envProblems: $env_problems,
@@ -122,5 +133,5 @@ def ordered_unique: reduce .[] as $item ([]; if index([$item]) == null then . + 
     count: ($changes | length),
     changes: $changes,
     rejected: ($changes | map(select(.reasons | length > 0)) | length),
-    restarts: ($changes | map(select(.restarts) | .target | select(type == "string")) | ordered_unique)
+    restarts: ($changes | map(select(.deploys) | .target) | ordered_unique)
   }

@@ -223,11 +223,14 @@ jobs:
     runs-on: ubuntu-latest
     # The gate of railway-config (S-14) decides alone whether an unattended apply
     # may change production. tools/deploy-gate/test.sh runs its rules against plan
-    # fixtures (bash + jq, no Railway), so a rule that would let a destructive or
-    # source change through fails this PR instead of the next apply.
+    # fixtures, and the deploy guard and the post-apply check against a stub API
+    # (Python) and a stub railway CLI (bash, jq, curl, python3; no Railway, no
+    # Docker), so a rule that would let a destructive or source change through, or
+    # a guard that would deploy during a pipeline run, fails this PR instead of
+    # the next apply.
     steps:
       - uses: actions/checkout@v4
-      - name: Gate rules against plan fixtures
+      - name: Gate, guard and post-apply check against fixtures and stubs
         run: tools/deploy-gate/test.sh
 
   railway-config:
@@ -255,7 +258,19 @@ jobs:
     if: >-
       github.event_name == 'push' ||
       github.event.pull_request.head.repo.full_name == github.repository
-    # One apply per environment at a time; never cancel a running apply.
+    # The deploy guard reads this run's creation time (gh api, actions: read);
+    # checkout needs contents: read. A permissions block drops every other scope.
+    permissions:
+      contents: read
+      actions: read
+    # Above the guard (DEPLOY_GUARD_TIMEOUT) plus the post-apply check
+    # (DEPLOY_VERIFY_TIMEOUT, then /api/ready for DEPLOY_GUARD_WAKE_TIMEOUT),
+    # with room for the plan and the apply. Railway's Wait for CI gives up 2 h
+    # after the push; the guard's DEPLOY_GUARD_DEADLINE keeps inside that.
+    timeout-minutes: 115
+    # One apply per environment at a time; never cancel a running apply. A
+    # guard waiting for a pipeline run holds the group: a third push meanwhile
+    # cancels the pending second run (the third contains its commit).
     concurrency:
       group: railway-config-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || 'production' }}
       cancel-in-progress: false
@@ -269,6 +284,13 @@ jobs:
       # PR envs track the PR branch; .railway/railway.ts uses this for non-production
       # envs so the apply does not rewrite source.branch. Empty on push to main.
       IAC_SOURCE_BRANCH: ${{ github.event_name == 'pull_request' && github.head_ref || '' }}
+      # Limits of the deploy guard and the post-apply check (tools/deploy-gate/README.md).
+      # Their sum must stay inside the 2 h Wait for CI window: never raise one
+      # without lowering the other.
+      DEPLOY_GUARD_TIMEOUT: 90m
+      DEPLOY_GUARD_INTERVAL: 60s
+      DEPLOY_GUARD_WAKE_TIMEOUT: 3m
+      DEPLOY_VERIFY_TIMEOUT: 15m
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -378,6 +400,35 @@ jobs:
               echo "Set $name in $TARGET_ENV"
             fi
           done
+      - name: Web address and deploy window
+        # The web origin of the environment (tools/deploy-gate/web-url.sh, the one
+        # mapping) and the guard's absolute deadline: this run's creation (shared
+        # by every attempt of the run) + the 120 min Wait for CI window − the
+        # post-apply check − 5 min. Past it Railway skips the code deploy anyway.
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          web_url=$(tools/deploy-gate/web-url.sh "$TARGET_ENV")
+          created_at=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" --jq .created_at)
+          usage_error() { echo "::error::$*"; exit 2; }
+          . tools/deploy-gate/lib.sh
+          duration_seconds DEPLOY_VERIFY_TIMEOUT
+          deadline=$(( $(date -u -d "$created_at" +%s) + 120 * 60 - REPLY - 5 * 60 ))
+          echo "Run created at $created_at; the deploy guard gives up at $(date -u -d "@$deadline" +%Y-%m-%dT%H:%M:%SZ)"
+          echo "WEB_URL=$web_url" >> "$GITHUB_ENV"
+          echo "DEPLOY_GUARD_DEADLINE=$deadline" >> "$GITHUB_ENV"
+      - name: Deploy guard (no pipeline run queued or running)
+        # Always, even for a plan without changes: Wait for CI deploys the code
+        # after this workflow, and a deploy interrupts a pipeline run. Waits up to
+        # DEPLOY_GUARD_TIMEOUT (or the deadline) while GET /api/deploy-safety says
+        # a run is queued or running; an API without the route (401/404) or one
+        # that cannot answer lets the deploy through with a warning. Before the
+        # plan, because the pinned plan must not outlive minutes of waiting (the
+        # apply refuses it once the environment changed). Repository variable
+        # DEPLOY_GUARD=off turns it off (runbook S-14, deploy-plan.md).
+        env:
+          DEPLOY_GUARD: ${{ vars.DEPLOY_GUARD }}
+        run: tools/deploy-gate/wait-safe.sh "$WEB_URL"
       - name: Plan and gate
         # The plan is pinned to plan.pin and the apply below applies exactly that
         # file, so what is applied is what the gate checked (the CLI refuses a
@@ -409,8 +460,25 @@ jobs:
           retention-days: 7
           if-no-files-found: ignore
           overwrite: true
+      - name: Deployments before the apply
+        # The newest deployment ID of every service the apply redeploys
+        # (restarts.txt from the gate), so the check below waits for a new one
+        # without comparing the runner's clock with Railway's.
+        if: env.PENDING_CHANGES != '0'
+        run: |
+          tools/deploy-gate/verify-apply.sh snapshot restarts.txt > deployments-before.json
+          cat deployments-before.json
       - name: Apply to ${{ env.TARGET_ENV }}
+        id: apply
         if: env.PENDING_CHANGES != '0'
         # Never --confirm-destructive: a non-interactive apply then refuses
         # destructive changes even if the gate above missed one.
         run: railway config apply --plan plan.pin --yes
+      - name: Check after the apply
+        # Only after an apply: every redeployed service must deploy again
+        # (SUCCESS; WAITING/QUEUED behind Wait for CI is handed over to
+        # deploy-verify) and /api/ready must answer 200, else the job fails.
+        if: steps.apply.outcome == 'success'
+        run: |
+          tools/deploy-gate/verify-apply.sh check restarts.txt deployments-before.json "$WEB_URL" \
+            >> "$GITHUB_STEP_SUMMARY"
