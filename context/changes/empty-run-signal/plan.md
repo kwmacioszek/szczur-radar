@@ -441,7 +441,7 @@ Brak migracji: kolumna `skipped` istnieje od V3. Wdrożenie API i crona następu
 
 #### Automated
 
-- [x] 2.1 Wszystkie przypadki atrapy, w tym `empty` (exit 1) i `skipped-warning` (exit 0): `tools/pipeline-trigger/test.sh`
+- [x] 2.1 Wszystkie przypadki atrapy, w tym `empty` (exit 1) i `skipped-warning` (exit 0): `tools/pipeline-trigger/test.sh` — a61aaf6
 
 #### Manual
 
@@ -451,8 +451,8 @@ Brak migracji: kolumna `skipped` istnieje od V3. Wdrożenie API i crona następu
 
 #### Automated
 
-- [ ] 3.1 Ton, etykieta i powody pominiętych oraz spójne fixture'y: `cd szczur-radar-web && npm test`
-- [ ] 3.2 Typecheck i build (w tym kitchen sink i mock z `skipped`): `cd szczur-radar-web && npm run build`
+- [x] 3.1 Ton, etykieta i powody pominiętych oraz spójne fixture'y: `cd szczur-radar-web && npm test`
+- [x] 3.2 Typecheck i build (w tym kitchen sink i mock z `skipped`): `cd szczur-radar-web && npm run build`
 
 #### Manual
 

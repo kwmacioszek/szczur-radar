@@ -48,7 +48,7 @@ function run(overrides: Partial<Run> = {}): Run {
     assessedFailed: 8,
     processingErrors: 0,
     dead: 0,
-    skipped: 2,
+    skipped: 0,
     llmRetries: 0,
     flexFallbacks: 0,
     inFlight: 0,
@@ -409,6 +409,21 @@ describe('AdminView', () => {
       expect(link.attributes('href')).toBe('/admin/runs/r1')
       expect(link.attributes('aria-label')).toBe('Szczegóły przebiegu z 2.10.2026, 08:00')
       expect(partial!.find('.attention').exists()).toBe(false)
+    })
+
+    it('warns about a run whose source skipped elements and counts them', async () => {
+      vi.mocked(fetchRuns).mockResolvedValue(
+        page([run({ id: 'r1', skipped: 3, needsAttention: true }), run({ id: 'r2', status: 'partial', skipped: 1, needsAttention: true })], 2),
+      )
+      const wrapper = await mountAdmin()
+      const [succeeded, partial] = wrapper.findAll('.run')
+      expect(succeeded!.find('.status').text()).toBe('zakończony — pominięte: 3')
+      expect(succeeded!.find('.status').attributes('data-tone')).toBe('warning')
+      expect(succeeded!.find('.attention').text()).toBe('wymaga uwagi')
+      expect(succeeded!.find('.counters').text()).toContain('pominięte 3')
+      expect(partial!.find('.status').text()).toBe('częściowo — pominięte: 1')
+      expect(partial!.find('.status').attributes('data-tone')).toBe('warning')
+      expect(partial!.find('.attention').text()).toBe('wymaga uwagi')
     })
 
     it('shows an interrupted step in words', async () => {

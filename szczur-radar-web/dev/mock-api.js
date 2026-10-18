@@ -15,17 +15,21 @@
  *       'date'  { lastUpdatedAt: '2026-10-13T03:12:00Z' } (05:12 in Warsaw), the default,
  *       'none'  { lastUpdatedAt: null }: no update yet,
  *       'error' 500; every other route answers as MODE says.
- * Runs (/api/admin/pipeline-runs?page&size, 28 in all: "Pokaż starsze" has a second page of 20) answer like
+ * Runs (/api/admin/pipeline-runs?page&size, 30 in all: "Pokaż starsze" has a second page of 20) answer like
  * pipeline/api/PipelineRunController.java, the newest first:
  *       r-running  an admin's range, assessing now (19 of 41, 4 in flight, last activity 20 s ago),
+ *       r-skipped  an admin's range, succeeded with 3 skipped elements (needs attention: a warning),
  *       r-deploy   the cron's night, interrupted by a new deployment, its assess step interrupted,
+ *       r-empty    an admin's range of today just after midnight, failed: its source gave no post (fetched 0, its
+ *                  fetch step failed, "NoPostsFetchedException: wykop gave no post to store (fetched 0, skipped 0)"),
  *       r-stalled  the cron's night, failed: "no progress for 39m 00s: the run was stopped" (the watchdog),
  *       r-dead     the cron's night, partial with 1 dead post (needs attention),
  *       r-ok       the cron's night, succeeded; then older nights, some partial with failed posts only.
  *   /api/admin/pipeline-runs/<id> is that run (e.g. /admin/runs/r-running); any other id is 404 {"detail":"not_found"}.
  * NOTIFICATIONS (the bell; MODE 'loading' and 'error' apply first), like notifications/api/NotificationController.java:
- *       'unread' 2 unread (r-deploy, r-stalled) and 1 read (r-dead), the default; a read one stays read until the
- *                mock is installed again (POST /api/admin/notifications/<id>/read and …/notifications/read → 204),
+ *       'unread' 4 unread (r-skipped, r-deploy, r-empty, r-stalled) and 1 read (r-dead), the default; a read one
+ *                stays read until the mock is installed again (POST /api/admin/notifications/<id>/read and
+ *                …/notifications/read → 204),
  *       'none'   no notifications (unread 0),
  *       'error'  500.
  * /api/posts answers like posts/api/PostController.java: page, size, total; a page past the end (e.g. /?page=9)
@@ -99,11 +103,29 @@ async page => {
         step('assess', 'running', ago(11.4 * MIN), null, 41, null),
       ],
     },
+    // An admin's range whose source skipped 3 elements (unexpected shape or not mappable): succeeded, a warning.
+    nightly('r-skipped', '2026-10-15', { scheduled: false, needsAttention: true, skipped: 3, newPosts: 397,
+      assessedOk: 397, createdAt: '2026-10-15T07:00:00Z', startedAt: '2026-10-15T07:00:01Z',
+      finishedAt: '2026-10-15T07:21:30Z', lastActivityAt: '2026-10-15T07:21:30Z', steps: [
+        step('fetch', 'succeeded', '2026-10-15T07:00:02Z', '2026-10-15T07:00:40Z', null, 470),
+        step('store', 'succeeded', '2026-10-15T07:00:40Z', '2026-10-15T07:00:44Z', 467, 397),
+        step('select', 'succeeded', '2026-10-15T07:00:44Z', '2026-10-15T07:00:44Z', 397, 397),
+        step('assess', 'succeeded', '2026-10-15T07:00:44Z', '2026-10-15T07:21:30Z', 397, 397),
+        step('summarize', 'succeeded', '2026-10-15T07:21:30Z', '2026-10-15T07:21:30Z', null, null),
+      ] }),
     nightly('r-deploy', '2026-10-15', { status: 'interrupted', interruptionCause: 'deploy', needsAttention: true,
       finishedAt: '2026-10-15T00:41:10Z', lastActivityAt: '2026-10-15T00:41:02Z', assessedOk: 212, assessedFailed: 3,
       error: 'interrupted: a new deployment took over',
       steps: night('2026-10-15', 400).slice(0, 3).concat(
         step('assess', 'interrupted', '2026-10-15T00:30:44Z', '2026-10-15T00:41:10Z', 400, null)) }),
+    // An admin's range of 15.10 (Warsaw) started 10 minutes after its midnight: the source gave no post.
+    nightly('r-empty', '2026-10-15', { scheduled: false, status: 'failed', needsAttention: true,
+      rangeFrom: '2026-10-14T22:00:00Z', rangeTo: '2026-10-15T21:59:59Z', createdAt: '2026-10-14T22:10:00Z',
+      startedAt: '2026-10-14T22:10:01Z', finishedAt: '2026-10-14T22:10:03Z', lastActivityAt: '2026-10-14T22:10:03Z',
+      fetched: 0, skipped: 0, newPosts: 0, assessedOk: 0, llmRetries: 0, flexFallbacks: 0,
+      error: 'NoPostsFetchedException: wykop gave no post to store (fetched 0, skipped 0)',
+      steps: [step('fetch', 'failed', '2026-10-14T22:10:01Z', '2026-10-14T22:10:03Z', null, null,
+        'wykop gave no post to store (fetched 0, skipped 0)')] }),
     nightly('r-stalled', '2026-10-14', { status: 'failed', needsAttention: true, finishedAt: '2026-10-14T01:20:31Z',
       lastActivityAt: '2026-10-14T00:41:31Z', assessedOk: 160, assessedFailed: 1,
       error: 'no progress for 39m 00s: the run was stopped',
@@ -123,11 +145,13 @@ async page => {
   const readIds = new Set()
   const notifiedRun = (r) => ({ id: r.id, kind: r.kind, status: r.status, interruptionCause: r.interruptionCause,
     finishedAt: r.finishedAt, assessedFailed: r.assessedFailed, dead: r.dead, processingErrors: r.processingErrors,
-    error: r.error })
+    skipped: r.skipped, error: r.error })
   const allNotifications = () => {
     const byId = Object.fromEntries(allRuns().map((r) => [r.id, r]))
     return [
+      { id: 'n-skipped', createdAt: '2026-10-15T07:21:31Z', readAt: null, run: notifiedRun(byId['r-skipped']) },
       { id: 'n-deploy', createdAt: '2026-10-15T00:41:12Z', readAt: null, run: notifiedRun(byId['r-deploy']) },
+      { id: 'n-empty', createdAt: '2026-10-14T22:10:04Z', readAt: null, run: notifiedRun(byId['r-empty']) },
       { id: 'n-stalled', createdAt: '2026-10-14T01:20:31Z', readAt: null, run: notifiedRun(byId['r-stalled']) },
       { id: 'n-dead', createdAt: '2026-10-13T00:52:11Z', readAt: '2026-10-13T06:10:00Z', run: notifiedRun(byId['r-dead']) },
     ].map((n) => ({ kind: 'run_attention', ...n, readAt: n.readAt ?? (readIds.has(n.id) ? new Date().toISOString() : null) }))

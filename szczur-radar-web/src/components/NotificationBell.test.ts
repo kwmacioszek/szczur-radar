@@ -39,6 +39,7 @@ function notification(id: string, overrides: Partial<AdminNotification> = {}): A
       assessedFailed: 0,
       dead: 0,
       processingErrors: 0,
+      skipped: 0,
       error: 'interrupted: a new deployment took over',
     },
     ...overrides,

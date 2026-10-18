@@ -278,6 +278,34 @@ describe('RunDetailView', () => {
       const { wrapper } = await mountRun()
       expect(wrapper.find('.attention').text()).toBe('Wymaga uwagi: 1 post martwy; błędy techniczne: 2')
     })
+
+    it('counts the skipped elements of a succeeded run and warns in its badge', async () => {
+      vi.mocked(fetchRun).mockResolvedValue(run({ needsAttention: true, skipped: 3 }))
+      const { wrapper } = await mountRun()
+      expect(wrapper.find('.attention').text()).toBe('Wymaga uwagi: pominięte elementy: 3')
+      expect(wrapper.find('.status').text()).toBe('zakończony — pominięte: 3')
+      expect(wrapper.find('.status').attributes('data-tone')).toBe('warning')
+    })
+
+    it('gives the error of a run whose source gave no post, with its failed fetch step', async () => {
+      const error = 'NoPostsFetchedException: wykop gave no post to store (fetched 0, skipped 0)'
+      vi.mocked(fetchRun).mockResolvedValue(
+        run({
+          status: 'failed',
+          needsAttention: true,
+          fetched: 0,
+          newPosts: 0,
+          assessedOk: 0,
+          assessedFailed: 0,
+          error,
+          steps: [step('fetch', { status: 'failed', itemsIn: null, itemsOut: null, error })],
+        }),
+      )
+      const { wrapper } = await mountRun()
+      expect(wrapper.find('.status').text()).toBe('błąd')
+      expect(wrapper.find('.status').attributes('data-tone')).toBe('destructive')
+      expect(wrapper.find('.attention').text()).toBe(`Wymaga uwagi: ${error}`)
+    })
   })
 
   describe('reading again', () => {

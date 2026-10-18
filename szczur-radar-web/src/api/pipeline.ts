@@ -29,7 +29,10 @@ export interface Run {
   status: RunStatus
   /** Why an interrupted run stopped; null for any other run and for one interrupted before causes were recorded. */
   interruptionCause: InterruptionCause | null
-  /** Failed, interrupted, or partial with a dead post or a technical error (the API's rule). */
+  /**
+   * Failed, interrupted, partial with a dead post or a technical error, or succeeded or partial with skipped elements
+   * (the API's rule).
+   */
   needsAttention: boolean
   /** Requested by the daily cron, not by an admin. */
   scheduled: boolean
