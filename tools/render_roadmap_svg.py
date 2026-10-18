@@ -18,7 +18,7 @@ MONO = "'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace"
 
 C = dict(
     bg="#0d1316", panel="#11181c", panel2="#141c21", card="#151e23", border="#222d33", border2="#2b373e",
-    text="#eaf0f2", muted="#a2afb4", dim="#78868c",
+    text="#eaf0f2", muted="#a2afb4", dim="#9aa8ae",
     done="#5fd18f", doneSoft="#14281d", doneLine="#4f9a6d", sky="#8ccbe8", skySoft="#13232e",
     lime="#c3f08c", limeDeep="#9fdc5c", limeSoft="#1b2b1c", green="#4ade80",
     amber="#f2c46d", amberSoft="#33291a", coral="#f28b9c", coralSoft="#3a1f25", gray="#c3cdd0", graySoft="#232d32",
@@ -85,6 +85,9 @@ def route(points, color, dashed=False, marker="lime", width_=1.6, r=10, edge=Non
     d = f"M{points[0][0]:.1f} {points[0][1]:.1f}"
     for i in range(1, len(points) - 1):
         (x0, y0), (x1, y1), (x2, y2) = points[i - 1], points[i], points[i + 1]
+        if r == 0:
+            d += f" L{x1:.1f} {y1:.1f}"
+            continue
         def towards(ax, ay, bx, by, dist):
             L = max(abs(bx - ax), abs(by - ay)); k = min(dist, L / 2) / L if L else 0
             return ax + (bx - ax) * k, ay + (by - ay) * k
@@ -98,10 +101,10 @@ def route(points, color, dashed=False, marker="lime", width_=1.6, r=10, edge=Non
 # ---------- generic card ----------
 def need_h(title, desc, w, compact=False):
     pad = 14
-    tsize, dsize = (13.5, 11.4) if compact else (15.5, 12.4)
+    tsize, dsize = (13.5, 11.4) if compact else (18, 15)
     tl = len(wrap(title, tsize, w - 2 * pad, 700)); dl = len(wrap(desc, dsize, w - 2 * pad))
     body = 51 + tl * (tsize + 4) + (2 if compact else 6) + (dl - 1) * (dsize + 5)
-    return body + (14 if compact else 66)
+    return body + (14 if compact else 90)
 CARD_BORDER = {"done": "#2f5a42", "ready": "#2e4d60", "blocked": "#7a3b47", "proposed": "#2f3b42", "progress": "#6b5426"}
 def card(x, y, w, h, iid, title, desc, status, req=None, cid=None, star=False, compact=False, note=None):
     lab, fg, bg = STATUS[status]
@@ -115,21 +118,24 @@ def card(x, y, w, h, iid, title, desc, status, req=None, cid=None, star=False, c
         add(f'<path d="M{tx+6:.1f} {y+13:.1f} l2.3 4.7 5.2 .8 -3.8 3.6 .9 5.1 -4.6 -2.4 -4.6 2.4 .9 -5.1 -3.8 -3.6 5.2 -.8z" fill="{C["lime"]}"/>')
     icon = {"done": "check", "blocked": "lock"}.get(status, "dot")
     pill(x + w - pad, y + 11, lab, fg, bg, 9.5 if compact else 10.5, right=True, icon=icon)
-    tsize = 13.5 if compact else 15.5
+    tsize = 13.5 if compact else 18
     tl = wrap(title, tsize, w - 2 * pad, 700)
     lines(x + pad, y + 51, tl, tsize, tsize + 4, 700)
     dy = y + 51 + len(tl) * (tsize + 4) + (2 if compact else 6)
-    dsize = 11.4 if compact else 12.4
+    dsize = 11.4 if compact else 15
     dl = wrap(desc, dsize, w - 2 * pad)
     lines(x + pad, dy, dl, dsize, dsize + 5, 400, C["muted"])
     if not compact:
-        fy = y + h - 34
+        fy = y + h - 56
         add(f'<line x1="{x+pad}" y1="{fy-18}" x2="{x+w-pad}" y2="{fy-18}" stroke="{C["border"]}"/>')
         text(x + pad, fy, "WYMAGA", 9.5, 700, C["dim"], spacing="1.2")
         reqc = C["coral"] if note else (C["text"] if req and req != "—" else C["muted"])
         text(x + pad + 60, fy, req or "—", 11, 700, reqc, family=MONO)
         if cid:
-            text(x + pad, fy + 19, cid, 10.5, 500, C["dim"], family=MONO)
+            # Change identifiers may wrap at hyphens; never spill into a neighbour.
+            cid_lines = wrap(cid.replace("-", "- "), 12, w - 2 * pad, 600)
+            lines(x + pad, fy + 22, [line.replace("- ", "-") for line in cid_lines],
+                  12, 16, 500, C["dim"], family=MONO)
     add('</g>')
     return len(tl), len(dl)
 
@@ -190,43 +196,56 @@ groups = [
 ]
 
 # ================= geometry (computed before drawing) =================
-PAD, GAP, GROUP_GAP = 16, 18, 20
+PAD, GAP, GROUP_GAP = 16, 32, 24
 P2W = 1568
 CW_CARD = (P2W - 2 * INNER - 4 * PAD - GROUP_GAP - 3 * GAP) / 5   # the M-2 card width, used by M-1 too
-CW1, GAP1 = CW_CARD, 24
+CW1, GAP1 = CW_CARD, 48
 # Lanes = the streams of roadmap v2.22: A "Dostęp i konta", B "Przegląd sygnałów", C "Codzienny automat".
 # Column = position left to right; a card never sits left of its prerequisite.
 lanes1 = [
     ("A", "Dostęp i konta", "Od pierwszego admina do kont przez CLI", {"S-01": 0, "F-03": 1, "S-07": 2}),
-    ("B", "Przegląd sygnałów", "Ocena LLM trafia do użytkownika", {"F-02": 2, "S-02": 3, "S-03": 4, "S-04": 5}),
-    ("C", "Codzienny automat", "Cron, świeżość i historia przebiegów", {"F-01": 0, "S-05": 4, "S-06": 5}),
+    ("B", "Przegląd sygnałów", "Ocena LLM trafia do użytkownika", {"F-02": 1, "S-02": 3, "S-03": 4, "S-04": 4}),
+    ("C", "Codzienny automat", "Cron, świeżość i historia przebiegów", {"F-01": 0, "S-05": 3, "S-06": 4}),
 ]
 CH1s = [max(need_h(m1[k][0], m1[k][1], CW1) for k in cols) + 6 for _, _, _, cols in lanes1]
-LANE1_W = 2 * PAD + 6 * CW1 + 5 * GAP1
-LANE1_GAP = 44                     # room for the channels between lanes
-MARGIN1 = 30                       # left channel for the long edges out of S-01
-LANE1_HS = [72 + ch + 24 for ch in CH1s]
+M1_COLUMNS = 1 + max(col for _, _, _, cols in lanes1 for col in cols.values())
+LANE1_W = 2 * PAD + M1_COLUMNS * CW1 + (M1_COLUMNS - 1) * GAP1
+LANE1_GAP = 44                     # separation between streams
+MARGIN1 = 30                       # inset shared by all streams
+LANE1_HS = [98 + ch * (2 if i == 1 else 1) + (72 if i == 1 else 24)
+            for i, ch in enumerate(CH1s)]
 P1W = 2 * INNER + MARGIN1 + LANE1_W
 P1X = M
 P1H = 98 + sum(LANE1_HS) + LANE1_GAP * (len(lanes1) - 1) + 40 + 24
 P2X = P1X + P1W + PANEL_GAP
 IN2 = P2W - 2 * INNER
-CW2 = (IN2 - 4 * PAD - GROUP_GAP - 3 * GAP) / 5
-HEAD_H, CARD_OFF = 46, 72
+M2_GRID_GAP = 2 * PAD + GROUP_GAP
+CW2 = (IN2 - 2 * PAD - 4 * M2_GRID_GAP) / 5
+HEAD_H, CARD_OFF = 70, 98
 rows2 = [[("A", 2), ("B", 3)], [("C", 5)], [("D", 3)]]
 def row_cw(row, n):
-    if len(row) > 1 or n == 5: return CW2
-    return (IN2 - 2 * PAD - (n - 1) * GAP) / n
+    return CW2
+
+# Equal column widths and gutters across every M-2 stream. The gutter
+# also accommodates the A/B panel borders without shifting the cards.
+M2_COLUMNS = [P2X + INNER + PAD + i * (CW2 + M2_GRID_GAP) for i in range(5)]
+M2_CARD_COLUMN = {
+    "S-08": 0, "S-12": 1, "F-04": 2, "S-13": 3, "S-18": 3,
+    "S-09": 0, "S-17": 1, "S-10": 2, "S-11": 3, "S-16": 4,
+    "S-14": 0, "S-15": 2, "S-19": 4,
+}
 row_ch = []
 for row in rows2:
     keys = dict(row)
     row_ch.append(max(need_h(v[2], v[3], row_cw(row, keys[v[0]])) for v in m2.values() if v[0] in keys) + 6)
-P2H = 98 + sum(CARD_OFF + ch + 36 for ch in row_ch) + 18 * (len(rows2) - 1) + 20
+row_ch = [max(row_ch)] * len(rows2)
+row_body = [2 * ch + 48 if i == 0 else ch for i, ch in enumerate(row_ch)]
+P2H = 98 + sum(CARD_OFF + body + 36 for body in row_body) + 18 * (len(rows2) - 1) + 20
 
 GW = 360
 P3W = 2 * GW + 20 + 2 * INNER
 P3X = P2X + P2W + PANEL_GAP
-ITEM_H = 50
+ITEM_H = 76
 gh = [max(len(groups[0][1]), len(groups[1][1])) * ITEM_H + 76, max(len(groups[2][1]), len(groups[3][1])) * ITEM_H + 76]
 P3H = 132 + gh[0] + 20 + gh[1] + 24
 
@@ -248,7 +267,7 @@ text(M, 172, "Roadmapa produktu", 31, 700)
 text(M, 202, "Źródło: context/foundation/roadmap.md  ·  v3  ·  stan 17.10.2026  ·  bez terminów — kolejność wynika z zależności", 13, 400, C["muted"])
 
 # progress card (same as before), right after the title block
-px, py, pw, ph = P2X, 36, 624, 214
+px, py, pw, ph = P2X, 36, 820, 214
 rect(px, py, pw, ph, 14, "url(#hero)", C["border2"])
 cx, cy, rr = px + 82, py + 100, 46
 frac = 10 / 23
@@ -365,43 +384,32 @@ for (key, name, sub, cols), ch, lh in zip(lanes1, CH1s, LANE1_HS):
     rect(L1X + PAD, ry + 14, 26, 26, 7, ink + "22", ink + "77")
     text(L1X + PAD + 13, ry + 32, key, 13, 700, ink, family=MONO, anchor="middle")
     text(L1X + PAD + 38, ry + 32, name, 15, 700)
-    text(L1X + PAD + 38 + width(name, 15, 700) + 14, ry + 32, sub, 12, 400, C["muted"])
+    text(L1X + PAD + 38, ry + 56, sub, 14, 400, C["muted"])
     text(L1X + LANE1_W - PAD, ry + 32, f"{len(cols)} / {len(cols)} ukończonych", 11.5, 600, C["dim"], anchor="end")
     add(f'<line x1="{L1X+PAD}" y1="{ry+HEAD_H+4}" x2="{L1X+LANE1_W-PAD}" y2="{ry+HEAD_H+4}" stroke="{C["border"]}"/>')
     for k, c in cols.items():
-        box[k] = (L1X + PAD + c * (CW1 + GAP1), ry + CARD_OFF, CW1, ch)
+        offset = (0 if k == "S-03" else ch + 48 if k == "S-04" else (ch + 48) / 2) if key == "B" else 0
+        box[k] = (L1X + PAD + c * (CW1 + GAP1), ry + CARD_OFF + offset, CW1, ch)
     ry += lh + LANE1_GAP
 def L(k, f=0.5): x, y, w, h = box[k]; return (x, y + h * f)
 def R(k): x, y, w, h = box[k]; return (x + w, y + h / 2)
 def T(k, f=0.5): x, y, w, h = box[k]; return (x + w * f, y)
 def B(k, f=0.5): x, y, w, h = box[k]; return (x + w * f, y + h)
-# Channels: between lanes A/B and B/C, below lane C, and two in the left margin.
-yAB = lane1_y["A"][1] + LANE1_GAP / 2
-yBC = lane1_y["B"][1] + LANE1_GAP / 2
-yBelow = lane1_y["C"][1] + 20
-xm1, xm2 = L1X - 10, L1X - 21
-arcA = box["S-01"][1] - 12
-arcB = box["S-02"][1] - 12
+# Transitive reduction: S-01 → S-07 / S-02 / S-06 are already reachable
+# through prerequisites. Keep the full requirements on the cards.
 e1 = [
-    # inside lane A
     (("S-01", "F-03"), [R("S-01"), L("F-03")]),
     (("F-03", "S-07"), [R("F-03"), L("S-07")]),
-    (("S-01", "S-07"), [T("S-01"), (T("S-01")[0], arcA), (T("S-07")[0], arcA), T("S-07")]),
-    # inside lane B
     (("F-02", "S-02"), [R("F-02"), L("S-02")]),
-    (("S-02", "S-03"), [R("S-02"), L("S-03")]),
-    (("S-02", "S-04"), [T("S-02"), (T("S-02")[0], arcB), (T("S-04")[0], arcB), T("S-04")]),
-    # inside lane C
+    (("S-02", "S-03"), [T("S-02", 0.75), (T("S-02", 0.75)[0], L("S-03")[1]), L("S-03")]),
+    (("S-02", "S-04"), [B("S-02", 0.75), (B("S-02", 0.75)[0], L("S-04")[1]), L("S-04")]),
     (("F-01", "S-05"), [R("F-01"), L("S-05")]),
     (("S-05", "S-06"), [R("S-05"), L("S-06")]),
-    # between lanes
-    (("F-03", "F-02"), [B("F-03"), (B("F-03")[0], yAB), (T("F-02")[0], yAB), T("F-02")]),
-    (("S-02", "S-05"), [B("S-02", 0.75), (B("S-02", 0.75)[0], yBC + 8), (T("S-05")[0], yBC + 8), T("S-05")]),
-    (("S-01", "S-02"), [L("S-01", 0.6), (xm1, L("S-01", 0.6)[1]), (xm1, yBC - 8), (B("S-02")[0], yBC - 8), B("S-02")]),
-    (("S-01", "S-06"), [L("S-01", 0.4), (xm2, L("S-01", 0.4)[1]), (xm2, yBelow), (B("S-06")[0], yBelow), B("S-06")]),
+    (("F-03", "F-02"), [B("F-03"), T("F-02")]),
+    (("S-02", "S-05"), [B("S-02"), T("S-05")]),
 ]
 for pair, pts in e1:
-    route(pts, C["sky"], False, "sky", 1.8, edge=pair)
+    route(pts, C["sky"], False, "sky", 2.5, r=0, edge=pair)
 for k, (title, desc, c, r, req, cid) in m1.items():
     x, y, w, h = box[k]
     card(x, y, w, h, k, title, desc, "done", req=req, cid=cid)
@@ -415,7 +423,7 @@ box2 = {}
 ry = TOP + 98
 for ri, row in enumerate(rows2):
     ch = row_ch[ri]
-    row_h = CARD_OFF + ch + 36
+    row_h = CARD_OFF + row_body[ri] + 36
     x = P2X + INNER
     for key, n in row:
         cw = row_cw(row, n)
@@ -423,36 +431,36 @@ for ri, row in enumerate(rows2):
             pw_ = IN2
             gap = (pw_ - 2 * PAD - n * cw) / (n - 1)
         else:
-            gap = GAP
+            gap = M2_GRID_GAP
             pw_ = 2 * PAD + n * cw + (n - 1) * gap
         name, sub, ink = lanes[key]
         rect(x, ry, pw_, row_h, 12, C["panel2"], C["border"])
         rect(x + PAD, ry + 14, 26, 26, 7, ink + "22", ink + "77")
         text(x + PAD + 13, ry + 32, key, 13, 700, ink, family=MONO, anchor="middle")
         text(x + PAD + 38, ry + 32, name, 15, 700)
-        text(x + PAD + 38 + width(name, 15, 700) + 14, ry + 32, sub, 12, 400, C["muted"])
+        text(x + PAD + 38, ry + 56, sub, 14, 400, C["muted"])
         cnt = sum(1 for v in m2.values() if v[0] == key)
         counter = f"0 / {cnt} ukończonych"
-        assert x + PAD + 38 + width(name, 15, 700) + 14 + width(sub, 12) + 16 <= x + pw_ - PAD - width(counter, 11.5, 600), ("header overlap", key)
         text(x + pw_ - PAD, ry + 32, counter, 11.5, 600, C["dim"], anchor="end")
         add(f'<line x1="{x+PAD}" y1="{ry+HEAD_H+4}" x2="{x+pw_-PAD}" y2="{ry+HEAD_H+4}" stroke="{C["border"]}"/>')
         for k, v in m2.items():
             if v[0] == key:
-                box2[k] = (x + PAD + v[1] * (cw + gap), ry + CARD_OFF, cw, ch)
+                offset = (0 if k == "S-13" else ch + 48 if k == "S-18" else (ch + 48) / 2) if ri == 0 else 0
+                box2[k] = (M2_COLUMNS[M2_CARD_COLUMN[k]], ry + CARD_OFF + offset, cw, ch)
         x += pw_ + GROUP_GAP
     ry += row_h + 18
 def L2(k): x, y, w, h = box2[k]; return (x, y + h / 2)
 def R2(k): x, y, w, h = box2[k]; return (x + w, y + h / 2)
 def T2(k, f=0.5): x, y, w, h = box2[k]; return (x + w * f, y)
-arc_y = box2["F-04"][1] - 12
+def B2(k, f=0.5): x, y, w, h = box2[k]; return (x + w * f, y + h)
 e2 = [
     (("S-08", "S-12"), [R2("S-08"), L2("S-12")], C["lime"], False, "lime"),
-    (("F-04", "S-13"), [R2("F-04"), L2("S-13")], C["coral"], True, "coral"),
-    (("F-04", "S-18"), [T2("F-04"), (T2("F-04")[0], arc_y), (T2("S-18")[0], arc_y), T2("S-18")], C["coral"], True, "coral"),
+    (("F-04", "S-13"), [T2("F-04", 0.75), (T2("F-04", 0.75)[0], L2("S-13")[1]), L2("S-13")], C["coral"], True, "coral"),
+    (("F-04", "S-18"), [B2("F-04", 0.75), (B2("F-04", 0.75)[0], L2("S-18")[1]), L2("S-18")], C["coral"], True, "coral"),
     (("S-09", "S-17"), [R2("S-09"), L2("S-17")], C["sky"], False, "sky"),
 ]
 for pair, pts, col, dashed, mk in e2:
-    route(pts, col, dashed, mk, 1.8, edge=pair)
+    route(pts, col, dashed, mk, 2.5, r=0, edge=pair)
 for k, (ln, col, title, desc, st, req, cid) in m2.items():
     x, y, w, h = box2[k]
     card(x, y, w, h, k, title, desc, st, req=req, cid=cid, star=(k == "S-08"), note=(k == "F-04"))
@@ -480,11 +488,12 @@ for gi, (gname, items) in enumerate(groups):
     for ii, (ref, label) in enumerate(items):
         iy = gy + 74 + ii * ITEM_H
         add(f'<circle cx="{gx+22}" cy="{iy-4}" r="2.6" fill="{C["dim"]}"/>')
-        text(gx + 34, iy, label, 13, 500)
-        text(gx + 34, iy + 18, ref, 10.5, 600, C["dim"], family=MONO)
+        label_lines = wrap(label, 15, GW - 54, 500)
+        lines(gx + 34, iy, label_lines, 15, 20, 500)
+        text(gx + 34, iy + len(label_lines) * 20, ref, 12, 600, C["dim"], family=MONO)
 
 # ================= footer + assembly =================
-text(M, H - 30, "Szczur Radar · roadmapa v3 · M-1 zamknięty 17.10.2026 · M-2 otwarty · generowane z context/foundation/roadmap.md", 11, 400, C["dim"])
+text(M, H - 30, "Strzałki pomijają zależności wynikające ze ścieżek pośrednich. Pełne wymagania: na kartach. · Źródło: context/foundation/roadmap.md v3", 11, 400, C["dim"])
 text(W - M, H - 30, "MAPA ZALEŻNOŚCI · BEZ TERMINÓW", 10.5, 700, C["dim"], anchor="end", spacing="1.6")
 head = [
     f'<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{H}" viewBox="0 0 {W} {H}" role="img" aria-labelledby="t d">',
