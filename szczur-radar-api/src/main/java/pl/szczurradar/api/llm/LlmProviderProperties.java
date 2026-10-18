@@ -8,8 +8,10 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.jspecify.annotations.Nullable;
-import org.springframework.boot.convert.DurationStyle;
 import org.springframework.core.env.PropertyResolver;
+
+import pl.szczurradar.api.settings.DurationSetting;
+import pl.szczurradar.api.settings.SettingText;
 
 /**
  * The application's LLM configuration contract: exactly one provider per run, chosen by three
@@ -53,6 +55,9 @@ public record LlmProviderProperties(Provider provider, String model, String apiK
 
 	public static final Duration DEFAULT_TIMEOUT = Duration.ofSeconds(120);
 
+	/** The shortest accepted {@code LLM_TIMEOUT}: a shorter one is a slip (e.g. a forgotten unit), not a limit. */
+	public static final Duration MIN_TIMEOUT = Duration.ofSeconds(10);
+
 	/** The longest accepted {@code LLM_TIMEOUT}; the Gemini SDK takes it as {@code int} milliseconds. */
 	public static final Duration MAX_TIMEOUT = Duration.ofMinutes(30);
 
@@ -75,12 +80,12 @@ public record LlmProviderProperties(Provider provider, String model, String apiK
 	 * @throws IllegalStateException listing every problem; the message never contains the key
 	 */
 	public static LlmProviderProperties from(PropertyResolver environment) {
-		String providerId = trimmed(environment.getProperty(PROVIDER));
-		String model = trimmed(environment.getProperty(MODEL));
-		String apiKey = trimmed(environment.getProperty(API_KEY));
-		String serviceTierId = trimmed(environment.getProperty(SERVICE_TIER));
-		String reasoningEffortId = trimmed(environment.getProperty(REASONING_EFFORT));
-		String timeoutText = trimmed(environment.getProperty(TIMEOUT));
+		String providerId = SettingText.trimmed(environment.getProperty(PROVIDER));
+		String model = SettingText.trimmed(environment.getProperty(MODEL));
+		String apiKey = SettingText.trimmed(environment.getProperty(API_KEY));
+		String serviceTierId = SettingText.trimmed(environment.getProperty(SERVICE_TIER));
+		String reasoningEffortId = SettingText.trimmed(environment.getProperty(REASONING_EFFORT));
+		String timeoutText = SettingText.trimmed(environment.getProperty(TIMEOUT));
 
 		List<String> problems = new ArrayList<>();
 		Provider provider = oneOf(Provider.values(), Provider::id, PROVIDER, providerId, problems);
@@ -102,7 +107,8 @@ public record LlmProviderProperties(Provider provider, String model, String apiK
 			problems.add(REASONING_EFFORT + " is only supported for " + PROVIDER + "=openrouter (got '" + provider.id()
 					+ "')");
 		}
-		Duration timeout = timeoutText.isEmpty() ? DEFAULT_TIMEOUT : timeout(timeoutText, problems);
+		Duration timeout = timeoutText.isEmpty() ? DEFAULT_TIMEOUT
+				: DurationSetting.parse(TIMEOUT, timeoutText, MIN_TIMEOUT, MAX_TIMEOUT, problems);
 		if (!problems.isEmpty()) {
 			throw new IllegalStateException("Invalid LLM configuration: " + String.join("; ", problems)
 					+ ". See szczur-radar-api/README.md (LLM provider).");
@@ -121,28 +127,6 @@ public record LlmProviderProperties(Provider provider, String model, String apiK
 		problems.add(setting + " must be one of " + allowed
 				+ (value.isEmpty() ? " (not set)" : " (got '" + value + "')"));
 		return null;
-	}
-
-	private static @Nullable Duration timeout(String text, List<String> problems) {
-		try {
-			Duration timeout = DurationStyle.detectAndParse(text);
-			if (timeout.compareTo(MAX_TIMEOUT) > 0) {
-				problems.add(TIMEOUT + " must be at most 30m (got '" + text + "')");
-				return null;
-			}
-			if (!timeout.isNegative() && !timeout.isZero()) {
-				return timeout;
-			}
-		}
-		catch (IllegalArgumentException | ArithmeticException ex) {
-			// reported below
-		}
-		problems.add(TIMEOUT + " must be a positive duration such as 120s or 5m (got '" + text + "')");
-		return null;
-	}
-
-	private static String trimmed(@Nullable String value) {
-		return value == null ? "" : value.strip();
 	}
 
 }

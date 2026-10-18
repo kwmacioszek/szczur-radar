@@ -174,26 +174,53 @@ class LlmProviderConfigTest {
 			.withMessageNotContaining("very-secret-key");
 		assertThatIllegalStateException()
 			.isThrownBy(() -> environment("openrouter", "openai/gpt-6-luna", "very-secret-key", "LLM_TIMEOUT=soon"))
-			.withMessageContaining("LLM_TIMEOUT must be a positive duration such as 120s or 5m (got 'soon')")
+			.withMessageContaining("LLM_TIMEOUT must be a duration such as 300s or 5m (got 'soon')")
 			.withMessageNotContaining("very-secret-key");
-		assertThatIllegalStateException()
-			.isThrownBy(() -> environment("openrouter", "openai/gpt-6-luna", "very-secret-key", "LLM_TIMEOUT=0s"))
-			.withMessageContaining("LLM_TIMEOUT must be a positive duration");
 	}
 
 	@Test
-	void timeoutAbove30MinutesFailsTheStart() {
+	void aBareTimeoutNeedsAUnitBecauseSpringWouldReadMilliseconds() {
+		// The incident of 2026-10-06: 120 meant 120 ms, and every call timed out.
+		assertThatIllegalStateException()
+			.isThrownBy(() -> environment("openrouter", "openai/gpt-6-luna", "very-secret-key", "LLM_TIMEOUT=120"))
+			.withMessageStartingWith("Invalid LLM configuration: ")
+			.withMessageContaining("LLM_TIMEOUT needs a unit, e.g. 300s or 5m (got '120'; a bare number would be"
+					+ " milliseconds)")
+			.withMessageNotContaining("very-secret-key");
+	}
+
+	@Test
+	void anIsoTimeoutIsNotADuration() {
+		assertThatIllegalStateException()
+			.isThrownBy(() -> environment("openrouter", "openai/gpt-6-luna", "very-secret-key", "LLM_TIMEOUT=PT2M"))
+			.withMessageContaining("LLM_TIMEOUT must be a duration such as 300s or 5m (got 'PT2M')");
+	}
+
+	@Test
+	void timeoutFrom10SecondsTo30MinutesIsAccepted() {
 		// Gemini takes the timeout as int milliseconds (Math.toIntExact): an unbounded value overflows.
+		assertThat(LlmProviderProperties
+			.from(environment("gemini", "gemini-3.1-flash-lite", "synthetic-key", "LLM_TIMEOUT=10s"))
+			.timeout()).isEqualTo(LlmProviderProperties.MIN_TIMEOUT);
 		assertThat(LlmProviderProperties
 			.from(environment("gemini", "gemini-3.1-flash-lite", "synthetic-key", "LLM_TIMEOUT=30m"))
 			.timeout()).isEqualTo(LlmProviderProperties.MAX_TIMEOUT);
+		for (String timeout : List.of("9s", "0s", "-5m", "31m", "30d")) {
+			assertThatIllegalStateException()
+				.isThrownBy(() -> environment("gemini", "gemini-3.1-flash-lite", "very-secret-key",
+						"LLM_TIMEOUT=" + timeout))
+				.withMessageContaining("LLM_TIMEOUT must be from 10s to 30m (got '" + timeout + "')")
+				.withMessageNotContaining("very-secret-key");
+		}
+	}
+
+	@Test
+	void aTimeoutProblemIsListedWithTheOtherProblems() {
 		assertThatIllegalStateException()
-			.isThrownBy(() -> environment("gemini", "gemini-3.1-flash-lite", "very-secret-key", "LLM_TIMEOUT=31m"))
-			.withMessageContaining("LLM_TIMEOUT must be at most 30m (got '31m')")
-			.withMessageNotContaining("very-secret-key");
-		assertThatIllegalStateException()
-			.isThrownBy(() -> environment("gemini", "gemini-3.1-flash-lite", "synthetic-key", "LLM_TIMEOUT=30d"))
-			.withMessageContaining("LLM_TIMEOUT must be at most 30m (got '30d')");
+			.isThrownBy(() -> environment("openrouter", "openai/gpt-6-luna", "very-secret-key", "LLM_SERVICE_TIER=cheap",
+					"LLM_TIMEOUT=120"))
+			.withMessageContaining("LLM_SERVICE_TIER must be one of default, flex (got 'cheap'); LLM_TIMEOUT needs a unit")
+			.withMessageEndingWith(". See szczur-radar-api/README.md (LLM provider).");
 	}
 
 	@Test

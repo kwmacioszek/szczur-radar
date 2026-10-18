@@ -1,16 +1,18 @@
 package pl.szczurradar.api.pipeline;
 
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 
-import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.boot.convert.DurationStyle;
 import org.springframework.core.env.PropertyResolver;
 
 import pl.szczurradar.api.llm.LlmProviderProperties;
 import pl.szczurradar.api.llm.transport.TransportRetry;
 import pl.szczurradar.api.pipeline.state.Durations;
+import pl.szczurradar.api.settings.DurationSetting;
+import pl.szczurradar.api.settings.SettingText;
 
 /**
  * {@code PIPELINE_STALL_TIMEOUT}: how long a run of this instance may go without progress before
@@ -37,7 +39,10 @@ public final class PipelineStallSettings {
 	/** Added to the longest single LLM call: the run's own writes, a slow connection. */
 	public static final Duration MARGIN = Duration.ofMinutes(5);
 
-	/** The longest accepted timeout. */
+	/** The shortest accepted timeout: an explicit value may be far below {@link #minimum()} (tests, a manual check). */
+	public static final Duration MIN = Duration.ofMillis(1);
+
+	/** The longest accepted timeout ({@code 1d}). */
 	public static final Duration MAX = Duration.ofHours(24);
 
 	private static final Logger log = LoggerFactory.getLogger(PipelineStallSettings.class);
@@ -60,8 +65,7 @@ public final class PipelineStallSettings {
 	public static PipelineStallSettings from(PropertyResolver environment, LlmProviderProperties llm) {
 		Duration minimum = TransportRetry.maxCallDuration(llm.timeout(), llm.serviceTier()).plus(MARGIN);
 		Duration defaultTimeout = minimum.compareTo(MIN_DEFAULT) > 0 ? minimum : MIN_DEFAULT;
-		String value = environment.getProperty(NAME);
-		String text = value == null ? "" : value.strip();
+		String text = SettingText.trimmed(environment.getProperty(NAME));
 		if (text.isEmpty()) {
 			return new PipelineStallSettings(defaultTimeout, minimum);
 		}
@@ -97,30 +101,13 @@ public final class PipelineStallSettings {
 	}
 
 	private static Duration parse(String text, Duration defaultTimeout) {
-		String unset = ", or unset for the default (" + Durations.format(defaultTimeout) + ").";
-		if (text.matches("[+-]?\\d+")) {
-			throw new IllegalStateException("Invalid " + NAME + ": needs a unit, e.g. 39m or 1h (got '" + text
-					+ "'; a bare number would be milliseconds)" + unset);
-		}
-		Duration timeout = duration(text);
+		List<String> problems = new ArrayList<>();
+		Duration timeout = DurationSetting.parse(NAME, text, MIN, MAX, problems);
 		if (timeout == null) {
-			throw new IllegalStateException(
-					"Invalid " + NAME + ": must be a duration such as 39m or 1h (got '" + text + "')" + unset);
-		}
-		if (timeout.isNegative() || timeout.isZero() || timeout.compareTo(MAX) > 0) {
-			throw new IllegalStateException(
-					"Invalid " + NAME + ": must be more than 0 and at most 24h (got '" + text + "')" + unset);
+			throw new IllegalStateException("Invalid configuration: " + problems.getFirst()
+					+ ", or unset for the default (" + Durations.format(defaultTimeout) + ").");
 		}
 		return timeout;
-	}
-
-	private static @Nullable Duration duration(String text) {
-		try {
-			return DurationStyle.detectAndParse(text);
-		}
-		catch (IllegalArgumentException | ArithmeticException ex) {
-			return null;
-		}
 	}
 
 }

@@ -19,7 +19,7 @@ import pl.szczurradar.api.llm.ServiceTier;
 /**
  * {@code PIPELINE_STALL_TIMEOUT}: the default follows the longest single LLM call, a shorter explicit
  * value is accepted with a warning, and a bare number, zero, more than a day or no duration at all
- * fails the start.
+ * (ISO-8601 included) fails the start.
  */
 @ExtendWith(OutputCaptureExtension.class)
 class PipelineStallSettingsTest {
@@ -74,21 +74,28 @@ class PipelineStallSettingsTest {
 	@Test
 	void aBareNumberFailsTheStartNamingTheSetting() {
 		assertThatIllegalStateException().isThrownBy(() -> PipelineStallSettings.from(environment("15"), DEFAULT_CALLS))
-			.withMessageStartingWith("Invalid PIPELINE_STALL_TIMEOUT: needs a unit")
+			.withMessageStartingWith("Invalid configuration: PIPELINE_STALL_TIMEOUT needs a unit")
 			.withMessageContaining("'15'")
-			.withMessageContaining("milliseconds");
+			.withMessageContaining("milliseconds")
+			.withMessageEndingWith(", or unset for the default (15m 00s).");
 	}
 
 	@Test
 	void zeroMoreThanADayOrNoDurationFailsTheStartNamingTheSetting() {
-		for (String value : List.of("0s", "-5m", "25h", "abc")) {
+		for (String value : List.of("0s", "-5m", "25h", "abc", "PT15M")) {
 			assertThatIllegalStateException()
 				.isThrownBy(() -> PipelineStallSettings.from(environment(value), DEFAULT_CALLS))
-				.withMessageStartingWith("Invalid PIPELINE_STALL_TIMEOUT: ")
+				.withMessageStartingWith("Invalid configuration: PIPELINE_STALL_TIMEOUT")
 				.withMessageContaining("'" + value + "'");
 		}
+		assertThatIllegalStateException().isThrownBy(() -> PipelineStallSettings.from(environment("25h"), DEFAULT_CALLS))
+			.withMessageContaining("PIPELINE_STALL_TIMEOUT must be from 1ms to 1d (got '25h')");
+		assertThatIllegalStateException().isThrownBy(() -> PipelineStallSettings.from(environment("PT15M"), DEFAULT_CALLS))
+			.withMessageContaining("PIPELINE_STALL_TIMEOUT must be a duration such as 300s or 5m (got 'PT15M')");
 		assertThat(PipelineStallSettings.from(environment("24h"), DEFAULT_CALLS).timeout())
 			.isEqualTo(Duration.ofHours(24));
+		assertThat(PipelineStallSettings.from(environment("1ms"), DEFAULT_CALLS).timeout())
+			.isEqualTo(Duration.ofMillis(1));
 	}
 
 	private static MockEnvironment environment(String value) {

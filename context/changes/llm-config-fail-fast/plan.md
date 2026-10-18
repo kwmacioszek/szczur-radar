@@ -444,10 +444,10 @@ Brak: parsowanie raz przy starcie.
 
 #### Automated
 
-- [x] 1.1 Pełny build i testy bez zmian zachowania: `cd szczur-radar-api && ./mvnw -B verify`
-- [x] 1.2 W `src/main` i `src/test` nie ma importu `pl.szczurradar.api.config.LlmProviderProperties` (`grep -rn "config.LlmProviderProperties" szczur-radar-api/src` nic nie zwraca)
-- [x] 1.3 `JpaSchemaIT` przechodzi z niezmienionymi wartościami `"openrouter"`, `"flex"`, `"low"`
-- [x] 1.5 Poza `src` nie ma odwołań do starego miejsca (`grep -rn --exclude-dir=target "config/LlmProviderProperties\|config\.LlmProviderProperties" szczur-radar-api REPOSITORY_GUIDELINES.md` nic nie zwraca)
+- [x] 1.1 Pełny build i testy bez zmian zachowania: `cd szczur-radar-api && ./mvnw -B verify` — 6a2ee28
+- [x] 1.2 W `src/main` i `src/test` nie ma importu `pl.szczurradar.api.config.LlmProviderProperties` (`grep -rn "config.LlmProviderProperties" szczur-radar-api/src` nic nie zwraca) — 6a2ee28
+- [x] 1.3 `JpaSchemaIT` przechodzi z niezmienionymi wartościami `"openrouter"`, `"flex"`, `"low"` — 6a2ee28
+- [x] 1.5 Poza `src` nie ma odwołań do starego miejsca (`grep -rn --exclude-dir=target "config/LlmProviderProperties\|config\.LlmProviderProperties" szczur-radar-api REPOSITORY_GUIDELINES.md` nic nie zwraca) — 6a2ee28
 
 #### Manual
 
@@ -457,10 +457,10 @@ Brak: parsowanie raz przy starcie.
 
 #### Automated
 
-- [ ] 2.1 Testy jednostkowe parsera i ustawień przechodzą: `cd szczur-radar-api && ./mvnw -B test`
-- [ ] 2.2 Pełna bramka: `cd szczur-radar-api && ./mvnw -B verify`
-- [ ] 2.3 `DurationStyle.detectAndParse` nie występuje już w `src/main` (`grep -rn "detectAndParse" szczur-radar-api/src/main` nic nie zwraca)
-- [ ] 2.4 `settings/` nie importuje nic z aplikacji (`grep -rn "import pl.szczurradar" szczur-radar-api/src/main/java/pl/szczurradar/api/settings` nic nie zwraca)
+- [x] 2.1 Testy jednostkowe parsera i ustawień przechodzą: `cd szczur-radar-api && ./mvnw -B test`
+- [x] 2.2 Pełna bramka: `cd szczur-radar-api && ./mvnw -B verify`
+- [x] 2.3 `DurationStyle.detectAndParse` nie występuje już w `src/main` (`grep -rn "detectAndParse" szczur-radar-api/src/main` nic nie zwraca)
+- [x] 2.4 `settings/` nie importuje nic z aplikacji (`grep -rn "import pl.szczurradar" szczur-radar-api/src/main/java/pl/szczurradar/api/settings` nic nie zwraca)
 
 #### Manual
 
