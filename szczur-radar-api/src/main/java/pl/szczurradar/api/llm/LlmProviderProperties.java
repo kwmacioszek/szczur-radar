@@ -132,7 +132,7 @@ public record LlmProviderProperties(Provider provider, String model, String apiK
 		}
 		String allowed = Arrays.stream(values).map(id).collect(Collectors.joining(", "));
 		problems.add(setting + " must be one of " + allowed
-				+ (value.isEmpty() ? " (not set)" : " (got '" + value + "')"));
+				+ (value.isEmpty() ? " (not set)" : " (got '" + SettingText.echoed(value) + "')"));
 		return null;
 	}
 

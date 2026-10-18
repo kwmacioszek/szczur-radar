@@ -125,6 +125,16 @@ class LlmProviderConfigTest {
 	}
 
 	@Test
+	void aKeyPastedIntoAnotherSettingIsRepeatedOnlyInPart() {
+		String pasted = "sk-or-v1-0123456789abcdef0123456789abcdef";
+
+		assertThatIllegalStateException().isThrownBy(() -> environment(pasted, "some-model", "very-secret-key"))
+			.withMessageContaining("LLM_API_PROVIDER must be one of gemini, deepseek, openrouter (got 'sk-or-v1-0123456…')")
+			.withMessageNotContaining(pasted)
+			.withMessageNotContaining("very-secret-key");
+	}
+
+	@Test
 	void missingOrBlankKeyFailsTheStart() {
 		assertThatIllegalStateException().isThrownBy(() -> environment("deepseek", "deepseek-v4-flash", " "))
 			.withMessageContaining("LLM_API_KEY is not set");

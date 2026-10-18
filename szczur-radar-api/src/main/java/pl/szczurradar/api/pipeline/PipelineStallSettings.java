@@ -108,7 +108,7 @@ public final class PipelineStallSettings {
 		Duration timeout = DurationSetting.parse(NAME, text, MIN, MAX, problems);
 		if (timeout == null) {
 			throw new InvalidSettingsException("Invalid configuration: " + problems.getFirst()
-					+ ", or unset for the default (" + Durations.format(defaultTimeout) + ").");
+					+ ", or unset for the default (" + DurationSetting.format(defaultTimeout) + ").");
 		}
 		return timeout;
 	}

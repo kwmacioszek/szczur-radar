@@ -96,6 +96,11 @@ final class CommandChecks {
 	 *   <li>anything else (e.g. the database is unreachable, a migration fails):
 	 *       {@code <command> failed: <message>}, {@link ExitCode#FAILED}.
 	 * </ul>
+	 *
+	 * <p>{@link ExitCode#USAGE} promises that nothing touched the database. Today that holds because an
+	 * invalid setting is found before the context ({@code config/LlmConfigurationCheck}) or in a bean that
+	 * exists only in the server ({@code RunWatchdog}). A bean of a command's context that checks a setting
+	 * must do so before any database work, or this exit code would hide a migration that did run.
 	 */
 	static ExitCode contextFailed(CommandType command, RuntimeException failure, PrintStream err) {
 		for (Throwable cause = failure; cause != null; cause = cause.getCause()) {

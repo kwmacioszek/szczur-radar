@@ -32,12 +32,20 @@ class DurationSettingTest {
 	}
 
 	@ParameterizedTest
-	@ValueSource(strings = { "PT5M", "PT0.1S", "1.5h", "12 hours", "12x", "soon", "5 m", "m", "300S", "5M",
-			"9999999999999999999d", "9999999999999999d" })
+	@ValueSource(strings = { "PT5M", "PT0.1S", "1.5h", "12 hours", "12x", "soon", "5 m", "m", "300S", "5M" })
 	void anythingButAWholeNumberWithALowerCaseUnitIsNotADuration(String text) {
 		assertThat(DurationSetting.parse(NAME, text, MIN, MAX, problems)).isNull();
 
 		assertThat(problems).containsExactly("SOME_TIMEOUT must be a duration such as 300s or 5m (got '" + text + "')");
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = { "9999999999999999999d", "9999999999999999d" })
+	void anOverflowIsNotADurationAndALongValueIsRepeatedOnlyInPart(String text) {
+		assertThat(DurationSetting.parse(NAME, text, MIN, MAX, problems)).isNull();
+
+		assertThat(problems)
+			.containsExactly("SOME_TIMEOUT must be a duration such as 300s or 5m (got '9999999999999999…')");
 	}
 
 	@ParameterizedTest

@@ -65,24 +65,29 @@ public final class DurationSetting {
 	public static @Nullable Duration parse(String name, String text, Duration min, Duration max,
 			List<String> problems) {
 		if (BARE_NUMBER.matcher(text).matches()) {
-			problems.add(name + " needs a unit, e.g. 300s or 5m (got '" + text
+			problems.add(name + " needs a unit, e.g. 300s or 5m (got '" + SettingText.echoed(text)
 					+ "'; a bare number would be milliseconds)");
 			return null;
 		}
 		Duration duration = WITH_UNIT.matcher(text).matches() ? simple(text) : null;
 		if (duration == null) {
-			problems.add(name + " must be a duration such as 300s or 5m (got '" + text + "')");
+			problems.add(name + " must be a duration such as 300s or 5m (got '" + SettingText.echoed(text)
+					+ "')");
 			return null;
 		}
 		if (duration.compareTo(min) < 0 || duration.compareTo(max) > 0) {
-			problems.add(name + " must be from " + format(min) + " to " + format(max) + " (got '" + text + "')");
+			problems.add(name + " must be from " + format(min) + " to " + format(max) + " (got '"
+					+ SettingText.echoed(text) + "')");
 			return null;
 		}
 		return duration;
 	}
 
-	/** {@code duration} in the largest unit that holds it whole, e.g. {@code 24h} as {@code 1d}. */
-	static String format(Duration duration) {
+	/**
+	 * {@code duration} in the largest unit that holds it whole, e.g. {@code 24h} as {@code 1d}: a value the
+	 * rule accepts, so a message can suggest it.
+	 */
+	public static String format(Duration duration) {
 		for (Unit unit : Unit.values()) {
 			long count = duration.dividedBy(unit.length);
 			if (unit.length.multipliedBy(count).equals(duration)) {

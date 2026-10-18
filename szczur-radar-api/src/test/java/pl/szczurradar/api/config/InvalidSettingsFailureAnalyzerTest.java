@@ -33,7 +33,7 @@ class InvalidSettingsFailureAnalyzerTest {
 	void findsAnInvalidSettingThrownFromABean() {
 		InvalidSettingsException invalid = new InvalidSettingsException(
 				"Invalid configuration: PIPELINE_STALL_TIMEOUT needs a unit, e.g. 300s or 5m (got '15'; a bare"
-						+ " number would be milliseconds), or unset for the default (15m 00s).");
+						+ " number would be milliseconds), or unset for the default (15m).");
 		BeanCreationException failure = new BeanCreationException("runWatchdog", "Failed to instantiate", invalid);
 
 		FailureAnalysis analysis = analyzer.analyze(failure);

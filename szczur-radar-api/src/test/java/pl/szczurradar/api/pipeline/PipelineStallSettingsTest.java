@@ -80,7 +80,7 @@ class PipelineStallSettingsTest {
 			.withMessageStartingWith("Invalid configuration: PIPELINE_STALL_TIMEOUT needs a unit")
 			.withMessageContaining("'15'")
 			.withMessageContaining("milliseconds")
-			.withMessageEndingWith(", or unset for the default (15m 00s).");
+			.withMessageEndingWith(", or unset for the default (15m).");
 	}
 
 	@Test
