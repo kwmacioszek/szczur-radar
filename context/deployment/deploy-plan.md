@@ -697,7 +697,7 @@ PR #49 was squash-merged as `54c4fc2` (13:22 UTC), after S-05 (#50).
 
 ## S-06: historia przebiegów i powiadomienia (pipeline-run-history-dashboard)
 
-**Status (2026-10-16): in the PR env (#60), not merged.** S-06 shows the admin what a run is doing and tells them when one needs attention: the live progress of a running run, a watchdog that stops a run without progress, the cause of an interruption, in-app notifications for admins (a bell in the header) and a page per run (`/admin/runs/:id`). The cron logs a heartbeat. Change: `context/changes/pipeline-run-history-dashboard/`, issue #19.
+**Status (2026-10-18): live on production** after the human merge of PR #60 (`5b6eabb`); production verified, including the first night (section "Production after the merge" below); issue #19 closed. S-06 shows the admin what a run is doing and tells them when one needs attention: the live progress of a running run, a watchdog that stops a run without progress, the cause of an interruption, in-app notifications for admins (a bell in the header) and a page per run (`/admin/runs/:id`). The cron logs a heartbeat. Change: `context/archive/2026-10-15-pipeline-run-history-dashboard/`, issue #19.
 
 ### What it adds
 
@@ -801,7 +801,23 @@ Verified 2026-10-16 on `fa87f19` (CI run 38966942987: all seven jobs green; `rai
   - 14:53:14 one refresh on opening `/admin`, then 14:54:13 the 60 s poll.
 - **Not forced:** the watchdog's stop, which would need a really hung run. `RunWatchdogIT` covers the stop; the local run with `PIPELINE_STALL_TIMEOUT=1m` (plan step 2.4) showed it leaves a run with progress alone.
 
+### Production after the merge (2026-10-17 – 2026-10-18)
+
+PR #60 was merged by the operator as `5b6eabb` (2026-10-17 15:02 UTC).
+
+- **IaC and CI.** CI on `main` (run 39043339201): all seven jobs green; `railway-config` on production planned "No changes." (`PIPELINE_STALL_TIMEOUT: preserve()` creates no value).
+- **Deploys and migrations.** api `6f4ec335` and web `9f1a117d` SUCCESS from `5b6eabb`, one API deploy. The pre-deploy `migrate` applied `V8` (pipeline run progress) and `V9` (create notifications), "now at version v9" in 68 ms. The API started in 6.5 s with `Pipeline watchdog: a run without progress for 39m 00s is stopped (checked every 1m 00s)`, no WARN from `PipelineStallSettings`, no ERROR and no interrupted run; `/api/ready` 200.
+- **First night, 2026-10-18** (cron deployment `3570e47b`, SUCCESS):
+  - 00:31:41 UTC start; the API was asleep and answered after 8 s; the cron started RETRY `f3a06c8b` and RANGE `b3cfa5e6`. The queued RANGE logged only its status, no heartbeat (`87e92c3`);
+  - RETRY → `partial` in 34.5 s (ok 4, failed 1, dead 0); RANGE → `partial` in 3 min 12 s (fetched 425, new 71, ok 70, failed 1, dead 0); `OK: retry partial, range partial`, exit 0 at 00:35:50;
+  - no heartbeat line: both runs were shorter than `TRIGGER_HEARTBEAT_INTERVAL` (5 min);
+  - API log: start and end lines with counters, every step with its duration (fetch 6.0 s, store 105 ms, assess 3 min 05 s), the `assess:` progress line every minute (`26/71`, `52/71`, `71/71`); no ERROR, no watchdog WARN;
+  - notifications: both runs `partial` with only retryable `failed` posts, so no notification (no `needs attention` line), as the S-06 rule intends.
+- **Observation.** The last `assess: 71/71` line came twice: the last post fell on the one-minute mark, then the line after the last post followed. Harmless.
+
 ### Runbook — after the merge (operator; tracked in issue #19, not in the plan's Progress)
+
+**Done 2026-10-18** (section above).
 
 0. **Standing rules.**
    - No merge to `main` while `/admin` shows a run `RUNNING`, and not between about 00:30 and 01:30 UTC (section S-05).
