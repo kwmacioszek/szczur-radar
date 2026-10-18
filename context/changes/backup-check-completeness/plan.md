@@ -486,15 +486,15 @@ Porażka przed dumpem skraca przebieg zamiast go wydłużać.
 
 #### Automated
 
-- [x] 2.1 tools/db-backup/test.sh przechodzi z przypadkami: data z przyszłości, spadek, zgoda, zgoda wygasła, pusta baza
-- [x] 2.2 bash -n tools/db-backup/*.sh bez błędów
-- [ ] 2.3 Job CI db-backup-test zielony w PR
+- [x] 2.1 tools/db-backup/test.sh przechodzi z przypadkami: data z przyszłości, spadek, zgoda, zgoda wygasła, pusta baza — 6894228
+- [x] 2.2 bash -n tools/db-backup/*.sh bez błędów — 6894228
+- [x] 2.3 Job CI db-backup-test zielony w PR — 6894228
 
 ### Phase 3: IaC, dokumenty i weryfikacja w PR env
 
 #### Automated
 
-- [ ] 3.1 tools/db-backup/test.sh przechodzi
+- [x] 3.1 tools/db-backup/test.sh przechodzi
 - [ ] 3.2 Job CI railway-config zielony w PR (bez zmian destructive, resource.delete i źródła)
 - [ ] 3.3 Cały workflow CI zielony w PR
 

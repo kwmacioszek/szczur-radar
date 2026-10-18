@@ -218,8 +218,9 @@ export default defineRailway(() => {
   // No `checkSuites` (Wait for CI): Railway leaves it unset on a service that
   // IaC creates, so every later plan would show `source.checkSuites (null →
   // true)`, which the CI gate refuses as a source change — on main that would
-  // turn CI red and stop the API and web deploys. CI does not test
-  // tools/db-backup anyway (tools/db-backup/test.sh does, locally).
+  // turn CI red and stop the API and web deploys. The CI job db-backup-test
+  // tests the tool (tools/db-backup/test.sh), but the cron's deploy does not
+  // wait for it.
   const dbBackup = service("db-backup", {
     source: github(REPO, { branch }),
     rootDirectory: "tools/db-backup",
@@ -240,6 +241,13 @@ export default defineRailway(() => {
       S3_REGION: ref(backups, "REGION"),
       BACKUP_KEEP_DAILY: "14",
       BACKUP_KEEP_MONTHLY: "12",
+      // Overrides set by hand only, never here (tools/db-backup/README.md):
+      // BACKUP_IN_ANY_ENVIRONMENT=true runs the backup outside production, to
+      // verify the tool in a PR env; BACKUP_ACCEPT_SHRINK=<newest manifest> lets
+      // one run through fewer rows after a restore on purpose (deploy-plan.md,
+      // F-01, restore runbook). preserve() keeps those hand-set values.
+      BACKUP_IN_ANY_ENVIRONMENT: preserve(),
+      BACKUP_ACCEPT_SHRINK: preserve(),
     },
   });
 

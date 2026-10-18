@@ -13,6 +13,7 @@ Jeden obraz służy trzem celom: przebiegowi cron w Railway, testowi lokalnemu i
 | `Dockerfile` | `postgres:18` (klient i serwer 18) + `rclone`, `jq`, `ca-certificates`. `ENTRYPOINT` to `backup.sh`; `docker run <obraz> restore-check.sh …` uruchamia inne narzędzie obrazu |
 | `backup.sh` | jeden przebieg kopii (niżej) |
 | `restore-check.sh` | `restore-check.sh <dump> [<manifest>] [--serve]`: odtworzenie w tymczasowym klastrze i kontrole |
+| `tables.sh` | klasyfikacja każdej tabeli schematu `public` (S-15), czytana przez `backup.sh` i `restore-check.sh`: wersja Flyway, od której tabela istnieje, i tryb. `counted`: tabela wymagana, która tylko rośnie (liczona przed dumpem i po nim, porównywana z poprzednim manifestem). `present`: tabela tylko wymagana, bo jej wiersze mogą znikać (`activation_tokens`, `flyway_schema_history`) albo jej danych nie ma w dumpie (sesje). Migracja dodająca tabelę dopisuje ją tutaj w tym samym PR. Wpisów się nie usuwa: starsze kopie nadal mają tabelę |
 | `nas-retention.sh` | `nas-retention.sh <katalog> [--dry-run]`: retencja kopii na NAS (czysty bash, bez rclone i Dockera) |
 | `test.sh` | lokalny test całości w Dockerze, bez Railway i S3 |
 
@@ -21,27 +22,34 @@ Jeden obraz służy trzem celom: przebiegowi cron w Railway, testowi lokalnemu i
 0. Poza produkcją nic nie robi: jeśli `RAILWAY_ENVIRONMENT_NAME` jest ustawione i różne od `production`, zapisuje „skipped” i kończy się sukcesem. PR env dostaje ten cron jako kopia produkcji, ale jego baza nie potrzebuje kopii, a PR env bez bazy wysyłałby co noc e-mail o porażce. Wyjątek: `BACKUP_IN_ANY_ENVIRONMENT=true` na serwisie, do przetestowania zmiany narzędzia w PR env. Lokalnie (`test.sh`, ręcznie) zmiennej nie ma, więc przebieg rusza.
    Cały przebieg ma twardy limit czasu `BACKUP_TIMEOUT` (domyślnie `2h`), a `pg_dump` czeka na blokadę najwyżej 5 min. Zawieszony przebieg kończy się więc porażką (`FAILED: the run exceeded …`), zamiast blokować kolejne: Railway pomija przebieg cron, dopóki poprzedni trwa.
 1. Czeka, aż baza z `PG*` przyjmuje połączenia (sieć prywatna Railway bywa gotowa kilka sekund po starcie kontenera).
-2. Odczytuje wersję serwera i najwyższą udaną migrację Flyway. Liczy wiersze `users`, `pipeline_runs`, `posts`, `assessments` i `raw_payloads`.
-3. Uruchamia `pg_dump --format=custom --no-owner --exclude-table-data='public.spring_session*'`. Danych sesji nie ma w kopii, bo identyfikator sesji z dumpa pozwoliłby ją przejąć. Po odtworzeniu wszyscy logują się ponownie.
-4. Ponownie liczy wiersze. `pg_dump` czyta jeden snapshot, więc liczby w kopii mieszczą się między pomiarem przed dumpem a pomiarem po nim.
-5. Sprawdza `pg_restore --list`: muszą być dane `posts`, nie może być danych `spring_session*`. `--exclude-table-data` nie zgłasza błędu, gdy wzorzec nic nie pasuje.
-6. Zapisuje manifest (JSON) i uruchamia `restore-check.sh` na dumpie z manifestem.
-7. Dopiero po udanym sprawdzeniu wysyła `daily/szczur-radar-<UTC yyyymmddThhmmssZ>.dump`, a potem `.manifest.json` (manifest obok dumpa oznacza kompletną parę).
-8. Jeśli w `monthly/` nie ma jeszcze kopii bieżącego miesiąca UTC, kopiuje dump po stronie serwera jako `monthly/szczur-radar-<yyyy-mm>.dump` z manifestem. Kopią miesięczną zostaje więc pierwszy udany dump miesiąca.
-9. Retencja: w `daily/` zostaje `BACKUP_KEEP_DAILY` najnowszych dumpów, w `monthly/` `BACKUP_KEEP_MONTHLY`, każdy z manifestem. Liczą się tylko dokładne nazwy, które zapisuje to narzędzie (`szczur-radar-<yyyymmddThhmmssZ>.dump`, `szczur-radar-<yyyy-mm>.dump`). Inne pliki zostają i są logowane jako „ignoring”. Dumpa z bieżącego przebiegu retencja nigdy nie usuwa.
+2. Odczytuje wersję serwera i najwyższą udaną migrację Flyway. Liczy wiersze tabel `counted` z `tables.sh`, które istnieją przy tej wersji Flyway (przy V9: `users`, `pipeline_runs`, `pipeline_run_steps`, `raw_payloads`, `posts`, `assessments`, `notifications`).
+3. Kontrola wiarygodności, przed dumpem (S-15): kopia wyczyszczonej albo okrojonej bazy nie może trafić do bucketu, gdzie retencja i lustro NAS wyparłyby nią dobre kopie. Porażka kończy się komunikatem z „nothing dumped”, bez dumpa i bez wysyłki, więc retencja zostaje nietknięta.
+   - Minimum: `posts` musi mieć wiersze (`posts is empty: refusing to back up an empty database`), zawsze, także przy zgodzie.
+   - Brak spadku: żadna liczona tabela nie może mieć mniej wierszy niż w `counts_after` najnowszego manifestu w `daily/` (`rows lost since daily/<manifest>: posts 35 < 40`). Porównanie obejmuje tabele, które mają liczbę w obu; tabela nowsza niż ten manifest jest pomijana. Manifest z nazwą późniejszą niż bieżący przebieg (data z przyszłości) jest pomijany i logowany jako „ignoring”. Brak manifestu to nie błąd, tylko pierwsza kopia w buckecie.
+   - Zgoda: komunikat spadku podaje gotową wartość `BACKUP_ACCEPT_SHRINK=szczur-radar-<ts>`, czyli nazwę najnowszego manifestu bez rozszerzenia. Ustawiona na serwisie (i po redeployu `db-backup`) przepuszcza spadek tylko względem tego manifestu, z logiem `accepted: …`. Po pierwszej udanej kopii najnowszym manifestem jest już nowy, więc zgoda sama wygasa: następny przebieg loguje `ignoring BACKUP_ACCEPT_SHRINK=…` i sprawdza normalnie.
+   - Najnowszy manifest, którego nie da się przeczytać albo którego `counts_after` nie jest obiektem liczb, kończy przebieg błędem z jego nazwą, bo spadku nie da się wtedy sprawdzić. Zgoda tego nie obejmuje. Jeśli manifest jest uszkodzony, zmiana jego nazwy na taką spoza wzorca (np. `….manifest.json.broken`) sprawia, że narzędzie go pomija.
+4. Uruchamia `pg_dump --format=custom --no-owner --exclude-table-data='public.spring_session*'`. Danych sesji nie ma w kopii, bo identyfikator sesji z dumpa pozwoliłby ją przejąć. Po odtworzeniu wszyscy logują się ponownie.
+5. Ponownie liczy wiersze. `pg_dump` czyta jeden snapshot, więc liczby w kopii mieszczą się między pomiarem przed dumpem a pomiarem po nim.
+6. Sprawdza `pg_restore --list`: muszą być dane `posts`, nie może być danych `spring_session*`. `--exclude-table-data` nie zgłasza błędu, gdy wzorzec nic nie pasuje.
+7. Zapisuje manifest (JSON) i uruchamia `restore-check.sh` na dumpie z manifestem.
+8. Dopiero po udanym sprawdzeniu wysyła `daily/szczur-radar-<UTC yyyymmddThhmmssZ>.dump`, a potem `.manifest.json` (manifest obok dumpa oznacza kompletną parę).
+9. Jeśli w `monthly/` nie ma jeszcze kopii bieżącego miesiąca UTC, kopiuje dump po stronie serwera jako `monthly/szczur-radar-<yyyy-mm>.dump` z manifestem. Kopią miesięczną zostaje więc pierwszy udany dump miesiąca.
+10. Retencja: w `daily/` zostaje `BACKUP_KEEP_DAILY` najnowszych dumpów, w `monthly/` `BACKUP_KEEP_MONTHLY`, każdy z manifestem. Liczą się tylko dokładne nazwy, które zapisuje to narzędzie (`szczur-radar-<yyyymmddThhmmssZ>.dump`, `szczur-radar-<yyyy-mm>.dump`). Inne pliki zostają i są logowane jako „ignoring”. Dumpa z bieżącego przebiegu retencja nigdy nie usuwa.
 
 Każda porażka kończy przebieg kodem ≠ 0, więc Railway oznacza przebieg cron jako nieudany. Skrypty nigdy nie wypisują hasła do bazy ani kluczy S3 i nie używają `set -x`. Klucze trafiają do rclone przez zmienne `RCLONE_S3_*`, nie przez argumenty.
 
-Manifest zawiera: czas, nazwę pliku, `sha256`, rozmiar, wersje serwera i `pg_dump`, wersję Flyway, wykluczone dane, liczby wierszy przed dumpem i po nim oraz wynik i czas `restore_check`.
+Manifest zawiera: czas, nazwę pliku, `sha256`, rozmiar, wersje serwera i `pg_dump`, wersję Flyway, wykluczone dane, liczby wierszy przed dumpem i po nim, `compared_with` (nazwę porównanego manifestu z `daily/` albo `null` przy pierwszej kopii), `accepted_shrink` (`true`, gdy spadek przepuściła zgoda `BACKUP_ACCEPT_SHRINK`) oraz wynik i czas `restore_check`. `format` zostaje `1`: nowe pola tylko doszły, a starsze manifesty bez nich nadal przechodzą przez `restore-check.sh`.
 
 ## `restore-check.sh`
 
 - Tymczasowy klaster Postgres 18 powstaje w katalogu tymczasowym kontenera, nigdy na wolumenie. `initdb` i serwer działają jako użytkownik `postgres` obrazu, bo odmawiają pracy jako root.
 - Dump trafia do bazy `restored` przez `pg_restore --no-owner --no-acl --single-transaction`.
-- Kontrole:
-  - istnieją tabele aplikacji, sesji i `flyway_schema_history`;
+- Kontrole, w tej kolejności:
+  - `flyway_schema_history` ma udaną migrację; jej wersja wyznacza wymagane tabele;
+  - istnieje każda tabela z `tables.sh`, której wersja jest ≤ wersji Flyway odtworzonej bazy (`tables: missing …`). Dump sprzed V7 (np. kopia miesięczna 2026-10 z V5) przechodzi więc bez `activation_tokens` i `notifications`;
+  - każda tabela bazowa schematu `public` ma klasyfikację w `tables.sh` (`tables: unknown <t>; classify it in tables.sh`), więc tabela z nowej migracji nie przejdzie po cichu;
   - tabele sesji są puste;
-  - z manifestem: wersja Flyway jest taka sama, a liczby wierszy mieszczą się w przedziale [przed, po].
+  - z manifestem: wersja Flyway jest taka sama, a liczby wierszy każdej tabeli z manifestu mieszczą się w przedziale [przed, po]. Starszy manifest ma mniej liczonych tabel i nadal przechodzi.
 - Wynik: kod 0 albo ≠ 0 z nazwą kontroli, która nie przeszła.
 - `--serve`: po kontrolach serwer zostaje uruchomiony na porcie 5432 kontenera (użytkownik `postgres`, hasło z `RESTORE_CHECK_PASSWORD`, baza `restored`), aż do zatrzymania kontenera. Hasło jest ustawiane ze zmiennej (`\getenv`), nigdy z wiersza poleceń. `pg_hba.conf` jest przepisywany: socket bez hasła, każde połączenie TCP, także z loopback, z hasłem.
 - `backup.sh` uruchamia odtworzenie bez kluczy S3 w środowisku: odtworzenie wykonuje kod z dumpa jako superużytkownik.
@@ -56,7 +64,8 @@ Manifest zawiera: czas, nazwę pliku, `sha256`, rozmiar, wersje serwera i `pg_du
 | `S3_FORCE_PATH_STYLE` | domyślnie `false`: buckety Railway używają adresów virtual-hosted. Starszy bucket może wymagać `true`, co pokazuje jego zakładka Credentials |
 | `BACKUP_KEEP_DAILY`, `BACKUP_KEEP_MONTHLY` | retencja, domyślnie `14` i `12` (także w `nas-retention.sh`) |
 | `BACKUP_TIMEOUT` | limit czasu całego przebiegu (format `timeout`), domyślnie `2h` |
-| `RAILWAY_ENVIRONMENT_NAME`, `BACKUP_IN_ANY_ENVIRONMENT` | środowisko Railway (ustawia je Railway); poza `production` przebieg jest pomijany, chyba że `BACKUP_IN_ANY_ENVIRONMENT=true` |
+| `RAILWAY_ENVIRONMENT_NAME`, `BACKUP_IN_ANY_ENVIRONMENT` | środowisko Railway (ustawia je Railway); poza `production` przebieg jest pomijany, chyba że `BACKUP_IN_ANY_ENVIRONMENT=true` (ustawiana ręcznie; `.railway/railway.ts` deklaruje ją przez `preserve()`) |
+| `BACKUP_ACCEPT_SHRINK` | jednorazowa zgoda na spadek liczby wierszy po celowym odtworzeniu bazy: nazwa najnowszego manifestu w `daily/` bez rozszerzenia (`szczur-radar-<ts>`, podaje ją komunikat odrzuconego przebiegu). Działa tylko względem tego manifestu, więc po pierwszej udanej kopii wygasa; nie obejmuje pustej `posts`. Zmiana zmiennej wymaga redeployu `db-backup`. Ustawiana ręcznie (`preserve()` w `.railway/railway.ts`); runbook odtworzenia w `deploy-plan.md`, sekcja F-01 |
 | `RESTORE_CHECK_PASSWORD` | hasło użytkownika `postgres` dla `restore-check.sh --serve` |
 
 ## Test lokalny
@@ -68,22 +77,26 @@ tools/db-backup/test.sh
 Wymaga Dockera. Test:
 - buduje obraz i uruchamia Postgresa z obrazu produkcji (`postgres-ssl:18`);
 - zakłada schemat z migracji `szczur-radar-api/src/main/resources/db/migration` z `flyway_schema_history` jak po `migrate`;
-- wstawia przykładowe wiersze, w tym sesję;
+- wstawia przykładowe wiersze, w tym link aktywacyjny, powiadomienie i sesję;
 - uruchamia `backup.sh` z `BACKUP_REMOTE=:local:/out` (wolumen Dockera).
 
 Sprawdza:
-- dump i manifest;
+- dump i manifest (liczby wszystkich tabel `counted`, z `notifications` i `pipeline_run_steps`, bez `activation_tokens`; `compared_with: null` i `accepted_shrink: false` przy pierwszej kopii);
 - brak danych sesji w dumpie;
 - kopię miesięczną;
-- retencję (20 starszych dziennych → 14, 15 miesięcznych → 12; plik o innej nazwie zostaje);
+- retencję (20 starszych dziennych → 14, 15 miesięcznych → 12; plik o innej nazwie zostaje) i porównanie drugiego przebiegu z manifestem pierwszego;
+- pominięcie manifestu z datą w przyszłości;
+- odrzucenie spadku przed dumpem (5 usuniętych postów: `posts 35 < 40`) z gotową wartością `BACKUP_ACCEPT_SHRINK`, bez zmian w kopiach; przebieg z tą zgodą (`accepted_shrink: true`) i jej wygaśnięcie w następnym przebiegu;
+- przejście dumpa z Flyway V5 (bez `activation_tokens` i `notifications`) przez `restore-check.sh`;
 - porażkę na obciętym dumpie;
-- brak wysyłki, gdy sprawdzenie odtworzenia nie przejdzie;
 - porażkę po przekroczeniu limitu czasu (`BACKUP_TIMEOUT=1s`);
 - pominięcie przebiegu poza produkcją;
+- brak wysyłki, gdy sprawdzenie odtworzenia nie przejdzie: tabela bez klasyfikacji (`tables: unknown`) i brak wymaganej tabeli (`tables: missing activation_tokens`);
+- odrzucenie pustej `posts` przed dumpem, także przy zgodzie wskazującej najnowszy manifest;
 - `nas-retention.sh --dry-run` (inne nazwy i daty z przyszłości zostają);
 - brak hasła w logach.
 
-CI uruchamia ten test przy każdym PR i pushu na `main` (job `db backup test`), więc migracja psująca kopię zatrzymuje PR. Wypisuje też log pierwszego przebiegu, czyli to, co Railway pokazuje dla przebiegu cron. Kontenery, sieć i wolumen testu są zawsze usuwane.
+CI uruchamia ten test przy każdym PR i pushu na `main` (job `db backup test`), więc migracja psująca kopię zatrzymuje PR, także migracja z tabelą, której nie ma w `tables.sh`. Wypisuje też log pierwszego przebiegu, czyli to, co Railway pokazuje dla przebiegu cron. Kontenery, sieć i wolumen testu są zawsze usuwane.
 
 ## Ręczny test z aplikacją na pobranym dumpie
 
