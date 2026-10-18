@@ -482,8 +482,8 @@ Brak: parsowanie raz przy starcie.
 
 #### Automated
 
-- [ ] 4.1 Pełna bramka CI na PR zielona (`backend`, `api-container-smoke`, `railway-config` i pozostałe joby `ci.yml`)
-- [x] 4.2 Opis `LLM_TIMEOUT` w README podaje zakres `10s`–`30m` (`grep -n "10s" szczur-radar-api/README.md` trafia wiersz `LLM_TIMEOUT`)
+- [x] 4.1 Pełna bramka CI na PR zielona (`backend`, `api-container-smoke`, `railway-config` i pozostałe joby `ci.yml`) — b2f26af
+- [x] 4.2 Opis `LLM_TIMEOUT` w README podaje zakres `10s`–`30m` (`grep -n "10s" szczur-radar-api/README.md` trafia wiersz `LLM_TIMEOUT`) — b2f26af
 
 #### Manual
 
