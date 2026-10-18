@@ -2,14 +2,16 @@
 # The deploy gate of the CI job railway-config (S-14, safe-deploy-gate; see README.md). Classifies the
 # output of `railway config plan --json` before an unattended `railway config apply`: whether the plan
 # may be applied, why not, which resources the apply redeploys and how many changes it has. The rules
-# live in gate.jq and read the plan's structured fields, never its text.
+# live in gate.jq and read each change's kind, severity and details (the CLI's --json gives no other
+# field) and resolve the resource it redeploys in the plan's desiredGraph.
 #
 #   gate.sh <plan.json> <target-env> <project-id> >> "$GITHUB_STEP_SUMMARY"
 #
 # stdout: a markdown summary (number of changes, the changes, the resources the apply restarts).
 # stderr: the log, with a GitHub `::error::` line per refusal (stdout goes to the step summary).
-# GATE_RESTARTS_FILE (optional): written with the address of every resource the apply redeploys, one
-# per line (empty when none); emptied first, so a refused or unreadable plan never leaves an old list.
+# GATE_RESTARTS_FILE (optional): the name of every resource the apply redeploys (desiredGraph
+# resources[].name), one per line; emptied first and written only for an allowed plan, so a refused or
+# unreadable plan leaves it empty.
 # Exit codes: 0 the plan may be applied, 1 refused, 2 a bad invocation or an unreadable plan.
 set -euo pipefail
 
@@ -43,10 +45,6 @@ fi
 [[ $(jq '.readable' <<<"$report") == true ]] \
     || usage_error "the plan $plan has no list of changes (changeSet.changes): unknown plan format"
 
-if [[ -n ${GATE_RESTARTS_FILE:-} ]]; then
-    jq -r '.restarts[]' <<<"$report" >"$GATE_RESTARTS_FILE"
-fi
-
 # The step summary: what the apply would change and restart, and what the gate refused.
 jq -r --arg env "$target_env" '
     def cell: tostring | gsub("\\|"; "\\|") | gsub("\n"; " ");
@@ -54,11 +52,12 @@ jq -r --arg env "$target_env" '
     "### Railway config plan for `\($env)`\n",
     "**Changes: \(.count)**\n",
     if .count > 0 then
-        "| Change | Kind | Address | Severity | Deploy effect | Gate |",
+        "| Change | Kind | Details | Severity | Restarts | Gate |",
         "| --- | --- | --- | --- | --- | --- |",
-        (.changes[] | "| \(.label | cell) | \(.change.kind | code)\(if .change.field then " `\(.change.field | cell)`" else "" end) "
-            + "| \(.change.address | code) | \(.change.severity // "?" | cell) "
-            + "| \(.change.deployEffect // "deploy (not stated)" | cell) "
+        (.changes[] | "| \(.label | cell) | \(.change.kind | code) "
+            + "| \(if (.change.details | type) == "array" then .change.details | map(code) | join("<br>") else "" end) "
+            + "| \(.change.severity // "?" | cell) "
+            + "| \(if .restarts then (.target // "?" | code) else "none" end) "
             + "| \(if (.reasons | length) > 0 then "refused: " + (.reasons | join("; ") | cell) else "allowed" end) |"),
         ""
     else empty end,
@@ -75,5 +74,8 @@ if [[ $(jq '.rejected' <<<"$report") != 0 ]]; then
     ' <<<"$report" >&2
     jq '[.changes[] | select(.reasons | length > 0) | .change]' <<<"$report" >&2
     exit 1
+fi
+if [[ -n ${GATE_RESTARTS_FILE:-} ]]; then
+    jq -r '.restarts[]' <<<"$report" >"$GATE_RESTARTS_FILE"
 fi
 log "deploy gate: $(jq -r '"\(.count) change(s) allowed; restarts: \(if (.restarts | length) > 0 then .restarts | join(", ") else "none" end)"' <<<"$report")"

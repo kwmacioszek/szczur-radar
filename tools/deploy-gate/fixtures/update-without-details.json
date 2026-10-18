@@ -1,0 +1,64 @@
+{
+  "ok": true,
+  "command": "plan",
+  "file": ".railway/railway.ts",
+  "currentEnvironment": {
+    "projectId": "decf00e4-f5a4-43df-b338-6698be87c5a1",
+    "projectName": "szczur-radar",
+    "environmentId": "00000000-0000-4000-8000-000000000001",
+    "environmentName": "production",
+    "configEtag": "etag-fixture"
+  },
+  "changeSet": {
+    "changes": [
+      {
+        "summary": "Update szczur-radar-api deploy.sleepApplication",
+        "severity": "safe",
+        "kind": "resource.update"
+      }
+    ]
+  },
+  "diff": "~ Update szczur-radar-api deploy.sleepApplication",
+  "diagnostics": [],
+  "variablePolicy": {
+    "managed": true,
+    "ignore": [],
+    "default": true,
+    "ignoredCount": 0,
+    "byPattern": {}
+  },
+  "desiredGraph": {
+    "resources": [
+      {
+        "name": "postgres",
+        "type": "database",
+        "address": "database.postgres"
+      },
+      {
+        "name": "szczur-radar-api",
+        "type": "service",
+        "address": "service.szczur-radar-api"
+      },
+      {
+        "name": "szczur-radar-web",
+        "type": "service",
+        "address": "service.szczur-radar-web"
+      },
+      {
+        "name": "db-backups",
+        "type": "bucket",
+        "address": "bucket.db-backups"
+      },
+      {
+        "name": "db-backup",
+        "type": "service",
+        "address": "service.db-backup"
+      },
+      {
+        "name": "pipeline-trigger",
+        "type": "service",
+        "address": "service.pipeline-trigger"
+      }
+    ]
+  }
+}

@@ -10,34 +10,58 @@
     "configEtag": "etag-fixture"
   },
   "changeSet": {
-    "version": 1,
     "changes": [
       {
-        "kind": "resource.update",
-        "address": "service.szczur-radar-api",
-        "field": "source",
-        "before": {
-          "type": "github",
-          "repo": "kwmacioszek/szczur-radar",
-          "branch": "main",
-          "checkSuites": true
-        },
-        "after": {
-          "type": "github",
-          "repo": "kwmacioszek/szczur-radar",
-          "branch": "main"
-        },
-        "path": "resources.service.szczur-radar-api.source",
         "summary": "Update szczur-radar-api source.checkSuites",
         "severity": "safe",
-        "deployEffect": "deploy",
+        "kind": "resource.update",
         "details": [
           "source.checkSuites (true → null)"
         ]
       }
-    ],
-    "diagnostics": []
+    ]
   },
   "diff": "~ Update szczur-radar-api source.checkSuites",
-  "diagnostics": []
+  "diagnostics": [],
+  "variablePolicy": {
+    "managed": true,
+    "ignore": [],
+    "default": true,
+    "ignoredCount": 0,
+    "byPattern": {}
+  },
+  "desiredGraph": {
+    "resources": [
+      {
+        "name": "postgres",
+        "type": "database",
+        "address": "database.postgres"
+      },
+      {
+        "name": "szczur-radar-api",
+        "type": "service",
+        "address": "service.szczur-radar-api"
+      },
+      {
+        "name": "szczur-radar-web",
+        "type": "service",
+        "address": "service.szczur-radar-web"
+      },
+      {
+        "name": "db-backups",
+        "type": "bucket",
+        "address": "bucket.db-backups"
+      },
+      {
+        "name": "db-backup",
+        "type": "service",
+        "address": "service.db-backup"
+      },
+      {
+        "name": "pipeline-trigger",
+        "type": "service",
+        "address": "service.pipeline-trigger"
+      }
+    ]
+  }
 }

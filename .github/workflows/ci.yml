@@ -385,8 +385,8 @@ jobs:
         # in tools/deploy-gate/ (gate.jq, tested by deploy-gate-test): only
         # creates, updates, variable sets and domain creates, nothing destructive,
         # no source change but turning on Wait for CI (source.checkSuites → true),
-        # on the plan's structured fields. The step summary lists the changes and
-        # the services the apply redeploys (restarts.txt).
+        # on each change's kind, severity and details. The step summary lists the
+        # changes and the services the apply redeploys (restarts.txt: resource names).
         run: |
           plan_status=0
           railway config plan --json --out plan.pin > plan.json || plan_status=$?

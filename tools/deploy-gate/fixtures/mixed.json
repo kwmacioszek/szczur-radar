@@ -10,44 +10,63 @@
     "configEtag": "etag-fixture"
   },
   "changeSet": {
-    "version": 1,
     "changes": [
       {
-        "kind": "variable.set",
-        "address": "service.db-backup",
-        "variable": "BACKUP_KEEP_DAILY",
-        "after": {
-          "type": "literal",
-          "value": "«hidden»"
-        },
-        "before": {
-          "type": "literal",
-          "value": "«hidden»"
-        },
-        "path": "resources.service.db-backup.variables.BACKUP_KEEP_DAILY",
         "summary": "Update variable db-backup.BACKUP_KEEP_DAILY",
+        "severity": "safe",
+        "kind": "variable.set",
         "details": [
           "db-backup.BACKUP_KEEP_DAILY («hidden» → «hidden»)"
-        ],
-        "severity": "safe",
-        "deployEffect": "deploy"
+        ]
       },
       {
-        "kind": "variable.delete",
-        "address": "service.db-backup",
-        "variable": "BACKUP_TIMEOUT",
-        "previous": {
-          "type": "literal",
-          "value": "«hidden»"
-        },
-        "path": "resources.service.db-backup.variables.BACKUP_TIMEOUT",
         "summary": "Delete variable db-backup.BACKUP_TIMEOUT",
         "severity": "destructive",
-        "deployEffect": "deploy"
+        "kind": "variable.delete"
       }
-    ],
-    "diagnostics": []
+    ]
   },
   "diff": "~ Update variable db-backup.BACKUP_KEEP_DAILY\n~ Delete variable db-backup.BACKUP_TIMEOUT",
-  "diagnostics": []
+  "diagnostics": [],
+  "variablePolicy": {
+    "managed": true,
+    "ignore": [],
+    "default": true,
+    "ignoredCount": 0,
+    "byPattern": {}
+  },
+  "desiredGraph": {
+    "resources": [
+      {
+        "name": "postgres",
+        "type": "database",
+        "address": "database.postgres"
+      },
+      {
+        "name": "szczur-radar-api",
+        "type": "service",
+        "address": "service.szczur-radar-api"
+      },
+      {
+        "name": "szczur-radar-web",
+        "type": "service",
+        "address": "service.szczur-radar-web"
+      },
+      {
+        "name": "db-backups",
+        "type": "bucket",
+        "address": "bucket.db-backups"
+      },
+      {
+        "name": "db-backup",
+        "type": "service",
+        "address": "service.db-backup"
+      },
+      {
+        "name": "pipeline-trigger",
+        "type": "service",
+        "address": "service.pipeline-trigger"
+      }
+    ]
+  }
 }

@@ -1,17 +1,20 @@
 #!/usr/bin/env bash
 # Local test of the deploy gate, without Railway or GitHub (S-14, safe-deploy-gate; see README.md).
-# gate.sh classifies each plan in fixtures/ (the format of `railway config plan --json`, values
-# redacted). Every rule has a case it allows and a case it refuses:
+# gate.sh classifies each plan in fixtures/ (the format of `railway config plan --json` from CLI
+# 5.67.1: each change has only kind, severity, summary and details; values redacted). pr-env-*.json
+# are real plans from the PR env, trimmed. Every rule has a case it allows and a case it refuses:
 #   1. the plan is ok and targets the expected environment and project, else refused;
 #   2. a destructive change is refused (variable.delete, resource.delete);
 #   3. only resource.create, resource.update, variable.set and domain.create pass, whatever the severity
 #      (variable.delete or an unknown kind marked safe is refused);
-#   4. a source change is refused, except one that only turns source.checkSuites to true;
-#   5. a change without a kind and a resource.update without a field are refused (unknown format);
-#   6. a change without deployEffect is announced as a restart, deployEffect "none" is not.
+#   4. a source change (a source.* detail or a summary naming source) is refused, except one whose
+#      every detail is source.checkSuites (null|false → true);
+#   5. a change without a kind and a resource.update without a details list are refused (unknown format);
+#   6. a change without deployEffect is a restart of the desiredGraph resource its summary (or address)
+#      names; deployEffect "none" is not; a restart whose resource cannot be resolved is refused.
 # Also: the step summary (number of changes, the changes, the restarts), the restarts file
-# (GATE_RESTARTS_FILE), the `::error::` lines, and exit code 2 for a bad invocation or an unreadable
-# plan. Needs bash and jq only. Run from anywhere: tools/deploy-gate/test.sh
+# (GATE_RESTARTS_FILE, resource names), the `::error::` lines, and exit code 2 for a bad invocation or
+# an unreadable plan. Needs bash and jq only. Run from anywhere: tools/deploy-gate/test.sh
 set -euo pipefail
 
 here=$(cd "$(dirname "$0")" && pwd)
@@ -71,7 +74,7 @@ log_never_says() {
     ! grep -qF -- "$2" "$tmp/$1.log" || { show "$1"; die "$1: the log says '$2'"; }
 }
 
-# Case $1's restarts file lists exactly the addresses after it, in that order.
+# Case $1's restarts file lists exactly the resource names after it, in that order.
 restarts_are() {
     local name=$1
     shift
@@ -96,6 +99,13 @@ summary_says empty '**Changes: 0**'
 summary_says empty '**Restarts:** none'
 restarts_are empty
 pass "an empty plan for production: exit 0, 0 changes, no restarts, the stale restarts file emptied"
+run_gate pr-env-empty "$fixtures/pr-env-empty.json" 0 szczur-radar-pr-81 "$project_id"
+summary_says pr-env-empty '**Changes: 0**'
+restarts_are pr-env-empty
+pass "the real empty plan of szczur-radar-pr-81 (CLI 5.67.1): exit 0"
+check_gate pr-env-empty 1
+log_says pr-env-empty 'it targets environment "szczur-radar-pr-81", expected "production"'
+pass "the same real plan when production is expected: exit 1"
 check_gate wrong-env 1
 log_says wrong-env '::error::plan failed or targets the wrong environment (expected production): it targets environment "szczur-radar-pr-7", expected "production"'
 summary_says wrong-env '**Refused:** it targets environment "szczur-radar-pr-7"'
@@ -117,15 +127,16 @@ check_gate variable-delete 1
 errors_are variable-delete 1
 log_says variable-delete '::error::Delete variable pipeline-trigger.TRIGGER_HEARTBEAT_INTERVAL: destructive change'
 summary_says variable-delete '**Refused:** 1 change(s)'
-pass "variable.delete (destructive): exit 1"
+restarts_are variable-delete
+pass "variable.delete (destructive): exit 1, no restarts file for a refused plan"
 check_gate resource-delete 1
 log_says resource-delete '::error::Delete bucket Postgres-PITR: destructive change'
 pass "resource.delete (destructive): exit 1"
 check_gate variable-set 0
-summary_says variable-set '| Update variable szczur-radar-api.PIPELINE_LLM_CONCURRENCY | `variable.set` | `service.szczur-radar-api` | safe | deploy | allowed |'
-summary_says variable-set '**Restarts:** `service.szczur-radar-api`'
-restarts_are variable-set service.szczur-radar-api
-pass "variable.set (safe): exit 0, the service announced as restarted"
+summary_says variable-set '| Update variable szczur-radar-api.PIPELINE_LLM_CONCURRENCY | `variable.set` | `szczur-radar-api.PIPELINE_LLM_CONCURRENCY («hidden» → «hidden»)` | safe | `szczur-radar-api` | allowed |'
+summary_says variable-set '**Restarts:** `szczur-radar-api`, `db-backup`'
+restarts_are variable-set szczur-radar-api db-backup
+pass "variable.set (Update variable and Set variable, safe): exit 0, each service announced as restarted"
 
 step "3. only the allowed kinds of change pass, whatever their severity"
 check_gate variable-delete-safe 1
@@ -137,51 +148,69 @@ log_says unknown-kind-safe '::error::Delete domain szczur-radar-web-production.u
 pass "an unknown kind (domain.delete) marked safe: exit 1"
 check_gate resource-create 0
 summary_says resource-create '**Changes: 2**'
-restarts_are resource-create service.db-backup
-pass "resource.create of a bucket and a service: exit 0, only the service restarts"
+restarts_are resource-create db-backups db-backup
+pass "resource.create of a bucket and a service (with its branch line): exit 0, both announced (no deployEffect)"
 check_gate domain-create 0
-restarts_are domain-create
-pass "domain.create: exit 0"
+restarts_are domain-create szczur-radar-web
+pass "domain.create: exit 0, its service announced"
 check_gate mixed 1
 errors_are mixed 1
 log_says mixed '::error::Delete variable db-backup.BACKUP_TIMEOUT'
 log_never_says mixed '::error::Update variable db-backup.BACKUP_KEEP_DAILY'
-summary_says mixed '| Update variable db-backup.BACKUP_KEEP_DAILY | `variable.set` | `service.db-backup` | safe | deploy | allowed |'
+summary_says mixed '| Update variable db-backup.BACKUP_KEEP_DAILY | `variable.set` | `db-backup.BACKUP_KEEP_DAILY («hidden» → «hidden»)` | safe | `db-backup` | allowed |'
+restarts_are mixed
 pass "an allowed and a refused change: exit 1, only the refused one in the errors"
 
 step "4. source changes are refused, except turning on Wait for CI"
+run_gate pr-env-checksuites "$fixtures/pr-env-checksuites.json" 0 szczur-radar-pr-81 "$project_id"
+summary_says pr-env-checksuites '**Changes: 2**'
+summary_says pr-env-checksuites '| Update db-backup source.checkSuites | `resource.update` | `source.checkSuites (null → true)` | safe | `db-backup` | allowed |'
+summary_says pr-env-checksuites '**Restarts:** `db-backup`, `pipeline-trigger` (an apply redeploys them)'
+restarts_are pr-env-checksuites db-backup pipeline-trigger
+pass "the real plan of szczur-radar-pr-81 (checkSuites null → true on both crons): exit 0, both crons announced"
 check_gate source-branch 1
 log_says source-branch '::error::Update szczur-radar-api source.branch: source change (only source.checkSuites → true may pass)'
 pass "source.branch: exit 1"
 check_gate checksuites-enable 0
-summary_says checksuites-enable '| Update pipeline-trigger source.checkSuites | `resource.update` `source` | `service.pipeline-trigger` | safe | deploy | allowed |'
-restarts_are checksuites-enable service.pipeline-trigger service.db-backup
+restarts_are checksuites-enable pipeline-trigger db-backup
 pass "source.checkSuites null → true and false → true: exit 0, both crons announced"
 check_gate checksuites-disable 1
 log_says checksuites-disable 'source change'
 pass "source.checkSuites true → null: exit 1"
+check_gate checksuites-from-unknown 1
+log_says checksuites-from-unknown 'source change'
+pass "source.checkSuites from a value other than null or false → true: exit 1"
 check_gate checksuites-with-branch 1
 log_says checksuites-with-branch 'source change'
 pass "source.checkSuites → true together with source.branch: exit 1"
+check_gate source-summary-without-details 1
+log_says source-summary-without-details '::error::Update db-backup source.checkSuites: source change'
+pass "a summary naming source.checkSuites with no details: exit 1"
 
 step "5. an unknown plan format is refused"
-check_gate update-without-field 1
-log_says update-without-field 'resource.update without a field (unknown plan format)'
-pass "resource.update without a field: exit 1"
+check_gate update-without-details 1
+log_says update-without-details 'resource.update without a details list (unknown plan format)'
+pass "resource.update without details: exit 1"
 check_gate change-without-kind 1
 log_says change-without-kind 'change without a kind (unknown plan format)'
 pass "a change without a kind: exit 1"
 check_gate postgres-limit-override 0
-summary_says postgres-limit-override '`resource.update` `deploy` | `database.postgres` | safe | deploy | allowed |'
-summary_says postgres-limit-override '**Restarts:** `database.postgres` (an apply redeploys them)'
-restarts_are postgres-limit-override database.postgres
-pass "limitOverride on Postgres (resource.update with a field): exit 0, the restart announced"
+summary_says postgres-limit-override '| `resource.update` | `deploy.limitOverride.containers.cpu (2 → 1)`<br>`deploy.limitOverride.containers.memoryBytes (4000000000 → 2000000000)` | safe | `postgres` | allowed |'
+summary_says postgres-limit-override '**Restarts:** `postgres` (an apply redeploys them)'
+restarts_are postgres-limit-override postgres
+pass "limitOverride on Postgres: exit 0, the restart announced"
 
-step "6. restarts: a missing deployEffect counts as a deploy"
-check_gate no-deploy-effect 0
-summary_says no-deploy-effect '| deploy (not stated) | allowed |'
-restarts_are no-deploy-effect service.szczur-radar-web
-pass "no deployEffect: announced as a restart; deployEffect none (groupId): not announced"
+step "6. restarts: a missing deployEffect counts as a deploy of the resource the change names"
+check_gate optional-fields 0
+summary_says optional-fields '| Update szczur-radar-api groupId | `resource.update` | `groupId (null → "group-fixture")` | safe | none | allowed |'
+restarts_are optional-fields szczur-radar-web postgres
+pass "address given: its resource; deployEffect none: not announced; deployEffect deploy: announced"
+check_gate unknown-restart-target 1
+log_says unknown-restart-target '::error::Update ghost-service deploy.sleepApplication: a change that redeploys a resource names no single resource of desiredGraph'
+pass "a restart of a resource missing from desiredGraph: exit 1"
+check_gate unknown-address 1
+log_says unknown-address '::error::Update szczur-radar-web deploy.healthcheckTimeout: a change that redeploys a resource names no single resource of desiredGraph'
+pass "an address missing from desiredGraph (the summary is not consulted then): exit 1"
 
 step "7. a bad invocation or an unreadable plan: exit 2"
 run_gate no-arguments "" 2
@@ -210,7 +239,7 @@ step "8. runnable from any directory"
 pass "gate.sh runs from /"
 
 echo
-echo "gate.sh step summary of the checksuites-enable case (what the railway-config job shows):"
-sed 's/^/    /' "$tmp/checksuites-enable.md"
+echo "gate.sh step summary of the real szczur-radar-pr-81 plan (what the railway-config job shows):"
+sed 's/^/    /' "$tmp/pr-env-checksuites.md"
 
 printf '\nAll checks passed.\n'

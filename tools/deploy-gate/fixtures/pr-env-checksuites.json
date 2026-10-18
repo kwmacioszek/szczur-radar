@@ -1,0 +1,87 @@
+{
+  "ok": true,
+  "currentEnvironment": {
+    "projectId": "decf00e4-f5a4-43df-b338-6698be87c5a1",
+    "projectName": "szczur-radar",
+    "environmentId": "a2ed8fae-4cef-4e17-a094-6b19bb8f1671",
+    "environmentName": "szczur-radar-pr-81",
+    "configEtag": "711d6ea0878fac27eb354a16e0c42add51f9d87f1a39b157b6d0abe5cfc0a25c",
+    "pr": {
+      "repo": "kwmacioszek/szczur-radar"
+    }
+  },
+  "changeSet": {
+    "changes": [
+      {
+        "summary": "Update db-backup source.checkSuites",
+        "severity": "safe",
+        "kind": "resource.update",
+        "details": [
+          "source.checkSuites (null → true)"
+        ]
+      },
+      {
+        "summary": "Update pipeline-trigger source.checkSuites",
+        "severity": "safe",
+        "kind": "resource.update",
+        "details": [
+          "source.checkSuites (null → true)"
+        ]
+      }
+    ]
+  },
+  "diff": "~ Update db-backup source.checkSuites\n~ Update pipeline-trigger source.checkSuites",
+  "variablePolicy": {
+    "managed": true,
+    "ignore": [
+      "db-backup/BACKUP_IN_ANY_ENVIRONMENT",
+      "db-backup/BACKUP_TIMEOUT",
+      "db-backup/S3_FORCE_PATH_STYLE",
+      "pipeline-trigger/TRIGGER_*",
+      "szczur-radar-api/JAVA_TOOL_OPTIONS"
+    ],
+    "default": false,
+    "ignoredCount": 0,
+    "byPattern": {
+      "db-backup/BACKUP_IN_ANY_ENVIRONMENT": 0,
+      "db-backup/BACKUP_TIMEOUT": 0,
+      "db-backup/S3_FORCE_PATH_STYLE": 0,
+      "pipeline-trigger/TRIGGER_*": 0,
+      "szczur-radar-api/JAVA_TOOL_OPTIONS": 0
+    }
+  },
+  "desiredGraph": {
+    "resources": [
+      {
+        "name": "postgres",
+        "type": "database",
+        "address": "database.postgres"
+      },
+      {
+        "name": "szczur-radar-api",
+        "type": "service",
+        "address": "service.szczur-radar-api"
+      },
+      {
+        "name": "szczur-radar-web",
+        "type": "service",
+        "address": "service.szczur-radar-web"
+      },
+      {
+        "name": "db-backups",
+        "type": "bucket",
+        "address": "bucket.db-backups"
+      },
+      {
+        "name": "db-backup",
+        "type": "service",
+        "address": "service.db-backup"
+      },
+      {
+        "name": "pipeline-trigger",
+        "type": "service",
+        "address": "service.pipeline-trigger"
+      }
+    ]
+  }
+}

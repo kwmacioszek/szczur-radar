@@ -10,18 +10,57 @@
     "configEtag": "etag-fixture"
   },
   "changeSet": {
-    "version": 1,
     "changes": [
       {
-        "address": "service.szczur-radar-api",
-        "field": "deploy",
         "summary": "Update szczur-radar-api deploy.sleepApplication",
         "severity": "safe",
-        "deployEffect": "deploy"
+        "details": [
+          "deploy.sleepApplication (true → false)"
+        ]
       }
-    ],
-    "diagnostics": []
+    ]
   },
   "diff": "~ Update szczur-radar-api deploy.sleepApplication",
-  "diagnostics": []
+  "diagnostics": [],
+  "variablePolicy": {
+    "managed": true,
+    "ignore": [],
+    "default": true,
+    "ignoredCount": 0,
+    "byPattern": {}
+  },
+  "desiredGraph": {
+    "resources": [
+      {
+        "name": "postgres",
+        "type": "database",
+        "address": "database.postgres"
+      },
+      {
+        "name": "szczur-radar-api",
+        "type": "service",
+        "address": "service.szczur-radar-api"
+      },
+      {
+        "name": "szczur-radar-web",
+        "type": "service",
+        "address": "service.szczur-radar-web"
+      },
+      {
+        "name": "db-backups",
+        "type": "bucket",
+        "address": "bucket.db-backups"
+      },
+      {
+        "name": "db-backup",
+        "type": "service",
+        "address": "service.db-backup"
+      },
+      {
+        "name": "pipeline-trigger",
+        "type": "service",
+        "address": "service.pipeline-trigger"
+      }
+    ]
+  }
 }

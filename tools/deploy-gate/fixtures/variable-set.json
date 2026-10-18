@@ -10,31 +10,66 @@
     "configEtag": "etag-fixture"
   },
   "changeSet": {
-    "version": 1,
     "changes": [
       {
-        "kind": "variable.set",
-        "address": "service.szczur-radar-api",
-        "variable": "PIPELINE_LLM_CONCURRENCY",
-        "after": {
-          "type": "literal",
-          "value": "«hidden»"
-        },
-        "before": {
-          "type": "literal",
-          "value": "«hidden»"
-        },
-        "path": "resources.service.szczur-radar-api.variables.PIPELINE_LLM_CONCURRENCY",
         "summary": "Update variable szczur-radar-api.PIPELINE_LLM_CONCURRENCY",
+        "severity": "safe",
+        "kind": "variable.set",
         "details": [
           "szczur-radar-api.PIPELINE_LLM_CONCURRENCY («hidden» → «hidden»)"
-        ],
+        ]
+      },
+      {
+        "summary": "Set variable db-backup.BACKUP_KEEP_MONTHLY",
         "severity": "safe",
-        "deployEffect": "deploy"
+        "kind": "variable.set",
+        "details": [
+          "db-backup.BACKUP_KEEP_MONTHLY (unset → «hidden»)"
+        ]
       }
-    ],
-    "diagnostics": []
+    ]
   },
-  "diff": "~ Update variable szczur-radar-api.PIPELINE_LLM_CONCURRENCY",
-  "diagnostics": []
+  "diff": "~ Update variable szczur-radar-api.PIPELINE_LLM_CONCURRENCY\n~ Set variable db-backup.BACKUP_KEEP_MONTHLY",
+  "diagnostics": [],
+  "variablePolicy": {
+    "managed": true,
+    "ignore": [],
+    "default": true,
+    "ignoredCount": 0,
+    "byPattern": {}
+  },
+  "desiredGraph": {
+    "resources": [
+      {
+        "name": "postgres",
+        "type": "database",
+        "address": "database.postgres"
+      },
+      {
+        "name": "szczur-radar-api",
+        "type": "service",
+        "address": "service.szczur-radar-api"
+      },
+      {
+        "name": "szczur-radar-web",
+        "type": "service",
+        "address": "service.szczur-radar-web"
+      },
+      {
+        "name": "db-backups",
+        "type": "bucket",
+        "address": "bucket.db-backups"
+      },
+      {
+        "name": "db-backup",
+        "type": "service",
+        "address": "service.db-backup"
+      },
+      {
+        "name": "pipeline-trigger",
+        "type": "service",
+        "address": "service.pipeline-trigger"
+      }
+    ]
+  }
 }

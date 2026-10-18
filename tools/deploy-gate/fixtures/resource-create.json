@@ -10,42 +10,63 @@
     "configEtag": "etag-fixture"
   },
   "changeSet": {
-    "version": 1,
     "changes": [
       {
-        "kind": "resource.create",
-        "address": "bucket.db-backups",
-        "resource": {
-          "type": "bucket",
-          "name": "db-backups",
-          "address": "bucket.db-backups"
-        },
-        "path": "resources.bucket.db-backups",
         "summary": "Create bucket db-backups",
         "severity": "safe",
-        "deployEffect": "none"
+        "kind": "resource.create"
       },
       {
-        "kind": "resource.create",
-        "address": "service.db-backup",
-        "resource": {
-          "type": "service",
-          "name": "db-backup",
-          "address": "service.db-backup",
-          "source": {
-            "type": "github",
-            "repo": "kwmacioszek/szczur-radar",
-            "branch": "main"
-          }
-        },
-        "path": "resources.service.db-backup",
-        "summary": "Create service db-backup",
+        "summary": "Create service db-backup (branch: main (repo default))",
         "severity": "safe",
-        "deployEffect": "deploy"
+        "kind": "resource.create",
+        "details": [
+          "branch: main (repo default)"
+        ]
       }
-    ],
-    "diagnostics": []
+    ]
   },
-  "diff": "+ Create bucket db-backups\n+ Create service db-backup",
-  "diagnostics": []
+  "diff": "+ Create bucket db-backups\n+ Create service db-backup (branch: main (repo default))",
+  "diagnostics": [],
+  "variablePolicy": {
+    "managed": true,
+    "ignore": [],
+    "default": true,
+    "ignoredCount": 0,
+    "byPattern": {}
+  },
+  "desiredGraph": {
+    "resources": [
+      {
+        "name": "postgres",
+        "type": "database",
+        "address": "database.postgres"
+      },
+      {
+        "name": "szczur-radar-api",
+        "type": "service",
+        "address": "service.szczur-radar-api"
+      },
+      {
+        "name": "szczur-radar-web",
+        "type": "service",
+        "address": "service.szczur-radar-web"
+      },
+      {
+        "name": "db-backups",
+        "type": "bucket",
+        "address": "bucket.db-backups"
+      },
+      {
+        "name": "db-backup",
+        "type": "service",
+        "address": "service.db-backup"
+      },
+      {
+        "name": "pipeline-trigger",
+        "type": "service",
+        "address": "service.pipeline-trigger"
+      }
+    ]
+  }
 }

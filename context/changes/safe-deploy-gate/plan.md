@@ -664,6 +664,19 @@ Dokumentacja opisuje nową bramkę, a runbook — co robić, gdy strażnik czeka
 - Railway Wait for CI: https://docs.railway.com/deployments/github-autodeploys#wait-for-ci
 - Polityka zmiennych w CLI: https://github.com/railwayapp/cli/pull/1256
 
+## Plan Amendments
+
+### 2026-10-18 — reguły bramki na `details` (decyzja użytkownika: wariant A)
+
+**Powód:** prawdziwy plan z CLI 5.67.1 w PR env (run 39124555511, podgląd po stronie serwera Railway) ma w zmianie tylko `kind`, `severity`, `summary` i `details`, np. `{"kind":"resource.update","severity":"safe","summary":"Update db-backup source.checkSuites","details":["source.checkSuites (null → true)"]}`. Brakuje pól `field`, `before`/`after`, `deployEffect` i `address`, na których opierały się reguły 4–6 Phase 1 (STOP w Phase 2).
+
+**Zmiana kontraktu `gate.sh` (Phase 1, §1) — zastępuje reguły 4–5, reguły 1–3 i 6 bez zmian:**
+- `resource.update` dotyka źródła, gdy któryś `details[]` zaczyna się od `source.` albo `summary` pasuje do `(^|[ ,])source([.]|$| )`. Taka zmiana przechodzi tylko wtedy, gdy ma co najmniej jeden detal i **każdy** detal pasuje dokładnie do `^source\.checkSuites \((null|false) → true\)$`. W każdym innym przypadku jest odrzucana.
+- `resource.update` musi mieć `details` jako tablicę napisów, inaczej jest odrzucana (fail closed na nieznany format). Brak `field` nie jest już odrzuceniem.
+- **Restarty:** brak `deployEffect` dalej oznacza restart (reguła 6). Cel restartu to nazwa zasobu z `desiredGraph.resources[].name` (`.address`, gdy CLI go poda). Nazwa wynika z `summary` (np. `Update <name> …`, a dla zmiennych forma `<name>.<KEY>`). Zmiana z restartem, dla której nie da się ustalić zasobu z `desiredGraph`, jest odrzucana.
+- `restarts.txt` zawiera nazwy zasobów (np. `db-backup`, `postgres`), a nie adresy. To zamyka punkt „mapowanie adresu na nazwę usługi” z Phase 4 §2.
+- Fixture'y odwzorowują prawdziwy format. Fixture z runu 39124555511 (przycięty do `ok`, `currentEnvironment`, `changeSet`, `diff`, `variablePolicy`, `desiredGraph.resources[].{name,type,address}`) jest przypadkiem dozwolonym.
+
 ## Progress
 
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles. See `references/progress-format.md`.

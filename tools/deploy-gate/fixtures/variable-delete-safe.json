@@ -10,24 +10,55 @@
     "configEtag": "etag-fixture"
   },
   "changeSet": {
-    "version": 1,
     "changes": [
       {
-        "kind": "variable.delete",
-        "address": "service.pipeline-trigger",
-        "variable": "TRIGGER_HEARTBEAT_INTERVAL",
-        "previous": {
-          "type": "literal",
-          "value": "«hidden»"
-        },
-        "path": "resources.service.pipeline-trigger.variables.TRIGGER_HEARTBEAT_INTERVAL",
         "summary": "Delete variable pipeline-trigger.TRIGGER_HEARTBEAT_INTERVAL",
         "severity": "safe",
-        "deployEffect": "deploy"
+        "kind": "variable.delete"
       }
-    ],
-    "diagnostics": []
+    ]
   },
   "diff": "~ Delete variable pipeline-trigger.TRIGGER_HEARTBEAT_INTERVAL",
-  "diagnostics": []
+  "diagnostics": [],
+  "variablePolicy": {
+    "managed": true,
+    "ignore": [],
+    "default": true,
+    "ignoredCount": 0,
+    "byPattern": {}
+  },
+  "desiredGraph": {
+    "resources": [
+      {
+        "name": "postgres",
+        "type": "database",
+        "address": "database.postgres"
+      },
+      {
+        "name": "szczur-radar-api",
+        "type": "service",
+        "address": "service.szczur-radar-api"
+      },
+      {
+        "name": "szczur-radar-web",
+        "type": "service",
+        "address": "service.szczur-radar-web"
+      },
+      {
+        "name": "db-backups",
+        "type": "bucket",
+        "address": "bucket.db-backups"
+      },
+      {
+        "name": "db-backup",
+        "type": "service",
+        "address": "service.db-backup"
+      },
+      {
+        "name": "pipeline-trigger",
+        "type": "service",
+        "address": "service.pipeline-trigger"
+      }
+    ]
+  }
 }
