@@ -474,9 +474,9 @@ Porażka przed dumpem skraca przebieg zamiast go wydłużać.
 
 #### Automated
 
-- [x] 1.1 tools/db-backup/test.sh przechodzi z przypadkami: dump V5, nieznana tabela, brak activation_tokens, manifest z notifications i pipeline_run_steps
-- [x] 1.2 bash -n tools/db-backup/*.sh bez błędów
-- [ ] 1.3 Job CI db-backup-test zielony w PR
+- [x] 1.1 tools/db-backup/test.sh przechodzi z przypadkami: dump V5, nieznana tabela, brak activation_tokens, manifest z notifications i pipeline_run_steps — 067ce5b
+- [x] 1.2 bash -n tools/db-backup/*.sh bez błędów — 067ce5b
+- [x] 1.3 Job CI db-backup-test zielony w PR — 067ce5b
 
 #### Manual
 
@@ -486,8 +486,8 @@ Porażka przed dumpem skraca przebieg zamiast go wydłużać.
 
 #### Automated
 
-- [ ] 2.1 tools/db-backup/test.sh przechodzi z przypadkami: data z przyszłości, spadek, zgoda, zgoda wygasła, pusta baza
-- [ ] 2.2 bash -n tools/db-backup/*.sh bez błędów
+- [x] 2.1 tools/db-backup/test.sh przechodzi z przypadkami: data z przyszłości, spadek, zgoda, zgoda wygasła, pusta baza
+- [x] 2.2 bash -n tools/db-backup/*.sh bez błędów
 - [ ] 2.3 Job CI db-backup-test zielony w PR
 
 ### Phase 3: IaC, dokumenty i weryfikacja w PR env

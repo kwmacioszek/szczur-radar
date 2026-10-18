@@ -4,18 +4,23 @@
 # flyway_schema_history like Flyway's and sample rows including an activation link, a notification and
 # a session; then:
 #   1. backup.sh into a local rclone remote: dump and manifest uploaded (counts of every counted table
-#      in tables.sh, notifications and pipeline_run_steps among them, never activation_tokens), no
-#      session data in the dump, restore check passed (so every migrated table is classified), monthly
-#      copy made;
+#      in tables.sh, notifications and pipeline_run_steps among them, never activation_tokens; compared
+#      with no earlier manifest), no session data in the dump, restore check passed (so every migrated
+#      table is classified), monthly copy made;
 #   2. retention: 20 older daily and 15 older monthly dumps are cut to 14 and 12; a file with another
-#      name is left alone;
-#   3. a dump of a second database at Flyway V5 (before activation_tokens and notifications) passes
+#      name is left alone; the run compares its counts with the first run's manifest;
+#   3. shrink and consent: a manifest dated in the future is skipped; 5 deleted posts fail the run before
+#      the dump (posts 35 < 40) with the BACKUP_ACCEPT_SHRINK value to set; that value lets the next run
+#      through (accepted_shrink); the run after it ignores the stale value;
+#   4. a dump of a second database at Flyway V5 (before activation_tokens and notifications) passes
 #      restore-check.sh; a truncated dump fails it; a run over its time limit fails; outside production
 #      (RAILWAY_ENVIRONMENT_NAME) a run is skipped; a table tables.sh does not classify (tables: unknown)
 #      and a missing required table (tables: missing) fail the restore check, which uploads nothing;
-#   4. nas-retention.sh --dry-run names the right files and deletes nothing, then a real run prunes;
+#   5. an empty posts table fails the run before the dump, even with BACKUP_ACCEPT_SHRINK naming the
+#      newest manifest (last: it empties the database);
+#   6. nas-retention.sh --dry-run names the right files and deletes nothing, then a real run prunes;
 #      other names and future-dated dumps are left alone;
-#   5. the throwaway database password never appears in the logs.
+#   7. the throwaway database password never appears in the logs.
 # Needs Docker. Run from anywhere: tools/db-backup/test.sh
 set -euo pipefail
 
@@ -99,6 +104,23 @@ run_backup() {
         -e PGHOST="$db" -e PGPORT=5432 -e PGUSER="$db_user" -e PGPASSWORD -e PGDATABASE="$db_name" \
         -e BACKUP_REMOTE=:local:/out "$@" "$image" >"$log" 2>&1
 }
+# The name (szczur-radar-<ts>, no extension) of the daily dump that run $1 uploaded, from its log.
+uploaded() { sed -nE 's/.* backup: uploaded daily\/(.+)\.dump and its manifest$/\1/p' "$tmp/$1.log"; }
+# check_manifest <run> <jq filter> [<jq option>…]: jq -e (the image's) on the manifest that run uploaded.
+check_manifest() {
+    local base
+    base=$(uploaded "$1")
+    [ -n "$base" ] || { echo "run $1 uploaded nothing"; return 1; }
+    shift
+    in_image "$base" "$@" <<'SH'
+set -euo pipefail
+manifest=/out/daily/$1.manifest.json filter=$2
+shift 2
+jq -e "$@" "$filter" "$manifest" >/dev/null || { echo "manifest:"; cat "$manifest"; exit 1; }
+SH
+}
+# The newest manifest in daily/ by name, without its extension (the 2020 ones of step 2 sort first).
+newest_manifest() { in_image <<<'cd /out/daily && LC_ALL=C ls | grep -E "^szczur-radar-[0-9]{8}T[0-9]{6}Z\.manifest\.json$" | tail -n 1 | sed "s/\.manifest\.json$//"'; }
 
 step "build $image"
 docker build --quiet --tag "$image" "$here" >/dev/null
@@ -179,13 +201,14 @@ jq -e --argjson posts "$posts" --argjson users "$users" --arg version "$version"
     '.file == $file and .sha256 == $sha and .flyway_version == $version and .restore_check.ok == true
      and .counts_before.posts == $posts and .counts_after.posts == $posts and .counts_after.users == $users
      and .counts_before.notifications == 1 and .counts_after.pipeline_run_steps == 1
-     and (.counts_before | has("activation_tokens") | not)' \
+     and (.counts_before | has("activation_tokens") | not)
+     and .compared_with == null and .accepted_shrink == false' \
     "${manifests[0]}" >/dev/null || { echo "manifest:"; cat "${manifests[0]}"; exit 1; }
 month=$(date -u +%Y-%m)
 [[ -s /out/monthly/szczur-radar-$month.dump && -s /out/monthly/szczur-radar-$month.manifest.json ]] \
     || { echo "no monthly copy for $month"; ls -l /out/monthly || true; exit 1; }
 SH
-pass "dump + manifest in daily/ (sha256, Flyway, counts with notifications and pipeline_run_steps, no activation_tokens, restore_check), no session data, monthly copy"
+pass "dump + manifest in daily/ (sha256, Flyway, counts with notifications and pipeline_run_steps, no activation_tokens, restore_check, compared with nothing), no session data, monthly copy"
 echo "backup.sh log (what Railway shows for a cron run):"
 sed 's/^/    /' "$tmp/run1.log"
 
@@ -224,9 +247,56 @@ for dump in "${daily[@]}"; do [[ $dump == */szczur-radar-2020* ]] || real+=("$du
 SH
 grep -q 'ignoring daily/szczur-radar-before-restore.dump' "$tmp/run2.log" \
     || { cat "$tmp/run2.log"; die "the other file is not logged as ignored"; }
-pass "daily 22 → 14 (both real dumps kept), monthly 16 → 12 (current month kept, not copied twice), other names left alone"
+check_manifest run2 '.compared_with == $previous and .accepted_shrink == false' \
+    --arg previous "$(uploaded run1).manifest.json" || die "the second run did not compare with the first one's manifest"
+pass "daily 22 → 14 (both real dumps kept), monthly 16 → 12 (current month kept, not copied twice), other names left alone; compared with the first run's manifest"
 
-step "3. an older dump passes, a broken dump or schema fails, and a failed restore check uploads nothing"
+step "3. shrink and consent: fewer rows than the newest manifest fail the run unless BACKUP_ACCEPT_SHRINK names it"
+# A manifest dated in the future (a wrong clock, a hand-made file) is not the newest: its huge counts
+# would fail every run. Removed afterwards, so the next steps see only the names they expect.
+in_image <<'SH'
+set -euo pipefail
+echo '{"format": 1, "counts_after": {"users": 1000000, "posts": 1000000, "assessments": 1000000}}' \
+    >/out/daily/szczur-radar-29991231T020000Z.manifest.json
+SH
+run_backup run7 || { cat "$tmp/run7.log"; die "a run next to a future-dated manifest failed"; }
+grep -q 'ignoring daily/szczur-radar-29991231T020000Z.manifest.json' "$tmp/run7.log" \
+    || { cat "$tmp/run7.log"; die "the future-dated manifest is not logged as ignored"; }
+check_manifest run7 '.compared_with == $previous and .accepted_shrink == false' \
+    --arg previous "$(uploaded run2).manifest.json" || die "the run did not compare with the newest manifest before it"
+in_image <<<'rm /out/daily/szczur-radar-29991231T020000Z.manifest.json'
+pass "a manifest dated in the future is skipped: compared with the second run's"
+# 5 posts with their assessments go (their RAW stays): both tables shrink below the newest manifest.
+db_psql <<'SQL'
+delete from assessments where post_id in (select id from posts order by id limit 5);
+delete from posts where id in (select id from posts order by id limit 5);
+SQL
+before=$(in_image <<<'ls /out/daily /out/monthly')
+if run_backup run8; then
+    cat "$tmp/run8.log"
+    die "a run with fewer posts than the newest manifest exited 0"
+fi
+accept=$(sed -nE 's/.*set BACKUP_ACCEPT_SHRINK=([^ ]+) on db-backup and redeploy it.*/\1/p' "$tmp/run8.log")
+grep -qF "posts $(( posts - 5 )) < $posts" "$tmp/run8.log" \
+    && grep -q 'nothing dumped' "$tmp/run8.log" \
+    && [ "$accept" = "$(uploaded run7)" ] \
+    || { cat "$tmp/run8.log"; die "the failed run does not name the shrink and the BACKUP_ACCEPT_SHRINK value"; }
+[ "$(in_image <<<'ls /out/daily /out/monthly')" = "$before" ] || die "the run with fewer posts changed the backups"
+pass "fewer posts → fails before the dump (posts $(( posts - 5 )) < $posts), names BACKUP_ACCEPT_SHRINK=$accept, backups unchanged"
+run_backup run9 -e BACKUP_ACCEPT_SHRINK="$accept" || { cat "$tmp/run9.log"; die "the run with the consent failed"; }
+grep -qF "accepted: posts $(( posts - 5 )) < $posts" "$tmp/run9.log" \
+    || { cat "$tmp/run9.log"; die "the accepted shrink is not logged"; }
+check_manifest run9 '.compared_with == $previous and .accepted_shrink == true and .counts_before.posts == $posts' \
+    --arg previous "$accept.manifest.json" --argjson posts $(( posts - 5 )) || die "the accepted run's manifest"
+pass "BACKUP_ACCEPT_SHRINK naming the newest manifest lets the shrink through (accepted_shrink: true)"
+run_backup run10 -e BACKUP_ACCEPT_SHRINK="$accept" || { cat "$tmp/run10.log"; die "the run after the consent failed"; }
+grep -qF "ignoring BACKUP_ACCEPT_SHRINK=$accept: the newest manifest is daily/$(uploaded run9).manifest.json" "$tmp/run10.log" \
+    || { cat "$tmp/run10.log"; die "the stale BACKUP_ACCEPT_SHRINK is not logged as ignored"; }
+check_manifest run10 '.compared_with == $previous and .accepted_shrink == false' \
+    --arg previous "$(uploaded run9).manifest.json" || die "the run after the consent's manifest"
+pass "the same BACKUP_ACCEPT_SHRINK on the next run is ignored (accepted_shrink: false): the consent expires"
+
+step "4. an older dump passes, a broken dump or schema fails, and a failed restore check uploads nothing"
 in_image <<'SH' || die "a truncated dump passed restore-check.sh"
 set -uo pipefail
 dump=$(ls /out/daily/szczur-radar-*T*Z.dump | grep -v '/szczur-radar-2020' | tail -n 1)
@@ -282,7 +352,22 @@ grep -q 'restore-check failed; nothing uploaded' "$tmp/run3.log" \
 [ "$(in_image <<<'ls /out/daily /out/monthly')" = "$before" ] || die "the failed run changed the backups"
 pass "missing table → restore check fails, exit ≠ 0, backups unchanged"
 
-step "4. nas-retention.sh"
+# Last of the backup.sh runs: every run after it would fail on the minimum.
+step "5. an empty posts table fails the run before the dump, even with BACKUP_ACCEPT_SHRINK"
+db_psql -c 'truncate assessments, posts, raw_payloads'
+newest=$(newest_manifest)
+[ -n "$newest" ] || die "no manifest in daily/"
+before=$(in_image <<<'ls /out/daily /out/monthly')
+if run_backup run11 -e BACKUP_ACCEPT_SHRINK="$newest"; then
+    cat "$tmp/run11.log"
+    die "a backup of an empty database exited 0"
+fi
+grep -q 'posts is empty: refusing to back up an empty database; nothing dumped' "$tmp/run11.log" \
+    || { cat "$tmp/run11.log"; die "the failed run does not say that posts is empty"; }
+[ "$(in_image <<<'ls /out/daily /out/monthly')" = "$before" ] || die "the run of an empty database changed the backups"
+pass "empty posts → fails before the dump although BACKUP_ACCEPT_SHRINK=$newest names the newest manifest, backups unchanged"
+
+step "6. nas-retention.sh"
 in_image <<'SH' || die "nas-retention"
 set -euo pipefail
 nas=/tmp/nas
@@ -316,7 +401,7 @@ nas-retention.sh "$nas" >/dev/null 2>&1
 SH
 pass "--dry-run lists the 6 oldest daily and 3 oldest monthly pairs and deletes nothing; the run keeps 14 + 12; other names and future dates are left alone"
 
-step "5. no secrets in the logs"
+step "7. no secrets in the logs"
 if grep -lF "$db_password" "$tmp"/*.log; then
     die "the database password appears in a log"
 fi

@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
 # One run of the database backup (F-01, production-data-gate; see README.md).
-# pg_dump of the database named by PG*, a full restore check of that dump in a throwaway cluster
-# (restore-check.sh), then the upload of the dump and its manifest to BACKUP_REMOTE with rclone, a
-# monthly copy and the retention. Nothing is uploaded unless the restore check passes, and every
-# failure exits non-zero, so Railway marks the cron run as failed.
+# Before the dump, a plausibility check (S-15, backup-check-completeness): posts must not be empty, and
+# no counted table may have fewer rows than in the newest manifest in daily/, unless
+# BACKUP_ACCEPT_SHRINK names that manifest (once, after a restore on purpose). Then pg_dump of the
+# database named by PG*, a full restore check of that dump in a throwaway cluster (restore-check.sh),
+# then the upload of the dump and its manifest to BACKUP_REMOTE with rclone, a monthly copy and the
+# retention. Nothing is uploaded unless both checks pass, and every failure exits non-zero, so Railway
+# marks the cron run as failed.
 # Never `set -x`: the environment holds the database password and the S3 keys.
 set -euo pipefail
 
@@ -163,6 +166,55 @@ counted=$(counted_tables "$flyway_version") || fail "Flyway V$flyway_version is 
 mapfile -t counted <<<"$counted"
 
 counts_before=$(count_rows) || fail "cannot count the rows of ${counted[*]}"
+
+# Plausibility, before the dump: a copy of a wiped or cut-down database must never reach the bucket,
+# where the retention and the NAS mirror would let it push out the good copies. First a minimum that
+# no consent lifts.
+jq -e '.posts > 0' <<<"$counts_before" >/dev/null \
+    || fail "posts is empty: refusing to back up an empty database; nothing dumped"
+# Then no counted table may shrink since the newest manifest in daily/ (a name dated after this run is
+# skipped, as nas-retention.sh does). No manifest: the bucket's first copy, nothing to compare.
+daily_files=$(list_files daily) || fail "cannot list daily/; nothing dumped"
+previous=""
+while IFS= read -r file; do
+    [[ $file == *.manifest.json ]] || continue
+    if [[ ${file%.manifest.json} > $name ]]; then
+        log "ignoring daily/$file (dated after this run)"
+    else
+        previous=$file
+    fi
+done <<<"$daily_files"
+accept=${BACKUP_ACCEPT_SHRINK:-}
+accepted_shrink=false
+if [[ -z $previous ]]; then
+    [[ -z $accept ]] || log "ignoring BACKUP_ACCEPT_SHRINK=$accept: there is no manifest in daily/"
+else
+    # Unreadable or not counts: the shrink cannot be checked, and no consent covers that.
+    broken="if it is broken, rename it outside the name pattern (e.g. $previous.broken) and this tool skips it"
+    previous_json=$(rclone cat "$remote/daily/$previous" 2>"$work/cat.err") \
+        || { cat "$work/cat.err" >&2; fail "cannot read daily/$previous ($broken); nothing dumped"; }
+    jq -e '.counts_after | type == "object" and all(.[]; type == "number")' <<<"$previous_json" \
+        >/dev/null 2>&1 || fail "daily/$previous has no counts_after of numbers ($broken); nothing dumped"
+    # Every table counted now and in that manifest (a table newer than the manifest is skipped).
+    shrunk=$(jq -r --argjson current "$counts_before" '.counts_after as $before
+        | [$current | to_entries[] | select($before[.key] != null and .value < $before[.key])
+            | "\(.key) \(.value) < \($before[.key])"] | join(", ")' <<<"$previous_json") \
+        || fail "cannot compare the row counts with daily/$previous; nothing dumped"
+    if [[ -n $accept && $accept != "${previous%.manifest.json}" ]]; then
+        log "ignoring BACKUP_ACCEPT_SHRINK=$accept: the newest manifest is daily/$previous"
+        accept=""
+    fi
+    if [[ -n $shrunk ]]; then
+        [[ -n $accept ]] || fail "rows lost since daily/$previous: $shrunk; if the database was restored" \
+            "on purpose, set BACKUP_ACCEPT_SHRINK=${previous%.manifest.json} on db-backup and redeploy it;" \
+            "nothing dumped"
+        log "accepted: $shrunk since daily/$previous (BACKUP_ACCEPT_SHRINK)"
+        accepted_shrink=true
+    elif [[ -n $accept ]]; then
+        log "BACKUP_ACCEPT_SHRINK=$accept not needed: no table shrank since daily/$previous"
+    fi
+fi
+
 log "dumping database $PGDATABASE on $PGHOST (server $server_version, Flyway V$flyway_version)"
 # A lock held by a migration must not stall the run: pg_dump gives up after the lock wait.
 pg_dump --format=custom --no-owner --lock-wait-timeout=5min "--exclude-table-data=$EXCLUDED_DATA" \
@@ -189,10 +241,14 @@ jq -n \
     --arg excluded "$EXCLUDED_DATA" \
     --argjson counts_before "$counts_before" \
     --argjson counts_after "$counts_after" \
+    --arg compared_with "$previous" \
+    --argjson accepted_shrink "$accepted_shrink" \
     '{format: 1, created_at: $created_at, file: $file, sha256: $sha256, size_bytes: $size,
       server_version: $server_version, pg_dump_version: $pg_dump_version,
       flyway_version: $flyway_version, excluded_table_data: [$excluded],
-      counts_before: $counts_before, counts_after: $counts_after}' >"$manifest"
+      counts_before: $counts_before, counts_after: $counts_after,
+      compared_with: (if $compared_with == "" then null else $compared_with end),
+      accepted_shrink: $accepted_shrink}' >"$manifest"
 
 log "dump $name.dump: $(numfmt --to=iec "$size")B, sha256 $sha256; checking the restore"
 started=$SECONDS
