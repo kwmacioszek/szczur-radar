@@ -40,14 +40,14 @@ class DeploySafetyController {
 		}
 	}
 
+	// One statement decides the bit: two (running, then queued) would both miss a run that leaves the
+	// queue between them and answer safe while it runs. Only the reason is asked afterwards.
 	private DeploySafety safety() {
-		if (runs.existsRunning()) {
-			return DeploySafety.unsafe(DeploySafetyReason.PIPELINE_RUNNING);
+		if (!runs.existsActive()) {
+			return DeploySafety.SAFE;
 		}
-		if (runs.existsQueued()) {
-			return DeploySafety.unsafe(DeploySafetyReason.PIPELINE_QUEUED);
-		}
-		return DeploySafety.SAFE;
+		return DeploySafety.unsafe(runs.existsRunning() ? DeploySafetyReason.PIPELINE_RUNNING
+				: DeploySafetyReason.PIPELINE_QUEUED);
 	}
 
 	/**

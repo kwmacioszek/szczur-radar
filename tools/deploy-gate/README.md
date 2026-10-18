@@ -56,8 +56,8 @@ W tej kolejności:
 
 1. **Środowisko.** Plan musi mieć `ok == true`, `currentEnvironment.environmentName` równe środowisku docelowemu i `currentEnvironment.projectId` równe ID projektu. Inaczej odmowa całego planu z jego `diagnostics` w logu. Pozostałe reguły już się nie liczą.
 2. **Destrukcja.** Odmowa każdej zmiany z `severity == "destructive"`. Dziś to m.in. `resource.delete` i `variable.delete`, którą CLI zawsze oznacza jako destrukcyjną. Zmiana z `severity` innym niż `safe` i `destructive` (także bez `severity`) też jest odrzucana.
-3. **Lista dozwolonych rodzajów** (`allowed_kinds` w `gate.jq`). Przechodzą tylko `resource.create`, `resource.update`, `variable.set` i `domain.create`. Każdy inny `kind` jest odrzucany niezależnie od `severity`: `resource.delete`, `variable.delete`, `domain.delete` albo rodzaj, którego bramka nie zna.
-4. **Źródło usługi.** `resource.update` dotyka źródła (repo, gałąź, katalog, Wait for CI), gdy któryś `details[]` zaczyna się od `source.`, `summary` pasuje do `(^|[ ,])source([.]|$| )` albo CLI poda `field == "source"`. Taka zmiana przechodzi tylko wtedy, gdy ma co najmniej jeden detal i **każdy** detal pasuje dokładnie do `^source\.checkSuites \((null|false) → true\)$` (`wait_for_ci_detail` w `gate.jq`), czyli włącza Wait for CI. Odrzucane są m.in. `source.branch`, `checkSuites true → null`, `checkSuites` razem z `branch` i `summary` o źródle bez detali. PR env śledzi gałąź PR, produkcja `main`.
+3. **Lista dozwolonych rodzajów** (`allowed_kinds` w `gate.jq`). Przechodzą tylko `resource.create`, `resource.update`, `variable.set` i `domain.create`. Każdy inny `kind` jest odrzucany niezależnie od `severity`: `resource.delete`, `variable.delete`, `domain.delete` albo rodzaj, którego bramka nie zna. `domain.create` przechodzi tylko dla `szczur-radar-web` (`public_service` w `gate.jq`). Domena na każdej innej usłudze, także takiej, której bramka nie rozpozna, jest odrzucana, bo `szczur-radar-api` nie może mieć własnej publicznej domeny.
+4. **Źródło usługi.** `resource.update` dotyka źródła (repo, gałąź, katalog, Wait for CI), gdy któryś `details[]` dotyczy źródła (`^source([. (]|$)`: pole `source.*` albo cały obiekt `source (… → …)`), `summary` pasuje do `(^|[ ,])source([.]|$| )` albo CLI poda `field == "source"`. Taka zmiana przechodzi tylko wtedy, gdy ma co najmniej jeden detal i **każdy** detal pasuje dokładnie do `^source\.checkSuites \((null|false) → true\)$` (`wait_for_ci_detail` w `gate.jq`), czyli włącza Wait for CI. Odrzucane są m.in. `source.branch`, `checkSuites true → null`, `checkSuites` razem z `branch` i `summary` o źródle bez detali. PR env śledzi gałąź PR, produkcja `main`.
 5. **Nieznany format.** Odmowa zmiany bez `kind` i `resource.update`, której `details` nie jest tablicą napisów (np. jej brak). Brak `field` nie jest odmową. CLI nie podaje `details` dla zmiany nazwy i `networking`, więc takie zmiany bramka też odrzuca.
 6. **Restarty.** Zmiana z `deployEffect == "deploy"` albo bez `deployEffect` (w CLI 5.67.1 każda) trafia do listy restartów. Bramka ich nie odrzuca, tylko je ogłasza (także na Postgresie). `deployEffect == "none"` nie trafia na listę. Restartowany zasób to dokładnie jeden zasób z `desiredGraph.resources`:
    - po `address` zmiany, gdy CLI go poda (adres zasobu to jego `address` albo `<typ>.<nazwa>`);
@@ -107,7 +107,7 @@ Termin `DEPLOY_GUARD_DEADLINE` (sekundy epoki) obowiązuje niezależnie od limit
 | `DEPLOY_GUARD_TIMEOUT` | `90m` | jak długo czekać na zajęty pipeline |
 | `DEPLOY_GUARD_INTERVAL` | `60s` | odstęp pytań przy zajętym pipelinie |
 | `DEPLOY_GUARD_WAKE_TIMEOUT` | `3m` | jak długo ponawiać brak odpowiedzi (też `/api/ready` w `verify-apply.sh`) |
-| `DEPLOY_GUARD_DEADLINE` | brak | bezwzględny termin; workflow: `created_at` runu + 120 min − `DEPLOY_VERIFY_TIMEOUT` − 5 min |
+| `DEPLOY_GUARD_DEADLINE` | brak | bezwzględny termin; workflow: `created_at` runu + 120 min − `DEPLOY_VERIFY_TIMEOUT` − `DEPLOY_GUARD_WAKE_TIMEOUT` − 5 min |
 
 Czasy w formacie `tools/pipeline-trigger`: dodatnia liczba z jednostką `s`, `m`, `h` (sama liczba to sekundy). Zła wartość którejkolwiek zmiennej albo zły adres: kod 2. Log na stderr.
 
@@ -120,7 +120,7 @@ tools/deploy-gate/verify-apply.sh check restarts.txt deployments-before.json "$W
 
 Apply wdraża ponownie usługi, które zmienia (`restarts.txt` z `gate.sh`); 2026-10-12 „bezpieczny” apply zrestartował Postgresa, który wisiał 9 min, zanim ktoś spojrzał. Kontrola kończy job na czerwono w minutach:
 
-- **`snapshot`** zapisuje ID najnowszego deployu każdej usługi (`{"<usługa>": "<id>" | null}`; `null`: brak deployu albo usługa, której jeszcze nie ma, np. tworzona przez apply, po 3 próbach z `::warning::`).
+- **`snapshot`** zapisuje ID najnowszego deployu każdej usługi (`{"<usługa>": "<id>" | null}`; `null`: usługa bez deployu). Gdy Railway po 3 próbach nie poda deployów usługi, snapshot kończy się exit 1 z `::error::` i apply się nie wykonuje. Gdyby taka usługa trafiła do snapshotu jako `null`, `check` uznałby jej deploy sprzed apply za nowy i przeszedł bez czekania. Dotyczy to też usługi, której jeszcze nie ma: plan tworzący nową usługę (rzadki) stosuje się ręcznie (`railway config apply` lokalnie, po sprawdzeniu planu), a kolejny push ma już tę usługę w snapshocie.
 - **`check`** pyta `railway deployment list --json --limit 1 -s <usługa> -p "$RAILWAY_PROJECT_ID" -e "$RAILWAY_ENVIRONMENT_ID"` co `DEPLOY_VERIFY_INTERVAL` i czeka na deploy o innym ID niż w migawce (bez porównywania zegarów runnera i Railway). Status nowego deployu (`DeploymentStatus` Railway):
 
 | Status | Wynik |
@@ -170,7 +170,7 @@ Wait for CI uruchamia deploy kodu dopiero po zakończeniu `ci.yml`, więc żaden
 | --- | --- |
 | `0` | sprawdzone: zdrowe, zaalarmowane (issue albo komentarz) albo nic do sprawdzenia (inny projekt, nieznane środowisko) |
 | `1` | `gh` zawiódł: alarm nie dotarł (`::error::` „is NOT reported in an issue”) |
-| `2` | złe wywołanie albo zmienna (stan, brak `GH_TOKEN`, `GITHUB_REPOSITORY`, SHA, czas, `DEPLOY_WEB_URL`) |
+| `2` | złe wywołanie albo zmienna (stan, brak `GH_TOKEN`, `GITHUB_REPOSITORY`, SHA, czas, `DEPLOY_WEB_URL`). Z `deploy-verify.yml` nieosiągalne: `if:` joba przepuszcza tylko `success`/`failure`/`error`, a zdarzenie zawsze niesie pełny SHA. Ten kod łapie błąd w samym workflow (np. po jego zmianie), a nie stan deployu. Odstępstwo od planu, który dopuszczał tylko kod 1. |
 
 Niezdrowy deploy nigdy nie daje kodu 1. Wait for CI patrzy na konkluzję każdego workflow przy commicie, a `deploy-verify` biegnie przy wdrożonym commicie. Czerwony run sprawiłby, że Railway pominie redeploy tego samego commita, który może być naprawą.
 
@@ -187,12 +187,13 @@ Niezdrowy deploy nigdy nie daje kodu 1. Wait for CI patrzy na konkluzję każdeg
 
 Job `railway-config` startuje dopiero po wszystkich jobach testowych (`needs:`, w tym `deploy-gate-test`), ma `permissions: contents: read, actions: read` i `timeout-minutes: 115` (strażnik 90 min + kontrola 15 min + `/api/ready` 3 min + plan i apply). Limity są w `env:` joba; ich suma musi się mieścić w 2 h okna Wait for CI. Kolejność:
 
-1. „Web address and deploy window”: `WEB_URL` z `web-url.sh "$TARGET_ENV"` i `DEPLOY_GUARD_DEADLINE` z `created_at` runu (`gh api repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID`, `GH_TOKEN: github.token`; wspólne dla wszystkich prób runu) + 120 min − `DEPLOY_VERIFY_TIMEOUT` − 5 min.
+1. „Web address and deploy window”: `WEB_URL` z `web-url.sh "$TARGET_ENV"` i `DEPLOY_GUARD_DEADLINE` z `created_at` runu (`gh api repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID`, `GH_TOKEN: github.token`; wspólne dla wszystkich prób runu) + 120 min − `DEPLOY_VERIFY_TIMEOUT` − `DEPLOY_GUARD_WAKE_TIMEOUT` − 5 min.
 2. Strażnik `wait-safe.sh "$WEB_URL"` z `DEPLOY_GUARD: ${{ vars.DEPLOY_GUARD }}`, zawsze, także przy planie bez zmian, bo chroni też deploy kodu. Stoi przed planem: `apply --plan` odmawia, gdy środowisko zmieniło się od planu, więc przypięcie ma trwać sekundy, nie do 90 min czekania. Czekający strażnik trzyma grupę `concurrency`: trzeci push w tym czasie anuluje oczekujący drugi run (trzeci zawiera jego commit).
 3. „Plan and gate”: `railway config plan --json --out plan.pin > plan.json` (CLI `@railway/cli@5.67.1`). Wartości zmiennych CLI redaguje (bez `--show-values`). `--out` zapisuje przypięty plan tylko przy `ok == true`. `.diff` planu do logu, potem `gate.sh` (podsumowanie do `$GITHUB_STEP_SUMMARY`, `restarts.txt`). Gdy CLI zakończyło się błędem, krok pada także po przepuszczeniu przez bramkę.
 4. `plan.json` jako artefakt joba `railway-plan-<środowisko>` (7 dni), także przy odmowie. `plan.pin` nie jest zachowywany.
 5. Tylko przy liczbie zmian > 0: `verify-apply.sh snapshot restarts.txt > deployments-before.json`, potem apply `railway config apply --plan plan.pin --yes` (stosuje dokładnie sprawdzony plan i odmawia, jeśli środowisko zmieniło się od planu; nigdy `--confirm-destructive`).
 6. Tylko gdy apply się wykonał: `verify-apply.sh check restarts.txt deployments-before.json "$WEB_URL"` (podsumowanie do `$GITHUB_STEP_SUMMARY`).
+7. Tylko gdy apply padł: „API after a failed apply”, czyli `verify-apply.sh check` z pustą listą restartów, który pyta tylko `/api/ready`. Job jest i tak czerwony, ale apply mógł już zrestartować usługi (także Postgresa), więc log mówi, czy API nadal widzi bazę.
 
 `--json` i `--out` działają razem w jednym wywołaniu w CLI 5.67.1: `plan.json` jest czystym JSON-em, a `plan.pin` powstaje obok. Potwierdzone w PR env tej zmiany (`szczur-radar-pr-81`, runy 39124165646 i 39124555511). Fallback z dwoma wywołaniami planu nie jest potrzebny.
 
@@ -205,8 +206,8 @@ tools/deploy-gate/test.sh
 Wymaga `bash`, `jq`, `curl` i `python3` (bez Dockera, bez Railway, bez GitHuba), działa z dowolnego katalogu, trwa poniżej minuty (limity 1–3 s). Uruchamia `gate.sh` na każdym fixture'ze i sprawdza kod wyjścia, podsumowanie, linie `::error::` i plik restartów. Każda reguła ma przypadek dozwolony i odrzucony:
 - pusty plan dla produkcji i prawdziwy pusty plan `szczur-radar-pr-81` (0) oraz zła nazwa środowiska, inny projekt i `ok:false` (1);
 - `variable.delete` i `resource.delete` (destrukcyjne, 1), `variable.set` (`Update variable` i `Set variable`, 0, ogłoszone restarty usług);
-- `variable.delete` i nieznany rodzaj (`domain.delete`) z `severity: "safe"`, odrzucone przez listę dozwolonych, nie przez `severity` (1); `resource.create` i `domain.create` (0); plan z jedną dozwoloną i jedną odrzuconą zmianą (1, błąd tylko dla odrzuconej);
-- prawdziwy plan `szczur-radar-pr-81` z `checkSuites null → true` na obu cronach (0, restart `db-backup` i `pipeline-trigger`), `checkSuites null → true` i `false → true` (0); `source.branch`, `checkSuites true → null`, `checkSuites` razem z `branch` i `summary` o `source.checkSuites` bez detali (1);
+- `variable.delete` i nieznany rodzaj (`domain.delete`) z `severity: "safe"`, odrzucone przez listę dozwolonych, nie przez `severity` (1); `resource.create` i `domain.create` na webie (0), `domain.create` na API (1); plan z jedną dozwoloną i jedną odrzuconą zmianą (1, błąd tylko dla odrzuconej);
+- prawdziwy plan `szczur-radar-pr-81` z `checkSuites null → true` na obu cronach (0, restart `db-backup` i `pipeline-trigger`), `checkSuites null → true` i `false → true` (0); `source.branch`, `checkSuites true → null`, `checkSuites` razem z `branch`, `summary` o `source.checkSuites` bez detali i detal całego obiektu `source` ukryty w `summary` za „and 1 more” (1);
 - `resource.update` bez `details` i zmiana bez `kind` (1); `limitOverride` na Postgresie (0, restart `postgres`);
 - `address` podany przez CLI wskazuje zasób, `deployEffect: "none"` nie jest restartem, `deployEffect: "deploy"` jest (0); restart zasobu spoza `desiredGraph` po `summary` albo po `address` (1);
 - złe wywołanie, brak pliku, plan, który nie jest JSON-em, i plan bez `changeSet.changes` (2);

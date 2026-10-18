@@ -11,8 +11,9 @@
 # restarts.txt: one Railway service name per line (desiredGraph resource names, written by gate.sh;
 # `railway deployment list -s` takes them, a database included: it is a service in Railway). The
 # snapshot records the ID of each one's newest deployment ({"<service>": "<id>" | null}, null when it
-# has none or does not exist yet); the check waits for a deployment with another ID, so no clock of the
-# runner is compared with Railway's. Statuses of that new deployment (Railway's DeploymentStatus):
+# has none) and exits 1 when Railway cannot tell after 3 attempts (a service that does not exist yet
+# included); the check waits for a deployment with another ID, so no clock of the runner is compared
+# with Railway's. Statuses of that new deployment (Railway's DeploymentStatus):
 #   SUCCESS, SLEEPING                  deployed (SLEEPING: deployed, then put to sleep)
 #   WAITING, QUEUED                    handed over to deploy-verify: Wait for CI holds it until this
 #                                      workflow ends, so waiting here would deadlock
@@ -98,16 +99,18 @@ if [[ $mode == snapshot ]]; then
     for service in "${services[@]}"; do
         id=""
         # A few attempts: an ID missed here would make the check take the old deployment for the new one.
+        # A failure is not taken for "no deployment": the check would then take the deployment from before
+        # the apply for the new one and pass without waiting. So the job stops before the apply.
         for attempt in 1 2 3; do
             if latest "$service"; then
                 [[ $LATEST_ID == none ]] || id=$LATEST_ID
                 break
             fi
             if (( attempt == 3 )); then
-                log "::warning::post-apply check: no deployment of $service is known before the apply (a service the apply creates?); any deployment of it counts as new"
-            else
-                sleep "$WAKE_INTERVAL"
+                log "::error::post-apply check: cannot read the deployments of $service before the apply (3 attempts); not applying, since the check could not tell its new deployment from the old one (a plan that creates a service: apply it by hand, see README.md)"
+                exit 1
             fi
+            sleep "$WAKE_INTERVAL"
         done
         snapshot=$(jq --arg service "$service" --arg id "$id" '.[$service] = (if $id == "" then null else $id end)' <<<"$snapshot")
         log "post-apply check: $service before the apply: ${id:-no deployment}"

@@ -16,6 +16,10 @@
 # (resource.delete, variable.delete, domain.delete, a kind this gate has never seen).
 def allowed_kinds: ["resource.create", "resource.update", "variable.set", "domain.create"];
 
+# The only service a public domain may be created on: szczur-radar-api must not have one of its own
+# (the browser reaches it only through the web's /api/* proxy over the private network).
+def public_service: "szczur-radar-web";
+
 # The only source detail an unattended apply may make: turning Railway "Wait for CI" on. The CLI writes
 # a changed leaf as `<path> (<before> → <after>)`; a missing key is null.
 def wait_for_ci_detail: "^source\\.checkSuites \\((null|false) → true\\)$";
@@ -28,7 +32,7 @@ def is_strings: type == "array" and all(.[]; type == "string");
 # Does the resource.update touch the service source (repo, branch, root directory, Wait for CI)?
 def touches_source:
   .field == "source"
-  or ((.details | is_strings) and any(.details[]; startswith("source.")))
+  or ((.details | is_strings) and any(.details[]; test("^source([. (]|$)")))
   or ((.summary | type) == "string" and (.summary | test(source_summary)));
 
 # A source change that only turns Wait for CI on: at least one detail, and every detail is that one.
@@ -92,6 +96,8 @@ def reasons($target):
         "resource.update without a details list (unknown plan format)"
       elif .kind == "resource.update" and touches_source and (enables_wait_for_ci_only | not) then
         "source change (only source.checkSuites → true may pass)"
+      elif .kind == "domain.create" and $target.name != public_service then
+        "a public domain only on \(public_service) (szczur-radar-api stays private)"
       else empty end,
       if restarts and $target == null then
         "a change that redeploys a resource names no single resource of desiredGraph (unknown plan format)"
@@ -121,7 +127,7 @@ def ordered_unique: reduce .[] as $item ([]; if index([$item]) == null then . + 
   ) as $resources
 | ($plan.changeSet.changes | type == "array" and all(.[]; type == "object")) as $readable
 | (if $readable then $plan.changeSet.changes else [] end
-   | map((if restarts then target($resources) else null end) as $target
+   | map((if restarts or .kind == "domain.create" then target($resources) else null end) as $target
          | {change: ., label: describe, restarts: restarts, target: $target.name, targetType: $target.type,
             deploys: (restarts and $target != null
                       and ($target.type as $type | deployable_types | index([$type])) != null),

@@ -175,6 +175,10 @@ pass "resource.create of a bucket and a service (no deployEffect): exit 0, only 
 check_gate domain-create 0
 restarts_are domain-create szczur-radar-web
 pass "domain.create: exit 0, its service announced"
+check_gate domain-create-api 1
+log_says domain-create-api '::error::Create domain for szczur-radar-api: a public domain only on szczur-radar-web (szczur-radar-api stays private)'
+restarts_are domain-create-api
+pass "domain.create on szczur-radar-api: exit 1 (only the web is public)"
 check_gate mixed 1
 errors_are mixed 1
 log_says mixed '::error::Delete variable db-backup.BACKUP_TIMEOUT'
@@ -208,6 +212,9 @@ pass "source.checkSuites → true together with source.branch: exit 1"
 check_gate source-summary-without-details 1
 log_says source-summary-without-details '::error::Update db-backup source.checkSuites: source change'
 pass "a summary naming source.checkSuites with no details: exit 1"
+check_gate source-whole-object 1
+log_says source-whole-object '::error::Update szczur-radar-api deploy.startCommand and 1 more: source change'
+pass "a detail of the whole source object, hidden from the summary behind \"and 1 more\": exit 1"
 
 step "5. an unknown plan format is refused"
 check_gate update-without-details 1
@@ -575,14 +582,21 @@ step "11. verify-apply.sh: the check after the apply"
 railway_answers snapshot postgres "p1 SUCCESS"
 railway_answers snapshot db-backup none
 railway_answers snapshot szczur-radar-api fail "a1 SLEEPING"
-printf '%s\n' postgres db-backup szczur-radar-api pipeline-trigger "" >"$tmp/snapshot.restarts"
+printf '%s\n' postgres db-backup szczur-radar-api "" >"$tmp/snapshot.restarts"
 run_verify snapshot 0 -- snapshot "$tmp/snapshot.restarts"
-jq -e '. == {"postgres": "p1", "db-backup": null, "szczur-radar-api": "a1", "pipeline-trigger": null}' \
+jq -e '. == {"postgres": "p1", "db-backup": null, "szczur-radar-api": "a1"}' \
     "$tmp/snapshot.out" >/dev/null || { show_run snapshot; die "snapshot: not the expected deployment IDs"; }
 grep -qxF "deployment list --json --limit 1 -s postgres -p $project_id -e $environment_id" "$tmp/snapshot.railway/calls" \
     || { show_run snapshot; die "snapshot: railway was not called with the project and environment IDs"; }
-run_says snapshot '::warning::post-apply check: no deployment of pipeline-trigger is known before the apply'
-pass "snapshot: each service's newest deployment ID (null: none, or unknown to Railway after 3 attempts; a failed call retried), by project and environment ID"
+pass "snapshot: each service's newest deployment ID (null: none; a failed call retried), by project and environment ID"
+railway_answers snapshot-unknown postgres "p1 SUCCESS"
+railway_answers snapshot-unknown db-backup fail fail fail
+printf '%s\n' postgres db-backup >"$tmp/snapshot-unknown.restarts"
+run_verify snapshot-unknown 1 -- snapshot "$tmp/snapshot-unknown.restarts"
+run_says snapshot-unknown '::error::post-apply check: cannot read the deployments of db-backup before the apply (3 attempts)'
+[[ $(grep -c -- '-s db-backup ' "$tmp/snapshot-unknown.railway/calls") == 3 ]] \
+    || { show_run snapshot-unknown; die "snapshot-unknown: db-backup was not asked 3 times"; }
+pass "snapshot: a service Railway cannot tell about after 3 attempts: exit 1 (no apply), not taken for one without deployments"
 
 railway_answers success postgres "p2 SUCCESS"
 check_case success 0 postgres '{"postgres": "p1"}' "[$ready]"

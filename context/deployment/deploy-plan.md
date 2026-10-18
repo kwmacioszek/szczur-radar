@@ -918,7 +918,7 @@ A deploy interrupts a pipeline run that is queued or running. The guard asks `GE
   - 200 `{"safe":false,"reason":"pipeline_running"}`, which wins over `"pipeline_queued"` when both are true;
   - 503 `{"status":"unavailable"}` without the database, like `/api/ready`.
 - **Busy.** The guard logs the reason and asks again every `DEPLOY_GUARD_INTERVAL` (`60s`), up to `DEPLOY_GUARD_TIMEOUT` (`90m`) or the deadline (below), whichever comes first. Then it fails red with an `::error::` that points to this runbook.
-- **The deadline.** Railway's Wait for CI gives up 2 h after the push. The guard therefore also has an absolute deadline: the workflow run's `created_at` (the same for every attempt of the run) + 120 min − `DEPLOY_VERIFY_TIMEOUT` (`15m`) − 5 min, i.e. 100 min after the run was created. A deadline already past at the start fails at once, without a request.
+- **The deadline.** Railway's Wait for CI gives up 2 h after the push. The guard therefore also has an absolute deadline: the workflow run's `created_at` (the same for every attempt of the run) + 120 min − `DEPLOY_VERIFY_TIMEOUT` (`15m`) − `DEPLOY_GUARD_WAKE_TIMEOUT` (`3m`, the /api/ready wait after the apply) − 5 min, i.e. 97 min after the run was created. A deadline already past at the start fails at once, without a request.
 - **No decision means pass, with a warning:**
   - 401 or 404: the API has no such route (an older version). An API from before S-14 answers **401**, not 404: deny-by-default refuses a route outside `PUBLIC_ROUTES` without a session. The first merge of S-14 to production passes this way.
   - No connection or a 5xx: retried every 2 s up to `DEPLOY_GUARD_WAKE_TIMEOUT` (`3m`), which wakes a sleeping API. After that the guard passes with "API unavailable": no run can be in progress, and the deploy may be the fix.
@@ -950,6 +950,7 @@ The incident of 2026-10-12 (a "safe" apply restarted Postgres, which hung for 9 
   - the same ID until the limit: the job fails ("the apply did not trigger a deploy of <service>").
 - The limit for all services together is `DEPLOY_VERIFY_TIMEOUT` (`15m`). Then `GET <web>/api/ready` must answer 200 within `DEPLOY_GUARD_WAKE_TIMEOUT` (`3m`), otherwise the job fails.
 - An empty `restarts.txt` checks only `/api/ready`.
+- After a failed apply (the job is red anyway) the step "API after a failed apply" still asks `/api/ready`: a failed apply may already have restarted services, Postgres included, and the log then says whether the API still reaches its database.
 - The sum of the limits (guard 90 min + check 15 min + `/api/ready` 3 min + plan and apply) must stay inside the 2 h window: never raise one without lowering another.
 
 ### `deploy-verify` and the `deploy-health` issue

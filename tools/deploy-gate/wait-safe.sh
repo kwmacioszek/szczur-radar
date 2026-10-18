@@ -20,7 +20,8 @@
 #   DEPLOY_GUARD_WAKE_TIMEOUT  how long an API without an answer is retried (default 3m)
 #   DEPLOY_GUARD_DEADLINE      optional: seconds since the epoch at which the guard gives up whatever
 #                              the timeout (the workflow sets it to the run's creation + 120 min Wait for
-#                              CI window − DEPLOY_VERIFY_TIMEOUT − 5 min); passed at the start → exit 1
+#                              CI window − DEPLOY_VERIFY_TIMEOUT − DEPLOY_GUARD_WAKE_TIMEOUT − 5 min);
+#                              passed at the start → exit 1
 # The log goes to stderr, with GitHub `::warning::` / `::error::` lines.
 # Exit codes: 0 deploy (safe, or no decision), 1 do not deploy, 2 a bad invocation or variable.
 set -euo pipefail

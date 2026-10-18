@@ -412,8 +412,12 @@ jobs:
           created_at=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" --jq .created_at)
           usage_error() { echo "::error::$*"; exit 2; }
           . tools/deploy-gate/lib.sh
+          # The post-apply check may take DEPLOY_VERIFY_TIMEOUT, then /api/ready
+          # DEPLOY_GUARD_WAKE_TIMEOUT; 5 min more for the plan and the apply.
           duration_seconds DEPLOY_VERIFY_TIMEOUT
-          deadline=$(( $(date -u -d "$created_at" +%s) + 120 * 60 - REPLY - 5 * 60 ))
+          verify_timeout=$REPLY
+          duration_seconds DEPLOY_GUARD_WAKE_TIMEOUT
+          deadline=$(( $(date -u -d "$created_at" +%s) + 120 * 60 - verify_timeout - REPLY - 5 * 60 ))
           echo "Run created at $created_at; the deploy guard gives up at $(date -u -d "@$deadline" +%Y-%m-%dT%H:%M:%SZ)"
           echo "WEB_URL=$web_url" >> "$GITHUB_ENV"
           echo "DEPLOY_GUARD_DEADLINE=$deadline" >> "$GITHUB_ENV"
@@ -481,4 +485,14 @@ jobs:
         if: steps.apply.outcome == 'success'
         run: |
           tools/deploy-gate/verify-apply.sh check restarts.txt deployments-before.json "$WEB_URL" \
+            >> "$GITHUB_STEP_SUMMARY"
+      - name: API after a failed apply
+        # The job is red anyway, but a failed apply may already have restarted
+        # services (Postgres too): the log says whether the API still reaches its
+        # database (an empty list: the check asks only /api/ready).
+        if: always() && steps.apply.outcome == 'failure'
+        run: |
+          : > no-restarts.txt
+          echo '{}' > no-deployments.json
+          tools/deploy-gate/verify-apply.sh check no-restarts.txt no-deployments.json "$WEB_URL" \
             >> "$GITHUB_STEP_SUMMARY"
