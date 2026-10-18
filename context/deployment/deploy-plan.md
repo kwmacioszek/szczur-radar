@@ -886,9 +886,9 @@ Steps (plan `context/changes/backup-check-completeness/plan.md`, Phase 3, Manual
 4. **The consent passes.** `BACKUP_ACCEPT_SHRINK` set to that value and a redeploy of `db-backup`: the next run passes, its log has `accepted: …`, and its manifest has `accepted_shrink: true` and `compared_with` naming that manifest.
    Result: `BACKUP_ACCEPT_SHRINK=szczur-radar-20261018T160016Z` set with `--skip-deploys`, then a redeploy of `db-backup` (`01ff4d9c`). Its run at 16:12:02 logged `backup: accepted: posts 37 < 40, assessments 37 < 40 since daily/szczur-radar-20261018T160016Z.manifest.json (BACKUP_ACCEPT_SHRINK)`, then `restore-check: OK` and `backup: OK`; manifest `szczur-radar-20261018T161202Z` has `accepted_shrink: true`, `compared_with: szczur-radar-20261018T160016Z.manifest.json`, `posts` 37.
 5. **The IaC gate keeps the hand-set variables.** A push to the branch while both variables are set leaves `railway-config` green: no `Delete variable`, nothing destructive, no source change.
-   Result: — (pending)
+   Result: the push of `c7e5c3c` with both variables set: CI run 39144037112 all green; the `railway-config` plan for pr-79 had one change, `~ Update db-backup deploy.cronSchedule` (the temporary `*/5 * * * *` back to the declared `0 2 * * *`), no `Delete variable`, nothing destructive, no source change. After the apply both variables were still set. Note: any push during a verification resets a hand-set cron schedule in the PR env.
 6. **Cleanup.** Both variables deleted, the schedule back to `0 2 * * *`, `db-backup` redeployed (otherwise the old deployment still runs with the overrides). The result recorded here and commented on issue #74.
-   Result: — (pending)
+   Result: both variables deleted (`railway variable delete` has no `--skip-deploys`; it did not redeploy), the schedule already `0 2 * * *` from the IaC apply, then a redeploy of `db-backup` (`ae21e977`, SUCCESS, no run). The PR env keeps the API deployment `cc0f7d52` and the database with 37 posts until the PR env is deleted. Commented on issue #74.
 
 ### Runbook — after the merge (operator; tracked in issue #74, not in the plan's Progress)
 
