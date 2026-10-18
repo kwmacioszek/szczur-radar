@@ -18,14 +18,14 @@ import org.springframework.http.client.BufferingClientHttpRequestFactory;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 
-import pl.szczurradar.api.config.LlmProviderProperties;
-import pl.szczurradar.api.config.LlmProviderProperties.Provider;
-import pl.szczurradar.api.config.LlmProviderProperties.ServiceTier;
 import pl.szczurradar.api.llm.Channel;
 import pl.szczurradar.api.llm.LlmClient;
+import pl.szczurradar.api.llm.LlmProviderProperties;
 import pl.szczurradar.api.llm.LlmRequest;
 import pl.szczurradar.api.llm.LlmResponse;
 import pl.szczurradar.api.llm.OutputMode;
+import pl.szczurradar.api.llm.Provider;
+import pl.szczurradar.api.llm.ServiceTier;
 import pl.szczurradar.api.llm.transport.ChatResponses;
 import pl.szczurradar.api.llm.transport.HttpStatusErrors;
 import pl.szczurradar.api.llm.transport.ProviderMessages;

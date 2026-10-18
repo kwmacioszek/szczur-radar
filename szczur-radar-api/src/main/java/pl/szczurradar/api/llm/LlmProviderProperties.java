@@ -1,14 +1,12 @@
-package pl.szczurradar.api.config;
+package pl.szczurradar.api.llm;
 
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Locale;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import com.fasterxml.jackson.annotation.JsonValue;
 import org.jspecify.annotations.Nullable;
 import org.springframework.boot.convert.DurationStyle;
 import org.springframework.core.env.PropertyResolver;
@@ -58,49 +56,6 @@ public record LlmProviderProperties(Provider provider, String model, String apiK
 	/** The longest accepted {@code LLM_TIMEOUT}; the Gemini SDK takes it as {@code int} milliseconds. */
 	public static final Duration MAX_TIMEOUT = Duration.ofMinutes(30);
 
-	/**
-	 * The supported providers; {@link #id()} is the {@code LLM_API_PROVIDER} value, the profile name
-	 * and the JSON value.
-	 */
-	public enum Provider {
-
-		GEMINI, DEEPSEEK, OPENROUTER;
-
-		@JsonValue
-		public String id() {
-			return name().toLowerCase(Locale.ROOT);
-		}
-
-		static @Nullable Provider fromId(String id) {
-			return Arrays.stream(values()).filter(provider -> provider.id().equals(id)).findFirst().orElse(null);
-		}
-
-	}
-
-	/** {@code LLM_SERVICE_TIER}; {@link #id()} is the setting's value and the JSON value. */
-	public enum ServiceTier {
-
-		DEFAULT, FLEX;
-
-		@JsonValue
-		public String id() {
-			return name().toLowerCase(Locale.ROOT);
-		}
-
-	}
-
-	/** {@code LLM_REASONING_EFFORT}; {@link #id()} is the setting's value, the API value and the JSON value. */
-	public enum ReasoningEffort {
-
-		NONE, MINIMAL, LOW, MEDIUM, HIGH, XHIGH;
-
-		@JsonValue
-		public String id() {
-			return name().toLowerCase(Locale.ROOT);
-		}
-
-	}
-
 	/** The three required settings with default call settings. */
 	public LlmProviderProperties(Provider provider, String model, String apiKey) {
 		this(provider, model, apiKey, ServiceTier.DEFAULT, null, DEFAULT_TIMEOUT);
@@ -128,12 +83,7 @@ public record LlmProviderProperties(Provider provider, String model, String apiK
 		String timeoutText = trimmed(environment.getProperty(TIMEOUT));
 
 		List<String> problems = new ArrayList<>();
-		Provider provider = Provider.fromId(providerId);
-		if (provider == null) {
-			String allowed = Arrays.stream(Provider.values()).map(Provider::id).collect(Collectors.joining(", "));
-			problems.add(PROVIDER + " must be one of " + allowed
-					+ (providerId.isEmpty() ? " (not set)" : " (got '" + providerId + "')"));
-		}
+		Provider provider = oneOf(Provider.values(), Provider::id, PROVIDER, providerId, problems);
 		if (model.isEmpty()) {
 			problems.add(MODEL + " is not set (the exact model id of the selected provider)");
 		}
@@ -168,7 +118,8 @@ public record LlmProviderProperties(Provider provider, String model, String apiK
 			}
 		}
 		String allowed = Arrays.stream(values).map(id).collect(Collectors.joining(", "));
-		problems.add(setting + " must be one of " + allowed + " (got '" + value + "')");
+		problems.add(setting + " must be one of " + allowed
+				+ (value.isEmpty() ? " (not set)" : " (got '" + value + "')"));
 		return null;
 	}
 

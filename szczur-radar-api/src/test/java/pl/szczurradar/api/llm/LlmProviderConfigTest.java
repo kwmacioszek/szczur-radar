@@ -1,4 +1,4 @@
-package pl.szczurradar.api.config;
+package pl.szczurradar.api.llm;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
@@ -136,7 +136,7 @@ class LlmProviderConfigTest {
 
 	@Test
 	void propertiesNeverPrintTheKey() {
-		LlmProviderProperties properties = new LlmProviderProperties(LlmProviderProperties.Provider.DEEPSEEK,
+		LlmProviderProperties properties = new LlmProviderProperties(Provider.DEEPSEEK,
 				"deepseek-v4-flash", "very-secret-key");
 
 		assertThat(properties.toString()).doesNotContain("very-secret-key").contains("<hidden>");
@@ -147,7 +147,7 @@ class LlmProviderConfigTest {
 		LlmProviderProperties properties = LlmProviderProperties
 			.from(environment("openrouter", "openai/gpt-6-luna", "synthetic-key"));
 
-		assertThat(properties.serviceTier()).isEqualTo(LlmProviderProperties.ServiceTier.DEFAULT);
+		assertThat(properties.serviceTier()).isEqualTo(ServiceTier.DEFAULT);
 		assertThat(properties.reasoningEffort()).isNull();
 		assertThat(properties.timeout()).isEqualTo(Duration.ofSeconds(120));
 	}
@@ -157,8 +157,8 @@ class LlmProviderConfigTest {
 		LlmProviderProperties properties = LlmProviderProperties.from(environment("openrouter", "openai/gpt-6-luna",
 				"synthetic-key", "LLM_SERVICE_TIER=flex", "LLM_REASONING_EFFORT=low", "LLM_TIMEOUT=5m"));
 
-		assertThat(properties.serviceTier()).isEqualTo(LlmProviderProperties.ServiceTier.FLEX);
-		assertThat(properties.reasoningEffort()).isEqualTo(LlmProviderProperties.ReasoningEffort.LOW);
+		assertThat(properties.serviceTier()).isEqualTo(ServiceTier.FLEX);
+		assertThat(properties.reasoningEffort()).isEqualTo(ReasoningEffort.LOW);
 		assertThat(properties.timeout()).isEqualTo(Duration.ofMinutes(5));
 	}
 
@@ -207,7 +207,7 @@ class LlmProviderConfigTest {
 			.withMessageContaining("LLM_REASONING_EFFORT is only supported for LLM_API_PROVIDER=openrouter (got 'deepseek')");
 		assertThat(LlmProviderProperties
 			.from(environment("deepseek", "deepseek-v4-flash", "synthetic-key", "LLM_SERVICE_TIER=default"))
-			.serviceTier()).isEqualTo(LlmProviderProperties.ServiceTier.DEFAULT);
+			.serviceTier()).isEqualTo(ServiceTier.DEFAULT);
 	}
 
 	/**

@@ -8,7 +8,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.convert.DurationStyle;
 import org.springframework.core.env.PropertyResolver;
 
-import pl.szczurradar.api.config.LlmProviderProperties;
+import pl.szczurradar.api.llm.LlmProviderProperties;
 import pl.szczurradar.api.llm.transport.TransportRetry;
 import pl.szczurradar.api.pipeline.state.Durations;
 

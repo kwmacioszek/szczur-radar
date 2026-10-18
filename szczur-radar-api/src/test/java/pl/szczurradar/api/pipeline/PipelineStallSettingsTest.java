@@ -12,9 +12,9 @@ import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.mock.env.MockEnvironment;
 
-import pl.szczurradar.api.config.LlmProviderProperties;
-import pl.szczurradar.api.config.LlmProviderProperties.Provider;
-import pl.szczurradar.api.config.LlmProviderProperties.ServiceTier;
+import pl.szczurradar.api.llm.LlmProviderProperties;
+import pl.szczurradar.api.llm.Provider;
+import pl.szczurradar.api.llm.ServiceTier;
 
 /**
  * {@code PIPELINE_STALL_TIMEOUT}: the default follows the longest single LLM call, a shorter explicit

@@ -5,8 +5,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.core.env.Environment;
 
-import pl.szczurradar.api.config.LlmProviderProperties;
-
 /**
  * The application's {@link LlmClient}, from the same {@code LLM_*} settings as Embabel's model
  * registry. The client is lazy: the server, operator commands and tests start without building a

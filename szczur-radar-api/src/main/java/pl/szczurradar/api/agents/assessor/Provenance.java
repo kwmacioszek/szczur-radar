@@ -7,11 +7,11 @@ import java.util.Objects;
 import com.fasterxml.jackson.annotation.JsonValue;
 import org.jspecify.annotations.Nullable;
 
-import pl.szczurradar.api.config.LlmProviderProperties.Provider;
-import pl.szczurradar.api.config.LlmProviderProperties.ReasoningEffort;
-import pl.szczurradar.api.config.LlmProviderProperties.ServiceTier;
 import pl.szczurradar.api.llm.Channel;
 import pl.szczurradar.api.llm.OutputMode;
+import pl.szczurradar.api.llm.Provider;
+import pl.szczurradar.api.llm.ReasoningEffort;
+import pl.szczurradar.api.llm.ServiceTier;
 
 /**
  * Where an assessment came from (contract-v2.md §15), filled by the backend and stored next to the

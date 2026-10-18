@@ -2,7 +2,6 @@ package pl.szczurradar.api.llm;
 
 import org.jspecify.annotations.Nullable;
 
-import pl.szczurradar.api.config.LlmProviderProperties;
 import pl.szczurradar.api.llm.deepseek.DeepSeekClient;
 import pl.szczurradar.api.llm.gemini.GeminiClient;
 import pl.szczurradar.api.llm.openrouter.OpenRouterClient;

@@ -19,9 +19,9 @@ import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import tools.jackson.databind.JsonNode;
 
+import pl.szczurradar.api.agents.assessor.contract.Assertiveness;
 import pl.szczurradar.api.agents.assessor.contract.AssessmentInputV1;
 import pl.szczurradar.api.agents.assessor.contract.AssessmentOutputV2;
-import pl.szczurradar.api.agents.assessor.contract.Assertiveness;
 import pl.szczurradar.api.agents.assessor.contract.Attribution;
 import pl.szczurradar.api.agents.assessor.contract.ContractJson;
 import pl.szczurradar.api.agents.assessor.contract.Direction;
@@ -29,9 +29,6 @@ import pl.szczurradar.api.agents.assessor.contract.Relevance;
 import pl.szczurradar.api.agents.assessor.prompt.AssessmentPrompt;
 import pl.szczurradar.api.agents.assessor.validation.FailureClass;
 import pl.szczurradar.api.agents.assessor.validation.OutputParser;
-import pl.szczurradar.api.config.LlmProviderProperties.Provider;
-import pl.szczurradar.api.config.LlmProviderProperties.ReasoningEffort;
-import pl.szczurradar.api.config.LlmProviderProperties.ServiceTier;
 import pl.szczurradar.api.llm.CallFailure;
 import pl.szczurradar.api.llm.Channel;
 import pl.szczurradar.api.llm.LlmCallException;
@@ -39,6 +36,9 @@ import pl.szczurradar.api.llm.LlmClient;
 import pl.szczurradar.api.llm.LlmRequest;
 import pl.szczurradar.api.llm.LlmResponse;
 import pl.szczurradar.api.llm.OutputMode;
+import pl.szczurradar.api.llm.Provider;
+import pl.szczurradar.api.llm.ReasoningEffort;
+import pl.szczurradar.api.llm.ServiceTier;
 
 /** {@link Assessor} on a scripted {@link LlmClient}: classification, call count, provenance, message. */
 class AssessorTest {

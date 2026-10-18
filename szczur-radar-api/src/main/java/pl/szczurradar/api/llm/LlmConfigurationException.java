@@ -1,7 +1,5 @@
 package pl.szczurradar.api.llm;
 
-import pl.szczurradar.api.config.LlmProviderProperties.ServiceTier;
-
 /**
  * The provider refused the configuration, not this request: the key (HTTP 401), the account's credit
  * (402), the model (404) or, at OpenRouter, a spent key or budget limit (403, {@code OpenRouterClient}).

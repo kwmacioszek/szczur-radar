@@ -22,12 +22,12 @@ import pl.szczurradar.api.agents.assessor.contract.AssessmentOutputV2;
 import pl.szczurradar.api.agents.assessor.contract.ContractJson;
 import pl.szczurradar.api.agents.assessor.prompt.AssessmentPrompt;
 import pl.szczurradar.api.agents.assessor.validation.Violation;
-import pl.szczurradar.api.config.LlmProviderProperties.Provider;
-import pl.szczurradar.api.config.LlmProviderProperties.ReasoningEffort;
-import pl.szczurradar.api.config.LlmProviderProperties.ServiceTier;
 import pl.szczurradar.api.llm.Channel;
 import pl.szczurradar.api.llm.LlmResponse;
 import pl.szczurradar.api.llm.OutputMode;
+import pl.szczurradar.api.llm.Provider;
+import pl.szczurradar.api.llm.ReasoningEffort;
+import pl.szczurradar.api.llm.ServiceTier;
 
 /**
  * One recorded assessment of a gold post ({@code fixtures/llm/recordings/<configId>/<post_id>.json}):
