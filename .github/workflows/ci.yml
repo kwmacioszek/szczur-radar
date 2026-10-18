@@ -3,6 +3,14 @@ name: CI
 # Runs on every push to main and on every PR. Intentionally NOT path-filtered:
 # Railway's "Wait for CI" evaluates the whole workflow conclusion, and a skipped
 # required workflow never blocks — path filtering would silently defeat the gate.
+#
+# Runner switch (repository variables, no commit needed; tools/ci-runner/README.md):
+# every job runs on the runner label in CI_RUNNER_PR (pull_request) or
+# CI_RUNNER_MAIN (push to main), else CI_RUNNER, else GitHub's ubuntu-latest.
+# E.g. `gh variable set CI_RUNNER --body szczur-ci` moves all jobs to the
+# self-hosted runners, `gh variable delete CI_RUNNER` moves them back. A label
+# no online runner has leaves jobs queued, and Railway skips the deploy after 2 h.
+# Self-hosted runners are persistent: jobs must not leave named containers behind.
 on:
   push:
     branches: [main]
@@ -11,7 +19,7 @@ on:
 jobs:
   backend:
     name: backend (Maven verify)
-    runs-on: ubuntu-latest
+    runs-on: ${{ (github.event_name == 'pull_request' && vars.CI_RUNNER_PR) || (github.event_name == 'push' && vars.CI_RUNNER_MAIN) || vars.CI_RUNNER || 'ubuntu-latest' }}
     defaults:
       run:
         working-directory: szczur-radar-api
@@ -42,7 +50,8 @@ jobs:
             exit 1
           fi
       # Unit tests (*Test, Surefire) + integration tests (*IT, Failsafe) against
-      # a Testcontainers PostgreSQL 18 (Docker is preinstalled on ubuntu-latest).
+      # a Testcontainers PostgreSQL 18 (Docker is preinstalled on ubuntu-latest
+      # and installed on the self-hosted runners by tools/ci-runner/setup.sh).
       # Without Docker the integration tests fail rather than skip.
       - name: Build and test
         env:
@@ -53,7 +62,7 @@ jobs:
 
   web-unit:
     name: web unit tests (Vitest)
-    runs-on: ubuntu-latest
+    runs-on: ${{ (github.event_name == 'pull_request' && vars.CI_RUNNER_PR) || (github.event_name == 'push' && vars.CI_RUNNER_MAIN) || vars.CI_RUNNER || 'ubuntu-latest' }}
     defaults:
       run:
         working-directory: szczur-radar-web
@@ -71,7 +80,7 @@ jobs:
 
   web-container-smoke:
     name: web container smoke test
-    runs-on: ubuntu-latest
+    runs-on: ${{ (github.event_name == 'pull_request' && vars.CI_RUNNER_PR) || (github.event_name == 'push' && vars.CI_RUNNER_MAIN) || vars.CI_RUNNER || 'ubuntu-latest' }}
     # The image build runs `npm ci && npm run build` (vue-tsc typecheck + Vite
     # build) against the real production Dockerfile, so this job IS also the
     # frontend typecheck/build gate — no separate host build job, which would
@@ -81,7 +90,9 @@ jobs:
       - name: Build web image
         run: docker build -t szczur-radar-web ./szczur-radar-web
       - name: Run container
-        run: docker run -d --name web -e PORT=8080 -p 8080:8080 szczur-radar-web
+        run: |
+          docker rm -f web >/dev/null 2>&1 || true
+          docker run -d --name web -e PORT=8080 -p 8080:8080 szczur-radar-web
       - name: Smoke test /healthz and /
         run: |
           ready=0
@@ -99,11 +110,13 @@ jobs:
           curl -fsS http://localhost:8080/some/deep/route | grep -q 'id="app"'
       - name: Container logs
         if: always()
-        run: docker logs web || true
+        run: |
+          docker logs web || true
+          docker rm -f web >/dev/null 2>&1 || true
 
   api-container-smoke:
     name: api container smoke test
-    runs-on: ubuntu-latest
+    runs-on: ${{ (github.event_name == 'pull_request' && vars.CI_RUNNER_PR) || (github.event_name == 'push' && vars.CI_RUNNER_MAIN) || vars.CI_RUNNER || 'ubuntu-latest' }}
     # Builds the real szczur-radar-api/Dockerfile (the one Railway builds) and
     # runs it the way Railway does: the pre-deploy command (`migrate`) against
     # PostgreSQL 18, then the server (image ENTRYPOINT, no arguments) until
@@ -156,6 +169,7 @@ jobs:
             szczur-radar-api -jar target/szczur-radar-api.jar migrate
       - name: Run server
         run: |
+          docker rm -f api >/dev/null 2>&1 || true
           docker run -d --name api --network host -e PORT=8000 \
             -e PGHOST -e PGPORT -e PGDATABASE -e PGUSER -e PGPASSWORD \
             -e LLM_API_PROVIDER -e LLM_MODEL -e LLM_API_KEY \
@@ -175,11 +189,13 @@ jobs:
           curl -fsS http://localhost:8000/api/ready
       - name: Container logs
         if: always()
-        run: docker logs api || true
+        run: |
+          docker logs api || true
+          docker rm -f api >/dev/null 2>&1 || true
 
   db-backup-test:
     name: db backup test (tools/db-backup)
-    runs-on: ubuntu-latest
+    runs-on: ${{ (github.event_name == 'pull_request' && vars.CI_RUNNER_PR) || (github.event_name == 'push' && vars.CI_RUNNER_MAIN) || vars.CI_RUNNER || 'ubuntu-latest' }}
     # The backup cron (F-01) restores every dump and checks the app's tables by
     # name (tools/db-backup/restore-check.sh, backup.sh). tools/db-backup/test.sh
     # applies the repo's Flyway migrations to Postgres 18, runs a backup, its
@@ -192,7 +208,7 @@ jobs:
 
   pipeline-trigger-test:
     name: pipeline trigger test (tools/pipeline-trigger)
-    runs-on: ubuntu-latest
+    runs-on: ${{ (github.event_name == 'pull_request' && vars.CI_RUNNER_PR) || (github.event_name == 'push' && vars.CI_RUNNER_MAIN) || vars.CI_RUNNER || 'ubuntu-latest' }}
     # The daily-run cron (S-05) reports a failed night only through its exit code, and Railway gives
     # it no manual trigger. tools/pipeline-trigger/test.sh runs the image against a stub API in Docker
     # (wake-up retries, 409 busy, 401, every time limit, the result of each run as the exit code), so
@@ -204,7 +220,7 @@ jobs:
 
   railway-config:
     name: railway config (plan + apply IaC)
-    runs-on: ubuntu-latest
+    runs-on: ${{ (github.event_name == 'pull_request' && vars.CI_RUNNER_PR) || (github.event_name == 'push' && vars.CI_RUNNER_MAIN) || vars.CI_RUNNER || 'ubuntu-latest' }}
     # Applies .railway/railway.ts to the matching Railway environment. Because
     # Railway "Wait for CI" waits for this whole workflow, the service config
     # (e.g. preDeploy) is in place BEFORE Railway deploys the code.
