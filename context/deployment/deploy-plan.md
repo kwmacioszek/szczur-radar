@@ -890,6 +890,15 @@ Steps (plan `context/changes/backup-check-completeness/plan.md`, Phase 3, Manual
 6. **Cleanup.** Both variables deleted, the schedule back to `0 2 * * *`, `db-backup` redeployed (otherwise the old deployment still runs with the overrides). The result recorded here and commented on issue #74.
    Result: both variables deleted (`railway variable delete` has no `--skip-deploys`; it did not redeploy), the schedule already `0 2 * * *` from the IaC apply, then a redeploy of `db-backup` (`ae21e977`, SUCCESS, no run). The PR env keeps the API deployment `cc0f7d52` and the database with 37 posts until the PR env is deleted. Commented on issue #74.
 
+### Production dumps checked with this branch (2026-10-18)
+
+Plan Phase 1, manual check: `restore-check.sh` from the image built from `feature/backup-check-completeness` (`5186600`), run locally (restore runbook, step 2) on two production dumps the operator downloaded, each with its manifest. Both sha256 values match their manifests.
+
+- `monthly/szczur-radar-2026-10` (Flyway V5): `restore-check: OK in 1 s: Flyway V5, its 9 required tables, no unclassified table, no session rows, row counts within [before, after]`.
+- `daily/szczur-radar-20261018T020128Z` (Flyway V9): `restore-check: OK in 0 s: Flyway V9, its 11 required tables, no unclassified table, no session rows, row counts within [before, after]`.
+
+So the version-dependent requirement accepts production's older dumps, and the classification covers every table of the current schema.
+
 ### Runbook — after the merge (operator; tracked in issue #74, not in the plan's Progress)
 
 0. **Standing rules.** No merge to `main` while `/admin` shows a run `RUNNING`, not between about 00:30 and 01:30 UTC (section S-05), and not while the 02:00 UTC backup runs: the merge rebuilds `db-backup` (its watch path changes), and a new deployment replaces a running cron container.

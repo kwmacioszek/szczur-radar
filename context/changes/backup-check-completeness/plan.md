@@ -480,7 +480,7 @@ Porażka przed dumpem skraca przebieg zamiast go wydłużać.
 
 #### Manual
 
-- [ ] 1.4 restore-check.sh z gałęzi przechodzi na produkcyjnych dumpach monthly 2026-10 (V5) i najnowszym daily (V9)
+- [x] 1.4 restore-check.sh z gałęzi przechodzi na produkcyjnych dumpach monthly 2026-10 (V5) i najnowszym daily (V9)
 
 ### Phase 2: Odrzucanie podejrzanie pustej kopii
 
