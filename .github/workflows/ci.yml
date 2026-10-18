@@ -218,6 +218,18 @@ jobs:
       - name: Trigger tool against a stub API
         run: tools/pipeline-trigger/test.sh
 
+  deploy-gate-test:
+    name: deploy gate test (tools/deploy-gate)
+    runs-on: ubuntu-latest
+    # The gate of railway-config (S-14) decides alone whether an unattended apply
+    # may change production. tools/deploy-gate/test.sh runs its rules against plan
+    # fixtures (bash + jq, no Railway), so a rule that would let a destructive or
+    # source change through fails this PR instead of the next apply.
+    steps:
+      - uses: actions/checkout@v4
+      - name: Gate rules against plan fixtures
+        run: tools/deploy-gate/test.sh
+
   railway-config:
     name: railway config (plan + apply IaC)
     runs-on: ${{ (github.event_name == 'pull_request' && vars.CI_RUNNER_PR) || (github.event_name == 'push' && vars.CI_RUNNER_MAIN) || vars.CI_RUNNER || 'ubuntu-latest' }}
@@ -227,6 +239,19 @@ jobs:
     #   pull_request -> szczur-radar-pr-<N>   (never production)
     #   push to main -> production
     # Fork PRs get no secrets and no Railway PR env: skipped deliberately.
+    # It runs only after every test job is green (S-14): a red test skips the
+    # apply, and the failed workflow makes Wait for CI skip the code deploy too.
+    # This keeps "config before code": Wait for CI waits for the conclusion of
+    # the whole workflow, this job included, so the code still deploys after
+    # the apply.
+    needs:
+      - backend
+      - web-unit
+      - web-container-smoke
+      - api-container-smoke
+      - db-backup-test
+      - pipeline-trigger-test
+      - deploy-gate-test
     if: >-
       github.event_name == 'push' ||
       github.event.pull_request.head.repo.full_name == github.repository
@@ -253,7 +278,7 @@ jobs:
       - name: Install railway/iac SDK (repo root)
         run: npm ci
       - name: Install Railway CLI (pinned)
-        run: npm install --global @railway/cli@5.62.1 && railway --version
+        run: npm install --global @railway/cli@5.67.1 && railway --version
       - name: Check token
         run: |
           if [ -z "$RAILWAY_API_TOKEN" ]; then
@@ -354,40 +379,38 @@ jobs:
             fi
           done
       - name: Plan and gate
+        # The plan is pinned to plan.pin and the apply below applies exactly that
+        # file, so what is applied is what the gate checked (the CLI refuses a
+        # pinned plan once the environment changed since). The gate's rules live
+        # in tools/deploy-gate/ (gate.jq, tested by deploy-gate-test): only
+        # creates, updates, variable sets and domain creates, nothing destructive,
+        # no source change but turning on Wait for CI (source.checkSuites → true),
+        # on the plan's structured fields. The step summary lists the changes and
+        # the services the apply redeploys (restarts.txt).
         run: |
-          railway config plan --json > plan.json
-          jq -r '.diff // ""' plan.json
-          # The plan must target exactly the environment we resolved.
-          jq -e --arg env "$TARGET_ENV" --arg pid "$RAILWAY_PROJECT_ID" \
-            '.ok == true
-             and .currentEnvironment.environmentName == $env
-             and .currentEnvironment.projectId == $pid' plan.json >/dev/null || {
-            echo "::error::plan failed or targets the wrong environment (expected $TARGET_ENV)"
-            jq '{ok, currentEnvironment, diagnostics}' plan.json
-            exit 1
-          }
-          # Never destroy anything automatically (e.g. a database, bucket or variable).
-          blocked=$(jq '[.changeSet.changes[]? | select(.severity == "destructive" or .kind == "resource.delete")]' plan.json)
-          # Never rewrite an existing service's source/branch automatically, in ANY
-          # env: PR envs track the PR branch (IAC_SOURCE_BRANCH), production tracks
-          # main. Creating a resource is allowed (F-01: the db-backup cron service
-          # and its bucket; later e.g. S-05's): it rewrites nothing that exists. A
-          # create carries no details today, so it would pass anyway; skipping
-          # resource.create keeps that if the plan starts listing a new service's
-          # source. Deletes and destructive changes stay blocked above.
-          blocked=$(jq --argjson b "$blocked" \
-            '$b + [.changeSet.changes[]? | select(
-               .kind != "resource.create"
-               and (([.summary] + (.details // [])) | any(test("(^|[ ,])source([.]|$| )")))
-             )]' plan.json)
-          if [ "$(jq 'length' <<<"$blocked")" != "0" ]; then
-            echo "::error::plan contains destructive or source changes; refusing to apply to $TARGET_ENV"
-            jq . <<<"$blocked"
+          plan_status=0
+          railway config plan --json --out plan.pin > plan.json || plan_status=$?
+          jq -r '.diff // ""' plan.json || true
+          GATE_RESTARTS_FILE=restarts.txt \
+            tools/deploy-gate/gate.sh plan.json "$TARGET_ENV" "$RAILWAY_PROJECT_ID" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$plan_status" != "0" ]; then
+            echo "::error::railway config plan exited with $plan_status"
             exit 1
           fi
-          echo "PENDING_CHANGES=$(jq '[.changeSet.changes[]?] | length' plan.json)" >> "$GITHUB_ENV"
+          echo "PENDING_CHANGES=$(jq '.changeSet.changes | length' plan.json)" >> "$GITHUB_ENV"
+      - name: Keep the plan
+        # Variable values are redacted by the CLI (no --show-values); plan.pin is
+        # not kept.
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: railway-plan-${{ env.TARGET_ENV }}
+          path: plan.json
+          retention-days: 7
+          if-no-files-found: ignore
+          overwrite: true
       - name: Apply to ${{ env.TARGET_ENV }}
         if: env.PENDING_CHANGES != '0'
         # Never --confirm-destructive: a non-interactive apply then refuses
         # destructive changes even if the gate above missed one.
-        run: railway config apply --yes
+        run: railway config apply --plan plan.pin --yes

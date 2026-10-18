@@ -1,0 +1,33 @@
+{
+  "ok": true,
+  "command": "plan",
+  "file": ".railway/railway.ts",
+  "currentEnvironment": {
+    "projectId": "decf00e4-f5a4-43df-b338-6698be87c5a1",
+    "projectName": "szczur-radar",
+    "environmentId": "00000000-0000-4000-8000-000000000001",
+    "environmentName": "production",
+    "configEtag": "etag-fixture"
+  },
+  "changeSet": {
+    "version": 1,
+    "changes": [
+      {
+        "kind": "variable.delete",
+        "address": "service.pipeline-trigger",
+        "variable": "TRIGGER_HEARTBEAT_INTERVAL",
+        "previous": {
+          "type": "literal",
+          "value": "«hidden»"
+        },
+        "path": "resources.service.pipeline-trigger.variables.TRIGGER_HEARTBEAT_INTERVAL",
+        "summary": "Delete variable pipeline-trigger.TRIGGER_HEARTBEAT_INTERVAL",
+        "severity": "destructive",
+        "deployEffect": "deploy"
+      }
+    ],
+    "diagnostics": []
+  },
+  "diff": "~ Delete variable pipeline-trigger.TRIGGER_HEARTBEAT_INTERVAL",
+  "diagnostics": []
+}

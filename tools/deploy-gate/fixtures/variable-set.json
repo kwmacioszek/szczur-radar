@@ -1,0 +1,40 @@
+{
+  "ok": true,
+  "command": "plan",
+  "file": ".railway/railway.ts",
+  "currentEnvironment": {
+    "projectId": "decf00e4-f5a4-43df-b338-6698be87c5a1",
+    "projectName": "szczur-radar",
+    "environmentId": "00000000-0000-4000-8000-000000000001",
+    "environmentName": "production",
+    "configEtag": "etag-fixture"
+  },
+  "changeSet": {
+    "version": 1,
+    "changes": [
+      {
+        "kind": "variable.set",
+        "address": "service.szczur-radar-api",
+        "variable": "PIPELINE_LLM_CONCURRENCY",
+        "after": {
+          "type": "literal",
+          "value": "«hidden»"
+        },
+        "before": {
+          "type": "literal",
+          "value": "«hidden»"
+        },
+        "path": "resources.service.szczur-radar-api.variables.PIPELINE_LLM_CONCURRENCY",
+        "summary": "Update variable szczur-radar-api.PIPELINE_LLM_CONCURRENCY",
+        "details": [
+          "szczur-radar-api.PIPELINE_LLM_CONCURRENCY («hidden» → «hidden»)"
+        ],
+        "severity": "safe",
+        "deployEffect": "deploy"
+      }
+    ],
+    "diagnostics": []
+  },
+  "diff": "~ Update variable szczur-radar-api.PIPELINE_LLM_CONCURRENCY",
+  "diagnostics": []
+}

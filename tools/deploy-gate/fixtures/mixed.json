@@ -1,0 +1,53 @@
+{
+  "ok": true,
+  "command": "plan",
+  "file": ".railway/railway.ts",
+  "currentEnvironment": {
+    "projectId": "decf00e4-f5a4-43df-b338-6698be87c5a1",
+    "projectName": "szczur-radar",
+    "environmentId": "00000000-0000-4000-8000-000000000001",
+    "environmentName": "production",
+    "configEtag": "etag-fixture"
+  },
+  "changeSet": {
+    "version": 1,
+    "changes": [
+      {
+        "kind": "variable.set",
+        "address": "service.db-backup",
+        "variable": "BACKUP_KEEP_DAILY",
+        "after": {
+          "type": "literal",
+          "value": "«hidden»"
+        },
+        "before": {
+          "type": "literal",
+          "value": "«hidden»"
+        },
+        "path": "resources.service.db-backup.variables.BACKUP_KEEP_DAILY",
+        "summary": "Update variable db-backup.BACKUP_KEEP_DAILY",
+        "details": [
+          "db-backup.BACKUP_KEEP_DAILY («hidden» → «hidden»)"
+        ],
+        "severity": "safe",
+        "deployEffect": "deploy"
+      },
+      {
+        "kind": "variable.delete",
+        "address": "service.db-backup",
+        "variable": "BACKUP_TIMEOUT",
+        "previous": {
+          "type": "literal",
+          "value": "«hidden»"
+        },
+        "path": "resources.service.db-backup.variables.BACKUP_TIMEOUT",
+        "summary": "Delete variable db-backup.BACKUP_TIMEOUT",
+        "severity": "destructive",
+        "deployEffect": "deploy"
+      }
+    ],
+    "diagnostics": []
+  },
+  "diff": "~ Update variable db-backup.BACKUP_KEEP_DAILY\n~ Delete variable db-backup.BACKUP_TIMEOUT",
+  "diagnostics": []
+}

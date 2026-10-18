@@ -1,0 +1,27 @@
+{
+  "ok": true,
+  "command": "plan",
+  "file": ".railway/railway.ts",
+  "currentEnvironment": {
+    "projectId": "decf00e4-f5a4-43df-b338-6698be87c5a1",
+    "projectName": "szczur-radar",
+    "environmentId": "00000000-0000-4000-8000-000000000001",
+    "environmentName": "production",
+    "configEtag": "etag-fixture"
+  },
+  "changeSet": {
+    "version": 1,
+    "changes": [
+      {
+        "address": "service.szczur-radar-api",
+        "field": "deploy",
+        "summary": "Update szczur-radar-api deploy.sleepApplication",
+        "severity": "safe",
+        "deployEffect": "deploy"
+      }
+    ],
+    "diagnostics": []
+  },
+  "diff": "~ Update szczur-radar-api deploy.sleepApplication",
+  "diagnostics": []
+}

@@ -1,0 +1,51 @@
+{
+  "ok": true,
+  "command": "plan",
+  "file": ".railway/railway.ts",
+  "currentEnvironment": {
+    "projectId": "decf00e4-f5a4-43df-b338-6698be87c5a1",
+    "projectName": "szczur-radar",
+    "environmentId": "00000000-0000-4000-8000-000000000001",
+    "environmentName": "production",
+    "configEtag": "etag-fixture"
+  },
+  "changeSet": {
+    "version": 1,
+    "changes": [
+      {
+        "kind": "resource.create",
+        "address": "bucket.db-backups",
+        "resource": {
+          "type": "bucket",
+          "name": "db-backups",
+          "address": "bucket.db-backups"
+        },
+        "path": "resources.bucket.db-backups",
+        "summary": "Create bucket db-backups",
+        "severity": "safe",
+        "deployEffect": "none"
+      },
+      {
+        "kind": "resource.create",
+        "address": "service.db-backup",
+        "resource": {
+          "type": "service",
+          "name": "db-backup",
+          "address": "service.db-backup",
+          "source": {
+            "type": "github",
+            "repo": "kwmacioszek/szczur-radar",
+            "branch": "main"
+          }
+        },
+        "path": "resources.service.db-backup",
+        "summary": "Create service db-backup",
+        "severity": "safe",
+        "deployEffect": "deploy"
+      }
+    ],
+    "diagnostics": []
+  },
+  "diff": "+ Create bucket db-backups\n+ Create service db-backup",
+  "diagnostics": []
+}

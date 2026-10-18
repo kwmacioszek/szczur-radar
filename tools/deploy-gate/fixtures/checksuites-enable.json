@@ -1,0 +1,67 @@
+{
+  "ok": true,
+  "command": "plan",
+  "file": ".railway/railway.ts",
+  "currentEnvironment": {
+    "projectId": "decf00e4-f5a4-43df-b338-6698be87c5a1",
+    "projectName": "szczur-radar",
+    "environmentId": "00000000-0000-4000-8000-000000000001",
+    "environmentName": "production",
+    "configEtag": "etag-fixture"
+  },
+  "changeSet": {
+    "version": 1,
+    "changes": [
+      {
+        "kind": "resource.update",
+        "address": "service.pipeline-trigger",
+        "field": "source",
+        "before": {
+          "type": "github",
+          "repo": "kwmacioszek/szczur-radar",
+          "branch": "main"
+        },
+        "after": {
+          "type": "github",
+          "repo": "kwmacioszek/szczur-radar",
+          "branch": "main",
+          "checkSuites": true
+        },
+        "path": "resources.service.pipeline-trigger.source",
+        "summary": "Update pipeline-trigger source.checkSuites",
+        "severity": "safe",
+        "deployEffect": "deploy",
+        "details": [
+          "source.checkSuites (null → true)"
+        ]
+      },
+      {
+        "kind": "resource.update",
+        "address": "service.db-backup",
+        "field": "source",
+        "before": {
+          "type": "github",
+          "repo": "kwmacioszek/szczur-radar",
+          "branch": "main",
+          "checkSuites": false
+        },
+        "after": {
+          "type": "github",
+          "repo": "kwmacioszek/szczur-radar",
+          "branch": "main",
+          "checkSuites": true
+        },
+        "path": "resources.service.db-backup.source",
+        "summary": "Update db-backup source.checkSuites",
+        "severity": "safe",
+        "deployEffect": "deploy",
+        "details": [
+          "source.checkSuites (null → true)"
+        ]
+      }
+    ],
+    "diagnostics": []
+  },
+  "diff": "~ Update pipeline-trigger source.checkSuites\n~ Update db-backup source.checkSuites",
+  "diagnostics": []
+}
