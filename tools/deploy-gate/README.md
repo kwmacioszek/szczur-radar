@@ -10,10 +10,11 @@ Bramka wdrożeń Szczur Radar (S-14, `safe-deploy-gate`). Job CI `railway-config
 | `gate.jq` | reguły bramki; `gate.sh` uruchamia je na planie |
 | `wait-safe.sh` | strażnik: przed planem i apply czeka, aż żaden przebieg pipeline'u nie czeka ani nie trwa (`/api/deploy-safety`) |
 | `verify-apply.sh` | kontrola po apply: nowy deploy każdej restartowanej usługi i `/api/ready` 200 |
+| `verify-deploy.sh` | kontrola po deployu kodu (workflow `deploy-verify`): `/api/ready` i `/healthz`, alarm przez issue `deploy-health` |
 | `web-url.sh` | adres weba środowiska (jedno mapowanie nazwy środowiska na origin) |
 | `lib.sh` | wspólne helpery skryptów (format czasów, adres weba, zapytanie HTTP); dołączany przez `.`, nie uruchamiany |
 | `fixtures/*.json` | plany w formacie `railway config plan --json`, po jednym na przypadek testu; `pr-env-*.json` to prawdziwe plany z PR env |
-| `test.sh` | lokalny test bramki na fixture'ach oraz strażnika i kontroli na atrapach API i `railway`, bez Railway i bez Dockera |
+| `test.sh` | lokalny test bramki na fixture'ach oraz strażnika i kontroli na atrapach API, `railway` i `gh`, bez Railway, GitHuba i Dockera |
 
 ## Format planu (CLI 5.67.1)
 
@@ -137,6 +138,51 @@ Apply wdraża ponownie usługi, które zmienia (`restarts.txt` z `gate.sh`); 202
 
 Środowisko wyłącznie przez `RAILWAY_PROJECT_ID` i `RAILWAY_ENVIRONMENT_ID` (token workspace, nigdy `railway link`). Nazwy w `restarts.txt` to nazwy zasobów z `desiredGraph`, a te są nazwami usług Railway: `railway deployment list -s` szuka usługi po nazwie bez względu na wielkość liter albo po ID (`src/controllers/project.rs` w CLI v5.67.1), także bazy — Postgres (`postgres`, typ `database`) jest w Railway usługą z własnymi deployami. Wyjście `--json` to tablica `[{"id", "status", "createdAt", "meta"}]` od najnowszego (`src/commands/deployment.rs`). `check`: stdout to podsumowanie w markdownie (usługa, deploy, wynik), stderr log. Kod 2: złe wywołanie, brak pliku, migawka bez usługi z listy, brak `RAILWAY_*_ID` przy niepustej liście, zła nazwa usługi, zły czas albo adres.
 
+## `verify-deploy.sh` (kontrola po deployu kodu)
+
+```bash
+tools/deploy-gate/verify-deploy.sh >> "$GITHUB_STEP_SUMMARY"
+```
+
+Wait for CI uruchamia deploy kodu dopiero po zakończeniu `ci.yml`, więc żaden krok `ci.yml` go nie widzi. Railway zgłasza deploy w GitHubie jako Deployment środowiska `szczur-radar / <środowisko>`, a każdy jego status uruchamia workflow `.github/workflows/deploy-verify.yml`. Workflow wywołuje ten skrypt dla stanów `success`, `failure` i `error`, a pozostałe zdarzenia dają job `skipped`.
+
+| Zmienna | Znaczenie |
+| --- | --- |
+| `DEPLOY_STATE` | `success`, `failure` albo `error` (`deployment_status.state`); inna wartość: kod 2 |
+| `DEPLOY_ENVIRONMENT` | `deployment.environment`, np. `szczur-radar / production` |
+| `DEPLOY_SHA` | wdrożony commit (`deployment.sha`) |
+| `GH_TOKEN`, `GITHUB_REPOSITORY` | dla `gh` (`issues: write`); `GITHUB_SERVER_URL` i `GITHUB_RUN_ID` dają link do runu w issue |
+| `DEPLOY_GUARD_WAKE_TIMEOUT` | jak długo ponawiać sondy po `success` (domyślnie `3m`, wspólne okno obu sond) |
+| `DEPLOY_WEB_URL` | opcjonalna, tylko do testów i ręcznego użycia (workflow jej nie ustawia): origin sondowany zamiast adresu z `web-url.sh`; nazwa środowiska i tak musi być znana |
+
+- **Adres weba:** nazwa środowiska po `szczur-radar / ` → `web-url.sh`. Inny projekt albo nazwa nieznana `web-url.sh` → log „nothing to check” i kod 0, bez sond i bez `gh`. `target_url`/`environment_url` statusu Railway wskazują panel Railway, nie web, więc skrypt ich nie używa.
+- **`success`:** `GET <web>/api/ready` (API widzi bazę) i `GET <web>/healthz` (web działa), ponawiane co 2 s, póki usługa się budzi, do `DEPLOY_GUARD_WAKE_TIMEOUT`. Obie 200 → kod 0 bez wywołania `gh`.
+- **`failure`/`error`** (każda sonda raz, dla zapisu) **albo sonda bez 200 → alarm:**
+  1. `gh label create deploy-health --force` (tworzy etykietę, jeśli jej nie ma; bez wyścigu dwóch runów);
+  2. `gh issue list --label deploy-health --state open`: najstarsze otwarte issue z nazwą środowiska w tytule jako całym słowem (`szczur-radar-pr-8` nie pasuje do `szczur-radar-pr-81`) dostaje komentarz;
+  3. bez takiego issue powstaje nowe: „Niezdrowe wdrożenie: <środowisko>” (np. `Niezdrowe wdrożenie: production`) z etykietą `deploy-health`.
+
+  Treść issue albo komentarza: środowisko, commit, stan deployu, adres weba, link do runu i wynik każdej sondy. Ten sam raport trafia na stdout (podsumowanie joba).
+- **Deduplikacja:** Railway publikuje jeden GitHub Deployment na środowisko i commit, z kilkoma statusami bez nazwy usługi (po `success` może przyjść `failure`). Jeden deploy daje więc kilka runów, a wszystkie trafiają do jednego otwartego issue środowiska. Workflow nie ma grupy `concurrency`, bo anulowany oczekujący run kończy się `cancelled` przy commicie. Dwa runy w tej samej sekundzie mogą więc wyjątkowo otworzyć dwa issue.
+- **Zamykanie:** skrypt nie zamyka issue. Zamyka je człowiek po naprawie. Kolejny niezdrowy deploy tego środowiska otwiera wtedy nowe issue.
+
+| Kod | Znaczenie |
+| --- | --- |
+| `0` | sprawdzone: zdrowe, zaalarmowane (issue albo komentarz) albo nic do sprawdzenia (inny projekt, nieznane środowisko) |
+| `1` | `gh` zawiódł: alarm nie dotarł (`::error::` „is NOT reported in an issue”) |
+| `2` | złe wywołanie albo zmienna (stan, brak `GH_TOKEN`, `GITHUB_REPOSITORY`, SHA, czas, `DEPLOY_WEB_URL`) |
+
+Niezdrowy deploy nigdy nie daje kodu 1. Wait for CI patrzy na konkluzję każdego workflow przy commicie, a `deploy-verify` biegnie przy wdrożonym commicie. Czerwony run sprawiłby, że Railway pominie redeploy tego samego commita, który może być naprawą.
+
+### Workflow `deploy-verify`
+
+`.github/workflows/deploy-verify.yml`:
+- `on: deployment_status`;
+- job tylko dla stanów `success`/`failure`/`error` i środowisk `szczur-radar / …`, inaczej `skipped` (nie blokuje Wait for CI i nie zużywa minut);
+- `permissions: issues: write, contents: read`;
+- checkout na SHA deployu (`persist-credentials: false`), potem `verify-deploy.sh` z polami zdarzenia przekazanymi przez `env:`, nigdy wstawianymi w skrypt;
+- `timeout-minutes: 10`, bo przekroczenie limitu kończy run na czerwono.
+
 ## W CI
 
 Job `railway-config` startuje dopiero po wszystkich jobach testowych (`needs:`, w tym `deploy-gate-test`), ma `permissions: contents: read, actions: read` i `timeout-minutes: 115` (strażnik 90 min + kontrola 15 min + `/api/ready` 3 min + plan i apply). Limity są w `env:` joba; ich suma musi się mieścić w 2 h okna Wait for CI. Kolejność:
@@ -169,7 +215,8 @@ Wymaga `bash`, `jq`, `curl` i `python3` (bez Dockera, bez Railway, bez GitHuba),
 Dalej, na atrapach:
 - `web-url.sh`: `production`, `szczur-radar-pr-81`, nieznana nazwa albo brak argumentu (2);
 - `wait-safe.sh` na atrapie API (mały serwer HTTP w Pythonie ze skryptowanymi odpowiedziami): `safe`; `queued` → `running` → `safe`; zajęty do limitu i do terminu krótszego niż limit (1); termin minięty na starcie (1, bez zapytania); 401 i 404 (0 z ostrzeżeniem); odmowa połączenia → 503 → `safe`; stałe 503 i stała odmowa połączenia (0 z ostrzeżeniem); 200 bez werdyktu i 403 (1); `DEPLOY_GUARD=off`; złe wartości (2);
-- `verify-apply.sh` na atrapie `railway` w `PATH` (skryptowane `deployment list --json`, sprawdza też `-p`/`-e` z ID) i atrapie API: migawka (ID, `null`, ponowienie po błędzie CLI); `SUCCESS`, `SLEEPING`; `FAILED`, `CRASHED`, `SKIPPED`, `NEEDS_APPROVAL`, nieznany status (1, bez `/api/ready`); `WAITING` i `QUEUED` (przekazane); stare ID → `INITIALIZING` → `DEPLOYING` → `SUCCESS`; `REMOVED` → nowszy `SUCCESS`; usługa tworzona przez apply (`null` w migawce); to samo ID do limitu (1, „did not trigger a deploy”); błąd CLI do limitu (1); `DEPLOYING` do limitu (1); `/api/ready` 503 (1); pusta lista (tylko `/api/ready`, 503 → 200); złe wywołania (2).
+- `verify-apply.sh` na atrapie `railway` w `PATH` (skryptowane `deployment list --json`, sprawdza też `-p`/`-e` z ID) i atrapie API: migawka (ID, `null`, ponowienie po błędzie CLI); `SUCCESS`, `SLEEPING`; `FAILED`, `CRASHED`, `SKIPPED`, `NEEDS_APPROVAL`, nieznany status (1, bez `/api/ready`); `WAITING` i `QUEUED` (przekazane); stare ID → `INITIALIZING` → `DEPLOYING` → `SUCCESS`; `REMOVED` → nowszy `SUCCESS`; usługa tworzona przez apply (`null` w migawce); to samo ID do limitu (1, „did not trigger a deploy”); błąd CLI do limitu (1); `DEPLOYING` do limitu (1); `/api/ready` 503 (1); pusta lista (tylko `/api/ready`, 503 → 200); złe wywołania (2);
+- `verify-deploy.sh` na atrapie API i atrapie `gh` w `PATH` (zapisuje wywołania i treść issue): `success` z obiema sondami 200, także po 503 przy budzeniu (bez `gh`); `success` z `/api/ready` 503 do limitu (etykieta, nowe issue z commitem, stanem, sondami i linkiem do runu); `failure` (nowe issue); `error` z oboma sondami 503 (każda zapytana raz); otwarte issue środowiska (komentarz w najstarszym zamiast nowego; issue `szczur-radar-pr-81` nie liczy się dla `szczur-radar-pr-8`); inny projekt albo nieznane środowisko (0, bez `gh`); błąd `gh` (1); złe wywołania (2).
 
 CI uruchamia ten test przy każdym PR i pushu na `main` (job `deploy gate test`).
 
