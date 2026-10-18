@@ -488,4 +488,4 @@ Brak: parsowanie raz przy starcie.
 #### Manual
 
 - [ ] 4.3 W Railway PR env `LLM_TIMEOUT=120` zatrzymuje pre-deploy `migrate` blokiem `APPLICATION FAILED TO START`, a po usunięciu zmiennej deploy przechodzi
-- [ ] 4.4 Odczyt produkcji: ustawienia czasu spełniają nową regułę, wynik w komentarzu issue S-10 (`LLM_TIMEOUT`, a jeśli ustawione, także `PIPELINE_STALL_TIMEOUT` i `ACTIVATION_LINK_TTL`)
+- [x] 4.4 Odczyt produkcji: ustawienia czasu spełniają nową regułę, wynik w komentarzu issue S-10 (`LLM_TIMEOUT`, a jeśli ustawione, także `PIPELINE_STALL_TIMEOUT` i `ACTIVATION_LINK_TTL`) — #69 (issuecomment-6252645199)
