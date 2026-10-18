@@ -272,7 +272,9 @@ export default defineRailway(() => {
     rootDirectory: "tools/pipeline-trigger",
     build: { watchPatterns: ["tools/pipeline-trigger/**"] },
     replicas: { [REGION]: 1 },
-    deploy: { cronSchedule: "30 0 * * *", restartPolicyType: "NEVER", limitOverride: PIPELINE_TRIGGER_LIMITS },
+    // TEMPORARY (S-14 check 4.2/4.5, reverted by the next commit): a PR-env-only
+    // change that redeploys this cron, to exercise apply + the check after it.
+    deploy: { cronSchedule: process.env.IAC_SOURCE_BRANCH ? "31 0 * * *" : "30 0 * * *", restartPolicyType: "NEVER", limitOverride: PIPELINE_TRIGGER_LIMITS },
     env: {
       API_PRIVATE_DOMAIN: api.env.RAILWAY_PRIVATE_DOMAIN,
       API_PORT: API_INTERNAL_PORT,
