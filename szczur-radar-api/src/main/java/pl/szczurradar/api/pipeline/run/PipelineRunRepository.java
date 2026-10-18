@@ -20,6 +20,16 @@ public interface PipelineRunRepository extends JpaRepository<PipelineRun, UUID> 
 		return existsByStatusIn(List.of(RunStatus.QUEUED, RunStatus.RUNNING));
 	}
 
+	/** Whether a run is running. */
+	default boolean existsRunning() {
+		return existsByStatusIn(List.of(RunStatus.RUNNING));
+	}
+
+	/** Whether a run is queued (waiting behind a running one, or not yet taken by the queue). */
+	default boolean existsQueued() {
+		return existsByStatusIn(List.of(RunStatus.QUEUED));
+	}
+
 	boolean existsByStatusIn(Collection<RunStatus> statuses);
 
 	/** A page of runs, newest first; equal creation times are ordered by id (index {@code ix_pipeline_runs_created}). */

@@ -715,7 +715,7 @@ Dokumentacja opisuje nową bramkę, a runbook — co robić, gdy strażnik czeka
 
 #### Automated
 
-- [ ] 3.1 `cd szczur-radar-api && ./mvnw -B verify` przechodzi (w tym `DeploySafetyIT` i `AuthorizationCompletenessIT`)
+- [x] 3.1 `cd szczur-radar-api && ./mvnw -B verify` przechodzi (w tym `DeploySafetyIT` i `AuthorizationCompletenessIT`)
 - [ ] 3.2 Job `backend` zielony w CI
 
 #### Manual
