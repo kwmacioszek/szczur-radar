@@ -17,8 +17,10 @@ import pl.szczurradar.api.settings.SettingText;
 
 /**
  * {@code PIPELINE_STALL_TIMEOUT}: how long a run of this instance may go without progress before
- * {@link RunWatchdog} stops it. Optional, with a unit, e.g. {@code 39m} or {@code 1h}; a bare number
- * (Spring would read it as milliseconds), zero or less, or more than {@code 24h} fails the start.
+ * {@link RunWatchdog} stops it. Optional, by the one duration rule ({@link DurationSetting}: a whole number
+ * with a lower-case unit, e.g. {@code 39m} or {@code 1h}), from {@link #MIN 1ms} to {@link #MAX 1d}; a
+ * bare number (Spring would read it as milliseconds), ISO-8601 or a value out of range fails the server's
+ * start with an {@link InvalidSettingsException} (Spring Boot's {@code APPLICATION FAILED TO START} block).
  *
  * <p>The default is the longest single LLM call ({@link TransportRetry#maxCallDuration} for
  * {@code LLM_TIMEOUT} and {@code LLM_SERVICE_TIER}) plus {@link #MARGIN}, and at least

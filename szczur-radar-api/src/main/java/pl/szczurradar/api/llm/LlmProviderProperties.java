@@ -32,9 +32,15 @@ import pl.szczurradar.api.settings.SettingText;
  *       only {@code openrouter}, which routes it to OpenAI's flex tier);
  *   <li>{@code LLM_REASONING_EFFORT}: {@code none}, {@code minimal}, {@code low}, {@code medium},
  *       {@code high} or {@code xhigh} (only {@code openrouter}); unset = the provider's default;
- *   <li>{@code LLM_TIMEOUT}: time limit of one HTTP attempt, e.g. {@code 120s} or {@code 5m}
- *       (default {@code 120s}, at most {@code 30m}; flex is slower, give it more).
+ *   <li>{@code LLM_TIMEOUT}: time limit of one HTTP attempt, by the one duration rule
+ *       ({@link DurationSetting}: a whole number with a lower-case unit, e.g. {@code 120s} or {@code 5m};
+ *       a bare number or ISO-8601 is refused), from {@code 10s} to {@code 30m} (default {@code 120s};
+ *       flex is slower, give it more).
  * </ul>
+ *
+ * <p>An invalid value fails the start of the server and of every operator command (also the pre-deploy
+ * {@code migrate}) with an {@link InvalidSettingsException}: Spring Boot's
+ * {@code APPLICATION FAILED TO START} block, exit code 2 for a command.
  *
  * <p>The provider name also activates the Spring profile {@code application-<provider>.properties},
  * which maps these settings onto Embabel's properties and switches the other providers off.

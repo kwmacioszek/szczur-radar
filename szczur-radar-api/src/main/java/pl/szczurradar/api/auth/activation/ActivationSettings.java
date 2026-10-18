@@ -22,9 +22,10 @@ import pl.szczurradar.api.settings.SettingText;
  *   <li>{@code WEB_PUBLIC_URL} (required): the web app's public address, scheme, host and optional
  *       port only, e.g. {@code https://szczur-radar-web-production.up.railway.app}; a trailing
  *       {@code /} is dropped;
- *   <li>{@code ACTIVATION_LINK_TTL} (optional, default {@code 12h}): with a unit, e.g. {@code 12h}
- *       or {@code 90m}, from {@code 1m} to {@code 7d}. A bare number is refused: Spring would read it
- *       as milliseconds.
+ *   <li>{@code ACTIVATION_LINK_TTL} (optional, default {@code 12h}): by the one duration rule
+ *       ({@link DurationSetting}: a whole number with a lower-case unit, e.g. {@code 12h} or
+ *       {@code 90m}), from {@code 1m} to {@code 7d}. A bare number (Spring would read it as
+ *       milliseconds) and ISO-8601 are refused.
  * </ul>
  *
  * <p>Only the operator commands that issue links read them, before their Spring context starts; the

@@ -470,8 +470,8 @@ Brak: parsowanie raz przy starcie.
 
 #### Automated
 
-- [x] 3.1 Nowe i zmienione testy przechodzą: `cd szczur-radar-api && ./mvnw -B test`
-- [x] 3.2 Pełna bramka: `cd szczur-radar-api && ./mvnw -B verify`
+- [x] 3.1 Nowe i zmienione testy przechodzą: `cd szczur-radar-api && ./mvnw -B test` — 51245f0
+- [x] 3.2 Pełna bramka: `cd szczur-radar-api && ./mvnw -B verify` — 51245f0
 
 #### Manual
 
@@ -483,7 +483,7 @@ Brak: parsowanie raz przy starcie.
 #### Automated
 
 - [ ] 4.1 Pełna bramka CI na PR zielona (`backend`, `api-container-smoke`, `railway-config` i pozostałe joby `ci.yml`)
-- [ ] 4.2 Opis `LLM_TIMEOUT` w README podaje zakres `10s`–`30m` (`grep -n "10s" szczur-radar-api/README.md` trafia wiersz `LLM_TIMEOUT`)
+- [x] 4.2 Opis `LLM_TIMEOUT` w README podaje zakres `10s`–`30m` (`grep -n "10s" szczur-radar-api/README.md` trafia wiersz `LLM_TIMEOUT`)
 
 #### Manual
 
