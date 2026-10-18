@@ -19,7 +19,7 @@ Szczur Radar collects investment posts (Wykop, later Reddit), classifies them wi
 - `context/changes/bootstrap-verification/` — scaffold and audit logs per module.
 - `tools/db-backup/` — the database backup job (F-01): a `postgres:18` + `rclone` image with `backup.sh` (`pg_dump`, a full restore check, upload, retention), `restore-check.sh` (also `--serve` for a test with the app) and `nas-retention.sh`; `test.sh` tests it locally with Docker. See its `README.md`.
 - `tools/pipeline-trigger/` — the daily pipeline trigger (S-05): an `alpine` + `curl` + `jq` image whose `trigger.sh` wakes the API over the private network, starts the daily run (`POST /internal/pipeline-runs/daily`), waits for it and exits with its result; `test.sh` tests it against a fake API in Docker. See its `README.md`.
-- Whenever context/foundation/roadmap.md changes, update `tools/render_roadmap.swift` and regenerate `docs/visuals/roadmap-mvp.png`
+- Whenever context/foundation/roadmap.md changes, update the data in `tools/render_roadmap_svg.py` and regenerate `docs/visuals/roadmap.svg` (`python3 tools/render_roadmap_svg.py`)
 
 ## Build, Test, and Development Commands
 
