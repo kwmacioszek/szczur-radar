@@ -1,6 +1,7 @@
 package pl.szczurradar.api.llm;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 
 import java.net.InetSocketAddress;
@@ -18,11 +19,16 @@ import com.openai.client.okhttp.OpenAIOkHttpClient;
 import com.openai.models.chat.completions.ChatCompletionCreateParams;
 import com.sun.net.httpserver.HttpServer;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.WebApplicationType;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.ConfigurableEnvironment;
+
+import pl.szczurradar.api.settings.InvalidSettingsException;
 
 /**
  * The provider mapping in application.properties and application-&lt;provider&gt;.properties, for
@@ -181,7 +187,7 @@ class LlmProviderConfigTest {
 	@Test
 	void aBareTimeoutNeedsAUnitBecauseSpringWouldReadMilliseconds() {
 		// The incident of 2026-10-06: 120 meant 120 ms, and every call timed out.
-		assertThatIllegalStateException()
+		assertThatExceptionOfType(InvalidSettingsException.class)
 			.isThrownBy(() -> environment("openrouter", "openai/gpt-6-luna", "very-secret-key", "LLM_TIMEOUT=120"))
 			.withMessageStartingWith("Invalid LLM configuration: ")
 			.withMessageContaining("LLM_TIMEOUT needs a unit, e.g. 300s or 5m (got '120'; a bare number would be"
@@ -238,12 +244,41 @@ class LlmProviderConfigTest {
 	}
 
 	/**
+	 * What the operator sees when a setting is invalid: Boot's report block naming the problem, without
+	 * Spring's "Application run failed" stack trace and without the key.
+	 */
+	@Test
+	@ExtendWith(OutputCaptureExtension.class)
+	void anInvalidSettingIsReportedWithoutAStackTraceOrTheKey(CapturedOutput output) {
+		List<String> args = arguments("openrouter", "openai/gpt-6-luna", "synthetic-key-3f9c1a", "LLM_TIMEOUT=120");
+
+		assertThatExceptionOfType(InvalidSettingsException.class).isThrownBy(() -> start(args));
+
+		assertThat(output).contains("APPLICATION FAILED TO START", "LLM_TIMEOUT needs a unit",
+				"Fix the named setting(s) and start again")
+			.doesNotContain("Application run failed")
+			.doesNotContain("synthetic-key-3f9c1a");
+	}
+
+	/**
 	 * Starts only the configuration of the application (its property files and the startup check),
-	 * with the given settings; {@code null} means "set to empty", overriding any real variable. The
-	 * optional call settings are empty unless given as {@code NAME=value} in {@code callSettings}.
+	 * with the given settings (see {@link #arguments}). The negative cases fail the start on purpose, so
+	 * neither Spring's failure log nor Boot's failure report is logged.
 	 */
 	private static ConfigurableEnvironment environment(String provider, String model, String apiKey,
 			String... callSettings) {
+		List<String> args = arguments(provider, model, apiKey, callSettings);
+		args.add("--logging.level.org.springframework.boot.SpringApplication=OFF");
+		args.add("--logging.level.org.springframework.boot.diagnostics=OFF");
+		return start(args);
+	}
+
+	/**
+	 * The settings as command-line arguments; {@code null} means "set to empty", overriding any real
+	 * variable. The optional call settings are empty unless given as {@code NAME=value} in
+	 * {@code callSettings}.
+	 */
+	private static List<String> arguments(String provider, String model, String apiKey, String... callSettings) {
 		List<String> args = new ArrayList<>();
 		for (Map.Entry<String, String> setting : Map.of(LlmProviderProperties.PROVIDER, provider,
 				LlmProviderProperties.MODEL, model == null ? "" : model, LlmProviderProperties.API_KEY,
@@ -256,8 +291,10 @@ class LlmProviderConfigTest {
 			calls.put(setting.substring(0, setting.indexOf('=')), setting.substring(setting.indexOf('=') + 1));
 		}
 		calls.forEach((name, value) -> args.add("--" + name + "=" + value));
-		// The negative cases fail the start on purpose; don't let Spring log each one as a failure.
-		args.add("--logging.level.org.springframework.boot.SpringApplication=OFF");
+		return args;
+	}
+
+	private static ConfigurableEnvironment start(List<String> args) {
 		SpringApplication application = new SpringApplication(ConfigurationOnly.class);
 		application.setWebApplicationType(WebApplicationType.NONE);
 		try (ConfigurableApplicationContext context = application.run(args.toArray(String[]::new))) {

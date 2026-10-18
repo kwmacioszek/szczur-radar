@@ -457,10 +457,10 @@ Brak: parsowanie raz przy starcie.
 
 #### Automated
 
-- [x] 2.1 Testy jednostkowe parsera i ustawień przechodzą: `cd szczur-radar-api && ./mvnw -B test`
-- [x] 2.2 Pełna bramka: `cd szczur-radar-api && ./mvnw -B verify`
-- [x] 2.3 `DurationStyle.detectAndParse` nie występuje już w `src/main` (`grep -rn "detectAndParse" szczur-radar-api/src/main` nic nie zwraca)
-- [x] 2.4 `settings/` nie importuje nic z aplikacji (`grep -rn "import pl.szczurradar" szczur-radar-api/src/main/java/pl/szczurradar/api/settings` nic nie zwraca)
+- [x] 2.1 Testy jednostkowe parsera i ustawień przechodzą: `cd szczur-radar-api && ./mvnw -B test` — 0825b0f
+- [x] 2.2 Pełna bramka: `cd szczur-radar-api && ./mvnw -B verify` — 0825b0f
+- [x] 2.3 `DurationStyle.detectAndParse` nie występuje już w `src/main` (`grep -rn "detectAndParse" szczur-radar-api/src/main` nic nie zwraca) — 0825b0f
+- [x] 2.4 `settings/` nie importuje nic z aplikacji (`grep -rn "import pl.szczurradar" szczur-radar-api/src/main/java/pl/szczurradar/api/settings` nic nie zwraca) — 0825b0f
 
 #### Manual
 
@@ -470,8 +470,8 @@ Brak: parsowanie raz przy starcie.
 
 #### Automated
 
-- [ ] 3.1 Nowe i zmienione testy przechodzą: `cd szczur-radar-api && ./mvnw -B test`
-- [ ] 3.2 Pełna bramka: `cd szczur-radar-api && ./mvnw -B verify`
+- [x] 3.1 Nowe i zmienione testy przechodzą: `cd szczur-radar-api && ./mvnw -B test`
+- [x] 3.2 Pełna bramka: `cd szczur-radar-api && ./mvnw -B verify`
 
 #### Manual
 

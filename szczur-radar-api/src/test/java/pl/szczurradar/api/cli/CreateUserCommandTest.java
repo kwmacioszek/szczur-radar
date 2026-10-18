@@ -21,6 +21,7 @@ import pl.szczurradar.api.auth.activation.ActivationLinks;
 import pl.szczurradar.api.auth.activation.ActivationSettings;
 import pl.szczurradar.api.auth.activation.IssueOutcome;
 import pl.szczurradar.api.auth.activation.IssuedLink;
+import pl.szczurradar.api.settings.InvalidSettingsException;
 import pl.szczurradar.api.user.Role;
 
 /**
@@ -41,8 +42,10 @@ class CreateUserCommandTest {
 
 	private final AtomicInteger contextStarts = new AtomicInteger();
 
-	/** What the command's context starter returns; {@code null}: the start fails. */
+	/** What the command's context starter returns; {@code null}: the start fails with {@link #startFailure}. */
 	private ConfigurableApplicationContext context;
+
+	private RuntimeException startFailure = new IllegalStateException("no database in a unit test");
 
 	private final ByteArrayOutputStream outBytes = new ByteArrayOutputStream();
 
@@ -51,7 +54,7 @@ class CreateUserCommandTest {
 	private final CreateUserCommand command = new CreateUserCommand(environment::get, args -> {
 		contextStarts.incrementAndGet();
 		if (context == null) {
-			throw new IllegalStateException("no database in a unit test");
+			throw startFailure;
 		}
 		return context;
 	}, new PrintStream(outBytes, true, StandardCharsets.UTF_8),
@@ -164,6 +167,19 @@ class CreateUserCommandTest {
 		assertThat(code).isEqualTo(ExitCode.FAILED);
 		assertThat(contextStarts).hasValue(1);
 		assertThat(stderr()).contains("create-user failed: no database in a unit test");
+		assertThat(stdout()).isEmpty();
+	}
+
+	@Test
+	void anInvalidSettingThatFailsTheContextStartIsAConfigurationError() {
+		startFailure = new InvalidSettingsException("Invalid LLM configuration: LLM_TIMEOUT needs a unit");
+
+		ExitCode code = command.run(new String[] { "--email", "jan@example.com" });
+
+		assertThat(code).isEqualTo(ExitCode.USAGE);
+		assertThat(contextStarts).hasValue(1);
+		assertThat(stderr()).contains("create-user: invalid configuration: Invalid LLM configuration: LLM_TIMEOUT"
+				+ " needs a unit").doesNotContain("failed");
 		assertThat(stdout()).isEmpty();
 	}
 

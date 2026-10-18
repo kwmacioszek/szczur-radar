@@ -11,6 +11,7 @@ import org.jspecify.annotations.Nullable;
 import org.springframework.core.env.PropertyResolver;
 
 import pl.szczurradar.api.settings.DurationSetting;
+import pl.szczurradar.api.settings.InvalidSettingsException;
 import pl.szczurradar.api.settings.SettingText;
 
 /**
@@ -77,7 +78,7 @@ public record LlmProviderProperties(Provider provider, String model, String apiK
 	/**
 	 * Reads and validates the settings.
 	 *
-	 * @throws IllegalStateException listing every problem; the message never contains the key
+	 * @throws InvalidSettingsException listing every problem; the message never contains the key
 	 */
 	public static LlmProviderProperties from(PropertyResolver environment) {
 		String providerId = SettingText.trimmed(environment.getProperty(PROVIDER));
@@ -110,7 +111,7 @@ public record LlmProviderProperties(Provider provider, String model, String apiK
 		Duration timeout = timeoutText.isEmpty() ? DEFAULT_TIMEOUT
 				: DurationSetting.parse(TIMEOUT, timeoutText, MIN_TIMEOUT, MAX_TIMEOUT, problems);
 		if (!problems.isEmpty()) {
-			throw new IllegalStateException("Invalid LLM configuration: " + String.join("; ", problems)
+			throw new InvalidSettingsException("Invalid LLM configuration: " + String.join("; ", problems)
 					+ ". See szczur-radar-api/README.md (LLM provider).");
 		}
 		return new LlmProviderProperties(provider, model, apiKey, serviceTier, reasoningEffort, timeout);

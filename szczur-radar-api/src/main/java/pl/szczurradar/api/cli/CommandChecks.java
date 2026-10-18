@@ -9,13 +9,14 @@ import java.util.function.Function;
 
 import org.jspecify.annotations.Nullable;
 
+import pl.szczurradar.api.settings.InvalidSettingsException;
 import pl.szczurradar.api.user.Emails;
 
 /**
  * What the operator commands check before their Spring context starts, so that a usage or
  * configuration error never reaches the database: the options, the e-mail and the database settings.
  * A failed check is a usage error ({@link ExitCode#USAGE}); the checks that print say why on
- * {@code err}.
+ * {@code err}. Also how a command ends when its context fails to start ({@link #contextFailed}).
  */
 final class CommandChecks {
 
@@ -82,6 +83,29 @@ final class CommandChecks {
 			return false;
 		}
 		return true;
+	}
+
+	/**
+	 * Ends a command whose Spring context failed to start or failed inside it. Spring Boot has already
+	 * logged the failure (for an invalid setting the {@code APPLICATION FAILED TO START} block), so this
+	 * prints one short line on {@code err}:
+	 *
+	 * <ul>
+	 *   <li>an {@link InvalidSettingsException} anywhere in the cause chain (e.g. {@code LLM_TIMEOUT=120}):
+	 *       {@code <command>: invalid configuration: <its message>}, {@link ExitCode#USAGE};
+	 *   <li>anything else (e.g. the database is unreachable, a migration fails):
+	 *       {@code <command> failed: <message>}, {@link ExitCode#FAILED}.
+	 * </ul>
+	 */
+	static ExitCode contextFailed(CommandType command, RuntimeException failure, PrintStream err) {
+		for (Throwable cause = failure; cause != null; cause = cause.getCause()) {
+			if (cause instanceof InvalidSettingsException invalid) {
+				err.println(command.cliName() + ": invalid configuration: " + invalid.getMessage());
+				return ExitCode.USAGE;
+			}
+		}
+		err.println(command.cliName() + " failed: " + failure.getMessage());
+		return ExitCode.FAILED;
 	}
 
 	private static boolean isBlank(@Nullable String value) {

@@ -18,8 +18,8 @@ import pl.szczurradar.api.SzczurRadarApiApplication;
  *
  * <p>Exit codes: {@link ExitCode#OK} created, {@link ExitCode#REFUSED} (see {@link AdminBootstrap}) or
  * {@link ExitCode#FAILED}, {@link ExitCode#USAGE} for a usage or configuration error (missing/invalid
- * e-mail, no database configuration, no interactive console). Usage errors are detected before any
- * database work.
+ * e-mail, no database configuration, no interactive console, an invalid setting such as
+ * {@code LLM_TIMEOUT} that fails the context start). Usage errors are detected before any database work.
  */
 public final class CreateAdminCommand implements Command {
 
@@ -77,8 +77,7 @@ public final class CreateAdminCommand implements Command {
 			return context.getBean(AdminBootstrap.class).createAdmin(email, prompt, out, err);
 		}
 		catch (RuntimeException ex) {
-			err.println(type().cliName() + " failed: " + ex.getMessage());
-			return ExitCode.FAILED;
+			return CommandChecks.contextFailed(type(), ex, err);
 		}
 	}
 

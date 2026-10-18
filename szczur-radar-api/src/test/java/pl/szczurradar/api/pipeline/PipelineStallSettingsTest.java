@@ -1,6 +1,7 @@
 package pl.szczurradar.api.pipeline;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 
 import java.time.Duration;
@@ -15,6 +16,7 @@ import org.springframework.mock.env.MockEnvironment;
 import pl.szczurradar.api.llm.LlmProviderProperties;
 import pl.szczurradar.api.llm.Provider;
 import pl.szczurradar.api.llm.ServiceTier;
+import pl.szczurradar.api.settings.InvalidSettingsException;
 
 /**
  * {@code PIPELINE_STALL_TIMEOUT}: the default follows the longest single LLM call, a shorter explicit
@@ -73,7 +75,8 @@ class PipelineStallSettingsTest {
 
 	@Test
 	void aBareNumberFailsTheStartNamingTheSetting() {
-		assertThatIllegalStateException().isThrownBy(() -> PipelineStallSettings.from(environment("15"), DEFAULT_CALLS))
+		assertThatExceptionOfType(InvalidSettingsException.class)
+			.isThrownBy(() -> PipelineStallSettings.from(environment("15"), DEFAULT_CALLS))
 			.withMessageStartingWith("Invalid configuration: PIPELINE_STALL_TIMEOUT needs a unit")
 			.withMessageContaining("'15'")
 			.withMessageContaining("milliseconds")

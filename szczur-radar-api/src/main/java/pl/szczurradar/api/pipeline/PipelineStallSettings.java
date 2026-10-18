@@ -12,6 +12,7 @@ import pl.szczurradar.api.llm.LlmProviderProperties;
 import pl.szczurradar.api.llm.transport.TransportRetry;
 import pl.szczurradar.api.pipeline.state.Durations;
 import pl.szczurradar.api.settings.DurationSetting;
+import pl.szczurradar.api.settings.InvalidSettingsException;
 import pl.szczurradar.api.settings.SettingText;
 
 /**
@@ -60,7 +61,7 @@ public final class PipelineStallSettings {
 	 * Reads and validates the setting; logs a warning when it is set below {@link #minimum()}.
 	 *
 	 * @param llm the call settings the default and the minimum follow
-	 * @throws IllegalStateException naming the setting when its value is invalid
+	 * @throws InvalidSettingsException naming the setting when its value is invalid
 	 */
 	public static PipelineStallSettings from(PropertyResolver environment, LlmProviderProperties llm) {
 		Duration minimum = TransportRetry.maxCallDuration(llm.timeout(), llm.serviceTier()).plus(MARGIN);
@@ -104,7 +105,7 @@ public final class PipelineStallSettings {
 		List<String> problems = new ArrayList<>();
 		Duration timeout = DurationSetting.parse(NAME, text, MIN, MAX, problems);
 		if (timeout == null) {
-			throw new IllegalStateException("Invalid configuration: " + problems.getFirst()
+			throw new InvalidSettingsException("Invalid configuration: " + problems.getFirst()
 					+ ", or unset for the default (" + Durations.format(defaultTimeout) + ").");
 		}
 		return timeout;
