@@ -29,10 +29,14 @@ fi
 systemctl enable --now docker
 
 step "daily docker prune"
+# Prunes only when the disk fills up. A prune by age would also drop the base images every day
+# (`until` compares the image's creation time, not its pull time), and each run would pull them again.
+# `until=24h` keeps images just built by a running job (built, then started in a later step).
 cat >/etc/cron.daily/docker-prune <<'EOF'
 #!/bin/sh
-# Images, build cache and stopped containers older than 3 days; jobs rebuild what they need.
-docker system prune -af --filter until=72h >/dev/null
+used=$(df --output=pcent / | tail -1 | tr -dc 0-9)
+[ "$used" -ge 70 ] || exit 0
+docker system prune -af --filter until=24h >/dev/null
 docker volume prune -f >/dev/null
 EOF
 chmod 755 /etc/cron.daily/docker-prune
