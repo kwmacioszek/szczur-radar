@@ -494,9 +494,9 @@ Porażka przed dumpem skraca przebieg zamiast go wydłużać.
 
 #### Automated
 
-- [x] 3.1 tools/db-backup/test.sh przechodzi
-- [ ] 3.2 Job CI railway-config zielony w PR (bez zmian destructive, resource.delete i źródła)
-- [ ] 3.3 Cały workflow CI zielony w PR
+- [x] 3.1 tools/db-backup/test.sh przechodzi — e0f9a38
+- [x] 3.2 Job CI railway-config zielony w PR (bez zmian destructive, resource.delete i źródła) — e0f9a38
+- [x] 3.3 Cały workflow CI zielony w PR — e0f9a38
 
 #### Manual
 
