@@ -728,7 +728,7 @@ Dokumentacja opisuje nową bramkę, a runbook — co robić, gdy strażnik czeka
 #### Automated
 
 - [x] 4.1 `tools/deploy-gate/test.sh` przechodzi ze wszystkimi przypadkami strażnika i kontroli — cf80cb3
-- [ ] 4.2 `railway-config` w PR env zielony; w logu kolejno: strażnik (`safe`), plan i gate, apply, kontrola po apply
+- [x] 4.2 `railway-config` w PR env zielony; w logu kolejno: strażnik (`safe`), plan i gate, apply, kontrola po apply — cf80cb3
 
 #### Manual
 
