@@ -563,7 +563,7 @@ const assessments: { id: string; title: string; assessment: NonNullable<PostItem
     <section aria-labelledby="bell-title">
       <h2 id="bell-title">Dzwoneczek</h2>
       <ul class="samples">
-        <li v-for="bell in bells" :key="bell.id" class="bell-sample" :class="{ open: bellOpen[bell.id] }">
+        <li v-for="bell in bells" :key="bell.id" class="bell-sample" :class="{ open: bellOpen[bell.id], list: bell.items.length > 0 }">
           <p class="sample-title">{{ bell.title }}</p>
           <div class="bell-bar">
             <NotificationMenu
@@ -707,6 +707,11 @@ h3 {
 
 .bell-sample.open {
   min-height: 24rem;
+}
+
+/* Six notifications wrap to about 38rem at 375 px. */
+.bell-sample.open.list {
+  min-height: 40rem;
 }
 
 /* A bar like AppHeader's: positioned, so the panel opens below it, aligned to its right edge. */
