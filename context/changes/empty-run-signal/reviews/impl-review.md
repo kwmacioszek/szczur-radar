@@ -43,7 +43,7 @@ Automated criteria (local, after merging S-14): `./mvnw -B verify` 621 + 217 BUI
 - **Location**: N/A (branch `feature/empty-run-signal` vs `origin/main`)
 - **Detail**: Progress 4.2 is open: CI runs for `23d7262` and `55b66a5` are queued. Meanwhile `origin/main` gained `llm-config-fail-fast` and `backup-check-completeness`; `git merge-tree` shows conflicts in `context/deployment/deploy-plan.md` and `tools/render_roadmap_svg.py`, and `PipelineAgentIT.java` / `pipeline/CLAUDE.md` auto-merge, so the merged code has not been tested.
 - **Fix**: Merge `origin/main` again (keep both sides' sections; recompute the roadmap legend), rerun `./mvnw -B verify`, `tools/pipeline-trigger/test.sh`, `tools/deploy-gate/test.sh`, `npm test && npm run build`, push, and tick 4.2 when CI is green.
-- **Decision**: PENDING
+- **Decision**: FIXED (Fix now) — `origin/main` merged in `4c6cc77` (deploy-plan: S-15 section kept before S-08; roadmap legend 3 done / 1 in progress / 4 ready, svg regenerated). Locally green after the merge: `./mvnw -B verify` 687 + 217, `tools/deploy-gate/test.sh`, `tools/pipeline-trigger/test.sh`, `npm test` 398, `npm run build`. 4.2 stays open until CI on PR #80 is green.
 
 ### F3 — A failing counter write hides the empty-source error
 
