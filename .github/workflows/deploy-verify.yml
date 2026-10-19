@@ -1,0 +1,72 @@
+name: deploy-verify
+
+# The health check after a code deploy (S-14, safe-deploy-gate; tools/deploy-gate/README.md).
+#
+# Why a separate file: Railway's Wait for CI starts the code deploy only after the
+# CI workflow (ci.yml) has ended, so no step of ci.yml can see that deploy. Railway
+# reports it as GitHub Deployments ("szczur-radar / <environment>") whose statuses
+# trigger this workflow; tools/deploy-gate/verify-deploy.sh then asks the
+# environment's web for /api/ready and /healthz and opens (or comments on) an issue
+# labelled deploy-health when the deploy failed or a probe did. A human closes it.
+#
+# Why it never ends red: Wait for CI waits for the conclusion of EVERY workflow at
+# a commit, and this one runs at the deployed commit. A red run would make Railway
+# skip a redeploy of the same commit (`railway redeploy`, possibly the fix). An
+# unhealthy deploy therefore ends green with an issue; only a failing gh (the
+# alarm did not get through) fails the run. Events other than a final state, or of
+# another Railway project, skip the job (skipped never blocks Wait for CI and uses
+# no runner minutes). No concurrency group either: a pending run cancelled by a
+# newer one would end "cancelled" at the commit.
+on: deployment_status
+
+jobs:
+  verify:
+    name: deploy verify (/api/ready, /healthz)
+    if: >-
+      (github.event.deployment_status.state == 'success' ||
+       github.event.deployment_status.state == 'failure' ||
+       github.event.deployment_status.state == 'error') &&
+      startsWith(github.event.deployment.environment, 'szczur-radar / ')
+    # The runner switch of ci.yml (CI_RUNNER_PR / CI_RUNNER_MAIN never match a
+    # deployment_status event, so CI_RUNNER decides).
+    runs-on: ${{ (github.event_name == 'pull_request' && vars.CI_RUNNER_PR) || (github.event_name == 'push' && vars.CI_RUNNER_MAIN) || vars.CI_RUNNER || 'ubuntu-latest' }}
+    # gh opens or comments on the deploy-health issue (and creates the label);
+    # checkout needs contents: read. A permissions block drops every other scope.
+    permissions:
+      issues: write
+      contents: read
+    # Above the gh download, the probes' wake-up window (DEPLOY_GUARD_WAKE_TIMEOUT) and gh: a
+    # timed-out run ends red, which this workflow must not.
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.deployment.sha }}
+          persist-credentials: false
+      - name: Ensure gh (pinned)
+        # The self-hosted runners have no gh (tools/ci-runner/setup.sh installs
+        # none), GitHub's runners do. Without it: the pinned release, checked
+        # against its SHA-256, on PATH for this job only. A failed download fails
+        # the run like a failing gh: the alarm could not get through.
+        env:
+          GH_VERSION: 2.102.0
+          GH_SHA256: bb766f710eef8ede859c18578c72c327597cd4c8a85b06001b1f3843c6019386
+        run: |
+          if command -v gh >/dev/null; then gh --version | head -1; exit 0; fi
+          dir="$RUNNER_TEMP/gh"
+          mkdir -p "$dir"
+          curl -fsSL --retry 3 -o "$dir/gh.tar.gz" \
+            "https://github.com/cli/cli/releases/download/v$GH_VERSION/gh_${GH_VERSION}_linux_amd64.tar.gz"
+          echo "$GH_SHA256  $dir/gh.tar.gz" | sha256sum -c -
+          tar -xzf "$dir/gh.tar.gz" -C "$dir" --strip-components=1
+          echo "$dir/bin" >> "$GITHUB_PATH"
+          "$dir/bin/gh" --version | head -1
+      - name: Check the deployed environment
+        # Event fields only through env (never interpolated into the script).
+        env:
+          DEPLOY_STATE: ${{ github.event.deployment_status.state }}
+          DEPLOY_ENVIRONMENT: ${{ github.event.deployment.environment }}
+          DEPLOY_SHA: ${{ github.event.deployment.sha }}
+          GH_TOKEN: ${{ github.token }}
+          DEPLOY_GUARD_WAKE_TIMEOUT: 3m
+        run: tools/deploy-gate/verify-deploy.sh >> "$GITHUB_STEP_SUMMARY"

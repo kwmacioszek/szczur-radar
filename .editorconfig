@@ -36,6 +36,9 @@ tab_width = 4
 [{*.sql,*.swift,*.sh}]
 indent_size = 4
 
+[*.py]
+indent_size = 4
+
 [*.properties]
 indent_size = 4
 

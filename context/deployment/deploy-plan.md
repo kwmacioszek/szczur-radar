@@ -144,6 +144,8 @@ The API is now a Spring Boot 4 jar on Java 25, built from `szczur-radar-api/Dock
 3. `/api/ready` 200 on the public address; admin login works.
 4. Comment the result on the change's issue; the human closes the issue after this verification.
 
+**Update 2026-10-18 (S-14):** part of steps 1 and 3 is automated. `railway-config` runs only after every test job, its gate (`tools/deploy-gate/`) refuses anything destructive or a source change, and its check after the apply waits for every redeployed service and `/api/ready` 200. After the code deploy, the workflow `deploy-verify` probes `/api/ready` and `/healthz` and opens an issue labelled `deploy-health` when the deploy or a probe fails (section S-14). Reading the diff, the build and pre-deploy logs and the admin login stay manual.
+
 ### Rollback
 
 Revert only the image switch: delete `szczur-radar-api/Dockerfile` (Railpack takes over again) and restore `start: "java $JAVA_OPTS -jar target/szczur-radar-api.jar"` in `.railway/railway.ts`; check the plan before the apply. Do not restore the `Postgres-PITR` bucket declaration: PITR stays disabled — re-enabling it is a separate decision and does not bring back deleted backups.
@@ -344,7 +346,7 @@ Restoring a database is an operator action (`infrastructure.md`). The agent prep
   - Fixed by hand: the operator attached a volume in the dashboard. Two other attempts failed: `railway volume add` panicked in CLI 5.64.2, and Railway MCP `create-volume` returned an id but created nothing.
   - Then `railway redeploy --from-source` of `postgres`, `szczur-radar-api` (its pre-deploy `migrate` created V1–V5) and `szczur-radar-web`.
   - Expect the same in a PR env of any PR that changes neither the API nor the web. Its `db-backup` used to fail at every scheduled run; since the implementation review it skips every environment but production.
-- **Wait for CI is not set on a created service.** Railway left `checkSuites` unset on the `db-backup` that IaC created. The next plan showed `source.checkSuites (null → true)`, and the gate refused it as a source change (CI on `2b21c4a`, `railway-config` red). On `main` this would have turned every CI run after the first one red and stopped the API and web deploys. Fix: `db-backup` no longer declares `checkSuites`. CI does not test `tools/db-backup` anyway; `test.sh` does, locally.
+- **Wait for CI is not set on a created service.** Railway left `checkSuites` unset on the `db-backup` that IaC created. The next plan showed `source.checkSuites (null → true)`, and the gate refused it as a source change (CI on `2b21c4a`, `railway-config` red). On `main` this would have turned every CI run after the first one red and stopped the API and web deploys. Fix: `db-backup` no longer declares `checkSuites`. CI does not test `tools/db-backup` anyway; `test.sh` does, locally. **Update 2026-10-18 (S-14):** superseded. The gate (`tools/deploy-gate/`) lets exactly `source.checkSuites (null → true)` through, both crons declare `checkSuites: true`, and CI tests both cron tools (`db-backup-test`, `pipeline-trigger-test`); section S-14.
 - **The first deployment of the cron service stayed `QUEUED`** for about 11 minutes, with no region assigned. It was replaced when the operator saved a temporary schedule in the dashboard; the new one was built from `tools/db-backup/Dockerfile` within a minute. The cause is not known.
 - **Runs**, on a temporary schedule (`*/5`, then `*/10`):
   - 20:16 UTC, no database: `backup: FAILED: database postgres.railway.internal:5432 is not accepting connections`, status `CRASHED`.
@@ -461,10 +463,10 @@ PR #44 was squash-merged as `b7ee254` (11:25 UTC). CI on `main` applied `+ Creat
 | `szczur-radar-api` | `PIPELINE_TRIGGER_TOKEN` | set by the operator with `--stdin` (`openssl rand -hex 32`), **sealed**. At least 32 characters, otherwise the server does not start; unset, every `/internal/**` request is 401 | unset; set by hand only to verify the cron. `.railway/railway.ts` declares it with `preserve()` |
 | `pipeline-trigger` | `PIPELINE_TRIGGER_TOKEN` | a reference to the API's variable (IaC), never a value | the same |
 | `pipeline-trigger` | `API_PRIVATE_DOMAIN`, `API_PORT` | references from IaC (`RAILWAY_PRIVATE_DOMAIN` of the API, `8000`) | the same |
-| `pipeline-trigger` | `TRIGGER_IN_ANY_ENVIRONMENT` | unset | `true` only during a verification; `preserve()` keeps a hand-set value |
+| `pipeline-trigger` | `TRIGGER_IN_ANY_ENVIRONMENT` | unset | `true` only during a verification; IaC ignores a hand-set value (`variables.ignore` pattern `pipeline-trigger/TRIGGER_*` since S-14; before it, `preserve()`) |
 | `pipeline-trigger` | `TRIGGER_*` durations | defaults | defaults |
 
-- `pipeline-trigger` has its own resource cap `PIPELINE_TRIGGER_LIMITS` (0.5 vCPU / 0.5 GB; caps are per service since #52) and no `checkSuites`, for the same reason as `db-backup`.
+- `pipeline-trigger` has its own resource cap `PIPELINE_TRIGGER_LIMITS` (0.5 vCPU / 0.5 GB; caps are per service since #52) and no `checkSuites`, for the same reason as `db-backup`. **Update 2026-10-18 (S-14):** both crons declare `checkSuites: true` (section S-14).
 - Not known before production: whether a reference to a **sealed** variable of another service resolves (Railway's docs do not say). Step 2 of the runbook checks it. **Update 2026-10-14:** it resolves. The CLI cannot show it (a sealed value is `null` on the API and the cron's reference reads as an empty string), but at run time the cron sends the right token: the API answered 202 to the manual run and to the first night's run. No `preserve()` fallback is needed.
 
 ### No merge at night
@@ -734,7 +736,7 @@ PR #49 was squash-merged as `54c4fc2` (13:22 UTC), after S-05 (#50).
 | --- | --- | --- | --- |
 | `szczur-radar-api` | `PIPELINE_STALL_TIMEOUT` | unset: the default follows the LLM settings, `max(15m, the longest single LLM call + 5m)`, which is `39m` with `LLM_TIMEOUT=300s` and `flex`. Optional, always with a unit. A bare number, zero or less, or more than `24h` stops the server's start (the message names the variable); a value below that bound starts with a WARN. `.railway/railway.ts` declares it with `preserve()`, which never creates a value | unset: `15m`, since the PR env runs without `LLM_TIMEOUT` and `LLM_SERVICE_TIER` (section F-03) |
 | `szczur-radar-api` | `RAILWAY_DEPLOYMENT_ID` | set by Railway in every deployment, never by hand; not declared in IaC | the same |
-| `pipeline-trigger` | `TRIGGER_HEARTBEAT_INTERVAL` | unset (default `5m`); not declared, like the other `TRIGGER_*` durations | unset. Set by hand only for a verification, and deleted before the next push: an undeclared variable makes the IaC plan propose `Delete variable`, which the CI gate refuses (`tools/pipeline-trigger/README.md`) |
+| `pipeline-trigger` | `TRIGGER_HEARTBEAT_INTERVAL` | unset (default `5m`); not declared, like the other `TRIGGER_*` durations | unset. Set by hand only for a verification, and deleted before the next push: an undeclared variable makes the IaC plan propose `Delete variable`, which the CI gate refuses (`tools/pipeline-trigger/README.md`). **Update 2026-10-18 (S-14):** no longer needed: IaC ignores `pipeline-trigger/TRIGGER_*` (`variables.ignore`), so a hand-set value survives a push (section S-14) |
 
 Only the server reads `PIPELINE_STALL_TIMEOUT`; the pre-deploy `migrate` and the operator commands do not.
 
@@ -840,6 +842,188 @@ PR #60 was merged by the operator as `5b6eabb` (2026-10-17 15:02 UTC).
    - A run that ends `failed`, `interrupted`, or `partial` with a dead post or a technical error gives each admin one notification. A click opens the run's page and the count drops.
    - Record which case the first nights were.
 5. **Record and close.** Comment the results on issue #19: the merge commit, deployment IDs, the plan output, the first night's heartbeat and progress lines, the notifications seen. Close the issue only after this production verification.
+
+## self-hosted-pr-runner: CI na runnerach w Proxmoxie i na PC
+
+**Status (2026-10-19): in PR #83 (issue #30), not merged.** The GitHub Actions minutes of the private repo ran out on 2026-10-18 (about 1800 billed minutes in 30 days on a 2000-minute plan): no job started ("The job was not started because … your spending limit needs to be increased"), every workflow failed and Railway skipped every deploy. CI now runs on self-hosted runners; tool and runbook: `tools/ci-runner/README.md`.
+
+### How it works
+
+- **Switch.** Every job's `runs-on` in `.github/workflows/ci.yml` takes the runner label from repository variables, first non-empty wins: `CI_RUNNER_PR` (pull_request), `CI_RUNNER_MAIN` (push to `main`), `CI_RUNNER` (both), else `ubuntu-latest`. A change applies to the next run, a new commit or `gh run rerun <id>` (rerun reads the variables again). A branch must contain the switch (GitHub reads `runs-on` from the branch's `ci.yml`).
+- **Pool.** `CI_RUNNER=szczur-ci` since 2026-10-18. Every runner has the label `szczur-ci` and its own VM with its own Docker daemon (the smoke tests use fixed host ports 8080/8000/5432 and container names `web`/`api`):
+  - `github-runner-1`: VM `github-runner` (Ubuntu 24.04, 4 vCPU, 7 GB, 61 GB disk) in the home Proxmox, always on; installed with `tools/ci-runner/setup.sh`;
+  - `ci-pc-1-1` … `ci-pc-4-1`: KVM VMs (4 vCPU, 8 GB, 60 GB each) on the developer's Ubuntu PC, autostart with the PC; managed with `tools/ci-runner/pc_runners.py` (`create` / `delete` / `status`) as the `ci-admin` user (groups `libvirt`, `kvm`, no sudo).
+- **Who gets a job.** GitHub gives a job to any idle online runner with the label; there is no priority. PC on: a run takes about 2 min (bounded by the `backend` job). PC off or in Windows: its runners are `offline` and Proxmox takes every job, one after another, about 7 min a run — no variable change (verified 2026-10-19).
+
+### Variables (names only)
+
+- Repository variables: `CI_RUNNER` (set: `szczur-ci`), `CI_RUNNER_PR`, `CI_RUNNER_MAIN` (unset). Secrets unchanged; the runners receive the same CI secrets as GitHub's runners did (`LLM_API_KEY`, `RAILWAY_API_TOKEN`, `WYKOP_KEY`, `WYKOP_SECRET`).
+
+### Runbook (operator)
+
+1. **No runner online** (Proxmox VM down; jobs `queued`, PR checks pending, Railway deploy `WAITING`): start the VM or the runner service (`systemctl status 'actions.runner.*'` on it). GitHub cancels a queued job after 24 h and Railway skips the deploy after 2 h — after a fix, `gh run rerun <id>`.
+2. **Back to GitHub's runners** (minutes renewed or a budget set in Billing): `gh variable delete CI_RUNNER`. To keep only the production gate on GitHub: `gh variable set CI_RUNNER_MAIN --body ubuntu-latest`.
+3. **Shutting the PC down**: wait until `pc_runners.py status` shows no `busy` runner `ci-pc-*`; a job cut off by the shutdown fails after a few minutes — `gh run rerun <id>`.
+4. **Runner gone from GitHub** (offline more than 14 days): Proxmox — delete `/home/gha/actions-runner-N` and run `setup.sh` again with a new token; PC — `pc_runners.py delete` and `create`.
+5. **Known risk** (accepted, 2026-10-18): the runner VMs see the home LAN (no VLAN/firewall isolation yet) and hold the CI secrets above, including the Railway workspace token. Workflows from forks are off in the repo settings, so only branches of this repo run. The runners are persistent: the tool cache (e.g. the `railway` CLI that `railway-config` installs globally), the Docker image cache and `_work` outlive a job, so a PR job could plant something a later push-to-`main` job runs with `RAILWAY_API_TOKEN`. No escalation today (same-repo PR jobs already get the same token), but if the trust model changes (more collaborators, Dependabot, a production-only token), keep `CI_RUNNER_MAIN=ubuntu-latest` or move to ephemeral runners.
+
+### Runbook — after the merge (operator; tracked in issue #30, not in the plan's Progress)
+
+1. **Other open PRs** get the switch only after merging `main` into their branch; until then their jobs ask for `ubuntu-latest` and fail on the used-up minutes. When resolving a conflict in `ci.yml`, a new job (e.g. S-14's `deploy-gate-test`) gets the same `runs-on` expression.
+2. **Push to `main`.** With `CI_RUNNER` set, the production gate runs on the pool too: check that the run's jobs ran on `github-runner-1` / `ci-pc-*` (`gh api repos/kwmacioszek/szczur-radar/actions/runs/<id>/jobs`) and that Railway deployed production after it.
+3. **Record and close.** Comment the merge commit, the run id and the deploys on issue #30 and close it.
+
+## S-14: bezpieczna bramka wdrożeń (safe-deploy-gate)
+
+**Status (2026-10-18): in the PR env (#81), not merged.** Change: `context/archive/2026-10-18-safe-deploy-gate/`, issue #73. S-14 closes the gaps C4–C7 of the post-MVP audit:
+- the IaC apply ran in parallel with the tests (C4);
+- the cron services deployed at the push, before CI (C5);
+- nothing checked health after an apply or a code deploy (C6);
+- a tuning variable set by hand stopped every deploy on `main`, because the plan proposed `variable.delete` (C7).
+
+The gate's logic moved from inline `jq` in `ci.yml` to the tested tool `tools/deploy-gate/`. Its `README.md` is the reference for every script, exit code and limit; this section is the operator's view.
+
+### Order of the jobs
+
+- **Tests first.** The six test jobs and the new `deploy-gate-test` run in parallel. `railway-config` has `needs:` on all seven, so a red test skips the apply. The failed workflow then makes Wait for CI skip the code deploy too. "Config before code" still holds: Wait for CI waits for the whole workflow, `railway-config` included.
+- **`railway-config`** (CLI `@railway/cli@5.67.1`, `timeout-minutes: 115`), in this order:
+  1. "Web address and deploy window": the environment's web origin (`web-url.sh`) and the guard's deadline;
+  2. the deploy guard (`wait-safe.sh`), always, also when the plan will be empty, because it protects the code deploy too;
+  3. "Plan and gate": `railway config plan --json --out plan.pin > plan.json`, then `gate.sh`. The job summary lists the changes and the services the apply redeploys;
+  4. `plan.json` kept as the artifact `railway-plan-<environment>` (7 days, values redacted by the CLI), also when the gate refuses;
+  5. only when the plan has changes: a snapshot of the redeployed services' latest deployments, then `railway config apply --plan plan.pin --yes`. It applies exactly the checked plan, and refuses it if the environment changed since. Never `--confirm-destructive`;
+  6. only after an apply: the check after the apply (`verify-apply.sh check`).
+- **After the workflow** Railway deploys the code (Wait for CI). Each deploy status triggers the workflow `deploy-verify` (below).
+- The guard stands before the plan: a pinned plan must live seconds, not up to 90 min of waiting.
+
+### The gate's rules
+
+`railway config plan --json` in CLI 5.67.1 carries only four fields per change: `kind`, `severity`, `summary`, `details`. Railway rewrites the change list with a server-side preview, and the CLI's output passes through the runner's `Change` struct (`src/commands/config/runner.rs`), which drops `address`, `field`, `before`/`after` and `deployEffect`. The rules therefore read `details` and `summary` (plan amendment of 2026-10-18, variant A). In this order:
+
+1. **Environment.** `ok == true`, and the plan's environment name and project ID are the target's; otherwise the whole plan is refused.
+2. **Destruction.** Every change with `severity == "destructive"` is refused (`resource.delete`, `variable.delete` among them), and so is a change with no or an unknown `severity`.
+3. **Allowed kinds** (fail closed): `resource.create`, `resource.update`, `variable.set`, `domain.create`. Any other `kind` is refused whatever its `severity`.
+4. **Source.** A `resource.update` that touches the source (a detail starting with `source.`, or `source` in `summary`) passes only when every detail is exactly `source.checkSuites (null → true)` or `(false → true)`: turning Wait for CI on. `source.branch`, `checkSuites true → null`, or `checkSuites` together with another source field are refused.
+5. **Unknown format.** A change without `kind`, or a `resource.update` without `details` as a list of strings, is refused. The CLI gives no details for a rename or `networking`, so those are refused too.
+6. **Restarts.** Every change counts as a redeploy of its resource (the CLI gives no `deployEffect`). The gate announces these and does not refuse them, Postgres included. The resource is found in the plan's `desiredGraph` from the change's `summary`; a restart whose resource cannot be found is refused. `restarts.txt` holds the names of the redeployed resources of type `service` or `database` (e.g. `db-backup`, `postgres`). A bucket has no deployments, so it appears in the summary as "no deploy" and not in the file.
+
+Exit codes: 0 allowed (also an empty plan), 1 refused (`::error::` lines with the refused changes), 2 a bad call or an unreadable plan.
+
+### The deploy guard
+
+A deploy interrupts a pipeline run that is queued or running. The guard asks `GET <web>/api/deploy-safety` and holds the plan, the apply and, through the workflow's conclusion, the code deploy.
+
+- **The endpoint** (`pipeline/api/DeploySafetyController`) is public and listed in `PUBLIC_ROUTES` ("CI deploy gate"). It reveals only whether a run is queued or running:
+  - 200 `{"safe":true,"reason":null}`;
+  - 200 `{"safe":false,"reason":"pipeline_running"}`, which wins over `"pipeline_queued"` when both are true;
+  - 503 `{"status":"unavailable"}` without the database, like `/api/ready`.
+- **Busy.** The guard logs the reason and asks again every `DEPLOY_GUARD_INTERVAL` (`60s`), up to `DEPLOY_GUARD_TIMEOUT` (`90m`) or the deadline (below), whichever comes first. Then it fails red with an `::error::` that points to this runbook.
+- **The deadline.** Railway's Wait for CI gives up 2 h after the push. The guard therefore also has an absolute deadline: the workflow run's `created_at` (the same for every attempt of the run) + 120 min − `DEPLOY_VERIFY_TIMEOUT` (`15m`) − `DEPLOY_GUARD_WAKE_TIMEOUT` (`3m`, the /api/ready wait after the apply) − 5 min, i.e. 97 min after the run was created. A deadline already past at the start fails at once, without a request.
+- **No decision means pass, with a warning:**
+  - 401 or 404: the API has no such route (an older version). An API from before S-14 answers **401**, not 404: deny-by-default refuses a route outside `PUBLIC_ROUTES` without a session. The first merge of S-14 to production passes this way.
+  - No connection or a 5xx: retried every 2 s up to `DEPLOY_GUARD_WAKE_TIMEOUT` (`3m`), which wakes a sleeping API. After that the guard passes with "API unavailable": no run can be in progress, and the deploy may be the fix.
+  - Railway's edge answers 404 "Application not found" for a web service that is not deployed. The guard cannot tell that from an older API and passes with the "older API" warning (seen in the PR env, below).
+- **Fails red:** a 200 without a readable verdict (e.g. HTML, or `safe:false` without a reason), any other status (3xx, 403), and a bad setting (exit 2).
+- **Off switch:** the **repository variable** `DEPLOY_GUARD=off` (GitHub → Settings → Secrets and variables → Actions → Variables, or `gh variable set DEPLOY_GUARD --body off`). The guard then skips with a warning on every later run, PR envs included. Delete the variable as soon as the reason is gone (`gh variable delete DEPLOY_GUARD`). It is the emergency switch without a revert.
+- **What it does not cover**, so the human rules stay: a run started between `safe:true` and the start of the deploy is still interrupted (S-06 notifies the admins), and the guard knows nothing of the night's schedule. Keep "no merge while `/admin` shows a run `RUNNING`" and "no merge between about 00:30 and 01:30 UTC" (section S-05).
+- **Cost.** The guard adds about 1 min of Actions time per push. Waiting costs minutes only when a push meets a run, and its polling keeps the API awake meanwhile.
+
+### Runbook — the guard waits or fails (operator)
+
+1. **It waits.** The `railway-config` log shows `pipeline_running` or `pipeline_queued` once a minute. Usually nothing is wrong: an admin's run or the night's run (about 00:30–01:30 UTC) is in progress. Watch it in `/admin`. The guard passes on its first poll after the run ends, and the code deploys after the workflow.
+2. **A zombie run.** A run stays `running` or `queued` in the database while nothing executes it (audit A2; the fix is S-11). The S-06 watchdog stops a run without progress only on the instance that runs it. Restart the API (`railway redeploy -s szczur-radar-api -e <env> -y`): its start-up recovery marks unfinished runs `interrupted` and puts their posts back. Then check that `curl -s <web>/api/deploy-safety` says `{"safe":true,"reason":null}`.
+   - If the guard is still waiting, it passes on its next poll.
+   - If it has already failed: **"Re-run failed jobs" works only before the deadline**, because the deadline counts from the run's creation, not from the re-run, and a re-run past it fails at once. Past the deadline, use a new push (on `main`: a new merge, by a human), or `railway redeploy --from-source -s <service> -e <env>` for the services whose code must deploy. A redeploy does not apply the commit's `.railway/railway.ts`, so when the commit changes it, only a new push applies it. Not verified yet: whether Wait for CI also holds back a `railway redeploy` of a commit whose workflow ended red (`deploy-verify` assumes it does). If the redeploy ends `SKIPPED`, push again.
+3. **The guard itself is wrong** (e.g. the endpoint answers `safe:false` with no run in `/admin`, and a restart does not help): set `DEPLOY_GUARD=off`, re-run before the deadline or push again, fix the cause, then delete the variable.
+
+**A guard that fails past the deadline.** The workflow at that commit ends red, so the code of that commit is not deployed. Railway marks its GitHub Deployment `inactive`, which triggers no workflow: `deploy-verify` stays silent and no alarm comes. The red `railway-config` job (GitHub's notice of a failed workflow) is the only signal. Recover as in step 2.
+
+### The check after the apply
+
+The incident of 2026-10-12 (a "safe" apply restarted Postgres, which hung for 9 min before anyone looked; section F-01) is now caught in minutes:
+
+- Before the apply, `verify-apply.sh snapshot` stores the latest deployment ID of every service in `restarts.txt`. After it, `verify-apply.sh check` waits for a new deployment of each one (`railway deployment list --json --limit 1`, by project and environment ID, never `railway link`):
+  - `SUCCESS` or `SLEEPING`: deployed;
+  - `WAITING` or `QUEUED`: "handed over to deploy-verify". Wait for CI holds a deploy of a service with `checkSuites` until this workflow ends, so waiting here would deadlock;
+  - `BUILDING`, `DEPLOYING`, `INITIALIZING`: wait; `REMOVED`, `REMOVING`: replaced by a newer one, so ask again;
+  - `FAILED`, `CRASHED`, `SKIPPED`, `NEEDS_APPROVAL` or an unknown status: the job fails;
+  - the same ID until the limit: the job fails ("the apply did not trigger a deploy of <service>").
+- The limit for all services together is `DEPLOY_VERIFY_TIMEOUT` (`15m`). Then `GET <web>/api/ready` must answer 200 within `DEPLOY_GUARD_WAKE_TIMEOUT` (`3m`), otherwise the job fails.
+- An empty `restarts.txt` checks only `/api/ready`.
+- After a failed apply (the job is red anyway) the step "API after a failed apply" still asks `/api/ready`: a failed apply may already have restarted services, Postgres included, and the log then says whether the API still reaches its database.
+- The sum of the limits (guard 90 min + check 15 min + `/api/ready` 3 min + plan and apply) must stay inside the 2 h window: never raise one without lowering another.
+
+### `deploy-verify` and the `deploy-health` issue
+
+No step of `ci.yml` can see the code deploy, which starts only after the workflow ends. Railway reports each environment's deploy as a GitHub Deployment `szczur-radar / <environment>`, and every status of it triggers `.github/workflows/deploy-verify.yml` (`on: deployment_status`).
+
+- The job runs only for the states `success`, `failure` and `error` of a `szczur-radar / …` environment. Other events give a `skipped` job, which never blocks Wait for CI and costs no minutes.
+- `tools/deploy-gate/verify-deploy.sh` (checkout at the deployed SHA): after `success` it probes `<web>/api/ready` and `<web>/healthz`, retried for up to 3 min while the services wake. Both 200 means a green run and no issue.
+- After `failure` or `error`, or a probe without 200, it raises an alarm. It creates the label `deploy-health` if missing, then comments on the oldest open `deploy-health` issue with the environment's name in its title, or opens "Niezdrowe wdrożenie: <environment>". The text has the commit, the deploy state, the web address, a link to the run and each probe's result.
+- Railway sends several statuses per environment and commit, without the service's name, so one deploy gives several runs. They go to one open issue, except that runs within about 2 s of each other may open two: GitHub's issue lists show a new issue only about 2 s after it is created (the REST list the script reads; `gh issue list --label` goes through the search index and lags further). Measured in the manual test of 2026-10-19 (#84–#87). Close a duplicate by hand.
+- **The run ends green even after an alarm.** Wait for CI looks at the conclusion of every workflow at a commit. A red `deploy-verify` would make Railway skip a redeploy of the same commit, which may be the fix. Only a failing `gh` (the alarm did not get through) fails the run.
+- **A `deploy-health` issue:** read the probes in it and the service's deploy logs, fix the cause, then close the issue by hand; nothing closes it automatically. The next unhealthy deploy of that environment opens a new one.
+
+### The `concurrency` queue
+
+`railway-config` has one group per environment (`railway-config-production`, `railway-config-pr-<N>`) with `cancel-in-progress: false`: a running apply is never cancelled. A waiting guard holds the group, and GitHub keeps only one pending run per group. A third push meanwhile cancels the pending second run. The second commit does not deploy on its own, but the third contains it.
+
+### Ignored variables
+
+`.railway/railway.ts` has the project policy `variables: { ignore: [...] }` (Railway CLI ≥ 5.64.0). The CLI removes an ignored key from both sides before the diff, so IaC never sets it and never deletes it. A hand-set value therefore no longer gives `variable.delete`, which the gate refuses.
+
+| Pattern | Variables (`tools/db-backup/README.md`, `tools/pipeline-trigger/README.md`) |
+| --- | --- |
+| `db-backup/BACKUP_IN_ANY_ENVIRONMENT`, `db-backup/BACKUP_TIMEOUT`, `db-backup/S3_FORCE_PATH_STYLE` | the backup's tuning |
+| `pipeline-trigger/TRIGGER_*` | `TRIGGER_IN_ANY_ENVIRONMENT` and every `TRIGGER_*` duration, `TRIGGER_HEARTBEAT_INTERVAL` included |
+| `szczur-radar-api/JAVA_TOOL_OPTIONS` | extra JVM flags |
+
+- A new hand-set tuning variable needs its pattern here, or a declaration in the file. Never ignore a key the file declares: declared and ignored is a plan error, and an ignored literal (e.g. `BACKUP_KEEP_*`) would vanish from both sides of the diff.
+- `TRIGGER_IN_ANY_ENVIRONMENT: preserve()` is gone (the pattern covers it). The API's `preserve()` declarations stay.
+- `railway config plan --json` shows the policy as `variablePolicy`. A field unknown to the SDK may vanish silently (`lessons.md`), so check it there.
+
+### Crons wait for CI
+
+`db-backup` and `pipeline-trigger` declare `source: github(REPO, { branch, checkSuites: true })`, like the API and the web. A merge with a red `db-backup-test` or `pipeline-trigger-test` no longer deploys the cron. The first apply after S-14 shows `source.checkSuites (null → true)` on both, which is the gate's one allowed source change, and announces both crons as redeployed.
+
+### Rollback
+
+- A revert of the PR restores the old `ci.yml` and `railway.ts`, but not two things:
+  - `checkSuites: true` on the crons: the old gate would refuse `true → null`. To return to the state before S-14, turn Wait for CI off on both crons in the dashboard;
+  - the endpoint `/api/deploy-safety` goes with the revert, and the old gate does not use it.
+- Without a revert: `DEPLOY_GUARD=off` (above).
+
+### PR-env verification (szczur-radar-pr-81, 2026-10-18)
+
+- **Pinned plan.** `--json` and `--out` work together in one call in CLI 5.67.1: `plan.json` is clean JSON and `plan.pin` is written next to it (runs 39124165646 and 39124555511). The fallback with two plan calls is not needed.
+- **The real plan format.** The first gate (rules on `field`, `before`/`after` and `deployEffect`) refused the real change `{"kind":"resource.update","severity":"safe","summary":"Update db-backup source.checkSuites","details":["source.checkSuites (null → true)"]}` in run 39124555511, because the plan has none of those fields. The rules moved to `details`/`summary` (plan amendment, variant A; commit `00e9ac5`). The trimmed plan of that run is a fixture (`tools/deploy-gate/fixtures/pr-env-checksuites.json`).
+- **Crons.** Run 39130125679 was green: the gate let `source.checkSuites (null → true)` on `db-backup` and `pipeline-trigger` through, and the apply ended with "Applied pinned Railway configuration.".
+- **Guard without a deployed web.** In a PR env Railway deploys the web only when the PR touches `szczur-radar-web/`; on PR #81 all its deployments were `SKIPPED`. The guard then got the edge's 404 "Application not found" and passed with the "older API" warning (run 39132307596). Before verifying the guard in a PR env, deploy the web: `railway redeploy --from-source -s szczur-radar-web -e szczur-radar-pr-<N>` (see "PR-env verification: the web deployment's commit" in `first-assessed-wykop-feed`).
+- The remaining PR-env checks (the guard waiting for a run, a restart announced and checked, a forced `deploy-health` issue) are tracked in the plan's Progress.
+
+### Runbook — after the merge (operator; tracked in issue #73, not in the plan's Progress)
+
+0. **Before the merge.**
+   - Standing rules: no merge while `/admin` shows a run `RUNNING`, and not between about 00:30 and 01:30 UTC (section S-05).
+   - `railway config plan --environment production --detailed-exit-code` from the PR branch (CLI 5.67.1, read-only) shows only `source.checkSuites (null → true)` on `db-backup` and `pipeline-trigger`, and no `variable.delete`. If it shows anything else, stop and investigate.
+1. **CI on `main`.**
+   - [ ] `railway-config` starts only after all seven test jobs (the run's graph).
+   - [ ] The guard logs `safe`, or, on this first merge, the warning for an API without the route (401: production's API is from before S-14).
+   - [ ] The gate passes, and the apply applies `source.checkSuites (null → true)` on both crons.
+   - [ ] The check after the apply is green: both crons deployed or handed over, and `/api/ready` 200.
+2. **The code deploy.**
+   - [ ] The production deploy at the merge commit succeeds.
+   - [ ] `deploy-verify` runs at that commit are green and log `/api/ready` and `/healthz` 200.
+   - [ ] No open `deploy-health` issue (`gh issue list --label deploy-health --state open`).
+3. **The endpoint.**
+   - [ ] `curl -s https://szczur-radar-web-production.up.railway.app/api/deploy-safety` returns `{"safe":true,"reason":null}`.
+4. **Live configuration.**
+   - [ ] Both crons on production have Wait for CI on in the live configuration (Railway MCP `get-service-config`, or the dashboard: service → Settings → Source), not only an empty plan (`lessons.md`).
+   - [ ] `railway config plan --environment production --detailed-exit-code` from `main` exits 0.
+5. **Record and close.**
+   - [ ] Comment the results on issue #73: the merge commit, the CI run ID, the guard's line, the applied changes, the deployment IDs and the `deploy-verify` runs.
+   - [ ] Add a "Production after the merge" note to this section.
+   - [ ] Close #73 only after this verification. No further PR is needed.
 
 ## S-08: pusty przebieg daje sygnał (empty-run-signal)
 
@@ -1003,11 +1187,12 @@ Record the web URL, Railway project/environment and deployment IDs, configured v
 - **Build failure — web:** Dockerfile not detected, or `npm ci` / `vue-tsc` failed. Confirm `szczur-radar-web/Dockerfile` sits at the service root directory and `package-lock.json` is committed. The identical build is green in CI, so a Railway-only failure points at root-directory / build-context config.
 - **Proxy 502 (web → api):** Caddy can't reach the backend. Check the web service's `API_PRIVATE_DOMAIN` / `API_PORT` reference variables resolve to the api's `RAILWAY_PRIVATE_DOMAIN` / `PORT`; confirm the api is up (the JVM binds dual-stack); confirm the api deployment is live and healthy. A 502 only in the first seconds after the API slept is the JVM starting — Caddy retries for up to 30 s.
 - **Readiness 503:** `/api/ready` failed its `SELECT 1`. Check the api `PG*` references resolve and Postgres is up; read `railway logs --service szczur-radar-api`. Health 200 while ready 503 = app up, DB unreachable.
-- **CI wait / deploy stuck in `WAITING`:** Wait for CI is waiting on a workflow conclusion. Confirm the GitHub Actions run **concluded** (not skipped — do not path-filter the workflow) and the Railway GitHub app has repo permissions.
+- **CI wait / deploy stuck in `WAITING`:** Wait for CI is waiting on a workflow conclusion. Confirm the GitHub Actions run **concluded** (not skipped — do not path-filter the workflow) and the Railway GitHub app has repo permissions. Since `self-hosted-pr-runner`: jobs `queued` with no runner picking them up mean no self-hosted runner with the label in `CI_RUNNER` is online (section `self-hosted-pr-runner`, runbook step 1); Railway skips the deploy after 2 h. **Update 2026-10-18 (S-14):** while the deploy guard of `railway-config` waits for a pipeline run (up to 90 min), the code deploy waits with it; the job log says why (runbook in section S-14).
 - **Bad release:** roll back via dashboard → service → Deployments → Rollback (the CLI has no rollback). Code rollback does **not** roll back data — assess Postgres / migration state separately; migrations are fix-forward (Flyway, no undo) — repair with a new migration; restoring a database backup is the last resort — there is none until the subscription (see `api-docker-image`). **Update 2026-10-11 (F-01):** the daily dump and its restore runbook (section F-01).
 - **Backups can't be enabled or restore-tested** (since 2026-10-06 the planned backup is Railway's daily volume backup, not PITR): **stop before collecting production data** and reopen the documented Render fallback (managed Postgres with PITR) — risk register #1. **Update 2026-10-11 (F-01):** obsolete: backups are the `db-backup` cron. If its runs fail (`CRASHED` plus a Railway e-mail; **update (S-05, 2026-10-13):** a Railway notification, which needs the custom rule "deployment crashed", section F-01), read its log, where every failure names its step, and fix it before the next run. If no dump can be made and restored, stop collecting data and reopen the Render fallback.
 - **IaC config change didn't take effect (config ≠ merge):** changing `.railway/railway.ts` (start command, healthcheck, variables, region) needs `railway config apply` — git merge + autodeploy rebuilds **code**, not service **config**. Symptom: the deploy keeps running the OLD setting after a merged config change (here: the deploy still ran uvicorn until `railway config apply` pushed the Hypercorn start command). Fix: `railway config apply`, then redeploy.
   - **Since `admin-bootstrap-and-login` (2026-09-28) this is automated** by the CI job `railway-config` (`.github/workflows/ci.yml`): on every PR it plans + applies `.railway/railway.ts` to that PR's environment `szczur-radar-pr-<N>` (never `production`); on every push to `main` it applies to `production`. Railway "Wait for CI" waits for the whole workflow, so config (e.g. the API `preDeploy` migration) is applied **before** the code deploys. The job selects the environment with `RAILWAY_PROJECT_ID` + `RAILWAY_ENVIRONMENT_ID` (resolved by name from `railway environment list --json`) — never `railway link` — and **fails without applying** if the plan targets another environment, contains a `destructive` / `resource.delete` change, or changes a service `source`/branch in any environment; it never passes `--confirm-destructive`. **Update 2026-10-11 (F-01):** creating a resource (`resource.create`) passes the source check, so IaC can add a service such as `db-backup`. The check relies on `.kind`, because a create carries no details in today's plan. A change to an existing service's source is still refused. PR envs track the PR branch, so on `pull_request` the job sets `IAC_SOURCE_BRANCH` (= the PR head branch) and `railway.ts` uses it instead of `main` — otherwise every PR plan would try to rewrite `source.branch`. Variables set by hand in Railway (e.g. `JWT_SECRET`) must be declared in `railway.ts` with `preserve()` (name only, never a value) — otherwise the plan proposes `Delete variable …` and the job refuses to apply. Fork PRs are skipped (no secret, no PR env). If the job fails: read its plan output; fix `.railway/railway.ts` so the plan is clean (drift from dashboard settings → mirror them in the file, see lessons.md), then re-run the job. A missing PR env (job retries ~3 min) → check PR Environments are enabled, then re-run.
+  - **Update 2026-10-18 (S-14):** the gate is the tested tool `tools/deploy-gate/` (`gate.sh` + `gate.jq`, CI job `deploy-gate-test`). Its rules read each change's `kind`, `severity`, `details` and `summary`, because the CLI 5.67.1 plan carries nothing else. One source change of an existing service passes: `source.checkSuites (null|false → true)` alone, i.e. turning Wait for CI on (both crons declare it since S-14). The job now runs only after every test job (`needs:`), waits for the deploy guard (`GET /api/deploy-safety`), applies the pinned plan it checked (`railway config apply --plan plan.pin --yes`, CLI 5.67.1) and then checks the redeployed services and `/api/ready`. Hand-set tuning variables go into the project's `variables.ignore` in `railway.ts` (pattern `<service>/<KEY>`), not `preserve()`: IaC then neither sets nor deletes them. The API's variables already declared with `preserve()` (`LLM_*`, `WYKOP_*`, `PIPELINE_*`, `JWT_SECRET`, `ACTIVATION_LINK_TTL`) stay so. Section S-14.
   - `railway.ts` must mirror production: `railway config plan --detailed-exit-code` on `production` must exit **0** before any automatic apply (2026-09-28: sleep on all 3 services + bucket `Postgres-PITR` added to the file → exit 0). Since `api-docker-image` (2026-10-06) the bucket is no longer declared: PITR was disabled and the bucket deleted in each environment before the apply.
 - **Healthcheck "service unavailable" while the app logs look healthy:** Railway's healthcheck uses **IPv4**, the web→api proxy IPv6 — the listener must be dual-stack. The JVM's default wildcard bind is; do not set `server.address`. Also confirm the app listens on `$PORT` and does not block the `healthcheck.railway.app` host. (Before F-03 the Python API needed Hypercorn on `::` for this.)
 

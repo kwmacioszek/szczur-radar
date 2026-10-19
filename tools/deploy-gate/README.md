@@ -1,0 +1,240 @@
+# deploy-gate
+
+Bramka wdrożeń Szczur Radar (S-14, `safe-deploy-gate`). Job CI `railway-config` (`.github/workflows/ci.yml`) stosuje `.railway/railway.ts` bez nadzoru: w PR env przy każdym pushu na PR, na produkcji przy każdym pushu na `main`. Przed `railway config apply` bramka sprawdza plan i decyduje, czy wolno go zastosować. Reguły czytają `kind` i `severity` zmiany oraz jej `details` i `summary` w stałych formatach CLI, a zasób, który apply zrestartuje, odnajdują w `desiredGraph` planu. Czego bramka nie zna, to odrzuca.
+
+## Pliki
+
+| Plik | Co robi |
+| --- | --- |
+| `gate.sh` | klasyfikuje plan (niżej): kod wyjścia, podsumowanie joba, lista restartów |
+| `gate.jq` | reguły bramki; `gate.sh` uruchamia je na planie |
+| `wait-safe.sh` | strażnik: przed planem i apply czeka, aż żaden przebieg pipeline'u nie czeka ani nie trwa (`/api/deploy-safety`) |
+| `verify-apply.sh` | kontrola po apply: nowy deploy każdej restartowanej usługi i `/api/ready` 200 |
+| `verify-deploy.sh` | kontrola po deployu kodu (workflow `deploy-verify`): `/api/ready` i `/healthz`, alarm przez issue `deploy-health` |
+| `web-url.sh` | adres weba środowiska (jedno mapowanie nazwy środowiska na origin) |
+| `lib.sh` | wspólne helpery skryptów (format czasów, adres weba, zapytanie HTTP); dołączany przez `.`, nie uruchamiany |
+| `fixtures/*.json` | plany w formacie `railway config plan --json`, po jednym na przypadek testu; `pr-env-*.json` to prawdziwe plany z PR env |
+| `test.sh` | lokalny test bramki na fixture'ach oraz strażnika i kontroli na atrapach API, `railway` i `gh`, bez Railway, GitHuba i Dockera |
+
+## Format planu (CLI 5.67.1)
+
+`railway config plan --json` w CLI 5.67.1 podaje w każdej zmianie tylko cztery pola:
+
+```json
+{"summary": "Update db-backup source.checkSuites", "severity": "safe", "kind": "resource.update",
+ "details": ["source.checkSuites (null → true)"]}
+```
+
+Silnik CLI (`src/iac/change_set.rs`) liczy też `address`, `field`, `before`, `after` i `deployEffect`, a Railway przepisuje listę zmian podglądem po stronie serwera (`environmentPreviewChangeSet`, `src/iac/engine.rs`). Wyjście `--json` przechodzi jednak przez strukturę `Change` runnera (`src/commands/config/runner.rs`), która zostawia tylko `summary`, `severity`, `kind` i `details`. Pola strukturalne bramka uwzględnia, gdy CLI je poda (`field`, `deployEffect`, `address`), ale ich nie wymaga.
+
+Formaty `summary` i `details` w źródle CLI v5.67.1:
+
+| Rodzaj | `summary` | `details` |
+| --- | --- | --- |
+| `resource.create` | `Create <typ> <nazwa>`, `Create <typ> <nazwa> (branch: <gałąź> (PR branch\|repo default))` | brak albo `["branch: …"]` |
+| `resource.update` | `Update <nazwa> <ścieżka>[, <ścieżka>…][ and N more]`, `Update <nazwa> <pole>` (np. `networking`), `Rename <typ> <stara> to <nazwa>`, `Resize volume <nazwa> from …`, `Move database <nazwa> to <region>` (destrukcyjne) | `["<ścieżka> (<przed> → <po>)", …]`, brak dla `name` i `networking` |
+| `variable.set` | `Set variable <nazwa>.<KLUCZ>` (nowa), `Update variable <nazwa>.<KLUCZ>` | `["<nazwa>.<KLUCZ> («hidden» → «hidden»)"]`, nowa: `unset → «hidden»` |
+| `variable.delete` | `Delete variable <nazwa>.<KLUCZ>` | brak |
+| `resource.delete` | `Delete <typ> <nazwa>` | brak |
+| `domain.create` | CLI 5.67.1 sam go nie tworzy (domeny usługi są poza diffem), może go dać tylko podgląd serwera; format nieznany | — |
+
+Wartość brakującego klucza w `details` to `null`. Wartości zmiennych CLI redaguje jako `«hidden»` (bez `--show-values`).
+
+## `gate.sh`
+
+```bash
+GATE_RESTARTS_FILE=restarts.txt tools/deploy-gate/gate.sh plan.json "$TARGET_ENV" "$RAILWAY_PROJECT_ID" >> "$GITHUB_STEP_SUMMARY"
+```
+
+- **stdout**: podsumowanie w markdownie dla `$GITHUB_STEP_SUMMARY`: liczba zmian, tabela zmian (opis, rodzaj, `details`, `severity`, restartowany zasób, decyzja bramki z powodem) i linia `Restarts:` z nazwami zasobów, które apply wdroży ponownie.
+- **stderr**: log joba. Każda odmowa daje linię `::error::` (GitHub pokazuje ją jako adnotację), a pod nią pełne odrzucone zmiany z planu.
+- **`GATE_RESTARTS_FILE`** (opcjonalna): plik z nazwami usług i baz, które apply wdroży ponownie (`desiredGraph.resources[].name` zasobów typu `service` albo `database`, np. `db-backup`, `postgres`), jedna na linię, bez powtórzeń, w kolejności planu. Bramka czyści go na starcie i zapisuje tylko dla planu dozwolonego, więc odrzucony albo nieczytelny plan zostawia go pustym. To wejście dla kontroli po apply (`verify-apply.sh`): nazwa zasobu to nazwa usługi dla `railway deployment list -s <usługa>`. Zasób innego typu (kubełek `bucket`, wolumen) nie ma deployów, więc tabela pokazuje go jako `` `<nazwa>` (<typ>: no deploy) `` i nie trafia do pliku.
+
+### Reguły
+
+W tej kolejności:
+
+1. **Środowisko.** Plan musi mieć `ok == true`, `currentEnvironment.environmentName` równe środowisku docelowemu i `currentEnvironment.projectId` równe ID projektu. Inaczej odmowa całego planu z jego `diagnostics` w logu. Pozostałe reguły już się nie liczą.
+2. **Destrukcja.** Odmowa każdej zmiany z `severity == "destructive"`. Dziś to m.in. `resource.delete` i `variable.delete`, którą CLI zawsze oznacza jako destrukcyjną. Zmiana z `severity` innym niż `safe` i `destructive` (także bez `severity`) też jest odrzucana.
+3. **Lista dozwolonych rodzajów** (`allowed_kinds` w `gate.jq`). Przechodzą tylko `resource.create`, `resource.update`, `variable.set` i `domain.create`. Każdy inny `kind` jest odrzucany niezależnie od `severity`: `resource.delete`, `variable.delete`, `domain.delete` albo rodzaj, którego bramka nie zna. `domain.create` przechodzi tylko dla `szczur-radar-web` (`public_service` w `gate.jq`). Domena na każdej innej usłudze, także takiej, której bramka nie rozpozna, jest odrzucana, bo `szczur-radar-api` nie może mieć własnej publicznej domeny.
+4. **Źródło usługi.** `resource.update` dotyka źródła (repo, gałąź, katalog, Wait for CI), gdy któryś `details[]` dotyczy źródła (`^source([. (]|$)`: pole `source.*` albo cały obiekt `source (… → …)`), `summary` pasuje do `(^|[ ,])source([.]|$| )` albo CLI poda `field == "source"`. Taka zmiana przechodzi tylko wtedy, gdy ma co najmniej jeden detal i **każdy** detal pasuje dokładnie do `^source\.checkSuites \((null|false) → true\)$` (`wait_for_ci_detail` w `gate.jq`), czyli włącza Wait for CI. Odrzucane są m.in. `source.branch`, `checkSuites true → null`, `checkSuites` razem z `branch` i `summary` o źródle bez detali. PR env śledzi gałąź PR, produkcja `main`.
+5. **Nieznany format.** Odmowa zmiany bez `kind` i `resource.update`, której `details` nie jest tablicą napisów (np. jej brak). Brak `field` nie jest odmową. CLI nie podaje `details` dla zmiany nazwy i `networking`, więc takie zmiany bramka też odrzuca.
+6. **Restarty.** Zmiana z `deployEffect == "deploy"` albo bez `deployEffect` (w CLI 5.67.1 każda) trafia do listy restartów. Bramka ich nie odrzuca, tylko je ogłasza (także na Postgresie). `deployEffect == "none"` nie trafia na listę. Restartowany zasób to dokładnie jeden zasób z `desiredGraph.resources`:
+   - po `address` zmiany, gdy CLI go poda (adres zasobu to jego `address` albo `<typ>.<nazwa>`);
+   - inaczej po `summary` w formacie jej rodzaju (tabela wyżej): nazwa zaraz po `Create <typ> `, `Update `, `Set variable ` / `Update variable ` (przed `.<KLUCZ>`), po ` to ` w `Rename …`, po `Resize volume `; dla `domain.create` (format nieznany) nazwa zasobu jako całe słowo w `summary`.
+
+   Zmiana z restartem, dla której nie da się ustalić dokładnie jednego zasobu z `desiredGraph`, jest odrzucana, bo kontrola po apply nie wiedziałaby, na co czekać. Bez `deployEffect` także `domain.create` jest ogłaszane jako restart swojej usługi. `resource.create` kubełka ma zasób, ale bez deployów: tabela go pokazuje, lista restartów (`deployable_types` w `gate.jq`: `service`, `database`) nie.
+
+Plan bez listy zmian (`changeSet.changes`) przy `ok == true` jest nieczytelny (kod 2).
+
+### Kody wyjścia
+
+| Kod | Znaczenie |
+| --- | --- |
+| `0` | plan dozwolony (także pusty) |
+| `1` | plan odrzucony: zła odpowiedź planu albo środowisko, albo co najmniej jedna niedozwolona zmiana (linie `::error::`) |
+| `2` | złe wywołanie (liczba argumentów, puste środowisko albo ID projektu, brak `jq`) albo nieczytelny plan (brak pliku, nie JSON, brak `changeSet.changes`) |
+
+## `web-url.sh`
+
+```bash
+tools/deploy-gate/web-url.sh "$TARGET_ENV"
+```
+
+Wypisuje origin weba środowiska, bez ukośnika na końcu: `production` → `https://szczur-radar-web-production.up.railway.app`, `szczur-radar-pr-<N>` → `https://szczur-radar-web-szczur-radar-pr-<N>.up.railway.app`. Nieznana nazwa albo złe wywołanie: `::error::` i kod 2, nic na stdout. Tylko web ma publiczną domenę i przekazuje `/api/*` do API, więc obie kontrole pytają API przez ten adres.
+
+## `wait-safe.sh` (strażnik)
+
+```bash
+DEPLOY_GUARD_DEADLINE=<epoka> tools/deploy-gate/wait-safe.sh "$WEB_URL"
+```
+
+Deploy przerywa przebieg pipeline'u, który czeka albo trwa. Strażnik pyta `GET <web>/api/deploy-safety` i wstrzymuje plan, apply oraz — przez konkluzję workflow, na którą czeka Wait for CI — deploy kodu:
+
+| Odpowiedź | Wynik |
+| --- | --- |
+| 200 `{"safe":true}` | kod 0 |
+| 200 `{"safe":false,"reason":…}` | log z powodem (`pipeline_running`, `pipeline_queued`), pytanie co `DEPLOY_GUARD_INTERVAL`; po `DEPLOY_GUARD_TIMEOUT` kod 1 z `::error::` wskazującym runbook S-14 (zombie: restart API, potem nowy push albo `railway redeploy`; wyłącznik `DEPLOY_GUARD=off`) |
+| 401, 404 | kod 0 z `::warning::`: API bez trasy (starsza wersja; trasa spoza `PUBLIC_ROUTES` wymaga tam sesji, stąd 401) |
+| brak połączenia, 5xx (też 503 `{"status":"unavailable"}`) | ponawianie co 2 s do `DEPLOY_GUARD_WAKE_TIMEOUT` (budzenie uśpionego API), potem kod 0 z `::warning::`: API niedostępne, więc żaden przebieg nie może trwać, a deploy może być naprawą |
+| 200 bez czytelnego werdyktu (np. HTML, `safe:false` bez powodu), każdy inny status (3xx, 403…) | kod 1 |
+
+Termin `DEPLOY_GUARD_DEADLINE` (sekundy epoki) obowiązuje niezależnie od limitu: strażnik czeka do min(limit, termin). Termin minięty na starcie (bez zapytania) albo w trakcie daje kod 1 z `::error::` „the Wait for CI window (2 h) is closing … Railway will not deploy the code of this commit. Push again or run `railway redeploy`”. Po 2 h od pusha Railway i tak pomija deploy i oznacza GitHub Deployment jako `inactive`, czego nie widzi żaden workflow; czerwony job zamiast zielonego bez deployu.
+
+| Zmienna | Domyślnie | Znaczenie |
+| --- | --- | --- |
+| `DEPLOY_GUARD` | puste | `off`: pomiń z `::warning::` (zmienna repo, wyłącznik awaryjny); puste albo `on`: strażnik działa; inna wartość: kod 2 |
+| `DEPLOY_GUARD_TIMEOUT` | `90m` | jak długo czekać na zajęty pipeline |
+| `DEPLOY_GUARD_INTERVAL` | `60s` | odstęp pytań przy zajętym pipelinie |
+| `DEPLOY_GUARD_WAKE_TIMEOUT` | `3m` | jak długo ponawiać brak odpowiedzi (też `/api/ready` w `verify-apply.sh`) |
+| `DEPLOY_GUARD_DEADLINE` | brak | bezwzględny termin; workflow: `created_at` runu + 120 min − `DEPLOY_VERIFY_TIMEOUT` − `DEPLOY_GUARD_WAKE_TIMEOUT` − 5 min |
+
+Czasy w formacie `tools/pipeline-trigger`: dodatnia liczba z jednostką `s`, `m`, `h` (sama liczba to sekundy). Zła wartość którejkolwiek zmiennej albo zły adres: kod 2. Log na stderr.
+
+## `verify-apply.sh` (kontrola po apply)
+
+```bash
+tools/deploy-gate/verify-apply.sh snapshot restarts.txt > deployments-before.json     # tuż przed apply
+tools/deploy-gate/verify-apply.sh check restarts.txt deployments-before.json "$WEB_URL" >> "$GITHUB_STEP_SUMMARY"
+```
+
+Apply wdraża ponownie usługi, które zmienia (`restarts.txt` z `gate.sh`); 2026-10-12 „bezpieczny” apply zrestartował Postgresa, który wisiał 9 min, zanim ktoś spojrzał. Kontrola kończy job na czerwono w minutach:
+
+- **`snapshot`** zapisuje ID najnowszego deployu każdej usługi (`{"<usługa>": "<id>" | null}`; `null`: usługa bez deployu). Gdy Railway po 3 próbach nie poda deployów usługi, snapshot kończy się exit 1 z `::error::` i apply się nie wykonuje. Gdyby taka usługa trafiła do snapshotu jako `null`, `check` uznałby jej deploy sprzed apply za nowy i przeszedł bez czekania. Dotyczy to też usługi, której jeszcze nie ma: plan tworzący nową usługę (rzadki) stosuje się ręcznie (`railway config apply` lokalnie, po sprawdzeniu planu), a kolejny push ma już tę usługę w snapshocie.
+- **`check`** pyta `railway deployment list --json --limit 1 -s <usługa> -p "$RAILWAY_PROJECT_ID" -e "$RAILWAY_ENVIRONMENT_ID"` co `DEPLOY_VERIFY_INTERVAL` i czeka na deploy o innym ID niż w migawce (bez porównywania zegarów runnera i Railway). Status nowego deployu (`DeploymentStatus` Railway):
+
+| Status | Wynik |
+| --- | --- |
+| `SUCCESS`, `SLEEPING` | wdrożona (`SLEEPING`: wdrożona i uśpiona) |
+| `WAITING`, `QUEUED` | „handed over to deploy-verify” (`::notice::`): Wait for CI trzyma deploy do końca tego workflow, więc czekanie tu dałoby zakleszczenie |
+| `BUILDING`, `DEPLOYING`, `INITIALIZING` | czekaj |
+| `REMOVED`, `REMOVING` | zastąpiony nowszym: pytaj dalej o najnowszy |
+| `FAILED`, `CRASHED`, `SKIPPED` | kod 1 |
+| `NEEDS_APPROVAL`, każdy inny | kod 1 (potrzebny człowiek albo status nieznany kontroli) |
+
+  To samo ID do końca limitu: kod 1 „the apply did not trigger a deploy of <usługa>”. Łączny limit dla wszystkich usług: `DEPLOY_VERIFY_TIMEOUT` (domyślnie `15m`).
+- Potem `GET <web>/api/ready` (API widzi bazę) z ponowieniami co 2 s do `DEPLOY_GUARD_WAKE_TIMEOUT` (`3m`); bez 200 kod 1.
+- Pusty `restarts.txt`: tylko `/api/ready`, bez wywołań `railway`.
+
+Środowisko wyłącznie przez `RAILWAY_PROJECT_ID` i `RAILWAY_ENVIRONMENT_ID` (token workspace, nigdy `railway link`). Nazwy w `restarts.txt` to nazwy zasobów z `desiredGraph`, a te są nazwami usług Railway: `railway deployment list -s` szuka usługi po nazwie bez względu na wielkość liter albo po ID (`src/controllers/project.rs` w CLI v5.67.1), także bazy — Postgres (`postgres`, typ `database`) jest w Railway usługą z własnymi deployami. Wyjście `--json` to tablica `[{"id", "status", "createdAt", "meta"}]` od najnowszego (`src/commands/deployment.rs`). `check`: stdout to podsumowanie w markdownie (usługa, deploy, wynik), stderr log. Kod 2: złe wywołanie, brak pliku, migawka bez usługi z listy, brak `RAILWAY_*_ID` przy niepustej liście, zła nazwa usługi, zły czas albo adres.
+
+## `verify-deploy.sh` (kontrola po deployu kodu)
+
+```bash
+tools/deploy-gate/verify-deploy.sh >> "$GITHUB_STEP_SUMMARY"
+```
+
+Wait for CI uruchamia deploy kodu dopiero po zakończeniu `ci.yml`, więc żaden krok `ci.yml` go nie widzi. Railway zgłasza deploy w GitHubie jako Deployment środowiska `szczur-radar / <środowisko>`, a każdy jego status uruchamia workflow `.github/workflows/deploy-verify.yml`. Workflow wywołuje ten skrypt dla stanów `success`, `failure` i `error`, a pozostałe zdarzenia dają job `skipped`.
+
+| Zmienna | Znaczenie |
+| --- | --- |
+| `DEPLOY_STATE` | `success`, `failure` albo `error` (`deployment_status.state`); inna wartość: kod 2 |
+| `DEPLOY_ENVIRONMENT` | `deployment.environment`, np. `szczur-radar / production` |
+| `DEPLOY_SHA` | wdrożony commit (`deployment.sha`) |
+| `GH_TOKEN`, `GITHUB_REPOSITORY` | dla `gh` (`issues: write`; `github.token` runu, bez osobnego sekretu); `GITHUB_SERVER_URL` i `GITHUB_RUN_ID` dają link do runu w issue. Na runnerze bez `gh` (self-hosted) workflow najpierw pobiera przypiętą wersję i sprawdza jej SHA-256 (krok „Ensure gh (pinned)”) |
+| `DEPLOY_GUARD_WAKE_TIMEOUT` | jak długo ponawiać sondy po `success` (domyślnie `3m`, wspólne okno obu sond) |
+| `DEPLOY_WEB_URL` | opcjonalna, tylko do testów i ręcznego użycia (workflow jej nie ustawia): origin sondowany zamiast adresu z `web-url.sh`; nazwa środowiska i tak musi być znana |
+
+- **Adres weba:** nazwa środowiska po `szczur-radar / ` → `web-url.sh`. Inny projekt albo nazwa nieznana `web-url.sh` → log „nothing to check” i kod 0, bez sond i bez `gh`. `target_url`/`environment_url` statusu Railway wskazują panel Railway, nie web, więc skrypt ich nie używa.
+- **`success`:** `GET <web>/api/ready` (API widzi bazę) i `GET <web>/healthz` (web działa), ponawiane co 2 s, póki usługa się budzi, do `DEPLOY_GUARD_WAKE_TIMEOUT`. Obie 200 → kod 0 bez wywołania `gh`.
+- **`failure`/`error`** (każda sonda raz, dla zapisu) **albo sonda bez 200 → alarm:**
+  1. `gh label create deploy-health --force` (tworzy etykietę, jeśli jej nie ma; bez wyścigu dwóch runów);
+  2. `gh api repos/<repo>/issues?labels=deploy-health&state=open` (REST, bez pull requestów, które ta lista też zwraca): najstarsze otwarte issue z nazwą środowiska w tytule jako całym słowem (`szczur-radar-pr-8` nie pasuje do `szczur-radar-pr-81`) dostaje komentarz;
+  3. bez takiego issue powstaje nowe: „Niezdrowe wdrożenie: <środowisko>” (np. `Niezdrowe wdrożenie: production`) z etykietą `deploy-health`.
+
+  Treść issue albo komentarza: środowisko, commit, stan deployu, adres weba, link do runu i wynik każdej sondy. Ten sam raport trafia na stdout (podsumowanie joba).
+- **Deduplikacja:** Railway publikuje jeden GitHub Deployment na środowisko i commit, z kilkoma statusami bez nazwy usługi (po `success` może przyjść `failure`). Jeden deploy daje więc kilka runów, a wszystkie trafiają do jednego otwartego issue środowiska. Workflow nie ma grupy `concurrency`, bo anulowany oczekujący run kończy się `cancelled` przy commicie. Dwa runy w tej samej sekundzie mogą więc wyjątkowo otworzyć dwa issue. Lista idzie przez REST, nie przez `gh issue list --label`, który korzysta z indeksu wyszukiwania GitHuba, opóźnionego bardziej (test 2026-10-19: drugi run nie widział #84 i otworzył #85). Lista REST też jest opóźniona: nowe issue pojawia się na niej po ok. 2 s (zmierzone 2026-10-19), więc run w tym oknie po innym też otworzy drugie issue (#86, #87). Duplikat zamyka człowiek.
+- **Zamykanie:** skrypt nie zamyka issue. Zamyka je człowiek po naprawie. Kolejny niezdrowy deploy tego środowiska otwiera wtedy nowe issue.
+
+| Kod | Znaczenie |
+| --- | --- |
+| `0` | sprawdzone: zdrowe, zaalarmowane (issue albo komentarz) albo nic do sprawdzenia (inny projekt, nieznane środowisko) |
+| `1` | `gh` zawiódł: alarm nie dotarł (`::error::` „is NOT reported in an issue”) |
+| `2` | złe wywołanie albo zmienna (stan, brak `GH_TOKEN`, `GITHUB_REPOSITORY`, SHA, czas, `DEPLOY_WEB_URL`). Z `deploy-verify.yml` nieosiągalne: `if:` joba przepuszcza tylko `success`/`failure`/`error`, a zdarzenie zawsze niesie pełny SHA. Ten kod łapie błąd w samym workflow (np. po jego zmianie), a nie stan deployu. Odstępstwo od planu, który dopuszczał tylko kod 1. |
+
+Niezdrowy deploy nigdy nie daje kodu 1. Wait for CI patrzy na konkluzję każdego workflow przy commicie, a `deploy-verify` biegnie przy wdrożonym commicie. Czerwony run sprawiłby, że Railway pominie redeploy tego samego commita, który może być naprawą.
+
+### Workflow `deploy-verify`
+
+`.github/workflows/deploy-verify.yml`:
+- `on: deployment_status`;
+- job tylko dla stanów `success`/`failure`/`error` i środowisk `szczur-radar / …`, inaczej `skipped` (nie blokuje Wait for CI i nie zużywa minut);
+- `permissions: issues: write, contents: read`;
+- checkout na SHA deployu (`persist-credentials: false`), potem `verify-deploy.sh` z polami zdarzenia przekazanymi przez `env:`, nigdy wstawianymi w skrypt;
+- `timeout-minutes: 10`, bo przekroczenie limitu kończy run na czerwono.
+
+## W CI
+
+Job `railway-config` startuje dopiero po wszystkich jobach testowych (`needs:`, w tym `deploy-gate-test`), ma `permissions: contents: read, actions: read` i `timeout-minutes: 115` (strażnik 90 min + kontrola 15 min + `/api/ready` 3 min + plan i apply). Limity są w `env:` joba; ich suma musi się mieścić w 2 h okna Wait for CI. Kolejność:
+
+1. „Web address and deploy window”: `WEB_URL` z `web-url.sh "$TARGET_ENV"` i `DEPLOY_GUARD_DEADLINE` z `created_at` runu (`curl` do `$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID` z `GITHUB_TOKEN: github.token`, bez `gh`, którego self-hosted runnery nie mają; wspólne dla wszystkich prób runu) + 120 min − `DEPLOY_VERIFY_TIMEOUT` − `DEPLOY_GUARD_WAKE_TIMEOUT` − 5 min.
+2. Strażnik `wait-safe.sh "$WEB_URL"` z `DEPLOY_GUARD: ${{ vars.DEPLOY_GUARD }}`, zawsze, także przy planie bez zmian, bo chroni też deploy kodu. Stoi przed planem: `apply --plan` odmawia, gdy środowisko zmieniło się od planu, więc przypięcie ma trwać sekundy, nie do 90 min czekania. Czekający strażnik trzyma grupę `concurrency`: trzeci push w tym czasie anuluje oczekujący drugi run (trzeci zawiera jego commit).
+3. „Plan and gate”: `railway config plan --json --out plan.pin > plan.json` (CLI `@railway/cli@5.67.1`). Wartości zmiennych CLI redaguje (bez `--show-values`). `--out` zapisuje przypięty plan tylko przy `ok == true`. `.diff` planu do logu, potem `gate.sh` (podsumowanie do `$GITHUB_STEP_SUMMARY`, `restarts.txt`). Gdy CLI zakończyło się błędem, krok pada także po przepuszczeniu przez bramkę.
+4. `plan.json` jako artefakt joba `railway-plan-<środowisko>` (7 dni), także przy odmowie. `plan.pin` nie jest zachowywany.
+5. Tylko przy liczbie zmian > 0: `verify-apply.sh snapshot restarts.txt > deployments-before.json`, potem apply `railway config apply --plan plan.pin --yes` (stosuje dokładnie sprawdzony plan i odmawia, jeśli środowisko zmieniło się od planu; nigdy `--confirm-destructive`).
+6. Tylko gdy apply się wykonał: `verify-apply.sh check restarts.txt deployments-before.json "$WEB_URL"` (podsumowanie do `$GITHUB_STEP_SUMMARY`).
+7. Tylko gdy apply padł: „API after a failed apply”, czyli `verify-apply.sh check` z pustą listą restartów, który pyta tylko `/api/ready`. Job jest i tak czerwony, ale apply mógł już zrestartować usługi (także Postgresa), więc log mówi, czy API nadal widzi bazę.
+
+`--json` i `--out` działają razem w jednym wywołaniu w CLI 5.67.1: `plan.json` jest czystym JSON-em, a `plan.pin` powstaje obok. Potwierdzone w PR env tej zmiany (`szczur-radar-pr-81`, runy 39124165646 i 39124555511). Fallback z dwoma wywołaniami planu nie jest potrzebny.
+
+## Test lokalny
+
+```bash
+tools/deploy-gate/test.sh
+```
+
+Wymaga `bash`, `jq`, `curl` i `python3` (bez Dockera, bez Railway, bez GitHuba), działa z dowolnego katalogu, trwa poniżej minuty (limity 1–3 s). Uruchamia `gate.sh` na każdym fixture'ze i sprawdza kod wyjścia, podsumowanie, linie `::error::` i plik restartów. Każda reguła ma przypadek dozwolony i odrzucony:
+- pusty plan dla produkcji i prawdziwy pusty plan `szczur-radar-pr-81` (0) oraz zła nazwa środowiska, inny projekt i `ok:false` (1);
+- `variable.delete` i `resource.delete` (destrukcyjne, 1), `variable.set` (`Update variable` i `Set variable`, 0, ogłoszone restarty usług);
+- `variable.delete` i nieznany rodzaj (`domain.delete`) z `severity: "safe"`, odrzucone przez listę dozwolonych, nie przez `severity` (1); `resource.create` i `domain.create` na webie (0), `domain.create` na API (1); plan z jedną dozwoloną i jedną odrzuconą zmianą (1, błąd tylko dla odrzuconej);
+- prawdziwy plan `szczur-radar-pr-81` z `checkSuites null → true` na obu cronach (0, restart `db-backup` i `pipeline-trigger`), `checkSuites null → true` i `false → true` (0); `source.branch`, `checkSuites true → null`, `checkSuites` razem z `branch`, `summary` o `source.checkSuites` bez detali i detal całego obiektu `source` ukryty w `summary` za „and 1 more” (1);
+- `resource.update` bez `details` i zmiana bez `kind` (1); `limitOverride` na Postgresie (0, restart `postgres`);
+- `address` podany przez CLI wskazuje zasób, `deployEffect: "none"` nie jest restartem, `deployEffect: "deploy"` jest (0); restart zasobu spoza `desiredGraph` po `summary` albo po `address` (1);
+- złe wywołanie, brak pliku, plan, który nie jest JSON-em, i plan bez `changeSet.changes` (2);
+- `resource.create` kubełka: pokazany w tabeli jako „no deploy”, bez wpisu w pliku restartów.
+
+Dalej, na atrapach:
+- `web-url.sh`: `production`, `szczur-radar-pr-81`, nieznana nazwa albo brak argumentu (2);
+- `wait-safe.sh` na atrapie API (mały serwer HTTP w Pythonie ze skryptowanymi odpowiedziami): `safe`; `queued` → `running` → `safe`; zajęty do limitu i do terminu krótszego niż limit (1); termin minięty na starcie (1, bez zapytania); 401 i 404 (0 z ostrzeżeniem); odmowa połączenia → 503 → `safe`; stałe 503 i stała odmowa połączenia (0 z ostrzeżeniem); 200 bez werdyktu i 403 (1); `DEPLOY_GUARD=off`; złe wartości (2);
+- `verify-apply.sh` na atrapie `railway` w `PATH` (skryptowane `deployment list --json`, sprawdza też `-p`/`-e` z ID) i atrapie API: migawka (ID, `null`, ponowienie po błędzie CLI); `SUCCESS`, `SLEEPING`; `FAILED`, `CRASHED`, `SKIPPED`, `NEEDS_APPROVAL`, nieznany status (1, bez `/api/ready`); `WAITING` i `QUEUED` (przekazane); stare ID → `INITIALIZING` → `DEPLOYING` → `SUCCESS`; `REMOVED` → nowszy `SUCCESS`; usługa tworzona przez apply (`null` w migawce); to samo ID do limitu (1, „did not trigger a deploy”); błąd CLI do limitu (1); `DEPLOYING` do limitu (1); `/api/ready` 503 (1); pusta lista (tylko `/api/ready`, 503 → 200); złe wywołania (2);
+- `verify-deploy.sh` na atrapie API i atrapie `gh` w `PATH` (zapisuje wywołania i treść issue): `success` z obiema sondami 200, także po 503 przy budzeniu (bez `gh`); `success` z `/api/ready` 503 do limitu (etykieta, nowe issue z commitem, stanem, sondami i linkiem do runu); `failure` (nowe issue); `error` z oboma sondami 503 (każda zapytana raz); otwarte issue środowiska (komentarz w najstarszym zamiast nowego; issue `szczur-radar-pr-81` nie liczy się dla `szczur-radar-pr-8`); inny projekt albo nieznane środowisko (0, bez `gh`); błąd `gh` (1); złe wywołania (2).
+
+CI uruchamia ten test przy każdym PR i pushu na `main` (job `deploy gate test`).
+
+## Odświeżenie fixture'a z prawdziwego planu
+
+Prawdziwy plan jest wzorcem, gdy CLI zmieni format:
+
+1. Pobierz artefakt `railway-plan-<środowisko>` z joba `railway-config` (GitHub: run → Artifacts, np. `gh run download <run-id> -n railway-plan-szczur-radar-pr-<N>`) albo zaplanuj lokalnie, tylko do odczytu:
+   ```bash
+   railway config plan --environment szczur-radar-pr-<N> --json > plan.json
+   ```
+   Bez `--show-values`: CLI redaguje wartości zmiennych.
+2. Przytnij go do tego, co bramka czyta i co pokazuje format:
+   ```bash
+   jq '{ok, currentEnvironment, changeSet, diff, variablePolicy,
+        desiredGraph: {resources: [.desiredGraph.resources[] | {name, type, address}]}}' plan.json > fixtures/<przypadek>.json
+   ```
+   Bez `currentGraph`, `stagedPatch` i zmiennych z `desiredGraph`. Sprawdź, że w pliku nie ma żadnej wartości sekretu (`grep` po fragmentach kluczy).
+3. Dopisz przypadek w `test.sh`: dla planu z PR env `run_gate <przypadek> "$fixtures/<przypadek>.json" <kod> szczur-radar-pr-<N> "$project_id"`, dla planu produkcji `check_gate <przypadek> <kod>`, plus oczekiwane podsumowanie i restarty. Fixture'y syntetyczne używają projektu `decf00e4-f5a4-43df-b338-6698be87c5a1` i środowiska `production`.
+4. Jeśli prawdziwy plan ma inne pola albo inne formaty `summary`/`details` niż fixture'y, popraw najpierw `gate.jq` (i tabelę formatów wyżej), a potem fixture'y.

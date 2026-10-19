@@ -51,6 +51,7 @@ class AuthorizationCompletenessIT {
 	static final Map<String, String> PUBLIC_ROUTES = Map.of(
 			"GET /api/health", "liveness probe (Railway healthcheck)",
 			"GET /api/ready", "readiness probe, reveals only up/down",
+			"GET /api/deploy-safety", "CI deploy gate; reveals only whether a pipeline run is queued or running",
 			"POST /api/auth/login", "obtaining a session cannot require one",
 			"POST /api/auth/logout", "idempotent session end and cookie removal",
 			"POST /api/auth/activation",
