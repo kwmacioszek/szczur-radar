@@ -24,7 +24,9 @@
 # The web origin comes from the environment name after "szczur-radar / " (web-url.sh); another
 # project or an unknown name is logged and exits 0. Railway publishes one GitHub Deployment per
 # environment and commit, with several statuses without a service name (a failure may follow a
-# success), so one deploy gives several runs; the alarm keeps one open issue per environment:
+# success), so one deploy gives several runs, seconds apart; the alarm keeps one open issue per
+# environment (runs within about 2 s of each other may still open two: no concurrency group, see
+# deploy-verify.yml, and the issue list lags, see below):
 #   success: both probes, retried while the API wakes; both 200 → exit 0, no gh call;
 #   failure or error (each probe asked once, for the record), or a probe without 200: the label
 #     deploy-health is created if missing (gh label create --force), then the oldest open issue with
@@ -168,16 +170,21 @@ log "::error::deploy check: $DEPLOY_ENVIRONMENT is unhealthy after the deploymen
 gh label create "$label" --repo "$GITHUB_REPOSITORY" --force --color B60205 \
     --description "Unhealthy deployment reported by deploy-verify (S-14)" >/dev/null 2>"$work/gh-error" \
     || gh_failed "gh label create $label"
-issues=$(gh issue list --repo "$GITHUB_REPOSITORY" --label "$label" --state open --json number,title --limit 100 \
-    2>"$work/gh-error") || gh_failed "gh issue list"
+# The REST list of issues, not `gh issue list --label`, which goes through GitHub's search index and
+# lags further behind. The REST list lags too: a new issue shows up about 2 s after it is created
+# (measured 2026-10-19), so a run within that window of another still opens a second issue (#86, #87).
+# The list also returns pull requests.
+issues=$(gh api "repos/$GITHUB_REPOSITORY/issues?labels=$label&state=open&per_page=100" \
+    2>"$work/gh-error") || gh_failed "gh api repos/$GITHUB_REPOSITORY/issues"
 # The environment as a whole word of the title: szczur-radar-pr-8 must not match szczur-radar-pr-81
 # (web-url.sh admits only [a-z0-9-] in the name, so it needs no regex escaping).
 number=$(jq -r --arg name "$environment" '
         if type != "array" then error("not a list") else
-            [.[] | select((.title | type) == "string"
+            [.[] | select(type == "object" and (has("pull_request") | not))
+                | select((.title | type) == "string"
                 and (.title | test("(^|[^A-Za-z0-9-])" + $name + "($|[^A-Za-z0-9-])")))
                 | .number] | sort | (.[0] // "") | tostring
-        end' <<<"$issues" 2>"$work/gh-error") || gh_failed "reading the answer of gh issue list"
+        end' <<<"$issues" 2>"$work/gh-error") || gh_failed "reading the list of open issues"
 if [[ -n $number ]]; then
     url=$(gh issue comment "$number" --repo "$GITHUB_REPOSITORY" --body-file "$work/report.md" 2>"$work/gh-error") \
         || gh_failed "gh issue comment $number"

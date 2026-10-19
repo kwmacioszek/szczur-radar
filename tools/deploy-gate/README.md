@@ -159,11 +159,11 @@ Wait for CI uruchamia deploy kodu dopiero po zakończeniu `ci.yml`, więc żaden
 - **`success`:** `GET <web>/api/ready` (API widzi bazę) i `GET <web>/healthz` (web działa), ponawiane co 2 s, póki usługa się budzi, do `DEPLOY_GUARD_WAKE_TIMEOUT`. Obie 200 → kod 0 bez wywołania `gh`.
 - **`failure`/`error`** (każda sonda raz, dla zapisu) **albo sonda bez 200 → alarm:**
   1. `gh label create deploy-health --force` (tworzy etykietę, jeśli jej nie ma; bez wyścigu dwóch runów);
-  2. `gh issue list --label deploy-health --state open`: najstarsze otwarte issue z nazwą środowiska w tytule jako całym słowem (`szczur-radar-pr-8` nie pasuje do `szczur-radar-pr-81`) dostaje komentarz;
+  2. `gh api repos/<repo>/issues?labels=deploy-health&state=open` (REST, bez pull requestów, które ta lista też zwraca): najstarsze otwarte issue z nazwą środowiska w tytule jako całym słowem (`szczur-radar-pr-8` nie pasuje do `szczur-radar-pr-81`) dostaje komentarz;
   3. bez takiego issue powstaje nowe: „Niezdrowe wdrożenie: <środowisko>” (np. `Niezdrowe wdrożenie: production`) z etykietą `deploy-health`.
 
   Treść issue albo komentarza: środowisko, commit, stan deployu, adres weba, link do runu i wynik każdej sondy. Ten sam raport trafia na stdout (podsumowanie joba).
-- **Deduplikacja:** Railway publikuje jeden GitHub Deployment na środowisko i commit, z kilkoma statusami bez nazwy usługi (po `success` może przyjść `failure`). Jeden deploy daje więc kilka runów, a wszystkie trafiają do jednego otwartego issue środowiska. Workflow nie ma grupy `concurrency`, bo anulowany oczekujący run kończy się `cancelled` przy commicie. Dwa runy w tej samej sekundzie mogą więc wyjątkowo otworzyć dwa issue.
+- **Deduplikacja:** Railway publikuje jeden GitHub Deployment na środowisko i commit, z kilkoma statusami bez nazwy usługi (po `success` może przyjść `failure`). Jeden deploy daje więc kilka runów, a wszystkie trafiają do jednego otwartego issue środowiska. Workflow nie ma grupy `concurrency`, bo anulowany oczekujący run kończy się `cancelled` przy commicie. Dwa runy w tej samej sekundzie mogą więc wyjątkowo otworzyć dwa issue. Lista idzie przez REST, nie przez `gh issue list --label`, który korzysta z indeksu wyszukiwania GitHuba, opóźnionego bardziej (test 2026-10-19: drugi run nie widział #84 i otworzył #85). Lista REST też jest opóźniona: nowe issue pojawia się na niej po ok. 2 s (zmierzone 2026-10-19), więc run w tym oknie po innym też otworzy drugie issue (#86, #87). Duplikat zamyka człowiek.
 - **Zamykanie:** skrypt nie zamyka issue. Zamyka je człowiek po naprawie. Kolejny niezdrowy deploy tego środowiska otwiera wtedy nowe issue.
 
 | Kod | Znaczenie |

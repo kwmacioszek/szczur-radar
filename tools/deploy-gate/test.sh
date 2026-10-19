@@ -30,9 +30,9 @@
 #   12. verify-deploy.sh against the stub API and a stub `gh` in PATH (records its calls): success with
 #       both probes 200, also after a 503 while waking (no gh call); success with /api/ready 503 (a new
 #       issue); failure (a new issue, each probe asked once); an open issue of the environment (a
-#       comment instead; one of szczur-radar-pr-81 does not count for szczur-radar-pr-8); another
-#       project or an unknown environment (exit 0, no request, no gh call); gh failing (exit 1); bad
-#       invocations (exit 2).
+#       comment instead, a pull request in the list ignored; one of szczur-radar-pr-81 does not count
+#       for szczur-radar-pr-8); another project or an unknown environment (exit 0, no request, no gh
+#       call); gh failing (exit 1); bad invocations (exit 2).
 # Needs bash, jq, curl and python3 (no Docker). Short limits (1–3 s) keep it under a minute.
 # Run from anywhere: tools/deploy-gate/test.sh
 set -euo pipefail
@@ -691,8 +691,8 @@ pass "bad invocations (arguments, files, snapshot, RAILWAY_ENVIRONMENT_ID, durat
 
 # The stub `gh`: every call goes to $GH_STUB/calls (one line of arguments) and the file of
 # --body-file to $GH_STUB/body; $GH_STUB/fail makes every call fail (as gh does without a valid
-# token). `issue list` prints $GH_STUB/issues ([] without it); `issue create` and `issue comment`
-# print a URL, as gh does. Any other command, or a call without GH_TOKEN, fails with exit 3.
+# token). `api repos/<repo>/issues?…` prints $GH_STUB/issues ([] without it); `issue create` and
+# `issue comment` print a URL, as gh does. Any other command, or a call without GH_TOKEN, fails with exit 3.
 cat >"$tmp/bin/gh" <<'SH'
 #!/usr/bin/env bash
 set -euo pipefail
@@ -705,7 +705,7 @@ done
 [[ ! -f $GH_STUB/fail ]] || { echo "HTTP 401: Bad credentials (https://api.github.com/graphql)" >&2; exit 1; }
 case "${1:-} ${2:-}" in
     "label create") ;;
-    "issue list") cat "$GH_STUB/issues" 2>/dev/null || echo "[]" ;;
+    "api repos/"*"/issues?"*) cat "$GH_STUB/issues" 2>/dev/null || echo "[]" ;;
     "issue create") echo "https://github.com/example/szczur-radar/issues/101" ;;
     "issue comment") echo "https://github.com/example/szczur-radar/issues/$3#issuecomment-1" ;;
     *) echo "stub gh: unexpected command: $*" >&2; exit 3 ;;
@@ -759,7 +759,7 @@ body_says() {
 }
 
 readonly label_call="label create deploy-health --repo example/szczur-radar --force"
-readonly list_call="issue list --repo example/szczur-radar --label deploy-health --state open --json number,title"
+readonly list_call="api repos/example/szczur-radar/issues?labels=deploy-health&state=open&per_page=100"
 
 step "12. verify-deploy.sh: the check after a code deploy"
 deploy_case deploy-healthy 0 "[$ready]" "[$healthz]"
@@ -797,14 +797,16 @@ api_requests_were deploy-error-down 2
 body_says deploy-error-down '| `/healthz` | HTTP 503 |'
 pass "error with both probes 503: each probe asked once (not retried for DEPLOY_GUARD_WAKE_TIMEOUT), a new issue"
 mkdir -p "$tmp/deploy-existing.gh"
+# The REST list returns pull requests too: #30, older and naming the environment, is one.
 printf '%s\n' '[{"number": 57, "title": "Niezdrowe wdrożenie: szczur-radar-pr-81"},
   {"number": 42, "title": "Niezdrowe wdrożenie: production"},
+  {"number": 30, "title": "Niezdrowe wdrożenie: production", "pull_request": {"url": "https://api.github.com/x"}},
   {"number": 64, "title": "Niezdrowe wdrożenie: production (again)"}]' >"$tmp/deploy-existing.gh/issues"
 deploy_case deploy-existing 0 "[$ready]" "[$healthz]" DEPLOY_STATE=failure
 gh_calls_are deploy-existing "$label_call" "$list_call" "issue comment 42 --repo example/szczur-radar --body-file"
 run_says deploy-existing '::notice::deploy check: commented on the open issue #42: https://github.com/example/szczur-radar/issues/42#issuecomment-1'
 body_says deploy-existing '| Stan deployu (Railway) | `failure` |'
-pass "an open deploy-health issue of the environment: exit 0, a comment on the oldest (#42), no new issue"
+pass "an open deploy-health issue of the environment: exit 0, a comment on the oldest (#42, not the pull request #30), no new issue"
 mkdir -p "$tmp/deploy-other-pr.gh"
 cp "$tmp/deploy-existing.gh/issues" "$tmp/deploy-other-pr.gh/issues"
 deploy_case deploy-other-pr 0 "[$ready]" "[$healthz]" DEPLOY_STATE=failure DEPLOY_ENVIRONMENT="szczur-radar / szczur-radar-pr-8"
