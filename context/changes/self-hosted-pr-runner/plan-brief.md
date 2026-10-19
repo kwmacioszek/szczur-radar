@@ -1,4 +1,4 @@
-# Self-hosted runner CI na VM w Proxmoxie — Plan Brief
+# Self-hosted runnery CI (Proxmox + PC) — Plan Brief
 
 > Full plan: `context/changes/self-hosted-pr-runner/plan.md`
 > Research: `context/changes/self-hosted-pr-runner/research.md`
@@ -13,7 +13,7 @@ Siedem jobów `.github/workflows/ci.yml` ma na sztywno `runs-on: ubuntu-latest`.
 
 ## Desired End State
 
-`gh variable set CI_RUNNER --body szczur-ci` przenosi całe CI (PR i `main`) na VM, `gh variable delete CI_RUNNER` przywraca GitHuba — bez commita. PR tej zmiany przechodzi na VM i wdraża PR env, VM jest odtwarzalna skryptem z repo, a runbook mówi, co robić, gdy VM nie działa.
+`gh variable set CI_RUNNER --body szczur-ci` przenosi całe CI (PR i `main`) na VM, `gh variable delete CI_RUNNER` przywraca GitHuba — bez commita. PR tej zmiany przechodzi na VM i wdraża PR env, VM jest odtwarzalna skryptem z repo, a runbook mówi, co robić, gdy VM nie działa. Na czas developmentu dochodzą 4 runnery w VM-kach KVM na PC (ta sama etykieta): przy włączonym PC joby rozkładają się na pulę 5 runnerów, przy wyłączonym bierze je Proxmox.
 
 ## Key Decisions Made
 
@@ -29,16 +29,21 @@ Siedem jobów `.github/workflows/ci.yml` ma na sztywno `runs-on: ubuntu-latest`.
 | Instalacja | `tools/ci-runner/setup.sh` + README | Odtwarzalne, wzorem `tools/*/`. | Plan |
 | Issue | istniejące #30 | Opisuje dokładnie tę zmianę. | Research |
 | Fallback przy VM offline | ręczny (usunięcie flagi) | Automatyczny wymaga PAT z prawami admina. | Research |
+| Runnery na PC (2026-10-19) | 4 VM KVM × 1 runner na Ubuntu PC, etykieta `szczur-ci` | Pula z Proxmoxem bez zmiany flagi; własny Docker na VM = brak kolizji portów bez zmian w `ci.yml`. | Plan |
+| Hiperwizor na PC | KVM/libvirt (nie VirtualBox, nie WSL2) | Natywny na Ubuntu, bez konfliktu modułów, prosty skrypt z cloud-init. | Plan |
+| Wyłączenie PC w trakcie joba | runbook + `gh run rerun` | Zero dodatkowego kodu. | Plan |
+| Wykonanie fazy 2 | sesja Claude Code na PC | Skrypt pisany i testowany tam, gdzie działa. | Plan |
 
 ## Scope
 
 **In scope:**
 - Przełącznik `runs-on` we wszystkich jobach `ci.yml`, sprzątanie kontenerów `web`/`api`
 - `tools/ci-runner/setup.sh` i runbook; instalacja 1 runnera na VM; flaga `CI_RUNNER`
+- `tools/ci-runner/kvm-vms.sh`: 4 VM-ki z runnerami na PC w puli z Proxmoxem
 - Dokumentacja (guidelines, deploy-plan, README API, roadmapa + SVG), impl-review i archiwizacja
 
 **Out of scope:**
-- Drugi runner i unikalne porty w smoke testach (osobna zmiana, Parked)
+- Drugi runner w Proxmoxie i unikalne porty w smoke testach (osobna zmiana, Parked); priorytet PC przed Proxmoxem (GitHub tego nie wspiera)
 - Izolacja sieci VM, automatyczny fallback, runner w kontenerze, runner na Macu
 - Podbicie wersji akcji, łączenie jobów, zmiany w przepływie deployu produkcji
 
@@ -51,10 +56,11 @@ Każdy job ma w `runs-on` wyrażenie wybierające etykietę: `CI_RUNNER_PR` (PR)
 | Phase | What it delivers | Key risk |
 | --- | --- | --- |
 | 1. Przełącznik i runner na VM | CI na VM, flaga działa, PR env wdrożony | kolejność: runner online i flaga przed pierwszym pushem; dysk 31 GB |
-| 2. Dokumentacja i domknięcie | runbook, guidelines, roadmapa, impl-review, archiwizacja | konflikt z PR #81 (S-14) w `ci.yml` |
+| 2. Runnery na PC | 4 VM-ki KVM z runnerami, pula z Proxmoxem, test przejęcia | dwie sesje Claude na jednej gałęzi; wyłączenie PC w trakcie joba |
+| 3. Dokumentacja i domknięcie | runbook, guidelines, roadmapa, impl-review, archiwizacja | konflikt z PR #81 (S-14) w `ci.yml` |
 
 **Prerequisites:** VM z SSH (jest); tymczasowe NOPASSWD sudo dodane przez użytkownika na czas instalacji; uprawnienia admina repo dla `gh` (token rejestracyjny).
-**Estimated effort:** ~1–2 sesje, 2 fazy.
+**Estimated effort:** ~2–3 sesje, 3 fazy (faza 1 zrobiona; faza 2 w sesji Claude Code na PC).
 
 ## Open Risks & Assumptions
 
@@ -62,7 +68,8 @@ Każdy job ma w `runs-on` wyrażenie wybierające etykietę: `CI_RUNNER_PR` (PR)
 - Sekrety CI (`RAILWAY_API_TOKEN` workspace, `WYKOP_*`, `LLM_API_KEY`) leżą na VM, która widzi LAN (izolacja świadomie odłożona).
 - Po merge'u przy ustawionym `CI_RUNNER` także bramka deployu produkcji idzie na VM.
 - Inne otwarte PR-y odblokują się dopiero po wciągnięciu `main` z tą zmianą.
-- 1 runner: run ok. 10 min; limity pull Docker Hub dla self-hosted łagodzi lokalny cache obrazów.
+- Proxmox sam: run ok. 7 min z cache (10,4 min zimny); limity pull Docker Hub dla self-hosted łagodzi lokalny cache obrazów — przy 4 nowych VM-kach PC każda pobiera obrazy osobno.
+- Wyłączenie PC w trakcie joba = czerwony job do `gh run rerun`.
 
 ## Success Criteria (Summary)
 

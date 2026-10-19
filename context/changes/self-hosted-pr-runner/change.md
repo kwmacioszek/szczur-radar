@@ -3,7 +3,7 @@ change_id: self-hosted-pr-runner
 title: Lokalny self-hosted runner GitHub Actions z przełącznikiem dla PR env i produkcji
 status: implementing
 created: 2026-10-18
-updated: 2026-10-18
+updated: 2026-10-19
 archived_at: null
 ---
 
