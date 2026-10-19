@@ -32,14 +32,15 @@ Siedem jobów `.github/workflows/ci.yml` ma na sztywno `runs-on: ubuntu-latest`.
 | Runnery na PC (2026-10-19) | 4 VM KVM × 1 runner na Ubuntu PC, etykieta `szczur-ci` | Pula z Proxmoxem bez zmiany flagi; własny Docker na VM = brak kolizji portów bez zmian w `ci.yml`. | Plan |
 | Hiperwizor na PC | KVM/libvirt (nie VirtualBox, nie WSL2) | Natywny na Ubuntu, bez konfliktu modułów, prosty skrypt z cloud-init. | Plan |
 | Wyłączenie PC w trakcie joba | runbook + `gh run rerun` | Zero dodatkowego kodu. | Plan |
-| Wykonanie fazy 2 | sesja Claude Code na PC | Skrypt pisany i testowany tam, gdzie działa. | Plan |
+| Wykonanie fazy 2 | sesja na Macu przez SSH na `ci-admin` (bez sudo poza fazą) | Jedna sesja, ograniczone konto techniczne na PC. | Plan |
+| Forma narzędzia na PC | interaktywne CLI w Pythonie: create / delete / status | Decyzja użytkownika: VM-ki w miarę potrzeb, parametry podawane przy uruchomieniu. | Plan |
 
 ## Scope
 
 **In scope:**
 - Przełącznik `runs-on` we wszystkich jobach `ci.yml`, sprzątanie kontenerów `web`/`api`
 - `tools/ci-runner/setup.sh` i runbook; instalacja 1 runnera na VM; flaga `CI_RUNNER`
-- `tools/ci-runner/kvm-vms.sh`: 4 VM-ki z runnerami na PC w puli z Proxmoxem
+- `tools/ci-runner/pc_runners.py`: interaktywne CLI (create / delete / status) dla VM-ek z runnerami na PC w puli z Proxmoxem
 - Dokumentacja (guidelines, deploy-plan, README API, roadmapa + SVG), impl-review i archiwizacja
 
 **Out of scope:**
@@ -56,11 +57,11 @@ Każdy job ma w `runs-on` wyrażenie wybierające etykietę: `CI_RUNNER_PR` (PR)
 | Phase | What it delivers | Key risk |
 | --- | --- | --- |
 | 1. Przełącznik i runner na VM | CI na VM, flaga działa, PR env wdrożony | kolejność: runner online i flaga przed pierwszym pushem; dysk 31 GB |
-| 2. Runnery na PC | 4 VM-ki KVM z runnerami, pula z Proxmoxem, test przejęcia | dwie sesje Claude na jednej gałęzi; wyłączenie PC w trakcie joba |
+| 2. Runnery na PC | CLI `pc_runners.py`, 4 VM-ki KVM z runnerami, pula z Proxmoxem, test przejęcia | wyłączenie PC w trakcie joba; uprawnienia libvirt bez sudo |
 | 3. Dokumentacja i domknięcie | runbook, guidelines, roadmapa, impl-review, archiwizacja | konflikt z PR #81 (S-14) w `ci.yml` |
 
 **Prerequisites:** VM z SSH (jest); tymczasowe NOPASSWD sudo dodane przez użytkownika na czas instalacji; uprawnienia admina repo dla `gh` (token rejestracyjny).
-**Estimated effort:** ~2–3 sesje, 3 fazy (faza 1 zrobiona; faza 2 w sesji Claude Code na PC).
+**Estimated effort:** ~2–3 sesje, 3 fazy (faza 1 zrobiona; faza 2 przez SSH na PC).
 
 ## Open Risks & Assumptions
 

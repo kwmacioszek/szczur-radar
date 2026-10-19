@@ -1,6 +1,6 @@
 # ci-runner
 
-Self-hosted runnery GitHub Actions dla `.github/workflows/ci.yml` na VM z Ubuntu 24.04 w domowym Proxmoxie (zmiana `self-hosted-pr-runner`, issue #30). Powód: darmowe minuty GitHub Actions prywatnego repo kończą się przed końcem miesiąca (ok. 1800 min w 30 dni przy limicie 2000), a po ich wyczerpaniu żaden job nie startuje („The job was not started because … your spending limit needs to be increased”), workflow kończy się porażką i Railway pomija deploy.
+Self-hosted runnery GitHub Actions dla `.github/workflows/ci.yml` na VM z Ubuntu 24.04 w domowym Proxmoxie, a w czasie developmentu także w VM-kach na PC (sekcja „Runnery na PC”) (zmiana `self-hosted-pr-runner`, issue #30). Powód: darmowe minuty GitHub Actions prywatnego repo kończą się przed końcem miesiąca (ok. 1800 min w 30 dni przy limicie 2000), a po ich wyczerpaniu żaden job nie startuje („The job was not started because … your spending limit needs to be increased”), workflow kończy się porażką i Railway pomija deploy.
 
 ## Przełącznik
 
@@ -39,7 +39,35 @@ gh api repos/kwmacioszek/szczur-radar/actions/runners -q '.runners[] | [.name, .
 
 Joby `ci.yml` działają na takim runnerze bez zmian (`services:`, `--network host`, Testcontainers). Na trwałym runnerze joby sprzątają po sobie kontenery o stałych nazwach (`web`, `api`).
 
-**Jeden runner** wykonuje joby po kolei (run PR ok. 10 min zamiast ok. 4). Drugi runner wymaga najpierw unikalnych portów i nazw kontenerów w smoke testach (`8080`, `8000`, `5432` na hoście), inaczej dwa równoległe runy się zderzą.
+**Jeden runner na VM.** Runner wykonuje joby po kolei (sam Proxmox: run PR ok. 7 min z cache, ok. 10 min zimny). Drugi runner w tej samej VM wymaga najpierw unikalnych portów i nazw kontenerów w smoke testach (`8080`, `8000`, `5432` na hoście, kontenery `web`/`api`), inaczej dwa równoległe joby się zderzą. Więcej runnerów = więcej VM-ek, każda z własnym Dockerem (niżej).
+
+## Runnery na PC
+
+Na czas developmentu dochodzą runnery w VM-kach KVM na Ubuntu na PC (`pc_runners.py`), z tą samą etykietą `szczur-ci` co Proxmox. GitHub daje job **dowolnemu wolnemu runnerowi online** z tą etykietą (bez priorytetu), więc:
+
+- PC włączony: joby rozkładają się na pulę (Proxmox + VM-ki PC), run trwa mniej więcej tyle co najdłuższy job (`backend`);
+- PC wyłączony albo uruchomiony Windows: runnery PC są `offline`, GitHub ich nie wybiera, wszystko bierze Proxmox — bez zmiany `CI_RUNNER`;
+- **przed wyłączeniem PC** poczekaj, aż runnery `ci-pc-*` skończą joby (`python3 pc_runners.py status` → `busy`); job przerwany wyłączeniem kończy się porażką po kilku minutach i wymaga `gh run rerun <id>`.
+
+Host (raz, kontem z sudo):
+
+```bash
+sudo apt install -y qemu-kvm libvirt-daemon-system virtinst cloud-image-utils
+sudo usermod -aG libvirt,kvm $USER    # potem wyloguj się i zaloguj
+gh auth login                         # opcjonalnie: status runnerów, wyrejestrowanie przy delete, token przy create
+```
+
+```bash
+python3 tools/ci-runner/pc_runners.py           # menu: 1) create  2) delete  3) status
+python3 tools/ci-runner/pc_runners.py create    # pyta: ile VM-ek, vCPU, RAM (GB), dysk (GB), klucze SSH
+python3 tools/ci-runner/pc_runners.py create --count 4 --cpus 4 --ram 8 --disk 60 --yes
+python3 tools/ci-runner/pc_runners.py status    # VM-ki (stan, vCPU, RAM, IP, autostart) i ich runnery w GitHubie
+python3 tools/ci-runner/pc_runners.py delete    # pyta które; wyrejestrowuje runner (gh) i usuwa VM z dyskami
+```
+
+`create` nadaje VM-kom kolejne wolne numery (`ci-pc-1`, `ci-pc-2`, …; runner `<vm>-1`), trzyma dyski w puli libvirt `ci-runners` (`/var/lib/libvirt/images/ci-runners`, dysk qcow2 na obrazie Ubuntu 24.04 cloud sprawdzonym SHA-256, rośnie w miarę zapisu) i przez cloud-init ustawia nazwę hosta, użytkownika `ops` z kluczami SSH (domyślnie z `~/.ssh/authorized_keys`, sudo bez hasła) oraz uruchamia `setup.sh` (jeden runner). Runner jest online ok. 1 min po utworzeniu VM-ki; token rejestracyjny jest usuwany z VM-ki po rejestracji. Sieć: NAT libvirt (`default`), VM-ki mają adresy `192.168.122.x` widoczne tylko z hosta: `ssh -J <user>@<pc> ops@<ip>`. VM-ki startują razem z Ubuntu (autostart; `--no-autostart` wyłącza). Zatrzymanie bez usuwania: `virsh shutdown ci-pc-N`, start: `virsh start ci-pc-N`.
+
+Zasoby: VM-ka z 4 vCPU i 8 GB RAM wystarcza na każdy job; pierwszy run na nowej VM-ce jest wolniejszy, bo pobiera obrazy Dockera i zależności od zera.
 
 ## Obsługa
 

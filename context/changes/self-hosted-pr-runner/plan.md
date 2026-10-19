@@ -22,7 +22,7 @@ Dodane 2026-10-19 (faza 2): na czas developmentu cztery dodatkowe runnery w VM-k
 - PR tej zmiany przechodzi całe CI na VM (7 jobów zielone), `railway-config` stosuje IaC do PR env, a Railway wdraża PR env (Wait for CI).
 - VM jest odtwarzalna skryptem z repo (`tools/ci-runner/setup.sh`), a runbook przełącznika i awarii VM jest w `tools/ci-runner/README.md` i `context/deployment/deploy-plan.md`.
 - Weryfikacja: API jobów (`actions/runs/<id>/jobs`) pokazuje `runner_name` = `github-runner-1` i `labels` = `["szczur-ci"]`; po kolejnym pushu brak kolizji nazw kontenerów.
-- Po fazie 2: pula 5 runnerów (`github-runner-1` w Proxmoxie, `ci-pc-1-1` … `ci-pc-4-1` na PC), każdy we własnej VM z własnym Dockerem; run PR-a rozkłada joby na kilka runnerów, a przy wyłączonych VM-kach PC w całości idzie na Proxmoxa. VM-ki PC odtwarzalne skryptem `tools/ci-runner/kvm-vms.sh`, startują razem z Ubuntu.
+- Po fazie 2: pula 5 runnerów (`github-runner-1` w Proxmoxie, `ci-pc-1-1` … `ci-pc-4-1` na PC), każdy we własnej VM z własnym Dockerem; run PR-a rozkłada joby na kilka runnerów, a przy wyłączonych VM-kach PC w całości idzie na Proxmoxa. VM-ki PC tworzone, usuwane i podglądane narzędziem `tools/ci-runner/pc_runners.py`, startują razem z Ubuntu.
 
 ### Key Discoveries:
 
@@ -46,7 +46,7 @@ Dodane 2026-10-19 (faza 2): na czas developmentu cztery dodatkowe runnery w VM-k
 
 ## Implementation Approach
 
-Najpierw odblokowanie: przełącznik w `ci.yml` (domyślnie zachowanie bez zmian), runner na VM i flaga `CI_RUNNER` ustawiona, zanim gałąź trafi na GitHuba — PR tej zmiany jest wtedy pierwszym testem runnera. Potem pula runnerów na PC (faza 2, wykonywana w sesji Claude Code na PC), a na końcu dokumentacja i domknięcie na tej samej gałęzi; człowiek merguje raz, a pozostałe PR-y odblokowują się po wciągnięciu `main`.
+Najpierw odblokowanie: przełącznik w `ci.yml` (domyślnie zachowanie bez zmian), runner na VM i flaga `CI_RUNNER` ustawiona, zanim gałąź trafi na GitHuba — PR tej zmiany jest wtedy pierwszym testem runnera. Potem pula runnerów na PC (faza 2, przez SSH na PC), a na końcu dokumentacja i domknięcie na tej samej gałęzi; człowiek merguje raz, a pozostałe PR-y odblokowują się po wciągnięciu `main`.
 
 ## Critical Implementation Details
 
@@ -54,7 +54,7 @@ Najpierw odblokowanie: przełącznik w `ci.yml` (domyślnie zachowanie bez zmian
 - **Wyrażenie przełącznika:** `${{ (github.event_name == 'pull_request' && vars.CI_RUNNER_PR) || (github.event_name == 'push' && vars.CI_RUNNER_MAIN) || vars.CI_RUNNER || 'ubuntu-latest' }}` — nawiasy są konieczne: bez nich pusty `CI_RUNNER_PR` w łańcuchu `&& ||` daje zły wynik. To samo wyrażenie w każdym `runs-on` (także w `deploy-gate-test` z S-14, gdy wejdzie).
 - **Tymczasowe sudo:** instalacja wymaga roota; użytkownik dodaje `/etc/sudoers.d/90-claude-setup` (NOPASSWD dla `krzysiek`), agent usuwa go na końcu fazy 1. Runner działa jako `gha` bez sudo.
 - **S-14 (PR #81):** kto merguje drugi, rozwiązuje konflikt w `ci.yml` i dodaje przełącznik do `deploy-gate-test`.
-- **Faza 2 wykonuje się na PC:** w osobnej sesji Claude Code na Ubuntu PC (klon repo, `gh auth login` z prawami admina repo do tokenu rejestracyjnego, `git checkout feature/self-hosted-pr-runner`). Ta sesja pisze, testuje, commituje i pushuje skrypt. Dwie sesje nie commitują na tę gałąź równocześnie: sesja na Macu wraca dopiero do fazy 3, po `git pull`.
+- **Faza 2 przez SSH na PC (zmiana 2026-10-19):** sesja na Macu łączy się jako `ci-admin@192.168.10.15` (klucz `~/.ssh/szczur_ci_runner_ed25519`; konto techniczne w grupach `libvirt`, `kvm`, bez sudo — tymczasowe NOPASSWD tylko na czas fazy, usuwane na końcu). Główne konto użytkownika to `krzysiek-ai-lab`; narzędzie działa z każdego konta w grupie `libvirt`, bez sudo.
 - **Jedna VM = jeden runner:** smoke testy zajmują stałe porty i nazwy na hoście Dockera (8080, 8000, 5432, `web`, `api`), więc każdy runner musi mieć własny demon Dockera. Nazwy hostów VM muszą być unikalne, bo `setup.sh` nazywa runner `<hostname>-1`.
 
 ## Phase 1: Przełącznik i runner na VM
@@ -131,17 +131,17 @@ CI działa na VM w Proxmoxie, a jedna flaga przełącza je z powrotem na GitHuba
 
 ### Overview
 
-Cztery VM-ki KVM na Ubuntu na PC, każda z jednym runnerem z etykietą `szczur-ci`, dołączają do puli z `github-runner-1`. Przy włączonym PC joby rozkładają się na pulę; przy wyłączonym bierze je Proxmox. Całą fazę wykonuje sesja Claude Code na PC (patrz „Critical Implementation Details”).
+Cztery VM-ki KVM na Ubuntu na PC, każda z jednym runnerem z etykietą `szczur-ci`, dołączają do puli z `github-runner-1`. Przy włączonym PC joby rozkładają się na pulę; przy wyłączonym bierze je Proxmox. Fazę wykonuje sesja na Macu przez SSH na konto `ci-admin` na PC (zmiana 2026-10-19, patrz „Critical Implementation Details”).
 
 ### Changes Required:
 
-#### 1. Skrypt tworzący VM-ki na PC
+#### 1. Narzędzie CLI do VM-ek z runnerami na PC
 
-**File**: `tools/ci-runner/kvm-vms.sh`
+**File**: `tools/ci-runner/pc_runners.py` (zmiana 2026-10-19: zamiast `kvm-vms.sh` — decyzja użytkownika: interaktywna aplikacja CLI w Pythonie)
 
-**Intent**: Odtwarzalnie postawić N VM-ek z runnerami na hoście Ubuntu z KVM — bez ręcznej instalacji systemu w każdej.
+**Intent**: W miarę potrzeb tworzyć, usuwać i podglądać VM-ki z runnerami na hoście Ubuntu z KVM — bez ręcznej instalacji systemu w każdej. Pyta o brakujące parametry.
 
-**Contract**: Uruchamiany na hoście (Ubuntu z KVM/libvirt; skrypt doinstalowuje brakujące pakiety, np. `qemu-kvm`, `libvirt-daemon-system`, `virtinst`, `cloud-image-utils`). Parametry przez zmienne z domyślnymi: `VM_COUNT`=4, `VM_CPUS`=4, `VM_RAM_MB`=8192, `VM_DISK_GB`=60, `VM_PREFIX`=`ci-pc`. Obraz Ubuntu 24.04 cloud (amd64) pobierany raz, ze sprawdzeniem SHA-256. Każda VM `<prefix>-N` dostaje przez cloud-init: hostname `<prefix>-N`, użytkownika z kluczem SSH operatora, `setup.sh` z repo (osadzony w cloud-init) uruchomiony z tokenem rejestracyjnym (`gh api -X POST …/actions/runners/registration-token` przy uruchomieniu skryptu) i `RUNNER_LABELS=szczur-ci`. Sieć: domyślny NAT libvirt. `virsh autostart` dla każdej VM. Idempotentny: istniejąca VM jest pomijana.
+**Contract**: Python 3 (tylko biblioteka standardowa) na hoście Ubuntu z KVM/libvirt (`qemu-kvm`, `libvirt-daemon-system`, `virtinst`, `cloud-image-utils` instalowane raz przez operatora), uruchamiany jako użytkownik w grupie `libvirt` (`qemu:///system`, bez sudo). Polecenia: `create`, `delete`, `status`; bez polecenia — menu. `create` pyta (albo bierze z flag) o liczbę VM-ek, vCPU, RAM (GB), dysk (GB), z domyślnymi 4 / 4 / 8 / 60, prefiks `ci-pc`, etykietę `szczur-ci`; nowe VM-ki dostają kolejne wolne numery. `delete` wyrejestrowuje runner z GitHuba (gdy dostępny `gh`) i usuwa VM z dyskami, po potwierdzeniu i z ostrzeżeniem przy zajętym runnerze. `status` pokazuje VM-ki (stan, vCPU, RAM, IP) i runnery z GitHuba (status, busy). Dyski w puli libvirt `ci-runners`. Obraz Ubuntu 24.04 cloud (amd64) pobierany raz, ze sprawdzeniem SHA-256. Każda VM `<prefix>-N` dostaje przez cloud-init: hostname `<prefix>-N`, użytkownika z kluczem SSH operatora, `setup.sh` z repo (osadzony w cloud-init) uruchomiony z tokenem rejestracyjnym (`gh api -X POST …/actions/runners/registration-token` przy uruchomieniu skryptu) i `RUNNER_LABELS=szczur-ci`. Sieć: domyślny NAT libvirt. `virsh autostart` dla każdej VM. Token rejestracyjny: `--token`, zmienna `RUNNER_TOKEN`, `gh` albo pytanie. Istniejąca VM nie jest nadpisywana.
 
 #### 2. Runbook puli
 
@@ -149,24 +149,24 @@ Cztery VM-ki KVM na Ubuntu na PC, każda z jednym runnerem z etykietą `szczur-c
 
 **Intent**: Operator wie, jak działa pula Proxmox + PC i co robić przy wyłączaniu PC.
 
-**Contract**: Nowa sekcja o puli: GitHub wybiera dowolny wolny runner z etykietą (bez priorytetu); PC wyłączony / Windows → joby bierze Proxmox; zasada „przed wyłączeniem PC poczekaj, aż runnery `ci-pc-*` skończą joby (`gh api …/actions/runners` → `busy`), przerwany job → `gh run rerun <id>`”; użycie `kvm-vms.sh`; zatrzymanie i start VM-ek (`virsh shutdown` / `virsh start`), wyrejestrowanie.
+**Contract**: Nowa sekcja o puli: GitHub wybiera dowolny wolny runner z etykietą (bez priorytetu); PC wyłączony / Windows → joby bierze Proxmox; zasada „przed wyłączeniem PC poczekaj, aż runnery `ci-pc-*` skończą joby (`gh api …/actions/runners` → `busy`), przerwany job → `gh run rerun <id>`”; użycie `pc_runners.py` (create / delete / status); zatrzymanie i start VM-ek (`virsh shutdown` / `virsh start`), wyrejestrowanie.
 
-#### 3. Utworzenie VM-ek na PC (operator + sesja Claude Code na PC)
+#### 3. Utworzenie VM-ek na PC (sesja na Macu przez SSH)
 
 **File**: host Ubuntu na PC (poza repo)
 
 **Intent**: Uruchomić skrypt i dołączyć 4 runnery do puli.
 
-**Contract**: Na PC: klon repo, `gh auth login`, `git checkout feature/self-hosted-pr-runner`, uruchomienie `kvm-vms.sh`; runnery `ci-pc-1-1` … `ci-pc-4-1` online. Commit i push skryptu oraz README z PC; sesja na Macu nie commituje w tym czasie.
+**Contract**: Narzędzie skopiowane na PC (`scp`), `create` z 4 VM-kami i tokenem rejestracyjnym pobranym na Macu; runnery `ci-pc-1-1` … `ci-pc-4-1` online. Commit i push z Maca.
 
 ### Success Criteria:
 
 #### Automated Verification:
 
-- Składnia skryptu: `bash -n tools/ci-runner/kvm-vms.sh`
+- Składnia narzędzia: `python3 -m py_compile tools/ci-runner/pc_runners.py`
 - Pula online: `gh api repos/kwmacioszek/szczur-radar/actions/runners` pokazuje `github-runner-1` i `ci-pc-1-1` … `ci-pc-4-1` ze statusem `online` i etykietą `szczur-ci`
 - CI PR-a zielone na puli: wszystkie joby `success`, a `runner_name` w `actions/runs/<id>/jobs` obejmuje co najmniej jeden runner `ci-pc-*`
-- Ponowne uruchomienie `kvm-vms.sh` kończy się bez błędu i pomija istniejące VM-ki
+- `pc_runners.py status` pokazuje 4 VM-ki `running` z IP i ich runnery `online`
 
 #### Manual Verification:
 
@@ -310,17 +310,17 @@ Dokumentacja repo opisuje przełącznik i pulę runnerów (Proxmox + PC); roadma
 
 #### Automated
 
-- [ ] 2.1 Składnia skryptu: `bash -n tools/ci-runner/kvm-vms.sh`
-- [ ] 2.2 Pula online: `github-runner-1` i `ci-pc-1-1` … `ci-pc-4-1` online z etykietą `szczur-ci`
-- [ ] 2.3 CI PR-a zielone na puli, a co najmniej jeden job na runnerze `ci-pc-*`
-- [ ] 2.4 Ponowne uruchomienie `kvm-vms.sh` kończy się bez błędu i pomija istniejące VM-ki
+- [x] 2.1 Składnia narzędzia: `python3 -m py_compile tools/ci-runner/pc_runners.py`
+- [x] 2.2 Pula online: `github-runner-1` i `ci-pc-1-1` … `ci-pc-4-1` online z etykietą `szczur-ci`
+- [x] 2.3 CI PR-a zielone na puli, a co najmniej jeden job na runnerze `ci-pc-*`
+- [x] 2.4 `pc_runners.py status` pokazuje 4 VM-ki `running` z IP i ich runnery `online`
 
 #### Manual
 
-- [ ] 2.5 Przejęcie przez Proxmox: przy wyłączonych VM-kach PC rerun idzie w całości na `github-runner-1` i jest zielony
-- [ ] 2.6 Po restarcie Ubuntu na PC VM-ki startują same i runnery `ci-pc-*` wracają do `online`
-- [ ] 2.7 Czas runu z pulą zanotowany i porównany z ok. 7 min na samym Proxmoxie
-- [ ] 2.8 Runbook puli w `tools/ci-runner/README.md` przeczytany przez człowieka
+- [x] 2.5 Przejęcie przez Proxmox: przy wyłączonych VM-kach PC rerun idzie w całości na `github-runner-1` i jest zielony
+- [x] 2.6 Po restarcie Ubuntu na PC VM-ki startują same i runnery `ci-pc-*` wracają do `online`
+- [x] 2.7 Czas runu z pulą zanotowany i porównany z ok. 7 min na samym Proxmoxie
+- [x] 2.8 Runbook puli w `tools/ci-runner/README.md` przeczytany przez człowieka
 
 ### Phase 3: Dokumentacja i domknięcie
 
