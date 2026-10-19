@@ -310,24 +310,24 @@ Dokumentacja repo opisuje przełącznik i pulę runnerów (Proxmox + PC); roadma
 
 #### Automated
 
-- [x] 2.1 Składnia narzędzia: `python3 -m py_compile tools/ci-runner/pc_runners.py`
-- [x] 2.2 Pula online: `github-runner-1` i `ci-pc-1-1` … `ci-pc-4-1` online z etykietą `szczur-ci`
-- [x] 2.3 CI PR-a zielone na puli, a co najmniej jeden job na runnerze `ci-pc-*`
-- [x] 2.4 `pc_runners.py status` pokazuje 4 VM-ki `running` z IP i ich runnery `online`
+- [x] 2.1 Składnia narzędzia: `python3 -m py_compile tools/ci-runner/pc_runners.py` — 6fa5543
+- [x] 2.2 Pula online: `github-runner-1` i `ci-pc-1-1` … `ci-pc-4-1` online z etykietą `szczur-ci` — 6fa5543
+- [x] 2.3 CI PR-a zielone na puli, a co najmniej jeden job na runnerze `ci-pc-*` — 6fa5543
+- [x] 2.4 `pc_runners.py status` pokazuje 4 VM-ki `running` z IP i ich runnery `online` — 6fa5543
 
 #### Manual
 
-- [x] 2.5 Przejęcie przez Proxmox: przy wyłączonych VM-kach PC rerun idzie w całości na `github-runner-1` i jest zielony
-- [x] 2.6 Po restarcie Ubuntu na PC VM-ki startują same i runnery `ci-pc-*` wracają do `online`
-- [x] 2.7 Czas runu z pulą zanotowany i porównany z ok. 7 min na samym Proxmoxie
-- [x] 2.8 Runbook puli w `tools/ci-runner/README.md` przeczytany przez człowieka
+- [x] 2.5 Przejęcie przez Proxmox: przy wyłączonych VM-kach PC rerun idzie w całości na `github-runner-1` i jest zielony — 6fa5543
+- [x] 2.6 Po restarcie Ubuntu na PC VM-ki startują same i runnery `ci-pc-*` wracają do `online` — 6fa5543
+- [x] 2.7 Czas runu z pulą zanotowany i porównany z ok. 7 min na samym Proxmoxie — 6fa5543
+- [x] 2.8 Runbook puli w `tools/ci-runner/README.md` przeczytany przez człowieka — 6fa5543
 
 ### Phase 3: Dokumentacja i domknięcie
 
 #### Automated
 
-- [ ] 3.1 SVG roadmapy wygenerowany bez błędu: `python3 tools/render_roadmap_svg.py`
-- [ ] 3.2 Każdy odsyłacz do `tools/ci-runner` w dokumentach istnieje
+- [x] 3.1 SVG roadmapy wygenerowany bez błędu: `python3 tools/render_roadmap_svg.py`
+- [x] 3.2 Każdy odsyłacz do `tools/ci-runner` w dokumentach istnieje
 - [ ] 3.3 CI PR-a zielone na puli runnerów po commitach dokumentacji
 
 #### Manual

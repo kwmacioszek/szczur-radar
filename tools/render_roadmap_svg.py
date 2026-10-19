@@ -191,7 +191,7 @@ groups = [
         ("FR-016/017/019", "Panel kont + e-mail z zaproszeniem"), ("FR-020", "Własna nazwa wyświetlana"), ("FR-029", "Wygasanie krótkich sesji"),
         ("S-07 F1", "Unieważnianie sesji wersją poświadczeń"), ("Non-Goal", "2FA, logowanie zewn., reset, role")]),
     ("Operacje i skala", [
-        ("Non-Goal", "HA / multi-region, backup w kodzie"), ("S-04 F6", "Wydajność filtra przy ~20k postów"), ("#30", "Self-hosted runner CI dla PR"),
+        ("Non-Goal", "HA / multi-region, backup w kodzie"), ("S-04 F6", "Wydajność filtra przy ~20k postów"), ("roadmap", "Drugi runner CI w Proxmoxie"),
         ("audyt", "Porządki granic pakietów"), ("audyt", "Drobne ryzyka (A8, B8, B10, B11, C8, C14)")]),
 ]
 

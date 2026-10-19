@@ -841,6 +841,36 @@ PR #60 was merged by the operator as `5b6eabb` (2026-10-17 15:02 UTC).
    - Record which case the first nights were.
 5. **Record and close.** Comment the results on issue #19: the merge commit, deployment IDs, the plan output, the first night's heartbeat and progress lines, the notifications seen. Close the issue only after this production verification.
 
+## self-hosted-pr-runner: CI na runnerach w Proxmoxie i na PC
+
+**Status (2026-10-19): in PR #83 (issue #30), not merged.** The GitHub Actions minutes of the private repo ran out on 2026-10-18 (about 1800 billed minutes in 30 days on a 2000-minute plan): no job started ("The job was not started because … your spending limit needs to be increased"), every workflow failed and Railway skipped every deploy. CI now runs on self-hosted runners; tool and runbook: `tools/ci-runner/README.md`.
+
+### How it works
+
+- **Switch.** Every job's `runs-on` in `.github/workflows/ci.yml` takes the runner label from repository variables, first non-empty wins: `CI_RUNNER_PR` (pull_request), `CI_RUNNER_MAIN` (push to `main`), `CI_RUNNER` (both), else `ubuntu-latest`. A change applies to the next run, a new commit or `gh run rerun <id>` (rerun reads the variables again). A branch must contain the switch (GitHub reads `runs-on` from the branch's `ci.yml`).
+- **Pool.** `CI_RUNNER=szczur-ci` since 2026-10-18. Every runner has the label `szczur-ci` and its own VM with its own Docker daemon (the smoke tests use fixed host ports 8080/8000/5432 and container names `web`/`api`):
+  - `github-runner-1`: VM `github-runner` (Ubuntu 24.04, 4 vCPU, 7 GB, 61 GB disk) in the home Proxmox, always on; installed with `tools/ci-runner/setup.sh`;
+  - `ci-pc-1-1` … `ci-pc-4-1`: KVM VMs (4 vCPU, 8 GB, 60 GB each) on the developer's Ubuntu PC, autostart with the PC; managed with `tools/ci-runner/pc_runners.py` (`create` / `delete` / `status`) as the `ci-admin` user (groups `libvirt`, `kvm`, no sudo).
+- **Who gets a job.** GitHub gives a job to any idle online runner with the label; there is no priority. PC on: a run takes about 2 min (bounded by the `backend` job). PC off or in Windows: its runners are `offline` and Proxmox takes every job, one after another, about 7 min a run — no variable change (verified 2026-10-19).
+
+### Variables (names only)
+
+- Repository variables: `CI_RUNNER` (set: `szczur-ci`), `CI_RUNNER_PR`, `CI_RUNNER_MAIN` (unset). Secrets unchanged; the runners receive the same CI secrets as GitHub's runners did (`LLM_API_KEY`, `RAILWAY_API_TOKEN`, `WYKOP_KEY`, `WYKOP_SECRET`).
+
+### Runbook (operator)
+
+1. **No runner online** (Proxmox VM down; jobs `queued`, PR checks pending, Railway deploy `WAITING`): start the VM or the runner service (`systemctl status 'actions.runner.*'` on it). GitHub cancels a queued job after 24 h and Railway skips the deploy after 2 h — after a fix, `gh run rerun <id>`.
+2. **Back to GitHub's runners** (minutes renewed or a budget set in Billing): `gh variable delete CI_RUNNER`. To keep only the production gate on GitHub: `gh variable set CI_RUNNER_MAIN --body ubuntu-latest`.
+3. **Shutting the PC down**: wait until `pc_runners.py status` shows no `busy` runner `ci-pc-*`; a job cut off by the shutdown fails after a few minutes — `gh run rerun <id>`.
+4. **Runner gone from GitHub** (offline more than 14 days): Proxmox — delete `/home/gha/actions-runner-N` and run `setup.sh` again with a new token; PC — `pc_runners.py delete` and `create`.
+5. **Known risk** (accepted, 2026-10-18): the runner VMs see the home LAN (no VLAN/firewall isolation yet) and hold the CI secrets above, including the Railway workspace token. Workflows from forks are off in the repo settings, so only branches of this repo run.
+
+### Runbook — after the merge (operator; tracked in issue #30, not in the plan's Progress)
+
+1. **Other open PRs** get the switch only after merging `main` into their branch; until then their jobs ask for `ubuntu-latest` and fail on the used-up minutes. When resolving a conflict in `ci.yml`, a new job (e.g. S-14's `deploy-gate-test`) gets the same `runs-on` expression.
+2. **Push to `main`.** With `CI_RUNNER` set, the production gate runs on the pool too: check that the run's jobs ran on `github-runner-1` / `ci-pc-*` (`gh api repos/kwmacioszek/szczur-radar/actions/runs/<id>/jobs`) and that Railway deployed production after it.
+3. **Record and close.** Comment the merge commit, the run id and the deploys on issue #30 and close it.
+
 ## Phases
 
 ### [x] 1. Prepare the application
@@ -935,7 +965,7 @@ Record the web URL, Railway project/environment and deployment IDs, configured v
 - **Build failure — web:** Dockerfile not detected, or `npm ci` / `vue-tsc` failed. Confirm `szczur-radar-web/Dockerfile` sits at the service root directory and `package-lock.json` is committed. The identical build is green in CI, so a Railway-only failure points at root-directory / build-context config.
 - **Proxy 502 (web → api):** Caddy can't reach the backend. Check the web service's `API_PRIVATE_DOMAIN` / `API_PORT` reference variables resolve to the api's `RAILWAY_PRIVATE_DOMAIN` / `PORT`; confirm the api is up (the JVM binds dual-stack); confirm the api deployment is live and healthy. A 502 only in the first seconds after the API slept is the JVM starting — Caddy retries for up to 30 s.
 - **Readiness 503:** `/api/ready` failed its `SELECT 1`. Check the api `PG*` references resolve and Postgres is up; read `railway logs --service szczur-radar-api`. Health 200 while ready 503 = app up, DB unreachable.
-- **CI wait / deploy stuck in `WAITING`:** Wait for CI is waiting on a workflow conclusion. Confirm the GitHub Actions run **concluded** (not skipped — do not path-filter the workflow) and the Railway GitHub app has repo permissions.
+- **CI wait / deploy stuck in `WAITING`:** Wait for CI is waiting on a workflow conclusion. Confirm the GitHub Actions run **concluded** (not skipped — do not path-filter the workflow) and the Railway GitHub app has repo permissions. Since `self-hosted-pr-runner`: jobs `queued` with no runner picking them up mean no self-hosted runner with the label in `CI_RUNNER` is online (section `self-hosted-pr-runner`, runbook step 1); Railway skips the deploy after 2 h.
 - **Bad release:** roll back via dashboard → service → Deployments → Rollback (the CLI has no rollback). Code rollback does **not** roll back data — assess Postgres / migration state separately; migrations are fix-forward (Flyway, no undo) — repair with a new migration; restoring a database backup is the last resort — there is none until the subscription (see `api-docker-image`). **Update 2026-10-11 (F-01):** the daily dump and its restore runbook (section F-01).
 - **Backups can't be enabled or restore-tested** (since 2026-10-06 the planned backup is Railway's daily volume backup, not PITR): **stop before collecting production data** and reopen the documented Render fallback (managed Postgres with PITR) — risk register #1. **Update 2026-10-11 (F-01):** obsolete: backups are the `db-backup` cron. If its runs fail (`CRASHED` plus a Railway e-mail; **update (S-05, 2026-10-13):** a Railway notification, which needs the custom rule "deployment crashed", section F-01), read its log, where every failure names its step, and fix it before the next run. If no dump can be made and restored, stop collecting data and reopen the Render fallback.
 - **IaC config change didn't take effect (config ≠ merge):** changing `.railway/railway.ts` (start command, healthcheck, variables, region) needs `railway config apply` — git merge + autodeploy rebuilds **code**, not service **config**. Symptom: the deploy keeps running the OLD setting after a merged config change (here: the deploy still ran uvicorn until `railway config apply` pushed the Hypercorn start command). Fix: `railway config apply`, then redeploy.
