@@ -9,7 +9,7 @@ import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.ObjectNode;
 
-import pl.szczurradar.api.config.LlmProviderProperties.Provider;
+import pl.szczurradar.api.llm.Provider;
 
 /**
  * The subset of a JSON Schema each provider accepts. The full schema stays the caller's contract —

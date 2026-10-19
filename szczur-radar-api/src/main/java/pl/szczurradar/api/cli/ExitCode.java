@@ -18,7 +18,9 @@ public enum ExitCode {
 
 	/**
 	 * A usage or configuration error, found before any database work: a missing or unknown command or
-	 * option, an invalid e-mail, missing settings, no interactive console.
+	 * option, an invalid e-mail, missing settings, no interactive console, or an invalid setting that
+	 * fails the start of the command's Spring context (an {@code InvalidSettingsException}, e.g.
+	 * {@code LLM_TIMEOUT=120}).
 	 */
 	USAGE(2);
 

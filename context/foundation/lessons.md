@@ -110,13 +110,6 @@
 - **Rule**: Nowe pole w `railway.ts` sprawdź z typem `IntentServiceConfig` w `node_modules/railway/dist/*.d.ts`, a po apply — w żywej konfiguracji usługi na produkcji (MCP `get-service-config` albo panel), nie po pustym planie. Pusty plan po dodaniu pola znaczy, że pole nic nie robi.
 - **Applies to**: plan, implement, impl-review, infra, deploy
 
-## Wiąż gałąź zmiany z jej issue przez Development (`gh issue develop`), nie słowem zamykającym
-
-- **Context**: Faza 1 `/10x-implement` i każde zakładanie gałęzi `feature/<change-id>` dla zmiany, która ma issue (`S-NN: …` albo `<change-id>: …`) — zanim gałąź trafi na GitHuba (2026-10-18, pierwsza fala M-2).
-- **Problem**: PR-y w tym repo odwołują się do issue przez `Refs #N`, bo issue zamyka się dopiero po weryfikacji produkcji, a takie odwołanie nie pojawia się w zakładce Development issue — issue nie pokazuje ani gałęzi, ani PR. Słowo zamykające (`Closes #N`) by je powiązało, ale zamknęłoby issue już przy merge'u. `gh issue develop` tworzy powiązaną gałąź po stronie GitHuba od wskazanej bazy, więc trzeba go użyć przed pierwszym pushem gałęzi.
-- **Rule**: Zawsze wiąż gałąź zmiany z jej issue przez zakładkę Development (`gh issue develop <issue> --name feature/<change-id> --base main`), bo PR z „Refs #N” nie pojawia się w Development, a słowa zamykające (Closes) zamknęłyby issue przy merge'u przed weryfikacją produkcji.
-- **Applies to**: implement
-
 ## Przed /10x-implement nie modyfikuj plików kodu ani konfiguracji — także przy pilnym problemie
 
 - **Context**: Każda faza przed `/10x-implement` (`/10x-new`, `/10x-frame`, `/10x-research`, `/10x-plan`, plan-review), szczególnie gdy w trakcie pojawia się pilny problem (np. wyczerpany limit GitHub Actions blokujący CI).

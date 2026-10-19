@@ -214,7 +214,9 @@ export default defineRailway(() => {
   // a copy of production, so it gets the cron too), but backup.sh runs only in
   // production: elsewhere it logs "skipped" and exits 0 (BACKUP_IN_ANY_ENVIRONMENT
   // =true on the service runs it, to try a change of the tool in a PR env; IaC
-  // ignores that hand-set value, see `variables.ignore` below). The schedule
+  // ignores that hand-set value, see `variables.ignore` below; so is
+  // BACKUP_ACCEPT_SHRINK, the one-run consent to fewer rows after a restore on
+  // purpose, deploy-plan.md F-01 restore runbook). The schedule
   // is UTC and stays at 02:00 with S-05: the daily run (pipeline-trigger below,
   // 00:30 UTC) normally ends before it, and a dump taken while a run writes is
   // still consistent (pg_dump reads one snapshot). A cron run's status is its exit
@@ -304,6 +306,7 @@ export default defineRailway(() => {
     variables: {
       ignore: [
         `${dbBackup.name}/BACKUP_IN_ANY_ENVIRONMENT`,
+        `${dbBackup.name}/BACKUP_ACCEPT_SHRINK`,
         `${dbBackup.name}/BACKUP_TIMEOUT`,
         `${dbBackup.name}/S3_FORCE_PATH_STYLE`,
         `${pipelineTrigger.name}/TRIGGER_*`,

@@ -3,6 +3,8 @@ package pl.szczurradar.api.config;
 import org.springframework.boot.context.event.ApplicationEnvironmentPreparedEvent;
 import org.springframework.context.ApplicationListener;
 
+import pl.szczurradar.api.llm.LlmProviderProperties;
+
 /**
  * Fails every start of the application context — server, operator commands and tests alike — on
  * an invalid {@link LlmProviderProperties}, before any bean exists. Without it the first error would

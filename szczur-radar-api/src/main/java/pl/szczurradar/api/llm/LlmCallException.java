@@ -1,7 +1,5 @@
 package pl.szczurradar.api.llm;
 
-import pl.szczurradar.api.config.LlmProviderProperties.ServiceTier;
-
 /** A model call that produced no text, after {@link #attempts()} HTTP attempts. */
 public class LlmCallException extends RuntimeException {
 

@@ -15,7 +15,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplicat
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
-import pl.szczurradar.api.config.LlmProviderProperties;
+import pl.szczurradar.api.llm.LlmProviderProperties;
 import pl.szczurradar.api.pipeline.state.Durations;
 
 /**

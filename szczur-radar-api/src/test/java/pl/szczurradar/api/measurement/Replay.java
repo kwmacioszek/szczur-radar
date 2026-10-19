@@ -17,9 +17,9 @@ import pl.szczurradar.api.agents.assessor.Preparation;
 import pl.szczurradar.api.agents.assessor.Provenance;
 import pl.szczurradar.api.agents.assessor.contract.AssessmentOutputV2;
 import pl.szczurradar.api.agents.assessor.validation.FailureClass;
-import pl.szczurradar.api.config.LlmProviderProperties.Provider;
-import pl.szczurradar.api.config.LlmProviderProperties.ServiceTier;
 import pl.szczurradar.api.llm.LlmResponse;
+import pl.szczurradar.api.llm.Provider;
+import pl.szczurradar.api.llm.ServiceTier;
 import pl.szczurradar.api.measurement.GoldLabels.Post;
 import pl.szczurradar.api.measurement.ModelsConfig.Model;
 

@@ -1,2 +1,4 @@
 org.springframework.context.ApplicationListener=\
 pl.szczurradar.api.config.LlmConfigurationCheck
+org.springframework.boot.diagnostics.FailureAnalyzer=\
+pl.szczurradar.api.config.InvalidSettingsFailureAnalyzer

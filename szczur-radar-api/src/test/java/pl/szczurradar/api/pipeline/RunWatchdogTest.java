@@ -19,8 +19,8 @@ import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.mock.env.MockEnvironment;
 
-import pl.szczurradar.api.config.LlmProviderProperties;
-import pl.szczurradar.api.config.LlmProviderProperties.Provider;
+import pl.szczurradar.api.llm.LlmProviderProperties;
+import pl.szczurradar.api.llm.Provider;
 
 /**
  * One check of the watchdog, without its thread: nothing but an in-memory look while this instance has

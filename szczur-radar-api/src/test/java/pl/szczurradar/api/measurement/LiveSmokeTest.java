@@ -30,8 +30,8 @@ import pl.szczurradar.api.agents.assessor.Provenance;
 import pl.szczurradar.api.agents.assessor.contract.AssessmentInputV1;
 import pl.szczurradar.api.agents.assessor.validation.FailureClass;
 import pl.szczurradar.api.agents.assessor.validation.Violation;
-import pl.szczurradar.api.config.LlmProviderProperties;
 import pl.szczurradar.api.llm.LlmClientFactory;
+import pl.szczurradar.api.llm.LlmProviderProperties;
 import pl.szczurradar.api.sources.wykop.WykopItem;
 import pl.szczurradar.api.sources.wykop.WykopMapper;
 

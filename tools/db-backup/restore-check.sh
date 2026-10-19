@@ -1,16 +1,18 @@
 #!/usr/bin/env bash
 # Proves that a dump restores into a healthy, queryable database (F-01, production-data-gate; see
 # README.md): a throwaway Postgres 18 cluster in a temporary directory of the container (never a
-# volume), pg_restore in one transaction, then named checks. With the manifest written by backup.sh it
-# also compares the Flyway version and the row counts. With --serve the restored database stays up on
-# port 5432 (user postgres, password RESTORE_CHECK_PASSWORD, database `restored`) for a test with the
-# application, until the container stops.
+# volume), pg_restore in one transaction, then named checks: the tables that tables.sh requires at the
+# restored Flyway version exist, and no table is missing from its classification. With the manifest
+# written by backup.sh it also compares the Flyway version and the row counts. With --serve the
+# restored database stays up on port 5432 (user postgres, password RESTORE_CHECK_PASSWORD, database
+# `restored`) for a test with the application, until the container stops.
 #   restore-check.sh <dump> [<manifest>] [--serve]
 # Exit 0 when every check passes; otherwise non-zero with the failed check on stderr.
 set -euo pipefail
 
-readonly REQUIRED_TABLES=(users spring_session spring_session_attributes pipeline_runs pipeline_run_steps
-    raw_payloads posts assessments flyway_schema_history)
+# TABLES, required_tables, classified_tables: the classification lives next to this script.
+source "$(dirname "${BASH_SOURCE[0]}")/tables.sh"
+
 readonly DB=restored
 readonly USAGE="usage: restore-check.sh <dump> [<manifest>] [--serve]"
 
@@ -89,17 +91,30 @@ log "restoring $(basename "$dump")"
 pg_restore --dbname="$DB" --no-owner --no-acl --single-transaction --exit-on-error "$dump" \
     2>"$base/restore.err" || { tail -n 20 "$base/restore.err" >&2; fail "pg_restore"; }
 
-table_list=$(printf "'%s'," "${REQUIRED_TABLES[@]}")
+# The Flyway version first: which tables are required depends on it (an older dump has fewer).
+flyway=$(sql "select version from flyway_schema_history
+    where success and version is not null order by installed_rank desc limit 1") \
+    || fail "flyway: cannot read flyway_schema_history"
+[[ -n $flyway ]] || fail "flyway: no successful migration in flyway_schema_history"
+required=$(required_tables "$flyway") || fail "flyway: tables.sh cannot list the tables of V$flyway (see above)"
+mapfile -t required <<<"$required"
+
+table_list=$(printf "'%s'," "${required[@]}")
 missing=$(sql "select coalesce(string_agg(t, ', '), '') from unnest(array[${table_list%,}]) as t
     where to_regclass('public.' || t) is null") || fail "tables: query"
 [[ -z $missing ]] || fail "tables: missing $missing"
 
+# A table without a classification (a new migration's) would be backed up but never checked.
+mapfile -t known < <(classified_tables)
+known_list=$(printf "'%s'," "${known[@]}")
+unknown=$(sql "select coalesce(string_agg(table_name::text, ', ' order by table_name::text), '')
+    from information_schema.tables
+    where table_schema = 'public' and table_type = 'BASE TABLE'
+        and table_name::text <> all (array[${known_list%,}])") || fail "tables: query"
+[[ -z $unknown ]] || fail "tables: unknown $unknown; classify it in tables.sh"
+
 sessions=$(sql "select (select count(*) from spring_session) + (select count(*) from spring_session_attributes)")
 [[ $sessions == 0 ]] || fail "sessions: $sessions session rows restored, expected none"
-
-flyway=$(sql "select version from flyway_schema_history
-    where success and version is not null order by installed_rank desc limit 1")
-[[ -n $flyway ]] || fail "flyway: no successful migration in flyway_schema_history"
 
 if [[ -n $manifest ]]; then
     expected=$(jq -er '.flyway_version' "$manifest") || fail "manifest: no flyway_version"
@@ -116,7 +131,7 @@ if [[ -n $manifest ]]; then
     done <<<"$counts"
 fi
 
-log "OK in $(( SECONDS - started )) s: ${#REQUIRED_TABLES[@]} tables, no session rows, Flyway V$flyway${manifest:+, row counts within [before, after]}"
+log "OK in $(( SECONDS - started )) s: Flyway V$flyway, its ${#required[@]} required tables, no unclassified table, no session rows${manifest:+, row counts within [before, after]}"
 
 if $serve; then
     # The password comes from the environment (psql \getenv), never from a command line.

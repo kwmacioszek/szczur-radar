@@ -6,7 +6,8 @@
 llm/            the API — the only part the rest of the application imports
   LlmClient (complete, check), LlmRequest, LlmResponse, LlmCallException, LlmConfigurationException,
   CallFailure, Channel, OutputMode, LlmConfiguration (the lazy bean), LlmClientFactory (a switch over
-  the provider)
+  the provider), LlmProviderProperties (the LLM_* contract, read and validated by from()), Provider,
+  ServiceTier, ReasoningEffort
   api/          LlmCheckController — GET /api/admin/llm/check (admin)
   gemini/       GeminiClient       — create(): GenAI client, 1 attempt, timeout
   deepseek/     DeepSeekClient, DeepSeekRawResponse — create(): RestClient, no retry, timeouts
@@ -27,7 +28,7 @@ blank answer) is judged with the shared `text/Whitespace`, never `isBlank`. An a
 `REJECTED` (`provider_error`, no retry) for every provider, whatever the finish reason
 (`ChatResponses.requireText`).
 
-- One provider per run from `LLM_*` (`config/LlmProviderProperties`); the provider's `create()`
+- One provider per run from `LLM_*` (`LlmProviderProperties`); the provider's `create()`
   builds a Spring AI `ChatModel` outside Embabel's model beans. Embabel's `createObject` is never used for
   assessments (lenient parsing, semantic retries, schema pasted into the prompt).
 - **Retries live only in `TransportRetry`**: up to 3 attempts per tier on 429, 5xx, time-out and
@@ -82,7 +83,7 @@ blank answer) is judged with the shared `text/Whitespace`, never `isBlank`. An a
 
 ## Adding a provider
 
-1. A `Provider` constant in `config/LlmProviderProperties` (+ `application-<provider>.properties`
+1. A `Provider` constant in `llm/Provider` (+ `application-<provider>.properties`
    for Embabel's registry), and its value (and any new `Channel`) in the `CHECK` sets of
    `assessments.provider` / `assessments.channel` through a new Flyway migration. Constants whose
    values are stored (`Provider`, `Channel`, `ServiceTier`, `ReasoningEffort`, `OutputMode`) are
