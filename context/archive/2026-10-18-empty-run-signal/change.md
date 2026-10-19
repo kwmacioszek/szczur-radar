@@ -1,10 +1,10 @@
 ---
 change_id: empty-run-signal
 title: Empty run signal
-status: impl_reviewed
+status: archived
 created: 2026-10-18
 updated: 2026-10-19
-archived_at: null
+archived_at: 2026-10-19T20:56:34Z
 ---
 
 ## Notes
