@@ -1149,10 +1149,11 @@ An API older than S-08 gives `skipped ?`; the deploy order of the API and the cr
 
 ### PR-env verification (szczur-radar-pr-80)
 
-**Pending** — not performed yet. To do (plan steps 4.3 and 4.4), then record the results here:
+**Partly done (2026-10-19):** the empty range from an admin is verified (below); the cron's run is still pending. To do (plan steps 4.3 and 4.4), then record the results here:
 
 - [ ] **The cron's run.** `PIPELINE_TRIGGER_TOKEN` on the PR env's API, `TRIGGER_IN_ANY_ENVIRONMENT=true` and a one-off schedule on the cron, then a redeploy of the cron (as in section S-06). The run ends as before; the cron's line has `skipped N`, and the API's end line has `skipped N` right after `fetched`.
-- [ ] **An empty range from an admin.** A run for a very old range (e.g. 2008-01-01) from `/admin`. If Wykop returns no element: the run is `failed`, the bell has a notification, the run's page shows `NoPostsFetchedException: wykop gave no post to store (…)` and step `fetch` `failed`, and `GET /api/freshness` does not change. If Wykop does return elements, record what it returned here; the coverage stays with `PipelineAgentIT` (phase 1).
+- [x] **An empty range from an admin.** A run for a very old range (e.g. 2008-01-01) from `/admin`. If Wykop returns no element: the run is `failed`, the bell has a notification, the run's page shows `NoPostsFetchedException: wykop gave no post to store (…)` and step `fetch` `failed`, and `GET /api/freshness` does not change. If Wykop does return elements, record what it returned here; the coverage stays with `PipelineAgentIT` (phase 1).
+  - **Result (2026-10-19, API redeployed from `a2dd334`):** Wykop returned no element for 1.01.2008. The admin account was created in the PR env with `create-user --role admin` (the PR env's database is its own). The run `1befb218…` from `/admin` ended `failed` in 496 ms: `error` = `NoPostsFetchedException: wykop gave no post to store (fetched 0, skipped 0)`, the only step `fetch: failed` with the message, counters `fetched 0, skipped 0`, `needsAttention: true`. The bell showed one new notification with the badge "błąd"; the run's page gave the error text as the reason. `GET /api/freshness` stayed `{"lastUpdatedAt":null}` before and after. API log: `step fetch failed in 372ms`, `ERROR Pipeline run … failed`, `(range) ended failed in 496ms: fetched 0, skipped 0, new 0, …`, `ended failed and needs attention: 1 admin(s) notified`.
 - [ ] **Afterwards.** Delete `TRIGGER_IN_ANY_ENVIRONMENT`, set the schedule back to `30 0 * * *` and redeploy the cron (a deleted variable does not redeploy it, section S-05).
 
 ### Runbook — after the merge (operator; tracked in issue #67, not in the plan's Progress)
