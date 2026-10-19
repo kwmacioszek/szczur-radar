@@ -685,10 +685,10 @@ Dokumentacja opisuje nową bramkę, a runbook — co robić, gdy strażnik czeka
 
 #### Automated
 
-- [x] 1.1 `tools/deploy-gate/test.sh` przechodzi lokalnie (każda reguła z przypadkiem pozytywnym i negatywnym) — a98e9d1
-- [x] 1.2 Job `deploy-gate-test` zielony w CI na PR — a98e9d1
-- [x] 1.3 `railway-config` na PR startuje dopiero po zakończeniu wszystkich jobów testowych (widać w grafie runu) i jest zielony — a98e9d1
-- [x] 1.4 `grep -n "needs:" .github/workflows/ci.yml` pokazuje `needs:` na `railway-config` — a98e9d1
+- [x] 1.1 `tools/deploy-gate/test.sh` przechodzi lokalnie (każda reguła z przypadkiem pozytywnym i negatywnym) — 00d46b0
+- [x] 1.2 Job `deploy-gate-test` zielony w CI na PR — 00d46b0
+- [x] 1.3 `railway-config` na PR startuje dopiero po zakończeniu wszystkich jobów testowych (widać w grafie runu) i jest zielony — 00d46b0
+- [x] 1.4 `grep -n "needs:" .github/workflows/ci.yml` pokazuje `needs:` na `railway-config` — 00d46b0
 
 #### Manual
 
@@ -700,9 +700,9 @@ Dokumentacja opisuje nową bramkę, a runbook — co robić, gdy strażnik czeka
 
 #### Automated
 
-- [x] 2.1 `railway-config` w PR env zielony; bramka przepuszcza zmianę `checkSuites → true` na obu cronach i stosuje ją — 8649223, 754dadb
-- [x] 2.2 Plan `--json` w PR env zawiera `variablePolicy` z wzorcami z `railway.ts` — 8649223, 754dadb
-- [x] 2.3 `tools/deploy-gate/test.sh` dalej przechodzi (fixture `checkSuites` odpowiada prawdziwej zmianie z PR env) — 8649223, 754dadb
+- [x] 2.1 `railway-config` w PR env zielony; bramka przepuszcza zmianę `checkSuites → true` na obu cronach i stosuje ją — 1b8925e, 00e9ac5
+- [x] 2.2 Plan `--json` w PR env zawiera `variablePolicy` z wzorcami z `railway.ts` — 1b8925e, 00e9ac5
+- [x] 2.3 `tools/deploy-gate/test.sh` dalej przechodzi (fixture `checkSuites` odpowiada prawdziwej zmianie z PR env) — 1b8925e, 00e9ac5
 
 #### Manual
 
@@ -715,8 +715,8 @@ Dokumentacja opisuje nową bramkę, a runbook — co robić, gdy strażnik czeka
 
 #### Automated
 
-- [x] 3.1 `cd szczur-radar-api && ./mvnw -B verify` przechodzi (w tym `DeploySafetyIT` i `AuthorizationCompletenessIT`) — 40287f9
-- [x] 3.2 Job `backend` zielony w CI — 40287f9
+- [x] 3.1 `cd szczur-radar-api && ./mvnw -B verify` przechodzi (w tym `DeploySafetyIT` i `AuthorizationCompletenessIT`) — 32834b8
+- [x] 3.2 Job `backend` zielony w CI — 32834b8
 
 #### Manual
 
@@ -727,8 +727,8 @@ Dokumentacja opisuje nową bramkę, a runbook — co robić, gdy strażnik czeka
 
 #### Automated
 
-- [x] 4.1 `tools/deploy-gate/test.sh` przechodzi ze wszystkimi przypadkami strażnika i kontroli — cf80cb3
-- [x] 4.2 `railway-config` w PR env zielony; w logu kolejno: strażnik (`safe`), plan i gate, apply, kontrola po apply — cf80cb3
+- [x] 4.1 `tools/deploy-gate/test.sh` przechodzi ze wszystkimi przypadkami strażnika i kontroli — 8b3f337
+- [x] 4.2 `railway-config` w PR env zielony; w logu kolejno: strażnik (`safe`), plan i gate, apply, kontrola po apply — 8b3f337
 
 #### Manual
 
@@ -740,8 +740,8 @@ Dokumentacja opisuje nową bramkę, a runbook — co robić, gdy strażnik czeka
 
 #### Automated
 
-- [x] 5.1 `tools/deploy-gate/test.sh` przechodzi z przypadkami `verify-deploy.sh` — 6a0603b
-- [x] 5.2 Push na PR uruchamia `deploy-verify` po deployu PR env, a run kończy się na zielono — 6a0603b
+- [x] 5.1 `tools/deploy-gate/test.sh` przechodzi z przypadkami `verify-deploy.sh` — c9210d9
+- [x] 5.2 Push na PR uruchamia `deploy-verify` po deployu PR env, a run kończy się na zielono — c9210d9
 
 #### Manual
 
@@ -753,8 +753,8 @@ Dokumentacja opisuje nową bramkę, a runbook — co robić, gdy strażnik czeka
 
 #### Automated
 
-- [x] 6.1 Pełne CI na PR zielone (wszystkie joby, w tym `deploy-gate-test` i `railway-config`) — 1ea5771
-- [x] 6.2 `grep -rn "deploy-gate\|deploy-safety\|deploy-verify" REPOSITORY_GUIDELINES.md context/deployment/deploy-plan.md` pokazuje opisane elementy — 1ea5771
+- [x] 6.1 Pełne CI na PR zielone (wszystkie joby, w tym `deploy-gate-test` i `railway-config`) — 9483ecd
+- [x] 6.2 `grep -rn "deploy-gate\|deploy-safety\|deploy-verify" REPOSITORY_GUIDELINES.md context/deployment/deploy-plan.md` pokazuje opisane elementy — 9483ecd
 
 #### Manual
 
