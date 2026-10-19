@@ -468,6 +468,6 @@ Brak migracji: kolumna `skipped` istnieje od V3. Wdrożenie API i crona następu
 
 #### Manual
 
-- [ ] 4.3 PR env, cron z `TRIGGER_IN_ANY_ENVIRONMENT=true` i jednorazowym harmonogramem: przebieg kończy się jak dotąd, linia crona zawiera `skipped N`, a linia końcowa API `skipped N`
+- [x] 4.3 PR env, cron z `TRIGGER_IN_ANY_ENVIRONMENT=true` i jednorazowym harmonogramem: przebieg kończy się jak dotąd, linia crona zawiera `skipped N`, a linia końcowa API `skipped N` — a2dd334
 - [x] 4.4 PR env, przebieg admina dla bardzo starego zakresu (np. 2008-01-01): jeśli Wykop nie zwróci elementów, przebieg jest `failed`, dzwonek ma powiadomienie, strona przebiegu pokazuje tekst `NoPostsFetchedException` i krok `fetch` `failed`, a `/api/freshness` się nie zmienia. Jeśli Wykop zwróci elementy, wynik trafia do `deploy-plan.md`, a pokrycie zostaje przy IT z fazy 1 — a2dd334
 - [x] 4.5 PRD, `deploy-plan.md` i `REPOSITORY_GUIDELINES.md` opisują to samo zachowanie co kod (przegląd) — 1673a28
