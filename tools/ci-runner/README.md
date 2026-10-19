@@ -42,7 +42,7 @@ ssh -t <user>@<vm> "sudo RUNNER_TOKEN=$token RUNNER_COUNT=1 ./setup.sh"
 gh api repos/kwmacioszek/szczur-radar/actions/runners -q '.runners[] | [.name, .status, .busy] | @tsv'
 ```
 
-`setup.sh` instaluje Docker (`docker.io`, `docker-buildx`), `git`, `jq`, `curl`; tworzy użytkownika `gha` (bez sudo, w grupie `docker`); pobiera najnowszy runner (sprawdza SHA-256 z wydania); rejestruje `RUNNER_COUNT` runnerów z etykietą `szczur-ci` jako usługi systemd (`actions.runner.*`); ustawia rotację logów kontenerów i codzienne sprzątanie Dockera, które działa tylko przy zajętości `/` od 70% (obrazy bazowe, cache builda i zależności zostają między runami, więc kolejne runy są szybsze niż pierwszy). Ponowne uruchomienie pomija to, co już jest.
+`setup.sh` instaluje Docker (`docker.io`, `docker-buildx`), `git`, `jq`, `curl`, `gh` (dla `deploy-verify.yml`; na hoście sprzed S-14: `apt-get install -y gh` jako root); tworzy użytkownika `gha` (bez sudo, w grupie `docker`); pobiera najnowszy runner (sprawdza SHA-256 z wydania); rejestruje `RUNNER_COUNT` runnerów z etykietą `szczur-ci` jako usługi systemd (`actions.runner.*`); ustawia rotację logów kontenerów i codzienne sprzątanie Dockera, które działa tylko przy zajętości `/` od 70% (obrazy bazowe, cache builda i zależności zostają między runami, więc kolejne runy są szybsze niż pierwszy). Ponowne uruchomienie pomija to, co już jest.
 
 Joby `ci.yml` działają na takim runnerze bez zmian (`services:`, `--network host`, Testcontainers). Na trwałym runnerze joby sprzątają po sobie kontenery o stałych nazwach (`web`, `api`).
 

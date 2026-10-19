@@ -220,7 +220,7 @@ jobs:
 
   deploy-gate-test:
     name: deploy gate test (tools/deploy-gate)
-    runs-on: ubuntu-latest
+    runs-on: ${{ (github.event_name == 'pull_request' && vars.CI_RUNNER_PR) || (github.event_name == 'push' && vars.CI_RUNNER_MAIN) || vars.CI_RUNNER || 'ubuntu-latest' }}
     # The gate of railway-config (S-14) decides alone whether an unattended apply
     # may change production. tools/deploy-gate/test.sh runs its rules against plan
     # fixtures, and the deploy guard and the post-apply check against a stub API
@@ -258,7 +258,7 @@ jobs:
     if: >-
       github.event_name == 'push' ||
       github.event.pull_request.head.repo.full_name == github.repository
-    # The deploy guard reads this run's creation time (gh api, actions: read);
+    # The deploy guard reads this run's creation time (REST API, actions: read);
     # checkout needs contents: read. A permissions block drops every other scope.
     permissions:
       contents: read
@@ -405,12 +405,17 @@ jobs:
         # mapping) and the guard's absolute deadline: this run's creation (shared
         # by every attempt of the run) + the 120 min Wait for CI window − the
         # post-apply check − 5 min. Past it Railway skips the code deploy anyway.
+        # The REST API through curl, not gh: the self-hosted runners have no gh.
         env:
-          GH_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
-          web_url=$(tools/deploy-gate/web-url.sh "$TARGET_ENV")
-          created_at=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" --jq .created_at)
           usage_error() { echo "::error::$*"; exit 2; }
+          web_url=$(tools/deploy-gate/web-url.sh "$TARGET_ENV")
+          run_json=$(curl -fsS --retry 3 -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID")
+          created_at=$(jq -r '.created_at // empty' <<<"$run_json")
+          [ -n "$created_at" ] || usage_error "this run's created_at is missing from the GitHub API answer"
           . tools/deploy-gate/lib.sh
           # The post-apply check may take DEPLOY_VERIFY_TIMEOUT, then /api/ready
           # DEPLOY_GUARD_WAKE_TIMEOUT; 5 min more for the plan and the apply.

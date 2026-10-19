@@ -27,7 +27,10 @@ jobs:
        github.event.deployment_status.state == 'failure' ||
        github.event.deployment_status.state == 'error') &&
       startsWith(github.event.deployment.environment, 'szczur-radar / ')
-    runs-on: ubuntu-latest
+    # The runner switch of ci.yml (CI_RUNNER_PR / CI_RUNNER_MAIN never match a
+    # deployment_status event, so CI_RUNNER decides). A self-hosted runner needs gh
+    # (tools/ci-runner/setup.sh installs it).
+    runs-on: ${{ (github.event_name == 'pull_request' && vars.CI_RUNNER_PR) || (github.event_name == 'push' && vars.CI_RUNNER_MAIN) || vars.CI_RUNNER || 'ubuntu-latest' }}
     # gh opens or comments on the deploy-health issue (and creates the label);
     # checkout needs contents: read. A permissions block drops every other scope.
     permissions:
