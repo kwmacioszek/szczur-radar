@@ -875,7 +875,7 @@ PR #60 was merged by the operator as `5b6eabb` (2026-10-17 15:02 UTC).
 
 ## S-14: bezpieczna bramka wdrożeń (safe-deploy-gate)
 
-**Status (2026-10-18): in the PR env (#81), not merged.** Change: `context/changes/safe-deploy-gate/`, issue #73. S-14 closes the gaps C4–C7 of the post-MVP audit:
+**Status (2026-10-18): in the PR env (#81), not merged.** Change: `context/archive/2026-10-18-safe-deploy-gate/`, issue #73. S-14 closes the gaps C4–C7 of the post-MVP audit:
 - the IaC apply ran in parallel with the tests (C4);
 - the cron services deployed at the push, before CI (C5);
 - nothing checked health after an apply or a code deploy (C6);
