@@ -159,7 +159,7 @@ m1 = {  # title, outcome, column, row, prerequisites, change id
     "S-06": ("Dashboard historii przebiegów dla admina", "admin widzi historię przebiegów (kiedy, status, wynik) i wyraźny sygnał nieudanego przebiegu", 5, 2, "S-05, S-01", "pipeline-run-history-dashboard"),
 }
 m2 = {  # lane, position, title, outcome, status, prerequisites, change id
-    "S-08": ("A", 0, "Pusty przebieg daje sygnał", "operator dostaje sygnał, gdy przebieg nic nie pobrał albo pominął elementy; etykieta świeżości wtedy stoi", "ready", "—", "empty-run-signal"),
+    "S-08": ("A", 0, "Pusty przebieg daje sygnał", "operator dostaje sygnał, gdy przebieg nic nie pobrał albo pominął elementy; etykieta świeżości wtedy stoi", "progress", "—", "empty-run-signal"),
     "S-12": ("A", 1, "Powiadomienia o przebiegach nie giną", "admin dostaje każde należne powiadomienie o przebiegu, a stan kroków zgadza się ze statusem przebiegu", "proposed", "S-08", "reliable-run-notifications"),
     "F-04": ("B", 0, "Kanał alarmowy poza aplikacją", "(foundation) jeden kanał alarmowy poza aplikacją, w limicie kosztów, do którego API i crony mogą wysłać sygnał", "blocked", "decyzja: jaki kanał", "out-of-app-alert-channel"),
     "S-13": ("B", 1, "Brakująca noc nie przechodzi niezauważona", "operator dowie się, że nocny przebieg albo backup nie wystartował, i widzi dni bez danych", "proposed", "F-04", "missed-night-detection"),
@@ -282,13 +282,13 @@ bx = px + 164
 text(bx, py + 34, "POSTĘP KAMIENIA MILOWEGO", 10.5, 700, C["muted"], spacing="1.6")
 text(bx, py + 62, "M-2 · MVP Quality & Reliability Hardening", 17, 700)
 text(px + pw - 24, py + 62, "1 / 13", 17, 700, C["text"], anchor="end")
-m2_order = [("F-04", "blocked"), ("S-08", "ready"), ("S-09", "ready"), ("S-10", "ready"), ("S-11", "ready"), ("S-12", "proposed"),
+m2_order = [("F-04", "blocked"), ("S-08", "progress"), ("S-09", "ready"), ("S-10", "ready"), ("S-11", "ready"), ("S-12", "proposed"),
             ("S-13", "proposed"), ("S-14", "done"), ("S-15", "ready"), ("S-16", "ready"), ("S-17", "proposed"), ("S-18", "proposed"), ("S-19", "ready")]
 segw = (pw - 164 - 24 - 12 * 5) / 13
 for i, (iid, st) in enumerate(m2_order):
     lab, fg, bg = STATUS[st]
     rect(bx + i * (segw + 5), py + 78, segw, 12, 3, bg, fg + ("aa" if st != "proposed" else "55"), 1)
-legend_items = [("done", "1 ukończone"), ("progress", "0 w toku"), ("ready", "7 gotowe do planowania"), ("proposed", "4 proponowane"), ("blocked", "1 zablokowany")]
+legend_items = [("done", "1 ukończone"), ("progress", "1 w toku"), ("ready", "6 gotowe do planowania"), ("proposed", "4 proponowane"), ("blocked", "1 zablokowany")]
 for li, (st, lab) in enumerate(legend_items):
     fg = STATUS[st][1]
     lx = bx + (0, 122, 218)[li % 3]

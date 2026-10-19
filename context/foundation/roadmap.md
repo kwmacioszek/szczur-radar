@@ -92,7 +92,7 @@ Na Wykopie (#gielda) i Reddicie codziennie pojawiają się setki postów o inwes
 | ID   | Change ID                   | Outcome (user can …)                                                                                                   | Prerequisites | PRD refs                                                   | Status   |
 | ---- | --------------------------- | ---------------------------------------------------------------------------------------------------------------------- | ------------- | ---------------------------------------------------------- | -------- |
 | F-04 | out-of-app-alert-channel    | (foundation) jeden kanał alarmowy poza aplikacją, w limicie kosztów, do którego API i crony mogą wysłać sygnał          | —             | MS-04, NFR (sygnał awarii przebiegu); audyt C2, C11         | blocked  |
-| S-08 | empty-run-signal            | operator dostaje sygnał, gdy przebieg nic nie pobrał albo pominął elementy; etykieta świeżości wtedy stoi              | —             | MS-04, MS-01, NFR (sygnał awarii przebiegu); audyt C1, B5  | ready    |
+| S-08 | empty-run-signal            | operator dostaje sygnał, gdy przebieg nic nie pobrał albo pominął elementy; etykieta świeżości wtedy stoi              | —             | MS-04, MS-01, NFR (sygnał awarii przebiegu); audyt C1, B5  | in-progress |
 | S-09 | attempt-accounting          | awaria dostawcy LLM ani błąd naszego kodu nie zabija postów; post z powtarzalnym błędem technicznym ma limit           | —             | MS-01, MS-03; audyt B2, B3, B9, A1                          | ready    |
 | S-10 | llm-config-fail-fast        | operator dostaje błąd startu przy `LLM_TIMEOUT` bez jednostki; czasy są parsowane jedną regułą                        | —             | MS-01, MS-02; audyt B1, E                                   | ready    |
 | S-11 | stuck-run-self-heals        | przebieg po martwej instancji i post z wyścigu claim wracają do obiegu bez restartu API                                | —             | MS-01, MS-03; audyt A2, A4                                  | ready    |
@@ -157,7 +157,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Unknowns:**
   - Co jest „pustym” przebiegiem: 0 pobranych, 0 nowych czy udział pominiętych powyżej progu — i czy pusty dzień na tagu jest w ogóle możliwy (wtedy ostrzeżenie zamiast błędu)? — Owner: user. Block: no (rozstrzyga wywiad `/10x-plan`).
 - **Risk:** najpierw, bo to jedyne ustalenie H i łamie NFR; zmienia status przebiegu, `needsAttention`, odpowiedź `/internal`, wyjście crona i regułę świeżości naraz — kontrakt crona trzeba zmienić po obu stronach.
-- **Status:** ready
+- **Status:** in-progress
 
 ### S-09: Awaria dostawcy nie zabija postów
 
