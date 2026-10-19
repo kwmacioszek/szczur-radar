@@ -476,7 +476,7 @@ for ids in (("S-10", "S-11", "S-16"), ("S-14", "S-15", "S-19")):
 # ================= Po M-2 container (backlog) =================
 container(P3X, P3W, "PO M-2", "Odroczone",
           ("Parked", C["gray"], C["graySoft"], 10.5, False, 600, "dot"),
-          "24 pozycje z sekcji Parked roadmapy. Bez ustalonej kolejności; każda wymaga osobnego planu, zanim wejdzie do roadmapy.",
+          "25 pozycji z sekcji Parked roadmapy. Bez ustalonej kolejności; każda wymaga osobnego planu, zanim wejdzie do roadmapy.",
           None, C["border"])
 for gi, (gname, items) in enumerate(groups):
     col, row = gi % 2, gi // 2
