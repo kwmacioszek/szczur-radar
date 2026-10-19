@@ -117,15 +117,17 @@ class NotificationController {
 	 * ({@code GET /api/admin/pipeline-runs/{id}}) has the rest.
 	 *
 	 * @param processingErrors posts with a technical error and no stored assessment (not failed attempts)
+	 * @param skipped the fetched elements that could not become a post
 	 * @param error the reason of a failed or interrupted run, or the summary of technical errors
 	 */
 	record NotifiedRun(UUID id, RunKind kind, RunStatus status, @Nullable InterruptionCause interruptionCause,
-			@Nullable Instant finishedAt, int assessedFailed, int dead, int processingErrors, @Nullable String error) {
+			@Nullable Instant finishedAt, int assessedFailed, int dead, int processingErrors, int skipped,
+			@Nullable String error) {
 
 		static NotifiedRun of(PipelineRun run) {
 			return new NotifiedRun(run.getId(), run.getKind(), run.getStatus(), run.getInterruptionCause(),
 					run.getFinishedAt(), run.getAssessedFailed(), run.getDead(), run.getProcessingErrors(),
-					run.getError());
+					run.getSkipped(), run.getError());
 		}
 
 	}

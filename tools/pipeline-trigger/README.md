@@ -29,7 +29,7 @@ Komenda startu Railway nie rozwija zmiennych, więc cała logika jest w skrypcie
    - 202: lista utworzonych przebiegów w kolejności wykonania (`[{"id", "kind"}]`).
 4. **Czekanie.** Każdy przebieg z odpowiedzi 202 jest odpytywany (`GET /internal/pipeline-runs/{id}`) co `TRIGGER_POLL_INTERVAL` (domyślnie `30s`), aż osiągnie status końcowy. Limit `TRIGGER_RUN_TIMEOUT` (domyślnie `90m`) liczy się od odpowiedzi 202 i obejmuje wszystkie przebiegi razem. Brak połączenia albo 502/503/504 w trakcie czekania jest ponawiany najwyżej przez `TRIGGER_WAKE_TIMEOUT`. Każda inna odpowiedź niż 200 albo nieznany status kończy przebieg kodem 1.
    - **Heartbeat** (S-06): przebieg `running` loguje linię ze statusem, krokiem, postępem oceny i czasem ostatniej aktywności co `TRIGGER_HEARTBEAT_INTERVAL` (domyślnie `5m`). Przebieg `queued` (np. RANGE za RETRY) loguje tylko zmianę statusu: nie ma jeszcze postępu, a heartbeaty daje przebieg przed nim. Pierwsza przychodzi jeden interwał po linii ze zmianą statusu, potem przy pierwszym odpytaniu po każdym kolejnym interwale. Linia powstaje z odpowiedzi tego samego odpytania, więc heartbeat nie dodaje żadnego żądania. Pole, którego API nie podaje (starsza wersja API) albo podaje jako `null`, jest w linii znakiem `?`.
-5. **Wynik.** Kod 0, gdy każdy przebieg jest `succeeded` albo `partial`. Kod 1, gdy któryś jest `failed` albo `interrupted`, a także przy przekroczeniu czasu albo błędzie odpytywania. `partial` się liczy: jego nieudane posty ponawia kolejny przebieg i widać je w `/admin`. Skrypt czeka na wszystkie przebiegi, także gdy pierwszy się nie udał, więc log ma status każdego. Linia przebiegu `interrupted` kończy się przyczyną przerwania: `(cause deploy)` (przebieg przerwało inne wdrożenie API, np. merge na `main`), `(cause restart)` (API wystartowało ponownie w tym samym wdrożeniu albo wdrożenie jest nieznane) albo `(cause shutdown)` (instancja API się zamykała).
+5. **Wynik.** Kod 0, gdy każdy przebieg jest `succeeded` albo `partial`. Kod 1, gdy któryś jest `failed` albo `interrupted`, a także przy przekroczeniu czasu albo błędzie odpytywania. Pusty zakres to `failed` w API (S-08, `empty-run-signal`): przebieg RANGE, w którym źródło nie dało ani jednego posta do zapisu, kończy się błędem `NoPostsFetchedException`, więc cron kończy się kodem 1 tą samą ścieżką. Pominięte elementy przy dobrych postach (`skipped` > 0) nie zmieniają statusu ani kodu wyjścia: dają tylko powiadomienie w aplikacji. `partial` się liczy: jego nieudane posty ponawia kolejny przebieg i widać je w `/admin`. Skrypt czeka na wszystkie przebiegi, także gdy pierwszy się nie udał, więc log ma status każdego. Linia przebiegu `interrupted` kończy się przyczyną przerwania: `(cause deploy)` (przebieg przerwało inne wdrożenie API, np. merge na `main`), `(cause restart)` (API wystartowało ponownie w tym samym wdrożeniu albo wdrożenie jest nieznane) albo `(cause shutdown)` (instancja API się zamykała).
 
 Token trafia do `curl` jako konfiguracja na standardowym wejściu, nigdy jako argument (widoczny w `ps`). Skrypt nie używa `set -x` i nigdy nie wypisuje tokenu. Białe znaki na początku i końcu tokenu są obcinane, tak jak robi to API.
 
@@ -38,7 +38,7 @@ Token trafia do `curl` jako konfiguracja na standardowym wejściu, nigdy jako ar
 | Kod | Znaczenie |
 | --- | --- |
 | `0` | każdy przebieg `succeeded` albo `partial`, albo przebieg pominięty poza produkcją |
-| `1` | przebieg `failed` albo `interrupted`, odmowa API (401, 503 `source_not_configured`, inne 4xx), przekroczony limit czasu, błąd odpytywania |
+| `1` | przebieg `failed` (także pusty zakres: źródło nie dało posta do zapisu) albo `interrupted`, odmowa API (401, 503 `source_not_configured`, inne 4xx), przekroczony limit czasu, błąd odpytywania |
 | `2` | błąd konfiguracji: brak zmiennej albo zła wartość |
 
 ## Logi
@@ -55,16 +55,23 @@ Jedna linia na zdarzenie, z czasem UTC:
 2026-10-13T00:35:45Z trigger: range 4f0c…: running, step assess, assessed 38/251 (ok 38, failed 0, errors 0), last activity 2026-10-13T00:35:44.912Z
 2026-10-13T00:40:45Z trigger: range 4f0c…: running, step assess, assessed 97/251 (ok 96, failed 1, errors 0), last activity 2026-10-13T00:40:43.207Z
 …
-2026-10-13T00:52:15Z trigger: range 4f0c…: succeeded (fetched 270, new posts 251, assessed ok 249, assessed failed 2, processing errors 0, dead 0)
+2026-10-13T00:52:15Z trigger: range 4f0c…: succeeded (fetched 270, skipped 0, new posts 251, assessed ok 249, assessed failed 2, processing errors 0, dead 0)
 2026-10-13T00:52:15Z trigger: OK: range succeeded
 ```
 
-Liczniki znaczą to samo co na liście przebiegów w `/admin`. W linii heartbeatu `assessed 97/251` to posty już ocenione (udane i nieudane) z tych, które wziął krok `assess`, `errors` to błędy techniczne, a `last activity` to ostatnia zmiana w przebiegu według API (UTC). Przed krokiem `assess` jest `assessed 0/?`, a między krokami `step ?`. Porażka kończy się linią `FAILED: …` z przyczyną, np. przebieg przerwany wdrożeniem API:
+Liczniki znaczą to samo co na liście przebiegów w `/admin`. `skipped` to pobrane elementy, z których nie powstał post; API bez tego pola (starsza wersja) daje `skipped ?`. W linii heartbeatu `assessed 97/251` to posty już ocenione (udane i nieudane) z tych, które wziął krok `assess`, `errors` to błędy techniczne, a `last activity` to ostatnia zmiana w przebiegu według API (UTC). Przed krokiem `assess` jest `assessed 0/?`, a między krokami `step ?`. Porażka kończy się linią `FAILED: …` z przyczyną, np. przebieg przerwany wdrożeniem API:
 
 ```text
 2026-10-13T00:45:45Z trigger: range 4f0c…: running, step assess, assessed 160/251 (ok 159, failed 1, errors 0), last activity 2026-10-13T00:45:41.380Z
-2026-10-13T00:47:15Z trigger: range 4f0c…: interrupted (fetched 270, new posts 251, assessed ok 171, assessed failed 1, processing errors 0, dead 0) (cause deploy)
+2026-10-13T00:47:15Z trigger: range 4f0c…: interrupted (fetched 270, skipped 0, new posts 251, assessed ok 171, assessed failed 1, processing errors 0, dead 0) (cause deploy)
 2026-10-13T00:47:15Z trigger: FAILED: a run did not succeed: range interrupted
+```
+
+albo pusty zakres (źródło nie dało posta do zapisu; błąd przebiegu widać na jego stronie w `/admin`):
+
+```text
+2026-10-13T00:31:15Z trigger: range 4f0c…: failed (fetched 0, skipped 0, new posts 0, assessed ok 0, assessed failed 0, processing errors 0, dead 0)
+2026-10-13T00:31:15Z trigger: FAILED: a run did not succeed: range failed
 ```
 
 Skrypt pisze logi na stderr, a Railway pokazuje stderr crona na poziomie `error`, więc w widoku logów każda linia jest czerwona, także w udanym przebiegu. O wyniku mówi kod wyjścia (status deploymentu), nie kolor.
@@ -101,8 +108,10 @@ Wymaga Dockera. Test buduje obraz i dla każdego przypadku uruchamia go w sieci 
 - `succeeded` i `partial` → kod 0, `failed` → kod 1;
 - nieudany RETRY i udany RANGE → kod 1, oba przebiegi doczekane;
 - `interrupted` → kod 1 i przyczyna w logu (`cause deploy`);
+- pusty zakres (`empty`: `failed` z `fetched 0, skipped 0`) → kod 1 i liczniki w logu;
+- pominięte przy dobrych postach (`skipped-warning`: `succeeded` ze `skipped 3`) → kod 0 i `skipped 3` w logu;
 - heartbeat z `TRIGGER_HEARTBEAT_INTERVAL=1s`: krok i postęp (`step assess`, `assessed 3/10`) przy każdym odpytaniu po zmianie statusu, bez dodatkowego żądania; przebieg `queued` bez heartbeatu;
-- API bez pól kroku i postępu (starsza wersja) → `?` w heartbeacie i w przyczynie, bez błędu;
+- API bez pól kroku, postępu i `skipped` (starsza wersja) → `?` w heartbeacie, w przyczynie i w `skipped`, bez błędu;
 - odmowę połączenia przez pierwsze sekundy, potem 503 bez treści, potem 202 → kod 0;
 - 409, potem 202 → kod 0;
 - 401 i 503 `source_not_configured` → kod 1 po jednym żądaniu;

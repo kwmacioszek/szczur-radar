@@ -5,7 +5,7 @@ import type { BadgeTone } from './components/StatusBadge.vue'
 import { formatDate, label, plural } from './labels'
 
 /** What the tone and status text need; a run of the list and the run of a notification both have it. */
-type RunState = { status: RunStatus; interruptionCause: InterruptionCause | null }
+type RunState = { status: RunStatus; interruptionCause: InterruptionCause | null; skipped: number }
 
 /** What the "wymaga uwagi" reasons are built from. */
 type AttentionFields = RunState & Pick<Run, 'dead' | 'processingErrors' | 'error'>
@@ -21,10 +21,11 @@ const statusTone: Record<RunStatus, BadgeTone> = {
 
 /**
  * The badge tone of a run. A run interrupted by a new deployment is expected (the operator merged), so it is
- * `neutral`; any other interruption is a `warning`.
+ * `neutral`; any other interruption is a `warning`. A succeeded run whose source skipped elements is a `warning` too.
  */
 export function runTone(run: RunState): BadgeTone {
   if (run.status === 'interrupted' && run.interruptionCause === 'deploy') return 'neutral'
+  if (run.status === 'succeeded' && run.skipped > 0) return 'warning'
   return statusTone[run.status]
 }
 
@@ -41,18 +42,29 @@ export function stepTone(status: StepStatus, cause: InterruptionCause | null): B
   return stepStatusTone[status]
 }
 
-/** The status in words with the interruption's cause, e.g. `przerwany — nowe wdrożenie`. */
+/**
+ * The status in words with the interruption's cause, e.g. `przerwany — nowe wdrożenie`, or with the skipped elements
+ * of a succeeded or partial run, e.g. `zakończony — pominięte: 3`.
+ */
 export function runStatusLabel(run: RunState): string {
   const status = label('runStatus', run.status)
-  return run.status === 'interrupted' && run.interruptionCause
-    ? `${status} — ${label('interruptionCause', run.interruptionCause)}`
-    : status
+  if (run.status === 'interrupted' && run.interruptionCause) {
+    return `${status} — ${label('interruptionCause', run.interruptionCause)}`
+  }
+  if (hasSkipped(run)) return `${status} — pominięte: ${run.skipped}`
+  return status
+}
+
+/** A succeeded or partial run whose source skipped elements (unexpected shape or not mappable). */
+function hasSkipped(run: RunState): boolean {
+  return (run.status === 'succeeded' || run.status === 'partial') && run.skipped > 0
 }
 
 /**
  * Why the run needs attention, in words, along the API's rule (pipeline/run/PipelineRun.needsAttention): a failed
- * run's own error text, as it is (the watchdog's "no progress for …" too); an interrupted run's cause; a partial
- * run's dead posts and technical errors. Empty for a run that does not need attention.
+ * run's own error text, as it is (the watchdog's "no progress for …" and an empty source's
+ * "NoPostsFetchedException: …" too); an interrupted run's cause; a partial run's dead posts and technical errors; a
+ * succeeded or partial run's skipped elements. Empty for a run that does not need attention.
  */
 export function attentionReasons(run: AttentionFields): string[] {
   switch (run.status) {
@@ -60,10 +72,14 @@ export function attentionReasons(run: AttentionFields): string[] {
       return [run.error ?? 'przebieg zakończył się błędem']
     case 'interrupted':
       return [run.interruptionCause ? `przerwany: ${label('interruptionCause', run.interruptionCause)}` : 'przerwany']
-    case 'partial': {
+    case 'partial':
+    case 'succeeded': {
       const reasons: string[] = []
-      if (run.dead > 0) reasons.push(`${run.dead} ${plural(run.dead, 'post martwy', 'posty martwe', 'postów martwych')}`)
-      if (run.processingErrors > 0) reasons.push(`błędy techniczne: ${run.processingErrors}`)
+      if (run.status === 'partial') {
+        if (run.dead > 0) reasons.push(`${run.dead} ${plural(run.dead, 'post martwy', 'posty martwe', 'postów martwych')}`)
+        if (run.processingErrors > 0) reasons.push(`błędy techniczne: ${run.processingErrors}`)
+      }
+      if (hasSkipped(run)) reasons.push(`pominięte elementy: ${run.skipped}`)
       return reasons
     }
     default:

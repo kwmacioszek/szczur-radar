@@ -15,6 +15,8 @@ export interface NotifiedRun {
   assessedFailed: number
   dead: number
   processingErrors: number
+  /** Elements its source skipped (unexpected shape or not mappable); above 0 a succeeded run needs attention too. */
+  skipped: number
   error: string | null
 }
 

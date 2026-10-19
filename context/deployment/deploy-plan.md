@@ -453,13 +453,13 @@ PR #44 was squash-merged as `b7ee254` (11:25 UTC). CI on `main` applied `+ Creat
   - D-2 is fetched a second time. That catches posts the Wykop pagination missed the night before (S-02 review, F9). Posts already stored cost no LLM call, only about 7 more Wykop requests a night.
 - **Answers of `/internal/**`.** The token is the only credential there: the chain is stateless, reads no session and sets no cookie, and the token means nothing on `/api/**`.
   - `POST /internal/pipeline-runs/daily`: 202 `[{id, kind}]` in execution order; 409 `pipeline_busy` while a run is queued or running; 503 `source_not_configured`; 401 without the token, with a wrong one, and always when the API has no `PIPELINE_TRIGGER_TOKEN`.
-  - `GET /internal/pipeline-runs/{id}`: 200 `{id, kind, status, finishedAt, fetched, newPosts, assessedOk, assessedFailed, processingErrors, dead}`, or 404 `not_found`. The counters are for the cron's last log line. **Update (S-06, 2026-10-16):** the answer also has `startedAt`, `lastActivityAt`, `interruptionCause`, `step` (the running step, or `null`) and `assessTotal` (the posts the `assess` step took in, or `null`); the cron's heartbeat and an interrupted run's cause come from them (section S-06).
+  - `GET /internal/pipeline-runs/{id}`: 200 `{id, kind, status, finishedAt, fetched, newPosts, assessedOk, assessedFailed, processingErrors, dead}`, or 404 `not_found`. The counters are for the cron's last log line. **Update (S-06, 2026-10-16):** the answer also has `startedAt`, `lastActivityAt`, `interruptionCause`, `step` (the running step, or `null`) and `assessTotal` (the posts the `assess` step took in, or `null`); the cron's heartbeat and an interrupted run's cause come from them (section S-06). **Update (S-08, 2026-10-18):** the answer also has `skipped` (the fetched elements that could not become a post); the cron's line per run shows it right after `fetched` (section S-08).
 - **Retries and limits** (`trigger.sh`, defaults; `tools/pipeline-trigger/README.md`):
   - no connection or 502/503/504 (the API waking takes about 10 s, or the cron container's private network is not ready yet): every 2 s, up to `TRIGGER_WAKE_TIMEOUT` (`3m`). A 503 `source_not_configured` is not retried. Only a start request that never connected is retried: no answer after the connection was made (e.g. `TRIGGER_REQUEST_TIMEOUT`, `60s`) means the API may have queued the run, so the cron exits 1 ("the run may have started; check /admin") instead of starting a second run whose result would hide the first one's (implementation review F1);
   - 409 `pipeline_busy` (e.g. an admin's run): every `TRIGGER_BUSY_INTERVAL` (`60s`), up to `TRIGGER_BUSY_TIMEOUT` (`60m`);
   - polling every `TRIGGER_POLL_INTERVAL` (`30s`), up to `TRIGGER_RUN_TIMEOUT` (`90m`) for all runs together;
   - the whole cron run: `TRIGGER_TIMEOUT` (`3h`). A hung run fails instead of blocking later nights (Railway skips a cron run while the previous one is active).
-- **Exit code.** 0 when every run is `succeeded` or `partial`; 1 when one is `failed` or `interrupted`, on 401 or another 4xx, on 503 `source_not_configured` or a timeout; 2 on a configuration error. The token goes to `curl` as a config on stdin, never as an argument, and is never logged.
+- **Exit code.** 0 when every run is `succeeded` or `partial`; 1 when one is `failed` or `interrupted`, on 401 or another 4xx, on 503 `source_not_configured` or a timeout; 2 on a configuration error. The token goes to `curl` as a config on stdin, never as an argument, and is never logged. **Update (S-08, 2026-10-18):** an empty run is `failed`: a RANGE run whose source gave no post to store ends `failed` in the API, so the cron exits 1 by the same rule. Skipped elements next to good posts do not change the status or the exit code (section S-08).
 - **Failure signal.** A non-zero exit makes the cron's deployment `CRASHED`. Railway reports that **only through a notification rule**: in the PR-env test (2026-10-12) a crashed run sent no e-mail and no in-app notification. After the operator added a custom rule in Railway Account Settings (event "deployment crashed", scope: all environments), the next failed run arrived as an in-app and push notification "Pipeline-trigger deployment crashed". The same rule covers `db-backup` (section F-01). A `partial` run exits 0: its failed posts show in `/admin` and the next run retries them; an active signal for `partial` is S-06. **Update (S-06, 2026-10-16):** the signal is an in-app notification for every admin (the bell in the header), given by a `partial` run with a dead post or a technical error and by every `failed` or `interrupted` run; a `partial` run with only retryable `failed` posts gives none. The cron's exit codes are unchanged (section S-06).
 - **Environment guard.** Railway creates the cron in every environment (a PR env is a copy of production). Outside `production` (`RAILWAY_ENVIRONMENT_NAME`) `trigger.sh` logs "skipped" and exits 0 without a request, unless `TRIGGER_IN_ANY_ENVIRONMENT=true` is set on the service.
 - **Recovery before the port.** The cron's request is often the one that wakes the API. Start-up recovery of unfinished runs (`PipelineStartupRecovery`) now runs in `SmartInitializingSingleton.afterSingletonsInstantiated`, before the web server opens its port, so it cannot mark the cron's new run `interrupted`.
@@ -1097,6 +1097,77 @@ So the version-dependent requirement accepts production's older dumps, and the c
 
    A run that fails on a shrink right after the merge means rows were really lost since the previous night: investigate before any consent.
 4. **Record and close.** Comment the results on issue #74: the merge commit, the deployment id, the plan output, the run's `compared_with`, `accepted_shrink` and counts. Close the issue only after this production verification.
+
+## S-08: pusty przebieg daje sygnał (empty-run-signal)
+
+**Status (2026-10-18): in progress** on branch `feature/empty-run-signal`, PR #80, issue #67; not merged, PR-env verification pending. Before S-08 a RANGE run whose source gave no post ended `succeeded`: no notification, cron exit 0, and the label "Dane zaktualizowane" moved, so an empty night looked like a good one. S-08 makes an empty run fail and makes skipped elements give a warning. Change: `context/changes/empty-run-signal/`.
+
+### What changes
+
+- **Empty run → `failed`.** A RANGE run (the cron's or an admin's) in which a source gave no post to store fails in the `fetch` step. "No post" means no element in the range, or only elements that could not become a post (unexpected JSON shape or not mappable).
+  - `SourceIngest.fetch` fetches every source first, then throws `NoPostsFetchedException`. Step `fetch` is `failed` with the message; there is no `store`, `select` or `assess` step.
+  - The run's error (the text on `/admin/runs/:id`): `NoPostsFetchedException: wykop gave no post to store (fetched N, skipped N)`. Several empty sources are joined with `; `.
+  - The run's `fetched` and `skipped` hold the real counts (written before the run fails), so a run with only skipped elements shows e.g. "pobrane 12, pominięte 12", not zeros.
+  - The signals are those of any `failed` run: every admin gets an in-app notification (the bell with the badge "błąd"; the run's page gives the error text as the reason); the cron exits 1, so its deployment is `CRASHED` and Railway's "deployment crashed" rule sends a push; `GET /api/freshness` keeps the previous good run's date.
+  - An admin's run over a range without posts (e.g. today, just after midnight) fails the same way and notifies the admins. That is the rule working, not an outage.
+- **Skipped elements next to good posts → warning.** A run with `skipped` > 0 and at least one post ends as before (`succeeded` or `partial`), but it needs attention (`PipelineRun.needsAttention`).
+  - Every admin gets an in-app notification. The bell, `/admin` and the run's page show a warning tone and the label `zakończony — pominięte: N` (or `częściowo — pominięte: N`); the run's page gives the reason `pominięte elementy: N`.
+  - The cron exits 0 and the label "Dane zaktualizowane" moves. No Railway push.
+  - The API logs one WARN per source with skipped elements: `Run <id>: <source> skipped <skipped> of <fetched> elements (unexpected shape or not mappable)`.
+- **`skipped` everywhere.** `GET /internal/pipeline-runs/{id}` answers `skipped`; the cron's line per run and the API's end line show it right after `fetched`.
+- **Unchanged.** RETRY and POSTS runs (no fetch step; a RETRY run with no post left still ends `succeeded`), runs without skipped elements, the cron's exit-code rule (1 only for `failed` / `interrupted`), the freshness query. No migration: `skipped` exists since `V3`.
+
+### What the operator sees
+
+**In the API log**, a usual run (the end line now has `skipped`):
+
+```text
+Pipeline run 4f0c… (range) ended partial in 3m 12s: fetched 425, skipped 0, new 71, ok 70, failed 1, dead 0, errors 0, retries 0, flex fallbacks 0
+```
+
+A run with skipped elements adds, after the fetch, `WARN Run 4f0c…: wykop skipped 3 of 425 elements (unexpected shape or not mappable)`, and at the end `Pipeline run 4f0c… (range) ended succeeded and needs attention: N admin(s) notified`. An empty run logs `Run 4f0c… step fetch failed …`, `ERROR Pipeline run 4f0c… failed` with `NoPostsFetchedException` and its stack, the end line with `ended failed`, and the `needs attention` line.
+
+**In the cron's log** (`tools/pipeline-trigger/README.md`):
+
+```text
+… trigger: range 4f0c…: partial (fetched 425, skipped 0, new posts 71, assessed ok 70, assessed failed 1, processing errors 0, dead 0)
+… trigger: range 4f0c…: failed (fetched 0, skipped 0, new posts 0, assessed ok 0, assessed failed 0, processing errors 0, dead 0)
+… trigger: FAILED: a run did not succeed: range failed
+```
+
+An API older than S-08 gives `skipped ?`; the deploy order of the API and the cron does not matter.
+
+### Runbook — empty run (operator)
+
+1. **Open the run's page** from the bell or `/admin`: the error names the source and its counts.
+   - `fetched 0, skipped 0`: the source returned nothing for the range.
+   - `fetched N, skipped N`: the source answered, but nothing could become a post (a changed JSON shape or mapping); the API log has the WARN line with the same counts.
+2. **Check the source.** Is Wykop up, and do the keys work (`WYKOP_KEY` / `WYKOP_SECRET` on `szczur-radar-api`; a missing source is a 503 `source_not_configured` instead, section S-05)? Look at the API log around the run's `fetch` step.
+3. **After the fix**, start the same range again from `/admin`. No hurry for one night: the next night fetches D-2 a second time, so yesterday's D-1 comes back on its own.
+4. **An admin's run over a range without posts** (e.g. today just after midnight, or a very old date) ends `failed` the same way. If the range really had no posts, there is nothing to fix: mark the notification read.
+5. **Skipped elements** (warning, not a failure): if they come back night after night or grow, a source's shape or mapping changed. The counts are in the WARN line; finding which elements and why is not logged yet (out of scope of S-08).
+
+### PR-env verification (szczur-radar-pr-80)
+
+**Done (2026-10-19)** — plan steps 4.3 and 4.4:
+
+- [x] **The cron's run.** `PIPELINE_TRIGGER_TOKEN` on the PR env's API, `TRIGGER_IN_ANY_ENVIRONMENT=true` and a one-off schedule on the cron, then a redeploy of the cron (as in section S-06). The run ends as before; the cron's line has `skipped N`, and the API's end line has `skipped N` right after `fetched`.
+  - **Result (2026-10-19, API from `a2dd334`):** the operator set `TRIGGER_IN_ANY_ENVIRONMENT=true` and ran the cron by hand from the dashboard (the schedule stayed `30 0 * * *`). The first run ended `CRASHED` with `trigger: FAILED: PIPELINE_TRIGGER_TOKEN is not set` (exit 2): the PR env's API had no token (production's is sealed, so Railway does not copy it). After `PIPELINE_TRIGGER_TOKEN` was set on the PR env's API with `--stdin` (64 characters; the API redeployed) and the cron was redeployed (its deployment resolves the reference only when it is created), the second run passed: `range fa1ef44f…: partial (fetched 141, skipped 0, new posts 141, assessed ok 130, assessed failed 11, processing errors 0, dead 0)`, `OK: range partial`, exit 0. The API's end line: `Pipeline run fa1ef44f… (range) ended partial in 54.4s: fetched 141, skipped 0, new 141, ok 130, failed 11, dead 0, errors 0, retries 0, flex fallbacks 0`. No WARN `skipped` line (that day had no skipped element; the warning path is covered by `PipelineAgentIT`).
+- [x] **An empty range from an admin.** A run for a very old range (e.g. 2008-01-01) from `/admin`. If Wykop returns no element: the run is `failed`, the bell has a notification, the run's page shows `NoPostsFetchedException: wykop gave no post to store (…)` and step `fetch` `failed`, and `GET /api/freshness` does not change. If Wykop does return elements, record what it returned here; the coverage stays with `PipelineAgentIT` (phase 1).
+  - **Result (2026-10-19, API redeployed from `a2dd334`):** Wykop returned no element for 1.01.2008. The admin account was created in the PR env with `create-user --role admin` (the PR env's database is its own). The run `1befb218…` from `/admin` ended `failed` in 496 ms: `error` = `NoPostsFetchedException: wykop gave no post to store (fetched 0, skipped 0)`, the only step `fetch: failed` with the message, counters `fetched 0, skipped 0`, `needsAttention: true`. The bell showed one new notification with the badge "błąd"; the run's page gave the error text as the reason. `GET /api/freshness` stayed `{"lastUpdatedAt":null}` before and after. API log: `step fetch failed in 372ms`, `ERROR Pipeline run … failed`, `(range) ended failed in 496ms: fetched 0, skipped 0, new 0, …`, `ended failed and needs attention: 1 admin(s) notified`.
+- [x] **Afterwards.** Delete `TRIGGER_IN_ANY_ENVIRONMENT`, set the schedule back to `30 0 * * *` and redeploy the cron (a deleted variable does not redeploy it, section S-05).
+  - **Done (2026-10-19):** `TRIGGER_IN_ANY_ENVIRONMENT` deleted; the schedule was never changed (`30 0 * * *`); the cron redeployed (`1fa7681f`). `railway redeploy` refused ("cannot be redeployed"), the Railway MCP `redeploy` of the latest deployment worked. Its variables are again `API_PORT`, `API_PRIVATE_DOMAIN` and `PIPELINE_TRIGGER_TOKEN`. The API keeps its `PIPELINE_TRIGGER_TOKEN` (`preserve()`), and the admin account `kw.macioszek@gmail.com` stays in the PR env until the PR env is closed.
+
+### Runbook — after the merge (operator; tracked in issue #67, not in the plan's Progress)
+
+0. **Standing rules.** No merge to `main` while `/admin` shows a run `RUNNING`, and not between about 00:30 and 01:30 UTC (section S-05). The merge deploys the API and the cron together; there is no migration.
+1. **CI on `main`.** All jobs green; `railway-config` plans no change (S-08 adds no variable or service).
+2. **First night**, or a manual cron run on a temporary schedule as in section S-05, runbook step 3 (then set `30 0 * * *` back):
+   - the cron's line per run has `skipped N` right after `fetched N`, and it ends `OK: …` on a usual night;
+   - the API's end line has `skipped N`; with `skipped 0` there is no WARN line from `SourceIngest`;
+   - a usual night (no skipped element, only retryable `failed` posts) gives no notification, as before.
+3. **Record which case the first nights were:** a usual night, a warning (`skipped` > 0: a notification, exit 0) or an empty run (`failed`: a notification, exit 1, a Railway push). An empty night is handled with the runbook above.
+4. **Record and close.** Comment the results on issue #67: the merge commit, deployment IDs, the first night's cron and API lines, the notifications seen. Close the issue only after this production verification.
 
 ## Phases
 

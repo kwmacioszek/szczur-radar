@@ -99,11 +99,12 @@ class InternalPipelineRunController {
 	 * @param interruptionCause why an interrupted run stopped; {@code null} for any other run
 	 * @param step the step running now; {@code null} between steps and once the run has ended
 	 * @param assessTotal the posts its assess step took ({@code items_in}); {@code null} before that step
+	 * @param skipped the fetched elements that could not become a post
 	 */
 	record RunState(UUID id, RunKind kind, RunStatus status, @Nullable Instant startedAt, @Nullable Instant finishedAt,
 			@Nullable Instant lastActivityAt, @Nullable InterruptionCause interruptionCause, @Nullable RunStep step,
 			@Nullable Integer assessTotal, int fetched, int newPosts, int assessedOk, int assessedFailed,
-			int processingErrors, int dead) {
+			int processingErrors, int dead, int skipped) {
 
 		/** {@code run} with {@code steps}, its steps in the order they started. */
 		static RunState of(PipelineRun run, List<PipelineRunStep> steps) {
@@ -120,7 +121,7 @@ class InternalPipelineRunController {
 			return new RunState(run.getId(), run.getKind(), run.getStatus(), run.getStartedAt(), run.getFinishedAt(),
 					run.getLastActivityAt(), run.getInterruptionCause(), running, assessTotal, run.getFetched(),
 					run.getNewPosts(), run.getAssessedOk(), run.getAssessedFailed(), run.getProcessingErrors(),
-					run.getDead());
+					run.getDead(), run.getSkipped());
 		}
 
 	}

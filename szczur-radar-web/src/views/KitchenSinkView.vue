@@ -58,6 +58,7 @@ const variants = [
 /** Every tone with the run statuses and markers the admin panel shows in it (src/runs.ts). */
 const badges: { tone: BadgeTone; text: string }[] = [
   { tone: 'success', text: 'zakończony' },
+  { tone: 'warning', text: 'zakończony — pominięte: 3' },
   { tone: 'warning', text: 'częściowo' },
   { tone: 'warning', text: 'przerwany' },
   { tone: 'neutral', text: 'przerwany — nowe wdrożenie' },
@@ -90,13 +91,14 @@ function notification(
       assessedFailed: 0,
       dead: 0,
       processingErrors: 0,
+      skipped: 0,
       error: null,
       ...run,
     },
   }
 }
 
-/** Two unread (newest), then two read; every reason the API notifies about. */
+/** Two unread (newest), then four read; every reason the API notifies about. */
 const notifications: AdminNotification[] = [
   notification('n1', '2026-10-15T07:59:30Z', null, {
     status: 'failed',
@@ -109,7 +111,12 @@ const notifications: AdminNotification[] = [
     error: 'interrupted: a new deployment took over',
   }),
   notification('n3', '2026-10-15T01:05:00Z', '2026-10-15T06:00:00Z', { status: 'partial', dead: 1, assessedFailed: 7 }),
-  notification('n4', '2026-10-13T00:58:00Z', '2026-10-13T07:00:00Z', {
+  notification('n4', '2026-10-14T00:52:00Z', '2026-10-14T06:00:00Z', { status: 'succeeded', skipped: 3 }),
+  notification('n5', '2026-10-13T22:10:03Z', '2026-10-14T06:00:00Z', {
+    status: 'failed',
+    error: 'NoPostsFetchedException: wykop gave no post to store (fetched 0, skipped 0)',
+  }),
+  notification('n6', '2026-10-13T00:58:00Z', '2026-10-13T07:00:00Z', {
     status: 'interrupted',
     interruptionCause: 'restart',
     error: 'interrupted: the application restarted',
@@ -556,7 +563,7 @@ const assessments: { id: string; title: string; assessment: NonNullable<PostItem
     <section aria-labelledby="bell-title">
       <h2 id="bell-title">Dzwoneczek</h2>
       <ul class="samples">
-        <li v-for="bell in bells" :key="bell.id" class="bell-sample" :class="{ open: bellOpen[bell.id] }">
+        <li v-for="bell in bells" :key="bell.id" class="bell-sample" :class="{ open: bellOpen[bell.id], list: bell.items.length > 0 }">
           <p class="sample-title">{{ bell.title }}</p>
           <div class="bell-bar">
             <NotificationMenu
@@ -700,6 +707,11 @@ h3 {
 
 .bell-sample.open {
   min-height: 24rem;
+}
+
+/* Six notifications wrap to about 38rem at 375 px. */
+.bell-sample.open.list {
+  min-height: 40rem;
 }
 
 /* A bar like AppHeader's: positioned, so the panel opens below it, aligned to its right edge. */

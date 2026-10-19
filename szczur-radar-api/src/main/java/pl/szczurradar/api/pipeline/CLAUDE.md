@@ -18,7 +18,8 @@ pipeline/            entry points — start here
   run/     the run model: PipelineRun (+ needsAttention), PipelineRunStep, RunKind, RunStatus, RunStep, StepStatus,
            InterruptionCause, repositories
   flow/    the graph: PipelineAgent (thin actions), RunFlow (the blackboard types)
-  step/    the steps: SourceIngest (fetch), PostStore (store), AssessmentSelection (select)
+  step/    the steps: SourceIngest (fetch), PostStore (store), AssessmentSelection (select),
+           NoPostsFetchedException (a source without a post fails the fetch; caught by flow/PipelineAgent)
   assess/  assessing posts: AssessmentDispatcher (port), ConcurrentAssessmentDispatcher, AssessmentInputs
   state/   conditional state writes: RunRecorder (runs, steps, counters, activity), PostTransitions (posts),
            RunNoLongerRunningException, Durations (durations in log lines and errors)
@@ -34,7 +35,7 @@ Every route starts runs only through `PipelineRunService`; none has its own star
 | Class | Route | Who |
 | --- | --- | --- |
 | `PipelineRunController` | `/api/admin/pipeline-runs/**`: start a range or chosen posts, list runs (pages of up to 100, newest first), one run `GET /{id}` (404 `not_found`), sources, failed posts. A run (`RunView`) has its steps, counters, `scheduled` (requested by `SystemAccount.SCHEDULER`), `needsAttention`, `interruptionCause`, `lastActivityAt`, `llmRetries`, `flexFallbacks` and `inFlight` (`RunRecorder.inFlight`, only for a running run, else 0) | admin session |
-| `InternalPipelineRunController` | `POST /internal/pipeline-runs/daily` (D-2…D-1 of `ZONE` from the injected `Clock`, every configured source, requester `SystemAccount.SCHEDULER`; 202 `[{id, kind}]`), `GET /internal/pipeline-runs/{id}` (status, `startedAt`, `finishedAt`, `lastActivityAt`, `interruptionCause`, the running `step` or `null`, `assessTotal` = the `assess` step's `items_in` or `null`, counters; 404 `not_found`) — the cron's heartbeat reads it | the daily cron `pipeline-trigger`, token `PIPELINE_TRIGGER_TOKEN` only (`internal/`, `config/SecurityConfig`), never a session |
+| `InternalPipelineRunController` | `POST /internal/pipeline-runs/daily` (D-2…D-1 of `ZONE` from the injected `Clock`, every configured source, requester `SystemAccount.SCHEDULER`; 202 `[{id, kind}]`), `GET /internal/pipeline-runs/{id}` (status, `startedAt`, `finishedAt`, `lastActivityAt`, `interruptionCause`, the running `step` or `null`, `assessTotal` = the `assess` step's `items_in` or `null`, counters `fetched`, `skipped`, `newPosts`, `assessedOk`, `assessedFailed`, `processingErrors`, `dead`; 404 `not_found`) — the cron's heartbeat reads it | the daily cron `pipeline-trigger`, token `PIPELINE_TRIGGER_TOKEN` only (`internal/`, `config/SecurityConfig`), never a session |
 | `FreshnessController` | `GET /api/freshness` → `{lastUpdatedAt}`: `finished_at` of the RANGE run `succeeded`/`partial` whose range reaches furthest, the latest of those (`run/PipelineRunRepository.findLastUpdate`; an admin's run over older days leaves it) — the feed's label (FR-030); nothing else about runs | any session |
 | `DeploySafetyController` | `GET /api/deploy-safety` → `{safe, reason}`: `reason` (`DeploySafetyReason`) `pipeline_running` before `pipeline_queued` (both can exist: a retry runs, the range waits), `null` when safe (`run/PipelineRunRepository.existsActive` decides it in one statement, then `existsRunning` the reason: two statements would both miss a run leaving the queue between them); 503 `{status: unavailable}` without the database, as `/api/ready` — the CI deploy gate's question (S-14); nothing else about runs | anyone, no session (`PUBLIC_ROUTES`) |
 | `PipelineRunExceptionHandler` | the service's refusals for both run controllers: 409 `pipeline_busy`, 400 `post_dead`, 503 `source_not_configured` | — |
@@ -51,7 +52,7 @@ PipelineRunService.startRange / startPosts → queue → PipelineAgent:
 | --- | --- |
 | `flow/RunFlow` | the blackboard types; the graph follows from them. A new stage (e.g. ML) = new types and actions between `StoredBatch` and `PendingAssessments` |
 | `flow/PipelineAgent` | the actions — each calls one service and is recorded as a step (`RunRecorder.step`); no logic; exactly one action can run for any blackboard state |
-| `step/SourceIngest` | which sources a range run fetches (default: every configured one) and the fetch over them |
+| `step/SourceIngest` | which sources a range run fetches (default: every configured one) and the fetch over them; a source that gave no post fails the step (`NoPostsFetchedException`, below), a source with skipped elements gets a WARN line |
 | `step/PostStore` | new posts with their raw payload, once per `(source, item_type, source_item_id)`; `findKeys` in chunks of 1,000; stores chunks of 500 in one transaction each (raw payloads, then posts: JDBC batches), a chunk hitting the unique key again post by post |
 | `step/AssessmentSelection` | one attempt per post and request: range → only the posts it stored first; retry → every leftover; posts → the given ones still assessable |
 | `assess/AssessmentDispatcher` | the port of the assess step (`dispatch`, and `cancel` for a run the watchdog stopped); a Batch API version may replace the concurrent one |
@@ -74,8 +75,12 @@ PipelineRunService.startRange / startPosts → queue → PipelineAgent:
 - **Log lines (INFO).** `Pipeline run <id> (<kind>) started`; `Run <id> step <step> started (in N)` and
   `Run <id> step <step> <status> (out N) in <time>`; `Run <id> assess: <done>/<N> (ok …, failed …, dead …,
   errors …), in flight …, retries …, flex fallbacks …` at most every `PROGRESS_INTERVAL` (1 min) as posts
-  finish, and after the last; `Pipeline run <id> (<kind>) ended <status> in <time>: fetched …, new …, ok …,
-  failed …, dead …, errors …, retries …, flex fallbacks …`. No post text, no secret.
+  finish, and after the last; `Pipeline run <id> (<kind>) ended <status> in <time>: fetched …, skipped …,
+  new …, ok …, failed …, dead …, errors …, retries …, flex fallbacks …`. Two WARNs: `Run <id>: <source>
+  skipped <N> of <M> elements (unexpected shape or not mappable)` from `SourceIngest.fetch`, only for a
+  source with skipped elements; `The counters of run <id> could not be written before its fetch failed`
+  from `PipelineAgent.fetch`, when writing the counters of a run without posts fails (the run still fails
+  with `NoPostsFetchedException`, the write's failure suppressed in it). No post text, no secret.
 - **Steps only in a running run.** `RunRecorder.step` inserts the step row only while the run is
   `running` (one statement that also moves `last_activity_at`); otherwise it throws
   `RunNoLongerRunningException` without doing the work, and `execute` logs that at INFO, not as a
@@ -139,9 +144,9 @@ PipelineRunService.startRange / startPosts → queue → PipelineAgent:
   2. `PipelineRunService.onClose`, for each run it interrupted (`shutdown`);
   3. `PipelineStartupRecovery.recover`, for each run it interrupted, after its transaction commits;
   4. `PipelineRunService.stopStalled`, after the watchdog's stop.
-  `runEnded` notifies only a run with `PipelineRun.needsAttention()` — `failed`, `interrupted`, or
-  `partial` with a `dead` post or a technical error (a `partial` run with only retryable `failed` posts
-  does not: the next run retries them) — one row per admin with `login_enabled`, `ON CONFLICT DO
+  `runEnded` notifies only a run with `PipelineRun.needsAttention()` — `failed`, `interrupted`,
+  `partial` with a `dead` post or a technical error, or `succeeded` / `partial` with skipped elements (a
+  `partial` run with only retryable `failed` posts does not: the next run retries them) — one row per admin with `login_enabled`, `ON CONFLICT DO
   NOTHING`, so a run reported twice is notified once. It never throws: a failure is logged (ERROR) and
   the run's ending, or the server's start, goes on. The unique key `uq_notifications_recipient_kind_run`
   (`V9`) treats a `NULL` `run_id` as distinct: a future kind without a run needs a new migration with
@@ -157,6 +162,12 @@ PipelineRunService.startRange / startPosts → queue → PipelineAgent:
   `failed` result from `Assessor`, not an exception) stores nothing, puts the post back and is counted
   in `processing_errors` (`RunFlow.AssessedBatch.errorSummary` becomes the run's error).
 - Code that runs work in parallel passes its own executor (`availableProcessors()` may be 1).
+- A range run's `fetch` step fails when a source gave no post to store (no element in the range, or only
+  skipped ones): `SourceIngest.fetch` fetches every source, then throws `NoPostsFetchedException` naming
+  each empty source with its counts, so the run ends `failed` (notification, cron exit 1, the feed's date
+  stays). `PipelineAgent.fetch` writes the exception's counters (`fetched`, `skipped` of every source)
+  before rethrowing, so the run's page shows them. Retry and posts runs fetch nothing and are not
+  affected. Skipped elements next to posts are only a warning: the WARN line and `needsAttention`.
 - Every agent action fires once (`@Action(actionRetryPolicy = FIRE_ONCE)`): Embabel's default policy
   retries an action after most exceptions, with growing pauses (seen: a failed Wykop fetch repeated
   every 10 s and more), which would repeat and re-record a step. Retries of a call live only below
@@ -182,7 +193,7 @@ PipelineRunService.startRange / startPosts → queue → PipelineAgent:
   (threads, one client, a technical error; one `count` per stored post with its retries and flex
   fallback, `processingError`, nothing for a post not taken; a failed `count` keeps a stored post
   stored; `cancel` interrupts the run's call in flight, skips its post not started and leaves another
-  run's call alone; the progress line), `run/PipelineRunTest` (`needsAttention` for every status),
+  run's call alone; the progress line), `run/PipelineRunTest` (`needsAttention` for every status, with and without skipped elements),
   `PipelineStallSettingsTest` (default from the LLM settings, WARN below it, units, refusals),
   `RunWatchdogTest` (no database call without a run of its own, a failure and an `Error` logged, the
   checks going on after an `Error`, the check interval); `llm/transport/TransportRetryTest` covers
@@ -205,7 +216,10 @@ PipelineRunService.startRange / startPosts → queue → PipelineAgent:
   the list, marking one and all read, 404 for another admin's.
 - `PipelineAgentIT`: the whole graph on Postgres with a source on a local server and a scripted
   `LlmClient` — range, the same range again, a leftover's one attempt per request, recovery and a late
-  worker, a failing source (`failed`, the queue takes the next request), an orphaned `assessing` post,
+  worker, a failing source (`failed`, the queue takes the next request), a range without elements
+  (`failed` at `fetch`, one search per resource, the feed's date unchanged), a range of unmappable
+  elements (`failed` with its counters), some skipped elements (`succeeded`, needs attention, the WARN
+  and end lines), an orphaned `assessing` post,
   a stopping instance (`onClose`, cause `shutdown`, step `interrupted`, its queue thread neither closes
   nor reports the run again) and a refused LLM key (`failed`,
   no attempt); counters and `last_activity_at` growing during the assessment; no new step in an

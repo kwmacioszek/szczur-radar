@@ -138,7 +138,8 @@ answered() {
 }
 
 # The run statuses of the API (RunStatus), named only here: sets REPLY to ok, failed, interrupted (a
-# failure whose log line gives the cause), waiting (queued) or active (running).
+# failure whose log line gives the cause), waiting (queued) or active (running). A range run whose
+# source gave no post to store (S-08) ends failed in the API, so it fails here like any other.
 classify() {
     case $1 in
         succeeded | partial) REPLY=ok ;;
@@ -256,7 +257,8 @@ while true; do
         if [[ $REPLY != ok ]]; then
             failed=1
         fi
-        log "$kind $id: $status ($(jq -r '"fetched \(.fetched), new posts \(.newPosts), assessed ok \(.assessedOk), assessed failed \(.assessedFailed), processing errors \(.processingErrors), dead \(.dead)"' "$work/body"))$cause"
+        # skipped came in S-08 (empty-run-signal): an older API leaves it out, which shows as "?".
+        log "$kind $id: $status ($(jq -r '"fetched \(.fetched), skipped \(.skipped // "?"), new posts \(.newPosts), assessed ok \(.assessedOk), assessed failed \(.assessedFailed), processing errors \(.processingErrors), dead \(.dead)"' "$work/body"))$cause"
     done
     (( pending > 0 )) || break
     remaining=$(( deadline - SECONDS ))

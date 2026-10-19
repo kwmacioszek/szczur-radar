@@ -5,9 +5,11 @@
 #   1. the image runs as a non-root user; outside production (RAILWAY_ENVIRONMENT_NAME) a run is
 #      skipped without a request;
 #   2. 202 → succeeded or partial: exit 0; failed, interrupted (the log gives its cause), or a failed
-#      retry run before a succeeded range run: exit 1; a running run logs a heartbeat with its step and
-#      progress every TRIGGER_HEARTBEAT_INTERVAL, without an extra request, and an API without those
-#      fields gives "?" in their place;
+#      retry run before a succeeded range run: exit 1; an empty range run (the API ends it failed with
+#      fetched 0, skipped 0): exit 1; a succeeded run with skipped elements: exit 0, skipped in its
+#      line; a running run logs a heartbeat with its step and progress every
+#      TRIGGER_HEARTBEAT_INTERVAL, without an extra request, and an API without those fields gives "?"
+#      in their place;
 #   3. refused connections, then 503 without a body, then 202 (the API waking up): exit 0; 409
 #      pipeline_busy, then 202: exit 0;
 #   4. 401 (a wrong token) and 503 source_not_configured: exit 1 after one request; no answer to a POST
@@ -48,7 +50,7 @@ trap 'exit 130' INT TERM
 #   runs: [{kind, statuses}]: GET /{id} answers the statuses in turn, the last one repeating; a status
 #         is its name, or an object {status, <field>: <value>, …} whose fields replace the answer's;
 #   old_api: true leaves out the fields the API added in S-06 (startedAt, lastActivityAt,
-#         interruptionCause, step, assessTotal), as an API from before them;
+#         interruptionCause, step, assessTotal) and S-08 (skipped), as an API from before them;
 #   listen_after: seconds before it accepts connections (until then they are refused).
 # Every request without "Bearer $STUB_TOKEN" gets 401 not_authenticated. One line per request on
 # stdout: "<method> <path> <status>".
@@ -120,10 +122,10 @@ class Api(BaseHTTPRequestHandler):
                 "interruptionCause": "deploy" if status == "interrupted" else None,
                 "step": "assess" if running else None, "assessTotal": None if queued else 251,
                 "fetched": 270, "newPosts": 251, "assessedOk": 249, "assessedFailed": 2, "processingErrors": 0,
-                "dead": 0}
+                "dead": 0, "skipped": 0}
         body.update(fields)
         if case.get("old_api"):
-            for name in ("startedAt", "lastActivityAt", "interruptionCause", "step", "assessTotal"):
+            for name in ("startedAt", "lastActivityAt", "interruptionCause", "step", "assessTotal", "skipped"):
                 del body[name]
         self.answer(200, body)
 
@@ -216,7 +218,7 @@ pass "RAILWAY_ENVIRONMENT_NAME=szczur-radar-pr-1: skipped, exit 0, no request"
 step "2. the runs' result is the exit code, and a heartbeat while they run"
 check_case succeeded 0 '{"runs": [{"kind": "range", "statuses": ["queued", "running", "succeeded"]}]}' "$token" \
     -e RAILWAY_ENVIRONMENT_NAME=production
-log_says succeeded ': succeeded (fetched 270, new posts 251, assessed ok 249, assessed failed 2, processing errors 0, dead 0)'
+log_says succeeded ': succeeded (fetched 270, skipped 0, new posts 251, assessed ok 249, assessed failed 2, processing errors 0, dead 0)'
 log_says succeeded 'OK: range succeeded'
 requests_were succeeded 1 3
 pass "production: 202 → queued → running → succeeded, exit 0"
@@ -232,10 +234,24 @@ check_case retry-failed 1 '{"runs": [{"kind": "retry", "statuses": ["running", "
 log_says retry-failed 'FAILED: a run did not succeed: retry failed, range succeeded'
 pass "retry failed, range succeeded → both awaited, exit 1"
 check_case interrupted 1 '{"runs": [{"kind": "range", "statuses": ["running", "interrupted"]}]}' "$token"
-log_says interrupted ': interrupted (fetched 270, new posts 251, assessed ok 249, assessed failed 2, processing errors 0, dead 0) (cause deploy)'
+log_says interrupted ': interrupted (fetched 270, skipped 0, new posts 251, assessed ok 249, assessed failed 2, processing errors 0, dead 0) (cause deploy)'
 log_says interrupted 'FAILED: a run did not succeed: range interrupted'
 requests_were interrupted 1 2
 pass "interrupted → its cause in the log, exit 1"
+# An empty range run: the source gave no post to store, so the API ends it failed (S-08).
+check_case empty 1 '{"runs": [{"kind": "range", "statuses": ["running", {"status": "failed", "fetched": 0,
+    "skipped": 0, "newPosts": 0, "assessedOk": 0, "assessedFailed": 0, "assessTotal": null}]}]}' "$token"
+log_says empty ': failed (fetched 0, skipped 0, new posts 0, assessed ok 0, assessed failed 0, processing errors 0, dead 0)'
+log_says empty 'FAILED: a run did not succeed: range failed'
+requests_were empty 1 2
+pass "an empty range run (failed, fetched 0, skipped 0) → its counters in the log, exit 1"
+# Skipped elements next to good posts are only a warning in the app: the run succeeds, the cron too.
+check_case skipped-warning 0 '{"runs": [{"kind": "range", "statuses": ["running",
+    {"status": "succeeded", "skipped": 3}]}]}' "$token"
+log_says skipped-warning ': succeeded (fetched 270, skipped 3, new posts 251, assessed ok 249, assessed failed 2, processing errors 0, dead 0)'
+log_says skipped-warning 'OK: range succeeded'
+requests_were skipped-warning 1 2
+pass "succeeded with skipped 3 → skipped in the log, exit 0"
 check_case heartbeat 0 '{"runs": [{"kind": "range", "statuses": ["running",
     {"status": "running", "step": "assess", "assessTotal": 10, "assessedOk": 2, "assessedFailed": 1},
     {"status": "running", "step": "assess", "assessTotal": 10, "assessedOk": 2, "assessedFailed": 1},
@@ -258,10 +274,10 @@ pass "a queued run logs its status once and no heartbeat"
 check_case old-api 1 '{"old_api": true, "runs": [{"kind": "range", "statuses": ["running", "running", "interrupted"]}]}' \
     "$token" -e TRIGGER_HEARTBEAT_INTERVAL=1s
 log_says old-api ': running, step ?, assessed 251/? (ok 249, failed 2, errors 0), last activity ?'
-log_says old-api ': interrupted (fetched 270, new posts 251, assessed ok 249, assessed failed 2, processing errors 0, dead 0) (cause ?)'
+log_says old-api ': interrupted (fetched 270, skipped ?, new posts 251, assessed ok 249, assessed failed 2, processing errors 0, dead 0) (cause ?)'
 log_says old-api 'FAILED: a run did not succeed: range interrupted'
 requests_were old-api 1 3
-pass "an API without the step and progress fields: \"?\" in the heartbeat and the cause, exit 1"
+pass "an API without the step, progress and skipped fields: \"?\" in the heartbeat, the cause and skipped, exit 1"
 
 step "3. waking the API, and a busy pipeline"
 check_case wake 0 '{"listen_after": 4, "post": ["503-empty", 202],

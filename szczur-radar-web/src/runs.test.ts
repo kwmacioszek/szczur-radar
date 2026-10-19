@@ -69,13 +69,19 @@ describe('runTone', () => {
     ['failed', 'destructive'],
     ['interrupted', 'warning'],
   ] as const)('gives a %s run the %s tone', (status, tone) => {
-    expect(runTone({ status, interruptionCause: null })).toBe(tone)
+    expect(runTone({ status, interruptionCause: null, skipped: 0 })).toBe(tone)
   })
 
   it('treats an interruption by a new deployment as expected and any other as a warning', () => {
-    expect(runTone({ status: 'interrupted', interruptionCause: 'deploy' })).toBe('neutral')
-    expect(runTone({ status: 'interrupted', interruptionCause: 'restart' })).toBe('warning')
-    expect(runTone({ status: 'interrupted', interruptionCause: 'shutdown' })).toBe('warning')
+    expect(runTone({ status: 'interrupted', interruptionCause: 'deploy', skipped: 0 })).toBe('neutral')
+    expect(runTone({ status: 'interrupted', interruptionCause: 'restart', skipped: 0 })).toBe('warning')
+    expect(runTone({ status: 'interrupted', interruptionCause: 'shutdown', skipped: 0 })).toBe('warning')
+  })
+
+  it('warns about a succeeded run with skipped elements; a partial run stays a warning', () => {
+    expect(runTone({ status: 'succeeded', interruptionCause: null, skipped: 3 })).toBe('warning')
+    expect(runTone({ status: 'partial', interruptionCause: null, skipped: 3 })).toBe('warning')
+    expect(runTone({ status: 'failed', interruptionCause: null, skipped: 3 })).toBe('destructive')
   })
 })
 
@@ -92,15 +98,24 @@ describe('stepTone', () => {
 
 describe('runStatusLabel', () => {
   it('adds the cause to an interrupted run', () => {
-    expect(runStatusLabel({ status: 'interrupted', interruptionCause: 'deploy' })).toBe('przerwany — nowe wdrożenie')
-    expect(runStatusLabel({ status: 'interrupted', interruptionCause: 'shutdown' })).toBe(
+    expect(runStatusLabel({ status: 'interrupted', interruptionCause: 'deploy', skipped: 0 })).toBe(
+      'przerwany — nowe wdrożenie',
+    )
+    expect(runStatusLabel({ status: 'interrupted', interruptionCause: 'shutdown', skipped: 0 })).toBe(
       'przerwany — zatrzymanie aplikacji',
     )
   })
 
+  it('adds the skipped elements to a succeeded or partial run', () => {
+    expect(runStatusLabel({ status: 'succeeded', interruptionCause: null, skipped: 3 })).toBe('zakończony — pominięte: 3')
+    expect(runStatusLabel({ status: 'partial', interruptionCause: null, skipped: 1 })).toBe('częściowo — pominięte: 1')
+  })
+
   it('says only the status otherwise, also for an interruption recorded before its cause', () => {
-    expect(runStatusLabel({ status: 'interrupted', interruptionCause: null })).toBe('przerwany')
-    expect(runStatusLabel({ status: 'partial', interruptionCause: null })).toBe('częściowo')
+    expect(runStatusLabel({ status: 'interrupted', interruptionCause: null, skipped: 0 })).toBe('przerwany')
+    expect(runStatusLabel({ status: 'partial', interruptionCause: null, skipped: 0 })).toBe('częściowo')
+    expect(runStatusLabel({ status: 'succeeded', interruptionCause: null, skipped: 0 })).toBe('zakończony')
+    expect(runStatusLabel({ status: 'failed', interruptionCause: null, skipped: 4 })).toBe('błąd')
   })
 })
 
@@ -140,6 +155,32 @@ describe('attentionReasons', () => {
 
   it.each(['queued', 'running', 'succeeded'] as RunStatus[])('has no reason for a %s run', (status) => {
     expect(attentionReasons(run({ status, dead: 1, processingErrors: 1 }))).toEqual([])
+  })
+
+  it('names the skipped elements of a succeeded run', () => {
+    expect(attentionReasons(run({ status: 'succeeded', skipped: 3 }))).toEqual(['pominięte elementy: 3'])
+  })
+
+  it('names the skipped elements of a partial run after its dead posts and technical errors', () => {
+    expect(attentionReasons(run({ status: 'partial', dead: 1, processingErrors: 2, skipped: 3 }))).toEqual([
+      '1 post martwy',
+      'błędy techniczne: 2',
+      'pominięte elementy: 3',
+    ])
+    expect(attentionReasons(run({ status: 'partial', skipped: 1 }))).toEqual(['pominięte elementy: 1'])
+  })
+
+  it('gives a failed run its error only, whatever it skipped', () => {
+    expect(
+      attentionReasons(
+        run({
+          status: 'failed',
+          fetched: 4,
+          skipped: 4,
+          error: 'NoPostsFetchedException: wykop gave no post to store (fetched 4, skipped 4)',
+        }),
+      ),
+    ).toEqual(['NoPostsFetchedException: wykop gave no post to store (fetched 4, skipped 4)'])
   })
 })
 

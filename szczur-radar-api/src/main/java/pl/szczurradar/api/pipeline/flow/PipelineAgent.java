@@ -6,6 +6,8 @@ import com.embabel.agent.api.annotation.AchievesGoal;
 import com.embabel.agent.api.annotation.Action;
 import com.embabel.agent.api.annotation.Agent;
 import com.embabel.agent.core.ActionRetryPolicy;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import pl.szczurradar.api.pipeline.PipelineRunService;
 import pl.szczurradar.api.pipeline.assess.AssessmentDispatcher;
@@ -23,6 +25,7 @@ import pl.szczurradar.api.pipeline.run.RunStatus;
 import pl.szczurradar.api.pipeline.run.RunStep;
 import pl.szczurradar.api.pipeline.state.RunRecorder;
 import pl.szczurradar.api.pipeline.step.AssessmentSelection;
+import pl.szczurradar.api.pipeline.step.NoPostsFetchedException;
 import pl.szczurradar.api.pipeline.step.PostStore;
 import pl.szczurradar.api.pipeline.step.SourceIngest;
 
@@ -44,6 +47,8 @@ import pl.szczurradar.api.pipeline.step.SourceIngest;
 @Agent(description = "Runs one Szczur Radar pipeline run: fetch and store a range of the sources' posts, or pick"
 		+ " leftovers or given posts, then assess them and summarize the run")
 public class PipelineAgent {
+
+	private static final Logger log = LoggerFactory.getLogger(PipelineAgent.class);
 
 	private final SourceIngest ingest;
 
@@ -74,10 +79,29 @@ public class PipelineAgent {
 		};
 	}
 
+	/**
+	 * A source without a post fails the step; its counters are written before the run fails, so the
+	 * run's page shows what was fetched and skipped ({@link RunRecorder#count} needs a running run).
+	 */
 	@Action(actionRetryPolicy = ActionRetryPolicy.FIRE_ONCE)
 	public FetchedBatch fetch(RangeTarget target) {
-		FetchedBatch batch = recorder.step(target.runId(), RunStep.FETCH, null, () -> ingest.fetch(target),
-				FetchedBatch::fetched);
+		FetchedBatch batch;
+		try {
+			batch = recorder.step(target.runId(), RunStep.FETCH, null, () -> ingest.fetch(target),
+					FetchedBatch::fetched);
+		}
+		catch (NoPostsFetchedException ex) {
+			// A failed counter write must not replace the reason the run fails.
+			try {
+				recorder.count(target.runId(), RunRecorder.Counters.fetched(ex.fetched(), ex.skipped()));
+			}
+			catch (RuntimeException countFailure) {
+				log.warn("The counters of run {} could not be written before its fetch failed", target.runId(),
+						countFailure);
+				ex.addSuppressed(countFailure);
+			}
+			throw ex;
+		}
 		recorder.count(target.runId(), RunRecorder.Counters.fetched(batch.fetched(), batch.skipped()));
 		return batch;
 	}

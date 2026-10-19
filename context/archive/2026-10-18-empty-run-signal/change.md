@@ -1,0 +1,12 @@
+---
+change_id: empty-run-signal
+title: Empty run signal
+status: archived
+created: 2026-10-18
+updated: 2026-10-19
+archived_at: 2026-10-19T20:56:34Z
+---
+
+## Notes
+
+<!-- Free-form notes for this change: links, ad-hoc context, decisions that don't belong in research/frame/plan. -->
