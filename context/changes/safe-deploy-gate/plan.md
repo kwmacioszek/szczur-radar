@@ -692,9 +692,9 @@ Dokumentacja opisuje nową bramkę, a runbook — co robić, gdy strażnik czeka
 
 #### Manual
 
-- [ ] 1.5 W PR env plan z CLI 5.67.1 zawiera `field` i `deployEffect`; fixture z prawdziwego planu dodany do `fixtures/`
+- [x] 1.5 W PR env plan z CLI 5.67.1 zawiera `field` i `deployEffect`; fixture z prawdziwego planu dodany do `fixtures/` — zastąpione Plan Amendments (wariant A): plan nie ma `field`/`deployEffect`, reguły na `details`/`summary`; fixture `pr-env-checksuites.json` (00e9ac5)
 - [ ] 1.6 Podsumowanie joba `railway-config` w PR env pokazuje liczbę zmian i sekcję restartów
-- [ ] 1.7 `railway config plan --environment production --detailed-exit-code` z CLI 5.67.1 (lokalnie, tylko odczyt) pokazuje tylko oczekiwane różnice — zmiana wersji CLI nie wprowadza nowego diffu na produkcji
+- [x] 1.7 `railway config plan --environment production --detailed-exit-code` z CLI 5.67.1 (lokalnie, tylko odczyt) pokazuje tylko oczekiwane różnice — zmiana wersji CLI nie wprowadza nowego diffu na produkcji — plan lokalnie, CLI 5.67.0: tylko `source.checkSuites (null → true)` na cronach, exit 2
 
 ### Phase 2: Crony z Wait for CI i ignorowane zmienne strojenia
 
@@ -706,10 +706,10 @@ Dokumentacja opisuje nową bramkę, a runbook — co robić, gdy strażnik czeka
 
 #### Manual
 
-- [ ] 2.4 W PR env `TRIGGER_HEARTBEAT_INTERVAL=1m` ustawione ręcznie (`--skip-deploys`) nie daje `variable.delete` w kolejnym planie; po sprawdzeniu zmienna usunięta
-- [ ] 2.5 Żywa konfiguracja obu cronów w PR env pokazuje Wait for CI włączone (MCP `get-service-config` albo panel), nie tylko pusty plan
-- [ ] 2.6 Kolejny push na PR: cron deployuje się dopiero po zakończeniu CI (status commita `szczur-radar - pipeline-trigger` po czasie zakończenia workflow)
-- [ ] 2.7 `railway config plan --environment production --detailed-exit-code` (lokalnie) pokazuje tylko `checkSuites → true` na cronach, bez `variable.delete`
+- [x] 2.4 W PR env `TRIGGER_HEARTBEAT_INTERVAL=1m` ustawione ręcznie (`--skip-deploys`) nie daje `variable.delete` w kolejnym planie; po sprawdzeniu zmienna usunięta — plan: „1 ignored on Railway”, exit 0; zmienna usunięta
+- [x] 2.5 Żywa konfiguracja obu cronów w PR env pokazuje Wait for CI włączone (MCP `get-service-config` albo panel), nie tylko pusty plan — MCP `get-service-config`: `checkSuites: true` na obu cronach
+- [x] 2.6 Kolejny push na PR: cron deployuje się dopiero po zakończeniu CI (status commita `szczur-radar - pipeline-trigger` po czasie zakończenia workflow) — ec1fe66: CI koniec 15:23:48, `pipeline-trigger` pending 15:23:56
+- [x] 2.7 `railway config plan --environment production --detailed-exit-code` (lokalnie) pokazuje tylko `checkSuites → true` na cronach, bez `variable.delete` — jak 1.7, bez `variable.delete`
 
 ### Phase 3: Endpoint `GET /api/deploy-safety`
 
@@ -720,7 +720,7 @@ Dokumentacja opisuje nową bramkę, a runbook — co robić, gdy strażnik czeka
 
 #### Manual
 
-- [ ] 3.3 W PR env `curl https://szczur-radar-web-szczur-radar-pr-<N>.up.railway.app/api/deploy-safety` zwraca `{"safe":true,"reason":null}`
+- [x] 3.3 W PR env `curl https://szczur-radar-web-szczur-radar-pr-<N>.up.railway.app/api/deploy-safety` zwraca `{"safe":true,"reason":null}` — `{"safe":true,"reason":null}`, HTTP 200
 - [ ] 3.4 W PR env podczas przebiegu uruchomionego przez admina ta sama trasa zwraca `safe:false` z powodem `pipeline_running`
 
 ### Phase 4: Strażnik i kontrola po apply w `railway-config`
@@ -733,8 +733,8 @@ Dokumentacja opisuje nową bramkę, a runbook — co robić, gdy strażnik czeka
 #### Manual
 
 - [ ] 4.3 W PR env push w trakcie przebiegu uruchomionego przez admina: strażnik loguje `pipeline_running`, czeka, po zakończeniu przebiegu przepuszcza; deploy kodu następuje po przebiegu
-- [ ] 4.4 Pierwszy push po dodaniu strażnika (PR env bez endpointu) przechodzi z ostrzeżeniem 401 (stare API wymaga sesji)
-- [ ] 4.5 Zmiana wywołująca restart w PR env (np. tymczasowa zmiana `limitOverride` crona) jest ogłoszona w podsumowaniu, a kontrola po apply kończy się sukcesem albo „przekazane”; zmiana cofnięta
+- [x] 4.4 Pierwszy push po dodaniu strażnika (PR env bez endpointu) przechodzi z ostrzeżeniem 401 (stare API wymaga sesji) — przeszło z ostrzeżeniem po 404 z krawędzi Railway, nie po 401 (runy 39132307596, 39133095273, 39133580770); 401 do sprawdzenia przy pierwszym merge'u na produkcję
+- [x] 4.5 Zmiana wywołująca restart w PR env (np. tymczasowa zmiana `limitOverride` crona) jest ogłoszona w podsumowaniu, a kontrola po apply kończy się sukcesem albo „przekazane”; zmiana cofnięta — runy 39139999132 i 39140400096; zmiana cofnięta (76caa06)
 
 ### Phase 5: Workflow `deploy-verify` po deployu kodu
 
@@ -745,9 +745,9 @@ Dokumentacja opisuje nową bramkę, a runbook — co robić, gdy strażnik czeka
 
 #### Manual
 
-- [ ] 5.3 Run `deploy-verify` w PR env używa pliku workflow z gałęzi PR (SHA deployu) i loguje sondy 200
-- [ ] 5.4 Zdarzenia `in_progress` dają job `skipped`, a Wait for CI kolejnego pusha nie czeka na nie dłużej
-- [ ] 5.5 Wymuszona porażka sondy w PR env (np. tymczasowo zły adres w kopii skryptu na gałęzi) tworzy issue z etykietą `deploy-health`; issue zamknięte, zmiana cofnięta
+- [x] 5.3 Run `deploy-verify` w PR env używa pliku workflow z gałęzi PR (SHA deployu) i loguje sondy 200 — run 39241322905: sondy `/api/ready` i `/healthz` 200
+- [x] 5.4 Zdarzenia `in_progress` dają job `skipped`, a Wait for CI kolejnego pusha nie czeka na nie dłużej — skipped: 39235123755, 39235500570, 39235507303
+- [x] 5.5 Wymuszona porażka sondy w PR env (np. tymczasowo zły adres w kopii skryptu na gałęzi) tworzy issue z etykietą `deploy-health`; issue zamknięte, zmiana cofnięta — lokalnie z prawdziwym API: etykieta, nowe issue, komentarz (#84–#87, zamknięte); duplikat możliwy przy runach w odstępie ≤ 2 s (bbd412a)
 
 ### Phase 6: Dokumentacja, runbook S-14 i weryfikacja produkcji
 
@@ -758,4 +758,4 @@ Dokumentacja opisuje nową bramkę, a runbook — co robić, gdy strażnik czeka
 
 #### Manual
 
-- [ ] 6.3 Sekcja S-14 w `deploy-plan.md` zawiera runbook weryfikacji produkcji po merge'u (checklista z §3)
+- [x] 6.3 Sekcja S-14 w `deploy-plan.md` zawiera runbook weryfikacji produkcji po merge'u (checklista z §3) — `deploy-plan.md`, runbook S-14 po merge'u
