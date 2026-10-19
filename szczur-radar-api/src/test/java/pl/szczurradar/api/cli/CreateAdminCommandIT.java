@@ -69,12 +69,14 @@ class CreateAdminCommandIT {
 	private final ByteArrayOutputStream errBytes = new ByteArrayOutputStream();
 
 	/**
-	 * Removes every account that can log in; the system accounts of the migrations stay (runs they
-	 * requested reference them, and no test here creates or counts them).
+	 * Removes every account that can log in and every admin; the system accounts of the migrations
+	 * stay (they are not admins, runs they requested reference them, and no test here creates or
+	 * counts them). Admins without login come from other classes sharing this context's database
+	 * (e.g. {@code NotificationsIT}) and would make the bootstrap refuse, depending on class order.
 	 */
 	@BeforeEach
 	void emptyDatabase() {
-		jdbc.sql("DELETE FROM users WHERE login_enabled").update();
+		jdbc.sql("DELETE FROM users WHERE login_enabled OR role = 'admin'").update();
 	}
 
 	@Test

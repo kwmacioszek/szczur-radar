@@ -116,3 +116,10 @@
 - **Problem**: PR-y w tym repo odwołują się do issue przez `Refs #N`, bo issue zamyka się dopiero po weryfikacji produkcji, a takie odwołanie nie pojawia się w zakładce Development issue — issue nie pokazuje ani gałęzi, ani PR. Słowo zamykające (`Closes #N`) by je powiązało, ale zamknęłoby issue już przy merge'u. `gh issue develop` tworzy powiązaną gałąź po stronie GitHuba od wskazanej bazy, więc trzeba go użyć przed pierwszym pushem gałęzi.
 - **Rule**: Zawsze wiąż gałąź zmiany z jej issue przez zakładkę Development (`gh issue develop <issue> --name feature/<change-id> --base main`), bo PR z „Refs #N” nie pojawia się w Development, a słowa zamykające (Closes) zamknęłyby issue przy merge'u przed weryfikacją produkcji.
 - **Applies to**: implement
+
+## Przed /10x-implement nie modyfikuj plików kodu ani konfiguracji — także przy pilnym problemie
+
+- **Context**: Każda faza przed `/10x-implement` (`/10x-new`, `/10x-frame`, `/10x-research`, `/10x-plan`, plan-review), szczególnie gdy w trakcie pojawia się pilny problem (np. wyczerpany limit GitHub Actions blokujący CI).
+- **Problem**: W `self-hosted-pr-runner` (2026-10-18), w trakcie wywiadu `/10x-plan`, użytkownik zapytał „czy możemy zrobić obejście” po wyczerpaniu limitu Actions. Agent sam zmienił `.github/workflows/ci.yml` i utworzył `tools/ci-runner/` bez zgody i bez planu.
+- **Rule**: Przed `/10x-implement` nigdy nie modyfikuj plików kodu ani konfiguracji, także przy pilnym problemie. Przedstaw opcje i poczekaj na wyraźne polecenie przejścia do implementacji.
+- **Applies to**: frame, research, plan
