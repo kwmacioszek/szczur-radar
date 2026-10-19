@@ -166,7 +166,7 @@ m2 = {  # lane, position, title, outcome, status, prerequisites, change id
     "S-18": ("B", 2, "Błędy wymagające reakcji docierają do operatora", "błędy wymagające reakcji (ERROR, /api/ready, awaria ścieżki alarmowej) docierają do operatora; klucze nie trafiają do logów", "proposed", "F-04", "error-visibility"),
     "S-09": ("C", 0, "Awaria dostawcy nie zabija postów", "awaria dostawcy LLM ani błąd naszego kodu nie zabija postów; post z powtarzalnym błędem technicznym ma limit", "ready", "—", "attempt-accounting"),
     "S-17": ("C", 1, "Przebieg bez Embabel", "przebieg działa bez Embabel, przerwanie dociera do oceny, a testy silnika są skupione i niezależne od kolejności", "proposed", "S-09", "pipeline-without-embabel"),
-    "S-10": ("C", 2, "Zła konfiguracja LLM zatrzymuje start", "operator dostaje błąd startu przy LLM_TIMEOUT bez jednostki; czasy są parsowane jedną regułą", "ready", "—", "llm-config-fail-fast"),
+    "S-10": ("C", 2, "Zła konfiguracja LLM zatrzymuje start", "operator dostaje błąd startu przy LLM_TIMEOUT bez jednostki; czasy są parsowane jedną regułą", "done", "—", "llm-config-fail-fast"),
     "S-11": ("C", 3, "Utknięty przebieg sam wraca do obiegu", "przebieg po martwej instancji i post z wyścigu claim wracają do obiegu bez restartu API", "ready", "—", "stuck-run-self-heals"),
     "S-16": ("C", 4, "Wykop nie gubi postów po cichu", "stronicowanie Wykopu nie gubi elementów po cichu, a chwilowy błąd Wykopu nie zabija nocy", "ready", "—", "wykop-ingest-completeness"),
     "S-14": ("D", 0, "Bezpieczna bramka wdrożeń", "merge nie wdroży czerwonego commita, crony czekają na CI, po apply jest kontrola zdrowia, ręczne zmienne nie blokują wdrożeń", "done", "—", "safe-deploy-gate"),
@@ -270,25 +270,25 @@ text(M, 202, "Źródło: context/foundation/roadmap.md  ·  v3  ·  stan 19.10.2
 px, py, pw, ph = P2X, 36, 820, 214
 rect(px, py, pw, ph, 14, "url(#hero)", C["border2"])
 cx, cy, rr = px + 82, py + 100, 46
-frac = 12 / 23
+frac = 13 / 23
 add(f'<circle cx="{cx}" cy="{cy}" r="{rr}" fill="none" stroke="{C["graySoft"]}" stroke-width="9"/>')
 ang = frac * 2 * math.pi
 ex, ey = cx + rr * math.sin(ang), cy - rr * math.cos(ang)
 add(f'<path d="M{cx} {cy-rr} A{rr} {rr} 0 {1 if frac > 0.5 else 0} 1 {ex:.2f} {ey:.2f}" fill="none" stroke="{C["done"]}" stroke-width="9" stroke-linecap="round"/>')
-text(cx, cy + 4, "52%", 22, 700, anchor="middle")
-text(cx, cy + 22, "12 / 23", 11, 500, C["muted"], anchor="middle")
+text(cx, cy + 4, "57%", 22, 700, anchor="middle")
+text(cx, cy + 22, "13 / 23", 11, 500, C["muted"], anchor="middle")
 text(cx, py + 186, "M-1 + M-2", 10.5, 700, C["muted"], anchor="middle", spacing="1.2")
 bx = px + 164
 text(bx, py + 34, "POSTĘP KAMIENIA MILOWEGO", 10.5, 700, C["muted"], spacing="1.6")
 text(bx, py + 62, "M-2 · MVP Quality & Reliability Hardening", 17, 700)
-text(px + pw - 24, py + 62, "2 / 13", 17, 700, C["text"], anchor="end")
-m2_order = [("F-04", "blocked"), ("S-08", "ready"), ("S-09", "ready"), ("S-10", "ready"), ("S-11", "ready"), ("S-12", "proposed"),
+text(px + pw - 24, py + 62, "3 / 13", 17, 700, C["text"], anchor="end")
+m2_order = [("F-04", "blocked"), ("S-08", "ready"), ("S-09", "ready"), ("S-10", "done"), ("S-11", "ready"), ("S-12", "proposed"),
             ("S-13", "proposed"), ("S-14", "done"), ("S-15", "done"), ("S-16", "ready"), ("S-17", "proposed"), ("S-18", "proposed"), ("S-19", "ready")]
 segw = (pw - 164 - 24 - 12 * 5) / 13
 for i, (iid, st) in enumerate(m2_order):
     lab, fg, bg = STATUS[st]
     rect(bx + i * (segw + 5), py + 78, segw, 12, 3, bg, fg + ("aa" if st != "proposed" else "55"), 1)
-legend_items = [("done", "2 ukończone"), ("progress", "0 w toku"), ("ready", "6 gotowe do planowania"), ("proposed", "4 proponowane"), ("blocked", "1 zablokowany")]
+legend_items = [("done", "3 ukończone"), ("progress", "0 w toku"), ("ready", "5 gotowe do planowania"), ("proposed", "4 proponowane"), ("blocked", "1 zablokowany")]
 for li, (st, lab) in enumerate(legend_items):
     fg = STATUS[st][1]
     lx = bx + (0, 122, 218)[li % 3]
@@ -331,7 +331,7 @@ add(f'<line x1="{P3X+20}" y1="{AX_Y}" x2="{x_end-14}" y2="{AX_Y}" stroke="{C["mu
 add(f'<path d="M{x_end-22} {AX_Y-8} L{x_end-10} {AX_Y} L{x_end-22} {AX_Y+8}" fill="none" stroke="{C["muted"]}" stroke-opacity="0.6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>')
 nodes = [
     (P1X, "M-1", "MVP — ocenione sygnały z Wykopu", "Zamknięty 17.10.2026  ·  10 / 10", "done"),
-    (P2X, "M-2", "MVP Quality & Reliability Hardening", "Otwarty — teraz  ·  2 / 13", "now"),
+    (P2X, "M-2", "MVP Quality & Reliability Hardening", "Otwarty — teraz  ·  3 / 13", "now"),
     (P3X, "PO M-2", "Odroczone", "Backlog  ·  24 pozycje", "later"),
 ]
 for nx, tag, name, state, kind in nodes:
