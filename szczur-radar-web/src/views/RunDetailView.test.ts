@@ -288,7 +288,9 @@ describe('RunDetailView', () => {
     })
 
     it('gives the error of a run whose source gave no post, with its failed fetch step', async () => {
-      const error = 'NoPostsFetchedException: wykop gave no post to store (fetched 0, skipped 0)'
+      // The step keeps the exception's message; the run's error adds its class name.
+      const stepError = 'wykop gave no post to store (fetched 0, skipped 0)'
+      const error = `NoPostsFetchedException: ${stepError}`
       vi.mocked(fetchRun).mockResolvedValue(
         run({
           status: 'failed',
@@ -298,7 +300,7 @@ describe('RunDetailView', () => {
           assessedOk: 0,
           assessedFailed: 0,
           error,
-          steps: [step('fetch', { status: 'failed', itemsIn: null, itemsOut: null, error })],
+          steps: [step('fetch', { status: 'failed', itemsIn: null, itemsOut: null, error: stepError })],
         }),
       )
       const { wrapper } = await mountRun()

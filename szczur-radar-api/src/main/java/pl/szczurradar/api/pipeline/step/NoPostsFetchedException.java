@@ -1,4 +1,4 @@
-package pl.szczurradar.api.pipeline;
+package pl.szczurradar.api.pipeline.step;
 
 import java.util.List;
 import java.util.stream.Collectors;

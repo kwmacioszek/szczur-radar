@@ -10,7 +10,6 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 import pl.szczurradar.api.agents.assessor.contract.ItemType;
-import pl.szczurradar.api.pipeline.NoPostsFetchedException;
 import pl.szczurradar.api.pipeline.SourceNotConfiguredException;
 import pl.szczurradar.api.pipeline.flow.RunFlow.FetchedBatch;
 import pl.szczurradar.api.pipeline.flow.RunFlow.RangeTarget;

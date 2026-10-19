@@ -13,12 +13,13 @@ pipeline/            entry points — start here
   PipelineStartupRecovery  server start, before the port opens: unfinished runs → interrupted (cause), their posts put back
   RunWatchdog              server only: stops a run of this instance without progress (PIPELINE_STALL_TIMEOUT)
   PipelineStallSettings    PIPELINE_STALL_TIMEOUT, read and validated when the server starts
-  PipelineBusyException, PostDeadException, SourceNotConfiguredException, NoPostsFetchedException
+  PipelineBusyException, PostDeadException, SourceNotConfiguredException
   api/     the HTTP entries (below)
   run/     the run model: PipelineRun (+ needsAttention), PipelineRunStep, RunKind, RunStatus, RunStep, StepStatus,
            InterruptionCause, repositories
   flow/    the graph: PipelineAgent (thin actions), RunFlow (the blackboard types)
-  step/    the steps: SourceIngest (fetch), PostStore (store), AssessmentSelection (select)
+  step/    the steps: SourceIngest (fetch), PostStore (store), AssessmentSelection (select),
+           NoPostsFetchedException (a source without a post fails the fetch; caught by flow/PipelineAgent)
   assess/  assessing posts: AssessmentDispatcher (port), ConcurrentAssessmentDispatcher, AssessmentInputs
   state/   conditional state writes: RunRecorder (runs, steps, counters, activity), PostTransitions (posts),
            RunNoLongerRunningException, Durations (durations in log lines and errors)
@@ -75,9 +76,11 @@ PipelineRunService.startRange / startPosts → queue → PipelineAgent:
   `Run <id> step <step> <status> (out N) in <time>`; `Run <id> assess: <done>/<N> (ok …, failed …, dead …,
   errors …), in flight …, retries …, flex fallbacks …` at most every `PROGRESS_INTERVAL` (1 min) as posts
   finish, and after the last; `Pipeline run <id> (<kind>) ended <status> in <time>: fetched …, skipped …,
-  new …, ok …, failed …, dead …, errors …, retries …, flex fallbacks …`. One WARN: `Run <id>: <source>
+  new …, ok …, failed …, dead …, errors …, retries …, flex fallbacks …`. Two WARNs: `Run <id>: <source>
   skipped <N> of <M> elements (unexpected shape or not mappable)` from `SourceIngest.fetch`, only for a
-  source with skipped elements. No post text, no secret.
+  source with skipped elements; `The counters of run <id> could not be written before its fetch failed`
+  from `PipelineAgent.fetch`, when writing the counters of a run without posts fails (the run still fails
+  with `NoPostsFetchedException`, the write's failure suppressed in it). No post text, no secret.
 - **Steps only in a running run.** `RunRecorder.step` inserts the step row only while the run is
   `running` (one statement that also moves `last_activity_at`); otherwise it throws
   `RunNoLongerRunningException` without doing the work, and `execute` logs that at INFO, not as a
