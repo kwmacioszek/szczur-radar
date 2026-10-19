@@ -99,7 +99,7 @@ Na Wykopie (#gielda) i Reddicie codziennie pojawiają się setki postów o inwes
 | S-12 | reliable-run-notifications  | admin dostaje każde należne powiadomienie o przebiegu, a stan kroków zgadza się ze statusem przebiegu                  | S-08          | MS-04, MS-01, NFR (sygnał awarii przebiegu); audyt A3, A5, A6 | proposed |
 | S-13 | missed-night-detection      | operator dowie się, że nocny przebieg albo backup nie wystartował, i widzi dni bez danych                              | F-04          | MS-04, NFR (sygnał awarii przebiegu, kopia bazy); audyt C2, C3 | proposed |
 | S-14 | safe-deploy-gate            | merge nie wdroży czerwonego commita, crony czekają na CI, po apply jest kontrola zdrowia, ręczne zmienne nie blokują wdrożeń | —        | MS-02, MS-03; audyt C4, C5, C6, C7                          | done |
-| S-15 | backup-check-completeness   | sprawdzenie kopii bazy obejmuje wszystkie tabele i odrzuca kopię pustej bazy                                           | —             | MS-01, MS-03, NFR (kopia sprawdzana odtworzeniem); audyt C9 | ready    |
+| S-15 | backup-check-completeness   | sprawdzenie kopii bazy obejmuje wszystkie tabele i odrzuca kopię pustej bazy                                           | —             | MS-01, MS-03, NFR (kopia sprawdzana odtworzeniem); audyt C9 | done |
 | S-16 | wykop-ingest-completeness   | stronicowanie Wykopu nie gubi elementów po cichu, a chwilowy błąd Wykopu nie zabija nocy                               | —             | MS-01, MS-03; audyt B5, B6                                  | ready    |
 | S-17 | pipeline-without-embabel    | przebieg działa bez Embabel, przerwanie dociera do oceny, a testy silnika są skupione i niezależne od kolejności       | S-09          | MS-01, MS-03; audyt E, A7, D                                | proposed |
 | S-18 | error-visibility            | błędy wymagające reakcji (ERROR, `/api/ready`, awaria ścieżki alarmowej) docierają do operatora; klucze nie trafiają do logów | F-04     | MS-04; audyt C10, C11, B7                                   | proposed |
@@ -245,7 +245,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** mały; dotyka jedynej kopii danych — zmiana musi przejść `db-backup-test` i jeden przebieg w PR env (`BACKUP_IN_ANY_ENVIRONMENT`).
-- **Status:** ready
+- **Status:** done
 
 ### S-16: Wykop nie gubi postów po cichu
 
@@ -370,3 +370,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **S-04: użytkownik może zawęzić listę postów po spółce/temacie (dopasowanie tekstowe do fragmentu wskazującego cel i rodzaju celu) oraz po stanowisku autora wobec tego celu (np. pozytywne / negatywne); brak wyników pokazuje czytelny stan pusty.** — Archived 2026-10-13 → `context/archive/2026-10-12-filter-by-assessment/`. Lesson: —.
 - **S-06: admin widzi historię przebiegów (data/godzina, status, wynik) i jednoznaczny sygnał nieudanego lub częściowo nieudanego przebiegu; użytkownik z rolą `user` nie ma do tego dostępu.** — Archived 2026-10-17 → `context/archive/2026-10-15-pipeline-run-history-dashboard/`. Lesson: —.
 - **S-14: merge do `main` nie wdroży commita z czerwonymi testami (IaC stosowane dopiero po testach), crony czekają na CI, po apply i deployu jest automatyczna kontrola zdrowia produkcji, a zmienna ustawiona ręcznie nie blokuje kolejnych wdrożeń; logika bramki ma testy.** — Archived 2026-10-19 → `context/archive/2026-10-18-safe-deploy-gate/`. Lesson: —.
+- **S-15: codzienne sprawdzenie kopii bazy zna wszystkie tabele z migracji (także `activation_tokens` i `notifications`) i odrzuca kopię bazy, która jest podejrzanie pusta, zanim wyprze dobre kopie z retencji.** — Archived 2026-10-18 → `context/archive/2026-10-18-backup-check-completeness/`. Lesson: —.

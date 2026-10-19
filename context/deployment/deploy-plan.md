@@ -285,6 +285,10 @@ The operator ran Live Resize from the dashboard (`production` → `postgres-volu
   - **Update (S-05, 2026-10-13):** two corrections from the S-05 PR-env test (2026-10-12, section S-05 below).
     - No e-mail came for a crashed cron run, and no in-app notification either. The signal now relies on a custom notification rule the operator added in Railway Account Settings (event "deployment crashed", scope: all environments): a failed run then arrives as an in-app and push notification ("… deployment crashed"). Without that rule a failed `db-backup` run is silent. The e-mails of 2026-10-11 stay recorded as they happened.
     - A scheduled run reuses the cron service's existing deployment; it does not create a new one. The deployment's status is that of its latest run.
+  - **Update (S-15, 2026-10-18):** the checks know every table and refuse a suspiciously empty copy (section S-15 below; `tools/db-backup/README.md`).
+    - The restore check requires the tables of `tools/db-backup/tables.sh` that exist at the dump's Flyway version (a V5 dump passes without `activation_tokens` and `notifications`) and fails on a table `tables.sh` does not classify (`tables: unknown`).
+    - Before the dump, a run fails (`CRASHED`, "nothing dumped", the bucket untouched) when `posts` is empty, or when a counted table has fewer rows than the newest manifest in `daily/`. After a restore on purpose, the operator lets one run through with `BACKUP_ACCEPT_SHRINK=<newest manifest without its extension>` on `db-backup` and a redeploy (restore runbook, step 8); the failed run's log gives that value. The consent expires by itself after the first copy (its manifest becomes the newest) and never covers an empty `posts`.
+    - A newest manifest that cannot be read, or whose `counts_after` is not numbers with a `posts` count, fails every run with its name: if it is broken, rename it outside the name pattern (e.g. `….manifest.json.broken`, bucket → Files) and the next run skips it. The retention deletes exact names only, so the `.broken` file stays (in the NAS mirror too): delete it by hand once its dump has left the retention. A run also fails when every manifest in `daily/` is dated after it (a wrong clock or hand-made names): that is not a first copy.
 - **Bucket `db-backups`** (region `ams`), one per environment with its own keys: a PR env never sees production's dumps (and since the review it does not back up at all, see above). The S3 name is the display name plus a hash (variable `BUCKET`). Objects:
   - `daily/szczur-radar-<yyyymmddThhmmssZ>.dump`, each with a `.manifest.json` (time, sha256, size, server and `pg_dump` versions, Flyway version, row counts, restore check result);
   - `monthly/szczur-radar-<yyyy-mm>.dump` with its manifest: a server-side copy of the first successful dump of each UTC month;
@@ -336,6 +340,13 @@ Restoring a database is an operator action (`infrastructure.md`). The agent prep
    - `total` from `/api/posts` matches the state at the time of the dump.
 
    Record the result in the issue.
+8. **The next nightly backup** (since S-15). The restored database has fewer rows than the newest manifest in `daily/`, so the next run refuses it before the dump unless the operator consents:
+   1. Before the restore (step 1), note the name of the newest manifest in `daily/` (`szczur-radar-<yyyymmddThhmmssZ>.manifest.json`).
+   2. After the restore, set `BACKUP_ACCEPT_SHRINK=<that name without .manifest.json>` on `db-backup` in that environment (`railway variable set BACKUP_ACCEPT_SHRINK=<name> -s db-backup -e <env> --skip-deploys`). `.railway/railway.ts` ignores it (`variables.ignore`, pattern `db-backup/BACKUP_ACCEPT_SHRINK`), so the next apply keeps it.
+   3. Redeploy `db-backup`: a cron run reuses its deployment, so a variable changed without a redeploy does not reach the run (section S-05, PR-env verification).
+   4. After the first successful backup that compared with that manifest (`compared_with` names it), delete the variable. Its manifest has `accepted_shrink: true`, or `false` when nothing shrank after all (e.g. the newest dump was restored, or the 00:30 run added rows), with `BACKUP_ACCEPT_SHRINK=… not needed` in the log. A value left behind is inactive: it no longer names the newest manifest, so the run logs `ignoring BACKUP_ACCEPT_SHRINK=…` and checks as usual.
+
+   Alternatively skip steps 1–3: the night's run fails (`CRASHED`, nothing dumped, the bucket untouched), and its log ends with the value to set (`… set BACKUP_ACCEPT_SHRINK=szczur-radar-<ts> on db-backup and redeploy it; nothing dumped`). Then do steps 2–4; the next copy comes at the next 02:00, or sooner on a temporary schedule ("How the backup works"). The consent never covers an empty `posts`.
 
 ### PR-env verification (szczur-radar-pr-44, 2026-10-11)
 
@@ -1024,6 +1035,68 @@ No step of `ci.yml` can see the code deploy, which starts only after the workflo
    - [ ] Comment the results on issue #73: the merge commit, the CI run ID, the guard's line, the applied changes, the deployment IDs and the `deploy-verify` runs.
    - [ ] Add a "Production after the merge" note to this section.
    - [ ] Close #73 only after this verification. No further PR is needed.
+
+## S-15: kopia bazy sprawdzana w całości (backup-check-completeness)
+
+**Status (2026-10-18): in progress**, not merged. S-15 makes the nightly backup check know every table from the migrations and refuse a copy of a suspiciously empty database before it reaches the bucket, where the retention and the NAS mirror would let it push out the good copies (audit C9). Change: `context/changes/backup-check-completeness/`, branch `feature/backup-check-completeness`, PR #79, issue #74.
+
+### What it changes
+
+- **Table classification.** `tools/db-backup/tables.sh` lists every table of the `public` schema with the Flyway version that first has it and its mode: `counted` (required, only grows) or `present` (only required: `flyway_schema_history`, the session tables, `activation_tokens`). A migration that adds a table adds it there in the same PR; otherwise `db-backup-test` is red.
+- **Restore check.** `restore-check.sh` requires the tables that exist at the restored Flyway version, so production's V5 dumps (the monthly copy 2026-10) still pass, and fails with `tables: unknown <t>` on an unclassified table. Before S-15 it required the 9 tables of V5 and let `activation_tokens` (V7) and `notifications` (V9) go unchecked.
+- **Counts.** `backup.sh` counts the 7 counted tables (before: 5; now also `pipeline_run_steps` and `notifications`).
+- **Plausibility, before the dump.** A run fails with "nothing dumped" when `posts` is empty, or when a counted table has fewer rows than in the newest manifest in `daily/`, unless `BACKUP_ACCEPT_SHRINK` names that manifest (section F-01, restore runbook step 8). The manifest gets `compared_with` and `accepted_shrink`; `format` stays `1`.
+- **No database migration.** The first copy after the merge compares with a manifest written before it, which has only the 5 old counted tables: the comparison covers those 5 and skips `pipeline_run_steps` and `notifications`.
+
+### Variables (names only)
+
+| Service | Variable | Production | PR env |
+| --- | --- | --- | --- |
+| `db-backup` | `BACKUP_IN_ANY_ENVIRONMENT` | unset | `true` only during a verification; IaC ignores a hand-set value (`variables.ignore`) |
+| `db-backup` | `BACKUP_ACCEPT_SHRINK` | unset; set by hand only after a restore on purpose, then deleted (section F-01, restore runbook step 8); IaC ignores a hand-set value (`variables.ignore`) | set only during a verification |
+
+Both need a redeploy of `db-backup` to reach the next run: a cron run reuses its deployment.
+
+**Update 2026-10-19 (merge of `main` with S-14):** the branch first declared both with `preserve()` on `db-backup`; the PR-env verification below (step 5) ran with that. S-14 moved hand-set tuning variables to the project's `variables.ignore`, and a key both declared and ignored is a plan error, so `db-backup` now declares neither: `BACKUP_IN_ANY_ENVIRONMENT` was already ignored, and `db-backup/BACKUP_ACCEPT_SHRINK` joins the patterns. The effect is the same: IaC neither sets nor deletes a hand-set value.
+
+### PR-env verification
+
+Steps (plan `context/changes/backup-check-completeness/plan.md`, Phase 3, Manual Verification):
+
+1. **The PR env has a database with posts.** If it has no Postgres volume (a PR that changes neither the API nor the web, section F-01), attach one in the dashboard, then `railway redeploy --from-source` of `postgres`, `szczur-radar-api` (its pre-deploy `migrate` creates V1–V9) and `szczur-radar-web`, as in pr-44. Insert the sample rows of `tools/db-backup/test.sh` (a user, a run with a step, 40 posts with RAW and assessments, an activation link, a notification) by SQL through `railway connect postgres -e <env> --tunnel-only -P 15432`, with `psql` from the `db-backup` image (restore runbook, steps 2–3). A pipeline run (`pipeline-trigger` with `TRIGGER_IN_ANY_ENVIRONMENT=true`, section S-05) only if the PR env needs one anyway: it costs real Wykop and LLM calls.
+   Result (szczur-radar-pr-79, 2026-10-18, commit `214d811`): the PR env had a Postgres volume (unlike pr-44) but an empty database, and the API and web had never deployed. `railway redeploy --from-source -s szczur-radar-api` (deployment `cc0f7d52`) ran the pre-deploy `migrate`: Flyway V9, 11 tables. The sample rows of `test.sh` (without the session rows) went in by SQL in one transaction: 2 users (with the system account), 1 run, 1 step, 40 RAW, 40 posts, 40 assessments, 1 notification, 1 activation link. The web was not deployed: the backup needs only the database. The SSH tunnel of `railway connect --tunnel-only` dropped twice (`Connection reset by peer`); `railway ssh -s postgres -- psql -U postgres -d railway -c …` worked instead.
+2. **Two runs pass.** `BACKUP_IN_ANY_ENVIRONMENT=true` on `db-backup`, a temporary schedule (e.g. `*/5 * * * *`) and a redeploy of `db-backup`. The first manifest has `compared_with: null`, the second `compared_with` naming the first; both have `notifications` and `pipeline_run_steps` in `counts_before` and `counts_after`, and no `activation_tokens`.
+   Result: the bucket was empty. Runs at 15:40:23 and 15:45:26 UTC (deployment `e1904f25`) passed: `restore-check: OK … Flyway V9, its 11 required tables, no unclassified table, no session rows, row counts within [before, after]`, `backup: OK`. The first manifest has `compared_with: null`, the second `compared_with: szczur-radar-20261018T154023Z.manifest.json`; both have `accepted_shrink: false` and the 7 counted tables (`notifications` 1, `pipeline_run_steps` 1, `posts` 40, …), no `activation_tokens`. Three more runs (15:50, 15:55, 16:00) passed the same way (their dumps and manifests are in `daily/`).
+3. **A shrink gives `CRASHED`.** Delete a few posts with their assessments by SQL. The next run fails before the dump: its log names the shrunk tables (`rows lost since daily/…: posts … < …`) and the value `BACKUP_ACCEPT_SHRINK=szczur-radar-<ts>`, the deployment is `CRASHED`, the custom rule "deployment crashed" notifies the operator, and the PR env's bucket (Files) is unchanged.
+   Result: 3 posts and their assessments deleted at 16:03 UTC (37 left). The 16:05 run: `backup: FAILED: rows lost since daily/szczur-radar-20261018T160016Z.manifest.json: posts 37 < 40, assessments 37 < 40; if the database was restored on purpose, set BACKUP_ACCEPT_SHRINK=szczur-radar-20261018T160016Z on db-backup and redeploy it; nothing dumped`; deployment `e1904f25` `CRASHED`; the bucket listing identical before and after (16:03 → 16:10). At the next tick (16:10:00) Railway created a new deployment (`2a0e3422`, reason `redeploy`) instead of running the crashed one; it ran nothing. The operator received the notification from the rule "deployment crashed" (confirmed by the operator).
+4. **The consent passes.** `BACKUP_ACCEPT_SHRINK` set to that value and a redeploy of `db-backup`: the next run passes, its log has `accepted: …`, and its manifest has `accepted_shrink: true` and `compared_with` naming that manifest.
+   Result: `BACKUP_ACCEPT_SHRINK=szczur-radar-20261018T160016Z` set with `--skip-deploys`, then a redeploy of `db-backup` (`01ff4d9c`). Its run at 16:12:02 logged `backup: accepted: posts 37 < 40, assessments 37 < 40 since daily/szczur-radar-20261018T160016Z.manifest.json (BACKUP_ACCEPT_SHRINK)`, then `restore-check: OK` and `backup: OK`; manifest `szczur-radar-20261018T161202Z` has `accepted_shrink: true`, `compared_with: szczur-radar-20261018T160016Z.manifest.json`, `posts` 37.
+5. **The IaC gate keeps the hand-set variables.** A push to the branch while both variables are set leaves `railway-config` green: no `Delete variable`, nothing destructive, no source change.
+   Result: the push of `c7e5c3c` with both variables set: CI run 39144037112 all green; the `railway-config` plan for pr-79 had one change, `~ Update db-backup deploy.cronSchedule` (the temporary `*/5 * * * *` back to the declared `0 2 * * *`), no `Delete variable`, nothing destructive, no source change. After the apply both variables were still set. Note: any push during a verification resets a hand-set cron schedule in the PR env.
+6. **Cleanup.** Both variables deleted, the schedule back to `0 2 * * *`, `db-backup` redeployed (otherwise the old deployment still runs with the overrides). The result recorded here and commented on issue #74.
+   Result: both variables deleted (`railway variable delete` has no `--skip-deploys`; it did not redeploy), the schedule already `0 2 * * *` from the IaC apply, then a redeploy of `db-backup` (`ae21e977`, SUCCESS, no run). The PR env keeps the API deployment `cc0f7d52` and the database with 37 posts until the PR env is deleted. Commented on issue #74.
+
+### Production dumps checked with this branch (2026-10-18)
+
+Plan Phase 1, manual check: `restore-check.sh` from the image built from `feature/backup-check-completeness` (`5186600`), run locally (restore runbook, step 2) on two production dumps the operator downloaded, each with its manifest. Both sha256 values match their manifests.
+
+- `monthly/szczur-radar-2026-10` (Flyway V5): `restore-check: OK in 1 s: Flyway V5, its 9 required tables, no unclassified table, no session rows, row counts within [before, after]`.
+- `daily/szczur-radar-20261018T020128Z` (Flyway V9): `restore-check: OK in 0 s: Flyway V9, its 11 required tables, no unclassified table, no session rows, row counts within [before, after]`.
+
+So the version-dependent requirement accepts production's older dumps, and the classification covers every table of the current schema.
+
+### Runbook — after the merge (operator; tracked in issue #74, not in the plan's Progress)
+
+0. **Standing rules.** No merge to `main` while `/admin` shows a run `RUNNING`, not between about 00:30 and 01:30 UTC (section S-05), and not while the 02:00 UTC backup runs: the merge rebuilds `db-backup` (its watch path changes), and a new deployment replaces a running cron container.
+1. **CI on `main`.** The whole workflow is green, `db-backup-test` included (since S-14 the cron waits for CI). `railway-config` plans at most the new ignore pattern `db-backup/BACKUP_ACCEPT_SHRINK` (it sets no value); no variable or source change, nothing destructive, and the gate passes. If the plan shows anything else, stop and investigate.
+2. **No override on production.** `railway variable list -s db-backup -e production --json` (names only) has neither `BACKUP_IN_ANY_ENVIRONMENT` nor `BACKUP_ACCEPT_SHRINK`.
+3. **First run** at 02:00 UTC, or on a temporary schedule as in section F-01 (then set `0 2 * * *` back right after the run: on production nothing restores it until the next merge):
+   - the log has `restore-check: OK … Flyway V9, its 11 required tables, no unclassified table, …` and ends with `backup: OK: daily/…`;
+   - the new manifest has `compared_with` ≠ `null` (the newest manifest from before the merge) and `accepted_shrink: false`;
+   - its `counts_before` and `counts_after` include `notifications` and `pipeline_run_steps`, and no `activation_tokens`.
+
+   A run that fails on a shrink right after the merge means rows were really lost since the previous night: investigate before any consent.
+4. **Record and close.** Comment the results on issue #74: the merge commit, the deployment id, the plan output, the run's `compared_with`, `accepted_shrink` and counts. Close the issue only after this production verification.
 
 ## Phases
 
