@@ -435,7 +435,7 @@ Brak migracji: kolumna `skipped` istnieje od V3. Wdrożenie API i crona następu
 
 #### Manual
 
-- [ ] 1.5 Lokalnie (Postgres z `compose.local.yaml`, jar, prawdziwe `WYKOP_*` i `LLM_*`) przebieg admina dla zwykłego dnia kończy się jak dotąd. Linia końcowa API zawiera `skipped 0`, a przy `skipped = 0` nie ma linii WARN
+- [x] 1.5 Lokalnie (Postgres z `compose.local.yaml`, jar, prawdziwe `WYKOP_*` i `LLM_*`) przebieg admina dla zwykłego dnia kończy się jak dotąd. Linia końcowa API zawiera `skipped 0`, a przy `skipped = 0` nie ma linii WARN — 006babf
 
 ### Phase 2: Cron — `skipped` w kontrakcie `trigger.sh`
 
@@ -445,7 +445,7 @@ Brak migracji: kolumna `skipped` istnieje od V3. Wdrożenie API i crona następu
 
 #### Manual
 
-- [ ] 2.2 README narzędzia i przykładowe logi zgadzają się z wyjściem `test.sh` (porównanie wzrokowe linii liczników)
+- [x] 2.2 README narzędzia i przykładowe logi zgadzają się z wyjściem `test.sh` (porównanie wzrokowe linii liczników) — 006babf
 
 ### Phase 3: SPA — powód, ton i etykieta ostrzeżenia
 
@@ -456,8 +456,8 @@ Brak migracji: kolumna `skipped` istnieje od V3. Wdrożenie API i crona następu
 
 #### Manual
 
-- [ ] 3.3 Zrzuty z `dev/mock-api.js` + `playwright-cli` w obu motywach i przy 375 px pokazują `/admin`, obie strony przebiegów, otwarty dzwonek i sekcje kitchen sinka
-- [ ] 3.4 Macierz 7 stanów: default i loading jak w zrzutach widoków; hover, focus-visible i disabled — N/A, zmiana nie dodaje elementów interaktywnych; error to `r-empty`; empty bez zmian (lista bez przebiegów nie dotyka nowej logiki)
+- [x] 3.3 Zrzuty z `dev/mock-api.js` + `playwright-cli` w obu motywach i przy 375 px pokazują `/admin`, obie strony przebiegów, otwarty dzwonek i sekcje kitchen sinka — 1673a28
+- [x] 3.4 Macierz 7 stanów: default i loading jak w zrzutach widoków; hover, focus-visible i disabled — N/A, zmiana nie dodaje elementów interaktywnych; error to `r-empty`; empty bez zmian (lista bez przebiegów nie dotyka nowej logiki) — 006babf
 
 ### Phase 4: Dokumentacja i weryfikacja w PR env
 
@@ -470,4 +470,4 @@ Brak migracji: kolumna `skipped` istnieje od V3. Wdrożenie API i crona następu
 
 - [ ] 4.3 PR env, cron z `TRIGGER_IN_ANY_ENVIRONMENT=true` i jednorazowym harmonogramem: przebieg kończy się jak dotąd, linia crona zawiera `skipped N`, a linia końcowa API `skipped N`
 - [ ] 4.4 PR env, przebieg admina dla bardzo starego zakresu (np. 2008-01-01): jeśli Wykop nie zwróci elementów, przebieg jest `failed`, dzwonek ma powiadomienie, strona przebiegu pokazuje tekst `NoPostsFetchedException` i krok `fetch` `failed`, a `/api/freshness` się nie zmienia. Jeśli Wykop zwróci elementy, wynik trafia do `deploy-plan.md`, a pokrycie zostaje przy IT z fazy 1
-- [ ] 4.5 PRD, `deploy-plan.md` i `REPOSITORY_GUIDELINES.md` opisują to samo zachowanie co kod (przegląd)
+- [x] 4.5 PRD, `deploy-plan.md` i `REPOSITORY_GUIDELINES.md` opisują to samo zachowanie co kod (przegląd) — 1673a28
