@@ -6,12 +6,12 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import pl.szczurradar.api.config.LlmProviderProperties;
-import pl.szczurradar.api.config.LlmProviderProperties.Provider;
 import pl.szczurradar.api.llm.LlmCallException;
 import pl.szczurradar.api.llm.LlmClient;
 import pl.szczurradar.api.llm.LlmConfigurationException;
+import pl.szczurradar.api.llm.LlmProviderProperties;
 import pl.szczurradar.api.llm.LlmResponse;
+import pl.szczurradar.api.llm.Provider;
 
 /**
  * The admin's check of the LLM settings before a run (admin only: {@code /api/admin/**}): one tiny,

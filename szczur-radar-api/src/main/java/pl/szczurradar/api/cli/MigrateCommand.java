@@ -15,7 +15,9 @@ import pl.szczurradar.api.SzczurRadarApiApplication;
  * context with Flyway switched on, so Spring Boot's Flyway auto-configuration migrates the
  * database during startup with the same datasource and {@code spring.flyway.*} settings as the
  * server. A failed migration fails the context start, which maps to {@link ExitCode#FAILED} (a non-zero
- * exit code) and stops the Railway deploy (the previous version keeps serving).
+ * exit code) and stops the Railway deploy (the previous version keeps serving). An invalid setting
+ * (e.g. {@code LLM_TIMEOUT=120}) fails the start before any migration and maps to {@link ExitCode#USAGE},
+ * which stops the deploy too.
  */
 public final class MigrateCommand implements Command {
 
@@ -46,8 +48,7 @@ public final class MigrateCommand implements Command {
 			return ExitCode.OK;
 		}
 		catch (RuntimeException ex) {
-			err.println("migrate failed: " + ex.getMessage());
-			return ExitCode.FAILED;
+			return CommandChecks.contextFailed(type(), ex, err);
 		}
 	}
 

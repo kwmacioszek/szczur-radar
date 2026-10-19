@@ -66,7 +66,7 @@ class ActivationSettingsTest {
 	}
 
 	@ParameterizedTest
-	@ValueSource(strings = { "soon", "12 hours", "1.5h", "12x" })
+	@ValueSource(strings = { "soon", "12 hours", "1.5h", "12x", "PT12H", "12H" })
 	void aTtlThatIsNotADurationIsRefused(String ttl) {
 		environment.put(ActivationSettings.LINK_TTL, ttl);
 

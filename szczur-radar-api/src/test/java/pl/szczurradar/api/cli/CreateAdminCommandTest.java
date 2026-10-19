@@ -10,6 +10,9 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.BeanCreationException;
+
+import pl.szczurradar.api.settings.InvalidSettingsException;
 
 /** Usage and configuration errors of {@code create-admin}: exit 2 before any database work. */
 class CreateAdminCommandTest {
@@ -23,9 +26,12 @@ class CreateAdminCommandTest {
 
 	private final ByteArrayOutputStream errBytes = new ByteArrayOutputStream();
 
+	/** What the command's context start throws. */
+	private RuntimeException startFailure = new IllegalStateException("no database in a unit test");
+
 	private final CreateAdminCommand command = new CreateAdminCommand(environment::get, () -> prompt, args -> {
 		contextStarts.incrementAndGet();
-		throw new IllegalStateException("no database in a unit test");
+		throw startFailure;
 	}, new PrintStream(new ByteArrayOutputStream()), new PrintStream(errBytes, true, StandardCharsets.UTF_8));
 
 	@Test
@@ -66,6 +72,19 @@ class CreateAdminCommandTest {
 		assertThat(code).isEqualTo(ExitCode.FAILED);
 		assertThat(contextStarts).hasValue(1);
 		assertThat(stderr()).contains("create-admin failed: no database in a unit test");
+	}
+
+	@Test
+	void anInvalidSettingThatFailsTheContextStartIsAConfigurationError() {
+		startFailure = new BeanCreationException("runWatchdog", "Failed to instantiate",
+				new InvalidSettingsException("Invalid LLM configuration: LLM_TIMEOUT needs a unit"));
+
+		ExitCode code = command.run(new String[] { "--email", "admin@example.com" });
+
+		assertThat(code).isEqualTo(ExitCode.USAGE);
+		assertThat(contextStarts).hasValue(1);
+		assertThat(stderr()).contains("create-admin: invalid configuration: Invalid LLM configuration: LLM_TIMEOUT"
+				+ " needs a unit").doesNotContain("failed");
 	}
 
 	private void assertUsageError(String[] args, String message) {

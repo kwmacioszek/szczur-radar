@@ -2,10 +2,6 @@ package pl.szczurradar.api.llm;
 
 import org.jspecify.annotations.Nullable;
 
-import pl.szczurradar.api.config.LlmProviderProperties.Provider;
-import pl.szczurradar.api.config.LlmProviderProperties.ReasoningEffort;
-import pl.szczurradar.api.config.LlmProviderProperties.ServiceTier;
-
 /**
  * A completed model call: the raw text exactly as the model returned it, and where and how it was
  * produced.

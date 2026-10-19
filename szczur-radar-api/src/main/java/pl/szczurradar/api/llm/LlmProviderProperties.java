@@ -1,17 +1,18 @@
-package pl.szczurradar.api.config;
+package pl.szczurradar.api.llm;
 
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Locale;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import com.fasterxml.jackson.annotation.JsonValue;
 import org.jspecify.annotations.Nullable;
-import org.springframework.boot.convert.DurationStyle;
 import org.springframework.core.env.PropertyResolver;
+
+import pl.szczurradar.api.settings.DurationSetting;
+import pl.szczurradar.api.settings.InvalidSettingsException;
+import pl.szczurradar.api.settings.SettingText;
 
 /**
  * The application's LLM configuration contract: exactly one provider per run, chosen by three
@@ -31,9 +32,15 @@ import org.springframework.core.env.PropertyResolver;
  *       only {@code openrouter}, which routes it to OpenAI's flex tier);
  *   <li>{@code LLM_REASONING_EFFORT}: {@code none}, {@code minimal}, {@code low}, {@code medium},
  *       {@code high} or {@code xhigh} (only {@code openrouter}); unset = the provider's default;
- *   <li>{@code LLM_TIMEOUT}: time limit of one HTTP attempt, e.g. {@code 120s} or {@code 5m}
- *       (default {@code 120s}, at most {@code 30m}; flex is slower, give it more).
+ *   <li>{@code LLM_TIMEOUT}: time limit of one HTTP attempt, by the one duration rule
+ *       ({@link DurationSetting}: a whole number with a lower-case unit, e.g. {@code 120s} or {@code 5m};
+ *       a bare number or ISO-8601 is refused), from {@code 10s} to {@code 30m} (default {@code 120s};
+ *       flex is slower, give it more).
  * </ul>
+ *
+ * <p>An invalid value fails the start of the server and of every operator command (also the pre-deploy
+ * {@code migrate}) with an {@link InvalidSettingsException}: Spring Boot's
+ * {@code APPLICATION FAILED TO START} block, exit code 2 for a command.
  *
  * <p>The provider name also activates the Spring profile {@code application-<provider>.properties},
  * which maps these settings onto Embabel's properties and switches the other providers off.
@@ -55,51 +62,11 @@ public record LlmProviderProperties(Provider provider, String model, String apiK
 
 	public static final Duration DEFAULT_TIMEOUT = Duration.ofSeconds(120);
 
+	/** The shortest accepted {@code LLM_TIMEOUT}: a shorter one is a slip (e.g. a forgotten unit), not a limit. */
+	public static final Duration MIN_TIMEOUT = Duration.ofSeconds(10);
+
 	/** The longest accepted {@code LLM_TIMEOUT}; the Gemini SDK takes it as {@code int} milliseconds. */
 	public static final Duration MAX_TIMEOUT = Duration.ofMinutes(30);
-
-	/**
-	 * The supported providers; {@link #id()} is the {@code LLM_API_PROVIDER} value, the profile name
-	 * and the JSON value.
-	 */
-	public enum Provider {
-
-		GEMINI, DEEPSEEK, OPENROUTER;
-
-		@JsonValue
-		public String id() {
-			return name().toLowerCase(Locale.ROOT);
-		}
-
-		static @Nullable Provider fromId(String id) {
-			return Arrays.stream(values()).filter(provider -> provider.id().equals(id)).findFirst().orElse(null);
-		}
-
-	}
-
-	/** {@code LLM_SERVICE_TIER}; {@link #id()} is the setting's value and the JSON value. */
-	public enum ServiceTier {
-
-		DEFAULT, FLEX;
-
-		@JsonValue
-		public String id() {
-			return name().toLowerCase(Locale.ROOT);
-		}
-
-	}
-
-	/** {@code LLM_REASONING_EFFORT}; {@link #id()} is the setting's value, the API value and the JSON value. */
-	public enum ReasoningEffort {
-
-		NONE, MINIMAL, LOW, MEDIUM, HIGH, XHIGH;
-
-		@JsonValue
-		public String id() {
-			return name().toLowerCase(Locale.ROOT);
-		}
-
-	}
 
 	/** The three required settings with default call settings. */
 	public LlmProviderProperties(Provider provider, String model, String apiKey) {
@@ -117,23 +84,18 @@ public record LlmProviderProperties(Provider provider, String model, String apiK
 	/**
 	 * Reads and validates the settings.
 	 *
-	 * @throws IllegalStateException listing every problem; the message never contains the key
+	 * @throws InvalidSettingsException listing every problem; the message never contains the key
 	 */
 	public static LlmProviderProperties from(PropertyResolver environment) {
-		String providerId = trimmed(environment.getProperty(PROVIDER));
-		String model = trimmed(environment.getProperty(MODEL));
-		String apiKey = trimmed(environment.getProperty(API_KEY));
-		String serviceTierId = trimmed(environment.getProperty(SERVICE_TIER));
-		String reasoningEffortId = trimmed(environment.getProperty(REASONING_EFFORT));
-		String timeoutText = trimmed(environment.getProperty(TIMEOUT));
+		String providerId = SettingText.trimmed(environment.getProperty(PROVIDER));
+		String model = SettingText.trimmed(environment.getProperty(MODEL));
+		String apiKey = SettingText.trimmed(environment.getProperty(API_KEY));
+		String serviceTierId = SettingText.trimmed(environment.getProperty(SERVICE_TIER));
+		String reasoningEffortId = SettingText.trimmed(environment.getProperty(REASONING_EFFORT));
+		String timeoutText = SettingText.trimmed(environment.getProperty(TIMEOUT));
 
 		List<String> problems = new ArrayList<>();
-		Provider provider = Provider.fromId(providerId);
-		if (provider == null) {
-			String allowed = Arrays.stream(Provider.values()).map(Provider::id).collect(Collectors.joining(", "));
-			problems.add(PROVIDER + " must be one of " + allowed
-					+ (providerId.isEmpty() ? " (not set)" : " (got '" + providerId + "')"));
-		}
+		Provider provider = oneOf(Provider.values(), Provider::id, PROVIDER, providerId, problems);
 		if (model.isEmpty()) {
 			problems.add(MODEL + " is not set (the exact model id of the selected provider)");
 		}
@@ -152,9 +114,10 @@ public record LlmProviderProperties(Provider provider, String model, String apiK
 			problems.add(REASONING_EFFORT + " is only supported for " + PROVIDER + "=openrouter (got '" + provider.id()
 					+ "')");
 		}
-		Duration timeout = timeoutText.isEmpty() ? DEFAULT_TIMEOUT : timeout(timeoutText, problems);
+		Duration timeout = timeoutText.isEmpty() ? DEFAULT_TIMEOUT
+				: DurationSetting.parse(TIMEOUT, timeoutText, MIN_TIMEOUT, MAX_TIMEOUT, problems);
 		if (!problems.isEmpty()) {
-			throw new IllegalStateException("Invalid LLM configuration: " + String.join("; ", problems)
+			throw new InvalidSettingsException("Invalid LLM configuration: " + String.join("; ", problems)
 					+ ". See szczur-radar-api/README.md (LLM provider).");
 		}
 		return new LlmProviderProperties(provider, model, apiKey, serviceTier, reasoningEffort, timeout);
@@ -168,30 +131,9 @@ public record LlmProviderProperties(Provider provider, String model, String apiK
 			}
 		}
 		String allowed = Arrays.stream(values).map(id).collect(Collectors.joining(", "));
-		problems.add(setting + " must be one of " + allowed + " (got '" + value + "')");
+		problems.add(setting + " must be one of " + allowed
+				+ (value.isEmpty() ? " (not set)" : " (got '" + SettingText.echoed(value) + "')"));
 		return null;
-	}
-
-	private static @Nullable Duration timeout(String text, List<String> problems) {
-		try {
-			Duration timeout = DurationStyle.detectAndParse(text);
-			if (timeout.compareTo(MAX_TIMEOUT) > 0) {
-				problems.add(TIMEOUT + " must be at most 30m (got '" + text + "')");
-				return null;
-			}
-			if (!timeout.isNegative() && !timeout.isZero()) {
-				return timeout;
-			}
-		}
-		catch (IllegalArgumentException | ArithmeticException ex) {
-			// reported below
-		}
-		problems.add(TIMEOUT + " must be a positive duration such as 120s or 5m (got '" + text + "')");
-		return null;
-	}
-
-	private static String trimmed(@Nullable String value) {
-		return value == null ? "" : value.strip();
 	}
 
 }

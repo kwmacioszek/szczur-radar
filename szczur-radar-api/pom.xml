@@ -84,7 +84,7 @@
 			<version>${bouncycastle.version}</version>
 		</dependency>
 		<!-- Embabel agent platform (F-02 builds on it) with the three supported LLM providers; one is
-		     active per run, chosen by LLM_API_PROVIDER (config/LlmProviderProperties). -->
+		     active per run, chosen by LLM_API_PROVIDER (llm/LlmProviderProperties). -->
 		<dependency>
 			<groupId>com.embabel.agent</groupId>
 			<artifactId>embabel-agent-starter</artifactId>

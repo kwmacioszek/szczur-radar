@@ -1,6 +1,7 @@
-package pl.szczurradar.api.config;
+package pl.szczurradar.api.llm;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 
 import java.net.InetSocketAddress;
@@ -18,11 +19,16 @@ import com.openai.client.okhttp.OpenAIOkHttpClient;
 import com.openai.models.chat.completions.ChatCompletionCreateParams;
 import com.sun.net.httpserver.HttpServer;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.WebApplicationType;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.ConfigurableEnvironment;
+
+import pl.szczurradar.api.settings.InvalidSettingsException;
 
 /**
  * The provider mapping in application.properties and application-&lt;provider&gt;.properties, for
@@ -119,6 +125,16 @@ class LlmProviderConfigTest {
 	}
 
 	@Test
+	void aKeyPastedIntoAnotherSettingIsRepeatedOnlyInPart() {
+		String pasted = "sk-or-v1-0123456789abcdef0123456789abcdef";
+
+		assertThatIllegalStateException().isThrownBy(() -> environment(pasted, "some-model", "very-secret-key"))
+			.withMessageContaining("LLM_API_PROVIDER must be one of gemini, deepseek, openrouter (got 'sk-or-v1-0123456…')")
+			.withMessageNotContaining(pasted)
+			.withMessageNotContaining("very-secret-key");
+	}
+
+	@Test
 	void missingOrBlankKeyFailsTheStart() {
 		assertThatIllegalStateException().isThrownBy(() -> environment("deepseek", "deepseek-v4-flash", " "))
 			.withMessageContaining("LLM_API_KEY is not set");
@@ -136,7 +152,7 @@ class LlmProviderConfigTest {
 
 	@Test
 	void propertiesNeverPrintTheKey() {
-		LlmProviderProperties properties = new LlmProviderProperties(LlmProviderProperties.Provider.DEEPSEEK,
+		LlmProviderProperties properties = new LlmProviderProperties(Provider.DEEPSEEK,
 				"deepseek-v4-flash", "very-secret-key");
 
 		assertThat(properties.toString()).doesNotContain("very-secret-key").contains("<hidden>");
@@ -147,7 +163,7 @@ class LlmProviderConfigTest {
 		LlmProviderProperties properties = LlmProviderProperties
 			.from(environment("openrouter", "openai/gpt-6-luna", "synthetic-key"));
 
-		assertThat(properties.serviceTier()).isEqualTo(LlmProviderProperties.ServiceTier.DEFAULT);
+		assertThat(properties.serviceTier()).isEqualTo(ServiceTier.DEFAULT);
 		assertThat(properties.reasoningEffort()).isNull();
 		assertThat(properties.timeout()).isEqualTo(Duration.ofSeconds(120));
 	}
@@ -157,8 +173,8 @@ class LlmProviderConfigTest {
 		LlmProviderProperties properties = LlmProviderProperties.from(environment("openrouter", "openai/gpt-6-luna",
 				"synthetic-key", "LLM_SERVICE_TIER=flex", "LLM_REASONING_EFFORT=low", "LLM_TIMEOUT=5m"));
 
-		assertThat(properties.serviceTier()).isEqualTo(LlmProviderProperties.ServiceTier.FLEX);
-		assertThat(properties.reasoningEffort()).isEqualTo(LlmProviderProperties.ReasoningEffort.LOW);
+		assertThat(properties.serviceTier()).isEqualTo(ServiceTier.FLEX);
+		assertThat(properties.reasoningEffort()).isEqualTo(ReasoningEffort.LOW);
 		assertThat(properties.timeout()).isEqualTo(Duration.ofMinutes(5));
 	}
 
@@ -174,26 +190,53 @@ class LlmProviderConfigTest {
 			.withMessageNotContaining("very-secret-key");
 		assertThatIllegalStateException()
 			.isThrownBy(() -> environment("openrouter", "openai/gpt-6-luna", "very-secret-key", "LLM_TIMEOUT=soon"))
-			.withMessageContaining("LLM_TIMEOUT must be a positive duration such as 120s or 5m (got 'soon')")
+			.withMessageContaining("LLM_TIMEOUT must be a duration such as 300s or 5m (got 'soon')")
 			.withMessageNotContaining("very-secret-key");
-		assertThatIllegalStateException()
-			.isThrownBy(() -> environment("openrouter", "openai/gpt-6-luna", "very-secret-key", "LLM_TIMEOUT=0s"))
-			.withMessageContaining("LLM_TIMEOUT must be a positive duration");
 	}
 
 	@Test
-	void timeoutAbove30MinutesFailsTheStart() {
+	void aBareTimeoutNeedsAUnitBecauseSpringWouldReadMilliseconds() {
+		// The incident of 2026-10-06: 120 meant 120 ms, and every call timed out.
+		assertThatExceptionOfType(InvalidSettingsException.class)
+			.isThrownBy(() -> environment("openrouter", "openai/gpt-6-luna", "very-secret-key", "LLM_TIMEOUT=120"))
+			.withMessageStartingWith("Invalid LLM configuration: ")
+			.withMessageContaining("LLM_TIMEOUT needs a unit, e.g. 300s or 5m (got '120'; a bare number would be"
+					+ " milliseconds)")
+			.withMessageNotContaining("very-secret-key");
+	}
+
+	@Test
+	void anIsoTimeoutIsNotADuration() {
+		assertThatIllegalStateException()
+			.isThrownBy(() -> environment("openrouter", "openai/gpt-6-luna", "very-secret-key", "LLM_TIMEOUT=PT2M"))
+			.withMessageContaining("LLM_TIMEOUT must be a duration such as 300s or 5m (got 'PT2M')");
+	}
+
+	@Test
+	void timeoutFrom10SecondsTo30MinutesIsAccepted() {
 		// Gemini takes the timeout as int milliseconds (Math.toIntExact): an unbounded value overflows.
+		assertThat(LlmProviderProperties
+			.from(environment("gemini", "gemini-3.1-flash-lite", "synthetic-key", "LLM_TIMEOUT=10s"))
+			.timeout()).isEqualTo(LlmProviderProperties.MIN_TIMEOUT);
 		assertThat(LlmProviderProperties
 			.from(environment("gemini", "gemini-3.1-flash-lite", "synthetic-key", "LLM_TIMEOUT=30m"))
 			.timeout()).isEqualTo(LlmProviderProperties.MAX_TIMEOUT);
+		for (String timeout : List.of("9s", "0s", "-5m", "31m", "30d")) {
+			assertThatIllegalStateException()
+				.isThrownBy(() -> environment("gemini", "gemini-3.1-flash-lite", "very-secret-key",
+						"LLM_TIMEOUT=" + timeout))
+				.withMessageContaining("LLM_TIMEOUT must be from 10s to 30m (got '" + timeout + "')")
+				.withMessageNotContaining("very-secret-key");
+		}
+	}
+
+	@Test
+	void aTimeoutProblemIsListedWithTheOtherProblems() {
 		assertThatIllegalStateException()
-			.isThrownBy(() -> environment("gemini", "gemini-3.1-flash-lite", "very-secret-key", "LLM_TIMEOUT=31m"))
-			.withMessageContaining("LLM_TIMEOUT must be at most 30m (got '31m')")
-			.withMessageNotContaining("very-secret-key");
-		assertThatIllegalStateException()
-			.isThrownBy(() -> environment("gemini", "gemini-3.1-flash-lite", "synthetic-key", "LLM_TIMEOUT=30d"))
-			.withMessageContaining("LLM_TIMEOUT must be at most 30m (got '30d')");
+			.isThrownBy(() -> environment("openrouter", "openai/gpt-6-luna", "very-secret-key", "LLM_SERVICE_TIER=cheap",
+					"LLM_TIMEOUT=120"))
+			.withMessageContaining("LLM_SERVICE_TIER must be one of default, flex (got 'cheap'); LLM_TIMEOUT needs a unit")
+			.withMessageEndingWith(". See szczur-radar-api/README.md (LLM provider).");
 	}
 
 	@Test
@@ -207,16 +250,45 @@ class LlmProviderConfigTest {
 			.withMessageContaining("LLM_REASONING_EFFORT is only supported for LLM_API_PROVIDER=openrouter (got 'deepseek')");
 		assertThat(LlmProviderProperties
 			.from(environment("deepseek", "deepseek-v4-flash", "synthetic-key", "LLM_SERVICE_TIER=default"))
-			.serviceTier()).isEqualTo(LlmProviderProperties.ServiceTier.DEFAULT);
+			.serviceTier()).isEqualTo(ServiceTier.DEFAULT);
+	}
+
+	/**
+	 * What the operator sees when a setting is invalid: Boot's report block naming the problem, without
+	 * Spring's "Application run failed" stack trace and without the key.
+	 */
+	@Test
+	@ExtendWith(OutputCaptureExtension.class)
+	void anInvalidSettingIsReportedWithoutAStackTraceOrTheKey(CapturedOutput output) {
+		List<String> args = arguments("openrouter", "openai/gpt-6-luna", "synthetic-key-3f9c1a", "LLM_TIMEOUT=120");
+
+		assertThatExceptionOfType(InvalidSettingsException.class).isThrownBy(() -> start(args));
+
+		assertThat(output).contains("APPLICATION FAILED TO START", "LLM_TIMEOUT needs a unit",
+				"Fix the named setting(s) and start again")
+			.doesNotContain("Application run failed")
+			.doesNotContain("synthetic-key-3f9c1a");
 	}
 
 	/**
 	 * Starts only the configuration of the application (its property files and the startup check),
-	 * with the given settings; {@code null} means "set to empty", overriding any real variable. The
-	 * optional call settings are empty unless given as {@code NAME=value} in {@code callSettings}.
+	 * with the given settings (see {@link #arguments}). The negative cases fail the start on purpose, so
+	 * neither Spring's failure log nor Boot's failure report is logged.
 	 */
 	private static ConfigurableEnvironment environment(String provider, String model, String apiKey,
 			String... callSettings) {
+		List<String> args = arguments(provider, model, apiKey, callSettings);
+		args.add("--logging.level.org.springframework.boot.SpringApplication=OFF");
+		args.add("--logging.level.org.springframework.boot.diagnostics=OFF");
+		return start(args);
+	}
+
+	/**
+	 * The settings as command-line arguments; {@code null} means "set to empty", overriding any real
+	 * variable. The optional call settings are empty unless given as {@code NAME=value} in
+	 * {@code callSettings}.
+	 */
+	private static List<String> arguments(String provider, String model, String apiKey, String... callSettings) {
 		List<String> args = new ArrayList<>();
 		for (Map.Entry<String, String> setting : Map.of(LlmProviderProperties.PROVIDER, provider,
 				LlmProviderProperties.MODEL, model == null ? "" : model, LlmProviderProperties.API_KEY,
@@ -229,8 +301,10 @@ class LlmProviderConfigTest {
 			calls.put(setting.substring(0, setting.indexOf('=')), setting.substring(setting.indexOf('=') + 1));
 		}
 		calls.forEach((name, value) -> args.add("--" + name + "=" + value));
-		// The negative cases fail the start on purpose; don't let Spring log each one as a failure.
-		args.add("--logging.level.org.springframework.boot.SpringApplication=OFF");
+		return args;
+	}
+
+	private static ConfigurableEnvironment start(List<String> args) {
 		SpringApplication application = new SpringApplication(ConfigurationOnly.class);
 		application.setWebApplicationType(WebApplicationType.NONE);
 		try (ConfigurableApplicationContext context = application.run(args.toArray(String[]::new))) {

@@ -123,12 +123,15 @@ PipelineRunService.startRange / startPosts → queue → PipelineAgent:
   goes away with Embabel out of the run (`roadmap.md`, `## Parked`). `execute` catches
   `InterruptedException` (the instance closing) on its own: it neither closes nor reports that run
   (`onClose` did both, and the database may be closing), and restores the thread's interrupt flag.
-- **`PIPELINE_STALL_TIMEOUT`** (`PipelineStallSettings`, read only by the server): optional, with a unit;
-  default `max(15m, TransportRetry.maxCallDuration(LLM_TIMEOUT, LLM_SERVICE_TIER) + 5m)` — the LLM
+- **`PIPELINE_STALL_TIMEOUT`** (`PipelineStallSettings`, read only by the server): optional, by the one
+  duration rule (`settings/DurationSetting`: a whole number with a lower-case unit, e.g. `39m`), from `1ms`
+  to `1d`; default `max(15m, TransportRetry.maxCallDuration(LLM_TIMEOUT, LLM_SERVICE_TIER) + 5m)` — the LLM
   check, a run's last posts and a small retry run have one call in flight, which moves nothing until it
   ends. `15m` with the defaults (`120s`, tier `default`), `39m` on production (`300s`, `flex`). A shorter
   explicit value is accepted with a startup WARN naming `PIPELINE_STALL_TIMEOUT` and `LLM_TIMEOUT`; a bare
-  number, zero or less, or more than `24h` stops the server's start.
+  number, ISO-8601 (`PT5M`) or a value outside `1ms`–`1d` throws `InvalidSettingsException` from the
+  `RunWatchdog` bean, and the server's start fails with an `APPLICATION FAILED TO START` block
+  (`config/InvalidSettingsFailureAnalyzer`, no stack trace at ERROR).
 - **Notifications.** Every way a run ends calls `RunNotifications.runEnded(runId)` directly (not through
   Spring events: recovery runs before listeners are known to be registered), four places:
   1. `PipelineRunService.execute`, in `finally` after `close` (its own end, an exception; not after an

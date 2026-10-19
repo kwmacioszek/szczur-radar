@@ -14,7 +14,7 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import org.jspecify.annotations.Nullable;
 
 import pl.szczurradar.api.agents.assessor.contract.ContractJson;
-import pl.szczurradar.api.config.LlmProviderProperties;
+import pl.szczurradar.api.llm.LlmProviderProperties;
 
 /**
  * {@code fixtures/llm/models.json}: the measured model configurations, their prices and the default

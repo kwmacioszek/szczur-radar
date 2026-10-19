@@ -34,7 +34,8 @@ import pl.szczurradar.api.auth.activation.IssuedLink;
  *
  * <p>Exit codes: {@link ExitCode#OK} link issued, {@link ExitCode#REFUSED} (an {@link IssueOutcome.Refused},
  * nothing written), {@link ExitCode#FAILED} (e.g. the database is unreachable), {@link ExitCode#USAGE}
- * for a usage or configuration error.
+ * for a usage or configuration error, including an invalid setting such as {@code LLM_TIMEOUT} that fails
+ * the context start.
  */
 abstract sealed class LinkCommand implements Command permits CreateUserCommand, ResetPasswordCommand {
 
@@ -110,8 +111,7 @@ abstract sealed class LinkCommand implements Command permits CreateUserCommand, 
 			outcome = request.issue(context.getBean(ActivationLinks.class), settings.linkTtl());
 		}
 		catch (RuntimeException ex) {
-			err.println(type().cliName() + " failed: " + ex.getMessage());
-			return ExitCode.FAILED;
+			return CommandChecks.contextFailed(type(), ex, err);
 		}
 		return switch (outcome) {
 			case IssuedLink link -> {

@@ -15,8 +15,8 @@ import org.springframework.core.env.StandardEnvironment;
 
 import pl.szczurradar.api.agents.assessor.AssessmentResult;
 import pl.szczurradar.api.agents.assessor.Assessor;
-import pl.szczurradar.api.config.LlmProviderProperties;
 import pl.szczurradar.api.llm.LlmClientFactory;
+import pl.szczurradar.api.llm.LlmProviderProperties;
 import pl.szczurradar.api.measurement.GoldLabels.Post;
 import pl.szczurradar.api.measurement.ModelsConfig.Model;
 

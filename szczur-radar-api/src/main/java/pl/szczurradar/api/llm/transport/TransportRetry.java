@@ -5,10 +5,10 @@ import java.time.Duration;
 import org.springframework.core.retry.RetryPolicy;
 import org.springframework.core.retry.RetryTemplate;
 
-import pl.szczurradar.api.config.LlmProviderProperties.ServiceTier;
 import pl.szczurradar.api.llm.CallFailure;
 import pl.szczurradar.api.llm.LlmCallException;
 import pl.szczurradar.api.llm.LlmConfigurationException;
+import pl.szczurradar.api.llm.ServiceTier;
 
 /**
  * The only retry loop of a model call. Up to {@value #ATTEMPTS_PER_TIER} attempts per tier on

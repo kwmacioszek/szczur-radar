@@ -8,11 +8,11 @@ import org.junit.jupiter.api.Test;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
-import pl.szczurradar.api.config.LlmProviderProperties.Provider;
-import pl.szczurradar.api.config.LlmProviderProperties.ReasoningEffort;
-import pl.szczurradar.api.config.LlmProviderProperties.ServiceTier;
 import pl.szczurradar.api.llm.Channel;
 import pl.szczurradar.api.llm.OutputMode;
+import pl.szczurradar.api.llm.Provider;
+import pl.szczurradar.api.llm.ReasoningEffort;
+import pl.szczurradar.api.llm.ServiceTier;
 
 /** {@link Provenance} as JSON: every closed value in lower case, as stored and recorded. */
 class ProvenanceTest {

@@ -30,6 +30,7 @@ Pakiet bazowy `pl.szczurradar.api`, pakiety według funkcji — nie według wars
 | `raw` | surowe payloady źródeł osobno od danych aplikacji: `RawPayloadStore` (gzip + SHA-256 w tabeli `raw_payloads`) |
 | `persistence` | wspólne klocki zapisu: `EnumValueConverter` (enum ↔ wartość z `CHECK`), `Sha256`; wszystkie konwertery enumów w `persistence/converters/` |
 | `text` | `Whitespace` — zbiór białych znaków kontraktu (§10), wspólny dla `agents`, `llm` i `sources` |
+| `settings` | wspólne czytanie ustawień środowiska, bez zależności od reszty aplikacji: `DurationSetting` (jedna reguła czasu dla `LLM_TIMEOUT`, `ACTIVATION_LINK_TTL`, `PIPELINE_STALL_TIMEOUT`), `SettingText` (przycinanie wartości), `InvalidSettingsException` (zła wartość: blok `APPLICATION FAILED TO START`, kod `2` komend) |
 
 Kolejne moduły dochodzą obok, bez mieszania infrastruktury z domeną (`context/foundation/lessons.md`).
 
@@ -60,11 +61,13 @@ Opcjonalne ustawienia wywołania klienta oceny (`llm/`), nie są sekretami:
 | --- | --- |
 | `LLM_SERVICE_TIER` | `default` (domyślnie) albo `flex` — tańszy tryb OpenAI, może odmawiać (429); tylko z `openrouter` (routing `provider.only=["openai/flex"]`, po trzech odmowach to samo wywołanie w trybie standardowym) |
 | `LLM_REASONING_EFFORT` | `none`, `minimal`, `low`, `medium`, `high`, `xhigh`; tylko z `openrouter`; brak = domyślne dostawcy |
-| `LLM_TIMEOUT` | limit jednej próby HTTP, np. `120s`, `5m` (domyślnie `120s`, maks. `30m`; dla flex dłuższy) |
+| `LLM_TIMEOUT` | limit jednej próby HTTP, np. `120s`, `5m` (domyślnie `120s`, od `10s` do `30m`; dla flex dłuższy) |
 
 - Błędna wartość albo `flex`/`LLM_REASONING_EFFORT` z innym dostawcą niż `openrouter` przerywa start z komunikatem jak dla trzech zmiennych powyżej.
+- **Czasy** (`LLM_TIMEOUT`, `ACTIVATION_LINK_TTL`, `PIPELINE_STALL_TIMEOUT`) mają jedną regułę (`settings/DurationSetting`): liczba całkowita z jednostką pisaną małymi literami — `ns`, `us`, `ms`, `s`, `m`, `h`, `d` — np. `300s`, `5m`, w zakresie danego ustawienia (granice włącznie). Goła liczba (`LLM_TIMEOUT=120` — Spring czytałby ją jako milisekundy), zapis ISO-8601 (`PT5M`), ułamek (`1.5h`), spacja w środku (`12 h`), wielka litera (`5M`) i wartość spoza zakresu są odrzucane komunikatem z nazwą zmiennej i podaną wartością, np. „LLM_TIMEOUT needs a unit, e.g. 300s or 5m (got '120'; a bare number would be milliseconds)”, „… must be a duration such as 300s or 5m (got 'PT5M')”, „… must be from 10s to 30m (got '9s')”. Pusta albo nieustawiona wartość daje domyślną.
+- Zły `LLM_*` zatrzymuje start serwera i każdej komendy operatora, także pre-deploy `migrate`: Spring Boot loguje blok `APPLICATION FAILED TO START` (opis z listą problemów i działanie, bez stack trace'u; stack trace tylko na DEBUG), a komenda kończy się kodem `2` (sekcja „Komendy operatora”).
 - Ocena nie korzysta z `createObject` Embabel: klient z `llm/` (`LlmClientFactory` → `create()` w pakiecie dostawcy) buduje `ChatModel` Spring AI z tych samych zmiennych, z wyłączonymi ponowieniami frameworka i SDK; jedyne ponowienia (do 3 prób na 429, 5xx, przekroczenie czasu, błąd połączenia) są w `llm/TransportRetry`. Klient powstaje leniwie — start nie łączy się z dostawcą.
-- Brak lub błąd którejkolwiek z trzech wartości przerywa start z komunikatem (bez wartości klucza) — `config/LlmProviderProperties`. Start **nie wywołuje LLM** (klient powstaje przy pierwszej ocenie), więc nie sprawdza ważności klucza u dostawcy; `AssessorAgentIT` uruchamia agenta tylko na wpisie bez treści, który rozstrzyga odsiew.
+- Brak lub błąd którejkolwiek z trzech wartości przerywa start z komunikatem (bez wartości klucza) — `llm/LlmProviderProperties`. Start **nie wywołuje LLM** (klient powstaje przy pierwszej ocenie), więc nie sprawdza ważności klucza u dostawcy; `AssessorAgentIT` uruchamia agenta tylko na wpisie bez treści, który rozstrzyga odsiew.
 - Lokalnie trzymaj ustawienia poza repo, np. w `~/.config/szczur-radar/llm.env` (`chmod 600`) i `source` przed `./mvnw verify` lub `java -jar`.
 - CI (job `backend`): `LLM_API_PROVIDER` i `LLM_MODEL` jako GitHub Actions *variables*, `LLM_API_KEY` jako *secret*. PR env: job `railway-config` (krok „Ensure PR-env LLM settings”) ustawia w serwisie `szczur-radar-api` te same trzy wartości z CI — także nadpisuje klucz skopiowany przez Railway z produkcji — i usuwa skopiowane z produkcji opcjonalne `LLM_SERVICE_TIER`, `LLM_REASONING_EFFORT`, `LLM_TIMEOUT` (pasują do dostawcy produkcji, a nie CI; np. `flex` tylko z `openrouter`). Produkcja: operator ustawia trzy zmienne **przed** deployem, a `LLM_API_KEY` jest **zapieczętowany** (sealed), żeby Railway nie kopiował go do nowych PR env. `.railway/railway.ts` deklaruje je przez `preserve()`, które niczego nie tworzy.
 - Przy kodzie równoległym podawaj własny executor: Java 25 widzi limit CPU kontenera (`availableProcessors()` może być 1); rdzeń Embabel ma własny executor.
@@ -91,7 +94,7 @@ Przebieg działa w procesie API, w tle (mapa: `src/main/java/pl/szczurradar/api/
 | --- | --- |
 | `PIPELINE_LLM_CONCURRENCY` | liczba równoległych ocen LLM w przebiegu (domyślnie `4`, min. `1`) |
 | `PIPELINE_TRIGGER_TOKEN` | token crona dla tras `/internal/**` — sekret: nigdy w repo, logach ani argumentach. Opcjonalny: bez niego każde żądanie `/internal/**` dostaje 401. Ustawiony musi mieć co najmniej 32 znaki (np. `openssl rand -hex 32`), inaczej serwer nie startuje (komunikat bez wartości). Czyta go tylko serwer, nie `migrate` ani `create-admin` |
-| `PIPELINE_STALL_TIMEOUT` | po jakim czasie bez postępu strażnik (`RunWatchdog`) zatrzymuje przebieg tej instancji, z jednostką, np. `39m`, `1h`. Opcjonalna; domyślnie najdłuższe pojedyncze wywołanie LLM (`TransportRetry.maxCallDuration` dla `LLM_TIMEOUT` i `LLM_SERVICE_TIER`) plus `5m`, ale nie mniej niż `15m`: `15m` przy ustawieniach domyślnych (`120s`, `default`), `39m` na produkcji (`300s`, `flex`). Krótsza jawna wartość jest dozwolona (testy, sprawdzenie ręczne), a serwer loguje przy starcie WARN z tą granicą. Goła liczba, wartość ≤ 0 albo powyżej `24h` przerywają start serwera komunikatem z nazwą zmiennej. Czyta ją tylko serwer, nie `migrate` ani komendy CLI |
+| `PIPELINE_STALL_TIMEOUT` | po jakim czasie bez postępu strażnik (`RunWatchdog`) zatrzymuje przebieg tej instancji, z jednostką, np. `39m`, `1h`. Opcjonalna; domyślnie najdłuższe pojedyncze wywołanie LLM (`TransportRetry.maxCallDuration` dla `LLM_TIMEOUT` i `LLM_SERVICE_TIER`) plus `5m`, ale nie mniej niż `15m`: `15m` przy ustawieniach domyślnych (`120s`, `default`), `39m` na produkcji (`300s`, `flex`). Krótsza jawna wartość jest dozwolona (testy, sprawdzenie ręczne), a serwer loguje przy starcie WARN z tą granicą. Zakres od `1ms` do `1d` (= `24h`); goła liczba, zapis ISO-8601 albo wartość spoza zakresu przerywają start serwera blokiem `APPLICATION FAILED TO START` z nazwą zmiennej (reguła czasu w sekcji „Dostawca LLM”). Czyta ją tylko serwer, nie `migrate` ani komendy CLI |
 | `RAILWAY_DEPLOYMENT_ID` | id deploymentu; ustawia go Railway w każdym deploymencie, nie operator. Przebieg zapamiętuje deployment instancji, która go zakolejkowała, a odzyskiwanie przy starcie rozpoznaje po nim przerwanie przez deploy (`deploy`) i restart (`restart`). Lokalnie i w testach go nie ma: przerwany przebieg ma wtedy przyczynę `restart` |
 
 - **Przebieg dzienny:** `POST /internal/pipeline-runs/daily` z nagłówkiem `Authorization: Bearer <token>`, bez treści, uruchamia ten sam start co przycisk admina dla dni D-2…D-1 (kalendarz warszawski) ze wszystkich skonfigurowanych źródeł. Zleceniodawcą jest konto systemowe `scheduler@system.invalid` (migracja `V6`, `login_enabled = false`, bez hasła — nie zaloguje się). Odpowiedzi: 202 `[{id, kind}]`, 409 `pipeline_busy`, 503 `source_not_configured`, 401 bez tokenu lub z innym. `GET /internal/pipeline-runs/{id}` zwraca status przebiegu z licznikami, czasami (`startedAt`, `finishedAt`, `lastActivityAt`), przyczyną przerwania, trwającym krokiem (`step`) i liczbą postów do oceny (`assessTotal`); 404 `not_found` dla nieznanego id. Z tej odpowiedzi cron loguje heartbeat.
@@ -166,11 +169,11 @@ railway ssh -s szczur-radar-api -e <środowisko>
 java -jar target/szczur-radar-api.jar create-user --email jan@example.com   # e-mail bez < >
 ```
 
-Opcje podaje się jako `--nazwa wartość` albo `--nazwa=wartość`; nieznana lub powtórzona opcja to błąd użycia. Argumenty, e-mail i zmienne `PG*` są sprawdzane przed startem kontekstu Springa, więc błąd użycia nie dotyka bazy. Komendy uruchamiają wspólny kontekst Springa, więc też potrzebują trzech ustawień LLM.
+Opcje podaje się jako `--nazwa wartość` albo `--nazwa=wartość`; nieznana lub powtórzona opcja to błąd użycia. Argumenty, e-mail i zmienne `PG*` są sprawdzane przed startem kontekstu Springa, więc błąd użycia nie dotyka bazy. Komendy uruchamiają wspólny kontekst Springa, więc też potrzebują trzech ustawień LLM. Zła wartość ustawienia w tym kontekście (np. `LLM_TIMEOUT=120`) jest błędem konfiguracji: Spring Boot loguje blok `APPLICATION FAILED TO START`, komenda dopisuje na stderr jedną linię `<komenda>: invalid configuration: …` i kończy się kodem `2`. Inna awaria kontekstu albo pracy (np. nieosiągalna baza, nieudana migracja) daje `<komenda> failed: …` i kod `1`. Dotyczy też `migrate`, więc pre-deploy na Railway zatrzymuje deploy, a poprzednia wersja działa dalej.
 
 ### `create-admin`
 
-`create-admin` tworzy **pierwszego** administratora i odmawia, gdy admin już istnieje: kolejnego admina zakłada `create-user --email <e-mail> --role admin`, a utracony dostęp przywraca `reset-password --email <e-mail>`. Hasło jest pobierane dwa razy z ukrytego promptu, nigdy z argumentu, i nie trafia do logów; polityka 12–128 znaków. Bootstrap jest serializowany blokadą `pg_advisory_xact_lock`, więc równoległe uruchomienia tworzą dokładnie jednego admina. Kody wyjścia: 0 utworzono, 1 odmowa, 2 błąd użycia lub konfiguracji (brak/zły e-mail, brak zmiennych `PG*`, brak konsoli).
+`create-admin` tworzy **pierwszego** administratora i odmawia, gdy admin już istnieje: kolejnego admina zakłada `create-user --email <e-mail> --role admin`, a utracony dostęp przywraca `reset-password --email <e-mail>`. Hasło jest pobierane dwa razy z ukrytego promptu, nigdy z argumentu, i nie trafia do logów; polityka 12–128 znaków. Bootstrap jest serializowany blokadą `pg_advisory_xact_lock`, więc równoległe uruchomienia tworzą dokładnie jednego admina. Kody wyjścia: 0 utworzono, 1 odmowa lub błąd, 2 błąd użycia lub konfiguracji (brak/zły e-mail, brak zmiennych `PG*`, brak konsoli, zła wartość ustawienia, np. `LLM_*`).
 
 ### `create-user` i `reset-password` (S-07)
 
@@ -187,7 +190,7 @@ Na stdout: jedna linia opisu (konto, rola, ważność do czasu UTC, jednorazowo�
 | Zmienna | Znaczenie |
 | --- | --- |
 | `WEB_PUBLIC_URL` | wymagana: publiczny adres aplikacji web — sam schemat, host i opcjonalny port, bez ścieżki (np. `https://szczur-radar-web-production.up.railway.app`); lokalnie `http://localhost:5173` (`npm run dev`) |
-| `ACTIVATION_LINK_TTL` | opcjonalna: ważność linku z jednostką, np. `12h`, `90m` (domyślnie `12h`, od `1m` do `7d`); goła liczba jest odrzucana, bo Spring czytałby ją jako milisekundy |
+| `ACTIVATION_LINK_TTL` | opcjonalna: ważność linku z jednostką, np. `12h`, `90m` (domyślnie `12h`, od `1m` do `7d`); goła liczba (Spring czytałby ją jako milisekundy) i zapis ISO-8601 są odrzucane (reguła czasu w sekcji „Dostawca LLM”) |
 
 Obie zmienne czytają tylko te dwie komendy, przed startem Springa, więc zła wartość nie zatrzymuje serwera.
 
@@ -197,7 +200,7 @@ Kody wyjścia:
 
 - 0: link wydany;
 - 1: odmowa (zajęty e-mail, brak konta albo konto systemowe; nic nie zapisano) albo błąd;
-- 2: błąd użycia lub konfiguracji (brak/zły e-mail, nieznana rola lub opcja, brak zmiennych `PG*`, brak/zły `WEB_PUBLIC_URL`, `ACTIVATION_LINK_TTL` bez jednostki lub poza zakresem); komunikat nazywa opcję albo zmienną.
+- 2: błąd użycia lub konfiguracji (brak/zły e-mail, nieznana rola lub opcja, brak zmiennych `PG*`, brak/zły `WEB_PUBLIC_URL`, `ACTIVATION_LINK_TTL` bez jednostki, w ISO-8601 lub poza zakresem, zła wartość `LLM_*`); komunikat nazywa opcję albo zmienną.
 
 ```bash
 # lokalnie: Postgres z compose.local.yaml, PG* i LLM_* jak wyżej, w tym samym terminalu
