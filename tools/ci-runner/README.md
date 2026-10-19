@@ -2,6 +2,13 @@
 
 Self-hosted runnery GitHub Actions dla `.github/workflows/ci.yml` na VM z Ubuntu 24.04 w domowym Proxmoxie, a w czasie developmentu także w VM-kach na PC (sekcja „Runnery na PC”) (zmiana `self-hosted-pr-runner`, issue #30). Powód: darmowe minuty GitHub Actions prywatnego repo kończą się przed końcem miesiąca (ok. 1800 min w 30 dni przy limicie 2000), a po ich wyczerpaniu żaden job nie startuje („The job was not started because … your spending limit needs to be increased”), workflow kończy się porażką i Railway pomija deploy.
 
+## Pliki
+
+| Plik | Co robi |
+| --- | --- |
+| `setup.sh` | zamienia VM z Ubuntu 24.04 w host runnera: Docker, użytkownik `gha` bez sudo, jeden runner z etykietą `szczur-ci` jako usługa systemd (uruchamiany jako root, niżej) |
+| `pc_runners.py` | tworzy, usuwa i pokazuje VM-ki KVM z runnerami na PC (`create` / `delete` / `status`, sekcja „Runnery na PC”) |
+
 ## Przełącznik
 
 `runs-on` każdego joba w `ci.yml` wybiera etykietę runnera ze zmiennych repozytorium (pierwsza niepusta wygrywa):
@@ -14,7 +21,7 @@ Self-hosted runnery GitHub Actions dla `.github/workflows/ci.yml` na VM z Ubuntu
 | (żadna) | `ubuntu-latest`, runnery GitHuba |
 
 ```bash
-gh variable set CI_RUNNER --body szczur-ci   # wszystko na Proxmoxa
+gh variable set CI_RUNNER --body szczur-ci   # wszystko na self-hosted runnery (Proxmox + PC)
 gh variable delete CI_RUNNER                 # wszystko z powrotem na GitHuba
 gh variable list                             # co jest ustawione
 ```
@@ -25,7 +32,7 @@ Zmiana działa od następnego runu: nowego commita albo ponownego uruchomienia s
 
 ## Instalacja na VM
 
-VM: Ubuntu Server 24.04, x86_64 (Railway buduje `amd64`), min. 4 vCPU, 8 GB RAM, 50 GB dysku. Joby dostają sekrety CI (`LLM_API_KEY`, `RAILWAY_API_TOKEN`, `WYKOP_*`), więc VM nie powinna widzieć reszty sieci domowej (osobny VLAN albo firewall Proxmoxa: tylko wyjście do internetu). Runner potrzebuje tylko ruchu wychodzącego HTTPS do GitHuba.
+VM: Ubuntu Server 24.04, x86_64 (Railway buduje `amd64`), min. 4 vCPU, ok. 7–8 GB RAM, 50 GB dysku (VM `github-runner` w Proxmoxie: 4 vCPU, 7 GB, 61 GB). Joby dostają sekrety CI (`LLM_API_KEY`, `RAILWAY_API_TOKEN`, `WYKOP_*`), więc VM nie powinna widzieć reszty sieci domowej (osobny VLAN albo firewall Proxmoxa: tylko wyjście do internetu). **Znane ryzyko (2026-10-18):** dziś ani VM w Proxmoxie, ani VM-ki na PC nie są odcięte od LAN; NAT libvirt na PC chroni tylko przed ruchem przychodzącym. `setup.sh` przyjmuje tylko `RUNNER_COUNT=1` (jeden runner na VM). Runner potrzebuje tylko ruchu wychodzącego HTTPS do GitHuba.
 
 ```bash
 # na Macu: token rejestracyjny (ważny 1 h, wymaga uprawnień admina repo)
@@ -65,7 +72,7 @@ python3 tools/ci-runner/pc_runners.py status    # VM-ki (stan, vCPU, RAM, IP, au
 python3 tools/ci-runner/pc_runners.py delete    # pyta które; wyrejestrowuje runner (gh) i usuwa VM z dyskami
 ```
 
-`create` nadaje VM-kom kolejne wolne numery (`ci-pc-1`, `ci-pc-2`, …; runner `<vm>-1`), trzyma dyski w puli libvirt `ci-runners` (`/var/lib/libvirt/images/ci-runners`, dysk qcow2 na obrazie Ubuntu 24.04 cloud sprawdzonym SHA-256, rośnie w miarę zapisu) i przez cloud-init ustawia nazwę hosta, użytkownika `ops` z kluczami SSH (domyślnie z `~/.ssh/authorized_keys`, sudo bez hasła) oraz uruchamia `setup.sh` (jeden runner). Runner jest online ok. 1 min po utworzeniu VM-ki; token rejestracyjny jest usuwany z VM-ki po rejestracji. Sieć: NAT libvirt (`default`), VM-ki mają adresy `192.168.122.x` widoczne tylko z hosta: `ssh -J <user>@<pc> ops@<ip>`. VM-ki startują razem z Ubuntu (autostart; `--no-autostart` wyłącza). Zatrzymanie bez usuwania: `virsh shutdown ci-pc-N`, start: `virsh start ci-pc-N`.
+`create` nadaje VM-kom kolejne wolne numery (`ci-pc-1`, `ci-pc-2`, …; runner `<vm>-1`), trzyma dyski w puli libvirt `ci-runners` (`/var/lib/libvirt/images/ci-runners`, dysk qcow2 na obrazie Ubuntu 24.04 cloud sprawdzonym SHA-256, rośnie w miarę zapisu) i przez cloud-init ustawia nazwę hosta, użytkownika `ops` z kluczami SSH (domyślnie z `~/.ssh/authorized_keys`, sudo bez hasła) oraz uruchamia `setup.sh` (jeden runner). Runner jest online ok. 1 min po utworzeniu VM-ki. Token rejestracyjny (ważny 1 h) nie zostaje nigdzie: `setup.sh` przekazuje go runnerowi przez środowisko (nie trafia do `auth.log`), cloud-init po rejestracji kasuje swoje kopie user-data i wyłącza się na stałe (`/etc/cloud/cloud-init.disabled`), a `create` (z zalogowanym `gh`) czeka, aż runner będzie online, i wysuwa oraz usuwa seed ISO z tokenem; bez `gh` wypisuje polecenia `virsh` do zrobienia tego ręcznie. Nieudany `create` usuwa wolumeny tej VM-ki, a przerwany upload — obraz bazowy. Sieć: NAT libvirt (`default`), VM-ki mają adresy `192.168.122.x` widoczne tylko z hosta: `ssh -J <user>@<pc> ops@<ip>`. VM-ki startują razem z Ubuntu (autostart; `--no-autostart` wyłącza). Zatrzymanie bez usuwania: `virsh shutdown ci-pc-N`, start: `virsh start ci-pc-N`.
 
 Zasoby: VM-ka z 4 vCPU i 8 GB RAM wystarcza na każdy job; pierwszy run na nowej VM-ce jest wolniejszy, bo pobiera obrazy Dockera i zależności od zera.
 

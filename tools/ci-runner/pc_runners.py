@@ -127,9 +127,17 @@ def ensure_pool():
 
 
 def upload(volume, path):
-    """Copies a local file byte for byte into the pool (libvirtd writes it, so no sudo is needed)."""
+    """Copies a local file byte for byte into the pool (libvirtd writes it, so no sudo is needed).
+
+    A failed or interrupted upload removes the volume: a partial base image would otherwise stay
+    and every later VM would boot from it.
+    """
     virsh("vol-create-as", POOL, volume, f"{path.stat().st_size}b", "--format", "raw")
-    virsh("vol-upload", "--pool", POOL, volume, str(path))
+    try:
+        virsh("vol-upload", "--pool", POOL, volume, str(path))
+    except BaseException:
+        virsh("vol-delete", "--pool", POOL, volume, check=False)
+        raise
 
 
 def ensure_base_image():
@@ -138,13 +146,15 @@ def ensure_base_image():
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
     image = CACHE_DIR / IMAGE_URL.rsplit("/", 1)[1]
     print(f"downloading {IMAGE_URL}")
-    with urllib.request.urlopen(SUMS_URL) as response:
+    with urllib.request.urlopen(SUMS_URL, timeout=60) as response:
         sums = response.read().decode()
     expected = next((line.split()[0] for line in sums.splitlines() if line.endswith(image.name)), None)
     if expected is None:
         raise Fail(f"{image.name} not in {SUMS_URL}")
-    urllib.request.urlretrieve(IMAGE_URL, image)
-    digest = hashlib.sha256(image.read_bytes()).hexdigest()
+    with urllib.request.urlopen(IMAGE_URL, timeout=60) as response, image.open("wb") as out:
+        shutil.copyfileobj(response, out)
+    with image.open("rb") as data:
+        digest = hashlib.file_digest(data, "sha256").hexdigest()
     if digest != expected:
         image.unlink()
         raise Fail(f"SHA-256 mismatch for {image.name}")
@@ -171,16 +181,20 @@ def registration_token(given):
 
 def ssh_keys(path):
     keys = [line.strip() for line in Path(path).expanduser().read_text().splitlines()
-            if line.strip().startswith(("ssh-", "ecdsa-"))]
+            if line.strip().startswith(("ssh-", "ecdsa-", "sk-ssh-", "sk-ecdsa-"))]
     if not keys:
         raise Fail(f"no public SSH keys in {path}")
     return keys
 
 
 def user_data(vm, token, keys):
-    """cloud-init: user `ops` with the operator's keys, then setup.sh registers one runner."""
+    """cloud-init: user `ops` with the operator's keys, then setup.sh registers one runner.
+
+    Free-form values are written as JSON strings (valid YAML), so a key comment with `: ` or `#`
+    cannot change the document.
+    """
     setup = base64.b64encode(SETUP_SH.read_bytes()).decode()
-    key_lines = "\n".join(f"      - {key}" for key in keys)
+    key_lines = "\n".join(f"      - {json.dumps(key)}" for key in keys)
     return f"""#cloud-config
 hostname: {vm}
 manage_etc_hosts: true
@@ -199,13 +213,78 @@ write_files:
     content: {setup}
   - path: /root/ci-runner/token
     permissions: "0600"
-    content: {token}
+    content: {json.dumps(token)}
 runcmd:
   - [bash, -c, "RUNNER_TOKEN=$(cat /root/ci-runner/token) RUNNER_COUNT=1 RUNNER_LABELS={LABEL} REPO_URL=https://github.com/{REPO} bash /root/ci-runner/setup.sh >/var/log/ci-runner-setup.log 2>&1; rm -f /root/ci-runner/token"]
+  # The token is also in cloud-init's copies of this user-data: remove them and never run cloud-init
+  # again (the host ejects the seed ISO once the runner is online, see eject_seed).
+  - [bash, -c, "touch /etc/cloud/cloud-init.disabled; rm -f /var/lib/cloud/instances/*/user-data.txt* /var/lib/cloud/instances/*/cloud-config.txt /var/lib/cloud/instances/*/obj.pkl"]
 """
 
 
+def remove_vm(vm):
+    """Removes the domain (if any) and its volumes; also cleans up after a failed create."""
+    if virsh("domstate", vm, check=False).returncode == 0:
+        if virsh("domstate", vm).stdout.strip() == "running":
+            virsh("destroy", vm)
+        virsh("undefine", vm, "--remove-all-storage")
+    for volume in (f"{vm}.qcow2", f"{vm}-seed.iso"):
+        virsh("vol-delete", "--pool", POOL, volume, check=False)
+
+
 def create_vm(vm, cpus, ram_gb, disk_gb, token, keys, autostart):
+    try:
+        define_vm(vm, cpus, ram_gb, disk_gb, token, keys, autostart)
+    except BaseException:
+        # A half-created VM would leave volumes that block the next create under the same number.
+        remove_vm(vm)
+        raise
+
+
+def seed_target(vm):
+    """The cdrom target holding the cloud-init seed, or None once it is ejected."""
+    for line in virsh("domblklist", vm, "--details").stdout.splitlines():
+        fields = line.split()
+        if len(fields) == 4 and fields[1] == "cdrom" and fields[3].endswith(f"{vm}-seed.iso"):
+            return fields[2]
+    return None
+
+
+def eject_seed(vm):
+    """Ejects and deletes the seed ISO: it holds the registration token (valid 1 h)."""
+    target = seed_target(vm)
+    if target:
+        live = ["--live"] if virsh("domstate", vm).stdout.strip() == "running" else []
+        virsh("change-media", vm, target, "--eject", "--config", "--force", *live)
+    virsh("vol-delete", "--pool", POOL, f"{vm}-seed.iso", check=False)
+
+
+def eject_seeds_when_online(vms, timeout_s=600):
+    """Waits for the VMs' runners, then removes their seed ISOs (needs a logged-in gh)."""
+    if not gh_available():
+        print("\nNo gh login: the seed ISOs (with the registration token, valid 1 h) stay attached."
+                " Once the runners are online, remove them with:")
+        for vm in vms:
+            print(f"  virsh change-media {vm} {seed_target(vm) or 'sda'} --eject --live --config --force"
+                    f" && virsh vol-delete --pool {POOL} {vm}-seed.iso")
+        return
+    print("waiting for the runners to register …")
+    pending = set(vms)
+    deadline = time.time() + timeout_s
+    while pending and time.time() < deadline:
+        runners = gh_runners() or {}
+        for vm in sorted(pending):
+            if runners.get(runner_name(vm), {}).get("status") == "online":
+                eject_seed(vm)
+                print(f"{runner_name(vm)}: online, seed ISO removed")
+                pending.discard(vm)
+        if pending:
+            time.sleep(10)
+    if pending:
+        print("not online after 10 min (log in the VM: /var/log/ci-runner-setup.log): " + ", ".join(sorted(pending)))
+
+
+def define_vm(vm, cpus, ram_gb, disk_gb, token, keys, autostart):
     disk = f"{vm}.qcow2"
     seed = f"{vm}-seed.iso"
     virsh("vol-create-as", POOL, disk, f"{disk_gb}G", "--format", "qcow2",
@@ -255,8 +334,10 @@ def cmd_create(args):
     for vm in new:
         print(f"creating {vm}")
         create_vm(vm, cpus, ram, disk, token, keys, autostart)
-    print(f"\nCreated {len(new)} VM(s). The runners register within a few minutes of boot"
-            f" (log in the VM: /var/log/ci-runner-setup.log); check with: python3 {Path(__file__).name} status")
+    print(f"\nCreated {len(new)} VM(s). The runners register about a minute after boot"
+            f" (log in the VM: /var/log/ci-runner-setup.log).")
+    eject_seeds_when_online(new)
+    print(f"check with: python3 {Path(__file__).name} status")
 
 
 def vm_info(vm):
@@ -317,8 +398,14 @@ def cmd_delete(args):
         raise Fail("unknown VM(s): " + ", ".join(unknown))
     runners = gh_runners()
     busy = [vm for vm in chosen if runners and runners.get(runner_name(vm), {}).get("busy")]
-    if busy:
-        print("WARNING: busy runners (their running job fails and needs `gh run rerun`): " + ", ".join(busy))
+    if busy and not args.force:
+        print("skipped, runner busy (retry when idle, or --force: the running job fails and needs"
+                " `gh run rerun`): " + ", ".join(busy))
+        chosen = [vm for vm in chosen if vm not in busy]
+        if not chosen:
+            return
+    elif busy:
+        print("WARNING: deleting busy runners, their running job fails and needs `gh run rerun`: " + ", ".join(busy))
     if not confirm(f"Delete {', '.join(chosen)} with their disks?", args.yes):
         print("nothing deleted")
         return
@@ -329,11 +416,7 @@ def cmd_delete(args):
             print(f"{runner_name(vm)}: removed from GitHub")
         elif runners is None:
             print(f"{runner_name(vm)}: gh not logged in — remove it in GitHub (Settings → Actions → Runners)")
-        if virsh("domstate", vm).stdout.strip() == "running":
-            virsh("destroy", vm)
-        virsh("undefine", vm, "--remove-all-storage")
-        for volume in (f"{vm}.qcow2", f"{vm}-seed.iso"):
-            virsh("vol-delete", "--pool", POOL, volume, check=False)
+        remove_vm(vm)
         print(f"{vm}: deleted")
 
 
@@ -354,6 +437,7 @@ def main():
     delete.add_argument("--all", action="store_true")
     delete.add_argument("--names", help="comma-separated VM names")
     delete.add_argument("--yes", action="store_true")
+    delete.add_argument("--force", action="store_true", help="also delete VMs whose runner is running a job")
     args = parser.parse_args()
     if args.command is None:
         choice = ask("1) create  2) delete  3) status", "3")

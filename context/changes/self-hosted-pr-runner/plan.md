@@ -87,7 +87,7 @@ CI działa na VM w Proxmoxie, a jedna flaga przełącza je z powrotem na GitHuba
 
 **Intent**: VM odtwarzalna jednym poleceniem; runbook mówi, jak przełączać, instalować i obsługiwać runner.
 
-**Contract**: `setup.sh` uruchamiany jako root z `RUNNER_TOKEN` (opcjonalnie `RUNNER_COUNT`=1, `RUNNER_LABELS`=`szczur-ci`, `RUNNER_USER`=`gha`, `REPO_URL`); idempotentny; instaluje `docker.io`, `docker-buildx`, `git`, `jq`, `curl`; rotacja logów Dockera w `/etc/docker/daemon.json`; `/etc/cron.daily/docker-prune` (starsze niż 72 h); użytkownik `gha` w grupie `docker`, bez sudo; najnowszy runner z weryfikacją SHA-256 z wydania; rejestracja `<hostname>-N` jako usługa systemd. README: tabela zmiennych przełącznika, polecenia `gh variable`, ostrzeżenie o kolejce i 2 h Railway, instalacja (token rejestracyjny przez `gh api`), obsługa (status, logi, wyrejestrowanie), ograniczenie 1 runnera i brak izolacji sieci jako znane ryzyko.
+**Contract**: `setup.sh` uruchamiany jako root z `RUNNER_TOKEN` (opcjonalnie `RUNNER_COUNT`=1, `RUNNER_LABELS`=`szczur-ci`, `RUNNER_USER`=`gha`, `REPO_URL`); idempotentny; instaluje `docker.io`, `docker-buildx`, `git`, `jq`, `curl`; rotacja logów Dockera w `/etc/docker/daemon.json`; `/etc/cron.daily/docker-prune` (starsze niż 72 h; zmienione 2026-10-18, `b777370`: tylko przy zajętości `/` od 70%, `until=24h`); użytkownik `gha` w grupie `docker`, bez sudo; najnowszy runner z weryfikacją SHA-256 z wydania; rejestracja `<hostname>-N` jako usługa systemd. README: tabela zmiennych przełącznika, polecenia `gh variable`, ostrzeżenie o kolejce i 2 h Railway, instalacja (token rejestracyjny przez `gh api`), obsługa (status, logi, wyrejestrowanie), ograniczenie 1 runnera i brak izolacji sieci jako znane ryzyko.
 
 #### 4. Gałąź, issue i PR
 
@@ -263,10 +263,11 @@ Dokumentacja repo opisuje przełącznik i pulę runnerów (Proxmox + PC); roadma
 
 ## Performance Considerations
 
-- 1 runner wykonuje joby po kolei: run ok. 9–10 min zamiast ok. 3,7 min (`research.md`, sekcja 6). Dwa PR-y naraz czekają w kolejce.
+- 1 runner wykonuje joby po kolei: szacunek z researchu ok. 9–10 min zamiast ok. 3,7 min (`research.md`, sekcja 6); zmierzone niżej. Dwa PR-y naraz czekają w kolejce.
 - Obrazy i cache Mavena/npm zostają na VM między runami, więc kolejne buildy są szybsze (zmierzone: ok. 10,4 min zimny run → ok. 7 min z cache); `docker-prune` sprząta tylko przy zajętości `/` od 70%.
 - `/` na VM w Proxmoxie powiększone do 61 GB (wolne miejsce w VG).
-- Faza 2: pula 5 runnerów skraca run do mniej więcej czasu joba `backend` (ok. 3 min), ale każda VM PC ma własny zimny cache przy pierwszych runach.
+- Faza 2: pula 5 runnerów skraca run do mniej więcej czasu joba `backend`, ale każda VM PC ma własny zimny cache przy pierwszych runach.
+- Zmierzone 2026-10-18/19 (wall clock runu PR #83): sam Proxmox — 10,4 min zimny, ok. 6,7–7 min z cache (run 39165322337; fallback przy wyłączonych VM-kach PC: 6:47); pula 5 runnerów — 3:04 przy zimnym cache VM-ek PC, 2:02 z cache, 1:55 dla `debf01c` (run 39225423162). Obciążenie PC w runie 2:02 (`vmstat` co 2 s): CPU średnio 16%, szczyt 46% z 16 wątków, iowait średnio 1,3%.
 
 ## Migration Notes
 
@@ -328,10 +329,10 @@ Dokumentacja repo opisuje przełącznik i pulę runnerów (Proxmox + PC); roadma
 
 - [x] 3.1 SVG roadmapy wygenerowany bez błędu: `python3 tools/render_roadmap_svg.py`
 - [x] 3.2 Każdy odsyłacz do `tools/ci-runner` w dokumentach istnieje
-- [ ] 3.3 CI PR-a zielone na puli runnerów po commitach dokumentacji
+- [x] 3.3 CI PR-a zielone na puli runnerów po commitach dokumentacji
 
 #### Manual
 
-- [ ] 3.4 Runbook w `deploy-plan.md` przeczytany przez człowieka
-- [ ] 3.5 `/10x-impl-review` wykonany, ustalenia rozstrzygnięte
+- [x] 3.4 Runbook w `deploy-plan.md` przeczytany przez człowieka
+- [x] 3.5 `/10x-impl-review` wykonany, ustalenia rozstrzygnięte
 - [ ] 3.6 Zmiana zarchiwizowana na gałęzi; PR przekazany człowiekowi do merge'a

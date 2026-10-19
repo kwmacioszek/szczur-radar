@@ -863,7 +863,7 @@ PR #60 was merged by the operator as `5b6eabb` (2026-10-17 15:02 UTC).
 2. **Back to GitHub's runners** (minutes renewed or a budget set in Billing): `gh variable delete CI_RUNNER`. To keep only the production gate on GitHub: `gh variable set CI_RUNNER_MAIN --body ubuntu-latest`.
 3. **Shutting the PC down**: wait until `pc_runners.py status` shows no `busy` runner `ci-pc-*`; a job cut off by the shutdown fails after a few minutes — `gh run rerun <id>`.
 4. **Runner gone from GitHub** (offline more than 14 days): Proxmox — delete `/home/gha/actions-runner-N` and run `setup.sh` again with a new token; PC — `pc_runners.py delete` and `create`.
-5. **Known risk** (accepted, 2026-10-18): the runner VMs see the home LAN (no VLAN/firewall isolation yet) and hold the CI secrets above, including the Railway workspace token. Workflows from forks are off in the repo settings, so only branches of this repo run.
+5. **Known risk** (accepted, 2026-10-18): the runner VMs see the home LAN (no VLAN/firewall isolation yet) and hold the CI secrets above, including the Railway workspace token. Workflows from forks are off in the repo settings, so only branches of this repo run. The runners are persistent: the tool cache (e.g. the `railway` CLI that `railway-config` installs globally), the Docker image cache and `_work` outlive a job, so a PR job could plant something a later push-to-`main` job runs with `RAILWAY_API_TOKEN`. No escalation today (same-repo PR jobs already get the same token), but if the trust model changes (more collaborators, Dependabot, a production-only token), keep `CI_RUNNER_MAIN=ubuntu-latest` or move to ephemeral runners.
 
 ### Runbook — after the merge (operator; tracked in issue #30, not in the plan's Progress)
 

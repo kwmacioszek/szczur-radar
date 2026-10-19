@@ -5,7 +5,7 @@
 
 ## What & Why
 
-Darmowe minuty GitHub Actions prywatnego repo skończyły się 2026-10-18 (ok. 1815 min w 30 dni przy limicie 2000). Żaden job CI nie startuje, więc Railway nie wdraża ani PR env, ani produkcji, a development stoi. Przenosimy CI na własny runner na VM w domowym Proxmoxie z jedną flagą, która przełącza je z powrotem na runnery GitHuba.
+Darmowe minuty GitHub Actions prywatnego repo skończyły się 2026-10-18 (ok. 1815 min w 30 dni przy limicie 2000). Żaden job CI nie startuje, więc Railway nie wdraża ani PR env, ani produkcji, a development stoi. Przenosimy CI na własny runner na VM w domowym Proxmoxie (a w czasie developmentu także na VM-ki na PC) z jedną flagą, która przełącza je z powrotem na runnery GitHuba.
 
 ## Starting Point
 
@@ -50,7 +50,7 @@ Siedem jobów `.github/workflows/ci.yml` ma na sztywno `runs-on: ubuntu-latest`.
 
 ## Architecture / Approach
 
-Każdy job ma w `runs-on` wyrażenie wybierające etykietę: `CI_RUNNER_PR` (PR) / `CI_RUNNER_MAIN` (push na `main`), potem `CI_RUNNER`, na końcu `ubuntu-latest`. Runner `github-runner-1` na VM ma etykietę `szczur-ci`, działa jako usługa systemd na użytkowniku `gha` (bez sudo, w grupie `docker`) i łączy się z GitHubem tylko ruchem wychodzącym. Railway Wait for CI nadal czeka na wynik całego workflow.
+Każdy job ma w `runs-on` wyrażenie wybierające etykietę: `CI_RUNNER_PR` (PR) / `CI_RUNNER_MAIN` (push na `main`), potem `CI_RUNNER`, na końcu `ubuntu-latest`. Runner `github-runner-1` na VM ma etykietę `szczur-ci`, działa jako usługa systemd na użytkowniku `gha` (bez sudo, w grupie `docker`) i łączy się z GitHubem tylko ruchem wychodzącym. Railway Wait for CI nadal czeka na wynik całego workflow. Od fazy 2 w puli są też runnery `ci-pc-1-1` … `ci-pc-4-1` w VM-kach KVM na PC (`pc_runners.py`), z tą samą etykietą: GitHub daje job dowolnemu wolnemu runnerowi, a przy wyłączonym PC wszystko bierze Proxmox.
 
 ## Phases at a Glance
 
