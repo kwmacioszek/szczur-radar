@@ -99,7 +99,7 @@ public class SecurityConfig {
 			.authorizeHttpRequests(auth -> auth
 				// Error pages rendered for an already authorized request (e.g. 404, 415) stay visible.
 				.dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
-				.requestMatchers(HttpMethod.GET, "/api/health", "/api/ready").permitAll()
+				.requestMatchers(HttpMethod.GET, "/api/health", "/api/ready", "/api/deploy-safety").permitAll()
 				.requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/logout").permitAll()
 				// Activation links (S-07): the one-time token in the body is the credential.
 				.requestMatchers(HttpMethod.POST, "/api/auth/activation", "/api/auth/activation/lookup").permitAll()

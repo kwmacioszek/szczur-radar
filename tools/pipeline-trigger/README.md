@@ -87,7 +87,7 @@ Skrypt pisze logi na stderr, a Railway pokazuje stderr crona na poziomie `error`
 
 Czasy to dodatnia liczba całkowita z jednostką `s`, `m` albo `h`; liczba bez jednostki to sekundy.
 
-W Railway serwis i jego zmienne deklaruje `.railway/railway.ts`. Token jest wartością tylko na API: na produkcji zapieczętowaną, ustawioną przez operatora przez `--stdin`. Cron dostaje go referencją. Zmienna ustawiona ręcznie na serwisie musi być zadeklarowana w `railway.ts` przez `preserve()`. Inaczej plan IaC proponuje jej usunięcie, a bramka CI (`railway-config`) go odrzuca. Dziś dotyczy to tylko `TRIGGER_IN_ANY_ENVIRONMENT`. Pozostałe `TRIGGER_*` zostają na wartościach domyślnych.
+W Railway serwis i jego zmienne deklaruje `.railway/railway.ts`. Token jest wartością tylko na API: na produkcji zapieczętowaną, ustawioną przez operatora przez `--stdin`. Cron dostaje go referencją. Zmienne strojenia `TRIGGER_*` (także `TRIGGER_IN_ANY_ENVIRONMENT`) można ustawiać ręcznie na serwisie: `railway.ts` je ignoruje (wzorzec `pipeline-trigger/TRIGGER_*` w `variables.ignore` projektu, S-14), więc IaC ich nie ustawia i nie usuwa. Każda inna zmienna ustawiona ręcznie na serwisie wymaga dopisania wzorca do `variables.ignore` albo deklaracji w `railway.ts`. Inaczej plan IaC proponuje jej usunięcie (`variable.delete`), a bramka CI (`railway-config`) go odrzuca.
 
 ## Test lokalny
 
@@ -124,6 +124,6 @@ Cron jest w każdym PR env, ale tam się pomija. Żeby sprawdzić go w PR env `s
    ```
 2. Na serwisie `pipeline-trigger` ustaw `TRIGGER_IN_ANY_ENVIRONMENT=true`. W panelu ustaw tymczasowy harmonogram (Settings → Cron Schedule, np. `*/5 * * * *`, minimum 5 minut). Railway nie ma ręcznego wyzwolenia crona. Kolejny push przywraca harmonogram z IaC.
 3. Log wykonania kończy się `OK: …` albo `FAILED: …`, a deployment crona ma status `SUCCESS` albo `CRASHED`. Wykonanie z harmonogramu nie tworzy nowego deploymentu, tylko używa istniejącego, więc status deploymentu to wynik ostatniego wykonania. Przebieg widać w `/admin` PR env.
-4. Po sprawdzeniu usuń `TRIGGER_IN_ANY_ENVIRONMENT` (`preserve()` niczego nie tworzy, więc plan tego nie cofnie).
+4. Po sprawdzeniu usuń `TRIGGER_IN_ANY_ENVIRONMENT` (IaC ignoruje `TRIGGER_*`, więc plan jej ani nie cofnie, ani nie usunie).
 
 Na produkcji tymczasowy harmonogram trzeba przywrócić na `30 0 * * *` ręcznie: do następnego merge'a nic go nie przywróci.
