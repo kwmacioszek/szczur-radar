@@ -463,7 +463,7 @@ Brak migracji: kolumna `skipped` istnieje od V3. Wdrożenie API i crona następu
 
 #### Automated
 
-- [x] 4.1 Pełna bramka po zmianach dokumentacji: `cd szczur-radar-api && ./mvnw -B verify`, `tools/pipeline-trigger/test.sh`, `cd szczur-radar-web && npm test && npm run build`
+- [x] 4.1 Pełna bramka po zmianach dokumentacji: `cd szczur-radar-api && ./mvnw -B verify`, `tools/pipeline-trigger/test.sh`, `cd szczur-radar-web && npm test && npm run build` — c9b4065
 - [ ] 4.2 CI na PR zielone (wszystkie joby `.github/workflows/ci.yml`)
 
 #### Manual
