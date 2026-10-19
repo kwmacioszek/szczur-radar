@@ -59,6 +59,8 @@ Manifest zawiera: czas, nazwę pliku, `sha256`, rozmiar, wersje serwera i `pg_du
 | `RAILWAY_ENVIRONMENT_NAME`, `BACKUP_IN_ANY_ENVIRONMENT` | środowisko Railway (ustawia je Railway); poza `production` przebieg jest pomijany, chyba że `BACKUP_IN_ANY_ENVIRONMENT=true` |
 | `RESTORE_CHECK_PASSWORD` | hasło użytkownika `postgres` dla `restore-check.sh --serve` |
 
+W Railway serwis i jego zmienne deklaruje `.railway/railway.ts`. Zmienne strojenia `BACKUP_IN_ANY_ENVIRONMENT`, `BACKUP_TIMEOUT` i `S3_FORCE_PATH_STYLE` można ustawiać ręcznie na serwisie: `railway.ts` je ignoruje (wzorce `db-backup/…` w `variables.ignore` projektu, S-14), więc IaC ich nie ustawia i nie usuwa. `BACKUP_KEEP_DAILY` i `BACKUP_KEEP_MONTHLY` są zadeklarowane wartością, więc ręczną zmianę w panelu nadpisze następny apply; zmienia się je w `railway.ts`. Każda inna zmienna ustawiona ręcznie na serwisie wymaga dopisania wzorca do `variables.ignore` albo deklaracji w `railway.ts`. Inaczej plan IaC proponuje jej usunięcie (`variable.delete`), a bramka CI (`railway-config`) go odrzuca.
+
 ## Test lokalny
 
 ```bash
