@@ -234,15 +234,15 @@ Dokumentacja repo opisuje przełącznik i runner; roadmapa odzwierciedla zrobion
 - [x] 1.2 `ci.yml` parsuje się, a każdy z 7 jobów ma wyrażenie przełącznika
 - [x] 1.3 Runner online: `github-runner-1` ma status `online`
 - [x] 1.4 Flaga ustawiona: `gh variable get CI_RUNNER` zwraca `szczur-ci`
-- [ ] 1.5 CI PR-a zielone na VM: wszystkie joby `success` na `github-runner-1`
+- [x] 1.5 CI PR-a zielone na VM: wszystkie joby `success` na `github-runner-1`
 - [x] 1.6 Ponowne uruchomienie `setup.sh` na VM kończy się bez błędu i pomija zarejestrowany runner
 
 #### Manual
 
-- [ ] 1.7 Railway wdrożył PR env tej zmiany po CI i `/api/health` w PR env odpowiada
-- [ ] 1.8 Drugi push: CI znów zielone, na VM brak pozostałych kontenerów `web`/`api`
-- [ ] 1.9 Przełącznik w drugą stronę: bez `CI_RUNNER` joby żądają `ubuntu-latest`, potem flaga z powrotem
-- [ ] 1.10 Plik `/etc/sudoers.d/90-claude-setup` usunięty z VM
+- [x] 1.7 Railway wdrożył PR env tej zmiany po CI i `/api/health` w PR env odpowiada
+- [x] 1.8 Drugi push: CI znów zielone, na VM brak pozostałych kontenerów `web`/`api`
+- [x] 1.9 Przełącznik w drugą stronę: bez `CI_RUNNER` joby żądają `ubuntu-latest`, potem flaga z powrotem
+- [x] 1.10 Plik `/etc/sudoers.d/90-claude-setup` usunięty z VM
 
 ### Phase 2: Dokumentacja i domknięcie
 

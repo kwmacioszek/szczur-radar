@@ -19,7 +19,7 @@ gh variable delete CI_RUNNER                 # wszystko z powrotem na GitHuba
 gh variable list                             # co jest ustawione
 ```
 
-Zmiana działa od następnego runu (nowy commit). GitHub bierze `runs-on` z `ci.yml` gałęzi, więc gałąź PR-a sprzed tej zmiany trzeba zaktualizować z `main`.
+Zmiana działa od następnego runu: nowego commita albo ponownego uruchomienia starego (`gh run rerun <id>` czyta zmienne na nowo — sprawdzone 2026-10-18). GitHub bierze `runs-on` z `ci.yml` gałęzi, więc gałąź PR-a sprzed tej zmiany trzeba zaktualizować z `main`.
 
 **Uwaga:** etykieta, której nie ma żaden runner online (VM wyłączona, usługa padła), zostawia joby w kolejce. Railway czeka na wynik CI najwyżej 2 h, potem pomija deploy, a GitHub anuluje job po 24 h. Przy wyłączonej VM usuń zmienną, o ile limit minut na GitHubie na to pozwala, albo ustaw budżet w Billing.
 
