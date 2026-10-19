@@ -19,7 +19,7 @@ import pl.szczurradar.api.agents.assessor.Provenance;
 import pl.szczurradar.api.agents.assessor.contract.ItemType;
 import pl.szczurradar.api.agents.assessor.validation.FailureClass;
 import pl.szczurradar.api.agents.assessor.validation.Violation;
-import pl.szczurradar.api.config.LlmProviderProperties.Provider;
+import pl.szczurradar.api.llm.Provider;
 import pl.szczurradar.api.posts.Assessment;
 import pl.szczurradar.api.posts.AssessmentRepository;
 import pl.szczurradar.api.posts.Post;

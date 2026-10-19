@@ -1,21 +1,26 @@
 package pl.szczurradar.api.pipeline;
 
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 
-import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.boot.convert.DurationStyle;
 import org.springframework.core.env.PropertyResolver;
 
-import pl.szczurradar.api.config.LlmProviderProperties;
+import pl.szczurradar.api.llm.LlmProviderProperties;
 import pl.szczurradar.api.llm.transport.TransportRetry;
 import pl.szczurradar.api.pipeline.state.Durations;
+import pl.szczurradar.api.settings.DurationSetting;
+import pl.szczurradar.api.settings.InvalidSettingsException;
+import pl.szczurradar.api.settings.SettingText;
 
 /**
  * {@code PIPELINE_STALL_TIMEOUT}: how long a run of this instance may go without progress before
- * {@link RunWatchdog} stops it. Optional, with a unit, e.g. {@code 39m} or {@code 1h}; a bare number
- * (Spring would read it as milliseconds), zero or less, or more than {@code 24h} fails the start.
+ * {@link RunWatchdog} stops it. Optional, by the one duration rule ({@link DurationSetting}: a whole number
+ * with a lower-case unit, e.g. {@code 39m} or {@code 1h}), from {@link #MIN 1ms} to {@link #MAX 1d}; a
+ * bare number (Spring would read it as milliseconds), ISO-8601 or a value out of range fails the server's
+ * start with an {@link InvalidSettingsException} (Spring Boot's {@code APPLICATION FAILED TO START} block).
  *
  * <p>The default is the longest single LLM call ({@link TransportRetry#maxCallDuration} for
  * {@code LLM_TIMEOUT} and {@code LLM_SERVICE_TIER}) plus {@link #MARGIN}, and at least
@@ -37,7 +42,10 @@ public final class PipelineStallSettings {
 	/** Added to the longest single LLM call: the run's own writes, a slow connection. */
 	public static final Duration MARGIN = Duration.ofMinutes(5);
 
-	/** The longest accepted timeout. */
+	/** The shortest accepted timeout: an explicit value may be far below {@link #minimum()} (tests, a manual check). */
+	public static final Duration MIN = Duration.ofMillis(1);
+
+	/** The longest accepted timeout ({@code 1d}). */
 	public static final Duration MAX = Duration.ofHours(24);
 
 	private static final Logger log = LoggerFactory.getLogger(PipelineStallSettings.class);
@@ -55,13 +63,12 @@ public final class PipelineStallSettings {
 	 * Reads and validates the setting; logs a warning when it is set below {@link #minimum()}.
 	 *
 	 * @param llm the call settings the default and the minimum follow
-	 * @throws IllegalStateException naming the setting when its value is invalid
+	 * @throws InvalidSettingsException naming the setting when its value is invalid
 	 */
 	public static PipelineStallSettings from(PropertyResolver environment, LlmProviderProperties llm) {
 		Duration minimum = TransportRetry.maxCallDuration(llm.timeout(), llm.serviceTier()).plus(MARGIN);
 		Duration defaultTimeout = minimum.compareTo(MIN_DEFAULT) > 0 ? minimum : MIN_DEFAULT;
-		String value = environment.getProperty(NAME);
-		String text = value == null ? "" : value.strip();
+		String text = SettingText.trimmed(environment.getProperty(NAME));
 		if (text.isEmpty()) {
 			return new PipelineStallSettings(defaultTimeout, minimum);
 		}
@@ -97,30 +104,13 @@ public final class PipelineStallSettings {
 	}
 
 	private static Duration parse(String text, Duration defaultTimeout) {
-		String unset = ", or unset for the default (" + Durations.format(defaultTimeout) + ").";
-		if (text.matches("[+-]?\\d+")) {
-			throw new IllegalStateException("Invalid " + NAME + ": needs a unit, e.g. 39m or 1h (got '" + text
-					+ "'; a bare number would be milliseconds)" + unset);
-		}
-		Duration timeout = duration(text);
+		List<String> problems = new ArrayList<>();
+		Duration timeout = DurationSetting.parse(NAME, text, MIN, MAX, problems);
 		if (timeout == null) {
-			throw new IllegalStateException(
-					"Invalid " + NAME + ": must be a duration such as 39m or 1h (got '" + text + "')" + unset);
-		}
-		if (timeout.isNegative() || timeout.isZero() || timeout.compareTo(MAX) > 0) {
-			throw new IllegalStateException(
-					"Invalid " + NAME + ": must be more than 0 and at most 24h (got '" + text + "')" + unset);
+			throw new InvalidSettingsException("Invalid configuration: " + problems.getFirst()
+					+ ", or unset for the default (" + DurationSetting.format(defaultTimeout) + ").");
 		}
 		return timeout;
-	}
-
-	private static @Nullable Duration duration(String text) {
-		try {
-			return DurationStyle.detectAndParse(text);
-		}
-		catch (IllegalArgumentException | ArithmeticException ex) {
-			return null;
-		}
 	}
 
 }

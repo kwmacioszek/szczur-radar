@@ -10,7 +10,9 @@ import java.util.Set;
 import java.util.function.Function;
 
 import org.jspecify.annotations.Nullable;
-import org.springframework.boot.convert.DurationStyle;
+
+import pl.szczurradar.api.settings.DurationSetting;
+import pl.szczurradar.api.settings.SettingText;
 
 /**
  * Where an activation link points and how long it is valid, from two environment settings of the
@@ -20,9 +22,10 @@ import org.springframework.boot.convert.DurationStyle;
  *   <li>{@code WEB_PUBLIC_URL} (required): the web app's public address, scheme, host and optional
  *       port only, e.g. {@code https://szczur-radar-web-production.up.railway.app}; a trailing
  *       {@code /} is dropped;
- *   <li>{@code ACTIVATION_LINK_TTL} (optional, default {@code 12h}): with a unit, e.g. {@code 12h}
- *       or {@code 90m}, from {@code 1m} to {@code 7d}. A bare number is refused: Spring would read it
- *       as milliseconds.
+ *   <li>{@code ACTIVATION_LINK_TTL} (optional, default {@code 12h}): by the one duration rule
+ *       ({@link DurationSetting}: a whole number with a lower-case unit, e.g. {@code 12h} or
+ *       {@code 90m}), from {@code 1m} to {@code 7d}. A bare number (Spring would read it as
+ *       milliseconds) and ISO-8601 are refused.
  * </ul>
  *
  * <p>Only the operator commands that issue links read them, before their Spring context starts; the
@@ -74,9 +77,10 @@ public final class ActivationSettings {
 	/** Reads and validates both settings from {@code environment} (e.g. {@code System::getenv}). */
 	public static Result from(Function<String, @Nullable String> environment) {
 		List<String> problems = new ArrayList<>();
-		String webPublicUrl = webPublicUrl(trimmed(environment.apply(WEB_PUBLIC_URL)), problems);
-		String ttlText = trimmed(environment.apply(LINK_TTL));
-		Duration linkTtl = ttlText.isEmpty() ? DEFAULT_LINK_TTL : linkTtl(ttlText, problems);
+		String webPublicUrl = webPublicUrl(SettingText.trimmed(environment.apply(WEB_PUBLIC_URL)), problems);
+		String ttlText = SettingText.trimmed(environment.apply(LINK_TTL));
+		Duration linkTtl = ttlText.isEmpty() ? DEFAULT_LINK_TTL
+				: DurationSetting.parse(LINK_TTL, ttlText, MIN_LINK_TTL, MAX_LINK_TTL, problems);
 		if (!problems.isEmpty()) {
 			return new Result.Invalid(problems);
 		}
@@ -132,31 +136,6 @@ public final class ActivationSettings {
 		catch (URISyntaxException ex) {
 			return null;
 		}
-	}
-
-	private static @Nullable Duration linkTtl(String text, List<String> problems) {
-		if (text.matches("[+-]?\\d+")) {
-			problems.add(LINK_TTL + " needs a unit, e.g. 12h or 90m (got '" + text
-					+ "'; a bare number would be milliseconds)");
-			return null;
-		}
-		Duration ttl;
-		try {
-			ttl = DurationStyle.detectAndParse(text);
-		}
-		catch (IllegalArgumentException | ArithmeticException ex) {
-			problems.add(LINK_TTL + " must be a duration such as 12h or 90m (got '" + text + "')");
-			return null;
-		}
-		if (ttl.compareTo(MIN_LINK_TTL) < 0 || ttl.compareTo(MAX_LINK_TTL) > 0) {
-			problems.add(LINK_TTL + " must be from 1m to 7d (got '" + text + "')");
-			return null;
-		}
-		return ttl;
-	}
-
-	private static String trimmed(@Nullable String value) {
-		return value == null ? "" : value.strip();
 	}
 
 }

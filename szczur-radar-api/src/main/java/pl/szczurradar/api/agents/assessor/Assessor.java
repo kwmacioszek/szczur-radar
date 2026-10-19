@@ -18,13 +18,13 @@ import pl.szczurradar.api.agents.assessor.validation.OutputParser;
 import pl.szczurradar.api.agents.assessor.validation.RuleBasedValidator;
 import pl.szczurradar.api.agents.assessor.validation.ValidationResult;
 import pl.szczurradar.api.agents.assessor.validation.Violation;
-import pl.szczurradar.api.config.LlmProviderProperties;
-import pl.szczurradar.api.config.LlmProviderProperties.Provider;
 import pl.szczurradar.api.llm.LlmCallException;
 import pl.szczurradar.api.llm.LlmClient;
 import pl.szczurradar.api.llm.LlmConfigurationException;
+import pl.szczurradar.api.llm.LlmProviderProperties;
 import pl.szczurradar.api.llm.LlmRequest;
 import pl.szczurradar.api.llm.LlmResponse;
+import pl.szczurradar.api.llm.Provider;
 
 /**
  * Assesses one entry against contract V2: the no-content prefilter (§11), exactly one model call for

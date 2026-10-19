@@ -29,8 +29,8 @@ import pl.szczurradar.api.agents.assessor.AssessorAgent;
 import pl.szczurradar.api.agents.assessor.ContractFixtures;
 import pl.szczurradar.api.agents.assessor.Prefilter;
 import pl.szczurradar.api.agents.assessor.Provenance;
-import pl.szczurradar.api.config.LlmProviderProperties;
 import pl.szczurradar.api.llm.LlmClient;
+import pl.szczurradar.api.llm.LlmProviderProperties;
 
 /**
  * Embabel inside the real application context, with the same configuration as the server and the

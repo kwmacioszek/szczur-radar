@@ -17,7 +17,7 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 import pl.szczurradar.api.agents.assessor.validation.OutputParser;
-import pl.szczurradar.api.config.LlmProviderProperties.Provider;
+import pl.szczurradar.api.llm.Provider;
 
 /** What each provider receives of the V2 output schema. */
 class ProviderSchemasTest {

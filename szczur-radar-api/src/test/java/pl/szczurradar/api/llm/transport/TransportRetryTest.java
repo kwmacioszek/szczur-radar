@@ -11,10 +11,10 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
-import pl.szczurradar.api.config.LlmProviderProperties.ServiceTier;
 import pl.szczurradar.api.llm.CallFailure;
 import pl.szczurradar.api.llm.LlmCallException;
 import pl.szczurradar.api.llm.LlmConfigurationException;
+import pl.szczurradar.api.llm.ServiceTier;
 import pl.szczurradar.api.llm.transport.TransportException.Kind;
 
 /** The retry loop on scripted attempts: counts, waits, classes and the flex fallback. */
