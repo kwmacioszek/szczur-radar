@@ -151,7 +151,7 @@ Wait for CI uruchamia deploy kodu dopiero po zakończeniu `ci.yml`, więc żaden
 | `DEPLOY_STATE` | `success`, `failure` albo `error` (`deployment_status.state`); inna wartość: kod 2 |
 | `DEPLOY_ENVIRONMENT` | `deployment.environment`, np. `szczur-radar / production` |
 | `DEPLOY_SHA` | wdrożony commit (`deployment.sha`) |
-| `GH_TOKEN`, `GITHUB_REPOSITORY` | dla `gh` (`issues: write`); `GITHUB_SERVER_URL` i `GITHUB_RUN_ID` dają link do runu w issue |
+| `GH_TOKEN`, `GITHUB_REPOSITORY` | dla `gh` (`issues: write`; `github.token` runu, bez osobnego sekretu); `GITHUB_SERVER_URL` i `GITHUB_RUN_ID` dają link do runu w issue. Na runnerze bez `gh` (self-hosted) workflow najpierw pobiera przypiętą wersję i sprawdza jej SHA-256 (krok „Ensure gh (pinned)”) |
 | `DEPLOY_GUARD_WAKE_TIMEOUT` | jak długo ponawiać sondy po `success` (domyślnie `3m`, wspólne okno obu sond) |
 | `DEPLOY_WEB_URL` | opcjonalna, tylko do testów i ręcznego użycia (workflow jej nie ustawia): origin sondowany zamiast adresu z `web-url.sh`; nazwa środowiska i tak musi być znana |
 

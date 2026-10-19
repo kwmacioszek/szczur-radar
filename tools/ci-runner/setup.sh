@@ -25,8 +25,7 @@ export DEBIAN_FRONTEND=noninteractive
 # (also for the runner's installdependencies.sh below) instead of failing.
 echo 'DPkg::Lock::Timeout "600";' >/etc/apt/apt.conf.d/90-ci-runner-lock
 apt-get update -q
-# gh: deploy-verify.yml opens deploy-health issues with it (tools/deploy-gate/verify-deploy.sh).
-apt-get install -y -q docker.io docker-buildx git jq curl unzip ca-certificates gh
+apt-get install -y -q docker.io docker-buildx git jq curl unzip ca-certificates
 
 step "docker daemon"
 # Bounded container logs; persistent runners would otherwise grow them forever.
