@@ -570,10 +570,10 @@ Bezpiecznik skraca awarię: przebieg staje po ~9 nieudanych żądaniach HTTP zam
 
 #### Automated
 
-- [x] 3.1 Testy jednostkowe dyspozytora i `Assessor` przechodzą
-- [x] 3.2 Testy integracyjne przebiegu (z prawdziwym transportem) przechodzą
-- [x] 3.3 Kod pomiarowy się kompiluje
-- [x] 3.4 Pełny zestaw testów przechodzi
+- [x] 3.1 Testy jednostkowe dyspozytora i `Assessor` przechodzą — 30f860b
+- [x] 3.2 Testy integracyjne przebiegu (z prawdziwym transportem) przechodzą — 30f860b
+- [x] 3.3 Kod pomiarowy się kompiluje — 30f860b
+- [x] 3.4 Pełny zestaw testów przechodzi — 30f860b
 
 #### Manual
 
@@ -583,9 +583,9 @@ Bezpiecznik skraca awarię: przebieg staje po ~9 nieudanych żądaniach HTTP zam
 
 #### Automated
 
-- [ ] 4.1 Testy API przechodzą
-- [ ] 4.2 Testy SPA przechodzą
-- [ ] 4.3 Typecheck i build SPA przechodzą
+- [x] 4.1 Testy API przechodzą
+- [x] 4.2 Testy SPA przechodzą
+- [x] 4.3 Typecheck i build SPA przechodzą
 
 #### Manual
 

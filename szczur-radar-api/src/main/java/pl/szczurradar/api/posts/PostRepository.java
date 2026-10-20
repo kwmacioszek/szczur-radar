@@ -73,6 +73,21 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
 	Page<Post> findByStageIn(Collection<PostStage> stages, Pageable page);
 
 	/**
+	 * A page of the admin's failed list, newest first: failed and dead posts, and stored posts on hold
+	 * ({@link Post#MAX_TECHNICAL_FAILURES} technical failures in a row, never assessed since). A failed post on
+	 * hold is in by its stage.
+	 */
+	default Page<Post> findFailedPage(int page, int size) {
+		return findInStagesOrOnHold(List.of(PostStage.FAILED, PostStage.DEAD), PostStage.STORED,
+				Post.MAX_TECHNICAL_FAILURES, PageRequest.of(page, size, NEWEST_FIRST));
+	}
+
+	@Query("select p from Post p where p.stage in :stages"
+			+ " or (p.stage = :stored and p.technicalFailures >= :maxTechnicalFailures)")
+	Page<Post> findInStagesOrOnHold(Collection<PostStage> stages, PostStage stored, int maxTechnicalFailures,
+			Pageable page);
+
+	/**
 	 * A page of the feed (FR-011a), newest first, with {@code total} counted after the filter. Without a
 	 * condition it is every assessed post ({@link #findPage}). With one, an assessed post is in only if
 	 * its latest {@code ok} assessment (the one the feed shows: latest {@code assessed_at}, then greatest
