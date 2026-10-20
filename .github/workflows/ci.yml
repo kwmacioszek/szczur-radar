@@ -485,8 +485,9 @@ jobs:
         run: railway config apply --plan plan.pin --yes
       - name: Check after the apply
         # Only after an apply: every redeployed service must deploy again
-        # (SUCCESS; WAITING/QUEUED behind Wait for CI is handed over to
-        # deploy-verify) and /api/ready must answer 200, else the job fails.
+        # (SUCCESS; WAITING/QUEUED behind Wait for CI is handed over to the
+        # monitor szczur-radar-monitor) and /api/ready must answer 200, else
+        # the job fails.
         if: steps.apply.outcome == 'success'
         run: |
           tools/deploy-gate/verify-apply.sh check restarts.txt deployments-before.json "$WEB_URL" \

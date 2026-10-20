@@ -15,7 +15,7 @@
 # Also: the step summary (number of changes, the changes, the restarts), the restarts file
 # (GATE_RESTARTS_FILE, names of services and databases only: a bucket has no deployment), the
 # `::error::` lines, and exit code 2 for a bad invocation or an unreadable plan.
-# Then, without Railway or GitHub (9–12):
+# Then, without Railway or GitHub (9–11):
 #   9.  web-url.sh: production, szczur-radar-pr-<N>, an unknown name (exit 2);
 #   10. wait-safe.sh against a stub API (a small Python HTTP server with answers scripted per case):
 #       safe; busy → safe; busy until the timeout and until a deadline shorter than it (exit 1); a
@@ -27,12 +27,6 @@
 #       DEPLOYING → SUCCESS; REMOVED → a newer SUCCESS; the same ID until the limit (exit 1, "did not
 #       trigger a deploy"); DEPLOYING until the limit (exit 1); /api/ready 503 (exit 1); an empty
 #       restarts list (only /api/ready); bad invocations (exit 2).
-#   12. verify-deploy.sh against the stub API and a stub `gh` in PATH (records its calls): success with
-#       both probes 200, also after a 503 while waking (no gh call); success with /api/ready 503 (a new
-#       issue); failure (a new issue, each probe asked once); an open issue of the environment (a
-#       comment instead, a pull request in the list ignored; one of szczur-radar-pr-81 does not count
-#       for szczur-radar-pr-8); another project or an unknown environment (exit 0, no request, no gh
-#       call); gh failing (exit 1); bad invocations (exit 2).
 # Needs bash, jq, curl and python3 (no Docker). Short limits (1–3 s) keep it under a minute.
 # Run from anywhere: tools/deploy-gate/test.sh
 set -euo pipefail
@@ -377,10 +371,6 @@ show_run() {
         printf -- '--- railway calls\n'
         cat "$tmp/$1.railway/calls"
     fi
-    if [[ -f $tmp/$1.gh/calls ]]; then
-        printf -- '--- gh calls\n'
-        cat "$tmp/$1.gh/calls"
-    fi
 }
 
 # Case $1's log (stderr) says $2.
@@ -621,9 +611,9 @@ check_case sleeping 0 szczur-radar-api '{"szczur-radar-api": "a1"}' "[$ready]"
 pass "SLEEPING (deployed, then asleep): exit 0"
 railway_answers waiting db-backup "b2 WAITING"
 check_case waiting 0 db-backup '{"db-backup": "b1"}' "[$ready]"
-run_says waiting '::notice::post-apply check: the deployment of db-backup waits (WAITING; Wait for CI holds it until this workflow ends): handed over to deploy-verify'
-out_says waiting '| `db-backup` | `b2` | WAITING: handed over to deploy-verify |'
-pass "WAITING (Wait for CI): exit 0, handed over to deploy-verify"
+run_says waiting '::notice::post-apply check: the deployment of db-backup waits (WAITING; Wait for CI holds it until this workflow ends): handed over to the monitor szczur-radar-monitor'
+out_says waiting '| `db-backup` | `b2` | WAITING: handed over to the monitor szczur-radar-monitor |'
+pass "WAITING (Wait for CI): exit 0, handed over to the monitor szczur-radar-monitor"
 railway_answers deploying postgres "p1 SUCCESS" "p2 INITIALIZING" "p2 DEPLOYING" "p2 SUCCESS"
 check_case deploying 0 postgres '{"postgres": "p1"}' "[$ready]"
 run_says deploying 'post-apply check: postgres deployment p2: DEPLOYING'
@@ -637,7 +627,7 @@ railway_answers several db-backup "b2 QUEUED"
 railway_answers several postgres "p2 BUILDING" "p2 SUCCESS"
 railway_answers several pipeline-trigger none "t1 SUCCESS"
 check_case several 0 "db-backup postgres pipeline-trigger" '{"db-backup": "b1", "postgres": "p1", "pipeline-trigger": null}' "[$ready]"
-out_says several '| `db-backup` | `b2` | QUEUED: handed over to deploy-verify |'
+out_says several '| `db-backup` | `b2` | QUEUED: handed over to the monitor szczur-radar-monitor |'
 out_says several '| `pipeline-trigger` | `t1` | deployed (SUCCESS) |'
 pass "three services, one created by the apply (null before): exit 0"
 railway_answers same-id postgres "p1 SUCCESS"
@@ -688,155 +678,6 @@ run_says bad-name 'is not a service name'
 run_verify bad-url 2 -- check "$tmp/bad.restarts" "$tmp/bad.before.json" "https://example.test/api"
 run_says bad-url 'the web address must be an http(s) origin'
 pass "bad invocations (arguments, files, snapshot, RAILWAY_ENVIRONMENT_ID, duration, service name, web address): exit 2"
-
-# The stub `gh`: every call goes to $GH_STUB/calls (one line of arguments) and the file of
-# --body-file to $GH_STUB/body; $GH_STUB/fail makes every call fail (as gh does without a valid
-# token). `api repos/<repo>/issues?…` prints $GH_STUB/issues ([] without it); `issue create` and
-# `issue comment` print a URL, as gh does. Any other command, or a call without GH_TOKEN, fails with exit 3.
-cat >"$tmp/bin/gh" <<'SH'
-#!/usr/bin/env bash
-set -euo pipefail
-printf '%s\n' "$*" >>"$GH_STUB/calls"
-args=("$@")
-for (( i = 0; i < ${#args[@]}; i++ )); do
-    [[ ${args[i]} != --body-file ]] || cp "${args[i + 1]}" "$GH_STUB/body"
-done
-[[ -n ${GH_TOKEN:-} ]] || { echo "stub gh: no GH_TOKEN" >&2; exit 3; }
-[[ ! -f $GH_STUB/fail ]] || { echo "HTTP 401: Bad credentials (https://api.github.com/graphql)" >&2; exit 1; }
-case "${1:-} ${2:-}" in
-    "label create") ;;
-    "api repos/"*"/issues?"*) cat "$GH_STUB/issues" 2>/dev/null || echo "[]" ;;
-    "issue create") echo "https://github.com/example/szczur-radar/issues/101" ;;
-    "issue comment") echo "https://github.com/example/szczur-radar/issues/$3#issuecomment-1" ;;
-    *) echo "stub gh: unexpected command: $*" >&2; exit 3 ;;
-esac
-SH
-chmod +x "$tmp/bin/gh"
-
-readonly deploy_sha=0123456789abcdef0123456789abcdef01234567
-readonly healthz='{"status": 200, "body": "ok"}'
-
-# Case $1: verify-deploy.sh with the variables after it (NAME=value; by default the success of
-# $deploy_sha on szczur-radar / production, run 4242 of example/szczur-radar) must exit with $2. Its
-# stdout goes to $tmp/$1.out, its log to $tmp/$1.log, the stub gh's calls to $tmp/$1.gh/.
-run_deploy_check() {
-    local name=$1 expected=$2 status=0
-    shift 2
-    mkdir -p "$tmp/$name.gh"
-    env -u DEPLOY_GUARD_WAKE_TIMEOUT -u DEPLOY_WEB_URL PATH="$tmp/bin:$PATH" GH_STUB="$tmp/$name.gh" \
-        GH_TOKEN=stub-token GITHUB_REPOSITORY=example/szczur-radar GITHUB_SERVER_URL=https://github.com \
-        GITHUB_RUN_ID=4242 DEPLOY_STATE=success DEPLOY_ENVIRONMENT="szczur-radar / production" \
-        DEPLOY_SHA=$deploy_sha "$@" "$here/verify-deploy.sh" >"$tmp/$name.out" 2>"$tmp/$name.log" || status=$?
-    [[ $status == "$expected" ]] || { show_run "$name"; die "$name: exit code $status, expected $expected"; }
-}
-
-# Case $1: verify-deploy.sh while the stub API's /api/ready answers $3 and /healthz $4 (JSON lists),
-# with the variables after it, must exit with $2.
-deploy_case() {
-    local name=$1 expected=$2 ready_answers=$3 healthz_answers=$4
-    shift 4
-    start_stub "$name" "{\"paths\": {\"/api/ready\": $ready_answers, \"/healthz\": $healthz_answers}}"
-    run_deploy_check "$name" "$expected" DEPLOY_WEB_URL="$STUB_URL" "$@"
-    stop_stub
-}
-
-# Case $1's stub gh got exactly the calls after it (each a prefix of its line, in order).
-gh_calls_are() {
-    local name=$1 calls=() i line
-    shift
-    if [[ -f $tmp/$name.gh/calls ]]; then
-        while IFS= read -r line; do calls+=("$line"); done <"$tmp/$name.gh/calls"
-    fi
-    (( ${#calls[@]} == $# )) || { show_run "$name"; die "$name: ${#calls[@]} gh calls, expected $#"; }
-    for (( i = 1; i <= $#; i++ )); do
-        [[ ${calls[i - 1]} == "${!i}"* ]] || { show_run "$name"; die "$name: gh call $i is not '${!i}…'"; }
-    done
-}
-
-# Case $1's issue body (or comment) says $2.
-body_says() {
-    grep -qF -- "$2" "$tmp/$1.gh/body" || { show_run "$1"; cat "$tmp/$1.gh/body" 2>/dev/null; die "$1: the issue body does not say '$2'"; }
-}
-
-readonly label_call="label create deploy-health --repo example/szczur-radar --force"
-readonly list_call="api repos/example/szczur-radar/issues?labels=deploy-health&state=open&per_page=100"
-
-step "12. verify-deploy.sh: the check after a code deploy"
-deploy_case deploy-healthy 0 "[$ready]" "[$healthz]"
-run_says deploy-healthy 'deploy check: szczur-radar / production is healthy (/api/ready and /healthz 200)'
-out_says deploy-healthy '| `/api/ready` | HTTP 200 |'
-out_says deploy-healthy '| `/healthz` | HTTP 200 |'
-gh_calls_are deploy-healthy
-api_requests_were deploy-healthy 2
-pass "success, /api/ready and /healthz 200: exit 0, no gh call"
-deploy_case deploy-wakes 0 "[$unavailable, $ready]" "[$healthz]"
-run_says deploy-wakes 'deploy check: /api/ready: HTTP 503; retrying (the service may be waking up)'
-gh_calls_are deploy-wakes
-pass "success, /api/ready 503 then 200 (waking): exit 0, no gh call"
-deploy_case deploy-not-ready 0 "[$unavailable]" "[$healthz]" DEPLOY_GUARD_WAKE_TIMEOUT=2s
-run_says deploy-not-ready '::error::deploy check: szczur-radar / production is unhealthy after the deployment of 0123456789abcdef0123456789abcdef01234567 (state success; /api/ready HTTP 503'
-run_says deploy-not-ready '::notice::deploy check: opened https://github.com/example/szczur-radar/issues/101'
-gh_calls_are deploy-not-ready "$label_call" "$list_call" \
-    "issue create --repo example/szczur-radar --title Niezdrowe wdrożenie: production --label deploy-health --body-file"
-body_says deploy-not-ready '| Commit | `0123456789abcdef0123456789abcdef01234567` |'
-body_says deploy-not-ready '| Stan deployu (Railway) | `success` |'
-body_says deploy-not-ready '| `/api/ready` | HTTP 503 |'
-body_says deploy-not-ready '| `/healthz` | HTTP 200 |'
-body_says deploy-not-ready '| Run | https://github.com/example/szczur-radar/actions/runs/4242 |'
-body_says deploy-not-ready 'deploy-verify nie zamyka tego issue'
-out_says deploy-not-ready '### Niezdrowe wdrożenie: `production`'
-pass "success, /api/ready 503 until DEPLOY_GUARD_WAKE_TIMEOUT=2s: exit 0, the label, a new issue with the commit, state, probes and run link"
-deploy_case deploy-failure 0 "[$ready]" "[$healthz]" DEPLOY_STATE=failure
-run_says deploy-failure '::error::deploy check: Railway reports the deployment of 0123456789abcdef0123456789abcdef01234567 to szczur-radar / production as failure'
-gh_calls_are deploy-failure "$label_call" "$list_call" "issue create --repo example/szczur-radar --title Niezdrowe wdrożenie: production"
-body_says deploy-failure '| Stan deployu (Railway) | `failure` |'
-body_says deploy-failure '| `/api/ready` | HTTP 200 |'
-pass "failure (probes 200): exit 0, a new issue"
-deploy_case deploy-error-down 0 "[$unavailable]" "[$unavailable]" DEPLOY_STATE=error DEPLOY_GUARD_WAKE_TIMEOUT=20s
-api_requests_were deploy-error-down 2
-body_says deploy-error-down '| `/healthz` | HTTP 503 |'
-pass "error with both probes 503: each probe asked once (not retried for DEPLOY_GUARD_WAKE_TIMEOUT), a new issue"
-mkdir -p "$tmp/deploy-existing.gh"
-# The REST list returns pull requests too: #30, older and naming the environment, is one.
-printf '%s\n' '[{"number": 57, "title": "Niezdrowe wdrożenie: szczur-radar-pr-81"},
-  {"number": 42, "title": "Niezdrowe wdrożenie: production"},
-  {"number": 30, "title": "Niezdrowe wdrożenie: production", "pull_request": {"url": "https://api.github.com/x"}},
-  {"number": 64, "title": "Niezdrowe wdrożenie: production (again)"}]' >"$tmp/deploy-existing.gh/issues"
-deploy_case deploy-existing 0 "[$ready]" "[$healthz]" DEPLOY_STATE=failure
-gh_calls_are deploy-existing "$label_call" "$list_call" "issue comment 42 --repo example/szczur-radar --body-file"
-run_says deploy-existing '::notice::deploy check: commented on the open issue #42: https://github.com/example/szczur-radar/issues/42#issuecomment-1'
-body_says deploy-existing '| Stan deployu (Railway) | `failure` |'
-pass "an open deploy-health issue of the environment: exit 0, a comment on the oldest (#42, not the pull request #30), no new issue"
-mkdir -p "$tmp/deploy-other-pr.gh"
-cp "$tmp/deploy-existing.gh/issues" "$tmp/deploy-other-pr.gh/issues"
-deploy_case deploy-other-pr 0 "[$ready]" "[$healthz]" DEPLOY_STATE=failure DEPLOY_ENVIRONMENT="szczur-radar / szczur-radar-pr-8"
-gh_calls_are deploy-other-pr "$label_call" "$list_call" "issue create --repo example/szczur-radar --title Niezdrowe wdrożenie: szczur-radar-pr-8"
-pass "an open issue of szczur-radar-pr-81 is not one of szczur-radar-pr-8: a new issue"
-for environment in "szczur-radar / staging" "other-project / production" "production"; do
-    run_deploy_check deploy-unknown 0 DEPLOY_STATE=failure DEPLOY_ENVIRONMENT="$environment" \
-        DEPLOY_WEB_URL="http://127.0.0.1:$(free_port)"
-    run_says deploy-unknown 'nothing to check'
-    gh_calls_are deploy-unknown
-done
-pass "another project or an unknown environment (staging, other-project, no project): exit 0, no request, no gh call"
-mkdir -p "$tmp/deploy-gh-fails.gh"
-touch "$tmp/deploy-gh-fails.gh/fail"
-deploy_case deploy-gh-fails 1 "[$ready]" "[$healthz]" DEPLOY_STATE=failure
-run_says deploy-gh-fails '::error::deploy check: gh label create deploy-health failed, the unhealthy deployment of szczur-radar / production is NOT reported in an issue: HTTP 401: Bad credentials'
-pass "gh failing (the alarm does not get through): exit 1"
-run_deploy_check deploy-bad-state 2 DEPLOY_STATE=in_progress
-run_says deploy-bad-state "::error::deploy check: DEPLOY_STATE must be success, failure or error (it is 'in_progress')"
-run_deploy_check deploy-no-repository 2 GITHUB_REPOSITORY=
-run_says deploy-no-repository 'GITHUB_REPOSITORY must be <owner>/<repository>'
-run_deploy_check deploy-no-token 2 GH_TOKEN=
-run_deploy_check deploy-bad-sha 2 DEPLOY_SHA=main
-run_deploy_check deploy-bad-duration 2 DEPLOY_GUARD_WAKE_TIMEOUT=3min
-run_deploy_check deploy-bad-url 2 DEPLOY_WEB_URL=https://example.test/api
-run_says deploy-bad-url 'the web address must be an http(s) origin'
-for name in deploy-bad-state deploy-no-repository deploy-no-token deploy-bad-sha deploy-bad-duration deploy-bad-url; do
-    gh_calls_are "$name"
-done
-pass "bad invocations (state, repository, token, SHA, duration, web address): exit 2, no gh call"
 
 echo
 echo "gate.sh step summary of the real szczur-radar-pr-81 plan (what the railway-config job shows):"

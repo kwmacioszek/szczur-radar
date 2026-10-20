@@ -966,6 +966,8 @@ The incident of 2026-10-12 (a "safe" apply restarted Postgres, which hung for 9 
 
 ### `deploy-verify` and the `deploy-health` issue
 
+**Replaced (2026-10-20, `deploy-verification-hardening`):** `deploy-verify.yml` and `verify-deploy.sh` are removed; the external monitor `szczur-radar-monitor` checks each deployed service instead (section `deploy-verification-hardening`). This subsection is kept as the record of S-14.
+
 No step of `ci.yml` can see the code deploy, which starts only after the workflow ends. Railway reports each environment's deploy as a GitHub Deployment `szczur-radar / <environment>`, and every status of it triggers `.github/workflows/deploy-verify.yml` (`on: deployment_status`).
 
 - The job runs only for the states `success`, `failure` and `error` of a `szczur-radar / …` environment. Other events give a `skipped` job, which never blocks Wait for CI and costs no minutes.
@@ -1168,6 +1170,73 @@ An API older than S-08 gives `skipped ?`; the deploy order of the API and the cr
    - a usual night (no skipped element, only retryable `failed` posts) gives no notification, as before.
 3. **Record which case the first nights were:** a usual night, a warning (`skipped` > 0: a notification, exit 0) or an empty run (`failed`: a notification, exit 1, a Railway push). An empty night is handled with the runbook above.
 4. **Record and close.** Comment the results on issue #67: the merge commit, deployment IDs, the first night's cron and API lines, the notifications seen. Close the issue only after this production verification.
+
+## deploy-verification-hardening: wiarygodna weryfikacja wdrożeń (monitor zewnętrzny)
+
+**Status (2026-10-20): in progress** on branch `feature/deploy-verification-hardening`; not merged. Change: `context/changes/deploy-verification-hardening/`. It replaces the S-14 workflow `deploy-verify` (section S-14, "`deploy-verify` and the `deploy-health` issue"):
+- Railway gives one GitHub Deployment per environment and commit, with statuses that do not name the service. Every `in_progress` gave a `skipped` run (29 of 49 runs), a `failure` of any service (e.g. a cron's deliberate `CRASHED`) marked the whole environment, and a later `success` masked it.
+- The workflow could never end red: Wait for CI counts the conclusion of every workflow at a commit in szczur-radar, so a red run would block a redeploy of that commit.
+
+After this change szczur-radar has no workflow besides `ci.yml`. The deploy guard (`/api/deploy-safety`, `wait-safe.sh`, section S-14), the check after the apply (`verify-apply.sh`) and the no-merge rules (section S-05) stay unchanged: the monitor only reads the state after a deploy and triggers nothing.
+
+### Architecture
+
+```
+Railway project webhook (szczur-radar, PR envs included, header X-Monitor-Secret)
+  → Cloudflare Worker (repo szczur-radar-monitor, worker/): secret, project, event type, field formats
+     → workflow_dispatch of verify.yml in kwmacioszek/szczur-radar-monitor (public repo)
+        → verifier/verify.sh: the deployed service's state (railway CLI) + probes → green or red run
+           → red: one deploy-health issue per environment and service, assigned to the operator
+```
+
+- **Webhook.** One Railway webhook on the szczur-radar project, PR envs included, with the header `X-Monitor-Secret`. It is the only change in the Railway project and is not declared in `.railway/railway.ts` (the SDK has no webhooks). Railway sends it best-effort: no order, 3 retries, 30 s timeout.
+- **Worker.** Checks the secret (constant-time), the project, the event type and the field formats (UUID IDs, names `[a-z0-9-]{1,64}`). The final deploy events (`Deployment.deployed`, `redeployed`, `failed`, `crashed`, `oom_killed`) go on as `workflow_dispatch` of `verify.yml` on `main`; anything else gets 204 without a dispatch. Railway gets 2xx only after GitHub accepted the dispatch, otherwise 502, and Railway retries.
+- **`verify.yml`.** Inputs `event_type`, `environment_id`, `environment_name`, `service_name`, `deployment_id`, passed to the script only through `env:`. Runs of one environment are queued (`concurrency` per environment, `queue: max`, no `cancel-in-progress`), so the issue never races itself. It runs on GitHub's hosted runners (a public repo costs no minutes), not on `szczur-ci`.
+- **The verdict** is about **the service that deployed**, always its current state in Railway, never the webhook's content:
+  - the newest deployment of that service (by `createdAt`, without `SKIPPED`, `REMOVED`, `REMOVING`): `SUCCESS` / `SLEEPING` is OK; `FAILED` / `CRASHED` is red; `BUILDING`, `DEPLOYING`, `INITIALIZING`, `QUEUED`, `WAITING`, `NEEDS_APPROVAL` are asked again every 10 s, and after 5 min the run is red "nieweryfikowalne"; no deployment, an unknown status or Railway not answering is red;
+  - `szczur-radar-api` and `szczur-radar-web` (`READINESS_SERVICES`): after an OK state, through the environment's web origin, `GET /api/ready` (the API reaches the database), `GET /healthz` (Caddy is up) and `GET /` (200, `text/html` with a reference to `/assets/`: the SPA is really served) must answer within one 3 min window (`WAKE_TIMEOUT`, waking a sleeping API);
+  - a cron (`pipeline-trigger`, `db-backup`): only the state of that cron's deployment, no probes. A run of the API or the web never reads the crons' state, and a cron's run never reads the API's or the web's.
+  - Green = the state is OK and (for the API and the web) every probe passed. Errors after the start (exceptions in the log, failures in traffic) are out of scope.
+- **Issue.** One open issue per **environment and service** in the monitor repo: label `deploy-health`, title `Niezdrowe wdrożenie: <environment> / <service>`, assigned to `MONITOR_ASSIGNEE` (the operator; the assignment gives a push in GitHub Mobile). A red run opens it or comments on the oldest open one; the next green run of **the same service** comments "zielone po deployu `<id>`" and closes it. A green web deploy does not close an open API or cron issue. The title is matched with whole words, so `szczur-radar-pr-8` never matches `szczur-radar-pr-81`. Duplicate webhooks just give another run with the same result.
+- **Wait for CI.** The monitor's runs live in another repo, which Wait for CI does not see. A red run never blocks a redeploy of the same commit.
+
+The monitor's `README.md` and `SECURITY.md` are the reference for the scripts, exit codes, the Worker's answers and the set-up.
+
+### Secrets, permissions and rotation (names only)
+
+| Name | Where | Permissions |
+| --- | --- | --- |
+| `WEBHOOK_SECRET` | Worker secret (`wrangler secret put`); the header `X-Monitor-Secret` of the Railway webhook | none, it only authenticates the webhook |
+| `GITHUB_DISPATCH_TOKEN` | Worker secret | fine-grained PAT: only `szczur-radar-monitor`, **Actions: write**, with an expiry date. A leak lets someone start and cancel the monitor's runs, nothing more |
+| `RAILWAY_API_TOKEN` | secret of the GitHub environment `monitor` in the monitor repo (deployment branches: only `main`); read only by `verify.yml` | a dedicated Railway **workspace** token, separate from szczur-radar's CI token. Railway has no read-only tokens, and a project token covers one environment only, while the monitor also watches PR envs |
+| `GITHUB_TOKEN` | the run's own token | `verify.yml`: `contents: read`, `issues: write` in the monitor repo only |
+| `RAILWAY_PROJECT_ID`, `READINESS_SERVICES`, `MONITOR_ASSIGNEE` | repository variables of the monitor repo; `RAILWAY_PROJECT_ID`, `GITHUB_REPO` also in `worker/wrangler.toml` | public values |
+
+No secret of the monitor is in szczur-radar, and szczur-radar's secrets (`RAILWAY_TOKEN` of CI, `LLM_API_KEY`) are not in the monitor.
+
+- **Public repo protection:** `verify.yml` is the only workflow with secrets and has only `workflow_dispatch`; `ci.yml` of the monitor (`pull_request`, `push`) uses no environment and no secret, never `pull_request_target`; `main` has a ruleset (no force-push, changes through PRs); runs from forks need approval; actions are pinned by SHA and `permissions` are explicit.
+- **Rotation:** the PAT always has an expiry date. Before it expires: a new PAT with the same permissions, `npx wrangler secret put GITHUB_DISPATCH_TOKEN`, then revoke the old one. Rotate `RAILWAY_API_TOKEN` together with it (a new workspace token into the environment `monitor`, then revoke the old one in Railway). `WEBHOOK_SECRET`: a new random value (`openssl rand -hex 32`), `wrangler secret put`, then at once the same value in the webhook's header in Railway; in between, webhooks get 401 and Railway retries them. On a suspected leak revoke the secret at its source first, then rotate.
+
+### Limitations
+
+- **A lost webhook or a full queue skips the check.** Railway's webhooks are best-effort, and GitHub keeps at most 100 pending runs per `concurrency` group and cancels the rest. Nothing reconciles them: no schedule and no detection of a missing run. When a deploy has no `verify.yml` run, start it by hand in the monitor repo (Actions → verify → Run workflow, branch `main`) with the service's data: event type, environment ID and name, service name, deployment ID (from Railway's dashboard or `railway deployment list --json -s <service> -e <environment>`).
+- **A night-time `CRASHED` of a cron** (e.g. `db-backup` or `pipeline-trigger` exiting non-zero, section S-05 / S-08) sends `Deployment.crashed`, so it gives a red run and the issue of **that cron**. It does not touch the result or the issues of the API and the web. It comes in addition to Railway's "deployment crashed" notification rule, not instead of it.
+- **A Railway workspace token lives in a public repo's GitHub environment.** It is readable only by `verify.yml` on `main`, which only changes through a PR; anyone who can merge to the monitor's `main` can use it. A leak gives access to the whole Railway workspace: revoke it in Railway at once and rotate.
+- **An environment other than `production` and `szczur-radar-pr-<N>`** has no known web origin, so a deploy of the API or the web there is red "nieweryfikowalne".
+- **Not a gate.** The monitor reports after the deploy; it does not stop a bad deploy, and it does not replace the deploy guard or the no-merge rules.
+
+### Runbook — after the merge (operator; not in the plan's Progress)
+
+0. **Standing rules.** No merge to `main` while `/admin` shows a run `RUNNING`, and not between about 00:30 and 01:30 UTC (section S-05). The merge deploys the services whose code changed through Wait for CI as usual; there is no migration and no variable change.
+1. **Merge (human only).** CI on the PR is green, then the operator merges to `main`. Agents never merge.
+2. **Check the production deploy in the monitor repo.** For every service the merge deployed to production (at least `szczur-radar-api` and `szczur-radar-web`; the crons only if their deployment changed), there is one **green** `verify.yml` run in `kwmacioszek/szczur-radar-monitor` (Actions → verify, environment `production`). Its summary shows the service's state `SUCCESS` or `SLEEPING` and, for the API and the web, `/api/ready`, `/healthz` and `/` with 200. No new `deploy-health` issue in the monitor repo.
+   - At the merge commit in szczur-radar there is no `deploy-verify` run (`gh run list --workflow deploy-verify.yml --commit <sha>` finds nothing or reports no such workflow), only `ci`.
+   - A missing run: the webhook was lost; start `verify.yml` by hand (Limitations). A red run: read its report and the service's deploy logs in Railway, fix, redeploy; the next green run of that service closes the issue.
+   - Close by hand the old `deploy-health` issues still open in szczur-radar (from `deploy-verify`) after a look; the monitor keeps issues only in its own repo.
+3. **Rollback.** If the monitor does not work and the old check is wanted back:
+   - revert the deletion in szczur-radar (a PR reverting the commit that removed `.github/workflows/deploy-verify.yml` and `tools/deploy-gate/verify-deploy.sh`, with its test step and docs; merged by a human), which brings `deploy-verify` back from the next deploy on;
+   - disable (or delete) the webhook in the Railway project's settings, so the monitor stops getting events. The Worker and the monitor repo can stay; revoke `GITHUB_DISPATCH_TOKEN` and `RAILWAY_API_TOKEN` if the monitor is dropped for good.
+4. **Record and close.** Comment the results on this change's issue: the merge commit, the monitor's run IDs per service and their verdicts. Close the issue only after this production verification.
 
 ## Phases
 

@@ -537,8 +537,8 @@ kroków w nagłówku spójna.
 
 #### Automated
 
-- [ ] 4.1 `tools/deploy-gate/test.sh` przechodzi
-- [ ] 4.2 Brak odwołań do `verify-deploy.sh` i `deploy-verify.yml` poza `context/`
+- [x] 4.1 `tools/deploy-gate/test.sh` przechodzi
+- [x] 4.2 Brak odwołań do `verify-deploy.sh` i `deploy-verify.yml` poza `context/`
 - [ ] 4.3 CI szczur-radar na PR zielone
 
 #### Manual
