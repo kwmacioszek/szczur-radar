@@ -3,7 +3,7 @@ project: "Szczur Radar"
 version: 3
 status: draft # draft | active | locked
 created: 2026-09-27
-updated: 2026-10-19
+updated: 2026-10-20
 prd_version: 2
 main_goal: quality
 top_blocker: decisions # 5 decyzji produktowych z audytu (context/archive/2026-10-17-post-mvp-pipeline-audit/research.md, Open Questions); najdroższa: kanał alarmowy poza aplikacją (F-04)
@@ -103,7 +103,7 @@ Na Wykopie (#gielda) i Reddicie codziennie pojawiają się setki postów o inwes
 | S-16 | wykop-ingest-completeness   | stronicowanie Wykopu nie gubi elementów po cichu, a chwilowy błąd Wykopu nie zabija nocy                               | —             | MS-01, MS-03; audyt B5, B6                                  | ready    |
 | S-17 | pipeline-without-embabel    | przebieg działa bez Embabel, przerwanie dociera do oceny, a testy silnika są skupione i niezależne od kolejności       | S-09          | MS-01, MS-03; audyt E, A7, D                                | proposed |
 | S-18 | error-visibility            | błędy wymagające reakcji (ERROR, `/api/ready`, awaria ścieżki alarmowej) docierają do operatora; klucze nie trafiają do logów | F-04     | MS-04; audyt C10, C11, B7                                   | proposed |
-| S-19 | ops-docs-debt               | operator czyta prawdziwe runbooki i stan; zbędne zmienne IaC usunięte; otwarty dług operacyjny domknięty               | —             | MS-02, MS-04; audyt F, C12, C13                             | ready    |
+| S-19 | ops-docs-debt               | operator czyta prawdziwe runbooki i stan; zbędne zmienne IaC usunięte; otwarty dług operacyjny domknięty               | —             | MS-02, MS-04; audyt F, C12, C13                             | in-progress |
 
 ## Streams
 
@@ -296,7 +296,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** niski; usunięcie zmiennych wymaga kolejności „najpierw operator w Railway, potem plik”, inaczej bramka odmówi `variable.delete`; `context/archive/` zostaje nietknięte (archiwum jest niezmienne).
-- **Status:** ready
+- **Status:** in-progress
 
 ## Backlog Handoff
 

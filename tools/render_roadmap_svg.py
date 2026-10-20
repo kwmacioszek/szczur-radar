@@ -171,7 +171,7 @@ m2 = {  # lane, position, title, outcome, status, prerequisites, change id
     "S-16": ("C", 4, "Wykop nie gubi postów po cichu", "stronicowanie Wykopu nie gubi elementów po cichu, a chwilowy błąd Wykopu nie zabija nocy", "ready", "—", "wykop-ingest-completeness"),
     "S-14": ("D", 0, "Bezpieczna bramka wdrożeń", "merge nie wdroży czerwonego commita, crony czekają na CI, po apply jest kontrola zdrowia, ręczne zmienne nie blokują wdrożeń", "done", "—", "safe-deploy-gate"),
     "S-15": ("D", 1, "Kopia bazy sprawdzana w całości", "sprawdzenie kopii bazy obejmuje wszystkie tabele i odrzuca kopię pustej bazy", "done", "—", "backup-check-completeness"),
-    "S-19": ("D", 2, "Dokumenty operatora mówią prawdę", "operator czyta prawdziwe runbooki i stan; zbędne zmienne IaC usunięte; otwarty dług operacyjny domknięty", "ready", "—", "ops-docs-debt"),
+    "S-19": ("D", 2, "Dokumenty operatora mówią prawdę", "operator czyta prawdziwe runbooki i stan; zbędne zmienne IaC usunięte; otwarty dług operacyjny domknięty", "progress", "—", "ops-docs-debt"),
 }
 lanes = {
     "A": ("Sygnał w aplikacji", "Gwiazda przewodnia", C["lime"]),
@@ -283,7 +283,7 @@ text(bx, py + 34, "POSTĘP KAMIENIA MILOWEGO", 10.5, 700, C["muted"], spacing="1
 text(bx, py + 62, "M-2 · MVP Quality & Reliability Hardening", 17, 700)
 text(px + pw - 24, py + 62, "4 / 13", 17, 700, C["text"], anchor="end")
 m2_order = [("F-04", "blocked"), ("S-08", "done"), ("S-09", "ready"), ("S-10", "done"), ("S-11", "ready"), ("S-12", "proposed"),
-            ("S-13", "proposed"), ("S-14", "done"), ("S-15", "done"), ("S-16", "ready"), ("S-17", "proposed"), ("S-18", "proposed"), ("S-19", "ready")]
+            ("S-13", "proposed"), ("S-14", "done"), ("S-15", "done"), ("S-16", "ready"), ("S-17", "proposed"), ("S-18", "proposed"), ("S-19", "progress")]
 segw = (pw - 164 - 24 - 12 * 5) / 13
 for i, (iid, st) in enumerate(m2_order):
     lab, fg, bg = STATUS[st]

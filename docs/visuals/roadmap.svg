@@ -42,7 +42,7 @@
 <rect x="2395.0" y="114.0" width="44.0" height="12.0" rx="3" fill="#13232e" stroke="#8ccbe8aa" stroke-width="1" />
 <rect x="2444.0" y="114.0" width="44.0" height="12.0" rx="3" fill="#232d32" stroke="#c3cdd055" stroke-width="1" />
 <rect x="2493.0" y="114.0" width="44.0" height="12.0" rx="3" fill="#232d32" stroke="#c3cdd055" stroke-width="1" />
-<rect x="2542.0" y="114.0" width="44.0" height="12.0" rx="3" fill="#13232e" stroke="#8ccbe8aa" stroke-width="1" />
+<rect x="2542.0" y="114.0" width="44.0" height="12.0" rx="3" fill="#33291a" stroke="#f2c46daa" stroke-width="1" />
 <circle cx="1958.0" cy="147" r="4" fill="#5fd18f" stroke="#5fd18f" stroke-width="1.2"/>
 <text x="1967.0" y="151.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="500" fill="#eaf0f2">4 ukończone</text>
 <circle cx="2080.0" cy="147" r="4" fill="#f2c46d" stroke="#f2c46d" stroke-width="1.2"/>
@@ -577,12 +577,12 @@
 <text x="2521.6" y="2168.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="11" font-weight="700" fill="#a2afb4">—</text>
 <text x="2461.6" y="2190.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#9aa8ae">backup-check-completeness</text>
 </g>
-<g data-id="S-19" data-status="ready">
-<rect x="3065.2" y="1905.0" width="252.8" height="319.0" rx="12" fill="#151e23" stroke="#2e4d60" stroke-width="1" />
-<text x="3079.2" y="1930.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="13" font-weight="700" fill="#8ccbe8">S-19</text>
-<rect x="3151.2" y="1916.0" width="152.8" height="20.0" rx="5" fill="#13232e" stroke="#8ccbe855" stroke-width="1" />
-<circle cx="3163.2" cy="1926.0" r="3" fill="#8ccbe8"/>
-<text x="3172.2" y="1930.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="600" fill="#8ccbe8">Gotowe do planowania</text>
+<g data-id="S-19" data-status="progress">
+<rect x="3065.2" y="1905.0" width="252.8" height="319.0" rx="12" fill="#151e23" stroke="#6b5426" stroke-width="1" />
+<text x="3079.2" y="1930.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="13" font-weight="700" fill="#f2c46d">S-19</text>
+<rect x="3237.1" y="1916.0" width="66.9" height="20.0" rx="5" fill="#33291a" stroke="#f2c46d55" stroke-width="1" />
+<circle cx="3249.1" cy="1926.0" r="3" fill="#f2c46d"/>
+<text x="3258.1" y="1930.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="600" fill="#f2c46d">W toku</text>
 <text x="3079.2" y="1956.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#eaf0f2">Dokumenty operatora</text>
 <text x="3079.2" y="1978.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#eaf0f2">mówią prawdę</text>
 <text x="3079.2" y="2006.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">operator czyta prawdziwe</text>
