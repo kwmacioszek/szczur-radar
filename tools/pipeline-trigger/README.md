@@ -20,6 +20,8 @@ Komenda startu Railway nie rozwija zmiennych, więc cała logika jest w skrypcie
 
 0. **Straż środowiska.** Poza produkcją skrypt nic nie robi. Jeśli `RAILWAY_ENVIRONMENT_NAME` jest ustawione i różne od `production`, zapisuje „skipped” i kończy się kodem 0 bez żadnego żądania. PR env dostaje ten cron jako kopia produkcji, ale nie potrzebuje nocnego przebiegu, a bez tokenu na API co noc kończyłby się porażką i powiadomieniem. Wyjątek: `TRIGGER_IN_ANY_ENVIRONMENT=true` na serwisie, do sprawdzenia narzędzia w PR env. Lokalnie (`test.sh`, ręcznie) zmiennej nie ma, więc przebieg rusza.
 1. **Limit czasu całości.** Cały przebieg ma twardy limit `TRIGGER_TIMEOUT` (domyślnie `3h`, więcej niż suma limitów niżej). Zawieszony przebieg kończy się więc porażką (`FAILED: the run exceeded …`), zamiast blokować kolejne noce: Railway pomija przebieg cron, dopóki poprzedni trwa.
+   - **Meldunki** (F-04, `out-of-app-alert-channel`): z ustawionym `HEALTHCHECK_PING_URL` proces pilnujący limitu czasu melduje się do healthchecks.io. Przed przebiegiem wysyła `POST <adres>/start`, a po nim `POST <adres>/<kod wyjścia>` (`0`, `1` albo `2`; przekroczony limit czasu to `1`) z ostatnią niepustą linią logu przebiegu w treści (`text/plain`, najwyżej 1000 znaków), np. `… trigger: OK: range succeeded`. Healthchecks.io alarmuje w Telegramie, gdy koniec nie przyjdzie w karencji checka albo kod nie jest `0`. Meldunek idzie z tego procesu, bo tylko on widzi każdy wynik, także przekroczony limit czasu: jego meldunek idzie przed wyjściem. Przebieg pominięty poza produkcją (krok 0) nie melduje się wcale, a bez zmiennej nic nie jest wysyłane. Log przebiegu w Railway jest taki sam jak bez meldunków.
+   - Każdy meldunek to jedno `curl -fsS -m 10 --retry 3`. Jego porażka (błąd HTTP, brak sieci) daje tylko linię `warning: check-in … failed (…)`. Adres jest sekretem (kto go zna, może się meldować): trafia do `curl` jako konfiguracja na standardowym wejściu, nigdy jako argument, i nie pojawia się w logu. Adres spoza `https://` daje ostrzeżenie `HEALTHCHECK_PING_URL is not an https:// address; no check-in` i brak meldunku, a uzbrojony check zaalarmuje po karencji.
 2. **Zmienne.** Wymagane są `API_PRIVATE_DOMAIN`, `API_PORT` i `PIPELINE_TRIGGER_TOKEN`. Brak którejś daje kod 2 z nazwą zmiennej, bez wartości. Zła wartość czasu też daje kod 2.
 3. **Start.** `POST http://<API_PRIVATE_DOMAIN>:<API_PORT>/internal/pipeline-runs/daily` z nagłówkiem `Authorization: Bearer <token>`, bez treści. Żądanie idzie wprost do API przez sieć prywatną, z pominięciem Caddy (ten przekazuje tylko `/api/*`).
    - Brak połączenia albo 502/503/504 (poza 503 `source_not_configured`): API się budzi (uśpione odpowiada tak przez ok. 10 s) albo sieć prywatna kontenera crona nie jest jeszcze gotowa. Ponowienie co 2 s, najwyżej przez `TRIGGER_WAKE_TIMEOUT` (domyślnie `3m`). Ponawiane jest tylko żądanie, które nie nawiązało połączenia.
@@ -40,6 +42,8 @@ Token trafia do `curl` jako konfiguracja na standardowym wejściu, nigdy jako ar
 | `0` | każdy przebieg `succeeded` albo `partial`, albo przebieg pominięty poza produkcją |
 | `1` | przebieg `failed` (także pusty zakres: źródło nie dało posta do zapisu) albo `interrupted`, odmowa API (401, 503 `source_not_configured`, inne 4xx), przekroczony limit czasu, błąd odpytywania |
 | `2` | błąd konfiguracji: brak zmiennej albo zła wartość |
+
+Meldunek do healthchecks.io nigdy nie zmienia kodu wyjścia: jego porażka daje tylko ostrzeżenie w logu, a kod jest taki sam jak bez meldunku.
 
 ## Logi
 
@@ -89,7 +93,8 @@ Skrypt pisze logi na stderr, a Railway pokazuje stderr crona na poziomie `error`
 | `TRIGGER_HEARTBEAT_INTERVAL` | co ile logować heartbeat trwającego przebiegu (krok i postęp), domyślnie `5m`; linia przychodzi przy pierwszym odpytaniu po upływie interwału, więc nie częściej niż `TRIGGER_POLL_INTERVAL` |
 | `TRIGGER_RUN_TIMEOUT` | jak długo czekać na koniec wszystkich przebiegów, domyślnie `90m` |
 | `TRIGGER_REQUEST_TIMEOUT` | limit jednego żądania do API, domyślnie `60s` |
-| `TRIGGER_TIMEOUT` | limit czasu całego przebiegu crona, domyślnie `3h` |
+| `TRIGGER_TIMEOUT` | limit czasu całego przebiegu crona, domyślnie `3h`. Karencja checka healthchecks.io wynika z tego limitu: jego zmiana wymaga `tools/healthchecks/checks.sh apply` z nową karencją, inaczej długi przebieg da fałszywy alarm |
+| `HEALTHCHECK_PING_URL` | opcjonalny adres meldunków checka healthchecks.io (`https://…`, F-04); bez niego cron się nie melduje. Sekret: nigdy w logu ani w argumentach `curl` |
 | `RAILWAY_ENVIRONMENT_NAME`, `TRIGGER_IN_ANY_ENVIRONMENT` | środowisko Railway (ustawia je Railway); poza `production` przebieg jest pomijany, chyba że `TRIGGER_IN_ANY_ENVIRONMENT=true` |
 
 Czasy to dodatnia liczba całkowita z jednostką `s`, `m` albo `h`; liczba bez jednostki to sekundy.
@@ -102,7 +107,7 @@ W Railway serwis i jego zmienne deklaruje `.railway/railway.ts`. Token jest wart
 tools/pipeline-trigger/test.sh
 ```
 
-Wymaga Dockera. Test buduje obraz i dla każdego przypadku uruchamia go w sieci Dockera obok atrapy API. Atrapa to mały serwer HTTP w Pythonie (`python:3.14-alpine`) o skryptowanych odpowiedziach. Sprawdza:
+Wymaga Dockera i `openssl` (jednorazowy certyfikat atrapy). Test buduje obraz i dla każdego przypadku uruchamia go w sieci Dockera obok atrapy API. Atrapa to mały serwer HTTP w Pythonie (`python:3.14-alpine`) o skryptowanych odpowiedziach; meldunki przyjmuje po https jak healthchecks.io, a przypadki z meldunkami używają obrazu, który ufa jej certyfikatowi. Sprawdza:
 - użytkownika innego niż root;
 - pominięcie poza produkcją (kod 0, żadnego żądania) i przebieg w PR env z `TRIGGER_IN_ANY_ENVIRONMENT=true`;
 - `succeeded` i `partial` → kod 0, `failed` → kod 1;
@@ -118,7 +123,8 @@ Wymaga Dockera. Test buduje obraz i dla każdego przypadku uruchamia go w sieci 
 - brak odpowiedzi na `POST`, który dotarł do API (`TRIGGER_REQUEST_TIMEOUT`) → kod 1 bez drugiego `POST`;
 - każdy limit czasu (`TRIGGER_WAKE_TIMEOUT`, `TRIGGER_BUSY_TIMEOUT`, `TRIGGER_RUN_TIMEOUT`, `TRIGGER_TIMEOUT`) → kod 1;
 - brak `PIPELINE_TRIGGER_TOKEN` i zła wartość `TRIGGER_HEARTBEAT_INTERVAL` → kod 2;
-- brak tokenów w logach.
+- meldunki z `HEALTHCHECK_PING_URL`: `start`, potem `0` z linią `OK:`, `1` z linią `FAILED:` (także po `TRIGGER_TIMEOUT`), `2` przy błędzie konfiguracji; meldunek z odpowiedzią 500 (ponawiany) albo na nieosiągalny adres nie zmienia kodu wyjścia; bez zmiennej, przy pominięciu poza produkcją i z adresem spoza `https://` nie ma żadnego meldunku;
+- brak tokenów i klucza meldunków w logach.
 
 CI uruchamia ten test przy każdym PR i pushu na `main` (job `pipeline trigger test`). Wypisuje też log udanego przebiegu, czyli to, co Railway pokazuje dla przebiegu cron. Kontenery i sieć testu są zawsze usuwane.
 

@@ -3,7 +3,7 @@ project: "Szczur Radar"
 version: 3
 status: draft # draft | active | locked
 created: 2026-09-27
-updated: 2026-10-19
+updated: 2026-10-20
 prd_version: 2
 main_goal: quality
 top_blocker: decisions # 5 decyzji produktowych z audytu (context/archive/2026-10-17-post-mvp-pipeline-audit/research.md, Open Questions); najdroższa: kanał alarmowy poza aplikacją (F-04)
@@ -91,7 +91,7 @@ Na Wykopie (#gielda) i Reddicie codziennie pojawiają się setki postów o inwes
 
 | ID   | Change ID                   | Outcome (user can …)                                                                                                   | Prerequisites | PRD refs                                                   | Status   |
 | ---- | --------------------------- | ---------------------------------------------------------------------------------------------------------------------- | ------------- | ---------------------------------------------------------- | -------- |
-| F-04 | out-of-app-alert-channel    | (foundation) jeden kanał alarmowy poza aplikacją, w limicie kosztów, do którego API i crony mogą wysłać sygnał          | —             | MS-04, NFR (sygnał awarii przebiegu); audyt C2, C11         | blocked  |
+| F-04 | out-of-app-alert-channel    | (foundation) jeden kanał alarmowy poza aplikacją, w limicie kosztów, do którego API i crony mogą wysłać sygnał          | —             | MS-04, NFR (sygnał awarii przebiegu); audyt C2, C11         | in-progress |
 | S-08 | empty-run-signal            | operator dostaje sygnał, gdy przebieg nic nie pobrał albo pominął elementy; etykieta świeżości wtedy stoi              | —             | MS-04, MS-01, NFR (sygnał awarii przebiegu); audyt C1, B5  | done |
 | S-09 | attempt-accounting          | awaria dostawcy LLM ani błąd naszego kodu nie zabija postów; post z powtarzalnym błędem technicznym ma limit           | —             | MS-01, MS-03; audyt B2, B3, B9, A1                          | ready    |
 | S-10 | llm-config-fail-fast        | operator dostaje błąd startu przy `LLM_TIMEOUT` bez jednostki; czasy są parsowane jedną regułą                        | —             | MS-01, MS-02; audyt B1, E                                   | done     |
@@ -142,7 +142,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Unknowns:**
   - Jaki kanał (push, e-mail, zewnętrzna usługa „dead-man's switch” — czyli taka, która alarmuje, gdy oczekiwany sygnał NIE przyjdzie) i czy dopuszczamy zewnętrzną usługę przy limitach $10 (Railway) i $10/mies. (OpenRouter)? PRD §Non-Goals wyklucza wymaganą wysyłkę e-maili do użytkowników, ale nie alarmów dla operatora. — Owner: user. Block: yes.
 - **Risk:** sekwencjonowane przed S-13 i S-18, bo bez kanału poza aplikacją nie da się zgłosić zdarzenia, którego aplikacja nie widzi (nieodpalony cron, uśpione API); ryzyko: nowa usługa zewnętrzna i jej sekret.
-- **Status:** blocked
+- **Status:** in-progress
 
 ## Slices
 

@@ -23,7 +23,11 @@
 #      newest manifest (last: it empties the database);
 #   6. nas-retention.sh --dry-run names the right files and deletes nothing, then a real run prunes;
 #      other names and future-dated dumps are left alone;
-#   7. the throwaway database password never appears in the logs.
+#   7. the throwaway database password and the check-in key never appear in the logs.
+# Check-ins (F-04, out-of-app-alert-channel) go to a stub of healthchecks.io over https (a throwaway
+# certificate) and are checked at the runs above: the first run checks in /start, then /0 with its OK
+# line; the shrink refusal /1 with its line; the run over its time limit /124 with the time limit's
+# line; a skipped run nothing; an unreachable check-in address leaves the run's result as it is.
 # Needs Docker. Run from anywhere: tools/db-backup/test.sh
 set -euo pipefail
 
@@ -34,8 +38,15 @@ readonly db_image=ghcr.io/railwayapp-templates/postgres-ssl:18
 readonly id=sr-db-backup-test-$$
 readonly net=$id db=$id-db out=$id-out
 readonly db_user=backup_test db_name=backup_test posts=40
-# A throwaway password, checked below never to appear in a log.
+# The stub of healthchecks.io: its container, its name (a network alias, in its certificate), its image,
+# and the CA option for a run that checks in to it (the certificate is on the backup volume).
+readonly ping_stub=$id-ping ping_host=hc-ping.test stub_image=python:3.14-alpine
+readonly ping_ca=CURL_CA_BUNDLE=/out/ping/ca.pem
+# A throwaway password and check-in key, checked below never to appear in a log.
 db_password=test-$(od -An -N8 -tx1 /dev/urandom | tr -d ' \n')
+ping_key=$(od -An -N16 -tx1 /dev/urandom | tr -d ' \n')
+# Run <name> checks in at $ping_url/<name>, so the check-ins of each run can be told apart.
+readonly ping_url=https://$ping_host:8443/ping/$ping_key
 tmp=$(mktemp -d)
 
 step() { printf '\n== %s\n' "$*"; }
@@ -43,7 +54,7 @@ pass() { printf 'PASS %s\n' "$*"; }
 die() { printf 'FAIL %s\n' "$*" >&2; exit 1; }
 
 cleanup() {
-    # Every container of this test is named "$id-…" (the database and each backup run).
+    # Every container of this test is named "$id-…" (the database, the check-in stub and each backup run).
     docker ps -aq --filter "name=$id-" | xargs docker rm -f >/dev/null 2>&1 || true
     docker volume rm "$out" >/dev/null 2>&1 || true
     docker network rm "$net" >/dev/null 2>&1 || true
@@ -125,6 +136,48 @@ SH
 # The newest manifest in daily/ by name, without its extension (the 2020 ones of step 2 sort first).
 newest_manifest() { in_image <<<'cd /out/daily && LC_ALL=C ls | grep -E "^szczur-radar-[0-9]{8}T[0-9]{6}Z\.manifest\.json$" | tail -n 1 | sed "s/\.manifest\.json$//"'; }
 
+# The stub of healthchecks.io: answers 200 to every POST on port 8443 over https, with the certificate
+# from the backup volume. One line per check-in on stdout: "POST <path> 200 <body as a JSON string>".
+read -r -d '' ping_stub_code <<'PY' || true
+import json, ssl
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+
+class Ping(BaseHTTPRequestHandler):
+    def log_message(self, *args):
+        pass
+
+    def do_POST(self):
+        body = self.rfile.read(int(self.headers.get("Content-Length") or 0)).decode(errors="replace")
+        self.send_response(200)
+        self.send_header("Content-Type", "text/plain")
+        self.send_header("Content-Length", "2")
+        self.end_headers()
+        self.wfile.write(b"OK")
+        print(f"{self.command} {self.path} 200 {json.dumps(body)}", flush=True)
+
+
+tls = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+tls.load_cert_chain("/out/ping/ca.pem", "/out/ping/key.pem")
+server = ThreadingHTTPServer(("", 8443), Ping)
+server.socket = tls.wrap_socket(server.socket, server_side=True)
+print("listening", flush=True)
+server.serve_forever()
+PY
+# Run $1's check-ins at the stub were $2, in this order (start or the exit code, separated by spaces;
+# empty: none).
+pings_were() {
+    local pings
+    pings=$(docker logs "$ping_stub" 2>&1 | sed -nE "s|^POST /ping/$ping_key/$1/([^ ]+) .*|\1|p" | paste -sd ' ' -)
+    [[ $pings == "$2" ]] || { cat "$tmp/$1.log"; die "$1: check-ins '$pings', expected '$2'"; }
+}
+# The body of run $1's last check-in says $2.
+last_ping_says() {
+    local body
+    body=$(docker logs "$ping_stub" 2>&1 | grep "^POST /ping/$ping_key/$1/" | tail -n 1 | cut -d ' ' -f 4-)
+    [[ $body == *"$2"* ]] || { cat "$tmp/$1.log"; die "$1: the last check-in's body $body does not say '$2'"; }
+}
+
 step "build $image"
 docker build --quiet --tag "$image" "$here" >/dev/null
 pass "image built"
@@ -157,6 +210,26 @@ done
 
 migrate "$db_name"
 pass "$rank migrations, Flyway V$last_version"
+
+# A throwaway certificate (the image's openssl) on the backup volume, for the stub and the runs' curl.
+in_image "$ping_host" <<'SH' || die "the check-in stub's certificate"
+set -euo pipefail
+mkdir /out/ping
+openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj "/CN=$1" -addext "subjectAltName=DNS:$1" \
+    -keyout /out/ping/key.pem -out /out/ping/ca.pem 2>/dev/null
+SH
+docker pull --quiet "$stub_image" >/dev/null
+PING_STUB_CODE=$ping_stub_code docker run --detach --name "$ping_stub" --network "$net" \
+    --network-alias "$ping_host" -v "$out:/out:ro" -e PING_STUB_CODE "$stub_image" \
+    python -u -c 'import os; exec(os.environ["PING_STUB_CODE"])' >/dev/null
+for attempt in $(seq 1 50); do
+    if docker logs "$ping_stub" 2>&1 | grep -qx listening; then
+        break
+    fi
+    [ "$attempt" -lt 50 ] || { docker logs "$ping_stub"; die "the check-in stub did not start"; }
+    sleep 0.2
+done
+pass "a stub of healthchecks.io ($stub_image) at https://$ping_host:8443"
 
 db_psql <<SQL
 insert into users (email, password_hash, role) values ('admin@example.com', 'not-a-hash', 'admin');
@@ -198,8 +271,12 @@ users=$(db_psql -Atc 'select count(*) from users')
 pass "sample rows: 1 admin ($users users with the migrations' system accounts), 1 run with 1 step, $posts posts with RAW and assessments, 1 activation link, 1 notification, 1 session"
 
 step "1. backup.sh into :local:/out"
-run_backup run1 || { cat "$tmp/run1.log"; die "the first backup failed"; }
+run_backup run1 -e "$ping_ca" -e HEALTHCHECK_PING_URL="$ping_url/run1" \
+    || { cat "$tmp/run1.log"; die "the first backup failed"; }
 grep -q 'restore-check: .*OK' "$tmp/run1.log" || { cat "$tmp/run1.log"; die "no restore-check OK in the log"; }
+pings_were run1 'start 0'
+last_ping_says run1 ' backup: OK: daily/'
+pass "with HEALTHCHECK_PING_URL: /start, then /0 with the OK line"
 in_image "$posts" "$last_version" "$users" <<'SH' || die "backup contents"
 set -euo pipefail
 posts=$1 version=$2 users=$3
@@ -272,20 +349,26 @@ set -euo pipefail
 echo '{"format": 1, "counts_after": {"users": 1000000, "posts": 1000000, "assessments": 1000000}}' \
     >/out/daily/szczur-radar-29991231T020000Z.manifest.json
 SH
-run_backup run7 || { cat "$tmp/run7.log"; die "a run next to a future-dated manifest failed"; }
+# Its check-in address is unreachable (nothing listens on port 9): the run's result stays as it is.
+run_backup run7 -e "$ping_ca" -e HEALTHCHECK_PING_URL="https://$ping_host:9/ping/$ping_key/run7" \
+    || { cat "$tmp/run7.log"; die "a run next to a future-dated manifest failed"; }
 grep -q 'ignoring daily/szczur-radar-29991231T020000Z.manifest.json' "$tmp/run7.log" \
     || { cat "$tmp/run7.log"; die "the future-dated manifest is not logged as ignored"; }
+grep -qF 'warning: check-in start to healthchecks.io failed (curl: (7)' "$tmp/run7.log" \
+    && grep -qF 'warning: check-in 0 to healthchecks.io failed (curl: (7)' "$tmp/run7.log" \
+    || { cat "$tmp/run7.log"; die "the unreachable check-ins are not logged as warnings"; }
+pings_were run7 ''
 check_manifest run7 '.compared_with == $previous and .accepted_shrink == false' \
     --arg previous "$(uploaded run2).manifest.json" || die "the run did not compare with the newest manifest before it"
 in_image <<<'rm /out/daily/szczur-radar-29991231T020000Z.manifest.json'
-pass "a manifest dated in the future is skipped: compared with the second run's"
+pass "a manifest dated in the future is skipped: compared with the second run's; an unreachable check-in address only gives warnings"
 # 5 posts with their assessments go (their RAW stays): both tables shrink below the newest manifest.
 db_psql <<'SQL'
 delete from assessments where post_id in (select id from posts order by id limit 5);
 delete from posts where id in (select id from posts order by id limit 5);
 SQL
 before=$(in_image <<<'ls /out/daily /out/monthly')
-if run_backup run8; then
+if run_backup run8 -e "$ping_ca" -e HEALTHCHECK_PING_URL="$ping_url/run8"; then
     cat "$tmp/run8.log"
     die "a run with fewer posts than the newest manifest exited 0"
 fi
@@ -295,7 +378,9 @@ grep -qF "posts $(( posts - 5 )) < $posts" "$tmp/run8.log" \
     && [ "$accept" = "$(uploaded run7)" ] \
     || { cat "$tmp/run8.log"; die "the failed run does not name the shrink and the BACKUP_ACCEPT_SHRINK value"; }
 [ "$(in_image <<<'ls /out/daily /out/monthly')" = "$before" ] || die "the run with fewer posts changed the backups"
-pass "fewer posts → fails before the dump (posts $(( posts - 5 )) < $posts), names BACKUP_ACCEPT_SHRINK=$accept, backups unchanged"
+pings_were run8 'start 1'
+last_ping_says run8 " backup: FAILED: rows lost since daily/$accept.manifest.json: "
+pass "fewer posts → fails before the dump (posts $(( posts - 5 )) < $posts), names BACKUP_ACCEPT_SHRINK=$accept, backups unchanged; /1 with that line"
 # Pasted with a trailing space, as from a log line: the value is trimmed.
 run_backup run9 -e BACKUP_ACCEPT_SHRINK="$accept " || { cat "$tmp/run9.log"; die "the run with the consent failed"; }
 grep -qF "accepted: posts $(( posts - 5 )) < $posts" "$tmp/run9.log" \
@@ -372,17 +457,21 @@ docker run --rm -i --name "$id-v5" --entrypoint bash "$image" \
 grep -qE 'restore-check: OK .*Flyway V5([^0-9]|$)' "$tmp/v5.log" || { cat "$tmp/v5.log"; die "no Flyway V5 in the OK line"; }
 pass "a Flyway V5 dump (no activation_tokens, no notifications) passes restore-check.sh"
 before=$(in_image <<<'ls /out/daily /out/monthly')
-if run_backup run4 -e BACKUP_TIMEOUT=1s; then
+if run_backup run4 -e BACKUP_TIMEOUT=1s -e "$ping_ca" -e HEALTHCHECK_PING_URL="$ping_url/run4"; then
     cat "$tmp/run4.log"
     die "a run over its time limit exited 0"
 fi
 grep -q 'backup: FAILED: the run exceeded 1s' "$tmp/run4.log" || { cat "$tmp/run4.log"; die "the time limit is not named"; }
-pass "a run over its time limit (BACKUP_TIMEOUT=1s) fails and says so"
-run_backup run5 -e RAILWAY_ENVIRONMENT_NAME=szczur-radar-pr-1 || { cat "$tmp/run5.log"; die "a skipped run failed"; }
+pings_were run4 'start 124'
+last_ping_says run4 ' backup: FAILED: the run exceeded 1s'
+pass "a run over its time limit (BACKUP_TIMEOUT=1s) fails and says so; /124 with that line, before the exit"
+run_backup run5 -e RAILWAY_ENVIRONMENT_NAME=szczur-radar-pr-1 -e "$ping_ca" -e HEALTHCHECK_PING_URL="$ping_url/run5" \
+    || { cat "$tmp/run5.log"; die "a skipped run failed"; }
 grep -q 'skipped: backups run only in production (this is szczur-radar-pr-1)' "$tmp/run5.log" \
     || { cat "$tmp/run5.log"; die "outside production the run was not skipped"; }
+pings_were run5 ''
 [ "$(in_image <<<'ls /out/daily /out/monthly')" = "$before" ] || die "a skipped or timed-out run changed the backups"
-pass "outside production the run is skipped (exit 0, nothing written)"
+pass "outside production the run is skipped (exit 0, nothing written, no check-in)"
 # Before the missing table below: restore-check.sh checks missing tables before unknown ones.
 db_psql -c 'create table stray (id int)'
 if run_backup run6; then
@@ -457,9 +546,9 @@ SH
 pass "--dry-run lists the 6 oldest daily and 3 oldest monthly pairs and deletes nothing; the run keeps 14 + 12; other names and future dates are left alone"
 
 step "7. no secrets in the logs"
-if grep -lF "$db_password" "$tmp"/*.log; then
-    die "the database password appears in a log"
+if grep -lF -e "$db_password" -e "$ping_key" "$tmp"/*.log; then
+    die "the database password or the check-in key appears in a log"
 fi
-pass "the database password is in none of the backup logs"
+pass "neither the database password nor the check-in key is in any of the backup logs"
 
 printf '\nAll checks passed.\n'
