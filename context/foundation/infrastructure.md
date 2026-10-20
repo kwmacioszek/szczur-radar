@@ -31,6 +31,14 @@ tech_stack:
 >
 > Details and the runbook: `context/deployment/deploy-plan.md`, section S-05.
 
+> **Update 2026-10-20 (F-04, `out-of-app-alert-channel`):** two external services outside Railway carry the operator's alarms. Nothing polls production: every signal goes out from a cron or from the API while it works anyway, so the API still sleeps.
+> - **healthchecks.io** (free Hobbyist plan, $0, 20 checks; three per environment): a dead-man's switch. `pipeline-trigger` and `db-backup` check in at the start and with their exit code and last log line; a check alarms when the end is not `0`, or when no check-in arrives by the cron's schedule plus a grace time (about 03:45 and 04:15 UTC). A third check takes the API's operator events (`send-test-alert` in F-04, the error paths in S-18). The checks are created by `tools/healthchecks/checks.sh` with the project's read-write API key, which the operator keeps locally (never in CI, Railway or the repo).
+> - **Telegram** ($0): the alarm channel, through @HealthchecksBot, connected once in the healthchecks.io project. No bot of our own and no inbound channel.
+> - **Secrets:** one ping URL per service (`HEALTHCHECK_PING_URL` on `szczur-radar-api`, `pipeline-trigger`, `db-backup`), set by the operator, sealed on production and declared with `preserve()` in `.railway/railway.ts`. Unset, nothing is sent (PR envs, local runs).
+> - **Limits:** a check-in never changes a cron's result, and an API event never fails its caller. An outage of healthchecks.io or Telegram is silent: nothing watches them. Railway's notification rule "deployment crashed" stays as a second signal of a crashed cron.
+>
+> Details and the runbook: `context/deployment/deploy-plan.md`, section F-04.
+
 ## Recommendation
 
 **Deploy on Railway.**
@@ -119,6 +127,10 @@ The team put api, web, cron and Postgres on Railway on the Hobby plan, and every
   - Each run dumps the database, checks the dump by restoring it, and uploads it to the environment's bucket `db-backups` (14 daily + 12 monthly copies); the NAS keeps a copy outside Railway.
   - A failed run ends `CRASHED` and Railway e-mails it. **Update (S-05, 2026-10-13):** no e-mail came for a crashed cron run on 2026-10-12; Railway notifies (in the app and by push) only with the account's custom rule "deployment crashed", all environments. The same holds for `pipeline-trigger`.
   - A restore is a human runbook (`deploy-plan.md`, section F-01), and up to about 24 h of data can be lost.
+- **Alarms** (since F-04): healthchecks.io checks for both crons and the API's events, alerting in Telegram (@HealthchecksBot), $0.
+  - A cron run that fails alarms at once with its last log line; a night or backup that did not start or end on time alarms after its grace time.
+  - The ping URLs are secrets per service (`HEALTHCHECK_PING_URL`, sealed on production); the management key stays with the operator.
+  - An outage of healthchecks.io or Telegram is silent. Runbook: `deploy-plan.md`, section F-04.
 - **Logs**: `railway logs -n 200 --service szczur-radar-api` (likewise for web and the cron service), `railway deployment list --json`, plus the Railway MCP server (GA, `railway mcp local` or `mcp.railway.com`) for structured reads. Log retention: 7 days on Hobby, 30 days on Pro.
 
 ## Risk Register

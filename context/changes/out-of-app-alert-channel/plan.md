@@ -517,8 +517,8 @@ wstrzymać w panelu.
 
 #### Automated
 
-- [x] 3.1 Testy skryptu przechodzą: `tools/healthchecks/test.sh`
-- [x] 3.2 `shellcheck tools/healthchecks/*.sh` bez błędów
+- [x] 3.1 Testy skryptu przechodzą: `tools/healthchecks/test.sh` — a0b31fa
+- [x] 3.2 `shellcheck tools/healthchecks/*.sh` bez błędów — a0b31fa
 - [ ] 3.3 Plan IaC dla PR env bez zmian destrukcyjnych i zielona bramka `railway-config`
 - [ ] 3.4 CI na PR zielone, w tym `healthchecks-test`
 

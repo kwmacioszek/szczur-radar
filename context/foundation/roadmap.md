@@ -6,7 +6,7 @@ created: 2026-09-27
 updated: 2026-10-20
 prd_version: 2
 main_goal: quality
-top_blocker: decisions # 5 decyzji produktowych z audytu (context/archive/2026-10-17-post-mvp-pipeline-audit/research.md, Open Questions); najdroższa: kanał alarmowy poza aplikacją (F-04)
+top_blocker: decisions # 5 decyzji produktowych z audytu (context/archive/2026-10-17-post-mvp-pipeline-audit/research.md, Open Questions); najdroższa, kanał alarmowy poza aplikacją (F-04), rozstrzygnięta 2026-10-20: healthchecks.io → Telegram
 milestone_id: mvp-quality-reliability-hardening
 milestone_seq: 2
 milestone_status: open
@@ -64,6 +64,8 @@ milestone_status: open
 
 > v3.1 (2026-10-19): Pozycja Parked „Self-hosted runner CI” (#30) zrealizowana poza roadmapą w zmianie `self-hosted-pr-runner` (wyczerpany limit minut GitHub Actions 2026-10-18): przełącznik runnera w `ci.yml`, runner w VM w Proxmoxie i pula VM-ek na PC. W Parked zastąpiona drugim runnerem w Proxmoxie.
 
+> v3.2 (2026-10-20): F-04 (`out-of-app-alert-channel`) — niewiadoma rozstrzygnięta: kanał to healthchecks.io (darmowy Hobbyist) z alarmem w Telegramie przez @HealthchecksBot, koszt $0, bez odpytywania produkcji i zegarów w API. Oba crony meldują start i kod wyjścia, API ma nadawcę zdarzeń i komendę `send-test-alert`. Notatki w S-13 (check każdego crona już istnieje) i S-18 (ścieżki ERROR podłącza do `OperatorAlerts`); doprecyzowanie NFR o sygnale awarii w PRD.
+
 ## Milestone
 
 **M-2: MVP Quality & Reliability Hardening** — Status: open
@@ -91,7 +93,7 @@ Na Wykopie (#gielda) i Reddicie codziennie pojawiają się setki postów o inwes
 
 | ID   | Change ID                   | Outcome (user can …)                                                                                                   | Prerequisites | PRD refs                                                   | Status   |
 | ---- | --------------------------- | ---------------------------------------------------------------------------------------------------------------------- | ------------- | ---------------------------------------------------------- | -------- |
-| F-04 | out-of-app-alert-channel    | (foundation) jeden kanał alarmowy poza aplikacją, w limicie kosztów, do którego API i crony mogą wysłać sygnał          | —             | MS-04, NFR (sygnał awarii przebiegu); audyt C2, C11         | in-progress |
+| F-04 | out-of-app-alert-channel    | (foundation) kanał alarmowy poza aplikacją: healthchecks.io → Telegram, $0; crony się meldują, API ma nadawcę zdarzeń i sygnał testowy | —             | MS-04, NFR (sygnał awarii przebiegu); audyt C2, C11         | in-progress |
 | S-08 | empty-run-signal            | operator dostaje sygnał, gdy przebieg nic nie pobrał albo pominął elementy; etykieta świeżości wtedy stoi              | —             | MS-04, MS-01, NFR (sygnał awarii przebiegu); audyt C1, B5  | done |
 | S-09 | attempt-accounting          | awaria dostawcy LLM ani błąd naszego kodu nie zabija postów; post z powtarzalnym błędem technicznym ma limit           | —             | MS-01, MS-03; audyt B2, B3, B9, A1                          | ready    |
 | S-10 | llm-config-fail-fast        | operator dostaje błąd startu przy `LLM_TIMEOUT` bez jednostki; czasy są parsowane jedną regułą                        | —             | MS-01, MS-02; audyt B1, E                                   | done     |
@@ -112,7 +114,7 @@ Navigation aid — groups items that share a Prerequisites chain. Canonical orde
 | Stream | Theme                   | Chain                                          | Note                                                                                                   |
 | ------ | ----------------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
 | A      | Sygnał w aplikacji      | `S-08` → `S-12`                                | Gwiazda przewodnia; sygnały w dzwonku nie czekają na decyzję o kanale zewnętrznym (F-04).             |
-| B      | Kanał poza aplikacją    | `F-04` → `S-13` → `S-18`                        | Rusza po decyzji o kanale; przy celu `quality` fundament obserwowalności nie jest odkładany.          |
+| B      | Kanał poza aplikacją    | `F-04` → `S-13` → `S-18`                        | Kanał rozstrzygnięty (2026-10-20): healthchecks.io → Telegram; przy celu `quality` fundament obserwowalności nie jest odkładany.          |
 | C      | Próby i silnik          | `S-09` → `S-17` · `S-10` · `S-11` · `S-16`     | `S-10`, `S-11`, `S-16` są niezależne i równoległe; `S-17` przepisuje silnik po nowej semantyce prób.  |
 | D      | Wdrożenia i dane        | `S-14` · `S-15` · `S-19`                       | Niezależne; `S-14` warto zrobić wcześnie, bo chroni każdy kolejny merge tego kamienia.                |
 
@@ -132,7 +134,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 
 ### F-04: Kanał alarmowy poza aplikacją
 
-- **Outcome:** (foundation) jest jeden wybrany kanał alarmowy poza aplikacją (np. push, e-mail lub usługa nadzoru cyklicznych zadań), mieszczący się w limitach kosztów, do którego API i oba crony mogą wysłać sygnał, a jego działanie jest raz sprawdzone na produkcji. Tylko minimalne podłączenie: kontrakt wysyłki i jeden sygnał testowy; konkretne alarmy dodają S-13 i S-18.
+- **Outcome:** (foundation) jest jeden kanał alarmowy poza aplikacją, mieszczący się w limitach kosztów: healthchecks.io (usługa nadzoru cyklicznych zadań, darmowy plan) z alarmem w Telegramie przez @HealthchecksBot, $0. Oba crony meldują start i kod wyjścia z ostatnią linią logu, więc porażka, brak startu albo brak końca na czas (harmonogram + karencja) daje wiadomość; API ma nadawcę zdarzeń dla operatora (`alerts/OperatorAlerts`) i komendę `send-test-alert`, a działanie kanału jest raz sprawdzone na produkcji. Tylko minimalne podłączenie w API: jeden sygnał testowy; konkretne alarmy z API dodaje S-18, dni bez danych S-13.
 - **Change ID:** out-of-app-alert-channel
 - **PRD refs:** MS-04, NFR (sygnał awarii przebiegu); audyt C2, C11
 - **Unlocks:** S-13 (wykrycie nocy, w której cron lub backup w ogóle nie wystartował — aplikacja śpi, więc sama tego nie zgłosi), S-18 (błędy wymagające reakcji poza dzwonkiem)
@@ -140,7 +142,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Parallel with:** S-08–S-12, S-14–S-17, S-19
 - **Blockers:** —
 - **Unknowns:**
-  - Jaki kanał (push, e-mail, zewnętrzna usługa „dead-man's switch” — czyli taka, która alarmuje, gdy oczekiwany sygnał NIE przyjdzie) i czy dopuszczamy zewnętrzną usługę przy limitach $10 (Railway) i $10/mies. (OpenRouter)? PRD §Non-Goals wyklucza wymaganą wysyłkę e-maili do użytkowników, ale nie alarmów dla operatora. — Owner: user. Block: yes.
+  - Jaki kanał (push, e-mail, zewnętrzna usługa „dead-man's switch” — czyli taka, która alarmuje, gdy oczekiwany sygnał NIE przyjdzie) i czy dopuszczamy zewnętrzną usługę przy limitach $10 (Railway) i $10/mies. (OpenRouter)? PRD §Non-Goals wyklucza wymaganą wysyłkę e-maili do użytkowników, ale nie alarmów dla operatora. — Owner: user. Block: no — rozstrzygnięte 2026-10-20: healthchecks.io (dead-man's switch dla cronów, darmowy Hobbyist) → Telegram (@HealthchecksBot), koszt $0; sygnały tylko wychodzące, bez odpytywania produkcji i bez zegarów w API (`context/changes/out-of-app-alert-channel/frame.md`, `plan.md`).
 - **Risk:** sekwencjonowane przed S-13 i S-18, bo bez kanału poza aplikacją nie da się zgłosić zdarzenia, którego aplikacja nie widzi (nieodpalony cron, uśpione API); ryzyko: nowa usługa zewnętrzna i jej sekret.
 - **Status:** in-progress
 
@@ -220,6 +222,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Unknowns:**
   - Czy automatycznie uzupełniać dni starsze niż D-2, czy tylko je pokazywać i zostawić ręczny przebieg zakresu adminowi? — Owner: user. Block: no.
 - **Risk:** aplikacja i crony nie mogą same zgłosić, że się nie uruchomiły — dlatego zależy od kanału zewnętrznego; obejmuje też synchronizację NAS → Google Drive tylko wtedy, gdy kanał to umożliwia.
+- **Uwaga (F-04, 2026-10-20):** kanał F-04 to healthchecks.io → Telegram. Check każdego crona (`<środowisko>/pipeline-trigger`, `<środowisko>/db-backup`, harmonogram UTC i karencja) już istnieje i alarmuje, gdy noc albo backup nie wystartowały lub nie skończyły się na czas (ok. 03:45 i 04:15 UTC); dla S-13 zostają dni bez danych (pokazanie lub uzupełnianie) i ewentualny nadzór NAS → Google Drive (`deploy-plan.md`, sekcja F-04).
 - **Status:** proposed
 
 ### S-14: Bezpieczna bramka wdrożeń
@@ -284,6 +287,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Unknowns:**
   - Error tracker (zewnętrzna usługa) czy alarm z logów przez kanał F-04 — i jaki koszt jest akceptowalny? — Owner: user. Block: no (wynika z decyzji F-04).
 - **Risk:** łatwo zalać operatora alarmami — każdy alarm musi wymagać reakcji; maskowanie sekretów w logach to osobne, łatwe do pominięcia ryzyko.
+- **Uwaga (F-04, 2026-10-20):** kanał F-04 to healthchecks.io → Telegram. API ma nadawcę `alerts/OperatorAlerts` (`report(AlertEvent, detail)` do checka `<środowisko>/api-events`: `/fail` z opisem i od razu sukces; nigdy nie rzuca) z jednym zdarzeniem `TEST_SIGNAL`. S-18 dopisuje zdarzenia do `AlertEvent` i podłącza do `OperatorAlerts` ścieżki ERROR; limit healthchecks.io to ≤5 pingów na minutę na check, czyli ≤2 zdarzenia na minutę (`deploy-plan.md`, sekcja F-04).
 - **Status:** proposed
 
 ### S-19: Dokumenty operatora mówią prawdę
@@ -302,7 +306,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 
 | Roadmap ID | Change ID                   | Suggested issue title                                                     | Ready for `/10x-plan` | Notes                                                    |
 | ---------- | --------------------------- | ------------------------------------------------------------------------- | --------------------- | -------------------------------------------------------- |
-| F-04       | out-of-app-alert-channel    | F-04: kanał alarmowy poza aplikacją                                        | no                    | Zablokowane decyzją o kanale i koszcie (Owner: user)     |
+| F-04       | out-of-app-alert-channel    | F-04: kanał alarmowy poza aplikacją                                        | yes                   | W realizacji; kanał rozstrzygnięty: healthchecks.io → Telegram |
 | S-08       | empty-run-signal            | S-08: pusty przebieg daje sygnał (gwiazda przewodnia M-2)                  | yes                   | Run `/10x-plan empty-run-signal`                         |
 | S-09       | attempt-accounting          | S-09: awaria dostawcy LLM nie zużywa prób postów                           | yes                   | Run `/10x-plan attempt-accounting`                       |
 | S-10       | llm-config-fail-fast        | S-10: zła konfiguracja LLM zatrzymuje start                                | yes                   | Run `/10x-plan llm-config-fail-fast`                     |
