@@ -539,7 +539,7 @@ kroków w nagłówku spójna.
 
 - [x] 4.1 `tools/deploy-gate/test.sh` przechodzi — ad27491
 - [x] 4.2 Brak odwołań do `verify-deploy.sh` i `deploy-verify.yml` poza `context/` — ad27491
-- [x] 4.3 CI szczur-radar na PR zielone
+- [x] 4.3 CI szczur-radar na PR zielone — ad27491
 
 #### Manual
 
