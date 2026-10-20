@@ -82,6 +82,9 @@ class ConcurrentAssessmentDispatcherTest {
 
 	private static final String BOOM = "this post breaks the client";
 
+	/** A post whose raw payload its source's mapper cannot map (a bug of ours, before any call). */
+	private static final String UNMAPPABLE = "this post breaks the mapper";
+
 	/** A post whose call finds the key revoked (HTTP 401). */
 	private static final String REVOKED = "this post finds the key revoked";
 
@@ -105,6 +108,11 @@ class ConcurrentAssessmentDispatcherTest {
 	private final Map<UUID, PostStage> stages = new ConcurrentHashMap<>();
 
 	private final Map<UUID, Integer> attempts = new ConcurrentHashMap<>();
+
+	/** Each post's technical failures in a row and the last one's message, as {@code releaseFailed} counts them. */
+	private final Map<UUID, Integer> technicalFailures = new ConcurrentHashMap<>();
+
+	private final Map<UUID, String> lastTechnicalErrors = new ConcurrentHashMap<>();
 
 	private final List<Assessment> recorded = new CopyOnWriteArrayList<>();
 
@@ -130,6 +138,8 @@ class ConcurrentAssessmentDispatcherTest {
 	private final List<String> interrupted = new CopyOnWriteArrayList<>();
 
 	private final RunRecorder recorder = recorder();
+
+	private final PostTransitions transitions = transitions();
 
 	@AfterEach
 	void stop() {
@@ -168,11 +178,44 @@ class ConcurrentAssessmentDispatcherTest {
 		assertThat(stages.get(broken)).isEqualTo(PostStage.STORED);
 		assertThat(attempts.get(broken)).isZero();
 		assertThat(stages).allSatisfy((id, stage) -> assertThat(stage).isIn(PostStage.ASSESSED, PostStage.STORED));
+		// The broken post counts a technical failure, with the same message as the run's processing error.
+		assertThat(technicalFailures).containsOnlyKeys(broken).containsEntry(broken, 1);
+		assertThat(lastTechnicalErrors.get(broken)).isEqualTo(batch.processingErrors().getFirst().message());
+		verify(transitions, never()).release(broken, RUN);
 		// Each post is counted once, as it finishes: no total at the end of the step.
 		verify(recorder, times(8)).count(RUN, Counters.assessedOk(0, false));
 		verify(recorder).count(RUN, Counters.assessedOk(2, true));
 		verify(recorder).count(RUN, Counters.processingError());
 		verify(recorder, times(10)).count(eq(RUN), any(Counters.class));
+	}
+
+	@Test
+	void aBugBeforeTheCallPutsThePostBackCountingATechnicalFailure(CapturedOutput output) {
+		UUID unmappable = post(UNMAPPABLE);
+		stages.put(unmappable, PostStage.FAILED);
+		attempts.put(unmappable, 1);
+		technicalFailures.put(unmappable, 1);
+		UUID fine = post(ContractFixtures.BODY);
+
+		AssessedBatch batch = dispatcher().dispatch(RUN, List.of(unmappable, fine));
+
+		// No call and no stored attempt for it: back in its stage, its attempts as they were.
+		assertThat(calls).hasValue(1);
+		assertThat(recorded).extracting(Assessment::getPostId).containsExactly(fine);
+		assertThat(stages.get(unmappable)).isEqualTo(PostStage.FAILED);
+		assertThat(attempts.get(unmappable)).isEqualTo(1);
+		assertThat(batch.processingErrors()).singleElement().satisfies(error -> {
+			assertThat(error.postId()).isEqualTo(unmappable);
+			assertThat(error.message()).isEqualTo("IllegalArgumentException: " + UNMAPPABLE);
+		});
+		assertThat(batch.status()).isEqualTo(RunStatus.PARTIAL);
+		verify(transitions).releaseFailed(unmappable, RUN, "IllegalArgumentException: " + UNMAPPABLE);
+		verify(transitions, never()).release(unmappable, RUN);
+		assertThat(technicalFailures).containsEntry(unmappable, 2);
+		verify(recorder).count(RUN, Counters.processingError());
+		assertThat(output.getAll().lines().filter(line -> line.contains(" ERROR "))).singleElement()
+			.satisfies(line -> assertThat(line).contains("post " + unmappable + " in run " + RUN,
+					"put back without an attempt, technical failure 2"));
 	}
 
 	@Test
@@ -397,7 +440,7 @@ class ConcurrentAssessmentDispatcherTest {
 			}
 		};
 		return new ConcurrentAssessmentDispatcher(posts(), new AssessmentInputs(rawPayloads(), List.of(inputMapper())),
-				new Assessor(llm, Provider.GEMINI, "gemini-3.1-flash-lite", clock), transitions(), recorder, llm,
+				new Assessor(llm, Provider.GEMINI, "gemini-3.1-flash-lite", clock), transitions, recorder, llm,
 				pool, nanoTime::get);
 	}
 
@@ -444,13 +487,20 @@ class ConcurrentAssessmentDispatcherTest {
 
 			@Override
 			public AssessmentInputV1 map(byte[] raw) {
-				return ContractFixtures.post(new String(raw, StandardCharsets.UTF_8));
+				String body = new String(raw, StandardCharsets.UTF_8);
+				if (body.contains(UNMAPPABLE)) {
+					throw new IllegalArgumentException(body);
+				}
+				return ContractFixtures.post(body);
 			}
 
 		};
 	}
 
-	/** The conditional updates, in memory: take stored/failed, store only while held, put back. */
+	/**
+	 * The conditional updates, in memory: take stored/failed, store only while held, put back (also
+	 * counting a technical failure).
+	 */
 	private PostTransitions transitions() {
 		PostTransitions transitions = mock(PostTransitions.class);
 		when(transitions.claim(any(UUID.class), any(UUID.class))).thenAnswer(invocation -> {
@@ -469,12 +519,21 @@ class ConcurrentAssessmentDispatcherTest {
 			recorded.add(assessment);
 			return true;
 		});
+		doAnswer(invocation -> putBack(invocation.getArgument(0))).when(transitions)
+			.release(any(UUID.class), any(UUID.class));
 		doAnswer(invocation -> {
 			UUID id = invocation.getArgument(0);
-			stages.replace(id, PostStage.ASSESSING, attempts.get(id) == 0 ? PostStage.STORED : PostStage.FAILED);
-			return null;
-		}).when(transitions).release(any(UUID.class), any(UUID.class));
+			if (!putBack(id)) {
+				return Optional.empty();
+			}
+			lastTechnicalErrors.put(id, invocation.getArgument(2));
+			return Optional.of(technicalFailures.merge(id, 1, Integer::sum));
+		}).when(transitions).releaseFailed(any(UUID.class), any(UUID.class), any(String.class));
 		return transitions;
+	}
+
+	private boolean putBack(UUID id) {
+		return stages.replace(id, PostStage.ASSESSING, attempts.get(id) == 0 ? PostStage.STORED : PostStage.FAILED);
 	}
 
 	private static RunRecorder recorder() {

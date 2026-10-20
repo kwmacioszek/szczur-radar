@@ -545,9 +545,9 @@ Bezpiecznik skraca awarię: przebieg staje po ~9 nieudanych żądaniach HTTP zam
 
 #### Automated
 
-- [x] 1.1 Testy jednostkowe `llm/` przechodzą
-- [x] 1.2 Test `flexFailingWithMixedErrorsFallsBack` istnieje, a `flexFailingOtherwiseDoesNotFallBack` nie
-- [x] 1.3 Pełny zestaw testów przechodzi
+- [x] 1.1 Testy jednostkowe `llm/` przechodzą — aefbbab
+- [x] 1.2 Test `flexFailingWithMixedErrorsFallsBack` istnieje, a `flexFailingOtherwiseDoesNotFallBack` nie — aefbbab
+- [x] 1.3 Pełny zestaw testów przechodzi — aefbbab
 
 #### Manual
 
@@ -557,10 +557,10 @@ Bezpiecznik skraca awarię: przebieg staje po ~9 nieudanych żądaniach HTTP zam
 
 #### Automated
 
-- [ ] 2.1 Migracja i walidacja encji przechodzą
-- [ ] 2.2 Testy dyspozytora i przejść przechodzą
-- [ ] 2.3 Pełny zestaw testów przechodzi
-- [ ] 2.4 Test backupu przechodzi z nową migracją
+- [x] 2.1 Migracja i walidacja encji przechodzą
+- [x] 2.2 Testy dyspozytora i przejść przechodzą
+- [x] 2.3 Pełny zestaw testów przechodzi
+- [x] 2.4 Test backupu przechodzi z nową migracją
 
 #### Manual
 

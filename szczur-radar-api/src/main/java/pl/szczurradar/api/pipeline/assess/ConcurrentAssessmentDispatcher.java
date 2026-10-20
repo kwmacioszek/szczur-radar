@@ -58,7 +58,10 @@ import pl.szczurradar.api.posts.PostRepository;
  *       and the remaining posts are not taken;
  *   <li>stored with its next stage ({@link PostTransitions#record}), only while the run owns it;
  *   <li>otherwise put back without an attempt ({@link PostTransitions#release}); any exception there
- *       (a bug, a failed write) is a technical error of this post, and the other posts go on;
+ *       (a bug, a failed write) is a technical error of this post, and the other posts go on: the post
+ *       goes back counting one more technical failure with its message
+ *       ({@link PostTransitions#releaseFailed}; at {@link Post#MAX_TECHNICAL_FAILURES} in a row it is on
+ *       hold);
  *   <li>counted in the run's counters ({@link RunRecorder#count}): a stored result with its call's
  *       retries and flex fallback, or a technical error; a post not taken counts nothing. A failed count
  *       is logged and leaves the post's outcome as it is.
@@ -200,6 +203,9 @@ public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher, Dis
 			return new Outcome.NotTaken();
 		}
 		boolean stored = false;
+		// A technical error of this post: put back counting it, with the same message as its processing error.
+		@Nullable RuntimeException failure = null;
+		Outcome.@Nullable Error error = null;
 		try {
 			AssessmentInputV1 input = inputs.of(posts.findById(postId).orElseThrow());
 			AssessmentResult result = assessor.assess(input);
@@ -227,12 +233,27 @@ public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher, Dis
 				log.info("Assessing post {} in run {} ended with its stopped run: {}", postId, runId, ex.toString());
 				return new Outcome.NotTaken();
 			}
-			log.error("Assessing post {} in run {} failed; the post is put back without an attempt", postId, runId, ex);
-			return new Outcome.Error(ex.getClass().getSimpleName() + ": " + ex.getMessage());
+			failure = ex;
+			error = new Outcome.Error(ex.getClass().getSimpleName() + ": " + ex.getMessage());
+			return error;
 		}
 		finally {
 			if (!stored) {
-				transitions.release(postId, runId);
+				if (error == null) {
+					transitions.release(postId, runId);
+				}
+				else {
+					Optional<Integer> failures = Optional.empty();
+					try {
+						failures = transitions.releaseFailed(postId, runId, error.message());
+					}
+					finally {
+						// Logged even when putting the post back fails, which then fails the task.
+						log.error("Assessing post {} in run {} failed; the post is put back without an attempt,"
+								+ " technical failure {}", postId, runId,
+								failures.map(String::valueOf).orElse("not counted"), failure);
+					}
+				}
 			}
 		}
 	}

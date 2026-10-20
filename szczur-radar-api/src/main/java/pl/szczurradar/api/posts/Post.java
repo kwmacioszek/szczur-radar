@@ -28,8 +28,8 @@ import pl.szczurradar.api.text.Nul;
  * Flyway, {@code V3__create_pipeline_and_posts.sql}, {@code V4__posts_shared_item_type.sql}). Its type is
  * the shared model's {@link ItemType} — a source maps its own types onto it, so a new source changes
  * nothing here (PRD § Non-Functional Requirements). Its raw payload is kept apart
- * ({@link RawPayloadRef}). {@link #getStage()} and {@link #getAssessmentAttempts()} are the post's
- * progress; they change only through conditional updates of the pipeline, and every such update
+ * ({@link RawPayloadRef}). {@link #getStage()}, {@link #getAssessmentAttempts()} and
+ * {@link #getTechnicalFailures()} are the post's progress; they change only through conditional updates of the pipeline, and every such update
  * also sets {@code updated_at = now()} ({@code @UpdateTimestamp} covers only entity saves).
  */
 @Entity
@@ -38,6 +38,12 @@ public class Post {
 
 	/** A post whose third stored assessment fails is {@link PostStage#DEAD}. */
 	public static final int MAX_ASSESSMENT_ATTEMPTS = 3;
+
+	/**
+	 * A post with this many technical failures in a row is on hold: it stays {@link PostStage#STORED} or
+	 * {@link PostStage#FAILED}, but the retry run no longer takes it ({@code V10__posts_technical_failures.sql}).
+	 */
+	public static final int MAX_TECHNICAL_FAILURES = 3;
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.UUID)
@@ -85,6 +91,17 @@ public class Post {
 	/** The run assessing the post; set exactly when {@link #getStage()} is {@link PostStage#ASSESSING}. */
 	@Column(name = "assessing_run_id")
 	private @Nullable UUID assessingRunId;
+
+	/**
+	 * Errors of our code (no stored assessment, no attempt) since the last stored assessment; at
+	 * {@link #MAX_TECHNICAL_FAILURES} the post is on hold.
+	 */
+	@Column(name = "technical_failures", nullable = false)
+	private int technicalFailures;
+
+	/** The message of the latest of {@link #getTechnicalFailures()}; {@code null} when there is none. */
+	@Column(name = "last_technical_error")
+	private @Nullable String lastTechnicalError;
 
 	@Column(name = "first_run_id", nullable = false, updatable = false)
 	private UUID firstRunId;
@@ -192,6 +209,14 @@ public class Post {
 
 	public @Nullable UUID getAssessingRunId() {
 		return assessingRunId;
+	}
+
+	public int getTechnicalFailures() {
+		return technicalFailures;
+	}
+
+	public @Nullable String getLastTechnicalError() {
+		return lastTechnicalError;
 	}
 
 	public UUID getFirstRunId() {

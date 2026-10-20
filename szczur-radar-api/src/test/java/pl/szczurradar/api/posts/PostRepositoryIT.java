@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import jakarta.persistence.EntityManager;
@@ -29,6 +30,7 @@ import pl.szczurradar.api.llm.Provider;
 import pl.szczurradar.api.llm.ServiceTier;
 import pl.szczurradar.api.pipeline.run.PipelineRun;
 import pl.szczurradar.api.pipeline.run.PipelineRunRepository;
+import pl.szczurradar.api.pipeline.state.PostTransitions;
 import pl.szczurradar.api.raw.RawPayloadStore;
 import pl.szczurradar.api.sources.Source;
 import pl.szczurradar.api.user.Role;
@@ -37,7 +39,8 @@ import pl.szczurradar.api.user.UserRepository;
 
 /**
  * The queries of {@link PostRepository} and {@link AssessmentRepository} on Postgres: dedup keys,
- * leftovers, newest-first pages and the latest attempt with its tie rule. Each test rolls back.
+ * leftovers (without posts on hold), newest-first pages and the latest attempt with its tie rule; and the
+ * technical failures {@link PostTransitions} counts on a post. Each test rolls back.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, properties = MigrateCommand.ENABLE_FLYWAY)
 @Import(TestcontainersConfiguration.class)
@@ -60,17 +63,22 @@ class PostRepositoryIT {
 	RawPayloadStore rawPayloads;
 
 	@Autowired
+	PostTransitions transitions;
+
+	@Autowired
 	JdbcTemplate jdbc;
 
 	@Autowired
 	EntityManager entityManager;
 
+	private UUID adminId;
+
 	private UUID runId;
 
 	@BeforeEach
 	void run() {
-		User admin = users.save(new User("posts-" + UUID.randomUUID() + "@example.com", null, Role.ADMIN));
-		runId = runs.save(PipelineRun.retry(admin.getId(), null)).getId();
+		adminId = users.save(new User("posts-" + UUID.randomUUID() + "@example.com", null, Role.ADMIN)).getId();
+		runId = runs.save(PipelineRun.retry(adminId, null)).getId();
 	}
 
 	@Test
@@ -92,6 +100,105 @@ class PostRepositoryIT {
 		assessing(post(ItemType.POST, "80106", "2026-10-01T08:00:00Z"));
 
 		assertThat(posts.findLeftoverIds()).containsExactly(failedOnce, stored, failedTwice);
+	}
+
+	@Test
+	void aPostOnHoldIsNoLeftoverAndOneTechnicalFailureShortOfItIs() {
+		UUID storedOnHold = technicalFailures(post(ItemType.POST, "80111", "2026-10-01T08:00:00Z"),
+				Post.MAX_TECHNICAL_FAILURES);
+		UUID failedOnHold = technicalFailures(stage(post(ItemType.POST, "80112", "2026-10-01T09:00:00Z"),
+				PostStage.FAILED, 1), Post.MAX_TECHNICAL_FAILURES);
+
+		// Posts on hold alone: no leftover, so they queue no retry run.
+		assertThat(posts.findLeftoverIds()).isEmpty();
+		assertThat(posts.existsLeftover()).isFalse();
+
+		UUID almost = technicalFailures(post(ItemType.POST, "80113", "2026-10-01T10:00:00Z"),
+				Post.MAX_TECHNICAL_FAILURES - 1);
+
+		assertThat(posts.findLeftoverIds()).containsExactly(almost).doesNotContain(storedOnHold, failedOnHold);
+		assertThat(posts.existsLeftover()).isTrue();
+	}
+
+	@Test
+	void aReleaseWithATechnicalFailureCountsItOnlyForTheRunHoldingThePost() {
+		UUID otherRun = runs.save(PipelineRun.retry(adminId, null)).getId();
+		UUID held = post(ItemType.POST, "80121", "2026-10-01T08:00:00Z");
+		assessing(held);
+
+		assertThat(transitions.releaseFailed(held, otherRun, "IllegalStateException: not mine")).isEmpty();
+		assertThat(technical(held)).containsEntry("stage", PostStage.ASSESSING.value())
+			.containsEntry("technical_failures", 0)
+			.containsEntry("last_technical_error", null);
+
+		assertThat(transitions.releaseFailed(held, runId, "IllegalStateException: a bug")).contains(1);
+		assertThat(technical(held)).containsEntry("stage", PostStage.STORED.value())
+			.containsEntry("assessment_attempts", 0)
+			.containsEntry("technical_failures", 1)
+			.containsEntry("last_technical_error", "IllegalStateException: a bug");
+		// Back already: a second release changes nothing.
+		assertThat(transitions.release(held, runId)).isFalse();
+	}
+
+	@Test
+	void aLongTechnicalErrorIsCutAndLosesNul() {
+		UUID held = post(ItemType.POST, "80122", "2026-10-01T08:00:00Z");
+		assessing(held);
+
+		// PostgreSQL rejects U+0000 in TEXT; an SDK's message may carry it.
+		assertThat(transitions.releaseFailed(held, runId, "bad \u0000 byte " + "x".repeat(2_000))).contains(1);
+
+		assertThat((String) technical(held).get("last_technical_error")).hasSize(501)
+			.startsWith("bad \uFFFD byte x")
+			.endsWith("x…");
+	}
+
+	@Test
+	void aStoredResultResetsTheTechnicalFailures() {
+		UUID held = technicalFailures(post(ItemType.POST, "80131", "2026-10-01T08:00:00Z"), 2);
+		assessing(held);
+
+		assertThat(transitions.record(held, runId, 0, new Assessment(held, runId, ContractFixtures.validInput(),
+				failed(Instant.parse("2026-10-06T10:00:00Z"))))).isTrue();
+
+		assertThat(technical(held)).containsEntry("stage", PostStage.FAILED.value())
+			.containsEntry("assessment_attempts", 1)
+			.containsEntry("technical_failures", 0)
+			.containsEntry("last_technical_error", null);
+	}
+
+	@Test
+	void aTechnicalFailureIsCountedOnAPostPutBackOnlyWhileItsRunIsRunning() {
+		running(runId);
+		UUID stored = post(ItemType.POST, "80141", "2026-10-01T08:00:00Z");
+		UUID failed = stage(post(ItemType.POST, "80142", "2026-10-01T08:00:00Z"), PostStage.FAILED, 2);
+		UUID assessed = stage(post(ItemType.POST, "80143", "2026-10-01T08:00:00Z"), PostStage.ASSESSED, 0);
+		UUID dead = stage(post(ItemType.POST, "80144", "2026-10-01T08:00:00Z"), PostStage.DEAD, 3);
+		UUID held = post(ItemType.POST, "80145", "2026-10-01T08:00:00Z");
+		assessing(held);
+
+		assertThat(transitions.countTechnicalFailure(stored, runId, "provider unavailable")).isTrue();
+		assertThat(transitions.countTechnicalFailure(failed, runId, "provider unavailable")).isTrue();
+		assertThat(transitions.countTechnicalFailure(assessed, runId, "provider unavailable")).isFalse();
+		assertThat(transitions.countTechnicalFailure(dead, runId, "provider unavailable")).isFalse();
+		assertThat(transitions.countTechnicalFailure(held, runId, "provider unavailable")).isFalse();
+
+		assertThat(technical(stored)).containsEntry("stage", PostStage.STORED.value())
+			.containsEntry("technical_failures", 1)
+			.containsEntry("last_technical_error", "provider unavailable");
+		assertThat(technical(failed)).containsEntry("stage", PostStage.FAILED.value())
+			.containsEntry("assessment_attempts", 2)
+			.containsEntry("technical_failures", 1);
+		assertThat(List.of(assessed, dead, held)).allSatisfy(post -> assertThat(technical(post))
+			.containsEntry("technical_failures", 0)
+			.containsEntry("last_technical_error", null));
+
+		// A run interrupted in the meantime (e.g. a deploy) counts nothing more.
+		jdbc.update("UPDATE pipeline_runs SET status = 'interrupted', finished_at = now() WHERE id = ?", runId);
+
+		assertThat(transitions.countTechnicalFailure(stored, runId, "provider unavailable again")).isFalse();
+		assertThat(technical(stored)).containsEntry("technical_failures", 1)
+			.containsEntry("last_technical_error", "provider unavailable");
 	}
 
 	@Test
@@ -187,6 +294,28 @@ class PostRepositoryIT {
 		jdbc.update("UPDATE posts SET stage = ?, assessment_attempts = ? WHERE id = ?", stage.value(), attempts, post);
 		entityManager.clear();
 		return post;
+	}
+
+	/** Gives a post {@code count} technical failures in a row, as the pipeline's conditional updates would. */
+	private UUID technicalFailures(UUID post, int count) {
+		entityManager.flush();
+		jdbc.update("UPDATE posts SET technical_failures = ?, last_technical_error = 'IllegalStateException: x'"
+				+ " WHERE id = ?", count, post);
+		entityManager.clear();
+		return post;
+	}
+
+	/** A post's stage, attempts and technical failures, read from the table. */
+	private Map<String, Object> technical(UUID post) {
+		return jdbc.queryForMap("SELECT stage, assessment_attempts, technical_failures, last_technical_error"
+				+ " FROM posts WHERE id = ?", post);
+	}
+
+	/** Makes {@code run} the running run (at most one runs: any other is interrupted, rolled back with the test). */
+	private void running(UUID run) {
+		entityManager.flush();
+		jdbc.update("UPDATE pipeline_runs SET status = 'interrupted', finished_at = now() WHERE status = 'running'");
+		jdbc.update("UPDATE pipeline_runs SET status = 'running', started_at = now() WHERE id = ?", run);
 	}
 
 	private void assessing(UUID post) {

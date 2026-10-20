@@ -31,23 +31,31 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
 
 	/**
 	 * The leftovers of earlier runs, oldest first: stored posts never assessed (including those put back
-	 * after an interruption) and failed posts with attempts left.
+	 * after an interruption) and failed posts with attempts left — except posts on hold
+	 * ({@link Post#MAX_TECHNICAL_FAILURES} technical failures in a row), which only an admin's run of
+	 * chosen posts takes.
 	 */
 	default List<UUID> findLeftoverIds() {
-		return findIdsInStageOrFailedBelow(PostStage.STORED, PostStage.FAILED, Post.MAX_ASSESSMENT_ATTEMPTS);
+		return findIdsInStageOrFailedBelow(PostStage.STORED, PostStage.FAILED, Post.MAX_ASSESSMENT_ATTEMPTS,
+				Post.MAX_TECHNICAL_FAILURES);
 	}
 
-	@Query("select p.id from Post p where p.stage = :stage or (p.stage = :failed and p.assessmentAttempts < :maxAttempts)"
-			+ " order by p.publishedAt, p.id")
-	List<UUID> findIdsInStageOrFailedBelow(PostStage stage, PostStage failed, int maxAttempts);
+	@Query("select p.id from Post p where (p.stage = :stage or (p.stage = :failed and p.assessmentAttempts < :maxAttempts))"
+			+ " and p.technicalFailures < :maxTechnicalFailures order by p.publishedAt, p.id")
+	List<UUID> findIdsInStageOrFailedBelow(PostStage stage, PostStage failed, int maxAttempts, int maxTechnicalFailures);
 
-	/** Whether there is any leftover ({@link #findLeftoverIds()} is not empty). */
+	/**
+	 * Whether there is any leftover ({@link #findLeftoverIds()} is not empty); a post on hold alone queues
+	 * no retry run.
+	 */
 	default boolean existsLeftover() {
-		return existsInStageOrFailedBelow(PostStage.STORED, PostStage.FAILED, Post.MAX_ASSESSMENT_ATTEMPTS);
+		return existsInStageOrFailedBelow(PostStage.STORED, PostStage.FAILED, Post.MAX_ASSESSMENT_ATTEMPTS,
+				Post.MAX_TECHNICAL_FAILURES);
 	}
 
-	@Query("select count(p) > 0 from Post p where p.stage = :stage or (p.stage = :failed and p.assessmentAttempts < :maxAttempts)")
-	boolean existsInStageOrFailedBelow(PostStage stage, PostStage failed, int maxAttempts);
+	@Query("select count(p) > 0 from Post p where (p.stage = :stage or (p.stage = :failed and p.assessmentAttempts < :maxAttempts))"
+			+ " and p.technicalFailures < :maxTechnicalFailures")
+	boolean existsInStageOrFailedBelow(PostStage stage, PostStage failed, int maxAttempts, int maxTechnicalFailures);
 
 	/** Those of {@code ids} in {@code stage}. */
 	@Query("select p.id from Post p where p.id in :ids and p.stage = :stage order by p.id")
