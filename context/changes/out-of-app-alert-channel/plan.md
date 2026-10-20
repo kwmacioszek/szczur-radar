@@ -494,9 +494,9 @@ wstrzymać w panelu.
 
 #### Automated
 
-- [x] 1.1 Testy triggera przechodzą: `tools/pipeline-trigger/test.sh`
-- [x] 1.2 Testy backupu przechodzą: `tools/db-backup/test.sh`
-- [x] 1.3 Po testach nie zostają kontenery ani sieci testów
+- [x] 1.1 Testy triggera przechodzą: `tools/pipeline-trigger/test.sh` — d7553af
+- [x] 1.2 Testy backupu przechodzą: `tools/db-backup/test.sh` — d7553af
+- [x] 1.3 Po testach nie zostają kontenery ani sieci testów — d7553af
 
 #### Manual
 
@@ -506,8 +506,8 @@ wstrzymać w panelu.
 
 #### Automated
 
-- [ ] 2.1 Testy jednostkowe przechodzą: `./mvnw -B test`
-- [ ] 2.2 Pełna weryfikacja przechodzi: `./mvnw -B verify`
+- [x] 2.1 Testy jednostkowe przechodzą: `./mvnw -B test`
+- [x] 2.2 Pełna weryfikacja przechodzi: `./mvnw -B verify`
 
 #### Manual
 

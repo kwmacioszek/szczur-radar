@@ -16,7 +16,10 @@ public enum CommandType {
 
 	RESET_PASSWORD("reset-password",
 			"remove an account's password, end its sessions and print a new one-time activation link"
-					+ " (--email <e-mail>)");
+					+ " (--email <e-mail>)"),
+
+	SEND_TEST_ALERT("send-test-alert",
+			"send a test event to the healthchecks.io check in HEALTHCHECK_PING_URL and exit (no database)");
 
 	private final String cliName;
 

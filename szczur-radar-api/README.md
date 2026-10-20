@@ -18,7 +18,8 @@ Pakiet bazowy `pl.szczurradar.api`, pakiety według funkcji — nie według wars
 | `health` | sondy `GET /api/health` (bez bazy) i `GET /api/ready` (`SELECT 1`, 503 przy błędzie) |
 | `user` | encja `User`, `UserRepository` (Spring Data JPA), `Role` (enum), `Emails` (jedna normalizacja e-maila), `SystemAccount` (konta, które nie są osobami: `SCHEDULER`) |
 | `auth` | logowanie JSON, `/me`, logout, limiter prób, filtr Origin, odnawianie ciasteczka sesji, argon2 (`Passwords`); `auth/activation` — jednorazowe linki aktywacyjne (S-07): `ActivationLinks` (wydanie, reset konta, sprawdzenie i użycie linku), `ActivationSettings` (`WEB_PUBLIC_URL`, `ACTIVATION_LINK_TTL`), encja tokenu (w bazie tylko SHA-256) i publiczny `ActivationController` |
-| `cli` | komendy operatora: `migrate`, `create-admin`, `create-user`, `reset-password` (dyspozytor `CommandLine`; sprawdzenia przed startem Springa w `CommandChecks`; dwie komendy z linkiem aktywacyjnym na wspólnym `LinkCommand`) |
+| `cli` | komendy operatora: `migrate`, `create-admin`, `create-user`, `reset-password`, `send-test-alert` (dyspozytor `CommandLine`; sprawdzenia przed startem Springa w `CommandChecks`; dwie komendy z linkiem aktywacyjnym na wspólnym `LinkCommand`) |
+| `alerts` | zdarzenia dla operatora poza aplikacją (F-04): `AlertSettings` (`HEALTHCHECK_PING_URL`), `AlertEvent` (enum, dziś `TEST_SIGNAL`), `OperatorAlerts` (nigdy nie rzuca) z `HealthchecksAlerts` (check healthchecks.io → Telegram) i `NoOperatorAlerts`; bean tylko w serwerze (`AlertsConfiguration`) |
 | `internal` | token crona `PIPELINE_TRIGGER_TOKEN` (`PipelineTriggerToken`) i jego filtr dla tras `/internal/**` (`PipelineTriggerTokenFilter`) |
 | `config` | Spring Security, sesja i ciasteczko, format błędów `{"detail": …}`, konfiguracja dostawcy LLM |
 | `agents` | agenci Embabel; `agents/assessor` — kontrakt oceny V2 jako kod (model, schemat, parser, walidator D1–D15, odsiew), prompt z wersją, `Assessor` (jedno wywołanie modelu na wpis) i `AssessorAgent` |
@@ -169,7 +170,7 @@ railway ssh -s szczur-radar-api -e <środowisko>
 java -jar target/szczur-radar-api.jar create-user --email jan@example.com   # e-mail bez < >
 ```
 
-Opcje podaje się jako `--nazwa wartość` albo `--nazwa=wartość`; nieznana lub powtórzona opcja to błąd użycia. Argumenty, e-mail i zmienne `PG*` są sprawdzane przed startem kontekstu Springa, więc błąd użycia nie dotyka bazy. Komendy uruchamiają wspólny kontekst Springa, więc też potrzebują trzech ustawień LLM. Zła wartość ustawienia w tym kontekście (np. `LLM_TIMEOUT=120`) jest błędem konfiguracji: Spring Boot loguje blok `APPLICATION FAILED TO START`, komenda dopisuje na stderr jedną linię `<komenda>: invalid configuration: …` i kończy się kodem `2`. Inna awaria kontekstu albo pracy (np. nieosiągalna baza, nieudana migracja) daje `<komenda> failed: …` i kod `1`. Dotyczy też `migrate`, więc pre-deploy na Railway zatrzymuje deploy, a poprzednia wersja działa dalej.
+Opcje podaje się jako `--nazwa wartość` albo `--nazwa=wartość`; nieznana lub powtórzona opcja to błąd użycia. Argumenty, e-mail i zmienne `PG*` są sprawdzane przed startem kontekstu Springa, więc błąd użycia nie dotyka bazy. Komendy uruchamiają wspólny kontekst Springa, więc też potrzebują trzech ustawień LLM — poza `send-test-alert`, która działa bez Springa i bez bazy. Zła wartość ustawienia w tym kontekście (np. `LLM_TIMEOUT=120`) jest błędem konfiguracji: Spring Boot loguje blok `APPLICATION FAILED TO START`, komenda dopisuje na stderr jedną linię `<komenda>: invalid configuration: …` i kończy się kodem `2`. Inna awaria kontekstu albo pracy (np. nieosiągalna baza, nieudana migracja) daje `<komenda> failed: …` i kod `1`. Dotyczy też `migrate`, więc pre-deploy na Railway zatrzymuje deploy, a poprzednia wersja działa dalej.
 
 ### `create-admin`
 
@@ -206,6 +207,32 @@ Kody wyjścia:
 # lokalnie: Postgres z compose.local.yaml, PG* i LLM_* jak wyżej, w tym samym terminalu
 WEB_PUBLIC_URL=http://localhost:5173 java -jar target/szczur-radar-api.jar create-user --email jan@example.com
 ```
+
+### `send-test-alert` (F-04)
+
+Wysyła zdarzenie testowe `TEST_SIGNAL` do checka zdarzeń API w healthchecks.io, który alarmuje w Telegramie: przychodzi wiadomość „down” z opisem zdarzenia (np. „TEST_SIGNAL (test of the operator alert channel, nothing is wrong): send-test-alert from <host>”), a zaraz po niej „up”. Tak sprawdza się cały kanał alarmowy od API do telefonu. Komenda nie uruchamia Springa: nie potrzebuje `PG*` ani `LLM_*`, tylko `HEALTHCHECK_PING_URL`, i nie przyjmuje argumentów.
+
+| Zmienna | Znaczenie |
+| --- | --- |
+| `HEALTHCHECK_PING_URL` | opcjonalna: adres pingu checka zdarzeń API w healthchecks.io, np. `https://hc-ping.com/<uuid>` — **sekret** (kto go zna, może meldować do checka): nigdy w repo, logach, issue ani argumentach. Bez niej (albo pusta) API niczego nie wysyła poza aplikację — tak działają PR envy bez testowego checka, lokalne uruchomienia i testy. Ustawiona musi być bezwzględnym adresem `https://` z hostem, bez zapytania i fragmentu; inaczej serwer nie startuje (blok `APPLICATION FAILED TO START` z nazwą zmiennej, **bez powtórzenia wartości**). Czyta ją serwer przy starcie i `send-test-alert`; `migrate` i pozostałe komendy jej nie czytają, więc zła wartość nie zatrzymuje pre-deployu |
+
+Jedno zdarzenie to dwa żądania: `POST <adres>/fail` z opisem (przyciętym do 1000 znaków), a po odpowiedzi 2xx `POST <adres>` z „ok”, bo healthchecks.io alarmuje tylko przy zmianie stanu i bez powrotu do „up” następne zdarzenie nie dałoby wiadomości. Jedna próba na żądanie, bez ponowień, limity 5 s na połączenie i 10 s na żądanie. Porażka nigdy nie psuje wywołującego: kończy się jedną linią WARN ze zdarzeniem i statusem albo klasą wyjątku, nigdy z adresem. W F-04 woła go tylko ta komenda; ścieżki błędów API podłączy S-18.
+
+```bash
+# lokalnie (adres testowego checka trzymaj poza repo, jak klucz LLM)
+HEALTHCHECK_PING_URL=https://hc-ping.com/<uuid> java -jar target/szczur-radar-api.jar send-test-alert
+# produkcja / PR env: jak create-user — najpierw obudź API, potem w powłoce kontenera
+# (zmienna jest już ustawiona w serwisie szczur-radar-api):
+curl https://<domena-web>/api/health
+railway ssh -s szczur-radar-api -e <środowisko>
+java -jar target/szczur-radar-api.jar send-test-alert
+```
+
+Na stdout jedna linia o dostarczeniu, na stderr powód porażki; adresu nie wypisuje nigdzie. Kody wyjścia:
+
+- 0: zdarzenie dostarczone, check znów „up”;
+- 1: nie dostarczone (odpowiedź spoza 2xx, brak odpowiedzi, przekroczony czas — przyczyna w linii WARN; bez ponowienia);
+- 2: błąd użycia lub konfiguracji (argument, brak albo zła wartość `HEALTHCHECK_PING_URL`).
 
 ## Obraz Dockera (Railway, CI)
 
