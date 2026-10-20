@@ -583,9 +583,9 @@ Bezpiecznik skraca awarię: przebieg staje po ~9 nieudanych żądaniach HTTP zam
 
 #### Automated
 
-- [x] 4.1 Testy API przechodzą
-- [x] 4.2 Testy SPA przechodzą
-- [x] 4.3 Typecheck i build SPA przechodzą
+- [x] 4.1 Testy API przechodzą — d308250
+- [x] 4.2 Testy SPA przechodzą — d308250
+- [x] 4.3 Typecheck i build SPA przechodzą — d308250
 
 #### Manual
 
@@ -597,8 +597,8 @@ Bezpiecznik skraca awarię: przebieg staje po ~9 nieudanych żądaniach HTTP zam
 
 #### Automated
 
-- [ ] 5.1 W dokumentacji pakietów nie zostało zdanie o fallbacku tylko po trzech 429
-- [ ] 5.2 PRD ma doprecyzowanie S-09
+- [x] 5.1 W dokumentacji pakietów nie zostało zdanie o fallbacku tylko po trzech 429
+- [x] 5.2 PRD ma doprecyzowanie S-09
 
 #### Manual
 
