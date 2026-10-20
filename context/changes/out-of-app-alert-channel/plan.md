@@ -506,8 +506,8 @@ wstrzymać w panelu.
 
 #### Automated
 
-- [x] 2.1 Testy jednostkowe przechodzą: `./mvnw -B test`
-- [x] 2.2 Pełna weryfikacja przechodzi: `./mvnw -B verify`
+- [x] 2.1 Testy jednostkowe przechodzą: `./mvnw -B test` — 6afbd01
+- [x] 2.2 Pełna weryfikacja przechodzi: `./mvnw -B verify` — 6afbd01
 
 #### Manual
 
@@ -517,8 +517,8 @@ wstrzymać w panelu.
 
 #### Automated
 
-- [ ] 3.1 Testy skryptu przechodzą: `tools/healthchecks/test.sh`
-- [ ] 3.2 `shellcheck tools/healthchecks/*.sh` bez błędów
+- [x] 3.1 Testy skryptu przechodzą: `tools/healthchecks/test.sh`
+- [x] 3.2 `shellcheck tools/healthchecks/*.sh` bez błędów
 - [ ] 3.3 Plan IaC dla PR env bez zmian destrukcyjnych i zielona bramka `railway-config`
 - [ ] 3.4 CI na PR zielone, w tym `healthchecks-test`
 
