@@ -381,9 +381,9 @@ Brak migracji, zmiennych środowiskowych i zmian IaC. Wycofanie = revert PR.
 
 #### Automated
 
-- [x] 3.1 Testy jednostkowe przechodzą
-- [x] 3.2 Testy repozytorium pokrywają przypadki spójności i ponownego czytania
-- [x] 3.3 Pełna weryfikacja przechodzi (w tym `PipelineAgentIT`)
+- [x] 3.1 Testy jednostkowe przechodzą — 8ab8bc7
+- [x] 3.2 Testy repozytorium pokrywają przypadki spójności i ponownego czytania — 8ab8bc7
+- [x] 3.3 Pełna weryfikacja przechodzi (w tym `PipelineAgentIT`) — 8ab8bc7
 
 #### Manual
 
