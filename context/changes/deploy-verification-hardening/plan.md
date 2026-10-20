@@ -518,8 +518,8 @@ kroków w nagłówku spójna.
 
 #### Automated
 
-- [ ] 3.1 CI monitora zielone na `main`
-- [ ] 3.2 Środowisko GitHub `monitor` ograniczone do `main`
+- [x] 3.1 CI monitora zielone na `main` — szczur-radar-monitor@450083d
+- [x] 3.2 Środowisko GitHub `monitor` ograniczone do `main` — szczur-radar-monitor@450083d
 
 #### Manual
 
