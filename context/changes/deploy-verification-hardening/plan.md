@@ -506,9 +506,9 @@ kroków w nagłówku spójna.
 
 #### Automated
 
-- [ ] 2.1 Testy weryfikatora przechodzą: `verifier/test.sh`
-- [ ] 2.2 `shellcheck verifier/*.sh` bez błędów
-- [ ] 2.3 Workflowy przechodzą walidację składni: `actionlint`
+- [x] 2.1 Testy weryfikatora przechodzą: `verifier/test.sh` — szczur-radar-monitor@7eb658c
+- [x] 2.2 `shellcheck verifier/*.sh` bez błędów — szczur-radar-monitor@7eb658c
+- [x] 2.3 Workflowy przechodzą walidację składni: `actionlint` — szczur-radar-monitor@7eb658c
 
 #### Manual
 
