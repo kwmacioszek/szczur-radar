@@ -597,8 +597,8 @@ Bezpiecznik skraca awarię: przebieg staje po ~9 nieudanych żądaniach HTTP zam
 
 #### Automated
 
-- [x] 5.1 W dokumentacji pakietów nie zostało zdanie o fallbacku tylko po trzech 429
-- [x] 5.2 PRD ma doprecyzowanie S-09
+- [x] 5.1 W dokumentacji pakietów nie zostało zdanie o fallbacku tylko po trzech 429 — 9d78582
+- [x] 5.2 PRD ma doprecyzowanie S-09 — 9d78582
 
 #### Manual
 

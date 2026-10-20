@@ -1,7 +1,7 @@
 ---
 change_id: attempt-accounting
 title: Awaria dostawcy LLM ani błąd naszego kodu nie zabija postów
-status: implementing
+status: implemented
 created: 2026-10-20
 updated: 2026-10-20
 archived_at: null
