@@ -31,7 +31,10 @@ class LlmCheckController {
 		this.properties = properties;
 	}
 
-	/** 200 either way: {@code ok}, or why not (the provider's message, without the key). */
+	/**
+	 * 200 either way: {@code ok}, or why not (the provider's message, without the key; for an error that
+	 * is not the provider's, the exception's message).
+	 */
 	@GetMapping("/check")
 	LlmCheck check() {
 		try {
@@ -41,6 +44,12 @@ class LlmCheckController {
 		catch (LlmCallException ex) {
 			return new LlmCheck(properties.provider(), properties.model(), false,
 					ex instanceof LlmConfigurationException, null, ex.getMessage());
+		}
+		catch (RuntimeException ex) {
+			// not a provider error (a bug or an unknown SDK error, LlmClient#complete): still a failed check
+			String message = ex.getMessage();
+			return new LlmCheck(properties.provider(), properties.model(), false, false, null,
+					message != null ? message : ex.getClass().getName());
 		}
 	}
 
