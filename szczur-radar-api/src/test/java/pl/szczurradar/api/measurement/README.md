@@ -162,6 +162,38 @@ denominator is a measurement error (`InsufficientGoldException`), never a passed
 default (`luna`) keeps a margin and closing the gap is post-MVP "LLM hardening" (report
 `context/archive/2026-09-27-assessment-contract-harness/reports/gold-2026-10-06.md`).
 
+## Paging probe (`WykopPagingProbe`, S-16)
+
+Measures, on live answers and before the paging logic changes, how the Wykop search pages behave:
+for each of the last `probe.days` closed days (default 30, Warsaw time) it reads the #gielda
+`GET search/entries` and `GET search/links` page by page straight through
+`sources/wykop/WykopApiClient` (raw pages, not `WykopRepository`; the same query: `tags[]`, the whole
+day as `date_from`/`date_to`, `sort=newest`, 50 per page, 300 ms between requests). A resource stops
+at an empty page, a short page or when its unique elements (by resource and id) reach the first
+page's `pagination.total` (at most 200 pages).
+
+It prints only counts — no content, nicks, ids or URLs, and nothing is written to disk:
+
+- per day and resource: pages, each page's `total` (and whether it changed between pages), elements
+  received / unique / duplicated, an empty or short page before the total, unique elements below the
+  total, and whether today's stop rule (received elements, duplicates included, reach the total) would
+  have stopped short of the unique total;
+- for the whole run: the same counts summed, the distribution of the elements' `status` per resource
+  (absent and `null` apart) with how many of each have no text (an entry with blank `content`, a link
+  with blank `title` and `description`), and the elements without text.
+
+```bash
+# keys of a Wykop app (dev.wykop.pl), only in your shell
+( export WYKOP_KEY=… WYKOP_SECRET=… && \
+  ./mvnw -Pmeasurement test -Dtest=WykopPagingProbe )
+# optional: -Dprobe.days=30
+```
+
+Cost: about 7 requests per day (~6 pages of entries, 1 of links) and one `auth`, about 1–2 min for
+30 days. The run fails at the end when a request failed (everything is printed first). The aggregates
+and the conclusion (does the search return deleted elements, and in what shape; how often the paging
+is inconsistent) go into `context/changes/wykop-ingest-completeness/change.md` (`## Notes`).
+
 ## Recording, replay and report (plan phase 6)
 
 `src/test/resources/fixtures/llm/models.json` lists the measured configurations (`id`, `role`:
