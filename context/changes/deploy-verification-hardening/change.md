@@ -1,7 +1,7 @@
 ---
 change_id: deploy-verification-hardening
 title: Wiarygodna weryfikacja wdrożeń i alarmowanie bez blokowania Wait for CI
-status: implementing
+status: implemented
 created: 2026-10-20
 updated: 2026-10-20
 archived_at: null
