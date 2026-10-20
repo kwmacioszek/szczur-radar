@@ -368,10 +368,10 @@ Brak migracji, zmiennych środowiskowych i zmian IaC. Wycofanie = revert PR.
 
 #### Automated
 
-- [x] 2.1 Testy jednostkowe przechodzą
-- [x] 2.2 Testy klienta pokrywają przypadki ponowień z asercją liczby żądań
-- [x] 2.3 Relacja terminu z watchdogiem przypięta testem w `WykopRepositoryTest`
-- [x] 2.4 Pełna weryfikacja przechodzi (w tym `PipelineAgentIT`)
+- [x] 2.1 Testy jednostkowe przechodzą — f08c06a
+- [x] 2.2 Testy klienta pokrywają przypadki ponowień z asercją liczby żądań — f08c06a
+- [x] 2.3 Relacja terminu z watchdogiem przypięta testem w `WykopRepositoryTest` — f08c06a
+- [x] 2.4 Pełna weryfikacja przechodzi (w tym `PipelineAgentIT`) — f08c06a
 
 #### Manual
 
@@ -381,9 +381,9 @@ Brak migracji, zmiennych środowiskowych i zmian IaC. Wycofanie = revert PR.
 
 #### Automated
 
-- [ ] 3.1 Testy jednostkowe przechodzą
-- [ ] 3.2 Testy repozytorium pokrywają przypadki spójności i ponownego czytania
-- [ ] 3.3 Pełna weryfikacja przechodzi (w tym `PipelineAgentIT`)
+- [x] 3.1 Testy jednostkowe przechodzą
+- [x] 3.2 Testy repozytorium pokrywają przypadki spójności i ponownego czytania
+- [x] 3.3 Pełna weryfikacja przechodzi (w tym `PipelineAgentIT`)
 
 #### Manual
 

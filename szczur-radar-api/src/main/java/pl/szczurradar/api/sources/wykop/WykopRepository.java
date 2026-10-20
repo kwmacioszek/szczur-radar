@@ -11,6 +11,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
@@ -23,6 +26,17 @@ import tools.jackson.databind.json.JsonMapper;
  * skipped and counted ({@link WykopSearchResult}). Elements come back in the source's shape: the
  * fields the assessment needs ({@link WykopItem}) next to the raw element; mapping is
  * {@link WykopMapper}'s job.
+ *
+ * <p>Paging is checked for consistency, per resource: a read counts the elements it has seen (each
+ * distinct {@code resource:id} once; elements without an id and of an unexpected shape at every
+ * occurrence) and compares them with page 1's {@code pagination.total}. It is consistent when it ends
+ * with at least {@code total} seen and every page had the same {@code total}. An empty or short page
+ * before {@code total}, or a page whose {@code total} differs from page 1's, means the pages shifted
+ * (e.g. an element was deleted while paging, so one would be lost between pages). Such a resource is
+ * read once more from page 1 and that read replaces the first (an element deleted meanwhile is not
+ * kept); when it is inconsistent too, the fetch fails ({@link WykopFailure#INCOMPLETE_PAGING}) rather
+ * than return an incomplete day. Only the inconsistent resource is read again. An answer without
+ * {@code pagination.total} ends at its first short or empty page, unchecked.
  *
  * <p>{@code GET search/all} is not used: it has no pages and returns only a preview (e.g. 3 of 262
  * entries of #gielda on 2026-10-01). Without {@code votes} the search is not limited to popular
@@ -45,6 +59,8 @@ public class WykopRepository {
 	 * shortest default ({@code PipelineStallSettings.MIN_DEFAULT}; pinned by a test).
 	 */
 	static final Duration FETCH_DEADLINE = Duration.ofMinutes(10);
+
+	private static final Logger log = LoggerFactory.getLogger(WykopRepository.class);
 
 	private static final DateTimeFormatter SEARCH_TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
@@ -98,9 +114,10 @@ public class WykopRepository {
 	 * Entries, then links, with {@code tag} added between {@code from} and {@code to} (inclusive), each
 	 * once.
 	 *
-	 * @throws WykopApiException when a page is short of {@code pagination.total} (a cut-off answer),
-	 *     the page limit is reached, the API fails (after the client's retries) or the fetch does not fit
-	 *     {@link #FETCH_DEADLINE} ({@link WykopFailure#DEADLINE_EXCEEDED})
+	 * @throws WykopApiException when a resource's paging stays inconsistent in two reads
+	 *     ({@link WykopFailure#INCOMPLETE_PAGING}), the page limit is reached, the API fails (after the
+	 *     client's retries) or the fetch, both reads included, does not fit {@link #FETCH_DEADLINE}
+	 *     ({@link WykopFailure#DEADLINE_EXCEEDED})
 	 */
 	public WykopSearchResult itemsAddedBetween(String tag, LocalDateTime from, LocalDateTime to) {
 		Instant deadline = client.deadline(FETCH_DEADLINE);
@@ -112,13 +129,38 @@ public class WykopRepository {
 		return new WykopSearchResult(new ArrayList<>(elements.values()), skipped);
 	}
 
-	/** Adds the resource's elements to {@code elements} (keyed by resource and id); returns the skipped count. */
+	/**
+	 * Adds the resource's elements to {@code elements} (keyed by resource and id), from its first read
+	 * or, when that one is inconsistent, from a second read that replaces it; returns the skipped count.
+	 */
 	private int search(Resource resource, String tag, LocalDateTime from, LocalDateTime to, Instant deadline,
 			Map<String, WykopSearchResult.Element> elements) {
-		int received = 0;
+		Read read = read(resource, tag, from, to, deadline, false);
+		if (read.inconsistency() != null) {
+			log.warn("Reading Wykop {} again: {} of {}, {}", resource.path, read.seen(), read.total(),
+					read.inconsistency());
+			read = read(resource, tag, from, to, deadline, true);
+			if (read.inconsistency() != null) {
+				throw new WykopApiException(WykopFailure.INCOMPLETE_PAGING, "Wykop " + resource.path
+						+ " stayed inconsistent after 2 reads: " + read.seen() + " of " + read.total() + ", "
+						+ read.inconsistency());
+			}
+		}
+		elements.putAll(read.elements());
+		return read.skipped();
+	}
+
+	/**
+	 * One read of the resource from page 1, with its own elements; {@code again} pauses before page 1
+	 * too (the first read just asked for pages).
+	 */
+	private Read read(Resource resource, String tag, LocalDateTime from, LocalDateTime to, Instant deadline,
+			boolean again) {
+		Map<String, WykopSearchResult.Element> elements = new LinkedHashMap<>();
 		int skipped = 0;
+		int total = -1;
 		for (int page = 1; page <= MAX_PAGES; page++) {
-			if (page > 1) {
+			if (page > 1 || again) {
 				pause();
 			}
 			Map<String, Object> query = new LinkedHashMap<>();
@@ -135,7 +177,6 @@ public class WykopRepository {
 						"Wykop " + resource.path + " answered without a data list");
 			}
 			for (JsonNode element : data) {
-				received++;
 				WykopItem item;
 				try {
 					item = json.treeToValue(element, WykopItem.class);
@@ -146,27 +187,68 @@ public class WykopRepository {
 					continue;
 				}
 				// Pages shift when elements are added or removed while paging: keep each element once.
-				elements.putIfAbsent(key(item, elements.size()), new WykopSearchResult.Element(item, element));
+				elements.putIfAbsent(key(resource, item, elements.size()),
+						new WykopSearchResult.Element(item, element));
 			}
-			int total = answer.path("pagination").path("total").asInt(-1);
-			if (data.isEmpty() || (total >= 0 && received >= total)) {
-				return skipped;
+			int pageTotal = answer.path("pagination").path("total").asInt(-1);
+			if (page == 1) {
+				total = pageTotal;
+			}
+			// Without a total there is nothing to check: a short or empty page ends the read.
+			if (total < 0) {
+				if (data.size() < PAGE_SIZE) {
+					return new Read(elements, skipped, total, null);
+				}
+				continue;
+			}
+			Read read = new Read(elements, skipped, total, null);
+			if (pageTotal != total) {
+				return read.inconsistent("total changed " + total + "→" + (pageTotal < 0 ? "none" : pageTotal)
+						+ " on page " + page);
+			}
+			if (read.seen() >= total) {
+				return read;
+			}
+			if (data.isEmpty()) {
+				return read.inconsistent("page " + page + " is empty");
 			}
 			if (data.size() < PAGE_SIZE) {
-				if (total >= 0) {
-					throw new WykopApiException(WykopFailure.MALFORMED_ANSWER, "Wykop " + resource.path + " page "
-							+ page + " has " + data.size() + " elements, but only " + received + " of " + total
-							+ " were received");
-				}
-				return skipped;
+				return read.inconsistent(
+						"page " + page + " has only " + data.size() + " of " + PAGE_SIZE + " elements");
 			}
+			// A full page before the total: the next page (duplicates may hold back the count).
 		}
 		throw new WykopApiException(WykopFailure.PAGE_LIMIT,
 				"Wykop " + resource.path + " did not end within " + MAX_PAGES + " pages");
 	}
 
-	private static String key(WykopItem item, int position) {
-		return item.id() == null ? "no-id:" + position : item.resource() + ":" + item.id();
+	/**
+	 * One read of a resource: its elements (keyed by resource and id), the skipped count, page 1's
+	 * {@code total} (-1 without one) and why the read is inconsistent, or {@code null}.
+	 */
+	private record Read(Map<String, WykopSearchResult.Element> elements, int skipped, int total,
+			@Nullable String inconsistency) {
+
+		/**
+		 * The elements seen: each distinct one once; those without an id and those skipped cannot be told
+		 * apart, so at every occurrence.
+		 */
+		int seen() {
+			return elements.size() + skipped;
+		}
+
+		Read inconsistent(String why) {
+			return new Read(elements, skipped, total, why);
+		}
+
+	}
+
+	/**
+	 * An element without an id is keyed by its position in the read (kept at every occurrence) and its
+	 * resource (so the resources' reads never share a key).
+	 */
+	private static String key(Resource resource, WykopItem item, int position) {
+		return item.id() == null ? "no-id:" + resource.path + ":" + position : item.resource() + ":" + item.id();
 	}
 
 	private void pause() {
