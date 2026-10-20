@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Clock;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
@@ -25,6 +26,7 @@ import tools.jackson.databind.json.JsonMapper;
 
 import pl.szczurradar.api.agents.assessor.AssessmentResult;
 import pl.szczurradar.api.agents.assessor.Assessor;
+import pl.szczurradar.api.agents.assessor.Preparation;
 import pl.szczurradar.api.agents.assessor.Prefilter;
 import pl.szczurradar.api.agents.assessor.Provenance;
 import pl.szczurradar.api.agents.assessor.contract.AssessmentInputV1;
@@ -32,6 +34,7 @@ import pl.szczurradar.api.agents.assessor.validation.FailureClass;
 import pl.szczurradar.api.agents.assessor.validation.Violation;
 import pl.szczurradar.api.llm.LlmClientFactory;
 import pl.szczurradar.api.llm.LlmProviderProperties;
+import pl.szczurradar.api.llm.LlmUnavailableException;
 import pl.szczurradar.api.sources.wykop.WykopItem;
 import pl.szczurradar.api.sources.wykop.WykopMapper;
 
@@ -81,7 +84,7 @@ class LiveSmokeTest {
 				prefiltered++;
 				continue;
 			}
-			AssessmentResult result = assessor.assess(input);
+			AssessmentResult result = assess(assessor, input);
 			calls.add(result);
 			System.out.printf("%s %-6s %-26s %5d ms, %d attempt(s)%s%n", record.sampleId(), result.status().value(),
 					result.failureClass() == null ? "" : result.failureClass().value(),
@@ -95,6 +98,22 @@ class LiveSmokeTest {
 
 		report(properties, inputs, prefiltered, calls);
 		assertThat(calls).as("assessable posts in the sample").hasSize(ASSESSED);
+	}
+
+	/**
+	 * {@link Assessor#assess}, with a provider unavailable after the retries recorded as the failed call
+	 * of this entry, as before {@code LlmUnavailableException} existed: the measurement reports it and goes
+	 * on.
+	 */
+	private static AssessmentResult assess(Assessor assessor, AssessmentInputV1 input) {
+		long start = System.nanoTime();
+		try {
+			return assessor.assess(input);
+		}
+		catch (LlmUnavailableException ex) {
+			return assessor.failed(((Preparation.Prepared) assessor.prepare(input)).request(), ex,
+					Duration.ofNanos(System.nanoTime() - start));
+		}
 	}
 
 	/** A pilot record in the API's field names, mapped by {@link WykopMapper} like a live element. */
@@ -145,8 +164,8 @@ class LiveSmokeTest {
 		System.out.println("median duration:          " + (durations.isEmpty() ? "-" : median(durations) + " ms"));
 		System.out.println("retried calls / retries:  " + retried + " / " + retries
 				+ " (429, 5xx, time-out or connection error)");
-		System.out.printf("flex fallbacks:           %d/%d = %.1f%% (each = 3 consecutive 429 refusals of flex)%n",
-				fallbacks, calls.size(), percent(fallbacks, calls.size()));
+		System.out.printf("flex fallbacks:           %d/%d = %.1f%% (each = flex's attempts used up on 429, 5xx,"
+				+ " time-outs or connection errors)%n", fallbacks, calls.size(), percent(fallbacks, calls.size()));
 		System.out.println("prompt / contract:        " + calls.stream()
 			.map(result -> result.provenance().promptVersion() + " / " + result.provenance().contractVersion())
 			.distinct()

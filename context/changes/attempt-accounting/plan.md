@@ -557,10 +557,10 @@ Bezpiecznik skraca awarię: przebieg staje po ~9 nieudanych żądaniach HTTP zam
 
 #### Automated
 
-- [x] 2.1 Migracja i walidacja encji przechodzą
-- [x] 2.2 Testy dyspozytora i przejść przechodzą
-- [x] 2.3 Pełny zestaw testów przechodzi
-- [x] 2.4 Test backupu przechodzi z nową migracją
+- [x] 2.1 Migracja i walidacja encji przechodzą — 2d9f01c
+- [x] 2.2 Testy dyspozytora i przejść przechodzą — 2d9f01c
+- [x] 2.3 Pełny zestaw testów przechodzi — 2d9f01c
+- [x] 2.4 Test backupu przechodzi z nową migracją — 2d9f01c
 
 #### Manual
 
@@ -570,10 +570,10 @@ Bezpiecznik skraca awarię: przebieg staje po ~9 nieudanych żądaniach HTTP zam
 
 #### Automated
 
-- [ ] 3.1 Testy jednostkowe dyspozytora i `Assessor` przechodzą
-- [ ] 3.2 Testy integracyjne przebiegu (z prawdziwym transportem) przechodzą
-- [ ] 3.3 Kod pomiarowy się kompiluje
-- [ ] 3.4 Pełny zestaw testów przechodzi
+- [x] 3.1 Testy jednostkowe dyspozytora i `Assessor` przechodzą
+- [x] 3.2 Testy integracyjne przebiegu (z prawdziwym transportem) przechodzą
+- [x] 3.3 Kod pomiarowy się kompiluje
+- [x] 3.4 Pełny zestaw testów przechodzi
 
 #### Manual
 

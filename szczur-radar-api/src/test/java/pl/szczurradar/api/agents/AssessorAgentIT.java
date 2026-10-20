@@ -1,9 +1,11 @@
 package pl.szczurradar.api.agents;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.util.Map;
 
@@ -29,8 +31,11 @@ import pl.szczurradar.api.agents.assessor.AssessorAgent;
 import pl.szczurradar.api.agents.assessor.ContractFixtures;
 import pl.szczurradar.api.agents.assessor.Prefilter;
 import pl.szczurradar.api.agents.assessor.Provenance;
+import pl.szczurradar.api.llm.CallFailure;
 import pl.szczurradar.api.llm.LlmClient;
 import pl.szczurradar.api.llm.LlmProviderProperties;
+import pl.szczurradar.api.llm.LlmUnavailableException;
+import pl.szczurradar.api.llm.ServiceTier;
 
 /**
  * Embabel inside the real application context, with the same configuration as the server and the
@@ -41,7 +46,7 @@ import pl.szczurradar.api.llm.LlmProviderProperties;
  * <p>Nothing here calls the LLM: the start does not, and the assessor agent runs on an entry without
  * content, which the prefilter decides. The {@link LlmClient} is a mock that proves it — so this
  * confirms the local registration of the platform, the selected model and the agent, not that the
- * key works.
+ * key works. One case makes the mock fail the call, to show that the agent's action fires once.
  */
 @SpringBootTest
 @Import(TestcontainersConfiguration.class)
@@ -77,13 +82,7 @@ class AssessorAgentIT {
 
 	@Test
 	void theAssessorAgentIsDeployedAndAssessesAnEntryWithoutContentWithoutCallingTheLlm() {
-		Agent agent = agentPlatform.agents()
-			.stream()
-			.filter(candidate -> candidate.getName().equals(AssessorAgent.class.getSimpleName()))
-			.findFirst()
-			.orElseThrow(() -> new AssertionError("AssessorAgent not deployed: " + agentPlatform.agents()));
-
-		AgentProcess process = agentPlatform.runAgentFrom(agent, ProcessOptions.DEFAULT,
+		AgentProcess process = agentPlatform.runAgentFrom(assessorAgent(), ProcessOptions.DEFAULT,
 				Map.of("it", ContractFixtures.post("#gielda https://example.com")));
 
 		assertThat(process.getStatus()).isEqualTo(AgentProcessStatusCode.COMPLETED);
@@ -93,6 +92,26 @@ class AssessorAgentIT {
 		assertThat(result.provenance().source()).isEqualTo(Provenance.Source.PREFILTER);
 		verify(llmClient, never()).complete(any());
 		assertThat(process.getLlmInvocations()).isEmpty();
+	}
+
+	@Test
+	void theAssessorActionFiresOnceWhenTheProviderIsUnavailable() {
+		when(llmClient.complete(any())).thenThrow(new LlmUnavailableException(CallFailure.PROVIDER_ERROR,
+				"HTTP 503 after 3 attempts", 3, ServiceTier.DEFAULT, false, null));
+
+		assertThatExceptionOfType(LlmUnavailableException.class).isThrownBy(() -> agentPlatform
+			.runAgentFrom(assessorAgent(), ProcessOptions.DEFAULT, Map.of("it", ContractFixtures.validInput())));
+
+		// The paid call is not repeated by Embabel's default action retries.
+		verify(llmClient).complete(any());
+	}
+
+	private Agent assessorAgent() {
+		return agentPlatform.agents()
+			.stream()
+			.filter(candidate -> candidate.getName().equals(AssessorAgent.class.getSimpleName()))
+			.findFirst()
+			.orElseThrow(() -> new AssertionError("AssessorAgent not deployed: " + agentPlatform.agents()));
 	}
 
 }

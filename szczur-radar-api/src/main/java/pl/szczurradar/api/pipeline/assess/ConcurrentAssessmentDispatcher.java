@@ -2,6 +2,7 @@ package pl.szczurradar.api.pipeline.assess;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -34,6 +35,7 @@ import pl.szczurradar.api.agents.assessor.contract.AssessmentInputV1;
 import pl.szczurradar.api.llm.LlmCallException;
 import pl.szczurradar.api.llm.LlmClient;
 import pl.szczurradar.api.llm.LlmConfigurationException;
+import pl.szczurradar.api.llm.LlmUnavailableException;
 import pl.szczurradar.api.pipeline.flow.RunFlow.AssessedBatch;
 import pl.szczurradar.api.pipeline.flow.RunFlow.ProcessingError;
 import pl.szczurradar.api.pipeline.state.PostTransitions;
@@ -52,10 +54,13 @@ import pl.szczurradar.api.posts.PostRepository;
  * <ol>
  *   <li>taken for the run ({@link PostTransitions#claim}) — when that fails because the run is no
  *       longer running, the remaining posts are left alone;
- *   <li>assessed: {@link Assessor#assess} on the input rebuilt from its raw payload — a failed call is
- *       a {@code failed} result, never an exception; a refused configuration
+ *   <li>assessed: {@link Assessor#assess} on the input rebuilt from its raw payload — a call the
+ *       provider refused is a {@code failed} result, never an exception; a refused configuration
  *       ({@link LlmConfigurationException}, e.g. a revoked key) stops the step: no attempt is stored
- *       and the remaining posts are not taken;
+ *       and the remaining posts are not taken; a provider unavailable after the client's retries
+ *       ({@link LlmUnavailableException}) stores no attempt and puts the post back, and
+ *       {@value #OUTAGE_STREAK} such calls in a row (in the order they end, with no call answered by
+ *       the model between them; the prefilter makes no call) stop the step the same way;
  *   <li>stored with its next stage ({@link PostTransitions#record}), only while the run owns it;
  *   <li>otherwise put back without an attempt ({@link PostTransitions#release}); any exception there
  *       (a bug, a failed write) is a technical error of this post, and the other posts go on: the post
@@ -67,16 +72,24 @@ import pl.szczurradar.api.posts.PostRepository;
  *       is logged and leaves the post's outcome as it is.
  * </ol>
  *
- * A stopped step makes the run {@code failed} ({@link AssessedBatch#stoppedBy}), so a bad key never
- * uses up the posts' attempts. The log gets a progress line at most every {@link #PROGRESS_INTERVAL}
- * as posts finish, and one after the last. {@link #cancel} (the watchdog stopped the run) interrupts the
- * run's post tasks, so a stopped run never keeps threads of the pool waiting.
+ * A stopped step makes the run {@code failed} ({@link AssessedBatch#stoppedBy}), so neither a bad key
+ * nor a provider outage uses up the posts' attempts. A single outage the step went on after is a
+ * technical error of its post, counted only once every post has finished, and only when nothing stopped
+ * the step: the stop may come after the post was put back. Its post counts a technical failure
+ * ({@link PostTransitions#countTechnicalFailure}, only while the run is still running and only for a
+ * post this step put back itself), then the run a processing error. The log gets a progress line at
+ * most every {@link #PROGRESS_INTERVAL} as posts finish, and one after the last. {@link #cancel} (the
+ * watchdog stopped the run) interrupts the run's post tasks, so a stopped run never keeps threads of the
+ * pool waiting.
  */
 @Component
 public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher, DisposableBean {
 
 	/** The shortest time between two progress lines in the log. */
 	static final Duration PROGRESS_INTERVAL = Duration.ofMinutes(1);
+
+	/** Calls in a row that found the provider unavailable after their retries and stop the step. */
+	static final int OUTAGE_STREAK = 3;
 
 	private static final Logger log = LoggerFactory.getLogger(ConcurrentAssessmentDispatcher.class);
 
@@ -134,6 +147,8 @@ public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher, Dis
 		}
 		AtomicBoolean runStopped = new AtomicBoolean();
 		AtomicReference<@Nullable String> stoppedBy = new AtomicReference<>();
+		// Calls in a row, in the order they end, that found the provider unavailable.
+		AtomicInteger outages = new AtomicInteger();
 		Progress progress = new Progress(runId, postIds.size());
 		// Registered before the first task, so a cancel while they are submitted reaches every one.
 		Tasks tasks = new Tasks(new CopyOnWriteArrayList<>(), new AtomicBoolean());
@@ -141,7 +156,7 @@ public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher, Dis
 		try {
 			for (UUID postId : postIds) {
 				tasks.futures().add(executor.submit(() -> {
-					Outcome outcome = assess(runId, postId, runStopped, stoppedBy, tasks.cancelled());
+					Outcome outcome = assess(runId, postId, runStopped, stoppedBy, outages, tasks.cancelled());
 					count(runId, postId, outcome);
 					progress.finished(outcome);
 					return outcome;
@@ -151,6 +166,7 @@ public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher, Dis
 			int failed = 0;
 			int dead = 0;
 			List<ProcessingError> errors = new ArrayList<>();
+			Map<UUID, Outcome.Unavailable> unavailable = new LinkedHashMap<>();
 			for (int i = 0; i < postIds.size(); i++) {
 				switch (await(runId, postIds.get(i), tasks, i, progress)) {
 					case Outcome.Stored stored when stored.ok() -> ok++;
@@ -159,9 +175,18 @@ public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher, Dis
 						dead += stored.dead() ? 1 : 0;
 					}
 					case Outcome.Error error -> errors.add(new ProcessingError(postIds.get(i), error.message()));
+					case Outcome.Unavailable outage -> unavailable.put(postIds.get(i), outage);
 					case Outcome.NotTaken notTaken -> {
 					}
 				}
+			}
+			// Only now: the step may have stopped after an earlier outage's post was put back.
+			if (stoppedBy.get() == null) {
+				unavailable.forEach((postId, outage) -> {
+					if (countOutage(runId, postId, outage)) {
+						errors.add(new ProcessingError(postId, outage.message()));
+					}
+				});
 			}
 			progress.line();
 			return new AssessedBatch(runId, ok, failed, dead, errors, stoppedBy.get());
@@ -191,7 +216,7 @@ public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher, Dis
 	}
 
 	private Outcome assess(UUID runId, UUID postId, AtomicBoolean runStopped, AtomicReference<@Nullable String> stoppedBy,
-			AtomicBoolean cancelled) {
+			AtomicInteger outages, AtomicBoolean cancelled) {
 		if (runStopped.get() || cancelled.get()) {
 			return new Outcome.NotTaken();
 		}
@@ -203,6 +228,8 @@ public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher, Dis
 			return new Outcome.NotTaken();
 		}
 		boolean stored = false;
+		// Already put back here (after an outage), so that its outcome knows whether this task did it.
+		boolean putBack = false;
 		// A technical error of this post: put back counting it, with the same message as its processing error.
 		@Nullable RuntimeException failure = null;
 		Outcome.@Nullable Error error = null;
@@ -213,6 +240,10 @@ public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher, Dis
 			if (!stored) {
 				// The run lost the post (interrupted, post put back): not this run's error.
 				return new Outcome.NotTaken();
+			}
+			if (result.provenance().attempts() >= 1) {
+				// The provider answered (the prefilter makes no call): the outages are no longer in a row.
+				outages.set(0);
 			}
 			// The prefilter makes no call (attempts 0).
 			return new Outcome.Stored(result.ok(), !result.ok() && attempts.get() + 1 >= Post.MAX_ASSESSMENT_ATTEMPTS,
@@ -227,6 +258,25 @@ public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher, Dis
 			}
 			return new Outcome.NotTaken();
 		}
+		catch (LlmUnavailableException ex) {
+			if (cancelled.get()) {
+				// cancel() interrupted it: the run was stopped, this is not an outage of the provider.
+				log.info("Assessing post {} in run {} ended with its stopped run: {}", postId, runId, ex.toString());
+				return new Outcome.NotTaken();
+			}
+			if (outages.incrementAndGet() >= OUTAGE_STREAK) {
+				// Every later call would most likely fail the same way: stop taking posts, count no attempt.
+				runStopped.set(true);
+				if (stoppedBy.compareAndSet(null, "the LLM provider is unavailable: " + OUTAGE_STREAK
+						+ " calls in a row failed after their retries; the last: " + ex.getMessage())) {
+					log.warn("The LLM provider is unavailable in run {}: {} calls in a row failed after their retries;"
+							+ " no further post is taken: {}", runId, OUTAGE_STREAK, ex.getMessage());
+				}
+			}
+			putBack = true;
+			return new Outcome.Unavailable(ex.getClass().getSimpleName() + ": " + ex.getMessage(),
+					transitions.release(postId, runId));
+		}
 		catch (RuntimeException ex) {
 			if (cancelled.get()) {
 				// cancel() interrupted it: the run was stopped, this is not the post's technical error.
@@ -238,7 +288,7 @@ public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher, Dis
 			return error;
 		}
 		finally {
-			if (!stored) {
+			if (!stored && !putBack) {
 				if (error == null) {
 					transitions.release(postId, runId);
 				}
@@ -271,6 +321,9 @@ public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher, Dis
 					recorder.count(runId,
 							Counters.assessedFailed(stored.dead(), stored.llmRetries(), stored.flexFallback()));
 				case Outcome.Error error -> recorder.count(runId, Counters.processingError());
+				// Counted, if at all, once the step has finished (countOutage).
+				case Outcome.Unavailable outage -> {
+				}
 				case Outcome.NotTaken notTaken -> {
 				}
 			}
@@ -279,6 +332,34 @@ public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher, Dis
 			log.warn("The outcome of post {} could not be added to the counters of run {}; the post keeps it", postId,
 					runId, ex);
 		}
+	}
+
+	/**
+	 * A single outage of the provider the step went on after, once every post has finished: a technical
+	 * failure of the post this task put back ({@link PostTransitions#countTechnicalFailure}, only while
+	 * the run is still running), then a processing error of the run. Otherwise (the post was not put back
+	 * by this task, the run no longer runs, or the write failed) it counts like a post not taken.
+	 *
+	 * @return whether it was counted
+	 */
+	private boolean countOutage(UUID runId, UUID postId, Outcome.Unavailable outage) {
+		if (!outage.putBack()) {
+			return false;
+		}
+		boolean counted;
+		try {
+			counted = transitions.countTechnicalFailure(postId, runId, outage.message());
+		}
+		catch (RuntimeException ex) {
+			log.warn("The outage of post {} in run {} could not be counted as its technical failure", postId, runId, ex);
+			return false;
+		}
+		if (counted) {
+			log.warn("Assessing post {} in run {} found the LLM provider unavailable; the post was put back without an"
+					+ " attempt, counting a technical failure: {}", postId, runId, outage.message());
+			count(runId, postId, new Outcome.Error(outage.message()));
+		}
+		return counted;
 	}
 
 	private Outcome await(UUID runId, UUID postId, Tasks tasks, int index, Progress progress) {
@@ -343,6 +424,15 @@ public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher, Dis
 		record Error(String message) implements Outcome {
 		}
 
+		/**
+		 * The provider was unavailable after the call's retries: no assessment, no attempt, the post put
+		 * back. Counted only once the step has finished ({@link #countOutage}).
+		 *
+		 * @param putBack whether this task put the post back (the run still held it)
+		 */
+		record Unavailable(String message, boolean putBack) implements Outcome {
+		}
+
 		/** Not taken by this run (not assessable, the run stopped, or the post lost to recovery). */
 		record NotTaken() implements Outcome {
 		}
@@ -368,6 +458,8 @@ public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher, Dis
 
 		private final AtomicInteger errors = new AtomicInteger();
 
+		private final AtomicInteger unavailable = new AtomicInteger();
+
 		private final AtomicInteger retries = new AtomicInteger();
 
 		private final AtomicInteger fallbacks = new AtomicInteger();
@@ -390,6 +482,7 @@ public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher, Dis
 					fallbacks.addAndGet(stored.flexFallback() ? 1 : 0);
 				}
 				case Outcome.Error error -> errors.incrementAndGet();
+				case Outcome.Unavailable outage -> unavailable.incrementAndGet();
 				case Outcome.NotTaken notTaken -> {
 				}
 			}
@@ -402,15 +495,17 @@ public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher, Dis
 		}
 
 		/**
-		 * {@code Run <id> assess: <done>/<N> (ok …, failed …, dead …, errors …), in flight …, retries …,
-		 * flex fallbacks …}; no post content.
+		 * {@code Run <id> assess: <done>/<N> (ok …, failed …, dead …, errors …, unavailable …), in flight …,
+		 * retries …, flex fallbacks …}; no post content. {@code unavailable} are the posts whose call found
+		 * the provider unavailable: the run's processing errors are {@code errors} and those of them counted
+		 * at the step's end.
 		 */
 		void line() {
 			try {
-				int done = ok.get() + failed.get() + errors.get();
-				log.info("Run {} assess: {}/{} (ok {}, failed {}, dead {}, errors {}), in flight {}, retries {},"
-						+ " flex fallbacks {}", runId, done, total, ok.get(), failed.get(), dead.get(), errors.get(),
-						recorder.inFlight(runId), retries.get(), fallbacks.get());
+				int done = ok.get() + failed.get() + errors.get() + unavailable.get();
+				log.info("Run {} assess: {}/{} (ok {}, failed {}, dead {}, errors {}, unavailable {}), in flight {},"
+						+ " retries {}, flex fallbacks {}", runId, done, total, ok.get(), failed.get(), dead.get(),
+						errors.get(), unavailable.get(), recorder.inFlight(runId), retries.get(), fallbacks.get());
 			}
 			catch (RuntimeException ex) {
 				log.warn("The progress of run {} could not be logged", runId, ex);
