@@ -37,8 +37,13 @@ nothing.
    unmappable ones.
 4. `<Source>Posts implements RawInputMapper` (`@Component`) with a static `post(element)` →
    `SourcePost`; both go through `<Source>Mapper`, so storing and assessing map the same way.
-5. Tests: `<Source>FetcherTest` and the mapper/client/repository tests below, on real fixtures.
-6. The second source adds to `pipeline/step/SourceIngestTest` the case of two sources, one of them
+5. Retries follow `WykopApiClient`'s policy: the same statuses (429, 500–599, transport errors), up to
+   3 attempts, `Retry-After` capped at 30 s or 2 s / 4 s, never past the deadline the repository sets for
+   the whole fetch (below the watchdog's `PipelineStallSettings.MIN_DEFAULT`). The second source with
+   retries moves the shared loop into `sources/` instead of copying it a third time
+   (`context/foundation/lessons.md`, abstraction while the code is small).
+6. Tests: `<Source>FetcherTest` and the mapper/client/repository tests below, on real fixtures.
+7. The second source adds to `pipeline/step/SourceIngestTest` the case of two sources, one of them
    without a post: `NoPostsFetchedException` names only the empty source, and its counters are the sum
    of both. It cannot be written with one source (`SourceIngest` keys its fetchers by `Source`). Today an
    empty source fails the whole `fetch` step, also the other sources' posts; isolating the sources is
@@ -53,7 +58,7 @@ Reference implementation: `sources/wykop/`.
 
 | Class | Job | Must not |
 | --- | --- | --- |
-| `<Source>ApiClient` | transport: base URL, auth and token handling, one request → parsed JSON, HTTP errors as `<Source>ApiException` (status + short body) | know about tags, dates, paging or the contract; retry silently; put keys, secrets or tokens in messages, logs, causes or `toString()` |
+| `<Source>ApiClient` | transport: base URL, auth and token handling, one request → parsed JSON, HTTP errors as `<Source>ApiException` (status + short body); retries only transient failures (429, 5xx, transport), each retry a WARN line, within the deadline the repository passes in | know about tags, dates, paging or the contract; retry silently, retry past the deadline or retry anything else; put keys, secrets or tokens in messages, logs, causes or `toString()` |
 | `<Source>Repository` | reads elements: queries (tag/subreddit, time range), paging to the end, pause between pages, a page limit; returns each element once as a `<Source>Item` next to its raw `JsonNode` (`WykopSearchResult.Element`) | map to the contract, filter by content, anonymize, store |
 | `<Source>Item` | record of the fields the assessment needs, in the source's names (`@JsonIgnoreProperties(ignoreUnknown = true)`) | carry more than mapping needs (raw payloads are kept apart, see below) |
 | `<Source>Configuration` | the Spring bean of the repository from `<SOURCE>_KEY`/`<SOURCE>_SECRET`; no keys → no bean (consumers inject `Optional<…Repository>`), only one of them → start fails | require the keys for the API, CI or tests to start |
@@ -79,7 +84,10 @@ Reference implementation: `sources/wykop/`.
 - `<Source>MapperTest`, `<Source>ApiClientTest`, `<Source>RepositoryTest`, `<Source>FetcherTest` as
   `*Test` (no Spring, no Docker, no network). Client and repository run against a local `HttpServer`
   (`LocalWykopServer`): assert what is sent (path, query, auth header), paging and its end, re-auth,
-  errors without secrets.
+  errors without secrets. Retries are tested with request counts (the count proves no hidden retries)
+  and recorded waits on a fake clock: 5xx → success, 5xx × 3, 429 with `Retry-After`, 4xx once, auth
+  retried, transport errors, the deadline, an interrupted wait, and no secret in the error or the WARN
+  lines.
 - Answers are **real payloads**, anonymized (nicks → `uzytkownikN`, URLs → `<url>`, ids renumbered,
   media keys removed), in `src/test/resources/fixtures/<source>/`. A case that cannot be recorded
   (more pages than the recording has, a missing field) is the recording changed minimally in the

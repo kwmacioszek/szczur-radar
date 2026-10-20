@@ -7,6 +7,7 @@ import static org.mockito.Mockito.when;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.InstantSource;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -773,7 +774,10 @@ class PipelineAgentIT {
 
 		@Bean
 		WykopRepository wykopRepository() {
-			return new WykopRepository(new WykopApiClient(WYKOP.baseUrl(), "k", "s", Duration.ofSeconds(5)), duration -> {
+			// No real waits between the client's attempts: a Wykop that stays down fails the fetch at once.
+			WykopApiClient client = new WykopApiClient(WYKOP.baseUrl(), "k", "s", Duration.ofSeconds(5), wait -> {
+			}, InstantSource.system());
+			return new WykopRepository(client, duration -> {
 			}, Duration.ZERO);
 		}
 

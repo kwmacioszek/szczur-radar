@@ -6,6 +6,10 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.time.Duration;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -13,6 +17,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import tools.jackson.databind.JsonNode;
 
 import pl.szczurradar.api.sources.wykop.LocalWykopServer.Reply;
@@ -21,8 +28,10 @@ import pl.szczurradar.api.sources.wykop.LocalWykopServer.Request;
 /**
  * {@link WykopApiClient} against a local server. The auth answer and error bodies are short
  * synthetic JSON in the API's shape ({@code {"data": {"token": …}}}); a real one would carry a live
- * token.
+ * token. Waits between attempts are recorded instead of slept, and they move a fake clock; request
+ * counts prove there are no hidden retries.
  */
+@ExtendWith(OutputCaptureExtension.class)
 class WykopApiClientTest {
 
 	private static final String KEY = "w5-test-key";
@@ -30,6 +39,14 @@ class WykopApiClientTest {
 	private static final String SECRET = "test-secret-value";
 
 	private static final String TOKEN_1 = "{\"data\":{\"token\":\"token-1\"}}";
+
+	private static final String UNAVAILABLE = "{\"error\":{\"code\":503,\"message\":\"Service unavailable\"}}";
+
+	private static final Duration TIMEOUT = Duration.ofSeconds(5);
+
+	private final AtomicReference<Instant> now = new AtomicReference<>(Instant.parse("2026-10-20T00:30:00Z"));
+
+	private final List<Duration> waits = new ArrayList<>();
 
 	@Test
 	void authorizesOnceAndSendsTheTokenAndTheQuery() {
@@ -114,7 +131,7 @@ class WykopApiClientTest {
 	@Test
 	void aLongErrorBodyIsCappedAfterMasking() {
 		// "Wykop auth answered HTTP 500: " (30) + "{\"error\":\"" (10) + 455 = the secret starts at 495,
-		// across the 500-character cut.
+		// across the 500-character cut (the " after 3 attempts" at the end is cut off too).
 		String body = "{\"error\":\"" + "x".repeat(455) + SECRET + "y".repeat(600) + "\"}";
 		try (LocalWykopServer server = new LocalWykopServer(request -> new Reply(500, body))) {
 			assertThatExceptionOfType(WykopApiException.class)
@@ -124,6 +141,9 @@ class WykopApiClientTest {
 					// Masked before the cap: no prefix of the secret survives at the cut.
 					assertThat(ex.getMessage()).doesNotContain(SECRET.substring(0, 4));
 				});
+			// The 500 is retried: three auth attempts.
+			assertThat(server.requests()).extracting(Request::path).containsExactly("/api/v3/auth", "/api/v3/auth",
+					"/api/v3/auth");
 		}
 	}
 
@@ -182,14 +202,162 @@ class WykopApiClientTest {
 	}
 
 	@Test
-	void anErrorAnswerIsAnExceptionAfterOneRequestWithoutRetries() {
+	void aServerErrorIsRetriedAndASuccessEndsTheCall() {
+		AtomicInteger gets = new AtomicInteger();
+		try (LocalWykopServer server = new LocalWykopServer(request -> request.path().endsWith("/auth")
+				? Reply.ok(TOKEN_1)
+				: gets.incrementAndGet() == 1 ? new Reply(503, UNAVAILABLE) : Reply.ok("{\"data\":[]}"))) {
+			JsonNode answer = client(server).get("search/entries", Map.of());
+
+			assertThat(answer.path("data").isArray()).isTrue();
+			assertThat(searches(server)).hasSize(2);
+			assertThat(waits).containsExactly(Duration.ofSeconds(2));
+		}
+	}
+
+	@Test
+	void aServerErrorThatStaysFailsAfterThreeAttempts() {
 		try (LocalWykopServer server = new LocalWykopServer(request -> request.path().endsWith("/auth")
 				? Reply.ok(TOKEN_1) : new Reply(500, "{\"error\":{\"code\":500}}"))) {
 			assertThatExceptionOfType(WykopApiException.class)
 				.isThrownBy(() -> client(server).get("search/entries", Map.of()))
-				.satisfies(ex -> assertThat(ex.status()).isEqualTo(500));
-			assertThat(server.requests()).hasSize(2);
+				.satisfies(ex -> {
+					assertThat(ex.failure()).isEqualTo(WykopFailure.HTTP_STATUS);
+					assertThat(ex.status()).isEqualTo(500);
+					assertThat(ex.getMessage()).contains("GET search/entries answered HTTP 500")
+						.endsWith("after 3 attempts");
+				});
+			assertThat(searches(server)).hasSize(3);
+			assertThat(waits).containsExactly(Duration.ofSeconds(2), Duration.ofSeconds(4));
 		}
+	}
+
+	@Test
+	void aRateLimitWaitsRetryAfterInSeconds() {
+		assertThat(waitsAfterRateLimit(Map.of("Retry-After", "7"))).containsExactly(Duration.ofSeconds(7));
+	}
+
+	@Test
+	void aRateLimitWaitsRetryAfterAsAnHttpDate() {
+		String inTenSeconds = DateTimeFormatter.RFC_1123_DATE_TIME
+			.format(now.get().plusSeconds(10).atZone(ZoneOffset.UTC));
+
+		assertThat(waitsAfterRateLimit(Map.of("Retry-After", inTenSeconds))).containsExactly(Duration.ofSeconds(10));
+	}
+
+	@Test
+	void aLongRetryAfterIsCappedAt30Seconds() {
+		assertThat(waitsAfterRateLimit(Map.of("Retry-After", "120"))).containsExactly(Duration.ofSeconds(30));
+	}
+
+	@Test
+	void anUnreadableRetryAfterWaitsTheBackoff() {
+		assertThat(waitsAfterRateLimit(Map.of("Retry-After", "soon"))).containsExactly(Duration.ofSeconds(2));
+	}
+
+	@Test
+	void aBadRequestAndANotFoundAreNotRetried() {
+		for (int status : new int[] { 400, 404 }) {
+			waits.clear();
+			try (LocalWykopServer server = new LocalWykopServer(request -> request.path().endsWith("/auth")
+					? Reply.ok(TOKEN_1) : new Reply(status, "{\"error\":{\"code\":" + status + "}}"))) {
+				assertThatExceptionOfType(WykopApiException.class)
+					.isThrownBy(() -> client(server).get("search/entries", Map.of()))
+					.satisfies(ex -> assertThat(ex.status()).isEqualTo(status));
+				assertThat(searches(server)).hasSize(1);
+				assertThat(waits).isEmpty();
+			}
+		}
+	}
+
+	@Test
+	void aFailedAuthIsRetriedToo() {
+		AtomicInteger auths = new AtomicInteger();
+		try (LocalWykopServer server = new LocalWykopServer(request -> {
+			if (request.path().endsWith("/auth")) {
+				return auths.incrementAndGet() == 1 ? new Reply(503, UNAVAILABLE) : Reply.ok(TOKEN_1);
+			}
+			return Reply.ok("{\"data\":[]}");
+		})) {
+			client(server).get("search/entries", Map.of());
+
+			assertThat(server.requests()).extracting(Request::path)
+				.containsExactly("/api/v3/auth", "/api/v3/auth", "/api/v3/search/entries");
+			assertThat(server.requests().getLast().authorization()).isEqualTo("Bearer token-1");
+			assertThat(waits).containsExactly(Duration.ofSeconds(2));
+		}
+	}
+
+	@Test
+	void aRetryThatWouldEndAfterTheDeadlineIsNotStarted() {
+		try (LocalWykopServer server = new LocalWykopServer(request -> request.path().endsWith("/auth")
+				? Reply.ok(TOKEN_1) : new Reply(503, UNAVAILABLE))) {
+			WykopApiClient client = client(server);
+			// The first attempt fits (5 s time-out), the 2 s wait and the next attempt's 5 s do not.
+			Instant deadline = client.deadline(Duration.ofSeconds(6));
+
+			assertThatExceptionOfType(WykopApiException.class)
+				.isThrownBy(() -> client.get("search/entries", Map.of(), deadline))
+				.satisfies(ex -> {
+					assertThat(ex.failure()).isEqualTo(WykopFailure.DEADLINE_EXCEEDED);
+					assertThat(ex.getMessage()).contains("deadline", "HTTP 503");
+				});
+			assertThat(searches(server)).hasSize(1);
+			assertThat(waits).isEmpty();
+		}
+	}
+
+	@Test
+	void aPassedDeadlineSendsNoRequest() {
+		try (LocalWykopServer server = new LocalWykopServer(request -> Reply.ok(TOKEN_1))) {
+			WykopApiClient client = client(server);
+			Instant deadline = client.deadline(Duration.ofSeconds(-1));
+
+			assertThatExceptionOfType(WykopApiException.class)
+				.isThrownBy(() -> client.get("search/entries", Map.of(), deadline))
+				.satisfies(ex -> {
+					assertThat(ex.failure()).isEqualTo(WykopFailure.DEADLINE_EXCEEDED);
+					assertThat(ex.getMessage()).contains("before the first attempt");
+				});
+			assertThat(server.requests()).isEmpty();
+		}
+	}
+
+	@Test
+	void anInterruptedWaitStopsTheCallAndKeepsTheInterruptFlag() {
+		try (LocalWykopServer server = new LocalWykopServer(request -> request.path().endsWith("/auth")
+				? Reply.ok(TOKEN_1) : new Reply(503, UNAVAILABLE))) {
+			WykopApiClient client = new WykopApiClient(server.baseUrl(), KEY, SECRET, TIMEOUT, wait -> {
+				throw new InterruptedException("stopping");
+			}, now::get);
+
+			try {
+				assertThatExceptionOfType(WykopApiException.class)
+					.isThrownBy(() -> client.get("search/entries", Map.of()))
+					.satisfies(ex -> assertThat(ex.failure()).isEqualTo(WykopFailure.INTERRUPTED));
+				assertThat(Thread.currentThread().isInterrupted()).isTrue();
+			}
+			finally {
+				Thread.interrupted();
+			}
+			assertThat(searches(server)).hasSize(1);
+		}
+	}
+
+	@Test
+	void retriesQuotingTheSecretsLeaveThemOutOfTheErrorAndTheWarnings(CapturedOutput output) {
+		String body = "{\"error\":{\"code\":503,\"message\":\"key " + KEY + ", secret " + SECRET
+				+ ", token token-1\"}}";
+		try (LocalWykopServer server = new LocalWykopServer(request -> request.path().endsWith("/auth")
+				? Reply.ok(TOKEN_1) : new Reply(503, body))) {
+			assertThatExceptionOfType(WykopApiException.class)
+				.isThrownBy(() -> client(server).get("search/entries", Map.of()))
+				.satisfies(ex -> assertThat(stackTrace(ex)).contains("after 3 attempts", "key <hidden>")
+					.doesNotContain(KEY, SECRET, "token-1"));
+			assertThat(searches(server)).hasSize(3);
+		}
+		assertThat(output).contains("WARN", "Retrying Wykop GET search/entries", "attempt 1 of 3", "attempt 2 of 3")
+			.doesNotContain(KEY, SECRET, "token-1");
 	}
 
 	@Test
@@ -206,13 +374,36 @@ class WykopApiClientTest {
 	}
 
 	@Test
-	void aConnectionErrorIsATransportFailure() {
+	void aConnectionErrorIsATransportFailureAfterThreeAttempts() {
 		LocalWykopServer server = new LocalWykopServer(request -> Reply.ok(TOKEN_1));
 		WykopApiClient client = client(server);
 		server.close();
 
 		assertThatExceptionOfType(WykopApiException.class).isThrownBy(() -> client.get("search/entries", Map.of()))
-			.satisfies(ex -> assertThat(ex.failure()).isEqualTo(WykopFailure.TRANSPORT));
+			.satisfies(ex -> {
+				assertThat(ex.failure()).isEqualTo(WykopFailure.TRANSPORT);
+				assertThat(ex.getMessage()).contains("auth").endsWith("after 3 attempts");
+			});
+		// Three attempts of auth: two waits between them (the closed server records nothing).
+		assertThat(waits).containsExactly(Duration.ofSeconds(2), Duration.ofSeconds(4));
+	}
+
+	/** The waits of a search answered 429 with {@code headers}, then 200; two searches. */
+	private List<Duration> waitsAfterRateLimit(Map<String, String> headers) {
+		AtomicInteger gets = new AtomicInteger();
+		try (LocalWykopServer server = new LocalWykopServer(request -> request.path().endsWith("/auth")
+				? Reply.ok(TOKEN_1)
+				: gets.incrementAndGet() == 1 ? new Reply(429, "{\"error\":{\"code\":429}}", headers)
+						: Reply.ok("{\"data\":[]}"))) {
+			client(server).get("search/entries", Map.of());
+
+			assertThat(searches(server)).hasSize(2);
+			return List.copyOf(waits);
+		}
+	}
+
+	private static List<Request> searches(LocalWykopServer server) {
+		return server.requests().stream().filter(request -> request.path().contains("/search/")).toList();
 	}
 
 	private static String stackTrace(Throwable error) {
@@ -221,8 +412,12 @@ class WykopApiClientTest {
 		return trace.toString();
 	}
 
-	private static WykopApiClient client(LocalWykopServer server) {
-		return new WykopApiClient(server.baseUrl(), KEY, SECRET, Duration.ofSeconds(5));
+	/** A client whose waits are recorded and move the fake clock instead of sleeping. */
+	private WykopApiClient client(LocalWykopServer server) {
+		return new WykopApiClient(server.baseUrl(), KEY, SECRET, TIMEOUT, wait -> {
+			waits.add(wait);
+			now.updateAndGet(instant -> instant.plus(wait));
+		}, now::get);
 	}
 
 }

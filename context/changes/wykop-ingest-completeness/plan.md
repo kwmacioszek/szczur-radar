@@ -356,8 +356,8 @@ Brak migracji, zmiennych środowiskowych i zmian IaC. Wycofanie = revert PR.
 
 #### Automated
 
-- [x] 1.1 Kompilacja testów z profilem pomiarowym przechodzi
-- [x] 1.2 Sonda nie wchodzi do zwykłego `test`
+- [x] 1.1 Kompilacja testów z profilem pomiarowym przechodzi — 7cdd713
+- [x] 1.2 Sonda nie wchodzi do zwykłego `test` — 7cdd713
 
 #### Manual
 
@@ -368,10 +368,10 @@ Brak migracji, zmiennych środowiskowych i zmian IaC. Wycofanie = revert PR.
 
 #### Automated
 
-- [ ] 2.1 Testy jednostkowe przechodzą
-- [ ] 2.2 Testy klienta pokrywają przypadki ponowień z asercją liczby żądań
-- [ ] 2.3 Relacja terminu z watchdogiem przypięta testem w `WykopRepositoryTest`
-- [ ] 2.4 Pełna weryfikacja przechodzi (w tym `PipelineAgentIT`)
+- [x] 2.1 Testy jednostkowe przechodzą
+- [x] 2.2 Testy klienta pokrywają przypadki ponowień z asercją liczby żądań
+- [x] 2.3 Relacja terminu z watchdogiem przypięta testem w `WykopRepositoryTest`
+- [x] 2.4 Pełna weryfikacja przechodzi (w tym `PipelineAgentIT`)
 
 #### Manual
 

@@ -1,6 +1,7 @@
 package pl.szczurradar.api.sources.wykop;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -36,6 +37,14 @@ public class WykopRepository {
 	static final int MAX_PAGES = 200;
 
 	static final Duration DEFAULT_PAUSE = Duration.ofMillis(300);
+
+	/**
+	 * The deadline of one {@link #itemsAddedBetween} for the client's attempts and waits. With the last
+	 * attempt's time-out (and one connection retry inside the JDK) a fetch ends within about
+	 * {@code FETCH_DEADLINE + 2 × WykopApiClient.DEFAULT_TIMEOUT}, which must stay below the watchdog's
+	 * shortest default ({@code PipelineStallSettings.MIN_DEFAULT}; pinned by a test).
+	 */
+	static final Duration FETCH_DEADLINE = Duration.ofMinutes(10);
 
 	private static final DateTimeFormatter SEARCH_TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
@@ -90,19 +99,21 @@ public class WykopRepository {
 	 * once.
 	 *
 	 * @throws WykopApiException when a page is short of {@code pagination.total} (a cut-off answer),
-	 *     the page limit is reached or the API fails
+	 *     the page limit is reached, the API fails (after the client's retries) or the fetch does not fit
+	 *     {@link #FETCH_DEADLINE} ({@link WykopFailure#DEADLINE_EXCEEDED})
 	 */
 	public WykopSearchResult itemsAddedBetween(String tag, LocalDateTime from, LocalDateTime to) {
+		Instant deadline = client.deadline(FETCH_DEADLINE);
 		Map<String, WykopSearchResult.Element> elements = new LinkedHashMap<>();
 		int skipped = 0;
 		for (Resource resource : Resource.values()) {
-			skipped += search(resource, tag, from, to, elements);
+			skipped += search(resource, tag, from, to, deadline, elements);
 		}
 		return new WykopSearchResult(new ArrayList<>(elements.values()), skipped);
 	}
 
 	/** Adds the resource's elements to {@code elements} (keyed by resource and id); returns the skipped count. */
-	private int search(Resource resource, String tag, LocalDateTime from, LocalDateTime to,
+	private int search(Resource resource, String tag, LocalDateTime from, LocalDateTime to, Instant deadline,
 			Map<String, WykopSearchResult.Element> elements) {
 		int received = 0;
 		int skipped = 0;
@@ -117,7 +128,7 @@ public class WykopRepository {
 			query.put("sort", "newest");
 			query.put("limit", PAGE_SIZE);
 			query.put("page", page);
-			JsonNode answer = client.get(resource.path, query);
+			JsonNode answer = client.get(resource.path, query, deadline);
 			JsonNode data = answer.path("data");
 			if (!data.isArray()) {
 				throw new WykopApiException(WykopFailure.MALFORMED_ANSWER,

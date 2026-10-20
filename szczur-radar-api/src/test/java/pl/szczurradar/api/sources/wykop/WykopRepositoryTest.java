@@ -14,6 +14,7 @@ import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.ObjectNode;
 
+import pl.szczurradar.api.pipeline.PipelineStallSettings;
 import pl.szczurradar.api.sources.wykop.LocalWykopServer.Reply;
 import pl.szczurradar.api.sources.wykop.LocalWykopServer.Request;
 
@@ -147,6 +148,15 @@ class WykopRepositoryTest {
 				.satisfies(ex -> assertThat(ex.failure()).isEqualTo(WykopFailure.PAGE_LIMIT));
 			assertThat(searches(server)).hasSize(WykopRepository.MAX_PAGES);
 		}
+	}
+
+	@Test
+	void aFetchEndsBeforeTheWatchdogsShortestDefault() {
+		// The deadline bounds the attempts; the last one's time-out and one connection retry inside the
+		// JDK come on top. A fetch that ends within this is failed by its source, not stopped as stalled.
+		Duration longestFetch = WykopRepository.FETCH_DEADLINE.plus(WykopApiClient.DEFAULT_TIMEOUT.multipliedBy(2));
+
+		assertThat(longestFetch).isLessThan(PipelineStallSettings.MIN_DEFAULT);
 	}
 
 	private static List<WykopItem> items(WykopSearchResult result) {
