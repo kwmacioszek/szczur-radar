@@ -393,7 +393,7 @@ Brak migracji, zmiennych środowiskowych i zmian IaC. Wycofanie = revert PR.
 
 #### Automated
 
-- [ ] 4.1 CI na PR zielone
+- [x] 4.1 CI na PR zielone — 220f3af
 
 #### Manual
 
