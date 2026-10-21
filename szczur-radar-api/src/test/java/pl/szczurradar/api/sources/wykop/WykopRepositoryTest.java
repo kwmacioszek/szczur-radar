@@ -155,7 +155,7 @@ class WykopRepositoryTest {
 	}
 
 	@Test
-	void anEmptyPageBeforeTheTotalIsReadAgain() {
+	void anEmptyPageBeforeTheTotalIsReadAgain(CapturedOutput output) {
 		try (LocalWykopServer server = new LocalWykopServer(entriesByReadAndPage((read, page) -> {
 			if (page == 1) {
 				return entriesPage(100, ids(1, 50));
@@ -168,11 +168,12 @@ class WykopRepositoryTest {
 			assertThat(searches(server)).extracting(WykopRepositoryTest::pathAndPage)
 				.containsExactly("search/entries 1", "search/entries 2", "search/entries 1", "search/entries 2",
 						"search/links 1");
+			assertThat(output).contains("WARN", "Reading Wykop search/entries again: 50 of 100, page 2 is empty");
 		}
 	}
 
 	@Test
-	void duplicatesThatHideAGapAreCaughtAndReadAgain() {
+	void duplicatesThatHideAGapAreCaughtAndReadAgain(CapturedOutput output) {
 		// The first read's page 2 repeats page 1 (total 100): counting every element would end at 100 with
 		// only 50 distinct; counting distinct ones asks for page 3, which is empty.
 		try (LocalWykopServer server = new LocalWykopServer(entriesByReadAndPage((read, page) -> switch (page) {
@@ -186,6 +187,8 @@ class WykopRepositoryTest {
 			assertThat(searches(server)).extracting(WykopRepositoryTest::pathAndPage)
 				.containsExactly("search/entries 1", "search/entries 2", "search/entries 3", "search/entries 1",
 						"search/entries 2", "search/links 1");
+			// The repeated page counts once: 50 distinct of 100 when page 3 comes back empty.
+			assertThat(output).contains("WARN", "Reading Wykop search/entries again: 50 of 100, page 3 is empty");
 		}
 	}
 
@@ -244,7 +247,7 @@ class WykopRepositoryTest {
 	}
 
 	@Test
-	void aPageShortOfTheTotalIsAnErrorNotASilentlyCutDay() {
+	void aPageShortOfTheTotalIsAnErrorNotASilentlyCutDay(CapturedOutput output) {
 		ObjectNode page = (ObjectNode) MAPPER.readTree(ENTRIES);
 		// The real 12-entry page claiming 100 entries in total (e.g. an API that capped the limit), in both reads.
 		((ObjectNode) page.get("pagination")).put("total", 100);
@@ -252,9 +255,12 @@ class WykopRepositoryTest {
 			assertThatExceptionOfType(WykopApiException.class)
 				.isThrownBy(() -> repository(server).itemsOfDay("gielda", LocalDate.parse("2026-10-01")))
 				.satisfies(ex -> assertThat(ex.failure()).isEqualTo(WykopFailure.INCOMPLETE_PAGING))
-				.withMessageContaining("12 of 100");
+				.withMessage("Wykop search/entries stayed inconsistent after 2 reads: 12 of 100, "
+						+ "page 1 has only 12 of 50 elements");
 			assertThat(searches(server)).extracting(WykopRepositoryTest::pathAndPage)
 				.containsExactly("search/entries 1", "search/entries 1");
+			assertThat(output).contains("WARN",
+					"Reading Wykop search/entries again: 12 of 100, page 1 has only 12 of 50 elements");
 		}
 	}
 
