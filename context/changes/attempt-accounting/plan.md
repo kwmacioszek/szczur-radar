@@ -177,6 +177,7 @@ Warstwa `llm/` odróżnia „dostawca niedostępny” od „dostawca odmówił�
 #### Manual Verification:
 
 - Przegląd: w `src/main` nie ma już wywołania, które zamienia dowolny `Throwable` na `Kind.REJECTED` (`grep -rn "Kind.REJECTED" szczur-radar-api/src/main` pokazuje tylko statusy, odmowy i brak tekstu)
+  - Metoda (2026-10-21, audyt weryfikacji): wykonuje agent. Uruchamia ten `grep` oraz `grep -rn "catch (RuntimeException\|catch (Exception\|catch (Throwable" szczur-radar-api/src/main/java/pl/szczurradar/api/llm` i każde trafienie klasyfikuje (status, odmowa, brak tekstu, `unclassified`) z `file:line`. Zachowanie pokrywają już testy `anUnknownSdkErrorLeavesTheClientUnclassifiedAfterOneCall` trzech klientów i `TransportRetryTest`
 
 **Implementation Note**: Po zielonej weryfikacji automatycznej zatrzymaj się na ręczne potwierdzenie przed następną fazą.
 
@@ -263,6 +264,7 @@ Post dostaje licznik błędów technicznych z rzędu i ostatni błąd. Błąd na
 #### Manual Verification:
 
 - Lokalnie (`./mvnw spring-boot:run` + Postgres): post z ręcznie ustawionym `technical_failures = 3` nie trafia do przebiegu RETRY, a przebieg POSTS z jego id go bierze
+  - Metoda (2026-10-21, audyt weryfikacji): zamiast lokalnego `spring-boot:run` wykonuje agent, testem deterministycznym. Strona RETRY i `existsLeftover`: zielony `PostRepositoryIT.aPostOnHoldIsNoLeftoverAndOneTechnicalFailureShortOfItIs`. Strona POSTS (dotąd bez testu; `AssessmentSelection.fromTargets` filtruje POSTS tylko po etapie): agent dopisuje w `AssessmentSelectionTest` przypadek, w którym przebieg POSTS bierze wstrzymane posty `stored` i `failed` (`technicalFailures = Post.MAX_TECHNICAL_FAILURES`). Break-check: warunek `technicalFailures < MAX_TECHNICAL_FAILURES` w gałęzi POSTS zaczerwienia test, po czym plik jest odtworzony. Commit testu domyka ten krok
 
 **Implementation Note**: Po zielonej weryfikacji automatycznej zatrzymaj się na ręczne potwierdzenie przed następną fazą.
 
@@ -406,7 +408,9 @@ Wstrzymany post jest widoczny tam, gdzie admin szuka nieudanych postów, z liczb
 #### Manual Verification:
 
 - Zrzuty `/admin` z `dev/mock-api.js` + `playwright-cli` w obu motywach i przy 375 px pokazują wstrzymany wiersz i wiersz `failed` z błędem technicznym. Długi błąd nie rozpycha układu
+  - Metoda (2026-10-21, audyt weryfikacji): wykonuje agent, ocenia człowiek. Agent uruchamia `npm run dev` z `dev/mock-api.js` (MODE `data`: wstrzymany `p4` z długim błędem, `failed` `p2` z błędem technicznym) i `playwright-cli` na `/admin`: 4 zrzuty (jasny i ciemny motyw × szerokość desktopowa i 375 px). Przy 375 px mierzy `document.documentElement.scrollWidth <= document.documentElement.clientWidth`. Zrzuty i wynik pomiaru zapisuje w `reviews/`. Człowiek ocenia wygląd ze zrzutów
 - Stany listy: default, hover, focus-visible (pole wyboru wstrzymanego), disabled (pole `dead`), empty, loading, error. Każdy ma zrzut albo N/A z powodem
+  - Metoda (2026-10-21, audyt weryfikacji): wykonuje agent `playwright-cli` na atrapie, ocenia człowiek. Default (MODE `data`), hover (najechanie na wiersz), focus-visible (Tab do pola wyboru `p4`), disabled (pole posta `dead`), empty (MODE `empty`), loading (MODE `loading`), error (MODE `error`); każdy stan zrzutem w `reviews/` albo N/A z powodem
 - W PR env lista nieudanych ładuje się bez błędu (regresja kształtu odpowiedzi)
 
 **Implementation Note**: Po zielonej weryfikacji automatycznej zatrzymaj się na ręczne potwierdzenie przed następną fazą.
@@ -486,7 +490,9 @@ PRD, dokumentacja pakietów i plan wdrożenia opisują nową semantykę prób, b
 #### Manual Verification:
 
 - Zapytanie z runbooka S-09 uruchomione lokalnie na bazie z testowymi danymi zwraca oczekiwane posty i nic nie zmienia
+  - Metoda (2026-10-21, audyt weryfikacji): wykonuje agent. Jednorazowy kontener Postgres 18, `migrate`, potem posty: `failed` i `dead` z samymi próbami `provider_error`/`timeout` z regułą `call` i komunikatem `failed after N attempts` (liczone), post z mieszanką awarii i `schema_violation` (pominięty), post z `provider_error` „`choices` is not set” (pominięty). Zapytanie dosłownie z sekcji S-09 `deploy-plan.md` (`BEGIN READ ONLY`); wynik równy oczekiwanemu, liczby wierszy i sumy kontrolne `posts` i `assessments` przed i po równe. Dodatkowo tylko do odczytu na `szczur-radar-pr-96`: oczekiwane 0 wierszy (17 postów `failed`, każdy z naruszeniem kontraktu). Bez testu IT, żeby nie dublować SQL runbooka
 - Przegląd: PRD, `deploy-plan.md` i oba `CLAUDE.md` są spójne z zachowaniem z faz 1–4
+  - Metoda (2026-10-21, audyt weryfikacji): agent przygotowuje, człowiek decyduje. Agent buduje tabelę „twierdzenie w dokumencie → kod albo test (`file:line`)” dla `prd.md` (doprecyzowanie S-09), sekcji S-09 `deploy-plan.md`, `pipeline/CLAUDE.md` i `llm/CLAUDE.md`, z rozbieżnościami osobno (znane: Javadoc `AssessmentSelection.fromTargets` nie wspomina pomijania wstrzymanych przez RETRY; `szczur-radar-api/README.md:113-114` nie opisuje bezpiecznika). Człowiek akceptuje tabelę i decyduje o każdej rozbieżności; ich poprawka to osobna decyzja zakresu
 
 **Implementation Note**: Po zielonej weryfikacji automatycznej zatrzymaj się na ręczne potwierdzenie. Weryfikacja na produkcji po merge'u to runbook i komentarz w issue #68, nie krok tego planu.
 
