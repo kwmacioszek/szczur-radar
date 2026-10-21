@@ -105,9 +105,11 @@ Zamknąć niewiadomą z roadmapy („czy wyszukiwarka zwraca usunięte elementy 
 #### Manual Verification:
 
 - Sonda uruchomiona z kluczami na ≥ 30 dniach, agregaty i wniosek zapisane w `change.md` (`## Notes`)
+  Wykonuje: agent — `( set -a; source ~/.config/szczur-radar/wykop.env; set +a; cd szczur-radar-api && ./mvnw -B -Pmeasurement test -Dtest=WykopPagingProbe -Dprobe.days=30 )`, potem dopisuje agregaty i wniosek do `change.md`; dowód: wyjście sondy (same agregaty) i diff `change.md`; człowiek: nic.
 - Bramka decyzyjna sprawdzona: brak elementów nie-`visible` z tekstem albo decyzja użytkownika zapisana w `change.md`
+  Wykonuje: agent — z wyjścia sondy liczy (a) elementy o `status` innym niż `visible`/`null` z tekstem, (b) dni, w których `total` zmienił się między stronami; dowód: obie liczby w `change.md`; człowiek: tylko gdy (a) lub (b) > 0 — decyzja (faza 3 jest już wdrożona, więc korekta idzie jako poprawka do przodu).
 
-**Implementation Note**: Po zielonej weryfikacji automatycznej zatrzymaj się na ręczne uruchomienie sondy przez człowieka (klucze tylko w jego powłoce) przed fazą 2.
+**Implementation Note**: Po zielonej weryfikacji automatycznej zatrzymaj się na ręczne uruchomienie sondy przez człowieka (klucze tylko w jego powłoce) przed fazą 2. Zmiana sposobu weryfikacji (2026-10-21, za zgodą użytkownika): sondę uruchamia agent w podpowłoce z `~/.config/szczur-radar/wykop.env`; klucze nie trafiają do wyjścia, logów, czatu ani repo (sonda drukuje tylko agregaty).
 
 ---
 
@@ -204,6 +206,7 @@ Chwilowe 429, 5xx i błędy transportu są ponawiane w kliencie — jawnie (WARN
 #### Manual Verification:
 
 - Przegląd: żaden nowy komunikat ani log nie może zawierać klucza, sekretu ani tokenu (wszystko przez `clean`)
+  Wykonuje: agent — (1) każde nowe `log.*` i każdy komunikat wyjątku z `git diff origin/main -- szczur-radar-api/src/main` przypisane do testu, który sprawdza brak sekretów (`WykopApiClientTest`: `retriesQuotingTheSecretsLeaveThemOutOfTheErrorAndTheWarnings` i testy maskowania); miejsce bez takiego testu dostaje test; (2) po przebiegu z 4.3: `grep -cF` wartości `WYKOP_KEY` i `WYKOP_SECRET` (z `wykop.env`, bez wypisywania) w logach API PR env daje 0; dowód: tabela miejsce → test i obie liczby; człowiek: nic (dowodem są testy z break-checkiem, tabela je uzupełnia).
 
 **Implementation Note**: Po zielonej weryfikacji automatycznej zatrzymaj się na ręczne potwierdzenie przed fazą 3.
 
@@ -269,6 +272,7 @@ Stronicowanie liczy unikalne elementy, rozpoznaje niespójność, czyta zasób r
 #### Manual Verification:
 
 - Przegląd komunikatów WARN i `INCOMPLETE_PAGING`: operator z samego komunikatu wie, który zasób, ile z ilu i dlaczego
+  Wykonuje: test + agent — `WykopRepositoryTest` przypina pełną treść WARN dla każdego rodzaju niespójności (zmieniony `total`, pusta strona, duplikaty, krótka strona) i pełną treść `INCOMPLETE_PAGING` (zmieniony `total`, krótka strona); agent wkleja wszystkie warianty (z testów i z logów PR env, jeśli wystąpią); dowód: `./mvnw -B test -Dtest=WykopRepositoryTest` i lista wariantów; człowiek: ocena, czy tekst wystarcza operatorowi (ocena języka).
 
 **Implementation Note**: Po zielonej weryfikacji automatycznej zatrzymaj się na ręczne potwierdzenie przed fazą 4.
 
@@ -307,8 +311,11 @@ Lekcja dla przyszłych źródeł, weryfikacja na prawdziwym Wykopie w PR env, ak
 #### Manual Verification:
 
 - Lekcja dopisana na końcu `context/foundation/lessons.md`, bez edycji wcześniejszych wpisów
+  Wykonuje: agent — `git diff origin/main -- context/foundation/lessons.md`: 0 usuniętych linii, jeden fragment na końcu pliku; dowód: wynik `git diff --numstat` i fragment; człowiek: nic.
 - Przebieg za zakres w PR env `succeeded`, `fetched` zgodne z `total` wyszukiwarki, logi bez nieuzasadnionych WARN
+  Wykonuje: agent — `/api/deploy-safety` → `safe:true`; logowanie `curl`-em jako admin PR env (dane z pliku poza repo, nigdy na czacie), `POST /api/admin/pipeline-runs` za dwa niedawne dni, czekanie na koniec, odczyt `status` i `fetched`; zaraz potem sonda z fazy 1 z `-Dprobe.days` obejmującym ten zakres i porównanie `fetched` z sumą `total` wpisów i linków; logi API przez `railway logs -s szczur-radar-api -e szczur-radar-pr-94 -p <project>` (bez `railway link`) przeszukane pod „Retrying Wykop” i „Reading Wykop … again”; dowód: id przebiegu, `status`, `fetched`, suma `total`, liczba linii WARN z treścią; człowiek: jednorazowo dostęp admina do PR env. Wymaga działającego PR env: przy awarii Railway wiersz czeka, a nie jest zastępowany inną kontrolą.
 - Komentarz w issue S-16 z wynikiem weryfikacji w PR env
+  Wykonuje: agent — `gh issue comment 75` z dowodami z 1.3, 1.4, 2.5 i 4.3; dowód: link do komentarza; człowiek: nic (merge pozostaje u człowieka).
 
 ---
 
@@ -327,9 +334,10 @@ Lekcja dla przyszłych źródeł, weryfikacja na prawdziwym Wykopie w PR env, ak
 
 ### Manual Testing Steps:
 
-1. Sonda na ≥ 30 dniach z kluczami w powłoce; wynik w `change.md`.
-2. Przebieg za zakres w PR env na prawdziwym Wykopie; porównanie `fetched` z `total` z sondy na te same dni albo z `fetched` przebiegu produkcji za ten zakres.
-3. Przegląd logów API w PR env pod kątem WARN.
+1. Sonda na ≥ 30 dniach (agent, klucze z `~/.config/szczur-radar/wykop.env` w podpowłoce); wynik i bramka decyzyjna w `change.md`.
+2. Przebieg za zakres w PR env na prawdziwym Wykopie (agent przez API admina); zaraz po nim sonda na te same dni, żeby `total` nie zdążył się zmienić, i porównanie `fetched` z sumą `total` (zapasowo: `fetched` przebiegu produkcji za ten zakres).
+3. Logi API w PR env (agent): linie WARN z treścią i licznik wystąpień `WYKOP_KEY`/`WYKOP_SECRET` (oczekiwane 0).
+4. Człowiek: dostęp admina do PR env, ocena treści komunikatów (3.4) i decyzja tylko przy zapalonej bramce 1.4.
 
 ## Performance Considerations
 
