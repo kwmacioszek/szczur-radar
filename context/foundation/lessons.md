@@ -117,6 +117,20 @@
 - **Rule**: Przed `/10x-implement` nigdy nie modyfikuj plików kodu ani konfiguracji, także przy pilnym problemie. Przedstaw opcje i poczekaj na wyraźne polecenie przejścia do implementacji.
 - **Applies to**: frame, research, plan
 
+## Uzasadniaj zakres celem użytkownika, zanim dodasz mechanizm
+
+- **Context**: Planowanie, research i review zmian, szczególnie gdy analiza ujawnia kolejne ryzyka i przypadki brzegowe.
+- **Problem**: Agent traktuje znalezione ryzyka jako nowe wymagania i rozbudowuje rozwiązanie poza cel użytkownika. Przy weryfikacji deployu paczki doproponował rozliczanie historii, ledger i codzienny monitoring produkcji, a po korekcie nadal szukał wariantów nadmiarowego rozwiązania.
+- **Rule**: Przed dodaniem mechanizmu wskaż wymaganie użytkownika, którego bez niego nie da się spełnić; jeśli cel można osiągnąć bez tego mechanizmu, pozostaw go poza zakresem. Podczas review rozważ usunięcie zbędnej funkcji przed jej naprawianiem, a po korekcie zakresu przez użytkownika usuń rozszerzenie zamiast proponować jego kolejne warianty.
+- **Applies to**: frame, research, plan, plan-review, implement, impl-review
+
+## Planuj weryfikację agent-first, zachowując bramki człowieka
+
+- **Context**: Planowanie i przegląd slice'ów z `/10x-plan` oraz `/10x-plan-review`, szczególnie weryfikacja UI, API, integracji, CI i Railway PR environments.
+- **Problem**: Powtarzalne kontrole techniczne trafiają do Manual Verification, co wymaga od operatora ręcznego wykonywania testów i zatrzymuje pracę nad wieloma równoległymi slice'ami.
+- **Rule**: Dla każdego kryterium sukcesu wybierz najtańszą wiarygodną metodę weryfikacji: najpierw deterministyczny test automatyczny, następnie wykonanie scenariusza przez agenta z obserwowalnymi dowodami, a dopiero potem czynność człowieka. Manual zachowuj dla ocen i decyzji wymagających człowieka, ryzykownych operacji i przypadków bez wiarygodnej automatyzacji. Nie rezygnuj z weryfikacji ani nie uznawaj samego raportu agenta za niezależny dowód poprawności.
+- **Applies to**: plan, plan-review, implement, impl-review
+
 ## Ponowienia źródła żyją w jego kliencie, w terminie poniżej watchdoga; stronicowanie sprawdza spójność, nie tylko liczbę
 
 - **Context**: Każde źródło danych w `sources/<source>/` (Wykop, później Reddit), szczególnie klient API i stronicowanie wyników (S-16 `wykop-ingest-completeness`, 2026-10-20). Uzupełnia regułę „Akcje Embabel domyślnie się ponawiają…”, która wymienia tylko `llm/transport/TransportRetry`.
