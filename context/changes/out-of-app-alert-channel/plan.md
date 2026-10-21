@@ -519,8 +519,8 @@ wstrzymać w panelu.
 
 - [x] 3.1 Testy skryptu przechodzą: `tools/healthchecks/test.sh` — a0b31fa
 - [x] 3.2 `shellcheck tools/healthchecks/*.sh` bez błędów — a0b31fa
-- [ ] 3.3 Plan IaC dla PR env bez zmian destrukcyjnych i zielona bramka `railway-config`
-- [ ] 3.4 CI na PR zielone, w tym `healthchecks-test`
+- [x] 3.3 Plan IaC dla PR env bez zmian destrukcyjnych i zielona bramka `railway-config` — 1e4e2ef
+- [x] 3.4 CI na PR zielone, w tym `healthchecks-test` — 1e4e2ef
 
 #### Manual
 
@@ -531,7 +531,7 @@ wstrzymać w panelu.
 
 #### Automated
 
-- [ ] 4.1 CI na PR zielone po zmianach dokumentacji
+- [x] 4.1 CI na PR zielone po zmianach dokumentacji — 1e4e2ef
 
 #### Manual
 
