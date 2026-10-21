@@ -238,6 +238,8 @@ rotację. Treść uzupełniana w kolejnych fazach.
 #### Manual Verification:
 
 - `wrangler dev` lokalnie: `curl` z poprawnym sekretem i przykładowym payloadem Railway daje 502 bez tokena GitHub (ścieżka do dispatchu przebyta), zły sekret daje 401
+  - Metoda: agent (`WEBHOOK_SECRET` testowy w `.dev.vars`, bez `GITHUB_DISPATCH_TOKEN`). Dowód: oba
+    kody HTTP. Logikę pokrywają testy Workera (401, brak tokena → 502); tu sprawdzany jest runtime.
 
 **Implementation Note**: Po fazie zatrzymaj się na ręczne potwierdzenie.
 
@@ -299,6 +301,10 @@ kod wyjścia.
 #### Manual Verification:
 
 - Przegląd `SECURITY.md` i workflowów: sekret Railway tylko w środowisku `monitor`, żaden workflow z sekretami nie ma wyzwalacza z forka ani `pull_request_target`
+  - Metoda: agent zbiera dowody, operator ocenia. Agent: `grep` wyzwalaczy i każdego `secrets.*`
+    (tylko w jobie z `environment: monitor`), `gh api` sekretów repo (puste) i środowiska `monitor`,
+    polityki gałęzi, zatwierdzania runów z forków i domyślnych uprawnień workflow, jako tabela
+    w komentarzu issue. Operator czyta `SECURITY.md` i akceptuje postawę bezpieczeństwa.
 
 **Implementation Note**: Po fazie zatrzymaj się na ręczne potwierdzenie przed jakąkolwiek
 publikacją repo lub zmianą w Cloudflare i Railway.
@@ -347,14 +353,37 @@ Stary `deploy-verify` w szczur-radar nadal działa.
 #### Manual Verification:
 
 - Push do PR tej zmiany daje zielony run `verify.yml` na usługę z raportem środowiska `szczur-radar-pr-<N>`; raport weba pokazuje 200 z `/api/ready`, `/healthz` i `/`
+  - Metoda: agent (deploy API i weba w PR env). Dowód: URL-e runów `verify.yml` i ich podsumowanie
+    z trzema 200. Wymaga środowiska o nazwie `szczur-radar-pr-<N>` (`verifier/web-url.sh`).
 - Wymuszona awaria w PR env (np. `LLM_TIMEOUT=0s` na API, start pada na `LlmConfigurationCheck`) daje czerwony run z nazwą usługi i stanem `FAILED`, choć starszy deploy API nadal serwuje, oraz jedno issue `Niezdrowe wdrożenie: szczur-radar-pr-<N> / szczur-radar-api` przypisane do operatora
+  - Metoda: agent, po zgodzie operatora. `FAILED` albo `CRASHED` (zależnie od restart policy; oba
+    to RED). Od 3.4 do 3.7 bez pushy na gałąź: job `railway-config` usuwa `LLM_TIMEOUT` z PR env.
+    Dowód: URL czerwonego runu, URL issue z assignee.
 - Przypisanie issue daje rzeczywiste powiadomienie push w GitHub Mobile na telefonie operatora (zrzut ekranu lub potwierdzenie w issue)
+  - Metoda: człowiek (fizyczny telefon). Agent podaje link do issue z 3.4 i potwierdza assignee.
 - Przy otwartym issue API commit zmieniający tylko `szczur-radar-web/` daje zielony run weba, a issue API zostaje otwarte
+  - Metoda: agent. Zamiast commita (trafiłby do PR i na produkcję) redeploy samego weba w PR env:
+    ten sam webhook i ta sama ścieżka. Dowód: zielony run weba, issue API nadal otwarte, bez
+    nowego komentarza.
 - Po usunięciu zmiennej redeploy API daje zielony run i zamknięte issue API z komentarzem
+  - Metoda: agent. Dowód: URL zielonego runu, issue zamknięte z komentarzem.
 - Ponowne wysłanie tego samego webhooka (curl do Workera z sekretem) daje drugi run w kolejce z tym samym wynikiem i bez nowego issue
+  - Metoda: agent; nagłówek z sekretem z pliku 0600 (`curl -H @plik`), nigdy w argumentach.
+    Dowód: dwa runy z tym samym werdyktem, liczba issue `deploy-health` bez zmian.
 - Webhook z błędnym sekretem dostaje 401 i nie uruchamia runu
+  - Metoda: agent. Dowód: kod 401, liczba runów `verify.yml` przed i po taka sama.
 - Deploy produkcji w tym czasie (jeśli nastąpi) daje zielony run bez issue; w szczur-radar nie pojawia się nic nowego
+  - Metoda: agent, obserwacja. Bez deployu produkcji przed merge'em (zmiany poza `watchPatterns`
+    dają `SKIPPED`) dowodem jest run 39463095099 (prawdziwy deploy produkcji API, webhook
+    symulowany) i `check-runs` commitów szczur-radar z samym CI; prawdziwy deploy sprawdza
+    krok 2 runbooka po merge'u.
 - Payload deployu crona (`db-backup` lub `pipeline-trigger`) daje run z werdyktem tylko tego crona, bez sond; cron w stanie `CRASHED` (np. `TRIGGER_IN_ANY_ENVIRONMENT=true` bez działającego API) nie zmienia wyniku następnego deployu weba lub API
+  - Metoda: agent, po zgodzie operatora. `CRASHED` przez `TRIGGER_IN_ANY_ENVIRONMENT=true` i
+    `TRIGGER_WAKE_TIMEOUT=bad` na `pipeline-trigger` w PR env: `trigger.sh` kończy się kodem 2 przed
+    wywołaniem API. Wariant „bez działającego API” odpada, bo trigger budzi API w PR env i
+    uruchomiłby prawdziwy przebieg (Wykop, LLM). Obie zmienne są w `variables.ignore`. Wykonanie
+    o 00:30 UTC. Dowód: czerwony run crona bez tabeli sond, potem zielony redeploy weba, a issue
+    crona i API bez zmian. Po teście obie zmienne usunięte.
 
 **Implementation Note**: Po fazie zatrzymaj się na ręczne potwierdzenie.
 
@@ -417,7 +446,10 @@ kroków w nagłówku spójna.
 #### Manual Verification:
 
 - Na head SHA po pushu tej fazy nie ma żadnego runu `deploy-verify` (`gh run list --workflow deploy-verify.yml --commit <sha>` puste)
+  - Metoda: agent. Dowód: `gh api repos/kwmacioszek/szczur-radar/commits/<sha>/check-runs` i
+    `gh run list --commit <sha>` z samymi jobami `ci.yml`.
 - Runbook w `deploy-plan.md` przeczytany i zaakceptowany przez operatora
+  - Metoda: człowiek (decyzja operatora).
 
 ---
 
@@ -456,6 +488,13 @@ kroków w nagłówku spójna.
 **Błędy:** `railway` niezerowy kod → RED, exit 1; `gh` niezerowy → exit 1; brak zmiennej → exit 2.
 
 ### Manual Testing Steps:
+
+Każde kryterium Manual ma pod sobą metodę (agent-first, `lessons.md`). „Agent” znaczy: agent
+wykonuje scenariusz i wkleja w komentarzu issue #91 sprawdzalne dowody (URL-e runów i issue,
+wyjście `gh` / `curl` bez sekretów), a operator zaznacza wiersz po ich przeglądzie; sam raport
+agenta nie wystarcza. Awarie w PR env (3.4, 3.11) tylko po zgodzie operatora. Logikę tych
+scenariuszy pokrywają już testy deterministyczne; na żywo sprawdzana jest integracja z Railway,
+GitHubem i Workerem.
 
 1. Fazy 1 i 3: scenariusze z sekcji Manual Verification.
 2. Faza 4: brak runów `deploy-verify` przy nowym head SHA.
