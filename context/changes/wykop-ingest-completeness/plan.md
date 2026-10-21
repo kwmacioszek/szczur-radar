@@ -369,8 +369,8 @@ Brak migracji, zmiennych środowiskowych i zmian IaC. Wycofanie = revert PR.
 
 #### Manual
 
-- [ ] 1.3 Sonda uruchomiona z kluczami na ≥ 30 dniach, agregaty i wniosek zapisane w `change.md`
-- [ ] 1.4 Bramka decyzyjna sprawdzona (brak elementów nie-`visible` z tekstem albo decyzja zapisana)
+- [x] 1.3 Sonda uruchomiona z kluczami na ≥ 30 dniach, agregaty i wniosek zapisane w `change.md` — 9a6e7ab
+- [x] 1.4 Bramka decyzyjna sprawdzona (brak elementów nie-`visible` z tekstem albo decyzja zapisana) — 9a6e7ab
 
 ### Phase 2: Ponowienia i termin w WykopApiClient
 
