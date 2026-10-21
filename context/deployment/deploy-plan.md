@@ -111,18 +111,21 @@ The API is now a Spring Boot 4 jar on Java 25, built from `szczur-radar-api/Dock
 - Same image locally and in CI: `docker build -t szczur-radar-api ./szczur-radar-api`; `docker run <image>` = server, `docker run <image> migrate` = migrations. CI job `api-container-smoke` builds the Dockerfile, checks the non-root user, runs the exact pre-deploy command against Postgres 18, then `/api/health` and `/api/ready`.
 - `railway ssh` lands in a **root** shell (Railway SSH ignores `USER`); the app process runs as `app`.
 
-### Memory, build and cold start (measured 2026-10-06)
+### Memory, build and cold start
+
+Memory, CPU and GC measured 2026-10-21 on production (read-only `railway ssh` into `szczur-radar-api`, JDK 25.0.4.1) with `API_LIMITS` 2 vCPU / 2 GB (`.railway/railway.ts`); the GC and heap come from a second `java -XX:MaxRAMPercentage=75 -XX:+PrintFlagsFinal -version` in the same container, which sees the same cgroup. A PR env of a docs/IaC-only PR runs no services, so it cannot be measured there. The other rows are from 2026-10-06 (limit ≈ 954 MiB then: heap ≈ 716 MiB, SerialGC).
 
 | | |
 | --- | --- |
-| Container memory limit (`/sys/fs/cgroup/memory.max`) | 999997440 B ≈ 954 MiB |
-| Max heap with `-XX:MaxRAMPercentage=75` | ≈ 716 MiB (the JDK default of 25 % would give ≈ 238 MiB) |
-| GC | SerialGC (G1 needs ≥ 2 CPUs and ≥ 1792 MB) |
-| `nproc` in the container | 48 (host CPUs) |
-| Image size | 508 MB (local `docker image ls`) |
-| Build on Railway | without cache ~1:25 min (`dependency:go-offline` 54 s, `package` 11 s) + push ~40 s; with cached dependency layer ~7 s + push ~32 s |
-| Server start | 7.9–8.3 s warm; pre-deploy `migrate` container ~12 s |
-| First request after sleep | ~9.6–10.5 s (Railpack: ~10–11 s to logged-in) — no regression |
+| Container memory limit (`/sys/fs/cgroup/memory.max`) | 1999998976 B ≈ 1907 MiB |
+| CPU limit (`/sys/fs/cgroup/cpu.max`) | `200000 100000` = 2 CPUs |
+| Max heap with `-XX:MaxRAMPercentage=75` | 1501560832 B ≈ 1432 MiB (the JDK default of 25 % would give ≈ 477 MiB) |
+| GC | G1 (`UseG1GC` chosen by ergonomics: 2 CPUs and ≥ 1792 MB; SerialGC below that) |
+| `nproc` in the container | 48 (host CPUs; the JVM sizes itself by the cgroup CPU limit, `ActiveProcessorCount` not set) |
+| Image size (2026-10-06) | 508 MB (local `docker image ls`) |
+| Build on Railway (2026-10-06) | without cache ~1:25 min (`dependency:go-offline` 54 s, `package` 11 s) + push ~40 s; with cached dependency layer ~7 s + push ~32 s |
+| Server start (2026-10-06) | 7.9–8.3 s warm; pre-deploy `migrate` container ~12 s |
+| First request after sleep (2026-10-06) | ~9.6–10.5 s (Railpack: ~10–11 s to logged-in) — no regression |
 
 ### PITR disabled; database backup
 

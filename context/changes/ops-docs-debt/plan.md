@@ -185,6 +185,8 @@ Start pracy (gałąź, PR, issue) i wszystkie poprawki dokumentów, które nie p
 
 Prawdziwy pomiar JVM przy obecnych limitach i usunięcie trzech zmiennych z PR env oraz z `railway.ts`, aż CI będzie zielone.
 
+> **Zmiana 2026-10-21 (decyzja użytkownika):** PR, który nie dotyka katalogów usług, dostaje PR env bez żadnego deploymentu (`szczur-radar-pr-93` i `szczur-radar-pr-92`: wszystkie usługi offline, 0 deploymentów; pierwszy `szczur-radar-pr-93` powstał też w trakcie incydentu Railway i został odtworzony przez zamknięcie i ponowne otwarcie PR). Dlatego: pomiar JVM (#1, kryterium 2.5) robimy na **produkcji, tylko do odczytu** (`railway ssh`, poza oknami 00:30–01:30 i 01:50–02:30 UTC), a nie w PR env. Kryterium 2.4 (`/api/ready` w PR env) zastępuje zielone `railway-config` z planem bez zmian po usunięciu zmiennych. Kryterium 2.7 zapisuje skutek `variable delete` w PR env bez deploymentu (staged / brak deployu) z adnotacją, że nie przesądza on skutku na produkcji. Tytuły wierszy Progress zostają bez zmian.
+
 ### Changes Required:
 
 #### 1. Pomiar JVM w PR env
@@ -353,11 +355,11 @@ Wycofanie: przywrócenie zmiennych to `variable set` (dla `DATABASE_URL` referen
 
 #### Automated
 
-- [x] 1.1 Brak statusów „not merged” w `deploy-plan.md` poza sekcjami historycznymi
-- [x] 1.2 Każdy link `context/changes/<id>` w `deploy-plan.md` i `infrastructure.md` wskazuje istniejący katalog
-- [x] 1.3 `LangGraph` w `infrastructure.md` tylko w sekcji oznaczonej jako historyczna
-- [x] 1.4 SVG roadmapy wygenerowany ze statusem S-19 in-progress
-- [ ] 1.5 PR otwarty z `Refs #78`, komentarz startowy w #78
+- [x] 1.1 Brak statusów „not merged” w `deploy-plan.md` poza sekcjami historycznymi — a9f48ae
+- [x] 1.2 Każdy link `context/changes/<id>` w `deploy-plan.md` i `infrastructure.md` wskazuje istniejący katalog — a9f48ae
+- [x] 1.3 `LangGraph` w `infrastructure.md` tylko w sekcji oznaczonej jako historyczna — a9f48ae
+- [x] 1.4 SVG roadmapy wygenerowany ze statusem S-19 in-progress — a9f48ae
+- [x] 1.5 PR otwarty z `Refs #78`, komentarz startowy w #78 — a9f48ae
 
 #### Manual
 
@@ -367,11 +369,11 @@ Wycofanie: przywrócenie zmiennych to `variable set` (dla `DATABASE_URL` referen
 
 #### Automated
 
-- [ ] 2.1 `railway.ts` nie deklaruje `RAILPACK_JDK_VERSION`, `DATABASE_URL`, `JWT_SECRET`
-- [ ] 2.2 PR env bez trzech zmiennych (`jq 'keys'`)
+- [x] 2.1 `railway.ts` nie deklaruje `RAILPACK_JDK_VERSION`, `DATABASE_URL`, `JWT_SECRET`
+- [x] 2.2 PR env bez trzech zmiennych (`jq 'keys'`)
 - [ ] 2.3 Wszystkie workflow na PR zielone, w tym `railway-config`; brak alertu po deployu
 - [ ] 2.4 `/api/ready` w PR env zwraca 200 po deployu
-- [ ] 2.5 Tabela JVM ma datę i wartości pomiaru z PR env
+- [x] 2.5 Tabela JVM ma datę i wartości pomiaru z PR env
 - [ ] 2.7 Skutek `railway variable delete` w PR env zapisany w #78
 
 #### Manual
