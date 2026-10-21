@@ -577,7 +577,7 @@ Bezpiecznik skraca awarię: przebieg staje po ~9 nieudanych żądaniach HTTP zam
 
 #### Manual
 
-- [ ] 3.5 PR env: zwykły przebieg kończy się jak przed zmianą (regresja)
+- [x] 3.5 PR env: zwykły przebieg kończy się jak przed zmianą (regresja) — pr-96 @ 42fb68f, 2026-10-21: range partial, 278 nowych, 261 ok, 17 failed (odrzucenia kontraktu), 0 błędów technicznych, 0 wstrzymanych
 
 ### Phase 4: Wstrzymane posty na liście nieudanych (API i UI)
 
@@ -591,7 +591,7 @@ Bezpiecznik skraca awarię: przebieg staje po ~9 nieudanych żądaniach HTTP zam
 
 - [ ] 4.4 Zrzuty `/admin` z atrapą w obu motywach i przy 375 px
 - [ ] 4.5 Macierz 7 stanów listy: zrzut albo N/A z powodem
-- [ ] 4.6 W PR env lista nieudanych ładuje się bez błędu
+- [x] 4.6 W PR env lista nieudanych ładuje się bez błędu — pr-96 @ 42fb68f, 2026-10-21: potwierdził operator
 
 ### Phase 5: Dokumentacja i runbook
 
