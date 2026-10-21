@@ -1,7 +1,7 @@
 ---
 change_id: ops-docs-debt
 title: "S-19: dokumenty operatora mówią prawdę"
-status: implemented
+status: impl_reviewed
 created: 2026-10-20
 updated: 2026-10-21
 archived_at: null

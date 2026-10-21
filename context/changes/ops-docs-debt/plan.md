@@ -173,7 +173,7 @@ Start pracy (gałąź, PR, issue) i wszystkie poprawki dokumentów, które nie p
 
 #### Manual Verification:
 
-- Człowiek czyta zmienione statusy i notki w `deploy-plan.md` i potwierdza, że opisują stan faktyczny
+- Agent zestawia każdą linię Status z `gh pr view` i `gh issue view` (PR, SHA, data, stan issue) i zapisuje tabelę w `reviews/impl-review.md`. Człowiek ocenia, czy statusy i notki „Historical” są zrozumiałe dla operatora i wskazują właściwe sekcje bieżące.
 
 **Implementation Note**: Po zielonych kontrolach automatycznych zatrzymaj się na potwierdzenie człowieka przed fazą 2.
 
@@ -239,7 +239,7 @@ Prawdziwy pomiar JVM przy obecnych limitach i usunięcie trzech zmiennych z PR e
 
 #### Manual Verification:
 
-- Człowiek przegląda tabelę JVM i potwierdza, że wnioski (heap, GC) zgadzają się z wynikiem pomiaru
+- Agent zapisuje surowy wynik pomiaru w #78 i sprawdza arytmetykę. Człowiek porównuje tabelę JVM z surowym wynikiem w komentarzu #78 (`6322284179`).
 
 **Implementation Note**: Po zielonych kontrolach automatycznych zatrzymaj się na potwierdzenie człowieka przed fazą 3.
 

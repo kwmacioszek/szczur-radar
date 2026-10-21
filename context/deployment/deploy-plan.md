@@ -45,7 +45,7 @@ Both are the hard gate **before Phase 6 (data collection)**: subscribe → set l
 
 ## F-03: przełączenie na Javę (java-api-rewrite)
 
-**Status (2026-10-03): DONE — production switched to Java and verified after human merges of PR #26 (`7a406f2`) and follow-up PR #27 (`6bc15db`).** Change: `context/archive/2026-10-01-java-api-rewrite/`, [issue #25 close-out](https://github.com/kwmacioszek/szczur-radar/issues/25#issuecomment-5965517657). The implementation-review fixes are tracked separately in `context/archive/2026-10-01-java-api-rewrite/follow-ups/review-fixes.md`; they ship in their own PR (branch `fix/java-api-rewrite-review-fixes`).
+**Status (2026-10-03): DONE — production switched to Java and verified after human merges of PR #26 (`7a406f2`) and follow-up PR #27 (`6bc15db`).** Change: `context/archive/2026-10-01-java-api-rewrite/`, [issue #25 close-out](https://github.com/kwmacioszek/szczur-radar/issues/25#issuecomment-5965517657). The implementation-review fixes are tracked separately in `context/archive/2026-10-01-java-api-rewrite/follow-ups/review-fixes.md`; they shipped in their own PR (#28, branch `fix/java-api-rewrite-review-fixes`, merged 2026-10-03).
 
 The API is now a Spring Boot 4 jar on Java 25, built from `szczur-radar-api/Dockerfile` since `api-docker-image` (2026-10-06; before: Railpack with `RAILPACK_JDK_VERSION=25`). Sessions live in Postgres (Spring Session JDBC); migrations are Flyway, fix-forward. There is **no way back to the Python backend** after the switch: failures are fixed in Java and redeployed; a bad migration is fixed by a new migration; a database backup restores data, not the Python runtime (no backup until the subscription — see `api-docker-image` below).
 
@@ -53,7 +53,7 @@ The API is now a Spring Boot 4 jar on Java 25, built from `szczur-radar-api/Dock
 
 - Migrations (pre-deploy, automatic): `java -jar target/szczur-radar-api.jar migrate`.
 - First admin: wake the API first (`curl https://<web-domain>/api/health`) — a sleeping service has no container, and `railway ssh` then lands on Railway's SSH gateway (it prints account info and runs nothing). Then `railway ssh -s szczur-radar-api -e <env>` and, inside the container shell (`/app`), `java -jar target/szczur-radar-api.jar create-admin --email you@example.com` — password asked twice, hidden (needs a real terminal, not an agent's `!`); refuses if an admin exists. Type the e-mail without `< >`: the shell reads `<` as a redirect. The `railway ssh` shell runs as **root** (Railway SSH ignores the image's `USER`); the app itself runs as the non-root `app` user, and the jar commands work the same in both. In a checkout without `railway link`, prefix CLI commands with `RAILWAY_PROJECT_ID=<project-id>`.
-- Variables on `szczur-radar-api` (names only): `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, `PGPASSWORD` (references to Postgres, from IaC), `PORT`, and operator-set `LLM_API_PROVIDER`, `LLM_MODEL`, `LLM_API_KEY` — production's key is the operator's and must be **sealed** (Railway copies unsealed variables into new PR envs: on 2026-10-02 PR env #27 started with production's key). PR envs get the CI settings (variables + `LLM_API_KEY` secret) from the `railway-config` CI step "Ensure PR-env LLM settings", which overwrites a copied value, removes the optional `LLM_SERVICE_TIER` / `LLM_REASONING_EFFORT` / `LLM_TIMEOUT` copied from production (since 2026-10-06: PR env #34 failed `migrate` with `LLM_SERVICE_TIER=flex is only supported for LLM_API_PROVIDER=openrouter`) and never runs on production. `DATABASE_URL`, `JWT_SECRET` and `RAILPACK_JDK_VERSION` stay declared in `.railway/railway.ts` only because the CI gate refuses `variable.delete`; the first two are unused since F-03, `RAILPACK_JDK_VERSION` since `api-docker-image` (the JDK comes from the image). Optional: `JAVA_TOOL_OPTIONS` for extra JVM flags (the image already passes `-XX:MaxRAMPercentage=75`).
+- Variables on `szczur-radar-api` (names only): `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, `PGPASSWORD` (references to Postgres, from IaC), `PORT`, and operator-set `LLM_API_PROVIDER`, `LLM_MODEL`, `LLM_API_KEY` — production's key is the operator's and must be **sealed** (Railway copies unsealed variables into new PR envs: on 2026-10-02 PR env #27 started with production's key). PR envs get the CI settings (variables + `LLM_API_KEY` secret) from the `railway-config` CI step "Ensure PR-env LLM settings", which overwrites a copied value, removes the optional `LLM_SERVICE_TIER` / `LLM_REASONING_EFFORT` / `LLM_TIMEOUT` copied from production (since 2026-10-06: PR env #34 failed `migrate` with `LLM_SERVICE_TIER=flex is only supported for LLM_API_PROVIDER=openrouter`) and never runs on production. `DATABASE_URL`, `JWT_SECRET` (unused since F-03) and `RAILPACK_JDK_VERSION` (unused since `api-docker-image`, the JDK comes from the image) were removed in S-19: from each environment first, then from `.railway/railway.ts` (section S-19). Optional: `JAVA_TOOL_OPTIONS` for extra JVM flags (the image already passes `-XX:MaxRAMPercentage=75`).
 
 ### PR env verification (szczur-radar-pr-26, 2026-10-02)
 
@@ -903,7 +903,7 @@ PR #60 was merged by the operator as `5b6eabb` (2026-10-17 15:02 UTC).
 
 ## S-14: bezpieczna bramka wdrożeń (safe-deploy-gate)
 
-**Status (2026-10-19): live on production** after the human merge of PR #81 (`2abc64c`); issue #73 closed (automatically at the merge). No production verification is recorded yet, neither here nor in the issue: the runbook after the merge below is still open. Change: `context/archive/2026-10-18-safe-deploy-gate/`. S-14 closes the gaps C4–C7 of the post-MVP audit:
+**Status (2026-10-19): live on production** after the human merge of PR #81 (`2abc64c`); production verification: issue #73 (closed automatically at the merge, reopened 2026-10-21 for the runbook after the merge below). Change: `context/archive/2026-10-18-safe-deploy-gate/`. S-14 closes the gaps C4–C7 of the post-MVP audit:
 - the IaC apply ran in parallel with the tests (C4);
 - the cron services deployed at the push, before CI (C5);
 - nothing checked health after an apply or a code deploy (C6);
@@ -1055,7 +1055,7 @@ No step of `ci.yml` can see the code deploy, which starts only after the workflo
 
 ## S-15: kopia bazy sprawdzana w całości (backup-check-completeness)
 
-**Status (2026-10-19): live on production** after the human merge of PR #79 (`1a6d300`); issue #74 closed (automatically at the merge). No production verification is recorded yet, neither here nor in the issue: the runbook after the merge below is still open. Before the merge, two production dumps passed this branch's restore check (below). S-15 makes the nightly backup check know every table from the migrations and refuse a copy of a suspiciously empty database before it reaches the bucket, where the retention and the NAS mirror would let it push out the good copies (audit C9). Change: `context/archive/2026-10-18-backup-check-completeness/`.
+**Status (2026-10-19): live on production** after the human merge of PR #79 (`1a6d300`); production verification: issue #74 (closed automatically at the merge, reopened 2026-10-21 for the runbook after the merge below). Before the merge, two production dumps passed this branch's restore check (below). S-15 makes the nightly backup check know every table from the migrations and refuse a copy of a suspiciously empty database before it reaches the bucket, where the retention and the NAS mirror would let it push out the good copies (audit C9). Change: `context/archive/2026-10-18-backup-check-completeness/`.
 
 ### What it changes
 
@@ -1212,7 +1212,7 @@ What `railway variable delete` does: in `szczur-radar-pr-93` (2026-10-21) the de
 
 ### PR env of a PR that touches no service directory
 
-A PR that changes only `context/`, `docs/`, `.railway/` or `tools/` gets a PR env with **no deployment at all**: every service is offline (`szczur-radar-pr-93`, `szczur-radar-pr-92`, 2026-10-21). `railway-config` still plans and applies IaC there, so variable and service-config changes can be checked, but there is no API to `ssh` into or to probe. Measure on production instead (read-only, outside the night windows), as S-19 did for the JVM table. If the PR env was created during a Railway incident and is half-made (for example `postgres` without a volume, the apply's check waiting for a deploy that never comes), close and reopen the PR: Railway deletes the environment and creates it again.
+A PR that touches none of the watched service directories (`szczur-radar-api/`, `szczur-radar-web/`, `tools/db-backup/`, `tools/pipeline-trigger/`) gets a PR env with **no deployment**: every service is offline (observed in `szczur-radar-pr-93` and `szczur-radar-pr-92`, 2026-10-21). `railway-config` still plans and applies IaC there, so variable and service-config changes can be checked, but there is no API to `ssh` into or to probe. Measure on production instead (read-only, outside the night windows), as S-19 did for the JVM table. If the PR env was created during a Railway incident and is half-made (for example `postgres` without a volume, the apply's check waiting for a deploy that never comes), close and reopen the PR: Railway deletes the environment and creates it again.
 
 ### Runbook — before the merge (agent, on the human's confirmation; tracked in issue #78, not in the plan's Progress)
 
@@ -1223,9 +1223,9 @@ Run after `/10x-impl-review` and `/10x-archive`, when the PR is ready and the hu
    - `curl -s https://szczur-radar-web-production.up.railway.app/api/deploy-safety` returns `{"safe":true,…}`;
    - the time is outside 00:30–01:30 UTC (the daily run) and 01:50–02:30 UTC (the backup);
    - the human has just confirmed: "delete them on production now".
-1. **Delete** on production: `railway variable delete <KEY> -p <project> -s szczur-radar-api -e production` for `RAILPACK_JDK_VERSION`, `DATABASE_URL` and `JWT_SECRET`.
+1. **Delete** on production: `railway variable delete <KEY> -p <project> -s szczur-radar-api -e production` for `RAILPACK_JDK_VERSION`, `DATABASE_URL` and `JWT_SECRET`. Each deletion may redeploy the API (expect up to three redeploys): check `/api/deploy-safety` again before each one.
 2. **Check** by name: `railway variable list -p <project> -s szczur-radar-api -e production --json | jq 'keys'` lists none of the three.
-3. **Other open PRs** (`gh pr list --state open`; on 2026-10-21 #92): delete the same three in each existing PR env and check with `jq 'keys'`. Comment on that PR as well.
+3. **Other open PRs** (`gh pr list --state open`; on 2026-10-21 #92): delete the same three in each existing PR env and check with `jq 'keys'`. Comment on that PR as well. A later push of that PR with the old `railway.ts` recreates `DATABASE_URL` and `RAILPACK_JDK_VERSION` there; delete them again before its branch takes in `main`.
 4. **Effect.** If the deletion is staged, apply it in the dashboard; if it redeployed the API, wait for `/api/ready` 200.
 5. **Hand over.** Tell the human: merge now; any other merge before it recreates `DATABASE_URL` and `RAILPACK_JDK_VERSION` (then repeat step 1). The agent never merges.
 6. **Record** on issue #78: the variable names after the deletion, `/api/ready`, the time.

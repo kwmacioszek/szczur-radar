@@ -288,7 +288,7 @@ segw = (pw - 164 - 24 - 12 * 5) / 13
 for i, (iid, st) in enumerate(m2_order):
     lab, fg, bg = STATUS[st]
     rect(bx + i * (segw + 5), py + 78, segw, 12, 3, bg, fg + ("aa" if st != "proposed" else "55"), 1)
-legend_items = [("done", "4 ukończone"), ("progress", "0 w toku"), ("ready", "4 gotowe do planowania"), ("proposed", "4 proponowane"), ("blocked", "1 zablokowany")]
+legend_items = [("done", "4 ukończone"), ("progress", "1 w toku"), ("ready", "3 gotowe do planowania"), ("proposed", "4 proponowane"), ("blocked", "1 zablokowany")]
 for li, (st, lab) in enumerate(legend_items):
     fg = STATUS[st][1]
     lx = bx + (0, 122, 218)[li % 3]
