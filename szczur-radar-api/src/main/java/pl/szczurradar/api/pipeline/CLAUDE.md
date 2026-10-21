@@ -272,10 +272,10 @@ PipelineRunService.startRange / startPosts → queue → PipelineAgent:
   error, no attempt, no technical failure, the admin notified) and an outage of a run a stopping instance
   interrupted (Order 15: counts nothing, the progress line has `unavailable 1`); counters and
   `last_activity_at` growing during the assessment; no new step in an interrupted run and no ERROR in the
-  log.
+  log. Re-stub the `@MockitoBean` with `doAnswer(…).when(…)`, not `when(…)` (which calls the old
+  answer with `null`).
 - `LlmOutageIT`: the breaker through the real transport — the client from `LlmClientFactory` (DeepSeek) on
   `ScriptedProviderServer`, the check answered, then HTTP 500 to everything; a RANGE run ends `failed`
   after the check and 3 × 3 HTTP requests, with no model assessment, no attempt, no technical failure and
   the admin notified. The only test of transport → `Assessor` → dispatcher: a PR env cannot make the
-  provider fail. Re-stub the `@MockitoBean` with `doAnswer(…).when(…)`, not `when(…)` (which calls the old
-  answer with `null`).
+  provider fail.

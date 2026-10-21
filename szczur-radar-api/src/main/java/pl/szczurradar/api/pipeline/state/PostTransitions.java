@@ -23,7 +23,8 @@ import pl.szczurradar.api.text.Nul;
  * ({@code assessing_run_id}); a result is stored only while the run still owns the post, and only
  * the owner puts a post back. So a worker of an interrupted run (e.g. during a deployment overlap)
  * never changes a post another run took over. Stage and status values are bound from their enums,
- * never written into the SQL. A technical failure (an error of our code, no attempt) is counted on the
+ * never written into the SQL. A technical failure (an error of our code or a single provider outage, no
+ * attempt) is counted on the
  * post with its message; every stored result resets the count ({@link Post#MAX_TECHNICAL_FAILURES} in a
  * row put the post on hold).
  */

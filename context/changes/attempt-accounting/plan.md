@@ -557,7 +557,7 @@ Bezpiecznik skraca awarię: przebieg staje po ~9 nieudanych żądaniach HTTP zam
 
 #### Manual
 
-- [ ] 1.4 Przegląd: w `src/main` nie ma zamiany dowolnego `Throwable` na `Kind.REJECTED`
+- [x] 1.4 Przegląd: w `src/main` nie ma zamiany dowolnego `Throwable` na `Kind.REJECTED` — agent 2026-10-21: PASS, reviews/rejected-audit-s09.md
 
 ### Phase 2: Licznik błędów technicznych posta (A1)
 
@@ -570,7 +570,7 @@ Bezpiecznik skraca awarię: przebieg staje po ~9 nieudanych żądaniach HTTP zam
 
 #### Manual
 
-- [ ] 2.5 Lokalnie wstrzymany post nie trafia do RETRY, a trafia do POSTS
+- [x] 2.5 Lokalnie wstrzymany post nie trafia do RETRY, a trafia do POSTS — 805c912
 
 ### Phase 3: Awaria dostawcy i bezpiecznik (B2)
 
@@ -595,8 +595,8 @@ Bezpiecznik skraca awarię: przebieg staje po ~9 nieudanych żądaniach HTTP zam
 
 #### Manual
 
-- [ ] 4.4 Zrzuty `/admin` z atrapą w obu motywach i przy 375 px
-- [ ] 4.5 Macierz 7 stanów listy: zrzut albo N/A z powodem
+- [x] 4.4 Zrzuty `/admin` z atrapą w obu motywach i przy 375 px — agent 2026-10-21, wygląd zaakceptował operator: reviews/ui-s09/
+- [x] 4.5 Macierz 7 stanów listy: zrzut albo N/A z powodem — agent 2026-10-21, zaakceptował operator: reviews/ui-s09/
 - [x] 4.6 W PR env lista nieudanych ładuje się bez błędu — pr-96 @ 42fb68f, 2026-10-21: potwierdził operator
 
 ### Phase 5: Dokumentacja i runbook
@@ -609,4 +609,4 @@ Bezpiecznik skraca awarię: przebieg staje po ~9 nieudanych żądaniach HTTP zam
 #### Manual
 
 - [ ] 5.3 Zapytanie z runbooka S-09 zwraca oczekiwane posty i nic nie zmienia
-- [ ] 5.4 PRD, `deploy-plan.md` i oba `CLAUDE.md` są spójne z zachowaniem z faz 1–4
+- [x] 5.4 PRD, `deploy-plan.md` i oba `CLAUDE.md` są spójne z zachowaniem z faz 1–4 — tabela agenta zaakceptowana przez operatora 2026-10-21, R1–R5 i U-a poprawione: reviews/docs-consistency-s09.md
