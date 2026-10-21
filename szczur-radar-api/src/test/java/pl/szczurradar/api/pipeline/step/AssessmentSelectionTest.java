@@ -75,6 +75,20 @@ class AssessmentSelectionTest {
 			.containsExactly(failed.getId(), stored.getId());
 	}
 
+	@Test
+	void aPostsRunTakesPostsOnHold() {
+		// On hold only keeps a post out of the RETRY run (findLeftoverIds); an admin's chosen posts take it.
+		Post storedOnHold = post(PostStage.STORED);
+		Post failedOnHold = post(PostStage.FAILED);
+		set(storedOnHold, "technicalFailures", Post.MAX_TECHNICAL_FAILURES);
+		set(failedOnHold, "technicalFailures", Post.MAX_TECHNICAL_FAILURES);
+		List<UUID> asked = List.of(storedOnHold.getId(), failedOnHold.getId());
+		when(posts.findAllById(asked)).thenReturn(List.of(storedOnHold, failedOnHold));
+
+		assertThat(selection.fromTargets(new SelectionTarget(RUN, RunKind.POSTS, asked)).postIds())
+			.containsExactly(storedOnHold.getId(), failedOnHold.getId());
+	}
+
 	private static Post post(PostStage stage) {
 		Post post = new Post(Source.WYKOP, ItemType.POST, UUID.randomUUID().toString(), Instant.now(), null, "treść", null,
 				null, null, List.of(), new RawPayloadRef(UUID.randomUUID()), UUID.randomUUID());
