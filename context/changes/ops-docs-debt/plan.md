@@ -369,12 +369,12 @@ Wycofanie: przywrócenie zmiennych to `variable set` (dla `DATABASE_URL` referen
 
 #### Automated
 
-- [x] 2.1 `railway.ts` nie deklaruje `RAILPACK_JDK_VERSION`, `DATABASE_URL`, `JWT_SECRET`
-- [x] 2.2 PR env bez trzech zmiennych (`jq 'keys'`)
-- [ ] 2.3 Wszystkie workflow na PR zielone, w tym `railway-config`; brak alertu po deployu
-- [ ] 2.4 `/api/ready` w PR env zwraca 200 po deployu
-- [x] 2.5 Tabela JVM ma datę i wartości pomiaru z PR env
-- [ ] 2.7 Skutek `railway variable delete` w PR env zapisany w #78
+- [x] 2.1 `railway.ts` nie deklaruje `RAILPACK_JDK_VERSION`, `DATABASE_URL`, `JWT_SECRET` — d2c0b01
+- [x] 2.2 PR env bez trzech zmiennych (`jq 'keys'`) — d2c0b01
+- [x] 2.3 Wszystkie workflow na PR zielone, w tym `railway-config`; brak alertu po deployu — d2c0b01
+- [x] 2.4 `/api/ready` w PR env zwraca 200 po deployu — d2c0b01
+- [x] 2.5 Tabela JVM ma datę i wartości pomiaru z PR env — d2c0b01
+- [x] 2.7 Skutek `railway variable delete` w PR env zapisany w #78 — d2c0b01
 
 #### Manual
 
@@ -384,10 +384,10 @@ Wycofanie: przywrócenie zmiennych to `variable set` (dla `DATABASE_URL` referen
 
 #### Automated
 
-- [ ] 3.1 Sekcja `## S-19` w `deploy-plan.md` z runbookami „before the merge” i „after the merge” (#78)
-- [ ] 3.2 Runbook „before the merge” wymienia warunki wstępne i sprawdzenie przez `jq 'keys'`
-- [ ] 3.4 Status sekcji S-19 bez „not merged”/„in progress”, odsyła do #78
-- [ ] 3.5 Nowy wpis w `lessons.md` o statusach, plik tylko dopisany
+- [x] 3.1 Sekcja `## S-19` w `deploy-plan.md` z runbookami „before the merge” i „after the merge” (#78)
+- [x] 3.2 Runbook „before the merge” wymienia warunki wstępne i sprawdzenie przez `jq 'keys'`
+- [x] 3.4 Status sekcji S-19 bez „not merged”/„in progress”, odsyła do #78
+- [x] 3.5 Nowy wpis w `lessons.md` o statusach, plik tylko dopisany
 
 #### Manual
 

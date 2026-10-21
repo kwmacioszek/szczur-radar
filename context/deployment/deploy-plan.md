@@ -1186,6 +1186,58 @@ An API older than S-08 gives `skipped ?`; the deploy order of the API and the cr
 3. **Record which case the first nights were:** a usual night, a warning (`skipped` > 0: a notification, exit 0) or an empty run (`failed`: a notification, exit 1, a Railway push). An empty night is handled with the runbook above.
 4. **Record and close.** Comment the results on issue #67: the merge commit, deployment IDs, the first night's cron and API lines, the notifications seen. Close the issue only after this production verification.
 
+## S-19: dokumenty operatora mówią prawdę (ops-docs-debt)
+
+**Status:** delivered by PR #93; production verification and closure in issue #78. Change: `context/changes/ops-docs-debt/` (in `context/archive/` once archived).
+
+### What it changes
+
+- **Statuses in this file.** Every existing Status line is true: S-02, S-04, S-07, the self-hosted runner, S-14, S-15 and S-08 no longer describe a merged change as waiting for its merge. Links to changes moved to `context/archive/` point there. The FastAPI-era sections (Summary, Release status, S-01 release, Phases) start with a "Historical" note.
+- **JVM table** (section api-docker-image) measured on production at 2 vCPU / 2 GB: heap ≈ 1432 MiB, G1.
+- **`context/foundation/infrastructure.md`** describes today's topology (no LangGraph) and today's secrets.
+- **Hikari (#36)** is a decision, not a change: see "Hikari `Failed to validate connection` warnings" in section api-docker-image.
+- **Resource limits (#51)**, closed 2026-10-18: production's `limitOverride` matches `.railway/railway.ts`; no change was waiting.
+- **Variables removed** from `szczur-radar-api`: `RAILPACK_JDK_VERSION` (unused since api-docker-image), `DATABASE_URL` (unused since F-03, the API reads `PG*`), `JWT_SECRET` (unused since F-03; sealed on production, so its removal cannot be undone).
+
+### Removing a variable that `.railway/railway.ts` declares
+
+The CI gate refuses `variable.delete`, and the plan proposes one whenever the file no longer declares a variable that an environment still has. So the order is always **the environment first, then the file**, in every environment separately:
+
+1. Delete the variable in the environment: `railway variable delete <KEY> -p <project> -s <service> -e <environment>`. Check by name only: `railway variable list … --json | jq 'keys'` (without `jq 'keys'` the list prints values).
+2. Push the commit without the declaration right away. A push with the old file in between gives the plan `variable.set`, which the gate allows, so the variable comes back; delete it again.
+3. On production, delete it only just before the human merge, and merge at once. Another merge to `main` in between recreates the variable, and then the apply after the merge refuses `variable.delete`.
+4. **Every other open PR** has a PR env copied from production before the deletion. Delete the variable there too before its branch takes in `main`, or its `railway-config` goes red.
+
+What `railway variable delete` does: in `szczur-radar-pr-93` (2026-10-21) the deletion applied at once (`staged: null`) and created no deployment, because that environment had none. The CLI has no `--skip-deploys` for `delete`, so on production assume that it may redeploy the service.
+
+### PR env of a PR that touches no service directory
+
+A PR that changes only `context/`, `docs/`, `.railway/` or `tools/` gets a PR env with **no deployment at all**: every service is offline (`szczur-radar-pr-93`, `szczur-radar-pr-92`, 2026-10-21). `railway-config` still plans and applies IaC there, so variable and service-config changes can be checked, but there is no API to `ssh` into or to probe. Measure on production instead (read-only, outside the night windows), as S-19 did for the JVM table. If the PR env was created during a Railway incident and is half-made (for example `postgres` without a volume, the apply's check waiting for a deploy that never comes), close and reopen the PR: Railway deletes the environment and creates it again.
+
+### Runbook — before the merge (agent, on the human's confirmation; tracked in issue #78, not in the plan's Progress)
+
+Run after `/10x-impl-review` and `/10x-archive`, when the PR is ready and the human will merge right away.
+
+0. **Preconditions, all together:**
+   - CI on the PR is green;
+   - `curl -s https://szczur-radar-web-production.up.railway.app/api/deploy-safety` returns `{"safe":true,…}`;
+   - the time is outside 00:30–01:30 UTC (the daily run) and 01:50–02:30 UTC (the backup);
+   - the human has just confirmed: "delete them on production now".
+1. **Delete** on production: `railway variable delete <KEY> -p <project> -s szczur-radar-api -e production` for `RAILPACK_JDK_VERSION`, `DATABASE_URL` and `JWT_SECRET`.
+2. **Check** by name: `railway variable list -p <project> -s szczur-radar-api -e production --json | jq 'keys'` lists none of the three.
+3. **Other open PRs** (`gh pr list --state open`; on 2026-10-21 #92): delete the same three in each existing PR env and check with `jq 'keys'`. Comment on that PR as well.
+4. **Effect.** If the deletion is staged, apply it in the dashboard; if it redeployed the API, wait for `/api/ready` 200.
+5. **Hand over.** Tell the human: merge now; any other merge before it recreates `DATABASE_URL` and `RAILPACK_JDK_VERSION` (then repeat step 1). The agent never merges.
+6. **Record** on issue #78: the variable names after the deletion, `/api/ready`, the time.
+
+### Runbook — after the merge (agent/operator; tracked in issue #78, not in the plan's Progress)
+
+1. **CI on `main`.** All jobs green; `railway-config` plans no `variable.delete` for production.
+2. **Production variables.** `jq 'keys'` on `szczur-radar-api` lists none of the three.
+3. **API.** The merge changes only `context/`, `docs/`, `.railway/` and `tools/`, so it should not redeploy the API (`watchPatterns`). If it did, `/api/ready` returns 200.
+4. **Open PRs.** Each PR env created before the merge has none of the three variables (step 3 above); a PR that takes in `main` keeps a green `railway-config`.
+5. **Record and close.** Comment the results on issue #78 and close it.
+
 ## Phases
 
 > Historical (state of 2026-09-26 – 2026-09-27, FastAPI backend); current: the Java API in section F-03, its image in section `api-docker-image`, the pipeline in sections `first-assessed-wykop-feed` and S-05, the database backup in section F-01, CI and the deploy gate in section S-14.

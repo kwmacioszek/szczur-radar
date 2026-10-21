@@ -116,3 +116,10 @@
 - **Problem**: W `self-hosted-pr-runner` (2026-10-18), w trakcie wywiadu `/10x-plan`, użytkownik zapytał „czy możemy zrobić obejście” po wyczerpaniu limitu Actions. Agent sam zmienił `.github/workflows/ci.yml` i utworzył `tools/ci-runner/` bez zgody i bez planu.
 - **Rule**: Przed `/10x-implement` nigdy nie modyfikuj plików kodu ani konfiguracji, także przy pilnym problemie. Przedstaw opcje i poczekaj na wyraźne polecenie przejścia do implementacji.
 - **Applies to**: frame, research, plan
+
+## Status zmiany w deploy-plan.md ma być prawdziwy także po merge'u — stan produkcji żyje w issue
+
+- **Context**: Każda sekcja zmiany w `context/deployment/deploy-plan.md` pisana na gałęzi przed merge'em (`/10x-implement`, runbooki „after the merge”), szczególnie linia `**Status (…)**` na początku sekcji (S-19 `ops-docs-debt`, 2026-10-21).
+- **Problem**: Osiem sekcji (S-02, S-04, S-07, self-hosted runner, S-14, S-15, S-08) zostało z linią „in the PR env, not merged” albo „in progress” długo po merge'u. Status pisano na gałęzi, a po merge'u nikt go nie poprawiał, bo każda poprawka to kolejny PR do `main` (= deploy). Operator czytał runbook, który zaprzeczał produkcji.
+- **Rule**: Linię Status sekcji zmiany pisz tak, żeby była prawdziwa również po merge'u: „**Status:** delivered by PR #N; production verification and closure in issue #M.” Nigdy „not merged”, „in progress” ani „pending”. Stan produkcji i wyniki weryfikacji po merge'u zapisuj w komentarzach issue, nie w statusie pliku.
+- **Applies to**: plan, implement, impl-review, deploy
