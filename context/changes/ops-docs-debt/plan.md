@@ -363,7 +363,7 @@ Wycofanie: przywrócenie zmiennych to `variable set` (dla `DATABASE_URL` referen
 
 #### Manual
 
-- [ ] 1.6 Człowiek potwierdza, że zmienione statusy i notki opisują stan faktyczny
+- [x] 1.6 Człowiek potwierdza, że zmienione statusy i notki opisują stan faktyczny — a9f48ae
 
 ### Phase 2: PR env — pomiar JVM i usunięcie zmiennych
 
@@ -378,7 +378,7 @@ Wycofanie: przywrócenie zmiennych to `variable set` (dla `DATABASE_URL` referen
 
 #### Manual
 
-- [ ] 2.6 Człowiek potwierdza wnioski z tabeli JVM
+- [x] 2.6 Człowiek potwierdza wnioski z tabeli JVM — d2c0b01
 
 ### Phase 3: Produkcja przed merge'em i przekazanie
 
@@ -391,4 +391,4 @@ Wycofanie: przywrócenie zmiennych to `variable set` (dla `DATABASE_URL` referen
 
 #### Manual
 
-- [ ] 3.3 Człowiek potwierdza kolejność: impl-review → archive → usunięcie na produkcji → merge
+- [x] 3.3 Człowiek potwierdza kolejność: impl-review → archive → usunięcie na produkcji → merge — 9b63740
