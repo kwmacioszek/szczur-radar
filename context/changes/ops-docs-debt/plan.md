@@ -384,10 +384,10 @@ Wycofanie: przywrócenie zmiennych to `variable set` (dla `DATABASE_URL` referen
 
 #### Automated
 
-- [x] 3.1 Sekcja `## S-19` w `deploy-plan.md` z runbookami „before the merge” i „after the merge” (#78)
-- [x] 3.2 Runbook „before the merge” wymienia warunki wstępne i sprawdzenie przez `jq 'keys'`
-- [x] 3.4 Status sekcji S-19 bez „not merged”/„in progress”, odsyła do #78
-- [x] 3.5 Nowy wpis w `lessons.md` o statusach, plik tylko dopisany
+- [x] 3.1 Sekcja `## S-19` w `deploy-plan.md` z runbookami „before the merge” i „after the merge” (#78) — 9b63740
+- [x] 3.2 Runbook „before the merge” wymienia warunki wstępne i sprawdzenie przez `jq 'keys'` — 9b63740
+- [x] 3.4 Status sekcji S-19 bez „not merged”/„in progress”, odsyła do #78 — 9b63740
+- [x] 3.5 Nowy wpis w `lessons.md` o statusach, plik tylko dopisany — 9b63740
 
 #### Manual
 
