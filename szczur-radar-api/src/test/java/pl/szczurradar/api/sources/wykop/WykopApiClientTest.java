@@ -308,6 +308,48 @@ class WykopApiClientTest {
 	}
 
 	@Test
+	void aDeadlineAfterAnAnswerQuotingTheSecretsLeavesThemOutOfTheError(CapturedOutput output) {
+		String body = "{\"error\":{\"code\":503,\"message\":\"key " + KEY + ", secret " + SECRET
+				+ ", token token-1\"}}";
+		try (LocalWykopServer server = new LocalWykopServer(request -> request.path().endsWith("/auth")
+				? Reply.ok(TOKEN_1) : new Reply(503, body))) {
+			WykopApiClient client = client(server);
+			// As above: the deadline ends the call after the first attempt, with that attempt's answer.
+			Instant deadline = client.deadline(Duration.ofSeconds(6));
+
+			assertThatExceptionOfType(WykopApiException.class)
+				.isThrownBy(() -> client.get("search/entries", Map.of(), deadline))
+				.satisfies(ex -> {
+					assertThat(ex.failure()).isEqualTo(WykopFailure.DEADLINE_EXCEEDED);
+					assertThat(stackTrace(ex)).contains("deadline", "key <hidden>")
+						.doesNotContain(KEY, SECRET, "token-1");
+				});
+		}
+		assertThat(output).doesNotContain(KEY, SECRET, "token-1");
+	}
+
+	@Test
+	void anInterruptDuringARequestStopsTheCallWithoutTheSecrets() {
+		try (LocalWykopServer server = new LocalWykopServer(request -> Reply.ok(TOKEN_1))) {
+			WykopApiClient client = client(server);
+
+			Thread.currentThread().interrupt();
+			try {
+				assertThatExceptionOfType(WykopApiException.class)
+					.isThrownBy(() -> client.get("search/entries", Map.of()))
+					.satisfies(ex -> {
+						assertThat(ex.failure()).isEqualTo(WykopFailure.INTERRUPTED);
+						assertThat(stackTrace(ex)).contains("interrupted during Wykop").doesNotContain(KEY, SECRET);
+					});
+				assertThat(Thread.currentThread().isInterrupted()).isTrue();
+			}
+			finally {
+				Thread.interrupted();
+			}
+		}
+	}
+
+	@Test
 	void aPassedDeadlineSendsNoRequest() {
 		try (LocalWykopServer server = new LocalWykopServer(request -> Reply.ok(TOKEN_1))) {
 			WykopApiClient client = client(server);
