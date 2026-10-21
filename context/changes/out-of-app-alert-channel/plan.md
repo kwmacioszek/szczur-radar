@@ -194,6 +194,12 @@ stub meldunków nieosiągalny → wynik bez zmian.
 
 - Przegląd: adres meldunku nie trafia do logu, `ps` ani komunikatu w żadnej ścieżce obu skryptów
 
+**Metoda weryfikacji (2026-10-21, lekcja „Planuj weryfikację agent-first”):** brak adresu w logach sprawdzają już oba `test.sh` (krok
+„no secrets in the logs”). Do przeglądu agent dokłada dowody dla `ps` i komunikatów: każde użycie
+`HEALTHCHECK_PING_URL` w `trigger.sh` i `backup.sh` z `file:line`, pokazujące, że adres idzie tylko
+przez `--config -` na stdin i nie trafia do żadnego komunikatu ani ostrzeżenia. Człowiek czyta obie
+funkcje meldunku z tymi dowodami i dopiero wtedy odhacza przegląd.
+
 **Implementation Note**: Po zielonych testach zatrzymaj się na ręcznym przeglądzie przed fazą 2.
 
 ---
@@ -275,10 +281,7 @@ Komenda: kody wyjścia dla trzech wyników. `WebApplicationContextRunner` dla be
 
 - Testy jednostkowe przechodzą: `cd szczur-radar-api && ./mvnw -B test`
 - Pełna weryfikacja przechodzi: `cd szczur-radar-api && ./mvnw -B verify`
-
-#### Manual Verification:
-
-- Lokalnie `java -jar target/szczur-radar-api.jar send-test-alert` bez zmiennej kończy się kodem 2 z czytelnym komunikatem
+- Lokalnie `java -jar target/szczur-radar-api.jar send-test-alert` bez zmiennej kończy się kodem 2 z czytelnym komunikatem: `cd szczur-radar-api && ./mvnw -q -DskipTests package && env -u HEALTHCHECK_PING_URL java -jar target/szczur-radar-api.jar send-test-alert; echo $?` drukuje `2`, a komunikat jest zacytowany w raporcie (przeniesione z Manual 2026-10-21: polecenie z wynikiem do odczytania)
 
 **Implementation Note**: Po zielonym `verify` zatrzymaj się na ręcznym sprawdzeniu przed fazą 3.
 
@@ -357,11 +360,19 @@ wyłączone), nigdy wartość w repo.
 - `shellcheck tools/healthchecks/*.sh` bez błędów
 - Plan IaC dla PR env bez zmian destrukcyjnych i zielona bramka: job `railway-config` w CI
 - CI na PR zielone, w tym `healthchecks-test`
+- `railway config plan --json` pokazuje `HEALTHCHECK_PING_URL` jako `preserve` na trzech usługach: plan dla PR env (środowisko przez `RAILWAY_PROJECT_ID` + `RAILWAY_ENVIRONMENT_ID`), przefiltrowany `jq` do wpisów `HEALTHCHECK_PING_URL`, z wycinkiem JSON w raporcie (przeniesione z Manual 2026-10-21)
 
 #### Manual Verification:
 
 - Fixture'y nagrane z prawdziwego API zarządzania (na koncie operatora), bez klucza i adresów pingów w treści
-- `railway config plan --json` pokazuje `HEALTHCHECK_PING_URL` jako `preserve` na trzech usługach
+
+**Metoda weryfikacji (2026-10-21, lekcja „Planuj weryfikację agent-first”):** fixture'y powstały z dokumentacji API, nie z nagrania
+(adaptacja z implementacji fazy 3). Nagranie idzie przy weryfikacji w PR env (runbook F-04, krok
+„Fixtures”): z `HEALTHCHECKS_API_KEY` w powłoce odpowiedzi `POST /api/v3/checks/` i
+`GET /api/v3/checks/` przechodzą przez filtr `jq`, który zamienia `uuid` i adresy w polach `*_url` na
+stałe wartości testowe. Agent porównuje ich kształt (klucze i typy) z `fixtures/`, podmienia różniące
+się pliki i uruchamia `tools/healthchecks/test.sh`. Człowiek decyduje, czy klucz trafia do sesji
+agenta, i akceptuje diff fixture'ów przed commitem.
 
 **Implementation Note**: Po zielonym CI zatrzymaj się przed weryfikacją w PR env.
 
@@ -425,11 +436,10 @@ sprząta: `checks.sh delete pr-<N>`, usunięcie zmiennych, redeploy cronów.
 #### Automated Verification:
 
 - CI na PR zielone po zmianach dokumentacji
+- PR env przed ręcznym ustawieniem nie ma `HEALTHCHECK_PING_URL` na żadnej z trzech usług (produkcyjna wartość się nie skopiowała): `railway variable list -s <usługa> -e szczur-radar-pr-<N> --json | jq 'has("HEALTHCHECK_PING_URL")'` drukuje `false` dla `szczur-radar-api`, `pipeline-trigger` i `db-backup` (same nazwy, nigdy wartość; przeniesione z Manual 2026-10-21). Przed merge'em produkcja nie ma jeszcze tej zmiennej, więc ryzyko skopiowania niezapieczętowanej wartości sprawdza krok 2 runbooka po merge'u, na pierwszym PR env utworzonym po zapieczętowaniu
 
 #### Manual Verification:
 
-
-- PR env przed ręcznym ustawieniem nie ma `HEALTHCHECK_PING_URL` na żadnej z trzech usług (produkcyjna wartość się nie skopiowała)
 - Udany przebieg `pipeline-trigger` w PR env daje w panelu `start` i `0` z linią `OK:`, bez wiadomości w Telegramie
 - Nieudany przebieg `pipeline-trigger` (np. zły token) daje w Telegramie „down” z linią `FAILED:`, a kolejny udany — „up”
 - Uzbrojony check (stan „up”) bez meldunku po swoim harmonogramie i karencji daje w Telegramie „down” z powodem „nie przyszedł na czas”
@@ -438,6 +448,14 @@ sprząta: `checks.sh delete pr-<N>`, usunięcie zmiennych, redeploy cronów.
 - Po weryfikacji testowe checki usunięte, a zmienne PR env przywrócone (harmonogramy cronów bez zmian)
 - Runbook F-04 przeczytany przez operatora i zgodny z tym, co zrobiono w PR env
 - Dane F-04 i data „stan” w `tools/render_roadmap_svg.py` zgodne z `roadmap.md`, a `docs/visuals/roadmap.svg` wygenerowane na nowo (skrypt nie czyta roadmapy, dane są wpisane ręcznie)
+
+**Metoda weryfikacji (2026-10-21, lekcja „Planuj weryfikację agent-first”):** agent wykonuje kroki weryfikacji w PR env z runbooka F-04 i zbiera dowody: log crona w Railway i jego kod wyjścia, stan checka i `GET /api/v3/checks/<uuid>/flips/` (wystarczy klucz tylko do odczytu), treść pingu `GET /api/v3/checks/<uuid>/pings/` (tylko klucz z prawem zapisu). „Bez wiadomości w Telegramie” (udany `pipeline-trigger`, `db-backup`) potwierdza brak nowej zmiany stanu w `/flips/`. Zaśnięcie API po `send-test-alert` widać w stanie deploymentu w Railway (MCP), bez wołania API, które je budzi.
+
+Adresy pingów idą z wyjścia `checks.sh apply` do pliku 0600 w scratchpadzie agenta i dalej przez `railway variable set --stdin`; nigdy na ekran, do transkrypcji ani do logu. Plik znika po ustawieniu zmiennych.
+
+Człowiek: decyduje, czy `HEALTHCHECKS_API_KEY` trafia do powłoki agenta, czy sam uruchamia `checks.sh`; uruchamia crony w panelu („Run now”, CLI nie ma ręcznego uruchomienia crona) albo pozwala agentowi zrobić to w swojej zalogowanej przeglądarce; patrzy w Telegram przy nieudanym i następnym udanym `pipeline-trigger`, braku meldunku i `send-test-alert` (API healthchecks.io nie podaje doręczenia ani treści wiadomości); akceptuje zgodność runbooka na podstawie tabeli agenta „krok runbooka → użyte polecenie → odstępstwo” (raport agenta nie jest niezależnym dowodem).
+
+Roadmapa: agent uruchamia `python3 tools/render_roadmap_svg.py && git diff --exit-code docs/visuals/roadmap.svg` i cytuje obok siebie pola F-04 i datę z `roadmap.md` i ze skryptu; człowiek akceptuje porównanie.
 
 **Implementation Note**: Kroki produkcyjne wykonuje operator po merge'u według runbooka; nie należą do Progress.
 
@@ -508,9 +526,6 @@ wstrzymać w panelu.
 
 - [x] 2.1 Testy jednostkowe przechodzą: `./mvnw -B test` — 6afbd01
 - [x] 2.2 Pełna weryfikacja przechodzi: `./mvnw -B verify` — 6afbd01
-
-#### Manual
-
 - [ ] 2.3 Lokalnie `send-test-alert` bez zmiennej kończy się kodem 2 z czytelnym komunikatem
 
 ### Phase 3: Checki jako kod i IaC
@@ -521,21 +536,21 @@ wstrzymać w panelu.
 - [x] 3.2 `shellcheck tools/healthchecks/*.sh` bez błędów — a0b31fa
 - [x] 3.3 Plan IaC dla PR env bez zmian destrukcyjnych i zielona bramka `railway-config` — 1e4e2ef
 - [x] 3.4 CI na PR zielone, w tym `healthchecks-test` — 1e4e2ef
+- [ ] 3.6 `railway config plan --json` pokazuje `HEALTHCHECK_PING_URL` jako `preserve` na trzech usługach
 
 #### Manual
 
 - [ ] 3.5 Fixture'y nagrane z prawdziwego API zarządzania, bez klucza i adresów pingów
-- [ ] 3.6 `railway config plan --json` pokazuje `HEALTHCHECK_PING_URL` jako `preserve` na trzech usługach
 
 ### Phase 4: Weryfikacja w PR env i dokumentacja
 
 #### Automated
 
 - [x] 4.1 CI na PR zielone po zmianach dokumentacji — 1e4e2ef
+- [ ] 4.3 PR env bez `HEALTHCHECK_PING_URL` przed ręcznym ustawieniem (produkcyjna wartość się nie skopiowała)
 
 #### Manual
 
-- [ ] 4.3 PR env bez `HEALTHCHECK_PING_URL` przed ręcznym ustawieniem (produkcyjna wartość się nie skopiowała)
 - [ ] 4.4 Udany `pipeline-trigger` daje `start` i `0` z linią `OK:`, bez wiadomości w Telegramie
 - [ ] 4.5 Nieudany `pipeline-trigger` daje „down” z linią `FAILED:`, kolejny udany — „up”
 - [ ] 4.6 Uzbrojony check bez meldunku po harmonogramie i karencji daje „down” z powodem „nie przyszedł na czas”
