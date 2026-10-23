@@ -518,7 +518,7 @@ wstrzymać w panelu.
 
 #### Manual
 
-- [ ] 1.4 Przegląd: adres meldunku nie trafia do logu, `ps` ani komunikatu w żadnej ścieżce obu skryptów
+- [x] 1.4 Przegląd: adres meldunku nie trafia do logu, `ps` ani komunikatu w żadnej ścieżce obu skryptów — 2081457
 
 ### Phase 2: Zgłaszanie zdarzeń z API
 
@@ -540,7 +540,7 @@ wstrzymać w panelu.
 
 #### Manual
 
-- [ ] 3.5 Fixture'y nagrane z prawdziwego API zarządzania, bez klucza i adresów pingów
+- [x] 3.5 Fixture'y nagrane z prawdziwego API zarządzania, bez klucza i adresów pingów — a778d44
 
 ### Phase 4: Weryfikacja w PR env i dokumentacja
 
@@ -551,11 +551,11 @@ wstrzymać w panelu.
 
 #### Manual
 
-- [ ] 4.4 Udany `pipeline-trigger` daje `start` i `0` z linią `OK:`, bez wiadomości w Telegramie
-- [ ] 4.5 Nieudany `pipeline-trigger` daje „down” z linią `FAILED:`, kolejny udany — „up”
-- [ ] 4.6 Uzbrojony check bez meldunku po harmonogramie i karencji daje „down” z powodem „nie przyszedł na czas”
-- [ ] 4.7 `db-backup` w PR env daje `start` i `0`
+- [x] 4.4 Udany `pipeline-trigger` daje `start` i `0` z linią `OK:`, bez wiadomości w Telegramie — 2081457
+- [x] 4.5 Nieudany `pipeline-trigger` daje „down” z linią `FAILED:`, kolejny udany — „up” — 2081457
+- [x] 4.6 Uzbrojony check bez meldunku po harmonogramie i karencji daje „down” z powodem „nie przyszedł na czas” — 2081457
+- [x] 4.7 `db-backup` w PR env daje `start` i `0` — 2081457
 - [ ] 4.8 `send-test-alert` w PR env daje „down” z opisem i zaraz „up”, API potem zasypia
-- [ ] 4.9 Testowe checki usunięte, zmienne PR env przywrócone, harmonogramy cronów bez zmian
-- [ ] 4.10 Runbook F-04 zgodny z tym, co zrobiono w PR env
-- [ ] 4.11 Dane F-04 i data w `render_roadmap_svg.py` zgodne z `roadmap.md`, SVG wygenerowane na nowo
+- [x] 4.9 Testowe checki usunięte, zmienne PR env przywrócone, harmonogramy cronów bez zmian — 2081457
+- [x] 4.10 Runbook F-04 zgodny z tym, co zrobiono w PR env — 857244f
+- [x] 4.11 Dane F-04 i data w `render_roadmap_svg.py` zgodne z `roadmap.md`, SVG wygenerowane na nowo — 2081457
