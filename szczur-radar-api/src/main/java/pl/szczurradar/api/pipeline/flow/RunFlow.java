@@ -114,9 +114,10 @@ public final class RunFlow {
 	 * @param ok posts with a stored {@code ok} assessment
 	 * @param failed posts with a stored {@code failed} assessment (including those that became dead)
 	 * @param dead posts whose third failed attempt made them dead
-	 * @param processingErrors posts with a technical error and no stored assessment
-	 * @param stoppedBy why the step stopped before assessing every post — the LLM check failed or the
-	 *     provider refused the configuration — or {@code null}
+	 * @param processingErrors posts with a technical error and no stored assessment (also a single outage of
+	 *     the LLM provider the step went on after)
+	 * @param stoppedBy why the step stopped before assessing every post — the LLM check failed, the
+	 *     provider refused the configuration or was unavailable for several calls in a row — or {@code null}
 	 */
 	public record AssessedBatch(UUID runId, int ok, int failed, int dead, List<ProcessingError> processingErrors,
 			@Nullable String stoppedBy) {
@@ -156,7 +157,7 @@ public final class RunFlow {
 
 	}
 
-	/** A post whose assessment could not be stored because of a technical error (a bug, a failed write). */
+	/** A post whose assessment could not be stored because of a technical error (a bug, a failed write, an outage). */
 	public record ProcessingError(UUID postId, String message) {
 	}
 

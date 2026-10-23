@@ -192,6 +192,7 @@ const selected = ref<string[]>([])
 const retrying = ref(false)
 const retryMessage = ref<string | null>(null)
 const retryError = ref<string | null>(null)
+/** Failed posts and posts on hold; never a dead one. */
 const retryable = computed(() => failed.value.filter((post) => post.stage !== 'dead'))
 
 async function loadFailed(): Promise<void> {
@@ -356,9 +357,20 @@ onMounted(async () => {
             </label>
             <span class="attempt">
               <template v-if="post.stage === 'dead'"><strong>martwy</strong> · </template>
-              próby {{ post.assessmentAttempts }}
-              <template v-if="post.lastAttempt?.failureClass">
-                · {{ label('failureClass', post.lastAttempt.failureClass) }}
+              <template v-else-if="post.onHold"><strong>wstrzymany</strong> · </template>
+              <!-- A stored post on hold has no stored attempt: only its technical errors. -->
+              <template v-if="post.stage !== 'stored'">
+                próby {{ post.assessmentAttempts }}
+                <template v-if="post.lastAttempt?.failureClass">
+                  · {{ label('failureClass', post.lastAttempt.failureClass) }}
+                </template>
+              </template>
+              <template v-if="post.stage !== 'dead' && post.technicalFailures > 0">
+                <template v-if="post.stage !== 'stored'"> · </template>
+                <span class="alarm">błędy techniczne {{ post.technicalFailures }}</span>
+                <template v-if="post.lastTechnicalError">
+                  · <span class="technical-error" :title="post.lastTechnicalError">{{ post.lastTechnicalError }}</span>
+                </template>
               </template>
             </span>
           </li>
@@ -489,5 +501,21 @@ h2 {
 
 .excerpt {
   overflow-wrap: anywhere;
+}
+
+/* Never wider than the row, so a long technical error is cut below instead of pushing the layout. */
+.attempt {
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* One line, cut with an ellipsis; the full text is in its title (and in the text, for a screen reader). */
+.technical-error {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
 }
 </style>

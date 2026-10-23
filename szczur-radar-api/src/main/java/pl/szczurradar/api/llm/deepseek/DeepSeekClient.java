@@ -3,6 +3,7 @@ package pl.szczurradar.api.llm.deepseek;
 import java.net.http.HttpClient;
 import java.time.Duration;
 import java.util.List;
+import java.util.Optional;
 
 import org.jspecify.annotations.Nullable;
 import org.springframework.ai.chat.messages.SystemMessage;
@@ -141,7 +142,11 @@ public final class DeepSeekClient implements LlmClient {
 			if (observed.cutOffByServer()) {
 				throw serverCutOff(observed, ex);
 			}
-			throw TransportException.ofThrowable(ex, messages);
+			Optional<TransportException> classified = TransportException.ofTimeoutOrConnection(ex, messages);
+			if (classified.isPresent()) {
+				throw classified.get();
+			}
+			throw TransportException.unclassified(ex, messages);
 		}
 		DeepSeekRawResponse.Observed observed = rawResponse.take();
 		if (observed.cutOffByServer()) {

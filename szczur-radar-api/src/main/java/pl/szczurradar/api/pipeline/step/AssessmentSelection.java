@@ -21,8 +21,8 @@ import pl.szczurradar.api.posts.PostStage;
 /**
  * The select step: which posts a run assesses. Each post gets at most one attempt per request: a
  * range run takes only the posts it stored first itself (a leftover of the same day is the retry
- * run's), a retry run every leftover regardless of its date, a posts run the given posts that can
- * still be assessed.
+ * run's), a retry run every leftover regardless of its date except posts on hold, a posts run the
+ * given posts that can still be assessed, on hold or not.
  */
 @Service
 public class AssessmentSelection {
@@ -45,8 +45,9 @@ public class AssessmentSelection {
 
 	/**
 	 * {@link RunKind#RETRY}: every leftover (stored, or failed with
-	 * attempts left), oldest first — no cap in S-02 (a day has ~270 posts);
-	 * {@link RunKind#POSTS}: the given posts in their order, except those
+	 * attempts left) except posts on hold ({@link PostRepository#findLeftoverIds}), oldest first — no
+	 * cap in S-02 (a day has ~270 posts);
+	 * {@link RunKind#POSTS}: the given posts in their order, on hold or not, except those
 	 * assessed, dead or being assessed.
 	 */
 	public PendingAssessments fromTargets(SelectionTarget target) {
