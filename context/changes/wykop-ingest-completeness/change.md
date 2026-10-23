@@ -40,3 +40,12 @@ Bramka decyzyjna (1.4): (a) elementy o `status` innym niż `visible`/brak z teks
 | `search`: `INCOMPLETE_PAGING` | jw. | pełna treść (`withMessage`): 2 testy `WykopRepositoryTest` |
 
 Break-check nowych testów: zdjęcie `clean` z `DEADLINE_EXCEEDED` i klucz doklejony do komunikatu przerwania — za każdym razem czerwony był dokładnie nowy test; kod przywrócony. `./mvnw -B test`: 708 testów zielonych. Część 2 (licznik `WYKOP_KEY`/`WYKOP_SECRET` w logach API PR env) czeka na przebieg z 4.3.
+
+### Przebieg w PR env (kontrola 4.3) i logi (2.5, część 2)
+
+2026-10-23, agent, `szczur-radar-pr-94` z API na `7154395` (CI run 39928010630 zielony 8/8). Konto admina `agent-s16@example.com` założone przez `railway ssh … create-user --role admin`; link aktywacyjny i hasło tylko w plikach 600 poza repo, nigdzie nie wypisane.
+
+- Przebieg `e95f631b-89d9-4f3f-b042-52d6aedbfd12`, zakres 2026-10-21…2026-10-22 (Warsaw), start 09:03:47 UTC (`/api/deploy-safety` → `safe:true`), koniec 09:07:43 UTC.
+- Wynik: `partial` — `fetched` 579, `skipped` 0, `newPosts` 579, `assessedOk` 559, `assessedFailed` 20, `dead` 0, `processingErrors` 0, `needsAttention` false; wszystkie kroki `succeeded`, krok `fetch` 8 s. `partial` pochodzi z oceny (20 postów `failed` do ponowienia w następnym przebiegu, poza zakresem S-16), nie z pobierania.
+- Logi API PR env za 09:03–09:08:30 UTC (79 linii): „Retrying Wykop” 0, „Reading Wykop … again” 0, „stayed inconsistent” 0, WARN 0, ERROR 0; wystąpienia wartości `WYKOP_KEY`/`WYKOP_SECRET` (`grep -cF`, bez wypisywania): 0.
+- Porównanie z `total` wyszukiwarki: niewykonane. Sonda z `wykop.env` na te same dni (09:04:20 i 09:04:52 UTC) dostała HTTP 401 na wszystkie 4 wyszukiwania; 2026-10-21 te same klucze działały. Zapas z planu (`fetched` nocnego przebiegu produkcji za ten sam zakres D-2…D-1) wymaga odczytu produkcji — czeka na decyzję człowieka.
