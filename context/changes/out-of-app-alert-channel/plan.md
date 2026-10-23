@@ -526,7 +526,7 @@ wstrzymać w panelu.
 
 - [x] 2.1 Testy jednostkowe przechodzą: `./mvnw -B test` — 6afbd01
 - [x] 2.2 Pełna weryfikacja przechodzi: `./mvnw -B verify` — 6afbd01
-- [ ] 2.3 Lokalnie `send-test-alert` bez zmiennej kończy się kodem 2 z czytelnym komunikatem
+- [x] 2.3 Lokalnie `send-test-alert` bez zmiennej kończy się kodem 2 z czytelnym komunikatem — 4a45051
 
 ### Phase 3: Checki jako kod i IaC
 
@@ -536,7 +536,7 @@ wstrzymać w panelu.
 - [x] 3.2 `shellcheck tools/healthchecks/*.sh` bez błędów — a0b31fa
 - [x] 3.3 Plan IaC dla PR env bez zmian destrukcyjnych i zielona bramka `railway-config` — 1e4e2ef
 - [x] 3.4 CI na PR zielone, w tym `healthchecks-test` — 1e4e2ef
-- [ ] 3.6 `railway config plan --json` pokazuje `HEALTHCHECK_PING_URL` jako `preserve` na trzech usługach
+- [x] 3.6 `railway config plan --json` pokazuje `HEALTHCHECK_PING_URL` jako `preserve` na trzech usługach — 4a45051
 
 #### Manual
 
@@ -547,7 +547,7 @@ wstrzymać w panelu.
 #### Automated
 
 - [x] 4.1 CI na PR zielone po zmianach dokumentacji — 1e4e2ef
-- [ ] 4.3 PR env bez `HEALTHCHECK_PING_URL` przed ręcznym ustawieniem (produkcyjna wartość się nie skopiowała)
+- [x] 4.3 PR env bez `HEALTHCHECK_PING_URL` przed ręcznym ustawieniem (produkcyjna wartość się nie skopiowała) — 4a45051
 
 #### Manual
 
