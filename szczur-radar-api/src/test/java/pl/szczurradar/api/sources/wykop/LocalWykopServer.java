@@ -10,6 +10,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Function;
@@ -27,8 +28,12 @@ public final class LocalWykopServer implements AutoCloseable {
 	public record Request(String method, String path, String query, String authorization, String body) {
 	}
 
-	/** The answer to a request. */
-	public record Reply(int status, String body) {
+	/** The answer to a request, with extra response headers (e.g. {@code Retry-After}). */
+	public record Reply(int status, String body, Map<String, String> headers) {
+
+		public Reply(int status, String body) {
+			this(status, body, Map.of());
+		}
 
 		public static Reply ok(String body) {
 			return new Reply(200, body);
@@ -59,6 +64,7 @@ public final class LocalWykopServer implements AutoCloseable {
 			Reply reply = answers.apply(request);
 			byte[] body = reply.body().getBytes(StandardCharsets.UTF_8);
 			exchange.getResponseHeaders().add("Content-Type", "application/json");
+			reply.headers().forEach(exchange.getResponseHeaders()::add);
 			exchange.sendResponseHeaders(reply.status(), body.length);
 			exchange.getResponseBody().write(body);
 			exchange.close();

@@ -75,6 +75,8 @@ PipelineRunService.startRange / startPosts → queue → PipelineAgent:
   watchdog never stops a run of outages before the breaker) and every step's start and end (all
   conditional on `running`). The fetch step moves it only at its start and end: a long fetch shows no
   progress inside (`SourceFetcher` reports none). The watchdog measures from it (or from `started_at`).
+  A source bounds its fetch with a deadline below `PipelineStallSettings.MIN_DEFAULT` (Wykop: 10 min,
+  `WykopRepository.FETCH_DEADLINE`), so a failing fetch fails the step before the watchdog stops the run.
 - **Log lines (INFO).** `Pipeline run <id> (<kind>) started`; `Run <id> step <step> started (in N)` and
   `Run <id> step <step> <status> (out N) in <time>`; `Run <id> assess: <done>/<N> (ok …, failed …, dead …,
   errors …, unavailable …), in flight …, retries …, flex fallbacks …` at most every `PROGRESS_INTERVAL`
@@ -208,7 +210,7 @@ PipelineRunService.startRange / startPosts → queue → PipelineAgent:
 - Every agent action fires once (`@Action(actionRetryPolicy = FIRE_ONCE)`): Embabel's default policy
   retries an action after most exceptions, with growing pauses (seen: a failed Wykop fetch repeated
   every 10 s and more), which would repeat and re-record a step. Retries of a call live only below
-  the step (`llm/transport/TransportRetry`).
+  the step (`llm/transport/TransportRetry`, a source's client such as `sources/wykop/WykopApiClient`).
 - No run stays `queued`/`running` without a thread: `PipelineRunService.execute` ends it `failed` on
   any exception; start-up recovery interrupts unfinished runs and puts back every post `assessing`
   without a queued or running run (`PostTransitions.releaseOrphans`), also one claimed just as its run
