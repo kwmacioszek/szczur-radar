@@ -15,8 +15,8 @@
 # included); the check waits for a deployment with another ID, so no clock of the runner is compared
 # with Railway's. Statuses of that new deployment (Railway's DeploymentStatus):
 #   SUCCESS, SLEEPING                  deployed (SLEEPING: deployed, then put to sleep)
-#   WAITING, QUEUED                    handed over to deploy-verify: Wait for CI holds it until this
-#                                      workflow ends, so waiting here would deadlock
+#   WAITING, QUEUED                    handed over to the monitor szczur-radar-monitor: Wait for CI holds
+#                                      it until this workflow ends, so waiting here would deadlock
 #   BUILDING, DEPLOYING, INITIALIZING  waited for
 #   REMOVED, REMOVING                  a newer deployment replaced it: the newest is asked again
 #   FAILED, CRASHED, SKIPPED           exit 1
@@ -162,8 +162,8 @@ for service in "${services[@]}"; do
                     break
                     ;;
                 WAITING | QUEUED)
-                    log "::notice::post-apply check: the deployment of $service waits ($LATEST_STATUS; Wait for CI holds it until this workflow ends): handed over to deploy-verify"
-                    rows+=("| \`$service\` | \`$LATEST_ID\` | $LATEST_STATUS: handed over to deploy-verify |")
+                    log "::notice::post-apply check: the deployment of $service waits ($LATEST_STATUS; Wait for CI holds it until this workflow ends): handed over to the monitor szczur-radar-monitor"
+                    rows+=("| \`$service\` | \`$LATEST_ID\` | $LATEST_STATUS: handed over to the monitor szczur-radar-monitor |")
                     break
                     ;;
                 BUILDING | DEPLOYING | INITIALIZING | REMOVED | REMOVING) ;;

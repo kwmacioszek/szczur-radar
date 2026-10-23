@@ -13,6 +13,8 @@
 #   5. delete: the three checks found by name (another environment's check left alone), a missing one skipped;
 #   6. API errors: 401, 500, no answer, an answer that is not the check → 1, no request after the failure;
 #   7. usage: no key, bad arguments, bad environment names, bad overrides → 2 without a request;
+#   8. production also gets production/deploy-health (the monitor's check), applied and deleted with the rest
+#      (cases 1–6 use a PR env and so check that no other environment gets it);
 #   and in every case the API key is never in curl's argv, stdout or the log.
 # Needs bash and jq. Run from anywhere: tools/healthchecks/test.sh
 set -euo pipefail
@@ -29,6 +31,8 @@ readonly u3=00000000-0000-4000-8000-0000000000a3
 readonly ping1=https://hc-ping.com/$u1
 readonly ping2=https://hc-ping.com/$u2
 readonly ping3=https://hc-ping.com/$u3
+readonly u4=00000000-0000-4000-8000-0000000000a4
+readonly ping4=https://hc-ping.com/$u4
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 trap 'exit 130' INT TERM
@@ -151,7 +155,7 @@ run_case() {
         ! grep -qF -- "$u1" "$tmp/$name.stub/argv" || { show "$name"; die "$name: a check UUID is in curl's argv"; }
     fi
     # A ping URL (its UUID) only ever on stdout.
-    for uuid in "$u1" "$u2" "$u3"; do
+    for uuid in "$u1" "$u2" "$u3" "$u4"; do
         ! grep -qF -- "$uuid" "$tmp/$name.log" || { show "$name"; die "$name: a check UUID is in the log"; }
     done
 }
@@ -393,5 +397,42 @@ log_says bad-api-url "HEALTHCHECKS_API_URL must be an http(s) URL"
 run_case help 0 --help
 grep -qF 'usage: checks.sh apply' "$tmp/help.out" || { show help; die "help: no usage on stdout"; }
 pass "bad arguments, environment names, overrides and API URL: exit 2 without a request (an argument is never echoed)"
+
+step "8. production: also the monitor's check production/deploy-health"
+# The PR env's recorded answers renamed to production; the fourth check is the API's one as deploy-health.
+to_production() { jq 'tojson | gsub("szczur-radar-pr-99"; "production") | fromjson' "$1"; }
+as_deploy_health() {
+    jq --arg a "$u3" --arg b "$u4" \
+        'tojson | gsub("szczur-radar-pr-99"; "production") | gsub("api-events"; "deploy-health") | gsub($a; $b) | fromjson' "$1"
+}
+to_production "$existing1" >"$tmp/prod1.json"
+to_production "$existing2" >"$tmp/prod2.json"
+to_production "$existing3" >"$tmp/prod3.json"
+as_deploy_health "$created3" >"$tmp/prod4.json"
+jq --slurpfile d "$tmp/prod4.json" '.checks += [$d[0] | .status = "new"]' <(to_production "$listed") >"$tmp/prod-listed.json"
+script production \
+    "POST $checks_url 200 $tmp/prod1.json" \
+    "POST $checks_url 200 $tmp/prod2.json" \
+    "POST $checks_url 200 $tmp/prod3.json" \
+    "POST $checks_url 201 $tmp/prod4.json" \
+    "GET $checks_url 200 $tmp/prod-listed.json"
+run_case production 0 apply production
+requests_are production "POST $checks_url" "POST $checks_url" "POST $checks_url" "POST $checks_url" "GET $checks_url"
+body_matches production 4 '. == {name: "production/deploy-health", tags: "szczur-radar production",
+    desc: .desc, timeout: 31536000, grace: 31536000, channels: "*", unique: ["name"]}
+    and (.desc | test("szczur-radar-monitor"))'
+out_is production "production/pipeline-trigger $ping1" "production/db-backup $ping2" "production/api-events $ping3" \
+    "production/deploy-health $ping4"
+log_says production "production/deploy-health: created (simple, period 31536000s, grace 31536000s), status new"
+pass "production: the three checks and production/deploy-health (simple, not armed), its ping URL on stdout"
+script delete-production \
+    "GET $checks_url 200 $tmp/prod-listed.json" \
+    "DELETE $api/checks/$u1 200 $tmp/prod1.json" \
+    "DELETE $api/checks/$u2 200 $tmp/prod2.json" \
+    "DELETE $api/checks/$u3 200 $tmp/prod3.json" \
+    "DELETE $api/checks/$u4 200 $tmp/prod4.json"
+run_case delete-production 0 delete production
+log_says delete-production "OK: 4 check(s) of production deleted"
+pass "delete production: deploy-health too"
 
 printf '\nAll healthchecks tests passed.\n'
