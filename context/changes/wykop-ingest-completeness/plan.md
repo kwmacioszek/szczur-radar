@@ -395,7 +395,7 @@ Brak migracji, zmiennych środowiskowych i zmian IaC. Wycofanie = revert PR.
 
 #### Manual
 
-- [ ] 3.4 Przegląd komunikatów WARN i `INCOMPLETE_PAGING`
+- [x] 3.4 Przegląd komunikatów WARN i `INCOMPLETE_PAGING` — c63b1ef
 
 ### Phase 4: Domknięcie
 
