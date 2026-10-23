@@ -117,7 +117,7 @@ Success Criteria: 1.1–1.5, 2.1–2.5, 2.7, 3.1, 3.2, 3.4 and 3.5 were re-run o
 - **Location**: context/deployment/deploy-plan.md:1191
 - **Detail**: `context/changes/ops-docs-debt/ (in context/archive/ once archived)`. After `/10x-archive` on this branch, this is a dead `context/changes/` link, which is the very debt S-19 fixes, and criterion 1.2 would fail.
 - **Fix**: In the `/10x-archive` commit, rewrite the link to `context/archive/<date>-ops-docs-debt/`.
-- **Decision**: FIX QUEUED for the /10x-archive commit (follow-ups/review-fixes.md)
+- **Decision**: FIXED in the /10x-archive commit (follow-ups/review-fixes.md)
 
 ### F7 — Pre-merge runbook: several deletes may redeploy; #92 re-push
 

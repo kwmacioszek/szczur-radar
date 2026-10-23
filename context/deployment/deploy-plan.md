@@ -1188,7 +1188,7 @@ An API older than S-08 gives `skipped ?`; the deploy order of the API and the cr
 
 ## S-19: dokumenty operatora mówią prawdę (ops-docs-debt)
 
-**Status:** delivered by PR #93; production verification and closure in issue #78. Change: `context/changes/ops-docs-debt/` (in `context/archive/` once archived).
+**Status:** delivered by PR #93; production verification and closure in issue #78. Change: `context/archive/2026-10-20-ops-docs-debt/`.
 
 ### What it changes
 
