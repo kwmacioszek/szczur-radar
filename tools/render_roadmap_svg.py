@@ -171,7 +171,7 @@ m2 = {  # lane, position, title, outcome, status, prerequisites, change id
     "S-16": ("C", 4, "Wykop nie gubi postów po cichu", "stronicowanie Wykopu nie gubi elementów po cichu, a chwilowy błąd Wykopu nie zabija nocy", "ready", "—", "wykop-ingest-completeness"),
     "S-14": ("D", 0, "Bezpieczna bramka wdrożeń", "merge nie wdroży czerwonego commita, crony czekają na CI, po apply jest kontrola zdrowia, ręczne zmienne nie blokują wdrożeń", "done", "—", "safe-deploy-gate"),
     "S-15": ("D", 1, "Kopia bazy sprawdzana w całości", "sprawdzenie kopii bazy obejmuje wszystkie tabele i odrzuca kopię pustej bazy", "done", "—", "backup-check-completeness"),
-    "S-19": ("D", 2, "Dokumenty operatora mówią prawdę", "operator czyta prawdziwe runbooki i stan; zbędne zmienne IaC usunięte; otwarty dług operacyjny domknięty", "ready", "—", "ops-docs-debt"),
+    "S-19": ("D", 2, "Dokumenty operatora mówią prawdę", "operator czyta prawdziwe runbooki i stan; zbędne zmienne IaC usunięte; otwarty dług operacyjny domknięty", "done", "—", "ops-docs-debt"),
 }
 lanes = {
     "A": ("Sygnał w aplikacji", "Gwiazda przewodnia", C["lime"]),
@@ -281,14 +281,14 @@ text(cx, py + 186, "M-1 + M-2", 10.5, 700, C["muted"], anchor="middle", spacing=
 bx = px + 164
 text(bx, py + 34, "POSTĘP KAMIENIA MILOWEGO", 10.5, 700, C["muted"], spacing="1.6")
 text(bx, py + 62, "M-2 · MVP Quality & Reliability Hardening", 17, 700)
-text(px + pw - 24, py + 62, "4 / 13", 17, 700, C["text"], anchor="end")
+text(px + pw - 24, py + 62, "5 / 13", 17, 700, C["text"], anchor="end")
 m2_order = [("F-04", "blocked"), ("S-08", "done"), ("S-09", "progress"), ("S-10", "done"), ("S-11", "ready"), ("S-12", "proposed"),
-            ("S-13", "proposed"), ("S-14", "done"), ("S-15", "done"), ("S-16", "ready"), ("S-17", "proposed"), ("S-18", "proposed"), ("S-19", "ready")]
+            ("S-13", "proposed"), ("S-14", "done"), ("S-15", "done"), ("S-16", "ready"), ("S-17", "proposed"), ("S-18", "proposed"), ("S-19", "done")]
 segw = (pw - 164 - 24 - 12 * 5) / 13
 for i, (iid, st) in enumerate(m2_order):
     lab, fg, bg = STATUS[st]
     rect(bx + i * (segw + 5), py + 78, segw, 12, 3, bg, fg + ("aa" if st != "proposed" else "55"), 1)
-legend_items = [("done", "4 ukończone"), ("progress", "1 w toku"), ("ready", "3 gotowe do planowania"), ("proposed", "4 proponowane"), ("blocked", "1 zablokowany")]
+legend_items = [("done", "5 ukończone"), ("progress", "1 w toku"), ("ready", "2 gotowe do planowania"), ("proposed", "4 proponowane"), ("blocked", "1 zablokowany")]
 for li, (st, lab) in enumerate(legend_items):
     fg = STATUS[st][1]
     lx = bx + (0, 122, 218)[li % 3]

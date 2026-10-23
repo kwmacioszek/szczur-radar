@@ -3,7 +3,7 @@ project: "Szczur Radar"
 version: 3
 status: draft # draft | active | locked
 created: 2026-09-27
-updated: 2026-10-20
+updated: 2026-10-23
 prd_version: 2
 main_goal: quality
 top_blocker: decisions # 5 decyzji produktowych z audytu (context/archive/2026-10-17-post-mvp-pipeline-audit/research.md, Open Questions); najdroższa: kanał alarmowy poza aplikacją (F-04)
@@ -103,7 +103,7 @@ Na Wykopie (#gielda) i Reddicie codziennie pojawiają się setki postów o inwes
 | S-16 | wykop-ingest-completeness   | stronicowanie Wykopu nie gubi elementów po cichu, a chwilowy błąd Wykopu nie zabija nocy                               | —             | MS-01, MS-03; audyt B5, B6                                  | ready    |
 | S-17 | pipeline-without-embabel    | przebieg działa bez Embabel, przerwanie dociera do oceny, a testy silnika są skupione i niezależne od kolejności       | S-09          | MS-01, MS-03; audyt E, A7, D                                | proposed |
 | S-18 | error-visibility            | błędy wymagające reakcji (ERROR, `/api/ready`, awaria ścieżki alarmowej) docierają do operatora; klucze nie trafiają do logów | F-04     | MS-04; audyt C10, C11, B7                                   | proposed |
-| S-19 | ops-docs-debt               | operator czyta prawdziwe runbooki i stan; zbędne zmienne IaC usunięte; otwarty dług operacyjny domknięty               | —             | MS-02, MS-04; audyt F, C12, C13                             | ready    |
+| S-19 | ops-docs-debt               | operator czyta prawdziwe runbooki i stan; zbędne zmienne IaC usunięte; otwarty dług operacyjny domknięty               | —             | MS-02, MS-04; audyt F, C12, C13                             | done |
 
 ## Streams
 
@@ -296,7 +296,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** niski; usunięcie zmiennych wymaga kolejności „najpierw operator w Railway, potem plik”, inaczej bramka odmówi `variable.delete`; `context/archive/` zostaje nietknięte (archiwum jest niezmienne).
-- **Status:** ready
+- **Status:** done
 
 ## Backlog Handoff
 
@@ -374,3 +374,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **S-15: codzienne sprawdzenie kopii bazy zna wszystkie tabele z migracji (także `activation_tokens` i `notifications`) i odrzuca kopię bazy, która jest podejrzanie pusta, zanim wyprze dobre kopie z retencji.** — Archived 2026-10-18 → `context/archive/2026-10-18-backup-check-completeness/`. Lesson: —.
 - **S-10: operator dostaje czytelny błąd startu (serwer i `migrate`), gdy `LLM_TIMEOUT` nie ma jednostki albo jest absurdalnie krótki; wszystkie ustawienia czasu w API są parsowane jedną regułą, a enumy dostawcy nie żyją w klasie konfiguracji.** — Archived 2026-10-18 → `context/archive/2026-10-18-llm-config-fail-fast/`. Lesson: —.
 - **S-08: operator dostaje sygnał (powiadomienie w aplikacji i niezerowe wyjście crona), gdy przebieg nic nie pobrał albo pominął elementy o nieoczekiwanym kształcie; etykieta „Dane zaktualizowane” nie przesuwa się na takim przebiegu.** — Archived 2026-10-19 → `context/archive/2026-10-18-empty-run-signal/`. Lesson: —.
+- **S-19: operator czyta aktualne runbooki i stan: `deploy-plan.md` bez nieaktualnych statusów (S-02, S-04, S-06) i linków do przeniesionych zmian, prawdziwe pomiary JVM, `infrastructure.md` bez LangGraph; zbędne zmienne IaC (`RAILPACK_JDK_VERSION`, `DATABASE_URL`, `JWT_SECRET`) usunięte bez czerwonej bramki; ostrzeżenia Hikari (#36) rozstrzygnięte; nieaktualne issues (#51) zamknięte.** — Archived 2026-10-23 → `context/archive/2026-10-20-ops-docs-debt/`. Lesson: —.
