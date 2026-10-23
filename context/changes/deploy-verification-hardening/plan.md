@@ -571,14 +571,14 @@ GitHubem i Workerem.
 #### Manual
 
 - [x] 3.3 Push do PR daje zielony run na usługę; raport weba ma 200 z `/api/ready`, `/healthz` i `/` — szczur-radar-monitor@1510aaf
-- [ ] 3.4 Wymuszona awaria daje czerwony run z nazwą usługi i jedno issue środowiska i usługi przypisane do operatora
+- [x] 3.4 Wymuszona awaria daje czerwony run z nazwą usługi i jedno issue środowiska i usługi przypisane do operatora — szczur-radar-monitor@10f7b7a
 - [x] 3.5 Przypisanie issue daje rzeczywisty push w GitHub Mobile — szczur-radar-monitor@10f7b7a
-- [ ] 3.6 Zielony deploy samego weba nie zamyka otwartego issue API
-- [ ] 3.7 Redeploy API po naprawie daje zielony run i zamknięte issue API
-- [ ] 3.8 Duplikat webhooka: ten sam wynik, bez nowego issue
+- [x] 3.6 Zielony deploy samego weba nie zamyka otwartego issue API — szczur-radar-monitor@10f7b7a
+- [x] 3.7 Redeploy API po naprawie daje zielony run i zamknięte issue API — szczur-radar-monitor@10f7b7a
+- [x] 3.8 Duplikat webhooka: ten sam wynik, bez nowego issue — szczur-radar-monitor@10f7b7a
 - [x] 3.9 Błędny sekret: 401, brak runu — szczur-radar-monitor@450083d
-- [ ] 3.10 Deploy produkcji daje zielony run bez issue; w szczur-radar nic nowego
-- [ ] 3.11 Deploy crona oceniany osobno, bez sond; `CRASHED` crona nie zmienia wyniku deployu weba lub API
+- [x] 3.10 Deploy produkcji daje zielony run bez issue; w szczur-radar nic nowego — szczur-radar-monitor@1510aaf
+- [x] 3.11 Deploy crona oceniany osobno, bez sond; `CRASHED` crona nie zmienia wyniku deployu weba lub API — szczur-radar-monitor@1510aaf
 
 ### Phase 4: Wycofanie starego deploy-verify, dokumentacja i runbook
 
