@@ -383,7 +383,7 @@ Brak migracji, zmiennych środowiskowych i zmian IaC. Wycofanie = revert PR.
 
 #### Manual
 
-- [ ] 2.5 Przegląd: żaden nowy komunikat ani log nie zawiera klucza, sekretu ani tokenu
+- [x] 2.5 Przegląd: żaden nowy komunikat ani log nie zawiera klucza, sekretu ani tokenu — 0a64721
 
 ### Phase 3: Spójność stronicowania
 
