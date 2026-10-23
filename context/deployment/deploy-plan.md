@@ -1288,7 +1288,7 @@ Evidence from healthchecks.io: the check's state and `GET /api/v3/checks/<uuid>/
   ```bash
   railway ssh -s szczur-radar-api -e szczur-radar-pr-<N> -- java -jar /app/target/szczur-radar-api.jar send-test-alert
   ```
-  Exit 0 with `Test alert delivered …`. **Telegram**: a "down" for `pr-<N>/api-events` with `TEST_SIGNAL (test of the operator alert channel, nothing is wrong): send-test-alert from <host>` (over `railway ssh` it says `from operator`: the session does not export `HOSTNAME`), right after it an "up"; the flips show down → up. Afterwards the API goes to sleep as usual: check it by the deployment's state in Railway (MCP), not by calling the API, which wakes it.
+  Exit 0 with `Test alert delivered …`. **Telegram**: a "down" for `pr-<N>/api-events` with `TEST_SIGNAL (test of the operator alert channel, nothing is wrong): send-test-alert from <host>` (over `railway ssh` it says `from operator`: the session does not export `HOSTNAME`), right after it an "up"; the flips show down → up. Afterwards the API goes to sleep as usual. The deployment's state in Railway does not show sleep (it stays `SUCCESS`): leave the API alone for about 15 minutes, then call `/api/deploy-safety` twice; a sleeping API answers the first call only after its start (about 10 s, the second in about 0.1 s), and the same deployment's log gets a new `Started SzczurRadarApiApplication` line at that moment (update 2026-10-23).
 - [ ] **A missed check-in.** Last, because it leaves both cron checks down. Do not run a cron; move only the test checks' schedule to the next minutes, e.g. at 14:02 UTC:
   ```bash
   tools/healthchecks/checks.sh apply pr-<N> --schedule '5 14 * * *' --grace 60

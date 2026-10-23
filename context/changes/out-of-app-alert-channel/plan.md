@@ -555,7 +555,7 @@ wstrzymać w panelu.
 - [x] 4.5 Nieudany `pipeline-trigger` daje „down” z linią `FAILED:`, kolejny udany — „up” — 2081457
 - [x] 4.6 Uzbrojony check bez meldunku po harmonogramie i karencji daje „down” z powodem „nie przyszedł na czas” — 2081457
 - [x] 4.7 `db-backup` w PR env daje `start` i `0` — 2081457
-- [ ] 4.8 `send-test-alert` w PR env daje „down” z opisem i zaraz „up”, API potem zasypia
+- [x] 4.8 `send-test-alert` w PR env daje „down” z opisem i zaraz „up”, API potem zasypia — 2081457
 - [x] 4.9 Testowe checki usunięte, zmienne PR env przywrócone, harmonogramy cronów bez zmian — 2081457
 - [x] 4.10 Runbook F-04 zgodny z tym, co zrobiono w PR env — 857244f
 - [x] 4.11 Dane F-04 i data w `render_roadmap_svg.py` zgodne z `roadmap.md`, SVG wygenerowane na nowo — 2081457
