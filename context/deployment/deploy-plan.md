@@ -2,11 +2,15 @@
 
 ## Summary
 
+> Historical (state of 2026-09-26, FastAPI backend); current: the Java API in section F-03, its image in section `api-docker-image`, the database backup in section F-01, CI and the deploy gate in section S-14.
+
 Deploy the scaffold first: a neutral Vue page, a minimal FastAPI app, and PostgreSQL in one Railway project in Amsterdam. Only the web service gets a public domain. It proxies /api/\* to the API over Railway’s private network, so the browser uses one origin. No collection job or protected data endpoint goes live in this release.
 
 During implementation, update the existing context/deployment/deploy-plan.md in place. Use its checkboxes to record completion, deployment IDs, test results, and the web URL—never secret values.
 
 ## Release status (2026-09-27)
+
+> Historical (state of 2026-09-27, FastAPI backend); current: both exceptions are closed on Hobby (section F-01), the API is Java (section F-03) built from its Dockerfile (section `api-docker-image`).
 
 **Scaffold release: DONE and live** at `https://szczur-radar-web-production.up.railway.app` — web page + both API probes work through one HTTPS domain, api + Postgres private, CI-gated, PITR enabled. Phases 1–4 complete.
 
@@ -27,7 +31,9 @@ Both are the hard gate **before Phase 6 (data collection)**: subscribe → set l
 
 ## S-01 release — admin bootstrap and login (2026-09-29)
 
-**Live on production.** PR #13 squash-merged as `9b9fbf8` — merged by the agent after a consent bundled with other questions, which the operator rejected as not explicit; from now on only a human merges to `main` (lessons.md). Change: `context/changes/admin-bootstrap-and-login/`.
+> Historical (state of 2026-09-29, FastAPI backend); current: Java operator commands and Flyway migrations in section F-03, account onboarding and recovery in section S-07, the `railway-config` job in section S-14.
+
+**Live on production.** PR #13 squash-merged as `9b9fbf8` — merged by the agent after a consent bundled with other questions, which the operator rejected as not explicit; from now on only a human merges to `main` (lessons.md). Change: `context/archive/2026-09-27-admin-bootstrap-and-login/`.
 
 - **Config before code:** CI on `main` (run 36582863273, 14:27:55–14:28:39 UTC) — job `railway-config` applied exactly one change to `production`: `szczur-radar-api` `deploy.preDeployCommand` (null → `uv run alembic upgrade head`). The code deploy queued at 14:27:54 waited for CI (Wait for CI), so pre-deploy was in place before it ran.
 - **Migration:** api deployment `28b6575a` — pre-deploy log `Running upgrade -> 0001_create_users`, then Hypercorn up (14:31:12 UTC). The config apply triggered a second api deployment `362bae94` (SUCCESS, pre-deploy no-op; current). `alembic current` on production = `0001_create_users (head)`. Web deployment `15bf69ac` SUCCESS.
@@ -39,7 +45,7 @@ Both are the hard gate **before Phase 6 (data collection)**: subscribe → set l
 
 ## F-03: przełączenie na Javę (java-api-rewrite)
 
-**Status (2026-10-03): DONE — production switched to Java and verified after human merges of PR #26 (`7a406f2`) and follow-up PR #27 (`6bc15db`).** Change: `context/archive/2026-10-01-java-api-rewrite/`, [issue #25 close-out](https://github.com/kwmacioszek/szczur-radar/issues/25#issuecomment-5965517657). The implementation-review fixes are tracked separately in `context/archive/2026-10-01-java-api-rewrite/follow-ups/review-fixes.md`; they ship in their own PR (branch `fix/java-api-rewrite-review-fixes`).
+**Status (2026-10-03): DONE — production switched to Java and verified after human merges of PR #26 (`7a406f2`) and follow-up PR #27 (`6bc15db`).** Change: `context/archive/2026-10-01-java-api-rewrite/`, [issue #25 close-out](https://github.com/kwmacioszek/szczur-radar/issues/25#issuecomment-5965517657). The implementation-review fixes are tracked separately in `context/archive/2026-10-01-java-api-rewrite/follow-ups/review-fixes.md`; they shipped in their own PR (#28, branch `fix/java-api-rewrite-review-fixes`, merged 2026-10-03).
 
 The API is now a Spring Boot 4 jar on Java 25, built from `szczur-radar-api/Dockerfile` since `api-docker-image` (2026-10-06; before: Railpack with `RAILPACK_JDK_VERSION=25`). Sessions live in Postgres (Spring Session JDBC); migrations are Flyway, fix-forward. There is **no way back to the Python backend** after the switch: failures are fixed in Java and redeployed; a bad migration is fixed by a new migration; a database backup restores data, not the Python runtime (no backup until the subscription — see `api-docker-image` below).
 
@@ -47,7 +53,7 @@ The API is now a Spring Boot 4 jar on Java 25, built from `szczur-radar-api/Dock
 
 - Migrations (pre-deploy, automatic): `java -jar target/szczur-radar-api.jar migrate`.
 - First admin: wake the API first (`curl https://<web-domain>/api/health`) — a sleeping service has no container, and `railway ssh` then lands on Railway's SSH gateway (it prints account info and runs nothing). Then `railway ssh -s szczur-radar-api -e <env>` and, inside the container shell (`/app`), `java -jar target/szczur-radar-api.jar create-admin --email you@example.com` — password asked twice, hidden (needs a real terminal, not an agent's `!`); refuses if an admin exists. Type the e-mail without `< >`: the shell reads `<` as a redirect. The `railway ssh` shell runs as **root** (Railway SSH ignores the image's `USER`); the app itself runs as the non-root `app` user, and the jar commands work the same in both. In a checkout without `railway link`, prefix CLI commands with `RAILWAY_PROJECT_ID=<project-id>`.
-- Variables on `szczur-radar-api` (names only): `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, `PGPASSWORD` (references to Postgres, from IaC), `PORT`, and operator-set `LLM_API_PROVIDER`, `LLM_MODEL`, `LLM_API_KEY` — production's key is the operator's and must be **sealed** (Railway copies unsealed variables into new PR envs: on 2026-10-02 PR env #27 started with production's key). PR envs get the CI settings (variables + `LLM_API_KEY` secret) from the `railway-config` CI step "Ensure PR-env LLM settings", which overwrites a copied value, removes the optional `LLM_SERVICE_TIER` / `LLM_REASONING_EFFORT` / `LLM_TIMEOUT` copied from production (since 2026-10-06: PR env #34 failed `migrate` with `LLM_SERVICE_TIER=flex is only supported for LLM_API_PROVIDER=openrouter`) and never runs on production. `DATABASE_URL`, `JWT_SECRET` and `RAILPACK_JDK_VERSION` stay declared in `.railway/railway.ts` only because the CI gate refuses `variable.delete`; the first two are unused since F-03, `RAILPACK_JDK_VERSION` since `api-docker-image` (the JDK comes from the image). Optional: `JAVA_TOOL_OPTIONS` for extra JVM flags (the image already passes `-XX:MaxRAMPercentage=75`).
+- Variables on `szczur-radar-api` (names only): `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, `PGPASSWORD` (references to Postgres, from IaC), `PORT`, and operator-set `LLM_API_PROVIDER`, `LLM_MODEL`, `LLM_API_KEY` — production's key is the operator's and must be **sealed** (Railway copies unsealed variables into new PR envs: on 2026-10-02 PR env #27 started with production's key). PR envs get the CI settings (variables + `LLM_API_KEY` secret) from the `railway-config` CI step "Ensure PR-env LLM settings", which overwrites a copied value, removes the optional `LLM_SERVICE_TIER` / `LLM_REASONING_EFFORT` / `LLM_TIMEOUT` copied from production (since 2026-10-06: PR env #34 failed `migrate` with `LLM_SERVICE_TIER=flex is only supported for LLM_API_PROVIDER=openrouter`) and never runs on production. `DATABASE_URL`, `JWT_SECRET` (unused since F-03) and `RAILPACK_JDK_VERSION` (unused since `api-docker-image`, the JDK comes from the image) were removed in S-19: from each environment first, then from `.railway/railway.ts` (section S-19). Optional: `JAVA_TOOL_OPTIONS` for extra JVM flags (the image already passes `-XX:MaxRAMPercentage=75`).
 
 ### PR env verification (szczur-radar-pr-26, 2026-10-02)
 
@@ -96,7 +102,7 @@ The API is now a Spring Boot 4 jar on Java 25, built from `szczur-radar-api/Dock
 
 ## api-docker-image: obraz Dockera dla API i wyłączenie PITR
 
-**Status (2026-10-06): live on production** after the human merge of PR #33 (`721bb8a`); production verified (issue #32). Change: `context/changes/api-docker-image/`.
+**Status (2026-10-06): live on production** after the human merge of PR #33 (`721bb8a`); production verified (issue #32). Change: `context/archive/2026-10-04-api-docker-image/`.
 
 ### How the API is built and run
 
@@ -105,18 +111,21 @@ The API is now a Spring Boot 4 jar on Java 25, built from `szczur-radar-api/Dock
 - Same image locally and in CI: `docker build -t szczur-radar-api ./szczur-radar-api`; `docker run <image>` = server, `docker run <image> migrate` = migrations. CI job `api-container-smoke` builds the Dockerfile, checks the non-root user, runs the exact pre-deploy command against Postgres 18, then `/api/health` and `/api/ready`.
 - `railway ssh` lands in a **root** shell (Railway SSH ignores `USER`); the app process runs as `app`.
 
-### Memory, build and cold start (measured 2026-10-06)
+### Memory, build and cold start
+
+Memory, CPU and GC measured 2026-10-21 on production (read-only `railway ssh` into `szczur-radar-api`, JDK 25.0.4.1) with `API_LIMITS` 2 vCPU / 2 GB (`.railway/railway.ts`); the GC and heap come from a second `java -XX:MaxRAMPercentage=75 -XX:+PrintFlagsFinal -version` in the same container, which sees the same cgroup. A PR env of a docs/IaC-only PR runs no services, so it cannot be measured there. The other rows are from 2026-10-06 (limit ≈ 954 MiB then: heap ≈ 716 MiB, SerialGC).
 
 | | |
 | --- | --- |
-| Container memory limit (`/sys/fs/cgroup/memory.max`) | 999997440 B ≈ 954 MiB |
-| Max heap with `-XX:MaxRAMPercentage=75` | ≈ 716 MiB (the JDK default of 25 % would give ≈ 238 MiB) |
-| GC | SerialGC (G1 needs ≥ 2 CPUs and ≥ 1792 MB) |
-| `nproc` in the container | 48 (host CPUs) |
-| Image size | 508 MB (local `docker image ls`) |
-| Build on Railway | without cache ~1:25 min (`dependency:go-offline` 54 s, `package` 11 s) + push ~40 s; with cached dependency layer ~7 s + push ~32 s |
-| Server start | 7.9–8.3 s warm; pre-deploy `migrate` container ~12 s |
-| First request after sleep | ~9.6–10.5 s (Railpack: ~10–11 s to logged-in) — no regression |
+| Container memory limit (`/sys/fs/cgroup/memory.max`) | 1999998976 B ≈ 1907 MiB |
+| CPU limit (`/sys/fs/cgroup/cpu.max`) | `200000 100000` = 2 CPUs |
+| Max heap with `-XX:MaxRAMPercentage=75` | 1501560832 B ≈ 1432 MiB (the JDK default of 25 % would give ≈ 477 MiB) |
+| GC | G1 (`UseG1GC` chosen by ergonomics: 2 CPUs and ≥ 1792 MB; SerialGC below that) |
+| `nproc` in the container | 48 (host CPUs; the JVM sizes itself by the cgroup CPU limit, `ActiveProcessorCount` not set) |
+| Image size (2026-10-06) | 508 MB (local `docker image ls`) |
+| Build on Railway (2026-10-06) | without cache ~1:25 min (`dependency:go-offline` 54 s, `package` 11 s) + push ~40 s; with cached dependency layer ~7 s + push ~32 s |
+| Server start (2026-10-06) | 7.9–8.3 s warm; pre-deploy `migrate` container ~12 s |
+| First request after sleep (2026-10-06) | ~9.6–10.5 s (Railpack: ~10–11 s to logged-in) — no regression |
 
 ### PITR disabled; database backup
 
@@ -135,7 +144,15 @@ The API is now a Spring Boot 4 jar on Java 25, built from `szczur-radar-api/Dock
 
 - PR #33 merged by the operator as `721bb8a` (10:10 UTC); CI on `main` green; `railway-config` applied one change to `szczur-radar-api` (`deploy.startCommand` cleared) before the deploy.
 - Deployment `1e339712` SUCCESS: build log `load build definition from szczur-radar-api/Dockerfile`; pre-deploy `migrate` `started by app in /app`, "Schema … is up to date"; healthcheck passed; `/api/ready` 200; admin login on the public address verified.
-- Observation: Hikari `Failed to validate connection … (This connection has been closed.)` warnings after a few idle minutes, on production and in the PR env — follow-up F4 in `context/changes/api-docker-image/follow-ups/review-fixes.md` (separate change).
+- Observation: Hikari `Failed to validate connection … (This connection has been closed.)` warnings after a few idle minutes, on production and in the PR env — follow-up F4 in `context/archive/2026-10-04-api-docker-image/follow-ups/review-fixes.md` (separate change). **Update 2026-10-18:** resolved without a change, below.
+
+### Hikari `Failed to validate connection` warnings (issue #36, closed 2026-10-18)
+
+- Production's logs have no such warning since 2026-10-13 (checked 2026-10-18), although the API slept and woke many times and the nightly runs went normally. The last ones (2026-10-12, 11:38–11:44 and 21:07 UTC) coincide with Postgres restarts, among them the hung restart after the `sleepApplication` apply (section F-01).
+- The suspected cause of the steady noise was the sleeping Postgres. It ended when serverless sleep was turned off for the database (section `first-assessed-wykop-feed`, "First production deploy").
+- A single series of these warnings right after a database restart is expected: the pool's connections to the old server are closed.
+- The Hikari configuration (`max-lifetime`, `keepalive-time`) stays unchanged.
+- If the warnings come back without a database restart, reopen issue #36.
 
 ### Runbook — after a merge that changes the API image
 
@@ -159,7 +176,7 @@ Revert only the image switch: delete `szczur-radar-api/Dockerfile` (Railpack tak
 | `LLM_API_PROVIDER` | `openrouter` |
 | `LLM_MODEL` | `openai/gpt-6-luna` |
 | `LLM_API_KEY` | OpenRouter key of the production account — **sealed**, never copied to CI or PR envs |
-| `LLM_SERVICE_TIER` | `flex` (~$2.9/month at 12k posts, may wait/refuse; falls back to standard after three refusals) or `default` (~$5.9/month) — operator's choice |
+| `LLM_SERVICE_TIER` | `flex` (~$2.9/month at 12k posts, may wait/refuse; the same call falls back to standard once a flex tier's three attempts all failed — since S-09 on any mix of 429, 5xx, time-outs and connection errors, not only three refusals) or `default` (~$5.9/month) — operator's choice |
 | `LLM_REASONING_EFFORT` | unset (provider default = `medium`, as measured) |
 | `LLM_TIMEOUT` | `300s` with `flex` (flex responses are slower); unset (`120s`) with `default` — always with a unit, from `10s` to `30m` (a bare number would be milliseconds; since S-10 it stops the start, "Rule for variables") |
 
@@ -169,7 +186,7 @@ Revert only the image switch: delete `szczur-radar-api/Dockerfile` (Railpack tak
 
 ## first-assessed-wykop-feed: pierwszy oceniony feed z Wykopu (S-02)
 
-**Status (2026-10-09): in the PR env (#37), not merged.** S-02 adds the pipeline (fetch Wykop → store posts and RAW → assess with the LLM), the feed `GET /api/posts` and the admin panel `/admin`. Issue #14.
+**Status (2026-10-10): live on production** after the human merge of PR #37 (`1a33fcc`, 2026-10-09); issue #14 closed. The production verification (the first runs below, then, after the flex fix of `openrouter-in-body-errors`, a retry run `succeeded`) is in [the issue's last comment](https://github.com/kwmacioszek/szczur-radar/issues/14#issuecomment-6102418988). S-02 adds the pipeline (fetch Wykop → store posts and RAW → assess with the LLM), the feed `GET /api/posts` and the admin panel `/admin`. Change: `context/archive/2026-10-06-first-assessed-wykop-feed/`.
 
 ### How the pipeline runs
 
@@ -213,14 +230,14 @@ Move it per environment (operator; decided in the review, downtime accepted — 
 
 - **The merge deploy of #37 failed** (`szczur-radar-api` `399a5d0e`): the pre-deploy `migrate` timed out connecting to Postgres, which had gone to sleep at 13:45 UTC after its move to `europe-west4` and did not wake (its log ended at `Mounting volume on …`). The old API (`eb1ab54`) kept serving but `/api/ready` was 503 too. Fixed by redeploying `postgres`, then `szczur-radar-api`. Railway warns that a slept service "in remote cases, may require a rebuild to re-live" (docs: Serverless → Caveats). **Postgres serverless sleep is off** since then (`.railway/railway.ts`, `deploy.sleepApplication: false`; plan: one `safe` update); the setting applies to a new container, so after CI applies it, redeploy `postgres` once (`railway redeploy -s postgres -e production -y`). The API and web still sleep.
 - **The first production run failed safely:** the LLM check before the assess step answered `HTTP 401: Missing Authentication header`, so the run ended `failed` with 42 posts stored and no attempt used (the next range or retry run assesses them). OpenRouter gives this message when the bearer token is not an OpenRouter key — another provider's key, quotes or a `Bearer ` prefix in the value (a revoked `sk-or-v1-…` key answers `User not found.`). Production's sealed `LLM_API_KEY` must be replaced with a valid `sk-or-v1-…` key (`--stdin`, then seal, then redeploy the API) and `GET /api/admin/llm/check` must say `"ok":true` before the next run.
-- **With the new key, flex answers lost posts' attempts:** 15 of 25 model calls ended `provider_error` with `com.openai.errors.OpenAIInvalidDataException: \`choices\` is not set` (~6 s each). OpenRouter reports an error that occurs once the model has started on the request — e.g. a flex refusal — in the body of an **HTTP 200** (`{"error":{"code",…}}` instead of `choices`), and the client treated it as a refusal: no retry, no flex → default, one attempt used per post. Workaround: `LLM_SERVICE_TIER=default` on production. Fixed in change `openrouter-in-body-errors` (issue #39, PR #40): such an error is classified by its `code` like an HTTP status, an answer without `choices` is retried like a 5xx (`llm/CLAUDE.md`). The 15 posts keep 1 of 3 attempts used (decided in its plan: no manual data change).
+- **With the new key, flex answers lost posts' attempts:** 15 of 25 model calls ended `provider_error` with `com.openai.errors.OpenAIInvalidDataException: \`choices\` is not set` (~6 s each). OpenRouter reports an error that occurs once the model has started on the request — e.g. a flex refusal — in the body of an **HTTP 200** (`{"error":{"code",…}}` instead of `choices`), and the client treated it as a refusal: no retry, no flex → default, one attempt used per post. Workaround: `LLM_SERVICE_TIER=default` on production. Fixed in change `openrouter-in-body-errors` (issue #39, PR #40): such an error is classified by its `code` like an HTTP status, an answer without `choices` is retried like a 5xx (`llm/CLAUDE.md`). The 15 posts keep 1 of 3 attempts used (decided in its plan: no manual data change). **Update (S-09, 2026-10-20):** a call that stays unavailable after its retries (such an answer, a 5xx, a time-out, a connection error or a 429) no longer uses up an attempt at all: the post goes back without one, and three such calls in a row stop the run (section S-09).
 
 #### Runbook — back to flex after the merge of `openrouter-in-body-errors` (operator; tracked in issue #39)
 
 0. Not while a run is `RUNNING` in `/admin`.
 1. `railway variable set LLM_SERVICE_TIER=flex LLM_TIMEOUT=300s -s szczur-radar-api -e production --skip-deploys`, then `railway redeploy -s szczur-radar-api -e production -y` (if the merge deploy already ran — otherwise set them before it).
 2. `GET /api/admin/llm/check` (logged in as admin) says `"ok":true`.
-3. In `/admin`, retry the failed posts, or start a range run (it queues a retry of the leftovers first). In the production database the run's new `assessments` have no `provider_error` with "`choices` is not set"; a flex refusal now shows as retries or as `flex_fallback = true`, not as a failed attempt.
+3. In `/admin`, retry the failed posts, or start a range run (it queues a retry of the leftovers first). In the production database the run's new `assessments` have no `provider_error` with "`choices` is not set"; a flex refusal now shows as retries or as `flex_fallback = true`, not as a failed attempt. (Since S-09 not even when the default tier fails too: an outage after the retries uses no attempt, section S-09.)
 4. Comment the result on issue #39 and close it.
 
 ### PR-env verification: the web deployment's commit
@@ -236,7 +253,7 @@ On `szczur-radar-pr-37` a push deployed `szczur-radar-web` from an older commit 
 
 ## F-01: bramka produkcyjnych danych (production-data-gate)
 
-**Status (2026-10-12): done** — merged as `b7ee254` (PR #44), production verified (first backup, test with the application on a production dump, NAS and Google Drive copies); follow-ups in PR #46; issue #43. Change: `context/changes/production-data-gate/`. Production runs on Railway **Hobby**, which has no built-in volume backups and no PITR (both are Pro). The database is therefore protected by a daily logical dump (`pg_dump`) from a separate cron service, checked by a full restore before upload ("How the backup works" below). Verified in a PR env; the production steps after the merge are in the last runbook of this section.
+**Status (2026-10-12): done** — merged as `b7ee254` (PR #44), production verified (first backup, test with the application on a production dump, NAS and Google Drive copies); follow-ups in PR #46; issue #43. Change: `context/archive/2026-10-11-production-data-gate/`. Production runs on Railway **Hobby**, which has no built-in volume backups and no PITR (both are Pro). The database is therefore protected by a daily logical dump (`pg_dump`) from a separate cron service, checked by a full restore before upload ("How the backup works" below). Verified in a PR env; the production steps after the merge are in the last runbook of this section.
 
 ### Starting state (2026-10-11, read-only)
 
@@ -465,7 +482,7 @@ PR #44 was squash-merged as `b7ee254` (11:25 UTC). CI on `main` applied `+ Creat
 - **Recovery before the port.** The cron's request is often the one that wakes the API. Start-up recovery of unfinished runs (`PipelineStartupRecovery`) now runs in `SmartInitializingSingleton.afterSingletonsInstantiated`, before the web server opens its port, so it cannot mark the cron's new run `interrupted`.
 - **What Railway shows for a cron (seen 2026-10-12).** A scheduled run reuses the service's existing deployment; it does not create a new one. Railway shows what a cron writes to stderr at level `error`, and `trigger.sh` logs every line to stderr, so a normal run looks red in the log view. The exit code says whether it failed, not the colour.
 - **The label.** `GET /api/freshness` (any logged-in role) → `{"lastUpdatedAt": "<ISO-8601 UTC>" | null}`: the `finished_at` of a RANGE run, scheduled or an admin's, that ended `succeeded` or `partial`: of those, the one whose range reaches furthest, and of them the latest. An admin's run over older days leaves the date (implementation review F4). The feed shows "Dane zaktualizowane: <date, time in Warsaw>", "Dane nie były jeszcze aktualizowane." before the first such run, and nothing when the read fails (the list still works).
-- **Time and cost.** About 270 posts a night, 12–25 min with 4 threads; about $0.13 a night on tier `default` and $0.07 on `flex` (F-02 estimate). A night after a provider failure (RETRY without a limit, then RANGE) takes up to about 50 min, still before the 02:00 UTC backup. A dump taken while a run writes is still consistent (`pg_dump` reads one snapshot).
+- **Time and cost.** About 270 posts a night, 12–25 min with 4 threads; about $0.13 a night on tier `default` and $0.07 on `flex` (F-02 estimate). A night after a provider failure (RETRY without a limit, then RANGE) takes up to about 50 min, still before the 02:00 UTC backup. **Update (S-09, 2026-10-20):** a night *during* a provider outage no longer goes through every post with all its HTTP attempts: three calls in a row that fail after their retries stop the run `failed` (the breaker, section S-09), and its posts wait without an attempt used. With 5xx that takes minutes; with time-outs each call can last up to `TransportRetry.maxCallDuration` (34 min with `300s` and `flex`). Every call that ends finding the provider unavailable moves the run's `last_activity_at`, so the 39 min watchdog never stops such a run before the breaker, whatever `PIPELINE_LLM_CONCURRENCY` is (implementation review, 2026-10-23); with one thread and time-outs the breaker needs three calls one after another, about 1.5 h on production. The next night's RETRY takes those posts, so that night is the one that may take about 50 min. A dump taken while a run writes is still consistent (`pg_dump` reads one snapshot).
 
 ### Variables (names only)
 
@@ -488,7 +505,7 @@ PR #44 was squash-merged as `b7ee254` (11:25 UTC). CI on `main` applied `+ Creat
 
 ### Merge notes
 
-- **Migration number vs S-07.** This change adds `V6__users_login_enabled_scheduler.sql`; `cli-user-onboarding` (S-07, PR #49, not merged) plans its own `V6`. Flyway refuses a migration numbered below one already applied, so whichever change lands on `main` second renumbers its migration to the next free number and fixes the version list in `MigrationsIT` before its merge, never after a deploy.
+- **Migration number vs S-07.** This change adds `V6__users_login_enabled_scheduler.sql`; `cli-user-onboarding` (S-07, PR #49, merged later as `54c4fc2`) planned its own `V6`. Flyway refuses a migration numbered below one already applied, so whichever change lands on `main` second renumbers its migration to the next free number and fixes the version list in `MigrationsIT` before its merge, never after a deploy.
 - **System account vs S-07.** S-07's commands (`create-user`, `reset-password`, `lookup`, `activate`) must refuse an account with `login_enabled = false`; the change that lands second adds that code (posted on issue #20). The constraint `ck_users_login_password` already refuses a password for such an account.
 - **Backup manifest.** `V6` inserts one row into `users`, so the `users` count in the `db-backup` manifest grows by one after the merge.
 - **Update 2026-10-13 (S-07):** this change landed first. S-07 (PR #49) handles both points before its merge: its migration is now `V7__create_activation_tokens.sql`, and its commands and links refuse the system account (section S-07).
@@ -682,13 +699,13 @@ PR #49 was squash-merged as `54c4fc2` (13:22 UTC), after S-05 (#50).
 
 ## filter-by-assessment: filtr feedu (S-04)
 
-**Status (2026-10-13): verified in the PR env (#54), not merged.** The feed `/` gets a filter by target text, target kind and author stance on the same target (FR-011a). Change: `context/changes/filter-by-assessment/`, issue #17.
+**Status (2026-10-18): live on production** after the human merge of PR #54 (`c80e846`, 2026-10-14); issue #17 closed. On production only the database locale (runbook step 2) was checked; the logged-in checks of step 3 were not recorded ([the issue's closing comment](https://github.com/kwmacioszek/szczur-radar/issues/17#issuecomment-6248152907)). The feed `/` gets a filter by target text, target kind and author stance on the same target (FR-011a). Change: `context/archive/2026-10-12-filter-by-assessment/`.
 
 - **Nothing to set up.** No migration, no new variable, no IaC change. `GET /api/posts` takes the optional `q`, `kind` and `direction`; without them the answer is unchanged.
 - **The database locale matters.** The text match is `ILIKE`, which folds the case of Polish letters only under a suitable `LC_CTYPE`.
   - Testcontainers and the PR env have `en_US.utf8` (libc): `KĘTY` finds `Kęty`.
-  - Production was not checked before the merge; step 2 below checks it.
-- **PR-env verification:** results, screenshots and the 7-state matrix are in `context/changes/filter-by-assessment/ui-after/README.md`.
+  - Production was not checked before the merge; step 2 below checks it. **Checked 2026-10-18:** `c | en_US.utf8 | en_US.utf8`, the same as the PR env (issue #17).
+- **PR-env verification:** results, screenshots and the 7-state matrix are in `context/archive/2026-10-12-filter-by-assessment/ui-after/README.md`.
 
 ### Runbook — after the merge (operator + agent; tracked in issue #17, not in the plan's Progress)
 
@@ -727,7 +744,7 @@ PR #49 was squash-merged as `54c4fc2` (13:22 UTC), after S-05 (#50).
   - `shutdown`: the instance was stopping.
 
   The SPA shows "przerwany — nowe wdrożenie" (a neutral tone: expected after a merge), "przerwany — restart aplikacji" or "przerwany — zatrzymanie aplikacji".
-- **Notifications** (in the app only). A run that ends `failed`, `interrupted`, or `partial` with a dead post or a technical error gives every admin who can log in one notification.
+- **Notifications** (in the app only). A run that ends `failed`, `interrupted`, or `partial` with a dead post or a technical error gives every admin who can log in one notification. **Update (S-09, 2026-10-20):** a technical error now also includes a single provider outage the run went on after (the call failed after its retries; no attempt used), and three outages in a row end the run `failed` (section S-09).
   - A `partial` run whose only failures are `failed` posts with attempts left gives none: the next run retries them. A usual night (about 2% failed posts, no dead post) therefore gives none.
   - No push, e-mail or webhook. The cron's exit codes are unchanged, so Railway's "deployment crashed" rule still reports exactly what it reported before (a cron run exits 1 when a run ends `failed` or `interrupted`, never for `partial`).
 - **The admin's views.**
@@ -779,7 +796,7 @@ Pipeline run 4f0c… (range) ended partial in 22m 10s: fetched 470, new 251, ok 
 … trigger: range 4f0c…: interrupted (fetched 270, new posts 251, …) (cause deploy)
 ```
 
-**In the app** (admin): the bell with the unread count on every page, the run page `/admin/runs/:id` and the history in `/admin`. The screenshots and the 7-state matrix are in `context/changes/pipeline-run-history-dashboard/ui-after/README.md`.
+**In the app** (admin): the bell with the unread count on every page, the run page `/admin/runs/:id` and the history in `/admin`. The screenshots and the 7-state matrix are in `context/archive/2026-10-15-pipeline-run-history-dashboard/ui-after/README.md`.
 
 ### Rollback: fix-forward only
 
@@ -807,7 +824,7 @@ Verified 2026-10-16 on `fa87f19` (CI run 38966942987: all seven jobs green; `rai
   - the cron logged `interrupted (fetched 864, new posts 864, assessed ok 472, assessed failed 14, processing errors 0, dead 0) (cause deploy)` and `FAILED: a run did not succeed: range interrupted`, exit 1, deployment `CRASHED` (the custom rule's crash notification is expected here);
   - the admin's bell showed 1 unread, "nowe · przerwany — nowe wdrożenie"; a click opened `/admin/runs/5d2af0bf…` ("przerwany — nowe wdrożenie") and the count dropped to 0 (`readAt` set).
 - **A `user`** (`s06-user@example.com`): no bell and no "Panel admina" link; `/admin/runs/<id>` sent it to `/`; `GET /api/admin/notifications` and `GET /api/admin/pipeline-runs/<id>` answered 403.
-- **Afterwards.** `TRIGGER_IN_ANY_ENVIRONMENT` and `TRIGGER_HEARTBEAT_INTERVAL` deleted, the schedule back to `30 0 * * *`, the cron redeployed (`b89f6390`); its variables are again `API_PORT`, `API_PRIVATE_DOMAIN` and `PIPELINE_TRIGGER_TOKEN`. The API keeps its `PIPELINE_TRIGGER_TOKEN` (`preserve()`). Screenshots: `context/changes/pipeline-run-history-dashboard/ui-after/pr-env-*.png`.
+- **Afterwards.** `TRIGGER_IN_ANY_ENVIRONMENT` and `TRIGGER_HEARTBEAT_INTERVAL` deleted, the schedule back to `30 0 * * *`, the cron redeployed (`b89f6390`); its variables are again `API_PORT`, `API_PRIVATE_DOMAIN` and `PIPELINE_TRIGGER_TOKEN`. The API keeps its `PIPELINE_TRIGGER_TOKEN` (`preserve()`). Screenshots: `context/archive/2026-10-15-pipeline-run-history-dashboard/ui-after/pr-env-*.png`.
 - **The bell after the implementation-review fixes** (2026-10-17, `373ad6a`; CI run 39034495398 green; api and web at the head). The admin's password was reset with `reset-password` (link and password kept only in temporary files, deleted). Requests to `GET /api/admin/notifications`, counted in the browser:
   - 14:51:15 the first load on `/`; 14:51:30 one refresh on navigating to a post (the data was 15 s old); going back within seconds fetched nothing, and the bell kept its count without a loading state;
   - 75 s idle on `/`: no request (no polling outside `/admin*`);
@@ -850,13 +867,13 @@ PR #60 was merged by the operator as `5b6eabb` (2026-10-17 15:02 UTC).
    - `/admin` shows the night's runs with the range D-2…D-1, their duration and "cron". While one runs, `/admin/runs/<id>` shows its progress and "Ostatnia aktywność".
 4. **Notifications.**
    - A usual night ends `partial` with a few retryable `failed` posts and no dead post: no notification, and the bell shows no count.
-   - A run that ends `failed`, `interrupted`, or `partial` with a dead post or a technical error gives each admin one notification. A click opens the run's page and the count drops.
+   - A run that ends `failed`, `interrupted`, or `partial` with a dead post or a technical error gives each admin one notification. A click opens the run's page and the count drops. (Since S-09 a technical error includes a single provider outage, section S-09.)
    - Record which case the first nights were.
 5. **Record and close.** Comment the results on issue #19: the merge commit, deployment IDs, the plan output, the first night's heartbeat and progress lines, the notifications seen. Close the issue only after this production verification.
 
 ## self-hosted-pr-runner: CI na runnerach w Proxmoxie i na PC
 
-**Status (2026-10-19): in PR #83 (issue #30), not merged.** The GitHub Actions minutes of the private repo ran out on 2026-10-18 (about 1800 billed minutes in 30 days on a 2000-minute plan): no job started ("The job was not started because … your spending limit needs to be increased"), every workflow failed and Railway skipped every deploy. CI now runs on self-hosted runners; tool and runbook: `tools/ci-runner/README.md`.
+**Status (2026-10-19): live on production** after the human merge of PR #83 (`35c47a2`); issue #30 closed (automatically at the merge). The check after the merge (the CI run on `main` on the `szczur-ci` pool, the runners online) is in [the issue's last comment](https://github.com/kwmacioszek/szczur-radar/issues/30#issuecomment-6272136800). Change: `context/archive/2026-10-18-self-hosted-pr-runner/`. The GitHub Actions minutes of the private repo ran out on 2026-10-18 (about 1800 billed minutes in 30 days on a 2000-minute plan): no job started ("The job was not started because … your spending limit needs to be increased"), every workflow failed and Railway skipped every deploy. CI now runs on self-hosted runners; tool and runbook: `tools/ci-runner/README.md`.
 
 ### How it works
 
@@ -886,7 +903,7 @@ PR #60 was merged by the operator as `5b6eabb` (2026-10-17 15:02 UTC).
 
 ## S-14: bezpieczna bramka wdrożeń (safe-deploy-gate)
 
-**Status (2026-10-18): in the PR env (#81), not merged.** Change: `context/archive/2026-10-18-safe-deploy-gate/`, issue #73. S-14 closes the gaps C4–C7 of the post-MVP audit:
+**Status (2026-10-19): live on production** after the human merge of PR #81 (`2abc64c`); production verification: issue #73 (closed automatically at the merge, reopened 2026-10-21 for the runbook after the merge below). Change: `context/archive/2026-10-18-safe-deploy-gate/`. S-14 closes the gaps C4–C7 of the post-MVP audit:
 - the IaC apply ran in parallel with the tests (C4);
 - the cron services deployed at the push, before CI (C5);
 - nothing checked health after an apply or a code deploy (C6);
@@ -1038,7 +1055,7 @@ No step of `ci.yml` can see the code deploy, which starts only after the workflo
 
 ## S-15: kopia bazy sprawdzana w całości (backup-check-completeness)
 
-**Status (2026-10-18): in progress**, not merged. S-15 makes the nightly backup check know every table from the migrations and refuse a copy of a suspiciously empty database before it reaches the bucket, where the retention and the NAS mirror would let it push out the good copies (audit C9). Change: `context/changes/backup-check-completeness/`, branch `feature/backup-check-completeness`, PR #79, issue #74.
+**Status (2026-10-19): live on production** after the human merge of PR #79 (`1a6d300`); production verification: issue #74 (closed automatically at the merge, reopened 2026-10-21 for the runbook after the merge below). Before the merge, two production dumps passed this branch's restore check (below). S-15 makes the nightly backup check know every table from the migrations and refuse a copy of a suspiciously empty database before it reaches the bucket, where the retention and the NAS mirror would let it push out the good copies (audit C9). Change: `context/archive/2026-10-18-backup-check-completeness/`.
 
 ### What it changes
 
@@ -1061,7 +1078,7 @@ Both need a redeploy of `db-backup` to reach the next run: a cron run reuses its
 
 ### PR-env verification
 
-Steps (plan `context/changes/backup-check-completeness/plan.md`, Phase 3, Manual Verification):
+Steps (plan `context/archive/2026-10-18-backup-check-completeness/plan.md`, Phase 3, Manual Verification):
 
 1. **The PR env has a database with posts.** If it has no Postgres volume (a PR that changes neither the API nor the web, section F-01), attach one in the dashboard, then `railway redeploy --from-source` of `postgres`, `szczur-radar-api` (its pre-deploy `migrate` creates V1–V9) and `szczur-radar-web`, as in pr-44. Insert the sample rows of `tools/db-backup/test.sh` (a user, a run with a step, 40 posts with RAW and assessments, an activation link, a notification) by SQL through `railway connect postgres -e <env> --tunnel-only -P 15432`, with `psql` from the `db-backup` image (restore runbook, steps 2–3). A pipeline run (`pipeline-trigger` with `TRIGGER_IN_ANY_ENVIRONMENT=true`, section S-05) only if the PR env needs one anyway: it costs real Wykop and LLM calls.
    Result (szczur-radar-pr-79, 2026-10-18, commit `214d811`): the PR env had a Postgres volume (unlike pr-44) but an empty database, and the API and web had never deployed. `railway redeploy --from-source -s szczur-radar-api` (deployment `cc0f7d52`) ran the pre-deploy `migrate`: Flyway V9, 11 tables. The sample rows of `test.sh` (without the session rows) went in by SQL in one transaction: 2 users (with the system account), 1 run, 1 step, 40 RAW, 40 posts, 40 assessments, 1 notification, 1 activation link. The web was not deployed: the backup needs only the database. The SSH tunnel of `railway connect --tunnel-only` dropped twice (`Connection reset by peer`); `railway ssh -s postgres -- psql -U postgres -d railway -c …` worked instead.
@@ -1100,7 +1117,7 @@ So the version-dependent requirement accepts production's older dumps, and the c
 
 ## S-08: pusty przebieg daje sygnał (empty-run-signal)
 
-**Status (2026-10-18): in progress** on branch `feature/empty-run-signal`, PR #80, issue #67; not merged, PR-env verification pending. Before S-08 a RANGE run whose source gave no post ended `succeeded`: no notification, cron exit 0, and the label "Dane zaktualizowane" moved, so an empty night looked like a good one. S-08 makes an empty run fail and makes skipped elements give a warning. Change: `context/changes/empty-run-signal/`.
+**Status (2026-10-20): live on production** after the human merge of PR #80 (`a168731`, 2026-10-19); issue #67 closed. The production verification (the first night, 2026-10-20: a usual night with `skipped 0` and no notification) is in [the issue's closing comment](https://github.com/kwmacioszek/szczur-radar/issues/67#issuecomment-6284719709). Before S-08 a RANGE run whose source gave no post ended `succeeded`: no notification, cron exit 0, and the label "Dane zaktualizowane" moved, so an empty night looked like a good one. S-08 makes an empty run fail and makes skipped elements give a warning. Change: `context/archive/2026-10-18-empty-run-signal/`.
 
 ### What changes
 
@@ -1165,11 +1182,140 @@ An API older than S-08 gives `skipped ?`; the deploy order of the API and the cr
 2. **First night**, or a manual cron run on a temporary schedule as in section S-05, runbook step 3 (then set `30 0 * * *` back):
    - the cron's line per run has `skipped N` right after `fetched N`, and it ends `OK: …` on a usual night;
    - the API's end line has `skipped N`; with `skipped 0` there is no WARN line from `SourceIngest`;
-   - a usual night (no skipped element, only retryable `failed` posts) gives no notification, as before.
+   - a usual night (no skipped element, only retryable `failed` posts) gives no notification, as before. (Since S-09 a single provider outage is a technical error and does notify; section S-09.)
 3. **Record which case the first nights were:** a usual night, a warning (`skipped` > 0: a notification, exit 0) or an empty run (`failed`: a notification, exit 1, a Railway push). An empty night is handled with the runbook above.
 4. **Record and close.** Comment the results on issue #67: the merge commit, deployment IDs, the first night's cron and API lines, the notifications seen. Close the issue only after this production verification.
 
+## S-09: awaria dostawcy nie zabija postów (attempt-accounting)
+
+**Status (2026-10-20): in progress** on branch `feature/attempt-accounting`, issue #68; not merged. Before S-09 an attempt was any stored `failed` result, so a provider outage (e.g. 20 min of 5xx from OpenRouter) used up an attempt of every post it hit, and three bad nights made posts `dead`. S-09 tells three faults apart. Change: `context/changes/attempt-accounting/`.
+
+### What changes
+
+- **The post's fault uses an attempt** (as before): the provider refused the request (a non-retryable 4xx, a refused or blocked answer, no text) or the model's answer broke the contract (`schema_violation`, `fabricated_evidence`, …). A stored `failed` result; the third makes the post `dead`.
+- **The provider's fault uses none.** A call whose retries ran out on 429, 5xx, time-outs or connection errors (`TransportRetry`; with flex both tiers) means the provider is unavailable:
+  - **three such calls in a row** (in the order they end, with no call answered by the model between them; a post the prefilter decides makes no call and does not end the streak) stop the run (the breaker, a constant in code). It ends `failed` with the error `stopped, the remaining posts were put back: the LLM provider is unavailable: 3 calls in a row failed after their retries; the last: failed after N attempts: <provider message>`. Every post goes back as it was: no attempt, no technical failure;
+  - **progress, not a stall:** each such call that ends moves the run's `last_activity_at` without counting anything, so the watchdog (`PIPELINE_STALL_TIMEOUT`) stops only a call that hangs, and a run of time-outs ends with the breaker's error above at any `PIPELINE_LLM_CONCURRENCY`, never with `no progress for …`;
+  - **a single outage** the run went on after is a technical error of its post: the post goes back without an attempt, counting one technical failure with its message, and the run counts a processing error, so it ends `partial`.
+- **Our code's fault uses none, but has a limit.** An exception while assessing a post (a mapper, an unknown SDK exception in the LLM client — since S-09 no longer a `failed provider_error` — or a failed write) puts the post back without an attempt and counts one technical failure, as before in the run's `processing_errors`.
+- **On hold.** A post with three technical failures in a row (`posts.technical_failures`, migration `V10`; single outages and errors of our code alike) is on hold: the RETRY run no longer takes it, and it alone queues no RETRY. It keeps its stage (`stored` or `failed`) and is on the list "Nieudane posty" in `/admin` as "wstrzymany · błędy techniczne N · <last error>", with its checkbox active. An admin's run of chosen posts ("Ponów zaznaczone") takes it. Every stored result (ok or `failed`) resets the count and the last error.
+- **Flex.** A flex tier whose three attempts all failed, with any mix of 429, 5xx, time-outs and connection errors, moves the same call to the default tier (`flex_fallback = true`); before, only three 429s did. The longest call (`TransportRetry.maxCallDuration`) and so the watchdog's 39 min are unchanged.
+- **Signals.** The breaker's `failed` run gives the signals of any `failed` run: an in-app notification for every admin, the cron's exit 1 (`CRASHED`) and Railway's "deployment crashed" push. A `partial` run with a single outage notifies like any technical error (section S-06). No new variable, no new counter of the run, no change to the answer's shape of `/api/admin/llm/check` (an unknown error there is now `"ok":false` with its message, cleaned of the key and logged, instead of a 500).
+- **Migration `V10__posts_technical_failures.sql`.** Adds `posts.technical_failures` (default `0`, `CHECK >= 0`) and `posts.last_technical_error`. It only adds columns with defaults, so the old instance keeps writing during the deploy window. No new table, so `tools/db-backup/tables.sh` is unchanged. Fix-forward as always.
+- **History unchanged.** Posts whose attempts outages used up before S-09 keep them, and `dead` posts stay `dead` (no data migration; reviving `dead` is out of scope). The query below counts them; `failed` ones an admin retries with the button.
+
+### What the operator sees
+
+**A provider outage** (the breaker):
+
+- The run's page and `/admin`: status `failed` with the error above; the counters show no `failed` post and no technical error for the outage (`assessed failed 0`, `processing errors 0` unless other posts had them). The bell has a notification.
+- API log: `WARN The LLM provider is unavailable in run <id>: 3 calls in a row failed after their retries; no further post is taken: failed after …`. The progress line counts the posts whose call found the provider unavailable: `Run <id> assess: 3/251 (ok 0, failed 0, dead 0, errors 0, unavailable 3), in flight …, retries …, flex fallbacks …`.
+- The cron's line: `range …: failed (…, assessed failed 0, processing errors 0, dead 0)`, `FAILED: a run did not succeed: …`, exit 1, Railway's push.
+
+**A single outage:** `WARN Assessing post <id> in run <id> found the LLM provider unavailable; the post was put back without an attempt, counting a technical failure: LlmUnavailableException: failed after …`; the run ends `partial`, its error lists the post (`1 post(s) with a technical error, no assessment stored: <post id> (LlmUnavailableException: …)`), and the admins get a notification.
+
+**An error of our code:** `ERROR Assessing post <id> in run <id> failed; the post is put back without an attempt, technical failure N` with the stack trace; the run ends `partial`, its error lists the post.
+
+### Runbook — provider outage (operator)
+
+1. **Open the run's page** from the bell: the error says "the LLM provider is unavailable" and ends with the provider's last message (HTTP status or time-out).
+2. **Nothing to repair in the data.** Its posts used no attempt and count no technical failure. Once the provider is back (its status page, or `GET /api/admin/llm/check` → `"ok":true`), either wait for the next night (the cron's RETRY takes the leftovers before the range) or start a range run from `/admin` (it queues a RETRY of the leftovers first). The run is not retried the same night on its own.
+3. **If it repeats night after night**, it is no longer a short outage: check the key, credit and model (`/api/admin/llm/check`; a refused key stops the run with "refused the configuration" instead) and the provider. Never merge to `main` while a run is `RUNNING` (section S-05).
+
+### Runbook — a post on hold (operator)
+
+1. **Find it** in `/admin` → "Nieudane posty": "wstrzymany · błędy techniczne N · <last error>" (the full error in the tooltip). The last error says whose fault the latest failure was: `LlmUnavailableException: …` = a provider outage the run went on after, anything else (e.g. `IllegalStateException: …` from a mapper or a client) = our code. The three may be mixed and come from different runs; only a stored result breaks the row.
+2. **Fix the cause first.** For an error of our code that means a fix merged and deployed; for outages, the provider being back. A retry before that only adds another technical failure.
+3. **Retry it:** tick it and press "Ponów zaznaczone" (a POSTS run). A stored result, ok or `failed`, resets its count and puts it back into the automatic RETRY.
+4. Read-only, the posts on hold: `SELECT id, stage, technical_failures, last_technical_error FROM posts WHERE technical_failures >= 3 AND stage IN ('stored', 'failed');`.
+
+### Query — posts whose attempts outages used up before S-09 (read-only)
+
+`failed` and `dead` posts whose every stored `failed` attempt was an outage: class `timeout` or `provider_error` with the call's violation "failed after N attempts: …" (`TransportRetry`'s message for retries used up; the violations are a JSON array of `{failureClass, rule, path, message}`, with `rule` `call` for a call without an answer). Posts with a refusal or a contract violation among their attempts are not counted, nor the 15 posts of 2026-10-09 whose `provider_error` was "`choices` is not set" (section S-02 above). Run it in a read-only transaction (`railway connect postgres -e production`):
+
+```sql
+BEGIN READ ONLY;
+SELECT p.stage, count(*) AS posts
+FROM posts p
+WHERE p.stage IN ('failed', 'dead')
+  AND NOT EXISTS (
+    SELECT 1 FROM assessments a
+    WHERE a.post_id = p.id
+      AND a.status = 'failed'
+      AND NOT (a.failure_class IN ('provider_error', 'timeout')
+               AND EXISTS (SELECT 1 FROM jsonb_array_elements(a.violations) v
+                           WHERE v ->> 'rule' = 'call' AND v ->> 'message' LIKE 'failed after %')))
+GROUP BY p.stage
+ORDER BY p.stage;
+ROLLBACK;
+```
+
+For the posts themselves, select `p.id, p.stage, p.assessment_attempts, p.published_at` instead of the count (and drop `GROUP BY`). A `failed` one can be retried from "Nieudane posty"; a `dead` one stays `dead`. Checked locally on 2026-10-21 on `postgres:18` after `migrate` (`V1`–`V10`) with test data (change `attempt-accounting`, `reviews/runbook-query-s09.md`): it counts a `dead` post with three outage attempts and a `failed` one with a time-out attempt, and leaves out a post with a `schema_violation` or a `fabricated_evidence` among its attempts, one with "`choices` is not set", one with a refusal (HTTP 400), an `assessed` and a `stored` one; both tables were unchanged afterwards.
+
+### Runbook — after the merge (operator; tracked in issue #68, not in the plan's Progress)
+
+0. **Standing rules.** No merge to `main` while `/admin` shows a run `RUNNING`, and not between about 00:30 and 01:30 UTC (section S-05). The merge deploys the API (with `V10`) and the web.
+1. **CI on `main`.** All jobs green; `railway-config` plans no change (S-09 adds no variable or service).
+2. **Migration and start.** The API's pre-deploy `migrate` applies `V10` ("now at version v10"); `/api/ready` 200; no ERROR at start.
+3. **Before the first night (optional):** the query above, to record how many posts outages used up before S-09.
+4. **First night**, or a manual cron run on a temporary schedule as in section S-05, runbook step 3 (then set `30 0 * * *` back): the runs end as before (`succeeded` / `partial`); the API's progress lines have `unavailable 0`; `/admin` → "Nieudane posty" loads, with no post on hold. A breaker stop cannot be forced on production (`LlmOutageIT` covers it).
+5. **Record and close.** Comment the results on issue #68: the merge commit, deployment IDs, the migration line, the first night's progress and end lines, the query's counts. Close the issue only after this production verification.
+
+## S-19: dokumenty operatora mówią prawdę (ops-docs-debt)
+
+**Status:** delivered by PR #93; production verification and closure in issue #78. Change: `context/archive/2026-10-20-ops-docs-debt/`.
+
+### What it changes
+
+- **Statuses in this file.** Every existing Status line is true: S-02, S-04, S-07, the self-hosted runner, S-14, S-15 and S-08 no longer describe a merged change as waiting for its merge. Links to changes moved to `context/archive/` point there. The FastAPI-era sections (Summary, Release status, S-01 release, Phases) start with a "Historical" note.
+- **JVM table** (section api-docker-image) measured on production at 2 vCPU / 2 GB: heap ≈ 1432 MiB, G1.
+- **`context/foundation/infrastructure.md`** describes today's topology (no LangGraph) and today's secrets.
+- **Hikari (#36)** is a decision, not a change: see "Hikari `Failed to validate connection` warnings" in section api-docker-image.
+- **Resource limits (#51)**, closed 2026-10-18: production's `limitOverride` matches `.railway/railway.ts`; no change was waiting.
+- **Variables removed** from `szczur-radar-api`: `RAILPACK_JDK_VERSION` (unused since api-docker-image), `DATABASE_URL` (unused since F-03, the API reads `PG*`), `JWT_SECRET` (unused since F-03; sealed on production, so its removal cannot be undone).
+
+### Removing a variable that `.railway/railway.ts` declares
+
+The CI gate refuses `variable.delete`, and the plan proposes one whenever the file no longer declares a variable that an environment still has. So the order is always **the environment first, then the file**, in every environment separately:
+
+1. Delete the variable in the environment: `railway variable delete <KEY> -p <project> -s <service> -e <environment>`. Check by name only: `railway variable list … --json | jq 'keys'` (without `jq 'keys'` the list prints values).
+2. Push the commit without the declaration right away. A push with the old file in between gives the plan `variable.set`, which the gate allows, so the variable comes back; delete it again.
+3. On production, delete it only just before the human merge, and merge at once. Another merge to `main` in between recreates the variable, and then the apply after the merge refuses `variable.delete`.
+4. **Every other open PR** has a PR env copied from production before the deletion. Delete the variable there too before its branch takes in `main`, or its `railway-config` goes red.
+
+What `railway variable delete` does: in `szczur-radar-pr-93` (2026-10-21) the deletion applied at once (`staged: null`) and created no deployment, because that environment had none. The CLI has no `--skip-deploys` for `delete`, so on production assume that it may redeploy the service.
+
+### PR env of a PR that touches no service directory
+
+A PR that touches none of the watched service directories (`szczur-radar-api/`, `szczur-radar-web/`, `tools/db-backup/`, `tools/pipeline-trigger/`) gets a PR env with **no deployment**: every service is offline (observed in `szczur-radar-pr-93` and `szczur-radar-pr-92`, 2026-10-21). `railway-config` still plans and applies IaC there, so variable and service-config changes can be checked, but there is no API to `ssh` into or to probe. Measure on production instead (read-only, outside the night windows), as S-19 did for the JVM table. If the PR env was created during a Railway incident and is half-made (for example `postgres` without a volume, the apply's check waiting for a deploy that never comes), close and reopen the PR: Railway deletes the environment and creates it again.
+
+### Runbook — before the merge (agent, on the human's confirmation; tracked in issue #78, not in the plan's Progress)
+
+Run after `/10x-impl-review` and `/10x-archive`, when the PR is ready and the human will merge right away.
+
+0. **Preconditions, all together:**
+   - CI on the PR is green;
+   - `curl -s https://szczur-radar-web-production.up.railway.app/api/deploy-safety` returns `{"safe":true,…}`;
+   - the time is outside 00:30–01:30 UTC (the daily run) and 01:50–02:30 UTC (the backup);
+   - the human has just confirmed: "delete them on production now".
+1. **Delete** on production: `railway variable delete <KEY> -p <project> -s szczur-radar-api -e production` for `RAILPACK_JDK_VERSION`, `DATABASE_URL` and `JWT_SECRET`. Each deletion may redeploy the API (expect up to three redeploys): check `/api/deploy-safety` again before each one.
+2. **Check** by name: `railway variable list -p <project> -s szczur-radar-api -e production --json | jq 'keys'` lists none of the three.
+3. **Other open PRs** (`gh pr list --state open`; on 2026-10-21 #92): delete the same three in each existing PR env and check with `jq 'keys'`. Comment on that PR as well. A later push of that PR with the old `railway.ts` recreates `DATABASE_URL` and `RAILPACK_JDK_VERSION` there; delete them again before its branch takes in `main`.
+4. **Effect.** If the deletion is staged, apply it in the dashboard; if it redeployed the API, wait for `/api/ready` 200.
+5. **Hand over.** Tell the human: merge now; any other merge before it recreates `DATABASE_URL` and `RAILPACK_JDK_VERSION` (then repeat step 1). The agent never merges.
+6. **Record** on issue #78: the variable names after the deletion, `/api/ready`, the time.
+
+### Runbook — after the merge (agent/operator; tracked in issue #78, not in the plan's Progress)
+
+1. **CI on `main`.** All jobs green; `railway-config` plans no `variable.delete` for production.
+2. **Production variables.** `jq 'keys'` on `szczur-radar-api` lists none of the three.
+3. **API.** The merge changes only `context/`, `docs/`, `.railway/` and `tools/`, so it should not redeploy the API (`watchPatterns`). If it did, `/api/ready` returns 200.
+4. **Open PRs.** Each PR env created before the merge has none of the three variables (step 3 above); a PR that takes in `main` keeps a green `railway-config`.
+5. **Record and close.** Comment the results on issue #78 and close it.
+
 ## Phases
+
+> Historical (state of 2026-09-26 – 2026-09-27, FastAPI backend); current: the Java API in section F-03, its image in section `api-docker-image`, the pipeline in sections `first-assessed-wykop-feed` and S-05, the database backup in section F-01, CI and the deploy gate in section S-14.
 
 ### [x] 1. Prepare the application
 

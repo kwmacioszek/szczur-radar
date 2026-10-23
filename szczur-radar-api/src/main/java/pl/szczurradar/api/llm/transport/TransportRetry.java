@@ -8,14 +8,17 @@ import org.springframework.core.retry.RetryTemplate;
 import pl.szczurradar.api.llm.CallFailure;
 import pl.szczurradar.api.llm.LlmCallException;
 import pl.szczurradar.api.llm.LlmConfigurationException;
+import pl.szczurradar.api.llm.LlmUnavailableException;
 import pl.szczurradar.api.llm.ServiceTier;
 
 /**
  * The only retry loop of a model call. Up to {@value #ATTEMPTS_PER_TIER} attempts per tier on
  * {@link TransportException.Kind#retryable() retryable} failures, waiting {@code Retry-After} (capped
- * at 60 s) or {@code min(2^(n-1), 30)} s between them; anything else fails at once. With flex, three
- * consecutive 429 refusals switch the same call to the default tier for up to three more attempts.
- * Contract violations and parse errors never reach this loop — they are not retried.
+ * at 60 s) or {@code min(2^(n-1), 30)} s between them; anything else fails at once. With flex, a tier
+ * whose attempts all failed — any mix of 429, 5xx, time-outs and connection errors — switches the same
+ * call to the default tier for up to three more attempts. Retries used up (or an interruption between
+ * attempts) end as {@link LlmUnavailableException}: the provider was unavailable, not refusing the
+ * request. Contract violations and parse errors never reach this loop — they are not retried.
  */
 public final class TransportRetry {
 
@@ -59,8 +62,8 @@ public final class TransportRetry {
 	/**
 	 * The longest one call can take when each attempt is limited to {@code timeout}
 	 * ({@code LLM_TIMEOUT}): every attempt of a tier runs out its time and each wait is the longest
-	 * {@code Retry-After} — {@value #ATTEMPTS_PER_TIER} attempts and two waits per tier; with flex, three
-	 * refusals add the default tier's attempts (no wait at the switch). A connection phase outside the
+	 * {@code Retry-After} — {@value #ATTEMPTS_PER_TIER} attempts and two waits per tier; with flex, a
+	 * failed flex tier adds the default tier's attempts (no wait at the switch). A connection phase outside the
 	 * attempt's limit (DeepSeek) is not included.
 	 */
 	public static Duration maxCallDuration(Duration timeout, ServiceTier tier) {
@@ -70,18 +73,22 @@ public final class TransportRetry {
 	}
 
 	/**
-	 * Runs {@code attempt} until it succeeds or the attempts are used up.
+	 * Runs {@code attempt} until it succeeds or the attempts are used up. Only a
+	 * {@link TransportException} is classified; any other exception from {@code attempt} passes through
+	 * unchanged, without a retry.
 	 *
-	 * @throws LlmCallException with {@link CallFailure#TIMEOUT} if the last attempt timed out,
-	 *     otherwise {@link CallFailure#PROVIDER_ERROR}; an {@link LlmConfigurationException} when the
-	 *     provider refused the key, the credit or the model
+	 * @throws LlmUnavailableException when the attempts are used up on retryable failures — with
+	 *     {@link CallFailure#TIMEOUT} if the last attempt timed out, otherwise
+	 *     {@link CallFailure#PROVIDER_ERROR} — or the thread was interrupted between attempts
+	 * @throws LlmConfigurationException when the provider refused the key, the credit or the model
+	 * @throws LlmCallException (as such) with {@link CallFailure#PROVIDER_ERROR} when an attempt failed
+	 *     with a non-retryable error: the provider refused this request
 	 */
 	public <T> Outcome<T> run(ServiceTier requested, Attempt<T> attempt) {
 		ServiceTier tier = requested;
 		boolean flexFallback = false;
 		int attempts = 0;
 		while (true) {
-			int rateLimited = 0;
 			TransportException last = null;
 			for (int n = 1; n <= ATTEMPTS_PER_TIER; n++) {
 				attempts++;
@@ -97,23 +104,21 @@ public final class TransportRetry {
 						throw new LlmCallException(CallFailure.PROVIDER_ERROR, ex.getMessage(), attempts, tier,
 								flexFallback, ex);
 					}
-					if (ex.kind() == TransportException.Kind.RATE_LIMITED) {
-						rateLimited++;
-					}
 					if (n < ATTEMPTS_PER_TIER) {
 						sleep(delay(ex, n), attempts, tier, flexFallback);
 					}
 				}
 			}
-			if (tier == ServiceTier.FLEX && rateLimited == ATTEMPTS_PER_TIER) {
+			// Only retryable failures reach the end of a tier: a non-retryable one has already thrown.
+			if (tier == ServiceTier.FLEX) {
 				tier = ServiceTier.DEFAULT;
 				flexFallback = true;
 				continue;
 			}
 			CallFailure failure = last.kind() == TransportException.Kind.TIMEOUT ? CallFailure.TIMEOUT
 					: CallFailure.PROVIDER_ERROR;
-			throw new LlmCallException(failure, "failed after " + attempts + " attempts: " + last.getMessage(),
-					attempts, tier, flexFallback, last);
+			throw new LlmUnavailableException(failure,
+					"failed after " + attempts + " attempts: " + last.getMessage(), attempts, tier, flexFallback, last);
 		}
 	}
 
@@ -133,8 +138,8 @@ public final class TransportRetry {
 		}
 		catch (InterruptedException ex) {
 			Thread.currentThread().interrupt();
-			throw new LlmCallException(CallFailure.PROVIDER_ERROR, "interrupted between attempts", attempts, tier,
-					flexFallback, ex);
+			throw new LlmUnavailableException(CallFailure.PROVIDER_ERROR, "interrupted between attempts", attempts,
+					tier, flexFallback, ex);
 		}
 	}
 

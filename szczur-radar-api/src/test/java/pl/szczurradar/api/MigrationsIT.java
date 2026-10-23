@@ -36,7 +36,7 @@ class MigrationsIT {
 		List<Map<String, Object>> history = jdbc.queryForList(
 				"SELECT version, success FROM flyway_schema_history WHERE version IS NOT NULL ORDER BY installed_rank");
 		assertThat(history).extracting(row -> row.get("version")).containsExactly("1", "2", "3", "4", "5", "6", "7",
-				"8", "9");
+				"8", "9", "10");
 		assertThat(history).allSatisfy(row -> assertThat(row.get("success")).isEqualTo(true));
 	}
 
@@ -115,7 +115,7 @@ class MigrationsIT {
 				"ck_pipeline_runs_interruption_cause", "ck_pipeline_runs_interruption_status");
 		assertThat(constraintsOf("posts")).contains("uq_posts_source_item", "uq_posts_raw_payload", "ck_posts_stage",
 				"ck_posts_stage_attempts", "ck_posts_assessing_owner", "fk_posts_raw_payload", "ck_posts_item_type",
-				"ck_posts_source")
+				"ck_posts_source", "ck_posts_technical_failures")
 			.doesNotContain("ck_posts_resource");
 		assertThat(constraintsOf("assessments")).contains("ck_assessments_outcome", "ck_assessments_failure_class",
 				"ck_assessments_provider", "fk_assessments_post", "fk_assessments_run");
@@ -211,6 +211,17 @@ class MigrationsIT {
 		assertRejected(postInsert("post", "70105", "stored", 0, run, run), "ck_posts_assessing_owner");
 		insertPost("post", "70106", "assessing", 1, run, run);
 		insertPost("post", "70107", "dead", 3, null, run);
+	}
+
+	@Test
+	void aNewPostHasNoTechnicalFailureAndTheCountIsNeverNegative() {
+		UUID run = run(user("post-technical@example.com"), "queued");
+		UUID post = insertPost("post", "70301", "stored", 0, null, run);
+
+		assertThat(jdbc.queryForMap("SELECT technical_failures, last_technical_error FROM posts WHERE id = ?", post))
+			.containsEntry("technical_failures", 0)
+			.containsEntry("last_technical_error", null);
+		assertRejected("UPDATE posts SET technical_failures = -1 WHERE id = '" + post + "'", "ck_posts_technical_failures");
 	}
 
 	@Test

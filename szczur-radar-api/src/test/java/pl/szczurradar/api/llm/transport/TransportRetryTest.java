@@ -14,10 +14,14 @@ import org.junit.jupiter.api.Test;
 import pl.szczurradar.api.llm.CallFailure;
 import pl.szczurradar.api.llm.LlmCallException;
 import pl.szczurradar.api.llm.LlmConfigurationException;
+import pl.szczurradar.api.llm.LlmUnavailableException;
 import pl.szczurradar.api.llm.ServiceTier;
 import pl.szczurradar.api.llm.transport.TransportException.Kind;
 
-/** The retry loop on scripted attempts: counts, waits, classes and the flex fallback. */
+/**
+ * The retry loop on scripted attempts: counts, waits, classes (unavailable, refused, configuration) and
+ * the flex fallback.
+ */
 class TransportRetryTest {
 
 	private final List<Duration> sleeps = new ArrayList<>();
@@ -42,7 +46,7 @@ class TransportRetryTest {
 
 	@Test
 	void threeServerErrorsAreAProviderErrorAfterThreeAttempts() {
-		assertThatExceptionOfType(LlmCallException.class)
+		assertThatExceptionOfType(LlmUnavailableException.class)
 			.isThrownBy(() -> retry.run(ServiceTier.DEFAULT, script(failure(Kind.SERVER_ERROR),
 					failure(Kind.SERVER_ERROR), failure(Kind.SERVER_ERROR), "never")))
 			.satisfies(ex -> {
@@ -54,10 +58,13 @@ class TransportRetryTest {
 
 	@Test
 	void lastAttemptTimingOutIsATimeout() {
-		assertThatExceptionOfType(LlmCallException.class)
+		assertThatExceptionOfType(LlmUnavailableException.class)
 			.isThrownBy(() -> retry.run(ServiceTier.DEFAULT,
 					script(failure(Kind.CONNECTION), failure(Kind.SERVER_ERROR), failure(Kind.TIMEOUT))))
-			.satisfies(ex -> assertThat(ex.failure()).isEqualTo(CallFailure.TIMEOUT));
+			.satisfies(ex -> {
+				assertThat(ex.failure()).isEqualTo(CallFailure.TIMEOUT);
+				assertThat(ex.attempts()).isEqualTo(3);
+			});
 	}
 
 	@Test
@@ -65,9 +72,55 @@ class TransportRetryTest {
 		assertThatExceptionOfType(LlmCallException.class)
 			.isThrownBy(() -> retry.run(ServiceTier.DEFAULT, script(failure(Kind.REJECTED), "never")))
 			.satisfies(ex -> {
+				// the provider refused this request: not an outage
+				assertThat(ex).isNotInstanceOf(LlmUnavailableException.class)
+					.isNotInstanceOf(LlmConfigurationException.class);
 				assertThat(ex.failure()).isEqualTo(CallFailure.PROVIDER_ERROR);
 				assertThat(ex.attempts()).isEqualTo(1);
 			});
+		assertThat(sleeps).isEmpty();
+	}
+
+	@Test
+	void rejectedAfterRetryableFailuresIsStillNotUnavailable() {
+		assertThatExceptionOfType(LlmCallException.class)
+			.isThrownBy(() -> retry.run(ServiceTier.DEFAULT,
+					script(failure(Kind.SERVER_ERROR), failure(Kind.REJECTED), "never")))
+			.satisfies(ex -> {
+				assertThat(ex).isNotInstanceOf(LlmUnavailableException.class);
+				assertThat(ex.attempts()).isEqualTo(2);
+			});
+	}
+
+	@Test
+	void anInterruptionBetweenAttemptsIsUnavailable() {
+		TransportRetry interrupted = new TransportRetry(duration -> {
+			throw new InterruptedException("shutdown");
+		});
+		try {
+			assertThatExceptionOfType(LlmUnavailableException.class)
+				.isThrownBy(() -> interrupted.run(ServiceTier.DEFAULT, script(failure(Kind.SERVER_ERROR), "never")))
+				.satisfies(ex -> {
+					assertThat(ex.failure()).isEqualTo(CallFailure.PROVIDER_ERROR);
+					assertThat(ex.attempts()).isEqualTo(1);
+					assertThat(ex).hasMessageContaining("interrupted").hasCauseInstanceOf(InterruptedException.class);
+				});
+			// the interrupt is kept for the caller
+			assertThat(Thread.currentThread().isInterrupted()).isTrue();
+		}
+		finally {
+			Thread.interrupted();
+		}
+	}
+
+	@Test
+	void anExceptionThatIsNotATransportFailurePassesThroughWithoutARetry() {
+		IllegalStateException bug = new IllegalStateException("a bug in the client");
+		assertThatExceptionOfType(IllegalStateException.class).isThrownBy(() -> retry.run(ServiceTier.FLEX, tier -> {
+			tiers.add(tier);
+			throw bug;
+		})).isSameAs(bug);
+		assertThat(tiers).containsExactly(ServiceTier.FLEX);
 		assertThat(sleeps).isEmpty();
 	}
 
@@ -111,7 +164,7 @@ class TransportRetryTest {
 
 	@Test
 	void fallbackHasThreeAttemptsOfItsOwn() {
-		assertThatExceptionOfType(LlmCallException.class)
+		assertThatExceptionOfType(LlmUnavailableException.class)
 			.isThrownBy(() -> retry.run(ServiceTier.FLEX, script(failure(Kind.RATE_LIMITED), failure(Kind.RATE_LIMITED),
 					failure(Kind.RATE_LIMITED), failure(Kind.RATE_LIMITED), failure(Kind.RATE_LIMITED),
 					failure(Kind.RATE_LIMITED), "never")))
@@ -130,18 +183,49 @@ class TransportRetryTest {
 		// 3 × 300 s + 2 × 60 s
 		assertThat(TransportRetry.maxCallDuration(Duration.ofSeconds(300), ServiceTier.DEFAULT))
 			.isEqualTo(Duration.ofMinutes(17));
-		// Flex falls back to the default tier after three refusals: twice that (production).
+		// Flex falls back to the default tier after a failed flex tier: twice that (production).
 		assertThat(TransportRetry.maxCallDuration(Duration.ofSeconds(300), ServiceTier.FLEX))
 			.isEqualTo(Duration.ofMinutes(34));
 	}
 
 	@Test
-	void flexFailingOtherwiseDoesNotFallBack() {
-		assertThatExceptionOfType(LlmCallException.class)
-			.isThrownBy(() -> retry.run(ServiceTier.FLEX, script(failure(Kind.RATE_LIMITED), failure(Kind.SERVER_ERROR),
-					failure(Kind.RATE_LIMITED), "never")))
+	void flexFailingWithMixedErrorsFallsBack() {
+		TransportRetry.Outcome<String> outcome = retry.run(ServiceTier.FLEX, script(failure(Kind.RATE_LIMITED),
+				failure(Kind.SERVER_ERROR), failure(Kind.RATE_LIMITED), "ok"));
+		assertThat(outcome).isEqualTo(new TransportRetry.Outcome<>("ok", 4, ServiceTier.DEFAULT, true));
+		assertThat(tiers).containsExactly(ServiceTier.FLEX, ServiceTier.FLEX, ServiceTier.FLEX, ServiceTier.DEFAULT);
+	}
+
+	@Test
+	void flexTimingOutFallsBack() {
+		TransportRetry.Outcome<String> outcome = retry.run(ServiceTier.FLEX,
+				script(failure(Kind.TIMEOUT), failure(Kind.TIMEOUT), failure(Kind.TIMEOUT), "ok"));
+		assertThat(outcome).isEqualTo(new TransportRetry.Outcome<>("ok", 4, ServiceTier.DEFAULT, true));
+		assertThat(tiers).containsExactly(ServiceTier.FLEX, ServiceTier.FLEX, ServiceTier.FLEX, ServiceTier.DEFAULT);
+	}
+
+	@Test
+	void bothTiersUsedUpAreUnavailableWithTheLastAttemptsFailure() {
+		assertThatExceptionOfType(LlmUnavailableException.class)
+			.isThrownBy(() -> retry.run(ServiceTier.FLEX, script(failure(Kind.RATE_LIMITED), failure(Kind.CONNECTION),
+					failure(Kind.SERVER_ERROR), failure(Kind.SERVER_ERROR), failure(Kind.RATE_LIMITED),
+					failure(Kind.TIMEOUT), "never")))
 			.satisfies(ex -> {
-				assertThat(ex.attempts()).isEqualTo(3);
+				assertThat(ex.failure()).isEqualTo(CallFailure.TIMEOUT);
+				assertThat(ex.attempts()).isEqualTo(6);
+				assertThat(ex.serviceTier()).isEqualTo(ServiceTier.DEFAULT);
+				assertThat(ex.flexFallback()).isTrue();
+			});
+	}
+
+	@Test
+	void aRejectionOnFlexDoesNotFallBack() {
+		assertThatExceptionOfType(LlmCallException.class)
+			.isThrownBy(() -> retry.run(ServiceTier.FLEX,
+					script(failure(Kind.RATE_LIMITED), failure(Kind.REJECTED), "never")))
+			.satisfies(ex -> {
+				assertThat(ex).isNotInstanceOf(LlmUnavailableException.class);
+				assertThat(ex.attempts()).isEqualTo(2);
 				assertThat(ex.flexFallback()).isFalse();
 			});
 		assertThat(tiers).containsOnly(ServiceTier.FLEX);
