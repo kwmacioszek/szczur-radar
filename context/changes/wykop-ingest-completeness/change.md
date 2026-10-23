@@ -49,3 +49,8 @@ Break-check nowych testów: zdjęcie `clean` z `DEADLINE_EXCEEDED` i klucz dokle
 - Wynik: `partial` — `fetched` 579, `skipped` 0, `newPosts` 579, `assessedOk` 559, `assessedFailed` 20, `dead` 0, `processingErrors` 0, `needsAttention` false; wszystkie kroki `succeeded`, krok `fetch` 8 s. `partial` pochodzi z oceny (20 postów `failed` do ponowienia w następnym przebiegu, poza zakresem S-16), nie z pobierania.
 - Logi API PR env za 09:03–09:08:30 UTC (79 linii): „Retrying Wykop” 0, „Reading Wykop … again” 0, „stayed inconsistent” 0, WARN 0, ERROR 0; wystąpienia wartości `WYKOP_KEY`/`WYKOP_SECRET` (`grep -cF`, bez wypisywania): 0 — zarówno kluczy PR env (odczytanych z `railway variables` do pliku 600 i usuniętych), jak i lokalnych z `wykop.env`. Klucze PR env są inne niż lokalne (porównanie `cmp`, bez wypisywania).
 - Porównanie z `total` wyszukiwarki: niewykonane. Sonda z `wykop.env` na te same dni (09:04:20 i 09:04:52 UTC) dostała HTTP 401 na wszystkie 4 wyszukiwania; 2026-10-21 te same (lokalne) klucze działały, a PR env pobiera innymi kluczami, które działają. Zapas z planu (`fetched` nocnego przebiegu produkcji za ten sam zakres D-2…D-1) wymaga odczytu produkcji — czeka na decyzję człowieka.
+
+### Decyzje człowieka (2026-10-23)
+
+- 3.4: treść komunikatów WARN i `INCOMPLETE_PAGING` zaakceptowana (zasób, ile z ilu i powód wystarczają operatorowi).
+- 4.3: status `partial` przebiegu `e95f631b` wystarcza — pobranie pełne (579, `skipped` 0, bez ostrzeżeń), 20 ocen `failed` jest poza zakresem S-16. Do zamknięcia 4.3 zostaje porównanie `fetched` z `total` sondy; lokalne klucze z `wykop.env` odrzuca już `auth` (HTTP 401), więc sonda czeka na nowe klucze.
