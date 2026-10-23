@@ -406,5 +406,5 @@ Brak migracji, zmiennych środowiskowych i zmian IaC. Wycofanie = revert PR.
 #### Manual
 
 - [x] 4.2 Lekcja dopisana na końcu `lessons.md` — 1cf5f7b
-- [ ] 4.3 Przebieg za zakres w PR env `succeeded`, `fetched` zgodne z `total`
+- [x] 4.3 Przebieg za zakres w PR env `succeeded`, `fetched` zgodne z `total` — 60b2541
 - [ ] 4.4 Komentarz w issue S-16 z wynikiem weryfikacji
