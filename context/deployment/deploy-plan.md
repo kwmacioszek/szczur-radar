@@ -1476,7 +1476,7 @@ Run after `/10x-impl-review` and `/10x-archive`, when the PR is ready and the hu
 
 ## deploy-verification-hardening: wiarygodna weryfikacja wdrożeń (monitor zewnętrzny)
 
-**Status (2026-10-20): in progress** on branch `feature/deploy-verification-hardening`; not merged. Change: `context/changes/deploy-verification-hardening/`. It replaces the S-14 workflow `deploy-verify` (section S-14, "`deploy-verify` and the `deploy-health` issue"):
+**Status (2026-10-23): delivered by PR #99** (squash `9ef690b`; production verification and closure in issue #91, runbook below). Change: `context/archive/2026-10-20-deploy-verification-hardening/`. It replaces the S-14 workflow `deploy-verify` (section S-14, "`deploy-verify` and the `deploy-health` issue"):
 - Railway gives one GitHub Deployment per environment and commit, with statuses that do not name the service. Every `in_progress` gave a `skipped` run (29 of 49 runs), a `failure` of any service (e.g. a cron's deliberate `CRASHED`) marked the whole environment, and a later `success` masked it.
 - The workflow could never end red: Wait for CI counts the conclusion of every workflow at a commit in szczur-radar, so a red run would block a redeploy of that commit.
 

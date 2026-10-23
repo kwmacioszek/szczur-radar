@@ -584,11 +584,11 @@ GitHubem i Workerem.
 
 #### Automated
 
-- [x] 4.1 `tools/deploy-gate/test.sh` przechodzi — ad27491
-- [x] 4.2 Brak odwołań do `verify-deploy.sh` i `deploy-verify.yml` poza `context/` — ad27491
-- [x] 4.3 CI szczur-radar na PR zielone — ad27491
+- [x] 4.1 `tools/deploy-gate/test.sh` przechodzi — 9ef690b
+- [x] 4.2 Brak odwołań do `verify-deploy.sh` i `deploy-verify.yml` poza `context/` — 9ef690b
+- [x] 4.3 CI szczur-radar na PR zielone — 9ef690b
 
 #### Manual
 
-- [x] 4.4 Brak runów `deploy-verify` przy nowym head SHA — 76c7110
-- [x] 4.5 Runbook zaakceptowany przez operatora — 76c7110
+- [x] 4.4 Brak runów `deploy-verify` przy nowym head SHA — 9ef690b
+- [x] 4.5 Runbook zaakceptowany przez operatora — 9ef690b
