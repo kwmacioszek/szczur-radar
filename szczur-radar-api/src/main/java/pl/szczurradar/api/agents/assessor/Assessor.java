@@ -24,6 +24,7 @@ import pl.szczurradar.api.llm.LlmConfigurationException;
 import pl.szczurradar.api.llm.LlmProviderProperties;
 import pl.szczurradar.api.llm.LlmRequest;
 import pl.szczurradar.api.llm.LlmResponse;
+import pl.szczurradar.api.llm.LlmUnavailableException;
 import pl.szczurradar.api.llm.Provider;
 
 /**
@@ -106,10 +107,13 @@ public class Assessor {
 
 	/**
 	 * Assesses {@code input}: no model call for an entry without content, exactly one
-	 * {@link LlmClient#complete} otherwise. A failed call is a {@code failed} result with
-	 * {@code provider_error} or {@code timeout}, never an exception — except an
-	 * {@link LlmConfigurationException}: a refused key, credit or model says nothing about this entry,
-	 * so it is thrown and no attempt is recorded.
+	 * {@link LlmClient#complete} otherwise. A call the provider refused or failed with a non-retryable
+	 * error is a {@code failed} result with {@code provider_error} or {@code timeout}, not an exception.
+	 * Two failures say nothing about this entry, so they are thrown and no attempt is recorded:
+	 *
+	 * @throws LlmConfigurationException the provider refused the key, the credit or the model
+	 * @throws LlmUnavailableException the provider stayed unavailable after the client's retries (or the
+	 *     call was interrupted between attempts)
 	 */
 	public AssessmentResult assess(AssessmentInputV1 input) {
 		return switch (prepare(input)) {
@@ -124,7 +128,7 @@ public class Assessor {
 		try {
 			response = llmClient.complete(request.request());
 		}
-		catch (LlmConfigurationException ex) {
+		catch (LlmConfigurationException | LlmUnavailableException ex) {
 			throw ex;
 		}
 		catch (LlmCallException ex) {

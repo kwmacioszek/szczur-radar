@@ -4,12 +4,14 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.http.HttpTimeoutException;
 import java.time.Duration;
+import java.util.Optional;
 
 import org.jspecify.annotations.Nullable;
 
 /**
  * One failed HTTP attempt, classified for {@link TransportRetry}. Provider clients translate their
- * SDK's errors into this.
+ * SDK's errors into this — only those they can classify: an exception they cannot is not a transport
+ * failure and leaves the client outside this type ({@link #unclassified}).
  */
 public class TransportException extends RuntimeException {
 
@@ -35,7 +37,10 @@ public class TransportException extends RuntimeException {
 		 */
 		CONFIGURATION(false),
 
-		/** Any other error, including a model refusal or a blocked answer. Never retried. */
+		/**
+		 * Any other HTTP 4xx status, a model refusal, a blocked answer or an answer without text. Never
+		 * retried.
+		 */
 		REJECTED(false);
 
 		private final boolean retryable;
@@ -96,21 +101,34 @@ public class TransportException extends RuntimeException {
 	}
 
 	/**
-	 * An exception without an HTTP status: a time-out or I/O error found in its cause chain, otherwise
-	 * {@link Kind#REJECTED}.
+	 * An exception without an HTTP status as a transport failure, if its cause chain says it is one: a
+	 * time-out ({@link Kind#TIMEOUT}) or an I/O error ({@link Kind#CONNECTION}). Empty otherwise — the
+	 * exception is not classified ({@link #unclassified}).
 	 */
-	public static TransportException ofThrowable(Throwable error, ProviderMessages messages) {
+	public static Optional<TransportException> ofTimeoutOrConnection(Throwable error, ProviderMessages messages) {
 		for (Throwable cause = error; cause != null; cause = cause.getCause()) {
 			if (cause instanceof InterruptedIOException || cause instanceof HttpTimeoutException) {
-				return new TransportException(Kind.TIMEOUT, messages.clean("time-out: " + cause), null, error);
+				String message = messages.clean("time-out: " + cause);
+				return Optional.of(new TransportException(Kind.TIMEOUT, message, null, error));
 			}
 		}
 		for (Throwable cause = error; cause != null; cause = cause.getCause()) {
 			if (cause instanceof IOException) {
-				return new TransportException(Kind.CONNECTION, messages.clean("I/O error: " + cause), null, error);
+				String message = messages.clean("I/O error: " + cause);
+				return Optional.of(new TransportException(Kind.CONNECTION, message, null, error));
 			}
 		}
-		return new TransportException(Kind.REJECTED, messages.clean(String.valueOf(error)), null, error);
+		return Optional.empty();
+	}
+
+	/**
+	 * An exception a provider client cannot classify — a bug in our code or an unknown SDK error — as
+	 * what leaves the client instead of a transport failure: never retried and outside
+	 * {@code LlmCallException}, so it is not recorded as a provider error. The message is cleaned (it may
+	 * be recorded) and the original stays as the cause.
+	 */
+	public static IllegalStateException unclassified(Throwable error, ProviderMessages messages) {
+		return new IllegalStateException(messages.clean(String.valueOf(error)), error);
 	}
 
 	/** {@code Retry-After} in seconds (the HTTP-date form is not used by the providers), or {@code null}. */

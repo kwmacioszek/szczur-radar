@@ -7,6 +7,7 @@ import static org.mockito.Mockito.when;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.InstantSource;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -47,11 +48,13 @@ import pl.szczurradar.api.agents.assessor.Prefilter;
 import pl.szczurradar.api.agents.assessor.Provenance;
 import pl.szczurradar.api.agents.assessor.contract.ContractJson;
 import pl.szczurradar.api.cli.MigrateCommand;
+import pl.szczurradar.api.llm.CallFailure;
 import pl.szczurradar.api.llm.Channel;
 import pl.szczurradar.api.llm.LlmClient;
 import pl.szczurradar.api.llm.LlmConfigurationException;
 import pl.szczurradar.api.llm.LlmRequest;
 import pl.szczurradar.api.llm.LlmResponse;
+import pl.szczurradar.api.llm.LlmUnavailableException;
 import pl.szczurradar.api.llm.OutputMode;
 import pl.szczurradar.api.llm.Provider;
 import pl.szczurradar.api.llm.ServiceTier;
@@ -608,6 +611,81 @@ class PipelineAgentIT {
 		}
 	}
 
+	@Test
+	@Order(14)
+	void aProviderUnavailableForThreeCallsInARowFailsTheRunWithoutUsingAnAttempt() {
+		List<UUID> ids = modelAssessedPosts(4);
+		jdbc.update("UPDATE posts SET stage = 'stored', assessment_attempts = 0 WHERE id IN (?, ?, ?)", ids.get(0),
+				ids.get(1), ids.get(2));
+		jdbc.update("UPDATE posts SET stage = 'failed', assessment_attempts = 2 WHERE id = ?", ids.get(3));
+		int assessments = count("SELECT count(*) FROM assessments", null);
+		// The check passes (the mock's default); every call then finds the provider unavailable.
+		answer(request -> {
+			throw new LlmUnavailableException(CallFailure.PROVIDER_ERROR, "HTTP 503 after 3 attempts", 3,
+					ServiceTier.DEFAULT, false, null);
+		});
+
+		UUID run = service.startPosts(ids, admin).getFirst().getId();
+
+		Map<String, Object> finished = finished(run);
+		assertThat(finished).containsEntry("status", "failed")
+			.containsEntry("assessed_ok", 0)
+			.containsEntry("assessed_failed", 0)
+			.containsEntry("processing_errors", 0);
+		assertThat((String) finished.get("error")).contains("the LLM provider is unavailable: 3 calls in a row",
+				"HTTP 503 after 3 attempts");
+		// No attempt and no technical failure: the outage is the run's failure, not the posts'.
+		assertThat(count("SELECT count(*) FROM assessments", null)).isEqualTo(assessments);
+		for (UUID id : ids.subList(0, 3)) {
+			assertThat(post(id)).containsEntry("stage", "stored")
+				.containsEntry("assessment_attempts", 0)
+				.containsEntry("technical_failures", 0)
+				.containsEntry("assessing_run_id", null);
+		}
+		assertThat(post(ids.get(3))).containsEntry("stage", "failed")
+			.containsEntry("assessment_attempts", 2)
+			.containsEntry("technical_failures", 0);
+		awaitClosed(run);
+		assertThat(notified(run)).isOne();
+	}
+
+	@Test
+	@Order(15)
+	void anOutageOfARunAStoppingInstanceInterruptedCountsNothing(CapturedOutput output) throws InterruptedException {
+		UUID post = modelAssessedPosts(1).getFirst();
+		jdbc.update("UPDATE posts SET stage = 'failed', assessment_attempts = 1 WHERE id = ?", post);
+		CountDownLatch called = new CountDownLatch(1);
+		CountDownLatch answered = new CountDownLatch(1);
+		answer(request -> {
+			called.countDown();
+			await(answered);
+			throw new LlmUnavailableException(CallFailure.PROVIDER_ERROR, "HTTP 503 after 3 attempts", 3,
+					ServiceTier.DEFAULT, false, null);
+		});
+		// A second instance of the service, as during a deployment overlap; the shared one keeps running.
+		PipelineRunService stopping = new PipelineRunService(runs, posts, sources, recorder, transitions, notifications,
+				dispatcher, agentPlatform, jdbcClient, transaction, "deployment-stopping");
+		try {
+			UUID run = stopping.startPosts(List.of(post), admin).getFirst().getId();
+			assertThat(called.await(30, TimeUnit.SECONDS)).isTrue();
+
+			stopping.onClose();
+			assertThat(run(run)).containsEntry("status", "interrupted");
+			// The held call now ends with the outage, after its run was interrupted and its post put back.
+			answered.countDown();
+
+			awaitLog(output, "Run " + run + " assess: 1/1 (ok 0, failed 0, dead 0, errors 0, unavailable 1)");
+			assertThat(post(post)).containsEntry("stage", "failed")
+				.containsEntry("assessment_attempts", 1)
+				.containsEntry("technical_failures", 0)
+				.containsEntry("assessing_run_id", null);
+			assertThat(run(run)).containsEntry("status", "interrupted").containsEntry("processing_errors", 0);
+		}
+		finally {
+			answered.countDown();
+		}
+	}
+
 	/** Wykop's searches so far (entries and links, every page). */
 	private static int searches() {
 		return (int) WYKOP.requests()
@@ -773,7 +851,10 @@ class PipelineAgentIT {
 
 		@Bean
 		WykopRepository wykopRepository() {
-			return new WykopRepository(new WykopApiClient(WYKOP.baseUrl(), "k", "s", Duration.ofSeconds(5)), duration -> {
+			// No real waits between the client's attempts: a Wykop that stays down fails the fetch at once.
+			WykopApiClient client = new WykopApiClient(WYKOP.baseUrl(), "k", "s", Duration.ofSeconds(5), wait -> {
+			}, InstantSource.system());
+			return new WykopRepository(client, duration -> {
 			}, Duration.ZERO);
 		}
 

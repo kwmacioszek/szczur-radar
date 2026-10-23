@@ -1,6 +1,7 @@
 package pl.szczurradar.api.agents.assessor;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static pl.szczurradar.api.agents.assessor.ContractFixtures.claim;
 import static pl.szczurradar.api.agents.assessor.ContractFixtures.investment;
 import static pl.szczurradar.api.agents.assessor.ContractFixtures.target;
@@ -35,6 +36,7 @@ import pl.szczurradar.api.llm.LlmCallException;
 import pl.szczurradar.api.llm.LlmClient;
 import pl.szczurradar.api.llm.LlmRequest;
 import pl.szczurradar.api.llm.LlmResponse;
+import pl.szczurradar.api.llm.LlmUnavailableException;
 import pl.szczurradar.api.llm.OutputMode;
 import pl.szczurradar.api.llm.Provider;
 import pl.szczurradar.api.llm.ReasoningEffort;
@@ -75,6 +77,7 @@ class AssessorTest {
 	@ParameterizedTest
 	@EnumSource(value = CallFailure.class)
 	void aFailedCallIsFailedWithItsClassAfterOneCall(CallFailure failure) {
+		// A plain LlmCallException (neither unavailable nor a refused configuration) is the entry's failed result.
 		ScriptedClient client = ScriptedClient.failing(new LlmCallException(failure, "HTTP 503 after 3 attempts", 3,
 				ServiceTier.DEFAULT, true, null));
 
@@ -102,6 +105,19 @@ class AssessorTest {
 		assertThat(provenance.channel()).isNull();
 		assertThat(provenance.outputMode()).isNull();
 		assertThat(provenance.inputTokens()).isNull();
+	}
+
+	@ParameterizedTest
+	@EnumSource(value = CallFailure.class)
+	void aProviderUnavailableAfterTheRetriesIsThrownNotAFailedResult(CallFailure failure) {
+		LlmUnavailableException outage = new LlmUnavailableException(failure, "HTTP 503 after 3 attempts", 3,
+				ServiceTier.DEFAULT, true, null);
+		ScriptedClient client = ScriptedClient.failing(outage);
+
+		// It says nothing about the entry: no failed result, so no attempt for it.
+		assertThatExceptionOfType(LlmUnavailableException.class).isThrownBy(() -> assessor(client).assess(INPUT))
+			.isSameAs(outage);
+		assertThat(client.requests).hasSize(1);
 	}
 
 	@Test

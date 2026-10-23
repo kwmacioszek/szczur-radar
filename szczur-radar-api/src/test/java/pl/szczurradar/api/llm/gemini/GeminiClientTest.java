@@ -3,6 +3,7 @@ package pl.szczurradar.api.llm.gemini;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
+import java.io.IOException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -10,6 +11,8 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.ai.chat.prompt.Prompt;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ArrayNode;
@@ -25,11 +28,14 @@ import pl.szczurradar.api.llm.LlmConfigurationException;
 import pl.szczurradar.api.llm.LlmProviderProperties;
 import pl.szczurradar.api.llm.LlmRequest;
 import pl.szczurradar.api.llm.LlmResponse;
+import pl.szczurradar.api.llm.LlmUnavailableException;
 import pl.szczurradar.api.llm.OutputMode;
 import pl.szczurradar.api.llm.Provider;
 import pl.szczurradar.api.llm.ScriptedProviderServer;
 import pl.szczurradar.api.llm.ScriptedProviderServer.Reply;
 import pl.szczurradar.api.llm.ServiceTier;
+import pl.szczurradar.api.llm.transport.ProviderMessages;
+import pl.szczurradar.api.llm.transport.TransportRetry;
 
 /**
  * The Gemini client against a local server replaying a real Google AI Studio response
@@ -223,6 +229,50 @@ class GeminiClientTest {
 				assertThat(ex.attempts()).isEqualTo(3);
 			});
 		assertThat(sleeps).containsExactly(Duration.ofSeconds(1), Duration.ofSeconds(2));
+	}
+
+	@Test
+	void anUnknownSdkErrorLeavesTheClientUnclassifiedAfterOneCall() {
+		// An SDK exception without I/O in its cause chain (synthetic; its message quotes the key): not a
+		// transport failure, so neither a refusal nor retried, and the key does not reach the message.
+		RuntimeException sdkError = new RuntimeException("unexpected state for the key synthetic-key");
+		List<Prompt> calls = new ArrayList<>();
+		LlmClient client = stubbed(prompt -> {
+			calls.add(prompt);
+			throw sdkError;
+		});
+
+		assertThatExceptionOfType(IllegalStateException.class).isThrownBy(() -> client.complete(REQUEST))
+			.satisfies(ex -> {
+				assertThat(ex.getCause()).isSameAs(sdkError);
+				assertThat(ex.getMessage()).contains("unexpected state", "<hidden>").doesNotContain("synthetic-key");
+			});
+		assertThat(calls).hasSize(1);
+		assertThat(sleeps).isEmpty();
+	}
+
+	@Test
+	void anSdkErrorCausedByIoIsAConnectionErrorAndRetried() {
+		List<Prompt> calls = new ArrayList<>();
+		LlmClient client = stubbed(prompt -> {
+			calls.add(prompt);
+			throw new RuntimeException("request failed", new IOException("connection reset"));
+		});
+
+		assertThatExceptionOfType(LlmUnavailableException.class).isThrownBy(() -> client.complete(REQUEST))
+			.satisfies(ex -> {
+				assertThat(ex.failure()).isEqualTo(CallFailure.PROVIDER_ERROR);
+				assertThat(ex.attempts()).isEqualTo(3);
+				assertThat(ex.getMessage()).contains("I/O error", "connection reset");
+			});
+		assertThat(calls).hasSize(3);
+		assertThat(sleeps).containsExactly(Duration.ofSeconds(1), Duration.ofSeconds(2));
+	}
+
+	/** The client on a stand-in for the SDK's chat model, with the test's key and recorded waits. */
+	private LlmClient stubbed(ChatModel chatModel) {
+		return new GeminiClient(chatModel, "gemini-3.1-flash-lite", new TransportRetry(sleeps::add),
+				new ProviderMessages("synthetic-key"));
 	}
 
 	private LlmClient client(String baseUrl, Duration timeout) {

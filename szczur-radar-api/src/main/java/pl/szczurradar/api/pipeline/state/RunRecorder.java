@@ -118,6 +118,17 @@ public class RunRecorder {
 			.update();
 	}
 
+	/**
+	 * Moves the run's last activity while it is running, without changing a counter: a post's call that
+	 * ended with nothing to count yet (the provider unavailable, counted once the step has ended) is
+	 * progress too, so the watchdog never stops a run the breaker would.
+	 */
+	public void touch(UUID runId) {
+		statuses(jdbc.sql("UPDATE pipeline_runs SET last_activity_at = now() WHERE id = :id AND status = :running"))
+			.param("id", runId)
+			.update();
+	}
+
 	/** Sets the run's error text while it is running (e.g. the summary of technical errors). */
 	public void error(UUID runId, String error) {
 		statuses(jdbc.sql("UPDATE pipeline_runs SET error = :error WHERE id = :id AND status = :running"))
@@ -257,9 +268,7 @@ public class RunRecorder {
 					runId, step.value(), Durations.since(startedNanos));
 			return;
 		}
-		statuses(jdbc.sql("UPDATE pipeline_runs SET last_activity_at = now() WHERE id = :id AND status = :running"))
-			.param("id", runId)
-			.update();
+		touch(runId);
 		log.info("Run {} step {} {}{} in {}", runId, step.value(), status.value(),
 				itemsOut == null ? "" : " (out " + itemsOut + ")", Durations.since(startedNanos));
 	}

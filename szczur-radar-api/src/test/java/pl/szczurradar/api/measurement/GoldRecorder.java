@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
 import java.time.Clock;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -15,8 +16,11 @@ import org.springframework.core.env.StandardEnvironment;
 
 import pl.szczurradar.api.agents.assessor.AssessmentResult;
 import pl.szczurradar.api.agents.assessor.Assessor;
+import pl.szczurradar.api.agents.assessor.Preparation;
+import pl.szczurradar.api.agents.assessor.contract.AssessmentInputV1;
 import pl.szczurradar.api.llm.LlmClientFactory;
 import pl.szczurradar.api.llm.LlmProviderProperties;
+import pl.szczurradar.api.llm.LlmUnavailableException;
 import pl.szczurradar.api.measurement.GoldLabels.Post;
 import pl.szczurradar.api.measurement.ModelsConfig.Model;
 
@@ -58,7 +62,7 @@ class GoldRecorder {
 			if (!rerecord && existing.containsKey(post.postId())) {
 				continue;
 			}
-			AssessmentResult result = assessor.assess(post.input());
+			AssessmentResult result = assess(assessor, post.input());
 			Recording.of(post.postId(), model.id(), properties.provider(), result).write();
 			recorded++;
 			ok += result.ok() ? 1 : 0;
@@ -72,6 +76,22 @@ class GoldRecorder {
 		assertThat(Recording.readAll(model.id()).stream().filter(Recording::current).count())
 			.as("current recordings of " + model.id())
 			.isEqualTo(posts.size());
+	}
+
+	/**
+	 * {@link Assessor#assess}, with a provider unavailable after the retries recorded as the failed call
+	 * of this entry, as before {@code LlmUnavailableException} existed: the measurement reports it and goes
+	 * on.
+	 */
+	private static AssessmentResult assess(Assessor assessor, AssessmentInputV1 input) {
+		long start = System.nanoTime();
+		try {
+			return assessor.assess(input);
+		}
+		catch (LlmUnavailableException ex) {
+			return assessor.failed(((Preparation.Prepared) assessor.prepare(input)).request(), ex,
+					Duration.ofNanos(System.nanoTime() - start));
+		}
 	}
 
 }

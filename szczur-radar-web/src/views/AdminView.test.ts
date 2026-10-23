@@ -60,7 +60,7 @@ function run(overrides: Partial<Run> = {}): Run {
   }
 }
 
-function failed(id: string, stage: FailedPost['stage']): FailedPost {
+function failed(id: string, stage: FailedPost['stage'], overrides: Partial<FailedPost> = {}): FailedPost {
   return {
     id,
     itemType: 'post',
@@ -71,7 +71,16 @@ function failed(id: string, stage: FailedPost['stage']): FailedPost {
     stage,
     assessmentAttempts: stage === 'dead' ? 3 : 1,
     lastAttempt: { failureClass: 'timeout', violations: [], assessedAt: '2026-10-02T06:10:00Z', provider: 'gemini', model: 'm' },
+    technicalFailures: 0,
+    lastTechnicalError: null,
+    onHold: false,
+    ...overrides,
   }
+}
+
+/** A stored post on hold: no stored attempt, three technical failures in a row. */
+function onHold(id: string, lastTechnicalError = 'IllegalStateException: a bug in the mapper'): FailedPost {
+  return failed(id, 'stored', { assessmentAttempts: 0, lastAttempt: null, technicalFailures: 3, lastTechnicalError, onHold: true })
 }
 
 /** `attachTo`: in the document, for focus. */
@@ -348,6 +357,43 @@ describe('AdminView', () => {
 
     expect(retryPosts).toHaveBeenCalledWith(['a', 'c'])
     expect(wrapper.find('[role="status"]').text()).toContain('Ponowienie 2')
+  })
+
+  it('shows a post on hold with its technical errors and retries it', async () => {
+    vi.mocked(fetchFailedPosts).mockResolvedValue({ items: [onHold('h'), failed('b', 'dead')], page: 0, size: 50, total: 2 })
+    vi.mocked(retryPosts).mockResolvedValue([run({ kind: 'posts' })])
+    const wrapper = await mountAdmin()
+    const [held] = wrapper.findAll('.failed-posts li')
+    const attempt = held!.find('.attempt')
+    expect(attempt.text()).toContain('wstrzymany')
+    expect(attempt.text()).toContain('błędy techniczne 3')
+    expect(attempt.text()).not.toContain('próby')
+    expect(attempt.find('.technical-error').text()).toBe('IllegalStateException: a bug in the mapper')
+    const box = held!.find('input[type="checkbox"]')
+    expect(box.attributes('disabled')).toBeUndefined()
+
+    await box.setValue(true)
+    await wrapper.findAll('button').find((button) => button.text() === 'Ponów zaznaczone')!.trigger('click')
+    await flushPromises()
+
+    expect(retryPosts).toHaveBeenCalledWith(['h'])
+  })
+
+  it('shows both reasons for a failed post with technical errors, and the whole error in its title', async () => {
+    const error = `LlmUnavailableException: ${'connection reset '.repeat(20)}`
+    vi.mocked(fetchFailedPosts).mockResolvedValue({
+      items: [failed('a', 'failed', { technicalFailures: 1, lastTechnicalError: error })],
+      page: 0,
+      size: 50,
+      total: 1,
+    })
+    const wrapper = await mountAdmin()
+    const attempt = wrapper.find('.failed-posts .attempt')
+    expect(attempt.text()).toContain('próby 1')
+    expect(attempt.text()).toContain('przekroczony czas')
+    expect(attempt.text()).toContain('błędy techniczne 1')
+    expect(attempt.text()).not.toContain('wstrzymany')
+    expect(attempt.find('.technical-error').attributes('title')).toBe(error)
   })
 
   it('says the retry is under way while the server answers', async () => {

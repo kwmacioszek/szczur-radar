@@ -121,10 +121,6 @@ export default defineRailway(() => {
     deploy: { sleepApplication: true, limitOverride: API_LIMITS },
     env: {
       PORT: API_INTERNAL_PORT,
-      // Nieużywane od `api-docker-image` (JDK pochodzi z obrazu Dockera). Zostaje
-      // zadeklarowane, bo usunięcie zmiennej to `variable.delete`, które bramka CI
-      // odrzuca jako destrukcyjne.
-      RAILPACK_JDK_VERSION: "25",
       // Split Postgres variables for the JDBC URL
       // (jdbc:postgresql://${PGHOST}:${PGPORT}/${PGDATABASE}) — no DATABASE_URL parsing.
       PGHOST: db.env.PGHOST,
@@ -132,13 +128,6 @@ export default defineRailway(() => {
       PGUSER: db.env.PGUSER,
       PGPASSWORD: db.env.PGPASSWORD,
       PGDATABASE: db.env.PGDATABASE,
-      // Nieużywane od F-03 (Java czyta PG*). Zostaje zadeklarowane, bo usunięcie
-      // zmiennej to `variable.delete`, które bramka CI odrzuca jako destrukcyjne.
-      DATABASE_URL: db.env.DATABASE_URL,
-      // Nieużywane od F-03 (sesje Spring Session JDBC zamiast JWT). Produkcja ma
-      // zapieczętowaną wartość; bez preserve() plan na main proponowałby
-      // `Delete variable JWT_SECRET`, które bramka CI odrzuca. Nigdy wartość tutaj.
-      JWT_SECRET: preserve(),
       // LLM provider for Embabel (szczur-radar-api/README.md): set by the operator
       // in every environment BEFORE the API deploys — preserve() only keeps an
       // existing value, it never creates one. The key is a secret of that

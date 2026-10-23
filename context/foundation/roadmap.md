@@ -3,7 +3,7 @@ project: "Szczur Radar"
 version: 3
 status: draft # draft | active | locked
 created: 2026-09-27
-updated: 2026-10-20
+updated: 2026-10-23
 prd_version: 2
 main_goal: quality
 top_blocker: decisions # 5 decyzji produktowych z audytu (context/archive/2026-10-17-post-mvp-pipeline-audit/research.md, Open Questions); najdroższa, kanał alarmowy poza aplikacją (F-04), rozstrzygnięta 2026-10-20: healthchecks.io → Telegram
@@ -95,17 +95,17 @@ Na Wykopie (#gielda) i Reddicie codziennie pojawiają się setki postów o inwes
 | ---- | --------------------------- | ---------------------------------------------------------------------------------------------------------------------- | ------------- | ---------------------------------------------------------- | -------- |
 | F-04 | out-of-app-alert-channel    | (foundation) kanał alarmowy poza aplikacją: healthchecks.io → Telegram, $0; crony się meldują, API ma nadawcę zdarzeń i sygnał testowy | —             | MS-04, NFR (sygnał awarii przebiegu); audyt C2, C11         | in-progress |
 | S-08 | empty-run-signal            | operator dostaje sygnał, gdy przebieg nic nie pobrał albo pominął elementy; etykieta świeżości wtedy stoi              | —             | MS-04, MS-01, NFR (sygnał awarii przebiegu); audyt C1, B5  | done |
-| S-09 | attempt-accounting          | awaria dostawcy LLM ani błąd naszego kodu nie zabija postów; post z powtarzalnym błędem technicznym ma limit           | —             | MS-01, MS-03; audyt B2, B3, B9, A1                          | ready    |
+| S-09 | attempt-accounting          | awaria dostawcy LLM ani błąd naszego kodu nie zabija postów; post z powtarzalnym błędem technicznym ma limit           | —             | MS-01, MS-03; audyt B2, B3, B9, A1                          | done |
 | S-10 | llm-config-fail-fast        | operator dostaje błąd startu przy `LLM_TIMEOUT` bez jednostki; czasy są parsowane jedną regułą                        | —             | MS-01, MS-02; audyt B1, E                                   | done     |
 | S-11 | stuck-run-self-heals        | przebieg po martwej instancji i post z wyścigu claim wracają do obiegu bez restartu API                                | —             | MS-01, MS-03; audyt A2, A4                                  | ready    |
 | S-12 | reliable-run-notifications  | admin dostaje każde należne powiadomienie o przebiegu, a stan kroków zgadza się ze statusem przebiegu                  | S-08          | MS-04, MS-01, NFR (sygnał awarii przebiegu); audyt A3, A5, A6 | proposed |
 | S-13 | missed-night-detection      | operator dowie się, że nocny przebieg albo backup nie wystartował, i widzi dni bez danych                              | F-04          | MS-04, NFR (sygnał awarii przebiegu, kopia bazy); audyt C2, C3 | proposed |
 | S-14 | safe-deploy-gate            | merge nie wdroży czerwonego commita, crony czekają na CI, po apply jest kontrola zdrowia, ręczne zmienne nie blokują wdrożeń | —        | MS-02, MS-03; audyt C4, C5, C6, C7                          | done |
 | S-15 | backup-check-completeness   | sprawdzenie kopii bazy obejmuje wszystkie tabele i odrzuca kopię pustej bazy                                           | —             | MS-01, MS-03, NFR (kopia sprawdzana odtworzeniem); audyt C9 | done |
-| S-16 | wykop-ingest-completeness   | stronicowanie Wykopu nie gubi elementów po cichu, a chwilowy błąd Wykopu nie zabija nocy                               | —             | MS-01, MS-03; audyt B5, B6                                  | ready    |
+| S-16 | wykop-ingest-completeness   | stronicowanie Wykopu nie gubi elementów po cichu, a chwilowy błąd Wykopu nie zabija nocy                               | —             | MS-01, MS-03; audyt B5, B6                                  | in-progress |
 | S-17 | pipeline-without-embabel    | przebieg działa bez Embabel, przerwanie dociera do oceny, a testy silnika są skupione i niezależne od kolejności       | S-09          | MS-01, MS-03; audyt E, A7, D                                | proposed |
 | S-18 | error-visibility            | błędy wymagające reakcji (ERROR, `/api/ready`, awaria ścieżki alarmowej) docierają do operatora; klucze nie trafiają do logów | F-04     | MS-04; audyt C10, C11, B7                                   | proposed |
-| S-19 | ops-docs-debt               | operator czyta prawdziwe runbooki i stan; zbędne zmienne IaC usunięte; otwarty dług operacyjny domknięty               | —             | MS-02, MS-04; audyt F, C12, C13                             | ready    |
+| S-19 | ops-docs-debt               | operator czyta prawdziwe runbooki i stan; zbędne zmienne IaC usunięte; otwarty dług operacyjny domknięty               | —             | MS-02, MS-04; audyt F, C12, C13                             | done |
 
 ## Streams
 
@@ -170,9 +170,9 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Parallel with:** F-04, S-08, S-10–S-16, S-18, S-19
 - **Blockers:** —
 - **Unknowns:**
-  - Czy awaria dostawcy ma w ogóle zużywać próby, a jeśli nie — jaki próg bezpiecznika zatrzymuje przebieg (liczba kolejnych błędów, udział)? — Owner: user. Block: no.
+  - Czy awaria dostawcy ma w ogóle zużywać próby, a jeśli nie — jaki próg bezpiecznika zatrzymuje przebieg (liczba kolejnych błędów, udział)? — Owner: user. Block: no. **Rozstrzygnięte (2026-10-20, plan `attempt-accounting`):** awaria dostawcy po ponowieniach nie zużywa prób; bezpiecznik to 3 takie wywołania z rzędu (liczba, nie udział; stała w kodzie), które kończą przebieg `failed`, a posty wracają bez prób; pojedyncza awaria jest błędem technicznym posta, a 3 błędy techniczne z rzędu wstrzymują post (bez automatycznego RETRY, ponowienie przez admina).
 - **Risk:** zmienia model „próba = zapisany wynik `failed`” (`PostTransitions.Outcome`) i liczniki przebiegu — wspólna przyczyna czterech ustaleń, więc jedna zmiana zamiast czterech łat; przed S-17, żeby przepisany silnik niósł nową semantykę.
-- **Status:** ready
+- **Status:** done
 
 ### S-10: Zła konfiguracja LLM zatrzymuje start
 
@@ -261,7 +261,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Unknowns:**
   - Czy wyszukiwarka Wykopu zwraca usunięte elementy i w jakim kształcie? — Owner: team. Block: no (do zbadania w `/10x-research` na prawdziwych odpowiedziach).
 - **Risk:** zmienia źródło, ale nie silnik (zgodnie z NFR „nowe źródło = tylko pozyskanie + mapowanie”); ponowienia nie mogą przekroczyć limitów Wykopu ani progu watchdoga.
-- **Status:** ready
+- **Status:** in-progress
 
 ### S-17: Przebieg bez Embabel
 
@@ -300,7 +300,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** niski; usunięcie zmiennych wymaga kolejności „najpierw operator w Railway, potem plik”, inaczej bramka odmówi `variable.delete`; `context/archive/` zostaje nietknięte (archiwum jest niezmienne).
-- **Status:** ready
+- **Status:** done
 
 ## Backlog Handoff
 
@@ -322,7 +322,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 
 ## Open Roadmap Questions
 
-1. **Czy awaria dostawcy LLM w ogóle zużywa próby postów?** — decyzja produktowa z audytu; od niej zależy semantyka prób w S-09 i to, co przepisze S-17. Owner: user. Block: — (rozstrzyga wywiad `/10x-plan attempt-accounting`).
+1. **Czy awaria dostawcy LLM w ogóle zużywa próby postów?** — decyzja produktowa z audytu; od niej zależy semantyka prób w S-09 i to, co przepisze S-17. Owner: user. Block: — (rozstrzyga wywiad `/10x-plan attempt-accounting`). **Rozstrzygnięte (2026-10-20, plan `attempt-accounting`):** nie zużywa; 3 awarie z rzędu zatrzymują przebieg (bezpiecznik), szczegóły w S-09.
 2. **Weryfikacja produkcji z M-1:** lokalizacja bazy dla filtra S-04 (runbook z issue #17, krok 2: `C`/`POSIX` po cichu psuje `KĘTY`→`Kęty`) i pierwsza noc S-06 (runbook z issue #19, 2026-10-18). Owner: operator. Block: — (runbooki w `deploy-plan.md`; wynik `C`/`POSIX` dałby nowy wycinek).
 3. **Ustalenia z żywego Railway** (audyt, Open Questions 2–7): czy deploy po `config apply` czeka na CI (S-14); czy merge samej dokumentacji po #58 jest `SKIPPED`; czy reguła „deployment crashed” obejmuje crash loop API (F-04); okno SIGTERM→SIGKILL (S-11); aktualne ostrzeżenia Hikari (S-19); przyczyna przebiegu „trwającego” 22 h z 2026-10-09. Owner: operator. Block: — (każdy wycinek przyjmie ostrożne założenie, jeśli odpowiedzi nie będzie).
 4. **Kanał i próg dla FR-025 (powiadomienia o obiecującym trendzie)** — nie ustalono jeszcze, czym jest "obiecujący trend" liczbowo ani gdzie ma trafiać powiadomienie; F-04 może wybrać kanał, który później obsłuży też FR-025. Owner: użytkownik. Block: — (FR-025 odroczone).
@@ -378,3 +378,5 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **S-15: codzienne sprawdzenie kopii bazy zna wszystkie tabele z migracji (także `activation_tokens` i `notifications`) i odrzuca kopię bazy, która jest podejrzanie pusta, zanim wyprze dobre kopie z retencji.** — Archived 2026-10-18 → `context/archive/2026-10-18-backup-check-completeness/`. Lesson: —.
 - **S-10: operator dostaje czytelny błąd startu (serwer i `migrate`), gdy `LLM_TIMEOUT` nie ma jednostki albo jest absurdalnie krótki; wszystkie ustawienia czasu w API są parsowane jedną regułą, a enumy dostawcy nie żyją w klasie konfiguracji.** — Archived 2026-10-18 → `context/archive/2026-10-18-llm-config-fail-fast/`. Lesson: —.
 - **S-08: operator dostaje sygnał (powiadomienie w aplikacji i niezerowe wyjście crona), gdy przebieg nic nie pobrał albo pominął elementy o nieoczekiwanym kształcie; etykieta „Dane zaktualizowane” nie przesuwa się na takim przebiegu.** — Archived 2026-10-19 → `context/archive/2026-10-18-empty-run-signal/`. Lesson: —.
+- **S-19: operator czyta aktualne runbooki i stan: `deploy-plan.md` bez nieaktualnych statusów (S-02, S-04, S-06) i linków do przeniesionych zmian, prawdziwe pomiary JVM, `infrastructure.md` bez LangGraph; zbędne zmienne IaC (`RAILPACK_JDK_VERSION`, `DATABASE_URL`, `JWT_SECRET`) usunięte bez czerwonej bramki; ostrzeżenia Hikari (#36) rozstrzygnięte; nieaktualne issues (#51) zamknięte.** — Archived 2026-10-23 → `context/archive/2026-10-20-ops-docs-debt/`. Lesson: —.
+- **S-09: awaria dostawcy LLM (seria 5xx/timeoutów, mieszane odmowy flex) zatrzymuje przebieg bez zużywania prób postów, flex przechodzi na tryb standardowy także przy mieszanych błędach, błąd naszego kodu w kliencie nie udaje odmowy modelu, a post z powtarzalnym błędem technicznym ma limit i trafia na listę nieudanych.** — Archived 2026-10-23 → `context/archive/2026-10-20-attempt-accounting/`. Lesson: —.
