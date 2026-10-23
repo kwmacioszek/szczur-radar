@@ -608,5 +608,5 @@ Bezpiecznik skraca awarię: przebieg staje po ~9 nieudanych żądaniach HTTP zam
 
 #### Manual
 
-- [ ] 5.3 Zapytanie z runbooka S-09 zwraca oczekiwane posty i nic nie zmienia
+- [x] 5.3 Zapytanie z runbooka S-09 zwraca oczekiwane posty i nic nie zmienia — agent: lokalnie 2026-10-21 i w PR env 2026-10-23, reviews/runbook-query-s09.md
 - [x] 5.4 PRD, `deploy-plan.md` i oba `CLAUDE.md` są spójne z zachowaniem z faz 1–4 — tabela agenta zaakceptowana przez operatora 2026-10-21, R1–R5 i U-a poprawione: reviews/docs-consistency-s09.md

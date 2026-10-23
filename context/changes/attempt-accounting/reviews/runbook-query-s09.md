@@ -38,9 +38,12 @@ po:    8|5abee6307bf53eafbf3f80ab232152e4|13|c822ceccbae8d7e2c0cccd0b8d5dc76c
 
 Zapytanie działa w `BEGIN READ ONLY` … `ROLLBACK`.
 
-## Do zrobienia
+## PR env `szczur-radar-pr-96` (2026-10-23)
 
-Druga część metody: to samo zapytanie tylko do odczytu na `szczur-radar-pr-96` (oczekiwane 0 wierszy). Czeka na koniec awarii Railway.
+Ta sama kopia zapytania (`BEGIN READ ONLY` … `ROLLBACK`) przez `railway ssh -s postgres`. W bazie: 278 postów (261 `assessed`, 17 `failed`, każdy z naruszeniem kontraktu z przebiegu z kroku 3.5).
+
+- Wynik: 0 wierszy, zgodnie z oczekiwaniem.
+- Przed i po: `posts` 278 / md5 `2674a8c5f3757621918833e6df6e7a66`, `assessments` 278 / md5 `69e871c4ddab4e34ae48285fb0bc2469`. Bez zmian.
 
 ## Skrypt danych testowych
 
