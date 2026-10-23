@@ -1224,10 +1224,11 @@ An API older than S-08 gives `skipped ?`; the deploy order of the API and the cr
 | `<environment>/pipeline-trigger` | cron | `30 0 * * *` | 3 h 15 min (`TRIGGER_TIMEOUT` 3 h + 15 min) | 03:45 UTC |
 | `<environment>/db-backup` | cron | `0 2 * * *` | 2 h 15 min (`BACKUP_TIMEOUT` 2 h + 15 min) | 04:15 UTC |
 | `<environment>/api-events` | simple | none (period 365 days) | 365 days | never in practice: every event ends with a success ping |
+| `production/deploy-health` | simple | none (period 365 days) | 365 days | never in practice; production only: the deploy monitor's red runs (section `deploy-verification-hardening`) |
 
 - **The grace counts from `/start`**, so it covers the longest run: the cron's time limit plus a margin for Railway starting a cron a few minutes late.
 - **`tools/healthchecks/checks.sh`** creates and updates the checks with the healthchecks.io management API, an upsert by name (`tools/healthchecks/README.md`):
-  - `checks.sh apply <environment>` upserts the three checks and prints `<name> <ping URL>` for each, on stdout only;
+  - `checks.sh apply <environment>` upserts the environment's checks (three; on production also `production/deploy-health`) and prints `<name> <ping URL>` for each, on stdout only;
   - `checks.sh apply <environment> --schedule '<cron>' --grace <seconds>` overrides the schedule and grace of **both** cron checks, for the PR-env verification only;
   - `checks.sh delete <environment>` deletes the environment's checks.
 
@@ -1489,6 +1490,7 @@ Railway project webhook (szczur-radar, PR envs included, header X-Monitor-Secret
      → workflow_dispatch of verify.yml in kwmacioszek/szczur-radar-monitor (public repo)
         → verifier/verify.sh: the deployed service's state (railway CLI) + probes → green or red run
            → red: one deploy-health issue per environment and service, assigned to the operator
+           → red in production: a Telegram alert through healthchecks.io (check production/deploy-health, F-04)
 ```
 
 - **Webhook.** One Railway webhook on the szczur-radar project, PR envs included, with the header `X-Monitor-Secret`. It is the only change in the Railway project and is not declared in `.railway/railway.ts` (the SDK has no webhooks). Railway sends it best-effort: no order, 3 retries, 30 s timeout.
@@ -1500,6 +1502,7 @@ Railway project webhook (szczur-radar, PR envs included, header X-Monitor-Secret
   - any other service (the crons `pipeline-trigger`, `db-backup`, the database `postgres`): only the state of its deployment, no probes. A run of the API or the web never reads another service's state, and another service's run never reads the API's or the web's.
   - Green = the state is OK and (for the API and the web) every probe passed. Errors after the start (exceptions in the log, failures in traffic) are out of scope.
 - **Issue.** One open issue per **environment and service** in the monitor repo: label `deploy-health`, title `Niezdrowe wdrożenie: <environment> / <service>`, assigned to `MONITOR_ASSIGNEE` (the operator; the assignment gives a push in GitHub Mobile). A red run opens it or comments on the oldest open one; the next green run of **the same service** comments "zielone po deployu `<id>`" and closes it. A green web deploy does not close an open API or cron issue. The title is matched with whole words, so `szczur-radar-pr-8` never matches `szczur-radar-pr-81`. Duplicate webhooks just give another run with the same result.
+- **Telegram alert (production only).** A red run of `production` also sends the check `production/deploy-health` (F-04's healthchecks.io project, `tools/healthchecks/checks.sh`) a `/fail` with `DEPLOY_UNHEALTHY (<environment> / <service>): <state>` and the run's link, then a success: an event like the API's (section F-04), so Telegram shows a "down" with the text and then an "up". The state of the failure lives in the issue, not in the check. A PR env gives only the issue. healthchecks.io failing gives a warning in the run's log and never changes the verdict; without the secret `HEALTHCHECK_PING_URL` nothing is sent.
 - **Wait for CI.** The monitor's runs live in another repo, which Wait for CI does not see. A red run never blocks a redeploy of the same commit.
 
 The monitor's `README.md` and `SECURITY.md` are the reference for the scripts, exit codes, the Worker's answers and the set-up.
@@ -1512,6 +1515,7 @@ The monitor's `README.md` and `SECURITY.md` are the reference for the scripts, e
 | `GITHUB_DISPATCH_TOKEN` | Worker secret | fine-grained PAT: only `szczur-radar-monitor`, **Actions: write**, with an expiry date. A leak lets someone start and cancel the monitor's runs, nothing more |
 | `RAILWAY_API_TOKEN` | secret of the GitHub environment `monitor` in the monitor repo (deployment branches: only `main`); read only by `verify.yml` | a dedicated Railway **workspace** token, separate from szczur-radar's CI token. Railway has no read-only tokens, and a project token covers one environment only, while the monitor also watches PR envs |
 | `GITHUB_TOKEN` | the run's own token | `verify.yml`: `contents: read`, `issues: write` in the monitor repo only |
+| `HEALTHCHECK_PING_URL` | secret of the GitHub environment `monitor` (as `RAILWAY_API_TOKEN`) | the ping URL of `production/deploy-health`, nothing else: a leak lets someone send false deploy alerts. Not the API's or the crons' URLs |
 | `RAILWAY_PROJECT_ID`, `READINESS_SERVICES`, `MONITOR_ASSIGNEE` | repository variables of the monitor repo; `RAILWAY_PROJECT_ID`, `GITHUB_REPO` also in `worker/wrangler.toml` | public values |
 
 No secret of the monitor is in szczur-radar, and szczur-radar's secrets (`RAILWAY_TOKEN` of CI, `LLM_API_KEY`) are not in the monitor.
@@ -1527,6 +1531,12 @@ No secret of the monitor is in szczur-radar, and szczur-radar's secrets (`RAILWA
 - **A Railway workspace token lives in a public repo's GitHub environment.** It is readable only by `verify.yml` on `main`, which only changes through a PR; anyone who can merge to the monitor's `main` can use it. A leak gives access to the whole Railway workspace: revoke it in Railway at once and rotate.
 - **An environment other than `production` and `szczur-radar-pr-<N>`** has no known web origin, so a deploy of the API or the web there is red "nieweryfikowalne".
 - **Not a gate.** The monitor reports after the deploy; it does not stop a bad deploy, and it does not replace the deploy guard or the no-merge rules.
+
+### Runbook — the Telegram alert, before the merge (operator and agent)
+
+1. **The check (operator).** With `HEALTHCHECKS_API_KEY` in the shell, from this branch: `tools/healthchecks/checks.sh apply production`. An upsert: the three F-04 checks keep their addresses, and `production/deploy-health` is created. Copy its ping URL from stdout to the clipboard, never into a chat, an issue or a log.
+2. **The secret (agent or operator).** `pbpaste | gh secret set HEALTHCHECK_PING_URL --env monitor -R kwmacioszek/szczur-radar-monitor`; check the name only (`gh secret list --env monitor -R kwmacioszek/szczur-radar-monitor`).
+3. **A test alert.** A manual `verify.yml` for `production` with a service that does not exist in the project (e.g. `service_name=alert-test`): Railway answers "not found" until the 5 min settle window ends, then the run is red ("nieweryfikowalne"), and Telegram shows a "down" for `production/deploy-health` with `DEPLOY_UNHEALTHY (production / alert-test)`, then an "up". Close its issue in the monitor repo by hand.
 
 ### Runbook — after the merge (operator; not in the plan's Progress)
 

@@ -7,12 +7,14 @@
 #
 # apply creates or updates (upsert by name) the three checks of the environment: <environment>/pipeline-trigger
 # and <environment>/db-backup (cron checks, UTC, grace from the crons' time limits) and
-# <environment>/api-events (a simple check: the API's events, every one ending with a success). Every
+# <environment>/api-events (a simple check: the API's events, every one ending with a success); production
+# also gets production/deploy-health (a simple check: the unhealthy deploys the monitor szczur-radar-monitor
+# reports, deploy-verification-hardening; it alerts only for production, so no other environment has it). Every
 # check alerts all integrations of the project (the Telegram one). A new check never alerts before its
 # first check-in, so each cron check still "new" gets one success check-in (armed). Then it reads the
 # checks back and fails unless both cron checks are up. Only then it prints "<name> <ping URL>" per check
 # to stdout: the values of HEALTHCHECK_PING_URL. --schedule and --grace override both cron checks (only to
-# verify alerts in a PR env; apply again without them afterwards). delete deletes the three checks.
+# verify alerts in a PR env; apply again without them afterwards). delete deletes the environment's checks.
 #
 # HEALTHCHECKS_API_KEY: the project's read-write API key (never an argument). HEALTHCHECKS_API_URL
 # (optional, for test.sh): the API's base URL, default https://healthchecks.io/api/v3.
@@ -32,11 +34,12 @@ usage_error() { log "FAILED: $*"; printf '%s\n' "$usage" >&2; exit 2; }
 # checks, UTC) and the grace time in seconds. The cron checks' grace covers the cron's whole time limit
 # from its /start (TRIGGER_TIMEOUT 3h, BACKUP_TIMEOUT 2h) plus 15 min: changing a limit needs an apply with
 # a new grace. The API's check has no schedule: a period and a grace of 365 days, renewed by every event.
-readonly services=(pipeline-trigger db-backup api-events)
-readonly kinds=(cron cron simple)
-readonly schedules=("30 0 * * *" "0 2 * * *" "")
-readonly graces=(11700 8100 31536000)
-readonly descriptions=(
+# production also gets the monitor's check (below, once the environment is known), like the API's.
+services=(pipeline-trigger db-backup api-events)
+kinds=(cron cron simple)
+schedules=("30 0 * * *" "0 2 * * *" "")
+graces=(11700 8100 31536000)
+descriptions=(
     "Daily pipeline run (tools/pipeline-trigger): /start, then the exit code with the last log line."
     "Daily database backup (tools/db-backup): /start, then the exit code with the last log line."
     "Events of szczur-radar-api (alerts/HealthchecksAlerts): /fail with the event, then a success."
@@ -84,6 +87,11 @@ if [[ -n $grace ]]; then
     fi
 fi
 readonly command environment schedule grace
+if [[ $environment == production ]]; then
+    services+=(deploy-health) kinds+=(simple) schedules+=("") graces+=(31536000)
+    descriptions+=("Unhealthy deploys (kwmacioszek/szczur-radar-monitor, verify.yml): /fail with the run's summary, then a success.")
+fi
+readonly services kinds schedules graces descriptions
 
 api=${HEALTHCHECKS_API_URL:-https://healthchecks.io/api/v3}
 api=${api%/}

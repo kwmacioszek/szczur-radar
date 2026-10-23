@@ -361,6 +361,10 @@ Stary `deploy-verify` w szczur-radar nadal działa.
     Dowód: URL czerwonego runu, URL issue z assignee.
 - Przypisanie issue daje rzeczywiste powiadomienie push w GitHub Mobile na telefonie operatora (zrzut ekranu lub potwierdzenie w issue)
   - Metoda: człowiek (fizyczny telefon). Agent podaje link do issue z 3.4 i potwierdza assignee.
+  - Zmiana kanału (2026-10-23, decyzja operatora po F-04): push to wiadomość w Telegramie przez
+    healthchecks.io (check `production/deploy-health`, tylko produkcja); przypisanie issue zostaje.
+    Dowód: wiadomość „down” z `DEPLOY_UNHEALTHY (production / …)` z testu w runbooku
+    `deploy-plan.md` (sekcja `deploy-verification-hardening`, „the Telegram alert”).
 - Przy otwartym issue API commit zmieniający tylko `szczur-radar-web/` daje zielony run weba, a issue API zostaje otwarte
   - Metoda: agent. Zamiast commita (trafiłby do PR i na produkcję) redeploy samego weba w PR env:
     ten sam webhook i ta sama ścieżka. Dowód: zielony run weba, issue API nadal otwarte, bez

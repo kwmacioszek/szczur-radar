@@ -28,9 +28,9 @@ tools/healthchecks/checks.sh apply production
 tools/healthchecks/checks.sh delete szczur-radar-pr-<N>
 ```
 
-- **`apply <środowisko>`** robi upsert (`POST /api/v3/checks/` z `unique: ["name"]`: istniejący check o tej nazwie jest aktualizowany, nie dublowany) trzech checków z tabeli niżej, z tagami `szczur-radar <środowisko>`. Każdy check crona w stanie „new” dostaje jeden meldunek sukcesu (uzbrojenie): nowy check healthchecks.io nie liczy terminów do pierwszego meldunku, więc bez tego milczałby zawsze. Potem `apply` czyta checki z powrotem (`GET /api/v3/checks/`) i kończy się kodem 1, jeśli któryś check crona nie jest „up” (np. „down” po nieudanej nocy albo „started” w trakcie przebiegu). Dopiero gdy oba są „up”, drukuje na stdout po linii `<nazwa> <adres pingu>` na check. Te adresy to wartości `HEALTHCHECK_PING_URL` (runbook F-04 w `context/deployment/deploy-plan.md`). Ponowny `apply` jest bezpieczny: zmienia tylko ustawienia, adresy zostają te same.
+- **`apply <środowisko>`** robi upsert (`POST /api/v3/checks/` z `unique: ["name"]`: istniejący check o tej nazwie jest aktualizowany, nie dublowany) checków środowiska z tabeli niżej (trzech; na produkcji czterech, z `production/deploy-health`), z tagami `szczur-radar <środowisko>`. Każdy check crona w stanie „new” dostaje jeden meldunek sukcesu (uzbrojenie): nowy check healthchecks.io nie liczy terminów do pierwszego meldunku, więc bez tego milczałby zawsze. Potem `apply` czyta checki z powrotem (`GET /api/v3/checks/`) i kończy się kodem 1, jeśli któryś check crona nie jest „up” (np. „down” po nieudanej nocy albo „started” w trakcie przebiegu). Dopiero gdy oba są „up”, drukuje na stdout po linii `<nazwa> <adres pingu>` na check. Te adresy to wartości `HEALTHCHECK_PING_URL` (runbook F-04 w `context/deployment/deploy-plan.md`). Ponowny `apply` jest bezpieczny: zmienia tylko ustawienia, adresy zostają te same.
 - **`apply <środowisko> --schedule '<cron>' --grace <sekundy>`**: nadpisuje harmonogram i karencję obu checków cronów, np. `--schedule '*/5 * * * *' --grace 60` do sprawdzenia alarmu w PR env. Tylko do weryfikacji: potem `apply` bez opcji albo `delete`. Każdą opcję można podać osobno; check zdarzeń API się nie zmienia.
-- **`delete <środowisko>`** usuwa trzy checki środowiska (znalezione po nazwie; brakujący pomija). Do sprzątania po weryfikacji w PR env. `delete production` wyłącza alarmy produkcji.
+- **`delete <środowisko>`** usuwa checki środowiska (znalezione po nazwie; brakujący pomija). Do sprzątania po weryfikacji w PR env. `delete production` wyłącza alarmy produkcji.
 
 Środowisko to nazwa środowiska Railway (`[a-z0-9-]+`, np. `production`, `szczur-radar-pr-81`). Log idzie na stderr, z czasem UTC, i nie zawiera klucza ani adresów pingów. Nieoczekiwany argument nie jest powtarzany w komunikacie (mógłby nim być wklejony klucz).
 
@@ -47,8 +47,9 @@ tools/healthchecks/checks.sh delete szczur-radar-pr-<N>
 | `<środowisko>/pipeline-trigger` | cron | `30 0 * * *` | UTC | 11700 s (3 h 15 min) | ~03:45 UTC |
 | `<środowisko>/db-backup` | cron | `0 2 * * *` | UTC | 8100 s (2 h 15 min) | ~04:15 UTC |
 | `<środowisko>/api-events` | simple | okres 31536000 s (365 dni) | — | 31536000 s | nigdy w praktyce |
+| `production/deploy-health` | simple | okres 31536000 s (365 dni) | — | 31536000 s | nigdy w praktyce |
 
-Harmonogramy są takie same jak `cronSchedule` usług w `.railway/railway.ts`; zmiana jednego wymaga zmiany drugiego i `apply`. Karencja liczy się od meldunku `/start`, więc pokrywa cały limit czasu crona z zapasem 15 min: `TRIGGER_TIMEOUT` (domyślnie `3h`, `tools/pipeline-trigger/README.md`) i `BACKUP_TIMEOUT` (domyślnie `2h`, `tools/db-backup/README.md`). **Zmiana limitu wymaga `apply` z nową karencją** (stałe `graces` w `checks.sh`), inaczej długi, ale poprawny przebieg da fałszywy alarm. Check zdarzeń API nie ma harmonogramu: każde zdarzenie to `/fail` z opisem i zaraz sukces, który odnawia okres, a healthchecks.io alarmuje tylko przy zmianie stanu.
+Harmonogramy są takie same jak `cronSchedule` usług w `.railway/railway.ts`; zmiana jednego wymaga zmiany drugiego i `apply`. Karencja liczy się od meldunku `/start`, więc pokrywa cały limit czasu crona z zapasem 15 min: `TRIGGER_TIMEOUT` (domyślnie `3h`, `tools/pipeline-trigger/README.md`) i `BACKUP_TIMEOUT` (domyślnie `2h`, `tools/db-backup/README.md`). **Zmiana limitu wymaga `apply` z nową karencją** (stałe `graces` w `checks.sh`), inaczej długi, ale poprawny przebieg da fałszywy alarm. `production/deploy-health` dostaje tylko produkcja: czerwone runy monitora wdrożeń `kwmacioszek/szczur-radar-monitor` (zmiana `deploy-verification-hardening`), które alarmuje on wyłącznie dla produkcji, więc innym środowiskom ten check nie jest potrzebny. Jego adres trafia tylko do sekretu `HEALTHCHECK_PING_URL` środowiska GitHub `monitor` w repo monitora (`context/deployment/deploy-plan.md`, sekcja `deploy-verification-hardening`). Checki zdarzeń (API i monitora) nie mają harmonogramu: każde zdarzenie to `/fail` z opisem i zaraz sukces, który odnawia okres, a healthchecks.io alarmuje tylko przy zmianie stanu.
 
 ## Adres pingu to sekret
 
@@ -68,6 +69,7 @@ Wymaga `bash` i `jq` (bez Dockera). Atrapa `curl` w `PATH` odpowiada według skr
 - `apply`, gdy checki istnieją i są „up”: bez meldunku uzbrajającego;
 - check crona nie „up” po uzbrojeniu (także nieudany meldunek uzbrajający), check „down” i check brakujący w odczycie → kod 1, bez adresów na stdout;
 - `--schedule` i `--grace` w treści obu checków cronów (check zdarzeń bez zmian), `--grace` osobno;
+- `apply production`: także `production/deploy-health` (check prosty, bez uzbrajania), cztery adresy na stdout; `delete production` usuwa też jego; przypadki PR env sprawdzają, że innym środowiskom go nie zakłada;
 - `delete`: trzy checki po UUID z odczytu, check innego środowiska zostaje, brakujący jest pomijany, nieudane usunięcie → kod 1;
 - błędy API: 401 z komunikatem API, 500, brak odpowiedzi, odpowiedź dla innego checka, odczyt bez listy → kod 1, bez kolejnych żądań;
 - błędy użycia: brak albo pusty klucz, złe argumenty, nazwy środowiska, wartości opcji i `HEALTHCHECKS_API_URL` → kod 2 bez żądania;
