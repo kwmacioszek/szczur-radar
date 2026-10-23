@@ -543,7 +543,7 @@ GitHubem i Workerem.
 
 #### Manual
 
-- [ ] 1.3 `wrangler dev`: poprawny sekret i payload dają 502 bez tokena GitHub, zły sekret 401
+- [x] 1.3 `wrangler dev`: poprawny sekret i payload dają 502 bez tokena GitHub, zły sekret 401 — szczur-radar-monitor@b591b31
 
 ### Phase 2: Skrypt weryfikacji, workflowy i testy na stubach
 
@@ -555,7 +555,7 @@ GitHubem i Workerem.
 
 #### Manual
 
-- [ ] 2.4 Przegląd `SECURITY.md` i workflowów: sekret tylko w środowisku `monitor`, bez wyzwalaczy z forka
+- [x] 2.4 Przegląd `SECURITY.md` i workflowów: sekret tylko w środowisku `monitor`, bez wyzwalaczy z forka — szczur-radar-monitor@10f7b7a
 
 ### Phase 3: Uruchomienie monitora i sprawdzenie na PR env tej zmiany
 
@@ -566,13 +566,13 @@ GitHubem i Workerem.
 
 #### Manual
 
-- [ ] 3.3 Push do PR daje zielony run na usługę; raport weba ma 200 z `/api/ready`, `/healthz` i `/`
+- [x] 3.3 Push do PR daje zielony run na usługę; raport weba ma 200 z `/api/ready`, `/healthz` i `/` — szczur-radar-monitor@1510aaf
 - [ ] 3.4 Wymuszona awaria daje czerwony run z nazwą usługi i jedno issue środowiska i usługi przypisane do operatora
-- [ ] 3.5 Przypisanie issue daje rzeczywisty push w GitHub Mobile
+- [x] 3.5 Przypisanie issue daje rzeczywisty push w GitHub Mobile — szczur-radar-monitor@10f7b7a
 - [ ] 3.6 Zielony deploy samego weba nie zamyka otwartego issue API
 - [ ] 3.7 Redeploy API po naprawie daje zielony run i zamknięte issue API
 - [ ] 3.8 Duplikat webhooka: ten sam wynik, bez nowego issue
-- [ ] 3.9 Błędny sekret: 401, brak runu
+- [x] 3.9 Błędny sekret: 401, brak runu — szczur-radar-monitor@450083d
 - [ ] 3.10 Deploy produkcji daje zielony run bez issue; w szczur-radar nic nowego
 - [ ] 3.11 Deploy crona oceniany osobno, bez sond; `CRASHED` crona nie zmienia wyniku deployu weba lub API
 
@@ -586,5 +586,5 @@ GitHubem i Workerem.
 
 #### Manual
 
-- [ ] 4.4 Brak runów `deploy-verify` przy nowym head SHA
-- [ ] 4.5 Runbook zaakceptowany przez operatora
+- [x] 4.4 Brak runów `deploy-verify` przy nowym head SHA — 76c7110
+- [x] 4.5 Runbook zaakceptowany przez operatora — 76c7110
