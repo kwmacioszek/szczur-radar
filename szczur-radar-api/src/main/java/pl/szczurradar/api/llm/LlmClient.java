@@ -32,11 +32,16 @@ public interface LlmClient {
 	/**
 	 * Calls the model.
 	 *
-	 * @throws LlmCallException when the provider refused the call or the last attempt failed
-	 *     — every provider or transport failure ends here. A bug in our own code during an attempt
-	 *     surfaces as the original {@code RuntimeException} on purpose: it is not a provider error
-	 *     and must not be recorded as one. An {@link LlmConfigurationException} (a subclass) says the
-	 *     provider refused the key, the credit or the model, not this request.
+	 * @throws LlmCallException every provider or transport failure ends here, as one of three:
+	 *     an {@link LlmConfigurationException} (a subclass) — the provider refused the key, the credit
+	 *     or the model, not this request; an {@link LlmUnavailableException} (a subclass) — the
+	 *     provider stayed unavailable (429, 5xx, time-out, connection) after the retries, or the call
+	 *     was interrupted between attempts; a plain {@code LlmCallException} — the provider refused
+	 *     this request (a model refusal, a blocked answer, no text) or failed it with a non-retryable
+	 *     error. A bug in our own code or an unknown SDK error during an attempt surfaces as a
+	 *     {@code RuntimeException} outside {@code LlmCallException} on purpose (the original, or an
+	 *     {@code IllegalStateException} with a cleaned message around it): it is not a provider error
+	 *     and must not be recorded as one.
 	 */
 	LlmResponse complete(LlmRequest request);
 

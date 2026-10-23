@@ -233,6 +233,19 @@ jobs:
       - name: Gate, guard and post-apply check against fixtures and stubs
         run: tools/deploy-gate/test.sh
 
+  healthchecks-test:
+    name: healthchecks test (tools/healthchecks)
+    runs-on: ${{ (github.event_name == 'pull_request' && vars.CI_RUNNER_PR) || (github.event_name == 'push' && vars.CI_RUNNER_MAIN) || vars.CI_RUNNER || 'ubuntu-latest' }}
+    # The operator's script for the healthchecks.io checks of the out-of-app alert channel (F-04):
+    # the crons' and the API's checks, their schedules and grace, the arming check-in. It runs on the
+    # operator's machine with a key never given to CI, so tools/healthchecks/test.sh tests it against a
+    # stub curl (bash, jq; no healthchecks.io, no Docker): a wrong schedule or grace, a check left
+    # unarmed (it would never alert) or a leaked key or ping URL fails this PR.
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check script against a stub curl
+        run: tools/healthchecks/test.sh
+
   railway-config:
     name: railway config (plan + apply IaC)
     runs-on: ${{ (github.event_name == 'pull_request' && vars.CI_RUNNER_PR) || (github.event_name == 'push' && vars.CI_RUNNER_MAIN) || vars.CI_RUNNER || 'ubuntu-latest' }}
@@ -255,6 +268,7 @@ jobs:
       - db-backup-test
       - pipeline-trigger-test
       - deploy-gate-test
+      - healthchecks-test
     if: >-
       github.event_name == 'push' ||
       github.event.pull_request.head.repo.full_name == github.repository

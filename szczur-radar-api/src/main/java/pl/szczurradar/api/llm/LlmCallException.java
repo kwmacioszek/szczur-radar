@@ -1,6 +1,11 @@
 package pl.szczurradar.api.llm;
 
-/** A model call that produced no text, after {@link #attempts()} HTTP attempts. */
+/**
+ * A model call that produced no text, after {@link #attempts()} HTTP attempts. As such (not a subclass):
+ * the provider refused this request or failed it with a non-retryable error. Subclasses:
+ * {@link LlmConfigurationException} (the configuration is refused) and {@link LlmUnavailableException}
+ * (the provider stayed unavailable after the retries).
+ */
 public class LlmCallException extends RuntimeException {
 
 	private final CallFailure failure;

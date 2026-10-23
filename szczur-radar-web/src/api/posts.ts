@@ -87,7 +87,8 @@ export interface Page<T> {
   total: number
 }
 
-export type PostStage = 'failed' | 'dead'
+/** A post's stage on the failed list: `stored` only when the post is on hold. */
+export type PostStage = 'stored' | 'failed' | 'dead'
 
 /** Why an assessment attempt failed — szczur-radar-api agents/assessor/validation/FailureClass. */
 export type FailureClass =
@@ -99,6 +100,11 @@ export type FailureClass =
   | 'fabricated_evidence'
   | 'domain_invariant_violation'
 
+/**
+ * A post of the failed list: `failed` (attempts left, retryable), `dead` (no attempts left) or `stored` on hold
+ * (`technicalFailures` reached the limit, so the retry run no longer takes it; an admin's retry does). A
+ * `failed` post may have technical failures too, and be on hold.
+ */
 export interface FailedPost {
   id: string
   itemType: ItemType
@@ -115,6 +121,12 @@ export interface FailedPost {
     provider: string | null
     model: string | null
   } | null
+  /** Errors of our code or single provider outages in a row since the last stored assessment. */
+  technicalFailures: number
+  /** The message of the latest of `technicalFailures`. */
+  lastTechnicalError: string | null
+  /** The retry run no longer takes the post; never true for a dead one. */
+  onHold: boolean
 }
 
 /**
@@ -146,7 +158,7 @@ export function fetchPostRaw(id: string): Promise<string> {
   return apiFetchText(`/api/posts/${encodeURIComponent(id)}/raw`)
 }
 
-/** Failed and dead posts with their latest attempt (admin). */
+/** Failed, dead and on-hold posts with their latest attempt and technical error (admin). */
 export function fetchFailedPosts(page = 0, size = 50): Promise<Page<FailedPost>> {
   return apiFetch<Page<FailedPost>>(`/api/admin/posts/failed?page=${page}&size=${size}`)
 }

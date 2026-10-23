@@ -161,10 +161,10 @@ m1 = {  # title, outcome, column, row, prerequisites, change id
 m2 = {  # lane, position, title, outcome, status, prerequisites, change id
     "S-08": ("A", 0, "Pusty przebieg daje sygnał", "operator dostaje sygnał, gdy przebieg nic nie pobrał albo pominął elementy; etykieta świeżości wtedy stoi", "done", "—", "empty-run-signal"),
     "S-12": ("A", 1, "Powiadomienia o przebiegach nie giną", "admin dostaje każde należne powiadomienie o przebiegu, a stan kroków zgadza się ze statusem przebiegu", "proposed", "S-08", "reliable-run-notifications"),
-    "F-04": ("B", 0, "Kanał alarmowy poza aplikacją", "(foundation) jeden kanał alarmowy poza aplikacją, w limicie kosztów, do którego API i crony mogą wysłać sygnał", "blocked", "decyzja: jaki kanał", "out-of-app-alert-channel"),
+    "F-04": ("B", 0, "Kanał alarmowy poza aplikacją", "(foundation) kanał alarmowy poza aplikacją: healthchecks.io → Telegram, $0; crony się meldują, API ma nadawcę zdarzeń i sygnał testowy", "progress", "—", "out-of-app-alert-channel"),
     "S-13": ("B", 1, "Brakująca noc nie przechodzi niezauważona", "operator dowie się, że nocny przebieg albo backup nie wystartował, i widzi dni bez danych", "proposed", "F-04", "missed-night-detection"),
     "S-18": ("B", 2, "Błędy wymagające reakcji docierają do operatora", "błędy wymagające reakcji (ERROR, /api/ready, awaria ścieżki alarmowej) docierają do operatora; klucze nie trafiają do logów", "proposed", "F-04", "error-visibility"),
-    "S-09": ("C", 0, "Awaria dostawcy nie zabija postów", "awaria dostawcy LLM ani błąd naszego kodu nie zabija postów; post z powtarzalnym błędem technicznym ma limit", "ready", "—", "attempt-accounting"),
+    "S-09": ("C", 0, "Awaria dostawcy nie zabija postów", "awaria dostawcy LLM ani błąd naszego kodu nie zabija postów; post z powtarzalnym błędem technicznym ma limit", "done", "—", "attempt-accounting"),
     "S-17": ("C", 1, "Przebieg bez Embabel", "przebieg działa bez Embabel, przerwanie dociera do oceny, a testy silnika są skupione i niezależne od kolejności", "proposed", "S-09", "pipeline-without-embabel"),
     "S-10": ("C", 2, "Zła konfiguracja LLM zatrzymuje start", "operator dostaje błąd startu przy LLM_TIMEOUT bez jednostki; czasy są parsowane jedną regułą", "done", "—", "llm-config-fail-fast"),
     "S-11": ("C", 3, "Utknięty przebieg sam wraca do obiegu", "przebieg po martwej instancji i post z wyścigu claim wracają do obiegu bez restartu API", "ready", "—", "stuck-run-self-heals"),
@@ -175,7 +175,7 @@ m2 = {  # lane, position, title, outcome, status, prerequisites, change id
 }
 lanes = {
     "A": ("Sygnał w aplikacji", "Gwiazda przewodnia", C["lime"]),
-    "B": ("Kanał poza aplikacją", "Rusza po decyzji o kanale alarmowym", C["amber"]),
+    "B": ("Kanał poza aplikacją", "Kanał: healthchecks.io → Telegram", C["amber"]),
     "C": ("Próby i silnik", "S-10, S-11, S-16 są niezależne — mogą iść równolegle", C["sky"]),
     "D": ("Wdrożenia i dane", "Trzy niezależne wycinki — mogą iść równolegle", C["sky"]),
 }
@@ -264,7 +264,7 @@ text(M + 52, 57, "Szczur Radar", 17, 700)
 text(M + 52, 75, "MARKET INTELLIGENCE", 9.5, 600, C["muted"], spacing="2.4")
 text(M, 134, "MILESTONES I ZALEŻNOŚCI", 11, 700, C["muted"], spacing="2")
 text(M, 172, "Roadmapa produktu", 31, 700)
-text(M, 202, "Źródło: context/foundation/roadmap.md  ·  v3  ·  stan 19.10.2026  ·  bez terminów — kolejność wynika z zależności", 13, 400, C["muted"])
+text(M, 202, "Źródło: context/foundation/roadmap.md  ·  v3  ·  stan 23.10.2026  ·  bez terminów — kolejność wynika z zależności", 13, 400, C["muted"])
 
 # progress card (same as before), right after the title block
 px, py, pw, ph = P2X, 36, 820, 214
@@ -281,14 +281,14 @@ text(cx, py + 186, "M-1 + M-2", 10.5, 700, C["muted"], anchor="middle", spacing=
 bx = px + 164
 text(bx, py + 34, "POSTĘP KAMIENIA MILOWEGO", 10.5, 700, C["muted"], spacing="1.6")
 text(bx, py + 62, "M-2 · MVP Quality & Reliability Hardening", 17, 700)
-text(px + pw - 24, py + 62, "5 / 13", 17, 700, C["text"], anchor="end")
-m2_order = [("F-04", "blocked"), ("S-08", "done"), ("S-09", "ready"), ("S-10", "done"), ("S-11", "ready"), ("S-12", "proposed"),
+text(px + pw - 24, py + 62, "6 / 13", 17, 700, C["text"], anchor="end")
+m2_order = [("F-04", "progress"), ("S-08", "done"), ("S-09", "done"), ("S-10", "done"), ("S-11", "ready"), ("S-12", "proposed"),
             ("S-13", "proposed"), ("S-14", "done"), ("S-15", "done"), ("S-16", "ready"), ("S-17", "proposed"), ("S-18", "proposed"), ("S-19", "done")]
 segw = (pw - 164 - 24 - 12 * 5) / 13
 for i, (iid, st) in enumerate(m2_order):
     lab, fg, bg = STATUS[st]
     rect(bx + i * (segw + 5), py + 78, segw, 12, 3, bg, fg + ("aa" if st != "proposed" else "55"), 1)
-legend_items = [("done", "5 ukończone"), ("progress", "0 w toku"), ("ready", "3 gotowe do planowania"), ("proposed", "4 proponowane"), ("blocked", "1 zablokowany")]
+legend_items = [("done", "6 ukończone"), ("progress", "1 w toku"), ("ready", "2 gotowe do planowania"), ("proposed", "4 proponowane"), ("blocked", "0 zablokowanych")]
 for li, (st, lab) in enumerate(legend_items):
     fg = STATUS[st][1]
     lx = bx + (0, 122, 218)[li % 3]
@@ -331,7 +331,7 @@ add(f'<line x1="{P3X+20}" y1="{AX_Y}" x2="{x_end-14}" y2="{AX_Y}" stroke="{C["mu
 add(f'<path d="M{x_end-22} {AX_Y-8} L{x_end-10} {AX_Y} L{x_end-22} {AX_Y+8}" fill="none" stroke="{C["muted"]}" stroke-opacity="0.6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>')
 nodes = [
     (P1X, "M-1", "MVP — ocenione sygnały z Wykopu", "Zamknięty 17.10.2026  ·  10 / 10", "done"),
-    (P2X, "M-2", "MVP Quality & Reliability Hardening", "Otwarty — teraz  ·  3 / 13", "now"),
+    (P2X, "M-2", "MVP Quality & Reliability Hardening", "Otwarty — teraz  ·  4 / 13", "now"),
     (P3X, "PO M-2", "Odroczone", "Backlog  ·  24 pozycje", "later"),
 ]
 for nx, tag, name, state, kind in nodes:
@@ -418,7 +418,7 @@ for k, (title, desc, c, r, req, cid) in m1.items():
 container(P2X, P2W, "M-2", "MVP Quality & Reliability Hardening",
           ("Otwarty", C["amber"], C["amberSoft"], 10.5, False, 600, "dot"),
           "Złe noce, awarie dostawców i błędne wdrożenia są widoczne dla operatora, nie niszczą danych ani nie blokują pracy — zanim ruszy kolejna roadmapa funkcjonalna.",
-          ("2 / 13", 2 / 13, C["lime"]), C["lime"] + "40")
+          ("4 / 13", 4 / 13, C["lime"]), C["lime"] + "40")
 box2 = {}
 ry = TOP + 98
 for ri, row in enumerate(rows2):
@@ -456,15 +456,15 @@ def T2(k, f=0.5): x, y, w, h = box2[k]; return (x + w * f, y)
 def B2(k, f=0.5): x, y, w, h = box2[k]; return (x + w * f, y + h)
 e2 = [
     (("S-08", "S-12"), [R2("S-08"), L2("S-12")], C["lime"], False, "lime"),
-    (("F-04", "S-13"), [T2("F-04", 0.75), (T2("F-04", 0.75)[0], L2("S-13")[1]), L2("S-13")], C["coral"], True, "coral"),
-    (("F-04", "S-18"), [B2("F-04", 0.75), (B2("F-04", 0.75)[0], L2("S-18")[1]), L2("S-18")], C["coral"], True, "coral"),
+    (("F-04", "S-13"), [T2("F-04", 0.75), (T2("F-04", 0.75)[0], L2("S-13")[1]), L2("S-13")], C["amber"], False, "amber"),
+    (("F-04", "S-18"), [B2("F-04", 0.75), (B2("F-04", 0.75)[0], L2("S-18")[1]), L2("S-18")], C["amber"], False, "amber"),
     (("S-09", "S-17"), [R2("S-09"), L2("S-17")], C["sky"], False, "sky"),
 ]
 for pair, pts, col, dashed, mk in e2:
     route(pts, col, dashed, mk, 2.5, r=0, edge=pair)
 for k, (ln, col, title, desc, st, req, cid) in m2.items():
     x, y, w, h = box2[k]
-    card(x, y, w, h, k, title, desc, st, req=req, cid=cid, star=(k == "S-08"), note=(k == "F-04"))
+    card(x, y, w, h, k, title, desc, st, req=req, cid=cid, star=(k == "S-08"))
 for ids in (("S-10", "S-11", "S-16"), ("S-14", "S-15", "S-19")):
     x0 = box2[ids[0]][0]; x1 = box2[ids[-1]][0] + box2[ids[-1]][2]
     y = box2[ids[0]][1] + box2[ids[0]][3] + 20
@@ -502,7 +502,7 @@ head = [
     '<desc id="d">Roadmapa z context/foundation/roadmap.md v3 jako oś od lewej do prawej: kamień milowy M-1 (F-01–F-03, S-01–S-07, ukończony), M-2 MVP Quality &amp; Reliability Hardening (F-04, S-08–S-19, otwarty) i pozycje odroczone. Strzałka prowadzi od warunku wstępnego do elementu, który od niego zależy.</desc>',
     '<defs>',
 ]
-for name, col in (("lime", C["lime"]), ("done", C["done"]), ("sky", C["sky"]), ("coral", C["coral"]), ("gray", C["muted"])):
+for name, col in (("lime", C["lime"]), ("done", C["done"]), ("sky", C["sky"]), ("coral", C["coral"]), ("amber", C["amber"]), ("gray", C["muted"])):
     head.append(f'<marker id="arrow-{name}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1 L9 5 L1 9" fill="none" stroke="{col}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></marker>')
 head += [
     f'<linearGradient id="star" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1d2b1d"/><stop offset="1" stop-color="{C["card"]}"/></linearGradient>',

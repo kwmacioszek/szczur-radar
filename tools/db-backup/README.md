@@ -10,7 +10,7 @@ Jeden obraz służy trzem celom: przebiegowi cron w Railway, testowi lokalnemu i
 
 | Plik | Co robi |
 | --- | --- |
-| `Dockerfile` | `postgres:18` (klient i serwer 18) + `rclone`, `jq`, `ca-certificates`. `ENTRYPOINT` to `backup.sh`; `docker run <obraz> restore-check.sh …` uruchamia inne narzędzie obrazu |
+| `Dockerfile` | `postgres:18` (klient i serwer 18) + `rclone`, `jq`, `curl` (meldunki), `ca-certificates`. `ENTRYPOINT` to `backup.sh`; `docker run <obraz> restore-check.sh …` uruchamia inne narzędzie obrazu |
 | `backup.sh` | jeden przebieg kopii (niżej) |
 | `restore-check.sh` | `restore-check.sh <dump> [<manifest>] [--serve]`: odtworzenie w tymczasowym klastrze i kontrole |
 | `tables.sh` | klasyfikacja każdej tabeli schematu `public` (S-15), czytana przez `backup.sh` i `restore-check.sh`: wersja Flyway, od której tabela istnieje, i tryb. `counted`: tabela wymagana, która tylko rośnie (liczona przed dumpem i po nim, porównywana z poprzednim manifestem). `present`: tabela tylko wymagana, bo jej wiersze mogą znikać (`activation_tokens`, `flyway_schema_history`) albo jej danych nie ma w dumpie (sesje). Migracja dodająca tabelę dopisuje ją tutaj w tym samym PR. Wpisów się nie usuwa: starsze kopie nadal mają tabelę |
@@ -21,6 +21,8 @@ Jeden obraz służy trzem celom: przebiegowi cron w Railway, testowi lokalnemu i
 
 0. Poza produkcją nic nie robi: jeśli `RAILWAY_ENVIRONMENT_NAME` jest ustawione i różne od `production`, zapisuje „skipped” i kończy się sukcesem. PR env dostaje ten cron jako kopia produkcji, ale jego baza nie potrzebuje kopii, a PR env bez bazy wysyłałby co noc e-mail o porażce. Wyjątek: `BACKUP_IN_ANY_ENVIRONMENT=true` na serwisie, do przetestowania zmiany narzędzia w PR env. Lokalnie (`test.sh`, ręcznie) zmiennej nie ma, więc przebieg rusza.
    Cały przebieg ma twardy limit czasu `BACKUP_TIMEOUT` (domyślnie `2h`), a `pg_dump` czeka na blokadę najwyżej 5 min. Zawieszony przebieg kończy się więc porażką (`FAILED: the run exceeded …`), zamiast blokować kolejne: Railway pomija przebieg cron, dopóki poprzedni trwa.
+   - **Meldunki** (F-04, `out-of-app-alert-channel`): z ustawionym `HEALTHCHECK_PING_URL` proces pilnujący limitu czasu melduje się do healthchecks.io. Przed przebiegiem wysyła `POST <adres>/start`, a po nim `POST <adres>/<kod wyjścia>` (przekroczony limit czasu to kod `timeout`: `124`, po dobiciu `137`) z ostatnią niepustą linią logu przebiegu w treści (`text/plain`, najwyżej 1000 znaków), np. `… backup: OK: daily/…` albo `… backup: FAILED: rows lost since …`. Healthchecks.io alarmuje w Telegramie, gdy koniec nie przyjdzie w karencji checka albo kod nie jest `0`. Meldunek idzie z tego procesu, bo tylko on widzi każdy wynik, także przekroczony limit czasu: jego meldunek idzie przed wyjściem. Przebieg pominięty poza produkcją i inne narzędzia obrazu (`docker run <obraz> restore-check.sh …`) nie meldują się wcale, a bez zmiennej nic nie jest wysyłane. Log przebiegu w Railway jest taki sam jak bez meldunków.
+   - Każdy meldunek to jedno `curl -fsS -m 10 --retry 3`. Jego porażka (błąd HTTP, brak sieci) daje tylko linię `warning: check-in … failed (…)`. Adres jest sekretem (kto go zna, może się meldować): trafia do `curl` jako konfiguracja na standardowym wejściu, nigdy jako argument, i nie pojawia się w logu; przebieg (także odtworzenie kodu z dumpa) nie ma go w środowisku. Adres spoza `https://` daje ostrzeżenie `HEALTHCHECK_PING_URL is not an https:// address; no check-in` i brak meldunku, a uzbrojony check zaalarmuje po karencji. Ta sama funkcja meldunku jest w `tools/pipeline-trigger/trigger.sh` (osobny obraz): zmiana dotyczy obu.
 1. Czeka, aż baza z `PG*` przyjmuje połączenia (sieć prywatna Railway bywa gotowa kilka sekund po starcie kontenera).
 2. Odczytuje wersję serwera i najwyższą udaną migrację Flyway. Liczy wiersze tabel `counted` z `tables.sh`, które istnieją przy tej wersji Flyway (przy V9: `users`, `pipeline_runs`, `pipeline_run_steps`, `raw_payloads`, `posts`, `assessments`, `notifications`).
 3. Kontrola wiarygodności, przed dumpem (S-15): kopia wyczyszczonej albo okrojonej bazy nie może trafić do bucketu, gdzie retencja i lustro NAS wyparłyby nią dobre kopie. Porażka kończy się komunikatem z „nothing dumped”, bez dumpa i bez wysyłki, więc retencja zostaje nietknięta.
@@ -36,7 +38,7 @@ Jeden obraz służy trzem celom: przebiegowi cron w Railway, testowi lokalnemu i
 9. Jeśli w `monthly/` nie ma jeszcze kopii bieżącego miesiąca UTC, kopiuje dump po stronie serwera jako `monthly/szczur-radar-<yyyy-mm>.dump` z manifestem. Kopią miesięczną zostaje więc pierwszy udany dump miesiąca.
 10. Retencja: w `daily/` zostaje `BACKUP_KEEP_DAILY` najnowszych dumpów, w `monthly/` `BACKUP_KEEP_MONTHLY`, każdy z manifestem. Liczą się tylko dokładne nazwy, które zapisuje to narzędzie (`szczur-radar-<yyyymmddThhmmssZ>.dump`, `szczur-radar-<yyyy-mm>.dump`). Inne pliki zostają i są logowane jako „ignoring”. Dumpa z bieżącego przebiegu retencja nigdy nie usuwa.
 
-Każda porażka kończy przebieg kodem ≠ 0, więc Railway oznacza przebieg cron jako nieudany. Skrypty nigdy nie wypisują hasła do bazy ani kluczy S3 i nie używają `set -x`. Klucze trafiają do rclone przez zmienne `RCLONE_S3_*`, nie przez argumenty.
+Każda porażka kończy przebieg kodem ≠ 0, więc Railway oznacza przebieg cron jako nieudany. Meldunek do healthchecks.io nigdy nie zmienia kodu wyjścia: jego porażka daje tylko ostrzeżenie w logu. Skrypty nigdy nie wypisują hasła do bazy ani kluczy S3 i nie używają `set -x`. Klucze trafiają do rclone przez zmienne `RCLONE_S3_*`, nie przez argumenty.
 
 Manifest zawiera: czas, nazwę pliku, `sha256`, rozmiar, wersje serwera i `pg_dump`, wersję Flyway, wykluczone dane, liczby wierszy przed dumpem i po nim, `compared_with` (nazwę porównanego manifestu z `daily/` albo `null` przy pierwszej kopii), `accepted_shrink` (`true`, gdy spadek przepuściła zgoda `BACKUP_ACCEPT_SHRINK`) oraz wynik i czas `restore_check`. `format` zostaje `1`: nowe pola tylko doszły, a starsze manifesty bez nich nadal przechodzą przez `restore-check.sh`.
 
@@ -63,7 +65,8 @@ Manifest zawiera: czas, nazwę pliku, `sha256`, rozmiar, wersje serwera i `pg_du
 | `S3_BUCKET`, `S3_ENDPOINT`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `S3_REGION` | bucket Railway (referencje do `BUCKET`, `ENDPOINT`, `ACCESS_KEY_ID`, `SECRET_ACCESS_KEY`, `REGION`); region domyślnie `auto` |
 | `S3_FORCE_PATH_STYLE` | domyślnie `false`: buckety Railway używają adresów virtual-hosted. Starszy bucket może wymagać `true`, co pokazuje jego zakładka Credentials |
 | `BACKUP_KEEP_DAILY`, `BACKUP_KEEP_MONTHLY` | retencja, domyślnie `14` i `12` (także w `nas-retention.sh`) |
-| `BACKUP_TIMEOUT` | limit czasu całego przebiegu (format `timeout`), domyślnie `2h` |
+| `BACKUP_TIMEOUT` | limit czasu całego przebiegu (format `timeout`), domyślnie `2h`. Karencja checka healthchecks.io wynika z tego limitu: jego zmiana wymaga `tools/healthchecks/checks.sh apply` z nową karencją, inaczej długi przebieg da fałszywy alarm |
+| `HEALTHCHECK_PING_URL` | opcjonalny adres meldunków checka healthchecks.io (`https://…`, F-04); bez niego cron się nie melduje. Sekret: nigdy w logu ani w argumentach `curl` |
 | `RAILWAY_ENVIRONMENT_NAME`, `BACKUP_IN_ANY_ENVIRONMENT` | środowisko Railway (ustawia je Railway); poza `production` przebieg jest pomijany, chyba że `BACKUP_IN_ANY_ENVIRONMENT=true` (ustawiana ręcznie; `.railway/railway.ts` ją ignoruje: `variables.ignore`) |
 | `BACKUP_ACCEPT_SHRINK` | jednorazowa zgoda na spadek liczby wierszy po celowym odtworzeniu bazy: nazwa najnowszego manifestu w `daily/` bez rozszerzenia (`szczur-radar-<ts>`, podaje ją komunikat odrzuconego przebiegu). Działa tylko względem tego manifestu, więc po pierwszej udanej kopii wygasa; nie obejmuje pustej `posts`. Zmiana zmiennej wymaga redeployu `db-backup`. Ustawiana ręcznie (`.railway/railway.ts` ją ignoruje: `variables.ignore`); runbook odtworzenia w `deploy-plan.md`, sekcja F-01 |
 | `RESTORE_CHECK_PASSWORD` | hasło użytkownika `postgres` dla `restore-check.sh --serve` |
@@ -97,7 +100,8 @@ Sprawdza:
 - brak wysyłki, gdy sprawdzenie odtworzenia nie przejdzie: tabela bez klasyfikacji (`tables: unknown`) i brak wymaganej tabeli (`tables: missing activation_tokens`);
 - odrzucenie pustej `posts` przed dumpem, także przy zgodzie wskazującej najnowszy manifest;
 - `nas-retention.sh --dry-run` (inne nazwy i daty z przyszłości zostają);
-- brak hasła w logach.
+- meldunki do atrapy healthchecks.io (`python:3.14-alpine`, po https z jednorazowym certyfikatem z wolumenu testu): pierwszy przebieg `start`, potem `0` z linią `OK:`; odrzucenie spadku `1` z jego linią; przekroczony limit czasu `124` z linią limitu; przebieg pominięty bez meldunku; nieosiągalny adres meldunków daje ostrzeżenia, a wynik przebiegu się nie zmienia;
+- brak hasła i klucza meldunków w logach.
 
 CI uruchamia ten test przy każdym PR i pushu na `main` (job `db backup test`), więc migracja psująca kopię zatrzymuje PR, także migracja z tabelą, której nie ma w `tables.sh`. Wypisuje też log pierwszego przebiegu, czyli to, co Railway pokazuje dla przebiegu cron. Kontenery, sieć i wolumen testu są zawsze usuwane.
 

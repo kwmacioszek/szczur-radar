@@ -6,7 +6,7 @@ created: 2026-09-27
 updated: 2026-10-23
 prd_version: 2
 main_goal: quality
-top_blocker: decisions # 5 decyzji produktowych z audytu (context/archive/2026-10-17-post-mvp-pipeline-audit/research.md, Open Questions); najdroższa: kanał alarmowy poza aplikacją (F-04)
+top_blocker: decisions # 5 decyzji produktowych z audytu (context/archive/2026-10-17-post-mvp-pipeline-audit/research.md, Open Questions); najdroższa, kanał alarmowy poza aplikacją (F-04), rozstrzygnięta 2026-10-20: healthchecks.io → Telegram
 milestone_id: mvp-quality-reliability-hardening
 milestone_seq: 2
 milestone_status: open
@@ -64,6 +64,8 @@ milestone_status: open
 
 > v3.1 (2026-10-19): Pozycja Parked „Self-hosted runner CI” (#30) zrealizowana poza roadmapą w zmianie `self-hosted-pr-runner` (wyczerpany limit minut GitHub Actions 2026-10-18): przełącznik runnera w `ci.yml`, runner w VM w Proxmoxie i pula VM-ek na PC. W Parked zastąpiona drugim runnerem w Proxmoxie.
 
+> v3.2 (2026-10-20): F-04 (`out-of-app-alert-channel`) — niewiadoma rozstrzygnięta: kanał to healthchecks.io (darmowy Hobbyist) z alarmem w Telegramie przez @HealthchecksBot, koszt $0, bez odpytywania produkcji i zegarów w API. Oba crony meldują start i kod wyjścia, API ma nadawcę zdarzeń i komendę `send-test-alert`. Notatki w S-13 (check każdego crona już istnieje) i S-18 (ścieżki ERROR podłącza do `OperatorAlerts`); doprecyzowanie NFR o sygnale awarii w PRD.
+
 ## Milestone
 
 **M-2: MVP Quality & Reliability Hardening** — Status: open
@@ -91,16 +93,16 @@ Na Wykopie (#gielda) i Reddicie codziennie pojawiają się setki postów o inwes
 
 | ID   | Change ID                   | Outcome (user can …)                                                                                                   | Prerequisites | PRD refs                                                   | Status   |
 | ---- | --------------------------- | ---------------------------------------------------------------------------------------------------------------------- | ------------- | ---------------------------------------------------------- | -------- |
-| F-04 | out-of-app-alert-channel    | (foundation) jeden kanał alarmowy poza aplikacją, w limicie kosztów, do którego API i crony mogą wysłać sygnał          | —             | MS-04, NFR (sygnał awarii przebiegu); audyt C2, C11         | blocked  |
+| F-04 | out-of-app-alert-channel    | (foundation) kanał alarmowy poza aplikacją: healthchecks.io → Telegram, $0; crony się meldują, API ma nadawcę zdarzeń i sygnał testowy | —             | MS-04, NFR (sygnał awarii przebiegu); audyt C2, C11         | in-progress |
 | S-08 | empty-run-signal            | operator dostaje sygnał, gdy przebieg nic nie pobrał albo pominął elementy; etykieta świeżości wtedy stoi              | —             | MS-04, MS-01, NFR (sygnał awarii przebiegu); audyt C1, B5  | done |
-| S-09 | attempt-accounting          | awaria dostawcy LLM ani błąd naszego kodu nie zabija postów; post z powtarzalnym błędem technicznym ma limit           | —             | MS-01, MS-03; audyt B2, B3, B9, A1                          | ready    |
+| S-09 | attempt-accounting          | awaria dostawcy LLM ani błąd naszego kodu nie zabija postów; post z powtarzalnym błędem technicznym ma limit           | —             | MS-01, MS-03; audyt B2, B3, B9, A1                          | done |
 | S-10 | llm-config-fail-fast        | operator dostaje błąd startu przy `LLM_TIMEOUT` bez jednostki; czasy są parsowane jedną regułą                        | —             | MS-01, MS-02; audyt B1, E                                   | done     |
 | S-11 | stuck-run-self-heals        | przebieg po martwej instancji i post z wyścigu claim wracają do obiegu bez restartu API                                | —             | MS-01, MS-03; audyt A2, A4                                  | ready    |
 | S-12 | reliable-run-notifications  | admin dostaje każde należne powiadomienie o przebiegu, a stan kroków zgadza się ze statusem przebiegu                  | S-08          | MS-04, MS-01, NFR (sygnał awarii przebiegu); audyt A3, A5, A6 | proposed |
 | S-13 | missed-night-detection      | operator dowie się, że nocny przebieg albo backup nie wystartował, i widzi dni bez danych                              | F-04          | MS-04, NFR (sygnał awarii przebiegu, kopia bazy); audyt C2, C3 | proposed |
 | S-14 | safe-deploy-gate            | merge nie wdroży czerwonego commita, crony czekają na CI, po apply jest kontrola zdrowia, ręczne zmienne nie blokują wdrożeń | —        | MS-02, MS-03; audyt C4, C5, C6, C7                          | done |
 | S-15 | backup-check-completeness   | sprawdzenie kopii bazy obejmuje wszystkie tabele i odrzuca kopię pustej bazy                                           | —             | MS-01, MS-03, NFR (kopia sprawdzana odtworzeniem); audyt C9 | done |
-| S-16 | wykop-ingest-completeness   | stronicowanie Wykopu nie gubi elementów po cichu, a chwilowy błąd Wykopu nie zabija nocy                               | —             | MS-01, MS-03; audyt B5, B6                                  | ready    |
+| S-16 | wykop-ingest-completeness   | stronicowanie Wykopu nie gubi elementów po cichu, a chwilowy błąd Wykopu nie zabija nocy                               | —             | MS-01, MS-03; audyt B5, B6                                  | in-progress |
 | S-17 | pipeline-without-embabel    | przebieg działa bez Embabel, przerwanie dociera do oceny, a testy silnika są skupione i niezależne od kolejności       | S-09          | MS-01, MS-03; audyt E, A7, D                                | proposed |
 | S-18 | error-visibility            | błędy wymagające reakcji (ERROR, `/api/ready`, awaria ścieżki alarmowej) docierają do operatora; klucze nie trafiają do logów | F-04     | MS-04; audyt C10, C11, B7                                   | proposed |
 | S-19 | ops-docs-debt               | operator czyta prawdziwe runbooki i stan; zbędne zmienne IaC usunięte; otwarty dług operacyjny domknięty               | —             | MS-02, MS-04; audyt F, C12, C13                             | done |
@@ -112,7 +114,7 @@ Navigation aid — groups items that share a Prerequisites chain. Canonical orde
 | Stream | Theme                   | Chain                                          | Note                                                                                                   |
 | ------ | ----------------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
 | A      | Sygnał w aplikacji      | `S-08` → `S-12`                                | Gwiazda przewodnia; sygnały w dzwonku nie czekają na decyzję o kanale zewnętrznym (F-04).             |
-| B      | Kanał poza aplikacją    | `F-04` → `S-13` → `S-18`                        | Rusza po decyzji o kanale; przy celu `quality` fundament obserwowalności nie jest odkładany.          |
+| B      | Kanał poza aplikacją    | `F-04` → `S-13` → `S-18`                        | Kanał rozstrzygnięty (2026-10-20): healthchecks.io → Telegram; przy celu `quality` fundament obserwowalności nie jest odkładany.          |
 | C      | Próby i silnik          | `S-09` → `S-17` · `S-10` · `S-11` · `S-16`     | `S-10`, `S-11`, `S-16` są niezależne i równoległe; `S-17` przepisuje silnik po nowej semantyce prób.  |
 | D      | Wdrożenia i dane        | `S-14` · `S-15` · `S-19`                       | Niezależne; `S-14` warto zrobić wcześnie, bo chroni każdy kolejny merge tego kamienia.                |
 
@@ -132,7 +134,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 
 ### F-04: Kanał alarmowy poza aplikacją
 
-- **Outcome:** (foundation) jest jeden wybrany kanał alarmowy poza aplikacją (np. push, e-mail lub usługa nadzoru cyklicznych zadań), mieszczący się w limitach kosztów, do którego API i oba crony mogą wysłać sygnał, a jego działanie jest raz sprawdzone na produkcji. Tylko minimalne podłączenie: kontrakt wysyłki i jeden sygnał testowy; konkretne alarmy dodają S-13 i S-18.
+- **Outcome:** (foundation) jest jeden kanał alarmowy poza aplikacją, mieszczący się w limitach kosztów: healthchecks.io (usługa nadzoru cyklicznych zadań, darmowy plan) z alarmem w Telegramie przez @HealthchecksBot, $0. Oba crony meldują start i kod wyjścia z ostatnią linią logu, więc porażka, brak startu albo brak końca na czas (harmonogram + karencja) daje wiadomość; API ma nadawcę zdarzeń dla operatora (`alerts/OperatorAlerts`) i komendę `send-test-alert`, a działanie kanału jest raz sprawdzone na produkcji. Tylko minimalne podłączenie w API: jeden sygnał testowy; konkretne alarmy z API dodaje S-18, dni bez danych S-13.
 - **Change ID:** out-of-app-alert-channel
 - **PRD refs:** MS-04, NFR (sygnał awarii przebiegu); audyt C2, C11
 - **Unlocks:** S-13 (wykrycie nocy, w której cron lub backup w ogóle nie wystartował — aplikacja śpi, więc sama tego nie zgłosi), S-18 (błędy wymagające reakcji poza dzwonkiem)
@@ -140,9 +142,9 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Parallel with:** S-08–S-12, S-14–S-17, S-19
 - **Blockers:** —
 - **Unknowns:**
-  - Jaki kanał (push, e-mail, zewnętrzna usługa „dead-man's switch” — czyli taka, która alarmuje, gdy oczekiwany sygnał NIE przyjdzie) i czy dopuszczamy zewnętrzną usługę przy limitach $10 (Railway) i $10/mies. (OpenRouter)? PRD §Non-Goals wyklucza wymaganą wysyłkę e-maili do użytkowników, ale nie alarmów dla operatora. — Owner: user. Block: yes.
+  - Jaki kanał (push, e-mail, zewnętrzna usługa „dead-man's switch” — czyli taka, która alarmuje, gdy oczekiwany sygnał NIE przyjdzie) i czy dopuszczamy zewnętrzną usługę przy limitach $10 (Railway) i $10/mies. (OpenRouter)? PRD §Non-Goals wyklucza wymaganą wysyłkę e-maili do użytkowników, ale nie alarmów dla operatora. — Owner: user. Block: no — rozstrzygnięte 2026-10-20: healthchecks.io (dead-man's switch dla cronów, darmowy Hobbyist) → Telegram (@HealthchecksBot), koszt $0; sygnały tylko wychodzące, bez odpytywania produkcji i bez zegarów w API (`context/changes/out-of-app-alert-channel/frame.md`, `plan.md`).
 - **Risk:** sekwencjonowane przed S-13 i S-18, bo bez kanału poza aplikacją nie da się zgłosić zdarzenia, którego aplikacja nie widzi (nieodpalony cron, uśpione API); ryzyko: nowa usługa zewnętrzna i jej sekret.
-- **Status:** blocked
+- **Status:** in-progress
 
 ## Slices
 
@@ -168,9 +170,9 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Parallel with:** F-04, S-08, S-10–S-16, S-18, S-19
 - **Blockers:** —
 - **Unknowns:**
-  - Czy awaria dostawcy ma w ogóle zużywać próby, a jeśli nie — jaki próg bezpiecznika zatrzymuje przebieg (liczba kolejnych błędów, udział)? — Owner: user. Block: no.
+  - Czy awaria dostawcy ma w ogóle zużywać próby, a jeśli nie — jaki próg bezpiecznika zatrzymuje przebieg (liczba kolejnych błędów, udział)? — Owner: user. Block: no. **Rozstrzygnięte (2026-10-20, plan `attempt-accounting`):** awaria dostawcy po ponowieniach nie zużywa prób; bezpiecznik to 3 takie wywołania z rzędu (liczba, nie udział; stała w kodzie), które kończą przebieg `failed`, a posty wracają bez prób; pojedyncza awaria jest błędem technicznym posta, a 3 błędy techniczne z rzędu wstrzymują post (bez automatycznego RETRY, ponowienie przez admina).
 - **Risk:** zmienia model „próba = zapisany wynik `failed`” (`PostTransitions.Outcome`) i liczniki przebiegu — wspólna przyczyna czterech ustaleń, więc jedna zmiana zamiast czterech łat; przed S-17, żeby przepisany silnik niósł nową semantykę.
-- **Status:** ready
+- **Status:** done
 
 ### S-10: Zła konfiguracja LLM zatrzymuje start
 
@@ -220,6 +222,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Unknowns:**
   - Czy automatycznie uzupełniać dni starsze niż D-2, czy tylko je pokazywać i zostawić ręczny przebieg zakresu adminowi? — Owner: user. Block: no.
 - **Risk:** aplikacja i crony nie mogą same zgłosić, że się nie uruchomiły — dlatego zależy od kanału zewnętrznego; obejmuje też synchronizację NAS → Google Drive tylko wtedy, gdy kanał to umożliwia.
+- **Uwaga (F-04, 2026-10-20):** kanał F-04 to healthchecks.io → Telegram. Check każdego crona (`<środowisko>/pipeline-trigger`, `<środowisko>/db-backup`, harmonogram UTC i karencja) już istnieje i alarmuje, gdy noc albo backup nie wystartowały lub nie skończyły się na czas (ok. 03:45 i 04:15 UTC); dla S-13 zostają dni bez danych (pokazanie lub uzupełnianie) i ewentualny nadzór NAS → Google Drive (`deploy-plan.md`, sekcja F-04).
 - **Status:** proposed
 
 ### S-14: Bezpieczna bramka wdrożeń
@@ -258,7 +261,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Unknowns:**
   - Czy wyszukiwarka Wykopu zwraca usunięte elementy i w jakim kształcie? — Owner: team. Block: no (do zbadania w `/10x-research` na prawdziwych odpowiedziach).
 - **Risk:** zmienia źródło, ale nie silnik (zgodnie z NFR „nowe źródło = tylko pozyskanie + mapowanie”); ponowienia nie mogą przekroczyć limitów Wykopu ani progu watchdoga.
-- **Status:** ready
+- **Status:** in-progress
 
 ### S-17: Przebieg bez Embabel
 
@@ -284,6 +287,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Unknowns:**
   - Error tracker (zewnętrzna usługa) czy alarm z logów przez kanał F-04 — i jaki koszt jest akceptowalny? — Owner: user. Block: no (wynika z decyzji F-04).
 - **Risk:** łatwo zalać operatora alarmami — każdy alarm musi wymagać reakcji; maskowanie sekretów w logach to osobne, łatwe do pominięcia ryzyko.
+- **Uwaga (F-04, 2026-10-20):** kanał F-04 to healthchecks.io → Telegram. API ma nadawcę `alerts/OperatorAlerts` (`report(AlertEvent, detail)` do checka `<środowisko>/api-events`: `/fail` z opisem i od razu sukces; nigdy nie rzuca) z jednym zdarzeniem `TEST_SIGNAL`. S-18 dopisuje zdarzenia do `AlertEvent` i podłącza do `OperatorAlerts` ścieżki ERROR; limit healthchecks.io to ≤5 pingów na minutę na check, czyli ≤2 zdarzenia na minutę (`deploy-plan.md`, sekcja F-04).
 - **Status:** proposed
 
 ### S-19: Dokumenty operatora mówią prawdę
@@ -302,7 +306,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 
 | Roadmap ID | Change ID                   | Suggested issue title                                                     | Ready for `/10x-plan` | Notes                                                    |
 | ---------- | --------------------------- | ------------------------------------------------------------------------- | --------------------- | -------------------------------------------------------- |
-| F-04       | out-of-app-alert-channel    | F-04: kanał alarmowy poza aplikacją                                        | no                    | Zablokowane decyzją o kanale i koszcie (Owner: user)     |
+| F-04       | out-of-app-alert-channel    | F-04: kanał alarmowy poza aplikacją                                        | yes                   | W realizacji; kanał rozstrzygnięty: healthchecks.io → Telegram |
 | S-08       | empty-run-signal            | S-08: pusty przebieg daje sygnał (gwiazda przewodnia M-2)                  | yes                   | Run `/10x-plan empty-run-signal`                         |
 | S-09       | attempt-accounting          | S-09: awaria dostawcy LLM nie zużywa prób postów                           | yes                   | Run `/10x-plan attempt-accounting`                       |
 | S-10       | llm-config-fail-fast        | S-10: zła konfiguracja LLM zatrzymuje start                                | yes                   | Run `/10x-plan llm-config-fail-fast`                     |
@@ -318,7 +322,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 
 ## Open Roadmap Questions
 
-1. **Czy awaria dostawcy LLM w ogóle zużywa próby postów?** — decyzja produktowa z audytu; od niej zależy semantyka prób w S-09 i to, co przepisze S-17. Owner: user. Block: — (rozstrzyga wywiad `/10x-plan attempt-accounting`).
+1. **Czy awaria dostawcy LLM w ogóle zużywa próby postów?** — decyzja produktowa z audytu; od niej zależy semantyka prób w S-09 i to, co przepisze S-17. Owner: user. Block: — (rozstrzyga wywiad `/10x-plan attempt-accounting`). **Rozstrzygnięte (2026-10-20, plan `attempt-accounting`):** nie zużywa; 3 awarie z rzędu zatrzymują przebieg (bezpiecznik), szczegóły w S-09.
 2. **Weryfikacja produkcji z M-1:** lokalizacja bazy dla filtra S-04 (runbook z issue #17, krok 2: `C`/`POSIX` po cichu psuje `KĘTY`→`Kęty`) i pierwsza noc S-06 (runbook z issue #19, 2026-10-18). Owner: operator. Block: — (runbooki w `deploy-plan.md`; wynik `C`/`POSIX` dałby nowy wycinek).
 3. **Ustalenia z żywego Railway** (audyt, Open Questions 2–7): czy deploy po `config apply` czeka na CI (S-14); czy merge samej dokumentacji po #58 jest `SKIPPED`; czy reguła „deployment crashed” obejmuje crash loop API (F-04); okno SIGTERM→SIGKILL (S-11); aktualne ostrzeżenia Hikari (S-19); przyczyna przebiegu „trwającego” 22 h z 2026-10-09. Owner: operator. Block: — (każdy wycinek przyjmie ostrożne założenie, jeśli odpowiedzi nie będzie).
 4. **Kanał i próg dla FR-025 (powiadomienia o obiecującym trendzie)** — nie ustalono jeszcze, czym jest "obiecujący trend" liczbowo ani gdzie ma trafiać powiadomienie; F-04 może wybrać kanał, który później obsłuży też FR-025. Owner: użytkownik. Block: — (FR-025 odroczone).
@@ -375,3 +379,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **S-10: operator dostaje czytelny błąd startu (serwer i `migrate`), gdy `LLM_TIMEOUT` nie ma jednostki albo jest absurdalnie krótki; wszystkie ustawienia czasu w API są parsowane jedną regułą, a enumy dostawcy nie żyją w klasie konfiguracji.** — Archived 2026-10-18 → `context/archive/2026-10-18-llm-config-fail-fast/`. Lesson: —.
 - **S-08: operator dostaje sygnał (powiadomienie w aplikacji i niezerowe wyjście crona), gdy przebieg nic nie pobrał albo pominął elementy o nieoczekiwanym kształcie; etykieta „Dane zaktualizowane” nie przesuwa się na takim przebiegu.** — Archived 2026-10-19 → `context/archive/2026-10-18-empty-run-signal/`. Lesson: —.
 - **S-19: operator czyta aktualne runbooki i stan: `deploy-plan.md` bez nieaktualnych statusów (S-02, S-04, S-06) i linków do przeniesionych zmian, prawdziwe pomiary JVM, `infrastructure.md` bez LangGraph; zbędne zmienne IaC (`RAILPACK_JDK_VERSION`, `DATABASE_URL`, `JWT_SECRET`) usunięte bez czerwonej bramki; ostrzeżenia Hikari (#36) rozstrzygnięte; nieaktualne issues (#51) zamknięte.** — Archived 2026-10-23 → `context/archive/2026-10-20-ops-docs-debt/`. Lesson: —.
+- **S-09: awaria dostawcy LLM (seria 5xx/timeoutów, mieszane odmowy flex) zatrzymuje przebieg bez zużywania prób postów, flex przechodzi na tryb standardowy także przy mieszanych błędach, błąd naszego kodu w kliencie nie udaje odmowy modelu, a post z powtarzalnym błędem technicznym ma limit i trafia na listę nieudanych.** — Archived 2026-10-23 → `context/archive/2026-10-20-attempt-accounting/`. Lesson: —.

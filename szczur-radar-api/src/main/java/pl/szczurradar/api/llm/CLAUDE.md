@@ -5,9 +5,9 @@
 ```
 llm/            the API — the only part the rest of the application imports
   LlmClient (complete, check), LlmRequest, LlmResponse, LlmCallException, LlmConfigurationException,
-  CallFailure, Channel, OutputMode, LlmConfiguration (the lazy bean), LlmClientFactory (a switch over
-  the provider), LlmProviderProperties (the LLM_* contract, read and validated by from()), Provider,
-  ServiceTier, ReasoningEffort
+  LlmUnavailableException, CallFailure, Channel, OutputMode, LlmConfiguration (the lazy bean),
+  LlmClientFactory (a switch over the provider), LlmProviderProperties (the LLM_* contract, read and
+  validated by from()), Provider, ServiceTier, ReasoningEffort
   api/          LlmCheckController — GET /api/admin/llm/check (admin)
   gemini/       GeminiClient       — create(): GenAI client, 1 attempt, timeout
   deepseek/     DeepSeekClient, DeepSeekRawResponse — create(): RestClient, no retry, timeouts
@@ -23,19 +23,28 @@ messages)`; `LlmClientFactory.create(properties, baseUrl, sleeper)` is the test 
 
 Infrastructure only: no assessment contract here (the contract lives in `agents/assessor`; this
 package must not import it). `LlmClient.complete(LlmRequest)` returns the model's raw text and the
-call's metadata, or throws `LlmCallException` (`provider_error` | `timeout`). White space (e.g. a
-blank answer) is judged with the shared `text/Whitespace`, never `isBlank`. An answer without text is
-`REJECTED` (`provider_error`, no retry) for every provider, whatever the finish reason
-(`ChatResponses.requireText`).
+call's metadata, or throws `LlmCallException` (`provider_error` | `timeout`) as one of three:
+`LlmConfigurationException` (the key, credit or model refused — below), `LlmUnavailableException`
+(the provider stayed unavailable: retries used up on 429/5xx/time-out/connection errors, or interrupted
+between attempts — the request may be fine) or a plain `LlmCallException` (this request refused: a
+model refusal, a blocked answer, no text, another 4xx). Any other `RuntimeException` is our bug or an
+unknown SDK error and is not classified: `TransportException.ofTimeoutOrConnection` turns only a
+time-out or an I/O error in the cause chain into a transport failure; anything else leaves the client
+as `TransportException.unclassified` — an `IllegalStateException` outside `LlmCallException`, with the
+message cleaned by `ProviderMessages` and the original as its cause, never retried and never recorded
+as a provider error. White space (e.g. a blank answer) is judged with the shared `text/Whitespace`,
+never `isBlank`. An answer without text is `REJECTED` (`provider_error`, no retry) for every provider,
+whatever the finish reason (`ChatResponses.requireText`).
 
 - One provider per run from `LLM_*` (`LlmProviderProperties`); the provider's `create()`
   builds a Spring AI `ChatModel` outside Embabel's model beans. Embabel's `createObject` is never used for
   assessments (lenient parsing, semantic retries, schema pasted into the prompt).
 - **Retries live only in `TransportRetry`**: up to 3 attempts per tier on 429, 5xx, time-out and
-  connection errors; `Retry-After` (≤ 60 s) or `min(2^(n-1), 30)` s; flex → default after three
-  429s. Everything below is off and must stay off: Spring AI `RetryTemplate` (`TransportRetry.SPRING_AI_OFF`),
-  google-genai `HttpRetryOptions.attempts(1)`, openai-java `maxRetries(0)`, DeepSeek `RestClient`
-  without retry. Parse errors and contract violations are never retried.
+  connection errors; `Retry-After` (≤ 60 s) or `min(2^(n-1), 30)` s; flex → default after any used-up
+  flex tier (any mix of those errors), for up to 3 more attempts; used-up retries end as
+  `LlmUnavailableException` (`timeout` when the last attempt timed out). Everything below is off and
+  must stay off: Spring AI `RetryTemplate` (`TransportRetry.SPRING_AI_OFF`), google-genai
+  `HttpRetryOptions.attempts(1)`, openai-java `maxRetries(0)`, DeepSeek `RestClient` without retry. Parse errors and contract violations are never retried.
 - **A refused configuration is not a failed request:** HTTP 401 (key), 402 (credit) and 404 (model)
   are `TransportException.Kind.CONFIGURATION`, never retried, and end as `LlmConfigurationException`
   (a subclass of `LlmCallException`). `Assessor` rethrows it instead of recording a `failed` result,
@@ -51,7 +60,9 @@ blank answer) is judged with the shared `text/Whitespace`, never `isBlank`. An a
 - `LlmClient.check()`: one tiny real call (`CHECK_REQUEST`, a few dozen tokens) through the same path
   as an assessment — it proves the key, the model and the credit together. Listing models would not:
   DeepSeek accepts model ids it does not list (e.g. `deepseek-v4-flash`). Used before every pipeline
-  assess step and by `GET /api/admin/llm/check`.
+  assess step and by `GET /api/admin/llm/check`. Both treat any exception from it as a failed check: the
+  controller answers `ok: false` with the message cleaned of the key (`ProviderMessages`, also for an error
+  no client cleaned) and logs it; the assess step takes no post and fails the run.
 - Every HTTP attempt has the `LLM_TIMEOUT` limit (the Gemini SDK has none by default). For DeepSeek
   the connect phase (≤ 30 s) comes on top of it, so one attempt can last slightly longer.
 - Known re-send below our loop: OkHttp (inside the GenAI and openai-java SDKs) may resend a
@@ -70,9 +81,9 @@ blank answer) is judged with the shared `text/Whitespace`, never `isBlank`. An a
   2026-10-09). openai-java then fails with "`choices` is not set". `OpenRouterRawResponse` (an
   openai-java `HttpClient` around its OkHttp client; the SDK builder has no interceptor) keeps the raw
   2xx answer per thread, and `OpenRouterClient` classifies `error.code` like the HTTP status (429
-  retried and flex → default, 5xx retried, 401/402/404 and a 403 for a spent budget the configuration,
-  other 4xx `REJECTED`). A 2xx answer without `choices` and without an error (missing or empty list) is
-  retried like a 5xx. If generation fails after partial output, the error is in `choices[0].error`; it
+  and 5xx retried, flex → default after a used-up flex tier, 401/402/404 and a 403 for a spent
+  budget the configuration, other 4xx `REJECTED`). A 2xx answer without `choices` and without an
+  error (missing or empty list) is retried like a 5xx. If generation fails after partial output, the error is in `choices[0].error`; it
   is classified before accepting the result, and the partial text is discarded.
 - `ProviderSchemas` sends each provider the schema subset it accepts; the full schema stays the
   caller's check. Known losses: Spring AI's Gemini mapping drops `additionalProperties` and
@@ -97,7 +108,10 @@ blank answer) is judged with the shared `text/Whitespace`, never `isBlank`. An a
    `src/test/resources/fixtures/<provider>/` and test it in `llm/<provider>/<Provider>ClientTest` on
    `ScriptedProviderServer`: what is sent,
    text and usage read, and request counts for 429 → success, 5xx × 4, 400 and time-out (the count
-   proves no hidden retries). The success payload is always a real recording, never hand-written.
+   proves no hidden retries); an SDK exception without I/O in its cause chain leaves `complete` as an
+   `IllegalStateException` (not an `LlmCallException`) after one call, the original as its cause and
+   the key `<hidden>` in its message, while one with an `IOException` in the chain is a connection
+   error and retried. The success payload is always a real recording, never hand-written.
    Cases that cannot be provoked live (refusal, blocked answer, thought parts, no choices) are that
    recording changed minimally in the test, with a comment saying what was changed. HTTP error
    bodies are short synthetic JSON in the provider's error shape.

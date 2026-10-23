@@ -12,8 +12,8 @@ import java.util.Map;
  */
 public final class CommandLine {
 
-	/** A usage line: the name, padded to the longest ({@code reset-password}), and the description. */
-	private static final String USAGE_LINE = "  %-14s  %s%n";
+	/** A usage line: the name, padded to the longest ({@code send-test-alert}), and the description. */
+	private static final String USAGE_LINE = "  %-15s  %s%n";
 
 	private final Map<CommandType, Command> commands = new EnumMap<>(CommandType.class);
 
@@ -31,7 +31,7 @@ public final class CommandLine {
 	/** The commands shipped with the jar. */
 	public static CommandLine standard() {
 		return new CommandLine(List.of(new MigrateCommand(), new CreateAdminCommand(), new CreateUserCommand(),
-				new ResetPasswordCommand()), System.err);
+				new ResetPasswordCommand(), new SendTestAlertCommand()), System.err);
 	}
 
 	/**

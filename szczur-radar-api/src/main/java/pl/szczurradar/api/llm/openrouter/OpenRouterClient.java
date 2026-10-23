@@ -44,8 +44,9 @@ import pl.szczurradar.api.llm.transport.TransportRetry;
  * OpenRouter's OpenAI-compatible API through Spring AI's {@code OpenAiChatModel} on our own
  * openai-java client: strict {@code json_schema} without count and length limits, temperature 0,
  * optional reasoning effort. With {@code LLM_SERVICE_TIER=flex} the call is routed to OpenAI's flex
- * tier only ({@code provider.only = ["openai/flex"]}, no fallbacks); after three 429 refusals
- * {@link TransportRetry} retries it on {@code ["openai"]}.
+ * tier only ({@code provider.only = ["openai/flex"]}, no fallbacks); once the flex tier's attempts have
+ * all failed (429, 5xx, time-outs, connection errors) {@link TransportRetry} retries it on
+ * {@code ["openai"]}.
  *
  * <p>OpenRouter reports an error that occurs once the model has started on the request in the body of
  * an HTTP 200 ({@code {"error":{"code",…}}} instead of {@code choices}); openai-java then fails with
@@ -193,8 +194,14 @@ public final class OpenRouterClient implements LlmClient {
 					TransportException.parseRetryAfter(retryAfter.isEmpty() ? null : retryAfter.getFirst()), ex);
 		}
 		catch (RuntimeException ex) {
-			// e.g. openai-java's "`choices` is not set" on an error reported in a 200 answer
-			throw failedAnswer(rawResponse.take(), ex).orElseGet(() -> TransportException.ofThrowable(ex, messages));
+			// e.g. openai-java's "`choices` is not set" on an error reported in a 200 answer; then a time-out
+			// or I/O error; anything else is not a transport failure
+			Optional<TransportException> classified = failedAnswer(rawResponse.take(), ex)
+				.or(() -> TransportException.ofTimeoutOrConnection(ex, messages));
+			if (classified.isPresent()) {
+				throw classified.get();
+			}
+			throw TransportException.unclassified(ex, messages);
 		}
 		Optional<TransportException> failure = failedAnswer(rawResponse.take(), null);
 		if (failure.isPresent()) {
@@ -217,9 +224,9 @@ public final class OpenRouterClient implements LlmClient {
 
 	/**
 	 * The failure a 2xx answer reported, if it did: an {@code error} object is classified as the HTTP
-	 * status in its {@code code} (429 retried and, after three, flex → default; 5xx retried; 401/402/404
-	 * and a 403 for a spent budget the configuration); an answer without {@code choices} and without an
-	 * error is retried like a 5xx.
+	 * status in its {@code code} (429 retried, flex → default after a failed flex tier; 5xx retried;
+	 * 401/402/404 and a 403 for a spent budget the configuration); an answer without {@code choices} and
+	 * without an error is retried like a 5xx.
 	 */
 	private Optional<TransportException> failedAnswer(OpenRouterRawResponse.Observed answer,
 			@Nullable Throwable cause) {

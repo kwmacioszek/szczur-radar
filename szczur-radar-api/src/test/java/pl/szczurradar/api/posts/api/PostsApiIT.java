@@ -39,6 +39,7 @@ import pl.szczurradar.api.agents.assessor.validation.FailureClass;
 import pl.szczurradar.api.cli.MigrateCommand;
 import pl.szczurradar.api.pipeline.run.PipelineRunRepository;
 import pl.szczurradar.api.posts.AssessmentRepository;
+import pl.szczurradar.api.posts.Post;
 import pl.szczurradar.api.posts.PostRepository;
 import pl.szczurradar.api.posts.PostSeeds;
 import pl.szczurradar.api.posts.PostStage;
@@ -61,6 +62,8 @@ class PostsApiIT {
 	private static final JsonMapper JSON = JsonMapper.builder().build();
 
 	private static final String POST_NOT_FOUND = "{\"detail\":\"post_not_found\"}";
+
+	private static final String TECHNICAL_ERROR = "IllegalStateException: a bug in the mapper";
 
 	@Autowired
 	MockMvcTester mvc;
@@ -384,6 +387,69 @@ class PostsApiIT {
 		assertThat(result).bodyJson().extractingPath("$.items[1].lastAttempt.failureClass").isEqualTo("timeout");
 		assertThat(result).bodyJson().extractingPath("$.items[1].lastAttempt.violations[0].rule").isEqualTo("rule");
 		assertThat(result).bodyJson().extractingPath("$.total").isEqualTo(2);
+		assertThat(result).bodyJson().extractingPath("$.items[1].technicalFailures").isEqualTo(0);
+		assertThat(result).bodyJson().extractingPath("$.items[1].lastTechnicalError").isNull();
+		assertThat(result).bodyJson().extractingPath("$.items[1].onHold").isEqualTo(false);
+	}
+
+	@Test
+	void theFailedListHasStoredPostsOnHoldAndFailedPostsWithTheirTechnicalErrors() {
+		UUID onHold = technicalFailures(seeds.post(PostStage.STORED, 0, "2026-10-01T09:00:00Z"),
+				Post.MAX_TECHNICAL_FAILURES);
+		UUID failed = technicalFailures(seeds.post(PostStage.FAILED, 1, "2026-10-01T10:00:00Z"), 1);
+		seeds.failed(failed, "2026-10-02T08:00:00Z", FailureClass.SCHEMA_VIOLATION);
+		UUID dead = technicalFailures(seeds.post(PostStage.DEAD, 3, "2026-10-01T11:00:00Z"),
+				Post.MAX_TECHNICAL_FAILURES);
+		UUID belowTheLimit = technicalFailures(seeds.post(PostStage.STORED, 0, "2026-10-01T12:00:00Z"),
+				Post.MAX_TECHNICAL_FAILURES - 1);
+		// A stored assessment resets the count: an assessed post is never on the list.
+		UUID assessed = seeds.post(PostStage.ASSESSED, 0, "2026-10-01T13:00:00Z");
+		seeds.ok(assessed, "2026-10-02T08:00:00Z");
+
+		MvcTestResult result = mvc.get().uri("/api/admin/posts/failed").with(asAdmin()).exchange();
+
+		assertThat(result).hasStatusOk();
+		assertThat(result).bodyJson().extractingPath("$.items[*].id").asArray()
+			.containsExactly(dead.toString(), failed.toString(), onHold.toString())
+			.doesNotContain(belowTheLimit.toString(), assessed.toString());
+		assertThat(result).bodyJson().extractingPath("$.total").isEqualTo(3);
+		assertThat(result).bodyJson().extractingPath("$.items[0].onHold").isEqualTo(false);
+		assertThat(result).bodyJson().extractingPath("$.items[1].stage").isEqualTo("failed");
+		assertThat(result).bodyJson().extractingPath("$.items[1].technicalFailures").isEqualTo(1);
+		assertThat(result).bodyJson().extractingPath("$.items[1].lastTechnicalError").isEqualTo(TECHNICAL_ERROR);
+		assertThat(result).bodyJson().extractingPath("$.items[1].onHold").isEqualTo(false);
+		assertThat(result).bodyJson().extractingPath("$.items[1].lastAttempt.failureClass").isEqualTo("schema_violation");
+		assertThat(result).bodyJson().extractingPath("$.items[2].stage").isEqualTo("stored");
+		assertThat(result).bodyJson().extractingPath("$.items[2].assessmentAttempts").isEqualTo(0);
+		assertThat(result).bodyJson().extractingPath("$.items[2].technicalFailures").isEqualTo(3);
+		assertThat(result).bodyJson().extractingPath("$.items[2].lastTechnicalError").isEqualTo(TECHNICAL_ERROR);
+		assertThat(result).bodyJson().extractingPath("$.items[2].onHold").isEqualTo(true);
+		assertThat(result).bodyJson().extractingPath("$.items[2].lastAttempt").isNull();
+	}
+
+	@Test
+	void aFailedPostOnHoldHasBothItsLastAttemptAndItsTechnicalError() {
+		UUID failed = technicalFailures(seeds.post(PostStage.FAILED, 1, "2026-10-01T09:00:00Z"),
+				Post.MAX_TECHNICAL_FAILURES);
+		seeds.failed(failed, "2026-10-02T08:00:00Z", FailureClass.SCHEMA_VIOLATION);
+
+		MvcTestResult result = mvc.get().uri("/api/admin/posts/failed").with(asAdmin()).exchange();
+
+		assertThat(result).hasStatusOk();
+		assertThat(result).bodyJson().extractingPath("$.items[*].id").asArray().containsExactly(failed.toString());
+		assertThat(result).bodyJson().extractingPath("$.items[0].stage").isEqualTo("failed");
+		assertThat(result).bodyJson().extractingPath("$.items[0].technicalFailures").isEqualTo(3);
+		assertThat(result).bodyJson().extractingPath("$.items[0].lastTechnicalError").isEqualTo(TECHNICAL_ERROR);
+		assertThat(result).bodyJson().extractingPath("$.items[0].onHold").isEqualTo(true);
+		assertThat(result).bodyJson().extractingPath("$.items[0].lastAttempt.failureClass").isEqualTo("schema_violation");
+	}
+
+	/** Gives a post {@code count} technical failures in a row, as the pipeline's conditional updates would. */
+	private UUID technicalFailures(UUID post, int count) {
+		jdbc.update("UPDATE posts SET technical_failures = ?, last_technical_error = ? WHERE id = ?", count,
+				TECHNICAL_ERROR, post);
+		entityManager.clear();
+		return post;
 	}
 
 	private static String body(MvcTestResult result) {

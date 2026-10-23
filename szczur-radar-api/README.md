@@ -18,7 +18,8 @@ Pakiet bazowy `pl.szczurradar.api`, pakiety według funkcji — nie według wars
 | `health` | sondy `GET /api/health` (bez bazy) i `GET /api/ready` (`SELECT 1`, 503 przy błędzie) |
 | `user` | encja `User`, `UserRepository` (Spring Data JPA), `Role` (enum), `Emails` (jedna normalizacja e-maila), `SystemAccount` (konta, które nie są osobami: `SCHEDULER`) |
 | `auth` | logowanie JSON, `/me`, logout, limiter prób, filtr Origin, odnawianie ciasteczka sesji, argon2 (`Passwords`); `auth/activation` — jednorazowe linki aktywacyjne (S-07): `ActivationLinks` (wydanie, reset konta, sprawdzenie i użycie linku), `ActivationSettings` (`WEB_PUBLIC_URL`, `ACTIVATION_LINK_TTL`), encja tokenu (w bazie tylko SHA-256) i publiczny `ActivationController` |
-| `cli` | komendy operatora: `migrate`, `create-admin`, `create-user`, `reset-password` (dyspozytor `CommandLine`; sprawdzenia przed startem Springa w `CommandChecks`; dwie komendy z linkiem aktywacyjnym na wspólnym `LinkCommand`) |
+| `cli` | komendy operatora: `migrate`, `create-admin`, `create-user`, `reset-password`, `send-test-alert` (dyspozytor `CommandLine`; sprawdzenia przed startem Springa w `CommandChecks`; dwie komendy z linkiem aktywacyjnym na wspólnym `LinkCommand`) |
+| `alerts` | zdarzenia dla operatora poza aplikacją (F-04): `AlertSettings` (`HEALTHCHECK_PING_URL`), `AlertEvent` (enum, dziś `TEST_SIGNAL`), `OperatorAlerts` (nigdy nie rzuca) z `HealthchecksAlerts` (check healthchecks.io → Telegram) i `NoOperatorAlerts`; bean tylko w serwerze (`AlertsConfiguration`) |
 | `internal` | token crona `PIPELINE_TRIGGER_TOKEN` (`PipelineTriggerToken`) i jego filtr dla tras `/internal/**` (`PipelineTriggerTokenFilter`) |
 | `config` | Spring Security, sesja i ciasteczko, format błędów `{"detail": …}`, konfiguracja dostawcy LLM |
 | `agents` | agenci Embabel; `agents/assessor` — kontrakt oceny V2 jako kod (model, schemat, parser, walidator D1–D15, odsiew), prompt z wersją, `Assessor` (jedno wywołanie modelu na wpis) i `AssessorAgent` |
@@ -59,7 +60,7 @@ Opcjonalne ustawienia wywołania klienta oceny (`llm/`), nie są sekretami:
 
 | Zmienna | Znaczenie |
 | --- | --- |
-| `LLM_SERVICE_TIER` | `default` (domyślnie) albo `flex` — tańszy tryb OpenAI, może odmawiać (429); tylko z `openrouter` (routing `provider.only=["openai/flex"]`, po trzech odmowach to samo wywołanie w trybie standardowym) |
+| `LLM_SERVICE_TIER` | `default` (domyślnie) albo `flex` — tańszy tryb OpenAI, może odmawiać (429); tylko z `openrouter` (routing `provider.only=["openai/flex"]`, gdy trzy próby na flex się nie udały — dowolna mieszanka 429, 5xx, przekroczenia czasu i błędu połączenia — to samo wywołanie przechodzi na tryb standardowy) |
 | `LLM_REASONING_EFFORT` | `none`, `minimal`, `low`, `medium`, `high`, `xhigh`; tylko z `openrouter`; brak = domyślne dostawcy |
 | `LLM_TIMEOUT` | limit jednej próby HTTP, np. `120s`, `5m` (domyślnie `120s`, od `10s` do `30m`; dla flex dłuższy) |
 
@@ -111,6 +112,7 @@ Przebieg działa w procesie API, w tle (mapa: `src/main/java/pl/szczurradar/api/
 
 - Zakres dat: najpierw (jeśli są) ponowienie nieudanych postów, potem pobranie zakresu z wybranych źródeł (puste = wszystkie skonfigurowane), zapis nowych postów i ocena tylko tych, które ten przebieg zapisał pierwszy. Ponowny zakres tego samego dnia nie dodaje postów.
 - Post ma do 3 policzonych prób oceny (`failed`); trzecia nieudana robi z niego `dead` (bez ponawiania). Błąd techniczny nie zużywa próby.
+- **Awaria dostawcy (S-09):** wywołanie, które po ponowieniach nadal kończy się 429, 5xx, timeoutem albo błędem połączenia, nie zużywa próby. Pojedyncza taka awaria jest błędem technicznym posta, a trzy z rzędu zatrzymują przebieg jako `failed` (bezpiecznik), z postami odłożonymi bez prób. Post z 3 błędami technicznymi z rzędu jest wstrzymany: ponowienie nieudanych go nie bierze, „Ponów zaznaczone” tak.
 - Przed oceną przebieg sprawdza LLM jednym małym wywołaniem (`LlmClient.check()`); gdy się nie uda, żaden post nie jest brany, a przebieg kończy się `failed` z przyczyną. Odrzucony klucz, brak środków lub nieznany model (HTTP 401/402/404) w trakcie przebiegu też go zatrzymuje bez liczenia prób.
 - **Postęp (S-06):** liczniki oceny (ok, nieudane, martwe, błędy techniczne, ponowienia HTTP, powroty z flex) i `last_activity_at` rosną po każdym poście, a start i koniec każdego kroku przesuwa `last_activity_at`. Log API ma linie INFO o starcie i końcu przebiegu, starcie i końcu kroku oraz postępie oceny (najwyżej co minutę i po ostatnim poście), bez treści postów.
 - **Strażnik:** przebieg tej instancji bez aktywności przez `PIPELINE_STALL_TIMEOUT` kończy się `failed` z błędem „no progress for <próg>: the run was stopped”, jego otwarte kroki są zamknięte, posty wracają bez zużytej próby, a kolejny przebieg w kolejce rusza. Bez własnych przebiegów strażnik nie pyta bazy, więc API może zasnąć.
@@ -169,7 +171,7 @@ railway ssh -s szczur-radar-api -e <środowisko>
 java -jar target/szczur-radar-api.jar create-user --email jan@example.com   # e-mail bez < >
 ```
 
-Opcje podaje się jako `--nazwa wartość` albo `--nazwa=wartość`; nieznana lub powtórzona opcja to błąd użycia. Argumenty, e-mail i zmienne `PG*` są sprawdzane przed startem kontekstu Springa, więc błąd użycia nie dotyka bazy. Komendy uruchamiają wspólny kontekst Springa, więc też potrzebują trzech ustawień LLM. Zła wartość ustawienia w tym kontekście (np. `LLM_TIMEOUT=120`) jest błędem konfiguracji: Spring Boot loguje blok `APPLICATION FAILED TO START`, komenda dopisuje na stderr jedną linię `<komenda>: invalid configuration: …` i kończy się kodem `2`. Inna awaria kontekstu albo pracy (np. nieosiągalna baza, nieudana migracja) daje `<komenda> failed: …` i kod `1`. Dotyczy też `migrate`, więc pre-deploy na Railway zatrzymuje deploy, a poprzednia wersja działa dalej.
+Opcje podaje się jako `--nazwa wartość` albo `--nazwa=wartość`; nieznana lub powtórzona opcja to błąd użycia. Argumenty, e-mail i zmienne `PG*` są sprawdzane przed startem kontekstu Springa, więc błąd użycia nie dotyka bazy. Komendy uruchamiają wspólny kontekst Springa, więc też potrzebują trzech ustawień LLM — poza `send-test-alert`, która działa bez Springa i bez bazy. Zła wartość ustawienia w tym kontekście (np. `LLM_TIMEOUT=120`) jest błędem konfiguracji: Spring Boot loguje blok `APPLICATION FAILED TO START`, komenda dopisuje na stderr jedną linię `<komenda>: invalid configuration: …` i kończy się kodem `2`. Inna awaria kontekstu albo pracy (np. nieosiągalna baza, nieudana migracja) daje `<komenda> failed: …` i kod `1`. Dotyczy też `migrate`, więc pre-deploy na Railway zatrzymuje deploy, a poprzednia wersja działa dalej.
 
 ### `create-admin`
 
@@ -207,6 +209,32 @@ Kody wyjścia:
 WEB_PUBLIC_URL=http://localhost:5173 java -jar target/szczur-radar-api.jar create-user --email jan@example.com
 ```
 
+### `send-test-alert` (F-04)
+
+Wysyła zdarzenie testowe `TEST_SIGNAL` do checka zdarzeń API w healthchecks.io, który alarmuje w Telegramie: przychodzi wiadomość „down” z opisem zdarzenia (np. „TEST_SIGNAL (test of the operator alert channel, nothing is wrong): send-test-alert from <host>”), a zaraz po niej „up”. Tak sprawdza się cały kanał alarmowy od API do telefonu. Komenda nie uruchamia Springa: nie potrzebuje `PG*` ani `LLM_*`, tylko `HEALTHCHECK_PING_URL`, i nie przyjmuje argumentów.
+
+| Zmienna | Znaczenie |
+| --- | --- |
+| `HEALTHCHECK_PING_URL` | opcjonalna: adres pingu checka zdarzeń API w healthchecks.io, np. `https://hc-ping.com/<uuid>` — **sekret** (kto go zna, może meldować do checka): nigdy w repo, logach, issue ani argumentach. Bez niej (albo pusta) API niczego nie wysyła poza aplikację — tak działają PR envy bez testowego checka, lokalne uruchomienia i testy. Ustawiona musi być bezwzględnym adresem `https://` z hostem, bez zapytania i fragmentu; inaczej serwer nie startuje (blok `APPLICATION FAILED TO START` z nazwą zmiennej, **bez powtórzenia wartości**). Czyta ją serwer przy starcie i `send-test-alert`; `migrate` i pozostałe komendy jej nie czytają, więc zła wartość nie zatrzymuje pre-deployu |
+
+Jedno zdarzenie to dwa żądania: `POST <adres>/fail` z opisem (przyciętym do 1000 znaków), a po odpowiedzi 2xx `POST <adres>` z „ok”, bo healthchecks.io alarmuje tylko przy zmianie stanu i bez powrotu do „up” następne zdarzenie nie dałoby wiadomości. Jedna próba na żądanie, bez ponowień, limity 5 s na połączenie i 10 s na żądanie. Porażka nigdy nie psuje wywołującego: kończy się jedną linią WARN ze zdarzeniem i statusem albo klasą wyjątku, nigdy z adresem. W F-04 woła go tylko ta komenda; ścieżki błędów API podłączy S-18.
+
+```bash
+# lokalnie (adres testowego checka trzymaj poza repo, jak klucz LLM)
+HEALTHCHECK_PING_URL=https://hc-ping.com/<uuid> java -jar target/szczur-radar-api.jar send-test-alert
+# produkcja / PR env: jak create-user — najpierw obudź API, potem w powłoce kontenera
+# (zmienna jest już ustawiona w serwisie szczur-radar-api):
+curl https://<domena-web>/api/health
+railway ssh -s szczur-radar-api -e <środowisko>
+java -jar target/szczur-radar-api.jar send-test-alert
+```
+
+Na stdout jedna linia o dostarczeniu, na stderr powód porażki; adresu nie wypisuje nigdzie. Kody wyjścia:
+
+- 0: zdarzenie dostarczone, check znów „up”;
+- 1: nie dostarczone (odpowiedź spoza 2xx, brak odpowiedzi, przekroczony czas — przyczyna w linii WARN; bez ponowienia);
+- 2: błąd użycia lub konfiguracji (argument, brak albo zła wartość `HEALTHCHECK_PING_URL`).
+
 ## Obraz Dockera (Railway, CI)
 
 `Dockerfile` w tym katalogu buduje API na Railway (wykrywany automatycznie, jak w `szczur-radar-web`) i w CI (job `api-container-smoke`) — ten sam obraz lokalnie:
@@ -240,7 +268,7 @@ source ~/.config/szczur-radar/llm.env   # LLM_API_PROVIDER, LLM_MODEL, LLM_API_K
 
 - Trasy: `GET /api/health`, `GET /api/ready`, `POST /api/auth/login` (JSON `{email, password}`), `POST /api/auth/logout` (zawsze 204), `GET /api/auth/me` → `{id, email, role}`.
 - Aktywacja linkiem (S-07), trasy publiczne: `POST /api/auth/activation/lookup` (`{token}` → 200 `{email}`) i `POST /api/auth/activation` (`{token, password}` → 204). Token SPA bierze z fragmentu linku i wysyła tylko w body. Obie trasy nie tworzą sesji i nie ustawiają ciasteczka; aktywacja usuwa wszystkie sesje konta, a potem osoba loguje się przez `POST /api/auth/login`. Hasło spoza polityki (`password_policy`) nie zużywa linku.
-- Feed i pipeline (S-02): `GET /api/posts?page&size` (ocenione posty od najnowszych), `GET /api/freshness` (S-05, każda zalogowana rola: `{lastUpdatedAt}` — koniec przebiegu RANGE `succeeded`/`partial` z najdalej sięgającym zakresem albo `null`), admin: `POST /api/admin/pipeline-runs` (`{from, to, sources?}` albo `{postIds}` → 202), `GET /api/admin/pipeline-runs?page&size` (przebiegi od najnowszych, z krokami i licznikami; `size` do 100), `GET /api/admin/pipeline-runs/{id}` (S-06: jeden przebieg jak na liście — z `scheduled`, `needsAttention`, `interruptionCause`, `lastActivityAt`, `llmRetries`, `flexFallbacks`, `inFlight` — albo 404 `not_found`), `GET /api/admin/pipeline-runs/sources` (`[{source, configured}]`), `GET /api/admin/posts/failed` (nieudane i martwe z ostatnią próbą), `GET /api/admin/llm/check` (jedno małe, prawdziwe wywołanie skonfigurowanym kluczem i modelem: `{provider, model, ok, refused, answeredBy, error}`).
+- Feed i pipeline (S-02): `GET /api/posts?page&size` (ocenione posty od najnowszych), `GET /api/freshness` (S-05, każda zalogowana rola: `{lastUpdatedAt}` — koniec przebiegu RANGE `succeeded`/`partial` z najdalej sięgającym zakresem albo `null`), admin: `POST /api/admin/pipeline-runs` (`{from, to, sources?}` albo `{postIds}` → 202), `GET /api/admin/pipeline-runs?page&size` (przebiegi od najnowszych, z krokami i licznikami; `size` do 100), `GET /api/admin/pipeline-runs/{id}` (S-06: jeden przebieg jak na liście — z `scheduled`, `needsAttention`, `interruptionCause`, `lastActivityAt`, `llmRetries`, `flexFallbacks`, `inFlight` — albo 404 `not_found`), `GET /api/admin/pipeline-runs/sources` (`[{source, configured}]`), `GET /api/admin/posts/failed` (nieudane, martwe i wstrzymane — S-09: `stored` albo `failed` z 3 błędami technicznymi z rzędu — z ostatnią próbą, `technicalFailures`, `lastTechnicalError` i `onHold`), `GET /api/admin/llm/check` (jedno małe, prawdziwe wywołanie skonfigurowanym kluczem i modelem: `{provider, model, ok, refused, answeredBy, error}`).
 - Powiadomienia admina (S-06, każdy admin ma własne i własne „przeczytane”): `GET /api/admin/notifications` → `{unread, items}` (`unread` — wszystkie nieprzeczytane zalogowanego admina, `items` — jego 10 najnowszych `{id, kind, createdAt, readAt, run: {id, kind, status, interruptionCause, finishedAt, assessedFailed, dead, processingErrors, error}}`), `POST /api/admin/notifications/{id}/read` (204, idempotentne; nieznane albo cudze id → 404 `not_found`), `POST /api/admin/notifications/read` (204: oznacza wszystkie nieprzeczytane zalogowanego admina, także poza 10 na liście).
 - Błędy aplikacji mają kształt `{"detail": "<kod>"}`: `invalid_credentials`, `not_authenticated`, `forbidden`, `too_many_attempts` (+ `Retry-After`), `cross_origin`, `invalid_request`, `unsupported_media_type`, `activation_link_invalid` (400: link nieznany, użyty, wygasły albo zastąpiony nowszym — nieodróżnialnie), `password_policy` (400: hasło spoza 12–128 znaków), `pipeline_busy` (409), `post_dead` (400), `source_not_configured` (503), `not_found` (404: nieznany przebieg na `/internal/**` i w `GET /api/admin/pipeline-runs/{id}`, nieznane albo cudze powiadomienie). Nieznane pola w JSON są odrzucane.
 - Sesja: ciasteczko `sr_session` (`HttpOnly; Secure; SameSite=Strict; Path=/api; Max-Age=30 dni`), dane w tabelach `SPRING_SESSION*`; wygasa po 30 dniach bezczynności, ciasteczko jest odnawiane po każdym udanym, uwierzytelnionym żądaniu API. Unieważnienie wszystkich sesji użytkownika: `FindByIndexNameSessionRepository.findByPrincipalName(<uuid>)` (principal = UUID użytkownika); komendy CLI nie mają repozytorium sesji, więc `reset-password` usuwa wiersze `spring_session` tego konta SQL-em.

@@ -7,13 +7,13 @@ package pl.szczurradar.api.cli;
  */
 public enum ExitCode {
 
-	/** Done: migrations applied, the admin created, or the link issued and printed. */
+	/** Done: migrations applied, the admin created, the link issued and printed, or the test alert delivered. */
 	OK(0),
 
 	/** Refused, with nothing written: e.g. an admin or the e-mail exists, no such account, passwords differ. */
 	REFUSED(1),
 
-	/** Failed while working, e.g. the database is unreachable or a migration fails. */
+	/** Failed while working, e.g. the database is unreachable, a migration fails or a test alert is not delivered. */
 	FAILED(1),
 
 	/**

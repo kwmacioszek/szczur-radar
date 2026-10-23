@@ -1,6 +1,8 @@
 # Daily pipeline trigger (S-05, daily-scheduled-run-freshness; see README.md): bash, curl and jq, and
 # coreutils for GNU `timeout`. The same image runs as Railway's cron service `pipeline-trigger` and in
-# test.sh. The API is called over the private network with plain http, so no certificates are needed.
+# test.sh. The API is called over the private network with plain http; the check-ins to healthchecks.io
+# (F-04, out-of-app-alert-channel) go over https, verified with Alpine's CA bundle (ca-certificates-bundle,
+# in the base image and a dependency of curl).
 FROM alpine:3.24
 
 RUN apk add --no-cache bash coreutils curl jq \
