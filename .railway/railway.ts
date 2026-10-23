@@ -175,6 +175,13 @@ export default defineRailway(() => {
       // number is refused). Declared so that a value set by the operator is kept,
       // never created here.
       ACTIVATION_LINK_TTL: preserve(),
+      // Out-of-app alert channel (F-04; tools/healthchecks/README.md): the ping URL of
+      // this environment's `<env>/api-events` healthchecks.io check, where the API
+      // reports operator events (alerts/HealthchecksAlerts, `send-test-alert`). A
+      // secret, set by the operator with --stdin and sealed on production, so a new
+      // PR env does not copy it; unset (PR envs, by default) = no alerts sent. Never
+      // a value here.
+      HEALTHCHECK_PING_URL: preserve(),
     },
   });
 
@@ -236,6 +243,11 @@ export default defineRailway(() => {
       S3_REGION: ref(backups, "REGION"),
       BACKUP_KEEP_DAILY: "14",
       BACKUP_KEEP_MONTHLY: "12",
+      // Check-ins to this environment's `<env>/db-backup` healthchecks.io check (F-04;
+      // tools/db-backup/README.md): the start, then the exit code. A secret ping URL,
+      // set by the operator and sealed on production, so a new PR env does not copy
+      // it; unset = no check-ins. Never a value here.
+      HEALTHCHECK_PING_URL: preserve(),
     },
   });
 
@@ -268,6 +280,12 @@ export default defineRailway(() => {
       API_PRIVATE_DOMAIN: api.env.RAILWAY_PRIVATE_DOMAIN,
       API_PORT: API_INTERNAL_PORT,
       PIPELINE_TRIGGER_TOKEN: api.env.PIPELINE_TRIGGER_TOKEN,
+      // Check-ins to this environment's `<env>/pipeline-trigger` healthchecks.io check
+      // (F-04; tools/pipeline-trigger/README.md): the start, then the exit code. A
+      // secret ping URL, set by the operator and sealed on production, so a new PR env
+      // does not copy it; unset = no check-ins. Never a value here. Not TRIGGER_*: the
+      // ignore pattern below would swallow a declared key (a plan error).
+      HEALTHCHECK_PING_URL: preserve(),
     },
   });
 

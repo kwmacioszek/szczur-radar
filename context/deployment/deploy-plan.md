@@ -310,7 +310,7 @@ The operator ran Live Resize from the dashboard (`production` → `postgres-volu
   - `daily/szczur-radar-<yyyymmddThhmmssZ>.dump`, each with a `.manifest.json` (time, sha256, size, server and `pg_dump` versions, Flyway version, row counts, restore check result);
   - `monthly/szczur-radar-<yyyy-mm>.dump` with its manifest: a server-side copy of the first successful dump of each UTC month;
   - retention: 14 daily and 12 monthly copies.
-- **No manual trigger in Railway.** A cron service runs only on its schedule. To run it sooner, set a temporary schedule in the dashboard (`db-backup` → Settings → Cron Schedule, e.g. `*/5 * * * *`, minimum 5 minutes) and set it back to `0 2 * * *` afterwards:
+- **Running it sooner.** A cron run can be started by hand from the dashboard, and the schedule stays as it is (**update 2026-10-20 (F-04):** this replaces "No manual trigger in Railway"; used in the S-08 PR-env verification on 2026-10-19). Otherwise set a temporary schedule in the dashboard (`db-backup` → Settings → Cron Schedule, e.g. `*/5 * * * *`, minimum 5 minutes) and set it back to `0 2 * * *` afterwards:
   - in a PR env, the next push's apply restores it from IaC;
   - on production nothing restores it until the next merge.
 - **What a restore loses:** everything written after the dump, up to about 24 h. The sessions are not in the dump, so everyone logs in again. Missing posts can be fetched again with a range run for the missing days, but assessing them again costs LLM calls.
@@ -1185,6 +1185,163 @@ An API older than S-08 gives `skipped ?`; the deploy order of the API and the cr
    - a usual night (no skipped element, only retryable `failed` posts) gives no notification, as before. (Since S-09 a single provider outage is a technical error and does notify; section S-09.)
 3. **Record which case the first nights were:** a usual night, a warning (`skipped` > 0: a notification, exit 0) or an empty run (`failed`: a notification, exit 1, a Railway push). An empty night is handled with the runbook above.
 4. **Record and close.** Comment the results on issue #67: the merge commit, deployment IDs, the first night's cron and API lines, the notifications seen. Close the issue only after this production verification.
+
+## F-04: kanał alarmowy poza aplikacją (out-of-app-alert-channel)
+
+**Status (2026-10-20): in progress** on branch `feature/out-of-app-alert-channel`, issue #66; not merged, PR-env verification pending. Before F-04 nothing outside the application expected the nightly run or the backup. A cron run that never started (a skipped tick, a first deployment stuck `QUEUED` for about 11 min, section F-01) or whose container a merge replaced mid-run (section S-05, "Production after the merge") gave no signal, because Railway's rule "deployment crashed" fires only on `CRASHED`. The API had no way to send an event out of its process. F-04 adds an outside watcher, healthchecks.io, which alerts in Telegram, and a sender in the API that S-18 wires to the error paths. Change: `context/changes/out-of-app-alert-channel/`.
+
+### How it works
+
+- **Cron check-ins.** `pipeline-trigger` and `db-backup` check in from the outer process of `trigger.sh` / `backup.sh`, the one that holds the time limit, because only it sees every result, the time limit too:
+  1. `POST <ping URL>/start` before the run;
+  2. `POST <ping URL>/<exit code>` after it, with the run's last non-empty log line as a `text/plain` body (at most 1000 characters), e.g. `… trigger: OK: range partial` or `… backup: FAILED: rows lost since …`.
+
+  On a time limit `pipeline-trigger` reports `1` and `db-backup` the code of `timeout` (`124`, or `137` after the kill), each with its time-limit line. A run skipped outside production sends nothing, and so do the other tools of the backup image (`docker run <image> restore-check.sh …`). The run's log in Railway is the same as without check-ins. Details: `tools/pipeline-trigger/README.md`, `tools/db-backup/README.md`.
+- **When healthchecks.io alarms.** Each cron check has the cron's schedule (UTC) and a grace time (Checks below). It sends a Telegram message through @HealthchecksBot:
+  - at once when the end check-in is not `0`, with the run's last log line;
+  - when no check-in arrives by the schedule plus the grace: the cron did not start, stayed `QUEUED`, or started (`/start`) and never ended, e.g. a container replaced by a merge;
+  - "up" again with the next good run.
+
+  healthchecks.io alarms only on a change of state: a second failure while the check is already down gives no second message.
+- **API events.** The package `alerts` (`OperatorAlerts`, `HealthchecksAlerts`) reports an event to the check `<environment>/api-events`. One event is two requests:
+  1. `POST <ping URL>/fail` with `<EVENT> (<description>): <detail>`, cut to 1000 characters;
+  2. after a 2xx, `POST <ping URL>` with `ok`, so the check is up again and the next event alerts again.
+
+  One attempt per request (5 s to connect, 10 s per request), no retries, and it never throws: a failure is one WARN line with the event and the status or the exception's class, never the address. In F-04 only the operator command `send-test-alert` reports an event (`TEST_SIGNAL`); S-18 wires the error paths. At start the server logs `Operator alerts: sent to the healthchecks.io check in HEALTHCHECK_PING_URL`, or `Operator alerts: not configured (HEALTHCHECK_PING_URL is not set), nothing is sent outside the application`.
+- **Nothing polls production.** Every signal goes out: a cron's check-in, or an API event while the API works anyway. healthchecks.io never calls the application, the API has no new timer, and it still sleeps. Cost: $0 (healthchecks.io Hobbyist, free, 20 checks, F-04 uses 3 per environment; Telegram is free).
+- **A check-in never changes a cron's result.** Each one is one `curl -fsS -m 10 --retry 3`. A failure (an HTTP error, no network, healthchecks.io down) logs only `warning: check-in … to healthchecks.io failed (…); the exit code stays as it is`. A value that is not an `https://` address logs `HEALTHCHECK_PING_URL is not an https:// address; no check-in` and sends nothing, so the armed check alarms after its grace time.
+- **Railway's rule stays.** The account's custom rule "deployment crashed" (sections F-01, S-05) stays as a second signal of a crash. A crashed cron run therefore gives two alarms, a Railway push and a Telegram message, and three once `deploy-verification-hardening` adds its issue with a GitHub Mobile push. Only F-04 sees a night that never ran or never ended.
+
+### Checks
+
+`<environment>` is `production`, or `pr-<N>` for a PR-env verification. All checks live in one healthchecks.io project and alert through every channel of the project (`channels: "*"`, its Telegram integration).
+
+| Check | Type | Schedule (UTC) | Grace | No check-in → alarm at about |
+| --- | --- | --- | --- | --- |
+| `<environment>/pipeline-trigger` | cron | `30 0 * * *` | 3 h 15 min (`TRIGGER_TIMEOUT` 3 h + 15 min) | 03:45 UTC |
+| `<environment>/db-backup` | cron | `0 2 * * *` | 2 h 15 min (`BACKUP_TIMEOUT` 2 h + 15 min) | 04:15 UTC |
+| `<environment>/api-events` | simple | none (period 365 days) | 365 days | never in practice: every event ends with a success ping |
+
+- **The grace counts from `/start`**, so it covers the longest run: the cron's time limit plus a margin for Railway starting a cron a few minutes late.
+- **`tools/healthchecks/checks.sh`** creates and updates the checks with the healthchecks.io management API, an upsert by name (`tools/healthchecks/README.md`):
+  - `checks.sh apply <environment>` upserts the three checks and prints `<name> <ping URL>` for each, on stdout only;
+  - `checks.sh apply <environment> --schedule '<cron>' --grace <seconds>` overrides the schedule and grace of **both** cron checks, for the PR-env verification only;
+  - `checks.sh delete <environment>` deletes the environment's checks.
+
+  Exit codes: 0 done, 1 an API error or a cron check not "up", 2 a usage error (e.g. no key).
+- **Arming.** A new check is in the state "new", and healthchecks.io never counts a deadline for it: without a first check-in it stays silent forever. `apply` therefore sends one success ping to each cron check in the state "new" and then requires the state "up" of both (exit 1 otherwise). Before waiting for an alarm, check that state in the panel.
+- **The key.** `HEALTHCHECKS_API_KEY` is the project's read-write API key. The operator keeps it locally (e.g. `~/.config/szczur-radar/healthchecks.env`, sourced in the shell that runs `checks.sh`), never in CI, Railway, the repo or a log. `checks.sh` passes it to `curl` as a config on stdin, never as an argument.
+
+### Variables (names only)
+
+| Service | Variable | Production | PR env |
+| --- | --- | --- | --- |
+| `szczur-radar-api` | `HEALTHCHECK_PING_URL` | the ping URL of `production/api-events`, set by the operator with `--stdin`, **sealed** | unset: no events. Set by hand only for a verification, to the URL of `pr-<N>/api-events` |
+| `pipeline-trigger` | `HEALTHCHECK_PING_URL` | the ping URL of `production/pipeline-trigger`, **sealed** | unset: no check-ins. Set by hand only for a verification |
+| `db-backup` | `HEALTHCHECK_PING_URL` | the ping URL of `production/db-backup`, **sealed** | unset: no check-ins. Set by hand only for a verification |
+
+- **IaC.** `.railway/railway.ts` declares the three with `preserve()`: IaC never creates, changes or deletes a value, so a hand-set value survives every apply. The name is outside the ignore pattern `pipeline-trigger/TRIGGER_*` (a key both declared and ignored is a plan error, section S-14).
+- **Sealed on production.** Railway copies unsealed variables into a new PR env (section F-03), so an unsealed production value would make a PR env's runs check in to production's checks. A sealed one is not copied.
+- **Unset or empty = off.** The crons then behave exactly as before F-04, and the API logs `Operator alerts: not configured …`.
+- **A bad value.**
+  - On the API, a value that is not an absolute `https://` URL with a host and without a query or fragment stops the server's start: an `APPLICATION FAILED TO START` block names the variable and never repeats the value. The pre-deploy `migrate` and the other operator commands do not read it, so it never stops a migration. `send-test-alert` exits 2 on it.
+  - On a cron it gives the warning above and no check-in.
+- **Redeploy after a change.** A cron reads its variables when its deployment is created (section S-05): after setting, changing or deleting the variable, redeploy the cron. The API reads it at start.
+- **The address is a secret.** Whoever knows it can check in, and so fake an "up" or a "down". Set it with `--stdin`, never as an argument, and never paste it into an issue, a PR, a log or this document. A leaked address: delete that check in the panel, run `checks.sh apply <environment>` again (it creates the check anew, with a new address), then set the new address and redeploy the service.
+
+### One-time setup (operator)
+
+1. A healthchecks.io account on the free Hobbyist plan, with one project for this application (production's checks and the PR-env test checks live side by side, named by environment).
+2. In the project: Integrations → Telegram. The link opens @HealthchecksBot; start the chat with it (or add it to a group) and confirm, and the integration appears in the project. Send a test message from the integrations page. Add every integration before `checks.sh apply`: a check gets the project's integrations (`channels: "*"`) when it is upserted, so an integration added later reaches the existing checks only after another `apply` (update 2026-10-23).
+3. Project settings → API keys: create a **read-write** key and keep it locally as `HEALTHCHECKS_API_KEY` (above).
+
+### PR-env verification (szczur-radar-pr-<N>)
+
+Steps (plan `context/changes/out-of-app-alert-channel/plan.md`, Phase 4, Manual Verification). Every hand-set variable here survives a push: `*_IN_ANY_ENVIRONMENT` are in `variables.ignore`, `HEALTHCHECK_PING_URL` is `preserve()`. A push does reset a hand-set cron schedule, so the schedules are never changed: the crons are run by hand from the dashboard.
+
+**Who does what (agent-first, update 2026-10-21).** An agent runs the steps and collects the evidence named in each; the operator keeps four things:
+- the key: `HEALTHCHECKS_API_KEY` goes into the agent's shell for this verification only, or the operator runs every `checks.sh` call alone;
+- the cron runs: "Run now" in the dashboard (the CLI has no manual cron run, and `railway redeploy` refuses a cron), or the agent clicks it in the operator's logged-in browser;
+- a look at Telegram in the steps marked **Telegram**: the healthchecks.io API says neither whether a message was delivered nor what it said;
+- the approval of the record: the agent's report alone is not independent evidence.
+
+Evidence from healthchecks.io: the check's state and `GET /api/v3/checks/<uuid>/flips/` (a read-only key is enough), the ping bodies `GET /api/v3/checks/<uuid>/pings/` (the read-write key). "No Telegram message" = no new flip. The ping addresses go from `checks.sh` into a `0600` file in the agent's scratchpad and from there only through `--stdin`; never on the screen, into the transcript or a log. The file is deleted after the variables step.
+
+- [ ] **No production value copied.** Before anything is set, `railway variable list -s <service> -e szczur-radar-pr-<N> --json` (names only) has no `HEALTHCHECK_PING_URL` on `szczur-radar-api`, `pipeline-trigger` or `db-backup`: `| jq 'has("HEALTHCHECK_PING_URL")'` prints `false` three times. Before the merge production has no value yet either, so the real check of a copied value is step 2 of the runbook after the merge.
+- [ ] **Test checks.** With `HEALTHCHECKS_API_KEY` in the shell: `tools/healthchecks/checks.sh apply pr-<N>`. It creates `pr-<N>/pipeline-trigger`, `pr-<N>/db-backup` and `pr-<N>/api-events`, arms both cron checks and exits 0 only when both are "up"; the panel shows them "up". Keep the printed addresses only until the next step (an agent: in the `0600` file above, never printed).
+- [ ] **Fixtures (plan 3.5).** With the key in the shell, record the responses of `POST /api/v3/checks/` and `GET /api/v3/checks/` through a `jq` filter that replaces `uuid` and the addresses in the `*_url` fields with fixed test values, and compare their shape (keys and types) with `tools/healthchecks/fixtures/`. Replace the files that differ and run `tools/healthchecks/test.sh`; the operator approves the fixture diff before it is committed. No key and no real address in a fixture.
+- [ ] **Variables on the PR env**, each with `--skip-deploys`:
+  ```bash
+  railway variable set HEALTHCHECK_PING_URL --stdin -s pipeline-trigger -e szczur-radar-pr-<N> --skip-deploys   # pr-<N>/pipeline-trigger
+  railway variable set HEALTHCHECK_PING_URL --stdin -s db-backup -e szczur-radar-pr-<N> --skip-deploys          # pr-<N>/db-backup
+  railway variable set HEALTHCHECK_PING_URL --stdin -s szczur-radar-api -e szczur-radar-pr-<N> --skip-deploys   # pr-<N>/api-events
+  railway variable set TRIGGER_IN_ANY_ENVIRONMENT=true -s pipeline-trigger -e szczur-radar-pr-<N> --skip-deploys
+  railway variable set BACKUP_IN_ANY_ENVIRONMENT=true -s db-backup -e szczur-radar-pr-<N> --skip-deploys
+  ```
+  An agent feeds each `--stdin` from the file, e.g. `awk '$1 == "pr-<N>/pipeline-trigger" {print $2}' <file> | railway variable set HEALTHCHECK_PING_URL --stdin …`.
+  The cron needs the PR env's own `PIPELINE_TRIGGER_TOKEN` on the API (production's is sealed and not copied, section S-08): `openssl rand -hex 32 | railway variable set PIPELINE_TRIGGER_TOKEN --stdin -s szczur-radar-api -e szczur-radar-pr-<N> --skip-deploys`. A PR env without a database: section S-15, PR-env verification, step 1.
+- [ ] **Redeploy.** First the API (`railway redeploy -s szczur-radar-api -e szczur-radar-pr-<N> -y`; its start log has `Operator alerts: sent to the healthchecks.io check …`), then both crons with the Railway MCP `redeploy` (`railway redeploy` refuses a cron, section S-08). A cron's deployment resolves the token reference only when it is created. A cron that has never built in this PR env (every deployment `SKIPPED`, e.g. after the env was recreated and no commit has touched `tools/<cron>/**` since) has nothing to redeploy, and MCP `redeploy` refuses ("no snapshot"): deploy the branch's committed code once with `git archive HEAD | tar -x -C <dir>`, `find <dir> -type l ! -exec test -e {} \; -delete` (broken symlinks stop the upload) and `railway up <dir> --path-as-root -s <cron> -e szczur-radar-pr-<N> --detach`; later redeploys of that cron work with MCP (update 2026-10-23).
+- [ ] **A good `pipeline-trigger` run.** Run the cron by hand from the dashboard. Its log ends `OK: …`, and the panel shows `start`, then `0` with the `OK:` line in the body, on `pr-<N>/pipeline-trigger`. No Telegram message. Evidence: the cron's Railway log and exit code, the check "up" with a `last_ping` after the run started, the body from `/pings/`, no new flip.
+- [ ] **A failed `pipeline-trigger` run, then a good one.** Set a wrong token as a value on the cron, as in section S-05 (`openssl rand -hex 32 | railway variable set PIPELINE_TRIGGER_TOKEN --stdin -s pipeline-trigger -e szczur-radar-pr-<N> --skip-deploys`), redeploy the cron and run it by hand: exit 1 (401), a **Telegram** "down" with the `FAILED:` line, and Railway's "deployment crashed" push next to it. Restore the reference (`railway variable set 'PIPELINE_TRIGGER_TOKEN=${{szczur-radar-api.PIPELINE_TRIGGER_TOKEN}}' -s pipeline-trigger -e szczur-radar-pr-<N> --skip-deploys`), redeploy the cron and run it again: exit 0 and a **Telegram** "up". Evidence: both Railway logs and the flips up → down → up.
+- [ ] **A `db-backup` run.** The PR env's database now has posts from the runs above (a backup of an empty `posts` fails before the dump, section S-15). Run `db-backup` by hand from the dashboard: its log ends `backup: OK: daily/…`, and the panel shows `start` and `0` on `pr-<N>/db-backup`. The dump goes to the PR env's own bucket. Evidence: as for the good `pipeline-trigger` run, with no new flip.
+- [ ] **`send-test-alert`.** Wake the API (`curl https://szczur-radar-web-szczur-radar-pr-<N>.up.railway.app/api/health`; a sleeping API has no container for `railway ssh`, section S-07), then:
+  ```bash
+  railway ssh -s szczur-radar-api -e szczur-radar-pr-<N> -- java -jar /app/target/szczur-radar-api.jar send-test-alert
+  ```
+  Exit 0 with `Test alert delivered …`. **Telegram**: a "down" for `pr-<N>/api-events` with `TEST_SIGNAL (test of the operator alert channel, nothing is wrong): send-test-alert from <host>` (over `railway ssh` it says `from operator`: the session does not export `HOSTNAME`), right after it an "up"; the flips show down → up. Afterwards the API goes to sleep as usual. The deployment's state in Railway does not show sleep (it stays `SUCCESS`): leave the API alone for about 15 minutes, then call `/api/deploy-safety` twice; a sleeping API answers the first call only after its start (about 10 s, the second in about 0.1 s), and the same deployment's log gets a new `Started SzczurRadarApiApplication` line at that moment (update 2026-10-23).
+- [ ] **A missed check-in.** Last, because it leaves both cron checks down. Do not run a cron; move only the test checks' schedule to the next minutes, e.g. at 14:02 UTC:
+  ```bash
+  tools/healthchecks/checks.sh apply pr-<N> --schedule '5 14 * * *' --grace 60
+  ```
+  Both cron checks are "up" before the wait. After the schedule plus 60 s (healthchecks.io checks about once a minute), **Telegram** gives a "down" for each, with the reason "success signal did not arrive on time, grace time passed"; its "Last Ping Body" is the previous run's `OK:` line, not a cause. Evidence: a flip to down on both checks, with no ping since the arming.
+- [ ] **Cleanup.**
+  1. `tools/healthchecks/checks.sh delete pr-<N>`.
+  2. Delete `HEALTHCHECK_PING_URL` on the three services, `TRIGGER_IN_ANY_ENVIRONMENT` and `BACKUP_IN_ANY_ENVIRONMENT` (`railway variable delete` has no `--skip-deploys`, and it does not redeploy a cron). The cron's token is the reference again (step above).
+  3. Redeploy both crons (Railway MCP) and the API, otherwise their deployments keep the old values. The schedules were never changed (`30 0 * * *`, `0 2 * * *`).
+  4. The variable lists of the three services show none of the deleted names. The API keeps its `PIPELINE_TRIGGER_TOKEN` (`preserve()`). `GET /api/v3/checks/` has no `pr-<N>/` check, and the schedules in the live configuration (Railway MCP `get-service-config`) are `30 0 * * *` and `0 2 * * *`.
+- [ ] **Record.** The results here and as a comment on issue #66, never an address or the key. With them, the agent's table "runbook step → command used → deviation", for the operator's approval (plan 4.10).
+
+### Runbook — after the merge (operator; tracked in issue #66, not in the plan's Progress)
+
+0. **Standing rules.** No merge to `main` while `/admin` shows a run `RUNNING`, not between about 00:30 and 01:30 UTC (section S-05), and not while the 02:00 UTC backup runs (section S-15): the merge rebuilds the API and both crons. CI on `main` is green, and `railway-config` plans no change (`preserve()` creates no value). If the plan shows anything else, stop and investigate.
+1. **The production checks.** With `HEALTHCHECKS_API_KEY` in the shell: `tools/healthchecks/checks.sh apply production`. It exits 0 only when `production/pipeline-trigger` and `production/db-backup` are "up" (armed); confirm it in the panel too. Keep the printed addresses only until step 2.
+2. **The variables**, with `--skip-deploys`, then seal each one in the dashboard (service → Variables):
+   ```bash
+   railway variable set HEALTHCHECK_PING_URL --stdin -s szczur-radar-api -e production --skip-deploys   # production/api-events
+   railway variable set HEALTHCHECK_PING_URL --stdin -s pipeline-trigger -e production --skip-deploys   # production/pipeline-trigger
+   railway variable set HEALTHCHECK_PING_URL --stdin -s db-backup -e production --skip-deploys          # production/db-backup
+   ```
+   Check the names only (`railway variable list -s <service> -e production --json`), never print a value.
+
+   **Then, on the first PR env created after the sealing** (an older one copied the variables before): `railway variable list -s <service> -e szczur-radar-pr-<M> --json | jq 'has("HEALTHCHECK_PING_URL")'` prints `false` on the three services. `true` means a production value was not sealed: seal it, delete the variable in that PR env and redeploy its service there. This is the real check that PR envs do not inherit production's addresses (the PR-env verification could only check an environment without a production value).
+3. **One redeploy** of the crons and the API, under the standing rules: a cron reads its variables when its deployment is created. `railway redeploy -s szczur-radar-api -e production -y`, and both crons with the Railway MCP `redeploy`. The API's start log has `Operator alerts: sent to the healthchecks.io check in HEALTHCHECK_PING_URL`, and `/api/ready` returns 200.
+4. **`send-test-alert` on production.** Wake the API (`curl https://szczur-radar-web-production.up.railway.app/api/health`), then, in your own terminal (as `create-user`, section S-07):
+   ```bash
+   railway ssh -s szczur-radar-api -e production -- java -jar /app/target/szczur-radar-api.jar send-test-alert
+   ```
+   Exit 0; Telegram gives a "down" for `production/api-events` with the test text, then an "up".
+5. **The first night.** In the panel, `production/pipeline-trigger` has `start` and `0` with the `OK:` line (about 00:30–01:30 UTC), and `production/db-backup` has `start` and `0` with `backup: OK: daily/…` (about 02:00 UTC). No Telegram message. A message that night is a real failure (sections S-05, S-08, F-01) or a false alarm (below).
+6. **Record and close.** Comment on issue #66: the merge commit, the plan output, the deployment IDs, the API's start line, the `send-test-alert` result, the first night's check-ins and the check of a new PR env (step 2), never an address or the key. Close #66 only after this verification.
+
+### False alarms and outages
+
+- **A "down" without a failure.** Read the cron's Railway log and `/admin`:
+  - the run lasted longer than the grace: its end check-in turns the check "up" again (an "up" message). With the grace above the time limit, that happens only when a limit was raised without a new grace (below);
+  - Railway started the cron later than the grace, or skipped its tick (silently, as Railway does): the alarm is right, the night did not run on time. Run the cron by hand from the dashboard, or wait for the next night (it fetches D-2 again);
+  - the end check-in got lost (the log has `warning: check-in … failed`): the log has the result, and the next good run brings the check back "up".
+- **A planned outage** that would give known alarms (e.g. a maintenance window over the night): pause the checks in the panel. The next check-in resumes a paused check.
+- **healthchecks.io or Telegram down is silent.** No alarm comes and nothing says so; the crons and the API work as usual (at most a warning line in the cron's log). Nothing watches healthchecks.io itself (out of F-04's scope). The Railway rule still reports a crashed cron.
+
+### Changing `TRIGGER_TIMEOUT`, `BACKUP_TIMEOUT` or a cron schedule
+
+The grace of a cron check is its time limit plus 15 min. Both limits are set by hand (`variables.ignore`, section S-14), so nothing ties them to the checks: a raised limit without a new grace makes a long run a false alarm, and a moved schedule without a new check schedule a missed one.
+1. Change the grace (or the schedule) in `tools/healthchecks/checks.sh` and in the table above, in a PR. The `--schedule` / `--grace` options set both cron checks at once and are only for the PR-env verification.
+2. After its merge: `tools/healthchecks/checks.sh apply production` (an upsert: the addresses stay).
+3. Only then raise the limit or move the schedule.
+
+### Rollback
+
+Delete `HEALTHCHECK_PING_URL` on a service and redeploy it: its check-ins or events stop, with no code change. Pause or delete the checks in the panel. Without the variable the code behaves as before F-04.
 
 ## S-09: awaria dostawcy nie zabija postów (attempt-accounting)
 

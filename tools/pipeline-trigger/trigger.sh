@@ -6,8 +6,11 @@
 # failed, 2 on a configuration error. Railway marks a cron run that exits non-zero as crashed and
 # notifies it (needs the account's custom notification rule "deployment crashed", all environments).
 # While a run is running it logs a heartbeat with its step and progress (S-06,
-# pipeline-run-history-dashboard), from the answers it polls anyway.
-# Never `set -x`: PIPELINE_TRIGGER_TOKEN is the API's shared secret and is never printed.
+# pipeline-run-history-dashboard), from the answers it polls anyway. With HEALTHCHECK_PING_URL set it
+# checks in to healthchecks.io (F-04, out-of-app-alert-channel): the start, then the exit code with the
+# last log line.
+# Never `set -x`: PIPELINE_TRIGGER_TOKEN is the API's shared secret and HEALTHCHECK_PING_URL a secret
+# address; neither is ever printed.
 set -euo pipefail
 
 log() { printf '%s trigger: %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*" >&2; }
@@ -39,17 +42,61 @@ seconds() {
     esac
 }
 
+# Check-ins to healthchecks.io (F-04, out-of-app-alert-channel; see README.md), only when
+# HEALTHCHECK_PING_URL is set: /start before the run, then /<exit code> with the run's last log line as
+# the body. The check alarms when the end does not come in time or is not 0. Whoever knows the address
+# can check in, so it is a secret: it goes to curl as a config on stdin, never as an argument (visible in
+# ps), and is never logged. A failed check-in only logs a warning: it never changes the exit code. Not an
+# https:// address: a warning and no check-in (the check then alarms after its grace time).
+# The same code is in tools/db-backup/backup.sh (another image and build context): change both.
+readonly ping_pattern='^https://[A-Za-z0-9._~:/?#@!$&()*+,;=%-]+$'
+ping_url=${HEALTHCHECK_PING_URL:-}
+ping_url=${ping_url#"${ping_url%%[![:space:]]*}"}
+ping_url=${ping_url%"${ping_url##*[![:space:]]}"}
+ping_url=${ping_url%/}
+unset HEALTHCHECK_PING_URL
+if [[ -n $ping_url && ! $ping_url =~ $ping_pattern ]]; then
+    log "warning: HEALTHCHECK_PING_URL is not an https:// address; no check-in"
+    ping_url=""
+fi
+readonly ping_url
+
+# One check-in: POST <ping URL>/$1 with the file $2 (default: none) as a text/plain body.
+check_in() {
+    [[ -n $ping_url ]] || return 0
+    local error status=0
+    error=$(printf 'url = "%s/%s"\n' "$ping_url" "$1" | curl --disable -fsS -m 10 --retry 3 -o /dev/null \
+        --header 'Content-Type: text/plain' --data-binary "@${2:-/dev/null}" --config - 2>&1) || status=$?
+    if (( status != 0 )); then
+        error=$(tail -n 1 <<<"$error")
+        log "warning: check-in $1 to healthchecks.io failed (${error:-curl exit $status}); the exit code stays as it is"
+    fi
+}
+
+# The last non-empty line of the file $1, at most 1000 characters (what the check's alarm shows).
+last_line() { awk 'NF { line = $0 } END { printf "%s", substr(line, 1, 1000) }' "$1"; }
+
 # A run that hangs would never fail, and Railway skips every later run while one is still active: the
 # whole run gets a hard time limit (above the wake, busy and run limits together) and fails when it is
-# exceeded.
+# exceeded. Only this outer process sees every result, the time limit too, so it checks in.
 if [[ -z ${TRIGGER_TIME_LIMITED:-} ]]; then
-    seconds TRIGGER_TIMEOUT
     export TRIGGER_TIME_LIMITED=1
-    status=0
-    timeout --kill-after=30s "${REPLY}s" "${BASH_SOURCE[0]}" || status=$?
+    checkin_dir=$(mktemp -d)
+    trap 'rm -rf "$checkin_dir"' EXIT
+    check_in start
+    # The run's log goes to stderr as before and to a copy, for its last line. A bad TRIGGER_TIMEOUT ends
+    # the subshell with 2 (config_error), checked in like any other result.
+    set +e
+    { ( seconds TRIGGER_TIMEOUT; exec timeout --kill-after=30s "${REPLY}s" "${BASH_SOURCE[0]}" ) 2>&1 1>&3 3>&- \
+        | tee "$checkin_dir/log" >&2; status=${PIPESTATUS[0]}; } 3>&1
+    set -e
     if (( status == 124 || status == 137 )); then
-        fail "the run exceeded $TRIGGER_TIMEOUT"
+        # What fail does, but the check-in goes before the exit.
+        log "FAILED: the run exceeded $TRIGGER_TIMEOUT" 2>&1 | tee -a "$checkin_dir/log" >&2
+        status=1
     fi
+    last_line "$checkin_dir/log" >"$checkin_dir/body"
+    check_in "$status" "$checkin_dir/body"
     exit "$status"
 fi
 

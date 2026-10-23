@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Local test of the daily pipeline trigger, without Railway (S-05, daily-scheduled-run-freshness; see
 # README.md). The image runs in a Docker network next to a stub API: a small Python HTTP server that
-# answers /internal/pipeline-runs like the API, with answers scripted per case. Checks:
+# answers /internal/pipeline-runs like the API, with answers scripted per case, and check-ins to
+# /ping/<key>[/start|/<code>] like healthchecks.io over https (a throwaway certificate). Checks:
 #   1. the image runs as a non-root user; outside production (RAILWAY_ENVIRONMENT_NAME) a run is
 #      skipped without a request;
 #   2. 202 → succeeded or partial: exit 0; failed, interrupted (the log gives its cause), or a failed
@@ -16,8 +17,12 @@
 #      the API got (TRIGGER_REQUEST_TIMEOUT): exit 1 without a second POST; every time limit
 #      (TRIGGER_WAKE_TIMEOUT, TRIGGER_BUSY_TIMEOUT, TRIGGER_RUN_TIMEOUT, the whole run's
 #      TRIGGER_TIMEOUT): exit 1; a missing variable or a bad duration: exit 2;
-#   5. the tokens never appear in the logs.
-# Needs Docker. Run from anywhere: tools/pipeline-trigger/test.sh
+#   5. with HEALTHCHECK_PING_URL (F-04, out-of-app-alert-channel): /start, then the exit code (0, 1 for a
+#      failed run and the TRIGGER_TIMEOUT limit, 2 for a configuration error) with the last log line;
+#      a check-in answered 500 (retried) or unreachable leaves the exit code as it is; no variable, a
+#      skipped run or an address that is not https:// gives no check-in;
+#   6. the tokens and the check-in address never appear in the logs.
+# Needs Docker and openssl (the stub's certificate). Run from anywhere: tools/pipeline-trigger/test.sh
 set -euo pipefail
 
 here=$(cd "$(dirname "$0")" && pwd)
@@ -25,9 +30,15 @@ readonly image=szczur-radar-pipeline-trigger
 readonly stub_image=python:3.14-alpine
 readonly id=sr-pipeline-trigger-test-$$
 readonly net=$id
-# Throwaway tokens, checked below never to appear in a log.
+# The image with the stub's certificate trusted, for the check-in cases (removed by cleanup).
+readonly ping_image=$id-ping
+# The stub's name for the check-ins (a network alias, in its certificate).
+readonly ping_host=hc-ping.test
+# Throwaway tokens and check-in key, checked below never to appear in a log.
 token=test-$(od -An -N16 -tx1 /dev/urandom | tr -d ' \n')
 wrong_token=wrong-$(od -An -N16 -tx1 /dev/urandom | tr -d ' \n')
+ping_key=$(od -An -N16 -tx1 /dev/urandom | tr -d ' \n')
+readonly ping_url=https://$ping_host:8443/ping/$ping_key
 tmp=$(mktemp -d)
 
 step() { printf '\n== %s\n' "$*"; }
@@ -38,6 +49,7 @@ cleanup() {
     # Every container of this test is named "$id-…" (the stubs and each trigger run).
     docker ps -aq --filter "name=$id-" | xargs docker rm -f >/dev/null 2>&1 || true
     docker network rm "$net" >/dev/null 2>&1 || true
+    docker image rm "$ping_image" >/dev/null 2>&1 || true
     rm -rf "$tmp"
 }
 trap cleanup EXIT
@@ -51,11 +63,12 @@ trap 'exit 130' INT TERM
 #         is its name, or an object {status, <field>: <value>, …} whose fields replace the answer's;
 #   old_api: true leaves out the fields the API added in S-06 (startedAt, lastActivityAt,
 #         interruptionCause, step, assessTotal) and S-08 (skipped), as an API from before them;
-#   listen_after: seconds before it accepts connections (until then they are refused).
-# Every request without "Bearer $STUB_TOKEN" gets 401 not_authenticated. One line per request on
-# stdout: "<method> <path> <status>".
+#   listen_after: seconds before it accepts connections (until then they are refused);
+#   ping: the status of every check-in (POST /ping/…, on port 8443 over https with STUB_CERT), default 200.
+# Every request to the API without "Bearer $STUB_TOKEN" gets 401 not_authenticated. One line per request
+# on stdout: "<method> <path> <status>", for a check-in followed by its body as a JSON string.
 read -r -d '' stub_code <<'PY' || true
-import json, os, time, uuid
+import json, os, ssl, threading, time, uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 case = json.loads(os.environ["STUB_CASE"])
@@ -86,7 +99,19 @@ class Api(BaseHTTPRequestHandler):
         self.answer(401, {"detail": "not_authenticated"})
         return False
 
+    def ping(self):
+        body = self.rfile.read(int(self.headers.get("Content-Length") or 0)).decode(errors="replace")
+        status = case.get("ping", 200)
+        self.send_response(status)
+        self.send_header("Content-Type", "text/plain")
+        self.send_header("Content-Length", "2")
+        self.end_headers()
+        self.wfile.write(b"OK")
+        print(f"{self.command} {self.path} {status} {json.dumps(body)}", flush=True)
+
     def do_POST(self):
+        if self.path.startswith("/ping/"):
+            return self.ping()
         if not self.authorized():
             return
         if self.path != "/internal/pipeline-runs/daily":
@@ -132,6 +157,13 @@ class Api(BaseHTTPRequestHandler):
 
 time.sleep(case.get("listen_after", 0))
 server = ThreadingHTTPServer(("", 8000), Api)
+with open("/tmp/ping.pem", "w") as pem:
+    pem.write(os.environ["STUB_CERT"] + "\n" + os.environ["STUB_KEY"] + "\n")
+tls = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+tls.load_cert_chain("/tmp/ping.pem")
+pings = ThreadingHTTPServer(("", 8443), Api)
+pings.socket = tls.wrap_socket(pings.socket, server_side=True)
+threading.Thread(target=pings.serve_forever, daemon=True).start()
 print("listening", flush=True)
 server.serve_forever()
 PY
@@ -140,9 +172,10 @@ PY
 # makes it listen late.
 start_stub() {
     local name=$1 case=$2
-    STUB_CASE=$case STUB_TOKEN=$token STUB_CODE=$stub_code docker run --detach --name "$id-stub-$name" \
-        --network "$net" -e STUB_CASE -e STUB_TOKEN -e STUB_CODE "$stub_image" \
-        python -u -c 'import os; exec(os.environ["STUB_CODE"])' >/dev/null
+    STUB_CASE=$case STUB_TOKEN=$token STUB_CODE=$stub_code STUB_CERT=$(cat "$tmp/ping/ca.pem") \
+        STUB_KEY=$(cat "$tmp/ping-key.pem") docker run --detach --name "$id-stub-$name" \
+        --network "$net" --network-alias "$ping_host" -e STUB_CASE -e STUB_TOKEN -e STUB_CODE -e STUB_CERT \
+        -e STUB_KEY "$stub_image" python -u -c 'import os; exec(os.environ["STUB_CODE"])' >/dev/null
     [[ $case != *listen_after* ]] || return 0
     for attempt in $(seq 1 50); do
         if docker logs "$id-stub-$name" 2>&1 | grep -qx listening; then
@@ -154,14 +187,16 @@ start_stub() {
 }
 
 # One trigger run of case $1 against its stub, with the token $2 (empty: unset) and the `docker run`
-# options after it. Log in $tmp/$1.log; sets REPLY to the exit code.
+# options after it, in $trigger_image (default: the image). Log in $tmp/$1.log; sets REPLY to the exit
+# code.
 run_trigger() {
     local name=$1 trigger_token=$2
     shift 2
     REPLY=0
     PIPELINE_TRIGGER_TOKEN=$trigger_token docker run --rm --name "$id-$name" --network "$net" \
         -e API_PRIVATE_DOMAIN="$id-stub-$name" -e API_PORT=8000 -e PIPELINE_TRIGGER_TOKEN \
-        -e TRIGGER_POLL_INTERVAL=1s -e TRIGGER_BUSY_INTERVAL=1s "$@" "$image" >"$tmp/$name.log" 2>&1 || REPLY=$?
+        -e TRIGGER_POLL_INTERVAL=1s -e TRIGGER_BUSY_INTERVAL=1s "$@" "${trigger_image:-$image}" \
+        >"$tmp/$name.log" 2>&1 || REPLY=$?
 }
 
 show() {
@@ -185,25 +220,56 @@ check_case() {
     [[ $REPLY == "$expected" ]] || { show "$name"; die "$name: exit code $REPLY, expected $expected"; }
 }
 
+# check_case with the image that trusts the stub's certificate, for a trigger that checks in to it.
+check_ping_case() {
+    local trigger_image=$ping_image
+    check_case "$@"
+}
+
 # Case $1's log says $2.
 log_says() {
     grep -qF -- "$2" "$tmp/$1.log" || { show "$1"; die "$1: the log does not say '$2'"; }
 }
 
-# Case $1's stub got $2 POST and $3 GET requests.
+# Case $1's stub got $2 POST and $3 GET requests to the API (check-ins are not counted).
 requests_were() {
     local posts gets
-    posts=$(grep -c '^POST ' "$tmp/$1.requests" || true)
-    gets=$(grep -c '^GET ' "$tmp/$1.requests" || true)
+    posts=$(grep -c '^POST /internal/' "$tmp/$1.requests" || true)
+    gets=$(grep -c '^GET /internal/' "$tmp/$1.requests" || true)
     [[ $posts == "$2" && $gets == "$3" ]] \
         || { show "$1"; die "$1: $posts POST and $gets GET requests, expected $2 and $3"; }
+}
+
+# Case $1's stub got the check-ins $2 in this order (start or the exit code, separated by spaces; empty:
+# none). Every check-in counts, whatever its address.
+pings_were() {
+    local pings
+    pings=$(sed -nE 's|^POST /ping/([^ ]+) .*|\1|p' "$tmp/$1.requests" | sed -E "s|^$ping_key/||" | paste -sd ' ' -)
+    [[ $pings == "$2" ]] || { show "$1"; die "$1: check-ins '$pings', expected '$2'"; }
+}
+
+# The body of case $1's last check-in says $2.
+last_ping_says() {
+    local body
+    body=$(grep '^POST /ping/' "$tmp/$1.requests" | tail -n 1 | cut -d ' ' -f 4-)
+    [[ $body == *"$2"* ]] || { show "$1"; die "$1: the last check-in's body $body does not say '$2'"; }
 }
 
 step "build $image"
 docker build --quiet --tag "$image" "$here" >/dev/null
 docker pull --quiet "$stub_image" >/dev/null
 docker network create "$net" >/dev/null
-pass "image built, stub API image $stub_image"
+# A throwaway certificate for the stub's check-ins: healthchecks.io is https, and so must the address be.
+mkdir "$tmp/ping"
+openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj "/CN=$ping_host" \
+    -addext "subjectAltName=DNS:$ping_host" -keyout "$tmp/ping-key.pem" -out "$tmp/ping/ca.pem" 2>/dev/null \
+    || die "openssl cannot make the stub's certificate"
+docker build --quiet --tag "$ping_image" --file - "$tmp/ping" >/dev/null <<DOCKERFILE
+FROM $image
+COPY ca.pem /etc/ping-stub-ca.pem
+ENV CURL_CA_BUNDLE=/etc/ping-stub-ca.pem
+DOCKERFILE
+pass "image built, stub API image $stub_image, $ping_image trusting the stub's certificate"
 
 step "1. non-root, and skipped outside production"
 uid=$(docker run --rm --entrypoint id "$image" -u)
@@ -330,11 +396,64 @@ log_says bad-heartbeat 'FAILED: TRIGGER_HEARTBEAT_INTERVAL must be a duration su
 requests_were bad-heartbeat 0 0
 pass "TRIGGER_HEARTBEAT_INTERVAL=5x → exit 2, no request"
 
-step "5. no secrets in the logs"
-if grep -lF -e "$token" -e "$wrong_token" "$tmp"/*.log; then
-    die "a token appears in a trigger log"
+step "5. check-ins to healthchecks.io (HEALTHCHECK_PING_URL)"
+pings_were succeeded ''
+pings_were time-limit ''
+pass "without HEALTHCHECK_PING_URL: no check-in"
+check_ping_case ping-skipped 0 '{"runs": [{"kind": "range", "statuses": ["succeeded"]}]}' "$token" \
+    -e RAILWAY_ENVIRONMENT_NAME=szczur-radar-pr-1 -e HEALTHCHECK_PING_URL="$ping_url"
+log_says ping-skipped 'skipped: the daily run is started only in production'
+pings_were ping-skipped ''
+pass "a skipped run (outside production): no check-in"
+check_ping_case ping-ok 0 '{"runs": [{"kind": "range", "statuses": ["running", "succeeded"]}]}' "$token" \
+    -e HEALTHCHECK_PING_URL="$ping_url/"
+pings_were ping-ok 'start 0'
+last_ping_says ping-ok ' trigger: OK: range succeeded'
+requests_were ping-ok 1 2
+pass "succeeded: /start, then /0 with the OK line (a trailing / in the address is dropped)"
+check_ping_case ping-failed 1 '{"runs": [{"kind": "range", "statuses": ["running", "failed"]}]}' "$token" \
+    -e HEALTHCHECK_PING_URL="$ping_url"
+pings_were ping-failed 'start 1'
+last_ping_says ping-failed ' trigger: FAILED: a run did not succeed: range failed'
+pass "failed: /start, then /1 with the FAILED line"
+check_ping_case ping-config 2 '{"runs": [{"kind": "range", "statuses": ["succeeded"]}]}' "" \
+    -e HEALTHCHECK_PING_URL="$ping_url"
+pings_were ping-config 'start 2'
+last_ping_says ping-config ' trigger: FAILED: PIPELINE_TRIGGER_TOKEN is not set'
+requests_were ping-config 0 0
+pass "a configuration error: /start, then /2 with its line"
+check_ping_case ping-time-limit 1 '{"runs": [{"kind": "range", "statuses": ["running"]}]}' "$token" \
+    -e TRIGGER_TIMEOUT=3s -e HEALTHCHECK_PING_URL="$ping_url"
+log_says ping-time-limit 'FAILED: the run exceeded 3s'
+pings_were ping-time-limit 'start 1'
+last_ping_says ping-time-limit ' trigger: FAILED: the run exceeded 3s'
+pass "over TRIGGER_TIMEOUT=3s: /start, then /1 with the time limit's line, before the exit"
+check_ping_case ping-error 0 '{"ping": 500, "runs": [{"kind": "range", "statuses": ["succeeded"]}]}' "$token" \
+    -e HEALTHCHECK_PING_URL="$ping_url"
+log_says ping-error 'warning: check-in start to healthchecks.io failed (curl: (22)'
+log_says ping-error 'warning: check-in 0 to healthchecks.io failed (curl: (22)'
+log_says ping-error 'OK: range succeeded'
+pings_were ping-error 'start start start start 0 0 0 0'
+pass "check-ins answered 500: retried 3 times, a warning, exit 0 as without them"
+check_ping_case ping-unreachable 1 '{"runs": [{"kind": "range", "statuses": ["running", "failed"]}]}' "$token" \
+    -e HEALTHCHECK_PING_URL="https://$ping_host:9/ping/$ping_key"
+log_says ping-unreachable 'warning: check-in start to healthchecks.io failed (curl: (7)'
+log_says ping-unreachable 'warning: check-in 1 to healthchecks.io failed (curl: (7)'
+log_says ping-unreachable 'FAILED: a run did not succeed: range failed'
+pings_were ping-unreachable ''
+pass "an unreachable check-in address: a warning, exit 1 as without it"
+check_ping_case ping-not-https 0 '{"runs": [{"kind": "range", "statuses": ["succeeded"]}]}' "$token" \
+    -e HEALTHCHECK_PING_URL="http://$ping_host:8000/ping/$ping_key"
+log_says ping-not-https 'warning: HEALTHCHECK_PING_URL is not an https:// address; no check-in'
+log_says ping-not-https 'OK: range succeeded'
+pings_were ping-not-https ''
+pass "an address that is not https://: a warning, no check-in, exit 0"
+
+step "6. no secrets in the logs"
+if grep -lF -e "$token" -e "$wrong_token" -e "$ping_key" "$tmp"/*.log; then
+    die "a token or the check-in key appears in a trigger log"
 fi
-pass "neither token is in any trigger log"
+pass "neither token nor the check-in key is in any trigger log"
 
 echo
 echo "trigger.sh log of the succeeded case (what Railway shows for a cron run):"
