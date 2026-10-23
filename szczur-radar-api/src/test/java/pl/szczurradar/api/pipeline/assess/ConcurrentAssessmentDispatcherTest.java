@@ -316,6 +316,20 @@ class ConcurrentAssessmentDispatcherTest {
 	}
 
 	@Test
+	void aCheckFailingWithAnErrorThatIsNotTheProvidersTakesNoPostAndStopsTheStep() {
+		List<UUID> ids = List.of(post(ContractFixtures.validInput().item().body()));
+		// e.g. an unknown SDK error, which the clients leave unclassified
+		checkFailure.set(new IllegalStateException("java.lang.RuntimeException: unexpected state"));
+
+		AssessedBatch batch = dispatcher().dispatch(RUN, ids);
+
+		assertThat(calls).hasValue(0);
+		assertThat(stages).allSatisfy((id, stage) -> assertThat(stage).isEqualTo(PostStage.STORED));
+		assertThat(batch.stoppedBy()).isEqualTo("the LLM check failed: java.lang.RuntimeException: unexpected state");
+		assertThat(batch.status()).isEqualTo(RunStatus.FAILED);
+	}
+
+	@Test
 	void aRefusedConfigurationStopsTheStepWithoutAnAttempt(CapturedOutput output) {
 		List<UUID> ids = new ArrayList<>();
 		ids.add(post(REVOKED));
@@ -438,10 +452,34 @@ class ConcurrentAssessmentDispatcherTest {
 		verify(transitions, never()).countTechnicalFailure(any(UUID.class), any(UUID.class), any(String.class));
 		assertThat(technicalFailures).isEmpty();
 		verify(recorder, never()).count(any(), any());
+		// Yet each outage moved the run's last activity: the watchdog never stops a run before the breaker.
+		verify(recorder, times(3)).touch(RUN);
 		assertThat(output.getAll().lines().filter(line -> line.contains(" WARN "))).singleElement()
 			.satisfies(line -> assertThat(line).contains("LLM provider is unavailable in run " + RUN,
 					"3 calls in a row", "HTTP 503 after 3 attempts"));
 		assertThat(output.getAll().lines().filter(line -> line.contains(" ERROR "))).isEmpty();
+	}
+
+	@Test
+	void anOutagesPostIsPutBackEvenWhenTheFirstWriteFails() {
+		UUID id = post(ContractFixtures.BODY + UNAVAILABLE);
+		AtomicInteger writes = new AtomicInteger();
+		doAnswer(invocation -> {
+			if (writes.getAndIncrement() == 0) {
+				throw new IllegalStateException("the database is gone for a moment");
+			}
+			return putBack(invocation.getArgument(0));
+		}).when(transitions).release(any(UUID.class), any(UUID.class));
+
+		AssessedBatch batch = dispatchOnOneThread(List.of(id));
+
+		// Tried again on the way out: the post is back, without an attempt; the failed write is the
+		// post's technical error, as any failed write.
+		verify(transitions, times(2)).release(id, RUN);
+		assertThat(stages.get(id)).isEqualTo(PostStage.STORED);
+		assertThat(attempts.get(id)).isZero();
+		assertThat(batch.processingErrors()).singleElement()
+			.satisfies(error -> assertThat(error.message()).contains("the database is gone for a moment"));
 	}
 
 	@Test
@@ -467,6 +505,7 @@ class ConcurrentAssessmentDispatcherTest {
 		assertThat(lastTechnicalErrors).containsEntry(first, OUTAGE).containsEntry(second, OUTAGE);
 		verify(recorder, times(2)).count(RUN, Counters.processingError());
 		verify(recorder, times(2)).count(RUN, Counters.assessedOk(0, false));
+		verify(recorder, times(2)).touch(RUN);
 		// Counted only after the last post was stored, never as the outage's post was put back.
 		InOrder order = inOrder(transitions);
 		order.verify(transitions).record(eq(last), eq(RUN), anyInt(), any(Assessment.class));

@@ -60,7 +60,9 @@ whatever the finish reason (`ChatResponses.requireText`).
 - `LlmClient.check()`: one tiny real call (`CHECK_REQUEST`, a few dozen tokens) through the same path
   as an assessment — it proves the key, the model and the credit together. Listing models would not:
   DeepSeek accepts model ids it does not list (e.g. `deepseek-v4-flash`). Used before every pipeline
-  assess step and by `GET /api/admin/llm/check`.
+  assess step and by `GET /api/admin/llm/check`. Both treat any exception from it as a failed check: the
+  controller answers `ok: false` with the message cleaned of the key (`ProviderMessages`, also for an error
+  no client cleaned) and logs it; the assess step takes no post and fails the run.
 - Every HTTP attempt has the `LLM_TIMEOUT` limit (the Gemini SDK has none by default). For DeepSeek
   the connect phase (≤ 30 s) comes on top of it, so one attempt can last slightly longer.
 - Known re-send below our loop: OkHttp (inside the GenAI and openai-java SDKs) may resend a

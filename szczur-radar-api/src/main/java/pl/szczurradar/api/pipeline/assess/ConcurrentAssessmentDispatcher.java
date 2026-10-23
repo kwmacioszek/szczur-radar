@@ -141,7 +141,8 @@ public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher, Dis
 		try {
 			llm.check();
 		}
-		catch (LlmCallException ex) {
+		catch (RuntimeException ex) {
+			// A provider's refusal or outage, or an error that is not the provider's (LlmClient#complete).
 			log.error("The LLM check before run {} failed; no post is assessed", runId, ex);
 			return new AssessedBatch(runId, 0, 0, 0, List.of(), "the LLM check failed: " + ex.getMessage());
 		}
@@ -273,9 +274,10 @@ public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher, Dis
 							+ " no further post is taken: {}", runId, OUTAGE_STREAK, ex.getMessage());
 				}
 			}
+			boolean released = transitions.release(postId, runId);
+			// Only once it is back: when putting it back fails, the finally block below tries again.
 			putBack = true;
-			return new Outcome.Unavailable(ex.getClass().getSimpleName() + ": " + ex.getMessage(),
-					transitions.release(postId, runId));
+			return new Outcome.Unavailable(ex.getClass().getSimpleName() + ": " + ex.getMessage(), released);
 		}
 		catch (RuntimeException ex) {
 			if (cancelled.get()) {
@@ -321,9 +323,8 @@ public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher, Dis
 					recorder.count(runId,
 							Counters.assessedFailed(stored.dead(), stored.llmRetries(), stored.flexFallback()));
 				case Outcome.Error error -> recorder.count(runId, Counters.processingError());
-				// Counted, if at all, once the step has finished (countOutage).
-				case Outcome.Unavailable outage -> {
-				}
+				// Counted, if at all, once the step has finished (countOutage); its end is progress already.
+				case Outcome.Unavailable outage -> recorder.touch(runId);
 				case Outcome.NotTaken notTaken -> {
 				}
 			}

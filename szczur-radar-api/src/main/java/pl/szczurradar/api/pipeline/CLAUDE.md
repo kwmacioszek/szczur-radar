@@ -56,7 +56,7 @@ PipelineRunService.startRange / startPosts → queue → PipelineAgent:
 | `step/PostStore` | new posts with their raw payload, once per `(source, item_type, source_item_id)`; `findKeys` in chunks of 1,000; stores chunks of 500 in one transaction each (raw payloads, then posts: JDBC batches), a chunk hitting the unique key again post by post |
 | `step/AssessmentSelection` | one attempt per post and request: range → only the posts it stored first; retry → every leftover except posts on hold (`PostRepository.findLeftoverIds`, below); posts → the given ones still assessable (`stored` / `failed`, on hold or not) |
 | `assess/AssessmentDispatcher` | the port of the assess step (`dispatch`, and `cancel` for a run the watchdog stopped); a Batch API version may replace the concurrent one |
-| `assess/ConcurrentAssessmentDispatcher` | first `LlmClient.check()` (fails → no post taken, run `failed`); own pool (`PIPELINE_LLM_CONCURRENCY`, default 4); per post: claim → `Assessor.assess` on `AssessmentInputs.of(post)` → record, or release, then the post's result goes into the run's counters at once (`RunRecorder.count`, below); an `LlmConfigurationException` (revoked key, no credit, unknown model) stops taking posts (WARN with the provider's reason), counts no attempt and fails the run (`AssessedBatch.stoppedBy`); an `LlmUnavailableException` (retries used up) stores nothing and releases the post, and `OUTAGE_STREAK` (3) of them in a row stop the step the same way (the breaker, Rules below); any other exception puts the post back with `releaseFailed` (one more technical failure); a failed `count` is a WARN and leaves the post's outcome (a stored post is never a technical error); `cancel(runId)` interrupts the run's post tasks (below); a progress line in the log at most once a minute and after the last post |
+| `assess/ConcurrentAssessmentDispatcher` | first `LlmClient.check()` (any exception → no post taken, run `failed` with `the LLM check failed: …`); own pool (`PIPELINE_LLM_CONCURRENCY`, default 4); per post: claim → `Assessor.assess` on `AssessmentInputs.of(post)` → record, or release, then the post's result goes into the run's counters at once (`RunRecorder.count`, below); an `LlmConfigurationException` (revoked key, no credit, unknown model) stops taking posts (WARN with the provider's reason), counts no attempt and fails the run (`AssessedBatch.stoppedBy`); an `LlmUnavailableException` (retries used up) stores nothing and releases the post, and `OUTAGE_STREAK` (3) of them in a row stop the step the same way (the breaker, Rules below); any other exception puts the post back with `releaseFailed` (one more technical failure); a failed `count` is a WARN and leaves the post's outcome (a stored post is never a technical error); `cancel(runId)` interrupts the run's post tasks (below); a progress line in the log at most once a minute and after the last post |
 | `assess/AssessmentInputs` | a stored post's assessment input, rebuilt from its raw payload by its source's `RawInputMapper` |
 | `state/PostTransitions` | the post's stage changes, each a conditional `UPDATE` with `updated_at = now()`: claim (only while the run is running), record (only while the run owns the post; resets `technical_failures` and `last_technical_error`), release (back without an attempt; says whether this run put it back), releaseFailed (release + one more technical failure with its message, in the same statement, only while the run owns the post), countTechnicalFailure (one more technical failure on a post already put back, `stored` / `failed`, only while the run is still running); the message is cut to 500 characters, without U+0000 |
 | `state/RunRecorder` | run status, steps, counters, error, `last_activity_at` — every change conditional on the expected status; a step opens only in a running run and closes only once; `interrupt` / `interruptAll` (with the cause) and `stall` (the watchdog) close the open steps in the same transaction; status and stage values are bound from their enums, never written into the SQL |
@@ -70,7 +70,9 @@ PipelineRunService.startRange / startPosts → queue → PipelineAgent:
   exception: its processing error is counted only when the step ends (deferred, Rules below).
   `PipelineAgent.assess` no longer counts the batch at the end (it would count twice); it only sets the error summary. The counters of a running
   run are therefore live in `/admin`, on the run's page and in the cron's heartbeat.
-- **`last_activity_at`.** Set by the start, every counted post and every step's start and end (all
+- **`last_activity_at`.** Set by the start, every counted post, every post whose call found the provider
+  unavailable (`RunRecorder.touch`: counted only at the step's end, but its end is progress, so the
+  watchdog never stops a run of outages before the breaker) and every step's start and end (all
   conditional on `running`). The fetch step moves it only at its start and end: a long fetch shows no
   progress inside (`SourceFetcher` reports none). The watchdog measures from it (or from `started_at`).
 - **Log lines (INFO).** `Pipeline run <id> (<kind>) started`; `Run <id> step <step> started (in N)` and
@@ -232,7 +234,9 @@ PipelineRunService.startRange / startPosts → queue → PipelineAgent:
   run's call alone; the progress line; the breaker: three outages in a row stop the step with no
   attempt, no technical failure and no processing error, single outages between answered calls are
   counted once the step has ended (`partial`), a refused call ends the streak, a prefilter post does
-  not, an outage of a call the watchdog cancelled and one of a run no longer running count nothing),
+  not, an outage of a call the watchdog cancelled and one of a run no longer running count nothing, every
+  outage moves the run's activity (`touch`), an outage's post whose first put-back write fails is put
+  back on the way out; a check failing with an error that is not the provider's takes no post),
   `run/PipelineRunTest` (`needsAttention` for every status, with and without skipped elements),
   `PipelineStallSettingsTest` (default from the LLM settings, WARN below it, units, refusals),
   `RunWatchdogTest` (no database call without a run of its own, a failure and an `Error` logged, the
@@ -255,7 +259,8 @@ PipelineRunService.startRange / startPosts → queue → PipelineAgent:
 - `RunWatchdogIT` (`PIPELINE_STALL_TIMEOUT=5s`, `PIPELINE_LLM_CONCURRENCY=1`, a scripted `LlmClient`
   held on a latch): a hanging run ends `failed` with its `assess` step closed and its posts back without
   an attempt, its held call is interrupted, so the run queued behind it assesses on the only LLM thread,
-  the zombie action stores nothing, a slow run with progress (a post every 1.5 s) is not stopped, another
+  the zombie action stores nothing, a slow run with progress (a post every 1.5 s) is not stopped, nor is a
+  run whose calls each find the provider unavailable after 3 s (the breaker ends it, not the watchdog), another
   instance's run is left alone, the admins are notified, and a database connection has the 300 s
   `socketTimeout`.
 - `notifications/api/NotificationsIT`: recipients (admins only), idempotence, which run endings notify,

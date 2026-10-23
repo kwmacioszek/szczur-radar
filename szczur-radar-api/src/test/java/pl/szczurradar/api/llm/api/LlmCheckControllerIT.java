@@ -88,6 +88,17 @@ class LlmCheckControllerIT {
 					+ "\"error\":\"java.lang.RuntimeException: unexpected state\"}");
 	}
 
+	@Test
+	void anErrorThatIsNotTheProvidersNeverShowsTheKey() {
+		// e.g. building the client failed, with the SDK quoting the key: no client cleaned that message
+		when(llmClient.check()).thenThrow(new IllegalStateException("bad key " + properties.apiKey() + " in builder"));
+
+		assertThat(mvc.get().uri("/api/admin/llm/check").with(asAdmin())).hasStatusOk()
+			.bodyJson()
+			.extractingPath("$.error")
+			.isEqualTo("bad key <hidden> in builder");
+	}
+
 	private static RequestPostProcessor asAdmin() {
 		return user("00000000-0000-0000-0000-000000000001").roles(Role.ADMIN.name());
 	}

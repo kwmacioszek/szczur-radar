@@ -93,7 +93,8 @@ public class Post {
 	private @Nullable UUID assessingRunId;
 
 	/**
-	 * Errors of our code (no stored assessment, no attempt) since the last stored assessment; at
+	 * Technical failures in a row since the last stored assessment — errors of our code and single
+	 * outages of the LLM provider after their retries (no stored assessment, no attempt); at
 	 * {@link #MAX_TECHNICAL_FAILURES} the post is on hold.
 	 */
 	@Column(name = "technical_failures", nullable = false)

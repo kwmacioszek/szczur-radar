@@ -427,6 +427,23 @@ class PostsApiIT {
 		assertThat(result).bodyJson().extractingPath("$.items[2].lastAttempt").isNull();
 	}
 
+	@Test
+	void aFailedPostOnHoldHasBothItsLastAttemptAndItsTechnicalError() {
+		UUID failed = technicalFailures(seeds.post(PostStage.FAILED, 1, "2026-10-01T09:00:00Z"),
+				Post.MAX_TECHNICAL_FAILURES);
+		seeds.failed(failed, "2026-10-02T08:00:00Z", FailureClass.SCHEMA_VIOLATION);
+
+		MvcTestResult result = mvc.get().uri("/api/admin/posts/failed").with(asAdmin()).exchange();
+
+		assertThat(result).hasStatusOk();
+		assertThat(result).bodyJson().extractingPath("$.items[*].id").asArray().containsExactly(failed.toString());
+		assertThat(result).bodyJson().extractingPath("$.items[0].stage").isEqualTo("failed");
+		assertThat(result).bodyJson().extractingPath("$.items[0].technicalFailures").isEqualTo(3);
+		assertThat(result).bodyJson().extractingPath("$.items[0].lastTechnicalError").isEqualTo(TECHNICAL_ERROR);
+		assertThat(result).bodyJson().extractingPath("$.items[0].onHold").isEqualTo(true);
+		assertThat(result).bodyJson().extractingPath("$.items[0].lastAttempt.failureClass").isEqualTo("schema_violation");
+	}
+
 	/** Gives a post {@code count} technical failures in a row, as the pipeline's conditional updates would. */
 	private UUID technicalFailures(UUID post, int count) {
 		jdbc.update("UPDATE posts SET technical_failures = ?, last_technical_error = ? WHERE id = ?", count,

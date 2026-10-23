@@ -38,10 +38,12 @@ import pl.szczurradar.api.TestcontainersConfiguration;
 import pl.szczurradar.api.agents.assessor.Prefilter;
 import pl.szczurradar.api.agents.assessor.contract.ContractJson;
 import pl.szczurradar.api.cli.MigrateCommand;
+import pl.szczurradar.api.llm.CallFailure;
 import pl.szczurradar.api.llm.Channel;
 import pl.szczurradar.api.llm.LlmClient;
 import pl.szczurradar.api.llm.LlmRequest;
 import pl.szczurradar.api.llm.LlmResponse;
+import pl.szczurradar.api.llm.LlmUnavailableException;
 import pl.szczurradar.api.llm.OutputMode;
 import pl.szczurradar.api.llm.Provider;
 import pl.szczurradar.api.llm.ServiceTier;
@@ -59,8 +61,8 @@ import pl.szczurradar.api.user.UserRepository;
  * The watchdog on the whole run graph and Postgres with {@code PIPELINE_STALL_TIMEOUT=5s} (checked
  * every second): a run waiting for an LLM call that does not end is stopped (the admin notified once),
  * its call is interrupted and the run queued behind it goes on; the stopped run's action writes nothing;
- * a slow run with progress is not stopped; another instance's run is left alone; a database call has an
- * end too. Wykop is a local server answering the real, anonymized #gielda answers of 2026-10-01, the LLM
+ * a slow run with progress is not stopped; nor is one whose calls find the provider unavailable before
+ * the breaker stops it; another instance's run is left alone; a database call has an end too. Wykop is a local server answering the real, anonymized #gielda answers of 2026-10-01, the LLM
  * a scripted client. The methods share one database and run in order.
  */
 @SpringBootTest(properties = { MigrateCommand.ENABLE_FLYWAY, PipelineStallSettings.NAME + "=5s",
@@ -262,6 +264,37 @@ class RunWatchdogIT {
 		// pgjdbc's socketTimeout (application.properties): a hung statement fails instead of holding its thread.
 		assertThat(jdbc.execute((ConnectionCallback<Integer>) Connection::getNetworkTimeout))
 			.isEqualTo((int) Duration.ofMinutes(5).toMillis());
+	}
+
+	@Test
+	@Order(5)
+	void aRunWhoseCallsFindTheProviderUnavailableIsStoppedByTheBreakerNotTheWatchdog(CapturedOutput output) {
+		List<UUID> posts = jdbc.queryForList("SELECT p.id FROM posts p WHERE p.stage = 'assessed' AND EXISTS"
+				+ " (SELECT 1 FROM assessments a WHERE a.post_id = p.id AND a.result_source = 'model')"
+				+ " ORDER BY p.id LIMIT 4", UUID.class);
+		assertThat(posts).hasSize(4);
+		posts.forEach(post -> jdbc.update("UPDATE posts SET stage = 'stored' WHERE id = ?", post));
+		// Each call fails after 3 s, under the timeout, so the three in a row on the one thread take about 9 s:
+		// longer than the timeout, which only the outages' own progress keeps from stopping the run.
+		answer(request -> {
+			if (request.equals(LlmClient.CHECK_REQUEST)) {
+				return response(VALID);
+			}
+			pause(Duration.ofSeconds(3));
+			throw new LlmUnavailableException(CallFailure.PROVIDER_ERROR, "HTTP 503 after 3 attempts", 3,
+					ServiceTier.DEFAULT, false, new IllegalStateException("HTTP 503"));
+		});
+
+		UUID run = service.startPosts(posts, admin).getFirst().getId();
+
+		assertThat(finished(run)).containsEntry("status", "failed");
+		assertThat((String) run(run).get("error")).contains("the LLM provider is unavailable: 3 calls in a row");
+		assertThat(output.getAll()).doesNotContain("Pipeline run " + run + " made no progress");
+		// No attempt and no technical failure: the stop is the run's failure.
+		posts.forEach(post -> {
+			assertThat(post(post)).containsEntry("stage", "stored").containsEntry("assessment_attempts", 0);
+			assertThat(count("SELECT technical_failures FROM posts WHERE id = ?", post)).isZero();
+		});
 	}
 
 	/** The admin's notifications about {@code runId}. */
