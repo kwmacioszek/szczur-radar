@@ -54,3 +54,9 @@ Break-check nowych testów: zdjęcie `clean` z `DEADLINE_EXCEEDED` i klucz dokle
 
 - 3.4: treść komunikatów WARN i `INCOMPLETE_PAGING` zaakceptowana (zasób, ile z ilu i powód wystarczają operatorowi).
 - 4.3: status `partial` przebiegu `e95f631b` wystarcza — pobranie pełne (579, `skipped` 0, bez ostrzeżeń), 20 ocen `failed` jest poza zakresem S-16. Do zamknięcia 4.3 zostaje porównanie `fetched` z `total` sondy; lokalne klucze z `wykop.env` odrzuca już `auth` (HTTP 401), więc sonda czeka na nowe klucze.
+
+### Porównanie z `total` (kontrola 4.3)
+
+2026-10-23 15:40 UTC, agent, sonda z nowymi kluczami w `wykop.env` (`-Dprobe.days=2`, 0 wystąpień kluczy w wyjściu): 2026-10-21 wpisy 146 / linki 1, 2026-10-22 wpisy 426 / linki 4 — razem 577; 4 przejścia, 14 stron, 0 niespójności, 0 duplikatów, `status` tylko `visible` (wpisy) i brak (linki).
+
+Przebieg `e95f631b` (09:03 UTC) pobrał 579. Różnica 2 = elementy usunięte w ciągu 6,5 h między przebiegiem a sondą: przebieg nie zapisał żadnego „Reading Wykop … again”, więc w chwili pobrania unikalne elementy każdego zasobu równały się `total` jego pierwszej strony (suma 579), a wyszukiwarka nie zwraca usuniętych elementów (sonda 30 dni). `fetched` zgodne z `total` wyszukiwarki w chwili pobrania; 4.3 zamknięte (status `partial` zaakceptowany wyżej).
