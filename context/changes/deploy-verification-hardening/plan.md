@@ -359,6 +359,10 @@ Stary `deploy-verify` w szczur-radar nadal działa.
   - Metoda: agent, po zgodzie operatora. `FAILED` albo `CRASHED` (zależnie od restart policy; oba
     to RED). Od 3.4 do 3.7 bez pushy na gałąź: job `railway-config` usuwa `LLM_TIMEOUT` z PR env.
     Dowód: URL czerwonego runu, URL issue z assignee.
+  - Zmiana zakresu issue (2026-10-23, decyzja operatora): issue i alarm tylko dla produkcji, środowisko
+    PR daje sam wynik runu (kwmacioszek/szczur-radar-monitor#27). 3.4 i 3.6–3.8 sprawdzone w
+    `szczur-radar-pr-99` przed tą zmianą (ta sama logika issue, zmienia się tylko środowisko, które ją
+    uruchamia); po niej pokrywają je testy na stubach (`verifier/test.sh`, issue na `production`).
 - Przypisanie issue daje rzeczywiste powiadomienie push w GitHub Mobile na telefonie operatora (zrzut ekranu lub potwierdzenie w issue)
   - Metoda: człowiek (fizyczny telefon). Agent podaje link do issue z 3.4 i potwierdza assignee.
   - Zmiana kanału (2026-10-23, decyzja operatora po F-04): push to wiadomość w Telegramie przez
