@@ -4,6 +4,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
+import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -29,6 +30,7 @@ import pl.szczurradar.api.config.ApiError;
 import pl.szczurradar.api.config.ErrorCode;
 import pl.szczurradar.api.pipeline.PipelineRunService;
 import pl.szczurradar.api.pipeline.run.InterruptionCause;
+import pl.szczurradar.api.pipeline.run.MissingDays;
 import pl.szczurradar.api.pipeline.run.PipelineRun;
 import pl.szczurradar.api.pipeline.run.PipelineRunRepository;
 import pl.szczurradar.api.pipeline.run.PipelineRunStep;
@@ -127,6 +129,32 @@ class PipelineRunController {
 	}
 
 	/**
+	 * The days without data ({@link MissingDays}) for the admin's list: the window of the
+	 * {@value MissingDays#WINDOW_DAYS} days up to the day before yesterday (today in Warsaw from the
+	 * injected clock) and its days that no {@code range} run {@code succeeded} or {@code partial} (the
+	 * cron's or an admin's) covers, per configured source; a source starts at its first covered day ever,
+	 * so one never covered has no day. The admin starts such a range in the form; nothing here starts a run.
+	 */
+	@GetMapping("/missing-days")
+	MissingDaysView missingDays() {
+		LocalDate today = LocalDate.ofInstant(clock.instant(), PipelineRunService.ZONE);
+		List<Source> configured = sources.states()
+			.stream()
+			.filter(SourceIngest.SourceState::configured)
+			.map(SourceIngest.SourceState::source)
+			.toList();
+		List<MissingDays.Coverage> coverages = runs
+			.findCoveringSince(MissingDays.windowStart(today).atStartOfDay(PipelineRunService.ZONE).toInstant())
+			.stream()
+			.map(run -> MissingDays.Coverage.of(run, PipelineRunService.ZONE))
+			.toList();
+		Map<Source, LocalDate> firstCovered = new EnumMap<>(Source.class);
+		runs.findFirstCoveredFrom(configured)
+			.forEach((source, from) -> firstCovered.put(source, LocalDate.ofInstant(from, PipelineRunService.ZONE)));
+		return MissingDaysView.of(MissingDays.of(today, configured, coverages, firstCovered));
+	}
+
+	/**
 	 * Either a range — {@code from}/{@code to} calendar days in Warsaw time, optional {@code sources}
 	 * (absent or empty = every configured source) — or {@code postIds}, never both.
 	 */
@@ -158,6 +186,20 @@ class PipelineRunController {
 
 	/** A page of runs. */
 	record RunPage(List<RunView> items, int page, int size, long total) {
+	}
+
+	/** The checked window {@code from}–{@code to} (inclusive) and its days without data, ascending. */
+	record MissingDaysView(LocalDate from, LocalDate to, List<MissingDayView> days) {
+
+		static MissingDaysView of(MissingDays missing) {
+			return new MissingDaysView(missing.from(), missing.to(),
+					missing.days().stream().map(day -> new MissingDayView(day.day(), day.sources())).toList());
+		}
+
+	}
+
+	/** A day without data and the configured sources that miss it, in {@link Source} order. */
+	record MissingDayView(LocalDate day, List<Source> sources) {
 	}
 
 	/**
