@@ -21,7 +21,9 @@ const statusTone: Record<RunStatus, BadgeTone> = {
 
 /**
  * The badge tone of a run. A run interrupted by a new deployment is expected (the operator merged), so it is
- * `neutral`; any other interruption is a `warning`. A succeeded run whose source skipped elements is a `warning` too.
+ * `neutral`; any other interruption is a `warning` — a restart, a shutdown, and a run whose instance was lost
+ * (`lost`: an anomaly, cleaned up by another instance). A succeeded run whose source skipped elements is a `warning`
+ * too.
  */
 export function runTone(run: RunState): BadgeTone {
   if (run.status === 'interrupted' && run.interruptionCause === 'deploy') return 'neutral'
@@ -36,7 +38,10 @@ const stepStatusTone: Record<StepStatus, BadgeTone> = {
   interrupted: 'warning',
 }
 
-/** The badge tone of a step; an interrupted step takes the tone of its run's interruption. */
+/**
+ * The badge tone of a step; an interrupted step takes the tone of its run's interruption: `neutral` for a new
+ * deployment, `warning` for any other cause (`lost` included).
+ */
 export function stepTone(status: StepStatus, cause: InterruptionCause | null): BadgeTone {
   if (status === 'interrupted' && cause === 'deploy') return 'neutral'
   return stepStatusTone[status]

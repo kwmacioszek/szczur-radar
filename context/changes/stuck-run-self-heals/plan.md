@@ -334,16 +334,16 @@ Dwie dodatkowe instrukcje w `queue()` (wywoływanym przez człowieka albo raz na
 
 #### Automated
 
-- [x] 2.1 `DeploySafetyIT` zielony z nowymi przypadkami
-- [x] 2.2 Test bramki deployu bez zmian zielony
-- [x] 2.3 Cały backend zielony
+- [x] 2.1 `DeploySafetyIT` zielony z nowymi przypadkami — f47fb4c
+- [x] 2.2 Test bramki deployu bez zmian zielony — f47fb4c
+- [x] 2.3 Cały backend zielony — f47fb4c
 
 ### Phase 3: SPA zna przyczynę `lost`
 
 #### Automated
 
-- [ ] 3.1 Testy SPA zielone
-- [ ] 3.2 Typecheck i build
+- [x] 3.1 Testy SPA zielone
+- [x] 3.2 Typecheck i build
 
 #### Manual
 

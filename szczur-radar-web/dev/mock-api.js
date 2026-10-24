@@ -20,6 +20,9 @@
  *       r-running  an admin's range, assessing now (19 of 41, 4 in flight, last activity 20 s ago),
  *       r-skipped  an admin's range, succeeded with 3 skipped elements (needs attention: a warning),
  *       r-deploy   the cron's night, interrupted by a new deployment, its assess step interrupted,
+ *       r-lost     an admin's range, interrupted `lost`: its instance was lost mid-assess, and the cron's start request
+ *                  at 00:30 cleaned it up after 39 min without activity (PIPELINE_STALL_TIMEOUT), its assess step
+ *                  interrupted,
  *       r-empty    an admin's range of today just after midnight, failed: its source gave no post (fetched 0, its
  *                  fetch step failed, "NoPostsFetchedException: wykop gave no post to store (fetched 0, skipped 0)"),
  *       r-stalled  the cron's night, failed: "no progress for 39m 00s: the run was stopped" (the watchdog),
@@ -118,6 +121,19 @@ async page => {
       error: 'interrupted: a new deployment took over',
       steps: night('2026-10-15', 400).slice(0, 3).concat(
         step('assess', 'interrupted', '2026-10-15T00:30:44Z', '2026-10-15T00:41:10Z', 400, null)) }),
+    // An admin's range of 14.10 (Warsaw) whose instance was lost while assessing; the cron's start request at 00:30
+    // found it without activity for over 39 min and interrupted it `lost`.
+    nightly('r-lost', '2026-10-14', { scheduled: false, status: 'interrupted', interruptionCause: 'lost',
+      needsAttention: true, rangeFrom: '2026-10-13T22:00:00Z', rangeTo: '2026-10-14T21:59:59Z',
+      createdAt: '2026-10-14T23:00:00Z', startedAt: '2026-10-14T23:00:01Z', finishedAt: '2026-10-15T00:30:00Z',
+      lastActivityAt: '2026-10-14T23:08:30Z', assessedOk: 97, assessedFailed: 1,
+      error: 'interrupted: the instance running it was lost without closing it',
+      steps: [
+        step('fetch', 'succeeded', '2026-10-14T23:00:02Z', '2026-10-14T23:00:40Z', null, 470),
+        step('store', 'succeeded', '2026-10-14T23:00:40Z', '2026-10-14T23:00:44Z', 470, 400),
+        step('select', 'succeeded', '2026-10-14T23:00:44Z', '2026-10-14T23:00:44Z', 400, 400),
+        step('assess', 'interrupted', '2026-10-14T23:00:44Z', '2026-10-15T00:30:00Z', 400, null),
+      ] }),
     // An admin's range of 15.10 (Warsaw) started 10 minutes after its midnight: the source gave no post.
     nightly('r-empty', '2026-10-15', { scheduled: false, status: 'failed', needsAttention: true,
       rangeFrom: '2026-10-14T22:00:00Z', rangeTo: '2026-10-15T21:59:59Z', createdAt: '2026-10-14T22:10:00Z',
@@ -133,9 +149,9 @@ async page => {
     nightly('r-dead', '2026-10-13', { status: 'partial', needsAttention: true, assessedOk: 462, assessedFailed: 7, dead: 1,
       newPosts: 469, steps: night('2026-10-13', 469) }),
     nightly('r-ok', '2026-10-12'),
-    // Older nights: 23 more, so the list has a second page ("Pokaż starsze"); every third one partial without a
+    // Older nights: 22 more, so the list has a second page ("Pokaż starsze"); every third one partial without a
     // dead post (nothing to attend to).
-    ...Array.from({ length: 23 }, (_, n) => {
+    ...Array.from({ length: 22 }, (_, n) => {
       const day = new Date(Date.UTC(2026, 9, 11 - n)).toISOString().slice(0, 10)
       return nightly(`r-${day}`, day, n % 3 === 0 ? { status: 'partial', assessedOk: 393, assessedFailed: 7 } : {})
     }),
