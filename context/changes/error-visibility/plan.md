@@ -425,17 +425,17 @@ Bez migracji bazy, nowych tabel i zmiennych środowiska (`tools/db-backup/tables
 
 #### Automated
 
-- [x] 1.1 Testy pakietu `alerts` zielone: `./mvnw -B test -Dtest='pl.szczurradar.api.alerts.*Test'`
-- [x] 1.2 Kontekst bez serwera startuje bez `OperatorAlertQueue` (`AlertsConfigurationTest`)
-- [x] 1.3 Pełny zestaw zielony: `./mvnw -B verify`
+- [x] 1.1 Testy pakietu `alerts` zielone: `./mvnw -B test -Dtest='pl.szczurradar.api.alerts.*Test'` — 75107c3
+- [x] 1.2 Kontekst bez serwera startuje bez `OperatorAlertQueue` (`AlertsConfigurationTest`) — 75107c3
+- [x] 1.3 Pełny zestaw zielony: `./mvnw -B verify` — 75107c3
 
 ### Phase 2: Podłączenie ścieżek
 
 #### Automated
 
-- [ ] 2.1 Testy jednostkowe zielone: `./mvnw -B test`
-- [ ] 2.2 IT zielone, w tym `NotificationsIT`, `PipelineStartupRecoveryIT`, `RunWatchdogIT`, `PipelineAgentIT` (bez nowych ERROR w logu): `./mvnw -B verify`
-- [ ] 2.3 `AuthorizationCompletenessIT` bez zmian (żadnej nowej trasy)
+- [x] 2.1 Testy jednostkowe zielone: `./mvnw -B test`
+- [x] 2.2 IT zielone, w tym `NotificationsIT`, `PipelineStartupRecoveryIT`, `RunWatchdogIT`, `PipelineAgentIT` (bez nowych ERROR w logu): `./mvnw -B verify`
+- [x] 2.3 `AuthorizationCompletenessIT` bez zmian (żadnej nowej trasy)
 
 ### Phase 3: Klucze poza logami i przyczyna 503
 

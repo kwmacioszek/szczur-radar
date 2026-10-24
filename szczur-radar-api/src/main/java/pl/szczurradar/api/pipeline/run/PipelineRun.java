@@ -17,6 +17,7 @@ import org.hibernate.type.SqlTypes;
 import org.jspecify.annotations.Nullable;
 
 import pl.szczurradar.api.sources.Source;
+import pl.szczurradar.api.user.SystemAccount;
 
 /**
  * One pipeline run ({@code pipeline_runs}, owned by Flyway, {@code V3__create_pipeline_and_posts.sql},
@@ -266,6 +267,15 @@ public class PipelineRun {
 
 	public @Nullable String getError() {
 		return error;
+	}
+
+	/**
+	 * Whether the daily cron requested it ({@link SystemAccount#SCHEDULER}), not an admin — the one rule for
+	 * the run's page and the operator alert (the cron itself reports its {@code failed} / {@code interrupted}
+	 * runs by its exit code).
+	 */
+	public boolean scheduled() {
+		return SystemAccount.SCHEDULER.id().equals(requestedBy);
 	}
 
 	/**

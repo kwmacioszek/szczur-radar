@@ -18,6 +18,7 @@ import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.DisposableBean;
+import org.springframework.beans.factory.ObjectProvider;
 
 import pl.szczurradar.api.alerts.OperatorAlerts.Delivery;
 
@@ -194,6 +195,24 @@ public class OperatorAlertQueue implements DisposableBean {
 		catch (RejectedExecutionException ex) {
 			log.warn("Operator alert {} ({}) dropped: {} alerts are already waiting to be sent", event,
 					runLabel(runId), CAPACITY);
+		}
+		catch (RuntimeException ex) {
+			log.warn("Operator alert {} ({}) dropped: {}", event, runLabel(runId), ex.getClass().getName());
+		}
+	}
+
+	/**
+	 * {@link #raise} through the context's queue, for a bean shared with the operator commands, which takes
+	 * it as an {@link ObjectProvider}: the server has one, an operator command's context none, and then
+	 * nothing happens. Never throws.
+	 */
+	public static void raise(ObjectProvider<OperatorAlertQueue> queue, AlertEvent event, @Nullable UUID runId,
+			String detail) {
+		try {
+			OperatorAlertQueue alerts = queue.getIfAvailable();
+			if (alerts != null) {
+				alerts.raise(event, runId, detail);
+			}
 		}
 		catch (RuntimeException ex) {
 			log.warn("Operator alert {} ({}) dropped: {}", event, runLabel(runId), ex.getClass().getName());

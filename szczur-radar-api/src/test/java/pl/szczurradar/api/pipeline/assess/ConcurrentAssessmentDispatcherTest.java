@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.entry;
 import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
@@ -13,6 +14,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.nio.charset.StandardCharsets;
@@ -42,6 +44,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InOrder;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 
@@ -52,6 +55,8 @@ import pl.szczurradar.api.agents.assessor.contract.AssessmentInputV1;
 import pl.szczurradar.api.agents.assessor.contract.ContractJson;
 import pl.szczurradar.api.agents.assessor.contract.ItemType;
 import pl.szczurradar.api.agents.assessor.validation.FailureClass;
+import pl.szczurradar.api.alerts.AlertEvent;
+import pl.szczurradar.api.alerts.OperatorAlertQueue;
 import pl.szczurradar.api.llm.CallFailure;
 import pl.szczurradar.api.llm.Channel;
 import pl.szczurradar.api.llm.LlmCallException;
@@ -81,7 +86,8 @@ import pl.szczurradar.api.sources.Source;
 /**
  * {@link ConcurrentAssessmentDispatcher} on its own pool of {@value #THREADS} threads, one scripted
  * {@link LlmClient}, the posts' stages kept in memory in place of the database, a mocked
- * {@link RunRecorder} (the counters) and a test clock for the progress lines.
+ * {@link RunRecorder} (the counters), a mocked {@link OperatorAlertQueue} and a test clock for the progress
+ * lines.
  */
 @ExtendWith(OutputCaptureExtension.class)
 class ConcurrentAssessmentDispatcherTest {
@@ -172,6 +178,8 @@ class ConcurrentAssessmentDispatcherTest {
 
 	private final PostTransitions transitions = transitions();
 
+	private final OperatorAlertQueue alerts = mock(OperatorAlertQueue.class);
+
 	@AfterEach
 	void stop() {
 		release.countDown();
@@ -218,6 +226,8 @@ class ConcurrentAssessmentDispatcherTest {
 		verify(recorder).count(RUN, Counters.assessedOk(2, true));
 		verify(recorder).count(RUN, Counters.processingError());
 		verify(recorder, times(10)).count(eq(RUN), any(Counters.class));
+		// Every count was written: nothing for the operator.
+		verifyNoInteractions(alerts);
 	}
 
 	@Test
@@ -373,7 +383,37 @@ class ConcurrentAssessmentDispatcherTest {
 			.allSatisfy(line -> assertThat(line).contains("could not be added to the counters of run " + RUN))
 			.anySatisfy(line -> assertThat(line).contains("post " + ids.get(0)))
 			.anySatisfy(line -> assertThat(line).contains("post " + ids.get(1)));
-		assertThat(output.getAll().lines().filter(line -> line.contains(" ERROR "))).isEmpty();
+		// Once the step has ended: one ERROR line for the run's understated counters, never one per post.
+		assertThat(output.getAll().lines().filter(line -> line.contains(" ERROR "))).singleElement()
+			.satisfies(line -> assertThat(line).contains("2 post result(s) of run " + RUN,
+					"(0 dead, 0 technical error(s))", "needsAttention may be false"));
+	}
+
+	@Test
+	void resultsLostToFailedCountsAreRaisedOnceWithTheirNumbers(CapturedOutput output) {
+		UUID ok = post(ContractFixtures.BODY);
+		UUID lastChance = post(ContractFixtures.BODY + INVALID);
+		stages.put(lastChance, PostStage.FAILED);
+		attempts.put(lastChance, 2);
+		UUID counted = post(ContractFixtures.BODY + RETRIED);
+		// The ok post's and the dead post's counts fail; the retried post's is written.
+		doThrow(new IllegalStateException("the database is gone for a moment")).when(recorder)
+			.count(RUN, Counters.assessedOk(0, false));
+		doThrow(new IllegalStateException("the database is gone for a moment")).when(recorder)
+			.count(RUN, Counters.assessedFailed(true, 1, false));
+
+		AssessedBatch batch = dispatcher().dispatch(RUN, List.of(ok, lastChance, counted));
+
+		// The step's own result is whole; only the run's counters miss two posts, one of them dead.
+		assertThat(batch).isEqualTo(new AssessedBatch(RUN, 2, 1, 1, List.of(), null));
+		verify(recorder).count(RUN, Counters.assessedOk(2, true));
+		verify(alerts).raise(eq(AlertEvent.RUN_COUNTERS_LOST), eq(RUN),
+				argThat(detail -> detail.contains("2 post result(s) of pipeline run " + RUN)
+						&& detail.contains("(1 dead, 0 technical error(s))") && detail.contains("/admin/runs/" + RUN)
+						&& !detail.contains("the database is gone")));
+		verify(alerts, times(1)).raise(any(), any(), any());
+		assertThat(output.getAll().lines().filter(line -> line.contains(" ERROR "))).singleElement()
+			.satisfies(line -> assertThat(line).contains("2 post result(s) of run " + RUN, "(1 dead, 0 technical"));
 	}
 
 	@Test
@@ -698,7 +738,7 @@ class ConcurrentAssessmentDispatcherTest {
 		};
 		return new ConcurrentAssessmentDispatcher(posts(), new AssessmentInputs(rawPayloads(), List.of(inputMapper())),
 				new Assessor(llm, Provider.GEMINI, "gemini-3.1-flash-lite", clock), transitions, recorder, llm,
-				pool, nanoTime::get);
+				pool, nanoTime::get, alertQueue());
 	}
 
 	private static LlmResponse response(String raw) {
@@ -719,6 +759,13 @@ class ConcurrentAssessmentDispatcherTest {
 	private static LlmConfigurationException revoked() {
 		return new LlmConfigurationException("HTTP 401: invalid api key", 1, ServiceTier.DEFAULT, false,
 				new TransportException(TransportException.Kind.CONFIGURATION, "HTTP 401: invalid api key", null, null));
+	}
+
+	@SuppressWarnings("unchecked")
+	private ObjectProvider<OperatorAlertQueue> alertQueue() {
+		ObjectProvider<OperatorAlertQueue> queue = mock(ObjectProvider.class);
+		when(queue.getIfAvailable()).thenReturn(alerts);
+		return queue;
 	}
 
 	private PostRepository posts() {

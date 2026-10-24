@@ -12,6 +12,8 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplicat
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import pl.szczurradar.api.alerts.AlertEvent;
+import pl.szczurradar.api.alerts.OperatorAlertQueue;
 import pl.szczurradar.api.notifications.RunNotifications;
 import pl.szczurradar.api.pipeline.run.InterruptionCause;
 import pl.szczurradar.api.pipeline.state.PostTransitions;
@@ -43,8 +45,9 @@ import pl.szczurradar.api.pipeline.state.RunRecorder;
  * <p>Only in the server (a web application): operator commands such as the pre-deploy {@code migrate}
  * start the same context without a web server, and must neither interrupt the run an older instance is
  * still executing nor read tables before migrating them. A failure (e.g. the database not reachable
- * yet) is logged and does not stop the server, which starts without its database too; unfinished runs
- * then block new ones until the next start.
+ * yet) is logged, raised to the operator ({@link AlertEvent#RECOVERY_FAILED}) and does not stop the
+ * server, which starts without its database too; unfinished runs then block new ones until the next
+ * start, or until the next request to start runs cleans them up as orphans.
  */
 @Component
 @ConditionalOnWebApplication
@@ -60,15 +63,19 @@ public class PipelineStartupRecovery implements SmartInitializingSingleton {
 
 	private final TransactionTemplate transaction;
 
+	private final OperatorAlertQueue alerts;
+
 	/** This instance's deployment, {@code null} when unknown (locally, in tests). */
 	private final @Nullable String deploymentId;
 
 	PipelineStartupRecovery(RunRecorder recorder, PostTransitions transitions, RunNotifications notifications,
-			TransactionTemplate transaction, @Value("${RAILWAY_DEPLOYMENT_ID:}") @Nullable String deploymentId) {
+			TransactionTemplate transaction, OperatorAlertQueue alerts,
+			@Value("${RAILWAY_DEPLOYMENT_ID:}") @Nullable String deploymentId) {
 		this.recorder = recorder;
 		this.transitions = transitions;
 		this.notifications = notifications;
 		this.transaction = transaction;
+		this.alerts = alerts;
 		this.deploymentId = deploymentId == null || deploymentId.isBlank() ? null : deploymentId;
 	}
 
@@ -94,6 +101,9 @@ public class PipelineStartupRecovery implements SmartInitializingSingleton {
 		catch (RuntimeException ex) {
 			log.error("Start-up recovery of pipeline runs failed; unfinished runs block new ones until the next start",
 					ex);
+			alerts.raise(AlertEvent.RECOVERY_FAILED, null, "Start-up recovery of pipeline runs failed ("
+					+ ex.getClass().getName() + "); unfinished runs block new ones until the next start, or until"
+					+ " a request to start runs cleans them up after PIPELINE_STALL_TIMEOUT; details in the API log");
 			return List.of();
 		}
 		if (!interrupted.isEmpty()) {

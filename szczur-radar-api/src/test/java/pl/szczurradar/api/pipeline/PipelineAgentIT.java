@@ -48,6 +48,7 @@ import pl.szczurradar.api.agents.assessor.ContractFixtures;
 import pl.szczurradar.api.agents.assessor.Prefilter;
 import pl.szczurradar.api.agents.assessor.Provenance;
 import pl.szczurradar.api.agents.assessor.contract.ContractJson;
+import pl.szczurradar.api.alerts.OperatorAlertQueue;
 import pl.szczurradar.api.cli.MigrateCommand;
 import pl.szczurradar.api.llm.CallFailure;
 import pl.szczurradar.api.llm.Channel;
@@ -172,6 +173,9 @@ class PipelineAgentIT {
 
 	@Autowired
 	ObjectProvider<PipelineStallSettings> stall;
+
+	@Autowired
+	ObjectProvider<OperatorAlertQueue> alerts;
 
 	private UUID admin;
 
@@ -389,7 +393,7 @@ class PipelineAgentIT {
 		});
 		// A second instance of the service, as during a deployment overlap; the shared one keeps running.
 		PipelineRunService stopping = new PipelineRunService(runs, posts, sources, recorder, transitions, notifications,
-				dispatcher, agentPlatform, jdbcClient, transaction, stall, "deployment-stopping");
+				dispatcher, agentPlatform, jdbcClient, transaction, stall, alerts, "deployment-stopping");
 		try {
 			UUID run = stopping.startPosts(List.of(post), admin).getFirst().getId();
 			assertThat(called.await(30, TimeUnit.SECONDS)).isTrue();
@@ -668,7 +672,7 @@ class PipelineAgentIT {
 		});
 		// A second instance of the service, as during a deployment overlap; the shared one keeps running.
 		PipelineRunService stopping = new PipelineRunService(runs, posts, sources, recorder, transitions, notifications,
-				dispatcher, agentPlatform, jdbcClient, transaction, stall, "deployment-stopping");
+				dispatcher, agentPlatform, jdbcClient, transaction, stall, alerts, "deployment-stopping");
 		try {
 			UUID run = stopping.startPosts(List.of(post), admin).getFirst().getId();
 			assertThat(called.await(30, TimeUnit.SECONDS)).isTrue();

@@ -13,6 +13,8 @@ import org.springframework.beans.factory.InitializingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.stereotype.Component;
 
+import pl.szczurradar.api.alerts.AlertEvent;
+import pl.szczurradar.api.alerts.OperatorAlertQueue;
 import pl.szczurradar.api.pipeline.state.Durations;
 
 /**
@@ -29,7 +31,9 @@ import pl.szczurradar.api.pipeline.state.Durations;
  *   <li>No database query while this instance has no run (an in-memory check): Railway counts every
  *       outgoing packet, a query to Postgres too, as activity, so a query every minute would keep the
  *       API from sleeping and bring the plan's hard spending limit closer.
- *   <li>A failed check is logged, whatever was thrown; the next one runs as planned.
+ *   <li>A failed check is logged, whatever was thrown, and raised to the operator
+ *       ({@link AlertEvent#WATCHDOG_FAILED}, with the run, so at most once in the queue's repeat window
+ *       for that run); the next one runs as planned.
  *   <li>Only in the server, like {@link PipelineStartupRecovery}: the operator commands start the same
  *       context, and only the server reads {@code PIPELINE_STALL_TIMEOUT} (the server's one
  *       {@link PipelineStallSettings}, {@link PipelineStallConfiguration}, validated when it starts).
@@ -51,12 +55,15 @@ public class RunWatchdog implements InitializingBean, DisposableBean {
 
 	private final PipelineStallSettings settings;
 
+	private final OperatorAlertQueue alerts;
+
 	private final ScheduledExecutorService executor = Executors
 		.newSingleThreadScheduledExecutor(task -> Thread.ofPlatform().name("pipeline-watchdog").unstarted(task));
 
-	RunWatchdog(PipelineRunService service, PipelineStallSettings settings) {
+	RunWatchdog(PipelineRunService service, PipelineStallSettings settings, OperatorAlertQueue alerts) {
 		this.service = service;
 		this.settings = settings;
+		this.alerts = alerts;
 	}
 
 	/** How often {@code timeout} is checked: a fifth of it, at most {@link #MAX_CHECK_INTERVAL}. */
@@ -90,6 +97,11 @@ public class RunWatchdog implements InitializingBean, DisposableBean {
 			catch (Throwable ex) {
 				log.error("The pipeline watchdog could not check run {}; it checks again in {}", runId,
 						Durations.format(checkInterval(settings.timeout())), ex);
+				alerts.raise(AlertEvent.WATCHDOG_FAILED, runId, "The pipeline watchdog could not check run " + runId
+						+ " (" + ex.getClass().getName() + "); it checks again in "
+						+ Durations.format(checkInterval(settings.timeout()))
+						+ ", a stalled run may block the queue meanwhile; /admin/runs/" + runId
+						+ "; details in the API log");
 			}
 		}
 	}

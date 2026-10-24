@@ -40,7 +40,6 @@ import pl.szczurradar.api.pipeline.run.StepStatus;
 import pl.szczurradar.api.pipeline.state.RunRecorder;
 import pl.szczurradar.api.pipeline.step.SourceIngest;
 import pl.szczurradar.api.sources.Source;
-import pl.szczurradar.api.user.SystemAccount;
 
 /**
  * The admin's pipeline runs: start them, see their history and one run's page (admin only:
@@ -166,7 +165,7 @@ class PipelineRunController {
 	 * @param interruptionCause why an interrupted run stopped; {@code null} for any other run, and for one
 	 *     interrupted before the cause was recorded
 	 * @param needsAttention whether it needs the admin's attention ({@link PipelineRun#needsAttention()})
-	 * @param scheduled whether the daily cron requested it ({@link SystemAccount#SCHEDULER}), not an admin
+	 * @param scheduled whether the daily cron requested it, not an admin ({@link PipelineRun#scheduled()})
 	 * @param lastActivityAt the last change while it was running
 	 * @param processingErrors posts with a technical error and no stored assessment (not failed attempts)
 	 * @param llmRetries HTTP attempts beyond the first of the assessments' LLM calls
@@ -183,7 +182,7 @@ class PipelineRunController {
 
 		static RunView of(PipelineRun run, List<PipelineRunStep> steps, int inFlight) {
 			return new RunView(run.getId(), run.getKind(), run.getStatus(), run.getInterruptionCause(),
-					run.needsAttention(), SystemAccount.SCHEDULER.id().equals(run.getRequestedBy()),
+					run.needsAttention(), run.scheduled(),
 					run.getRangeFrom(), run.getRangeTo(), run.getSources(), run.getRequestedPostIds(),
 					run.getCreatedAt(), run.getStartedAt(), run.getFinishedAt(), run.getLastActivityAt(),
 					run.getFetched(), run.getNewPosts(), run.getAssessedOk(), run.getAssessedFailed(),
