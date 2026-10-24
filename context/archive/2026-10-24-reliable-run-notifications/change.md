@@ -1,10 +1,10 @@
 ---
 change_id: reliable-run-notifications
 title: Reliable run notifications
-status: preparing
+status: archived
 created: 2026-10-24
 updated: 2026-10-24
-archived_at: null
+archived_at: 2026-10-24T13:42:52Z
 ---
 
 ## Notes
