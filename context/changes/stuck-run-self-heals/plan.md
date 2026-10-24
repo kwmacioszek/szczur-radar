@@ -342,8 +342,8 @@ Dwie dodatkowe instrukcje w `queue()` (wywoływanym przez człowieka albo raz na
 
 #### Automated
 
-- [x] 3.1 Testy SPA zielone
-- [x] 3.2 Typecheck i build
+- [x] 3.1 Testy SPA zielone — 9b23757
+- [x] 3.2 Typecheck i build — 9b23757
 
 #### Manual
 
@@ -353,7 +353,7 @@ Dwie dodatkowe instrukcje w `queue()` (wywoływanym przez człowieka albo raz na
 
 #### Automated
 
-- [ ] 4.1 Backend i SPA zielone po zmianach dokumentów
+- [x] 4.1 Backend i SPA zielone po zmianach dokumentów
 - [ ] 4.2 CI na PR zielone
 
 #### Manual
