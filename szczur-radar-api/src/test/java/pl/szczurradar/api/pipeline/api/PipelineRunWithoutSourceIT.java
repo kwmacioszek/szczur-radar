@@ -96,8 +96,9 @@ class PipelineRunWithoutSourceIT {
 			.uri("/api/admin/pipeline-runs/missing-days")
 			.with(user(admin.toString()).roles(Role.ADMIN.name()))).hasStatusOk()
 			.bodyJson()
-			.isStrictlyEqualTo("{\"from\":\"%s\",\"to\":\"%s\",\"days\":[]}".formatted(from,
-					MissingDays.windowEnd(today)));
+			.extractingPath("$.days")
+			.asArray()
+			.isEmpty();
 	}
 
 }

@@ -83,9 +83,12 @@ class MissingDaysIT {
 	@BeforeEach
 	void setUp() {
 		// The other tests of this context share the database: within this test's transaction no earlier
-		// run covers a day, so only the runs of this test count.
+		// run covers a day, so only the runs of this test count, and none is queued or running, so this
+		// test's running run never meets uq_pipeline_runs_one_running.
 		jdbc.update("UPDATE pipeline_runs SET status = ? WHERE status IN (?, ?)", RunStatus.FAILED.value(),
 				RunStatus.SUCCEEDED.value(), RunStatus.PARTIAL.value());
+		jdbc.update("UPDATE pipeline_runs SET status = ? WHERE status IN (?, ?)", RunStatus.INTERRUPTED.value(),
+				RunStatus.QUEUED.value(), RunStatus.RUNNING.value());
 		admin = users.saveAndFlush(new User("missing-days-" + UUID.randomUUID() + "@example.com", null, Role.ADMIN))
 			.getId();
 	}

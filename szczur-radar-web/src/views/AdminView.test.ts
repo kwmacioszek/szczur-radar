@@ -4,7 +4,7 @@ import { createMemoryHistory } from 'vue-router'
 import { fetchMe } from '../api/auth'
 import { ApiError } from '../api/client'
 import { fetchNotifications } from '../api/notifications'
-import { type Run, fetchMissingDays, fetchRuns, fetchSources, retryPosts, startRange } from '../api/pipeline'
+import { type MissingDays, type Run, fetchMissingDays, fetchRuns, fetchSources, retryPosts, startRange } from '../api/pipeline'
 import { type FailedPost, fetchFailedPosts } from '../api/posts'
 import { resetSession } from '../auth/session'
 import { createAppRouter } from '../router'
@@ -507,6 +507,27 @@ describe('AdminView', () => {
       await flushPromises()
 
       expect(fetchMissingDays).toHaveBeenCalledTimes(2)
+      expect(section(wrapper).find('.missing-range').exists()).toBe(false)
+      expect(section(wrapper).find('.empty').text()).toBe('Brak dni bez danych od 9.10.2026 do 22.10.2026.')
+    })
+
+    it('keeps the newest answer when an older read of the days ends later', async () => {
+      let resolveOlder!: (days: MissingDays) => void
+      let resolveNewer!: (days: MissingDays) => void
+      vi.mocked(fetchMissingDays)
+        .mockResolvedValueOnce(example)
+        .mockReturnValueOnce(new Promise((resolve) => (resolveOlder = resolve)))
+        .mockReturnValueOnce(new Promise((resolve) => (resolveNewer = resolve)))
+      const wrapper = await mountAdmin()
+      const refresh = wrapper.findAll('button').find((button) => button.text() === 'Odśwież')!
+
+      await refresh.trigger('click')
+      await refresh.trigger('click')
+      resolveNewer({ ...example, days: [] })
+      await flushPromises()
+      resolveOlder(example)
+      await flushPromises()
+
       expect(section(wrapper).find('.missing-range').exists()).toBe(false)
       expect(section(wrapper).find('.empty').text()).toBe('Brak dni bez danych od 9.10.2026 do 22.10.2026.')
     })
