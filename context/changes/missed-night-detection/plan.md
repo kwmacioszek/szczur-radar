@@ -365,7 +365,7 @@ Bez migracji i bez zmian danych. Wycofanie to zwykły revert.
 
 #### Manual
 
-- [ ] 2.3 Zrzuty `/admin` z atrapą (7 stanów, oba motywy, 375 px) zaakceptowane przez człowieka
+- [x] 2.3 Zrzuty `/admin` z atrapą (7 stanów, oba motywy, 375 px) zaakceptowane przez człowieka
 
 ### Phase 3: Dokumenty i weryfikacja w PR env
 
@@ -375,5 +375,5 @@ Bez migracji i bez zmian danych. Wycofanie to zwykły revert.
 
 #### Manual
 
-- [ ] 3.2 Scenariusz w PR env (D-3 → lista D-2 → wypełnienie i uruchomienie → lista pusta) z dowodami w issue #72
-- [ ] 3.3 Człowiek akceptuje sekcję S-13 w `deploy-plan.md`
+- [x] 3.2 Scenariusz w PR env (D-3 → lista D-2 → wypełnienie i uruchomienie → lista pusta) z dowodami w issue #72
+- [x] 3.3 Człowiek akceptuje sekcję S-13 w `deploy-plan.md`
