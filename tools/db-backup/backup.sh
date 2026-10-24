@@ -43,16 +43,17 @@ fi
 # the body. The check alarms when the end does not come in time or is not 0. Whoever knows the address
 # can check in, so it is a secret: it goes to curl as a config on stdin, never as an argument (visible in
 # ps), and is never logged. A failed check-in only logs a warning: it never changes the exit code. Not an
-# https:// address: a warning and no check-in (the check then alarms after its grace time).
+# https:// address, or one with a query or fragment (? or #, which would swallow /start and /<exit code>, as
+# AlertSettings in the API refuses): a warning and no check-in (the check then alarms after its grace time).
 # The same code is in tools/pipeline-trigger/trigger.sh (another image and build context): change both.
-readonly ping_pattern='^https://[A-Za-z0-9._~:/?#@!$&()*+,;=%-]+$'
+readonly ping_pattern='^https://[A-Za-z0-9._~:/@!$&()*+,;=%-]+$'
 ping_url=${HEALTHCHECK_PING_URL:-}
 ping_url=${ping_url#"${ping_url%%[![:space:]]*}"}
 ping_url=${ping_url%"${ping_url##*[![:space:]]}"}
 ping_url=${ping_url%/}
 unset HEALTHCHECK_PING_URL
 if [[ -n $ping_url && ! $ping_url =~ $ping_pattern ]]; then
-    log "warning: HEALTHCHECK_PING_URL is not an https:// address; no check-in"
+    log "warning: HEALTHCHECK_PING_URL is not an https:// address without ? or #; no check-in"
     ping_url=""
 fi
 readonly ping_url
@@ -69,7 +70,8 @@ check_in() {
     fi
 }
 
-# The last non-empty line of the file $1, at most 1000 characters (what the check's alarm shows).
+# The last non-empty line of the file $1, at most 1000 bytes (what the check's alarm shows; awk counts
+# bytes, so a long non-ASCII line may end in a cut character).
 last_line() { awk 'NF { line = $0 } END { printf "%s", substr(line, 1, 1000) }' "$1"; }
 
 # A run that hangs (a lock, a stalled connection) would never fail, and Railway skips every later run
@@ -77,19 +79,25 @@ last_line() { awk 'NF { line = $0 } END { printf "%s", substr(line, 1, 1000) }' 
 # this outer process sees every result, the time limit too, so it checks in.
 if [[ -z ${BACKUP_TIME_LIMITED:-} ]]; then
     export BACKUP_TIME_LIMITED=1
-    checkin_dir=$(mktemp -d)
-    trap 'rm -rf "$checkin_dir"' EXIT
+    # A broken /tmp (full, read-only) costs only the check-in's body, never the run or its exit code.
+    if checkin_dir=$(mktemp -d 2>/dev/null); then
+        trap 'rm -rf "$checkin_dir"' EXIT
+        log_copy=$checkin_dir/log body=$checkin_dir/body
+    else
+        log "warning: no temporary directory; the end check-in goes without the last log line"
+        log_copy=/dev/null body=/dev/null
+    fi
     check_in start
     # The run's log goes to stderr as before and to a copy, for its last line.
     set +e
     { timeout --kill-after=60s "${BACKUP_TIMEOUT:-2h}" "${BASH_SOURCE[0]}" 2>&1 1>&3 3>&- \
-        | tee "$checkin_dir/log" >&2; status=${PIPESTATUS[0]}; } 3>&1
+        | tee "$log_copy" >&2; status=${PIPESTATUS[0]}; } 3>&1
     set -e
     if (( status == 124 || status == 137 )); then
-        log "FAILED: the run exceeded ${BACKUP_TIMEOUT:-2h}" 2>&1 | tee -a "$checkin_dir/log" >&2
+        log "FAILED: the run exceeded ${BACKUP_TIMEOUT:-2h}" 2>&1 | tee -a "$log_copy" >&2 || true
     fi
-    last_line "$checkin_dir/log" >"$checkin_dir/body"
-    check_in "$status" "$checkin_dir/body"
+    last_line "$log_copy" >"$body" 2>/dev/null || true
+    check_in "$status" "$body"
     exit "$status"
 fi
 

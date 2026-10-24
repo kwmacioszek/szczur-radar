@@ -20,7 +20,8 @@
 #   5. with HEALTHCHECK_PING_URL (F-04, out-of-app-alert-channel): /start, then the exit code (0, 1 for a
 #      failed run and the TRIGGER_TIMEOUT limit, 2 for a configuration error) with the last log line;
 #      a check-in answered 500 (retried) or unreachable leaves the exit code as it is; no variable, a
-#      skipped run or an address that is not https:// gives no check-in;
+#      skipped run or an address that is not https:// or has a query gives no check-in; no temporary
+#      directory leaves the exit code as it is, with check-ins without the last line;
 #   6. the tokens and the check-in address never appear in the logs.
 # Needs Docker and openssl (the stub's certificate). Run from anywhere: tools/pipeline-trigger/test.sh
 set -euo pipefail
@@ -444,10 +445,23 @@ pings_were ping-unreachable ''
 pass "an unreachable check-in address: a warning, exit 1 as without it"
 check_ping_case ping-not-https 0 '{"runs": [{"kind": "range", "statuses": ["succeeded"]}]}' "$token" \
     -e HEALTHCHECK_PING_URL="http://$ping_host:8000/ping/$ping_key"
-log_says ping-not-https 'warning: HEALTHCHECK_PING_URL is not an https:// address; no check-in'
+log_says ping-not-https 'warning: HEALTHCHECK_PING_URL is not an https:// address without ? or #; no check-in'
 log_says ping-not-https 'OK: range succeeded'
 pings_were ping-not-https ''
 pass "an address that is not https://: a warning, no check-in, exit 0"
+check_ping_case ping-query 0 '{"runs": [{"kind": "range", "statuses": ["succeeded"]}]}' "$token" \
+    -e HEALTHCHECK_PING_URL="$ping_url?x=1"
+log_says ping-query 'warning: HEALTHCHECK_PING_URL is not an https:// address without ? or #; no check-in'
+log_says ping-query 'OK: range succeeded'
+pings_were ping-query ''
+pass "an address with a query (? would swallow /start and /<exit code>): a warning, no check-in, exit 0"
+# The configuration error ends the run before it needs a temporary directory of its own.
+check_ping_case ping-no-tmp 2 '{"runs": [{"kind": "range", "statuses": ["succeeded"]}]}' "" \
+    -e TMPDIR=/nonexistent -e HEALTHCHECK_PING_URL="$ping_url"
+log_says ping-no-tmp 'warning: no temporary directory; the end check-in goes without the last log line'
+log_says ping-no-tmp 'FAILED: PIPELINE_TRIGGER_TOKEN is not set'
+pings_were ping-no-tmp 'start 2'
+pass "no temporary directory: a warning, /start and /2 without the last line, exit 2 as without it"
 
 step "6. no secrets in the logs"
 if grep -lF -e "$token" -e "$wrong_token" -e "$ping_key" "$tmp"/*.log; then
