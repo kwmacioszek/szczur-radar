@@ -10,7 +10,7 @@ Checki healthchecks.io kanału alarmowego poza aplikacją (F-04, `out-of-app-ale
 | --- | --- |
 | `checks.sh` | `apply` i `delete` checków środowiska (niżej) |
 | `test.sh` | lokalny test `checks.sh` z atrapą `curl` w `PATH`, bez healthchecks.io i Dockera |
-| `fixtures/*.json` | odpowiedzi API zarządzania dla testu (`fixtures/README.md`: zbudowane według dokumentacji, do zastąpienia nagranymi) |
+| `fixtures/*.json` | odpowiedzi API zarządzania dla testu (nagrane z prawdziwego API zarządzania, `fixtures/README.md`) |
 
 ## Jednorazowo w panelu healthchecks.io
 

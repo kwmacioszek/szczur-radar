@@ -244,11 +244,11 @@ public class WykopRepository {
 	}
 
 	/**
-	 * An element without an id is keyed by its position in the read (kept at every occurrence) and its
-	 * resource (so the resources' reads never share a key).
+	 * An element is keyed by the resource it was read from and its id, one without an id by its position
+	 * in the read (kept at every occurrence) — so the resources' reads never share a key.
 	 */
 	private static String key(Resource resource, WykopItem item, int position) {
-		return item.id() == null ? "no-id:" + resource.path + ":" + position : item.resource() + ":" + item.id();
+		return resource.path + ":" + (item.id() == null ? "no-id:" + position : item.id());
 	}
 
 	private void pause() {

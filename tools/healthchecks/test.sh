@@ -2,7 +2,8 @@
 # Local test of checks.sh (F-04, out-of-app-alert-channel; see README.md), without healthchecks.io or
 # Docker. A stub `curl` in PATH answers every request from a script per case (method, URL, status and a
 # fixture as the body, in order) and records what checks.sh sent: argv, the config read from stdin (URL
-# and headers), the headers and the body. fixtures/ follow the documented shape of the Management API v3.
+# and headers), the headers and the body. fixtures/ are responses recorded from the real Management API v3
+# (fixtures/README.md).
 # Cases:
 #   1. apply on a fresh project: three upserts (name, tags, schedule, tz, grace, channels, unique), one
 #      arming check-in per cron check (no API key on it), the read-back with both up, the ping URLs on

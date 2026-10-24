@@ -29,6 +29,7 @@ STATUS = {
     "ready": ("Gotowe do planowania", C["sky"], C["skySoft"]),
     "proposed": ("Proponowane", C["gray"], C["graySoft"]),
     "blocked": ("Zablokowane", C["coral"], C["coralSoft"]),
+    "parked": ("Zaparkowane", C["dim"], C["panel2"]),
 }
 
 out = []
@@ -105,7 +106,7 @@ def need_h(title, desc, w, compact=False):
     tl = len(wrap(title, tsize, w - 2 * pad, 700)); dl = len(wrap(desc, dsize, w - 2 * pad))
     body = 51 + tl * (tsize + 4) + (2 if compact else 6) + (dl - 1) * (dsize + 5)
     return body + (14 if compact else 90)
-CARD_BORDER = {"done": "#2f5a42", "ready": "#2e4d60", "blocked": "#7a3b47", "proposed": "#2f3b42", "progress": "#6b5426"}
+CARD_BORDER = {"done": "#2f5a42", "ready": "#2e4d60", "blocked": "#7a3b47", "proposed": "#2f3b42", "progress": "#6b5426", "parked": "#222d33"}
 def card(x, y, w, h, iid, title, desc, status, req=None, cid=None, star=False, compact=False, note=None):
     lab, fg, bg = STATUS[status]
     add(f'<g data-id="{iid}" data-status="{status}">')
@@ -160,15 +161,15 @@ m1 = {  # title, outcome, column, row, prerequisites, change id
 }
 m2 = {  # lane, position, title, outcome, status, prerequisites, change id
     "S-08": ("A", 0, "Pusty przebieg daje sygnał", "operator dostaje sygnał, gdy przebieg nic nie pobrał albo pominął elementy; etykieta świeżości wtedy stoi", "done", "—", "empty-run-signal"),
-    "S-12": ("A", 1, "Powiadomienia o przebiegach nie giną", "admin dostaje każde należne powiadomienie o przebiegu, a stan kroków zgadza się ze statusem przebiegu", "proposed", "S-08", "reliable-run-notifications"),
-    "F-04": ("B", 0, "Kanał alarmowy poza aplikacją", "(foundation) kanał alarmowy poza aplikacją: healthchecks.io → Telegram, $0; crony się meldują, API ma nadawcę zdarzeń i sygnał testowy", "progress", "—", "out-of-app-alert-channel"),
+    "S-12": ("A", 1, "Powiadomienia o przebiegach nie giną", "zaparkowane 2026-10-24 (frame: scenariusze tylko z audytu); A5 przeszedł do S-18, A6 do Parked", "parked", "S-08", "reliable-run-notifications"),
+    "F-04": ("B", 0, "Kanał alarmowy poza aplikacją", "(foundation) kanał alarmowy poza aplikacją: healthchecks.io → Telegram, $0; crony się meldują, API ma nadawcę zdarzeń i sygnał testowy", "done", "—", "out-of-app-alert-channel"),
     "S-13": ("B", 1, "Brakująca noc nie przechodzi niezauważona", "operator dowie się, że nocny przebieg albo backup nie wystartował, i widzi dni bez danych", "proposed", "F-04", "missed-night-detection"),
-    "S-18": ("B", 2, "Błędy wymagające reakcji docierają do operatora", "błędy wymagające reakcji (ERROR, /api/ready, awaria ścieżki alarmowej) docierają do operatora; klucze nie trafiają do logów", "proposed", "F-04", "error-visibility"),
+    "S-18": ("B", 2, "Błędy wymagające reakcji docierają do operatora", "błędy wymagające reakcji (ERROR, /api/ready, awaria ścieżki alarmowej, nieudany zapis licznika przebiegu) docierają do operatora; klucze nie trafiają do logów", "proposed", "F-04", "error-visibility"),
     "S-09": ("C", 0, "Awaria dostawcy nie zabija postów", "awaria dostawcy LLM ani błąd naszego kodu nie zabija postów; post z powtarzalnym błędem technicznym ma limit", "done", "—", "attempt-accounting"),
     "S-17": ("C", 1, "Przebieg bez Embabel", "przebieg działa bez Embabel, przerwanie dociera do oceny, a testy silnika są skupione i niezależne od kolejności", "proposed", "S-09", "pipeline-without-embabel"),
     "S-10": ("C", 2, "Zła konfiguracja LLM zatrzymuje start", "operator dostaje błąd startu przy LLM_TIMEOUT bez jednostki; czasy są parsowane jedną regułą", "done", "—", "llm-config-fail-fast"),
     "S-11": ("C", 3, "Utknięty przebieg sam wraca do obiegu", "przebieg po martwej instancji i post z wyścigu claim wracają do obiegu bez restartu API", "progress", "—", "stuck-run-self-heals"),
-    "S-16": ("C", 4, "Wykop nie gubi postów po cichu", "stronicowanie Wykopu nie gubi elementów po cichu, a chwilowy błąd Wykopu nie zabija nocy", "ready", "—", "wykop-ingest-completeness"),
+    "S-16": ("C", 4, "Wykop nie gubi postów po cichu", "stronicowanie Wykopu nie gubi elementów po cichu, a chwilowy błąd Wykopu nie zabija nocy", "done", "—", "wykop-ingest-completeness"),
     "S-14": ("D", 0, "Bezpieczna bramka wdrożeń", "merge nie wdroży czerwonego commita, crony czekają na CI, po apply jest kontrola zdrowia, ręczne zmienne nie blokują wdrożeń", "done", "—", "safe-deploy-gate"),
     "S-15": ("D", 1, "Kopia bazy sprawdzana w całości", "sprawdzenie kopii bazy obejmuje wszystkie tabele i odrzuca kopię pustej bazy", "done", "—", "backup-check-completeness"),
     "S-19": ("D", 2, "Dokumenty operatora mówią prawdę", "operator czyta prawdziwe runbooki i stan; zbędne zmienne IaC usunięte; otwarty dług operacyjny domknięty", "done", "—", "ops-docs-debt"),
@@ -264,31 +265,31 @@ text(M + 52, 57, "Szczur Radar", 17, 700)
 text(M + 52, 75, "MARKET INTELLIGENCE", 9.5, 600, C["muted"], spacing="2.4")
 text(M, 134, "MILESTONES I ZALEŻNOŚCI", 11, 700, C["muted"], spacing="2")
 text(M, 172, "Roadmapa produktu", 31, 700)
-text(M, 202, "Źródło: context/foundation/roadmap.md  ·  v3  ·  stan 23.10.2026  ·  bez terminów — kolejność wynika z zależności", 13, 400, C["muted"])
+text(M, 202, "Źródło: context/foundation/roadmap.md  ·  v3  ·  stan 24.10.2026  ·  bez terminów — kolejność wynika z zależności", 13, 400, C["muted"])
 
 # progress card (same as before), right after the title block
 px, py, pw, ph = P2X, 36, 820, 214
 rect(px, py, pw, ph, 14, "url(#hero)", C["border2"])
 cx, cy, rr = px + 82, py + 100, 46
-frac = 13 / 23
+frac = 17 / 23
 add(f'<circle cx="{cx}" cy="{cy}" r="{rr}" fill="none" stroke="{C["graySoft"]}" stroke-width="9"/>')
 ang = frac * 2 * math.pi
 ex, ey = cx + rr * math.sin(ang), cy - rr * math.cos(ang)
 add(f'<path d="M{cx} {cy-rr} A{rr} {rr} 0 {1 if frac > 0.5 else 0} 1 {ex:.2f} {ey:.2f}" fill="none" stroke="{C["done"]}" stroke-width="9" stroke-linecap="round"/>')
-text(cx, cy + 4, "57%", 22, 700, anchor="middle")
-text(cx, cy + 22, "13 / 23", 11, 500, C["muted"], anchor="middle")
+text(cx, cy + 4, "74%", 22, 700, anchor="middle")
+text(cx, cy + 22, "17 / 23", 11, 500, C["muted"], anchor="middle")
 text(cx, py + 186, "M-1 + M-2", 10.5, 700, C["muted"], anchor="middle", spacing="1.2")
 bx = px + 164
 text(bx, py + 34, "POSTĘP KAMIENIA MILOWEGO", 10.5, 700, C["muted"], spacing="1.6")
 text(bx, py + 62, "M-2 · MVP Quality & Reliability Hardening", 17, 700)
-text(px + pw - 24, py + 62, "6 / 13", 17, 700, C["text"], anchor="end")
-m2_order = [("F-04", "progress"), ("S-08", "done"), ("S-09", "done"), ("S-10", "done"), ("S-11", "progress"), ("S-12", "proposed"),
-            ("S-13", "proposed"), ("S-14", "done"), ("S-15", "done"), ("S-16", "ready"), ("S-17", "proposed"), ("S-18", "proposed"), ("S-19", "done")]
+text(px + pw - 24, py + 62, "8 / 13", 17, 700, C["text"], anchor="end")
+m2_order = [("F-04", "done"), ("S-08", "done"), ("S-09", "done"), ("S-10", "done"), ("S-11", "progress"), ("S-12", "parked"),
+            ("S-13", "proposed"), ("S-14", "done"), ("S-15", "done"), ("S-16", "done"), ("S-17", "proposed"), ("S-18", "proposed"), ("S-19", "done")]
 segw = (pw - 164 - 24 - 12 * 5) / 13
 for i, (iid, st) in enumerate(m2_order):
     lab, fg, bg = STATUS[st]
-    rect(bx + i * (segw + 5), py + 78, segw, 12, 3, bg, fg + ("aa" if st != "proposed" else "55"), 1)
-legend_items = [("done", "6 ukończone"), ("progress", "2 w toku"), ("ready", "1 gotowe do planowania"), ("proposed", "4 proponowane"), ("blocked", "0 zablokowanych")]
+    rect(bx + i * (segw + 5), py + 78, segw, 12, 3, bg, fg + ("aa" if st not in ("proposed", "parked") else "55"), 1)
+legend_items = [("done", "8 ukończone"), ("progress", "1 w toku"), ("ready", "0 gotowe do planowania"), ("proposed", "3 proponowane"), ("parked", "1 zaparkowane"), ("blocked", "0 zablokowanych")]
 for li, (st, lab) in enumerate(legend_items):
     fg = STATUS[st][1]
     lx = bx + (0, 122, 218)[li % 3]
@@ -303,7 +304,7 @@ lgx, lgy, lgw, lgh = P3X, 36, P3W, 214
 rect(lgx, lgy, lgw, lgh, 14, C["panel"], C["border2"])
 text(lgx + 24, lgy + 34, "LEGENDA", 10.5, 700, C["muted"], spacing="1.6")
 x = lgx + 24
-for st in ("done", "progress", "ready", "proposed", "blocked"):
+for st in ("done", "progress", "ready", "proposed", "parked", "blocked"):
     lab, fg, bg = STATUS[st]
     x += pill(x, lgy + 52, lab, fg, bg, 10.5, icon={"done": "check", "blocked": "lock"}.get(st, "dot")) + 10
 add(f'<line x1="{lgx+24}" y1="{lgy+92}" x2="{lgx+lgw-24}" y2="{lgy+92}" stroke="{C["border2"]}"/>')
@@ -331,7 +332,7 @@ add(f'<line x1="{P3X+20}" y1="{AX_Y}" x2="{x_end-14}" y2="{AX_Y}" stroke="{C["mu
 add(f'<path d="M{x_end-22} {AX_Y-8} L{x_end-10} {AX_Y} L{x_end-22} {AX_Y+8}" fill="none" stroke="{C["muted"]}" stroke-opacity="0.6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>')
 nodes = [
     (P1X, "M-1", "MVP — ocenione sygnały z Wykopu", "Zamknięty 17.10.2026  ·  10 / 10", "done"),
-    (P2X, "M-2", "MVP Quality & Reliability Hardening", "Otwarty — teraz  ·  4 / 13", "now"),
+    (P2X, "M-2", "MVP Quality & Reliability Hardening", "Otwarty — teraz  ·  8 / 13", "now"),
     (P3X, "PO M-2", "Odroczone", "Backlog  ·  24 pozycje", "later"),
 ]
 for nx, tag, name, state, kind in nodes:
@@ -418,7 +419,7 @@ for k, (title, desc, c, r, req, cid) in m1.items():
 container(P2X, P2W, "M-2", "MVP Quality & Reliability Hardening",
           ("Otwarty", C["amber"], C["amberSoft"], 10.5, False, 600, "dot"),
           "Złe noce, awarie dostawców i błędne wdrożenia są widoczne dla operatora, nie niszczą danych ani nie blokują pracy — zanim ruszy kolejna roadmapa funkcjonalna.",
-          ("4 / 13", 4 / 13, C["lime"]), C["lime"] + "40")
+          ("8 / 13", 8 / 13, C["lime"]), C["lime"] + "40")
 box2 = {}
 ry = TOP + 98
 for ri, row in enumerate(rows2):
@@ -455,7 +456,7 @@ def R2(k): x, y, w, h = box2[k]; return (x + w, y + h / 2)
 def T2(k, f=0.5): x, y, w, h = box2[k]; return (x + w * f, y)
 def B2(k, f=0.5): x, y, w, h = box2[k]; return (x + w * f, y + h)
 e2 = [
-    (("S-08", "S-12"), [R2("S-08"), L2("S-12")], C["lime"], False, "lime"),
+    (("S-08", "S-12"), [R2("S-08"), L2("S-12")], C["muted"], True, "gray"),
     (("F-04", "S-13"), [T2("F-04", 0.75), (T2("F-04", 0.75)[0], L2("S-13")[1]), L2("S-13")], C["amber"], False, "amber"),
     (("F-04", "S-18"), [B2("F-04", 0.75), (B2("F-04", 0.75)[0], L2("S-18")[1]), L2("S-18")], C["amber"], False, "amber"),
     (("S-09", "S-17"), [R2("S-09"), L2("S-17")], C["sky"], False, "sky"),
@@ -476,7 +477,7 @@ for ids in (("S-10", "S-11", "S-16"), ("S-14", "S-15", "S-19")):
 # ================= Po M-2 container (backlog) =================
 container(P3X, P3W, "PO M-2", "Odroczone",
           ("Parked", C["gray"], C["graySoft"], 10.5, False, 600, "dot"),
-          "25 pozycji z sekcji Parked roadmapy. Bez ustalonej kolejności; każda wymaga osobnego planu, zanim wejdzie do roadmapy.",
+          "26 pozycji z sekcji Parked roadmapy (zaparkowany S-12 jest na karcie w M-2). Bez ustalonej kolejności; każda wymaga osobnego planu, zanim wejdzie do roadmapy.",
           None, C["border"])
 for gi, (gname, items) in enumerate(groups):
     col, row = gi % 2, gi // 2

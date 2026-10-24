@@ -512,50 +512,50 @@ wstrzymać w panelu.
 
 #### Automated
 
-- [x] 1.1 Testy triggera przechodzą: `tools/pipeline-trigger/test.sh` — d7553af
-- [x] 1.2 Testy backupu przechodzą: `tools/db-backup/test.sh` — d7553af
-- [x] 1.3 Po testach nie zostają kontenery ani sieci testów — d7553af
+- [x] 1.1 Testy triggera przechodzą: `tools/pipeline-trigger/test.sh` — 45d18c4
+- [x] 1.2 Testy backupu przechodzą: `tools/db-backup/test.sh` — 45d18c4
+- [x] 1.3 Po testach nie zostają kontenery ani sieci testów — 45d18c4
 
 #### Manual
 
-- [x] 1.4 Przegląd: adres meldunku nie trafia do logu, `ps` ani komunikatu w żadnej ścieżce obu skryptów — 2081457
+- [x] 1.4 Przegląd: adres meldunku nie trafia do logu, `ps` ani komunikatu w żadnej ścieżce obu skryptów — 45d18c4
 
 ### Phase 2: Zgłaszanie zdarzeń z API
 
 #### Automated
 
-- [x] 2.1 Testy jednostkowe przechodzą: `./mvnw -B test` — 6afbd01
-- [x] 2.2 Pełna weryfikacja przechodzi: `./mvnw -B verify` — 6afbd01
-- [x] 2.3 Lokalnie `send-test-alert` bez zmiennej kończy się kodem 2 z czytelnym komunikatem — 4a45051
+- [x] 2.1 Testy jednostkowe przechodzą: `./mvnw -B test` — 45d18c4
+- [x] 2.2 Pełna weryfikacja przechodzi: `./mvnw -B verify` — 45d18c4
+- [x] 2.3 Lokalnie `send-test-alert` bez zmiennej kończy się kodem 2 z czytelnym komunikatem — 45d18c4
 
 ### Phase 3: Checki jako kod i IaC
 
 #### Automated
 
-- [x] 3.1 Testy skryptu przechodzą: `tools/healthchecks/test.sh` — a0b31fa
-- [x] 3.2 `shellcheck tools/healthchecks/*.sh` bez błędów — a0b31fa
-- [x] 3.3 Plan IaC dla PR env bez zmian destrukcyjnych i zielona bramka `railway-config` — 1e4e2ef
-- [x] 3.4 CI na PR zielone, w tym `healthchecks-test` — 1e4e2ef
-- [x] 3.6 `railway config plan --json` pokazuje `HEALTHCHECK_PING_URL` jako `preserve` na trzech usługach — 4a45051
+- [x] 3.1 Testy skryptu przechodzą: `tools/healthchecks/test.sh` — 45d18c4
+- [x] 3.2 `shellcheck tools/healthchecks/*.sh` bez błędów — 45d18c4
+- [x] 3.3 Plan IaC dla PR env bez zmian destrukcyjnych i zielona bramka `railway-config` — 45d18c4
+- [x] 3.4 CI na PR zielone, w tym `healthchecks-test` — 45d18c4
+- [x] 3.6 `railway config plan --json` pokazuje `HEALTHCHECK_PING_URL` jako `preserve` na trzech usługach — 45d18c4
 
 #### Manual
 
-- [x] 3.5 Fixture'y nagrane z prawdziwego API zarządzania, bez klucza i adresów pingów — a778d44
+- [x] 3.5 Fixture'y nagrane z prawdziwego API zarządzania, bez klucza i adresów pingów — 45d18c4
 
 ### Phase 4: Weryfikacja w PR env i dokumentacja
 
 #### Automated
 
-- [x] 4.1 CI na PR zielone po zmianach dokumentacji — 1e4e2ef
-- [x] 4.3 PR env bez `HEALTHCHECK_PING_URL` przed ręcznym ustawieniem (produkcyjna wartość się nie skopiowała) — 4a45051
+- [x] 4.1 CI na PR zielone po zmianach dokumentacji — 45d18c4
+- [x] 4.3 PR env bez `HEALTHCHECK_PING_URL` przed ręcznym ustawieniem (produkcyjna wartość się nie skopiowała) — 45d18c4
 
 #### Manual
 
-- [x] 4.4 Udany `pipeline-trigger` daje `start` i `0` z linią `OK:`, bez wiadomości w Telegramie — 2081457
-- [x] 4.5 Nieudany `pipeline-trigger` daje „down” z linią `FAILED:`, kolejny udany — „up” — 2081457
-- [x] 4.6 Uzbrojony check bez meldunku po harmonogramie i karencji daje „down” z powodem „nie przyszedł na czas” — 2081457
-- [x] 4.7 `db-backup` w PR env daje `start` i `0` — 2081457
-- [x] 4.8 `send-test-alert` w PR env daje „down” z opisem i zaraz „up”, API potem zasypia — 2081457
-- [x] 4.9 Testowe checki usunięte, zmienne PR env przywrócone, harmonogramy cronów bez zmian — 2081457
-- [x] 4.10 Runbook F-04 zgodny z tym, co zrobiono w PR env — 857244f
-- [x] 4.11 Dane F-04 i data w `render_roadmap_svg.py` zgodne z `roadmap.md`, SVG wygenerowane na nowo — 2081457
+- [x] 4.4 Udany `pipeline-trigger` daje `start` i `0` z linią `OK:`, bez wiadomości w Telegramie — 45d18c4
+- [x] 4.5 Nieudany `pipeline-trigger` daje „down” z linią `FAILED:`, kolejny udany — „up” — 45d18c4
+- [x] 4.6 Uzbrojony check bez meldunku po harmonogramie i karencji daje „down” z powodem „nie przyszedł na czas” — 45d18c4
+- [x] 4.7 `db-backup` w PR env daje `start` i `0` — 45d18c4
+- [x] 4.8 `send-test-alert` w PR env daje „down” z opisem i zaraz „up”, API potem zasypia — 45d18c4
+- [x] 4.9 Testowe checki usunięte, zmienne PR env przywrócone, harmonogramy cronów bez zmian — 45d18c4
+- [x] 4.10 Runbook F-04 zgodny z tym, co zrobiono w PR env — 45d18c4
+- [x] 4.11 Dane F-04 i data w `render_roadmap_svg.py` zgodne z `roadmap.md`, SVG wygenerowane na nowo — 45d18c4
