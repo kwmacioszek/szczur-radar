@@ -360,8 +360,8 @@ Bez migracji i bez zmian danych. Wycofanie to zwykły revert.
 
 #### Automated
 
-- [x] 2.1 Testy Vitest przechodzą: `cd szczur-radar-web && npm test`
-- [x] 2.2 Typecheck i build przechodzą: `cd szczur-radar-web && npm run build`
+- [x] 2.1 Testy Vitest przechodzą: `cd szczur-radar-web && npm test` — 6ebb057
+- [x] 2.2 Typecheck i build przechodzą: `cd szczur-radar-web && npm run build` — 6ebb057
 
 #### Manual
 
