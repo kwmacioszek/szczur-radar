@@ -371,7 +371,7 @@ Bez migracji i bez zmian danych. Wycofanie to zwykły revert.
 
 #### Automated
 
-- [ ] 3.1 Pełny CI na PR jest zielony: `gh pr checks <N> --watch`
+- [x] 3.1 Pełny CI na PR jest zielony: `gh pr checks <N> --watch` — dd554fa
 
 #### Manual
 
