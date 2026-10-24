@@ -66,6 +66,8 @@ milestone_status: open
 
 > v3.2 (2026-10-20): F-04 (`out-of-app-alert-channel`) — niewiadoma rozstrzygnięta: kanał to healthchecks.io (darmowy Hobbyist) z alarmem w Telegramie przez @HealthchecksBot, koszt $0, bez odpytywania produkcji i zegarów w API. Oba crony meldują start i kod wyjścia, API ma nadawcę zdarzeń i komendę `send-test-alert`. Notatki w S-13 (check każdego crona już istnieje) i S-18 (ścieżki ERROR podłącza do `OperatorAlerts`); doprecyzowanie NFR o sygnale awarii w PRD.
 
+> v3.3 (2026-10-24): S-12 (`reliable-run-notifications`) **zaparkowany** (decyzja użytkownika po `/10x-frame`, `context/archive/2026-10-24-reliable-run-notifications/frame.md`): A3, A5, A6 znane tylko z audytu, bez incydentu; zguba powiadomienia wymaga awarii bazy w oknie milisekund po commicie, przebiegi idą prawie tylko z crona (kod wyjścia, Railway, healthchecks), a S-18 zrobi z nieudanego powiadomienia alarm. A5 (nieudany zapis licznika, dziś tylko WARN) przeszedł do zakresu S-18; A6 i reszta S-12 w `## Parked` z warunkiem powrotu. Status `parked` nie blokuje zamknięcia M-2.
+
 ## Milestone
 
 **M-2: MVP Quality & Reliability Hardening** — Status: open
@@ -98,13 +100,13 @@ Na Wykopie (#gielda) i Reddicie codziennie pojawiają się setki postów o inwes
 | S-09 | attempt-accounting          | awaria dostawcy LLM ani błąd naszego kodu nie zabija postów; post z powtarzalnym błędem technicznym ma limit           | —             | MS-01, MS-03; audyt B2, B3, B9, A1                          | done |
 | S-10 | llm-config-fail-fast        | operator dostaje błąd startu przy `LLM_TIMEOUT` bez jednostki; czasy są parsowane jedną regułą                        | —             | MS-01, MS-02; audyt B1, E                                   | done     |
 | S-11 | stuck-run-self-heals        | przebieg po martwej instancji i post z wyścigu claim wracają do obiegu bez restartu API                                | —             | MS-01, MS-03; audyt A2, A4                                  | ready    |
-| S-12 | reliable-run-notifications  | admin dostaje każde należne powiadomienie o przebiegu, a stan kroków zgadza się ze statusem przebiegu                  | S-08          | MS-04, MS-01, NFR (sygnał awarii przebiegu); audyt A3, A5, A6 | proposed |
+| S-12 | reliable-run-notifications  | ~~admin dostaje każde należne powiadomienie o przebiegu, a stan kroków zgadza się ze statusem przebiegu~~ — zaparkowane 2026-10-24, A5 w S-18 | S-08          | MS-04, MS-01, NFR (sygnał awarii przebiegu); audyt A3, A5, A6 | parked |
 | S-13 | missed-night-detection      | operator dowie się, że nocny przebieg albo backup nie wystartował, i widzi dni bez danych                              | F-04          | MS-04, NFR (sygnał awarii przebiegu, kopia bazy); audyt C2, C3 | proposed |
 | S-14 | safe-deploy-gate            | merge nie wdroży czerwonego commita, crony czekają na CI, po apply jest kontrola zdrowia, ręczne zmienne nie blokują wdrożeń | —        | MS-02, MS-03; audyt C4, C5, C6, C7                          | done |
 | S-15 | backup-check-completeness   | sprawdzenie kopii bazy obejmuje wszystkie tabele i odrzuca kopię pustej bazy                                           | —             | MS-01, MS-03, NFR (kopia sprawdzana odtworzeniem); audyt C9 | done |
 | S-16 | wykop-ingest-completeness   | stronicowanie Wykopu nie gubi elementów po cichu, a chwilowy błąd Wykopu nie zabija nocy                               | —             | MS-01, MS-03; audyt B5, B6                                  | done |
 | S-17 | pipeline-without-embabel    | przebieg działa bez Embabel, przerwanie dociera do oceny, a testy silnika są skupione i niezależne od kolejności       | S-09          | MS-01, MS-03; audyt E, A7, D                                | proposed |
-| S-18 | error-visibility            | błędy wymagające reakcji (ERROR, `/api/ready`, awaria ścieżki alarmowej) docierają do operatora; klucze nie trafiają do logów | F-04     | MS-04; audyt C10, C11, B7                                   | proposed |
+| S-18 | error-visibility            | błędy wymagające reakcji (ERROR, `/api/ready`, awaria ścieżki alarmowej, nieudany zapis licznika przebiegu) docierają do operatora; klucze nie trafiają do logów | F-04     | MS-04; audyt C10, C11, B7, A5                               | proposed |
 | S-19 | ops-docs-debt               | operator czyta prawdziwe runbooki i stan; zbędne zmienne IaC usunięte; otwarty dług operacyjny domknięty               | —             | MS-02, MS-04; audyt F, C12, C13                             | done |
 
 ## Streams
@@ -113,7 +115,7 @@ Navigation aid — groups items that share a Prerequisites chain. Canonical orde
 
 | Stream | Theme                   | Chain                                          | Note                                                                                                   |
 | ------ | ----------------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| A      | Sygnał w aplikacji      | `S-08` → `S-12`                                | Gwiazda przewodnia; sygnały w dzwonku nie czekają na decyzję o kanale zewnętrznym (F-04).             |
+| A      | Sygnał w aplikacji      | `S-08` → ~~`S-12`~~                            | Gwiazda przewodnia; sygnały w dzwonku nie czekają na decyzję o kanale zewnętrznym (F-04). S-12 zaparkowany (v3.3). |
 | B      | Kanał poza aplikacją    | `F-04` → `S-13` → `S-18`                        | Kanał rozstrzygnięty (2026-10-20): healthchecks.io → Telegram; przy celu `quality` fundament obserwowalności nie jest odkładany.          |
 | C      | Próby i silnik          | `S-09` → `S-17` · `S-10` · `S-11` · `S-16`     | `S-10`, `S-11`, `S-16` są niezależne i równoległe; `S-17` przepisuje silnik po nowej semantyce prób.  |
 | D      | Wdrożenia i dane        | `S-14` · `S-15` · `S-19`                       | Niezależne; `S-14` warto zrobić wcześnie, bo chroni każdy kolejny merge tego kamienia.                |
@@ -209,7 +211,8 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** po S-08, bo ten dodaje nowy powód powiadomienia i zmienia `needsAttention`; obie zmiany w tym samym miejscu naraz dałyby konflikt.
-- **Status:** proposed
+- **Decyzja (2026-10-24): zaparkowany, nie planować.** Frame (`context/archive/2026-10-24-reliable-run-notifications/frame.md`): A3, A5, A6 znane tylko z audytu, żadnego incydentu. A3 wymaga zerwania bazy w oknie milisekund po commicie statusu; realna awaria bazy najpierw zatrzymuje zapis statusu, a ten przypadek kończy się powiadomieniem `interrupted` po restarcie (S-11 skraca czekanie). Przebiegi idą prawie tylko z crona, który ma własny sygnał przy `failed`/`interrupted`; S-18 zrobi alarm z linii ERROR nieudanego powiadomienia. A5 przeszedł do S-18; A6 (krok `assess` `succeeded` w przebiegu `failed`) nie dotyczy powiadomień — w `## Parked`. **Powrót**, gdy: pierwszy incydent zgubionego powiadomienia albo przebiegi admina uruchamiane bez patrzenia.
+- **Status:** parked
 
 ### S-13: Brakująca noc nie przechodzi niezauważona
 
@@ -278,9 +281,9 @@ Foundations below assume these are present and do NOT re-scaffold them.
 
 ### S-18: Błędy wymagające reakcji docierają do operatora
 
-- **Outcome:** błędy wymagające reakcji — linie ERROR (odzyskiwanie, watchdog, zamykanie przebiegu, nieudane powiadomienie), nieudane `/api/ready` z przyczyną w logu — docierają do operatora przez kanał z F-04, a łańcuch przyczyn wyjątków dostawców nie wynosi kluczy do logów.
+- **Outcome:** błędy wymagające reakcji — linie ERROR (odzyskiwanie, watchdog, zamykanie przebiegu, nieudane powiadomienie), nieudany zapis licznika przebiegu, nieudane `/api/ready` z przyczyną w logu — docierają do operatora przez kanał z F-04, a łańcuch przyczyn wyjątków dostawców nie wynosi kluczy do logów.
 - **Change ID:** error-visibility
-- **PRD refs:** MS-04; audyt C10, C11, B7
+- **PRD refs:** MS-04; audyt C10, C11, B7, A5
 - **Prerequisites:** F-04
 - **Parallel with:** S-08–S-17, S-19
 - **Blockers:** —
@@ -289,6 +292,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Risk:** łatwo zalać operatora alarmami — każdy alarm musi wymagać reakcji; maskowanie sekretów w logach to osobne, łatwe do pominięcia ryzyko.
 - **Uwaga (F-04, 2026-10-20):** kanał F-04 to healthchecks.io → Telegram. API ma nadawcę `alerts/OperatorAlerts` (`report(AlertEvent, detail)` do checka `<środowisko>/api-events`: `/fail` z opisem i od razu sukces; nigdy nie rzuca) z jednym zdarzeniem `TEST_SIGNAL`. S-18 dopisuje zdarzenia do `AlertEvent` i podłącza do `OperatorAlerts` ścieżki ERROR; limit healthchecks.io to ≤5 pingów na minutę na check, czyli ≤2 zdarzenia na minutę (`deploy-plan.md`, sekcja F-04).
 - **Uwaga (przegląd implementacji F-04, 2026-10-24):** ograniczenia nadawcy, które S-18 musi uwzględnić przy podłączaniu ścieżek: (1) `report()` na przerwanym wątku zwraca `FAILED` bez wysyłki, a `PipelineRunService` i `RunWatchdog` zamykają executory przez `shutdownNow()`, więc zdarzenie z workera przy zamknięciu lub anulowaniu nie wyjdzie; (2) wysyłka jest synchroniczna i blokuje wywołującego do ok. 2 × (5 s połączenie + 10 s żądanie); (3) bean `OperatorAlerts` istnieje tylko w serwerze (`@ConditionalOnWebApplication`), więc bean wspólny z kontekstem komend (`migrate`) bierze go przez `ObjectProvider` albo sam jest tylko webowy; (4) `HealthchecksAlerts.report` ma `@Nullable detail`, a `OperatorAlerts.report` nie — wyrównać przy pierwszej edycji pakietu (`context/changes/out-of-app-alert-channel/reviews/impl-review.md`, F8 i F10).
+- **Uwaga (S-12, 2026-10-24):** z zaparkowanego S-12 przeszedł tu A5. Nieudany zapis licznika przebiegu (`ConcurrentAssessmentDispatcher.count`) to dziś tylko WARN, a przy przebiegu `partial` z martwym postem albo błędem technicznym zaniża `dead` / `processing_errors`, więc `needsAttention` daje fałsz i nikt nie dostaje powiadomienia (cron kończy się wtedy kodem 0). To jedyna droga, którą należne powiadomienie ginie bez linii ERROR; ta zmiana ma ją uczynić widoczną dla operatora.
 - **Status:** proposed
 
 ### S-19: Dokumenty operatora mówią prawdę
@@ -312,7 +316,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 | S-09       | attempt-accounting          | S-09: awaria dostawcy LLM nie zużywa prób postów                           | yes                   | Run `/10x-plan attempt-accounting`                       |
 | S-10       | llm-config-fail-fast        | S-10: zła konfiguracja LLM zatrzymuje start                                | yes                   | Run `/10x-plan llm-config-fail-fast`                     |
 | S-11       | stuck-run-self-heals        | S-11: utknięty przebieg sam wraca do obiegu                                | yes                   | Run `/10x-plan stuck-run-self-heals`                     |
-| S-12       | reliable-run-notifications  | S-12: powiadomienia o przebiegach nie giną                                 | no                    | Po S-08                                                  |
+| S-12       | reliable-run-notifications  | S-12: powiadomienia o przebiegach nie giną                                 | no                    | Zaparkowany 2026-10-24 (frame); nie planować, A5 w S-18  |
 | S-13       | missed-night-detection      | S-13: brakująca noc nie przechodzi niezauważona                            | no                    | Po F-04                                                  |
 | S-14       | safe-deploy-gate            | S-14: bezpieczna bramka wdrożeń                                            | yes                   | Run `/10x-plan safe-deploy-gate`; warto wcześnie          |
 | S-15       | backup-check-completeness   | S-15: kopia bazy sprawdzana w całości                                      | yes                   | Run `/10x-plan backup-check-completeness`                |
@@ -355,6 +359,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Losowe padanie budowy obrazów Dockera na self-hosted runnerach (cache budowania)** — Why parked: zauważone w S-08 `empty-run-signal` (PR #80, 2026-10-19), do zrobienia w kolejnej fali. Joby budujące obraz padają losowo na VM-kach `ci-pc-*` z `failed to prepare extraction snapshot "…": parent snapshot sha256:… …` przy rozpakowaniu obrazu do lokalnego magazynu Dockera (obraz zbudowany, warstwy `CACHED`): `api container smoke test` na `ci-pc-1-1` (run 39286873262) i `db backup test` na `ci-pc-2-1` (run 39295084707, podejście 1); ponowienie jobu przechodzi. Prawdopodobnie cache budowania wskazuje na usuniętą warstwę rodzica (np. po czyszczeniu Dockera na VM). Do sprawdzenia w `tools/ci-runner/`: czyszczenie cache budowania (`docker builder prune -af`) przed jobem albo budowa obrazów w CI bez cache; do tego czasu pomaga `gh run rerun <id> --failed`.
 - **Komunikat, gdy nie udało się odczytać daty aktualizacji danych** — Why parked: nice-to-have po MVP (decyzja użytkownika 2026-10-13, S-05 `daily-scheduled-run-freshness`, faza 4). Dziś przy błędzie `GET /api/freshness` etykieta „Dane zaktualizowane: …” nad feedem po prostu znika, a lista działa (`FeedView.vue`; `context/archive/2026-10-12-daily-scheduled-run-freshness/ui/README.md`), więc użytkownik nie odróżni „nie udało się sprawdzić” od braku etykiety. Pomysł: osobny, neutralny komunikat treści w miejscu etykiety (nie czerwony alert, bo posty są w porządku), np. „Nie udało się sprawdzić daty aktualizacji.”, ewentualnie z ponowieniem.
 - **Unieważnianie sesji wersją poświadczeń** — Why parked: po MVP, z przeglądu implementacji S-07 (`cli-user-onboarding`, F1). Logowanie, które sprawdziło hasło przed zatwierdzeniem `reset-password`, zapisuje sesję już po `DELETE` resetu, więc ta sesja działa aż do aktywacji (najwyżej `ACTIVATION_LINK_TTL`, domyślnie 12 h); od S-07 kończy ją aktywacja. Pełne zamknięcie: wersja poświadczeń konta (np. `password_changed_at`), zapisana w sesji przy logowaniu i sprawdzana przy każdym uwierzytelnionym żądaniu — migracja i sprawdzenie w łańcuchu filtrów.
+- **S-12 `reliable-run-notifications` — powiadomienia o przebiegach nie giną (A3), krok `assess` nie jest `succeeded` w przebiegu `failed` (A6)** — Why parked: decyzja użytkownika 2026-10-24 po `/10x-frame` (`context/archive/2026-10-24-reliable-run-notifications/frame.md`). Scenariusze tylko z audytu, bez incydentu; A3 wymaga awarii bazy w oknie milisekund po commicie i po S-18 przestaje być cichy; A6 to niespójny obraz kroków w `/admin` (powiadomienie powstaje). A5 przeszedł do S-18. Powrót: pierwszy incydent zgubionego powiadomienia albo przebiegi admina uruchamiane bez patrzenia; A6 przy najbliższej pracy w `pipeline/flow`.
 - **Przybliżony czas zakończenia trwającego przebiegu** — Why parked: nice-to-have po MVP (decyzja użytkownika 2026-10-13, po pierwszym przebiegu crona na produkcji). Buduje na postępie przebiegu z S-06 (dopisek o monitorowaniu): bez liczników postępu nie ma z czego liczyć. Pomysł: w `/admin` przy przebiegu `running` szacowany koniec i odliczanie, np. średni czas oceny posta z ostatnich przebiegów (z `pipeline_run_steps` i `assessments`) × liczba postów do oceny + typowy czas pobrania, albo tempo bieżącego przebiegu, gdy ma już kilka ocen. Niepewność: tier flex, ponowienia i powroty do standardu mocno wydłużają pojedyncze oceny, więc to przybliżenie, nie obietnica.
 
 ## Milestone History
