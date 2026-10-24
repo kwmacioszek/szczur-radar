@@ -2,6 +2,7 @@ package pl.szczurradar.api.pipeline.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.Map;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -22,29 +23,36 @@ import org.springframework.transaction.annotation.Transactional;
 
 import pl.szczurradar.api.TestcontainersConfiguration;
 import pl.szczurradar.api.cli.MigrateCommand;
+import pl.szczurradar.api.pipeline.PipelineStallSettings;
 import pl.szczurradar.api.pipeline.run.PipelineRun;
 import pl.szczurradar.api.pipeline.run.PipelineRunRepository;
 import pl.szczurradar.api.pipeline.run.RunStatus;
 import pl.szczurradar.api.user.SystemAccount;
 
 /**
- * {@code GET /api/deploy-safety}, the CI deploy gate's question: every answer, without a session, and
- * 503 without the database.
+ * {@code GET /api/deploy-safety}, the CI deploy gate's question: every answer, dead runs (no activity for
+ * {@code PIPELINE_STALL_TIMEOUT}) safe and left as they were, without a session, and 503 without the
+ * database.
  */
 class DeploySafetyIT {
 
 	private static final String DEPLOY_SAFETY = "/api/deploy-safety";
 
 	/**
-	 * Runs are stored through the entity and then given their status as the pipeline would. Each test
-	 * rolls back.
+	 * Runs are stored through the entity and then given their status as the pipeline would; a dead one
+	 * gets its times an hour back with SQL. Each test rolls back. The timeout is set, so the dead runs do
+	 * not depend on the LLM settings' default, and long, so a run just stored (its creation time from
+	 * this JVM's clock) is never aged by a clock skew to the database's.
 	 */
 	@Nested
-	@SpringBootTest(properties = MigrateCommand.ENABLE_FLYWAY)
+	@SpringBootTest(properties = { MigrateCommand.ENABLE_FLYWAY, PipelineStallSettings.NAME + "=10m" })
 	@AutoConfigureMockMvc
 	@Import(TestcontainersConfiguration.class)
 	@Transactional
 	class WithDatabase {
+
+		/** An hour without activity: far older than the timeout. */
+		private static final String DEAD = "now() - interval '1 hour'";
 
 		@Autowired
 		MockMvcTester mvc;
@@ -91,6 +99,46 @@ class DeploySafetyIT {
 			assertDeploySafety("{\"safe\":false,\"reason\":\"pipeline_running\"}");
 		}
 
+		@Test
+		void aDeadRunningRunIsSafeAndLeftAsItWas() {
+			// Its instance was lost without closing it: no one runs it, and only a request to start runs
+			// interrupts it — never this read.
+			UUID id = deadRun(RunStatus.RUNNING);
+			Map<String, Object> before = row(id);
+
+			assertDeploySafety("{\"safe\":true,\"reason\":null}");
+			assertThat(row(id)).isEqualTo(before).containsEntry("status", RunStatus.RUNNING.value());
+		}
+
+		@Test
+		void aDeadQueuedRunIsSafe() {
+			// Queued on an instance that was lost before it ran (or whose submit never reached its queue).
+			deadRun(RunStatus.QUEUED);
+
+			assertDeploySafety("{\"safe\":true,\"reason\":null}");
+		}
+
+		@Test
+		void aRunningRunWithRecentActivityIsNotSafe() {
+			// Started long ago, but its last activity is within the timeout: the activity decides.
+			UUID id = run(RunStatus.RUNNING);
+			jdbc.update("UPDATE pipeline_runs SET created_at = " + DEAD + ", started_at = " + DEAD
+					+ ", last_activity_at = now() WHERE id = ?", id);
+
+			assertDeploySafety("{\"safe\":false,\"reason\":\"pipeline_running\"}");
+		}
+
+		@Test
+		void aLiveQueuedRunBehindADeadRunningOneIsNotSafe() {
+			deadRun(RunStatus.RUNNING);
+			run(RunStatus.QUEUED);
+
+			assertThat(mvc.get().uri(DEPLOY_SAFETY)).hasStatusOk()
+				.bodyJson()
+				.extractingPath("$.safe")
+				.isEqualTo(false);
+		}
+
 		@ParameterizedTest
 		@EnumSource(value = RunStatus.class, names = { "SUCCEEDED", "PARTIAL", "FAILED", "INTERRUPTED" })
 		void onlyEndedRunsAreSafe(RunStatus status) {
@@ -108,9 +156,32 @@ class DeploySafetyIT {
 		}
 
 		/** A run of the scheduler with {@code status}. */
-		private void run(RunStatus status) {
+		private UUID run(RunStatus status) {
 			UUID id = runs.saveAndFlush(PipelineRun.retry(SystemAccount.SCHEDULER.id(), null)).getId();
 			jdbc.update("UPDATE pipeline_runs SET status = ? WHERE id = ?", status.value(), id);
+			return id;
+		}
+
+		/**
+		 * A run of the scheduler with {@code status} and no activity for an hour: created then and, when
+		 * running, started and last active then too.
+		 */
+		private UUID deadRun(RunStatus status) {
+			UUID id = run(status);
+			if (status == RunStatus.RUNNING) {
+				jdbc.update("UPDATE pipeline_runs SET created_at = " + DEAD + ", started_at = " + DEAD
+						+ ", last_activity_at = " + DEAD + " WHERE id = ?", id);
+			}
+			else {
+				jdbc.update("UPDATE pipeline_runs SET created_at = " + DEAD + " WHERE id = ?", id);
+			}
+			return id;
+		}
+
+		/** What a write to a run would change. */
+		private Map<String, Object> row(UUID id) {
+			return jdbc.queryForMap("SELECT status, started_at, finished_at, last_activity_at, interruption_cause,"
+					+ " error FROM pipeline_runs WHERE id = ?", id);
 		}
 
 		/** The answer without a session: the bit and its reason, nothing else about the runs. */

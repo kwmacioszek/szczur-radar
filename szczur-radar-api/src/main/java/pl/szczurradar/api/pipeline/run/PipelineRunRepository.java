@@ -1,5 +1,6 @@
 package pl.szczurradar.api.pipeline.run;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
@@ -26,6 +27,23 @@ public interface PipelineRunRepository extends JpaRepository<PipelineRun, UUID> 
 	}
 
 	boolean existsByStatusIn(Collection<RunStatus> statuses);
+
+	/**
+	 * Whether a queued or running run showed activity within {@code threshold}: its last activity, else
+	 * its start, else its creation is no older, by the database's clock. The same criterion keeps
+	 * {@code RunRecorder.interruptOrphans} from taking the queue's runs as orphans; a run older than that
+	 * is dead (no instance executes it) and the next request to start runs interrupts it.
+	 */
+	default boolean existsLiveActive(Duration threshold) {
+		return existsWithActivityWithin(List.of(RunStatus.QUEUED.value(), RunStatus.RUNNING.value()),
+				threshold.toMillis());
+	}
+
+	/** {@link #existsLiveActive}, with the statuses bound as stored; call that instead. */
+	@Query(value = "SELECT EXISTS (SELECT 1 FROM pipeline_runs WHERE status IN (:statuses)"
+			+ " AND COALESCE(last_activity_at, started_at, created_at)"
+			+ " >= now() - CAST(:millis AS BIGINT) * INTERVAL '1 millisecond')", nativeQuery = true)
+	boolean existsWithActivityWithin(Collection<String> statuses, long millis);
 
 	/** A page of runs, newest first; equal creation times are ordered by id (index {@code ix_pipeline_runs_created}). */
 	default Page<PipelineRun> findPage(int page, int size) {

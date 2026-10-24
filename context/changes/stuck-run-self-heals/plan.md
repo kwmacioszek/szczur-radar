@@ -325,18 +325,18 @@ Dwie dodatkowe instrukcje w `queue()` (wywoływanym przez człowieka albo raz na
 
 #### Automated
 
-- [x] 1.1 Migracje przechodzą, a `MigrationsIT` przyjmuje `lost` i nadal odrzuca nieznaną przyczynę
-- [x] 1.2 `OrphanedRunIT` zielony we wszystkich scenariuszach
-- [x] 1.3 Istniejące testy odzyskiwania i watchdoga bez zmian zielone
-- [x] 1.4 `JpaSchemaIT` zielony (encje zgodne ze schematem po `V11`)
+- [x] 1.1 Migracje przechodzą, a `MigrationsIT` przyjmuje `lost` i nadal odrzuca nieznaną przyczynę — ee0885e
+- [x] 1.2 `OrphanedRunIT` zielony we wszystkich scenariuszach — ee0885e
+- [x] 1.3 Istniejące testy odzyskiwania i watchdoga bez zmian zielone — ee0885e
+- [x] 1.4 `JpaSchemaIT` zielony (encje zgodne ze schematem po `V11`) — ee0885e
 
 ### Phase 2: Bramka deployu ignoruje martwe przebiegi
 
 #### Automated
 
-- [ ] 2.1 `DeploySafetyIT` zielony z nowymi przypadkami
-- [ ] 2.2 Test bramki deployu bez zmian zielony
-- [ ] 2.3 Cały backend zielony
+- [x] 2.1 `DeploySafetyIT` zielony z nowymi przypadkami
+- [x] 2.2 Test bramki deployu bez zmian zielony
+- [x] 2.3 Cały backend zielony
 
 ### Phase 3: SPA zna przyczynę `lost`
 
