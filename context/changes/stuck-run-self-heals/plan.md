@@ -353,8 +353,8 @@ Dwie dodatkowe instrukcje w `queue()` (wywoływanym przez człowieka albo raz na
 
 #### Automated
 
-- [x] 4.1 Backend i SPA zielone po zmianach dokumentów
-- [ ] 4.2 CI na PR zielone
+- [x] 4.1 Backend i SPA zielone po zmianach dokumentów — 9377d4e
+- [x] 4.2 CI na PR zielone — 9377d4e
 
 #### Manual
 
