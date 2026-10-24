@@ -1,7 +1,7 @@
 /*
  * Mock /api/* for screenshots of /admin, a run (/admin/runs/:id), the feed (/), a post (/posts/:id) and /activate
  * without a running API (playwright-cli run-code), kept for /10x-ui changes. Another mode = run a copy of this file
- * with MODE, NOTIFICATIONS, AUTH, ACTIVATION or FRESHNESS replaced.
+ * with MODE, NOTIFICATIONS, AUTH, ACTIVATION, FRESHNESS or MISSING replaced.
  * MODE: 'data'         runs + failed posts; the feed has 120 posts (3 pages of 50), each with its page and raw data,
  *       'loading'      admin calls (the notification bell's too), /api/posts and /api/posts/:id (with /raw) hang 60 s,
  *       'error'        admin calls (the bell's too), /api/posts and /api/posts/:id (with /raw) answer 500,
@@ -15,6 +15,11 @@
  *       'date'  { lastUpdatedAt: '2026-10-13T03:12:00Z' } (05:12 in Warsaw), the default,
  *       'none'  { lastUpdatedAt: null }: no update yet,
  *       'error' 500; every other route answers as MODE says.
+ * MISSING (the "Dni bez danych" section of /admin; MODE 'loading' and 'error' apply first), like
+ * /api/admin/pipeline-runs/missing-days of pipeline/api/PipelineRunController.java, relative to today in Warsaw (D):
+ *       'gaps'  the window D-15…D-2 with Wykop missing D-9…D-7 and D-4 (a 3-day and a 1-day range), the default,
+ *       'none'  the window and no day,
+ *       'error' 500.
  * Runs (/api/admin/pipeline-runs?page&size, 30 in all: "Pokaż starsze" has a second page of 20) answer like
  * pipeline/api/PipelineRunController.java, the newest first:
  *       r-running  an admin's range, assessing now (19 of 41, 4 in flight, last activity 20 s ago),
@@ -283,6 +288,15 @@ async page => {
   const AUTH = 'admin'
   const ACTIVATION = 'valid'
   const FRESHNESS = 'date'
+  const MISSING = 'gaps'
+  // Days without data, relative to today in Warsaw: D-n as YYYY-MM-DD (counted on UTC midnights, so no clock change
+  // shifts a day).
+  const today = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Warsaw' }).format(new Date())
+  const dMinus = (n) => new Date(Date.parse(`${today}T00:00:00Z`) - n * 24 * 60 * MIN).toISOString().slice(0, 10)
+  const missingDays = () => ({
+    from: dMinus(15), to: dMinus(2),
+    days: MISSING === 'none' ? [] : [9, 8, 7, 4].map((n) => ({ day: dMinus(n), sources: ['wykop'] })),
+  })
   const hang = () => new Promise((r) => setTimeout(r, 60000))
   const json = (route, body, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) })
   await page.unrouteAll().catch(() => {})
@@ -308,6 +322,9 @@ async page => {
     if (MODE === 'loading' && p.startsWith('/api/admin')) await hang()
     if (MODE === 'error' && p.startsWith('/api/admin')) return json(route, { detail: 'internal_error' }, 500)
     if (p === '/api/admin/pipeline-runs/sources') return json(route, [{ source: 'wykop', configured: true }])
+    if (p === '/api/admin/pipeline-runs/missing-days') {
+      return MISSING === 'error' ? json(route, { detail: 'internal_error' }, 500) : json(route, missingDays())
+    }
     if (p === '/api/admin/pipeline-runs' && route.request().method() === 'GET') {
       const runs = MODE === 'empty' ? [] : allRuns()
       const pageNumber = Number(url.searchParams.get('page') ?? 0)

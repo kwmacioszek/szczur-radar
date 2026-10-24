@@ -99,6 +99,26 @@ export function fetchSources(): Promise<SourceState[]> {
   return apiFetch<SourceState[]>('/api/admin/pipeline-runs/sources')
 }
 
+/** A Warsaw day (`YYYY-MM-DD`) and the configured sources no succeeded or partial range run covers on it. */
+export interface MissingDay {
+  day: string
+  /** In the API's order of sources. */
+  sources: string[]
+}
+
+/** The checked window `from`–`to` (both included, `YYYY-MM-DD`: D-15…D-2 in Warsaw) and its days without data. */
+export interface MissingDays {
+  from: string
+  to: string
+  /** Ascending. */
+  days: MissingDay[]
+}
+
+/** The days without data of the last 14 days up to the day before yesterday, per configured source. */
+export function fetchMissingDays(): Promise<MissingDays> {
+  return apiFetch<MissingDays>('/api/admin/pipeline-runs/missing-days')
+}
+
 /** A Polish message for a failed start or retry. */
 export function startErrorMessage(err: unknown): string {
   if (err instanceof ApiError) {

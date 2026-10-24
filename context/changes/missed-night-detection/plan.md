@@ -352,16 +352,16 @@ Bez migracji i bez zmian danych. Wycofanie to zwykły revert.
 
 #### Automated
 
-- [x] 1.1 Testy jednostkowe przechodzą: `cd szczur-radar-api && ./mvnw -B test`
-- [x] 1.2 Testy integracyjne (z nowym IT, `AuthorizationCompletenessIT`, `AdminRoleIT`) przechodzą: `cd szczur-radar-api && ./mvnw -B verify`
-- [x] 1.3 Celowe złamanie reguły czerwieni `MissingDaysTest`/IT (sprawdzone raz i cofnięte)
+- [x] 1.1 Testy jednostkowe przechodzą: `cd szczur-radar-api && ./mvnw -B test` — 06854b5
+- [x] 1.2 Testy integracyjne (z nowym IT, `AuthorizationCompletenessIT`, `AdminRoleIT`) przechodzą: `cd szczur-radar-api && ./mvnw -B verify` — 06854b5
+- [x] 1.3 Celowe złamanie reguły czerwieni `MissingDaysTest`/IT (sprawdzone raz i cofnięte) — 06854b5
 
 ### Phase 2: Web — sekcja „Dni bez danych” w /admin
 
 #### Automated
 
-- [ ] 2.1 Testy Vitest przechodzą: `cd szczur-radar-web && npm test`
-- [ ] 2.2 Typecheck i build przechodzą: `cd szczur-radar-web && npm run build`
+- [x] 2.1 Testy Vitest przechodzą: `cd szczur-radar-web && npm test`
+- [x] 2.2 Typecheck i build przechodzą: `cd szczur-radar-web && npm run build`
 
 #### Manual
 
