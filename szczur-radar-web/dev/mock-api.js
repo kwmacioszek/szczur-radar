@@ -21,8 +21,8 @@
  *       r-skipped  an admin's range, succeeded with 3 skipped elements (needs attention: a warning),
  *       r-deploy   the cron's night, interrupted by a new deployment, its assess step interrupted,
  *       r-lost     an admin's range, interrupted `lost`: its instance was lost mid-assess, and the cron's start request
- *                  at 00:30 cleaned it up after 39 min without activity (PIPELINE_STALL_TIMEOUT), its assess step
- *                  interrupted,
+ *                  at 00:30 — the first start request after PIPELINE_STALL_TIMEOUT (39 min) without activity —
+ *                  cleaned it up, its assess step interrupted,
  *       r-empty    an admin's range of today just after midnight, failed: its source gave no post (fetched 0, its
  *                  fetch step failed, "NoPostsFetchedException: wykop gave no post to store (fetched 0, skipped 0)"),
  *       r-stalled  the cron's night, failed: "no progress for 39m 00s: the run was stopped" (the watchdog),

@@ -22,7 +22,7 @@ import pl.szczurradar.api.pipeline.run.PipelineRunRepository;
  *
  * <p>A queued or running run without activity for {@code PIPELINE_STALL_TIMEOUT}
  * ({@link PipelineStallSettings}: its last activity, else its start, else its creation is older, by the
- * database's clock) is dead: no instance executes it, e.g. its instance was lost without closing it.
+ * database's clock; the creation is written by the application's clock, a negligible difference) is dead: no instance executes it, e.g. its instance was lost without closing it.
  * While every active run is dead the deploy is safe — it interrupts nothing alive, and the new
  * instance's start-up recovery interrupts those runs anyway. The answer only reads: the next request to
  * start runs interrupts the dead ones ({@code lost}), never this route.

@@ -30,7 +30,10 @@ public interface PipelineRunRepository extends JpaRepository<PipelineRun, UUID> 
 
 	/**
 	 * Whether a queued or running run showed activity within {@code threshold}: its last activity, else
-	 * its start, else its creation is no older, by the database's clock. The same criterion keeps
+	 * its start, else its creation is no older, by the database's clock
+	 * (a run's creation is written by the application's clock when it is saved; against the timeout the difference is negligible) — or, while one is queued or
+	 * running, any run ended within {@code threshold} (a queue that just ended a run is alive, though the
+	 * run behind it shows only its old creation until it starts). The same criterion keeps
 	 * {@code RunRecorder.interruptOrphans} from taking the queue's runs as orphans; a run older than that
 	 * is dead (no instance executes it) and the next request to start runs interrupts it.
 	 */
@@ -41,8 +44,11 @@ public interface PipelineRunRepository extends JpaRepository<PipelineRun, UUID> 
 
 	/** {@link #existsLiveActive}, with the statuses bound as stored; call that instead. */
 	@Query(value = "SELECT EXISTS (SELECT 1 FROM pipeline_runs WHERE status IN (:statuses)"
-			+ " AND COALESCE(last_activity_at, started_at, created_at)"
-			+ " >= now() - CAST(:millis AS BIGINT) * INTERVAL '1 millisecond')", nativeQuery = true)
+			+ " AND (COALESCE(last_activity_at, started_at, created_at)"
+			+ " >= now() - CAST(:millis AS BIGINT) * INTERVAL '1 millisecond'"
+			+ " OR EXISTS (SELECT 1 FROM pipeline_runs f"
+			+ " WHERE f.finished_at >= now() - CAST(:millis AS BIGINT) * INTERVAL '1 millisecond')))",
+			nativeQuery = true)
 	boolean existsWithActivityWithin(Collection<String> statuses, long millis);
 
 	/** A page of runs, newest first; equal creation times are ordered by id (index {@code ix_pipeline_runs_created}). */

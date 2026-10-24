@@ -149,6 +149,8 @@ class OrphanedRunIT {
 		// Rows of "another instance" a test left active, and leftovers that would add a retry run.
 		jdbc.update("UPDATE pipeline_runs SET status = 'failed', finished_at = now() WHERE status IN ('queued',"
 				+ " 'running')");
+		// A run that ended within the timeout means a living queue: the next test's dead rows would stay.
+		jdbc.update("UPDATE pipeline_runs SET finished_at = " + DEAD + " WHERE finished_at IS NOT NULL");
 		jdbc.update("UPDATE posts SET stage = 'dead', assessment_attempts = 3, assessing_run_id = NULL"
 				+ " WHERE stage IN ('stored', 'failed', 'assessing')");
 	}
@@ -194,6 +196,20 @@ class OrphanedRunIT {
 
 		assertThat(run(queued)).containsEntry("status", "interrupted")
 			.containsEntry("interruption_cause", InterruptionCause.LOST.value());
+	}
+
+	@Test
+	void aQueuedRunBehindARunThatJustEndedIsLeftAlone() {
+		// Between the end of a long run and the start of the one queued with it: the queue is alive.
+		jdbc.update("INSERT INTO pipeline_runs (kind, status, requested_by, created_at, started_at, last_activity_at,"
+				+ " finished_at, deployment_id) VALUES ('retry', 'succeeded', ?, " + DEAD + ", " + DEAD + ", " + DEAD
+				+ ", now(), 'deployment-other')", admin);
+		UUID queued = foreignQueued(DEAD);
+		Map<String, Object> before = run(queued);
+
+		assertThat(daily()).hasStatus(HttpStatus.CONFLICT).bodyJson().isStrictlyEqualTo(BUSY);
+
+		assertThat(run(queued)).isEqualTo(before).containsEntry("status", "queued");
 	}
 
 	@Test

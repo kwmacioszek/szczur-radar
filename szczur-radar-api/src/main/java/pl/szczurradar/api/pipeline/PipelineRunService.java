@@ -164,6 +164,7 @@ public class PipelineRunService {
 	 * @throws PipelineBusyException when a run is queued or running
 	 */
 	public List<PipelineRun> startRange(LocalDate from, LocalDate to, List<Source> requestedSources, UUID requestedBy) {
+		cleanUpOrphans();
 		PipelineRun range = PipelineRun.range(from.atStartOfDay(ZONE).toInstant(),
 				to.atTime(LocalTime.of(23, 59, 59)).atZone(ZONE).toInstant(), sources.resolve(requestedSources),
 				requestedBy, deploymentId);
@@ -178,6 +179,7 @@ public class PipelineRunService {
 	 * @throws PipelineBusyException when a run is queued or running
 	 */
 	public List<PipelineRun> startPosts(List<UUID> postIds, UUID requestedBy) {
+		cleanUpOrphans();
 		return queue(() -> {
 			List<UUID> dead = posts.findIdsInStage(postIds, PostStage.DEAD);
 			if (!dead.isEmpty()) {
@@ -188,16 +190,16 @@ public class PipelineRunService {
 	}
 
 	/**
-	 * First cleans up orphans ({@link #cleanUpOrphans}); then, in one transaction under the advisory lock:
-	 * refuses while a run is active, saves the runs {@code toCreate} returns; after the commit (the run
-	 * thread must see them) queues them in order.
+	 * In one transaction under the advisory lock: refuses while a run is active, saves the runs
+	 * {@code toCreate} returns; after the commit (the run thread must see them) queues them in order.
 	 *
-	 * <p>Two transactions, each under the lock, because a refusal ({@link PipelineBusyException}, or
-	 * {@link PostDeadException} from {@code toCreate}) rolls back the one it is thrown in: the clean-up
-	 * must stay committed when another instance's run with progress, or a dead post, refuses the request.
+	 * <p>Every request first cleans up orphans ({@link #cleanUpOrphans}, called by {@link #startRange} and
+	 * {@link #startPosts} before anything can refuse them), in a transaction of its own under the same lock,
+	 * because a refusal ({@link SourceNotConfiguredException}, {@link PipelineBusyException}, or
+	 * {@link PostDeadException} from {@code toCreate}) would roll back the one it is thrown in: the clean-up
+	 * stays committed whatever refuses the request, and the refusals keep their order.
 	 */
 	private List<PipelineRun> queue(Supplier<List<PipelineRun>> toCreate) {
-		cleanUpOrphans();
 		List<PipelineRun> created = transaction.execute(status -> {
 			lock();
 			if (runs.existsActive()) {
@@ -216,15 +218,25 @@ public class PipelineRunService {
 	 * {@code PIPELINE_STALL_TIMEOUT} ({@link RunRecorder#interruptOrphans}: all or none); then, in every
 	 * case, puts back the posts still {@code assessing} without a queued or running run
 	 * ({@link PostTransitions#releaseOrphans}), e.g. one claimed just as its run was interrupted. After the
-	 * commit: a WARN for each, and the interrupted runs reported to {@link RunNotifications#runEnded}.
+	 * commit: a WARN for each, and the interrupted runs reported to {@link RunNotifications#runEnded}. A
+	 * failure (e.g. a deadlock with another instance's recovery) is logged and the request goes on, as in
+	 * start-up recovery and the watchdog: a clean-up must never block every start, and the decision after it
+	 * still refuses while a run is active.
 	 */
 	private void cleanUpOrphans() {
 		Duration threshold = stall.getObject().timeout();
-		Orphans orphans = transaction.execute(status -> {
-			lock();
-			List<UUID> lost = own.isEmpty() ? recorder.interruptOrphans(threshold) : List.of();
-			return new Orphans(lost, transitions.releaseOrphans());
-		});
+		Orphans orphans;
+		try {
+			orphans = transaction.execute(status -> {
+				lock();
+				List<UUID> lost = own.isEmpty() ? recorder.interruptOrphans(threshold) : List.of();
+				return new Orphans(lost, transitions.releaseOrphans());
+			});
+		}
+		catch (RuntimeException ex) {
+			log.error("The clean-up of orphaned pipeline runs failed; the request is decided without it", ex);
+			return;
+		}
 		if (orphans == null) {
 			return;
 		}

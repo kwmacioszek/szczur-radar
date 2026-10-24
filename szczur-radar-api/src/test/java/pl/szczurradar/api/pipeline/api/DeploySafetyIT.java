@@ -119,6 +119,17 @@ class DeploySafetyIT {
 		}
 
 		@Test
+		void aQueuedRunBehindARunThatJustEndedIsNotSafe() {
+			// The retry ran longer than the timeout and just ended; the range queued with it has not started.
+			UUID ended = run(RunStatus.SUCCEEDED);
+			jdbc.update("UPDATE pipeline_runs SET created_at = " + DEAD + ", started_at = " + DEAD
+					+ ", last_activity_at = " + DEAD + ", finished_at = now() WHERE id = ?", ended);
+			deadRun(RunStatus.QUEUED);
+
+			assertDeploySafety("{\"safe\":false,\"reason\":\"pipeline_queued\"}");
+		}
+
+		@Test
 		void aRunningRunWithRecentActivityIsNotSafe() {
 			// Started long ago, but its last activity is within the timeout: the activity decides.
 			UUID id = run(RunStatus.RUNNING);

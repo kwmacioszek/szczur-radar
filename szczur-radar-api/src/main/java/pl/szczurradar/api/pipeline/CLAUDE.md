@@ -38,7 +38,7 @@ Every route starts runs only through `PipelineRunService`; none has its own star
 | `PipelineRunController` | `/api/admin/pipeline-runs/**`: start a range or chosen posts, list runs (pages of up to 100, newest first), one run `GET /{id}` (404 `not_found`), sources, failed posts. A run (`RunView`) has its steps, counters, `scheduled` (requested by `SystemAccount.SCHEDULER`), `needsAttention`, `interruptionCause`, `lastActivityAt`, `llmRetries`, `flexFallbacks` and `inFlight` (`RunRecorder.inFlight`, only for a running run, else 0) | admin session |
 | `InternalPipelineRunController` | `POST /internal/pipeline-runs/daily` (D-2…D-1 of `ZONE` from the injected `Clock`, every configured source, requester `SystemAccount.SCHEDULER`; 202 `[{id, kind}]`), `GET /internal/pipeline-runs/{id}` (status, `startedAt`, `finishedAt`, `lastActivityAt`, `interruptionCause`, the running `step` or `null`, `assessTotal` = the `assess` step's `items_in` or `null`, counters `fetched`, `skipped`, `newPosts`, `assessedOk`, `assessedFailed`, `processingErrors`, `dead`; 404 `not_found`) — the cron's heartbeat reads it | the daily cron `pipeline-trigger`, token `PIPELINE_TRIGGER_TOKEN` only (`internal/`, `config/SecurityConfig`), never a session |
 | `FreshnessController` | `GET /api/freshness` → `{lastUpdatedAt}`: `finished_at` of the RANGE run `succeeded`/`partial` whose range reaches furthest, the latest of those (`run/PipelineRunRepository.findLastUpdate`; an admin's run over older days leaves it) — the feed's label (FR-030); nothing else about runs | any session |
-| `DeploySafetyController` | `GET /api/deploy-safety` → `{safe, reason}`: `reason` (`DeploySafetyReason`) `pipeline_running` before `pipeline_queued` (both can exist: a retry runs, the range waits), `null` when safe (`run/PipelineRunRepository.existsLiveActive` decides it in one statement, then `existsRunning` the reason, over every active run: two statements would both miss a run leaving the queue between them). A dead run — queued or running without activity for `PIPELINE_STALL_TIMEOUT` (`COALESCE(last_activity_at, started_at, created_at)`, the database's clock) — does not hold the deploy (safe when every active run is dead: no instance executes it, and the new instance's start-up recovery interrupts it anyway); it only reads, the next request to start runs interrupts them (`lost`, Rules); 503 `{status: unavailable}` without the database, as `/api/ready` — the CI deploy gate's question (S-14); nothing else about runs | anyone, no session (`PUBLIC_ROUTES`) |
+| `DeploySafetyController` | `GET /api/deploy-safety` → `{safe, reason}`: `reason` (`DeploySafetyReason`) `pipeline_running` before `pipeline_queued` (both can exist: a retry runs, the range waits), `null` when safe (`run/PipelineRunRepository.existsLiveActive` decides it in one statement, then `existsRunning` the reason, over every active run: two statements would both miss a run leaving the queue between them). A dead run — queued or running without activity for `PIPELINE_STALL_TIMEOUT` (`COALESCE(last_activity_at, started_at, created_at)`, the database's clock), and no run ended within it (a queue that just ended a run is alive) — does not hold the deploy (safe when every active run is dead: no instance executes it, and the new instance's start-up recovery interrupts it anyway); it only reads, the next request to start runs interrupts them (`lost`, Rules); 503 `{status: unavailable}` without the database, as `/api/ready` — the CI deploy gate's question (S-14); nothing else about runs | anyone, no session (`PUBLIC_ROUTES`) |
 | `PipelineRunExceptionHandler` | the service's refusals for both run controllers: 409 `pipeline_busy`, 400 `post_dead`, 503 `source_not_configured` | — |
 
 ```
@@ -232,13 +232,19 @@ PipelineRunService.startRange / startPosts → queue → PipelineAgent:
   - only when this instance's `own` is empty (its own runs are its watchdog's), `RunRecorder.interruptOrphans`:
     one statement marks every queued and running run `interrupted` (`lost`, open steps `interrupted`)
     when none of them has `COALESCE(last_activity_at, started_at, created_at)` within
-    `PIPELINE_STALL_TIMEOUT` by the database's clock — all or none, the queue being one: a queued run
-    behind a dead running one is as orphaned, one run with progress means a living queue; the same age
-    as the watchdog's, so a run its own watchdog would not stop is never taken from it;
+    `PIPELINE_STALL_TIMEOUT` by the database's clock (`created_at` is the application's clock, a negligible
+    difference) — all or none, the queue being one: a queued run
+    behind a dead running one is as orphaned, one run with progress means a living queue, and so does any
+    run that ended within the timeout (between a long run's end and the start of the run queued with it,
+    that run shows only its old creation); the same age
+    as the watchdog's; one edge is accepted — the `NOT EXISTS` is evaluated once on the statement's
+    snapshot, so a live run of another instance (deploy overlap only) whose progress commits at the
+    threshold's edge while it runs is still marked `lost` (no row locks, Rules);
   - always `PostTransitions.releaseOrphans`, so a post left `assessing` by an ended run goes back at
     every request to start runs, not only at start-up;
-  - committed before the request is decided, so it stays when the request is then refused (409
-    `pipeline_busy`, 400 `post_dead`); after the commit WARN `Marked N orphaned pipeline run(s)
+  - committed before the request is decided — `startRange` / `startPosts` run it first, before any
+    refusal — so it stays when the request is then refused (503 `source_not_configured`, 409
+    `pipeline_busy`, 400 `post_dead`), and the refusals keep their order; after the commit WARN `Marked N orphaned pipeline run(s)
     interrupted: no queued or running run showed activity for <t> and none runs on this instance: [ids]`,
     WARN `Put back N post(s) left assessing by ended runs` and `runEnded` for each run.
   Nothing else asks: no timer, so an idle API still sleeps; reads (`/admin`, `/api/deploy-safety`) never
@@ -293,7 +299,10 @@ PipelineRunService.startRange / startPosts → queue → PipelineAgent:
   notifications, both WARN lines, new runs created; a lone orphaned queued run; a run with activity →
   409, unchanged; a dead running run next to a fresh queued one → 409, nothing cleaned up (all or none);
   activity 2 s ago → kept; a run of this instance in progress → 409, the dead foreign row unchanged; a post
-  left `assessing` by an ended run put back although the request gets 409 or 400 `post_dead`; the admin's
+  left `assessing` by an ended run put back although the request gets 409 or 400 `post_dead`; a queued run
+  behind a run that just ended → 409, kept (a living queue); `PipelineRunServiceTest` (mocks): a failing
+  clean-up is an ERROR and the request is still decided, 503 `source_not_configured` comes after the
+  clean-up, a run of this instance's own keeps `interruptOrphans` from being asked; the admin's
   `POST /api/admin/pipeline-runs` cleans up the same way. `MigrationsIT` (outside this package) accepts
   `lost` and still rejects an unknown cause.
 - `RunWatchdogIT` (`PIPELINE_STALL_TIMEOUT=5s`, `PIPELINE_LLM_CONCURRENCY=1`, a scripted `LlmClient`

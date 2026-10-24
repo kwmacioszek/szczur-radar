@@ -236,9 +236,19 @@ public class RunRecorder {
 	 * steps closed, in one transaction — but only when none of them showed activity for {@code threshold}
 	 * (its last activity, else its start, else its creation is older), otherwise none. The queue is one
 	 * and sequential: a queued run behind a dead running one is as orphaned, and one run with progress
-	 * means a living queue. One statement decides and writes it (two would let a run join the queue
-	 * between them), measured by the database's clock as in {@link #stall}, with the same age as the
-	 * watchdog's: a run its own watchdog would not stop is never taken from it here.
+	 * means a living queue — so does a run that ended within {@code threshold}: between the end of a long
+	 * run and the start of the one behind it, the next run (created with the first) shows only its old
+	 * creation, while the queue that just ended a run is alive. One statement decides and writes it (two
+	 * would let a run join the queue between them), measured by the database's clock as in {@link #stall}
+	 * (a run's creation is written by the application's clock when it is saved; against the timeout the difference is negligible), with the same age as the watchdog's.
+	 *
+	 * <p>The {@code NOT EXISTS} tests are not correlated with the row updated, so PostgreSQL evaluates them
+	 * once, on the statement's snapshot, and does not re-evaluate them after waiting for a row another
+	 * transaction locked. A live run of another instance just past the threshold whose progress commits
+	 * while this statement runs is therefore still marked {@code lost}, and its later writes change
+	 * nothing (they need it running). That needs two instances — only a deploy overlap, whose old instance
+	 * stops anyway — and progress at the threshold's edge: accepted, as the package's "no row locks" rule
+	 * stands ({@code pipeline/CLAUDE.md}).
 	 *
 	 * @return the runs interrupted; empty when there was no active run or one of them showed activity
 	 */
@@ -248,7 +258,9 @@ public class RunRecorder {
 					+ " error = :lostError WHERE status IN (:queued, :running) AND NOT EXISTS (SELECT 1 FROM"
 					+ " pipeline_runs a WHERE a.status IN (:queued, :running)"
 					+ " AND COALESCE(a.last_activity_at, a.started_at, a.created_at)"
-					+ " >= now() - CAST(:millis AS BIGINT) * INTERVAL '1 millisecond') RETURNING id"))
+					+ " >= now() - CAST(:millis AS BIGINT) * INTERVAL '1 millisecond')"
+					+ " AND NOT EXISTS (SELECT 1 FROM pipeline_runs f"
+					+ " WHERE f.finished_at >= now() - CAST(:millis AS BIGINT) * INTERVAL '1 millisecond') RETURNING id"))
 			.param("lost", InterruptionCause.LOST.value())
 			.param("lostError", InterruptionCause.LOST.error())
 			.param("millis", threshold.toMillis())

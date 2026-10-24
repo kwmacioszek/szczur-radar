@@ -307,7 +307,7 @@ Dwie dodatkowe instrukcje w `queue()` (wywoływanym przez człowieka albo raz na
 
 ## Migration Notes
 
-`V11` tylko rozszerza `CHECK`; istniejące wiersze go spełniają. Fix-forward: nie edytować `V8`. Starsza wersja API po wycofaniu nie zna `lost` — jej konwerter może nie odczytać takiego wiersza (niesprawdzone); wycofanie po pierwszym `lost` naprawia się nową poprawką do przodu, nie edycją `V11`.
+`V11` tylko rozszerza `CHECK`; istniejące wiersze go spełniają. Fix-forward: nie edytować `V8`. Starsza wersja API po wycofaniu nie zna `lost` — jej konwerter nie odczyta takiego wiersza (potwierdzone w przeglądzie: `EnumValueConverter.convertToEntityAttribute` rzuca `IllegalArgumentException` przy nieznanej wartości, więc lista przebiegów admina się wysypie); wycofanie po pierwszym `lost` naprawia się nową poprawką do przodu, nie edycją `V11`.
 
 ## References
 
