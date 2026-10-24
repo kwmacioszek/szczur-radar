@@ -168,7 +168,7 @@ m2 = {  # lane, position, title, outcome, status, prerequisites, change id
     "S-17": ("C", 1, "Przebieg bez Embabel", "przebieg działa bez Embabel, przerwanie dociera do oceny, a testy silnika są skupione i niezależne od kolejności", "proposed", "S-09", "pipeline-without-embabel"),
     "S-10": ("C", 2, "Zła konfiguracja LLM zatrzymuje start", "operator dostaje błąd startu przy LLM_TIMEOUT bez jednostki; czasy są parsowane jedną regułą", "done", "—", "llm-config-fail-fast"),
     "S-11": ("C", 3, "Utknięty przebieg sam wraca do obiegu", "przebieg po martwej instancji i post z wyścigu claim wracają do obiegu bez restartu API", "ready", "—", "stuck-run-self-heals"),
-    "S-16": ("C", 4, "Wykop nie gubi postów po cichu", "stronicowanie Wykopu nie gubi elementów po cichu, a chwilowy błąd Wykopu nie zabija nocy", "ready", "—", "wykop-ingest-completeness"),
+    "S-16": ("C", 4, "Wykop nie gubi postów po cichu", "stronicowanie Wykopu nie gubi elementów po cichu, a chwilowy błąd Wykopu nie zabija nocy", "done", "—", "wykop-ingest-completeness"),
     "S-14": ("D", 0, "Bezpieczna bramka wdrożeń", "merge nie wdroży czerwonego commita, crony czekają na CI, po apply jest kontrola zdrowia, ręczne zmienne nie blokują wdrożeń", "done", "—", "safe-deploy-gate"),
     "S-15": ("D", 1, "Kopia bazy sprawdzana w całości", "sprawdzenie kopii bazy obejmuje wszystkie tabele i odrzuca kopię pustej bazy", "done", "—", "backup-check-completeness"),
     "S-19": ("D", 2, "Dokumenty operatora mówią prawdę", "operator czyta prawdziwe runbooki i stan; zbędne zmienne IaC usunięte; otwarty dług operacyjny domknięty", "done", "—", "ops-docs-debt"),
@@ -270,25 +270,25 @@ text(M, 202, "Źródło: context/foundation/roadmap.md  ·  v3  ·  stan 24.10.2
 px, py, pw, ph = P2X, 36, 820, 214
 rect(px, py, pw, ph, 14, "url(#hero)", C["border2"])
 cx, cy, rr = px + 82, py + 100, 46
-frac = 13 / 23
+frac = 17 / 23
 add(f'<circle cx="{cx}" cy="{cy}" r="{rr}" fill="none" stroke="{C["graySoft"]}" stroke-width="9"/>')
 ang = frac * 2 * math.pi
 ex, ey = cx + rr * math.sin(ang), cy - rr * math.cos(ang)
 add(f'<path d="M{cx} {cy-rr} A{rr} {rr} 0 {1 if frac > 0.5 else 0} 1 {ex:.2f} {ey:.2f}" fill="none" stroke="{C["done"]}" stroke-width="9" stroke-linecap="round"/>')
-text(cx, cy + 4, "57%", 22, 700, anchor="middle")
-text(cx, cy + 22, "13 / 23", 11, 500, C["muted"], anchor="middle")
+text(cx, cy + 4, "74%", 22, 700, anchor="middle")
+text(cx, cy + 22, "17 / 23", 11, 500, C["muted"], anchor="middle")
 text(cx, py + 186, "M-1 + M-2", 10.5, 700, C["muted"], anchor="middle", spacing="1.2")
 bx = px + 164
 text(bx, py + 34, "POSTĘP KAMIENIA MILOWEGO", 10.5, 700, C["muted"], spacing="1.6")
 text(bx, py + 62, "M-2 · MVP Quality & Reliability Hardening", 17, 700)
-text(px + pw - 24, py + 62, "7 / 13", 17, 700, C["text"], anchor="end")
+text(px + pw - 24, py + 62, "8 / 13", 17, 700, C["text"], anchor="end")
 m2_order = [("F-04", "done"), ("S-08", "done"), ("S-09", "done"), ("S-10", "done"), ("S-11", "ready"), ("S-12", "proposed"),
-            ("S-13", "proposed"), ("S-14", "done"), ("S-15", "done"), ("S-16", "ready"), ("S-17", "proposed"), ("S-18", "proposed"), ("S-19", "done")]
+            ("S-13", "proposed"), ("S-14", "done"), ("S-15", "done"), ("S-16", "done"), ("S-17", "proposed"), ("S-18", "proposed"), ("S-19", "done")]
 segw = (pw - 164 - 24 - 12 * 5) / 13
 for i, (iid, st) in enumerate(m2_order):
     lab, fg, bg = STATUS[st]
     rect(bx + i * (segw + 5), py + 78, segw, 12, 3, bg, fg + ("aa" if st != "proposed" else "55"), 1)
-legend_items = [("done", "7 ukończone"), ("progress", "0 w toku"), ("ready", "2 gotowe do planowania"), ("proposed", "4 proponowane"), ("blocked", "0 zablokowanych")]
+legend_items = [("done", "8 ukończone"), ("progress", "0 w toku"), ("ready", "1 gotowe do planowania"), ("proposed", "4 proponowane"), ("blocked", "0 zablokowanych")]
 for li, (st, lab) in enumerate(legend_items):
     fg = STATUS[st][1]
     lx = bx + (0, 122, 218)[li % 3]
@@ -331,7 +331,7 @@ add(f'<line x1="{P3X+20}" y1="{AX_Y}" x2="{x_end-14}" y2="{AX_Y}" stroke="{C["mu
 add(f'<path d="M{x_end-22} {AX_Y-8} L{x_end-10} {AX_Y} L{x_end-22} {AX_Y+8}" fill="none" stroke="{C["muted"]}" stroke-opacity="0.6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>')
 nodes = [
     (P1X, "M-1", "MVP — ocenione sygnały z Wykopu", "Zamknięty 17.10.2026  ·  10 / 10", "done"),
-    (P2X, "M-2", "MVP Quality & Reliability Hardening", "Otwarty — teraz  ·  7 / 13", "now"),
+    (P2X, "M-2", "MVP Quality & Reliability Hardening", "Otwarty — teraz  ·  8 / 13", "now"),
     (P3X, "PO M-2", "Odroczone", "Backlog  ·  24 pozycje", "later"),
 ]
 for nx, tag, name, state, kind in nodes:
@@ -418,7 +418,7 @@ for k, (title, desc, c, r, req, cid) in m1.items():
 container(P2X, P2W, "M-2", "MVP Quality & Reliability Hardening",
           ("Otwarty", C["amber"], C["amberSoft"], 10.5, False, 600, "dot"),
           "Złe noce, awarie dostawców i błędne wdrożenia są widoczne dla operatora, nie niszczą danych ani nie blokują pracy — zanim ruszy kolejna roadmapa funkcjonalna.",
-          ("7 / 13", 7 / 13, C["lime"]), C["lime"] + "40")
+          ("8 / 13", 8 / 13, C["lime"]), C["lime"] + "40")
 box2 = {}
 ry = TOP + 98
 for ri, row in enumerate(rows2):

@@ -176,7 +176,7 @@ It prints only counts — no content, nicks, ids or URLs, and nothing is written
 
 - per day and resource: pages, each page's `total` (and whether it changed between pages), elements
   received / unique / duplicated, an empty or short page before the total, unique elements below the
-  total, and whether today's stop rule (received elements, duplicates included, reach the total) would
+  total, and whether the pre-S-16 stop rule (received elements, duplicates included, reach the total) would
   have stopped short of the unique total;
 - for the whole run: the same counts summed, the distribution of the elements' `status` per resource
   (absent and `null` apart) with how many of each have no text (an entry with blank `content`, a link
