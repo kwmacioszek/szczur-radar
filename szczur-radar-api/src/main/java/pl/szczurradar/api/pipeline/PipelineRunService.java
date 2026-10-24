@@ -23,6 +23,7 @@ import com.embabel.agent.core.AgentPlatform;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.event.ContextClosedEvent;
 import org.springframework.context.event.EventListener;
@@ -65,11 +66,21 @@ import pl.szczurradar.api.sources.Source;
  *   <li>A run of this instance without progress for {@code PIPELINE_STALL_TIMEOUT} is stopped by
  *       {@link RunWatchdog} ({@link #stopStalled}): {@code failed}, its posts put back, its post tasks
  *       interrupted, and the queue goes on with the next run.
+ *   <li>A run nobody executes any more (its instance was lost without closing it, a run queued on an old
+ *       instance after the new one's recovery, a failed start-up recovery) would refuse every request.
+ *       So each request to start a run first, under the same advisory lock: when this instance has no
+ *       run of its own, marks every queued and running run {@code interrupted}
+ *       ({@link InterruptionCause#LOST}) if none of them showed activity for {@code PIPELINE_STALL_TIMEOUT}
+ *       — all of them or none, the queue being one ({@link RunRecorder#interruptOrphans}); and puts back
+ *       every post still {@code assessing} without a queued or running run
+ *       ({@link PostTransitions#releaseOrphans}). This clean-up commits on its own, also when the request
+ *       is then refused. The API asks the database nothing more while idle: only a request does it.
  *   <li>When the context closes, this instance marks its own queued and running runs
  *       {@code interrupted} ({@link InterruptionCause#SHUTDOWN}) first, then stops its thread; a newer
  *       deployment's start-up recovery does the same for runs nobody finished
  *       ({@link PipelineStartupRecovery}).
- *   <li>Every way a run ends here — its own end, the watchdog's stop, the instance closing — reports it
+ *   <li>Every way a run ends here — its own end, the watchdog's stop, the instance closing, the clean-up
+ *       of orphaned runs — reports it
  *       to {@link RunNotifications#runEnded}, which notifies the admins when it needs attention (a run
  *       reported twice is notified once).
  *   <li>The log gets a line when a run starts and when it ends, with its counters.
@@ -106,6 +117,12 @@ public class PipelineRunService {
 
 	private final TransactionTemplate transaction;
 
+	/**
+	 * {@code PIPELINE_STALL_TIMEOUT}, the server's bean ({@link PipelineStallConfiguration}); resolved only
+	 * when a run is requested, so an operator command's context (no web server, no bean) never reads it.
+	 */
+	private final ObjectProvider<PipelineStallSettings> stall;
+
 	/** This instance's deployment, {@code null} when unknown (locally, in tests). */
 	private final @Nullable String deploymentId;
 
@@ -121,6 +138,7 @@ public class PipelineRunService {
 	PipelineRunService(PipelineRunRepository runs, PostRepository posts, SourceIngest sources, RunRecorder recorder,
 			PostTransitions transitions, RunNotifications notifications, AssessmentDispatcher dispatcher,
 			AgentPlatform agentPlatform, JdbcClient jdbc, TransactionTemplate transaction,
+			ObjectProvider<PipelineStallSettings> stall,
 			@Value("${RAILWAY_DEPLOYMENT_ID:}") @Nullable String deploymentId) {
 		this.runs = runs;
 		this.posts = posts;
@@ -132,6 +150,7 @@ public class PipelineRunService {
 		this.agentPlatform = agentPlatform;
 		this.jdbc = jdbc;
 		this.transaction = transaction;
+		this.stall = stall;
 		this.deploymentId = deploymentId == null || deploymentId.isBlank() ? null : deploymentId;
 	}
 
@@ -145,6 +164,7 @@ public class PipelineRunService {
 	 * @throws PipelineBusyException when a run is queued or running
 	 */
 	public List<PipelineRun> startRange(LocalDate from, LocalDate to, List<Source> requestedSources, UUID requestedBy) {
+		cleanUpOrphans();
 		PipelineRun range = PipelineRun.range(from.atStartOfDay(ZONE).toInstant(),
 				to.atTime(LocalTime.of(23, 59, 59)).atZone(ZONE).toInstant(), sources.resolve(requestedSources),
 				requestedBy, deploymentId);
@@ -159,6 +179,7 @@ public class PipelineRunService {
 	 * @throws PipelineBusyException when a run is queued or running
 	 */
 	public List<PipelineRun> startPosts(List<UUID> postIds, UUID requestedBy) {
+		cleanUpOrphans();
 		return queue(() -> {
 			List<UUID> dead = posts.findIdsInStage(postIds, PostStage.DEAD);
 			if (!dead.isEmpty()) {
@@ -171,10 +192,16 @@ public class PipelineRunService {
 	/**
 	 * In one transaction under the advisory lock: refuses while a run is active, saves the runs
 	 * {@code toCreate} returns; after the commit (the run thread must see them) queues them in order.
+	 *
+	 * <p>Every request first cleans up orphans ({@link #cleanUpOrphans}, called by {@link #startRange} and
+	 * {@link #startPosts} before anything can refuse them), in a transaction of its own under the same lock,
+	 * because a refusal ({@link SourceNotConfiguredException}, {@link PipelineBusyException}, or
+	 * {@link PostDeadException} from {@code toCreate}) would roll back the one it is thrown in: the clean-up
+	 * stays committed whatever refuses the request, and the refusals keep their order.
 	 */
 	private List<PipelineRun> queue(Supplier<List<PipelineRun>> toCreate) {
 		List<PipelineRun> created = transaction.execute(status -> {
-			jdbc.sql("SELECT pg_advisory_xact_lock(:lock)").param("lock", LOCK_ID).query((rs, row) -> true).single();
+			lock();
 			if (runs.existsActive()) {
 				throw new PipelineBusyException();
 			}
@@ -182,6 +209,52 @@ public class PipelineRunService {
 		});
 		created.forEach(run -> submit(run.getId()));
 		return created;
+	}
+
+	/**
+	 * In one transaction under the advisory lock, before a request to start runs is decided: when this
+	 * instance has no run of its own (its own runs are its watchdog's), marks every queued and running
+	 * run {@code interrupted} ({@link InterruptionCause#LOST}) if none of them showed activity for
+	 * {@code PIPELINE_STALL_TIMEOUT} ({@link RunRecorder#interruptOrphans}: all or none); then, in every
+	 * case, puts back the posts still {@code assessing} without a queued or running run
+	 * ({@link PostTransitions#releaseOrphans}), e.g. one claimed just as its run was interrupted. After the
+	 * commit: a WARN for each, and the interrupted runs reported to {@link RunNotifications#runEnded}. A
+	 * failure (e.g. a deadlock with another instance's recovery) is logged and the request goes on, as in
+	 * start-up recovery and the watchdog: a clean-up must never block every start, and the decision after it
+	 * still refuses while a run is active.
+	 */
+	private void cleanUpOrphans() {
+		Duration threshold = stall.getObject().timeout();
+		Orphans orphans;
+		try {
+			orphans = transaction.execute(status -> {
+				lock();
+				List<UUID> lost = own.isEmpty() ? recorder.interruptOrphans(threshold) : List.of();
+				return new Orphans(lost, transitions.releaseOrphans());
+			});
+		}
+		catch (RuntimeException ex) {
+			log.error("The clean-up of orphaned pipeline runs failed; the request is decided without it", ex);
+			return;
+		}
+		if (orphans == null) {
+			return;
+		}
+		if (!orphans.runs().isEmpty()) {
+			log.warn("Marked {} orphaned pipeline run(s) interrupted: no queued or running run showed activity for {}"
+					+ " and none runs on this instance: {}", orphans.runs().size(), Durations.format(threshold),
+					orphans.runs());
+		}
+		if (orphans.posts() > 0) {
+			log.warn("Put back {} post(s) left assessing by ended runs", orphans.posts());
+		}
+		// After the commit: the notifications read the interrupted runs.
+		orphans.runs().forEach(notifications::runEnded);
+	}
+
+	/** Creating runs and cleaning up orphans wait for each other, on every instance (one database). */
+	private void lock() {
+		jdbc.sql("SELECT pg_advisory_xact_lock(:lock)").param("lock", LOCK_ID).query((rs, row) -> true).single();
 	}
 
 	private void submit(UUID runId) {
@@ -339,6 +412,15 @@ public class PipelineRunService {
 			interrupted.forEach(notifications::runEnded);
 		}
 		executor.shutdownNow();
+	}
+
+	/**
+	 * What {@link #cleanUpOrphans} did.
+	 *
+	 * @param runs the orphaned runs marked interrupted
+	 * @param posts how many posts were put back
+	 */
+	private record Orphans(List<UUID> runs, int posts) {
 	}
 
 }

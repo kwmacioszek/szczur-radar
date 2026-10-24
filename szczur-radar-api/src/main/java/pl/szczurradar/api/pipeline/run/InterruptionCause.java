@@ -18,7 +18,14 @@ public enum InterruptionCause {
 	RESTART("restart", "interrupted: the application restarted"),
 
 	/** The instance running it was stopping (its context closed). */
-	SHUTDOWN("shutdown", "interrupted: the application stopped");
+	SHUTDOWN("shutdown", "interrupted: the application stopped"),
+
+	/**
+	 * Nobody executes it any more: the instance running it was lost without closing it. Another instance
+	 * found it when asked to start a run — no queued or running run had shown activity for
+	 * {@code PIPELINE_STALL_TIMEOUT} and none ran on that instance ({@code PipelineRunService}).
+	 */
+	LOST("lost", "interrupted: the instance running it was lost without closing it");
 
 	private final String value;
 

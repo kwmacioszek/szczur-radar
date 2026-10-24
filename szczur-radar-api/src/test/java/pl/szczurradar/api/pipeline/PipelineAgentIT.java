@@ -26,6 +26,7 @@ import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -168,6 +169,9 @@ class PipelineAgentIT {
 
 	@Autowired
 	TransactionTemplate transaction;
+
+	@Autowired
+	ObjectProvider<PipelineStallSettings> stall;
 
 	private UUID admin;
 
@@ -385,7 +389,7 @@ class PipelineAgentIT {
 		});
 		// A second instance of the service, as during a deployment overlap; the shared one keeps running.
 		PipelineRunService stopping = new PipelineRunService(runs, posts, sources, recorder, transitions, notifications,
-				dispatcher, agentPlatform, jdbcClient, transaction, "deployment-stopping");
+				dispatcher, agentPlatform, jdbcClient, transaction, stall, "deployment-stopping");
 		try {
 			UUID run = stopping.startPosts(List.of(post), admin).getFirst().getId();
 			assertThat(called.await(30, TimeUnit.SECONDS)).isTrue();
@@ -664,7 +668,7 @@ class PipelineAgentIT {
 		});
 		// A second instance of the service, as during a deployment overlap; the shared one keeps running.
 		PipelineRunService stopping = new PipelineRunService(runs, posts, sources, recorder, transitions, notifications,
-				dispatcher, agentPlatform, jdbcClient, transaction, "deployment-stopping");
+				dispatcher, agentPlatform, jdbcClient, transaction, stall, "deployment-stopping");
 		try {
 			UUID run = stopping.startPosts(List.of(post), admin).getFirst().getId();
 			assertThat(called.await(30, TimeUnit.SECONDS)).isTrue();

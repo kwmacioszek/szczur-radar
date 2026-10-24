@@ -15,6 +15,7 @@ describe('labels', () => {
     expect(label('interruptionCause', 'deploy')).toBe('nowe wdrożenie')
     expect(label('interruptionCause', 'restart')).toBe('restart aplikacji')
     expect(label('interruptionCause', 'shutdown')).toBe('zatrzymanie aplikacji')
+    expect(label('interruptionCause', 'lost')).toBe('utracona instancja')
     expect(label('stepStatus', 'interrupted')).toBe('przerwany')
     expect(label('stepStatus', 'failed')).toBe('błąd')
   })
