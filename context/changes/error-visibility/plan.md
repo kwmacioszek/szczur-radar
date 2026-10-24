@@ -433,17 +433,17 @@ Bez migracji bazy, nowych tabel i zmiennych środowiska (`tools/db-backup/tables
 
 #### Automated
 
-- [x] 2.1 Testy jednostkowe zielone: `./mvnw -B test`
-- [x] 2.2 IT zielone, w tym `NotificationsIT`, `PipelineStartupRecoveryIT`, `RunWatchdogIT`, `PipelineAgentIT` (bez nowych ERROR w logu): `./mvnw -B verify`
-- [x] 2.3 `AuthorizationCompletenessIT` bez zmian (żadnej nowej trasy)
+- [x] 2.1 Testy jednostkowe zielone: `./mvnw -B test` — d585dbe
+- [x] 2.2 IT zielone, w tym `NotificationsIT`, `PipelineStartupRecoveryIT`, `RunWatchdogIT`, `PipelineAgentIT` (bez nowych ERROR w logu): `./mvnw -B verify` — d585dbe
+- [x] 2.3 `AuthorizationCompletenessIT` bez zmian (żadnej nowej trasy) — d585dbe
 
 ### Phase 3: Klucze poza logami i przyczyna 503
 
 #### Automated
 
-- [ ] 3.1 Testy klientów LLM i transportu zielone: `./mvnw -B test -Dtest='pl.szczurradar.api.llm.**.*Test'`
-- [ ] 3.2 Test „klucza nie ma w łańcuchu” jest czerwony bez `cleanCause` (sprawdzenie celowym cofnięciem jednego miejsca)
-- [ ] 3.3 Pełny zestaw zielony, w tym `LlmOutageIT` i `LlmCheckControllerIT`: `./mvnw -B verify`
+- [x] 3.1 Testy klientów LLM i transportu zielone: `./mvnw -B test -Dtest='pl.szczurradar.api.llm.**.*Test'`
+- [x] 3.2 Test „klucza nie ma w łańcuchu” jest czerwony bez `cleanCause` (sprawdzenie celowym cofnięciem jednego miejsca)
+- [x] 3.3 Pełny zestaw zielony, w tym `LlmOutageIT` i `LlmCheckControllerIT`: `./mvnw -B verify`
 
 ### Phase 4: Dokumenty i weryfikacja w PR env
 

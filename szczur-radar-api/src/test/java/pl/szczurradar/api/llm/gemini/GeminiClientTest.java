@@ -2,8 +2,12 @@ package pl.szczurradar.api.llm.gemini;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.assertj.core.api.Assertions.catchThrowable;
 
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.net.SocketTimeoutException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -34,6 +38,7 @@ import pl.szczurradar.api.llm.Provider;
 import pl.szczurradar.api.llm.ScriptedProviderServer;
 import pl.szczurradar.api.llm.ScriptedProviderServer.Reply;
 import pl.szczurradar.api.llm.ServiceTier;
+import pl.szczurradar.api.llm.transport.CleanedProviderException;
 import pl.szczurradar.api.llm.transport.ProviderMessages;
 import pl.szczurradar.api.llm.transport.TransportRetry;
 
@@ -244,11 +249,36 @@ class GeminiClientTest {
 
 		assertThatExceptionOfType(IllegalStateException.class).isThrownBy(() -> client.complete(REQUEST))
 			.satisfies(ex -> {
-				assertThat(ex.getCause()).isSameAs(sdkError);
+				assertThat(ex.getCause()).isInstanceOf(CleanedProviderException.class)
+					.hasMessageStartingWith(RuntimeException.class.getName() + ": unexpected state");
+				assertThat(ex.getCause().getStackTrace()).isEqualTo(sdkError.getStackTrace());
 				assertThat(ex.getMessage()).contains("unexpected state", "<hidden>").doesNotContain("synthetic-key");
 			});
 		assertThat(calls).hasSize(1);
 		assertThat(sleeps).isEmpty();
+	}
+
+	@Test
+	void noFailureLeavingTheClientCarriesTheKeyInItsCauses() {
+		// Gemini quotes the key in the message of an error answer (the 401 above); here a 401 and a 503 in
+		// that shape, then an error without a status and a time-out from a stand-in for the SDK.
+		String quoting = "{\"error\":{\"code\":%d,\"message\":\"API key synthetic-key not valid\",\"status\":\"%s\"}}";
+		try (ScriptedProviderServer server = new ScriptedProviderServer(
+				Reply.status(401, quoting.formatted(401, "UNAUTHENTICATED")))) {
+			assertPrintedWithoutTheKey(catchThrowable(() -> client(server, Duration.ofSeconds(5)).complete(REQUEST)),
+					CleanedProviderException.class.getName(), "com.google.genai.errors.ClientException");
+		}
+		Reply unavailable = Reply.status(503, quoting.formatted(503, "UNAVAILABLE"));
+		try (ScriptedProviderServer server = new ScriptedProviderServer(unavailable, unavailable, unavailable)) {
+			assertPrintedWithoutTheKey(catchThrowable(() -> client(server, Duration.ofSeconds(5)).complete(REQUEST)),
+					CleanedProviderException.class.getName(), "com.google.genai.errors.ServerException");
+		}
+		assertPrintedWithoutTheKey(catchThrowable(() -> stubbed(_ -> {
+			throw new RuntimeException("unexpected state for the key synthetic-key");
+		}).complete(REQUEST)), CleanedProviderException.class.getName(), RuntimeException.class.getName());
+		assertPrintedWithoutTheKey(catchThrowable(() -> stubbed(_ -> {
+			throw new RuntimeException("call failed", new SocketTimeoutException("read timed out for synthetic-key"));
+		}).complete(REQUEST)), CleanedProviderException.class.getName(), SocketTimeoutException.class.getName());
 	}
 
 	@Test
@@ -267,6 +297,16 @@ class GeminiClientTest {
 			});
 		assertThat(calls).hasSize(3);
 		assertThat(sleeps).containsExactly(Duration.ofSeconds(1), Duration.ofSeconds(2));
+	}
+
+	/**
+	 * {@code failure} printed in full, as a log prints it: the key appears in none of its causes, the
+	 * original exceptions' classes do.
+	 */
+	private static void assertPrintedWithoutTheKey(Throwable failure, String... originalClasses) {
+		StringWriter printed = new StringWriter();
+		failure.printStackTrace(new PrintWriter(printed));
+		assertThat(printed.toString()).doesNotContain("synthetic-key").contains(originalClasses);
 	}
 
 	/** The client on a stand-in for the SDK's chat model, with the test's key and recorded waits. */

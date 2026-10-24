@@ -102,20 +102,21 @@ public class TransportException extends RuntimeException {
 
 	/**
 	 * An exception without an HTTP status as a transport failure, if its cause chain says it is one: a
-	 * time-out ({@link Kind#TIMEOUT}) or an I/O error ({@link Kind#CONNECTION}). Empty otherwise — the
-	 * exception is not classified ({@link #unclassified}).
+	 * time-out ({@link Kind#TIMEOUT}) or an I/O error ({@link Kind#CONNECTION}), with the chain without
+	 * the key ({@link ProviderMessages#cleanCause}) as the cause. Empty otherwise — the exception is not
+	 * classified ({@link #unclassified}).
 	 */
 	public static Optional<TransportException> ofTimeoutOrConnection(Throwable error, ProviderMessages messages) {
 		for (Throwable cause = error; cause != null; cause = cause.getCause()) {
 			if (cause instanceof InterruptedIOException || cause instanceof HttpTimeoutException) {
 				String message = messages.clean("time-out: " + cause);
-				return Optional.of(new TransportException(Kind.TIMEOUT, message, null, error));
+				return Optional.of(new TransportException(Kind.TIMEOUT, message, null, messages.cleanCause(error)));
 			}
 		}
 		for (Throwable cause = error; cause != null; cause = cause.getCause()) {
 			if (cause instanceof IOException) {
 				String message = messages.clean("I/O error: " + cause);
-				return Optional.of(new TransportException(Kind.CONNECTION, message, null, error));
+				return Optional.of(new TransportException(Kind.CONNECTION, message, null, messages.cleanCause(error)));
 			}
 		}
 		return Optional.empty();
@@ -125,10 +126,10 @@ public class TransportException extends RuntimeException {
 	 * An exception a provider client cannot classify — a bug in our code or an unknown SDK error — as
 	 * what leaves the client instead of a transport failure: never retried and outside
 	 * {@code LlmCallException}, so it is not recorded as a provider error. The message is cleaned (it may
-	 * be recorded) and the original stays as the cause.
+	 * be recorded), and the cause is the original's chain without the key ({@link ProviderMessages#cleanCause}).
 	 */
 	public static IllegalStateException unclassified(Throwable error, ProviderMessages messages) {
-		return new IllegalStateException(messages.clean(String.valueOf(error)), error);
+		return new IllegalStateException(messages.clean(String.valueOf(error)), messages.cleanCause(error));
 	}
 
 	/** {@code Retry-After} in seconds (the HTTP-date form is not used by the providers), or {@code null}. */

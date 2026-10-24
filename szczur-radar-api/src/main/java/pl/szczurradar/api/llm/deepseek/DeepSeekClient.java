@@ -140,7 +140,7 @@ public final class DeepSeekClient implements LlmClient {
 			// Spring AI cannot map DeepSeek's newer finish reasons; the raw answer says why it ended.
 			DeepSeekRawResponse.Observed observed = rawResponse.take();
 			if (observed.cutOffByServer()) {
-				throw serverCutOff(observed, ex);
+				throw serverCutOff(observed, messages.cleanCause(ex));
 			}
 			Optional<TransportException> classified = TransportException.ofTimeoutOrConnection(ex, messages);
 			if (classified.isPresent()) {

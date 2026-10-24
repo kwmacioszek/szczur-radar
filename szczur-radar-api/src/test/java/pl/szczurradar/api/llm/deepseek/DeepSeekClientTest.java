@@ -2,8 +2,12 @@ package pl.szczurradar.api.llm.deepseek;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.assertj.core.api.Assertions.catchThrowable;
 
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.net.SocketTimeoutException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -33,6 +37,7 @@ import pl.szczurradar.api.llm.Provider;
 import pl.szczurradar.api.llm.ScriptedProviderServer;
 import pl.szczurradar.api.llm.ScriptedProviderServer.Reply;
 import pl.szczurradar.api.llm.ServiceTier;
+import pl.szczurradar.api.llm.transport.CleanedProviderException;
 import pl.szczurradar.api.llm.transport.ProviderMessages;
 import pl.szczurradar.api.llm.transport.TransportRetry;
 
@@ -236,11 +241,36 @@ class DeepSeekClientTest {
 
 		assertThatExceptionOfType(IllegalStateException.class).isThrownBy(() -> client.complete(REQUEST))
 			.satisfies(ex -> {
-				assertThat(ex.getCause()).isSameAs(sdkError);
+				assertThat(ex.getCause()).isInstanceOf(CleanedProviderException.class)
+					.hasMessageStartingWith(RuntimeException.class.getName() + ": unexpected state");
+				assertThat(ex.getCause().getStackTrace()).isEqualTo(sdkError.getStackTrace());
 				assertThat(ex.getMessage()).contains("unexpected state", "<hidden>").doesNotContain("synthetic-key");
 			});
 		assertThat(calls).hasSize(1);
 		assertThat(sleeps).isEmpty();
+	}
+
+	@Test
+	void noFailureLeavingTheClientCarriesTheKeyInItsCauses() {
+		// DeepSeek quotes the key in a 401 answer (above); here a 401 and a 503 in that shape — HTTP statuses
+		// leave HttpStatusErrors without a cause — then an error without a status and a time-out from a
+		// stand-in for the SDK.
+		String quoting = "{\"error\":{\"message\":\"Authentication Fails, Your api key: synthetic-key is invalid\"}}";
+		try (ScriptedProviderServer server = new ScriptedProviderServer(Reply.status(401, quoting))) {
+			assertPrintedWithoutTheKey(catchThrowable(() -> client(server, Duration.ofSeconds(5)).complete(REQUEST)),
+					"HTTP 401");
+		}
+		Reply unavailable = Reply.status(503, quoting);
+		try (ScriptedProviderServer server = new ScriptedProviderServer(unavailable, unavailable, unavailable)) {
+			assertPrintedWithoutTheKey(catchThrowable(() -> client(server, Duration.ofSeconds(5)).complete(REQUEST)),
+					"HTTP 503");
+		}
+		assertPrintedWithoutTheKey(catchThrowable(() -> stubbed(_ -> {
+			throw new RuntimeException("unexpected state for the key synthetic-key");
+		}).complete(REQUEST)), CleanedProviderException.class.getName(), RuntimeException.class.getName());
+		assertPrintedWithoutTheKey(catchThrowable(() -> stubbed(_ -> {
+			throw new RuntimeException("call failed", new SocketTimeoutException("read timed out for synthetic-key"));
+		}).complete(REQUEST)), CleanedProviderException.class.getName(), SocketTimeoutException.class.getName());
 	}
 
 	@Test
@@ -259,6 +289,16 @@ class DeepSeekClientTest {
 			});
 		assertThat(calls).hasSize(3);
 		assertThat(sleeps).containsExactly(Duration.ofSeconds(1), Duration.ofSeconds(2));
+	}
+
+	/**
+	 * {@code failure} printed in full, as a log prints it: the key appears in none of its causes, the
+	 * original exceptions' classes do.
+	 */
+	private static void assertPrintedWithoutTheKey(Throwable failure, String... originalClasses) {
+		StringWriter printed = new StringWriter();
+		failure.printStackTrace(new PrintWriter(printed));
+		assertThat(printed.toString()).doesNotContain("synthetic-key").contains(originalClasses);
 	}
 
 	/** The client on a stand-in for the SDK's chat model, with the test's key and recorded waits. */
