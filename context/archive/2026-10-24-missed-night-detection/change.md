@@ -1,10 +1,10 @@
 ---
 change_id: missed-night-detection
 title: Missed night detection
-status: impl_reviewed
+status: archived
 created: 2026-10-24
 updated: 2026-10-24
-archived_at: null
+archived_at: 2026-10-24T20:20:28Z
 ---
 
 ## Notes
