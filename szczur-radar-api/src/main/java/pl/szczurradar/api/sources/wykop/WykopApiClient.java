@@ -13,6 +13,7 @@ import java.time.InstantSource;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -139,7 +140,7 @@ public class WykopApiClient {
 	 */
 	public JsonNode get(String path, Map<String, ?> query) {
 		return get(path, query,
-				deadline(DEFAULT_TIMEOUT.multipliedBy(MAX_ATTEMPTS).plus(MAX_RETRY_AFTER.multipliedBy(2))));
+				deadline(timeout.multipliedBy(MAX_ATTEMPTS).plus(MAX_RETRY_AFTER.multipliedBy(MAX_ATTEMPTS - 1))));
 	}
 
 	/**
@@ -347,11 +348,14 @@ public class WykopApiClient {
 	 * error body may quote them — capped at {@value #MAX_MESSAGE} characters after masking.
 	 */
 	private String clean(String text, @Nullable String bearer) {
-		String cleaned = text.replace(key, "<hidden>").replace(secret, "<hidden>");
-		for (String used : new String[] { token, bearer }) {
-			if (used != null && !used.isEmpty()) {
-				cleaned = cleaned.replace(used, "<hidden>");
-			}
+		String cleaned = text;
+		// Longest first: a value that contains another one is hidden whole, not cut around the shorter one.
+		List<String> hidden = Stream.of(key, secret, token, bearer)
+			.filter(value -> value != null && !value.isEmpty())
+			.sorted(Comparator.comparingInt(String::length).reversed())
+			.toList();
+		for (String value : hidden) {
+			cleaned = cleaned.replace(value, "<hidden>");
 		}
 		return cleaned.length() > MAX_MESSAGE ? cleaned.substring(0, MAX_MESSAGE) + "…" : cleaned;
 	}

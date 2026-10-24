@@ -39,7 +39,7 @@ import pl.szczurradar.api.text.Whitespace;
  *
  * It prints only counts: per day and resource the pages, each page's {@code pagination.total} (and
  * whether it changed), elements received / unique / duplicated, an empty or short page before the
- * total, and whether today's stop rule (elements received, duplicates included, reach the total) would
+ * total, and whether the pre-S-16 stop rule (elements received, duplicates included, reach the total) would
  * have stopped short of the unique total; for the whole run the distribution of the elements'
  * {@code status} (absent and {@code null} apart) and how many elements have no text. Nothing is
  * written to disk; no content, nicks, ids or URLs are printed. Fails at the end when a request
@@ -165,7 +165,7 @@ class WykopPagingProbe {
 				count(resource, element);
 			}
 			if (!read.todayStopped && total >= 0 && read.received >= total) {
-				// WykopRepository stops here today: it counts received elements, duplicates included.
+				// WykopRepository stopped here before S-16: it counted received elements, duplicates included.
 				read.todayStopped = true;
 				read.todayStopsShort = read.unique() < total;
 			}
@@ -309,7 +309,7 @@ class WykopPagingProbe {
 				flags.add("unique below total");
 			}
 			if (todayStopsShort) {
-				flags.add("today's stop short of the unique total");
+				flags.add("pre-S-16 stop short of the unique total");
 			}
 			if (!flags.isEmpty()) {
 				line.append(" !! ").append(String.join(", ", flags));
@@ -369,7 +369,7 @@ class WykopPagingProbe {
 			System.out.printf("reads (resource × day): %d, failed %d, page limit %d; pages read: %d%n", reads, failed,
 					pageLimit, requests);
 			System.out.printf("total changed between pages: %d; empty page before total: %d; short page before total: %d;"
-					+ " unique below the first total: %d; today's stop short of the unique total: %d%n", totalChanged,
+					+ " unique below the first total: %d; pre-S-16 stop short of the unique total: %d%n", totalChanged,
 					emptyBeforeTotal, shortBeforeTotal, belowTotal, todayStopsShort);
 			System.out.printf("elements received: %d, unique: %d, duplicates: %d, without id: %d%n", received, unique,
 					duplicates, withoutId);

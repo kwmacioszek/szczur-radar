@@ -77,6 +77,9 @@ PipelineRunService.startRange / startPosts → queue → PipelineAgent:
   progress inside (`SourceFetcher` reports none). The watchdog measures from it (or from `started_at`).
   A source bounds its fetch with a deadline below `PipelineStallSettings.MIN_DEFAULT` (Wykop: 10 min,
   `WykopRepository.FETCH_DEADLINE`), so a failing fetch fails the step before the watchdog stops the run.
+  An explicit `PIPELINE_STALL_TIMEOUT` below that deadline plus two request time-outs (Wykop: about
+  11 min) would stop a failing fetch as stalled instead; `minimum()` warns only about the LLM call, so
+  do not set it lower.
 - **Log lines (INFO).** `Pipeline run <id> (<kind>) started`; `Run <id> step <step> started (in N)` and
   `Run <id> step <step> <status> (out N) in <time>`; `Run <id> assess: <done>/<N> (ok …, failed …, dead …,
   errors …, unavailable …), in flight …, retries …, flex fallbacks …` at most every `PROGRESS_INTERVAL`

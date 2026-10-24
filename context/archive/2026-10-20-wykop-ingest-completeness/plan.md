@@ -364,47 +364,47 @@ Brak migracji, zmiennych środowiskowych i zmian IaC. Wycofanie = revert PR.
 
 #### Automated
 
-- [x] 1.1 Kompilacja testów z profilem pomiarowym przechodzi — 7cdd713
-- [x] 1.2 Sonda nie wchodzi do zwykłego `test` — 7cdd713
+- [x] 1.1 Kompilacja testów z profilem pomiarowym przechodzi — 2ed995c
+- [x] 1.2 Sonda nie wchodzi do zwykłego `test` — 2ed995c
 
 #### Manual
 
-- [x] 1.3 Sonda uruchomiona z kluczami na ≥ 30 dniach, agregaty i wniosek zapisane w `change.md` — 9a6e7ab
-- [x] 1.4 Bramka decyzyjna sprawdzona (brak elementów nie-`visible` z tekstem albo decyzja zapisana) — 9a6e7ab
+- [x] 1.3 Sonda uruchomiona z kluczami na ≥ 30 dniach, agregaty i wniosek zapisane w `change.md` — 2ed995c
+- [x] 1.4 Bramka decyzyjna sprawdzona (brak elementów nie-`visible` z tekstem albo decyzja zapisana) — 2ed995c
 
 ### Phase 2: Ponowienia i termin w WykopApiClient
 
 #### Automated
 
-- [x] 2.1 Testy jednostkowe przechodzą — f08c06a
-- [x] 2.2 Testy klienta pokrywają przypadki ponowień z asercją liczby żądań — f08c06a
-- [x] 2.3 Relacja terminu z watchdogiem przypięta testem w `WykopRepositoryTest` — f08c06a
-- [x] 2.4 Pełna weryfikacja przechodzi (w tym `PipelineAgentIT`) — f08c06a
+- [x] 2.1 Testy jednostkowe przechodzą — 2ed995c
+- [x] 2.2 Testy klienta pokrywają przypadki ponowień z asercją liczby żądań — 2ed995c
+- [x] 2.3 Relacja terminu z watchdogiem przypięta testem w `WykopRepositoryTest` — 2ed995c
+- [x] 2.4 Pełna weryfikacja przechodzi (w tym `PipelineAgentIT`) — 2ed995c
 
 #### Manual
 
-- [x] 2.5 Przegląd: żaden nowy komunikat ani log nie zawiera klucza, sekretu ani tokenu — 0a64721
+- [x] 2.5 Przegląd: żaden nowy komunikat ani log nie zawiera klucza, sekretu ani tokenu — 2ed995c
 
 ### Phase 3: Spójność stronicowania
 
 #### Automated
 
-- [x] 3.1 Testy jednostkowe przechodzą — 8ab8bc7
-- [x] 3.2 Testy repozytorium pokrywają przypadki spójności i ponownego czytania — 8ab8bc7
-- [x] 3.3 Pełna weryfikacja przechodzi (w tym `PipelineAgentIT`) — 8ab8bc7
+- [x] 3.1 Testy jednostkowe przechodzą — 2ed995c
+- [x] 3.2 Testy repozytorium pokrywają przypadki spójności i ponownego czytania — 2ed995c
+- [x] 3.3 Pełna weryfikacja przechodzi (w tym `PipelineAgentIT`) — 2ed995c
 
 #### Manual
 
-- [x] 3.4 Przegląd komunikatów WARN i `INCOMPLETE_PAGING` — c63b1ef
+- [x] 3.4 Przegląd komunikatów WARN i `INCOMPLETE_PAGING` — 2ed995c
 
 ### Phase 4: Domknięcie
 
 #### Automated
 
-- [x] 4.1 CI na PR zielone — 220f3af
+- [x] 4.1 CI na PR zielone — 2ed995c
 
 #### Manual
 
-- [x] 4.2 Lekcja dopisana na końcu `lessons.md` — 1cf5f7b
-- [x] 4.3 Przebieg za zakres w PR env `succeeded`, `fetched` zgodne z `total` — 60b2541
-- [x] 4.4 Komentarz w issue S-16 z wynikiem weryfikacji — ef73646
+- [x] 4.2 Lekcja dopisana na końcu `lessons.md` — 2ed995c
+- [x] 4.3 Przebieg za zakres w PR env `succeeded`, `fetched` zgodne z `total` — 2ed995c
+- [x] 4.4 Komentarz w issue S-16 z wynikiem weryfikacji — 2ed995c

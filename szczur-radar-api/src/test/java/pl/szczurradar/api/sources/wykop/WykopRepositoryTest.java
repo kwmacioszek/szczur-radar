@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 import java.time.Duration;
+import java.time.InstantSource;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -209,6 +210,19 @@ class WykopRepositoryTest {
 	}
 
 	@Test
+	void aTotalThatDisappearsOnALaterPageIsInconsistent() {
+		// Page 2 of both reads comes without pagination (minimally changed recording).
+		try (LocalWykopServer server = new LocalWykopServer(entriesByReadAndPage(
+				(read, page) -> page == 1 ? entriesPage(100, ids(1, 50)) : withoutPagination(entriesPage(100, ids(51, 100)))))) {
+			assertThatExceptionOfType(WykopApiException.class)
+				.isThrownBy(() -> repository(server).itemsOfDay("gielda", LocalDate.parse("2026-10-01")))
+				.satisfies(ex -> assertThat(ex.failure()).isEqualTo(WykopFailure.INCOMPLETE_PAGING))
+				.withMessage("Wykop search/entries stayed inconsistent after 2 reads: 100 of 100, "
+						+ "total changed 100→none on page 2");
+		}
+	}
+
+	@Test
 	void anInconsistentEntriesReadDoesNotReadTheLinksAgain() {
 		try (LocalWykopServer server = new LocalWykopServer(entriesByReadAndPage((read, page) -> {
 			if (page == 1) {
@@ -261,6 +275,21 @@ class WykopRepositoryTest {
 				.containsExactly("search/entries 1", "search/entries 1");
 			assertThat(output).contains("WARN",
 					"Reading Wykop search/entries again: 12 of 100, page 1 has only 12 of 50 elements");
+		}
+	}
+
+	@Test
+	void anEntryAndALinkWithTheSameIdAreBothKept() {
+		// The real pages, each one's first element with the same id and no "resource" field (minimally
+		// changed recordings): the resource the element was read from tells them apart.
+		String entries = firstWithoutResource(WHOLE_DAY);
+		String links = firstWithoutResource(LINKS);
+		try (LocalWykopServer server = new LocalWykopServer(request -> request.path().endsWith("/auth")
+				? Reply.ok("{\"data\":{\"token\":\"t\"}}")
+				: Reply.ok(request.path().endsWith("/search/entries") ? entries : links))) {
+			WykopSearchResult result = repository(server).itemsOfDay("gielda", LocalDate.parse("2026-10-01"));
+
+			assertThat(result.elements().size() + result.skippedElements()).isEqualTo(12 + 4);
 		}
 	}
 
@@ -353,8 +382,10 @@ class WykopRepositoryTest {
 	}
 
 	private WykopRepository repository(LocalWykopServer server) {
-		return new WykopRepository(new WykopApiClient(server.baseUrl(), "k", "s", Duration.ofSeconds(5)), pauses::add,
-				Duration.ofMillis(1));
+		// No real waits between the client's attempts: a case answering 5xx stays fast.
+		WykopApiClient client = new WykopApiClient(server.baseUrl(), "k", "s", Duration.ofSeconds(5), wait -> {
+		}, InstantSource.system());
+		return new WykopRepository(client, pauses::add, Duration.ofMillis(1));
 	}
 
 	private static List<Request> searches(LocalWykopServer server) {
@@ -367,6 +398,20 @@ class WykopRepositoryTest {
 
 	private static String page(Request request) {
 		return request.query().replaceAll(".*page=(\\d+).*", "$1");
+	}
+
+	private static String withoutPagination(String page) {
+		ObjectNode answer = (ObjectNode) MAPPER.readTree(page);
+		answer.remove("pagination");
+		return answer.toString();
+	}
+
+	private static String firstWithoutResource(String page) {
+		ObjectNode answer = (ObjectNode) MAPPER.readTree(page);
+		ObjectNode first = (ObjectNode) answer.get("data").get(0);
+		first.remove("resource");
+		first.put("id", 987654321L);
+		return answer.toString();
 	}
 
 	private static String withItems(String page, int count, int total) {

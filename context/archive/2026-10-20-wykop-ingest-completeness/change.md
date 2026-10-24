@@ -1,10 +1,10 @@
 ---
 change_id: wykop-ingest-completeness
 title: S-16 — Wykop nie gubi postów po cichu
-status: implemented
+status: archived
 created: 2026-10-20
-updated: 2026-10-21
-archived_at: null
+updated: 2026-10-24
+archived_at: 2026-10-24T07:27:35Z
 ---
 
 ## Notes

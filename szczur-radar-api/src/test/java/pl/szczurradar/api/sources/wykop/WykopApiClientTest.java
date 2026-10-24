@@ -102,6 +102,7 @@ class WykopApiClientTest {
 					assertThat(ex.status()).isEqualTo(403);
 					assertThat(ex.getMessage()).contains("auth", "403").doesNotContain(SECRET, KEY);
 				});
+			assertThat(server.requests()).hasSize(1);
 			assertThat(client(server).toString()).doesNotContain(SECRET, KEY);
 		}
 	}
@@ -118,6 +119,21 @@ class WykopApiClientTest {
 	}
 
 	@Test
+	void aKeyInsideTheSecretLeavesNoPartOfTheSecret() {
+		String key = "K3y";
+		String secret = "S3cretK3yT4il";
+		try (LocalWykopServer server = new LocalWykopServer(request -> new Reply(400,
+				"{\"error\":{\"code\":400,\"message\":\"Invalid secret " + secret + "\"}}"))) {
+			WykopApiClient client = new WykopApiClient(server.baseUrl(), key, secret, TIMEOUT, waits::add, now::get);
+
+			assertThatExceptionOfType(WykopApiException.class)
+				.isThrownBy(() -> client.get("search/entries", Map.of()))
+				.satisfies(ex -> assertThat(ex.getMessage()).contains("Invalid secret <hidden>")
+					.doesNotContain("S3cret", "T4il"));
+		}
+	}
+
+	@Test
 	void anErrorQuotingTheTokenIsMasked() {
 		try (LocalWykopServer server = new LocalWykopServer(request -> request.path().endsWith("/auth")
 				? Reply.ok(TOKEN_1) : new Reply(403, "{\"error\":{\"code\":403,\"message\":\"token token-1 lacks scope\"}}"))) {
@@ -125,6 +141,7 @@ class WykopApiClientTest {
 				.isThrownBy(() -> client(server).get("search/entries", Map.of()))
 				.satisfies(ex -> assertThat(ex.getMessage()).contains("HTTP 403", "token <hidden> lacks scope")
 					.doesNotContain("token-1"));
+			assertThat(searches(server)).hasSize(1);
 		}
 	}
 
@@ -346,6 +363,19 @@ class WykopApiClientTest {
 			finally {
 				Thread.interrupted();
 			}
+		}
+	}
+
+	@Test
+	void aSingleCallFitsTheClientsOwnTimeout() {
+		try (LocalWykopServer server = new LocalWykopServer(request -> request.path().endsWith("/auth")
+				? Reply.ok(TOKEN_1) : Reply.ok("{\"data\":[]}"))) {
+			// A time-out longer than the default's whole budget: the call's deadline follows this client.
+			WykopApiClient client = new WykopApiClient(server.baseUrl(), KEY, SECRET, Duration.ofSeconds(200),
+					waits::add, now::get);
+
+			assertThat(client.get("search/entries", Map.of()).path("data").isArray()).isTrue();
+			assertThat(searches(server)).hasSize(1);
 		}
 	}
 
