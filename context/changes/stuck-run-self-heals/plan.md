@@ -358,6 +358,6 @@ Dwie dodatkowe instrukcje w `queue()` (wywoływanym przez człowieka albo raz na
 
 #### Manual
 
-- [ ] 4.3 Agent: w PR env martwy przebieg daje `safe:true`, a świeży `pipeline_running`
-- [ ] 4.4 Agent lub człowiek: start przebiegu w PR env przy martwym wierszu daje 202 i sprząta go jako `lost`
-- [ ] 4.5 Człowiek: `/admin`, strona przebiegu i dzwonek w PR env pokazują „utracona instancja”
+- [x] 4.3 Agent: w PR env martwy przebieg daje `safe:true`, a świeży `pipeline_running` — 85f54ed
+- [x] 4.4 Agent lub człowiek: start przebiegu w PR env przy martwym wierszu daje 202 i sprząta go jako `lost` — 85f54ed
+- [x] 4.5 Człowiek: `/admin`, strona przebiegu i dzwonek w PR env pokazują „utracona instancja” — 53c31b9
