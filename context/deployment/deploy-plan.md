@@ -1596,7 +1596,7 @@ The second line comes alone, with no interrupted run, when a request finds only 
 
 ### PR-env verification (szczur-radar-pr-103; runbook, plan Phase 4 item 3)
 
-Not run yet; the results go to issue #70. Every SQL statement runs as `railway ssh -s postgres -e szczur-radar-pr-103 -- psql -U postgres -d railway -c "<SQL>"` (the tunnel of `railway connect` drops, section S-15). The PR env runs with `PIPELINE_STALL_TIMEOUT` unset (`15m`). The start in step 3 makes real Wykop and LLM calls, which PR envs allow.
+Run 2026-10-24 on `f1ff8fd` (result below; details in issue #70). Every SQL statement runs as `railway ssh -s postgres -e szczur-radar-pr-103 -- psql -U postgres -d railway -c "<SQL>"` (add `-p <project id>` in a checkout not linked to the project) (the tunnel of `railway connect` drops, section S-15). The PR env runs with `PIPELINE_STALL_TIMEOUT` unset (`15m`). The start in step 3 makes real Wykop and LLM calls, which PR envs allow.
 
 0. **Preconditions.** The API and the web are deployed from this branch (`V11` applied; deploy the web as in section S-14, "PR-env verification", if its deployment was skipped). An admin account in the PR env (`create-user --role admin`, section S-08). The API is awake (`curl -s <web>/api/ready` 200) and no run is active: `SELECT count(*) FROM pipeline_runs WHERE status IN ('queued', 'running')` is 0. Keep the API awake until step 3 (an API that sleeps and wakes runs start-up recovery, which interrupts the inserted row with cause `deploy` or `restart` instead of `lost`; then start again from step 1).
 1. **A dead run of "another instance"**, with an open step and a post it holds (the scheduler as requester):
@@ -1614,6 +1614,16 @@ Not run yet; the results go to issue #70. Every SQL statement runs as `railway s
 5. **A fresh row is not safe.** After the runs of step 3 have ended (while they run, the guard says `pipeline_running` anyway): the same `INSERT` as in step 1 with `now()` for `created_at`, `started_at` and `last_activity_at` → `curl -s <web>/api/deploy-safety` returns `{"safe":false,"reason":"pipeline_running"}`.
 6. **Clean up at once** (a fresh row holds the PR env's guard and a start for 15 min): `DELETE FROM notifications WHERE run_id IN (SELECT id FROM pipeline_runs WHERE deployment_id = 'deployment-other')`, then the same for `pipeline_run_steps`, then `DELETE FROM pipeline_runs WHERE deployment_id = 'deployment-other'`. `curl -s <web>/api/deploy-safety` returns `{"safe":true,"reason":null}`. With the cron used: delete `TRIGGER_IN_ANY_ENVIRONMENT` and redeploy the cron (section S-08).
 7. **Record** on issue #70: both `curl` outputs, the SQL rows of step 4, the WARN line, the new runs' ids.
+
+Result (2026-10-24, API `f1ff8fd` deployment `1461bbcf`, web `c2218bd`; [issue #70](https://github.com/kwmacioszek/szczur-radar/issues/70#issuecomment-6385844745)):
+
+- **Setup.** The PR env had no admin and no post. A test account `s11-admin@example.com` (admin) was created with `create-user` over `railway ssh` and activated through `/api/auth/activation` with a random password; the link and the password were never printed. Without posts, step 1 had no post `assessing`.
+- **Steps 1–4.** Dead run `ed28be71…` → `{"safe":true,"reason":null}`, the row still `running`. The admin's start for 2026-10-23 at 14:35:17Z → 202, RANGE `51573642…`; the dead run became `interrupted | lost` with its step `interrupted` and 1 notification; the API log had `Marked 1 orphaned pipeline run(s) interrupted: no queued or running run showed activity for 15m 00s and none runs on this instance: [ed28be71-…]`. The RANGE run ended `partial` (fetched 277, ok 262, failed 15).
+- **A run that just ended keeps the queue alive** (review finding F1): a dead row inserted 26 s after that run ended → `{"safe":false,"reason":"pipeline_running"}`. So a new orphan is cleaned up only once the last run ended more than `PIPELINE_STALL_TIMEOUT` ago.
+- **Step 5.** A fresh row → `{"safe":false,"reason":"pipeline_running"}`. **Step 6:** after the clean-up `{"safe":true,"reason":null}`.
+- **Lessons for a rerun.**
+  - Step 6 deletes the `lost` run too: keep one for the human's check of `/admin`, the run page and the bell (plan Progress 4.5). Here a second one, `3359f2c9…`, was made at 15:11Z with a start of chosen posts (one post, one LLM call) and left in the database.
+  - The API image has no `curl` and the PR env's API has no `PIPELINE_TRIGGER_TOKEN`, so `/internal/**` cannot be called from inside: start as an admin, or through the cron as in section S-08.
 
 ### Rollback: fix-forward only
 
