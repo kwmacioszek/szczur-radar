@@ -35,7 +35,7 @@
 <rect x="2003.0" y="114.0" width="44.0" height="12.0" rx="3" fill="#14281d" stroke="#5fd18faa" stroke-width="1" />
 <rect x="2052.0" y="114.0" width="44.0" height="12.0" rx="3" fill="#14281d" stroke="#5fd18faa" stroke-width="1" />
 <rect x="2101.0" y="114.0" width="44.0" height="12.0" rx="3" fill="#14281d" stroke="#5fd18faa" stroke-width="1" />
-<rect x="2150.0" y="114.0" width="44.0" height="12.0" rx="3" fill="#13232e" stroke="#8ccbe8aa" stroke-width="1" />
+<rect x="2150.0" y="114.0" width="44.0" height="12.0" rx="3" fill="#33291a" stroke="#f2c46daa" stroke-width="1" />
 <rect x="2199.0" y="114.0" width="44.0" height="12.0" rx="3" fill="#232d32" stroke="#c3cdd055" stroke-width="1" />
 <rect x="2248.0" y="114.0" width="44.0" height="12.0" rx="3" fill="#232d32" stroke="#c3cdd055" stroke-width="1" />
 <rect x="2297.0" y="114.0" width="44.0" height="12.0" rx="3" fill="#14281d" stroke="#5fd18faa" stroke-width="1" />
@@ -47,9 +47,9 @@
 <circle cx="1958.0" cy="147" r="4" fill="#5fd18f" stroke="#5fd18f" stroke-width="1.2"/>
 <text x="1967.0" y="151.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="500" fill="#eaf0f2">6 ukończone</text>
 <circle cx="2080.0" cy="147" r="4" fill="#f2c46d" stroke="#f2c46d" stroke-width="1.2"/>
-<text x="2089.0" y="151.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="500" fill="#eaf0f2">1 w toku</text>
+<text x="2089.0" y="151.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="500" fill="#eaf0f2">2 w toku</text>
 <circle cx="2176.0" cy="147" r="4" fill="#13232e" stroke="#8ccbe8" stroke-width="1.2"/>
-<text x="2185.0" y="151.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="500" fill="#eaf0f2">2 gotowe do planowania</text>
+<text x="2185.0" y="151.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="500" fill="#eaf0f2">1 gotowe do planowania</text>
 <circle cx="1958.0" cy="169" r="4" fill="#232d32" stroke="#c3cdd0" stroke-width="1.2"/>
 <text x="1967.0" y="173.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="500" fill="#eaf0f2">4 proponowane</text>
 <circle cx="2080.0" cy="169" r="4" fill="#f28b9c" stroke="#f28b9c" stroke-width="1.2"/>
@@ -511,12 +511,12 @@
 <text x="2521.6" y="1697.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="11" font-weight="700" fill="#a2afb4">—</text>
 <text x="2461.6" y="1719.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#9aa8ae">llm-config-fail-fast</text>
 </g>
-<g data-id="S-11" data-status="ready">
-<rect x="2756.4" y="1434.0" width="252.8" height="319.0" rx="12" fill="#151e23" stroke="#2e4d60" stroke-width="1" />
-<text x="2770.4" y="1459.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="13" font-weight="700" fill="#8ccbe8">S-11</text>
-<rect x="2842.4" y="1445.0" width="152.8" height="20.0" rx="5" fill="#13232e" stroke="#8ccbe855" stroke-width="1" />
-<circle cx="2854.4" cy="1455.0" r="3" fill="#8ccbe8"/>
-<text x="2863.4" y="1459.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="600" fill="#8ccbe8">Gotowe do planowania</text>
+<g data-id="S-11" data-status="progress">
+<rect x="2756.4" y="1434.0" width="252.8" height="319.0" rx="12" fill="#151e23" stroke="#6b5426" stroke-width="1" />
+<text x="2770.4" y="1459.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="13" font-weight="700" fill="#f2c46d">S-11</text>
+<rect x="2928.3" y="1445.0" width="66.9" height="20.0" rx="5" fill="#33291a" stroke="#f2c46d55" stroke-width="1" />
+<circle cx="2940.3" cy="1455.0" r="3" fill="#f2c46d"/>
+<text x="2949.3" y="1459.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="600" fill="#f2c46d">W toku</text>
 <text x="2770.4" y="1485.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#eaf0f2">Utknięty przebieg sam</text>
 <text x="2770.4" y="1507.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#eaf0f2">wraca do obiegu</text>
 <text x="2770.4" y="1535.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">przebieg po martwej</text>

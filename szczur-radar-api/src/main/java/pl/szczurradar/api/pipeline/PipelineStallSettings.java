@@ -29,8 +29,10 @@ import pl.szczurradar.api.settings.SettingText;
  * settings ({@code 120s}, tier {@code default}) and {@code 39m} on production ({@code 300s}, flex). A
  * shorter explicit value is accepted (tests, a manual check), with a warning at start-up.
  *
- * <p>Only the server reads it ({@link RunWatchdog}); the operator commands ({@code migrate},
- * {@code create-admin}, …) do not.
+ * <p>Only the server reads it: one bean ({@link PipelineStallConfiguration}) for {@link RunWatchdog}, which
+ * stops this instance's runs by it, and {@link PipelineRunService}, which takes another instance's runs
+ * without activity for that long as orphans; the operator commands ({@code migrate}, {@code create-admin},
+ * …) do not.
  */
 public final class PipelineStallSettings {
 

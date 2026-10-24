@@ -10,12 +10,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
-import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
-import pl.szczurradar.api.llm.LlmProviderProperties;
 import pl.szczurradar.api.pipeline.state.Durations;
 
 /**
@@ -26,14 +23,16 @@ import pl.szczurradar.api.pipeline.state.Durations;
  * for that long as {@code failed}.
  *
  * <ul>
- *   <li>Only this instance's runs: another instance's (a deployment overlap) are start-up recovery's.
+ *   <li>Only this instance's runs: another instance's (a deployment overlap) are start-up recovery's,
+ *       or, once none of the active runs shows activity for the same timeout, the next request to start
+ *       a run's ({@link PipelineRunService}, cause {@code lost}).
  *   <li>No database query while this instance has no run (an in-memory check): Railway counts every
  *       outgoing packet, a query to Postgres too, as activity, so a query every minute would keep the
  *       API from sleeping and bring the plan's hard spending limit closer.
  *   <li>A failed check is logged, whatever was thrown; the next one runs as planned.
  *   <li>Only in the server, like {@link PipelineStartupRecovery}: the operator commands start the same
- *       context, and only the server reads {@code PIPELINE_STALL_TIMEOUT} ({@link PipelineStallSettings},
- *       validated when it starts).
+ *       context, and only the server reads {@code PIPELINE_STALL_TIMEOUT} (the server's one
+ *       {@link PipelineStallSettings}, {@link PipelineStallConfiguration}, validated when it starts).
  * </ul>
  */
 @Component
@@ -54,11 +53,6 @@ public class RunWatchdog implements InitializingBean, DisposableBean {
 
 	private final ScheduledExecutorService executor = Executors
 		.newSingleThreadScheduledExecutor(task -> Thread.ofPlatform().name("pipeline-watchdog").unstarted(task));
-
-	@Autowired
-	RunWatchdog(PipelineRunService service, Environment environment, LlmProviderProperties llm) {
-		this(service, PipelineStallSettings.from(environment, llm));
-	}
 
 	RunWatchdog(PipelineRunService service, PipelineStallSettings settings) {
 		this.service = service;

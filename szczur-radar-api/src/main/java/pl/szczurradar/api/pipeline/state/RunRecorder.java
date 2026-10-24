@@ -232,6 +232,31 @@ public class RunRecorder {
 	}
 
 	/**
+	 * Every queued or running run, now {@code interrupted} ({@link InterruptionCause#LOST}) with its open
+	 * steps closed, in one transaction — but only when none of them showed activity for {@code threshold}
+	 * (its last activity, else its start, else its creation is older), otherwise none. The queue is one
+	 * and sequential: a queued run behind a dead running one is as orphaned, and one run with progress
+	 * means a living queue. One statement decides and writes it (two would let a run join the queue
+	 * between them), measured by the database's clock as in {@link #stall}, with the same age as the
+	 * watchdog's: a run its own watchdog would not stop is never taken from it here.
+	 *
+	 * @return the runs interrupted; empty when there was no active run or one of them showed activity
+	 */
+	public List<UUID> interruptOrphans(Duration threshold) {
+		return inTransaction(() -> closeSteps(statuses(jdbc
+			.sql("UPDATE pipeline_runs SET status = :interrupted, finished_at = now(), interruption_cause = :lost,"
+					+ " error = :lostError WHERE status IN (:queued, :running) AND NOT EXISTS (SELECT 1 FROM"
+					+ " pipeline_runs a WHERE a.status IN (:queued, :running)"
+					+ " AND COALESCE(a.last_activity_at, a.started_at, a.created_at)"
+					+ " >= now() - CAST(:millis AS BIGINT) * INTERVAL '1 millisecond') RETURNING id"))
+			.param("lost", InterruptionCause.LOST.value())
+			.param("lostError", InterruptionCause.LOST.error())
+			.param("millis", threshold.toMillis())
+			.query(UUID.class)
+			.list(), StepStatus.INTERRUPTED, null));
+	}
+
+	/**
 	 * A new step of a running run, and the run's last activity moved, in one statement; empty when the
 	 * run is no longer running. The run's row is updated first, so an interruption either waits for the
 	 * new step (and closes it) or makes this add none.
