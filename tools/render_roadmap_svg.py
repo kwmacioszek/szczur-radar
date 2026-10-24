@@ -161,7 +161,7 @@ m1 = {  # title, outcome, column, row, prerequisites, change id
 m2 = {  # lane, position, title, outcome, status, prerequisites, change id
     "S-08": ("A", 0, "Pusty przebieg daje sygnał", "operator dostaje sygnał, gdy przebieg nic nie pobrał albo pominął elementy; etykieta świeżości wtedy stoi", "done", "—", "empty-run-signal"),
     "S-12": ("A", 1, "Powiadomienia o przebiegach nie giną", "admin dostaje każde należne powiadomienie o przebiegu, a stan kroków zgadza się ze statusem przebiegu", "proposed", "S-08", "reliable-run-notifications"),
-    "F-04": ("B", 0, "Kanał alarmowy poza aplikacją", "(foundation) kanał alarmowy poza aplikacją: healthchecks.io → Telegram, $0; crony się meldują, API ma nadawcę zdarzeń i sygnał testowy", "progress", "—", "out-of-app-alert-channel"),
+    "F-04": ("B", 0, "Kanał alarmowy poza aplikacją", "(foundation) kanał alarmowy poza aplikacją: healthchecks.io → Telegram, $0; crony się meldują, API ma nadawcę zdarzeń i sygnał testowy", "done", "—", "out-of-app-alert-channel"),
     "S-13": ("B", 1, "Brakująca noc nie przechodzi niezauważona", "operator dowie się, że nocny przebieg albo backup nie wystartował, i widzi dni bez danych", "proposed", "F-04", "missed-night-detection"),
     "S-18": ("B", 2, "Błędy wymagające reakcji docierają do operatora", "błędy wymagające reakcji (ERROR, /api/ready, awaria ścieżki alarmowej) docierają do operatora; klucze nie trafiają do logów", "proposed", "F-04", "error-visibility"),
     "S-09": ("C", 0, "Awaria dostawcy nie zabija postów", "awaria dostawcy LLM ani błąd naszego kodu nie zabija postów; post z powtarzalnym błędem technicznym ma limit", "done", "—", "attempt-accounting"),
@@ -264,7 +264,7 @@ text(M + 52, 57, "Szczur Radar", 17, 700)
 text(M + 52, 75, "MARKET INTELLIGENCE", 9.5, 600, C["muted"], spacing="2.4")
 text(M, 134, "MILESTONES I ZALEŻNOŚCI", 11, 700, C["muted"], spacing="2")
 text(M, 172, "Roadmapa produktu", 31, 700)
-text(M, 202, "Źródło: context/foundation/roadmap.md  ·  v3  ·  stan 23.10.2026  ·  bez terminów — kolejność wynika z zależności", 13, 400, C["muted"])
+text(M, 202, "Źródło: context/foundation/roadmap.md  ·  v3  ·  stan 24.10.2026  ·  bez terminów — kolejność wynika z zależności", 13, 400, C["muted"])
 
 # progress card (same as before), right after the title block
 px, py, pw, ph = P2X, 36, 820, 214
@@ -281,14 +281,14 @@ text(cx, py + 186, "M-1 + M-2", 10.5, 700, C["muted"], anchor="middle", spacing=
 bx = px + 164
 text(bx, py + 34, "POSTĘP KAMIENIA MILOWEGO", 10.5, 700, C["muted"], spacing="1.6")
 text(bx, py + 62, "M-2 · MVP Quality & Reliability Hardening", 17, 700)
-text(px + pw - 24, py + 62, "7 / 13", 17, 700, C["text"], anchor="end")
-m2_order = [("F-04", "progress"), ("S-08", "done"), ("S-09", "done"), ("S-10", "done"), ("S-11", "ready"), ("S-12", "proposed"),
+text(px + pw - 24, py + 62, "8 / 13", 17, 700, C["text"], anchor="end")
+m2_order = [("F-04", "done"), ("S-08", "done"), ("S-09", "done"), ("S-10", "done"), ("S-11", "ready"), ("S-12", "proposed"),
             ("S-13", "proposed"), ("S-14", "done"), ("S-15", "done"), ("S-16", "done"), ("S-17", "proposed"), ("S-18", "proposed"), ("S-19", "done")]
 segw = (pw - 164 - 24 - 12 * 5) / 13
 for i, (iid, st) in enumerate(m2_order):
     lab, fg, bg = STATUS[st]
     rect(bx + i * (segw + 5), py + 78, segw, 12, 3, bg, fg + ("aa" if st != "proposed" else "55"), 1)
-legend_items = [("done", "7 ukończone"), ("progress", "1 w toku"), ("ready", "1 gotowe do planowania"), ("proposed", "4 proponowane"), ("blocked", "0 zablokowanych")]
+legend_items = [("done", "8 ukończone"), ("progress", "0 w toku"), ("ready", "1 gotowe do planowania"), ("proposed", "4 proponowane"), ("blocked", "0 zablokowanych")]
 for li, (st, lab) in enumerate(legend_items):
     fg = STATUS[st][1]
     lx = bx + (0, 122, 218)[li % 3]
@@ -331,7 +331,7 @@ add(f'<line x1="{P3X+20}" y1="{AX_Y}" x2="{x_end-14}" y2="{AX_Y}" stroke="{C["mu
 add(f'<path d="M{x_end-22} {AX_Y-8} L{x_end-10} {AX_Y} L{x_end-22} {AX_Y+8}" fill="none" stroke="{C["muted"]}" stroke-opacity="0.6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>')
 nodes = [
     (P1X, "M-1", "MVP — ocenione sygnały z Wykopu", "Zamknięty 17.10.2026  ·  10 / 10", "done"),
-    (P2X, "M-2", "MVP Quality & Reliability Hardening", "Otwarty — teraz  ·  4 / 13", "now"),
+    (P2X, "M-2", "MVP Quality & Reliability Hardening", "Otwarty — teraz  ·  8 / 13", "now"),
     (P3X, "PO M-2", "Odroczone", "Backlog  ·  24 pozycje", "later"),
 ]
 for nx, tag, name, state, kind in nodes:
@@ -418,7 +418,7 @@ for k, (title, desc, c, r, req, cid) in m1.items():
 container(P2X, P2W, "M-2", "MVP Quality & Reliability Hardening",
           ("Otwarty", C["amber"], C["amberSoft"], 10.5, False, 600, "dot"),
           "Złe noce, awarie dostawców i błędne wdrożenia są widoczne dla operatora, nie niszczą danych ani nie blokują pracy — zanim ruszy kolejna roadmapa funkcjonalna.",
-          ("7 / 13", 7 / 13, C["lime"]), C["lime"] + "40")
+          ("8 / 13", 8 / 13, C["lime"]), C["lime"] + "40")
 box2 = {}
 ry = TOP + 98
 for ri, row in enumerate(rows2):
