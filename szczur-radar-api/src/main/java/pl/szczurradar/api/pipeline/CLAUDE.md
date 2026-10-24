@@ -9,10 +9,11 @@ decides the flow. The durable state is in Postgres (`pipeline_runs`, `pipeline_r
 
 ```
 pipeline/            entry points — start here
-  PipelineRunService       create runs (advisory lock, refuse while busy), queue them, run one at a time
+  PipelineRunService       create runs (advisory lock, clean up orphans, refuse while busy), queue them, run one at a time
   PipelineStartupRecovery  server start, before the port opens: unfinished runs → interrupted (cause), their posts put back
   RunWatchdog              server only: stops a run of this instance without progress (PIPELINE_STALL_TIMEOUT)
   PipelineStallSettings    PIPELINE_STALL_TIMEOUT, read and validated when the server starts
+  PipelineStallConfiguration  server only: the one PipelineStallSettings bean (watchdog, queue, deploy safety)
   PipelineBusyException, PostDeadException, SourceNotConfiguredException
   api/     the HTTP entries (below)
   run/     the run model: PipelineRun (+ needsAttention), PipelineRunStep, RunKind, RunStatus, RunStep, StepStatus,
@@ -37,7 +38,7 @@ Every route starts runs only through `PipelineRunService`; none has its own star
 | `PipelineRunController` | `/api/admin/pipeline-runs/**`: start a range or chosen posts, list runs (pages of up to 100, newest first), one run `GET /{id}` (404 `not_found`), sources, failed posts, the days without data `GET /missing-days` → `{from, to, days: [{day, sources}]}` (`run/MissingDays`: the window D-15…D-2 of `ZONE` from the injected `Clock`; a day is covered for a configured source by a RANGE run `succeeded`/`partial` naming it, the cron's or an admin's; a source's window starts at its first covered day ever, so one never covered misses none; days ascending, `sources` in `Source` order; it starts nothing). A run (`RunView`) has its steps, counters, `scheduled` (requested by `SystemAccount.SCHEDULER`), `needsAttention`, `interruptionCause`, `lastActivityAt`, `llmRetries`, `flexFallbacks` and `inFlight` (`RunRecorder.inFlight`, only for a running run, else 0) | admin session |
 | `InternalPipelineRunController` | `POST /internal/pipeline-runs/daily` (D-2…D-1 of `ZONE` from the injected `Clock`, every configured source, requester `SystemAccount.SCHEDULER`; 202 `[{id, kind}]`), `GET /internal/pipeline-runs/{id}` (status, `startedAt`, `finishedAt`, `lastActivityAt`, `interruptionCause`, the running `step` or `null`, `assessTotal` = the `assess` step's `items_in` or `null`, counters `fetched`, `skipped`, `newPosts`, `assessedOk`, `assessedFailed`, `processingErrors`, `dead`; 404 `not_found`) — the cron's heartbeat reads it | the daily cron `pipeline-trigger`, token `PIPELINE_TRIGGER_TOKEN` only (`internal/`, `config/SecurityConfig`), never a session |
 | `FreshnessController` | `GET /api/freshness` → `{lastUpdatedAt}`: `finished_at` of the RANGE run `succeeded`/`partial` whose range reaches furthest, the latest of those (`run/PipelineRunRepository.findLastUpdate`; an admin's run over older days leaves it) — the feed's label (FR-030); nothing else about runs | any session |
-| `DeploySafetyController` | `GET /api/deploy-safety` → `{safe, reason}`: `reason` (`DeploySafetyReason`) `pipeline_running` before `pipeline_queued` (both can exist: a retry runs, the range waits), `null` when safe (`run/PipelineRunRepository.existsActive` decides it in one statement, then `existsRunning` the reason: two statements would both miss a run leaving the queue between them); 503 `{status: unavailable}` without the database, as `/api/ready` — the CI deploy gate's question (S-14); nothing else about runs | anyone, no session (`PUBLIC_ROUTES`) |
+| `DeploySafetyController` | `GET /api/deploy-safety` → `{safe, reason}`: `reason` (`DeploySafetyReason`) `pipeline_running` before `pipeline_queued` (both can exist: a retry runs, the range waits), `null` when safe (`run/PipelineRunRepository.existsLiveActive` decides it in one statement, then `existsRunning` the reason, over every active run: two statements would both miss a run leaving the queue between them). A dead run — queued or running without activity for `PIPELINE_STALL_TIMEOUT` (`COALESCE(last_activity_at, started_at, created_at)`, the database's clock), and no run ended within it (a queue that just ended a run is alive) — does not hold the deploy (safe when every active run is dead: no instance executes it, and the new instance's start-up recovery interrupts it anyway); it only reads, the next request to start runs interrupts them (`lost`, Rules); 503 `{status: unavailable}` without the database, as `/api/ready` — the CI deploy gate's question (S-14); nothing else about runs | anyone, no session (`PUBLIC_ROUTES`) |
 | `PipelineRunExceptionHandler` | the service's refusals for both run controllers: 409 `pipeline_busy`, 400 `post_dead`, 503 `source_not_configured` | — |
 
 ```
@@ -59,7 +60,7 @@ PipelineRunService.startRange / startPosts → queue → PipelineAgent:
 | `assess/ConcurrentAssessmentDispatcher` | first `LlmClient.check()` (any exception → no post taken, run `failed` with `the LLM check failed: …`); own pool (`PIPELINE_LLM_CONCURRENCY`, default 4); per post: claim → `Assessor.assess` on `AssessmentInputs.of(post)` → record, or release, then the post's result goes into the run's counters at once (`RunRecorder.count`, below); an `LlmConfigurationException` (revoked key, no credit, unknown model) stops taking posts (WARN with the provider's reason), counts no attempt and fails the run (`AssessedBatch.stoppedBy`); an `LlmUnavailableException` (retries used up) stores nothing and releases the post, and `OUTAGE_STREAK` (3) of them in a row stop the step the same way (the breaker, Rules below); any other exception puts the post back with `releaseFailed` (one more technical failure); a failed `count` is a WARN and leaves the post's outcome (a stored post is never a technical error); `cancel(runId)` interrupts the run's post tasks (below); a progress line in the log at most once a minute and after the last post |
 | `assess/AssessmentInputs` | a stored post's assessment input, rebuilt from its raw payload by its source's `RawInputMapper` |
 | `state/PostTransitions` | the post's stage changes, each a conditional `UPDATE` with `updated_at = now()`: claim (only while the run is running), record (only while the run owns the post; resets `technical_failures` and `last_technical_error`), release (back without an attempt; says whether this run put it back), releaseFailed (release + one more technical failure with its message, in the same statement, only while the run owns the post), countTechnicalFailure (one more technical failure on a post already put back, `stored` / `failed`, only while the run is still running); the message is cut to 500 characters, without U+0000 |
-| `state/RunRecorder` | run status, steps, counters, error, `last_activity_at` — every change conditional on the expected status; a step opens only in a running run and closes only once; `interrupt` / `interruptAll` (with the cause) and `stall` (the watchdog) close the open steps in the same transaction; status and stage values are bound from their enums, never written into the SQL |
+| `state/RunRecorder` | run status, steps, counters, error, `last_activity_at` — every change conditional on the expected status; a step opens only in a running run and closes only once; `interrupt` / `interruptAll` (with the cause), `interruptOrphans` (cause `lost`, all or none; Rules) and `stall` (the watchdog) close the open steps in the same transaction; status and stage values are bound from their enums, never written into the SQL |
 
 ## Progress, interruption, watchdog, notifications (S-06)
 
@@ -108,7 +109,10 @@ PipelineRunService.startRange / startPosts → queue → PipelineAgent:
     `RAILWAY_DEPLOYMENT_ID` of the instance that queued it (`deployment_id`), and Railway stops the old
     deployment only once the new one runs, so the new instance's id differs;
   - `restart` — the same deployment, or either id unknown (no `RAILWAY_DEPLOYMENT_ID`, e.g. locally);
-  - `shutdown` — the instance running it was stopping (`PipelineRunService.onClose`).
+  - `shutdown` — the instance running it was stopping (`PipelineRunService.onClose`);
+  - `lost` — nobody executed it any more (its instance was lost without closing it): another instance,
+    asked to start a run, found no queued or running run with activity for `PIPELINE_STALL_TIMEOUT`
+    (`RunRecorder.interruptOrphans`, Rules; `V11` adds the value).
   The run's `error` says the same in words (`InterruptionCause.error()`). Runs interrupted before `V8`
   have no cause.
 - **Watchdog** (`RunWatchdog`, server only, thread `pipeline-watchdog`). Every fifth of
@@ -150,15 +154,20 @@ PipelineRunService.startRange / startPosts → queue → PipelineAgent:
   ends. `15m` with the defaults (`120s`, tier `default`), `39m` on production (`300s`, `flex`). A shorter
   explicit value is accepted with a startup WARN naming `PIPELINE_STALL_TIMEOUT` and `LLM_TIMEOUT`; a bare
   number, ISO-8601 (`PT5M`) or a value outside `1ms`–`1d` throws `InvalidSettingsException` from the
-  `RunWatchdog` bean, and the server's start fails with an `APPLICATION FAILED TO START` block
-  (`config/InvalidSettingsFailureAnalyzer`, no stack trace at ERROR).
+  `pipelineStallSettings` bean (`PipelineStallConfiguration`, `@ConditionalOnWebApplication`), and the server's start fails with an `APPLICATION FAILED TO START` block
+  (`config/InvalidSettingsFailureAnalyzer`, no stack trace at ERROR). That one bean is injected into
+  `RunWatchdog`; `PipelineRunService` (orphans) and `DeploySafetyController` (dead runs) take an
+  `ObjectProvider` and resolve it only when asked, so a context without the web server (an operator
+  command, the pre-deploy `migrate`) never reads the setting.
 - **Notifications.** Every way a run ends calls `RunNotifications.runEnded(runId)` directly (not through
-  Spring events: recovery runs before listeners are known to be registered), four places:
+  Spring events: recovery runs before listeners are known to be registered), five places:
   1. `PipelineRunService.execute`, in `finally` after `close` (its own end, an exception; not after an
      `InterruptedException`, which `onClose` already reported);
   2. `PipelineRunService.onClose`, for each run it interrupted (`shutdown`);
   3. `PipelineStartupRecovery.recover`, for each run it interrupted, after its transaction commits;
-  4. `PipelineRunService.stopStalled`, after the watchdog's stop.
+  4. `PipelineRunService.stopStalled`, after the watchdog's stop;
+  5. `PipelineRunService.cleanUpOrphans` (the start of `queue()`), for each orphaned run it interrupted
+     (`lost`), after its transaction commits.
   `runEnded` notifies only a run with `PipelineRun.needsAttention()` — `failed` (the breaker's stop
   included), `interrupted`, `partial` with a `dead` post or a technical error (a single provider outage
   included), or `succeeded` / `partial` with skipped elements (a
@@ -218,7 +227,31 @@ PipelineRunService.startRange / startPosts → queue → PipelineAgent:
   any exception; start-up recovery interrupts unfinished runs and puts back every post `assessing`
   without a queued or running run (`PostTransitions.releaseOrphans`), also one claimed just as its run
   was interrupted by a stopping instance. A run of this instance that hangs (no progress for
-  `PIPELINE_STALL_TIMEOUT`) is stopped by `RunWatchdog`, so it never blocks the queue.
+  `PIPELINE_STALL_TIMEOUT`) is stopped by `RunWatchdog`, so it never blocks the queue. A run nobody
+  executes any more (its instance lost without `onClose`, a run queued on the old instance after the new
+  one's recovery, a `submit` that never reached the executor, a failed start-up recovery) is cleaned up
+  on request (S-11): every request to start runs (`queue()`: the cron's and the admin's) first runs
+  `cleanUpOrphans` in its own transaction under the same advisory lock —
+  - only when this instance's `own` is empty (its own runs are its watchdog's), `RunRecorder.interruptOrphans`:
+    one statement marks every queued and running run `interrupted` (`lost`, open steps `interrupted`)
+    when none of them has `COALESCE(last_activity_at, started_at, created_at)` within
+    `PIPELINE_STALL_TIMEOUT` by the database's clock (`created_at` is the application's clock, a negligible
+    difference) — all or none, the queue being one: a queued run
+    behind a dead running one is as orphaned, one run with progress means a living queue, and so does any
+    run that ended within the timeout (between a long run's end and the start of the run queued with it,
+    that run shows only its old creation); the same age
+    as the watchdog's; one edge is accepted — the `NOT EXISTS` is evaluated once on the statement's
+    snapshot, so a live run of another instance (deploy overlap only) whose progress commits at the
+    threshold's edge while it runs is still marked `lost` (no row locks, Rules);
+  - always `PostTransitions.releaseOrphans`, so a post left `assessing` by an ended run goes back at
+    every request to start runs, not only at start-up;
+  - committed before the request is decided — `startRange` / `startPosts` run it first, before any
+    refusal — so it stays when the request is then refused (503 `source_not_configured`, 409
+    `pipeline_busy`, 400 `post_dead`), and the refusals keep their order; after the commit WARN `Marked N orphaned pipeline run(s)
+    interrupted: no queued or running run showed activity for <t> and none runs on this instance: [ids]`,
+    WARN `Put back N post(s) left assessing by ended runs` and `runEnded` for each run.
+  Nothing else asks: no timer, so an idle API still sleeps; reads (`/admin`, `/api/deploy-safety`) never
+  write.
 - Whoever ends a run reports it to `RunNotifications.runEnded`; a new way to end a run adds that call.
 - Start-up recovery runs before the web server opens its port (`SmartInitializingSingleton`, not
   `ApplicationReadyEvent`): it interrupts every queued or running run without asking who created it,
@@ -264,9 +297,23 @@ PipelineRunService.startRange / startPosts → queue → PipelineAgent:
   (`failed`, `interrupted`, `queued`, `running` and RETRY/POSTS runs do not; `partial` and an admin's do),
   the first covered day from the history, the exact JSON; `api/PipelineRunWithoutSourceIT` also that no
   day is missing without a configured source. `api/DeploySafetyIT`: every answer (a running run
-  outranks a queued one, ended runs are safe), no session and no cookie, 503 without the database.
+  outranks a queued one, ended runs are safe; a dead running run is safe and its row unchanged, a dead
+  queued run is safe, a running run with recent activity is not, nor a live queued run behind a dead
+  running one), no session and no cookie, 503 without the database.
   `PipelineStartupRecoveryIT`: recovery before the port, the cause `deploy` / `restart`, steps
   `interrupted`, notifications.
+- `OrphanedRunIT` (`PIPELINE_STALL_TIMEOUT=5s`; "another instance's" runs are rows inserted with SQL,
+  `deployment_id = 'deployment-other'`): a dead running run with an open step and a held post plus a
+  queued run behind it → 202, both `interrupted` / `lost`, the step `interrupted`, the post `stored`, two
+  notifications, both WARN lines, new runs created; a lone orphaned queued run; a run with activity →
+  409, unchanged; a dead running run next to a fresh queued one → 409, nothing cleaned up (all or none);
+  activity 2 s ago → kept; a run of this instance in progress → 409, the dead foreign row unchanged; a post
+  left `assessing` by an ended run put back although the request gets 409 or 400 `post_dead`; a queued run
+  behind a run that just ended → 409, kept (a living queue); `PipelineRunServiceTest` (mocks): a failing
+  clean-up is an ERROR and the request is still decided, 503 `source_not_configured` comes after the
+  clean-up, a run of this instance's own keeps `interruptOrphans` from being asked; the admin's
+  `POST /api/admin/pipeline-runs` cleans up the same way. `MigrationsIT` (outside this package) accepts
+  `lost` and still rejects an unknown cause.
 - `RunWatchdogIT` (`PIPELINE_STALL_TIMEOUT=5s`, `PIPELINE_LLM_CONCURRENCY=1`, a scripted `LlmClient`
   held on a latch): a hanging run ends `failed` with its `assess` step closed and its posts back without
   an attempt, its held call is interrupted, so the run queued behind it assesses on the only LLM thread,

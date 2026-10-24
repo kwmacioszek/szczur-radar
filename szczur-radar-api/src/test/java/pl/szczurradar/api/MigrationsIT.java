@@ -36,7 +36,7 @@ class MigrationsIT {
 		List<Map<String, Object>> history = jdbc.queryForList(
 				"SELECT version, success FROM flyway_schema_history WHERE version IS NOT NULL ORDER BY installed_rank");
 		assertThat(history).extracting(row -> row.get("version")).containsExactly("1", "2", "3", "4", "5", "6", "7",
-				"8", "9", "10");
+				"8", "9", "10", "11");
 		assertThat(history).allSatisfy(row -> assertThat(row.get("success")).isEqualTo(true));
 	}
 
@@ -142,7 +142,8 @@ class MigrationsIT {
 				+ " 'failed', '" + admin + "', 'deploy')", "ck_pipeline_runs_interruption_status");
 		assertRejected("UPDATE pipeline_runs SET interruption_cause = 'restart' WHERE id = '" + run + "'",
 				"ck_pipeline_runs_interruption_status");
-		for (String cause : List.of("deploy", "restart", "shutdown")) {
+		// V11 adds lost: a run another instance found without its executor (S-11).
+		for (String cause : List.of("deploy", "restart", "shutdown", "lost")) {
 			jdbc.update("INSERT INTO pipeline_runs (kind, status, requested_by, interruption_cause, deployment_id)"
 					+ " VALUES ('retry', 'interrupted', ?, ?, 'deployment-1')", admin, cause);
 		}

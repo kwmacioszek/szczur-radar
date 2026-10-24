@@ -744,6 +744,8 @@ PR #49 was squash-merged as `54c4fc2` (13:22 UTC), after S-05 (#50).
   - `shutdown`: the instance was stopping.
 
   The SPA shows "przerwany — nowe wdrożenie" (a neutral tone: expected after a merge), "przerwany — restart aplikacji" or "przerwany — zatrzymanie aplikacji".
+
+  **Update (S-11):** a fourth cause, `lost` ("przerwany — utracona instancja", warning tone): a run nobody executes any more, which the next request to start runs interrupts once no queued or running run has shown activity for `PIPELINE_STALL_TIMEOUT`. The watchdog still watches only its own instance's runs; another instance's dead runs no longer wait for a restart (section S-11).
 - **Notifications** (in the app only). A run that ends `failed`, `interrupted`, or `partial` with a dead post or a technical error gives every admin who can log in one notification. **Update (S-09, 2026-10-20):** a technical error now also includes a single provider outage the run went on after (the call failed after its retries; no attempt used), and three outages in a row end the run `failed` (section S-09).
   - A `partial` run whose only failures are `failed` posts with attempts left gives none: the next run retries them. A usual night (about 2% failed posts, no dead post) therefore gives none.
   - No push, e-mail or webhook. The cron's exit codes are unchanged, so Railway's "deployment crashed" rule still reports exactly what it reported before (a cron run exits 1 when a run ends `failed` or `interrupted`, never for `partial`).
@@ -942,7 +944,7 @@ Exit codes: 0 allowed (also an empty plan), 1 refused (`::error::` lines with th
 
 A deploy interrupts a pipeline run that is queued or running. The guard asks `GET <web>/api/deploy-safety` and holds the plan, the apply and, through the workflow's conclusion, the code deploy.
 
-- **The endpoint** (`pipeline/api/DeploySafetyController`) is public and listed in `PUBLIC_ROUTES` ("CI deploy gate"). It reveals only whether a run is queued or running:
+- **The endpoint** (`pipeline/api/DeploySafetyController`) is public and listed in `PUBLIC_ROUTES` ("CI deploy gate"). It reveals only whether a run is queued or running. **Update (S-11):** a run without activity for `PIPELINE_STALL_TIMEOUT` is dead and does not count: `safe:true` also while every queued or running run is dead (section S-11):
   - 200 `{"safe":true,"reason":null}`;
   - 200 `{"safe":false,"reason":"pipeline_running"}`, which wins over `"pipeline_queued"` when both are true;
   - 503 `{"status":"unavailable"}` without the database, like `/api/ready`.
@@ -960,7 +962,7 @@ A deploy interrupts a pipeline run that is queued or running. The guard asks `GE
 ### Runbook — the guard waits or fails (operator)
 
 1. **It waits.** The `railway-config` log shows `pipeline_running` or `pipeline_queued` once a minute. Usually nothing is wrong: an admin's run or the night's run (about 00:30–01:30 UTC) is in progress. Watch it in `/admin`. The guard passes on its first poll after the run ends, and the code deploys after the workflow.
-2. **A zombie run.** A run stays `running` or `queued` in the database while nothing executes it (audit A2; the fix is S-11). The S-06 watchdog stops a run without progress only on the instance that runs it. Restart the API (`railway redeploy -s szczur-radar-api -e <env> -y`): its start-up recovery marks unfinished runs `interrupted` and puts their posts back. Then check that `curl -s <web>/api/deploy-safety` says `{"safe":true,"reason":null}`.
+2. **A zombie run.** A run stays `running` or `queued` in the database while nothing executes it (audit A2). The S-06 watchdog stops a run without progress only on the instance that runs it. Since S-11 (section S-11) the guard passes by itself once no queued or running run has shown activity for `PIPELINE_STALL_TIMEOUT` (production `39m`, PR env `15m`): `/api/deploy-safety` then says `{"safe":true,"reason":null}` and the guard passes on its next poll. A guard that meets a younger zombie waits at most until its last activity is that old, within its 90 min. The zombie itself stays `running` in `/admin` until the next start of a run (the cron's or an admin's), which marks it `interrupted` (cause `lost`) and puts its posts back. A restart of the API (`railway redeploy -s szczur-radar-api -e <env> -y`) only does it sooner: its start-up recovery marks unfinished runs `interrupted` and puts their posts back. Then check that `curl -s <web>/api/deploy-safety` says `{"safe":true,"reason":null}`.
    - If the guard is still waiting, it passes on its next poll.
    - If it has already failed: **"Re-run failed jobs" works only before the deadline**, because the deadline counts from the run's creation, not from the re-run, and a re-run past it fails at once. Past the deadline, use a new push (on `main`: a new merge, by a human), or `railway redeploy --from-source -s <service> -e <env>` for the services whose code must deploy. A redeploy does not apply the commit's `.railway/railway.ts`, so when the commit changes it, only a new push applies it. Not verified yet: whether Wait for CI also holds back a `railway redeploy` of a commit whose workflow ended red (`deploy-verify` assumes it does). If the redeploy ends `SKIPPED`, push again.
 3. **The guard itself is wrong** (e.g. the endpoint answers `safe:false` with no run in `/admin`, and a restart does not help): set `DEPLOY_GUARD=off`, re-run before the deadline or push again, fix the cause, then delete the variable.
@@ -1553,6 +1555,87 @@ No secret of the monitor is in szczur-radar, and szczur-radar's secrets (`RAILWA
    - revert the deletion in szczur-radar (a PR reverting the commit that removed `.github/workflows/deploy-verify.yml` and `tools/deploy-gate/verify-deploy.sh`, with its test step and docs; merged by a human), which brings `deploy-verify` back from the next deploy on;
    - disable (or delete) the webhook in the Railway project's settings, so the monitor stops getting events. The Worker and the monitor repo can stay; revoke `GITHUB_DISPATCH_TOKEN` and `RAILWAY_API_TOKEN` if the monitor is dropped for good.
 4. **Record and close.** Comment the results on this change's issue: the merge commit, the monitor's run IDs per service and their verdicts. Close the issue only after this production verification.
+
+## S-11: utknięty przebieg sam wraca do obiegu (stuck-run-self-heals)
+
+**Status:** delivered by PR #103; production verification and closure in issue #70. Change: `context/archive/2026-10-23-stuck-run-self-heals/`. Before S-11 a run left `queued` or `running` while nothing executed it (a "zombie", audit A2) blocked everything that asks for the queue: the cron's and the admin's start got 409 `pipeline_busy`, and `/api/deploy-safety` held every deploy for up to 90 min. Such a run comes from an instance that vanished without `onClose`, a run queued on the old instance after the new one's start-up recovery (Railway stops the old instance only once the new one is active), a `submit` that never reached the executor, or a failed start-up recovery (seen on production 2026-10-23 07:12 UTC, a Postgres password error). Only start-up recovery cleared it, and a start needs the API to fall asleep first, which the cron's and the guard's polling prevented. The S-06 watchdog sees only its own instance's runs.
+
+### What changes
+
+- **Clean-up on request.** Every request to start runs (`POST /internal/pipeline-runs/daily`, `POST /api/admin/pipeline-runs`) first cleans up, in its own transaction under the queue's advisory lock (`PipelineRunService.cleanUpOrphans`):
+  - only when this instance has no run of its own (those are its watchdog's): if **no** queued or running run showed activity for `PIPELINE_STALL_TIMEOUT` (`COALESCE(last_activity_at, started_at, created_at)`, by the database's clock; production `39m`, PR env `15m`) and no run ended within it (a queue that just ended a run is alive, though the run queued behind it shows only its old creation), all of them become `interrupted` with the cause `lost`, error `interrupted: the instance running it was lost without closing it`, their open steps `interrupted` (`RunRecorder.interruptOrphans`, one statement);
+  - all or none: the queue is one, so a queued run behind a dead running one is as orphaned, and one run with activity within the timeout means a living queue (409 as before, nothing touched);
+  - in every case the posts left `assessing` by a run that is no longer queued or running go back (`PostTransitions.releaseOrphans`, until now only at start-up), e.g. a post claimed just as its run was interrupted (audit A4);
+  - the clean-up is committed before the request is decided, so it stays when the request is then refused (503 `source_not_configured`, 409 `pipeline_busy`, 400 `post_dead`); a failing clean-up is logged at ERROR (`The clean-up of orphaned pipeline runs failed; the request is decided without it`) and never blocks the request. Then the request is decided as before: 202 with the new runs, or a refusal.
+- **The deploy guard ignores dead runs.** `GET /api/deploy-safety` answers `{"safe":true,"reason":null}` while every queued or running run is dead by the same timeout (`PipelineRunRepository.existsLiveActive`). It only reads: the dead run stays `running` in `/admin` until the next request to start runs, or until the deploy's start-up recovery interrupts it. When a live run makes it unsafe, the reason looks at every active run, as before.
+- **Notifications.** A `lost` run is `interrupted`, so every admin gets an in-app notification. The SPA shows "przerwany — utracona instancja" in the warning tone (only `deploy` is neutral), on `/admin`, the run page and the bell.
+- **Migration** `V11__pipeline_run_interruption_lost.sql`: `ck_pipeline_runs_interruption_cause` allows `lost`; no new table or column (`tools/db-backup/tables.sh` unchanged).
+- **`PIPELINE_STALL_TIMEOUT`** is now one bean of the server (`PipelineStallConfiguration`) for the watchdog, the queue and the guard. No new variable; an invalid value still fails the server's start, and the pre-deploy `migrate` and the operator commands still do not read it.
+- **Unchanged.** The watchdog, start-up recovery, `trigger.sh` (its 409 retries every 60 s for up to `TRIGGER_BUSY_TIMEOUT` `60m` outlast the 39 min threshold) and `wait-safe.sh` (up to 90 min). The API asks the database nothing more while idle: only a request does it, so it still sleeps. Railway's `overlapSeconds` and `drainingSeconds` are unchanged. A rare drift of a run's counters against `assessments` (the `claim` race, A4) stays; only its visible effect, a post stuck `assessing`, is healed.
+
+### What the operator sees
+
+**In the API log**, after the clean-up's commit (the time in the `Durations` format):
+
+```text
+WARN  Marked 1 orphaned pipeline run(s) interrupted: no queued or running run showed activity for 39m 00s and none runs on this instance: [4f0c…]
+WARN  Put back 3 post(s) left assessing by ended runs
+INFO  Pipeline run 4f0c… (range) ended interrupted and needs attention: 1 admin(s) notified
+```
+
+The second line comes alone, with no interrupted run, when a request finds only posts left `assessing`. Start-up recovery keeps its own line (`Marked N unfinished pipeline run(s) interrupted: […]`, causes `deploy` / `restart`).
+
+**In the app:** the zombie stays visible as `running` / `queued` (its "Ostatnia aktywność" older than the timeout) until the next start; then it shows "przerwany — utracona instancja" and the bell has a notification.
+
+### Runbook — a zombie run (operator)
+
+1. **Recognise it.** `/admin` shows a run `running` or `queued` whose last activity (run page, "Ostatnia aktywność") is older than `PIPELINE_STALL_TIMEOUT` (production `39m`), and the API log has no progress for it.
+2. **Usually nothing to do.** Once its last activity is older than the timeout, the deploy guard passes, and the next night's cron (or an admin's "Uruchom") cleans it up and starts its runs. Before the timeout a start gets 409 as before: the run may still be alive on another instance.
+3. **Sooner:** start a run from `/admin` once the timeout has passed, or restart the API (`railway redeploy -s szczur-radar-api -e <env> -y`; start-up recovery interrupts it at once with cause `deploy` / `restart`). Never during a live run.
+4. **A notification for a `lost` run** says an instance was lost without closing: look at the API's deployments around the run's last activity (an overlap, a crash, a failed start-up recovery). Its posts went back, and the next RETRY run takes them.
+
+### PR-env verification (szczur-radar-pr-103; runbook, plan Phase 4 item 3)
+
+Run 2026-10-24 on `f1ff8fd` (result below; details in issue #70). Every SQL statement runs as `railway ssh -s postgres -e szczur-radar-pr-103 -- psql -U postgres -d railway -c "<SQL>"` (add `-p <project id>` in a checkout not linked to the project) (the tunnel of `railway connect` drops, section S-15). The PR env runs with `PIPELINE_STALL_TIMEOUT` unset (`15m`). The start in step 3 makes real Wykop and LLM calls, which PR envs allow.
+
+0. **Preconditions.** The API and the web are deployed from this branch (`V11` applied; deploy the web as in section S-14, "PR-env verification", if its deployment was skipped). An admin account in the PR env (`create-user --role admin`, section S-08). The API is awake (`curl -s <web>/api/ready` 200) and no run is active: `SELECT count(*) FROM pipeline_runs WHERE status IN ('queued', 'running')` is 0. Keep the API awake until step 3 (an API that sleeps and wakes runs start-up recovery, which interrupts the inserted row with cause `deploy` or `restart` instead of `lost`; then start again from step 1).
+1. **A dead run of "another instance"**, with an open step and a post it holds (the scheduler as requester):
+   - `INSERT INTO pipeline_runs (kind, status, requested_by, created_at, started_at, last_activity_at, deployment_id) VALUES ('retry', 'running', '00000000-0000-4000-8000-000000000001', now() - interval '1 hour', now() - interval '1 hour', now() - interval '1 hour', 'deployment-other') RETURNING id` — note the id as `<run>`;
+   - `INSERT INTO pipeline_run_steps (run_id, step, started_at, items_in) VALUES ('<run>', 'assess', now() - interval '1 hour', 1)`;
+   - `UPDATE posts SET stage = 'assessing', assessing_run_id = '<run>' WHERE id = (SELECT id FROM posts WHERE stage = 'stored' ORDER BY created_at LIMIT 1) RETURNING id` — note it as `<post>`; a PR env without a `stored` post skips the post (`OrphanedRunIT` covers it).
+2. **The guard.** `curl -s <web>/api/deploy-safety` returns `{"safe":true,"reason":null}`, and the row is still `running` (the route only reads).
+3. **Start a run.** As the admin, "Uruchom" in `/admin` for yesterday's range; or the cron with `TRIGGER_IN_ANY_ENVIRONMENT=true` and `PIPELINE_TRIGGER_TOKEN` on the PR env's API, then a redeploy of the cron (as in section S-08). Expected: 202 (the new runs appear in `/admin`, no `pipeline_busy`).
+4. **Check the result.**
+   - `SELECT status, interruption_cause, error, finished_at IS NOT NULL FROM pipeline_runs WHERE id = '<run>'` → `interrupted | lost | interrupted: the instance running it was lost without closing it | t`;
+   - `SELECT status, finished_at IS NOT NULL FROM pipeline_run_steps WHERE run_id = '<run>'` → `interrupted | t`;
+   - `SELECT stage, assessing_run_id FROM posts WHERE id = '<post>'` → `stored` (or `failed` if it had attempts) and an empty `assessing_run_id`;
+   - the API log (`railway logs -s szczur-radar-api -e szczur-radar-pr-103`) has `Marked 1 orphaned pipeline run(s) interrupted: no queued or running run showed activity for 15m 00s and none runs on this instance: [<run>]` and, with a post, `Put back 1 post(s) left assessing by ended runs`;
+   - `/admin` and the run page show "przerwany — utracona instancja" in the warning tone, and the bell has a notification for `<run>` (the human's check, plan Progress 4.5).
+5. **A fresh row is not safe.** After the runs of step 3 have ended (while they run, the guard says `pipeline_running` anyway): the same `INSERT` as in step 1 with `now()` for `created_at`, `started_at` and `last_activity_at` → `curl -s <web>/api/deploy-safety` returns `{"safe":false,"reason":"pipeline_running"}`.
+6. **Clean up at once** (a fresh row holds the PR env's guard and a start for 15 min): `DELETE FROM notifications WHERE run_id IN (SELECT id FROM pipeline_runs WHERE deployment_id = 'deployment-other')`, then the same for `pipeline_run_steps`, then `DELETE FROM pipeline_runs WHERE deployment_id = 'deployment-other'`. `curl -s <web>/api/deploy-safety` returns `{"safe":true,"reason":null}`. With the cron used: delete `TRIGGER_IN_ANY_ENVIRONMENT` and redeploy the cron (section S-08).
+7. **Record** on issue #70: both `curl` outputs, the SQL rows of step 4, the WARN line, the new runs' ids.
+
+Result (2026-10-24, API `f1ff8fd` deployment `1461bbcf`, web `c2218bd`; [issue #70](https://github.com/kwmacioszek/szczur-radar/issues/70#issuecomment-6385844745)):
+
+- **Setup.** The PR env had no admin and no post. A test account `s11-admin@example.com` (admin) was created with `create-user` over `railway ssh` and activated through `/api/auth/activation` with a random password; the link and the password were never printed. Without posts, step 1 had no post `assessing`.
+- **Steps 1–4.** Dead run `ed28be71…` → `{"safe":true,"reason":null}`, the row still `running`. The admin's start for 2026-10-23 at 14:35:17Z → 202, RANGE `51573642…`; the dead run became `interrupted | lost` with its step `interrupted` and 1 notification; the API log had `Marked 1 orphaned pipeline run(s) interrupted: no queued or running run showed activity for 15m 00s and none runs on this instance: [ed28be71-…]`. The RANGE run ended `partial` (fetched 277, ok 262, failed 15).
+- **A run that just ended keeps the queue alive** (review finding F1): a dead row inserted 26 s after that run ended → `{"safe":false,"reason":"pipeline_running"}`. So a new orphan is cleaned up only once the last run ended more than `PIPELINE_STALL_TIMEOUT` ago.
+- **Step 5.** A fresh row → `{"safe":false,"reason":"pipeline_running"}`. **Step 6:** after the clean-up `{"safe":true,"reason":null}`.
+- **Lessons for a rerun.**
+  - Step 6 deletes the `lost` run too: keep one for the human's check of `/admin`, the run page and the bell (plan Progress 4.5). Here a second one, `3359f2c9…`, was made at 15:11Z with a start of chosen posts (one post, one LLM call) and left in the database.
+  - The API image has no `curl` and the PR env's API has no `PIPELINE_TRIGGER_TOKEN`, so `/internal/**` cannot be called from inside: start as an admin, or through the cron as in section S-08.
+
+### Rollback: fix-forward only
+
+`V11` only widens a `CHECK`, so the old instance keeps working during the deploy window. An API from before S-11 does not know `lost`: after the first `lost` run its converter may fail to read that row (not verified), as `/admin` did with S-06's `interrupted` step (section S-06, "Rollback"). Repair a bad S-11 release with a new commit; never edit `V11`.
+
+### Runbook — after the merge (operator; tracked in issue #70, not in the plan's Progress)
+
+0. **Standing rules.** No merge to `main` while `/admin` shows a run `RUNNING`, and not between about 00:30 and 01:30 UTC (section S-05). The merge deploys the API and the web; `V11` is the only migration; no variable or service changes.
+1. **CI on `main`.** All jobs green; `railway-config` plans no change.
+2. **Migration and start.** The pre-deploy `migrate` reaches `v11`; the API starts with the usual `Pipeline watchdog: a run without progress for 39m 00s is stopped (checked every 1m 00s)` and no ERROR; `/api/ready` 200; `curl -s https://szczur-radar-web-production.up.railway.app/api/deploy-safety` returns `{"safe":true,"reason":null}`.
+3. **First night.** The cron ends `OK: …` as before; a usual night has no `Marked … orphaned` and no `Put back …` line. If one appears, record which run and why it was orphaned.
+4. **Record and close.** Comment the results on issue #70: the merge commit, deployment IDs, the migration line, the first night's cron line. Close the issue only after this production verification.
 
 ## S-13: dni bez danych (missed-night-detection)
 

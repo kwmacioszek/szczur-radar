@@ -76,6 +76,7 @@ describe('runTone', () => {
     expect(runTone({ status: 'interrupted', interruptionCause: 'deploy', skipped: 0 })).toBe('neutral')
     expect(runTone({ status: 'interrupted', interruptionCause: 'restart', skipped: 0 })).toBe('warning')
     expect(runTone({ status: 'interrupted', interruptionCause: 'shutdown', skipped: 0 })).toBe('warning')
+    expect(runTone({ status: 'interrupted', interruptionCause: 'lost', skipped: 0 })).toBe('warning')
   })
 
   it('warns about a succeeded run with skipped elements; a partial run stays a warning', () => {
@@ -92,6 +93,7 @@ describe('stepTone', () => {
     expect(stepTone('failed', null)).toBe('destructive')
     expect(stepTone('interrupted', null)).toBe('warning')
     expect(stepTone('interrupted', 'restart')).toBe('warning')
+    expect(stepTone('interrupted', 'lost')).toBe('warning')
     expect(stepTone('interrupted', 'deploy')).toBe('neutral')
   })
 })
@@ -103,6 +105,9 @@ describe('runStatusLabel', () => {
     )
     expect(runStatusLabel({ status: 'interrupted', interruptionCause: 'shutdown', skipped: 0 })).toBe(
       'przerwany — zatrzymanie aplikacji',
+    )
+    expect(runStatusLabel({ status: 'interrupted', interruptionCause: 'lost', skipped: 0 })).toBe(
+      'przerwany — utracona instancja',
     )
   })
 

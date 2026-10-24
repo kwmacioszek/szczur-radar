@@ -52,7 +52,12 @@ const labels: Record<string, Record<string, string>> = {
     failed: 'błąd',
     interrupted: 'przerwany',
   },
-  interruptionCause: { deploy: 'nowe wdrożenie', restart: 'restart aplikacji', shutdown: 'zatrzymanie aplikacji' },
+  interruptionCause: {
+    deploy: 'nowe wdrożenie',
+    restart: 'restart aplikacji',
+    shutdown: 'zatrzymanie aplikacji',
+    lost: 'utracona instancja',
+  },
   stepStatus: { running: 'trwa', succeeded: 'zakończony', failed: 'błąd', interrupted: 'przerwany' },
   step: { fetch: 'pobranie', store: 'zapis', select: 'wybór', assess: 'ocena', summarize: 'podsumowanie' },
   failureClass: {

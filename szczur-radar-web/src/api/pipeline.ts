@@ -9,9 +9,11 @@ export type RunStepName = 'fetch' | 'store' | 'select' | 'assess' | 'summarize'
 export type StepStatus = 'running' | 'succeeded' | 'failed' | 'interrupted'
 /**
  * Why an interrupted run stopped — pipeline/run/InterruptionCause: another deployment took over (`deploy`), the
- * application restarted (`restart`) or the instance was stopping (`shutdown`).
+ * application restarted (`restart`), the instance was stopping (`shutdown`) or the instance running it was lost
+ * without closing it, so another instance's start request cleaned it up after `PIPELINE_STALL_TIMEOUT` without
+ * activity (`lost`).
  */
-export type InterruptionCause = 'deploy' | 'restart' | 'shutdown'
+export type InterruptionCause = 'deploy' | 'restart' | 'shutdown' | 'lost'
 
 export interface RunStep {
   step: RunStepName

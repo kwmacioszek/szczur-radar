@@ -168,7 +168,7 @@ m2 = {  # lane, position, title, outcome, status, prerequisites, change id
     "S-09": ("C", 0, "Awaria dostawcy nie zabija postów", "awaria dostawcy LLM ani błąd naszego kodu nie zabija postów; post z powtarzalnym błędem technicznym ma limit", "done", "—", "attempt-accounting"),
     "S-17": ("C", 1, "Przebieg bez Embabel", "przebieg działa bez Embabel, przerwanie dociera do oceny, a testy silnika są skupione i niezależne od kolejności", "proposed", "S-09", "pipeline-without-embabel"),
     "S-10": ("C", 2, "Zła konfiguracja LLM zatrzymuje start", "operator dostaje błąd startu przy LLM_TIMEOUT bez jednostki; czasy są parsowane jedną regułą", "done", "—", "llm-config-fail-fast"),
-    "S-11": ("C", 3, "Utknięty przebieg sam wraca do obiegu", "przebieg po martwej instancji i post z wyścigu claim wracają do obiegu bez restartu API", "ready", "—", "stuck-run-self-heals"),
+    "S-11": ("C", 3, "Utknięty przebieg sam wraca do obiegu", "przebieg po martwej instancji i post z wyścigu claim wracają do obiegu bez restartu API", "done", "—", "stuck-run-self-heals"),
     "S-16": ("C", 4, "Wykop nie gubi postów po cichu", "stronicowanie Wykopu nie gubi elementów po cichu, a chwilowy błąd Wykopu nie zabija nocy", "done", "—", "wykop-ingest-completeness"),
     "S-14": ("D", 0, "Bezpieczna bramka wdrożeń", "merge nie wdroży czerwonego commita, crony czekają na CI, po apply jest kontrola zdrowia, ręczne zmienne nie blokują wdrożeń", "done", "—", "safe-deploy-gate"),
     "S-15": ("D", 1, "Kopia bazy sprawdzana w całości", "sprawdzenie kopii bazy obejmuje wszystkie tabele i odrzuca kopię pustej bazy", "done", "—", "backup-check-completeness"),
@@ -283,13 +283,13 @@ bx = px + 164
 text(bx, py + 34, "POSTĘP KAMIENIA MILOWEGO", 10.5, 700, C["muted"], spacing="1.6")
 text(bx, py + 62, "M-2 · MVP Quality & Reliability Hardening", 17, 700)
 text(px + pw - 24, py + 62, "8 / 13", 17, 700, C["text"], anchor="end")
-m2_order = [("F-04", "done"), ("S-08", "done"), ("S-09", "done"), ("S-10", "done"), ("S-11", "ready"), ("S-12", "parked"),
+m2_order = [("F-04", "done"), ("S-08", "done"), ("S-09", "done"), ("S-10", "done"), ("S-11", "done"), ("S-12", "parked"),
             ("S-13", "progress"), ("S-14", "done"), ("S-15", "done"), ("S-16", "done"), ("S-17", "proposed"), ("S-18", "proposed"), ("S-19", "done")]
 segw = (pw - 164 - 24 - 12 * 5) / 13
 for i, (iid, st) in enumerate(m2_order):
     lab, fg, bg = STATUS[st]
     rect(bx + i * (segw + 5), py + 78, segw, 12, 3, bg, fg + ("aa" if st not in ("proposed", "parked") else "55"), 1)
-legend_items = [("done", "8 ukończone"), ("progress", "1 w toku"), ("ready", "1 gotowe do planowania"), ("proposed", "2 proponowane"), ("parked", "1 zaparkowane"), ("blocked", "0 zablokowanych")]
+legend_items = [("done", "9 ukończone"), ("progress", "1 w toku"), ("ready", "0 gotowe do planowania"), ("proposed", "2 proponowane"), ("parked", "1 zaparkowane"), ("blocked", "0 zablokowanych")]
 for li, (st, lab) in enumerate(legend_items):
     fg = STATUS[st][1]
     lx = bx + (0, 122, 218)[li % 3]
