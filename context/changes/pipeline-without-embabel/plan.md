@@ -481,9 +481,9 @@ Dokumentacja projektu opisuje stan bez Embabel; `deploy-plan.md` dostaje sekcję
 
 #### Automated
 
-- [x] 5.1 Dokumenty bieżące bez Embabel: `grep -il embabel REPOSITORY_GUIDELINES.md szczur-radar-api/README.md .github/workflows/ci.yml .railway/railway.ts context/foundation/infrastructure.md` zwraca nic
-- [x] 5.2 Deploy-plan ma sekcję S-17 ze statusem w formacie lekcji: `grep -c 'S-17: przebieg bez Embabel' context/deployment/deploy-plan.md` wypisuje `1` i `grep -c 'Status:\*\* delivered by PR' context/deployment/deploy-plan.md` nie maleje
-- [ ] 5.3 CI zielone na PR (wszystkie joby, w tym `api-container-smoke` i `railway-config`): `gh pr checks <PR> --watch`
+- [x] 5.1 Dokumenty bieżące bez Embabel: `grep -il embabel REPOSITORY_GUIDELINES.md szczur-radar-api/README.md .github/workflows/ci.yml .railway/railway.ts context/foundation/infrastructure.md` zwraca nic — eb26113
+- [x] 5.2 Deploy-plan ma sekcję S-17 ze statusem w formacie lekcji: `grep -c 'S-17: przebieg bez Embabel' context/deployment/deploy-plan.md` wypisuje `1` i `grep -c 'Status:\*\* delivered by PR' context/deployment/deploy-plan.md` nie maleje — eb26113
+- [x] 5.3 CI zielone na PR (wszystkie joby, w tym `api-container-smoke` i `railway-config`): `gh pr checks <PR> --watch` — eb26113
 
 #### Manual
 
