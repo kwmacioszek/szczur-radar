@@ -86,9 +86,12 @@ import pl.szczurradar.api.posts.PostRepository;
  * the step: the stop may come after the post was put back. Its post counts a technical failure
  * ({@link PostTransitions#countTechnicalFailure}, only while the run is still running and only for a
  * post this step put back itself), then the run a processing error. The log gets a progress line at
- * most every {@link #PROGRESS_INTERVAL} as posts finish, and one after the last. {@link #cancel} (the
- * watchdog stopped the run) interrupts the run's post tasks, so a stopped run never keeps threads of the
- * pool waiting.
+ * most every {@link #PROGRESS_INTERVAL} as posts finish, and one after the last. A stopped run never
+ * keeps threads of the pool waiting, by either of two ways: the thread of {@link #dispatch} interrupted
+ * while it waits for the posts (the watchdog's stop, a stopping instance) cancels the run's post tasks and
+ * throws, and {@link #cancel} (the watchdog's stop) cancels them from outside, also while that thread is
+ * where an interrupt does not reach it (the LLM check on its HTTP client). Either way a cancelled task
+ * counts nothing and is never a post's technical error or an outage.
  */
 @Component
 public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher, DisposableBean {
@@ -226,7 +229,9 @@ public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher, Dis
 	 * socket read at the latest when its attempt's {@code LLM_TIMEOUT} runs out, and it is not tried again
 	 * ({@code TransportRetry}'s wait fails on the pending interrupt). Its result is never stored (the
 	 * stopped run no longer holds its posts), a failure it ends with is not the post's technical error, and
-	 * nothing is counted. Called by {@code PipelineRunService.stopStalled} after the stop is written.
+	 * nothing is counted. Called by {@code PipelineRunService.stopStalled} after the stop is written and
+	 * after it interrupted the run's thread (which, waiting in {@link #dispatch}, cancels the same tasks
+	 * itself): this reaches them also when that thread is not waiting yet, e.g. in the LLM check.
 	 */
 	@Override
 	public void cancel(UUID runId) {
@@ -393,6 +398,9 @@ public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher, Dis
 			return tasks.futures().get(index).get();
 		}
 		catch (InterruptedException ex) {
+			// The run's thread was stopped (the watchdog, a stopping instance): its tasks end as cancel() ends
+			// them, so marked first — an interrupted call is then neither an outage nor a technical error.
+			tasks.cancelled().set(true);
 			Thread.currentThread().interrupt();
 			tasks.futures().forEach(outcome -> outcome.cancel(true));
 			throw new IllegalStateException("interrupted while assessing run " + runId, ex);
@@ -429,7 +437,7 @@ public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher, Dis
 	/**
 	 * A run's post tasks while {@link #dispatch} waits for them.
 	 *
-	 * @param cancelled whether {@link #cancel} stopped them
+	 * @param cancelled whether {@link #cancel}, or an interrupt of the thread waiting for them, stopped them
 	 */
 	private record Tasks(List<Future<Outcome>> futures, AtomicBoolean cancelled) {
 	}

@@ -8,7 +8,6 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import com.embabel.agent.api.common.SomeOf;
 import org.jspecify.annotations.Nullable;
 
 import pl.szczurradar.api.pipeline.run.PipelineRun;
@@ -18,16 +17,15 @@ import pl.szczurradar.api.sources.Source;
 import pl.szczurradar.api.sources.SourcePost;
 
 /**
- * The types on the blackboard of {@link PipelineAgent}. The agent's graph follows from them (GOAP):
+ * The data the steps of {@link RunSequence} hand to each other, in this order:
  *
  * <pre>
- * RunRequest → RouteRun = RangeTarget | SelectionTarget
- * RangeTarget → FetchedBatch → StoredBatch → PendingAssessments
- * SelectionTarget → PendingAssessments
- * PendingAssessments → AssessedBatch → RunSummary (goal)
+ * RunRequest → RANGE: RangeTarget → FetchedBatch → StoredBatch → PendingAssessments
+ *            → RETRY / POSTS: SelectionTarget → PendingAssessments
+ * PendingAssessments → AssessedBatch → RunSummary
  * </pre>
  *
- * Future ML stages go in as new types and actions between {@link StoredBatch} and
+ * Future ML stages go in as new types and steps between {@link StoredBatch} and
  * {@link PendingAssessments}.
  */
 public final class RunFlow {
@@ -68,10 +66,6 @@ public final class RunFlow {
 			postIds = List.copyOf(postIds);
 		}
 
-	}
-
-	/** Exactly one of the two is set; only the set one goes on the blackboard. */
-	public record RouteRun(@Nullable RangeTarget range, @Nullable SelectionTarget selection) implements SomeOf {
 	}
 
 	/**
@@ -161,7 +155,7 @@ public final class RunFlow {
 	public record ProcessingError(UUID postId, String message) {
 	}
 
-	/** The goal: the run's final status, written to {@code pipeline_runs}. */
+	/** The run's final status, written to {@code pipeline_runs}. */
 	public record RunSummary(UUID runId, RunStatus status) {
 	}
 

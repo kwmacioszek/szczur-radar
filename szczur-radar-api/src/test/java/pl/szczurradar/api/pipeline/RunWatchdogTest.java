@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeast;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.times;
@@ -31,7 +32,8 @@ import pl.szczurradar.api.llm.Provider;
 /**
  * One check of the watchdog, without its thread: nothing but an in-memory look while this instance has
  * no run, every run of its own handed to the stop, a failure logged and raised to the operator with its
- * run, an {@link Error} too; and on its thread, the checks going on after an {@link Error}.
+ * run, an {@link Error} too, and a raise that fails stopping nothing; and on its thread, the checks going
+ * on after an {@link Error}.
  */
 @ExtendWith(OutputCaptureExtension.class)
 class RunWatchdogTest {
@@ -108,6 +110,16 @@ class RunWatchdogTest {
 	}
 
 	@Test
+	void aFailingRaiseIsLoggedAndTheOtherRunsAreStillChecked(CapturedOutput output) {
+		assertRaiseFailureStopsNothing(new IllegalStateException("the alert queue is gone"), output);
+	}
+
+	@Test
+	void anErrorOfTheRaiseIsLoggedAndTheOtherRunsAreStillChecked(CapturedOutput output) {
+		assertRaiseFailureStopsNothing(new NoClassDefFoundError("pl/szczurradar/MissingAlert"), output);
+	}
+
+	@Test
 	void anErrorInOneCheckDoesNotEndTheLaterChecks() {
 		UUID run = UUID.randomUUID();
 		Duration timeout = Duration.ofMillis(500);
@@ -136,6 +148,22 @@ class RunWatchdogTest {
 		assertThat(RunWatchdog.checkInterval(Duration.ofMinutes(39))).isEqualTo(Duration.ofMinutes(1));
 		// Never a busy loop, whatever the timeout.
 		assertThat(RunWatchdog.checkInterval(Duration.ofMillis(1))).isEqualTo(RunWatchdog.MIN_CHECK_INTERVAL);
+	}
+
+	/** A check of one run fails and raising that fails with {@code raiseFailure}: the next run is still checked. */
+	private void assertRaiseFailureStopsNothing(Throwable raiseFailure, CapturedOutput output) {
+		UUID failing = UUID.randomUUID();
+		UUID next = UUID.randomUUID();
+		when(service.ownRuns()).thenReturn(List.of(failing, next));
+		when(service.stopStalled(failing, TIMEOUT)).thenThrow(new IllegalStateException("the database is gone"));
+		doThrow(raiseFailure).when(alerts).raise(any(), any(), any());
+
+		watchdog.check();
+
+		verify(service).stopStalled(next, TIMEOUT);
+		assertThat(output).contains("ERROR", "could not check run " + failing,
+				"The pipeline watchdog could not raise WATCHDOG_FAILED for run " + failing,
+				raiseFailure.getClass().getSimpleName());
 	}
 
 }

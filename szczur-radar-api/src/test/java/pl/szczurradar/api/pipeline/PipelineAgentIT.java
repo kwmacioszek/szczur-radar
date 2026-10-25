@@ -19,7 +19,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
-import com.embabel.agent.core.AgentPlatform;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
@@ -63,6 +62,7 @@ import pl.szczurradar.api.llm.ServiceTier;
 import pl.szczurradar.api.llm.transport.TransportException;
 import pl.szczurradar.api.notifications.RunNotifications;
 import pl.szczurradar.api.pipeline.assess.AssessmentDispatcher;
+import pl.szczurradar.api.pipeline.flow.RunSequence;
 import pl.szczurradar.api.pipeline.run.PipelineRun;
 import pl.szczurradar.api.pipeline.run.PipelineRunRepository;
 import pl.szczurradar.api.pipeline.run.RunKind;
@@ -82,7 +82,7 @@ import pl.szczurradar.api.user.User;
 import pl.szczurradar.api.user.UserRepository;
 
 /**
- * The whole run graph on the Embabel platform and Postgres: Wykop is a local server answering the
+ * The whole run sequence on Postgres: Wykop is a local server answering the
  * real, anonymized #gielda answers of 2026-10-01 (12 entries, 4 links), the LLM a scripted client. The
  * admin is notified about the runs that need attention, as their end, a failure or a closing instance
  * reports them. The methods share one database and run in order.
@@ -163,7 +163,7 @@ class PipelineAgentIT {
 	AssessmentDispatcher dispatcher;
 
 	@Autowired
-	AgentPlatform agentPlatform;
+	RunSequence sequence;
 
 	@Autowired
 	JdbcClient jdbcClient;
@@ -393,7 +393,7 @@ class PipelineAgentIT {
 		});
 		// A second instance of the service, as during a deployment overlap; the shared one keeps running.
 		PipelineRunService stopping = new PipelineRunService(runs, posts, sources, recorder, transitions, notifications,
-				dispatcher, agentPlatform, jdbcClient, transaction, stall, alerts, "deployment-stopping");
+				dispatcher, sequence, jdbcClient, transaction, stall, alerts, "deployment-stopping");
 		try {
 			UUID run = stopping.startPosts(List.of(post), admin).getFirst().getId();
 			assertThat(called.await(30, TimeUnit.SECONDS)).isTrue();
@@ -413,9 +413,9 @@ class PipelineAgentIT {
 			// The admin is notified while the instance closes.
 			assertThat(notified(run)).isOne();
 
-			// Its queue thread stops waiting and leaves the run as onClose left it: no second close or report,
-			// which would race the database's shutdown.
-			awaitLog(output, "Pipeline run " + run + ": stopped waiting, the application is stopping");
+			// Its queue thread stops the run's step and leaves the run as onClose left it: no second close or
+			// report, which would race the database's shutdown.
+			awaitLog(output, "Pipeline run " + run + ": stopped, the application is stopping");
 			long deadline = System.nanoTime() + Duration.ofSeconds(30).toNanos();
 			while (stopping.ownRuns().contains(run)) {
 				assertThat(System.nanoTime()).isLessThan(deadline);
@@ -546,7 +546,7 @@ class PipelineAgentIT {
 			assertThat(steps(range)).containsExactly("fetch:failed");
 			assertThat(jdbc.queryForObject("SELECT error FROM pipeline_run_steps WHERE run_id = ? AND step = 'fetch'",
 					String.class, range)).isEqualTo("wykop gave no post to store (fetched 0, skipped 0)");
-			// The action fired once: one search of entries and one of links, no repeated fetch.
+			// The step ran once: one search of entries and one of links, no repeated fetch.
 			assertThat(searches() - searches).isEqualTo(2);
 			awaitClosed(range);
 			assertThat(notified(range)).isOne();
@@ -666,23 +666,35 @@ class PipelineAgentIT {
 		CountDownLatch answered = new CountDownLatch(1);
 		answer(request -> {
 			called.countDown();
-			await(answered);
+			try {
+				answered.await(30, TimeUnit.SECONDS);
+			}
+			catch (InterruptedException ex) {
+				// As TransportRetry interrupted between two attempts: the call ends finding the provider unavailable.
+				Thread.currentThread().interrupt();
+			}
 			throw new LlmUnavailableException(CallFailure.PROVIDER_ERROR, "HTTP 503 after 3 attempts", 3,
 					ServiceTier.DEFAULT, false, null);
 		});
 		// A second instance of the service, as during a deployment overlap; the shared one keeps running.
 		PipelineRunService stopping = new PipelineRunService(runs, posts, sources, recorder, transitions, notifications,
-				dispatcher, agentPlatform, jdbcClient, transaction, stall, alerts, "deployment-stopping");
+				dispatcher, sequence, jdbcClient, transaction, stall, alerts, "deployment-stopping");
 		try {
 			UUID run = stopping.startPosts(List.of(post), admin).getFirst().getId();
 			assertThat(called.await(30, TimeUnit.SECONDS)).isTrue();
 
+			// The stopping instance interrupts the run and its post, then its queue thread, which cancels the
+			// held call: the call ends with the outage after its run was interrupted and its post put back.
 			stopping.onClose();
 			assertThat(run(run)).containsEntry("status", "interrupted");
-			// The held call now ends with the outage, after its run was interrupted and its post put back.
 			answered.countDown();
 
-			awaitLog(output, "Run " + run + " assess: 1/1 (ok 0, failed 0, dead 0, errors 0, unavailable 1)");
+			awaitLog(output, "Assessing post " + post + " in run " + run + " ended with its stopped run");
+			assertThat(output.getAll().lines().filter(line -> line.contains("ended with its stopped run")
+					&& line.contains(run.toString()))).singleElement()
+				.satisfies(line -> assertThat(line).contains("LlmUnavailableException"));
+			assertThat(output.getAll()).doesNotContain("Assessing post " + post + " in run " + run
+					+ " found the LLM provider unavailable");
 			assertThat(post(post)).containsEntry("stage", "failed")
 				.containsEntry("assessment_attempts", 1)
 				.containsEntry("technical_failures", 0)

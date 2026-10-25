@@ -8,18 +8,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.CancellationException;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.FutureTask;
 import java.util.function.Supplier;
 
-import com.embabel.agent.api.invocation.AgentInvocation;
-import com.embabel.agent.core.AgentPlatform;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,7 +31,7 @@ import pl.szczurradar.api.alerts.OperatorAlertQueue;
 import pl.szczurradar.api.notifications.RunNotifications;
 import pl.szczurradar.api.pipeline.assess.AssessmentDispatcher;
 import pl.szczurradar.api.pipeline.flow.RunFlow.RunRequest;
-import pl.szczurradar.api.pipeline.flow.RunFlow.RunSummary;
+import pl.szczurradar.api.pipeline.flow.RunSequence;
 import pl.szczurradar.api.pipeline.run.InterruptionCause;
 import pl.szczurradar.api.pipeline.run.PipelineRun;
 import pl.szczurradar.api.pipeline.run.PipelineRunRepository;
@@ -60,14 +55,16 @@ import pl.szczurradar.api.sources.Source;
  *       a PostgreSQL advisory lock, so two concurrent requests never create two sets of runs.
  *   <li>Every run remembers the deployment that queued it ({@code RAILWAY_DEPLOYMENT_ID}, none when
  *       unset), so a newer deployment's recovery can tell that it took over.
- *   <li>A run starts only from {@code queued} (a conditional update); it ends with the agent's
- *       summary, as {@code failed} on any exception (also one before it started, so a run never
- *       stays queued or running without a thread and blocks the queue), and in every case its posts
- *       still {@code assessing} are put back. A run that stopped elsewhere meanwhile (interrupted)
- *       ends quietly: its next step is not started ({@link RunNoLongerRunningException}).
+ *   <li>A run starts only from {@code queued} (a conditional update) and its steps run on this
+ *       service's thread ({@link RunSequence}); it ends with the sequence's summary, as {@code failed}
+ *       on any exception of its own (also one before it started, so a run never stays queued or running
+ *       without a thread and blocks the queue), and in every case its posts still {@code assessing} are
+ *       put back. A run that stopped elsewhere meanwhile (interrupted, the watchdog) ends quietly, at
+ *       INFO: its next step is not started ({@link RunNoLongerRunningException}), or its step ends with
+ *       whatever the stop made it throw.
  *   <li>A run of this instance without progress for {@code PIPELINE_STALL_TIMEOUT} is stopped by
- *       {@link RunWatchdog} ({@link #stopStalled}): {@code failed}, its posts put back, its post tasks
- *       interrupted, and the queue goes on with the next run.
+ *       {@link RunWatchdog} ({@link #stopStalled}): {@code failed}, its posts put back, its thread and its
+ *       post tasks interrupted, and the queue goes on with the next run.
  *   <li>A run nobody executes any more (its instance was lost without closing it, a run queued on an old
  *       instance after the new one's recovery, a failed start-up recovery) would refuse every request.
  *       So each request to start a run first, under the same advisory lock: when this instance has no
@@ -117,7 +114,7 @@ public class PipelineRunService {
 
 	private final AssessmentDispatcher dispatcher;
 
-	private final AgentPlatform agentPlatform;
+	private final RunSequence sequence;
 
 	private final JdbcClient jdbc;
 
@@ -141,12 +138,12 @@ public class PipelineRunService {
 	/** The runs this instance queued and has not finished. */
 	private final Set<UUID> own = ConcurrentHashMap.newKeySet();
 
-	/** The agent's future of the run this instance is waiting for; {@link #stopStalled} cancels it. */
-	private final Map<UUID, Future<?>> waiting = new ConcurrentHashMap<>();
+	/** The queue's task of each run this instance queued and has not finished; {@link #stopStalled} interrupts it. */
+	private final Map<UUID, Future<?>> running = new ConcurrentHashMap<>();
 
 	PipelineRunService(PipelineRunRepository runs, PostRepository posts, SourceIngest sources, RunRecorder recorder,
 			PostTransitions transitions, RunNotifications notifications, AssessmentDispatcher dispatcher,
-			AgentPlatform agentPlatform, JdbcClient jdbc, TransactionTemplate transaction,
+			RunSequence sequence, JdbcClient jdbc, TransactionTemplate transaction,
 			ObjectProvider<PipelineStallSettings> stall, ObjectProvider<OperatorAlertQueue> alerts,
 			@Value("${RAILWAY_DEPLOYMENT_ID:}") @Nullable String deploymentId) {
 		this.runs = runs;
@@ -156,7 +153,7 @@ public class PipelineRunService {
 		this.transitions = transitions;
 		this.notifications = notifications;
 		this.dispatcher = dispatcher;
-		this.agentPlatform = agentPlatform;
+		this.sequence = sequence;
 		this.jdbc = jdbc;
 		this.transaction = transaction;
 		this.stall = stall;
@@ -271,9 +268,31 @@ public class PipelineRunService {
 		jdbc.sql("SELECT pg_advisory_xact_lock(:lock)").param("lock", LOCK_ID).query((rs, row) -> true).single();
 	}
 
+	/**
+	 * Queues {@code runId} as a task of its own, registered before the executor gets it: the run may end
+	 * (and {@link #execute} remove it) before {@code execute(task)} returns.
+	 */
 	private void submit(UUID runId) {
 		own.add(runId);
-		executor.execute(() -> execute(runId));
+		FutureTask<?> task = new FutureTask<>(() -> guarded(runId), null);
+		running.put(runId, task);
+		executor.execute(task);
+	}
+
+	/**
+	 * {@link #execute} with whatever escapes it logged: the {@link FutureTask} keeps any {@link Throwable}
+	 * in a future nobody reads, so an {@link Error} (e.g. {@link OutOfMemoryError},
+	 * {@link NoClassDefFoundError}) or an exception of its {@code finally} would otherwise vanish without a
+	 * line.
+	 */
+	private void guarded(UUID runId) {
+		try {
+			execute(runId);
+		}
+		catch (Throwable ex) {
+			log.error("Pipeline run {} crashed its queue thread", runId, ex);
+			throw ex;
+		}
 	}
 
 	/** The runs this instance queued and has not finished (the watchdog's; in memory, no database query). */
@@ -282,14 +301,18 @@ public class PipelineRunService {
 	}
 
 	/**
-	 * Runs one queued run to its end; package-private for tests.
+	 * Runs one queued run to its end, its steps on this thread ({@link RunSequence}); package-private for
+	 * tests.
 	 *
-	 * <p>The agent's actions run on Embabel's threads; this one waits for the agent's future, kept in
-	 * {@link #waiting} meanwhile. An action's exception arrives wrapped in an {@link ExecutionException};
-	 * this thread being stopped (the instance closing) as an {@link InterruptedException}; the future
-	 * cancelled by {@link #stopStalled} as a {@link CancellationException}. After an interruption the
-	 * run is not closed or reported here: {@link #onClose} already did both, and the database may be
-	 * closing.
+	 * <p>A step's exception arrives as it was thrown. Whether it is this run's failure is decided by the
+	 * run's state, not by the exception's type: a run someone else ended meanwhile — the watchdog
+	 * ({@link #stopStalled}, which also interrupts this thread), {@link #onClose} (which stops this thread
+	 * too), a newer instance's recovery — makes its step throw whatever the stop caused, and that is an
+	 * INFO line, never an ERROR or a second end. Before any database call the thread's interrupt flag is
+	 * cleared (a connection pool refuses an interrupted thread) and remembered only when the instance is
+	 * stopping: then the run is neither closed nor reported here ({@link #onClose} did both, and the
+	 * database may be closing), and the flag is restored after the clean-up. After the watchdog's
+	 * interrupt it is not: this thread takes the next run.
 	 */
 	void execute(UUID runId) {
 		String error = "the run ended without a summary";
@@ -300,33 +323,34 @@ public class PipelineRunService {
 				started = System.nanoTime();
 				PipelineRun run = runs.findById(runId).orElseThrow();
 				log.info("Pipeline run {} ({}) started", runId, run.getKind().value());
-				CompletableFuture<RunSummary> agent = AgentInvocation.create(agentPlatform, RunSummary.class)
-					.invokeAsync(RunRequest.of(run));
-				waiting.put(runId, agent);
-				agent.get();
+				sequence.run(RunRequest.of(run));
 			}
 		}
-		catch (InterruptedException ex) {
-			// The instance is stopping: onClose interrupted its runs first.
-			interrupted = true;
-			log.info("Pipeline run {}: stopped waiting, the application is stopping", runId);
-		}
-		catch (CancellationException ex) {
-			// stopStalled ended the run and put its posts back; its action may still run, changing nothing.
-			log.info("Pipeline run {}: stopped waiting, the watchdog stopped the run", runId);
-		}
-		catch (Exception ex) {
-			if (RunNoLongerRunningException.isCauseOf(ex)) {
+		catch (RuntimeException ex) {
+			// First, before any database call: cleared, so the clean-up below gets its connections.
+			Thread.interrupted();
+			boolean stopping = executor.isShutdown();
+			if (stopping) {
+				// The instance is stopping: onClose interrupted its runs first (so a step may have been refused
+				// before the interrupt came, RunNoLongerRunningException).
+				interrupted = true;
+				log.info("Pipeline run {}: stopped, the application is stopping", runId);
+			}
+			else if (ex instanceof RunNoLongerRunningException) {
 				log.info("Pipeline run {} is no longer running here; its remaining steps were not started", runId);
+			}
+			else if (!stillRunning(runId, ex)) {
+				// The watchdog or an interruption ended it; its step ended with what the stop caused.
+				log.info("Pipeline run {} ended by the watchdog or an interruption; its step ended with {}", runId,
+						ex.getClass().getSimpleName());
 			}
 			else {
 				log.error("Pipeline run {} failed", runId, ex);
-				Throwable failure = unwrap(ex);
-				error = failure.getClass().getSimpleName() + ": " + failure.getMessage();
+				error = ex.getClass().getSimpleName() + ": " + ex.getMessage();
 			}
 		}
 		finally {
-			waiting.remove(runId);
+			running.remove(runId);
 			if (!interrupted) {
 				close(runId, error, started);
 				notifications.runEnded(runId);
@@ -340,16 +364,38 @@ public class PipelineRunService {
 	}
 
 	/**
+	 * Whether the run whose step threw {@code failure} is still running here; when even that cannot be
+	 * read, it is taken as running (the step's failure is then this run's), with the read's failure
+	 * suppressed in {@code failure}.
+	 */
+	private boolean stillRunning(UUID runId, RuntimeException failure) {
+		try {
+			return recorder.isRunning(runId);
+		}
+		catch (RuntimeException ex) {
+			failure.addSuppressed(ex);
+			return true;
+		}
+	}
+
+	/**
 	 * Stops a run of this instance that made no progress for {@code threshold} ({@link RunWatchdog}):
 	 * ends it {@code failed} with its open steps ({@link RunRecorder#stall}) and puts its posts back, in
-	 * one transaction; then notifies the admins, cancels the wait for its agent, so this queue takes the
-	 * next run, and interrupts its post tasks ({@link AssessmentDispatcher#cancel}), so their threads of
-	 * the LLM pool are freed.
+	 * one transaction; then notifies the admins and pulls both levers that end the run's work:
 	 *
-	 * <p>The agent's action goes on in Embabel's thread until its current call ends, but changes
-	 * nothing: claiming a post needs a running run, storing a result needs the post still held by the
-	 * run, and its counters and steps are conditional. The cancelled wait is temporary — it goes with
-	 * Embabel out of the run.
+	 * <ol>
+	 *   <li>{@code cancel(true)} on its queue task interrupts this service's thread inside its step: a
+	 *       dispatcher waiting for its posts cancels them ({@link AssessmentDispatcher}), the source's client
+	 *       ends its request, the store step stores no further chunk; the step ends with an exception and
+	 *       {@link #execute} logs it at INFO, so this queue takes the next run;
+	 *   <li>{@link AssessmentDispatcher#cancel} interrupts the run's post tasks also when the thread is
+	 *       where an interrupt does not reach (e.g. the LLM check in flight on its HTTP client).
+	 * </ol>
+	 *
+	 * Writing first matters: interrupting first would let {@link #execute} close the run {@code failed}
+	 * with another error. Whatever the stopped step still does changes nothing: claiming a post needs a
+	 * running run, storing a result needs the post still held by the run, and its counters and steps are
+	 * conditional.
 	 *
 	 * @return whether the run was stopped; nothing happens to a run that is not running (still queued,
 	 *     finished) or made progress meanwhile
@@ -369,9 +415,9 @@ public class PipelineRunService {
 		log.warn("Pipeline run {} made no progress for {}; stopped", runId, Durations.format(threshold));
 		// After the commit: the notifications read the stopped run.
 		notifications.runEnded(runId);
-		Future<?> agent = waiting.get(runId);
-		if (agent != null) {
-			agent.cancel(false);
+		Future<?> task = running.get(runId);
+		if (task != null) {
+			task.cancel(true);
 		}
 		dispatcher.cancel(runId);
 		return true;
@@ -407,16 +453,12 @@ public class PipelineRunService {
 		}
 	}
 
-	/** The action's own exception from inside the agent's future. */
-	private static Throwable unwrap(Exception ex) {
-		return (ex instanceof ExecutionException || ex instanceof CompletionException) && ex.getCause() != null
-				? ex.getCause() : ex;
-	}
-
 	/**
 	 * This instance stops: its own queued and running runs become {@code interrupted} (before the
 	 * thread is stopped, so a run interrupted mid-step is not marked {@code failed}) and their posts are
-	 * put back, in one transaction; then the admins are notified and the thread is stopped. When the
+	 * put back, in one transaction; then the admins are notified and the thread is stopped:
+	 * {@code shutdownNow()} interrupts the step it is in, as the watchdog's stop does
+	 * ({@link #stopStalled}), and {@link #execute} leaves the run as this left it. When the
 	 * transaction fails (e.g. the database is gone), an ERROR line and, when this instance had runs, an
 	 * operator alert ({@link AlertEvent#RUN_CLOSE_FAILED}) name them; the thread is stopped in any case.
 	 * The queue is still alive here: the context closes before its beans are destroyed.

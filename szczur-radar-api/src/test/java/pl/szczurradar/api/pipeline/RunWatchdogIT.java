@@ -58,9 +58,9 @@ import pl.szczurradar.api.user.User;
 import pl.szczurradar.api.user.UserRepository;
 
 /**
- * The watchdog on the whole run graph and Postgres with {@code PIPELINE_STALL_TIMEOUT=5s} (checked
+ * The watchdog on the whole run sequence and Postgres with {@code PIPELINE_STALL_TIMEOUT=5s} (checked
  * every second): a run waiting for an LLM call that does not end is stopped (the admin notified once),
- * its call is interrupted and the run queued behind it goes on; the stopped run's action writes nothing;
+ * its call is interrupted and the run queued behind it goes on; the stopped run's step writes nothing;
  * a slow run with progress is not stopped; nor is one whose calls find the provider unavailable before
  * the breaker stops it; another instance's run is left alone; a database call has an end too. Wykop is a local server answering the real, anonymized #gielda answers of 2026-10-01, the LLM
  * a scripted client. The methods share one database and run in order.
@@ -175,7 +175,7 @@ class RunWatchdogIT {
 				.containsEntry("assessment_attempts", 1)
 				.containsEntry("assessing_run_id", null);
 			awaitLog(output, "Pipeline run " + retry + " made no progress for 5.0s; stopped");
-			awaitLog(output, "Pipeline run " + retry + ": stopped waiting, the watchdog stopped the run");
+			awaitLog(output, "Pipeline run " + retry + " ended by the watchdog or an interruption");
 			Supplier<List<Object>> retryState = () -> List.of(run(retry), steps(retry), post(leftover),
 					count("SELECT count(*) FROM assessments WHERE post_id = ? OR run_id = ?", leftover, retry));
 			List<Object> stopped = retryState.get();
@@ -195,8 +195,8 @@ class RunWatchdogIT {
 			assertThat(notified(retry)).isOne();
 			assertThat(notified(range)).isZero();
 
-			// The stopped run's action ends its step without the answer, and writes nothing: no assessment,
-			// counter, error or step; the interrupted call is not the post's technical error.
+			// The stopped run's step ends without the answer, and writes nothing: no assessment, counter, error
+			// or step; the interrupted call is not the post's technical error.
 			awaitLog(output, "Run " + retry + " step assess ended in");
 			assertUnchanged(retryState, stopped);
 			assertThat(run(retry)).containsEntry("assessed_ok", 0)

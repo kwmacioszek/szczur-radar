@@ -7,19 +7,23 @@ import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.time.Duration;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import com.embabel.agent.core.AgentPlatform;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -38,10 +42,16 @@ import pl.szczurradar.api.llm.LlmProviderProperties;
 import pl.szczurradar.api.llm.Provider;
 import pl.szczurradar.api.notifications.RunNotifications;
 import pl.szczurradar.api.pipeline.assess.AssessmentDispatcher;
+import pl.szczurradar.api.pipeline.flow.RunFlow.RunSummary;
+import pl.szczurradar.api.pipeline.flow.RunSequence;
 import pl.szczurradar.api.pipeline.run.InterruptionCause;
 import pl.szczurradar.api.pipeline.run.PipelineRun;
 import pl.szczurradar.api.pipeline.run.PipelineRunRepository;
+import pl.szczurradar.api.pipeline.run.RunKind;
+import pl.szczurradar.api.pipeline.run.RunStatus;
+import pl.szczurradar.api.pipeline.run.RunStep;
 import pl.szczurradar.api.pipeline.state.PostTransitions;
+import pl.szczurradar.api.pipeline.state.RunNoLongerRunningException;
 import pl.szczurradar.api.pipeline.state.RunRecorder;
 import pl.szczurradar.api.pipeline.step.SourceIngest;
 import pl.szczurradar.api.posts.PostRepository;
@@ -51,8 +61,11 @@ import pl.szczurradar.api.sources.Source;
  * {@link PipelineRunService}'s clean-up of orphaned runs in the cases {@code OrphanedRunIT} cannot stage
  * on a real database: a failing clean-up, a refusal before the queue is asked, and this instance's own run
  * (on a database its fresh activity alone keeps the queue alive). Every clean-up on a real database is in
- * {@code OrphanedRunIT}. And the operator alerts of its failing paths: the clean-up, a run's close and the
- * shutdown's interruption, each raised once to a mocked {@link OperatorAlertQueue}.
+ * {@code OrphanedRunIT}. The operator alerts of its failing paths: the clean-up, a run's close and the
+ * shutdown's interruption, each raised once to a mocked {@link OperatorAlertQueue}. And how a run ends
+ * on its queue thread with a mocked {@link RunSequence} — its own failure an ERROR, a run someone else
+ * ended or a stopping instance an INFO line, an {@link Error} logged although its task keeps it — and the
+ * watchdog's stop, its writes first, then the interrupt of the run's thread, then its post tasks.
  */
 @ExtendWith(OutputCaptureExtension.class)
 class PipelineRunServiceTest {
@@ -75,6 +88,10 @@ class PipelineRunServiceTest {
 
 	private final RunNotifications notifications = mock(RunNotifications.class);
 
+	private final AssessmentDispatcher dispatcher = mock(AssessmentDispatcher.class);
+
+	private final RunSequence sequence = mock(RunSequence.class);
+
 	private final OperatorAlertQueue alerts = mock(OperatorAlertQueue.class);
 
 	@SuppressWarnings("unchecked")
@@ -82,7 +99,7 @@ class PipelineRunServiceTest {
 
 	private final PipelineRunService service = new PipelineRunService(runs, mock(PostRepository.class),
 			sources, recorder, transitions, notifications,
-			mock(AssessmentDispatcher.class), mock(AgentPlatform.class), mock(JdbcClient.class, RETURNS_DEEP_STUBS),
+			dispatcher, sequence, mock(JdbcClient.class, RETURNS_DEEP_STUBS),
 			transaction, stall, alertQueue, null);
 
 	PipelineRunServiceTest() {
@@ -97,6 +114,9 @@ class PipelineRunServiceTest {
 	@AfterEach
 	void release() {
 		held.countDown();
+		service.onClose();
+		// A test that calls execute() on its own thread may leave the flag set for the next one.
+		Thread.interrupted();
 	}
 
 	@Test
@@ -200,6 +220,204 @@ class PipelineRunServiceTest {
 				argThat(detail -> detail.contains(ownId.toString())
 						&& detail.contains(CannotAcquireLockException.class.getName())));
 		verify(alerts, times(1)).raise(any(), any(), any());
+	}
+
+
+	@Test
+	void aRunThatEndsWithItsSummaryLogsNoError(CapturedOutput output) {
+		UUID run = started(RunKind.POSTS, RunStatus.SUCCEEDED);
+		when(sequence.run(any())).thenReturn(new RunSummary(run, RunStatus.SUCCEEDED));
+
+		service.execute(run);
+
+		verify(sequence).run(any());
+		// The close changes nothing on a run its summary ended: its failure is conditional on queued/running.
+		verify(recorder).fail(run, "the run ended without a summary");
+		verify(transitions).releaseAll(run);
+		verify(notifications).runEnded(run);
+		assertThat(output.getAll()).contains("Pipeline run " + run + " (posts) ended succeeded in");
+		assertThat(errors(output, run)).isEmpty();
+	}
+
+	@Test
+	void aStepsOwnExceptionFailsTheRunWithItsClassAndMessage(CapturedOutput output) {
+		UUID run = started(RunKind.RANGE, RunStatus.FAILED);
+		when(sequence.run(any())).thenThrow(new IllegalStateException("the mapper broke"));
+		when(recorder.isRunning(run)).thenReturn(true);
+
+		service.execute(run);
+
+		verify(recorder).fail(run, "IllegalStateException: the mapper broke");
+		verify(notifications).runEnded(run);
+		assertThat(errors(output, run)).singleElement()
+			.satisfies(line -> assertThat(line).contains("Pipeline run " + run + " failed"));
+	}
+
+	@Test
+	void aStepEndingAfterSomeoneElseEndedItsRunIsAnInfoNotAFailure(CapturedOutput output) {
+		UUID run = started(RunKind.RETRY, RunStatus.FAILED);
+		when(sequence.run(any())).thenThrow(new IllegalStateException("interrupted while assessing run " + run));
+		when(recorder.isRunning(run)).thenReturn(false);
+
+		service.execute(run);
+
+		assertThat(output.getAll()).contains("Pipeline run " + run
+				+ " ended by the watchdog or an interruption; its step ended with IllegalStateException");
+		assertThat(errors(output, run)).isEmpty();
+		// Not failed with the step's exception: whoever ended the run wrote its end.
+		verify(recorder, never()).fail(run, "IllegalStateException: interrupted while assessing run " + run);
+		verify(notifications).runEnded(run);
+	}
+
+	@Test
+	void aRunTheInstanceStopsIsNeitherClosedNorReportedAndTheInterruptStays(CapturedOutput output) {
+		assertStoppingInstance(new IllegalStateException("interrupted while assessing"), output);
+	}
+
+	@Test
+	void aStepRefusedWhileTheInstanceStopsIsTheStopToo(CapturedOutput output) {
+		// onClose interrupts the run first: its next step may be refused before the thread's interrupt comes.
+		assertStoppingInstance(new RunNoLongerRunningException(UUID.randomUUID(), RunStep.ASSESS), output);
+	}
+
+	@Test
+	void aRunNoLongerRunningHereIsAnInfo(CapturedOutput output) {
+		UUID run = started(RunKind.POSTS, RunStatus.INTERRUPTED);
+		when(sequence.run(any())).thenThrow(new RunNoLongerRunningException(run, RunStep.SUMMARIZE));
+
+		service.execute(run);
+
+		assertThat(output.getAll()).contains("Pipeline run " + run
+				+ " is no longer running here; its remaining steps were not started");
+		assertThat(errors(output, run)).isEmpty();
+		verify(recorder, never()).isRunning(run);
+		verify(recorder).fail(run, "the run ended without a summary");
+		verify(notifications).runEnded(run);
+	}
+
+	@Test
+	void anErrorEscapingTheRunIsLoggedThoughItsTaskKeepsIt(CapturedOutput output) {
+		PipelineRun queued = mock(PipelineRun.class);
+		UUID run = UUID.randomUUID();
+		when(queued.getId()).thenReturn(run);
+		when(runs.saveAll(any())).thenReturn(List.of(queued));
+		// The close catches only exceptions: an Error leaves execute().
+		doThrow(new NoClassDefFoundError("pl/szczurradar/Missing")).when(recorder).fail(eq(run), any());
+
+		service.startPosts(List.of(UUID.randomUUID()), UUID.randomUUID());
+
+		long deadline = System.nanoTime() + Duration.ofSeconds(10).toNanos();
+		while (!output.getAll().contains("Pipeline run " + run + " crashed its queue thread")) {
+			assertThat(System.nanoTime()).as("the crash is logged").isLessThan(deadline);
+			Thread.onSpinWait();
+		}
+		assertThat(errors(output, run)).singleElement()
+			.satisfies(line -> assertThat(line).contains("crashed its queue thread"));
+		assertThat(output.getAll()).contains("NoClassDefFoundError");
+	}
+
+	@Test
+	void theWatchdogsStopWritesFirstThenInterruptsTheRunsThreadThenItsPostTasks() throws InterruptedException {
+		List<String> events = new CopyOnWriteArrayList<>();
+		CountDownLatch holding = new CountDownLatch(1);
+		CountDownLatch interrupted = new CountDownLatch(1);
+		// A run of this instance, held in its queue thread; after the interrupt it waits until the test ends.
+		PipelineRun own = mock(PipelineRun.class);
+		UUID run = UUID.randomUUID();
+		when(own.getId()).thenReturn(run);
+		when(runs.saveAll(any())).thenReturn(List.of(own));
+		when(recorder.start(run)).thenAnswer(call -> {
+			holding.countDown();
+			try {
+				held.await();
+			}
+			catch (InterruptedException ex) {
+				events.add("queue thread interrupted");
+				interrupted.countDown();
+				// Until the test ends, whatever interrupts it then (onClose).
+				while (held.getCount() > 0) {
+					try {
+						held.await();
+					}
+					catch (InterruptedException again) {
+						// Waits on.
+					}
+				}
+			}
+			return false;
+		});
+		service.startPosts(List.of(UUID.randomUUID()), UUID.randomUUID());
+		assertThat(holding.await(10, TimeUnit.SECONDS)).as("the run is held in the queue thread").isTrue();
+		Duration threshold = Duration.ofMinutes(20);
+		when(recorder.stall(run, threshold)).thenAnswer(call -> events.add("stall"));
+		doAnswer(call -> {
+			events.add("releaseAll");
+			return 1;
+		}).when(transitions).releaseAll(run);
+		doAnswer(call -> events.add("runEnded")).when(notifications).runEnded(run);
+		doAnswer(call -> {
+			// Waits for the queue thread's interrupt: it comes first, or not before this times out.
+			interrupted.await(5, TimeUnit.SECONDS);
+			return events.add("dispatcher.cancel");
+		}).when(dispatcher).cancel(run);
+
+		assertThat(service.stopStalled(run, threshold)).isTrue();
+
+		assertThat(events).containsExactly("stall", "releaseAll", "runEnded", "queue thread interrupted",
+				"dispatcher.cancel");
+	}
+
+	@Test
+	void aRunTheWatchdogCannotStopIsLeftAlone() {
+		UUID run = UUID.randomUUID();
+		Duration threshold = Duration.ofMinutes(20);
+		when(recorder.stall(run, threshold)).thenReturn(false);
+
+		assertThat(service.stopStalled(run, threshold)).isFalse();
+
+		verify(transitions, never()).releaseAll(any());
+		verify(notifications, never()).runEnded(any());
+		verify(dispatcher, never()).cancel(any());
+	}
+
+	/**
+	 * {@code execute} on this thread after {@link PipelineRunService#onClose} stopped the queue: the step
+	 * ends with {@code failure}, and the run is left as {@code onClose} left it, the interrupt flag set.
+	 */
+	private void assertStoppingInstance(RuntimeException failure, CapturedOutput output) {
+		UUID run = started(RunKind.POSTS, RunStatus.INTERRUPTED);
+		when(sequence.run(any())).thenThrow(failure);
+		service.onClose();
+
+		service.execute(run);
+
+		assertThat(Thread.interrupted()).as("the interrupt flag is restored").isTrue();
+		assertThat(output.getAll()).contains("Pipeline run " + run + ": stopped, the application is stopping");
+		assertThat(errors(output, run)).isEmpty();
+		verify(recorder, never()).isRunning(any());
+		verify(recorder, never()).fail(any(), any());
+		verify(notifications, never()).runEnded(run);
+	}
+
+	/**
+	 * The ERROR lines about {@code run}: the captured output also holds what the queue threads of earlier
+	 * tests logged.
+	 */
+	private static List<String> errors(CapturedOutput output, UUID run) {
+		return output.getAll().lines().filter(line -> line.contains(" ERROR ") && line.contains(run.toString())).toList();
+	}
+
+	/** A queued run that {@code execute} starts, of {@code kind}, read back as {@code status} when it closes. */
+	private UUID started(RunKind kind, RunStatus status) {
+		UUID id = UUID.randomUUID();
+		PipelineRun run = mock(PipelineRun.class);
+		when(run.getId()).thenReturn(id);
+		when(run.getKind()).thenReturn(kind);
+		when(run.getStatus()).thenReturn(status);
+		when(run.getSources()).thenReturn(List.of());
+		when(runs.findById(id)).thenReturn(Optional.of(run));
+		when(recorder.start(id)).thenReturn(true);
+		return id;
 	}
 
 }

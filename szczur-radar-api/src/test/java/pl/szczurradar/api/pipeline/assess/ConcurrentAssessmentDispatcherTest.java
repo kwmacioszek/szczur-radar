@@ -478,6 +478,43 @@ class ConcurrentAssessmentDispatcherTest {
 	}
 
 	@Test
+	void aDispatchWhoseThreadIsInterruptedCancelsItsTasksAsAStoppedRun(CapturedOutput output) throws Exception {
+		UUID held = post(ContractFixtures.BODY + HELD);
+		ConcurrentAssessmentDispatcher dispatcher = dispatcher();
+		AtomicReference<@Nullable Throwable> thrown = new AtomicReference<>();
+		// The run's thread (pipeline-run), waiting for its post while the call is in flight.
+		Thread step = Thread.ofPlatform().start(() -> {
+			try {
+				dispatcher.dispatch(RUN, List.of(held));
+			}
+			catch (Throwable ex) {
+				thrown.set(ex);
+			}
+		});
+		assertThat(holding.tryAcquire(10, TimeUnit.SECONDS)).isTrue();
+
+		// The watchdog's cancel(true) on the run's task, or a stopping instance's shutdownNow().
+		step.interrupt();
+
+		step.join(10_000);
+		assertThat(step.isAlive()).isFalse();
+		assertThat(thrown.get()).isInstanceOf(IllegalStateException.class)
+			.hasMessage("interrupted while assessing run " + RUN);
+		// The call saw the interrupt and ended with the stopped run.
+		executor.shutdown();
+		assertThat(executor.awaitTermination(10, TimeUnit.SECONDS)).isTrue();
+		assertThat(interrupted).singleElement().satisfies(message -> assertThat(message).contains(HELD));
+		// Marked cancelled before the interrupt reached the call: not the post's technical error, not counted.
+		assertThat(stages.get(held)).isEqualTo(PostStage.STORED);
+		assertThat(attempts.get(held)).isZero();
+		assertThat(technicalFailures).isEmpty();
+		verify(transitions, never()).releaseFailed(any(UUID.class), any(UUID.class), any(String.class));
+		verify(recorder, never()).count(any(), any());
+		assertThat(output.getAll().lines().filter(line -> line.contains(" WARN ") || line.contains(" ERROR "))).isEmpty();
+		assertThat(output.getAll()).contains("Assessing post " + held + " in run " + RUN + " ended with its stopped run");
+	}
+
+	@Test
 	void cancellingARunThatIsNotDispatchedChangesNothingForItsLaterStep() {
 		ConcurrentAssessmentDispatcher dispatcher = dispatcher();
 		dispatcher.cancel(RUN);
