@@ -10,14 +10,17 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.MethodOrderer;
-import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -31,6 +34,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.ConnectionCallback;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.util.ReflectionTestUtils;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ObjectNode;
 
@@ -47,6 +51,7 @@ import pl.szczurradar.api.llm.LlmUnavailableException;
 import pl.szczurradar.api.llm.OutputMode;
 import pl.szczurradar.api.llm.Provider;
 import pl.szczurradar.api.llm.ServiceTier;
+import pl.szczurradar.api.pipeline.assess.AssessmentDispatcher;
 import pl.szczurradar.api.pipeline.run.PipelineRun;
 import pl.szczurradar.api.pipeline.run.RunKind;
 import pl.szczurradar.api.sources.wykop.LocalWykopServer;
@@ -63,18 +68,26 @@ import pl.szczurradar.api.user.UserRepository;
  * its call is interrupted and the run queued behind it goes on; the stopped run's step writes nothing;
  * a slow run with progress is not stopped; nor is one whose calls find the provider unavailable before
  * the breaker stops it; another instance's run is left alone; a database call has an end too. Wykop is a local server answering the real, anonymized #gielda answers of 2026-10-01, the LLM
- * a scripted client. The methods share one database and run in order.
+ * a scripted client.
+ *
+ * <p>Each scenario stands alone and the methods run in a random order (the seed is logged and repeatable,
+ * {@link RandomOrderSeed}), as in {@link PipelineRunIT}: the run and post tables are emptied before each
+ * one ({@link #reset}), a scenario that needs assessed posts makes them itself ({@link #assessedDay}), and
+ * the service is left quiet after each one ({@link #settle}).
  */
 @SpringBootTest(properties = { MigrateCommand.ENABLE_FLYWAY, PipelineStallSettings.NAME + "=5s",
 		// One thread of the LLM pool: the run queued behind a stopped one assesses only once the stop has
 		// interrupted the stopped run's call and freed the thread.
 		"PIPELINE_LLM_CONCURRENCY=1" })
 @Import({ TestcontainersConfiguration.class, RunWatchdogIT.LocalWykop.class })
-@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
+@TestMethodOrder(MethodOrderer.Random.class)
 @ExtendWith(OutputCaptureExtension.class)
 class RunWatchdogIT {
 
 	private static final Duration TIMEOUT = Duration.ofSeconds(5);
+
+	/** How long a stopped run's step may take to end after the stop: far below a held call's 30 s. */
+	private static final Duration STOPPED_STEP_ENDS_WITHIN = Duration.ofSeconds(10);
 
 	/** The run's and its open step's error after the watchdog stopped it ({@code Durations.format}). */
 	private static final String STALLED = "no progress for 5.0s: the run was stopped";
@@ -117,18 +130,55 @@ class RunWatchdogIT {
 	@Autowired
 	JdbcTemplate jdbc;
 
+	@Autowired
+	AssessmentDispatcher dispatcher;
+
+	/** The latches this scenario's scripted calls wait on; {@link #settle} releases every one. */
+	private final List<CountDownLatch> held = new CopyOnWriteArrayList<>();
+
 	private UUID admin;
 
+	@BeforeAll
+	static void seed() {
+		RandomOrderSeed.log(RunWatchdogIT.class);
+	}
+
+	/**
+	 * Starts from empty run and post tables (one statement, as in {@link PipelineRunIT#reset}), once the
+	 * previous scenario left nothing running; the day's links unpublished. The admin is created once.
+	 */
 	@BeforeEach
-	void admin() {
+	void reset() {
+		assertThat(service.ownRuns()).as("runs of the service left by the previous scenario").isEmpty();
+		assertThat(count("SELECT count(*) FROM pipeline_runs WHERE status IN ('queued', 'running')"))
+			.as("queued or running runs left by the previous scenario")
+			.isZero();
+		jdbc.execute("TRUNCATE notifications, pipeline_run_steps, assessments, posts, raw_payloads, pipeline_runs");
+		linksPublished = false;
 		admin = users.findByEmail("watchdog-admin@example.com")
 			.orElseGet(() -> users.save(new User("watchdog-admin@example.com", null, Role.ADMIN)))
 			.getId();
 		answer(request -> response(VALID));
 	}
 
+	/**
+	 * Releases every call the scenario holds and waits until the service is quiet: no run of its own (its
+	 * queue thread closed each) and no task of the LLM pool in progress.
+	 */
+	@AfterEach
+	void settle() {
+		held.forEach(CountDownLatch::countDown);
+		long deadline = System.nanoTime() + Duration.ofSeconds(30).toNanos();
+		while (!quiet()) {
+			if (System.nanoTime() > deadline) {
+				throw new AssertionError("the service did not settle: own runs " + service.ownRuns()
+						+ ", LLM pool active " + llmPool().getActiveCount() + ", queued " + llmPool().getQueue().size());
+			}
+			pause(Duration.ofMillis(100));
+		}
+	}
+
 	@Test
-	@Order(1)
 	void aRunWaitingForACallThatDoesNotEndIsStoppedAndTheRunBehindItGoesOn(CapturedOutput output) {
 		// The day's entries, stored and assessed.
 		UUID first = service.startRange(DAY, DAY, List.of(), admin).getFirst().getId();
@@ -140,7 +190,7 @@ class RunWatchdogIT {
 		String body = MAPPER.writeValueAsString(jdbc.queryForObject("SELECT body FROM posts WHERE id = ?",
 				String.class, leftover)).replaceAll("^\"|\"$", "");
 		CountDownLatch called = new CountDownLatch(1);
-		CountDownLatch answered = new CountDownLatch(1);
+		CountDownLatch answered = held();
 		CountDownLatch interrupted = new CountDownLatch(1);
 		answer(request -> {
 			if (request.userMessage().contains(body)) {
@@ -158,62 +208,66 @@ class RunWatchdogIT {
 			return response(VALID);
 		});
 		linksPublished = true;
-		try {
-			List<PipelineRun> runs = service.startRange(DAY, DAY, List.of(), admin);
-			assertThat(runs).extracting(PipelineRun::getKind).containsExactly(RunKind.RETRY, RunKind.RANGE);
-			UUID retry = runs.get(0).getId();
-			UUID range = runs.get(1).getId();
-			await(called);
+		List<PipelineRun> runs = service.startRange(DAY, DAY, List.of(), admin);
+		assertThat(runs).extracting(PipelineRun::getKind).containsExactly(RunKind.RETRY, RunKind.RANGE);
+		UUID retry = runs.get(0).getId();
+		UUID range = runs.get(1).getId();
+		await(called);
 
-			assertThat(finished(retry)).containsEntry("status", "failed")
-				.containsEntry("error", STALLED)
-				.containsEntry("interruption_cause", null);
-			// The step it was in is closed with the same error, not left running.
-			assertThat(steps(retry)).containsExactly("select:succeeded::true", "assess:failed:" + STALLED + ":true");
-			// The post is back without an attempt used.
-			assertThat(post(leftover)).containsEntry("stage", "failed")
-				.containsEntry("assessment_attempts", 1)
-				.containsEntry("assessing_run_id", null);
-			awaitLog(output, "Pipeline run " + retry + " made no progress for 5.0s; stopped");
-			awaitLog(output, "Pipeline run " + retry + " ended by the watchdog or an interruption");
-			Supplier<List<Object>> retryState = () -> List.of(run(retry), steps(retry), post(leftover),
-					count("SELECT count(*) FROM assessments WHERE post_id = ? OR run_id = ?", leftover, retry));
-			List<Object> stopped = retryState.get();
+		assertThat(finished(retry)).containsEntry("status", "failed")
+			.containsEntry("error", STALLED)
+			.containsEntry("interruption_cause", null);
+		// The step it was in is closed with the same error, not left running.
+		assertThat(steps(retry)).containsExactly("select:succeeded::true", "assess:failed:" + STALLED + ":true");
+		// The post is back without an attempt used.
+		assertThat(post(leftover)).containsEntry("stage", "failed")
+			.containsEntry("assessment_attempts", 1)
+			.containsEntry("assessing_run_id", null);
+		awaitLog(output, "Pipeline run " + retry + " made no progress for 5.0s; stopped");
+		long stoppedAt = System.nanoTime();
+		// What the stop wrote (it logs after its commit), before its interrupt ends the step.
+		Supplier<List<Object>> retryState = () -> List.of(run(retry), steps(retry), post(leftover),
+				count("SELECT count(*) FROM assessments WHERE post_id = ? OR run_id = ?", leftover, retry));
+		List<Object> stopped = retryState.get();
+		// The stop's interrupt reaches the step: it ends within seconds of the stop, without the answer (still
+		// held) and long before the held call's 30 s, leaving the step as the stop closed it.
+		awaitLog(output, "Run " + retry + " step assess ended in");
+		assertThat(Duration.ofNanos(System.nanoTime() - stoppedAt)).isLessThan(STOPPED_STEP_ENDS_WITHIN);
+		assertThat(answered.getCount()).isOne();
+		assertThat(output.getAll().lines().filter(line -> line.contains("Run " + retry + " step assess ended in")))
+			.singleElement()
+			.asString()
+			.contains("after its run had stopped");
+		awaitLog(output, "Pipeline run " + retry + " ended by the watchdog or an interruption");
 
-			// The stop interrupts the call that did not end, so its thread of the LLM pool is free again,
-			// before the call has an answer.
-			await(interrupted);
-			assertThat(answered.getCount()).isOne();
-			// The range run queued behind it starts and assesses its new posts (the links) on that thread.
-			assertThat(finished(range)).containsEntry("status", "succeeded")
-				.containsEntry("fetched", 16)
-				.containsEntry("new_posts", 4)
-				.containsEntry("assessed_ok", 4);
-			// The admin is notified about the stopped run once, though both the watchdog and the run's own
-			// end report it; not about the run that succeeded.
-			awaitClosed(range);
-			assertThat(notified(retry)).isOne();
-			assertThat(notified(range)).isZero();
+		// The stop interrupts the call that did not end, so its thread of the LLM pool is free again,
+		// before the call has an answer.
+		await(interrupted);
+		assertThat(answered.getCount()).isOne();
+		// The range run queued behind it starts and assesses its new posts (the links) on that thread.
+		assertThat(finished(range)).containsEntry("status", "succeeded")
+			.containsEntry("fetched", 16)
+			.containsEntry("new_posts", 4)
+			.containsEntry("assessed_ok", 4);
+		// The admin is notified about the stopped run once, though both the watchdog and the run's own
+		// end report it; not about the run that succeeded.
+		awaitClosed(range);
+		assertThat(notified(retry)).isOne();
+		assertThat(notified(range)).isZero();
 
-			// The stopped run's step ends without the answer, and writes nothing: no assessment, counter, error
-			// or step; the interrupted call is not the post's technical error.
-			awaitLog(output, "Run " + retry + " step assess ended in");
-			assertUnchanged(retryState, stopped);
-			assertThat(run(retry)).containsEntry("assessed_ok", 0)
-				.containsEntry("assessed_failed", 0)
-				.containsEntry("processing_errors", 0);
-			assertThat(output.getAll()).doesNotContain("Pipeline run " + retry + " failed")
-				.doesNotContain("Assessing post " + leftover + " in run " + retry + " failed");
-		}
-		finally {
-			answered.countDown();
-			linksPublished = false;
-		}
+		// The stopped run's step ended without the answer, and wrote nothing: no assessment, counter, error
+		// or step; the interrupted call is not the post's technical error.
+		assertUnchanged(retryState, stopped);
+		assertThat(run(retry)).containsEntry("assessed_ok", 0)
+			.containsEntry("assessed_failed", 0)
+			.containsEntry("processing_errors", 0);
+		assertThat(output.getAll()).doesNotContain("Pipeline run " + retry + " failed")
+			.doesNotContain("Assessing post " + leftover + " in run " + retry + " failed");
 	}
 
 	@Test
-	@Order(2)
 	void aSlowRunWithProgressIsNotStopped(CapturedOutput output) {
+		assessedDay();
 		List<UUID> posts = jdbc.queryForList("SELECT p.id FROM posts p WHERE p.stage = 'assessed' AND EXISTS"
 				+ " (SELECT 1 FROM assessments a WHERE a.post_id = p.id AND a.result_source = 'model')"
 				+ " ORDER BY p.id LIMIT 6", UUID.class);
@@ -238,7 +292,6 @@ class RunWatchdogIT {
 	}
 
 	@Test
-	@Order(3)
 	void anotherInstancesRunIsLeftAlone(CapturedOutput output) {
 		// Running without activity for an hour, but not queued by this instance: start-up recovery's.
 		UUID foreign = jdbc.queryForObject("INSERT INTO pipeline_runs (kind, status, requested_by, started_at,"
@@ -259,7 +312,6 @@ class RunWatchdogIT {
 	}
 
 	@Test
-	@Order(4)
 	void aDatabaseCallWaitsAtMostFiveMinutesForItsAnswer() {
 		// pgjdbc's socketTimeout (application.properties): a hung statement fails instead of holding its thread.
 		assertThat(jdbc.execute((ConnectionCallback<Integer>) Connection::getNetworkTimeout))
@@ -267,8 +319,8 @@ class RunWatchdogIT {
 	}
 
 	@Test
-	@Order(5)
 	void aRunWhoseCallsFindTheProviderUnavailableIsStoppedByTheBreakerNotTheWatchdog(CapturedOutput output) {
+		assessedDay();
 		List<UUID> posts = jdbc.queryForList("SELECT p.id FROM posts p WHERE p.stage = 'assessed' AND EXISTS"
 				+ " (SELECT 1 FROM assessments a WHERE a.post_id = p.id AND a.result_source = 'model')"
 				+ " ORDER BY p.id LIMIT 4", UUID.class);
@@ -295,6 +347,41 @@ class RunWatchdogIT {
 			assertThat(post(post)).containsEntry("stage", "stored").containsEntry("assessment_attempts", 0);
 			assertThat(count("SELECT technical_failures FROM posts WHERE id = ?", post)).isZero();
 		});
+	}
+
+	/**
+	 * Runs the day's range with its links published — its 16 posts stored and assessed — and waits until
+	 * the run is closed: the start of a scenario that needs assessed posts.
+	 */
+	private UUID assessedDay() {
+		linksPublished = true;
+		try {
+			UUID run = service.startRange(DAY, DAY, List.of(), admin).getLast().getId();
+			assertThat(finished(run)).containsEntry("status", "succeeded").containsEntry("assessed_ok", 16);
+			awaitClosed(run);
+			return run;
+		}
+		finally {
+			linksPublished = false;
+		}
+	}
+
+	/** A latch a scripted call waits on, released by {@link #settle} at the latest. */
+	private CountDownLatch held() {
+		CountDownLatch latch = new CountDownLatch(1);
+		held.add(latch);
+		return latch;
+	}
+
+	/** No run of the service's own left and no task of the LLM pool in progress or waiting. */
+	private boolean quiet() {
+		ThreadPoolExecutor pool = llmPool();
+		return service.ownRuns().isEmpty() && pool.getActiveCount() == 0 && pool.getQueue().isEmpty();
+	}
+
+	/** The dispatcher's pool of LLM threads (one here), whose tasks may outlive a run's end. */
+	private ThreadPoolExecutor llmPool() {
+		return (ThreadPoolExecutor) ReflectionTestUtils.getField(dispatcher, "executor");
 	}
 
 	/** The admin's notifications about {@code runId}. */

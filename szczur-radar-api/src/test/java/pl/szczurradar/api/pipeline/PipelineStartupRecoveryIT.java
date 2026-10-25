@@ -2,6 +2,8 @@ package pl.szczurradar.api.pipeline;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -18,7 +20,20 @@ import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import pl.szczurradar.api.TestcontainersConfiguration;
+import pl.szczurradar.api.agents.assessor.AssessmentResult;
+import pl.szczurradar.api.agents.assessor.ContractFixtures;
+import pl.szczurradar.api.agents.assessor.Prefilter;
+import pl.szczurradar.api.agents.assessor.Provenance;
+import pl.szczurradar.api.agents.assessor.contract.ItemType;
 import pl.szczurradar.api.cli.MigrateCommand;
+import pl.szczurradar.api.pipeline.run.RunStatus;
+import pl.szczurradar.api.pipeline.state.PostTransitions;
+import pl.szczurradar.api.pipeline.state.RunRecorder;
+import pl.szczurradar.api.posts.Assessment;
+import pl.szczurradar.api.posts.Post;
+import pl.szczurradar.api.posts.PostRepository;
+import pl.szczurradar.api.raw.RawPayloadStore;
+import pl.szczurradar.api.sources.Source;
 import pl.szczurradar.api.user.SystemAccount;
 
 /**
@@ -27,7 +42,8 @@ import pl.szczurradar.api.user.SystemAccount;
  * ({@link WebServerInitializedEvent}). Otherwise the request that wakes the API (the daily cron's
  * start) could create a run that recovery interrupts a moment later. Every run it interrupts notifies
  * the admins. A real server on a random port, as deployment {@value #DEPLOYMENT}
- * ({@code RAILWAY_DEPLOYMENT_ID}).
+ * ({@code RAILWAY_DEPLOYMENT_ID}). And a recovery while the old worker still lives: it takes no new
+ * post, and its late result, clean-up and release leave a post another run took alone.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
 		properties = { MigrateCommand.ENABLE_FLYWAY, "RAILWAY_DEPLOYMENT_ID=" + PipelineStartupRecoveryIT.DEPLOYMENT })
@@ -42,6 +58,21 @@ class PipelineStartupRecoveryIT {
 
 	@Autowired
 	JdbcTemplate jdbc;
+
+	@Autowired
+	PipelineStartupRecovery recovery;
+
+	@Autowired
+	PostTransitions transitions;
+
+	@Autowired
+	RunRecorder recorder;
+
+	@Autowired
+	PostRepository posts;
+
+	@Autowired
+	RawPayloadStore rawPayloads;
 
 	@Test
 	void unfinishedRunsAreInterruptedBeforeTheServerAcceptsConnections() {
@@ -77,6 +108,64 @@ class PipelineStartupRecoveryIT {
 		// The runs' requester is a system account, not an admin.
 		assertThat(jdbc.queryForObject("SELECT count(*) FROM notifications WHERE recipient_id = ?", Integer.class,
 				SystemAccount.SCHEDULER.id())).isZero();
+	}
+
+	@Test
+	void recoveryInterruptsUnfinishedRunsAndALateWorkerChangesNothing() {
+		UUID admin = unfinishedRun.admin;
+		UUID firstRun = jdbc.queryForObject("INSERT INTO pipeline_runs (kind, status, requested_by, started_at,"
+				+ " finished_at) VALUES ('retry', 'succeeded', ?, now(), now()) RETURNING id", UUID.class, admin);
+		UUID taken = post("90001", firstRun);
+		UUID other = post("90002", firstRun);
+		UUID oldRun = jdbc.queryForObject("INSERT INTO pipeline_runs (kind, status, requested_by, started_at)"
+				+ " VALUES ('retry', 'running', ?, now()) RETURNING id", UUID.class, admin);
+		assertThat(transitions.claim(taken, oldRun)).contains(0);
+
+		assertThat(recovery.recover()).containsExactly(oldRun);
+
+		// No deployment id on the run: a restart.
+		assertThat(run(oldRun)).containsEntry("status", "interrupted")
+			.containsEntry("interruption_cause", "restart")
+			.containsEntry("error", "interrupted: the application restarted");
+		assertThat(post(taken))
+			.containsEntry("stage", "stored")
+			.containsEntry("assessing_run_id", null);
+		// The old worker, still alive: it takes no new post, and its summary changes nothing.
+		assertThat(transitions.claim(other, oldRun)).isEmpty();
+		assertThat(recorder.finish(oldRun, RunStatus.SUCCEEDED, null)).isFalse();
+
+		// A new run takes the post; the old worker's late result, clean-up and release leave it alone.
+		UUID newRun = jdbc.queryForObject("INSERT INTO pipeline_runs (kind, status, requested_by, started_at)"
+				+ " VALUES ('retry', 'running', ?, now()) RETURNING id", UUID.class, admin);
+		assertThat(transitions.claim(taken, newRun)).contains(0);
+		int assessments = jdbc.queryForObject("SELECT count(*) FROM assessments", Integer.class);
+		Assessment late = new Assessment(taken, oldRun, ContractFixtures.validInput(),
+				new AssessmentResult(AssessmentResult.Status.OK, Prefilter.noContentOutput(), null, List.of(),
+						Provenance.prefilter("V2", Instant.now()), null));
+		assertThat(transitions.record(taken, oldRun, 0, late)).isFalse();
+		transitions.release(taken, oldRun);
+		assertThat(transitions.releaseAll(oldRun)).isZero();
+
+		assertThat(jdbc.queryForObject("SELECT count(*) FROM assessments", Integer.class)).isEqualTo(assessments);
+		assertThat(post(taken))
+			.containsEntry("stage", "assessing")
+			.containsEntry("assessing_run_id", newRun)
+			.containsEntry("assessment_attempts", 0);
+		// Clean up: the new run ends; nothing stays assessing.
+		assertThat(recorder.finish(newRun, RunStatus.SUCCEEDED, null)).isTrue();
+		assertThat(transitions.releaseAll(newRun)).isEqualTo(1);
+	}
+
+	/** A stored post of Wykop, first stored by {@code firstRun}. */
+	private UUID post(String sourceItemId, UUID firstRun) {
+		return posts.save(new Post(Source.WYKOP, ItemType.POST, sourceItemId, Instant.parse("2026-10-01T08:00:00Z"),
+				null, "treść", null, null, null, List.of("gielda"),
+				rawPayloads.store(Source.WYKOP, ("{\"id\":" + sourceItemId + "}").getBytes(StandardCharsets.UTF_8)),
+				firstRun)).getId();
+	}
+
+	private Map<String, Object> post(UUID postId) {
+		return jdbc.queryForMap("SELECT stage, assessment_attempts, assessing_run_id FROM posts WHERE id = ?", postId);
 	}
 
 	private Map<String, Object> run(UUID runId) {

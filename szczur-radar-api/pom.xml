@@ -28,6 +28,11 @@
 		<!-- JUnit tags of the unit test run: everything except live LLM/API runs (profile measurement). -->
 		<surefire.groups></surefire.groups>
 		<surefire.excludedGroups>measurement</surefire.excludedGroups>
+		<!-- The seed of the random method order of the engine's ITs (MethodOrderer.Random): a number of the
+		     build's time, so every build tries another order; the classes log it when they start, and
+		     ./mvnw -B verify -Dit.seed=<n> repeats the order of a red run. -->
+		<maven.build.timestamp.format>yyMMddHHmmss</maven.build.timestamp.format>
+		<it.seed>${maven.build.timestamp}</it.seed>
 	</properties>
 
 	<dependencyManagement>
@@ -172,6 +177,9 @@
 					<includes>
 						<include>**/*IT.java</include>
 					</includes>
+					<systemPropertyVariables>
+						<junit.jupiter.execution.order.random.seed>${it.seed}</junit.jupiter.execution.order.random.seed>
+					</systemPropertyVariables>
 				</configuration>
 				<executions>
 					<execution>

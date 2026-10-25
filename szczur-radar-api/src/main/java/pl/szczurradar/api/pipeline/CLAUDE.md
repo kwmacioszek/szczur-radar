@@ -393,8 +393,20 @@ PipelineRunService.startRange / startPosts → queue (thread pipeline-run) → R
   the checks going on after an `Error`, the check interval); `llm/transport/TransportRetryTest` covers
   `maxCallDuration`; `agents/assessor/AssessorTest` that `LlmUnavailableException` is thrown, not a
   `failed` result.
+- `state/RunRecorderIT` (on Postgres, each test rolled back; runs inserted with SQL): every guard of
+  `RunRecorder` on its own — `start` only from `queued`; `finish`, `count`, `touch` and `error` only in a
+  running run (`finish` keeping the error set while running); `fail` from `queued` or `running`, never
+  from an ended run; a step of a run that is not running refused before its work, adding no row; the
+  step's end as its work decides (`succeeded` with its count, `failed` with a `StepOutcome`'s reason — A6
+  —, `failed` with its exception's message); a step an interruption closed left as it is; `stall` only
+  after the threshold, its open steps `failed` with the same error; `interrupt` with its cause and its
+  open steps `interrupted`; `interruptAll` naming `deploy` / `restart` by `deployment_id`;
+  `interruptOrphans` all or none (both cases; the rest in `OrphanedRunIT`).
 - `posts/PostRepositoryIT` (outside this package, on Postgres): the RETRY predicates (a post on hold is
-  no leftover, one technical failure short of it is), `releaseFailed` counting only for the run holding
+  no leftover, one technical failure short of it is), `claim` only of a `stored` / `failed` post and only
+  for a running run (returning its attempts), `releaseAll` only of that run's posts, `releaseOrphans`
+  putting back a post claimed just as its run was interrupted and leaving the posts of a queued or
+  running run, `releaseFailed` counting only for the run holding
   the post, a long error cut and without U+0000, `record` resetting the count, `countTechnicalFailure`
   only on a post put back while its run is running. `posts/api/PostsApiIT`: the failed list with posts on
   hold and `failed` posts with technical errors.
@@ -410,7 +422,8 @@ PipelineRunService.startRange / startPosts → queue (thread pipeline-run) → R
   queued run is safe, a running run with recent activity is not, nor a live queued run behind a dead
   running one), no session and no cookie, 503 without the database.
   `PipelineStartupRecoveryIT`: recovery before the port, the cause `deploy` / `restart`, steps
-  `interrupted`, notifications.
+  `interrupted`, notifications; a recovery while the old worker lives (it takes no new post, its summary,
+  late result, clean-up and release change nothing of a post a new run took).
 - `OrphanedRunIT` (`PIPELINE_STALL_TIMEOUT=5s`; "another instance's" runs are rows inserted with SQL,
   `deployment_id = 'deployment-other'`): a dead running run with an open step and a held post plus a
   queued run behind it → 202, both `interrupted` / `lost`, the step `interrupted`, the post `stored`, two
@@ -424,28 +437,37 @@ PipelineRunService.startRange / startPosts → queue (thread pipeline-run) → R
   `POST /api/admin/pipeline-runs` cleans up the same way. `MigrationsIT` (outside this package) accepts
   `lost` and still rejects an unknown cause.
 - `RunWatchdogIT` (`PIPELINE_STALL_TIMEOUT=5s`, `PIPELINE_LLM_CONCURRENCY=1`, a scripted `LlmClient`
-  held on a latch): a hanging run ends `failed` with its `assess` step closed and its posts back without
-  an attempt, its held call is interrupted, so the run queued behind it assesses on the only LLM thread,
-  the stopped step ends at once and stores nothing, a slow run with progress (a post every 1.5 s) is not stopped, nor is a
+  held on a latch; scenarios independent, in a random order, as `PipelineRunIT` below): a hanging run ends
+  `failed` with its `assess` step closed and its posts back without an attempt, its held call is
+  interrupted, so the run queued behind it assesses on the only LLM thread, the stopped step ends within
+  seconds of the stop ("… after its run had stopped", the call still unanswered) and stores nothing, a
+  slow run with progress (a post every 1.5 s) is not stopped, nor is a
   run whose calls each find the provider unavailable after 3 s (the breaker ends it, not the watchdog), another
   instance's run is left alone, the admins are notified, and a database connection has the 300 s
   `socketTimeout`.
 - `notifications/api/NotificationsIT`: recipients (admins only), idempotence, which run endings notify,
   the list, marking one and all read, 404 for another admin's.
-- `PipelineAgentIT`: the whole sequence on Postgres with a source on a local server and a scripted
-  `LlmClient` — range, the same range again, a leftover's one attempt per request, recovery and a late
-  worker, a failing source (`failed`, the queue takes the next request), a range without elements
-  (`failed` at `fetch`, one search per resource, the feed's date unchanged), a range of unmappable
-  elements (`failed` with its counters), some skipped elements (`succeeded`, needs attention, the WARN
-  and end lines), an orphaned `assessing` post,
-  a stopping instance (`onClose`, cause `shutdown`, step `interrupted`, its queue thread neither closes
-  nor reports the run again), a refused LLM key (`failed`,
-  no attempt), a provider unavailable for three calls in a row (Order 14: `failed` with the breaker's
-  error, no attempt, no technical failure, the admin notified) and an outage of a run a stopping instance
-  interrupted (Order 15: the call ends as the stopped run's, at INFO, counting nothing); counters and
+- `PipelineRunIT`: the whole sequence on Postgres with a source on a local server and a scripted
+  `LlmClient` — range, the same range again, a leftover's one attempt per request, a failing source
+  (`failed`, the queue takes the next request), a range without elements (`failed` at `fetch`, one search
+  per resource, the feed's date unchanged), a range of unmappable elements (`failed` with its counters),
+  some skipped elements (`succeeded`, needs attention, the WARN and end lines), a stopping instance
+  (`onClose`, cause `shutdown`, step `interrupted`, its queue thread ends the step at once, neither closes
+  nor reports the run again and logs no ERROR), a refused LLM key (`failed`, no attempt), a provider
+  unavailable for three calls in a row (`failed` with the breaker's error, no attempt, no technical
+  failure, the admin notified) and an outage of a run a stopping instance interrupted (the interrupt ends
+  the held call at once, as the stopped run's, at INFO, counting nothing); counters and
   `last_activity_at` growing during the assessment; no new step in an interrupted run and no ERROR in the
-  log. Re-stub the `@MockitoBean` with `doAnswer(…).when(…)`, not `when(…)` (which calls the old
-  answer with `null`).
+  log. Each scenario stands alone, in a random order (`@TestMethodOrder(MethodOrderer.Random.class)`, as
+  `RunWatchdogIT`): before each one `reset()` checks that nothing runs and empties the run and post tables
+  in one `TRUNCATE` (the six tables are closed under the foreign keys; users, sessions and Flyway's history
+  stay); a scenario that needs assessed posts runs `assessedDay()` itself; after each one `settle()`
+  releases the held calls and waits until no instance has a run of its own and the LLM pool is idle — a
+  run's status is written before its queue thread closes it, so `finished()` alone returns too early. The
+  seed comes from `-Dit.seed` (Failsafe, `pom.xml`; by default a number of the build's time) and each
+  class logs it at INFO: `./mvnw -B verify -Dit.seed=<n>` repeats a red order. A new scenario keeps that:
+  no reliance on another scenario's data, no `@Order`. Re-stub the `@MockitoBean` with
+  `doAnswer(…).when(…)`, not `when(…)` (which calls the old answer with `null`).
 - `LlmOutageIT`: the breaker through the real transport — the client from `LlmClientFactory` (DeepSeek) on
   `ScriptedProviderServer`, the check answered, then HTTP 500 to everything; a RANGE run ends `failed`
   after the check and 3 × 3 HTTP requests, with no model assessment, no attempt, no technical failure and

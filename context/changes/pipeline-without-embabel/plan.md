@@ -456,9 +456,9 @@ Dokumentacja projektu opisuje stan bez Embabel; `deploy-plan.md` dostaje sekcję
 
 #### Automated
 
-- [x] 3.1 Testy jednostkowe zielone: `cd szczur-radar-api && ./mvnw -B test`
-- [x] 3.2 Pełna weryfikacja zielona: `cd szczur-radar-api && ./mvnw -B verify`
-- [x] 3.3 PRD ma doprecyzowanie S-17: `grep -c 'S-17 `pipeline-without-embabel`' context/foundation/prd.md` wypisuje `1`
+- [x] 3.1 Testy jednostkowe zielone: `cd szczur-radar-api && ./mvnw -B test` — e118bea
+- [x] 3.2 Pełna weryfikacja zielona: `cd szczur-radar-api && ./mvnw -B verify` — e118bea
+- [x] 3.3 PRD ma doprecyzowanie S-17: `grep -c 'S-17 `pipeline-without-embabel`' context/foundation/prd.md` wypisuje `1` — e118bea
 
 #### Manual
 
@@ -468,10 +468,10 @@ Dokumentacja projektu opisuje stan bez Embabel; `deploy-plan.md` dostaje sekcję
 
 #### Automated
 
-- [ ] 4.1 Pełna weryfikacja zielona dwa razy z rzędu (dwa losowe ziarna): `cd szczur-radar-api && ./mvnw -B verify && ./mvnw -B verify`
-- [ ] 4.2 Pojedyncze scenariusze działają same: `cd szczur-radar-api && ./mvnw -B verify -Dit.test='PipelineRunIT#aRangeRunFetchesStoresAndAssessesEveryPostOfTheDay' -Dtest=NONE -Dsurefire.failIfNoSpecifiedTests=false` i to samo dla jednego scenariusza z przerwaniem (`RunWatchdogIT#aRunWaitingForACallThatDoesNotEndIsStoppedAndTheRunBehindItGoesOn`)
-- [ ] 4.3 Brak `OrderAnnotation` w testach silnika: `grep -rl 'OrderAnnotation' szczur-radar-api/src/test/java/pl/szczurradar/api/pipeline` zwraca nic
-- [ ] 4.4 `RunRecorderIT` istnieje i przechodzi: `cd szczur-radar-api && ./mvnw -B verify -Dit.test=RunRecorderIT -Dtest=NONE -Dsurefire.failIfNoSpecifiedTests=false`
+- [x] 4.1 Pełna weryfikacja zielona dwa razy z rzędu (dwa losowe ziarna): `cd szczur-radar-api && ./mvnw -B verify && ./mvnw -B verify`
+- [x] 4.2 Pojedyncze scenariusze działają same: `cd szczur-radar-api && ./mvnw -B verify -Dit.test='PipelineRunIT#aRangeRunFetchesStoresAndAssessesEveryPostOfTheDay' -Dtest=NONE -Dsurefire.failIfNoSpecifiedTests=false` i to samo dla jednego scenariusza z przerwaniem (`RunWatchdogIT#aRunWaitingForACallThatDoesNotEndIsStoppedAndTheRunBehindItGoesOn`)
+- [x] 4.3 Brak `OrderAnnotation` w testach silnika: `grep -rl 'OrderAnnotation' szczur-radar-api/src/test/java/pl/szczurradar/api/pipeline` zwraca nic
+- [x] 4.4 `RunRecorderIT` istnieje i przechodzi: `cd szczur-radar-api && ./mvnw -B verify -Dit.test=RunRecorderIT -Dtest=NONE -Dsurefire.failIfNoSpecifiedTests=false`
 
 #### Manual
 
