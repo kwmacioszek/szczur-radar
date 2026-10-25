@@ -1691,6 +1691,7 @@ INFO  Operator alert RUN_NEEDS_ATTENTION (run 4f0c…) reported: DELIVERED
 - no admin was notified: no admin with `login_enabled`, or the run was already notified;
 - the event repeats within 10 min for the same run, or the queue was full, or the process was killed or shut down with the event still waiting (the log has the line);
 - `HEALTHCHECK_PING_URL` is unset, healthchecks.io or Telegram is down (silent, section F-04), or the delivery failed (WARN in the log). A refused success ping leaves the check down, and the next event's "down" then gives no message (healthchecks.io alerts only on a change of state); that event's success ping brings the check up again;
+- the previous event was cut off at shutdown: after its 5 s the queue stops its thread, which may interrupt an event between its "down" and its "up" (each request may take up to 10 s). The check stays down, and the next event (e.g. after the restart) gives no message. A check that healthchecks.io shows down with no newer event in the API log is re-armed at once with `send-test-alert` (section F-04): its own "down" and "up" come through;
 - the error is one of the "not alerted" cases above.
 
 ### PR-env verification (szczur-radar-pr-<N>; plan Phase 4 item 3)

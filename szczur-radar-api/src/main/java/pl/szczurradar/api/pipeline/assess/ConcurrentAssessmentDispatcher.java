@@ -38,7 +38,9 @@ import pl.szczurradar.api.alerts.OperatorAlertQueue;
 import pl.szczurradar.api.llm.LlmCallException;
 import pl.szczurradar.api.llm.LlmClient;
 import pl.szczurradar.api.llm.LlmConfigurationException;
+import pl.szczurradar.api.llm.LlmProviderProperties;
 import pl.szczurradar.api.llm.LlmUnavailableException;
+import pl.szczurradar.api.llm.transport.ProviderMessages;
 import pl.szczurradar.api.pipeline.flow.RunFlow.AssessedBatch;
 import pl.szczurradar.api.pipeline.flow.RunFlow.ProcessingError;
 import pl.szczurradar.api.pipeline.state.PostTransitions;
@@ -119,19 +121,24 @@ public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher, Dis
 	/** The server's queue ({@code AlertsConfiguration}), resolved when used; none in an operator command. */
 	private final ObjectProvider<OperatorAlertQueue> alerts;
 
+	/** Cleans the key out of a failed check that is not the provider's: the run's error goes to the operator. */
+	private final ProviderMessages messages;
+
 	/** The post tasks of each run while {@link #dispatch} waits for them; {@link #cancel} interrupts them. */
 	private final Map<UUID, Tasks> dispatching = new ConcurrentHashMap<>();
 
 	@Autowired
 	ConcurrentAssessmentDispatcher(PostRepository posts, AssessmentInputs inputs, Assessor assessor,
 			PostTransitions transitions, RunRecorder recorder, @Lazy LlmClient llm,
-			@Value("${PIPELINE_LLM_CONCURRENCY:4}") int concurrency, ObjectProvider<OperatorAlertQueue> alerts) {
-		this(posts, inputs, assessor, transitions, recorder, llm, pool(concurrency), System::nanoTime, alerts);
+			@Value("${PIPELINE_LLM_CONCURRENCY:4}") int concurrency, ObjectProvider<OperatorAlertQueue> alerts,
+			LlmProviderProperties llmSettings) {
+		this(posts, inputs, assessor, transitions, recorder, llm, pool(concurrency), System::nanoTime, alerts,
+				new ProviderMessages(llmSettings.apiKey()));
 	}
 
 	ConcurrentAssessmentDispatcher(PostRepository posts, AssessmentInputs inputs, Assessor assessor,
 			PostTransitions transitions, RunRecorder recorder, LlmClient llm, ExecutorService executor,
-			LongSupplier nanoTime, ObjectProvider<OperatorAlertQueue> alerts) {
+			LongSupplier nanoTime, ObjectProvider<OperatorAlertQueue> alerts, ProviderMessages messages) {
 		this.posts = posts;
 		this.inputs = inputs;
 		this.assessor = assessor;
@@ -141,6 +148,7 @@ public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher, Dis
 		this.executor = executor;
 		this.nanoTime = nanoTime;
 		this.alerts = alerts;
+		this.messages = messages;
 	}
 
 	@Override
@@ -152,9 +160,11 @@ public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher, Dis
 			llm.check();
 		}
 		catch (RuntimeException ex) {
-			// A provider's refusal or outage, or an error that is not the provider's (LlmClient#complete).
-			log.error("The LLM check before run {} failed; no post is assessed", runId, ex);
-			return new AssessedBatch(runId, 0, 0, 0, List.of(), "the LLM check failed: " + ex.getMessage());
+			// A provider's refusal or outage, or an error that is not the provider's (LlmClient#complete): its
+			// message and causes may come from outside the clients (e.g. building one), so they are cleaned here.
+			log.error("The LLM check before run {} failed; no post is assessed", runId, messages.cleanCause(ex));
+			return new AssessedBatch(runId, 0, 0, 0, List.of(),
+					"the LLM check failed: " + messages.clean(String.valueOf(ex.getMessage())));
 		}
 		AtomicBoolean runStopped = new AtomicBoolean();
 		AtomicReference<@Nullable String> stoppedBy = new AtomicReference<>();

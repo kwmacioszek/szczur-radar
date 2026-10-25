@@ -4,16 +4,27 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.catchThrowable;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.net.SocketTimeoutException;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 import com.openai.client.okhttp.OkHttpClient;
+import com.openai.core.RequestOptions;
+import com.openai.core.http.Headers;
+import com.openai.core.http.HttpClient;
+import com.openai.core.http.HttpMethod;
+import com.openai.core.http.HttpRequest;
+import com.openai.core.http.HttpResponse;
+import com.openai.errors.OpenAIInvalidDataException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -531,6 +542,25 @@ class OpenRouterClientTest {
 	}
 
 	@Test
+	void anErrorInA200AnswerTheSdkFailsOnCarriesNoKeyInItsCauses() {
+		// A 502 reported in a 200 answer (above) reaches the raw response; then the stand-in for the SDK
+		// fails on it as openai-java does, with a message quoting the key (synthetic).
+		OpenRouterRawResponse rawResponse = new OpenRouterRawResponse(
+				answering(inBody(errorBody(502, "Upstream error", Map.of("error_type", "provider_error")))));
+		LlmClient client = stubbed(rawResponse, _ -> {
+			rawResponse.execute(HttpRequest.builder().method(HttpMethod.POST).baseUrl("http://openrouter.invalid").build(),
+					RequestOptions.none());
+			throw new OpenAIInvalidDataException("`choices` is not set in the answer for synthetic-key");
+		});
+
+		Throwable failure = catchThrowable(() -> client.complete(REQUEST));
+
+		assertThat(failure).hasMessageContaining("HTTP 502");
+		assertPrintedWithoutTheKey(failure, CleanedProviderException.class.getName(),
+				OpenAIInvalidDataException.class.getName());
+	}
+
+	@Test
 	void anSdkErrorCausedByIoIsAConnectionErrorAndRetried() {
 		List<Prompt> calls = new ArrayList<>();
 		LlmClient client = stubbed(prompt -> {
@@ -560,9 +590,54 @@ class OpenRouterClientTest {
 
 	/** The client on a stand-in for the SDK's chat model, with the test's key and recorded waits. */
 	private LlmClient stubbed(ChatModel chatModel) {
+		return stubbed(new OpenRouterRawResponse(OkHttpClient.builder().build()), chatModel);
+	}
+
+	private LlmClient stubbed(OpenRouterRawResponse rawResponse, ChatModel chatModel) {
 		return new OpenRouterClient(chatModel, "openai/gpt-6-luna", ServiceTier.DEFAULT, null, Duration.ofSeconds(5),
-				new TransportRetry(sleeps::add), new OpenRouterRawResponse(OkHttpClient.builder().build()),
-				new ProviderMessages("synthetic-key"));
+				new TransportRetry(sleeps::add), rawResponse, new ProviderMessages("synthetic-key"));
+	}
+
+	/** A stand-in for openai-java's HTTP client answering every request with {@code body} as an HTTP 200. */
+	private static HttpClient answering(String body) {
+		return new HttpClient() {
+
+			@Override
+			public HttpResponse execute(HttpRequest request, RequestOptions requestOptions) {
+				return new HttpResponse() {
+
+					@Override
+					public int statusCode() {
+						return 200;
+					}
+
+					@Override
+					public Headers headers() {
+						return Headers.builder().build();
+					}
+
+					@Override
+					public InputStream body() {
+						return new ByteArrayInputStream(body.getBytes(StandardCharsets.UTF_8));
+					}
+
+					@Override
+					public void close() {
+					}
+
+				};
+			}
+
+			@Override
+			public CompletableFuture<HttpResponse> executeAsync(HttpRequest request, RequestOptions requestOptions) {
+				throw new UnsupportedOperationException();
+			}
+
+			@Override
+			public void close() {
+			}
+
+		};
 	}
 
 	/** The real payload changed to OpenRouter's documented error after partial output. */

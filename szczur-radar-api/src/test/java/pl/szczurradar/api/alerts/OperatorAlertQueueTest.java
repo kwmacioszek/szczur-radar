@@ -154,6 +154,22 @@ class OperatorAlertQueueTest {
 	}
 
 	@Test
+	void aClockGoingBackDoesNotHoldTheNextEvent() throws InterruptedException {
+		FakeAlerts alerts = new FakeAlerts(clock);
+		OperatorAlertQueue queue = queue(alerts, OperatorAlertQueue.DRAIN_TIMEOUT);
+		queue.raise(AlertEvent.RUN_NEEDS_ATTENTION, RUN, "1");
+		queue.raise(AlertEvent.RUN_NEEDS_ATTENTION, OTHER_RUN, "2");
+		alerts.next();
+		alerts.next();
+
+		clock.advance(Duration.ofHours(-1));
+		queue.raise(AlertEvent.RUN_COUNTERS_LOST, RUN, "3");
+
+		assertThat(alerts.next().at()).isEqualTo(T0.minus(Duration.ofHours(1)));
+		assertThat(sleeps).isEmpty();
+	}
+
+	@Test
 	void aFullQueueDropsTheEventWithAWarnAndDoesNotThrow(CapturedOutput output) throws InterruptedException {
 		FakeAlerts alerts = FakeAlerts.hanging(clock);
 		OperatorAlertQueue queue = queue(alerts, OperatorAlertQueue.DRAIN_TIMEOUT);

@@ -7,7 +7,9 @@ import static org.assertj.core.api.Assertions.catchThrowable;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.io.UncheckedIOException;
 import java.net.SocketTimeoutException;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -17,6 +19,9 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.http.HttpStatus;
+import org.springframework.mock.http.client.MockClientHttpRequest;
+import org.springframework.mock.http.client.MockClientHttpResponse;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ObjectNode;
@@ -274,6 +279,24 @@ class DeepSeekClientTest {
 	}
 
 	@Test
+	void aServerCutOffTheSdkFailsOnCarriesNoKeyInItsCauses() {
+		// The real payload as DeepSeek ends an answer it could not finish reaches the raw response; then the
+		// stand-in for the SDK fails on it with a message quoting the key (synthetic).
+		ObjectNode cutOff = (ObjectNode) MAPPER.readTree(SUCCESS);
+		((ObjectNode) cutOff.at("/choices/0")).put("finish_reason", "insufficient_system_resource");
+		DeepSeekRawResponse rawResponse = new DeepSeekRawResponse();
+		LlmClient client = stubbed(rawResponse, _ -> {
+			answered(rawResponse, cutOff.toString());
+			throw new RuntimeException("no finish reason insufficient_system_resource for the key synthetic-key");
+		});
+
+		Throwable failure = catchThrowable(() -> client.complete(REQUEST));
+
+		assertThat(failure).hasMessageContaining("answer cut off by the server");
+		assertPrintedWithoutTheKey(failure, CleanedProviderException.class.getName(), RuntimeException.class.getName());
+	}
+
+	@Test
 	void anSdkErrorCausedByIoIsAConnectionErrorAndRetried() {
 		List<Prompt> calls = new ArrayList<>();
 		LlmClient client = stubbed(prompt -> {
@@ -303,8 +326,23 @@ class DeepSeekClientTest {
 
 	/** The client on a stand-in for the SDK's chat model, with the test's key and recorded waits. */
 	private LlmClient stubbed(ChatModel chatModel) {
-		return new DeepSeekClient(chatModel, "deepseek-v4-flash", new TransportRetry(sleeps::add),
-				new DeepSeekRawResponse(), new ProviderMessages("synthetic-key"));
+		return stubbed(new DeepSeekRawResponse(), chatModel);
+	}
+
+	private LlmClient stubbed(DeepSeekRawResponse rawResponse, ChatModel chatModel) {
+		return new DeepSeekClient(chatModel, "deepseek-v4-flash", new TransportRetry(sleeps::add), rawResponse,
+				new ProviderMessages("synthetic-key"));
+	}
+
+	/** {@code body} passed through {@code rawResponse} as a 200 answer on this thread. */
+	private static void answered(DeepSeekRawResponse rawResponse, String body) {
+		try {
+			rawResponse.intercept(new MockClientHttpRequest(), new byte[0],
+					(_, _) -> new MockClientHttpResponse(body.getBytes(StandardCharsets.UTF_8), HttpStatus.OK));
+		}
+		catch (IOException ex) {
+			throw new UncheckedIOException(ex);
+		}
 	}
 
 	private LlmClient client(String baseUrl, Duration timeout) {

@@ -264,13 +264,15 @@ public class OperatorAlertQueue implements DisposableBean {
 		}
 	}
 
-	/** Waits until fewer than {@link #MAX_PER_MINUTE} reports started in the last {@link #RATE_WINDOW}. */
+	/**
+	 * Waits until fewer than {@link #MAX_PER_MINUTE} reports started in the last {@link #RATE_WINDOW}. A
+	 * report "started" after now (the wall clock went back) no longer counts, so a jump back never makes
+	 * the queue wait longer than the window.
+	 */
 	private void awaitLimit() throws InterruptedException {
 		while (true) {
 			Instant now = clock.instant();
-			while (!sent.isEmpty() && !sent.getFirst().plus(RATE_WINDOW).isAfter(now)) {
-				sent.removeFirst();
-			}
+			sent.removeIf(started -> started.isAfter(now) || !started.plus(RATE_WINDOW).isAfter(now));
 			if (sent.size() < MAX_PER_MINUTE) {
 				return;
 			}

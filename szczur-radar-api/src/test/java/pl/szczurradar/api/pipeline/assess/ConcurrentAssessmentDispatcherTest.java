@@ -67,6 +67,7 @@ import pl.szczurradar.api.llm.LlmUnavailableException;
 import pl.szczurradar.api.llm.OutputMode;
 import pl.szczurradar.api.llm.Provider;
 import pl.szczurradar.api.llm.ServiceTier;
+import pl.szczurradar.api.llm.transport.ProviderMessages;
 import pl.szczurradar.api.llm.transport.TransportException;
 import pl.szczurradar.api.pipeline.flow.RunFlow.AssessedBatch;
 import pl.szczurradar.api.pipeline.flow.RunFlow.ProcessingError;
@@ -133,6 +134,9 @@ class ConcurrentAssessmentDispatcherTest {
 
 	/** The message of an outage's processing error and technical failure. */
 	private static final String OUTAGE = "LlmUnavailableException: HTTP 503 after 3 attempts";
+
+	/** The configured LLM key, which no run error or log line may carry. */
+	private static final String KEY = "synthetic-key";
 
 	private final ExecutorService executor = Executors.newFixedThreadPool(THREADS);
 
@@ -337,6 +341,19 @@ class ConcurrentAssessmentDispatcherTest {
 		assertThat(stages).allSatisfy((id, stage) -> assertThat(stage).isEqualTo(PostStage.STORED));
 		assertThat(batch.stoppedBy()).isEqualTo("the LLM check failed: java.lang.RuntimeException: unexpected state");
 		assertThat(batch.status()).isEqualTo(RunStatus.FAILED);
+	}
+
+	@Test
+	void aCheckFailingOutsideTheClientsLeavesTheKeyOutOfTheRunsErrorAndTheLog(CapturedOutput output) {
+		List<UUID> ids = List.of(post(ContractFixtures.validInput().item().body()));
+		// e.g. building the client: neither the message nor a cause went through a client's cleaning
+		checkFailure.set(new IllegalStateException("no client for the key " + KEY,
+				new IllegalArgumentException("bad key " + KEY)));
+
+		AssessedBatch batch = dispatcher().dispatch(RUN, ids);
+
+		assertThat(batch.stoppedBy()).isEqualTo("the LLM check failed: no client for the key <hidden>");
+		assertThat(output).doesNotContain(KEY).contains(IllegalArgumentException.class.getName(), "bad key <hidden>");
 	}
 
 	@Test
@@ -738,7 +755,7 @@ class ConcurrentAssessmentDispatcherTest {
 		};
 		return new ConcurrentAssessmentDispatcher(posts(), new AssessmentInputs(rawPayloads(), List.of(inputMapper())),
 				new Assessor(llm, Provider.GEMINI, "gemini-3.1-flash-lite", clock), transitions, recorder, llm,
-				pool, nanoTime::get, alertQueue());
+				pool, nanoTime::get, alertQueue(), new ProviderMessages(KEY));
 	}
 
 	private static LlmResponse response(String raw) {
