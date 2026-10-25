@@ -31,8 +31,8 @@ model refusal, a blocked answer, no text, another 4xx). Any other `RuntimeExcept
 unknown SDK error and is not classified: `TransportException.ofTimeoutOrConnection` turns only a
 time-out or an I/O error in the cause chain into a transport failure; anything else leaves the client
 as `TransportException.unclassified` — an `IllegalStateException` outside `LlmCallException`, with the
-message cleaned by `ProviderMessages` and the original as its cause, never retried and never recorded
-as a provider error. White space (e.g. a blank answer) is judged with the shared `text/Whitespace`,
+message cleaned by `ProviderMessages` and a cleaned copy of the original's chain as its cause (below),
+never retried and never recorded as a provider error. White space (e.g. a blank answer) is judged with the shared `text/Whitespace`,
 never `isBlank`. An answer without text is `REJECTED` (`provider_error`, no retry) for every provider,
 whatever the finish reason (`ChatResponses.requireText`).
 
@@ -73,6 +73,15 @@ whatever the finish reason (`ChatResponses.requireText`).
   closed (the app has one lazy bean); measurement code creates the client once and reuses it.
 - Error texts from providers pass through `ProviderMessages` (key → `<hidden>`, ≤ 500 characters)
   before they become exception messages.
+- **Causes are cleaned copies too** (S-18, audit B7): an SDK's exception may quote the key in its own
+  message, and `log.error(…, ex)` prints the whole cause chain. So every exception a client attaches as a
+  cause is `ProviderMessages.cleanCause(error)`, never the original: a chain of `CleanedProviderException`,
+  each with the message `<original class>: <cleaned message>` (only the class name when there is none),
+  the original's stack trace and the copy of its cause; no suppressed exceptions, at most 16 elements,
+  safe against a cycle. Make it after the classification, which reads the types of the original chain —
+  the copy keeps none. `TransportException.ofTimeoutOrConnection`, `TransportException.unclassified` and
+  every client (`GeminiClient.classify`, `OpenRouterClient`, `DeepSeekClient`) do it; a new client does
+  the same wherever it attaches a cause.
 - DeepSeek: Spring AI's finish-reason enum lacks `insufficient_system_resource` and `aborted`;
   `DeepSeekRawResponse` reads them from the raw answer and they are retried as server errors.
 - OpenRouter reports an error that occurs once the model has started on the request in the body of
@@ -109,9 +118,11 @@ whatever the finish reason (`ChatResponses.requireText`).
    `ScriptedProviderServer`: what is sent,
    text and usage read, and request counts for 429 → success, 5xx × 4, 400 and time-out (the count
    proves no hidden retries); an SDK exception without I/O in its cause chain leaves `complete` as an
-   `IllegalStateException` (not an `LlmCallException`) after one call, the original as its cause and
-   the key `<hidden>` in its message, while one with an `IOException` in the chain is a connection
-   error and retried. The success payload is always a real recording, never hand-written.
+   `IllegalStateException` (not an `LlmCallException`) after one call, with a `CleanedProviderException`
+   as its cause (the original's class name in its message, the original's stack trace) and the key
+   `<hidden>` in its message, while one with an `IOException` in the chain is a connection
+   error and retried; for answers that quote the key (401, 5xx, an error without a status, a time-out)
+   the full `printStackTrace` of what leaves the client has no key and names the original's class. The success payload is always a real recording, never hand-written.
    Cases that cannot be provoked live (refusal, blocked answer, thought parts, no choices) are that
    recording changed minimally in the test, with a comment saying what was changed. HTTP error
    bodies are short synthetic JSON in the provider's error shape.

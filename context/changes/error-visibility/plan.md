@@ -441,17 +441,17 @@ Bez migracji bazy, nowych tabel i zmiennych środowiska (`tools/db-backup/tables
 
 #### Automated
 
-- [x] 3.1 Testy klientów LLM i transportu zielone: `./mvnw -B test -Dtest='pl.szczurradar.api.llm.**.*Test'`
-- [x] 3.2 Test „klucza nie ma w łańcuchu” jest czerwony bez `cleanCause` (sprawdzenie celowym cofnięciem jednego miejsca)
-- [x] 3.3 Pełny zestaw zielony, w tym `LlmOutageIT` i `LlmCheckControllerIT`: `./mvnw -B verify`
+- [x] 3.1 Testy klientów LLM i transportu zielone: `./mvnw -B test -Dtest='pl.szczurradar.api.llm.**.*Test'` — 71ef627
+- [x] 3.2 Test „klucza nie ma w łańcuchu” jest czerwony bez `cleanCause` (sprawdzenie celowym cofnięciem jednego miejsca) — 71ef627
+- [x] 3.3 Pełny zestaw zielony, w tym `LlmOutageIT` i `LlmCheckControllerIT`: `./mvnw -B verify` — 71ef627
 
 ### Phase 4: Dokumenty i weryfikacja w PR env
 
 #### Automated
 
-- [ ] 4.1 CI na PR zielone (wszystkie joby `ci.yml`, w tym `railway-config`)
-- [ ] 4.2 W PR env (agent): przebieg admina `2004-01-01`–`2004-01-01` (bez resztek w kolejce) kończy się `failed`, a log API ma linię wyniku wysyłki z kolejki z `RUN_NEEDS_ATTENTION`, id tego przebiegu i `DELIVERED`
-- [ ] 4.3 Dokumenty: `grep` po `OperatorAlertQueue` w `pipeline/CLAUDE.md` i `REPOSITORY_GUIDELINES.md` oraz po „S-18” w `prd.md` i `deploy-plan.md` znajduje nowe akapity
+- [x] 4.1 CI na PR zielone (wszystkie joby `ci.yml`, w tym `railway-config`)
+- [x] 4.2 W PR env (agent): przebieg admina `2004-01-01`–`2004-01-01` (bez resztek w kolejce) kończy się `failed`, a log API ma linię wyniku wysyłki z kolejki z `RUN_NEEDS_ATTENTION`, id tego przebiegu i `DELIVERED`
+- [x] 4.3 Dokumenty: `grep` po `OperatorAlertQueue` w `pipeline/CLAUDE.md` i `REPOSITORY_GUIDELINES.md` oraz po „S-18” w `prd.md` i `deploy-plan.md` znajduje nowe akapity
 
 #### Manual
 
