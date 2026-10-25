@@ -3,6 +3,10 @@ package pl.szczurradar.api.pipeline.api;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 
+import java.time.Clock;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.util.List;
 import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
@@ -14,16 +18,25 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
+import org.springframework.transaction.annotation.Transactional;
 
 import pl.szczurradar.api.TestcontainersConfiguration;
 import pl.szczurradar.api.cli.MigrateCommand;
+import pl.szczurradar.api.pipeline.PipelineRunService;
+import pl.szczurradar.api.pipeline.run.MissingDays;
+import pl.szczurradar.api.pipeline.run.PipelineRun;
+import pl.szczurradar.api.pipeline.run.PipelineRunRepository;
+import pl.szczurradar.api.pipeline.run.RunStatus;
+import pl.szczurradar.api.sources.Source;
 import pl.szczurradar.api.user.Role;
+import pl.szczurradar.api.user.SystemAccount;
 import pl.szczurradar.api.user.User;
 import pl.szczurradar.api.user.UserRepository;
 
 /**
  * Without Wykop's keys (the usual CI and PR env state until they are set) no source is configured: a
- * range request is refused with 503 {@code source_not_configured} and creates no run.
+ * range request is refused with 503 {@code source_not_configured} and creates no run, and no day is
+ * missing.
  */
 @SpringBootTest(properties = { MigrateCommand.ENABLE_FLYWAY, "WYKOP_KEY=", "WYKOP_SECRET=" })
 @AutoConfigureMockMvc
@@ -38,6 +51,12 @@ class PipelineRunWithoutSourceIT {
 
 	@Autowired
 	JdbcTemplate jdbc;
+
+	@Autowired
+	PipelineRunRepository runs;
+
+	@Autowired
+	Clock clock;
 
 	@Test
 	void aRangeWithoutAConfiguredSourceIsUnavailable() {
@@ -58,6 +77,28 @@ class PipelineRunWithoutSourceIT {
 		assertThat(mvc.get().uri("/api/admin/pipeline-runs/sources").with(user(admin.toString()).roles(Role.ADMIN.name())))
 			.bodyJson()
 			.isStrictlyEqualTo("[{\"source\":\"wykop\",\"configured\":false}]");
+	}
+
+	@Test
+	@Transactional
+	void aSourceThatIsNotConfiguredMissesNoDay() {
+		UUID admin = users.save(new User("no-source-" + UUID.randomUUID() + "@example.com", null, Role.ADMIN)).getId();
+		LocalDate today = LocalDate.ofInstant(clock.instant(), PipelineRunService.ZONE);
+		LocalDate from = MissingDays.windowStart(today);
+		// Wykop covered the window's first day only: configured, it would miss every other day.
+		UUID run = runs.saveAndFlush(PipelineRun.range(from.atStartOfDay(PipelineRunService.ZONE).toInstant(),
+				from.atTime(LocalTime.of(23, 59, 59)).atZone(PipelineRunService.ZONE).toInstant(),
+				List.of(Source.WYKOP), SystemAccount.SCHEDULER.id(), null))
+			.getId();
+		jdbc.update("UPDATE pipeline_runs SET status = ? WHERE id = ?", RunStatus.SUCCEEDED.value(), run);
+
+		assertThat(mvc.get()
+			.uri("/api/admin/pipeline-runs/missing-days")
+			.with(user(admin.toString()).roles(Role.ADMIN.name()))).hasStatusOk()
+			.bodyJson()
+			.extractingPath("$.days")
+			.asArray()
+			.isEmpty();
 	}
 
 }

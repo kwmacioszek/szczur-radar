@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from './client'
-import { fetchRun, fetchRuns, fetchSources, retryPosts, startErrorMessage, startRange } from './pipeline'
+import { fetchMissingDays, fetchRun, fetchRuns, fetchSources, retryPosts, startErrorMessage, startRange } from './pipeline'
 import { fetchFailedPosts, fetchPosts } from './posts'
 
 function respond(status: number, body: unknown) {
@@ -61,6 +61,13 @@ describe('pipeline and posts API', () => {
       '/api/admin/pipeline-runs?page=1&size=40',
       '/api/admin/pipeline-runs/3f2a%2F..%3Fx',
     ])
+  })
+
+  it('reads the days without data', async () => {
+    const body = { from: '2026-10-09', to: '2026-10-22', days: [{ day: '2026-10-19', sources: ['wykop'] }] }
+    const fetchMock = respond(200, body)
+    await expect(fetchMissingDays()).resolves.toEqual(body)
+    expect(sent(fetchMock).path).toBe('/api/admin/pipeline-runs/missing-days')
   })
 
   it('says an unknown run is not found', async () => {

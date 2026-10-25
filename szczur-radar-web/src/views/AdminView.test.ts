@@ -4,7 +4,7 @@ import { createMemoryHistory } from 'vue-router'
 import { fetchMe } from '../api/auth'
 import { ApiError } from '../api/client'
 import { fetchNotifications } from '../api/notifications'
-import { type Run, fetchRuns, fetchSources, retryPosts, startRange } from '../api/pipeline'
+import { type MissingDays, type Run, fetchMissingDays, fetchRuns, fetchSources, retryPosts, startRange } from '../api/pipeline'
 import { type FailedPost, fetchFailedPosts } from '../api/posts'
 import { resetSession } from '../auth/session'
 import { createAppRouter } from '../router'
@@ -24,6 +24,7 @@ vi.mock('../api/pipeline', async (importOriginal) => ({
   retryPosts: vi.fn(),
   fetchRuns: vi.fn(),
   fetchSources: vi.fn(),
+  fetchMissingDays: vi.fn(),
 }))
 
 function run(overrides: Partial<Run> = {}): Run {
@@ -117,6 +118,7 @@ describe('AdminView', () => {
     vi.mocked(fetchRuns).mockReset().mockResolvedValue({ items: [], page: 0, size: 20, total: 0 })
     vi.mocked(fetchFailedPosts).mockReset().mockResolvedValue({ items: [], page: 0, size: 50, total: 0 })
     vi.mocked(fetchNotifications).mockReset().mockResolvedValue({ unread: 0, items: [] })
+    vi.mocked(fetchMissingDays).mockReset().mockResolvedValue({ from: '2026-10-09', to: '2026-10-22', days: [] })
     vi.mocked(startRange).mockReset()
     vi.mocked(retryPosts).mockReset()
     // The router scrolls to the top on a path change (router/scroll.ts); jsdom does not implement scrolling.
@@ -405,6 +407,148 @@ describe('AdminView', () => {
     await retry.trigger('click')
     expect(retry.text()).toBe('Ponawianie…')
     expect(retry.attributes('aria-busy')).toBe('true')
+  })
+
+  describe('days without data', () => {
+    /** The plan's example: today 2026-10-24, Wykop has no data on 19 and 20 October. */
+    const example = {
+      from: '2026-10-09',
+      to: '2026-10-22',
+      days: [
+        { day: '2026-10-19', sources: ['wykop'] },
+        { day: '2026-10-20', sources: ['wykop'] },
+      ],
+    }
+
+    function section(wrapper: Awaited<ReturnType<typeof mountAdmin>>) {
+      return wrapper.find('section[aria-labelledby="missing-title"]')
+    }
+
+    function fillButtons(wrapper: Awaited<ReturnType<typeof mountAdmin>>) {
+      return section(wrapper).findAll('button').filter((button) => button.text() === 'Wpisz do formularza')
+    }
+
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    it('shows consecutive days as one range with its sources, and the note about just after midnight', async () => {
+      vi.mocked(fetchMissingDays).mockResolvedValue(example)
+      const wrapper = await mountAdmin()
+      const rows = section(wrapper).findAll('.missing-range')
+      expect(rows.map((row) => row.find('.missing-days').text())).toEqual(['19.10.2026 – 20.10.2026 · Wykop'])
+      expect(fillButtons(wrapper)).toHaveLength(1)
+      expect(fillButtons(wrapper)[0]!.attributes('aria-label')).toBe(
+        'Wpisz do formularza: 19.10.2026 – 20.10.2026 · Wykop',
+      )
+      expect(section(wrapper).find('.hint').text()).toContain('Tuż po północy')
+      expect(section(wrapper).attributes('aria-busy')).toBeUndefined()
+    })
+
+    it('puts the range into the form, checks its sources, clears the last message and focuses Od', async () => {
+      vi.mocked(fetchMissingDays).mockResolvedValue(example)
+      vi.mocked(startRange).mockRejectedValue(new ApiError(409, 'pipeline_busy'))
+      const wrapper = await mountAdmin({ attachTo: document.body })
+      await wrapper.find('input[type="checkbox"][value="wykop"]').setValue(false)
+      await wrapper.find('input[type="checkbox"][value="wykop"]').setValue(true)
+      await wrapper.find('form').trigger('submit')
+      await flushPromises()
+      expect(wrapper.find('section[aria-labelledby="start-title"] [role="alert"]').exists()).toBe(true)
+      await wrapper.find('input[type="checkbox"][value="wykop"]').setValue(false)
+
+      await fillButtons(wrapper)[0]!.trigger('click')
+
+      const [fromField, toField] = wrapper.findAll('input[type="date"]')
+      expect((fromField!.element as HTMLInputElement).value).toBe('2026-10-19')
+      expect((toField!.element as HTMLInputElement).value).toBe('2026-10-20')
+      expect((wrapper.find('input[type="checkbox"][value="wykop"]').element as HTMLInputElement).checked).toBe(true)
+      expect(wrapper.find('section[aria-labelledby="start-title"] [role="alert"]').exists()).toBe(false)
+      expect(document.activeElement).toBe(fromField!.element)
+    })
+
+    it('checks only configured sources', async () => {
+      vi.mocked(fetchMissingDays).mockResolvedValue(example)
+      vi.mocked(fetchSources).mockResolvedValue([{ source: 'wykop', configured: false }])
+      const wrapper = await mountAdmin()
+      await fillButtons(wrapper)[0]!.trigger('click')
+      expect((wrapper.find('input[type="checkbox"][value="wykop"]').element as HTMLInputElement).checked).toBe(false)
+    })
+
+    it('names the checked window when no day is missing', async () => {
+      const wrapper = await mountAdmin()
+      expect(section(wrapper).find('.empty').text()).toBe('Brak dni bez danych od 9.10.2026 do 22.10.2026.')
+      expect(section(wrapper).find('.missing-range').exists()).toBe(false)
+      expect(section(wrapper).find('.hint').exists()).toBe(false)
+    })
+
+    it('says it is loading until the API answers', async () => {
+      vi.mocked(fetchMissingDays).mockReturnValue(never())
+      const wrapper = await mountAdmin()
+      expect(section(wrapper).find('.loading').text()).toBe('Wczytywanie…')
+      expect(section(wrapper).attributes('aria-busy')).toBe('true')
+      expect(section(wrapper).find('.empty').exists()).toBe(false)
+    })
+
+    it('says the days failed to load', async () => {
+      vi.mocked(fetchMissingDays).mockRejectedValue(new ApiError(500, 'internal_error'))
+      const wrapper = await mountAdmin()
+      expect(section(wrapper).find('[role="alert"]').text()).toBe('Nie udało się wczytać dni bez danych.')
+      expect(section(wrapper).find('.empty').exists()).toBe(false)
+    })
+
+    it('reads the days again with Odśwież', async () => {
+      vi.mocked(fetchMissingDays)
+        .mockResolvedValueOnce(example)
+        .mockResolvedValueOnce({ ...example, days: [] })
+      const wrapper = await mountAdmin()
+      expect(section(wrapper).findAll('.missing-range')).toHaveLength(1)
+
+      await wrapper.findAll('button').find((button) => button.text() === 'Odśwież')!.trigger('click')
+      await flushPromises()
+
+      expect(fetchMissingDays).toHaveBeenCalledTimes(2)
+      expect(section(wrapper).find('.missing-range').exists()).toBe(false)
+      expect(section(wrapper).find('.empty').text()).toBe('Brak dni bez danych od 9.10.2026 do 22.10.2026.')
+    })
+
+    it('keeps the newest answer when an older read of the days ends later', async () => {
+      let resolveOlder!: (days: MissingDays) => void
+      let resolveNewer!: (days: MissingDays) => void
+      vi.mocked(fetchMissingDays)
+        .mockResolvedValueOnce(example)
+        .mockReturnValueOnce(new Promise((resolve) => (resolveOlder = resolve)))
+        .mockReturnValueOnce(new Promise((resolve) => (resolveNewer = resolve)))
+      const wrapper = await mountAdmin()
+      const refresh = wrapper.findAll('button').find((button) => button.text() === 'Odśwież')!
+
+      await refresh.trigger('click')
+      await refresh.trigger('click')
+      resolveNewer({ ...example, days: [] })
+      await flushPromises()
+      resolveOlder(example)
+      await flushPromises()
+
+      expect(section(wrapper).find('.missing-range').exists()).toBe(false)
+      expect(section(wrapper).find('.empty').text()).toBe('Brak dni bez danych od 9.10.2026 do 22.10.2026.')
+    })
+
+    it('reads the days again once a run of the list is no longer active', async () => {
+      vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval', 'setTimeout', 'clearTimeout'] })
+      vi.mocked(fetchRuns)
+        .mockResolvedValueOnce(page([run({ status: 'running', finishedAt: null })], 1))
+        .mockResolvedValueOnce(page([run({ status: 'running', finishedAt: null, assessedOk: 30 })], 1))
+        .mockResolvedValue(page([run({ status: 'succeeded' })], 1))
+      await mountAdmin()
+      expect(fetchMissingDays).toHaveBeenCalledTimes(1)
+
+      await vi.advanceTimersByTimeAsync(10_000)
+      await flushPromises()
+      expect(fetchMissingDays).toHaveBeenCalledTimes(1)
+
+      await vi.advanceTimersByTimeAsync(10_000)
+      await flushPromises()
+      expect(fetchMissingDays).toHaveBeenCalledTimes(2)
+    })
   })
 
   describe('run history', () => {

@@ -3,7 +3,7 @@ project: "Szczur Radar"
 version: 3
 status: draft # draft | active | locked
 created: 2026-09-27
-updated: 2026-10-24
+updated: 2026-10-25
 prd_version: 2
 main_goal: quality
 top_blocker: decisions # 5 decyzji produktowych z audytu (context/archive/2026-10-17-post-mvp-pipeline-audit/research.md, Open Questions); najdroższa, kanał alarmowy poza aplikacją (F-04), rozstrzygnięta 2026-10-20: healthchecks.io → Telegram
@@ -68,6 +68,8 @@ milestone_status: open
 
 > v3.3 (2026-10-24): S-12 (`reliable-run-notifications`) **zaparkowany** (decyzja użytkownika po `/10x-frame`, `context/archive/2026-10-24-reliable-run-notifications/frame.md`): A3, A5, A6 znane tylko z audytu, bez incydentu; zguba powiadomienia wymaga awarii bazy w oknie milisekund po commicie, przebiegi idą prawie tylko z crona (kod wyjścia, Railway, healthchecks), a S-18 zrobi z nieudanego powiadomienia alarm. A5 (nieudany zapis licznika, dziś tylko WARN) przeszedł do zakresu S-18; A6 i reszta S-12 w `## Parked` z warunkiem powrotu. Status `parked` nie blokuje zamknięcia M-2.
 
+> v3.4 (2026-10-25): S-13 (`missed-night-detection`) zakończone: dni bez danych widoczne w `/admin`, zakres wpisywany do formularza ręcznego przebiegu (PR #106, squash `d0b099c`, weryfikacja produkcji w issue #72). Niewiadoma S-13 rozstrzygnięta: tylko pokazywać, bez automatycznego uzupełniania i bez nowego alarmu. Do `## Parked` dopisane dwie odłożone poprawki z przeglądu S-13 (F2, F5) i nadzór synchronizacji NAS → Google Drive, który S-13 zostawił poza zakresem.
+
 ## Milestone
 
 **M-2: MVP Quality & Reliability Hardening** — Status: open
@@ -101,7 +103,7 @@ Na Wykopie (#gielda) i Reddicie codziennie pojawiają się setki postów o inwes
 | S-10 | llm-config-fail-fast        | operator dostaje błąd startu przy `LLM_TIMEOUT` bez jednostki; czasy są parsowane jedną regułą                        | —             | MS-01, MS-02; audyt B1, E                                   | done     |
 | S-11 | stuck-run-self-heals        | przebieg po martwej instancji i post z wyścigu claim wracają do obiegu bez restartu API                                | —             | MS-01, MS-03; audyt A2, A4                                  | done |
 | S-12 | reliable-run-notifications  | ~~admin dostaje każde należne powiadomienie o przebiegu, a stan kroków zgadza się ze statusem przebiegu~~ — zaparkowane 2026-10-24, A5 w S-18 | S-08          | MS-04, MS-01, NFR (sygnał awarii przebiegu); audyt A3, A5, A6 | parked |
-| S-13 | missed-night-detection      | operator dowie się, że nocny przebieg albo backup nie wystartował, i widzi dni bez danych                              | F-04          | MS-04, NFR (sygnał awarii przebiegu, kopia bazy); audyt C2, C3 | proposed |
+| S-13 | missed-night-detection      | operator dowie się, że nocny przebieg albo backup nie wystartował, i widzi dni bez danych                              | F-04          | MS-04, NFR (sygnał awarii przebiegu, kopia bazy); audyt C2, C3 | done |
 | S-14 | safe-deploy-gate            | merge nie wdroży czerwonego commita, crony czekają na CI, po apply jest kontrola zdrowia, ręczne zmienne nie blokują wdrożeń | —        | MS-02, MS-03; audyt C4, C5, C6, C7                          | done |
 | S-15 | backup-check-completeness   | sprawdzenie kopii bazy obejmuje wszystkie tabele i odrzuca kopię pustej bazy                                           | —             | MS-01, MS-03, NFR (kopia sprawdzana odtworzeniem); audyt C9 | done |
 | S-16 | wykop-ingest-completeness   | stronicowanie Wykopu nie gubi elementów po cichu, a chwilowy błąd Wykopu nie zabija nocy                               | —             | MS-01, MS-03; audyt B5, B6                                  | done |
@@ -223,10 +225,10 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Parallel with:** S-08–S-12, S-14–S-19
 - **Blockers:** —
 - **Unknowns:**
-  - Czy automatycznie uzupełniać dni starsze niż D-2, czy tylko je pokazywać i zostawić ręczny przebieg zakresu adminowi? — Owner: user. Block: no.
+  - Czy automatycznie uzupełniać dni starsze niż D-2, czy tylko je pokazywać i zostawić ręczny przebieg zakresu adminowi? — Owner: user. Block: no. **Rozstrzygnięte (2026-10-24, plan `missed-night-detection`):** tylko pokazywać — sekcja „Dni bez danych” w `/admin` (okno D-15…D-2, osobno dla każdego skonfigurowanego źródła) wpisuje zakres do formularza, przebieg uruchamia admin; bez automatycznego uzupełniania i bez nowego alarmu (złą noc zgłasza F-04). Nadzór NAS → Google Drive poza zakresem (`## Parked`).
 - **Risk:** aplikacja i crony nie mogą same zgłosić, że się nie uruchomiły — dlatego zależy od kanału zewnętrznego; obejmuje też synchronizację NAS → Google Drive tylko wtedy, gdy kanał to umożliwia.
 - **Uwaga (F-04, 2026-10-20):** kanał F-04 to healthchecks.io → Telegram. Check każdego crona (`<środowisko>/pipeline-trigger`, `<środowisko>/db-backup`, harmonogram UTC i karencja) już istnieje i alarmuje, gdy noc albo backup nie wystartowały lub nie skończyły się na czas (ok. 03:45 i 04:15 UTC); dla S-13 zostają dni bez danych (pokazanie lub uzupełnianie) i ewentualny nadzór NAS → Google Drive (`deploy-plan.md`, sekcja F-04).
-- **Status:** proposed
+- **Status:** done
 
 ### S-14: Bezpieczna bramka wdrożeń
 
@@ -311,13 +313,13 @@ Foundations below assume these are present and do NOT re-scaffold them.
 
 | Roadmap ID | Change ID                   | Suggested issue title                                                     | Ready for `/10x-plan` | Notes                                                    |
 | ---------- | --------------------------- | ------------------------------------------------------------------------- | --------------------- | -------------------------------------------------------- |
-| F-04       | out-of-app-alert-channel    | F-04: kanał alarmowy poza aplikacją                                        | yes                   | W realizacji; kanał rozstrzygnięty: healthchecks.io → Telegram |
+| F-04       | out-of-app-alert-channel    | F-04: kanał alarmowy poza aplikacją                                        | yes                   | Zrobione 2026-10-24 (PR #95, `45d18c4`); kanał: healthchecks.io → Telegram |
 | S-08       | empty-run-signal            | S-08: pusty przebieg daje sygnał (gwiazda przewodnia M-2)                  | yes                   | Run `/10x-plan empty-run-signal`                         |
 | S-09       | attempt-accounting          | S-09: awaria dostawcy LLM nie zużywa prób postów                           | yes                   | Run `/10x-plan attempt-accounting`                       |
 | S-10       | llm-config-fail-fast        | S-10: zła konfiguracja LLM zatrzymuje start                                | yes                   | Run `/10x-plan llm-config-fail-fast`                     |
 | S-11       | stuck-run-self-heals        | S-11: utknięty przebieg sam wraca do obiegu                                | yes                   | Run `/10x-plan stuck-run-self-heals`                     |
 | S-12       | reliable-run-notifications  | S-12: powiadomienia o przebiegach nie giną                                 | no                    | Zaparkowany 2026-10-24 (frame); nie planować, A5 w S-18  |
-| S-13       | missed-night-detection      | S-13: brakująca noc nie przechodzi niezauważona                            | no                    | Po F-04                                                  |
+| S-13       | missed-night-detection      | S-13: brakująca noc nie przechodzi niezauważona                            | no                    | Zrobione 2026-10-25 (PR #106, `d0b099c`)                                                  |
 | S-14       | safe-deploy-gate            | S-14: bezpieczna bramka wdrożeń                                            | yes                   | Run `/10x-plan safe-deploy-gate`; warto wcześnie          |
 | S-15       | backup-check-completeness   | S-15: kopia bazy sprawdzana w całości                                      | yes                   | Run `/10x-plan backup-check-completeness`                |
 | S-16       | wykop-ingest-completeness   | S-16: Wykop nie gubi postów po cichu                                       | yes                   | Run `/10x-plan wykop-ingest-completeness`                |
@@ -361,6 +363,9 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Unieważnianie sesji wersją poświadczeń** — Why parked: po MVP, z przeglądu implementacji S-07 (`cli-user-onboarding`, F1). Logowanie, które sprawdziło hasło przed zatwierdzeniem `reset-password`, zapisuje sesję już po `DELETE` resetu, więc ta sesja działa aż do aktywacji (najwyżej `ACTIVATION_LINK_TTL`, domyślnie 12 h); od S-07 kończy ją aktywacja. Pełne zamknięcie: wersja poświadczeń konta (np. `password_changed_at`), zapisana w sesji przy logowaniu i sprawdzana przy każdym uwierzytelnionym żądaniu — migracja i sprawdzenie w łańcuchu filtrów.
 - **S-12 `reliable-run-notifications` — powiadomienia o przebiegach nie giną (A3), krok `assess` nie jest `succeeded` w przebiegu `failed` (A6)** — Why parked: decyzja użytkownika 2026-10-24 po `/10x-frame` (`context/archive/2026-10-24-reliable-run-notifications/frame.md`). Scenariusze tylko z audytu, bez incydentu; A3 wymaga awarii bazy w oknie milisekund po commicie i po S-18 przestaje być cichy; A6 to niespójny obraz kroków w `/admin` (powiadomienie powstaje). A5 przeszedł do S-18. Powrót: pierwszy incydent zgubionego powiadomienia albo przebiegi admina uruchamiane bez patrzenia; A6 przy najbliższej pracy w `pipeline/flow`.
 - **Przybliżony czas zakończenia trwającego przebiegu** — Why parked: nice-to-have po MVP (decyzja użytkownika 2026-10-13, po pierwszym przebiegu crona na produkcji). Buduje na postępie przebiegu z S-06 (dopisek o monitorowaniu): bez liczników postępu nie ma z czego liczyć. Pomysł: w `/admin` przy przebiegu `running` szacowany koniec i odliczanie, np. średni czas oceny posta z ostatnich przebiegów (z `pipeline_run_steps` i `assessments`) × liczba postów do oceny + typowy czas pobrania, albo tempo bieżącego przebiegu, gdy ma już kilka ocen. Niepewność: tier flex, ponowienia i powroty do standardu mocno wydłużają pojedyncze oceny, więc to przybliżenie, nie obietnica.
+- **Dni bez danych przy drugim źródle (S-13, przegląd F2)** — Why parked: dziś jest jedno źródło (Wykop), więc przypadku „dwa źródła z różnymi lukami” w `MissingDaysTest` nie da się napisać; kod liczy pokrycie osobno dla każdego źródła (`pipeline/run/MissingDays`). Dopisać w wycinku z Redditem (FR-023): dzień, którego brakuje tylko jednemu źródłu, i `sources` dnia w kolejności `Source` (`context/archive/2026-10-24-missed-night-detection/follow-ups/review-fixes.md`).
+- **Odczyt dni bez danych poza kontrolerem (S-13, przegląd F5)** — Why parked: jedynym odbiorcą listy jest sekcja w `/admin`. `PipelineRunController.missingDays()` składa ją z dwóch odczytów bez wspólnej transakcji (chwilowa niespójność możliwa tylko przy pierwszym w historii przebiegu źródła). Przy drugim odbiorcy (np. alarm o dziurze z crona) przenieść składanie do usługi odczytu w `pipeline/`, z jednym odczytem `readOnly` i jednym zapytaniem grupującym po źródłach.
+- **Nadzór synchronizacji NAS → Google Drive** — Why parked: S-13 (audyt C2) obejmował go „tylko wtedy, gdy kanał to umożliwia”, a plan `missed-night-detection` zostawił go poza zakresem. Dziś nic nie sprawdza obu zadań Synology Cloud Sync (`deploy-plan.md`, sekcja F-01). Możliwa droga: osobny check healthchecks.io w `tools/healthchecks/checks.sh` i zadanie DSM na NAS-ie, które go pinguje — praca operatora poza Railway i kolejny sekret (ping URL).
 
 ## Milestone History
 
@@ -389,3 +394,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **S-16: pobieranie z Wykopu wykrywa niekompletne stronicowanie (zamiast kończyć się „kompletne” przy brakach), a chwilowy błąd Wykopu (429, 5xx, transport) jest ponawiany, zamiast kończyć całą noc `failed`.** — Archived 2026-10-24 → `context/archive/2026-10-20-wykop-ingest-completeness/`. Lesson: —.
 - **F-04: (foundation) jest jeden kanał alarmowy poza aplikacją, mieszczący się w limitach kosztów: healthchecks.io (usługa nadzoru cyklicznych zadań, darmowy plan) z alarmem w Telegramie przez @HealthchecksBot, $0. Oba crony meldują start i kod wyjścia z ostatnią linią logu, więc porażka, brak startu albo brak końca na czas (harmonogram + karencja) daje wiadomość; API ma nadawcę zdarzeń dla operatora (`alerts/OperatorAlerts`) i komendę `send-test-alert`, a działanie kanału jest raz sprawdzone na produkcji. Tylko minimalne podłączenie w API: jeden sygnał testowy; konkretne alarmy z API dodaje S-18, dni bez danych S-13.** — Archived 2026-10-24 → `context/archive/2026-10-20-out-of-app-alert-channel/`. Lesson: —.
 - **S-11: przebieg `running` po instancji, która zniknęła bez zamknięcia, oraz post przejęty w wyścigu z odzyskiwaniem wracają do obiegu bez restartu API, więc nocny cron nie dostaje godzinami `409 pipeline_busy`.** — Archived 2026-10-24 → `context/archive/2026-10-23-stuck-run-self-heals/`. Lesson: —.
+- **S-13: operator dostaje alarm przez kanał z F-04, gdy nocny przebieg albo backup nie wystartował lub nie zgłosił końca na czas, a dni bez pobranych danych są widoczne (lub uzupełniane).** — Archived 2026-10-24 → `context/archive/2026-10-24-missed-night-detection/`. Merged as squash `d0b099c` (PR #106; SHA w Progress archiwum to commity gałęzi), produkcja zweryfikowana 2026-10-25 (issue #72). Lesson: —.
