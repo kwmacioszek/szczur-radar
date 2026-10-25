@@ -455,5 +455,5 @@ Bez migracji bazy, nowych tabel i zmiennych środowiska (`tools/db-backup/tables
 
 #### Manual
 
-- [ ] 4.4 Wiadomość w Telegramie z checka `szczur-radar-pr-<N>/api-events` ma zdarzenie `RUN_NEEDS_ATTENTION`, id przebiegu i odnośnik `/admin/runs/<id>`, bez sekretów
-- [ ] 4.5 Testowy check PR env usunięty (`checks.sh delete szczur-radar-pr-<N>`)
+- [x] 4.4 Wiadomość w Telegramie z checka `szczur-radar-pr-<N>/api-events` ma zdarzenie `RUN_NEEDS_ATTENTION`, id przebiegu i odnośnik `/admin/runs/<id>`, bez sekretów
+- [x] 4.5 Testowy check PR env usunięty (`checks.sh delete szczur-radar-pr-<N>`)
