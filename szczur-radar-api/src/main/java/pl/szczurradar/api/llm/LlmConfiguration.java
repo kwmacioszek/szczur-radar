@@ -6,11 +6,10 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.core.env.Environment;
 
 /**
- * The application's {@link LlmClient}, from the same {@code LLM_*} settings as Embabel's model
- * registry. The client is lazy: the server, operator commands and tests start without building a
- * client or touching the network. The settings themselves are a bean (already validated at start-up
- * by {@code config/LlmConfigurationCheck}), so the assessor can record the configured provider and
- * model.
+ * The application's {@link LlmClient}, from the {@code LLM_*} settings. The client is lazy: the server,
+ * operator commands and tests start without building a client or touching the network. The settings
+ * themselves are a bean (already validated at start-up by {@code config/LlmConfigurationCheck}), so the
+ * assessor can record the configured provider and model.
  */
 @Configuration(proxyBeanMethods = false)
 public class LlmConfiguration {

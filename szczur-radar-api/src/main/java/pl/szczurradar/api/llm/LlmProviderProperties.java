@@ -41,9 +41,6 @@ import pl.szczurradar.api.settings.SettingText;
  * <p>An invalid value fails the start of the server and of every operator command (also the pre-deploy
  * {@code migrate}) with an {@link InvalidSettingsException}: Spring Boot's
  * {@code APPLICATION FAILED TO START} block, exit code 2 for a command.
- *
- * <p>The provider name also activates the Spring profile {@code application-<provider>.properties},
- * which maps these settings onto Embabel's properties and switches the other providers off.
  */
 public record LlmProviderProperties(Provider provider, String model, String apiKey, ServiceTier serviceTier,
 		@Nullable ReasoningEffort reasoningEffort, Duration timeout) {

@@ -37,8 +37,10 @@ never `isBlank`. An answer without text is `REJECTED` (`provider_error`, no retr
 whatever the finish reason (`ChatResponses.requireText`).
 
 - One provider per run from `LLM_*` (`LlmProviderProperties`); the provider's `create()`
-  builds a Spring AI `ChatModel` outside Embabel's model beans. Embabel's `createObject` is never used for
-  assessments (lenient parsing, semantic retries, schema pasted into the prompt).
+  builds its Spring AI `ChatModel` directly from those settings, with no agent framework and no Spring
+  AI auto-configuration (the pom has only the provider modules, no starters). The model's raw text goes
+  straight to the caller's parser: no framework converter (lenient parsing, semantic retries, schema
+  pasted into the prompt) runs in between.
 - **Retries live only in `TransportRetry`**: up to 3 attempts per tier on 429, 5xx, time-out and
   connection errors; `Retry-After` (≤ 60 s) or `min(2^(n-1), 30)` s; flex → default after any used-up
   flex tier (any mix of those errors), for up to 3 more attempts; used-up retries end as
@@ -103,13 +105,13 @@ whatever the finish reason (`ChatResponses.requireText`).
 
 ## Adding a provider
 
-1. A `Provider` constant in `llm/Provider` (+ `application-<provider>.properties`
-   for Embabel's registry), and its value (and any new `Channel`) in the `CHECK` sets of
+1. A `Provider` constant in `llm/Provider`, and its value (and any new `Channel`) in the `CHECK` sets of
    `assessments.provider` / `assessments.channel` through a new Flyway migration. Constants whose
    values are stored (`Provider`, `Channel`, `ServiceTier`, `ReasoningEffort`, `OutputMode`) are
    append-only: never rename or remove one — old `assessments` rows would no longer load
    (`persistence/EnumValueConverter` rejects unknown values).
-2. A package `llm/<provider>/` with `<Provider>Client implements LlmClient` and its static `create()`
+2. Its Spring AI provider module in `pom.xml` (the module, never a starter), and a package
+   `llm/<provider>/` with `<Provider>Client implements LlmClient` and its static `create()`
    building the `ChatModel` with every SDK/framework retry off and the timeout set; translate HTTP
    errors into `TransportException` (status + `Retry-After`); one `case` in `LlmClientFactory`.
 3. Its schema subset in `transport/ProviderSchemas`.

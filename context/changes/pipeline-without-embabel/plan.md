@@ -434,10 +434,10 @@ Dokumentacja projektu opisuje stan bez Embabel; `deploy-plan.md` dostaje sekcję
 
 #### Automated
 
-- [x] 1.1 Testy jednostkowe zielone: `cd szczur-radar-api && ./mvnw -B test`
-- [x] 1.2 Pełna weryfikacja z Testcontainers zielona: `cd szczur-radar-api && ./mvnw -B verify`
-- [x] 1.3 Pakiet przebiegu bez Embabel: `grep -rl 'com.embabel' szczur-radar-api/src/main/java/pl/szczurradar/api/pipeline szczur-radar-api/src/test/java/pl/szczurradar/api/pipeline` zwraca nic
-- [x] 1.4 `RunSequenceTest` i rozszerzony `PipelineRunServiceTest` istnieją i przechodzą: `cd szczur-radar-api && ./mvnw -B test -Dtest='RunSequenceTest,PipelineRunServiceTest,RunWatchdogTest'`
+- [x] 1.1 Testy jednostkowe zielone: `cd szczur-radar-api && ./mvnw -B test` — 7f095c1
+- [x] 1.2 Pełna weryfikacja z Testcontainers zielona: `cd szczur-radar-api && ./mvnw -B verify` — 7f095c1
+- [x] 1.3 Pakiet przebiegu bez Embabel: `grep -rl 'com.embabel' szczur-radar-api/src/main/java/pl/szczurradar/api/pipeline szczur-radar-api/src/test/java/pl/szczurradar/api/pipeline` zwraca nic — 7f095c1
+- [x] 1.4 `RunSequenceTest` i rozszerzony `PipelineRunServiceTest` istnieją i przechodzą: `cd szczur-radar-api && ./mvnw -B test -Dtest='RunSequenceTest,PipelineRunServiceTest,RunWatchdogTest'` — 7f095c1
 
 #### Manual
 
@@ -447,10 +447,10 @@ Dokumentacja projektu opisuje stan bez Embabel; `deploy-plan.md` dostaje sekcję
 
 #### Automated
 
-- [ ] 2.1 Drzewo zależności bez Embabel: `cd szczur-radar-api && ./mvnw -q dependency:tree | grep -ci embabel` wypisuje `0`
-- [ ] 2.2 Źródła i pom bez Embabel: `grep -rli embabel szczur-radar-api/src szczur-radar-api/pom.xml` zwraca nic
-- [ ] 2.3 Pełna weryfikacja zielona: `cd szczur-radar-api && ./mvnw -B verify`
-- [ ] 2.4 Obraz startuje bez Embabel i z fail-fast `LLM_*`: `docker build -t szczur-radar-api ./szczur-radar-api`, `docker run --rm szczur-radar-api migrate` bez `LLM_*` kończy się kodem `2` z blokiem `APPLICATION FAILED TO START`, a z `PG*` i `LLM_*` `migrate` kończy się `0` i serwer odpowiada `200` na `/api/ready` (sekwencja jak w jobie `api-container-smoke`); log startu nie zawiera `Embabel`, `Deployed agent` ani `embabel-platform`
+- [x] 2.1 Drzewo zależności bez Embabel: `cd szczur-radar-api && ./mvnw -q dependency:tree | grep -ci embabel` wypisuje `0`
+- [x] 2.2 Źródła i pom bez Embabel: `grep -rli embabel szczur-radar-api/src szczur-radar-api/pom.xml` zwraca nic
+- [x] 2.3 Pełna weryfikacja zielona: `cd szczur-radar-api && ./mvnw -B verify`
+- [x] 2.4 Obraz startuje bez Embabel i z fail-fast `LLM_*`: `docker build -t szczur-radar-api ./szczur-radar-api`, `docker run --rm szczur-radar-api migrate` bez `LLM_*` kończy się kodem `2` z blokiem `APPLICATION FAILED TO START`, a z `PG*` i `LLM_*` `migrate` kończy się `0` i serwer odpowiada `200` na `/api/ready` (sekwencja jak w jobie `api-container-smoke`); log startu nie zawiera `Embabel`, `Deployed agent` ani `embabel-platform`
 
 ### Phase 3: Bezpiecznik na niesklasyfikowane błędy klienta LLM (F7)
 

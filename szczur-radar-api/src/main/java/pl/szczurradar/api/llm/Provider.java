@@ -5,8 +5,7 @@ import java.util.Locale;
 import com.fasterxml.jackson.annotation.JsonValue;
 
 /**
- * The supported providers; {@link #id()} is the {@code LLM_API_PROVIDER} value, the profile name
- * and the JSON value.
+ * The supported providers; {@link #id()} is the {@code LLM_API_PROVIDER} value and the JSON value.
  */
 public enum Provider {
 
