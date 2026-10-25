@@ -449,9 +449,9 @@ Bez migracji bazy, nowych tabel i zmiennych środowiska (`tools/db-backup/tables
 
 #### Automated
 
-- [x] 4.1 CI na PR zielone (wszystkie joby `ci.yml`, w tym `railway-config`)
-- [x] 4.2 W PR env (agent): przebieg admina `2004-01-01`–`2004-01-01` (bez resztek w kolejce) kończy się `failed`, a log API ma linię wyniku wysyłki z kolejki z `RUN_NEEDS_ATTENTION`, id tego przebiegu i `DELIVERED`
-- [x] 4.3 Dokumenty: `grep` po `OperatorAlertQueue` w `pipeline/CLAUDE.md` i `REPOSITORY_GUIDELINES.md` oraz po „S-18” w `prd.md` i `deploy-plan.md` znajduje nowe akapity
+- [x] 4.1 CI na PR zielone (wszystkie joby `ci.yml`, w tym `railway-config`) — f3842fd
+- [x] 4.2 W PR env (agent): przebieg admina `2004-01-01`–`2004-01-01` (bez resztek w kolejce) kończy się `failed`, a log API ma linię wyniku wysyłki z kolejki z `RUN_NEEDS_ATTENTION`, id tego przebiegu i `DELIVERED` — f3842fd
+- [x] 4.3 Dokumenty: `grep` po `OperatorAlertQueue` w `pipeline/CLAUDE.md` i `REPOSITORY_GUIDELINES.md` oraz po „S-18” w `prd.md` i `deploy-plan.md` znajduje nowe akapity — f3842fd
 
 #### Manual
 
