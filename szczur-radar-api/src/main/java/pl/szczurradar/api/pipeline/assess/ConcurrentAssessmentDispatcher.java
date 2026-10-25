@@ -24,6 +24,7 @@ import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.DisposableBean;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
@@ -32,10 +33,14 @@ import org.springframework.stereotype.Component;
 import pl.szczurradar.api.agents.assessor.AssessmentResult;
 import pl.szczurradar.api.agents.assessor.Assessor;
 import pl.szczurradar.api.agents.assessor.contract.AssessmentInputV1;
+import pl.szczurradar.api.alerts.AlertEvent;
+import pl.szczurradar.api.alerts.OperatorAlertQueue;
 import pl.szczurradar.api.llm.LlmCallException;
 import pl.szczurradar.api.llm.LlmClient;
 import pl.szczurradar.api.llm.LlmConfigurationException;
+import pl.szczurradar.api.llm.LlmProviderProperties;
 import pl.szczurradar.api.llm.LlmUnavailableException;
+import pl.szczurradar.api.llm.transport.ProviderMessages;
 import pl.szczurradar.api.pipeline.flow.RunFlow.AssessedBatch;
 import pl.szczurradar.api.pipeline.flow.RunFlow.ProcessingError;
 import pl.szczurradar.api.pipeline.state.PostTransitions;
@@ -69,7 +74,10 @@ import pl.szczurradar.api.posts.PostRepository;
  *       hold);
  *   <li>counted in the run's counters ({@link RunRecorder#count}): a stored result with its call's
  *       retries and flex fallback, or a technical error; a post not taken counts nothing. A failed count
- *       is logged and leaves the post's outcome as it is.
+ *       is logged (WARN) and leaves the post's outcome as it is; once every post has finished, the step's
+ *       failed counts give one ERROR line (the run's counters are understated, so its status may not show
+ *       that it needs attention) and one operator alert ({@link AlertEvent#RUN_COUNTERS_LOST}, through
+ *       the server's {@link OperatorAlertQueue}; none in an operator command's context).
  * </ol>
  *
  * A stopped step makes the run {@code failed} ({@link AssessedBatch#stoppedBy}), so neither a bad key
@@ -110,19 +118,27 @@ public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher, Dis
 	/** {@link System#nanoTime()}, or a test's clock for the progress lines. */
 	private final LongSupplier nanoTime;
 
+	/** The server's queue ({@code AlertsConfiguration}), resolved when used; none in an operator command. */
+	private final ObjectProvider<OperatorAlertQueue> alerts;
+
+	/** Cleans the key out of a failed check that is not the provider's: the run's error goes to the operator. */
+	private final ProviderMessages messages;
+
 	/** The post tasks of each run while {@link #dispatch} waits for them; {@link #cancel} interrupts them. */
 	private final Map<UUID, Tasks> dispatching = new ConcurrentHashMap<>();
 
 	@Autowired
 	ConcurrentAssessmentDispatcher(PostRepository posts, AssessmentInputs inputs, Assessor assessor,
 			PostTransitions transitions, RunRecorder recorder, @Lazy LlmClient llm,
-			@Value("${PIPELINE_LLM_CONCURRENCY:4}") int concurrency) {
-		this(posts, inputs, assessor, transitions, recorder, llm, pool(concurrency), System::nanoTime);
+			@Value("${PIPELINE_LLM_CONCURRENCY:4}") int concurrency, ObjectProvider<OperatorAlertQueue> alerts,
+			LlmProviderProperties llmSettings) {
+		this(posts, inputs, assessor, transitions, recorder, llm, pool(concurrency), System::nanoTime, alerts,
+				new ProviderMessages(llmSettings.apiKey()));
 	}
 
 	ConcurrentAssessmentDispatcher(PostRepository posts, AssessmentInputs inputs, Assessor assessor,
 			PostTransitions transitions, RunRecorder recorder, LlmClient llm, ExecutorService executor,
-			LongSupplier nanoTime) {
+			LongSupplier nanoTime, ObjectProvider<OperatorAlertQueue> alerts, ProviderMessages messages) {
 		this.posts = posts;
 		this.inputs = inputs;
 		this.assessor = assessor;
@@ -131,6 +147,8 @@ public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher, Dis
 		this.llm = llm;
 		this.executor = executor;
 		this.nanoTime = nanoTime;
+		this.alerts = alerts;
+		this.messages = messages;
 	}
 
 	@Override
@@ -142,15 +160,19 @@ public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher, Dis
 			llm.check();
 		}
 		catch (RuntimeException ex) {
-			// A provider's refusal or outage, or an error that is not the provider's (LlmClient#complete).
-			log.error("The LLM check before run {} failed; no post is assessed", runId, ex);
-			return new AssessedBatch(runId, 0, 0, 0, List.of(), "the LLM check failed: " + ex.getMessage());
+			// A provider's refusal or outage, or an error that is not the provider's (LlmClient#complete): its
+			// message and causes may come from outside the clients (e.g. building one), so they are cleaned here.
+			log.error("The LLM check before run {} failed; no post is assessed", runId, messages.cleanCause(ex));
+			return new AssessedBatch(runId, 0, 0, 0, List.of(),
+					"the LLM check failed: " + messages.clean(String.valueOf(ex.getMessage())));
 		}
 		AtomicBoolean runStopped = new AtomicBoolean();
 		AtomicReference<@Nullable String> stoppedBy = new AtomicReference<>();
 		// Calls in a row, in the order they end, that found the provider unavailable.
 		AtomicInteger outages = new AtomicInteger();
 		Progress progress = new Progress(runId, postIds.size());
+		// The results whose count fails; reported once every post has finished.
+		LostCounts lost = new LostCounts();
 		// Registered before the first task, so a cancel while they are submitted reaches every one.
 		Tasks tasks = new Tasks(new CopyOnWriteArrayList<>(), new AtomicBoolean());
 		dispatching.put(runId, tasks);
@@ -158,7 +180,7 @@ public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher, Dis
 			for (UUID postId : postIds) {
 				tasks.futures().add(executor.submit(() -> {
 					Outcome outcome = assess(runId, postId, runStopped, stoppedBy, outages, tasks.cancelled());
-					count(runId, postId, outcome);
+					count(runId, postId, outcome, lost);
 					progress.finished(outcome);
 					return outcome;
 				}));
@@ -169,7 +191,7 @@ public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher, Dis
 			List<ProcessingError> errors = new ArrayList<>();
 			Map<UUID, Outcome.Unavailable> unavailable = new LinkedHashMap<>();
 			for (int i = 0; i < postIds.size(); i++) {
-				switch (await(runId, postIds.get(i), tasks, i, progress)) {
+				switch (await(runId, postIds.get(i), tasks, i, progress, lost)) {
 					case Outcome.Stored stored when stored.ok() -> ok++;
 					case Outcome.Stored stored -> {
 						failed++;
@@ -184,12 +206,13 @@ public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher, Dis
 			// Only now: the step may have stopped after an earlier outage's post was put back.
 			if (stoppedBy.get() == null) {
 				unavailable.forEach((postId, outage) -> {
-					if (countOutage(runId, postId, outage)) {
+					if (countOutage(runId, postId, outage, lost)) {
 						errors.add(new ProcessingError(postId, outage.message()));
 					}
 				});
 			}
 			progress.line();
+			lost.report(runId);
 			return new AssessedBatch(runId, ok, failed, dead, errors, stoppedBy.get());
 		}
 		finally {
@@ -311,10 +334,11 @@ public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher, Dis
 	}
 
 	/**
-	 * Adds a post's outcome to the run's counters. A failure (e.g. the database for a moment) is logged
-	 * and changes nothing else: a stored result stays stored, never a technical error.
+	 * Adds a post's outcome to the run's counters. A failure (e.g. the database for a moment) is logged,
+	 * kept in {@code lost} when the outcome was a result for the counters (a stored result or a technical
+	 * error), and changes nothing else: a stored result stays stored, never a technical error.
 	 */
-	private void count(UUID runId, UUID postId, Outcome outcome) {
+	private void count(UUID runId, UUID postId, Outcome outcome, LostCounts lost) {
 		try {
 			switch (outcome) {
 				case Outcome.Stored stored when stored.ok() ->
@@ -332,6 +356,7 @@ public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher, Dis
 		catch (RuntimeException ex) {
 			log.warn("The outcome of post {} could not be added to the counters of run {}; the post keeps it", postId,
 					runId, ex);
+			lost.add(outcome);
 		}
 	}
 
@@ -343,7 +368,7 @@ public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher, Dis
 	 *
 	 * @return whether it was counted
 	 */
-	private boolean countOutage(UUID runId, UUID postId, Outcome.Unavailable outage) {
+	private boolean countOutage(UUID runId, UUID postId, Outcome.Unavailable outage, LostCounts lost) {
 		if (!outage.putBack()) {
 			return false;
 		}
@@ -358,12 +383,12 @@ public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher, Dis
 		if (counted) {
 			log.warn("Assessing post {} in run {} found the LLM provider unavailable; the post was put back without an"
 					+ " attempt, counting a technical failure: {}", postId, runId, outage.message());
-			count(runId, postId, new Outcome.Error(outage.message()));
+			count(runId, postId, new Outcome.Error(outage.message()), lost);
 		}
 		return counted;
 	}
 
-	private Outcome await(UUID runId, UUID postId, Tasks tasks, int index, Progress progress) {
+	private Outcome await(UUID runId, UUID postId, Tasks tasks, int index, Progress progress, LostCounts lost) {
 		try {
 			return tasks.futures().get(index).get();
 		}
@@ -380,7 +405,7 @@ public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher, Dis
 			// assess() catches what it can; this is a task the pool never ran, or one that failed outside
 			// it (e.g. taking the post), so it was not counted.
 			Outcome error = new Outcome.Error(String.valueOf(ex));
-			count(runId, postId, error);
+			count(runId, postId, error, lost);
 			progress.finished(error);
 			return error;
 		}
@@ -407,6 +432,54 @@ public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher, Dis
 	 * @param cancelled whether {@link #cancel} stopped them
 	 */
 	private record Tasks(List<Future<Outcome>> futures, AtomicBoolean cancelled) {
+	}
+
+	/**
+	 * The post results of one {@link #dispatch} that did not reach the run's counters (a failed
+	 * {@link RunRecorder#count}): how many, how many of them dead and how many technical errors. Added to
+	 * from the pool's threads, reported once every post has finished.
+	 */
+	private final class LostCounts {
+
+		private final AtomicInteger results = new AtomicInteger();
+
+		private final AtomicInteger dead = new AtomicInteger();
+
+		private final AtomicInteger errors = new AtomicInteger();
+
+		/** A result whose count failed; an outage's activity ({@code touch}) is no result and is not kept. */
+		void add(Outcome outcome) {
+			switch (outcome) {
+				case Outcome.Stored stored -> {
+					results.incrementAndGet();
+					dead.addAndGet(stored.dead() ? 1 : 0);
+				}
+				case Outcome.Error error -> {
+					results.incrementAndGet();
+					errors.incrementAndGet();
+				}
+				case Outcome.Unavailable outage -> {
+				}
+				case Outcome.NotTaken notTaken -> {
+				}
+			}
+		}
+
+		/** When a result was lost: one ERROR line and one {@link AlertEvent#RUN_COUNTERS_LOST}. */
+		void report(UUID runId) {
+			int lost = results.get();
+			if (lost == 0) {
+				return;
+			}
+			log.error("{} post result(s) of run {} could not be added to its counters ({} dead, {} technical"
+					+ " error(s)); its counters are understated and needsAttention may be false", lost, runId,
+					dead.get(), errors.get());
+			OperatorAlertQueue.raise(alerts, AlertEvent.RUN_COUNTERS_LOST, runId, lost + " post result(s) of"
+					+ " pipeline run " + runId + " did not reach its counters (" + dead.get() + " dead, "
+					+ errors.get() + " technical error(s)); its status may hide them; /admin/runs/" + runId
+					+ "; details in the API log");
+		}
+
 	}
 
 	/** What happened to one post. */

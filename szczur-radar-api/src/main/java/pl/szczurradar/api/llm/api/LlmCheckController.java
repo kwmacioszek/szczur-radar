@@ -53,10 +53,11 @@ class LlmCheckController {
 		catch (RuntimeException ex) {
 			// not a provider error (a bug or an unknown SDK error, LlmClient#complete): still a failed check;
 			// its message may come from outside the clients (e.g. building one), so it is cleaned here
-			log.error("The LLM check failed with an error that is not the provider's", ex);
+			ProviderMessages messages = new ProviderMessages(properties.apiKey());
+			log.error("The LLM check failed with an error that is not the provider's", messages.cleanCause(ex));
 			String message = ex.getMessage();
 			return new LlmCheck(properties.provider(), properties.model(), false, false, null,
-					new ProviderMessages(properties.apiKey()).clean(message != null ? message : ex.getClass().getName()));
+					messages.clean(message != null ? message : ex.getClass().getName()));
 		}
 	}
 

@@ -1,9 +1,13 @@
 package pl.szczurradar.api.pipeline;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.timeout;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
@@ -19,13 +23,15 @@ import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.mock.env.MockEnvironment;
 
+import pl.szczurradar.api.alerts.AlertEvent;
+import pl.szczurradar.api.alerts.OperatorAlertQueue;
 import pl.szczurradar.api.llm.LlmProviderProperties;
 import pl.szczurradar.api.llm.Provider;
 
 /**
  * One check of the watchdog, without its thread: nothing but an in-memory look while this instance has
- * no run, every run of its own handed to the stop, a failure logged, an {@link Error} too; and on its
- * thread, the checks going on after an {@link Error}.
+ * no run, every run of its own handed to the stop, a failure logged and raised to the operator with its
+ * run, an {@link Error} too; and on its thread, the checks going on after an {@link Error}.
  */
 @ExtendWith(OutputCaptureExtension.class)
 class RunWatchdogTest {
@@ -34,9 +40,11 @@ class RunWatchdogTest {
 
 	private final PipelineRunService service = mock(PipelineRunService.class);
 
+	private final OperatorAlertQueue alerts = mock(OperatorAlertQueue.class);
+
 	private final RunWatchdog watchdog = new RunWatchdog(service, PipelineStallSettings.from(
 			new MockEnvironment().withProperty(PipelineStallSettings.NAME, "20m"),
-			new LlmProviderProperties(Provider.GEMINI, "model", "key")));
+			new LlmProviderProperties(Provider.GEMINI, "model", "key")), alerts);
 
 	@AfterEach
 	void stop() {
@@ -77,6 +85,11 @@ class RunWatchdogTest {
 
 		verify(service).stopStalled(next, TIMEOUT);
 		assertThat(output).contains("ERROR", "could not check run " + failing, "the database is gone");
+		// Raised once, for the failing run only, with the exception's class and not its message.
+		verify(alerts).raise(eq(AlertEvent.WATCHDOG_FAILED), eq(failing),
+				argThat(detail -> detail.contains(IllegalStateException.class.getName())
+						&& detail.contains("/admin/runs/" + failing) && !detail.contains("the database is gone")));
+		verify(alerts, times(1)).raise(any(), any(), any());
 	}
 
 	@Test
@@ -90,6 +103,8 @@ class RunWatchdogTest {
 
 		verify(service).stopStalled(next, TIMEOUT);
 		assertThat(output).contains("ERROR", "could not check run " + failing, "NoClassDefFoundError");
+		verify(alerts).raise(eq(AlertEvent.WATCHDOG_FAILED), eq(failing),
+				argThat(detail -> detail.contains(NoClassDefFoundError.class.getName())));
 	}
 
 	@Test
@@ -102,7 +117,7 @@ class RunWatchdogTest {
 		// Checked every 100 ms on its own thread.
 		RunWatchdog scheduled = new RunWatchdog(service, PipelineStallSettings.from(
 				new MockEnvironment().withProperty(PipelineStallSettings.NAME, "500ms"),
-				new LlmProviderProperties(Provider.GEMINI, "model", "key")));
+				new LlmProviderProperties(Provider.GEMINI, "model", "key")), alerts);
 		try {
 			scheduled.afterPropertiesSet();
 

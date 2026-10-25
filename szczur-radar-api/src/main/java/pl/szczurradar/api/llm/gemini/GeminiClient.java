@@ -118,13 +118,13 @@ public final class GeminiClient implements LlmClient {
 	/**
 	 * Spring AI wraps every GenAI error in {@code RuntimeException("Failed to generate content")}: the
 	 * HTTP status of a GenAI {@code ApiException} in the chain, else a time-out or I/O error, else not a
-	 * transport failure.
+	 * transport failure. The chain is attached without the key ({@link ProviderMessages#cleanCause}).
 	 */
 	private RuntimeException classify(RuntimeException error) {
 		for (Throwable cause = error; cause != null; cause = cause.getCause()) {
 			if (cause instanceof ApiException api) {
 				return TransportException.ofStatus(api.code(), messages.clean(api.status() + " " + api.message()), null,
-						error);
+						messages.cleanCause(error));
 			}
 		}
 		Optional<TransportException> classified = TransportException.ofTimeoutOrConnection(error, messages);

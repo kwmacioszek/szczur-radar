@@ -191,12 +191,14 @@ public final class OpenRouterClient implements LlmClient {
 			JsonValue error = ex.body(); // openai-java keeps the answer's error object
 			throw statusFailure(ex.statusCode(), text(error, "message"), text(error, "metadata", "limit_source"),
 					messages.clean(String.valueOf(ex.getMessage())),
-					TransportException.parseRetryAfter(retryAfter.isEmpty() ? null : retryAfter.getFirst()), ex);
+					TransportException.parseRetryAfter(retryAfter.isEmpty() ? null : retryAfter.getFirst()),
+					messages.cleanCause(ex));
 		}
 		catch (RuntimeException ex) {
 			// e.g. openai-java's "`choices` is not set" on an error reported in a 200 answer; then a time-out
-			// or I/O error; anything else is not a transport failure
-			Optional<TransportException> classified = failedAnswer(rawResponse.take(), ex)
+			// or I/O error; anything else is not a transport failure. The SDK's message may quote the key, so
+			// only its cleaned chain becomes the cause.
+			Optional<TransportException> classified = failedAnswer(rawResponse.take(), messages.cleanCause(ex))
 				.or(() -> TransportException.ofTimeoutOrConnection(ex, messages));
 			if (classified.isPresent()) {
 				throw classified.get();

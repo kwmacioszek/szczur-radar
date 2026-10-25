@@ -2,8 +2,14 @@ package pl.szczurradar.api.llm.deepseek;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.assertj.core.api.Assertions.catchThrowable;
 
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.io.UncheckedIOException;
+import java.net.SocketTimeoutException;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -13,6 +19,9 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.http.HttpStatus;
+import org.springframework.mock.http.client.MockClientHttpRequest;
+import org.springframework.mock.http.client.MockClientHttpResponse;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ObjectNode;
@@ -33,6 +42,7 @@ import pl.szczurradar.api.llm.Provider;
 import pl.szczurradar.api.llm.ScriptedProviderServer;
 import pl.szczurradar.api.llm.ScriptedProviderServer.Reply;
 import pl.szczurradar.api.llm.ServiceTier;
+import pl.szczurradar.api.llm.transport.CleanedProviderException;
 import pl.szczurradar.api.llm.transport.ProviderMessages;
 import pl.szczurradar.api.llm.transport.TransportRetry;
 
@@ -236,11 +246,54 @@ class DeepSeekClientTest {
 
 		assertThatExceptionOfType(IllegalStateException.class).isThrownBy(() -> client.complete(REQUEST))
 			.satisfies(ex -> {
-				assertThat(ex.getCause()).isSameAs(sdkError);
+				assertThat(ex.getCause()).isInstanceOf(CleanedProviderException.class)
+					.hasMessageStartingWith(RuntimeException.class.getName() + ": unexpected state");
+				assertThat(ex.getCause().getStackTrace()).isEqualTo(sdkError.getStackTrace());
 				assertThat(ex.getMessage()).contains("unexpected state", "<hidden>").doesNotContain("synthetic-key");
 			});
 		assertThat(calls).hasSize(1);
 		assertThat(sleeps).isEmpty();
+	}
+
+	@Test
+	void noFailureLeavingTheClientCarriesTheKeyInItsCauses() {
+		// DeepSeek quotes the key in a 401 answer (above); here a 401 and a 503 in that shape — HTTP statuses
+		// leave HttpStatusErrors without a cause — then an error without a status and a time-out from a
+		// stand-in for the SDK.
+		String quoting = "{\"error\":{\"message\":\"Authentication Fails, Your api key: synthetic-key is invalid\"}}";
+		try (ScriptedProviderServer server = new ScriptedProviderServer(Reply.status(401, quoting))) {
+			assertPrintedWithoutTheKey(catchThrowable(() -> client(server, Duration.ofSeconds(5)).complete(REQUEST)),
+					"HTTP 401");
+		}
+		Reply unavailable = Reply.status(503, quoting);
+		try (ScriptedProviderServer server = new ScriptedProviderServer(unavailable, unavailable, unavailable)) {
+			assertPrintedWithoutTheKey(catchThrowable(() -> client(server, Duration.ofSeconds(5)).complete(REQUEST)),
+					"HTTP 503");
+		}
+		assertPrintedWithoutTheKey(catchThrowable(() -> stubbed(_ -> {
+			throw new RuntimeException("unexpected state for the key synthetic-key");
+		}).complete(REQUEST)), CleanedProviderException.class.getName(), RuntimeException.class.getName());
+		assertPrintedWithoutTheKey(catchThrowable(() -> stubbed(_ -> {
+			throw new RuntimeException("call failed", new SocketTimeoutException("read timed out for synthetic-key"));
+		}).complete(REQUEST)), CleanedProviderException.class.getName(), SocketTimeoutException.class.getName());
+	}
+
+	@Test
+	void aServerCutOffTheSdkFailsOnCarriesNoKeyInItsCauses() {
+		// The real payload as DeepSeek ends an answer it could not finish reaches the raw response; then the
+		// stand-in for the SDK fails on it with a message quoting the key (synthetic).
+		ObjectNode cutOff = (ObjectNode) MAPPER.readTree(SUCCESS);
+		((ObjectNode) cutOff.at("/choices/0")).put("finish_reason", "insufficient_system_resource");
+		DeepSeekRawResponse rawResponse = new DeepSeekRawResponse();
+		LlmClient client = stubbed(rawResponse, _ -> {
+			answered(rawResponse, cutOff.toString());
+			throw new RuntimeException("no finish reason insufficient_system_resource for the key synthetic-key");
+		});
+
+		Throwable failure = catchThrowable(() -> client.complete(REQUEST));
+
+		assertThat(failure).hasMessageContaining("answer cut off by the server");
+		assertPrintedWithoutTheKey(failure, CleanedProviderException.class.getName(), RuntimeException.class.getName());
 	}
 
 	@Test
@@ -261,10 +314,35 @@ class DeepSeekClientTest {
 		assertThat(sleeps).containsExactly(Duration.ofSeconds(1), Duration.ofSeconds(2));
 	}
 
+	/**
+	 * {@code failure} printed in full, as a log prints it: the key appears in none of its causes, the
+	 * original exceptions' classes do.
+	 */
+	private static void assertPrintedWithoutTheKey(Throwable failure, String... originalClasses) {
+		StringWriter printed = new StringWriter();
+		failure.printStackTrace(new PrintWriter(printed));
+		assertThat(printed.toString()).doesNotContain("synthetic-key").contains(originalClasses);
+	}
+
 	/** The client on a stand-in for the SDK's chat model, with the test's key and recorded waits. */
 	private LlmClient stubbed(ChatModel chatModel) {
-		return new DeepSeekClient(chatModel, "deepseek-v4-flash", new TransportRetry(sleeps::add),
-				new DeepSeekRawResponse(), new ProviderMessages("synthetic-key"));
+		return stubbed(new DeepSeekRawResponse(), chatModel);
+	}
+
+	private LlmClient stubbed(DeepSeekRawResponse rawResponse, ChatModel chatModel) {
+		return new DeepSeekClient(chatModel, "deepseek-v4-flash", new TransportRetry(sleeps::add), rawResponse,
+				new ProviderMessages("synthetic-key"));
+	}
+
+	/** {@code body} passed through {@code rawResponse} as a 200 answer on this thread. */
+	private static void answered(DeepSeekRawResponse rawResponse, String body) {
+		try {
+			rawResponse.intercept(new MockClientHttpRequest(), new byte[0],
+					(_, _) -> new MockClientHttpResponse(body.getBytes(StandardCharsets.UTF_8), HttpStatus.OK));
+		}
+		catch (IOException ex) {
+			throw new UncheckedIOException(ex);
+		}
 	}
 
 	private LlmClient client(String baseUrl, Duration timeout) {

@@ -1671,6 +1671,95 @@ The list is not an alarm. A bad night alarms through section "F-04: kanał alarm
 
 Rollback: a revert; there is no data, migration or variable to undo.
 
+## S-18: błędy wymagające reakcji docierają do operatora (error-visibility)
+
+**Status:** delivered by PR #107; production verification and closure in issue #77. Change: `context/changes/error-visibility/`. Before S-18 the API's sender (section F-04) was used only by `send-test-alert`. A run that needed attention reached only the bell in `/admin`, and a nightly `partial` with a dead post or a technical error exits the cron with 0, so Telegram never heard of it. Failures of the signal paths themselves (the admins' notification, start-up recovery, closing a run, the watchdog, the S-11 orphan clean-up, the run's counters, audit A5) were one ERROR line in the log. S-18 sends these events to the check `<environment>/api-events` and keeps provider keys out of logged cause chains (audit B7). It also logs why `/api/ready` answers 503 (audit C10).
+
+### What changes
+
+- **Events** (`alerts/AlertEvent`), each raised through `alerts/OperatorAlertQueue`. The ERROR lines stay:
+
+  | Event | When | Run in the event |
+  | --- | --- | --- |
+  | `RUN_NEEDS_ATTENTION` | a run ended in a state that notified the admins (section S-06: `failed`, `interrupted`, `partial` with a dead post or a technical error, `succeeded` / `partial` with skipped elements), once per run; **not** a cron run ended `failed` / `interrupted` | the run |
+  | `NOTIFICATION_FAILED` | the admins' in-app notification about a run could not be written | the run |
+  | `RECOVERY_FAILED` | start-up recovery of unfinished runs failed (e.g. the database not reachable at start) | none |
+  | `RUN_CLOSE_FAILED` | a run could not be closed, or a stopping instance could not interrupt its runs (the ids in the detail) | the run, or none on shutdown |
+  | `WATCHDOG_FAILED` | the watchdog could not check a run of this instance | the run |
+  | `ORPHAN_CLEANUP_FAILED` | the S-11 clean-up before a start request failed (the request is still decided) | none |
+  | `RUN_COUNTERS_LOST` | post results did not reach a run's counters, so its status may hide dead posts or errors; once per assess step | the run |
+
+- **The cron's run is the cron's.** A run of the daily cron that ends `failed` or `interrupted` gives no API event: the cron's exit 1 and its check `<environment>/pipeline-trigger` report it already. A cron run that ends `partial` with a dead post or a technical error, or with skipped elements, exits 0, so the API raises it. An admin's run is raised for every ending that notifies. When the cron stops waiting before its run ends, its exit 1 says only that the run did not end, and a later `failed` / `interrupted` ending of that run shows in `/admin` and the bell, not in Telegram. The cron stops waiting on `FAILED: not ended within 90m: …` (`TRIGGER_RUN_TIMEOUT`), when the API does not answer while it waits, or on `no answer to the start after the request was sent …`.
+- **The queue.** `raise` returns at once, from any thread, an interrupted one too, and never throws. The queue's own thread `operator-alerts` sends the events. Its limits:
+  - the same event for the same run (or for no run) goes once per 10 min; repeats are counted, and the next one sent after the window says `(N repeat(s) within 10 min of the last alert were not sent)`;
+  - at most 2 events a minute (healthchecks.io takes 5 pings a minute per check, and each event is two). Up to 20 events wait; one more is dropped with a WARN;
+  - on shutdown the waiting events get 5 s, then the rest are dropped with a WARN naming them;
+  - no retries and nothing durable: an event still waiting when the process is killed is lost, while the bell and the log stay.
+
+  The queue exists only in the server. The operator commands (`migrate`, …) raise nothing, and `send-test-alert` still reports synchronously, without the queue.
+- **One event = two Telegram messages.** First a "down" for `<environment>/api-events` with `<EVENT> (<description>): <detail>` (at most 1000 characters), then at once an "up". The "up" only re-arms the check for the next event; it does not mean the problem is over. With 2 events a minute that is at most 4 messages, within Telegram's 6 a minute per chat. The `RUN_NEEDS_ATTENTION` detail is `Pipeline run <id> (<kind>, cron|admin) ended <status>[ (<cause>)]: dead N, errors N, skipped N[; error: <the run's error, at most 300 characters, as /admin shows it>]; /admin/runs/<id>`. The detail of a failed path names what failed, the run, the exception's class (never its message) and what happens next, and ends `details in the API log`. No secret: no ping URL, no key, no SQL.
+- **Keys out of logged causes (B7).** The LLM clients attach a cleaned copy of the SDK's cause chain (`CleanedProviderException`: the original class and its message without the key, the original stack trace) instead of the SDK's own exception, so an ERROR line with a stack trace never shows a key a provider quoted (`szczur-radar-api/.../llm/CLAUDE.md`).
+- **`/api/ready` (C10).** A 503 now logs one line, `WARN Not ready: the database query failed: <exception class>: <message>`, without a stack trace and without an alert. The answer is unchanged.
+- **Not alerted, by design:**
+  - a run's crash, a failed LLM check and a post's error are not separate events: they end the run, which `RUN_NEEDS_ATTENTION` or the cron reports;
+  - a 503 from `/api/ready`: after a deploy the external monitor alerts (section `deploy-verification-hardening`), and a database down while the API is idle stays silent until a run or the cron needs it;
+  - unhandled 500s and ERROR lines of libraries: no Logback appender, only explicit events.
+- **No new variable, migration, table or service.** Production has `HEALTHCHECK_PING_URL` on the API since F-04 (sealed), so the events start with the deploy. A PR env without the variable sends nothing.
+
+### What the operator sees
+
+**In Telegram:** a "down" for `production/api-events` with the event's text, then an "up". Open the run's page (`/admin/runs/<id>`) or `/admin`, and the API log for the failed paths.
+
+**In the API log** (each event, with its run or `no run`):
+
+```text
+INFO  Operator alert RUN_NEEDS_ATTENTION (run 4f0c…) taken
+INFO  Operator alert RUN_NEEDS_ATTENTION delivered to healthchecks.io
+INFO  Operator alert RUN_NEEDS_ATTENTION (run 4f0c…) reported: DELIVERED
+```
+
+`reported:` is `DELIVERED`, `FAILED` (with a WARN of `HealthchecksAlerts` before it: an HTTP status or an exception class, never the address) or `NOT_CONFIGURED` (`HEALTHCHECK_PING_URL` unset). Other lines: `… not sent: a repeat within 10 min of the last one (N so far)`, WARN `… dropped: 20 alerts are already waiting to be sent`, `… dropped: the application is shutting down`, WARN `Operator alerts not sent within 5000 ms of shutdown, dropped: […]`.
+
+**No message does not mean all is well.** Nothing comes when:
+- the run is the cron's and ended `failed` / `interrupted`; the cron's own check reports it;
+- no admin was notified: no admin with `login_enabled`, or the run was already notified;
+- the event repeats within 10 min for the same run, or the queue was full, or the process was killed or shut down with the event still waiting (the log has the line);
+- `HEALTHCHECK_PING_URL` is unset, healthchecks.io or Telegram is down (silent, section F-04), or the delivery failed (WARN in the log). A refused success ping leaves the check down, and the next event's "down" then gives no message (healthchecks.io alerts only on a change of state); that event's success ping brings the check up again;
+- the previous event was cut off at shutdown: after its 5 s the queue stops its thread, which may interrupt an event between its "down" and its "up" (each request may take up to 10 s). The check stays down, and the next event (e.g. after the restart) gives no message. A check that healthchecks.io shows down with no newer event in the API log is re-armed at once with `send-test-alert` (section F-04): its own "down" and "up" come through;
+- the error is one of the "not alerted" cases above.
+
+### PR-env verification (szczur-radar-pr-<N>; plan Phase 4 item 3)
+
+One real alert from the API to Telegram, on a test check of the PR env, without touching production. The run used makes no LLM call: a range before Wykop existed gives no element, so the run ends `failed` at `fetch` (`NoPostsFetchedException`, section S-08). If Wykop refused the date, the run would end `failed` too.
+
+0. **Preconditions.** The API is deployed from this branch. The PR env has an admin account (`create-user --role admin`, section S-08): without an admin to notify, `RUN_NEEDS_ATTENTION` is not raised. No run is active.
+1. **The test check (operator).** With `HEALTHCHECKS_API_KEY` in the shell: `tools/healthchecks/checks.sh apply szczur-radar-pr-<N>`. Set the printed address of `szczur-radar-pr-<N>/api-events` on the API only, never on screen or in a log (section F-04, "PR-env verification"):
+   ```bash
+   railway variable set HEALTHCHECK_PING_URL --stdin -s szczur-radar-api -e szczur-radar-pr-<N> --skip-deploys
+   railway redeploy -s szczur-radar-api -e szczur-radar-pr-<N> -y
+   ```
+   The API's start log has `Operator alerts: sent to the healthchecks.io check in HEALTHCHECK_PING_URL`. `apply` arms the two cron checks of the PR env too. Nothing checks in to them here, so they alert after their grace time (about 03:45 and 04:15 UTC): finish with step 5 the same day.
+2. **No leftovers (agent).** A leftover makes the start queue a RETRY first, which makes LLM calls (`PostRepository.existsLeftover`). Read-only: `SELECT count(*) FROM posts WHERE (stage = 'stored' OR (stage = 'failed' AND assessment_attempts < 3)) AND technical_failures < 3` is 0 (`railway ssh -s postgres -e szczur-radar-pr-<N> -- psql -U postgres -d railway -c "<SQL>"`, section S-11). The list "Nieudane posty" in `/admin` shows the `failed` ones.
+3. **The run (agent).** As the admin: in `/admin` the range 2004-01-01 – 2004-01-01 and "Uruchom", or `POST /api/admin/pipeline-runs` with `{"from":"2004-01-01","to":"2004-01-01"}` and the admin's session. Expected: 202, the run ends `failed` within seconds, and the bell has its notification.
+4. **The log (agent).** `railway logs -s szczur-radar-api -e szczur-radar-pr-<N>` has `Pipeline run <id> (range) ended failed and needs attention: 1 admin(s) notified` (or more admins), `Operator alert RUN_NEEDS_ATTENTION (run <id>) taken` and `Operator alert RUN_NEEDS_ATTENTION (run <id>) reported: DELIVERED`, with the id of that run.
+5. **Telegram and cleanup (operator).** **Telegram** shows a "down" for `szczur-radar-pr-<N>/api-events` with `RUN_NEEDS_ATTENTION (…): Pipeline run <id> (range, admin) ended failed: dead 0, errors 0, skipped 0; error: …; /admin/runs/<id>`, no secret, then an "up". Then:
+   - `tools/healthchecks/checks.sh delete szczur-radar-pr-<N>`;
+   - `railway variable delete HEALTHCHECK_PING_URL -s szczur-radar-api -e szczur-radar-pr-<N>`, then redeploy the API.
+6. **Record** on issue #77: the log lines, the time, the run's id and the operator's confirmation of the message. Never the address or the key.
+
+### Rollback
+
+Revert the commit in a PR; nothing stays in the data. To silence the API's events at once, without a code change: delete `HEALTHCHECK_PING_URL` on `szczur-radar-api` and redeploy it (this also stops `send-test-alert`; section F-04, "Rollback").
+
+### Runbook — after the merge (operator; tracked in issue #77, not in the plan's Progress)
+
+0. **Standing rules.** No merge to `main` while `/admin` shows a run `RUNNING`, not between about 00:30 and 01:30 UTC (section S-05), and not while the 02:00 UTC backup runs (section S-15). The merge deploys the API; no migration, no variable or service change.
+1. **CI on `main`.** All jobs green; `railway-config` plans no change.
+2. **Start.** The API's start log has `Operator alerts: sent to the healthchecks.io check in HEALTHCHECK_PING_URL` (the sealed variable from F-04; nothing to set) and no ERROR; `/api/ready` returns 200.
+3. **One real alert.** Outside the night windows, as an admin. First the read-only leftover count of step 2 above (`railway connect postgres -e production`, in a read-only transaction). With leftovers, the start also queues a RETRY of them. That RETRY makes real LLM calls, the work the next night's cron would do, and its ending may give its own event. Start only when the count is 0, or when that RETRY is acceptable. Then the run 2004-01-01 – 2004-01-01 as in step 3 above. Expected: the run `failed` within seconds, the log lines of step 4 with `DELIVERED`, and a Telegram "down" for `production/api-events` with `RUN_NEEDS_ATTENTION`, the run's id and `/admin/runs/<id>`, then an "up". The failed run stays in the history and does not move the feed's date (section S-08).
+4. **The first nights.** A night whose run ends `partial` with only retryable `failed` posts gives no API event. One with a dead post, a technical error or skipped elements now gives a `RUN_NEEDS_ATTENTION` message, and a `failed` / `interrupted` night still gives only the cron's message. Note which came.
+5. **Record and close.** Comment on issue #77: the merge commit, the deployment ID, the start line, the alert's log lines and time, the Telegram confirmation, the first nights' messages. Never an address or the key. Close #77 only after this production verification.
+
 ## Phases
 
 > Historical (state of 2026-09-26 – 2026-09-27, FastAPI backend); current: the Java API in section F-03, its image in section `api-docker-image`, the pipeline in sections `first-assessed-wykop-feed` and S-05, the database backup in section F-01, CI and the deploy gate in section S-14.

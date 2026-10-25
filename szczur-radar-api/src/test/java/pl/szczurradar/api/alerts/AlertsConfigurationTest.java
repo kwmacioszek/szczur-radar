@@ -9,9 +9,9 @@ import org.springframework.boot.test.context.runner.WebApplicationContextRunner;
 import pl.szczurradar.api.settings.InvalidSettingsException;
 
 /**
- * {@link AlertsConfiguration}: in the server the bean follows {@code HEALTHCHECK_PING_URL} and a bad value
- * fails the start; an operator command's context (not a web application) has no bean and starts whatever
- * the value.
+ * {@link AlertsConfiguration}: in the server the bean follows {@code HEALTHCHECK_PING_URL}, a bad value
+ * fails the start and the {@link OperatorAlertQueue} sits over it; an operator command's context (not a
+ * web application) has neither and starts whatever the value.
  */
 class AlertsConfigurationTest {
 
@@ -32,6 +32,11 @@ class AlertsConfigurationTest {
 			assertThat(started).hasNotFailed();
 			assertThat(started).getBean(OperatorAlerts.class).isInstanceOf(NoOperatorAlerts.class);
 		});
+	}
+
+	@Test
+	void theServerHasTheQueueOfTheErrorPaths() {
+		server.run(started -> assertThat(started).hasSingleBean(OperatorAlertQueue.class));
 	}
 
 	@Test
@@ -56,10 +61,12 @@ class AlertsConfigurationTest {
 		command.run(started -> {
 			assertThat(started).hasNotFailed();
 			assertThat(started).doesNotHaveBean(OperatorAlerts.class);
+			assertThat(started).doesNotHaveBean(OperatorAlertQueue.class);
 		});
 		command.withPropertyValues(AlertSettings.NAME + "=http://hc-ping.com/" + SECRET_UUID).run(started -> {
 			assertThat(started).hasNotFailed();
 			assertThat(started).doesNotHaveBean(OperatorAlerts.class);
+			assertThat(started).doesNotHaveBean(OperatorAlertQueue.class);
 		});
 	}
 

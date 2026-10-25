@@ -31,6 +31,8 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import pl.szczurradar.api.alerts.AlertEvent;
+import pl.szczurradar.api.alerts.OperatorAlertQueue;
 import pl.szczurradar.api.notifications.RunNotifications;
 import pl.szczurradar.api.pipeline.assess.AssessmentDispatcher;
 import pl.szczurradar.api.pipeline.flow.RunFlow.RunRequest;
@@ -84,6 +86,10 @@ import pl.szczurradar.api.sources.Source;
  *       to {@link RunNotifications#runEnded}, which notifies the admins when it needs attention (a run
  *       reported twice is notified once).
  *   <li>The log gets a line when a run starts and when it ends, with its counters.
+ *   <li>A clean-up of orphans, a close of a run or the shutdown's interruption that fails is an ERROR line
+ *       and an operator alert ({@link AlertEvent#ORPHAN_CLEANUP_FAILED}, {@link AlertEvent#RUN_CLOSE_FAILED})
+ *       through the server's {@link OperatorAlertQueue}; an operator command's context has none, and then
+ *       nothing is raised.
  * </ul>
  */
 @Service
@@ -123,6 +129,9 @@ public class PipelineRunService {
 	 */
 	private final ObjectProvider<PipelineStallSettings> stall;
 
+	/** The server's queue ({@code AlertsConfiguration}), resolved when used; none in an operator command. */
+	private final ObjectProvider<OperatorAlertQueue> alerts;
+
 	/** This instance's deployment, {@code null} when unknown (locally, in tests). */
 	private final @Nullable String deploymentId;
 
@@ -138,7 +147,7 @@ public class PipelineRunService {
 	PipelineRunService(PipelineRunRepository runs, PostRepository posts, SourceIngest sources, RunRecorder recorder,
 			PostTransitions transitions, RunNotifications notifications, AssessmentDispatcher dispatcher,
 			AgentPlatform agentPlatform, JdbcClient jdbc, TransactionTemplate transaction,
-			ObjectProvider<PipelineStallSettings> stall,
+			ObjectProvider<PipelineStallSettings> stall, ObjectProvider<OperatorAlertQueue> alerts,
 			@Value("${RAILWAY_DEPLOYMENT_ID:}") @Nullable String deploymentId) {
 		this.runs = runs;
 		this.posts = posts;
@@ -151,6 +160,7 @@ public class PipelineRunService {
 		this.jdbc = jdbc;
 		this.transaction = transaction;
 		this.stall = stall;
+		this.alerts = alerts;
 		this.deploymentId = deploymentId == null || deploymentId.isBlank() ? null : deploymentId;
 	}
 
@@ -235,6 +245,10 @@ public class PipelineRunService {
 		}
 		catch (RuntimeException ex) {
 			log.error("The clean-up of orphaned pipeline runs failed; the request is decided without it", ex);
+			OperatorAlertQueue.raise(alerts, AlertEvent.ORPHAN_CLEANUP_FAILED, null, "The clean-up of orphaned"
+					+ " pipeline runs failed (" + ex.getClass().getName() + "); the request was decided without it,"
+					+ " runs left running are cleaned up by the next start request after PIPELINE_STALL_TIMEOUT;"
+					+ " details in the API log");
 			return;
 		}
 		if (orphans == null) {
@@ -386,6 +400,10 @@ public class PipelineRunService {
 		}
 		catch (RuntimeException ex) {
 			log.error("Pipeline run {} could not be closed; the next start-up recovery closes it", runId, ex);
+			OperatorAlertQueue.raise(alerts, AlertEvent.RUN_CLOSE_FAILED, runId, "Pipeline run " + runId
+					+ " could not be closed (" + ex.getClass().getName() + "); it may stay running without a"
+					+ " notification until the next start-up recovery, or until the next start request after"
+					+ " PIPELINE_STALL_TIMEOUT cleans it up; /admin/runs/" + runId + "; details in the API log");
 		}
 	}
 
@@ -398,20 +416,37 @@ public class PipelineRunService {
 	/**
 	 * This instance stops: its own queued and running runs become {@code interrupted} (before the
 	 * thread is stopped, so a run interrupted mid-step is not marked {@code failed}) and their posts are
-	 * put back, in one transaction; then the admins are notified and the thread is stopped.
+	 * put back, in one transaction; then the admins are notified and the thread is stopped. When the
+	 * transaction fails (e.g. the database is gone), an ERROR line and, when this instance had runs, an
+	 * operator alert ({@link AlertEvent#RUN_CLOSE_FAILED}) name them; the thread is stopped in any case.
+	 * The queue is still alive here: the context closes before its beans are destroyed.
 	 */
 	@EventListener(ContextClosedEvent.class)
 	void onClose() {
-		List<UUID> interrupted = transaction.execute(status -> {
-			List<UUID> ids = recorder.interrupt(List.copyOf(own), InterruptionCause.SHUTDOWN);
-			ids.forEach(transitions::releaseAll);
-			return ids;
-		});
-		// After the commit: the notifications read the interrupted runs.
-		if (interrupted != null) {
-			interrupted.forEach(notifications::runEnded);
+		List<UUID> mine = List.copyOf(own);
+		try {
+			List<UUID> interrupted = transaction.execute(status -> {
+				List<UUID> ids = recorder.interrupt(mine, InterruptionCause.SHUTDOWN);
+				ids.forEach(transitions::releaseAll);
+				return ids;
+			});
+			// After the commit: the notifications read the interrupted runs.
+			if (interrupted != null) {
+				interrupted.forEach(notifications::runEnded);
+			}
 		}
-		executor.shutdownNow();
+		catch (RuntimeException ex) {
+			log.error("The pipeline runs of this instance could not be interrupted on shutdown: {}", mine, ex);
+			if (!mine.isEmpty()) {
+				OperatorAlertQueue.raise(alerts, AlertEvent.RUN_CLOSE_FAILED, null, "The pipeline runs of a stopping"
+						+ " instance could not be interrupted (" + ex.getClass().getName() + "): " + mine
+						+ "; the next start-up recovery interrupts them, or the next start request after"
+						+ " PIPELINE_STALL_TIMEOUT cleans them up; details in the API log");
+			}
+		}
+		finally {
+			executor.shutdownNow();
+		}
 	}
 
 	/**

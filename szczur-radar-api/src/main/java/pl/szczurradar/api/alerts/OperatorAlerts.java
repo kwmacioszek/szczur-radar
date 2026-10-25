@@ -1,5 +1,7 @@
 package pl.szczurradar.api.alerts;
 
+import org.jspecify.annotations.Nullable;
+
 /**
  * Reports an event that needs the operator outside the application (F-04): to a healthchecks.io check,
  * which alerts in Telegram. Synchronous, one attempt, short time limits; it never throws, so a caller
@@ -7,6 +9,8 @@ package pl.szczurradar.api.alerts;
  *
  * <p>In the server the bean is {@link HealthchecksAlerts} when {@code HEALTHCHECK_PING_URL} is set and
  * {@link NoOperatorAlerts} otherwise ({@link AlertsConfiguration}); operator commands have no bean.
+ * Error paths do not call it directly: they raise through {@link OperatorAlertQueue}, which sends on its
+ * own thread, within the channel's limits.
  */
 public interface OperatorAlerts {
 
@@ -25,8 +29,9 @@ public interface OperatorAlerts {
 	}
 
 	/**
-	 * Reports {@code event} with {@code detail} (what happened, for a human; never a secret). Never throws.
+	 * Reports {@code event} with {@code detail} (what happened, for a human; never a secret; {@code null}
+	 * for none). Never throws.
 	 */
-	Delivery report(AlertEvent event, String detail);
+	Delivery report(AlertEvent event, @Nullable String detail);
 
 }

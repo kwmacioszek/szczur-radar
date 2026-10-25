@@ -1,6 +1,12 @@
 package pl.szczurradar.api.notifications.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 
 import java.io.UnsupportedEncodingException;
@@ -21,11 +27,14 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 import pl.szczurradar.api.TestcontainersConfiguration;
+import pl.szczurradar.api.alerts.AlertEvent;
+import pl.szczurradar.api.alerts.OperatorAlertQueue;
 import pl.szczurradar.api.cli.MigrateCommand;
 import pl.szczurradar.api.notifications.RunNotifications;
 import pl.szczurradar.api.user.Role;
@@ -34,9 +43,10 @@ import pl.szczurradar.api.user.SystemAccount;
 /**
  * The admins' notifications about runs that need attention: who gets one from
  * {@link RunNotifications#runEnded}, that a second report adds none, and the logged-in admin's list and
- * read marks ({@code /api/admin/notifications}). Runs are written as the pipeline leaves them. Every test
- * has its own admins, so the notifications about other tests' runs (which every admin of this database
- * gets) never reach its assertions.
+ * read marks ({@code /api/admin/notifications}), and the operator alert of an admin's run that needs
+ * attention, raised once to the server's queue (here a mock). Runs are written as the pipeline leaves
+ * them. Every test has its own admins, so the notifications about other tests' runs (which every admin
+ * of this database gets) never reach its assertions.
  */
 @SpringBootTest(properties = MigrateCommand.ENABLE_FLYWAY)
 @AutoConfigureMockMvc
@@ -53,6 +63,9 @@ class NotificationsIT {
 
 	@Autowired
 	RunNotifications runNotifications;
+
+	@MockitoBean
+	OperatorAlertQueue alerts;
 
 	private UUID admin;
 
@@ -78,6 +91,24 @@ class NotificationsIT {
 		assertThat(notifications(plainUser, run)).isZero();
 		assertThat(notifications(adminWithoutLogin, run)).isZero();
 		assertThat(notifications(SystemAccount.SCHEDULER.id(), run)).isZero();
+	}
+
+	@Test
+	void anAdminsRunThatNeedsAttentionIsRaisedToTheOperatorOnce() {
+		UUID run = run("partial", 1, 1, 0, admin);
+		UUID cronRun = run("failed", 0, 0, 0, SystemAccount.SCHEDULER.id());
+
+		runNotifications.runEnded(run);
+		runNotifications.runEnded(run);
+		runNotifications.runEnded(cronRun);
+
+		assertThat(notifications(admin, run)).isOne();
+		verify(alerts, times(1)).raise(eq(AlertEvent.RUN_NEEDS_ATTENTION), eq(run),
+				argThat(detail -> detail.startsWith("Pipeline run " + run + " (retry, admin) ended partial: dead 1")
+						&& detail.endsWith("/admin/runs/" + run)));
+		// The cron's failed run is the cron's to report.
+		assertThat(notifications(admin, cronRun)).isOne();
+		verify(alerts, never()).raise(any(), eq(cronRun), any());
 	}
 
 	@ParameterizedTest
@@ -226,10 +257,14 @@ class NotificationsIT {
 
 	/** A finished retry run with these counters, requested by the scheduler. */
 	private UUID run(String status, int assessedFailed, int dead, int processingErrors) {
+		return run(status, assessedFailed, dead, processingErrors, SystemAccount.SCHEDULER.id());
+	}
+
+	/** A finished retry run with these counters, requested by {@code requestedBy}. */
+	private UUID run(String status, int assessedFailed, int dead, int processingErrors, UUID requestedBy) {
 		return jdbc.queryForObject("INSERT INTO pipeline_runs (kind, status, requested_by, started_at, finished_at,"
 				+ " assessed_failed, dead, processing_errors) VALUES ('retry', ?, ?, now(), now(), ?, ?, ?)"
-				+ " RETURNING id", UUID.class, status, SystemAccount.SCHEDULER.id(), assessedFailed, dead,
-				processingErrors);
+				+ " RETURNING id", UUID.class, status, requestedBy, assessedFailed, dead, processingErrors);
 	}
 
 	/** An account without a password (as before its activation) with {@code role}. */

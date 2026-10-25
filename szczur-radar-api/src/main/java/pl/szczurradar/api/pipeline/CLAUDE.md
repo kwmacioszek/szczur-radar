@@ -57,7 +57,7 @@ PipelineRunService.startRange / startPosts → queue → PipelineAgent:
 | `step/PostStore` | new posts with their raw payload, once per `(source, item_type, source_item_id)`; `findKeys` in chunks of 1,000; stores chunks of 500 in one transaction each (raw payloads, then posts: JDBC batches), a chunk hitting the unique key again post by post |
 | `step/AssessmentSelection` | one attempt per post and request: range → only the posts it stored first; retry → every leftover except posts on hold (`PostRepository.findLeftoverIds`, below); posts → the given ones still assessable (`stored` / `failed`, on hold or not) |
 | `assess/AssessmentDispatcher` | the port of the assess step (`dispatch`, and `cancel` for a run the watchdog stopped); a Batch API version may replace the concurrent one |
-| `assess/ConcurrentAssessmentDispatcher` | first `LlmClient.check()` (any exception → no post taken, run `failed` with `the LLM check failed: …`); own pool (`PIPELINE_LLM_CONCURRENCY`, default 4); per post: claim → `Assessor.assess` on `AssessmentInputs.of(post)` → record, or release, then the post's result goes into the run's counters at once (`RunRecorder.count`, below); an `LlmConfigurationException` (revoked key, no credit, unknown model) stops taking posts (WARN with the provider's reason), counts no attempt and fails the run (`AssessedBatch.stoppedBy`); an `LlmUnavailableException` (retries used up) stores nothing and releases the post, and `OUTAGE_STREAK` (3) of them in a row stop the step the same way (the breaker, Rules below); any other exception puts the post back with `releaseFailed` (one more technical failure); a failed `count` is a WARN and leaves the post's outcome (a stored post is never a technical error); `cancel(runId)` interrupts the run's post tasks (below); a progress line in the log at most once a minute and after the last post |
+| `assess/ConcurrentAssessmentDispatcher` | first `LlmClient.check()` (any exception → no post taken, run `failed` with `the LLM check failed: …`); own pool (`PIPELINE_LLM_CONCURRENCY`, default 4); per post: claim → `Assessor.assess` on `AssessmentInputs.of(post)` → record, or release, then the post's result goes into the run's counters at once (`RunRecorder.count`, below); an `LlmConfigurationException` (revoked key, no credit, unknown model) stops taking posts (WARN with the provider's reason), counts no attempt and fails the run (`AssessedBatch.stoppedBy`); an `LlmUnavailableException` (retries used up) stores nothing and releases the post, and `OUTAGE_STREAK` (3) of them in a row stop the step the same way (the breaker, Rules below); any other exception puts the post back with `releaseFailed` (one more technical failure); a failed `count` is a WARN and leaves the post's outcome (a stored post is never a technical error), and once every post has finished the step's failed counts give one ERROR and `RUN_COUNTERS_LOST` (below); `cancel(runId)` interrupts the run's post tasks (below); a progress line in the log at most once a minute and after the last post |
 | `assess/AssessmentInputs` | a stored post's assessment input, rebuilt from its raw payload by its source's `RawInputMapper` |
 | `state/PostTransitions` | the post's stage changes, each a conditional `UPDATE` with `updated_at = now()`: claim (only while the run is running), record (only while the run owns the post; resets `technical_failures` and `last_technical_error`), release (back without an attempt; says whether this run put it back), releaseFailed (release + one more technical failure with its message, in the same statement, only while the run owns the post), countTechnicalFailure (one more technical failure on a post already put back, `stored` / `failed`, only while the run is still running); the message is cut to 500 characters, without U+0000 |
 | `state/RunRecorder` | run status, steps, counters, error, `last_activity_at` — every change conditional on the expected status; a step opens only in a running run and closes only once; `interrupt` / `interruptAll` (with the cause), `interruptOrphans` (cause `lost`, all or none; Rules) and `stall` (the watchdog) close the open steps in the same transaction; status and stage values are bound from their enums, never written into the SQL |
@@ -172,10 +172,47 @@ PipelineRunService.startRange / startPosts → queue → PipelineAgent:
   included), `interrupted`, `partial` with a `dead` post or a technical error (a single provider outage
   included), or `succeeded` / `partial` with skipped elements (a
   `partial` run with only retryable `failed` posts does not: the next run retries them) — one row per admin with `login_enabled`, `ON CONFLICT DO
-  NOTHING`, so a run reported twice is notified once. It never throws: a failure is logged (ERROR) and
-  the run's ending, or the server's start, goes on. The unique key `uq_notifications_recipient_kind_run`
+  NOTHING`, so a run reported twice is notified once. It never throws: a failure is logged (ERROR),
+  raised as `NOTIFICATION_FAILED` (below), and the run's ending, or the server's start, goes on. The unique key `uq_notifications_recipient_kind_run`
   (`V9`) treats a `NULL` `run_id` as distinct: a future kind without a run needs a new migration with
   `UNIQUE NULLS NOT DISTINCT` (never an edit of `V9`), or its `ON CONFLICT` never fires.
+- **The operator's alert of a run (S-18).** When `runEnded` created notifications (`created > 0`: once per
+  run, and only with an admin to notify), it also raises `AlertEvent.RUN_NEEDS_ATTENTION` through
+  `alerts/OperatorAlertQueue` (healthchecks.io → Telegram, check `<env>/api-events`), with the detail
+  `Pipeline run <id> (<kind>, cron|admin) ended <status>[ (<cause>)]: dead N, errors N, skipped N[; error:
+  <the run's error, cut to 300 characters>]; /admin/runs/<id>`. The exception: a run of the daily cron
+  (`PipelineRun.scheduled()`, requested by `SystemAccount.SCHEDULER`) that ended `failed` or `interrupted`
+  — the cron reports it already (exit 1, its own check `<env>/pipeline-trigger`), so an alert would only
+  double that message. A cron run ending `partial` with a `dead` post or a technical error, or with skipped
+  elements, exits 0 and is raised; an admin's run is raised for every ending that notifies. When the cron
+  gives up before its runs end (`not ended within` `TRIGGER_RUN_TIMEOUT` 90 min, the API not answering for
+  `TRIGGER_WAKE_TIMEOUT` while it waits, no answer to its `POST`), its exit 1 says only that the run did
+  not end; a later `failed` / `interrupted` ending of that run is still the cron's, so it shows in `/admin`
+  and the bell, not in Telegram.
+- **Operator alerts of the error paths (S-18).** Each path that ended in an ERROR line nothing else reported
+  now also raises an `alerts/AlertEvent` through `OperatorAlertQueue.raise(event, runId, detail)`; the
+  ERROR line stays:
+
+  | Path | Event | Run in the event |
+  | --- | --- | --- |
+  | `RunNotifications.runEnded` fails | `NOTIFICATION_FAILED` | the run |
+  | `PipelineStartupRecovery.recover` fails | `RECOVERY_FAILED` | none |
+  | `PipelineRunService.close` fails | `RUN_CLOSE_FAILED` | the run |
+  | `PipelineRunService.onClose`: interrupting this instance's runs fails (ERROR `The pipeline runs of this instance could not be interrupted on shutdown: [ids]`; raised only when it had runs) | `RUN_CLOSE_FAILED`, the ids in the detail | none |
+  | `RunWatchdog`: a check throws | `WATCHDOG_FAILED` | the run (so once per repeat window and run) |
+  | `PipelineRunService.cleanUpOrphans` fails | `ORPHAN_CLEANUP_FAILED` | none |
+  | `ConcurrentAssessmentDispatcher`: `RunRecorder.count` failed for results of one `dispatch` (audit A5) | `RUN_COUNTERS_LOST`, once after every post has finished, with ERROR `N post result(s) of run <id> could not be added to its counters (D dead, E technical error(s)); its counters are understated and needsAttention may be false` | the run |
+
+  The detail says what failed, the run, the exception's class (never its message: a database exception
+  may carry SQL and values) and what happens next, e.g. that the next start request cleans up after
+  `PIPELINE_STALL_TIMEOUT`, ending `details in the API log`. The queue exists only in the server
+  (`alerts/AlertsConfiguration`): the beans an operator command's context shares (`PipelineRunService`,
+  `RunNotifications`, `ConcurrentAssessmentDispatcher`) take an `ObjectProvider<OperatorAlertQueue>` and call
+  the static `OperatorAlertQueue.raise(provider, …)`, which does nothing without the bean; the web-only
+  `PipelineStartupRecovery` and `RunWatchdog` inject it. `onClose` runs on `ContextClosedEvent`, before the
+  beans are destroyed, so the queue still takes its event; `executor.shutdownNow()` is in `finally`.
+  Not raised on their own, by design: a run's crash in `execute`, a failed LLM check, a post's error —
+  they end the run, which `RUN_NEEDS_ATTENTION` or the cron reports.
 
 ## Rules
 
@@ -253,6 +290,11 @@ PipelineRunService.startRange / startPosts → queue → PipelineAgent:
   Nothing else asks: no timer, so an idle API still sleeps; reads (`/admin`, `/api/deploy-safety`) never
   write.
 - Whoever ends a run reports it to `RunNotifications.runEnded`; a new way to end a run adds that call.
+- A new path that ends in an ERROR line and that nothing else reports (not a run's ending: `runEnded`
+  covers those) gets its own `AlertEvent` constant, whose description says what to check, and calls
+  `OperatorAlertQueue.raise` next to that line (S-18, above). Never `OperatorAlerts` directly (it blocks
+  for up to two HTTP requests and sends nothing from an interrupted thread), never a Logback appender
+  or an alert per ERROR line; the detail carries no secret and no exception message.
 - Start-up recovery runs before the web server opens its port (`SmartInitializingSingleton`, not
   `ApplicationReadyEvent`): it interrupts every queued or running run without asking who created it,
   and the cron's `POST` is often the very request that wakes the API, so a later recovery would

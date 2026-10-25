@@ -8,7 +8,12 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
-/** Which runs need an admin's attention ({@link PipelineRun#needsAttention()}), for every status. */
+import pl.szczurradar.api.user.SystemAccount;
+
+/**
+ * Which runs need an admin's attention ({@link PipelineRun#needsAttention()}), for every status, and which
+ * the daily cron requested ({@link PipelineRun#scheduled()}).
+ */
 class PipelineRunTest {
 
 	@ParameterizedTest
@@ -41,6 +46,12 @@ class PipelineRunTest {
 	void anUnfinishedRunNeedsNoAttentionWhateverItsCounters(RunStatus status) {
 		assertThat(PipelineRun.needsAttention(status, 0, 0, 0)).isFalse();
 		assertThat(PipelineRun.needsAttention(status, 1, 1, 1)).isFalse();
+	}
+
+	@Test
+	void onlyARunRequestedByTheSchedulerIsScheduled() {
+		assertThat(PipelineRun.retry(SystemAccount.SCHEDULER.id(), null).scheduled()).isTrue();
+		assertThat(PipelineRun.retry(UUID.randomUUID(), null).scheduled()).as("an admin's").isFalse();
 	}
 
 	@Test
