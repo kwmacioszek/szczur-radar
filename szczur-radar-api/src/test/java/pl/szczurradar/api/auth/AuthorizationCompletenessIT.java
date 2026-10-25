@@ -64,6 +64,7 @@ class AuthorizationCompletenessIT {
 			"POST /api/admin/pipeline-runs",
 			"GET /api/admin/pipeline-runs",
 			"GET /api/admin/pipeline-runs/sources",
+			"GET /api/admin/pipeline-runs/missing-days",
 			"GET /api/admin/pipeline-runs/{id}",
 			"GET /api/admin/posts/failed",
 			"GET /api/admin/llm/check",

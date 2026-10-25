@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref, useTemplateRef } from 'vue'
 import {
+  type MissingDays,
   type Run,
   type SourceState,
+  fetchMissingDays,
   fetchRuns,
   fetchSources,
   retryPosts,
@@ -14,7 +16,8 @@ import AppButton from '../components/AppButton.vue'
 import AppHeader from '../components/AppHeader.vue'
 import StatusBadge from '../components/StatusBadge.vue'
 import StatusMessage from '../components/StatusMessage.vue'
-import { formatDateTime, formatDuration, label } from '../labels'
+import { formatDate, formatDateTime, formatDuration, label } from '../labels'
+import { type MissingRange, missingRanges } from '../missingDays'
 import { useEvery } from '../polling'
 import { isActive, requester, runDuration, runRange, runStatusLabel, runTone, stepTone } from '../runs'
 
@@ -75,6 +78,49 @@ async function start(): Promise<void> {
   }
 }
 
+// --- days without data ------------------------------------------------------------------
+const fromInput = useTemplateRef<HTMLInputElement>('from-input')
+const missing = ref<MissingDays | null>(null)
+/** Loading without an answer yet; a reload keeps the ranges on screen. */
+const missingLoading = ref(true)
+const missingError = ref<string | null>(null)
+/** The number of the latest read; the answer or error of any earlier one is dropped. */
+let latestMissing = 0
+const ranges = computed(() => (missing.value ? missingRanges(missing.value.days) : []))
+
+// Read on mount, with "Odśwież" and after a run of the list stops being active: then the coverage may have changed.
+async function loadMissing(): Promise<void> {
+  const current = ++latestMissing
+  missingLoading.value = missing.value === null
+  missingError.value = null
+  try {
+    const answer = await fetchMissingDays()
+    if (current === latestMissing) missing.value = answer
+  } catch {
+    if (current === latestMissing) missingError.value = 'Nie udało się wczytać dni bez danych.'
+  } finally {
+    if (current === latestMissing) missingLoading.value = false
+  }
+}
+
+/** The days, as a run's range is shown, and the sources; a `YYYY-MM-DD` day is its UTC midnight, that day in Warsaw. */
+function rangeText(range: MissingRange): string {
+  const days = runRange({ rangeFrom: range.from, rangeTo: range.to })
+  return `${days} · ${range.sources.map((source) => label('source', source)).join(', ')}`
+}
+
+/** Puts the range into "Nowy przebieg" (only configured sources can be checked) and moves the focus to "Od". */
+function fillForm(range: MissingRange): void {
+  from.value = range.from
+  to.value = range.to
+  chosenSources.value = range.sources.filter((source) =>
+    sources.value.some((state) => state.source === source && state.configured),
+  )
+  startMessage.value = null
+  startError.value = null
+  fromInput.value?.focus()
+}
+
 // --- runs -------------------------------------------------------------------------------
 /** Rows per page of "Pokaż starsze". */
 const PAGE_SIZE = 20
@@ -120,7 +166,10 @@ async function loadRuns(): Promise<void> {
   try {
     const page = await fetchRuns(0, Math.min(Math.max(runs.value.length, PAGE_SIZE), MAX_PAGE_SIZE))
     if (current !== latestRefresh) return
+    const wasActive = new Set(runs.value.filter(isActive).map((run) => run.id))
     runs.value = mergeRuns(page.items, runs.value)
+    // A run that ended may have covered days without data.
+    if (runs.value.some((run) => wasActive.has(run.id) && !isActive(run))) void loadMissing()
     runsTotal.value = page.total
     pagesLoaded = Math.max(pagesLoaded, 1)
     now.value = Date.now()
@@ -231,11 +280,11 @@ function excerpt(post: FailedPost): string {
 }
 
 async function refresh(): Promise<void> {
-  await Promise.all([loadRuns(), loadFailed(), sourcesError.value ? loadSources() : undefined])
+  await Promise.all([loadRuns(), loadFailed(), loadMissing(), sourcesError.value ? loadSources() : undefined])
 }
 
 onMounted(async () => {
-  await Promise.all([loadSources(), loadRuns(), loadFailed()])
+  await Promise.all([loadSources(), loadMissing(), loadRuns(), loadFailed()])
 })
 </script>
 
@@ -247,7 +296,7 @@ onMounted(async () => {
     <section aria-labelledby="start-title">
       <h2 id="start-title">Nowy przebieg</h2>
       <form class="start" @submit.prevent="start">
-        <label>Od <input v-model="from" type="date" required /></label>
+        <label>Od <input ref="from-input" v-model="from" type="date" required /></label>
         <label>Do <input v-model="to" type="date" required /></label>
         <fieldset class="sources" :aria-busy="sourcesLoading ? 'true' : undefined">
           <legend>Źródła</legend>
@@ -282,6 +331,30 @@ onMounted(async () => {
       <p v-if="startHint" id="start-hint" class="hint">{{ startHint }}</p>
       <StatusMessage v-if="startMessage" tone="ok">{{ startMessage }}</StatusMessage>
       <StatusMessage v-if="startError" tone="error">{{ startError }}</StatusMessage>
+    </section>
+
+    <section aria-labelledby="missing-title" :aria-busy="missingLoading ? 'true' : undefined">
+      <h2 id="missing-title">Dni bez danych</h2>
+      <p v-if="missingLoading" class="loading">Wczytywanie…</p>
+      <StatusMessage v-else-if="missingError" tone="error">{{ missingError }}</StatusMessage>
+      <template v-else-if="missing">
+        <p v-if="ranges.length === 0" class="empty">
+          Brak dni bez danych od {{ formatDate(missing.from) }} do {{ formatDate(missing.to) }}.
+        </p>
+        <template v-else>
+          <ul class="missing-ranges">
+            <li v-for="range in ranges" :key="range.from" class="missing-range">
+              <span class="missing-days">{{ rangeText(range) }}</span>
+              <AppButton :aria-label="`Wpisz do formularza: ${rangeText(range)}`" @click="fillForm(range)">
+                Wpisz do formularza
+              </AppButton>
+            </li>
+          </ul>
+          <p class="hint">
+            Tuż po północy (czasu polskiego) przedwczorajszy dzień może tu być przez 2–3 godziny, zanim pobierze go nocny przebieg.
+          </p>
+        </template>
+      </template>
     </section>
 
     <section ref="runs-section" aria-labelledby="runs-title" :aria-busy="runsLoading ? 'true' : undefined">
@@ -437,16 +510,26 @@ h2 {
 }
 
 .runs,
-.failed-posts {
+.failed-posts,
+.missing-ranges {
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
 .run,
-.failed-posts li {
+.failed-posts li,
+.missing-range {
   padding: var(--space-2) 0;
   border-bottom: 1px solid var(--border);
+}
+
+.missing-range {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-1) var(--space-3);
 }
 
 .run p {

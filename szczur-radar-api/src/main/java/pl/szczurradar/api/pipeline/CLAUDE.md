@@ -17,7 +17,7 @@ pipeline/            entry points — start here
   PipelineBusyException, PostDeadException, SourceNotConfiguredException
   api/     the HTTP entries (below)
   run/     the run model: PipelineRun (+ needsAttention), PipelineRunStep, RunKind, RunStatus, RunStep, StepStatus,
-           InterruptionCause, repositories
+           InterruptionCause, repositories, MissingDays (the days no run covered, for the admin's list)
   flow/    the graph: PipelineAgent (thin actions), RunFlow (the blackboard types)
   step/    the steps: SourceIngest (fetch), PostStore (store), AssessmentSelection (select),
            NoPostsFetchedException (a source without a post fails the fetch; caught by flow/PipelineAgent)
@@ -35,7 +35,7 @@ Every route starts runs only through `PipelineRunService`; none has its own star
 
 | Class | Route | Who |
 | --- | --- | --- |
-| `PipelineRunController` | `/api/admin/pipeline-runs/**`: start a range or chosen posts, list runs (pages of up to 100, newest first), one run `GET /{id}` (404 `not_found`), sources, failed posts. A run (`RunView`) has its steps, counters, `scheduled` (requested by `SystemAccount.SCHEDULER`), `needsAttention`, `interruptionCause`, `lastActivityAt`, `llmRetries`, `flexFallbacks` and `inFlight` (`RunRecorder.inFlight`, only for a running run, else 0) | admin session |
+| `PipelineRunController` | `/api/admin/pipeline-runs/**`: start a range or chosen posts, list runs (pages of up to 100, newest first), one run `GET /{id}` (404 `not_found`), sources, failed posts, the days without data `GET /missing-days` → `{from, to, days: [{day, sources}]}` (`run/MissingDays`: the window D-15…D-2 of `ZONE` from the injected `Clock`; a day is covered for a configured source by a RANGE run `succeeded`/`partial` naming it, the cron's or an admin's; a source's window starts at its first covered day ever, so one never covered misses none; days ascending, `sources` in `Source` order; it starts nothing). A run (`RunView`) has its steps, counters, `scheduled` (requested by `SystemAccount.SCHEDULER`), `needsAttention`, `interruptionCause`, `lastActivityAt`, `llmRetries`, `flexFallbacks` and `inFlight` (`RunRecorder.inFlight`, only for a running run, else 0) | admin session |
 | `InternalPipelineRunController` | `POST /internal/pipeline-runs/daily` (D-2…D-1 of `ZONE` from the injected `Clock`, every configured source, requester `SystemAccount.SCHEDULER`; 202 `[{id, kind}]`), `GET /internal/pipeline-runs/{id}` (status, `startedAt`, `finishedAt`, `lastActivityAt`, `interruptionCause`, the running `step` or `null`, `assessTotal` = the `assess` step's `items_in` or `null`, counters `fetched`, `skipped`, `newPosts`, `assessedOk`, `assessedFailed`, `processingErrors`, `dead`; 404 `not_found`) — the cron's heartbeat reads it | the daily cron `pipeline-trigger`, token `PIPELINE_TRIGGER_TOKEN` only (`internal/`, `config/SecurityConfig`), never a session |
 | `FreshnessController` | `GET /api/freshness` → `{lastUpdatedAt}`: `finished_at` of the RANGE run `succeeded`/`partial` whose range reaches furthest, the latest of those (`run/PipelineRunRepository.findLastUpdate`; an admin's run over older days leaves it) — the feed's label (FR-030); nothing else about runs | any session |
 | `DeploySafetyController` | `GET /api/deploy-safety` → `{safe, reason}`: `reason` (`DeploySafetyReason`) `pipeline_running` before `pipeline_queued` (both can exist: a retry runs, the range waits), `null` when safe (`run/PipelineRunRepository.existsLiveActive` decides it in one statement, then `existsRunning` the reason, over every active run: two statements would both miss a run leaving the queue between them). A dead run — queued or running without activity for `PIPELINE_STALL_TIMEOUT` (`COALESCE(last_activity_at, started_at, created_at)`, the database's clock), and no run ended within it (a queue that just ended a run is alive) — does not hold the deploy (safe when every active run is dead: no instance executes it, and the new instance's start-up recovery interrupts it anyway); it only reads, the next request to start runs interrupts them (`lost`, Rules); 503 `{status: unavailable}` without the database, as `/api/ready` — the CI deploy gate's question (S-14); nothing else about runs | anyone, no session (`PUBLIC_ROUTES`) |
@@ -276,6 +276,9 @@ PipelineRunService.startRange / startPosts → queue → PipelineAgent:
   outage moves the run's activity (`touch`), an outage's post whose first put-back write fails is put
   back on the way out; a check failing with an error that is not the provider's takes no post),
   `run/PipelineRunTest` (`needsAttention` for every status, with and without skipped elements),
+  `run/MissingDaysTest` (the plan's example, the window D-15…D-2, a source's first covered day, a source
+  never covered or not configured, overlapping ranges, a one-day run on the 25-hour day, the gap one bad
+  night shows just after midnight),
   `PipelineStallSettingsTest` (default from the LLM settings, WARN below it, units, refusals),
   `RunWatchdogTest` (no database call without a run of its own, a failure and an `Error` logged, the
   checks going on after an `Error`, the check interval); `llm/transport/TransportRetryTest` covers
@@ -290,7 +293,10 @@ PipelineRunService.startRange / startPosts → queue → PipelineAgent:
   cookie on `/internal/**`, the D-2…D-1 range for a fixed `Clock` (also a DST day), 409, 404, the exact
   keys of `GET /internal/pipeline-runs/{id}` with `step` and `assessTotal` during the assessment.
   `api/PipelineRunControllerIT`: the run page, 404, the new fields, `scheduled` for the cron's run.
-  `api/FreshnessIT`: which runs move the label. `api/DeploySafetyIT`: every answer (a running run
+  `api/FreshnessIT`: which runs move the label. `api/MissingDaysIT` (fixed `Clock`): which runs cover a day
+  (`failed`, `interrupted`, `queued`, `running` and RETRY/POSTS runs do not; `partial` and an admin's do),
+  the first covered day from the history, the exact JSON; `api/PipelineRunWithoutSourceIT` also that no
+  day is missing without a configured source. `api/DeploySafetyIT`: every answer (a running run
   outranks a queued one, ended runs are safe; a dead running run is safe and its row unchanged, a dead
   queued run is safe, a running run with recent activity is not, nor a live queued run behind a dead
   running one), no session and no cookie, 503 without the database.

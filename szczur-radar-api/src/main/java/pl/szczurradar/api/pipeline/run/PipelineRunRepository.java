@@ -3,7 +3,9 @@ package pl.szczurradar.api.pipeline.run;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Collection;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -12,6 +14,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+
+import pl.szczurradar.api.sources.Source;
 
 /** Pipeline runs. Status and counters change only through conditional updates, never a blind save. */
 public interface PipelineRunRepository extends JpaRepository<PipelineRun, UUID> {
@@ -75,5 +79,39 @@ public interface PipelineRunRepository extends JpaRepository<PipelineRun, UUID> 
 			order by r.rangeTo desc, r.finishedAt desc
 			limit 1""")
 	Optional<Instant> findFinishedAtOfNewestRange(RunKind kind, Collection<RunStatus> statuses);
+
+	/**
+	 * The runs that cover their days ({@link MissingDays}): {@link RunKind#RANGE} runs, the daily one or an
+	 * admin's, that {@link RunStatus#SUCCEEDED succeeded} or ended {@link RunStatus#PARTIAL partial} (as
+	 * {@link #findLastUpdate}), whose range ends at or after {@code since}.
+	 */
+	default List<PipelineRun> findCoveringSince(Instant since) {
+		return findRangesEndingSince(RunKind.RANGE, List.of(RunStatus.SUCCEEDED, RunStatus.PARTIAL), since);
+	}
+
+	@Query("""
+			select r from PipelineRun r
+			where r.kind = :kind and r.status in :statuses and r.rangeTo >= :since""")
+	List<PipelineRun> findRangesEndingSince(RunKind kind, Collection<RunStatus> statuses, Instant since);
+
+	/**
+	 * The start of the earliest covering run ({@link #findCoveringSince}) of each of {@code sources} in the
+	 * whole history; a source without one is missing.
+	 */
+	default Map<Source, Instant> findFirstCoveredFrom(Collection<Source> sources) {
+		Map<Source, Instant> first = new EnumMap<>(Source.class);
+		for (Source source : sources) {
+			findEarliestRangeFrom(RunKind.RANGE, List.of(RunStatus.SUCCEEDED, RunStatus.PARTIAL), source.value())
+				.ifPresent(from -> first.put(source, from));
+		}
+		return first;
+	}
+
+	// array_position, not array_contains: Hibernate renders that as @> with a varchar[], which Postgres
+	// refuses on the text[] column.
+	@Query("""
+			select min(r.rangeFrom) from PipelineRun r
+			where r.kind = :kind and r.status in :statuses and array_position(r.sources, :source) is not null""")
+	Optional<Instant> findEarliestRangeFrom(RunKind kind, Collection<RunStatus> statuses, String source);
 
 }

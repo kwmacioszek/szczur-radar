@@ -1637,6 +1637,40 @@ Result (2026-10-24, API `f1ff8fd` deployment `1461bbcf`, web `c2218bd`; [issue #
 3. **First night.** The cron ends `OK: …` as before; a usual night has no `Marked … orphaned` and no `Put back …` line. If one appears, record which run and why it was orphaned.
 4. **Record and close.** Comment the results on issue #70: the merge commit, deployment IDs, the migration line, the first night's cron line. Close the issue only after this production verification.
 
+## S-13: dni bez danych (missed-night-detection)
+
+**Status:** delivered by PR #106; production verification and closure in issue #72. Change: `context/changes/missed-night-detection/`. The nightly run fetches D-2…D-1 (section S-05), so every day gets two nights: one bad night leaves no gap, two bad nights in a row leave a day without data, and before S-13 nothing showed it (audit C3). Every bad night already alarms through F-04; S-13 adds what F-04 does not say: which day is left without data and how to fill it. No automatic catch-up, no new alarm, no migration.
+
+### What the list shows
+
+`/admin` has the section "Dni bez danych" under "Nowy przebieg". It reads `GET /api/admin/pipeline-runs/missing-days` (admin only, no parameters; rules in `pipeline/run/MissingDays.java`), which answers `{from, to, days: [{day, sources}]}`, the days `YYYY-MM-DD` of the Warsaw calendar, ascending.
+
+- **A covered day.** A Warsaw day is covered for a source when a `range` run that ended `succeeded` or `partial` has the source among its sources and the day between its first and last day. The cron's runs and an admin's count alike. `failed`, `interrupted`, queued and running runs cover nothing, nor do the kinds "ponowienie resztek" and "wybrane posty". A range run ends `succeeded` / `partial` only when each source fetched without an error and gave at least one post (section S-08). The list counts runs, not posts: a day fetched with very few posts is covered and never listed.
+- **The window.** The 14 days D-15…D-2, D = today in Warsaw (on 2026-10-24: 2026-10-09…2026-10-22). D-1 and D are left out, the nightly cron still fetches them. A day older than D-15 drops off the list for good.
+- **Per source.** Only configured sources count, the ones the form can start. A source's window starts no earlier than its first covered day ever, so the time before production or before the source was added is no gap, and a source never covered has no day. A day is listed when at least one source misses it, with the sources that miss it.
+- **Ranges.** The web groups consecutive days that miss the same sources into one range, cut into pieces of at most 7 days (the start's limit, `MAX_RANGE_DAYS`). "Wpisz do formularza" next to a range sets "Od", "Do" and "Źródła" of "Nowy przebieg" (configured sources only) and moves the focus to "Od"; it starts nothing. An empty list says "Brak dni bez danych od … do …" with the window.
+- **When it is read.** On opening `/admin`, with "Odśwież", and when a run of the list stops being active. Nothing pushes it: no bell notification, no alarm.
+- **A false gap after midnight.** After one bad night, D-2 is missing from midnight in Warsaw until the night's run that covers it ends: about 2–3 h (the cron at 00:30 UTC plus the run). The list does not hide it, and a sentence under it says so ("Tuż po północy (czasu polskiego) przedwczorajszy dzień może tu być przez 2–3 godziny, zanim pobierze go nocny przebieg."). A day still listed after the night's run ended is a real gap.
+
+### The alarm comes from F-04
+
+The list is not an alarm. A bad night alarms through section "F-04: kanał alarmowy poza aplikacją": the check `production/pipeline-trigger` gives a Telegram "down" when the cron exits non-zero (`failed` or `interrupted`, an empty run included, section S-08) or does not check in by about 03:45 UTC. Railway's "deployment crashed" rule and the bell (section S-06) come with it.
+
+### Runbook — after a Telegram alert (operator)
+
+1. **Read the cause** in the cron's log and on the run's page in `/admin` (sections S-05, S-08; false alarms in section F-04). Fix a cause that repeats (key, credit, Wykop) before any catch-up, or the catch-up fails the same way.
+2. **One bad night: wait.** The next good night fetches the bad night's D-1 again as its D-2, and the night before had already fetched the bad night's D-2. After the next night's run ends, "Dni bez danych" shows no new range.
+3. **Two bad nights in a row, or a day still listed after the night's run: fill it.** `/admin` → "Dni bez danych" → "Wpisz do formularza" next to the range → check "Od", "Do" and "Źródła" → "Uruchom". A gap longer than 7 days is several ranges: start each one (runs are queued and run one at a time). When a run ends `succeeded` or `partial`, the list reads itself again and its range is gone; after a `failed` run the range stays, read the run's page.
+4. **While it runs.** A catch-up is an ordinary run: no merge to `main` (and no push to a PR branch under test) while `/admin` shows it queued or `RUNNING`. A deploy interrupts it: it ends `interrupted`, its posts go back and the range stays on the list. The deploy guard holds a deploy while a run is queued or running (section S-14), but not one started after its check. Do not start it between about 00:30 and 01:30 UTC: it waits behind the nightly run and keeps the no-merge window open longer (section S-05).
+
+### Runbook — after the merge (operator; tracked in issue #72, not in the plan's Progress)
+
+0. **Standing rules.** No merge to `main` while `/admin` shows a run `RUNNING`, and not between about 00:30 and 01:30 UTC (section S-05). The merge deploys the API and the web; no migration, no variable change.
+1. **The list opens.** In `/admin`, outside the false gap after midnight, "Dni bez danych" loads without an error and shows either "Brak dni bez danych od … do …" with the window D-15…D-2, or ranges that match the run history: no `succeeded` / `partial` range run in "Ostatnie przebiegi" covers a listed day for its source. A real gap found here is filled with the runbook above.
+2. **Record and close.** Comment on issue #72: the merge commit, the window and the list (or the empty message) with the runs it was checked against. Close #72 only after this verification.
+
+Rollback: a revert; there is no data, migration or variable to undo.
+
 ## Phases
 
 > Historical (state of 2026-09-26 – 2026-09-27, FastAPI backend); current: the Java API in section F-03, its image in section `api-docker-image`, the pipeline in sections `first-assessed-wykop-feed` and S-05, the database backup in section F-01, CI and the deploy gate in section S-14.
