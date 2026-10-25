@@ -1639,7 +1639,7 @@ Result (2026-10-24, API `f1ff8fd` deployment `1461bbcf`, web `c2218bd`; [issue #
 
 ## S-13: dni bez danych (missed-night-detection)
 
-**Status:** delivered by PR #106; production verification and closure in issue #72. Change: `context/changes/missed-night-detection/`. The nightly run fetches D-2…D-1 (section S-05), so every day gets two nights: one bad night leaves no gap, two bad nights in a row leave a day without data, and before S-13 nothing showed it (audit C3). Every bad night already alarms through F-04; S-13 adds what F-04 does not say: which day is left without data and how to fill it. No automatic catch-up, no new alarm, no migration.
+**Status:** delivered by PR #106; production verification and closure in issue #72. Change: `context/archive/2026-10-24-missed-night-detection/`. The nightly run fetches D-2…D-1 (section S-05), so every day gets two nights: one bad night leaves no gap, two bad nights in a row leave a day without data, and before S-13 nothing showed it (audit C3). Every bad night already alarms through F-04; S-13 adds what F-04 does not say: which day is left without data and how to fill it. No automatic catch-up, no new alarm, no migration.
 
 ### What the list shows
 
