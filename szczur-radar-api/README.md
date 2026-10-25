@@ -1,6 +1,6 @@
 # szczur-radar-api
 
-Backend Szczur Radar: **Spring Boot 4 na Javie 25**, budowany Mavenem przez wrapper (`./mvnw`, bez globalnego Mavena). Spring Security + Spring Session JDBC (sesja w Postgresie), Spring Data JPA (Hibernate) na schemacie z Flyway, Embabel (agenci LLM). Wszystkie polecenia poniżej uruchamiaj z katalogu `szczur-radar-api/` z JDK 25 (`export JAVA_HOME=$(/usr/libexec/java_home -v 25)` na macOS).
+Backend Szczur Radar: **Spring Boot 4 na Javie 25**, budowany Mavenem przez wrapper (`./mvnw`, bez globalnego Mavena). Spring Security + Spring Session JDBC (sesja w Postgresie), Spring Data JPA (Hibernate) na schemacie z Flyway, Spring AI (klienci dostawców LLM, bez frameworka agentowego). Wszystkie polecenia poniżej uruchamiaj z katalogu `szczur-radar-api/` z JDK 25 (`export JAVA_HOME=$(/usr/libexec/java_home -v 25)` na macOS).
 
 ```bash
 ./mvnw -B verify                               # testy jednostkowe + integracyjne (wymaga Dockera)
@@ -22,10 +22,10 @@ Pakiet bazowy `pl.szczurradar.api`, pakiety według funkcji — nie według wars
 | `alerts` | zdarzenia dla operatora poza aplikacją (F-04): `AlertSettings` (`HEALTHCHECK_PING_URL`), `AlertEvent` (enum, dziś `TEST_SIGNAL`), `OperatorAlerts` (nigdy nie rzuca) z `HealthchecksAlerts` (check healthchecks.io → Telegram) i `NoOperatorAlerts`; bean tylko w serwerze (`AlertsConfiguration`) |
 | `internal` | token crona `PIPELINE_TRIGGER_TOKEN` (`PipelineTriggerToken`) i jego filtr dla tras `/internal/**` (`PipelineTriggerTokenFilter`) |
 | `config` | Spring Security, sesja i ciasteczko, format błędów `{"detail": …}`, konfiguracja dostawcy LLM |
-| `agents` | agenci Embabel; `agents/assessor` — kontrakt oceny V2 jako kod (model, schemat, parser, walidator D1–D15, odsiew), prompt z wersją, `Assessor` (jedno wywołanie modelu na wpis) i `AssessorAgent` |
+| `agents` | `agents/assessor` — kontrakt oceny V2 jako kod (model, schemat, parser, walidator D1–D15, odsiew), prompt z wersją i `Assessor` (jedno wywołanie modelu na wpis) |
 | `llm` | klienci dostawców LLM: w korzeniu API (`LlmClient` i typy wywołania, `LlmClientFactory`), po podpakiecie na dostawcę (`gemini/`, `deepseek/`, `openrouter/`), `transport/` — jedyne ponowienia (`TransportRetry`), schematy, maskowanie; mapa w `llm/CLAUDE.md` |
 | `sources` | źródła danych → wejście kontraktu (jak dodać źródło: `sources/CLAUDE.md`); `sources/wykop` — `WykopApiClient` (autoryzacja, `GET`), `WykopRepository` (wyszukiwarka: wpisy i znaleziska z tagiem w zakresie dat), `WykopMapper` (wpis → `post`, znalezisko → `link`, czas Europe/Warsaw), `WykopConfiguration` (bean z `WYKOP_KEY`/`WYKOP_SECRET`); `Source` (enum źródeł) |
-| `pipeline` | przebiegi pipeline'u (S-02): w korzeniu punkty wejścia (`PipelineRunService`, `PipelineStartupRecovery`, strażnik `RunWatchdog` z `PipelineStallSettings`, wyjątki); `run/` model przebiegu, `flow/` agent Embabel (GOAP), `step/` kroki, `assess/` ocena postów, `state/` warunkowe zapisy stanu; mapa w `pipeline/CLAUDE.md` |
+| `pipeline` | przebiegi pipeline'u (S-02): w korzeniu punkty wejścia (`PipelineRunService`, `PipelineStartupRecovery`, strażnik `RunWatchdog` z `PipelineStallSettings`, wyjątki); `run/` model przebiegu, `flow/` sekwencja kroków (`RunSequence`, na wątku kolejki `pipeline-run`), `step/` kroki, `assess/` ocena postów, `state/` warunkowe zapisy stanu; mapa w `pipeline/CLAUDE.md` |
 | `notifications` | powiadomienia adminów w aplikacji (S-06): encja `Notification`, `NotificationKind` (enum, dziś `run_attention`), `NotificationRepository`, `RunNotifications` (powiadomienie każdego admina o przebiegu, który wymaga uwagi; idempotentne, nigdy nie rzuca) i `api/NotificationController` |
 | `posts` | posty i każda próba oceny: encje `Post`, `Assessment`, repozytoria (lista od najnowszych, resztki do ponowienia, ostatnia ocena) |
 | `raw` | surowe payloady źródeł osobno od danych aplikacji: `RawPayloadStore` (gzip + SHA-256 w tabeli `raw_payloads`) |
@@ -35,9 +35,9 @@ Pakiet bazowy `pl.szczurradar.api`, pakiety według funkcji — nie według wars
 
 Kolejne moduły dochodzą obok, bez mieszania infrastruktury z domeną (`context/foundation/lessons.md`).
 
-## Dostawca LLM (Embabel)
+## Dostawca LLM
 
-Każde uruchomienie kontekstu Springa — serwer, komendy operatora (`migrate`, `create-admin`, `create-user`, `reset-password`) oraz testy `*IT` — startuje platformę Embabel z **jednym** dostawcą LLM. Wybierają go trzy ustawienia środowiska, zmieniane zawsze razem:
+Każde uruchomienie kontekstu Springa — serwer, komendy operatora (`migrate`, `create-admin`, `create-user`, `reset-password`) oraz testy `*IT` — czyta i sprawdza ustawienia **jednego** dostawcy LLM (`llm/LlmProviderProperties`, bez platformy agentowej). Wybierają go trzy ustawienia środowiska, zmieniane zawsze razem:
 
 | Zmienna | Znaczenie |
 | --- | --- |
@@ -46,7 +46,7 @@ Każde uruchomienie kontekstu Springa — serwer, komendy operatora (`migrate`, 
 | `LLM_API_KEY` | prawdziwy klucz tego dostawcy — sekret: nigdy w repo, logach ani argumentach |
 
 ```bash
-# DeepSeek bezpośrednio (modele w Embabel: deepseek-v4-flash, deepseek-v4-pro, deepseek-chat, deepseek-reasoner)
+# DeepSeek bezpośrednio (np. deepseek-v4-flash, deepseek-v4-pro, deepseek-chat, deepseek-reasoner)
 export LLM_API_PROVIDER=deepseek LLM_MODEL=deepseek-v4-flash LLM_API_KEY=…
 # Gemini przez Google AI Studio (bez Vertex AI)
 export LLM_API_PROVIDER=gemini LLM_MODEL=gemini-3.1-flash-lite LLM_API_KEY=…
@@ -54,7 +54,7 @@ export LLM_API_PROVIDER=gemini LLM_MODEL=gemini-3.1-flash-lite LLM_API_KEY=…
 export LLM_API_PROVIDER=openrouter LLM_MODEL=<id-z-katalogu-openrouter> LLM_API_KEY=…
 ```
 
-- Mapowanie na właściwości Embabel: `src/main/resources/application-<dostawca>.properties` (profil włączany przez `LLM_API_PROVIDER`). Pozostali dostawcy są wyłączeni, więc ich klucze nie są potrzebne. OpenRouter dostaje `base-url=https://openrouter.ai/api/v1`; SDK OpenAI dokleja `chat/completions`.
+- Klient wybranego dostawcy powstaje z tych zmiennych; pozostali dostawcy nie są konfigurowani, więc ich klucze nie są potrzebne. OpenRouter ma bazę `https://openrouter.ai/api/v1` (`llm/openrouter/OpenRouterClient`); SDK OpenAI dokleja `chat/completions`.
 
 Opcjonalne ustawienia wywołania klienta oceny (`llm/`), nie są sekretami:
 
@@ -67,11 +67,11 @@ Opcjonalne ustawienia wywołania klienta oceny (`llm/`), nie są sekretami:
 - Błędna wartość albo `flex`/`LLM_REASONING_EFFORT` z innym dostawcą niż `openrouter` przerywa start z komunikatem jak dla trzech zmiennych powyżej.
 - **Czasy** (`LLM_TIMEOUT`, `ACTIVATION_LINK_TTL`, `PIPELINE_STALL_TIMEOUT`) mają jedną regułę (`settings/DurationSetting`): liczba całkowita z jednostką pisaną małymi literami — `ns`, `us`, `ms`, `s`, `m`, `h`, `d` — np. `300s`, `5m`, w zakresie danego ustawienia (granice włącznie). Goła liczba (`LLM_TIMEOUT=120` — Spring czytałby ją jako milisekundy), zapis ISO-8601 (`PT5M`), ułamek (`1.5h`), spacja w środku (`12 h`), wielka litera (`5M`) i wartość spoza zakresu są odrzucane komunikatem z nazwą zmiennej i podaną wartością, np. „LLM_TIMEOUT needs a unit, e.g. 300s or 5m (got '120'; a bare number would be milliseconds)”, „… must be a duration such as 300s or 5m (got 'PT5M')”, „… must be from 10s to 30m (got '9s')”. Pusta albo nieustawiona wartość daje domyślną.
 - Zły `LLM_*` zatrzymuje start serwera i każdej komendy operatora, także pre-deploy `migrate`: Spring Boot loguje blok `APPLICATION FAILED TO START` (opis z listą problemów i działanie, bez stack trace'u; stack trace tylko na DEBUG), a komenda kończy się kodem `2` (sekcja „Komendy operatora”).
-- Ocena nie korzysta z `createObject` Embabel: klient z `llm/` (`LlmClientFactory` → `create()` w pakiecie dostawcy) buduje `ChatModel` Spring AI z tych samych zmiennych, z wyłączonymi ponowieniami frameworka i SDK; jedyne ponowienia (do 3 prób na 429, 5xx, przekroczenie czasu, błąd połączenia) są w `llm/TransportRetry`. Klient powstaje leniwie — start nie łączy się z dostawcą.
-- Brak lub błąd którejkolwiek z trzech wartości przerywa start z komunikatem (bez wartości klucza) — `llm/LlmProviderProperties`. Start **nie wywołuje LLM** (klient powstaje przy pierwszej ocenie), więc nie sprawdza ważności klucza u dostawcy; `AssessorAgentIT` uruchamia agenta tylko na wpisie bez treści, który rozstrzyga odsiew.
+- Ocena buduje `ChatModel` Spring AI wprost: klient z `llm/` (`LlmClientFactory` → `create()` w pakiecie dostawcy) tworzy go z tych samych zmiennych, z wyłączonymi ponowieniami frameworka i SDK; jedyne ponowienia (do 3 prób na 429, 5xx, przekroczenie czasu, błąd połączenia) są w `llm/TransportRetry`. Klient powstaje leniwie — start nie łączy się z dostawcą.
+- Brak lub błąd którejkolwiek z trzech wartości przerywa start z komunikatem (bez wartości klucza) — `llm/LlmProviderProperties`. Start **nie wywołuje LLM** (klient powstaje przy pierwszej ocenie), więc nie sprawdza ważności klucza u dostawcy.
 - Lokalnie trzymaj ustawienia poza repo, np. w `~/.config/szczur-radar/llm.env` (`chmod 600`) i `source` przed `./mvnw verify` lub `java -jar`.
 - CI (job `backend`): `LLM_API_PROVIDER` i `LLM_MODEL` jako GitHub Actions *variables*, `LLM_API_KEY` jako *secret*. PR env: job `railway-config` (krok „Ensure PR-env LLM settings”) ustawia w serwisie `szczur-radar-api` te same trzy wartości z CI — także nadpisuje klucz skopiowany przez Railway z produkcji — i usuwa skopiowane z produkcji opcjonalne `LLM_SERVICE_TIER`, `LLM_REASONING_EFFORT`, `LLM_TIMEOUT` (pasują do dostawcy produkcji, a nie CI; np. `flex` tylko z `openrouter`). Produkcja: operator ustawia trzy zmienne **przed** deployem, a `LLM_API_KEY` jest **zapieczętowany** (sealed), żeby Railway nie kopiował go do nowych PR env. `.railway/railway.ts` deklaruje je przez `preserve()`, które niczego nie tworzy.
-- Przy kodzie równoległym podawaj własny executor: Java 25 widzi limit CPU kontenera (`availableProcessors()` może być 1); rdzeń Embabel ma własny executor.
+- Przy kodzie równoległym podawaj własny executor: Java 25 widzi limit CPU kontenera (`availableProcessors()` może być 1).
 
 ## Wykop
 

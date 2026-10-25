@@ -6,7 +6,7 @@ runner_up: Render
 context_type: mvp
 tech_stack:
   language: Java 25 (backend, since F-03 — was Python 3.13) + TypeScript (frontend)
-  framework: Spring Boot 4 + Embabel (szczur-radar-api) / Vue 3 SPA built with Vite (szczur-radar-web)
+  framework: Spring Boot 4 (szczur-radar-api) / Vue 3 SPA built with Vite (szczur-radar-web)
   runtime: Java 25 from szczur-radar-api/Dockerfile (eclipse-temurin 25 -noble, ./mvnw build; Railpack until 2026-10-06) + static SPA; PostgreSQL
 ---
 
@@ -148,7 +148,7 @@ The team put api, web, cron and Postgres on Railway on the Hobby plan, and every
 | API URL baked into the frontend build | Unknown unknowns | M | L | Avoided: the SPA calls `/api/*` on its own origin (same-origin Caddy proxy), so there is no build-time `VITE_API_URL` and no cross-origin CORS to maintain. |
 | Service-to-service over IPv6 private network | Unknown unknowns | L | M | web→api goes over the private network via the Caddy `/api/*` reverse proxy, so the API listens dual-stack (JVM default) and stays private (no public domain). For cron→Postgres, verify the driver connects to the IPv6 host. |
 | JDK version change if `RAILPACK_JDK_VERSION` is removed | Unknown unknowns | L | M | Closed (`api-docker-image`): the JDK comes from the Dockerfile's base image (`eclipse-temurin:25-*-noble`); `RAILPACK_JDK_VERSION` is unused. Remaining form: the moving `25-jdk-noble`/`25-jre-noble` tags pick up Temurin 25 updates on rebuild — CI `api-container-smoke` builds the same image before Railway. |
-| JVM cold start after `sleepApplication` (first request waits for Spring + Embabel) | F-03 | H | L | Caddy retries the upstream for up to 30 s while the API wakes (no 502); measured in `context/deployment/deploy-plan.md`. If too slow: AOT cache/CDS (Java 25) or disable sleep for the API — a separate decision. |
+| JVM cold start after `sleepApplication` (first request waits for Spring) | F-03 | H | L | Caddy retries the upstream for up to 30 s while the API wakes (no 502); measured in `context/deployment/deploy-plan.md`. If too slow: AOT cache/CDS (Java 25) or disable sleep for the API — a separate decision. |
 | RAW payload growth consumes the Postgres volume even though RAW is rarely queried | Research finding | M | M | Keep RAW behind a separate storage boundary, preserve it losslessly, and make compression transparent. Do not store full RAW JSON inline in the primary post row. Before production ingest, decide whether the initial backend is a separate DB representation or Railway Bucket; Bucket is the preferred candidate if it avoids consuming the 5 GB Hobby Postgres volume. Monitor RAW bytes and relational DB bytes separately. |
 | Cost above the Hobby estimate (~$5–15/mo; derived, not quoted) | Research finding | M | L | Set a usage limit in Railway; the Pro plan (~$20/mo) is acceptable given the DX preference and possibly required for backups. **Update 2026-10-11 (F-01):** workspace usage limits set: $5 alert and $10 hard. The hard limit takes every service offline, PR envs included. The plan stays Hobby (backups by `pg_dump`, not Pro). Production's OpenRouter key has a $10/month limit; LLM costs are not covered by Railway's limits. |
 | Only one EU region (Amsterdam) | Research finding | L | L | Acceptable (single region, small scale); all services and Postgres in the same region. |

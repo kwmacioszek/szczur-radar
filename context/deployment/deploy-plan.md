@@ -736,7 +736,7 @@ PR #49 was squash-merged as `54c4fc2` (13:22 UTC), after S-05 (#50).
   - Its open steps are closed `failed`, its posts go back without an attempt, and the next queued run starts (e.g. the RANGE run behind a RETRY). Before S-06 a hung run blocked every later start (the run of 2026-10-09 "lasted" about 22 h).
   - It checks every minute. While the instance has no run it asks the database nothing, so the API can still sleep.
   - A step without progress inside (`fetch`, `store`) moves the activity only at its start and end, so it is stopped too if it alone lasts longer than the timeout.
-  - The stopped run's agent action goes on in Embabel's thread but changes nothing (conditional writes; `pipeline/CLAUDE.md`). The stop interrupts its LLM calls in flight (the log says `Run <id> assess: stopped, N post task(s) not finished were cancelled`), so they free their threads at once, or within one `LLM_TIMEOUT` attempt when blocked in a read, without another attempt.
+  - The stop interrupts the stopped run's step (since S-17; before, the step went on to its end in the agent framework's thread, section S-17). A step waiting for its posts in `assess`, in the Wykop client or between two chunks of `store` ends within seconds of the interrupt (INFO `Run <id> step <step> ended in <t> after its run had stopped`) and changes nothing (conditional writes; `pipeline/CLAUDE.md`). The stop also cancels its LLM calls in flight (the log says `Run <id> assess: stopped, N post task(s) not finished were cancelled`), so they free their threads at once; a call blocked in a read on OkHttp ends within its attempt's `LLM_TIMEOUT`, without another attempt.
   - Every database call has an end too: the driver fails a statement that waits more than 300 s for the database's answer (`socketTimeout`, `szczur-radar-api/src/main/resources/application.properties`). A hung call fails after 5 min with a JDBC error (`An I/O error occurred while sending to the backend`, caused by `SocketTimeoutException: Read timed out`) instead of holding its thread until a restart. Nothing legitimate in the app or in `migrate` waits that long; only a second `create-admin` started while the first one waits for its password fails after 5 min instead of waiting.
 - **Interruption cause.** An `interrupted` run has `interruption_cause`, and its open steps become `interrupted`:
   - `deploy`: a new deployment took over. Every run stores the `RAILWAY_DEPLOYMENT_ID` of the instance that queued it, and the new instance's start-up recovery sees another id;
@@ -1759,6 +1759,72 @@ Revert the commit in a PR; nothing stays in the data. To silence the API's event
 3. **One real alert.** Outside the night windows, as an admin. First the read-only leftover count of step 2 above (`railway connect postgres -e production`, in a read-only transaction). With leftovers, the start also queues a RETRY of them. That RETRY makes real LLM calls, the work the next night's cron would do, and its ending may give its own event. Start only when the count is 0, or when that RETRY is acceptable. Then the run 2004-01-01 – 2004-01-01 as in step 3 above. Expected: the run `failed` within seconds, the log lines of step 4 with `DELIVERED`, and a Telegram "down" for `production/api-events` with `RUN_NEEDS_ATTENTION`, the run's id and `/admin/runs/<id>`, then an "up". The failed run stays in the history and does not move the feed's date (section S-08).
 4. **The first nights.** A night whose run ends `partial` with only retryable `failed` posts gives no API event. One with a dead post, a technical error or skipped elements now gives a `RUN_NEEDS_ATTENTION` message, and a `failed` / `interrupted` night still gives only the cron's message. Note which came.
 5. **Record and close.** Comment on issue #77: the merge commit, the deployment ID, the start line, the alert's log lines and time, the Telegram confirmation, the first nights' messages. Never an address or the key. Close #77 only after this production verification.
+
+## S-17: przebieg bez Embabel (pipeline-without-embabel)
+
+**Status:** delivered by PR #110; production verification and closure in issue #76. Change: `pipeline-without-embabel` (its folder moves to `context/archive/` when the change is archived). Before S-17 a pipeline run was an Embabel agent: its steps ran on Embabel's own thread pool while the queue thread `pipeline-run` only waited for them. A stop by the watchdog or by a stopping instance therefore interrupted the waiting, not the step: the stopped step went on to its end and changed nothing only thanks to the conditional writes (audit A7). S-17 runs the steps as a plain Java sequence on the queue thread itself and removes Embabel from the API. No migration, no new variable, no API, SPA or cron contract change; `.railway/railway.ts` changes only a comment.
+
+### What changed for the operator
+
+- **Start-up log without Embabel.** The lines `Default LLM: …`, `Deployed agent …`, the threads `embabel-platform-N` and the provider profile (`The following 1 profile is active: "<provider>"`) are gone; Spring Boot now says that no profile is active. `LLM_*` are still required by every start, the pre-deploy `migrate` included (`APPLICATION FAILED TO START`, exit code `2`; section F-03). The usual `Pipeline watchdog: a run without progress for … is stopped (checked every …)` line stays.
+- **Spring Boot's default log format.** The app has no logging configuration of its own; until S-17 Embabel brought one (`logback-embabel.xml`, pattern `%d{HH:mm:ss.SSS} [%t] %-5level %logger{0} - %msg%n`). The message texts (`Pipeline run …`, `Run … step …`, `Operator alert …`) are unchanged; only the prefix differs. The same line from the image before (`origin/main`) and after this change, local Docker, 2026-10-25:
+
+  ```text
+  18:26:53.947 [main] INFO  SzczurRadarApiApplication - Starting SzczurRadarApiApplication v0.0.1-SNAPSHOT using Java 25.0.4.1 with PID 1 (…
+  2026-10-25T17:34:20.699Z  INFO 1 --- [szczur-radar-api] [           main] p.s.api.SzczurRadarApiApplication        : Starting SzczurRadarApiApplication v0.0.1-SNAPSHOT using Java 25.0.4.1 with PID 1 (…
+  ```
+
+  The new prefix carries the date with the zone, the level, the process id (`1` in the container), the application name, the thread and the abbreviated logger name. Searching Railway's logs by message text works as before.
+- **The interrupt reaches the step.** The watchdog's stop (`cancel(true)` on the run's task) and a stopping instance (`shutdownNow()`) interrupt the `pipeline-run` thread inside its step (`pipeline/CLAUDE.md`, "Interruption reaches the step"):
+  - waiting for its posts in `assess`, in the Wykop client, between two chunks of `store` and before the next source of `fetch`, the step ends within seconds; `store` writes at most the chunk it was in;
+  - an LLM call blocked in a read on OkHttp (Gemini, OpenRouter) ends within its attempt's `LLM_TIMEOUT`, without another attempt, as before;
+  - the stopped step logs INFO `Run <id> step <step> ended in <t> after its run had stopped; the step stays as the run's end left it`, and the queue thread one INFO line: `Pipeline run <id> ended by the watchdog or an interruption; its step ended with <exception class>` (watchdog) or `Pipeline run <id>: stopped, the application is stopping` (shutdown). A stopped run gives no ERROR line; an ERROR `Pipeline run <id> failed` means the run's own step failed.
+- **Breaker for LLM client errors (F7).** Three LLM calls in a row that fail with an error the client cannot classify (not the provider's fault and not the post's, e.g. an unknown error of the provider's library after an update) stop the `assess` step. WARN `The LLM client failed 3 calls in a row in run <id> with an error that is not the provider's; no further post is taken: …`; the run ends `failed` with the error `the LLM client failed 3 calls in a row with an error that is not the provider's; the last: <class>: <message>`. Each of the three posts gets one technical error more (S-09 rules), the other posts go back without an attempt, and the signals are those of any `failed` run: the bell, `RUN_NEEDS_ATTENTION` for an admin's run (section S-18), the cron's exit 1 for the cron's run. A stored result the model answered resets the series; provider outages (S-09's own breaker) and errors of our code outside the LLM client do not count. Before S-17 such an error went through every post of the run. PRD: the S-17 clarification under the failure signal NFR.
+- **A stopped `assess` step is `failed`.** When the assessment stops taking posts (the provider refused the configuration, three outages in a row, or the F7 breaker), the step `assess` shows `failed` with that reason on `/admin/runs/:id`; before S-17 it showed `succeeded` inside a `failed` run (audit A6). The run's status and error are unchanged.
+- **Unchanged:** the run's error text `<exception class>: <message>` (the SPA, `dev/mock-api.js` and the cron read it), the watchdog's timeout and semantics (section S-06), the S-11 clean-up, the deploy guard (section S-14), `PIPELINE_LLM_CONCURRENCY`.
+
+### PR-env verification
+
+A checklist for the human (plan Phase 5, Manual Verification). Results, the environment's name, deployment IDs and times go to issue #76 as comments, not here. SQL runs as `railway ssh -s postgres -e szczur-radar-pr-<N> -- psql -U postgres -d railway -c "<SQL>"` (section S-11). Real Wykop and LLM calls are allowed in PR envs.
+
+0. **Preconditions.** The API is deployed from this branch: its pre-deploy `migrate` passed ("Schema is up to date"), `curl -s <web>/api/ready` returns 200. The web is deployed (section S-14, "PR-env verification", when its deployment was skipped). The PR env has an admin account (`create-user --role admin`, section S-08). No run is active: `SELECT count(*) FROM pipeline_runs WHERE status IN ('queued', 'running')` is 0.
+1. **A RANGE run of one day.** As the admin, in `/admin`, a range of one day (e.g. yesterday) and "Uruchom". Expected: the run ends `succeeded` or `partial`; on `/admin/runs/<id>` every step (`fetch`, `store`, `select`, `assess`, `summarize`) is closed; afterwards `curl -s <web>/api/deploy-safety` returns `{"safe":true,"reason":null}`; the API log has no ERROR.
+2. **Interruption by a deploy during `assess`.** Start a RANGE run of 3–4 days. While `/admin/runs/<id>` shows the step `assess` running, redeploy the API (`railway redeploy -s szczur-radar-api -e szczur-radar-pr-<N> -y`, or the Railway MCP `redeploy`, as in section S-06's verification). A push to the branch does not do it: the deploy guard holds the deploy while the run is running (section S-14). Expected:
+   - the new instance: the run `interrupted` with cause `deploy`, its open step `interrupted`, no `summarize` step; `SELECT count(*) FROM posts WHERE stage = 'assessing'` is 0; the bell has the run's notification ("przerwany — nowe wdrożenie"); no ERROR in its log;
+   - the old instance (`railway logs` of its deployment): within seconds of its stop (SIGTERM), `Run <id> step assess ended in <t> after its run had stopped; …`, and no ERROR.
+3. **Start-up time after a wake, 3× before and 3× after.** Before: the `Started SzczurRadarApiApplication in N seconds` lines of three wakes from sleep of an API from before this change (read-only `railway logs -s szczur-radar-api -e production`, or a PR env deployed from `main`). After: three wakes of this PR env's API — let it fall asleep (its deployment shows `SLEEPING`), wake it with `curl -s <web>/api/ready` and read the line. Note the six values and compare them with section "Startup time" below.
+4. **Log format.** In the PR env's API log: Spring Boot's default prefix (example above); no line with `Deployed agent`, `embabel-platform` or `Default LLM`. The operator confirms the format is readable in Railway's log view.
+
+### Startup time
+
+Before S-17 (with Embabel), already recorded in this file:
+
+- section F-03, "Cold start after sleep" (PR env, 2026-10-02): `Started … in 5.9–7.7 seconds` on a warm container;
+- section `api-docker-image`, "Memory, build and cold start" (2026-10-06): server start 7.9–8.3 s warm.
+
+Locally in Docker, the same image built before and after this change:
+
+| Image (2026-10-25, a MacBook, Docker Desktop, Postgres 18 in a container, migrated) | `Started SzczurRadarApiApplication in …` (three starts) |
+| --- | --- |
+| before: `origin/main` 0a17f7d, with Embabel | 9.27 s, 9.93 s, 9.65 s |
+| after: this branch 8fb760c, without Embabel | 7.40 s, 6.92 s, 8.53 s |
+
+About 2 s less on the same machine, in the same session. A laptop is not Railway: the numbers compare the two images, not the production wake time.
+
+The PR env's six values (step 3 above) and production's first wake after the merge (runbook below) are recorded in issue #76.
+
+### Runbook — after the merge (operator; tracked in issue #76)
+
+0. **Standing rules.** No merge to `main` while `/admin` shows a run `RUNNING`, not between about 00:30 and 01:30 UTC (section S-05), and not while the 02:00 UTC backup runs (section S-15). The merge deploys the API; no migration, no variable or service change.
+1. **CI on `main`.** All jobs green; `railway-config` plans no change.
+2. **Start.** The pre-deploy `migrate` passes ("Schema is up to date"); the API's start log is in Spring Boot's default format, has no Embabel line and no ERROR, and has the usual `Pipeline watchdog: a run without progress for 39m 00s is stopped (checked every 1m 00s)`; `curl -s https://szczur-radar-web-production.up.railway.app/api/ready` returns 200 and `/api/deploy-safety` `{"safe":true,"reason":null}`.
+3. **Start-up time after the first wake.** After production's API has slept once, the `Started SzczurRadarApiApplication in N seconds` line of its first wake, next to the "before" values above.
+4. **First night.** The cron ends `OK: …` as before; the night's run on `/admin/runs/<id>` has every step closed; the API log has no ERROR from the run.
+5. **Record and close.** Comment on issue #76: the merge commit, the deployment ID, the start line, the start-up time after the first wake, the first night's cron line. Close #76 only after this production verification.
+
+### Rollback: fix-forward only
+
+Nothing in the data, schema or variables ties the release to the code, but repair a bad S-17 release with a new commit (a revert in a PR is one), which goes through CI, the deploy guard and Wait for CI like any merge. A rollback in Railway's dashboard skips them (section S-14), and an older image brings Embabel and its log format back.
 
 ## Phases
 

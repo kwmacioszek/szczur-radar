@@ -468,10 +468,10 @@ Dokumentacja projektu opisuje stan bez Embabel; `deploy-plan.md` dostaje sekcję
 
 #### Automated
 
-- [x] 4.1 Pełna weryfikacja zielona dwa razy z rzędu (dwa losowe ziarna): `cd szczur-radar-api && ./mvnw -B verify && ./mvnw -B verify`
-- [x] 4.2 Pojedyncze scenariusze działają same: `cd szczur-radar-api && ./mvnw -B verify -Dit.test='PipelineRunIT#aRangeRunFetchesStoresAndAssessesEveryPostOfTheDay' -Dtest=NONE -Dsurefire.failIfNoSpecifiedTests=false` i to samo dla jednego scenariusza z przerwaniem (`RunWatchdogIT#aRunWaitingForACallThatDoesNotEndIsStoppedAndTheRunBehindItGoesOn`)
-- [x] 4.3 Brak `OrderAnnotation` w testach silnika: `grep -rl 'OrderAnnotation' szczur-radar-api/src/test/java/pl/szczurradar/api/pipeline` zwraca nic
-- [x] 4.4 `RunRecorderIT` istnieje i przechodzi: `cd szczur-radar-api && ./mvnw -B verify -Dit.test=RunRecorderIT -Dtest=NONE -Dsurefire.failIfNoSpecifiedTests=false`
+- [x] 4.1 Pełna weryfikacja zielona dwa razy z rzędu (dwa losowe ziarna): `cd szczur-radar-api && ./mvnw -B verify && ./mvnw -B verify` — 8fb760c
+- [x] 4.2 Pojedyncze scenariusze działają same: `cd szczur-radar-api && ./mvnw -B verify -Dit.test='PipelineRunIT#aRangeRunFetchesStoresAndAssessesEveryPostOfTheDay' -Dtest=NONE -Dsurefire.failIfNoSpecifiedTests=false` i to samo dla jednego scenariusza z przerwaniem (`RunWatchdogIT#aRunWaitingForACallThatDoesNotEndIsStoppedAndTheRunBehindItGoesOn`) — 8fb760c
+- [x] 4.3 Brak `OrderAnnotation` w testach silnika: `grep -rl 'OrderAnnotation' szczur-radar-api/src/test/java/pl/szczurradar/api/pipeline` zwraca nic — 8fb760c
+- [x] 4.4 `RunRecorderIT` istnieje i przechodzi: `cd szczur-radar-api && ./mvnw -B verify -Dit.test=RunRecorderIT -Dtest=NONE -Dsurefire.failIfNoSpecifiedTests=false` — 8fb760c
 
 #### Manual
 
@@ -481,8 +481,8 @@ Dokumentacja projektu opisuje stan bez Embabel; `deploy-plan.md` dostaje sekcję
 
 #### Automated
 
-- [ ] 5.1 Dokumenty bieżące bez Embabel: `grep -il embabel REPOSITORY_GUIDELINES.md szczur-radar-api/README.md .github/workflows/ci.yml .railway/railway.ts context/foundation/infrastructure.md` zwraca nic
-- [ ] 5.2 Deploy-plan ma sekcję S-17 ze statusem w formacie lekcji: `grep -c 'S-17: przebieg bez Embabel' context/deployment/deploy-plan.md` wypisuje `1` i `grep -c 'Status:\*\* delivered by PR' context/deployment/deploy-plan.md` nie maleje
+- [x] 5.1 Dokumenty bieżące bez Embabel: `grep -il embabel REPOSITORY_GUIDELINES.md szczur-radar-api/README.md .github/workflows/ci.yml .railway/railway.ts context/foundation/infrastructure.md` zwraca nic
+- [x] 5.2 Deploy-plan ma sekcję S-17 ze statusem w formacie lekcji: `grep -c 'S-17: przebieg bez Embabel' context/deployment/deploy-plan.md` wypisuje `1` i `grep -c 'Status:\*\* delivered by PR' context/deployment/deploy-plan.md` nie maleje
 - [ ] 5.3 CI zielone na PR (wszystkie joby, w tym `api-container-smoke` i `railway-config`): `gh pr checks <PR> --watch`
 
 #### Manual
