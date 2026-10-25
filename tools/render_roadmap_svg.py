@@ -265,31 +265,37 @@ text(M + 52, 57, "Szczur Radar", 17, 700)
 text(M + 52, 75, "MARKET INTELLIGENCE", 9.5, 600, C["muted"], spacing="2.4")
 text(M, 134, "MILESTONES I ZALEŻNOŚCI", 11, 700, C["muted"], spacing="2")
 text(M, 172, "Roadmapa produktu", 31, 700)
-text(M, 202, "Źródło: context/foundation/roadmap.md  ·  v3  ·  stan 24.10.2026  ·  bez terminów — kolejność wynika z zależności", 13, 400, C["muted"])
+text(M, 202, "Źródło: context/foundation/roadmap.md  ·  v3  ·  stan 25.10.2026  ·  bez terminów — kolejność wynika z zależności", 13, 400, C["muted"])
+
+# M-2 slice states; every counter below is derived from them (M-1 closed with all 10 done)
+m2_order = [("F-04", "done"), ("S-08", "done"), ("S-09", "done"), ("S-10", "done"), ("S-11", "done"), ("S-12", "parked"),
+            ("S-13", "done"), ("S-14", "done"), ("S-15", "done"), ("S-16", "done"), ("S-17", "proposed"), ("S-18", "done"), ("S-19", "done")]
+M1_DONE = M1_TOTAL = 10
+M2_TOTAL = len(m2_order)
+M2_COUNT = {st: sum(1 for _, s in m2_order if s == st) for st in ("done", "progress", "ready", "proposed", "parked", "blocked")}
+M2_DONE = M2_COUNT["done"]
 
 # progress card (same as before), right after the title block
 px, py, pw, ph = P2X, 36, 820, 214
 rect(px, py, pw, ph, 14, "url(#hero)", C["border2"])
 cx, cy, rr = px + 82, py + 100, 46
-frac = 17 / 23
+frac = (M1_DONE + M2_DONE) / (M1_TOTAL + M2_TOTAL)
 add(f'<circle cx="{cx}" cy="{cy}" r="{rr}" fill="none" stroke="{C["graySoft"]}" stroke-width="9"/>')
 ang = frac * 2 * math.pi
 ex, ey = cx + rr * math.sin(ang), cy - rr * math.cos(ang)
 add(f'<path d="M{cx} {cy-rr} A{rr} {rr} 0 {1 if frac > 0.5 else 0} 1 {ex:.2f} {ey:.2f}" fill="none" stroke="{C["done"]}" stroke-width="9" stroke-linecap="round"/>')
-text(cx, cy + 4, "74%", 22, 700, anchor="middle")
-text(cx, cy + 22, "17 / 23", 11, 500, C["muted"], anchor="middle")
+text(cx, cy + 4, f"{round(frac * 100)}%", 22, 700, anchor="middle")
+text(cx, cy + 22, f"{M1_DONE + M2_DONE} / {M1_TOTAL + M2_TOTAL}", 11, 500, C["muted"], anchor="middle")
 text(cx, py + 186, "M-1 + M-2", 10.5, 700, C["muted"], anchor="middle", spacing="1.2")
 bx = px + 164
 text(bx, py + 34, "POSTĘP KAMIENIA MILOWEGO", 10.5, 700, C["muted"], spacing="1.6")
 text(bx, py + 62, "M-2 · MVP Quality & Reliability Hardening", 17, 700)
-text(px + pw - 24, py + 62, "10 / 13", 17, 700, C["text"], anchor="end")
-m2_order = [("F-04", "done"), ("S-08", "done"), ("S-09", "done"), ("S-10", "done"), ("S-11", "done"), ("S-12", "parked"),
-            ("S-13", "done"), ("S-14", "done"), ("S-15", "done"), ("S-16", "done"), ("S-17", "proposed"), ("S-18", "done"), ("S-19", "done")]
-segw = (pw - 164 - 24 - 12 * 5) / 13
+text(px + pw - 24, py + 62, f"{M2_DONE} / {M2_TOTAL}", 17, 700, C["text"], anchor="end")
+segw = (pw - 164 - 24 - 12 * 5) / M2_TOTAL
 for i, (iid, st) in enumerate(m2_order):
     lab, fg, bg = STATUS[st]
     rect(bx + i * (segw + 5), py + 78, segw, 12, 3, bg, fg + ("aa" if st not in ("proposed", "parked") else "55"), 1)
-legend_items = [("done", "11 ukończone"), ("progress", "0 w toku"), ("ready", "0 gotowe do planowania"), ("proposed", "1 proponowane"), ("parked", "1 zaparkowane"), ("blocked", "0 zablokowanych")]
+legend_items = [("done", f"{M2_COUNT['done']} ukończone"), ("progress", f"{M2_COUNT['progress']} w toku"), ("ready", f"{M2_COUNT['ready']} gotowe do planowania"), ("proposed", f"{M2_COUNT['proposed']} proponowane"), ("parked", f"{M2_COUNT['parked']} zaparkowane"), ("blocked", f"{M2_COUNT['blocked']} zablokowanych")]
 for li, (st, lab) in enumerate(legend_items):
     fg = STATUS[st][1]
     lx = bx + (0, 122, 218)[li % 3]
@@ -332,7 +338,7 @@ add(f'<line x1="{P3X+20}" y1="{AX_Y}" x2="{x_end-14}" y2="{AX_Y}" stroke="{C["mu
 add(f'<path d="M{x_end-22} {AX_Y-8} L{x_end-10} {AX_Y} L{x_end-22} {AX_Y+8}" fill="none" stroke="{C["muted"]}" stroke-opacity="0.6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>')
 nodes = [
     (P1X, "M-1", "MVP — ocenione sygnały z Wykopu", "Zamknięty 17.10.2026  ·  10 / 10", "done"),
-    (P2X, "M-2", "MVP Quality & Reliability Hardening", "Otwarty — teraz  ·  10 / 13", "now"),
+    (P2X, "M-2", "MVP Quality & Reliability Hardening", f"Otwarty — teraz  ·  {M2_DONE} / {M2_TOTAL}", "now"),
     (P3X, "PO M-2", "Odroczone", "Backlog  ·  24 pozycje", "later"),
 ]
 for nx, tag, name, state, kind in nodes:
@@ -419,7 +425,7 @@ for k, (title, desc, c, r, req, cid) in m1.items():
 container(P2X, P2W, "M-2", "MVP Quality & Reliability Hardening",
           ("Otwarty", C["amber"], C["amberSoft"], 10.5, False, 600, "dot"),
           "Złe noce, awarie dostawców i błędne wdrożenia są widoczne dla operatora, nie niszczą danych ani nie blokują pracy — zanim ruszy kolejna roadmapa funkcjonalna.",
-          ("10 / 13", 10 / 13, C["lime"]), C["lime"] + "40")
+          (f"{M2_DONE} / {M2_TOTAL}", M2_DONE / M2_TOTAL, C["lime"]), C["lime"] + "40")
 box2 = {}
 ry = TOP + 98
 for ri, row in enumerate(rows2):
