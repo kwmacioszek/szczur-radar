@@ -37,6 +37,7 @@ import pl.szczurradar.api.alerts.AlertEvent;
 import pl.szczurradar.api.alerts.OperatorAlertQueue;
 import pl.szczurradar.api.llm.LlmCallException;
 import pl.szczurradar.api.llm.LlmClient;
+import pl.szczurradar.api.llm.LlmClientException;
 import pl.szczurradar.api.llm.LlmConfigurationException;
 import pl.szczurradar.api.llm.LlmProviderProperties;
 import pl.szczurradar.api.llm.LlmUnavailableException;
@@ -65,7 +66,10 @@ import pl.szczurradar.api.posts.PostRepository;
  *       and the remaining posts are not taken; a provider unavailable after the client's retries
  *       ({@link LlmUnavailableException}) stores no attempt and puts the post back, and
  *       {@value #OUTAGE_STREAK} such calls in a row (in the order they end, with no call answered by
- *       the model between them; the prefilter makes no call) stop the step the same way;
+ *       the model between them; the prefilter makes no call) stop the step the same way; so do
+ *       {@value #CLIENT_ERROR_STREAK} calls in a row that leave the client with an error it could not
+ *       classify ({@link LlmClientException}, e.g. after an SDK change), each still a technical error of
+ *       its post (below);
  *   <li>stored with its next stage ({@link PostTransitions#record}), only while the run owns it;
  *   <li>otherwise put back without an attempt ({@link PostTransitions#release}); any exception there
  *       (a bug, a failed write) is a technical error of this post, and the other posts go on: the post
@@ -81,7 +85,11 @@ import pl.szczurradar.api.posts.PostRepository;
  * </ol>
  *
  * A stopped step makes the run {@code failed} ({@link AssessedBatch#stoppedBy}), so neither a bad key
- * nor a provider outage uses up the posts' attempts. A single outage the step went on after is a
+ * nor a provider outage uses up the posts' attempts, and a client error every call ends with costs
+ * {@value #CLIENT_ERROR_STREAK} posts a technical failure each, not every post of the run. The client's
+ * streak counts like the outages' (in the order the calls end, reset only by a stored result whose call
+ * reached the model); an outage, the prefilter and an error outside the client (a mapper, a write) leave
+ * it as it is, and an error of a cancelled task counts nothing. A single outage the step went on after is a
  * technical error of its post, counted only once every post has finished, and only when nothing stopped
  * the step: the stop may come after the post was put back. Its post counts a technical failure
  * ({@link PostTransitions#countTechnicalFailure}, only while the run is still running and only for a
@@ -101,6 +109,12 @@ public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher, Dis
 
 	/** Calls in a row that found the provider unavailable after their retries and stop the step. */
 	static final int OUTAGE_STREAK = 3;
+
+	/**
+	 * Calls in a row that left the LLM client with an error it could not classify ({@link LlmClientException})
+	 * and stop the step: such an error is most likely systematic, so it would go through every post.
+	 */
+	static final int CLIENT_ERROR_STREAK = 3;
 
 	private static final Logger log = LoggerFactory.getLogger(ConcurrentAssessmentDispatcher.class);
 
@@ -173,6 +187,8 @@ public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher, Dis
 		AtomicReference<@Nullable String> stoppedBy = new AtomicReference<>();
 		// Calls in a row, in the order they end, that found the provider unavailable.
 		AtomicInteger outages = new AtomicInteger();
+		// Calls in a row, in the order they end, that left the client with an error it could not classify.
+		AtomicInteger clientErrors = new AtomicInteger();
 		Progress progress = new Progress(runId, postIds.size());
 		// The results whose count fails; reported once every post has finished.
 		LostCounts lost = new LostCounts();
@@ -182,7 +198,8 @@ public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher, Dis
 		try {
 			for (UUID postId : postIds) {
 				tasks.futures().add(executor.submit(() -> {
-					Outcome outcome = assess(runId, postId, runStopped, stoppedBy, outages, tasks.cancelled());
+					Outcome outcome = assess(runId, postId, runStopped, stoppedBy, outages, clientErrors,
+							tasks.cancelled());
 					count(runId, postId, outcome, lost);
 					progress.finished(outcome);
 					return outcome;
@@ -245,7 +262,7 @@ public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher, Dis
 	}
 
 	private Outcome assess(UUID runId, UUID postId, AtomicBoolean runStopped, AtomicReference<@Nullable String> stoppedBy,
-			AtomicInteger outages, AtomicBoolean cancelled) {
+			AtomicInteger outages, AtomicInteger clientErrors, AtomicBoolean cancelled) {
 		if (runStopped.get() || cancelled.get()) {
 			return new Outcome.NotTaken();
 		}
@@ -271,8 +288,10 @@ public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher, Dis
 				return new Outcome.NotTaken();
 			}
 			if (result.provenance().attempts() >= 1) {
-				// The provider answered (the prefilter makes no call): the outages are no longer in a row.
+				// The provider answered (the prefilter makes no call): neither the outages nor the client's
+				// errors are in a row any more.
 				outages.set(0);
+				clientErrors.set(0);
 			}
 			// The prefilter makes no call (attempts 0).
 			return new Outcome.Stored(result.ok(), !result.ok() && attempts.get() + 1 >= Post.MAX_ASSESSMENT_ATTEMPTS,
@@ -312,6 +331,17 @@ public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher, Dis
 				// cancel() interrupted it: the run was stopped, this is not the post's technical error.
 				log.info("Assessing post {} in run {} ended with its stopped run: {}", postId, runId, ex.toString());
 				return new Outcome.NotTaken();
+			}
+			if (ex instanceof LlmClientException && clientErrors.incrementAndGet() >= CLIENT_ERROR_STREAK) {
+				// Most likely every later call would fail the same way: stop taking posts. This post is still
+				// put back as a technical error (below), as each of the streak's posts.
+				runStopped.set(true);
+				if (stoppedBy.compareAndSet(null, "the LLM client failed " + CLIENT_ERROR_STREAK
+						+ " calls in a row with an error that is not the provider's; the last: "
+						+ ex.getClass().getSimpleName() + ": " + ex.getMessage())) {
+					log.warn("The LLM client failed {} calls in a row in run {} with an error that is not the provider's;"
+							+ " no further post is taken: {}", CLIENT_ERROR_STREAK, runId, ex.getMessage());
+				}
 			}
 			failure = ex;
 			error = new Outcome.Error(ex.getClass().getSimpleName() + ": " + ex.getMessage());

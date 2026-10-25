@@ -5,7 +5,7 @@
 ```
 llm/            the API — the only part the rest of the application imports
   LlmClient (complete, check), LlmRequest, LlmResponse, LlmCallException, LlmConfigurationException,
-  LlmUnavailableException, CallFailure, Channel, OutputMode, LlmConfiguration (the lazy bean),
+  LlmUnavailableException, LlmClientException, CallFailure, Channel, OutputMode, LlmConfiguration (the lazy bean),
   LlmClientFactory (a switch over the provider), LlmProviderProperties (the LLM_* contract, read and
   validated by from()), Provider, ServiceTier, ReasoningEffort
   api/          LlmCheckController — GET /api/admin/llm/check (admin)
@@ -30,9 +30,12 @@ between attempts — the request may be fine) or a plain `LlmCallException` (thi
 model refusal, a blocked answer, no text, another 4xx). Any other `RuntimeException` is our bug or an
 unknown SDK error and is not classified: `TransportException.ofTimeoutOrConnection` turns only a
 time-out or an I/O error in the cause chain into a transport failure; anything else leaves the client
-as `TransportException.unclassified` — an `IllegalStateException` outside `LlmCallException`, with the
-message cleaned by `ProviderMessages` and a cleaned copy of the original's chain as its cause (below),
-never retried and never recorded as a provider error. White space (e.g. a blank answer) is judged with the shared `text/Whitespace`,
+as `TransportException.unclassified` — an `LlmClientException` (an `IllegalStateException`) outside
+`LlmCallException`, with the message cleaned by `ProviderMessages` and a cleaned copy of the original's
+chain as its cause (below), never retried and never recorded as a provider error. Its own type lets the
+pipeline tell the client's error from one of its own code (a mapper, a write) and stop a run after three
+in a row (`pipeline/CLAUDE.md`, the client's breaker); a client never throws it for a provider's refusal
+or outage. White space (e.g. a blank answer) is judged with the shared `text/Whitespace`,
 never `isBlank`. An answer without text is `REJECTED` (`provider_error`, no retry) for every provider,
 whatever the finish reason (`ChatResponses.requireText`).
 
@@ -120,7 +123,7 @@ whatever the finish reason (`ChatResponses.requireText`).
    `ScriptedProviderServer`: what is sent,
    text and usage read, and request counts for 429 → success, 5xx × 4, 400 and time-out (the count
    proves no hidden retries); an SDK exception without I/O in its cause chain leaves `complete` as an
-   `IllegalStateException` (not an `LlmCallException`) after one call, with a `CleanedProviderException`
+   `LlmClientException` (an `IllegalStateException`, not an `LlmCallException`) after one call, with a `CleanedProviderException`
    as its cause (the original's class name in its message, the original's stack trace) and the key
    `<hidden>` in its message, while one with an `IOException` in the chain is a connection
    error and retried; for answers that quote the key (401, 5xx, an error without a status, a time-out)

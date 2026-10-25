@@ -40,7 +40,7 @@ public interface LlmClient {
 	 *     this request (a model refusal, a blocked answer, no text) or failed it with a non-retryable
 	 *     error. A bug in our own code or an unknown SDK error during an attempt surfaces as a
 	 *     {@code RuntimeException} outside {@code LlmCallException} on purpose (the original, or an
-	 *     {@code IllegalStateException} with a cleaned message around it): it is not a provider error
+	 *     {@link LlmClientException} with a cleaned message around it): it is not a provider error
 	 *     and must not be recorded as one.
 	 */
 	LlmResponse complete(LlmRequest request);

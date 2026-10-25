@@ -31,6 +31,7 @@ import pl.szczurradar.api.llm.CallFailure;
 import pl.szczurradar.api.llm.Channel;
 import pl.szczurradar.api.llm.LlmCallException;
 import pl.szczurradar.api.llm.LlmClient;
+import pl.szczurradar.api.llm.LlmClientException;
 import pl.szczurradar.api.llm.LlmClientFactory;
 import pl.szczurradar.api.llm.LlmConfigurationException;
 import pl.szczurradar.api.llm.LlmProviderProperties;
@@ -244,8 +245,10 @@ class DeepSeekClientTest {
 			throw sdkError;
 		});
 
-		assertThatExceptionOfType(IllegalStateException.class).isThrownBy(() -> client.complete(REQUEST))
+		// Its own type (still an IllegalStateException), so the pipeline counts it toward a streak.
+		assertThatExceptionOfType(LlmClientException.class).isThrownBy(() -> client.complete(REQUEST))
 			.satisfies(ex -> {
+				assertThat(ex).isInstanceOf(IllegalStateException.class);
 				assertThat(ex.getCause()).isInstanceOf(CleanedProviderException.class)
 					.hasMessageStartingWith(RuntimeException.class.getName() + ": unexpected state");
 				assertThat(ex.getCause().getStackTrace()).isEqualTo(sdkError.getStackTrace());
