@@ -262,7 +262,8 @@ class PipelineRunServiceTest {
 		service.execute(run);
 
 		assertThat(output.getAll()).contains("Pipeline run " + run
-				+ " ended by the watchdog or an interruption; its step ended with IllegalStateException");
+				+ " ended by the watchdog or an interruption; its step ended with IllegalStateException:"
+				+ " interrupted while assessing run " + run);
 		assertThat(errors(output, run)).isEmpty();
 		// Not failed with the step's exception: whoever ended the run wrote its end.
 		verify(recorder, never()).fail(run, "IllegalStateException: interrupted while assessing run " + run);
@@ -278,6 +279,41 @@ class PipelineRunServiceTest {
 	void aStepRefusedWhileTheInstanceStopsIsTheStopToo(CapturedOutput output) {
 		// onClose interrupts the run first: its next step may be refused before the thread's interrupt comes.
 		assertStoppingInstance(new RunNoLongerRunningException(UUID.randomUUID(), RunStep.ASSESS), output);
+	}
+
+	@Test
+	void aLateInterruptOfTheWatchdogDoesNotReachTheCloseAndIsNotKept(CapturedOutput output) {
+		UUID run = started(RunKind.RETRY, RunStatus.FAILED);
+		// The watchdog's cancel(true) landing after the step returned (or after the catch cleared the flag).
+		when(sequence.run(any())).thenAnswer(call -> {
+			Thread.currentThread().interrupt();
+			return new RunSummary(run, RunStatus.INTERRUPTED);
+		});
+
+		service.execute(run);
+
+		assertThat(Thread.interrupted()).as("the flag is cleared for the next run").isFalse();
+		verify(recorder).fail(run, "the run ended without a summary");
+		verify(notifications).runEnded(run);
+		assertThat(errors(output, run)).isEmpty();
+	}
+
+	@Test
+	void aLateInterruptOfTheStoppingInstanceIsRestoredAfterTheClose(CapturedOutput output) {
+		UUID run = started(RunKind.RETRY, RunStatus.SUCCEEDED);
+		// onClose's shutdownNow() landing after the summary: the run ended by itself, so it is still reported.
+		when(sequence.run(any())).thenAnswer(call -> {
+			service.onClose();
+			Thread.currentThread().interrupt();
+			return new RunSummary(run, RunStatus.SUCCEEDED);
+		});
+
+		service.execute(run);
+
+		assertThat(Thread.interrupted()).as("the interrupt flag is restored").isTrue();
+		verify(recorder).fail(run, "the run ended without a summary");
+		verify(notifications).runEnded(run);
+		assertThat(errors(output, run)).isEmpty();
 	}
 
 	@Test

@@ -106,6 +106,14 @@ whatever the finish reason (`ChatResponses.requireText`).
   never answered `null` (D12). See
   `context/archive/2026-09-27-assessment-contract-harness/implementation-notes.md` (N1, N2, N5).
 
+## Bumping Spring AI or Spring Boot
+
+- `openai-java.version` in `pom.xml` must equal the `openai-java-core` the new `spring-ai-openai` brings
+  (`./mvnw dependency:tree -Dincludes=com.openai`): the OkHttp client module is declared by hand, and a
+  mismatch would split the two halves of the SDK silently.
+- The pins in `dependencyManagement` (`antlr4-runtime` for Hibernate's HQL parser, `guava` for
+  google-genai) are re-checked against `hibernate-core`'s and `google-genai`'s poms; no BOM manages them.
+
 ## Adding a provider
 
 1. A `Provider` constant in `llm/Provider`, and its value (and any new `Channel`) in the `CHECK` sets of

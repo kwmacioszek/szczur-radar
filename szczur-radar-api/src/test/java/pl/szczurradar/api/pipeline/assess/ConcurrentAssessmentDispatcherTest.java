@@ -74,6 +74,7 @@ import pl.szczurradar.api.pipeline.flow.RunFlow.AssessedBatch;
 import pl.szczurradar.api.pipeline.flow.RunFlow.ProcessingError;
 import pl.szczurradar.api.pipeline.run.RunStatus;
 import pl.szczurradar.api.pipeline.state.PostTransitions;
+import pl.szczurradar.api.pipeline.state.RunInterruptedException;
 import pl.szczurradar.api.pipeline.state.RunRecorder;
 import pl.szczurradar.api.pipeline.state.RunRecorder.Counters;
 import pl.szczurradar.api.posts.Assessment;
@@ -181,6 +182,9 @@ class ConcurrentAssessmentDispatcherTest {
 
 	/** What the check call ({@link LlmClient#CHECK_REQUEST}) throws, if anything. */
 	private final AtomicReference<@Nullable RuntimeException> checkFailure = new AtomicReference<>();
+
+	/** Whether the check call waits on {@link #release} first, as a call in flight. */
+	private final AtomicBoolean checkHeld = new AtomicBoolean();
 
 	/** The dispatcher's clock for the progress lines, in nanoseconds; only a {@link #SLOW} call moves it. */
 	private final AtomicLong nanoTime = new AtomicLong();
@@ -534,6 +538,39 @@ class ConcurrentAssessmentDispatcherTest {
 	}
 
 	@Test
+	void aCheckInterruptedByTheRunsStopEndsTheStepAsAStoppedRun(CapturedOutput output) throws Exception {
+		UUID stored = post(ContractFixtures.BODY);
+		checkHeld.set(true);
+		ConcurrentAssessmentDispatcher dispatcher = dispatcher();
+		AtomicReference<@Nullable Throwable> thrown = new AtomicReference<>();
+		// The run's thread (pipeline-run), inside the LLM check before the first post.
+		Thread step = Thread.ofPlatform().start(() -> {
+			try {
+				dispatcher.dispatch(RUN, List.of(stored));
+			}
+			catch (Throwable ex) {
+				thrown.set(ex);
+			}
+		});
+		assertThat(holding.tryAcquire(10, TimeUnit.SECONDS)).isTrue();
+
+		// A stopping instance's shutdownNow(), or the watchdog's cancel(true), while the check is in flight.
+		step.interrupt();
+
+		step.join(10_000);
+		assertThat(step.isAlive()).isFalse();
+		// The stop, not the check's failure: execute logs it at INFO and the step stays as the stop closed it.
+		assertThat(thrown.get()).isInstanceOf(RunInterruptedException.class)
+			.hasMessage("the run's thread was interrupted during assess (run " + RUN + ")");
+		assertThat(calls).hasValue(0);
+		assertThat(stages.get(stored)).isEqualTo(PostStage.STORED);
+		verify(transitions, never()).claim(any(UUID.class), any(UUID.class));
+		verify(recorder, never()).count(any(), any());
+		assertThat(output.getAll()).contains("Run " + RUN + " assess: the LLM check was interrupted by the run's stop");
+		assertThat(output.getAll().lines().filter(line -> line.contains(" WARN ") || line.contains(" ERROR "))).isEmpty();
+	}
+
+	@Test
 	void cancellingARunThatIsNotDispatchedChangesNothingForItsLaterStep() {
 		ConcurrentAssessmentDispatcher dispatcher = dispatcher();
 		dispatcher.cancel(RUN);
@@ -883,6 +920,17 @@ class ConcurrentAssessmentDispatcherTest {
 		Clock clock = Clock.fixed(Instant.parse("2026-10-08T10:00:00Z"), ZoneOffset.UTC);
 		LlmClient llm = request -> {
 			if (request.equals(LlmClient.CHECK_REQUEST)) {
+				if (checkHeld.get()) {
+					holding.release();
+					try {
+						release.await();
+					}
+					catch (InterruptedException ex) {
+						// As TransportRetry between attempts: the interrupt ends the check, the flag kept.
+						Thread.currentThread().interrupt();
+						throw unavailable();
+					}
+				}
 				RuntimeException failure = checkFailure.get();
 				if (failure != null) {
 					throw failure;

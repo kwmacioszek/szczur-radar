@@ -44,6 +44,21 @@
 				<type>pom</type>
 				<scope>import</scope>
 			</dependency>
+			<!-- Transitive versions no BOM manages, held at what they were before the Embabel BOM left (S-17):
+			     Hibernate's HQL parser is generated with antlr4-runtime 4.13.2 (spring-ai-model would pull 4.13.1
+			     nearer), and google-genai declares guava 33.4.0-jre (its auth library would pull the -android
+			     flavour nearer). Re-check both against hibernate-core's and google-genai's poms on a Spring Boot
+			     or Spring AI bump (./mvnw dependency:tree -Dverbose -Dincludes=org.antlr,com.google.guava). -->
+			<dependency>
+				<groupId>org.antlr</groupId>
+				<artifactId>antlr4-runtime</artifactId>
+				<version>4.13.2</version>
+			</dependency>
+			<dependency>
+				<groupId>com.google.guava</groupId>
+				<artifactId>guava</artifactId>
+				<version>33.4.0-jre</version>
+			</dependency>
 		</dependencies>
 	</dependencyManagement>
 

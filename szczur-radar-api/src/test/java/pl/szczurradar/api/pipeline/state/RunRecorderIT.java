@@ -117,19 +117,27 @@ class RunRecorderIT {
 	}
 
 	@Test
-	void failEndsAQueuedOrRunningRunButNotAFinishedOne() {
+	void failEndsAQueuedOrRunningRunButNotAFinishedOneAndClosesItsOpenStep() {
 		UUID queued = run("queued", null, null);
 		UUID running = run("running", null, null);
+		// An Error escaping the step: step() did not close it.
+		closedStep(running, "select");
+		openStep(running, "assess");
 		UUID succeeded = run("succeeded", null, null);
+		openStep(succeeded, "summarize");
 
 		recorder.fail(queued, "the run ended without a summary");
-		recorder.fail(running, "IllegalStateException: a bug");
+		recorder.fail(running, "OutOfMemoryError: Java heap space");
 		recorder.fail(succeeded, "too late");
 
 		assertThat(row(queued)).containsEntry("status", "failed").containsEntry("error", "the run ended without a summary");
 		assertThat(row(queued).get("finished_at")).isNotNull();
-		assertThat(row(running)).containsEntry("status", "failed").containsEntry("error", "IllegalStateException: a bug");
+		assertThat(row(running)).containsEntry("status", "failed").containsEntry("error", "OutOfMemoryError: Java heap space");
+		assertThat(steps(running)).containsExactly("select:succeeded::::true",
+				"assess:failed:::OutOfMemoryError: Java heap space:true");
 		assertThat(row(succeeded)).containsEntry("status", "succeeded").containsEntry("error", null);
+		// Not this run's end: its step is left alone too.
+		assertThat(steps(succeeded)).containsExactly("summarize:running::::false");
 	}
 
 	@Test

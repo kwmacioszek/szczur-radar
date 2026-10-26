@@ -1778,22 +1778,31 @@ Revert the commit in a PR; nothing stays in the data. To silence the API's event
 - **The interrupt reaches the step.** The watchdog's stop (`cancel(true)` on the run's task) and a stopping instance (`shutdownNow()`) interrupt the `pipeline-run` thread inside its step (`pipeline/CLAUDE.md`, "Interruption reaches the step"):
   - waiting for its posts in `assess`, in the Wykop client, between two chunks of `store` and before the next source of `fetch`, the step ends within seconds; `store` writes at most the chunk it was in;
   - an LLM call blocked in a read on OkHttp (Gemini, OpenRouter) ends within its attempt's `LLM_TIMEOUT`, without another attempt, as before;
-  - the stopped step logs INFO `Run <id> step <step> ended in <t> after its run had stopped; the step stays as the run's end left it`, and the queue thread one INFO line: `Pipeline run <id> ended by the watchdog or an interruption; its step ended with <exception class>` (watchdog) or `Pipeline run <id>: stopped, the application is stopping` (shutdown). A stopped run gives no ERROR line; an ERROR `Pipeline run <id> failed` means the run's own step failed.
+  - the stopped step logs INFO `Run <id> step <step> ended in <t> after its run had stopped; the step stays as the run's end left it`, and the queue thread one INFO line: `Pipeline run <id> ended by the watchdog or an interruption; its step ended with <exception class>: <message>` (watchdog) or `Pipeline run <id>: stopped, the application is stopping` (shutdown). A stopped run gives no ERROR line; an ERROR `Pipeline run <id> failed` means the run's own step failed.
 - **Breaker for LLM client errors (F7).** Three LLM calls in a row that fail with an error the client cannot classify (not the provider's fault and not the post's, e.g. an unknown error of the provider's library after an update) stop the `assess` step. WARN `The LLM client failed 3 calls in a row in run <id> with an error that is not the provider's; no further post is taken: …`; the run ends `failed` with the error `the LLM client failed 3 calls in a row with an error that is not the provider's; the last: <class>: <message>`. Each of the three posts gets one technical error more (S-09 rules), the other posts go back without an attempt, and the signals are those of any `failed` run: the bell, `RUN_NEEDS_ATTENTION` for an admin's run (section S-18), the cron's exit 1 for the cron's run. A stored result the model answered resets the series; provider outages (S-09's own breaker) and errors of our code outside the LLM client do not count. Before S-17 such an error went through every post of the run. PRD: the S-17 clarification under the failure signal NFR.
 - **A stopped `assess` step is `failed`.** When the assessment stops taking posts (the provider refused the configuration, three outages in a row, or the F7 breaker), the step `assess` shows `failed` with that reason on `/admin/runs/:id`; before S-17 it showed `succeeded` inside a `failed` run (audit A6). The run's status and error are unchanged.
 - **Unchanged:** the run's error text `<exception class>: <message>` (the SPA, `dev/mock-api.js` and the cron read it), the watchdog's timeout and semantics (section S-06), the S-11 clean-up, the deploy guard (section S-14), `PIPELINE_LLM_CONCURRENCY`.
 
-### PR-env verification
+### PR-env verification (szczur-radar-pr-110)
 
-A checklist for the human (plan Phase 5, Manual Verification). Results, the environment's name, deployment IDs and times go to issue #76 as comments, not here. SQL runs as `railway ssh -s postgres -e szczur-radar-pr-<N> -- psql -U postgres -d railway -c "<SQL>"` (section S-11). Real Wykop and LLM calls are allowed in PR envs.
+A checklist for the human (plan Phase 5, Manual Verification), run on the PR env of PR #110. Each step's result — the date, the deployment ID and what was observed — goes into the "Results" table below this checklist, as in the other sections' PR-env verifications; only production's results (runbook below) go to issue #76. SQL runs as `railway ssh -s postgres -e szczur-radar-pr-110 -- psql -U postgres -d railway -c "<SQL>"` (section S-11). Real Wykop and LLM calls are allowed in PR envs.
 
 0. **Preconditions.** The API is deployed from this branch: its pre-deploy `migrate` passed ("Schema is up to date"), `curl -s <web>/api/ready` returns 200. The web is deployed (section S-14, "PR-env verification", when its deployment was skipped). The PR env has an admin account (`create-user --role admin`, section S-08). No run is active: `SELECT count(*) FROM pipeline_runs WHERE status IN ('queued', 'running')` is 0.
 1. **A RANGE run of one day.** As the admin, in `/admin`, a range of one day (e.g. yesterday) and "Uruchom". Expected: the run ends `succeeded` or `partial`; on `/admin/runs/<id>` every step (`fetch`, `store`, `select`, `assess`, `summarize`) is closed; afterwards `curl -s <web>/api/deploy-safety` returns `{"safe":true,"reason":null}`; the API log has no ERROR.
-2. **Interruption by a deploy during `assess`.** Start a RANGE run of 3–4 days. While `/admin/runs/<id>` shows the step `assess` running, redeploy the API (`railway redeploy -s szczur-radar-api -e szczur-radar-pr-<N> -y`, or the Railway MCP `redeploy`, as in section S-06's verification). A push to the branch does not do it: the deploy guard holds the deploy while the run is running (section S-14). Expected:
+2. **Interruption by a deploy during `assess`.** Start a RANGE run of 3–4 days. While `/admin/runs/<id>` shows the step `assess` running, redeploy the API (`railway redeploy -s szczur-radar-api -e szczur-radar-pr-110 -y`, or the Railway MCP `redeploy`, as in section S-06's verification). A push to the branch does not do it: the deploy guard holds the deploy while the run is running (section S-14). Expected:
    - the new instance: the run `interrupted` with cause `deploy`, its open step `interrupted`, no `summarize` step; `SELECT count(*) FROM posts WHERE stage = 'assessing'` is 0; the bell has the run's notification ("przerwany — nowe wdrożenie"); no ERROR in its log;
    - the old instance (`railway logs` of its deployment): within seconds of its stop (SIGTERM), `Run <id> step assess ended in <t> after its run had stopped; …`, and no ERROR.
-3. **Start-up time after a wake, 3× before and 3× after.** Before: the `Started SzczurRadarApiApplication in N seconds` lines of three wakes from sleep of an API from before this change (read-only `railway logs -s szczur-radar-api -e production`, or a PR env deployed from `main`). After: three wakes of this PR env's API — let it fall asleep (its deployment shows `SLEEPING`), wake it with `curl -s <web>/api/ready` and read the line. Note the six values and compare them with section "Startup time" below.
+3. **Start-up time after a wake, 3× before and 3× after.** Before: the `Started SzczurRadarApiApplication in N seconds` lines of three wakes from sleep of an API from before this change (read-only `railway logs -s szczur-radar-api -e production`, or a PR env deployed from `main`). After: three wakes of this PR env's API — let it fall asleep (its deployment shows `SLEEPING`), wake it with `curl -s <web>/api/ready` and read the line. Write the six values into the table in "Startup time" below.
 4. **Log format.** In the PR env's API log: Spring Boot's default prefix (example above); no line with `Deployed agent`, `embabel-platform` or `Default LLM`. The operator confirms the format is readable in Railway's log view.
+
+Results (szczur-radar-pr-110; filled in as each step runs, before the merge):
+
+| Step | Date (UTC) | Deployment | Observed |
+| --- | --- | --- | --- |
+| 1. RANGE run of one day | | | |
+| 2. Interruption by a redeploy during `assess` | | | |
+| 3. Start-up time after a wake (the six lines: table in "Startup time" below) | | | |
+| 4. Log format | | | |
 
 ### Startup time
 
@@ -1811,7 +1820,14 @@ Locally in Docker, the same image built before and after this change:
 
 About 2 s less on the same machine, in the same session. A laptop is not Railway: the numbers compare the two images, not the production wake time.
 
-The PR env's six values (step 3 above) and production's first wake after the merge (runbook below) are recorded in issue #76.
+On Railway, after a wake from sleep (step 3 above; filled in as the checks run, before the merge):
+
+| API | `Started SzczurRadarApiApplication in …` (three wakes) |
+| --- | --- |
+| before: `main` before this change (production's log, or a PR env deployed from `main`) | |
+| after: szczur-radar-pr-110, this branch | |
+
+Production's first wake after the merge (runbook below) is recorded in issue #76.
 
 ### Runbook — after the merge (operator; tracked in issue #76)
 

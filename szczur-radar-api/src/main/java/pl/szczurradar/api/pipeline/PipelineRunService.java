@@ -312,7 +312,9 @@ public class PipelineRunService {
 	 * cleared (a connection pool refuses an interrupted thread) and remembered only when the instance is
 	 * stopping: then the run is neither closed nor reported here ({@link #onClose} did both, and the
 	 * database may be closing), and the flag is restored after the clean-up. After the watchdog's
-	 * interrupt it is not: this thread takes the next run.
+	 * interrupt it is not: this thread takes the next run. An interrupt that lands only after the catch
+	 * cleared the flag, or after a normal return ({@link #onClose} during the summary), is cleared again at
+	 * the start of the clean-up and restored by the same rule.
 	 */
 	void execute(UUID runId) {
 		String error = "the run ended without a summary";
@@ -341,8 +343,9 @@ public class PipelineRunService {
 			}
 			else if (!stillRunning(runId, ex)) {
 				// The watchdog or an interruption ended it; its step ended with what the stop caused.
-				log.info("Pipeline run {} ended by the watchdog or an interruption; its step ended with {}", runId,
-						ex.getClass().getSimpleName());
+				log.info("Pipeline run {} ended by the watchdog or an interruption; its step ended with {}: {}", runId,
+						ex.getClass().getSimpleName(), ex.getMessage());
+				log.debug("Pipeline run {}: the step's exception after the stop", runId, ex);
 			}
 			else {
 				log.error("Pipeline run {} failed", runId, ex);
@@ -350,13 +353,16 @@ public class PipelineRunService {
 			}
 		}
 		finally {
+			// A late interrupt (the watchdog's cancel(true) after the catch cleared the flag, onClose's
+			// shutdownNow() after the step returned) must not reach the clean-up's database calls either.
+			boolean flagged = Thread.interrupted();
 			running.remove(runId);
 			if (!interrupted) {
 				close(runId, error, started);
 				notifications.runEnded(runId);
 			}
 			own.remove(runId);
-			if (interrupted) {
+			if (interrupted || (flagged && executor.isShutdown())) {
 				// Restored after the clean-up, whose database calls an interrupted thread may not get.
 				Thread.currentThread().interrupt();
 			}

@@ -426,6 +426,15 @@ Dokumentacja projektu opisuje stan bez Embabel; `deploy-plan.md` dostaje sekcję
 - Wzorzec testu na bazie: `test/posts/PostRepositoryIT.java:45-48`
 - Lekcje: `context/foundation/lessons.md` (FIRE_ONCE `:82-87`, ponowienia źródła `:141-147`, jedna gałąź/PR, status w deploy-plan)
 
+## Addendum (implementation, 2026-10-26)
+
+Adaptacje przyjęte w implementacji i w przeglądzie implementacji (`reviews/impl-review.md`), bez zmiany kontraktów faz powyżej:
+
+- Faza 5 §3 (2) i Manual Testing krok 2: przerwanie przez deploy na PR env wywołuje `railway redeploy -s szczur-radar-api -e szczur-radar-pr-110 -y` (albo `redeploy` z MCP Railway), nie push commita — strażnik deployu S-14 wstrzymuje deploy pusha, dopóki przebieg jest `RUNNING` (do 90 min; potem `railway-config` kończy się czerwono i Wait for CI nie wdraża tego commita). Procedura: `context/deployment/deploy-plan.md`, sekcja S-17, „PR-env verification”.
+- Faza 5 §2 i wiersz 5.6: wyniki PR env (daty, id deploymentów, sześć linii `Started … in N s`) trafiają do tabel sekcji S-17 w `deploy-plan.md` (przegląd F1), nie do komentarzy issue #76; do #76 idą tylko wyniki produkcji.
+- Key Discoveries („`RunWatchdogIT` Order 1 asercjonuje brak ERROR”): ten scenariusz sprawdzał tylko dwa konkretne komunikaty; przegląd F7 dodał mu ogólną asercję braku linii ` ERROR ` (jak w `PipelineRunIT`), która strzeże poprawki F2 (przerwany `llm.check()` kończy krok `RunInterruptedException` na INFO, nie linią ERROR).
+- Poprawki kodu z przeglądu poza kontraktami faz: F2 (gałąź przerwania w `catch` check'u dyspozytora), F3 (`finally` w `execute` czyści spóźnione przerwanie przed `close`), F4 (`antlr4-runtime` i `guava` przypięte w `dependencyManagement`), F5 (linia INFO po zatrzymaniu z komunikatem wyjątku), F6 (pula wątków LLM jako bean `pipeline/assess/AssessmentPool`; ITy bez refleksji).
+
 ## Progress
 
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles. See `references/progress-format.md`.

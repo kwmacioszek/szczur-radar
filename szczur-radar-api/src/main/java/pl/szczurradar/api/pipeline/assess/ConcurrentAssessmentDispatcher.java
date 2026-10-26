@@ -12,7 +12,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -23,10 +22,8 @@ import java.util.function.LongSupplier;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
@@ -44,7 +41,9 @@ import pl.szczurradar.api.llm.LlmUnavailableException;
 import pl.szczurradar.api.llm.transport.ProviderMessages;
 import pl.szczurradar.api.pipeline.flow.RunFlow.AssessedBatch;
 import pl.szczurradar.api.pipeline.flow.RunFlow.ProcessingError;
+import pl.szczurradar.api.pipeline.run.RunStep;
 import pl.szczurradar.api.pipeline.state.PostTransitions;
+import pl.szczurradar.api.pipeline.state.RunInterruptedException;
 import pl.szczurradar.api.pipeline.state.RunRecorder;
 import pl.szczurradar.api.pipeline.state.RunRecorder.Counters;
 import pl.szczurradar.api.posts.Assessment;
@@ -102,7 +101,7 @@ import pl.szczurradar.api.posts.PostRepository;
  * counts nothing and is never a post's technical error or an outage.
  */
 @Component
-public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher, DisposableBean {
+public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher {
 
 	/** The shortest time between two progress lines in the log. */
 	static final Duration PROGRESS_INTERVAL = Duration.ofMinutes(1);
@@ -146,10 +145,9 @@ public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher, Dis
 
 	@Autowired
 	ConcurrentAssessmentDispatcher(PostRepository posts, AssessmentInputs inputs, Assessor assessor,
-			PostTransitions transitions, RunRecorder recorder, @Lazy LlmClient llm,
-			@Value("${PIPELINE_LLM_CONCURRENCY:4}") int concurrency, ObjectProvider<OperatorAlertQueue> alerts,
-			LlmProviderProperties llmSettings) {
-		this(posts, inputs, assessor, transitions, recorder, llm, pool(concurrency), System::nanoTime, alerts,
+			PostTransitions transitions, RunRecorder recorder, @Lazy LlmClient llm, AssessmentPool pool,
+			ObjectProvider<OperatorAlertQueue> alerts, LlmProviderProperties llmSettings) {
+		this(posts, inputs, assessor, transitions, recorder, llm, pool.executor(), System::nanoTime, alerts,
 				new ProviderMessages(llmSettings.apiKey()));
 	}
 
@@ -177,6 +175,12 @@ public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher, Dis
 			llm.check();
 		}
 		catch (RuntimeException ex) {
+			if (Thread.currentThread().isInterrupted()) {
+				// The run's thread was interrupted during the check (the watchdog's cancel(true), a stopping
+				// instance's shutdownNow()): whoever stopped the run wrote its end; not the check's failure.
+				log.info("Run {} assess: the LLM check was interrupted by the run's stop", runId);
+				throw new RunInterruptedException(runId, RunStep.ASSESS);
+			}
 			// A provider's refusal or outage, or an error that is not the provider's (LlmClient#complete): its
 			// message and causes may come from outside the clients (e.g. building one), so they are cleaned here.
 			log.error("The LLM check before run {} failed; no post is assessed", runId, messages.cleanCause(ex));
@@ -447,21 +451,6 @@ public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher, Dis
 			progress.finished(error);
 			return error;
 		}
-	}
-
-	private static ExecutorService pool(int concurrency) {
-		if (concurrency < 1) {
-			throw new IllegalStateException("PIPELINE_LLM_CONCURRENCY must be at least 1 (got " + concurrency + ")");
-		}
-		AtomicInteger thread = new AtomicInteger();
-		return Executors.newFixedThreadPool(concurrency,
-				task -> Thread.ofPlatform().name("pipeline-llm-" + thread.incrementAndGet()).unstarted(task));
-	}
-
-	/** Stops the threads when the context closes; an assessment in flight is interrupted. */
-	@Override
-	public void destroy() {
-		executor.shutdownNow();
 	}
 
 	/**

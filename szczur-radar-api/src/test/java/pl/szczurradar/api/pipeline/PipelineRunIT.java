@@ -15,7 +15,6 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
@@ -39,7 +38,6 @@ import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.support.TransactionTemplate;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
@@ -63,6 +61,7 @@ import pl.szczurradar.api.llm.ServiceTier;
 import pl.szczurradar.api.llm.transport.TransportException;
 import pl.szczurradar.api.notifications.RunNotifications;
 import pl.szczurradar.api.pipeline.assess.AssessmentDispatcher;
+import pl.szczurradar.api.pipeline.assess.AssessmentPool;
 import pl.szczurradar.api.pipeline.flow.RunSequence;
 import pl.szczurradar.api.pipeline.run.PipelineRun;
 import pl.szczurradar.api.pipeline.run.PipelineRunRepository;
@@ -169,6 +168,10 @@ class PipelineRunIT {
 	@Autowired
 	AssessmentDispatcher dispatcher;
 
+	/** The dispatcher's LLM threads, whose post tasks may outlive a run's end. */
+	@Autowired
+	AssessmentPool llmPool;
+
 	@Autowired
 	RunSequence sequence;
 
@@ -227,14 +230,18 @@ class PipelineRunIT {
 	@AfterEach
 	void settle() {
 		held.forEach(CountDownLatch::countDown);
+		// A scenario that failed before its own onClose() would leave a live queue thread otherwise; idempotent
+		// for one it closed itself.
+		stoppingInstances.forEach(PipelineRunService::onClose);
 		long deadline = System.nanoTime() + Duration.ofSeconds(30).toNanos();
 		while (!quiet()) {
 			if (System.nanoTime() > deadline) {
 				throw new AssertionError("the service did not settle: own runs " + service.ownRuns()
-						+ ", LLM pool active " + llmPool().getActiveCount() + ", queued " + llmPool().getQueue().size());
+						+ ", LLM pool active " + llmPool.activeTasks() + ", queued " + llmPool.queuedTasks());
 			}
 			pause();
 		}
+		stoppingInstances.clear();
 	}
 
 	@Test
@@ -693,14 +700,8 @@ class PipelineRunIT {
 
 	/** No run of any instance's own left and no task of the LLM pool in progress or waiting. */
 	private boolean quiet() {
-		ThreadPoolExecutor pool = llmPool();
-		return service.ownRuns().isEmpty() && stoppingInstances.stream().allMatch(stopping -> stopping.ownRuns().isEmpty())
-				&& pool.getActiveCount() == 0 && pool.getQueue().isEmpty();
-	}
-
-	/** The dispatcher's pool of LLM threads ({@code PIPELINE_LLM_CONCURRENCY}), whose tasks may outlive a run's end. */
-	private ThreadPoolExecutor llmPool() {
-		return (ThreadPoolExecutor) ReflectionTestUtils.getField(dispatcher, "executor");
+		return service.ownRuns().isEmpty()
+				&& stoppingInstances.stream().allMatch(stopping -> stopping.ownRuns().isEmpty()) && llmPool.idle();
 	}
 
 	/** Wykop's searches so far (entries and links, every page). */

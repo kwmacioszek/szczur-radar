@@ -12,7 +12,6 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -34,7 +33,6 @@ import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.ConnectionCallback;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.test.util.ReflectionTestUtils;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ObjectNode;
 
@@ -52,6 +50,7 @@ import pl.szczurradar.api.llm.OutputMode;
 import pl.szczurradar.api.llm.Provider;
 import pl.szczurradar.api.llm.ServiceTier;
 import pl.szczurradar.api.pipeline.assess.AssessmentDispatcher;
+import pl.szczurradar.api.pipeline.assess.AssessmentPool;
 import pl.szczurradar.api.pipeline.run.PipelineRun;
 import pl.szczurradar.api.pipeline.run.RunKind;
 import pl.szczurradar.api.sources.wykop.LocalWykopServer;
@@ -133,6 +132,10 @@ class RunWatchdogIT {
 	@Autowired
 	AssessmentDispatcher dispatcher;
 
+	/** The dispatcher's LLM threads, whose post tasks may outlive a run's end. */
+	@Autowired
+	AssessmentPool llmPool;
+
 	/** The latches this scenario's scripted calls wait on; {@link #settle} releases every one. */
 	private final List<CountDownLatch> held = new CopyOnWriteArrayList<>();
 
@@ -172,7 +175,7 @@ class RunWatchdogIT {
 		while (!quiet()) {
 			if (System.nanoTime() > deadline) {
 				throw new AssertionError("the service did not settle: own runs " + service.ownRuns()
-						+ ", LLM pool active " + llmPool().getActiveCount() + ", queued " + llmPool().getQueue().size());
+						+ ", LLM pool active " + llmPool.activeTasks() + ", queued " + llmPool.queuedTasks());
 			}
 			pause(Duration.ofMillis(100));
 		}
@@ -263,6 +266,8 @@ class RunWatchdogIT {
 			.containsEntry("processing_errors", 0);
 		assertThat(output.getAll()).doesNotContain("Pipeline run " + retry + " failed")
 			.doesNotContain("Assessing post " + leftover + " in run " + retry + " failed");
+		// A stopped run gives no ERROR line at all (its LLM check included).
+		assertThat(output.getAll().lines().filter(line -> line.contains(" ERROR "))).isEmpty();
 	}
 
 	@Test
@@ -375,13 +380,7 @@ class RunWatchdogIT {
 
 	/** No run of the service's own left and no task of the LLM pool in progress or waiting. */
 	private boolean quiet() {
-		ThreadPoolExecutor pool = llmPool();
-		return service.ownRuns().isEmpty() && pool.getActiveCount() == 0 && pool.getQueue().isEmpty();
-	}
-
-	/** The dispatcher's pool of LLM threads (one here), whose tasks may outlive a run's end. */
-	private ThreadPoolExecutor llmPool() {
-		return (ThreadPoolExecutor) ReflectionTestUtils.getField(dispatcher, "executor");
+		return service.ownRuns().isEmpty() && llmPool.idle();
 	}
 
 	/** The admin's notifications about {@code runId}. */

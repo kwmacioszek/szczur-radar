@@ -86,16 +86,20 @@ public class RunRecorder {
 
 	/**
 	 * {@code queued} or {@code running} → {@code failed} with {@code error}: a run that cannot go on,
-	 * e.g. after an exception, or one that ended without a summary. No change for a run already
-	 * finished or interrupted.
+	 * e.g. after an exception, or one that ended without a summary, with its open steps closed
+	 * {@code failed} with the same error, in one transaction (a step's own exception closed its step
+	 * already; an {@link Error} escaping a step, which {@link #step} does not catch, did not). No change
+	 * for a run already finished or interrupted.
 	 */
 	public void fail(UUID runId, String error) {
-		statuses(jdbc.sql("UPDATE pipeline_runs SET status = :failed, finished_at = now(), error = :error"
-				+ " WHERE id = :id AND status IN (:queued, :running)"))
+		inTransaction(() -> closeSteps(statuses(jdbc
+			.sql("UPDATE pipeline_runs SET status = :failed, finished_at = now(), error = :error"
+					+ " WHERE id = :id AND status IN (:queued, :running) RETURNING id"))
 			.param("failed", RunStatus.FAILED.value())
 			.param("error", truncate(error))
 			.param("id", runId)
-			.update();
+			.query(UUID.class)
+			.list(), StepStatus.FAILED, error));
 	}
 
 	/** Adds to the run's counters while it is running, and moves its last activity. */
