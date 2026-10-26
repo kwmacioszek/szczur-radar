@@ -496,7 +496,7 @@ Adaptacje przyjęte w implementacji i w przeglądzie implementacji (`reviews/imp
 
 #### Manual
 
-- [ ] 5.4 PR env: przebieg RANGE kończy się `succeeded`/`partial` ze wszystkimi krokami zamkniętymi, `/api/deploy-safety` wraca do `safe:true`
-- [ ] 5.5 PR env: przerwanie przez deploy kończy przebieg `interrupted` (`deploy`), posty wracają, dzwonek ma powiadomienie, nowa instancja bez ERROR, stara kończy krok w ciągu sekund
-- [ ] 5.6 PR env: czas startu po obudzeniu zmierzony przed i po (trzy linie `Started … in N s` każda) i zapisany w `deploy-plan.md`
+- [x] 5.4 PR env: przebieg RANGE kończy się `succeeded`/`partial` ze wszystkimi krokami zamkniętymi, `/api/deploy-safety` wraca do `safe:true` — f2a2a09 (szczur-radar-pr-110, 2026-10-26; `deploy-plan.md` S-17, Results 1)
+- [x] 5.5 PR env: przerwanie przez deploy kończy przebieg `interrupted` (`deploy`), posty wracają, dzwonek ma powiadomienie, nowa instancja bez ERROR, stara kończy krok w ciągu sekund — f2a2a09 (szczur-radar-pr-110, 2026-10-26; `deploy-plan.md` S-17, Results 2)
+- [x] 5.6 PR env: czas startu po obudzeniu zmierzony przed i po (trzy linie `Started … in N s` każda) i zapisany w `deploy-plan.md` — f2a2a09 (przed: produkcja 7.94/7.38/6.87 s; po: szczur-radar-pr-110 6.18/7.61/6.26 s; `deploy-plan.md` S-17, Startup time)
 - [ ] 5.7 PR env: logi w domyślnym formacie Boota, bez linii Embabel; operator potwierdza, że format jest czytelny w Railway
