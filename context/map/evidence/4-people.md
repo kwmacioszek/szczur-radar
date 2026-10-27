@@ -1,97 +1,88 @@
 # Evidence: people
 
-- Okno: cała historia, 2026-09-26 .. 2026-10-17 (`a6f9c23` .. `5b6eabb`), 47 commitów, wszystkie liczone (0 botów, 0 commitów autorstwa agenta, 0 masowych) — według `scan-contract.md`. `evidence`
-- **Ludzie w oknie: 1** — właściciel repozytorium / jedyny autor, pod dwiema tożsamościami git (6 commitów z 2026-09-26: `Init`, shape-notes, bootstrap; 41 commitów od 2026-09-27). Brak `.mailmap`; tożsamości scalone ręcznie (to samo imię i nazwisko). `evidence`
-- **Baseline: mały zespół — koncentracja jest stanem bazowym** (false-signals reguła 6). Każda capability ma 100% jednego człowieka; to nie jest ustalenie ani ryzyko. `evidence`
-- Agent (Claude) nie jest liczony jako osoba: 42 z 47 commitów ma trailer `Co-authored-by: Claude …` (Opus 5.5 ×31, Opus 4.8 ×8, Sonnet 5 ×2, Sonnet 5.5 ×1). Commity bez trailera: 3 commity startowe (2026-09-26) oraz `#4` (decyzje o raw payloadach) i `#12` (lokalny stos Caddy). `evidence`
-- Squash merge: 1 commit = 1 PR/zmiana (50–180 plików), więc „commity per capability” to liczba zmian, które ją dotknęły, nie liczba edycji. Szum (vendored `.claude/`, fixture'y, lockfile'y, media) wyłączony przez `attribute.py`. `evidence`
-
-## Obszary
-
-Wszystkie capability z krytycznością high/medium oraz top 5 wg commitów (docs-planning raportowane osobno jako proza; model-evaluation — low, poza top 5, podane dla kompletności).
-
-| Capability | Kryterium włączenia | Commity | Pliki (zmiany) | Okres |
-|---|---|---|---|---|
-| platform | high; top 5 | 25 | 121 | 09-26 .. 10-17 |
-| shared-ui | medium; top 5 | 13 | 62 | 09-26 .. 10-17 |
-| auth | high; top 5 | 10 | 88 | 09-29 .. 10-17 |
-| shared-foundations | medium; top 5 | 8 | 60 | 10-02 .. 10-17 |
-| feed | high; top 5 | 8 | 55 | 09-29 .. 10-17 |
-| llm-providers | high | 7 | 71 | 10-02 .. 10-17 |
-| admin-console | medium | 6 | 39 | 10-09 .. 10-17 |
-| pipeline-runs | high | 4 | 56 | 10-09 .. 10-17 |
-| assessment | high | 4 | 88 | 10-02 .. 10-14 |
-| accounts | high | 4 | 65 | 09-29 .. 10-13 |
-| db-backup | high | 3 | 7 | 10-12 .. 10-13 |
-| daily-run | medium | 2 | 18 | 10-13 .. 10-17 |
-| ingest | high | 2 | 42 | 10-06 .. 10-09 |
-| model-evaluation | low (kontekst) | 2 | 22 | 10-06 .. 10-09 |
-| docs-planning (proza) | osobno | 46 | 477 | 09-26 .. 10-17 |
+- **Ludzie w oknie: 1** (`humans_in_window: 1`, okno a6f9c23 2026-09-26 .. 047b65d 2026-10-27, 77 commitów policzonych). `evidence`
+- Jedna osoba pod trzema tożsamościami git (scalone; adresy e-mail celowo pominięte): `kwmacioszek` (adres A, 67 commitów, 2026-09-27..10-27 — squash merge PR-ów), `kwmacioszek` (adres B, 4, 2026-10-18..10-27 — bezpośrednie commity docs), `krzysztofmacioszek` (adres B, 6, wszystkie 2026-09-26 — bootstrap). Brak `.mailmap`. `evidence`
+- Forge potwierdza: 72 PR-y, wszystkie autorstwa `kwmacioszek`, 67 scalonych przez niego, **0 review**; komentarze PR: `railway-app` 63 (status automatu, reguła 7 — nie review), `kwmacioszek` 11. 40 issues (wszystkie zamknięte): 38 od `kwmacioszek`, 2 od `github-actions` (etykieta `deploy-health`); komentarze: `kwmacioszek` 166, `github-actions` 5. Drugiego człowieka nie ma nigdzie. `evidence`
+- **Baseline (reguła 6): mały zespół — koncentracja jest stanem wyjściowym.** Każda liczba „jedna osoba = 100%” poniżej to tautologia, nie ryzyko. Pytanie „kogo zapytać” ma jedną odpowiedź; użyteczna treść tego pliku to **gdzie czytać zamiast pytać** i **kto spoza repo trzyma wiedzę**.
+- Filtry: reguły kontraktu (lockfile'y, binaria, nagrania LLM wyłączone; 0 botów, 0 commitów agentów, 0 masowych). Commity per capability zgodne z kontraktem 1:1; liczby zmian plików różnią się o ≤5 (obsługa renamów) — raportuję commity. Unmapped: 0. Trailer `Co-authored-by: kwmacioszek` (62×) to dopisek GitHuba przy squashu — ta sama osoba, nie agent.
 
 ## People per capability
 
-Jedna osoba we wszystkich wierszach: **właściciel repozytorium / jedyny autor**. Grupy tematów wywiedzione z tematów commitów (identyfikatory zmian) i ścieżek przypisanych w `commit-files.tsv`. `evidence` (autorstwo, okres) / `inference` (nazwy grup tematów).
+Wszystkie capability: autor `kwmacioszek` (1 osoba). Kolumna „tematy” pochodzi z tematów commitów i dotykanych ścieżek; „skupione” = commity dotykające ≤2 capability kodu (bez `docs-planning`, które każdy PR niesie jako folder zmiany). `evidence` dla liczb, tematy to `inference` z tematów commitów.
 
-| Capability | Osoba | Grupy tematów (zmiany, które ją dotknęły) | Okres |
-|---|---|---|---|
-| platform | właściciel | scaffold i pierwszy deploy Railway (#1, #2 bind dual-stack), przepisanie na Javę (F-03 #26/#27), obraz Dockera API (#33/#34), backup i limity kosztów (F-01 #44/#46), limity zasobów (#52), watchPatterns w IaC (#58); ponadto deklaracje IaC/CI przy każdym slice'ie S-0x | 09-26 .. 10-17 |
-| shared-ui | właściciel | scaffold SPA, hardening UI panelu admina (#42) i feedu (#48), komponenty współdzielone dokładane przy S-02..S-07 | 09-26 .. 10-17 |
-| auth | właściciel | logowanie/wylogowanie i ochrona tras (S-01 #13), port na Spring Security (F-03 #26), poprawki review: ścieżka filtra Origin (#28); reguły trasy dokładane z każdym nowym endpointem (S-02..S-07) | 09-29 .. 10-17 |
-| shared-foundations | właściciel | fundament Javy (F-03), konwertery enumów / testy schematu dokładane przy migracjach S-02..S-07 | 10-02 .. 10-17 |
-| feed | właściciel | pierwszy feed (S-02 #37), hardening UI feedu (#48), widok posta (S-03 #53), filtr (S-04 #54), etykieta świeżości (S-05 #50) | 09-29 .. 10-17 |
-| llm-providers | właściciel | konfiguracja dostawcy (F-03), klienci i retry (F-02 #31), błędy OpenRouter w treści 200 (#40), postęp/limity w S-06 (#60) | 10-02 .. 10-17 |
-| admin-console | właściciel | panel admina (S-02 #37), hardening UI (#42), historia przebiegów i powiadomienia (S-06 #60) | 10-09 .. 10-17 |
-| pipeline-runs | właściciel | silnik przebiegów (S-02 #37), błędy OpenRouter (#40), start dzienny (S-05 #50), watchdog i przyczyny przerwań (S-06 #60) | 10-09 .. 10-17 |
-| assessment | właściciel | kontrakt V2 jako kod (F-02 #31), użycie w pipeline (S-02), filtr po ocenie (S-04) | 10-02 .. 10-14 |
-| accounts | właściciel | create-admin (S-01 #13, F-03), create-user / reset-password / linki aktywacyjne (S-07 #49), konto systemowe (S-05 #50) | 09-29 .. 10-13 |
-| db-backup | właściciel | backup + restore check + retencja (F-01 #44, domknięcie #46), manifest po V6 (S-05) | 10-12 .. 10-13 |
-| daily-run | właściciel | cron `pipeline-trigger` i `/internal` (S-05 #50), heartbeat (S-06 #60) | 10-13 .. 10-17 |
-| ingest | właściciel | mapowanie Wykopu (F-02 #31), pobieranie i raw payloady (S-02 #37) | 10-06 .. 10-09 |
-| model-evaluation | właściciel | gold sample i nagrania (F-02 #31), S-02 | 10-06 .. 10-09 |
+| capability (kryt.) | commity / okres | skupione / >3 cap. | tematy pracy | PR-y do przeczytania |
+|---|---|---|---|---|
+| pipeline-runs (high) | 14 / 10-09..10-27 | 1 / 11 | kolejka i stan przebiegu, watchdog i samoleczenie, rozliczanie prób, pusty przebieg, dni bez danych, widoczność błędów, wyjście z Embabel | #37 S-02, #60 S-06, #96 S-09, #103 S-11, #107 S-18, #110 S-17 |
+| llm-providers (high) | 10 / 10-02..10-27 | 1 / 9 | klienci dostawców i transport, błędy w treści odpowiedzi 200, fail-fast `LLM_*`, Spring AI wprost | #40 openrouter-in-body-errors, #82 S-10, #96 S-09, #110 S-17 |
+| assessment (high) | 7 / 10-02..10-27 | 0 / 7 | kontrakt V2 jako kod (schemat, parser, walidator), ocena w filtrze feedu | #31 F-02, #54 S-04 |
+| ingest (high) | 6 / 10-06..10-27 | 0 / 4 | fetcher Wykopu, stronicowanie, kompletność pobierania, pusty przebieg | #94 S-16, #104 (poprawki z przeglądu), #80 S-08 |
+| feed (high) | 11 / 10-09..10-27 | 1 / 10 | feed i widok posta, filtr q/kind/direction, hardening UI | #53 S-03, #54 S-04, #48 feed-view-ui-hardening |
+| auth (high) | 17 / 09-26..10-25 | 1 / 14 | logowanie i sesje (Python → Java), filtr Origin, deny-by-default; każda nowa trasa dopisuje się do `AuthorizationCompletenessIT` i routera | #13 S-01, #26 F-03, #28 (poprawki przeglądu: Origin) |
+| accounts (high) | 7 / 09-29..10-23 | 0 / 6 | komendy CLI operatora, link aktywacyjny, reset hasła | #13 S-01, #27, #49 S-07 |
+| db-backup (high) | 7 / 10-12..10-24 | 2 / 4 | `pg_dump`, pełny restore check, retencja, check-in crona | #44 F-01, #46, #79 S-15 |
+| platform (high) | 32 / 09-26..10-27 | 15 / 14 | Railway IaC i limity, CI i self-hosted runnery, bramka wdrożeń, monitor zewnętrzny, obrazy Docker | #81 S-14, #83, #99, #52, #58, #33 |
+| admin-console (medium) | 12 / 10-09..10-25 | 0 / 12 | historia przebiegów i dzwonek, nieudane posty i ponowienia, dni bez danych, hardening UI | #42, #60 S-06, #106 S-13 |
+| daily-run (medium) | 6 / 10-13..10-24 | 0 / 5 | cron z tokenem, etykieta świeżości, strażnik wdrożeń, check-in | #50 S-05 |
+| operator-alerts (medium) | 4 / 10-23..10-25 | 1 / 2 | healthchecks.io → Telegram, `OperatorAlerts`, zdarzenia błędów | #95 F-04, #101, #107 S-18 |
+| shared-foundations (bucket, top 5) | 23 / 09-26..10-27 | 2 / 18 | README API, `MigrationsIT`, `pom.xml` — przelew z dużych squashy (reguła 12) | — |
+| shared-ui (bucket, top 5) | 17 / 09-26..10-25 | 3 / 14 | `dev/mock-api.js`, kitchen sink, `style.css` — przelew z dużych squashy | #42, #48 |
+
+`model-evaluation` (low, 6 commitów, 0 skupionych) i `docs-planning` (prosa, 76 commitów, reguła 8) pominięte w rankingu.
 
 ## Concentration
 
-- **Mały zespół (1 człowiek) — koncentracja jest stanem bazowym.** Bez języka „bus factor”. `evidence`
-- Capability, których kiedykolwiek dotknęła tylko jedna osoba: **wszystkie 15** (łącznie z docs-planning). `evidence`
-- Druga tożsamość git pojawia się tylko w scaffoldzie z 2026-09-26 (platform, shared-ui, docs-planning) — to ta sama osoba, nie drugi współtwórca. `evidence`
-- Recenzje: `gh pr list` — 43 PR, wszystkie autorstwa właściciela, 0 z recenzją, merge'ujący to wyłącznie właściciel. Brak `CODEOWNERS`. Nie ma drugiej pary oczu w historii forge. `evidence`
+- **Mały zespół — koncentracja jest stanem wyjściowym.** Wszystkie 16 capability dotknęła wyłącznie jedna osoba; lista „tylko jedna osoba kiedykolwiek” = wszystkie. Bez języka bus-factor. `evidence`
+- Ryzyko odpowiadające bus-factorowi przenosi się tu z ludzi na **dokumenty**: wiedza nieobecna w prozie istnieje tylko w głowie jednej osoby albo w kontach zewnętrznych (patrz Implications). `inference`
 
 ## Agent co-authorship
 
-| Capability | Commity z trailerem agenta |
-|---|---|
-| auth, shared-foundations, feed, llm-providers, admin-console, pipeline-runs, assessment, accounts, db-backup, daily-run, ingest, model-evaluation | 100% (wszystkie) |
-| docs-planning | 41/46 (89%) |
-| platform | 21/25 (84%) |
-| shared-ui | 10/13 (77%) |
+Kontekst, nie osoba. Agenci występują tylko jako trailery; autorem jest człowiek, który sterował zmianą. `evidence`
 
-- Cały kod Javy (od F-03, 2026-10-02) powstał w commitach współtworzonych przez agenta; commity bez agenta to tylko scaffold, decyzje o raw payloadach (#4) i lokalny stos Caddy (#12). `evidence`
-- Kontekst, nie filtr: człowiek sterował zmianami (plan, review, merge), ale wiedza o szczegółach implementacji jest zapisana raczej w śladzie planistycznym (`context/archive/*/plan.md`, `research.md`, `reviews/`) niż w pamięci autora. `inference`
+- Ogółem **72/77 (94%)** commitów ma trailer agenta Claude. Bez trailera jest 5 najwcześniejszych commitów (09-26..09-28: Init, shape-notes, bootstrap FastAPI/Vue, decyzja o surowych payloadach, lokalny Caddy).
+- Per capability: **100%** w pipeline-runs, llm-providers, assessment, ingest, feed, accounts, db-backup, admin-console, daily-run, operator-alerts, model-evaluation; shared-foundations 96% (22/23), auth 94% (16/17), docs-planning 93% (71/76), platform 88% (28/32), shared-ui 82% (14/17) — niższe wartości to wyłącznie commity bootstrapu.
+- Modele (commity z trailerem): Opus 5.5 ×60 (09-26..10-27), Opus 4.8 ×8 (tylko 09-27), Sonnet 5 ×2 (09-26), Sonnet 5.5 ×1 (10-11), Fable 5.1 ×1 (10-27).
+- Wniosek: kod jest pisany głównie przez agentów pod kierunkiem człowieka, a uzasadnienie decyzji zostaje w folderach zmian: 33 foldery w `context/archive/`, w tym 28 `plan.md` i 29 `reviews/impl-review.md`, plus 13 plików `follow-ups`. `evidence` (liczby) / `inference` (gdzie żyje uzasadnienie)
 
 ## Implications
 
-- Przed każdą zmianą: pytać właściciela — jest jedynym rozmówcą dla każdej capability. Ponieważ kod pisał głównie agent, drugim źródłem „kto już próbował” jest ślad zmian w `context/archive/`. `inference`
-- Co przeczytać przed zmianą danego rodzaju (PR = squash, więc PR = cała zmiana):
-  - platform / IaC / deploy: #1, #2, #33, #44, #46, #52, #58 (incydenty z restartami i watchPatterns), plus `context/deployment/deploy-plan.md`.
-  - auth: #13, #26, #28 (filtr Origin po review).
-  - accounts: #49 (S-07), #50 (konto systemowe, kolizja numerów migracji V6/V7).
-  - llm-providers / assessment: #31 (F-02), #40 (błędy w treści 200).
-  - pipeline-runs / daily-run / admin-console: #37 (S-02), #50 (S-05), #60 (S-06).
-  - feed: #37, #48, #53, #54.
-  - db-backup: #44, #46.
-  `evidence` (numery PR z tematów commitów)
+**Gdzie czytać zamiast pytać** (liczba w nawiasie = ile commitów capability zmieniło ten dokument w tym samym commicie; `evidence`):
+
+| capability | najpierw przeczytaj |
+|---|---|
+| pipeline-runs | `szczur-radar-api/.../pipeline/CLAUDE.md` (13/14; 506 linii: Where things are, Entries, Progress/interruption/watchdog/notifications, Rules, Tests); `deploy-plan.md` sekcje S-06, S-08, S-11, S-17 |
+| llm-providers | `.../llm/CLAUDE.md` (8/10; 141 linii: Bumping Spring AI or Spring Boot, Adding a provider); `deploy-plan.md` F-02 (ustawienia `LLM_*` produkcji) |
+| assessment | `.../agents/assessor/CLAUDE.md` (4/7; 25 linii: Adding or changing a rule); `context/foundation/llm-assessment/` (`contract-v2.md`, `examples.md`, `hardening-sources.md`, `agent-implementation.md`) |
+| ingest | `.../sources/CLAUDE.md` (5/6; 105 linii: Adding a source (e.g. Reddit), Live use); ostatnia lekcja w `lessons.md` (ponowienia źródła w kliencie, stronicowanie sprawdza spójność) |
+| platform | `deploy-plan.md` (24/32; sekcje S-14 155 linii, self-hosted-pr-runner, deploy-verification-hardening); `tools/deploy-gate/README.md`, `tools/ci-runner/README.md`; 4 lekcje Railway w `lessons.md` (IaC w CI, bucket, pole nieznane SDK znika bez błędu, Hobby bez kopii) |
+| db-backup | `tools/db-backup/README.md` (6/7); `deploy-plan.md` F-01 (206 linii — największa sekcja, runbook odtwarzania) |
+| daily-run | `tools/pipeline-trigger/README.md` (6/6); `deploy-plan.md` S-05 |
+| operator-alerts | `tools/healthchecks/README.md` (4/4); `deploy-plan.md` F-04 (160 linii) |
+| accounts | `szczur-radar-api/README.md` „Komendy operatora” (7/7); `deploy-plan.md` S-07 (115 linii) |
+| admin-console | `pipeline/CLAUDE.md` (9/12; sekcje Entries i S-06); `deploy-plan.md` S-06 |
+| auth, feed | **brak pakietowego `CLAUDE.md`** — reguły tylko w `REPOSITORY_GUIDELINES.md` (deny-by-default, `PUBLIC_ROUTES`/`ADMIN_ROUTES`, sekcja UI) i w folderach zmian w archiwum. `evidence` (brak pliku w HEAD), `inference` (to luka w prozie) |
+
+- Stan produkcji po merge'u żyje w **issue GitHuba** slice'a (lekcja „Status zmiany w deploy-plan.md ma być prawdziwy także po merge'u — stan produkcji żyje w issue”; 166 komentarzy właściciela w 40 issues). Przed zmianą capability przeczytaj issue jej slice'a. `evidence`
+- `deploy-plan.md` (1976 linii, zmieniany w 49 commitach) to jeden runbook dla wszystkich capability operacyjnych; wzmianki: „operator” 134×, „sealed” 27×, ręczne kroki („ręczn/by hand/manual”) 46×, panel/dashboard Railway 40×. `evidence`
+
+**Wiedza poza repo — kto ją trzyma** (`inference` z liczby wzmianek w `deploy-plan.md`; zawartość = `unknown`):
+
+- **Rola operatora** (ta sama osoba, inna rola): zapieczętowane sekrety produkcji (`LLM_API_KEY`, `WYKOP_KEY`/`WYKOP_SECRET`, `PIPELINE_TRIGGER_TOKEN`, `HEALTHCHECK_PING_URL`, sekret sesji), wartości ręcznych zmiennych z `variables.ignore`, klucz `HEALTHCHECKS_API_KEY` używany tylko lokalnie.
+- **Railway** (konto/projekt): reguła powiadomień „deployment crashed” istnieje tylko w ustawieniach konta, Wait for CI, sealed variables; `railway-app` komentuje każdy PR (63).
+- **healthchecks.io + Telegram (@HealthchecksBot)**: konfiguracja checków jest kodem (`tools/healthchecks/`), ale stan i historia alertów są tylko w serwisie (42 / 30 wzmianek).
+- **Wykop API**: klucze aplikacji i zachowanie API na żywo (36 wzmianek; utrwalone w fixture'ach `fixtures/wykop` i w `sources/CLAUDE.md` „Live use”).
+- **OpenRouter** (konto produkcji, tier flex; 11 wzmianek) — koszty i limity konta poza repo.
+- **NAS operatora (Synology Cloud Sync)** — kopia poza Railway (15 wzmianek); **Proxmox w domu + PC dewelopera** — self-hosted runnery (6).
+- **Repo `kwmacioszek/szczur-radar-monitor`** (Cloudflare Worker): monitor po deployu od #99; jego historia nie jest w tym logu — `unknown (external)`.
 
 ## Unknowns
 
-- Czy ktoś poza właścicielem będzie pracował nad repo (brak CODEOWNERS, brak recenzentów) — `unknown`.
-- Formalna własność obszarów — brak pliku; jedyna osoba = de facto właściciel wszystkiego. `unknown`
-- Ile decyzji implementacyjnych podjął agent bez wyraźnej decyzji człowieka — git tego nie pokazuje (trailer mówi tylko o współautorstwie). `unknown`
-- Merge PR #13 przez agenta (zapis w `deploy-plan.md`) jest w forge widoczny jako merge właściciela — atrybucja merge'y na forge nie odróżnia człowieka od agenta. `unknown`
+- Czy dojdzie drugi człowiek — formalna własność nie jest zapisana (brak `CODEOWNERS`; zakres sprawdzony tylko w commitach i forge). `unknown`
+- Wiedza w głowie autora, nieutrwalona w prozie, szczególnie dla auth i feed (brak pakietowego `CLAUDE.md`). `unknown`
+- Zawartość kont zewnętrznych (Railway, healthchecks.io, OpenRouter, Wykop, NAS) i historia `szczur-radar-monitor`. `unknown (external)`
+- Udział agenta w pojedynczej linii kodu — trailer mówi tylko „współautor commitu”, nie ile napisał. `unknown`
 
-## Komendy
-
-- `python3 -I context/map/.work/people-analyze.py` (importuje dane z `commit-files.tsv` / `git-log.txt` wygenerowane przez `attribute.py`) → `context/map/.work/people-per-capability.txt`
-- `python3 -I -c …` — commity bez trailera agenta z `git-log.txt`
-- `git -c core.quotepath=off shortlog -sne HEAD` (e-maile usunięte z wyjścia)
-- `ls .mailmap CODEOWNERS .github/CODEOWNERS docs/CODEOWNERS`
-- `gh pr list -R kwmacioszek/szczur-radar --state all --limit 100 --json number,author,reviews,mergedBy`
+Komendy:
+- `python3 -I people.py .work/git-log.txt .work/capabilities.tsv .work` (atrybucja wg reguł kontraktu → `.work/people-by-capability.tsv`, `people-subjects.txt`, `people-crosscut.tsv`, `people-prose-by-capability.tsv`, `people-prose-touch.txt`)
+- `awk`/`grep` na `.work/git-log.txt` (tożsamości, trailery, modele i ich daty, commity bez trailera)
+- `gh pr list --state all --json number,author,reviews,comments,mergedBy,state` → `.work/people-prs.json`; `gh issue list --state all --json number,title,author,comments,labels,state` → `.work/people-issues.json`
+- `wc -l` i `grep '^## '` na dokumentach prozy (`deploy-plan.md`, `lessons.md`, pakietowe `CLAUDE.md`, `tools/*/README.md`); `grep -ciE` na wzmiankach podmiotów zewnętrznych; `grep` na `.work/head-paths.txt` (foldery archiwum, plany, przeglądy)
