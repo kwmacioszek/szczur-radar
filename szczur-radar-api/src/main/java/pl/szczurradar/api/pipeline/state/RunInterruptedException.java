@@ -13,7 +13,12 @@ import pl.szczurradar.api.pipeline.run.RunStep;
 public class RunInterruptedException extends RuntimeException {
 
 	public RunInterruptedException(UUID runId, RunStep step) {
-		super("the run's thread was interrupted during " + step.value() + " (run " + runId + ")");
+		super(message(runId, step));
+	}
+
+	/** With what the interrupt ended (e.g. the LLM check's exception), kept as the cause. */
+	public RunInterruptedException(UUID runId, RunStep step, Throwable cause) {
+		super(message(runId, step), cause);
 	}
 
 	/**
@@ -26,6 +31,10 @@ public class RunInterruptedException extends RuntimeException {
 		if (Thread.currentThread().isInterrupted()) {
 			throw new RunInterruptedException(runId, step);
 		}
+	}
+
+	private static String message(UUID runId, RunStep step) {
+		return "the run's thread was interrupted during " + step.value() + " (run " + runId + ")";
 	}
 
 }

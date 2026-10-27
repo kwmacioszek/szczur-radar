@@ -23,6 +23,7 @@ import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -31,6 +32,7 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.dao.CannotAcquireLockException;
+import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.mock.env.MockEnvironment;
 import org.springframework.transaction.support.TransactionCallback;
@@ -64,8 +66,10 @@ import pl.szczurradar.api.sources.Source;
  * {@code OrphanedRunIT}. The operator alerts of its failing paths: the clean-up, a run's close and the
  * shutdown's interruption, each raised once to a mocked {@link OperatorAlertQueue}. And how a run ends
  * on its queue thread with a mocked {@link RunSequence} — its own failure an ERROR, a run someone else
- * ended or a stopping instance an INFO line, an {@link Error} logged although its task keeps it — and the
- * watchdog's stop, its writes first, then the interrupt of the run's thread, then its post tasks.
+ * ended or a stopping instance an INFO line, an {@link Error} logged although its task keeps it, a close
+ * the watchdog's late interrupt cut short an INFO line — the stopping instance known from the start of
+ * {@code onClose}, which reports every run of its own; and the watchdog's stop, its writes first, then the
+ * interrupt of the run's thread and of its post tasks, then the notification.
  */
 @ExtendWith(OutputCaptureExtension.class)
 class PipelineRunServiceTest {
@@ -176,15 +180,60 @@ class PipelineRunServiceTest {
 	void aRunThatCannotBeClosedIsRaisedAndStillReported(CapturedOutput output) {
 		UUID run = UUID.randomUUID();
 		doThrow(new CannotAcquireLockException("the database is gone")).when(recorder).fail(eq(run), any());
+		// Nobody else ended it: the close's failure leaves it running.
+		when(recorder.isRunning(run)).thenReturn(true);
 
 		service.execute(run);
 
+		verify(recorder).isRunning(run);
 		assertThat(output).contains("ERROR", "Pipeline run " + run + " could not be closed");
 		verify(alerts).raise(eq(AlertEvent.RUN_CLOSE_FAILED), eq(run),
 				argThat(detail -> detail.contains(CannotAcquireLockException.class.getName())
 						&& detail.contains("/admin/runs/" + run) && !detail.contains("the database is gone")));
 		verify(alerts, times(1)).raise(any(), any(), any());
 		verify(notifications).runEnded(run);
+	}
+
+	@Test
+	void aCloseFailureWhoseRunCannotBeReadIsStillRaised(CapturedOutput output) {
+		UUID run = UUID.randomUUID();
+		doThrow(new CannotAcquireLockException("the database is gone")).when(recorder).fail(eq(run), any());
+		when(recorder.isRunning(run)).thenThrow(new CannotAcquireLockException("still gone"));
+
+		service.execute(run);
+
+		assertThat(errors(output, run)).singleElement()
+			.satisfies(line -> assertThat(line).contains("Pipeline run " + run + " could not be closed"));
+		verify(alerts).raise(eq(AlertEvent.RUN_CLOSE_FAILED), eq(run), any());
+	}
+
+	@Test
+	void aLateInterruptOfTheWatchdogCuttingTheCloseShortIsAnInfoWithoutAnAlert(CapturedOutput output) {
+		UUID run = started(RunKind.RETRY, RunStatus.FAILED);
+		// The stalled step ended by itself while stopStalled was committing: its cancel(true) lands in the close,
+		// and the connection pool refuses the interrupted thread.
+		when(sequence.run(any())).thenReturn(new RunSummary(run, RunStatus.SUCCEEDED));
+		doAnswer(call -> {
+			Thread.currentThread().interrupt();
+			throw new DataAccessResourceFailureException("Interrupted during connection acquisition");
+		}).when(recorder).fail(eq(run), any());
+		AtomicBoolean checkedInterrupted = new AtomicBoolean(true);
+		when(recorder.isRunning(run)).thenAnswer(call -> {
+			checkedInterrupted.set(Thread.currentThread().isInterrupted());
+			// The watchdog ended it failed.
+			return false;
+		});
+
+		service.execute(run);
+
+		assertThat(checkedInterrupted).as("the check gets its connection: the flag is cleared first").isFalse();
+		assertThat(output.getAll()).contains("Pipeline run " + run + " had already ended (its summary, the watchdog or a newer instance); its clean-up here"
+				+ " was cut short: " + DataAccessResourceFailureException.class.getName()
+				+ ": Interrupted during connection acquisition");
+		assertThat(errors(output, run)).isEmpty();
+		verify(alerts, never()).raise(any(), any(), any());
+		verify(notifications).runEnded(run);
+		assertThat(Thread.interrupted()).as("the watchdog's interrupt is not kept for the next run").isFalse();
 	}
 
 	@Test
@@ -299,9 +348,10 @@ class PipelineRunServiceTest {
 	}
 
 	@Test
-	void aLateInterruptOfTheStoppingInstanceIsRestoredAfterTheClose(CapturedOutput output) {
+	void aLateInterruptOfTheStoppingInstanceIsRestoredAndTheRunLeftToOnClose(CapturedOutput output) {
 		UUID run = started(RunKind.RETRY, RunStatus.SUCCEEDED);
-		// onClose's shutdownNow() landing after the summary: the run ended by itself, so it is still reported.
+		// onClose's shutdownNow() landing after the summary: the run ended by itself, and onClose reports it
+		// with every run of its own (onCloseReportsARunOfItsOwnThatHadAlreadyEnded); this one is not queued here.
 		when(sequence.run(any())).thenAnswer(call -> {
 			service.onClose();
 			Thread.currentThread().interrupt();
@@ -311,9 +361,91 @@ class PipelineRunServiceTest {
 		service.execute(run);
 
 		assertThat(Thread.interrupted()).as("the interrupt flag is restored").isTrue();
-		verify(recorder).fail(run, "the run ended without a summary");
-		verify(notifications).runEnded(run);
+		verify(recorder, never()).fail(any(), any());
+		verify(notifications, never()).runEnded(run);
 		assertThat(errors(output, run)).isEmpty();
+	}
+
+	@Test
+	void aRunEndingWhileOnCloseStillWritesIsTheStopNotAFailure(CapturedOutput output) throws InterruptedException {
+		// A run of this instance whose step starts only once onClose began: the instance is stopping, but its
+		// executor is not shut down yet (that is onClose's last statement).
+		PipelineRun own = mock(PipelineRun.class);
+		UUID run = UUID.randomUUID();
+		when(own.getId()).thenReturn(run);
+		when(own.getKind()).thenReturn(RunKind.POSTS);
+		when(own.getSources()).thenReturn(List.of());
+		when(runs.saveAll(any())).thenReturn(List.of(own));
+		when(runs.findById(run)).thenReturn(Optional.of(own));
+		CountDownLatch closing = new CountDownLatch(1);
+		CountDownLatch written = new CountDownLatch(1);
+		when(recorder.start(run)).thenAnswer(call -> closing.await(10, TimeUnit.SECONDS));
+		// onClose's interruption is written: the run's next step is refused.
+		when(sequence.run(any())).thenThrow(new RunNoLongerRunningException(run, RunStep.ASSESS));
+		when(recorder.interrupt(List.of(run), InterruptionCause.SHUTDOWN)).thenAnswer(call -> {
+			closing.countDown();
+			// Held until the queue thread has finished the run (the notifications' round trip, in production).
+			written.await(10, TimeUnit.SECONDS);
+			return List.of(run);
+		});
+		service.startPosts(List.of(UUID.randomUUID()), UUID.randomUUID());
+
+		Thread closer = Thread.ofPlatform().start(service::onClose);
+		long deadline = System.nanoTime() + Duration.ofSeconds(10).toNanos();
+		while (!service.ownRuns().isEmpty()) {
+			assertThat(System.nanoTime()).as("the queue thread finishes the run").isLessThan(deadline);
+			Thread.onSpinWait();
+		}
+
+		// The queue thread neither closed nor reported it: no false ERROR, no RUN_CLOSE_FAILED.
+		assertThat(output.getAll()).contains("Pipeline run " + run + ": stopped, the application is stopping");
+		assertThat(errors(output, run)).isEmpty();
+		verify(recorder, never()).isRunning(any());
+		verify(recorder, never()).fail(any(), any());
+		verify(notifications, never()).runEnded(run);
+
+		written.countDown();
+		closer.join(10_000);
+		assertThat(closer.isAlive()).isFalse();
+		// onClose reported it.
+		verify(notifications, times(1)).runEnded(run);
+		verify(transitions).releaseAll(run);
+		verify(alerts, never()).raise(any(), any(), any());
+	}
+
+	@Test
+	void onCloseReportsARunOfItsOwnThatHadAlreadyEnded() throws InterruptedException {
+		// A run of this instance whose summary committed just before: no longer queued or running, so the
+		// interruption changes nothing, but execute no longer reports it.
+		PipelineRun own = mock(PipelineRun.class);
+		UUID run = UUID.randomUUID();
+		when(own.getId()).thenReturn(run);
+		when(runs.saveAll(any())).thenReturn(List.of(own));
+		CountDownLatch holding = new CountDownLatch(1);
+		when(recorder.start(run)).thenAnswer(call -> {
+			holding.countDown();
+			try {
+				held.await();
+			}
+			catch (InterruptedException ex) {
+				// onClose's shutdownNow().
+			}
+			return false;
+		});
+		when(recorder.interrupt(List.of(run), InterruptionCause.SHUTDOWN)).thenReturn(List.of());
+		service.startPosts(List.of(UUID.randomUUID()), UUID.randomUUID());
+		assertThat(holding.await(10, TimeUnit.SECONDS)).as("the run is held in the queue thread").isTrue();
+
+		service.onClose();
+
+		long deadline = System.nanoTime() + Duration.ofSeconds(10).toNanos();
+		while (!service.ownRuns().isEmpty()) {
+			assertThat(System.nanoTime()).as("the queue thread finishes the run").isLessThan(deadline);
+			Thread.onSpinWait();
+		}
+		verify(notifications, times(1)).runEnded(run);
+		verify(transitions, never()).releaseAll(any());
+		verify(recorder, never()).fail(any(), any());
 	}
 
 	@Test
@@ -353,7 +485,8 @@ class PipelineRunServiceTest {
 	}
 
 	@Test
-	void theWatchdogsStopWritesFirstThenInterruptsTheRunsThreadThenItsPostTasks() throws InterruptedException {
+	void theWatchdogsStopWritesFirstThenInterruptsTheRunsThreadAndItsPostTasksThenNotifies()
+			throws InterruptedException {
 		List<String> events = new CopyOnWriteArrayList<>();
 		CountDownLatch holding = new CountDownLatch(1);
 		CountDownLatch interrupted = new CountDownLatch(1);
@@ -399,8 +532,9 @@ class PipelineRunServiceTest {
 
 		assertThat(service.stopStalled(run, threshold)).isTrue();
 
-		assertThat(events).containsExactly("stall", "releaseAll", "runEnded", "queue thread interrupted",
-				"dispatcher.cancel");
+		// The interrupts right after the commit, before the notification's round trip.
+		assertThat(events).containsExactly("stall", "releaseAll", "queue thread interrupted", "dispatcher.cancel",
+				"runEnded");
 	}
 
 	@Test

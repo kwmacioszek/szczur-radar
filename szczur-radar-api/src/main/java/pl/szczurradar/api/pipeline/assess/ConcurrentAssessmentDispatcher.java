@@ -94,11 +94,13 @@ import pl.szczurradar.api.posts.PostRepository;
  * ({@link PostTransitions#countTechnicalFailure}, only while the run is still running and only for a
  * post this step put back itself), then the run a processing error. The log gets a progress line at
  * most every {@link #PROGRESS_INTERVAL} as posts finish, and one after the last. A stopped run never
- * keeps threads of the pool waiting, by either of two ways: the thread of {@link #dispatch} interrupted
+ * keeps threads of the pool waiting, by any of three ways: the thread of {@link #dispatch} interrupted
  * while it waits for the posts (the watchdog's stop, a stopping instance) cancels the run's post tasks and
- * throws, and {@link #cancel} (the watchdog's stop) cancels them from outside, also while that thread is
- * where an interrupt does not reach it (the LLM check on its HTTP client). Either way a cancelled task
- * counts nothing and is never a post's technical error or an outage.
+ * throws; {@link #cancel} (the watchdog's stop) cancels them from outside, also while that thread is
+ * where an interrupt does not reach it (the LLM check on its HTTP client); and the pool's own shutdown
+ * when the context closes ({@link AssessmentPool}) interrupts them, also before that thread waits for
+ * them. Any way a cancelled or interrupted task counts nothing and is never a post's technical error or an
+ * outage (the transport and the HTTP client leave the interrupt flag set when an interrupt ends a call).
  */
 @Component
 public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher {
@@ -179,7 +181,7 @@ public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher {
 				// The run's thread was interrupted during the check (the watchdog's cancel(true), a stopping
 				// instance's shutdownNow()): whoever stopped the run wrote its end; not the check's failure.
 				log.info("Run {} assess: the LLM check was interrupted by the run's stop", runId);
-				throw new RunInterruptedException(runId, RunStep.ASSESS);
+				throw new RunInterruptedException(runId, RunStep.ASSESS, ex);
 			}
 			// A provider's refusal or outage, or an error that is not the provider's (LlmClient#complete): its
 			// message and causes may come from outside the clients (e.g. building one), so they are cleaned here.
@@ -311,8 +313,9 @@ public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher {
 			return new Outcome.NotTaken();
 		}
 		catch (LlmUnavailableException ex) {
-			if (cancelled.get()) {
-				// cancel() interrupted it: the run was stopped, this is not an outage of the provider.
+			if (cancelled.get() || Thread.currentThread().isInterrupted()) {
+				// cancel(), an interrupted await or the pool's shutdown interrupted it: the run was stopped, this
+				// is not an outage of the provider.
 				log.info("Assessing post {} in run {} ended with its stopped run: {}", postId, runId, ex.toString());
 				return new Outcome.NotTaken();
 			}
@@ -331,8 +334,9 @@ public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher {
 			return new Outcome.Unavailable(ex.getClass().getSimpleName() + ": " + ex.getMessage(), released);
 		}
 		catch (RuntimeException ex) {
-			if (cancelled.get()) {
-				// cancel() interrupted it: the run was stopped, this is not the post's technical error.
+			if (cancelled.get() || Thread.currentThread().isInterrupted()) {
+				// cancel(), an interrupted await or the pool's shutdown interrupted it: the run was stopped, this
+				// is not the post's technical error.
 				log.info("Assessing post {} in run {} ended with its stopped run: {}", postId, runId, ex.toString());
 				return new Outcome.NotTaken();
 			}

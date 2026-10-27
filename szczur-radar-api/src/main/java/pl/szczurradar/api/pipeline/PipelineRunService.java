@@ -86,7 +86,8 @@ import pl.szczurradar.api.sources.Source;
  *   <li>A clean-up of orphans, a close of a run or the shutdown's interruption that fails is an ERROR line
  *       and an operator alert ({@link AlertEvent#ORPHAN_CLEANUP_FAILED}, {@link AlertEvent#RUN_CLOSE_FAILED})
  *       through the server's {@link OperatorAlertQueue}; an operator command's context has none, and then
- *       nothing is raised.
+ *       nothing is raised. A close that fails for a run that had already ended (e.g. the watchdog's
+ *       late interrupt) is an INFO line.
  * </ul>
  */
 @Service
@@ -140,6 +141,12 @@ public class PipelineRunService {
 
 	/** The queue's task of each run this instance queued and has not finished; {@link #stopStalled} interrupts it. */
 	private final Map<UUID, Future<?>> running = new ConcurrentHashMap<>();
+
+	/**
+	 * Whether this instance is stopping: set first thing in {@link #onClose}, before its database writes,
+	 * so {@link #execute} knows it before the executor is shut down (which {@code onClose} does last).
+	 */
+	private volatile boolean stopping;
 
 	PipelineRunService(PipelineRunRepository runs, PostRepository posts, SourceIngest sources, RunRecorder recorder,
 			PostTransitions transitions, RunNotifications notifications, AssessmentDispatcher dispatcher,
@@ -310,11 +317,14 @@ public class PipelineRunService {
 	 * too), a newer instance's recovery — makes its step throw whatever the stop caused, and that is an
 	 * INFO line, never an ERROR or a second end. Before any database call the thread's interrupt flag is
 	 * cleared (a connection pool refuses an interrupted thread) and remembered only when the instance is
-	 * stopping: then the run is neither closed nor reported here ({@link #onClose} did both, and the
-	 * database may be closing), and the flag is restored after the clean-up. After the watchdog's
-	 * interrupt it is not: this thread takes the next run. An interrupt that lands only after the catch
-	 * cleared the flag, or after a normal return ({@link #onClose} during the summary), is cleared again at
-	 * the start of the clean-up and restored by the same rule.
+	 * stopping — known from {@link #onClose}'s first statement, before its writes, not only once the
+	 * executor is shut down: then the run is neither closed nor reported here ({@link #onClose} interrupts
+	 * and reports every run of its own, also one that ended by itself a moment before, and the database may
+	 * be closing), and the flag is restored after the clean-up. After the watchdog's interrupt it is not:
+	 * this thread takes the next run. An interrupt that lands only after the catch cleared the flag, or
+	 * after a normal return ({@link #onClose} during the summary), is cleared again at the start of the
+	 * clean-up and restored by the same rule; one that lands inside the clean-up (the watchdog's late
+	 * {@code cancel(true)}) is tolerated by {@link #close}.
 	 */
 	void execute(UUID runId) {
 		String error = "the run ended without a summary";
@@ -331,12 +341,14 @@ public class PipelineRunService {
 		catch (RuntimeException ex) {
 			// First, before any database call: cleared, so the clean-up below gets its connections.
 			Thread.interrupted();
-			boolean stopping = executor.isShutdown();
+			// Set by onClose before its writes; the executor is shut down only at its end.
+			boolean stopping = this.stopping || executor.isShutdown();
 			if (stopping) {
 				// The instance is stopping: onClose interrupted its runs first (so a step may have been refused
 				// before the interrupt came, RunNoLongerRunningException).
 				interrupted = true;
 				log.info("Pipeline run {}: stopped, the application is stopping", runId);
+				log.debug("Pipeline run {}: the step's exception after the stop", runId, ex);
 			}
 			else if (ex instanceof RunNoLongerRunningException) {
 				log.info("Pipeline run {} is no longer running here; its remaining steps were not started", runId);
@@ -356,13 +368,16 @@ public class PipelineRunService {
 			// A late interrupt (the watchdog's cancel(true) after the catch cleared the flag, onClose's
 			// shutdownNow() after the step returned) must not reach the clean-up's database calls either.
 			boolean flagged = Thread.interrupted();
+			// A run that ended by itself while the instance stops (its summary during onClose) is onClose's too:
+			// it reports every run of its own, and the database may be closing.
+			boolean stop = interrupted || this.stopping;
 			running.remove(runId);
-			if (!interrupted) {
+			if (!stop) {
 				close(runId, error, started);
 				notifications.runEnded(runId);
 			}
 			own.remove(runId);
-			if (interrupted || (flagged && executor.isShutdown())) {
+			if (interrupted || (flagged && stop)) {
 				// Restored after the clean-up, whose database calls an interrupted thread may not get.
 				Thread.currentThread().interrupt();
 			}
@@ -370,8 +385,8 @@ public class PipelineRunService {
 	}
 
 	/**
-	 * Whether the run whose step threw {@code failure} is still running here; when even that cannot be
-	 * read, it is taken as running (the step's failure is then this run's), with the read's failure
+	 * Whether the run whose step (or close) threw {@code failure} is still running here; when even that
+	 * cannot be read, it is taken as running (the failure is then this run's), with the read's failure
 	 * suppressed in {@code failure}.
 	 */
 	private boolean stillRunning(UUID runId, RuntimeException failure) {
@@ -387,7 +402,8 @@ public class PipelineRunService {
 	/**
 	 * Stops a run of this instance that made no progress for {@code threshold} ({@link RunWatchdog}):
 	 * ends it {@code failed} with its open steps ({@link RunRecorder#stall}) and puts its posts back, in
-	 * one transaction; then notifies the admins and pulls both levers that end the run's work:
+	 * one transaction; then, right after the commit, pulls both levers that end the run's work, and only
+	 * then notifies the admins:
 	 *
 	 * <ol>
 	 *   <li>{@code cancel(true)} on its queue task interrupts this service's thread inside its step: a
@@ -399,7 +415,10 @@ public class PipelineRunService {
 	 * </ol>
 	 *
 	 * Writing first matters: interrupting first would let {@link #execute} close the run {@code failed}
-	 * with another error. Whatever the stopped step still does changes nothing: claiming a post needs a
+	 * with another error. Interrupting before the notification's database round trip keeps the window
+	 * small in which the stalled step ends by itself and the interrupt lands in {@link #execute}'s
+	 * clean-up instead ({@link #close} tolerates it); the notification is idempotent, so {@link #execute}
+	 * may report the run too. Whatever the stopped step still does changes nothing: claiming a post needs a
 	 * running run, storing a result needs the post still held by the run, and its counters and steps are
 	 * conditional.
 	 *
@@ -419,21 +438,24 @@ public class PipelineRunService {
 			return false;
 		}
 		log.warn("Pipeline run {} made no progress for {}; stopped", runId, Durations.format(threshold));
-		// After the commit: the notifications read the stopped run.
-		notifications.runEnded(runId);
 		Future<?> task = running.get(runId);
 		if (task != null) {
 			task.cancel(true);
 		}
 		dispatcher.cancel(runId);
+		// After the commit: the notifications read the stopped run.
+		notifications.runEnded(runId);
 		return true;
 	}
 
 	/**
 	 * A run that is still queued or running here has failed with {@code error} (no change when its
 	 * summary or an interruption ended it); its posts still {@code assessing} go back. A run that
-	 * started here gets its end line in the log. When even this fails (the database is gone), start-up
-	 * recovery does it.
+	 * started here gets its end line in the log. When even this fails (the database is gone), an ERROR
+	 * line and {@link AlertEvent#RUN_CLOSE_FAILED}, and start-up recovery does it — unless the run had already ended (its own summary; the watchdog, whose late {@code cancel(true)} may land in here and make the
+	 * connection pool refuse this thread; a newer instance's recovery): then the failure is an INFO line,
+	 * with no alert. The interrupt flag is cleared for that check and not restored here ({@link #execute}'s
+	 * rule decides).
 	 *
 	 * @param startedNanos when it started ({@link System#nanoTime()}), {@code null} when it did not
 	 */
@@ -451,6 +473,15 @@ public class PipelineRunService {
 			}
 		}
 		catch (RuntimeException ex) {
+			// Cleared, so the check below can get a connection (a late interrupt of the watchdog).
+			Thread.interrupted();
+			// When even that cannot be read, it is taken as running: the close's failure stays an alert.
+			if (!stillRunning(runId, ex)) {
+				log.info("Pipeline run {} had already ended (its summary, the watchdog or a newer instance); its clean-up here was cut short: {}", runId,
+						ex.toString());
+				log.debug("Pipeline run {}: the clean-up's exception", runId, ex);
+				return;
+			}
 			log.error("Pipeline run {} could not be closed; the next start-up recovery closes it", runId, ex);
 			OperatorAlertQueue.raise(alerts, AlertEvent.RUN_CLOSE_FAILED, runId, "Pipeline run " + runId
 					+ " could not be closed (" + ex.getClass().getName() + "); it may stay running without a"
@@ -460,28 +491,31 @@ public class PipelineRunService {
 	}
 
 	/**
-	 * This instance stops: its own queued and running runs become {@code interrupted} (before the
+	 * This instance stops: first it marks itself stopping (so {@link #execute} neither closes nor reports
+	 * a run from now on), then its own queued and running runs become {@code interrupted} (before the
 	 * thread is stopped, so a run interrupted mid-step is not marked {@code failed}) and their posts are
-	 * put back, in one transaction; then the admins are notified and the thread is stopped:
-	 * {@code shutdownNow()} interrupts the step it is in, as the watchdog's stop does
-	 * ({@link #stopStalled}), and {@link #execute} leaves the run as this left it. When the
-	 * transaction fails (e.g. the database is gone), an ERROR line and, when this instance had runs, an
-	 * operator alert ({@link AlertEvent#RUN_CLOSE_FAILED}) name them; the thread is stopped in any case.
-	 * The queue is still alive here: the context closes before its beans are destroyed.
+	 * put back, in one transaction; then every run of its own is reported to
+	 * {@link RunNotifications#runEnded} — the interrupted ones and any that ended by itself just before
+	 * (its summary committed, but {@link #execute} no longer reports it), idempotent and nothing for a run
+	 * that needs no attention — and the thread is stopped: {@code shutdownNow()} interrupts the step it is
+	 * in, as the watchdog's stop does ({@link #stopStalled}), and {@link #execute} leaves the run as this
+	 * left it. When the transaction fails (e.g. the database is gone), an ERROR line and, when this instance
+	 * had runs, an operator alert ({@link AlertEvent#RUN_CLOSE_FAILED}) name them; the thread is stopped in
+	 * any case. The queue is still alive here: the context closes before its beans are destroyed.
 	 */
 	@EventListener(ContextClosedEvent.class)
 	void onClose() {
+		stopping = true;
 		List<UUID> mine = List.copyOf(own);
 		try {
-			List<UUID> interrupted = transaction.execute(status -> {
+			transaction.execute(status -> {
 				List<UUID> ids = recorder.interrupt(mine, InterruptionCause.SHUTDOWN);
 				ids.forEach(transitions::releaseAll);
 				return ids;
 			});
-			// After the commit: the notifications read the interrupted runs.
-			if (interrupted != null) {
-				interrupted.forEach(notifications::runEnded);
-			}
+			// After the commit: the notifications read the interrupted runs; every run of its own, since
+			// execute no longer reports one that ended by itself meanwhile.
+			mine.forEach(notifications::runEnded);
 		}
 		catch (RuntimeException ex) {
 			log.error("The pipeline runs of this instance could not be interrupted on shutdown: {}", mine, ex);
