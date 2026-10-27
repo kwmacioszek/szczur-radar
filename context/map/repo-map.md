@@ -90,7 +90,7 @@ Szum według rodzin sygnałów, oceniany względem pozostałych możliwości (H/
 - **Pokrycie możliwości:** 0 zmian nieprzypisanych. Koszyki zbiorcze to 17,8% zmian w kodzie (shared-foundations 9,1%, shared-ui 8,7%), a razem z platform 26,9%. Szum wykluczony: 946 zmian plików (452 binarne, 480 nagrań LLM, 14 lockfile'i).
 - **Gdzie foldery nie pasują do możliwości:**
   - `pipeline/api/` obsługuje admin-console, daily-run (`/internal`, świeżość) i platform (`/api/deploy-safety`).
-  - `posts/` to encje feedu, ale zapisuje je silnik: 17 krawędzi i surowy SQL w `pipeline/state/PostTransitions` oraz `RunRecorder`.
+  - `posts/` to encje feedu, ale zapisuje je silnik: 17 krawędzi i surowy SQL `UPDATE posts` w `pipeline/state/PostTransitions` (`RunRecorder` tylko czyta `posts`).
   - `pipeline/step/SourceIngest` to szew pobierania ze źródeł, liczony do silnika, nie do ingest.
   - `cli/` trzyma komendy kont i `send-test-alert` (operator-alerts).
   - `agents/` nosi nazwę po Embabel, choć od S-17 zawiera już tylko kontrakt oceny.
@@ -135,7 +135,7 @@ Szum według rodzin sygnałów, oceniany względem pozostałych możliwości (H/
 - Gdzie żyje: `szczur-radar-api/src/main/java/pl/szczurradar/api/llm/openrouter/OpenRouterClient.java`, `llm/transport/TransportException.java`, `llm/transport/ProviderMessages.java`, `llm/LlmClient.java`, `llm/LlmClientException.java`, `llm/LlmProviderProperties.java`.
 
 **3. platform — weryfikacja wdrożeń (pod-obszar `tools/deploy-gate` + Wait for CI)**
-- Dlaczego: mechanizm, który ma chronić produkcję, w M-2 wymagał trzech podejść w 5 dni. S-14 dało `deploy-verify` i 7 issue `deploy-health`, w tym fałszywy alarm #98 na produkcji. Potem dwa PR-y zamknięto bez merge'a (#92, #97), aż monitor przeniesiono do zewnętrznego repo (#99). Do tego produkcja wdrożyła `2abc64c` mimo czerwonego CI. Przyczyny nikt nie zbadał. Ta usterka i fałszywy `SKIPPED` w `verify-apply.sh` żyją tylko w komentarzu #73 i w `roadmap.md` (Milestone History, v3.7).
+- Dlaczego: mechanizm, który ma chronić produkcję, w M-2 wymagał trzech podejść w 5 dni. S-14 dało `deploy-verify` i 7 issue `deploy-health`, w tym fałszywy alarm #98 na produkcji. Potem dwa PR-y zamknięto bez merge'a (#92, #97), aż monitor przeniesiono do zewnętrznego repo (#99). Do tego kontrola po apply padła fałszywie: `gate.jq` liczy każdą zmianę jako redeploy, a `source.checkSuites` nie wywołuje deploymentu, więc `verify-apply.sh` wziął za „deployment apply'a” deployment z równoległego pusha (`SKIPPED` przez watch paths). Następny apply z taką zmianą znów zrobi `railway-config` czerwonym, a wtedy Wait for CI pominie deploy kodu. Zapis z komentarza #73, że produkcja wdrożyła `2abc64c` mimo czerwonego CI, okazał się błędny: deployment API został `SKIPPED` 3 s po czerwonym CI (audyt `context/changes/post-m2-audit/research.md`, P1–P2).
 - Niezależne sygnały:
   - *tarcie*: 3 podejścia, 2 PR-y bez merge'a i 2 nierozwiązane ustalenia (`2-discussion.md`, Friction);
   - *uwaga*: sekcja C audytu (15 ustaleń, najwięcej ze wszystkich) powstała przed tymi podejściami, a Open Roadmap Question 3 (czy deploy po `config apply` czeka na CI) wciąż jest otwarte (`2-discussion.md`, Planning attention).
@@ -199,7 +199,7 @@ Luka w prozie: **auth i feed nie mają pakietowego `CLAUDE.md`**. Ich reguły s�
   - kto konsumuje `/api/admin/llm/check`: nie ma konsumenta w repo, więc to unknown (external), podobnie sondy `szczur-radar-monitor`;
   - odpowiedzi na Open Roadmap Questions 2–5: locale bazy dla filtra S-04, ustalenia z żywego Railway, próg FR-025, budżet LLM na przebieg.
 - **Niewiadome warte skupionego badania:**
-  1. Dlaczego Wait for CI przepuścił `2abc64c` i czy wstrzymuje `railway redeploy` (`deploy-plan.md`: „Not verified yet”). Razem z fałszywym `SKIPPED` w `verify-apply.sh` — #73, Open Roadmap Question 3.
+  1. Czy redeploy wywołany przez apply zmiany, która deployuje, czeka na Wait for CI (`deploy-plan.md`: „Not verified yet”) — Open Roadmap Question 3. Samo `2abc64c` jest wyjaśnione: Wait for CI zadziałał, deployment API był `SKIPPED`; zostaje fałszywa kontrola po apply w `verify-apply.sh` (audyt `post-m2-audit`, P1–P2).
   2. Kontrakt JSON SPA ↔ API i `dev/mock-api.js`: brak generowanego klienta i testu kontraktu, więc zgodność trzyma się na ręcznie utrzymywanych bliźniakach.
   3. Resztkowe okno wyścigu F3 w zamykaniu przebiegu i niestabilny test anulowania (`pipeline-concurrency-review`).
   4. Izolacja źródeł w `SourceIngest.fetch` i świeżość per źródło, przed dodaniem Reddita (Parked „Izolacja źródeł i świeżość per źródło”).
