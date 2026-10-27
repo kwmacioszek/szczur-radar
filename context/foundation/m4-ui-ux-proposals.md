@@ -2,9 +2,11 @@
 
 Zapis decyzji użytkownika z 2026-10-27: **kolejny kamień milowy po M-3 to nowe UI i UX** aplikacji webowej. Poniżej cztery propozycje **układu** przekazane przez użytkownika jako makiety (dane demonstracyjne). To nie jest projekt wizualny ani zakres — kolory, typografię i szczegóły wyglądu ustali M-4 (`/10x-ui`, `/10x-roadmap`). Termin: bez presji (grudzień 2026, ewentualnie styczeń 2027).
 
-Pliki makiet (do uzupełnienia): `context/foundation/m4-ui-ux-proposals/1-czytnik.png`, `2-karta-podmiotu.png`, `3-strumien-inspektor.png`, `4-przeglad.png`.
+Makiety (PNG 1500×950) leżą w `docs/visuals/m4-ui-ux/`; każda sekcja niżej linkuje swoją.
 
 ## 1. „Czytnik” (Research Edition) — czytanie jednego wpisu z adnotacjami
+
+![Czytnik](../../docs/visuals/m4-ui-ux/szczur-radar-koncepcja-4-reader.png)
 
 - Jasne, „papierowe” tło, szeryfowe nagłówki, nawigacja u góry: Czytnik · Wątki · Podmioty · Zapisane; hasło strony „Od wypowiedzi do argumentu.”
 - Trzy kolumny:
@@ -14,6 +16,8 @@ Pliki makiet (do uzupełnienia): `context/foundation/m4-ui-ux-proposals/1-czytni
 
 ## 2. „Karta podmiotu” (Eksplorator) — widok wokół spółki, nie chronologii
 
+![Karta podmiotu](../../docs/visuals/m4-ui-ux/szczur-radar-koncepcja-3-lens.png)
+
 - Lewy panel **katalog analiz**: pole „Filtruj spółki…” i lista celów (ORLEN, XTB, KĘTY, S&P500, RAM); okruszki „Universe / Polskie spółki / wybrany target”.
 - Nagłówek **karty podmiotu** (ORLEN) z przyciskiem „Przejdź do źródła”.
 - „**Co wynika z dyskusji?**” — pasek proporcji stanowisk (wzrostowe / spadkowe / inne, w %), teza z wypowiedzi z cytatem, „Jak to czytać?”.
@@ -22,11 +26,15 @@ Pliki makiet (do uzupełnienia): `context/foundation/m4-ui-ux-proposals/1-czytni
 
 ## 3. „Strumień dyskusji” + „Inspektor wpisu” — ciemny układ roboczy w trzech panelach
 
+![Strumień i inspektor wpisu](../../docs/visuals/m4-ui-ux/szczur-radar-koncepcja-1-workstation.png)
+
 - Lewa nawigacja: Strumień (licznik), Spółki, Analizy, Zapisane; sekcja System: Pipeline, Ustawienia; stan „Pipeline gotowy” na dole.
 - Środek — **strumień**: wyszukiwanie po treści lub spółce, przełącznik stanowiska (Wszystkie / Wzrostowe / Spadkowe), licznik wpisów i źródła (`Wykop / Reddit`), sortowanie „Najnowsze”; wiersz wpisu: źródło · czas, tytuł, etykiety celów i stanowiska.
 - Prawa — **inspektor wpisu**: źródło, tytuł, autor · czas · typ, treść, „Interpretacja treści” jako karta na cel (stanowisko, teza, „Dowód z oryginalnej wypowiedzi” z cytatem); przyciski „Czytaj z adnotacjami” i „JSON” (surowe dane).
 
 ## 4. „Przegląd” — „Co mówi dziś rynek?”
+
+![Przegląd](../../docs/visuals/m4-ui-ux/szczur-radar-koncepcja-2-brief.png)
 
 - Nawigacja: Przegląd · Spółki · Wpisy · Archiwum; wybór dnia.
 - Kafelki: aktywny wątek (ORLEN), liczba wpisów, liczba stanowisk, źródła (Wykop + Reddit).
