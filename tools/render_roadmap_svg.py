@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
-"""Renders docs/visuals/roadmap.svg: the roadmap as a timeline, M-1 → M-2 → Po M-2, left to right.
+"""Renders docs/visuals/roadmap.svg: the roadmap as a timeline, M-1 → M-2 → M-3 → Po M-3, left to right.
 
 The data is copied by hand from context/foundation/roadmap.md (v3); the M-1 prerequisites and streams come
 from the roadmap before M-1 closed (v2.22, commit 5b6eabb), because v3 keeps M-1 only in `## Done`.
+The open M-3 comes from v4: streams from `## Streams`, card titles from `## Slices`, card texts from the
+`## At a glance` outcomes, and its slice states drive the progress card.
 Every card carries data-id / data-status and every dependency arrow data-from / data-to, so the drawing
 can be checked against the roadmap. When roadmap.md changes, update the data below and run:
 
@@ -180,21 +182,43 @@ lanes = {
     "C": ("Próby i silnik", "S-10, S-11, S-16 są niezależne — mogą iść równolegle", C["sky"]),
     "D": ("Wdrożenia i dane", "Trzy niezależne wycinki — mogą iść równolegle", C["sky"]),
 }
+m3 = {  # lane, title, outcome (At a glance), status, prerequisites, change id
+    "S-20": ("A", "Awaria albo cisza jednego źródła nie psuje drugiego", "awaria albo cisza jednego źródła nie psuje przebiegu pozostałych; czas pobrania wielu źródeł mieści się w progu strażnika; liczniki widać per źródło", "ready", "—", "source-isolation"),
+    "S-27": ("A", "Reddit jako drugie źródło", "użytkownik widzi w feedzie posty z wybranych subredditów obok Wykopu, ocenione tym samym kontraktem", "blocked", "S-20", "reddit-source"),
+    "S-28": ("A", "Jakość i koszt Reddita zmierzone przed produkcją", "operator wie przed włączeniem Reddita na produkcji, że ocena postów po angielsku spełnia progi, a koszt mieści się w budżecie", "proposed", "S-27", "reddit-quality-and-cost"),
+    "S-29": ("A", "Źródło widoczne w feedzie, świeżość bez kłamstwa", "użytkownik odróżnia źródło posta w feedzie i szczegółach, a data aktualizacji nie kłamie przy dwóch źródłach", "blocked", "S-27", "source-aware-feed"),
+    "S-21": ("B", "Zmiana IaC bez deployu nie blokuje wdrożeń", "zmiana IaC, która nie wywołuje deployu, nie robi CI czerwonego ani nie blokuje deployu kodu; dokumenty S-14 i #73 mówią prawdę", "ready", "—", "deploy-gate-no-deploy-changes"),
+    "S-25": ("B", "Jedna reguła adresu check-in alarmów", "adres check-in alarmów ma jedną regułę we wszystkich miejscach, a rozjazd kopii jest wykrywany testem", "ready", "—", "alert-ping-single-rule"),
+    "S-22": ("C", "„Wymaga uwagi” liczone jedną regułą", "admin widzi powody „wymaga uwagi” liczone tą samą regułą co powiadomienia i alerty, bez pustego tekstu przy nowym powodzie", "ready", "—", "run-attention-single-rule"),
+    "S-23": ("C", "Zamknięte zbiory i kolumny posta pilnowane w CI", "nowa wartość zamkniętego zbioru albo nowa kolumna posta bez migracji lub bez zapisu jest wykrywana w CI, nie w nocy na produkcji", "ready", "—", "closed-sets-guard"),
+    "S-24": ("C", "Kontrakt SPA ↔ API pilnowany testem", "rozjazd odpowiedzi API i typów SPA (pełne ciała, kształt błędu 500, kopie reguł) jest wykrywany testem, nie ręczną dyscypliną", "ready", "—", "api-contract-guard"),
+    "S-26": ("D", "Testy silnika bez zależności od zegara", "testy silnika nie zależą od czasu zegara na współdzielonym runnerze, a znane okna fałszywych alarmów (F3) są przypięte testami", "ready", "—", "engine-test-stability"),
+}
+lanes3 = {  # the streams of roadmap v4
+    "A": ("Drugie źródło", "Gwiazda przewodnia otwiera strumień; S-28 i S-29 równolegle po S-27", C["lime"]),
+    "B": ("Wdrożenia i alarmy", "Niezależne; S-21 wcześnie — zmiany IaC w M-3 idą przez bramkę", C["amber"]),
+    "C": ("Jedna reguła, jeden strażnik", "Reguły z kilku miejsc dostają strażnika przed nowym źródłem", C["sky"]),
+    "D": ("Silnik", "Stabilne testy silnika przed zmianą szwu źródeł", C["sky"]),
+}
 groups = [
     ("Źródła i ocena", [
-        ("FR-023", "Reddit jako drugie źródło"), ("audyt", "Izolacja źródeł i świeżość per źródło"), ("Non-Goal", "Przetwarzanie komentarzy pod postami"),
+        ("Non-Goal", "Przetwarzanie komentarzy pod postami"),
         ("Non-Goal", "Spółki, „wartościowy sygnał”, trend, raporty"), ("roadmap", "LLM hardening: kierunek i ironia"), ("audyt", "Ochrona przed dryfem modelu"),
         ("roadmap", "Ocena obrazków (multimodalna)"), ("forward", "Lekkie modele ML i embeddingi")]),
     ("Analiza i widok", [
         ("FR-024/025", "Wykres giełdowy i alerty o trendzie"), ("FR-032", "„Ask szczur” — pytanie do LLM"), ("FR-008/011b", "Sortowanie po polach oceny"),
-        ("FR-031", "Eksport listy do CSV/JSON"), ("roadmap", "Komunikat błędu daty aktualizacji"), ("roadmap", "Przybliżony koniec przebiegu")]),
+        ("FR-031", "Eksport listy do CSV/JSON"), ("roadmap", "Komunikat błędu daty aktualizacji"), ("roadmap", "Przybliżony koniec przebiegu"),
+        ("M-5", "Nowe UI/UX + E2E (Playwright)")]),
     ("Konta i dostęp", [
         ("FR-016/017/019", "Panel kont + e-mail z zaproszeniem"), ("FR-020", "Własna nazwa wyświetlana"), ("FR-029", "Wygasanie krótkich sesji"),
         ("S-07 F1", "Unieważnianie sesji wersją poświadczeń"), ("Non-Goal", "2FA, logowanie zewn., reset, role")]),
     ("Operacje i skala", [
         ("Non-Goal", "HA / multi-region, backup w kodzie"), ("S-04 F6", "Wydajność filtra przy ~20k postów"), ("#30", "Drugi runner CI w Proxmoxie"),
-        ("audyt", "Porządki granic pakietów"), ("audyt", "Drobne ryzyka (A8, B8, B10, B11, C8, C14)")]),
+        ("audyt", "Porządki granic pakietów"), ("audyt", "Drobne ryzyka (A8, B8, B10, B11, C8, C14)"),
+        ("M-4", "Weryfikacja i regresja (plan testów)")]),
 ]
+
+DEFERRED = sum(len(items) for _, items in groups)
 
 # ================= geometry (computed before drawing) =================
 PAD, GAP, GROUP_GAP = 16, 32, 24
@@ -243,16 +267,29 @@ row_ch = [max(row_ch)] * len(rows2)
 row_body = [2 * ch + 48 if i == 0 else ch for i, ch in enumerate(row_ch)]
 P2H = 98 + sum(CARD_OFF + body + 36 for body in row_body) + 18 * (len(rows2) - 1) + 20
 
-GW = 360
-P3W = 2 * GW + 20 + 2 * INNER
+# M-3 reuses the M-2 grid: five equal columns, the same card width and gutters.
 P3X = P2X + P2W + PANEL_GAP
+P3W = P2W
+rows3 = [[("A", 3), ("B", 2)], [("C", 3), ("D", 2)]]   # (stream, columns of its panel)
+M3_COLUMNS = [P3X + INNER + PAD + i * (CW2 + M2_GRID_GAP) for i in range(5)]
+M3_CARD_COLUMN = {
+    "S-20": 0, "S-27": 1, "S-28": 2, "S-29": 2, "S-21": 3, "S-25": 4,
+    "S-22": 0, "S-23": 1, "S-24": 2, "S-26": 3,
+}
+CH3 = max(need_h(v[1], v[2], CW2) for v in m3.values()) + 6
+row3_body = [2 * CH3 + 48, CH3]          # the first row stacks S-28 over S-29
+P3H = 98 + sum(CARD_OFF + body + 36 for body in row3_body) + 18 * (len(rows3) - 1) + 20
+
+GW = 360
+P4W = 2 * GW + 20 + 2 * INNER
+P4X = P3X + P3W + PANEL_GAP
 ITEM_H = 76
 gh = [max(len(groups[0][1]), len(groups[1][1])) * ITEM_H + 76, max(len(groups[2][1]), len(groups[3][1])) * ITEM_H + 76]
-P3H = 132 + gh[0] + 20 + gh[1] + 24
+P4H = 132 + gh[0] + 20 + gh[1] + 24
 
-PH = max(P1H, P2H, P3H)
-PANEL_H = {"M-1": P1H, "M-2": P2H, "PO M-2": P3H}
-W = int(P3X + P3W + M)
+PH = max(P1H, P2H, P3H, P4H)
+PANEL_H = {"M-1": P1H, "M-2": P2H, "M-3": P3H, "PO M-3": P4H}
+W = int(P4X + P4W + M)
 H = int(TOP + PH + 72)
 
 # ================= header =================
@@ -265,7 +302,7 @@ text(M + 52, 57, "Szczur Radar", 17, 700)
 text(M + 52, 75, "MARKET INTELLIGENCE", 9.5, 600, C["muted"], spacing="2.4")
 text(M, 134, "MILESTONES I ZALEŻNOŚCI", 11, 700, C["muted"], spacing="2")
 text(M, 172, "Roadmapa produktu", 31, 700)
-text(M, 202, "Źródło: context/foundation/roadmap.md  ·  v3  ·  stan 27.10.2026  ·  bez terminów — kolejność wynika z zależności", 13, 400, C["muted"])
+text(M, 202, "Źródło: context/foundation/roadmap.md  ·  v4  ·  stan 27.10.2026  ·  bez terminów — kolejność wynika z zależności", 13, 400, C["muted"])
 
 # M-2 slice states; every counter below is derived from them (M-1 closed with all 10 done)
 m2_order = [("F-04", "done"), ("S-08", "done"), ("S-09", "done"), ("S-10", "done"), ("S-11", "done"), ("S-12", "parked"),
@@ -274,39 +311,57 @@ M1_DONE = M1_TOTAL = 10
 M2_TOTAL = len(m2_order)
 M2_COUNT = {st: sum(1 for _, s in m2_order if s == st) for st in ("done", "progress", "ready", "proposed", "parked", "blocked")}
 M2_DONE = M2_COUNT["done"]
+# M-3 (open) slice states, in ID order, straight from the card data
+m3_order = [(k, m3[k][3]) for k in sorted(m3)]
+M3_TOTAL = len(m3_order)
+M3_COUNT = {st: sum(1 for _, s in m3_order if s == st) for st in ("done", "progress", "ready", "proposed", "parked", "blocked")}
+M3_DONE = M3_COUNT["done"]
 
-# progress card (same as before), right after the title block
-px, py, pw, ph = P2X, 36, 820, 214
+def plural(n, few, many):
+    """Polish count agreement: 1 and 2–4 (not 12–14) take `few`, the rest `many`."""
+    return few if n == 1 or (n % 10 in (2, 3, 4) and n % 100 not in (12, 13, 14)) else many
+
+# progress card of the current milestone (M-3), over its container
+px, py, pw, ph = P3X, 36, 820, 214
 rect(px, py, pw, ph, 14, "url(#hero)", C["border2"])
 cx, cy, rr = px + 82, py + 100, 46
-frac = (M1_DONE + M2_DONE) / (M1_TOTAL + M2_TOTAL)
+ALL_DONE, ALL_TOTAL = M1_DONE + M2_DONE + M3_DONE, M1_TOTAL + M2_TOTAL + M3_TOTAL
+frac = ALL_DONE / ALL_TOTAL
 add(f'<circle cx="{cx}" cy="{cy}" r="{rr}" fill="none" stroke="{C["graySoft"]}" stroke-width="9"/>')
 ang = frac * 2 * math.pi
 ex, ey = cx + rr * math.sin(ang), cy - rr * math.cos(ang)
 add(f'<path d="M{cx} {cy-rr} A{rr} {rr} 0 {1 if frac > 0.5 else 0} 1 {ex:.2f} {ey:.2f}" fill="none" stroke="{C["done"]}" stroke-width="9" stroke-linecap="round"/>')
 text(cx, cy + 4, f"{round(frac * 100)}%", 22, 700, anchor="middle")
-text(cx, cy + 22, f"{M1_DONE + M2_DONE} / {M1_TOTAL + M2_TOTAL}", 11, 500, C["muted"], anchor="middle")
-text(cx, py + 186, "M-1 + M-2", 10.5, 700, C["muted"], anchor="middle", spacing="1.2")
+text(cx, cy + 22, f"{ALL_DONE} / {ALL_TOTAL}", 11, 500, C["muted"], anchor="middle")
+text(cx, py + 186, "M-1 + M-2 + M-3", 10.5, 700, C["muted"], anchor="middle", spacing="1.2")
 bx = px + 164
 text(bx, py + 34, "POSTĘP KAMIENIA MILOWEGO", 10.5, 700, C["muted"], spacing="1.6")
-text(bx, py + 62, "M-2 · MVP Quality & Reliability Hardening", 17, 700)
-text(px + pw - 24, py + 62, f"{M2_DONE} / {M2_TOTAL}", 17, 700, C["text"], anchor="end")
-segw = (pw - 164 - 24 - 12 * 5) / M2_TOTAL
-for i, (iid, st) in enumerate(m2_order):
+text(bx, py + 62, "M-3 · Drugie źródło na utwardzonym rdzeniu", 17, 700)
+text(px + pw - 24, py + 62, f"{M3_DONE} / {M3_TOTAL}", 17, 700, C["text"], anchor="end")
+segw = (pw - 164 - 24 - (M3_TOTAL - 1) * 5) / M3_TOTAL
+for i, (iid, st) in enumerate(m3_order):
     lab, fg, bg = STATUS[st]
     rect(bx + i * (segw + 5), py + 78, segw, 12, 3, bg, fg + ("aa" if st not in ("proposed", "parked") else "55"), 1)
-legend_items = [("done", f"{M2_COUNT['done']} ukończone"), ("progress", f"{M2_COUNT['progress']} w toku"), ("ready", f"{M2_COUNT['ready']} gotowe do planowania"), ("proposed", f"{M2_COUNT['proposed']} proponowane"), ("parked", f"{M2_COUNT['parked']} zaparkowane"), ("blocked", f"{M2_COUNT['blocked']} zablokowanych")]
+legend_items = [
+    ("done", f"{M3_COUNT['done']} {plural(M3_COUNT['done'], 'ukończone', 'ukończonych')}"),
+    ("progress", f"{M3_COUNT['progress']} w toku"),
+    ("ready", f"{M3_COUNT['ready']} {plural(M3_COUNT['ready'], 'gotowe', 'gotowych')} do planowania"),
+    ("proposed", f"{M3_COUNT['proposed']} {plural(M3_COUNT['proposed'], 'proponowane', 'proponowanych')}"),
+    ("parked", f"{M3_COUNT['parked']} {plural(M3_COUNT['parked'], 'zaparkowane', 'zaparkowanych')}"),
+    ("blocked", f"{M3_COUNT['blocked']} {plural(M3_COUNT['blocked'], 'zablokowane', 'zablokowanych')}"),
+]
 for li, (st, lab) in enumerate(legend_items):
     fg = STATUS[st][1]
-    lx = bx + (0, 122, 218)[li % 3]
+    lx = bx + (0, 150, 300)[li % 3]
     ly0 = py + 111 + (li // 3) * 22
     add(f'<circle cx="{lx+4}" cy="{ly0}" r="4" fill="{fg if st in ("done","blocked","progress") else STATUS[st][2]}" stroke="{fg}" stroke-width="1.2"/>')
     text(lx + 13, ly0 + 4, lab, 11.5, 500, C["muted"] if lab.startswith("0") else C["text"])
 add(f'<line x1="{bx}" y1="{py+156}" x2="{px+pw-24}" y2="{py+156}" stroke="{C["border2"]}"/>')
-pill(bx, py + 172, "M-1  10 / 10", C["done"], C["doneSoft"], 10.5, icon="check")
+mx = bx + pill(bx, py + 172, f"M-1  {M1_DONE} / {M1_TOTAL}", C["done"], C["doneSoft"], 10.5, icon="check") + 10
+pill(mx, py + 172, f"M-2  {M2_DONE} / {M2_TOTAL}", C["done"], C["doneSoft"], 10.5, icon="check")
 
-# legend over the "Po M-2" container
-lgx, lgy, lgw, lgh = P3X, 36, P3W, 214
+# legend over the "Po M-3" container
+lgx, lgy, lgw, lgh = P4X, 36, P4W, 214
 rect(lgx, lgy, lgw, lgh, 14, C["panel"], C["border2"])
 text(lgx + 24, lgy + 34, "LEGENDA", 10.5, 700, C["muted"], spacing="1.6")
 x = lgx + 24
@@ -330,16 +385,18 @@ text(c2 + 52, y3, "przerywana: od zablokowanego", 12.5, 400, C["muted"])
 
 # ================= timeline axis =================
 AX_Y = 316
-x_end = P3X + P3W
-# Track: done (M-1, M-2), deferred (after M-2).
+x_end = P4X + P4W
+# Track: done (M-1, M-2), current (M-3), deferred (after M-3).
 add(f'<line x1="{P1X+20}" y1="{AX_Y}" x2="{P2X+20}" y2="{AX_Y}" stroke="{C["done"]}" stroke-width="4" stroke-linecap="round"/>')
 add(f'<line x1="{P2X+20}" y1="{AX_Y}" x2="{P3X+20}" y2="{AX_Y}" stroke="{C["done"]}" stroke-width="4" stroke-linecap="round"/>')
-add(f'<line x1="{P3X+20}" y1="{AX_Y}" x2="{x_end-14}" y2="{AX_Y}" stroke="{C["muted"]}" stroke-opacity="0.45" stroke-width="3" stroke-dasharray="2 9" stroke-linecap="round"/>')
+add(f'<line x1="{P3X+20}" y1="{AX_Y}" x2="{P4X+20}" y2="{AX_Y}" stroke="{C["border2"]}" stroke-width="4" stroke-linecap="round"/>')
+add(f'<line x1="{P4X+20}" y1="{AX_Y}" x2="{x_end-14}" y2="{AX_Y}" stroke="{C["muted"]}" stroke-opacity="0.45" stroke-width="3" stroke-dasharray="2 9" stroke-linecap="round"/>')
 add(f'<path d="M{x_end-22} {AX_Y-8} L{x_end-10} {AX_Y} L{x_end-22} {AX_Y+8}" fill="none" stroke="{C["muted"]}" stroke-opacity="0.6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>')
 nodes = [
     (P1X, "M-1", "MVP — ocenione sygnały z Wykopu", "Zamknięty 17.10.2026  ·  10 / 10", "done"),
     (P2X, "M-2", "MVP Quality & Reliability Hardening", f"Zamknięty 27.10.2026  ·  {M2_DONE} / {M2_TOTAL}", "done"),
-    (P3X, "PO M-2", "Odroczone", "Backlog  ·  24 pozycje", "later"),
+    (P3X, "M-3", "Drugie źródło na utwardzonym rdzeniu", f"Otwarty — teraz  ·  {M3_DONE} / {M3_TOTAL}", "now"),
+    (P4X, "PO M-3", "Odroczone", f"Backlog  ·  {DEFERRED} {plural(DEFERRED, 'pozycje', 'pozycji')}", "later"),
 ]
 for nx, tag, name, state, kind in nodes:
     cxn = nx + 20
@@ -364,7 +421,7 @@ for nx, tag, name, state, kind in nodes:
 # ================= M-1 container =================
 def container(x, w, tag, title, pill_spec, summary, prog, border):
     rect(x, TOP, w, PANEL_H[tag], 16, C["panel"], border)
-    text(x + 28, TOP + 40, tag, 13, 700, C["lime"] if tag == "M-2" else (C["done"] if tag == "M-1" else C["muted"]), family=MONO)
+    text(x + 28, TOP + 40, tag, 13, 700, C["lime"] if tag in ("M-2", "M-3") else (C["done"] if tag == "M-1" else C["muted"]), family=MONO)
     tx = x + 28 + width(tag, 13, 700) * 1.1 + 12
     text(tx, TOP + 40, title, 18, 700)
     if pill_spec:
@@ -480,14 +537,65 @@ for ids in (("S-10", "S-11", "S-16"), ("S-14", "S-15", "S-19")):
     rect((x0 + x1) / 2 - tw / 2, y - 9, tw, 18, 9, C["panel2"])
     text((x0 + x1) / 2, y + 4, "niezależne · równolegle", 10, 600, C["dim"], anchor="middle", spacing="1")
 
-# ================= Po M-2 container (backlog) =================
-container(P3X, P3W, "PO M-2", "Odroczone",
+# ================= M-3 container (open) =================
+container(P3X, P3W, "M-3", "Drugie źródło na utwardzonym rdzeniu",
+          ("Otwarty", C["amber"], C["amberSoft"], 10.5, False, 600, "dot"),
+          "Awaria albo cisza jednego źródła nie psuje drugiego, ślepe punkty audytu po M-2 są domknięte, a posty z subredditów idą do feedu i oceny jak Wykop — po pomiarze jakości i kosztu.",
+          (f"{M3_DONE} / {M3_TOTAL}", M3_DONE / M3_TOTAL, C["lime"]), C["lime"] + "40")
+box3 = {}
+ry = TOP + 98
+for ri, row in enumerate(rows3):
+    row_h = CARD_OFF + row3_body[ri] + 36
+    x = P3X + INNER
+    for key, n in row:
+        pw_ = 2 * PAD + n * CW2 + (n - 1) * M2_GRID_GAP
+        name, sub, ink = lanes3[key]
+        rect(x, ry, pw_, row_h, 12, C["panel2"], C["border"])
+        rect(x + PAD, ry + 14, 26, 26, 7, ink + "22", ink + "77")
+        text(x + PAD + 13, ry + 32, key, 13, 700, ink, family=MONO, anchor="middle")
+        text(x + PAD + 38, ry + 32, name, 15, 700)
+        text(x + PAD + 38, ry + 56, sub, 14, 400, C["muted"])
+        cnt = sum(1 for v in m3.values() if v[0] == key)
+        done = sum(1 for v in m3.values() if v[0] == key and v[3] == "done")
+        text(x + pw_ - PAD, ry + 32, f"{done} / {cnt} ukończonych", 11.5, 600, C["dim"], anchor="end")
+        add(f'<line x1="{x+PAD}" y1="{ry+HEAD_H+4}" x2="{x+pw_-PAD}" y2="{ry+HEAD_H+4}" stroke="{C["border"]}"/>')
+        for k, v in m3.items():
+            if v[0] == key:
+                # First row is two cards tall: S-28 above S-29, everything else centred between them.
+                offset = (0 if k == "S-28" else CH3 + 48 if k == "S-29" else (CH3 + 48) / 2) if ri == 0 else 0
+                box3[k] = (M3_COLUMNS[M3_CARD_COLUMN[k]], ry + CARD_OFF + offset, CW2, CH3)
+        x += pw_ + GROUP_GAP
+    ry += row_h + 18
+def L3(k): x, y, w, h = box3[k]; return (x, y + h / 2)
+def R3(k): x, y, w, h = box3[k]; return (x + w, y + h / 2)
+def T3(k, f=0.5): x, y, w, h = box3[k]; return (x + w * f, y)
+def B3(k, f=0.5): x, y, w, h = box3[k]; return (x + w * f, y + h)
+e3 = [  # dashed coral: from a blocked slice
+    (("S-20", "S-27"), [R3("S-20"), L3("S-27")], C["lime"], False, "lime"),
+    (("S-27", "S-28"), [T3("S-27", 0.75), (T3("S-27", 0.75)[0], L3("S-28")[1]), L3("S-28")], C["coral"], True, "coral"),
+    (("S-27", "S-29"), [B3("S-27", 0.75), (B3("S-27", 0.75)[0], L3("S-29")[1]), L3("S-29")], C["coral"], True, "coral"),
+]
+for pair, pts, col, dashed, mk in e3:
+    route(pts, col, dashed, mk, 2.5, r=0, edge=pair)
+for k, (ln, title, desc, st, req, cid) in m3.items():
+    x, y, w, h = box3[k]
+    card(x, y, w, h, k, title, desc, st, req=req, cid=cid, star=(k == "S-20"), note=(st == "blocked"))
+for ids in (("S-21", "S-25"), ("S-22", "S-23", "S-24")):
+    x0 = box3[ids[0]][0]; x1 = box3[ids[-1]][0] + box3[ids[-1]][2]
+    y = box3[ids[0]][1] + box3[ids[0]][3] + 20
+    add(f'<line x1="{x0}" y1="{y}" x2="{x1}" y2="{y}" stroke="{C["muted"]}" stroke-opacity="0.35" stroke-dasharray="2 4"/>')
+    tw = width("niezależne · równolegle", 10, 600) + 24
+    rect((x0 + x1) / 2 - tw / 2, y - 9, tw, 18, 9, C["panel2"])
+    text((x0 + x1) / 2, y + 4, "niezależne · równolegle", 10, 600, C["dim"], anchor="middle", spacing="1")
+
+# ================= Po M-3 container (backlog) =================
+container(P4X, P4W, "PO M-3", "Odroczone",
           ("Parked", C["gray"], C["graySoft"], 10.5, False, 600, "dot"),
-          "26 pozycji z sekcji Parked roadmapy (zaparkowany S-12 jest na karcie w M-2). Bez ustalonej kolejności; każda wymaga osobnego planu, zanim wejdzie do roadmapy.",
+          f"{DEFERRED} {plural(DEFERRED, 'pozycje', 'pozycji')} z sekcji Parked roadmapy (zaparkowany S-12 jest na karcie w M-2), w tym kandydaci na M-4 (weryfikacja i regresja) i M-5 (nowe UI/UX z E2E). Bez ustalonej kolejności; każda wymaga osobnego planu, zanim wejdzie do roadmapy.",
           None, C["border"])
 for gi, (gname, items) in enumerate(groups):
     col, row = gi % 2, gi // 2
-    gx = P3X + INNER + col * (GW + 20)
+    gx = P4X + INNER + col * (GW + 20)
     gy = TOP + 132 + (0 if row == 0 else gh[0] + 20)
     rect(gx, gy, GW, gh[row], 12, C["panel2"], C["border"])
     text(gx + 18, gy + 30, gname, 15, 700)
@@ -501,12 +609,12 @@ for gi, (gname, items) in enumerate(groups):
         text(gx + 34, iy + len(label_lines) * 20, ref, 12, 600, C["dim"], family=MONO)
 
 # ================= footer + assembly =================
-text(M, H - 30, "Strzałki pomijają zależności wynikające ze ścieżek pośrednich. Pełne wymagania: na kartach. · Źródło: context/foundation/roadmap.md v3", 11, 400, C["dim"])
+text(M, H - 30, "Strzałki pomijają zależności wynikające ze ścieżek pośrednich. Pełne wymagania: na kartach. · Źródło: context/foundation/roadmap.md v4", 11, 400, C["dim"])
 text(W - M, H - 30, "MAPA ZALEŻNOŚCI · BEZ TERMINÓW", 10.5, 700, C["dim"], anchor="end", spacing="1.6")
 head = [
     f'<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{H}" viewBox="0 0 {W} {H}" role="img" aria-labelledby="t d">',
-    '<title id="t">Szczur Radar — roadmapa produktu: M-1 → M-2 → Po M-2</title>',
-    '<desc id="d">Roadmapa z context/foundation/roadmap.md v3 jako oś od lewej do prawej: kamień milowy M-1 (F-01–F-03, S-01–S-07, ukończony), M-2 MVP Quality &amp; Reliability Hardening (F-04, S-08–S-19, zamknięty 27.10.2026, S-12 zaparkowany) i pozycje odroczone. Strzałka prowadzi od warunku wstępnego do elementu, który od niego zależy.</desc>',
+    '<title id="t">Szczur Radar — roadmapa produktu: M-1 → M-2 → M-3 → Po M-3</title>',
+    '<desc id="d">Roadmapa z context/foundation/roadmap.md v4 jako oś od lewej do prawej: kamień milowy M-1 (F-01–F-03, S-01–S-07, ukończony), M-2 MVP Quality &amp; Reliability Hardening (F-04, S-08–S-19, zamknięty 27.10.2026, S-12 zaparkowany), M-3 Drugie źródło na utwardzonym rdzeniu (S-20–S-29, otwarty, gwiazda przewodnia S-20) i pozycje odroczone. Strzałka prowadzi od warunku wstępnego do elementu, który od niego zależy.</desc>',
     '<defs>',
 ]
 for name, col in (("lime", C["lime"]), ("done", C["done"]), ("sky", C["sky"]), ("coral", C["coral"]), ("amber", C["amber"]), ("gray", C["muted"])):
@@ -518,4 +626,4 @@ head += [
     '</defs>',
 ]
 open(OUTPUT, "w").write("\n".join(head + out + ['</svg>']))
-print(OUTPUT, W, H, "panels:", round(P1H), round(P2H), round(P3H))
+print(OUTPUT, W, H, "panels:", round(P1H), round(P2H), round(P3H), round(P4H))
