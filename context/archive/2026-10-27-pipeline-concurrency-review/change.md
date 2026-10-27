@@ -1,9 +1,10 @@
 ---
 change_id: pipeline-concurrency-review
 title: Uzupełniający przegląd współbieżności pipeline bez Embabel
-status: impl_reviewed
+status: archived
 created: 2026-10-27
 updated: 2026-10-27
+archived_at: 2026-10-27T11:32:25Z
 ---
 
 ## Notes
