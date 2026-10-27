@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="4298" height="2432" viewBox="0 0 4298 2432" role="img" aria-labelledby="t d">
 <title id="t">Szczur Radar — roadmapa produktu: M-1 → M-2 → Po M-2</title>
-<desc id="d">Roadmapa z context/foundation/roadmap.md v3 jako oś od lewej do prawej: kamień milowy M-1 (F-01–F-03, S-01–S-07, ukończony), M-2 MVP Quality &amp; Reliability Hardening (F-04, S-08–S-19, otwarty) i pozycje odroczone. Strzałka prowadzi od warunku wstępnego do elementu, który od niego zależy.</desc>
+<desc id="d">Roadmapa z context/foundation/roadmap.md v3 jako oś od lewej do prawej: kamień milowy M-1 (F-01–F-03, S-01–S-07, ukończony), M-2 MVP Quality &amp; Reliability Hardening (F-04, S-08–S-19, zamknięty 27.10.2026, S-12 zaparkowany) i pozycje odroczone. Strzałka prowadzi od warunku wstępnego do elementu, który od niego zależy.</desc>
 <defs>
 <marker id="arrow-lime" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1 L9 5 L1 9" fill="none" stroke="#c3f08c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></marker>
 <marker id="arrow-done" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1 L9 5 L1 9" fill="none" stroke="#5fd18f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></marker>
@@ -21,7 +21,7 @@
 <text x="108.0" y="75.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="9.5" font-weight="600" fill="#a2afb4" letter-spacing="2.4">MARKET INTELLIGENCE</text>
 <text x="56.0" y="134.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="700" fill="#a2afb4" letter-spacing="2">MILESTONES I ZALEŻNOŚCI</text>
 <text x="56.0" y="172.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="31" font-weight="700" fill="#eaf0f2">Roadmapa produktu</text>
-<text x="56.0" y="202.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="400" fill="#a2afb4">Źródło: context/foundation/roadmap.md  ·  v3  ·  stan 25.10.2026  ·  bez terminów — kolejność wynika z zależności</text>
+<text x="56.0" y="202.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="400" fill="#a2afb4">Źródło: context/foundation/roadmap.md  ·  v3  ·  stan 27.10.2026  ·  bez terminów — kolejność wynika z zależności</text>
 <rect x="1790.0" y="36.0" width="820.0" height="214.0" rx="14" fill="url(#hero)" stroke="#2b373e" stroke-width="1" />
 <circle cx="1872.0" cy="136" r="46" fill="none" stroke="#232d32" stroke-width="9"/>
 <path d="M1872.0 90 A46 46 0 1 1 1859.59 91.71" fill="none" stroke="#5fd18f" stroke-width="9" stroke-linecap="round"/>
@@ -94,7 +94,7 @@
 <path d="M3838.0 232.0 L3878.0 232.0" fill="none" stroke="#f28b9c" stroke-width="1.8" stroke-dasharray="5 5" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-coral)"/>
 <text x="3890.0" y="236.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#a2afb4">przerywana: od zablokowanego</text>
 <line x1="76" y1="316" x2="1810.0" y2="316" stroke="#5fd18f" stroke-width="4" stroke-linecap="round"/>
-<line x1="1810.0" y1="316" x2="3474.0" y2="316" stroke="#2b373e" stroke-width="4" stroke-linecap="round"/>
+<line x1="1810.0" y1="316" x2="3474.0" y2="316" stroke="#5fd18f" stroke-width="4" stroke-linecap="round"/>
 <line x1="3474.0" y1="316" x2="4228.0" y2="316" stroke="#a2afb4" stroke-opacity="0.45" stroke-width="3" stroke-dasharray="2 9" stroke-linecap="round"/>
 <path d="M4220.0 308 L4232.0 316 L4220.0 324" fill="none" stroke="#a2afb4" stroke-opacity="0.6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
 <circle cx="76" cy="316" r="11" fill="#5fd18f"/>
@@ -103,13 +103,12 @@
 <text x="135.2" y="290.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="700" fill="#eaf0f2">MVP — ocenione sygnały z Wykopu</text>
 <text x="102.0" y="346.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#5fd18f">Zamknięty 17.10.2026  ·  10 / 10</text>
 <line x1="76" y1="332" x2="76" y2="400" stroke="#5fd18f" stroke-opacity="0.35" stroke-width="1.5" stroke-dasharray="2 5"/>
-<circle cx="1810.0" cy="316" r="15" fill="#f2c46d" fill-opacity="0.14"/>
-<circle cx="1810.0" cy="316" r="10" fill="#0d1316" stroke="#f2c46d" stroke-width="3"/>
-<circle cx="1810.0" cy="316" r="3.5" fill="#f2c46d"/>
-<text x="1836.0" y="290.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="700" fill="#f2c46d">M-2</text>
+<circle cx="1810.0" cy="316" r="11" fill="#5fd18f"/>
+<path d="M1805.0 316 l3.5 3.5 l6 -7" fill="none" stroke="#0d1316" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="1836.0" y="290.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="700" fill="#5fd18f">M-2</text>
 <text x="1869.2" y="290.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="700" fill="#eaf0f2">MVP Quality &amp; Reliability Hardening</text>
-<text x="1836.0" y="346.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#f2c46d">Otwarty — teraz  ·  12 / 13</text>
-<line x1="1810.0" y1="332" x2="1810.0" y2="400" stroke="#f2c46d" stroke-opacity="0.35" stroke-width="1.5" stroke-dasharray="2 5"/>
+<text x="1836.0" y="346.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#5fd18f">Zamknięty 27.10.2026  ·  12 / 13</text>
+<line x1="1810.0" y1="332" x2="1810.0" y2="400" stroke="#5fd18f" stroke-opacity="0.35" stroke-width="1.5" stroke-dasharray="2 5"/>
 <circle cx="3474.0" cy="316" r="9" fill="#0d1316" stroke="#a2afb4" stroke-width="2" stroke-dasharray="3 3"/>
 <text x="3500.0" y="290.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="700" fill="#a2afb4">PO M-2</text>
 <text x="3556.3" y="290.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="700" fill="#eaf0f2">Odroczone</text>
@@ -329,16 +328,16 @@
 <text x="1460.8" y="2030.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="11" font-weight="700" fill="#eaf0f2">S-05, S-01</text>
 <text x="1400.8" y="2052.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#9aa8ae">pipeline-run-history-dashboard</text>
 </g>
-<rect x="1790.0" y="400.0" width="1568.0" height="1960.0" rx="16" fill="#11181c" stroke="#c3f08c40" stroke-width="1" />
+<rect x="1790.0" y="400.0" width="1568.0" height="1960.0" rx="16" fill="#11181c" stroke="#222d33" stroke-width="1" />
 <text x="1818.0" y="440.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="13" font-weight="700" fill="#c3f08c">M-2</text>
 <text x="1855.1" y="440.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#eaf0f2">MVP Quality &amp; Reliability Hardening</text>
-<rect x="2241.6" y="425.0" width="73.0" height="20.0" rx="5" fill="#33291a" stroke="#f2c46d55" stroke-width="1" />
-<circle cx="2253.6" cy="435.0" r="3" fill="#f2c46d"/>
-<text x="2262.6" y="439.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="600" fill="#f2c46d">Otwarty</text>
+<rect x="2241.6" y="425.0" width="152.8" height="20.0" rx="5" fill="#14281d" stroke="#5fd18f55" stroke-width="1" />
+<path d="M2250.6 435.0 l3 3 l5.5 -6" fill="none" stroke="#5fd18f" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="2262.6" y="439.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="600" fill="#5fd18f">Zamknięty 27.10.2026</text>
 <text x="1818.0" y="466.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="400" fill="#a2afb4">Złe noce, awarie dostawców i błędne wdrożenia są widoczne dla operatora, nie niszczą danych ani nie blokują pracy — zanim ruszy kolejna roadmapa funkcjonalna.</text>
 <rect x="3118.0" y="430.0" width="160.0" height="8.0" rx="4" fill="#232d32" />
-<rect x="3118.0" y="430.0" width="147.7" height="8.0" rx="4" fill="#c3f08c" />
-<text x="3330.0" y="440.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="700" fill="#c3f08c" text-anchor="end">12 / 13</text>
+<rect x="3118.0" y="430.0" width="147.7" height="8.0" rx="4" fill="#5fd18f" />
+<text x="3330.0" y="440.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="700" fill="#5fd18f" text-anchor="end">12 / 13</text>
 <rect x="1814.0" y="498.0" width="593.6" height="860.0" rx="12" fill="#141c21" stroke="#222d33" stroke-width="1" />
 <rect x="1830.0" y="512.0" width="26.0" height="26.0" rx="7" fill="#c3f08c22" stroke="#c3f08c77" stroke-width="1" />
 <text x="1843.0" y="530.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="13" font-weight="700" fill="#c3f08c" text-anchor="middle">A</text>
@@ -358,7 +357,7 @@
 <text x="1843.0" y="1408.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="13" font-weight="700" fill="#8ccbe8" text-anchor="middle">C</text>
 <text x="1868.0" y="1408.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#eaf0f2">Próby i silnik</text>
 <text x="1868.0" y="1432.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#a2afb4">S-10, S-11, S-16 są niezależne — mogą iść równolegle</text>
-<text x="3318.0" y="1408.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600" fill="#9aa8ae" text-anchor="end">4 / 5 ukończonych</text>
+<text x="3318.0" y="1408.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600" fill="#9aa8ae" text-anchor="end">5 / 5 ukończonych</text>
 <line x1="1830.0" y1="1450" x2="3318.0" y2="1450" stroke="#222d33"/>
 <rect x="1814.0" y="1867.0" width="1520.0" height="473.0" rx="12" fill="#141c21" stroke="#222d33" stroke-width="1" />
 <rect x="1830.0" y="1881.0" width="26.0" height="26.0" rx="7" fill="#8ccbe822" stroke="#8ccbe877" stroke-width="1" />
@@ -483,12 +482,12 @@
 <text x="1904.0" y="1757.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="11" font-weight="700" fill="#a2afb4">—</text>
 <text x="1844.0" y="1779.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#9aa8ae">attempt-accounting</text>
 </g>
-<g data-id="S-17" data-status="proposed">
-<rect x="2138.8" y="1474.0" width="252.8" height="339.0" rx="12" fill="#151e23" stroke="#2f3b42" stroke-width="1" />
-<text x="2152.8" y="1499.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="13" font-weight="700" fill="#c3cdd0">S-17</text>
-<rect x="2280.0" y="1485.0" width="97.6" height="20.0" rx="5" fill="#232d32" stroke="#c3cdd055" stroke-width="1" />
-<circle cx="2292.0" cy="1495.0" r="3" fill="#c3cdd0"/>
-<text x="2301.0" y="1499.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="600" fill="#c3cdd0">Proponowane</text>
+<g data-id="S-17" data-status="done">
+<rect x="2138.8" y="1474.0" width="252.8" height="339.0" rx="12" fill="#151e23" stroke="#2f5a42" stroke-width="1" />
+<text x="2152.8" y="1499.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="13" font-weight="700" fill="#5fd18f">S-17</text>
+<rect x="2292.3" y="1485.0" width="85.3" height="20.0" rx="5" fill="#14281d" stroke="#5fd18f55" stroke-width="1" />
+<path d="M2301.3 1495.0 l3 3 l5.5 -6" fill="none" stroke="#5fd18f" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="2313.3" y="1499.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="600" fill="#5fd18f">Ukończone</text>
 <text x="2152.8" y="1525.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#eaf0f2">Przebieg bez Embabel</text>
 <text x="2152.8" y="1553.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">przebieg działa bez</text>
 <text x="2152.8" y="1573.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">Embabel, przerwanie dociera</text>

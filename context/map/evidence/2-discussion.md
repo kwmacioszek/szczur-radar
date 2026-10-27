@@ -1,87 +1,86 @@
 # Evidence: discussion
 
-Źródła: `gh` (kwmacioszek/szczur-radar, tylko odczyt) + git + artefakty planistyczne w `context/`. Okno: cała historia, 2026-09-26 … 2026-10-17 (HEAD `5b6eabb`). Limity: nie przekroczone (43 PR, 17 issues, jedna strona `--limit 100`). Surowe dane: `context/map/.work/discussion-*.{tsv,json}`.
+Źródła: `gh` (kwmacioszek/szczur-radar, tylko odczyt) + git (`.work/git-log.txt`) + artefakty planowania (`context/archive/*`, `context/foundation/roadmap.md`, `context/deployment/deploy-plan.md`, `lessons.md`). Okno: cała historia, 2026-09-26 … 2026-10-27 (HEAD `047b65d`); „M-2” = od 2026-10-18 (po poprzedniej mapie `5b6eabb`). Limity: brak — 72 PR i 40 issues zmieściły się w jednej stronie (`--limit 100`). PR przypisane do capability przez numer `(#N)` w subjectach squash i pliki tego commita (`.work/capabilities.tsv`, reguły kontraktu: commit liczy się dla każdej capability, której dotyka). PR zamknięte bez merge'a nie mają commita — przypisane po tytule i gałęzi (`inference`). Surowe dane: `.work/disc-commits.json`, `disc-prs.json`, `disc-issues.json`, `disc-issues-by-cap.json`, `disc-plans.json`, `disc-plans-by-cap.json`, `disc-markers.json`.
 
-Kontekst bazowy (`evidence`): jeden człowiek, 47 commitów, każdy PR squash-merge'owany (1 commit = 1 zmiana), prawie wszystkie z trailerem `Co-authored-by: Claude`. **Na żadnym z 43 PR nie ma ani jednej recenzji** (`reviews` = 0 wszędzie); komentarze PR to wyłącznie bot `railway-app` (41) i dwie notatki właściciela przy zamknięciu. Wszystkie 68 komentarzy w issues napisał właściciel. Recenzja odbywa się poza forge'em — w plikach `reviews/impl-review*.md` i `plan-review*.md` w `context/archive/` (`inference`: pisane przez sesje agenta na polecenie właściciela).
+Baza zespołu (reguła 6): **1 człowiek** w oknie; 0 recenzji, wszystkie komentarze ludzkie na PR to komentarze autora (11), a 63 komentarze PR to `railway-app` (status PR env — nie review, reguła 7). Przegląd odbywa się poza forge'em: pliki `reviews/impl-review*.md` / `plan-review*.md` pisane przez agenta w `context/archive/` — to jedyny „review signal” w repo. `evidence`
 
 ## Buzz per capability
 
-PR = squash-commity `(#n)` dotykające kodu capability (pliki bez szumu, przypisanie przez `attribute.py`); „cross>3” = ile z nich dotyka > 3 capability kodowych. Plany = zmiany w `context/archive/` przypisane po nazwie (jedna zmiana może iść do kilku capability). Review = pliki `reviews/*.md` tych zmian; ~findings = nagłówki `F<n>` w impl-review (przybliżenie, mechaniczne). Open FU = otwarte `- [ ]` w `follow-ups/` w chwili archiwizacji (stan obecny `unknown`, część na pewno zamknięta później). Incydenty = wpisy w `context/deployment/deploy-plan.md`.
+Kolumny: **PR** = PR-y (squash) dotykające capability, w nawiasie przekrojowe (>3 capability); **M-2** = z tego od 2026-10-18. **fix-PR** = PR z subjectem/gałęzią `fix…`, „follow-up”, „poprawki z przeglądu”. **Issues** = issues slice'ów/zmian przypisane po tytule (`inference`), w nawiasie `deploy-health`; otwartych: 0 we wszystkich. **Plany** = zmiany w `context/archive/` (w nawiasie od 2026-10-18). **Review** = ustalenia impl-review WARNING/OBSERVATION · plan-review CRITICAL (wszystkie impl-review: 0 CRITICAL). **Parked** = pozycje `roadmap.md ## Parked` dotyczące capability: dług/ryzyko (D) / odroczona funkcja (F) (`inference` po treści; pozycje wspólne liczone w każdej). Reverty: **0 wszędzie**. Markery TODO/FIXME w kodzie: **0 wszędzie**.
 
-| capability | PR (cross>3) | closed-unmerged | human review | reverts | fix-PR | issues (open) | plany | review files / ~findings | open FU | incydenty prod/PR-env | markery |
-|---|---|---|---|---|---|---|---|---|---|---|---|
-| platform | 22 (9) | 1 (#10 test tokenu) | 0 | 0 | 4 (#2, #27, #52, #58) | #30, #51 otwarte | api-docker-image, java-api-rewrite, bootstrap-verification | 4 / ~6 | 0 (F4 Hikari → issue #36) | **8** (zob. Friction) | 0 |
-| auth | 10 (9) | 0 | 0 | 0 | 2 (#27, #28) | #15, #25 zamknięte | admin-bootstrap-and-login, java-api-rewrite | 5+3 / ~10 | 0 | 2 (merge bez zgody, JWT_SECRET ujawniony → rotacja) | 0 |
-| shared-foundations | 8 (8) | 0 | 0 | 0 | 1 (#27) | #36 otwarte (Hikari, `enhancement`) | — (część F-03) | — | 1 (wspólne parsowanie durations, cli-user-onboarding F4) | 1 (Hikari warnings) | 0 |
-| feed | 8 (7) | 0 | 0 | 0 | 0 | #16 zamk., **#17 otwarte** | post-detail-view, filter-by-assessment, feed-view-ui-hardening, (S-02) | 3 / ~21 | 0 | 0 (locale `ILIKE` = check w runbooku) | 0 |
-| llm-providers | 7 (5) | 1 (#23, z F-02) | 0 | 0 | 1 (#40 openrouter-in-body-errors) | #24, #39 zamk. | assessment-contract-harness, openrouter-in-body-errors | 6+1 / ~12 | 7 (F-02, wspólne z assessment) | **3** (klucz 401, flex „choices not set”, `LLM_TIMEOUT=120` = 120 ms) | 0 |
-| admin-console | 6 (6) | 0 | 0 | 0 | 0 | #41 zamk., **#19 otwarte** | admin-panel-ui-hardening, pipeline-run-history-dashboard, (S-02) | 7+2 / ~12 | 0 | 0 | 0 |
-| pipeline-runs | 4 (3) | 0 | 0 | 0 | 0 | #14 zamk., **#19 otwarte** | first-assessed-wykop-feed, pipeline-run-history-dashboard | 4+2 / ~28 | 6 (S-02) | **3** (run „trwający” ~22 h, przerwania przez deploy 2026-10-13, luka w obserwowalności) | 0 |
-| assessment | 4 (4) | 1 (#23) | 0 | 0 | 0 | #24 zamk. | assessment-contract-harness (61 plików, 8548 linii — największa) + `foundation/llm-assessment` | 6 / ~40 | 7 | 0 | 0 |
-| accounts | 4 (4) | 0 | 0 | 0 | 0 | #20 zamk. | cli-user-onboarding, admin-bootstrap-and-login | 1+5 / ~8 | 1 | 3 (ssh rozłączony w trakcie, link w transkrypcie agenta, checksum V6 w PR env #49) | 0 |
-| db-backup | 3 (1) | 0 | 0 | 0 | 0 (#46 = domknięcie) | #43 zamk. | production-data-gate | 1 / ~9 | 0 | **4** (bucket niewdrożony na prod, cron `QUEUED`, ciche awarie bez reguły, restart Postgresa wisiał) | 0 |
-| shared-ui | 10 (8) | 0 | 0 | 0 | 0 | #41, #47 zamk. | admin-panel- i feed-view-ui-hardening | (wspólne z admin/feed) | 0 | 0 | 0 |
-| daily-run | 2 (2) | 0 | 0 | 0 | 0 | #18 zamk. | daily-scheduled-run-freshness | 1 / ~5 | 0 | 2 (ręczny run przerwany przez merge docs, brak sygnału crash bez reguły) | 0 |
-| ingest | 2 (2) | 0 | 0 | 0 | 0 | #14 zamk. | first-assessed-wykop-feed | (wspólne z S-02) | 2 (store wolny w PR env; maskowanie błędów Wykopu F8d) | 1 (Postgres w `sfo` → store 1 m 44 s) | 0 |
-| model-evaluation | 2 (2) | 0 | 0 | 0 | 0 | #24 zamk. | assessment-contract-harness | (wspólne z F-02) | — | 0 | 0 |
-| docs-planning (proza) | 40 PR, 16 czysto dokumentacyjnych | — | — | — | — | — | — | — | — | — | 7 (roadmap, review) |
+| capability | PR (cross) | M-2 | closed-unmerged | human review | fix-PR | issues (dh) | plany (M-2) | review W/O · planCRIT | Parked D/F |
+|---|---|---|---|---|---|---|---|---|---|
+| pipeline-runs | 14 (13) | **10** | 0 | 0 | 1 (#104) | 7 | **9 (6)** | **27/37 · 4** | **4**/0 |
+| platform | **29** (16) | 8 | **3** (#10, #92, #97) | 0 | **4** (#2, #52, #58, #46) | **13 (7)** | 5 (4) | 19/21 · 3 | **4**/0 (+2 z #73 poza Parked) |
+| llm-providers | 10 (9) | 4 | 1 (#23, wspólne) | 0 | 1 (#40) | 4 | 4 (3) | 8/15 · 2 | 1/0 |
+| operator-alerts *(nowa)* | 4 (3) | 4 | 0 | 0 | 1 (#101) | 2 | 2 (2) | 4/14 · 2 | 2/0 |
+| admin-console | 12 (12) | 6 | 0 | 0 | 0 | 4 | 4 (2) | 4/12 · 1 | 3/1 |
+| daily-run | 6 (6) | 4 | 0 | 0 | 1 (#101) | 3 | 3 (2) | 5/12 · 0 | 1/1 |
+| ingest | 6 (6) | 4 | 0 | 0 | 1 (#104) | 2 | 2 (1) | 13/15 · 0 | 1/1 |
+| db-backup | 7 (5) | 4 | 0 | 0 | 2 (#46, #101) | 2 | 2 (1) | 8/10 · 0 | 1/1 |
+| assessment | 7 (7) | 3 | 1 (#23) | 0 | 0 | 1 | 1 (0) | 19/21 · 0 | 2/**5** |
+| feed | 11 (10) | 4 | 0 | 0 | 0 | 4 | 4 (**0**) | 18/21 · 0 | 1/3 |
+| auth | 16 (15) | 3 | 0 | 0 | 2 (#27, #28) | 2 | 2 (0) | 9/0 · 2 | 1/2 |
+| accounts | 7 (7) | 3 | 0 | 0 | 1 (#27) | 2 | 2 (0) | 10/5 · 1 | 1/2 |
+| model-evaluation | 6 (6) | 4 | 0 | 0 | 0 | 0 | (w F-02) | — | (w assessment) |
+| shared-foundations | 22 (20) | 7 | 0 | 0 | 1 (#27) | 1 (#36 Hikari, zamk.) | — | — | 0 |
+| shared-ui | 14 (13) | 4 | 0 | 0 | 0 | 0 | (w ui-hardening) | — | 0 |
+| docs-planning (proza) | 66 (27); 24 czysto dokumentacyjnych | 26 | — | — | — | 1 (#64) | — | — | — |
 
-Pokrycie: 47/47 commitów przypisanych; 0 nieprzypisanych plików (kontrakt). Issues: 17, z czego 0 z etykietą bug (jedyna użyta etykieta: `enhancement` na #36).
+Uwagi do tabeli (`evidence` + reguła 4/12): w M-2 każdy PR kodowy pipeline-runs jest przekrojowy (10/10), bo slice'y M-2 to squash całych pionowych zmian — liczby PR nie należy czytać jako 10 niezależnych sygnałów. 27 z 67 PR-ów jest przekrojowych.
 
 ## Friction
 
-- **Reverty: 0** (`git log | grep -iE 'revert|hotfix|rollback'` → brak). `evidence`.
-- **Zamknięte bez merge'a: 2.** #23 (F-02 w Pythonie, 5543 linii) — „implementacja F-02 zostanie wykonana w Javie po java-api-rewrite” → ponownie wylądowało jako #31 (31210 linii z fiksturami) — **druga próba assessment/llm-providers** wymuszona zmianą stosu, nie awarią. #10 — test zakresu tokenu Railway (platform). `evidence`.
-- **Drugie podejścia / ten sam zakres poprawiany w krótkich odstępach (`evidence` z subjectów i deploy-plan):**
-  - **platform / Railway — najwięcej iteracji:** #1 → #2 dzień później (healthcheck IPv4, Hypercorn); config ≠ merge (start command nie zmienił się bez `config apply`); `API_PORT` pusty; Postgres sleep → zawieszony start 2026-10-09 (#38 „Postgres without sleep”) → ta sama deklaracja powodowała restart przy każdym apply i zawieszenie 2026-10-12 (#46 usuwa ją); `watchPatterns` w złym miejscu → każdy merge redeployował wszystko i przerwał run 2026-10-13 (#58); limity zasobów (#52); `checkSuites` na usłudze tworzonej przez IaC; bucket `db-backups` niewdrożony na produkcji. Pięć lekcji w `lessons.md` dotyczy Railway/IaC. Po regule 5 (`false-signals`) część to normalna iteracja infra — ale **trzy z tych zdarzeń dotknęły produkcji (DB 503, przerwany run)**, więc to nie tylko szum (`inference`).
-  - **auth:** S-01 w Pythonie (#13, 2 re-review w jeden dzień) → całość przepisana w F-03 (#26) → follow-upy #27 i #28 (ścieżka filtra Origin) dzień później. Przepisanie to decyzja stosu (reguła 12: spillover F-03 na auth/accounts/platform), poprawki #28 są realne.
-  - **llm-providers:** po pierwszym produkcyjnym runie: zły klucz (401), potem flex zwracający błąd w HTTP 200 → 15 postów straciło próbę → dedykowany PR #40 dzień później.
-  - **pipeline-runs / admin-console:** S-02 → S-06 jako „hardening monitorowania” wynikły z produkcji (run zawieszony ~22 h, 7 min bez logów, run przerwany przez deploy). S-06 dodało watchdog, przyczynę przerwania, powiadomienia.
-  - **feed / admin-console UI:** każdy widok przeszedł osobny „ui-hardening” (#42, #48) po zbudowaniu w S-02 — zaplanowana praca stylu, nie awaria (reguła 5, `mechanical`).
-- **Otwarte issues (wiek na 2026-10-17):** #17 S-04 (19 dni; kod zmergowany 10-14, brak weryfikacji produkcji — deploy-plan nadal mówi „not merged”, dokument w tyle); #19 S-06 (19 dni; zmergowane 10-17, weryfikacja produkcji w toku); #36 Hikari (11 dni, jedyny dług techniczny w trackerze); #51 railway-resource-limits (5 dni, PR #52 zmergowany); #30 self-hosted runner (14 dni, nice-to-have). Proces: issue zamyka się dopiero po weryfikacji produkcji, więc „otwarte” ≠ „błąd” (`inference`).
-- **Czas PR (created→merged):** duże zmiany 1–3 dni (#13 1 d, #31 3 d, #37 3 d, #49/#50/#60 1 d). `evidence`.
+- **Reverty: 0, hotfixy (subject lub gałąź `fix…`): 4, wszystkie w M-1, + follow-up #27** (#2 Hypercorn/healthcheck, #28 filtr Origin po F-03, #52 limity zasobów, #58 `watchPatterns` po tym, jak merge dokumentacji #55 przerwał przebieg 2026-10-13). W M-2 presja poprawek nie jest w subjectach, tylko w prozie: domknięcia „+ poprawki z przeglądu” (#101 F-04, #104 S-16) i sekcje `## Triage` w impl-review (np. S-17: 9 ustaleń, wszystkie naprawione przed merge'em). `evidence`
+- **platform — wdrożenia, trzy podejścia w 5 dni (najsilniejszy sygnał tarcia w M-2).** S-14 (#81, merge 2026-10-19) dodało `deploy-verify` + issues `deploy-health` → 6 issues `deploy-health` 2026-10-19 podczas testów w PR env (#84–#88, #90) i #98 na produkcji 2026-10-22/23 (sondy `/api/ready` i `/healthz` 200, alarm ze stanu deployu Railway w czasie awarii Railway — fałszywy) → `deploy-verification-hardening` zastąpiło mechanizm zewnętrznym monitorem (#99, 2026-10-23) po **dwóch PR zamkniętych bez merge'a** (#92, #97: Railway po incydencie JUA1PC5H nie odtworzył PR env). Issue #91 tej zmiany ma 11 komentarzy (najwięcej w M-2). `evidence`. Część przyczyny jest zewnętrzna (awaria Railway) i reguła 5 (CI/deploy poprawia się iteracyjnie) — ale iteracje dotyczyły mechanizmu bezpieczeństwa, nie kosmetyki. `inference`
+- **Otwarte po zamknięciu M-2 (S-14, issue #73).** #73 zamknięte 2026-10-24 z dwoma „otwartymi ustaleniami … do osobnej zmiany”: (1) `verify-apply.sh` traktuje `SKIPPED` (zwykły wynik watch paths) jako błąd — kontrola po apply padła fałszywie; (2) produkcja wdrożyła `2abc64c` **mimo czerwonego CI** (failure 16:39:31, deploy 16:39:39) — Wait for CI tego nie zatrzymał, przyczyna niezbadana. Brak dla nich issue, folderu zmiany i pozycji w `## Parked`; wspominają je tylko komentarz #73 oraz `roadmap.md:77` i `:382`. Wiąże się z nierozstrzygniętym Open Roadmap Question 3 („czy deploy po `config apply` czeka na CI”). `evidence`
+- **pipeline-runs — ten sam silnik przerabiany w kółko.** S-02 (silnik na Embabel, 10-09) → S-06 watchdog (10-17) → S-08 pusty przebieg → S-09 rozliczanie prób → S-11 samonaprawa utkniętego przebiegu → S-18 błędy do operatora → **S-17 usunięcie Embabel** (`PipelineAgent.java` → `RunSequence.java`, R052; 10-27) → tego samego dnia osobny `pipeline-concurrency-review`. Ten ostatni pisze wprost: „**F3 nie jest całkowicie wyeliminowane**” (anulowanie przez watchdog nie jest zsynchronizowane ze sprzątaniem; fałszywy `RUN_CLOSE_FAILED` wciąż możliwy) oraz utrzymuje A4/A8 jako przyjęte ryzyka. Do tego niestabilny test `ConcurrentAssessmentDispatcherTest…cancellingARunInterrupts…` (Timeout, run 39133095273, komentarz #73). Wspólna przyczyna (reguła 4): M-2 celowo utwardzał ten obszar po audycie (sekcja A: 8 ustaleń) — jednak 8 zmian w 18 dni w jednym silniku, zakończonych przepisaniem i resztkowym oknem wyścigu, to realne drugie podejścia. `evidence` + `inference`
+- **llm-providers — obsługa błędów dostawcy w pięciu podejściach:** #40 `openrouter-in-body-errors` (incydent M-1: błąd w HTTP 200 spalił próby 15 postów) → S-09 (awaria dostawcy nie zużywa prób; bezpiecznik 3 awarii) → S-10 (fail-fast `LLM_*`) → S-18 → S-17 (Spring AI wprost, nowy `LlmClientException`). `evidence`
+- **Zamknięte bez merge'a: 4.** #10 (test tokenu Railway — celowy), #23 (F-02 w Pythonie → ponownie jako #31 w Javie; zmiana stosu, nie awaria, M-1), #92 i #97 (wyżej). Do tego zamknięcia-i-ponowne-otwarcia #93/#94/#95 dla odtworzenia PR env po awarii Railway i ręczne usuwanie zmiennych w PR env pr-94/95/96 (runbook S-19). `evidence`
+- **Issues: 40, otwartych 0, z etykietą bug 0** (etykiety: `deploy-health` ×7, `enhancement` ×1). Najdłużej otwarte to issues M-1 zamykane dopiero po weryfikacji produkcji (S-04 #17 i S-06 #19: 19,6 dnia). W M-2 issues zamykane w 1–9 dni. Mediana PR created→merged 0,1 dnia, maks. 3 dni (#93–#96 podczas awarii Railway). `evidence`
+- **CI na self-hosted runnerach:** losowe `failed to prepare extraction snapshot` przy budowie obrazów (Parked, od S-08 #80; obejście `gh run rerun --failed`). `evidence`; reguła 5 — tryb pracy CI, nie zepsuta capability.
 
 ## Planning attention
 
-- 14 zmian w `context/archive/` + 1 w `context/changes/` (bootstrap-verification). Każdy slice/foundation ma plan, plan-review (część), impl-review i często follow-upy.
-- **Najwięcej uwagi: assessment + llm-providers + model-evaluation (F-02)** — 61 plików, 8548 linii, 6 plików review (impl-review po fazach 3, 5, 6 + końcowy; 2 plan-review), 7 otwartych follow-upów przy archiwizacji (m.in. F8d maskowanie błędów Wykopu, F8f niewidoczne znaki — osobny plik). Plus katalog `context/foundation/llm-assessment` i 2 pozycje Parked („LLM hardening: ironia”, „obrazki”). `evidence`.
-- **pipeline-runs / ingest (S-02)**: 4 review, 2 pliki follow-up, 6 otwartych pozycji (spalanie prób przy błędzie całego runu, wolny store, PR env deployujący stary commit — przyczyna nieznana). S-06: plan-review + impl-review; roadmap Parked: „przebieg bez Embabel” (z plan-review S-06).
-- **auth**: S-01 — 5 plików review, w tym 2 re-review i rereview3 tego samego dnia (najwięcej rund dla jednej zmiany).
-- **admin-console**: admin-panel-ui-hardening — 7 plików review (z dowodami Playwright F1/F2).
-- **Dokumenty fundamentów (liczba commitów)**: deploy-plan 30, roadmap 22, lessons 12, prd 11, infrastructure 11. deploy-plan to de facto dziennik incydentów platformy (`inference`).
-- Świeżość: ostatnie plany to S-06 (2026-10-15), S-03/S-04/S-05/S-07 (2026-10-12).
+- **31 zarchiwizowanych zmian** (+ żywa `bootstrap-verification`; poprzednia mapa pominięta), **16 od 2026-10-18**. Pliki review: 37 impl-review z łącznie 0 CRITICAL / 101 WARNING / 135 OBSERVATION; plan-review: **10 CRITICAL — wszystkie złapane przed implementacją** (S-14 ×2; po 1: S-01, F-03, S-06, S-09, deploy-verification-hardening, F-04, S-18, S-17). `evidence`
+- **pipeline-runs przyciąga najwięcej planowania:** 9 zmian (6 w M-2), najwięcej ustaleń impl-review (27 W / 37 O) i plan-review CRITICAL (4); w `deploy-plan.md` 6 sekcji (S-06 148 linii, S-11 81, S-09 75, S-17 86, S-18 89, S-08 71); issues tej capability mają 44 komentarze autora (najwięcej). Przesunięcie od poprzedniej mapy (17.10), gdzie prowadził F-02/assessment (2996 linii prozy, 20 plików — nadal największy pojedynczy folder). `evidence`
+- **platform:** 5 zmian (4 w M-2: S-14 1350 linii prozy, self-hosted-pr-runner, deploy-verification-hardening z `frame.md`, S-19 ops-docs-debt), 13 issues (7 `deploy-health`), audyt sekcja C (operacje) 15 ustaleń — najwięcej z sekcji audytu. `deploy-plan.md` to dziennik incydentów/runbooków: 49 commitów (19 w M-2), 1976 linii. `evidence`
+- **operator-alerts — nowa capability, w całości z M-2:** F-04 (z `frame.md`, 1042 linie prozy) + S-18; 2 pozycje długu z przeglądu S-18 (F4, F5) w Parked. `evidence`
+- **Wyciszone od M-1 (0 zmian od 2026-10-18): feed, auth, accounts, assessment.** feed miał 4 zmiany w M-1 (S-03, S-04, feed-view-ui-hardening, S-02). assessment ma 0 nowych planów, ale w Parked trzyma największy dług jakości: „LLM hardening” — żaden z 12 modeli nie spełnił progów kierunku, progi złagodzono do ≥70 %/≤10 % (cel ≥75 %/≤3 %) oraz brak ochrony przed dryfem modelu (audyt B4). `evidence`
+- **Co dalej (po zamknięciu M-2):** `roadmap.md:77` (v3.7) — M-3 nieotwarty; decyzja użytkownika: najpierw ta mapa i audyt zawężony pod kolejny kamień — **drugie źródło (Reddit, FR-023 → ingest), silnik po S-17 (pipeline-runs), ustalenia S-14 z #73 (platform)**. Open Roadmap Questions: 1 z 5 rozstrzygnięte (Q1); otwarte Q2 (locale bazy dla filtra S-04), Q3 (żywy Railway: deploy po apply vs CI, crash loop, SIGTERM, Hikari, przebieg 22 h), Q4 (próg FR-025), Q5 (budżet LLM na przebieg). `evidence`
+- **Parked urósł z 18 (mapa 17.10) do 32 pozycji**; ~14 nowych pochodzi z audytu M-2 i przeglądów M-2 (S-12 zaparkowany po `/10x-frame` — PR #105 tylko dla parkowania; dni bez danych F2/F5; kolejka alarmów F4; watchdog F5; NAS→Drive; drugi runner CI; cache Dockera; start API). `evidence`
+- **Lekcje (`lessons.md`, 20 wpisów):** ~6 o Railway/IaC/platformie, po 1 o backupie, kontrakcie LLM, źródłach (ponowienia w kliencie), Embabel (`FIRE_ONCE` — **już historia**, Embabel usunięty w S-17, reguła 11), reszta o procesie agentowym. `inference`
 
 ## Debt markers
 
-- `TODO|FIXME|HACK|XXX` na HEAD w plikach kodu wszystkich 14 capability: **0** (0,00 / 1000 linii). Jedyne 7 trafień to proza (`roadmap.md` 3, impl-review S-04 2, próbka pilota 1, `render_roadmap.swift` 1). `evidence`.
-- Dług jest prowadzony w prozie, nie w kodzie: `follow-ups/*.md` (17 otwartych `[ ]` łącznie przy archiwizacji), `roadmap.md ## Parked` (18 pozycji, m.in. wydajność filtra feedu, unieważnianie sesji wersją poświadczeń, komunikat świeżości) i issues #36/#30. Brak markerów w kodzie to konwencja, nie brak długu (`inference`).
+- `git grep -w 'TODO|FIXME|HACK|XXX'` na HEAD: **0 w kodzie** wszystkich 15 capability niebędących prozą (`szczur-radar-api`, `szczur-radar-web`, `tools`, `.github`, `.railway`): 0,00 / 1000 linii. 57 trafień w prozie: 50 w lustrach skilli (`.claude/skills`, `.agents/skills`), 2 w `roadmap.md` (TODO wydajności filtra feedu), 2 w archiwum, 3 w starej mapie. `evidence`
+- Dług żyje w prozie (konwencja repo, nie brak długu): `## Parked` (32), `follow-ups/*.md` (12 plików w 11 zmianach; w M-2 tylko S-09, S-19, S-13), 2 niezamknięte `[ ]` w archiwalnych planach (self-hosted-pr-runner 3.6, stuck-run-self-heals 3.3 — zrzuty `/admin`) i 13 `[ ]` w `deploy-plan.md` — **wszystkie w runbooku „after the merge” S-14** (wiersze 1043–1059), choć zamykający komentarz #73 opisuje wykonaną weryfikację. Inne runbooki M-2 nie mają otwartych pól → sekcja S-14 jest nieuaktualniona (por. `lessons.md:134`). `evidence` + `inference`
 
 ## Mechanical signals
 
-- **docs-planning** — 46/47 commitów, 16 PR czysto dokumentacyjnych (głównie zapis stanu deploy-planu i domknięcia slice'ów): churn prozy, przypisany wyżej do omawianych capability (reguła 8), nie gorący obszar.
-- **cross>3** — prawie każdy feature PR dotyka 5–11 capability (squash całej zmiany: plan + kod + testy + docs). Liczby PR per capability mierzą „ile zmian ją zahaczyło”, nie edycje (kontrakt).
-- **F-03 (#26) i F-02 (#31)** — największe PR; F-03 to przepisanie stosu (spillover na auth/accounts/platform/shared-foundations, reguła 12), 480 plików F-02 to fikstury (szum).
-- **Fix-ratio platform (4 fix-PR)** — iteracja infra (reguła 5); utrzymane jako friction tylko dla zdarzeń z wpływem na produkcję.
-- **ui-hardening #42/#48** — zaplanowane dopracowanie UI, nie naprawy defektów.
-- **Komentarze `railway-app`** na 41 PR — status bota, nie recenzja (reguła 7).
-- **Licznik ~findings** — nagłówki `F<n>`, pliki fazowe F-02 mogą powtarzać te same findings (wszystkie mają po 10) — przybliżenie.
-- **„Open FU”** — checkboxy w archiwum są niezmienne; co najmniej F8b (`LLM_TIMEOUT` bez górnej granicy) jest dziś rozwiązane (README: maks. `30m`), więc liczba zawyża dług.
+- **Liczba PR i komentarzy platform/docs-planning** — wysoka, bo każda zmiana dotyka `ci.yml`/`.railway/railway.ts`/`deploy-plan.md` (reguła 4, 8); proza liczona tu jako dyskusja o capability, którą opisuje, nie jako gorący obszar.
+- **Komentarze `railway-app` (63) i `github-actions` (5 na #90, #98)** — automatyka, nie review (reguła 7). Komentarze autora na PR to procedura (reopen PR env, info o zmiennych), nie dyskusja.
+- **7 issues `deploy-health`** — 6 to testy mechanizmu w PR env pr-80/pr-81 i `lag-test` jednego dnia; #98 fałszywy alarm z awarii Railway. Liczą się jako tarcie mechanizmu wdrożeń, nie jako 7 incydentów produkcji.
+- **Wielkość PR:** #31 F-02 (32 128 linii) zawiera 480 nagranych odpowiedzi LLM (szum wg kontraktu); #62 audyt i #45/#102 aktualizacje skilli to proza/narzędzia.
+- **Rozmiar `deploy-plan.md` per sekcja** i słownictwo „interrupted/przerwanie” — to nazwy stanów przebiegu w runbookach, nie licznik incydentów.
+- **Tabela `## Backlog Handoff` w roadmap** nadal mówi „Run `/10x-plan …`” przy zrobionych S-08–S-11, S-14–S-16, S-19 — dryf prozy, nie sygnał o kodzie.
+- **Przepisania F-03/F-02 (M-1)** — spillover zmiany stosu na auth/accounts/assessment (reguła 12); poza M-2.
+- **Poza skanowanym worktree:** w głównym checkoutcie leży nieśledzony `context/changes/deploy-verification-hardening/` (pliki z 2026-10-20), kopia zmiany zarchiwizowanej 2026-10-23 — pozostałość, nie żywa zmiana.
 
 ## Unknowns
 
-- **Brak ludzkiej recenzji na forge'u** — nie da się zmierzyć mediany review ani sporów; jedyny ślad dyskusji to artefakty agenta w `context/`. Jakość tych recenzji: `unknown`.
-- **Aktualny stan follow-upów** z archiwum (17 `[ ]`) — część rozwiązana później bez odhaczenia; wymagałoby przejścia per pozycja (`/10x-research`).
-- **Błędy produkcyjne** — brak error trackera (Sentry itp.) w repo; incydenty znane tylko z ręcznych zapisów w deploy-plan i z logów Railway (poza zakresem). Nie wiadomo, ile awarii nie zostało zapisanych.
-- **Przyczyna deployu starego commitu web w PR env** (2026-10-09, 2026-10-13) — `unknown` wg deploy-plan.
-- **Stan S-04 na produkcji** — kod zmergowany, issue #17 otwarte, deploy-plan nieaktualny (sprawdzenie locale `ILIKE` nieodnotowane).
-- Issues sprzed `gh` (zadania w czacie, decyzje „użytkownika” w roadmapie) — poza trackerem.
+- **Brak drugiego recenzenta** — nie da się zmierzyć jakości review ani sporów; jedyny sygnał przeglądu to raporty agenta w `context/archive/**/reviews/`. `unknown`
+- **Pierwsza nocna praca crona na silniku S-17** wypada 2026-10-28 (po HEAD) — zachowanie nowego silnika na produkcji w nocnym przebiegu jest niezweryfikowane. `unknown`
+- **Przyczyna deployu `2abc64c` mimo czerwonego CI** (#73) i to, czy Wait for CI wstrzymuje `railway redeploy` (`deploy-plan.md:967`: „Not verified yet”). `unknown`
+- **Błędy produkcyjne:** brak error trackera; alarmy idą healthchecks.io → Telegram (F-04) i do zewnętrznego repo `szczur-radar-monitor` (monitor po deployu, #99) — ich historia jest poza tym repo. `unknown (external)`
+- **Open Roadmap Questions 2–5** (locale bazy, żywy Railway, FR-025, budżet LLM) bez odpowiedzi. `unknown`
+- Przypisanie issues, zmian i pozycji Parked do capability jest po nazwie/treści, nie po plikach. `inference`
 
 ### Polecenia
-- `python3 -I` nad `.work/commit-files.tsv` → `.work/discussion-commit-caps.tsv` (capability per commit, cross-cut, fix)
-- `gh pr list --state all --limit 100 --json number,title,createdAt,mergedAt,closedAt,state,reviews,comments,additions,deletions,author,headRefName` → `.work/discussion-prs.json`
-- `gh issue list --state all --limit 100 --json number,title,labels,createdAt,closedAt,state,comments,author` → `.work/discussion-issues.json`
-- `gh pr view 23|10 --json comments` (powód zamknięcia)
-- `git log --format='%h %s' | grep -iE 'revert|hotfix|rollback'`
-- `git ls-files context/archive` + `grep -c` (`reviews/`, `follow-ups/`, `- [ ]`, nagłówki `F<n>`)
-- `grep -n '^#'` w `lessons.md`, `roadmap.md`; `git log --oneline -- <foundation docs> | wc -l`
-- skan `TODO|FIXME|HACK|XXX` po plikach z `git ls-files` przez `attribute.capability/noise` → `.work/discussion-markers.tsv`
+- `python3 caps.py` (scratchpad) — parsowanie `.work/git-log.txt`, filtr szumu, mapowanie `capabilities.tsv` → `.work/disc-commits.json`
+- `gh pr list -R kwmacioszek/szczur-radar --state all --limit 100 --search "created:>=2026-09-01" --json number,title,createdAt,mergedAt,closedAt,state,reviews,comments,additions,deletions,headRefName,author`
+- `gh issue list -R kwmacioszek/szczur-radar --state all --limit 100 --search "created:>=2026-09-01" --json number,title,labels,createdAt,closedAt,state,comments,author`
+- `gh issue view 73|98 --json body,comments`
+- `python3 plans.py` — pliki, nagłówki `**Severity**` i `[ ]`/`[x]` w `context/archive/*/` → `.work/disc-plans.json`
+- `grep`/`awk` po `roadmap.md` (`## Parked`, Open Questions, Backlog Handoff), `deploy-plan.md` (sekcje, `[ ]`), `lessons.md` (nagłówki)
+- `git grep -c -w -E 'TODO|FIXME|HACK|XXX' HEAD`
