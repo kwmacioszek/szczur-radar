@@ -8,6 +8,8 @@ import java.util.Optional;
 
 import org.jspecify.annotations.Nullable;
 
+import pl.szczurradar.api.llm.LlmClientException;
+
 /**
  * One failed HTTP attempt, classified for {@link TransportRetry}. Provider clients translate their
  * SDK's errors into this — only those they can classify: an exception they cannot is not a transport
@@ -124,12 +126,13 @@ public class TransportException extends RuntimeException {
 
 	/**
 	 * An exception a provider client cannot classify — a bug in our code or an unknown SDK error — as
-	 * what leaves the client instead of a transport failure: never retried and outside
-	 * {@code LlmCallException}, so it is not recorded as a provider error. The message is cleaned (it may
-	 * be recorded), and the cause is the original's chain without the key ({@link ProviderMessages#cleanCause}).
+	 * what leaves the client instead of a transport failure: an {@link LlmClientException}, never retried
+	 * and outside {@code LlmCallException}, so it is not recorded as a provider error. The message is
+	 * cleaned (it may be recorded), and the cause is the original's chain without the key
+	 * ({@link ProviderMessages#cleanCause}).
 	 */
-	public static IllegalStateException unclassified(Throwable error, ProviderMessages messages) {
-		return new IllegalStateException(messages.clean(String.valueOf(error)), messages.cleanCause(error));
+	public static LlmClientException unclassified(Throwable error, ProviderMessages messages) {
+		return new LlmClientException(messages.clean(String.valueOf(error)), messages.cleanCause(error));
 	}
 
 	/** {@code Retry-After} in seconds (the HTTP-date form is not used by the providers), or {@code null}. */

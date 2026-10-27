@@ -61,6 +61,7 @@ import pl.szczurradar.api.llm.CallFailure;
 import pl.szczurradar.api.llm.Channel;
 import pl.szczurradar.api.llm.LlmCallException;
 import pl.szczurradar.api.llm.LlmClient;
+import pl.szczurradar.api.llm.LlmClientException;
 import pl.szczurradar.api.llm.LlmConfigurationException;
 import pl.szczurradar.api.llm.LlmResponse;
 import pl.szczurradar.api.llm.LlmUnavailableException;
@@ -73,6 +74,7 @@ import pl.szczurradar.api.pipeline.flow.RunFlow.AssessedBatch;
 import pl.szczurradar.api.pipeline.flow.RunFlow.ProcessingError;
 import pl.szczurradar.api.pipeline.run.RunStatus;
 import pl.szczurradar.api.pipeline.state.PostTransitions;
+import pl.szczurradar.api.pipeline.state.RunInterruptedException;
 import pl.szczurradar.api.pipeline.state.RunRecorder;
 import pl.szczurradar.api.pipeline.state.RunRecorder.Counters;
 import pl.szczurradar.api.posts.Assessment;
@@ -102,6 +104,12 @@ class ConcurrentAssessmentDispatcherTest {
 	/** A post whose raw payload its source's mapper cannot map (a bug of ours, before any call). */
 	private static final String UNMAPPABLE = "this post breaks the mapper";
 
+	/**
+	 * A post whose input cannot be built with an {@link IllegalStateException} (as {@code AssessmentInputs}
+	 * without a mapper for its source), before any call: our code's error, but not the LLM client's.
+	 */
+	private static final String NO_MAPPER = "this post finds no mapper";
+
 	/** A post whose call finds the key revoked (HTTP 401). */
 	private static final String REVOKED = "this post finds the key revoked";
 
@@ -127,10 +135,31 @@ class ConcurrentAssessmentDispatcherTest {
 	private static final String REFUSED = " refused by the provider";
 
 	/**
+	 * Added to a post: its call leaves the client with an error it could not classify (also when it is
+	 * interrupted while {@link #HELD}), as an unknown SDK error after an SDK change.
+	 */
+	private static final String CLIENT_ERROR = " fails in the client";
+
+	/** The message of {@link #CLIENT_ERROR}'s exception, as {@code TransportException.unclassified} makes it. */
+	private static final String CLIENT_ERROR_MESSAGE = "java.lang.RuntimeException: unexpected state";
+
+	/** The message of a client error's processing error and technical failure. */
+	private static final String CLIENT_FAILURE = "LlmClientException: " + CLIENT_ERROR_MESSAGE;
+
+	/**
 	 * Added to a post: while its call is in flight, a stopping instance interrupts the run and puts its
 	 * posts back ({@code onClose} during a deploy), and the call ends finding the provider unavailable.
 	 */
 	private static final String DEPLOYED = " cut off by a deploy";
+
+	/**
+	 * Added to a post: the pool's own shutdown (the context closing) interrupts its call, which ends finding
+	 * the provider unavailable — nothing marked the run's tasks cancelled.
+	 */
+	private static final String SHUT_DOWN_UNAVAILABLE = " cut off by the pool's shutdown as an outage";
+
+	/** Added to a post: as {@link #SHUT_DOWN_UNAVAILABLE}, the call ending with an error of the client. */
+	private static final String SHUT_DOWN_CLIENT_ERROR = " cut off by the pool's shutdown in the client";
 
 	/** The message of an outage's processing error and technical failure. */
 	private static final String OUTAGE = "LlmUnavailableException: HTTP 503 after 3 attempts";
@@ -162,6 +191,9 @@ class ConcurrentAssessmentDispatcherTest {
 
 	/** What the check call ({@link LlmClient#CHECK_REQUEST}) throws, if anything. */
 	private final AtomicReference<@Nullable RuntimeException> checkFailure = new AtomicReference<>();
+
+	/** Whether the check call waits on {@link #release} first, as a call in flight. */
+	private final AtomicBoolean checkHeld = new AtomicBoolean();
 
 	/** The dispatcher's clock for the progress lines, in nanoseconds; only a {@link #SLOW} call moves it. */
 	private final AtomicLong nanoTime = new AtomicLong();
@@ -478,6 +510,80 @@ class ConcurrentAssessmentDispatcherTest {
 	}
 
 	@Test
+	void aDispatchWhoseThreadIsInterruptedCancelsItsTasksAsAStoppedRun(CapturedOutput output) throws Exception {
+		UUID held = post(ContractFixtures.BODY + HELD);
+		ConcurrentAssessmentDispatcher dispatcher = dispatcher();
+		AtomicReference<@Nullable Throwable> thrown = new AtomicReference<>();
+		// The run's thread (pipeline-run), waiting for its post while the call is in flight.
+		Thread step = Thread.ofPlatform().start(() -> {
+			try {
+				dispatcher.dispatch(RUN, List.of(held));
+			}
+			catch (Throwable ex) {
+				thrown.set(ex);
+			}
+		});
+		assertThat(holding.tryAcquire(10, TimeUnit.SECONDS)).isTrue();
+
+		// The watchdog's cancel(true) on the run's task, or a stopping instance's shutdownNow().
+		step.interrupt();
+
+		step.join(10_000);
+		assertThat(step.isAlive()).isFalse();
+		assertThat(thrown.get()).isInstanceOf(IllegalStateException.class)
+			.hasMessage("interrupted while assessing run " + RUN);
+		// The call saw the interrupt and ended with the stopped run.
+		executor.shutdown();
+		assertThat(executor.awaitTermination(10, TimeUnit.SECONDS)).isTrue();
+		assertThat(interrupted).singleElement().satisfies(message -> assertThat(message).contains(HELD));
+		// Marked cancelled before the interrupt reached the call: not the post's technical error, not counted.
+		assertThat(stages.get(held)).isEqualTo(PostStage.STORED);
+		assertThat(attempts.get(held)).isZero();
+		assertThat(technicalFailures).isEmpty();
+		verify(transitions, never()).releaseFailed(any(UUID.class), any(UUID.class), any(String.class));
+		verify(recorder, never()).count(any(), any());
+		assertThat(output.getAll().lines().filter(line -> line.contains(" WARN ") || line.contains(" ERROR "))).isEmpty();
+		assertThat(output.getAll()).contains("Assessing post " + held + " in run " + RUN + " ended with its stopped run");
+	}
+
+	@Test
+	void aCheckInterruptedByTheRunsStopEndsTheStepAsAStoppedRun(CapturedOutput output) throws Exception {
+		UUID stored = post(ContractFixtures.BODY);
+		checkHeld.set(true);
+		ConcurrentAssessmentDispatcher dispatcher = dispatcher();
+		AtomicReference<@Nullable Throwable> thrown = new AtomicReference<>();
+		// The run's thread (pipeline-run), inside the LLM check before the first post.
+		Thread step = Thread.ofPlatform().start(() -> {
+			try {
+				dispatcher.dispatch(RUN, List.of(stored));
+			}
+			catch (Throwable ex) {
+				thrown.set(ex);
+			}
+		});
+		assertThat(holding.tryAcquire(10, TimeUnit.SECONDS)).isTrue();
+
+		// A stopping instance's shutdownNow(), or the watchdog's cancel(true), while the check is in flight.
+		step.interrupt();
+
+		step.join(10_000);
+		assertThat(step.isAlive()).isFalse();
+		// The stop, not the check's failure: execute logs it at INFO and the step stays as the stop closed it.
+		assertThat(thrown.get()).isInstanceOf(RunInterruptedException.class)
+			.hasMessage("the run's thread was interrupted during assess (run " + RUN + ")")
+			// What the interrupted check ended with is kept.
+			.cause()
+			.isInstanceOf(LlmUnavailableException.class)
+			.hasMessage("HTTP 503 after 3 attempts");
+		assertThat(calls).hasValue(0);
+		assertThat(stages.get(stored)).isEqualTo(PostStage.STORED);
+		verify(transitions, never()).claim(any(UUID.class), any(UUID.class));
+		verify(recorder, never()).count(any(), any());
+		assertThat(output.getAll()).contains("Run " + RUN + " assess: the LLM check was interrupted by the run's stop");
+		assertThat(output.getAll().lines().filter(line -> line.contains(" WARN ") || line.contains(" ERROR "))).isEmpty();
+	}
+
+	@Test
 	void cancellingARunThatIsNotDispatchedChangesNothingForItsLaterStep() {
 		ConcurrentAssessmentDispatcher dispatcher = dispatcher();
 		dispatcher.cancel(RUN);
@@ -650,6 +756,58 @@ class ConcurrentAssessmentDispatcherTest {
 	}
 
 	@Test
+	void anOutageOfACallThePoolsShutdownInterruptedIsNotCounted(CapturedOutput output) {
+		List<UUID> ids = List.of(post(ContractFixtures.BODY + SHUT_DOWN_UNAVAILABLE),
+				post(ContractFixtures.BODY + SHUT_DOWN_UNAVAILABLE), post(ContractFixtures.BODY + SHUT_DOWN_UNAVAILABLE));
+		UUID after = post(ContractFixtures.BODY);
+
+		AssessedBatch batch = dispatchOnOneThread(List.of(ids.get(0), ids.get(1), ids.get(2), after));
+
+		// Not outages of the provider: no streak (three would stop the step), nothing counted, the posts back
+		// without an attempt; the post after them is assessed as usual.
+		assertThat(batch).isEqualTo(new AssessedBatch(RUN, 1, 0, 0, List.of(), null));
+		assertThat(stages.get(after)).isEqualTo(PostStage.ASSESSED);
+		ids.forEach(id -> {
+			assertThat(stages.get(id)).isEqualTo(PostStage.STORED);
+			assertThat(attempts.get(id)).isZero();
+			verify(transitions).release(id, RUN);
+		});
+		assertThat(technicalFailures).isEmpty();
+		verify(transitions, never()).releaseFailed(any(UUID.class), any(UUID.class), any(String.class));
+		verify(transitions, never()).countTechnicalFailure(any(UUID.class), any(UUID.class), any(String.class));
+		verify(recorder, never()).touch(RUN);
+		verify(recorder, times(1)).count(eq(RUN), any(Counters.class));
+		assertThat(output.getAll().lines().filter(line -> line.contains(" WARN ") || line.contains(" ERROR "))).isEmpty();
+		assertThat(output.getAll().lines().filter(line -> line.contains("ended with its stopped run")))
+			.hasSize(3)
+			.allSatisfy(line -> assertThat(line).contains("LlmUnavailableException"));
+	}
+
+	@Test
+	void aClientErrorOfACallThePoolsShutdownInterruptedIsNotCounted(CapturedOutput output) {
+		List<UUID> ids = List.of(post(ContractFixtures.BODY + SHUT_DOWN_CLIENT_ERROR),
+				post(ContractFixtures.BODY + SHUT_DOWN_CLIENT_ERROR), post(ContractFixtures.BODY + SHUT_DOWN_CLIENT_ERROR));
+		UUID after = post(ContractFixtures.BODY);
+
+		AssessedBatch batch = dispatchOnOneThread(List.of(ids.get(0), ids.get(1), ids.get(2), after));
+
+		// Not the client's errors: no streak (three would trip the client's breaker), no technical failure.
+		assertThat(batch).isEqualTo(new AssessedBatch(RUN, 1, 0, 0, List.of(), null));
+		assertThat(stages.get(after)).isEqualTo(PostStage.ASSESSED);
+		ids.forEach(id -> {
+			assertThat(stages.get(id)).isEqualTo(PostStage.STORED);
+			assertThat(attempts.get(id)).isZero();
+		});
+		assertThat(technicalFailures).isEmpty();
+		verify(transitions, never()).releaseFailed(any(UUID.class), any(UUID.class), any(String.class));
+		verify(recorder, times(1)).count(eq(RUN), any(Counters.class));
+		assertThat(output.getAll().lines().filter(line -> line.contains(" WARN ") || line.contains(" ERROR "))).isEmpty();
+		assertThat(output.getAll().lines().filter(line -> line.contains("ended with its stopped run")))
+			.hasSize(3)
+			.allSatisfy(line -> assertThat(line).contains("LlmClientException"));
+	}
+
+	@Test
 	void anOutageOfARunNoLongerRunningIsNotCounted() {
 		UUID first = post(ContractFixtures.BODY + UNAVAILABLE);
 		UUID cutOff = post(ContractFixtures.BODY + DEPLOYED);
@@ -668,6 +826,136 @@ class ConcurrentAssessmentDispatcherTest {
 		assertThat(stages.get(first)).isEqualTo(PostStage.STORED);
 		assertThat(stages.get(cutOff)).isEqualTo(PostStage.STORED);
 		assertThat(attempts).allSatisfy((id, count) -> assertThat(count).isZero());
+	}
+
+	@Test
+	void threeClientErrorsInARowStopTheStepEachCountingATechnicalFailure(CapturedOutput output) {
+		List<UUID> ids = List.of(post(ContractFixtures.BODY + CLIENT_ERROR), post(ContractFixtures.BODY + CLIENT_ERROR),
+				post(ContractFixtures.BODY + CLIENT_ERROR), post(ContractFixtures.BODY), post(ContractFixtures.BODY));
+
+		AssessedBatch batch = dispatchOnOneThread(ids);
+
+		assertThat(batch.stoppedBy()).isEqualTo("the LLM client failed 3 calls in a row with an error that is not the"
+				+ " provider's; the last: " + CLIENT_FAILURE);
+		assertThat(batch.status()).isEqualTo(RunStatus.FAILED);
+		// The posts after the third error are neither taken nor called; nothing is stored.
+		assertThat(calls).hasValue(3);
+		verify(transitions, never()).claim(ids.get(3), RUN);
+		verify(transitions, never()).claim(ids.get(4), RUN);
+		assertThat(recorded).isEmpty();
+		// Each of the three is an error of our code: back without an attempt, one more technical failure with its
+		// message, a processing error of the run.
+		assertThat(batch.processingErrors()).extracting(ProcessingError::postId, ProcessingError::message)
+			.containsExactly(tuple(ids.get(0), CLIENT_FAILURE), tuple(ids.get(1), CLIENT_FAILURE),
+					tuple(ids.get(2), CLIENT_FAILURE));
+		ids.subList(0, 3).forEach(id -> verify(transitions).releaseFailed(id, RUN, CLIENT_FAILURE));
+		assertThat(technicalFailures).containsOnly(entry(ids.get(0), 1), entry(ids.get(1), 1), entry(ids.get(2), 1));
+		assertThat(stages).allSatisfy((id, stage) -> assertThat(stage).isEqualTo(PostStage.STORED));
+		assertThat(attempts).allSatisfy((id, count) -> assertThat(count).isZero());
+		verify(recorder, times(3)).count(RUN, Counters.processingError());
+		verify(recorder, times(3)).count(eq(RUN), any(Counters.class));
+		assertThat(output.getAll().lines().filter(line -> line.contains(" WARN "))).singleElement()
+			.satisfies(line -> assertThat(line).contains("The LLM client failed 3 calls in a row in run " + RUN,
+					"no further post is taken", CLIENT_ERROR_MESSAGE));
+		assertThat(output.getAll().lines().filter(line -> line.contains(" ERROR "))).hasSize(3)
+			.allSatisfy(line -> assertThat(line).contains("put back without an attempt, technical failure 1"));
+	}
+
+	@Test
+	void aStoredResultEndsTheStreakOfClientErrors() {
+		List<UUID> ids = List.of(post(ContractFixtures.BODY + CLIENT_ERROR), post(ContractFixtures.BODY + CLIENT_ERROR),
+				post(ContractFixtures.BODY), post(ContractFixtures.BODY + CLIENT_ERROR),
+				post(ContractFixtures.BODY + CLIENT_ERROR));
+
+		AssessedBatch batch = dispatchOnOneThread(ids);
+
+		// The model answered the third post: two errors, then two, never three in a row; the fourth error does
+		// not stop the step.
+		assertThat(batch.stoppedBy()).isNull();
+		assertThat(calls).hasValue(5);
+		assertThat(batch.ok()).isOne();
+		assertThat(batch.processingErrors()).extracting(ProcessingError::postId)
+			.containsExactly(ids.get(0), ids.get(1), ids.get(3), ids.get(4));
+		assertThat(batch.status()).isEqualTo(RunStatus.PARTIAL);
+		assertThat(technicalFailures).containsOnlyKeys(ids.get(0), ids.get(1), ids.get(3), ids.get(4));
+	}
+
+	@Test
+	void anErrorOutsideTheClientNeitherAddsToNorEndsTheStreakOfClientErrors() {
+		UUID noMapper = post(NO_MAPPER);
+		UUID boom = post(BOOM);
+		UUID after = post(ContractFixtures.BODY);
+		List<UUID> ids = List.of(post(ContractFixtures.BODY + CLIENT_ERROR), post(ContractFixtures.BODY + CLIENT_ERROR),
+				noMapper, boom, post(ContractFixtures.BODY + CLIENT_ERROR), after);
+
+		AssessedBatch batch = dispatchOnOneThread(ids);
+
+		// A plain IllegalStateException — building the input before the call, or one the client did not classify
+		// as its own — is a technical error of its post, outside the streak: the step stops at the third
+		// client error, the fifth post.
+		assertThat(batch.stoppedBy()).contains("the LLM client failed 3 calls in a row");
+		assertThat(batch.status()).isEqualTo(RunStatus.FAILED);
+		assertThat(calls).hasValue(4);
+		verify(transitions, never()).claim(after, RUN);
+		assertThat(batch.processingErrors()).extracting(ProcessingError::postId, ProcessingError::message)
+			.containsExactly(tuple(ids.get(0), CLIENT_FAILURE), tuple(ids.get(1), CLIENT_FAILURE),
+					tuple(noMapper, "IllegalStateException: " + NO_MAPPER),
+					tuple(boom, "IllegalStateException: a bug in the client"), tuple(ids.get(4), CLIENT_FAILURE));
+		assertThat(technicalFailures).containsOnlyKeys(ids.get(0), ids.get(1), noMapper, boom, ids.get(4));
+	}
+
+	@Test
+	void anOutageNeitherAddsToNorEndsTheStreakOfClientErrors() {
+		UUID outage = post(ContractFixtures.BODY + UNAVAILABLE);
+		UUID after = post(ContractFixtures.BODY);
+		List<UUID> ids = List.of(post(ContractFixtures.BODY + CLIENT_ERROR), post(ContractFixtures.BODY + CLIENT_ERROR),
+				outage, post(ContractFixtures.BODY + CLIENT_ERROR), after);
+
+		AssessedBatch batch = dispatchOnOneThread(ids);
+
+		// The outage is the provider's, not the client's: the third client error stops the step.
+		assertThat(batch.stoppedBy()).contains("the LLM client failed 3 calls in a row");
+		assertThat(calls).hasValue(4);
+		verify(transitions, never()).claim(after, RUN);
+		// The step stopped, so the outage is not counted: its post is back without a technical failure.
+		assertThat(batch.processingErrors()).extracting(ProcessingError::postId)
+			.containsExactly(ids.get(0), ids.get(1), ids.get(3));
+		assertThat(stages.get(outage)).isEqualTo(PostStage.STORED);
+		verify(transitions, never()).countTechnicalFailure(any(UUID.class), any(UUID.class), any(String.class));
+		assertThat(technicalFailures).containsOnlyKeys(ids.get(0), ids.get(1), ids.get(3));
+	}
+
+	@Test
+	void aClientErrorOfACallTheWatchdogCancelledIsNotCounted(CapturedOutput output) throws Exception {
+		List<UUID> ids = List.of(post(ContractFixtures.BODY + HELD + CLIENT_ERROR),
+				post(ContractFixtures.BODY + HELD + CLIENT_ERROR), post(ContractFixtures.BODY + HELD + CLIENT_ERROR));
+		ConcurrentAssessmentDispatcher dispatcher = dispatcher();
+		ExecutorService caller = Executors.newSingleThreadExecutor();
+		try {
+			Future<AssessedBatch> step = caller.submit(() -> dispatcher.dispatch(RUN, ids));
+			assertThat(holding.tryAcquire(THREADS, 10, TimeUnit.SECONDS)).isTrue();
+
+			dispatcher.cancel(RUN);
+
+			assertThat(step.get(10, TimeUnit.SECONDS)).isEqualTo(new AssessedBatch(RUN, 0, 0, 0, List.of(), null));
+			executor.shutdown();
+			assertThat(executor.awaitTermination(10, TimeUnit.SECONDS)).isTrue();
+		}
+		finally {
+			caller.shutdownNow();
+		}
+
+		assertThat(interrupted).hasSize(3);
+		// Not the client's errors: no streak, no stop, no technical failure, the posts back without an attempt.
+		assertThat(stages).allSatisfy((id, stage) -> assertThat(stage).isEqualTo(PostStage.STORED));
+		assertThat(attempts).allSatisfy((id, count) -> assertThat(count).isZero());
+		assertThat(technicalFailures).isEmpty();
+		verify(transitions, never()).releaseFailed(any(UUID.class), any(UUID.class), any(String.class));
+		verify(recorder, never()).count(any(), any());
+		assertThat(output.getAll().lines().filter(line -> line.contains(" WARN ") || line.contains(" ERROR "))).isEmpty();
+		assertThat(output.getAll().lines().filter(line -> line.contains("ended with its stopped run")))
+			.hasSize(3)
+			.allSatisfy(line -> assertThat(line).contains("LlmClientException"));
 	}
 
 	private UUID post(String body) {
@@ -697,6 +985,17 @@ class ConcurrentAssessmentDispatcherTest {
 		Clock clock = Clock.fixed(Instant.parse("2026-10-08T10:00:00Z"), ZoneOffset.UTC);
 		LlmClient llm = request -> {
 			if (request.equals(LlmClient.CHECK_REQUEST)) {
+				if (checkHeld.get()) {
+					holding.release();
+					try {
+						release.await();
+					}
+					catch (InterruptedException ex) {
+						// As TransportRetry between attempts: the interrupt ends the check, the flag kept.
+						Thread.currentThread().interrupt();
+						throw unavailable();
+					}
+				}
 				RuntimeException failure = checkFailure.get();
 				if (failure != null) {
 					throw failure;
@@ -711,6 +1010,15 @@ class ConcurrentAssessmentDispatcherTest {
 					release.await();
 				}
 				Thread.sleep(50);
+				if (request.userMessage().contains(SHUT_DOWN_UNAVAILABLE)) {
+					// AssessmentPool.destroy()'s shutdownNow(): the interrupt ends the call, the flag kept.
+					Thread.currentThread().interrupt();
+					throw unavailable();
+				}
+				if (request.userMessage().contains(SHUT_DOWN_CLIENT_ERROR)) {
+					Thread.currentThread().interrupt();
+					throw clientError();
+				}
 				if (request.userMessage().contains(DEPLOYED)) {
 					// onClose of a stopping instance: the run interrupted and its posts put back, the call cut off.
 					running.set(false);
@@ -726,6 +1034,9 @@ class ConcurrentAssessmentDispatcherTest {
 				}
 				if (request.userMessage().contains(BOOM)) {
 					throw new IllegalStateException("a bug in the client");
+				}
+				if (request.userMessage().contains(CLIENT_ERROR)) {
+					throw clientError();
 				}
 				if (request.userMessage().contains(REVOKED)) {
 					throw revoked();
@@ -746,6 +1057,9 @@ class ConcurrentAssessmentDispatcherTest {
 				if (request.userMessage().contains(UNAVAILABLE)) {
 					// As TransportRetry, interrupted between two attempts.
 					throw unavailable();
+				}
+				if (request.userMessage().contains(CLIENT_ERROR)) {
+					throw clientError();
 				}
 				throw new IllegalStateException("the call was interrupted", ex);
 			}
@@ -771,6 +1085,10 @@ class ConcurrentAssessmentDispatcherTest {
 	private static LlmUnavailableException unavailable() {
 		return new LlmUnavailableException(CallFailure.PROVIDER_ERROR, "HTTP 503 after 3 attempts", 3,
 				ServiceTier.DEFAULT, false, null);
+	}
+
+	private static LlmClientException clientError() {
+		return new LlmClientException(CLIENT_ERROR_MESSAGE, new RuntimeException("unexpected state"));
 	}
 
 	private static LlmConfigurationException revoked() {
@@ -816,6 +1134,9 @@ class ConcurrentAssessmentDispatcherTest {
 				String body = new String(raw, StandardCharsets.UTF_8);
 				if (body.contains(UNMAPPABLE)) {
 					throw new IllegalArgumentException(body);
+				}
+				if (body.contains(NO_MAPPER)) {
+					throw new IllegalStateException(body);
 				}
 				return ContractFixtures.post(body);
 			}

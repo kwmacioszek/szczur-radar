@@ -3,7 +3,7 @@ project: "Szczur Radar"
 version: 3
 status: draft # draft | active | locked
 created: 2026-09-27
-updated: 2026-10-25
+updated: 2026-10-27
 prd_version: 2
 main_goal: quality
 top_blocker: decisions # 5 decyzji produktowych z audytu (context/archive/2026-10-17-post-mvp-pipeline-audit/research.md, Open Questions); najdroższa, kanał alarmowy poza aplikacją (F-04), rozstrzygnięta 2026-10-20: healthchecks.io → Telegram
@@ -72,6 +72,8 @@ milestone_status: open
 
 > v3.5 (2026-10-25): S-18 (`error-visibility`) zakończone: przebieg wymagający uwagi i awarie ścieżek sygnału (powiadomienie, odzyskiwanie, zamknięcie przebiegu, watchdog, sprzątanie sierot, liczniki A5) dają operatorowi wiadomość w Telegramie przez kanał F-04; klucze dostawców poza logowanymi przyczynami (B7); przyczyna 503 z `/api/ready` w logu (C10) (PR #107, squash `6dc24ee`, weryfikacja produkcji w issue #77). Niewiadoma S-18 rozstrzygnięta: bez error trackera i bez alarmu z każdej linii ERROR, tylko jawne zdarzenia `AlertEvent` przez kanał F-04, $0. Do `## Parked` dopisane dwie odłożone poprawki z przeglądu S-18 (F4, F5).
 
+> v3.6 (2026-10-27): S-17 (`pipeline-without-embabel`) zaimplementowane, przejrzane i zarchiwizowane na gałęzi (PR #110, otwarty): przebieg to sekwencja kroków w Javie na wątku kolejki, bez Embabel w całym API (Spring AI 2.0.1 wprost), przerwanie dociera do kroku (watchdog `cancel(true)`, `shutdownNow()`), krok `assess` zatrzymany przez dyspozytor kończy się `failed` (A6), checkpointy w `store`/`fetch` (A7), watchdog odporny na błąd alertu (F5 z S-18), bezpiecznik na trzy niesklasyfikowane błędy klienta LLM (F7 z S-09), testy silnika skupione i w losowej kolejności (MS-03). Weryfikacja w PR env `szczur-radar-pr-110` (`deploy-plan.md`, S-17): przebieg RANGE, przerwanie przez deploy, obudzenia 6,2–7,6 s wobec 6,9–7,9 s z Embabel. Merge i weryfikacja produkcji (pierwsze obudzenie, pierwsza noc crona) w issue #76; wpis w `## Done` od `/10x-archive`.
+
 ## Milestone
 
 **M-2: MVP Quality & Reliability Hardening** — Status: open
@@ -109,7 +111,7 @@ Na Wykopie (#gielda) i Reddicie codziennie pojawiają się setki postów o inwes
 | S-14 | safe-deploy-gate            | merge nie wdroży czerwonego commita, crony czekają na CI, po apply jest kontrola zdrowia, ręczne zmienne nie blokują wdrożeń | —        | MS-02, MS-03; audyt C4, C5, C6, C7                          | done |
 | S-15 | backup-check-completeness   | sprawdzenie kopii bazy obejmuje wszystkie tabele i odrzuca kopię pustej bazy                                           | —             | MS-01, MS-03, NFR (kopia sprawdzana odtworzeniem); audyt C9 | done |
 | S-16 | wykop-ingest-completeness   | stronicowanie Wykopu nie gubi elementów po cichu, a chwilowy błąd Wykopu nie zabija nocy                               | —             | MS-01, MS-03; audyt B5, B6                                  | done |
-| S-17 | pipeline-without-embabel    | przebieg działa bez Embabel, przerwanie dociera do oceny, a testy silnika są skupione i niezależne od kolejności       | S-09          | MS-01, MS-03; audyt E, A7, D                                | proposed |
+| S-17 | pipeline-without-embabel    | przebieg działa bez Embabel, przerwanie dociera do oceny, a testy silnika są skupione i niezależne od kolejności       | S-09          | MS-01, MS-03; audyt E, A7, D                                | done |
 | S-18 | error-visibility            | błędy wymagające reakcji (ERROR, `/api/ready`, awaria ścieżki alarmowej, nieudany zapis licznika przebiegu) docierają do operatora; klucze nie trafiają do logów | F-04     | MS-04; audyt C10, C11, B7, A5                               | done        |
 | S-19 | ops-docs-debt               | operator czyta prawdziwe runbooki i stan; zbędne zmienne IaC usunięte; otwarty dług operacyjny domknięty               | —             | MS-02, MS-04; audyt F, C12, C13                             | done |
 
@@ -281,7 +283,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Unknowns:**
   - Wyjąć Embabel tylko z przebiegu czy z całego API (autokonfiguracja dostawców, `AssessorAgent`, wymóg `LLM_*` w `migrate`) — i zmiana decyzji w `tech-stack-api.md`? — Owner: user. Block: no (rozstrzyga research zmiany; dawna pozycja Parked z plan-review S-06).
 - **Risk:** największa zmiana kamienia — przepisuje rdzeń, który działa na produkcji; po S-09, żeby nie przepisywać semantyki prób dwa razy; wymaga pełnej weryfikacji w PR env z przerwaniem przez deploy.
-- **Status:** proposed
+- **Status:** done
 
 ### S-18: Błędy wymagające reakcji docierają do operatora
 
@@ -325,7 +327,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 | S-14       | safe-deploy-gate            | S-14: bezpieczna bramka wdrożeń                                            | yes                   | Run `/10x-plan safe-deploy-gate`; warto wcześnie          |
 | S-15       | backup-check-completeness   | S-15: kopia bazy sprawdzana w całości                                      | yes                   | Run `/10x-plan backup-check-completeness`                |
 | S-16       | wykop-ingest-completeness   | S-16: Wykop nie gubi postów po cichu                                       | yes                   | Run `/10x-plan wykop-ingest-completeness`                |
-| S-17       | pipeline-without-embabel    | S-17: przebieg bez Embabel                                                 | no                    | Po S-09                                                  |
+| S-17       | pipeline-without-embabel    | S-17: przebieg bez Embabel                                                 | yes                   | Zarchiwizowane 2026-10-27 (PR #110; produkcja → issue #76)   |
 | S-18       | error-visibility            | S-18: błędy wymagające reakcji docierają do operatora                      | no                    | Zrobione 2026-10-25 (PR #107, `6dc24ee`)                                                  |
 | S-19       | ops-docs-debt               | S-19: dokumenty operatora mówią prawdę                                     | yes                   | Run `/10x-plan ops-docs-debt`                            |
 
@@ -400,3 +402,5 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **S-11: przebieg `running` po instancji, która zniknęła bez zamknięcia, oraz post przejęty w wyścigu z odzyskiwaniem wracają do obiegu bez restartu API, więc nocny cron nie dostaje godzinami `409 pipeline_busy`.** — Archived 2026-10-24 → `context/archive/2026-10-23-stuck-run-self-heals/`. Lesson: —.
 - **S-13: operator dostaje alarm przez kanał z F-04, gdy nocny przebieg albo backup nie wystartował lub nie zgłosił końca na czas, a dni bez pobranych danych są widoczne (lub uzupełniane).** — Archived 2026-10-24 → `context/archive/2026-10-24-missed-night-detection/`. Merged as squash `d0b099c` (PR #106; SHA w Progress archiwum to commity gałęzi), produkcja zweryfikowana 2026-10-25 (issue #72). Lesson: —.
 - **S-18: błędy wymagające reakcji — linie ERROR (odzyskiwanie, watchdog, zamykanie przebiegu, nieudane powiadomienie), nieudany zapis licznika przebiegu, nieudane `/api/ready` z przyczyną w logu — docierają do operatora przez kanał z F-04, a łańcuch przyczyn wyjątków dostawców nie wynosi kluczy do logów.** — Archived 2026-10-25 → `context/archive/2026-10-24-error-visibility/`. Merged as squash `6dc24ee` (PR #107; SHA w Progress archiwum to commity gałęzi), produkcja zweryfikowana 2026-10-25 (issue #77): start z linią `Operator alerts: sent to …`, przebieg admina za 2004-01-01 i poprzedzający go RETRY (`partial`, 1 martwy post) dały po wiadomości `RUN_NEEDS_ATTENTION` w Telegramie (`DELIVERED`). Lesson: —.
+- **S-17: przebieg pipeline'u działa jako zwykła sekwencja kroków bez Embabel, przerwanie i watchdog docierają do oceny bez „zombie” akcji, a testy silnika są skupione (zapisy stanu na bazie, logika bez Springa) i niezależne od kolejności.** — Archived 2026-10-27 → `context/archive/2026-10-25-pipeline-without-embabel/`. Lesson: —.
+

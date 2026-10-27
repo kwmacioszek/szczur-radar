@@ -40,7 +40,8 @@ import pl.szczurradar.api.user.UserRepository;
 /**
  * The queries of {@link PostRepository} and {@link AssessmentRepository} on Postgres: dedup keys,
  * leftovers (without posts on hold), newest-first pages and the latest attempt with its tie rule; and the
- * technical failures {@link PostTransitions} counts on a post. Each test rolls back.
+ * conditional writes of {@link PostTransitions}: taking a post, putting a run's posts or orphans back, the
+ * technical failures counted on a post. Each test rolls back.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, properties = MigrateCommand.ENABLE_FLYWAY)
 @Import(TestcontainersConfiguration.class)
@@ -202,6 +203,90 @@ class PostRepositoryIT {
 	}
 
 	@Test
+	void aClaimTakesOnlyAStoredOrFailedPostAndOnlyForARunningRun() {
+		UUID stored = post(ItemType.POST, "80151", "2026-10-01T08:00:00Z");
+		UUID failed = stage(post(ItemType.POST, "80152", "2026-10-01T08:00:00Z"), PostStage.FAILED, 2);
+		UUID assessed = stage(post(ItemType.POST, "80153", "2026-10-01T08:00:00Z"), PostStage.ASSESSED, 0);
+		UUID dead = stage(post(ItemType.POST, "80154", "2026-10-01T08:00:00Z"), PostStage.DEAD, 3);
+		UUID heldByAnother = post(ItemType.POST, "80155", "2026-10-01T08:00:00Z");
+		UUID otherRun = runs.save(PipelineRun.retry(adminId, null)).getId();
+		assessing(heldByAnother, otherRun);
+
+		// The run is still queued: it takes nothing.
+		assertThat(transitions.claim(stored, runId)).isEmpty();
+		assertThat(technical(stored)).containsEntry("stage", PostStage.STORED.value());
+
+		running(runId);
+
+		// The failed attempts so far come back with the post.
+		assertThat(transitions.claim(stored, runId)).contains(0);
+		assertThat(transitions.claim(failed, runId)).contains(2);
+		assertThat(transitions.claim(assessed, runId)).isEmpty();
+		assertThat(transitions.claim(dead, runId)).isEmpty();
+		assertThat(transitions.claim(heldByAnother, runId)).isEmpty();
+		// Taken once: a second claim finds it assessing.
+		assertThat(transitions.claim(stored, runId)).isEmpty();
+
+		assertThat(List.of(stored, failed)).allSatisfy(post -> assertThat(owner(post))
+			.containsEntry("stage", PostStage.ASSESSING.value())
+			.containsEntry("assessing_run_id", runId));
+		assertThat(owner(failed)).containsEntry("assessment_attempts", 2);
+		assertThat(owner(assessed)).containsEntry("stage", PostStage.ASSESSED.value())
+			.containsEntry("assessing_run_id", null);
+		assertThat(owner(dead)).containsEntry("stage", PostStage.DEAD.value()).containsEntry("assessing_run_id", null);
+		assertThat(owner(heldByAnother)).containsEntry("assessing_run_id", otherRun);
+	}
+
+	@Test
+	void releaseAllPutsBackOnlyThePostsOfThatRun() {
+		UUID otherRun = runs.save(PipelineRun.retry(adminId, null)).getId();
+		UUID neverFailed = assessing(post(ItemType.POST, "80161", "2026-10-01T08:00:00Z"), runId);
+		UUID failedOnce = assessing(stage(post(ItemType.POST, "80162", "2026-10-01T08:00:00Z"), PostStage.FAILED, 1),
+				runId);
+		UUID ofAnotherRun = assessing(post(ItemType.POST, "80163", "2026-10-01T08:00:00Z"), otherRun);
+
+		assertThat(transitions.releaseAll(runId)).isEqualTo(2);
+
+		// Back where they were before the attempt, without one.
+		assertThat(owner(neverFailed)).containsEntry("stage", PostStage.STORED.value())
+			.containsEntry("assessment_attempts", 0)
+			.containsEntry("assessing_run_id", null);
+		assertThat(owner(failedOnce)).containsEntry("stage", PostStage.FAILED.value())
+			.containsEntry("assessment_attempts", 1)
+			.containsEntry("assessing_run_id", null);
+		assertThat(owner(ofAnotherRun)).containsEntry("stage", PostStage.ASSESSING.value())
+			.containsEntry("assessing_run_id", otherRun);
+		// Nothing left: a second call puts nothing back.
+		assertThat(transitions.releaseAll(runId)).isZero();
+	}
+
+	@Test
+	void releaseOrphansPutsBackAPostClaimedJustAsItsRunWasInterruptedAndLeavesALiveRunsPosts() {
+		UUID claimed = stage(post(ItemType.POST, "80171", "2026-10-01T08:00:00Z"), PostStage.FAILED, 1);
+		running(runId);
+		assertThat(transitions.claim(claimed, runId)).contains(1);
+		// The stopping instance interrupted the run and put its posts back just before this claim
+		// committed, then stopped before the worker could put the post back itself.
+		jdbc.update("UPDATE pipeline_runs SET status = 'interrupted', finished_at = now() WHERE id = ?", runId);
+		// Posts of live runs: a running one and a queued one.
+		UUID liveRun = runs.save(PipelineRun.retry(adminId, null)).getId();
+		running(liveRun);
+		UUID queuedRun = runs.save(PipelineRun.retry(adminId, null)).getId();
+		UUID ofRunning = assessing(post(ItemType.POST, "80172", "2026-10-01T08:00:00Z"), liveRun);
+		UUID ofQueued = assessing(post(ItemType.POST, "80173", "2026-10-01T08:00:00Z"), queuedRun);
+
+		transitions.releaseOrphans();
+
+		assertThat(owner(claimed)).containsEntry("stage", PostStage.FAILED.value())
+			.containsEntry("assessment_attempts", 1)
+			.containsEntry("assessing_run_id", null);
+		assertThat(owner(ofRunning)).containsEntry("stage", PostStage.ASSESSING.value())
+			.containsEntry("assessing_run_id", liveRun);
+		assertThat(owner(ofQueued)).containsEntry("stage", PostStage.ASSESSING.value())
+			.containsEntry("assessing_run_id", queuedRun);
+	}
+
+	@Test
 	void aPageIsNewestFirstWithTiesByIdAndCountsTheTotal() {
 		UUID older = stage(post(ItemType.POST, "80201", "2026-10-01T08:00:00Z"), PostStage.ASSESSED, 0);
 		UUID tieA = stage(post(ItemType.POST, "80202", "2026-10-01T09:00:00Z"), PostStage.ASSESSED, 0);
@@ -311,6 +396,11 @@ class PostRepositoryIT {
 				+ " FROM posts WHERE id = ?", post);
 	}
 
+	/** A post's stage, attempts and owner, read from the table. */
+	private Map<String, Object> owner(UUID post) {
+		return jdbc.queryForMap("SELECT stage, assessment_attempts, assessing_run_id FROM posts WHERE id = ?", post);
+	}
+
 	/** Makes {@code run} the running run (at most one runs: any other is interrupted, rolled back with the test). */
 	private void running(UUID run) {
 		entityManager.flush();
@@ -319,9 +409,15 @@ class PostRepositoryIT {
 	}
 
 	private void assessing(UUID post) {
+		assessing(post, runId);
+	}
+
+	/** Puts a post in assessment by {@code run}, keeping its attempts, as {@link PostTransitions#claim} would. */
+	private UUID assessing(UUID post, UUID run) {
 		entityManager.flush();
-		jdbc.update("UPDATE posts SET stage = 'assessing', assessing_run_id = ? WHERE id = ?", runId, post);
+		jdbc.update("UPDATE posts SET stage = 'assessing', assessing_run_id = ? WHERE id = ?", run, post);
 		entityManager.clear();
+		return post;
 	}
 
 	private Assessment assess(UUID post, AssessmentResult result) {

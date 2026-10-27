@@ -9,9 +9,10 @@ import pl.szczurradar.api.llm.transport.ProviderMessages;
 import pl.szczurradar.api.llm.transport.TransportRetry;
 
 /**
- * Builds the {@link LlmClient} of the configured provider from {@code LLM_*}, outside Embabel's model
- * beans. Each provider's package builds its own SDK client with every retry below
- * {@link TransportRetry} switched off and the {@code LLM_TIMEOUT} limit on every HTTP attempt.
+ * Builds the {@link LlmClient} of the configured provider from {@code LLM_*}, with no agent framework or
+ * auto-configured model beans. Each provider's package builds its own SDK client and Spring AI
+ * {@code ChatModel} with every retry below {@link TransportRetry} switched off and the
+ * {@code LLM_TIMEOUT} limit on every HTTP attempt.
  */
 public final class LlmClientFactory {
 

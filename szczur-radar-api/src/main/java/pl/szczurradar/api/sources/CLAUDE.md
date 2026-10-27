@@ -96,7 +96,7 @@ Reference implementation: `sources/wykop/`.
   test, with a comment saying what changed. Auth answers and error bodies may be short synthetic JSON
   in the API's shape (a real one holds a live token).
 - Time zones: test a winter and a summer timestamp.
-- The whole run over a source: `pipeline/PipelineAgentIT` (Wykop on `LocalWykopServer`).
+- The whole run over a source: `pipeline/PipelineRunIT` (Wykop on `LocalWykopServer`).
 
 ## Live use
 

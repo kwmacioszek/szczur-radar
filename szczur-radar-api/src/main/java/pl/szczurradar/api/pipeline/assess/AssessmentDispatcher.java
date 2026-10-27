@@ -14,14 +14,18 @@ public interface AssessmentDispatcher {
 
 	/**
 	 * Assesses {@code postIds} for {@code runId}: each post is taken for the run, assessed and its
-	 * result stored in its own transaction, or put back unchanged on a technical error.
+	 * result stored in its own transaction, or put back unchanged on a technical error. When the calling
+	 * thread is interrupted while it waits (the watchdog or a stopping instance stopped the run), its work
+	 * stops as by {@link #cancel} and it throws.
 	 */
 	AssessedBatch dispatch(UUID runId, List<UUID> postIds);
 
 	/**
 	 * Stops the work {@link #dispatch} still does for {@code runId} (the watchdog stopped the run, its
 	 * posts are already back): no further post is taken, a call in flight is interrupted, and nothing more
-	 * is counted. No effect when the run's posts are not being dispatched.
+	 * is counted. The second way next to interrupting the thread of {@link #dispatch}: it also reaches a
+	 * dispatch whose thread an interrupt does not reach (e.g. the LLM check in flight). No effect when the
+	 * run's posts are not being dispatched.
 	 */
 	void cancel(UUID runId);
 

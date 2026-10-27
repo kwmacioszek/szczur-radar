@@ -31,7 +31,7 @@ jobs:
           java-version: "25"
           cache: maven
           cache-dependency-path: szczur-radar-api/pom.xml
-      # Every Spring context (server, commands, *IT) starts Embabel with the one
+      # Every Spring context (server, commands, *IT) reads and checks the one
       # LLM provider chosen by these three settings (szczur-radar-api/README.md).
       # Provider and model are repository variables, the key a secret; nothing
       # calls the LLM in CI. Missing settings fail the job, never skip tests.

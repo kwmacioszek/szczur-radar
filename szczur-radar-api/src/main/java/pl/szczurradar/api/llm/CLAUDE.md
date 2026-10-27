@@ -5,7 +5,7 @@
 ```
 llm/            the API — the only part the rest of the application imports
   LlmClient (complete, check), LlmRequest, LlmResponse, LlmCallException, LlmConfigurationException,
-  LlmUnavailableException, CallFailure, Channel, OutputMode, LlmConfiguration (the lazy bean),
+  LlmUnavailableException, LlmClientException, CallFailure, Channel, OutputMode, LlmConfiguration (the lazy bean),
   LlmClientFactory (a switch over the provider), LlmProviderProperties (the LLM_* contract, read and
   validated by from()), Provider, ServiceTier, ReasoningEffort
   api/          LlmCheckController — GET /api/admin/llm/check (admin)
@@ -30,15 +30,20 @@ between attempts — the request may be fine) or a plain `LlmCallException` (thi
 model refusal, a blocked answer, no text, another 4xx). Any other `RuntimeException` is our bug or an
 unknown SDK error and is not classified: `TransportException.ofTimeoutOrConnection` turns only a
 time-out or an I/O error in the cause chain into a transport failure; anything else leaves the client
-as `TransportException.unclassified` — an `IllegalStateException` outside `LlmCallException`, with the
-message cleaned by `ProviderMessages` and a cleaned copy of the original's chain as its cause (below),
-never retried and never recorded as a provider error. White space (e.g. a blank answer) is judged with the shared `text/Whitespace`,
+as `TransportException.unclassified` — an `LlmClientException` (an `IllegalStateException`) outside
+`LlmCallException`, with the message cleaned by `ProviderMessages` and a cleaned copy of the original's
+chain as its cause (below), never retried and never recorded as a provider error. Its own type lets the
+pipeline tell the client's error from one of its own code (a mapper, a write) and stop a run after three
+in a row (`pipeline/CLAUDE.md`, the client's breaker); a client never throws it for a provider's refusal
+or outage. White space (e.g. a blank answer) is judged with the shared `text/Whitespace`,
 never `isBlank`. An answer without text is `REJECTED` (`provider_error`, no retry) for every provider,
 whatever the finish reason (`ChatResponses.requireText`).
 
 - One provider per run from `LLM_*` (`LlmProviderProperties`); the provider's `create()`
-  builds a Spring AI `ChatModel` outside Embabel's model beans. Embabel's `createObject` is never used for
-  assessments (lenient parsing, semantic retries, schema pasted into the prompt).
+  builds its Spring AI `ChatModel` directly from those settings, with no agent framework and no Spring
+  AI auto-configuration (the pom has only the provider modules, no starters). The model's raw text goes
+  straight to the caller's parser: no framework converter (lenient parsing, semantic retries, schema
+  pasted into the prompt) runs in between.
 - **Retries live only in `TransportRetry`**: up to 3 attempts per tier on 429, 5xx, time-out and
   connection errors; `Retry-After` (≤ 60 s) or `min(2^(n-1), 30)` s; flex → default after any used-up
   flex tier (any mix of those errors), for up to 3 more attempts; used-up retries end as
@@ -101,15 +106,23 @@ whatever the finish reason (`ChatResponses.requireText`).
   never answered `null` (D12). See
   `context/archive/2026-09-27-assessment-contract-harness/implementation-notes.md` (N1, N2, N5).
 
+## Bumping Spring AI or Spring Boot
+
+- `openai-java.version` in `pom.xml` must equal the `openai-java-core` the new `spring-ai-openai` brings
+  (`./mvnw dependency:tree -Dincludes=com.openai`): the OkHttp client module is declared by hand, and a
+  mismatch would split the two halves of the SDK silently.
+- The pins in `dependencyManagement` (`antlr4-runtime` for Hibernate's HQL parser, `guava` for
+  google-genai) are re-checked against `hibernate-core`'s and `google-genai`'s poms; no BOM manages them.
+
 ## Adding a provider
 
-1. A `Provider` constant in `llm/Provider` (+ `application-<provider>.properties`
-   for Embabel's registry), and its value (and any new `Channel`) in the `CHECK` sets of
+1. A `Provider` constant in `llm/Provider`, and its value (and any new `Channel`) in the `CHECK` sets of
    `assessments.provider` / `assessments.channel` through a new Flyway migration. Constants whose
    values are stored (`Provider`, `Channel`, `ServiceTier`, `ReasoningEffort`, `OutputMode`) are
    append-only: never rename or remove one — old `assessments` rows would no longer load
    (`persistence/EnumValueConverter` rejects unknown values).
-2. A package `llm/<provider>/` with `<Provider>Client implements LlmClient` and its static `create()`
+2. Its Spring AI provider module in `pom.xml` (the module, never a starter), and a package
+   `llm/<provider>/` with `<Provider>Client implements LlmClient` and its static `create()`
    building the `ChatModel` with every SDK/framework retry off and the timeout set; translate HTTP
    errors into `TransportException` (status + `Retry-After`); one `case` in `LlmClientFactory`.
 3. Its schema subset in `transport/ProviderSchemas`.
@@ -118,7 +131,7 @@ whatever the finish reason (`ChatResponses.requireText`).
    `ScriptedProviderServer`: what is sent,
    text and usage read, and request counts for 429 → success, 5xx × 4, 400 and time-out (the count
    proves no hidden retries); an SDK exception without I/O in its cause chain leaves `complete` as an
-   `IllegalStateException` (not an `LlmCallException`) after one call, with a `CleanedProviderException`
+   `LlmClientException` (an `IllegalStateException`, not an `LlmCallException`) after one call, with a `CleanedProviderException`
    as its cause (the original's class name in its message, the original's stack trace) and the key
    `<hidden>` in its message, while one with an `IOException` in the chain is a connection
    error and retried; for answers that quote the key (401, 5xx, an error without a status, a time-out)

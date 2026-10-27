@@ -33,7 +33,8 @@ import pl.szczurradar.api.pipeline.state.Durations;
  *       API from sleeping and bring the plan's hard spending limit closer.
  *   <li>A failed check is logged, whatever was thrown, and raised to the operator
  *       ({@link AlertEvent#WATCHDOG_FAILED}, with the run, so at most once in the queue's repeat window
- *       for that run); the next one runs as planned.
+ *       for that run); the next one runs as planned. A failure of that raise is logged too and stops
+ *       nothing: the other runs are still checked.
  *   <li>Only in the server, like {@link PipelineStartupRecovery}: the operator commands start the same
  *       context, and only the server reads {@code PIPELINE_STALL_TIMEOUT} (the server's one
  *       {@link PipelineStallSettings}, {@link PipelineStallConfiguration}, validated when it starts).
@@ -86,8 +87,8 @@ public class RunWatchdog implements InitializingBean, DisposableBean {
 
 	/**
 	 * One check of this instance's runs; package-private for tests. Any failure, an {@link Error} too,
-	 * is logged here: one escaping to {@code scheduleWithFixedDelay} would cancel every later check
-	 * without a word.
+	 * is logged here, and so is a failure to raise it: one escaping to {@code scheduleWithFixedDelay}
+	 * would cancel every later check without a word.
 	 */
 	void check() {
 		for (UUID runId : service.ownRuns()) {
@@ -97,11 +98,16 @@ public class RunWatchdog implements InitializingBean, DisposableBean {
 			catch (Throwable ex) {
 				log.error("The pipeline watchdog could not check run {}; it checks again in {}", runId,
 						Durations.format(checkInterval(settings.timeout())), ex);
-				alerts.raise(AlertEvent.WATCHDOG_FAILED, runId, "The pipeline watchdog could not check run " + runId
-						+ " (" + ex.getClass().getName() + "); it checks again in "
-						+ Durations.format(checkInterval(settings.timeout()))
-						+ ", a stalled run may block the queue meanwhile; /admin/runs/" + runId
-						+ "; details in the API log");
+				try {
+					alerts.raise(AlertEvent.WATCHDOG_FAILED, runId, "The pipeline watchdog could not check run " + runId
+							+ " (" + ex.getClass().getName() + "); it checks again in "
+							+ Durations.format(checkInterval(settings.timeout()))
+							+ ", a stalled run may block the queue meanwhile; /admin/runs/" + runId
+							+ "; details in the API log");
+				}
+				catch (Throwable raiseFailure) {
+					log.error("The pipeline watchdog could not raise WATCHDOG_FAILED for run {}", runId, raiseFailure);
+				}
 			}
 		}
 	}

@@ -14,6 +14,8 @@ import org.springframework.stereotype.Service;
 import pl.szczurradar.api.pipeline.SourceNotConfiguredException;
 import pl.szczurradar.api.pipeline.flow.RunFlow.FetchedBatch;
 import pl.szczurradar.api.pipeline.flow.RunFlow.RangeTarget;
+import pl.szczurradar.api.pipeline.run.RunStep;
+import pl.szczurradar.api.pipeline.state.RunInterruptedException;
 import pl.szczurradar.api.sources.Source;
 import pl.szczurradar.api.sources.SourceFetcher;
 import pl.szczurradar.api.sources.SourcePost;
@@ -69,11 +71,13 @@ public class SourceIngest {
 	/**
 	 * Every named source's posts in the range, one source after another; a failing source fails the
 	 * step. A source with skipped elements gets a WARN line with its counts (only this loop knows them
-	 * per source).
+	 * per source). Before each source the run's thread is checked for an interrupt: a stopped run fetches
+	 * no further source.
 	 *
 	 * @throws NoPostsFetchedException after every source was fetched, when one of them gave no post to
 	 *     store (no element in the range, or only elements that could not become a post): an empty
 	 *     source fails the step, and so the run, with the counters of every source
+	 * @throws RunInterruptedException when the run's thread was interrupted before a source
 	 */
 	public FetchedBatch fetch(RangeTarget target) {
 		List<SourcePost> posts = new ArrayList<>();
@@ -81,6 +85,7 @@ public class SourceIngest {
 		int fetched = 0;
 		int skipped = 0;
 		for (Source source : target.sources()) {
+			RunInterruptedException.checkpoint(target.runId(), RunStep.FETCH);
 			if (!configured(source)) {
 				throw new SourceNotConfiguredException(List.of(source));
 			}

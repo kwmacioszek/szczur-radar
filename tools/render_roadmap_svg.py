@@ -269,7 +269,7 @@ text(M, 202, "Źródło: context/foundation/roadmap.md  ·  v3  ·  stan 25.10.2
 
 # M-2 slice states; every counter below is derived from them (M-1 closed with all 10 done)
 m2_order = [("F-04", "done"), ("S-08", "done"), ("S-09", "done"), ("S-10", "done"), ("S-11", "done"), ("S-12", "parked"),
-            ("S-13", "done"), ("S-14", "done"), ("S-15", "done"), ("S-16", "done"), ("S-17", "proposed"), ("S-18", "done"), ("S-19", "done")]
+            ("S-13", "done"), ("S-14", "done"), ("S-15", "done"), ("S-16", "done"), ("S-17", "done"), ("S-18", "done"), ("S-19", "done")]
 M1_DONE = M1_TOTAL = 10
 M2_TOTAL = len(m2_order)
 M2_COUNT = {st: sum(1 for _, s in m2_order if s == st) for st in ("done", "progress", "ready", "proposed", "parked", "blocked")}

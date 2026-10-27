@@ -49,4 +49,22 @@ class RunOutcomeTest {
 		assertThat(stopped.errorSummary()).hasValueSatisfying(error -> assertThat(error).contains("HTTP 401"));
 	}
 
+	@Test
+	void aStepStoppedByClientErrorsFailsTheRunAndNamesBothTheStopAndThePosts() {
+		String clientError = "LlmClientException: java.lang.RuntimeException: unexpected state";
+		UUID first = UUID.randomUUID();
+		UUID second = UUID.randomUUID();
+		UUID third = UUID.randomUUID();
+		AssessedBatch stopped = new AssessedBatch(UUID.randomUUID(), 2, 0, 0,
+				List.of(new ProcessingError(first, clientError), new ProcessingError(second, clientError),
+						new ProcessingError(third, clientError)),
+				"the LLM client failed 3 calls in a row with an error that is not the provider's; the last: " + clientError);
+
+		assertThat(stopped.status()).isEqualTo(RunStatus.FAILED);
+		assertThat(stopped.errorSummary()).hasValueSatisfying(error -> assertThat(error)
+			.startsWith("stopped, the remaining posts were put back: the LLM client failed 3 calls in a row")
+			.contains(" | 3 post(s) with a technical error, no assessment stored: " + first + " (" + clientError + ")",
+					second.toString(), third.toString()));
+	}
+
 }

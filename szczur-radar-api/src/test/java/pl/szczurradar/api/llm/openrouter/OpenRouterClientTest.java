@@ -10,6 +10,7 @@ import java.io.InputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.net.SocketTimeoutException;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -39,6 +40,7 @@ import pl.szczurradar.api.llm.CallFailure;
 import pl.szczurradar.api.llm.Channel;
 import pl.szczurradar.api.llm.LlmCallException;
 import pl.szczurradar.api.llm.LlmClient;
+import pl.szczurradar.api.llm.LlmClientException;
 import pl.szczurradar.api.llm.LlmClientFactory;
 import pl.szczurradar.api.llm.LlmConfigurationException;
 import pl.szczurradar.api.llm.LlmProviderProperties;
@@ -110,6 +112,25 @@ class OpenRouterClientTest {
 				assertThat(new ArrayList<>(body.at("/response_format/json_schema/schema/properties/claims/items/properties")
 					.propertyNames())).containsExactly("id", "kind", "attribution", "target_ids", "evidence", "statement");
 			});
+		}
+	}
+
+	/**
+	 * The SDK appends {@code chat/completions} to the base URL, so the real base must end with a single
+	 * {@code /v1}: on a local server with {@link OpenRouterClient#BASE_URL}'s path the request lands on
+	 * {@code /api/v1/chat/completions}, i.e. https://openrouter.ai/api/v1/chat/completions.
+	 */
+	@Test
+	void completionsGoToApiV1ChatCompletionsWithoutASecondV1() {
+		URI real = URI.create(OpenRouterClient.BASE_URL);
+		try (ScriptedProviderServer server = new ScriptedProviderServer(Reply.ok(SUCCESS))) {
+			LlmClientFactory.create(new LlmProviderProperties(Provider.OPENROUTER, "openai/gpt-6-luna", "synthetic-key",
+					ServiceTier.DEFAULT, null, Duration.ofSeconds(5)), server.baseUrl() + real.getPath(), sleeps::add)
+				.complete(REQUEST);
+
+			assertThat(real.getHost()).isEqualTo("openrouter.ai");
+			assertThat(server.requests()).extracting(ScriptedProviderServer.Request::path)
+				.containsExactly("/api/v1/chat/completions");
 		}
 	}
 
@@ -507,8 +528,10 @@ class OpenRouterClientTest {
 			throw sdkError;
 		});
 
-		assertThatExceptionOfType(IllegalStateException.class).isThrownBy(() -> client.complete(REQUEST))
+		// Its own type (still an IllegalStateException), so the pipeline counts it toward a streak.
+		assertThatExceptionOfType(LlmClientException.class).isThrownBy(() -> client.complete(REQUEST))
 			.satisfies(ex -> {
+				assertThat(ex).isInstanceOf(IllegalStateException.class);
 				assertThat(ex.getCause()).isInstanceOf(CleanedProviderException.class)
 					.hasMessageStartingWith(RuntimeException.class.getName() + ": unexpected state");
 				assertThat(ex.getCause().getStackTrace()).isEqualTo(sdkError.getStackTrace());

@@ -4,6 +4,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.function.ToIntFunction;
 
@@ -85,16 +86,20 @@ public class RunRecorder {
 
 	/**
 	 * {@code queued} or {@code running} → {@code failed} with {@code error}: a run that cannot go on,
-	 * e.g. after an exception, or one that ended without a summary. No change for a run already
-	 * finished or interrupted.
+	 * e.g. after an exception, or one that ended without a summary, with its open steps closed
+	 * {@code failed} with the same error, in one transaction (a step's own exception closed its step
+	 * already; an {@link Error} escaping a step, which {@link #step} does not catch, did not). No change
+	 * for a run already finished or interrupted.
 	 */
 	public void fail(UUID runId, String error) {
-		statuses(jdbc.sql("UPDATE pipeline_runs SET status = :failed, finished_at = now(), error = :error"
-				+ " WHERE id = :id AND status IN (:queued, :running)"))
+		inTransaction(() -> closeSteps(statuses(jdbc
+			.sql("UPDATE pipeline_runs SET status = :failed, finished_at = now(), error = :error"
+					+ " WHERE id = :id AND status IN (:queued, :running) RETURNING id"))
 			.param("failed", RunStatus.FAILED.value())
 			.param("error", truncate(error))
 			.param("id", runId)
-			.update();
+			.query(UUID.class)
+			.list(), StepStatus.FAILED, error));
 	}
 
 	/** Adds to the run's counters while it is running, and moves its last activity. */
@@ -155,6 +160,24 @@ public class RunRecorder {
 	 *     running: no step is added to a run that is over
 	 */
 	public <T> T step(UUID runId, RunStep step, @Nullable Integer itemsIn, Supplier<T> work, ToIntFunction<T> itemsOut) {
+		return step(runId, step, itemsIn, work,
+				(T result) -> new StepOutcome(StepStatus.SUCCEEDED, itemsOut.applyAsInt(result), null));
+	}
+
+	/**
+	 * Runs {@code work} as a recorded step that decides its own end: {@code running} before, then the
+	 * status, output count and error {@code outcome} gives for its result — e.g. the assess step, whose
+	 * dispatcher stopped (the provider's configuration refused, an outage streak) returns a result, not an
+	 * exception, and is still {@code failed} with that reason. When {@code work} throws, the step is
+	 * {@code failed} with the error and the exception is rethrown; when even closing the step fails (e.g.
+	 * the thread was interrupted, the database is gone), that failure is suppressed in the step's
+	 * exception, which stays the cause. The step's start and end move the run's last activity.
+	 *
+	 * @throws RunNoLongerRunningException without running {@code work} when the run is no longer
+	 *     running: no step is added to a run that is over
+	 */
+	public <T> T step(UUID runId, RunStep step, @Nullable Integer itemsIn, Supplier<T> work,
+			Function<T, StepOutcome> outcome) {
 		UUID stepId = openStep(runId, step, itemsIn).orElseThrow(() -> new RunNoLongerRunningException(runId, step));
 		log.info("Run {} step {} started{}", runId, step.value(), itemsIn == null ? "" : " (in " + itemsIn + ")");
 		long started = System.nanoTime();
@@ -163,10 +186,17 @@ public class RunRecorder {
 			result = work.get();
 		}
 		catch (RuntimeException ex) {
-			endStep(runId, stepId, step, StepStatus.FAILED, null, String.valueOf(ex.getMessage()), started);
+			try {
+				endStep(runId, stepId, step, StepStatus.FAILED, null, String.valueOf(ex.getMessage()), started);
+			}
+			catch (RuntimeException endFailure) {
+				// The step's own exception is why the run ends; a failed close must not replace it.
+				ex.addSuppressed(endFailure);
+			}
 			throw ex;
 		}
-		endStep(runId, stepId, step, StepStatus.SUCCEEDED, itemsOut.applyAsInt(result), null, started);
+		StepOutcome end = outcome.apply(result);
+		endStep(runId, stepId, step, end.status(), end.itemsOut(), end.error(), started);
 		return result;
 	}
 
@@ -345,6 +375,16 @@ public class RunRecorder {
 	/** Binds the open step status the statements above name. */
 	private static StatementSpec steps(StatementSpec statement) {
 		return statement.param("stepRunning", StepStatus.RUNNING.value());
+	}
+
+	/**
+	 * How a step ended, for {@link #step(UUID, RunStep, Integer, Supplier, Function)}.
+	 *
+	 * @param status {@code succeeded} or {@code failed}
+	 * @param itemsOut the step's output count, or {@code null}
+	 * @param error why the step failed (cut like every error), or {@code null}
+	 */
+	public record StepOutcome(StepStatus status, @Nullable Integer itemsOut, @Nullable String error) {
 	}
 
 	/**

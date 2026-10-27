@@ -128,7 +128,7 @@ export default defineRailway(() => {
       PGUSER: db.env.PGUSER,
       PGPASSWORD: db.env.PGPASSWORD,
       PGDATABASE: db.env.PGDATABASE,
-      // LLM provider for Embabel (szczur-radar-api/README.md): set by the operator
+      // LLM provider of the assessment client (szczur-radar-api/README.md): set by the operator
       // in every environment BEFORE the API deploys — preserve() only keeps an
       // existing value, it never creates one. The key is a secret of that
       // environment (production's is never copied to PR envs). Never values here.
