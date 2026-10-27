@@ -208,13 +208,14 @@ groups = [
     ("Analiza i widok", [
         ("FR-024/025", "Wykres giełdowy i alerty o trendzie"), ("FR-032", "„Ask szczur” — pytanie do LLM"), ("FR-008/011b", "Sortowanie po polach oceny"),
         ("FR-031", "Eksport listy do CSV/JSON"), ("roadmap", "Komunikat błędu daty aktualizacji"), ("roadmap", "Przybliżony koniec przebiegu"),
-        ("M-4", "Nowe UI/UX (propozycje układu)")]),
+        ("M-5", "Nowe UI/UX + E2E (Playwright)")]),
     ("Konta i dostęp", [
         ("FR-016/017/019", "Panel kont + e-mail z zaproszeniem"), ("FR-020", "Własna nazwa wyświetlana"), ("FR-029", "Wygasanie krótkich sesji"),
         ("S-07 F1", "Unieważnianie sesji wersją poświadczeń"), ("Non-Goal", "2FA, logowanie zewn., reset, role")]),
     ("Operacje i skala", [
         ("Non-Goal", "HA / multi-region, backup w kodzie"), ("S-04 F6", "Wydajność filtra przy ~20k postów"), ("#30", "Drugi runner CI w Proxmoxie"),
-        ("audyt", "Porządki granic pakietów"), ("audyt", "Drobne ryzyka (A8, B8, B10, B11, C8, C14)")]),
+        ("audyt", "Porządki granic pakietów"), ("audyt", "Drobne ryzyka (A8, B8, B10, B11, C8, C14)"),
+        ("M-4", "Weryfikacja i regresja (plan testów)")]),
 ]
 
 DEFERRED = sum(len(items) for _, items in groups)
@@ -590,7 +591,7 @@ for ids in (("S-21", "S-25"), ("S-22", "S-23", "S-24")):
 # ================= Po M-3 container (backlog) =================
 container(P4X, P4W, "PO M-3", "Odroczone",
           ("Parked", C["gray"], C["graySoft"], 10.5, False, 600, "dot"),
-          f"{DEFERRED} {plural(DEFERRED, 'pozycje', 'pozycji')} z sekcji Parked roadmapy (zaparkowany S-12 jest na karcie w M-2), w tym kandydat na M-4: nowe UI/UX. Bez ustalonej kolejności; każda wymaga osobnego planu, zanim wejdzie do roadmapy.",
+          f"{DEFERRED} {plural(DEFERRED, 'pozycje', 'pozycji')} z sekcji Parked roadmapy (zaparkowany S-12 jest na karcie w M-2), w tym kandydaci na M-4 (weryfikacja i regresja) i M-5 (nowe UI/UX z E2E). Bez ustalonej kolejności; każda wymaga osobnego planu, zanim wejdzie do roadmapy.",
           None, C["border"])
 for gi, (gname, items) in enumerate(groups):
     col, row = gi % 2, gi // 2

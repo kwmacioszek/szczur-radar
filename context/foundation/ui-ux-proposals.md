@@ -1,12 +1,12 @@
-# M-4 (kandydat): nowe UI/UX — propozycje układu
+# M-5 (kandydat): nowe UI/UX — propozycje układu
 
-Zapis decyzji użytkownika z 2026-10-27: **kolejny kamień milowy po M-3 to nowe UI i UX** aplikacji webowej. Poniżej cztery propozycje **układu** przekazane przez użytkownika jako makiety (dane demonstracyjne). To nie jest projekt wizualny ani zakres — kolory, typografię i szczegóły wyglądu ustali M-4 (`/10x-ui`, `/10x-roadmap`). Termin: bez presji (grudzień 2026, ewentualnie styczeń 2027).
+Zapis decyzji użytkownika z 2026-10-27: **nowe UI i UX** aplikacji webowej to kamień milowy **M-5**, po M-3 (drugie źródło) i M-4 (weryfikacja i regresja, `context/foundation/verification-scope.md`). Pierwotnie było to M-4; przesunięte tego samego dnia, żeby przebudowa UI miała gotową siatkę regresji. Poniżej cztery propozycje **układu** przekazane przez użytkownika jako makiety (dane demonstracyjne). To nie jest projekt wizualny ani zakres — kolory, typografię i szczegóły wyglądu ustali M-5 (`/10x-ui`, `/10x-roadmap`). Termin: bez presji.
 
-Makiety (PNG 1500×950) leżą w `docs/visuals/m4-ui-ux/`; każda sekcja niżej linkuje swoją.
+Makiety (PNG 1500×950) leżą w `docs/visuals/ui-ux-proposals/`; każda sekcja niżej linkuje swoją.
 
 ## 1. „Czytnik” (Research Edition) — czytanie jednego wpisu z adnotacjami
 
-![Czytnik](../../docs/visuals/m4-ui-ux/szczur-radar-koncepcja-4-reader.png)
+![Czytnik](../../docs/visuals/ui-ux-proposals/szczur-radar-koncepcja-4-reader.png)
 
 - Jasne, „papierowe” tło, szeryfowe nagłówki, nawigacja u góry: Czytnik · Wątki · Podmioty · Zapisane; hasło strony „Od wypowiedzi do argumentu.”
 - Trzy kolumny:
@@ -16,7 +16,7 @@ Makiety (PNG 1500×950) leżą w `docs/visuals/m4-ui-ux/`; każda sekcja niżej 
 
 ## 2. „Karta podmiotu” (Eksplorator) — widok wokół spółki, nie chronologii
 
-![Karta podmiotu](../../docs/visuals/m4-ui-ux/szczur-radar-koncepcja-3-lens.png)
+![Karta podmiotu](../../docs/visuals/ui-ux-proposals/szczur-radar-koncepcja-3-lens.png)
 
 - Lewy panel **katalog analiz**: pole „Filtruj spółki…” i lista celów (ORLEN, XTB, KĘTY, S&P500, RAM); okruszki „Universe / Polskie spółki / wybrany target”.
 - Nagłówek **karty podmiotu** (ORLEN) z przyciskiem „Przejdź do źródła”.
@@ -26,7 +26,7 @@ Makiety (PNG 1500×950) leżą w `docs/visuals/m4-ui-ux/`; każda sekcja niżej 
 
 ## 3. „Strumień dyskusji” + „Inspektor wpisu” — ciemny układ roboczy w trzech panelach
 
-![Strumień i inspektor wpisu](../../docs/visuals/m4-ui-ux/szczur-radar-koncepcja-1-workstation.png)
+![Strumień i inspektor wpisu](../../docs/visuals/ui-ux-proposals/szczur-radar-koncepcja-1-workstation.png)
 
 - Lewa nawigacja: Strumień (licznik), Spółki, Analizy, Zapisane; sekcja System: Pipeline, Ustawienia; stan „Pipeline gotowy” na dole.
 - Środek — **strumień**: wyszukiwanie po treści lub spółce, przełącznik stanowiska (Wszystkie / Wzrostowe / Spadkowe), licznik wpisów i źródła (`Wykop / Reddit`), sortowanie „Najnowsze”; wiersz wpisu: źródło · czas, tytuł, etykiety celów i stanowiska.
@@ -34,17 +34,18 @@ Makiety (PNG 1500×950) leżą w `docs/visuals/m4-ui-ux/`; każda sekcja niżej 
 
 ## 4. „Przegląd” — „Co mówi dziś rynek?”
 
-![Przegląd](../../docs/visuals/m4-ui-ux/szczur-radar-koncepcja-2-brief.png)
+![Przegląd](../../docs/visuals/ui-ux-proposals/szczur-radar-koncepcja-2-brief.png)
 
 - Nawigacja: Przegląd · Spółki · Wpisy · Archiwum; wybór dnia.
 - Kafelki: aktywny wątek (ORLEN), liczba wpisów, liczba stanowisk, źródła (Wykop + Reddit).
 - „**Spółki i tematy**” — lista celów z paskiem proporcji stanowisk i odsetkiem.
 - „**Warto przeczytać**” — wątek dnia (tytuł, teza, „Pokaż analizę wpisu”) i lista kolejnych wpisów z etykietą celu.
 
-## Co z tego wynika dla planowania M-4 (do rozstrzygnięcia, nie decyzje)
+## Co z tego wynika dla planowania M-5 (do rozstrzygnięcia, nie decyzje)
 
 - Wszystkie cztery układy niosą to samo jądro, które produkt już ma: **stanowisko per cel z dosłownym cytatem** (kontrakt V2) i **źródło wpisu** (Wykop / Reddit — po S-27 i S-29 z M-3).
 - Układy 1 i 3 (czytnik, strumień + inspektor) da się zbudować na dzisiejszych danych: feed, filtr po celu i stanowisku, widok posta z oceną i surowymi danymi.
-- Układy 2 i 4 (karta podmiotu, przegląd) agregują wiele wpisów **wokół spółki** (proporcje stanowisk, „wątek dnia”, „warto przeczytać”). Dotyka to granic PRD: rozpoznawanie spółek i decyzja „wartościowy sygnał” są poza zakresem (`prd.md:314`), trend to FR-024/FR-025 (nice-to-have); dziś cel to tylko dopasowanie tekstu anchora („CDR” ≠ „CD Projekt”, `prd.md:126`). M-4 musi zdecydować, czy agregacja po tekście celu wystarczy, czy potrzebna jest zmiana PRD.
-- Elementy z PRD i Parked, które pasują do M-4: sortowanie (FR-008/FR-011b), eksport widocznej listy (FR-031), własna nazwa wyświetlana (FR-020), komunikat przy nieudanym odczycie daty aktualizacji, przybliżony czas końca przebiegu (`roadmap.md`, `## Parked`).
+- Układy 2 i 4 (karta podmiotu, przegląd) agregują wiele wpisów **wokół spółki** (proporcje stanowisk, „wątek dnia”, „warto przeczytać”). Dotyka to granic PRD: rozpoznawanie spółek i decyzja „wartościowy sygnał” są poza zakresem (`prd.md:314`), trend to FR-024/FR-025 (nice-to-have); dziś cel to tylko dopasowanie tekstu anchora („CDR” ≠ „CD Projekt”, `prd.md:126`). M-5 musi zdecydować, czy agregacja po tekście celu wystarczy, czy potrzebna jest zmiana PRD.
+- Elementy z PRD i Parked, które pasują do M-5: sortowanie (FR-008/FR-011b), eksport widocznej listy (FR-031), własna nazwa wyświetlana (FR-020), komunikat przy nieudanym odczycie daty aktualizacji, przybliżony czas końca przebiegu (`roadmap.md`, `## Parked`).
+- **Testy E2E (Playwright)** wchodzą do M-5: każdy nowy widok kończy się testem E2E swojego przepływu, rozbudowującym smoke w przeglądarce z M-4 (`verification-scope.md`). Testy szukają elementów po rolach i tekstach, nie po wyglądzie.
 - Zasady UI repozytorium obowiązują dalej: tokeny i komponenty z `szczur-radar-web/src/style.css` i `src/components/`, kitchen sink, macierz 7 stanów, zrzuty w obu motywach i przy 375 px (`REPOSITORY_GUIDELINES.md`, sekcja UI).
