@@ -112,11 +112,12 @@ list_deployments() {
 }
 
 # The newest deployment of service $1: sets LATEST_ID and LATEST_STATUS (LATEST_ID "none": it has no
-# deployment). Returns 1, with the reason in the log, when the CLI fails or prints no list.
+# deployment). Returns 1, with the reason in the log, when the CLI fails or prints no list (an empty
+# answer too: `jq -e`).
 latest() {
     local out
     list_deployments "$1" 1 || return 1
-    if ! out=$(jq -r 'if type != "array" then error("not a list")
+    if ! out=$(jq -er 'if type != "array" then error("not a list")
             elif length == 0 then "none -"
             elif (.[0].id | type) == "string" and (.[0].status | type) == "string" then "\(.[0].id) \(.[0].status)"
             else error("not a deployment") end' <<<"$REPLY" 2>/dev/null); then
@@ -160,11 +161,11 @@ JQ
 # The apply's deployment of service $1, whose newest deployment before the apply was $2 ("" for none),
 # as apply_deployment_jq tells it: sets FOUND (lost, none or apply), APPLY_ID and APPLY_STATUS, JUDGED_ID
 # and JUDGED_STATUS, SKIPPED_REASON. Returns 1, with the reason in the log, when the CLI fails or prints
-# no list.
+# no list (an empty answer too: `jq -e`).
 apply_deployment() {
     local out
     list_deployments "$1" "$list_limit" || return 1
-    if ! out=$(jq -r --arg before "$2" "$apply_deployment_jq" <<<"$REPLY" 2>/dev/null); then
+    if ! out=$(jq -er --arg before "$2" "$apply_deployment_jq" <<<"$REPLY" 2>/dev/null); then
         log "post-apply check: railway deployment list -s $1 printed no list of deployments"
         return 1
     fi
@@ -221,8 +222,12 @@ fail() {
 
 # One window and one limit for all the services, from the start of the check (just after the apply):
 # the apply starts its deployments within seconds, so a service checked after a long Postgres deploy
-# gets its verdict from one list.
-readonly deadline=$(( SECONDS + verify_timeout )) window_end=$(( SECONDS + deploy_window ))
+# gets its verdict from one list. SECONDS counts whole seconds, so the window ends a second later to
+# last at least DEPLOY_VERIFY_DEPLOY_WINDOW, but never after the limit.
+readonly deadline=$(( SECONDS + verify_timeout ))
+window_end=$(( SECONDS + deploy_window + 1 ))
+(( window_end <= deadline )) || window_end=$deadline
+readonly window_end
 for service in "${services[@]}"; do
     before=$(jq -r --arg service "$service" 'if has($service) then .[$service] // "" else error("missing") end' \
         "$before_file" 2>/dev/null) || usage_error "$before_file has no deployment of $service (no snapshot before the apply)"
@@ -270,7 +275,7 @@ for service in "${services[@]}"; do
                     ;;
                 SKIPPED)
                     fail "the deployment $JUDGED_ID of $service ended SKIPPED after the apply${SKIPPED_REASON:+ (Railway: \"$SKIPPED_REASON\")}" \
-                        "| \`$service\` | \`$JUDGED_ID\` | **SKIPPED**${SKIPPED_REASON:+ ($SKIPPED_REASON)} |"
+                        "| \`$service\` | \`$JUDGED_ID\` | **SKIPPED**${SKIPPED_REASON:+ (${SKIPPED_REASON//|/\\|})} |"
                     ;;
                 NEEDS_APPROVAL)
                     fail "the deployment $JUDGED_ID of $service needs an approval in Railway" \
@@ -294,6 +299,7 @@ for service in "${services[@]}"; do
         fi
         pause=$(( deadline - SECONDS ))
         (( pause < verify_interval )) || pause=$verify_interval
+        (( pause > 0 )) || pause=0
         sleep "$pause"
     done
 done
