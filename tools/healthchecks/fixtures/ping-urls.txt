@@ -1,0 +1,60 @@
+# The cases of the one rule for HEALTHCHECK_PING_URL (S-25): read by AlertSettingsTest (the API)
+# and by step 9 of tools/healthchecks/test.sh (the block of backup.sh, the same as trigger.sh).
+# A line is "accept <address>" or "refuse <address>": the verdict, one space, then the rest of the
+# line is the address, spaces included. Empty lines and lines starting with # are skipped. No
+# address has white space at its ends (trimming is tested by each side on its own). Every address
+# is made up (UUIDs 00000000-…), none is a real check's ping URL. The file is UTF-8: some refused
+# addresses are not ASCII. The length cap (512 characters) is tested with generated addresses by
+# each side, not here.
+
+# The production shape, from checks.sh apply.
+accept https://hc-ping.com/00000000-0000-4000-8000-000000000001
+# The scheme in any case.
+accept HTTPS://hc-ping.com/00000000-0000-4000-8000-000000000002
+accept HtTpS://HC-Ping.COM/00000000-0000-4000-8000-000000000003
+# The shape of the stub in the cron tests: a port and a longer path.
+accept https://hc-ping.test:8443/ping/0123456789abcdef0123456789abcdef/run1
+accept https://healthchecks.example.org/ping/00000000-0000-4000-8000-000000000004
+# A one-label host and no path.
+accept https://localhost
+accept https://hc-ping.com
+# An escape in the path and the characters a path may have.
+accept https://hc-ping.com/ping%2F00000000-0000-4000-8000-000000000005
+accept https://hc-ping.com/a-b_c.d~e:f@g!h$i&j(k)l*m+n,o;p=q/00000000-0000-4000-8000-000000000006
+# A trailing / is accepted (and dropped by the API).
+accept https://hc-ping.com/00000000-0000-4000-8000-000000000007/
+# The largest port of 5 digits.
+accept https://hc-ping.test:65535/00000000-0000-4000-8000-000000000008
+
+# Not https.
+refuse http://hc-ping.example/00000000-0000-4000-8000-000000000011
+refuse ftp://hc-ping.example/00000000-0000-4000-8000-000000000012
+# No scheme.
+refuse hc-ping.example/00000000-0000-4000-8000-000000000013
+refuse 00000000-0000-4000-8000-000000000014
+# No host.
+refuse https:///00000000-0000-4000-8000-000000000015
+# A query or a fragment.
+refuse https://hc-ping.example/00000000-0000-4000-8000-000000000016?x=1
+refuse https://hc-ping.example/00000000-0000-4000-8000-000000000017#x
+# Not a host name.
+refuse https://hc_ping.example/00000000-0000-4000-8000-000000000018
+refuse https://-hc-ping.example/00000000-0000-4000-8000-000000000019
+refuse https://hc-ping-.example/00000000-0000-4000-8000-000000000020
+refuse https://user@hc-ping.example/00000000-0000-4000-8000-000000000021
+refuse https://192.0.2.1/00000000-0000-4000-8000-000000000022
+refuse https://hc-ping.1example/00000000-0000-4000-8000-000000000023
+# An empty port, or one of more than 5 digits (java.net.URI then reads the authority without a host).
+refuse https://hc-ping.example:/00000000-0000-4000-8000-000000000024
+refuse https://hc-ping.example:100000/00000000-0000-4000-8000-000000000032
+refuse https://hc-ping.example:99999999999/00000000-0000-4000-8000-000000000033
+# % that is not %XX.
+refuse https://hc-ping.example/%zz00000000-0000-4000-8000-000000000025
+# A character a path may not have.
+refuse https://hc-ping.example/ 00000000-0000-4000-8000-000000000026
+refuse https://hc-ping.example/"00000000-0000-4000-8000-000000000027
+refuse https://hc-ping.example/\00000000-0000-4000-8000-000000000028
+refuse garbage 00000000-0000-4000-8000-000000000029 \ {}
+# Not ASCII (bash's [A-Za-z] takes é under a UTF-8 locale of glibc; the rule does not).
+refuse https://hé.example/00000000-0000-4000-8000-000000000030
+refuse https://hc-ping.example/00000000-0000-4000-8000-000000000031é

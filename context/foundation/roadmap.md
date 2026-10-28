@@ -108,7 +108,7 @@ Na Wykopie (#gielda) i Reddicie codziennie pojawiają się setki postów o inwes
 | S-22 | run-attention-single-rule       | admin widzi powody „wymaga uwagi” liczone tą samą regułą co powiadomienia i alerty, bez pustego tekstu przy nowym powodzie      | —             | NFR `prd.md:259`; audyt K1; destylacja R-22, D-04                         | in-progress |
 | S-23 | closed-sets-guard               | nowa wartość zamkniętego zbioru albo nowa kolumna posta bez migracji lub bez zapisu jest wykrywana w CI, nie w nocy na produkcji | —             | audyt E4; destylacja R-17, R-19                                           | done |
 | S-24 | api-contract-guard              | rozjazd odpowiedzi API i typów SPA (pełne ciała, kształt błędu 500, kopie reguł) jest wykrywany testem, nie ręczną dyscypliną   | —             | audyt K2, K3, K4; destylacja Q-05                                         | ready    |
-| S-25 | alert-ping-single-rule          | adres check-in alarmów ma jedną regułę we wszystkich miejscach, a rozjazd kopii jest wykrywany testem                           | —             | NFR `prd.md:259`; audyt P4, P5; destylacja R-27                           | ready    |
+| S-25 | alert-ping-single-rule          | adres check-in alarmów ma jedną regułę we wszystkich miejscach, a rozjazd kopii jest wykrywany testem                           | —             | NFR `prd.md:259`; audyt P4, P5; destylacja R-27                           | in-progress |
 | S-26 | engine-test-stability           | testy silnika nie zależą od czasu zegara na współdzielonym runnerze, a znane okna fałszywych alarmów (F3) są przypięte testami | —             | audyt E1, E2, E6                                                          | done |
 | S-27 | reddit-source                   | użytkownik widzi w feedzie posty z wybranych subredditów obok Wykopu, ocenione tym samym kontraktem                             | S-20          | FR-023, NFR `prd.md:268`, `prd.md:42`; audyt S3, S6, S7, S8; destylacja Q-01, Q-07 | blocked  |
 | S-28 | reddit-quality-and-cost         | operator wie przed włączeniem Reddita na produkcji, że ocena postów po angielsku spełnia progi, a koszt mieści się w budżecie    | S-27          | guardrails `prd.md:48-49`; audyt S7; destylacja R-15, R-16, Q-03, Q-04    | proposed |
@@ -218,7 +218,7 @@ Brak — każda praca przekrojowa M-3 ma widoczny skutek dla użytkownika albo o
 - **Unknowns:**
   - Jeden dom reguły (np. walidacja tylko w jednym miejscu) czy dwie kopie z testem zgodności (destylacja Q-09)? — Owner: operator. Block: no (rozstrzyga wywiad `/10x-plan`).
 - **Risk:** dotyka check-inów obu cronów, które dziś działają; zły wzorzec po cichu wyłącza check-in (warn-and-continue), więc test negatywny jest częścią wycinka.
-- **Status:** ready
+- **Status:** in-progress
 
 ### S-26: Testy silnika bez zależności od zegara
 

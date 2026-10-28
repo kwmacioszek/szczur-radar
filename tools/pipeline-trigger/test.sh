@@ -19,8 +19,9 @@
 #      TRIGGER_TIMEOUT): exit 1; a missing variable or a bad duration: exit 2;
 #   5. with HEALTHCHECK_PING_URL (F-04, out-of-app-alert-channel): /start, then the exit code (0, 1 for a
 #      failed run and the TRIGGER_TIMEOUT limit, 2 for a configuration error) with the last log line;
-#      a check-in answered 500 (retried) or unreachable leaves the exit code as it is; no variable, a
-#      skipped run or an address that is not https:// or has a query gives no check-in; no temporary
+#      a check-in answered 500 (retried) or unreachable leaves the exit code as it is; an HTTPS:// scheme
+#      in capitals is accepted; no variable, a skipped run or an address that is not https://, has a query
+#      or no host name gives no check-in (an address outside the rule with a warning); no temporary
 #      directory leaves the exit code as it is, with check-ins without the last line;
 #   6. the tokens and the check-in address never appear in the logs.
 # Needs Docker and openssl (the stub's certificate). Run from anywhere: tools/pipeline-trigger/test.sh
@@ -406,12 +407,13 @@ check_ping_case ping-skipped 0 '{"runs": [{"kind": "range", "statuses": ["succee
 log_says ping-skipped 'skipped: the daily run is started only in production'
 pings_were ping-skipped ''
 pass "a skipped run (outside production): no check-in"
+# The scheme in capitals (the rule takes https in any case) and a trailing /.
 check_ping_case ping-ok 0 '{"runs": [{"kind": "range", "statuses": ["running", "succeeded"]}]}' "$token" \
-    -e HEALTHCHECK_PING_URL="$ping_url/"
+    -e HEALTHCHECK_PING_URL="HTTPS://$ping_host:8443/ping/$ping_key/"
 pings_were ping-ok 'start 0'
 last_ping_says ping-ok ' trigger: OK: range succeeded'
 requests_were ping-ok 1 2
-pass "succeeded: /start, then /0 with the OK line (a trailing / in the address is dropped)"
+pass "succeeded: /start, then /0 with the OK line (an HTTPS:// address with a trailing /, which is dropped)"
 check_ping_case ping-failed 1 '{"runs": [{"kind": "range", "statuses": ["running", "failed"]}]}' "$token" \
     -e HEALTHCHECK_PING_URL="$ping_url"
 pings_were ping-failed 'start 1'
@@ -445,16 +447,22 @@ pings_were ping-unreachable ''
 pass "an unreachable check-in address: a warning, exit 1 as without it"
 check_ping_case ping-not-https 0 '{"runs": [{"kind": "range", "statuses": ["succeeded"]}]}' "$token" \
     -e HEALTHCHECK_PING_URL="http://$ping_host:8000/ping/$ping_key"
-log_says ping-not-https 'warning: HEALTHCHECK_PING_URL is not an https:// address without ? or #; no check-in'
+log_says ping-not-https 'warning: HEALTHCHECK_PING_URL is not an https:// address with a host name and without ? or #; no check-in'
 log_says ping-not-https 'OK: range succeeded'
 pings_were ping-not-https ''
 pass "an address that is not https://: a warning, no check-in, exit 0"
 check_ping_case ping-query 0 '{"runs": [{"kind": "range", "statuses": ["succeeded"]}]}' "$token" \
     -e HEALTHCHECK_PING_URL="$ping_url?x=1"
-log_says ping-query 'warning: HEALTHCHECK_PING_URL is not an https:// address without ? or #; no check-in'
+log_says ping-query 'warning: HEALTHCHECK_PING_URL is not an https:// address with a host name and without ? or #; no check-in'
 log_says ping-query 'OK: range succeeded'
 pings_were ping-query ''
 pass "an address with a query (? would swallow /start and /<exit code>): a warning, no check-in, exit 0"
+check_ping_case ping-no-host 0 '{"runs": [{"kind": "range", "statuses": ["succeeded"]}]}' "$token" \
+    -e HEALTHCHECK_PING_URL="https:///ping/$ping_key"
+log_says ping-no-host 'warning: HEALTHCHECK_PING_URL is not an https:// address with a host name and without ? or #; no check-in'
+log_says ping-no-host 'OK: range succeeded'
+pings_were ping-no-host ''
+pass "an address without a host name (https:///…): a warning, no check-in, exit 0"
 # The configuration error ends the run before it needs a temporary directory of its own.
 check_ping_case ping-no-tmp 2 '{"runs": [{"kind": "range", "statuses": ["succeeded"]}]}' "" \
     -e TMPDIR=/nonexistent -e HEALTHCHECK_PING_URL="$ping_url"
