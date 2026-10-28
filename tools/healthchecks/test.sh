@@ -16,6 +16,11 @@
 #   7. usage: no key, bad arguments, bad environment names, bad overrides → 2 without a request;
 #   8. production also gets production/deploy-health (the monitor's check), applied and deleted with the rest
 #      (cases 1–6 use a PR env and so check that no other environment gets it);
+#   9. the ping URL rule (S-25): the "ping-url rule (S-25)" blocks of tools/db-backup/backup.sh and
+#      tools/pipeline-trigger/trigger.sh are byte for byte the same (markers once in each), their pattern is
+#      the literal of checks.sh and of AlertSettings.PING_PATTERN in the API, and the block, run in bash with
+#      only a stub log, decides every row of fixtures/ping-urls.txt as the table does (a refusal with a
+#      warning that does not repeat the address);
 #   and in every case the API key is never in curl's argv, stdout or the log.
 # Needs bash and jq. Run from anywhere: tools/healthchecks/test.sh
 set -euo pipefail
@@ -435,5 +440,78 @@ script delete-production \
 run_case delete-production 0 delete production
 log_says delete-production "OK: 4 check(s) of production deleted"
 pass "delete production: deploy-health too"
+
+step "9. the ping URL rule: one pattern, two identical cron blocks, one case table"
+root=$(cd "$here/../.." && pwd)
+readonly backup_sh=$root/tools/db-backup/backup.sh trigger_sh=$root/tools/pipeline-trigger/trigger.sh
+readonly alert_settings=$root/szczur-radar-api/src/main/java/pl/szczurradar/api/alerts/AlertSettings.java
+readonly ping_table=$fixtures/ping-urls.txt
+readonly rule_begin='# ping-url rule (S-25): begin' rule_end='# ping-url rule (S-25): end'
+# The lines between the markers of cron $1 into $2; each marker exactly once, the begin first.
+cut_block() {
+    local begins ends
+    begins=$(grep -cxF -- "$rule_begin" "$1" || true)
+    ends=$(grep -cxF -- "$rule_end" "$1" || true)
+    [[ $begins == 1 && $ends == 1 ]] || die "$1: '$rule_begin' $begins times and '$rule_end' $ends times, expected once each"
+    awk -v begin="$rule_begin" -v end="$rule_end" '
+        $0 == end { inside = 0; done = 1 }
+        inside { print }
+        $0 == begin && !done { inside = 1 }' "$1" >"$2"
+    [[ -s $2 ]] || die "$1: nothing between '$rule_begin' and '$rule_end' (or the end comes first)"
+}
+cut_block "$backup_sh" "$tmp/rule-backup.sh"
+cut_block "$trigger_sh" "$tmp/rule-trigger.sh"
+cmp -s "$tmp/rule-backup.sh" "$tmp/rule-trigger.sh" \
+    || { diff -u "$tmp/rule-backup.sh" "$tmp/rule-trigger.sh" || true
+         die "the ping-url rule blocks of backup.sh and trigger.sh differ"; }
+pass "the ping-url rule block is the same in backup.sh and trigger.sh, its markers once in each"
+# The pattern from the one line that holds it (prints it; exactly one such line).
+one_literal() {
+    local found
+    found=$(sed -n "$2" "$1")
+    [[ -n $found && $found != *$'\n'* ]] || die "$1: not exactly one line with the ping URL pattern"
+    printf '%s\n' "$found"
+}
+cron_pattern=$(one_literal "$tmp/rule-backup.sh" "s/^readonly ping_pattern='\(.*\)'\$/\1/p")
+checks_pattern=$(one_literal "$checks" "s/^readonly ping_pattern='\(.*\)'\$/\1/p")
+java_pattern=$(one_literal "$alert_settings" 's/^[[:space:]]*static final String PING_PATTERN = "\(.*\)";$/\1/p')
+# A backslash would mean one thing in the Java literal and another in the shell.
+[[ $java_pattern != *\\* ]] || die "AlertSettings.PING_PATTERN has a backslash: the Java literal is not the pattern's text"
+[[ $checks_pattern == "$cron_pattern" ]] \
+    || die "checks.sh's ping_pattern differs from the crons' ($checks_pattern, crons: $cron_pattern)"
+[[ $java_pattern == "$cron_pattern" ]] \
+    || die "AlertSettings.PING_PATTERN differs from the crons' ($java_pattern, crons: $cron_pattern)"
+pass "one pattern in the crons, checks.sh and AlertSettings.PING_PATTERN"
+# Each row of the table through the cron block, in a fresh bash as strict as the crons, with only log
+# from outside (it prints its line). The address goes in through the environment, never as code.
+rule_block=$(cat "$tmp/rule-backup.sh")
+rows=0 accepted=0 refused=0 line_number=0
+while IFS= read -r line || [[ -n $line ]]; do
+    line_number=$(( line_number + 1 ))
+    [[ -z $line || $line == \#* ]] && continue
+    [[ $line =~ ^(accept|refuse)\ (.+)$ ]] || die "ping-urls.txt:$line_number: not 'accept <address>' or 'refuse <address>'"
+    verdict=${BASH_REMATCH[1]} address=${BASH_REMATCH[2]}
+    status=0
+    result=$(HEALTHCHECK_PING_URL=$address RULE_BLOCK=$rule_block bash -c '
+        set -euo pipefail
+        log() { printf "log %s\n" "$*"; }
+        eval "$RULE_BLOCK"
+        [[ -z ${HEALTHCHECK_PING_URL+set} ]] || { echo "HEALTHCHECK_PING_URL still set"; exit 1; }
+        printf "ping_url %s\n" "$ping_url"' 2>&1) || status=$?
+    (( status == 0 )) || die "ping-urls.txt:$line_number ($line): the block failed ($status): $result"
+    if [[ $verdict == accept ]]; then
+        [[ $result == "ping_url ${address%/}" ]] \
+            || die "ping-urls.txt:$line_number ($line): refused by the cron block, or changed: $result"
+        accepted=$(( accepted + 1 ))
+    else
+        [[ $result == $'log warning: HEALTHCHECK_PING_URL is not an https:// address'*$'; no check-in\nping_url ' ]] \
+            || die "ping-urls.txt:$line_number ($line): accepted by the cron block, or no warning: $result"
+        [[ $result != *"$address"* ]] || die "ping-urls.txt:$line_number: the warning repeats the address"
+        refused=$(( refused + 1 ))
+    fi
+    rows=$(( rows + 1 ))
+done <"$ping_table"
+(( accepted > 0 && refused > 0 )) || die "ping-urls.txt: $accepted accept and $refused refuse rows, expected some of each"
+pass "the cron block decides all $rows rows of fixtures/ping-urls.txt as the table does ($accepted accepted, $refused refused with a warning that does not repeat the address)"
 
 printf '\nAll healthchecks tests passed.\n'

@@ -73,6 +73,7 @@ Wymaga `bash` i `jq` (bez Dockera). Atrapa `curl` w `PATH` odpowiada według skr
 - `delete`: trzy checki po UUID z odczytu, check innego środowiska zostaje, brakujący jest pomijany, nieudane usunięcie → kod 1;
 - błędy API: 401 z komunikatem API, 500, brak odpowiedzi, odpowiedź dla innego checka, odczyt bez listy → kod 1, bez kolejnych żądań;
 - błędy użycia: brak albo pusty klucz, złe argumenty, nazwy środowiska, wartości opcji i `HEALTHCHECKS_API_URL` → kod 2 bez żądania;
-- w każdym przypadku: klucza nie ma w argumentach `curl`, na stdout ani w logu, a UUID-ów checków w logu.
+- w każdym przypadku: klucza nie ma w argumentach `curl`, na stdout ani w logu, a UUID-ów checków w logu;
+- jedną regułę adresu check-in (S-25, krok 9): bloki `ping-url rule (S-25)` w `tools/db-backup/backup.sh` i `tools/pipeline-trigger/trigger.sh` są bajt w bajt takie same (znaczniki raz w każdym), ich wzorzec to literał `ping_pattern` z `checks.sh` i `AlertSettings.PING_PATTERN` z API, a wycięty blok rozstrzyga każdy wiersz tabeli `fixtures/ping-urls.txt` tak jak ona (odmowa z ostrzeżeniem bez adresu); wypisuje liczbę sprawdzonych wierszy.
 
 CI uruchamia ten test przy każdym PR i pushu na `main` (job `healthchecks test`).

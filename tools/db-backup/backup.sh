@@ -42,21 +42,28 @@ fi
 # HEALTHCHECK_PING_URL is set: /start before the run, then /<exit code> with the run's last log line as
 # the body. The check alarms when the end does not come in time or is not 0. Whoever knows the address
 # can check in, so it is a secret: it goes to curl as a config on stdin, never as an argument (visible in
-# ps), and is never logged. A failed check-in only logs a warning: it never changes the exit code. Not an
-# https:// address, or one with a query or fragment (? or #, which would swallow /start and /<exit code>, as
-# AlertSettings in the API refuses): a warning and no check-in (the check then alarms after its grace time).
-# The same code is in tools/pipeline-trigger/trigger.sh (another image and build context): change both.
-readonly ping_pattern='^https://[A-Za-z0-9._~:/@!$&()*+,;=%-]+$'
+# ps), and is never logged. A failed check-in only logs a warning: it never changes the exit code. The
+# address follows the one rule of the API (AlertSettings, S-25): https in any case, a host name (no user
+# info, no IP address), an optional port, a path without ? or # (which would swallow /start and /<exit
+# code>) and with % only as %XX. Any other address: a warning and no check-in (the check then alarms after
+# its grace time).
+# The block between the two "ping-url rule (S-25)" lines is byte for byte the one in
+# tools/pipeline-trigger/trigger.sh (another image and build context). Step 9 of tools/healthchecks/test.sh
+# compares the two blocks, compares the pattern with AlertSettings.PING_PATTERN and tools/healthchecks/checks.sh,
+# and runs the block over tools/healthchecks/fixtures/ping-urls.txt. It may use only log from outside.
+# ping-url rule (S-25): begin
+readonly ping_pattern='^[Hh][Tt][Tt][Pp][Ss]://([A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?[.])*[A-Za-z]([A-Za-z0-9-]*[A-Za-z0-9])?(:[0-9]+)?(/([A-Za-z0-9._~:/@!$&()*+,;=-]|%[0-9A-Fa-f]{2})*)?$'
 ping_url=${HEALTHCHECK_PING_URL:-}
 ping_url=${ping_url#"${ping_url%%[![:space:]]*}"}
 ping_url=${ping_url%"${ping_url##*[![:space:]]}"}
 ping_url=${ping_url%/}
 unset HEALTHCHECK_PING_URL
 if [[ -n $ping_url && ! $ping_url =~ $ping_pattern ]]; then
-    log "warning: HEALTHCHECK_PING_URL is not an https:// address without ? or #; no check-in"
+    log "warning: HEALTHCHECK_PING_URL is not an https:// address with a host name and without ? or #; no check-in"
     ping_url=""
 fi
 readonly ping_url
+# ping-url rule (S-25): end
 
 # One check-in: POST <ping URL>/$1 with the file $2 (default: none) as a text/plain body.
 check_in() {

@@ -248,20 +248,20 @@ Bez zmian zmiennych i IaC. Jedyne ryzyko wdrożenia to wartość produkcyjna, kt
 
 #### Automated
 
-- [x] 1.1 `cd szczur-radar-api && ./mvnw -B test -Dtest=AlertSettingsTest` przechodzi, a raport pokazuje po jednym wywołaniu na wiersz tabeli
-- [x] 1.2 `cd szczur-radar-api && ./mvnw -B test` przechodzi
-- [x] 1.3 `grep -c 'PING_PATTERN = "' szczur-radar-api/src/main/java/pl/szczurradar/api/alerts/AlertSettings.java` = 1, a wzorzec jest w jednej linii
-- [x] 1.4 Kontrolne zepsucie: zmiana `[Hh]` na `h` w `PING_PATTERN` daje czerwony `AlertSettingsTest` na wierszu `HTTPS://…` (zmiana cofnięta)
+- [x] 1.1 `cd szczur-radar-api && ./mvnw -B test -Dtest=AlertSettingsTest` przechodzi, a raport pokazuje po jednym wywołaniu na wiersz tabeli — f9d920c
+- [x] 1.2 `cd szczur-radar-api && ./mvnw -B test` przechodzi — f9d920c
+- [x] 1.3 `grep -c 'PING_PATTERN = "' szczur-radar-api/src/main/java/pl/szczurradar/api/alerts/AlertSettings.java` = 1, a wzorzec jest w jednej linii — f9d920c
+- [x] 1.4 Kontrolne zepsucie: zmiana `[Hh]` na `h` w `PING_PATTERN` daje czerwony `AlertSettingsTest` na wierszu `HTTPS://…` (zmiana cofnięta) — f9d920c
 
 ### Phase 2: Kopie w shellu i strażnik zgodności
 
 #### Automated
 
-- [ ] 2.1 `tools/healthchecks/test.sh` przechodzi, a krok 9 wypisuje liczbę sprawdzonych wierszy tabeli
-- [ ] 2.2 `tools/pipeline-trigger/test.sh` przechodzi (Docker)
-- [ ] 2.3 `tools/db-backup/test.sh` przechodzi (Docker)
-- [ ] 2.4 Kontrolne zepsucie: (a) jeden znak zmieniony w bloku `trigger.sh`, (b) inny literał w `checks.sh`, (c) inny literał w `AlertSettings.java`: każde osobno daje czerwony krok 9 z nazwą rozjazdu (zmiany cofnięte)
-- [ ] 2.5 `grep -rn 'change both' tools/db-backup/backup.sh tools/pipeline-trigger/trigger.sh` nie znajduje nic
+- [x] 2.1 `tools/healthchecks/test.sh` przechodzi, a krok 9 wypisuje liczbę sprawdzonych wierszy tabeli
+- [x] 2.2 `tools/pipeline-trigger/test.sh` przechodzi (Docker)
+- [x] 2.3 `tools/db-backup/test.sh` przechodzi (Docker)
+- [x] 2.4 Kontrolne zepsucie: (a) jeden znak zmieniony w bloku `trigger.sh`, (b) inny literał w `checks.sh`, (c) inny literał w `AlertSettings.java`: każde osobno daje czerwony krok 9 z nazwą rozjazdu (zmiany cofnięte)
+- [x] 2.5 `grep -rn 'change both' tools/db-backup/backup.sh tools/pipeline-trigger/trigger.sh` nie znajduje nic
 
 ### Phase 3: Limit czasu jako `1` i dokumenty operatora
 

@@ -48,7 +48,10 @@ readonly simple_timeout=31536000
 readonly tag=szczur-radar
 # A URL goes into a curl config between double quotes: no quote, backslash, space or control character.
 readonly url_pattern='^https?://[A-Za-z0-9._~:/?#@!$&()*+,;=%-]+$'
-readonly ping_pattern='^https://[A-Za-z0-9._~:/?#@!$&()*+,;=%-]+$'
+# A check's ping URL: the one rule of HEALTHCHECK_PING_URL (S-25), the same literal as
+# AlertSettings.PING_PATTERN in the API and the "ping-url rule (S-25)" blocks of both crons (step 9 of
+# test.sh keeps the four equal). apply never arms or prints an address the API and the crons would refuse.
+readonly ping_pattern='^[Hh][Tt][Tt][Pp][Ss]://([A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?[.])*[A-Za-z]([A-Za-z0-9-]*[A-Za-z0-9])?(:[0-9]+)?(/([A-Za-z0-9._~:/@!$&()*+,;=-]|%[0-9A-Fa-f]{2})*)?$'
 readonly uuid_pattern='^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
 
 # Arguments. An unexpected one is never echoed: it might be the key, pasted in the wrong place.

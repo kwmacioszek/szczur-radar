@@ -100,7 +100,8 @@ Sprawdza:
 - brak wysyłki, gdy sprawdzenie odtworzenia nie przejdzie: tabela bez klasyfikacji (`tables: unknown`) i brak wymaganej tabeli (`tables: missing activation_tokens`);
 - odrzucenie pustej `posts` przed dumpem, także przy zgodzie wskazującej najnowszy manifest;
 - `nas-retention.sh --dry-run` (inne nazwy i daty z przyszłości zostają);
-- meldunki do atrapy healthchecks.io (`python:3.14-alpine`, po https z jednorazowym certyfikatem z wolumenu testu): pierwszy przebieg `start`, potem `0` z linią `OK:`; odrzucenie spadku `1` z jego linią; przekroczony limit czasu `124` z linią limitu; przebieg pominięty bez meldunku; nieosiągalny adres meldunków daje ostrzeżenia, a wynik przebiegu się nie zmienia;
+- meldunki do atrapy healthchecks.io (`python:3.14-alpine`, po https z jednorazowym certyfikatem z wolumenu testu): pierwszy przebieg `start`, potem `0` z linią `OK:` (pod adresem z `HTTPS://`); odrzucenie spadku `1` z jego linią; przekroczony limit czasu `124` z linią limitu; przebieg pominięty bez meldunku; nieosiągalny adres meldunków daje ostrzeżenia, a wynik przebiegu się nie zmienia;
+- adres meldunków spoza reguły (S-25: nie `https://`, z zapytaniem, bez nazwy hosta, przypadki `ping-not-https`, `ping-query`, `ping-no-host`, bez `PGHOST`): ostrzeżenie bez adresu, brak meldunku, a przebieg idzie dalej i kończy się na `PGHOST is not set`;
 - brak hasła i klucza meldunków w logach.
 
 CI uruchamia ten test przy każdym PR i pushu na `main` (job `db backup test`), więc migracja psująca kopię zatrzymuje PR, także migracja z tabelą, której nie ma w `tables.sh`. Wypisuje też log pierwszego przebiegu, czyli to, co Railway pokazuje dla przebiegu cron. Kontenery, sieć i wolumen testu są zawsze usuwane.

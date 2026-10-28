@@ -123,7 +123,7 @@ Wymaga Dockera i `openssl` (jednorazowy certyfikat atrapy). Test buduje obraz i 
 - brak odpowiedzi na `POST`, który dotarł do API (`TRIGGER_REQUEST_TIMEOUT`) → kod 1 bez drugiego `POST`;
 - każdy limit czasu (`TRIGGER_WAKE_TIMEOUT`, `TRIGGER_BUSY_TIMEOUT`, `TRIGGER_RUN_TIMEOUT`, `TRIGGER_TIMEOUT`) → kod 1;
 - brak `PIPELINE_TRIGGER_TOKEN` i zła wartość `TRIGGER_HEARTBEAT_INTERVAL` → kod 2;
-- meldunki z `HEALTHCHECK_PING_URL`: `start`, potem `0` z linią `OK:`, `1` z linią `FAILED:` (także po `TRIGGER_TIMEOUT`), `2` przy błędzie konfiguracji; meldunek z odpowiedzią 500 (ponawiany) albo na nieosiągalny adres nie zmienia kodu wyjścia; bez zmiennej, przy pominięciu poza produkcją i z adresem spoza `https://` albo z zapytaniem nie ma żadnego meldunku; bez katalogu tymczasowego kod wyjścia się nie zmienia;
+- meldunki z `HEALTHCHECK_PING_URL`: `start`, potem `0` z linią `OK:` (pod adresem z `HTTPS://` i końcową `/`), `1` z linią `FAILED:` (także po `TRIGGER_TIMEOUT`), `2` przy błędzie konfiguracji; meldunek z odpowiedzią 500 (ponawiany) albo na nieosiągalny adres nie zmienia kodu wyjścia; bez zmiennej i przy pominięciu poza produkcją nie ma żadnego meldunku, a z adresem spoza `https://`, z zapytaniem albo bez nazwy hosta (`ping-not-https`, `ping-query`, `ping-no-host`) jest ostrzeżenie i nie ma meldunku; bez katalogu tymczasowego kod wyjścia się nie zmienia;
 - brak tokenów i klucza meldunków w logach.
 
 CI uruchamia ten test przy każdym PR i pushu na `main` (job `pipeline trigger test`). Wypisuje też log udanego przebiegu, czyli to, co Railway pokazuje dla przebiegu cron. Kontenery i sieć testu są zawsze usuwane.
