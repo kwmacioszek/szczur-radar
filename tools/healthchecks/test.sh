@@ -18,7 +18,7 @@
 #      (cases 1–6 use a PR env and so check that no other environment gets it);
 #   9. the ping URL rule (S-25): the "ping-url rule (S-25)" blocks of tools/db-backup/backup.sh and
 #      tools/pipeline-trigger/trigger.sh are byte for byte the same (markers once in each), their pattern is
-#      the literal of checks.sh and of AlertSettings.PING_PATTERN in the API, their length cap (2048) is
+#      the literal of checks.sh and of AlertSettings.PING_PATTERN in the API, their length cap (512) is
 #      checks.sh's and AlertSettings.PING_MAX_LENGTH, and the block, run in bash with only a stub log under a
 #      UTF-8 locale when there is one (en_US first, as glibc's in the postgres:18 image), decides every row of
 #      fixtures/ping-urls.txt as the table does and generated addresses at the cap and one past it (a refusal

@@ -49,7 +49,7 @@ seconds() {
 # ps), and is never logged. A failed check-in only logs a warning: it never changes the exit code. The
 # address follows the one rule of the API (AlertSettings, S-25): https in any case, a host name (no user
 # info, no IP address), an optional port of at most 5 digits, a path without ? or # (which would swallow
-# /start and /<exit code>) and with % only as %XX, at most 2048 characters, all ASCII (bash's [A-Za-z]
+# /start and /<exit code>) and with % only as %XX, at most 512 characters, all ASCII (bash's [A-Za-z]
 # also takes non-ASCII letters under a UTF-8 locale of glibc, so the block refuses them itself; the cap
 # comes first). Any other address: a warning and no check-in (the check then alarms after its grace time).
 # The block between the two "ping-url rule (S-25)" lines is byte for byte the one in
@@ -57,13 +57,13 @@ seconds() {
 # compares the two blocks, compares the pattern with AlertSettings.PING_PATTERN and tools/healthchecks/checks.sh,
 # and runs the block over tools/healthchecks/fixtures/ping-urls.txt. It may use only log from outside.
 # ping-url rule (S-25): begin
-readonly ping_pattern='^[Hh][Tt][Tt][Pp][Ss]://([A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?[.])*[A-Za-z]([A-Za-z0-9-]*[A-Za-z0-9])?(:[0-9]{1,5})?(/([A-Za-z0-9._~:/@!$&()*+,;=-]|%[0-9A-Fa-f]{2})*)?$'
+readonly ping_pattern='^[Hh][Tt][Tt][Pp][Ss]://([A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?[.])*[A-Za-z]([A-Za-z0-9-]*[A-Za-z0-9])?(:[0-9]{1,5})?(/[A-Za-z0-9._~:/@!$&()*+,;=-]*(%[0-9A-Fa-f]{2}[A-Za-z0-9._~:/@!$&()*+,;=-]*)*)?$'
 ping_url=${HEALTHCHECK_PING_URL:-}
 ping_url=${ping_url#"${ping_url%%[![:space:]]*}"}
 ping_url=${ping_url%"${ping_url##*[![:space:]]}"}
 ping_url=${ping_url%/}
 unset HEALTHCHECK_PING_URL
-if [[ -n $ping_url ]] && { (( ${#ping_url} > 2048 )) || [[ $ping_url == *[![:ascii:]]* || ! $ping_url =~ $ping_pattern ]]; }; then
+if [[ -n $ping_url ]] && { (( ${#ping_url} > 512 )) || [[ $ping_url == *[![:ascii:]]* || ! $ping_url =~ $ping_pattern ]]; }; then
     log "warning: HEALTHCHECK_PING_URL is not an https:// address with a host name and without ? or #; no check-in"
     ping_url=""
 fi

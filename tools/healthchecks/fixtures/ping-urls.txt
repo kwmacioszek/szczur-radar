@@ -4,7 +4,7 @@
 # line is the address, spaces included. Empty lines and lines starting with # are skipped. No
 # address has white space at its ends (trimming is tested by each side on its own). Every address
 # is made up (UUIDs 00000000-…), none is a real check's ping URL. The file is UTF-8: some refused
-# addresses are not ASCII. The length cap (2048 characters) is tested with generated addresses by
+# addresses are not ASCII. The length cap (512 characters) is tested with generated addresses by
 # each side, not here.
 
 # The production shape, from checks.sh apply.

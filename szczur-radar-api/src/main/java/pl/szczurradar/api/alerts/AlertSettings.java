@@ -46,7 +46,7 @@ public final class AlertSettings {
 	 * The rule as one line (step 9 of {@code tools/healthchecks/test.sh} reads it from here): no backslash, so
 	 * the Java literal is the shell literal byte for byte.
 	 */
-	static final String PING_PATTERN = "^[Hh][Tt][Tt][Pp][Ss]://([A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?[.])*[A-Za-z]([A-Za-z0-9-]*[A-Za-z0-9])?(:[0-9]{1,5})?(/([A-Za-z0-9._~:/@!$&()*+,;=-]|%[0-9A-Fa-f]{2})*)?$";
+	static final String PING_PATTERN = "^[Hh][Tt][Tt][Pp][Ss]://([A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?[.])*[A-Za-z]([A-Za-z0-9-]*[A-Za-z0-9])?(:[0-9]{1,5})?(/[A-Za-z0-9._~:/@!$&()*+,;=-]*(%[0-9A-Fa-f]{2}[A-Za-z0-9._~:/@!$&()*+,;=-]*)*)?$";
 
 	/**
 	 * The longest value taken, checked before the pattern: the matcher recurses on the repeated groups, and a
@@ -54,7 +54,7 @@ public final class AlertSettings {
 	 * Kept on one line: step 9 of {@code tools/healthchecks/test.sh} reads the number from it and compares it
 	 * with the shell copies' cap.
 	 */
-	static final int PING_MAX_LENGTH = 2048;
+	static final int PING_MAX_LENGTH = 512;
 
 	private static final Pattern PING = Pattern.compile(PING_PATTERN);
 

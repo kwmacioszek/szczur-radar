@@ -78,7 +78,7 @@ class AlertSettingsTest {
 	 */
 	@Test
 	void anAddressOfAtMostTheCapIsAcceptedAndALongerOneRefused() {
-		assertThat(AlertSettings.PING_MAX_LENGTH).isEqualTo(2048);
+		assertThat(AlertSettings.PING_MAX_LENGTH).isEqualTo(512);
 		String atTheCap = validAddressOfLength(AlertSettings.PING_MAX_LENGTH);
 
 		assertThat(settings(atTheCap).configured()).isTrue();
@@ -90,6 +90,23 @@ class AlertSettingsTest {
 	@Test
 	void aVeryLongAddressIsRefusedWithTheSettingsMessageNotAStackOverflow() {
 		assertRefusedWithoutRepeatingAnyPartOf(validAddressOfLength(10_000));
+	}
+
+	/**
+	 * The matcher recurses once per host label and per {@code %XX} escape (a plain path does not recurse):
+	 * at the cap, the deepest shapes are still decided, not ended with a {@link StackOverflowError} (S-25
+	 * review, F4: a cap of 2048 overflowed on a CI runner).
+	 */
+	@Test
+	void theDeepestShapesAtTheCapAreDecided() {
+		String labels = "https://" + "a.".repeat((AlertSettings.PING_MAX_LENGTH - "https://hc".length()) / 2) + "hc";
+		String escapes = "https://hc-ping.example/"
+				+ "%41".repeat((AlertSettings.PING_MAX_LENGTH - "https://hc-ping.example/".length()) / 3);
+
+		assertThat(labels).hasSizeLessThanOrEqualTo(AlertSettings.PING_MAX_LENGTH);
+		assertThat(escapes).hasSizeLessThanOrEqualTo(AlertSettings.PING_MAX_LENGTH);
+		assertThat(settings(labels).configured()).isTrue();
+		assertThat(settings(escapes).configured()).isTrue();
 	}
 
 	private static String validAddressOfLength(int length) {

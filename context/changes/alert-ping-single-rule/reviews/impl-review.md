@@ -67,7 +67,7 @@ Success criteria at HEAD (dac3faa): 1.1–1.3, 2.1, 2.5, 3.2 re-run locally, PAS
 - **Location**: szczur-radar-api/src/main/java/pl/szczurradar/api/alerts/AlertSettings.java:44
 - **Detail**: `java.util.regex` recurses on the `(…|%XX)*` path group and the `(label[.])*` group: a path of about 3,850 characters (or about 5k labels) throws `StackOverflowError` (reviewer's measurement, Java 25). No ReDoS (failing inputs are linear) and nothing leaks (the error has no message), but the start fails without the formatted `APPLICATION FAILED TO START` block. Reachable only through an operator-set variable.
 - **Fix**: Optional: refuse a value longer than e.g. 2048 characters before matching, mirrored as `${#ping_url}` in the shell block and checks.sh (and one table row).
-- **Decision**: FIXED
+- **Decision**: FIXED (differently, after a red CI on c93184f: the first fix, a cap of 2048, still overflowed the stack in `anAddressOfAtMostTheCapIsAcceptedAndALongerOneRefused` on the CI runner. The path part of the pattern is rewritten as `(/C*(%XX C*)*)?`, the same language without recursion per character, and the cap is 512 in all copies; measured margin at least 3.4x with `-Xss512k`. New test `theDeepestShapesAtTheCapAreDecided`.)
 
 ### F5 — checks.sh's refusal text still says "no https:// ping URL"
 

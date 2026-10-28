@@ -52,7 +52,7 @@ readonly url_pattern='^https?://[A-Za-z0-9._~:/?#@!$&()*+,;=%-]+$'
 # AlertSettings.PING_PATTERN in the API and the "ping-url rule (S-25)" blocks of both crons (step 9 of
 # test.sh keeps the four equal). apply never arms or prints an address the API and the crons would refuse
 # (is_ping_url below adds their length cap and ASCII check).
-readonly ping_pattern='^[Hh][Tt][Tt][Pp][Ss]://([A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?[.])*[A-Za-z]([A-Za-z0-9-]*[A-Za-z0-9])?(:[0-9]{1,5})?(/([A-Za-z0-9._~:/@!$&()*+,;=-]|%[0-9A-Fa-f]{2})*)?$'
+readonly ping_pattern='^[Hh][Tt][Tt][Pp][Ss]://([A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?[.])*[A-Za-z]([A-Za-z0-9-]*[A-Za-z0-9])?(:[0-9]{1,5})?(/[A-Za-z0-9._~:/@!$&()*+,;=-]*(%[0-9A-Fa-f]{2}[A-Za-z0-9._~:/@!$&()*+,;=-]*)*)?$'
 readonly uuid_pattern='^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
 
 # Arguments. An unexpected one is never echoed: it might be the key, pasted in the wrong place.
@@ -167,11 +167,11 @@ field_of() {
 }
 
 # Whether $1 is a ping URL the API and the crons accept: the conditions of the crons' block, in its order.
-# At most 2048 characters (AlertSettings.PING_MAX_LENGTH; step 9 of test.sh keeps the three caps equal),
+# At most 512 characters (AlertSettings.PING_MAX_LENGTH; step 9 of test.sh keeps the three caps equal),
 # ASCII only (bash's [A-Za-z] also takes non-ASCII letters under a UTF-8 locale, e.g. on the operator's
 # Mac), then the pattern.
 is_ping_url() {
-    (( ${#1} <= 2048 )) && [[ $1 != *[![:ascii:]]* && $1 =~ $ping_pattern ]]
+    (( ${#1} <= 512 )) && [[ $1 != *[![:ascii:]]* && $1 =~ $ping_pattern ]]
 }
 
 if [[ $command == delete ]]; then
