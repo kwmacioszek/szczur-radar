@@ -120,7 +120,8 @@ whatever the finish reason (`ChatResponses.requireText`).
    `assessments.provider` / `assessments.channel` through a new Flyway migration. Constants whose
    values are stored (`Provider`, `Channel`, `ServiceTier`, `ReasoningEffort`, `OutputMode`) are
    append-only: never rename or remove one — old `assessments` rows would no longer load
-   (`persistence/EnumValueConverter` rejects unknown values).
+   (`persistence/EnumValueConverter` rejects unknown values). `persistence/ClosedSetsIT` keeps each
+   one's constants equal to its column's `CHECK`.
 2. Its Spring AI provider module in `pom.xml` (the module, never a starter), and a package
    `llm/<provider>/` with `<Provider>Client implements LlmClient` and its static `create()`
    building the `ChatModel` with every SDK/framework retry off and the timeout set; translate HTTP

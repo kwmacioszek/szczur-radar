@@ -29,7 +29,7 @@ Pakiet bazowy `pl.szczurradar.api`, pakiety według funkcji — nie według wars
 | `notifications` | powiadomienia adminów w aplikacji (S-06): encja `Notification`, `NotificationKind` (enum, dziś `run_attention`), `NotificationRepository`, `RunNotifications` (powiadomienie każdego admina o przebiegu, który wymaga uwagi; idempotentne, nigdy nie rzuca) i `api/NotificationController` |
 | `posts` | posty i każda próba oceny: encje `Post`, `Assessment`, repozytoria (lista od najnowszych, resztki do ponowienia, ostatnia ocena) |
 | `raw` | surowe payloady źródeł osobno od danych aplikacji: `RawPayloadStore` (gzip + SHA-256 w tabeli `raw_payloads`) |
-| `persistence` | wspólne klocki zapisu: `EnumValueConverter` (enum ↔ wartość z `CHECK`), `Sha256`; wszystkie konwertery enumów w `persistence/converters/` |
+| `persistence` | wspólne klocki zapisu: `EnumValueConverter` (enum ↔ wartość z `CHECK`), `Sha256`; wszystkie konwertery enumów w `persistence/converters/`. Enum zapisywany w bazie ma `CHECK` swojej kolumny równy swoim wartościom, czego pilnuje `ClosedSetsIT` (nowy enum → wpis w rejestrze testu) |
 | `text` | `Whitespace` — zbiór białych znaków kontraktu (§10), wspólny dla `agents`, `llm` i `sources` |
 | `settings` | wspólne czytanie ustawień środowiska, bez zależności od reszty aplikacji: `DurationSetting` (jedna reguła czasu dla `LLM_TIMEOUT`, `ACTIVATION_LINK_TTL`, `PIPELINE_STALL_TIMEOUT`), `SettingText` (przycinanie wartości), `InvalidSettingsException` (zła wartość: blok `APPLICATION FAILED TO START`, kod `2` komend) |
 
