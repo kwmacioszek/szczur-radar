@@ -69,7 +69,39 @@ class AlertSettingsTest {
 	@ParameterizedTest(name = "{0}")
 	@MethodSource("refused")
 	void anAddressOfTheTableIsRefusedWithoutRepeatingAnyPartOfIt(PingCase row) {
-		String address = row.address();
+		assertRefusedWithoutRepeatingAnyPartOf(row.address());
+	}
+
+	/**
+	 * The cap is not a table row: the addresses are generated, of the length given and of the pattern's shape
+	 * (a host name, then a path of hex digits).
+	 */
+	@Test
+	void anAddressOfAtMostTheCapIsAcceptedAndALongerOneRefused() {
+		assertThat(AlertSettings.PING_MAX_LENGTH).isEqualTo(2048);
+		String atTheCap = validAddressOfLength(AlertSettings.PING_MAX_LENGTH);
+
+		assertThat(settings(atTheCap).configured()).isTrue();
+		// The trailing / is dropped, so it does not count, as in the crons.
+		assertThat(settings(atTheCap + "/").pingUrl()).hasToString(atTheCap);
+		assertRefusedWithoutRepeatingAnyPartOf(validAddressOfLength(AlertSettings.PING_MAX_LENGTH + 1));
+	}
+
+	@Test
+	void aVeryLongAddressIsRefusedWithTheSettingsMessageNotAStackOverflow() {
+		assertRefusedWithoutRepeatingAnyPartOf(validAddressOfLength(10_000));
+	}
+
+	private static String validAddressOfLength(int length) {
+		StringBuilder address = new StringBuilder("https://hc-ping.example/");
+		while (address.length() < length) {
+			address.append("0123456789abcdef");
+		}
+		address.setLength(length);
+		return address.toString();
+	}
+
+	private static void assertRefusedWithoutRepeatingAnyPartOf(String address) {
 		String rest = address.replaceFirst("^[^:/]*://", "");
 		int slash = rest.indexOf('/');
 		String host = slash < 0 ? rest : rest.substring(0, slash);
@@ -94,7 +126,9 @@ class AlertSettingsTest {
 
 		assertThat(table).anyMatch(PingCase::accept).anyMatch(row -> !row.accept());
 		assertThat(table).extracting(PingCase::address)
-			.contains("https://hc-ping.com/00000000-0000-4000-8000-000000000001");
+			.contains("https://hc-ping.com/00000000-0000-4000-8000-000000000001",
+					// Read as UTF-8: the non-ASCII rows come through as written.
+					"https://h\u00e9.example/00000000-0000-4000-8000-000000000030");
 	}
 
 	@Test

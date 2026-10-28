@@ -50,8 +50,9 @@ readonly tag=szczur-radar
 readonly url_pattern='^https?://[A-Za-z0-9._~:/?#@!$&()*+,;=%-]+$'
 # A check's ping URL: the one rule of HEALTHCHECK_PING_URL (S-25), the same literal as
 # AlertSettings.PING_PATTERN in the API and the "ping-url rule (S-25)" blocks of both crons (step 9 of
-# test.sh keeps the four equal). apply never arms or prints an address the API and the crons would refuse.
-readonly ping_pattern='^[Hh][Tt][Tt][Pp][Ss]://([A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?[.])*[A-Za-z]([A-Za-z0-9-]*[A-Za-z0-9])?(:[0-9]+)?(/([A-Za-z0-9._~:/@!$&()*+,;=-]|%[0-9A-Fa-f]{2})*)?$'
+# test.sh keeps the four equal). apply never arms or prints an address the API and the crons would refuse
+# (is_ping_url below adds their length cap and ASCII check).
+readonly ping_pattern='^[Hh][Tt][Tt][Pp][Ss]://([A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?[.])*[A-Za-z]([A-Za-z0-9-]*[A-Za-z0-9])?(:[0-9]{1,5})?(/([A-Za-z0-9._~:/@!$&()*+,;=-]|%[0-9A-Fa-f]{2})*)?$'
 readonly uuid_pattern='^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
 
 # Arguments. An unexpected one is never echoed: it might be the key, pasted in the wrong place.
@@ -165,6 +166,14 @@ field_of() {
         '.checks[] | select(.name == $n) | .[$f] | if type == "string" then . else "" end' "$work/checks.json"
 }
 
+# Whether $1 is a ping URL the API and the crons accept: the conditions of the crons' block, in its order.
+# At most 2048 characters (AlertSettings.PING_MAX_LENGTH; step 9 of test.sh keeps the three caps equal),
+# ASCII only (bash's [A-Za-z] also takes non-ASCII letters under a UTF-8 locale, e.g. on the operator's
+# Mac), then the pattern.
+is_ping_url() {
+    (( ${#1} <= 2048 )) && [[ $1 != *[![:ascii:]]* && $1 =~ $ping_pattern ]]
+}
+
 if [[ $command == delete ]]; then
     read_checks
     deleted=0
@@ -220,7 +229,8 @@ for i in "${!services[@]}"; do
     log "$name: $action ($settings), status $status"
     if [[ $kind == cron && $status == new ]]; then
         ping_url=$(jq -r '.ping_url | if type == "string" then . else "" end' "$work/body")
-        [[ $ping_url =~ $ping_pattern ]] || fail "$name: the answer has no https:// ping URL"
+        is_ping_url "$ping_url" \
+            || fail "$name: the answer has no ping URL the API and the crons accept (AlertSettings.PING_PATTERN)"
         request POST "$ping_url" "$work/arm.txt" text/plain nokey
         if [[ $REPLY == 2?? ]]; then
             log "$name: armed with one success check-in"
@@ -239,7 +249,8 @@ for i in "${!services[@]}"; do
     (( REPLY == 1 )) || fail "$name: $REPLY checks with this name after the upsert (expected 1)"
     status=$(field_of "$name" status)
     ping_url=$(field_of "$name" ping_url)
-    [[ $ping_url =~ $ping_pattern ]] || fail "$name: the check has no https:// ping URL"
+    is_ping_url "$ping_url" \
+        || fail "$name: the check has no ping URL the API and the crons accept (AlertSettings.PING_PATTERN)"
     if [[ ${kinds[i]} == cron && $status != up ]]; then
         not_up+="${not_up:+, }$name (${status:-no status})"
     fi

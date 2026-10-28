@@ -18,9 +18,11 @@
 #      (cases 1–6 use a PR env and so check that no other environment gets it);
 #   9. the ping URL rule (S-25): the "ping-url rule (S-25)" blocks of tools/db-backup/backup.sh and
 #      tools/pipeline-trigger/trigger.sh are byte for byte the same (markers once in each), their pattern is
-#      the literal of checks.sh and of AlertSettings.PING_PATTERN in the API, and the block, run in bash with
-#      only a stub log, decides every row of fixtures/ping-urls.txt as the table does (a refusal with a
-#      warning that does not repeat the address);
+#      the literal of checks.sh and of AlertSettings.PING_PATTERN in the API, their length cap (2048) is
+#      checks.sh's and AlertSettings.PING_MAX_LENGTH, and the block, run in bash with only a stub log under a
+#      UTF-8 locale when there is one (en_US first, as glibc's in the postgres:18 image), decides every row of
+#      fixtures/ping-urls.txt as the table does and generated addresses at the cap and one past it (a refusal
+#      with a warning that does not repeat the address);
 #   and in every case the API key is never in curl's argv, stdout or the log.
 # Needs bash and jq. Run from anywhere: tools/healthchecks/test.sh
 set -euo pipefail
@@ -482,36 +484,78 @@ java_pattern=$(one_literal "$alert_settings" 's/^[[:space:]]*static final String
 [[ $java_pattern == "$cron_pattern" ]] \
     || die "AlertSettings.PING_PATTERN differs from the crons' ($java_pattern, crons: $cron_pattern)"
 pass "one pattern in the crons, checks.sh and AlertSettings.PING_PATTERN"
+# The length cap: the number in the crons' block ((( ${#ping_url} > N ))), in checks.sh's is_ping_url
+# ((( ${#1} <= N ))) and AlertSettings.PING_MAX_LENGTH, each from exactly one line.
+one_cap() {
+    local found
+    found=$(grep -oE -- "$2" "$1" || true)
+    [[ -n $found && $found != *$'\n'* ]] || die "$1: not exactly one line with the ping URL length cap"
+    [[ $found =~ ([0-9]+)[^0-9]*$ ]] || die "$1: no number in the length cap ($found)"
+    printf '%s\n' "${BASH_REMATCH[1]}"
+}
+cron_cap=$(one_cap "$tmp/rule-backup.sh" '\(\( \$\{#ping_url\} > [0-9]+ \)\)')
+checks_cap=$(one_cap "$checks" '\(\( \$\{#1\} <= [0-9]+ \)\)')
+java_cap=$(one_cap "$alert_settings" '^[[:space:]]*static final int PING_MAX_LENGTH = [0-9]+;$')
+[[ $checks_cap == "$cron_cap" ]] \
+    || die "checks.sh's length cap differs from the crons' ($checks_cap, crons: $cron_cap)"
+[[ $java_cap == "$cron_cap" ]] \
+    || die "AlertSettings.PING_MAX_LENGTH differs from the crons' length cap ($java_cap, crons: $cron_cap)"
+pass "one length cap ($cron_cap characters) in the crons, checks.sh and AlertSettings.PING_MAX_LENGTH"
 # Each row of the table through the cron block, in a fresh bash as strict as the crons, with only log
-# from outside (it prints its line). The address goes in through the environment, never as code.
+# from outside (it prints its line). The address goes in through the environment, never as code. The
+# bash runs under a UTF-8 locale when `locale -a` lists one (en_US first: under it glibc's [A-Za-z] also
+# takes non-ASCII letters, as in the postgres:18 image), else in the current locale.
+utf8_locale=""
+available_locales=$(locale -a 2>/dev/null || true)
+for candidate in en_US.UTF-8 en_US.utf8; do
+    if grep -qxF -- "$candidate" <<<"$available_locales"; then utf8_locale=$candidate; break; fi
+done
+if [[ -z $utf8_locale ]]; then
+    utf8_locale=$(grep -iE '\.utf-?8$' <<<"$available_locales" | head -n 1 || true)
+fi
+block_locale=${utf8_locale:-${LC_ALL:-${LANG:-the current locale}}}
 rule_block=$(cat "$tmp/rule-backup.sh")
+# Runs the block on the address $3 and checks the verdict $2 (accept or refuse); $1 names the case.
+decide() {
+    local name=$1 verdict=$2 address=$3 result status=0
+    result=$(LC_ALL=${utf8_locale:-${LC_ALL:-}} HEALTHCHECK_PING_URL=$address RULE_BLOCK=$rule_block bash -c '
+        set -euo pipefail
+        log() { printf "log %s\n" "$*"; }
+        eval "$RULE_BLOCK"
+        [[ -z ${HEALTHCHECK_PING_URL+set} ]] || { echo "HEALTHCHECK_PING_URL still set"; exit 1; }
+        printf "ping_url %s\n" "$ping_url"' 2>&1) || status=$?
+    (( status == 0 )) || die "$name: the block failed ($status): $result"
+    if [[ $verdict == accept ]]; then
+        [[ $result == "ping_url ${address%/}" ]] || die "$name: refused by the cron block, or changed: $result"
+    else
+        [[ $result == $'log warning: HEALTHCHECK_PING_URL is not an https:// address'*$'; no check-in\nping_url ' ]] \
+            || die "$name: accepted by the cron block, or no warning: $result"
+        [[ $result != *"$address"* ]] || die "$name: the warning repeats the address"
+    fi
+}
 rows=0 accepted=0 refused=0 line_number=0
 while IFS= read -r line || [[ -n $line ]]; do
     line_number=$(( line_number + 1 ))
     [[ -z $line || $line == \#* ]] && continue
     [[ $line =~ ^(accept|refuse)\ (.+)$ ]] || die "ping-urls.txt:$line_number: not 'accept <address>' or 'refuse <address>'"
     verdict=${BASH_REMATCH[1]} address=${BASH_REMATCH[2]}
-    status=0
-    result=$(HEALTHCHECK_PING_URL=$address RULE_BLOCK=$rule_block bash -c '
-        set -euo pipefail
-        log() { printf "log %s\n" "$*"; }
-        eval "$RULE_BLOCK"
-        [[ -z ${HEALTHCHECK_PING_URL+set} ]] || { echo "HEALTHCHECK_PING_URL still set"; exit 1; }
-        printf "ping_url %s\n" "$ping_url"' 2>&1) || status=$?
-    (( status == 0 )) || die "ping-urls.txt:$line_number ($line): the block failed ($status): $result"
-    if [[ $verdict == accept ]]; then
-        [[ $result == "ping_url ${address%/}" ]] \
-            || die "ping-urls.txt:$line_number ($line): refused by the cron block, or changed: $result"
-        accepted=$(( accepted + 1 ))
-    else
-        [[ $result == $'log warning: HEALTHCHECK_PING_URL is not an https:// address'*$'; no check-in\nping_url ' ]] \
-            || die "ping-urls.txt:$line_number ($line): accepted by the cron block, or no warning: $result"
-        [[ $result != *"$address"* ]] || die "ping-urls.txt:$line_number: the warning repeats the address"
-        refused=$(( refused + 1 ))
-    fi
+    decide "ping-urls.txt:$line_number ($line)" "$verdict" "$address"
+    if [[ $verdict == accept ]]; then accepted=$(( accepted + 1 )); else refused=$(( refused + 1 )); fi
     rows=$(( rows + 1 ))
 done <"$ping_table"
 (( accepted > 0 && refused > 0 )) || die "ping-urls.txt: $accepted accept and $refused refuse rows, expected some of each"
-pass "the cron block decides all $rows rows of fixtures/ping-urls.txt as the table does ($accepted accepted, $refused refused with a warning that does not repeat the address)"
+pass "the cron block (locale $block_locale) decides all $rows rows of fixtures/ping-urls.txt as the table does ($accepted accepted, $refused refused with a warning that does not repeat the address)"
+# The cap is not a table row: generated addresses of the pattern's shape (a host name, then hex digits),
+# as in AlertSettingsTest. The trailing / is dropped before the cap is checked.
+address_of_length() {
+    local address=https://hc-ping.example/
+    while (( ${#address} < $1 )); do address+=0123456789abcdef; done
+    printf '%s\n' "${address:0:$1}"
+}
+at_cap=$(address_of_length "$cron_cap")
+decide "an address of $cron_cap characters" accept "$at_cap"
+decide "an address of $cron_cap characters and a trailing /" accept "$at_cap/"
+decide "an address of $(( cron_cap + 1 )) characters" refuse "$(address_of_length $(( cron_cap + 1 )))"
+pass "the cron block (locale $block_locale) accepts an address of $cron_cap characters (also with a trailing /) and refuses one of $(( cron_cap + 1 ))"
 
 printf '\nAll healthchecks tests passed.\n'

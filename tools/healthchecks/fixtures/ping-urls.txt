@@ -3,7 +3,9 @@
 # A line is "accept <address>" or "refuse <address>": the verdict, one space, then the rest of the
 # line is the address, spaces included. Empty lines and lines starting with # are skipped. No
 # address has white space at its ends (trimming is tested by each side on its own). Every address
-# is made up (UUIDs 00000000-…), none is a real check's ping URL.
+# is made up (UUIDs 00000000-…), none is a real check's ping URL. The file is UTF-8: some refused
+# addresses are not ASCII. The length cap (2048 characters) is tested with generated addresses by
+# each side, not here.
 
 # The production shape, from checks.sh apply.
 accept https://hc-ping.com/00000000-0000-4000-8000-000000000001
@@ -21,6 +23,8 @@ accept https://hc-ping.com/ping%2F00000000-0000-4000-8000-000000000005
 accept https://hc-ping.com/a-b_c.d~e:f@g!h$i&j(k)l*m+n,o;p=q/00000000-0000-4000-8000-000000000006
 # A trailing / is accepted (and dropped by the API).
 accept https://hc-ping.com/00000000-0000-4000-8000-000000000007/
+# The largest port of 5 digits.
+accept https://hc-ping.test:65535/00000000-0000-4000-8000-000000000008
 
 # Not https.
 refuse http://hc-ping.example/00000000-0000-4000-8000-000000000011
@@ -40,8 +44,10 @@ refuse https://hc-ping-.example/00000000-0000-4000-8000-000000000020
 refuse https://user@hc-ping.example/00000000-0000-4000-8000-000000000021
 refuse https://192.0.2.1/00000000-0000-4000-8000-000000000022
 refuse https://hc-ping.1example/00000000-0000-4000-8000-000000000023
-# An empty port.
+# An empty port, or one of more than 5 digits (java.net.URI then reads the authority without a host).
 refuse https://hc-ping.example:/00000000-0000-4000-8000-000000000024
+refuse https://hc-ping.example:100000/00000000-0000-4000-8000-000000000032
+refuse https://hc-ping.example:99999999999/00000000-0000-4000-8000-000000000033
 # % that is not %XX.
 refuse https://hc-ping.example/%zz00000000-0000-4000-8000-000000000025
 # A character a path may not have.
@@ -49,3 +55,6 @@ refuse https://hc-ping.example/ 00000000-0000-4000-8000-000000000026
 refuse https://hc-ping.example/"00000000-0000-4000-8000-000000000027
 refuse https://hc-ping.example/\00000000-0000-4000-8000-000000000028
 refuse garbage 00000000-0000-4000-8000-000000000029 \ {}
+# Not ASCII (bash's [A-Za-z] takes é under a UTF-8 locale of glibc; the rule does not).
+refuse https://hé.example/00000000-0000-4000-8000-000000000030
+refuse https://hc-ping.example/00000000-0000-4000-8000-000000000031é
