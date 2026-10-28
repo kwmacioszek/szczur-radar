@@ -1,14 +1,18 @@
-// How a pipeline run is shown: its tone, status text, "wymaga uwagi" reasons, range, duration and progress —
-// one place for the run list (/admin), the run's page (/admin/runs/:id) and the notification bell.
-import type { InterruptionCause, Run, RunStatus, StepStatus } from './api/pipeline'
+// How a pipeline run is shown: its tone, status text, the text of its "wymaga uwagi" reasons, range, duration and
+// progress — one place for the run list (/admin), the run's page (/admin/runs/:id) and the notification bell. The
+// reasons themselves come from the API (pipeline/run/PipelineRun.attentionReasons); here they only get their text.
+import type { AttentionReason, InterruptionCause, Run, RunStatus, StepStatus } from './api/pipeline'
 import type { BadgeTone } from './components/StatusBadge.vue'
 import { formatDate, label, plural } from './labels'
 
 /** What the tone and status text need; a run of the list and the run of a notification both have it. */
 type RunState = { status: RunStatus; interruptionCause: InterruptionCause | null; skipped: number }
 
-/** What the "wymaga uwagi" reasons are built from. */
-type AttentionFields = RunState & Pick<Run, 'dead' | 'processingErrors' | 'error'>
+/** The API's reason codes and what their text is built from. */
+type AttentionFields = Pick<
+  Run,
+  'needsAttention' | 'attentionReasons' | 'interruptionCause' | 'dead' | 'processingErrors' | 'skipped' | 'error'
+>
 
 const statusTone: Record<RunStatus, BadgeTone> = {
   queued: 'neutral',
@@ -20,13 +24,11 @@ const statusTone: Record<RunStatus, BadgeTone> = {
 }
 
 /**
- * The badge tone of a run. A run interrupted by a new deployment is expected (the operator merged), so it is
- * `neutral`; any other interruption is a `warning` — a restart, a shutdown, and a run whose instance was lost
- * (`lost`: an anomaly, cleaned up by another instance). A succeeded run whose source skipped elements is a `warning`
- * too.
+ * The badge tone of a run. Every interruption is a `warning`, whatever its cause: the API's rule
+ * (pipeline/run/PipelineRun.attentionReasons) says an interrupted run needs attention, a new deployment's included.
+ * A succeeded run whose source skipped elements is a `warning` too.
  */
 export function runTone(run: RunState): BadgeTone {
-  if (run.status === 'interrupted' && run.interruptionCause === 'deploy') return 'neutral'
   if (run.status === 'succeeded' && run.skipped > 0) return 'warning'
   return statusTone[run.status]
 }
@@ -38,12 +40,8 @@ const stepStatusTone: Record<StepStatus, BadgeTone> = {
   interrupted: 'warning',
 }
 
-/**
- * The badge tone of a step; an interrupted step takes the tone of its run's interruption: `neutral` for a new
- * deployment, `warning` for any other cause (`lost` included).
- */
-export function stepTone(status: StepStatus, cause: InterruptionCause | null): BadgeTone {
-  if (status === 'interrupted' && cause === 'deploy') return 'neutral'
+/** The badge tone of a step; an interrupted step is a `warning` like its run, whatever the cause. */
+export function stepTone(status: StepStatus): BadgeTone {
   return stepStatusTone[status]
 }
 
@@ -66,29 +64,34 @@ function hasSkipped(run: RunState): boolean {
 }
 
 /**
- * Why the run needs attention, in words, along the API's rule (pipeline/run/PipelineRun.needsAttention): a failed
- * run's own error text, as it is (the watchdog's "no progress for …" and an empty source's
- * "NoPostsFetchedException: …" too); an interrupted run's cause; a partial run's dead posts and technical errors; a
- * succeeded or partial run's skipped elements. Empty for a run that does not need attention.
+ * Why the run needs attention, in words: the text of each reason code the API sends
+ * (pipeline/run/PipelineRun.attentionReasons), in its order — nothing is counted here. `failed`: the run's own error
+ * text, as it is (the watchdog's "no progress for …" and an empty source's "NoPostsFetchedException: …" too);
+ * `interrupted`: its cause; `dead_posts`, `processing_errors`, `skipped`: the run's counter. A code without a text
+ * here shows as it came. A run that needs attention without any reason (an API from before S-22 sends none) gets one
+ * stand-in text, so "Wymaga uwagi:" is never empty; a run that does not need attention has none.
  */
 export function attentionReasons(run: AttentionFields): string[] {
-  switch (run.status) {
+  if (!run.needsAttention) return []
+  const reasons = (run.attentionReasons ?? []).map((code) => attentionReasonText(code, run))
+  return reasons.length > 0 ? reasons : ['sprawdź kroki i błąd przebiegu']
+}
+
+function attentionReasonText(code: AttentionReason, run: AttentionFields): string {
+  switch (code) {
     case 'failed':
-      return [run.error ?? 'przebieg zakończył się błędem']
+      return run.error ?? 'przebieg zakończył się błędem'
     case 'interrupted':
-      return [run.interruptionCause ? `przerwany: ${label('interruptionCause', run.interruptionCause)}` : 'przerwany']
-    case 'partial':
-    case 'succeeded': {
-      const reasons: string[] = []
-      if (run.status === 'partial') {
-        if (run.dead > 0) reasons.push(`${run.dead} ${plural(run.dead, 'post martwy', 'posty martwe', 'postów martwych')}`)
-        if (run.processingErrors > 0) reasons.push(`błędy techniczne: ${run.processingErrors}`)
-      }
-      if (hasSkipped(run)) reasons.push(`pominięte elementy: ${run.skipped}`)
-      return reasons
-    }
+      return run.interruptionCause ? `przerwany: ${label('interruptionCause', run.interruptionCause)}` : 'przerwany'
+    case 'dead_posts':
+      return `${run.dead} ${plural(run.dead, 'post martwy', 'posty martwe', 'postów martwych')}`
+    case 'processing_errors':
+      return `błędy techniczne: ${run.processingErrors}`
+    case 'skipped':
+      return `pominięte elementy: ${run.skipped}`
     default:
-      return []
+      // A code the API added after this SPA was built.
+      return String(code)
   }
 }
 

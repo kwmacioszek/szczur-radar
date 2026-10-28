@@ -252,17 +252,17 @@ Bez migracji bazy. Wdrożenie: API i web wychodzą z tego samego merge'a, ale w 
 
 #### Automated
 
-- [x] 1.1 Testy jednostkowe reguły przechodzą: `cd szczur-radar-api && ./mvnw -B test -Dtest=PipelineRunTest`
-- [x] 1.2 Pełna bramka backendu przechodzi (w tym `PipelineRunControllerIT`, `NotificationsIT`, `RunNotificationsTest`, `PipelineRunIT`): `cd szczur-radar-api && ./mvnw -B verify`
-- [x] 1.3 W kodzie produkcyjnym nie ma drugiej tabeli reguły: `rg -n "needsAttention\(RunStatus" szczur-radar-api/src` nie znajduje nic
+- [x] 1.1 Testy jednostkowe reguły przechodzą: `cd szczur-radar-api && ./mvnw -B test -Dtest=PipelineRunTest` — 45db4d3
+- [x] 1.2 Pełna bramka backendu przechodzi (w tym `PipelineRunControllerIT`, `NotificationsIT`, `RunNotificationsTest`, `PipelineRunIT`): `cd szczur-radar-api && ./mvnw -B verify` — 45db4d3
+- [x] 1.3 W kodzie produkcyjnym nie ma drugiej tabeli reguły: `rg -n "needsAttention\(RunStatus" szczur-radar-api/src` nie znajduje nic — 45db4d3
 
 ### Phase 2: SPA — tekst z kodów API, ton `warning` dla wdrożenia
 
 #### Automated
 
-- [ ] 2.1 Testy web przechodzą: `cd szczur-radar-web && npm test`
-- [ ] 2.2 Typecheck i build przechodzą: `cd szczur-radar-web && npm run build`
-- [ ] 2.3 SPA nie liczy już powodów z liczników ani nie ma wyjątku tonu dla wdrożenia: `rg -n "=== 'deploy'|run\.dead > 0|run\.processingErrors > 0" szczur-radar-web/src/runs.ts` nie znajduje nic
+- [x] 2.1 Testy web przechodzą: `cd szczur-radar-web && npm test`
+- [x] 2.2 Typecheck i build przechodzą: `cd szczur-radar-web && npm run build`
+- [x] 2.3 SPA nie liczy już powodów z liczników ani nie ma wyjątku tonu dla wdrożenia: `rg -n "=== 'deploy'|run\.dead > 0|run\.processingErrors > 0" szczur-radar-web/src/runs.ts` nie znajduje nic
 
 #### Manual
 

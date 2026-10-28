@@ -61,7 +61,7 @@ const badges: { tone: BadgeTone; text: string }[] = [
   { tone: 'warning', text: 'zakończony — pominięte: 3' },
   { tone: 'warning', text: 'częściowo' },
   { tone: 'warning', text: 'przerwany' },
-  { tone: 'neutral', text: 'przerwany — nowe wdrożenie' },
+  { tone: 'warning', text: 'przerwany — nowe wdrożenie' },
   { tone: 'warning', text: 'przerwany — utracona instancja' },
   { tone: 'destructive', text: 'błąd' },
   { tone: 'destructive', text: 'wymaga uwagi' },

@@ -14,6 +14,11 @@ export type StepStatus = 'running' | 'succeeded' | 'failed' | 'interrupted'
  * activity (`lost`).
  */
 export type InterruptionCause = 'deploy' | 'restart' | 'shutdown' | 'lost'
+/**
+ * Why a run needs attention — pipeline/run/AttentionReason, in the API's rule order. The API may add a code; until
+ * src/runs.ts gives it a text, the SPA shows it as it came.
+ */
+export type AttentionReason = 'failed' | 'interrupted' | 'dead_posts' | 'processing_errors' | 'skipped'
 
 export interface RunStep {
   step: RunStepName
@@ -31,11 +36,13 @@ export interface Run {
   status: RunStatus
   /** Why an interrupted run stopped; null for any other run and for one interrupted before causes were recorded. */
   interruptionCause: InterruptionCause | null
-  /**
-   * Failed, interrupted, partial with a dead post or a technical error, or succeeded or partial with skipped elements
-   * (the API's rule).
-   */
+  /** True exactly when `attentionReasons` is not empty (the API's one rule). */
   needsAttention: boolean
+  /**
+   * Why it needs attention, in the API's rule order; empty when it does not. Optional: an API from before S-22 does
+   * not send it.
+   */
+  attentionReasons?: AttentionReason[]
   /** Requested by the daily cron, not by an admin. */
   scheduled: boolean
   rangeFrom: string | null
