@@ -26,13 +26,19 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.FutureTask;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.RunnableFuture;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -42,6 +48,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InOrder;
 import org.springframework.beans.factory.ObjectProvider;
@@ -90,9 +97,12 @@ import pl.szczurradar.api.sources.Source;
  * {@link ConcurrentAssessmentDispatcher} on its own pool of {@value #THREADS} threads, one scripted
  * {@link LlmClient}, the posts' stages kept in memory in place of the database, a mocked
  * {@link RunRecorder} (the counters), a mocked {@link OperatorAlertQueue} and a test clock for the progress
- * lines.
+ * lines. The tests wait for events, never for a time of their own: a test that hangs ends at its
+ * {@link Timeout}, with a dump of every thread in the log ({@code junit-platform.properties}); a pool's
+ * termination, which needs a bound, gets a day.
  */
 @ExtendWith(OutputCaptureExtension.class)
+@Timeout(60)
 class ConcurrentAssessmentDispatcherTest {
 
 	private static final int THREADS = 3;
@@ -204,6 +214,12 @@ class ConcurrentAssessmentDispatcherTest {
 	/** Lets the {@link #HELD} calls answer. */
 	private final CountDownLatch release = new CountDownLatch(1);
 
+	/**
+	 * When set, each model call first waits until this many calls have reached it, so that many are in flight
+	 * at once, however fast the machine.
+	 */
+	private final AtomicReference<@Nullable CountDownLatch> overlap = new AtomicReference<>();
+
 	/** The user messages of the calls that were interrupted. */
 	private final List<String> interrupted = new CopyOnWriteArrayList<>();
 
@@ -232,6 +248,8 @@ class ConcurrentAssessmentDispatcherTest {
 					: ContractFixtures.BODY));
 		}
 		UUID broken = ids.get(5);
+		// The first two calls wait for each other: at least two in flight, never more than the pool's threads.
+		overlap.set(new CountDownLatch(2));
 
 		AssessedBatch batch = dispatcher().dispatch(RUN, ids);
 
@@ -473,24 +491,27 @@ class ConcurrentAssessmentDispatcherTest {
 		UUID notStarted = post(ContractFixtures.BODY + " (the stopped run's, never started)");
 		// Two threads: the other run's call holds one, the stopped run's call the other, and the stopped run's
 		// second post waits for a thread.
-		ExecutorService twoThreads = Executors.newFixedThreadPool(2);
+		Semaphore awaited = new Semaphore(0);
+		ExecutorService twoThreads = awaitedPool(2, awaited);
 		ExecutorService callers = Executors.newFixedThreadPool(2);
 		ConcurrentAssessmentDispatcher dispatcher = dispatcher(twoThreads);
 		try {
 			Future<AssessedBatch> otherRun = callers.submit(() -> dispatcher.dispatch(other, List.of(going)));
-			assertThat(holding.tryAcquire(10, TimeUnit.SECONDS)).isTrue();
+			holding.acquire();
 			Future<AssessedBatch> stoppedRun = callers.submit(() -> dispatcher.dispatch(RUN, List.of(stopped, notStarted)));
-			assertThat(holding.tryAcquire(10, TimeUnit.SECONDS)).isTrue();
+			holding.acquire();
+			// Both steps wait for their posts: each has submitted every task, the stopped run both of its own.
+			awaited.acquire(2);
 
 			dispatcher.cancel(RUN);
 
 			// The stopped run's step returns at once, with nothing taken or counted; its call saw the interrupt.
-			assertThat(stoppedRun.get(10, TimeUnit.SECONDS)).isEqualTo(new AssessedBatch(RUN, 0, 0, 0, List.of(), null));
+			assertThat(stoppedRun.get()).isEqualTo(new AssessedBatch(RUN, 0, 0, 0, List.of(), null));
 			assertThat(otherRun.isDone()).isFalse();
 			release.countDown();
-			assertThat(otherRun.get(10, TimeUnit.SECONDS)).isEqualTo(new AssessedBatch(other, 1, 0, 0, List.of(), null));
+			assertThat(otherRun.get()).isEqualTo(new AssessedBatch(other, 1, 0, 0, List.of(), null));
 			twoThreads.shutdown();
-			assertThat(twoThreads.awaitTermination(10, TimeUnit.SECONDS)).isTrue();
+			assertThat(twoThreads.awaitTermination(1, TimeUnit.DAYS)).isTrue();
 		}
 		finally {
 			twoThreads.shutdownNow();
@@ -523,18 +544,18 @@ class ConcurrentAssessmentDispatcherTest {
 				thrown.set(ex);
 			}
 		});
-		assertThat(holding.tryAcquire(10, TimeUnit.SECONDS)).isTrue();
+		holding.acquire();
 
 		// The watchdog's cancel(true) on the run's task, or a stopping instance's shutdownNow().
 		step.interrupt();
 
-		step.join(10_000);
+		step.join();
 		assertThat(step.isAlive()).isFalse();
 		assertThat(thrown.get()).isInstanceOf(IllegalStateException.class)
 			.hasMessage("interrupted while assessing run " + RUN);
 		// The call saw the interrupt and ended with the stopped run.
 		executor.shutdown();
-		assertThat(executor.awaitTermination(10, TimeUnit.SECONDS)).isTrue();
+		assertThat(executor.awaitTermination(1, TimeUnit.DAYS)).isTrue();
 		assertThat(interrupted).singleElement().satisfies(message -> assertThat(message).contains(HELD));
 		// Marked cancelled before the interrupt reached the call: not the post's technical error, not counted.
 		assertThat(stages.get(held)).isEqualTo(PostStage.STORED);
@@ -561,12 +582,12 @@ class ConcurrentAssessmentDispatcherTest {
 				thrown.set(ex);
 			}
 		});
-		assertThat(holding.tryAcquire(10, TimeUnit.SECONDS)).isTrue();
+		holding.acquire();
 
 		// A stopping instance's shutdownNow(), or the watchdog's cancel(true), while the check is in flight.
 		step.interrupt();
 
-		step.join(10_000);
+		step.join();
 		assertThat(step.isAlive()).isFalse();
 		// The stop, not the check's failure: execute logs it at INFO and the step stays as the stop closed it.
 		assertThat(thrown.get()).isInstanceOf(RunInterruptedException.class)
@@ -730,14 +751,14 @@ class ConcurrentAssessmentDispatcherTest {
 		ExecutorService caller = Executors.newSingleThreadExecutor();
 		try {
 			Future<AssessedBatch> step = caller.submit(() -> dispatcher.dispatch(RUN, ids));
-			assertThat(holding.tryAcquire(THREADS, 10, TimeUnit.SECONDS)).isTrue();
+			holding.acquire(THREADS);
 
 			dispatcher.cancel(RUN);
 
-			assertThat(step.get(10, TimeUnit.SECONDS)).isEqualTo(new AssessedBatch(RUN, 0, 0, 0, List.of(), null));
+			assertThat(step.get()).isEqualTo(new AssessedBatch(RUN, 0, 0, 0, List.of(), null));
 			// The interrupted calls end finding the provider "unavailable", as between two attempts.
 			executor.shutdown();
-			assertThat(executor.awaitTermination(10, TimeUnit.SECONDS)).isTrue();
+			assertThat(executor.awaitTermination(1, TimeUnit.DAYS)).isTrue();
 		}
 		finally {
 			caller.shutdownNow();
@@ -933,13 +954,13 @@ class ConcurrentAssessmentDispatcherTest {
 		ExecutorService caller = Executors.newSingleThreadExecutor();
 		try {
 			Future<AssessedBatch> step = caller.submit(() -> dispatcher.dispatch(RUN, ids));
-			assertThat(holding.tryAcquire(THREADS, 10, TimeUnit.SECONDS)).isTrue();
+			holding.acquire(THREADS);
 
 			dispatcher.cancel(RUN);
 
-			assertThat(step.get(10, TimeUnit.SECONDS)).isEqualTo(new AssessedBatch(RUN, 0, 0, 0, List.of(), null));
+			assertThat(step.get()).isEqualTo(new AssessedBatch(RUN, 0, 0, 0, List.of(), null));
 			executor.shutdown();
-			assertThat(executor.awaitTermination(10, TimeUnit.SECONDS)).isTrue();
+			assertThat(executor.awaitTermination(1, TimeUnit.DAYS)).isTrue();
 		}
 		finally {
 			caller.shutdownNow();
@@ -981,6 +1002,30 @@ class ConcurrentAssessmentDispatcherTest {
 		}
 	}
 
+	/**
+	 * A pool of {@code threads} threads, as {@link Executors#newFixedThreadPool}, whose tasks release a permit
+	 * of {@code awaited} each time someone waits for their result ({@link Future#get()}): a step waits for its
+	 * first post only once it has submitted every one.
+	 */
+	private static ExecutorService awaitedPool(int threads, Semaphore awaited) {
+		return new ThreadPoolExecutor(threads, threads, 0, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>()) {
+
+			@Override
+			protected <T> RunnableFuture<T> newTaskFor(Callable<T> callable) {
+				return new FutureTask<>(callable) {
+
+					@Override
+					public T get() throws InterruptedException, ExecutionException {
+						awaited.release();
+						return super.get();
+					}
+
+				};
+			}
+
+		};
+	}
+
 	private ConcurrentAssessmentDispatcher dispatcher(ExecutorService pool) {
 		Clock clock = Clock.fixed(Instant.parse("2026-10-08T10:00:00Z"), ZoneOffset.UTC);
 		LlmClient llm = request -> {
@@ -1005,6 +1050,11 @@ class ConcurrentAssessmentDispatcherTest {
 			calls.incrementAndGet();
 			maxInFlight.accumulateAndGet(inFlight.incrementAndGet(), Math::max);
 			try {
+				CountDownLatch meeting = overlap.get();
+				if (meeting != null) {
+					meeting.countDown();
+					meeting.await();
+				}
 				if (request.userMessage().contains(HELD)) {
 					holding.release();
 					release.await();

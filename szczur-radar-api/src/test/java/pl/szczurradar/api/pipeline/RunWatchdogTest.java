@@ -7,7 +7,6 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -16,9 +15,11 @@ import static org.mockito.Mockito.when;
 import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
@@ -33,9 +34,11 @@ import pl.szczurradar.api.llm.Provider;
  * One check of the watchdog, without its thread: nothing but an in-memory look while this instance has
  * no run, every run of its own handed to the stop, a failure logged and raised to the operator with its
  * run, an {@link Error} too, and a raise that fails stopping nothing; and on its thread, the checks going
- * on after an {@link Error}.
+ * on after an {@link Error}, waited for as they happen: a test that hangs ends at its {@link Timeout}, with a
+ * dump of every thread in the log ({@code junit-platform.properties}).
  */
 @ExtendWith(OutputCaptureExtension.class)
+@Timeout(60)
 class RunWatchdogTest {
 
 	private static final Duration TIMEOUT = Duration.ofMinutes(20);
@@ -120,12 +123,18 @@ class RunWatchdogTest {
 	}
 
 	@Test
-	void anErrorInOneCheckDoesNotEndTheLaterChecks() {
+	void anErrorInOneCheckDoesNotEndTheLaterChecks() throws InterruptedException {
 		UUID run = UUID.randomUUID();
 		Duration timeout = Duration.ofMillis(500);
 		when(service.ownRuns()).thenReturn(List.of(run));
-		when(service.stopStalled(run, timeout)).thenThrow(new NoClassDefFoundError("pl/szczurradar/Missing"))
-			.thenReturn(false);
+		CountDownLatch checked = new CountDownLatch(3);
+		when(service.stopStalled(run, timeout)).thenAnswer(call -> {
+			checked.countDown();
+			throw new NoClassDefFoundError("pl/szczurradar/Missing");
+		}).thenAnswer(call -> {
+			checked.countDown();
+			return false;
+		});
 		// Checked every 100 ms on its own thread.
 		RunWatchdog scheduled = new RunWatchdog(service, PipelineStallSettings.from(
 				new MockEnvironment().withProperty(PipelineStallSettings.NAME, "500ms"),
@@ -133,7 +142,9 @@ class RunWatchdogTest {
 		try {
 			scheduled.afterPropertiesSet();
 
-			verify(service, timeout(5_000).atLeast(3)).stopStalled(run, timeout);
+			// The first check's Error, then two more checks.
+			checked.await();
+			verify(service, atLeast(3)).stopStalled(run, timeout);
 		}
 		finally {
 			scheduled.destroy();

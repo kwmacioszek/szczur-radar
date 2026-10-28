@@ -22,11 +22,11 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.test.system.CapturedOutput;
@@ -69,10 +69,17 @@ import pl.szczurradar.api.sources.Source;
  * ended or a stopping instance an INFO line, an {@link Error} logged although its task keeps it, a close
  * the watchdog's late interrupt cut short an INFO line — the stopping instance known from the start of
  * {@code onClose}, which reports every run of its own; and the watchdog's stop, its writes first, then the
- * interrupt of the run's thread and of its post tasks, then the notification.
+ * interrupt of the run's thread and of its post tasks, then the notification. The tests wait for events
+ * (a latch a mock counts down, or the queue thread's own state polled), never for a time of their own: a
+ * test that hangs ends at its {@link Timeout}, with a dump of every thread in the log
+ * ({@code junit-platform.properties}).
  */
 @ExtendWith(OutputCaptureExtension.class)
+@Timeout(60)
 class PipelineRunServiceTest {
+
+	/** How often a test polls what no mock can signal (milliseconds); the class's timeout bounds the polling. */
+	private static final long POLL = 10;
 
 	private final PipelineRunRepository runs = mock(PipelineRunRepository.class);
 
@@ -259,11 +266,13 @@ class PipelineRunServiceTest {
 			return false;
 		});
 		service.startPosts(List.of(UUID.randomUUID()), UUID.randomUUID());
-		assertThat(holding.await(10, TimeUnit.SECONDS)).as("the run is held in the queue thread").isTrue();
+		// The run is held in the queue thread.
+		holding.await();
 
 		service.onClose();
 
-		assertThat(stopped.await(10, TimeUnit.SECONDS)).as("the queue thread was interrupted").isTrue();
+		// The queue thread was interrupted.
+		stopped.await();
 		assertThat(output).contains("ERROR", "could not be interrupted on shutdown", ownId.toString());
 		verify(alerts).raise(eq(AlertEvent.RUN_CLOSE_FAILED), isNull(),
 				argThat(detail -> detail.contains(ownId.toString())
@@ -379,23 +388,22 @@ class PipelineRunServiceTest {
 		when(runs.findById(run)).thenReturn(Optional.of(own));
 		CountDownLatch closing = new CountDownLatch(1);
 		CountDownLatch written = new CountDownLatch(1);
-		when(recorder.start(run)).thenAnswer(call -> closing.await(10, TimeUnit.SECONDS));
+		when(recorder.start(run)).thenAnswer(call -> {
+			closing.await();
+			return true;
+		});
 		// onClose's interruption is written: the run's next step is refused.
 		when(sequence.run(any())).thenThrow(new RunNoLongerRunningException(run, RunStep.ASSESS));
 		when(recorder.interrupt(List.of(run), InterruptionCause.SHUTDOWN)).thenAnswer(call -> {
 			closing.countDown();
 			// Held until the queue thread has finished the run (the notifications' round trip, in production).
-			written.await(10, TimeUnit.SECONDS);
+			written.await();
 			return List.of(run);
 		});
 		service.startPosts(List.of(UUID.randomUUID()), UUID.randomUUID());
 
 		Thread closer = Thread.ofPlatform().start(service::onClose);
-		long deadline = System.nanoTime() + Duration.ofSeconds(10).toNanos();
-		while (!service.ownRuns().isEmpty()) {
-			assertThat(System.nanoTime()).as("the queue thread finishes the run").isLessThan(deadline);
-			Thread.onSpinWait();
-		}
+		awaitNoRunOfItsOwn();
 
 		// The queue thread neither closed nor reported it: no false ERROR, no RUN_CLOSE_FAILED.
 		assertThat(output.getAll()).contains("Pipeline run " + run + ": stopped, the application is stopping");
@@ -405,7 +413,7 @@ class PipelineRunServiceTest {
 		verify(notifications, never()).runEnded(run);
 
 		written.countDown();
-		closer.join(10_000);
+		closer.join();
 		assertThat(closer.isAlive()).isFalse();
 		// onClose reported it.
 		verify(notifications, times(1)).runEnded(run);
@@ -434,15 +442,12 @@ class PipelineRunServiceTest {
 		});
 		when(recorder.interrupt(List.of(run), InterruptionCause.SHUTDOWN)).thenReturn(List.of());
 		service.startPosts(List.of(UUID.randomUUID()), UUID.randomUUID());
-		assertThat(holding.await(10, TimeUnit.SECONDS)).as("the run is held in the queue thread").isTrue();
+		// The run is held in the queue thread.
+		holding.await();
 
 		service.onClose();
 
-		long deadline = System.nanoTime() + Duration.ofSeconds(10).toNanos();
-		while (!service.ownRuns().isEmpty()) {
-			assertThat(System.nanoTime()).as("the queue thread finishes the run").isLessThan(deadline);
-			Thread.onSpinWait();
-		}
+		awaitNoRunOfItsOwn();
 		verify(notifications, times(1)).runEnded(run);
 		verify(transitions, never()).releaseAll(any());
 		verify(recorder, never()).fail(any(), any());
@@ -464,7 +469,7 @@ class PipelineRunServiceTest {
 	}
 
 	@Test
-	void anErrorEscapingTheRunIsLoggedThoughItsTaskKeepsIt(CapturedOutput output) {
+	void anErrorEscapingTheRunIsLoggedThoughItsTaskKeepsIt(CapturedOutput output) throws InterruptedException {
 		PipelineRun queued = mock(PipelineRun.class);
 		UUID run = UUID.randomUUID();
 		when(queued.getId()).thenReturn(run);
@@ -474,10 +479,9 @@ class PipelineRunServiceTest {
 
 		service.startPosts(List.of(UUID.randomUUID()), UUID.randomUUID());
 
-		long deadline = System.nanoTime() + Duration.ofSeconds(10).toNanos();
+		// Until the crash is logged: the line comes after the last call any mock sees.
 		while (!output.getAll().contains("Pipeline run " + run + " crashed its queue thread")) {
-			assertThat(System.nanoTime()).as("the crash is logged").isLessThan(deadline);
-			Thread.onSpinWait();
+			Thread.sleep(POLL);
 		}
 		assertThat(errors(output, run)).singleElement()
 			.satisfies(line -> assertThat(line).contains("crashed its queue thread"));
@@ -516,7 +520,8 @@ class PipelineRunServiceTest {
 			return false;
 		});
 		service.startPosts(List.of(UUID.randomUUID()), UUID.randomUUID());
-		assertThat(holding.await(10, TimeUnit.SECONDS)).as("the run is held in the queue thread").isTrue();
+		// The run is held in the queue thread.
+		holding.await();
 		Duration threshold = Duration.ofMinutes(20);
 		when(recorder.stall(run, threshold)).thenAnswer(call -> events.add("stall"));
 		doAnswer(call -> {
@@ -525,8 +530,9 @@ class PipelineRunServiceTest {
 		}).when(transitions).releaseAll(run);
 		doAnswer(call -> events.add("runEnded")).when(notifications).runEnded(run);
 		doAnswer(call -> {
-			// Waits for the queue thread's interrupt: it comes first, or not before this times out.
-			interrupted.await(5, TimeUnit.SECONDS);
+			// Waits for the queue thread's interrupt, sent before this call: when it comes later, it is still
+			// recorded first, and when it never comes the test times out.
+			interrupted.await();
 			return events.add("dispatcher.cancel");
 		}).when(dispatcher).cancel(run);
 
@@ -548,6 +554,16 @@ class PipelineRunServiceTest {
 		verify(transitions, never()).releaseAll(any());
 		verify(notifications, never()).runEnded(any());
 		verify(dispatcher, never()).cancel(any());
+	}
+
+	/**
+	 * Until the queue thread has finished every run of this instance: it removes a run last, after any call a
+	 * mock sees, so the test polls for it.
+	 */
+	private void awaitNoRunOfItsOwn() throws InterruptedException {
+		while (!service.ownRuns().isEmpty()) {
+			Thread.sleep(POLL);
+		}
 	}
 
 	/**
