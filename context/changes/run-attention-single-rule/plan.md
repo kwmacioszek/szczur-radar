@@ -201,6 +201,8 @@ SPA bierze powody z `Run.attentionReasons`, zamienia je na tekst i nic nie liczy
 
 Szczegóły obu kroków w „Manual Testing Steps”. Zrzuty robi agent (`dev/mock-api.js` + `playwright-cli`), ogląda człowiek; ze stanów 7-stanowej macierzy tylko `default`, reszta N/A z powodem (zmienia się sam ton jednego wariantu badge'a). W PR env admin uruchamia przebieg zakresu na dzisiejszy dzień (źródło bez postów → `failed`), a odpowiedź `GET /api/admin/pipeline-runs/<id>` ma też `"needsAttention":true`.
 
+> Notatka z wykonania (2026-10-28): 2.5 sprawdzono lokalnie, nie w PR env. W PR env `szczur-radar-pr-128` nie było konta admina, a `railway ssh` (potrzebne do `create-admin`) było niedostępne po stronie Railway, a dla agenta zablokowane uprawnieniami. Sprawdzenie, za zgodą użytkownika: obraz API z `szczur-radar-api/Dockerfile` z commita `f077113`, Postgres 18, prawdziwe klucze Wykop i LLM, SPA przez proxy Vite. Przebieg zakresu `2004-01-01`, a nie dzisiejszego dnia, który o tej porze ma już posty: `failed`, `"needsAttention":true`, `"attentionReasons":["failed"]`, strona przebiegu „Wymaga uwagi: NoPostsFetchedException: wykop gave no post to store (fetched 0, skipped 0)”. Samo wdrożenie na Railway potwierdziło CI PR #128 (zielone wdrożenia API i web, `/api/ready` 200). Dowody w komentarzu PR #128.
+
 **Implementation Note**: Po zielonej automatycznej weryfikacji zatrzymaj się na ręcznym potwierdzeniu zrzutów i sprawdzenia w PR env.
 
 ---
@@ -267,4 +269,4 @@ Bez migracji bazy. Wdrożenie: API i web wychodzą z tego samego merge'a, ale w 
 #### Manual
 
 - [x] 2.4 Zrzuty z atrapy `/admin` i `/admin/runs/r-deploy` w obu motywach i przy 375 px pokazują ton ostrzeżenia dla przerwania przez wdrożenie
-- [ ] 2.5 PR env: przebieg zakresu bez postów pokazuje „Wymaga uwagi: NoPostsFetchedException: …”, a jego JSON ma `"attentionReasons":["failed"]`
+- [x] 2.5 PR env: przebieg zakresu bez postów pokazuje „Wymaga uwagi: NoPostsFetchedException: …”, a jego JSON ma `"attentionReasons":["failed"]`
