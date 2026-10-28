@@ -101,7 +101,10 @@ if [[ -z ${BACKUP_TIME_LIMITED:-} ]]; then
         | tee "$log_copy" >&2; status=${PIPESTATUS[0]}; } 3>&1
     set -e
     if (( status == 124 || status == 137 )); then
+        # What fail does, but the check-in goes before the exit: the time limit is 1 like in
+        # tools/pipeline-trigger/trigger.sh (S-25).
         log "FAILED: the run exceeded ${BACKUP_TIMEOUT:-2h}" 2>&1 | tee -a "$log_copy" >&2 || true
+        status=1
     fi
     last_line "$log_copy" >"$body" 2>/dev/null || true
     check_in "$status" "$body"

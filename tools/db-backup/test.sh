@@ -27,10 +27,10 @@
 # Check-ins (F-04, out-of-app-alert-channel) go to a stub of healthchecks.io over https (a throwaway
 # certificate) and are checked at the runs above: the first run checks in /start, then /0 with its OK
 # line (at an HTTPS:// address: the rule takes https in any case); the shrink refusal /1 with its line;
-# the run over its time limit /124 with the time limit's line; a skipped run nothing; an unreachable
-# check-in address leaves the run's result as it is; an address outside the rule (S-25: not https, with a
-# query, without a host name) gives a warning and no check-in, in runs without PGHOST that end before the
-# dump.
+# the run over its time limit /1 with the time limit's line and exit code 1 (S-25: like the trigger); a
+# skipped run nothing; an unreachable check-in address leaves the run's result as it is; an address
+# outside the rule (S-25: not https, with a query, without a host name) gives a warning and no check-in,
+# in runs without PGHOST that end before the dump.
 # Needs Docker. Run from anywhere: tools/db-backup/test.sh
 set -euo pipefail
 
@@ -461,14 +461,13 @@ docker run --rm -i --name "$id-v5" --entrypoint bash "$image" \
 grep -qE 'restore-check: OK .*Flyway V5([^0-9]|$)' "$tmp/v5.log" || { cat "$tmp/v5.log"; die "no Flyway V5 in the OK line"; }
 pass "a Flyway V5 dump (no activation_tokens, no notifications) passes restore-check.sh"
 before=$(in_image <<<'ls /out/daily /out/monthly')
-if run_backup run4 -e BACKUP_TIMEOUT=1s -e "$ping_ca" -e HEALTHCHECK_PING_URL="$ping_url/run4"; then
-    cat "$tmp/run4.log"
-    die "a run over its time limit exited 0"
-fi
+run4=0
+run_backup run4 -e BACKUP_TIMEOUT=1s -e "$ping_ca" -e HEALTHCHECK_PING_URL="$ping_url/run4" || run4=$?
+[ "$run4" = 1 ] || { cat "$tmp/run4.log"; die "a run over its time limit exited $run4, not 1"; }
 grep -q 'backup: FAILED: the run exceeded 1s' "$tmp/run4.log" || { cat "$tmp/run4.log"; die "the time limit is not named"; }
-pings_were run4 'start 124'
+pings_were run4 'start 1'
 last_ping_says run4 ' backup: FAILED: the run exceeded 1s'
-pass "a run over its time limit (BACKUP_TIMEOUT=1s) fails and says so; /124 with that line, before the exit"
+pass "a run over its time limit (BACKUP_TIMEOUT=1s) fails with 1 and says so; /1 with that line, before the exit"
 run_backup run5 -e RAILWAY_ENVIRONMENT_NAME=szczur-radar-pr-1 -e "$ping_ca" -e HEALTHCHECK_PING_URL="$ping_url/run5" \
     || { cat "$tmp/run5.log"; die "a skipped run failed"; }
 grep -q 'skipped: backups run only in production (this is szczur-radar-pr-1)' "$tmp/run5.log" \
