@@ -254,7 +254,9 @@ public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher {
 	 * stopped run no longer holds its posts), a failure it ends with is not the post's technical error, and
 	 * nothing is counted. Called by {@code PipelineRunService.stopStalled} after the stop is written and
 	 * after it interrupted the run's thread (which, waiting in {@link #dispatch}, cancels the same tasks
-	 * itself): this reaches them also when that thread is not waiting yet, e.g. in the LLM check.
+	 * itself). It reaches only the tasks registered so far: none before the LLM check has ended (there the
+	 * stop's interrupt of the run's thread, and {@code claim} needing a running run, end the step), and a
+	 * task whose call started just before its future was registered only through that interrupt.
 	 */
 	@Override
 	public void cancel(UUID runId) {

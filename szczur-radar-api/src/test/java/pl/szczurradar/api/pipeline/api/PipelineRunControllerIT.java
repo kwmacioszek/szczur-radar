@@ -23,6 +23,7 @@ import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -67,10 +68,15 @@ import pl.szczurradar.api.user.UserRepository;
  * {@code POST} and {@code GET /api/admin/pipeline-runs}, and one run's page, against the real queue: runs
  * execute in the background with Wykop on a local server (which a test can hold, to keep a run active)
  * and a stubbed LLM. Every test waits until no run is active before it ends.
+ *
+ * <p>A held search waits for the gate without a bound; the clean-up ({@link #awaitIdle}) opens it, after a
+ * red test too, and a test that hangs ends at the class's {@link Timeout}, with a dump of every thread in
+ * the log ({@code junit-platform.properties}).
  */
 @SpringBootTest(properties = MigrateCommand.ENABLE_FLYWAY)
 @AutoConfigureMockMvc
 @Import({ TestcontainersConfiguration.class, PipelineRunControllerIT.LocalWykop.class })
+@Timeout(value = 5, unit = TimeUnit.MINUTES)
 class PipelineRunControllerIT {
 
 	/** Closed while a test needs a run to stay active; Wykop's searches wait for it. */
@@ -81,10 +87,13 @@ class PipelineRunControllerIT {
 			return Reply.ok("{\"data\":{\"token\":\"t\"}}");
 		}
 		try {
-			wykopGate.await(30, TimeUnit.SECONDS);
+			// Without a bound: the test or its clean-up opens the gate.
+			wykopGate.await();
 		}
 		catch (InterruptedException ex) {
+			// Never an empty day for a held search: the fetch fails, as when Wykop is down.
 			Thread.currentThread().interrupt();
+			return new Reply(503, "{\"error\":{\"code\":503,\"message\":\"the test's gate was interrupted\"}}");
 		}
 		return Reply.ok("{\"data\":[],\"pagination\":{\"total\":0}}");
 	});

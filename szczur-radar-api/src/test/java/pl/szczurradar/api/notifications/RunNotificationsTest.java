@@ -11,10 +11,13 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.jspecify.annotations.Nullable;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -22,6 +25,7 @@ import org.junit.jupiter.params.provider.EnumSource;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
+import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.dao.DataIntegrityViolationException;
 
 import pl.szczurradar.api.alerts.AlertEvent;
@@ -36,7 +40,10 @@ import pl.szczurradar.api.pipeline.run.RunStatus;
  * Which run endings {@link RunNotifications#runEnded} raises to the operator, with mocks: a run that
  * needs attention once its notifications were created, except a cron run that ended {@code failed} or
  * {@code interrupted} (the cron reports it); a failure to notify; and an operator command's context
- * without the queue. Who gets the notifications is in {@code NotificationsIT}.
+ * without the queue. And a failure on an interrupted thread (the watchdog's late interrupt) tried once
+ * more with the flag cleared, the flag restored after it; only the second attempt's failure, or one
+ * without an interrupt (never tried again), is raised. Who gets the notifications is in
+ * {@code NotificationsIT}.
  */
 @ExtendWith(OutputCaptureExtension.class)
 class RunNotificationsTest {
@@ -54,6 +61,12 @@ class RunNotificationsTest {
 
 	RunNotificationsTest() {
 		when(alertQueue.getIfAvailable()).thenReturn(alerts);
+	}
+
+	@AfterEach
+	void clearInterrupt() {
+		// A test that interrupts its own thread must not leave the flag set for the next one.
+		Thread.interrupted();
 	}
 
 	@Test
@@ -144,6 +157,69 @@ class RunNotificationsTest {
 	}
 
 	@Test
+	void aReadTheWatchdogsLateInterruptCutShortIsMadeOnceMoreWithTheFlagCleared(CapturedOutput output) {
+		PipelineRun run = run(RunKind.RANGE, false, RunStatus.FAILED, null, 0, 0, 0, "the run failed");
+		UUID id = run.getId();
+		// The watchdog's late cancel(true) lands in the read, and the connection pool refuses the thread.
+		AtomicBoolean retriedInterrupted = new AtomicBoolean(true);
+		when(runs.findById(id)).thenAnswer(call -> {
+			Thread.currentThread().interrupt();
+			throw new DataAccessResourceFailureException("Interrupted during connection acquisition");
+		}).thenAnswer(call -> {
+			retriedInterrupted.set(Thread.currentThread().isInterrupted());
+			return Optional.of(run);
+		});
+		when(notifications.notifyAdmins(NotificationKind.RUN_ATTENTION, id)).thenReturn(1);
+
+		runNotifications.runEnded(id);
+		boolean flagged = Thread.interrupted();
+
+		assertThat(retriedInterrupted).as("the second read gets its connection: the flag is cleared first").isFalse();
+		assertThat(flagged).as("the interrupt is restored for the caller's rule").isTrue();
+		verify(notifications).notifyAdmins(NotificationKind.RUN_ATTENTION, id);
+		verify(alerts).raise(eq(AlertEvent.RUN_NEEDS_ATTENTION), eq(id), any());
+		verify(alerts, never()).raise(eq(AlertEvent.NOTIFICATION_FAILED), any(), any());
+		assertThat(errors(output, id)).isEmpty();
+	}
+
+	@Test
+	void aSecondAttemptFailingOnAnInterruptedThreadTooIsRaised(CapturedOutput output) {
+		UUID id = UUID.randomUUID();
+		when(runs.findById(id)).thenAnswer(call -> {
+			Thread.currentThread().interrupt();
+			throw new DataAccessResourceFailureException("Interrupted during connection acquisition");
+		});
+
+		assertThatNoException().isThrownBy(() -> runNotifications.runEnded(id));
+		boolean flagged = Thread.interrupted();
+
+		// Once more, not again and again.
+		verify(runs, times(2)).findById(id);
+		assertThat(flagged).as("the interrupt is restored for the caller's rule").isTrue();
+		assertThat(errors(output, id)).singleElement()
+			.satisfies(line -> assertThat(line).contains("Pipeline run " + id + ": the admins could not be notified"));
+		verify(alerts).raise(AlertEvent.NOTIFICATION_FAILED, id, "Pipeline run " + id
+				+ ": the admins could not be notified (" + DataAccessResourceFailureException.class.getName()
+				+ "); details in the API log");
+		verify(alerts, times(1)).raise(any(), any(), any());
+	}
+
+	@Test
+	void aFailureWithoutAnInterruptIsNotTriedAgain(CapturedOutput output) {
+		UUID id = UUID.randomUUID();
+		when(runs.findById(id)).thenThrow(new DataAccessResourceFailureException("the database is gone"));
+
+		assertThatNoException().isThrownBy(() -> runNotifications.runEnded(id));
+
+		verify(runs, times(1)).findById(id);
+		assertThat(Thread.interrupted()).as("no interrupt is made up").isFalse();
+		assertThat(errors(output, id)).singleElement()
+			.satisfies(line -> assertThat(line).contains("Pipeline run " + id + ": the admins could not be notified"));
+		verify(alerts).raise(eq(AlertEvent.NOTIFICATION_FAILED), eq(id), any());
+		verify(alerts, times(1)).raise(any(), any(), any());
+	}
+
+	@Test
 	void withoutTheQueueNothingIsRaisedAndNothingThrown() {
 		when(alertQueue.getIfAvailable()).thenReturn(null);
 		PipelineRun run = run(RunKind.RANGE, false, RunStatus.FAILED, null, 0, 0, 0, "the run failed");
@@ -159,6 +235,11 @@ class RunNotificationsTest {
 
 		verify(notifications).notifyAdmins(NotificationKind.RUN_ATTENTION, id);
 		verify(alerts, never()).raise(any(), any(), any());
+	}
+
+	/** The ERROR lines about {@code run} in the captured output. */
+	private static List<String> errors(CapturedOutput output, UUID run) {
+		return output.getAll().lines().filter(line -> line.contains(" ERROR ") && line.contains(run.toString())).toList();
 	}
 
 	/** A finished run that needs attention, as the repository returns it. */
