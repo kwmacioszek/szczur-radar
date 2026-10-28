@@ -190,7 +190,7 @@ m3 = {  # lane, title, outcome (At a glance), status, prerequisites, change id
     "S-21": ("B", "Zmiana IaC bez deployu nie blokuje wdrożeń", "zmiana IaC, która nie wywołuje deployu, nie robi CI czerwonego ani nie blokuje deployu kodu; dokumenty S-14 i #73 mówią prawdę", "done", "—", "deploy-gate-no-deploy-changes"),
     "S-25": ("B", "Jedna reguła adresu check-in alarmów", "adres check-in alarmów ma jedną regułę we wszystkich miejscach, a rozjazd kopii jest wykrywany testem", "progress", "—", "alert-ping-single-rule"),
     "S-22": ("C", "„Wymaga uwagi” liczone jedną regułą", "admin widzi powody „wymaga uwagi” liczone tą samą regułą co powiadomienia i alerty, bez pustego tekstu przy nowym powodzie", "ready", "—", "run-attention-single-rule"),
-    "S-23": ("C", "Zamknięte zbiory i kolumny posta pilnowane w CI", "nowa wartość zamkniętego zbioru albo nowa kolumna posta bez migracji lub bez zapisu jest wykrywana w CI, nie w nocy na produkcji", "ready", "—", "closed-sets-guard"),
+    "S-23": ("C", "Zamknięte zbiory i kolumny posta pilnowane w CI", "nowa wartość zamkniętego zbioru albo nowa kolumna posta bez migracji lub bez zapisu jest wykrywana w CI, nie w nocy na produkcji", "done", "—", "closed-sets-guard"),
     "S-24": ("C", "Kontrakt SPA ↔ API pilnowany testem", "rozjazd odpowiedzi API i typów SPA (pełne ciała, kształt błędu 500, kopie reguł) jest wykrywany testem, nie ręczną dyscypliną", "ready", "—", "api-contract-guard"),
     "S-26": ("D", "Testy silnika bez zależności od zegara", "testy silnika nie zależą od czasu zegara na współdzielonym runnerze, a znane okna fałszywych alarmów (F3) są przypięte testami", "done", "—", "engine-test-stability"),
 }

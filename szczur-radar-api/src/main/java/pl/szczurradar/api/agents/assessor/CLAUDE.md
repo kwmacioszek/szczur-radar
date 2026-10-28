@@ -22,4 +22,4 @@ Lengths are Unicode code points (`codePointCount`), never `String.length()`.
 
 `FailureClass`, `AssessmentResult.Status`, `Provenance.Source` and `ItemType` values are stored in
 `assessments`/`posts` (`persistence/converters/`): append-only — never rename or remove a constant, or old rows
-no longer load.
+no longer load. `persistence/ClosedSetsIT` keeps their constants equal to their column's `CHECK`.
