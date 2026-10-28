@@ -53,7 +53,8 @@ import pl.szczurradar.api.user.Role;
  * {@code CHECK} violation in a production run. {@link #REGISTRY} names each enum with its column; it is
  * itself checked against the JPA metamodel (every enum attribute of an entity) and against the
  * migrated schema (every {@code CHECK} with a list of values of one column), so a new enum or a new
- * closed-set column cannot pass unregistered.
+ * closed-set column cannot pass unregistered; a {@code CHECK} with literals in any other form must be a
+ * known rule ({@link #NOT_A_VALUE_LIST}).
  *
  * <p>The values come from {@code pg_get_constraintdef}, which normalizes {@code x IN (...)} to
  * {@code x = ANY (ARRAY[...])}, a single value to {@code x = '...'}, and keeps an array column's
@@ -107,6 +108,18 @@ class ClosedSetsIT {
 			StoredEnum.of(NotificationKind.class, NotificationKind::value, "notifications", "kind", "Notification",
 					"kind"),
 			StoredEnum.of(Role.class, Role::value, "users", "role", "User", "role"));
+
+	/**
+	 * The {@code CHECK}s with string literals that are not a list of values: rules across columns and
+	 * patterns. Any other {@code CHECK} with a literal must read as a list of values, so a closed set
+	 * written in another form (a {@code VARCHAR} column, {@code x IS NULL OR x IN (...)}) cannot pass unseen.
+	 */
+	private static final Set<String> NOT_A_VALUE_LIST = Set.of("ck_activation_tokens_token_hash",
+			"ck_assessments_input_hash", "ck_assessments_outcome", "ck_notifications_run",
+			"ck_pipeline_runs_interruption_status", "ck_pipeline_runs_range", "ck_pipeline_runs_requested_posts",
+			"ck_posts_assessing_owner", "ck_posts_content_hash", "ck_posts_stage_attempts", "ck_raw_payloads_sha256");
+
+	private static final Pattern ANY_LITERAL = Pattern.compile("'(?:[^']|'')*'::");
 
 	private static final String LITERAL = "'(?:[^']|'')*'::text";
 
@@ -203,45 +216,69 @@ class ClosedSetsIT {
 			.isEmpty();
 	}
 
+	@Test
+	void everyCheckWithLiteralsIsAValueListOrKnown() {
+		List<Check> checks = checks();
+		List<String> unread = checks.stream()
+			.filter(check -> ANY_LITERAL.matcher(check.definition()).find())
+			.filter(check -> valueList(check.definition()).isEmpty() && !NOT_A_VALUE_LIST.contains(check.name()))
+			.map(check -> check.name() + " on " + check.table() + ": " + check.definition())
+			.toList();
+		Set<String> gone = difference(NOT_A_VALUE_LIST,
+				checks.stream().map(Check::name).collect(Collectors.toSet()));
+
+		assertThat(unread).withFailMessage("%s", "CHECKs with literals that read neither as a list of values nor"
+				+ " as a known rule: " + unread + " — a closed set is a TEXT column with CHECK (x IN (...)) and an"
+				+ " enum in the registry; a rule across columns or a pattern goes into NOT_A_VALUE_LIST")
+			.isEmpty();
+		assertThat(gone).withFailMessage("%s", "NOT_A_VALUE_LIST names CHECKs the schema no longer has: " + gone)
+			.isEmpty();
+	}
+
 	/** Today's three forms, so a change in Postgres's output is red here, never an empty set read as green. */
 	@Test
 	void theCheckParserReadsEveryFormOfAListOfValues() {
-		assertThat(valueList(definition("ck_posts_stage"))).hasValueSatisfying(list -> {
+		assertThat(valueList(definition("posts", "ck_posts_stage"))).hasValueSatisfying(list -> {
 			assertThat(list.column()).isEqualTo("stage");
 			assertThat(list.values()).contains("stored", "assessing", "assessed", "failed", "dead");
 		});
-		assertThat(valueList(definition("ck_posts_source"))).hasValueSatisfying(list -> {
+		assertThat(valueList(definition("posts", "ck_posts_source"))).hasValueSatisfying(list -> {
 			assertThat(list.column()).isEqualTo("source");
 			assertThat(list.values()).contains("wykop");
 		});
-		assertThat(valueList(definition("ck_pipeline_runs_sources"))).hasValueSatisfying(list -> {
+		assertThat(valueList(definition("pipeline_runs", "ck_pipeline_runs_sources"))).hasValueSatisfying(list -> {
 			assertThat(list.column()).isEqualTo("sources");
 			assertThat(list.values()).contains("wykop");
 		});
 		// Compound CHECKs with enum values and other single-column CHECKs are not lists of values.
-		assertThat(valueList(definition("ck_posts_assessing_owner"))).isEmpty();
-		assertThat(valueList(definition("ck_posts_stage_attempts"))).isEmpty();
-		assertThat(valueList(definition("ck_posts_content_hash"))).isEmpty();
-		assertThat(valueList(definition("ck_users_email_lower"))).isEmpty();
+		assertThat(valueList(definition("posts", "ck_posts_assessing_owner"))).isEmpty();
+		assertThat(valueList(definition("posts", "ck_posts_stage_attempts"))).isEmpty();
+		assertThat(valueList(definition("posts", "ck_posts_content_hash"))).isEmpty();
+		assertThat(valueList(definition("users", "ck_users_email_lower"))).isEmpty();
 	}
 
 	/** Every {@code CHECK} of the application's tables that is a list of values of one column. */
 	private List<ValueListCheck> valueListChecks() {
-		List<ValueListCheck> checks = new ArrayList<>();
-		jdbc.query("SELECT t.relname, c.conname, pg_get_constraintdef(c.oid) FROM pg_constraint c"
-				+ " JOIN pg_class t ON t.oid = c.conrelid JOIN pg_namespace n ON n.oid = t.relnamespace"
-				+ " WHERE c.contype = 'c' AND n.nspname = 'public' ORDER BY t.relname, c.conname", row -> {
-					String table = row.getString(1);
-					String name = row.getString(2);
-					valueList(row.getString(3))
-						.ifPresent(list -> checks.add(new ValueListCheck(name, table, list.column(), list.values())));
-				});
-		return checks;
+		List<ValueListCheck> lists = new ArrayList<>();
+		for (Check check : checks()) {
+			valueList(check.definition()).ifPresent(
+					list -> lists.add(new ValueListCheck(check.name(), check.table(), list.column(), list.values())));
+		}
+		return lists;
 	}
 
-	private String definition(String constraint) {
-		return jdbc.queryForObject("SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conname = ?",
-				String.class, constraint);
+	/** Every {@code CHECK} of the application's tables with its definition. */
+	private List<Check> checks() {
+		return jdbc.query("SELECT t.relname, c.conname, pg_get_constraintdef(c.oid) FROM pg_constraint c"
+				+ " JOIN pg_class t ON t.oid = c.conrelid JOIN pg_namespace n ON n.oid = t.relnamespace"
+				+ " WHERE c.contype = 'c' AND n.nspname = 'public' ORDER BY t.relname, c.conname",
+				(row, index) -> new Check(row.getString(1), row.getString(2), row.getString(3)));
+	}
+
+	private String definition(String table, String constraint) {
+		return jdbc.queryForObject(
+				"SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conrelid = ?::regclass AND conname = ?",
+				String.class, table, constraint);
 	}
 
 	/** The column and its allowed values when {@code definition} is a list of values; otherwise empty. */
@@ -301,6 +338,9 @@ class ClosedSetsIT {
 	}
 
 	private record ValueList(String column, Set<String> values) {
+	}
+
+	private record Check(String table, String name, String definition) {
 	}
 
 	private record ValueListCheck(String name, String table, String column, Set<String> values) {

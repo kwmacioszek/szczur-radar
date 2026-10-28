@@ -56,7 +56,7 @@ import pl.szczurradar.api.user.UserRepository;
 /**
  * Every column of {@code posts} is either set once by the {@code INSERT} ({@link #SET_ONCE}) or part of
  * the post's assessment state ({@link #STATE}), and the conditional writes of {@link PostTransitions}
- * are the only {@code UPDATE}s of it. A new column cannot pass unclassified, and a state column cannot
+ * are meant to be the only {@code UPDATE}s of it. A new column cannot pass unclassified, and a state column cannot
  * pass without its value after every transition: {@link #SCENARIOS} gives, for each public method of
  * {@link PostTransitions}, a post in a "dirty" state (technical failures and their message set, failed
  * attempts for the release's {@code CASE}) and the value of every state column after it, as
@@ -112,6 +112,9 @@ class PostColumnsIT {
 			new Scenario("release", "release", Given.held(1, RunStatus.RUNNING),
 					(transitions, post, run) -> transitions.release(post, run),
 					run -> row(PostStage.FAILED, 1, null, 2, EARLIER_ERROR)),
+			new Scenario("release never failed", "release", Given.held(0, RunStatus.RUNNING),
+					(transitions, post, run) -> transitions.release(post, run),
+					run -> row(PostStage.STORED, 0, null, 2, EARLIER_ERROR)),
 			new Scenario("releaseFailed", "releaseFailed", Given.held(1, RunStatus.RUNNING),
 					(transitions, post, run) -> transitions.releaseFailed(post, run, ERROR).isPresent(),
 					run -> row(PostStage.FAILED, 1, null, 3, ERROR)),
@@ -145,7 +148,8 @@ class PostColumnsIT {
 	@Autowired
 	JdbcTemplate jdbc;
 
-	private @Nullable Rows stored;
+	/** What the current scenario stored so far, for {@link #deleteTheScenariosRows()}. */
+	private final Rows stored = new Rows();
 
 	@Test
 	void everyPostColumnIsClassified() {
@@ -191,7 +195,7 @@ class PostColumnsIT {
 	@ParameterizedTest(name = "{0}")
 	@MethodSource("scenarios")
 	void aTransitionLeavesTheExpectedRow(Scenario scenario) {
-		Rows ids = given(scenario.given());
+		Ids ids = given(scenario.given());
 		Map<String, @Nullable Object> expected = scenario.expected().apply(ids.run());
 		Set<String> stateColumns = difference(STATE, Set.of(UPDATED_AT));
 		Set<String> missing = difference(stateColumns, expected.keySet());
@@ -218,37 +222,54 @@ class PostColumnsIT {
 		return SCENARIOS;
 	}
 
+	/** Deletes what the scenario stored, also when {@link #given} failed halfway. */
 	@AfterEach
 	void deleteTheScenariosRows() {
-		if (stored == null) {
-			return;
+		if (stored.post != null) {
+			jdbc.update("DELETE FROM assessments WHERE post_id = ?", stored.post);
+			jdbc.update("DELETE FROM posts WHERE id = ?", stored.post);
 		}
-		jdbc.update("DELETE FROM assessments WHERE post_id = ?", stored.post());
-		jdbc.update("DELETE FROM posts WHERE id = ?", stored.post());
-		jdbc.update("DELETE FROM raw_payloads WHERE id = ?", stored.rawPayload());
-		jdbc.update("DELETE FROM pipeline_runs WHERE id = ?", stored.run());
-		jdbc.update("DELETE FROM users WHERE id = ?", stored.user());
+		if (stored.rawPayload != null) {
+			jdbc.update("DELETE FROM raw_payloads WHERE id = ?", stored.rawPayload);
+		}
+		if (stored.run != null) {
+			jdbc.update("DELETE FROM pipeline_runs WHERE id = ?", stored.run);
+		}
+		if (stored.user != null) {
+			jdbc.update("DELETE FROM users WHERE id = ?", stored.user);
+		}
 	}
 
-	/** Stores a user, a run in {@code given.run()} and a post in the given state, {@code updated_at} a day back. */
-	private Rows given(Given given) {
+	/**
+	 * Stores a user, a run in {@code given.run()} and a post in the given state, {@code updated_at} a day
+	 * back; each id is kept as soon as its row exists, so the clean-up finds it.
+	 */
+	private Ids given(Given given) {
 		UUID user = users.save(new User("post-columns-" + UUID.randomUUID() + "@example.com", null,
 				Role.ADMIN)).getId();
+		stored.user = user;
 		UUID run = runs.save(PipelineRun.retry(user, null)).getId();
+		stored.run = run;
 		String sourceItemId = UUID.randomUUID().toString();
 		RawPayloadRef raw = rawPayloads.store(Source.WYKOP,
 				("{\"id\":\"" + sourceItemId + "\"}").getBytes(StandardCharsets.UTF_8));
+		stored.rawPayload = raw.id();
 		UUID post = posts.save(new Post(Source.WYKOP, ItemType.POST, sourceItemId,
 				Instant.parse("2026-10-01T08:00:00Z"), "tytuł", "treść", "autor", "slug",
 				"https://wykop.pl/wpis/" + sourceItemId, List.of("gielda", "akcje"), raw, run)).getId();
-		stored = new Rows(user, run, raw.id(), post);
+		stored.post = post;
 
+		if (given.run() == RunStatus.RUNNING) {
+			// At most one run runs (uq_pipeline_runs_one_running): one another test left running is interrupted.
+			jdbc.update("UPDATE pipeline_runs SET status = ?, finished_at = now() WHERE status = ?",
+					RunStatus.INTERRUPTED.value(), RunStatus.RUNNING.value());
+		}
 		jdbc.update("UPDATE pipeline_runs SET status = ?, started_at = now(), finished_at = ? WHERE id = ?",
 				given.run().value(), given.run() == RunStatus.RUNNING ? null : Timestamp.from(Instant.now()), run);
 		jdbc.update("UPDATE posts SET stage = ?, assessment_attempts = ?, assessing_run_id = ?, technical_failures = 2,"
 				+ " last_technical_error = ?, updated_at = now() - interval '1 day' WHERE id = ?",
 				given.stage().value(), given.attempts(), given.held() ? run : null, EARLIER_ERROR, post);
-		return stored;
+		return new Ids(run, post);
 	}
 
 	/** The state columns but {@code updated_at}, read from the table. */
@@ -336,7 +357,21 @@ class PostColumnsIT {
 
 	}
 
-	private record Rows(UUID user, UUID run, UUID rawPayload, UUID post) {
+	/** The scenario's run and post. */
+	private record Ids(UUID run, UUID post) {
+	}
+
+	/** The rows a scenario stored so far ({@code null} until stored). */
+	private static final class Rows {
+
+		@Nullable UUID user;
+
+		@Nullable UUID run;
+
+		@Nullable UUID rawPayload;
+
+		@Nullable UUID post;
+
 	}
 
 }
