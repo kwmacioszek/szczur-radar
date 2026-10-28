@@ -345,16 +345,16 @@ Nie dotyczy: bez migracji, bez zmian konfiguracji Railway ani CI. Zmiana zachowa
 
 #### Automated
 
-- [x] 3.1 IT silnika zielone na ziarnach 1 i 2 (`-Dit.test=… -Dit.seed=1`, `-Dit.seed=2`)
-- [x] 3.2 Brak asercji czasu trwania i ignorowanych wyników `await` w IT silnika (grep)
-- [x] 3.3 Celowe złamanie: bez `task.cancel(true)` w `stopStalled` scenariusz zawieszonego przebiegu czerwony; cofnięte
-- [x] 3.4 Cały zestaw zielony lokalnie: `./mvnw -B verify`
+- [x] 3.1 IT silnika zielone na ziarnach 1 i 2 (`-Dit.test=… -Dit.seed=1`, `-Dit.seed=2`) — 1a7c341
+- [x] 3.2 Brak asercji czasu trwania i ignorowanych wyników `await` w IT silnika (grep) — 1a7c341
+- [x] 3.3 Celowe złamanie: bez `task.cancel(true)` w `stopStalled` scenariusz zawieszonego przebiegu czerwony; cofnięte — 1a7c341
+- [x] 3.4 Cały zestaw zielony lokalnie: `./mvnw -B verify` — 1a7c341
 
 ### Phase 4: Notatki silnika (`pipeline/CLAUDE.md`)
 
 #### Automated
 
-- [ ] 4.1 Grep potwierdza poprawki E6 i opis zasad testów w `pipeline/CLAUDE.md`
+- [x] 4.1 Grep potwierdza poprawki E6 i opis zasad testów w `pipeline/CLAUDE.md`
 - [ ] 4.2 CI na PR zielone: `gh pr checks <PR>`
 
 #### Manual
