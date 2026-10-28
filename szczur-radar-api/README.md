@@ -274,5 +274,3 @@ source ~/.config/szczur-radar/llm.env   # LLM_API_PROVIDER, LLM_MODEL, LLM_API_K
 - Sesja: ciasteczko `sr_session` (`HttpOnly; Secure; SameSite=Strict; Path=/api; Max-Age=30 dni`), dane w tabelach `SPRING_SESSION*`; wygasa po 30 dniach bezczynności, ciasteczko jest odnawiane po każdym udanym, uwierzytelnionym żądaniu API. Unieważnienie wszystkich sesji użytkownika: `FindByIndexNameSessionRepository.findByPrincipalName(<uuid>)` (principal = UUID użytkownika); komendy CLI nie mają repozytorium sesji, więc `reset-password` usuwa wiersze `spring_session` tego konta SQL-em.
 - CSRF: `SameSite=Strict` + `OriginGuardFilter` (obcy `Origin` przy zapisie → 403); tokeny CSRF Springa są wyłączone.
 - Limiter: 5 nieudanych prób / 15 min na e-mail i 20 na IP (`X-Real-IP` z krawędzi Railway), w pamięci procesu — poprawny przy jednej replice.
-
-<!-- TEMPORARY (S-21 Phase 2, removed by its last commit): this line puts the service in the PR diff, so the PR env deploys it. -->

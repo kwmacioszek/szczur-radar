@@ -142,5 +142,3 @@ Cron jest w każdym PR env, ale tam się pomija. Żeby sprawdzić go w PR env `s
 4. Po sprawdzeniu usuń `TRIGGER_IN_ANY_ENVIRONMENT` (IaC ignoruje `TRIGGER_*`, więc plan jej ani nie cofnie, ani nie usunie).
 
 Na produkcji tymczasowy harmonogram trzeba przywrócić na `30 0 * * *` ręcznie: do następnego merge'a nic go nie przywróci.
-
-<!-- TEMPORARY (S-21 Phase 2, removed by its last commit): this line puts the service in the PR diff, so the PR env deploys it. -->
