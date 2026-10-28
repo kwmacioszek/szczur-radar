@@ -7,9 +7,11 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -46,10 +48,12 @@ import pl.szczurradar.api.user.UserRepository;
  * run {@code failed}, with no attempt and no technical failure on any post. The only test of the whole
  * chain transport → {@code Assessor} → dispatcher: a provider cannot be made to fail in a PR environment.
  * Wykop is a local server answering the real, anonymized #gielda answers of 2026-10-01; one LLM thread,
- * so the posts end in their order.
+ * so the posts end in their order. A test that hangs ends at the class's {@link Timeout}, with a dump of
+ * every thread in the log ({@code junit-platform.properties}).
  */
 @SpringBootTest(properties = { MigrateCommand.ENABLE_FLYWAY, "PIPELINE_LLM_CONCURRENCY=1" })
 @Import({ TestcontainersConfiguration.class, LlmOutageIT.LocalWykop.class })
+@Timeout(value = 5, unit = TimeUnit.MINUTES)
 class LlmOutageIT {
 
 	private static final JsonMapper MAPPER = JsonMapper.builder().build();

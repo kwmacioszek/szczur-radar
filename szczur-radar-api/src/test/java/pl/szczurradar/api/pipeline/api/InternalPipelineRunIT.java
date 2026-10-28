@@ -17,6 +17,7 @@ import jakarta.servlet.http.Cookie;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.NullSource;
@@ -65,11 +66,16 @@ import pl.szczurradar.api.user.UserRepository;
  * background with Wykop on a local server answering an empty day, so a run fails at its fetch step (no
  * post to store); a test can hold the answer to keep a run active. Every test waits until no run is
  * active before it ends.
+ *
+ * <p>A held search waits for the gate without a bound; the clean-up ({@link #awaitIdle}) opens it, after a
+ * red test too, and a test that hangs ends at the class's {@link Timeout}, with a dump of every thread in
+ * the log ({@code junit-platform.properties}).
  */
 @SpringBootTest(properties = { MigrateCommand.ENABLE_FLYWAY,
 		PipelineTriggerToken.NAME + "=" + InternalPipelineRunIT.TOKEN })
 @AutoConfigureMockMvc
 @Import({ TestcontainersConfiguration.class, InternalPipelineRunIT.TestBeans.class })
+@Timeout(value = 5, unit = TimeUnit.MINUTES)
 class InternalPipelineRunIT {
 
 	/** A test-only token, as long as {@code openssl rand -hex 32} makes one. */
@@ -89,10 +95,13 @@ class InternalPipelineRunIT {
 			return Reply.ok("{\"data\":{\"token\":\"t\"}}");
 		}
 		try {
-			wykopGate.await(30, TimeUnit.SECONDS);
+			// Without a bound: the test or its clean-up opens the gate.
+			wykopGate.await();
 		}
 		catch (InterruptedException ex) {
+			// Never an empty day for a held search: the fetch fails, as when Wykop is down.
 			Thread.currentThread().interrupt();
+			return new Reply(503, "{\"error\":{\"code\":503,\"message\":\"the test's gate was interrupted\"}}");
 		}
 		return Reply.ok("{\"data\":[],\"pagination\":{\"total\":0}}");
 	});
