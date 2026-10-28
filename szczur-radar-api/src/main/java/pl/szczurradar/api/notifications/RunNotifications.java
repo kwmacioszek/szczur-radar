@@ -27,7 +27,8 @@ import pl.szczurradar.api.pipeline.run.RunStatus;
  * to notify is {@link AlertEvent#NOTIFICATION_FAILED}. Both go through the {@link OperatorAlertQueue},
  * only in the server: an operator command's context has none, and then nothing is raised.
  *
- * <p>It never throws: a failure is logged, and the run's ending (or the server's start) goes on.
+ * <p>It never throws: a failure is logged, and the run's ending (or the server's start) goes on. A
+ * failure on an interrupted thread (the watchdog's late interrupt) is tried once more first.
  */
 @Component
 public class RunNotifications {
@@ -55,27 +56,62 @@ public class RunNotifications {
 	 * {@code runId} ended, or may have: when it needs attention, every admin who can log in and has no
 	 * notification about it yet gets one. Nothing happens for a run that is unknown, still active or needs
 	 * no attention — e.g. one that never started here.
+	 *
+	 * <p>A failure on an interrupted thread is tried once more with the flag cleared: the watchdog's late
+	 * {@code cancel(true)} of a run's thread may land in this work, and the connection pool refuses an
+	 * interrupted thread — that would be a false {@link AlertEvent#NOTIFICATION_FAILED} for a run the
+	 * watchdog stopped. {@code cancel(true)} interrupts once, so the second attempt gets its connection;
+	 * only its failure counts. Doing it twice is safe: creating the notifications is idempotent, and the
+	 * operator's alert follows only notifications created. The flag is restored after it, as it was when
+	 * the work failed: the caller's rule decides it.
 	 */
 	public void runEnded(UUID runId) {
+		RuntimeException failure;
 		try {
-			PipelineRun run = runs.findById(runId).orElse(null);
-			if (run == null || !run.needsAttention()) {
-				return;
-			}
-			int created = notifications.notifyAdmins(NotificationKind.RUN_ATTENTION, runId);
-			if (created > 0) {
-				log.info("Pipeline run {} ({}) ended {} and needs attention: {} admin(s) notified", runId,
-						run.getKind().value(), run.getStatus().value(), created);
-				if (!reportedByTheCron(run)) {
-					OperatorAlertQueue.raise(alerts, AlertEvent.RUN_NEEDS_ATTENTION, runId, attentionDetail(run));
-				}
-			}
+			notifyAdmins(runId);
+			return;
 		}
 		catch (RuntimeException ex) {
-			log.error("Pipeline run {}: the admins could not be notified", runId, ex);
+			failure = ex;
+		}
+		// The same rule as PipelineRunService.stillRunning: once more only on an interrupted thread, the flag restored.
+		boolean interrupted = Thread.interrupted();
+		try {
+			if (interrupted) {
+				try {
+					notifyAdmins(runId);
+					return;
+				}
+				catch (RuntimeException again) {
+					again.addSuppressed(failure);
+					failure = again;
+				}
+			}
+			log.error("Pipeline run {}: the admins could not be notified", runId, failure);
 			// Only the class: a database exception's message may carry SQL and values.
 			OperatorAlertQueue.raise(alerts, AlertEvent.NOTIFICATION_FAILED, runId, "Pipeline run " + runId
-					+ ": the admins could not be notified (" + ex.getClass().getName() + "); details in the API log");
+					+ ": the admins could not be notified (" + failure.getClass().getName() + "); details in the API log");
+		}
+		finally {
+			if (interrupted) {
+				Thread.currentThread().interrupt();
+			}
+		}
+	}
+
+	/** One attempt of {@link #runEnded}: its exception is the caller's to handle. */
+	private void notifyAdmins(UUID runId) {
+		PipelineRun run = runs.findById(runId).orElse(null);
+		if (run == null || !run.needsAttention()) {
+			return;
+		}
+		int created = notifications.notifyAdmins(NotificationKind.RUN_ATTENTION, runId);
+		if (created > 0) {
+			log.info("Pipeline run {} ({}) ended {} and needs attention: {} admin(s) notified", runId,
+					run.getKind().value(), run.getStatus().value(), created);
+			if (!reportedByTheCron(run)) {
+				OperatorAlertQueue.raise(alerts, AlertEvent.RUN_NEEDS_ATTENTION, runId, attentionDetail(run));
+			}
 		}
 	}
 

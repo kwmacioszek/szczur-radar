@@ -109,7 +109,7 @@ Na Wykopie (#gielda) i Reddicie codziennie pojawiają się setki postów o inwes
 | S-23 | closed-sets-guard               | nowa wartość zamkniętego zbioru albo nowa kolumna posta bez migracji lub bez zapisu jest wykrywana w CI, nie w nocy na produkcji | —             | audyt E4; destylacja R-17, R-19                                           | done |
 | S-24 | api-contract-guard              | rozjazd odpowiedzi API i typów SPA (pełne ciała, kształt błędu 500, kopie reguł) jest wykrywany testem, nie ręczną dyscypliną   | —             | audyt K2, K3, K4; destylacja Q-05                                         | ready    |
 | S-25 | alert-ping-single-rule          | adres check-in alarmów ma jedną regułę we wszystkich miejscach, a rozjazd kopii jest wykrywany testem                           | —             | NFR `prd.md:259`; audyt P4, P5; destylacja R-27                           | ready    |
-| S-26 | engine-test-stability           | testy silnika nie zależą od czasu zegara na współdzielonym runnerze, a znane okna fałszywych alarmów (F3) są przypięte testami | —             | audyt E1, E2, E6                                                          | ready    |
+| S-26 | engine-test-stability           | testy silnika nie zależą od czasu zegara na współdzielonym runnerze, a znane okna fałszywych alarmów (F3) są przypięte testami | —             | audyt E1, E2, E6                                                          | done |
 | S-27 | reddit-source                   | użytkownik widzi w feedzie posty z wybranych subredditów obok Wykopu, ocenione tym samym kontraktem                             | S-20          | FR-023, NFR `prd.md:268`, `prd.md:42`; audyt S3, S6, S7, S8; destylacja Q-01, Q-07 | blocked  |
 | S-28 | reddit-quality-and-cost         | operator wie przed włączeniem Reddita na produkcji, że ocena postów po angielsku spełnia progi, a koszt mieści się w budżecie    | S-27          | guardrails `prd.md:48-49`; audyt S7; destylacja R-15, R-16, Q-03, Q-04    | proposed |
 | S-29 | source-aware-feed               | użytkownik odróżnia źródło posta w feedzie i szczegółach, a data aktualizacji nie kłamie przy dwóch źródłach                    | S-27          | FR-023, FR-008; audyt S5, S6; destylacja D-08, R-24, Q-02                 | blocked  |
@@ -231,7 +231,7 @@ Brak — każda praca przekrojowa M-3 ma widoczny skutek dla użytkownika albo o
 - **Unknowns:**
   - Co spowodowało Timeout w runie 39133095273? — Owner: team. Block: no (wycinek dodaje zrzut wątków, który odpowie przy następnym wystąpieniu).
 - **Risk:** dotyka testów przepisanego rdzenia, nie samego kodu silnika; warto przed S-20 i S-27, które zmieniają ten sam obszar i potrzebują wiarygodnego CI.
-- **Status:** ready
+- **Status:** done
 
 ### S-27: Reddit jako drugie źródło
 
@@ -368,3 +368,4 @@ Brak — każda praca przekrojowa M-3 ma widoczny skutek dla użytkownika albo o
 
 - **S-21: kontrola po apply w `railway-config` przechodzi, gdy zastosowana zmiana nie wywołuje deployu (np. `source.checkSuites`) albo gdy w trakcie pojawi się deployment z innego pusha; nie przepuszcza przy tym deployu, który naprawdę się nie udał; runbook S-14 w `deploy-plan.md` i issue #73 opisują to, co faktycznie stało się z `2abc64c`.** — Archived 2026-10-28 → `context/archive/2026-10-27-deploy-gate-no-deploy-changes/`. Lesson: kryterium, które agent sprawdzi poleceniem, zapisuj jako Automated — Manual tylko dla decyzji człowieka (`lessons.md`).
 - **S-23: każda wartość enumu zapisywanego w bazie (`PostStage`, `RunStatus`, `StepStatus`, `InterruptionCause`, `FailureClass`, `ItemType`, `Source` i pozostałe) jest przyjmowana przez `CHECK` swojej kolumny, a kolumna dodana do posta bez obsługi w warunkowych zapisach stanu jest wykrywana testem — przed nocnym przebiegiem, nie w nim.** — Archived 2026-10-28 → `context/archive/2026-10-27-closed-sets-guard/`. Lesson: —.
+- **S-26: test anulowania dyspozytora i pokrewne testy silnika nie padają losowo na współdzielonym runnerze (synchronizacja bez limitów zegarowych jako warunku poprawności, zrzut wątków przy przekroczeniu czasu), a znane okna fałszywych alarmów po S-17 (fałszywa linia ERROR i `NOTIFICATION_FAILED` przy spóźnionym przerwaniu) są przypięte testami; notatki silnika `pipeline/CLAUDE.md` zgadzają się z kodem.** — Archived 2026-10-28 → `context/archive/2026-10-27-engine-test-stability/`. Lesson: —.

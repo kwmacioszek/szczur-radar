@@ -26,6 +26,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -89,19 +90,23 @@ import pl.szczurradar.api.user.UserRepository;
  * scenario that needs assessed posts makes them itself ({@link #assessedDay}), and after each one the
  * service is left quiet ({@link #settle}): a run's status is written before its queue thread closes it
  * (end line, notification), so a scenario may end while that thread and the LLM pool still work.
+ *
+ * <p>A held call waits for its latch without a bound: only an interrupt ends it before {@link #settle}
+ * releases it, so a step that ends while it waits ended without its answer, whatever the machine's speed. A
+ * scenario that hangs ends at the class's {@link Timeout}, with a dump of every thread in the log
+ * ({@code junit-platform.properties}); the loops that wait for the database or the log keep their own bound,
+ * to say what they waited for.
  */
 @SpringBootTest(properties = MigrateCommand.ENABLE_FLYWAY)
 @Import({ TestcontainersConfiguration.class, PipelineRunIT.LocalWykop.class })
 @TestMethodOrder(MethodOrderer.Random.class)
 @ExtendWith(OutputCaptureExtension.class)
+@Timeout(value = 5, unit = TimeUnit.MINUTES)
 class PipelineRunIT {
 
 	private static final JsonMapper MAPPER = JsonMapper.builder().build();
 
 	private static final LocalDate DAY = LocalDate.parse("2026-10-01");
-
-	/** How long the queue thread of a stopped run may take to end its step: far below a held call's 30 s. */
-	private static final Duration STOPPED_STEP_ENDS_WITHIN = Duration.ofSeconds(10);
 
 	/** The real last entries page served as the whole day ({@code pagination.total} set to its 12). */
 	private static final String ENTRIES = withTotal(LocalWykopServer.fixture("search-entries-page.json"), 12);
@@ -371,12 +376,15 @@ class PipelineRunIT {
 		jdbc.update("UPDATE posts SET stage = 'stored' WHERE id = ?", post);
 		CountDownLatch called = new CountDownLatch(1);
 		CountDownLatch answered = held();
+		CountDownLatch interrupted = new CountDownLatch(1);
 		answer(request -> {
 			called.countDown();
 			try {
-				answered.await(30, TimeUnit.SECONDS);
+				// Without a bound: the stop's interrupt ends it, or settle() releases it after the scenario.
+				answered.await();
 			}
 			catch (InterruptedException ex) {
+				interrupted.countDown();
 				Thread.currentThread().interrupt();
 			}
 			return response(VALID);
@@ -388,7 +396,6 @@ class PipelineRunIT {
 		assertThat(post(post)).containsEntry("stage", "assessing").containsEntry("assessing_run_id", run);
 
 		stopping.onClose();
-		long closed = System.nanoTime();
 
 		assertThat(run(run)).containsEntry("status", "interrupted")
 			.containsEntry("interruption_cause", "shutdown")
@@ -405,14 +412,11 @@ class PipelineRunIT {
 		// Its queue thread stops the run's step and leaves the run as onClose left it: no second close or
 		// report, which would race the database's shutdown.
 		awaitLog(output, "Pipeline run " + run + ": stopped, the application is stopping");
-		long deadline = System.nanoTime() + Duration.ofSeconds(30).toNanos();
-		while (stopping.ownRuns().contains(run)) {
-			assertThat(System.nanoTime()).isLessThan(deadline);
-			pause();
-		}
-		// The interrupt reached the step: it ended at once, while the held call still had no answer.
-		assertThat(Duration.ofNanos(System.nanoTime() - closed)).isLessThan(STOPPED_STEP_ENDS_WITHIN);
-		assertThat(answered.getCount()).isOne();
+		awaitClosed(stopping, run);
+		// The interrupt reached the step: it ended while the held call still had no answer (only settle()
+		// releases it), and the call saw the interrupt.
+		assertThat(answered.getCount()).as("the held call's answer, released only after the scenario").isOne();
+		await(interrupted);
 		// close() would log the run's end line.
 		assertThat(output.getAll()).doesNotContain("Pipeline run " + run + " (posts) ended interrupted in");
 		assertThat(output.getAll().lines().filter(line -> line.contains(" ERROR "))).isEmpty();
@@ -633,13 +637,16 @@ class PipelineRunIT {
 		jdbc.update("UPDATE posts SET stage = 'failed', assessment_attempts = 1 WHERE id = ?", post);
 		CountDownLatch called = new CountDownLatch(1);
 		CountDownLatch answered = held();
+		CountDownLatch interrupted = new CountDownLatch(1);
 		answer(request -> {
 			called.countDown();
 			try {
-				answered.await(30, TimeUnit.SECONDS);
+				// Without a bound: the stop's interrupt ends it, or settle() releases it after the scenario.
+				answered.await();
 			}
 			catch (InterruptedException ex) {
 				// As TransportRetry interrupted between two attempts: the call ends finding the provider unavailable.
+				interrupted.countDown();
 				Thread.currentThread().interrupt();
 			}
 			throw new LlmUnavailableException(CallFailure.PROVIDER_ERROR, "HTTP 503 after 3 attempts", 3,
@@ -653,13 +660,12 @@ class PipelineRunIT {
 		// The stopping instance interrupts the run and its post, then its queue thread, which cancels the
 		// held call: the call ends with the outage after its run was interrupted and its post put back.
 		stopping.onClose();
-		long closed = System.nanoTime();
 		assertThat(run(run)).containsEntry("status", "interrupted");
 
 		awaitLog(output, "Assessing post " + post + " in run " + run + " ended with its stopped run");
-		// The interrupt ended the call at once, not its answer (still held) or the held call's 30 s.
-		assertThat(Duration.ofNanos(System.nanoTime() - closed)).isLessThan(STOPPED_STEP_ENDS_WITHIN);
-		assertThat(answered.getCount()).isOne();
+		// The interrupt ended the call, not its answer: still held, only settle() releases it.
+		await(interrupted);
+		assertThat(answered.getCount()).as("the held call's answer, released only after the scenario").isOne();
 		assertThat(output.getAll().lines().filter(line -> line.contains("ended with its stopped run")
 				&& line.contains(run.toString()))).singleElement()
 			.satisfies(line -> assertThat(line).contains("LlmUnavailableException"));
@@ -720,8 +726,13 @@ class PipelineRunIT {
 
 	/** Waits until the shared service has closed {@code runId}: its end was reported to the notifications. */
 	private void awaitClosed(UUID runId) {
+		awaitClosed(service, runId);
+	}
+
+	/** Waits until {@code instance}'s queue thread is done with {@code runId}: no longer a run of its own. */
+	private static void awaitClosed(PipelineRunService instance, UUID runId) {
 		long deadline = System.nanoTime() + Duration.ofSeconds(30).toNanos();
-		while (service.ownRuns().contains(runId)) {
+		while (instance.ownRuns().contains(runId)) {
 			if (System.nanoTime() > deadline) {
 				throw new AssertionError("run " + runId + " was never closed");
 			}

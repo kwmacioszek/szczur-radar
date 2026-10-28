@@ -17,6 +17,7 @@ import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -54,7 +55,7 @@ import pl.szczurradar.api.user.User;
 import pl.szczurradar.api.user.UserRepository;
 
 /**
- * Orphaned runs on Postgres with {@code PIPELINE_STALL_TIMEOUT=5s}: a request to start runs, on an
+ * Orphaned runs on Postgres with {@code PIPELINE_STALL_TIMEOUT=60s}: a request to start runs, on an
  * instance without a run of its own, marks every queued and running run {@code interrupted} with the
  * cause {@code lost} when none of them showed activity for the timeout — all of them or none — and puts
  * back every post left {@code assessing} by an ended run, committed even when the request is then
@@ -62,12 +63,19 @@ import pl.szczurradar.api.user.UserRepository;
  * Wykop is a local server answering an empty day (a test can hold its answer to keep a run of this
  * instance active), and the LLM check fails, so a run takes no post; every test waits until this
  * instance has no run before it ends.
+ *
+ * <p>No test waits for the timeout: a dead run is an hour old ({@link #DEAD}), a live one was active (or
+ * ended) now or 2 s ago, so the timeout is far from any test's length, and the watchdog never stops a run
+ * of this instance a test holds in its fetch step. A held search waits for the gate without a bound; the
+ * clean-up ({@link #awaitIdle}) opens it, after a red test too, and a test that hangs ends at the class's
+ * {@link Timeout}, with a dump of every thread in the log ({@code junit-platform.properties}).
  */
-@SpringBootTest(properties = { MigrateCommand.ENABLE_FLYWAY, PipelineStallSettings.NAME + "=5s",
+@SpringBootTest(properties = { MigrateCommand.ENABLE_FLYWAY, PipelineStallSettings.NAME + "=60s",
 		PipelineTriggerToken.NAME + "=" + OrphanedRunIT.TOKEN })
 @AutoConfigureMockMvc
 @Import({ TestcontainersConfiguration.class, OrphanedRunIT.LocalWykop.class })
 @ExtendWith(OutputCaptureExtension.class)
+@Timeout(value = 5, unit = TimeUnit.MINUTES)
 class OrphanedRunIT {
 
 	/** A test-only token, as long as {@code openssl rand -hex 32} makes one. */
@@ -88,10 +96,13 @@ class OrphanedRunIT {
 			return Reply.ok("{\"data\":{\"token\":\"t\"}}");
 		}
 		try {
-			wykopGate.await(30, TimeUnit.SECONDS);
+			// Without a bound: the test or its clean-up opens the gate.
+			wykopGate.await();
 		}
 		catch (InterruptedException ex) {
+			// Never an empty day for a held search: the fetch fails, as when Wykop is down.
 			Thread.currentThread().interrupt();
+			return new Reply(503, "{\"error\":{\"code\":503,\"message\":\"the test's gate was interrupted\"}}");
 		}
 		return Reply.ok("{\"data\":[],\"pagination\":{\"total\":0}}");
 	});
@@ -178,7 +189,7 @@ class OrphanedRunIT {
 		// The admin is notified about both, once each.
 		assertThat(notified(running) + notified(queued)).isEqualTo(2);
 		assertThat(warning(output, "Marked 2 orphaned pipeline run(s) interrupted: no queued or running run showed"
-				+ " activity for 5.0s and none runs on this instance: ")).contains(running.toString(),
+				+ " activity for 1m 00s and none runs on this instance: ")).contains(running.toString(),
 						queued.toString());
 		assertThat(warning(output, "Put back 1 post(s) left assessing by ended runs")).isNotBlank();
 		// The new runs: a retry run for the post put back, then the day's range.
@@ -237,7 +248,7 @@ class OrphanedRunIT {
 
 	@Test
 	void activityWithinTheTimeoutKeepsTheRun() {
-		// 2 s ago, with a timeout of 5 s.
+		// 2 s ago, with a timeout of 60 s.
 		UUID running = foreignRunning("now() - interval '2 seconds'");
 		Map<String, Object> before = run(running);
 
