@@ -3,7 +3,7 @@ project: "Szczur Radar"
 version: 4
 status: draft # draft | active | locked
 created: 2026-09-27
-updated: 2026-10-27
+updated: 2026-10-28
 prd_version: 2
 main_goal: quality
 top_blocker: decisions # 7 pytań do właściciela o Reddita i oceny (destylacja domeny, Q-01–Q-07): subreddity i dostęp, oznaczanie źródła, świeżość per źródło, budżet LLM, jakość po angielsku, mapowanie url+selftext
@@ -106,7 +106,7 @@ Na Wykopie (#gielda) i Reddicie codziennie pojawiają się setki postów o inwes
 | S-20 | source-isolation                | awaria albo cisza jednego źródła nie psuje przebiegu pozostałych; czas pobrania wielu źródeł mieści się w progu strażnika; liczniki widać per źródło | —             | NFR `prd.md:268`, FR-023; audyt S1, S2, S5; destylacja R-05, D-01        | ready    |
 | S-21 | deploy-gate-no-deploy-changes   | zmiana IaC, która nie wywołuje deployu, nie robi CI czerwonego ani nie blokuje deployu kodu; dokumenty S-14 i #73 mówią prawdę  | —             | audyt P1, P2, P3; Open Roadmap Question 2                                 | ready    |
 | S-22 | run-attention-single-rule       | admin widzi powody „wymaga uwagi” liczone tą samą regułą co powiadomienia i alerty, bez pustego tekstu przy nowym powodzie      | —             | NFR `prd.md:259`; audyt K1; destylacja R-22, D-04                         | ready    |
-| S-23 | closed-sets-guard               | nowa wartość zamkniętego zbioru albo nowa kolumna posta bez migracji lub bez zapisu jest wykrywana w CI, nie w nocy na produkcji | —             | audyt E4; destylacja R-17, R-19                                           | ready    |
+| S-23 | closed-sets-guard               | nowa wartość zamkniętego zbioru albo nowa kolumna posta bez migracji lub bez zapisu jest wykrywana w CI, nie w nocy na produkcji | —             | audyt E4; destylacja R-17, R-19                                           | in-progress |
 | S-24 | api-contract-guard              | rozjazd odpowiedzi API i typów SPA (pełne ciała, kształt błędu 500, kopie reguł) jest wykrywany testem, nie ręczną dyscypliną   | —             | audyt K2, K3, K4; destylacja Q-05                                         | ready    |
 | S-25 | alert-ping-single-rule          | adres check-in alarmów ma jedną regułę we wszystkich miejscach, a rozjazd kopii jest wykrywany testem                           | —             | NFR `prd.md:259`; audyt P4, P5; destylacja R-27                           | ready    |
 | S-26 | engine-test-stability           | testy silnika nie zależą od czasu zegara na współdzielonym runnerze, a znane okna fałszywych alarmów (F3) są przypięte testami | —             | audyt E1, E2, E6                                                          | ready    |
@@ -192,7 +192,7 @@ Brak — każda praca przekrojowa M-3 ma widoczny skutek dla użytkownika albo o
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** mały i czysto testowy; warto przed S-27, bo Reddit dodaje stałą `Source` i migrację `CHECK` — pierwsze miejsce, gdzie strażnik zadziała.
-- **Status:** ready
+- **Status:** in-progress
 
 ### S-24: Kontrakt SPA ↔ API pilnowany testem
 

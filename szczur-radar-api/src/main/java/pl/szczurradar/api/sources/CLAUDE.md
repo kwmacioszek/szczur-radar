@@ -31,6 +31,8 @@ nothing.
 1. `sources/Source`: the constant (its `value()` is what is stored), and one Flyway migration adding
    that value to the `CHECK` sets of `posts.source`, `raw_payloads.source` and
    `pipeline_runs.sources` (registering the source; nothing else in persistence changes).
+   `persistence/ClosedSetsIT` is red when the constant has no such migration (or the migration no
+   constant) in any of the three columns.
 2. `sources/<source>/`: client, repository, item, mapper and configuration as in the layout below.
 3. `<Source>Fetcher implements SourceFetcher` (`@Component`): `configured()` from the configuration's
    optional bean; `fetch` = repository → `<Source>Posts.post(element)` per element, `skipped` for the
