@@ -200,11 +200,11 @@ Brak migracji. Pierwsza migracja, przy której strażnik zadziała, to rejestrac
 
 #### Automated
 
-- [x] 1.1 Pełna weryfikacja z Testcontainers zielona: `cd szczur-radar-api && ./mvnw -B verify`
-- [x] 1.2 `ClosedSetsIT` istnieje i przechodzi sam: `cd szczur-radar-api && ./mvnw -B verify -Dit.test=ClosedSetsIT -Dtest=NONE -Dsurefire.failIfNoSpecifiedTests=false`
-- [x] 1.3 Celowe złamanie — nowa stała bez migracji: tymczasowa stała `REDDIT` w `api/sources/Source.java` daje czerwony `ClosedSetsIT` z komunikatem nazywającym `posts.source`, `raw_payloads.source` i `pipeline_runs.sources`; po cofnięciu zielony (zmiana nie trafia do commita)
-- [x] 1.4 Celowe złamanie — `CHECK` bez enumu: tymczasowa migracja testowa dodająca kolumnę z `CHECK (x IN ('a','b'))` (albo wartość `'reddit'` w `ck_posts_source` bez stałej) daje czerwony test kompletności / równości; po cofnięciu zielony (zmiana nie trafia do commita)
-- [x] 1.5 Dopiski w opisach są na miejscu: `grep -l 'ClosedSetsIT' REPOSITORY_GUIDELINES.md szczur-radar-api/README.md szczur-radar-api/src/main/java/pl/szczurradar/api/sources/CLAUDE.md szczur-radar-api/src/main/java/pl/szczurradar/api/llm/CLAUDE.md szczur-radar-api/src/main/java/pl/szczurradar/api/agents/assessor/CLAUDE.md` wypisuje 5 plików
+- [x] 1.1 Pełna weryfikacja z Testcontainers zielona: `cd szczur-radar-api && ./mvnw -B verify` — e7c294f
+- [x] 1.2 `ClosedSetsIT` istnieje i przechodzi sam: `cd szczur-radar-api && ./mvnw -B verify -Dit.test=ClosedSetsIT -Dtest=NONE -Dsurefire.failIfNoSpecifiedTests=false` — e7c294f
+- [x] 1.3 Celowe złamanie — nowa stała bez migracji: tymczasowa stała `REDDIT` w `api/sources/Source.java` daje czerwony `ClosedSetsIT` z komunikatem nazywającym `posts.source`, `raw_payloads.source` i `pipeline_runs.sources`; po cofnięciu zielony (zmiana nie trafia do commita) — e7c294f
+- [x] 1.4 Celowe złamanie — `CHECK` bez enumu: tymczasowa migracja testowa dodająca kolumnę z `CHECK (x IN ('a','b'))` (albo wartość `'reddit'` w `ck_posts_source` bez stałej) daje czerwony test kompletności / równości; po cofnięciu zielony (zmiana nie trafia do commita) — e7c294f
+- [x] 1.5 Dopiski w opisach są na miejscu: `grep -l 'ClosedSetsIT' REPOSITORY_GUIDELINES.md szczur-radar-api/README.md szczur-radar-api/src/main/java/pl/szczurradar/api/sources/CLAUDE.md szczur-radar-api/src/main/java/pl/szczurradar/api/llm/CLAUDE.md szczur-radar-api/src/main/java/pl/szczurradar/api/agents/assessor/CLAUDE.md` wypisuje 5 plików — e7c294f
 
 #### Manual
 
@@ -214,11 +214,11 @@ Brak migracji. Pierwsza migracja, przy której strażnik zadziała, to rejestrac
 
 #### Automated
 
-- [ ] 2.1 Pełna weryfikacja z Testcontainers zielona: `cd szczur-radar-api && ./mvnw -B verify`
-- [ ] 2.2 `PostColumnsIT` istnieje i przechodzi sam: `cd szczur-radar-api && ./mvnw -B verify -Dit.test=PostColumnsIT -Dtest=NONE -Dsurefire.failIfNoSpecifiedTests=false`
-- [ ] 2.3 Celowe złamanie — nowa kolumna: tymczasowa migracja `ALTER TABLE posts ADD COLUMN probe INTEGER NOT NULL DEFAULT 0` daje czerwony `everyPostColumnIsClassified` nazywający `probe`; po cofnięciu zielony (zmiana nie trafia do commita)
-- [ ] 2.4 Celowe złamanie — przejście gubi reset: usunięcie `technical_failures = 0` z `record` w `PostTransitions` daje czerwony scenariusz `record`; usunięcie `updated_at = now()` z `claim` daje czerwony scenariusz `claim`; po cofnięciu zielony (zmiany nie trafiają do commita)
-- [ ] 2.5 Dopisek w opisie pakietu: `grep -c 'PostColumnsIT' szczur-radar-api/src/main/java/pl/szczurradar/api/pipeline/CLAUDE.md` wypisuje co najmniej `1`
+- [x] 2.1 Pełna weryfikacja z Testcontainers zielona: `cd szczur-radar-api && ./mvnw -B verify`
+- [x] 2.2 `PostColumnsIT` istnieje i przechodzi sam: `cd szczur-radar-api && ./mvnw -B verify -Dit.test=PostColumnsIT -Dtest=NONE -Dsurefire.failIfNoSpecifiedTests=false`
+- [x] 2.3 Celowe złamanie — nowa kolumna: tymczasowa migracja `ALTER TABLE posts ADD COLUMN probe INTEGER NOT NULL DEFAULT 0` daje czerwony `everyPostColumnIsClassified` nazywający `probe`; po cofnięciu zielony (zmiana nie trafia do commita)
+- [x] 2.4 Celowe złamanie — przejście gubi reset: usunięcie `technical_failures = 0` z `record` w `PostTransitions` daje czerwony scenariusz `record`; usunięcie `updated_at = now()` z `claim` daje czerwony scenariusz `claim`; po cofnięciu zielony (zmiany nie trafiają do commita)
+- [x] 2.5 Dopisek w opisie pakietu: `grep -c 'PostColumnsIT' szczur-radar-api/src/main/java/pl/szczurradar/api/pipeline/CLAUDE.md` wypisuje co najmniej `1`
 - [ ] 2.6 CI zielone na PR (wszystkie joby): `gh pr checks <PR> --watch`
 
 #### Manual
