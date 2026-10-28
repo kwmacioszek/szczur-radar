@@ -208,7 +208,7 @@ Brak migracji. Pierwsza migracja, przy której strażnik zadziała, to rejestrac
 
 #### Manual
 
-- [ ] 1.6 Przegląd rejestru w `ClosedSetsIT`: 22 wpisy odpowiadają liście z Current State Analysis, a komunikat błędu z celowego złamania jest zrozumiały dla autora nowego źródła (mówi, którą migrację dopisać)
+- [x] 1.6 Przegląd rejestru w `ClosedSetsIT`: 22 wpisy odpowiadają liście z Current State Analysis, a komunikat błędu z celowego złamania jest zrozumiały dla autora nowego źródła (mówi, którą migrację dopisać) — 29aad2e (przegląd implementacji 2026-10-28, potwierdzone przez użytkownika 2026-10-28)
 
 ### Phase 2: Strażnik kolumn posta
 
@@ -223,4 +223,4 @@ Brak migracji. Pierwsza migracja, przy której strażnik zadziała, to rejestrac
 
 #### Manual
 
-- [ ] 2.7 Przegląd macierzy w `PostColumnsIT`: oczekiwane wartości kolumn stanu po każdym przejściu zgadzają się z opisem przejść w `api/pipeline/CLAUDE.md:65,276-283,319-320` (żadne oczekiwanie nie „utrwala” błędu obecnego kodu)
+- [x] 2.7 Przegląd macierzy w `PostColumnsIT`: oczekiwane wartości kolumn stanu po każdym przejściu zgadzają się z opisem przejść w `api/pipeline/CLAUDE.md:65,276-283,319-320` (żadne oczekiwanie nie „utrwala” błędu obecnego kodu) — 29aad2e (przegląd implementacji 2026-10-28, potwierdzone przez użytkownika 2026-10-28)
