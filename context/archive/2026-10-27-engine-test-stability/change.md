@@ -1,10 +1,10 @@
 ---
 change_id: engine-test-stability
 title: "S-26: testy silnika bez zależności od zegara"
-status: impl_reviewed
+status: archived
 created: 2026-10-27
 updated: 2026-10-28
-archived_at: null
+archived_at: 2026-10-28T15:09:13Z
 ---
 
 ## Notes
