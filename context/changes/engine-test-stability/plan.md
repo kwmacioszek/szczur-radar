@@ -359,4 +359,4 @@ Nie dotyczy: bez migracji, bez zmian konfiguracji Railway ani CI. Zmiana zachowa
 
 #### Manual
 
-- [ ] 4.3 Użytkownik przegląda diff PR: kod produkcyjny tylko dwa ponowne odczyty (faza 2)
+- [x] 4.3 Użytkownik przegląda diff PR: kod produkcyjny tylko dwa ponowne odczyty (faza 2)
