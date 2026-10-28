@@ -22,6 +22,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -73,6 +74,13 @@ import pl.szczurradar.api.user.UserRepository;
  * {@link RandomOrderSeed}), as in {@link PipelineRunIT}: the run and post tables are emptied before each
  * one ({@link #reset}), a scenario that needs assessed posts makes them itself ({@link #assessedDay}), and
  * the service is left quiet after each one ({@link #settle}).
+ *
+ * <p>A held call waits for its latch without a bound: only the stop's interrupt ends it before
+ * {@link #settle} releases it, so a step that ends while it waits ended without its answer, whatever the
+ * machine's speed. A scenario that hangs ends at the class's {@link Timeout}, with a dump of every thread in
+ * the log ({@code junit-platform.properties}); the loops that wait for the database or the log keep their own
+ * bound, to say what they waited for. Only the watchdog's own scenarios measure time, against the 5 s
+ * timeout, each with its margin.
  */
 @SpringBootTest(properties = { MigrateCommand.ENABLE_FLYWAY, PipelineStallSettings.NAME + "=5s",
 		// One thread of the LLM pool: the run queued behind a stopped one assesses only once the stop has
@@ -81,12 +89,10 @@ import pl.szczurradar.api.user.UserRepository;
 @Import({ TestcontainersConfiguration.class, RunWatchdogIT.LocalWykop.class })
 @TestMethodOrder(MethodOrderer.Random.class)
 @ExtendWith(OutputCaptureExtension.class)
+@Timeout(value = 5, unit = TimeUnit.MINUTES)
 class RunWatchdogIT {
 
 	private static final Duration TIMEOUT = Duration.ofSeconds(5);
-
-	/** How long a stopped run's step may take to end after the stop: far below a held call's 30 s. */
-	private static final Duration STOPPED_STEP_ENDS_WITHIN = Duration.ofSeconds(10);
 
 	/** The run's and its open step's error after the watchdog stopped it ({@code Durations.format}). */
 	private static final String STALLED = "no progress for 5.0s: the run was stopped";
@@ -199,7 +205,8 @@ class RunWatchdogIT {
 			if (request.userMessage().contains(body)) {
 				called.countDown();
 				try {
-					answered.await(30, TimeUnit.SECONDS);
+					// Without a bound: the stop's interrupt ends it, or settle() releases it after the scenario.
+					answered.await();
 				}
 				catch (InterruptedException ex) {
 					// As the HTTP client of a call in flight: an interrupt ends the call.
@@ -227,16 +234,14 @@ class RunWatchdogIT {
 			.containsEntry("assessment_attempts", 1)
 			.containsEntry("assessing_run_id", null);
 		awaitLog(output, "Pipeline run " + retry + " made no progress for 5.0s; stopped");
-		long stoppedAt = System.nanoTime();
 		// What the stop wrote (it logs after its commit), before its interrupt ends the step.
 		Supplier<List<Object>> retryState = () -> List.of(run(retry), steps(retry), post(leftover),
 				count("SELECT count(*) FROM assessments WHERE post_id = ? OR run_id = ?", leftover, retry));
 		List<Object> stopped = retryState.get();
-		// The stop's interrupt reaches the step: it ends within seconds of the stop, without the answer (still
-		// held) and long before the held call's 30 s, leaving the step as the stop closed it.
+		// The stop's interrupt reaches the step: it ends while the held call still waits for its answer (only
+		// settle() releases it), leaving the step as the stop closed it.
 		awaitLog(output, "Run " + retry + " step assess ended in");
-		assertThat(Duration.ofNanos(System.nanoTime() - stoppedAt)).isLessThan(STOPPED_STEP_ENDS_WITHIN);
-		assertThat(answered.getCount()).isOne();
+		assertThat(answered.getCount()).as("the held call's answer, released only after the scenario").isOne();
 		assertThat(output.getAll().lines().filter(line -> line.contains("Run " + retry + " step assess ended in")))
 			.singleElement()
 			.asString()
@@ -331,13 +336,14 @@ class RunWatchdogIT {
 				+ " ORDER BY p.id LIMIT 4", UUID.class);
 		assertThat(posts).hasSize(4);
 		posts.forEach(post -> jdbc.update("UPDATE posts SET stage = 'stored' WHERE id = ?", post));
-		// Each call fails after 3 s, under the timeout, so the three in a row on the one thread take about 9 s:
-		// longer than the timeout, which only the outages' own progress keeps from stopping the run.
+		// Each call fails after 2 s, 3 s under the timeout, so the three in a row on the one thread take at least
+		// 6 s (their pauses): longer than the timeout, which only the outages' own progress keeps from stopping
+		// the run.
 		answer(request -> {
 			if (request.equals(LlmClient.CHECK_REQUEST)) {
 				return response(VALID);
 			}
-			pause(Duration.ofSeconds(3));
+			pause(Duration.ofSeconds(2));
 			throw new LlmUnavailableException(CallFailure.PROVIDER_ERROR, "HTTP 503 after 3 attempts", 3,
 					ServiceTier.DEFAULT, false, new IllegalStateException("HTTP 503"));
 		});

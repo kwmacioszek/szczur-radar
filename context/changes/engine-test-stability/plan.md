@@ -337,18 +337,18 @@ Nie dotyczy: bez migracji, bez zmian konfiguracji Railway ani CI. Zmiana zachowa
 
 #### Automated
 
-- [x] 2.1 Nowe i istniejące testy zielone: `./mvnw -B test -Dtest='PipelineRunServiceTest,RunNotificationsTest'`
-- [x] 2.2 Celowe złamanie: bez ponownego odczytu nowe testy okien 1 i 2 czerwone; cofnięte
-- [x] 2.3 Wszystkie testy jednostkowe zielone: `./mvnw -B test`
+- [x] 2.1 Nowe i istniejące testy zielone: `./mvnw -B test -Dtest='PipelineRunServiceTest,RunNotificationsTest'` — d2c5373
+- [x] 2.2 Celowe złamanie: bez ponownego odczytu nowe testy okien 1 i 2 czerwone; cofnięte — d2c5373
+- [x] 2.3 Wszystkie testy jednostkowe zielone: `./mvnw -B test` — d2c5373
 
 ### Phase 3: IT bez zegara jako warunku poprawności
 
 #### Automated
 
-- [ ] 3.1 IT silnika zielone na ziarnach 1 i 2 (`-Dit.test=… -Dit.seed=1`, `-Dit.seed=2`)
-- [ ] 3.2 Brak asercji czasu trwania i ignorowanych wyników `await` w IT silnika (grep)
-- [ ] 3.3 Celowe złamanie: bez `task.cancel(true)` w `stopStalled` scenariusz zawieszonego przebiegu czerwony; cofnięte
-- [ ] 3.4 Cały zestaw zielony lokalnie: `./mvnw -B verify`
+- [x] 3.1 IT silnika zielone na ziarnach 1 i 2 (`-Dit.test=… -Dit.seed=1`, `-Dit.seed=2`)
+- [x] 3.2 Brak asercji czasu trwania i ignorowanych wyników `await` w IT silnika (grep)
+- [x] 3.3 Celowe złamanie: bez `task.cancel(true)` w `stopStalled` scenariusz zawieszonego przebiegu czerwony; cofnięte
+- [x] 3.4 Cały zestaw zielony lokalnie: `./mvnw -B verify`
 
 ### Phase 4: Notatki silnika (`pipeline/CLAUDE.md`)
 
