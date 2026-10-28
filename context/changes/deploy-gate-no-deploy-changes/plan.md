@@ -289,9 +289,9 @@ Brak danych i migracji. Wycofanie: revert PR-a przywraca starą kontrolę (z fa�
 
 #### Automated
 
-- [ ] 1.1 `tools/deploy-gate/test.sh` kończy się „All checks passed.” (exit 0)
-- [ ] 1.2 `test.sh` zawiera przypadki (a)–(i) z sekcji 11 i nie zawiera oczekiwania „the apply did not trigger a deploy”
-- [ ] 1.3 `bash -n tools/deploy-gate/verify-apply.sh` i `bash -n tools/deploy-gate/test.sh` bez błędów
+- [x] 1.1 `tools/deploy-gate/test.sh` kończy się „All checks passed.” (exit 0)
+- [x] 1.2 `test.sh` zawiera przypadki (a)–(i) z sekcji 11 i nie zawiera oczekiwania „the apply did not trigger a deploy”
+- [x] 1.3 `bash -n tools/deploy-gate/verify-apply.sh` i `bash -n tools/deploy-gate/test.sh` bez błędów
 
 #### Manual
 
