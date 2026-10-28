@@ -214,12 +214,12 @@ Brak migracji. Pierwsza migracja, przy której strażnik zadziała, to rejestrac
 
 #### Automated
 
-- [x] 2.1 Pełna weryfikacja z Testcontainers zielona: `cd szczur-radar-api && ./mvnw -B verify`
-- [x] 2.2 `PostColumnsIT` istnieje i przechodzi sam: `cd szczur-radar-api && ./mvnw -B verify -Dit.test=PostColumnsIT -Dtest=NONE -Dsurefire.failIfNoSpecifiedTests=false`
-- [x] 2.3 Celowe złamanie — nowa kolumna: tymczasowa migracja `ALTER TABLE posts ADD COLUMN probe INTEGER NOT NULL DEFAULT 0` daje czerwony `everyPostColumnIsClassified` nazywający `probe`; po cofnięciu zielony (zmiana nie trafia do commita)
-- [x] 2.4 Celowe złamanie — przejście gubi reset: usunięcie `technical_failures = 0` z `record` w `PostTransitions` daje czerwony scenariusz `record`; usunięcie `updated_at = now()` z `claim` daje czerwony scenariusz `claim`; po cofnięciu zielony (zmiany nie trafiają do commita)
-- [x] 2.5 Dopisek w opisie pakietu: `grep -c 'PostColumnsIT' szczur-radar-api/src/main/java/pl/szczurradar/api/pipeline/CLAUDE.md` wypisuje co najmniej `1`
-- [ ] 2.6 CI zielone na PR (wszystkie joby): `gh pr checks <PR> --watch`
+- [x] 2.1 Pełna weryfikacja z Testcontainers zielona: `cd szczur-radar-api && ./mvnw -B verify` — b522368
+- [x] 2.2 `PostColumnsIT` istnieje i przechodzi sam: `cd szczur-radar-api && ./mvnw -B verify -Dit.test=PostColumnsIT -Dtest=NONE -Dsurefire.failIfNoSpecifiedTests=false` — b522368
+- [x] 2.3 Celowe złamanie — nowa kolumna: tymczasowa migracja `ALTER TABLE posts ADD COLUMN probe INTEGER NOT NULL DEFAULT 0` daje czerwony `everyPostColumnIsClassified` nazywający `probe`; po cofnięciu zielony (zmiana nie trafia do commita) — b522368
+- [x] 2.4 Celowe złamanie — przejście gubi reset: usunięcie `technical_failures = 0` z `record` w `PostTransitions` daje czerwony scenariusz `record`; usunięcie `updated_at = now()` z `claim` daje czerwony scenariusz `claim`; po cofnięciu zielony (zmiany nie trafiają do commita) — b522368
+- [x] 2.5 Dopisek w opisie pakietu: `grep -c 'PostColumnsIT' szczur-radar-api/src/main/java/pl/szczurradar/api/pipeline/CLAUDE.md` wypisuje co najmniej `1` — b522368
+- [x] 2.6 CI zielone na PR (wszystkie joby): `gh pr checks <PR> --watch` — b522368
 
 #### Manual
 

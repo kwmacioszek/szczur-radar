@@ -1,7 +1,7 @@
 ---
 change_id: closed-sets-guard
 title: "S-23: zamknięte zbiory i kolumny posta pilnowane w CI"
-status: implementing
+status: implemented
 created: 2026-10-27
 updated: 2026-10-28
 archived_at: null
