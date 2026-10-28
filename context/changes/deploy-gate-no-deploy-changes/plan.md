@@ -289,9 +289,9 @@ Brak danych i migracji. Wycofanie: revert PR-a przywraca starą kontrolę (z fa�
 
 #### Automated
 
-- [x] 1.1 `tools/deploy-gate/test.sh` kończy się „All checks passed.” (exit 0)
-- [x] 1.2 `test.sh` zawiera przypadki (a)–(i) z sekcji 11 i nie zawiera oczekiwania „the apply did not trigger a deploy”
-- [x] 1.3 `bash -n tools/deploy-gate/verify-apply.sh` i `bash -n tools/deploy-gate/test.sh` bez błędów
+- [x] 1.1 `tools/deploy-gate/test.sh` kończy się „All checks passed.” (exit 0) — dd321c2
+- [x] 1.2 `test.sh` zawiera przypadki (a)–(i) z sekcji 11 i nie zawiera oczekiwania „the apply did not trigger a deploy” — dd321c2
+- [x] 1.3 `bash -n tools/deploy-gate/verify-apply.sh` i `bash -n tools/deploy-gate/test.sh` bez błędów — dd321c2
 
 #### Manual
 
@@ -301,8 +301,8 @@ Brak danych i migracji. Wycofanie: revert PR-a przywraca starą kontrolę (z fa�
 
 #### Automated
 
-- [ ] 2.1 CI PR-a zielone na każdym z trzech commitów, w tym `deploy-gate-test` i `railway-config` (`gh pr checks`)
-- [ ] 2.2 `git diff origin/main -- .railway/railway.ts szczur-radar-api szczur-radar-web tools/db-backup tools/pipeline-trigger` pusty na czubku gałęzi
+- [x] 2.1 CI PR-a zielone na każdym z trzech commitów, w tym `deploy-gate-test` i `railway-config` (`gh pr checks`) — 9077846
+- [x] 2.2 `git diff origin/main -- .railway/railway.ts szczur-radar-api szczur-radar-web tools/db-backup tools/pipeline-trigger` pusty na czubku gałęzi — 9077846
 
 #### Manual
 
@@ -315,10 +315,10 @@ Brak danych i migracji. Wycofanie: revert PR-a przywraca starą kontrolę (z fa�
 
 #### Automated
 
-- [ ] 3.1 W sekcji S-14 `deploy-plan.md` nie ma pola `- [ ]`, jest `### Production after the merge (2026-10-19)`
-- [ ] 3.2 `grep` „announces both crons as redeployed” / „an apply redeploys them” w `deploy-plan.md`, `tools/deploy-gate/README.md`, `gate.sh` bez trafień
-- [ ] 3.3 `deploy-plan.md` ma sekcję `## S-21:` z linią „**Status:** delivered by PR #” i „issue #115”
-- [ ] 3.4 `tools/deploy-gate/test.sh` dalej zielony
+- [x] 3.1 W sekcji S-14 `deploy-plan.md` nie ma pola `- [ ]`, jest `### Production after the merge (2026-10-19)`
+- [x] 3.2 `grep` „announces both crons as redeployed” / „an apply redeploys them” w `deploy-plan.md`, `tools/deploy-gate/README.md`, `gate.sh` bez trafień
+- [x] 3.3 `deploy-plan.md` ma sekcję `## S-21:` z linią „**Status:** delivered by PR #” i „issue #115”
+- [x] 3.4 `tools/deploy-gate/test.sh` dalej zielony
 
 #### Manual
 
