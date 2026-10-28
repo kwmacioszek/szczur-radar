@@ -267,10 +267,10 @@ Bez zmian zmiennych i IaC. Jedyne ryzyko wdrożenia to wartość produkcyjna, kt
 
 #### Automated
 
-- [x] 3.1 `tools/db-backup/test.sh` przechodzi, a `run4` melduje `start 1`
-- [x] 3.2 `grep -rn '124' tools/db-backup/README.md` nie znajduje opisu kodu meldunku po limicie czasu
-- [x] 3.3 `cd szczur-radar-api && ./mvnw -B verify` przechodzi
-- [ ] 3.4 CI na PR zielone (`gh pr checks`), w tym `healthchecks-test`, `db-backup-test`, `pipeline-trigger-test`, backend `verify` i `railway-config`
+- [x] 3.1 `tools/db-backup/test.sh` przechodzi, a `run4` melduje `start 1` — 7a3a68b
+- [x] 3.2 `grep -rn '124' tools/db-backup/README.md` nie znajduje opisu kodu meldunku po limicie czasu — 7a3a68b
+- [x] 3.3 `cd szczur-radar-api && ./mvnw -B verify` przechodzi — 7a3a68b
+- [x] 3.4 CI na PR zielone (`gh pr checks`), w tym `healthchecks-test`, `db-backup-test`, `pipeline-trigger-test`, backend `verify` i `railway-config` — 7a3a68b
 
 #### Manual
 
