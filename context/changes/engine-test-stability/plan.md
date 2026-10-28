@@ -354,8 +354,8 @@ Nie dotyczy: bez migracji, bez zmian konfiguracji Railway ani CI. Zmiana zachowa
 
 #### Automated
 
-- [x] 4.1 Grep potwierdza poprawki E6 i opis zasad testów w `pipeline/CLAUDE.md`
-- [ ] 4.2 CI na PR zielone: `gh pr checks <PR>`
+- [x] 4.1 Grep potwierdza poprawki E6 i opis zasad testów w `pipeline/CLAUDE.md` — c8eb01e
+- [x] 4.2 CI na PR zielone: `gh pr checks <PR>` — c8eb01e
 
 #### Manual
 
