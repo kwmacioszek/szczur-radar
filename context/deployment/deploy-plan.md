@@ -905,7 +905,7 @@ PR #60 was merged by the operator as `5b6eabb` (2026-10-17 15:02 UTC).
 
 ## S-14: bezpieczna bramka wdrożeń (safe-deploy-gate)
 
-**Status:** delivered by PR #81 (`2abc64c`); production verification and closure in issue #73 (closed 2026-10-24; points 1–2 of its closing comment are corrected in "Production after the merge (2026-10-19)" below). Change: `context/archive/2026-10-18-safe-deploy-gate/`. S-14 closes the gaps C4–C7 of the post-MVP audit:
+**Status:** delivered by PR #81 (`2abc64c`); production verification and closure in issue #73 (closed 2026-10-24; points 1–2 of its closing comment are corrected in "Production after the merge (2026-10-19)" below and in a comment on #73, 2026-10-28). Change: `context/archive/2026-10-18-safe-deploy-gate/`. S-14 closes the gaps C4–C7 of the post-MVP audit:
 - the IaC apply ran in parallel with the tests (C4);
 - the cron services deployed at the push, before CI (C5);
 - nothing checked health after an apply or a code deploy (C6);
@@ -1038,7 +1038,7 @@ No step of `ci.yml` can see the code deploy, which starts only after the workflo
 
 ### Production after the merge (2026-10-19)
 
-PR #81 was merged as `2abc64c` (push 16:27:00 UTC; Railway created its deployments at 16:27:02). Reconstructed later from Railway's deployment lists, the CI run and GitHub's deployment statuses (audit `context/changes/post-m2-audit/research.md`, section 3, P1–P2). The closing comment on issue #73 (2026-10-24) had points 1 and 2 wrong; this record corrects them. The one-time runbook that stood here (13 items, never ticked) is replaced by this record.
+PR #81 was merged as `2abc64c` (push 16:27:00 UTC; Railway created its deployments at 16:27:02). Reconstructed later from Railway's deployment lists, the CI run and GitHub's deployment statuses (audit `context/changes/post-m2-audit/research.md`, section 3, P1–P2). The closing comment on issue #73 (2026-10-24) had points 1 and 2 wrong; this record corrects them, and so does a comment there (2026-10-28). The one-time runbook that stood here (13 items, never ticked) is replaced by this record.
 
 - **CI on `main`** (run 39285519093). `railway-config` started after the seven test jobs (16:29:18). The guard got 401 (production's API was from before S-14) and passed with the "older API" warning. The gate let the two changes `source.checkSuites (null → true)` (`db-backup`, `pipeline-trigger`) through, the snapshot stored `5239fac5` and `0d50b476`, and the apply applied both (16:29:47). Both crons have `checkSuites: true` in the live configuration, and `railway config plan --environment production --detailed-exit-code` from `main` (`0bea22f`) exits 0.
 - **The apply deployed nothing.** No new deployment of either cron came between the apply and 16:31:42: `source.checkSuites` does not deploy.

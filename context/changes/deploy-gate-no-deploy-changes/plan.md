@@ -322,5 +322,5 @@ Brak danych i migracji. Wycofanie: revert PR-a przywraca starą kontrolę (z fa�
 
 #### Manual
 
-- [ ] 3.5 Komentarz korygujący w #73 wysłany (tekst zatwierdzony przez operatora)
-- [ ] 3.6 Operator potwierdza, że notatka S-14 i sekcja S-21 zgadzają się z tym, co widział na produkcji
+- [x] 3.5 Komentarz korygujący w #73 wysłany (tekst zatwierdzony przez operatora) — 4e21617
+- [x] 3.6 Operator potwierdza, że notatka S-14 i sekcja S-21 zgadzają się z tym, co widział na produkcji — 4e21617
