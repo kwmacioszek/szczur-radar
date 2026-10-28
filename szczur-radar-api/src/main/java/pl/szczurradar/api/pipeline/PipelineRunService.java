@@ -315,8 +315,11 @@ public class PipelineRunService {
 	 * run's state, not by the exception's type: a run someone else ended meanwhile — the watchdog
 	 * ({@link #stopStalled}, which also interrupts this thread), {@link #onClose} (which stops this thread
 	 * too), a newer instance's recovery — makes its step throw whatever the stop caused, and that is an
-	 * INFO line, never an ERROR or a second end. Before any database call the thread's interrupt flag is
-	 * cleared (a connection pool refuses an interrupted thread) and remembered only when the instance is
+	 * INFO line, never an ERROR or a second end. When the watchdog's interrupt lands only in that check of
+	 * the run's state (its step had ended by itself with its own exception, and the pool refuses the
+	 * interrupted thread), the check is read once more with the flag cleared ({@link #stillRunning}), so the
+	 * stop stays an INFO line. Before any database call the thread's interrupt flag is cleared (a
+	 * connection pool refuses an interrupted thread) and remembered only when the instance is
 	 * stopping — known from {@link #onClose}'s first statement, before its writes, not only once the
 	 * executor is shut down: then the run is neither closed nor reported here ({@link #onClose} interrupts
 	 * and reports every run of its own, also one that ended by itself a moment before, and the database may
@@ -324,7 +327,9 @@ public class PipelineRunService {
 	 * this thread takes the next run. An interrupt that lands only after the catch cleared the flag, or
 	 * after a normal return ({@link #onClose} during the summary), is cleared again at the start of the
 	 * clean-up and restored by the same rule; one that lands inside the clean-up (the watchdog's late
-	 * {@code cancel(true)}) is tolerated by {@link #close}.
+	 * {@code cancel(true)}) is tolerated by {@link #close} and {@link RunNotifications#runEnded} (each reads
+	 * once more with the flag cleared), cleared before the notification and after it, and restored only
+	 * when the instance is stopping by then.
 	 */
 	void execute(UUID runId) {
 		String error = "the run ended without a summary";
@@ -372,12 +377,19 @@ public class PipelineRunService {
 			// it reports every run of its own, and the database may be closing.
 			boolean stop = interrupted || this.stopping;
 			running.remove(runId);
+			boolean late = false;
 			if (!stop) {
 				close(runId, error, started);
+				// An interrupt that landed in the close (the watchdog's late cancel(true), also one its check
+				// restored after its second read) must not reach the notification's database calls either.
+				late = Thread.interrupted();
 				notifications.runEnded(runId);
+				// Or one that landed in the notification (restored after its second attempt).
+				late |= Thread.interrupted();
 			}
 			own.remove(runId);
-			if (interrupted || (flagged && stop)) {
+			// The clean-up's late interrupt by the same rule: kept only when the instance stops by now.
+			if (interrupted || (flagged && stop) || (late && this.stopping)) {
 				// Restored after the clean-up, whose database calls an interrupted thread may not get.
 				Thread.currentThread().interrupt();
 			}
@@ -388,14 +400,34 @@ public class PipelineRunService {
 	 * Whether the run whose step (or close) threw {@code failure} is still running here; when even that
 	 * cannot be read, it is taken as running (the failure is then this run's), with the read's failure
 	 * suppressed in {@code failure}.
+	 *
+	 * <p>A read that fails on an interrupted thread is made once more with the flag cleared: the
+	 * watchdog's late {@code cancel(true)} (its stall committed, the step ended by itself meanwhile) may land
+	 * in the read, and the connection pool refuses an interrupted thread — taking the run as running then
+	 * would turn the watchdog's stop into a false ERROR. {@code cancel(true)} interrupts once, so the second
+	 * read gets its connection; only its failure counts. The flag is restored after it, as it was when the
+	 * read failed: the caller's rule decides it.
 	 */
 	private boolean stillRunning(UUID runId, RuntimeException failure) {
 		try {
 			return recorder.isRunning(runId);
 		}
 		catch (RuntimeException ex) {
-			failure.addSuppressed(ex);
-			return true;
+			if (!Thread.interrupted()) {
+				failure.addSuppressed(ex);
+				return true;
+			}
+			try {
+				return recorder.isRunning(runId);
+			}
+			catch (RuntimeException again) {
+				failure.addSuppressed(ex);
+				failure.addSuppressed(again);
+				return true;
+			}
+			finally {
+				Thread.currentThread().interrupt();
+			}
 		}
 	}
 

@@ -326,20 +326,20 @@ Nie dotyczy: bez migracji, bez zmian konfiguracji Railway ani CI. Zmiana zachowa
 
 #### Automated
 
-- [x] 1.1 Trzy klasy zielone: `./mvnw -B test -Dtest='ConcurrentAssessmentDispatcherTest,PipelineRunServiceTest,RunWatchdogTest'`
-- [x] 1.2 Brak oczekiwań z limitem krótszym niż `@Timeout`, ignorowanych wyników i `onSpinWait` w trzech klasach (grep)
-- [x] 1.3 Celowe złamanie wyścigu (pauza między zgłoszeniami) — test anulowania zielony; cofnięte
-- [x] 1.4 Celowe zawieszenie — czerwień na `@Timeout` ze zrzutem wątków w wyjściu; cofnięte
-- [x] 1.5 20 przebiegów trzech klas pod obciążeniem CPU — 20/20 zielonych
-- [x] 1.6 Wszystkie testy jednostkowe zielone: `./mvnw -B test`
+- [x] 1.1 Trzy klasy zielone: `./mvnw -B test -Dtest='ConcurrentAssessmentDispatcherTest,PipelineRunServiceTest,RunWatchdogTest'` — 841f86a
+- [x] 1.2 Brak oczekiwań z limitem krótszym niż `@Timeout`, ignorowanych wyników i `onSpinWait` w trzech klasach (grep) — 841f86a
+- [x] 1.3 Celowe złamanie wyścigu (pauza między zgłoszeniami) — test anulowania zielony; cofnięte — 841f86a
+- [x] 1.4 Celowe zawieszenie — czerwień na `@Timeout` ze zrzutem wątków w wyjściu; cofnięte — 841f86a
+- [x] 1.5 20 przebiegów trzech klas pod obciążeniem CPU — 20/20 zielonych — 841f86a
+- [x] 1.6 Wszystkie testy jednostkowe zielone: `./mvnw -B test` — 841f86a
 
 ### Phase 2: Okna fałszywych alarmów E1
 
 #### Automated
 
-- [ ] 2.1 Nowe i istniejące testy zielone: `./mvnw -B test -Dtest='PipelineRunServiceTest,RunNotificationsTest'`
-- [ ] 2.2 Celowe złamanie: bez ponownego odczytu nowe testy okien 1 i 2 czerwone; cofnięte
-- [ ] 2.3 Wszystkie testy jednostkowe zielone: `./mvnw -B test`
+- [x] 2.1 Nowe i istniejące testy zielone: `./mvnw -B test -Dtest='PipelineRunServiceTest,RunNotificationsTest'`
+- [x] 2.2 Celowe złamanie: bez ponownego odczytu nowe testy okien 1 i 2 czerwone; cofnięte
+- [x] 2.3 Wszystkie testy jednostkowe zielone: `./mvnw -B test`
 
 ### Phase 3: IT bez zegara jako warunku poprawności
 

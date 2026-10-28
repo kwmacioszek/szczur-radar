@@ -67,7 +67,9 @@ import pl.szczurradar.api.sources.Source;
  * shutdown's interruption, each raised once to a mocked {@link OperatorAlertQueue}. And how a run ends
  * on its queue thread with a mocked {@link RunSequence} — its own failure an ERROR, a run someone else
  * ended or a stopping instance an INFO line, an {@link Error} logged although its task keeps it, a close
- * the watchdog's late interrupt cut short an INFO line — the stopping instance known from the start of
+ * the watchdog's late interrupt cut short an INFO line, as is a step's own failure when that interrupt cuts
+ * short the check of its run (read once more with the flag cleared), and an interrupt the notification
+ * restores not kept for the next run — the stopping instance known from the start of
  * {@code onClose}, which reports every run of its own; and the watchdog's stop, its writes first, then the
  * interrupt of the run's thread and of its post tasks, then the notification. The tests wait for events
  * (a latch a mock counts down, or the queue thread's own state polled), never for a time of their own: a
@@ -240,6 +242,56 @@ class PipelineRunServiceTest {
 		assertThat(errors(output, run)).isEmpty();
 		verify(alerts, never()).raise(any(), any(), any());
 		verify(notifications).runEnded(run);
+		assertThat(Thread.interrupted()).as("the watchdog's interrupt is not kept for the next run").isFalse();
+	}
+
+	@Test
+	void aLateInterruptOfTheWatchdogCuttingTheStepsCheckShortIsAnInfoWithoutAnAlert(CapturedOutput output) {
+		UUID run = started(RunKind.RETRY, RunStatus.FAILED);
+		// The stalled step ended by itself with its own exception while stopStalled was committing: its
+		// cancel(true) lands in the check whether the run is still running, after the catch cleared the flag,
+		// and the connection pool refuses the interrupted thread.
+		when(sequence.run(any())).thenThrow(new IllegalStateException("the mapper broke"));
+		AtomicBoolean checkedInterrupted = new AtomicBoolean(true);
+		when(recorder.isRunning(run)).thenAnswer(call -> {
+			Thread.currentThread().interrupt();
+			throw new DataAccessResourceFailureException("Interrupted during connection acquisition");
+		}).thenAnswer(call -> {
+			checkedInterrupted.set(Thread.currentThread().isInterrupted());
+			// The watchdog ended it failed.
+			return false;
+		});
+
+		service.execute(run);
+
+		assertThat(checkedInterrupted).as("the second read gets its connection: the flag is cleared first").isFalse();
+		verify(recorder, times(2)).isRunning(run);
+		assertThat(output.getAll()).contains("Pipeline run " + run
+				+ " ended by the watchdog or an interruption; its step ended with IllegalStateException: the mapper broke");
+		assertThat(errors(output, run)).isEmpty();
+		// Closed with the default error, not the step's: the watchdog wrote the run's end.
+		verify(recorder).fail(run, "the run ended without a summary");
+		verify(recorder, never()).fail(run, "IllegalStateException: the mapper broke");
+		verify(alerts, never()).raise(any(), any(), any());
+		verify(notifications).runEnded(run);
+		assertThat(Thread.interrupted()).as("the watchdog's interrupt is not kept for the next run").isFalse();
+	}
+
+	@Test
+	void anInterruptTheNotificationRestoresIsNotKeptForTheNextRun() {
+		UUID run = started(RunKind.RETRY, RunStatus.FAILED);
+		when(sequence.run(any())).thenReturn(new RunSummary(run, RunStatus.SUCCEEDED));
+		// The watchdog's late cancel(true) landed in the notification, which restores it after its second attempt.
+		AtomicBoolean notifiedInterrupted = new AtomicBoolean(true);
+		doAnswer(call -> {
+			notifiedInterrupted.set(Thread.currentThread().isInterrupted());
+			Thread.currentThread().interrupt();
+			return null;
+		}).when(notifications).runEnded(run);
+
+		service.execute(run);
+
+		assertThat(notifiedInterrupted).as("the notification starts with the flag cleared").isFalse();
 		assertThat(Thread.interrupted()).as("the watchdog's interrupt is not kept for the next run").isFalse();
 	}
 
