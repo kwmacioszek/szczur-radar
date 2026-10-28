@@ -11,41 +11,54 @@ import org.junit.jupiter.params.provider.EnumSource;
 import pl.szczurradar.api.user.SystemAccount;
 
 /**
- * Which runs need an admin's attention ({@link PipelineRun#needsAttention()}), for every status, and which
- * the daily cron requested ({@link PipelineRun#scheduled()}).
+ * Why runs need an admin's attention ({@link PipelineRun#attentionReasons()}, and so
+ * {@link PipelineRun#needsAttention()}), for every status and in the rule's order, and which the daily cron
+ * requested ({@link PipelineRun#scheduled()}).
  */
 class PipelineRunTest {
 
-	@ParameterizedTest
-	@EnumSource(value = RunStatus.class, names = { "FAILED", "INTERRUPTED" })
-	void aFailedOrInterruptedRunNeedsAttentionWhateverItsCounters(RunStatus status) {
-		assertThat(PipelineRun.needsAttention(status, 0, 0, 0)).isTrue();
-		assertThat(PipelineRun.needsAttention(status, 1, 1, 1)).isTrue();
+	@Test
+	void aFailedRunHasOnlyItsOwnReasonWhateverItsCounters() {
+		assertThat(PipelineRun.attentionReasons(RunStatus.FAILED, 0, 0, 0)).containsExactly(AttentionReason.FAILED);
+		assertThat(PipelineRun.attentionReasons(RunStatus.FAILED, 1, 1, 1)).containsExactly(AttentionReason.FAILED);
 	}
 
 	@Test
-	void aPartialRunNeedsAttentionOnlyWithADeadPostATechnicalErrorOrSkippedElements() {
-		assertThat(PipelineRun.needsAttention(RunStatus.PARTIAL, 1, 0, 0)).as("a dead post").isTrue();
-		assertThat(PipelineRun.needsAttention(RunStatus.PARTIAL, 0, 1, 0)).as("a technical error").isTrue();
-		assertThat(PipelineRun.needsAttention(RunStatus.PARTIAL, 0, 0, 1)).as("a skipped element").isTrue();
-		assertThat(PipelineRun.needsAttention(RunStatus.PARTIAL, 2, 3, 4)).isTrue();
+	void anInterruptedRunHasOnlyItsOwnReasonWhateverItsCounters() {
+		assertThat(PipelineRun.attentionReasons(RunStatus.INTERRUPTED, 0, 0, 0))
+			.containsExactly(AttentionReason.INTERRUPTED);
+		assertThat(PipelineRun.attentionReasons(RunStatus.INTERRUPTED, 1, 1, 1))
+			.containsExactly(AttentionReason.INTERRUPTED);
+	}
+
+	@Test
+	void aPartialRunNeedsAttentionOnlyWithADeadPostATechnicalErrorOrSkippedElementsInThatOrder() {
+		assertThat(PipelineRun.attentionReasons(RunStatus.PARTIAL, 1, 0, 0)).as("a dead post")
+			.containsExactly(AttentionReason.DEAD_POSTS);
+		assertThat(PipelineRun.attentionReasons(RunStatus.PARTIAL, 0, 1, 0)).as("a technical error")
+			.containsExactly(AttentionReason.PROCESSING_ERRORS);
+		assertThat(PipelineRun.attentionReasons(RunStatus.PARTIAL, 0, 0, 1)).as("a skipped element")
+			.containsExactly(AttentionReason.SKIPPED);
+		assertThat(PipelineRun.attentionReasons(RunStatus.PARTIAL, 2, 3, 4)).containsExactly(AttentionReason.DEAD_POSTS,
+				AttentionReason.PROCESSING_ERRORS, AttentionReason.SKIPPED);
 		// Only failed posts with attempts left: the next run retries them.
-		assertThat(PipelineRun.needsAttention(RunStatus.PARTIAL, 0, 0, 0)).isFalse();
+		assertThat(PipelineRun.attentionReasons(RunStatus.PARTIAL, 0, 0, 0)).isEmpty();
 	}
 
 	@Test
 	void aSucceededRunNeedsAttentionOnlyWithSkippedElements() {
-		assertThat(PipelineRun.needsAttention(RunStatus.SUCCEEDED, 0, 0, 1)).as("a skipped element").isTrue();
-		assertThat(PipelineRun.needsAttention(RunStatus.SUCCEEDED, 0, 0, 0)).isFalse();
+		assertThat(PipelineRun.attentionReasons(RunStatus.SUCCEEDED, 0, 0, 1)).as("a skipped element")
+			.containsExactly(AttentionReason.SKIPPED);
+		assertThat(PipelineRun.attentionReasons(RunStatus.SUCCEEDED, 0, 0, 0)).isEmpty();
 		// A succeeded run has neither, but they alone would not make it need attention.
-		assertThat(PipelineRun.needsAttention(RunStatus.SUCCEEDED, 1, 1, 0)).isFalse();
+		assertThat(PipelineRun.attentionReasons(RunStatus.SUCCEEDED, 1, 1, 0)).isEmpty();
 	}
 
 	@ParameterizedTest
 	@EnumSource(value = RunStatus.class, names = { "QUEUED", "RUNNING" })
 	void anUnfinishedRunNeedsNoAttentionWhateverItsCounters(RunStatus status) {
-		assertThat(PipelineRun.needsAttention(status, 0, 0, 0)).isFalse();
-		assertThat(PipelineRun.needsAttention(status, 1, 1, 1)).isFalse();
+		assertThat(PipelineRun.attentionReasons(status, 0, 0, 0)).isEmpty();
+		assertThat(PipelineRun.attentionReasons(status, 1, 1, 1)).isEmpty();
 	}
 
 	@Test
@@ -56,7 +69,10 @@ class PipelineRunTest {
 
 	@Test
 	void aNewRunIsQueuedAndNeedsNoAttention() {
-		assertThat(PipelineRun.retry(UUID.randomUUID(), null).needsAttention()).isFalse();
+		PipelineRun run = PipelineRun.retry(UUID.randomUUID(), null);
+
+		assertThat(run.attentionReasons()).isEmpty();
+		assertThat(run.needsAttention()).isFalse();
 	}
 
 }

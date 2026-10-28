@@ -29,6 +29,7 @@ import org.springframework.web.bind.annotation.RestController;
 import pl.szczurradar.api.config.ApiError;
 import pl.szczurradar.api.config.ErrorCode;
 import pl.szczurradar.api.pipeline.PipelineRunService;
+import pl.szczurradar.api.pipeline.run.AttentionReason;
 import pl.szczurradar.api.pipeline.run.InterruptionCause;
 import pl.szczurradar.api.pipeline.run.MissingDays;
 import pl.szczurradar.api.pipeline.run.PipelineRun;
@@ -207,6 +208,8 @@ class PipelineRunController {
 	 * @param interruptionCause why an interrupted run stopped; {@code null} for any other run, and for one
 	 *     interrupted before the cause was recorded
 	 * @param needsAttention whether it needs the admin's attention ({@link PipelineRun#needsAttention()})
+	 * @param attentionReasons why it needs attention, in the rule's order
+	 *     ({@link PipelineRun#attentionReasons()}); empty when it does not
 	 * @param scheduled whether the daily cron requested it, not an admin ({@link PipelineRun#scheduled()})
 	 * @param lastActivityAt the last change while it was running
 	 * @param processingErrors posts with a technical error and no stored assessment (not failed attempts)
@@ -216,7 +219,8 @@ class PipelineRunController {
 	 * @param error the reason of a failed or interrupted run, or the summary of technical errors
 	 */
 	record RunView(UUID id, RunKind kind, RunStatus status, @Nullable InterruptionCause interruptionCause,
-			boolean needsAttention, boolean scheduled, @Nullable Instant rangeFrom, @Nullable Instant rangeTo,
+			boolean needsAttention, List<AttentionReason> attentionReasons, boolean scheduled,
+			@Nullable Instant rangeFrom, @Nullable Instant rangeTo,
 			List<Source> sources, @Nullable List<UUID> requestedPostIds, Instant createdAt, @Nullable Instant startedAt,
 			@Nullable Instant finishedAt, @Nullable Instant lastActivityAt, int fetched, int newPosts, int assessedOk,
 			int assessedFailed, int processingErrors, int dead, int skipped, int llmRetries, int flexFallbacks,
@@ -224,7 +228,7 @@ class PipelineRunController {
 
 		static RunView of(PipelineRun run, List<PipelineRunStep> steps, int inFlight) {
 			return new RunView(run.getId(), run.getKind(), run.getStatus(), run.getInterruptionCause(),
-					run.needsAttention(), run.scheduled(),
+					run.needsAttention(), run.attentionReasons(), run.scheduled(),
 					run.getRangeFrom(), run.getRangeTo(), run.getSources(), run.getRequestedPostIds(),
 					run.getCreatedAt(), run.getStartedAt(), run.getFinishedAt(), run.getLastActivityAt(),
 					run.getFetched(), run.getNewPosts(), run.getAssessedOk(), run.getAssessedFailed(),

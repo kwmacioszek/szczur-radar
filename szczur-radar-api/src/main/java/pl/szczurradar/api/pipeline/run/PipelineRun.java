@@ -1,6 +1,7 @@
 package pl.szczurradar.api.pipeline.run;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -279,28 +280,49 @@ public class PipelineRun {
 	}
 
 	/**
-	 * Whether the run needs an admin's attention — the one rule for the notifications, the run list, the
-	 * run's page and the bell: it {@link RunStatus#FAILED failed} or was {@link RunStatus#INTERRUPTED
-	 * interrupted}, or it ended {@link RunStatus#PARTIAL partial} with a dead post or a post with a
+	 * Why the run needs an admin's attention, in the order of {@link AttentionReason}; empty when it does
+	 * not — the one rule for the notifications, the run list, the run's page and the bell: it
+	 * {@link RunStatus#FAILED failed} or was {@link RunStatus#INTERRUPTED interrupted} (that reason alone,
+	 * whatever its counters), or it ended {@link RunStatus#PARTIAL partial} with a dead post or a post with a
 	 * technical error, or it ended {@link RunStatus#SUCCEEDED succeeded} or partial with skipped elements
 	 * (fetched, but they could not become a post). A partial run whose only failures are posts with
-	 * attempts left does not: the next run retries them. A run that is queued or running never does.
+	 * attempts left has none: the next run retries them. A run that is queued or running never has one.
 	 *
 	 * <p>The daily cron does not use it: it looks only at the status ({@code failed} / {@code interrupted}
 	 * → exit 1), so a dead post or skipped elements do not fail it.
+	 *
+	 * @return an unmodifiable list
 	 */
-	public boolean needsAttention() {
-		return needsAttention(status, dead, processingErrors, skipped);
+	public List<AttentionReason> attentionReasons() {
+		return attentionReasons(status, dead, processingErrors, skipped);
 	}
 
-	/** {@link #needsAttention()} of a run in {@code status} with these counters; package-private for tests. */
-	static boolean needsAttention(RunStatus status, int dead, int processingErrors, int skipped) {
+	/** {@link #attentionReasons()} of a run in {@code status} with these counters; package-private for tests. */
+	static List<AttentionReason> attentionReasons(RunStatus status, int dead, int processingErrors, int skipped) {
 		return switch (status) {
-			case FAILED, INTERRUPTED -> true;
-			case PARTIAL -> dead > 0 || processingErrors > 0 || skipped > 0;
-			case SUCCEEDED -> skipped > 0;
-			case QUEUED, RUNNING -> false;
+			case FAILED -> List.of(AttentionReason.FAILED);
+			case INTERRUPTED -> List.of(AttentionReason.INTERRUPTED);
+			case PARTIAL -> {
+				List<AttentionReason> reasons = new ArrayList<>(3);
+				if (dead > 0) {
+					reasons.add(AttentionReason.DEAD_POSTS);
+				}
+				if (processingErrors > 0) {
+					reasons.add(AttentionReason.PROCESSING_ERRORS);
+				}
+				if (skipped > 0) {
+					reasons.add(AttentionReason.SKIPPED);
+				}
+				yield List.copyOf(reasons);
+			}
+			case SUCCEEDED -> skipped > 0 ? List.of(AttentionReason.SKIPPED) : List.of();
+			case QUEUED, RUNNING -> List.of();
 		};
+	}
+
+	/** Whether the run needs an admin's attention: it has a reason ({@link #attentionReasons()}). */
+	public boolean needsAttention() {
+		return !attentionReasons().isEmpty();
 	}
 
 }
