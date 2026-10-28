@@ -1,10 +1,10 @@
 ---
 change_id: deploy-gate-no-deploy-changes
 title: Zmiana IaC bez deployu nie blokuje wdrożeń (S-21)
-status: impl_reviewed
+status: archived
 created: 2026-10-27
 updated: 2026-10-28
-archived_at: null
+archived_at: 2026-10-28T14:34:12Z
 ---
 
 ## Notes
