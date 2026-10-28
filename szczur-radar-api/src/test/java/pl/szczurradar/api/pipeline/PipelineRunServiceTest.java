@@ -68,8 +68,9 @@ import pl.szczurradar.api.sources.Source;
  * on its queue thread with a mocked {@link RunSequence} — its own failure an ERROR, a run someone else
  * ended or a stopping instance an INFO line, an {@link Error} logged although its task keeps it, a close
  * the watchdog's late interrupt cut short an INFO line, as is a step's own failure when that interrupt cuts
- * short the check of its run (read once more with the flag cleared), and an interrupt the notification
- * restores not kept for the next run — the stopping instance known from the start of
+ * short the check of its run (read once more with the flag cleared; a second failed read is still the
+ * step's ERROR), and an interrupt the notification restores not kept for the next run, unless the instance
+ * began to stop meanwhile — the stopping instance known from the start of
  * {@code onClose}, which reports every run of its own; and the watchdog's stop, its writes first, then the
  * interrupt of the run's thread and of its post tasks, then the notification. The tests wait for events
  * (a latch a mock counts down, or the queue thread's own state polled), never for a time of their own: a
@@ -296,6 +297,45 @@ class PipelineRunServiceTest {
 	}
 
 	@Test
+	void anInterruptTheNotificationRestoresIsKeptWhenTheInstanceBeganToStopMeanwhile() {
+		UUID run = started(RunKind.RETRY, RunStatus.FAILED);
+		when(sequence.run(any())).thenReturn(new RunSummary(run, RunStatus.SUCCEEDED));
+		// onClose began while the run was being reported (its shutdownNow() lands in the notification, which
+		// restores it): the queue thread is stopping too, so the interrupt stays for it.
+		doAnswer(call -> {
+			service.onClose();
+			Thread.currentThread().interrupt();
+			return null;
+		}).when(notifications).runEnded(run);
+
+		service.execute(run);
+
+		assertThat(Thread.interrupted()).as("the stop's interrupt is kept for the stopping queue thread").isTrue();
+	}
+
+	@Test
+	void aStepsCheckThatFailsTwiceOnAnInterruptedThreadIsStillTheStepsError(CapturedOutput output) {
+		UUID run = started(RunKind.RETRY, RunStatus.FAILED);
+		when(sequence.run(any())).thenThrow(new IllegalStateException("the mapper broke"));
+		// The interrupt lands in the check, and the second read fails too (the database is gone): the run is
+		// taken as running, so the failure is the step's own.
+		when(recorder.isRunning(run)).thenAnswer(call -> {
+			Thread.currentThread().interrupt();
+			throw new DataAccessResourceFailureException("Interrupted during connection acquisition");
+		}).thenThrow(new CannotAcquireLockException("the database is gone"));
+
+		service.execute(run);
+
+		verify(recorder, times(2)).isRunning(run);
+		assertThat(errors(output, run)).singleElement()
+			.satisfies(line -> assertThat(line).contains("Pipeline run " + run + " failed"));
+		// Both reads' failures are kept with the step's exception.
+		assertThat(output.getAll()).contains("Interrupted during connection acquisition", "the database is gone");
+		verify(recorder).fail(run, "IllegalStateException: the mapper broke");
+		assertThat(Thread.interrupted()).as("the watchdog's interrupt is not kept for the next run").isFalse();
+	}
+
+	@Test
 	void aFailedShutdownInterruptionIsRaisedAndTheQueueThreadIsStillStopped(CapturedOutput output)
 			throws InterruptedException {
 		// A run of this instance, held in its queue thread until that thread is interrupted.
@@ -455,16 +495,21 @@ class PipelineRunServiceTest {
 		service.startPosts(List.of(UUID.randomUUID()), UUID.randomUUID());
 
 		Thread closer = Thread.ofPlatform().start(service::onClose);
-		awaitNoRunOfItsOwn();
+		try {
+			awaitNoRunOfItsOwn();
 
-		// The queue thread neither closed nor reported it: no false ERROR, no RUN_CLOSE_FAILED.
-		assertThat(output.getAll()).contains("Pipeline run " + run + ": stopped, the application is stopping");
-		assertThat(errors(output, run)).isEmpty();
-		verify(recorder, never()).isRunning(any());
-		verify(recorder, never()).fail(any(), any());
-		verify(notifications, never()).runEnded(run);
-
-		written.countDown();
+			// The queue thread neither closed nor reported it: no false ERROR, no RUN_CLOSE_FAILED.
+			assertThat(output.getAll()).contains("Pipeline run " + run + ": stopped, the application is stopping");
+			assertThat(errors(output, run)).isEmpty();
+			verify(recorder, never()).isRunning(any());
+			verify(recorder, never()).fail(any(), any());
+			verify(notifications, never()).runEnded(run);
+		}
+		finally {
+			// On every path: a test cut short must not leave onClose held, here or in @AfterEach (whose own
+			// onClose enters the same answer, outside the class's @Timeout).
+			written.countDown();
+		}
 		closer.join();
 		assertThat(closer.isAlive()).isFalse();
 		// onClose reported it.

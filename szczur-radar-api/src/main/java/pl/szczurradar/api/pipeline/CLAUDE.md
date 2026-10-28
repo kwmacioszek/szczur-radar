@@ -148,8 +148,10 @@ PipelineRunService.startRange / startPosts → queue (thread pipeline-run) → R
      RETRY);
   3. `AssessmentDispatcher.cancel(runId)`: the run's post futures are cancelled with `cancel(true)`, so a
      post not started never runs and a call in flight gets an interrupt (INFO `Run <id> assess: stopped,
-     N post task(s) not finished were cancelled`) — also when the run's thread is where an interrupt does
-     not reach it (the LLM check in flight on OkHttp);
+     N post task(s) not finished were cancelled`) — only the tasks registered so far: none before the LLM
+     check has ended (there the interrupt of step 2, and `claim` needing a running run, end the step), and
+     a task whose call started just before `dispatch` registered its future is reached only through step 2
+     (the dispatcher waiting in `dispatch` cancels every task itself);
   4. `RunNotifications.runEnded` — last, so its database round trip does not widen the window in which the
      stalled step ends by itself and the interrupt lands in `execute`'s clean-up instead (`close` tolerates
      it, below); idempotent, so `execute` may report the run too.
@@ -421,7 +423,8 @@ PipelineRunService.startRange / startPosts → queue (thread pipeline-run) → R
   that declares `@Timeout` has one). A duration is not an assertion when the property can be said as an
   order: "the step ended while the held call still had no answer" (`answered.getCount() == 1`, the call
   saw the interrupt), not "within 10 s"; "the dispatcher registered every task" (a test pool whose futures
-  release a permit on `get()`), not a pause. What keeps a bound: a pool's `awaitTermination` (a day,
+  release a permit on `get()`), not a pause — every test that calls `cancel` waits for it, since a call can
+  start before its future is registered and `cancel` reaches only registered ones. What keeps a bound: a pool's `awaitTermination` (a day,
   asserted) and the IT helper loops that poll the database or the log (`awaitLog`, `awaitClosed`, `settle`,
   `finished`, `awaitIdle`), far longer than their wait, so a red one says what it waited for. Only the watchdog's own
   scenarios measure time, against its threshold, each with its margin. A new test of the engine keeps this.

@@ -747,20 +747,25 @@ class ConcurrentAssessmentDispatcherTest {
 	void anOutageOfACallTheWatchdogCancelledIsNotCounted(CapturedOutput output) throws Exception {
 		List<UUID> ids = List.of(post(ContractFixtures.BODY + HELD + UNAVAILABLE),
 				post(ContractFixtures.BODY + HELD + UNAVAILABLE), post(ContractFixtures.BODY + HELD + UNAVAILABLE));
-		ConcurrentAssessmentDispatcher dispatcher = dispatcher();
+		// Cancelled only once the step has registered every task (its first get()), as in the cancel test.
+		Semaphore awaited = new Semaphore(0);
+		ExecutorService pool = awaitedPool(THREADS, awaited);
+		ConcurrentAssessmentDispatcher dispatcher = dispatcher(pool);
 		ExecutorService caller = Executors.newSingleThreadExecutor();
 		try {
 			Future<AssessedBatch> step = caller.submit(() -> dispatcher.dispatch(RUN, ids));
 			holding.acquire(THREADS);
+			awaited.acquire();
 
 			dispatcher.cancel(RUN);
 
 			assertThat(step.get()).isEqualTo(new AssessedBatch(RUN, 0, 0, 0, List.of(), null));
 			// The interrupted calls end finding the provider "unavailable", as between two attempts.
-			executor.shutdown();
-			assertThat(executor.awaitTermination(1, TimeUnit.DAYS)).isTrue();
+			pool.shutdown();
+			assertThat(pool.awaitTermination(1, TimeUnit.DAYS)).isTrue();
 		}
 		finally {
+			pool.shutdownNow();
 			caller.shutdownNow();
 		}
 
@@ -950,19 +955,24 @@ class ConcurrentAssessmentDispatcherTest {
 	void aClientErrorOfACallTheWatchdogCancelledIsNotCounted(CapturedOutput output) throws Exception {
 		List<UUID> ids = List.of(post(ContractFixtures.BODY + HELD + CLIENT_ERROR),
 				post(ContractFixtures.BODY + HELD + CLIENT_ERROR), post(ContractFixtures.BODY + HELD + CLIENT_ERROR));
-		ConcurrentAssessmentDispatcher dispatcher = dispatcher();
+		// Cancelled only once the step has registered every task (its first get()), as in the cancel test.
+		Semaphore awaited = new Semaphore(0);
+		ExecutorService pool = awaitedPool(THREADS, awaited);
+		ConcurrentAssessmentDispatcher dispatcher = dispatcher(pool);
 		ExecutorService caller = Executors.newSingleThreadExecutor();
 		try {
 			Future<AssessedBatch> step = caller.submit(() -> dispatcher.dispatch(RUN, ids));
 			holding.acquire(THREADS);
+			awaited.acquire();
 
 			dispatcher.cancel(RUN);
 
 			assertThat(step.get()).isEqualTo(new AssessedBatch(RUN, 0, 0, 0, List.of(), null));
-			executor.shutdown();
-			assertThat(executor.awaitTermination(1, TimeUnit.DAYS)).isTrue();
+			pool.shutdown();
+			assertThat(pool.awaitTermination(1, TimeUnit.DAYS)).isTrue();
 		}
 		finally {
+			pool.shutdownNow();
 			caller.shutdownNow();
 		}
 

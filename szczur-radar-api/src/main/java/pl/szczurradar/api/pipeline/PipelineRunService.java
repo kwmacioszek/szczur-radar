@@ -413,6 +413,7 @@ public class PipelineRunService {
 			return recorder.isRunning(runId);
 		}
 		catch (RuntimeException ex) {
+			// The same rule as RunNotifications.runEnded: once more only on an interrupted thread, the flag restored.
 			if (!Thread.interrupted()) {
 				failure.addSuppressed(ex);
 				return true;
@@ -486,8 +487,8 @@ public class PipelineRunService {
 	 * started here gets its end line in the log. When even this fails (the database is gone), an ERROR
 	 * line and {@link AlertEvent#RUN_CLOSE_FAILED}, and start-up recovery does it — unless the run had already ended (its own summary; the watchdog, whose late {@code cancel(true)} may land in here and make the
 	 * connection pool refuse this thread; a newer instance's recovery): then the failure is an INFO line,
-	 * with no alert. The interrupt flag is cleared for that check and not restored here ({@link #execute}'s
-	 * rule decides).
+	 * with no alert. The interrupt flag is cleared for that check; one that lands in it is restored by
+	 * {@link #stillRunning} after its second read, and {@link #execute}'s rule decides it.
 	 *
 	 * @param startedNanos when it started ({@link System#nanoTime()}), {@code null} when it did not
 	 */

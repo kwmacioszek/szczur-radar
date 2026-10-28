@@ -74,6 +74,7 @@ public class RunNotifications {
 		catch (RuntimeException ex) {
 			failure = ex;
 		}
+		// The same rule as PipelineRunService.stillRunning: once more only on an interrupted thread, the flag restored.
 		boolean interrupted = Thread.interrupted();
 		try {
 			if (interrupted) {
