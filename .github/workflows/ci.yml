@@ -460,7 +460,7 @@ jobs:
         # creates, updates, variable sets and domain creates, nothing destructive,
         # no source change but turning on Wait for CI (source.checkSuites → true),
         # on each change's kind, severity and details. The step summary lists the
-        # changes and the services the apply redeploys (restarts.txt: resource names).
+        # changes and the services the apply may redeploy (restarts.txt: resource names).
         run: |
           plan_status=0
           railway config plan --json --out plan.pin > plan.json || plan_status=$?
@@ -484,9 +484,10 @@ jobs:
           if-no-files-found: ignore
           overwrite: true
       - name: Deployments before the apply
-        # The newest deployment ID of every service the apply redeploys
-        # (restarts.txt from the gate), so the check below waits for a new one
-        # without comparing the runner's clock with Railway's.
+        # The newest deployment ID of every service the apply may redeploy
+        # (restarts.txt from the gate): the boundary above which the check below
+        # looks for the apply's deployment, without comparing the runner's clock
+        # with Railway's.
         if: env.PENDING_CHANGES != '0'
         run: |
           tools/deploy-gate/verify-apply.sh snapshot restarts.txt > deployments-before.json
@@ -498,10 +499,12 @@ jobs:
         # destructive changes even if the gate above missed one.
         run: railway config apply --plan plan.pin --yes
       - name: Check after the apply
-        # Only after an apply: every redeployed service must deploy again
-        # (SUCCESS; WAITING/QUEUED behind Wait for CI is handed over to the
-        # monitor szczur-radar-monitor) and /api/ready must answer 200, else
-        # the job fails.
+        # Only after an apply: each deployment the apply started (meta.patchId
+        # iac-change-set/…, above the snapshot; a push's is never taken for it)
+        # must deploy (SUCCESS; WAITING/QUEUED behind Wait for CI is handed over
+        # to the monitor szczur-radar-monitor; none within
+        # DEPLOY_VERIFY_DEPLOY_WINDOW is a notice) and /api/ready must answer
+        # 200, else the job fails.
         if: steps.apply.outcome == 'success'
         run: |
           tools/deploy-gate/verify-apply.sh check restarts.txt deployments-before.json "$WEB_URL" \
