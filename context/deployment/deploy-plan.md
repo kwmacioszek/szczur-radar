@@ -1194,6 +1194,8 @@ An API older than S-08 gives `skipped ?`; the deploy order of the API and the cr
   2. `POST <ping URL>/<exit code>` after it, with the run's last non-empty log line as a `text/plain` body (at most 1000 characters), e.g. `… trigger: OK: range partial` or `… backup: FAILED: rows lost since …`.
 
   On a time limit `pipeline-trigger` reports `1` and `db-backup` the code of `timeout` (`124`, or `137` after the kill), each with its time-limit line. A run skipped outside production sends nothing, and so do the other tools of the backup image (`docker run <image> restore-check.sh …`). The run's log in Railway is the same as without check-ins. Details: `tools/pipeline-trigger/README.md`, `tools/db-backup/README.md`.
+
+  > Since S-25: `db-backup` reports a time limit as `1` too, and the check-in address has one rule in the API, both crons and `checks.sh` (section S-25).
 - **When healthchecks.io alarms.** Each cron check has the cron's schedule (UTC) and a grace time (Checks below). It sends a Telegram message through @HealthchecksBot:
   - at once when the end check-in is not `0`, with the run's last log line;
   - when no check-in arrives by the schedule plus the grace: the cron did not start, stayed `QUEUED`, or started (`/start`) and never ended, e.g. a container replaced by a merge;
@@ -1875,6 +1877,49 @@ Nothing in the data, schema or variables ties the release to the code, but repai
    Expected: exit 0, "no deploy" for both, `/api/ready` 200. No `railway config apply`, no `redeploy`, no write.
 3. **Record and close.** Comment on issue #115: the merge commit, the CI run ID with its empty plan, the read-only check's boundaries, log and summary. Close #115 only after this production verification.
 4. **The first real apply with changes on production** (e.g. with S-27). Note its rows of "After the apply" (`deployed`, `WAITING: handed over …`, `no deploy`) in #115, or in that change's issue when #115 is closed, and for each "no deploy" whether the change should have deployed (above).
+
+## S-25: jedna reguła adresu check-in alarmów (alert-ping-single-rule)
+
+**Status:** delivered by PR #125; production verification and closure in issue #119. Change: `alert-ping-single-rule` (its folder moves to `context/archive/` when the change is archived). Before S-25 the check-in address `HEALTHCHECK_PING_URL` (section F-04) had three rules. The API (`java.net.URI`) took `https` in any case without a query or fragment, but also user info, an IP address and an empty port. Both crons took a character class that refused `HTTPS://` and let `https:///<uuid>` through without a host, and only a "change both" comment kept their two copies equal. `checks.sh` let `?` and `#` through, so `apply` could print an address the API and the crons refuse (audit after M-2, P4 and P5). On a time limit `db-backup` reported `124` (`137` after the kill) and `pipeline-trigger` `1`. No migration, no variable, no IaC change.
+
+### The rule
+
+- **One literal.** The same pattern, byte for byte, in four places: `AlertSettings.PING_PATTERN` in the API, the block between `# ping-url rule (S-25): begin` and `# ping-url rule (S-25): end` in `tools/db-backup/backup.sh` and `tools/pipeline-trigger/trigger.sh` (the two blocks are identical), and `ping_pattern` in `tools/healthchecks/checks.sh`.
+- **What it takes:** `https://` with the scheme in any case, a host name (no user info, no IP address: the last label starts with a letter), an optional port of at most 5 digits, and a path without `?` or `#` in which `%` only starts a `%XX` escape; at most 512 characters (not counting a trailing `/`), all ASCII. The cap is checked before the pattern (the API's matcher recurses, so a much longer value would fail the start with a `StackOverflowError` instead of the settings message), and the shell copies refuse a non-ASCII character themselves (bash's `[A-Za-z]` also takes letters such as `é` under glibc's UTF-8 locale, which the `postgres:18` image of `db-backup` sets); the API's `Pattern` is ASCII-only without flags. One trailing `/` is dropped, as before. Production's shape `https://hc-ping.com/<uuid>`, which `checks.sh apply` prints, passes everywhere.
+- **What changed against the old rules:** the API now refuses user info, an IP address and an empty port (`host:/…`); the crons now take `HTTPS://` and, like the API, refuse an address without a host, user info, an IP address, an empty port, a host with `_` and a `%` that is not `%XX`; `checks.sh apply` refuses `?` and `#`. All four places also refuse a port of more than 5 digits (the API used to start with one, `java.net.URI` read it without a host, and every alert then failed), a value of more than 512 characters and a non-ASCII character.
+- **A bad address, unchanged behaviour:**
+  - the API does not start (`APPLICATION FAILED TO START`, `Invalid HEALTHCHECK_PING_URL: must be an https:// URL (the scheme in any case) of at most 512 ASCII characters with a host name …`), and `send-test-alert` exits `2`; the value is never repeated;
+  - a cron logs `warning: HEALTHCHECK_PING_URL is not an https:// address with a host name and without ? or #; no check-in` (the new text; section F-04 quotes the older ones), runs without check-ins, and its armed check alarms after the grace time;
+  - `checks.sh apply` exits `1` (`the answer has no ping URL the API and the crons accept (AlertSettings.PING_PATTERN)` / `the check has no ping URL the API and the crons accept (AlertSettings.PING_PATTERN)`) and prints no address.
+- **The guard.** Step 9 of `tools/healthchecks/test.sh` (CI job `healthchecks-test`) fails when the two cron blocks differ, when a literal differs from the crons', when the length cap of `checks.sh` or `AlertSettings.PING_MAX_LENGTH` differs from the crons' `512`, or when the cut-out block decides a row of `tools/healthchecks/fixtures/ping-urls.txt` (UTF-8, with non-ASCII rows) or a generated address at the cap or one past it other than expected. It runs the block under a UTF-8 locale when `locale -a` lists one (`en_US` first, as glibc's in `postgres:18`) and names it in its PASS line. `AlertSettingsTest` runs the same table and its own generated cases at the cap, one past it and at 10,000 characters (backend `verify`). The crons' tests check the rule in their real images (`HTTPS://` taken; `ping-not-https`, `ping-query`, `ping-no-host` refused). A new case goes into the table, not into a test.
+
+### Time limit as `1`
+
+`db-backup` over `BACKUP_TIMEOUT` now checks in `/1` with `backup: FAILED: the run exceeded …` as the last line and exits `1`, like `pipeline-trigger` over `TRIGGER_TIMEOUT`. A kill after the 60 s grace (`137` from `timeout`) is reported as `1` too. Railway marks every non-zero exit `CRASHED`, and healthchecks.io alarms on any code but `0`, so both signals fire as before; only the number in the check-in and in the Telegram message changes.
+
+### Deploy: nothing for the operator
+
+The merge rebuilds the API and both crons (their `watchPatterns`). No variable to set: the sealed production values came from `checks.sh apply` and have the shape the rule takes.
+
+If the new API deployment does not start and its log says `Invalid HEALTHCHECK_PING_URL`, production's sealed value of `szczur-radar-api` is outside the rule (the monitor's run for `szczur-radar-api` is red). A sealed value cannot be read back, so set it again:
+
+1. `tools/healthchecks/checks.sh apply production` with `HEALTHCHECKS_API_KEY` in the shell. A repeated `apply` is safe and prints the same addresses (section F-04, Checks).
+2. Set the address of `production/api-events` with `railway variable set HEALTHCHECK_PING_URL --stdin -s szczur-radar-api -e production --skip-deploys`, seal it and deploy the staged change, as in section F-04's runbook, step 2.
+3. Redeploy the API under the standing rules; its start log has `Operator alerts: sent to the healthchecks.io check in HEALTHCHECK_PING_URL`.
+
+A cron whose log has the warning above gets the same treatment with its own check and service (`pipeline-trigger` ↔ `production/pipeline-trigger`, `db-backup` ↔ `production/db-backup`). The address is a secret: never paste it into an issue, a PR, a log or this document.
+
+### Runbook — after the merge (operator; tracked in issue #119, not in the plan's Progress)
+
+0. **Standing rules.** No merge to `main` while `/admin` shows a run `RUNNING`, not between about 00:30 and 01:30 UTC (section S-05), and not while the 02:00 UTC backup runs (section S-15). No migration, no variable or service change.
+1. **CI on `main`.** All jobs green; `railway-config` plans no change.
+2. **The API starts.** The monitor's run (`kwmacioszek/szczur-radar-monitor`, `verify.yml`) for `szczur-radar-api` on production is green (`gh run list -R kwmacioszek/szczur-radar-monitor`). The API's start log has `Operator alerts: sent to the healthchecks.io check in HEALTHCHECK_PING_URL` and no `Invalid HEALTHCHECK_PING_URL`. Otherwise: "Deploy" above.
+3. **The first night.** `production/pipeline-trigger` and `production/db-backup` are "up", each with `start` and `0`. Neither cron's Railway log has `HEALTHCHECK_PING_URL is not an https:// address`. No Telegram message; a message that night is a real failure (sections S-05, F-01) or the address (above).
+4. **Record and close.** Comment on issue #119: the merge commit, the deployment IDs, the monitor's run, the API's start line, the first night's check-ins. Never an address or the key. Close #119 only after this production verification.
+
+### Rollback: fix-forward only
+
+Repair a bad S-25 release with a new commit (a revert in a PR is one), which goes through CI, the deploy guard and Wait for CI like any merge (section S-14).
 
 ## Phases
 

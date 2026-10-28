@@ -26,8 +26,11 @@
 #   7. the throwaway database password and the check-in key never appear in the logs.
 # Check-ins (F-04, out-of-app-alert-channel) go to a stub of healthchecks.io over https (a throwaway
 # certificate) and are checked at the runs above: the first run checks in /start, then /0 with its OK
-# line; the shrink refusal /1 with its line; the run over its time limit /124 with the time limit's
-# line; a skipped run nothing; an unreachable check-in address leaves the run's result as it is.
+# line (at an HTTPS:// address: the rule takes https in any case); the shrink refusal /1 with its line;
+# the run over its time limit /1 with the time limit's line and exit code 1 (S-25: like the trigger); a
+# skipped run nothing; an unreachable check-in address leaves the run's result as it is; an address
+# outside the rule (S-25: not https, with a query, without a host name) gives a warning and no check-in,
+# in runs without PGHOST that end before the dump.
 # Needs Docker. Run from anywhere: tools/db-backup/test.sh
 set -euo pipefail
 
@@ -271,12 +274,13 @@ users=$(db_psql -Atc 'select count(*) from users')
 pass "sample rows: 1 admin ($users users with the migrations' system accounts), 1 run with 1 step, $posts posts with RAW and assessments, 1 activation link, 1 notification, 1 session"
 
 step "1. backup.sh into :local:/out"
-run_backup run1 -e "$ping_ca" -e HEALTHCHECK_PING_URL="$ping_url/run1" \
+# The scheme in capitals: the rule takes https in any case.
+run_backup run1 -e "$ping_ca" -e HEALTHCHECK_PING_URL="HTTPS://$ping_host:8443/ping/$ping_key/run1" \
     || { cat "$tmp/run1.log"; die "the first backup failed"; }
 grep -q 'restore-check: .*OK' "$tmp/run1.log" || { cat "$tmp/run1.log"; die "no restore-check OK in the log"; }
 pings_were run1 'start 0'
 last_ping_says run1 ' backup: OK: daily/'
-pass "with HEALTHCHECK_PING_URL: /start, then /0 with the OK line"
+pass "with HEALTHCHECK_PING_URL (HTTPS:// in capitals): /start, then /0 with the OK line"
 in_image "$posts" "$last_version" "$users" <<'SH' || die "backup contents"
 set -euo pipefail
 posts=$1 version=$2 users=$3
@@ -457,14 +461,13 @@ docker run --rm -i --name "$id-v5" --entrypoint bash "$image" \
 grep -qE 'restore-check: OK .*Flyway V5([^0-9]|$)' "$tmp/v5.log" || { cat "$tmp/v5.log"; die "no Flyway V5 in the OK line"; }
 pass "a Flyway V5 dump (no activation_tokens, no notifications) passes restore-check.sh"
 before=$(in_image <<<'ls /out/daily /out/monthly')
-if run_backup run4 -e BACKUP_TIMEOUT=1s -e "$ping_ca" -e HEALTHCHECK_PING_URL="$ping_url/run4"; then
-    cat "$tmp/run4.log"
-    die "a run over its time limit exited 0"
-fi
+run4=0
+run_backup run4 -e BACKUP_TIMEOUT=1s -e "$ping_ca" -e HEALTHCHECK_PING_URL="$ping_url/run4" || run4=$?
+[ "$run4" = 1 ] || { cat "$tmp/run4.log"; die "a run over its time limit exited $run4, not 1"; }
 grep -q 'backup: FAILED: the run exceeded 1s' "$tmp/run4.log" || { cat "$tmp/run4.log"; die "the time limit is not named"; }
-pings_were run4 'start 124'
+pings_were run4 'start 1'
 last_ping_says run4 ' backup: FAILED: the run exceeded 1s'
-pass "a run over its time limit (BACKUP_TIMEOUT=1s) fails and says so; /124 with that line, before the exit"
+pass "a run over its time limit (BACKUP_TIMEOUT=1s) fails with 1 and says so; /1 with that line, before the exit"
 run_backup run5 -e RAILWAY_ENVIRONMENT_NAME=szczur-radar-pr-1 -e "$ping_ca" -e HEALTHCHECK_PING_URL="$ping_url/run5" \
     || { cat "$tmp/run5.log"; die "a skipped run failed"; }
 grep -q 'skipped: backups run only in production (this is szczur-radar-pr-1)' "$tmp/run5.log" \
@@ -472,6 +475,22 @@ grep -q 'skipped: backups run only in production (this is szczur-radar-pr-1)' "$
 pings_were run5 ''
 [ "$(in_image <<<'ls /out/daily /out/monthly')" = "$before" ] || die "a skipped or timed-out run changed the backups"
 pass "outside production the run is skipped (exit 0, nothing written, no check-in)"
+# An address outside the rule (S-25): a warning that does not repeat it, no check-in, and the run goes on.
+# Without PGHOST (emptied over run_backup's value) it ends at once, before the dump.
+for ping_case in "ping-not-https http://$ping_host:8443/ping/$ping_key/ping-not-https" \
+        "ping-query $ping_url/ping-query?x=1" "ping-no-host https:///ping/$ping_key/ping-no-host"; do
+    name=${ping_case%% *}
+    if run_backup "$name" -e PGHOST= -e "$ping_ca" -e HEALTHCHECK_PING_URL="${ping_case#* }"; then
+        cat "$tmp/$name.log"
+        die "$name: a run without PGHOST exited 0"
+    fi
+    grep -qF 'backup: warning: HEALTHCHECK_PING_URL is not an https:// address with a host name and without ? or #; no check-in' \
+        "$tmp/$name.log" && grep -qF 'backup: FAILED: PGHOST is not set' "$tmp/$name.log" \
+        || { cat "$tmp/$name.log"; die "$name: no warning about the address, or not the PGHOST failure"; }
+    pings_were "$name" ''
+done
+[ "$(in_image <<<'ls /out/daily /out/monthly')" = "$before" ] || die "a run with a refused check-in address changed the backups"
+pass "an address that is not https://, has a query or no host name: a warning, no check-in, the run goes on (fails on PGHOST)"
 # Before the missing table below: restore-check.sh checks missing tables before unknown ones.
 db_psql -c 'create table stray (id int)'
 if run_backup run6; then

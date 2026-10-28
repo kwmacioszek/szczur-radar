@@ -11,6 +11,7 @@ Checki healthchecks.io kanału alarmowego poza aplikacją (F-04, `out-of-app-ale
 | `checks.sh` | `apply` i `delete` checków środowiska (niżej) |
 | `test.sh` | lokalny test `checks.sh` z atrapą `curl` w `PATH`, bez healthchecks.io i Dockera |
 | `fixtures/*.json` | odpowiedzi API zarządzania dla testu (nagrane z prawdziwego API zarządzania, `fixtures/README.md`) |
+| `fixtures/ping-urls.txt` | tabela przypadków jednej reguły adresu check-in `HEALTHCHECK_PING_URL` (S-25), czytana przez krok 9 `test.sh` i `AlertSettingsTest` w API (`fixtures/README.md`) |
 
 ## Jednorazowo w panelu healthchecks.io
 
@@ -28,7 +29,7 @@ tools/healthchecks/checks.sh apply production
 tools/healthchecks/checks.sh delete szczur-radar-pr-<N>
 ```
 
-- **`apply <środowisko>`** robi upsert (`POST /api/v3/checks/` z `unique: ["name"]`: istniejący check o tej nazwie jest aktualizowany, nie dublowany) checków środowiska z tabeli niżej (trzech; na produkcji czterech, z `production/deploy-health`), z tagami `szczur-radar <środowisko>`. Każdy check crona w stanie „new” dostaje jeden meldunek sukcesu (uzbrojenie): nowy check healthchecks.io nie liczy terminów do pierwszego meldunku, więc bez tego milczałby zawsze. Potem `apply` czyta checki z powrotem (`GET /api/v3/checks/`) i kończy się kodem 1, jeśli któryś check crona nie jest „up” (np. „down” po nieudanej nocy albo „started” w trakcie przebiegu). Dopiero gdy oba są „up”, drukuje na stdout po linii `<nazwa> <adres pingu>` na check. Te adresy to wartości `HEALTHCHECK_PING_URL` (runbook F-04 w `context/deployment/deploy-plan.md`). Ponowny `apply` jest bezpieczny: zmienia tylko ustawienia, adresy zostają te same.
+- **`apply <środowisko>`** robi upsert (`POST /api/v3/checks/` z `unique: ["name"]`: istniejący check o tej nazwie jest aktualizowany, nie dublowany) checków środowiska z tabeli niżej (trzech; na produkcji czterech, z `production/deploy-health`), z tagami `szczur-radar <środowisko>`. Każdy check crona w stanie „new” dostaje jeden meldunek sukcesu (uzbrojenie): nowy check healthchecks.io nie liczy terminów do pierwszego meldunku, więc bez tego milczałby zawsze. Potem `apply` czyta checki z powrotem (`GET /api/v3/checks/`) i kończy się kodem 1, jeśli któryś check crona nie jest „up” (np. „down” po nieudanej nocy albo „started” w trakcie przebiegu). Dopiero gdy oba są „up”, drukuje na stdout po linii `<nazwa> <adres pingu>` na check. Te adresy to wartości `HEALTHCHECK_PING_URL` (runbook F-04 w `context/deployment/deploy-plan.md`). Ponowny `apply` jest bezpieczny: zmienia tylko ustawienia, adresy zostają te same. Adres pingu z odpowiedzi API, który nie spełnia jednej reguły adresu check-in (S-25: ten sam wzorzec co `AlertSettings.PING_PATTERN` w API i oba crony, `https://` w dowolnej wielkości liter, nazwa hosta, opcjonalny port najwyżej 5 cyfr, bez `?` i `#`, najwyżej 512 znaków, tylko ASCII), daje kod 1 bez adresów na stdout: `apply` nie uzbraja checka takim adresem ani go nie drukuje, bo API i crony by go odrzuciły.
 - **`apply <środowisko> --schedule '<cron>' --grace <sekundy>`**: nadpisuje harmonogram i karencję obu checków cronów, np. `--schedule '*/5 * * * *' --grace 60` do sprawdzenia alarmu w PR env. Tylko do weryfikacji: potem `apply` bez opcji albo `delete`. Każdą opcję można podać osobno; check zdarzeń API się nie zmienia.
 - **`delete <środowisko>`** usuwa checki środowiska (znalezione po nazwie; brakujący pomija). Do sprzątania po weryfikacji w PR env. `delete production` wyłącza alarmy produkcji.
 
@@ -73,6 +74,7 @@ Wymaga `bash` i `jq` (bez Dockera). Atrapa `curl` w `PATH` odpowiada według skr
 - `delete`: trzy checki po UUID z odczytu, check innego środowiska zostaje, brakujący jest pomijany, nieudane usunięcie → kod 1;
 - błędy API: 401 z komunikatem API, 500, brak odpowiedzi, odpowiedź dla innego checka, odczyt bez listy → kod 1, bez kolejnych żądań;
 - błędy użycia: brak albo pusty klucz, złe argumenty, nazwy środowiska, wartości opcji i `HEALTHCHECKS_API_URL` → kod 2 bez żądania;
-- w każdym przypadku: klucza nie ma w argumentach `curl`, na stdout ani w logu, a UUID-ów checków w logu.
+- w każdym przypadku: klucza nie ma w argumentach `curl`, na stdout ani w logu, a UUID-ów checków w logu;
+- jedną regułę adresu check-in (S-25, krok 9): bloki `ping-url rule (S-25)` w `tools/db-backup/backup.sh` i `tools/pipeline-trigger/trigger.sh` są bajt w bajt takie same (znaczniki raz w każdym), ich wzorzec to literał `ping_pattern` z `checks.sh` i `AlertSettings.PING_PATTERN` z API, ich limit długości (512) to limit `is_ping_url` w `checks.sh` i `AlertSettings.PING_MAX_LENGTH`, a wycięty blok, uruchomiony w locale UTF-8, gdy `locale -a` jakieś zna (najpierw `en_US`, jak glibc w obrazie `postgres:18`), rozstrzyga każdy wiersz tabeli `fixtures/ping-urls.txt` tak jak ona, a wygenerowany adres 512 znaków przyjmuje i 513 odrzuca (odmowa z ostrzeżeniem bez adresu); wypisuje liczbę sprawdzonych wierszy i użyte locale.
 
 CI uruchamia ten test przy każdym PR i pushu na `main` (job `healthchecks test`).
