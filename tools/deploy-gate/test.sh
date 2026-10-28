@@ -10,8 +10,9 @@
 #   4. a source change (a source.* detail or a summary naming source) is refused, except one whose
 #      every detail is source.checkSuites (null|false → true);
 #   5. a change without a kind and a resource.update without a details list are refused (unknown format);
-#   6. a change without deployEffect is a restart of the desiredGraph resource its summary (or address)
-#      names; deployEffect "none" is not; a restart whose resource cannot be resolved is refused.
+#   6. a change without deployEffect may redeploy the desiredGraph resource its summary (or address)
+#      names, so that resource goes on the restarts list; deployEffect "none" does not; a change that
+#      may redeploy a resource the gate cannot resolve is refused.
 # Also: the step summary (number of changes, the changes, the restarts), the restarts file
 # (GATE_RESTARTS_FILE, names of services and databases only: a bucket has no deployment), the
 # `::error::` lines, and exit code 2 for a bad invocation or an unreadable plan.
@@ -22,12 +23,21 @@
 #       deadline passed at the start (exit 1, no request); 401 and 404 (exit 0, warning); refused
 #       connections → 200; an API that stays unavailable, refused or 503 (exit 0, warning); a 200
 #       without a verdict (exit 1); DEPLOY_GUARD=off; bad values (exit 2);
-#   11. verify-apply.sh against a stub `railway` in PATH (scripted `deployment list --json`) and the
-#       stub API: the snapshot; SUCCESS; FAILED, CRASHED, SKIPPED (exit 1); WAITING (handed over);
-#       DEPLOYING → SUCCESS; REMOVED → a newer SUCCESS; the same ID until the limit (exit 1, "did not
-#       trigger a deploy"); DEPLOYING until the limit (exit 1); /api/ready 503 (exit 1); an empty
-#       restarts list (only /api/ready); bad invocations (exit 2).
-# Needs bash, jq, curl and python3 (no Docker). Short limits (1–3 s) keep it under a minute.
+#   11. verify-apply.sh against a stub `railway` in PATH (scripted `deployment list --json`: deployments
+#       newest first, each with the meta of an apply's, a push's or a push skipped by watch paths) and
+#       the stub API: the snapshot (the newest deployment of any origin); the apply's deployment (the
+#       newest with an iac-change-set/ patchId above the snapshot) SUCCESS; FAILED, CRASHED, SKIPPED
+#       (with Railway's skippedReason) (exit 1); WAITING (handed over); none yet → DEPLOYING → SUCCESS;
+#       REMOVED → a newer SUCCESS, also under a push skipped by watch paths; only pushes above the
+#       snapshot (SKIPPED, WAITING, SUCCESS: "no deploy" with a notice after the window, exit 0); a
+#       push SKIPPED above the apply's WAITING (handed over) and a push SUCCESS above the apply's FAILED
+#       (exit 1); the apply's deployment after two lists without it; the snapshot's deployment not
+#       among the newest 50 (exit 1, "cannot tell"); railway failing until the limit, also after a list
+#       within the window (exit 1, never "no deploy"); DEPLOYING until the limit (exit 1); /api/ready
+#       503 (exit 1); an empty restarts list (only /api/ready); bad invocations, a window longer than
+#       the limit (exit 2).
+# Needs bash, jq, curl and python3 (no Docker). Short limits and windows (1–5 s) keep it at about a
+# minute.
 # Run from anywhere: tools/deploy-gate/test.sh
 set -euo pipefail
 
@@ -163,7 +173,7 @@ pass "an unknown kind (domain.delete) marked safe: exit 1"
 check_gate resource-create 0
 summary_says resource-create '**Changes: 2**'
 summary_says resource-create '| Create bucket db-backups | `resource.create` |  | safe | `db-backups` (bucket: no deploy) | allowed |'
-summary_says resource-create '**Restarts:** `db-backup` (an apply redeploys them)'
+summary_says resource-create '**Restarts:** `db-backup` (an apply may redeploy them; the check after it waits for the deployments the apply starts)'
 restarts_are resource-create db-backup
 pass "resource.create of a bucket and a service (no deployEffect): exit 0, only the service listed (a bucket has no deployment)"
 check_gate domain-create 0
@@ -185,7 +195,7 @@ step "4. source changes are refused, except turning on Wait for CI"
 run_gate pr-env-checksuites "$fixtures/pr-env-checksuites.json" 0 szczur-radar-pr-81 "$project_id"
 summary_says pr-env-checksuites '**Changes: 2**'
 summary_says pr-env-checksuites '| Update db-backup source.checkSuites | `resource.update` | `source.checkSuites (null → true)` | safe | `db-backup` | allowed |'
-summary_says pr-env-checksuites '**Restarts:** `db-backup`, `pipeline-trigger` (an apply redeploys them)'
+summary_says pr-env-checksuites '**Restarts:** `db-backup`, `pipeline-trigger` (an apply may redeploy them; the check after it waits for the deployments the apply starts)'
 restarts_are pr-env-checksuites db-backup pipeline-trigger
 pass "the real plan of szczur-radar-pr-81 (checkSuites null → true on both crons): exit 0, both crons announced"
 check_gate source-branch 1
@@ -219,11 +229,11 @@ log_says change-without-kind 'change without a kind (unknown plan format)'
 pass "a change without a kind: exit 1"
 check_gate postgres-limit-override 0
 summary_says postgres-limit-override '| `resource.update` | `deploy.limitOverride.containers.cpu (2 → 1)`<br>`deploy.limitOverride.containers.memoryBytes (4000000000 → 2000000000)` | safe | `postgres` | allowed |'
-summary_says postgres-limit-override '**Restarts:** `postgres` (an apply redeploys them)'
+summary_says postgres-limit-override '**Restarts:** `postgres` (an apply may redeploy them; the check after it waits for the deployments the apply starts)'
 restarts_are postgres-limit-override postgres
 pass "limitOverride on Postgres: exit 0, the restart announced"
 
-step "6. restarts: a missing deployEffect counts as a deploy of the resource the change names"
+step "6. restarts: a missing deployEffect counts as a possible redeploy of the resource the change names"
 check_gate optional-fields 0
 summary_says optional-fields '| Update szczur-radar-api groupId | `resource.update` | `groupId (null → "group-fixture")` | safe | none | allowed |'
 restarts_are optional-fields szczur-radar-web postgres
@@ -378,6 +388,11 @@ run_says() {
     grep -qF -- "$2" "$tmp/$1.log" || { show_run "$1"; die "$1: the log does not say '$2'"; }
 }
 
+# Case $1's log (stderr) does not say $2.
+run_never_says() {
+    ! grep -qF -- "$2" "$tmp/$1.log" || { show_run "$1"; die "$1: the log says '$2'"; }
+}
+
 # Case $1's stdout says $2.
 out_says() {
     grep -qF -- "$2" "$tmp/$1.out" || { show_run "$1"; die "$1: stdout does not say '$2'"; }
@@ -388,6 +403,13 @@ api_requests_were() {
     local count
     count=$(grep -c '^GET ' "$tmp/$1.requests" || true)
     [[ $count == "$2" ]] || { show_run "$1"; die "$1: $count requests to the stub API, expected $2"; }
+}
+
+# Case $1 asked the stub railway about service $2 exactly $3 times.
+railway_calls_were() {
+    local count
+    count=$(grep -c -- "-s $2 " "$tmp/$1.railway/calls" || true)
+    [[ $count == "$3" ]] || { show_run "$1"; die "$1: railway was asked about $2 $count times, expected $3"; }
 }
 
 # Case $1: wait-safe.sh against $3 (a URL) with the variables after it (NAME=value) must exit with $2.
@@ -485,11 +507,23 @@ run_guard bad-url 2 "szczur-radar-web-production.up.railway.app/api"
 run_says bad-url 'the web address must be an http(s) origin'
 pass "a bad duration (90x, 0s), switch, deadline or web address: exit 2"
 
-# The stub `railway`: answers `railway deployment list --json --limit 1 -s <service> -p <project> -e
-# <environment>` of the project and environment below from $RAILWAY_STUB/<service>, one answer per
-# call, the last one repeating: "<id> <STATUS>" (a list with that deployment), "none" (an empty list)
-# or "fail" (the CLI fails). A service without a file is unknown (the CLI's error). Every call goes to
-# $RAILWAY_STUB/calls; any other command or option fails with exit 3.
+# The stub `railway`: answers `railway deployment list --json --limit <1|50> -s <service> -p <project>
+# -e <environment>` of the project and environment below from $RAILWAY_STUB/<service>, one answer per
+# call, the last one repeating: "none" (an empty list), "empty" (nothing at all, exit 0), "garbage"
+# (not JSON, exit 0), "fail" (the CLI fails) or the deployments,
+# newest first, separated by commas, each "<id> <STATUS> <origin>[ <skippedReason>]" (e.g.
+# "b3 SKIPPED watch, b2 WAITING iac, b1 SUCCESS push"). The origin gives the meta Railway gives on
+# production (research of S-21):
+#   iac    an apply's: patchId "iac-change-set/<environment>/<hash>", reason "deploy", commitHash (the
+#          branch's tip), branch, ignoreWatchPatterns true; on postgres, which deploys only by patches,
+#          just patchId and reason;
+#   push   a push's: reason "deploy", commitHash, branch;
+#   watch  a push skipped by watch paths: commitHash, branch, skippedReason "No changes to watched
+#          files", no reason.
+# Words after the origin are the deployment's skippedReason (replacing watch's). createdAt falls a minute
+# per deployment down the list; --limit 1 gives only the newest. A service without a file is unknown
+# (the CLI's error). Every call goes to $RAILWAY_STUB/calls; any other command, option or limit, or an
+# answer it cannot read, fails with exit 3.
 readonly environment_id=00000000-0000-4000-8000-000000000001
 mkdir -p "$tmp/bin"
 cat >"$tmp/bin/railway" <<'SH'
@@ -509,7 +543,8 @@ while (( $# > 0 )); do
         *) echo "stub railway: unexpected option $1" >&2; exit 3 ;;
     esac
 done
-[[ $json == 1 && $limit == 1 && $project == "$STUB_PROJECT_ID" && $environment == "$STUB_ENVIRONMENT_ID" ]] \
+[[ $json == 1 && ($limit == 1 || $limit == 50) && $project == "$STUB_PROJECT_ID" \
+        && $environment == "$STUB_ENVIRONMENT_ID" ]] \
     || { echo "stub railway: unexpected arguments" >&2; exit 3; }
 answers=$RAILWAY_STUB/$service
 [[ -f $answers ]] || { echo "Service '$service' not found" >&2; exit 1; }
@@ -521,9 +556,27 @@ fi
 case $answer in
     fail) echo "Failed to fetch: error sending request" >&2; exit 1 ;;
     none) echo "[]" ;;
+    empty) ;;
+    garbage) echo "Something went wrong" ;;
     *)
-        read -r id status <<<"$answer"
-        printf '[\n  {\n    "id": "%s",\n    "status": "%s",\n    "createdAt": "2026-10-18T12:00:00Z",\n    "meta": {}\n  }\n]\n' "$id" "$status"
+        jq -n --arg answer "$answer" --arg service "$service" --arg env "$STUB_ENVIRONMENT_ID" \
+                --argjson limit "$limit" '
+            def meta($origin):
+              {commitHash: "4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f", branch: "main"} as $git
+              | if $origin == "iac" then
+                  {patchId: "iac-change-set/\($env)/9c2b7e4a1d0f4c3e8b5a6d7e8f901234", reason: "deploy"}
+                  + (if $service == "postgres" then {} else $git + {ignoreWatchPatterns: true} end)
+                elif $origin == "push" then {reason: "deploy"} + $git
+                elif $origin == "watch" then $git + {skippedReason: "No changes to watched files"}
+                else error("unknown origin \($origin)") end;
+            [$answer | split(",")[] | [splits(" +") | select(. != "")]]
+            | to_entries
+            | map(.key as $n | .value as [$id, $status, $origin]
+                  | {id: $id, status: $status,
+                     createdAt: ("2026-10-18T12:00:00Z" | fromdate - 60 * $n | todate),
+                     meta: (meta($origin)
+                            + (.value[3:] | if length > 0 then {skippedReason: join(" ")} else {} end))})
+            | .[:$limit]' || { echo "stub railway: cannot read the answer '$answer'" >&2; exit 3; }
         ;;
 esac
 SH
@@ -536,7 +589,8 @@ railway_answers() {
 }
 
 # Case $1: verify-apply.sh with the variables (NAME=value) before `--` and the arguments after it must
-# exit with $2. Its stdout goes to $tmp/$1.out, its log to $tmp/$1.log.
+# exit with $2. Its stdout goes to $tmp/$1.out, its log to $tmp/$1.log. The caller's limits are dropped
+# (the defaults apply unless the case sets them); the interval is 1 s.
 run_verify() {
     local name=$1 expected=$2 status=0 vars=()
     shift 2
@@ -546,7 +600,7 @@ run_verify() {
     done
     shift
     mkdir -p "$tmp/$name.railway"
-    env -u DEPLOY_VERIFY_TIMEOUT -u DEPLOY_GUARD_WAKE_TIMEOUT PATH="$tmp/bin:$PATH" \
+    env -u DEPLOY_VERIFY_TIMEOUT -u DEPLOY_VERIFY_DEPLOY_WINDOW -u DEPLOY_GUARD_WAKE_TIMEOUT PATH="$tmp/bin:$PATH" \
         RAILWAY_STUB="$tmp/$name.railway" STUB_PROJECT_ID=$project_id STUB_ENVIRONMENT_ID=$environment_id \
         RAILWAY_PROJECT_ID=$project_id RAILWAY_ENVIRONMENT_ID=$environment_id DEPLOY_VERIFY_INTERVAL=1s \
         "${vars[@]}" "$here/verify-apply.sh" "$@" >"$tmp/$name.out" 2>"$tmp/$name.log" || status=$?
@@ -569,33 +623,41 @@ check_case() {
 }
 
 step "11. verify-apply.sh: the check after the apply"
-railway_answers snapshot postgres "p1 SUCCESS"
+railway_answers snapshot postgres "p1 SUCCESS iac, p0 REMOVED iac"
 railway_answers snapshot db-backup none
-railway_answers snapshot szczur-radar-api fail "a1 SLEEPING"
-printf '%s\n' postgres db-backup szczur-radar-api "" >"$tmp/snapshot.restarts"
+railway_answers snapshot szczur-radar-api fail "a1 SLEEPING push, a0 REMOVED iac"
+railway_answers snapshot pipeline-trigger "t1 SKIPPED watch, t0 SUCCESS iac"
+printf '%s\n' postgres db-backup szczur-radar-api pipeline-trigger "" >"$tmp/snapshot.restarts"
 run_verify snapshot 0 -- snapshot "$tmp/snapshot.restarts"
-jq -e '. == {"postgres": "p1", "db-backup": null, "szczur-radar-api": "a1"}' \
+jq -e '. == {"postgres": "p1", "db-backup": null, "szczur-radar-api": "a1", "pipeline-trigger": "t1"}' \
     "$tmp/snapshot.out" >/dev/null || { show_run snapshot; die "snapshot: not the expected deployment IDs"; }
 grep -qxF "deployment list --json --limit 1 -s postgres -p $project_id -e $environment_id" "$tmp/snapshot.railway/calls" \
     || { show_run snapshot; die "snapshot: railway was not called with the project and environment IDs"; }
-pass "snapshot: each service's newest deployment ID (null: none; a failed call retried), by project and environment ID"
-railway_answers snapshot-unknown postgres "p1 SUCCESS"
+pass "snapshot: each service's newest deployment ID, whatever started it (null: none; a failed call retried), by project and environment ID"
+railway_answers snapshot-unknown postgres "p1 SUCCESS iac"
 railway_answers snapshot-unknown db-backup fail fail fail
 printf '%s\n' postgres db-backup >"$tmp/snapshot-unknown.restarts"
 run_verify snapshot-unknown 1 -- snapshot "$tmp/snapshot-unknown.restarts"
 run_says snapshot-unknown '::error::post-apply check: cannot read the deployments of db-backup before the apply (3 attempts)'
-[[ $(grep -c -- '-s db-backup ' "$tmp/snapshot-unknown.railway/calls") == 3 ]] \
-    || { show_run snapshot-unknown; die "snapshot-unknown: db-backup was not asked 3 times"; }
+railway_calls_were snapshot-unknown db-backup 3
 pass "snapshot: a service Railway cannot tell about after 3 attempts: exit 1 (no apply), not taken for one without deployments"
+railway_answers snapshot-empty db-backup empty garbage empty
+printf 'db-backup\n' >"$tmp/snapshot-empty.restarts"
+run_verify snapshot-empty 1 -- snapshot "$tmp/snapshot-empty.restarts"
+run_says snapshot-empty 'post-apply check: railway deployment list -s db-backup printed no list of deployments'
+run_says snapshot-empty '::error::post-apply check: cannot read the deployments of db-backup before the apply (3 attempts)'
+pass "snapshot: an empty or unreadable answer (exit 0) 3 times: exit 1 (no apply), not taken for a service without deployments"
 
-railway_answers success postgres "p2 SUCCESS"
+railway_answers success postgres "p2 SUCCESS iac, p1 SUCCESS iac"
 check_case success 0 postgres '{"postgres": "p1"}' "[$ready]"
 out_says success '| `postgres` | `p2` | deployed (SUCCESS) |'
 out_says success '| `/api/ready` | — | 200 |'
 run_says success 'post-apply check: /api/ready answers 200'
-pass "a new deployment SUCCESS, then /api/ready 200: exit 0"
+grep -qxF "deployment list --json --limit 50 -s postgres -p $project_id -e $environment_id" "$tmp/success.railway/calls" \
+    || { show_run success; die "success: railway was not asked for the newest 50 deployments"; }
+pass "the apply's deployment SUCCESS (the newest 50 asked), then /api/ready 200: exit 0"
 for status in FAILED CRASHED SKIPPED NEEDS_APPROVAL BOGUS; do
-    railway_answers "ended-$status" postgres "p2 $status"
+    railway_answers "ended-$status" postgres "p2 $status iac, p1 SUCCESS iac"
     check_case "ended-$status" 1 postgres '{"postgres": "p1"}' "[$ready]"
     case $status in
         NEEDS_APPROVAL) run_says "ended-$status" '::error::post-apply check: the deployment p2 of postgres needs an approval in Railway' ;;
@@ -605,46 +667,121 @@ for status in FAILED CRASHED SKIPPED NEEDS_APPROVAL BOGUS; do
     out_says "ended-$status" "| \`postgres\` | \`p2\` | **$status** |"
     api_requests_were "ended-$status" 0
 done
-pass "a new deployment FAILED, CRASHED, SKIPPED, NEEDS_APPROVAL or an unknown status: exit 1, /api/ready not asked"
-railway_answers sleeping szczur-radar-api "a2 SLEEPING"
+pass "the apply's deployment FAILED, CRASHED, SKIPPED, NEEDS_APPROVAL or an unknown status: exit 1, /api/ready not asked"
+railway_answers skipped-reason szczur-radar-web "w2 SKIPPED iac Deployment cancelled, w1 SUCCESS push"
+check_case skipped-reason 1 szczur-radar-web '{"szczur-radar-web": "w1"}' "[$ready]"
+run_says skipped-reason '::error::post-apply check: the deployment w2 of szczur-radar-web ended SKIPPED after the apply (Railway: "Deployment cancelled")'
+out_says skipped-reason '| `szczur-radar-web` | `w2` | **SKIPPED** (Deployment cancelled) |'
+api_requests_were skipped-reason 0
+pass "the apply's deployment SKIPPED with a skippedReason: exit 1, Railway's reason in the error and the summary"
+railway_answers skipped-pipe db-backup "b2 SKIPPED iac Paused | by operator, b1 SUCCESS push"
+check_case skipped-pipe 1 db-backup '{"db-backup": "b1"}' "[$ready]"
+out_says skipped-pipe '| `db-backup` | `b2` | **SKIPPED** (Paused \| by operator) |'
+pass "a skippedReason with a | : escaped in the summary's table cell"
+railway_answers sleeping szczur-radar-api "a2 SLEEPING iac, a1 SUCCESS push"
 check_case sleeping 0 szczur-radar-api '{"szczur-radar-api": "a1"}' "[$ready]"
 pass "SLEEPING (deployed, then asleep): exit 0"
-railway_answers waiting db-backup "b2 WAITING"
+railway_answers waiting db-backup "b2 WAITING iac, b1 SUCCESS push"
 check_case waiting 0 db-backup '{"db-backup": "b1"}' "[$ready]"
 run_says waiting '::notice::post-apply check: the deployment of db-backup waits (WAITING; Wait for CI holds it until this workflow ends): handed over to the monitor szczur-radar-monitor'
 out_says waiting '| `db-backup` | `b2` | WAITING: handed over to the monitor szczur-radar-monitor |'
 pass "WAITING (Wait for CI): exit 0, handed over to the monitor szczur-radar-monitor"
-railway_answers deploying postgres "p1 SUCCESS" "p2 INITIALIZING" "p2 DEPLOYING" "p2 SUCCESS"
+railway_answers deploying postgres "p1 SUCCESS iac" "p2 INITIALIZING iac, p1 SUCCESS iac" \
+    "p2 DEPLOYING iac, p1 SUCCESS iac" "p2 SUCCESS iac, p1 SUCCESS iac"
 check_case deploying 0 postgres '{"postgres": "p1"}' "[$ready]"
 run_says deploying 'post-apply check: postgres deployment p2: DEPLOYING'
 out_says deploying '| `postgres` | `p2` | deployed (SUCCESS) |'
-pass "the old ID, INITIALIZING, DEPLOYING, then SUCCESS: exit 0"
-railway_answers removed db-backup "b2 REMOVED" "b3 SUCCESS"
+pass "no deployment of the apply yet, then INITIALIZING, DEPLOYING, SUCCESS: exit 0"
+railway_answers removed db-backup "b2 REMOVED iac, b1 SUCCESS push" "b3 SUCCESS push, b2 REMOVED iac, b1 SUCCESS push"
 check_case removed 0 db-backup '{"db-backup": "b1"}' "[$ready]"
+run_says removed 'post-apply check: db-backup deployment b2: REMOVED, replaced by b3: SUCCESS'
 out_says removed '| `db-backup` | `b3` | deployed (SUCCESS) |'
-pass "REMOVED (replaced), then the newer deployment SUCCESS: exit 0"
-railway_answers several db-backup "b2 QUEUED"
-railway_answers several postgres "p2 BUILDING" "p2 SUCCESS"
-railway_answers several pipeline-trigger none "t1 SUCCESS"
+pass "the apply's deployment REMOVED, waited for until a newer one replaces it, then that one SUCCESS: exit 0"
+railway_answers removing db-backup "b2 REMOVING iac, b1 SUCCESS push" "b3 WAITING push, b2 REMOVING iac, b1 SUCCESS push"
+check_case removing 0 db-backup '{"db-backup": "b1"}' "[$ready]" DEPLOY_VERIFY_TIMEOUT=3s DEPLOY_VERIFY_DEPLOY_WINDOW=2s
+run_says removing 'post-apply check: db-backup deployment b2: REMOVING, replaced by b3: WAITING'
+out_says removing '| `db-backup` | `b3` | WAITING: handed over to the monitor szczur-radar-monitor |'
+pass "the apply's deployment REMOVING, then replaced by a newer one WAITING: exit 0, handed over"
+railway_answers removed-under-skipped db-backup "b4 SKIPPED watch, b3 SUCCESS push, b2 REMOVED iac, b1 SUCCESS push"
+check_case removed-under-skipped 0 db-backup '{"db-backup": "b1"}' "[$ready]"
+out_says removed-under-skipped '| `db-backup` | `b3` | deployed (SUCCESS) |'
+run_never_says removed-under-skipped 'ended SKIPPED'
+pass "the apply's deployment REMOVED by a push's SUCCESS, a push skipped by watch paths above both: exit 0, the SUCCESS judged"
+railway_answers several db-backup "b2 QUEUED iac, b1 SUCCESS push"
+railway_answers several postgres "p2 BUILDING iac, p1 SUCCESS iac" "p2 SUCCESS iac, p1 SUCCESS iac"
+railway_answers several pipeline-trigger none "t1 SUCCESS iac"
 check_case several 0 "db-backup postgres pipeline-trigger" '{"db-backup": "b1", "postgres": "p1", "pipeline-trigger": null}' "[$ready]"
 out_says several '| `db-backup` | `b2` | QUEUED: handed over to the monitor szczur-radar-monitor |'
 out_says several '| `pipeline-trigger` | `t1` | deployed (SUCCESS) |'
 pass "three services, one created by the apply (null before): exit 0"
-railway_answers same-id postgres "p1 SUCCESS"
-check_case same-id 1 postgres '{"postgres": "p1"}' "[$ready]" DEPLOY_VERIFY_TIMEOUT=2s
-run_says same-id '::error::post-apply check: the apply did not trigger a deploy of postgres within 2s (its newest deployment is still p1)'
-out_says same-id '| `postgres` | — | **no new deployment** |'
-pass "the same deployment ID until DEPLOY_VERIFY_TIMEOUT=2s: exit 1, the apply did not trigger a deploy"
+
+# 2026-10-19: source.checkSuites deployed nothing, and a push meanwhile gave db-backup a deployment
+# SKIPPED by watch paths, which the check took for the apply's.
+railway_answers no-deploy db-backup "b2 SKIPPED watch, b1 SUCCESS push"
+railway_answers no-deploy pipeline-trigger "t4 WAITING push, t3 SUCCESS push, t2 SKIPPED watch, t1 SUCCESS iac"
+check_case no-deploy 0 "db-backup pipeline-trigger" '{"db-backup": "b1", "pipeline-trigger": "t1"}' "[$ready]" \
+    DEPLOY_VERIFY_DEPLOY_WINDOW=2s
+run_says no-deploy '::notice::post-apply check: the apply triggered no deploy of db-backup within 2s'
+run_says no-deploy '::notice::post-apply check: the apply triggered no deploy of pipeline-trigger within 2s'
+out_says no-deploy '| `db-backup` | — | no deploy (none within 2s of the apply) |'
+out_says no-deploy '| `pipeline-trigger` | — | no deploy (none within 2s of the apply) |'
+out_says no-deploy '| `/api/ready` | — | 200 |'
+run_never_says no-deploy 'handed over'
+run_never_says no-deploy '::error::'
+api_requests_were no-deploy 1
+# One window for all the services: pipeline-trigger, checked after the window, gets one read.
+railway_calls_were no-deploy pipeline-trigger 1
+pass "only pushes above the snapshot (SKIPPED by watch paths, WAITING, SUCCESS), DEPLOY_VERIFY_DEPLOY_WINDOW=2s: exit 0, \"no deploy\" with a notice, /api/ready asked; the second service decided by one list"
+railway_answers push-over-waiting db-backup "b3 SKIPPED watch, b2 WAITING iac, b1 SUCCESS push"
+check_case push-over-waiting 0 db-backup '{"db-backup": "b1"}' "[$ready]"
+out_says push-over-waiting '| `db-backup` | `b2` | WAITING: handed over to the monitor szczur-radar-monitor |'
+run_never_says push-over-waiting 'ended SKIPPED'
+pass "a push SKIPPED by watch paths above the apply's deployment WAITING: exit 0, the apply's handed over"
+railway_answers push-over-failed szczur-radar-api "a3 SUCCESS push, a2 FAILED iac, a1 SUCCESS push"
+check_case push-over-failed 1 szczur-radar-api '{"szczur-radar-api": "a1"}' "[$ready]"
+run_says push-over-failed '::error::post-apply check: the deployment a2 of szczur-radar-api ended FAILED after the apply'
+out_says push-over-failed '| `szczur-radar-api` | `a2` | **FAILED** |'
+api_requests_were push-over-failed 0
+pass "a push SUCCESS above the apply's deployment FAILED: exit 1 about the apply's"
+railway_answers appears-later pipeline-trigger "t1 SUCCESS push" "t2 SKIPPED watch, t1 SUCCESS push" \
+    "t3 SUCCESS iac, t2 SKIPPED watch, t1 SUCCESS push"
+check_case appears-later 0 pipeline-trigger '{"pipeline-trigger": "t1"}' "[$ready]" DEPLOY_VERIFY_DEPLOY_WINDOW=5s
+run_says appears-later 'post-apply check: pipeline-trigger deployment t3: SUCCESS'
+out_says appears-later '| `pipeline-trigger` | `t3` | deployed (SUCCESS) |'
+run_never_says appears-later 'triggered no deploy'
+railway_calls_were appears-later pipeline-trigger 3
+pass "the apply's deployment in the third list within the window (before it nothing, then a push SKIPPED): exit 0, waited for"
+railway_answers boundary-lost postgres "p3 SUCCESS iac, p2 REMOVED iac"
+check_case boundary-lost 1 postgres '{"postgres": "p1"}' "[$ready]"
+run_says boundary-lost "::error::post-apply check: cannot tell the apply's deployment of postgres: its deployment before the apply p1 is not among the newest 50"
+out_says boundary-lost '| `postgres` | — | **cannot tell** (`p1` not among the newest 50) |'
+api_requests_were boundary-lost 0
+pass "the snapshot's deployment not in the list: exit 1, cannot tell"
 railway_answers cli-fails postgres fail
-check_case cli-fails 1 postgres '{"postgres": "p1"}' "[$ready]" DEPLOY_VERIFY_TIMEOUT=2s
+check_case cli-fails 1 postgres '{"postgres": "p1"}' "[$ready]" DEPLOY_VERIFY_TIMEOUT=2s DEPLOY_VERIFY_DEPLOY_WINDOW=2s
 run_says cli-fails 'post-apply check: railway deployment list -s postgres failed: Failed to fetch'
-run_says cli-fails 'the last railway deployment list failed'
+run_says cli-fails "::error::post-apply check: cannot tell whether the apply deployed postgres within 2s (the last railway deployment list failed)"
 pass "railway failing until the limit: exit 1, the failure in the log"
-railway_answers limit postgres "p2 DEPLOYING"
-check_case limit 1 postgres '{"postgres": "p1"}' "[$ready]" DEPLOY_VERIFY_TIMEOUT=2s
+railway_answers cli-fails-after-window db-backup "b1 SUCCESS push" fail
+check_case cli-fails-after-window 1 db-backup '{"db-backup": "b1"}' "[$ready]" \
+    DEPLOY_VERIFY_TIMEOUT=2s DEPLOY_VERIFY_DEPLOY_WINDOW=2s
+run_says cli-fails-after-window "::error::post-apply check: cannot tell whether the apply deployed db-backup within 2s (the last railway deployment list failed)"
+out_says cli-fails-after-window '| `db-backup` | — | **unknown** (the last railway deployment list failed) |'
+run_never_says cli-fails-after-window 'triggered no deploy'
+api_requests_were cli-fails-after-window 0
+pass "no deployment of the apply in a list within the window, then railway failing until the limit: exit 1, never \"no deploy\""
+railway_answers check-empty db-backup empty
+check_case check-empty 1 db-backup '{"db-backup": "b1"}' "[$ready]" DEPLOY_VERIFY_TIMEOUT=2s DEPLOY_VERIFY_DEPLOY_WINDOW=2s
+run_says check-empty 'post-apply check: railway deployment list -s db-backup printed no list of deployments'
+run_says check-empty "::error::post-apply check: cannot tell whether the apply deployed db-backup within 2s (the last railway deployment list failed)"
+run_never_says check-empty 'triggered no deploy'
+api_requests_were check-empty 0
+pass "an empty answer (exit 0) until the limit: exit 1 as a failed list, never \"no deploy\""
+railway_answers limit postgres "p2 DEPLOYING iac, p1 SUCCESS iac"
+check_case limit 1 postgres '{"postgres": "p1"}' "[$ready]" DEPLOY_VERIFY_TIMEOUT=2s DEPLOY_VERIFY_DEPLOY_WINDOW=2s
 run_says limit '::error::post-apply check: the deployment p2 of postgres did not finish within 2s (last status DEPLOYING)'
 pass "DEPLOYING until DEPLOY_VERIFY_TIMEOUT=2s: exit 1"
-railway_answers not-ready postgres "p2 SUCCESS"
+railway_answers not-ready postgres "p2 SUCCESS iac, p1 SUCCESS iac"
 check_case not-ready 1 postgres '{"postgres": "p1"}' "[$unavailable]" DEPLOY_GUARD_WAKE_TIMEOUT=2s
 run_says not-ready '::error::post-apply check: /api/ready did not answer 200 within 2s (HTTP 503): the API does not reach its database or is down'
 out_says not-ready '| `/api/ready` | — | **HTTP 503** |'
@@ -678,6 +815,16 @@ run_says bad-name 'is not a service name'
 run_verify bad-url 2 -- check "$tmp/bad.restarts" "$tmp/bad.before.json" "https://example.test/api"
 run_says bad-url 'the web address must be an http(s) origin'
 pass "bad invocations (arguments, files, snapshot, RAILWAY_ENVIRONMENT_ID, duration, service name, web address): exit 2"
+run_verify window-too-long 2 DEPLOY_VERIFY_DEPLOY_WINDOW=16m -- snapshot "$tmp/bad.restarts"
+run_says window-too-long '::error::post-apply check: DEPLOY_VERIFY_DEPLOY_WINDOW (16m) must not be longer than DEPLOY_VERIFY_TIMEOUT (15m)'
+run_verify bad-window 2 DEPLOY_VERIFY_DEPLOY_WINDOW=2min -- snapshot "$tmp/bad.restarts"
+run_says bad-window "DEPLOY_VERIFY_DEPLOY_WINDOW must be a duration such as 30s, 3m or 2h (it is '2min')"
+for name in window-too-long bad-window; do
+    [[ ! -f $tmp/$name.railway/calls ]] || { show_run "$name"; die "$name: railway was called"; }
+done
+run_verify window-in-check 2 DEPLOY_VERIFY_TIMEOUT=1m -- check "$tmp/bad.restarts" "$tmp/bad.before.json" "http://127.0.0.1:1"
+run_says window-in-check 'DEPLOY_VERIFY_DEPLOY_WINDOW (2m) must not be longer than DEPLOY_VERIFY_TIMEOUT (1m)'
+pass "a DEPLOY_VERIFY_DEPLOY_WINDOW longer than DEPLOY_VERIFY_TIMEOUT (also the default 2m) or not a duration: exit 2, in the snapshot before any railway call (no apply)"
 
 echo
 echo "gate.sh step summary of the real szczur-radar-pr-81 plan (what the railway-config job shows):"
