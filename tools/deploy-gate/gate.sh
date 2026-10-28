@@ -1,17 +1,18 @@
 #!/usr/bin/env bash
 # The deploy gate of the CI job railway-config (S-14, safe-deploy-gate; see README.md). Classifies the
 # output of `railway config plan --json` before an unattended `railway config apply`: whether the plan
-# may be applied, why not, which resources the apply redeploys and how many changes it has. The rules
+# may be applied, why not, which resources the apply may redeploy and how many changes it has. The rules
 # live in gate.jq and read each change's kind, severity and details (the CLI's --json gives no other
-# field) and resolve the resource it redeploys in the plan's desiredGraph.
+# field) and resolve the resource it may redeploy in the plan's desiredGraph.
 #
 #   gate.sh <plan.json> <target-env> <project-id> >> "$GITHUB_STEP_SUMMARY"
 #
-# stdout: a markdown summary (number of changes, the changes, the resources the apply restarts).
+# stdout: a markdown summary (number of changes, the changes, the resources the apply may redeploy).
 # stderr: the log, with a GitHub `::error::` line per refusal (stdout goes to the step summary).
-# GATE_RESTARTS_FILE (optional): the name of every service or database the apply redeploys (desiredGraph
-# resources[].name), one per line; emptied first and written only for an allowed plan, so a refused or
-# unreadable plan leaves it empty.
+# GATE_RESTARTS_FILE (optional): the name of every service or database the apply may redeploy
+# (desiredGraph resources[].name), one per line: not every change deploys, and the check after the
+# apply (verify-apply.sh) waits only for the deployments the apply starts. Emptied first and written
+# only for an allowed plan, so a refused or unreadable plan leaves it empty.
 # Exit codes: 0 the plan may be applied, 1 refused, 2 a bad invocation or an unreadable plan.
 set -euo pipefail
 
@@ -45,7 +46,7 @@ fi
 [[ $(jq '.readable' <<<"$report") == true ]] \
     || usage_error "the plan $plan has no list of changes (changeSet.changes): unknown plan format"
 
-# The step summary: what the apply would change and restart, and what the gate refused.
+# The step summary: what the apply would change and may redeploy, and what the gate refused.
 jq -r --arg env "$target_env" '
     def cell: tostring | gsub("\\|"; "\\|") | gsub("\n"; " ");
     def code: if . == null then "" else "`\(cell)`" end;
@@ -64,7 +65,7 @@ jq -r --arg env "$target_env" '
         ""
     else empty end,
     if (.restarts | length) > 0 then
-        "**Restarts:** \(.restarts | map("`\(cell)`") | join(", ")) (an apply redeploys them)"
+        "**Restarts:** \(.restarts | map("`\(cell)`") | join(", ")) (an apply may redeploy them; the check after it waits for the deployments the apply starts)"
     else "**Restarts:** none" end,
     if .rejected > 0 then "\n**Refused:** \(.rejected) change(s) the gate does not allow. Nothing applied." else empty end
 ' <<<"$report"

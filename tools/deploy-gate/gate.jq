@@ -4,13 +4,15 @@
 #   {envProblems: [text], readable: bool, count,
 #    changes: [{change, label, restarts, target, targetType, deploys, reasons}],
 #    rejected: <number of changes with a reason>, restarts: [resource name]}
-# restarts lists only the resources that have deployments (deployable_types): the input of
-# verify-apply.sh, which waits for each one's new deployment.
+# restarts lists the resources an apply may redeploy, only those that have deployments
+# (deployable_types): the input of verify-apply.sh, which waits for the deployment the apply starts on
+# each one. Not every change deploys (source.checkSuites null → true did not, 2026-10-19), and the plan
+# does not tell which do, so a listed resource may get none.
 # The CLI's --json (5.67.1) gives each change only kind, severity, summary and details (its runner
 # keeps no other field), so the rules read those: kind and severity as values, details and summary in
 # the CLI's own fixed formats (src/iac/change_set.rs). Optional structured fields (field, deployEffect,
 # address) are honoured when a CLI gives them. Anything the gate does not know is refused (fail
-# closed); the only tolerance is a change without deployEffect, which counts as a restart.
+# closed); the only tolerance is a change without deployEffect, which counts as a possible redeploy.
 
 # The kinds of change an unattended apply may make. Every other kind is refused, whatever its severity
 # (resource.delete, variable.delete, domain.delete, a kind this gate has never seen).
@@ -39,7 +41,8 @@ def touches_source:
 def enables_wait_for_ci_only:
   (.details | is_strings) and (.details | length) > 0 and all(.details[]; test(wait_for_ci_detail));
 
-# Does applying the change redeploy its resource? Missing deployEffect counts as a deploy.
+# May applying the change redeploy its resource? Missing deployEffect (CLI 5.67.1 gives none) counts
+# as yes; whether the apply really deploys it, only the check after the apply sees.
 def restarts: .deployEffect != "none";
 
 # The desiredGraph resource types that have deployments in Railway (a database is a service there).
@@ -72,7 +75,7 @@ def names_resource($r):
       any($s | splits("[ ,()]+"); . == $n)
     else false end;
 
-# The one desiredGraph resource ({name, type}) the change redeploys, or null when it is not exactly
+# The one desiredGraph resource ({name, type}) the change may redeploy, or null when it is not exactly
 # one name: by the change's address when the CLI gives one, else by its summary.
 def target($resources):
   . as $change
