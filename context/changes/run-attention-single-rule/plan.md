@@ -268,5 +268,5 @@ Bez migracji bazy. Wdrożenie: API i web wychodzą z tego samego merge'a, ale w 
 
 #### Manual
 
-- [x] 2.4 Zrzuty z atrapy `/admin` i `/admin/runs/r-deploy` w obu motywach i przy 375 px pokazują ton ostrzeżenia dla przerwania przez wdrożenie
-- [x] 2.5 PR env: przebieg zakresu bez postów pokazuje „Wymaga uwagi: NoPostsFetchedException: …”, a jego JSON ma `"attentionReasons":["failed"]`
+- [x] 2.4 Zrzuty z atrapy `/admin` i `/admin/runs/r-deploy` w obu motywach i przy 375 px pokazują ton ostrzeżenia dla przerwania przez wdrożenie — 6164ba3
+- [x] 2.5 PR env: przebieg zakresu bez postów pokazuje „Wymaga uwagi: NoPostsFetchedException: …”, a jego JSON ma `"attentionReasons":["failed"]` — c042580
