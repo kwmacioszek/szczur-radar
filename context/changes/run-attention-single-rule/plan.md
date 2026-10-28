@@ -260,9 +260,9 @@ Bez migracji bazy. Wdrożenie: API i web wychodzą z tego samego merge'a, ale w 
 
 #### Automated
 
-- [x] 2.1 Testy web przechodzą: `cd szczur-radar-web && npm test`
-- [x] 2.2 Typecheck i build przechodzą: `cd szczur-radar-web && npm run build`
-- [x] 2.3 SPA nie liczy już powodów z liczników ani nie ma wyjątku tonu dla wdrożenia: `rg -n "=== 'deploy'|run\.dead > 0|run\.processingErrors > 0" szczur-radar-web/src/runs.ts` nie znajduje nic
+- [x] 2.1 Testy web przechodzą: `cd szczur-radar-web && npm test` — 5d3297a
+- [x] 2.2 Typecheck i build przechodzą: `cd szczur-radar-web && npm run build` — 5d3297a
+- [x] 2.3 SPA nie liczy już powodów z liczników ani nie ma wyjątku tonu dla wdrożenia: `rg -n "=== 'deploy'|run\.dead > 0|run\.processingErrors > 0" szczur-radar-web/src/runs.ts` nie znajduje nic — 5d3297a
 
 #### Manual
 
