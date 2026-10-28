@@ -295,7 +295,7 @@ Brak danych i migracji. Wycofanie: revert PR-a przywraca starą kontrolę (z fa�
 
 #### Manual
 
-- [ ] 1.4 Kontrola tylko do odczytu na prawdziwych deploymentach produkcji (CLI 5.67.1): granica 2–3 deploymenty wstecz dla `db-backup` i `pipeline-trigger` daje exit 0, „no deploy” dla obu i `/api/ready` 200
+- [x] 1.4 Kontrola tylko do odczytu na prawdziwych deploymentach produkcji (CLI 5.67.1): granica 2–3 deploymenty wstecz dla `db-backup` i `pipeline-trigger` daje exit 0, „no deploy” dla obu i `/api/ready` 200 — dd321c2
 
 ### Phase 2: Weryfikacja w PR env
 
@@ -306,10 +306,10 @@ Brak danych i migracji. Wycofanie: revert PR-a przywraca starą kontrolę (z fa�
 
 #### Manual
 
-- [ ] 2.3 Bez deployu: run zmiany 1 ma „no deploy” dla `db-backup` z `::notice::`, exit 0 i `/api/ready` 200; brak deploymentu `iac-change-set/` po apply'u
-- [ ] 2.4 Równoległy push: deploymenty z pusha zmiany 2 w oknie runu 1 nie są wzięte za deployment apply'a
-- [ ] 2.5 Z deployem: runy zmian 2 i 3 mają deployment IaC `pipeline-trigger` w `WAITING`, przekazany monitorowi, exit 0; po CI `SUCCESS`
-- [ ] 2.6 PR env po fazie: `railway config plan --detailed-exit-code` z czubka gałęzi daje 0
+- [x] 2.3 Bez deployu: run zmiany 1 ma „no deploy” dla `db-backup` z `::notice::`, exit 0 i `/api/ready` 200; brak deploymentu `iac-change-set/` po apply'u — 6d13b41
+- [x] 2.4 Równoległy push: deploymenty z pusha zmiany 2 w oknie runu 1 nie są wzięte za deployment apply'a — 4637f86
+- [x] 2.5 Z deployem: runy zmian 2 i 3 mają deployment IaC `pipeline-trigger` w `WAITING`, przekazany monitorowi, exit 0; po CI `SUCCESS` — 9077846
+- [x] 2.6 PR env po fazie: `railway config plan --detailed-exit-code` z czubka gałęzi daje 0 — 4637f86
 
 ### Phase 3: Dokumenty i #73
 
