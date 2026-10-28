@@ -2,8 +2,8 @@ package pl.szczurradar.api.alerts;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.Locale;
 import java.util.function.Function;
+import java.util.regex.Pattern;
 
 import org.jspecify.annotations.Nullable;
 
@@ -16,10 +16,17 @@ import pl.szczurradar.api.settings.SettingText;
  * ping the check — so it is never logged, printed or repeated in an error message, not even in part
  * ({@link SettingText#echoed} is not used here).
  *
- * <p>Optional. Unset or blank: the channel is not configured and nothing is sent. Set, it must be an
- * absolute {@code https://} URL with a host and without a query or fragment (the sender appends
- * {@code /fail} to its path); otherwise {@link #from} throws an {@link InvalidSettingsException} naming
- * only the variable. A trailing {@code /} is dropped.
+ * <p>Optional. Unset or blank: the channel is not configured and nothing is sent. Set, the whole value
+ * must match {@link #PING_PATTERN} (the sender appends {@code /fail} to its path): {@code https} in any
+ * case, a host name (no user info, no IP address: the last label starts with a letter), an optional
+ * port, and a path without {@code ?} or {@code #} in which {@code %} only starts a {@code %XX} escape.
+ * Otherwise {@link #from} throws an {@link InvalidSettingsException} naming only the variable. A
+ * trailing {@code /} is dropped.
+ *
+ * <p>The same rule, as the same literal, is in {@code tools/db-backup/backup.sh},
+ * {@code tools/pipeline-trigger/trigger.sh} and {@code tools/healthchecks/checks.sh} (S-25); step 9 of
+ * {@code tools/healthchecks/test.sh} fails when a copy differs, and its cases in
+ * {@code tools/healthchecks/fixtures/ping-urls.txt} are this class's test table too.
  *
  * <p>Read by the server when it starts ({@link AlertsConfiguration}, so a bad value stops the start)
  * and by the command {@code send-test-alert}, without Spring. The other operator commands do not read it.
@@ -28,8 +35,17 @@ public final class AlertSettings {
 
 	public static final String NAME = "HEALTHCHECK_PING_URL";
 
-	private static final String RULE = "must be an absolute https:// URL with a host and without a query or"
-			+ " fragment, e.g. https://hc-ping.com/<uuid>, or unset to send no operator alerts";
+	/**
+	 * The rule as one line (step 9 of {@code tools/healthchecks/test.sh} reads it from here): no backslash, so
+	 * the Java literal is the shell literal byte for byte.
+	 */
+	static final String PING_PATTERN = "^[Hh][Tt][Tt][Pp][Ss]://([A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?[.])*[A-Za-z]([A-Za-z0-9-]*[A-Za-z0-9])?(:[0-9]+)?(/([A-Za-z0-9._~:/@!$&()*+,;=-]|%[0-9A-Fa-f]{2})*)?$";
+
+	private static final Pattern PING = Pattern.compile(PING_PATTERN);
+
+	private static final String RULE = "must be an https:// URL (the scheme in any case) with a host name (no user"
+			+ " info, no IP address), an optional port and a path without ? or # in which % only starts a %XX"
+			+ " escape, e.g. https://hc-ping.com/<uuid>, or unset to send no operator alerts";
 
 	private final @Nullable URI pingUrl;
 
@@ -49,10 +65,9 @@ public final class AlertSettings {
 		if (text.isEmpty()) {
 			return new AlertSettings(null);
 		}
-		URI uri = parse(text);
-		if (uri == null || uri.getScheme() == null || !"https".equals(uri.getScheme().toLowerCase(Locale.ROOT))
-				|| uri.getHost() == null || uri.getHost().isEmpty() || uri.getRawQuery() != null
-				|| uri.getRawFragment() != null) {
+		// The pattern decides; the URI is only built from a value it accepted.
+		URI uri = PING.matcher(text).matches() ? parse(text) : null;
+		if (uri == null) {
 			// Never the value: it is a secret (the check's UUID).
 			throw new InvalidSettingsException("Invalid " + NAME + ": " + RULE
 					+ ". The value is a secret, so it is not repeated here.");
