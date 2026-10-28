@@ -89,9 +89,11 @@ function attentionReasonText(code: AttentionReason, run: AttentionFields): strin
       return `błędy techniczne: ${run.processingErrors}`
     case 'skipped':
       return `pominięte elementy: ${run.skipped}`
-    default:
-      // A code the API added after this SPA was built.
-      return String(code)
+    default: {
+      // A code the API added after this SPA was built; a code of the union without a text here fails the build.
+      const unknown: never = code
+      return String(unknown)
+    }
   }
 }
 
