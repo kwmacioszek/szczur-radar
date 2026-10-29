@@ -11,6 +11,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -27,14 +28,18 @@ import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import pl.szczurradar.api.alerts.AlertEvent;
 import pl.szczurradar.api.alerts.OperatorAlertQueue;
+import pl.szczurradar.api.pipeline.run.AttentionReason;
 import pl.szczurradar.api.pipeline.run.InterruptionCause;
 import pl.szczurradar.api.pipeline.run.PipelineRun;
 import pl.szczurradar.api.pipeline.run.PipelineRunRepository;
 import pl.szczurradar.api.pipeline.run.RunKind;
 import pl.szczurradar.api.pipeline.run.RunStatus;
+import pl.szczurradar.api.sources.Source;
+import pl.szczurradar.api.user.SystemAccount;
 
 /**
  * Which run endings {@link RunNotifications#runEnded} raises to the operator, with mocks: a run that
@@ -112,6 +117,28 @@ class RunNotificationsTest {
 
 		verify(alerts).raise(AlertEvent.RUN_NEEDS_ATTENTION, id, "Pipeline run " + id
 				+ " (retry, cron) ended partial: dead 1, errors 0, skipped 0; /admin/runs/" + id);
+	}
+
+	@Test
+	void aCronRunThatEndedPartialOnlyBecauseASourceGaveNoPostIsRaised() {
+		// The run's own rule, not a stubbed one: its only reason is the empty source.
+		PipelineRun run = PipelineRun.range(Instant.parse("2026-09-30T22:00:00Z"),
+				Instant.parse("2026-10-01T21:59:59Z"), List.of(Source.WYKOP, Source.REDDIT), SystemAccount.SCHEDULER.id(),
+				null);
+		UUID id = UUID.randomUUID();
+		ReflectionTestUtils.setField(run, "id", id);
+		ReflectionTestUtils.setField(run, "status", RunStatus.PARTIAL);
+		ReflectionTestUtils.setField(run, "sourcesEmpty", 1);
+		ReflectionTestUtils.setField(run, "error", "reddit gave no post to store (fetched 0, skipped 0)");
+		assertThat(run.attentionReasons()).containsExactly(AttentionReason.SOURCE_EMPTY);
+		notified(run, 1);
+
+		runNotifications.runEnded(id);
+
+		verify(notifications).notifyAdmins(NotificationKind.RUN_ATTENTION, id);
+		verify(alerts).raise(AlertEvent.RUN_NEEDS_ATTENTION, id, "Pipeline run " + id + " (range, cron) ended partial:"
+				+ " dead 0, errors 0, skipped 0; error: reddit gave no post to store (fetched 0, skipped 0);"
+				+ " /admin/runs/" + id);
 	}
 
 	@Test

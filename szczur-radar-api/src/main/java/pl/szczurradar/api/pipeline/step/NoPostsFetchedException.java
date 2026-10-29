@@ -1,14 +1,14 @@
 package pl.szczurradar.api.pipeline.step;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
+import pl.szczurradar.api.pipeline.flow.RunFlow.SourceFetch;
 import pl.szczurradar.api.sources.Source;
 
 /**
- * A range run's sources gave no post to store: a source fetched no element in the range, or only
- * elements that could not become a post. The fetch step, and so the run, fails; the message names each
- * such source with its own counts.
+ * No source of a range run gave a post to store: each one failed, fetched no element in the range, or
+ * only elements that could not become a post. The fetch step, and so the run, fails; the message names
+ * each source with its result ({@link SourceFetch#summary}).
  */
 public class NoPostsFetchedException extends RuntimeException {
 
@@ -18,22 +18,15 @@ public class NoPostsFetchedException extends RuntimeException {
 
 	private final int skipped;
 
-	/**
-	 * @param empty each source that gave no post, with its own counts
-	 * @param fetched the elements every source of the run fetched, for the run's counters
-	 * @param skipped the elements of every source of the run that could not become a post
-	 */
-	public NoPostsFetchedException(List<EmptySource> empty, int fetched, int skipped) {
-		super(empty.stream()
-			.map(source -> source.source().value() + " gave no post to store (fetched " + source.fetched()
-					+ ", skipped " + source.skipped() + ")")
-			.collect(Collectors.joining("; ")));
-		this.sources = empty.stream().map(EmptySource::source).toList();
-		this.fetched = fetched;
-		this.skipped = skipped;
+	/** @param outcomes the result of every source of the run, none of them {@code succeeded} */
+	public NoPostsFetchedException(List<SourceFetch> outcomes) {
+		super(SourceFetch.summary(outcomes));
+		this.sources = outcomes.stream().map(SourceFetch::source).toList();
+		this.fetched = outcomes.stream().mapToInt(SourceFetch::fetched).sum();
+		this.skipped = outcomes.stream().mapToInt(SourceFetch::skipped).sum();
 	}
 
-	/** The sources that gave no post. */
+	/** Every source of the run, in the order they were fetched. */
 	public List<Source> sources() {
 		return sources;
 	}
@@ -46,10 +39,6 @@ public class NoPostsFetchedException extends RuntimeException {
 	/** The elements of every source of the run that could not become a post. */
 	public int skipped() {
 		return skipped;
-	}
-
-	/** A source that gave no post, with what it fetched and skipped. */
-	public record EmptySource(Source source, int fetched, int skipped) {
 	}
 
 }

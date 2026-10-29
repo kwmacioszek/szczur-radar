@@ -19,46 +19,69 @@ class PipelineRunTest {
 
 	@Test
 	void aFailedRunHasOnlyItsOwnReasonWhateverItsCounters() {
-		assertThat(PipelineRun.attentionReasons(RunStatus.FAILED, 0, 0, 0)).containsExactly(AttentionReason.FAILED);
-		assertThat(PipelineRun.attentionReasons(RunStatus.FAILED, 1, 1, 1)).containsExactly(AttentionReason.FAILED);
+		assertThat(PipelineRun.attentionReasons(RunStatus.FAILED, 0, 0, 0, 0, 0))
+			.containsExactly(AttentionReason.FAILED);
+		assertThat(PipelineRun.attentionReasons(RunStatus.FAILED, 1, 1, 1, 1, 1))
+			.containsExactly(AttentionReason.FAILED);
 	}
 
 	@Test
 	void anInterruptedRunHasOnlyItsOwnReasonWhateverItsCounters() {
-		assertThat(PipelineRun.attentionReasons(RunStatus.INTERRUPTED, 0, 0, 0))
+		assertThat(PipelineRun.attentionReasons(RunStatus.INTERRUPTED, 0, 0, 0, 0, 0))
 			.containsExactly(AttentionReason.INTERRUPTED);
-		assertThat(PipelineRun.attentionReasons(RunStatus.INTERRUPTED, 1, 1, 1))
+		assertThat(PipelineRun.attentionReasons(RunStatus.INTERRUPTED, 1, 1, 1, 1, 1))
 			.containsExactly(AttentionReason.INTERRUPTED);
 	}
 
 	@Test
 	void aPartialRunNeedsAttentionOnlyWithADeadPostATechnicalErrorOrSkippedElementsInThatOrder() {
-		assertThat(PipelineRun.attentionReasons(RunStatus.PARTIAL, 1, 0, 0)).as("a dead post")
+		assertThat(PipelineRun.attentionReasons(RunStatus.PARTIAL, 1, 0, 0, 0, 0)).as("a dead post")
 			.containsExactly(AttentionReason.DEAD_POSTS);
-		assertThat(PipelineRun.attentionReasons(RunStatus.PARTIAL, 0, 1, 0)).as("a technical error")
+		assertThat(PipelineRun.attentionReasons(RunStatus.PARTIAL, 0, 1, 0, 0, 0)).as("a technical error")
 			.containsExactly(AttentionReason.PROCESSING_ERRORS);
-		assertThat(PipelineRun.attentionReasons(RunStatus.PARTIAL, 0, 0, 1)).as("a skipped element")
+		assertThat(PipelineRun.attentionReasons(RunStatus.PARTIAL, 0, 0, 1, 0, 0)).as("a skipped element")
 			.containsExactly(AttentionReason.SKIPPED);
-		assertThat(PipelineRun.attentionReasons(RunStatus.PARTIAL, 2, 3, 4)).containsExactly(AttentionReason.DEAD_POSTS,
-				AttentionReason.PROCESSING_ERRORS, AttentionReason.SKIPPED);
+		assertThat(PipelineRun.attentionReasons(RunStatus.PARTIAL, 2, 3, 4, 0, 0))
+			.containsExactly(AttentionReason.DEAD_POSTS, AttentionReason.PROCESSING_ERRORS, AttentionReason.SKIPPED);
 		// Only failed posts with attempts left: the next run retries them.
-		assertThat(PipelineRun.attentionReasons(RunStatus.PARTIAL, 0, 0, 0)).isEmpty();
+		assertThat(PipelineRun.attentionReasons(RunStatus.PARTIAL, 0, 0, 0, 0, 0)).isEmpty();
 	}
 
 	@Test
 	void aSucceededRunNeedsAttentionOnlyWithSkippedElements() {
-		assertThat(PipelineRun.attentionReasons(RunStatus.SUCCEEDED, 0, 0, 1)).as("a skipped element")
+		assertThat(PipelineRun.attentionReasons(RunStatus.SUCCEEDED, 0, 0, 1, 0, 0)).as("a skipped element")
 			.containsExactly(AttentionReason.SKIPPED);
-		assertThat(PipelineRun.attentionReasons(RunStatus.SUCCEEDED, 0, 0, 0)).isEmpty();
+		assertThat(PipelineRun.attentionReasons(RunStatus.SUCCEEDED, 0, 0, 0, 0, 0)).isEmpty();
 		// A succeeded run has neither, but they alone would not make it need attention.
-		assertThat(PipelineRun.attentionReasons(RunStatus.SUCCEEDED, 1, 1, 0)).isEmpty();
+		assertThat(PipelineRun.attentionReasons(RunStatus.SUCCEEDED, 1, 1, 0, 0, 0)).isEmpty();
+	}
+
+	@Test
+	void aPartialRunsFailedOrEmptySourcesComeFirstInTheRulesOrder() {
+		assertThat(PipelineRun.attentionReasons(RunStatus.PARTIAL, 0, 0, 0, 1, 0)).as("a failed source")
+			.containsExactly(AttentionReason.SOURCE_FAILED);
+		assertThat(PipelineRun.attentionReasons(RunStatus.PARTIAL, 0, 0, 0, 0, 1)).as("an empty source")
+			.containsExactly(AttentionReason.SOURCE_EMPTY);
+		assertThat(PipelineRun.attentionReasons(RunStatus.PARTIAL, 0, 0, 0, 1, 1))
+			.containsExactly(AttentionReason.SOURCE_FAILED, AttentionReason.SOURCE_EMPTY);
+		assertThat(PipelineRun.attentionReasons(RunStatus.PARTIAL, 2, 3, 4, 1, 1)).containsExactly(
+				AttentionReason.SOURCE_FAILED, AttentionReason.SOURCE_EMPTY, AttentionReason.DEAD_POSTS,
+				AttentionReason.PROCESSING_ERRORS, AttentionReason.SKIPPED);
+	}
+
+	@Test
+	void aSucceededRunsFailedOrEmptySourceNeedsAttention() {
+		assertThat(PipelineRun.attentionReasons(RunStatus.SUCCEEDED, 0, 0, 0, 0, 1))
+			.containsExactly(AttentionReason.SOURCE_EMPTY);
+		assertThat(PipelineRun.attentionReasons(RunStatus.SUCCEEDED, 0, 0, 2, 1, 0))
+			.containsExactly(AttentionReason.SOURCE_FAILED, AttentionReason.SKIPPED);
 	}
 
 	@ParameterizedTest
 	@EnumSource(value = RunStatus.class, names = { "QUEUED", "RUNNING" })
 	void anUnfinishedRunNeedsNoAttentionWhateverItsCounters(RunStatus status) {
-		assertThat(PipelineRun.attentionReasons(status, 0, 0, 0)).isEmpty();
-		assertThat(PipelineRun.attentionReasons(status, 1, 1, 1)).isEmpty();
+		assertThat(PipelineRun.attentionReasons(status, 0, 0, 0, 0, 0)).isEmpty();
+		assertThat(PipelineRun.attentionReasons(status, 1, 1, 1, 1, 1)).isEmpty();
 	}
 
 	@Test

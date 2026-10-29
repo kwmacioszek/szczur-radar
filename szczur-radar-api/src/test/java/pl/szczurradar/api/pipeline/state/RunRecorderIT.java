@@ -83,7 +83,7 @@ class RunRecorderIT {
 		UUID running = run("running", null, "1 hour");
 
 		assertThat(recorder.finish(queued, RunStatus.SUCCEEDED, "x")).isFalse();
-		recorder.count(queued, Counters.fetched(3, 1));
+		recorder.count(queued, new Counters(3, 0, 0, 0, 0, 0, 1, 0, 0));
 		recorder.touch(queued);
 		recorder.error(queued, "not yours");
 		assertThat(row(queued)).containsEntry("status", "queued")
@@ -95,7 +95,7 @@ class RunRecorderIT {
 		Object before = row(running).get("last_activity_at");
 		recorder.touch(running);
 		assertThat(row(running).get("last_activity_at")).isNotEqualTo(before);
-		recorder.count(running, Counters.fetched(3, 1));
+		recorder.count(running, new Counters(3, 0, 0, 0, 0, 0, 1, 0, 0));
 		recorder.count(running, Counters.assessedOk(2, true));
 		recorder.error(running, "1 post with a technical error");
 		assertThat(row(running)).containsEntry("fetched", 3)
@@ -112,7 +112,7 @@ class RunRecorderIT {
 
 		// Over: nothing changes it any more.
 		assertThat(recorder.finish(running, RunStatus.FAILED, "late")).isFalse();
-		recorder.count(running, Counters.fetched(5, 0));
+		recorder.count(running, new Counters(5, 0, 0, 0, 0, 0, 0, 0, 0));
 		recorder.error(running, "late");
 		assertThat(row(running)).containsEntry("status", "partial")
 			.containsEntry("fetched", 3)

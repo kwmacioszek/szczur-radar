@@ -64,6 +64,7 @@ import pl.szczurradar.api.notifications.RunNotifications;
 import pl.szczurradar.api.pipeline.assess.AssessmentDispatcher;
 import pl.szczurradar.api.pipeline.assess.AssessmentPool;
 import pl.szczurradar.api.pipeline.flow.RunSequence;
+import pl.szczurradar.api.pipeline.run.AttentionReason;
 import pl.szczurradar.api.pipeline.run.PipelineRun;
 import pl.szczurradar.api.pipeline.run.PipelineRunRepository;
 import pl.szczurradar.api.pipeline.run.RunKind;
@@ -71,10 +72,16 @@ import pl.szczurradar.api.pipeline.state.PostTransitions;
 import pl.szczurradar.api.pipeline.state.RunRecorder;
 import pl.szczurradar.api.pipeline.step.SourceIngest;
 import pl.szczurradar.api.posts.PostRepository;
+import pl.szczurradar.api.sources.ScriptedSourceConfiguration;
+import pl.szczurradar.api.sources.ScriptedSourceFetcher;
 import pl.szczurradar.api.sources.Source;
+import pl.szczurradar.api.sources.SourceFetcher;
 import pl.szczurradar.api.sources.wykop.LocalWykopServer;
 import pl.szczurradar.api.sources.wykop.LocalWykopServer.Reply;
 import pl.szczurradar.api.sources.wykop.WykopApiClient;
+import pl.szczurradar.api.sources.wykop.WykopItem;
+import pl.szczurradar.api.sources.wykop.WykopMapper;
+import pl.szczurradar.api.sources.wykop.WykopPosts;
 import pl.szczurradar.api.sources.wykop.WykopRepository;
 import pl.szczurradar.api.user.Role;
 import pl.szczurradar.api.user.User;
@@ -83,7 +90,9 @@ import pl.szczurradar.api.user.UserRepository;
 /**
  * The whole run sequence on Postgres: Wykop is a local server answering the real, anonymized #gielda
  * answers of 2026-10-01 (12 entries, 4 links), the LLM a scripted client. The admin is notified about the
- * runs that need attention, as their end, a failure or a closing instance reports them.
+ * runs that need attention, as their end, a failure or a closing instance reports them. A second source
+ * ({@link ScriptedSourceConfiguration}, under {@link Source#REDDIT}) is configured only by the scenarios of
+ * two sources: one source failing, silent or stopped leaves the other's posts stored and assessed.
  *
  * <p>Each scenario stands alone and the methods run in a random order (the seed is logged and repeatable,
  * {@link RandomOrderSeed}): before each one the run and post tables are emptied ({@link #reset}), a
@@ -98,7 +107,7 @@ import pl.szczurradar.api.user.UserRepository;
  * to say what they waited for.
  */
 @SpringBootTest(properties = MigrateCommand.ENABLE_FLYWAY)
-@Import({ TestcontainersConfiguration.class, PipelineRunIT.LocalWykop.class })
+@Import({ TestcontainersConfiguration.class, PipelineRunIT.LocalWykop.class, ScriptedSourceConfiguration.class })
 @TestMethodOrder(MethodOrderer.Random.class)
 @ExtendWith(OutputCaptureExtension.class)
 @Timeout(value = 5, unit = TimeUnit.MINUTES)
@@ -192,6 +201,10 @@ class PipelineRunIT {
 	@Autowired
 	ObjectProvider<OperatorAlertQueue> alerts;
 
+	/** The second source; not configured unless a scenario says so ({@link #reset}). */
+	@Autowired
+	ScriptedSourceFetcher reddit;
+
 	/** The latches this scenario's scripted calls wait on; {@link #settle} releases every one. */
 	private final List<CountDownLatch> held = new CopyOnWriteArrayList<>();
 
@@ -222,6 +235,7 @@ class PipelineRunIT {
 		wykopDown = false;
 		wykopEmpty = false;
 		wykopTextless = 0;
+		reddit.reset();
 		admin = users.findByEmail("pipeline-admin@example.com")
 			.orElseGet(() -> users.save(new User("pipeline-admin@example.com", null, Role.ADMIN)))
 			.getId();
@@ -229,13 +243,14 @@ class PipelineRunIT {
 	}
 
 	/**
-	 * Releases every call the scenario holds and waits until the service is quiet: no run of its own on
+	 * Releases every call and fetch the scenario holds and waits until the service is quiet: no run of its own on
 	 * any instance (each run's queue thread closed it) and no task of the LLM pool in progress. The
 	 * scripted client is reset only after this ({@code @MockitoBean}), so a held call still ends as scripted.
 	 */
 	@AfterEach
 	void settle() {
 		held.forEach(CountDownLatch::countDown);
+		reddit.release();
 		// A scenario that failed before its own onClose() would leave a live queue thread otherwise; idempotent
 		// for one it closed itself.
 		stoppingInstances.forEach(PipelineRunService::onClose);
@@ -272,6 +287,9 @@ class PipelineRunIT {
 		assertThat(jdbc.queryForList("SELECT step || ':' || status FROM pipeline_run_steps WHERE run_id = ?"
 				+ " ORDER BY started_at, id", String.class, runs.getFirst().getId())).containsExactly("fetch:succeeded",
 						"store:succeeded", "select:succeeded", "assess:succeeded", "summarize:succeeded");
+		// Its one source's result.
+		assertThat(sources(runs.getFirst().getId())).containsExactly("wykop:succeeded:16:0:");
+		assertThat(run).containsEntry("sources_failed", 0).containsEntry("sources_empty", 0);
 		assertThat(count("SELECT count(*) FROM posts WHERE stage = 'assessed' AND first_run_id = ?", runs.getFirst().getId()))
 			.isEqualTo(16);
 		assertThat(count("SELECT count(*) FROM posts p JOIN raw_payloads r ON r.id = p.raw_payload_id", null)).isEqualTo(16);
@@ -531,6 +549,7 @@ class PipelineRunIT {
 			assertThat(steps(range)).containsExactly("fetch:failed");
 			assertThat(jdbc.queryForObject("SELECT error FROM pipeline_run_steps WHERE run_id = ? AND step = 'fetch'",
 					String.class, range)).isEqualTo("wykop gave no post to store (fetched 0, skipped 0)");
+			assertThat(sources(range)).containsExactly("wykop:empty:0:0:");
 			// The step ran once: one search of entries and one of links, no repeated fetch.
 			assertThat(searches() - searches).isEqualTo(2);
 			awaitClosed(range);
@@ -679,6 +698,132 @@ class PipelineRunIT {
 		assertThat(run(run)).containsEntry("status", "interrupted").containsEntry("processing_errors", 0);
 	}
 
+	@Test
+	void aSourceThatFailsLeavesTheOtherSourcesPostsAssessedAndTheRunPartial(CapturedOutput output) {
+		reddit.configured(true).fail(new IllegalStateException("HTTP 503 from reddit"));
+
+		List<PipelineRun> created = service.startRange(DAY, DAY, List.of(), admin);
+		UUID range = created.getLast().getId();
+
+		// No sources named: every configured one, the second source too.
+		assertThat(created.getLast().getSources()).containsExactly(Source.WYKOP, Source.REDDIT);
+		Map<String, Object> run = finished(range);
+		assertThat(run).containsEntry("status", "partial")
+			.containsEntry("fetched", 16)
+			.containsEntry("new_posts", 16)
+			.containsEntry("assessed_ok", 16)
+			.containsEntry("sources_failed", 1)
+			.containsEntry("sources_empty", 0)
+			.containsEntry("error", "reddit failed: IllegalStateException: HTTP 503 from reddit");
+		// The fetch step went on after the failed source.
+		assertThat(steps(range)).containsExactly("fetch:succeeded", "store:succeeded", "select:succeeded",
+				"assess:succeeded", "summarize:succeeded");
+		assertThat(sources(range)).containsExactlyInAnyOrder("wykop:succeeded:16:0:",
+				"reddit:failed:0:0:IllegalStateException: HTTP 503 from reddit");
+		assertThat(count("SELECT count(*) FROM posts WHERE stage = 'assessed' AND source = 'wykop'"
+				+ " AND first_run_id = ?", range)).isEqualTo(16);
+		assertThat(runs.findById(range).orElseThrow().attentionReasons())
+			.containsExactly(AttentionReason.SOURCE_FAILED);
+		awaitClosed(range);
+		assertThat(notified(range)).isOne();
+		awaitLog(output, "Operator alert RUN_NEEDS_ATTENTION (run " + range + ") taken");
+		awaitLog(output, "Run " + range + ": reddit failed: HTTP 503 from reddit");
+	}
+
+	@Test
+	void aSourceWithoutAPostMakesTheRunPartialWithItsReason() {
+		reddit.configured(true).answerEmpty(0);
+
+		UUID range = service.startRange(DAY, DAY, List.of(), admin).getLast().getId();
+
+		assertThat(finished(range)).containsEntry("status", "partial")
+			.containsEntry("assessed_ok", 16)
+			.containsEntry("sources_failed", 0)
+			.containsEntry("sources_empty", 1)
+			.containsEntry("error", "reddit gave no post to store (fetched 0, skipped 0)");
+		assertThat(sources(range)).containsExactlyInAnyOrder("wykop:succeeded:16:0:", "reddit:empty:0:0:");
+		assertThat(runs.findById(range).orElseThrow().attentionReasons()).containsExactly(AttentionReason.SOURCE_EMPTY);
+		awaitClosed(range);
+		assertThat(notified(range)).isOne();
+	}
+
+	@Test
+	void aWykopOutageLeavesTheSecondSourcesPostAssessedFromItsRawPayload() {
+		wykopDown = true;
+		reddit.configured(true).answer(new SourceFetcher.Fetched(List.of(ScriptedSourceConfiguration.post()), 1, 0));
+
+		UUID range = service.startRange(DAY, DAY, List.of(), admin).getLast().getId();
+
+		Map<String, Object> run = finished(range);
+		assertThat(run).containsEntry("status", "partial")
+			.containsEntry("fetched", 1)
+			.containsEntry("new_posts", 1)
+			.containsEntry("assessed_ok", 1)
+			.containsEntry("sources_failed", 1);
+		assertThat((String) run.get("error")).startsWith("wykop failed: WykopApiException: ");
+		assertThat(sources(range)).hasSize(2).contains("reddit:succeeded:1:0:");
+		assertThat(jdbc.queryForObject("SELECT status FROM pipeline_run_sources WHERE run_id = ? AND source = 'wykop'",
+				String.class, range)).isEqualTo("failed");
+		assertThat(runs.findById(range).orElseThrow().attentionReasons())
+			.containsExactly(AttentionReason.SOURCE_FAILED);
+		// The second source's post was stored and assessed on the input its raw payload maps to: the fixture's.
+		UUID post = jdbc.queryForObject("SELECT id FROM posts WHERE source = 'reddit' AND first_run_id = ?", UUID.class,
+				range);
+		assertThat(post(post)).containsEntry("stage", "assessed");
+		JsonNode input = MAPPER.readTree(jdbc.queryForObject("SELECT input::text FROM assessments WHERE post_id = ?"
+				+ " AND run_id = ? AND status = 'ok'", String.class, post, range));
+		byte[] entry = ScriptedSourceConfiguration.entry();
+		assertThat(input).isEqualTo(MAPPER.readTree(ContractJson.MAPPER
+			.writeValueAsString(WykopMapper.map(MAPPER.readValue(entry, WykopItem.class), WykopPosts.TAG))));
+		assertThat(input.at("/item/body").asString()).isEqualTo(MAPPER.readTree(entry).get("content").asString());
+		awaitClosed(range);
+		assertThat(notified(range)).isOne();
+	}
+
+	@Test
+	void sourcesThatAllGaveNoPostFailTheRunAtTheFetchNamingEach() {
+		wykopEmpty = true;
+		reddit.configured(true).fail(new IllegalStateException("HTTP 503 from reddit"));
+
+		UUID range = service.startRange(DAY, DAY, List.of(), admin).getLast().getId();
+
+		assertThat(finished(range)).containsEntry("status", "failed")
+			.containsEntry("fetched", 0)
+			.containsEntry("sources_failed", 1)
+			.containsEntry("sources_empty", 1)
+			.containsEntry("error", "NoPostsFetchedException: wykop gave no post to store (fetched 0, skipped 0);"
+					+ " reddit failed: IllegalStateException: HTTP 503 from reddit");
+		assertThat(steps(range)).containsExactly("fetch:failed");
+		assertThat(sources(range)).containsExactlyInAnyOrder("wykop:empty:0:0:",
+				"reddit:failed:0:0:IllegalStateException: HTTP 503 from reddit");
+		assertThat(count("SELECT count(*) FROM posts", null)).isZero();
+		awaitClosed(range);
+		assertThat(notified(range)).isOne();
+	}
+
+	@Test
+	void aRunStoppedBetweenItsSourcesGetsNoRowForTheSourceItWasIn(CapturedOutput output) {
+		reddit.configured(true).answerPosts(1).hold();
+		// A second instance of the service, as during a deployment overlap; the shared one keeps running.
+		PipelineRunService stopping = stoppingInstance();
+		UUID run = stopping.startRange(DAY, DAY, List.of(), admin).getLast().getId();
+		// Wykop's result is written before the second source is asked; that fetch is held.
+		until(run, row -> reddit.calls() == 1);
+		assertThat(sources(run)).containsExactly("wykop:succeeded:16:0:");
+
+		stopping.onClose();
+
+		assertThat(run(run)).containsEntry("status", "interrupted").containsEntry("interruption_cause", "shutdown");
+		awaitLog(output, "Pipeline run " + run + ": stopped, the application is stopping");
+		awaitClosed(stopping, run);
+		// The interrupt ended the held fetch; the stopped run got no row for it and stored nothing.
+		assertThat(sources(run)).containsExactly("wykop:succeeded:16:0:");
+		assertThat(reddit.calls()).isOne();
+		assertThat(steps(run)).containsExactly("fetch:interrupted");
+		assertThat(count("SELECT count(*) FROM posts", null)).isZero();
+		assertThat(output.getAll().lines().filter(line -> line.contains(" ERROR "))).isEmpty();
+	}
+
 	/**
 	 * Runs the day's range on the shared service — its 16 posts stored and assessed — and waits until the
 	 * run is closed: the start of a scenario that needs assessed posts.
@@ -746,6 +891,13 @@ class PipelineRunIT {
 		return jdbc.queryForList("SELECT p.id FROM posts p WHERE p.stage = 'assessed' AND EXISTS"
 				+ " (SELECT 1 FROM assessments a WHERE a.post_id = p.id AND a.result_source = 'model')"
 				+ " ORDER BY p.id LIMIT ?", UUID.class, limit);
+	}
+
+	/** The run's sources' results as {@code source:status:fetched:skipped:error}. */
+	private List<String> sources(UUID runId) {
+		return jdbc.queryForList("SELECT source || ':' || status || ':' || fetched || ':' || skipped || ':'"
+				+ " || COALESCE(error, '') FROM pipeline_run_sources WHERE run_id = ? ORDER BY finished_at, id",
+				String.class, runId);
 	}
 
 	/** The run's steps as {@code step:status}, in the order they started. */

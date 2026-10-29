@@ -20,7 +20,8 @@ public interface SourceFetcher {
 	 * The posts added between {@code from} and {@code to} (inclusive), each once.
 	 *
 	 * @throws IllegalStateException when not {@link #configured()}
-	 * @throws RuntimeException when the source fails (the run fails; nothing is half-stored)
+	 * @throws RuntimeException when the source fails: the source's result is {@code failed}, nothing of it
+	 *     is stored, and the run goes on with the other sources
 	 */
 	Fetched fetch(Instant from, Instant to);
 

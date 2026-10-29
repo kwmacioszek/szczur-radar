@@ -436,10 +436,6 @@ public class RunRecorder {
 	public record Counters(int fetched, int newPosts, int assessedOk, int assessedFailed, int processingErrors,
 			int dead, int skipped, int llmRetries, int flexFallbacks) {
 
-		public static Counters fetched(int fetched, int skipped) {
-			return new Counters(fetched, 0, 0, 0, 0, 0, skipped, 0, 0);
-		}
-
 		public static Counters stored(int newPosts) {
 			return new Counters(0, newPosts, 0, 0, 0, 0, 0, 0, 0);
 		}

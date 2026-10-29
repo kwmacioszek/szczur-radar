@@ -16,6 +16,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -54,6 +55,9 @@ import pl.szczurradar.api.pipeline.assess.AssessmentDispatcher;
 import pl.szczurradar.api.pipeline.assess.AssessmentPool;
 import pl.szczurradar.api.pipeline.run.PipelineRun;
 import pl.szczurradar.api.pipeline.run.RunKind;
+import pl.szczurradar.api.sources.ScriptedSourceConfiguration;
+import pl.szczurradar.api.sources.ScriptedSourceFetcher;
+import pl.szczurradar.api.sources.SourceFetcher;
 import pl.szczurradar.api.sources.wykop.LocalWykopServer;
 import pl.szczurradar.api.sources.wykop.LocalWykopServer.Reply;
 import pl.szczurradar.api.sources.wykop.WykopApiClient;
@@ -67,8 +71,10 @@ import pl.szczurradar.api.user.UserRepository;
  * every second): a run waiting for an LLM call that does not end is stopped (the admin notified once),
  * its call is interrupted and the run queued behind it goes on; the stopped run's step writes nothing;
  * a slow run with progress is not stopped; nor is one whose calls find the provider unavailable before
- * the breaker stops it; another instance's run is left alone; a database call has an end too. Wykop is a local server answering the real, anonymized #gielda answers of 2026-10-01, the LLM
- * a scripted client.
+ * the breaker stops it; nor is one whose two sources together take longer than the timeout, each under it
+ * (the write after each source is progress); another instance's run is left alone; a database call has an
+ * end too. Wykop is a local server answering the real, anonymized #gielda answers of 2026-10-01, the LLM
+ * a scripted client, the second source ({@link ScriptedSourceConfiguration}) configured only by its scenario.
  *
  * <p>Each scenario stands alone and the methods run in a random order (the seed is logged and repeatable,
  * {@link RandomOrderSeed}), as in {@link PipelineRunIT}: the run and post tables are emptied before each
@@ -86,7 +92,7 @@ import pl.szczurradar.api.user.UserRepository;
 		// One thread of the LLM pool: the run queued behind a stopped one assesses only once the stop has
 		// interrupted the stopped run's call and freed the thread.
 		"PIPELINE_LLM_CONCURRENCY=1" })
-@Import({ TestcontainersConfiguration.class, RunWatchdogIT.LocalWykop.class })
+@Import({ TestcontainersConfiguration.class, RunWatchdogIT.LocalWykop.class, ScriptedSourceConfiguration.class })
 @TestMethodOrder(MethodOrderer.Random.class)
 @ExtendWith(OutputCaptureExtension.class)
 @Timeout(value = 5, unit = TimeUnit.MINUTES)
@@ -110,11 +116,18 @@ class RunWatchdogIT {
 	/** When set, the day's 4 links are published: a range run stores them as new posts. */
 	private static volatile boolean linksPublished;
 
+	/** When set, Wykop answers its entries search after this pause. */
+	private static volatile @Nullable Duration entriesDelay;
+
 	private static final LocalWykopServer WYKOP = new LocalWykopServer(request -> {
 		if (request.path().endsWith("/auth")) {
 			return Reply.ok("{\"data\":{\"token\":\"t\"}}");
 		}
 		if (request.path().endsWith("/search/entries")) {
+			Duration delay = entriesDelay;
+			if (delay != null) {
+				pause(delay);
+			}
 			return Reply.ok(ENTRIES);
 		}
 		return Reply.ok(linksPublished ? LocalWykopServer.fixture("search-links-page.json") : NO_LINKS);
@@ -142,6 +155,10 @@ class RunWatchdogIT {
 	@Autowired
 	AssessmentPool llmPool;
 
+	/** The second source; not configured unless a scenario says so ({@link #reset}). */
+	@Autowired
+	ScriptedSourceFetcher reddit;
+
 	/** The latches this scenario's scripted calls wait on; {@link #settle} releases every one. */
 	private final List<CountDownLatch> held = new CopyOnWriteArrayList<>();
 
@@ -154,7 +171,8 @@ class RunWatchdogIT {
 
 	/**
 	 * Starts from empty run and post tables (one statement, as in {@link PipelineRunIT#reset}), once the
-	 * previous scenario left nothing running; the day's links unpublished. The admin is created once.
+	 * previous scenario left nothing running; the day's links unpublished, Wykop without a pause and the
+	 * second source not configured. The admin is created once.
 	 */
 	@BeforeEach
 	void reset() {
@@ -165,6 +183,8 @@ class RunWatchdogIT {
 		jdbc.execute("TRUNCATE notifications, pipeline_run_steps, pipeline_run_sources, assessments, posts,"
 				+ " raw_payloads, pipeline_runs");
 		linksPublished = false;
+		entriesDelay = null;
+		reddit.reset();
 		admin = users.findByEmail("watchdog-admin@example.com")
 			.orElseGet(() -> users.save(new User("watchdog-admin@example.com", null, Role.ADMIN)))
 			.getId();
@@ -178,6 +198,7 @@ class RunWatchdogIT {
 	@AfterEach
 	void settle() {
 		held.forEach(CountDownLatch::countDown);
+		reddit.release();
 		long deadline = System.nanoTime() + Duration.ofSeconds(30).toNanos();
 		while (!quiet()) {
 			if (System.nanoTime() > deadline) {
@@ -303,6 +324,40 @@ class RunWatchdogIT {
 	}
 
 	@Test
+	void twoSourcesTakingLongerThanTheTimeoutTogetherAreNotStopped(CapturedOutput output) {
+		// Each source takes about 3 s, 2 s under the timeout; both together about 6 s, longer than it: only the
+		// write after each source (progress) keeps the fetch step from being stopped.
+		entriesDelay = Duration.ofSeconds(3);
+		reddit.configured(true)
+			.answer(new SourceFetcher.Fetched(List.of(ScriptedSourceConfiguration.post()), 1, 0))
+			.delay(Duration.ofSeconds(3));
+
+		UUID range = service.startRange(DAY, DAY, List.of(), admin).getLast().getId();
+
+		// While the second source is fetched, the run's last activity is the first source's write.
+		awaitCalled(reddit);
+		assertThat(jdbc.queryForMap("SELECT r.status, r.last_activity_at = s.finished_at AS moved FROM pipeline_runs r"
+				+ " JOIN pipeline_run_sources s ON s.run_id = r.id AND s.source = 'wykop' WHERE r.id = ?", range))
+			.containsEntry("status", "running")
+			.containsEntry("moved", true);
+		assertThat(finished(range)).containsEntry("status", "succeeded")
+			.containsEntry("fetched", 13)
+			.containsEntry("new_posts", 13)
+			.containsEntry("assessed_ok", 13)
+			.containsEntry("sources_failed", 0)
+			.containsEntry("sources_empty", 0);
+		assertThat(jdbc.queryForList("SELECT source || ':' || status FROM pipeline_run_sources WHERE run_id = ?",
+				String.class, range)).containsExactlyInAnyOrder("wykop:succeeded", "reddit:succeeded");
+		// The fetch step outlived the timeout, and the second source's write came about 3 s after the first's.
+		assertThat(jdbc.queryForObject("SELECT EXTRACT(EPOCH FROM finished_at - started_at) FROM pipeline_run_steps"
+				+ " WHERE run_id = ? AND step = 'fetch'", Double.class, range)).isGreaterThan(TIMEOUT.toSeconds());
+		assertThat(jdbc.queryForObject("SELECT EXTRACT(EPOCH FROM r.finished_at - w.finished_at) FROM"
+				+ " pipeline_run_sources w JOIN pipeline_run_sources r ON r.run_id = w.run_id AND r.source = 'reddit'"
+				+ " WHERE w.run_id = ? AND w.source = 'wykop'", Double.class, range)).isGreaterThan(2.5);
+		assertThat(output.getAll()).doesNotContain("Pipeline run " + range + " made no progress");
+	}
+
+	@Test
 	void anotherInstancesRunIsLeftAlone(CapturedOutput output) {
 		// Running without activity for an hour, but not queued by this instance: start-up recovery's.
 		UUID foreign = jdbc.queryForObject("INSERT INTO pipeline_runs (kind, status, requested_by, started_at,"
@@ -418,6 +473,17 @@ class RunWatchdogIT {
 		long deadline = System.nanoTime() + Duration.ofSeconds(1).toNanos();
 		while (System.nanoTime() < deadline) {
 			assertThat(state.get()).isEqualTo(expected);
+			pause(Duration.ofMillis(100));
+		}
+	}
+
+	/** Waits until {@code fetcher} was asked for a fetch. */
+	private static void awaitCalled(ScriptedSourceFetcher fetcher) {
+		long deadline = System.nanoTime() + Duration.ofSeconds(30).toNanos();
+		while (fetcher.calls() == 0) {
+			if (System.nanoTime() > deadline) {
+				throw new AssertionError("the second source was never fetched");
+			}
 			pause(Duration.ofMillis(100));
 		}
 	}

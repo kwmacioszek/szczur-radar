@@ -13,7 +13,7 @@ Spring beans (`List<…>` injected, keyed by `source()`). It never names a sourc
 
 | Interface | Called by | Contract |
 | --- | --- | --- |
-| `SourceFetcher` | fetch step of a range run (`pipeline/step/SourceIngest`) | `source()`; `configured()` (e.g. keys set — an unconfigured source is never fetched and a request naming it is refused); `fetch(from, to)` → `Fetched(posts, fetched, skipped)`: the posts added in the range as `SourcePost`s, each once; elements that cannot become a post are counted as `skipped`, never thrown; a failure of the source itself is thrown (the run fails) |
+| `SourceFetcher` | fetch step of a range run (`pipeline/step/SourceIngest`) | `source()`; `configured()` (e.g. keys set — an unconfigured source is never fetched and a request naming it is refused); `fetch(from, to)` → `Fetched(posts, fetched, skipped)`: the posts added in the range as `SourcePost`s, each once; elements that cannot become a post are counted as `skipped`, never thrown; a failure of the source itself is thrown: the source's result is `failed`, the run goes on with the other sources (`pipeline/step/SourceIngest`) |
 | `RawInputMapper` | assess step, for new and retried posts alike (`pipeline/assess/AssessmentInputs`) | `source()`; `map(raw)` → the `AssessmentInputV1` of a stored post, rebuilt from the raw payload the fetcher put in `SourcePost.raw` — so a retry gets exactly the input of the first attempt |
 
 `SourcePost` (`sources/SourcePost`): the shared fields, already mapped — `itemType` (shared
@@ -29,10 +29,11 @@ nothing.
 ## Adding a source (e.g. Reddit)
 
 1. `sources/Source`: the constant (its `value()` is what is stored), and one Flyway migration adding
-   that value to the `CHECK` sets of `posts.source`, `raw_payloads.source` and
-   `pipeline_runs.sources` (registering the source; nothing else in persistence changes).
-   `persistence/ClosedSetsIT` is red when the constant has no such migration (or the migration no
-   constant) in any of the three columns.
+   that value to the four `CHECK` sets of a source: `posts.source`, `raw_payloads.source`,
+   `pipeline_runs.sources` and `pipeline_run_sources.source` (registering the source; nothing else in
+   persistence changes). `persistence/ClosedSetsIT` is red when the constant has no such migration (or
+   the migration no constant) in any of the four columns. `REDDIT` is registered (`V12`), with no code
+   until S-27: not configured, so a request naming it is refused.
 2. `sources/<source>/`: client, repository, item, mapper and configuration as in the layout below.
 3. `<Source>Fetcher implements SourceFetcher` (`@Component`): `configured()` from the configuration's
    optional bean; `fetch` = repository → `<Source>Posts.post(element)` per element, `skipped` for the
@@ -45,13 +46,17 @@ nothing.
    retries moves the shared loop into `sources/` instead of copying it a third time
    (`context/foundation/lessons.md`, abstraction while the code is small).
 6. Tests: `<Source>FetcherTest` and the mapper/client/repository tests below, on real fixtures.
-7. The second source adds to `pipeline/step/SourceIngestTest` the case of two sources, one of them
-   without a post: `NoPostsFetchedException` names only the empty source, and its counters are the sum
-   of both. It cannot be written with one source (`SourceIngest` keys its fetchers by `Source`). Today an
-   empty source fails the whole `fetch` step, also the other sources' posts; isolating the sources is
-   Parked (`context/foundation/roadmap.md`, `## Parked`).
+7. The engine's tests of two sources exist already (S-20), with the scripted second source of the tests
+   (`ScriptedSourceFetcher` of `Source.REDDIT`): `pipeline/step/SourceIngestTest` (posts of both, one
+   empty, one throwing, neither with a post) and `pipeline/PipelineRunIT` (one failing, empty or stopped
+   next to Wykop on Postgres). A source that fails or gives no post is its own result (`failed` /
+   `empty` in `pipeline_run_sources`): the other sources' posts are stored and assessed and the run ends
+   `partial` with `source_failed` / `source_empty`; only a run where no source gave a post fails. The
+   real source adds its own fetcher and mapper tests (6); its posts in the whole run are tested on its
+   own fixtures, not on Wykop's.
 
-Nothing in `pipeline/`, `posts/`, `raw/`, `agents/` or the API changes. If a step seems to need it,
+Nothing in `pipeline/`, `posts/`, `raw/`, `agents/` or the API changes — in behaviour too: a new
+source that fails or stays silent does not fail the other sources' run. If a step seems to need it,
 the port is missing something: change the port (and the plan), don't special-case a source.
 
 ## Layout of a source: `sources/<source>/`
@@ -98,7 +103,8 @@ Reference implementation: `sources/wykop/`.
   test, with a comment saying what changed. Auth answers and error bodies may be short synthetic JSON
   in the API's shape (a real one holds a live token).
 - Time zones: test a winter and a summer timestamp.
-- The whole run over a source: `pipeline/PipelineRunIT` (Wykop on `LocalWykopServer`).
+- The whole run over a source: `pipeline/PipelineRunIT` (Wykop on `LocalWykopServer`; the scripted second
+  source of `ScriptedSourceConfiguration` in its scenarios of two sources).
 
 ## Live use
 

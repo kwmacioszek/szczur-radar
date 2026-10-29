@@ -586,17 +586,17 @@ Jeden dodatkowy `UPDATE … RETURNING` + `INSERT` na źródło na przebieg (dzi�
 
 #### Automated
 
-- [x] 1.1 Bramka backendu przechodzi (w tym `ClosedSetsIT`, `JpaSchemaIT`, `MigrationsIT`, `V12BackfillIT`, `RunRecorderIT`): `cd szczur-radar-api && ./mvnw -B verify`
-- [x] 1.2 Kopia bazy zna nową tabelę: `tools/db-backup/test.sh` kończy się kodem 0
-- [x] 1.3 PR istnieje i odwołuje się do issue: `gh pr view --json body -q .body | grep -q 'Refs #114'`
+- [x] 1.1 Bramka backendu przechodzi (w tym `ClosedSetsIT`, `JpaSchemaIT`, `MigrationsIT`, `V12BackfillIT`, `RunRecorderIT`): `cd szczur-radar-api && ./mvnw -B verify` — 6857eed
+- [x] 1.2 Kopia bazy zna nową tabelę: `tools/db-backup/test.sh` kończy się kodem 0 — 6857eed
+- [x] 1.3 PR istnieje i odwołuje się do issue: `gh pr view --json body -q .body | grep -q 'Refs #114'` — 6857eed
 
 ### Phase 2: Izolacja w silniku — `SourceIngest`, `RunSequence`, status i powody
 
 #### Automated
 
-- [ ] 2.1 Testy jednostkowe szwu przechodzą: `cd szczur-radar-api && ./mvnw -B test -Dtest='SourceIngestTest,RunSequenceTest,PipelineRunTest,RunNotificationsTest'`
-- [ ] 2.2 Pełna bramka backendu przechodzi (w tym `PipelineRunIT`, `RunWatchdogIT`, `NotificationsIT`, `PipelineRunControllerIT`): `cd szczur-radar-api && ./mvnw -B verify`
-- [ ] 2.3 Krok `fetch` nie zapisuje już sum osobno od wyników źródeł: `rg -n 'Counters\.fetched\(' szczur-radar-api/src/main` nie znajduje nic
+- [x] 2.1 Testy jednostkowe szwu przechodzą: `cd szczur-radar-api && ./mvnw -B test -Dtest='SourceIngestTest,RunSequenceTest,PipelineRunTest,RunNotificationsTest'`
+- [x] 2.2 Pełna bramka backendu przechodzi (w tym `PipelineRunIT`, `RunWatchdogIT`, `NotificationsIT`, `PipelineRunControllerIT`): `cd szczur-radar-api && ./mvnw -B verify`
+- [x] 2.3 Krok `fetch` nie zapisuje już sum osobno od wyników źródeł: `rg -n 'Counters\.fetched\(' szczur-radar-api/src/main` nie znajduje nic
 
 ### Phase 3: Pokrycie dnia per źródło
 

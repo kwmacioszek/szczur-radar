@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -14,7 +15,9 @@ import org.springframework.stereotype.Service;
 import pl.szczurradar.api.pipeline.SourceNotConfiguredException;
 import pl.szczurradar.api.pipeline.flow.RunFlow.FetchedBatch;
 import pl.szczurradar.api.pipeline.flow.RunFlow.RangeTarget;
+import pl.szczurradar.api.pipeline.flow.RunFlow.SourceFetch;
 import pl.szczurradar.api.pipeline.run.RunStep;
+import pl.szczurradar.api.pipeline.run.SourceFetchStatus;
 import pl.szczurradar.api.pipeline.state.RunInterruptedException;
 import pl.szczurradar.api.sources.Source;
 import pl.szczurradar.api.sources.SourceFetcher;
@@ -22,7 +25,8 @@ import pl.szczurradar.api.sources.SourcePost;
 
 /**
  * The fetch step of a range run over the sources the run names, through their {@link SourceFetcher}
- * beans: it knows no source by name, so a new source changes nothing here.
+ * beans: it knows no source by name, so a new source changes nothing here. A source's failure or silence
+ * is its own result, never the end of the other sources' fetch ({@link #fetch}).
  */
 @Service
 public class SourceIngest {
@@ -69,42 +73,62 @@ public class SourceIngest {
 	}
 
 	/**
-	 * Every named source's posts in the range, one source after another; a failing source fails the
-	 * step. A source with skipped elements gets a WARN line with its counts (only this loop knows them
-	 * per source). Before each source the run's thread is checked for an interrupt: a stopped run fetches
-	 * no further source.
+	 * Every named source's posts in the range, one source after another, each source isolated from the
+	 * others: a source that throws (also one not configured any more) is that source's {@code failed}
+	 * result ({@code <SimpleName>: <message>}, a WARN line with the exception), one without a post its
+	 * {@code empty} result, and the step goes on with the next source. Each result is handed to
+	 * {@code recorded} as soon as its source ended, outside the source's {@code try}: the caller writes it
+	 * (the run's progress), and an exception of that write ends the step. A source with skipped elements
+	 * gets a WARN line with its counts (only this loop knows them per source).
 	 *
-	 * @throws NoPostsFetchedException after every source was fetched, when one of them gave no post to
-	 *     store (no element in the range, or only elements that could not become a post): an empty
-	 *     source fails the step, and so the run, with the counters of every source
+	 * <p>Before each source the run's thread is checked for an interrupt: a stopped run fetches no further
+	 * source. A source's exception caused by the interrupt (its client keeps the flag) is its
+	 * {@code failed} result like any other; whoever stopped the run wrote its end first, so the caller's
+	 * conditional write adds nothing, and the checkpoint before the next source ends the step. After the
+	 * last source there is none: the step returns or throws, and the next step is refused.
+	 *
+	 * @throws NoPostsFetchedException after every source was fetched, when none of them gave a post to
+	 *     store: the step, and so the run, fails, naming each source with its result
 	 * @throws RunInterruptedException when the run's thread was interrupted before a source
 	 */
-	public FetchedBatch fetch(RangeTarget target) {
+	public FetchedBatch fetch(RangeTarget target, Consumer<SourceFetch> recorded) {
 		List<SourcePost> posts = new ArrayList<>();
-		List<NoPostsFetchedException.EmptySource> empty = new ArrayList<>();
+		List<SourceFetch> outcomes = new ArrayList<>();
 		int fetched = 0;
 		int skipped = 0;
 		for (Source source : target.sources()) {
 			RunInterruptedException.checkpoint(target.runId(), RunStep.FETCH);
-			if (!configured(source)) {
-				throw new SourceNotConfiguredException(List.of(source));
+			SourceFetch outcome;
+			List<SourcePost> sourcePosts = List.of();
+			try {
+				if (!configured(source)) {
+					throw new SourceNotConfiguredException(List.of(source));
+				}
+				SourceFetcher.Fetched result = fetchers.get(source).fetch(target.from(), target.to());
+				if (result.skipped() > 0) {
+					log.warn("Run {}: {} skipped {} of {} elements (unexpected shape or not mappable)", target.runId(),
+							source.value(), result.skipped(), result.fetched());
+				}
+				sourcePosts = result.posts();
+				SourceFetchStatus status = sourcePosts.isEmpty() ? SourceFetchStatus.EMPTY
+						: SourceFetchStatus.SUCCEEDED;
+				outcome = new SourceFetch(source, status, result.fetched(), result.skipped(), null);
 			}
-			SourceFetcher.Fetched result = fetchers.get(source).fetch(target.from(), target.to());
-			if (result.skipped() > 0) {
-				log.warn("Run {}: {} skipped {} of {} elements (unexpected shape or not mappable)", target.runId(),
-						source.value(), result.skipped(), result.fetched());
+			catch (RuntimeException ex) {
+				log.warn("Run {}: {} failed: {}", target.runId(), source.value(), ex.getMessage(), ex);
+				outcome = new SourceFetch(source, SourceFetchStatus.FAILED, 0, 0,
+						ex.getClass().getSimpleName() + ": " + ex.getMessage());
 			}
-			if (result.posts().isEmpty()) {
-				empty.add(new NoPostsFetchedException.EmptySource(source, result.fetched(), result.skipped()));
-			}
-			posts.addAll(result.posts());
-			fetched += result.fetched();
-			skipped += result.skipped();
+			recorded.accept(outcome);
+			outcomes.add(outcome);
+			posts.addAll(sourcePosts);
+			fetched += outcome.fetched();
+			skipped += outcome.skipped();
 		}
-		if (!empty.isEmpty()) {
-			throw new NoPostsFetchedException(empty, fetched, skipped);
+		if (outcomes.stream().noneMatch(outcome -> outcome.status() == SourceFetchStatus.SUCCEEDED)) {
+			throw new NoPostsFetchedException(outcomes);
 		}
-		return new FetchedBatch(target.runId(), posts, fetched, skipped);
+		return new FetchedBatch(target.runId(), posts, fetched, skipped, outcomes);
 	}
 
 	private boolean configured(Source source) {
