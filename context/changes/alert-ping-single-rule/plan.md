@@ -274,5 +274,5 @@ Bez zmian zmiennych i IaC. Jedyne ryzyko wdrożenia to wartość produkcyjna, kt
 
 #### Manual
 
-- [x] 3.5 Po merge'u (robi go człowiek): run monitora `szczur-radar-monitor` dla `szczur-radar-api` na produkcji jest zielony, czyli API wstało z zapieczętowanym `HEALTHCHECK_PING_URL` — 9e47c87 (issue #119)
-- [x] 3.6 Po pierwszej nocy po merge'u: checki `production/pipeline-trigger` i `production/db-backup` są „up”, a logi obu cronów na Railway nie mają `HEALTHCHECK_PING_URL is not an https:// address` — 9e47c87 (issue #119)
+- [x] 3.5 Po merge'u (robi go człowiek): run monitora `szczur-radar-monitor` dla `szczur-radar-api` na produkcji jest zielony, czyli API wstało z zapieczętowanym `HEALTHCHECK_PING_URL` — 9e47c87
+- [x] 3.6 Po pierwszej nocy po merge'u: checki `production/pipeline-trigger` i `production/db-backup` są „up”, a logi obu cronów na Railway nie mają `HEALTHCHECK_PING_URL is not an https:// address` — 9e47c87
