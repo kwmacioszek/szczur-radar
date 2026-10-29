@@ -617,7 +617,7 @@ Jeden dodatkowy `UPDATE … RETURNING` + `INSERT` na źródło na przebieg (dzi�
 
 #### Manual
 
-- [ ] 4.5 Polskie teksty sekcji „Wynik per źródło” i powodów `source_failed`/`source_empty` są zrozumiałe dla admina (ocena użytkownika na zrzutach)
+- [x] 4.5 Polskie teksty sekcji „Wynik per źródło” i powodów `source_failed`/`source_empty` są zrozumiałe dla admina (ocena użytkownika na zrzutach) — potwierdzone przez użytkownika 2026-10-29
 
 ### Phase 5: Dokumenty, runbook i weryfikacja w PR env
 
@@ -630,4 +630,4 @@ Jeden dodatkowy `UPDATE … RETURNING` + `INSERT` na źródło na przebieg (dzi�
 
 #### Manual
 
-- [ ] 5.5 Operator ocenia treść doprecyzowań PRD i sekcji runbooka S-20 (w tym kroki po merge'u) i podejmuje decyzję o merge'u po `/10x-impl-review` i `/10x-archive`
+- [x] 5.5 Operator ocenia treść doprecyzowań PRD i sekcji runbooka S-20 (w tym kroki po merge'u) i podejmuje decyzję o merge'u po `/10x-impl-review` i `/10x-archive` — potwierdzone przez użytkownika 2026-10-29 (krok 0 runbooka na produkcji: bad_counters 0, brak aktywnych przebiegów)
