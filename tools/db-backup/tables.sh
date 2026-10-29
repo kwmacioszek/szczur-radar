@@ -26,6 +26,7 @@ readonly TABLES=(
     "assessments 3 counted"
     "activation_tokens 7 present"         # a used activation link deletes its row (auth/activation)
     "notifications 9 counted"
+    "pipeline_run_sources 12 counted"
 )
 
 # The tables of TABLES that a database at Flyway version $1 has, one per line, whose mode is $2

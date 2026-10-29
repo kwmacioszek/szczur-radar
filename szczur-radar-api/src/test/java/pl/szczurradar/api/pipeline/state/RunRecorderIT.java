@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,9 +24,11 @@ import pl.szczurradar.api.cli.MigrateCommand;
 import pl.szczurradar.api.pipeline.run.InterruptionCause;
 import pl.szczurradar.api.pipeline.run.RunStatus;
 import pl.szczurradar.api.pipeline.run.RunStep;
+import pl.szczurradar.api.pipeline.run.SourceFetchStatus;
 import pl.szczurradar.api.pipeline.run.StepStatus;
 import pl.szczurradar.api.pipeline.state.RunRecorder.Counters;
 import pl.szczurradar.api.pipeline.state.RunRecorder.StepOutcome;
+import pl.szczurradar.api.sources.Source;
 
 /**
  * The conditional writes of {@link RunRecorder} on Postgres, each guard on its own: which status a write
@@ -114,6 +117,74 @@ class RunRecorderIT {
 		assertThat(row(running)).containsEntry("status", "partial")
 			.containsEntry("fetched", 3)
 			.containsEntry("error", "1 post with a technical error");
+	}
+
+	@Test
+	void aSourcesResultIsWrittenWithTheRunsCountersAndActivityOnlyInARunningRun() {
+		UUID running = run("running", null, "1 hour");
+		Object before = row(running).get("last_activity_at");
+
+		assertThat(recorder.source(running, Source.WYKOP, SourceFetchStatus.SUCCEEDED, 16, 2, null)).isTrue();
+		assertThat(recorder.source(running, Source.REDDIT, SourceFetchStatus.FAILED, 0, 0,
+				"RedditApiException: Reddit answered 503")).isTrue();
+
+		assertThat(row(running)).containsEntry("fetched", 16)
+			.containsEntry("skipped", 2)
+			.containsEntry("sources_failed", 1)
+			.containsEntry("sources_empty", 0)
+			.containsEntry("status", "running");
+		assertThat(row(running).get("last_activity_at")).isNotEqualTo(before);
+		assertThat(sources(running)).containsExactly("reddit:failed:0:0:RedditApiException: Reddit answered 503",
+				"wykop:succeeded:16:2:");
+
+		// One running run at a time (uq_pipeline_runs_one_running).
+		jdbc.update("UPDATE pipeline_runs SET status = 'partial', finished_at = now() WHERE id = ?", running);
+		UUID empty = run("running", null, null);
+		assertThat(recorder.source(empty, Source.WYKOP, SourceFetchStatus.EMPTY, 5, 5, null)).isTrue();
+		assertThat(row(empty)).containsEntry("fetched", 5)
+			.containsEntry("skipped", 5)
+			.containsEntry("sources_failed", 0)
+			.containsEntry("sources_empty", 1);
+		assertThat(sources(empty)).containsExactly("wykop:empty:5:5:");
+	}
+
+	@Test
+	void aSourcesResultOfAQueuedOrEndedRunChangesNothing() {
+		UUID queued = run("queued", null, null);
+		UUID interrupted = run("interrupted", null, null);
+
+		for (UUID run : List.of(queued, interrupted)) {
+			assertThat(recorder.source(run, Source.WYKOP, SourceFetchStatus.FAILED, 3, 1, "WykopApiException: late"))
+				.isFalse();
+			assertThat(row(run)).containsEntry("fetched", 0)
+				.containsEntry("skipped", 0)
+				.containsEntry("sources_failed", 0)
+				.containsEntry("sources_empty", 0)
+				.containsEntry("last_activity_at", null);
+			assertThat(sources(run)).isEmpty();
+		}
+	}
+
+	@Test
+	void aSourcesLongErrorIsCut() {
+		UUID running = run("running", null, null);
+
+		recorder.source(running, Source.WYKOP, SourceFetchStatus.FAILED, 0, 0, "x".repeat(RunRecorder.MAX_ERROR + 50));
+
+		assertThat(
+				jdbc.queryForObject("SELECT error FROM pipeline_run_sources WHERE run_id = ?", String.class, running))
+			.isEqualTo("x".repeat(RunRecorder.MAX_ERROR) + "…");
+	}
+
+	/** The violation aborts the test's transaction, so it comes last. */
+	@Test
+	void aSecondResultOfTheSameSourceInARunIsRefused() {
+		UUID running = run("running", null, null);
+		recorder.source(running, Source.WYKOP, SourceFetchStatus.SUCCEEDED, 4, 0, null);
+
+		assertThatThrownBy(() -> recorder.source(running, Source.WYKOP, SourceFetchStatus.EMPTY, 0, 0, null))
+			.isInstanceOf(DataIntegrityViolationException.class)
+			.hasMessageContaining("uq_pipeline_run_sources_run_source");
 	}
 
 	@Test
@@ -318,6 +389,13 @@ class RunRecorderIT {
 	private void closedStep(UUID runId, String step) {
 		jdbc.update("INSERT INTO pipeline_run_steps (run_id, step, status, started_at, finished_at) VALUES (?, ?,"
 				+ " 'succeeded', now() - interval '1 minute', now() - interval '30 seconds')", runId, step);
+	}
+
+	/** The run's sources' results as {@code source:status:fetched:skipped:error}, by source. */
+	private List<String> sources(UUID runId) {
+		return jdbc.queryForList("SELECT source || ':' || status || ':' || fetched || ':' || skipped || ':'"
+				+ " || COALESCE(error, '') FROM pipeline_run_sources WHERE run_id = ? ORDER BY source", String.class,
+				runId);
 	}
 
 	private Map<String, Object> row(UUID runId) {

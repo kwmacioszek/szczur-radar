@@ -586,9 +586,9 @@ Jeden dodatkowy `UPDATE … RETURNING` + `INSERT` na źródło na przebieg (dzi�
 
 #### Automated
 
-- [ ] 1.1 Bramka backendu przechodzi (w tym `ClosedSetsIT`, `JpaSchemaIT`, `MigrationsIT`, `V12BackfillIT`, `RunRecorderIT`): `cd szczur-radar-api && ./mvnw -B verify`
-- [ ] 1.2 Kopia bazy zna nową tabelę: `tools/db-backup/test.sh` kończy się kodem 0
-- [ ] 1.3 PR istnieje i odwołuje się do issue: `gh pr view --json body -q .body | grep -q 'Refs #114'`
+- [x] 1.1 Bramka backendu przechodzi (w tym `ClosedSetsIT`, `JpaSchemaIT`, `MigrationsIT`, `V12BackfillIT`, `RunRecorderIT`): `cd szczur-radar-api && ./mvnw -B verify`
+- [x] 1.2 Kopia bazy zna nową tabelę: `tools/db-backup/test.sh` kończy się kodem 0
+- [x] 1.3 PR istnieje i odwołuje się do issue: `gh pr view --json body -q .body | grep -q 'Refs #114'`
 
 ### Phase 2: Izolacja w silniku — `SourceIngest`, `RunSequence`, status i powody
 

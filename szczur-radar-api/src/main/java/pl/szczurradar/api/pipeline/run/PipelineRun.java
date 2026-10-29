@@ -22,7 +22,8 @@ import pl.szczurradar.api.user.SystemAccount;
 
 /**
  * One pipeline run ({@code pipeline_runs}, owned by Flyway, {@code V3__create_pipeline_and_posts.sql},
- * progress and interruption from {@code V8__pipeline_run_progress.sql}). Created {@code queued}; its
+ * progress and interruption from {@code V8__pipeline_run_progress.sql}, the sources' results from
+ * {@code V12__pipeline_run_sources.sql}). Created {@code queued}; its
  * status and counters change only through conditional updates that require the run to be
  * {@code running}, so an interrupted run never changes again. The entity writes only what a new run
  * has: the progress and the interruption columns are read-only here.
@@ -104,6 +105,14 @@ public class PipelineRun {
 	/** Assessments whose call was refused on the flex tier and fell back to the default one. */
 	@Column(name = "flex_fallbacks", nullable = false, insertable = false, updatable = false)
 	private int flexFallbacks;
+
+	/** The sources of a range run that failed ({@link SourceFetchStatus#FAILED}; {@link PipelineRunSource}). */
+	@Column(name = "sources_failed", nullable = false, insertable = false, updatable = false)
+	private int sourcesFailed;
+
+	/** The sources of a range run without a post ({@link SourceFetchStatus#EMPTY}; {@link PipelineRunSource}). */
+	@Column(name = "sources_empty", nullable = false, insertable = false, updatable = false)
+	private int sourcesEmpty;
 
 	/** The last change while it was running (its start, a step starting or ending, a post counted). */
 	@Column(name = "last_activity_at", insertable = false, updatable = false)
@@ -252,6 +261,14 @@ public class PipelineRun {
 
 	public int getFlexFallbacks() {
 		return flexFallbacks;
+	}
+
+	public int getSourcesFailed() {
+		return sourcesFailed;
+	}
+
+	public int getSourcesEmpty() {
+		return sourcesEmpty;
 	}
 
 	public @Nullable Instant getLastActivityAt() {

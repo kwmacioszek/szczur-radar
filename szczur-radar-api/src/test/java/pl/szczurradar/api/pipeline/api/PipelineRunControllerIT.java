@@ -240,7 +240,7 @@ class PipelineRunControllerIT {
 				"{\"from\":\"2026-10-01\"}", "{\"from\":\"2026-10-01\",\"to\":\"2026-10-01\",\"postIds\":[\"" + UUID.randomUUID()
 						+ "\"]}",
 				"{\"postIds\":[]}", "{\"postIds\":[" + hundredAndOne + "]}",
-				"{\"from\":\"2026-10-01\",\"to\":\"2026-10-01\",\"sources\":[\"reddit\"]}",
+				"{\"from\":\"2026-10-01\",\"to\":\"2026-10-01\",\"sources\":[\"twitter\"]}",
 				"{\"from\":\"2026-10-01\",\"to\":\"2026-10-01\",\"extra\":1}", "{\"from\":\"01.10.2026\",\"to\":\"2026-10-01\"}")) {
 			assertThat(start(body)).as(body)
 				.hasStatus(HttpStatus.BAD_REQUEST)
@@ -250,6 +250,18 @@ class PipelineRunControllerIT {
 		// Seven days, ending today, are fine.
 		assertThat(start("{\"from\":\"" + LocalDate.now(PipelineRunService.ZONE).minusDays(6) + "\",\"to\":\"" + today
 				+ "\"}")).hasStatus(HttpStatus.ACCEPTED);
+	}
+
+	@Test
+	void aRegisteredSourceWithoutAFetcherIsNotConfigured() {
+		int before = jdbc.queryForObject("SELECT count(*) FROM pipeline_runs", Integer.class);
+
+		// Reddit is registered (sources/Source.REDDIT), but has no fetcher before S-27.
+		assertThat(start("{\"from\":\"2026-10-01\",\"to\":\"2026-10-01\",\"sources\":[\"reddit\"]}"))
+			.hasStatus(HttpStatus.SERVICE_UNAVAILABLE)
+			.bodyJson()
+			.isStrictlyEqualTo("{\"detail\":\"source_not_configured\"}");
+		assertThat(jdbc.queryForObject("SELECT count(*) FROM pipeline_runs", Integer.class)).isEqualTo(before);
 	}
 
 	@Test

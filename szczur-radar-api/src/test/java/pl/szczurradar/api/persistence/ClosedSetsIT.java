@@ -40,6 +40,7 @@ import pl.szczurradar.api.pipeline.run.InterruptionCause;
 import pl.szczurradar.api.pipeline.run.RunKind;
 import pl.szczurradar.api.pipeline.run.RunStatus;
 import pl.szczurradar.api.pipeline.run.RunStep;
+import pl.szczurradar.api.pipeline.run.SourceFetchStatus;
 import pl.szczurradar.api.pipeline.run.StepStatus;
 import pl.szczurradar.api.posts.PostStage;
 import pl.szczurradar.api.raw.ContentEncoding;
@@ -91,6 +92,9 @@ class ClosedSetsIT {
 			StoredEnum.of(StepStatus.class, StepStatus::value, "pipeline_run_steps", "status", "PipelineRunStep",
 					"status"),
 			StoredEnum.of(RunStep.class, RunStep::value, "pipeline_run_steps", "step", "PipelineRunStep", "step"),
+			StoredEnum.of(Source.class, Source::value, "pipeline_run_sources", "source", "PipelineRunSource", "source"),
+			StoredEnum.of(SourceFetchStatus.class, SourceFetchStatus::value, "pipeline_run_sources", "status",
+					"PipelineRunSource", "status"),
 			StoredEnum.of(AssessmentResult.Status.class, AssessmentResult.Status::value, "assessments", "status",
 					"Assessment", "status"),
 			StoredEnum.of(FailureClass.class, FailureClass::value, "assessments", "failure_class", "Assessment",
@@ -116,8 +120,9 @@ class ClosedSetsIT {
 	 */
 	private static final Set<String> NOT_A_VALUE_LIST = Set.of("ck_activation_tokens_token_hash",
 			"ck_assessments_input_hash", "ck_assessments_outcome", "ck_notifications_run",
-			"ck_pipeline_runs_interruption_status", "ck_pipeline_runs_range", "ck_pipeline_runs_requested_posts",
-			"ck_posts_assessing_owner", "ck_posts_content_hash", "ck_posts_stage_attempts", "ck_raw_payloads_sha256");
+			"ck_pipeline_run_sources_error", "ck_pipeline_runs_interruption_status", "ck_pipeline_runs_range",
+			"ck_pipeline_runs_requested_posts", "ck_posts_assessing_owner", "ck_posts_content_hash",
+			"ck_posts_stage_attempts", "ck_raw_payloads_sha256");
 
 	private static final Pattern ANY_LITERAL = Pattern.compile("'(?:[^']|'')*'::");
 

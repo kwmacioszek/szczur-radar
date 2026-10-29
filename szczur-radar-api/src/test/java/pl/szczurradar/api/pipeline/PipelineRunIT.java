@@ -217,7 +217,8 @@ class PipelineRunIT {
 		assertThat(count("SELECT count(*) FROM pipeline_runs WHERE status IN ('queued', 'running')", null))
 			.as("queued or running runs left by the previous scenario")
 			.isZero();
-		jdbc.execute("TRUNCATE notifications, pipeline_run_steps, assessments, posts, raw_payloads, pipeline_runs");
+		jdbc.execute("TRUNCATE notifications, pipeline_run_steps, pipeline_run_sources, assessments, posts,"
+				+ " raw_payloads, pipeline_runs");
 		wykopDown = false;
 		wykopEmpty = false;
 		wykopTextless = 0;
