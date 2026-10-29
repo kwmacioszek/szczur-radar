@@ -1,7 +1,7 @@
 // How a pipeline run is shown: its tone, status text, the text of its "wymaga uwagi" reasons, range, duration and
 // progress — one place for the run list (/admin), the run's page (/admin/runs/:id) and the notification bell. The
 // reasons themselves come from the API (pipeline/run/PipelineRun.attentionReasons); here they only get their text.
-import type { AttentionReason, InterruptionCause, Run, RunStatus, StepStatus } from './api/pipeline'
+import type { AttentionReason, InterruptionCause, Run, RunStatus, SourceFetchStatus, StepStatus } from './api/pipeline'
 import type { BadgeTone } from './components/StatusBadge.vue'
 import { formatDate, label, plural } from './labels'
 
@@ -11,7 +11,14 @@ type RunState = { status: RunStatus; interruptionCause: InterruptionCause | null
 /** The API's reason codes and what their text is built from. */
 type AttentionFields = Pick<
   Run,
-  'needsAttention' | 'attentionReasons' | 'interruptionCause' | 'dead' | 'processingErrors' | 'skipped' | 'error'
+  | 'needsAttention'
+  | 'attentionReasons'
+  | 'interruptionCause'
+  | 'dead'
+  | 'processingErrors'
+  | 'skipped'
+  | 'error'
+  | 'sourceResults'
 >
 
 const statusTone: Record<RunStatus, BadgeTone> = {
@@ -45,6 +52,17 @@ export function stepTone(status: StepStatus): BadgeTone {
   return stepStatusTone[status]
 }
 
+const sourceStatusTone: Record<SourceFetchStatus, BadgeTone> = {
+  succeeded: 'success',
+  empty: 'warning',
+  failed: 'destructive',
+}
+
+/** The badge tone of a source's result: a source without a post is a `warning`, one that threw `destructive`. */
+export function sourceTone(status: SourceFetchStatus): BadgeTone {
+  return sourceStatusTone[status]
+}
+
 /**
  * The status in words with the interruption's cause, e.g. `przerwany — nowe wdrożenie`, or with the skipped elements
  * of a succeeded or partial run, e.g. `zakończony — pominięte: 3`.
@@ -67,8 +85,9 @@ function hasSkipped(run: RunState): boolean {
  * Why the run needs attention, in words: the text of each reason code the API sends
  * (pipeline/run/PipelineRun.attentionReasons), in its order — nothing is counted here. `failed`: the run's own error
  * text, as it is (the watchdog's "no progress for …" and an empty source's "NoPostsFetchedException: …" too);
- * `interrupted`: its cause; `dead_posts`, `processing_errors`, `skipped`: the run's counter. A code without a text
- * here shows as it came. A run that needs attention without any reason (an API from before S-22 sends none) gets one
+ * `interrupted`: its cause; `source_failed`: the sources that threw, `source_empty`: each source without a post with
+ * its counts (both from `sourceResults`, a stand-in text without them); `dead_posts`, `processing_errors`, `skipped`:
+ * the run's counter. A code without a text here shows as it came. A run that needs attention without any reason (an API from before S-22 sends none) gets one
  * stand-in text, so "Wymaga uwagi:" is never empty; a run that does not need attention has none.
  */
 export function attentionReasons(run: AttentionFields): string[] {
@@ -83,6 +102,18 @@ function attentionReasonText(code: AttentionReason, run: AttentionFields): strin
       return run.error ?? 'przebieg zakończył się błędem'
     case 'interrupted':
       return run.interruptionCause ? `przerwany: ${label('interruptionCause', run.interruptionCause)}` : 'przerwany'
+    case 'source_failed': {
+      const failed = (run.sourceResults ?? []).filter((result) => result.status === 'failed')
+      if (failed.length === 0) return 'błąd pobrania źródła'
+      return `błąd pobrania: ${failed.map((result) => label('source', result.source)).join(', ')}`
+    }
+    case 'source_empty': {
+      const empty = (run.sourceResults ?? []).filter((result) => result.status === 'empty')
+      if (empty.length === 0) return 'źródło nie dało postów'
+      return empty
+        .map((result) => `bez postów: ${label('source', result.source)} (pobrano ${result.fetched}, pominięto ${result.skipped})`)
+        .join('; ')
+    }
     case 'dead_posts':
       return `${run.dead} ${plural(run.dead, 'post martwy', 'posty martwe', 'postów martwych')}`
     case 'processing_errors':

@@ -51,6 +51,8 @@ function run(overrides: Partial<Run> = {}): Run {
     processingErrors: 0,
     dead: 0,
     skipped: 0,
+    sourcesFailed: 0,
+    sourcesEmpty: 0,
     llmRetries: 0,
     flexFallbacks: 0,
     inFlight: 0,

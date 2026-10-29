@@ -602,18 +602,18 @@ Jeden dodatkowy `UPDATE … RETURNING` + `INSERT` na źródło na przebieg (dzi�
 
 #### Automated
 
-- [x] 3.1 Testy pokrycia przechodzą: `cd szczur-radar-api && ./mvnw -B test -Dtest=MissingDaysTest`
-- [x] 3.2 Pełna bramka backendu przechodzi (w tym `MissingDaysIT`, `PipelineRunWithoutSourceIT`, `FreshnessIT`): `cd szczur-radar-api && ./mvnw -B verify`
-- [x] 3.3 Pokrycie nie czyta już listy żądanej: `rg -n 'array_position' szczur-radar-api/src/main` nie znajduje nic
+- [x] 3.1 Testy pokrycia przechodzą: `cd szczur-radar-api && ./mvnw -B test -Dtest=MissingDaysTest` — d0dc0bd
+- [x] 3.2 Pełna bramka backendu przechodzi (w tym `MissingDaysIT`, `PipelineRunWithoutSourceIT`, `FreshnessIT`): `cd szczur-radar-api && ./mvnw -B verify` — d0dc0bd
+- [x] 3.3 Pokrycie nie czyta już listy żądanej: `rg -n 'array_position' szczur-radar-api/src/main` nie znajduje nic — d0dc0bd
 
 ### Phase 4: API i SPA — wynik per źródło na stronie przebiegu
 
 #### Automated
 
-- [ ] 4.1 Bramka backendu przechodzi (w tym `PipelineRunControllerIT`): `cd szczur-radar-api && ./mvnw -B verify`
-- [ ] 4.2 Testy web przechodzą: `cd szczur-radar-web && npm test`
-- [ ] 4.3 Typecheck i build przechodzą (w tym `styleContract.test.ts` w `npm test`): `cd szczur-radar-web && npm run build`
-- [ ] 4.4 Zrzuty sekcji istnieją dla obu fixtur, obu motywów i 375 px: `ls context/changes/source-isolation/ui/*.png | wc -l` ≥ 6 i `ui/README.md` wymienia każdy stan macierzy albo N/A z powodem
+- [x] 4.1 Bramka backendu przechodzi (w tym `PipelineRunControllerIT`): `cd szczur-radar-api && ./mvnw -B verify`
+- [x] 4.2 Testy web przechodzą: `cd szczur-radar-web && npm test`
+- [x] 4.3 Typecheck i build przechodzą (w tym `styleContract.test.ts` w `npm test`): `cd szczur-radar-web && npm run build`
+- [x] 4.4 Zrzuty sekcji istnieją dla obu fixtur, obu motywów i 375 px: `ls context/changes/source-isolation/ui/*.png | wc -l` ≥ 6 i `ui/README.md` wymienia każdy stan macierzy albo N/A z powodem
 
 #### Manual
 

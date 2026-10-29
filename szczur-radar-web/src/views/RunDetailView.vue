@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // One pipeline run (admin), also one beyond the list in /admin: status with its cause, why it needs attention,
-// who started it, its range, times, counters, steps and error; while it is queued or running, its progress, read
-// again every 10 s until it ends.
+// who started it, its range, times, counters, each source's result (a range run), steps and error; while it is
+// queued or running, its progress, read again every 10 s until it ends.
 import { computed, nextTick, ref, useTemplateRef, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { ApiError } from '../api/client'
@@ -22,6 +22,7 @@ import {
   runRange,
   runStatusLabel,
   runTone,
+  sourceTone,
   stepDuration,
   stepTone,
 } from '../runs'
@@ -227,6 +228,34 @@ watch(
           </ul>
         </section>
 
+        <section
+          v-if="run.kind === 'range' && run.sourceResults"
+          class="part source-results"
+          aria-labelledby="source-results-title"
+        >
+          <h2 id="source-results-title">Wynik per źródło</h2>
+          <p v-if="run.sourceResults.length === 0" class="empty">Jeszcze żadne źródło nie zakończyło pobrania.</p>
+          <ul v-else class="source-list">
+            <li
+              v-for="result in run.sourceResults"
+              :key="result.source"
+              class="source-result"
+              :data-status="result.status"
+            >
+              <p class="source-head">
+                <strong>{{ label('source', result.source) }}</strong>
+                <StatusBadge :tone="sourceTone(result.status)">
+                  {{ label('sourceStatus', result.status) }}
+                </StatusBadge>
+              </p>
+              <p class="source-meta">
+                pobrane {{ result.fetched }} · pominięte {{ result.skipped }} · posty {{ result.fetched - result.skipped }}
+              </p>
+              <p v-if="result.error" class="source-error">{{ result.error }}</p>
+            </li>
+          </ul>
+        </section>
+
         <section class="part" aria-labelledby="steps-title">
           <h2 id="steps-title">Kroki</h2>
           <p v-if="run.steps.length === 0" class="empty">Żaden krok się jeszcze nie zaczął.</p>
@@ -367,37 +396,44 @@ progress {
   font-size: var(--font-size-sm);
 }
 
-.steps {
+.steps,
+.source-list {
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-/* A line between steps only: the section below ("Błąd przebiegu") draws its own. */
-.step {
+/* A line between steps (and between source results) only: the next section draws its own. */
+.step,
+.source-result {
   padding: var(--space-2) 0;
 }
 
-.step + .step {
+.step + .step,
+.source-result + .source-result {
   border-top: 1px solid var(--border);
 }
 
-.step p {
+.step p,
+.source-result p {
   margin: var(--space-0) 0;
 }
 
-.step-head {
+.step-head,
+.source-head {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
   gap: var(--space-1) var(--space-3);
 }
 
-.step-meta {
+.step-meta,
+.source-meta {
   font-size: var(--font-size-sm);
 }
 
 .step-error,
+.source-error,
 .run-error {
   color: var(--destructive);
   font-size: var(--font-size-sm);

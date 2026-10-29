@@ -69,7 +69,8 @@ const labels: Record<string, Record<string, string>> = {
     fabricated_evidence: 'zmyślony cytat',
     domain_invariant_violation: 'naruszenie reguł kontraktu',
   },
-  source: { wykop: 'Wykop' },
+  source: { wykop: 'Wykop', reddit: 'Reddit' },
+  sourceStatus: { succeeded: 'pobrane', empty: 'bez postów', failed: 'błąd' },
 }
 
 export function label(set: keyof typeof labels, value: string): string {

@@ -315,6 +315,8 @@ class PipelineRunControllerIT {
 		assertThat(page0).bodyJson().extractingPath("$.items[0].steps[*].step").asArray().containsExactly("select", "assess");
 		assertThat(page0).bodyJson().extractingPath("$.items[0].steps[1].itemsOut").isEqualTo(4);
 		assertThat(page0).bodyJson().extractingPath("$.items[1].steps").asArray().isEmpty();
+		// A run that fetched nothing has no source result, but the field is there.
+		assertThat(page0).bodyJson().extractingPath("$.items[0].sourceResults").asArray().isEmpty();
 		// A technical error needs attention; a run that succeeded does not.
 		assertThat(page0).bodyJson().extractingPath("$.items[*].needsAttention").asArray().containsExactly(true, false);
 		assertThat(page0).bodyJson().extractingPath("$.items[*].attentionReasons").asArray()
@@ -361,6 +363,53 @@ class PipelineRunControllerIT {
 		assertThat(page).bodyJson().extractingPath("$.steps[*].status").asArray()
 			.containsExactly("succeeded", "interrupted");
 		assertThat(page).bodyJson().extractingPath("$.steps[1].itemsIn").isEqualTo(200);
+	}
+
+	@Test
+	void aRangeRunShowsEachSourcesResultInSourceOrderOnItsPageAndInTheList() {
+		// Created later than any other run, so it is the first of the list's first page.
+		UUID run = jdbc.queryForObject("INSERT INTO pipeline_runs (kind, status, requested_by, range_from, range_to,"
+				+ " sources, created_at, started_at, finished_at, fetched, skipped, new_posts, assessed_ok, sources_failed,"
+				+ " error) VALUES ('range', 'partial', ?, '2026-10-13T22:00:00Z', '2026-10-14T21:59:59Z',"
+				+ " ARRAY['wykop', 'reddit'], '2099-02-01T00:00:00Z', '2026-10-16T00:30:05Z', '2026-10-16T00:41:00Z', 12, 2,"
+				+ " 10, 10, 1, 'reddit failed: IllegalStateException: 503') RETURNING id", UUID.class,
+				SystemAccount.SCHEDULER.id());
+		// Written in the opposite order: the response puts them in Source order.
+		jdbc.update("INSERT INTO pipeline_run_sources (run_id, source, status, fetched, skipped, error, finished_at)"
+				+ " VALUES (?, 'reddit', 'failed', 0, 0, 'IllegalStateException: 503', '2026-10-16T00:31:00Z')", run);
+		jdbc.update("INSERT INTO pipeline_run_sources (run_id, source, status, fetched, skipped, error, finished_at)"
+				+ " VALUES (?, 'wykop', 'succeeded', 12, 2, NULL, '2026-10-16T00:30:40Z')", run);
+		try {
+			MvcTestResult page = mvc.get().uri("/api/admin/pipeline-runs/" + run).with(asAdmin()).exchange();
+			MvcTestResult list = mvc.get().uri("/api/admin/pipeline-runs").with(asAdmin()).exchange();
+
+			assertThat(page).hasStatusOk();
+			assertThat(page).bodyJson().extractingPath("$.sourcesFailed").isEqualTo(1);
+			assertThat(page).bodyJson().extractingPath("$.sourcesEmpty").isEqualTo(0);
+			assertThat(page).bodyJson().extractingPath("$.attentionReasons").asArray()
+				.containsExactly("source_failed", "skipped");
+			assertThat(page).bodyJson().extractingPath("$.sourceResults[*].source").asArray()
+				.containsExactly("wykop", "reddit");
+			assertThat(page).bodyJson().extractingPath("$.sourceResults[*].status").asArray()
+				.containsExactly("succeeded", "failed");
+			assertThat(page).bodyJson().extractingPath("$.sourceResults[*].fetched").asArray().containsExactly(12, 0);
+			assertThat(page).bodyJson().extractingPath("$.sourceResults[*].skipped").asArray().containsExactly(2, 0);
+			assertThat(page).bodyJson().extractingPath("$.sourceResults[0].error").isNull();
+			assertThat(page).bodyJson().extractingPath("$.sourceResults[1].error").isEqualTo("IllegalStateException: 503");
+			assertThat(page).bodyJson().extractingPath("$.sourceResults[*].finishedAt").asArray()
+				.containsExactly("2026-10-16T00:30:40Z", "2026-10-16T00:31:00Z");
+			assertThat(list).bodyJson().extractingPath("$.items[0].id").isEqualTo(run.toString());
+			assertThat(list).bodyJson().extractingPath("$.items[0].sourceResults[*].source").asArray()
+				.containsExactly("wykop", "reddit");
+			assertThat(list).bodyJson().extractingPath("$.items[0].sourceResults[*].status").asArray()
+				.containsExactly("succeeded", "failed");
+			assertThat(list).bodyJson().extractingPath("$.items[0].sourcesFailed").isEqualTo(1);
+			assertThat(list).bodyJson().extractingPath("$.items[0].sourcesEmpty").isEqualTo(0);
+		}
+		finally {
+			jdbc.update("DELETE FROM pipeline_run_sources WHERE run_id = ?", run);
+			jdbc.update("DELETE FROM pipeline_runs WHERE id = ?", run);
+		}
 	}
 
 	@Test

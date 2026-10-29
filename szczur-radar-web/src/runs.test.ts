@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { AttentionReason, Run, RunStep } from './api/pipeline'
+import type { AttentionReason, Run, RunStep, SourceResult } from './api/pipeline'
 import {
   assessProgress,
   attentionReasons,
@@ -10,6 +10,7 @@ import {
   runRange,
   runStatusLabel,
   runTone,
+  sourceTone,
   stepDuration,
   stepTone,
 } from './runs'
@@ -52,6 +53,8 @@ function run(overrides: Partial<Run> = {}): Run {
     processingErrors: 0,
     dead: 0,
     skipped: 0,
+    sourcesFailed: 0,
+    sourcesEmpty: 0,
     llmRetries: 0,
     flexFallbacks: 0,
     inFlight: 0,
@@ -93,6 +96,14 @@ describe('stepTone', () => {
     expect(stepTone('succeeded')).toBe('success')
     expect(stepTone('failed')).toBe('destructive')
     expect(stepTone('interrupted')).toBe('warning')
+  })
+})
+
+describe('sourceTone', () => {
+  it('gives each source result its tone; a source without a post is a warning', () => {
+    expect(sourceTone('succeeded')).toBe('success')
+    expect(sourceTone('empty')).toBe('warning')
+    expect(sourceTone('failed')).toBe('destructive')
   })
 })
 
@@ -165,6 +176,59 @@ describe('attentionReasons', () => {
       'błędy techniczne: 2',
     ])
     expect(attentionReasons(attention(['skipped'], { skipped: 3 }))).toEqual(['pominięte elementy: 3'])
+  })
+
+  describe('of the sources', () => {
+    function result(source: string, status: SourceResult['status'], overrides: Partial<SourceResult> = {}): SourceResult {
+      return {
+        source,
+        status,
+        fetched: 0,
+        skipped: 0,
+        error: status === 'failed' ? 'WykopApiException: HTTP 503' : null,
+        finishedAt: '2026-10-13T00:31:00Z',
+        ...overrides,
+      }
+    }
+
+    it('names the sources that failed, by their labels', () => {
+      const sourceResults = [result('wykop', 'succeeded', { fetched: 40 }), result('reddit', 'failed')]
+      expect(attentionReasons(attention(['source_failed'], { status: 'partial', sourcesFailed: 1, sourceResults }))).toEqual(
+        ['błąd pobrania: Reddit'],
+      )
+      const both = [result('wykop', 'failed'), result('reddit', 'failed')]
+      expect(attentionReasons(attention(['source_failed'], { status: 'failed', sourceResults: both }))).toEqual([
+        'błąd pobrania: Wykop, Reddit',
+      ])
+    })
+
+    it('names each source without a post with its counts', () => {
+      const sourceResults = [
+        result('wykop', 'empty', { fetched: 3, skipped: 3 }),
+        result('reddit', 'empty'),
+      ]
+      expect(attentionReasons(attention(['source_empty'], { status: 'partial', sourcesEmpty: 2, sourceResults }))).toEqual([
+        'bez postów: Wykop (pobrano 3, pominięto 3); bez postów: Reddit (pobrano 0, pominięto 0)',
+      ])
+    })
+
+    it('gives a stand-in text without the results (an API from before S-20) or without a matching one', () => {
+      expect(attentionReasons(attention(['source_failed', 'source_empty'], { status: 'partial' }))).toEqual([
+        'błąd pobrania źródła',
+        'źródło nie dało postów',
+      ])
+      const onlyGood = [result('wykop', 'succeeded', { fetched: 5 })]
+      expect(
+        attentionReasons(attention(['source_failed', 'source_empty'], { status: 'partial', sourceResults: onlyGood })),
+      ).toEqual(['błąd pobrania źródła', 'źródło nie dało postów'])
+    })
+
+    it('comes before the assessment in the API order', () => {
+      const sourceResults = [result('wykop', 'succeeded', { fetched: 5 }), result('reddit', 'failed')]
+      expect(
+        attentionReasons(attention(['source_failed', 'dead_posts'], { status: 'partial', dead: 1, sourceResults })),
+      ).toEqual(['błąd pobrania: Reddit', '1 post martwy'])
+    })
   })
 
   it("keeps the API's order", () => {
