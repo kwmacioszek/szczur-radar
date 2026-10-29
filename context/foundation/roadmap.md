@@ -103,7 +103,7 @@ Na Wykopie (#gielda) i Reddicie codziennie pojawiają się setki postów o inwes
 
 | ID   | Change ID                       | Outcome (user can …)                                                                                                           | Prerequisites | PRD refs                                                                 | Status   |
 | ---- | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ | ------------- | ------------------------------------------------------------------------ | -------- |
-| S-20 | source-isolation                | awaria albo cisza jednego źródła nie psuje przebiegu pozostałych; czas pobrania wielu źródeł mieści się w progu strażnika; liczniki widać per źródło | —             | NFR `prd.md:268`, FR-023; audyt S1, S2, S5; destylacja R-05, D-01        | ready    |
+| S-20 | source-isolation                | awaria albo cisza jednego źródła nie psuje przebiegu pozostałych; czas pobrania wielu źródeł mieści się w progu strażnika; liczniki widać per źródło | —             | NFR `prd.md:268`, FR-023; audyt S1, S2, S5; destylacja R-05, D-01        | in-progress |
 | S-21 | deploy-gate-no-deploy-changes   | zmiana IaC, która nie wywołuje deployu, nie robi CI czerwonego ani nie blokuje deployu kodu; dokumenty S-14 i #73 mówią prawdę  | —             | audyt P1, P2, P3; Open Roadmap Question 2                                 | done |
 | S-22 | run-attention-single-rule       | admin widzi powody „wymaga uwagi” liczone tą samą regułą co powiadomienia i alerty, bez pustego tekstu przy nowym powodzie      | —             | NFR `prd.md:259`; audyt K1; destylacja R-22, D-04                         | done |
 | S-23 | closed-sets-guard               | nowa wartość zamkniętego zbioru albo nowa kolumna posta bez migracji lub bez zapisu jest wykrywana w CI, nie w nocy na produkcji | —             | audyt E4; destylacja R-17, R-19                                           | done |
@@ -154,7 +154,7 @@ Brak — każda praca przekrojowa M-3 ma widoczny skutek dla użytkownika albo o
 - **Unknowns:**
   - Jaki status ma przebieg, w którym jedno źródło padło albo było puste, a drugie dało posty (`partial`? `succeeded` z powiadomieniem?), i czy taki przebieg przesuwa datę aktualizacji? — Owner: user. Block: no (rozstrzyga wywiad `/10x-plan`; wiąże się z S-29).
 - **Risk:** zmienia szew `SourceIngest` i regułę postępu kroku `fetch`, które działają dziś na produkcji z jednym źródłem; da się to zweryfikować fałszywym drugim źródłem w testach, bez API Reddita (audyt, sekcja 1, „Testowalność drugiego źródła”).
-- **Status:** ready
+- **Status:** in-progress
 
 ### S-21: Zmiana IaC bez deployu nie blokuje wdrożeń
 
@@ -239,6 +239,7 @@ Brak — każda praca przekrojowa M-3 ma widoczny skutek dla użytkownika albo o
 - **Change ID:** reddit-source
 - **PRD refs:** FR-023, NFR `prd.md:268`, `prd.md:42`; audyt S3, S6, S7, S8; destylacja Q-01, Q-07
 - **Prerequisites:** S-20
+- **Obowiązkowe przejęcie z S-20 (plan-review F1, 2026-10-29):** w testach integracyjnych rzeczywistego Reddita zastąpić testowy adapter `RawInputMapper(REDDIT)` delegujący do `WykopPosts` oraz RAW Wykopu produkcyjnym mapperem Reddita i jego rzeczywistym, zanonimizowanym fixture. Dostosować `ScriptedSourceConfiguration`, żeby nie rejestrowała dodatkowych beanów `SourceFetcher` / `RawInputMapper` pod `Source.REDDIT` obok produkcyjnych. Bramka S-27: przy awarii Wykopu post Reddita przechodzi przez zapis RAW, produkcyjny mapper i ocenę; zapisane wejście oceny zgadza się z fixture Reddita. Ująć ten krok w planie S-27 i zweryfikować przed zamknięciem wycinka; adapter z S-20 dowodzi tylko izolacji silnika, nie obsługi formatu Reddita.
 - **Parallel with:** S-21–S-26
 - **Blockers:** —
 - **Unknowns:**
