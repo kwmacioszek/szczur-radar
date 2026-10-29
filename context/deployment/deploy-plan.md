@@ -1953,9 +1953,9 @@ Repair a bad S-25 release with a new commit (a revert in a PR is one), which goe
 
   Before V12 every run named one source, so the run's `fetched` / `skipped` are that source's. Then `sources_failed` / `sources_empty` are counted from the rows.
 
-**An intended correction of history.** Historical empty runs that ended `succeeded` (before S-08) get `empty`. They no longer cover their days, nor set a source's first covered day. So "Dni bez danych" may list a day after the deploy that it did not list before, or start a source's window later. A source without any `succeeded` result still has no missing day.
+**An intended correction of history.** Historical empty runs that ended `succeeded` (before S-08) get `empty`. They no longer cover their days, nor set a source's first covered day. So "Dni bez danych" may list a day after the deploy that it did not list before, or start a source's window later. A source without any `succeeded` result still has no missing day. The same runs also show "wymaga uwagi: bez postów: Wykop (pobrano N, pominięto N)" in `/admin` and on their page from the deploy on (`sources_empty = 1`, reason `source_empty` of a `succeeded` run); nothing is raised for them after the fact — no bell notification and no Telegram alert (`RunNotifications` runs only when a run ends). Expected, not a regression.
 
-**When `migrate` fails**, Railway stops the deploy and the previous API keeps serving (section F-03, "Troubleshooting (Java)"). Read the pre-deploy log: a `CHECK` violated by an existing row, or a backfill error. Fix forward with `V13__…`, never by editing V12 (the Migrations rule in `REPOSITORY_GUIDELINES.md`). A run that was `RUNNING` in the old instance during the deploy (against the standing rule) gets no row, and as `interrupted` it covers nothing anyway.
+**When `migrate` fails**, Railway stops the deploy and the previous API keeps serving (section F-03, "Troubleshooting (Java)"). Read the pre-deploy log: a `CHECK` violated by an existing row, or a backfill error. Fix forward with `V13__…`, never by editing V12 (the Migrations rule in `REPOSITORY_GUIDELINES.md`). A run that was `RUNNING` in the old instance during the deploy (against the standing rule) gets no row unless its `fetch` step had already ended (the backfill reads the step's status, not the run's); as `interrupted` it covers nothing anyway.
 
 ### PR-env verification (szczur-radar-pr-130)
 
@@ -1967,7 +1967,14 @@ Repair a bad S-25 release with a new commit (a revert in a PR is one), which goe
 
 ### Runbook — after the merge (operator; tracked in issue #114)
 
-0. **Standing rules.** No merge to `main` while `/admin` shows a run `RUNNING`, not between about 00:30 and 01:30 UTC (section S-05), and not while the 02:00 UTC backup runs (section S-15). The merge deploys the API (with the migration `V12` in its pre-deploy), the web and `pipeline-trigger` (only its README changed; `trigger.sh` is unchanged). No variable or service change. **Before the merge**, note the list in `/admin` → "Dni bez danych" (or `GET /api/admin/pipeline-runs/missing-days`), to compare with step 2.
+0. **Standing rules.** No merge to `main` while `/admin` shows a run `RUNNING`, not between about 00:30 and 01:30 UTC (section S-05), and not while the 02:00 UTC backup runs (section S-15). The merge deploys the API (with the migration `V12` in its pre-deploy), the web and `pipeline-trigger` (only its README changed; `trigger.sh` is unchanged). No variable or service change. **Before the merge**, note the list in `/admin` → "Dni bez danych" (or `GET /api/admin/pipeline-runs/missing-days`), to compare with step 2. Also check that no historical range run has counters the new table's `CHECK` (`skipped <= fetched`, both ≥ 0) would refuse — a violated `CHECK` stops the pre-deploy `migrate` and so the deploy (fix forward with `V13__…`, "When `migrate` fails" above); expected `0`:
+
+   ```bash
+   railway ssh -s postgres -e production -- 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "
+   SELECT count(*) AS bad_counters FROM pipeline_runs
+    WHERE kind = '\''range'\'' AND (skipped > fetched OR fetched < 0 OR skipped < 0);"'
+   ```
+
 1. **CI on `main` and the pre-deploy.** All jobs green; `railway-config` plans no change. The API's pre-deploy `migrate` passes with V12 (`Migrating schema "public" to version "12 - pipeline run sources"`), and the API starts (`/api/ready` 200).
 2. **Read production, right after the deploy and before the next range run** (read-only).
    - The backfill: one row per source of each range run whose last `fetch` step ended `succeeded` or `failed`. Every run so far named one source (`wykop`), so `source_rows` equals the number of such runs:
@@ -1987,7 +1994,7 @@ Repair a bad S-25 release with a new commit (a revert in a PR is one), which goe
      ```
 
      Expected: `source_rows = expected_rows`. A range run started after the deploy can make them differ: a run stopped during its fetch has a row for each source that ended but an `interrupted` step. So run this before the next run, or compare only runs created before the deploy. Alternatively, the latest night's page in `/admin` must show "Wynik per źródło" with one row `wykop` `pobrane`.
-   - "Dni bez danych" agrees with the coverage from the `succeeded` rows and each source's first covered day (section S-13 as changed above). Explain any difference from the list noted before the merge with the historical runs that V12 classified `empty`. They are the ones that no longer cover a day; it is not a loss of good fetches:
+   - "Dni bez danych" agrees with the coverage from the `succeeded` rows and each source's first covered day (section S-13 as changed above). Explain any difference from the list noted before the merge with the historical runs that V12 classified `empty` (the same runs now carry "wymaga uwagi: bez postów" in the run list and on their page — expected). They are the ones that no longer cover a day; it is not a loss of good fetches:
 
      ```bash
      railway ssh -s postgres -e production -- 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "

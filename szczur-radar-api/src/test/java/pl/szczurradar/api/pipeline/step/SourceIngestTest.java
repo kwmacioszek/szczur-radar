@@ -248,6 +248,35 @@ class SourceIngestTest {
 		assertThat(Thread.currentThread().isInterrupted()).as("the flag is kept").isTrue();
 	}
 
+	@Test
+	void aSourceThatThrowsBecauseTheRunWasStoppedIsItsFailureAtInfo(CapturedOutput output) throws InterruptedException {
+		List<SourcePost> wykopPosts = wykop.posts(1);
+		wykop.answer(new SourceFetcher.Fetched(wykopPosts, 1, 0));
+		reddit.hold();
+		// The run is stopped while the second source is fetched: its client throws and keeps the flag.
+		Thread runThread = Thread.currentThread();
+		Thread stop = new Thread(() -> {
+			while (reddit.calls() == 0) {
+				Thread.onSpinWait();
+			}
+			runThread.interrupt();
+		});
+		stop.start();
+
+		FetchedBatch batch = ingest().fetch(target(Source.WYKOP, Source.REDDIT), recorded::add);
+
+		assertThat(Thread.interrupted()).as("the flag is kept").isTrue();
+		stop.join();
+		assertThat(batch.posts()).isEqualTo(wykopPosts);
+		assertThat(recorded.getLast()).isEqualTo(new SourceFetch(Source.REDDIT, SourceFetchStatus.FAILED, 0, 0,
+				"IllegalStateException: reddit: the fetch was interrupted"));
+		// Not an outage of the source: INFO without the exception's stack trace, no WARN.
+		assertThat(output.getAll()).contains("Run " + RUN + ": reddit ended with the run's stop:"
+				+ " java.lang.IllegalStateException: reddit: the fetch was interrupted");
+		assertThat(output.getAll().lines().filter(line -> line.contains(" WARN "))).isEmpty();
+		assertThat(output.getAll()).doesNotContain("\tat ");
+	}
+
 	private SourceIngest ingest() {
 		return new SourceIngest(List.of(wykop, reddit));
 	}

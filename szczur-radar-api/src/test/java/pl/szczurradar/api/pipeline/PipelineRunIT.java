@@ -822,6 +822,11 @@ class PipelineRunIT {
 		assertThat(steps(run)).containsExactly("fetch:interrupted");
 		assertThat(count("SELECT count(*) FROM posts", null)).isZero();
 		assertThat(output.getAll().lines().filter(line -> line.contains(" ERROR "))).isEmpty();
+		// The held fetch ended with the stop, not as an outage of the source: INFO, no WARN with a stack trace.
+		assertThat(output.getAll()).contains("Run " + run + ": reddit ended with the run's stop:"
+				+ " java.lang.IllegalStateException: reddit: the fetch was interrupted");
+		assertThat(output.getAll().lines().filter(line -> line.contains(" WARN ") && line.contains("reddit failed")))
+			.isEmpty();
 	}
 
 	/**

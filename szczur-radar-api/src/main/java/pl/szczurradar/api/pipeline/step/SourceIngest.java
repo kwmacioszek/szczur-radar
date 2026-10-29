@@ -83,7 +83,8 @@ public class SourceIngest {
 	 *
 	 * <p>Before each source the run's thread is checked for an interrupt: a stopped run fetches no further
 	 * source. A source's exception caused by the interrupt (its client keeps the flag) is its
-	 * {@code failed} result like any other; whoever stopped the run wrote its end first, so the caller's
+	 * {@code failed} result like any other, logged at INFO without the exception ({@code ended with the
+	 * run's stop}: not an outage); whoever stopped the run wrote its end first, so the caller's
 	 * conditional write adds nothing, and the checkpoint before the next source ends the step. After the
 	 * last source there is none: the step returns or throws, and the next step is refused.
 	 *
@@ -115,7 +116,14 @@ public class SourceIngest {
 				outcome = new SourceFetch(source, status, result.fetched(), result.skipped(), null);
 			}
 			catch (RuntimeException ex) {
-				log.warn("Run {}: {} failed: {}", target.runId(), source.value(), ex.getMessage(), ex);
+				if (Thread.currentThread().isInterrupted()) {
+					// The run was stopped during this source (the watchdog's cancel(true), a stopping instance's
+					// shutdownNow()); its client keeps the flag. Whoever stopped the run wrote its end: not an outage.
+					log.info("Run {}: {} ended with the run's stop: {}", target.runId(), source.value(), ex.toString());
+				}
+				else {
+					log.warn("Run {}: {} failed: {}", target.runId(), source.value(), ex.getMessage(), ex);
+				}
 				outcome = new SourceFetch(source, SourceFetchStatus.FAILED, 0, 0,
 						ex.getClass().getSimpleName() + ": " + ex.getMessage());
 			}
