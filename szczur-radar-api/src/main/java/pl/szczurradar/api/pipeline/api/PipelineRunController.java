@@ -4,6 +4,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
+import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
@@ -34,11 +35,14 @@ import pl.szczurradar.api.pipeline.run.InterruptionCause;
 import pl.szczurradar.api.pipeline.run.MissingDays;
 import pl.szczurradar.api.pipeline.run.PipelineRun;
 import pl.szczurradar.api.pipeline.run.PipelineRunRepository;
+import pl.szczurradar.api.pipeline.run.PipelineRunSource;
+import pl.szczurradar.api.pipeline.run.PipelineRunSourceRepository;
 import pl.szczurradar.api.pipeline.run.PipelineRunStep;
 import pl.szczurradar.api.pipeline.run.PipelineRunStepRepository;
 import pl.szczurradar.api.pipeline.run.RunKind;
 import pl.szczurradar.api.pipeline.run.RunStatus;
 import pl.szczurradar.api.pipeline.run.RunStep;
+import pl.szczurradar.api.pipeline.run.SourceFetchStatus;
 import pl.szczurradar.api.pipeline.run.StepStatus;
 import pl.szczurradar.api.pipeline.state.RunRecorder;
 import pl.szczurradar.api.pipeline.step.SourceIngest;
@@ -64,6 +68,8 @@ class PipelineRunController {
 
 	private final PipelineRunStepRepository steps;
 
+	private final PipelineRunSourceRepository sourceResults;
+
 	private final RunRecorder recorder;
 
 	private final SourceIngest sources;
@@ -71,10 +77,11 @@ class PipelineRunController {
 	private final Clock clock;
 
 	PipelineRunController(PipelineRunService service, PipelineRunRepository runs, PipelineRunStepRepository steps,
-			RunRecorder recorder, SourceIngest sources, Clock clock) {
+			PipelineRunSourceRepository sourceResults, RunRecorder recorder, SourceIngest sources, Clock clock) {
 		this.service = service;
 		this.runs = runs;
 		this.steps = steps;
+		this.sourceResults = sourceResults;
 		this.recorder = recorder;
 		this.sources = sources;
 		this.clock = clock;
@@ -95,27 +102,32 @@ class PipelineRunController {
 				: service.startRange(request.from(), request.to(),
 						request.sources() == null ? List.of() : request.sources(), admin);
 		return ResponseEntity.status(HttpStatus.ACCEPTED)
-			.body(created.stream().map(run -> view(run, List.of())).toList());
+			.body(created.stream().map(run -> view(run, List.of(), List.of())).toList());
 	}
 
-	/** The latest runs with their steps, newest first (equal creation times by id). */
+	/** The latest runs with their steps and source results, newest first (equal creation times by id). */
 	@GetMapping
 	RunPage list(@RequestParam(defaultValue = "0") @Min(0) int page,
 			@RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
 		Page<PipelineRun> found = runs.findPage(page, size);
-		Map<UUID, List<PipelineRunStep>> stepsByRun = steps
-			.findByRunIdInOrderByStartedAtAscIdAsc(found.map(PipelineRun::getId).getContent())
+		List<UUID> ids = found.map(PipelineRun::getId).getContent();
+		Map<UUID, List<PipelineRunStep>> stepsByRun = steps.findByRunIdInOrderByStartedAtAscIdAsc(ids)
 			.stream()
 			.collect(Collectors.groupingBy(PipelineRunStep::getRunId));
-		return new RunPage(found.map(run -> view(run, stepsByRun.getOrDefault(run.getId(), List.of()))).getContent(),
-				page, size, found.getTotalElements());
+		Map<UUID, List<PipelineRunSource>> sourcesByRun = sourceResults.findByRunIdIn(ids)
+			.stream()
+			.collect(Collectors.groupingBy(PipelineRunSource::getRunId));
+		return new RunPage(found.map(run -> view(run, stepsByRun.getOrDefault(run.getId(), List.of()),
+				sourcesByRun.getOrDefault(run.getId(), List.of())))
+			.getContent(), page, size, found.getTotalElements());
 	}
 
-	/** One run with its steps, for its page; 404 {@code not_found} for an unknown id. */
+	/** One run with its steps and source results, for its page; 404 {@code not_found} for an unknown id. */
 	@GetMapping("/{id}")
 	ResponseEntity<?> run(@PathVariable UUID id) {
 		return runs.findById(id)
-			.<ResponseEntity<?>>map(run -> ResponseEntity.ok(view(run, steps.findByRunIdOrderByStartedAtAscIdAsc(id))))
+			.<ResponseEntity<?>>map(run -> ResponseEntity
+				.ok(view(run, steps.findByRunIdOrderByStartedAtAscIdAsc(id), sourceResults.findByRunId(id))))
 			.orElseGet(() -> ApiError.response(ErrorCode.NOT_FOUND));
 	}
 
@@ -132,8 +144,9 @@ class PipelineRunController {
 	 * The days without data ({@link MissingDays}) for the admin's list: the window of the
 	 * {@value MissingDays#WINDOW_DAYS} days up to the day before yesterday (today in Warsaw from the
 	 * injected clock) and its days that no {@code range} run {@code succeeded} or {@code partial} (the
-	 * cron's or an admin's) covers, per configured source; a source starts at its first covered day ever,
-	 * so one never covered has no day. The admin starts such a range in the form; nothing here starts a run.
+	 * cron's or an admin's) covers, per configured source: a run covers a source only where the source's
+	 * result is {@code succeeded} (it gave a post). A source starts at its first covered day ever, so one
+	 * never covered has no day. The admin starts such a range in the form; nothing here starts a run.
 	 */
 	@GetMapping("/missing-days")
 	MissingDaysView missingDays() {
@@ -146,7 +159,7 @@ class PipelineRunController {
 		List<MissingDays.Coverage> coverages = runs
 			.findCoveringSince(MissingDays.windowStart(today).atStartOfDay(PipelineRunService.ZONE).toInstant())
 			.stream()
-			.map(run -> MissingDays.Coverage.of(run, PipelineRunService.ZONE))
+			.map(range -> MissingDays.Coverage.of(range, PipelineRunService.ZONE))
 			.toList();
 		Map<Source, LocalDate> firstCovered = new EnumMap<>(Source.class);
 		runs.findFirstCoveredFrom(configured)
@@ -177,11 +190,12 @@ class PipelineRunController {
 	}
 
 	/**
-	 * {@code run} with {@code runSteps}; the posts it holds in assessment are counted only while it is
-	 * running (at most one run is).
+	 * {@code run} with {@code runSteps} and {@code runSources}; the posts it holds in assessment are counted
+	 * only while it is running (at most one run is).
 	 */
-	private RunView view(PipelineRun run, List<PipelineRunStep> runSteps) {
-		return RunView.of(run, runSteps, run.getStatus() == RunStatus.RUNNING ? recorder.inFlight(run.getId()) : 0);
+	private RunView view(PipelineRun run, List<PipelineRunStep> runSteps, List<PipelineRunSource> runSources) {
+		return RunView.of(run, runSteps, runSources,
+				run.getStatus() == RunStatus.RUNNING ? recorder.inFlight(run.getId()) : 0);
 	}
 
 	/** A page of runs. */
@@ -213,27 +227,57 @@ class PipelineRunController {
 	 * @param scheduled whether the daily cron requested it, not an admin ({@link PipelineRun#scheduled()})
 	 * @param lastActivityAt the last change while it was running
 	 * @param processingErrors posts with a technical error and no stored assessment (not failed attempts)
+	 * @param sourcesFailed the sources of a range run that failed (the {@code failed} ones in
+	 *     {@code sourceResults})
+	 * @param sourcesEmpty the sources of a range run that gave no post (the {@code empty} ones in
+	 *     {@code sourceResults})
 	 * @param llmRetries HTTP attempts beyond the first of the assessments' LLM calls
 	 * @param flexFallbacks assessments whose call fell back from the flex tier to the default one
 	 * @param inFlight the posts it is assessing now; 0 unless it is running
 	 * @param error the reason of a failed or interrupted run, or the summary of technical errors
+	 * @param sourceResults the result of each source a range run has fetched so far, in {@link Source}
+	 *     order; empty for any other run and before its first source ends
 	 */
 	record RunView(UUID id, RunKind kind, RunStatus status, @Nullable InterruptionCause interruptionCause,
 			boolean needsAttention, List<AttentionReason> attentionReasons, boolean scheduled,
 			@Nullable Instant rangeFrom, @Nullable Instant rangeTo,
 			List<Source> sources, @Nullable List<UUID> requestedPostIds, Instant createdAt, @Nullable Instant startedAt,
 			@Nullable Instant finishedAt, @Nullable Instant lastActivityAt, int fetched, int newPosts, int assessedOk,
-			int assessedFailed, int processingErrors, int dead, int skipped, int llmRetries, int flexFallbacks,
-			int inFlight, @Nullable String error, List<StepView> steps) {
+			int assessedFailed, int processingErrors, int dead, int skipped, int sourcesFailed, int sourcesEmpty,
+			int llmRetries, int flexFallbacks, int inFlight, @Nullable String error, List<StepView> steps,
+			List<SourceResultView> sourceResults) {
 
-		static RunView of(PipelineRun run, List<PipelineRunStep> steps, int inFlight) {
+		static RunView of(PipelineRun run, List<PipelineRunStep> steps, List<PipelineRunSource> sources, int inFlight) {
 			return new RunView(run.getId(), run.getKind(), run.getStatus(), run.getInterruptionCause(),
 					run.needsAttention(), run.attentionReasons(), run.scheduled(),
 					run.getRangeFrom(), run.getRangeTo(), run.getSources(), run.getRequestedPostIds(),
 					run.getCreatedAt(), run.getStartedAt(), run.getFinishedAt(), run.getLastActivityAt(),
 					run.getFetched(), run.getNewPosts(), run.getAssessedOk(), run.getAssessedFailed(),
-					run.getProcessingErrors(), run.getDead(), run.getSkipped(), run.getLlmRetries(),
-					run.getFlexFallbacks(), inFlight, run.getError(), steps.stream().map(StepView::of).toList());
+					run.getProcessingErrors(), run.getDead(), run.getSkipped(), run.getSourcesFailed(),
+					run.getSourcesEmpty(), run.getLlmRetries(), run.getFlexFallbacks(), inFlight, run.getError(),
+					steps.stream().map(StepView::of).toList(),
+					sources.stream()
+						.sorted(Comparator.comparing(PipelineRunSource::getSource))
+						.map(SourceResultView::of)
+						.toList());
+		}
+
+	}
+
+	/**
+	 * The result of one source of a range run ({@link PipelineRunSource}).
+	 *
+	 * @param fetched the elements it fetched, skipped ones included (its posts are {@code fetched − skipped})
+	 * @param skipped the fetched elements that could not become a post
+	 * @param error why it failed ({@code <SimpleName>: <message>}); {@code null} unless it failed
+	 * @param finishedAt when its result was written
+	 */
+	record SourceResultView(Source source, SourceFetchStatus status, int fetched, int skipped,
+			@Nullable String error, Instant finishedAt) {
+
+		static SourceResultView of(PipelineRunSource result) {
+			return new SourceResultView(result.getSource(), result.getStatus(), result.getFetched(),
+					result.getSkipped(), result.getError(), result.getFinishedAt());
 		}
 
 	}

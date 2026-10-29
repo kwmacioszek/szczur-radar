@@ -27,6 +27,7 @@ import pl.szczurradar.api.pipeline.run.MissingDays;
 import pl.szczurradar.api.pipeline.run.PipelineRun;
 import pl.szczurradar.api.pipeline.run.PipelineRunRepository;
 import pl.szczurradar.api.pipeline.run.RunStatus;
+import pl.szczurradar.api.pipeline.run.SourceFetchStatus;
 import pl.szczurradar.api.sources.Source;
 import pl.szczurradar.api.user.Role;
 import pl.szczurradar.api.user.SystemAccount;
@@ -90,6 +91,8 @@ class PipelineRunWithoutSourceIT {
 				from.atTime(LocalTime.of(23, 59, 59)).atZone(PipelineRunService.ZONE).toInstant(),
 				List.of(Source.WYKOP), SystemAccount.SCHEDULER.id(), null))
 			.getId();
+		jdbc.update("INSERT INTO pipeline_run_sources (run_id, source, status, fetched, skipped)"
+				+ " VALUES (?, ?, ?, 3, 0)", run, Source.WYKOP.value(), SourceFetchStatus.SUCCEEDED.value());
 		jdbc.update("UPDATE pipeline_runs SET status = ? WHERE id = ?", RunStatus.SUCCEEDED.value(), run);
 
 		assertThat(mvc.get()

@@ -8,7 +8,14 @@ import com.fasterxml.jackson.annotation.JsonValue;
 /** A data source of posts; {@link #value()} is the stored and API value. */
 public enum Source {
 
-	WYKOP;
+	WYKOP,
+
+	/**
+	 * Registered (the value in every {@code CHECK} set of a source, {@code V12}), not implemented: no
+	 * {@link SourceFetcher} or {@link RawInputMapper} until S-27 ({@code sources/CLAUDE.md}, step 1), so it
+	 * is never configured and a range request naming it is refused.
+	 */
+	REDDIT;
 
 	@JsonValue
 	public String value() {

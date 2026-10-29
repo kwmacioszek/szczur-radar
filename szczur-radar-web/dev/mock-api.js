@@ -20,10 +20,18 @@
  *       'gaps'  the window D-15…D-2 with Wykop missing D-9…D-7 and D-4 (a 3-day and a 1-day range), the default,
  *       'none'  the window and no day,
  *       'error' 500.
- * Runs (/api/admin/pipeline-runs?page&size, 30 in all: "Pokaż starsze" has a second page of 20) answer like
+ * Runs (/api/admin/pipeline-runs?page&size, 32 in all: "Pokaż starsze" has a second page of 20) answer like
  * pipeline/api/PipelineRunController.java, the newest first; a run that needs attention has its reason codes in
- * attentionReasons, along the API's rule (pipeline/run/PipelineRun.attentionReasons):
+ * attentionReasons, along the API's rule (pipeline/run/PipelineRun.attentionReasons). Every range run has
+ * sourceResults (each source's status, fetched, skipped, error) and the counters sourcesFailed / sourcesEmpty;
+ * unless said otherwise its one source, Wykop, succeeded:
  *       r-running  an admin's range, assessing now (19 of 41, 4 in flight, last activity 20 s ago),
+ *       r-source-empty   an admin's range of Wykop and Reddit, partial: Reddit answered without a post
+ *                  (fetched 0; ['source_empty'], "reddit gave no post to store (fetched 0, skipped 0)"); Wykop's
+ *                  posts assessed,
+ *       r-source-failed  the cron's night of Wykop and Reddit, partial: Reddit threw after its attempts
+ *                  (['source_failed'], its row's error "RedditApiException: … answered HTTP 503 …", the run's
+ *                  "reddit failed: …"); Wykop's posts stored and assessed,
  *       r-skipped  an admin's range, succeeded with 3 skipped elements (needs attention: a warning, ['skipped']),
  *       r-deploy   the cron's night, interrupted by a new deployment (['interrupted']: a warning), its assess step
  *                  interrupted,
@@ -31,15 +39,16 @@
  *                  at 00:30 — the first start request after PIPELINE_STALL_TIMEOUT (39 min) without activity —
  *                  cleaned it up, its assess step interrupted,
  *       r-empty    an admin's range of today just after midnight, failed: its source gave no post (fetched 0, its
- *                  fetch step failed, "NoPostsFetchedException: wykop gave no post to store (fetched 0, skipped 0)"),
+ *                  fetch step failed, "NoPostsFetchedException: wykop gave no post to store (fetched 0, skipped 0)";
+ *                  Wykop's result empty),
  *       r-stalled  the cron's night, failed: "no progress for 39m 00s: the run was stopped" (the watchdog),
  *       r-dead     the cron's night, partial with 1 dead post (needs attention: ['dead_posts']),
  *       r-ok       the cron's night, succeeded; then older nights, some partial with failed posts only.
  *   /api/admin/pipeline-runs/<id> is that run (e.g. /admin/runs/r-running); any other id is 404 {"detail":"not_found"}.
  * NOTIFICATIONS (the bell; MODE 'loading' and 'error' apply first), like notifications/api/NotificationController.java:
- *       'unread' 4 unread (r-skipped, r-deploy, r-empty, r-stalled) and 1 read (r-dead), the default; a read one
- *                stays read until the mock is installed again (POST /api/admin/notifications/<id>/read and
- *                …/notifications/read → 204),
+ *       'unread' 5 unread (r-source-failed, r-skipped, r-deploy, r-empty, r-stalled) and 1 read (r-dead), the
+ *                default; a read one stays read until the mock is installed again
+ *                (POST /api/admin/notifications/<id>/read and …/notifications/read → 204),
  *       'none'   no notifications (unread 0),
  *       'error'  500.
  * /api/posts answers like posts/api/PostController.java: page, size, total; a page past the end (e.g. /?page=9)
@@ -87,19 +96,30 @@ async page => {
     step('assess', last, `${day}T00:30:44Z`, `${day}T00:52:10Z`, posts, last === 'succeeded' ? posts : null, error),
     ...(last === 'succeeded' ? [step('summarize', 'succeeded', `${day}T00:52:10Z`, `${day}T00:52:10Z`, null, null)] : []),
   ]
+  // One source's result of a range run, as PipelineRunController's SourceResultView: `succeeded` (gave a post),
+  // `empty` (no post) or `failed` (threw; only then an error).
+  const sourceResult = (source, status, fetched, skipped, finishedAt, error = null) =>
+    ({ source, status, fetched, skipped, error, finishedAt })
   // The cron's run of the night of `day`: D-2…D-1 in Warsaw (22:00 UTC of D-3 to 21:59:59 UTC of D-1, summer time).
+  // Without sourceResults in `o`, its one source (Wykop) gave the run's fetched and skipped: succeeded, or empty
+  // when every fetched element was skipped.
   const nightly = (id, day, o) => {
     const d = new Date(`${day}T00:00:00Z`)
     const back = (days) => new Date(d.getTime() - days * 24 * 60 * MIN).toISOString().slice(0, 10)
-    return {
+    const r = {
       id, kind: 'range', status: 'succeeded', interruptionCause: null, needsAttention: false, attentionReasons: [],
       scheduled: true,
       rangeFrom: `${back(3)}T22:00:00Z`, rangeTo: `${back(1)}T21:59:59Z`, sources: ['wykop'], requestedPostIds: null,
       createdAt: `${day}T00:30:00Z`, startedAt: `${day}T00:30:01Z`, finishedAt: `${day}T00:52:10Z`,
       lastActivityAt: `${day}T00:52:10Z`, fetched: 470, newPosts: 400, assessedOk: 400, assessedFailed: 0,
-      processingErrors: 0, dead: 0, skipped: 0, llmRetries: 9, flexFallbacks: 2, inFlight: 0, error: null,
-      steps: night(day, 400), ...o,
+      processingErrors: 0, dead: 0, skipped: 0, sourcesFailed: 0, sourcesEmpty: 0, llmRetries: 9, flexFallbacks: 2,
+      inFlight: 0, error: null, steps: night(day, 400), ...o,
     }
+    if (o?.sourceResults) return r
+    const fetchEnd = r.steps.find((s) => s.step === 'fetch')?.finishedAt ?? r.startedAt
+    const status = r.fetched > r.skipped ? 'succeeded' : 'empty'
+    return { ...r, sourcesEmpty: status === 'empty' ? 1 : 0,
+      sourceResults: [sourceResult('wykop', status, r.fetched, r.skipped, fetchEnd)] }
   }
   const allRuns = () => [
     // An admin's range run, assessing now: 19 of 41 done, 4 in flight.
@@ -113,7 +133,35 @@ async page => {
         step('select', 'succeeded', ago(11.4 * MIN), ago(11.4 * MIN), 41, 41),
         step('assess', 'running', ago(11.4 * MIN), null, 41, null),
       ],
+      sourceResults: [sourceResult('wykop', 'succeeded', 270, 0, ago(11.5 * MIN))],
     },
+    // An admin's range of Wykop and Reddit: Reddit answered, but without a post; Wykop's posts were assessed.
+    nightly('r-source-empty', '2026-10-16', { scheduled: false, status: 'partial', needsAttention: true,
+      attentionReasons: ['source_empty'], sources: ['wykop', 'reddit'], sourcesEmpty: 1,
+      rangeFrom: '2026-10-14T22:00:00Z', rangeTo: '2026-10-15T21:59:59Z', createdAt: '2026-10-16T08:00:00Z',
+      startedAt: '2026-10-16T08:00:01Z', finishedAt: '2026-10-16T08:21:40Z', lastActivityAt: '2026-10-16T08:21:40Z',
+      error: 'reddit gave no post to store (fetched 0, skipped 0)',
+      steps: [
+        step('fetch', 'succeeded', '2026-10-16T08:00:02Z', '2026-10-16T08:00:51Z', null, 470),
+        step('store', 'succeeded', '2026-10-16T08:00:51Z', '2026-10-16T08:00:55Z', 470, 400),
+        step('select', 'succeeded', '2026-10-16T08:00:55Z', '2026-10-16T08:00:55Z', 400, 400),
+        step('assess', 'succeeded', '2026-10-16T08:00:55Z', '2026-10-16T08:21:40Z', 400, 400),
+        step('summarize', 'succeeded', '2026-10-16T08:21:40Z', '2026-10-16T08:21:40Z', null, null),
+      ],
+      sourceResults: [
+        sourceResult('wykop', 'succeeded', 470, 0, '2026-10-16T08:00:40Z'),
+        sourceResult('reddit', 'empty', 0, 0, '2026-10-16T08:00:51Z'),
+      ] }),
+    // The cron's night of Wykop and Reddit: Reddit threw after its attempts; Wykop's posts were stored and assessed.
+    nightly('r-source-failed', '2026-10-16', { status: 'partial', needsAttention: true,
+      attentionReasons: ['source_failed'], sources: ['wykop', 'reddit'], sourcesFailed: 1,
+      error: 'reddit failed: RedditApiException: Reddit GET /r/inwestowanie/new answered HTTP 503: upstream'
+        + ' connect error after 3 attempts',
+      sourceResults: [
+        sourceResult('wykop', 'succeeded', 470, 0, '2026-10-16T00:30:40Z'),
+        sourceResult('reddit', 'failed', 0, 0, '2026-10-16T00:31:58Z', 'RedditApiException: Reddit GET'
+          + ' /r/inwestowanie/new answered HTTP 503: upstream connect error after 3 attempts'),
+      ] }),
     // An admin's range whose source skipped 3 elements (unexpected shape or not mappable): succeeded, a warning.
     nightly('r-skipped', '2026-10-15', { scheduled: false, needsAttention: true, attentionReasons: ['skipped'],
       skipped: 3, newPosts: 397, assessedOk: 397, createdAt: '2026-10-15T07:00:00Z', startedAt: '2026-10-15T07:00:01Z',
@@ -176,6 +224,8 @@ async page => {
   const allNotifications = () => {
     const byId = Object.fromEntries(allRuns().map((r) => [r.id, r]))
     return [
+      { id: 'n-source-failed', createdAt: '2026-10-16T00:52:11Z', readAt: null,
+        run: notifiedRun(byId['r-source-failed']) },
       { id: 'n-skipped', createdAt: '2026-10-15T07:21:31Z', readAt: null, run: notifiedRun(byId['r-skipped']) },
       { id: 'n-deploy', createdAt: '2026-10-15T00:41:12Z', readAt: null, run: notifiedRun(byId['r-deploy']) },
       { id: 'n-empty', createdAt: '2026-10-14T22:10:04Z', readAt: null, run: notifiedRun(byId['r-empty']) },

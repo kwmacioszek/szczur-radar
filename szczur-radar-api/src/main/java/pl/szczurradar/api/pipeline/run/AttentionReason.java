@@ -16,6 +16,19 @@ public enum AttentionReason {
 	/** The run was {@link RunStatus#INTERRUPTED interrupted}, whatever the cause; its only reason. */
 	INTERRUPTED("interrupted"),
 
+	/**
+	 * A source of a {@link RunStatus#SUCCEEDED succeeded} or {@link RunStatus#PARTIAL partial} range run
+	 * failed ({@link SourceFetchStatus#FAILED}): the other sources' posts were stored and assessed, its own
+	 * were not. The run's error and its sources' rows ({@link PipelineRunSource}) name it.
+	 */
+	SOURCE_FAILED("source_failed"),
+
+	/**
+	 * A source of a {@link RunStatus#SUCCEEDED succeeded} or {@link RunStatus#PARTIAL partial} range run
+	 * gave no post ({@link SourceFetchStatus#EMPTY}: no element in the range, or only skipped ones).
+	 */
+	SOURCE_EMPTY("source_empty"),
+
 	/** A {@link RunStatus#PARTIAL partial} run made a post dead (its last attempt failed). */
 	DEAD_POSTS("dead_posts"),
 

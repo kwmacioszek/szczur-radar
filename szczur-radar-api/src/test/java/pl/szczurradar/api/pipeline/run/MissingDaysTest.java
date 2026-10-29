@@ -8,7 +8,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 
@@ -75,6 +74,25 @@ class MissingDaysTest {
 		MissingDays missing = MissingDays.of(TODAY, List.of(Source.WYKOP), List.of(), Map.of());
 
 		assertThat(missing.days()).isEmpty();
+		// A second configured source that never gave a post misses no day either, next to one covered throughout.
+		assertThat(MissingDays
+			.of(TODAY, List.of(Source.WYKOP, Source.REDDIT), List.of(coverage("2026-10-09", "2026-10-22")),
+					COVERED_LONG_AGO)
+			.days()).isEmpty();
+	}
+
+	@Test
+	void twoSourcesMissTheirOwnDays() {
+		LocalDate longAgo = LocalDate.parse("2026-09-01");
+		MissingDays missing = MissingDays.of(TODAY, List.of(Source.REDDIT, Source.WYKOP),
+				List.of(coverage("2026-10-09", "2026-10-18"), coverage("2026-10-21", "2026-10-22"),
+						coverage(Source.REDDIT, "2026-10-09", "2026-10-17"),
+						coverage(Source.REDDIT, "2026-10-21", "2026-10-22")),
+				Map.of(Source.WYKOP, longAgo, Source.REDDIT, longAgo));
+
+		assertThat(missing.days()).containsExactly(new Day(LocalDate.parse("2026-10-18"), List.of(Source.REDDIT)),
+				new Day(LocalDate.parse("2026-10-19"), List.of(Source.WYKOP, Source.REDDIT)),
+				new Day(LocalDate.parse("2026-10-20"), List.of(Source.WYKOP, Source.REDDIT)));
 	}
 
 	@Test
@@ -142,12 +160,15 @@ class MissingDaysTest {
 	}
 
 	private static Coverage coverage(String from, String to) {
-		return new Coverage(LocalDate.parse(from), LocalDate.parse(to), Set.of(Source.WYKOP));
+		return coverage(Source.WYKOP, from, to);
 	}
 
-	private static PipelineRun range(String from, String to) {
-		return PipelineRun.range(Instant.parse(from), Instant.parse(to), List.of(Source.WYKOP), UUID.randomUUID(),
-				null);
+	private static Coverage coverage(Source source, String from, String to) {
+		return new Coverage(LocalDate.parse(from), LocalDate.parse(to), Set.of(source));
+	}
+
+	private static CoveredRange range(String from, String to) {
+		return new CoveredRange(Instant.parse(from), Instant.parse(to), Source.WYKOP);
 	}
 
 	/** The days {@code first}–{@code last}, inclusive. */

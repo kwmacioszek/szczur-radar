@@ -99,7 +99,7 @@ function notification(
   }
 }
 
-/** Two unread (newest), then four read; every reason the API notifies about. */
+/** Two unread (newest), then five read; every reason the API notifies about. */
 const notifications: AdminNotification[] = [
   notification('n1', '2026-10-15T07:59:30Z', null, {
     status: 'failed',
@@ -110,6 +110,11 @@ const notifications: AdminNotification[] = [
     kind: 'retry',
     interruptionCause: 'deploy',
     error: 'interrupted: a new deployment took over',
+  }),
+  // A source failed, the other's posts were assessed: partial, the failed source named in the run's error.
+  notification('n7', '2026-10-15T01:30:00Z', '2026-10-15T06:00:00Z', {
+    status: 'partial',
+    error: 'reddit failed: RedditApiException: Reddit GET /r/inwestowanie/new answered HTTP 503 after 3 attempts',
   }),
   notification('n3', '2026-10-15T01:05:00Z', '2026-10-15T06:00:00Z', { status: 'partial', dead: 1, assessedFailed: 7 }),
   notification('n4', '2026-10-14T00:52:00Z', '2026-10-14T06:00:00Z', { status: 'succeeded', skipped: 3 }),
@@ -710,9 +715,9 @@ h3 {
   min-height: 24rem;
 }
 
-/* Six notifications wrap to about 38rem at 375 px. */
+/* Seven notifications wrap to about 41rem at 375 px. */
 .bell-sample.open.list {
-  min-height: 40rem;
+  min-height: 43rem;
 }
 
 /* A bar like AppHeader's: positioned, so the panel opens below it, aligned to its right edge. */

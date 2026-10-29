@@ -81,37 +81,42 @@ public interface PipelineRunRepository extends JpaRepository<PipelineRun, UUID> 
 	Optional<Instant> findFinishedAtOfNewestRange(RunKind kind, Collection<RunStatus> statuses);
 
 	/**
-	 * The runs that cover their days ({@link MissingDays}): {@link RunKind#RANGE} runs, the daily one or an
+	 * What covers its days ({@link MissingDays}): for each {@link RunKind#RANGE} run, the daily one or an
 	 * admin's, that {@link RunStatus#SUCCEEDED succeeded} or ended {@link RunStatus#PARTIAL partial} (as
-	 * {@link #findLastUpdate}), whose range ends at or after {@code since}.
+	 * {@link #findLastUpdate}) and whose range ends at or after {@code since}, its range once per source whose
+	 * result ({@link PipelineRunSource}) is {@link SourceFetchStatus#SUCCEEDED succeeded}: a source that
+	 * failed or gave no post covers nothing, whatever the run requested.
 	 */
-	default List<PipelineRun> findCoveringSince(Instant since) {
-		return findRangesEndingSince(RunKind.RANGE, List.of(RunStatus.SUCCEEDED, RunStatus.PARTIAL), since);
+	default List<CoveredRange> findCoveringSince(Instant since) {
+		return findRangesEndingSince(RunKind.RANGE, List.of(RunStatus.SUCCEEDED, RunStatus.PARTIAL),
+				SourceFetchStatus.SUCCEEDED, since);
 	}
 
 	@Query("""
-			select r from PipelineRun r
-			where r.kind = :kind and r.status in :statuses and r.rangeTo >= :since""")
-	List<PipelineRun> findRangesEndingSince(RunKind kind, Collection<RunStatus> statuses, Instant since);
+			select new pl.szczurradar.api.pipeline.run.CoveredRange(r.rangeFrom, r.rangeTo, s.source)
+			from PipelineRunSource s join PipelineRun r on s.runId = r.id
+			where r.kind = :kind and r.status in :statuses and s.status = :sourceStatus and r.rangeTo >= :since""")
+	List<CoveredRange> findRangesEndingSince(RunKind kind, Collection<RunStatus> statuses,
+			SourceFetchStatus sourceStatus, Instant since);
 
 	/**
-	 * The start of the earliest covering run ({@link #findCoveringSince}) of each of {@code sources} in the
+	 * The start of the earliest range that covered each of {@code sources} ({@link #findCoveringSince}) in the
 	 * whole history; a source without one is missing.
 	 */
 	default Map<Source, Instant> findFirstCoveredFrom(Collection<Source> sources) {
 		Map<Source, Instant> first = new EnumMap<>(Source.class);
 		for (Source source : sources) {
-			findEarliestRangeFrom(RunKind.RANGE, List.of(RunStatus.SUCCEEDED, RunStatus.PARTIAL), source.value())
+			findEarliestCoveredFrom(RunKind.RANGE, List.of(RunStatus.SUCCEEDED, RunStatus.PARTIAL),
+					SourceFetchStatus.SUCCEEDED, source)
 				.ifPresent(from -> first.put(source, from));
 		}
 		return first;
 	}
 
-	// array_position, not array_contains: Hibernate renders that as @> with a varchar[], which Postgres
-	// refuses on the text[] column.
 	@Query("""
-			select min(r.rangeFrom) from PipelineRun r
-			where r.kind = :kind and r.status in :statuses and array_position(r.sources, :source) is not null""")
-	Optional<Instant> findEarliestRangeFrom(RunKind kind, Collection<RunStatus> statuses, String source);
+			select min(r.rangeFrom) from PipelineRunSource s join PipelineRun r on s.runId = r.id
+			where r.kind = :kind and r.status in :statuses and s.status = :sourceStatus and s.source = :source""")
+	Optional<Instant> findEarliestCoveredFrom(RunKind kind, Collection<RunStatus> statuses,
+			SourceFetchStatus sourceStatus, Source source);
 
 }

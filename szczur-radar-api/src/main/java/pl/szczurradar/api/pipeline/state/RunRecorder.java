@@ -19,8 +19,10 @@ import org.springframework.transaction.support.TransactionTemplate;
 import pl.szczurradar.api.pipeline.run.InterruptionCause;
 import pl.szczurradar.api.pipeline.run.RunStatus;
 import pl.szczurradar.api.pipeline.run.RunStep;
+import pl.szczurradar.api.pipeline.run.SourceFetchStatus;
 import pl.szczurradar.api.pipeline.run.StepStatus;
 import pl.szczurradar.api.posts.PostStage;
+import pl.szczurradar.api.sources.Source;
 
 /**
  * Writes a run's state, steps and counters. Every change of a run is one conditional {@code UPDATE}
@@ -121,6 +123,44 @@ public class RunRecorder {
 			.param("fallbacks", delta.flexFallbacks())
 			.param("id", runId)
 			.update();
+	}
+
+	/**
+	 * The result of one source of a running range run, in one conditional statement: the run's counters
+	 * ({@code fetched}, {@code skipped}, and {@code sources_failed} or {@code sources_empty} by the status)
+	 * and its last activity are moved and the source's row is added — or nothing, when the run is no longer
+	 * running (whoever ended it wrote first, so a stopped run never gets a source's row). The run's row is
+	 * updated first, as in {@link #openStep}. A second result of the same source in a run violates
+	 * {@code uq_pipeline_run_sources_run_source}.
+	 *
+	 * @param error why the source failed ({@code <SimpleName>: <message>}, cut like every error); only for
+	 *     {@link SourceFetchStatus#FAILED}, otherwise {@code null}
+	 * @return whether the result was written
+	 */
+	public boolean source(UUID runId, Source source, SourceFetchStatus status, int fetched, int skipped,
+			@Nullable String error) {
+		boolean written = statuses(jdbc
+			.sql("WITH run AS (UPDATE pipeline_runs SET fetched = fetched + :fetched, skipped = skipped + :skipped,"
+					+ " sources_failed = sources_failed + :failed, sources_empty = sources_empty + :empty,"
+					+ " last_activity_at = now() WHERE id = :id AND status = :running RETURNING id)"
+					+ " INSERT INTO pipeline_run_sources (run_id, source, status, fetched, skipped, error)"
+					+ " SELECT id, :source, :status, :fetched, :skipped, CAST(:error AS TEXT) FROM run RETURNING id"))
+			.param("fetched", fetched)
+			.param("skipped", skipped)
+			.param("failed", status == SourceFetchStatus.FAILED ? 1 : 0)
+			.param("empty", status == SourceFetchStatus.EMPTY ? 1 : 0)
+			.param("id", runId)
+			.param("source", source.value())
+			.param("status", status.value())
+			.param("error", error == null ? null : truncate(error))
+			.query(UUID.class)
+			.optional()
+			.isPresent();
+		if (written) {
+			log.info("Run {}: {} {}: fetched {}, skipped {}{}", runId, source.value(), status.value(), fetched, skipped,
+					status == SourceFetchStatus.FAILED ? "; " + error : "");
+		}
+		return written;
 	}
 
 	/**
@@ -395,10 +435,6 @@ public class RunRecorder {
 	 */
 	public record Counters(int fetched, int newPosts, int assessedOk, int assessedFailed, int processingErrors,
 			int dead, int skipped, int llmRetries, int flexFallbacks) {
-
-		public static Counters fetched(int fetched, int skipped) {
-			return new Counters(fetched, 0, 0, 0, 0, 0, skipped, 0, 0);
-		}
 
 		public static Counters stored(int newPosts) {
 			return new Counters(0, newPosts, 0, 0, 0, 0, 0, 0, 0);

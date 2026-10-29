@@ -26,7 +26,9 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import pl.szczurradar.api.agents.assessor.contract.ItemType;
 import pl.szczurradar.api.pipeline.flow.RunFlow.FetchedBatch;
+import pl.szczurradar.api.pipeline.flow.RunFlow.SourceFetch;
 import pl.szczurradar.api.pipeline.flow.RunFlow.StoredBatch;
+import pl.szczurradar.api.pipeline.run.SourceFetchStatus;
 import pl.szczurradar.api.posts.Post;
 import pl.szczurradar.api.posts.PostKey;
 import pl.szczurradar.api.posts.PostRepository;
@@ -70,8 +72,8 @@ class PostStoreTest {
 		when(posts.findKeys(eq(Source.WYKOP), anyCollection()))
 			.thenReturn(List.of(new PostKey(ItemType.POST, "1")));
 
-		StoredBatch batch = store.store(new FetchedBatch(RUN,
-				List.of(post(ItemType.POST, "1"), post(ItemType.LINK, "1"), post(ItemType.POST, "2")), 3, 0));
+		StoredBatch batch = store.store(
+				fetched(List.of(post(ItemType.POST, "1"), post(ItemType.LINK, "1"), post(ItemType.POST, "2"))));
 
 		assertThat(saved).extracting(Post::getItemType, Post::getSourceItemId)
 			.containsExactly(tuple(ItemType.LINK, "1"), tuple(ItemType.POST, "2"));
@@ -85,7 +87,7 @@ class PostStoreTest {
 		when(posts.findKeys(eq(Source.WYKOP), anyCollection())).thenReturn(List.of());
 		when(posts.save(any(Post.class))).thenThrow(new DataIntegrityViolationException("uq_posts_source_item"));
 
-		StoredBatch batch = store.store(new FetchedBatch(RUN, List.of(post(ItemType.POST, "7")), 1, 0));
+		StoredBatch batch = store.store(fetched(List.of(post(ItemType.POST, "7"))));
 
 		assertThat(batch.newPostIds()).isEmpty();
 	}
@@ -97,7 +99,7 @@ class PostStoreTest {
 			.mapToObj(i -> post(ItemType.POST, String.valueOf(i)))
 			.toList();
 
-		StoredBatch batch = store.store(new FetchedBatch(RUN, many, many.size(), 0));
+		StoredBatch batch = store.store(fetched(many));
 
 		assertThat(batch.newPostIds()).hasSize(many.size());
 		assertThat(transactions).hasSize(2);
@@ -118,8 +120,8 @@ class PostStoreTest {
 			return post;
 		});
 
-		StoredBatch batch = store.store(new FetchedBatch(RUN,
-				List.of(post(ItemType.POST, "6"), post(ItemType.POST, "7"), post(ItemType.POST, "8")), 3, 0));
+		StoredBatch batch = store.store(
+				fetched(List.of(post(ItemType.POST, "6"), post(ItemType.POST, "7"), post(ItemType.POST, "8"))));
 
 		// The chunk's transaction rolled back (its "6" with it); stored one by one, "7" is not new.
 		assertThat(transactions).hasSize(4);
@@ -138,9 +140,15 @@ class PostStoreTest {
 		});
 		List<SourcePost> many = IntStream.range(0, 2_500).mapToObj(i -> post(ItemType.POST, String.valueOf(i))).toList();
 
-		store.store(new FetchedBatch(RUN, many, many.size(), 0));
+		store.store(fetched(many));
 
 		assertThat(lookups).extracting(List::size).containsExactly(1000, 1000, 500);
+	}
+
+	/** Wykop's fetch of {@code posts}, every element a post. */
+	private static FetchedBatch fetched(List<SourcePost> posts) {
+		return new FetchedBatch(RUN, posts, posts.size(), 0,
+				List.of(new SourceFetch(Source.WYKOP, SourceFetchStatus.SUCCEEDED, posts.size(), 0, null)));
 	}
 
 	private static SourcePost post(ItemType type, String id) {

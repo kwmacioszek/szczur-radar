@@ -2,7 +2,7 @@
 
 A run is a plain sequence of steps in Java (`flow/RunSequence`), executed on the queue thread
 `pipeline-run` of `PipelineRunService`; no LLM and no framework decides the flow. The durable state is in
-Postgres (`pipeline_runs`, `pipeline_run_steps`, `posts`, `assessments`). Sources are reached only
+Postgres (`pipeline_runs`, `pipeline_run_steps`, `pipeline_run_sources`, `posts`, `assessments`). Sources are reached only
 through `sources/SourceFetcher` and `sources/RawInputMapper` — never name a source here
 (`sources/CLAUDE.md`).
 
@@ -18,13 +18,16 @@ pipeline/            entry points — start here
   PipelineBusyException, PostDeadException, SourceNotConfiguredException
   api/     the HTTP entries (below)
   run/     the run model: PipelineRun (+ attentionReasons → needsAttention), AttentionReason, PipelineRunStep,
-           RunKind, RunStatus, RunStep, StepStatus, InterruptionCause, repositories, MissingDays (the days no run covered, for the admin's list)
-  flow/    RunSequence (the steps in order), RunFlow (the step types)
+           PipelineRunSource (a source's result in a range run), SourceFetchStatus, RunKind, RunStatus, RunStep,
+           StepStatus, InterruptionCause, repositories, CoveredRange, MissingDays (the days no source's `succeeded`
+           result covered, for the admin's list)
+  flow/    RunSequence (the steps in order), RunFlow (the step types, SourceFetch: one source's result)
   step/    the steps: SourceIngest (fetch), PostStore (store), AssessmentSelection (select),
-           NoPostsFetchedException (a source without a post fails the fetch; caught by flow/RunSequence)
+           NoPostsFetchedException (no source gave a post: the fetch fails)
   assess/  assessing posts: AssessmentDispatcher (port), ConcurrentAssessmentDispatcher, AssessmentInputs,
            AssessmentPool (the LLM threads, PIPELINE_LLM_CONCURRENCY)
-  state/   conditional state writes: RunRecorder (runs, steps, counters, activity), PostTransitions (posts),
+  state/   conditional state writes: RunRecorder (runs, steps, counters, activity, `source`: a source's result),
+           PostTransitions (posts),
            RunNoLongerRunningException, RunInterruptedException (a step's checkpoint after an interrupt),
            Durations (durations in log lines and errors)
 ```
@@ -38,7 +41,7 @@ Every route starts runs only through `PipelineRunService`; none has its own star
 
 | Class | Route | Who |
 | --- | --- | --- |
-| `PipelineRunController` | `/api/admin/pipeline-runs/**`: start a range or chosen posts, list runs (pages of up to 100, newest first), one run `GET /{id}` (404 `not_found`), sources `GET /sources`, the days without data `GET /missing-days` → `{from, to, days: [{day, sources}]}` (`run/MissingDays`: the window D-15…D-2 of `ZONE` from the injected `Clock`; a day is covered for a configured source by a RANGE run `succeeded`/`partial` naming it, the cron's or an admin's; a source's window starts at its first covered day ever, so one never covered misses none; days ascending, `sources` in `Source` order; it starts nothing). A run (`RunView`) has its steps, counters, `scheduled` (requested by `SystemAccount.SCHEDULER`), `needsAttention` and `attentionReasons` (`run/AttentionReason` codes in the rule's order, e.g. `["dead_posts","skipped"]`, empty when it needs none; the SPA turns them into text in `src/runs.ts`), `interruptionCause`, `lastActivityAt`, `llmRetries`, `flexFallbacks` and `inFlight` (`RunRecorder.inFlight`, only for a running run, else 0) | admin session |
+| `PipelineRunController` | `/api/admin/pipeline-runs/**`: start a range or chosen posts, list runs (pages of up to 100, newest first), one run `GET /{id}` (404 `not_found`), sources `GET /sources`, the days without data `GET /missing-days` → `{from, to, days: [{day, sources}]}` (`run/MissingDays`: the window D-15…D-2 of `ZONE` from the injected `Clock`; a day is covered for a configured source by a RANGE run `succeeded`/`partial` whose result for that source (`run/PipelineRunSource`) is `succeeded` — it gave a post; a failed or empty source covers nothing, though the run requested it — the cron's or an admin's (`run/PipelineRunRepository.findCoveringSince` / `findFirstCoveredFrom`); a source's window starts at its first covered day ever, so one never covered misses none; days ascending, `sources` in `Source` order; it starts nothing). A run (`RunView`) has its steps, counters, `scheduled` (requested by `SystemAccount.SCHEDULER`), `needsAttention` and `attentionReasons` (`run/AttentionReason` codes in the rule's order, e.g. `["dead_posts","skipped"]`, empty when it needs none; the SPA turns them into text in `src/runs.ts`), `interruptionCause`, `lastActivityAt`, `llmRetries`, `flexFallbacks`, `inFlight` (`RunRecorder.inFlight`, only for a running run, else 0), `sourcesFailed` / `sourcesEmpty` and `sourceResults` (each source's `run/PipelineRunSource` — `source`, `status`, `fetched`, `skipped`, `error`, `finishedAt` — in `Source` order; the list loads them with one `findByRunIdIn`; empty for a run that is not a range and before its first source ends) | admin session |
 | `InternalPipelineRunController` | `POST /internal/pipeline-runs/daily` (D-2…D-1 of `ZONE` from the injected `Clock`, every configured source, requester `SystemAccount.SCHEDULER`; 202 `[{id, kind}]`), `GET /internal/pipeline-runs/{id}` (status, `startedAt`, `finishedAt`, `lastActivityAt`, `interruptionCause`, the running `step` or `null`, `assessTotal` = the `assess` step's `items_in` or `null`, counters `fetched`, `skipped`, `newPosts`, `assessedOk`, `assessedFailed`, `processingErrors`, `dead`; 404 `not_found`) — the cron's heartbeat reads it | the daily cron `pipeline-trigger`, token `PIPELINE_TRIGGER_TOKEN` only (`internal/`, `config/SecurityConfig`), never a session |
 | `FreshnessController` | `GET /api/freshness` → `{lastUpdatedAt}`: `finished_at` of the RANGE run `succeeded`/`partial` whose range reaches furthest, the latest of those (`run/PipelineRunRepository.findLastUpdate`; an admin's run over older days leaves it) — the feed's label (FR-030); nothing else about runs | any session |
 | `DeploySafetyController` | `GET /api/deploy-safety` → `{safe, reason}`: `reason` (`DeploySafetyReason`) `pipeline_running` before `pipeline_queued` (both can exist: a retry runs, the range waits), `null` when safe (`run/PipelineRunRepository.existsLiveActive` decides it in one statement, then `existsRunning` the reason, over every active run: two statements would both miss a run leaving the queue between them). A dead run — queued or running without activity for `PIPELINE_STALL_TIMEOUT` (`COALESCE(last_activity_at, started_at, created_at)`, the database's clock), and no run ended within it (a queue that just ended a run is alive) — does not hold the deploy (safe when every active run is dead: no instance executes it, and the new instance's start-up recovery interrupts it anyway); it only reads, the next request to start runs interrupts them (`lost`, Rules); 503 `{status: unavailable}` without the database, as `/api/ready` — the CI deploy gate's question (S-14); nothing else about runs | anyone, no session (`PUBLIC_ROUTES`) |
@@ -58,15 +61,15 @@ PipelineRunService.startRange / startPosts → queue (thread pipeline-run) → R
 | Class | Job |
 | --- | --- |
 | `flow/RunFlow` | the data the steps hand to each other (records). A new stage (e.g. ML) = new types and steps between `StoredBatch` and `PendingAssessments` |
-| `flow/RunSequence` | the steps of a run in order — RANGE: fetch → store → select → assess → summarize; RETRY / POSTS: select → assess → summarize — each a call to one service recorded as a step (`RunRecorder.step`); no other logic. A step's exception leaves `run` as it was thrown, and no later step starts |
-| `step/SourceIngest` | which sources a range run fetches (default: every configured one) and the fetch over them; a source that gave no post fails the step (`NoPostsFetchedException`, below), a source with skipped elements gets a WARN line; before each source an interrupt checkpoint (`RunInterruptedException`, below) |
+| `flow/RunSequence` | the steps of a run in order — RANGE: fetch → store → select → assess → summarize; RETRY / POSTS: select → assess → summarize — each a call to one service recorded as a step (`RunRecorder.step`). The fetch step writes each source's result as the source ends (`RunRecorder.source`); a range run's error is the fetch's summary of the sources that did not succeed and the assessment's, joined ` \| `, and its status the assessment's, but `partial` when that succeeded and a source did not (below). A step's exception leaves `run` as it was thrown, and no later step starts |
+| `step/SourceIngest` | which sources a range run fetches (default: every configured one) and the fetch over them, each source isolated: a source that throws (also one not configured any more) is its `failed` result (`<SimpleName>: <message>`, a WARN line with the exception; on an interrupted thread — the run was stopped during the source — the same result at INFO without the exception, `ended with the run's stop`), one without a post its `empty` result, and the next source is fetched; each result is handed to the caller as soon as its source ended, outside the source's `try` (`RunSequence` writes it; a failed write ends the step); the step fails only when no source gave a post (`NoPostsFetchedException`, below); a source with skipped elements gets a WARN line; before each source an interrupt checkpoint (`RunInterruptedException`, below) |
 | `step/PostStore` | new posts with their raw payload, once per `(source, item_type, source_item_id)`; `findKeys` in chunks of 1,000; stores chunks of 500 in one transaction each (raw payloads, then posts: JDBC batches), a chunk hitting the unique key again post by post; before each chunk an interrupt checkpoint (`RunInterruptedException`, below), so a stopped run stores at most the chunk it was in |
 | `step/AssessmentSelection` | one attempt per post and request: range → only the posts it stored first; retry → every leftover except posts on hold (`PostRepository.findLeftoverIds`, below); posts → the given ones still assessable (`stored` / `failed`, on hold or not) |
 | `assess/AssessmentDispatcher` | the port of the assess step (`dispatch`, which stops like `cancel` when its thread is interrupted while it waits, and `cancel` for a run the watchdog stopped); a Batch API version may replace the concurrent one |
 | `assess/ConcurrentAssessmentDispatcher` | first `LlmClient.check()` (any exception → no post taken, run `failed` with `the LLM check failed: …`; a check that fails on an interrupted thread — the run was stopped during it — ends the step with `RunInterruptedException` instead, at INFO, the check's exception as its cause); the `AssessmentPool` threads (`PIPELINE_LLM_CONCURRENCY`, default 4: a bean passed in, shut down with the context); per post: claim → `Assessor.assess` on `AssessmentInputs.of(post)` → record, or release, then the post's result goes into the run's counters at once (`RunRecorder.count`, below); an `LlmConfigurationException` (revoked key, no credit, unknown model) stops taking posts (WARN with the provider's reason), counts no attempt and fails the run (`AssessedBatch.stoppedBy`); an `LlmUnavailableException` (retries used up) stores nothing and releases the post, and `OUTAGE_STREAK` (3) of them in a row stop the step the same way (the breaker, Rules below); any other exception puts the post back with `releaseFailed` (one more technical failure), and `CLIENT_ERROR_STREAK` (3) `LlmClientException`s in a row (errors the LLM client could not classify) also stop the step (the client's breaker, Rules below); a failed `count` is a WARN and leaves the post's outcome (a stored post is never a technical error), and once every post has finished the step's failed counts give one ERROR and `RUN_COUNTERS_LOST` (below); `cancel(runId)` interrupts the run's post tasks, and so does an interrupt of the thread waiting in `dispatch` (it marks them cancelled first, then throws; below) and the pool's own shutdown when the context closes; a task ending on an interrupted thread counts nothing, whichever of the three interrupted it; a progress line in the log at most once a minute and after the last post |
 | `assess/AssessmentInputs` | a stored post's assessment input, rebuilt from its raw payload by its source's `RawInputMapper` |
 | `state/PostTransitions` | the post's stage changes, each a conditional `UPDATE` with `updated_at = now()`: claim (only while the run is running), record (only while the run owns the post; resets `technical_failures` and `last_technical_error`), release (back without an attempt; says whether this run put it back), releaseFailed (release + one more technical failure with its message, in the same statement, only while the run owns the post), countTechnicalFailure (one more technical failure on a post already put back, `stored` / `failed`, only while the run is still running); the message is cut to 500 characters, without U+0000. A column added to `posts` is classified in `state/PostColumnsIT` (set once by the `INSERT`, or post state with its value after every transition), and a new transition gets a scenario there |
-| `state/RunRecorder` | run status, steps, counters, error, `last_activity_at` — every change conditional on the expected status; a step opens only in a running run and closes only once; `step(…, Function<T, StepOutcome>)` lets a step decide its own end from its result (the assess step whose dispatcher stopped, `AssessedBatch.stoppedBy`, is closed `failed` with that reason though `dispatch` returned), `step(…, ToIntFunction<T>)` closes it `succeeded`; a step that throws is closed `failed` with the error, and when that close fails too (an interrupted thread, the database gone) its failure is suppressed in the step's exception; `interrupt` / `interruptAll` (with the cause), `interruptOrphans` (cause `lost`, all or none; Rules), `stall` (the watchdog) and `fail` (a run that cannot go on: an `Error` escaping its step leaves the step open, `step` catching only `RuntimeException`) close the open steps in the same transaction; status and stage values are bound from their enums, never written into the SQL |
+| `state/RunRecorder` | run status, steps, counters, error, `last_activity_at`, each source's result (`source`: the run's `fetched`, `skipped`, `sources_failed` / `sources_empty`, its activity and the `pipeline_run_sources` row in one statement, only while it runs) — every change conditional on the expected status; a step opens only in a running run and closes only once; `step(…, Function<T, StepOutcome>)` lets a step decide its own end from its result (the assess step whose dispatcher stopped, `AssessedBatch.stoppedBy`, is closed `failed` with that reason though `dispatch` returned), `step(…, ToIntFunction<T>)` closes it `succeeded`; a step that throws is closed `failed` with the error, and when that close fails too (an interrupted thread, the database gone) its failure is suppressed in the step's exception; `interrupt` / `interruptAll` (with the cause), `interruptOrphans` (cause `lost`, all or none; Rules), `stall` (the watchdog) and `fail` (a run that cannot go on: an `Error` escaping its step leaves the step open, `step` catching only `RuntimeException`) close the open steps in the same transaction; status and stage values are bound from their enums, never written into the SQL |
 | `state/RunInterruptedException` | `checkpoint(runId, step)` throws when the run's thread is interrupted (the flag stays set): `PostStore` before each chunk, `SourceIngest` before each source |
 
 ## Progress, interruption, watchdog, notifications (S-06)
@@ -81,10 +84,12 @@ PipelineRunService.startRange / startPosts → queue (thread pipeline-run) → R
 - **`last_activity_at`.** Set by the start, every counted post, every post whose call found the provider
   unavailable (`RunRecorder.touch`: counted only at the step's end, but its end is progress, so the
   watchdog never stops a run of outages before the breaker) and every step's start and end (all
-  conditional on `running`). The fetch step moves it only at its start and end: a long fetch shows no
-  progress inside (`SourceFetcher` reports none). The watchdog measures from it (or from `started_at`).
+  conditional on `running`). The fetch step also moves it after each source (`RunRecorder.source`), so
+  sources fetched one after another are each measured on their own; inside one source's fetch nothing
+  moves it (`SourceFetcher` reports no progress). The watchdog measures from it (or from `started_at`).
   A source bounds its fetch with a deadline below `PipelineStallSettings.MIN_DEFAULT` (Wykop: 10 min,
-  `WykopRepository.FETCH_DEADLINE`), so a failing fetch fails the step before the watchdog stops the run.
+  `WykopRepository.FETCH_DEADLINE`), so a failing source ends with its `failed` result before the watchdog
+  stops the run; the deadline is per source, and their sum may exceed the threshold (`RunWatchdogIT`).
   An explicit `PIPELINE_STALL_TIMEOUT` below that deadline plus two request time-outs (Wykop: about
   11 min) would stop a failing fetch as stalled instead; `minimum()` warns only about the LLM call, so
   do not set it lower.
@@ -96,9 +101,10 @@ PipelineRunService.startRange / startPosts → queue (thread pipeline-run) → R
   step's end); `Pipeline run <id> (<kind>) ended <status> in <time>: fetched …, skipped …,
   new …, ok …, failed …, dead …, errors …, retries …, flex fallbacks …`. The fetch's WARNs: `Run <id>: <source>
   skipped <N> of <M> elements (unexpected shape or not mappable)` from `SourceIngest.fetch`, only for a
-  source with skipped elements; `The counters of run <id> could not be written before its fetch failed`
-  from `RunSequence.fetch`, when writing the counters of a run without posts fails (the run still fails
-  with `NoPostsFetchedException`, the write's failure suppressed in it). The assess step adds its own:
+  source with skipped elements, and `Run <id>: <source> failed: <message>` with the exception, for a source
+  that threw (on an interrupted thread — the run was stopped during it — INFO `Run <id>: <source> ended with
+  the run's stop: <exception>` instead); each source's result then gives INFO `Run <id>: <source> <status>: fetched N, skipped M[;
+  <error>]` from `RunRecorder.source` (only when written: not for a run already stopped). The assess step adds its own:
   WARN `The LLM provider is unavailable in run <id>: 3 calls in a row failed after their retries; no
   further post is taken: …` (the breaker, once), WARN `The LLM client failed 3 calls in a row in run <id>
   with an error that is not the provider's; no further post is taken: …` (the client's breaker, once),
@@ -250,7 +256,8 @@ PipelineRunService.startRange / startPosts → queue (thread pipeline-run) → R
      (`lost`), after its transaction commits.
   `runEnded` notifies only a run with a non-empty `PipelineRun.attentionReasons()` (`needsAttention()`, the
   one rule) — `failed` (the breaker's stop
-  included), `interrupted`, `partial` with a `dead` post or a technical error (a single provider outage
+  included), `interrupted`, `succeeded` / `partial` with a source that failed or gave no post
+  (`source_failed`, `source_empty`), `partial` with a `dead` post or a technical error (a single provider outage
   included), or `succeeded` / `partial` with skipped elements (a
   `partial` run with only retryable `failed` posts does not: the next run retries them) — one row per admin with `login_enabled`, `ON CONFLICT DO
   NOTHING`, so a run reported twice is notified once. It never throws: a failure is logged (ERROR),
@@ -268,8 +275,9 @@ PipelineRunService.startRange / startPosts → queue (thread pipeline-run) → R
   <the run's error, cut to 300 characters>]; /admin/runs/<id>`. The exception: a run of the daily cron
   (`PipelineRun.scheduled()`, requested by `SystemAccount.SCHEDULER`) that ended `failed` or `interrupted`
   — the cron reports it already (exit 1, its own check `<env>/pipeline-trigger`), so an alert would only
-  double that message. A cron run ending `partial` with a `dead` post or a technical error, or with skipped
-  elements, exits 0 and is raised; an admin's run is raised for every ending that notifies. When the cron
+  double that message. A cron run ending `partial` with a failed or empty source, a `dead` post or a technical
+  error, or with skipped elements, exits 0 and is raised (the source's name is in the run's error the
+  detail carries); an admin's run is raised for every ending that notifies. When the cron
   gives up before its runs end (`not ended within` `TRIGGER_RUN_TIMEOUT` 90 min, the API not answering for
   `TRIGGER_WAKE_TIMEOUT` while it waits, no answer to its `POST`), its exit 1 says only that the run did
   not end; a later `failed` / `interrupted` ending of that run is still the cron's, so it shows in `/admin`
@@ -354,12 +362,22 @@ PipelineRunService.startRange / startPosts → queue (thread pipeline-run) → R
   and it alone queues no RETRY), a POSTS run (an admin's "Ponów zaznaczone") still takes it, and
   `GET /api/admin/posts/failed` lists it with `technicalFailures`, `lastTechnicalError`, `onHold`.
 - Code that runs work in parallel passes its own executor (`availableProcessors()` may be 1).
-- A range run's `fetch` step fails when a source gave no post to store (no element in the range, or only
-  skipped ones): `SourceIngest.fetch` fetches every source, then throws `NoPostsFetchedException` naming
-  each empty source with its counts, so the run ends `failed` (notification, cron exit 1, the feed's date
-  stays). `RunSequence.fetch` writes the exception's counters (`fetched`, `skipped` of every source)
-  before rethrowing, so the run's page shows them. Retry and posts runs fetch nothing and are not
-  affected. Skipped elements next to posts are only a warning: the WARN line and `needsAttention`.
+- **A source's failure or silence is its own result** (S-20). `SourceIngest.fetch` fetches every source of
+  a range run, one after another: a source that threw is `failed` (`<SimpleName>: <message>`), one that gave
+  no post to store (no element in the range, or only skipped ones) `empty`, one with a post `succeeded`;
+  `RunSequence.fetch` writes each result as the source ends (`RunRecorder.source`: the row in
+  `pipeline_run_sources`, the run's `fetched`, `skipped`, `sources_failed` / `sources_empty`, its activity),
+  so the counters are written before a fetch fails too, and the step writes no sums of its own. The step
+  fails only when no source gave a post: `NoPostsFetchedException` names each source with its result, and
+  the run ends `failed` (notification, cron exit 1, the feed's date stays). Otherwise the posts of the
+  sources that gave some are stored and assessed, and the run ends `partial` when its assessment
+  succeeded but a source did not, with the reasons `source_failed` / `source_empty` (the bell,
+  `RUN_NEEDS_ATTENTION` as for any `partial` run, cron exit 0) and the run's error `<source> failed: …` /
+  `<source> gave no post to store (fetched N, skipped M)` (joined `; `), followed by ` | ` and the
+  assessment's error when it has one. A stop between sources: the checkpoint before the next source ends the
+  step, and the source the stop interrupted gets no row (whoever stopped the run wrote first). Retry and
+  posts runs fetch nothing and are not affected. Skipped elements next to posts are only a warning: the WARN
+  line and `needsAttention`.
 - A step with side effects runs once; retries live only below the step (`llm/transport/TransportRetry`, a
   source's client such as `sources/wykop/WykopApiClient`), never around it: a repeated step would repeat
   its writes and be recorded again (seen under a retrying framework: a failed Wykop fetch repeated every
@@ -430,8 +448,9 @@ PipelineRunService.startRange / startPosts → queue (thread pipeline-run) → R
   `finished`, `awaitIdle`), far longer than their wait, so a red one says what it waited for. Only the watchdog's own
   scenarios measure time, against its threshold, each with its margin. A new test of the engine keeps this.
 - Unit (`*Test`, no Spring): `flow/RunSequenceTest` (each kind of run's steps in order and each once,
-  the fetch's counters written before a run without posts fails and a failed write suppressed in it with a
-  WARN, the store step counting new posts, the assess step a stopped dispatcher ended closed `failed` with
+  each source's result written inside the fetch step in order and no sums of the step's own, a failed
+  source next to a clean assessment `partial` with the sources' summary as the error, the summary and the
+  assessment's error joined ` | `, a fetch without posts failing its step with no later step, the store step counting new posts, the assess step a stopped dispatcher ended closed `failed` with
   its reason and the run's error set, the summary step closed before the finish and `INTERRUPTED` when the
   finish changed nothing, a step's exception ending the run with no later step, a refused step ending the
   sequence), `PipelineRunServiceTest` (with a mocked `RunSequence`: a run's own end without ERROR, a step's
@@ -447,7 +466,10 @@ PipelineRunService.startRange / startPosts → queue (thread pipeline-run) → R
   longer running an INFO, an `Error` escaping `execute` logged by its queue task; `stopStalled`: its
   writes, then the interrupt of the run's thread, then `AssessmentDispatcher.cancel`, then the
   notification, nothing when the stall changed nothing; and the clean-up and alert paths below), `state/RunOutcomeTest`, `state/DurationsTest`, `step/PostStoreTest`,
-  `step/AssessmentSelectionTest`, `step/SourceIngestTest`, `assess/ConcurrentAssessmentDispatcherTest`
+  `step/AssessmentSelectionTest`, `step/SourceIngestTest` (two sources with the scripted
+  `sources/ScriptedSourceFetcher` of the tests: posts of both, one empty, one throwing — a WARN with the
+  exception —, both without a post naming both after reporting both, one not configured any more, an
+  interrupt before the second source fetching it not), `assess/ConcurrentAssessmentDispatcherTest`
   (threads, one client, a technical error; a bug before the call puts the post back with
   `releaseFailed` and no attempt; one `count` per stored post with its retries and flex
   fallback, `processingError`, nothing for a post not taken; a failed `count` keeps a stored post
@@ -469,11 +491,11 @@ PipelineRunService.startRange / startPosts → queue (thread pipeline-run) → R
   neither adds to it nor resets it, nor does an outage, and a client error of a cancelled call counts
   nothing; `state/RunOutcomeTest` that its stop fails the run with both the stop and the posts' errors),
 
-  `run/PipelineRunTest` (`attentionReasons` for every status, with and without skipped elements, in the rule's
-  order; none for a new run),
+  `run/PipelineRunTest` (`attentionReasons` for every status, with and without failed or empty sources and
+  skipped elements, in the rule's order; none for a new run),
   `run/MissingDaysTest` (the plan's example, the window D-15…D-2, a source's first covered day, a source
-  never covered or not configured, overlapping ranges, a one-day run on the 25-hour day, the gap one bad
-  night shows just after midnight),
+  never covered or not configured, two sources with different gaps, overlapping ranges, a one-day run on
+  the 25-hour day, the gap one bad night shows just after midnight),
   `PipelineStallSettingsTest` (default from the LLM settings, WARN below it, units, refusals),
   `RunWatchdogTest` (no database call without a run of its own, a failure and an `Error` logged, a raise
   of `WATCHDOG_FAILED` that throws an exception or an `Error` logged without stopping the other runs' checks,
@@ -488,7 +510,8 @@ PipelineRunService.startRange / startPosts → queue (thread pipeline-run) → R
   —, `failed` with its exception's message); a step an interruption closed left as it is; `stall` only
   after the threshold, its open steps `failed` with the same error; `interrupt` with its cause and its
   open steps `interrupted`; `interruptAll` naming `deploy` / `restart` by `deployment_id`;
-  `interruptOrphans` all or none (both cases; the rest in `OrphanedRunIT`).
+  `interruptOrphans` all or none (both cases; the rest in `OrphanedRunIT`); `source` only in a running run
+  (its counters, activity and row), a second row of a source refused, a long error cut.
 - `posts/PostRepositoryIT` (outside this package, on Postgres): the RETRY predicates (a post on hold is
   no leftover, one technical failure short of it is), `claim` only of a `stored` / `failed` post and only
   for a running run (returning its attempts), `releaseAll` only of that run's posts, `releaseOrphans`
@@ -504,8 +527,9 @@ PipelineRunService.startRange / startPosts → queue (thread pipeline-run) → R
   keys of `GET /internal/pipeline-runs/{id}` with `step` and `assessTotal` during the assessment.
   `api/PipelineRunControllerIT`: the run page, 404, the new fields, `scheduled` for the cron's run.
   `api/FreshnessIT`: which runs move the label. `api/MissingDaysIT` (fixed `Clock`): which runs cover a day
-  (`failed`, `interrupted`, `queued`, `running` and RETRY/POSTS runs do not; `partial` and an admin's do),
-  the first covered day from the history, the exact JSON; `api/PipelineRunWithoutSourceIT` also that no
+  (`failed`, `interrupted`, `queued`, `running` and RETRY/POSTS runs do not; `partial` and an admin's do;
+  in a `partial` run with a second source, only the source whose result is `succeeded`), the first covered
+  day from the sources' results, the exact JSON; `api/PipelineRunWithoutSourceIT` also that no
   day is missing without a configured source. `api/DeploySafetyIT`: every answer (a running run
   outranks a queued one, ended runs are safe; a dead running run is safe and its row unchanged, a dead
   queued run is safe, a running run with recent activity is not, nor a live queued run behind a dead
@@ -538,8 +562,10 @@ PipelineRunService.startRange / startPosts → queue (thread pipeline-run) → R
   slow run with progress (a post every 1.5 s) is not stopped, nor is a
   run whose calls each find the provider unavailable after a 2 s pause (each under the 5 s threshold,
   three in a row at least 6 s, longer than it: the breaker ends the run, not the watchdog), another
-  instance's run is left alone, the admins are notified, and a database connection has the 300 s
-  `socketTimeout`.
+  instance's run is left alone, the admins are notified, a run of two sources each taking about 3 s (Wykop
+  paused, the scripted second source delayed) is not stopped though its fetch step lasts longer than the
+  threshold (the run's last activity is the first source's write while the second is fetched), and a
+  database connection has the 300 s `socketTimeout`.
 - `notifications/api/NotificationsIT`: recipients (admins only), idempotence, which run endings notify,
   the list, marking one and all read, 404 for another admin's. `notifications/RunNotificationsTest`
   (outside this package, mocks) also covers the late interrupt: an attempt it cut short made once more
@@ -556,13 +582,19 @@ PipelineRunService.startRange / startPosts → queue (thread pipeline-run) → R
   nor reports the run again and logs no ERROR), a refused LLM key (`failed`, no attempt), a provider
   unavailable for three calls in a row (`failed` with the breaker's error, no attempt, no technical
   failure, the admin notified) and an outage of a run a stopping instance interrupted (the interrupt ends
-  the held call before its answer, as the stopped run's, at INFO, counting nothing); a held call waits
+  the held call before its answer, as the stopped run's, at INFO, counting nothing); two sources (the
+  scripted second source of `sources/ScriptedSourceConfiguration`, configured only by these scenarios, its
+  post the Wykop fixture under `reddit`, mapped by the production `WykopPosts`): one throwing (`partial`,
+  `source_failed`, the other's posts assessed, the admin notified and `RUN_NEEDS_ATTENTION` raised), one
+  empty (`partial`, `source_empty`), Wykop down (the second source's post assessed on the input its raw
+  payload maps to), both without a post (`failed` at `fetch`, naming both, a row each) and a run stopped
+  while the second source is held (no row for it, Wykop's row kept, no ERROR); a held call waits
   without a bound (only an interrupt or `settle()` ends it); counters and
   `last_activity_at` growing during the assessment; no new step in an interrupted run and no ERROR in the
   log. Each scenario stands alone, in a random order (`@TestMethodOrder(MethodOrderer.Random.class)`, as
-  `RunWatchdogIT`): before each one `reset()` checks that nothing runs and empties the run and post tables
-  in one `TRUNCATE` (the six tables are closed under the foreign keys; users, sessions and Flyway's history
-  stay); a scenario that needs assessed posts runs `assessedDay()` itself; after each one `settle()`
+  `RunWatchdogIT`): before each one `reset()` checks that nothing runs, empties the run and post tables
+  in one `TRUNCATE` (the seven tables are closed under the foreign keys; users, sessions and Flyway's history
+  stay) and switches the second source off; a scenario that needs assessed posts runs `assessedDay()` itself; after each one `settle()`
   releases the held calls and waits until no instance has a run of its own and the LLM pool is idle
   (`AssessmentPool.idle()`) — a
   run's status is written before its queue thread closes it, so `finished()` alone returns too early. The

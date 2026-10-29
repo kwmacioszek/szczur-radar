@@ -22,7 +22,8 @@ import pl.szczurradar.api.user.SystemAccount;
 
 /**
  * One pipeline run ({@code pipeline_runs}, owned by Flyway, {@code V3__create_pipeline_and_posts.sql},
- * progress and interruption from {@code V8__pipeline_run_progress.sql}). Created {@code queued}; its
+ * progress and interruption from {@code V8__pipeline_run_progress.sql}, the sources' results from
+ * {@code V12__pipeline_run_sources.sql}). Created {@code queued}; its
  * status and counters change only through conditional updates that require the run to be
  * {@code running}, so an interrupted run never changes again. The entity writes only what a new run
  * has: the progress and the interruption columns are read-only here.
@@ -104,6 +105,14 @@ public class PipelineRun {
 	/** Assessments whose call was refused on the flex tier and fell back to the default one. */
 	@Column(name = "flex_fallbacks", nullable = false, insertable = false, updatable = false)
 	private int flexFallbacks;
+
+	/** The sources of a range run that failed ({@link SourceFetchStatus#FAILED}; {@link PipelineRunSource}). */
+	@Column(name = "sources_failed", nullable = false, insertable = false, updatable = false)
+	private int sourcesFailed;
+
+	/** The sources of a range run without a post ({@link SourceFetchStatus#EMPTY}; {@link PipelineRunSource}). */
+	@Column(name = "sources_empty", nullable = false, insertable = false, updatable = false)
+	private int sourcesEmpty;
 
 	/** The last change while it was running (its start, a step starting or ending, a post counted). */
 	@Column(name = "last_activity_at", insertable = false, updatable = false)
@@ -254,6 +263,14 @@ public class PipelineRun {
 		return flexFallbacks;
 	}
 
+	public int getSourcesFailed() {
+		return sourcesFailed;
+	}
+
+	public int getSourcesEmpty() {
+		return sourcesEmpty;
+	}
+
 	public @Nullable Instant getLastActivityAt() {
 		return lastActivityAt;
 	}
@@ -283,31 +300,41 @@ public class PipelineRun {
 	 * Why the run needs an admin's attention, in the order of {@link AttentionReason}; empty when it does
 	 * not — the one rule for the notifications, the run list, the run's page and the bell: it
 	 * {@link RunStatus#FAILED failed} or was {@link RunStatus#INTERRUPTED interrupted} (that reason alone,
-	 * whatever its counters), or it ended {@link RunStatus#PARTIAL partial} with a dead post or a post with a
-	 * technical error, or it ended {@link RunStatus#SUCCEEDED succeeded} or partial with skipped elements
-	 * (fetched, but they could not become a post). A partial run whose only failures are posts with
-	 * attempts left has none: the next run retries them. A run that is queued or running never has one.
+	 * whatever its counters), or it ended {@link RunStatus#SUCCEEDED succeeded} or
+	 * {@link RunStatus#PARTIAL partial} with a source that failed or gave no post (the fetch before the
+	 * assessment), or partial with a dead post or a post with a technical error, or succeeded or partial
+	 * with skipped elements (fetched, but they could not become a post). A partial run whose only failures
+	 * are posts with attempts left has none: the next run retries them. A run that is queued or running
+	 * never has one.
 	 *
 	 * <p>The daily cron does not use it: it looks only at the status ({@code failed} / {@code interrupted}
-	 * → exit 1), so a dead post or skipped elements do not fail it.
+	 * → exit 1), so a failed or empty source next to one with posts, a dead post or skipped elements do not
+	 * fail it.
 	 *
 	 * @return an unmodifiable list
 	 */
 	public List<AttentionReason> attentionReasons() {
-		return attentionReasons(status, dead, processingErrors, skipped);
+		return attentionReasons(status, dead, processingErrors, skipped, sourcesFailed, sourcesEmpty);
 	}
 
 	/** {@link #attentionReasons()} of a run in {@code status} with these counters; package-private for tests. */
-	static List<AttentionReason> attentionReasons(RunStatus status, int dead, int processingErrors, int skipped) {
+	static List<AttentionReason> attentionReasons(RunStatus status, int dead, int processingErrors, int skipped,
+			int sourcesFailed, int sourcesEmpty) {
 		return switch (status) {
 			case FAILED -> List.of(AttentionReason.FAILED);
 			case INTERRUPTED -> List.of(AttentionReason.INTERRUPTED);
-			case PARTIAL -> {
-				List<AttentionReason> reasons = new ArrayList<>(3);
-				if (dead > 0) {
+			case PARTIAL, SUCCEEDED -> {
+				List<AttentionReason> reasons = new ArrayList<>(5);
+				if (sourcesFailed > 0) {
+					reasons.add(AttentionReason.SOURCE_FAILED);
+				}
+				if (sourcesEmpty > 0) {
+					reasons.add(AttentionReason.SOURCE_EMPTY);
+				}
+				if (status == RunStatus.PARTIAL && dead > 0) {
 					reasons.add(AttentionReason.DEAD_POSTS);
 				}
-				if (processingErrors > 0) {
+				if (status == RunStatus.PARTIAL && processingErrors > 0) {
 					reasons.add(AttentionReason.PROCESSING_ERRORS);
 				}
 				if (skipped > 0) {
@@ -315,7 +342,6 @@ public class PipelineRun {
 				}
 				yield List.copyOf(reasons);
 			}
-			case SUCCEEDED -> skipped > 0 ? List.of(AttentionReason.SKIPPED) : List.of();
 			case QUEUED, RUNNING -> List.of();
 		};
 	}

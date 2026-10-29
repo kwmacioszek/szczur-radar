@@ -4,7 +4,7 @@ import { createMemoryHistory } from 'vue-router'
 import { fetchMe } from '../api/auth'
 import { ApiError } from '../api/client'
 import { fetchNotifications } from '../api/notifications'
-import { type AttentionReason, type Run, type RunStep, fetchRun } from '../api/pipeline'
+import { type AttentionReason, type Run, type RunStep, type SourceResult, fetchRun } from '../api/pipeline'
 import { resetSession } from '../auth/session'
 import { createAppRouter } from '../router'
 import RunDetailView from './RunDetailView.vue'
@@ -36,6 +36,18 @@ function step(name: RunStep['step'], overrides: Partial<RunStep> = {}): RunStep 
   }
 }
 
+function sourceResult(source: string, overrides: Partial<SourceResult> = {}): SourceResult {
+  return {
+    source,
+    status: 'succeeded',
+    fetched: 248,
+    skipped: 2,
+    error: null,
+    finishedAt: '2026-10-13T00:30:25Z',
+    ...overrides,
+  }
+}
+
 function run(overrides: Partial<Run> = {}): Run {
   return {
     id: 'r1',
@@ -60,6 +72,8 @@ function run(overrides: Partial<Run> = {}): Run {
     processingErrors: 0,
     dead: 0,
     skipped: 0,
+    sourcesFailed: 0,
+    sourcesEmpty: 0,
     llmRetries: 6,
     flexFallbacks: 2,
     inFlight: 0,
@@ -237,6 +251,97 @@ describe('RunDetailView', () => {
     expect(wrapper.find('.duration').text()).toBe('—')
     expect(wrapper.find('.steps').exists()).toBe(false)
     expect(page(wrapper).find('.empty').text()).toBe('Żaden krok się jeszcze nie zaczął.')
+  })
+
+  describe('each source’s result', () => {
+    /** The cron's night whose second source failed: Wykop's posts were stored and assessed. */
+    function sourceFailed(): Run {
+      return run({
+        status: 'partial',
+        sources: ['wykop', 'reddit'],
+        needsAttention: true,
+        attentionReasons: ['source_failed'],
+        sourcesFailed: 1,
+        error: 'reddit failed: WykopApiException: HTTP 503',
+        sourceResults: [
+          sourceResult('wykop'),
+          sourceResult('reddit', { status: 'failed', fetched: 0, skipped: 0, error: 'WykopApiException: HTTP 503' }),
+        ],
+      })
+    }
+
+    it('lists every source with its status, figures and error, between the counters and the steps', async () => {
+      vi.mocked(fetchRun).mockResolvedValue(sourceFailed())
+      const { wrapper } = await mountRun()
+      const section = wrapper.find('.source-results')
+      expect(section.find('h2').text()).toBe('Wynik per źródło')
+      const titles = page(wrapper).findAll('h2').map((heading) => heading.text())
+      expect(titles.indexOf('Wynik per źródło')).toBe(titles.indexOf('Liczniki') + 1)
+      expect(titles.indexOf('Kroki')).toBe(titles.indexOf('Wynik per źródło') + 1)
+      const [wykop, reddit] = section.findAll('.source-result')
+      expect(wykop!.find('.source-head strong').text()).toBe('Wykop')
+      expect(wykop!.find('.source-head [data-tone]').text()).toBe('pobrane')
+      expect(wykop!.find('.source-head [data-tone]').attributes('data-tone')).toBe('success')
+      expect(wykop!.find('.source-meta').text()).toBe('pobrane 248 · pominięte 2 · posty 246')
+      expect(wykop!.find('.source-error').exists()).toBe(false)
+      expect(reddit!.find('.source-head strong').text()).toBe('Reddit')
+      expect(reddit!.find('.source-head [data-tone]').text()).toBe('błąd')
+      expect(reddit!.find('.source-head [data-tone]').attributes('data-tone')).toBe('destructive')
+      expect(reddit!.find('.source-meta').text()).toBe('pobrane 0 · pominięte 0 · posty 0')
+      expect(reddit!.find('.source-error').text()).toBe('WykopApiException: HTTP 503')
+      // The requested sources stay in the run's details.
+      expect(wrapper.find('.meta').text()).toContain('Wykop, Reddit')
+    })
+
+    it('names the failed source in "Wymaga uwagi"', async () => {
+      vi.mocked(fetchRun).mockResolvedValue(sourceFailed())
+      const { wrapper } = await mountRun()
+      expect(wrapper.find('.attention').text()).toBe('Wymaga uwagi: błąd pobrania: Reddit')
+      expect(wrapper.find('.status').text()).toBe('częściowo')
+    })
+
+    it('warns about a source without a post', async () => {
+      vi.mocked(fetchRun).mockResolvedValue(
+        run({
+          status: 'partial',
+          needsAttention: true,
+          attentionReasons: ['source_empty'],
+          sourcesEmpty: 1,
+          sourceResults: [sourceResult('wykop'), sourceResult('reddit', { status: 'empty', fetched: 3, skipped: 3 })],
+        }),
+      )
+      const { wrapper } = await mountRun()
+      const empty = wrapper.find('.source-result[data-status="empty"]')
+      expect(empty.find('[data-tone]').text()).toBe('bez postów')
+      expect(empty.find('[data-tone]').attributes('data-tone')).toBe('warning')
+      expect(empty.find('.source-meta').text()).toBe('pobrane 3 · pominięte 3 · posty 0')
+      expect(wrapper.find('.attention').text()).toBe('Wymaga uwagi: bez postów: Reddit (pobrano 3, pominięto 3)')
+    })
+
+    it('says no source has finished yet for a range run without results', async () => {
+      vi.mocked(fetchRun).mockResolvedValue(
+        running({ steps: [step('fetch', { status: 'running', finishedAt: null, itemsOut: null })], sourceResults: [] }),
+      )
+      const { wrapper } = await mountRun()
+      const section = wrapper.find('.source-results')
+      expect(section.find('.empty').text()).toBe('Jeszcze żadne źródło nie zakończyło pobrania.')
+      expect(section.find('.source-list').exists()).toBe(false)
+    })
+
+    it('is not there for a run that is not a range', async () => {
+      vi.mocked(fetchRun).mockResolvedValue(
+        run({ kind: 'retry', rangeFrom: null, rangeTo: null, sources: [], sourceResults: [] }),
+      )
+      const { wrapper } = await mountRun()
+      expect(wrapper.find('.source-results').exists()).toBe(false)
+    })
+
+    it('is not there when the API does not send the results (from before S-20)', async () => {
+      vi.mocked(fetchRun).mockResolvedValue(run())
+      const { wrapper } = await mountRun()
+      expect(wrapper.find('.source-results').exists()).toBe(false)
+      expect(page(wrapper).text()).not.toContain('Wynik per źródło')
+    })
   })
 
   describe('why it needs attention', () => {

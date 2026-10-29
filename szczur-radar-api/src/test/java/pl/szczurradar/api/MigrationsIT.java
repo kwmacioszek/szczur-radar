@@ -36,7 +36,7 @@ class MigrationsIT {
 		List<Map<String, Object>> history = jdbc.queryForList(
 				"SELECT version, success FROM flyway_schema_history WHERE version IS NOT NULL ORDER BY installed_rank");
 		assertThat(history).extracting(row -> row.get("version")).containsExactly("1", "2", "3", "4", "5", "6", "7",
-				"8", "9", "10", "11");
+				"8", "9", "10", "11", "12");
 		assertThat(history).allSatisfy(row -> assertThat(row.get("success")).isEqualTo(true));
 	}
 
@@ -177,9 +177,9 @@ class MigrationsIT {
 				"ck_pipeline_runs_range");
 		assertRejected("INSERT INTO pipeline_runs (kind, requested_by, range_from, range_to) VALUES ('range', '" + admin
 				+ "', '2026-10-02T00:00:00Z', '2026-10-01T00:00:00Z')", "ck_pipeline_runs_range");
-		// A range run names its sources (V5), only registered ones; other runs name none.
+		// A range run names its sources (V5), only registered ones (V12 registers reddit); other runs name none.
 		assertRejected("INSERT INTO pipeline_runs (kind, requested_by, range_from, range_to, sources) VALUES ('range', '"
-				+ admin + "', '2026-10-01T00:00:00Z', '2026-10-01T23:59:59Z', ARRAY['reddit'])", "ck_pipeline_runs_sources");
+				+ admin + "', '2026-10-01T00:00:00Z', '2026-10-01T23:59:59Z', ARRAY['twitter'])", "ck_pipeline_runs_sources");
 		assertRejected("INSERT INTO pipeline_runs (kind, requested_by, range_from, range_to, sources) VALUES ('range', '"
 				+ admin + "', '2026-10-01T00:00:00Z', '2026-10-01T23:59:59Z', ARRAY[]::TEXT[])", "ck_pipeline_runs_sources");
 		assertRejected("INSERT INTO pipeline_runs (kind, requested_by, sources) VALUES ('retry', '" + admin
@@ -189,6 +189,54 @@ class MigrationsIT {
 				+ "', '2026-10-01T00:00:00Z')", "ck_pipeline_runs_range");
 		assertRejected("INSERT INTO pipeline_runs (kind, requested_by, range_to) VALUES ('retry', '" + admin
 				+ "', '2026-10-01T00:00:00Z')", "ck_pipeline_runs_range");
+	}
+
+	@Test
+	void redditIsARegisteredSource() {
+		UUID admin = user("reddit-registered@example.com");
+		for (String sources : List.of("ARRAY['reddit']", "ARRAY['wykop', 'reddit']")) {
+			jdbc.update("INSERT INTO pipeline_runs (kind, status, requested_by, range_from, range_to, sources) VALUES"
+					+ " ('range', 'succeeded', ?, '2026-10-01T00:00:00Z', '2026-10-01T23:59:59Z', " + sources + ")",
+					admin);
+		}
+		UUID run = run(admin, "queued");
+		String hash = "'" + "0".repeat(64) + "'";
+		jdbc.update("WITH raw AS (INSERT INTO raw_payloads (source, content_encoding, media_type, payload, sha256)"
+				+ " VALUES ('reddit', 'gzip', 'application/json', '\\x00', " + hash + ") RETURNING id)"
+				+ " INSERT INTO posts (source, item_type, source_item_id, published_at, raw_payload_id, content_hash,"
+				+ " first_run_id) SELECT 'reddit', 'post', '70401', now(), raw.id, " + hash + ", ? FROM raw", run);
+		assertRejected("INSERT INTO raw_payloads (source, content_encoding, media_type, payload, sha256) VALUES"
+				+ " ('twitter', 'gzip', 'application/json', '\\x00', " + hash + ")", "ck_raw_payloads_source");
+	}
+
+	@Test
+	void aSourcesResultHasAKnownSourceAndStatusSaneCountsAnErrorOnlyWhenFailedAndIsOncePerRun() {
+		assertThat(constraintsOf("pipeline_run_sources")).contains("pipeline_run_sources_pkey",
+				"fk_pipeline_run_sources_run", "ck_pipeline_run_sources_source", "ck_pipeline_run_sources_status",
+				"ck_pipeline_run_sources_counts", "ck_pipeline_run_sources_error",
+				"uq_pipeline_run_sources_run_source");
+		UUID run = run(user("run-sources@example.com"), "succeeded");
+		String insert = "INSERT INTO pipeline_run_sources (run_id, source, status, fetched, skipped, error) VALUES ('"
+				+ run + "', '%s', '%s', %d, %d, %s)";
+
+		assertRejected(insert.formatted("wykop", "skipped", 1, 0, "NULL"), "ck_pipeline_run_sources_status");
+		assertRejected(insert.formatted("twitter", "succeeded", 1, 0, "NULL"), "ck_pipeline_run_sources_source");
+		assertRejected(insert.formatted("wykop", "succeeded", 1, 2, "NULL"), "ck_pipeline_run_sources_counts");
+		assertRejected(insert.formatted("wykop", "empty", -1, 0, "NULL"), "ck_pipeline_run_sources_counts");
+		assertRejected(insert.formatted("wykop", "failed", 0, 0, "NULL"), "ck_pipeline_run_sources_error");
+		assertRejected(insert.formatted("wykop", "succeeded", 1, 0, "'boom'"), "ck_pipeline_run_sources_error");
+		assertRejected(insert.formatted("wykop", "succeeded", 1, 0, "NULL").replace("'" + run + "'",
+				"'" + UUID.randomUUID() + "'"), "fk_pipeline_run_sources_run");
+
+		jdbc.update(insert.formatted("wykop", "succeeded", 16, 2, "NULL"));
+		jdbc.update(insert.formatted("reddit", "failed", 0, 0, "'RedditApiException: 503'"));
+		assertThat(jdbc.queryForObject("SELECT finished_at IS NOT NULL FROM pipeline_run_sources WHERE run_id = ?"
+				+ " AND source = 'wykop'", Boolean.class, run)).as("finished_at default").isTrue();
+		assertRejected(insert.formatted("wykop", "empty", 0, 0, "NULL"), "uq_pipeline_run_sources_run_source");
+		// The run's counters start at zero; only RunRecorder.source moves them, with the row.
+		assertThat(jdbc.queryForMap("SELECT sources_failed, sources_empty FROM pipeline_runs WHERE id = ?", run))
+			.containsEntry("sources_failed", 0)
+			.containsEntry("sources_empty", 0);
 	}
 
 	@Test

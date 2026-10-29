@@ -6,6 +6,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,11 +35,14 @@ import pl.szczurradar.api.notifications.NotificationRepository;
 import pl.szczurradar.api.pipeline.run.InterruptionCause;
 import pl.szczurradar.api.pipeline.run.PipelineRun;
 import pl.szczurradar.api.pipeline.run.PipelineRunRepository;
+import pl.szczurradar.api.pipeline.run.PipelineRunSource;
+import pl.szczurradar.api.pipeline.run.PipelineRunSourceRepository;
 import pl.szczurradar.api.pipeline.run.PipelineRunStep;
 import pl.szczurradar.api.pipeline.run.PipelineRunStepRepository;
 import pl.szczurradar.api.pipeline.run.RunKind;
 import pl.szczurradar.api.pipeline.run.RunStatus;
 import pl.szczurradar.api.pipeline.run.RunStep;
+import pl.szczurradar.api.pipeline.run.SourceFetchStatus;
 import pl.szczurradar.api.pipeline.run.StepStatus;
 import pl.szczurradar.api.posts.Assessment;
 import pl.szczurradar.api.posts.AssessmentRepository;
@@ -74,6 +78,9 @@ class JpaSchemaIT {
 
 	@Autowired
 	PipelineRunStepRepository steps;
+
+	@Autowired
+	PipelineRunSourceRepository runSources;
 
 	@Autowired
 	RawPayloadStore rawPayloads;
@@ -197,6 +204,50 @@ class JpaSchemaIT {
 		assertThat(jdbc.queryForMap("SELECT status, result_source, provider, channel, service_tier, reasoning_effort,"
 				+ " output_mode FROM assessments WHERE id = ?", savedOk.getId())).containsValues("ok", "model",
 						"openrouter", "openai/flex", "flex", "low", "json_schema");
+	}
+
+	@Test
+	void aRunsSourcesResultsRoundTripAndRedditIsARunsSource() {
+		User admin = users.save(new User("run-sources-schema@example.com", null, Role.ADMIN));
+		Instant from = Instant.parse("2026-10-01T22:00:00Z");
+		PipelineRun run = runs.save(PipelineRun.range(from, from.plus(1, ChronoUnit.DAYS).minusSeconds(1),
+				List.of(Source.WYKOP, Source.REDDIT), admin.getId(), null));
+		PipelineRunSource succeeded = runSources
+			.save(new PipelineRunSource(run.getId(), Source.WYKOP, SourceFetchStatus.SUCCEEDED, 16, 2, null));
+		PipelineRunSource failed = runSources.save(new PipelineRunSource(run.getId(), Source.REDDIT,
+				SourceFetchStatus.FAILED, 0, 0, "RedditApiException: Reddit answered 503"));
+
+		PipelineRun loadedRun = runs.findById(run.getId()).orElseThrow();
+		assertThat(loadedRun.getSources()).containsExactly(Source.WYKOP, Source.REDDIT);
+		// Written with the row by RunRecorder.source only.
+		assertThat(loadedRun.getSourcesFailed()).isZero();
+		assertThat(loadedRun.getSourcesEmpty()).isZero();
+		assertThat(jdbc.queryForObject("SELECT array_to_string(sources, ',') FROM pipeline_runs WHERE id = ?",
+				String.class, run.getId())).isEqualTo("wykop,reddit");
+		jdbc.update("UPDATE pipeline_runs SET sources_failed = 1, sources_empty = 2 WHERE id = ?", run.getId());
+		PipelineRun counted = runs.findById(run.getId()).orElseThrow();
+		assertThat(counted.getSourcesFailed()).isEqualTo(1);
+		assertThat(counted.getSourcesEmpty()).isEqualTo(2);
+
+		assertThat(runSources.findByRunId(run.getId())).hasSize(2);
+		PipelineRunSource loadedSucceeded = runSources.findById(succeeded.getId()).orElseThrow();
+		assertThat(loadedSucceeded.getRunId()).isEqualTo(run.getId());
+		assertThat(loadedSucceeded.getSource()).isEqualTo(Source.WYKOP);
+		assertThat(loadedSucceeded.getStatus()).isEqualTo(SourceFetchStatus.SUCCEEDED);
+		assertThat(loadedSucceeded.getFetched()).isEqualTo(16);
+		assertThat(loadedSucceeded.getSkipped()).isEqualTo(2);
+		assertThat(loadedSucceeded.getError()).isNull();
+		assertThat(loadedSucceeded.getFinishedAt()).isNotNull();
+		PipelineRunSource loadedFailed = runSources.findById(failed.getId()).orElseThrow();
+		assertThat(loadedFailed.getSource()).isEqualTo(Source.REDDIT);
+		assertThat(loadedFailed.getStatus()).isEqualTo(SourceFetchStatus.FAILED);
+		assertThat(loadedFailed.getError()).isEqualTo("RedditApiException: Reddit answered 503");
+		// Stored as the lower-case values (the CHECK sets).
+		assertThat(jdbc.queryForList("SELECT source || ':' || status FROM pipeline_run_sources WHERE run_id = ?"
+				+ " ORDER BY source", String.class, run.getId())).containsExactly("reddit:failed", "wykop:succeeded");
+		assertThat(runSources.findByRunIdIn(List.of(run.getId(), UUID.randomUUID())))
+			.extracting(PipelineRunSource::getId)
+			.containsExactlyInAnyOrder(succeeded.getId(), failed.getId());
 	}
 
 	@Test

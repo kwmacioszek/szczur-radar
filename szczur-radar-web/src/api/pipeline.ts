@@ -18,7 +18,19 @@ export type InterruptionCause = 'deploy' | 'restart' | 'shutdown' | 'lost'
  * Why a run needs attention — pipeline/run/AttentionReason, in the API's rule order. The API may add a code; until
  * src/runs.ts gives it a text, the SPA shows it as it came.
  */
-export type AttentionReason = 'failed' | 'interrupted' | 'dead_posts' | 'processing_errors' | 'skipped'
+export type AttentionReason =
+  | 'failed'
+  | 'interrupted'
+  | 'source_failed'
+  | 'source_empty'
+  | 'dead_posts'
+  | 'processing_errors'
+  | 'skipped'
+/**
+ * The result of one source of a range run — pipeline/run/SourceFetchStatus: it gave at least one post (`succeeded`),
+ * it answered without a post (`empty`: no element in the range, or only skipped ones), or it threw (`failed`).
+ */
+export type SourceFetchStatus = 'succeeded' | 'empty' | 'failed'
 
 export interface RunStep {
   step: RunStepName
@@ -28,6 +40,19 @@ export interface RunStep {
   itemsIn: number | null
   itemsOut: number | null
   error: string | null
+}
+
+/** What one source of a range run fetched — pipeline/run/PipelineRunSource. */
+export interface SourceResult {
+  source: string
+  status: SourceFetchStatus
+  /** The elements it fetched, skipped ones included; its posts are `fetched − skipped`. */
+  fetched: number
+  /** The fetched elements that could not become a post. */
+  skipped: number
+  /** Why it failed (`<SimpleName>: <message>`); null unless it failed. */
+  error: string | null
+  finishedAt: string
 }
 
 export interface Run {
@@ -62,6 +87,10 @@ export interface Run {
   processingErrors: number
   dead: number
   skipped: number
+  /** The sources of a range run that failed (the `failed` ones in `sourceResults`). */
+  sourcesFailed: number
+  /** The sources of a range run that gave no post (the `empty` ones in `sourceResults`). */
+  sourcesEmpty: number
   /** HTTP attempts beyond the first of the assessments' LLM calls. */
   llmRetries: number
   /** Assessments whose call fell back from the flex tier to the default one. */
@@ -70,6 +99,11 @@ export interface Run {
   inFlight: number
   error: string | null
   steps: RunStep[]
+  /**
+   * What each source of a range run fetched so far, in the API's order of sources; empty for any other run and before
+   * its first source ends. Optional: an API from before S-20 does not send it.
+   */
+  sourceResults?: SourceResult[]
 }
 
 /** A source a range run may fetch, and whether it is configured on the server. */
