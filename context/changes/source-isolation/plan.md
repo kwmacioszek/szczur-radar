@@ -623,10 +623,10 @@ Jeden dodatkowy `UPDATE … RETURNING` + `INSERT` na źródło na przebieg (dzi�
 
 #### Automated
 
-- [ ] 5.1 CI PR-a zielone: `gh pr checks --watch` kończy się bez porażki
-- [x] 5.2 PR env: JSON przebiegu admina ma wiersz Wykopu: `curl -sb <cookie> <web-origin>/api/admin/pipeline-runs/<id> | jq -e '.sourceResults | length == 1 and .[0].source == "wykop" and .[0].status == "succeeded"'`
-- [x] 5.3 PR env: `reddit` jest zarejestrowane, ale nieskonfigurowane: `curl -s -o /dev/null -w '%{http_code}' -b <cookie> -H 'Content-Type: application/json' -d '{"from":"<D-2>","to":"<D-2>","sources":["reddit"]}' <web-origin>/api/admin/pipeline-runs` daje `503`, a `GET …/pipeline-runs/sources` daje `[{"source":"wykop","configured":true}]`
-- [x] 5.4 Dokumenty wymieniają S-20: `rg -n 'S-20' context/foundation/prd.md context/deployment/deploy-plan.md REPOSITORY_GUIDELINES.md` znajduje każdy z trzech plików
+- [x] 5.1 CI PR-a zielone: `gh pr checks --watch` kończy się bez porażki — 9be094f
+- [x] 5.2 PR env: JSON przebiegu admina ma wiersz Wykopu: `curl -sb <cookie> <web-origin>/api/admin/pipeline-runs/<id> | jq -e '.sourceResults | length == 1 and .[0].source == "wykop" and .[0].status == "succeeded"'` — 9be094f
+- [x] 5.3 PR env: `reddit` jest zarejestrowane, ale nieskonfigurowane: `curl -s -o /dev/null -w '%{http_code}' -b <cookie> -H 'Content-Type: application/json' -d '{"from":"<D-2>","to":"<D-2>","sources":["reddit"]}' <web-origin>/api/admin/pipeline-runs` daje `503`, a `GET …/pipeline-runs/sources` daje `[{"source":"wykop","configured":true}]` — 9be094f
+- [x] 5.4 Dokumenty wymieniają S-20: `rg -n 'S-20' context/foundation/prd.md context/deployment/deploy-plan.md REPOSITORY_GUIDELINES.md` znajduje każdy z trzech plików — 9be094f
 
 #### Manual
 
