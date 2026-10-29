@@ -182,6 +182,7 @@ class PipelineRunControllerIT {
 		// An admin's run, which needs nothing yet and assesses nothing yet.
 		assertThat(result).bodyJson().extractingPath("$[0].scheduled").isEqualTo(false);
 		assertThat(result).bodyJson().extractingPath("$[0].needsAttention").isEqualTo(false);
+		assertThat(result).bodyJson().extractingPath("$[0].attentionReasons").asArray().isEmpty();
 		assertThat(result).bodyJson().extractingPath("$[0].inFlight").isEqualTo(0);
 	}
 
@@ -284,6 +285,9 @@ class PipelineRunControllerIT {
 				+ " 'succeeded', NULL, 5)", partial);
 		jdbc.update("INSERT INTO pipeline_run_steps (run_id, step, status, items_in, items_out, started_at) VALUES (?,"
 				+ " 'assess', 'succeeded', 5, 4, now() + interval '1 second')", partial);
+		// The oldest of the three, alone on the second page: every reason a partial run can have.
+		jdbc.update("UPDATE pipeline_runs SET status = 'partial', dead = 1, processing_errors = 2, skipped = 3 WHERE id = ?",
+				ids.get(2));
 
 		MvcTestResult page0 = mvc.get().uri("/api/admin/pipeline-runs?page=0&size=2").with(asAdmin()).exchange();
 		MvcTestResult page1 = mvc.get().uri("/api/admin/pipeline-runs?page=1&size=2").with(asAdmin()).exchange();
@@ -301,6 +305,11 @@ class PipelineRunControllerIT {
 		assertThat(page0).bodyJson().extractingPath("$.items[1].steps").asArray().isEmpty();
 		// A technical error needs attention; a run that succeeded does not.
 		assertThat(page0).bodyJson().extractingPath("$.items[*].needsAttention").asArray().containsExactly(true, false);
+		assertThat(page0).bodyJson().extractingPath("$.items[*].attentionReasons").asArray()
+			.containsExactly(List.of("processing_errors"), List.of());
+		// The API values, in the rule's order.
+		assertThat(page1).bodyJson().extractingPath("$.items[0].attentionReasons").asArray()
+			.containsExactly("dead_posts", "processing_errors", "skipped");
 		assertThat(page0).bodyJson().extractingPath("$.items[*].scheduled").asArray().containsExactly(false, false);
 		assertThat(mvc.get().uri("/api/admin/pipeline-runs?size=101").with(asAdmin())).hasStatus(HttpStatus.BAD_REQUEST);
 		jdbc.update("DELETE FROM pipeline_run_steps WHERE run_id = ANY(?)", (Object) ids.toArray(UUID[]::new));
@@ -328,6 +337,7 @@ class PipelineRunControllerIT {
 		assertThat(page).bodyJson().extractingPath("$.status").isEqualTo("interrupted");
 		assertThat(page).bodyJson().extractingPath("$.interruptionCause").isEqualTo("deploy");
 		assertThat(page).bodyJson().extractingPath("$.needsAttention").isEqualTo(true);
+		assertThat(page).bodyJson().extractingPath("$.attentionReasons").asArray().containsExactly("interrupted");
 		assertThat(page).bodyJson().extractingPath("$.scheduled").isEqualTo(true);
 		assertThat(page).bodyJson().extractingPath("$.lastActivityAt").isEqualTo("2026-10-16T00:40:30Z");
 		assertThat(page).bodyJson().extractingPath("$.llmRetries").isEqualTo(5);
@@ -355,6 +365,7 @@ class PipelineRunControllerIT {
 			assertThat(page).bodyJson().extractingPath("$.status").isEqualTo("running");
 			assertThat(page).bodyJson().extractingPath("$.inFlight").isEqualTo(1);
 			assertThat(page).bodyJson().extractingPath("$.needsAttention").isEqualTo(false);
+			assertThat(page).bodyJson().extractingPath("$.attentionReasons").asArray().isEmpty();
 			assertThat(page).bodyJson().extractingPath("$.scheduled").isEqualTo(false);
 			assertThat(page).bodyJson().extractingPath("$.interruptionCause").isNull();
 			assertThat(page).bodyJson().extractingPath("$.lastActivityAt").isNotNull();

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { Run, RunStatus, RunStep } from './api/pipeline'
+import type { AttentionReason, Run, RunStep } from './api/pipeline'
 import {
   assessProgress,
   attentionReasons,
@@ -35,6 +35,7 @@ function run(overrides: Partial<Run> = {}): Run {
     status: 'succeeded',
     interruptionCause: null,
     needsAttention: false,
+    attentionReasons: [],
     scheduled: false,
     rangeFrom: '2026-10-10T22:00:00Z',
     rangeTo: '2026-10-12T21:59:59Z',
@@ -72,12 +73,12 @@ describe('runTone', () => {
     expect(runTone({ status, interruptionCause: null, skipped: 0 })).toBe(tone)
   })
 
-  it('treats an interruption by a new deployment as expected and any other as a warning', () => {
-    expect(runTone({ status: 'interrupted', interruptionCause: 'deploy', skipped: 0 })).toBe('neutral')
-    expect(runTone({ status: 'interrupted', interruptionCause: 'restart', skipped: 0 })).toBe('warning')
-    expect(runTone({ status: 'interrupted', interruptionCause: 'shutdown', skipped: 0 })).toBe('warning')
-    expect(runTone({ status: 'interrupted', interruptionCause: 'lost', skipped: 0 })).toBe('warning')
-  })
+  it.each(['deploy', 'restart', 'shutdown', 'lost'] as const)(
+    'warns about an interruption whatever its cause, %s included',
+    (interruptionCause) => {
+      expect(runTone({ status: 'interrupted', interruptionCause, skipped: 0 })).toBe('warning')
+    },
+  )
 
   it('warns about a succeeded run with skipped elements; a partial run stays a warning', () => {
     expect(runTone({ status: 'succeeded', interruptionCause: null, skipped: 3 })).toBe('warning')
@@ -87,14 +88,11 @@ describe('runTone', () => {
 })
 
 describe('stepTone', () => {
-  it('gives each step status its tone; an interrupted step follows its run', () => {
-    expect(stepTone('running', null)).toBe('info')
-    expect(stepTone('succeeded', null)).toBe('success')
-    expect(stepTone('failed', null)).toBe('destructive')
-    expect(stepTone('interrupted', null)).toBe('warning')
-    expect(stepTone('interrupted', 'restart')).toBe('warning')
-    expect(stepTone('interrupted', 'lost')).toBe('warning')
-    expect(stepTone('interrupted', 'deploy')).toBe('neutral')
+  it('gives each step status its tone; an interrupted step is a warning', () => {
+    expect(stepTone('running')).toBe('info')
+    expect(stepTone('succeeded')).toBe('success')
+    expect(stepTone('failed')).toBe('destructive')
+    expect(stepTone('interrupted')).toBe('warning')
   })
 })
 
@@ -125,67 +123,82 @@ describe('runStatusLabel', () => {
 })
 
 describe('attentionReasons', () => {
+  /** A run that needs attention for the API's `codes`. */
+  function attention(codes: AttentionReason[], overrides: Partial<Run> = {}): Run {
+    return run({ needsAttention: true, attentionReasons: codes, ...overrides })
+  }
+
   it("gives a failed run's error as it is, the watchdog's included", () => {
     expect(
-      attentionReasons(run({ status: 'failed', error: 'no progress for 39m 00s: the run was stopped', dead: 2 })),
+      attentionReasons(
+        attention(['failed'], { status: 'failed', error: 'no progress for 39m 00s: the run was stopped', dead: 2 }),
+      ),
     ).toEqual(['no progress for 39m 00s: the run was stopped'])
-    expect(attentionReasons(run({ status: 'failed', error: 'Wykop GET search answered HTTP 503' }))).toEqual([
-      'Wykop GET search answered HTTP 503',
-    ])
+    const wykop = attention(['failed'], { status: 'failed', error: 'Wykop GET search answered HTTP 503' })
+    expect(attentionReasons(wykop)).toEqual(['Wykop GET search answered HTTP 503'])
   })
 
   it('says a failed run without an error failed', () => {
-    expect(attentionReasons(run({ status: 'failed' }))).toEqual(['przebieg zakończył się błędem'])
+    const failed = attention(['failed'], { status: 'failed' })
+    expect(attentionReasons(failed)).toEqual(['przebieg zakończył się błędem'])
   })
 
   it('names the cause of an interruption', () => {
-    expect(attentionReasons(run({ status: 'interrupted', interruptionCause: 'deploy' }))).toEqual([
-      'przerwany: nowe wdrożenie',
-    ])
-    expect(attentionReasons(run({ status: 'interrupted', interruptionCause: 'restart' }))).toEqual([
-      'przerwany: restart aplikacji',
-    ])
-    expect(attentionReasons(run({ status: 'interrupted' }))).toEqual(['przerwany'])
+    const interrupted = (cause: Run['interruptionCause']) =>
+      attention(['interrupted'], { status: 'interrupted', interruptionCause: cause })
+    expect(attentionReasons(interrupted('deploy'))).toEqual(['przerwany: nowe wdrożenie'])
+    expect(attentionReasons(interrupted('restart'))).toEqual(['przerwany: restart aplikacji'])
+    expect(attentionReasons(interrupted(null))).toEqual(['przerwany'])
   })
 
   it.each([
-    [1, 0, ['1 post martwy']],
-    [3, 0, ['3 posty martwe']],
-    [5, 2, ['5 postów martwych', 'błędy techniczne: 2']],
-    [0, 1, ['błędy techniczne: 1']],
-    [0, 0, []],
-  ])('counts %i dead posts and %i technical errors of a partial run', (dead, processingErrors, reasons) => {
-    expect(attentionReasons(run({ status: 'partial', dead, processingErrors, assessedFailed: 9 }))).toEqual(reasons)
+    [1, '1 post martwy'],
+    [3, '3 posty martwe'],
+    [5, '5 postów martwych'],
+  ])('counts %i dead posts', (dead, reason) => {
+    const partial = attention(['dead_posts'], { status: 'partial', dead, assessedFailed: 9 })
+    expect(attentionReasons(partial)).toEqual([reason])
   })
 
-  it.each(['queued', 'running', 'succeeded'] as RunStatus[])('has no reason for a %s run', (status) => {
-    expect(attentionReasons(run({ status, dead: 1, processingErrors: 1 }))).toEqual([])
+  it('counts the technical errors and the skipped elements', () => {
+    expect(attentionReasons(attention(['processing_errors'], { status: 'partial', processingErrors: 2 }))).toEqual([
+      'błędy techniczne: 2',
+    ])
+    expect(attentionReasons(attention(['skipped'], { skipped: 3 }))).toEqual(['pominięte elementy: 3'])
   })
 
-  it('names the skipped elements of a succeeded run', () => {
-    expect(attentionReasons(run({ status: 'succeeded', skipped: 3 }))).toEqual(['pominięte elementy: 3'])
-  })
-
-  it('names the skipped elements of a partial run after its dead posts and technical errors', () => {
-    expect(attentionReasons(run({ status: 'partial', dead: 1, processingErrors: 2, skipped: 3 }))).toEqual([
+  it("keeps the API's order", () => {
+    const counters = { status: 'partial', dead: 1, processingErrors: 2, skipped: 3 } as const
+    expect(attentionReasons(attention(['dead_posts', 'processing_errors', 'skipped'], counters))).toEqual([
       '1 post martwy',
       'błędy techniczne: 2',
       'pominięte elementy: 3',
     ])
-    expect(attentionReasons(run({ status: 'partial', skipped: 1 }))).toEqual(['pominięte elementy: 1'])
+    expect(attentionReasons(attention(['skipped', 'dead_posts'], { status: 'partial', dead: 1, skipped: 3 }))).toEqual([
+      'pominięte elementy: 3',
+      '1 post martwy',
+    ])
   })
 
-  it('gives a failed run its error only, whatever it skipped', () => {
-    expect(
-      attentionReasons(
-        run({
-          status: 'failed',
-          fetched: 4,
-          skipped: 4,
-          error: 'NoPostsFetchedException: wykop gave no post to store (fetched 4, skipped 4)',
-        }),
-      ),
-    ).toEqual(['NoPostsFetchedException: wykop gave no post to store (fetched 4, skipped 4)'])
+  it('shows a code it has no text for as it came', () => {
+    expect(attentionReasons(attention(['stale_source' as AttentionReason, 'skipped'], { skipped: 1 }))).toEqual([
+      'stale_source',
+      'pominięte elementy: 1',
+    ])
+  })
+
+  it('gives a run that needs attention without any reason a stand-in text', () => {
+    // An API from before S-22 sends the flag without the field.
+    const legacy = run({ needsAttention: true, status: 'failed', error: 'boom' })
+    delete legacy.attentionReasons
+    expect(attentionReasons(legacy)).toEqual(['sprawdź kroki i błąd przebiegu'])
+    const empty = attention([], { status: 'partial', dead: 1 })
+    expect(attentionReasons(empty)).toEqual(['sprawdź kroki i błąd przebiegu'])
+  })
+
+  it('counts nothing itself: a run the API does not flag has no reason, whatever its counters', () => {
+    expect(attentionReasons(run({ status: 'partial', dead: 1, processingErrors: 1, skipped: 1 }))).toEqual([])
+    expect(attentionReasons(run({ status: 'failed', error: 'boom' }))).toEqual([])
   })
 })
 

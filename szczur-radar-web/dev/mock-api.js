@@ -21,17 +21,19 @@
  *       'none'  the window and no day,
  *       'error' 500.
  * Runs (/api/admin/pipeline-runs?page&size, 30 in all: "Pokaż starsze" has a second page of 20) answer like
- * pipeline/api/PipelineRunController.java, the newest first:
+ * pipeline/api/PipelineRunController.java, the newest first; a run that needs attention has its reason codes in
+ * attentionReasons, along the API's rule (pipeline/run/PipelineRun.attentionReasons):
  *       r-running  an admin's range, assessing now (19 of 41, 4 in flight, last activity 20 s ago),
- *       r-skipped  an admin's range, succeeded with 3 skipped elements (needs attention: a warning),
- *       r-deploy   the cron's night, interrupted by a new deployment, its assess step interrupted,
+ *       r-skipped  an admin's range, succeeded with 3 skipped elements (needs attention: a warning, ['skipped']),
+ *       r-deploy   the cron's night, interrupted by a new deployment (['interrupted']: a warning), its assess step
+ *                  interrupted,
  *       r-lost     an admin's range, interrupted `lost`: its instance was lost mid-assess, and the cron's start request
  *                  at 00:30 — the first start request after PIPELINE_STALL_TIMEOUT (39 min) without activity —
  *                  cleaned it up, its assess step interrupted,
  *       r-empty    an admin's range of today just after midnight, failed: its source gave no post (fetched 0, its
  *                  fetch step failed, "NoPostsFetchedException: wykop gave no post to store (fetched 0, skipped 0)"),
  *       r-stalled  the cron's night, failed: "no progress for 39m 00s: the run was stopped" (the watchdog),
- *       r-dead     the cron's night, partial with 1 dead post (needs attention),
+ *       r-dead     the cron's night, partial with 1 dead post (needs attention: ['dead_posts']),
  *       r-ok       the cron's night, succeeded; then older nights, some partial with failed posts only.
  *   /api/admin/pipeline-runs/<id> is that run (e.g. /admin/runs/r-running); any other id is 404 {"detail":"not_found"}.
  * NOTIFICATIONS (the bell; MODE 'loading' and 'error' apply first), like notifications/api/NotificationController.java:
@@ -90,7 +92,8 @@ async page => {
     const d = new Date(`${day}T00:00:00Z`)
     const back = (days) => new Date(d.getTime() - days * 24 * 60 * MIN).toISOString().slice(0, 10)
     return {
-      id, kind: 'range', status: 'succeeded', interruptionCause: null, needsAttention: false, scheduled: true,
+      id, kind: 'range', status: 'succeeded', interruptionCause: null, needsAttention: false, attentionReasons: [],
+      scheduled: true,
       rangeFrom: `${back(3)}T22:00:00Z`, rangeTo: `${back(1)}T21:59:59Z`, sources: ['wykop'], requestedPostIds: null,
       createdAt: `${day}T00:30:00Z`, startedAt: `${day}T00:30:01Z`, finishedAt: `${day}T00:52:10Z`,
       lastActivityAt: `${day}T00:52:10Z`, fetched: 470, newPosts: 400, assessedOk: 400, assessedFailed: 0,
@@ -112,8 +115,8 @@ async page => {
       ],
     },
     // An admin's range whose source skipped 3 elements (unexpected shape or not mappable): succeeded, a warning.
-    nightly('r-skipped', '2026-10-15', { scheduled: false, needsAttention: true, skipped: 3, newPosts: 397,
-      assessedOk: 397, createdAt: '2026-10-15T07:00:00Z', startedAt: '2026-10-15T07:00:01Z',
+    nightly('r-skipped', '2026-10-15', { scheduled: false, needsAttention: true, attentionReasons: ['skipped'],
+      skipped: 3, newPosts: 397, assessedOk: 397, createdAt: '2026-10-15T07:00:00Z', startedAt: '2026-10-15T07:00:01Z',
       finishedAt: '2026-10-15T07:21:30Z', lastActivityAt: '2026-10-15T07:21:30Z', steps: [
         step('fetch', 'succeeded', '2026-10-15T07:00:02Z', '2026-10-15T07:00:40Z', null, 470),
         step('store', 'succeeded', '2026-10-15T07:00:40Z', '2026-10-15T07:00:44Z', 467, 397),
@@ -122,15 +125,17 @@ async page => {
         step('summarize', 'succeeded', '2026-10-15T07:21:30Z', '2026-10-15T07:21:30Z', null, null),
       ] }),
     nightly('r-deploy', '2026-10-15', { status: 'interrupted', interruptionCause: 'deploy', needsAttention: true,
-      finishedAt: '2026-10-15T00:41:10Z', lastActivityAt: '2026-10-15T00:41:02Z', assessedOk: 212, assessedFailed: 3,
+      attentionReasons: ['interrupted'], finishedAt: '2026-10-15T00:41:10Z', lastActivityAt: '2026-10-15T00:41:02Z',
+      assessedOk: 212, assessedFailed: 3,
       error: 'interrupted: a new deployment took over',
       steps: night('2026-10-15', 400).slice(0, 3).concat(
         step('assess', 'interrupted', '2026-10-15T00:30:44Z', '2026-10-15T00:41:10Z', 400, null)) }),
     // An admin's range of 14.10 (Warsaw) whose instance was lost while assessing; the cron's start request at 00:30
     // found it without activity for over 39 min and interrupted it `lost`.
     nightly('r-lost', '2026-10-14', { scheduled: false, status: 'interrupted', interruptionCause: 'lost',
-      needsAttention: true, rangeFrom: '2026-10-13T22:00:00Z', rangeTo: '2026-10-14T21:59:59Z',
-      createdAt: '2026-10-14T23:00:00Z', startedAt: '2026-10-14T23:00:01Z', finishedAt: '2026-10-15T00:30:00Z',
+      needsAttention: true, attentionReasons: ['interrupted'], rangeFrom: '2026-10-13T22:00:00Z',
+      rangeTo: '2026-10-14T21:59:59Z', createdAt: '2026-10-14T23:00:00Z', startedAt: '2026-10-14T23:00:01Z',
+      finishedAt: '2026-10-15T00:30:00Z',
       lastActivityAt: '2026-10-14T23:08:30Z', assessedOk: 97, assessedFailed: 1,
       error: 'interrupted: the instance running it was lost without closing it',
       steps: [
@@ -141,18 +146,19 @@ async page => {
       ] }),
     // An admin's range of 15.10 (Warsaw) started 10 minutes after its midnight: the source gave no post.
     nightly('r-empty', '2026-10-15', { scheduled: false, status: 'failed', needsAttention: true,
+      attentionReasons: ['failed'],
       rangeFrom: '2026-10-14T22:00:00Z', rangeTo: '2026-10-15T21:59:59Z', createdAt: '2026-10-14T22:10:00Z',
       startedAt: '2026-10-14T22:10:01Z', finishedAt: '2026-10-14T22:10:03Z', lastActivityAt: '2026-10-14T22:10:03Z',
       fetched: 0, skipped: 0, newPosts: 0, assessedOk: 0, llmRetries: 0, flexFallbacks: 0,
       error: 'NoPostsFetchedException: wykop gave no post to store (fetched 0, skipped 0)',
       steps: [step('fetch', 'failed', '2026-10-14T22:10:01Z', '2026-10-14T22:10:03Z', null, null,
         'wykop gave no post to store (fetched 0, skipped 0)')] }),
-    nightly('r-stalled', '2026-10-14', { status: 'failed', needsAttention: true, finishedAt: '2026-10-14T01:20:31Z',
-      lastActivityAt: '2026-10-14T00:41:31Z', assessedOk: 160, assessedFailed: 1,
+    nightly('r-stalled', '2026-10-14', { status: 'failed', needsAttention: true, attentionReasons: ['failed'],
+      finishedAt: '2026-10-14T01:20:31Z', lastActivityAt: '2026-10-14T00:41:31Z', assessedOk: 160, assessedFailed: 1,
       error: 'no progress for 39m 00s: the run was stopped',
       steps: night('2026-10-14', 400, 'failed', 'no progress for 39m 00s: the run was stopped') }),
-    nightly('r-dead', '2026-10-13', { status: 'partial', needsAttention: true, assessedOk: 462, assessedFailed: 7, dead: 1,
-      newPosts: 469, steps: night('2026-10-13', 469) }),
+    nightly('r-dead', '2026-10-13', { status: 'partial', needsAttention: true, attentionReasons: ['dead_posts'],
+      assessedOk: 462, assessedFailed: 7, dead: 1, newPosts: 469, steps: night('2026-10-13', 469) }),
     nightly('r-ok', '2026-10-12'),
     // Older nights: 22 more, so the list has a second page ("Pokaż starsze"); every third one partial without a
     // dead post (nothing to attend to).

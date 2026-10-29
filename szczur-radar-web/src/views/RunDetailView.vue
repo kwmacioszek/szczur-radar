@@ -234,7 +234,7 @@ watch(
             <li v-for="step in run.steps" :key="step.step + step.startedAt" class="step" :data-status="step.status">
               <p class="step-head">
                 <strong>{{ label('step', step.step) }}</strong>
-                <StatusBadge :tone="stepTone(step.status, run.interruptionCause)">
+                <StatusBadge :tone="stepTone(step.status)">
                   {{ label('stepStatus', step.status) }}
                 </StatusBadge>
               </p>

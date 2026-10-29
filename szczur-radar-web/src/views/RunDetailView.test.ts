@@ -4,7 +4,7 @@ import { createMemoryHistory } from 'vue-router'
 import { fetchMe } from '../api/auth'
 import { ApiError } from '../api/client'
 import { fetchNotifications } from '../api/notifications'
-import { type Run, type RunStep, fetchRun } from '../api/pipeline'
+import { type AttentionReason, type Run, type RunStep, fetchRun } from '../api/pipeline'
 import { resetSession } from '../auth/session'
 import { createAppRouter } from '../router'
 import RunDetailView from './RunDetailView.vue'
@@ -43,6 +43,7 @@ function run(overrides: Partial<Run> = {}): Run {
     status: 'succeeded',
     interruptionCause: null,
     needsAttention: false,
+    attentionReasons: [],
     scheduled: true,
     rangeFrom: '2026-10-10T22:00:00Z',
     rangeTo: '2026-10-12T21:59:59Z',
@@ -241,7 +242,12 @@ describe('RunDetailView', () => {
   describe('why it needs attention', () => {
     it('gives a failed run’s error as it is', async () => {
       vi.mocked(fetchRun).mockResolvedValue(
-        run({ status: 'failed', needsAttention: true, error: 'no progress for 39m 00s: the run was stopped' }),
+        run({
+          status: 'failed',
+          needsAttention: true,
+          attentionReasons: ['failed'],
+          error: 'no progress for 39m 00s: the run was stopped',
+        }),
       )
       const { wrapper } = await mountRun()
       const attention = wrapper.find('.attention')
@@ -256,6 +262,7 @@ describe('RunDetailView', () => {
           status: 'interrupted',
           interruptionCause: 'deploy',
           needsAttention: true,
+          attentionReasons: ['interrupted'],
           inFlight: 0,
           finishedAt: '2026-10-13T00:40:00Z',
           error: 'interrupted: a new deployment took over',
@@ -264,23 +271,31 @@ describe('RunDetailView', () => {
       )
       const { wrapper } = await mountRun()
       expect(wrapper.find('.status').text()).toBe('przerwany — nowe wdrożenie')
-      expect(wrapper.find('.status').attributes('data-tone')).toBe('neutral')
+      expect(wrapper.find('.status').attributes('data-tone')).toBe('warning')
       expect(wrapper.find('.attention').text()).toBe('Wymaga uwagi: przerwany: nowe wdrożenie')
       const interrupted = wrapper.find('.step[data-status="interrupted"] .step-head')
       expect(interrupted.find('strong').text()).toBe('ocena')
       expect(interrupted.find('[data-tone]').text()).toBe('przerwany')
-      expect(interrupted.find('[data-tone]').attributes('data-tone')).toBe('neutral')
+      expect(interrupted.find('[data-tone]').attributes('data-tone')).toBe('warning')
       expect(wrapper.find('.progress').exists()).toBe(false)
     })
 
     it('counts the dead posts and technical errors of a partial run', async () => {
-      vi.mocked(fetchRun).mockResolvedValue(run({ status: 'partial', needsAttention: true, dead: 1, processingErrors: 2 }))
+      vi.mocked(fetchRun).mockResolvedValue(
+        run({
+          status: 'partial',
+          needsAttention: true,
+          attentionReasons: ['dead_posts', 'processing_errors'],
+          dead: 1,
+          processingErrors: 2,
+        }),
+      )
       const { wrapper } = await mountRun()
       expect(wrapper.find('.attention').text()).toBe('Wymaga uwagi: 1 post martwy; błędy techniczne: 2')
     })
 
     it('counts the skipped elements of a succeeded run and warns in its badge', async () => {
-      vi.mocked(fetchRun).mockResolvedValue(run({ needsAttention: true, skipped: 3 }))
+      vi.mocked(fetchRun).mockResolvedValue(run({ needsAttention: true, attentionReasons: ['skipped'], skipped: 3 }))
       const { wrapper } = await mountRun()
       expect(wrapper.find('.attention').text()).toBe('Wymaga uwagi: pominięte elementy: 3')
       expect(wrapper.find('.status').text()).toBe('zakończony — pominięte: 3')
@@ -295,6 +310,7 @@ describe('RunDetailView', () => {
         run({
           status: 'failed',
           needsAttention: true,
+          attentionReasons: ['failed'],
           fetched: 0,
           newPosts: 0,
           assessedOk: 0,
@@ -307,6 +323,23 @@ describe('RunDetailView', () => {
       expect(wrapper.find('.status').text()).toBe('błąd')
       expect(wrapper.find('.status').attributes('data-tone')).toBe('destructive')
       expect(wrapper.find('.attention').text()).toBe(`Wymaga uwagi: ${error}`)
+    })
+
+    it('shows a reason code it has no text for as it came', async () => {
+      vi.mocked(fetchRun).mockResolvedValue(
+        run({ needsAttention: true, attentionReasons: ['stale_source' as AttentionReason, 'skipped'], skipped: 1 }),
+      )
+      const { wrapper } = await mountRun()
+      expect(wrapper.find('.attention').text()).toBe('Wymaga uwagi: stale_source; pominięte elementy: 1')
+    })
+
+    it('never leaves "Wymaga uwagi" empty: a flagged run without reasons gets a stand-in text', async () => {
+      // An API from before S-22 sends the flag without the field.
+      const legacy = run({ status: 'partial', needsAttention: true, dead: 1 })
+      delete legacy.attentionReasons
+      vi.mocked(fetchRun).mockResolvedValue(legacy)
+      const { wrapper } = await mountRun()
+      expect(wrapper.find('.attention').text()).toBe('Wymaga uwagi: sprawdź kroki i błąd przebiegu')
     })
   })
 

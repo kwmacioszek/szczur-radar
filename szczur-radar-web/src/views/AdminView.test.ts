@@ -34,6 +34,7 @@ function run(overrides: Partial<Run> = {}): Run {
     status: 'succeeded',
     interruptionCause: null,
     needsAttention: false,
+    attentionReasons: [],
     scheduled: false,
     rangeFrom: '2026-09-30T22:00:00Z',
     rangeTo: '2026-10-01T21:59:59Z',
@@ -582,7 +583,13 @@ describe('AdminView', () => {
       vi.mocked(fetchRuns).mockResolvedValue(
         page(
           [
-            run({ id: 'r1', status: 'interrupted', interruptionCause: 'deploy', needsAttention: true }),
+            run({
+              id: 'r1',
+              status: 'interrupted',
+              interruptionCause: 'deploy',
+              needsAttention: true,
+              attentionReasons: ['interrupted'],
+            }),
             run({ id: 'r2', status: 'partial' }),
           ],
           2,
@@ -591,7 +598,7 @@ describe('AdminView', () => {
       const wrapper = await mountAdmin()
       const [interrupted, partial] = wrapper.findAll('.run')
       expect(interrupted!.find('.status').text()).toBe('przerwany — nowe wdrożenie')
-      expect(interrupted!.find('.status').attributes('data-tone')).toBe('neutral')
+      expect(interrupted!.find('.status').attributes('data-tone')).toBe('warning')
       expect(interrupted!.find('.attention').text()).toBe('wymaga uwagi')
       expect(interrupted!.find('.attention').attributes('data-tone')).toBe('destructive')
       const link = interrupted!.find('a.details')
@@ -603,7 +610,13 @@ describe('AdminView', () => {
 
     it('warns about a run whose source skipped elements and counts them', async () => {
       vi.mocked(fetchRuns).mockResolvedValue(
-        page([run({ id: 'r1', skipped: 3, needsAttention: true }), run({ id: 'r2', status: 'partial', skipped: 1, needsAttention: true })], 2),
+        page(
+          [
+            run({ id: 'r1', skipped: 3, needsAttention: true, attentionReasons: ['skipped'] }),
+            run({ id: 'r2', status: 'partial', skipped: 1, needsAttention: true, attentionReasons: ['skipped'] }),
+          ],
+          2,
+        ),
       )
       const wrapper = await mountAdmin()
       const [succeeded, partial] = wrapper.findAll('.run')

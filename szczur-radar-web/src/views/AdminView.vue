@@ -396,7 +396,7 @@ onMounted(async () => {
                 <span v-if="step.status === 'succeeded'">
                   {{ label('step', step.step) }}<template v-if="step.itemsOut !== null"> ({{ step.itemsOut }})</template>
                 </span>
-                <StatusBadge v-else :tone="stepTone(step.status, run.interruptionCause)">
+                <StatusBadge v-else :tone="stepTone(step.status)">
                   {{ label('step', step.step) }} ({{ label('stepStatus', step.status) }})
                 </StatusBadge>
               </template>

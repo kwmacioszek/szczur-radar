@@ -24,16 +24,16 @@
 <text x="56.0" y="202.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="400" fill="#a2afb4">Źródło: context/foundation/roadmap.md  ·  v4  ·  stan 27.10.2026  ·  bez terminów — kolejność wynika z zależności</text>
 <rect x="3454.0" y="36.0" width="820.0" height="214.0" rx="14" fill="url(#hero)" stroke="#2b373e" stroke-width="1" />
 <circle cx="3536.0" cy="136" r="46" fill="none" stroke="#232d32" stroke-width="9"/>
-<path d="M3536.0 90 A46 46 0 1 1 3490.05 133.81" fill="none" stroke="#5fd18f" stroke-width="9" stroke-linecap="round"/>
-<text x="3536.0" y="140.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="22" font-weight="700" fill="#eaf0f2" text-anchor="middle">76%</text>
-<text x="3536.0" y="158.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="500" fill="#a2afb4" text-anchor="middle">25 / 33</text>
+<path d="M3536.0 90 A46 46 0 1 1 3491.30 125.16" fill="none" stroke="#5fd18f" stroke-width="9" stroke-linecap="round"/>
+<text x="3536.0" y="140.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="22" font-weight="700" fill="#eaf0f2" text-anchor="middle">79%</text>
+<text x="3536.0" y="158.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="500" fill="#a2afb4" text-anchor="middle">26 / 33</text>
 <text x="3536.0" y="222.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="700" fill="#a2afb4" text-anchor="middle" letter-spacing="1.2">M-1 + M-2 + M-3</text>
 <text x="3618.0" y="70.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="700" fill="#a2afb4" letter-spacing="1.6">POSTĘP KAMIENIA MILOWEGO</text>
 <text x="3618.0" y="98.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" font-weight="700" fill="#eaf0f2">M-3 · Drugie źródło na utwardzonym rdzeniu</text>
-<text x="4250.0" y="98.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" font-weight="700" fill="#eaf0f2" text-anchor="end">3 / 10</text>
+<text x="4250.0" y="98.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" font-weight="700" fill="#eaf0f2" text-anchor="end">4 / 10</text>
 <rect x="3618.0" y="114.0" width="58.7" height="12.0" rx="3" fill="#13232e" stroke="#8ccbe8aa" stroke-width="1" />
 <rect x="3681.7" y="114.0" width="58.7" height="12.0" rx="3" fill="#14281d" stroke="#5fd18faa" stroke-width="1" />
-<rect x="3745.4" y="114.0" width="58.7" height="12.0" rx="3" fill="#13232e" stroke="#8ccbe8aa" stroke-width="1" />
+<rect x="3745.4" y="114.0" width="58.7" height="12.0" rx="3" fill="#14281d" stroke="#5fd18faa" stroke-width="1" />
 <rect x="3809.1" y="114.0" width="58.7" height="12.0" rx="3" fill="#14281d" stroke="#5fd18faa" stroke-width="1" />
 <rect x="3872.8" y="114.0" width="58.7" height="12.0" rx="3" fill="#13232e" stroke="#8ccbe8aa" stroke-width="1" />
 <rect x="3936.5" y="114.0" width="58.7" height="12.0" rx="3" fill="#33291a" stroke="#f2c46daa" stroke-width="1" />
@@ -42,11 +42,11 @@
 <rect x="4127.6" y="114.0" width="58.7" height="12.0" rx="3" fill="#232d32" stroke="#c3cdd055" stroke-width="1" />
 <rect x="4191.3" y="114.0" width="58.7" height="12.0" rx="3" fill="#3a1f25" stroke="#f28b9caa" stroke-width="1" />
 <circle cx="3622.0" cy="147" r="4" fill="#5fd18f" stroke="#5fd18f" stroke-width="1.2"/>
-<text x="3631.0" y="151.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="500" fill="#eaf0f2">3 ukończone</text>
+<text x="3631.0" y="151.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="500" fill="#eaf0f2">4 ukończone</text>
 <circle cx="3772.0" cy="147" r="4" fill="#f2c46d" stroke="#f2c46d" stroke-width="1.2"/>
 <text x="3781.0" y="151.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="500" fill="#eaf0f2">1 w toku</text>
 <circle cx="3922.0" cy="147" r="4" fill="#13232e" stroke="#8ccbe8" stroke-width="1.2"/>
-<text x="3931.0" y="151.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="500" fill="#eaf0f2">3 gotowe do planowania</text>
+<text x="3931.0" y="151.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="500" fill="#eaf0f2">2 gotowe do planowania</text>
 <circle cx="3622.0" cy="169" r="4" fill="#232d32" stroke="#c3cdd0" stroke-width="1.2"/>
 <text x="3631.0" y="173.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="500" fill="#eaf0f2">1 proponowane</text>
 <circle cx="3772.0" cy="169" r="4" fill="#141c21" stroke="#9aa8ae" stroke-width="1.2"/>
@@ -115,7 +115,7 @@
 <circle cx="3474.0" cy="316" r="3.5" fill="#f2c46d"/>
 <text x="3500.0" y="290.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="700" fill="#f2c46d">M-3</text>
 <text x="3533.2" y="290.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="700" fill="#eaf0f2">Drugie źródło na utwardzonym rdzeniu</text>
-<text x="3500.0" y="346.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#f2c46d">Otwarty — teraz  ·  3 / 10</text>
+<text x="3500.0" y="346.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#f2c46d">Otwarty — teraz  ·  4 / 10</text>
 <line x1="3474.0" y1="332" x2="3474.0" y2="400" stroke="#f2c46d" stroke-opacity="0.35" stroke-width="1.5" stroke-dasharray="2 5"/>
 <circle cx="5138.0" cy="316" r="9" fill="#0d1316" stroke="#a2afb4" stroke-width="2" stroke-dasharray="3 3"/>
 <text x="5164.0" y="290.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="700" fill="#a2afb4">PO M-3</text>
@@ -624,8 +624,8 @@
 <text x="3937.2" y="439.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="600" fill="#f2c46d">Otwarty</text>
 <text x="3482.0" y="466.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="400" fill="#a2afb4">Awaria albo cisza jednego źródła nie psuje drugiego, ślepe punkty audytu po M-2 są domknięte, a posty z subredditów idą do feedu i oceny jak Wykop — po pomiarze jakości i kosztu.</text>
 <rect x="4782.0" y="430.0" width="160.0" height="8.0" rx="4" fill="#232d32" />
-<rect x="4782.0" y="430.0" width="48.0" height="8.0" rx="4" fill="#c3f08c" />
-<text x="4994.0" y="440.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="700" fill="#c3f08c" text-anchor="end">3 / 10</text>
+<rect x="4782.0" y="430.0" width="64.0" height="8.0" rx="4" fill="#c3f08c" />
+<text x="4994.0" y="440.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="700" fill="#c3f08c" text-anchor="end">4 / 10</text>
 <rect x="3478.0" y="498.0" width="902.4" height="820.0" rx="12" fill="#141c21" stroke="#222d33" stroke-width="1" />
 <rect x="3494.0" y="512.0" width="26.0" height="26.0" rx="7" fill="#c3f08c22" stroke="#c3f08c77" stroke-width="1" />
 <text x="3507.0" y="530.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="13" font-weight="700" fill="#c3f08c" text-anchor="middle">A</text>
@@ -645,7 +645,7 @@
 <text x="3507.0" y="1368.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="13" font-weight="700" fill="#8ccbe8" text-anchor="middle">C</text>
 <text x="3532.0" y="1368.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#eaf0f2">Jedna reguła, jeden strażnik</text>
 <text x="3532.0" y="1392.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#a2afb4">Reguły z kilku miejsc dostają strażnika przed nowym źródłem</text>
-<text x="4364.4" y="1368.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600" fill="#9aa8ae" text-anchor="end">1 / 3 ukończonych</text>
+<text x="4364.4" y="1368.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600" fill="#9aa8ae" text-anchor="end">2 / 3 ukończonych</text>
 <line x1="3494.0" y1="1410" x2="4364.4" y2="1410" stroke="#222d33"/>
 <rect x="4404.4" y="1336.0" width="593.6" height="453.0" rx="12" fill="#141c21" stroke="#222d33" stroke-width="1" />
 <rect x="4420.4" y="1350.0" width="26.0" height="26.0" rx="7" fill="#8ccbe822" stroke="#8ccbe877" stroke-width="1" />
@@ -773,12 +773,12 @@
 <text x="4803.2" y="1042.5" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="11" font-weight="700" fill="#a2afb4">—</text>
 <text x="4743.2" y="1064.5" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#9aa8ae">alert-ping-single-rule</text>
 </g>
-<g data-id="S-22" data-status="ready">
-<rect x="3494.0" y="1434.0" width="252.8" height="319.0" rx="12" fill="#151e23" stroke="#2e4d60" stroke-width="1" />
-<text x="3508.0" y="1459.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="13" font-weight="700" fill="#8ccbe8">S-22</text>
-<rect x="3580.0" y="1445.0" width="152.8" height="20.0" rx="5" fill="#13232e" stroke="#8ccbe855" stroke-width="1" />
-<circle cx="3592.0" cy="1455.0" r="3" fill="#8ccbe8"/>
-<text x="3601.0" y="1459.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="600" fill="#8ccbe8">Gotowe do planowania</text>
+<g data-id="S-22" data-status="done">
+<rect x="3494.0" y="1434.0" width="252.8" height="319.0" rx="12" fill="#151e23" stroke="#2f5a42" stroke-width="1" />
+<text x="3508.0" y="1459.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="13" font-weight="700" fill="#5fd18f">S-22</text>
+<rect x="3647.5" y="1445.0" width="85.3" height="20.0" rx="5" fill="#14281d" stroke="#5fd18f55" stroke-width="1" />
+<path d="M3656.5 1455.0 l3 3 l5.5 -6" fill="none" stroke="#5fd18f" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="3668.5" y="1459.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="600" fill="#5fd18f">Ukończone</text>
 <text x="3508.0" y="1485.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#eaf0f2">„Wymaga uwagi”</text>
 <text x="3508.0" y="1507.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#eaf0f2">liczone jedną regułą</text>
 <text x="3508.0" y="1535.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">admin widzi powody „wymaga</text>
