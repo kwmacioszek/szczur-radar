@@ -132,8 +132,9 @@ class PipelineRunController {
 	 * The days without data ({@link MissingDays}) for the admin's list: the window of the
 	 * {@value MissingDays#WINDOW_DAYS} days up to the day before yesterday (today in Warsaw from the
 	 * injected clock) and its days that no {@code range} run {@code succeeded} or {@code partial} (the
-	 * cron's or an admin's) covers, per configured source; a source starts at its first covered day ever,
-	 * so one never covered has no day. The admin starts such a range in the form; nothing here starts a run.
+	 * cron's or an admin's) covers, per configured source: a run covers a source only where the source's
+	 * result is {@code succeeded} (it gave a post). A source starts at its first covered day ever, so one
+	 * never covered has no day. The admin starts such a range in the form; nothing here starts a run.
 	 */
 	@GetMapping("/missing-days")
 	MissingDaysView missingDays() {
@@ -146,7 +147,7 @@ class PipelineRunController {
 		List<MissingDays.Coverage> coverages = runs
 			.findCoveringSince(MissingDays.windowStart(today).atStartOfDay(PipelineRunService.ZONE).toInstant())
 			.stream()
-			.map(run -> MissingDays.Coverage.of(run, PipelineRunService.ZONE))
+			.map(range -> MissingDays.Coverage.of(range, PipelineRunService.ZONE))
 			.toList();
 		Map<Source, LocalDate> firstCovered = new EnumMap<>(Source.class);
 		runs.findFirstCoveredFrom(configured)

@@ -7,7 +7,6 @@ import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
 
@@ -22,8 +21,10 @@ import pl.szczurradar.api.sources.Source;
  *
  * <ol>
  *   <li>A day is covered for a source when a {@link RunKind#RANGE} run, the cron's or an admin's,
- *       {@link RunStatus#SUCCEEDED succeeded} or ended {@link RunStatus#PARTIAL partial} with the source
- *       among its sources and the day between its first and last day ({@link Coverage}).
+ *       {@link RunStatus#SUCCEEDED succeeded} or ended {@link RunStatus#PARTIAL partial} with the source's
+ *       result {@link SourceFetchStatus#SUCCEEDED succeeded} (it gave a post; a source that failed or gave
+ *       none covers nothing, though the run requested it) and the day between its first and last day
+ *       ({@link Coverage}).
  *   <li>The window is the {@value #WINDOW_DAYS} days up to {@value #LAST_DAY_BEFORE_TODAY} days before
  *       today ({@link #windowStart}, {@link #windowEnd}).
  *   <li>For a source it starts no earlier than the first day the source was ever covered: a source never
@@ -113,11 +114,13 @@ public record MissingDays(LocalDate from, LocalDate to, List<Day> days) {
 			sources = Set.copyOf(sources);
 		}
 
-		/** The days of a covering range run: the calendar days in {@code zone} of its range's ends. */
-		public static Coverage of(PipelineRun run, ZoneId zone) {
-			return new Coverage(LocalDate.ofInstant(Objects.requireNonNull(run.getRangeFrom(), "rangeFrom"), zone),
-					LocalDate.ofInstant(Objects.requireNonNull(run.getRangeTo(), "rangeTo"), zone),
-					Set.copyOf(run.getSources()));
+		/**
+		 * The days a covering run fetched from one source: the calendar days in {@code zone} of its range's
+		 * ends, for that source only.
+		 */
+		public static Coverage of(CoveredRange range, ZoneId zone) {
+			return new Coverage(LocalDate.ofInstant(range.rangeFrom(), zone),
+					LocalDate.ofInstant(range.rangeTo(), zone), Set.of(range.source()));
 		}
 
 		boolean covers(LocalDate day, Source source) {

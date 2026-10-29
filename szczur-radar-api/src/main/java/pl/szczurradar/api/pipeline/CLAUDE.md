@@ -19,7 +19,8 @@ pipeline/            entry points — start here
   api/     the HTTP entries (below)
   run/     the run model: PipelineRun (+ attentionReasons → needsAttention), AttentionReason, PipelineRunStep,
            PipelineRunSource (a source's result in a range run), SourceFetchStatus, RunKind, RunStatus, RunStep,
-           StepStatus, InterruptionCause, repositories, MissingDays (the days no run covered, for the admin's list)
+           StepStatus, InterruptionCause, repositories, CoveredRange, MissingDays (the days no source's `succeeded`
+           result covered, for the admin's list)
   flow/    RunSequence (the steps in order), RunFlow (the step types, SourceFetch: one source's result)
   step/    the steps: SourceIngest (fetch), PostStore (store), AssessmentSelection (select),
            NoPostsFetchedException (no source gave a post: the fetch fails)
@@ -40,7 +41,7 @@ Every route starts runs only through `PipelineRunService`; none has its own star
 
 | Class | Route | Who |
 | --- | --- | --- |
-| `PipelineRunController` | `/api/admin/pipeline-runs/**`: start a range or chosen posts, list runs (pages of up to 100, newest first), one run `GET /{id}` (404 `not_found`), sources `GET /sources`, the days without data `GET /missing-days` → `{from, to, days: [{day, sources}]}` (`run/MissingDays`: the window D-15…D-2 of `ZONE` from the injected `Clock`; a day is covered for a configured source by a RANGE run `succeeded`/`partial` naming it, the cron's or an admin's; a source's window starts at its first covered day ever, so one never covered misses none; days ascending, `sources` in `Source` order; it starts nothing). A run (`RunView`) has its steps, counters, `scheduled` (requested by `SystemAccount.SCHEDULER`), `needsAttention` and `attentionReasons` (`run/AttentionReason` codes in the rule's order, e.g. `["dead_posts","skipped"]`, empty when it needs none; the SPA turns them into text in `src/runs.ts`), `interruptionCause`, `lastActivityAt`, `llmRetries`, `flexFallbacks` and `inFlight` (`RunRecorder.inFlight`, only for a running run, else 0) | admin session |
+| `PipelineRunController` | `/api/admin/pipeline-runs/**`: start a range or chosen posts, list runs (pages of up to 100, newest first), one run `GET /{id}` (404 `not_found`), sources `GET /sources`, the days without data `GET /missing-days` → `{from, to, days: [{day, sources}]}` (`run/MissingDays`: the window D-15…D-2 of `ZONE` from the injected `Clock`; a day is covered for a configured source by a RANGE run `succeeded`/`partial` whose result for that source (`run/PipelineRunSource`) is `succeeded` — it gave a post; a failed or empty source covers nothing, though the run requested it — the cron's or an admin's (`run/PipelineRunRepository.findCoveringSince` / `findFirstCoveredFrom`); a source's window starts at its first covered day ever, so one never covered misses none; days ascending, `sources` in `Source` order; it starts nothing). A run (`RunView`) has its steps, counters, `scheduled` (requested by `SystemAccount.SCHEDULER`), `needsAttention` and `attentionReasons` (`run/AttentionReason` codes in the rule's order, e.g. `["dead_posts","skipped"]`, empty when it needs none; the SPA turns them into text in `src/runs.ts`), `interruptionCause`, `lastActivityAt`, `llmRetries`, `flexFallbacks` and `inFlight` (`RunRecorder.inFlight`, only for a running run, else 0) | admin session |
 | `InternalPipelineRunController` | `POST /internal/pipeline-runs/daily` (D-2…D-1 of `ZONE` from the injected `Clock`, every configured source, requester `SystemAccount.SCHEDULER`; 202 `[{id, kind}]`), `GET /internal/pipeline-runs/{id}` (status, `startedAt`, `finishedAt`, `lastActivityAt`, `interruptionCause`, the running `step` or `null`, `assessTotal` = the `assess` step's `items_in` or `null`, counters `fetched`, `skipped`, `newPosts`, `assessedOk`, `assessedFailed`, `processingErrors`, `dead`; 404 `not_found`) — the cron's heartbeat reads it | the daily cron `pipeline-trigger`, token `PIPELINE_TRIGGER_TOKEN` only (`internal/`, `config/SecurityConfig`), never a session |
 | `FreshnessController` | `GET /api/freshness` → `{lastUpdatedAt}`: `finished_at` of the RANGE run `succeeded`/`partial` whose range reaches furthest, the latest of those (`run/PipelineRunRepository.findLastUpdate`; an admin's run over older days leaves it) — the feed's label (FR-030); nothing else about runs | any session |
 | `DeploySafetyController` | `GET /api/deploy-safety` → `{safe, reason}`: `reason` (`DeploySafetyReason`) `pipeline_running` before `pipeline_queued` (both can exist: a retry runs, the range waits), `null` when safe (`run/PipelineRunRepository.existsLiveActive` decides it in one statement, then `existsRunning` the reason, over every active run: two statements would both miss a run leaving the queue between them). A dead run — queued or running without activity for `PIPELINE_STALL_TIMEOUT` (`COALESCE(last_activity_at, started_at, created_at)`, the database's clock), and no run ended within it (a queue that just ended a run is alive) — does not hold the deploy (safe when every active run is dead: no instance executes it, and the new instance's start-up recovery interrupts it anyway); it only reads, the next request to start runs interrupts them (`lost`, Rules); 503 `{status: unavailable}` without the database, as `/api/ready` — the CI deploy gate's question (S-14); nothing else about runs | anyone, no session (`PUBLIC_ROUTES`) |
@@ -492,8 +493,8 @@ PipelineRunService.startRange / startPosts → queue (thread pipeline-run) → R
   `run/PipelineRunTest` (`attentionReasons` for every status, with and without failed or empty sources and
   skipped elements, in the rule's order; none for a new run),
   `run/MissingDaysTest` (the plan's example, the window D-15…D-2, a source's first covered day, a source
-  never covered or not configured, overlapping ranges, a one-day run on the 25-hour day, the gap one bad
-  night shows just after midnight),
+  never covered or not configured, two sources with different gaps, overlapping ranges, a one-day run on
+  the 25-hour day, the gap one bad night shows just after midnight),
   `PipelineStallSettingsTest` (default from the LLM settings, WARN below it, units, refusals),
   `RunWatchdogTest` (no database call without a run of its own, a failure and an `Error` logged, a raise
   of `WATCHDOG_FAILED` that throws an exception or an `Error` logged without stopping the other runs' checks,
@@ -525,8 +526,9 @@ PipelineRunService.startRange / startPosts → queue (thread pipeline-run) → R
   keys of `GET /internal/pipeline-runs/{id}` with `step` and `assessTotal` during the assessment.
   `api/PipelineRunControllerIT`: the run page, 404, the new fields, `scheduled` for the cron's run.
   `api/FreshnessIT`: which runs move the label. `api/MissingDaysIT` (fixed `Clock`): which runs cover a day
-  (`failed`, `interrupted`, `queued`, `running` and RETRY/POSTS runs do not; `partial` and an admin's do),
-  the first covered day from the history, the exact JSON; `api/PipelineRunWithoutSourceIT` also that no
+  (`failed`, `interrupted`, `queued`, `running` and RETRY/POSTS runs do not; `partial` and an admin's do;
+  in a `partial` run with a second source, only the source whose result is `succeeded`), the first covered
+  day from the sources' results, the exact JSON; `api/PipelineRunWithoutSourceIT` also that no
   day is missing without a configured source. `api/DeploySafetyIT`: every answer (a running run
   outranks a queued one, ended runs are safe; a dead running run is safe and its row unchanged, a dead
   queued run is safe, a running run with recent activity is not, nor a live queued run behind a dead

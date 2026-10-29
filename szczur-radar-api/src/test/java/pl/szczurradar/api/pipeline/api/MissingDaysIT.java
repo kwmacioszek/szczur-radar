@@ -8,9 +8,12 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneOffset;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -33,6 +36,9 @@ import pl.szczurradar.api.pipeline.run.PipelineRun;
 import pl.szczurradar.api.pipeline.run.PipelineRunRepository;
 import pl.szczurradar.api.pipeline.run.RunKind;
 import pl.szczurradar.api.pipeline.run.RunStatus;
+import pl.szczurradar.api.pipeline.run.SourceFetchStatus;
+import pl.szczurradar.api.sources.ScriptedSourceConfiguration;
+import pl.szczurradar.api.sources.ScriptedSourceFetcher;
 import pl.szczurradar.api.sources.Source;
 import pl.szczurradar.api.sources.wykop.WykopConfiguration;
 import pl.szczurradar.api.user.Role;
@@ -43,14 +49,16 @@ import pl.szczurradar.api.user.UserRepository;
 /**
  * {@code GET /api/admin/pipeline-runs/missing-days} on Postgres with a fixed clock (today is 24 October
  * 2026 in Warsaw, so the window is 9–22 October): which runs cover a day and the exact answer. Wykop is
- * configured with keys no call uses (no run executes here). Runs are stored through the entities and
- * then ended as the pipeline would end them. Each test rolls back. Who may read it:
- * {@code AuthorizationCompletenessIT} and {@code AdminRoleIT} ({@code ADMIN_ROUTES}).
+ * configured with keys no call uses (no run executes here); the second source ({@link ScriptedSourceFetcher}
+ * of {@link Source#REDDIT}) only in the scenario that switches it on. Runs are stored through the entities,
+ * then ended as the pipeline would end them, with each source's result written as {@code RunRecorder.source}
+ * writes it. Each test rolls back. Who may read it: {@code AuthorizationCompletenessIT} and
+ * {@code AdminRoleIT} ({@code ADMIN_ROUTES}).
  */
 @SpringBootTest(properties = { MigrateCommand.ENABLE_FLYWAY, WykopConfiguration.KEY + "=test-key",
 		WykopConfiguration.SECRET + "=test-secret" })
 @AutoConfigureMockMvc
-@Import({ TestcontainersConfiguration.class, MissingDaysIT.FixedClock.class })
+@Import({ TestcontainersConfiguration.class, ScriptedSourceConfiguration.class, MissingDaysIT.FixedClock.class })
 @Transactional
 class MissingDaysIT {
 
@@ -78,6 +86,9 @@ class MissingDaysIT {
 	@Autowired
 	UserRepository users;
 
+	@Autowired
+	ScriptedSourceFetcher reddit;
+
 	private UUID admin;
 
 	@BeforeEach
@@ -91,6 +102,11 @@ class MissingDaysIT {
 				RunStatus.QUEUED.value(), RunStatus.RUNNING.value());
 		admin = users.saveAndFlush(new User("missing-days-" + UUID.randomUUID() + "@example.com", null, Role.ADMIN))
 			.getId();
+	}
+
+	@AfterEach
+	void tearDown() {
+		reddit.reset();
 	}
 
 	@Test
@@ -157,6 +173,32 @@ class MissingDaysIT {
 	}
 
 	@Test
+	void aPartialRunCoversOnlyTheSourcesThatSucceeded() {
+		reddit.configured(true);
+		Map<Source, SourceFetchStatus> redditDown = results(SourceFetchStatus.SUCCEEDED, SourceFetchStatus.FAILED);
+		Map<Source, SourceFetchStatus> bothUp = results(SourceFetchStatus.SUCCEEDED, SourceFetchStatus.SUCCEEDED);
+		// Reddit gave its first post on 13 October: the run before it, though it requested Reddit, does not
+		// start Reddit's window.
+		range(RunStatus.PARTIAL, SystemAccount.SCHEDULER.id(), "2026-10-07", "2026-10-12", redditDown);
+		range(RunStatus.SUCCEEDED, SystemAccount.SCHEDULER.id(), "2026-10-13", "2026-10-18", bothUp);
+		range(RunStatus.PARTIAL, SystemAccount.SCHEDULER.id(), "2026-10-19", "2026-10-20", redditDown);
+		range(RunStatus.SUCCEEDED, SystemAccount.SCHEDULER.id(), "2026-10-21", "2026-10-22", bothUp);
+
+		assertMissingDays("""
+				{"from":"2026-10-09","to":"2026-10-22","days":[\
+				{"day":"2026-10-19","sources":["reddit"]},{"day":"2026-10-20","sources":["reddit"]}]}""");
+	}
+
+	@Test
+	void anEmptySourceDoesNotCover() {
+		nightlyRunsWithAGapOn19And20October();
+		range(RunStatus.PARTIAL, SystemAccount.SCHEDULER.id(), "2026-10-19", "2026-10-20",
+				Map.of(Source.WYKOP, SourceFetchStatus.EMPTY));
+
+		assertMissingDays(GAP);
+	}
+
+	@Test
 	void aSourceWithoutACoveringRunHasNoMissingDay() {
 		range(RunStatus.FAILED, SystemAccount.SCHEDULER.id(), "2026-10-09", "2026-10-10");
 
@@ -174,13 +216,34 @@ class MissingDaysIT {
 
 	/**
 	 * A Wykop range run over the Warsaw days {@code from}–{@code to}, stored as the service stores it, then
-	 * ended {@code status}.
+	 * ended {@code status}, with Wykop's result {@code succeeded}.
 	 */
 	private void range(RunStatus status, UUID requestedBy, String from, String to) {
+		range(status, requestedBy, from, to, Map.of(Source.WYKOP, SourceFetchStatus.SUCCEEDED));
+	}
+
+	/**
+	 * A range run of the sources of {@code results} over the Warsaw days {@code from}–{@code to}, stored as the
+	 * service stores it, then ended {@code status}, with each source's result.
+	 */
+	private void range(RunStatus status, UUID requestedBy, String from, String to,
+			Map<Source, SourceFetchStatus> results) {
+		Map<Source, SourceFetchStatus> ordered = new EnumMap<>(results);
 		PipelineRun run = PipelineRun.range(LocalDate.parse(from).atStartOfDay(PipelineRunService.ZONE).toInstant(),
 				LocalDate.parse(to).atTime(LocalTime.of(23, 59, 59)).atZone(PipelineRunService.ZONE).toInstant(),
-				List.of(Source.WYKOP), requestedBy, null);
-		end(runs.saveAndFlush(run).getId(), status);
+				List.copyOf(ordered.keySet()), requestedBy, null);
+		UUID id = runs.saveAndFlush(run).getId();
+		ordered.forEach((source, result) -> jdbc.update(
+				"INSERT INTO pipeline_run_sources (run_id, source, status, fetched, skipped, error)"
+						+ " VALUES (?, ?, ?, ?, 0, ?)",
+				id, source.value(), result.value(), result == SourceFetchStatus.SUCCEEDED ? 3 : 0,
+				result == SourceFetchStatus.FAILED ? "IllegalStateException: " + source.value() + " is down" : null));
+		end(id, status);
+	}
+
+	/** Wykop's result {@code wykop}, Reddit's {@code reddit}. */
+	private static Map<Source, SourceFetchStatus> results(SourceFetchStatus wykop, SourceFetchStatus reddit) {
+		return Map.of(Source.WYKOP, wykop, Source.REDDIT, reddit);
 	}
 
 	private void end(UUID id, RunStatus status) {

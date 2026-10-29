@@ -2,6 +2,10 @@ package pl.szczurradar.api.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.time.Instant;
+import java.time.LocalDate;
+import java.util.EnumMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -9,6 +13,7 @@ import javax.sql.DataSource;
 
 import org.flywaydb.core.Flyway;
 import org.jspecify.annotations.Nullable;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -16,16 +21,25 @@ import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import pl.szczurradar.api.TestcontainersConfiguration;
+import pl.szczurradar.api.pipeline.PipelineRunService;
+import pl.szczurradar.api.pipeline.run.MissingDays;
+import pl.szczurradar.api.pipeline.run.PipelineRunRepository;
+import pl.szczurradar.api.sources.Source;
 
 /**
  * {@code V12__pipeline_run_sources.sql} fills the history from each range run's last {@code fetch} step:
- * the database is migrated to V11 (this context leaves Flyway off, as the server does), runs from before
- * V12 are inserted with SQL, then every migration is applied and the rows and counters are read.
+ * the database is emptied and migrated to V11 (this context leaves Flyway off, as the server does), runs
+ * from before V12 are inserted with SQL, then every migration is applied and the rows and counters are
+ * read — and the days without data, through the production queries ({@link PipelineRunRepository}) and
+ * {@link MissingDays}, assembled as the {@code missing-days} route assembles them.
  * {@link pl.szczurradar.api.MigrationsIT} cannot show this: it migrates everything when its context starts.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @Import(TestcontainersConfiguration.class)
 class V12BackfillIT {
+
+	/** Today for the days without data: the window is 3–16 October 2026. */
+	private static final LocalDate TODAY = LocalDate.parse("2026-10-18");
 
 	@Autowired
 	DataSource dataSource;
@@ -33,11 +47,22 @@ class V12BackfillIT {
 	@Autowired
 	JdbcTemplate jdbc;
 
+	@Autowired
+	PipelineRunRepository runs;
+
+	private UUID admin;
+
+	@BeforeEach
+	void migrateAnEmptyDatabaseToV11() {
+		// Each test starts from an empty database: V12 runs once per database.
+		Flyway.configure().dataSource(dataSource).cleanDisabled(false).load().clean();
+		Flyway.configure().dataSource(dataSource).target("11").load().migrate();
+		admin = jdbc.queryForObject("INSERT INTO users (email, role) VALUES ('backfill@example.com', 'admin')"
+				+ " RETURNING id", UUID.class);
+	}
+
 	@Test
 	void eachRangeRunGetsItsSourcesResultFromItsLastFetchStep() {
-		Flyway.configure().dataSource(dataSource).target("11").load().migrate();
-		UUID admin = jdbc.queryForObject("INSERT INTO users (email, role) VALUES ('backfill@example.com', 'admin')"
-				+ " RETURNING id", UUID.class);
 		UUID withPosts = range(admin, "succeeded", 16, 2);
 		fetch(withPosts, "succeeded", null, "2026-10-02T00:31:00Z");
 		// Before S-08 a day without a post ended succeeded.
@@ -74,12 +99,82 @@ class V12BackfillIT {
 		}
 	}
 
-	/** An ended range run of Wykop over one day with its counters, as V11 knew it. */
+	@Test
+	void theHistoryCoversOnlyTheDaysWhoseFetchGavePosts() {
+		night("2026-10-14", 0, 0);
+		night("2026-10-15", 16, 2);
+		night("2026-10-16", 0, 0);
+
+		Flyway.configure().dataSource(dataSource).load().migrate();
+
+		assertThat(runs.findFirstCoveredFrom(List.of(Source.WYKOP)))
+			.isEqualTo(Map.of(Source.WYKOP, warsawStart(LocalDate.parse("2026-10-15"))));
+		assertThat(missingDays().days())
+			.containsExactly(new MissingDays.Day(LocalDate.parse("2026-10-16"), List.of(Source.WYKOP)));
+	}
+
+	@Test
+	void anotherFetchWithPostsCoversAnEmptyDay() {
+		night("2026-10-14", 0, 0);
+		night("2026-10-15", 16, 2);
+		night("2026-10-16", 0, 0);
+		night("2026-10-16", 9, 1);
+
+		Flyway.configure().dataSource(dataSource).load().migrate();
+
+		assertThat(missingDays().days()).isEmpty();
+	}
+
+	@Test
+	void onlyEmptyFetchesCoverNothingAndStartNoWindow() {
+		night("2026-10-14", 0, 0);
+		night("2026-10-15", 3, 3);
+		night("2026-10-16", 0, 0);
+
+		Flyway.configure().dataSource(dataSource).load().migrate();
+
+		assertThat(runs.findFirstCoveredFrom(List.of(Source.WYKOP))).isEmpty();
+		assertThat(missingDays().days()).isEmpty();
+	}
+
+	/** An ended range run of Wykop over 1 October 2026 with its counters, as V11 knew it. */
 	private UUID range(UUID admin, String status, int fetched, int skipped) {
+		return range(admin, LocalDate.parse("2026-10-01"), status, fetched, skipped);
+	}
+
+	/** An ended range run of Wykop over the Warsaw day {@code day} with its counters, as V11 knew it. */
+	private UUID range(UUID admin, LocalDate day, String status, int fetched, int skipped) {
 		return jdbc.queryForObject("INSERT INTO pipeline_runs (kind, status, requested_by, range_from, range_to,"
-				+ " sources, started_at, finished_at, fetched, skipped) VALUES ('range', ?, ?, '2026-09-30T22:00:00Z',"
-				+ " '2026-10-01T21:59:59Z', ARRAY['wykop'], now(), now(), ?, ?) RETURNING id", UUID.class, status,
-				admin, fetched, skipped);
+				+ " sources, started_at, finished_at, fetched, skipped) VALUES ('range', ?, ?, CAST(? AS TIMESTAMPTZ),"
+				+ " CAST(? AS TIMESTAMPTZ), ARRAY['wykop'], now(), now(), ?, ?) RETURNING id", UUID.class, status,
+				admin, warsawStart(day).toString(), warsawStart(day.plusDays(1)).minusSeconds(1).toString(), fetched,
+				skipped);
+	}
+
+	/**
+	 * A succeeded run of the night over the Warsaw day {@code day} with a succeeded {@code fetch} step, as V11
+	 * knew it (before S-08 a day without a post ended succeeded too).
+	 */
+	private void night(String day, int fetched, int skipped) {
+		LocalDate date = LocalDate.parse(day);
+		UUID run = range(admin, date, "succeeded", fetched, skipped);
+		fetch(run, "succeeded", null, warsawStart(date.plusDays(2)).toString());
+	}
+
+	/** The days without data of {@link #TODAY} for Wykop, as the {@code missing-days} route assembles them. */
+	private MissingDays missingDays() {
+		List<MissingDays.Coverage> coverages = runs.findCoveringSince(warsawStart(MissingDays.windowStart(TODAY)))
+			.stream()
+			.map(range -> MissingDays.Coverage.of(range, PipelineRunService.ZONE))
+			.toList();
+		Map<Source, LocalDate> firstCovered = new EnumMap<>(Source.class);
+		runs.findFirstCoveredFrom(List.of(Source.WYKOP))
+			.forEach((source, from) -> firstCovered.put(source, LocalDate.ofInstant(from, PipelineRunService.ZONE)));
+		return MissingDays.of(TODAY, List.of(Source.WYKOP), coverages, firstCovered);
+	}
+
+	private static Instant warsawStart(LocalDate day) {
+		return day.atStartOfDay(PipelineRunService.ZONE).toInstant();
 	}
 
 	/** The run's fetch step in {@code status}, finished at {@code finishedAt} (an ISO instant). */

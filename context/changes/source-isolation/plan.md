@@ -594,17 +594,17 @@ Jeden dodatkowy `UPDATE … RETURNING` + `INSERT` na źródło na przebieg (dzi�
 
 #### Automated
 
-- [x] 2.1 Testy jednostkowe szwu przechodzą: `cd szczur-radar-api && ./mvnw -B test -Dtest='SourceIngestTest,RunSequenceTest,PipelineRunTest,RunNotificationsTest'`
-- [x] 2.2 Pełna bramka backendu przechodzi (w tym `PipelineRunIT`, `RunWatchdogIT`, `NotificationsIT`, `PipelineRunControllerIT`): `cd szczur-radar-api && ./mvnw -B verify`
-- [x] 2.3 Krok `fetch` nie zapisuje już sum osobno od wyników źródeł: `rg -n 'Counters\.fetched\(' szczur-radar-api/src/main` nie znajduje nic
+- [x] 2.1 Testy jednostkowe szwu przechodzą: `cd szczur-radar-api && ./mvnw -B test -Dtest='SourceIngestTest,RunSequenceTest,PipelineRunTest,RunNotificationsTest'` — bad637d
+- [x] 2.2 Pełna bramka backendu przechodzi (w tym `PipelineRunIT`, `RunWatchdogIT`, `NotificationsIT`, `PipelineRunControllerIT`): `cd szczur-radar-api && ./mvnw -B verify` — bad637d
+- [x] 2.3 Krok `fetch` nie zapisuje już sum osobno od wyników źródeł: `rg -n 'Counters\.fetched\(' szczur-radar-api/src/main` nie znajduje nic — bad637d
 
 ### Phase 3: Pokrycie dnia per źródło
 
 #### Automated
 
-- [ ] 3.1 Testy pokrycia przechodzą: `cd szczur-radar-api && ./mvnw -B test -Dtest=MissingDaysTest`
-- [ ] 3.2 Pełna bramka backendu przechodzi (w tym `MissingDaysIT`, `PipelineRunWithoutSourceIT`, `FreshnessIT`): `cd szczur-radar-api && ./mvnw -B verify`
-- [ ] 3.3 Pokrycie nie czyta już listy żądanej: `rg -n 'array_position' szczur-radar-api/src/main` nie znajduje nic
+- [x] 3.1 Testy pokrycia przechodzą: `cd szczur-radar-api && ./mvnw -B test -Dtest=MissingDaysTest`
+- [x] 3.2 Pełna bramka backendu przechodzi (w tym `MissingDaysIT`, `PipelineRunWithoutSourceIT`, `FreshnessIT`): `cd szczur-radar-api && ./mvnw -B verify`
+- [x] 3.3 Pokrycie nie czyta już listy żądanej: `rg -n 'array_position' szczur-radar-api/src/main` nie znajduje nic
 
 ### Phase 4: API i SPA — wynik per źródło na stronie przebiegu
 
