@@ -1,10 +1,10 @@
 ---
 change_id: alert-ping-single-rule
 title: "S-25: jedna reguła adresu check-in alarmów"
-status: impl_reviewed
+status: archived
 created: 2026-10-27
-updated: 2026-10-28
-archived_at: null
+updated: 2026-10-29
+archived_at: 2026-10-29T08:34:50Z
 ---
 
 ## Notes
