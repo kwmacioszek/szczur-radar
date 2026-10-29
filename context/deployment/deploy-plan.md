@@ -1921,6 +1921,90 @@ A cron whose log has the warning above gets the same treatment with its own chec
 
 Repair a bad S-25 release with a new commit (a revert in a PR is one), which goes through CI, the deploy guard and Wait for CI like any merge (section S-14).
 
+## S-20: awaria albo cisza jednego źródła nie psuje przebiegu pozostałych (source-isolation)
+
+**Status:** delivered by PR #130; production verification and closure in issue #114. Change: `source-isolation` (its folder moves to `context/archive/` when the change is archived). Before S-20 the `fetch` step of a range run fetched its sources one after another without isolation. One source's exception left the loop and ended the run `failed` without its counters. A source without a post failed the whole step after the loop, the other sources' posts included (section S-08). Nothing between two sources reported progress to the watchdog, and "Dni bez danych" (section S-13) counted a day covered for every source the run had asked for. With a second source (Reddit, S-27), a silent subreddit would therefore have made a good Wykop night `failed` and listed a Wykop gap it did not cause (audit after M-2, S1, S2, S5). S-20 isolates the sources within one run, records each source's result, and registers `reddit` as a source (constant and `CHECK` sets only, no code). It changes the S-08 rule (an empty run is now one where **no** source gave a post) and S-13's coverage (a day is covered for a source only by its `succeeded` result). Migration `V12`; no new variable or service, no change to the cron's contract or the alert's format.
+
+### What changed for the operator
+
+- **A failing or silent source is its own result.** Each source of a range run ends `succeeded` (it gave at least one post), `empty` (it answered, but gave no post: no element in the range, or only skipped ones) or `failed` (it threw; error `<SimpleName>: <message>`). The result is written to `pipeline_run_sources` as soon as that source ends, in one conditional statement with the run's `fetched`, `skipped`, `sources_failed` / `sources_empty` and `last_activity_at`. The next source is fetched either way. Each write is progress for the watchdog, so several sources fetched one after another are measured each on its own, not as one long fetch. The API logs INFO `Run <id>: <source> <status>: fetched N, skipped M[; <error>]` per source, and WARN `Run <id>: <source> failed: <message>` with the exception for a source that threw.
+- **`partial` with a source's reason.** When at least one source gave posts, those posts are stored and assessed as usual. The run ends `partial` if any source is not `succeeded`, even when the assessment was clean. Its `attentionReasons` start with `source_failed` and/or `source_empty`, before `dead_posts`, `processing_errors` and `skipped`. The run's error names the source: `reddit failed: <SimpleName>: <message>` or `wykop gave no post to store (fetched N, skipped M)`, several joined with `; `, then ` | ` and the assessment's error when it has one. The signals are those of any `partial` run that needs attention:
+  - every admin gets an in-app notification (the bell), and the run's page gives the reason: `błąd pobrania: Reddit` or `bez postów: Wykop (pobrano N, pominięto M)`;
+  - Telegram gets `RUN_NEEDS_ATTENTION` (section S-18) for the cron's run too, since it exits 0. Its format is unchanged; the source's name comes in the run's error the alert already quotes: `RUN_NEEDS_ATTENTION (…): Pipeline run <id> (range, cron) ended partial: dead 0, errors 0, skipped 0; error: reddit failed: …; /admin/runs/<id>`;
+  - the cron exits 0, as for any `partial`, and the label "Dane zaktualizowane" moves.
+- **`failed` only when no source gave a post** (section S-08, narrowed). Step `fetch` fails with `NoPostsFetchedException`, whose message names each source with its result (for one source the error text is the same as before: `NoPostsFetchedException: wykop gave no post to store (fetched N, skipped M)`). No `store`, `select` or `assess` step follows. The run's counters and a row per source are written before the failure (they are written per source). Signals as for any `failed` run: the bell, cron exit 1 with its check-in and Railway's "deployment crashed", the freshness label stays. This replaces the S-08 sentences "`SourceIngest.fetch` fetches every source first, then throws" and "in which a source gave no post".
+- **The run's page has "Wynik per źródło"** (only for a range run), between "Liczniki" and "Kroki". It lists each source with its badge (`pobrane` / `bez postów` / `błąd`), `pobrane N · pominięte M · posty N−M` and the error. A range run without rows says "Jeszcze żadne źródło nie zakończyło pobrania." This is also what an older run shows when the backfill gave it no row (below). The API sends it in `RunView` as `sourceResults` (in `Source` order) with the counters `sourcesFailed` / `sourcesEmpty`. "Źródła" in the run's details stays the list the run asked for. The bell and the `/admin` list show no per-source result.
+- **"Dni bez danych" per source** (section S-13, changed). A day is covered for a source only when a `succeeded` / `partial` range run has a `succeeded` result for that source. A failed or empty source covers nothing, though the run asked for it, and a source's window starts at its first `succeeded` result. This replaces S-13's sentence "A range run ends `succeeded` / `partial` only when each source fetched without an error and gave at least one post". The freshness label stays global (S-29 makes it per source).
+- **`reddit` is registered, not configured.** `sources/Source.REDDIT` and the value `reddit` in the four `CHECK` sets of a source. There is no fetcher until S-27: `GET /api/admin/pipeline-runs/sources` still lists only `wykop`, and `POST /api/admin/pipeline-runs` with `"sources":["reddit"]` answers 503 `source_not_configured` (an unknown value, e.g. `twitter`, stays 400 `invalid_request`).
+- **Unchanged:** the cron's exit codes (`partial` → 0, `failed` / `interrupted` → 1), the keys of `GET /internal/pipeline-runs/{id}`, `trigger.sh`, the S-18 rule that skips the API's alert for a cron run ended `failed` / `interrupted`, the alert's format, RETRY and POSTS runs (no fetch step), the admin's form. Deploy order: an older SPA ignores the new fields, and the new SPA hides the section and names no source in the reasons while the API is older.
+
+### Migration
+
+`V12__pipeline_run_sources.sql` runs in the API's pre-deploy `migrate` (as V8–V11). In one migration:
+
+- `pipeline_runs`: two columns `sources_failed`, `sources_empty` (`INTEGER NOT NULL DEFAULT 0`);
+- `reddit` added to `ck_posts_source`, `ck_raw_payloads_source` and `ck_pipeline_runs_sources` (`DROP` + `ADD` under the same name);
+- the table `pipeline_run_sources` (`run_id` → `pipeline_runs`, `source`, `status` `succeeded` / `empty` / `failed`, `fetched`, `skipped`, `error` only for `failed`, `finished_at`; one row per run and source). The backup classifies it (`tools/db-backup/tables.sh`: `pipeline_run_sources 12 counted`);
+- **the backfill from the `fetch` step.** For each range run, from its last `fetch` step:
+  - step `succeeded` → `succeeded` when `fetched > skipped`, else `empty` (runs before S-08 ended an empty day `succeeded`);
+  - step `failed` with `gave no post to store` (S-08) → `empty`;
+  - any other `failed` → `failed` with the step's error;
+  - a step `running` / `interrupted`, or no step → no row.
+
+  Before V12 every run named one source, so the run's `fetched` / `skipped` are that source's. Then `sources_failed` / `sources_empty` are counted from the rows.
+
+**An intended correction of history.** Historical empty runs that ended `succeeded` (before S-08) get `empty`. They no longer cover their days, nor set a source's first covered day. So "Dni bez danych" may list a day after the deploy that it did not list before, or start a source's window later. A source without any `succeeded` result still has no missing day.
+
+**When `migrate` fails**, Railway stops the deploy and the previous API keeps serving (section F-03, "Troubleshooting (Java)"). Read the pre-deploy log: a `CHECK` violated by an existing row, or a backfill error. Fix forward with `V13__…`, never by editing V12 (the Migrations rule in `REPOSITORY_GUIDELINES.md`). A run that was `RUNNING` in the old instance during the deploy (against the standing rule) gets no row, and as `interrupted` it covers nothing anyway.
+
+### PR-env verification (szczur-radar-pr-130)
+
+- **Result (2026-10-29, API and web deployed from `6040908`):** CI green on that commit (all nine jobs, `railway-config` applied to `szczur-radar-pr-130`); `V12` applied by the pre-deploy `migrate`, `/api/ready` 200. A test admin `s20-admin@example.com` was created with `create-user --role admin` over `railway ssh` and activated through `/api/auth/activation` with a random password (never printed). The PR env had no run before.
+  - `GET /api/admin/pipeline-runs/sources` → `[{"source":"wykop","configured":true}]`; `POST /api/admin/pipeline-runs` with `{"from":"2026-10-27","to":"2026-10-27","sources":["reddit"]}` → 503 `{"detail":"source_not_configured"}`.
+  - The admin's run `ba72933f-33cd-4db1-83b3-af0deea12a3c` for D-2 (27.10.2026, Wykop) → 202, ended `partial` in 1 min 22 s from its assessment (fetched 213, new 213, assessed 200, failed 13, skipped 0; `attentionReasons: []`, `error: null`, as before S-20). `sourceResults`: one row `wykop` `succeeded`, fetched 213, skipped 0, error `null`; `sourcesFailed 0`, `sourcesEmpty 0`; every step `succeeded`. `jq -e '.sourceResults | length == 1 and .[0].source == "wykop" and .[0].status == "succeeded"'` → `true`.
+  - `/admin/runs/ba72933f…` shows "Wynik per źródło" with `Wykop` `pobrane` and `pobrane 213 · pominięte 0 · posty 213` (screenshot `context/changes/source-isolation/ui/pr-env-run-wykop-1280-light.png`).
+  - `GET /api/admin/pipeline-runs/missing-days` → `{"from":"2026-10-14","to":"2026-10-27","days":[]}`: the only run covers Wykop from 27.10, its first covered day, so no day is missing (no historical `empty` run in this PR env).
+
+### Runbook — after the merge (operator; tracked in issue #114)
+
+0. **Standing rules.** No merge to `main` while `/admin` shows a run `RUNNING`, not between about 00:30 and 01:30 UTC (section S-05), and not while the 02:00 UTC backup runs (section S-15). The merge deploys the API (with the migration `V12` in its pre-deploy), the web and `pipeline-trigger` (only its README changed; `trigger.sh` is unchanged). No variable or service change. **Before the merge**, note the list in `/admin` → "Dni bez danych" (or `GET /api/admin/pipeline-runs/missing-days`), to compare with step 2.
+1. **CI on `main` and the pre-deploy.** All jobs green; `railway-config` plans no change. The API's pre-deploy `migrate` passes with V12 (`Migrating schema "public" to version "12 - pipeline run sources"`), and the API starts (`/api/ready` 200).
+2. **Read production, right after the deploy and before the next range run** (read-only).
+   - The backfill: one row per source of each range run whose last `fetch` step ended `succeeded` or `failed`. Every run so far named one source (`wykop`), so `source_rows` equals the number of such runs:
+
+     ```bash
+     railway ssh -s postgres -e production -- 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "
+     SELECT (SELECT count(*) FROM pipeline_run_sources) AS source_rows,
+            (SELECT coalesce(sum(cardinality(r.sources)), 0)
+               FROM pipeline_runs r
+               CROSS JOIN LATERAL (SELECT st.status FROM pipeline_run_steps st
+                                    WHERE st.run_id = r.id AND st.step = '\''fetch'\''
+                                    ORDER BY st.started_at DESC, st.id DESC LIMIT 1) f
+              WHERE r.kind = '\''range'\'' AND f.status IN ('\''succeeded'\'', '\''failed'\'')) AS expected_rows,
+            (SELECT count(*) FROM pipeline_run_sources s WHERE s.status = '\''succeeded'\'') AS succeeded,
+            (SELECT count(*) FROM pipeline_run_sources s WHERE s.status = '\''empty'\'') AS empty,
+            (SELECT count(*) FROM pipeline_run_sources s WHERE s.status = '\''failed'\'') AS failed;"'
+     ```
+
+     Expected: `source_rows = expected_rows`. A range run started after the deploy can make them differ: a run stopped during its fetch has a row for each source that ended but an `interrupted` step. So run this before the next run, or compare only runs created before the deploy. Alternatively, the latest night's page in `/admin` must show "Wynik per źródło" with one row `wykop` `pobrane`.
+   - "Dni bez danych" agrees with the coverage from the `succeeded` rows and each source's first covered day (section S-13 as changed above). Explain any difference from the list noted before the merge with the historical runs that V12 classified `empty`. They are the ones that no longer cover a day; it is not a loss of good fetches:
+
+     ```bash
+     railway ssh -s postgres -e production -- 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "
+     SELECT r.id, r.status, r.range_from, r.range_to, s.fetched, s.skipped
+       FROM pipeline_run_sources s JOIN pipeline_runs r ON r.id = s.run_id
+      WHERE s.status = '\''empty'\'' AND r.status IN ('\''succeeded'\'', '\''partial'\'')
+      ORDER BY r.range_from;"'
+     ```
+
+     Each day that is newly listed, or newly outside a source's window, must lie in the range of a run from this list, with no other `succeeded` result covering it. A newly listed day without such a run is a fault: record it in #114. Fill a real gap with the S-13 runbook.
+3. **First night after the merge.** The cron ends `OK: range succeeded` or `OK: range partial` with exit 0, as before. The night's run on `/admin/runs/<id>` has "Wynik per źródło" with one row `wykop` `pobrane` and its counts. The API log has `Run <id>: wykop succeeded: fetched N, skipped M` before the `store` step. With a usual night, no new attention reason appears (no `source_failed` / `source_empty`).
+4. **Record and close.** Comment on issue #114: the merge commit, the API deployment ID, the pre-deploy line with V12, the two query results (`source_rows` / `expected_rows` and the status breakdown), the "Dni bez danych" before and after with the explanation of each difference, the first night's run id, cron line and page. Close #114 only after this production verification.
+
+### Rollback: fix-forward only
+
+V12 adds a table, two columns and wider `CHECK` sets. An older API runs on that schema, but it would neither write per-source rows nor read them for coverage. Repair a bad S-20 release with a new commit (a revert in a PR is one, plus `V13__…` for any schema fix; never an edit of V12), which goes through CI, the deploy guard and Wait for CI like any merge (section S-14). A rollback in Railway's dashboard skips them. The value `reddit` stays registered: closed sets are append-only.
+
 ## Phases
 
 > Historical (state of 2026-09-26 – 2026-09-27, FastAPI backend); current: the Java API in section F-03, its image in section `api-docker-image`, the pipeline in sections `first-assessed-wykop-feed` and S-05, the database backup in section F-01, CI and the deploy gate in section S-14.

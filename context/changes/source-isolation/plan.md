@@ -610,10 +610,10 @@ Jeden dodatkowy `UPDATE … RETURNING` + `INSERT` na źródło na przebieg (dzi�
 
 #### Automated
 
-- [x] 4.1 Bramka backendu przechodzi (w tym `PipelineRunControllerIT`): `cd szczur-radar-api && ./mvnw -B verify`
-- [x] 4.2 Testy web przechodzą: `cd szczur-radar-web && npm test`
-- [x] 4.3 Typecheck i build przechodzą (w tym `styleContract.test.ts` w `npm test`): `cd szczur-radar-web && npm run build`
-- [x] 4.4 Zrzuty sekcji istnieją dla obu fixtur, obu motywów i 375 px: `ls context/changes/source-isolation/ui/*.png | wc -l` ≥ 6 i `ui/README.md` wymienia każdy stan macierzy albo N/A z powodem
+- [x] 4.1 Bramka backendu przechodzi (w tym `PipelineRunControllerIT`): `cd szczur-radar-api && ./mvnw -B verify` — 6040908
+- [x] 4.2 Testy web przechodzą: `cd szczur-radar-web && npm test` — 6040908
+- [x] 4.3 Typecheck i build przechodzą (w tym `styleContract.test.ts` w `npm test`): `cd szczur-radar-web && npm run build` — 6040908
+- [x] 4.4 Zrzuty sekcji istnieją dla obu fixtur, obu motywów i 375 px: `ls context/changes/source-isolation/ui/*.png | wc -l` ≥ 6 i `ui/README.md` wymienia każdy stan macierzy albo N/A z powodem — 6040908
 
 #### Manual
 
@@ -624,9 +624,9 @@ Jeden dodatkowy `UPDATE … RETURNING` + `INSERT` na źródło na przebieg (dzi�
 #### Automated
 
 - [ ] 5.1 CI PR-a zielone: `gh pr checks --watch` kończy się bez porażki
-- [ ] 5.2 PR env: JSON przebiegu admina ma wiersz Wykopu: `curl -sb <cookie> <web-origin>/api/admin/pipeline-runs/<id> | jq -e '.sourceResults | length == 1 and .[0].source == "wykop" and .[0].status == "succeeded"'`
-- [ ] 5.3 PR env: `reddit` jest zarejestrowane, ale nieskonfigurowane: `curl -s -o /dev/null -w '%{http_code}' -b <cookie> -H 'Content-Type: application/json' -d '{"from":"<D-2>","to":"<D-2>","sources":["reddit"]}' <web-origin>/api/admin/pipeline-runs` daje `503`, a `GET …/pipeline-runs/sources` daje `[{"source":"wykop","configured":true}]`
-- [ ] 5.4 Dokumenty wymieniają S-20: `rg -n 'S-20' context/foundation/prd.md context/deployment/deploy-plan.md REPOSITORY_GUIDELINES.md` znajduje każdy z trzech plików
+- [x] 5.2 PR env: JSON przebiegu admina ma wiersz Wykopu: `curl -sb <cookie> <web-origin>/api/admin/pipeline-runs/<id> | jq -e '.sourceResults | length == 1 and .[0].source == "wykop" and .[0].status == "succeeded"'`
+- [x] 5.3 PR env: `reddit` jest zarejestrowane, ale nieskonfigurowane: `curl -s -o /dev/null -w '%{http_code}' -b <cookie> -H 'Content-Type: application/json' -d '{"from":"<D-2>","to":"<D-2>","sources":["reddit"]}' <web-origin>/api/admin/pipeline-runs` daje `503`, a `GET …/pipeline-runs/sources` daje `[{"source":"wykop","configured":true}]`
+- [x] 5.4 Dokumenty wymieniają S-20: `rg -n 'S-20' context/foundation/prd.md context/deployment/deploy-plan.md REPOSITORY_GUIDELINES.md` znajduje każdy z trzech plików
 
 #### Manual
 
