@@ -248,31 +248,31 @@ Bez zmian zmiennych i IaC. Jedyne ryzyko wdrożenia to wartość produkcyjna, kt
 
 #### Automated
 
-- [x] 1.1 `cd szczur-radar-api && ./mvnw -B test -Dtest=AlertSettingsTest` przechodzi, a raport pokazuje po jednym wywołaniu na wiersz tabeli — f9d920c
-- [x] 1.2 `cd szczur-radar-api && ./mvnw -B test` przechodzi — f9d920c
-- [x] 1.3 `grep -c 'PING_PATTERN = "' szczur-radar-api/src/main/java/pl/szczurradar/api/alerts/AlertSettings.java` = 1, a wzorzec jest w jednej linii — f9d920c
-- [x] 1.4 Kontrolne zepsucie: zmiana `[Hh]` na `h` w `PING_PATTERN` daje czerwony `AlertSettingsTest` na wierszu `HTTPS://…` (zmiana cofnięta) — f9d920c
+- [x] 1.1 `cd szczur-radar-api && ./mvnw -B test -Dtest=AlertSettingsTest` przechodzi, a raport pokazuje po jednym wywołaniu na wiersz tabeli — 9e47c87
+- [x] 1.2 `cd szczur-radar-api && ./mvnw -B test` przechodzi — 9e47c87
+- [x] 1.3 `grep -c 'PING_PATTERN = "' szczur-radar-api/src/main/java/pl/szczurradar/api/alerts/AlertSettings.java` = 1, a wzorzec jest w jednej linii — 9e47c87
+- [x] 1.4 Kontrolne zepsucie: zmiana `[Hh]` na `h` w `PING_PATTERN` daje czerwony `AlertSettingsTest` na wierszu `HTTPS://…` (zmiana cofnięta) — 9e47c87
 
 ### Phase 2: Kopie w shellu i strażnik zgodności
 
 #### Automated
 
-- [x] 2.1 `tools/healthchecks/test.sh` przechodzi, a krok 9 wypisuje liczbę sprawdzonych wierszy tabeli — 704747b
-- [x] 2.2 `tools/pipeline-trigger/test.sh` przechodzi (Docker) — 704747b
-- [x] 2.3 `tools/db-backup/test.sh` przechodzi (Docker) — 704747b
-- [x] 2.4 Kontrolne zepsucie: (a) jeden znak zmieniony w bloku `trigger.sh`, (b) inny literał w `checks.sh`, (c) inny literał w `AlertSettings.java`: każde osobno daje czerwony krok 9 z nazwą rozjazdu (zmiany cofnięte) — 704747b
-- [x] 2.5 `grep -rn 'change both' tools/db-backup/backup.sh tools/pipeline-trigger/trigger.sh` nie znajduje nic — 704747b
+- [x] 2.1 `tools/healthchecks/test.sh` przechodzi, a krok 9 wypisuje liczbę sprawdzonych wierszy tabeli — 9e47c87
+- [x] 2.2 `tools/pipeline-trigger/test.sh` przechodzi (Docker) — 9e47c87
+- [x] 2.3 `tools/db-backup/test.sh` przechodzi (Docker) — 9e47c87
+- [x] 2.4 Kontrolne zepsucie: (a) jeden znak zmieniony w bloku `trigger.sh`, (b) inny literał w `checks.sh`, (c) inny literał w `AlertSettings.java`: każde osobno daje czerwony krok 9 z nazwą rozjazdu (zmiany cofnięte) — 9e47c87
+- [x] 2.5 `grep -rn 'change both' tools/db-backup/backup.sh tools/pipeline-trigger/trigger.sh` nie znajduje nic — 9e47c87
 
 ### Phase 3: Limit czasu jako `1` i dokumenty operatora
 
 #### Automated
 
-- [x] 3.1 `tools/db-backup/test.sh` przechodzi, a `run4` melduje `start 1` — 7a3a68b
-- [x] 3.2 `grep -rn '124' tools/db-backup/README.md` nie znajduje opisu kodu meldunku po limicie czasu — 7a3a68b
-- [x] 3.3 `cd szczur-radar-api && ./mvnw -B verify` przechodzi — 7a3a68b
-- [x] 3.4 CI na PR zielone (`gh pr checks`), w tym `healthchecks-test`, `db-backup-test`, `pipeline-trigger-test`, backend `verify` i `railway-config` — 7a3a68b
+- [x] 3.1 `tools/db-backup/test.sh` przechodzi, a `run4` melduje `start 1` — 9e47c87
+- [x] 3.2 `grep -rn '124' tools/db-backup/README.md` nie znajduje opisu kodu meldunku po limicie czasu — 9e47c87
+- [x] 3.3 `cd szczur-radar-api && ./mvnw -B verify` przechodzi — 9e47c87
+- [x] 3.4 CI na PR zielone (`gh pr checks`), w tym `healthchecks-test`, `db-backup-test`, `pipeline-trigger-test`, backend `verify` i `railway-config` — 9e47c87
 
 #### Manual
 
-- [ ] 3.5 Po merge'u (robi go człowiek): run monitora `szczur-radar-monitor` dla `szczur-radar-api` na produkcji jest zielony, czyli API wstało z zapieczętowanym `HEALTHCHECK_PING_URL`
-- [ ] 3.6 Po pierwszej nocy po merge'u: checki `production/pipeline-trigger` i `production/db-backup` są „up”, a logi obu cronów na Railway nie mają `HEALTHCHECK_PING_URL is not an https:// address`
+- [x] 3.5 Po merge'u (robi go człowiek): run monitora `szczur-radar-monitor` dla `szczur-radar-api` na produkcji jest zielony, czyli API wstało z zapieczętowanym `HEALTHCHECK_PING_URL` — 9e47c87
+- [x] 3.6 Po pierwszej nocy po merge'u: checki `production/pipeline-trigger` i `production/db-backup` są „up”, a logi obu cronów na Railway nie mają `HEALTHCHECK_PING_URL is not an https:// address` — 9e47c87
