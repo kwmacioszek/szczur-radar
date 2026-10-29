@@ -103,7 +103,7 @@ Na Wykopie (#gielda) i Reddicie codziennie pojawiają się setki postów o inwes
 
 | ID   | Change ID                       | Outcome (user can …)                                                                                                           | Prerequisites | PRD refs                                                                 | Status   |
 | ---- | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ | ------------- | ------------------------------------------------------------------------ | -------- |
-| S-20 | source-isolation                | awaria albo cisza jednego źródła nie psuje przebiegu pozostałych; czas pobrania wielu źródeł mieści się w progu strażnika; liczniki widać per źródło | —             | NFR `prd.md:268`, FR-023; audyt S1, S2, S5; destylacja R-05, D-01        | in-progress |
+| S-20 | source-isolation                | awaria albo cisza jednego źródła nie psuje przebiegu pozostałych; czas pobrania wielu źródeł mieści się w progu strażnika; liczniki widać per źródło | —             | NFR `prd.md:268`, FR-023; audyt S1, S2, S5; destylacja R-05, D-01        | done        |
 | S-21 | deploy-gate-no-deploy-changes   | zmiana IaC, która nie wywołuje deployu, nie robi CI czerwonego ani nie blokuje deployu kodu; dokumenty S-14 i #73 mówią prawdę  | —             | audyt P1, P2, P3; Open Roadmap Question 2                                 | done |
 | S-22 | run-attention-single-rule       | admin widzi powody „wymaga uwagi” liczone tą samą regułą co powiadomienia i alerty, bez pustego tekstu przy nowym powodzie      | —             | NFR `prd.md:259`; audyt K1; destylacja R-22, D-04                         | done |
 | S-23 | closed-sets-guard               | nowa wartość zamkniętego zbioru albo nowa kolumna posta bez migracji lub bez zapisu jest wykrywana w CI, nie w nocy na produkcji | —             | audyt E4; destylacja R-17, R-19                                           | done |
@@ -154,7 +154,7 @@ Brak — każda praca przekrojowa M-3 ma widoczny skutek dla użytkownika albo o
 - **Unknowns:**
   - Jaki status ma przebieg, w którym jedno źródło padło albo było puste, a drugie dało posty (`partial`? `succeeded` z powiadomieniem?), i czy taki przebieg przesuwa datę aktualizacji? — Owner: user. Block: no (rozstrzyga wywiad `/10x-plan`; wiąże się z S-29).
 - **Risk:** zmienia szew `SourceIngest` i regułę postępu kroku `fetch`, które działają dziś na produkcji z jednym źródłem; da się to zweryfikować fałszywym drugim źródłem w testach, bez API Reddita (audyt, sekcja 1, „Testowalność drugiego źródła”).
-- **Status:** in-progress
+- **Status:** done
 
 ### S-21: Zmiana IaC bez deployu nie blokuje wdrożeń
 
@@ -372,3 +372,4 @@ Brak — każda praca przekrojowa M-3 ma widoczny skutek dla użytkownika albo o
 - **S-26: test anulowania dyspozytora i pokrewne testy silnika nie padają losowo na współdzielonym runnerze (synchronizacja bez limitów zegarowych jako warunku poprawności, zrzut wątków przy przekroczeniu czasu), a znane okna fałszywych alarmów po S-17 (fałszywa linia ERROR i `NOTIFICATION_FAILED` przy spóźnionym przerwaniu) są przypięte testami; notatki silnika `pipeline/CLAUDE.md` zgadzają się z kodem.** — Archived 2026-10-28 → `context/archive/2026-10-27-engine-test-stability/`. Lesson: —.
 - **S-22: powody „wymaga uwagi” na stronie przebiegu, w `/admin` i w dzwonku pochodzą z tej samej reguły co powiadomienia i alert `RUN_NEEDS_ATTENTION`; nowy powód po stronie API nie daje pustego tekstu w SPA, a ton przebiegu przerwanego przez wdrożenie zgadza się z tym, czy wymaga uwagi.** — Archived 2026-10-29 → `context/archive/2026-10-27-run-attention-single-rule/`. Lesson: —.
 - **S-25: adres check-in healthchecks ma jedną regułę walidacji w API, w obu cronach i w narzędziu checków (wielkość liter schematu, host, brak zapytania i fragmentu), kod wyjścia po limicie czasu jest zgłaszany tak samo przez oba crony, a rozjazd kopii jest wykrywany testem.** — Archived 2026-10-29 → `context/archive/2026-10-27-alert-ping-single-rule/`. Lesson: —.
+- **S-20: przebieg z kilkoma źródłami zapisuje i ocenia posty zdrowych źródeł, gdy jedno z nich rzuca błąd albo nie daje żadnego posta; łączny czas pobrania kilku zdrowych źródeł nie zatrzymuje przebiegu jako „bez postępu”; admin widzi pobrane i pominięte elementy osobno dla każdego źródła, a dzień jest pokryty dla źródła, które dało posty.** — Archived 2026-10-29 → `context/archive/2026-10-29-source-isolation/`. Lesson: —.
