@@ -410,23 +410,23 @@ Brak migracji bazy. Zmiana kształtu ciała 404/405/5xx jest zgodna z SPA, któr
 
 #### Automated
 
-- [x] 1.1 Nowy IT przechodzi: `cd szczur-radar-api && ./mvnw -B -Dit.test=ApiErrorHttpIT -Dtest=ErrorCodeTest -Dsurefire.failIfNoSpecifiedTests=false verify`
-- [x] 1.2 Testy logowania i kompletności autoryzacji przechodzą: `./mvnw -B -Dit.test='AuthIT,AuthorizationCompletenessIT,AdminRoleIT' -Dtest=none -Dsurefire.failIfNoSpecifiedTests=false verify`
-- [x] 1.3 Cały backend zielony: `cd szczur-radar-api && ./mvnw -B verify`
-- [x] 1.4 Celowe zepsucie (agent wykonuje i cofa): usunięcie `ApiErrorController` daje czerwony `ApiErrorHttpIT` z ciałem Boot w komunikacie
-- [x] 1.5 Testy web bez zmian zielone: `cd szczur-radar-web && npm test`
+- [x] 1.1 Nowy IT przechodzi: `cd szczur-radar-api && ./mvnw -B -Dit.test=ApiErrorHttpIT -Dtest=ErrorCodeTest -Dsurefire.failIfNoSpecifiedTests=false verify` — a90397f
+- [x] 1.2 Testy logowania i kompletności autoryzacji przechodzą: `./mvnw -B -Dit.test='AuthIT,AuthorizationCompletenessIT,AdminRoleIT' -Dtest=none -Dsurefire.failIfNoSpecifiedTests=false verify` — a90397f
+- [x] 1.3 Cały backend zielony: `cd szczur-radar-api && ./mvnw -B verify` — a90397f
+- [x] 1.4 Celowe zepsucie (agent wykonuje i cofa): usunięcie `ApiErrorController` daje czerwony `ApiErrorHttpIT` z ciałem Boot w komunikacie — a90397f
+- [x] 1.5 Testy web bez zmian zielone: `cd szczur-radar-web && npm test` — a90397f
 
 ### Phase 2: Wspólny pełny kształt dużych odpowiedzi
 
 #### Automated
 
-- [ ] 2.1 Trzy nowe testy IT przechodzą: `cd szczur-radar-api && ./mvnw -B -Dit.test='PipelineRunControllerIT,PostsApiIT' -Dtest=none -Dsurefire.failIfNoSpecifiedTests=false verify`
-- [ ] 2.2 Test kształtów Vitest przechodzi: `cd szczur-radar-web && npx vitest run src/contract/shapes.test.ts`
-- [ ] 2.3 Całe testy web i typecheck zielone: `cd szczur-radar-web && npm test && npm run build`
-- [ ] 2.4 Obraz web buduje się z własnego kontekstu (typecheck testów z importem JSON): `docker build -t sr-web-contract ./szczur-radar-web && docker rmi sr-web-contract`
-- [ ] 2.5 Cały backend zielony: `cd szczur-radar-api && ./mvnw -B verify`
-- [ ] 2.6 Celowe zepsucie Javy (agent wykonuje i cofa): nowe pole w `RunView` daje czerwony `runDetailMatchesTheSharedContract` z nowym ciałem w komunikacie
-- [ ] 2.7 Celowe zepsucie TS (agent wykonuje i cofa): usunięcie pola z interfejsu `Run` w `src/api/pipeline.ts` daje błąd `vue-tsc` w `samples.ts`, a usunięcie pola z próbki daje czerwony `shapes.test.ts`
+- [x] 2.1 Trzy nowe testy IT przechodzą: `cd szczur-radar-api && ./mvnw -B -Dit.test='PipelineRunControllerIT,PostsApiIT' -Dtest=none -Dsurefire.failIfNoSpecifiedTests=false verify`
+- [x] 2.2 Test kształtów Vitest przechodzi: `cd szczur-radar-web && npx vitest run src/contract/shapes.test.ts`
+- [x] 2.3 Całe testy web i typecheck zielone: `cd szczur-radar-web && npm test && npm run build`
+- [x] 2.4 Obraz web buduje się z własnego kontekstu (typecheck testów z importem JSON): `docker build -t sr-web-contract ./szczur-radar-web && docker rmi sr-web-contract`
+- [x] 2.5 Cały backend zielony: `cd szczur-radar-api && ./mvnw -B verify`
+- [x] 2.6 Celowe zepsucie Javy (agent wykonuje i cofa): nowe pole w `RunView` daje czerwony `runDetailMatchesTheSharedContract` z nowym ciałem w komunikacie
+- [x] 2.7 Celowe zepsucie TS (agent wykonuje i cofa): usunięcie pola z interfejsu `Run` w `src/api/pipeline.ts` daje błąd `vue-tsc` w `samples.ts`, a usunięcie pola z próbki daje czerwony `shapes.test.ts`
 
 #### Manual
 

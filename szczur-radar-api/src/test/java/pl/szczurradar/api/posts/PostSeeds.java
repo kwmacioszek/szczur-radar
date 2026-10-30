@@ -92,6 +92,19 @@ public final class PostSeeds {
 						Provenance.prefilter("V2", Instant.parse(assessedAt)), null)));
 	}
 
+	/**
+	 * An {@code ok} attempt of {@code postId} at {@code assessedAt} as a model answers it: {@link
+	 * ContractFixtures#validOutput()} with the model's provenance (the shape the SPA gets for most posts).
+	 */
+	public Assessment okByModel(UUID postId, String assessedAt) {
+		return assessments.saveAndFlush(new Assessment(postId, runId, ContractFixtures.validInput(),
+				new AssessmentResult(AssessmentResult.Status.OK, ContractFixtures.validOutput(), null, List.of(),
+						new Provenance(Provenance.Source.MODEL, Provider.GEMINI, "gemini-3.1-flash-lite", null,
+								ServiceTier.DEFAULT, false, null, null, "p1", "V2", Instant.parse(assessedAt), null, null, null,
+								1_000, 1),
+						"{}")));
+	}
+
 	/** A failed attempt of {@code postId} at {@code assessedAt}, with {@code failureClass}. */
 	public Assessment failed(UUID postId, String assessedAt, FailureClass failureClass) {
 		return assessments.saveAndFlush(new Assessment(postId, runId, ContractFixtures.validInput(),

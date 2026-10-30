@@ -264,7 +264,8 @@ describe('RunDetailView', () => {
         sourcesFailed: 1,
         error: 'reddit failed: WykopApiException: HTTP 503',
         sourceResults: [
-          sourceResult('wykop'),
+          // The run's `fetched` and `skipped` are the sums of its sources' (the server's rule), so no skipped element here.
+          sourceResult('wykop', { skipped: 0 }),
           sourceResult('reddit', { status: 'failed', fetched: 0, skipped: 0, error: 'WykopApiException: HTTP 503' }),
         ],
       })
@@ -282,7 +283,7 @@ describe('RunDetailView', () => {
       expect(wykop!.find('.source-head strong').text()).toBe('Wykop')
       expect(wykop!.find('.source-head [data-tone]').text()).toBe('pobrane')
       expect(wykop!.find('.source-head [data-tone]').attributes('data-tone')).toBe('success')
-      expect(wykop!.find('.source-meta').text()).toBe('pobrane 248 · pominięte 2 · posty 246')
+      expect(wykop!.find('.source-meta').text()).toBe('pobrane 248 · pominięte 0 · posty 248')
       expect(wykop!.find('.source-error').exists()).toBe(false)
       expect(reddit!.find('.source-head strong').text()).toBe('Reddit')
       expect(reddit!.find('.source-head [data-tone]').text()).toBe('błąd')

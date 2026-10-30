@@ -87,13 +87,14 @@ describe('pipeline and posts API', () => {
     ])
   })
 
+  // The statuses the API sends with these codes.
   it.each([
-    ['pipeline_busy', 'Przebieg już trwa.'],
-    ['post_dead', 'nie można już ponowić'],
-    ['source_not_configured', 'nie jest skonfigurowane'],
-    ['invalid_request', 'maks. 7 dni'],
-  ])('explains %s in Polish', (detail, text) => {
-    expect(startErrorMessage(new ApiError(400, detail))).toContain(text)
+    [409, 'pipeline_busy', 'Przebieg już trwa.'],
+    [400, 'post_dead', 'nie można już ponowić'],
+    [503, 'source_not_configured', 'nie jest skonfigurowane'],
+    [400, 'invalid_request', 'maks. 7 dni'],
+  ])('explains %i %s in Polish', (status, detail, text) => {
+    expect(startErrorMessage(new ApiError(status, detail))).toContain(text)
   })
 
   it('falls back to a generic message', () => {
