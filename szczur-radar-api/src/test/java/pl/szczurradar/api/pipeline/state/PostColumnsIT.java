@@ -75,9 +75,9 @@ class PostColumnsIT {
 	private static final String UPDATED_AT = "updated_at";
 
 	/** Written by the {@code INSERT} only ({@code step/PostStore}); no transition may change them. */
-	private static final Set<String> SET_ONCE = Set.of("id", "source", "item_type", "source_item_id", "published_at",
-			"title", "body", "author", "slug", "web_url", "tags", "raw_payload_id", "content_hash", "first_run_id",
-			"created_at");
+	private static final Set<String> SET_ONCE = Set.of("id", "source", "item_type", "source_item_id", "channel",
+			"published_at", "title", "body", "author", "slug", "web_url", "tags", "raw_payload_id", "content_hash",
+			"first_run_id", "created_at");
 
 	/** The post's assessment state: what {@link PostTransitions} writes. */
 	private static final Set<String> STATE = Set.of("stage", "assessment_attempts", "assessing_run_id",
@@ -254,7 +254,7 @@ class PostColumnsIT {
 		RawPayloadRef raw = rawPayloads.store(Source.WYKOP,
 				("{\"id\":\"" + sourceItemId + "\"}").getBytes(StandardCharsets.UTF_8));
 		stored.rawPayload = raw.id();
-		UUID post = posts.save(new Post(Source.WYKOP, ItemType.POST, sourceItemId,
+		UUID post = posts.save(new Post(Source.WYKOP, ItemType.POST, sourceItemId, "gielda",
 				Instant.parse("2026-10-01T08:00:00Z"), "tytuł", "treść", "autor", "slug",
 				"https://wykop.pl/wpis/" + sourceItemId, List.of("gielda", "akcje"), raw, run)).getId();
 		stored.post = post;

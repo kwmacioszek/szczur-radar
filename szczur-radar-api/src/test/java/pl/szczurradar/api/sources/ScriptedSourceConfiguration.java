@@ -66,8 +66,8 @@ public class ScriptedSourceConfiguration {
 	public static SourcePost post() {
 		JsonNode raw = JSON.readTree(entry());
 		SourcePost post = WykopPosts.post(new WykopSearchResult.Element(JSON.treeToValue(raw, WykopItem.class), raw));
-		return new SourcePost(Source.REDDIT, post.itemType(), post.sourceItemId(), post.publishedAt(), post.title(),
-				post.body(), post.author(), post.slug(), post.webUrl(), post.tags(), post.raw());
+		return new SourcePost(Source.REDDIT, post.itemType(), post.sourceItemId(), post.channel(), post.publishedAt(),
+				post.title(), post.body(), post.author(), post.slug(), post.webUrl(), post.tags(), post.raw());
 	}
 
 }

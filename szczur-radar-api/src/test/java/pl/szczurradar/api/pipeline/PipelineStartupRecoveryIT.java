@@ -158,8 +158,8 @@ class PipelineStartupRecoveryIT {
 
 	/** A stored post of Wykop, first stored by {@code firstRun}. */
 	private UUID post(String sourceItemId, UUID firstRun) {
-		return posts.save(new Post(Source.WYKOP, ItemType.POST, sourceItemId, Instant.parse("2026-10-01T08:00:00Z"),
-				null, "treść", null, null, null, List.of("gielda"),
+		return posts.save(new Post(Source.WYKOP, ItemType.POST, sourceItemId, "gielda",
+				Instant.parse("2026-10-01T08:00:00Z"), null, "treść", null, null, null, List.of("gielda"),
 				rawPayloads.store(Source.WYKOP, ("{\"id\":" + sourceItemId + "}").getBytes(StandardCharsets.UTF_8)),
 				firstRun)).getId();
 	}

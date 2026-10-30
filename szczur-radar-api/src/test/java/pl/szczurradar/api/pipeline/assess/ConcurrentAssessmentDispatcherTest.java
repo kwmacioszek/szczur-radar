@@ -1167,8 +1167,8 @@ class ConcurrentAssessmentDispatcherTest {
 		PostRepository posts = mock(PostRepository.class);
 		when(posts.findById(any(UUID.class))).thenAnswer(invocation -> {
 			UUID id = invocation.getArgument(0);
-			Post post = new Post(Source.WYKOP, ItemType.POST, id.toString(), Instant.now(), null, bodies.get(id), null,
-					null, null, List.of(), new RawPayloadRef(id), RUN);
+			Post post = new Post(Source.WYKOP, ItemType.POST, id.toString(), "gielda", Instant.now(), null,
+					bodies.get(id), null, null, null, List.of(), new RawPayloadRef(id), RUN);
 			return Optional.of(post);
 		});
 		return posts;

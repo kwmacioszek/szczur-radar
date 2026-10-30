@@ -88,8 +88,9 @@ public class PostStore {
 		List<UUID> ids = new ArrayList<>(chunk.size());
 		for (int i = 0; i < chunk.size(); i++) {
 			SourcePost post = chunk.get(i);
-			ids.add(posts.save(new Post(post.source(), post.itemType(), post.sourceItemId(), post.publishedAt(),
-					post.title(), post.body(), post.author(), post.slug(), post.webUrl(), post.tags(), raws.get(i), runId))
+			ids.add(posts.save(new Post(post.source(), post.itemType(), post.sourceItemId(), post.channel(),
+					post.publishedAt(), post.title(), post.body(), post.author(), post.slug(), post.webUrl(), post.tags(),
+					raws.get(i), runId))
 				.getId());
 		}
 		return ids;

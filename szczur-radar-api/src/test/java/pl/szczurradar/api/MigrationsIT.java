@@ -36,7 +36,7 @@ class MigrationsIT {
 		List<Map<String, Object>> history = jdbc.queryForList(
 				"SELECT version, success FROM flyway_schema_history WHERE version IS NOT NULL ORDER BY installed_rank");
 		assertThat(history).extracting(row -> row.get("version")).containsExactly("1", "2", "3", "4", "5", "6", "7",
-				"8", "9", "10", "11", "12");
+				"8", "9", "10", "11", "12", "13");
 		assertThat(history).allSatisfy(row -> assertThat(row.get("success")).isEqualTo(true));
 	}
 
@@ -115,7 +115,7 @@ class MigrationsIT {
 				"ck_pipeline_runs_interruption_cause", "ck_pipeline_runs_interruption_status");
 		assertThat(constraintsOf("posts")).contains("uq_posts_source_item", "uq_posts_raw_payload", "ck_posts_stage",
 				"ck_posts_stage_attempts", "ck_posts_assessing_owner", "fk_posts_raw_payload", "ck_posts_item_type",
-				"ck_posts_source", "ck_posts_technical_failures")
+				"ck_posts_source", "ck_posts_technical_failures", "ck_posts_channel")
 			.doesNotContain("ck_posts_resource");
 		assertThat(constraintsOf("assessments")).contains("ck_assessments_outcome", "ck_assessments_failure_class",
 				"ck_assessments_provider", "fk_assessments_post", "fk_assessments_run");
@@ -203,8 +203,9 @@ class MigrationsIT {
 		String hash = "'" + "0".repeat(64) + "'";
 		jdbc.update("WITH raw AS (INSERT INTO raw_payloads (source, content_encoding, media_type, payload, sha256)"
 				+ " VALUES ('reddit', 'gzip', 'application/json', '\\x00', " + hash + ") RETURNING id)"
-				+ " INSERT INTO posts (source, item_type, source_item_id, published_at, raw_payload_id, content_hash,"
-				+ " first_run_id) SELECT 'reddit', 'post', '70401', now(), raw.id, " + hash + ", ? FROM raw", run);
+				+ " INSERT INTO posts (source, item_type, source_item_id, channel, published_at, raw_payload_id,"
+				+ " content_hash, first_run_id) SELECT 'reddit', 'post', '70401', 'ValueInvesting', now(), raw.id, " + hash
+				+ ", ? FROM raw", run);
 		assertRejected("INSERT INTO raw_payloads (source, content_encoding, media_type, payload, sha256) VALUES"
 				+ " ('twitter', 'gzip', 'application/json', '\\x00', " + hash + ")", "ck_raw_payloads_source");
 	}
@@ -271,6 +272,20 @@ class MigrationsIT {
 			.containsEntry("technical_failures", 0)
 			.containsEntry("last_technical_error", null);
 		assertRejected("UPDATE posts SET technical_failures = -1 WHERE id = '" + post + "'", "ck_posts_technical_failures");
+	}
+
+	@Test
+	void aPostHasAChannelAndNeverAnEmptyOne() {
+		UUID run = run(user("post-channel@example.com"), "queued");
+		UUID post = insertPost("post", "70501", "stored", 0, null, run);
+
+		assertThat(jdbc.queryForObject("SELECT channel FROM posts WHERE id = ?", String.class, post))
+			.isEqualTo("gielda");
+		// V13: an open set (Wykop's tag, any subreddit), so only an empty value is rejected; no default.
+		assertRejected("UPDATE posts SET channel = '' WHERE id = '" + post + "'", "ck_posts_channel");
+		assertThatThrownBy(() -> jdbc.update("UPDATE posts SET channel = NULL WHERE id = ?", post))
+			.isInstanceOf(DataIntegrityViolationException.class)
+			.hasMessageContaining("channel");
 	}
 
 	@Test
@@ -401,9 +416,9 @@ class MigrationsIT {
 		String hash = "'" + "0".repeat(64) + "'";
 		return "WITH raw AS (INSERT INTO raw_payloads (source, content_encoding, media_type, payload, sha256)"
 				+ " VALUES ('wykop', 'gzip', 'application/json', '\\x00', " + hash + ") RETURNING id)"
-				+ " INSERT INTO posts (source, item_type, source_item_id, published_at, raw_payload_id, content_hash,"
-				+ " stage, assessment_attempts, assessing_run_id, first_run_id) SELECT 'wykop', '" + itemType + "', '"
-				+ sourceItemId + "', now(), raw.id, " + hash + ", '" + stage + "', " + attempts + ", "
+				+ " INSERT INTO posts (source, item_type, source_item_id, channel, published_at, raw_payload_id,"
+				+ " content_hash, stage, assessment_attempts, assessing_run_id, first_run_id) SELECT 'wykop', '" + itemType
+				+ "', '" + sourceItemId + "', 'gielda', now(), raw.id, " + hash + ", '" + stage + "', " + attempts + ", "
 				+ (assessingRun == null ? "NULL" : "'" + assessingRun + "'") + ", '" + firstRun + "' FROM raw";
 	}
 

@@ -90,8 +90,8 @@ class AssessmentSelectionTest {
 	}
 
 	private static Post post(PostStage stage) {
-		Post post = new Post(Source.WYKOP, ItemType.POST, UUID.randomUUID().toString(), Instant.now(), null, "treść", null,
-				null, null, List.of(), new RawPayloadRef(UUID.randomUUID()), UUID.randomUUID());
+		Post post = new Post(Source.WYKOP, ItemType.POST, UUID.randomUUID().toString(), "gielda", Instant.now(), null,
+				"treść", null, null, null, List.of(), new RawPayloadRef(UUID.randomUUID()), UUID.randomUUID());
 		set(post, "id", UUID.randomUUID());
 		set(post, "stage", stage);
 		return post;

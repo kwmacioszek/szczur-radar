@@ -58,6 +58,14 @@ public class Post {
 	@Column(name = "source_item_id", nullable = false, updatable = false)
 	private String sourceItemId;
 
+	/**
+	 * The source's channel the post came from, in the source's own spelling (Wykop: the tag without
+	 * {@code #}, Reddit: the subreddit) — the assessment input's {@code channels[0]}
+	 * ({@code V13__posts_channel.sql}).
+	 */
+	@Column(nullable = false)
+	private String channel;
+
 	@Column(name = "published_at", nullable = false)
 	private Instant publishedAt;
 
@@ -124,12 +132,13 @@ public class Post {
 	 * A new post, {@link PostStage#STORED}, first stored by the run {@code firstRunId}. Its texts lose
 	 * U+0000 ({@link Nul}), which the database rejects.
 	 */
-	public Post(Source source, ItemType itemType, String sourceItemId, Instant publishedAt, @Nullable String title,
-			@Nullable String body, @Nullable String author, @Nullable String slug, @Nullable String webUrl,
-			List<String> tags, RawPayloadRef raw, UUID firstRunId) {
+	public Post(Source source, ItemType itemType, String sourceItemId, String channel, Instant publishedAt,
+			@Nullable String title, @Nullable String body, @Nullable String author, @Nullable String slug,
+			@Nullable String webUrl, List<String> tags, RawPayloadRef raw, UUID firstRunId) {
 		this.source = Objects.requireNonNull(source, "source");
 		this.itemType = Objects.requireNonNull(itemType, "itemType");
 		this.sourceItemId = Objects.requireNonNull(sourceItemId, "sourceItemId");
+		this.channel = Nul.removed(Objects.requireNonNull(channel, "channel"));
 		this.publishedAt = Objects.requireNonNull(publishedAt, "publishedAt");
 		this.title = Nul.removed(title);
 		this.body = Nul.removed(body);
@@ -162,6 +171,10 @@ public class Post {
 
 	public String getSourceItemId() {
 		return sourceItemId;
+	}
+
+	public String getChannel() {
+		return channel;
 	}
 
 	public Instant getPublishedAt() {

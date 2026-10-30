@@ -160,8 +160,8 @@ public final class ScriptedSourceFetcher implements SourceFetcher {
 
 	/** A post of this source with the source id {@code id}. */
 	public SourcePost post(String id) {
-		return new SourcePost(source, ItemType.POST, id, Instant.parse("2026-10-01T08:00:00Z"), null, "treść " + id,
-				null, null, null, List.of(), "{}".getBytes(StandardCharsets.UTF_8));
+		return new SourcePost(source, ItemType.POST, id, "kanal", Instant.parse("2026-10-01T08:00:00Z"), null,
+				"treść " + id, null, null, null, List.of(), "{}".getBytes(StandardCharsets.UTF_8));
 	}
 
 	private static Fetched nothing() {

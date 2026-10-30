@@ -27,7 +27,7 @@ import org.junit.jupiter.api.Test;
 import pl.szczurradar.api.agents.assessor.Prefilter;
 import pl.szczurradar.api.agents.assessor.contract.AssessmentInputV1;
 import pl.szczurradar.api.measurement.GoldLabels.Post;
-import pl.szczurradar.api.sources.wykop.UnmappableItemException;
+import pl.szczurradar.api.sources.UnmappableItemException;
 import pl.szczurradar.api.sources.wykop.WykopApiClient;
 import pl.szczurradar.api.sources.wykop.WykopItem;
 import pl.szczurradar.api.sources.wykop.WykopMapper;

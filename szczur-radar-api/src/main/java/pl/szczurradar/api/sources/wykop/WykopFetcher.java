@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 import pl.szczurradar.api.sources.Source;
 import pl.szczurradar.api.sources.SourceFetcher;
 import pl.szczurradar.api.sources.SourcePost;
+import pl.szczurradar.api.sources.UnmappableItemException;
 
 /**
  * {@link SourceFetcher} for Wykop: #gielda entries and links added in the range ({@link WykopPosts#TAG}),

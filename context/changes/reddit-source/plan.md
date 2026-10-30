@@ -456,14 +456,14 @@ Zmienna zadeklarowana w IaC i ustawiana w PR env z CI, dokumenty i runbooki (wł
 
 #### Automated
 
-- [ ] 1.1 Testy Wykopu i pętli zielone: `cd szczur-radar-api && ./mvnw -B test -Dtest='WykopApiClientTest,WykopRepositoryTest,WykopFetcherTest,WykopMapperTest,WykopConfigurationTest,HttpRetryTest'`
-- [ ] 1.2 `WykopApiClientTest` niezmieniony: `git diff --stat origin/main -- szczur-radar-api/src/test/java/pl/szczurradar/api/sources/wykop/WykopApiClientTest.java` nie wypisuje nic
-- [ ] 1.3 Pętla istnieje raz: `rg -n 'for \(int attempt' szczur-radar-api/src/main/java/pl/szczurradar/api/sources/` znajduje tylko `sources/transport/HttpRetry.java`
-- [ ] 1.4 Wyjątek przeniesiony: `test -f szczur-radar-api/src/main/java/pl/szczurradar/api/sources/UnmappableItemException.java && ! test -e szczur-radar-api/src/main/java/pl/szczurradar/api/sources/wykop/UnmappableItemException.java`
-- [ ] 1.5 Cała jednostkowa część zielona: `cd szczur-radar-api && ./mvnw -B test`
-- [ ] 1.6 Kolumna kanału w schemacie, modelu i strażnikach: `rg -n 'channel' szczur-radar-api/src/main/resources/db/migration/V13__posts_channel.sql szczur-radar-api/src/main/java/pl/szczurradar/api/sources/SourcePost.java szczur-radar-api/src/main/java/pl/szczurradar/api/posts/Post.java szczur-radar-api/src/test/java/pl/szczurradar/api/pipeline/state/PostColumnsIT.java` znajduje każdy z czterech plików
-- [ ] 1.7 Schemat, encje i backfill zielone z Testcontainers: `cd szczur-radar-api && ./mvnw -B verify`
-- [ ] 1.8 Test backupu po migracji kanału zielony z Dockerem: `tools/db-backup/test.sh`
+- [x] 1.1 Testy Wykopu i pętli zielone: `cd szczur-radar-api && ./mvnw -B test -Dtest='WykopApiClientTest,WykopRepositoryTest,WykopFetcherTest,WykopMapperTest,WykopConfigurationTest,HttpRetryTest'`
+- [x] 1.2 `WykopApiClientTest` niezmieniony: `git diff --stat origin/main -- szczur-radar-api/src/test/java/pl/szczurradar/api/sources/wykop/WykopApiClientTest.java` nie wypisuje nic
+- [x] 1.3 Pętla istnieje raz: `rg -n 'for \(int attempt' szczur-radar-api/src/main/java/pl/szczurradar/api/sources/` znajduje tylko `sources/transport/HttpRetry.java`
+- [x] 1.4 Wyjątek przeniesiony: `test -f szczur-radar-api/src/main/java/pl/szczurradar/api/sources/UnmappableItemException.java && ! test -e szczur-radar-api/src/main/java/pl/szczurradar/api/sources/wykop/UnmappableItemException.java`
+- [x] 1.5 Cała jednostkowa część zielona: `cd szczur-radar-api && ./mvnw -B test`
+- [x] 1.6 Kolumna kanału w schemacie, modelu i strażnikach: `rg -n 'channel' szczur-radar-api/src/main/resources/db/migration/V13__posts_channel.sql szczur-radar-api/src/main/java/pl/szczurradar/api/sources/SourcePost.java szczur-radar-api/src/main/java/pl/szczurradar/api/posts/Post.java szczur-radar-api/src/test/java/pl/szczurradar/api/pipeline/state/PostColumnsIT.java` znajduje każdy z czterech plików
+- [x] 1.7 Schemat, encje i backfill zielone z Testcontainers: `cd szczur-radar-api && ./mvnw -B verify`
+- [x] 1.8 Test backupu po migracji kanału zielony z Dockerem: `tools/db-backup/test.sh`
 
 ### Phase 2: Transport i stronicowanie Arctic Shift
 

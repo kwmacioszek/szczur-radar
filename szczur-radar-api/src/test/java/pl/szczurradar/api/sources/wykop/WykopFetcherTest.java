@@ -50,6 +50,8 @@ class WykopFetcherTest {
 		assertThat(batch.skipped()).isEqualTo(1);
 		assertThat(batch.posts()).hasSize(16);
 		assertThat(batch.posts()).extracting(SourcePost::itemType).containsOnly(ItemType.POST, ItemType.LINK);
+		// The channel is the input's channels[0]: the tag the search read.
+		assertThat(batch.posts()).extracting(SourcePost::channel).containsOnly(WykopPosts.TAG);
 		SourcePost first = batch.posts().getFirst();
 		assertThat(first.source()).isEqualTo(Source.WYKOP);
 		assertThat(first.sourceItemId()).isEqualTo(String.valueOf(elements.getFirst().item().id()));
