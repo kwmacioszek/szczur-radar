@@ -13,7 +13,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
@@ -554,8 +553,8 @@ class PipelineRunIT {
 	@Test
 	void aRangeWithoutAnyElementFailsTheRunAtTheFetchStep() {
 		assessedDay();
-		Optional<Instant> lastUpdate = runs.findLastUpdate();
-		assertThat(lastUpdate).isPresent();
+		Map<Source, Instant> lastUpdates = runs.findLastUpdates();
+		assertThat(lastUpdates).containsKey(Source.WYKOP);
 		int searches = searches();
 		List<PipelineRun> created;
 		wykopEmpty = true;
@@ -577,7 +576,7 @@ class PipelineRunIT {
 			awaitClosed(range);
 			assertThat(notified(range)).isOne();
 			// A failed run leaves the feed's date as it was.
-			assertThat(runs.findLastUpdate()).isEqualTo(lastUpdate);
+			assertThat(runs.findLastUpdates()).isEqualTo(lastUpdates);
 		}
 		finally {
 			wykopEmpty = false;
@@ -751,6 +750,8 @@ class PipelineRunIT {
 		assertThat(channels(range, "wykop")).containsExactly("gielda");
 		assertThat(runs.findById(range).orElseThrow().attentionReasons())
 			.containsExactly(AttentionReason.SOURCE_FAILED);
+		// Only the source that gave posts has an update.
+		assertThat(runs.findLastUpdates()).containsOnlyKeys(Source.WYKOP);
 		awaitClosed(range);
 		assertThat(notified(range)).isOne();
 		awaitLog(output, "Operator alert RUN_NEEDS_ATTENTION (run " + range + ") taken");
@@ -771,6 +772,8 @@ class PipelineRunIT {
 			.containsEntry("error", "reddit gave no post to store (fetched 0, skipped 0)");
 		assertThat(sources(range)).containsExactlyInAnyOrder("wykop:succeeded:16:0:", "reddit:empty:0:0:");
 		assertThat(runs.findById(range).orElseThrow().attentionReasons()).containsExactly(AttentionReason.SOURCE_EMPTY);
+		// Only the source that gave posts has an update.
+		assertThat(runs.findLastUpdates()).containsOnlyKeys(Source.WYKOP);
 		awaitClosed(range);
 		assertThat(notified(range)).isOne();
 	}
@@ -796,6 +799,8 @@ class PipelineRunIT {
 				String.class, range)).isEqualTo("failed");
 		assertThat(runs.findById(range).orElseThrow().attentionReasons())
 			.containsExactly(AttentionReason.SOURCE_FAILED);
+		// Only the source that gave posts has an update.
+		assertThat(runs.findLastUpdates()).containsOnlyKeys(Source.REDDIT);
 		// Arctic Shift was asked for the run's range, one second wider at each end (its bounds are exclusive).
 		long from = DAY.atStartOfDay(PipelineRunService.ZONE).toEpochSecond();
 		long next = DAY.plusDays(1).atStartOfDay(PipelineRunService.ZONE).toEpochSecond();

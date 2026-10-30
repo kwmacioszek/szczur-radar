@@ -1,11 +1,12 @@
-// The full bodies of the three large API responses as typed TS literals, the other half of the files next to this
-// one: run.json (GET /api/admin/pipeline-runs/{id}), post.json (GET /api/posts/{id}) and failed-post.json (an item
-// of GET /api/admin/posts/failed). The API's integration tests compare each real body, masked, with its file
-// (ContractFiles); shapes.test.ts compares each file with the sample here, and the annotations make vue-tsc reject
-// a field the type does not know. A field added in Java therefore changes the file (the integration test prints the
-// new body), this sample and the TS type together, in one PR.
+// The full bodies of the four shared API responses as typed TS literals, the other half of the files next to this
+// one: run.json (GET /api/admin/pipeline-runs/{id}), post.json (GET /api/posts/{id}), failed-post.json (an item of
+// GET /api/admin/posts/failed) and freshness.json (GET /api/freshness). The API's integration tests compare each real
+// body, masked, with its file (ContractFiles); shapes.test.ts compares each file with the sample here, and the
+// annotations make vue-tsc reject a field the type does not know. A field added in Java therefore changes the file (the
+// integration test prints the new body), this sample and the TS type together, in one PR.
 //
 // Masks, as in the files: a UUID is '<uuid>', an ISO-8601 instant is '<instant>'; every other value is literal.
+import type { Freshness } from '../api/freshness'
 import type { Run } from '../api/pipeline'
 import type { FailedPost, PostItem } from '../api/posts'
 
@@ -180,4 +181,12 @@ export const sampleFailedPost: FailedPost = {
   technicalFailures: 1,
   lastTechnicalError: 'IllegalStateException: a bug in the mapper',
   onHold: false,
+}
+
+/** Both sources with an update, in the API's order. */
+export const sampleFreshness: Freshness = {
+  sources: [
+    { source: 'wykop', lastUpdatedAt: '<instant>' },
+    { source: 'reddit', lastUpdatedAt: '<instant>' },
+  ],
 }

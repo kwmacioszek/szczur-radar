@@ -9,7 +9,7 @@ import FeedFilter from '../components/FeedFilter.vue'
 import PostCard from '../components/PostCard.vue'
 import StatusMessage from '../components/StatusMessage.vue'
 import { filterFromQuery, filterToQuery, isFilterActive, sameFilter } from '../feedFilter'
-import { formatDateTime } from '../labels'
+import { formatDateTime, label } from '../labels'
 import { reportFeedLoaded } from '../router/scroll'
 
 const PAGE_SIZE = 50
@@ -58,9 +58,11 @@ const resultText = computed(() => {
 })
 
 /**
- * When the data was last updated, read once on entry alongside the first page, not on every page
- * change. Null while loading and after an error: the label is then left out and the list stays.
- * `freshnessSettled` resolves (never rejects) once the label is shown or left out.
+ * When each source's data was last updated, read once on entry alongside the first page, not on every
+ * page change. Null while loading and after an error: the label is then left out and the list stays.
+ * An answer without `sources` leaves it out too: API and web deploy independently, so an older API may
+ * answer with its old shape for a while. `freshnessSettled` resolves (never rejects) once the label is
+ * shown or left out.
  */
 const freshness = ref<Freshness | null>(null)
 const freshnessSettled = fetchFreshness()
@@ -169,10 +171,16 @@ watch(
   <main class="feed">
     <section aria-labelledby="feed-title">
       <h1 id="feed-title" ref="feed-title" tabindex="-1">Posty</h1>
-      <p v-if="freshness" class="freshness">
-        <template v-if="freshness.lastUpdatedAt">
+      <p v-if="freshness?.sources" class="freshness">
+        <template v-if="freshness.sources.length > 0">
           Dane zaktualizowane:
-          <time :datetime="freshness.lastUpdatedAt">{{ formatDateTime(freshness.lastUpdatedAt) }}</time>
+          <template v-for="(update, index) in freshness.sources" :key="update.source">
+            <template v-if="index > 0"> · </template>
+            <span class="source-update">
+              {{ label('source', update.source) }}
+              <time :datetime="update.lastUpdatedAt">{{ formatDateTime(update.lastUpdatedAt) }}</time>
+            </span>
+          </template>
         </template>
         <template v-else>Dane nie były jeszcze aktualizowane.</template>
       </p>
@@ -230,6 +238,11 @@ h1:has(+ .freshness) {
   margin: 0 0 var(--space-4);
   font-size: var(--font-size-sm);
   color: var(--text);
+}
+
+/* A source and its date stay on one line; the label breaks between the sources. */
+.source-update {
+  white-space: nowrap;
 }
 
 .result {

@@ -12,8 +12,10 @@
  *       'raw-error'    /api/posts/:id/raw answers 500 (the rest as in 'data').
  * FRESHNESS (independent of MODE; another variant = a copy of this file with FRESHNESS replaced), the label above the
  * feed — /api/freshness answers like pipeline/api/FreshnessController.java:
- *       'date'  { lastUpdatedAt: '2026-10-13T03:12:00Z' } (05:12 in Warsaw), the default,
- *       'none'  { lastUpdatedAt: null }: no update yet,
+ *       'date'  { sources: [wykop, reddit] }, both 2026-10-13T03:12:00Z (05:12 in Warsaw), the default,
+ *       'apart' both sources, Reddit older: 2026-10-11T03:12:00Z (a night it failed or gave no post since),
+ *       'wykop' Wykop alone: the one source with an update, as on production until S-28,
+ *       'none'  { sources: [] }: no update yet,
  *       'error' 500; every other route answers as MODE says.
  * MISSING (the "Dni bez danych" section of /admin; MODE 'loading' and 'error' apply first), like
  * /api/admin/pipeline-runs/missing-days of pipeline/api/PipelineRunController.java, relative to today in Warsaw (D):
@@ -379,6 +381,14 @@ async page => {
     from: dMinus(15), to: dMinus(2),
     days: MISSING === 'none' ? [] : [9, 8, 7, 4].map((n) => ({ day: dMinus(n), sources: ['wykop'] })),
   })
+  // The sources of /api/freshness by FRESHNESS, in the API's order.
+  const WYKOP_UPDATE = { source: 'wykop', lastUpdatedAt: '2026-10-13T03:12:00Z' }
+  const FRESHNESS_SOURCES = {
+    date: [WYKOP_UPDATE, { source: 'reddit', lastUpdatedAt: '2026-10-13T03:12:00Z' }],
+    apart: [WYKOP_UPDATE, { source: 'reddit', lastUpdatedAt: '2026-10-11T03:12:00Z' }],
+    wykop: [WYKOP_UPDATE],
+    none: [],
+  }
   const hang = () => new Promise((r) => setTimeout(r, 60000))
   const json = (route, body, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) })
   await page.unrouteAll().catch(() => {})
@@ -438,7 +448,7 @@ async page => {
     if (p === '/api/admin/posts/failed') return json(route, { items: MODE === 'empty' ? [] : failed, page: 0, size: 50, total: MODE === 'empty' ? 0 : failed.length })
     if (p === '/api/freshness') {
       if (FRESHNESS === 'error') return json(route, { detail: 'internal_error' }, 500)
-      return json(route, { lastUpdatedAt: FRESHNESS === 'none' ? null : '2026-10-13T03:12:00Z' })
+      return json(route, { sources: FRESHNESS_SOURCES[FRESHNESS] })
     }
     if (p === '/api/posts') {
       const pageNumber = Number(url.searchParams.get('page') ?? 0)

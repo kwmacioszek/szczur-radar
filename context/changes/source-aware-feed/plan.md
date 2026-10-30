@@ -350,22 +350,22 @@ Bez migracji. `V12` dał historii wiersze `pipeline_run_sources`, ale stare prze
 
 #### Automated
 
-- [x] 1.1 Testy API z Testcontainers zielone: `cd szczur-radar-api && ./mvnw -B verify`
-- [x] 1.2 Testy SPA zielone: `cd szczur-radar-web && npm test`
-- [x] 1.3 Typecheck i build zielone: `cd szczur-radar-web && npm run build`
-- [x] 1.4 Plik kontraktu niesie oba pola: `jq -e '.source == "wykop" and .channel == "gielda"' szczur-radar-web/src/contract/post.json`
-- [x] 1.5 Nowe źródło bez przedrostka jest czerwone: `rg -n "CHANNEL_PREFIXES" szczur-radar-web/src/contract/rules.test.ts`
+- [x] 1.1 Testy API z Testcontainers zielone: `cd szczur-radar-api && ./mvnw -B verify` — 3ebecfc
+- [x] 1.2 Testy SPA zielone: `cd szczur-radar-web && npm test` — 3ebecfc
+- [x] 1.3 Typecheck i build zielone: `cd szczur-radar-web && npm run build` — 3ebecfc
+- [x] 1.4 Plik kontraktu niesie oba pola: `jq -e '.source == "wykop" and .channel == "gielda"' szczur-radar-web/src/contract/post.json` — 3ebecfc
+- [x] 1.5 Nowe źródło bez przedrostka jest czerwone: `rg -n "CHANNEL_PREFIXES" szczur-radar-web/src/contract/rules.test.ts` — 3ebecfc
 
 ### Phase 2: Świeżość per źródło
 
 #### Automated
 
-- [ ] 2.1 Testy API z Testcontainers zielone: `cd szczur-radar-api && ./mvnw -B verify`
-- [ ] 2.2 Testy SPA zielone: `cd szczur-radar-web && npm test`
-- [ ] 2.3 Typecheck i build zielone: `cd szczur-radar-web && npm run build`
-- [ ] 2.4 Plik kontraktu ma kształt listy: `jq -e '.sources[0].source == "wykop" and .sources[1].source == "reddit" and .sources[0].lastUpdatedAt == "<instant>" and (has("lastUpdatedAt") | not)' szczur-radar-web/src/contract/freshness.json`
-- [ ] 2.5 Reguły globalnej nie ma w kodzie: `! rg -n "findLastUpdate\b|findFinishedAtOfNewestRange" --glob '*.java' szczur-radar-api/src`
-- [ ] 2.6 Przypadek „tylko Reddit” jest przypięty: `rg -n "Reddit" szczur-radar-api/src/test/java/pl/szczurradar/api/pipeline/api/FreshnessIT.java`
+- [x] 2.1 Testy API z Testcontainers zielone: `cd szczur-radar-api && ./mvnw -B verify`
+- [x] 2.2 Testy SPA zielone: `cd szczur-radar-web && npm test`
+- [x] 2.3 Typecheck i build zielone: `cd szczur-radar-web && npm run build`
+- [x] 2.4 Plik kontraktu ma kształt listy: `jq -e '.sources[0].source == "wykop" and .sources[1].source == "reddit" and .sources[0].lastUpdatedAt == "<instant>" and (has("lastUpdatedAt") | not)' szczur-radar-web/src/contract/freshness.json`
+- [x] 2.5 Reguły globalnej nie ma w kodzie: `! rg -n "findLastUpdate\b|findFinishedAtOfNewestRange" --glob '*.java' szczur-radar-api/src`
+- [x] 2.6 Przypadek „tylko Reddit” jest przypięty: `rg -n "Reddit" szczur-radar-api/src/test/java/pl/szczurradar/api/pipeline/api/FreshnessIT.java`
 
 ### Phase 3: Zrzuty, dokumenty i dowód w PR env
 
