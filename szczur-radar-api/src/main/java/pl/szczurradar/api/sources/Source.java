@@ -11,9 +11,9 @@ public enum Source {
 	WYKOP,
 
 	/**
-	 * Registered (the value in every {@code CHECK} set of a source, {@code V12}), not implemented: no
-	 * {@link SourceFetcher} or {@link RawInputMapper} until S-27 ({@code sources/CLAUDE.md}, step 1), so it
-	 * is never configured and a range request naming it is refused.
+	 * Registered (the value in every {@code CHECK} set of a source, {@code V12}) and implemented in
+	 * {@code sources/reddit} (S-27): configured only when {@code REDDIT_SUBREDDITS} names a subreddit
+	 * ({@code RedditConfiguration}); without it a range request naming it is refused.
 	 */
 	REDDIT;
 

@@ -18,6 +18,7 @@ import pl.szczurradar.api.agents.assessor.contract.AssessmentInputV1;
 import pl.szczurradar.api.agents.assessor.contract.Context;
 import pl.szczurradar.api.agents.assessor.contract.ContractJson;
 import pl.szczurradar.api.agents.assessor.contract.ItemType;
+import pl.szczurradar.api.sources.UnmappableItemException;
 
 /**
  * {@link WykopMapper} on Wykop API v3 elements: real #gielda elements of 2026-10-01 from the search

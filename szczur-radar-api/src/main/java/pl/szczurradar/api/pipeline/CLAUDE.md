@@ -88,7 +88,8 @@ PipelineRunService.startRange / startPosts → queue (thread pipeline-run) → R
   sources fetched one after another are each measured on their own; inside one source's fetch nothing
   moves it (`SourceFetcher` reports no progress). The watchdog measures from it (or from `started_at`).
   A source bounds its fetch with a deadline below `PipelineStallSettings.MIN_DEFAULT` (Wykop: 10 min,
-  `WykopRepository.FETCH_DEADLINE`), so a failing source ends with its `failed` result before the watchdog
+  `WykopRepository.FETCH_DEADLINE`; Reddit: 10 min over all its subreddits, `RedditRepository.FETCH_DEADLINE`),
+  so a failing source ends with its `failed` result before the watchdog
   stops the run; the deadline is per source, and their sum may exceed the threshold (`RunWatchdogIT`).
   An explicit `PIPELINE_STALL_TIMEOUT` below that deadline plus two request time-outs (Wykop: about
   11 min) would stop a failing fetch as stalled instead; `minimum()` warns only about the LLM call, so
@@ -172,7 +173,8 @@ PipelineRunService.startRange / startPosts → queue (thread pipeline-run) → R
     cancelled task counts nothing, and what it ends with is logged at INFO (`Assessing post <id> in run <id>
     ended with its stopped run: …`), never as an outage or the post's technical error;
   - an LLM call waiting for its answer or between attempts (`TransportRetry`'s wait fails on the interrupt,
-    without another attempt); the Wykop client (`WykopApiException(INTERRUPTED)`);
+    without another attempt); a source's client (`sources/transport/HttpRetry`: `WykopApiException` /
+    `RedditApiException` with `INTERRUPTED`, without another attempt);
   - the LLM check before the posts (`llm.check()`), when its call fails on the interrupted thread: the
     dispatcher ends the step with `RunInterruptedException` (INFO `Run <id> assess: the LLM check was
     interrupted by the run's stop`; the check's exception its cause), not with the check's ERROR line;
@@ -188,7 +190,7 @@ PipelineRunService.startRange / startPosts → queue (thread pipeline-run) → R
   after `releaseAll`), counters and steps are conditional, and `endStep` leaves the step as the stop closed
   it (INFO `Run <id> step <step> ended in <t> after its run had stopped`).
 - **How `execute` classifies a step's exception.** The run's state decides, not the exception's type
-  (after an interrupt it may be any of `WykopApiException`, `IllegalStateException`,
+  (after an interrupt it may be any of `WykopApiException`, `RedditApiException`, `IllegalStateException`,
   `RunInterruptedException`, `RunNoLongerRunningException`). One `catch` for every `RuntimeException`
   first clears the interrupt flag (`Thread.interrupted()`) and reads whether the instance is stopping (the
   flag `stopping`, set as `onClose`'s first statement, before its writes; `executor.isShutdown()` becomes
@@ -467,7 +469,8 @@ PipelineRunService.startRange / startPosts → queue (thread pipeline-run) → R
   writes, then the interrupt of the run's thread, then `AssessmentDispatcher.cancel`, then the
   notification, nothing when the stall changed nothing; and the clean-up and alert paths below), `state/RunOutcomeTest`, `state/DurationsTest`, `step/PostStoreTest`,
   `step/AssessmentSelectionTest`, `step/SourceIngestTest` (two sources with the scripted
-  `sources/ScriptedSourceFetcher` of the tests: posts of both, one empty, one throwing — a WARN with the
+  `sources/ScriptedSourceFetcher` of the tests, its only user, as the ITs run the real sources: posts of
+  both, one empty, one throwing — a WARN with the
   exception —, both without a post naming both after reporting both, one not configured any more, an
   interrupt before the second source fetching it not), `assess/ConcurrentAssessmentDispatcherTest`
   (threads, one client, a technical error; a bug before the call puts the post back with
@@ -528,8 +531,9 @@ PipelineRunService.startRange / startPosts → queue (thread pipeline-run) → R
   `api/PipelineRunControllerIT`: the run page, 404, the new fields, `scheduled` for the cron's run.
   `api/FreshnessIT`: which runs move the label. `api/MissingDaysIT` (fixed `Clock`): which runs cover a day
   (`failed`, `interrupted`, `queued`, `running` and RETRY/POSTS runs do not; `partial` and an admin's do;
-  in a `partial` run with a second source, only the source whose result is `succeeded`), the first covered
-  day from the sources' results, the exact JSON; `api/PipelineRunWithoutSourceIT` also that no
+  in a `partial` run with a second source — Reddit on `sources/reddit/LocalReddit`, configured only there —,
+  only the source whose result is `succeeded`), the first covered day from the sources' results, the exact
+  JSON; `api/PipelineRunWithoutSourceIT` also that no
   day is missing without a configured source. `api/DeploySafetyIT`: every answer (a running run
   outranks a queued one, ended runs are safe; a dead running run is safe and its row unchanged, a dead
   queued run is safe, a running run with recent activity is not, nor a live queued run behind a dead
@@ -563,9 +567,10 @@ PipelineRunService.startRange / startPosts → queue (thread pipeline-run) → R
   run whose calls each find the provider unavailable after a 2 s pause (each under the 5 s threshold,
   three in a row at least 6 s, longer than it: the breaker ends the run, not the watchdog), another
   instance's run is left alone, the admins are notified, a run of two sources each taking about 3 s (Wykop
-  paused, the scripted second source delayed) is not stopped though its fetch step lasts longer than the
-  threshold (the run's last activity is the first source's write while the second is fetched), and a
-  database connection has the 300 s `socketTimeout`.
+  paused, Reddit's one search on `sources/reddit/LocalReddit` delayed — `LocalReddit.delay`, its arrival
+  seen by the server's request count) is not stopped though its fetch step lasts longer than the threshold
+  (the run's last activity is the first source's write while the second is fetched), and a database
+  connection has the 300 s `socketTimeout`.
 - `notifications/api/NotificationsIT`: recipients (admins only), idempotence, which run endings notify,
   the list, marking one and all read, 404 for another admin's. `notifications/RunNotificationsTest`
   (outside this package, mocks) also covers the late interrupt: an attempt it cut short made once more
@@ -582,19 +587,28 @@ PipelineRunService.startRange / startPosts → queue (thread pipeline-run) → R
   nor reports the run again and logs no ERROR), a refused LLM key (`failed`, no attempt), a provider
   unavailable for three calls in a row (`failed` with the breaker's error, no attempt, no technical
   failure, the admin notified) and an outage of a run a stopping instance interrupted (the interrupt ends
-  the held call before its answer, as the stopped run's, at INFO, counting nothing); two sources (the
-  scripted second source of `sources/ScriptedSourceConfiguration`, configured only by these scenarios, its
-  post the Wykop fixture under `reddit`, mapped by the production `WykopPosts`): one throwing (`partial`,
-  `source_failed`, the other's posts assessed, the admin notified and `RUN_NEEDS_ATTENTION` raised), one
-  empty (`partial`, `source_empty`), Wykop down (the second source's post assessed on the input its raw
-  payload maps to), both without a post (`failed` at `fetch`, naming both, a row each) and a run stopped
-  while the second source is held (no row for it, Wykop's row kept, no ERROR); a held call waits
-  without a bound (only an interrupt or `settle()` ends it); counters and
+  the held call before its answer, as the stopped run's, at INFO, counting nothing); two sources — Reddit
+  is its production client, repository, fetcher and mapper on `sources/reddit/LocalReddit` (a
+  `RedditRepository` bean over `LocalRedditServer` answering the real, anonymized Arctic Shift pages of
+  `fixtures/reddit/`, configured only by these scenarios; no test sets `REDDIT_SUBREDDITS`): Reddit down
+  (`partial`, `source_failed` with its client's error after 3 attempts, Wykop's posts assessed and stored
+  with their channel `gielda`, the admin notified and `RUN_NEEDS_ATTENTION` raised), Reddit empty
+  (`partial`, `source_empty`), Wykop down — gate F1 (S-20, closed in S-27): every Reddit post stored with
+  its subreddit as `channel` and assessed on the input its raw payload maps to, equal to the production
+  `RedditMapper`'s input of the fixture element with that id (item type from `is_self`, the body its
+  `selftext`), and Arctic Shift asked for the run's range one second wider at each end —, removed Reddit
+  posts (r/stocks: 19 of 25) neither fetched nor skipped (only the visible ones stored, no `skipped`
+  reason, no notification, counted in the log line `… removed or deleted left out …`), the same range
+  again storing neither source's posts twice, both without a post (`failed` at `fetch`, naming both, a
+  row each) and a run stopped while Reddit's search is held (no row for it, Wykop's row kept, the
+  interrupt ending the search at INFO without a second attempt, no ERROR); a held call or search waits
+  without a bound (only an interrupt or `settle()` ends it; `LocalReddit`'s client time-out, 60 s, is
+  far above any wait); counters and
   `last_activity_at` growing during the assessment; no new step in an interrupted run and no ERROR in the
   log. Each scenario stands alone, in a random order (`@TestMethodOrder(MethodOrderer.Random.class)`, as
   `RunWatchdogIT`): before each one `reset()` checks that nothing runs, empties the run and post tables
   in one `TRUNCATE` (the seven tables are closed under the foreign keys; users, sessions and Flyway's history
-  stay) and switches the second source off; a scenario that needs assessed posts runs `assessedDay()` itself; after each one `settle()`
+  stay) and switches Reddit off (`LocalReddit.reset()`); a scenario that needs assessed posts runs `assessedDay()` itself; after each one `settle()`
   releases the held calls and waits until no instance has a run of its own and the LLM pool is idle
   (`AssessmentPool.idle()`) — a
   run's status is written before its queue thread closes it, so `finished()` alone returns too early. The

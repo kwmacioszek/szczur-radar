@@ -114,14 +114,15 @@ class ClosedSetsIT {
 			StoredEnum.of(Role.class, Role::value, "users", "role", "User", "role"));
 
 	/**
-	 * The {@code CHECK}s with string literals that are not a list of values: rules across columns and
-	 * patterns. Any other {@code CHECK} with a literal must read as a list of values, so a closed set
-	 * written in another form (a {@code VARCHAR} column, {@code x IS NULL OR x IN (...)}) cannot pass unseen.
+	 * The {@code CHECK}s with string literals that are not a list of values: rules across columns,
+	 * patterns and the non-empty value of an open set ({@code ck_posts_channel}: any subreddit). Any other
+	 * {@code CHECK} with a literal must read as a list of values, so a closed set written in another form (a
+	 * {@code VARCHAR} column, {@code x IS NULL OR x IN (...)}) cannot pass unseen.
 	 */
 	private static final Set<String> NOT_A_VALUE_LIST = Set.of("ck_activation_tokens_token_hash",
 			"ck_assessments_input_hash", "ck_assessments_outcome", "ck_notifications_run",
 			"ck_pipeline_run_sources_error", "ck_pipeline_runs_interruption_status", "ck_pipeline_runs_range",
-			"ck_pipeline_runs_requested_posts", "ck_posts_assessing_owner", "ck_posts_content_hash",
+			"ck_pipeline_runs_requested_posts", "ck_posts_assessing_owner", "ck_posts_channel", "ck_posts_content_hash",
 			"ck_posts_stage_attempts", "ck_raw_payloads_sha256");
 
 	private static final Pattern ANY_LITERAL = Pattern.compile("'(?:[^']|'')*'::");

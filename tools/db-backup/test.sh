@@ -247,9 +247,9 @@ with raw as (
     from generate_series(1, $posts)
     returning id
 )
-insert into posts (source, item_type, source_item_id, published_at, title, body, raw_payload_id,
+insert into posts (source, item_type, source_item_id, channel, published_at, title, body, raw_payload_id,
         content_hash, stage, first_run_id)
-    select 'wykop', 'post', (row_number() over ())::text, now(), 'title', 'body', raw.id, repeat('b', 64),
+    select 'wykop', 'post', (row_number() over ())::text, 'gielda', now(), 'title', 'body', raw.id, repeat('b', 64),
         'assessed', (select id from pipeline_runs)
     from raw;
 insert into assessments (post_id, run_id, status, input, input_hash, output, violations, result_source,

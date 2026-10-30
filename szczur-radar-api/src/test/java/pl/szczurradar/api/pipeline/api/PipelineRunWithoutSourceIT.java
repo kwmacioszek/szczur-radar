@@ -35,9 +35,9 @@ import pl.szczurradar.api.user.User;
 import pl.szczurradar.api.user.UserRepository;
 
 /**
- * Without Wykop's keys (the usual CI and PR env state until they are set) no source is configured: a
- * range request is refused with 503 {@code source_not_configured} and creates no run, and no day is
- * missing.
+ * Without Wykop's keys and without {@code REDDIT_SUBREDDITS} (the usual CI and PR env state until they are
+ * set) no source is configured: a range request is refused with 503 {@code source_not_configured} and
+ * creates no run, and no day is missing.
  */
 @SpringBootTest(properties = { MigrateCommand.ENABLE_FLYWAY, "WYKOP_KEY=", "WYKOP_SECRET=" })
 @AutoConfigureMockMvc
@@ -77,7 +77,7 @@ class PipelineRunWithoutSourceIT {
 		assertThat(jdbc.queryForObject("SELECT count(*) FROM pipeline_runs", Integer.class)).isEqualTo(before);
 		assertThat(mvc.get().uri("/api/admin/pipeline-runs/sources").with(user(admin.toString()).roles(Role.ADMIN.name())))
 			.bodyJson()
-			.isStrictlyEqualTo("[{\"source\":\"wykop\",\"configured\":false}]");
+			.isStrictlyEqualTo("[{\"source\":\"wykop\",\"configured\":false},{\"source\":\"reddit\",\"configured\":false}]");
 	}
 
 	@Test

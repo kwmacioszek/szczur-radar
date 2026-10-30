@@ -70,8 +70,8 @@ public final class PostSeeds {
 	/** As {@link #post(PostStage, int, String)}, with {@code raw} (UTF-8 JSON) as its raw payload. */
 	public UUID post(PostStage stage, int attempts, String publishedAt, byte[] raw) {
 		String id = UUID.randomUUID().toString();
-		Post post = posts.save(new Post(Source.WYKOP, ItemType.POST, id, Instant.parse(publishedAt), null, "treść " + id,
-				"uzytkownik1", null, "https://wykop.pl/wpis/" + id, List.of("gielda"),
+		Post post = posts.save(new Post(Source.WYKOP, ItemType.POST, id, "gielda", Instant.parse(publishedAt), null,
+				"treść " + id, "uzytkownik1", null, "https://wykop.pl/wpis/" + id, List.of("gielda"),
 				rawPayloads.store(Source.WYKOP, raw), runId));
 		posts.flush();
 		jdbc.update("UPDATE posts SET stage = ?, assessment_attempts = ? WHERE id = ?", stage.value(), attempts,

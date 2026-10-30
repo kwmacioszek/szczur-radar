@@ -13,7 +13,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -37,9 +36,8 @@ import pl.szczurradar.api.pipeline.run.PipelineRunRepository;
 import pl.szczurradar.api.pipeline.run.RunKind;
 import pl.szczurradar.api.pipeline.run.RunStatus;
 import pl.szczurradar.api.pipeline.run.SourceFetchStatus;
-import pl.szczurradar.api.sources.ScriptedSourceConfiguration;
-import pl.szczurradar.api.sources.ScriptedSourceFetcher;
 import pl.szczurradar.api.sources.Source;
+import pl.szczurradar.api.sources.reddit.LocalReddit;
 import pl.szczurradar.api.sources.wykop.WykopConfiguration;
 import pl.szczurradar.api.user.Role;
 import pl.szczurradar.api.user.SystemAccount;
@@ -49,16 +47,16 @@ import pl.szczurradar.api.user.UserRepository;
 /**
  * {@code GET /api/admin/pipeline-runs/missing-days} on Postgres with a fixed clock (today is 24 October
  * 2026 in Warsaw, so the window is 9–22 October): which runs cover a day and the exact answer. Wykop is
- * configured with keys no call uses (no run executes here); the second source ({@link ScriptedSourceFetcher}
- * of {@link Source#REDDIT}) only in the scenario that switches it on. Runs are stored through the entities,
- * then ended as the pipeline would end them, with each source's result written as {@code RunRecorder.source}
- * writes it. Each test rolls back. Who may read it: {@code AuthorizationCompletenessIT} and
- * {@code AdminRoleIT} ({@code ADMIN_ROUTES}).
+ * configured with keys no call uses (no run executes here); Reddit ({@link LocalReddit}, searched by no call
+ * either) only in the scenario that names its subreddits. Runs are stored through the entities, then ended
+ * as the pipeline would end them, with each source's result written as {@code RunRecorder.source} writes it.
+ * Each test rolls back. Who may read it: {@code AuthorizationCompletenessIT} and {@code AdminRoleIT}
+ * ({@code ADMIN_ROUTES}).
  */
 @SpringBootTest(properties = { MigrateCommand.ENABLE_FLYWAY, WykopConfiguration.KEY + "=test-key",
 		WykopConfiguration.SECRET + "=test-secret" })
 @AutoConfigureMockMvc
-@Import({ TestcontainersConfiguration.class, ScriptedSourceConfiguration.class, MissingDaysIT.FixedClock.class })
+@Import({ TestcontainersConfiguration.class, LocalReddit.class, MissingDaysIT.FixedClock.class })
 @Transactional
 class MissingDaysIT {
 
@@ -86,13 +84,12 @@ class MissingDaysIT {
 	@Autowired
 	UserRepository users;
 
-	@Autowired
-	ScriptedSourceFetcher reddit;
-
 	private UUID admin;
 
 	@BeforeEach
 	void setUp() {
+		// Reddit not configured unless the scenario names its subreddits.
+		LocalReddit.reset();
 		// The other tests of this context share the database: within this test's transaction no earlier
 		// run covers a day, so only the runs of this test count, and none is queued or running, so this
 		// test's running run never meets uq_pipeline_runs_one_running.
@@ -102,11 +99,6 @@ class MissingDaysIT {
 				RunStatus.QUEUED.value(), RunStatus.RUNNING.value());
 		admin = users.saveAndFlush(new User("missing-days-" + UUID.randomUUID() + "@example.com", null, Role.ADMIN))
 			.getId();
-	}
-
-	@AfterEach
-	void tearDown() {
-		reddit.reset();
 	}
 
 	@Test
@@ -174,7 +166,7 @@ class MissingDaysIT {
 
 	@Test
 	void aPartialRunCoversOnlyTheSourcesThatSucceeded() {
-		reddit.configured(true);
+		LocalReddit.configure(List.of("stocks"));
 		Map<Source, SourceFetchStatus> redditDown = results(SourceFetchStatus.SUCCEEDED, SourceFetchStatus.FAILED);
 		Map<Source, SourceFetchStatus> bothUp = results(SourceFetchStatus.SUCCEEDED, SourceFetchStatus.SUCCEEDED);
 		// Reddit gave its first post on 13 October: the run before it, though it requested Reddit, does not

@@ -336,8 +336,9 @@ class PostRepositoryIT {
 	@Test
 	void textsWithNulAreStoredWithoutIt() {
 		// PostgreSQL rejects U+0000 in TEXT and jsonb; the entities keep it out (text/Nul).
-		Post saved = posts.save(new Post(Source.WYKOP, ItemType.POST, "80501", Instant.parse("2026-10-01T08:00:00Z"),
-				"tytuł\u0000", "treść\u0000wpisu", "autor\u0000", null, null, List.of("gi\u0000elda"),
+		Post saved = posts.save(new Post(Source.WYKOP, ItemType.POST, "80501", "gi\u0000elda",
+				Instant.parse("2026-10-01T08:00:00Z"), "tytuł\u0000", "treść\u0000wpisu", "autor\u0000", null, null,
+				List.of("gi\u0000elda"),
 				rawPayloads.store(Source.WYKOP, "{\"id\":80501}".getBytes(StandardCharsets.UTF_8)), runId));
 		AssessmentResult failed = new AssessmentResult(AssessmentResult.Status.FAILED, null, FailureClass.SCHEMA_VIOLATION,
 				List.of(new Violation(FailureClass.SCHEMA_VIOLATION, "schema:type", "$", "bad \u0000 value")),
@@ -351,6 +352,7 @@ class PostRepositoryIT {
 		assertThat(loaded.getTitle()).isEqualTo("tytuł");
 		assertThat(loaded.getBody()).isEqualTo("treśćwpisu");
 		assertThat(loaded.getTags()).containsExactly("gielda");
+		assertThat(loaded.getChannel()).isEqualTo("gielda");
 		Assessment loadedAssessment = assessments.findById(assessment.getId()).orElseThrow();
 		assertThat(loadedAssessment.getRawText()).isEqualTo("{\"x\":\"\uFFFD\"}");
 		assertThat(loadedAssessment.getViolations()).singleElement()
@@ -366,8 +368,8 @@ class PostRepositoryIT {
 	}
 
 	private UUID post(ItemType itemType, String sourceItemId, String publishedAt) {
-		Post post = posts.save(new Post(Source.WYKOP, itemType, sourceItemId, Instant.parse(publishedAt), null, "treść",
-				null, null, null, List.of("gielda"),
+		Post post = posts.save(new Post(Source.WYKOP, itemType, sourceItemId, "gielda", Instant.parse(publishedAt),
+				null, "treść", null, null, null, List.of("gielda"),
 				rawPayloads.store(Source.WYKOP, ("{\"id\":" + sourceItemId + "}").getBytes(StandardCharsets.UTF_8)),
 				runId));
 		return post.getId();

@@ -22,8 +22,8 @@ import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.ObjectNode;
 
 import pl.szczurradar.api.pipeline.PipelineStallSettings;
-import pl.szczurradar.api.sources.wykop.LocalWykopServer.Reply;
-import pl.szczurradar.api.sources.wykop.LocalWykopServer.Request;
+import pl.szczurradar.api.sources.LocalApiServer.Reply;
+import pl.szczurradar.api.sources.LocalApiServer.Request;
 
 /**
  * {@link WykopRepository} on real, anonymized search answers of #gielda for 2026-10-01

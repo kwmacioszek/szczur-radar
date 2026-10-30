@@ -128,9 +128,9 @@ class JpaSchemaIT {
 		steps.save(new PipelineRunStep(run.getId(), RunStep.FETCH));
 		byte[] rawJson = "{\"id\":70001, \"votes\":{\"up\":3}}".getBytes(StandardCharsets.UTF_8);
 		RawPayloadRef raw = rawPayloads.store(Source.WYKOP, rawJson);
-		Post post = posts.save(new Post(Source.WYKOP, ItemType.POST, "70001", Instant.parse("2026-10-01T08:15:00Z"),
-				null, "Treść wpisu #gielda", "uzytkownik1", "tresc-wpisu", "https://wykop.pl/wpis/70001/tresc-wpisu",
-				List.of("gielda", "inwestycje"), raw, run.getId()));
+		Post post = posts.save(new Post(Source.WYKOP, ItemType.POST, "70001", "gielda",
+				Instant.parse("2026-10-01T08:15:00Z"), null, "Treść wpisu #gielda", "uzytkownik1", "tresc-wpisu",
+				"https://wykop.pl/wpis/70001/tresc-wpisu", List.of("gielda", "inwestycje"), raw, run.getId()));
 		AssessmentInputV1 input = ContractFixtures.validInput();
 		AssessmentResult ok = new AssessmentResult(AssessmentResult.Status.OK, ContractFixtures.validOutput(), null,
 				List.of(), modelProvenance(), "{\"raw\":\"text\"}");

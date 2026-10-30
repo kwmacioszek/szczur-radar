@@ -152,8 +152,8 @@ class PostStoreTest {
 	}
 
 	private static SourcePost post(ItemType type, String id) {
-		return new SourcePost(Source.WYKOP, type, id, Instant.parse("2026-10-01T08:00:00Z"), null, "treść " + id, "autor",
-				null, null, List.of("gielda"), ("{\"id\":" + id + "}").getBytes());
+		return new SourcePost(Source.WYKOP, type, id, "gielda", Instant.parse("2026-10-01T08:00:00Z"), null,
+				"treść " + id, "autor", null, null, List.of("gielda"), ("{\"id\":" + id + "}").getBytes());
 	}
 
 	private TransactionTemplate transaction() {

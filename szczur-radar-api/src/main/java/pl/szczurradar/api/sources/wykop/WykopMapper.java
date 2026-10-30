@@ -13,6 +13,7 @@ import pl.szczurradar.api.agents.assessor.contract.AssessmentInputV1;
 import pl.szczurradar.api.agents.assessor.contract.Context;
 import pl.szczurradar.api.agents.assessor.contract.Item;
 import pl.szczurradar.api.agents.assessor.contract.ItemType;
+import pl.szczurradar.api.sources.UnmappableItemException;
 import pl.szczurradar.api.text.Nul;
 import pl.szczurradar.api.text.Whitespace;
 
