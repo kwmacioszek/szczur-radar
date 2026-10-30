@@ -29,8 +29,9 @@ each side because Arctic Shift's `after` and `before` are exclusive (`after=1793
   `1xh44sm` is a crosspost from its author's profile (`crosspost_parent_list`) whose `_meta` says
   `was_deleted_later` with `removed_by_category: null` — still a live post for the repository.
   `1xh5lkk` is spam linking a Reddit profile in its `selftext`; the profile's nick (not an author of
-  the file) was replaced by hand with `uzytkownik15` after the command below, as mentions are in the
-  Wykop fixtures (`@uzytkownikN`). The rest of its text is as recorded.
+  the file) was replaced by hand with `uzytkownik15` after the general anonymization, as mentions
+  are in the Wykop fixtures (`@uzytkownikN`). The additional step below reproduces that exception;
+  the rest of its text is as recorded.
 - `search-posts-stocks.json`: the first 25 posts of the day of r/stocks (a full page of
   `limit=25`; the day has more), all self-posts: 19 removed (`removed_by_category`: 16 `moderator`,
   3 `reddit`; `selftext` `[removed]`) and 6 visible, one of them the daily discussion thread.
@@ -41,7 +42,8 @@ each side because Arctic Shift's `after` and `before` are exclusive (`after=1793
 
 Kept as recorded (public identifiers and content): `id`, `name`, `permalink`, `url`, `subreddit`,
 `created_utc`, `title`, `selftext`, `removed_by_category`, `_meta` and every other field not listed
-below. Changed:
+below. The one content exception is the profile mention in `selftext` of post `1xh5lkk`, described
+above. Changed:
 
 - `author` → `uzytkownikN`, one number per nick within a file in order of first appearance (also in
   `crosspost_parent_list`); `[deleted]` stays;
@@ -49,17 +51,23 @@ below. Changed:
 - `profile_img` and `thumbnail` holding a URL (avatars, previews) → `<url>` (`self`, `default` stay);
 - `media`, `secure_media`, `preview`, `media_metadata`, `gallery_data` and a non-empty `media_embed` /
   `secure_media_embed` → `<media>` (a `null` stays `null`);
-- any other string holding a nick (the crosspost's profile subreddit `u_<nick>`, `u/<nick>`, its
-  `/user/<nick>/…` permalink) → the nick's alias; `title` and `selftext` are post content and stay.
+- any other string holding an author's nick (the crosspost's profile subreddit `u_<nick>`,
+  `u/<nick>`, its `/user/<nick>/…` permalink) → the nick's alias; this general step leaves `title`
+  and `selftext` unchanged;
+- only for `1xh5lkk`, the profile nick in the link label and URL inside `selftext` →
+  `uzytkownik15`; every other part of that post's content stays.
 
 Checked after the run: no author's nick is left anywhere in either file, and `id`, `permalink`,
-`url`, `subreddit`, `created_utc`, `title`, `selftext`, `removed_by_category`, `_meta` and `is_self`
-equal the recording for every post.
+`url`, `subreddit`, `created_utc`, `title`, `removed_by_category`, `_meta` and `is_self` equal the
+recording for every post. `selftext` also equals the recording except for the documented profile
+mention in `1xh5lkk`.
 
-Command (jq 1.8), run on each recorded answer:
+To reproduce both the general anonymization and the additional mention replacement, save the two
+filters below and run (jq 1.8) on each recorded answer. The second filter changes only `1xh5lkk`;
+the r/stocks recording is unchanged by that step.
 
 ```bash
-jq -f anonymize.jq answer.json > search-posts-<subreddit>.json
+jq -f anonymize.jq answer.json | jq -f anonymize-mention.jq > search-posts-<subreddit>.json
 ```
 
 `anonymize.jq`:
@@ -70,7 +78,8 @@ jq -f anonymize.jq answer.json > search-posts-<subreddit>.json
 # first appearance; "[deleted]" stays. author_fullname -> t2_<alias>; avatar and thumbnail URLs ->
 # "<url>"; media, secure_media, preview, media_metadata, gallery_data and non-empty *_media_embed ->
 # "<media>"; any other string holding a nick (e.g. a crosspost from the author's profile, u_<nick>)
-# gets the alias. title and selftext (post content) and everything else stay as recorded.
+# gets the alias. This stage leaves title and selftext (post content) unchanged; the one mention
+# exception is applied afterwards by anonymize-mention.jq. Everything else stays as recorded.
 def nicks: [.. | objects | .author? | strings | select(. != "[deleted]")] | reduce .[] as $n ([]; if index([$n]) then . else . + [$n] end);
 (nicks | to_entries | map({nick: .value, alias: ("uzytkownik" + (.key + 1 | tostring))})) as $aliases
 | def alias($n): if $n == "[deleted]" then $n else ($aliases[] | select(.nick == $n) | .alias) end;
@@ -92,4 +101,17 @@ def nicks: [.. | objects | .author? | strings | select(. != "[deleted]")] | redu
     elif type == "string" then reduce $aliases[] as $p (.; split($p.nick) | join($p.alias))
     else . end;
   .data |= map(post | scrub)
+```
+
+`anonymize-mention.jq` (reproduces the manual exception without recording the original nick):
+
+```jq
+.data |= map(
+  if .id == "1xh5lkk" then
+    .selftext |= (
+      capture("https://www\\.reddit\\.com/user/(?<nick>[^/]+)/").nick as $nick
+      | split($nick) | join("uzytkownik15")
+    )
+  else . end
+)
 ```

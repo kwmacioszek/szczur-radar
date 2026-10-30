@@ -1,7 +1,7 @@
 ---
 change_id: reddit-source
 title: Reddit jako drugie źródło postów obok Wykopu (S-27)
-status: implemented
+status: impl_reviewed
 created: 2026-10-29
 updated: 2026-10-30
 archived_at: null

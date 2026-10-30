@@ -1,5 +1,6 @@
 package pl.szczurradar.api.sources.reddit;
 
+import java.time.DateTimeException;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -37,7 +38,7 @@ public final class RedditMapper {
 	/**
 	 * @throws UnmappableItemException for a removed or deleted post ({@code selftext} {@code [removed]} or
 	 *     {@code [deleted]}; the repository leaves such posts out already), a post without a subreddit or
-	 *     without text, or a missing or negative {@code created_utc}
+	 *     without text, or a missing, negative or unrepresentable {@code created_utc}
 	 */
 	public static AssessmentInputV1 map(RedditItem item) {
 		if (REMOVED.equals(item.selftext()) || DELETED.equals(item.selftext())) {
@@ -63,7 +64,13 @@ public final class RedditMapper {
 			throw new UnmappableItemException(
 					"Reddit post " + item.id() + " has no valid created_utc (" + seconds + ")");
 		}
-		return OffsetDateTime.ofInstant(Instant.ofEpochSecond(seconds), ZoneOffset.UTC);
+		try {
+			return OffsetDateTime.ofInstant(Instant.ofEpochSecond(seconds), ZoneOffset.UTC);
+		}
+		catch (DateTimeException ex) {
+			throw new UnmappableItemException(
+					"Reddit post " + item.id() + " has no valid created_utc (" + seconds + ")");
+		}
 	}
 
 	/** {@code text} without U+0000 ({@link Nul}), or {@code null} when nothing but white space is left. */

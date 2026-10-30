@@ -12,8 +12,11 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ObjectNode;
@@ -86,6 +89,25 @@ class RedditFetcherTest {
 			.isThrownBy(() -> new RedditFetcher(Optional.of(repository)).fetch(FROM, TO));
 	}
 
+	@ParameterizedTest
+	@MethodSource("unrepresentableTimes")
+	void aPostWithAnUnrepresentableTimeIsSkippedWithoutLosingTheOtherPosts(long seconds) {
+		List<RedditSearchResult.Element> elements = elements("search-posts-inwestowanie.json");
+		RedditSearchResult.Element last = elements.removeLast();
+		List<String> expectedIds = elements.stream().map(element -> element.item().id()).toList();
+		// Only the last real post's timestamp is changed: outside OffsetDateTime or Instant's range.
+		elements.add(element(((ObjectNode) last.raw().deepCopy()).put("created_utc", seconds)));
+		when(repository.subreddits()).thenReturn(List.of("inwestowanie"));
+		when(repository.postsCreatedBetween(FROM, TO)).thenReturn(new RedditSearchResult(elements, 0, 0));
+
+		SourceFetcher.Fetched batch = new RedditFetcher(Optional.of(repository)).fetch(FROM, TO);
+
+		assertThat(batch.fetched()).isEqualTo(14);
+		assertThat(batch.skipped()).isEqualTo(1);
+		assertThat(batch.posts()).hasSize(13);
+		assertThat(batch.posts()).extracting(SourcePost::sourceItemId).containsExactlyElementsOf(expectedIds);
+	}
+
 	@Test
 	void withoutSubredditsItIsNotConfiguredAndCannotFetch() {
 		when(repository.subreddits()).thenReturn(List.of());
@@ -111,6 +133,10 @@ class RedditFetcherTest {
 		when(repository.subreddits()).thenReturn(List.of("stocks"));
 
 		assertThat(new RedditFetcher(Optional.of(repository)).configured()).isTrue();
+	}
+
+	private static Stream<Long> unrepresentableTimes() {
+		return Stream.of(Instant.MAX.getEpochSecond(), Long.MAX_VALUE);
 	}
 
 	/** The posts of a fixture as the repository returns them: the removed ones left out. */

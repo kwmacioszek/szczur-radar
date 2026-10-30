@@ -321,9 +321,11 @@ Klient i repozytorium Reddita nad Arctic Shift, element w nazwach Reddita, lokal
 - Dubletu nie ma: `! rg -n 'ScriptedSourceConfiguration' szczur-radar-api/src REPOSITORY_GUIDELINES.md`
 - Bramka F1 istnieje i sprawdza wejście z fixture'a Reddita: `rg -n 'aWykopOutageLeavesTheRedditPostAssessedFromItsRawPayload|RedditMapper.map' szczur-radar-api/src/test/java/pl/szczurradar/api/pipeline/PipelineRunIT.java`
 - Zdjęte posty poza licznikami: `rg -n 'removedRedditPostsAreNeitherFetchedNorSkipped' szczur-radar-api/src/test/java/pl/szczurradar/api/pipeline/PipelineRunIT.java`
-- Reddit widoczny w `/sources`: `rg -n '"source\\\\":\\\\"reddit\\\\",\\\\"configured\\\\":false' szczur-radar-api/src/test/java/pl/szczurradar/api/pipeline/api/PipelineRunControllerIT.java szczur-radar-api/src/test/java/pl/szczurradar/api/pipeline/api/PipelineRunWithoutSourceIT.java` znajduje oba pliki
+- Reddit widoczny w `/sources`: `rg -n -F '\"source\":\"reddit\",\"configured\":false' szczur-radar-api/src/test/java/pl/szczurradar/api/pipeline/api/PipelineRunControllerIT.java szczur-radar-api/src/test/java/pl/szczurradar/api/pipeline/api/PipelineRunWithoutSourceIT.java` znajduje oba pliki
 - Reguły pakietów wymieniają `LocalReddit`: `rg -n 'LocalReddit' szczur-radar-api/src/main/java/pl/szczurradar/api/sources/CLAUDE.md szczur-radar-api/src/main/java/pl/szczurradar/api/pipeline/CLAUDE.md` znajduje oba pliki
 - Kanał zapisany per źródło w przebiegu dwóch źródeł: `rg -n "channel" szczur-radar-api/src/test/java/pl/szczurradar/api/pipeline/PipelineRunIT.java` znajduje asercje `inwestowanie` i `gielda`
+
+**Implementation Note (2026-10-30, impl-review F1)**: Pierwotne polecenie kontroli 4.5 miało nadmiarowe backslashe we wzorcu regex i zwracało kod 1, mimo obecności asercji. Poprawione powyżej wyszukiwanie literalne `rg -n -F` zwraca kod 0 i znajduje oba pliki: `PipelineRunControllerIT.java:159` oraz `PipelineRunWithoutSourceIT.java:80`. Historyczny tytuł i odhaczenie 4.5 w Progress pozostają bez zmian; ta nota prostuje dowód jego weryfikacji.
 
 ---
 
