@@ -436,11 +436,11 @@ Brak migracji bazy. Zmiana kształtu ciała 404/405/5xx jest zgodna z SPA, któr
 
 #### Automated
 
-- [x] 3.1 Test rejestru Javy przechodzi: `cd szczur-radar-api && ./mvnw -B -Dtest=SpaRulesTest test`
-- [x] 3.2 Test rejestru Vitest przechodzi: `cd szczur-radar-web && npx vitest run src/contract/rules.test.ts`
-- [x] 3.3 Całe testy web i typecheck zielone: `cd szczur-radar-web && npm test && npm run build`
-- [x] 3.4 Obraz web buduje się z własnego kontekstu (`?raw` atrapy i JSON w typecheck): `docker build -t sr-web-contract ./szczur-radar-web && docker rmi sr-web-contract`
-- [x] 3.5 Cały backend zielony: `cd szczur-radar-api && ./mvnw -B verify`
-- [x] 3.6 Celowe zepsucie Javy (agent wykonuje i cofa): nowa wartość w `RunStatus` daje czerwony `SpaRulesTest`; zmiana `Passwords.MIN_LENGTH` daje czerwony `SpaRulesTest`
-- [x] 3.7 Celowe zepsucie SPA (agent wykonuje i cofa): usunięcie etykiety `runStatus`, tekstu powodu w `runs.ts` albo znaku z `WHITE_SPACE` daje czerwony `rules.test.ts`; `detail: 'no_such_code'` w atrapie daje czerwony skan
-- [ ] 3.8 CI na PR zielone: `gh pr checks --watch` kończy się bez czerwonego joba
+- [x] 3.1 Test rejestru Javy przechodzi: `cd szczur-radar-api && ./mvnw -B -Dtest=SpaRulesTest test` — ce7865b
+- [x] 3.2 Test rejestru Vitest przechodzi: `cd szczur-radar-web && npx vitest run src/contract/rules.test.ts` — ce7865b
+- [x] 3.3 Całe testy web i typecheck zielone: `cd szczur-radar-web && npm test && npm run build` — ce7865b
+- [x] 3.4 Obraz web buduje się z własnego kontekstu (`?raw` atrapy i JSON w typecheck): `docker build -t sr-web-contract ./szczur-radar-web && docker rmi sr-web-contract` — ce7865b
+- [x] 3.5 Cały backend zielony: `cd szczur-radar-api && ./mvnw -B verify` — ce7865b
+- [x] 3.6 Celowe zepsucie Javy (agent wykonuje i cofa): nowa wartość w `RunStatus` daje czerwony `SpaRulesTest`; zmiana `Passwords.MIN_LENGTH` daje czerwony `SpaRulesTest` — ce7865b
+- [x] 3.7 Celowe zepsucie SPA (agent wykonuje i cofa): usunięcie etykiety `runStatus`, tekstu powodu w `runs.ts` albo znaku z `WHITE_SPACE` daje czerwony `rules.test.ts`; `detail: 'no_such_code'` w atrapie daje czerwony skan — ce7865b
+- [x] 3.8 CI na PR zielone: `gh pr checks --watch` kończy się bez czerwonego joba — ce7865b
