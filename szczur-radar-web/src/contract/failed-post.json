@@ -1,0 +1,27 @@
+{
+  "id": "<uuid>",
+  "itemType": "post",
+  "publishedAt": "<instant>",
+  "title": "XTB i CDR po wynikach",
+  "body": "XTB po wynikach poleci w górę, dokupuję.\nAnalityk pisze, że CDR spadnie.\n#gielda ",
+  "webUrl": "https://wykop.pl/wpis/12345",
+  "stage": "failed",
+  "assessmentAttempts": 1,
+  "lastAttempt": {
+    "failureClass": "schema_violation",
+    "violations": [
+      {
+        "failureClass": "schema_violation",
+        "rule": "schema:required",
+        "path": "$.claims[0]",
+        "message": "required property 'evidence' not found"
+      }
+    ],
+    "assessedAt": "<instant>",
+    "provider": "gemini",
+    "model": "gemini-3.1-flash-lite"
+  },
+  "technicalFailures": 1,
+  "lastTechnicalError": "IllegalStateException: a bug in the mapper",
+  "onHold": false
+}

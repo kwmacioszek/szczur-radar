@@ -37,6 +37,7 @@ import pl.szczurradar.api.agents.assessor.contract.Target;
 import pl.szczurradar.api.agents.assessor.contract.TargetKind;
 import pl.szczurradar.api.agents.assessor.validation.FailureClass;
 import pl.szczurradar.api.cli.MigrateCommand;
+import pl.szczurradar.api.contract.ContractFiles;
 import pl.szczurradar.api.pipeline.run.PipelineRunRepository;
 import pl.szczurradar.api.posts.AssessmentRepository;
 import pl.szczurradar.api.posts.Post;
@@ -180,6 +181,37 @@ class PostsApiIT {
 			.isEqualTo(ContractJson.MAPPER.valueToTree(ContractFixtures.validOutput().claims()));
 		JsonNode listItem = tree(mvc.get().uri("/api/posts").with(asUser()).exchange()).get("items").get(0);
 		assertThat(detail).isEqualTo(listItem);
+	}
+
+	@Test
+	void postDetailMatchesTheSharedContract() {
+		UUID post = seeds.post(PostStage.ASSESSED, 0, "2026-10-01T09:00:00Z");
+		seeds.okByModel(post, "2026-10-02T08:00:00Z");
+		namePost(post);
+
+		MvcTestResult result = mvc.get().uri("/api/posts/" + post).with(asUser()).exchange();
+
+		assertThat(result).hasStatusOk();
+		ContractFiles.assertMatches(body(result), "post.json");
+	}
+
+	@Test
+	void failedPostMatchesTheSharedContract() {
+		UUID failed = technicalFailures(seeds.post(PostStage.FAILED, 1, "2026-10-01T09:00:00Z"), 1);
+		seeds.failed(failed, "2026-10-02T08:00:00Z", FailureClass.SCHEMA_VIOLATION);
+		namePost(failed);
+		// A violation as the parser reports it, in place of the seed's placeholder one.
+		jdbc.update("UPDATE assessments SET violations = ?::jsonb WHERE post_id = ?",
+				"[{\"failureClass\":\"schema_violation\",\"rule\":\"schema:required\",\"path\":\"$.claims[0]\","
+						+ "\"message\":\"required property 'evidence' not found\"}]",
+				failed);
+		entityManager.clear();
+
+		MvcTestResult result = mvc.get().uri("/api/admin/posts/failed").with(asAdmin()).exchange();
+
+		assertThat(result).hasStatusOk();
+		assertThat(result).bodyJson().extractingPath("$.items[*].id").asArray().containsExactly(failed.toString());
+		ContractFiles.assertMatches(JSON.writeValueAsString(tree(result).get("items").get(0)), "failed-post.json");
 	}
 
 	@Test
@@ -442,6 +474,16 @@ class PostsApiIT {
 		assertThat(result).bodyJson().extractingPath("$.items[0].lastTechnicalError").isEqualTo(TECHNICAL_ERROR);
 		assertThat(result).bodyJson().extractingPath("$.items[0].onHold").isEqualTo(true);
 		assertThat(result).bodyJson().extractingPath("$.items[0].lastAttempt.failureClass").isEqualTo("schema_violation");
+	}
+
+	/**
+	 * Gives a post a fixed text (the body that {@code validOutput()} quotes), author and address, which the
+	 * seed makes from its random id.
+	 */
+	private void namePost(UUID post) {
+		jdbc.update("UPDATE posts SET title = ?, body = ?, author = ?, web_url = ? WHERE id = ?",
+				"XTB i CDR po wynikach", ContractFixtures.BODY, "uzytkownik1", "https://wykop.pl/wpis/12345", post);
+		entityManager.clear();
 	}
 
 	/** Gives a post {@code count} technical failures in a row, as the pipeline's conditional updates would. */

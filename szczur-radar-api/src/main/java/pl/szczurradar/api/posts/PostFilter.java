@@ -17,6 +17,12 @@ import pl.szczurradar.api.text.Whitespace;
  */
 public record PostFilter(@Nullable String quote, @Nullable TargetKind kind, @Nullable Direction direction) {
 
+	/**
+	 * The most characters (UTF-16 units, before white space is stripped) the feed's {@code q} may have; the
+	 * {@code @Size} of the route. The SPA's {@code MAX_QUERY_LENGTH} copies it ({@code rules.json}).
+	 */
+	public static final int MAX_QUERY_LENGTH = 100;
+
 	/** The escape character of {@link #quotePattern()}, named in the query's {@code ESCAPE}. */
 	public static final String LIKE_ESCAPE = "!";
 

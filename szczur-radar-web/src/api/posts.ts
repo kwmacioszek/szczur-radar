@@ -4,6 +4,9 @@ import { apiFetch, apiFetchText } from './client'
 /** The shared model's type of a post. */
 export type ItemType = 'post' | 'link' | 'comment'
 
+/** Failed assessment attempts after which a post is dead: szczur-radar-api posts/Post.MAX_ASSESSMENT_ATTEMPTS. */
+export const MAX_ASSESSMENT_ATTEMPTS = 3
+
 export type Relevance = 'investment_related' | 'not_investment_related' | 'unclear'
 
 /** `target.kind` (contract V2 §3), in the contract's order; also the options of the feed filter. */

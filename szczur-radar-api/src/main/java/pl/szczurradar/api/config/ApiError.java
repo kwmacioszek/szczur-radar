@@ -21,7 +21,12 @@ public record ApiError(ErrorCode detail) {
 
 	/** For filters and Spring Security handlers, which answer outside Spring MVC. */
 	public static void write(HttpServletResponse response, ErrorCode code) throws IOException {
-		response.setStatus(code.status().value());
+		write(response, code.status().value(), code);
+	}
+
+	/** As {@link #write(HttpServletResponse, ErrorCode)}, but with the status the container reported. */
+	public static void write(HttpServletResponse response, int status, ErrorCode code) throws IOException {
+		response.setStatus(status);
 		response.setContentType(MediaType.APPLICATION_JSON_VALUE);
 		// Codes are lower-case enum names: safe to embed without JSON escaping.
 		response.getWriter().write("{\"detail\":\"" + code.code() + "\"}");

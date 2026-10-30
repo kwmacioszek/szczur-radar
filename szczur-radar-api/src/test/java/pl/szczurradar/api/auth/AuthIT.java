@@ -1,6 +1,7 @@
 package pl.szczurradar.api.auth;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.doThrow;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -21,6 +22,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
+import org.springframework.dao.QueryTimeoutException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -28,6 +30,7 @@ import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.session.FindByIndexNameSessionRepository;
 import org.springframework.session.Session;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
 
@@ -60,6 +63,10 @@ class AuthIT {
 	private static final AtomicInteger SEQUENCE = new AtomicInteger();
 
 	private static final AtomicInteger IP_SEQUENCE = new AtomicInteger();
+
+	/** A spy: it answers as usual except in the one test that makes the account lookup fail. */
+	@MockitoSpyBean
+	AccountDetailsService accountDetails;
 
 	@Autowired
 	MockMvcTester mvc;
@@ -208,6 +215,20 @@ class AuthIT {
 			.exchange();
 
 		assertThat(result).hasStatus(HttpStatus.FORBIDDEN).bodyJson().isStrictlyEqualTo("{\"detail\":\"cross_origin\"}");
+	}
+
+	@Test
+	void anAccountStoreFailureIsAnInternalErrorNotAWrongPassword() {
+		String email = newEmail();
+		doThrow(new QueryTimeoutException("the database does not answer")).when(accountDetails)
+			.loadUserByUsername(email);
+
+		MvcTestResult result = login(email, PASSWORD);
+
+		assertThat(result).hasStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+			.bodyJson()
+			.isStrictlyEqualTo("{\"detail\":\"internal_error\"}");
+		assertThat(result.getResponse().getHeaders("Set-Cookie")).isEmpty();
 	}
 
 	// --- limiter --------------------------------------------------------------------------------

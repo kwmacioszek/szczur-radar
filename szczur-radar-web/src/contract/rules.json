@@ -1,0 +1,36 @@
+{
+  "whitespace": [
+    9, 10, 11, 12, 13, 28, 29, 30, 31, 32,
+    133, 160, 5760, 8192, 8193, 8194, 8195, 8196, 8197, 8198,
+    8199, 8200, 8201, 8202, 8232, 8233, 8239, 8287, 12288
+  ],
+  "limits": {
+    "feedQueryMaxLength": 100,
+    "runRangeMaxDays": 7,
+    "runsPageMaxSize": 100,
+    "passwordMinLength": 12,
+    "passwordMaxLength": 128,
+    "maxAssessmentAttempts": 3
+  },
+  "values": {
+    "itemType": ["post", "link", "comment"],
+    "relevance": ["investment_related", "not_investment_related", "unclear"],
+    "direction": ["bullish", "bearish", "neutral", "mixed", "not_expressed", "unclear"],
+    "flag": ["missing_context", "possible_sarcasm", "insufficient_content", "extraction_limit"],
+    "modifier": ["humor", "promotion"],
+    "claimKind": ["factual_claim", "opinion", "investment_thesis", "question", "trade_action"],
+    "attribution": ["author", "reported", "unclear"],
+    "targetKind": ["company", "asset", "sector", "macro_topic", "other", "unknown"],
+    "reference": ["explicit", "contextual", "ambiguous", "unresolved"],
+    "runKind": ["range", "retry", "posts"],
+    "runStatus": ["queued", "running", "succeeded", "partial", "failed", "interrupted"],
+    "interruptionCause": ["deploy", "restart", "shutdown", "lost"],
+    "stepStatus": ["running", "succeeded", "failed", "interrupted"],
+    "step": ["fetch", "store", "select", "assess", "summarize"],
+    "failureClass": ["provider_error", "timeout", "invalid_structured_output", "schema_violation", "invalid_reference", "fabricated_evidence", "domain_invariant_violation"],
+    "source": ["wykop", "reddit"],
+    "sourceStatus": ["succeeded", "empty", "failed"],
+    "attentionReason": ["failed", "interrupted", "source_failed", "source_empty", "dead_posts", "processing_errors", "skipped"]
+  },
+  "errorCodes": ["invalid_credentials", "not_authenticated", "forbidden", "too_many_attempts", "cross_origin", "invalid_request", "unsupported_media_type", "activation_link_invalid", "password_policy", "pipeline_busy", "post_dead", "post_not_found", "source_not_configured", "not_found", "internal_error"]
+}

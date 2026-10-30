@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -42,6 +43,7 @@ import pl.szczurradar.api.TestcontainersConfiguration;
 import pl.szczurradar.api.agents.assessor.Prefilter;
 import pl.szczurradar.api.agents.assessor.contract.ContractJson;
 import pl.szczurradar.api.cli.MigrateCommand;
+import pl.szczurradar.api.contract.ContractFiles;
 import pl.szczurradar.api.llm.Channel;
 import pl.szczurradar.api.llm.LlmClient;
 import pl.szczurradar.api.llm.LlmResponse;
@@ -407,6 +409,45 @@ class PipelineRunControllerIT {
 			assertThat(list).bodyJson().extractingPath("$.items[0].sourcesEmpty").isEqualTo(0);
 		}
 		finally {
+			jdbc.update("DELETE FROM pipeline_run_sources WHERE run_id = ?", run);
+			jdbc.update("DELETE FROM pipeline_runs WHERE id = ?", run);
+		}
+	}
+
+	@Test
+	void runDetailMatchesTheSharedContract() {
+		// The cron's range run of two sources that ended partial: one source failed, elements were skipped,
+		// a post died and one had a technical error. Its counters follow the server's rule: fetched and
+		// skipped are the sums of the sources' results, new posts are fetched minus skipped.
+		UUID run = jdbc.queryForObject("INSERT INTO pipeline_runs (kind, status, requested_by, range_from, range_to,"
+				+ " sources, created_at, started_at, finished_at, last_activity_at, fetched, new_posts, assessed_ok,"
+				+ " assessed_failed, processing_errors, dead, skipped, sources_failed, sources_empty, llm_retries,"
+				+ " flex_fallbacks, error) VALUES ('range', 'partial', ?, '2026-10-13T22:00:00Z', '2026-10-14T21:59:59Z',"
+				+ " ARRAY['wykop', 'reddit'], '2026-10-16T00:30:00Z', '2026-10-16T00:30:05Z', '2026-10-16T00:41:00Z',"
+				+ " '2026-10-16T00:41:00Z', 12, 10, 8, 1, 1, 1, 2, 1, 0, 3, 1,"
+				+ " 'reddit failed: IllegalStateException: 503') RETURNING id", UUID.class,
+				SystemAccount.SCHEDULER.id());
+		jdbc.update("INSERT INTO pipeline_run_steps (run_id, step, status, started_at, finished_at, items_out) VALUES"
+				+ " (?, 'fetch', 'succeeded', '2026-10-16T00:30:06Z', '2026-10-16T00:31:00Z', 12)", run);
+		jdbc.update("INSERT INTO pipeline_run_steps (run_id, step, status, started_at, finished_at, items_in, items_out)"
+				+ " VALUES (?, 'store', 'succeeded', '2026-10-16T00:31:01Z', '2026-10-16T00:31:30Z', 10, 10)", run);
+		jdbc.update("INSERT INTO pipeline_run_steps (run_id, step, status, started_at, finished_at, items_in, items_out)"
+				+ " VALUES (?, 'select', 'succeeded', '2026-10-16T00:31:31Z', '2026-10-16T00:31:32Z', 10, 10)", run);
+		jdbc.update("INSERT INTO pipeline_run_steps (run_id, step, status, started_at, finished_at, items_in, items_out)"
+				+ " VALUES (?, 'assess', 'succeeded', '2026-10-16T00:31:33Z', '2026-10-16T00:41:00Z', 10, 8)", run);
+		jdbc.update("INSERT INTO pipeline_run_sources (run_id, source, status, fetched, skipped, error, finished_at)"
+				+ " VALUES (?, 'wykop', 'succeeded', 12, 2, NULL, '2026-10-16T00:30:40Z')", run);
+		jdbc.update("INSERT INTO pipeline_run_sources (run_id, source, status, fetched, skipped, error, finished_at)"
+				+ " VALUES (?, 'reddit', 'failed', 0, 0, 'IllegalStateException: 503', '2026-10-16T00:31:00Z')", run);
+		try {
+			MvcTestResult page = mvc.get().uri("/api/admin/pipeline-runs/" + run).with(asAdmin()).exchange();
+
+			assertThat(page).hasStatusOk();
+			ContractFiles.assertMatches(
+					new String(page.getResponse().getContentAsByteArray(), StandardCharsets.UTF_8), "run.json");
+		}
+		finally {
+			jdbc.update("DELETE FROM pipeline_run_steps WHERE run_id = ?", run);
 			jdbc.update("DELETE FROM pipeline_run_sources WHERE run_id = ?", run);
 			jdbc.update("DELETE FROM pipeline_runs WHERE id = ?", run);
 		}
