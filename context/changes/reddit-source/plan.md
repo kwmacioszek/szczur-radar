@@ -404,6 +404,8 @@ Zmienna zadeklarowana w IaC i ustawiana w PR env z CI, dokumenty i runbooki (wł
 
 **Implementation Note**: Merge wykonuje wyłącznie człowiek; włączenie na produkcji, weryfikacja i zamknięcie issue #121 idą runbookiem po S-28, nie przez Progress.
 
+**Implementation Note (2026-10-30, impl-review fazy 5, F10)**: Implementacja słusznie odeszła od kontraktu w tych miejscach, a plan tego wcześniej nie odnotował. Runbook włączenia: `railway variable set REDDIT_SUBREDDITS=… --skip-deploys`, potem jeden `railway redeploy` (forma z kontraktu nie jest poprawną składnią CLI i pomijała regułę F-03). Runbook wyłączenia: usunięcie nie działa samo, a CLI nie ma `--skip-deploys` dla `delete`, więc kroki idą za sekcją S-19, z kontrolą `/sources` i usunięciem repository variable. „Do 3 razy” w kontrakcie README to 3 próby, czyli 2 ponowienia; „pusta lista” przerywa start tylko jako wartość bez nazwy (` , `), a pusta zmienna oznacza brak konfiguracji. Kontrola `missing-days` z kontraktu nie może się nie udać, bo źródło nigdy niepokryte nie ma okna: dowodem pokrycia jest wiersz `succeeded` w `sourceResults`. Ostrzeżenie kroku CI przy pustej zmiennej zmienione z „runs without Reddit”, bo po włączeniu na produkcji nowy PR env kopiuje jej wartość. Sekcja Progress bez zmian.
+
 ---
 
 ## Testing Strategy

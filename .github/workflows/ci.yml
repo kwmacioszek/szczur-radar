@@ -434,7 +434,7 @@ jobs:
             exit 1
           fi
           if [ -z "$CI_REDDIT_SUBREDDITS" ]; then
-            echo "::warning::repository variable REDDIT_SUBREDDITS missing: $TARGET_ENV runs without Reddit"
+            echo "::warning::repository variable REDDIT_SUBREDDITS missing: nothing written, $TARGET_ENV keeps the value it has (none, or one copied from production)"
             exit 0
           fi
           current=$(railway variable list -s szczur-radar-api -e "$TARGET_ENV" --json)
