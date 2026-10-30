@@ -8,6 +8,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -43,6 +45,8 @@ import pl.szczurradar.api.user.UserRepository;
 @RequestMapping("/api/auth")
 class AuthController {
 
+	private static final Logger log = LoggerFactory.getLogger(AuthController.class);
+
 	private final AuthenticationManager authenticationManager;
 
 	private final SecurityContextRepository securityContextRepository;
@@ -67,7 +71,8 @@ class AuthController {
 	/**
 	 * 200 with the account and a new session; 401 {@code invalid_credentials} for an unknown e-mail,
 	 * a wrong password or an account without a password (indistinguishable); 429
-	 * {@code too_many_attempts} with {@code Retry-After} over the limit.
+	 * {@code too_many_attempts} with {@code Retry-After} over the limit; 500 {@code internal_error} when the
+	 * account store fails (the attempt does not count towards the limit).
 	 */
 	@PostMapping(path = "/login", consumes = MediaType.APPLICATION_JSON_VALUE)
 	ResponseEntity<?> login(@Valid @RequestBody LoginRequest body, HttpServletRequest request,
@@ -90,7 +95,11 @@ class AuthController {
 					.authenticate(UsernamePasswordAuthenticationToken.unauthenticated(email, body.password()));
 			}
 			catch (InternalAuthenticationServiceException ex) {
-				throw ex; // e.g. the database is down: not a verdict on the credentials
+				// E.g. the database is down: not a verdict on the credentials. Rethrowing would not do:
+				// ExceptionTranslationFilter walks the cause chain, finds an AuthenticationException and
+				// answers 401, which the SPA shows as a wrong password.
+				log.error("login failed: the account store did not answer", ex);
+				return ApiError.response(ErrorCode.INTERNAL_ERROR);
 			}
 			catch (AuthenticationException ex) {
 				outcome = Outcome.FAILURE;
