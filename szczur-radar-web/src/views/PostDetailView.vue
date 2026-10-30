@@ -7,7 +7,7 @@ import AppButton from '../components/AppButton.vue'
 import AppHeader from '../components/AppHeader.vue'
 import PostAssessment from '../components/PostAssessment.vue'
 import StatusMessage from '../components/StatusMessage.vue'
-import { formatDateTime, label } from '../labels'
+import { formatDateTime, label, postOrigin } from '../labels'
 
 const route = useRoute()
 const router = useRouter()
@@ -153,6 +153,7 @@ watch(
         <p class="meta">
           <time :datetime="post.publishedAt">{{ formatDateTime(post.publishedAt) }}</time>
           <span class="type">{{ label('itemType', post.itemType) }}</span>
+          <span class="origin">{{ postOrigin(post.source, post.channel) }}</span>
           <span v-if="post.author" class="author">{{ post.author }}</span>
         </p>
         <p v-if="original">
@@ -246,6 +247,7 @@ p {
   white-space: nowrap;
 }
 
+.origin,
 .author {
   overflow-wrap: anywhere;
 }

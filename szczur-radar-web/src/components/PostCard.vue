@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import type { PostItem } from '../api/posts'
-import { formatDateTime, label } from '../labels'
+import { formatDateTime, label, postOrigin } from '../labels'
 import StanceText from './StanceText.vue'
 import StatusBadge from './StatusBadge.vue'
 
@@ -21,6 +21,7 @@ const output = computed(() => props.post.assessment?.output)
   <article class="post-card">
     <div class="meta">
       <time class="date" :datetime="post.publishedAt">{{ formatDateTime(post.publishedAt) }}</time>
+      <span class="origin">{{ postOrigin(post.source, post.channel) }}</span>
       <span class="type">{{ label('itemType', post.itemType) }}</span>
       <StatusBadge v-if="output" class="relevance" tone="neutral">{{ label('relevance', output.relevance) }}</StatusBadge>
       <span v-if="post.assessment?.resultSource === 'prefilter'" class="note">bez treści, bez oceny modelu</span>
@@ -71,6 +72,11 @@ const output = computed(() => props.post.assessment?.output)
   color: var(--text-h);
   font-weight: 600;
   white-space: nowrap;
+}
+
+/* A long channel name wraps instead of widening the metadata's column. */
+.origin {
+  overflow-wrap: anywhere;
 }
 
 .content {

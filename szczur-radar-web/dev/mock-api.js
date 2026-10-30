@@ -53,7 +53,10 @@
  *       'error'  500.
  * /api/posts answers like posts/api/PostController.java: page, size, total; a page past the end (e.g. /?page=9)
  * is 200 with items [] and the real total. /api/posts/feed-<n> (n from 0 to 119) is the feed's post n, any other
- * id is 404 {"detail":"post_not_found"}; /api/posts/feed-<n>/raw is indented JSON text shaped like a Wykop entry.
+ * id is 404 {"detail":"post_not_found"}; /api/posts/feed-<n>/raw is indented JSON text shaped like a Wykop entry,
+ * whatever the post's source. Each post has source and channel (without its prefix): every third one (n % 3 === 2)
+ * is Reddit's, channel stocks, ValueInvesting or investing in turn, with a https://www.reddit.com/r/<channel>/… address;
+ * the rest are Wykop's, channel gielda.
  * AUTH: 'admin' (/api/auth/me → the admin) or 'anonymous' (/api/auth/me → 401), for the public /activate and /login.
  * ACTIVATION (/activate#<any token>; the token is not checked): 'valid' (lookup → e-mail, activation → 204, then
  *   /login with the "password set" notice), 'invalid' (both → 400 activation_link_invalid), 'policy' (activation →
@@ -323,11 +326,18 @@ async page => {
       flags: [],
     },
   ]
+  // Where post n came from: every third is Reddit's, so its variants are a post and a link, what Reddit gives.
+  const REDDIT_CHANNELS = ['stocks', 'ValueInvesting', 'investing']
+  const feedOrigin = (n) => {
+    if (n % 3 !== 2) return { source: 'wykop', channel: 'gielda', webUrl: `https://wykop.pl/wpis/${n}` }
+    const channel = REDDIT_CHANNELS[Math.floor(n / 3) % REDDIT_CHANNELS.length]
+    return { source: 'reddit', channel, webUrl: `https://www.reddit.com/r/${channel}/comments/${n}/` }
+  }
   const feedItem = (n) => {
     const k = n % feedTexts.length
     const assessment = feedAssessments[k]
     return {
-      id: `feed-${n}`, ...feedTexts[k], author: `uzytkownik${n}`, webUrl: `https://wykop.pl/wpis/${n}`,
+      id: `feed-${n}`, ...feedOrigin(n), ...feedTexts[k], author: `uzytkownik${n}`,
       publishedAt: new Date(Date.UTC(2026, 9, 12, 20, 0) - n * 17 * 60000).toISOString(),
       assessment: assessment
         ? { output: { modifiers: [], ...assessment }, resultSource: 'model', assessedAt: '2026-10-12T21:00:00Z' }

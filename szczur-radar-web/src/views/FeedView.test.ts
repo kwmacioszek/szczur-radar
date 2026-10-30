@@ -25,6 +25,8 @@ vi.mock('../router/scroll', async (importOriginal) => ({
 function post(id: string, overrides: Partial<PostItem> = {}): PostItem {
   return {
     id,
+    source: 'wykop',
+    channel: 'gielda',
     itemType: 'post',
     publishedAt: '2026-10-01T07:15:00Z',
     title: null,

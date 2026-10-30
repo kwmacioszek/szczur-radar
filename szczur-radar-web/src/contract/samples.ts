@@ -100,6 +100,8 @@ export const sampleRun: Run = {
 /** An assessed post with a bullish target resting on an author's claim and a target with only a reported one. */
 export const samplePost: PostItem = {
   id: '<uuid>',
+  source: 'wykop',
+  channel: 'gielda',
   itemType: 'post',
   publishedAt: '<instant>',
   title: 'XTB i CDR po wynikach',

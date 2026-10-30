@@ -39,6 +39,7 @@ import pl.szczurradar.api.posts.PostNotFoundException;
 import pl.szczurradar.api.posts.PostRepository;
 import pl.szczurradar.api.posts.PostStage;
 import pl.szczurradar.api.raw.RawPayloadStore;
+import pl.szczurradar.api.sources.Source;
 
 /**
  * The feed (US-01, FR-006, FR-007): assessed posts, newest first, each with its latest {@code ok}
@@ -133,16 +134,21 @@ class PostController {
 	/**
 	 * One post of the feed.
 	 *
+	 * @param source the {@link Source} it came from: {@code wykop} or {@code reddit}
+	 * @param channel the source's channel in the source's own spelling, without a prefix: {@code gielda},
+	 *     {@code ValueInvesting}
 	 * @param itemType the shared model's type: {@code post}, {@code link} or {@code comment}
 	 * @param assessment its latest {@code ok} assessment; {@code null} only if none was found (should not happen
 	 *     for an assessed post)
 	 */
-	record PostItem(UUID id, ItemType itemType, Instant publishedAt, @Nullable String title, @Nullable String body,
-			@Nullable String author, @Nullable String webUrl, @Nullable AssessmentView assessment) {
+	record PostItem(UUID id, Source source, String channel, ItemType itemType, Instant publishedAt,
+			@Nullable String title, @Nullable String body, @Nullable String author, @Nullable String webUrl,
+			@Nullable AssessmentView assessment) {
 
 		static PostItem of(Post post, @Nullable Assessment assessment) {
-			return new PostItem(post.getId(), post.getItemType(), post.getPublishedAt(), post.getTitle(), post.getBody(),
-					post.getAuthor(), post.getWebUrl(), assessment == null ? null : AssessmentView.of(assessment));
+			return new PostItem(post.getId(), post.getSource(), post.getChannel(), post.getItemType(),
+					post.getPublishedAt(), post.getTitle(), post.getBody(), post.getAuthor(), post.getWebUrl(),
+					assessment == null ? null : AssessmentView.of(assessment));
 		}
 
 	}

@@ -190,10 +190,12 @@ function modelAssessment(targets: Target[], flags: Flag[], claims: Claim[] = [])
 /** The feed filter as applied from the address, every field set. */
 const activeFilter: PostFilter = { q: 'orlen', kind: 'company', direction: 'bullish' }
 
-/** Every variant of the feed's card, newest first; the targets cover four kinds. */
+/** Every variant of the feed's card, newest first; the targets cover four kinds, the last post is Reddit's. */
 const posts: PostItem[] = [
   {
     id: 'model',
+    source: 'wykop',
+    channel: 'gielda',
     itemType: 'post',
     publishedAt: '2026-10-12T19:45:00Z',
     title: null,
@@ -215,6 +217,8 @@ const posts: PostItem[] = [
   },
   {
     id: 'link',
+    source: 'wykop',
+    channel: 'gielda',
     itemType: 'link',
     publishedAt: '2026-10-12T18:10:00Z',
     title: 'Orlen ogłasza buyback za 4 mld zł',
@@ -240,6 +244,8 @@ const posts: PostItem[] = [
   },
   {
     id: 'prefilter',
+    source: 'wykop',
+    channel: 'gielda',
     itemType: 'comment',
     publishedAt: '2026-10-12T17:30:00Z',
     title: null,
@@ -254,6 +260,8 @@ const posts: PostItem[] = [
   },
   {
     id: 'no-assessment',
+    source: 'wykop',
+    channel: 'gielda',
     itemType: 'comment',
     publishedAt: '2026-10-12T16:05:00Z',
     title: null,
@@ -264,6 +272,8 @@ const posts: PostItem[] = [
   },
   {
     id: 'long-url',
+    source: 'wykop',
+    channel: 'gielda',
     itemType: 'post',
     publishedAt: '2026-10-12T15:20:00Z',
     title: null,
@@ -274,6 +284,22 @@ const posts: PostItem[] = [
       [target('t1', 'Orlen', 'not_expressed', null), target('t2', 'ropy', 'bearish', 'hedged', ['c1'], 'asset')],
       ['missing_context'],
       [authorClaim('c1', 'factual_claim', ['t2'], 'przy spadku ceny ropy', 'Cena ropy spada.')],
+    ),
+  },
+  {
+    id: 'reddit',
+    source: 'reddit',
+    channel: 'ValueInvesting',
+    itemType: 'post',
+    publishedAt: '2026-10-12T14:40:00Z',
+    title: 'Is Berkshire sitting on too much cash?',
+    body: 'Berkshire keeps adding to its cash pile and I am still holding. The market looks expensive to me.',
+    author: 'cierpliwy_kapital',
+    webUrl: 'https://www.reddit.com/r/ValueInvesting/comments/1xgabc1/is_berkshire_sitting_on_too_much_cash/',
+    assessment: modelAssessment(
+      [target('t1', 'Berkshire', 'bullish', 'hedged', ['c1'])],
+      [],
+      [authorClaim('c1', 'trade_action', ['t1'], 'I am still holding', 'Autor nadal trzyma akcje Berkshire.')],
     ),
   },
 ]

@@ -350,11 +350,11 @@ Bez migracji. `V12` dał historii wiersze `pipeline_run_sources`, ale stare prze
 
 #### Automated
 
-- [ ] 1.1 Testy API z Testcontainers zielone: `cd szczur-radar-api && ./mvnw -B verify`
-- [ ] 1.2 Testy SPA zielone: `cd szczur-radar-web && npm test`
-- [ ] 1.3 Typecheck i build zielone: `cd szczur-radar-web && npm run build`
-- [ ] 1.4 Plik kontraktu niesie oba pola: `jq -e '.source == "wykop" and .channel == "gielda"' szczur-radar-web/src/contract/post.json`
-- [ ] 1.5 Nowe źródło bez przedrostka jest czerwone: `rg -n "CHANNEL_PREFIXES" szczur-radar-web/src/contract/rules.test.ts`
+- [x] 1.1 Testy API z Testcontainers zielone: `cd szczur-radar-api && ./mvnw -B verify`
+- [x] 1.2 Testy SPA zielone: `cd szczur-radar-web && npm test`
+- [x] 1.3 Typecheck i build zielone: `cd szczur-radar-web && npm run build`
+- [x] 1.4 Plik kontraktu niesie oba pola: `jq -e '.source == "wykop" and .channel == "gielda"' szczur-radar-web/src/contract/post.json`
+- [x] 1.5 Nowe źródło bez przedrostka jest czerwone: `rg -n "CHANNEL_PREFIXES" szczur-radar-web/src/contract/rules.test.ts`
 
 ### Phase 2: Świeżość per źródło
 
