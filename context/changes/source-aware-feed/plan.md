@@ -371,16 +371,16 @@ Bez migracji. `V12` dał historii wiersze `pipeline_run_sources`, ale stare prze
 
 #### Automated
 
-- [x] 3.1 Zrzuty istnieją: `test "$(ls context/changes/source-aware-feed/ui/*.png | wc -l)" -ge 9`
-- [x] 3.2 `ui/README.md` wymienia każdy stan macierzy: `for s in default hover focus-visible disabled error empty loading; do rg -q "$s" context/changes/source-aware-feed/ui/README.md || echo "brak: $s"; done | wc -l | grep -qx ' *0'`
-- [x] 3.3 Dokumenty nie opisują starego kształtu: `! rg -n "findLastUpdate\b|\{lastUpdatedAt\}" --glob '*.md' --glob '!context/archive/**' --glob '!context/changes/**' --glob '!context/domain/**' .`
-- [x] 3.4 PRD zapisuje decyzję: `rg -n "Doprecyzowanie \(2026-10-30, S-29" context/foundation/prd.md`
-- [x] 3.5 CI PR zielone: `gh pr checks <N>`
-- [x] 3.6 PR env: oba źródła w etykiecie, bez starego pola: `curl -sb <cookie> <web-origin>/api/freshness | jq -e '[.sources[].source] == ["wykop","reddit"] and (has("lastUpdatedAt") | not)'`
-- [x] 3.7 PR env: przebieg tylko z Redditem przesuwa tylko Reddita: `jq -en --argjson a "$BEFORE" --argjson b "$AFTER" '($a.sources|length) == 2 and $a.sources[0] == $b.sources[0] and $b.sources[1].lastUpdatedAt > $a.sources[1].lastUpdatedAt'`
-- [x] 3.8 PR env: post Reddita ma źródło i kanał bez przedrostka: `curl -sb <cookie> '<web-origin>/api/posts?page=<page>&size=100' | jq -e 'any(.items[]; .source == "reddit" and (.channel | IN("stocks","ValueInvesting","investing")))'` (zacząć od `page=0`)
-- [x] 3.9 PR env: wdrożony SPA pokazuje oba źródła: `rg -n "Wykop .*Reddit|Reddit · r/" context/changes/source-aware-feed/ui/README.md`
-- [x] 3.10 Komentarz o wyniku w issue: `gh issue view 123 --comments | rg -c "PR env"`
+- [x] 3.1 Zrzuty istnieją: `test "$(ls context/changes/source-aware-feed/ui/*.png | wc -l)" -ge 9` — 4d29bb6
+- [x] 3.2 `ui/README.md` wymienia każdy stan macierzy: `for s in default hover focus-visible disabled error empty loading; do rg -q "$s" context/changes/source-aware-feed/ui/README.md || echo "brak: $s"; done | wc -l | grep -qx ' *0'` — 4d29bb6
+- [x] 3.3 Dokumenty nie opisują starego kształtu: `! rg -n "findLastUpdate\b|\{lastUpdatedAt\}" --glob '*.md' --glob '!context/archive/**' --glob '!context/changes/**' --glob '!context/domain/**' .` — 4d29bb6
+- [x] 3.4 PRD zapisuje decyzję: `rg -n "Doprecyzowanie \(2026-10-30, S-29" context/foundation/prd.md` — 4d29bb6
+- [x] 3.5 CI PR zielone: `gh pr checks <N>` — 4d29bb6
+- [x] 3.6 PR env: oba źródła w etykiecie, bez starego pola: `curl -sb <cookie> <web-origin>/api/freshness | jq -e '[.sources[].source] == ["wykop","reddit"] and (has("lastUpdatedAt") | not)'` — 4d29bb6
+- [x] 3.7 PR env: przebieg tylko z Redditem przesuwa tylko Reddita: `jq -en --argjson a "$BEFORE" --argjson b "$AFTER" '($a.sources|length) == 2 and $a.sources[0] == $b.sources[0] and $b.sources[1].lastUpdatedAt > $a.sources[1].lastUpdatedAt'` — 4d29bb6
+- [x] 3.8 PR env: post Reddita ma źródło i kanał bez przedrostka: `curl -sb <cookie> '<web-origin>/api/posts?page=<page>&size=100' | jq -e 'any(.items[]; .source == "reddit" and (.channel | IN("stocks","ValueInvesting","investing")))'` (zacząć od `page=0`) — 4d29bb6
+- [x] 3.9 PR env: wdrożony SPA pokazuje oba źródła: `rg -n "Wykop .*Reddit|Reddit · r/" context/changes/source-aware-feed/ui/README.md` — 4d29bb6
+- [x] 3.10 Komentarz o wyniku w issue: `gh issue view 123 --comments | rg -c "PR env"` — 4d29bb6
 
 #### Manual
 
