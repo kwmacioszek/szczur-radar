@@ -210,6 +210,7 @@ class PostsApiIT {
 		MvcTestResult result = mvc.get().uri("/api/admin/posts/failed").with(asAdmin()).exchange();
 
 		assertThat(result).hasStatusOk();
+		assertThat(result).bodyJson().extractingPath("$.items[*].id").asArray().containsExactly(failed.toString());
 		ContractFiles.assertMatches(JSON.writeValueAsString(tree(result).get("items").get(0)), "failed-post.json");
 	}
 

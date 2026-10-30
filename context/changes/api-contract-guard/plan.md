@@ -430,7 +430,7 @@ Brak migracji bazy. Zmiana kształtu ciała 404/405/5xx jest zgodna z SPA, któr
 
 #### Manual
 
-- [ ] 2.8 Właściciel przegląda `run.json`, `post.json`, `failed-post.json` i potwierdza, że pokazują reprezentatywne dane: przebieg wymagający uwagi z wynikami źródeł, post z oceną z tezami, nieudany post z naruszeniem
+- [x] 2.8 Właściciel przegląda `run.json`, `post.json`, `failed-post.json` i potwierdza, że pokazują reprezentatywne dane: przebieg wymagający uwagi z wynikami źródeł, post z oceną z tezami, nieudany post z naruszeniem
 
 ### Phase 3: Rejestr skopiowanych reguł
 

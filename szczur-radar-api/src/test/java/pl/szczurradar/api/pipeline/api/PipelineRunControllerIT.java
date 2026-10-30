@@ -430,9 +430,9 @@ class PipelineRunControllerIT {
 		jdbc.update("INSERT INTO pipeline_run_steps (run_id, step, status, started_at, finished_at, items_out) VALUES"
 				+ " (?, 'fetch', 'succeeded', '2026-10-16T00:30:06Z', '2026-10-16T00:31:00Z', 12)", run);
 		jdbc.update("INSERT INTO pipeline_run_steps (run_id, step, status, started_at, finished_at, items_in, items_out)"
-				+ " VALUES (?, 'store', 'succeeded', '2026-10-16T00:31:01Z', '2026-10-16T00:31:30Z', 12, 10)", run);
-		jdbc.update("INSERT INTO pipeline_run_steps (run_id, step, status, started_at, finished_at, items_out) VALUES"
-				+ " (?, 'select', 'succeeded', '2026-10-16T00:31:31Z', '2026-10-16T00:31:32Z', 10)", run);
+				+ " VALUES (?, 'store', 'succeeded', '2026-10-16T00:31:01Z', '2026-10-16T00:31:30Z', 10, 10)", run);
+		jdbc.update("INSERT INTO pipeline_run_steps (run_id, step, status, started_at, finished_at, items_in, items_out)"
+				+ " VALUES (?, 'select', 'succeeded', '2026-10-16T00:31:31Z', '2026-10-16T00:31:32Z', 10, 10)", run);
 		jdbc.update("INSERT INTO pipeline_run_steps (run_id, step, status, started_at, finished_at, items_in, items_out)"
 				+ " VALUES (?, 'assess', 'succeeded', '2026-10-16T00:31:33Z', '2026-10-16T00:41:00Z', 10, 8)", run);
 		jdbc.update("INSERT INTO pipeline_run_sources (run_id, source, status, fetched, skipped, error, finished_at)"

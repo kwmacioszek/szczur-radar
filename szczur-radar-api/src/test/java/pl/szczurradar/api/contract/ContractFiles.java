@@ -38,15 +38,18 @@ public final class ContractFiles {
 
 	/**
 	 * Asserts that {@code json}, masked, equals the contract file {@code fileName}. A failure carries the
-	 * masked body, pretty-printed, ready to be pasted into the file.
+	 * masked body, pretty-printed by Jackson: its content goes into the file, reformatted in the file's style
+	 * (two-space indent, as {@code JSON.stringify}) to keep the diff to the changed fields.
 	 */
 	public static void assertMatches(String json, String fileName) {
 		JsonNode actual = mask(JSON.readTree(json));
 		Path file = Path.of(DIRECTORY + fileName);
 		String pretty = JSON.writerWithDefaultPrettyPrinter().writeValueAsString(actual);
-		assertThat(file).as("the contract file %s is missing; the masked body is:%n%s", file, pretty).exists();
+		assertThat(file)
+			.as("the contract file %s is missing; the masked body (reformat before committing) is:%n%s", file, pretty)
+			.exists();
 		assertThat(actual)
-			.as("the body differs from %s; the masked body is:%n%s", file, pretty)
+			.as("the body differs from %s; the masked body (reformat before committing) is:%n%s", file, pretty)
 			.isEqualTo(JSON.readTree(file));
 	}
 

@@ -50,7 +50,7 @@
       "status": "succeeded",
       "startedAt": "<instant>",
       "finishedAt": "<instant>",
-      "itemsIn": 12,
+      "itemsIn": 10,
       "itemsOut": 10,
       "error": null
     },
@@ -59,7 +59,7 @@
       "status": "succeeded",
       "startedAt": "<instant>",
       "finishedAt": "<instant>",
-      "itemsIn": null,
+      "itemsIn": 10,
       "itemsOut": 10,
       "error": null
     },

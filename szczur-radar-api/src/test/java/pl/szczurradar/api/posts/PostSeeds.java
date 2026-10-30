@@ -99,9 +99,7 @@ public final class PostSeeds {
 	public Assessment okByModel(UUID postId, String assessedAt) {
 		return assessments.saveAndFlush(new Assessment(postId, runId, ContractFixtures.validInput(),
 				new AssessmentResult(AssessmentResult.Status.OK, ContractFixtures.validOutput(), null, List.of(),
-						new Provenance(Provenance.Source.MODEL, Provider.GEMINI, "gemini-3.1-flash-lite", null,
-								ServiceTier.DEFAULT, false, null, null, "p1", "V2", Instant.parse(assessedAt), null, null, null,
-								1_000, 1),
+						modelProvenance(assessedAt),
 						"{}")));
 	}
 
@@ -110,10 +108,14 @@ public final class PostSeeds {
 		return assessments.saveAndFlush(new Assessment(postId, runId, ContractFixtures.validInput(),
 				new AssessmentResult(AssessmentResult.Status.FAILED, null, failureClass,
 						List.of(new Violation(failureClass, "rule", "$", "why")),
-						new Provenance(Provenance.Source.MODEL, Provider.GEMINI, "gemini-3.1-flash-lite", null,
-								ServiceTier.DEFAULT, false, null, null, "p1", "V2", Instant.parse(assessedAt), null, null, null,
-								1_000, 1),
+						modelProvenance(assessedAt),
 						"{}")));
+	}
+
+	/** The provenance of a model's answer at {@code assessedAt}, shared by {@link #okByModel} and {@link #failed}. */
+	private static Provenance modelProvenance(String assessedAt) {
+		return new Provenance(Provenance.Source.MODEL, Provider.GEMINI, "gemini-3.1-flash-lite", null,
+				ServiceTier.DEFAULT, false, null, null, "p1", "V2", Instant.parse(assessedAt), null, null, null, 1_000, 1);
 	}
 
 	/** The bytes of {@code fixtures/wykop/entry.json}, the raw payload of {@link #post(PostStage, int, String)}. */
