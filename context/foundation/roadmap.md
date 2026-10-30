@@ -111,7 +111,7 @@ Na Wykopie (#gielda) i Reddicie codziennie pojawiają się setki postów o inwes
 | S-25 | alert-ping-single-rule          | adres check-in alarmów ma jedną regułę we wszystkich miejscach, a rozjazd kopii jest wykrywany testem                           | —             | NFR `prd.md:259`; audyt P4, P5; destylacja R-27                           | done |
 | S-26 | engine-test-stability           | testy silnika nie zależą od czasu zegara na współdzielonym runnerze, a znane okna fałszywych alarmów (F3) są przypięte testami | —             | audyt E1, E2, E6                                                          | done |
 | S-27 | reddit-source                   | użytkownik widzi w feedzie posty z wybranych subredditów obok Wykopu, ocenione tym samym kontraktem                             | S-20          | FR-023, NFR `prd.md:268`, `prd.md:42`; audyt S3, S6, S7, S8; destylacja Q-01, Q-07 | done        |
-| S-28 | reddit-quality-and-cost         | operator wie przed włączeniem Reddita na produkcji, że ocena postów po angielsku spełnia progi, a koszt mieści się w budżecie    | S-27          | guardrails `prd.md:48-49`; audyt S7; destylacja R-15, R-16, Q-03, Q-04    | proposed |
+| S-28 | reddit-quality-and-cost         | operator wie przed włączeniem Reddita na produkcji, że ocena postów po angielsku spełnia progi, a koszt mieści się w budżecie    | S-27          | guardrails `prd.md:48-49`; audyt S7; destylacja R-15, R-16, Q-03, Q-04    | in-progress |
 | S-29 | source-aware-feed               | użytkownik odróżnia źródło posta w feedzie i szczegółach, a data aktualizacji nie kłamie przy dwóch źródłach                    | S-27          | FR-023, FR-008; audyt S5, S6; destylacja D-08, R-24, Q-02                 | blocked  |
 
 ## Streams
@@ -262,7 +262,7 @@ Brak — każda praca przekrojowa M-3 ma widoczny skutek dla użytkownika albo o
   - Czy wynik pomiaru jest warunkiem włączenia Reddita na produkcji (destylacja Q-04)? — Owner: user. Block: no.
   - Język posta w bazie (decyzja właściciela 2026-10-29 przy planie S-27: ma być zapisany): pole `language` w wyjściu modelu (ścieżka §16 kontraktu, nowa `PROMPT_VERSION`) czy detekcja w backendzie bez LLM, i kolumna `posts.language` z backfillem? — Owner: user (właściciel kontraktu). Block: no (S-27 daje `posts.channel`, z którego język da się zgadnąć; S-28 i tak dotyka promptu przy pomiarze po angielsku).
 - **Risk:** zestaw wzorcowy i nagrania są dziś wyłącznie wykopowe; próbka angielska wymaga oznaczenia przez człowieka, a progi zostały już raz złagodzone (≥ 70 % / ≤ 10 %).
-- **Status:** proposed
+- **Status:** in-progress
 
 ### S-29: Źródło widoczne w feedzie, świeżość bez kłamstwa
 
