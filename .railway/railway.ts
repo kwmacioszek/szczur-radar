@@ -148,6 +148,14 @@ export default defineRailway(() => {
       // secrets (CI step "Ensure PR-env Wykop keys"). Never values here.
       WYKOP_KEY: preserve(),
       WYKOP_SECRET: preserve(),
+      // Reddit's subreddits for the pipeline (S-27; szczur-radar-api/README.md, Reddit):
+      // optional, not a secret — a comma-separated list such as
+      // stocks,ValueInvesting,investing; without it Reddit is a not-configured
+      // source. PR envs get it from the repository variable REDDIT_SUBREDDITS (CI
+      // step "Ensure PR-env Reddit settings"); production's is set by the operator
+      // after S-28 (deploy-plan.md, section S-27). Declared before anyone sets it,
+      // so a set value is kept, never created here. Never a value here.
+      REDDIT_SUBREDDITS: preserve(),
       // Optional: parallel LLM calls of a pipeline run (default 4). Not a secret;
       // declared so that a value set by the operator is kept, never created here.
       PIPELINE_LLM_CONCURRENCY: preserve(),

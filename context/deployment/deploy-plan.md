@@ -1935,7 +1935,7 @@ Repair a bad S-25 release with a new commit (a revert in a PR is one), which goe
 - **`failed` only when no source gave a post** (section S-08, narrowed). Step `fetch` fails with `NoPostsFetchedException`, whose message names each source with its result (for one source the error text is the same as before: `NoPostsFetchedException: wykop gave no post to store (fetched N, skipped M)`). No `store`, `select` or `assess` step follows. The run's counters and a row per source are written before the failure (they are written per source). Signals as for any `failed` run: the bell, cron exit 1 with its check-in and Railway's "deployment crashed", the freshness label stays. This replaces the S-08 sentences "`SourceIngest.fetch` fetches every source first, then throws" and "in which a source gave no post".
 - **The run's page has "Wynik per źródło"** (only for a range run), between "Liczniki" and "Kroki". It lists each source with its badge (`pobrane` / `bez postów` / `błąd`), `pobrane N · pominięte M · posty N−M` and the error. A range run without rows says "Jeszcze żadne źródło nie zakończyło pobrania." This is also what an older run shows when the backfill gave it no row (below). The API sends it in `RunView` as `sourceResults` (in `Source` order) with the counters `sourcesFailed` / `sourcesEmpty`. "Źródła" in the run's details stays the list the run asked for. The bell and the `/admin` list show no per-source result.
 - **"Dni bez danych" per source** (section S-13, changed). A day is covered for a source only when a `succeeded` / `partial` range run has a `succeeded` result for that source. A failed or empty source covers nothing, though the run asked for it, and a source's window starts at its first `succeeded` result. This replaces S-13's sentence "A range run ends `succeeded` / `partial` only when each source fetched without an error and gave at least one post". The freshness label stays global (S-29 makes it per source).
-- **`reddit` is registered, not configured.** `sources/Source.REDDIT` and the value `reddit` in the four `CHECK` sets of a source. There is no fetcher until S-27: `GET /api/admin/pipeline-runs/sources` still lists only `wykop`, and `POST /api/admin/pipeline-runs` with `"sources":["reddit"]` answers 503 `source_not_configured` (an unknown value, e.g. `twitter`, stays 400 `invalid_request`).
+- **`reddit` is registered, not configured.** `sources/Source.REDDIT` and the value `reddit` in the four `CHECK` sets of a source. There is no fetcher until S-27: `GET /api/admin/pipeline-runs/sources` still lists only `wykop`, and `POST /api/admin/pipeline-runs` with `"sources":["reddit"]` answers 503 `source_not_configured` (an unknown value, e.g. `twitter`, stays 400 `invalid_request`). **Update (S-27):** `reddit` is listed as `configured:false` without `REDDIT_SUBREDDITS` (`configured:true` with it); a run naming it without the variable still answers 503 (section S-27).
 - **Unchanged:** the cron's exit codes (`partial` → 0, `failed` / `interrupted` → 1), the keys of `GET /internal/pipeline-runs/{id}`, `trigger.sh`, the S-18 rule that skips the API's alert for a cron run ended `failed` / `interrupted`, the alert's format, RETRY and POSTS runs (no fetch step), the admin's form. Deploy order: an older SPA ignores the new fields, and the new SPA hides the section and names no source in the reasons while the API is older.
 
 ### Migration
@@ -2011,6 +2011,95 @@ Repair a bad S-25 release with a new commit (a revert in a PR is one), which goe
 ### Rollback: fix-forward only
 
 V12 adds a table, two columns and wider `CHECK` sets. An older API runs on that schema, but it would neither write per-source rows nor read them for coverage. Repair a bad S-20 release with a new commit (a revert in a PR is one, plus `V13__…` for any schema fix; never an edit of V12), which goes through CI, the deploy guard and Wait for CI like any merge (section S-14). A rollback in Railway's dashboard skips them. The value `reddit` stays registered: closed sets are append-only.
+
+## S-27: Reddit jako drugie źródło (reddit-source)
+
+**Status:** delivered by PR #132; production verification and closure in issue #121. Change: `reddit-source` (its folder moves to `context/archive/` when the change is archived). S-20 registered `reddit` as a source without code (section S-20). S-27 adds Reddit's acquisition and mapping in `sources/reddit/`: the posts of chosen subreddits, read from the public archive Arctic Shift (`https://arctic-shift.photon-reddit.com`, no key), a self-post as `post` and any other as `link`, assessed with the same contract as Wykop's. The engine, the assessment and the API do not change. Reddit is configured only where `REDDIT_SUBREDDITS` names at least one subreddit: PR envs get it from a repository variable, production stays without it until the operator enables Reddit after S-28 (runbook below). With the second source the retry loop moved out of `WykopApiClient` into `sources/transport/HttpRetry` (Wykop's behaviour unchanged), and every post got the column `channel` (migration `V13`). One new variable, declared with `preserve()`, and one CI step; no new service, no change to the cron's contract or the alert's format.
+
+### What changed for the operator
+
+- **Without `REDDIT_SUBREDDITS` nothing changes in a run** (production until the enabling runbook below). `GET /api/admin/pipeline-runs/sources` lists `reddit` too: `[{"source":"wykop","configured":true},{"source":"reddit","configured":false}]`, and `/admin` → "Nowy przebieg" shows "Reddit (nieskonfigurowane)" disabled. A range run naming `reddit` answers 503 `source_not_configured`; the night (every configured source) and "Dni bez danych" (configured sources only) do not see it.
+- **With it, Reddit is a source of every range run that names no sources**, the night's cron included, fetched after Wykop (`Source` order). Its result is one row `reddit` in "Wynik per źródło" for all its subreddits together: `empty` only when no subreddit gave a post in the range; `failed` (`RedditApiException: …`) when the archive still fails after the retries, the fetch's deadline passes or paging cannot go on without a gap. As for any source since S-20, a failed or empty Reddit next to Wykop's posts makes the run `partial` with `source_failed` / `source_empty` (the bell, `RUN_NEEDS_ATTENTION`, cron exit 0), and "Dni bez danych" count Reddit's days from its first `succeeded` result on.
+- **Reddit posts in the feed** like Wykop's. "Otwórz oryginał" goes to `https://www.reddit.com/r/<subreddit>/comments/…`, and "Dane dla nerdów" shows the full Reddit post object the archive returned (with the author's nick, as Wykop's raw payload has it). The feed and the post page do not name the source or the channel yet (S-29).
+- **Posts taken down are not fetched.** A post removed by a moderator or by Reddit, or deleted by its author (`removed_by_category`, `selftext` `[removed]` / `[deleted]`), is left out before counting: neither `fetched` nor `skipped`, since a skipped element raises the run's attention every night (in the recorded first 25 posts of r/stocks on 2026-10-27, 19 were removed). The API logs one INFO line per subreddit: `Reddit r/<name>: N post(s) in range, R removed or deleted left out, S of unexpected shape`. A post removed after the fetch stays, with its counters as fetched: there is no sync of deletions (PRD, retention NFR).
+- **Retries and the deadline.** 429, 422 ("Timeout. Maybe slow down a bit"), 5xx and transport errors get up to 3 attempts, waiting `Retry-After` or `X-RateLimit-Reset` (up to 30 s), else 2 s and 4 s; each retry is a WARN `Retrying Reddit GET api/posts/search in … after attempt <n> of 3: …`. Another 4xx or an answer without a `data` list (an `error` in it included) fails the source at once. The whole fetch (every subreddit) has 10 min (`FETCH_DEADLINE`), so with the last attempt's time-out a failing archive ends Reddit `failed` (`DEADLINE_EXCEEDED`) before the watchdog's shortest threshold (15 min). Fetched one after another, Wykop and Reddit take at most about 11 min each, within the cron's 90 min together with the assessment.
+- **Wykop unchanged.** Its client runs on the shared loop with the same statuses, waits, messages and request counts (its client test is unchanged). Every Wykop post is stored with `channel` `gielda`.
+- **Unchanged:** the engine, the assessment (prompt `v2.5`, the prefilter, the contract), the API's routes and JSON (no `source` or `channel` in `PostItem`), the SPA, the cron and its exit codes, the alerts.
+
+### Variables (`szczur-radar-api`)
+
+| Variable | Production | PR env |
+| --- | --- | --- |
+| `REDDIT_SUBREDDITS` | unset until the operator enables Reddit after S-28 (runbook below); not a secret, never sealed | the repository variable `REDDIT_SUBREDDITS` (first configuration `stocks,ValueInvesting,investing`), set by the `railway-config` step "Ensure PR-env Reddit settings" before the plan (only when it differs; the value is printed; never on production); without the repository variable the step warns and the PR env runs without Reddit |
+
+The value is a comma-separated list. Each name is stripped, an optional `r/` (lower-case only) is dropped, its case is kept (as Reddit spells it; `posts.channel` takes the payload's spelling anyway), and it must be 2–21 letters, digits or `_`; a name repeated in another case counts once. Unset or blank: Reddit is not configured. A value naming no subreddit, or with an invalid name, fails the start of the server and of every command with Spring, the pre-deploy `migrate` included (exit 1, `Invalid Reddit configuration: REDDIT_SUBREDDITS …` in the log, naming the element), so a deploy with a bad value stops and the previous version keeps serving (details: `szczur-radar-api/README.md`, "Reddit").
+
+`.railway/railway.ts` declares it with `preserve()`, which never creates a value, and not in `variables.ignore`. The declaration lands in the same PR whose CI step first sets the value in a PR env: a variable set before its declaration makes the plan propose `variable.delete`, which the gate refuses (section S-14). The repository variable: `gh variable set REDDIT_SUBREDDITS --body "stocks,ValueInvesting,investing"`; without it new PR envs run without Reddit, and an existing PR env keeps the value it got.
+
+### Migration
+
+`V13__posts_channel.sql` runs in the API's pre-deploy `migrate`. It adds `posts.channel` (the channel a post came from, in the source's spelling: Wykop's tag without `#`, a subreddit's name as its payload writes it; the same value as the assessment input's `channels[0]`), fills it with `gielda` for every existing `wykop` row (no environment had a `reddit` post), then makes it `NOT NULL` with `ck_posts_channel CHECK (channel <> '')`. One `UPDATE` over the Wykop posts in the migration's transaction. No new table (`tools/db-backup/tables.sh` unchanged; the seed of `tools/db-backup/test.sh` writes `channel`), no registration (`reddit` is in the four `CHECK` sets since `V12`). **When `migrate` fails**, Railway stops the deploy and the previous API keeps serving (section F-03, "Troubleshooting (Java)"): fix forward with `V14__…`, never by editing V13.
+
+### Runbook — after the merge (operator; tracked in issue #121)
+
+0. **Standing rules.** No merge to `main` while `/admin` shows a run `RUNNING`, not between about 00:30 and 01:30 UTC (section S-05), and not while the 02:00 UTC backup runs (section S-15). The merge deploys the API (with `V13` in its pre-deploy) and `db-backup` (its `test.sh` changed; `backup.sh` is unchanged). No variable is set on production.
+1. **CI on `main` and the pre-deploy.** All jobs green; `railway-config` plans no change on production (`REDDIT_SUBREDDITS` is declared with `preserve()` and unset there). The API's pre-deploy `migrate` passes with V13 (`Migrating schema "public" to version "13 - posts channel"`), and the API starts (`/api/ready` 200).
+2. **Read production after the deploy** (read-only):
+   - every post has its channel, every Wykop post `gielda`, no Reddit post:
+
+     ```bash
+     railway ssh -s postgres -e production -- 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "
+     SELECT source, channel, count(*) FROM posts GROUP BY source, channel ORDER BY source, channel;"'
+     ```
+
+     Expected: one row `wykop | gielda | <every post>`.
+   - `GET /api/admin/pipeline-runs/sources` (logged in as admin) → `[{"source":"wykop","configured":true},{"source":"reddit","configured":false}]`.
+3. **First night after the merge.** As before S-27: the cron ends `OK: range succeeded` or `OK: range partial` with exit 0, "Wynik per źródło" has one row `wykop` `pobrane`, and the night's new posts have `channel` `gielda` (the query above). Reddit is not in it.
+4. **Record.** Comment on issue #121: the merge commit, the API deployment ID, the pre-deploy line with V13, the query's result, the `/sources` answer and the first night's run id. Keep #121 open: Reddit's own production verification is the enabling runbook below.
+
+### Runbook — enabling Reddit on production (after S-28; operator; tracked in issue #121)
+
+Only once S-28 has shown that the assessment of English posts meets its thresholds and the cost fits the budget. Use the subreddit list S-28 settles on (first configuration: `stocks,ValueInvesting,investing`).
+
+0. **Standing rules.** A redeploy of the API interrupts a running run, and setting a variable from the CLI bypasses the CI deploy guard. So not while `/admin` shows a run `RUNNING` or queued (`GET /api/deploy-safety` → `{"safe":true,"reason":null}`), not between about 00:30 and 01:30 UTC (section S-05), and not while the 02:00 UTC backup runs (section S-15).
+1. **Set the variable and redeploy** (not a secret: as an argument, not sealed; the rule for variables of section F-03: `--skip-deploys`, then one deploy):
+
+   ```bash
+   railway variable set REDDIT_SUBREDDITS=stocks,ValueInvesting,investing -s szczur-radar-api -e production --skip-deploys
+   railway redeploy -s szczur-radar-api -e production -y
+   ```
+
+   A value naming no subreddit or with a bad name stops the redeploy at the pre-deploy `migrate` (`Invalid Reddit configuration: REDDIT_SUBREDDITS …` in its log), and the previous API keeps serving without Reddit: correct the value and redeploy again. Later merges keep the value (`preserve()`).
+2. **Check and a first run** (logged in as admin):
+   - `GET /api/admin/pipeline-runs/sources` → `reddit` `configured: true`; in `/admin` → "Nowy przebieg" Reddit is checked.
+   - A run for D-2 with Reddit only (`/admin`, or `POST /api/admin/pipeline-runs` with `{"from":"<D-2>","to":"<D-2>","sources":["reddit"]}` → 202). On `/admin/runs/<id>`: "Wynik per źródło" has one row `Reddit` `pobrane` with fetched > 0 and skipped 0, and the run has no reason `pominięte`. The API log has one INFO line `Reddit r/<name>: …` per subreddit and `Run <id>: reddit succeeded: fetched N, skipped 0`.
+   - The feed has the day's Reddit posts; on one of them "Otwórz oryginał" goes to `https://www.reddit.com/r/…` and "Dane dla nerdów" shows Reddit's JSON with `subreddit`. The stored channels are the subreddits as their payloads spell them:
+
+     ```bash
+     railway ssh -s postgres -e production -- 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "
+     SELECT channel, count(*) FROM posts WHERE source = '\''reddit'\'' GROUP BY channel ORDER BY channel;"'
+     ```
+3. **First night with Reddit.** The cron ends `OK: range succeeded` or `OK: range partial` with exit 0; the night's run page has two rows in "Wynik per źródło", `wykop` and `reddit`, both `pobrane`, and no `source_failed` / `source_empty`. "Dni bez danych" lists no Reddit day before its first `succeeded` result.
+4. **Record and close.** Comment on issue #121: when the variable was set and its value, the API deployment ID, the first run's id with its Reddit row and the INFO lines, the first night's run id, cron line and page. Close #121 only after this production verification.
+
+### Runbook — Arctic Shift stops delivering (horizon March 2027)
+
+Arctic Shift has no data of its own: it reads Reddit's official Data API, whose public access Reddit closes in March 2027 (the archive's issue #76, where its maintainer answered "Not sure yet what exactly will happen."). The archive gives no uptime guarantee; its outages of October 2026 were each fixed within a day.
+
+- **Symptoms.** Night after night Reddit's result is `empty` (the archive answers without new posts) or `failed` (it does not answer: `RedditApiException: … HTTP 5xx`, `DEADLINE_EXCEEDED`, a transport error). The run ends `partial` with `source_empty` / `source_failed`: the bell and `RUN_NEEDS_ATTENTION` in Telegram every night, cron exit 0 (Wykop's posts are still stored and assessed), and "Dni bez danych" lists the days for Reddit. Check the status page `https://status.arctic-shift.photon-reddit.com` (components API, Archiver) and the repository's issues `https://github.com/ArthurHeitmann/arctic_shift/issues`.
+- **A short outage** (a day or two, an incident on the status page): nothing to do. When the archive is back, fill Reddit's days from "Dni bez danych" (section S-13): a later run fetches whatever the archive holds for those days.
+- **The archive stopped for good** (or longer than you accept an alert every night): turn Reddit off, under the standing rules of the enabling runbook (step 0):
+
+  ```bash
+  railway variable delete REDDIT_SUBREDDITS -s szczur-radar-api -e production
+  railway redeploy -s szczur-radar-api -e production -y
+  ```
+
+  The new API has Reddit not configured: the nights fetch only Wykop (no Reddit `source_failed` / `source_empty`), "Dni bez danych" stops counting Reddit, and `/admin` shows "Reddit (nieskonfigurowane)". The posts already collected stay with their raw payloads and assessments. No code change and no merge; `.railway/railway.ts` keeps only the declaration (`preserve()` creates nothing). Comment the date and the reason on the issue that tracks Reddit (#121, or its successor once #121 is closed). Another way to Reddit's data is a new change (a new client of the source), not this runbook.
+
+### Rollback: fix-forward only
+
+V13 adds a `NOT NULL` column without a default, so an API older than S-27 cannot store a post on this schema (its insert has no `channel`): a rollback in Railway's dashboard would make the next run's `store` step fail. Repair a bad S-27 release with a new commit (a revert in a PR is one, together with `V14__…` that gives `channel` a default or drops it; never an edit of V13), which goes through CI, the deploy guard and Wait for CI like any merge (section S-14). A fault in Reddit's code needs no rollback: delete `REDDIT_SUBREDDITS` (runbook above). Without the variable Reddit's code is never called, and even with it a failing Reddit does not touch Wykop's posts of the same run (section S-20). The value `reddit` stays registered: closed sets are append-only.
 
 ## Phases
 

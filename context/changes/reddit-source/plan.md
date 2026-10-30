@@ -489,26 +489,26 @@ Zmienna zadeklarowana w IaC i ustawiana w PR env z CI, dokumenty i runbooki (wł
 
 #### Automated
 
-- [x] 4.1 Cały backend zielony z Testcontainers: `cd szczur-radar-api && ./mvnw -B verify`
-- [x] 4.2 Dubletu nie ma: `! rg -n 'ScriptedSourceConfiguration' szczur-radar-api/src REPOSITORY_GUIDELINES.md`
-- [x] 4.3 Bramka F1 istnieje i sprawdza wejście z fixture'a Reddita: `rg -n 'aWykopOutageLeavesTheRedditPostAssessedFromItsRawPayload|RedditMapper.map' szczur-radar-api/src/test/java/pl/szczurradar/api/pipeline/PipelineRunIT.java`
-- [x] 4.4 Zdjęte posty poza licznikami: `rg -n 'removedRedditPostsAreNeitherFetchedNorSkipped' szczur-radar-api/src/test/java/pl/szczurradar/api/pipeline/PipelineRunIT.java`
-- [x] 4.5 Reddit widoczny w `/sources`: `rg -n '"source\\\\":\\\\"reddit\\\\",\\\\"configured\\\\":false' szczur-radar-api/src/test/java/pl/szczurradar/api/pipeline/api/PipelineRunControllerIT.java szczur-radar-api/src/test/java/pl/szczurradar/api/pipeline/api/PipelineRunWithoutSourceIT.java` znajduje oba pliki
-- [x] 4.6 Reguły pakietów wymieniają `LocalReddit`: `rg -n 'LocalReddit' szczur-radar-api/src/main/java/pl/szczurradar/api/sources/CLAUDE.md szczur-radar-api/src/main/java/pl/szczurradar/api/pipeline/CLAUDE.md` znajduje oba pliki
-- [x] 4.7 Kanał zapisany per źródło w przebiegu dwóch źródeł: `rg -n "channel" szczur-radar-api/src/test/java/pl/szczurradar/api/pipeline/PipelineRunIT.java` znajduje asercje `inwestowanie` i `gielda`
+- [x] 4.1 Cały backend zielony z Testcontainers: `cd szczur-radar-api && ./mvnw -B verify` — 59138a3
+- [x] 4.2 Dubletu nie ma: `! rg -n 'ScriptedSourceConfiguration' szczur-radar-api/src REPOSITORY_GUIDELINES.md` — 59138a3
+- [x] 4.3 Bramka F1 istnieje i sprawdza wejście z fixture'a Reddita: `rg -n 'aWykopOutageLeavesTheRedditPostAssessedFromItsRawPayload|RedditMapper.map' szczur-radar-api/src/test/java/pl/szczurradar/api/pipeline/PipelineRunIT.java` — 59138a3
+- [x] 4.4 Zdjęte posty poza licznikami: `rg -n 'removedRedditPostsAreNeitherFetchedNorSkipped' szczur-radar-api/src/test/java/pl/szczurradar/api/pipeline/PipelineRunIT.java` — 59138a3
+- [x] 4.5 Reddit widoczny w `/sources`: `rg -n '"source\\\\":\\\\"reddit\\\\",\\\\"configured\\\\":false' szczur-radar-api/src/test/java/pl/szczurradar/api/pipeline/api/PipelineRunControllerIT.java szczur-radar-api/src/test/java/pl/szczurradar/api/pipeline/api/PipelineRunWithoutSourceIT.java` znajduje oba pliki — 59138a3
+- [x] 4.6 Reguły pakietów wymieniają `LocalReddit`: `rg -n 'LocalReddit' szczur-radar-api/src/main/java/pl/szczurradar/api/sources/CLAUDE.md szczur-radar-api/src/main/java/pl/szczurradar/api/pipeline/CLAUDE.md` znajduje oba pliki — 59138a3
+- [x] 4.7 Kanał zapisany per źródło w przebiegu dwóch źródeł: `rg -n "channel" szczur-radar-api/src/test/java/pl/szczurradar/api/pipeline/PipelineRunIT.java` znajduje asercje `inwestowanie` i `gielda` — 59138a3
 
 ### Phase 5: IaC, CI, dokumentacja, weryfikacja w PR env
 
 #### Automated
 
 - [ ] 5.1 CI PR-a zielone: `gh pr checks --watch` kończy się bez porażki
-- [ ] 5.2 Repository variable ustawiona: `gh variable get REDDIT_SUBREDDITS` wypisuje `stocks,ValueInvesting,investing`
+- [x] 5.2 Repository variable ustawiona: `gh variable get REDDIT_SUBREDDITS` wypisuje `stocks,ValueInvesting,investing`
 - [ ] 5.3 PR env: Reddit skonfigurowany: `curl -sb <cookie> <web-origin>/api/admin/pipeline-runs/sources | jq -e '.[] | select(.source == "reddit") | .configured == true'`
 - [ ] 5.4 PR env: przebieg Reddita udany bez pominięć: `curl -sb <cookie> <web-origin>/api/admin/pipeline-runs/<id> | jq -e '(.sourceResults[] | select(.source == "reddit") | .status == "succeeded" and .fetched > 0 and .skipped == 0) and (.attentionReasons | index("skipped") | not)'`
 - [ ] 5.5 PR env: post Reddita w feedzie z RAW: `curl -sb <cookie> '<web-origin>/api/posts?page=<page>&size=100' | jq -e '[.items[] | select((.webUrl // "") | startswith("https://www.reddit.com/r/ValueInvesting/"))] | length > 0'` (zacząć od `page=0`; brak dopasowania na stronie oznacza sprawdzenie kolejnej strony, dopóki `(page + 1) * size < total` z odpowiedzi; brak dopasowania po ostatniej stronie kończy weryfikację błędem) i `curl -sb <cookie> <web-origin>/api/posts/<id>/raw | jq -e '.subreddit == "ValueInvesting"'` dla id znalezionego posta
 - [ ] 5.6 PR env: ten sam zakres drugi raz nie dodaje postów: `curl -sb <cookie> <web-origin>/api/admin/pipeline-runs/<id2> | jq -e '.newPosts == 0 and any(.sourceResults[]; .source == "reddit" and .status == "succeeded" and .fetched > 0 and .skipped == 0)'`
-- [ ] 5.7 Deklaracja IaC i krok CI istnieją: `rg -n 'REDDIT_SUBREDDITS: preserve\(\)' .railway/railway.ts && rg -n 'Ensure PR-env Reddit settings' .github/workflows/ci.yml`
-- [ ] 5.8 Dokumenty wymieniają S-27: `rg -n 'S-27' context/foundation/prd.md context/deployment/deploy-plan.md REPOSITORY_GUIDELINES.md szczur-radar-api/README.md` znajduje każdy z czterech plików
+- [x] 5.7 Deklaracja IaC i krok CI istnieją: `rg -n 'REDDIT_SUBREDDITS: preserve\(\)' .railway/railway.ts && rg -n 'Ensure PR-env Reddit settings' .github/workflows/ci.yml`
+- [x] 5.8 Dokumenty wymieniają S-27: `rg -n 'S-27' context/foundation/prd.md context/deployment/deploy-plan.md REPOSITORY_GUIDELINES.md szczur-radar-api/README.md` znajduje każdy z czterech plików
 
 #### Manual
 

@@ -414,6 +414,37 @@ jobs:
               echo "Set $name in $TARGET_ENV"
             fi
           done
+      - name: Ensure PR-env Reddit settings
+        # The pipeline reads Reddit (Arctic Shift, no key) for the subreddits in
+        # REDDIT_SUBREDDITS (optional: without it Reddit is a not-configured
+        # source and a range run naming it is refused with 503
+        # source_not_configured). PR envs get the list from the repository
+        # variable REDDIT_SUBREDDITS (S-27): written only when it differs, never
+        # on production (set there by the operator after S-28, deploy-plan.md
+        # S-27). Not a secret, so the value may be printed. A missing variable
+        # only warns. Before "Plan and gate": the variable is declared in
+        # .railway/railway.ts (preserve()), so the plan keeps it.
+        if: github.event_name == 'pull_request'
+        env:
+          CI_REDDIT_SUBREDDITS: ${{ vars.REDDIT_SUBREDDITS }}
+        run: |
+          set -o pipefail
+          if [ "$TARGET_ENV" = "production" ]; then
+            echo "::error::refusing to set Reddit settings on production"
+            exit 1
+          fi
+          if [ -z "$CI_REDDIT_SUBREDDITS" ]; then
+            echo "::warning::repository variable REDDIT_SUBREDDITS missing: $TARGET_ENV runs without Reddit"
+            exit 0
+          fi
+          current=$(railway variable list -s szczur-radar-api -e "$TARGET_ENV" --json)
+          if [ "$(printf '%s' "$current" | jq -r '.REDDIT_SUBREDDITS // ""')" = "$CI_REDDIT_SUBREDDITS" ]; then
+            echo "REDDIT_SUBREDDITS already set in $TARGET_ENV: $CI_REDDIT_SUBREDDITS"
+          else
+            printf '%s' "$CI_REDDIT_SUBREDDITS" \
+              | railway variable set REDDIT_SUBREDDITS --stdin -s szczur-radar-api -e "$TARGET_ENV" --skip-deploys >/dev/null
+            echo "Set REDDIT_SUBREDDITS in $TARGET_ENV: $CI_REDDIT_SUBREDDITS"
+          fi
       - name: Web address and deploy window
         # The web origin of the environment (tools/deploy-gate/web-url.sh, the one
         # mapping) and the guard's absolute deadline: this run's creation (shared
