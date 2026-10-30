@@ -5,6 +5,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.stereotype.Component;
+
 import pl.szczurradar.api.sources.Source;
 import pl.szczurradar.api.sources.SourceFetcher;
 import pl.szczurradar.api.sources.SourcePost;
@@ -17,6 +19,7 @@ import pl.szczurradar.api.sources.UnmappableItemException;
  * no elements of the fetch: the repository leaves them out before counting, so they are neither fetched nor
  * skipped.
  */
+@Component
 public class RedditFetcher implements SourceFetcher {
 
 	private final Optional<RedditRepository> repository;

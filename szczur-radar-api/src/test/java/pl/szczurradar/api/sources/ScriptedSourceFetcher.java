@@ -22,6 +22,10 @@ import pl.szczurradar.api.agents.assessor.contract.ItemType;
  * <p>Not configured until a test says so ({@link #configured(boolean)}), so a range run that names no
  * source fetches only the others, and {@link #reset} brings it back to that. A held or delayed fetch whose
  * thread is interrupted throws, keeping the interrupt flag, as a source's client does.
+ *
+ * <p>Only for the engine's unit tests ({@code pipeline/step/SourceIngestTest}), where the sources are
+ * placeholders. The integration tests run real sources over local servers: Wykop on
+ * {@code LocalWykopServer}, Reddit on {@code sources/reddit/LocalReddit}.
  */
 public final class ScriptedSourceFetcher implements SourceFetcher {
 

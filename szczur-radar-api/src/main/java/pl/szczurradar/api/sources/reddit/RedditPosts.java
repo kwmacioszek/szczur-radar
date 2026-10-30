@@ -2,6 +2,7 @@ package pl.szczurradar.api.sources.reddit;
 
 import java.util.List;
 
+import org.springframework.stereotype.Component;
 import tools.jackson.databind.json.JsonMapper;
 
 import pl.szczurradar.api.agents.assessor.contract.AssessmentInputV1;
@@ -16,6 +17,7 @@ import pl.szczurradar.api.sources.UnmappableItemException;
  * input of its first attempt. The post's channel is its subreddit, as the payload spells it: the same as
  * the input's {@code channels[0]}.
  */
+@Component
 public class RedditPosts implements RawInputMapper {
 
 	/** The author Reddit shows for a deleted account: no author. */

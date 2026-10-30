@@ -152,9 +152,11 @@ class PipelineRunControllerIT {
 
 	@Test
 	void theSourcesListSaysWhichAreConfigured() {
+		// Every registered source with its fetcher, in Source order: Wykop on the local server, Reddit without
+		// REDDIT_SUBREDDITS.
 		assertThat(mvc.get().uri("/api/admin/pipeline-runs/sources").with(asAdmin())).hasStatusOk()
 			.bodyJson()
-			.isStrictlyEqualTo("[{\"source\":\"wykop\",\"configured\":true}]");
+			.isStrictlyEqualTo("[{\"source\":\"wykop\",\"configured\":true},{\"source\":\"reddit\",\"configured\":false}]");
 	}
 
 	@Test
@@ -253,10 +255,11 @@ class PipelineRunControllerIT {
 	}
 
 	@Test
-	void aRegisteredSourceWithoutAFetcherIsNotConfigured() {
+	void aRegisteredSourceWithoutItsSettingIsNotConfigured() {
 		int before = jdbc.queryForObject("SELECT count(*) FROM pipeline_runs", Integer.class);
 
-		// Reddit is registered (sources/Source.REDDIT), but has no fetcher before S-27.
+		// Reddit has its fetcher (sources/reddit/RedditFetcher), but without REDDIT_SUBREDDITS no repository: not
+		// configured.
 		assertThat(start("{\"from\":\"2026-10-01\",\"to\":\"2026-10-01\",\"sources\":[\"reddit\"]}"))
 			.hasStatus(HttpStatus.SERVICE_UNAVAILABLE)
 			.bodyJson()

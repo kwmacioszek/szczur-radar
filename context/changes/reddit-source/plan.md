@@ -479,23 +479,23 @@ Zmienna zadeklarowana w IaC i ustawiana w PR env z CI, dokumenty i runbooki (wł
 
 #### Automated
 
-- [x] 3.1 Testy mapowania i źródła zielone: `cd szczur-radar-api && ./mvnw -B test -Dtest='Reddit*Test'`
-- [x] 3.2 Nic nie jest jeszcze beanem: `! rg -n '@Component' szczur-radar-api/src/main/java/pl/szczurradar/api/sources/reddit/`
-- [x] 3.3 Wejście z RAW równe wejściu z elementu dla każdego posta fixture'a (`RedditPostsTest` zielony): `cd szczur-radar-api && ./mvnw -B test -Dtest='RedditPostsTest'`
-- [x] 3.4 Cała jednostkowa część zielona: `cd szczur-radar-api && ./mvnw -B test`
-- [x] 3.5 Kanał Reddita to subreddit: `rg -n 'subreddit\(\)' szczur-radar-api/src/main/java/pl/szczurradar/api/sources/reddit/RedditPosts.java` i `rg -n 'channel' szczur-radar-api/src/test/java/pl/szczurradar/api/sources/reddit/RedditPostsTest.java`
+- [x] 3.1 Testy mapowania i źródła zielone: `cd szczur-radar-api && ./mvnw -B test -Dtest='Reddit*Test'` — afe6103
+- [x] 3.2 Nic nie jest jeszcze beanem: `! rg -n '@Component' szczur-radar-api/src/main/java/pl/szczurradar/api/sources/reddit/` — afe6103
+- [x] 3.3 Wejście z RAW równe wejściu z elementu dla każdego posta fixture'a (`RedditPostsTest` zielony): `cd szczur-radar-api && ./mvnw -B test -Dtest='RedditPostsTest'` — afe6103
+- [x] 3.4 Cała jednostkowa część zielona: `cd szczur-radar-api && ./mvnw -B test` — afe6103
+- [x] 3.5 Kanał Reddita to subreddit: `rg -n 'subreddit\(\)' szczur-radar-api/src/main/java/pl/szczurradar/api/sources/reddit/RedditPosts.java` i `rg -n 'channel' szczur-radar-api/src/test/java/pl/szczurradar/api/sources/reddit/RedditPostsTest.java` — afe6103
 
 ### Phase 4: Rejestracja i testy silnika na prawdziwym Reddicie
 
 #### Automated
 
-- [ ] 4.1 Cały backend zielony z Testcontainers: `cd szczur-radar-api && ./mvnw -B verify`
-- [ ] 4.2 Dubletu nie ma: `! rg -n 'ScriptedSourceConfiguration' szczur-radar-api/src REPOSITORY_GUIDELINES.md`
-- [ ] 4.3 Bramka F1 istnieje i sprawdza wejście z fixture'a Reddita: `rg -n 'aWykopOutageLeavesTheRedditPostAssessedFromItsRawPayload|RedditMapper.map' szczur-radar-api/src/test/java/pl/szczurradar/api/pipeline/PipelineRunIT.java`
-- [ ] 4.4 Zdjęte posty poza licznikami: `rg -n 'removedRedditPostsAreNeitherFetchedNorSkipped' szczur-radar-api/src/test/java/pl/szczurradar/api/pipeline/PipelineRunIT.java`
-- [ ] 4.5 Reddit widoczny w `/sources`: `rg -n '"source\\\\":\\\\"reddit\\\\",\\\\"configured\\\\":false' szczur-radar-api/src/test/java/pl/szczurradar/api/pipeline/api/PipelineRunControllerIT.java szczur-radar-api/src/test/java/pl/szczurradar/api/pipeline/api/PipelineRunWithoutSourceIT.java` znajduje oba pliki
-- [ ] 4.6 Reguły pakietów wymieniają `LocalReddit`: `rg -n 'LocalReddit' szczur-radar-api/src/main/java/pl/szczurradar/api/sources/CLAUDE.md szczur-radar-api/src/main/java/pl/szczurradar/api/pipeline/CLAUDE.md` znajduje oba pliki
-- [ ] 4.7 Kanał zapisany per źródło w przebiegu dwóch źródeł: `rg -n "channel" szczur-radar-api/src/test/java/pl/szczurradar/api/pipeline/PipelineRunIT.java` znajduje asercje `inwestowanie` i `gielda`
+- [x] 4.1 Cały backend zielony z Testcontainers: `cd szczur-radar-api && ./mvnw -B verify`
+- [x] 4.2 Dubletu nie ma: `! rg -n 'ScriptedSourceConfiguration' szczur-radar-api/src REPOSITORY_GUIDELINES.md`
+- [x] 4.3 Bramka F1 istnieje i sprawdza wejście z fixture'a Reddita: `rg -n 'aWykopOutageLeavesTheRedditPostAssessedFromItsRawPayload|RedditMapper.map' szczur-radar-api/src/test/java/pl/szczurradar/api/pipeline/PipelineRunIT.java`
+- [x] 4.4 Zdjęte posty poza licznikami: `rg -n 'removedRedditPostsAreNeitherFetchedNorSkipped' szczur-radar-api/src/test/java/pl/szczurradar/api/pipeline/PipelineRunIT.java`
+- [x] 4.5 Reddit widoczny w `/sources`: `rg -n '"source\\\\":\\\\"reddit\\\\",\\\\"configured\\\\":false' szczur-radar-api/src/test/java/pl/szczurradar/api/pipeline/api/PipelineRunControllerIT.java szczur-radar-api/src/test/java/pl/szczurradar/api/pipeline/api/PipelineRunWithoutSourceIT.java` znajduje oba pliki
+- [x] 4.6 Reguły pakietów wymieniają `LocalReddit`: `rg -n 'LocalReddit' szczur-radar-api/src/main/java/pl/szczurradar/api/sources/CLAUDE.md szczur-radar-api/src/main/java/pl/szczurradar/api/pipeline/CLAUDE.md` znajduje oba pliki
+- [x] 4.7 Kanał zapisany per źródło w przebiegu dwóch źródeł: `rg -n "channel" szczur-radar-api/src/test/java/pl/szczurradar/api/pipeline/PipelineRunIT.java` znajduje asercje `inwestowanie` i `gielda`
 
 ### Phase 5: IaC, CI, dokumentacja, weryfikacja w PR env
 
