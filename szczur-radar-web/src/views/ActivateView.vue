@@ -4,15 +4,17 @@
 // the API only in a JSON body, and nothing here logs it.
 import { computed, nextTick, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { activate, activationFailure, lookupActivation } from '../api/activation'
+import {
+  activate,
+  activationFailure,
+  lookupActivation,
+  PASSWORD_MAX_LENGTH,
+  PASSWORD_MIN_LENGTH,
+} from '../api/activation'
 import { logout } from '../api/auth'
 import { clearSession, ensureSession } from '../auth/session'
 import AppButton from '../components/AppButton.vue'
 import StatusMessage from '../components/StatusMessage.vue'
-
-/** The password policy of the API (auth/Passwords.java): 12–128 characters, counted as code points. */
-const MIN_LENGTH = 12
-const MAX_LENGTH = 128
 
 /** Checking the link, a link that cannot be used, a check that failed (network, 5xx), or the form. */
 type Phase = 'checking' | 'invalid' | 'lookup_failed' | 'form'
@@ -21,10 +23,10 @@ type Phase = 'checking' | 'invalid' | 'lookup_failed' | 'form'
 type FormProblem = 'too_short' | 'too_long' | 'mismatch' | 'password_policy' | 'unavailable'
 
 const PROBLEM_MESSAGES: Record<FormProblem, string> = {
-  too_short: `Hasło musi mieć co najmniej ${MIN_LENGTH} znaków.`,
-  too_long: `Hasło może mieć najwyżej ${MAX_LENGTH} znaków.`,
+  too_short: `Hasło musi mieć co najmniej ${PASSWORD_MIN_LENGTH} znaków.`,
+  too_long: `Hasło może mieć najwyżej ${PASSWORD_MAX_LENGTH} znaków.`,
   mismatch: 'Hasła nie są takie same.',
-  password_policy: `Hasło musi mieć od ${MIN_LENGTH} do ${MAX_LENGTH} znaków.`,
+  password_policy: `Hasło musi mieć od ${PASSWORD_MIN_LENGTH} do ${PASSWORD_MAX_LENGTH} znaków.`,
   unavailable: 'Nie udało się ustawić hasła. Spróbuj ponownie.',
 }
 
@@ -49,8 +51,8 @@ const repeatInvalid = computed(() => problem.value === 'mismatch')
 /** The policy as the API checks it; `[...text]` counts code points, not UTF-16 units. */
 function formProblem(): FormProblem | null {
   const length = [...password.value].length
-  if (length < MIN_LENGTH) return 'too_short'
-  if (length > MAX_LENGTH) return 'too_long'
+  if (length < PASSWORD_MIN_LENGTH) return 'too_short'
+  if (length > PASSWORD_MAX_LENGTH) return 'too_long'
   if (password.value !== repeat.value) return 'mismatch'
   return null
 }
@@ -146,7 +148,7 @@ onMounted(() => {
                 :aria-invalid="passwordInvalid ? 'true' : undefined"
               />
             </label>
-            <span id="password-hint" class="hint">Od {{ MIN_LENGTH }} do {{ MAX_LENGTH }} znaków.</span>
+            <span id="password-hint" class="hint">Od {{ PASSWORD_MIN_LENGTH }} do {{ PASSWORD_MAX_LENGTH }} znaków.</span>
           </div>
           <label>
             Powtórz hasło

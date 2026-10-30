@@ -1,6 +1,7 @@
 // /api/admin/pipeline-runs — the contract of szczur-radar-api pipeline/api/PipelineRunController.
+import { MAX_RANGE_DAYS } from '../missingDays'
 import { ApiError, apiFetch } from './client'
-import type { Page } from './posts'
+import { MAX_ASSESSMENT_ATTEMPTS, type Page } from './posts'
 
 export type RunKind = 'range' | 'retry' | 'posts'
 export type RunStatus = 'queued' | 'running' | 'succeeded' | 'partial' | 'failed' | 'interrupted'
@@ -128,7 +129,10 @@ export function retryPosts(postIds: string[]): Promise<Run[]> {
   })
 }
 
-/** The runs, newest first; `page` from 0, `size` at most 100. */
+/** The API's largest page of runs: szczur-radar-api PipelineRunController.MAX_PAGE_SIZE. */
+export const MAX_RUNS_PAGE_SIZE = 100
+
+/** The runs, newest first; `page` from 0, `size` at most `MAX_RUNS_PAGE_SIZE`. */
 export function fetchRuns(page = 0, size = 20): Promise<Page<Run>> {
   return apiFetch<Page<Run>>(`/api/admin/pipeline-runs?page=${page}&size=${size}`)
 }
@@ -169,11 +173,11 @@ export function startErrorMessage(err: unknown): string {
       case 'pipeline_busy':
         return 'Przebieg już trwa. Poczekaj, aż się zakończy, i spróbuj ponownie.'
       case 'post_dead':
-        return 'Wśród zaznaczonych jest post, którego nie można już ponowić (3 nieudane próby).'
+        return `Wśród zaznaczonych jest post, którego nie można już ponowić (${MAX_ASSESSMENT_ATTEMPTS} nieudane próby).`
       case 'source_not_configured':
         return 'Wybrane źródło nie jest skonfigurowane na serwerze (brak kluczy).'
       case 'invalid_request':
-        return 'Nieprawidłowy zakres: maks. 7 dni, „od” nie później niż „do”, „do” najpóźniej dziś.'
+        return `Nieprawidłowy zakres: maks. ${MAX_RANGE_DAYS} dni, „od” nie później niż „do”, „do” najpóźniej dziś.`
     }
   }
   return 'Nie udało się uruchomić przebiegu. Spróbuj ponownie.'

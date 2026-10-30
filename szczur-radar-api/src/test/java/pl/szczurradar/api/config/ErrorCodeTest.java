@@ -8,6 +8,8 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 /** The error codes are part of the API contract with the SPA: pinned here, with their statuses. */
 class ErrorCodeTest {
@@ -31,7 +33,15 @@ class ErrorCodeTest {
 				entry("post_dead", 400),
 				entry("post_not_found", 404),
 				entry("source_not_configured", 503),
-				entry("not_found", 404)));
+				entry("not_found", 404),
+				entry("internal_error", 500)));
+	}
+
+	@ParameterizedTest
+	@CsvSource({ "400, invalid_request", "401, not_authenticated", "403, forbidden", "404, not_found",
+			"405, invalid_request", "415, unsupported_media_type", "500, internal_error", "503, internal_error" })
+	void forStatusMapsAContainerStatusToACode(int status, String code) {
+		assertThat(ErrorCode.forStatus(status).code()).isEqualTo(code);
 	}
 
 }

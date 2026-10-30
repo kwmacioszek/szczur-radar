@@ -2,6 +2,7 @@
 import { computed, nextTick, onMounted, ref, useTemplateRef } from 'vue'
 import {
   type MissingDays,
+  MAX_RUNS_PAGE_SIZE,
   type Run,
   type SourceState,
   fetchMissingDays,
@@ -124,8 +125,6 @@ function fillForm(range: MissingRange): void {
 // --- runs -------------------------------------------------------------------------------
 /** Rows per page of "Pokaż starsze". */
 const PAGE_SIZE = 20
-/** The API's largest page: a refresh reads at most this many of the newest rows again. */
-const MAX_PAGE_SIZE = 100
 /** How often the list is read again while a run is queued or running. */
 const REFRESH_MS = 10 * 1000
 
@@ -155,7 +154,7 @@ function mergeRuns(fresh: Run[], shown: Run[]): Run[] {
 }
 
 /**
- * Reads the newest runs again: page 0 as large as the rows on screen (at most MAX_PAGE_SIZE; older rows stay), so
+ * Reads the newest runs again: page 0 as large as the rows on screen (at most MAX_RUNS_PAGE_SIZE; older rows stay), so
  * the pages read with "Pokaż starsze" do not disappear. Rows are merged by id: a new run shifts the pages.
  */
 async function loadRuns(): Promise<void> {
@@ -164,7 +163,7 @@ async function loadRuns(): Promise<void> {
   runsLoading.value = runs.value.length === 0
   runsError.value = null
   try {
-    const page = await fetchRuns(0, Math.min(Math.max(runs.value.length, PAGE_SIZE), MAX_PAGE_SIZE))
+    const page = await fetchRuns(0, Math.min(Math.max(runs.value.length, PAGE_SIZE), MAX_RUNS_PAGE_SIZE))
     if (current !== latestRefresh) return
     const wasActive = new Set(runs.value.filter(isActive).map((run) => run.id))
     runs.value = mergeRuns(page.items, runs.value)

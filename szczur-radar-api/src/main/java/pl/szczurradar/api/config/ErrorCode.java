@@ -8,7 +8,9 @@ import org.springframework.http.HttpStatus;
 /**
  * Every application error the API answers with, and its HTTP status. On the wire it is the
  * lower-case name in {@code {"detail": "<code>"}} — part of the contract with the SPA
- * ({@code szczur-radar-web/src/api/client.ts}), so renaming a constant changes the API.
+ * ({@code szczur-radar-web/src/api/client.ts}), so renaming a constant changes the API. The list of codes is
+ * copied into {@code szczur-radar-web/src/contract/rules.json}, which {@code SpaRulesTest} (here) and
+ * {@code rules.test.ts} (the SPA) compare with the code and the SPA.
  */
 public enum ErrorCode {
 
@@ -61,7 +63,13 @@ public enum ErrorCode {
 	 * The addressed resource (e.g. a pipeline run by its id) does not exist; a notification also when it is
 	 * another admin's.
 	 */
-	NOT_FOUND(HttpStatus.NOT_FOUND);
+	NOT_FOUND(HttpStatus.NOT_FOUND),
+
+	/**
+	 * An unexpected server error: an uncaught exception, or any 5xx the container reports. Details only in
+	 * the log, never in the body.
+	 */
+	INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR);
 
 	private final HttpStatus status;
 
@@ -71,6 +79,24 @@ public enum ErrorCode {
 
 	public HttpStatus status() {
 		return status;
+	}
+
+	/**
+	 * The error {@code /error} answers with for a status the container reports (an unhandled exception, an
+	 * unknown route, a method the route does not allow): 400, 401, 403, 404 and 415 keep their own codes,
+	 * every 5xx is {@link #INTERNAL_ERROR}, any other status is {@link #INVALID_REQUEST}.
+	 */
+	public static ErrorCode forStatus(int status) {
+		if (status >= 500) {
+			return INTERNAL_ERROR;
+		}
+		return switch (status) {
+			case 401 -> NOT_AUTHENTICATED;
+			case 403 -> FORBIDDEN;
+			case 404 -> NOT_FOUND;
+			case 415 -> UNSUPPORTED_MEDIA_TYPE;
+			default -> INVALID_REQUEST;
+		};
 	}
 
 	/** The value of {@code detail}, e.g. {@code invalid_credentials}. */

@@ -15,7 +15,13 @@ describe('StanceText', () => {
   })
 
   it.each(['bullish', 'bearish', 'neutral', 'mixed', 'not_expressed', 'unclear'] as const)('marks the %s direction with its class', (direction) => {
-    const wrapper = mountStance({ direction, assertiveness: null, claim_ids: [] })
+    // As the server allows (table §7.2 of the contract): a directional stance has an assertiveness (but mixed) and 1–4 claims.
+    const directional = ['bullish', 'bearish', 'neutral', 'mixed'].includes(direction)
+    const wrapper = mountStance({
+      direction,
+      assertiveness: directional && direction !== 'mixed' ? 'unhedged' : null,
+      claim_ids: directional ? ['c1'] : [],
+    })
     expect(wrapper.classes()).toContain(direction)
   })
 
