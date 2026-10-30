@@ -469,21 +469,21 @@ Zmienna zadeklarowana w IaC i ustawiana w PR env z CI, dokumenty i runbooki (wł
 
 #### Automated
 
-- [x] 2.1 Testy transportu Reddita zielone: `cd szczur-radar-api && ./mvnw -B test -Dtest='RedditApiClientTest,RedditRepositoryTest,HttpRetryTest,Wykop*Test'`
-- [x] 2.2 Fixture'y są prawdziwe i zanonimizowane: `for f in szczur-radar-api/src/test/resources/fixtures/reddit/search-posts-*.json; do jq -e '.data | length >= 10' "$f" >/dev/null && test -z "$(jq -r '.data[].author' "$f" | grep -v -E '^(uzytkownik[0-9]+|\[deleted\])$')"; done`
-- [x] 2.3 Fixture r/stocks ma posty zdjęte i widoczne: `jq -e '[.data[] | select(.removed_by_category != null)] | length > 0' szczur-radar-api/src/test/resources/fixtures/reddit/search-posts-stocks.json && jq -e '[.data[] | select(.removed_by_category == null)] | length > 0' szczur-radar-api/src/test/resources/fixtures/reddit/search-posts-stocks.json`
-- [x] 2.4 Termin pobrania przypięty poniżej watchdoga: `rg -n 'aFetchEndsBeforeTheWatchdogsShortestDefault' szczur-radar-api/src/test/java/pl/szczurradar/api/sources/reddit/RedditRepositoryTest.java`
-- [x] 2.5 Cała jednostkowa część zielona: `cd szczur-radar-api && ./mvnw -B test`
+- [x] 2.1 Testy transportu Reddita zielone: `cd szczur-radar-api && ./mvnw -B test -Dtest='RedditApiClientTest,RedditRepositoryTest,HttpRetryTest,Wykop*Test'` — bb0f135
+- [x] 2.2 Fixture'y są prawdziwe i zanonimizowane: `for f in szczur-radar-api/src/test/resources/fixtures/reddit/search-posts-*.json; do jq -e '.data | length >= 10' "$f" >/dev/null && test -z "$(jq -r '.data[].author' "$f" | grep -v -E '^(uzytkownik[0-9]+|\[deleted\])$')"; done` — bb0f135
+- [x] 2.3 Fixture r/stocks ma posty zdjęte i widoczne: `jq -e '[.data[] | select(.removed_by_category != null)] | length > 0' szczur-radar-api/src/test/resources/fixtures/reddit/search-posts-stocks.json && jq -e '[.data[] | select(.removed_by_category == null)] | length > 0' szczur-radar-api/src/test/resources/fixtures/reddit/search-posts-stocks.json` — bb0f135
+- [x] 2.4 Termin pobrania przypięty poniżej watchdoga: `rg -n 'aFetchEndsBeforeTheWatchdogsShortestDefault' szczur-radar-api/src/test/java/pl/szczurradar/api/sources/reddit/RedditRepositoryTest.java` — bb0f135
+- [x] 2.5 Cała jednostkowa część zielona: `cd szczur-radar-api && ./mvnw -B test` — bb0f135
 
 ### Phase 3: Mapowanie i źródło (klasy bez rejestracji w Springu)
 
 #### Automated
 
-- [ ] 3.1 Testy mapowania i źródła zielone: `cd szczur-radar-api && ./mvnw -B test -Dtest='Reddit*Test'`
-- [ ] 3.2 Nic nie jest jeszcze beanem: `! rg -n '@Component' szczur-radar-api/src/main/java/pl/szczurradar/api/sources/reddit/`
-- [ ] 3.3 Wejście z RAW równe wejściu z elementu dla każdego posta fixture'a (`RedditPostsTest` zielony): `cd szczur-radar-api && ./mvnw -B test -Dtest='RedditPostsTest'`
-- [ ] 3.4 Cała jednostkowa część zielona: `cd szczur-radar-api && ./mvnw -B test`
-- [ ] 3.5 Kanał Reddita to subreddit: `rg -n 'subreddit\(\)' szczur-radar-api/src/main/java/pl/szczurradar/api/sources/reddit/RedditPosts.java` i `rg -n 'channel' szczur-radar-api/src/test/java/pl/szczurradar/api/sources/reddit/RedditPostsTest.java`
+- [x] 3.1 Testy mapowania i źródła zielone: `cd szczur-radar-api && ./mvnw -B test -Dtest='Reddit*Test'`
+- [x] 3.2 Nic nie jest jeszcze beanem: `! rg -n '@Component' szczur-radar-api/src/main/java/pl/szczurradar/api/sources/reddit/`
+- [x] 3.3 Wejście z RAW równe wejściu z elementu dla każdego posta fixture'a (`RedditPostsTest` zielony): `cd szczur-radar-api && ./mvnw -B test -Dtest='RedditPostsTest'`
+- [x] 3.4 Cała jednostkowa część zielona: `cd szczur-radar-api && ./mvnw -B test`
+- [x] 3.5 Kanał Reddita to subreddit: `rg -n 'subreddit\(\)' szczur-radar-api/src/main/java/pl/szczurradar/api/sources/reddit/RedditPosts.java` i `rg -n 'channel' szczur-radar-api/src/test/java/pl/szczurradar/api/sources/reddit/RedditPostsTest.java`
 
 ### Phase 4: Rejestracja i testy silnika na prawdziwym Reddicie
 
