@@ -360,27 +360,27 @@ Bez migracji. `V12` dał historii wiersze `pipeline_run_sources`, ale stare prze
 
 #### Automated
 
-- [x] 2.1 Testy API z Testcontainers zielone: `cd szczur-radar-api && ./mvnw -B verify`
-- [x] 2.2 Testy SPA zielone: `cd szczur-radar-web && npm test`
-- [x] 2.3 Typecheck i build zielone: `cd szczur-radar-web && npm run build`
-- [x] 2.4 Plik kontraktu ma kształt listy: `jq -e '.sources[0].source == "wykop" and .sources[1].source == "reddit" and .sources[0].lastUpdatedAt == "<instant>" and (has("lastUpdatedAt") | not)' szczur-radar-web/src/contract/freshness.json`
-- [x] 2.5 Reguły globalnej nie ma w kodzie: `! rg -n "findLastUpdate\b|findFinishedAtOfNewestRange" --glob '*.java' szczur-radar-api/src`
-- [x] 2.6 Przypadek „tylko Reddit” jest przypięty: `rg -n "Reddit" szczur-radar-api/src/test/java/pl/szczurradar/api/pipeline/api/FreshnessIT.java`
+- [x] 2.1 Testy API z Testcontainers zielone: `cd szczur-radar-api && ./mvnw -B verify` — 0181835
+- [x] 2.2 Testy SPA zielone: `cd szczur-radar-web && npm test` — 0181835
+- [x] 2.3 Typecheck i build zielone: `cd szczur-radar-web && npm run build` — 0181835
+- [x] 2.4 Plik kontraktu ma kształt listy: `jq -e '.sources[0].source == "wykop" and .sources[1].source == "reddit" and .sources[0].lastUpdatedAt == "<instant>" and (has("lastUpdatedAt") | not)' szczur-radar-web/src/contract/freshness.json` — 0181835
+- [x] 2.5 Reguły globalnej nie ma w kodzie: `! rg -n "findLastUpdate\b|findFinishedAtOfNewestRange" --glob '*.java' szczur-radar-api/src` — 0181835
+- [x] 2.6 Przypadek „tylko Reddit” jest przypięty: `rg -n "Reddit" szczur-radar-api/src/test/java/pl/szczurradar/api/pipeline/api/FreshnessIT.java` — 0181835
 
 ### Phase 3: Zrzuty, dokumenty i dowód w PR env
 
 #### Automated
 
-- [ ] 3.1 Zrzuty istnieją: `test "$(ls context/changes/source-aware-feed/ui/*.png | wc -l)" -ge 9`
-- [ ] 3.2 `ui/README.md` wymienia każdy stan macierzy: `for s in default hover focus-visible disabled error empty loading; do rg -q "$s" context/changes/source-aware-feed/ui/README.md || echo "brak: $s"; done | wc -l | grep -qx ' *0'`
-- [ ] 3.3 Dokumenty nie opisują starego kształtu: `! rg -n "findLastUpdate\b|\{lastUpdatedAt\}" --glob '*.md' --glob '!context/archive/**' --glob '!context/changes/**' --glob '!context/domain/**' .`
-- [ ] 3.4 PRD zapisuje decyzję: `rg -n "Doprecyzowanie \(2026-10-30, S-29" context/foundation/prd.md`
-- [ ] 3.5 CI PR zielone: `gh pr checks <N>`
-- [ ] 3.6 PR env: oba źródła w etykiecie, bez starego pola: `curl -sb <cookie> <web-origin>/api/freshness | jq -e '[.sources[].source] == ["wykop","reddit"] and (has("lastUpdatedAt") | not)'`
-- [ ] 3.7 PR env: przebieg tylko z Redditem przesuwa tylko Reddita: `jq -en --argjson a "$BEFORE" --argjson b "$AFTER" '($a.sources|length) == 2 and $a.sources[0] == $b.sources[0] and $b.sources[1].lastUpdatedAt > $a.sources[1].lastUpdatedAt'`
-- [ ] 3.8 PR env: post Reddita ma źródło i kanał bez przedrostka: `curl -sb <cookie> '<web-origin>/api/posts?page=<page>&size=100' | jq -e 'any(.items[]; .source == "reddit" and (.channel | IN("stocks","ValueInvesting","investing")))'` (zacząć od `page=0`)
-- [ ] 3.9 PR env: wdrożony SPA pokazuje oba źródła: `rg -n "Wykop .*Reddit|Reddit · r/" context/changes/source-aware-feed/ui/README.md`
-- [ ] 3.10 Komentarz o wyniku w issue: `gh issue view 123 --comments | rg -c "PR env"`
+- [x] 3.1 Zrzuty istnieją: `test "$(ls context/changes/source-aware-feed/ui/*.png | wc -l)" -ge 9`
+- [x] 3.2 `ui/README.md` wymienia każdy stan macierzy: `for s in default hover focus-visible disabled error empty loading; do rg -q "$s" context/changes/source-aware-feed/ui/README.md || echo "brak: $s"; done | wc -l | grep -qx ' *0'`
+- [x] 3.3 Dokumenty nie opisują starego kształtu: `! rg -n "findLastUpdate\b|\{lastUpdatedAt\}" --glob '*.md' --glob '!context/archive/**' --glob '!context/changes/**' --glob '!context/domain/**' .`
+- [x] 3.4 PRD zapisuje decyzję: `rg -n "Doprecyzowanie \(2026-10-30, S-29" context/foundation/prd.md`
+- [x] 3.5 CI PR zielone: `gh pr checks <N>`
+- [x] 3.6 PR env: oba źródła w etykiecie, bez starego pola: `curl -sb <cookie> <web-origin>/api/freshness | jq -e '[.sources[].source] == ["wykop","reddit"] and (has("lastUpdatedAt") | not)'`
+- [x] 3.7 PR env: przebieg tylko z Redditem przesuwa tylko Reddita: `jq -en --argjson a "$BEFORE" --argjson b "$AFTER" '($a.sources|length) == 2 and $a.sources[0] == $b.sources[0] and $b.sources[1].lastUpdatedAt > $a.sources[1].lastUpdatedAt'`
+- [x] 3.8 PR env: post Reddita ma źródło i kanał bez przedrostka: `curl -sb <cookie> '<web-origin>/api/posts?page=<page>&size=100' | jq -e 'any(.items[]; .source == "reddit" and (.channel | IN("stocks","ValueInvesting","investing")))'` (zacząć od `page=0`)
+- [x] 3.9 PR env: wdrożony SPA pokazuje oba źródła: `rg -n "Wykop .*Reddit|Reddit · r/" context/changes/source-aware-feed/ui/README.md`
+- [x] 3.10 Komentarz o wyniku w issue: `gh issue view 123 --comments | rg -c "PR env"`
 
 #### Manual
 

@@ -273,8 +273,8 @@ Brak — każda praca przekrojowa M-3 ma widoczny skutek dla użytkownika albo o
 - **Parallel with:** S-28
 - **Blockers:** —
 - **Unknowns:**
-  - Czy lista i szczegóły mają oznaczać źródło, czy potrzebny jest filtr albo sortowanie po źródle (FR-008, nice-to-have), i czy świeżość ma być per źródło (destylacja Q-02)? — Owner: user. Block: yes (od odpowiedzi zależy zakres widoków i kształt API).
-  - Czy obok źródła feed i szczegóły pokazują kanał (`posts.channel` z S-27: `#gielda`, `r/<subreddit>`) i język posta (jeśli S-28 go zapisze)? — Owner: user. Block: no (rozszerza ten sam `PostItem`).
+  - Czy lista i szczegóły mają oznaczać źródło, czy potrzebny jest filtr albo sortowanie po źródle (FR-008, nice-to-have), i czy świeżość ma być per źródło (destylacja Q-02)? — Owner: user. Rozstrzygnięte w planie `source-aware-feed` z 2026-10-30: lista i szczegóły oznaczają źródło, bez filtra i sortowania (FR-008 zostaje kandydatem do M-5); świeżość per źródło, zawsze rozpisana.
+  - Czy obok źródła feed i szczegóły pokazują kanał (`posts.channel` z S-27: `#gielda`, `r/<subreddit>`) i język posta (jeśli S-28 go zapisze)? — Owner: user. Rozstrzygnięte w planie `source-aware-feed` z 2026-10-30: kanał tak (`Wykop · #gielda`, `Reddit · r/<subreddit>`); język posta nie, decyzja zostaje przy S-28.
 - **Risk:** zmienia kształt odpowiedzi feedu i etykiety świeżości, które widzi każdy użytkownik; po S-27, bo bez drugiego źródła nie ma czego oznaczać.
 - **Status:** in-progress
 
