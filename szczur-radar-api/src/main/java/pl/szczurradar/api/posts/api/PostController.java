@@ -84,7 +84,7 @@ class PostController {
 	@GetMapping("/api/posts")
 	PostPage list(@RequestParam(defaultValue = "0") @Min(0) int page,
 			@RequestParam(defaultValue = "50") @Min(1) @Max(100) int size,
-			@RequestParam(required = false) @Size(max = 100) @Pattern(regexp = "[^\\x00]*") @Nullable String q,
+			@RequestParam(required = false) @Size(max = PostFilter.MAX_QUERY_LENGTH) @Pattern(regexp = "[^\\x00]*") @Nullable String q,
 			@RequestParam(required = false) @Nullable TargetKind kind,
 			@RequestParam(required = false) @Nullable Direction direction) {
 		Page<Post> found = posts.findAssessedPage(new PostFilter(q, kind, direction), page, size);

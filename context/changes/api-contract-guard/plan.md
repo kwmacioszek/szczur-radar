@@ -420,13 +420,13 @@ Brak migracji bazy. Zmiana kształtu ciała 404/405/5xx jest zgodna z SPA, któr
 
 #### Automated
 
-- [x] 2.1 Trzy nowe testy IT przechodzą: `cd szczur-radar-api && ./mvnw -B -Dit.test='PipelineRunControllerIT,PostsApiIT' -Dtest=none -Dsurefire.failIfNoSpecifiedTests=false verify`
-- [x] 2.2 Test kształtów Vitest przechodzi: `cd szczur-radar-web && npx vitest run src/contract/shapes.test.ts`
-- [x] 2.3 Całe testy web i typecheck zielone: `cd szczur-radar-web && npm test && npm run build`
-- [x] 2.4 Obraz web buduje się z własnego kontekstu (typecheck testów z importem JSON): `docker build -t sr-web-contract ./szczur-radar-web && docker rmi sr-web-contract`
-- [x] 2.5 Cały backend zielony: `cd szczur-radar-api && ./mvnw -B verify`
-- [x] 2.6 Celowe zepsucie Javy (agent wykonuje i cofa): nowe pole w `RunView` daje czerwony `runDetailMatchesTheSharedContract` z nowym ciałem w komunikacie
-- [x] 2.7 Celowe zepsucie TS (agent wykonuje i cofa): usunięcie pola z interfejsu `Run` w `src/api/pipeline.ts` daje błąd `vue-tsc` w `samples.ts`, a usunięcie pola z próbki daje czerwony `shapes.test.ts`
+- [x] 2.1 Trzy nowe testy IT przechodzą: `cd szczur-radar-api && ./mvnw -B -Dit.test='PipelineRunControllerIT,PostsApiIT' -Dtest=none -Dsurefire.failIfNoSpecifiedTests=false verify` — 8318374
+- [x] 2.2 Test kształtów Vitest przechodzi: `cd szczur-radar-web && npx vitest run src/contract/shapes.test.ts` — 8318374
+- [x] 2.3 Całe testy web i typecheck zielone: `cd szczur-radar-web && npm test && npm run build` — 8318374
+- [x] 2.4 Obraz web buduje się z własnego kontekstu (typecheck testów z importem JSON): `docker build -t sr-web-contract ./szczur-radar-web && docker rmi sr-web-contract` — 8318374
+- [x] 2.5 Cały backend zielony: `cd szczur-radar-api && ./mvnw -B verify` — 8318374
+- [x] 2.6 Celowe zepsucie Javy (agent wykonuje i cofa): nowe pole w `RunView` daje czerwony `runDetailMatchesTheSharedContract` z nowym ciałem w komunikacie — 8318374
+- [x] 2.7 Celowe zepsucie TS (agent wykonuje i cofa): usunięcie pola z interfejsu `Run` w `src/api/pipeline.ts` daje błąd `vue-tsc` w `samples.ts`, a usunięcie pola z próbki daje czerwony `shapes.test.ts` — 8318374
 
 #### Manual
 
@@ -436,11 +436,11 @@ Brak migracji bazy. Zmiana kształtu ciała 404/405/5xx jest zgodna z SPA, któr
 
 #### Automated
 
-- [ ] 3.1 Test rejestru Javy przechodzi: `cd szczur-radar-api && ./mvnw -B -Dtest=SpaRulesTest test`
-- [ ] 3.2 Test rejestru Vitest przechodzi: `cd szczur-radar-web && npx vitest run src/contract/rules.test.ts`
-- [ ] 3.3 Całe testy web i typecheck zielone: `cd szczur-radar-web && npm test && npm run build`
-- [ ] 3.4 Obraz web buduje się z własnego kontekstu (`?raw` atrapy i JSON w typecheck): `docker build -t sr-web-contract ./szczur-radar-web && docker rmi sr-web-contract`
-- [ ] 3.5 Cały backend zielony: `cd szczur-radar-api && ./mvnw -B verify`
-- [ ] 3.6 Celowe zepsucie Javy (agent wykonuje i cofa): nowa wartość w `RunStatus` daje czerwony `SpaRulesTest`; zmiana `Passwords.MIN_LENGTH` daje czerwony `SpaRulesTest`
-- [ ] 3.7 Celowe zepsucie SPA (agent wykonuje i cofa): usunięcie etykiety `runStatus`, tekstu powodu w `runs.ts` albo znaku z `WHITE_SPACE` daje czerwony `rules.test.ts`; `detail: 'no_such_code'` w atrapie daje czerwony skan
+- [x] 3.1 Test rejestru Javy przechodzi: `cd szczur-radar-api && ./mvnw -B -Dtest=SpaRulesTest test`
+- [x] 3.2 Test rejestru Vitest przechodzi: `cd szczur-radar-web && npx vitest run src/contract/rules.test.ts`
+- [x] 3.3 Całe testy web i typecheck zielone: `cd szczur-radar-web && npm test && npm run build`
+- [x] 3.4 Obraz web buduje się z własnego kontekstu (`?raw` atrapy i JSON w typecheck): `docker build -t sr-web-contract ./szczur-radar-web && docker rmi sr-web-contract`
+- [x] 3.5 Cały backend zielony: `cd szczur-radar-api && ./mvnw -B verify`
+- [x] 3.6 Celowe zepsucie Javy (agent wykonuje i cofa): nowa wartość w `RunStatus` daje czerwony `SpaRulesTest`; zmiana `Passwords.MIN_LENGTH` daje czerwony `SpaRulesTest`
+- [x] 3.7 Celowe zepsucie SPA (agent wykonuje i cofa): usunięcie etykiety `runStatus`, tekstu powodu w `runs.ts` albo znaku z `WHITE_SPACE` daje czerwony `rules.test.ts`; `detail: 'no_such_code'` w atrapie daje czerwony skan
 - [ ] 3.8 CI na PR zielone: `gh pr checks --watch` kończy się bez czerwonego joba

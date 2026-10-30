@@ -8,7 +8,9 @@ import org.springframework.http.HttpStatus;
 /**
  * Every application error the API answers with, and its HTTP status. On the wire it is the
  * lower-case name in {@code {"detail": "<code>"}} — part of the contract with the SPA
- * ({@code szczur-radar-web/src/api/client.ts}), so renaming a constant changes the API.
+ * ({@code szczur-radar-web/src/api/client.ts}), so renaming a constant changes the API. The list of codes is
+ * copied into {@code szczur-radar-web/src/contract/rules.json}, which {@code SpaRulesTest} (here) and
+ * {@code rules.test.ts} (the SPA) compare with the code and the SPA.
  */
 public enum ErrorCode {
 

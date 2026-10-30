@@ -4,6 +4,10 @@
 // cookie and never answer 401.
 import { ApiError, apiFetch } from './client'
 
+/** The password policy of the API (auth/Passwords.java): 12–128 characters, counted as code points. */
+export const PASSWORD_MIN_LENGTH = 12
+export const PASSWORD_MAX_LENGTH = 128
+
 export interface ActivationLookup {
   /** The account the link sets a password for. */
   email: string

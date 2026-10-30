@@ -21,7 +21,7 @@ function oneOf<T extends string>(values: readonly T[], value: string | undefined
  * (`text/Whitespace.java`). `String.trim()` is a different set: it keeps U+0085 and U+001C–U+001F and
  * drops U+FEFF, so a link with one of them would be a filter here and none in the API.
  */
-const WHITE_SPACE = '\\t-\\r\\x1C-\\x20\\x85\\xA0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000'
+export const WHITE_SPACE = '\\t-\\r\\x1C-\\x20\\x85\\xA0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000'
 const EDGE_WHITE_SPACE = new RegExp(`^[${WHITE_SPACE}]+|[${WHITE_SPACE}]+$`, 'g')
 
 function strip(text: string): string {

@@ -54,10 +54,13 @@ import pl.szczurradar.api.sources.Source;
  */
 @RestController
 @RequestMapping("/api/admin/pipeline-runs")
-class PipelineRunController {
+public class PipelineRunController {
 
 	/** The longest range a request may name, in days (inclusive). */
-	static final int MAX_RANGE_DAYS = 7;
+	public static final int MAX_RANGE_DAYS = 7;
+
+	/** The largest page of runs a request may ask for. */
+	public static final int MAX_PAGE_SIZE = 100;
 
 	/** The most posts a posts run may name. */
 	static final int MAX_POSTS = 100;
@@ -108,7 +111,7 @@ class PipelineRunController {
 	/** The latest runs with their steps and source results, newest first (equal creation times by id). */
 	@GetMapping
 	RunPage list(@RequestParam(defaultValue = "0") @Min(0) int page,
-			@RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
+			@RequestParam(defaultValue = "20") @Min(1) @Max(MAX_PAGE_SIZE) int size) {
 		Page<PipelineRun> found = runs.findPage(page, size);
 		List<UUID> ids = found.map(PipelineRun::getId).getContent();
 		Map<UUID, List<PipelineRunStep>> stepsByRun = steps.findByRunIdInOrderByStartedAtAscIdAsc(ids)
