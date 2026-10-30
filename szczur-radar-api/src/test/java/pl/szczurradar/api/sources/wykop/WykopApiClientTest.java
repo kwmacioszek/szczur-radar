@@ -22,8 +22,8 @@ import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 import tools.jackson.databind.JsonNode;
 
-import pl.szczurradar.api.sources.wykop.LocalWykopServer.Reply;
-import pl.szczurradar.api.sources.wykop.LocalWykopServer.Request;
+import pl.szczurradar.api.sources.LocalApiServer.Reply;
+import pl.szczurradar.api.sources.LocalApiServer.Request;
 
 /**
  * {@link WykopApiClient} against a local server. The auth answer and error bodies are short

@@ -22,8 +22,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 
+import pl.szczurradar.api.sources.LocalApiServer.Reply;
 import pl.szczurradar.api.sources.wykop.LocalWykopServer;
-import pl.szczurradar.api.sources.wykop.LocalWykopServer.Reply;
 
 /**
  * {@link HttpRetry} against a local server (any source's API: the loop knows none). Waits are recorded

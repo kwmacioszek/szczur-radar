@@ -456,24 +456,24 @@ Zmienna zadeklarowana w IaC i ustawiana w PR env z CI, dokumenty i runbooki (wł
 
 #### Automated
 
-- [x] 1.1 Testy Wykopu i pętli zielone: `cd szczur-radar-api && ./mvnw -B test -Dtest='WykopApiClientTest,WykopRepositoryTest,WykopFetcherTest,WykopMapperTest,WykopConfigurationTest,HttpRetryTest'`
-- [x] 1.2 `WykopApiClientTest` niezmieniony: `git diff --stat origin/main -- szczur-radar-api/src/test/java/pl/szczurradar/api/sources/wykop/WykopApiClientTest.java` nie wypisuje nic
-- [x] 1.3 Pętla istnieje raz: `rg -n 'for \(int attempt' szczur-radar-api/src/main/java/pl/szczurradar/api/sources/` znajduje tylko `sources/transport/HttpRetry.java`
-- [x] 1.4 Wyjątek przeniesiony: `test -f szczur-radar-api/src/main/java/pl/szczurradar/api/sources/UnmappableItemException.java && ! test -e szczur-radar-api/src/main/java/pl/szczurradar/api/sources/wykop/UnmappableItemException.java`
-- [x] 1.5 Cała jednostkowa część zielona: `cd szczur-radar-api && ./mvnw -B test`
-- [x] 1.6 Kolumna kanału w schemacie, modelu i strażnikach: `rg -n 'channel' szczur-radar-api/src/main/resources/db/migration/V13__posts_channel.sql szczur-radar-api/src/main/java/pl/szczurradar/api/sources/SourcePost.java szczur-radar-api/src/main/java/pl/szczurradar/api/posts/Post.java szczur-radar-api/src/test/java/pl/szczurradar/api/pipeline/state/PostColumnsIT.java` znajduje każdy z czterech plików
-- [x] 1.7 Schemat, encje i backfill zielone z Testcontainers: `cd szczur-radar-api && ./mvnw -B verify`
-- [x] 1.8 Test backupu po migracji kanału zielony z Dockerem: `tools/db-backup/test.sh`
+- [x] 1.1 Testy Wykopu i pętli zielone: `cd szczur-radar-api && ./mvnw -B test -Dtest='WykopApiClientTest,WykopRepositoryTest,WykopFetcherTest,WykopMapperTest,WykopConfigurationTest,HttpRetryTest'` — 11aa2cd
+- [x] 1.2 `WykopApiClientTest` niezmieniony: `git diff --stat origin/main -- szczur-radar-api/src/test/java/pl/szczurradar/api/sources/wykop/WykopApiClientTest.java` nie wypisuje nic — 11aa2cd
+- [x] 1.3 Pętla istnieje raz: `rg -n 'for \(int attempt' szczur-radar-api/src/main/java/pl/szczurradar/api/sources/` znajduje tylko `sources/transport/HttpRetry.java` — 11aa2cd
+- [x] 1.4 Wyjątek przeniesiony: `test -f szczur-radar-api/src/main/java/pl/szczurradar/api/sources/UnmappableItemException.java && ! test -e szczur-radar-api/src/main/java/pl/szczurradar/api/sources/wykop/UnmappableItemException.java` — 11aa2cd
+- [x] 1.5 Cała jednostkowa część zielona: `cd szczur-radar-api && ./mvnw -B test` — 11aa2cd
+- [x] 1.6 Kolumna kanału w schemacie, modelu i strażnikach: `rg -n 'channel' szczur-radar-api/src/main/resources/db/migration/V13__posts_channel.sql szczur-radar-api/src/main/java/pl/szczurradar/api/sources/SourcePost.java szczur-radar-api/src/main/java/pl/szczurradar/api/posts/Post.java szczur-radar-api/src/test/java/pl/szczurradar/api/pipeline/state/PostColumnsIT.java` znajduje każdy z czterech plików — 11aa2cd
+- [x] 1.7 Schemat, encje i backfill zielone z Testcontainers: `cd szczur-radar-api && ./mvnw -B verify` — 11aa2cd
+- [x] 1.8 Test backupu po migracji kanału zielony z Dockerem: `tools/db-backup/test.sh` — 11aa2cd
 
 ### Phase 2: Transport i stronicowanie Arctic Shift
 
 #### Automated
 
-- [ ] 2.1 Testy transportu Reddita zielone: `cd szczur-radar-api && ./mvnw -B test -Dtest='RedditApiClientTest,RedditRepositoryTest,HttpRetryTest,Wykop*Test'`
-- [ ] 2.2 Fixture'y są prawdziwe i zanonimizowane: `for f in szczur-radar-api/src/test/resources/fixtures/reddit/search-posts-*.json; do jq -e '.data | length >= 10' "$f" >/dev/null && test -z "$(jq -r '.data[].author' "$f" | grep -v -E '^(uzytkownik[0-9]+|\[deleted\])$')"; done`
-- [ ] 2.3 Fixture r/stocks ma posty zdjęte i widoczne: `jq -e '[.data[] | select(.removed_by_category != null)] | length > 0' szczur-radar-api/src/test/resources/fixtures/reddit/search-posts-stocks.json && jq -e '[.data[] | select(.removed_by_category == null)] | length > 0' szczur-radar-api/src/test/resources/fixtures/reddit/search-posts-stocks.json`
-- [ ] 2.4 Termin pobrania przypięty poniżej watchdoga: `rg -n 'aFetchEndsBeforeTheWatchdogsShortestDefault' szczur-radar-api/src/test/java/pl/szczurradar/api/sources/reddit/RedditRepositoryTest.java`
-- [ ] 2.5 Cała jednostkowa część zielona: `cd szczur-radar-api && ./mvnw -B test`
+- [x] 2.1 Testy transportu Reddita zielone: `cd szczur-radar-api && ./mvnw -B test -Dtest='RedditApiClientTest,RedditRepositoryTest,HttpRetryTest,Wykop*Test'`
+- [x] 2.2 Fixture'y są prawdziwe i zanonimizowane: `for f in szczur-radar-api/src/test/resources/fixtures/reddit/search-posts-*.json; do jq -e '.data | length >= 10' "$f" >/dev/null && test -z "$(jq -r '.data[].author' "$f" | grep -v -E '^(uzytkownik[0-9]+|\[deleted\])$')"; done`
+- [x] 2.3 Fixture r/stocks ma posty zdjęte i widoczne: `jq -e '[.data[] | select(.removed_by_category != null)] | length > 0' szczur-radar-api/src/test/resources/fixtures/reddit/search-posts-stocks.json && jq -e '[.data[] | select(.removed_by_category == null)] | length > 0' szczur-radar-api/src/test/resources/fixtures/reddit/search-posts-stocks.json`
+- [x] 2.4 Termin pobrania przypięty poniżej watchdoga: `rg -n 'aFetchEndsBeforeTheWatchdogsShortestDefault' szczur-radar-api/src/test/java/pl/szczurradar/api/sources/reddit/RedditRepositoryTest.java`
+- [x] 2.5 Cała jednostkowa część zielona: `cd szczur-radar-api && ./mvnw -B test`
 
 ### Phase 3: Mapowanie i źródło (klasy bez rejestracji w Springu)
 
