@@ -3,7 +3,7 @@ project: "Szczur Radar"
 version: 4
 status: draft # draft | active | locked
 created: 2026-09-27
-updated: 2026-10-29
+updated: 2026-10-30
 prd_version: 2
 main_goal: quality
 top_blocker: decisions # 7 pytań do właściciela o Reddita i oceny (destylacja domeny, Q-01–Q-07): subreddity i dostęp, oznaczanie źródła, świeżość per źródło, budżet LLM, jakość po angielsku, mapowanie url+selftext
@@ -110,7 +110,7 @@ Na Wykopie (#gielda) i Reddicie codziennie pojawiają się setki postów o inwes
 | S-24 | api-contract-guard              | rozjazd odpowiedzi API i typów SPA (pełne ciała, kształt błędu 500, kopie reguł) jest wykrywany testem, nie ręczną dyscypliną   | —             | audyt K2, K3, K4; destylacja Q-05                                         | ready    |
 | S-25 | alert-ping-single-rule          | adres check-in alarmów ma jedną regułę we wszystkich miejscach, a rozjazd kopii jest wykrywany testem                           | —             | NFR `prd.md:259`; audyt P4, P5; destylacja R-27                           | done |
 | S-26 | engine-test-stability           | testy silnika nie zależą od czasu zegara na współdzielonym runnerze, a znane okna fałszywych alarmów (F3) są przypięte testami | —             | audyt E1, E2, E6                                                          | done |
-| S-27 | reddit-source                   | użytkownik widzi w feedzie posty z wybranych subredditów obok Wykopu, ocenione tym samym kontraktem                             | S-20          | FR-023, NFR `prd.md:268`, `prd.md:42`; audyt S3, S6, S7, S8; destylacja Q-01, Q-07 | blocked  |
+| S-27 | reddit-source                   | użytkownik widzi w feedzie posty z wybranych subredditów obok Wykopu, ocenione tym samym kontraktem                             | S-20          | FR-023, NFR `prd.md:268`, `prd.md:42`; audyt S3, S6, S7, S8; destylacja Q-01, Q-07 | in-progress |
 | S-28 | reddit-quality-and-cost         | operator wie przed włączeniem Reddita na produkcji, że ocena postów po angielsku spełnia progi, a koszt mieści się w budżecie    | S-27          | guardrails `prd.md:48-49`; audyt S7; destylacja R-15, R-16, Q-03, Q-04    | proposed |
 | S-29 | source-aware-feed               | użytkownik odróżnia źródło posta w feedzie i szczegółach, a data aktualizacji nie kłamie przy dwóch źródłach                    | S-27          | FR-023, FR-008; audyt S5, S6; destylacja D-08, R-24, Q-02                 | blocked  |
 
@@ -247,7 +247,7 @@ Brak — każda praca przekrojowa M-3 ma widoczny skutek dla użytkownika albo o
   - Post Reddita z odnośnikiem i treścią tekstową: `post` czy `link` (`contract-v2.md:70`, destylacja Q-07)? — Owner: user (właściciel kontraktu). Block: no (rozstrzyga wywiad `/10x-plan` albo ścieżka zmiany kontraktu).
   - Czy Reddit ma wejść do nocnego przebiegu od pierwszej konfiguracji (audyt S4)? — Owner: user. Block: no.
 - **Risk:** pierwszy test NFR „nowe źródło = pozyskanie + mapowanie” na prawdziwym drugim źródle; model stronicowania Reddita (kursory, bez filtra dat) może nie pasować do reguły spójności z `lessons.md` — po S-20, żeby awaria nowego źródła nie psuła nocy Wykopu.
-- **Status:** blocked
+- **Status:** in-progress
 
 ### S-28: Jakość i koszt Reddita zmierzone przed produkcją
 
@@ -260,6 +260,7 @@ Brak — każda praca przekrojowa M-3 ma widoczny skutek dla użytkownika albo o
 - **Unknowns:**
   - Jaki jest budżet kosztu LLM na dzień albo przebieg poza limitem $10/mies. na kluczu (Open Roadmap Question 4, destylacja Q-03)? — Owner: user. Block: no (pomiar najpierw, decyzja o włączeniu po nim).
   - Czy wynik pomiaru jest warunkiem włączenia Reddita na produkcji (destylacja Q-04)? — Owner: user. Block: no.
+  - Język posta w bazie (decyzja właściciela 2026-10-29 przy planie S-27: ma być zapisany): pole `language` w wyjściu modelu (ścieżka §16 kontraktu, nowa `PROMPT_VERSION`) czy detekcja w backendzie bez LLM, i kolumna `posts.language` z backfillem? — Owner: user (właściciel kontraktu). Block: no (S-27 daje `posts.channel`, z którego język da się zgadnąć; S-28 i tak dotyka promptu przy pomiarze po angielsku).
 - **Risk:** zestaw wzorcowy i nagrania są dziś wyłącznie wykopowe; próbka angielska wymaga oznaczenia przez człowieka, a progi zostały już raz złagodzone (≥ 70 % / ≤ 10 %).
 - **Status:** proposed
 
@@ -273,6 +274,7 @@ Brak — każda praca przekrojowa M-3 ma widoczny skutek dla użytkownika albo o
 - **Blockers:** —
 - **Unknowns:**
   - Czy lista i szczegóły mają oznaczać źródło, czy potrzebny jest filtr albo sortowanie po źródle (FR-008, nice-to-have), i czy świeżość ma być per źródło (destylacja Q-02)? — Owner: user. Block: yes (od odpowiedzi zależy zakres widoków i kształt API).
+  - Czy obok źródła feed i szczegóły pokazują kanał (`posts.channel` z S-27: `#gielda`, `r/<subreddit>`) i język posta (jeśli S-28 go zapisze)? — Owner: user. Block: no (rozszerza ten sam `PostItem`).
 - **Risk:** zmienia kształt odpowiedzi feedu i etykiety świeżości, które widzi każdy użytkownik; po S-27, bo bez drugiego źródła nie ma czego oznaczać.
 - **Status:** blocked
 
