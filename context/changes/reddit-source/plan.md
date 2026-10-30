@@ -501,14 +501,14 @@ Zmienna zadeklarowana w IaC i ustawiana w PR env z CI, dokumenty i runbooki (wł
 
 #### Automated
 
-- [ ] 5.1 CI PR-a zielone: `gh pr checks --watch` kończy się bez porażki
-- [x] 5.2 Repository variable ustawiona: `gh variable get REDDIT_SUBREDDITS` wypisuje `stocks,ValueInvesting,investing`
-- [ ] 5.3 PR env: Reddit skonfigurowany: `curl -sb <cookie> <web-origin>/api/admin/pipeline-runs/sources | jq -e '.[] | select(.source == "reddit") | .configured == true'`
-- [ ] 5.4 PR env: przebieg Reddita udany bez pominięć: `curl -sb <cookie> <web-origin>/api/admin/pipeline-runs/<id> | jq -e '(.sourceResults[] | select(.source == "reddit") | .status == "succeeded" and .fetched > 0 and .skipped == 0) and (.attentionReasons | index("skipped") | not)'`
-- [ ] 5.5 PR env: post Reddita w feedzie z RAW: `curl -sb <cookie> '<web-origin>/api/posts?page=<page>&size=100' | jq -e '[.items[] | select((.webUrl // "") | startswith("https://www.reddit.com/r/ValueInvesting/"))] | length > 0'` (zacząć od `page=0`; brak dopasowania na stronie oznacza sprawdzenie kolejnej strony, dopóki `(page + 1) * size < total` z odpowiedzi; brak dopasowania po ostatniej stronie kończy weryfikację błędem) i `curl -sb <cookie> <web-origin>/api/posts/<id>/raw | jq -e '.subreddit == "ValueInvesting"'` dla id znalezionego posta
-- [ ] 5.6 PR env: ten sam zakres drugi raz nie dodaje postów: `curl -sb <cookie> <web-origin>/api/admin/pipeline-runs/<id2> | jq -e '.newPosts == 0 and any(.sourceResults[]; .source == "reddit" and .status == "succeeded" and .fetched > 0 and .skipped == 0)'`
-- [x] 5.7 Deklaracja IaC i krok CI istnieją: `rg -n 'REDDIT_SUBREDDITS: preserve\(\)' .railway/railway.ts && rg -n 'Ensure PR-env Reddit settings' .github/workflows/ci.yml`
-- [x] 5.8 Dokumenty wymieniają S-27: `rg -n 'S-27' context/foundation/prd.md context/deployment/deploy-plan.md REPOSITORY_GUIDELINES.md szczur-radar-api/README.md` znajduje każdy z czterech plików
+- [x] 5.1 CI PR-a zielone: `gh pr checks --watch` kończy się bez porażki — 68bc2de
+- [x] 5.2 Repository variable ustawiona: `gh variable get REDDIT_SUBREDDITS` wypisuje `stocks,ValueInvesting,investing` — 68bc2de
+- [x] 5.3 PR env: Reddit skonfigurowany: `curl -sb <cookie> <web-origin>/api/admin/pipeline-runs/sources | jq -e '.[] | select(.source == "reddit") | .configured == true'` — 68bc2de
+- [x] 5.4 PR env: przebieg Reddita udany bez pominięć: `curl -sb <cookie> <web-origin>/api/admin/pipeline-runs/<id> | jq -e '(.sourceResults[] | select(.source == "reddit") | .status == "succeeded" and .fetched > 0 and .skipped == 0) and (.attentionReasons | index("skipped") | not)'` — 68bc2de
+- [x] 5.5 PR env: post Reddita w feedzie z RAW: `curl -sb <cookie> '<web-origin>/api/posts?page=<page>&size=100' | jq -e '[.items[] | select((.webUrl // "") | startswith("https://www.reddit.com/r/ValueInvesting/"))] | length > 0'` (zacząć od `page=0`; brak dopasowania na stronie oznacza sprawdzenie kolejnej strony, dopóki `(page + 1) * size < total` z odpowiedzi; brak dopasowania po ostatniej stronie kończy weryfikację błędem) i `curl -sb <cookie> <web-origin>/api/posts/<id>/raw | jq -e '.subreddit == "ValueInvesting"'` dla id znalezionego posta — 68bc2de
+- [x] 5.6 PR env: ten sam zakres drugi raz nie dodaje postów: `curl -sb <cookie> <web-origin>/api/admin/pipeline-runs/<id2> | jq -e '.newPosts == 0 and any(.sourceResults[]; .source == "reddit" and .status == "succeeded" and .fetched > 0 and .skipped == 0)'` — 68bc2de
+- [x] 5.7 Deklaracja IaC i krok CI istnieją: `rg -n 'REDDIT_SUBREDDITS: preserve\(\)' .railway/railway.ts && rg -n 'Ensure PR-env Reddit settings' .github/workflows/ci.yml` — 68bc2de
+- [x] 5.8 Dokumenty wymieniają S-27: `rg -n 'S-27' context/foundation/prd.md context/deployment/deploy-plan.md REPOSITORY_GUIDELINES.md szczur-radar-api/README.md` znajduje każdy z czterech plików — 68bc2de
 
 #### Manual
 
