@@ -384,4 +384,4 @@ Bez migracji. `V12` dał historii wiersze `pipeline_run_sources`, ale stare prze
 
 #### Manual
 
-- [ ] 3.11 Ocena napisów i układu na zrzutach z `ui/`: etykieta przy dwóch datach oraz `Reddit · r/ValueInvesting` w wąskiej kolumnie karty (ocena użytkownika)
+- [x] 3.11 Ocena napisów i układu na zrzutach z `ui/`: etykieta przy dwóch datach oraz `Reddit · r/ValueInvesting` w wąskiej kolumnie karty (ocena użytkownika) — 4d29bb6
