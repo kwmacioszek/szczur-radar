@@ -63,6 +63,10 @@ nothing.
    source gave a post fails. A new source adds its own fetcher and mapper tests (6) and its scenarios in
    the whole run on its own fixtures, through a test configuration like `LocalReddit`: its repository
    bean over its local server, configured per scenario, never by its environment setting.
+8. The SPA names the source (S-29): its value in `values.source` of `szczur-radar-web/src/contract/rules.json`,
+   its label in `labels.source` and its channel's prefix in `CHANNEL_PREFIXES` (`src/labels.ts`), which give
+   `Wykop · #gielda`, `Reddit · r/stocks`. `SpaRulesTest` and `rules.test.ts` are red when one is missing. The
+   API gives `channel` without a prefix, and `GET /api/freshness` lists the source after its first update.
 
 Nothing in `pipeline/`, `posts/`, `raw/`, `agents/` or the API changes — in behaviour too: a new
 source that fails or stays silent does not fail the other sources' run. If a step seems to need it,

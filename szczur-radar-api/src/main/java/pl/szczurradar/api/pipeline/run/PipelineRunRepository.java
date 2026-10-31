@@ -20,6 +20,14 @@ import pl.szczurradar.api.sources.Source;
 /** Pipeline runs. Status and counters change only through conditional updates, never a blind save. */
 public interface PipelineRunRepository extends JpaRepository<PipelineRun, UUID> {
 
+	/**
+	 * How a {@link RunKind#RANGE} run ended when it fetched and stored its range: {@link RunStatus#SUCCEEDED
+	 * succeeded}, or {@link RunStatus#PARTIAL partial}, where only some posts were not assessed or some source
+	 * gave none. Only such a run updates the feed's date ({@link #findLastUpdates}) and covers its days
+	 * ({@link #findCoveringSince}).
+	 */
+	List<RunStatus> STORED_RANGE_STATUSES = List.of(RunStatus.SUCCEEDED, RunStatus.PARTIAL);
+
 	/** Whether a run is queued or running (then a new request is refused). */
 	default boolean existsActive() {
 		return existsByStatusIn(List.of(RunStatus.QUEUED, RunStatus.RUNNING));
@@ -61,35 +69,44 @@ public interface PipelineRunRepository extends JpaRepository<PipelineRun, UUID> 
 	}
 
 	/**
-	 * When the newest data was last updated: among the {@link RunKind#RANGE} runs, the daily one or an
-	 * admin's, that {@link RunStatus#SUCCEEDED succeeded} or ended {@link RunStatus#PARTIAL partial}
-	 * (they fetched and stored their range; only some posts were not assessed), the end of the one whose
-	 * range reaches furthest, and of those the latest. An admin's run over an older range therefore
-	 * leaves the date as it was, while a run over the same newest days moves it. Runs over leftovers or
-	 * chosen posts fetch nothing new, so they never count; neither does a failed, interrupted or
-	 * unfinished run. Empty before the first such run.
+	 * When each source's newest data was last updated: among the {@link RunKind#RANGE} runs, the daily one or an
+	 * admin's, that ended one of {@link #STORED_RANGE_STATUSES} with that source's result
+	 * ({@link PipelineRunSource}) {@link SourceFetchStatus#SUCCEEDED succeeded}, the end of the run whose range
+	 * reaches furthest, and of those the latest. So a source that failed or gave no post keeps its date while
+	 * another moves on, and an admin's run over an older range leaves the date as it was, while a run over the
+	 * same newest days moves it. It is the run's end, not the source's: its posts reach the feed only assessed.
+	 * Runs over leftovers or chosen posts fetch nothing new, so they never count; neither does a failed,
+	 * interrupted or unfinished run. A source without such a run is missing; the map iterates in {@link Source}
+	 * order. The same rule as {@link #findCoveringSince}, so the feed's date and the days without data agree.
 	 */
-	default Optional<Instant> findLastUpdate() {
-		return findFinishedAtOfNewestRange(RunKind.RANGE, List.of(RunStatus.SUCCEEDED, RunStatus.PARTIAL));
+	default Map<Source, Instant> findLastUpdates() {
+		Map<Source, Instant> updates = new EnumMap<>(Source.class);
+		for (Source source : Source.values()) {
+			findNewestStoredRangeEnd(RunKind.RANGE, STORED_RANGE_STATUSES, SourceFetchStatus.SUCCEEDED, source)
+				.ifPresent(finishedAt -> updates.put(source, finishedAt));
+		}
+		return updates;
 	}
 
+	/** {@link #findLastUpdates}, for one source; call that instead. */
 	@Query("""
-			select r.finishedAt from PipelineRun r
+			select r.finishedAt from PipelineRunSource s join PipelineRun r on s.runId = r.id
 			where r.kind = :kind and r.status in :statuses and r.finishedAt is not null
+			and s.status = :sourceStatus and s.source = :source
 			order by r.rangeTo desc, r.finishedAt desc
 			limit 1""")
-	Optional<Instant> findFinishedAtOfNewestRange(RunKind kind, Collection<RunStatus> statuses);
+	Optional<Instant> findNewestStoredRangeEnd(RunKind kind, Collection<RunStatus> statuses,
+			SourceFetchStatus sourceStatus, Source source);
 
 	/**
 	 * What covers its days ({@link MissingDays}): for each {@link RunKind#RANGE} run, the daily one or an
-	 * admin's, that {@link RunStatus#SUCCEEDED succeeded} or ended {@link RunStatus#PARTIAL partial} (as
-	 * {@link #findLastUpdate}) and whose range ends at or after {@code since}, its range once per source whose
-	 * result ({@link PipelineRunSource}) is {@link SourceFetchStatus#SUCCEEDED succeeded}: a source that
-	 * failed or gave no post covers nothing, whatever the run requested.
+	 * admin's, that ended one of {@link #STORED_RANGE_STATUSES} (as {@link #findLastUpdates}) and whose range
+	 * ends at or after {@code since}, its range once per source whose result ({@link PipelineRunSource}) is
+	 * {@link SourceFetchStatus#SUCCEEDED succeeded}: a source that failed or gave no post covers nothing,
+	 * whatever the run requested.
 	 */
 	default List<CoveredRange> findCoveringSince(Instant since) {
-		return findRangesEndingSince(RunKind.RANGE, List.of(RunStatus.SUCCEEDED, RunStatus.PARTIAL),
-				SourceFetchStatus.SUCCEEDED, since);
+		return findRangesEndingSince(RunKind.RANGE, STORED_RANGE_STATUSES, SourceFetchStatus.SUCCEEDED, since);
 	}
 
 	@Query("""
@@ -106,8 +123,7 @@ public interface PipelineRunRepository extends JpaRepository<PipelineRun, UUID> 
 	default Map<Source, Instant> findFirstCoveredFrom(Collection<Source> sources) {
 		Map<Source, Instant> first = new EnumMap<>(Source.class);
 		for (Source source : sources) {
-			findEarliestCoveredFrom(RunKind.RANGE, List.of(RunStatus.SUCCEEDED, RunStatus.PARTIAL),
-					SourceFetchStatus.SUCCEEDED, source)
+			findEarliestCoveredFrom(RunKind.RANGE, STORED_RANGE_STATUSES, SourceFetchStatus.SUCCEEDED, source)
 				.ifPresent(from -> first.put(source, from));
 		}
 		return first;

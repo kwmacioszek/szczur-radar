@@ -22,6 +22,8 @@ const LONG_BODY =
 function post(overrides: Partial<PostItem> = {}): PostItem {
   return {
     id: '1',
+    source: 'wykop',
+    channel: 'gielda',
     itemType: 'post',
     publishedAt: '2026-10-01T07:15:00Z',
     title: null,
@@ -173,6 +175,29 @@ describe('PostDetailView', () => {
     expect(meta.find('time').text()).toBe('1.10.2026, 09:15')
     expect(meta.find('.type').text()).toBe('wpis')
     expect(meta.find('.author').text()).toBe('uzytkownik1')
+  })
+
+  it('shows the source and channel between the type and the author', async () => {
+    vi.mocked(fetchPost).mockResolvedValue(post())
+    const { wrapper } = await mountPost()
+    const origin = wrapper.find('.meta .origin')
+    expect(origin.text()).toBe('Wykop · #gielda')
+    expect(origin.element.previousElementSibling?.className).toBe('type')
+    expect(origin.element.nextElementSibling?.className).toBe('author')
+  })
+
+  it('shows a Reddit post with its subreddit', async () => {
+    vi.mocked(fetchPost).mockResolvedValue(post({ source: 'reddit', channel: 'ValueInvesting' }))
+    const { wrapper } = await mountPost()
+    expect(wrapper.find('.meta .origin').text()).toBe('Reddit · r/ValueInvesting')
+  })
+
+  it('shows no origin for a post of an older API, deployed apart from the web', async () => {
+    vi.mocked(fetchPost).mockResolvedValue(post({ source: undefined, channel: undefined } as unknown as Partial<PostItem>))
+    const { wrapper } = await mountPost()
+    expect(wrapper.find('.meta .origin').exists()).toBe(false)
+    expect(wrapper.find('.meta').text()).not.toContain('undefined')
+    expect(wrapper.find('.meta .type').exists()).toBe(true)
   })
 
   it('shows the full text with its line breaks', async () => {

@@ -12,8 +12,10 @@
  *       'raw-error'    /api/posts/:id/raw answers 500 (the rest as in 'data').
  * FRESHNESS (independent of MODE; another variant = a copy of this file with FRESHNESS replaced), the label above the
  * feed — /api/freshness answers like pipeline/api/FreshnessController.java:
- *       'date'  { lastUpdatedAt: '2026-10-13T03:12:00Z' } (05:12 in Warsaw), the default,
- *       'none'  { lastUpdatedAt: null }: no update yet,
+ *       'date'  { sources: [wykop, reddit] }, both 2026-10-13T03:12:00Z (05:12 in Warsaw), the default,
+ *       'apart' both sources, Reddit older: 2026-10-11T03:12:00Z (a night it failed or gave no post since),
+ *       'wykop' Wykop alone: the one source with an update, as on production until S-28,
+ *       'none'  { sources: [] }: no update yet,
  *       'error' 500; every other route answers as MODE says.
  * MISSING (the "Dni bez danych" section of /admin; MODE 'loading' and 'error' apply first), like
  * /api/admin/pipeline-runs/missing-days of pipeline/api/PipelineRunController.java, relative to today in Warsaw (D):
@@ -53,7 +55,10 @@
  *       'error'  500.
  * /api/posts answers like posts/api/PostController.java: page, size, total; a page past the end (e.g. /?page=9)
  * is 200 with items [] and the real total. /api/posts/feed-<n> (n from 0 to 119) is the feed's post n, any other
- * id is 404 {"detail":"post_not_found"}; /api/posts/feed-<n>/raw is indented JSON text shaped like a Wykop entry.
+ * id is 404 {"detail":"post_not_found"}; /api/posts/feed-<n>/raw is indented JSON text shaped like a Wykop entry,
+ * whatever the post's source. Each post has source and channel (without its prefix): every third one (n % 3 === 2)
+ * is Reddit's, channel stocks, ValueInvesting or investing in turn, with a https://www.reddit.com/r/<channel>/… address;
+ * the rest are Wykop's, channel gielda.
  * AUTH: 'admin' (/api/auth/me → the admin) or 'anonymous' (/api/auth/me → 401), for the public /activate and /login.
  * ACTIVATION (/activate#<any token>; the token is not checked): 'valid' (lookup → e-mail, activation → 204, then
  *   /login with the "password set" notice), 'invalid' (both → 400 activation_link_invalid), 'policy' (activation →
@@ -323,11 +328,18 @@ async page => {
       flags: [],
     },
   ]
+  // Where post n came from: every third is Reddit's, so its variants are a post and a link, what Reddit gives.
+  const REDDIT_CHANNELS = ['stocks', 'ValueInvesting', 'investing']
+  const feedOrigin = (n) => {
+    if (n % 3 !== 2) return { source: 'wykop', channel: 'gielda', webUrl: `https://wykop.pl/wpis/${n}` }
+    const channel = REDDIT_CHANNELS[Math.floor(n / 3) % REDDIT_CHANNELS.length]
+    return { source: 'reddit', channel, webUrl: `https://www.reddit.com/r/${channel}/comments/${n}/` }
+  }
   const feedItem = (n) => {
     const k = n % feedTexts.length
     const assessment = feedAssessments[k]
     return {
-      id: `feed-${n}`, ...feedTexts[k], author: `uzytkownik${n}`, webUrl: `https://wykop.pl/wpis/${n}`,
+      id: `feed-${n}`, ...feedOrigin(n), ...feedTexts[k], author: `uzytkownik${n}`,
       publishedAt: new Date(Date.UTC(2026, 9, 12, 20, 0) - n * 17 * 60000).toISOString(),
       assessment: assessment
         ? { output: { modifiers: [], ...assessment }, resultSource: 'model', assessedAt: '2026-10-12T21:00:00Z' }
@@ -369,6 +381,14 @@ async page => {
     from: dMinus(15), to: dMinus(2),
     days: MISSING === 'none' ? [] : [9, 8, 7, 4].map((n) => ({ day: dMinus(n), sources: ['wykop'] })),
   })
+  // The sources of /api/freshness by FRESHNESS, in the API's order.
+  const WYKOP_UPDATE = { source: 'wykop', lastUpdatedAt: '2026-10-13T03:12:00Z' }
+  const FRESHNESS_SOURCES = {
+    date: [WYKOP_UPDATE, { source: 'reddit', lastUpdatedAt: '2026-10-13T03:12:00Z' }],
+    apart: [WYKOP_UPDATE, { source: 'reddit', lastUpdatedAt: '2026-10-11T03:12:00Z' }],
+    wykop: [WYKOP_UPDATE],
+    none: [],
+  }
   const hang = () => new Promise((r) => setTimeout(r, 60000))
   const json = (route, body, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) })
   await page.unrouteAll().catch(() => {})
@@ -428,7 +448,7 @@ async page => {
     if (p === '/api/admin/posts/failed') return json(route, { items: MODE === 'empty' ? [] : failed, page: 0, size: 50, total: MODE === 'empty' ? 0 : failed.length })
     if (p === '/api/freshness') {
       if (FRESHNESS === 'error') return json(route, { detail: 'internal_error' }, 500)
-      return json(route, { lastUpdatedAt: FRESHNESS === 'none' ? null : '2026-10-13T03:12:00Z' })
+      return json(route, { sources: FRESHNESS_SOURCES[FRESHNESS] })
     }
     if (p === '/api/posts') {
       const pageNumber = Number(url.searchParams.get('page') ?? 0)
