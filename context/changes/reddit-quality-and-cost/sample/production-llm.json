@@ -1,0 +1,7 @@
+{
+  "LLM_API_PROVIDER": "openrouter",
+  "LLM_MODEL": "openai/gpt-6-luna",
+  "LLM_SERVICE_TIER": "flex",
+  "LLM_REASONING_EFFORT": "medium",
+  "LLM_TIMEOUT": "300s"
+}

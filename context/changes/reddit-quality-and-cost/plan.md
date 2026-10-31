@@ -343,21 +343,21 @@ Brak migracji i zmian konfiguracji. Merge przebudowuje obraz API tak jak każda 
 
 #### Automated
 
-- [x] 1.1 Testy jednostkowe zielone, w tym nowe i bramka nagrań
-- [ ] 1.2 Zmiana nie dotyka produkcji ani danych bramki
-- [x] 1.3 Próbny zapis jednego dnia przechodzi, a posts.json nie ma adresów ani wzmianek
-- [ ] 1.4 CI na PR zielone
+- [x] 1.1 Testy jednostkowe zielone, w tym nowe i bramka nagrań — 55f427b
+- [x] 1.2 Zmiana nie dotyka produkcji ani danych bramki — 55f427b
+- [x] 1.3 Próbny zapis jednego dnia przechodzi, a posts.json nie ma adresów ani wzmianek — 55f427b
+- [x] 1.4 CI na PR zielone — 55f427b
 
 ### Phase 2: Przebieg na żywo
 
 #### Automated
 
-- [ ] 2.1 production-llm.json i wykop-usage.json poprawne, bez treści
-- [ ] 2.2 posts.json obejmuje 7 dni i 3 subreddity, bez adresów i wzmianek
-- [ ] 2.3 Każdy post ma ocenę ok albo trzy próby
-- [ ] 2.4 Wszystkie próby mają tę samą wersję, model, tryb i reasoning produkcji
-- [ ] 2.5 Koszt przebiegu nie przekracza $4
-- [ ] 2.6 Raport ma wszystkie sekcje i akapit o klasyfikatorze
+- [x] 2.1 production-llm.json i wykop-usage.json poprawne, bez treści
+- [x] 2.2 posts.json obejmuje 7 dni i 3 subreddity, bez adresów i wzmianek
+- [x] 2.3 Każdy post ma ocenę ok albo trzy próby
+- [x] 2.4 Wszystkie próby mają tę samą wersję, model, tryb i reasoning produkcji
+- [x] 2.5 Koszt przebiegu nie przekracza $4
+- [x] 2.6 Raport ma wszystkie sekcje i akapit o klasyfikatorze
 
 ### Phase 3: Godzina oceny
 
