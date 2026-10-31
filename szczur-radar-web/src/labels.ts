@@ -77,6 +77,14 @@ export function label(set: keyof typeof labels, value: string): string {
   return labels[set]?.[value] ?? value
 }
 
+/** How each source writes a channel's name; the API gives the name without the prefix. Not a label of `labels`. */
+export const CHANNEL_PREFIXES: Record<string, string> = { wykop: '#', reddit: 'r/' }
+
+/** Where a post came from, e.g. `Wykop · #gielda`; an unknown source shows as it came, its channel bare. */
+export function postOrigin(source: string, channel: string): string {
+  return `${label('source', source)} · ${CHANNEL_PREFIXES[source] ?? ''}${channel}`
+}
+
 const dateTime = new Intl.DateTimeFormat('pl-PL', {
   dateStyle: 'short',
   timeStyle: 'short',

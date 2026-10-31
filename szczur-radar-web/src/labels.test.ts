@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatDate, formatDateTime, formatDuration, formatRelative, label, plural } from './labels'
+import { formatDate, formatDateTime, formatDuration, formatRelative, label, plural, postOrigin } from './labels'
 
 const NOW = Date.parse('2026-10-15T08:00:00Z')
 const SECOND = 1000
@@ -22,6 +22,16 @@ describe('labels', () => {
 
   it('shows an unknown value as it is', () => {
     expect(label('interruptionCause', 'meteor')).toBe('meteor')
+  })
+})
+
+describe('postOrigin', () => {
+  it.each([
+    ['wykop', 'gielda', 'Wykop · #gielda'],
+    ['reddit', 'ValueInvesting', 'Reddit · r/ValueInvesting'],
+    ['x', 'y', 'x · y'],
+  ])('shows %s and %s as "%s"', (source, channel, text) => {
+    expect(postOrigin(source, channel)).toBe(text)
   })
 })
 

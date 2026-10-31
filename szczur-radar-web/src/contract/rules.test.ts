@@ -25,7 +25,7 @@ import {
   TARGET_KINDS,
 } from '../api/posts'
 import { MAX_QUERY_LENGTH, WHITE_SPACE } from '../feedFilter'
-import { labels } from '../labels'
+import { CHANNEL_PREFIXES, labels } from '../labels'
 import { MAX_RANGE_DAYS } from '../missingDays'
 import { attentionReasons, runTone, sourceTone, stepTone } from '../runs'
 import rules from './rules.json'
@@ -87,6 +87,12 @@ describe('labels', () => {
 
   it.each(sets)('%s has a label for each value and for no other', (set) => {
     expect(sorted(Object.keys(labels[set]))).toEqual(sorted(valuesOf(set as ValueSet)))
+  })
+})
+
+describe('channel prefixes', () => {
+  it('are given for exactly the sources of the file', () => {
+    expect(sorted(Object.keys(CHANNEL_PREFIXES))).toEqual(sorted(valuesOf('source')))
   })
 })
 

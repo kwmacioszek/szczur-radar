@@ -1,0 +1,12 @@
+{
+  "sources": [
+    {
+      "source": "wykop",
+      "lastUpdatedAt": "<instant>"
+    },
+    {
+      "source": "reddit",
+      "lastUpdatedAt": "<instant>"
+    }
+  ]
+}

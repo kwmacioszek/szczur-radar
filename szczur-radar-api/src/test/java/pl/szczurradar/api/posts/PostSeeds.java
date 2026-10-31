@@ -9,6 +9,7 @@ import java.util.UUID;
 
 import jakarta.persistence.EntityManager;
 import org.springframework.jdbc.core.JdbcTemplate;
+import tools.jackson.databind.json.JsonMapper;
 
 import pl.szczurradar.api.agents.assessor.AssessmentResult;
 import pl.szczurradar.api.agents.assessor.ContractFixtures;
@@ -23,6 +24,7 @@ import pl.szczurradar.api.pipeline.run.PipelineRun;
 import pl.szczurradar.api.pipeline.run.PipelineRunRepository;
 import pl.szczurradar.api.raw.RawPayloadStore;
 import pl.szczurradar.api.sources.Source;
+import pl.szczurradar.api.sources.reddit.LocalRedditServer;
 import pl.szczurradar.api.user.Role;
 import pl.szczurradar.api.user.User;
 import pl.szczurradar.api.user.UserRepository;
@@ -37,6 +39,9 @@ public final class PostSeeds {
 
 	/** A real, anonymized Wykop entry ({@code fixtures/wykop/entry.json}): the raw payload of every seeded post. */
 	private static final byte[] ENTRY = entry();
+
+	/** A real, anonymized Reddit post ({@code fixtures/reddit/}): the raw payload of every seeded Reddit post. */
+	private static final byte[] REDDIT_ELEMENT = redditElement();
 
 	private final PostRepository posts;
 
@@ -69,10 +74,21 @@ public final class PostSeeds {
 
 	/** As {@link #post(PostStage, int, String)}, with {@code raw} (UTF-8 JSON) as its raw payload. */
 	public UUID post(PostStage stage, int attempts, String publishedAt, byte[] raw) {
+		return post(Source.WYKOP, "gielda", "https://wykop.pl/wpis/", stage, attempts, publishedAt, raw);
+	}
+
+	/** As {@link #post(PostStage, int, String)}, a Reddit post of the subreddit {@code channel}. */
+	public UUID redditPost(String channel, PostStage stage, int attempts, String publishedAt) {
+		return post(Source.REDDIT, channel, "https://www.reddit.com/r/" + channel + "/comments/", stage, attempts,
+				publishedAt, REDDIT_ELEMENT);
+	}
+
+	private UUID post(Source source, String channel, String webUrlPrefix, PostStage stage, int attempts,
+			String publishedAt, byte[] raw) {
 		String id = UUID.randomUUID().toString();
-		Post post = posts.save(new Post(Source.WYKOP, ItemType.POST, id, "gielda", Instant.parse(publishedAt), null,
-				"treść " + id, "uzytkownik1", null, "https://wykop.pl/wpis/" + id, List.of("gielda"),
-				rawPayloads.store(Source.WYKOP, raw), runId));
+		Post post = posts.save(new Post(source, ItemType.POST, id, channel, Instant.parse(publishedAt), null,
+				"treść " + id, "uzytkownik1", null, webUrlPrefix + id, List.of(channel), rawPayloads.store(source, raw),
+				runId));
 		posts.flush();
 		jdbc.update("UPDATE posts SET stage = ?, assessment_attempts = ? WHERE id = ?", stage.value(), attempts,
 				post.getId());
@@ -126,6 +142,13 @@ public final class PostSeeds {
 		catch (IOException ex) {
 			throw new UncheckedIOException(ex);
 		}
+	}
+
+	/** The first post of {@code fixtures/reddit/search-posts-inwestowanie.json}, the bytes a Reddit post stores. */
+	private static byte[] redditElement() {
+		JsonMapper json = JsonMapper.builder().build();
+		String answer = LocalRedditServer.fixture("search-posts-inwestowanie.json");
+		return json.writeValueAsBytes(json.readTree(answer).get("data").get(0));
 	}
 
 	/** The greater of two ids in Postgres' order (their hex text), the winner of an {@code id DESC} tie. */

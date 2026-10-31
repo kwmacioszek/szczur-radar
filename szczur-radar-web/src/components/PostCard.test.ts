@@ -8,6 +8,8 @@ import PostCard from './PostCard.vue'
 function post(overrides: Partial<PostItem> = {}): PostItem {
   return {
     id: '1',
+    source: 'wykop',
+    channel: 'gielda',
     itemType: 'post',
     publishedAt: '2026-10-01T07:15:00Z',
     title: null,
@@ -66,6 +68,24 @@ describe('PostCard', () => {
     expect(links[0]!.element.closest('h2')).not.toBeNull()
     expect(links[0]!.attributes('href')).toBe('/posts/1')
     expect(links[0]!.text()).toBe('Wpis o XTB')
+  })
+
+  it('shows the source and channel right after the date', () => {
+    const origin = mountCard().find('.meta .origin')
+    expect(origin.text()).toBe('Wykop · #gielda')
+    expect(origin.element.previousElementSibling?.tagName).toBe('TIME')
+  })
+
+  it('shows a Reddit post with its subreddit', () => {
+    const wrapper = mountCard(post({ source: 'reddit', channel: 'ValueInvesting' }))
+    expect(wrapper.find('.origin').text()).toBe('Reddit · r/ValueInvesting')
+  })
+
+  it('shows no origin for a post of an older API, deployed apart from the web', () => {
+    const wrapper = mountCard(post({ source: undefined, channel: undefined } as unknown as Partial<PostItem>))
+    expect(wrapper.find('.origin').exists()).toBe(false)
+    expect(wrapper.find('.meta').text()).not.toContain('undefined')
+    expect(wrapper.find('.meta .type').exists()).toBe(true)
   })
 
   it('shows the post type as the text of its label', () => {

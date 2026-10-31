@@ -184,6 +184,26 @@ class PostsApiIT {
 	}
 
 	@Test
+	void aPostHasItsSourceAndItsChannelWithoutAPrefixInTheFeedAndOnItsOwn() {
+		UUID wykop = seeds.post(PostStage.ASSESSED, 0, "2026-10-01T08:00:00Z");
+		UUID reddit = seeds.redditPost("ValueInvesting", PostStage.ASSESSED, 0, "2026-10-01T09:00:00Z");
+		List.of(wykop, reddit).forEach(post -> seeds.ok(post, "2026-10-02T08:00:00Z"));
+
+		MvcTestResult feed = mvc.get().uri("/api/posts").with(asUser()).exchange();
+
+		assertThat(feed).hasStatusOk();
+		assertThat(feed).bodyJson().extractingPath("$.items[*].source").asArray().containsExactly("reddit", "wykop");
+		assertThat(feed).bodyJson().extractingPath("$.items[*].channel").asArray()
+			.containsExactly("ValueInvesting", "gielda");
+		MvcTestResult wykopPost = mvc.get().uri("/api/posts/" + wykop).with(asUser()).exchange();
+		assertThat(wykopPost).bodyJson().extractingPath("$.source").isEqualTo("wykop");
+		assertThat(wykopPost).bodyJson().extractingPath("$.channel").isEqualTo("gielda");
+		MvcTestResult redditPost = mvc.get().uri("/api/posts/" + reddit).with(asUser()).exchange();
+		assertThat(redditPost).bodyJson().extractingPath("$.source").isEqualTo("reddit");
+		assertThat(redditPost).bodyJson().extractingPath("$.channel").isEqualTo("ValueInvesting");
+	}
+
+	@Test
 	void postDetailMatchesTheSharedContract() {
 		UUID post = seeds.post(PostStage.ASSESSED, 0, "2026-10-01T09:00:00Z");
 		seeds.okByModel(post, "2026-10-02T08:00:00Z");

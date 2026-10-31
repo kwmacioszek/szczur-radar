@@ -69,6 +69,10 @@ export interface AssessmentOutput {
 
 export interface PostItem {
   id: string
+  /** The source the post came from: `wykop` or `reddit`. */
+  source: string
+  /** The source's channel in the source's own spelling, without a prefix: `gielda`, `ValueInvesting`. */
+  channel: string
   itemType: ItemType
   publishedAt: string
   title: string | null
