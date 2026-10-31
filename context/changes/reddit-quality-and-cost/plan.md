@@ -343,9 +343,9 @@ Brak migracji i zmian konfiguracji. Merge przebudowuje obraz API tak jak każda 
 
 #### Automated
 
-- [ ] 1.1 Testy jednostkowe zielone, w tym nowe i bramka nagrań
+- [x] 1.1 Testy jednostkowe zielone, w tym nowe i bramka nagrań
 - [ ] 1.2 Zmiana nie dotyka produkcji ani danych bramki
-- [ ] 1.3 Próbny zapis jednego dnia przechodzi, a posts.json nie ma adresów ani wzmianek
+- [x] 1.3 Próbny zapis jednego dnia przechodzi, a posts.json nie ma adresów ani wzmianek
 - [ ] 1.4 CI na PR zielone
 
 ### Phase 2: Przebieg na żywo

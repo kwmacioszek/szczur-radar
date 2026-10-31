@@ -83,7 +83,7 @@ class GoldRecorder {
 	 * of this entry, as before {@code LlmUnavailableException} existed: the measurement reports it and goes
 	 * on.
 	 */
-	private static AssessmentResult assess(Assessor assessor, AssessmentInputV1 input) {
+	static AssessmentResult assess(Assessor assessor, AssessmentInputV1 input) {
 		long start = System.nanoTime();
 		try {
 			return assessor.assess(input);

@@ -30,4 +30,12 @@ except the two things below.
    `src/test/resources/fixtures/assessor/gold/`), because the default model is chosen on them; a
    change is the user's decision and goes into the report and `implementation-notes.md`.
 
+## Reddit measurement (S-28)
+
+`RedditSampler`, `RedditRecorder`, `RedditReport` and `RedditMeasures` measure production's configuration
+on real Reddit posts for the decision on enabling the source. This is not part of the CI gate: no Reddit
+post goes into the gold files or `models.json`, and the sample lives in the change folder, outside the
+directories `RecordingsReplayTest` and `GoldDataTest` read. The live classes are tagged `measurement`; only
+`RedditMeasuresTest` and `RedditAnonymizerTest` run in CI.
+
 Keys only from the shell, never in the repo, recordings or logs (`README.md`).
