@@ -81,6 +81,8 @@ milestone_status: open
 > v4.1 (2026-10-27): kolejność kamieni po M-3 zmieniona decyzją użytkownika: M-4 (kandydat) to weryfikacja i regresja (`context/foundation/verification-scope.md`), a nowe UI/UX przesuwa się na M-5 (kandydat) razem z testami E2E na Playwright (`context/foundation/ui-ux-proposals.md`, dawniej `m4-ui-ux-proposals.md`; makiety w `docs/visuals/ui-ux-proposals/`). Dwa wpisy w `## Parked`; M-3 bez zmian.
 - **S-29: użytkownik widzi przy każdym poście, z którego źródła pochodzi, a etykieta „Dane zaktualizowane” nie przesuwa się po przebiegu, który nie objął danego źródła — zgodnie z decyzją, czy świeżość jest wspólna, czy per źródło.** — Archived 2026-10-31 → `context/archive/2026-10-30-source-aware-feed/`. Lesson: —.
 
+> v4.2 (2026-10-31): S-28 zamyka pomiar: nowy Outcome (obraz konfiguracji produkcyjnej zamiast spełnienia progów), Q-03 i Q-04 oraz pytanie 4 rozstrzygnięte, decyzja o włączeniu Reddita bez napraw. Do Parked trafiają `posts.language`, naprawy oceny Reddita i porównanie modeli; S-29 bez warunku o języku.
+
 ## Milestone
 
 **M-3: Drugie źródło na utwardzonym rdzeniu** — Status: open
@@ -112,7 +114,7 @@ Na Wykopie (#gielda) i Reddicie codziennie pojawiają się setki postów o inwes
 | S-25 | alert-ping-single-rule          | adres check-in alarmów ma jedną regułę we wszystkich miejscach, a rozjazd kopii jest wykrywany testem                           | —             | NFR `prd.md:259`; audyt P4, P5; destylacja R-27                           | done |
 | S-26 | engine-test-stability           | testy silnika nie zależą od czasu zegara na współdzielonym runnerze, a znane okna fałszywych alarmów (F3) są przypięte testami | —             | audyt E1, E2, E6                                                          | done |
 | S-27 | reddit-source                   | użytkownik widzi w feedzie posty z wybranych subredditów obok Wykopu, ocenione tym samym kontraktem                             | S-20          | FR-023, NFR `prd.md:268`, `prd.md:42`; audyt S3, S6, S7, S8; destylacja Q-01, Q-07 | done        |
-| S-28 | reddit-quality-and-cost         | operator wie przed włączeniem Reddita na produkcji, że ocena postów po angielsku spełnia progi, a koszt mieści się w budżecie    | S-27          | guardrails `prd.md:48-49`; audyt S7; destylacja R-15, R-16, Q-03, Q-04    | in-progress |
+| S-28 | reddit-quality-and-cost         | operator zna obraz konfiguracji produkcyjnej na postach z Reddita i koszt łączny z Wykopem, a decyzja o włączeniu jest zapisana    | S-27          | guardrails `prd.md:48-49`; audyt S7; destylacja R-15, R-16, Q-03, Q-04    | in-progress |
 | S-29 | source-aware-feed               | użytkownik odróżnia źródło posta w feedzie i szczegółach, a data aktualizacji nie kłamie przy dwóch źródłach                    | S-27          | FR-023, FR-008; audyt S5, S6; destylacja D-08, R-24, Q-02                 | done        |
 
 ## Streams
@@ -252,17 +254,16 @@ Brak — każda praca przekrojowa M-3 ma widoczny skutek dla użytkownika albo o
 
 ### S-28: Jakość i koszt Reddita zmierzone przed produkcją
 
-- **Outcome:** operator ma pomiar oceny postów z Reddita (progi kierunku celów i sprzeczności na próbce angielskiej przy obecnym prompcie) oraz szacunek dziennego kosztu LLM dla wybranych subredditów, zanim klucze Reddita trafią na produkcję.
+- **Outcome:** operator zna obraz konfiguracji produkcyjnej (`openai/gpt-6-luna`, prompt v2.5) na 396 postach z Reddita i koszt łączny z Wykopem oraz zapisał decyzję o włączeniu; pomiar nie rozstrzyga progów kierunku celów i sprzeczności.
 - **Change ID:** reddit-quality-and-cost
 - **PRD refs:** guardrails `prd.md:48-49`; audyt S7; destylacja R-15, R-16, Q-03, Q-04
 - **Prerequisites:** S-27
 - **Parallel with:** S-29
 - **Blockers:** —
 - **Unknowns:**
-  - Jaki jest budżet kosztu LLM na dzień albo przebieg poza limitem $10/mies. na kluczu (Open Roadmap Question 4, destylacja Q-03)? — Owner: user. Block: no (pomiar najpierw, decyzja o włączeniu po nim).
-  - Czy wynik pomiaru jest warunkiem włączenia Reddita na produkcji (destylacja Q-04)? — Owner: user. Block: no.
-  - Język posta w bazie (decyzja właściciela 2026-10-29 przy planie S-27: ma być zapisany): pole `language` w wyjściu modelu (ścieżka §16 kontraktu, nowa `PROMPT_VERSION`) czy detekcja w backendzie bez LLM, i kolumna `posts.language` z backfillem? — Owner: user (właściciel kontraktu). Block: no (S-27 daje `posts.channel`, z którego język da się zgadnąć; S-28 i tak dotyka promptu przy pomiarze po angielsku).
-- **Risk:** zestaw wzorcowy i nagrania są dziś wyłącznie wykopowe; próbka angielska wymaga oznaczenia przez człowieka, a progi zostały już raz złagodzone (≥ 70 % / ≤ 10 %).
+  - Jaki jest budżet kosztu LLM na dzień albo przebieg poza limitem $10/mies. na kluczu (Open Roadmap Question 4, destylacja Q-03)? — Owner: user. Rozstrzygnięte 2026-10-31: limit $10/mies. zostaje, bez osobnego pułapu dziennego; koszt łączny z Wykopem to $3,21/mies. na `flex` (górna granica $4,67).
+  - Czy wynik pomiaru jest warunkiem włączenia Reddita na produkcji (destylacja Q-04)? — Owner: user. Rozstrzygnięte 2026-10-31: nie, raport jest materiałem do decyzji, bez progów. Decyzja: włączyć bez napraw (`stocks,ValueInvesting,investing`); tezy po polsku nie są warunkiem.
+- **Risk:** próbka nie ma etykiet bez podpowiedzi modelu: właściciel przejrzał 28 z 40 postów z podpowiedzią, więc progów nie rozstrzyga. Publiczne API Reddita, z którego czyta Arctic Shift, zamyka się etapami od 12 stycznia do marca 2027 (`deploy-plan.md`, runbook „Arctic Shift stops delivering”).
 - **Status:** in-progress
 
 ### S-29: Źródło widoczne w feedzie, świeżość bez kłamstwa
@@ -275,7 +276,7 @@ Brak — każda praca przekrojowa M-3 ma widoczny skutek dla użytkownika albo o
 - **Blockers:** —
 - **Unknowns:**
   - Czy lista i szczegóły mają oznaczać źródło, czy potrzebny jest filtr albo sortowanie po źródle (FR-008, nice-to-have), i czy świeżość ma być per źródło (destylacja Q-02)? — Owner: user. Rozstrzygnięte w planie `source-aware-feed` z 2026-10-30: lista i szczegóły oznaczają źródło, bez filtra i sortowania (FR-008 zostaje kandydatem do M-5); świeżość per źródło, zawsze rozpisana.
-  - Czy obok źródła feed i szczegóły pokazują kanał (`posts.channel` z S-27: `#gielda`, `r/<subreddit>`) i język posta (jeśli S-28 go zapisze)? — Owner: user. Rozstrzygnięte w planie `source-aware-feed` z 2026-10-30: kanał tak (`Wykop · #gielda`, `Reddit · r/<subreddit>`); język posta nie, decyzja zostaje przy S-28.
+  - Czy obok źródła feed i szczegóły pokazują kanał (`posts.channel` z S-27: `#gielda`, `r/<subreddit>`) i język posta? — Owner: user. Rozstrzygnięte w planie `source-aware-feed` z 2026-10-30: kanał tak (`Wykop · #gielda`, `Reddit · r/<subreddit>`); język posta nie (`posts.language` zaparkowane przy S-28).
 - **Risk:** zmienia kształt odpowiedzi feedu i etykiety świeżości, które widzi każdy użytkownik; po S-27, bo bez drugiego źródła nie ma czego oznaczać.
 - **Status:** done
 
@@ -299,7 +300,7 @@ Brak — każda praca przekrojowa M-3 ma widoczny skutek dla użytkownika albo o
 1. **Weryfikacja produkcji z M-1:** lokalizacja bazy dla filtra S-04 (runbook z issue #17, krok 2: `C`/`POSIX` po cichu psuje `KĘTY`→`Kęty`) i pierwsza noc S-06 (runbook z issue #19). Owner: operator. Block: — (przeniesione z M-2; wynik `C`/`POSIX` dałby nowy wycinek).
 2. **Ustalenia z żywego Railway** (audyt M-2, Open Questions 2–7): czy redeploy po `config apply` zmiany, która deployuje, czeka na CI (S-21); czy reguła „deployment crashed” obejmuje crash loop API; okno SIGTERM→SIGKILL; przyczyna przebiegu „trwającego” 22 h z 2026-10-09. Owner: operator. Block: —. Rozstrzygnięte przez audyt `post-m2-audit` (P2): merge samej dokumentacji daje `SKIPPED` na wszystkich usługach; apply `source.checkSuites` nie wywołuje żadnego deploymentu; deployment API z czerwonym CI jest pomijany przez Wait for CI.
 3. **Kanał i próg dla FR-025 (powiadomienia o obiecującym trendzie)** — nie ustalono, czym jest „obiecujący trend” liczbowo ani gdzie ma trafiać powiadomienie. Owner: użytkownik. Block: — (FR-025 odroczone).
-4. **Budżet kosztów LLM na przebieg** — guardrail PRD każe minimalizować koszt zapytań, ale nie podaje pułapu (na dzień ani na post); twardy pułap to $10/mies. na kluczu OpenRouter produkcji. Drugie źródło zwiększy liczbę ocen. Owner: użytkownik. Block: S-28 (nie blokuje planowania; decyduje o włączeniu Reddita).
+4. **Budżet kosztów LLM na przebieg** — guardrail PRD każe minimalizować koszt zapytań, ale nie podaje pułapu (na dzień ani na post); twardy pułap to $10/mies. na kluczu OpenRouter produkcji. Drugie źródło zwiększy liczbę ocen. Owner: użytkownik. Rozstrzygnięte 2026-10-31 w S-28: limit $10/mies. zostaje, bez osobnego pułapu; koszt łączny z Wykopem to $3,21/mies. na `flex` (górna granica $4,67), Reddit włączany.
 5. **PRD ma status `draft` i ostatnią zmianę 2026-10-13** — nowsze decyzje żyją w blokach „Doprecyzowanie” i w roadmapie (destylacja, sekcja „Stale documents”: FR-029 krótka sesja vs 30 dni, „zakres dat/godzin”, FR-022 warunkowe). Czy odświeżyć PRD do v3 przed planowaniem Reddita? Owner: użytkownik. Block: — (destylacja D-02, D-03, D-10).
 
 ## Parked
@@ -337,6 +338,9 @@ Brak — każda praca przekrojowa M-3 ma widoczny skutek dla użytkownika albo o
 - **Alarm watchdoga budowany w `catch (Throwable)` bez osobnej ochrony (S-18, przegląd F5)** — Why parked: `RunWatchdog.check` buduje tekst `WATCHDOG_FAILED` w bloku, który ma nie wypuścić niczego do `scheduleWithFixedDelay`; przy `OutOfMemoryError` składanie tekstu może rzucić drugi raz i zatrzymać kolejne sprawdzenia. Linia ERROR przed nim ma to samo ryzyko, a przypadek jest skrajny. **Powrót** przy najbliższej zmianie `RunWatchdog`: owinąć `alerts.raise(...)` w osobny `try`/`catch (Throwable)` (`…/reviews/impl-review.md`, F5).
 - **Krótszy start API po obudzeniu (Spring AOT, flagi JVM, AOT cache JDK 25)** — Why parked: nice-to-have po S-17; JVM startuje w ok. 6 s (produkcja po S-17: 5,6–6,0 s), a klient widzi 8–10 s razem ze startem kontenera Railway. Kolejność prób: `JAVA_TOOL_OPTIONS` (`-XX:TieredStopAtLevel=1`, `-XX:+UseSerialGC`) zmierzone w PR env; `spring-boot-maven-plugin` `process-aot` + `-Dspring.aot.enabled=true` jako mała zmiana; AOT cache JDK 25 (trening z bazą albo cache na wolumenie) tylko gdy poprzednie nie zejdą poniżej ok. 4 s; bez `spring.main.lazy-initialization` (kłóci się z fail-fast S-10) i bez wyłączania usypiania (decyzja F-03). Pomiary: `deploy-plan.md`, S-17 „Startup time”.
 - **Ustalenia niskiej wagi z audytu po M-2 (`post-m2-audit`)** — Why parked: cel M-3 `quality` bierze do wycinków ustalenia wysokiej i średniej wagi; te zostają do najbliższej pracy w tym samym obszarze. A7 dla przebiegu przerwanego przez odzyskiwanie nowszej instancji (zombie zapisuje posty do SIGTERM; nic nie ginie), A8 cz. 1 (`submit` przy zamykanym executorze → 500 i `queued` do sprzątania), A4 i B10 bez zmian (E3); harmonogramy i karencje checków w trzech źródłach bez testu krzyżowego (P6); po `TRIGGER_RUN_TIMEOUT` fałszywy alarm idzie dwoma kanałami (P8, rozszerza C8); statusy GitHub Deployment `success` dla commita z deploymentem `SKIPPED` — kandydat na lekcję (P9); atrapa `dev/mock-api.js` poza testami, id nie-UUID, brak logowania (K5); limiter logowań w pamięci jednej repliki (destylacja R-33, Q-10); kaskady `ON DELETE` bez ścieżki usuwania konta (R-29, Q-11); pola `content_hash`, `slug`, `requested_by` bez czytelnika (destylacja #10, Q-12). Szczegóły i kotwice: `context/changes/post-m2-audit/research.md`, `context/domain/domain-distillation.md`.
+- **Język posta w bazie (`posts.language`)** — Why parked: plan S-28 nie zmienia promptu ani kontraktu, język da się przybliżyć z `posts.channel`, a Reddit ma horyzont do marca 2027. Wraca przy źródle, które naprawdę tego wymaga.
+- **Naprawy oceny Reddita (`claim_ids`, dopasowanie cytatów `D6`, tezy po polsku, filtr megawątków)** — Why parked: decyzja użytkownika 2026-10-31 o włączeniu bez napraw, bo Arctic Shift może przestać dostarczać dane między styczniem a marcem 2027. Wraca, gdyby Reddit został z nami dłużej.
+- **Porównanie modeli na postach z Reddita (DeepSeek, Haiku 5.5)** — Why parked: pomysł użytkownika z 2026-10-31, poza S-28. Bez niezależnych etykiet pokaże odrzucenia, koszt i liczbę celów, a nie to, który model ocenia lepiej; Haiku 5.5 nie ma w `models.json`. Zarys: osobna zmiana, około 50 długich postów w osobnym katalogu.
 
 ## Milestone History
 

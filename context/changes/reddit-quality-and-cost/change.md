@@ -10,3 +10,11 @@ archived_at: null
 ## Notes
 
 Dotyczy slice S-28 z roadmapy M-3.
+
+Decyzja właściciela (2026-10-31), po raporcie `report-2026-10-31.md`:
+
+- **Wariant:** włączyć Reddita bez napraw.
+- **Subreddity:** `stocks,ValueInvesting,investing`.
+- **Budżet (Q-03):** limit $10/mies. zostaje, bez osobnego pułapu.
+- **Tezy po polsku:** nie są warunkiem.
+- **Powód:** publiczne API Reddita, z którego czyta Arctic Shift, zamyka się etapami od 12 stycznia do marca 2027, więc naprawy (`claim_ids`, `D6`, filtr megawątków) by się nie zwróciły. Trafiają do Parked, razem z porównaniem modeli.

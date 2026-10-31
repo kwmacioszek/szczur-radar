@@ -363,25 +363,25 @@ Brak migracji i zmian konfiguracji. Merge przebudowuje obraz API tak jak każda 
 
 #### Automated
 
-- [x] 3.1 sheet.json ma poprawny skład i przeplot
-- [x] 3.2 Scenariusz playwright-cli przechodzi z zapisanym wynikiem
-- [x] 3.3 Eksport przechodzi GoldLabels.readLabels i RedditReport
-- [x] 3.4 Raport zawiera sekcję o pominiętych celach
+- [x] 3.1 sheet.json ma poprawny skład i przeplot — f567a85
+- [x] 3.2 Scenariusz playwright-cli przechodzi z zapisanym wynikiem — f567a85
+- [x] 3.3 Eksport przechodzi GoldLabels.readLabels i RedditReport — f567a85
+- [x] 3.4 Raport zawiera sekcję o pominiętych celach — f567a85
 
 #### Manual
 
-- [x] 3.5 Operator oznacza posty przez około godzinę i zapisuje labels.json
+- [x] 3.5 Operator oznacza posty przez około godzinę i zapisuje labels.json — f567a85
 
 ### Phase 4: Decyzja i dokumenty
 
 #### Automated
 
-- [ ] 4.1 deploy-plan nie wymaga już spełnienia progów
-- [ ] 4.2 Sekcja S-28 w roadmapie bez posts.language, wpis w Parked
-- [ ] 4.3 Rysunek roadmapy aktualny
+- [x] 4.1 deploy-plan nie wymaga już spełnienia progów
+- [x] 4.2 Sekcja S-28 w roadmapie bez posts.language, wpis w Parked
+- [x] 4.3 Rysunek roadmapy aktualny
 - [ ] 4.4 Komentarze z raportem są w issue #122 i #121
 - [ ] 4.5 CI na PR zielone
 
 #### Manual
 
-- [ ] 4.6 Operator czyta raport i zapisuje decyzję, budżet i listę subredditów
+- [x] 4.6 Operator czyta raport i zapisuje decyzję, budżet i listę subredditów
