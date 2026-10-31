@@ -81,6 +81,13 @@ describe('PostCard', () => {
     expect(wrapper.find('.origin').text()).toBe('Reddit · r/ValueInvesting')
   })
 
+  it('shows no origin for a post of an older API, deployed apart from the web', () => {
+    const wrapper = mountCard(post({ source: undefined, channel: undefined } as unknown as Partial<PostItem>))
+    expect(wrapper.find('.origin').exists()).toBe(false)
+    expect(wrapper.find('.meta').text()).not.toContain('undefined')
+    expect(wrapper.find('.meta .type').exists()).toBe(true)
+  })
+
   it('shows the post type as the text of its label', () => {
     expect(mountCard().find('.type').text()).toBe('wpis')
   })

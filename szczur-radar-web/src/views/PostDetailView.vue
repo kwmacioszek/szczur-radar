@@ -153,7 +153,8 @@ watch(
         <p class="meta">
           <time :datetime="post.publishedAt">{{ formatDateTime(post.publishedAt) }}</time>
           <span class="type">{{ label('itemType', post.itemType) }}</span>
-          <span class="origin">{{ postOrigin(post.source, post.channel) }}</span>
+          <!-- API and web deploy independently: an older API has no source or channel, so the origin is left out. -->
+          <span v-if="post.source" class="origin">{{ postOrigin(post.source, post.channel) }}</span>
           <span v-if="post.author" class="author">{{ post.author }}</span>
         </p>
         <p v-if="original">

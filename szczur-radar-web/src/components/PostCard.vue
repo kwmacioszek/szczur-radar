@@ -21,7 +21,8 @@ const output = computed(() => props.post.assessment?.output)
   <article class="post-card">
     <div class="meta">
       <time class="date" :datetime="post.publishedAt">{{ formatDateTime(post.publishedAt) }}</time>
-      <span class="origin">{{ postOrigin(post.source, post.channel) }}</span>
+      <!-- API and web deploy independently: an older API has no source or channel, so the origin is left out. -->
+      <span v-if="post.source" class="origin">{{ postOrigin(post.source, post.channel) }}</span>
       <span class="type">{{ label('itemType', post.itemType) }}</span>
       <StatusBadge v-if="output" class="relevance" tone="neutral">{{ label('relevance', output.relevance) }}</StatusBadge>
       <span v-if="post.assessment?.resultSource === 'prefilter'" class="note">bez treści, bez oceny modelu</span>

@@ -192,6 +192,14 @@ describe('PostDetailView', () => {
     expect(wrapper.find('.meta .origin').text()).toBe('Reddit · r/ValueInvesting')
   })
 
+  it('shows no origin for a post of an older API, deployed apart from the web', async () => {
+    vi.mocked(fetchPost).mockResolvedValue(post({ source: undefined, channel: undefined } as unknown as Partial<PostItem>))
+    const { wrapper } = await mountPost()
+    expect(wrapper.find('.meta .origin').exists()).toBe(false)
+    expect(wrapper.find('.meta').text()).not.toContain('undefined')
+    expect(wrapper.find('.meta .type').exists()).toBe(true)
+  })
+
   it('shows the full text with its line breaks', async () => {
     vi.mocked(fetchPost).mockResolvedValue(post())
     const { wrapper } = await mountPost()
