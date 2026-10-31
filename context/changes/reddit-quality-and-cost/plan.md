@@ -352,25 +352,25 @@ Brak migracji i zmian konfiguracji. Merge przebudowuje obraz API tak jak każda 
 
 #### Automated
 
-- [x] 2.1 production-llm.json i wykop-usage.json poprawne, bez treści
-- [x] 2.2 posts.json obejmuje 7 dni i 3 subreddity, bez adresów i wzmianek
-- [x] 2.3 Każdy post ma ocenę ok albo trzy próby
-- [x] 2.4 Wszystkie próby mają tę samą wersję, model, tryb i reasoning produkcji
-- [x] 2.5 Koszt przebiegu nie przekracza $4
-- [x] 2.6 Raport ma wszystkie sekcje i akapit o klasyfikatorze
+- [x] 2.1 production-llm.json i wykop-usage.json poprawne, bez treści — 7908910
+- [x] 2.2 posts.json obejmuje 7 dni i 3 subreddity, bez adresów i wzmianek — 7908910
+- [x] 2.3 Każdy post ma ocenę ok albo trzy próby — 7908910
+- [x] 2.4 Wszystkie próby mają tę samą wersję, model, tryb i reasoning produkcji — 7908910
+- [x] 2.5 Koszt przebiegu nie przekracza $4 — 7908910
+- [x] 2.6 Raport ma wszystkie sekcje i akapit o klasyfikatorze — 7908910
 
 ### Phase 3: Godzina oceny
 
 #### Automated
 
-- [ ] 3.1 sheet.json ma poprawny skład i przeplot
-- [ ] 3.2 Scenariusz playwright-cli przechodzi z zapisanym wynikiem
-- [ ] 3.3 Eksport przechodzi GoldLabels.readLabels i RedditReport
-- [ ] 3.4 Raport zawiera sekcję o pominiętych celach
+- [x] 3.1 sheet.json ma poprawny skład i przeplot
+- [x] 3.2 Scenariusz playwright-cli przechodzi z zapisanym wynikiem
+- [x] 3.3 Eksport przechodzi GoldLabels.readLabels i RedditReport
+- [x] 3.4 Raport zawiera sekcję o pominiętych celach
 
 #### Manual
 
-- [ ] 3.5 Operator oznacza posty przez około godzinę i zapisuje labels.json
+- [x] 3.5 Operator oznacza posty przez około godzinę i zapisuje labels.json
 
 ### Phase 4: Decyzja i dokumenty
 

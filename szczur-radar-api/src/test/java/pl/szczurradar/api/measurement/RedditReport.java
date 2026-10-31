@@ -34,12 +34,15 @@ import pl.szczurradar.api.agents.assessor.contract.Claim;
 import pl.szczurradar.api.agents.assessor.contract.ContractJson;
 import pl.szczurradar.api.agents.assessor.validation.FailureClass;
 import pl.szczurradar.api.agents.assessor.validation.Violation;
+import pl.szczurradar.api.measurement.GoldLabels.Label;
 import pl.szczurradar.api.measurement.GoldLabels.Post;
 import pl.szczurradar.api.measurement.GoldMetrics.Metric;
 import pl.szczurradar.api.measurement.ModelsConfig.Model;
 import pl.szczurradar.api.measurement.ModelsConfig.Price;
 import pl.szczurradar.api.measurement.RedditMeasures.Interval;
 import pl.szczurradar.api.measurement.RedditMeasures.LengthBucket;
+import pl.szczurradar.api.measurement.RedditMeasures.Review;
+import pl.szczurradar.api.measurement.RedditMeasures.Reviewed;
 import pl.szczurradar.api.measurement.RedditMeasures.ThesisLanguage;
 import pl.szczurradar.api.measurement.RedditMeasures.ThesisMix;
 import pl.szczurradar.api.measurement.RedditSampler.Volume;
@@ -53,12 +56,19 @@ import pl.szczurradar.api.measurement.RedditSampler.Volume;
  * ./mvnw -Pmeasurement test -Dtest=RedditReport -Dreddit.dir=&lt;path&gt; -Dreport.out=&lt;path&gt;
  * </pre>
  *
- * Optional: {@code -Dreddit.price=luna}, the configuration of {@code models.json} whose prices count.
+ * Optional: {@code -Dreddit.price=luna}, the configuration of {@code models.json} whose prices count. Two
+ * files of {@code reddit.dir} are optional too: {@code labels.json}, the owner's review on the sheet of
+ * {@link RedditSheet}, adds its section, and {@code report-notes.md}, hand-written notes a regenerated report
+ * must keep, goes in verbatim before the definitions.
  */
 @Tag("measurement")
 class RedditReport {
 
 	static final String WYKOP_USAGE = "wykop-usage.json";
+
+	static final String LABELS = "labels.json";
+
+	static final String NOTES = "report-notes.md";
 
 	/** The monthly limit on the LLM key, shared with Wykop. */
 	private static final double KEY_LIMIT_USD = 10;
@@ -106,7 +116,26 @@ class RedditReport {
 	}
 
 	/** A post with its lines, in order, and today's verdict on each. */
-	private record Assessed(Post post, List<Recording> lines, List<AssessmentResult> results) {
+	record Assessed(Post post, List<Recording> lines, List<AssessmentResult> results) {
+
+		/**
+		 * Every post of {@code posts} with its {@code lines}, each judged again. Fails on lines of other posts
+		 * and on a post with neither an {@code ok} line nor three lines: the sample is incomplete.
+		 */
+		static List<Assessed> all(List<Post> posts, List<Recording> lines) {
+			Map<String, List<Recording>> byPost = RedditMeasures.byPost(lines);
+			Set<String> ids = posts.stream().map(Post::postId).collect(Collectors.toSet());
+			assertThat(byPost.keySet()).as("lines of posts outside posts.json").isSubsetOf(ids);
+			assertThat(posts.stream().filter(post -> !RedditMeasures.finished(byPost.getOrDefault(post.postId(), List.of())))
+				.map(Post::postId)
+				.toList()).as("posts without an ok line or three lines: the sample is incomplete").isEmpty();
+			List<Assessed> assessed = new ArrayList<>();
+			for (Post post : posts) {
+				List<Recording> ofPost = byPost.get(post.postId());
+				assessed.add(new Assessed(post, ofPost, ofPost.stream().map(line -> Replay.judge(post, line)).toList()));
+			}
+			return assessed;
+		}
 
 		boolean firstOk() {
 			return results.getFirst().ok();
@@ -149,19 +178,7 @@ class RedditReport {
 				new TypeReference<List<WykopUsage>>() {
 				});
 		List<Recording> lines = RedditRecorder.readRecordings(dir.resolve(RedditRecorder.RECORDINGS));
-		Map<String, List<Recording>> byPost = RedditMeasures.byPost(lines);
-
-		Set<String> ids = posts.stream().map(Post::postId).collect(Collectors.toSet());
-		assertThat(byPost.keySet()).as("lines of posts outside posts.json").isSubsetOf(ids);
-		assertThat(posts.stream().filter(post -> !RedditMeasures.finished(byPost.getOrDefault(post.postId(), List.of())))
-			.map(Post::postId)
-			.toList()).as("posts without an ok line or three lines: the sample is incomplete").isEmpty();
-
-		List<Assessed> assessed = new ArrayList<>();
-		for (Post post : posts) {
-			List<Recording> ofPost = byPost.get(post.postId());
-			assessed.add(new Assessed(post, ofPost, ofPost.stream().map(line -> Replay.judge(post, line)).toList()));
-		}
+		List<Assessed> assessed = Assessed.all(posts, lines);
 
 		StringBuilder md = new StringBuilder();
 		md.append("# Raport Reddita — ").append(LocalDate.now(RedditMeasures.ZONE)).append("\n\n");
@@ -182,6 +199,12 @@ class RedditReport {
 		appendLanguages(md, assessed);
 		appendCost(md, posts, lines, volume, usage, prices);
 		appendReference(md, assessed);
+		if (Files.exists(dir.resolve(LABELS))) {
+			appendReview(md, assessed, GoldLabels.readLabels(dir.resolve(LABELS)));
+		}
+		if (Files.exists(dir.resolve(NOTES))) {
+			md.append(Files.readString(dir.resolve(NOTES))).append('\n');
+		}
 		md.append(LEGEND);
 
 		Files.createDirectories(out.toAbsolutePath().getParent());
@@ -361,7 +384,44 @@ class RedditReport {
 			.append(share(count(assessed, Assessed::firstOk), assessed.size())).append(". Kierunek celów (≥ ")
 			.append(percent(Metric.TARGET_DIRECTION_ACCURACY.threshold())).append(") i sprzeczne kierunki (≤ ")
 			.append(percent(Metric.CONTRADICTION_RATE.threshold()))
-			.append(") wymagają etykiet człowieka i nie są tu liczone.\n\n");
+			.append(") wymagają etykiet człowieka bez podpowiedzi modelu i nie są tu liczone wobec progów.\n\n");
+	}
+
+	private static void appendReview(StringBuilder md, List<Assessed> assessed, List<Label> labels) {
+		Map<String, Assessed> byId = assessed.stream()
+			.filter(Assessed::ok)
+			.collect(Collectors.toMap(post -> post.post().postId(), Function.identity()));
+		assertThat(labels).extracting(Label::postId).as("labels of posts without a valid assessment")
+			.isSubsetOf(byId.keySet());
+		List<Reviewed> reviewed = labels.stream()
+			.map(label -> new Reviewed(label, byId.get(label.postId()).output().orElseThrow().targets()))
+			.toList();
+
+		md.append("## Pominięte cele (ocena właściciela)\n\n");
+		md.append("Przejrzane posty: ").append(labels.size()).append(", z tego „trudne”, poza mianownikami: ")
+			.append(labels.stream().filter(Label::hard).count())
+			.append(". Mianownikiem są tylko posty przejrzane, nigdy cała kolejka arkusza.\n\n");
+		md.append("| Długość `body` (znaki) | Posty | Posty z pominiętym celem | Braki na post | Pominięte wśród celów ")
+			.append("właściciela | Cele modelu usunięte | Odwrotny kierunek | Stanowisko, którego właściciel nie widzi |\n")
+			.append("|---|---|---|---|---|---|---|---|\n");
+		for (LengthBucket bucket : LengthBucket.values()) {
+			appendReviewRow(md, bucket.label(),
+					reviewed.stream().filter(post -> byId.get(post.label().postId()).bucket() == bucket).toList());
+		}
+		appendReviewRow(md, "wszystkie", reviewed);
+		md.append('\n').append(REVIEW_NOTES).append('\n');
+	}
+
+	private static void appendReviewRow(StringBuilder md, String label, List<Reviewed> posts) {
+		Review review = RedditMeasures.review(posts);
+		md.append("| ").append(label).append(" | ").append(review.posts()).append(" | ")
+			.append(share(review.postsWithMiss(), review.posts())).append(" | ")
+			.append(review.posts() == 0 ? "—" : String.format(Locale.ROOT, "%.2f (%d/%d)",
+					(double) review.missed() / review.posts(), review.missed(), review.posts()))
+			.append(" | ").append(share(review.missed(), review.ownerTargets())).append(" | ")
+			.append(share(review.removed(), review.modelTargets())).append(" | ")
+			.append(share(review.reversed(), review.polarTargets())).append(" | ")
+			.append(share(review.unseenStances(), review.noStanceTargets())).append(" |\n");
 	}
 
 	private static int count(List<Assessed> posts, Predicate<Assessed> filter) {
@@ -399,6 +459,17 @@ class RedditReport {
 	private static String usd(double value) {
 		return String.format(Locale.ROOT, "$%.4f", value);
 	}
+
+	private static final String REVIEW_NOTES = """
+			Arkusz był wypełniony odpowiedzią modelu, więc ta podpowiedź może zawyżać wynik modelu: łatwiej przyjąć gotowy cel, niż zauważyć brak. Kolejka ma celowo większy udział długich postów i nie ma w niej megawątków ani postów `dead`, więc wiersz „wszystkie” nie opisuje całej próbki. Cele z jednego posta nie są od siebie niezależne, więc widełki miar liczonych na celach są raczej za wąskie.
+
+			- **Para:** cel właściciela i cel modelu połączone jeden do jednego przez `AnchorMatcher`, bez aliasów.
+			- **Pominięty cel:** cel właściciela bez pary.
+			- **Braki na post:** pominięte cele / posty. Może przekroczyć 1, więc to nie odsetek i nie ma widełek Wilsona; ma je kolumna obok, pominięte cele / cele właściciela.
+			- **Cel modelu usunięty:** cel modelu bez pary / cele modelu.
+			- **Odwrotny kierunek:** cele właściciela `bullish` lub `bearish`, których para ma kierunek przeciwny / wszystkie takie cele; cel bez pary nie jest odwrotny (miara „sprzeczne kierunki” z `GoldMetrics`).
+			- **Stanowisko, którego właściciel nie widzi:** cele właściciela `not_expressed` lub `unclear`, których para ma inny kierunek niż te dwa / wszystkie takie cele; cel bez pary się do licznika nie liczy.
+			""";
 
 	private static final String LEGEND = """
 			## Definicje

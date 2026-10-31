@@ -7,16 +7,27 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 
+import pl.szczurradar.api.agents.assessor.ContractFixtures;
+import pl.szczurradar.api.agents.assessor.contract.Assertiveness;
 import pl.szczurradar.api.agents.assessor.contract.ContractJson;
+import pl.szczurradar.api.agents.assessor.contract.Direction;
+import pl.szczurradar.api.agents.assessor.contract.Relevance;
+import pl.szczurradar.api.agents.assessor.contract.Target;
+import pl.szczurradar.api.measurement.GoldLabels.Label;
+import pl.szczurradar.api.measurement.GoldLabels.LabeledTarget;
 import pl.szczurradar.api.measurement.ModelsConfig.Model;
 import pl.szczurradar.api.measurement.ModelsConfig.Price;
 import pl.szczurradar.api.measurement.ModelsConfig.Role;
 import pl.szczurradar.api.measurement.RedditMeasures.Interval;
 import pl.szczurradar.api.measurement.RedditMeasures.LengthBucket;
+import pl.szczurradar.api.measurement.RedditMeasures.Review;
+import pl.szczurradar.api.measurement.RedditMeasures.Reviewed;
 import pl.szczurradar.api.measurement.RedditMeasures.ThesisLanguage;
 import pl.szczurradar.api.measurement.RedditMeasures.ThesisMix;
 import pl.szczurradar.api.measurement.RedditReport.WykopUsage;
@@ -40,6 +51,9 @@ class RedditMeasuresTest {
 	void wilsonIntervalStaysWithinBoundsAtTheEnds() {
 		assertThat(RedditMeasures.wilson(0, 10).low()).isCloseTo(0, within(1e-9));
 		assertThat(RedditMeasures.wilson(10, 10).high()).isCloseTo(1, within(1e-9));
+		// 0/20 and 0/467 used to round to a negative zero, which the report printed as "-0.0".
+		assertThat(RedditMeasures.wilson(0, 20).low()).isNotNegative();
+		assertThat(RedditMeasures.wilson(0, 467).low()).isNotNegative();
 	}
 
 	@Test
@@ -127,6 +141,116 @@ class RedditMeasuresTest {
 	}
 
 	@Test
+	void theSheetTakesTenFifteenFifteenLongestFirst() {
+		List<Integer> queue = RedditMeasures.sheetQueue(lengths(100, 100, 100), LengthBucket::of, 1);
+
+		assertThat(queue).hasSize(40).doesNotHaveDuplicates();
+		assertThat(queue.stream().map(LengthBucket::of).toList().subList(0, 7)).containsExactly(LengthBucket.LONG,
+				LengthBucket.MEDIUM, LengthBucket.SHORT, LengthBucket.LONG, LengthBucket.MEDIUM, LengthBucket.SHORT,
+				LengthBucket.LONG);
+		assertThat(queue.stream().map(LengthBucket::of).toList().subList(30, 40)).containsExactly(LengthBucket.MEDIUM,
+				LengthBucket.SHORT, LengthBucket.MEDIUM, LengthBucket.SHORT, LengthBucket.MEDIUM, LengthBucket.SHORT,
+				LengthBucket.MEDIUM, LengthBucket.SHORT, LengthBucket.MEDIUM, LengthBucket.SHORT);
+		assertThat(queue.stream().filter(length -> LengthBucket.of(length) == LengthBucket.LONG)).hasSize(10);
+		assertThat(queue.stream().filter(length -> LengthBucket.of(length) == LengthBucket.MEDIUM)).hasSize(15);
+		assertThat(queue.stream().filter(length -> LengthBucket.of(length) == LengthBucket.SHORT)).hasSize(15);
+	}
+
+	@Test
+	void theSheetSkipsABucketThatIsUsedUp() {
+		List<Integer> queue = RedditMeasures.sheetQueue(lengths(2, 1, 0), LengthBucket::of, 1);
+
+		assertThat(queue.stream().map(LengthBucket::of).toList()).containsExactly(LengthBucket.MEDIUM, LengthBucket.SHORT,
+				LengthBucket.SHORT);
+	}
+
+	@Test
+	void theSheetIsTheSameForTheSameSeed() {
+		List<Integer> candidates = lengths(100, 100, 100);
+
+		assertThat(RedditMeasures.sheetQueue(candidates, LengthBucket::of, 20261030))
+			.isEqualTo(RedditMeasures.sheetQueue(candidates, LengthBucket::of, 20261030))
+			.isNotEqualTo(RedditMeasures.sheetQueue(candidates, LengthBucket::of, 20261031));
+		assertThat(RedditMeasures.sheetQueue(List.<Integer>of(), LengthBucket::of, 1)).isEmpty();
+	}
+
+	@Test
+	void aTargetTheOwnerAddedIsMissed() {
+		Review review = RedditMeasures.review(List.of(
+				reviewed(false, targets(owner("Apple", Direction.BULLISH), owner("Micron", Direction.BEARISH)),
+						model("Apple", Direction.BULLISH)),
+				reviewed(false, targets(owner("Tesla", Direction.BULLISH)), model("$Tesla", Direction.BULLISH))));
+
+		assertThat(review.posts()).isEqualTo(2);
+		assertThat(review.postsWithMiss()).isEqualTo(1);
+		assertThat(review.ownerTargets()).isEqualTo(3);
+		assertThat(review.missed()).isEqualTo(1);
+		assertThat(review.removed()).isZero();
+	}
+
+	@Test
+	void aModelTargetWithoutAPairIsRemoved() {
+		Review review = RedditMeasures.review(List.of(
+				reviewed(false, targets(owner("Apple", Direction.BULLISH)), model("Apple", Direction.BULLISH),
+						model("the sector", Direction.NOT_EXPRESSED))));
+
+		assertThat(review.modelTargets()).isEqualTo(2);
+		assertThat(review.removed()).isEqualTo(1);
+		assertThat(review.missed()).isZero();
+	}
+
+	@Test
+	void aPostTheOwnerFoundNotInvestmentRelatedRemovesEveryModelTarget() {
+		Label none = new Label("reddit-1", Relevance.NOT_INVESTMENT_RELATED, false, "", List.of());
+
+		Review review = RedditMeasures.review(List.of(new Reviewed(none, List.of(model("Apple", Direction.BULLISH)))));
+
+		assertThat(review.posts()).isEqualTo(1);
+		assertThat(review.removed()).isEqualTo(1);
+		assertThat(review.postsWithMiss()).isZero();
+	}
+
+	@Test
+	void anOppositeDirectionOfAPairIsReversed() {
+		Review review = RedditMeasures.review(List.of(reviewed(false,
+				targets(owner("Apple", Direction.BULLISH), owner("Tesla", Direction.BEARISH),
+						owner("Micron", Direction.BULLISH), owner("Intel", Direction.BULLISH),
+						owner("AMD", Direction.NEUTRAL)),
+				model("Apple", Direction.BEARISH), model("Tesla", Direction.BEARISH), model("Intel", Direction.NEUTRAL),
+				model("AMD", Direction.BEARISH))));
+
+		// Micron has no pair: it is missed, not reversed. AMD's owner direction is not polar.
+		assertThat(review.polarTargets()).isEqualTo(4);
+		assertThat(review.reversed()).isEqualTo(1);
+	}
+
+	@Test
+	void aModelStanceTheOwnerDoesNotSeeCountsLikeGoldMetrics() {
+		Review review = RedditMeasures.review(List.of(reviewed(false,
+				targets(owner("Apple", Direction.NOT_EXPRESSED), owner("Tesla", Direction.UNCLEAR),
+						owner("Micron", Direction.NOT_EXPRESSED), owner("Intel", Direction.NOT_EXPRESSED),
+						owner("AMD", Direction.BULLISH)),
+				model("Apple", Direction.BULLISH), model("Tesla", Direction.NEUTRAL), model("Micron", Direction.UNCLEAR),
+				model("AMD", Direction.BEARISH))));
+
+		// Micron: "unclear" and "not_expressed" are the same answer. Intel has no pair.
+		assertThat(review.noStanceTargets()).isEqualTo(4);
+		assertThat(review.unseenStances()).isEqualTo(2);
+	}
+
+	@Test
+	void aHardPostCountsNowhere() {
+		Reviewed hard = reviewed(true,
+				targets(owner("Apple", Direction.BULLISH), owner("Micron", Direction.NOT_EXPRESSED),
+						owner("Tesla", Direction.BEARISH)),
+				model("Apple", Direction.BEARISH), model("Micron", Direction.BULLISH),
+				model("the sector", Direction.NEUTRAL));
+
+		assertThat(RedditMeasures.review(List.of(hard))).isEqualTo(new Review(0, 0, 0, 0, 0, 0, 0, 0, 0, 0));
+		assertThat(RedditMeasures.review(List.of())).isEqualTo(new Review(0, 0, 0, 0, 0, 0, 0, 0, 0, 0));
+	}
+
+	@Test
 	void volumeRowsSurviveTheirFile() {
 		Volume row = new Volume(LocalDate.parse("2026-10-20"), "stocks", 40, 3, 1, 35);
 
@@ -147,6 +271,30 @@ class RedditMeasuresTest {
 		assertThat(rows[0].cost(LUNA)).isCloseTo((200_000 * 0.05 + 100_000 * 0.005 + 40_000 * 0.25) / 1_000_000,
 				within(1e-9));
 		assertThat(rows[1].cost(LUNA)).isZero();
+	}
+
+	/** Candidates of the sheet: body lengths in the three buckets. */
+	private static List<Integer> lengths(int shortPosts, int mediumPosts, int longPosts) {
+		return Stream.of(IntStream.range(0, shortPosts), IntStream.range(1000, 1000 + mediumPosts),
+				IntStream.range(3000, 3000 + longPosts)).flatMap(IntStream::boxed).toList();
+	}
+
+	private static Reviewed reviewed(boolean hard, List<LabeledTarget> owner, Target... model) {
+		return new Reviewed(new Label("reddit-1", Relevance.INVESTMENT_RELATED, hard, "", owner), List.of(model));
+	}
+
+	private static List<LabeledTarget> targets(LabeledTarget... owner) {
+		return List.of(owner);
+	}
+
+	private static LabeledTarget owner(String anchor, Direction direction) {
+		return new LabeledTarget(anchor, direction, false);
+	}
+
+	private static Target model(String anchor, Direction direction) {
+		Assertiveness assertiveness = direction == Direction.BULLISH || direction == Direction.BEARISH
+				|| direction == Direction.NEUTRAL ? Assertiveness.UNHEDGED : null;
+		return ContractFixtures.target("t", anchor, direction, assertiveness);
 	}
 
 	private static Recording line(String status, @Nullable String channel, @Nullable String rawText,

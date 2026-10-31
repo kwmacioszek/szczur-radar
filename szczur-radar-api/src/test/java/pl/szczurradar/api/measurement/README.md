@@ -224,9 +224,10 @@ every gold post for it and every `GoldMetrics` threshold met.
 ## Reddit sample
 
 Measures what production's configuration does with real Reddit posts, for the decision on enabling
-Reddit. Unlike the gold set it has no labels of its own, draws nothing and is not in the CI gate. Its
-data lives in the change folder, never under `src/test/resources`; every path below is relative to
-`szczur-radar-api/`, and the examples use `DIR=../context/changes/reddit-quality-and-cost/sample`.
+Reddit. Unlike the gold set it is not in the CI gate, the run draws nothing, and labels cover only the
+posts of the sheet the owner reviewed. Its data lives in the change folder, never under
+`src/test/resources`; every path below is relative to `szczur-radar-api/`, and the examples use
+`DIR=../context/changes/reddit-quality-and-cost/sample`.
 
 ```bash
 # 1. Sample: every post of the closed days (Warsaw calendar), no key needed. D-2 is the newest safe day.
@@ -245,7 +246,15 @@ data lives in the change folder, never under `src/test/resources`; every path be
 # 3. Report (no model calls); needs wykop-usage.json and fails on an incomplete sample
 ./mvnw -Pmeasurement test -Dtest=RedditReport -Dreddit.dir=$DIR -Dreport.out=<path>/report-$(date +%F).md
 # optional: -Dreddit.price=luna
+
+# 4. Sheet for the owner's review (no model calls): freezes the queue in sheet.json
+./mvnw -Pmeasurement test -Dtest=RedditSheet -Dreddit.dir=$DIR
+# optional: -Dreddit.seed=20261030
 ```
+
+Then open `context/changes/reddit-quality-and-cost/labeling-reddit.html` in a browser, load `sheet.json`
+with „Wczytaj sheet.json”, review for about an hour and save the export as `$DIR/labels.json`. Run step 3
+again: the report gains its section on missed targets.
 
 | File in `$DIR` | Written by | Content |
 | --- | --- | --- |
@@ -253,6 +262,9 @@ data lives in the change folder, never under `src/test/resources`; every path be
 | `volume.json` | `RedditSampler` | one row per day and subreddit: `day`, `subreddit`, `fetched` (returned + removed + skipped), `removed`, `skipped`, `assessable` |
 | `recordings.jsonl` | `RedditRecorder` | one `Recording` per line, one line per try; `configId` = `luna-<tier>` |
 | `wykop-usage.json` | a read-only `SELECT` by hand | `[{day, channel, service_tier, flex_fallback, ok, failed, input_tokens, cached_tokens, output_tokens, wykop_posts}]`, one row per day and (`channel`, `service_tier`, `flex_fallback`); no post content |
+| `sheet.json` | `RedditSheet` | the review queue: `[{post_id, day, media, input, model: {relevance, targets: [{anchor, direction, hedged}]}}]`, up to 40 posts with a valid assessment, no megathreads, 10 / 15 / 15 (3000+ / 1000–2999 / < 1000) interleaved from the longest |
+| `labels.json` | `labeling-reddit.html` | the owner's labels in the `GoldLabels.Label` format, reviewed posts only; optional: without it the report has no section on them |
+| `report-notes.md` | by hand | notes a regenerated report must keep, inserted verbatim right before `## Definicje`; optional |
 
 In `wykop-usage.json` `channel` is `null` for calls without an answer, token sums are numbers
 (`COALESCE(…, 0)`), and `wykop_posts` is the same in every row of a day.
@@ -262,6 +274,10 @@ the other, while production spreads them over nights. `attempts` in a line count
 tries. A post with an `ok` line or three lines is finished, and the report fails while any post is not.
 The fuse stops new tries past `maxUsd`, counting every line in the file at `luna`'s price for the line's
 recorded channel; a higher limit resumes the run.
+
+The report pairs the owner's targets with the model's through `AnchorMatcher`, without aliases, and leaves
+"hard" posts out of every denominator. The denominator is the reviewed posts, never the whole sheet, and the
+sheet is pre-filled with the model's answer, which can inflate the result; the section says so.
 
 **Anonymization.** The sample goes into a public repository, so the text is anonymized before the
 assessment, the one deliberate difference from production's path: `u/nick` and `/u/nick` become

@@ -1,19 +1,28 @@
 package pl.szczurradar.api.measurement;
 
 import java.time.ZoneId;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Deque;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.jspecify.annotations.Nullable;
 
 import pl.szczurradar.api.agents.assessor.AssessmentResult;
+import pl.szczurradar.api.agents.assessor.contract.Direction;
+import pl.szczurradar.api.agents.assessor.contract.Target;
+import pl.szczurradar.api.measurement.GoldLabels.Label;
+import pl.szczurradar.api.measurement.GoldLabels.LabeledTarget;
 import pl.szczurradar.api.measurement.ModelsConfig.Model;
 import pl.szczurradar.api.measurement.ModelsConfig.Price;
 import pl.szczurradar.api.posts.Post;
@@ -21,7 +30,7 @@ import pl.szczurradar.api.posts.Post;
 /**
  * The pure logic behind the numbers of {@link RedditReport} (S-28), apart from any file or network, so
  * that {@code RedditMeasuresTest} can pin it: Wilson interval, length buckets, the megathread pattern,
- * the language of a thesis, when a post is finished, cost.
+ * the language of a thesis, when a post is finished, cost, the labeling sheet's queue and the owner's review.
  */
 final class RedditMeasures {
 
@@ -64,22 +73,30 @@ final class RedditMeasures {
 		double denominator = 1 + z2 / total;
 		double centre = (p + z2 / (2.0 * total)) / denominator;
 		double half = Z * Math.sqrt(p * (1 - p) / total + z2 / (4.0 * total * total)) / denominator;
-		return new Interval(centre - half, centre + half);
+		return new Interval(Math.max(0, centre - half), Math.min(1, centre + half));
 	}
 
 	/** The length of a post's {@code body} in characters, in the report's three buckets. */
 	enum LengthBucket {
 
-		SHORT("< 1000"), MEDIUM("1000–2999"), LONG("3000+");
+		SHORT("< 1000", 15), MEDIUM("1000–2999", 15), LONG("3000+", 10);
 
 		private final String label;
 
-		LengthBucket(String label) {
+		private final int sheetPosts;
+
+		LengthBucket(String label, int sheetPosts) {
 			this.label = label;
+			this.sheetPosts = sheetPosts;
 		}
 
 		String label() {
 			return label;
+		}
+
+		/** How many posts of this bucket the labeling sheet takes at most. */
+		int sheetPosts() {
+			return sheetPosts;
 		}
 
 		static LengthBucket of(int length) {
@@ -160,6 +177,100 @@ final class RedditMeasures {
 	/** {@value #DAYS_PER_MONTH} × the mean posts to assess a day × the mean cost of a post with its tries. */
 	static double monthlyCost(int posts, int days, double costPerPost) {
 		return DAYS_PER_MONTH * ((double) posts / days) * costPerPost;
+	}
+
+	/**
+	 * The labeling sheet's queue: from each bucket up to {@link LengthBucket#sheetPosts} candidates, drawn
+	 * with {@code seed}, one bucket after the other from the longest, so a review stopped early keeps a
+	 * sensible mix. A bucket that is used up is skipped.
+	 */
+	static <T> List<T> sheetQueue(List<T> candidates, Function<T, LengthBucket> bucketOf, long seed) {
+		Random random = new Random(seed);
+		List<Deque<T>> buckets = new ArrayList<>();
+		for (LengthBucket bucket : List.of(LengthBucket.values()).reversed()) {
+			List<T> drawn = new ArrayList<>(candidates);
+			drawn.removeIf(candidate -> bucketOf.apply(candidate) != bucket);
+			Collections.shuffle(drawn, random);
+			buckets.add(new ArrayDeque<>(drawn.subList(0, Math.min(bucket.sheetPosts(), drawn.size()))));
+		}
+		List<T> queue = new ArrayList<>();
+		while (buckets.stream().anyMatch(bucket -> !bucket.isEmpty())) {
+			for (Deque<T> bucket : buckets) {
+				if (!bucket.isEmpty()) {
+					queue.add(bucket.removeFirst());
+				}
+			}
+		}
+		return queue;
+	}
+
+	/** One post the owner reviewed: the label and the targets of the model's output the sheet showed. */
+	record Reviewed(Label label, List<Target> model) {
+	}
+
+	/**
+	 * The owner's review against the model, on the reviewed posts not marked "hard". A target of one side
+	 * pairs with one of the other through {@link AnchorMatcher}, without aliases; directions as in
+	 * {@link GoldMetrics}.
+	 *
+	 * @param posts reviewed posts not marked "hard", the denominator of every count here
+	 * @param postsWithMiss posts with at least one owner's target without a pair
+	 * @param ownerTargets the owner's targets
+	 * @param missed the owner's targets without a pair
+	 * @param modelTargets the model's targets
+	 * @param removed the model's targets without a pair
+	 * @param polarTargets the owner's {@code bullish} or {@code bearish} targets
+	 * @param reversed of those, the ones whose pair has the opposite direction (an unpaired one has not)
+	 * @param noStanceTargets the owner's targets without a usable direction
+	 * @param unseenStances of those, the ones whose pair has a usable direction (an unpaired one has not)
+	 */
+	record Review(int posts, int postsWithMiss, int ownerTargets, int missed, int modelTargets, int removed,
+			int polarTargets, int reversed, int noStanceTargets, int unseenStances) {
+	}
+
+	static Review review(List<Reviewed> reviewed) {
+		int posts = 0;
+		int postsWithMiss = 0;
+		int ownerTargets = 0;
+		int missed = 0;
+		int modelTargets = 0;
+		int removed = 0;
+		int polarTargets = 0;
+		int reversed = 0;
+		int noStanceTargets = 0;
+		int unseenStances = 0;
+		for (Reviewed post : reviewed) {
+			if (post.label().hard()) {
+				continue;
+			}
+			List<LabeledTarget> owner = post.label().targets();
+			List<Target> model = post.model();
+			Direction[] pairedDirection = new Direction[owner.size()];
+			List<AnchorMatcher.Pair> pairs = AnchorMatcher.match(owner.stream().map(LabeledTarget::anchor).toList(),
+					model.stream().map(target -> target.anchor().quote()).toList());
+			pairs.forEach(pair -> pairedDirection[pair.gold()] = model.get(pair.model()).stance().direction());
+			posts++;
+			postsWithMiss += pairs.size() < owner.size() ? 1 : 0;
+			ownerTargets += owner.size();
+			missed += owner.size() - pairs.size();
+			modelTargets += model.size();
+			removed += model.size() - pairs.size();
+			for (int i = 0; i < owner.size(); i++) {
+				Direction expected = owner.get(i).direction();
+				Direction actual = pairedDirection[i];
+				Direction opposite = GoldMetrics.opposite(expected);
+				if (opposite != null) {
+					polarTargets++;
+					reversed += actual == opposite ? 1 : 0;
+				}
+				if (GoldMetrics.noDirection(expected)) {
+					noStanceTargets++;
+					unseenStances += actual != null && !GoldMetrics.noDirection(actual) ? 1 : 0;
+				}
+			}
+		}
+		return new Review(posts, postsWithMiss, ownerTargets, missed, modelTargets, removed, polarTargets, reversed,
+				noStanceTargets, unseenStances);
 	}
 
 	/** The median; 0 for no values. */
