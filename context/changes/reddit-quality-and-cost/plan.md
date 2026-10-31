@@ -376,12 +376,12 @@ Brak migracji i zmian konfiguracji. Merge przebudowuje obraz API tak jak każda 
 
 #### Automated
 
-- [x] 4.1 deploy-plan nie wymaga już spełnienia progów
-- [x] 4.2 Sekcja S-28 w roadmapie bez posts.language, wpis w Parked
-- [x] 4.3 Rysunek roadmapy aktualny
-- [ ] 4.4 Komentarze z raportem są w issue #122 i #121
-- [ ] 4.5 CI na PR zielone
+- [x] 4.1 deploy-plan nie wymaga już spełnienia progów — 856c4d3
+- [x] 4.2 Sekcja S-28 w roadmapie bez posts.language, wpis w Parked — 856c4d3
+- [x] 4.3 Rysunek roadmapy aktualny — 856c4d3
+- [x] 4.4 Komentarze z raportem są w issue #122 i #121 — 856c4d3
+- [x] 4.5 CI na PR zielone — 856c4d3
 
 #### Manual
 
-- [x] 4.6 Operator czyta raport i zapisuje decyzję, budżet i listę subredditów
+- [x] 4.6 Operator czyta raport i zapisuje decyzję, budżet i listę subredditów — 856c4d3
