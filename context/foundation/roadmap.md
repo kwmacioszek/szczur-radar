@@ -114,7 +114,7 @@ Na Wykopie (#gielda) i Reddicie codziennie pojawiają się setki postów o inwes
 | S-25 | alert-ping-single-rule          | adres check-in alarmów ma jedną regułę we wszystkich miejscach, a rozjazd kopii jest wykrywany testem                           | —             | NFR `prd.md:259`; audyt P4, P5; destylacja R-27                           | done |
 | S-26 | engine-test-stability           | testy silnika nie zależą od czasu zegara na współdzielonym runnerze, a znane okna fałszywych alarmów (F3) są przypięte testami | —             | audyt E1, E2, E6                                                          | done |
 | S-27 | reddit-source                   | użytkownik widzi w feedzie posty z wybranych subredditów obok Wykopu, ocenione tym samym kontraktem                             | S-20          | FR-023, NFR `prd.md:268`, `prd.md:42`; audyt S3, S6, S7, S8; destylacja Q-01, Q-07 | done        |
-| S-28 | reddit-quality-and-cost         | operator zna obraz konfiguracji produkcyjnej na postach z Reddita i koszt łączny z Wykopem, a decyzja o włączeniu jest zapisana    | S-27          | guardrails `prd.md:48-49`; audyt S7; destylacja R-15, R-16, Q-03, Q-04    | in-progress |
+| S-28 | reddit-quality-and-cost         | operator zna obraz konfiguracji produkcyjnej na postach z Reddita i koszt łączny z Wykopem, a decyzja o włączeniu jest zapisana    | S-27          | guardrails `prd.md:48-49`; audyt S7; destylacja R-15, R-16, Q-03, Q-04    | done        |
 | S-29 | source-aware-feed               | użytkownik odróżnia źródło posta w feedzie i szczegółach, a data aktualizacji nie kłamie przy dwóch źródłach                    | S-27          | FR-023, FR-008; audyt S5, S6; destylacja D-08, R-24, Q-02                 | done        |
 
 ## Streams
@@ -264,7 +264,7 @@ Brak — każda praca przekrojowa M-3 ma widoczny skutek dla użytkownika albo o
   - Jaki jest budżet kosztu LLM na dzień albo przebieg poza limitem $10/mies. na kluczu (Open Roadmap Question 4, destylacja Q-03)? — Owner: user. Rozstrzygnięte 2026-10-31: limit $10/mies. zostaje, bez osobnego pułapu dziennego; koszt łączny z Wykopem to $3,21/mies. na `flex` (górna granica $4,67).
   - Czy wynik pomiaru jest warunkiem włączenia Reddita na produkcji (destylacja Q-04)? — Owner: user. Rozstrzygnięte 2026-10-31: nie, raport jest materiałem do decyzji, bez progów. Decyzja: włączyć bez napraw (`stocks,ValueInvesting,investing`); tezy po polsku nie są warunkiem.
 - **Risk:** próbka nie ma etykiet bez podpowiedzi modelu: właściciel przejrzał 28 z 40 postów z podpowiedzią, więc progów nie rozstrzyga. Publiczne API Reddita, z którego czyta Arctic Shift, zamyka się etapami od 12 stycznia do marca 2027 (`deploy-plan.md`, runbook „Arctic Shift stops delivering”).
-- **Status:** in-progress
+- **Status:** done
 
 ### S-29: Źródło widoczne w feedzie, świeżość bez kłamstwa
 
@@ -382,3 +382,4 @@ Brak — każda praca przekrojowa M-3 ma widoczny skutek dla użytkownika albo o
 - **S-20: przebieg z kilkoma źródłami zapisuje i ocenia posty zdrowych źródeł, gdy jedno z nich rzuca błąd albo nie daje żadnego posta; łączny czas pobrania kilku zdrowych źródeł nie zatrzymuje przebiegu jako „bez postępu”; admin widzi pobrane i pominięte elementy osobno dla każdego źródła, a dzień jest pokryty dla źródła, które dało posty.** — Archived 2026-10-29 → `context/archive/2026-10-29-source-isolation/`. Lesson: —.
 - **S-24: duże odpowiedzi API (przebieg z krokami, post z oceną, nieudany post) mają w testach zapisany pełny kształt; odpowiedź na nieoczekiwany błąd serwera ma zdefiniowany kod, a atrapa i testy SPA używają tego samego; reguły powtórzone po obu stronach (białe znaki, limity, listy wartości) nie rozjadą się bez czerwonego testu.** — Archived 2026-10-30 → `context/archive/2026-10-29-api-contract-guard/`. Lesson: —.
 - **S-27: posty z wybranych subredditów są pobierane w przebiegu zakresu obok Wykopu, mapowane do wspólnego modelu, oceniane tym samym kontraktem i widoczne w feedzie; nieskonfigurowany Reddit nie zmienia niczego w zachowaniu Wykopu, a jego klucze nie zatrzymują wdrożeń.** — Archived 2026-10-30 → `context/archive/2026-10-29-reddit-source/`. Lesson: —.
+- **S-28: operator zna obraz konfiguracji produkcyjnej (`openai/gpt-6-luna`, prompt v2.5) na 396 postach z Reddita i koszt łączny z Wykopem oraz zapisał decyzję o włączeniu; pomiar nie rozstrzyga progów kierunku celów i sprzeczności.** — Archived 2026-10-31 → `context/archive/2026-10-30-reddit-quality-and-cost/`. Lesson: —.
