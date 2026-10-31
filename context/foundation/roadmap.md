@@ -3,7 +3,7 @@ project: "Szczur Radar"
 version: 4
 status: draft # draft | active | locked
 created: 2026-09-27
-updated: 2026-10-30
+updated: 2026-10-31
 prd_version: 2
 main_goal: quality
 top_blocker: decisions # 7 pytań do właściciela o Reddita i oceny (destylacja domeny, Q-01–Q-07): subreddity i dostęp, oznaczanie źródła, świeżość per źródło, budżet LLM, jakość po angielsku, mapowanie url+selftext
