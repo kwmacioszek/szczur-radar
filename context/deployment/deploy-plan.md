@@ -2070,7 +2070,7 @@ The value is a comma-separated list. Each name is stripped, an optional `r/` (lo
 
 ### Runbook — enabling Reddit on production (after S-28; operator; tracked in issue #121)
 
-Only once S-28 has shown that the assessment of English posts meets its thresholds and the cost fits the budget. Use the subreddit list S-28 settles on (first configuration: `stocks,ValueInvesting,investing`).
+Only after the operator has read the S-28 report and recorded the decision in issue #121; no threshold has to be met (section S-28). Use that decision's subreddit list (`stocks,ValueInvesting,investing`).
 
 0. **Standing rules.** A redeploy of the API interrupts a running run, and setting a variable from the CLI bypasses the CI deploy guard. So not while `/admin` shows a run `RUNNING` or queued (`GET /api/deploy-safety` → `{"safe":true,"reason":null}`), not between about 00:30 and 01:30 UTC (section S-05), and not while the 02:00 UTC backup runs (section S-15).
 1. **Set the variable and redeploy** (not a secret: as an argument, not sealed; the rule for variables of section F-03: `--skip-deploys`, then one deploy):
@@ -2091,12 +2091,12 @@ Only once S-28 has shown that the assessment of English posts meets its threshol
      SELECT channel, count(*) FROM posts WHERE source = '\''reddit'\'' GROUP BY channel ORDER BY channel;"'
      ```
 3. **First night with Reddit.** The cron ends `OK: range succeeded` or `OK: range partial` with exit 0; the night's run page has two rows in "Wynik per źródło", `wykop` and `reddit`, both `pobrane`, and no `source_failed` / `source_empty`. "Dni bez danych" lists no Reddit day before its first `succeeded` result.
-4. **Third night with Reddit.** A post that keeps failing its assessment goes `dead` only at its third attempt, and each night's RETRY runs before the range, so `dead_posts` (the bell, `RUN_NEEDS_ATTENTION`) can first appear around the second or third night (in the PR env 9 of 79 posts went `dead`). Compare the night's dead posts with what S-28 accepted.
+4. **Third night with Reddit.** A post that keeps failing its assessment goes `dead` only at its third attempt, and each night's RETRY runs before the range, so `dead_posts` (the bell, `RUN_NEEDS_ATTENTION`) can first appear around the second or third night (in the PR env, on CI's model, 9 of 79 posts went `dead`). Compare the night's dead posts with the S-28 report: 2.5 % of posts, about 1.4 a day, so the alert comes on roughly 3 nights in 4. Look into it only when the share stays above the report's upper bound of 4.6 % for several nights, and read each alert's reason: `source_failed` or `source_empty` means the archive, not the model.
 5. **Record and close.** Comment on issue #121: when the variable was set and its value, the API deployment ID, the first run's id with its Reddit row and the INFO lines, the first and third night's run ids, cron lines and pages. Close #121 only after this production verification.
 
 ### Runbook — Arctic Shift stops delivering (horizon March 2027)
 
-Arctic Shift has no data of its own: it reads Reddit's official Data API, whose public access Reddit closes in March 2027 (the archive's issue #76, where its maintainer answered "Not sure yet what exactly will happen."). The archive gives no uptime guarantee; its outages of October 2026 were each fixed within a day.
+Arctic Shift has no data of its own: it reads Reddit's official Data API, whose public access Reddit closes in March 2027 (the archive's issue #76, where its maintainer answered "Not sure yet what exactly will happen."). The same issue dates the start of removing access for unregistered apps at 12 January 2027, so the archive may stop before March. The archive gives no uptime guarantee; its outages of October 2026 were each fixed within a day.
 
 - **Symptoms.** Reddit's result is `failed` from the first night the archive does not answer (`RedditApiException: … HTTP 5xx`, `DEADLINE_EXCEEDED`, a transport error). When it answers without new posts the result is `empty`, but later: a night's range is D-2…D-1, so the posts of the day the archive stopped still make the next two nights `succeeded`, and the first `empty`, the first alert, is the third night after that day. The second of those nights counts as covered without data. Either way the run ends `partial` with `source_empty` / `source_failed`: the bell and `RUN_NEEDS_ATTENTION` in Telegram every night, cron exit 0 (Wykop's posts are still stored and assessed), and "Dni bez danych" lists the uncovered days for Reddit. Check the status page `https://status.arctic-shift.photon-reddit.com` (components API, Archiver) and the repository's issues `https://github.com/ArthurHeitmann/arctic_shift/issues`.
 - **A short outage** (a day or two, an incident on the status page): nothing to do. An outage of the `empty` kind that ends within about two days raises no alert at all. When the archive is back, fill Reddit's days from "Dni bez danych" (section S-13): a later run fetches whatever the archive holds for those days. After an `empty` episode that list misses a day (the night counted as covered above), so find the last day with data and fill from there:
@@ -2127,6 +2127,18 @@ V13 adds a `NOT NULL` column without a default, so an API older than S-27 cannot
 
 A fault in Reddit's fetching needs no rollback: delete `REDDIT_SUBREDDITS` (runbook above). Without the variable nothing is fetched from Reddit, though leftover Reddit posts are still mapped in retries, and even with it a failing Reddit does not touch Wykop's posts of the same run (section S-20). The value `reddit` stays registered: closed sets are append-only.
 
+## S-28: Reddit measurement (reddit-quality-and-cost)
+
+**Status:** delivered by PR #134; closure in issue #122.
+
+Change: `reddit-quality-and-cost` (its folder moves to `context/archive/` when the change is archived). The report is `report-2026-10-31.md` in that folder, with its data in `sample/`. S-28 adds only test-only tools in `measurement/`: production code, the prompt, the contract, `models.json` and the gold set are unchanged, so nothing here needs a deploy step.
+
+- **Result.** Production's configuration (`openai/gpt-6-luna`, prompt v2.5, `flex`) on 396 Reddit posts from 7 days of `stocks`, `ValueInvesting` and `investing`: 86.6 % assessed at the first attempt, 97.5 % within three, 2.5 % `dead`. Failed attempts are 17.3 %, against 2.3 % on Wykop. 22.1 % of theses are in Polish. The monthly cost with Wykop is $3.21 on `flex` and $6.42 on `default`; if every fetched post stayed up, $4.67 and $9.34.
+- **What it does not show.** The owner reviewed 28 of the 40 sheet posts, with the model's answer filled in, in about 34 minutes, and changed nothing. That does not prove there are no missed targets, and the sample does not settle the thresholds of 70 % and 10 %.
+- **Decision (2026-10-31).** Enable Reddit without repairs, with `stocks,ValueInvesting,investing`. The OpenRouter key's $10 monthly limit stays, with no separate cap, and Polish theses are not a condition. The reason is the horizon: Arctic Shift may stop between January and March 2027 (section S-27, its runbook), so repairs would not pay back.
+
+Enabling follows the runbook in section S-27 and is tracked in issue #121. Issue #122 closes once the merge's deploy is verified healthy on production, since nothing else of S-28 reaches it.
+
 ## S-29: źródło widoczne w feedzie, świeżość bez kłamstwa (source-aware-feed)
 
 **Status:** delivered by PR #133; production verification and closure in issue #123.
@@ -2139,7 +2151,7 @@ Change: `source-aware-feed` (its folder moves to `context/archive/` when the cha
 - **What moves a source's date.** Only that source's `succeeded` result in a range run that ended `succeeded` or `partial`. `empty` and `failed` results leave it, so a Reddit-only run, or a run where one source failed or gave no post, moves only the date of the source that gave posts. It is the same rule as "Dni bez danych" (section S-20). The date is still the run's end (`finished_at`), not the end of the source's fetch, because posts reach the feed only assessed.
 - **Which sources are listed.** Only those with at least one such update, counted from the run history, without reading the configuration: a newly enabled source appears after its first good update. Before any update the label says "Dane nie były jeszcze aktualizowane."; when the read fails there is no label and the list works. A source switched off stays listed with its last date: the label reads the run history, not the configuration, so an old Reddit date after removing `REDDIT_SUBREDDITS` is expected, not an outage.
 - **`GET /api/freshness` changed shape.** It answers `{"sources":[{"source":"wykop","lastUpdatedAt":"<ISO-8601 UTC>"},{"source":"reddit","lastUpdatedAt":"<ISO-8601 UTC>"}]}` in `Source` order, and `{"sources":[]}` before the first update. The top-level `lastUpdatedAt` is gone. The SPA is its only reader.
-- **Posts name their origin.** The feed card and the post page show `Wykop · #gielda` or `Reddit · r/<subreddit>`, as plain text. `GET /api/posts` and `GET /api/posts/{id}` have `source` and `channel` (the name without a prefix; the SPA adds it). There is no filter or sort by source (FR-008 stays nice-to-have), and the post's language is not shown (S-28).
+- **Posts name their origin.** The feed card and the post page show `Wykop · #gielda` or `Reddit · r/<subreddit>`, as plain text. `GET /api/posts` and `GET /api/posts/{id}` have `source` and `channel` (the name without a prefix; the SPA adds it). There is no filter or sort by source (FR-008 stays nice-to-have), and the post's language is not shown (parked, see `## Parked` in the roadmap).
 - **Unchanged:** no migration and no new variable. The run engine, the cron and its exit codes, the alerts, "Dni bez danych" and the failed-post list stay as they were. Reddit stays off on production (section S-27).
 
 ### Deploy window
