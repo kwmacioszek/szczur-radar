@@ -1,0 +1,148 @@
+[ {
+  "day" : "2026-10-23",
+  "subreddit" : "stocks",
+  "fetched" : 42,
+  "removed" : 27,
+  "skipped" : 0,
+  "assessable" : 15
+}, {
+  "day" : "2026-10-23",
+  "subreddit" : "ValueInvesting",
+  "fetched" : 36,
+  "removed" : 11,
+  "skipped" : 0,
+  "assessable" : 25
+}, {
+  "day" : "2026-10-23",
+  "subreddit" : "investing",
+  "fetched" : 21,
+  "removed" : 7,
+  "skipped" : 0,
+  "assessable" : 14
+}, {
+  "day" : "2026-10-24",
+  "subreddit" : "stocks",
+  "fetched" : 35,
+  "removed" : 21,
+  "skipped" : 0,
+  "assessable" : 14
+}, {
+  "day" : "2026-10-24",
+  "subreddit" : "ValueInvesting",
+  "fetched" : 33,
+  "removed" : 12,
+  "skipped" : 0,
+  "assessable" : 21
+}, {
+  "day" : "2026-10-24",
+  "subreddit" : "investing",
+  "fetched" : 19,
+  "removed" : 10,
+  "skipped" : 0,
+  "assessable" : 9
+}, {
+  "day" : "2026-10-25",
+  "subreddit" : "stocks",
+  "fetched" : 37,
+  "removed" : 29,
+  "skipped" : 0,
+  "assessable" : 8
+}, {
+  "day" : "2026-10-25",
+  "subreddit" : "ValueInvesting",
+  "fetched" : 23,
+  "removed" : 12,
+  "skipped" : 0,
+  "assessable" : 11
+}, {
+  "day" : "2026-10-25",
+  "subreddit" : "investing",
+  "fetched" : 11,
+  "removed" : 3,
+  "skipped" : 0,
+  "assessable" : 8
+}, {
+  "day" : "2026-10-26",
+  "subreddit" : "stocks",
+  "fetched" : 67,
+  "removed" : 44,
+  "skipped" : 0,
+  "assessable" : 23
+}, {
+  "day" : "2026-10-26",
+  "subreddit" : "ValueInvesting",
+  "fetched" : 42,
+  "removed" : 16,
+  "skipped" : 0,
+  "assessable" : 26
+}, {
+  "day" : "2026-10-26",
+  "subreddit" : "investing",
+  "fetched" : 26,
+  "removed" : 9,
+  "skipped" : 0,
+  "assessable" : 17
+}, {
+  "day" : "2026-10-27",
+  "subreddit" : "stocks",
+  "fetched" : 58,
+  "removed" : 44,
+  "skipped" : 0,
+  "assessable" : 14
+}, {
+  "day" : "2026-10-27",
+  "subreddit" : "ValueInvesting",
+  "fetched" : 45,
+  "removed" : 14,
+  "skipped" : 0,
+  "assessable" : 31
+}, {
+  "day" : "2026-10-27",
+  "subreddit" : "investing",
+  "fetched" : 9,
+  "removed" : 2,
+  "skipped" : 0,
+  "assessable" : 7
+}, {
+  "day" : "2026-10-28",
+  "subreddit" : "stocks",
+  "fetched" : 78,
+  "removed" : 52,
+  "skipped" : 0,
+  "assessable" : 26
+}, {
+  "day" : "2026-10-28",
+  "subreddit" : "ValueInvesting",
+  "fetched" : 50,
+  "removed" : 15,
+  "skipped" : 0,
+  "assessable" : 35
+}, {
+  "day" : "2026-10-28",
+  "subreddit" : "investing",
+  "fetched" : 24,
+  "removed" : 6,
+  "skipped" : 0,
+  "assessable" : 18
+}, {
+  "day" : "2026-10-29",
+  "subreddit" : "stocks",
+  "fetched" : 66,
+  "removed" : 45,
+  "skipped" : 0,
+  "assessable" : 21
+}, {
+  "day" : "2026-10-29",
+  "subreddit" : "ValueInvesting",
+  "fetched" : 46,
+  "removed" : 9,
+  "skipped" : 0,
+  "assessable" : 37
+}, {
+  "day" : "2026-10-29",
+  "subreddit" : "investing",
+  "fetched" : 21,
+  "removed" : 5,
+  "skipped" : 0,
+  "assessable" : 16
+} ]

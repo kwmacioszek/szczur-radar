@@ -1,0 +1,1006 @@
+[
+ {
+  "post_id": "reddit-1xeycwc",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "NFLX",
+    "direction": "bullish",
+    "hedged": false
+   },
+   {
+    "anchor": "Microsoft",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "WWE",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "NFL",
+    "direction": "not_expressed",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "reddit-1xdqtqt",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "indexes",
+    "direction": "mixed",
+    "hedged": false
+   },
+   {
+    "anchor": "yields",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "Trump",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "AI capex",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "Oracle",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "robots",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "cash",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "money market funds",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "IREN",
+    "direction": "mixed",
+    "hedged": false
+   },
+   {
+    "anchor": "FGEQ",
+    "direction": "bullish",
+    "hedged": true
+   },
+   {
+    "anchor": "ISPA",
+    "direction": "bullish",
+    "hedged": true
+   },
+   {
+    "anchor": "VDIV",
+    "direction": "bullish",
+    "hedged": true
+   }
+  ]
+ },
+ {
+  "post_id": "reddit-1xhzklx",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "GOOG",
+    "direction": "not_expressed",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "reddit-1xh8wia",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "gold",
+    "direction": "mixed",
+    "hedged": false
+   },
+   {
+    "anchor": "GLD",
+    "direction": "bullish",
+    "hedged": false
+   },
+   {
+    "anchor": "S&P",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "US federal debt",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "inflation",
+    "direction": "bullish",
+    "hedged": true
+   },
+   {
+    "anchor": "cash",
+    "direction": "bearish",
+    "hedged": false
+   },
+   {
+    "anchor": "dollar",
+    "direction": "bullish",
+    "hedged": true
+   },
+   {
+    "anchor": "interest rates",
+    "direction": "bullish",
+    "hedged": false
+   },
+   {
+    "anchor": "Treasury bonds",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "central banks",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "war in Iran",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "oil",
+    "direction": "not_expressed",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "reddit-1xhblx4",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "The stock is cheaper than Target. <--- ten Target mnie zastanawia, czy to jest jakaś spółka?",
+  "targets": [
+   {
+    "anchor": "AppLovin",
+    "direction": "bullish",
+    "hedged": false
+   },
+   {
+    "anchor": "S&P 500",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "Meta",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "bull market",
+    "direction": "bullish",
+    "hedged": true
+   },
+   {
+    "anchor": "Target",
+    "direction": "not_expressed",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "reddit-1xh0qsl",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "Prediction markets",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "NYSE",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "Nvidia",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "Tesla",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "Apple",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "SPY",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "binary options",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "contracts tied directly to earnings results",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "Earnings season",
+    "direction": "not_expressed",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "reddit-1xfsteo",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "ZK Prime Capital",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "CELLO",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "Google",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "Alibaba Cloud",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "Dropbox",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "Telegram",
+    "direction": "not_expressed",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "reddit-1xhr0gg",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "cybersecurity stocks",
+    "direction": "bearish",
+    "hedged": false
+   },
+   {
+    "anchor": "AI",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "BlackHat Convention",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "Evercore",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "Crowdstrike",
+    "direction": "bearish",
+    "hedged": false
+   },
+   {
+    "anchor": "Nvidia",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "OpenAI",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "RBRK",
+    "direction": "bearish",
+    "hedged": false
+   },
+   {
+    "anchor": "Palo Alto Network",
+    "direction": "bearish",
+    "hedged": true
+   },
+   {
+    "anchor": "Rubrik",
+    "direction": "bearish",
+    "hedged": false
+   },
+   {
+    "anchor": "DataDog",
+    "direction": "bearish",
+    "hedged": true
+   },
+   {
+    "anchor": "Cloudflare",
+    "direction": "bearish",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "reddit-1xhwhbq",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "Oracle",
+    "direction": "bullish",
+    "hedged": true
+   }
+  ]
+ },
+ {
+  "post_id": "reddit-1xhpgpx",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "Alphabet",
+    "direction": "mixed",
+    "hedged": false
+   },
+   {
+    "anchor": "Amazon",
+    "direction": "mixed",
+    "hedged": false
+   },
+   {
+    "anchor": "Meta",
+    "direction": "bullish",
+    "hedged": true
+   },
+   {
+    "anchor": "Nvidia",
+    "direction": "bullish",
+    "hedged": true
+   }
+  ]
+ },
+ {
+  "post_id": "reddit-1xito4n",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "BMY",
+    "direction": "mixed",
+    "hedged": false
+   },
+   {
+    "anchor": "pharma",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "Eliquis",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "Opdivo",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "S&P",
+    "direction": "bearish",
+    "hedged": true
+   },
+   {
+    "anchor": "PFE",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "KMB",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "AI",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "Google",
+    "direction": "bearish",
+    "hedged": true
+   }
+  ]
+ },
+ {
+  "post_id": "reddit-1xfezj7",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "Google",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "Nvidia",
+    "direction": "bullish",
+    "hedged": false
+   },
+   {
+    "anchor": "Micron",
+    "direction": "not_expressed",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "reddit-1xg7ahi",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "Anthropic",
+    "direction": "mixed",
+    "hedged": false
+   },
+   {
+    "anchor": "Amazon Web Services",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "Google Cloud Platform",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "Broadcom",
+    "direction": "not_expressed",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "reddit-1xiuxl5",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "Reddit",
+    "direction": "bearish",
+    "hedged": true
+   },
+   {
+    "anchor": "Google",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "LSEG",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "CNBC",
+    "direction": "not_expressed",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "reddit-1xgzdst",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "Anthropic",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "SpaceX",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "Nasdaq",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "SEC",
+    "direction": "not_expressed",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "reddit-1xh8v2i",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "Gold",
+    "direction": "bullish",
+    "hedged": false
+   },
+   {
+    "anchor": "GLD",
+    "direction": "bullish",
+    "hedged": false
+   },
+   {
+    "anchor": "S&P",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "The US federal debt",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "inflation",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "cash",
+    "direction": "bearish",
+    "hedged": false
+   },
+   {
+    "anchor": "US dollar",
+    "direction": "bearish",
+    "hedged": true
+   },
+   {
+    "anchor": "interest rates",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "Warsh",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "AI build out",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "30 year Treasury bonds",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "oil",
+    "direction": "not_expressed",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "reddit-1xf3wpi",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "Nike",
+    "direction": "mixed",
+    "hedged": false
+   },
+   {
+    "anchor": "Pepsi",
+    "direction": "mixed",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "reddit-1xgxfqk",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "Direct Indexing",
+    "direction": "bearish",
+    "hedged": true
+   },
+   {
+    "anchor": "tax loss harvesting accounts",
+    "direction": "bearish",
+    "hedged": true
+   }
+  ]
+ },
+ {
+  "post_id": "reddit-1xg7zsk",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "oRo",
+    "direction": "bullish",
+    "hedged": true
+   },
+   {
+    "anchor": "Aeon",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "Nissan",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "Adobe",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "Semrush",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "Japanese small caps",
+    "direction": "not_expressed",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "reddit-1xhy6fn",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "The Federal Reserve",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "benchmark interest rates",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "inflation",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "midterm elections",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "Trump",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "CME Group",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "S&P 500",
+    "direction": "bullish",
+    "hedged": true
+   },
+   {
+    "anchor": "Kevin Warsh",
+    "direction": "not_expressed",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "reddit-1xhn5z1",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "junk bonds tied to AI infrastructure",
+    "direction": "bearish",
+    "hedged": true
+   },
+   {
+    "anchor": "debt market",
+    "direction": "bearish",
+    "hedged": true
+   },
+   {
+    "anchor": "data centers",
+    "direction": "bearish",
+    "hedged": true
+   },
+   {
+    "anchor": "hyperscalers",
+    "direction": "bearish",
+    "hedged": true
+   },
+   {
+    "anchor": "Oracle",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "Alphabet",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "Amazon",
+    "direction": "not_expressed",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "reddit-1xi7epc",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "Intel",
+    "direction": "mixed",
+    "hedged": false
+   },
+   {
+    "anchor": "TSMC",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "Zacks",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "Estimize",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "Morningstar",
+    "direction": "not_expressed",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "reddit-1xijqqn",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "Crypto",
+    "direction": "bearish",
+    "hedged": false
+   },
+   {
+    "anchor": "stocks",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "bonds",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "patents",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "copyrights",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "trademarks",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "e-money",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "fiat money",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "food",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "energy",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "metal",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "real estate",
+    "direction": "not_expressed",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "reddit-1xgpq2t",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "IREN",
+    "direction": "bearish",
+    "hedged": true
+   },
+   {
+    "anchor": "APLD",
+    "direction": "bearish",
+    "hedged": true
+   }
+  ]
+ },
+ {
+  "post_id": "reddit-1xg9fui",
+  "relevance": "investment_related",
+  "hard": true,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "Anthropic's",
+    "direction": "bearish",
+    "hedged": false
+   },
+   {
+    "anchor": "Google",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "Amazon",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "Broadcom",
+    "direction": "not_expressed",
+    "hedged": false
+   },
+   {
+    "anchor": "broader market",
+    "direction": "bearish",
+    "hedged": true
+   }
+  ]
+ },
+ {
+  "post_id": "reddit-1xgaozo",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "DASH",
+    "direction": "mixed",
+    "hedged": false
+   },
+   {
+    "anchor": "CART",
+    "direction": "bullish",
+    "hedged": false
+   },
+   {
+    "anchor": "grocery delivery",
+    "direction": "not_expressed",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "reddit-1xfwwbo",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "mało tekstu, jest URL który pewnie niesie więcej informacji.",
+  "targets": [
+   {
+    "anchor": "Anthropic",
+    "direction": "not_expressed",
+    "hedged": false
+   }
+  ]
+ },
+ {
+  "post_id": "reddit-1xhm5j4",
+  "relevance": "investment_related",
+  "hard": false,
+  "note": "",
+  "targets": [
+   {
+    "anchor": "Costco",
+    "direction": "bullish",
+    "hedged": false
+   }
+  ]
+ }
+]

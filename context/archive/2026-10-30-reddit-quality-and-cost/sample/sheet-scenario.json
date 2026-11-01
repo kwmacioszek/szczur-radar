@@ -1,0 +1,70 @@
+{
+ "steps": [
+  {
+   "name": "before load: app hidden",
+   "value": true
+  },
+  {
+   "name": "post 1 loaded",
+   "value": {
+    "meta": "1/40 · reddit-1xeycwc · r/ValueInvesting · post · 2026-10-25 09:56",
+    "marks": 7,
+    "rows": 4,
+    "count": "0/40",
+    "status": "nieprzejrzany: popraw albo zatwierdź",
+    "relevanceChecked": "investment_related"
+   }
+  },
+  {
+   "name": "post 1 target added from selection",
+   "value": {
+    "picked": "Please",
+    "rowsAfter": 5,
+    "status": "✓ przejrzany"
+   }
+  },
+  {
+   "name": "post 1 corrected",
+   "value": {
+    "firstBefore": "bullish",
+    "rowsNow": 4,
+    "count": "1/40"
+   }
+  },
+  {
+   "name": "post 2 passed with Next",
+   "value": {
+    "meta": "2/40 · reddit-1xdqtqt · r/investing · post · 2026-10-23 21:36",
+    "status": "nieprzejrzany: popraw albo zatwierdź"
+   }
+  },
+  {
+   "name": "post 3 approved unchanged",
+   "value": {
+    "count": "2/40",
+    "now": "4/40 · reddit-1xh8wia · r/stocks · post · 2026-10-27 23:53"
+   }
+  },
+  {
+   "name": "post 4 hard with a note",
+   "value": {
+    "count": "3/40"
+   }
+  },
+  {
+   "name": "exported",
+   "value": {
+    "suggested": "labels.json"
+   }
+  },
+  {
+   "name": "after reload",
+   "value": {
+    "count": "3/40",
+    "posts": 40
+   }
+  }
+ ],
+ "dialogs": [],
+ "pageErrors": []
+}

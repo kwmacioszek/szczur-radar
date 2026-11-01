@@ -91,7 +91,7 @@ final class Replay {
 	}
 
 	/** Today's verdict on a recording: a re-evaluated answer, or the recorded call failure. */
-	private static AssessmentResult judge(Post post, Recording recording) {
+	static AssessmentResult judge(Post post, Recording recording) {
 		LlmResponse response = recording.response();
 		if (response == null) {
 			return failedCall(recording);

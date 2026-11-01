@@ -240,11 +240,11 @@ public final class GoldMetrics {
 		return expected == actual || (noDirection(expected) && actual != null && noDirection(actual));
 	}
 
-	private static boolean noDirection(Direction direction) {
+	static boolean noDirection(Direction direction) {
 		return direction == Direction.UNCLEAR || direction == Direction.NOT_EXPRESSED;
 	}
 
-	private static @Nullable Direction opposite(Direction direction) {
+	static @Nullable Direction opposite(Direction direction) {
 		return switch (direction) {
 			case BULLISH -> Direction.BEARISH;
 			case BEARISH -> Direction.BULLISH;

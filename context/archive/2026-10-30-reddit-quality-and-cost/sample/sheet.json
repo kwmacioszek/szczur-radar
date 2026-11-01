@@ -1,0 +1,1905 @@
+[ {
+  "post_id" : "reddit-1xeycwc",
+  "day" : "2026-10-25",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-25T09:56:02Z",
+      "channels" : [ "ValueInvesting" ],
+      "title" : "NFLX seems like a no-brainer at these levels - what am I missing? Please provide the bear arguments!",
+      "body" : "NFLX is sitting at 52-week lows right now. Last time we saw this stock price was September 2024.\n\nOn the Q3 call, management trimmed their 2026 ad revenue guidance from $3.0B to $2.7B and guidance came in light. Wall Street did not like it, which awakened the contrarian in me lol. So I spent my entire Saturday reading and researching this company.\n\nMy main conclusion (for now) is that for investors with long-term time horizons (which I assume all of us are here on this sub) this looks like a no-brainer. But when a possible buy looks almost like 'guaranteed money', I feel uncomfortable so this is why I would be happy to hear your counterarguments to my points below or as to why NFLX is not a buy at all in your opinion.\n\nRunning a 5-year DCF, implied value per share came out at $79. And running a simple forward P/E weighted probability model on rather conservative estimations, I end up with a share price range $107 - $135 come 2030. \n\nAt a forward P/E of 18 and the Wall Street expectation to barely grow double digits (10-11%) in the coming years, what am I missing here? This seems like a sure bet that will solidly compound.\n\nFull transparency: yes, I asked AI to quickly summarise my bullet points in natural language, but I have made significant modifications to the text however.\n\n* **The 'slowed' ad revenue for 2026 seems to me like a tech bottleneck first and foremost, not an issue with possible monetisation:** People *want* this tier. It makes up nearly 47% of all new sign-ups. The issue is that user growth exploded so fast that Netflix’s internal ad tech couldn't keep up. They’ve been moving away from Microsoft to build their own global, automated ad server from scratch, and this is now delayed a bit. Logically, this means that the ads revenue isn’t gone - rather it'll just arrive a bit later than originally intended. As a long-term investor, this seems like the ideal set-up to start buying.\n* **Once their proprietary ad stack is ready, it should be materially accretive to margins:** From my understanding this should be ready by the end of 2027, and from then onwards NFLX stops sharing revenue with third-party partners. Plus, they’ll finally be able to offer the hyper-targeted data that brands pay top dollar for. A fully monetised ad-tier user is likely to bring in more revenue than a standard ad-free subscriber.\n* **Live sports:** The WWE and NFL deals showed that people actually sign up to the service to see these events. This is in and of itself a huge ads opportunity since millions stream the same content at the exact same moment. According to what I have read online, Netflix also isn't taking on debt to buy sports; they are capping it at 5% of their existing content budget by cutting underperforming scripted shows (i.e. content budget does not materially increase because of these expensive sports deals).\n* **Best fundamentals since company went public:** This company is expected to generate $12.5 billion in FCF. The margin profile is at ATHs (gross, operating & net)."
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  },
+  "model" : {
+    "relevance" : "investment_related",
+    "targets" : [ {
+      "anchor" : "NFLX",
+      "direction" : "bullish",
+      "hedged" : false
+    }, {
+      "anchor" : "Microsoft",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "WWE",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "NFL",
+      "direction" : "not_expressed",
+      "hedged" : false
+    } ]
+  }
+}, {
+  "post_id" : "reddit-1xdqtqt",
+  "day" : "2026-10-23",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-23T21:36:07Z",
+      "channels" : [ "investing" ],
+      "title" : "When are indexes supposed to crash?",
+      "body" : "It is amazing to me how all of ETF's that follow indexes or have a wide range of stock are near 52w moving averages, yet so much stuff has crashed 70% already when you look at individual tickers, and other bigger companies also took big losses.\n\n  \nWe've seen yields go to 5%\n\nWe've seen Trump do Trump things. \"Vote for me if you want more war after midterms\" like wtf.\n\nWe've seen AI capex fears hit ATH's with Oracle CDS going up, gloom and doom news about robots taking over\n\nAnd yet the indexes which are supposedly \"held by a few stocks\" that basically depend on this AI spending continue to go up.\n\nSo I don't know what it takes for markets to finally give us a capitulation so we can buy indexes at, at least, a -10% discount, but refuse to get anywhere near the 200WMA for a long time now.\n\nI am bagholding so much cash, like im 90% cash and have around 400k€ waiting in money market funds. Im also bagholding some IREN which is my only equity now, like 500 shares, at a 50% loss now. Im not selling, but im also not buying because these things can dump so much (and recover quick if narrative shifts).\n\n  \nSo my idea is to start a position on my ETF watchlist (mostly FGEQ, ISPA, VDIV) when SP500 crashes and takes down all these ETFs with it, and also add to my % of gambling allocation with high beta stocks like IREN which can run blazing fast once we hit the event horizon and everyone has capitulated. But it just feels like im stuck in this loop where indexes will forever go up while magically most individual tickers are dumping already. So I don't get it like wtf. We had 70% crashes on so many tickers, if the indexes crashes like say 10 to 20%, how low are these going to get?\n\n  \nTL;DR: Just give me a proper crash so I can allocate."
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  },
+  "model" : {
+    "relevance" : "investment_related",
+    "targets" : [ {
+      "anchor" : "indexes",
+      "direction" : "mixed",
+      "hedged" : false
+    }, {
+      "anchor" : "yields",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "Trump",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "AI capex",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "Oracle",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "robots",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "cash",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "money market funds",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "IREN",
+      "direction" : "mixed",
+      "hedged" : false
+    }, {
+      "anchor" : "FGEQ",
+      "direction" : "bullish",
+      "hedged" : true
+    }, {
+      "anchor" : "ISPA",
+      "direction" : "bullish",
+      "hedged" : true
+    }, {
+      "anchor" : "VDIV",
+      "direction" : "bullish",
+      "hedged" : true
+    } ]
+  }
+}, {
+  "post_id" : "reddit-1xhzklx",
+  "day" : "2026-10-28",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-28T20:28:32Z",
+      "channels" : [ "ValueInvesting" ],
+      "title" : "GOOG Investment Thesis",
+      "body" : "How many peoples thesis has actually changed after these Q3 earnings or is this just a DCA down opportunity for y’all?"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  },
+  "model" : {
+    "relevance" : "investment_related",
+    "targets" : [ {
+      "anchor" : "GOOG",
+      "direction" : "not_expressed",
+      "hedged" : false
+    } ]
+  }
+}, {
+  "post_id" : "reddit-1xh8wia",
+  "day" : "2026-10-28",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-27T23:53:53Z",
+      "channels" : [ "stocks" ],
+      "title" : "Good Opportunity for Gold?",
+      "body" : "Now I know that gold is a classic rare metal that people should have some exposure to in their accounts anyway, but I think there is potential for a longer run over the coming years, so I am going to make my bull case and bear case. I already have a small position, but I am also planning on purchasing more at the current prices. My ETF of choice is GLD since it tracks the spot price directly and also has an annual expense ratio of 0.4%. If anyone prefers a different method, feel free to say as much in the comments. I have considered buying physical as well.\n\n**My Bull Case for buying @ \\~$366**\n\n* GLD sits about 28% below its 52-week high of $509.70. I realize the run up was a good selling opportunity, but gold is still hovering near $4,000 after a sharp pullback. I feel like investors typically fall into two camps after a big correction: this is either a good opportunity to buy in, or the rally is over. So why'd it drop so much? A combo of interest rate expectations, Treasury yield increases, and the dollar momentarily strengthening. I’ll touch on this more in the bear case. \n* Over the last 25 years, gold has outperformed the S&P by about double (938% vs 461%). I know 25 years is pretty arbitrary as far as time horizons go, but I am planning on holding for a long time. \n* The US federal debt keeps climbing and climbing. In fiscal year 2026 we hit a record $1.05 trillion in net interest payments. I repeat - over $1T on interest alone! How is the US government planning on reining this in? In my opinion, the likeliest path forward is policies that tolerate inflation and erode the true value of the debt. I foresee a lot of money printing in the near future. In this case, people holding cash lose out.\n* Have the structural reasons for buying gold changed in the last few years? Has the US eliminated its fiscal deficit? Has the debt begun shrinking? Has federal interest expense returned to historical norms? Have the central banks stopped diversifying reserves? Has the global monetary system suddenly become more disciplined? I am inclined to say no to all of these questions. The short-term circumstances for gold provide some pretty strong headwinds (see the bear case), but I think the long-term forces still apply.\n* Gold still matters from a de-dollarization perspective. No fiat currency has ever survived in the history of mankind, and the US dollar can go the same way. Gold can’t be printed like fiat, and there is continued instability in the Middle East. That cuts both ways, though - the conflict supports gold as a safe haven, but it has also strengthened the dollar and kept energy prices elevated (again see bear case). \n* As far as following the “smart” money goes, central banks bought over 1,000 metric tons a year from 2022 through 2024, and still added 863 tons in 2025.\n* A minor, but legitimate, player is the AI build out. Gold in electronics accounts for \\~7% of annual gold demand, compared to jewelry, central bank buying, and investment demand. Figured I would include it since this is a global movement.\n\n**My Bear Case for avoiding @ \\~$366**\n\n* Gold pays no yield, and higher interest rates or other strong performing assets apply pressure or are at least tempting/more exciting.\n* A stronger dollar can pressure it, as we’ve seen recently, even if its momentary.\n* Reuters reported on Oct 12 that the dollar was near its strongest level in a year and a half, helped by safe-haven demand amid the war in Iran. Higher energy prices are likely to keep inflation elevated, and the SPR is at historic lows. Pressure on other routes to get oil out of the Middle East is exacerbating this.\n* All of this points to Warsh keeping interest rates high or pushing them higher. Keep in mind that we are expecting another Fed rate decision on Oct 28, and a hike is definitely on the table.\n* The 30 year Treasury bonds are at \\~5.3%. \n* Some critics think the growth of the US economy could outpace the debt (I don’t personally agree with this).\n\n**Possible PT?**\n\nJust using this part to say that historical performance is not a guarantee of future price action. Gold can always stop climbing for a number of reasons, and just because gold’s historical rebounds from large corrections have seen it climb higher doesn’t mean that will happen again. Not financial advice, lol.\n\nQuick math on a possible 5-year price target using gold’s 25-year return (938%):\n\n* The multiple of a 938% return = 938/100 + 1 = 10.38x\n* Annualized return over 25 years = 10.38\\^(1/25) - 1 = 1.098 - 1 = 0.098, or 9.8% a year\n* Applying that rate for 5 years = 1.098\\^5 = \\~1.6x\n* Apply that multiple to the current price: $366 \\* 1.6 = \\~$586. Shave off about 2% for fees and call it \\~$575.\n\nThat’s about $65 above the 52-week high of $509.70, or roughly 57% above today’s price. That doesn't seem like much in this crazy bull market, but since it is the world reserve asset, I think it is a good play in this environment. I plan to DCA my position over the next few months. Can it can go lower? Yup, I just know I am not buying at the top! Thoughts?"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  },
+  "model" : {
+    "relevance" : "investment_related",
+    "targets" : [ {
+      "anchor" : "gold",
+      "direction" : "mixed",
+      "hedged" : false
+    }, {
+      "anchor" : "GLD",
+      "direction" : "bullish",
+      "hedged" : false
+    }, {
+      "anchor" : "S&P",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "US federal debt",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "inflation",
+      "direction" : "bullish",
+      "hedged" : true
+    }, {
+      "anchor" : "cash",
+      "direction" : "bearish",
+      "hedged" : false
+    }, {
+      "anchor" : "dollar",
+      "direction" : "bullish",
+      "hedged" : true
+    }, {
+      "anchor" : "interest rates",
+      "direction" : "bullish",
+      "hedged" : false
+    }, {
+      "anchor" : "Treasury bonds",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "central banks",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "war in Iran",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "oil",
+      "direction" : "not_expressed",
+      "hedged" : false
+    } ]
+  }
+}, {
+  "post_id" : "reddit-1xhblx4",
+  "day" : "2026-10-28",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-28T01:56:48Z",
+      "channels" : [ "ValueInvesting" ],
+      "title" : "AppLovin is a bargain",
+      "body" : "The multiple has gotten ridiculous at this point... 2027 EPS is expected to be around $20. The end of 2027 is only 14 months away so we're basically at 13x forward earnings on a N14M basis.\n\nFor a company that grew revenue and EPS 53% and 57% respectively last quarter. Their operating margins are 78%, which doesn't even sound real. I believe they have the highest margins in the entire S&P 500. \n\nThey have less than 1000 employees, zero capex, they buy back a ton of stock. They're founder led and he owns like 9% of the company. They've just recently expanded their advertiser base beyond mobile game publishers into a much larger and broader market of ecommerce merchants, which should make their business even more efficient while giving them a longer runway for growth.\n\nThis isn't meant to be a complete breakdown of AppLovin's business, but just to spark some discussion. If the company isn't an actual accounting fraud, what the hell is going on? Why is it so ridiculously cheap? This is like 2022 Meta but we're in the middle of a bull market. I don't think \"they're overearning\" or \"can they sustain their growth?\" is enough of an explanation. The stock is cheaper than Target, a brick and mortar retailer with declining revenue.\n\nAre you bullish? Bearish? What's your take on this one?"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  },
+  "model" : {
+    "relevance" : "investment_related",
+    "targets" : [ {
+      "anchor" : "AppLovin",
+      "direction" : "bullish",
+      "hedged" : false
+    }, {
+      "anchor" : "S&P 500",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "Meta",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "bull market",
+      "direction" : "bullish",
+      "hedged" : true
+    }, {
+      "anchor" : "Target",
+      "direction" : "not_expressed",
+      "hedged" : false
+    } ]
+  }
+}, {
+  "post_id" : "reddit-1xh0qsl",
+  "day" : "2026-10-27",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-27T18:35:10Z",
+      "channels" : [ "stocks" ],
+      "title" : "Prediction markets are taking over. Now the NYSE wants to bring all-or-nothing bets to Nvidia, Tesla and Apple.",
+      "body" : "Prediction markets have exploded in popularity, and now Wall Street seems to want a piece of the action.\n\nThe NYSE is preparing to introduce binary options on 12 major stocks and ETFs, including Nvidia, Tesla, Apple and SPY.\n\nThe idea is pretty simple. Instead of buying the stock, you take a position on whether it finishes above or below a certain price. If you're right, you get a fixed payout. If you're wrong, you lose your stake.\n\nAnd they're not stopping there.\n\nThe exchange is also exploring contracts tied directly to earnings results, meaning people could eventually bet on whether a company reports revenue or EPS above a specific number. Those contracts still need regulatory approval.\n\nWith prediction markets already attracting huge interest, bringing this kind of trading to some of the world's most popular stocks could be a pretty big deal.\n\nEarnings season is already chaotic enough and now we are adding all-or-nothing bets on the actual results.... \n\n"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  },
+  "model" : {
+    "relevance" : "investment_related",
+    "targets" : [ {
+      "anchor" : "Prediction markets",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "NYSE",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "Nvidia",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "Tesla",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "Apple",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "SPY",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "binary options",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "contracts tied directly to earnings results",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "Earnings season",
+      "direction" : "not_expressed",
+      "hedged" : false
+    } ]
+  }
+}, {
+  "post_id" : "reddit-1xfsteo",
+  "day" : "2026-10-26",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-26T10:12:59Z",
+      "channels" : [ "investing" ],
+      "title" : "I'm building a security and trust layer for agent-to-agent communication. Yesterday a fake VC almost cleaned me out because they preyed on founder hope.",
+      "body" : "On Sunday mid-morning, someone reached out to me on Telegram introducing himself as James Roger from ZK Prime Capital.\n\nThe name rang a bell. I have been posting about my product across a few places recently, and ZK is shorthand for zero-knowledge proofs. I'm building CELLO, a security and trust layer for agent-to-agent communication and collaboration. It is not a blockchain project, but it makes heavy use of cryptographic techniques refined by blockchain engineers. Having a crypto-AI fund reach out made complete logical sense.\n\nHe asked me to tell him about what I was building. I gave him a short summary. Then he started asking sharp, specific questions about the cryptography, why the approach was innovative, and even how we handle FROST ceremonies.\n\nHe asked if it was just theory or if we were working on something real. I told him it was a ready-made product, that we had opened it up a few days ago, and that I was currently reaching out to my network to get the first 50 to 100 testers so I could find the 10 people who really love it.\n\nHe replied: \"Smart. Do things that don't scale. Mine your network.\"\n\nI felt like I was killing it. I knew my product inside out, I knew how I was going to grow it, and he was asking the exact questions a VC partner would ask.\n\nThen he said we should get on a call with the other partners and sent a legitimate Google Calendar booking link. I picked a slot two hours later and sent him a screenshot. He replied that there had probably been a mistake and Sunday slots shouldn't be open, and asked if I could cancel and move it to Monday. At the time, that seemed like a reasonable request. In retrospect, it is odd that a VC firm booking calls all the time would make that mistake. I rebooked for Monday and got a standard Google Calendar invite.\n\nRight after booking, I went and told my wife I had a little bit of good news. Nothing fantastic, just that I had a bite and someone recognized the value of my work. Mentally, I was skipping around happy.\n\nA little while later, a reminder came through on Telegram to make sure I signed the NDA included in the calendar invite before Monday's call.\n\nI found that odd. Normally VCs don't want to sign an NDA and they don't make you sign one. When I asked him about it, he said the NDA was simply an agreement not to record the conversation or share the discussion contents outside my organization. I could see his point, though it still felt unusual.\n\nHe also sent a link to a legitimate Google Sheet, supposedly a list of the companies they had invested in. All the tabs were locked. Off to the side was a Google warning claiming my app was out of date, that it couldn't complete OAuth to unlock the sheet, and that I needed to download an updater.\n\nBeing a technical founder, my brain started registering anomalies. This is a web app. OAuth is handled by the browser and has nothing to do with downloading a local updater.\n\nI took a screenshot, threw it into my AI agent, and discussed it. As I suspected, it was malware phishing.\n\nAfter talking it through with my agent, I downloaded the file into a safe sandbox and had my AI analyze it. It was a compiled AppleScript dropper designed to deploy a macOS Keychain and wallet stealer. Had I run it on my machine, it would have tried to extract every password, access key, and crypto key it could find.\n\nWe reverse-engineered the dropper, extracted their hardcoded infrastructure and fallback mechanisms, and filed formal abuse and takedown reports across all five layers of their operation:\n\n1. The Google Sheets lure document\n2. Their primary payload and exfiltration domain via the Alibaba Cloud registrar\n3. Their hardcoded fallback command-and-control server via its hosting ISP\n4. Their Dropbox fallback binary payload\n5. The hardcoded Telegram bot used for credential exfiltration\n\nHonestly, burning their accounts probably only inconvenienced them slightly. My guess is they have plenty of these set up.\n\nThe harder part came afterward.\n\nI am not some naive vibe-coder. I am a seasoned professional, and my product is literally designed to be a security and trust layer to defend against attacks. Yet I went as far as I did despite red flags all along the way.\n\nWhy? Because I let them prey on my hope. When you are a solo founder trying to move quickly and show that you take immediate action, you are in a vulnerable state.\n\nI was angry at these guys who waste their lives doing this to people, and angry at myself. I had to tell my wife that I was actually just being scammed, which felt pretty embarrassing. I thought burning their infrastructure would make me feel better. It didn't. It took me down lower than my starting point and left me in a foul mood for most of Sunday.\n\nNot much else to say. It was a shitty experience, though it could have been much worse. Back on the job today."
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  },
+  "model" : {
+    "relevance" : "investment_related",
+    "targets" : [ {
+      "anchor" : "ZK Prime Capital",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "CELLO",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "Google",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "Alibaba Cloud",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "Dropbox",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "Telegram",
+      "direction" : "not_expressed",
+      "hedged" : false
+    } ]
+  }
+}, {
+  "post_id" : "reddit-1xhr0gg",
+  "day" : "2026-10-28",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-28T15:21:28Z",
+      "channels" : [ "ValueInvesting" ],
+      "title" : "Why are cybersecurity stocks so pricey?",
+      "body" : "I understand that a lot of news has come out in the last 2-3 months that have kept investors hyped up enough to ignore the absurd valuations in cybersecurity stocks and all. This includes frontier labs talking about how their AIs are breaking out of their sandboxes and calling for government regulations on AI to try to and regulate out the competition, to new vulnerabilities being detected like zero day exploits in the PHP language, to hackers using AI agents to target bank customer logins and the attack on supermarket refrigerators across France. The BlackHat Convention back in August and Evercore’s new survey highlighting growing demand for cybersecurity also helped supported bullish sentiment. Arguably the most overvalued stock in the sector is Crowdstrike. Jensen Huang mentioned that it is Nvidia’s number one cybersecurity partner last month. Crowdstrike also recently expanded their OpenAI and Nvidia partnerships. Also, many of these stocks have had their price target revised upwards by analysts in the last two months, sometimes by a big margin.\n\nStocks like CRWD and RBRK have such crazy price to sales ratios that even if the cost to run their businesses went to zero and somehow their sales doubled, they would still be pricey. CRWD's P/E ratio is current over 7,300 and net margin is 0.36%. Palo Alto Network's PE ratio is 762 right now with a -8.27% net margin in the latest quarter. Rubrik's net margin was -14.46 in the latest quarter while its forward PE ratio is over 200. DataDog has a PE ratio of 572.5, price to cash flow ratio of 84.6, a net margin of 3.97%, and a forward price to earnings of around 97. Same overvaluation in many other cybersecurity names like Cloudflare as well. What investors are buying these names at these prices? I want to bet against them but just wanted to be sure."
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  },
+  "model" : {
+    "relevance" : "investment_related",
+    "targets" : [ {
+      "anchor" : "cybersecurity stocks",
+      "direction" : "bearish",
+      "hedged" : false
+    }, {
+      "anchor" : "AI",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "BlackHat Convention",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "Evercore",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "Crowdstrike",
+      "direction" : "bearish",
+      "hedged" : false
+    }, {
+      "anchor" : "Nvidia",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "OpenAI",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "RBRK",
+      "direction" : "bearish",
+      "hedged" : false
+    }, {
+      "anchor" : "Palo Alto Network",
+      "direction" : "bearish",
+      "hedged" : true
+    }, {
+      "anchor" : "Rubrik",
+      "direction" : "bearish",
+      "hedged" : false
+    }, {
+      "anchor" : "DataDog",
+      "direction" : "bearish",
+      "hedged" : true
+    }, {
+      "anchor" : "Cloudflare",
+      "direction" : "bearish",
+      "hedged" : false
+    } ]
+  }
+}, {
+  "post_id" : "reddit-1xhwhbq",
+  "day" : "2026-10-28",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-28T18:36:20Z",
+      "channels" : [ "stocks" ],
+      "title" : "Oracle is the 1st company to cap its capex in 2027",
+      "body" : "Set long-term outlook for FY30 of $225 billion+ in total revenue, representing more than 35% CAGR from FY26, non-GAAP operating margin of 40%+ and non-GAAP EPS $21+.\n\nDefined timeline to positive free cash flow during the second half of FY28 and set free cash flow target of $30 billion+ for FY29.\n\nCommitted to limiting additional capital raises through FY30 to $20 billion, excluding refinancing of existing debt, split between $10 billion in equity and $10 billion in gross debt.\n\nConfirmed that growth will be self-funded beginning in FY29 and net debt to adjusted EBITDA will be below 3.5 times in FY29.1\n\nStock is rallying after the news and the first time that a company has topped its capex spending.\n\n<url>"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  },
+  "model" : {
+    "relevance" : "investment_related",
+    "targets" : [ {
+      "anchor" : "Oracle",
+      "direction" : "bullish",
+      "hedged" : true
+    } ]
+  }
+}, {
+  "post_id" : "reddit-1xhpgpx",
+  "day" : "2026-10-28",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-28T14:23:25Z",
+      "channels" : [ "ValueInvesting" ],
+      "title" : "Alphabet vs Amazon vs Meta vs Nvidia: which stock would I choose for the long term Horizon?",
+      "body" : "# Four companies, four different ways to win from AI. Nvidia sells the chips. Amazon rents out computing power and sells to customers. Meta uses AI to make its ads more valuable. Alphabet is growing Cloud while defending Search. At the October 27, 2026 closing prices, my overall research order is Amazon, Nvidia, Meta, Alphabet. I’d choose Nvidia for two years and Amazon for five to ten. That is a ranking of potential returns from these prices, not a claim that any one business is certain to win.\n\n**Nvidia wins the two-year contest because the earnings are arriving now.** It just earned **$2.46 a share** on **$96.2 billion in quarterly sales**. Management expects about **$108 billion in next-quarter sales** at a **74% gross margin**, though it has given no EPS forecast. At **$217.94**, I get roughly **25 times annualised operating earnings**. My two-year case needs annual sales to reach **$600 billion** while Nvidia keeps a remarkable **62% operating margin**. That produces about **$12.82 of operating EPS**; at **25 times**, the share would be worth roughly **$320** before costs and dividends. The risk is in that margin: customers building their own chips, price pressure or slower AI spending could cut it faster than sales grow. [investor.nvidia.com](<url>\n\n**Amazon’s $5.75 quarterly EPS is the number I would** ***not*** **build a thesis on.** It includes **$53.4 billion of non-operating pretax income**, mainly tied to Anthropic. Even operating profit benefited by about **$1.2 billion** from tariff refunds and energy-contract accounting. The stronger evidence is AWS: sales rose **37% to $42.2 billion**, and operating profit reached **$16.6 billion**. Amazon guides to **$197 billion–$202 billion of next-quarter sales** and **$22.5 billion–$26.5 billion of operating profit**, with no EPS guide. At **$253.10**, the shares cost roughly **34 times** my annualised operating-earnings estimate after removing those operating benefits. That is expensive for a company whose trailing free cash flow is **negative $7.6 billion** and whose **2026 cash capital-spending plan rose from about $200 billion to about $220 billion**.\n\n**Why put Amazon first anyway? Because it has more than one route to higher earnings per share.** AWS can sell more computing power, advertising can earn more from shoppers, and a more efficient delivery network can leave more profit on each order. My five-year case assumes **$1.7 trillion in annual sales**, a **16% operating margin** and **$17.90 of operating EPS** after allowing for more shares. At **25 times earnings**, that is about **$448 a share**. At ten years, **$3.1 trillion in sales**, a **17% margin** and **$32.46 EPS** at just **21 times** give roughly **$682**. My weighted scenarios imply **+79% cumulative net return over five years** and **+173% over ten**. Those are demanding forecasts, especially while cash is being spent ahead of returns. If Amazon’s five-year margin reaches **14% instead of 16%**, its modeled return drops to about **+57%**—below Nvidia’s **+67%**. Amazon earns first place only if the spending eventually turns into cash for each share.\n\n**Meta is the stock that could embarrass this ranking.** Its reported quarterly EPS was **$3.83**, but a **$9.89 billion legal charge** pulled it down; Meta calculates **$7.40** without that charge. At **$620.19**, that adjusted quarter annualised puts the stock near **21 times earnings**. The charge still matters because the underlying agreement allows payments of up to **$18.59 billion**. Management expects **$73 billion–$76 billion in next-quarter sales** and **$135 billion–$145 billion in 2026 capital spending**, with no EPS guide. Quarterly free cash flow was **negative $2.12 billion**, and new preferred financing and a **$25 billion common-share forward offering** add cost and possible dilution. My five-year case uses **$47.88 operating EPS at 19 times**, leaving Meta third for that horizon. Its planned Class C stock dividend is economically a split, not a bonus return. The question is how much of today’s powerful ad earnings will belong to each share after the spending and financing.\n\n**Alphabet comes fourth because the price asks a lot, even though the business is performing.** Search-related sales grew **17%** and Cloud grew **82%**. But reported EPS of **$9.11** included **$6.26 per share from investment gains**. Subtract that gain and EPS is **$2.85**; my operating-profit estimate is a stricter **$2.58 for the quarter**. At **$320.58**, that is about **31 times annualised operating earnings**. Management raised its **2026 capital-spending outlook to $195 billion–$205 billion** and expects a significant increase in 2027. My five-year case of **$16.20 operating EPS at 22 times** gives about **$356 a share** before costs and dividends. Cloud could grow enough to prove me too cautious, and I have **not separately valued Alphabet’s investment holdings**. For now, I need more evidence that Cloud’s growth and AI spending will lift lasting cash per share enough to justify the entry price.\n\n**Here is what the ranking pays in my model, cumulatively rather than per year.** At **two years**: **Nvidia +50%, Meta +19%, Amazon +11%, Alphabet +10%**. At **five**: **Amazon +79%, Nvidia +67%, Meta +49%, Alphabet +14%**. At **ten**: **Amazon +173%, Nvidia +83%, Meta +62%, Alphabet +41%**. I use bear/base/bull weights of **25%/55%/20%**, future diluted share counts, assumed dividends, **0.5% buying and 0.5% selling costs**, and lower earnings multiples as these businesses mature. The odds and future EPS are **my assumptions, not management guidance or calibrated probabilities**. My modeled Nvidia two-year bear loses roughly a third; Amazon’s five-year bear loses roughly a fifth. Those are scenarios, not worst-case limits. None of the weighted outcomes reaches my **+500% five-year** or **+1,000% ten-year** ambition.\n\n**My pick is Amazon for the long haul, Nvidia for the next two year.** In a separate twelve-month test, my weighted net returns are about **+30% for Nvidia, +14% for Meta and −1% each for Amazon and Alphabet**.  Alphabet reports on **October 28** and Amazon on **October 29**, so I would refresh the numbers before acting. **AI revenue is exciting. Cash earned for each future share is the prize.** \n\n  \nLovely Day."
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  },
+  "model" : {
+    "relevance" : "investment_related",
+    "targets" : [ {
+      "anchor" : "Alphabet",
+      "direction" : "mixed",
+      "hedged" : false
+    }, {
+      "anchor" : "Amazon",
+      "direction" : "mixed",
+      "hedged" : false
+    }, {
+      "anchor" : "Meta",
+      "direction" : "bullish",
+      "hedged" : true
+    }, {
+      "anchor" : "Nvidia",
+      "direction" : "bullish",
+      "hedged" : true
+    } ]
+  }
+}, {
+  "post_id" : "reddit-1xito4n",
+  "day" : "2026-10-29",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-29T19:29:55Z",
+      "channels" : [ "ValueInvesting" ],
+      "title" : "BMY: Spells BUY if you change the M to a U",
+      "body" : "BMY at \\~$60 trades around forward PE of 9.4x updated 2026 non-GAAP EPS guideance. That compares with other large pharma peers median around 14.5+. The catch: on a forward basis BMY has traded at 7–10x for roughly three years, so this isn't a fresh dislocation. It's the market pricing Eliquis and Opdivo losing US exclusivity in 2028, and those two drugs were about half of last year's revenue. On defensiveness, the case is solid. Q3 revenue rose 7% to $13.1B, the Growth Portfolio grew 12%, the stock carries a very low beta, and the \\~4.2% yield is well covered by roughly $12.8B of FCF despite \\~$35B of net debt. Demand for cancer and anticoagulant drugs doesn't care about the business cycle, so I'd expect BMY to fall far less than the S&P in a correction. In fact, many defensive pharm companies have been getting extra attention during these past few anti AI months including PFE  and KMB ehich suffer from similar patent issues. In short, I think this is a good time to buy BMY. A potential shield during these turbulent times where Google trades like a penny stock. Just my opinion, not financial advice."
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  },
+  "model" : {
+    "relevance" : "investment_related",
+    "targets" : [ {
+      "anchor" : "BMY",
+      "direction" : "mixed",
+      "hedged" : false
+    }, {
+      "anchor" : "pharma",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "Eliquis",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "Opdivo",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "S&P",
+      "direction" : "bearish",
+      "hedged" : true
+    }, {
+      "anchor" : "PFE",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "KMB",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "AI",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "Google",
+      "direction" : "bearish",
+      "hedged" : true
+    } ]
+  }
+}, {
+  "post_id" : "reddit-1xfezj7",
+  "day" : "2026-10-25",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-25T21:55:35Z",
+      "channels" : [ "ValueInvesting" ],
+      "title" : "Google or Nvidia, at these prices",
+      "body" : "Nvidia or Google for a 5–10 year hold?\n\nGoogle has Search, YouTube, Cloud and its own AI models and chips. But Nvidia looks compelling given how much of the AI buildout depends on it.  \nWhat I don’t understand is how cyclical Nvidia is. Could big customers eventually have enough computing capacity and cut spending? \n\nOr will AI spread across the whole economy, military, education, healthcare, robotics, making Nvidia’s opportunity much bigger than the current data centre buildout?\n\nIs Nvidia really comparable to Micron’s cycles? At current valuations, which would you buy, Google or Nvidia?"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  },
+  "model" : {
+    "relevance" : "investment_related",
+    "targets" : [ {
+      "anchor" : "Google",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "Nvidia",
+      "direction" : "bullish",
+      "hedged" : false
+    }, {
+      "anchor" : "Micron",
+      "direction" : "not_expressed",
+      "hedged" : false
+    } ]
+  }
+}, {
+  "post_id" : "reddit-1xg7ahi",
+  "day" : "2026-10-26",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-26T19:53:30Z",
+      "channels" : [ "stocks" ],
+      "title" : "I personally love the products of Anthropic, BUT I think their S1 is a far more scarier than what people let on.",
+      "body" : "Before getting straight into the meat of this article, there are certain things I wish to point out first. To start with, I'm not anti-Generative artificial intelligence nor am I here to criticize the entire industry. Personally I've been using Claude on a day-to-day basis myself, I believe Anthropic is developing some pretty amazing products. As someone who founded his own company in the past, I was very much aware of making this mistake during the initial phases. Leveraging fixed expenses to achieve early hypergrowth resulting in constraints coming into play, thankfully not nearly to the same extent as here. After reading through the entirety of this S-1, the thing which stands out is that the company doesn't even have any other way forward besides expanding exponentially.\n\n\n\nWhat you'll notice when taking a quick skim through the top 25 pages in this offering:\n\n\n\nIn H1 2026, annual revenue grew from $1.16b to $16.3b and recorded a GAAP Operating income of $1.03 billion for quarter two 2026. The company holds total cash and near cash investment equal to a staggering figure of $131.7b. However after thoroughly analyzing these figures along with its accounting methods, working capital management approach and note nine. It becomes quite evident to me that the actual structure has been built in a manner that looks high-margin software stock yet holds a highly leveraged utility company's balance sheet underneath. Following are several key issues i've come across:\n\n\n\nTraining cost: Absence Of Gross Margin Line Item:\n\nOpening virtually any s-1 of SaaS companies, one notices revenue line immediately followed by COGS/gross profit then operating expenses including r&d. However Anthropic chose to remove gross margins altogether, incorporating Cost of Goods Serviced (Customer Inference Computing Power)+ Model Training costs in a combined Line Item Called \"Compute and Infrastructure\". This cost came in at an enormous sum of $8.95billion in H1 2026. Two Main reasons behind doing so:\n\n\n\nCombining both eliminates transparency as to whether each one individually holds insignificant marginal profitability, or Multi-Billion dollar training campaigns conducted repeatedly for Model Development purposes falls under non-discretionary CapEx expenses.\n\n\n\nConvertible Note Subsidy:\n\nGlancing down the income statement reveals some shocking numbers reported in Q2 2026 with Change in Fair Value of Convertible Notes Amounting To A Staggering Number Of Negative $72.4billion. Now these figures tend to dismiss by most wall street analysts as accounting adjustments made due to valuation increases seen in private round funding. However i'm going to explain how it differs greatly from conventional assumptions:\n\nIssuing tens of billions of dollars of heavily subsidized convertible notes within the range of 2023-2025 were done solely for covering Training Compute Costs, Paid Through Cheap Equity Shares Issued Directly To Cloud Providers including Amazon Web Services and Google Cloud Platform. That is Yes, Economic Training Expenses Equal to $72.4 billion remain hidden from Operating Line Items In Footnotes!\n\nOff Balance Sheet Tsunami-The take-or-pay obligation Trap ($587 billion Footnote 9):\n\n\n\nTotal off-balance sheet obligations jumped up 6 times higher compared to previous periods to reach $587 billion at the close of Q2 2026.\n\nAnalyzing This Number:\n\n\n\nA sum of $265.6 billion consists of Irrevocable Minimum Fixed Purchase Agreements including a sum of $114.5billion with Google cloud agreement till 2033 & $110billion worth with AWS till 2036 with at least 80percent non-discretionary.\n\n\n\n\"Uncommenced Lease\":\n\nBecause of ASC 842 regulations allowing these agreements being deferred infinitely till occupancy period. Off Balance Sheet Total amount comes up To Be An Unnecessarily Enormous Figure Of $321.4 Billion.\n\n\n\nBroadcom 9% Debt Loop:\n\nOf which another $161.2 billion are taken in Broadcom TPU Leases lasting five years, Financed By $42billion 9 Percent Loan Facility especially arranged for this purpose.\n\nEffect on Financial Statements:\n\n\n\nAny time drawing upon these loan facilities to make payments according to lease agreement gets categorized strictly as Financing Activities Not Operating Expense Keeping Cash Flow Figures Clean.\n\nTypically speaking leasing Infrastructure always counted under Variable Expense since it depends upon customer demands. However Anthropic transformed that Variable Into Fixed Commitments forcing exponential growth plan. This profit turning inflection point happened during limited period before un-commencement of lease and Take-or-Pay agreements occurring between 2027-2030.\n\n\n\nCompany Store Revenues And Liability Loop:\n\n\n\nNoticeably an intriguing pattern occurs on balance sheet with Revenues Increasing Consistently while Current Liabilities Increase Too. By tracing flow of money one realizes they established a loop using google/aws:\n\n\n\n48 percent of Total Revenues Generated Through AWS Marketplace and Google Vertex AI Platforms compared to only 11% in 2023.\n\n\n\nGross Vs Net Revenue Inflation:\n\n\n\nSince customers pay for the services offered on google/aws marketplace, Entire Payment Recorded As Gross Revenue (Hence Inflating Multiple), while Percentage Commission Paid To Owner of Marketplace gets counted under sales and marketing expenses consuming 19percent.\n\n\n\nWorking Capital Effect:\n\nMajority (58 Percent) of Accounts Receivables belong to Amazon/google. With increasing amounts of Accruals and Current Liabilities, Company Owes Vast Amounts To Marketplaces' Owners\n\nThey use picks and Shovels borrowed From Amazon/google to Mine Gold From Them Then Sell Back Gold To Amazon/google Via Their Company Stores Allowing Amazon/google to Own 58 Percent of Receivables Generated From Customers and Record Their 25% Profit Margin As Gross Revenue!\n\n\n\nWhy Does Math Never Add Up With Valuation Theory?\n\n\n\nAs mentioned earlier they needed a large portion of IT Spending compared to current Enterprise Software Market Allowability. Implying That They Needed To Cannibalize Multiple Trillion Dollar Payroll Budgets. Being someone Using Them Daily, this theory Disregards Mathematical Constraints Associated With Matrix Multiplication And Nature Of Human Workforce\n\n\n\nFast Cheap Accuracy Conundrum:\n\nLarge Language Models Learn with an Aim To Minimize Loss Functions Delivering Approximate Efficient Solutions Whenever forced To Optimize Training Toward Faster/Cheaper Production Mathematical Constraint Becomes One Of Laziness Which Takes Shortcut To Skip Complex Computations For Simple Solution.\n\nAttempt Of Making Machine Conduct Mathematical Proof With Complex Deeper Computation Proves To Become Too Expensive Hence Making It Impossible For Usages.\n\n\n\nSituation Human vs. Mechanical Multiplication Efforts:\n\nHuman Labor Consists Primarily In Decision-Making Situations In Which Engineer Takes Five Minutes Writing Code, But Dedicates Four Hours Solving Logical Bugs Knowing Whole Business Is Dependent Upon Proper Logic.\n\nOn Contrast LLMS Conduct Calculation According To Prescribed Formula Without Understanding Of Real World Scenarios Or Legal Responsibilities Involving Them.\n\n\n\nWorkshifts Versus Replacement Fallacy:\n\n\n\nExcept restricted sandboxed situations Such As Code Execution Where Either Program Runs Correctly Or Not, Artificial Intelligence Does Not Replace Humans Outside Of It.\n\nInstead Moves People To Audit Role In Which To Audit 85percent Precise Predictions Requires Fully-Equip Senior Employee.\n\nFirms Realize That Artificial Intelligence Increases Productivity Levels By 15 Percent!\n\n\n\nConclusion (Tl;Dr):\n\n\n\nThe takeaway Point i wish To Make Clear Here Is That Private Investors And Hyperscaler Reached Maximum Asset Concentration.\n\nWhereby Committing To Enormous Amount Of Contracts With Cloud Providers In Order To Drive Hypergrowth Required For Inflating Valuations. And Now Those Contracts Are Restraining Them To A Death-Treadmill With No Exit Strategies."
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  },
+  "model" : {
+    "relevance" : "investment_related",
+    "targets" : [ {
+      "anchor" : "Anthropic",
+      "direction" : "mixed",
+      "hedged" : false
+    }, {
+      "anchor" : "Amazon Web Services",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "Google Cloud Platform",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "Broadcom",
+      "direction" : "not_expressed",
+      "hedged" : false
+    } ]
+  }
+}, {
+  "post_id" : "reddit-1xiuxl5",
+  "day" : "2026-10-29",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-29T20:16:34Z",
+      "channels" : [ "stocks" ],
+      "title" : "Reddit shares sink on weak sales guidance and plans login requirement test as Google search traffic shrinks",
+      "body" : "Reddit plans to require all users to create official accounts to access the social media platform, marking a major departure for the site known as “the front page of the internet.”\n\nThe company revealed the change Thursday as part of its third-quarter earnings, in which it beat on the top and bottom lines, but provided weak fourth-quarter sales guidance. The company’s shares dropped over 11% after its numbers were released.\n\nHere’s how the company did compared with LSEG estimates:\n\n* **Earnings per share:** $1.40 vs. $1.35 expected\n* **Revenue:** $895 million vs. $878 million expected\n\nReddit CEO Steve Huffman told CNBC in an interview that the company’s shrinking search-referral traffic from Google played a major role in its planned efforts to require people to become “logged-in” users.\n\nA previous Google search update designed to surface “authentic” content from internet forums helped Reddit grow its user base over the past few years, but the search giant’s continued push on AI overviews and related chatting features has negatively impacted referral traffic.\n\nHuffman didn’t provide any specific timing on when Reddit plans for the platform registration change, saying only that implementing it through the site would involve a lot of complexity**.** The company will begin testing in the fourth quarter outside of the U.S.\n\nHe said that Reddit is still determining what parts of the service logged-out users will be able to see, and will iron out the details as part of its upcoming testing.\n\nReddit said that daily active uniques, or DAUq, rose 12% year-over-year to 130.3 million in the third quarter, trailing Wall Street estimates of 133.7 million. U.S.-specific DAUq dropped 2% year-over-year to 50.7 million, which was below analyst projections of 53.5 million."
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  },
+  "model" : {
+    "relevance" : "investment_related",
+    "targets" : [ {
+      "anchor" : "Reddit",
+      "direction" : "bearish",
+      "hedged" : true
+    }, {
+      "anchor" : "Google",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "LSEG",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "CNBC",
+      "direction" : "not_expressed",
+      "hedged" : false
+    } ]
+  }
+}, {
+  "post_id" : "reddit-1xgzdst",
+  "day" : "2026-10-27",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-27T17:45:41Z",
+      "channels" : [ "stocks" ],
+      "title" : "Anthropic's IPO could start trading as soon as Nov. 16",
+      "body" : "Anthropic's (ANTH.PVT) long-awaited stock market debut could be just weeks away.\n\nThe artificial intelligence startup publicly filed for its initial public offering on Monday, releasing its S-1 - the prospectus a company must file with the Securities and Exchange Commission before selling stock to the public. That started a countdown that could end in one of the largest IPOs in history as soon as mid-November.\n\nBefore its stock can begin trading on the Nasdaq under the ticker ANT, Anthropic and its Wall Street bankers have to get through an investor roadshow, set a price, and receive a final green light from regulators.\n\nUnder SEC rules, the earliest Anthropic could start trading is Monday, Nov. 16, according to Yahoo Finance calculations. At the pace SpaceX (SPCX) set in June - when it went from public filing to first trade in 23 days -  Anthropic would debut on Wednesday, Nov. 18."
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  },
+  "model" : {
+    "relevance" : "investment_related",
+    "targets" : [ {
+      "anchor" : "Anthropic",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "SpaceX",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "Nasdaq",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "SEC",
+      "direction" : "not_expressed",
+      "hedged" : false
+    } ]
+  }
+}, {
+  "post_id" : "reddit-1xh8v2i",
+  "day" : "2026-10-28",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-27T23:52:08Z",
+      "channels" : [ "investing" ],
+      "title" : "Good Opportunity for Gold?",
+      "body" : "Now I know that gold is a classic rare metal that people should have some exposure to in their accounts anyway, but I think there is potential for a longer run over the coming years, so I am going to make my bull case and bear case. I already have a small position, but I am also planning on purchasing more at the current prices. My ETF of choice is GLD since it tracks the spot price directly and also has an annual expense ratio of 0.4%. If anyone prefers a different method, feel free to say as much in the comments. I have considered buying physical as well.\n\n**My Bull Case for buying @ \\~$366**\n\n* GLD sits about 28% below its 52-week high of $509.70. I realize the run up was a good selling opportunity, but gold is still hovering near $4,000 after a sharp pullback. I feel like investors typically fall into two camps after a big correction: this is either a good opportunity to buy in, or the rally is over. So why'd it drop so much? A combo of interest rate expectations, Treasury yield increases, and the dollar momentarily strengthening. I’ll touch on this more in the bear case. \n* Over the last 25 years, gold has outperformed the S&P by about double (938% vs 461%). I know 25 years is pretty arbitrary as far as time horizons go, but I am planning on holding for a long time. \n* The US federal debt keeps climbing and climbing. In fiscal year 2026 we hit a record $1.05 trillion in net interest payments. I repeat - over $1T on interest alone! How is the US government planning on reining this in? In my opinion, the likeliest path forward is policies that tolerate inflation and erode the true value of the debt. I foresee a lot of money printing in the near future. In this case, people holding cash lose out.\n* Have the structural reasons for buying gold changed in the last few years? Has the US eliminated its fiscal deficit? Has the debt begun shrinking? Has federal interest expense returned to historical norms? Have the central banks stopped diversifying reserves? Has the global monetary system suddenly become more disciplined? I am inclined to say no to all of these questions. The short-term circumstances for gold provide some pretty strong headwinds (see the bear case), but I think the long-term forces still apply.\n* Gold still matters from a de-dollarization perspective. No fiat currency has ever survived in the history of mankind, and the US dollar can go the same way. Gold can’t be printed like fiat, and there is continued instability in the Middle East. That cuts both ways, though - the conflict supports gold as a safe haven, but it has also strengthened the dollar and kept energy prices elevated (again see bear case). \n* As far as following the “smart” money goes, central banks bought over 1,000 metric tons a year from 2022 through 2024, and still added 863 tons in 2025.\n* A minor, but legitimate, player is the AI build out. Gold in electronics accounts for \\~7% of annual gold demand, compared to jewelry, central bank buying, and investment demand. Figured I would include it since this is a global movement.\n\n**My Bear Case for avoiding @ \\~$366**\n\n* Gold pays no yield, and higher interest rates or other strong performing assets apply pressure or are at least tempting/more exciting.\n* A stronger dollar can pressure it, as we’ve seen recently, even if its momentary.\n* Reuters reported on Oct 12 that the dollar was near its strongest level in a year and a half, helped by safe-haven demand amid the war in Iran. Higher energy prices are likely to keep inflation elevated, and the SPR is at historic lows. Pressure on other routes to get oil out of the Middle East is exacerbating this.\n* All of this points to Warsh keeping interest rates high or pushing them higher. Keep in mind that we are expecting another Fed rate decision on Oct 28, and a hike is definitely on the table.\n* The 30 year Treasury bonds are at \\~5.3%. \n* Some critics think the growth of the US economy could outpace the debt (I don’t personally agree with this).\n\n**Possible PT?**\n\nJust using this part to say that historical performance is not a guarantee of future price action. Gold can always stop climbing for a number of reasons, and just because gold’s historical rebounds from large corrections have seen it climb higher doesn’t mean that will happen again. Not financial advice, lol.\n\nQuick math on a possible 5-year price target using gold’s 25-year return (938%):\n\n* The multiple of a 938% return = 938/100 + 1 = 10.38x\n* Annualized return over 25 years = 10.38\\^(1/25) - 1 = 1.098 - 1 = 0.098, or 9.8% a year\n* Applying that rate for 5 years = 1.098\\^5 = \\~1.6x\n* Apply that multiple to the current price: $366 \\* 1.6 = \\~$586. Shave off about 2% for fees and call it \\~$575.\n\nThat’s about $65 above the 52-week high of $509.70, or roughly 57% above today’s price. That doesn't seem like much in this crazy bull market, but since it is the world reserve asset, I think it is a good play in this environment. I plan to DCA my position over the next few months. Can it can go lower? Yup, I just know I am not buying at the top! Thoughts?"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  },
+  "model" : {
+    "relevance" : "investment_related",
+    "targets" : [ {
+      "anchor" : "Gold",
+      "direction" : "bullish",
+      "hedged" : false
+    }, {
+      "anchor" : "GLD",
+      "direction" : "bullish",
+      "hedged" : false
+    }, {
+      "anchor" : "S&P",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "The US federal debt",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "inflation",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "cash",
+      "direction" : "bearish",
+      "hedged" : false
+    }, {
+      "anchor" : "US dollar",
+      "direction" : "bearish",
+      "hedged" : true
+    }, {
+      "anchor" : "interest rates",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "Warsh",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "AI build out",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "30 year Treasury bonds",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "oil",
+      "direction" : "not_expressed",
+      "hedged" : false
+    } ]
+  }
+}, {
+  "post_id" : "reddit-1xf3wpi",
+  "day" : "2026-10-25",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-25T14:32:57Z",
+      "channels" : [ "ValueInvesting" ],
+      "title" : "Nike and Pepsi both yield ~4.4% now. On earnings Nike looks like the deeper value, on free cash flow it doesn't",
+      "body" : "TL;DR: nike and pepsi both yield \\~4.4% right now. on earnings, sales and book nike sits at the very bottom of its own history, which is why \"deep value\" keeps coming up. on free cash flow it's only around the 33rd percentile, and fy26 fcf didn't cover the dividend. pepsi is cheap on cash too. i sold both, and pepsi is the sale i'm less sure about.  \n  \nthe yield moved because the price did  \nnike paid \\~1% for most of the last decade. $1.64 a year on a \\~$37 stock is 4.4%. nothing about the business got more generous, the stock just fell from \\~70 at the 52w high.  \n  \nthe cash check i run before i believe a yield  \nnike free cash flow: fy24 6.6b, fy25 3.3b, fy26 2.2b  \nnike dividend: \\~2.4b a year  \nso it went from about a third of fcf in fy24 to \\~110% in fy26. the payout ratio people quote in the threads (\\~77%) is on earnings, not cash.  \n  \npepsi free cash flow: 2025 7.7b, last 12 months 10.5b  \npepsi dividend: \\~8.1b a year  \nroughly all of it in 2025, \\~77% on the trailing year. net debt \\~1.8x ebitda.  \n  \nwhere they sit against their own history  \nnike: earnings multiple \\~14 vs a median \\~30 (2nd percentile), price/sales 1.2 vs 2.8, price/fcf \\~26 vs \\~34 (33rd percentile)  \npepsi: price/fcf \\~18 vs \\~33 (1st percentile), ev/ebitda \\~11.7 vs \\~17.7  \n  \nso nike only looks like a bargain on the numbers that fell slower than the cash. pepsi looks cheap on every line i checked.  \n  \nvaluation, with the assumptions  \na dividend discount model (assumes the dividend keeps growing at its past pace) gives nike \\~44 and pepsi \\~158. a cash flow dcf gives pepsi \\~111. for nike the dcf comes out so low i don't trust it: fcf just dropped by two thirds, and any model fed with that says the company is worth a fraction of the price. so the honest read for me is a range for pepsi (\\~111 to \\~158 against \\~136) and \"can't tell yet\" for nike.  \n  \nfunny side note: the ddm number for pepsi is almost exactly where i sold it.  \n  \nmy position  \nneither. nike i sold for a tiny profit and i'm not going back. pepsi i sold in march at \\~159, it's \\~136 now, \\~15% below my exit, and that's the one i keep second guessing.  \n  \nwhat would change my mind  \nnike: a full year with fcf back above \\~1.5x the dividend. one good quarter isn't it.  \npepsi: north america volumes turning up. that's what i was watching before the sale and it's still what i'd watch.  \n  \nrisks to my read: fiscal years don't line up (nike's ends in may), fcf is lumpy, and \"own history\" for nike includes the years when it traded like a growth stock, so the median may be too high to anchor on.  \n  \nfor those holding nike for the yield: what fcf payout would you sit through, and for how long?"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  },
+  "model" : {
+    "relevance" : "investment_related",
+    "targets" : [ {
+      "anchor" : "Nike",
+      "direction" : "mixed",
+      "hedged" : false
+    }, {
+      "anchor" : "Pepsi",
+      "direction" : "mixed",
+      "hedged" : false
+    } ]
+  }
+}, {
+  "post_id" : "reddit-1xgxfqk",
+  "day" : "2026-10-27",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-27T16:35:29Z",
+      "channels" : [ "ValueInvesting" ],
+      "title" : "Direct Indexing",
+      "body" : "Long time lurker, infrequent poster\n\nSorry if this is the wrong place to ask this . Can anyone steelman the case AGAINST direct indexing / tax loss harvesting accounts ?\n\nI see these pushed all the time , but I am seeing several issues . \n\n1. There tends to be little to harvest after 5 years  \n2. Fees  \n3. Tax nightmare to unload the account \n\nAppreciate any answers in advance \n\nRegards "
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  },
+  "model" : {
+    "relevance" : "investment_related",
+    "targets" : [ {
+      "anchor" : "Direct Indexing",
+      "direction" : "bearish",
+      "hedged" : true
+    }, {
+      "anchor" : "tax loss harvesting accounts",
+      "direction" : "bearish",
+      "hedged" : true
+    } ]
+  }
+}, {
+  "post_id" : "reddit-1xg7zsk",
+  "day" : "2026-10-26",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-26T20:19:25Z",
+      "channels" : [ "ValueInvesting" ],
+      "title" : "oRo (3983.T): Tokyo accounting software with a third of its market cap in net cash, priced as if cash flow shrinks forever",
+      "body" : "**Thesis.** oRo makes ZAC, a cloud ERP for Japanese firms that bill by the project (consultancies, ad agencies, IT shops). At ¥1,874 (26 Oct) the market cap is about ¥29.1B, and ¥9.4B of that is net cash. The rest values the business at about 10x the ¥1.98B of cash flow it makes a year. Discount that at 9% and the price implies cash flow shrinking about 0.9% a year, forever. The cloud core grew 21.5% in H1 2026.\n\n**Why it looks worse on a screen**\n\n\\- Until January 2023 it sold perpetual licenses, and it still books that old prepaid cash slowly: ¥764M in 2024, ¥435M in 2025, about ¥130M this year, zero from 2027. Strip it out and cloud revenue grew 25.5% in 2025 and 21.5% in H1 2026.  \n\\- A small ad-agency unit depends on two clients, Aeon and Nissan. Its profit fell 73% in 2025, from ¥558M to ¥148M. That's why group net profit fell 8.5% last year, the first drop since 2016.\n\nCloud was 68% of 2025 revenue and 94% of operating profit. Monthly churn is 0.29%. Contracted licenses rose 18 quarters in a row, from 243,000 to 364,000.\n\nSince the end of 2021, EPS went from ¥87.96 to ¥137.61 (TTM), up 56%. The share price went from ¥2,909 to ¥1,874, down 36%. P/E went from 33x to about 13.6x.\n\n**H1 2026**\n\nRevenue ¥4,553M (+17.0%), operating profit ¥1,411M (+17.3%), margin 31.0%. Operating cash flow was 1.4x net profit. Contract liabilities (cash collected up front) rose ¥40M, the first increase after two years of shrinking.\n\n**Balance sheet and capital return**\n\nNo debt, no goodwill, and no acquisition in 27 years. Net cash ¥9,441M (cash plus deposits minus leases). Buybacks were ¥226M in 2024, ¥1,276M in 2025 and a ¥1B program this year. In April it cancelled ¥911M of repurchased shares, which is rare in Japan. Dividend ¥20, ¥30, ¥35, ¥50, with a stated no-cut policy, so 2.7% at today's price.\n\nMy complaint is the cash. About ¥10.2B sits in deposits at 0.27%. The two founders hold 57.1% and have sold slowly over five years (7.7% and 19% of their stakes), so nobody outside can push for a bigger buyback.\n\n**Valuation**\n\nCash flow base ¥1,976M, the average of 2024, 2025 and TTM after lease payments.\n\n\\- Pessimistic DCF: ¥2,081  \n\\- Zero-growth value: ¥2,078  \n\\- Median P/E x guided EPS: ¥2,742  \n\\- Base DCF (8.5% growth, well under the company's \\~19% plan): ¥3,191  \n\\- Optimistic DCF: ¥4,957 (terminal value is 61% of it, so I treat it as a ceiling)\n\n**Bear case**\n\n\\- Sales: 33 new contracts in H1 against a plan of 104. Net revenue retention fell from 116.1% to 107.0% after twelve companies from two groups cancelled.  \n\\- Marketing relapse: if Aeon and Nissan cut again, group profit loses ¥200-300M.  \n\\- Adobe bought Semrush, which oRo distributes in Japan. That line plus other third-party products is about ¥380M of revenue.  \n\\- AI at the small end: retention on the cheap product for firms under 50 people was 94.6% in 2025.  \n\\- Liquidity: 30,000-110,000 shares a day.\n\n**What would change my mind**\n\nQ3 comes around 13 Nov. I'm watching cumulative new contracts (under 60 after nine months is bad), net revenue retention (under 110%), Marketing revenue (¥847M in Q1, ¥659M in Q2, under ¥700M in Q3 would worry me) and contract liabilities shrinking again.\n\nDoes anyone here follow Japanese small caps? Is 33 new contracts in six months a blip or a trend?\n\nFull report, with the falsifiers checked daily:[See the oRo analysis here](<url>\n\n*Disclosure: I own some. I run Waiting Is the Work, the non-commercial site where this analysis is published. This is research, not investment advice.*"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  },
+  "model" : {
+    "relevance" : "investment_related",
+    "targets" : [ {
+      "anchor" : "oRo",
+      "direction" : "bullish",
+      "hedged" : true
+    }, {
+      "anchor" : "Aeon",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "Nissan",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "Adobe",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "Semrush",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "Japanese small caps",
+      "direction" : "not_expressed",
+      "hedged" : false
+    } ]
+  }
+}, {
+  "post_id" : "reddit-1xhy6fn",
+  "day" : "2026-10-28",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-28T19:37:02Z",
+      "channels" : [ "stocks" ],
+      "title" : "Fed holds rates steady despite concerns over inflation",
+      "body" : "The Federal Reserve voted Wednesday to keep benchmark interest rates on hold, opting to take a patient approach in its fight against inflation despite mounting evidence that price pressures are proving more nettlesome than policymakers had hoped.\n\nIn a widely expected decision, the Federal Open Market Committee kept the overnight funds rate in a range between 3.75%-4%, where it has been since the central bank approved a quarter percentage-point increase in September.\n\nTwo of the 12 FOMC voters dissented from the decision – Governor Lisa Cook and Cleveland Fed President Beth Hammack, both of whom wanted the committee to raise rates by a quarter percentage point.\n\nThe midterm elections have lingered over the decision. Pivotal votes take place nationwide on Nov. 3, with control of Congress at stake. Fed officials consider political independence to be a cornerstone of the central bank, but some observers have speculated that officials won’t want to raise rates this close to an election.\n\nTrump, who nominated Warsh to the position, has been at odds with the Fed for years. Trump has charged that the funds rate should be much lower.\n\nThe dissents reflected underlying conflict on the committee over how aggressively it needs to raise rates to combat rising prices. Inflation has been above the Fed’s 2% target for more than five years, and the pace of price increases has only picked up since the September meeting.\n\nThe decision came as little surprise as markets had been pricing in a less than 10% chance of a hike, according to the CME Group’s FedWatch tool. Following the decision, the S&P 500 held on to its gains.\n\nHowever, it raises fresh questions about how long policymakers are willing to wait before tightening again. Futures market pricing indicates a strong possibility of another hike at the next FOMC meeting in December, and perhaps another hike or two in 2027.\n\nSeparately, Fed Chairman Kevin Warsh unveiled at a news conference changes to the FOMC meetings next year that could reduce the number of rate-setting meetings each year."
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  },
+  "model" : {
+    "relevance" : "investment_related",
+    "targets" : [ {
+      "anchor" : "The Federal Reserve",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "benchmark interest rates",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "inflation",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "midterm elections",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "Trump",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "CME Group",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "S&P 500",
+      "direction" : "bullish",
+      "hedged" : true
+    }, {
+      "anchor" : "Kevin Warsh",
+      "direction" : "not_expressed",
+      "hedged" : false
+    } ]
+  }
+}, {
+  "post_id" : "reddit-1xhn5z1",
+  "day" : "2026-10-28",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-28T12:49:47Z",
+      "channels" : [ "investing" ],
+      "title" : "AI data-center debt is piling up faster than bond buyers can absorb it",
+      "body" : "Credit hedge funds that loaded up on junk bonds tied to AI infrastructure are under serious pressure right now. Credit default swaps on AI-related debt are back in demand as buyers grow nervous about the volume of paper being issued to fund data-center buildouts, per the Economist and FT Alphaville.\n\nWhen buyers pull back from a busy debt market, sellers have to offer higher rates to move the bonds. Higher borrowing costs flow directly into the economics of building data centers, which eventually shows up in what hyperscalers pay to expand capacity. The chain from buyer fatigue to project economics is short.\n\nOracle, Alphabet, and Amazon report earnings this week, and their capex guidance will hit a debt market already under strain. Do you see them pulling back on spending commitments or doubling down?"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  },
+  "model" : {
+    "relevance" : "investment_related",
+    "targets" : [ {
+      "anchor" : "junk bonds tied to AI infrastructure",
+      "direction" : "bearish",
+      "hedged" : true
+    }, {
+      "anchor" : "debt market",
+      "direction" : "bearish",
+      "hedged" : true
+    }, {
+      "anchor" : "data centers",
+      "direction" : "bearish",
+      "hedged" : true
+    }, {
+      "anchor" : "hyperscalers",
+      "direction" : "bearish",
+      "hedged" : true
+    }, {
+      "anchor" : "Oracle",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "Alphabet",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "Amazon",
+      "direction" : "not_expressed",
+      "hedged" : false
+    } ]
+  }
+}, {
+  "post_id" : "reddit-1xi7epc",
+  "day" : "2026-10-29",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-29T01:57:59Z",
+      "channels" : [ "ValueInvesting" ],
+      "title" : "I Spent Hours Analyzing Intel Before Earnings. Last Time It Crushed Expectations, the Stock Fell 14%. I Think the Same Trap Could Be Waiting Again.",
+      "body" : "Intel reports earnings tomorrow, October 29.\n\nI've spent hours reviewing Intel's financial reports, its previous earnings call, analyst estimates, earnings history and valuation.\n\nAnd I've found something that makes this quarter particularly interesting.\n\n**My model gives Intel a 70% chance of delivering a very strong earnings beat.**\n\nBut I'm still cautious about the stock.\n\nThat might sound contradictory. Here's why.\n\n# Last Quarter, Intel Did Almost Everything Right\n\nIn July, Intel reported its strongest revenue growth in more than 15 years.\n\nRevenue reached $16.1 billion, up 25%.\n\nAdjusted earnings came in at $0.42 per share, compared with roughly $0.22 expected.\n\nThat's almost twice what Wall Street anticipated.\n\nThe Data Center and AI business grew 59%.\n\nGross margins improved significantly.\n\nOn paper, this looked like the kind of turnaround quarter Intel shareholders had been waiting for.\n\nThen something strange happened.\n\n**The stock fell nearly 14% over the following three trading sessions.**\n\nWhy?\n\nBecause the market wasn't just looking at the quarter Intel had delivered.\n\nIt was looking at what came next.\n\nInvestors were concerned about manufacturing capacity, future spending and whether the company's recovery could continue.\n\nAnd that's exactly what I'm watching tomorrow.\n\n# The Part of Intel That Has Me Optimistic\n\nIntel's server business is showing real momentum.\n\nLast quarter, Data Center and AI revenue reached approximately **$6.3 billion**, up 59% year over year.\n\nThat's an impressive recovery.\n\nDemand for server processors has been strong enough that Intel has struggled to supply everything customers want.\n\nThat's a much better problem than having factories full of products nobody wants.\n\nBut there's an important difference between strong demand and strong financial results.\n\nIf Intel can't manufacture enough chips, some of that demand won't turn into revenue immediately.\n\nManagement previously indicated additional capacity would become available toward the end of Q3 and during Q4.\n\nIf those improvements are happening on schedule, Intel could deliver another strong quarter.\n\nThat's one of the main reasons I'm expecting an earnings beat.\n\n# Here's What Wall Street Expects\n\nFor tomorrow's report, these are the figures I'm using.\n\n|Metric|Wall Street|My Strong-Beat Scenario|\n|:-|:-|:-|\n|Revenue|$16.54B|Above $16.54B|\n|Adjusted EPS|$0.41|At least $0.45|\n|Gross margin|\\~42% company outlook|Above 42% would help|\n\nIntel itself guided for revenue between $15.8 billion and $16.8 billion.\n\nSo the market already expects the company to perform near the upper end of management's range.\n\nThat's important.\n\nA normal quarter might not be enough.\n\nI also looked at the differences between analyst estimates.\n\nThe Wall Street benchmark I'm using is $0.41 EPS, although some providers are closer to $0.39–$0.40.\n\nMore interestingly, the Estimize crowd estimate is approximately $0.47.\n\nThat's a meaningful difference.\n\nSome investors clearly expect more than the traditional consensus.\n\nAnd when expectations are already high, a modest beat doesn't always impress anyone.\n\n# Why My Model Favors a Strong Beat\n\nSeveral signals point in the same direction.\n\nIntel has beaten revenue expectations in each of the last eight quarters covered by my analysis.\n\nRecent analyst revisions have also been positive.\n\nZacks gives Intel a Rank #1, with a positive Earnings ESP.\n\nAnd the earnings whisper is around $0.47 per share.\n\nMy model combines those signals with Intel's historical results.\n\nThe outcome is a **70% subjective probability of a very strong beat**, which I define as adjusted EPS of at least $0.45 alongside revenue above $16.54 billion.\n\nI want to be clear about something.\n\nThat's not a statistically proven 70% chance.\n\nIt's the output of my own scenario model, based on a limited historical sample.\n\nI like the setup, but I'm not pretending earnings are predictable with that level of precision.\n\nAnd even if the numbers beat, the stock could still fall.\n\nWe've already seen it happen.\n\n# The Foundry Problem Nobody Should Ignore\n\nThis is where my optimism starts to fade.\n\nIntel wants to become a major manufacturer of advanced chips for other companies.\n\nEssentially, it wants to compete more directly with TSMC.\n\nIf Intel succeeds, the opportunity could be enormous.\n\nBut look at the actual numbers.\n\nLast quarter, Intel Foundry recorded approximately **$5.8 billion in revenue**.\n\nSounds impressive.\n\nExcept most of that revenue came from manufacturing chips for Intel's own businesses.\n\nRevenue from external customers was only around **$293 million**.\n\nMeanwhile, the Foundry business lost approximately **$2.1 billion**.\n\nThat's the part that concerns me.\n\nIntel is spending heavily to build advanced manufacturing capabilities, but it still needs to prove that major outside customers will pay to use them at scale.\n\nA large manufacturing business isn't automatically a profitable manufacturing business.\n\nI want to hear management explain what's happening with its 14A manufacturing process.\n\nMore importantly, I want evidence of meaningful external customer commitments.\n\nThat's when the investment story starts becoming more convincing to me.\n\n# The Valuation Is Hard to Ignore\n\nHere's where I expect some people to disagree with me.\n\nIntel closed at approximately $95.53.\n\nThat's a remarkable recovery from where the stock traded a year ago.\n\nBut the company's valuation has risen much faster than its sales.\n\nIntel now trades at roughly **8.9 times trailing revenue**, compared with a five-year median around 2.6 times.\n\nIts valuation is also approximately **48 times expected 2027 earnings**.\n\nThose are demanding numbers for a company still proving its turnaround.\n\nMorningstar's estimated fair value is around $105.\n\nMy own conservative valuation framework is substantially more cautious because I place much less value on Intel's Foundry business until it proves it can attract large external customers and produce sustainable profits.\n\nI'm not saying Intel can't justify its current price.\n\nI'm saying a lot of future success already appears to be reflected in it.\n\nAnd that leaves investors exposed if management disappoints.\n\n# What Could Actually Move the Stock Tomorrow?\n\nI don't think the headline EPS number will be the deciding factor.\n\nI'll be listening for three things.\n\nFirst, **Q4 guidance**.\n\nWall Street expects approximately $17.1 billion in revenue next quarter.\n\nIf Intel guides meaningfully above that, it would support the argument that server demand is translating into actual sales.\n\nSecond, **gross margins**.\n\nIntel is targeting around 42%.\n\nIf margins improve while manufacturing volumes increase, that's encouraging evidence that the recovery is becoming more profitable.\n\nThird, **future investment spending**.\n\nIntel needs to invest in advanced manufacturing to remain competitive.\n\nBut shareholders also need to know how much money that will require and when those investments are expected to generate returns.\n\nThis is particularly important after the recent earnings reactions from other major technology companies.\n\nWall Street is becoming more demanding about the economics of AI infrastructure.\n\nStrong growth alone may not be enough.\n\n# My Prediction\n\nI expect Intel to deliver a strong quarter.\n\nMy model favors a meaningful earnings beat, potentially above $0.45 adjusted EPS.\n\nBut I have much less confidence in predicting the stock's reaction.\n\nThe options market is pricing in a move of roughly 9% in either direction.\n\nIntel's historical earnings reactions have frequently been even larger.\n\nSo I don't see this as an obvious bullish trade simply because the earnings setup looks favorable.\n\nA strong report with disappointing guidance could still hurt shareholders.\n\nAnd a modest earnings beat paired with excellent guidance could send the stock higher.\n\nThat's the lesson I took from Intel's last report.\n\n# My Final Take\n\nI think Intel's recovery is real.\n\nThe server business is improving, manufacturing execution is getting better, and demand is encouraging.\n\nBut I also think investors are paying a substantial premium for a turnaround that isn't finished.\n\nThe Foundry business still has a lot to prove.\n\nThe valuation gives me little comfort if something goes wrong.\n\nAnd I don't want to confuse a strong earnings forecast with an attractive long-term investment.\n\n**I can be bullish on Intel's earnings tomorrow without being bullish on buying the stock at today's price.**\n\nThat's where I stand.\n\nIf Intel delivers another huge earnings beat, the first thing I'll check won't be the headline EPS.\n\nIt'll be the guidance, manufacturing margins and whether Foundry is finally attracting meaningful outside business.\n\nBecause sooner or later, Intel has to prove it's building more than an exciting comeback story.\n\nIt has to build a consistently profitable business."
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  },
+  "model" : {
+    "relevance" : "investment_related",
+    "targets" : [ {
+      "anchor" : "Intel",
+      "direction" : "mixed",
+      "hedged" : false
+    }, {
+      "anchor" : "TSMC",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "Zacks",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "Estimize",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "Morningstar",
+      "direction" : "not_expressed",
+      "hedged" : false
+    } ]
+  }
+}, {
+  "post_id" : "reddit-1xijqqn",
+  "day" : "2026-10-29",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-29T13:18:24Z",
+      "channels" : [ "investing" ],
+      "title" : "Why Crypto Is a Utopian Illusion",
+      "body" : "It all boils down to a basic reality: why would anyone voluntarily hand over practically useful things like food, energy, metal, real estate or labor in exchange for crypto, which is merely a record in a database? It makes no sense.\n\nThat is why every traditional database or paper record traded on the market (such as stocks, bonds, patents, copyrights, trademarks, and e-money) is a legally binding instrument. The issuer, counterparty, or debtor is legally bound by contract and civil law to pay a specific amount of fiat money to the record holder. If they fail to do so, courts order asset freezes, wage garnishments, or forced liquidations.\n\nThe fiat money received by holders, itself just another record, then serves as the final link in the enforceable chain to practical utility. Because the banking system issues fiat as debt, millions of private and public sector debtors are legally compelled to acquire it. To do so and avoid foreclosure, repossession, or bankruptcy, they must offer goods, energy, food, labor, services, and settlement of tax obligations to anyone holding that money.\n\nSo, legal enforceability is the only reason people hand over practically useful things for a mere record.\n\nYet in crypto, that very enforceability has been intentionally removed from the equation. People have embraced a utopian illusion that others will continue handing over practically useful things simply because a record is decentralized and cryptographically stored. \n\nLike all utopias, it will collapse under the weight of basic reality. In this case, that reality is simple: decentralization and cryptography cannot provide food, water, heat, shelter, healthcare, physical safety, aesthetic pleasure, or immunity from the law."
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  },
+  "model" : {
+    "relevance" : "investment_related",
+    "targets" : [ {
+      "anchor" : "Crypto",
+      "direction" : "bearish",
+      "hedged" : false
+    }, {
+      "anchor" : "stocks",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "bonds",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "patents",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "copyrights",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "trademarks",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "e-money",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "fiat money",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "food",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "energy",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "metal",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "real estate",
+      "direction" : "not_expressed",
+      "hedged" : false
+    } ]
+  }
+}, {
+  "post_id" : "reddit-1xgpq2t",
+  "day" : "2026-10-27",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "link",
+      "published_at" : "2026-10-27T11:15:00Z",
+      "channels" : [ "ValueInvesting" ],
+      "title" : "IREN vs APLD: Which One Offers Better Value for Investors?",
+      "body" : "looking into IREN and APLD to see which offers better value at current prices.\n\nBoth have massive AI contracts, but their business models are quite different.\n\nA few things stood out:\n\n* IREN has $13.8B in spending commitments and significant GPU replacement risks.\n* APLD has around $6.4B in debt, plus some expensive preferred financing.\n* Both are spending billions expanding, while their existing operations aren't generating enough cash to fund that growth.\n\nWould you rather hold IREN or APLD long term, and why?"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  },
+  "model" : {
+    "relevance" : "investment_related",
+    "targets" : [ {
+      "anchor" : "IREN",
+      "direction" : "bearish",
+      "hedged" : true
+    }, {
+      "anchor" : "APLD",
+      "direction" : "bearish",
+      "hedged" : true
+    } ]
+  }
+}, {
+  "post_id" : "reddit-1xg9fui",
+  "day" : "2026-10-26",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-26T21:14:45Z",
+      "channels" : [ "investing" ],
+      "title" : "I love Anthropic's products, BUT I think their S1 is a far scarier than people let on.",
+      "body" : "Before I get into my analysis, let me just say that I use Claude every day and really like Anthropic's products. But I think they are making a pretty large error with their IPO, trying to slide some things by without you noticing.\n\n\n\nWhen you only look at the top 25 pages of the S-1, everything pretty much looks pretty good: Revenues up from $1.16B in H1 2025 to $16.3B in H1 2026. Q2 2026 GAAP operating profit was $1.03B. They have $131.7B in cash and near-cash equivalents. But if you look at the accounting mechanics, the accounting treatments, the working capital loops, and particularly footnote 9, you start to see that the structure of Anthropic is poised to be that of a high margin software company, while the balance sheet looks more like a highly leveraged utility.\n\n\n\nHere are some red flags I found:\n\nTraining costs are number uno, there is no gross margin line item anywhere in the S-1. If you open virtually any SaaS S-1 you will see the revenue line, and directly below that COGs or Gross Profit line, then operating expenses. Anthropic has chosen to remove the gross margin line. They have taken their cost of goods sold (customer inference & computing power) and model training cost and put them into a single line aggregate expense called \"Compute and infrastructure,\" which came to $8.95B in H1 2026.\n\n\n\nThey only have two reasons for doing so:\n\nOne either the company has absolutely dreadful marginal profitability per unit provided (not too profitable at the service level) or the multi-billion dollar training campaigns that go on nearly all the time (AI Labs are continuously training the next model; model development doesn't stop) are essential recurring capex rather than optional discretionary R&D spend.\n\n\n\nConvertible Notes Subsidy:\n\nSo take a look at the bottom of the income statement. There's a large amount of losses in Q2 2026 for changes in the fair value of the convertible notes amounting to $72.4B. Most of the wall street crowd will just brush it off as a non-cash accounting item, as the valuation of notes had gone up by a considerable amount in their last private funding rounds. But if you take a deeper look at those tens of billions of dollars of losses in the form of convertible notes issued by the company between 2023 and 2025 were entirely and soley to cover the enormous training compute costs, which were paid for by the company in the form of cheap equity shares to Google and Amazon (the cloud providers). So I hypothesize that Anthropic is subsidizing their training expense, as part of notes to the Cloud providers Google and Amazon, to shift the Billions of dolllars from top line COGs, into liabilities. But I don't think this is the only thing they are doing with creative accounting to spruce up the numbers, I'll cover that in a second.\n\n\n\nOff-Balance Sheet Tsunami:\n\nThe $587 billion take-or-pay obligation trap (Footnote 9 of S-1): Total off balance sheet liabilites were up to nearly 6x what they were a year earlier, reaching $587B by the end of Q2 2026\n\n\n\nLets break the numbers down a bit to see where we are:\n\n\n\n* $265.6B in irrevocable minimum fixed purchase agreements (which includes at least $114.5B to Google Cloud through 2033 and $110B to AWS through 2036); around 80% of that is non-discretionary.\n\n\n\n* Uncommeced leases, under ASC 842 the leases can be deferred indefinitely until the date of official occupancy, so this category of leases alone make up about $321.4B of off balance sheet liabilites, even though they represent a real liability to the company.\n\n\n\n* Broadcom 9% debt loop, of that, it contains $161.2B of Broadcom TPU leases which are 5 years out (around 2030,2031) that were funded with $42B 9% loan facility\n\n\n\nSo how does this like affect the S-1:\n\nWhenever the company uses those loans to make lease payments they are treated as financing activities rather than operating expenses which allows the company to present the cash-flow are relatively clean, presenting the image that Anthropic is profitable or has decent margins. Typically, if you are leasing out infrastructure, it would be a variable cost as most companies do that scales as usage scales, but in Anthropics case they have effectively turned a variable cost into a fixed cost floor that is irrevocable. They have locked themselves into an exponential growth plan without room for any hitches. They are now forced to produce a spike in revenue before 2027-2030 to service the uncommenced leases, take-or-pay commitments, and regular operations.\n\n\n\nSo now we see the company is using liabilities as a way to shift expenses but they are doing something weird with revenue too:\n\nNotice the weirdness of the balance sheet: revenues go up steadily, so do their current liabilities, seemingly in lockstep. After I traced the path of the funds, you realize that they are creating a self-looping cycle involving Google/AWS: 48%. of the revenue came through the AWS marketplaces and Google Vertex AI Platform (up from 11% in 2023). Gross vs Net revenue inflation: when a customer pays Anthropic for service via the AWS or Google cloud marketplaces, they are recognizing the full amount as gross revenue (which inflates their sales multiples). The commission paid to the marketplace owner (around 20-27%) is then essentially shifted into the sales and marketing expense line at 19% of all revenue.\n\n\n\nWorking capital vice effect: 58% of the company's accounts receivable are still in the hands of AWS/Google. The other side of it is that current liabilities and accruals have risen so dramatically that they owe a massive amount to their marketplace owners. They are borrowing picks and shovels to mine for gold at Amazon/Google, sell the gold back to them via the marketplaces, have Amazone/Google hold on to 58% of the receivables from the customers, and book the 255 net margin from the marketplaces as gross revenue.\n\n\n\nMy Conclusion:\n\nThe point I am trying to convey is the fact that Private investors and hyperscalers have reached maximum asset concentrations. They have entered massive commitments with cloud providers in order to fuel hypergrowth necessary for inflating valuations. And now those same agreements are chaining them to a death-trap treadmill without an exit strategy. Even with unstable public markets and enterprise cutbacks looming, this offering seems more like a desperate liquidity release than a fundraising exercise. And if revenue growth breaks the form needed to service Anthropic's or any large AI startup's liabilities, the broader market is in trouble.\n\n"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  },
+  "model" : {
+    "relevance" : "investment_related",
+    "targets" : [ {
+      "anchor" : "Anthropic's",
+      "direction" : "bearish",
+      "hedged" : false
+    }, {
+      "anchor" : "Google",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "Amazon",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "Broadcom",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "broader market",
+      "direction" : "bearish",
+      "hedged" : true
+    } ]
+  }
+}, {
+  "post_id" : "reddit-1xgaozo",
+  "day" : "2026-10-26",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-26T22:04:10Z",
+      "channels" : [ "stocks" ],
+      "title" : "DASH in late stage talks to buy CART in $17B deal",
+      "body" : "CART is my 3rd largest position and I noticed it went up \\~23% in the last two trading days. I heard the rumors on Friday that CART was seeking buyers, today near close it was reported DASH is in late stage talks to buy for $17B. Potentially closing the deal this week. \n\nI’m surprised I haven’t seen any other posts here. As a shareholder of CART I’m a bit disappointed, I was pretty bullish and it was trading so cheap that I was expecting pretty huge returns over the next 5-10yrs. If $17B is correct I’ll still be up about 60% over 15 months ish, which is fine. \n\nI also own DASH, albeit a much smaller position. I’m conflicted on my thoughts here, everyone thought DASH could just enter grocery delivery and eat CARTs lunch. I didn’t believe it would be that easy, which is why I had so much CART, but I’m still pretty surprised they’re buying CART for so much. I still think CART is cheap so I guess they’re getting a bargain while trading at a higher valuation, so potentially it’ll be a big value add. DASH is trading down -13% over the last couple trading days, which happens to be very close to a $17B decrease in market cap kinda sus. \n\nWhat’re yalls thoughts? "
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  },
+  "model" : {
+    "relevance" : "investment_related",
+    "targets" : [ {
+      "anchor" : "DASH",
+      "direction" : "mixed",
+      "hedged" : false
+    }, {
+      "anchor" : "CART",
+      "direction" : "bullish",
+      "hedged" : false
+    }, {
+      "anchor" : "grocery delivery",
+      "direction" : "not_expressed",
+      "hedged" : false
+    } ]
+  }
+}, {
+  "post_id" : "reddit-1xfwwbo",
+  "day" : "2026-10-26",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-26T13:31:33Z",
+      "channels" : [ "investing" ],
+      "title" : "BREAKING: Anthropic publicly files IPO prospectus",
+      "body" : "[<url>"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  },
+  "model" : {
+    "relevance" : "investment_related",
+    "targets" : [ {
+      "anchor" : "Anthropic",
+      "direction" : "not_expressed",
+      "hedged" : false
+    } ]
+  }
+}, {
+  "post_id" : "reddit-1xhm5j4",
+  "day" : "2026-10-28",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-28T12:01:46Z",
+      "channels" : [ "ValueInvesting" ],
+      "title" : "How Does Costco Make Money?",
+      "body" : "Costco generates its significant profit not from selling goods, but predominantly from the annual membership fees paid by its 84.1 million members worldwide, instead of high markups on the products it sells.\n\nIn fiscal year 2026, membership fees totaled $5,907 million, contributing more than half of its operating income, while merchandise sales typically operate on deliberately thin margins to offer competitive prices.\n\nWhat are the primary revenue sources?  \nCostco operates a two-part business model - selling goods at low prices and charging for the privilege of access. For fiscal year 2026, the company reported total revenue of $303,154 million, the vast majority $297,247 million came from net merchandise sales, representing about 98% of total revenue.\n\nThese sales are distributed across several categories: Foods and Sundries ($116,788 million), Non-Foods ($77,375 million), Fresh Foods ($41,715 million), and Warehouse Ancillary and Other Businesses ($61,369 million), which includes segments like gasoline and pharmacy. However, as mentioned before the profit engine is separate - membership fees, which amounted to $5,907 million in fiscal year 2026, making up the remaining 1.9% of total revenue yet still the vast majority of its profit.\n\nThese fees, totaling $5,907 million in fiscal year 2026, provide more than 50% of the company's operating income. Costco intentionally keeps its gross merchandise margins very narrow— around 11% in fiscal year 2026—with selling, general, and administrative (SG&A) expenses around 9%. This razor-thin spread of less than two percentage points on goods sold means that the membership fee is critical to its overall profitability. This strategy underpins the perception of pricing authority, where members consistently find competitive values, incentivizing them to renew their annual subscriptions.\n\nWho pays the fees and why?  \nCostco's fees are paid by its 84.1 million paid members globally, as of fiscal year 2026. These members, which include 42.3 million Executive members, pay an annual fee to access the warehouses and online platforms. The membership structure is designed to foster loyalty, U.S. and Canada renewal rate was 92.3% in fiscal year 2026 and worldwide it stood at 89.8%. The appeal for members lies in the deeply discounted bulk products and services, with Executive members receiving a 2% reward on most purchases, which can significantly offset their annual fee. For example, an Executive member spending about $5,300 annually effectively recoups nearly $100 of their $130 fee. This creates a compelling value proposition that drives both initial sign-ups and high retention.\n\nWhat has been growing or shrinking over the last few years?  \nCostco has seen consistent growth across its revenue streams, though with varying dynamics. Total revenue increased 10% to $303,154 million in fiscal year 2026 from $275,235 million in fiscal year 2025. This growth was driven by comparable sales, which rose 8% (5% from average ticket and 3% from shopping frequency). Membership fee revenue grew 11% in fiscal year 2026, bolstered by new sign-ups, fee increases (such as the September 2024 hike in the U.S. and Canada, which contributed 30% of fee income growth in fiscal year 2026), and Executive membership upgrades.\n\nHowever, the rate of paid member growth has slowed dropping from 6.3% in fiscal year 2025 to 3.8% in fiscal year 2026. While merchandise categories like Foods and Sundries grew 6.6% and Non-Foods rose to 8.7% in fiscal year 2026, the Warehouse Ancillary and Other Businesses segment saw robust growth of 20%, primarily due to higher gasoline prices and increased volume. Digitally-enabled comparable sales growth has been strong, rising 20.7% (excluding foreign exchange impacts) in fiscal year 2026, now accounting for over $33 billion in sales. This indicates a shift in how members interact with the business, leaning more into digital channels and ancillary services.\n\nWhat to watch  \nWatch for changes in the U.S. and Canada member renewal rate. If it drops below 92%, it would signal a potential weakening of the membership moat.\n\nTrack the growth in membership fee income. If it falls below 10% in upcoming quarters without a recent fee increase, it suggests the underlying acquisition engine is slowing.\n\nMonitor the gross margin in core merchandise categories. If it begins to contract while traffic slows, it could indicate a shift away from Costco's core strategy of passing savings to members."
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  },
+  "model" : {
+    "relevance" : "investment_related",
+    "targets" : [ {
+      "anchor" : "Costco",
+      "direction" : "bullish",
+      "hedged" : false
+    } ]
+  }
+}, {
+  "post_id" : "reddit-1xdevo1",
+  "day" : "2026-10-23",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-23T14:00:57Z",
+      "channels" : [ "stocks" ],
+      "title" : "American Express is cutting 5% of its workforce to ‘prepare for AI’",
+      "body" : "American Express CEO Stephen Squeri said Friday the card company is eliminating 5% of its global workforce.\n\nThe firm, which reported third-quarter results earlier Friday, is taking a $336 million restructuring charge in the quarter, Squeri told analysts. Those types of charges typically include employee severance costs.\n\nAmex had almost 77,000 employees at the end of 2025.\n\n“We’ve got good momentum, but to accelerate innovation and win over the next few years, we needed to become \\[a\\] more agile and efficient organization,” Squeri said.\n\n“We believe this exercise will help us operate and execute more effectively and give us greater capacity to invest in our business priorities,” he said.\n\nThe restructuring charge was to make American Express “leaner, more agile, and also to prepare for AI,” CFO Christophe Le Caillec told CNBC in an interview.\n\n“You don’t want to automate processes that are not optimally structured, and so what we’re doing here is to reduce layers and increase spans of controls, so that we can automate and take advantage of AI in the coming quarters and the coming years,” Le Caillec said.\n\nSource: [<url>"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  },
+  "model" : {
+    "relevance" : "investment_related",
+    "targets" : [ {
+      "anchor" : "American Express",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "AI",
+      "direction" : "not_expressed",
+      "hedged" : false
+    } ]
+  }
+}, {
+  "post_id" : "reddit-1xedq4d",
+  "day" : "2026-10-24",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-24T16:56:02Z",
+      "channels" : [ "investing" ],
+      "title" : "Amazon is spending $220 BILLION on AI… and still can't keep up with demand.",
+      "body" : "Saw this yesterday and thought it was pretty interesting.\n\nAmazon CEO Andy Jassy says AWS's major cloud capacity is largely booked through 2027, with a good chunk of 2028 already committed.\n\nAnd this is a company planning to spend around $220 billion this year.\n\nObviously, having customers lined up is great, but $220 billion is an absolutely ridiculous amount of money to invest.\n\nI suppose the big question is whether all this AI demand eventually translates into the profits investors are expecting.\n\nAmazon reports earnings on October 29, so that'll be interesting to watch.\n\nAnyone here holding $AMZN? Are you confident in all this spending, or starting to think these tech companies are getting a bit carried away?"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  },
+  "model" : {
+    "relevance" : "investment_related",
+    "targets" : [ {
+      "anchor" : "Amazon",
+      "direction" : "mixed",
+      "hedged" : false
+    }, {
+      "anchor" : "AWS",
+      "direction" : "bullish",
+      "hedged" : false
+    }, {
+      "anchor" : "AI",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "tech companies",
+      "direction" : "bearish",
+      "hedged" : true
+    } ]
+  }
+}, {
+  "post_id" : "reddit-1xie7pf",
+  "day" : "2026-10-29",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "link",
+      "published_at" : "2026-10-29T08:22:54Z",
+      "channels" : [ "ValueInvesting" ],
+      "title" : "Google Is Still Expensive Despite a Nearly 10% Drop After Q3 Earnings.",
+      "body" : "Google is undoubtedly one of the best businesses in the world, but a great business does not necessarily make a great investment at any price. \n\nBack in 2016, Buffett bought Apple traded at roughly **11.3x P/E.** [Forbes: Buffett's Apple Investment](<url>\n\nFollowing its [Q3 earnings release](<url> on October 28, Alphabet fell nearly 10% in after-hours trading, wiping out almost $400 billion in market value. [Market reaction](<url>\n\nThere are a few things that concern me:\n\n1. **Valuation:** Headline earnings are distorted by investment gains and losses from SpaceX and Anthropic. I prefer valuing Google based on its underlying operating incomes rather than relying on its reported P/E.\n2. **AI spending:** Q3 capex reached $51.4 billion, contributing to negative free cash flow of $9.1 billion. Management also expects capital spending to increase significantly in 2027.\n3. **Search growth:** Google Search revenue growth slowed to 12%, down from 17% in Q2, while AI continues to change how users search and how Google monetizes them.\n\nAt approximately $3.6 trillion in market cap after the selloff, I still don't see enough margin of safety. My preferred entry price is around **$235 per share**. I could be wrong or overly pessimistic about Google.\n\nMy view is bearish on valuation, not on Google's business.\n\nI've written a more detailed analysis here:\n\n[Google Is Still Expensive Despite a Nearly 10% Drop After Q3 Earnings](<url>\n\nThanks for reading! [This post](<url> is public so feel free to share it."
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  },
+  "model" : {
+    "relevance" : "investment_related",
+    "targets" : [ {
+      "anchor" : "Google",
+      "direction" : "bearish",
+      "hedged" : true
+    }, {
+      "anchor" : "Apple",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "SpaceX",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "Anthropic",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "AI",
+      "direction" : "not_expressed",
+      "hedged" : false
+    } ]
+  }
+}, {
+  "post_id" : "reddit-1xdz85v",
+  "day" : "2026-10-24",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-24T04:28:53Z",
+      "channels" : [ "ValueInvesting" ],
+      "title" : "raise some cash",
+      "body" : "everywhere i look i see billions and trillions flying around like sacks of peanuts  \nshouldn't we all be a little bit concerned that Jensen has to reassure the public about ai companies?  \nwho is going to backstop all this ai debt?  \nthe stock market has become a cashing-out dumping ground for all the private/vc funds  \nkenny from citadel gave you the sell signal in the recent interview  \njust asking questions, don't hate the messenger"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  },
+  "model" : {
+    "relevance" : "investment_related",
+    "targets" : [ {
+      "anchor" : "raise some cash",
+      "direction" : "bearish",
+      "hedged" : false
+    }, {
+      "anchor" : "ai companies",
+      "direction" : "bearish",
+      "hedged" : true
+    }, {
+      "anchor" : "Jensen",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "ai debt",
+      "direction" : "bearish",
+      "hedged" : true
+    }, {
+      "anchor" : "private/vc funds",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "citadel",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "kenny",
+      "direction" : "not_expressed",
+      "hedged" : false
+    } ]
+  }
+}, {
+  "post_id" : "reddit-1xhcwoa",
+  "day" : "2026-10-28",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-28T02:59:46Z",
+      "channels" : [ "ValueInvesting" ],
+      "title" : "Meta's Muse will be a complete flop. Tell me I'm wrong.",
+      "body" : "There has been a ton of buzz about Muse since it's release at the beginning of September.\n\nI seem be the only person working from 1st principles to determine if there will actually be demand for the product. I can find hardly any discussion about this.\n\nI have tested Muse repeatedly to see how it performs, here is what I've done:\n\n1. Booking a restaurant reservation\n2. Booking a flight\n3. Booking a hotel\n4. Shopping for clothes and shoes\n5. Giving Muse access to my Walmart+ account to buy groceries for me.\n\nOn the last one, I actually ran a test where I wrote a grocery list and handed it to Muse, while simultaneously using Walmart+ to manually to do the shopping. The result was that it took Muse 7mins longer than me doing it manually.\n\nWhile performing this test I realized that Walmart has their own Ai assistant named Sparky. I pasted the same list into Sparky and it pulled up every item in the chat with the quantity toggle button linked in. Ultimately, Sparky was way faster than me, and probably 10x faster than Muse.\n\nWhich leads me to my main conclusion. I think that consumer Ai assistants will fail in favour of individual businesses embedding Ai directly into their customer experiences, as Walmart has.\n\nI also tested booking a hotel on Muse vs Google Ai mode. Google Ai mode was so much faster and easier it was shocking. Embedding Ai into the pre-existing workflow (looking for a hotel on google) supercharged the experience and makes it easier than I can even imagine.\n\nIt's a similar situation with shopping. Using the amazon Ai \"Rufus\" was so much easier to find a specific type of shoes I wanted. Muse was way slower and couldn't find what I was looking for. I did this using the exact same prompts for Muse and Rufus.\n\nMy point is, I am having so much trouble reconciling all this hype for Muse. It seems like people are caught up in the moment and focusing on what can be built rather than what there is demand for.\n\nI think the average person will not get value from using Muse in anyway that they don't get value from other Ai models. The angle with Muse is that it plugs into all your data/apps and executes your online activities for you...\n\nI believe this is going after a very slim margin of value and that Ai will decentralize into each individual business, being deployed to serve their customers in a far better way than 1 broad consumer Ai assistant ever could.\n\nI think the creation of Muse is motivated by greed and the desire to revolutionize the world with a new technology - not grounded in solving real problems and providing value to individual customers.\n\nPLEASE tell me how I could be wrong."
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  },
+  "model" : {
+    "relevance" : "investment_related",
+    "targets" : [ {
+      "anchor" : "Meta",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "Muse",
+      "direction" : "bearish",
+      "hedged" : false
+    }, {
+      "anchor" : "Walmart",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "Walmart+",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "Sparky",
+      "direction" : "bullish",
+      "hedged" : false
+    }, {
+      "anchor" : "Google",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "Google Ai mode",
+      "direction" : "bullish",
+      "hedged" : false
+    }, {
+      "anchor" : "amazon",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "Rufus",
+      "direction" : "bullish",
+      "hedged" : false
+    }, {
+      "anchor" : "consumer Ai assistants",
+      "direction" : "bearish",
+      "hedged" : true
+    } ]
+  }
+}, {
+  "post_id" : "reddit-1xhn54b",
+  "day" : "2026-10-28",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-28T12:48:42Z",
+      "channels" : [ "stocks" ],
+      "title" : "AI data-center supplier Vertiv just reported orders up over 100%. Shares are jumping 15% premarket.",
+      "body" : "Pretty interesting earnings from Vertiv this morning.\n\nThe company makes cooling and power infrastructure for data centers, so it's one of the businesses actually supplying the massive AI buildout.\n\nTheir quarterly revenue jumped 61% to $4.3 billion, but what stood out was orders growing more than 100% compared with last year\n\nThey also comfortably beat earnings expectations and raised their full-year forecast.\n\nWith all the recent concerns about AI spending and whether companies are building too much capacity, these numbers are pretty striking.\n\n$VRT is up around 15% premarket. Anyone holding it or following the companies supplying all these AI data centers?"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  },
+  "model" : {
+    "relevance" : "investment_related",
+    "targets" : [ {
+      "anchor" : "Vertiv",
+      "direction" : "bullish",
+      "hedged" : true
+    }, {
+      "anchor" : "AI data centers",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "AI spending",
+      "direction" : "not_expressed",
+      "hedged" : false
+    } ]
+  }
+}, {
+  "post_id" : "reddit-1xe9923",
+  "day" : "2026-10-24",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-24T13:53:17Z",
+      "channels" : [ "ValueInvesting" ],
+      "title" : "My analysis of SNDK",
+      "body" : "Before you say anything, i know its up multiple times this year and that NAND is cyclical. However, I believe we are before a generational opportunity.\n\nLet me explain:\n\nSandisk was spun off WDC in 2025. The idea was that WDC kept the HDD production, which is basically for the enterprise segment, and Sandisk retained the Flash/NAND/SSD one, which is (was, actually) more consumer oriented, and therefore more cyclical. Moreover, the NAND market was very capital intensive, because building more lines was very expensive. \n\nBut AI has changed everything. Demand for NAND has exploded, and will keep exploding as inference becomes more intensive. Sandisk has signed 94B MINIMUM revenue by Long Term Agreements, which, if we assume their guidance of 50% FCF through 2030, gives us around 50B of guaranteee fcf, backed by 16.5B in financial guarantees (sandisk market cap is, today, 180B). Expectations are high for the next year, expecting 200+ EPS (a forward PE of 6). And what I like the most about all this: share buybacks. Sandisk does not give a dividend, and instead cannibalizes its own shares. In the last quarter, they repurchased 2% of their company at a 1500 average price. The currenr price is 1280 and their FCF has increased, so expect a 3% reduction in ONE QUARTER. Btw, their balance sheet is clean with zero debt, and their capex is kept very low because they have very few upcoming factories (only through their kioxia partnership they are opening a japan facility, but it is partly funded by kioxia and the Japanese Government.\n\nAnd here is where, i believe, lies the most fundamental transformation for Sandisk, that the market is clearly overlooking: HBF. For non electronic-engineering guys, let me explain why this is so important: for many years, we have been using HBM for TRAINING AI. HMB is basically DRAM, which is volatile, and can be rewritten as many times you want, and is very fast (low latency). When AI is done training, it rewrites new info into the non volatile memory, which is mostly SSDs(this is what sandisk makes). SSDs cant be rewriten infinite times like DRAM, and loses capacity when it is rewriten, so DRAM (or HBM, which is DRAM stacked and connected) acts as the middle player between the GPU and the SSD. But here is where sandisk comes in. What if we used memory only for reading? This way, you would save HBM memory and the GPU could read traight fron the SSD. Of course, this would not be useful for training AI, because memory could not be rewritten, but very useful for cutting inference costs. \n\nIn Summary, SNDK is to me a strong buy due to share buybacks, big backlog, HBF and strong earnings."
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  },
+  "model" : {
+    "relevance" : "investment_related",
+    "targets" : [ {
+      "anchor" : "SNDK",
+      "direction" : "bullish",
+      "hedged" : false
+    }, {
+      "anchor" : "WDC",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "NAND",
+      "direction" : "bullish",
+      "hedged" : true
+    }, {
+      "anchor" : "HDD",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "Flash",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "SSDs",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "AI",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "HBM",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "DRAM",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "kioxia",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "HBF",
+      "direction" : "bullish",
+      "hedged" : true
+    } ]
+  }
+}, {
+  "post_id" : "reddit-1xgt2gv",
+  "day" : "2026-10-27",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-27T13:50:05Z",
+      "channels" : [ "investing" ],
+      "title" : "The Capital Gains Surprise",
+      "body" : "For the last couple years my basket of mutual funds have done a lot of portfolio churning. This has generated unpredictable taxable income. It happens in December and I don’t see it until the 1099’s are issued. It results in thousands of dollars in unexpected taxes.\n\nMy response has been to take all the gains to a cash account. This prevents the MF’s from reinvesting them and gives me a cash cushion to pay the taxes.\n\nHow are others handling this? Any other recommended strategies? The big churners are also the ones with the highest yields."
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  },
+  "model" : {
+    "relevance" : "investment_related",
+    "targets" : [ {
+      "anchor" : "mutual funds",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "cash account",
+      "direction" : "not_expressed",
+      "hedged" : false
+    } ]
+  }
+}, {
+  "post_id" : "reddit-1xgavvz",
+  "day" : "2026-10-26",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-26T22:12:18Z",
+      "channels" : [ "stocks" ],
+      "title" : "\"State-backed investors were sellers into rallies to keep gains ​in check.\"",
+      "body" : "This is just an FYI\n\nA lot of trading people have seen a millions signals like this but I've never seen it said so overly (as if obviously true and unavoidable):\n\nThis is from a very recent reuters post about Chinese government and AI stocks, the key point is in the quiet admission that Chinese (and likely our own) governments do control stock using a kind of sock puppetting where 'investors' were forced to accept bad deals.\n\nThis allows market manipulation, stops real valuation, and explains why during crazy periods we often see an 'unexplainable support' which does not move even as the trend clearly approaches (I never understood that phenomenon but it always looked like manipulation).\n\nHere's the full article:\n\n<url>\n\nI personally believe that stocks like politics is largely entertainment for the masses rather than reflecting the real resources of control.\n\nImagine what the price of a truly borderless near zero fee system would be if governments could not be manipulate markets, just a reminder that even if your successful your playing someone elses game.\n\nEnjoy"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  },
+  "model" : {
+    "relevance" : "investment_related",
+    "targets" : [ {
+      "anchor" : "Chinese government",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "AI stocks",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "market",
+      "direction" : "bearish",
+      "hedged" : false
+    }, {
+      "anchor" : "stocks",
+      "direction" : "bearish",
+      "hedged" : false
+    }, {
+      "anchor" : "governments",
+      "direction" : "not_expressed",
+      "hedged" : false
+    } ]
+  }
+}, {
+  "post_id" : "reddit-1xd41e7",
+  "day" : "2026-10-23",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-23T04:14:02Z",
+      "channels" : [ "ValueInvesting" ],
+      "title" : "Do you do tax-loss harvesting yourself, or pay for an SMA/direct indexing to do it?",
+      "body" : "&#x200B;\n\nMy advisor is suggesting a Fidelity index SMA (\\~0.45% fee) mainly for the tax-loss harvesting. Before I sign up: do any of you just harvest losses yourself with regular index funds/ETFs instead? Is the SMA actually worth it, or is DIY good enough?\n\nThanks!"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  },
+  "model" : {
+    "relevance" : "investment_related",
+    "targets" : [ {
+      "anchor" : "Fidelity",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "SMA/direct indexing",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "tax-loss harvesting",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "regular index funds/ETFs",
+      "direction" : "not_expressed",
+      "hedged" : false
+    } ]
+  }
+}, {
+  "post_id" : "reddit-1xebjx6",
+  "day" : "2026-10-24",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-24T15:28:30Z",
+      "channels" : [ "stocks" ],
+      "title" : "What are you doing with your investments leading into midterms?",
+      "body" : "I hear a lot of polarizing chatter out there, knee jerk behavior leading into midterms and I am curious to learn what you are doing. Are you like Charlie and Warren or are you like a drunk tinder swiper looking for your next date? Here is some context:\n\nIn the 1974 Midterms The Ford administration faced massive Democratic wave losses following Watergate with Republicans losing 48 House and 4 Senate seats. Over the next 12 months, the S&P 500 rose roughly 31.2 percent as the market recovered from severe bear market lows and falling inflation.\n\n1994 Midterms  \nRepublicans achieved a historic revolution by taking control of both the House and Senate, completely shattering the ruling Democratic majority. In the subsequent 12 months, the S&P 500 gained roughly 32.5 percent during an explosive secular bull market.\n\n2006 Midterms  \nWidespread disapproval of the Iraq War led to a major defeat for Republicans, who lost majorities in both the House and Senate to Democrats. The S&P 500 rose about 11 to 12 percent over the next 12 months, though this occurred right on the edge of the 2008 financial crisis where macroeconomic fundamentals eventually overpowered political tailwinds.\n\n2018 Midterms  \nDemocrats flipped the House to create a divided government while Republicans slightly expanded their Senate majority, checking the presidential agenda. Over the next 12 months, the S&P 500 gained roughly 14.5 percent and the Nasdaq rose over 17 percent following a late 2018 market correction."
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  },
+  "model" : {
+    "relevance" : "investment_related",
+    "targets" : [ {
+      "anchor" : "midterms",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "S&P 500",
+      "direction" : "bullish",
+      "hedged" : true
+    }, {
+      "anchor" : "Nasdaq",
+      "direction" : "bullish",
+      "hedged" : true
+    } ]
+  }
+}, {
+  "post_id" : "reddit-1xiweg3",
+  "day" : "2026-10-29",
+  "media" : {
+    "photo" : false,
+    "embed" : false,
+    "survey" : false
+  },
+  "input" : {
+    "schema_version" : "AssessmentInputV1",
+    "item" : {
+      "item_type" : "post",
+      "published_at" : "2026-10-29T21:12:48Z",
+      "channels" : [ "ValueInvesting" ],
+      "title" : "Is Amazon pulling a Microsoft who pulled a Google",
+      "body" : "Same exact story every single time \"BuT tHe CapEx!\" then the stock rallys 50% next earnings when the company says \"we made a million billion dollars because of that so we're gonna keep doing it\" \n\nanyways I'm buying tomorrow without even reading the whole er this market is way too stupid for it to actually matter"
+    },
+    "context" : {
+      "parent_post" : null,
+      "parent_comment" : null
+    }
+  },
+  "model" : {
+    "relevance" : "investment_related",
+    "targets" : [ {
+      "anchor" : "Amazon",
+      "direction" : "bullish",
+      "hedged" : false
+    }, {
+      "anchor" : "Microsoft",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "Google",
+      "direction" : "not_expressed",
+      "hedged" : false
+    }, {
+      "anchor" : "this market",
+      "direction" : "not_expressed",
+      "hedged" : false
+    } ]
+  }
+} ]
