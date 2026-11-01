@@ -3,13 +3,13 @@ project: "Szczur Radar"
 version: 4
 status: draft # draft | active | locked
 created: 2026-09-27
-updated: 2026-10-31
+updated: 2026-11-01
 prd_version: 2
 main_goal: quality
 top_blocker: decisions # 7 pytań do właściciela o Reddita i oceny (destylacja domeny, Q-01–Q-07): subreddity i dostęp, oznaczanie źródła, świeżość per źródło, budżet LLM, jakość po angielsku, mapowanie url+selftext
 milestone_id: second-source-on-hardened-core
 milestone_seq: 3
-milestone_status: open
+milestone_status: done
 ---
 
 # Roadmap: Szczur Radar
@@ -79,13 +79,13 @@ milestone_status: open
 > v4 (2026-10-27): otwarty M-3 „Drugie źródło na utwardzonym rdzeniu” (`/10x-roadmap`) z PRD v2 (FR-023), audytu `post-m2-audit` i destylacji domeny; ramy od użytkownika: cel `quality`, gwiazda przewodnia S-20 (izolacja źródeł), główne ryzyko `decisions`. Wycinki S-20–S-29; bez fundamentów. Poprawki z audytu w treści roadmapy: S-17 zamknęło A6 (wpis Parked S-12 poprawiony), a A7 i F5 tylko częściowo (nota v3.6 zawyża: A7 zostaje dla przebiegu przerwanego przez odzyskiwanie nowszej instancji, F5 dla linii ERROR przed alarmem watchdoga). Ustalenia niskiej wagi z audytu w `## Parked`. Z `## Parked` usunięte pozycje, które weszły do M-3: FR-023 (→ S-27) i izolacja źródeł ze świeżością per źródło (→ S-20, S-29). Kolejny kamień M-4 (kandydat): nowe UI i UX — wpis w `## Parked` i propozycje układu w `context/foundation/m4-ui-ux-proposals.md`.
 
 > v4.1 (2026-10-27): kolejność kamieni po M-3 zmieniona decyzją użytkownika: M-4 (kandydat) to weryfikacja i regresja (`context/foundation/verification-scope.md`), a nowe UI/UX przesuwa się na M-5 (kandydat) razem z testami E2E na Playwright (`context/foundation/ui-ux-proposals.md`, dawniej `m4-ui-ux-proposals.md`; makiety w `docs/visuals/ui-ux-proposals/`). Dwa wpisy w `## Parked`; M-3 bez zmian.
-- **S-29: użytkownik widzi przy każdym poście, z którego źródła pochodzi, a etykieta „Dane zaktualizowane” nie przesuwa się po przebiegu, który nie objął danego źródła — zgodnie z decyzją, czy świeżość jest wspólna, czy per źródło.** — Archived 2026-10-31 → `context/archive/2026-10-30-source-aware-feed/`. Lesson: —.
-
 > v4.2 (2026-10-31): S-28 zamyka pomiar: nowy Outcome (obraz konfiguracji produkcyjnej zamiast spełnienia progów), Q-03 i Q-04 oraz pytanie 4 rozstrzygnięte, decyzja o włączeniu Reddita bez napraw. Do Parked trafiają `posts.language`, naprawy oceny Reddita i porównanie modeli; S-29 bez warunku o języku.
+
+> v4.3 (2026-11-01): M-3 zamknięty (`/10x-roadmap`): S-20–S-29 `done`, Reddit (r/stocks, r/ValueInvesting, r/investing) włączony na produkcji 2026-11-01; wpis w `## Milestone History`. Decyzja użytkownika: otwarta weryfikacja produkcji S-27 (issue #121: noce z Redditem 2.11 i 4.11, porównanie `dead` z raportem S-28, feed i strona przebiegu w aplikacji) nie blokuje zamknięcia; ewentualne poprawki pójdą jako wydanie poprawkowe v0.3.1. Wpis S-29, który `/10x-archive` dopisał między notkami wersji, przeniesiony do `## Done`. M-4 jeszcze nieotwarty (decyzja użytkownika); kandydaci M-4 i M-5 w `## Parked`.
 
 ## Milestone
 
-**M-3: Drugie źródło na utwardzonym rdzeniu** — Status: open
+**M-3: Drugie źródło na utwardzonym rdzeniu** — Status: done
 
 - **Intent:** Awaria albo cisza jednego źródła nie psuje drugiego, ślepe punkty z audytu po M-2 są domknięte (bramka wdrożeń, reguły w kilku miejscach, niestabilne testy silnika), a posty z wybranych subredditów trafiają do tego samego feedu i tej samej oceny co Wykop — z jakością i kosztem zmierzonymi, zanim pójdą na produkcję.
 - **Source materials:** `context/foundation/prd.md` (v2, kolejna transza: FR-023, kryterium „secondary” `prd.md:42`, NFR `prd.md:268`, guardrails `prd.md:48-49`); audyt `context/changes/post-m2-audit/research.md` (ustalenia S1–S8, E1–E6, P1–P9, K1–K6); destylacja domeny `context/domain/domain-distillation.md` (R-05, R-15–R-17, R-22, R-24, R-27, D-01, D-04, D-08, pytania Q-01–Q-12).
@@ -346,6 +346,7 @@ Brak — każda praca przekrojowa M-3 ma widoczny skutek dla użytkownika albo o
 
 - **M-1: MVP — ocenione sygnały z Wykopu dla zaproszonych osób** (`mvp-wykop-signal-radar`) — closed 2026-10-17. Wszystkie konieczne FR i historyjki US-01, US-02 dostarczone na produkcji (F-01–F-03, S-01–S-07); domknięcie runbooków produkcji S-04 (#17) i S-06 (#19) przeniesione do Open Roadmap Questions M-2.
 - **M-2: MVP Quality & Reliability Hardening** (`mvp-quality-reliability-hardening`) — closed 2026-10-27. Istniejące MVP nie milczy i nie gubi danych: kanał alarmowy poza aplikacją (F-04), sygnały pustej i brakującej nocy, awarie dostawców bez utraty prób, samonaprawa utkniętych przebiegów, bezpieczna bramka wdrożeń, pełna kontrola kopii bazy, kompletne pobieranie z Wykopu, przebieg bez Embabel i błędy wymagające reakcji w Telegramie (F-04, S-08–S-11, S-13–S-19, produkcja zweryfikowana); S-12 zaparkowany decyzją użytkownika (v3.3). Pierwsza noc crona na silniku S-17 (2026-10-28) pod nadzorem F-04; otwarte ustalenie S-14 z issue #73: fałszywa kontrola po apply w `verify-apply.sh` (zmiana bez deployu, `SKIPPED` z równoległego pusha); drugie ustalenie z #73 („deploy `2abc64c` mimo czerwonego CI”) okazało się błędną diagnozą — deployment API został `SKIPPED` przez Wait for CI (audyt `post-m2-audit`).
+- **M-3: Drugie źródło na utwardzonym rdzeniu** (`second-source-on-hardened-core`) — closed 2026-11-01. Reddit jest drugim źródłem na produkcji (od 2026-11-01, trzy subreddity), ocenianym tym samym kontraktem co Wykop, na rdzeniu, w którym awaria albo cisza jednego źródła nie psuje przebiegu pozostałych (S-20, gwiazda przewodnia); źródło widoczne w feedzie i świeżość bez kłamstwa przy dwóch źródłach (S-29); obraz jakości i kosztu Reddita przed włączeniem i decyzja o włączeniu bez napraw (S-28); domknięte ślepe punkty z audytu po M-2: bramka wdrożeń przy zmianie bez deployu (S-21), reguły w jednym miejscu (S-22, S-25), zamknięte zbiory i kontrakt SPA ↔ API pilnowane w CI (S-23, S-24), testy silnika bez zależności od zegara (S-26). Weryfikacja nocy z Redditem otwarta w issue #121 — nie blokuje zamknięcia (decyzja użytkownika, v4.3).
 
 ## Done
 
@@ -383,3 +384,4 @@ Brak — każda praca przekrojowa M-3 ma widoczny skutek dla użytkownika albo o
 - **S-24: duże odpowiedzi API (przebieg z krokami, post z oceną, nieudany post) mają w testach zapisany pełny kształt; odpowiedź na nieoczekiwany błąd serwera ma zdefiniowany kod, a atrapa i testy SPA używają tego samego; reguły powtórzone po obu stronach (białe znaki, limity, listy wartości) nie rozjadą się bez czerwonego testu.** — Archived 2026-10-30 → `context/archive/2026-10-29-api-contract-guard/`. Lesson: —.
 - **S-27: posty z wybranych subredditów są pobierane w przebiegu zakresu obok Wykopu, mapowane do wspólnego modelu, oceniane tym samym kontraktem i widoczne w feedzie; nieskonfigurowany Reddit nie zmienia niczego w zachowaniu Wykopu, a jego klucze nie zatrzymują wdrożeń.** — Archived 2026-10-30 → `context/archive/2026-10-29-reddit-source/`. Lesson: —.
 - **S-28: operator zna obraz konfiguracji produkcyjnej (`openai/gpt-6-luna`, prompt v2.5) na 396 postach z Reddita i koszt łączny z Wykopem oraz zapisał decyzję o włączeniu; pomiar nie rozstrzyga progów kierunku celów i sprzeczności.** — Archived 2026-10-31 → `context/archive/2026-10-30-reddit-quality-and-cost/`. Lesson: —.
+- **S-29: użytkownik widzi przy każdym poście, z którego źródła pochodzi, a etykieta „Dane zaktualizowane” nie przesuwa się po przebiegu, który nie objął danego źródła — zgodnie z decyzją, czy świeżość jest wspólna, czy per źródło.** — Archived 2026-10-31 → `context/archive/2026-10-30-source-aware-feed/`. Lesson: —.
