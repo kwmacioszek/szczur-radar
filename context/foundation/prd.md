@@ -1,9 +1,9 @@
 ---
 project: "Szczur Radar"
-version: 2
+version: 3
 status: draft
 created: 2026-09-26
-updated: 2026-10-13
+updated: 2026-11-04
 context_type: greenfield
 product_type: data-pipeline
 target_scale:
@@ -15,6 +15,8 @@ timeline_budget:
   hard_deadline: 2026-12-06
   after_hours_only: true
 ---
+
+> **v3 (2026-11-04), po M-3.** Odświeżenie po zamknięciu M-3 (Reddit na produkcji od 2026-11-01) i przed otwarciem M-4. Zmiany: zakres przebiegu w dniach, a nie godzinach (FR-001); FR-022 i FR-023 zrealizowane; FR-029 zastąpione decyzją F-03 (sesja 30 dni); wejście oceny opisane zgodnie z kontraktem (Business Logic); decyzje właściciela z 2026-11-01 i 2026-11-04 (pytania Q-13, Q-14, Q-16, Q-18 z `context/domain/domain-distillation.md`) jako doprecyzowania i nowe wymagania FR-033 i FR-034. Doprecyzowania w FR i NFR są dopisywane chronologicznie: obowiązuje najnowsze, a starsze zostają jako historia decyzji.
 
 ## Vision & Problem Statement
 
@@ -33,16 +35,16 @@ Administrator (operator wdrożenia) — zarządza dostępem: tworzy konta dla za
 ## Success Criteria
 
 ### Primary
-- Codzienny przepływ (uruchamiany automatycznie wg harmonogramu — FR-002) pobiera posty z Wykopu (#gielda) dla zadanego zakresu dat/godzin, mapuje je do wspólnego modelu, odrzuca duplikaty, przetwarza przez LLM według ustalonego schematu i zapisuje wynik do bazy danych.
+- Codzienny przepływ (uruchamiany automatycznie wg harmonogramu — FR-002) pobiera posty z Wykopu (#gielda) i wybranych subredditów Reddita (FR-023, od 2026-11-01) dla zadanego zakresu dat, mapuje je do wspólnego modelu, odrzuca duplikaty, przetwarza przez LLM według ustalonego schematu i zapisuje wynik do bazy danych.
 - Użytkownik widzi przetworzone posty w aplikacji webowej: listę chronologiczną z filtrowaniem po podstawowych polach klasyfikacji LLM (FR-011a) oraz widok szczegółowy pojedynczego posta (wersja surowa obok przetworzonej przez LLM).
 - System kont działa end-to-end: admin tworzy konto z przypisaną rolą przez CLI, przekazuje zaproszonemu link aktywacyjny, ten samodzielnie ustawia hasło, loguje się i widzi dane zgodnie ze swoją rolą.
 - Admin widzi w dashboardzie historię uruchomień przepływu (kiedy, status, wynik) — widoczne wyłącznie dla roli admin (FR-021).
 
 ### Secondary
-- Drugie źródło danych — Reddit (wybrane kanały) — dochodzi jako kolejne źródło w tym samym pipeline.
+- Drugie źródło danych — Reddit (wybrane kanały) — dochodzi jako kolejne źródło w tym samym pipeline. *(Zrealizowane: S-27, na produkcji od 2026-11-01, weryfikacja w issue #121.)*
 - Wykres giełdowy z nałożonym wykresem trendu wykrytych sygnałów dla konkretnej spółki.
 - Dodatkowe sortowanie listy postów po dacie/źródle (FR-008) i po polach klasyfikacji LLM (FR-011b) — dostępne, jeśli te nice-to-have zostaną zrealizowane.
-- Ręczne wywołanie przepływu na żądanie z dashboardu (FR-022) — opcjonalne rozszerzenie automatycznego harmonogramu, zależne od realizacji tego nice-to-have.
+- Ręczne wywołanie przepływu na żądanie z dashboardu (FR-022) — opcjonalne rozszerzenie automatycznego harmonogramu. *(Zrealizowane: S-02, doprecyzowanie przy FR-022.)*
 
 ### Guardrails
 - Jakość danych z LLM musi być wysoka — ekstrakcja/klasyfikacja bez halucynacji.
@@ -53,7 +55,7 @@ Administrator (operator wdrożenia) — zarządza dostępem: tworzy konta dla za
 
 ### US-01: Użytkownik widzi przetworzone posty z Wykopu w aplikacji webowej
 
-- **Given** skonfigurowany zakres dat/godzin i źródło (Wykop), oraz zalogowany użytkownik z rolą `user` lub `admin`
+- **Given** skonfigurowany zakres dat i źródło (Wykop), oraz zalogowany użytkownik z rolą `user` lub `admin`
 - **When** przepływ uruchamia się automatycznie zgodnie z harmonogramem
 - **Then** przetworzone posty trafiają do bazy i są widoczne w aplikacji webowej jako lista z filtrowaniem po klasyfikacji LLM oraz podglądem szczegółowym (surowy post obok przetworzonego, z linkiem do oryginału), wraz z etykietą daty ostatniej udanej aktualizacji danych
 
@@ -78,7 +80,8 @@ Administrator (operator wdrożenia) — zarządza dostępem: tworzy konta dla za
 ## Functional Requirements
 
 ### Zbieranie i przetwarzanie danych
-- FR-001: System pobiera posty z Wykopu (tag #gielda) dla zadanego zakresu dat/godzin. Priority: must-have
+- FR-001: System pobiera posty z Wykopu (tag #gielda) dla zadanego zakresu dat. Priority: must-have
+  > Doprecyzowanie (2026-11-04, PRD v3): zakres to pełne dni kalendarza warszawskiego (przebieg dzienny: D-2…D-1, S-05); zakresu godzin nie ma i nie jest planowany (wcześniej „zakres dat/godzin”).
   > Socrates: Kontrargument rozważony: "zależność od jednego, zewnętrznego API bez zapasowej opcji — Wykop może
   > ograniczyć/zmienić API w dowolnym momencie." Rozwiązanie: ryzyko przyjęte świadomie — MVP celowo zaczyna od
   > jednego źródła; Reddit jako drugie źródło zaplanowany jako nice-to-have (FR-023), co ogranicza tę zależność.
@@ -146,6 +149,7 @@ Administrator (operator wdrożenia) — zarządza dostępem: tworzy konta dla za
   do ustalenia) i wymaga ponownego zalogowania; aktywność użytkownika przedłuża sesję. Priority: nice-to-have
   > Socrates: Kontrargument rozważony (przez użytkownika wprost): "krótki timeout jest uciążliwy — wylogowuje w
   > trakcie czytania." Rozwiązanie: obniżone do nice-to-have; podstawą wylogowania w MVP jest FR-013.
+  > Doprecyzowanie (2026-11-04, PRD v3; decyzja F-03 z 2026-10-02, `roadmap.md` v2.4): sesja wygasa po 30 dniach bezczynności, a ciasteczko jest odnawiane po każdym udanym, uwierzytelnionym żądaniu API. Krótkiego limitu (np. 5 minut) świadomie nie ma; krótsze limity są odroczone (`roadmap.md`, `## Parked`).
 - FR-014: Niezalogowany użytkownik nie ma dostępu do chronionych danych ani funkcji aplikacji. Priority: must-have
   > Socrates: Kontrargument rozważony: "jeśli ochrona nie jest konsekwentnie zastosowana wszędzie tam, gdzie
   > potrzebna, może zostać luka bezpieczeństwa." Rozwiązanie: FR zostaje must-have bez zmian; dodatkowo w
@@ -156,6 +160,7 @@ Administrator (operator wdrożenia) — zarządza dostępem: tworzy konta dla za
   kont (FR-016/FR-019) oraz ręczne wywołanie przepływu z dashboardu (FR-022). Priority: must-have
   > Socrates: Kontrargument rozważony: "zbyt ogólne bez listy, które operacje są administracyjne." Rozwiązanie:
   > FR doprecyzowany przez wprost wymienione odwołania do konkretnych FR; zostaje must-have.
+  > Doprecyzowanie (2026-11-04, PRD v3): FR-022 jest zrealizowane (S-02), więc ręczne wywołanie przepływu należy już do grupy (a). Do grupy (a) dochodzą też: lista nieudanych postów z ponowieniem (S-09), „Dni bez danych” (S-13) i przywracanie martwych postów (FR-034). Panel kont (FR-016/FR-019) zostaje w grupie (b).
 - FR-016: Administrator może utworzyć nowe konto użytkownika z przypisaną rolą z poziomu panelu administracyjnego. Priority: nice-to-have
   > Socrates: Kontrargument rozważony (przez użytkownika wprost): "panel użytkowników + tworzenie kont to fajne
   > rozszerzenie, ale nie jest potrzebne do działania MVP, skoro CLI (FR-028) daje ten sam efekt szybciej."
@@ -166,7 +171,7 @@ Administrator (operator wdrożenia) — zarządza dostępem: tworzy konta dla za
   > Socrates: Kontrargument rozważony: skoro CLI (FR-028) świadomie NIE wysyła maila (operator przekazuje link
   > sam), jedynym konsumentem automatycznej wysyłki zostaje panel webowy — sam nice-to-have. Rozwiązanie:
   > obniżone do nice-to-have; MVP nie wymaga wcale integracji z dostawcą poczty.
-- FR-018: Zaproszony użytkownik ustawia własne hasło przy pierwszym logowaniu za pomocą linku aktywacyjnego. Priority: must-have
+- FR-018: Zaproszony użytkownik ustawia własne hasło za pomocą linku aktywacyjnego, zanim pierwszy raz się zaloguje. Priority: must-have
   > Socrates: Rozważone w kontekście zależności CLI/panelu (patrz FR-028): mechanizm ustawienia hasła przez link
   > jest wspólnym backendem dla obu ścieżek tworzenia konta, więc zostaje must-have niezależnie od tego, która
   > ścieżka (CLI czy panel) zostanie zaimplementowana.
@@ -183,7 +188,7 @@ Administrator (operator wdrożenia) — zarządza dostępem: tworzy konta dla za
   > Socrates: Kontrargument rozważony: "to kolejna nowa warstwa UI (dashboard) + trwałe logowanie uruchomień —
   > dodatkowy nakład obok już dużego zakresu." Rozwiązanie (przez użytkownika wprost): przy automatycznym
   > codziennym pipeline sensownie jest móc zweryfikować, czy ostatnie uruchomienia się udały — zostaje must-have.
-- FR-022: Administrator może ręcznie wywołać nowy przepływ na żądanie z poziomu dashboardu; wywołanie jest asynchroniczne z osobnym sposobem sprawdzenia statusu. Priority: nice-to-have
+- FR-022: Administrator może ręcznie wywołać nowy przepływ na żądanie z poziomu dashboardu; wywołanie jest asynchroniczne z osobnym sposobem sprawdzenia statusu. Priority: nice-to-have (zrealizowane, S-02)
   > Socrates: Kontrargument rozważony (przez użytkownika wprost): "automatyczny harmonogram (FR-002) już
   > istnieje; ręczne odpalenie pipeline'u było wcześniej słusznie nice-to-have." Rozwiązanie: zostaje
   > nice-to-have.
@@ -235,12 +240,14 @@ Administrator (operator wdrożenia) — zarządza dostępem: tworzy konta dla za
   > nice-to-have, nie blokuje głównego przepływu MVP.
 
 ### Rozszerzenia (poza MVP)
-- FR-023: System pobiera posty z wybranych kanałów Reddita jako drugie źródło danych. Priority: nice-to-have
+- FR-023: System pobiera posty z wybranych kanałów Reddita jako drugie źródło danych. Priority: nice-to-have (zrealizowane, S-27; na produkcji od 2026-11-01)
   > Socrates: Kontrargument rozważony: "Reddit ma inny format/ograniczenia niż Wykop — dodanie źródła może nie
   > być tak tanie, jak sugeruje wspólny kontrakt mapowania." Rozwiązanie: ryzyko przyjęte i odnotowane; FR
   > zostaje nice-to-have.
   > Doprecyzowanie (2026-10-30, S-27 `reddit-source`): źródłem danych Reddita jest publiczne archiwum Arctic Shift (`https://arctic-shift.photon-reddit.com`), bez klucza i rejestracji; projekt nie korzysta z API Reddita bezpośrednio. „Wybrane kanały” to subreddity z ustawienia `REDDIT_SUBREDDITS` (lista po przecinku; pierwsza konfiguracja: `stocks`, `ValueInvesting`, `investing`). Bez niego Reddit nie jest skonfigurowanym źródłem: nocny przebieg i „Dni bez danych” go pomijają, a przebieg, który go wymaga, jest odrzucany jako `source_not_configured`. Pobierane są posty (bez komentarzy, zgodnie z Non-Goals) utworzone w zakresie przebiegu. Posty zdjęte przez moderację albo Reddit i skasowane przez autora nie są pobierane ani liczone jako pominięte elementy; ich liczbę podaje tylko log. Self-post Reddita (`is_self`) to typ `post`, każdy inny (link, obraz, crosspost) to `link`, także gdy ma treść. Kanałem posta (`posts.channel`) jest nazwa subredditu. Ryzyko horyzontu: Arctic Shift czyta oficjalne Data API Reddita, które Reddit zamyka publicznie w marcu 2027, a co wtedy stanie się z archiwum, nie wiadomo. Właściciel przyjął to ryzyko 2026-10-29 razem z runbookiem wyłączenia źródła (usunięcie `REDDIT_SUBREDDITS`; zebrane posty zostają). Na produkcji Reddit włącza operator po S-28 (jakość i koszt ocen po angielsku). Szczegóły: `context/deployment/deploy-plan.md`, sekcja S-27.
   > Doprecyzowanie (2026-10-30, S-29 `source-aware-feed`): każdy post w feedzie i na stronie szczegółów jest oznaczony źródłem i kanałem (`Wykop · #gielda`, `Reddit · r/stocks`), a odpowiedź posta w API ma pola `source` i `channel` (kanał bez przedrostka). Filtra ani sortowania po źródle nie ma: FR-008 zostaje nice-to-have. Języka posta nie pokazujemy, bo nie jest zapisany; `posts.language` jest zaparkowane (roadmapa, `## Parked`). Szczegóły: `context/deployment/deploy-plan.md`, sekcja S-29.
+  > Doprecyzowanie (2026-11-04, PRD v3, decyzja właściciela Q-13): typ posta pokazujemy słowami jego źródła. Wykop: `post` → „wpis”, `link` → „znalezisko”. Reddit: `post` → „post”, `link` → „link”. Słowa Wykopu nie pojawiają się przy postach Reddita (dziś pojawiają się: rozbieżność D-12 z destylacji domeny, do poprawki w M-4).
+  > Stan (2026-11-04): weryfikacja produkcji zamknięta w issue #121 po nocach 2–4 listopada. Martwych postów Reddita (`dead`) jest 0,5 % (1 na 192 posty po trzech próbach; raport S-28: 2,5 %), pierwsza próba odrzuca 16,6 % postów Reddita, a ponowienia ratują prawie wszystkie.
 - FR-024: Aplikacja webowa pokazuje wykres giełdowy z nałożonym wykresem trendu wykrytych sygnałów dla wybranej spółki. Priority: nice-to-have
   > Socrates: Kontrargument rozważony: "wymaga nowej integracji z danymi giełdowymi + rozpoznania spółki/tickera
   > — to więcej niż samo nałożenie wykresu." Rozwiązanie: ryzyko przyjęte i odnotowane; zostaje nice-to-have,
@@ -257,6 +264,12 @@ Administrator (operator wdrożenia) — zarządza dostępem: tworzy konta dla za
   > pytań o wybrany post, z odpowiedzią opartą na jego treści i zapisanej ocenie, oraz z limitem pytań na
   > użytkownika; zostaje nice-to-have.
 
+### Jakość i odzyskiwanie ocen (od PRD v3, M-4)
+- FR-033: Operator widzi jakość ocen osobno dla każdego źródła, liczoną z danych produkcyjnych: udział nieudanych prób według klas błędu oraz udział tez (`statement`) w innym języku niż post. Przekroczenie progu daje operatorowi sygnał bez czytania logów. Priority: must-have
+  > Uzasadnienie (2026-11-04): guardrail „jakość danych z LLM musi być wysoka” nie ma dziś żadnej miary po wdrożeniu; mierzy go tylko harness poza CI (destylacja domeny, kandydat #1, R-15). Reguła języka tez zostaje bez wyjątków i nie jest sprawdzana przez walidator (decyzja właściciela Q-16, `contract-v2.md` §8). Progi ustala plan wycinka na danych z produkcji.
+- FR-034: Administrator może przywrócić zaznaczone martwe posty (`dead`) do oceny: post traci martwy stan, a jego próby oceny są zerowane, więc kolejny przebieg ocenia go od nowa. Priority: must-have
+  > Uzasadnienie (2026-11-04, decyzja właściciela Q-18): `dead` jest dziś nieodwracalne, więc zła noc dostawcy albo zmiana promptu nie mają drogi powrotu. Obok tego seria odmów dostawcy zatrzymuje przebieg, zanim zużyje próby kolejnych postów (NFR o sygnale dla operatora, doprecyzowanie PRD v3).
+
 ## Non-Functional Requirements
 
 - Operator otrzymuje jednoznaczny, widoczny sygnał, gdy zaplanowany dzienny przebieg zbierania/przetwarzania nie powiedzie się lub zakończy częściowym błędem — nie dowiaduje się o tym pośrednio, przez brak nowych danych.
@@ -269,6 +282,10 @@ Administrator (operator wdrożenia) — zarządza dostępem: tworzy konta dla za
   > Doprecyzowanie (2026-10-25, S-18 `error-visibility`): API zgłasza operatorowi zdarzenia kanałem F-04 (check `api-events`, wiadomość w Telegramie). Przebieg, który daje adminom powiadomienie w aplikacji (S-06), daje teraz też wiadomość `RUN_NEEDS_ATTENTION` z id przebiegu, jego statusem, licznikami (martwe, błędy techniczne, pominięte), błędem przebiegu i odnośnikiem `/admin/runs/<id>`. Dotyczy to przebiegu `partial` z martwym postem albo błędem technicznym, przebiegu z pominiętymi elementami i przebiegu admina zakończonego `failed` albo `interrupted`. Zdanie z F-04 „`partial` z martwym postem albo błędem technicznym nadal daje tylko powiadomienie w aplikacji (S-06), bez wiadomości w Telegramie” nie jest więc już prawdziwe. Przebieg crona zakończony `failed` albo `interrupted` zgłasza tylko cron (kod wyjścia 1 i jego check), bez drugiej wiadomości z API. Gdy cron przestanie czekać przed końcem przebiegu (np. po 90 min), jego kod 1 mówi tylko, że przebieg się nie skończył, a późniejszy wynik `failed` albo `interrupted` widać w `/admin` i w dzwonku, nie w Telegramie. Wiadomość dają też awarie samych ścieżek sygnału: nieudane powiadomienie adminów, odzyskiwanie przebiegów przy starcie, zamknięcie przebiegu, sprawdzenie watchdoga, sprzątanie osieroconych przebiegów i zapis liczników przebiegu. Każde zdarzenie to w Telegramie dwie wiadomości: „down” z opisem i zaraz po niej „up”, które tylko uzbraja check na następne zdarzenie i nie znaczy, że problem minął. To samo zdarzenie dla tego samego przebiegu idzie najwyżej raz na 10 min, a wszystkie razem najwyżej 2 na minutę; zdarzenie, które czeka na wysyłkę w chwili zabicia procesu, ginie (powiadomienie w aplikacji i log zostają). Treść nie zawiera sekretów. Bez nowych zmiennych i migracji; przyczyna 503 z `/api/ready` trafia tylko do logu API. Szczegóły: `context/deployment/deploy-plan.md`, sekcja S-18.
   > Doprecyzowanie (2026-10-25, S-17 `pipeline-without-embabel`): trzy kolejne błędy klienta LLM, które nie są winą ani dostawcy, ani posta (np. nieznany błąd biblioteki dostawcy po jej aktualizacji, którego klient nie umie sklasyfikować), kończą przebieg `failed` z błędem „the LLM client failed 3 calls in a row …”. Daje to te same sygnały co każdy `failed` (doprecyzowania S-06, F-04 i S-18). Każdy z tych trzech postów, jak przy każdym błędzie naszego kodu z doprecyzowania S-09, nie traci próby oceny, ale dostaje jeden błąd techniczny więcej, a trzy takie błędy z rzędu wstrzymują post. Pozostałe posty przebiegu wracają bez prób i bez błędów technicznych, a podejmie je RETRY; ocena postów, które już trwała, kończy się jak zwykle. „Z rzędu” liczy się w kolejności, w jakiej kończą się wywołania: zapisany wynik oceny, dla którego model odpowiedział, zeruje serię, a awaria dostawcy, odrzucenie przez filtr wstępny bez wywołania i błędy naszego kodu poza klientem LLM (np. mapowania albo zapisu) jej nie zmieniają. Wcześniej taki błąd przechodził przez każdy post przebiegu: każdy dostawał błąd techniczny, a po trzech przebiegach był wstrzymany. Doprecyzowanie S-09 obowiązuje bez zmian. Szczegóły: `context/deployment/deploy-plan.md`, sekcja S-17.
   > Doprecyzowanie (2026-10-29, S-20 `source-isolation`): zdanie z S-08 „przebieg RANGE, w którym źródło nie dało ani jednego posta do zapisu […] kończy się `failed`” dotyczy od S-20 przebiegu, w którym **żadne** źródło nie dało posta: wtedy przebieg kończy się `failed` jak dotąd, z błędem nazywającym każde źródło z jego wynikiem, i daje te same sygnały co każdy `failed`. Przebieg, w którym jedno źródło padło (rzuciło błąd) albo nic nie dało, a inne dało posty, zapisuje i ocenia posty tych drugich i kończy się `partial` z powodem `source_failed` albo `source_empty` oraz błędem przebiegu nazywającym źródło (np. `reddit failed: …`). Daje to sygnały każdego `partial`, który wymaga uwagi: powiadomienie w aplikacji dla każdego admina (dzwoneczek, strona przebiegu `/admin/runs/:id` z wynikiem każdego źródła: status, pobrane, pominięte, błąd), wiadomość `RUN_NEEDS_ATTENTION` w Telegramie (także dla przebiegu crona, który kończy się kodem 0) i etykietę świeżości przesuniętą jak przy każdym `partial` (od S-29 przesuwa się tylko data źródła, które dało posty; zob. FR-030). Wynik każdego źródła jest zapisywany zaraz po jego pobraniu, co jest też postępem dla watchdoga, więc kilka źródeł pobieranych po kolei nie zatrzymuje przebiegu jako „bez postępu”. „Dni bez danych” (S-13) liczą dzień jako pokryty dla źródła tylko wtedy, gdy przebieg `succeeded` albo `partial` ma dla tego źródła wynik `succeeded` (źródło dało posty), a nie samo to, że przebieg o nie prosił; historyczne puste przebiegi sprzed S-08, które kończyły się `succeeded`, dnia nie pokrywają. Szczegóły: `context/deployment/deploy-plan.md`, sekcja S-20.
+  > Doprecyzowanie (2026-11-04, PRD v3; decyzje właściciela Q-14 i Q-18 po nocach z Redditem, issue #121; realizacja w M-4):
+  > - **Martwe posty bez alarmu na każdy przebieg.** Martwy post zdarza się często (Reddit: 0,5 % postów, alarm w 1 nocy na 3), więc przebieg `partial` z martwym postem nie daje już wiadomości `RUN_NEEDS_ATTENTION` w Telegramie. Zamiast tego operator dostaje raz dziennie podsumowanie martwych postów z ostatniej doby. Pozostałe powody wiadomości (błąd techniczny, nieudane albo puste źródło, pominięte elementy, przebieg admina `failed`/`interrupted`) zostają. Czy dzwonek w aplikacji dalej pokazuje martwe posty i jak wysyłać podsumowanie, rozstrzyga plan wycinka.
+  > - **Nieudane próby bez sygnału.** Post po nieudanej próbie, który ma jeszcze próby, nadal nie daje powodu „wymaga uwagi” (zgodnie z S-06): na Reddicie pierwsza próba odrzuca 16,6 % postów, a ponowienia ratują prawie wszystkie.
+  > - **Wyłącznik serii odmów dostawcy.** Seria odmów dostawcy na kolejnych postach (np. moderacja albo odrzucane żądanie dla każdego posta) zatrzymuje przebieg, zanim zużyje próby pozostałych postów, i daje sygnał jak każdy `failed`. Dziś każda odmowa zużywa próbę i zeruje licznik awarii, więc seria jest cicha przez dwie noce, a w trzeciej posty stają się martwe (`context/changes/post-m3-verification-audit/research.md`, R-41). Martwe posty z takiej serii admin przywraca przez FR-034.
 - Dodanie nowego źródła danych ogranicza się do nowego pozyskania i mapowania do wspólnego modelu; warstwa oceny, zapisu i udostępniania danych pozostaje niezmieniona.
   > Doprecyzowanie (2026-10-07, S-02 `first-assessed-wykop-feed`, przegląd fazy 2): rejestracja źródła — jego stała (`sources/Source`) i dopisanie jej do reguły `CHECK` kolumny `source` jedną migracją — jest częścią dodania źródła. Model danych, encje i zapytania warstwy zapisu się nie zmieniają: typ posta to typ wspólnego modelu (`post` / `link` / `comment`), na który źródło mapuje własne typy.
   > Doprecyzowanie (2026-10-29, S-20 `source-isolation`): rejestracja źródła obejmuje od S-20 także regułę `CHECK` kolumny `pipeline_run_sources.source` (wynik źródła w przebiegu), czyli cztery zbiory: `posts.source`, `raw_payloads.source`, `pipeline_runs.sources` i `pipeline_run_sources.source`. Silnik izoluje źródła w jednym przebiegu: awaria albo cisza jednego źródła jest jego wynikiem (`failed` albo `empty`) i nie zatrzymuje pobrania, zapisu ani oceny postów pozostałych źródeł, więc nowe źródło nie psuje przebiegu już działających. Stała `reddit` jest zarejestrowana (stała i migracja `V12`) bez implementacji: Reddit nie jest skonfigurowanym źródłem, a przebieg, który go wymaga, jest odrzucany jako `source_not_configured`, dopóki S-27 nie doda jego pozyskania i mapowania. Szczegóły: `context/deployment/deploy-plan.md`, sekcja S-20.
@@ -285,7 +302,7 @@ Administrator (operator wdrożenia) — zarządza dostępem: tworzy konta dla za
 
 Aplikacja opisuje znaczenie każdego zebranego posta tak, by użytkownik mógł szybko ocenić, czy jest wartościowym sygnałem inwestycyjnym: czy treść dotyczy inwestowania, jakich spółek lub tematów dotyczy, jakie stanowisko autor zajmuje wobec każdej z nich (i czy je osłabia, np. „może”), oraz jakie tezy, opinie, fakty, pytania i działania przedstawia — każde poparte dosłownym cytatem z posta.
 
-Wejściem oceny jest wyłącznie treść posta (tytuł, treść; docelowo też komentarze z kontekstem rodzica). Metadane źródłowe (źródło, autor, link, zaangażowanie) nie trafiają do LLM — backend przechowuje je osobno. Wyjściem jest ustandaryzowany wynik oceny per post zgodny z kontraktem `context/foundation/llm-assessment/contract-v2.md` (V2): trafność, cele ze stanowiskiem autora, tezy/opinie/fakty/pytania/działania z cytatem, flagi niepewności. Kontrakt V2 nie zawiera grafu powiązań argumentów (zgłoszona rozbieżność z wcześniejszym opisem — rozstrzygnięta w zmianie `assessment-contract-harness`, 2026-10-01); wpisy bez treści (poza tagami, wzmiankami i linkami brak tekstu, np. samo zdjęcie z tagiem) dostają wynik bez wywołania modelu. LLM nie wydaje decyzji „wartościowy / niewartościowy” ani nie ocenia nowości — w MVP tę ocenę robi użytkownik na podstawie opisanej struktury; automatyczna decyzja o sygnale jest odroczona (patrz Non-Goals).
+Wejściem oceny jest treść posta (tytuł, treść; docelowo też komentarze z kontekstem rodzica) z trzema polami opisu z kontraktu: typ posta (`post`/`link`), data publikacji i kanał (tag Wykopu albo nazwa subredditu); dokładny kształt wejścia określa kontrakt, który ma tu pierwszeństwo. Metadane źródłowe (źródło, autor, link, zaangażowanie) nie trafiają do LLM — backend przechowuje je osobno. Tezy są w języku posta, a cytaty zawsze w oryginale (kontrakt §8, decyzja właściciela Q-16 z 2026-11-04). Wyjściem jest ustandaryzowany wynik oceny per post zgodny z kontraktem `context/foundation/llm-assessment/contract-v2.md` (V2): trafność, cele ze stanowiskiem autora, tezy/opinie/fakty/pytania/działania z cytatem, flagi niepewności. Kontrakt V2 nie zawiera grafu powiązań argumentów (zgłoszona rozbieżność z wcześniejszym opisem — rozstrzygnięta w zmianie `assessment-contract-harness`, 2026-10-01); wpisy bez treści (poza tagami, wzmiankami i linkami brak tekstu, np. samo zdjęcie z tagiem) dostają wynik bez wywołania modelu. LLM nie wydaje decyzji „wartościowy / niewartościowy” ani nie ocenia nowości — w MVP tę ocenę robi użytkownik na podstawie opisanej struktury; automatyczna decyzja o sygnale jest odroczona (patrz Non-Goals).
 
 Użytkownik spotyka tę ocenę na liście i w widoku szczegółowym w aplikacji webowej (z możliwością filtrowania po tych polach — FR-011a/b) i może przejść przez link do oryginalnego posta, żeby zweryfikować kontekst. W rozszerzeniu poza MVP (FR-024/FR-025) oceny są agregowane w czasie per spółka, nakładane na wykres notowań giełdowych, z alertami przy obiecującym trendzie.
 
@@ -301,8 +318,8 @@ Role:
   klasyfikacji) oraz ustawienie własnej etykiety/nazwy wyświetlanej (FR-020) są opcjonalne — dostępne, jeśli te
   nice-to-have zostaną zrealizowane, nie gwarantowane w MVP.
 - `admin` — wszystko co `user`, plus: tworzenie kont z przypisaną rolą przez CLI (FR-026/FR-027/FR-028) oraz
-  dashboard z historią uruchomień przepływu (FR-021, must-have). Ręczne wywołanie nowego przepływu z dashboardu
-  (FR-022) jest opcjonalne — dostępne, jeśli to nice-to-have zostanie zrealizowane, nie gwarantowane w MVP.
+  dashboard z historią uruchomień przepływu (FR-021, must-have), ręczne wywołanie nowego przepływu z dashboardu
+  (FR-022, zrealizowane w S-02) i przywracanie martwych postów (FR-034, od M-4).
 
 Niezalogowany użytkownik nie ma dostępu do żadnych chronionych danych ani funkcji — trafia na ekran logowania.
 

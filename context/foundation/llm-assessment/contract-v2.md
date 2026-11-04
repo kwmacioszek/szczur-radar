@@ -67,7 +67,7 @@ Kształt wejścia jest bez zmian względem V1.
 
 - Co najmniej jedno z `item.title` / `item.body` jest niepuste; każdy niepusty parent ma co najmniej jedno niepuste pole tekstowe.
 - Brak tekstu = `null` (nie pusty string).
-- Mapowanie: wpis Wykopu → `post`, znalezisko Wykopu → `link`, post Reddita → `post` (tekstowy) lub `link`, komentarz → `comment`. Nieobsługiwany typ zasobu źródła nie może być mapowany po cichu.
+- Mapowanie: wpis Wykopu → `post`, znalezisko Wykopu → `link`, post Reddita → `post` (self-post, `is_self`) lub `link` (każdy inny: link, obraz, crosspost, także gdy ma treść; decyzja S-27, PRD FR-023), komentarz → `comment`. Nieobsługiwany typ zasobu źródła nie może być mapowany po cichu.
 - **MVP:** oceniane są wyłącznie `post` i `link`; `context.parent_post = null` i `context.parent_comment = null` (komentarze poza MVP — PRD §Non-Goals). Kontekst rodzica i typ `comment` zostają w kształcie na przyszłość.
 - Tekst trafia do modelu bez zmian: twarde spacje, łamania linii, emoji, „lenny face”, słowa ocenzurowane przez źródło i zanonimizowane znaczniki zostają jak w źródle.
 - Analizowany jest wyłącznie `item`; parent służy tylko do interpretacji odniesień.
@@ -259,6 +259,7 @@ Stanowisko kierunkowe (`bullish`, `bearish`, `neutral`, `mixed`) zawsze opiera s
 ## 8. Język
 
 - `statement` jest w języku posta (post po polsku → po polsku, post po angielsku → po angielsku).
+  > Doprecyzowanie (2026-11-04, PRD v3, decyzja właściciela Q-16): reguła obowiązuje bez wyjątków, także dla Reddita. Walidator jej nie sprawdza (tak jak reguł §5–§7.1): pilnuje jej prompt, a udział tez w innym języku niż post jest mierzony osobno dla każdego źródła na danych produkcyjnych (PRD, FR-033). Pomiar S-28 dał 22,1 % tez po polsku na postach angielskich.
 - Anchor i cytaty są zawsze w oryginale (§10).
 
 ---
@@ -356,7 +357,9 @@ Kolejność walidacji odpowiedzi modelu:
 | D14. Stanowisko kierunkowe (`bullish`, `bearish`, `neutral`, `mixed`) ma wśród `claim_ids` tezę z `attribution = author` | `domain_invariant_violation` |
 | D15. `relevance = not_investment_related` ⇒ `targets = []` i `claims = []` | `domain_invariant_violation` |
 
-Błędy wywołania (poza odpowiedzią): `provider_error` (błąd dostawcy, odmowa, błąd transportu po wyczerpaniu prób) i `timeout` (przekroczenie czasu po wyczerpaniu prób).
+Błędy wywołania (poza odpowiedzią): `provider_error` (odmowa dostawcy, np. odrzucone żądanie albo odpowiedź bez tekstu) i `timeout` (przekroczenie czasu po wyczerpaniu prób).
+
+> Doprecyzowanie (2026-11-04, PRD v3; zachowanie od S-09 `attempt-accounting`): awaria dostawcy po wyczerpaniu prób (5xx, przekroczenie czasu, brak połączenia, 429) nie jest wynikiem oceny: nie zapisuje się jako ocena nieudana i nie zużywa próby posta, a post wraca do ponowienia (PRD, Non-Functional Requirements, doprecyzowanie S-09). `provider_error` znaczy więc dziś tylko odmowę dostawcy. `timeout` zostaje w zbiorze zamkniętym (zbiory są tylko rozszerzane), ale nie ma producenta.
 
 Pełna lista klas:
 
