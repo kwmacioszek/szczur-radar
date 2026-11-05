@@ -174,7 +174,7 @@ Nie dotyczy (bez zmian schematu). Nowa tabela w przyszłej migracji jest czyszcz
 
 #### Manual
 
-- [ ] 1.4 Przegląd diffa: rozszerzenie nie dotyka tabel z danymi z migracji poza `SCHEDULER`.
+- [x] 1.4 Przegląd diffa: rozszerzenie nie dotyka tabel z danymi z migracji poza `SCHEDULER`. — 4594aa2
 
 ### Phase 2: Dowód i dokumentacja
 
@@ -185,5 +185,5 @@ Nie dotyczy (bez zmian schematu). Nowa tabela w przyszłej migracji jest czyszcz
 
 #### Manual
 
-- [ ] 2.3 Czerwona kolejność (alphabetical, bez rozszerzenia) faktycznie padała w `PostRepositoryIT` (dowód red).
-- [ ] 2.4 CI na PR zielone; czas `backend (Maven verify)` nie wzrósł zauważalnie względem zielonych runów.
+- [x] 2.3 Czerwona kolejność (alphabetical, bez rozszerzenia) faktycznie padała w `PostRepositoryIT` (dowód red). — 4594aa2
+- [x] 2.4 CI na PR zielone; czas `backend (Maven verify)` nie wzrósł zauważalnie względem zielonych runów. — 4594aa2
