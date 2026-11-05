@@ -180,8 +180,8 @@ Nie dotyczy (bez zmian schematu). Nowa tabela w przyszłej migracji jest czyszcz
 
 #### Automated
 
-- [x] 2.1 Pełny verify zielony w dwóch kolejnościach klas: `./mvnw -B verify -Dfailsafe.runOrder=alphabetical` i `-Dfailsafe.runOrder=reversealphabetical`
-- [x] 2.2 Przebieg z dowodu red (alphabetical, bez rozszerzenia czerwony) jest zielony z rozszerzeniem
+- [x] 2.1 Pełny verify zielony w dwóch kolejnościach klas: `./mvnw -B verify -Dfailsafe.runOrder=alphabetical` i `-Dfailsafe.runOrder=reversealphabetical` — 5731567
+- [x] 2.2 Przebieg z dowodu red (alphabetical, bez rozszerzenia czerwony) jest zielony z rozszerzeniem — 5731567
 
 #### Manual
 
