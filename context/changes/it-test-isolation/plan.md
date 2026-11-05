@@ -168,9 +168,9 @@ Nie dotyczy (bez zmian schematu). Nowa tabela w przyszłej migracji jest czyszcz
 
 #### Automated
 
-- [x] 1.1 Test rozszerzenia przechodzi: `cd szczur-radar-api && ./mvnw -B verify -Dit.test=DbIsolationExtensionIT`
-- [x] 1.2 Para klas przechodzi w obu kolejnościach: `./mvnw -B verify -Dit.test='MigrationsIT,PostRepositoryIT' -Dfailsafe.runOrder=alphabetical` oraz `reversealphabetical`
-- [x] 1.3 Testy jednostkowe nadal przechodzą bez Dockera: `./mvnw -B test`
+- [x] 1.1 Test rozszerzenia przechodzi: `cd szczur-radar-api && ./mvnw -B verify -Dit.test=DbIsolationExtensionIT` — 2ef165d
+- [x] 1.2 Para klas przechodzi w obu kolejnościach: `./mvnw -B verify -Dit.test='MigrationsIT,PostRepositoryIT' -Dfailsafe.runOrder=alphabetical` oraz `reversealphabetical` — 2ef165d
+- [x] 1.3 Testy jednostkowe nadal przechodzą bez Dockera: `./mvnw -B test` — 2ef165d
 
 #### Manual
 
@@ -180,8 +180,8 @@ Nie dotyczy (bez zmian schematu). Nowa tabela w przyszłej migracji jest czyszcz
 
 #### Automated
 
-- [ ] 2.1 Pełny verify zielony w dwóch kolejnościach klas: `./mvnw -B verify -Dfailsafe.runOrder=alphabetical` i `-Dfailsafe.runOrder=reversealphabetical`
-- [ ] 2.2 Przebieg z dowodu red (alphabetical, bez rozszerzenia czerwony) jest zielony z rozszerzeniem
+- [x] 2.1 Pełny verify zielony w dwóch kolejnościach klas: `./mvnw -B verify -Dfailsafe.runOrder=alphabetical` i `-Dfailsafe.runOrder=reversealphabetical`
+- [x] 2.2 Przebieg z dowodu red (alphabetical, bez rozszerzenia czerwony) jest zielony z rozszerzeniem
 
 #### Manual
 

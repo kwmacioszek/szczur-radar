@@ -10,7 +10,8 @@ import org.testcontainers.utility.DockerImageName;
  * Shared PostgreSQL for integration tests ({@code *IT}). Same major version as Railway and
  * compose.local.yaml. {@code @ServiceConnection} replaces the PG* based datasource settings, so the
  * tests never depend on PG* environment variables. Each distinct Spring test context gets its own
- * container (a fresh, empty database).
+ * container, but classes with the same context key (same properties, imports and web environment) share
+ * it and so one database: {@link DbIsolationExtension} empties the test data after every test class.
  *
  * <p>Docker is required: without it the context fails to start and {@code ./mvnw verify} fails
  * (the tests are deliberately not skipped).

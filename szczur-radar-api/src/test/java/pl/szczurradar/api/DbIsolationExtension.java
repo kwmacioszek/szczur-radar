@@ -1,7 +1,10 @@
 package pl.szczurradar.api;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Set;
+import java.util.WeakHashMap;
 import java.util.stream.Collectors;
 
 import javax.sql.DataSource;
@@ -25,8 +28,8 @@ import pl.szczurradar.api.user.SystemAccount;
  * leftover query found). This global extension (registered through {@code META-INF/services}) makes the data
  * of a class its own: after every top-level {@code @SpringBootTest} class it truncates every table of schema
  * {@code public} but {@code flyway_schema_history}, and keeps {@link SystemAccount#SCHEDULER}, the one row a
- * migration inserts; before every such class it fails, naming the tables and row counts, if anything else is
- * left.
+ * migration inserts; before every such class that reuses a context an earlier class used it fails, naming the tables and row
+ * counts, if anything else is left (the first class of a context may seed data while the context starts).
  *
  * <p>It does nothing for a class without {@code @SpringBootTest}, for a {@code @Nested} class (its callbacks
  * run in the middle of the outer class), for a context without a {@link DataSource}, and when the database
@@ -40,10 +43,22 @@ public class DbIsolationExtension implements BeforeAllCallback, AfterAllCallback
 
 	private static final String USERS = "users";
 
+	/** The datasources (one per context) a class has already used; weakly held, so a closed context goes away. */
+	private static final Set<DataSource> CONTEXTS_SEEN = Collections.newSetFromMap(new WeakHashMap<>());
+
 	@Override
 	public void beforeAll(ExtensionContext context) {
 		JdbcTemplate jdbc = jdbcOf(context);
 		if (jdbc == null) {
+			return;
+		}
+		// The first class of a context may seed data while its context starts (PipelineStartupRecoveryIT does, to
+		// have runs to recover): that is its own, so only a context an earlier class already used is checked.
+		boolean usedBefore;
+		synchronized (CONTEXTS_SEEN) {
+			usedBefore = !CONTEXTS_SEEN.add(jdbc.getDataSource());
+		}
+		if (!usedBefore) {
 			return;
 		}
 		try {
