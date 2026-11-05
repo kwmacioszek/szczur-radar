@@ -19,7 +19,7 @@ Większość weryfikacji wycinka i regresja działają same w CI przy każdym PR
 - **Poprawność testów backendu:** testy mutacyjne (np. PIT) na rdzeniu — przebieg i warunkowe zapisy stanu, walidator kontraktu V2, rozliczanie prób oceny — oraz przegląd jakości testów (asercje na zachowanie zamiast na mocki, pełne ciała odpowiedzi, brak zależności od zegara).
 - **Scenariusze API zamiast ręcznego klikania:** pełne API z Postgresem (Testcontainers), atrapy źródeł i LLM z prawdziwych payloadów w `szczur-radar-api/src/test/resources/fixtures/`; scenariusze odtwarzają ręczne weryfikacje PR env z ostatnich wycinków (np. S-13, S-17, S-18, S-20, S-27).
 - **Smoke w przeglądarce na atrapie API:** konfiguracja Playwright (`/10x-e2e-setup`) i kilka przepływów na `szczur-radar-web/dev/mock-api.js` — logowanie i strażnik sesji, feed z filtrem, post z oceną, strona przebiegu. M-5 rozbudowuje je pod nowe widoki.
-- **Regresja w CI:** wszystko powyżej chodzi przy każdym PR w `ci.yml`, z kontrolą czasu CI na self-hosted runnerach.
+- **Regresja w CI:** wszystko powyżej chodzi przy każdym PR w `ci.yml`, z kontrolą czasu CI (od 2026-10-24 na darmowych runnerach GitHuba, bo repo jest publiczne; pula self-hosted to rezerwa).
 
 ## Kandydat na „done when”
 

@@ -875,19 +875,19 @@ PR #60 was merged by the operator as `5b6eabb` (2026-10-17 15:02 UTC).
 
 ## self-hosted-pr-runner: CI na runnerach w Proxmoxie i na PC
 
-**Status (2026-10-19): live on production** after the human merge of PR #83 (`35c47a2`); issue #30 closed (automatically at the merge). The check after the merge (the CI run on `main` on the `szczur-ci` pool, the runners online) is in [the issue's last comment](https://github.com/kwmacioszek/szczur-radar/issues/30#issuecomment-6272136800). Change: `context/archive/2026-10-18-self-hosted-pr-runner/`. The GitHub Actions minutes of the private repo ran out on 2026-10-18 (about 1800 billed minutes in 30 days on a 2000-minute plan): no job started ("The job was not started because … your spending limit needs to be increased"), every workflow failed and Railway skipped every deploy. CI now runs on self-hosted runners; tool and runbook: `tools/ci-runner/README.md`.
+**Status (2026-10-19): live on production** after the human merge of PR #83 (`35c47a2`); issue #30 closed (automatically at the merge). The check after the merge (the CI run on `main` on the `szczur-ci` pool, the runners online) is in [the issue's last comment](https://github.com/kwmacioszek/szczur-radar/issues/30#issuecomment-6272136800). Change: `context/archive/2026-10-18-self-hosted-pr-runner/`. The GitHub Actions minutes of the private repo ran out on 2026-10-18 (about 1800 billed minutes in 30 days on a 2000-minute plan): no job started ("The job was not started because … your spending limit needs to be increased"), every workflow failed and Railway skipped every deploy. CI ran on self-hosted runners until 2026-10-24; since then the repository is public and CI is back on GitHub's free hosted runners, with this pool as the fallback (Pool below). Tool and runbook: `tools/ci-runner/README.md`.
 
 ### How it works
 
 - **Switch.** Every job's `runs-on` in `.github/workflows/ci.yml` takes the runner label from repository variables, first non-empty wins: `CI_RUNNER_PR` (pull_request), `CI_RUNNER_MAIN` (push to `main`), `CI_RUNNER` (both), else `ubuntu-latest`. A change applies to the next run, a new commit or `gh run rerun <id>` (rerun reads the variables again). A branch must contain the switch (GitHub reads `runs-on` from the branch's `ci.yml`).
-- **Pool.** `CI_RUNNER=szczur-ci` since 2026-10-18. Every runner has the label `szczur-ci` and its own VM with its own Docker daemon (the smoke tests use fixed host ports 8080/8000/5432 and container names `web`/`api`):
+- **Pool.** `CI_RUNNER=szczur-ci` from 2026-10-18 to 2026-10-24 (the last job on the pool ran at 06:46 UTC that day, the first on `ubuntu-latest` at 07:29 UTC). Since then the variable is unset on purpose: the repository is public and its Actions minutes are free, so the pool is only the fallback (`gh variable set CI_RUNNER --body szczur-ci`). Every runner has the label `szczur-ci` and its own VM with its own Docker daemon (the smoke tests use fixed host ports 8080/8000/5432 and container names `web`/`api`):
   - `github-runner-1`: VM `github-runner` (Ubuntu 24.04, 4 vCPU, 7 GB, 61 GB disk) in the home Proxmox, always on; installed with `tools/ci-runner/setup.sh`;
   - `ci-pc-1-1` … `ci-pc-4-1`: KVM VMs (4 vCPU, 8 GB, 60 GB each) on the developer's Ubuntu PC, autostart with the PC; managed with `tools/ci-runner/pc_runners.py` (`create` / `delete` / `status`) as the `ci-admin` user (groups `libvirt`, `kvm`, no sudo).
 - **Who gets a job.** GitHub gives a job to any idle online runner with the label; there is no priority. PC on: a run takes about 2 min (bounded by the `backend` job). PC off or in Windows: its runners are `offline` and Proxmox takes every job, one after another, about 7 min a run — no variable change (verified 2026-10-19).
 
 ### Variables (names only)
 
-- Repository variables: `CI_RUNNER` (set: `szczur-ci`), `CI_RUNNER_PR`, `CI_RUNNER_MAIN` (unset). Secrets unchanged; the runners receive the same CI secrets as GitHub's runners did (`LLM_API_KEY`, `RAILWAY_API_TOKEN`, `WYKOP_KEY`, `WYKOP_SECRET`).
+- Repository variables: `CI_RUNNER`, `CI_RUNNER_PR`, `CI_RUNNER_MAIN` (all unset since 2026-10-24; `CI_RUNNER` was `szczur-ci` from 2026-10-18). Secrets unchanged; the runners receive the same CI secrets as GitHub's runners did (`LLM_API_KEY`, `RAILWAY_API_TOKEN`, `WYKOP_KEY`, `WYKOP_SECRET`).
 
 ### Runbook (operator)
 
