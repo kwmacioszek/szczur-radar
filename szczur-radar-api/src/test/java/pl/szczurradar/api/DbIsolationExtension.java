@@ -17,8 +17,11 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationContext;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
+import org.springframework.transaction.support.TransactionTemplate;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 
 import pl.szczurradar.api.user.SystemAccount;
 
@@ -31,7 +34,9 @@ import pl.szczurradar.api.user.SystemAccount;
  * migration inserts; before every such class that reuses a context an earlier class used it fails, naming the tables and row
  * counts, if anything else is left (the first class of a context may seed data while the context starts).
  *
- * <p>It does nothing for a class without {@code @SpringBootTest}, for a {@code @Nested} class (its callbacks
+ * <p>It only touches the Testcontainers database of {@link TestcontainersConfiguration} (a context with a
+ * {@code PostgreSQLContainer} bean), never a Postgres a context reaches through the {@code PG*} variables.
+ * It does nothing for a class without {@code @SpringBootTest}, for a {@code @Nested} class (its callbacks
  * run in the middle of the outer class), for a context without a {@link DataSource}, and when the database
  * cannot be reached or has no tables yet (a class that runs Flyway {@code clean} itself, or one whose
  * datasource points nowhere): there is nothing to empty. The tables are listed when the check or the clean
@@ -42,6 +47,8 @@ public class DbIsolationExtension implements BeforeAllCallback, AfterAllCallback
 	private static final String FLYWAY_HISTORY = "flyway_schema_history";
 
 	private static final String USERS = "users";
+
+	private static final String LOCK_TIMEOUT = "30s";
 
 	/** The datasources (one per context) a class has already used; weakly held, so a closed context goes away. */
 	private static final Set<DataSource> CONTEXTS_SEEN = Collections.newSetFromMap(new WeakHashMap<>());
@@ -76,11 +83,14 @@ public class DbIsolationExtension implements BeforeAllCallback, AfterAllCallback
 			return;
 		}
 		try {
-			clean(jdbc);
+			tables(jdbc);
 		}
 		catch (DataAccessException unreachable) {
-			// no database to empty
+			return; // no database to empty
 		}
+		// A clean that fails (a lock that is not released, a lost connection) is an error of this class, not
+		// something to hide: the next class would fail on leftovers with the real cause gone.
+		clean(jdbc);
 	}
 
 	/**
@@ -97,16 +107,21 @@ public class DbIsolationExtension implements BeforeAllCallback, AfterAllCallback
 
 	/** Empties every table of schema {@code public} but {@code flyway_schema_history}; {@code users} keeps the scheduler. */
 	static void clean(JdbcTemplate jdbc) {
-		List<String> tables = tables(jdbc);
-		List<String> others = new ArrayList<>(tables);
-		others.remove(USERS);
-		if (!others.isEmpty()) {
-			jdbc.execute("TRUNCATE TABLE " + others.stream().map(DbIsolationExtension::quote)
-					.collect(Collectors.joining(", ")) + " CASCADE");
-		}
-		if (tables.contains(USERS)) {
-			jdbc.update("DELETE FROM users WHERE id <> ?", SystemAccount.SCHEDULER.id());
-		}
+		// One transaction with a lock timeout: TRUNCATE takes an exclusive lock, and a transaction a background
+		// thread of the test still holds would otherwise make it wait without end.
+		new TransactionTemplate(new DataSourceTransactionManager(jdbc.getDataSource())).executeWithoutResult(status -> {
+			jdbc.execute("SET LOCAL lock_timeout = '" + LOCK_TIMEOUT + "'");
+			List<String> tables = tables(jdbc);
+			List<String> others = new ArrayList<>(tables);
+			others.remove(USERS);
+			if (!others.isEmpty()) {
+				jdbc.execute("TRUNCATE TABLE " + others.stream().map(DbIsolationExtension::quote)
+						.collect(Collectors.joining(", ")) + " CASCADE");
+			}
+			if (tables.contains(USERS)) {
+				jdbc.update("DELETE FROM users WHERE id <> ?", SystemAccount.SCHEDULER.id());
+			}
+		});
 	}
 
 	private static List<String> leftovers(JdbcTemplate jdbc) {
@@ -142,6 +157,11 @@ public class DbIsolationExtension implements BeforeAllCallback, AfterAllCallback
 		}
 		try {
 			ApplicationContext applicationContext = SpringExtension.getApplicationContext(context);
+			// Only the Testcontainers database of TestcontainersConfiguration is emptied: a context that points at
+			// another Postgres (PG* variables, a developer's local database) is never touched.
+			if (applicationContext.getBeanProvider(PostgreSQLContainer.class).getIfAvailable() == null) {
+				return null;
+			}
 			DataSource dataSource = applicationContext.getBeanProvider(DataSource.class).getIfUnique();
 			return dataSource == null ? null : new JdbcTemplate(dataSource);
 		}
