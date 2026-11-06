@@ -190,20 +190,20 @@ Brak migracji. API i web wdrażają się niezależnie: starsze API bez `source` 
 
 #### Automated
 
-- [x] 1.1 Testy jednostkowe SPA przechodzą (`npm test`)
-- [x] 1.2 Typecheck i build przechodzą (`npm run build`)
-- [x] 1.3 Test rejestru tabeli jest czerwony po usunięciu wiersza `reddit` z `ITEM_TYPE_WORDS`
+- [x] 1.1 Testy jednostkowe SPA przechodzą (`npm test`) — 8db574b
+- [x] 1.2 Typecheck i build przechodzą (`npm run build`) — 8db574b
+- [x] 1.3 Test rejestru tabeli jest czerwony po usunięciu wiersza `reddit` z `ITEM_TYPE_WORDS` — 8db574b
 
 ### Phase 2: Widoki, testy komponentów i weryfikacja
 
 #### Automated
 
-- [ ] 2.1 Testy SPA przechodzą (`npm test`)
-- [ ] 2.2 Typecheck i build przechodzą (`npm run build`)
-- [ ] 2.3 Żaden widok nie woła już `label('itemType'` (grep)
-- [ ] 2.4 `SpaRulesTest` przechodzi bez zmian po stronie API
-- [ ] 2.5 Agent sprawdza karty Wykopu i Reddita przez `playwright-cli` (kitchen sink i feed z mocka, oba motywy, 375 px)
-- [ ] 2.6 Agent sprawdza stronę szczegółów posta Reddita w mocku (meta i tytuł zastępczy)
+- [x] 2.1 Testy SPA przechodzą (`npm test`)
+- [x] 2.2 Typecheck i build przechodzą (`npm run build`)
+- [x] 2.3 Żaden widok nie woła już `label('itemType'` (grep)
+- [x] 2.4 `SpaRulesTest` przechodzi bez zmian po stronie API
+- [x] 2.5 Agent sprawdza karty Wykopu i Reddita przez `playwright-cli` (kitchen sink i feed z mocka, oba motywy, 375 px)
+- [x] 2.6 Agent sprawdza stronę szczegółów posta Reddita w mocku (meta i tytuł zastępczy)
 
 #### Manual
 

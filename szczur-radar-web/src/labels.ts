@@ -1,6 +1,5 @@
 // Polish labels for the API's closed value sets; an unknown value shows as is.
 export const labels: Record<string, Record<string, string>> = {
-  itemType: { post: 'wpis', link: 'znalezisko', comment: 'komentarz' },
   relevance: {
     investment_related: 'inwestycyjny',
     not_investment_related: 'nie inwestycyjny',

@@ -79,9 +79,10 @@ describe('limits', () => {
 })
 
 describe('labels', () => {
-  const sets = Object.keys(rules.values).filter((set) => set !== 'attentionReason')
+  // An attention reason has a text, not a label; item type words depend on the source (see `item type words`).
+  const sets = Object.keys(rules.values).filter((set) => set !== 'attentionReason' && set !== 'itemType')
 
-  it('are given for exactly the sets of values of the file (an attention reason has a text, not a label)', () => {
+  it('are given for exactly the sets of values of the file (an attention reason has a text, an item type a word of its source)', () => {
     expect(sorted(Object.keys(labels))).toEqual(sorted(sets))
   })
 
