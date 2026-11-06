@@ -453,6 +453,8 @@ async page => {
     if (p === '/api/posts') {
       const pageNumber = Number(url.searchParams.get('page') ?? 0)
       const size = Number(url.searchParams.get('size') ?? 50)
+      // Like the API (PageLimits.MAX_PAGE): a page above it is a 400, never a page past the end.
+      if (pageNumber > 21474836) return json(route, { detail: 'invalid_request' }, 400)
       const later = pageNumber > 0
       if (MODE === 'loading' || (MODE === 'loading-next' && later)) await new Promise((r) => setTimeout(r, 60000))
       if (MODE === 'error' || (MODE === 'error-next' && later)) return json(route, { detail: 'internal_error' }, 500)

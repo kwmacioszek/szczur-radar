@@ -37,6 +37,7 @@ import pl.szczurradar.api.pipeline.run.RunStep;
 import pl.szczurradar.api.pipeline.run.SourceFetchStatus;
 import pl.szczurradar.api.pipeline.run.StepStatus;
 import pl.szczurradar.api.posts.Post;
+import pl.szczurradar.api.config.PageLimits;
 import pl.szczurradar.api.posts.PostFilter;
 import pl.szczurradar.api.sources.Source;
 import pl.szczurradar.api.text.Whitespace;
@@ -62,7 +63,8 @@ class SpaRulesTest {
 			"runsPageMaxSize", PipelineRunController.MAX_PAGE_SIZE,
 			"passwordMinLength", Passwords.MIN_LENGTH,
 			"passwordMaxLength", Passwords.MAX_LENGTH,
-			"maxAssessmentAttempts", Post.MAX_ASSESSMENT_ATTEMPTS);
+			"maxAssessmentAttempts", Post.MAX_ASSESSMENT_ATTEMPTS,
+			"pageMax", PageLimits.MAX_PAGE);
 
 	/**
 	 * The lists of values by their name in {@code rules.json}, which is the name of the SPA's {@code labels}

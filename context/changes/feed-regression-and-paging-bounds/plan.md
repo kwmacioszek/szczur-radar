@@ -211,16 +211,16 @@ Brak migracji, brak zmiany schematu ani kontraktu. Klient wysyłający `page` po
 
 #### Automated
 
-- [x] 2.1 Pięć nowych testów przechodzi: `./mvnw -B verify -Dit.test=PostsApiIT`
-- [x] 2.2 Każdy z pięciu testów czerwony na swoim celowym zepsuciu, zepsucie cofnięte
-- [x] 2.3 Pełny zestaw API zielony: `./mvnw -B verify`
+- [x] 2.1 Pięć nowych testów przechodzi: `./mvnw -B verify -Dit.test=PostsApiIT` — d8c234b
+- [x] 2.2 Każdy z pięciu testów czerwony na swoim celowym zepsuciu, zepsucie cofnięte — d8c234b
+- [x] 2.3 Pełny zestaw API zielony: `./mvnw -B verify` — d8c234b
 
 ### Phase 3: NUL i ogromny `page` w linku feedu (SPA)
 
 #### Automated
 
-- [ ] 3.1 Testy SPA przechodzą: `npm test`
-- [ ] 3.2 Typecheck i build przechodzą: `npm run build`
-- [ ] 3.3 Celowe zepsucie normalizacji i granicy `page` zaczerwienia nowe przypadki, zmiany cofnięte
-- [ ] 3.4 `playwright-cli`: `/?q=a%00b` i `/?page=99999999999` na atrapie API pokazują feed, a bez poprawki błąd
-- [ ] 3.5 `SpaRulesTest` i `rules.test.ts` zielone z nowym wpisem granicy `page`
+- [x] 3.1 Testy SPA przechodzą: `npm test`
+- [x] 3.2 Typecheck i build przechodzą: `npm run build`
+- [x] 3.3 Celowe zepsucie normalizacji i granicy `page` zaczerwienia nowe przypadki, zmiany cofnięte
+- [x] 3.4 `playwright-cli`: `/?q=a%00b` i `/?page=99999999999` na atrapie API pokazują feed, a bez poprawki błąd
+- [x] 3.5 `SpaRulesTest` i `rules.test.ts` zielone z nowym wpisem granicy `page`
