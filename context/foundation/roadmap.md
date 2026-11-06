@@ -3,7 +3,7 @@ project: "Szczur Radar"
 version: 5
 status: draft # draft | active | locked
 created: 2026-09-27
-updated: 2026-11-05
+updated: 2026-11-06
 prd_version: 3
 main_goal: quality
 top_blocker: capacity # 16 wycinków, jeden recenzent i osoba mergująca; darmowe runnery GitHuba muszą zmieścić scenariusze i PIT
@@ -121,7 +121,7 @@ Na Wykopie (#gielda) i Reddicie codziennie pojawiają się setki postów o inwes
 | S-41 | api-contract-shapes-round-two     | każdy kształt odpowiedzi, który czyta SPA, ma plik kontraktu z wariantami `null`, a pole zawsze wysyłane przez API jest wymagane w TS | —                        | FR-006; audyt §2, X3; `verification-scope.md`                                              | ready    |
 | S-42 | spa-rules-registry-round-two      | porównanie kodu błędu, limit rozmiaru strony i enumy spoza rejestru są pilnowane testem albo kompilatorem                          | —                        | FR-006; audyt §1 R-22, R-43, X5                                                            | ready    |
 | S-43 | contract-bound-mocks              | atrapa API w SPA i atrapy narzędzi odpowiadają tak jak prawdziwe API, a rozjazd czerwieni test                                     | S-41                     | audyt §3, X4, „Materiał dla M-4” p. 4; `verification-scope.md` „Granice z M-3 i M-5”      | proposed |
-| S-44 | feed-regression-and-paging-bounds | feed ma testy regresji znanych ścieżek, a ogromny numer strony i NUL w linku dają 400 zamiast błędu serwera albo zawieszonego feedu | —                        | FR-006, FR-007, FR-011a; audyt §4, X6                                                      | ready    |
+| S-44 | feed-regression-and-paging-bounds | feed ma testy regresji znanych ścieżek, a ogromny numer strony i NUL w linku dają 400 zamiast błędu serwera albo zawieszonego feedu | —                        | FR-006, FR-007, FR-011a; audyt §4, X6                                                      | in-progress |
 | S-45 | core-mutation-testing             | wiadomo, które testy rdzenia łapią błędy: mutanty, które przeżyły, są zabite testem albo przyjęte z powodem                         | S-30, S-32, S-33, S-38   | `verification-scope.md` „Poprawność testów backendu”, „done when”                         | proposed |
 
 ## Streams
@@ -339,7 +339,7 @@ Brak — każda praca przekrojowa M-4 ma widoczny skutek dla użytkownika, opera
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** X6 to potwierdzony defekt (`Page offset exceeds Integer.MAX_VALUE` jako nieobsłużony wyjątek); ta sama wada w `FailedPostController` i `PipelineRunController` nie była uruchamiana, więc wycinek ją najpierw sprawdza.
-- **Status:** ready
+- **Status:** in-progress
 
 ### S-45: Testy mutacyjne rdzenia
 

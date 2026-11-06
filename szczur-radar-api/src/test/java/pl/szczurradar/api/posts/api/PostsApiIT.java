@@ -165,6 +165,47 @@ class PostsApiIT {
 		}
 	}
 
+	/**
+	 * {@code page × size} is an {@code int} offset in the database query: with the largest size (100) the
+	 * last page that fits is 21474836, and the next one used to be a 500 (audit X6).
+	 */
+	@Test
+	void aPageBeyondTheOffsetLimitIsAnInvalidRequestOnTheFeed() {
+		for (String uri : List.of("/api/posts?size=100&page=21474837", "/api/posts?size=100&page=21474837&q=xtb",
+				"/api/posts?size=100&page=99999999")) {
+			assertThat(mvc.get().uri(uri).with(asUser())).as(uri)
+				.hasStatus(HttpStatus.BAD_REQUEST)
+				.bodyJson()
+				.isStrictlyEqualTo("{\"detail\":\"invalid_request\"}");
+		}
+	}
+
+	@Test
+	void aPageBeyondTheOffsetLimitIsAnInvalidRequestOnTheFailedList() {
+		assertThat(mvc.get().uri("/api/admin/posts/failed?size=100&page=21474837").with(asAdmin()))
+			.hasStatus(HttpStatus.BAD_REQUEST)
+			.bodyJson()
+			.isStrictlyEqualTo("{\"detail\":\"invalid_request\"}");
+	}
+
+	@Test
+	void theLastPageThatFitsTheOffsetLimitIsAnEmptyPageWithTheRealTotal() {
+		UUID post = seeds.post(PostStage.ASSESSED, 0, "2026-10-01T09:00:00Z");
+		seeds.ok(post, "2026-10-02T08:00:00Z");
+		seeds.post(PostStage.DEAD, 3, "2026-10-01T10:00:00Z");
+
+		for (String uri : List.of("/api/posts?size=100&page=21474836", "/api/posts?size=100&page=21474836&q=xtb")) {
+			MvcTestResult result = mvc.get().uri(uri).with(asUser()).exchange();
+			assertThat(result).as(uri).hasStatusOk();
+			assertThat(result).as(uri).bodyJson().extractingPath("$.items").asArray().isEmpty();
+			assertThat(result).as(uri).bodyJson().extractingPath("$.total").isEqualTo(1);
+		}
+		MvcTestResult failed = mvc.get().uri("/api/admin/posts/failed?size=100&page=21474836").with(asAdmin()).exchange();
+		assertThat(failed).hasStatusOk();
+		assertThat(failed).bodyJson().extractingPath("$.items").asArray().isEmpty();
+		assertThat(failed).bodyJson().extractingPath("$.total").isEqualTo(1);
+	}
+
 	@Test
 	void anAssessedPostIsTheFeedItemWithItsLatestOkAssessment() {
 		UUID post = seeds.post(PostStage.ASSESSED, 1, "2026-10-01T09:00:00Z");
