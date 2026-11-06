@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -63,7 +64,7 @@ import pl.szczurradar.api.user.Role;
  * {@code x = ANY (ARRAY[...])}, a single value to {@code x = '...'}, and keeps an array column's
  * {@code x <@ ARRAY[...]} (inside the compound {@code ck_pipeline_runs_sources}). Other compound
  * {@code CHECK}s that mention enum values ({@code ck_posts_stage_attempts}, {@code ck_assessments_outcome},
- * ...) are not lists of values and are not read.
+ * ...) are not lists of values, but their literals are read as {@code column <op> 'literal'} pairs.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, properties = MigrateCommand.ENABLE_FLYWAY)
 @Import(TestcontainersConfiguration.class)
@@ -117,18 +118,20 @@ class ClosedSetsIT {
 			StoredEnum.of(Role.class, "users", "role", "User", "role"));
 
 	/**
-	 * The {@code CHECK}s with string literals that are not a list of values: rules across columns,
-	 * patterns and the non-empty value of an open set ({@code ck_posts_channel}: any subreddit). Any other
-	 * {@code CHECK} with a literal must read as a list of values, so a closed set written in another form (a
-	 * {@code VARCHAR} column, {@code x IS NULL OR x IN (...)}) cannot pass unseen.
+	 * The {@code CHECK}s with string literals that are neither a list of values nor read as column-literal
+	 * pairs: a pattern or the non-empty value of an open set ({@code ck_posts_channel}: any subreddit), each
+	 * with its reason. A compound {@code CHECK} with enum literals ({@code ck_pipeline_runs_interruption_status},
+	 * {@code ck_posts_stage_attempts}, ...) is not here: its literals are read and must be values of the enum of
+	 * their column. Any other {@code CHECK} with a literal must read as one of the three, so a closed set
+	 * written in another form cannot pass unseen. An entry without a reason, or one that no longer applies
+	 * (the {@code CHECK} is gone, has no literal or reads as a list of values), is red.
 	 */
-	private static final Set<String> NOT_A_VALUE_LIST = Set.of("ck_activation_tokens_token_hash",
-			"ck_assessments_input_hash", "ck_assessments_outcome", "ck_notifications_run",
-			"ck_pipeline_run_sources_error", "ck_pipeline_runs_interruption_status", "ck_pipeline_runs_range",
-			"ck_pipeline_runs_requested_posts", "ck_posts_assessing_owner", "ck_posts_channel", "ck_posts_content_hash",
-			"ck_posts_stage_attempts", "ck_raw_payloads_sha256");
-
-	private static final Pattern ANY_LITERAL = Pattern.compile("'(?:[^']|'')*'::");
+	private static final Map<String, String> NOT_A_VALUE_LIST = Map.of(
+			"ck_posts_channel", "an open set: any subreddit or Wykop tag, only non-empty",
+			"ck_assessments_input_hash", "a pattern: the SHA-256 of the input as 64 lower-case hex digits",
+			"ck_posts_content_hash", "a pattern: the SHA-256 of the content as 64 lower-case hex digits",
+			"ck_raw_payloads_sha256", "a pattern: the SHA-256 of the payload as 64 lower-case hex digits",
+			"ck_activation_tokens_token_hash", "a pattern: the SHA-256 of the token as 64 lower-case hex digits");
 
 	private static final String LITERAL = "'(?:[^']|'')*'::text";
 
@@ -225,19 +228,23 @@ class ClosedSetsIT {
 	@Test
 	void everyCheckWithLiteralsIsAValueListOrKnown() {
 		List<Check> checks = checks();
-		List<String> unread = checks.stream()
-			.filter(check -> ANY_LITERAL.matcher(check.definition()).find())
-			.filter(check -> valueList(check.definition()).isEmpty() && !NOT_A_VALUE_LIST.contains(check.name()))
-			.map(check -> check.name() + " on " + check.table() + ": " + check.definition())
-			.toList();
-		Set<String> gone = difference(NOT_A_VALUE_LIST,
-				checks.stream().map(Check::name).collect(Collectors.toSet()));
+		Map<String, Set<String>> written = writtenValuesByColumn();
+		List<String> unknown = new ArrayList<>();
+		for (Check check : checks) {
+			if (ClosedSetsGuard.ANY_LITERAL.matcher(check.definition()).find()
+					&& valueList(check.definition()).isEmpty() && !NOT_A_VALUE_LIST.containsKey(check.name())) {
+				unknown.addAll(ClosedSetsGuard.unknownLiterals(check.name(), check.table(), check.definition(), written));
+			}
+		}
+		List<String> staleExceptions = ClosedSetsGuard.exceptionProblems(NOT_A_VALUE_LIST,
+				checks.stream().collect(Collectors.toMap(Check::name, Check::definition)),
+				definition -> valueList(definition).isPresent());
 
-		assertThat(unread).withFailMessage("%s", "CHECKs with literals that read neither as a list of values nor"
-				+ " as a known rule: " + unread + " — a closed set is a TEXT column with CHECK (x IN (...)) and an"
-				+ " enum in the registry; a rule across columns or a pattern goes into NOT_A_VALUE_LIST")
+		assertThat(unknown).withFailMessage("%s", "Compound CHECKs whose literals are not values of the enum of their"
+				+ " column (or that the guard cannot read): " + unknown + " — a literal in a CHECK is a value of an"
+				+ " enum in the registry; a pattern or an open set goes into NOT_A_VALUE_LIST with its reason")
 			.isEmpty();
-		assertThat(gone).withFailMessage("%s", "NOT_A_VALUE_LIST names CHECKs the schema no longer has: " + gone)
+		assertThat(staleExceptions).withFailMessage("%s", "NOT_A_VALUE_LIST entries that do not hold: " + staleExceptions)
 			.isEmpty();
 	}
 
@@ -307,6 +314,21 @@ class ClosedSetsIT {
 			values.add(matcher.group(1).replace("''", "'"));
 		}
 		return values;
+	}
+
+	/** {@code table.column} to the values the application writes there: from the real converter, or the run's sources. */
+	private static Map<String, Set<String>> writtenValuesByColumn() {
+		Map<Class<?>, AttributeConverter<Object, String>> converters = ClosedSetsGuard.convertersByEnum();
+		Map<String, Set<String>> written = new HashMap<>();
+		for (StoredEnum stored : REGISTRY) {
+			if (stored.sources()) {
+				written.put(stored.where(), runSourceValues());
+			}
+			else if (converters.containsKey(stored.type())) {
+				written.put(stored.where(), ClosedSetsGuard.writtenValues(stored.type(), converters.get(stored.type())));
+			}
+		}
+		return written;
 	}
 
 	/** What a range run stores in {@code pipeline_runs.sources}: its constructor's write, read back through the entity. */

@@ -223,17 +223,17 @@ Bez migracji. Przebiegi ze zmianą psującą kod nie zostawiają zmian w `src/ma
 
 #### Automated
 
-- [x] 1.1 Strażnik X1 i jego testy zielone (`ClosedSetsIT`, `ClosedSetsGuardTest`)
-- [x] 1.2 Przebieg X1: `RunKind::name` w `RunKindConverter` czerwieni `ClosedSetsIT`, zmiana cofnięta
-- [x] 1.3 Pełny `./mvnw -B verify` zielony
+- [x] 1.1 Strażnik X1 i jego testy zielone (`ClosedSetsIT`, `ClosedSetsGuardTest`) — 05feb01
+- [x] 1.2 Przebieg X1: `RunKind::name` w `RunKindConverter` czerwieni `ClosedSetsIT`, zmiana cofnięta — 05feb01
+- [x] 1.3 Pełny `./mvnw -B verify` zielony — 05feb01
 
 ### Phase 2: X2 — literały złożonych `CHECK`ów
 
 #### Automated
 
-- [ ] 2.1 Strażnik X2 i testy parsera zielone (`ClosedSetsIT`, `ClosedSetsGuardTest`)
-- [ ] 2.2 Przebieg X2: migracja z `'interupted'` czerwieni `ClosedSetsIT`, migracja usunięta
-- [ ] 2.3 Pełny `./mvnw -B verify` zielony
+- [x] 2.1 Strażnik X2 i testy parsera zielone (`ClosedSetsIT`, `ClosedSetsGuardTest`)
+- [x] 2.2 Przebieg X2: migracja z `'interupted'` czerwieni `ClosedSetsIT`, migracja usunięta
+- [x] 2.3 Pełny `./mvnw -B verify` zielony
 
 ### Phase 3: R-23 — koniec przebiegu zawsze powiadamia
 
