@@ -2,18 +2,17 @@ package pl.szczurradar.api.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.function.Function;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
+import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.metamodel.Attribute;
 import jakarta.persistence.metamodel.PluralAttribute;
@@ -37,6 +36,7 @@ import pl.szczurradar.api.llm.ReasoningEffort;
 import pl.szczurradar.api.llm.ServiceTier;
 import pl.szczurradar.api.notifications.NotificationKind;
 import pl.szczurradar.api.pipeline.run.InterruptionCause;
+import pl.szczurradar.api.pipeline.run.PipelineRun;
 import pl.szczurradar.api.pipeline.run.RunKind;
 import pl.szczurradar.api.pipeline.run.RunStatus;
 import pl.szczurradar.api.pipeline.run.RunStep;
@@ -51,7 +51,9 @@ import pl.szczurradar.api.user.Role;
 /**
  * Every enum stored in the database has a {@code CHECK} on its column that allows exactly its values:
  * a constant without a migration (or a value in a {@code CHECK} without a constant) is red here, not a
- * {@code CHECK} violation in a production run. {@link #REGISTRY} names each enum with its column; it is
+ * {@code CHECK} violation in a production run. The values compared are the ones the entity's real
+ * converter writes ({@link ClosedSetsGuard}), not a lambda of the registry, so a converter that writes
+ * another value than the {@code CHECK} allows is red here. {@link #REGISTRY} names each enum with its column; it is
  * itself checked against the JPA metamodel (every enum attribute of an entity) and against the
  * migrated schema (every {@code CHECK} with a list of values of one column), so a new enum or a new
  * closed-set column cannot pass unregistered; a {@code CHECK} with literals in any other form must be a
@@ -61,7 +63,14 @@ import pl.szczurradar.api.user.Role;
  * {@code x = ANY (ARRAY[...])}, a single value to {@code x = '...'}, and keeps an array column's
  * {@code x <@ ARRAY[...]} (inside the compound {@code ck_pipeline_runs_sources}). Other compound
  * {@code CHECK}s that mention enum values ({@code ck_posts_stage_attempts}, {@code ck_assessments_outcome},
- * ...) are not lists of values and are not read.
+ * ...) are not lists of values, but their literals are read as {@code column <op> 'literal'} pairs, and
+ * each must be a value of that column's enum (a typo in a compound {@code CHECK} is red here); this holds
+ * for {@code ck_pipeline_runs_sources} too, whose {@code <@ ARRAY[...]} fragment is the column's list and
+ * whose other literal ({@code 'range'}) is read as a pair.
+ *
+ * <p>Known limit: the guard compares the converter it scans, not the attribute binding. An entity attribute
+ * with {@code @Enumerated} or an explicit different {@code @Convert} would write other values than the scanned
+ * converter while the guard stays green; none exists today.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, properties = MigrateCommand.ENABLE_FLYWAY)
 @Import(TestcontainersConfiguration.class)
@@ -71,77 +80,64 @@ class ClosedSetsIT {
 			+ " a stored constant is never renamed or removed (append-only).";
 
 	/**
-	 * Each stored enum with the value it is written as (the method reference of its converter, or of the
-	 * write for {@code pipeline_runs.sources}), its column and the entity attribute that holds it.
+	 * Each stored enum with its column and the entity attribute that holds it. The values it is written as
+	 * are not listed here: they come from the real converter of the enum ({@link ClosedSetsGuard}), or, for
+	 * {@code pipeline_runs.sources}, from what {@link PipelineRun#range} stores.
 	 */
 	private static final List<StoredEnum> REGISTRY = List.of(
-			StoredEnum.of(PostStage.class, PostStage::value, "posts", "stage", "Post", "stage"),
-			StoredEnum.of(ItemType.class, ItemType::value, "posts", "item_type", "Post", "itemType"),
-			StoredEnum.of(Source.class, Source::value, "posts", "source", "Post", "source"),
-			StoredEnum.of(Source.class, Source::value, "raw_payloads", "source", "RawPayload", "source"),
-			StoredEnum.of(ContentEncoding.class, ContentEncoding::value, "raw_payloads", "content_encoding",
+			StoredEnum.of(PostStage.class, "posts", "stage", "Post", "stage"),
+			StoredEnum.of(ItemType.class, "posts", "item_type", "Post", "itemType"),
+			StoredEnum.of(Source.class, "posts", "source", "Post", "source"),
+			StoredEnum.of(Source.class, "raw_payloads", "source", "RawPayload", "source"),
+			StoredEnum.of(ContentEncoding.class, "raw_payloads", "content_encoding",
 					"RawPayload", "contentEncoding"),
-			StoredEnum.of(RawMediaType.class, RawMediaType::value, "raw_payloads", "media_type", "RawPayload",
+			StoredEnum.of(RawMediaType.class, "raw_payloads", "media_type", "RawPayload",
 					"mediaType"),
-			// A List<String> of Source::value (PipelineRun's constructor), no converter and no enum attribute.
-			StoredEnum.of(Source.class, Source::value, "pipeline_runs", "sources", null, null),
-			StoredEnum.of(RunStatus.class, RunStatus::value, "pipeline_runs", "status", "PipelineRun", "status"),
-			StoredEnum.of(RunKind.class, RunKind::value, "pipeline_runs", "kind", "PipelineRun", "kind"),
-			StoredEnum.of(InterruptionCause.class, InterruptionCause::value, "pipeline_runs", "interruption_cause",
+			// A List<String> written by PipelineRun's constructor, no converter and no enum attribute.
+			StoredEnum.of(Source.class, "pipeline_runs", "sources", null, null),
+			StoredEnum.of(RunStatus.class, "pipeline_runs", "status", "PipelineRun", "status"),
+			StoredEnum.of(RunKind.class, "pipeline_runs", "kind", "PipelineRun", "kind"),
+			StoredEnum.of(InterruptionCause.class, "pipeline_runs", "interruption_cause",
 					"PipelineRun", "interruptionCause"),
-			StoredEnum.of(StepStatus.class, StepStatus::value, "pipeline_run_steps", "status", "PipelineRunStep",
+			StoredEnum.of(StepStatus.class, "pipeline_run_steps", "status", "PipelineRunStep",
 					"status"),
-			StoredEnum.of(RunStep.class, RunStep::value, "pipeline_run_steps", "step", "PipelineRunStep", "step"),
-			StoredEnum.of(Source.class, Source::value, "pipeline_run_sources", "source", "PipelineRunSource", "source"),
-			StoredEnum.of(SourceFetchStatus.class, SourceFetchStatus::value, "pipeline_run_sources", "status",
+			StoredEnum.of(RunStep.class, "pipeline_run_steps", "step", "PipelineRunStep", "step"),
+			StoredEnum.of(Source.class, "pipeline_run_sources", "source", "PipelineRunSource", "source"),
+			StoredEnum.of(SourceFetchStatus.class, "pipeline_run_sources", "status",
 					"PipelineRunSource", "status"),
-			StoredEnum.of(AssessmentResult.Status.class, AssessmentResult.Status::value, "assessments", "status",
+			StoredEnum.of(AssessmentResult.Status.class, "assessments", "status",
 					"Assessment", "status"),
-			StoredEnum.of(FailureClass.class, FailureClass::value, "assessments", "failure_class", "Assessment",
+			StoredEnum.of(FailureClass.class, "assessments", "failure_class", "Assessment",
 					"failureClass"),
-			StoredEnum.of(Provenance.Source.class, Provenance.Source::value, "assessments", "result_source",
+			StoredEnum.of(Provenance.Source.class, "assessments", "result_source",
 					"Assessment", "resultSource"),
-			StoredEnum.of(Provider.class, Provider::id, "assessments", "provider", "Assessment", "provider"),
-			StoredEnum.of(Channel.class, Channel::value, "assessments", "channel", "Assessment", "channel"),
-			StoredEnum.of(ServiceTier.class, ServiceTier::id, "assessments", "service_tier", "Assessment",
+			StoredEnum.of(Provider.class, "assessments", "provider", "Assessment", "provider"),
+			StoredEnum.of(Channel.class, "assessments", "channel", "Assessment", "channel"),
+			StoredEnum.of(ServiceTier.class, "assessments", "service_tier", "Assessment",
 					"serviceTier"),
-			StoredEnum.of(ReasoningEffort.class, ReasoningEffort::id, "assessments", "reasoning_effort",
+			StoredEnum.of(ReasoningEffort.class, "assessments", "reasoning_effort",
 					"Assessment", "reasoningEffort"),
-			StoredEnum.of(OutputMode.class, OutputMode::value, "assessments", "output_mode", "Assessment",
+			StoredEnum.of(OutputMode.class, "assessments", "output_mode", "Assessment",
 					"outputMode"),
-			StoredEnum.of(NotificationKind.class, NotificationKind::value, "notifications", "kind", "Notification",
+			StoredEnum.of(NotificationKind.class, "notifications", "kind", "Notification",
 					"kind"),
-			StoredEnum.of(Role.class, Role::value, "users", "role", "User", "role"));
+			StoredEnum.of(Role.class, "users", "role", "User", "role"));
 
 	/**
-	 * The {@code CHECK}s with string literals that are not a list of values: rules across columns,
-	 * patterns and the non-empty value of an open set ({@code ck_posts_channel}: any subreddit). Any other
-	 * {@code CHECK} with a literal must read as a list of values, so a closed set written in another form (a
-	 * {@code VARCHAR} column, {@code x IS NULL OR x IN (...)}) cannot pass unseen.
+	 * The {@code CHECK}s with string literals that are neither a list of values nor read as column-literal
+	 * pairs: a pattern or the non-empty value of an open set ({@code ck_posts_channel}: any subreddit), each
+	 * with its reason. A compound {@code CHECK} with enum literals ({@code ck_pipeline_runs_interruption_status},
+	 * {@code ck_posts_stage_attempts}, ...) is not here: its literals are read and must be values of the enum of
+	 * their column. Any other {@code CHECK} with a literal must read as one of the three, so a closed set
+	 * written in another form cannot pass unseen. An entry without a reason, or one that no longer applies
+	 * (the {@code CHECK} is gone, has no literal or reads as a list of values), is red.
 	 */
-	private static final Set<String> NOT_A_VALUE_LIST = Set.of("ck_activation_tokens_token_hash",
-			"ck_assessments_input_hash", "ck_assessments_outcome", "ck_notifications_run",
-			"ck_pipeline_run_sources_error", "ck_pipeline_runs_interruption_status", "ck_pipeline_runs_range",
-			"ck_pipeline_runs_requested_posts", "ck_posts_assessing_owner", "ck_posts_channel", "ck_posts_content_hash",
-			"ck_posts_stage_attempts", "ck_raw_payloads_sha256");
-
-	private static final Pattern ANY_LITERAL = Pattern.compile("'(?:[^']|'')*'::");
-
-	private static final String LITERAL = "'(?:[^']|'')*'::text";
-
-	private static final String LITERALS = LITERAL + "(?:, " + LITERAL + ")*";
-
-	/** The whole definition: {@code CHECK ((x = ANY (ARRAY['a'::text, 'b'::text])))}. */
-	private static final Pattern ANY_OF = Pattern
-		.compile("CHECK \\(\\((\\w+) = ANY \\(ARRAY\\[(" + LITERALS + ")\\]\\)\\)\\)");
-
-	/** The whole definition: {@code CHECK ((x = 'a'::text))}. */
-	private static final Pattern ONE_OF = Pattern.compile("CHECK \\(\\((\\w+) = (" + LITERAL + ")\\)\\)");
-
-	/** Anywhere in the definition: {@code (x <@ ARRAY['a'::text])}, an array column's values. */
-	private static final Pattern CONTAINED_IN = Pattern.compile("\\((\\w+) <@ ARRAY\\[(" + LITERALS + ")\\]\\)");
-
-	private static final Pattern VALUE = Pattern.compile("'((?:[^']|'')*)'::text");
+	private static final Map<String, String> NOT_A_VALUE_LIST = Map.of(
+			"ck_posts_channel", "an open set: any subreddit or Wykop tag, only non-empty",
+			"ck_assessments_input_hash", "a pattern: the SHA-256 of the input as 64 lower-case hex digits",
+			"ck_posts_content_hash", "a pattern: the SHA-256 of the content as 64 lower-case hex digits",
+			"ck_raw_payloads_sha256", "a pattern: the SHA-256 of the payload as 64 lower-case hex digits",
+			"ck_activation_tokens_token_hash", "a pattern: the SHA-256 of the token as 64 lower-case hex digits");
 
 	@Autowired
 	JdbcTemplate jdbc;
@@ -153,6 +149,7 @@ class ClosedSetsIT {
 	void everyStoredEnumEqualsTheCheckOfItsColumn() {
 		Map<String, List<ValueListCheck>> checksByColumn = valueListChecks().stream()
 			.collect(Collectors.groupingBy(ValueListCheck::where));
+		Map<Class<?>, AttributeConverter<Object, String>> converters = ClosedSetsGuard.convertersByEnum();
 		List<String> mismatches = new ArrayList<>();
 		for (StoredEnum stored : REGISTRY) {
 			List<ValueListCheck> checks = checksByColumn.getOrDefault(stored.where(), List.of());
@@ -162,13 +159,9 @@ class ClosedSetsIT {
 				continue;
 			}
 			Set<String> allowed = checks.getFirst().values();
-			Set<String> missingFromCheck = difference(stored.values(), allowed);
-			Set<String> missingFromEnum = difference(allowed, stored.values());
-			if (!missingFromCheck.isEmpty() || !missingFromEnum.isEmpty()) {
-				mismatches.add(stored.where() + " (" + stored.enumName() + ", " + checks.getFirst().name()
-						+ "): missing from the CHECK: " + missingFromCheck + ", missing from the enum: "
-						+ missingFromEnum);
-			}
+			mismatches.addAll(stored.sources()
+					? ClosedSetsGuard.problems(stored.where(), stored.type(), runSourceValues(), allowed)
+					: ClosedSetsGuard.problems(stored.where(), stored.type(), converters, allowed));
 		}
 
 		assertThat(mismatches).withFailMessage("%s",
@@ -191,8 +184,8 @@ class ClosedSetsIT {
 			.map(stored -> stored.entity() + "." + stored.attribute())
 			.collect(Collectors.toCollection(TreeSet::new));
 
-		Set<String> unregistered = difference(enumAttributes, registered);
-		Set<String> unknown = difference(registered, enumAttributes);
+		Set<String> unregistered = ClosedSetsGuard.difference(enumAttributes, registered);
+		Set<String> unknown = ClosedSetsGuard.difference(registered, enumAttributes);
 		assertThat(unregistered).withFailMessage("%s", "Enum attributes of entities missing from ClosedSetsIT's"
 				+ " registry: " + unregistered + " — add an entry with the enum, its stored value and its column")
 			.isEmpty();
@@ -211,7 +204,7 @@ class ClosedSetsIT {
 			.filter(check -> !registered.contains(check.where()))
 			.map(check -> check.name() + " on " + check.where() + " " + check.values())
 			.toList();
-		Set<String> withoutCheck = difference(registered,
+		Set<String> withoutCheck = ClosedSetsGuard.difference(registered,
 				checks.stream().map(ValueListCheck::where).collect(Collectors.toSet()));
 		assertThat(unregistered).withFailMessage("%s", "CHECKs with a list of values missing from ClosedSetsIT's"
 				+ " registry: " + unregistered + " — a closed-set column must have an enum (lesson: closed value"
@@ -225,49 +218,53 @@ class ClosedSetsIT {
 	@Test
 	void everyCheckWithLiteralsIsAValueListOrKnown() {
 		List<Check> checks = checks();
-		List<String> unread = checks.stream()
-			.filter(check -> ANY_LITERAL.matcher(check.definition()).find())
-			.filter(check -> valueList(check.definition()).isEmpty() && !NOT_A_VALUE_LIST.contains(check.name()))
-			.map(check -> check.name() + " on " + check.table() + ": " + check.definition())
-			.toList();
-		Set<String> gone = difference(NOT_A_VALUE_LIST,
-				checks.stream().map(Check::name).collect(Collectors.toSet()));
+		Map<String, Set<String>> written = writtenValuesByColumn();
+		List<String> unknown = new ArrayList<>();
+		for (Check check : checks) {
+			if (ClosedSetsGuard.ANY_LITERAL.matcher(check.definition()).find()
+					&& !ClosedSetsGuard.isValueList(check.definition()) && !NOT_A_VALUE_LIST.containsKey(check.name())) {
+				unknown.addAll(ClosedSetsGuard.unknownLiterals(check.name(), check.table(), check.definition(), written));
+			}
+		}
+		List<String> staleExceptions = ClosedSetsGuard.exceptionProblems(NOT_A_VALUE_LIST,
+				checks.stream().collect(Collectors.toMap(Check::name, Check::definition)),
+				ClosedSetsGuard::isValueList);
 
-		assertThat(unread).withFailMessage("%s", "CHECKs with literals that read neither as a list of values nor"
-				+ " as a known rule: " + unread + " — a closed set is a TEXT column with CHECK (x IN (...)) and an"
-				+ " enum in the registry; a rule across columns or a pattern goes into NOT_A_VALUE_LIST")
+		assertThat(unknown).withFailMessage("%s", "Compound CHECKs whose literals are not values of the enum of their"
+				+ " column (or that the guard cannot read): " + unknown + " — a literal in a CHECK is a value of an"
+				+ " enum in the registry; a pattern or an open set goes into NOT_A_VALUE_LIST with its reason")
 			.isEmpty();
-		assertThat(gone).withFailMessage("%s", "NOT_A_VALUE_LIST names CHECKs the schema no longer has: " + gone)
+		assertThat(staleExceptions).withFailMessage("%s", "NOT_A_VALUE_LIST entries that do not hold: " + staleExceptions)
 			.isEmpty();
 	}
 
 	/** Today's three forms, so a change in Postgres's output is red here, never an empty set read as green. */
 	@Test
 	void theCheckParserReadsEveryFormOfAListOfValues() {
-		assertThat(valueList(definition("posts", "ck_posts_stage"))).hasValueSatisfying(list -> {
+		assertThat(ClosedSetsGuard.valueList(definition("posts", "ck_posts_stage"))).hasValueSatisfying(list -> {
 			assertThat(list.column()).isEqualTo("stage");
 			assertThat(list.values()).contains("stored", "assessing", "assessed", "failed", "dead");
 		});
-		assertThat(valueList(definition("posts", "ck_posts_source"))).hasValueSatisfying(list -> {
+		assertThat(ClosedSetsGuard.valueList(definition("posts", "ck_posts_source"))).hasValueSatisfying(list -> {
 			assertThat(list.column()).isEqualTo("source");
 			assertThat(list.values()).contains("wykop");
 		});
-		assertThat(valueList(definition("pipeline_runs", "ck_pipeline_runs_sources"))).hasValueSatisfying(list -> {
+		assertThat(ClosedSetsGuard.valueList(definition("pipeline_runs", "ck_pipeline_runs_sources"))).hasValueSatisfying(list -> {
 			assertThat(list.column()).isEqualTo("sources");
 			assertThat(list.values()).contains("wykop");
 		});
 		// Compound CHECKs with enum values and other single-column CHECKs are not lists of values.
-		assertThat(valueList(definition("posts", "ck_posts_assessing_owner"))).isEmpty();
-		assertThat(valueList(definition("posts", "ck_posts_stage_attempts"))).isEmpty();
-		assertThat(valueList(definition("posts", "ck_posts_content_hash"))).isEmpty();
-		assertThat(valueList(definition("users", "ck_users_email_lower"))).isEmpty();
+		assertThat(ClosedSetsGuard.valueList(definition("posts", "ck_posts_assessing_owner"))).isEmpty();
+		assertThat(ClosedSetsGuard.valueList(definition("posts", "ck_posts_stage_attempts"))).isEmpty();
+		assertThat(ClosedSetsGuard.valueList(definition("posts", "ck_posts_content_hash"))).isEmpty();
+		assertThat(ClosedSetsGuard.valueList(definition("users", "ck_users_email_lower"))).isEmpty();
 	}
 
 	/** Every {@code CHECK} of the application's tables that is a list of values of one column. */
 	private List<ValueListCheck> valueListChecks() {
 		List<ValueListCheck> lists = new ArrayList<>();
 		for (Check check : checks()) {
-			valueList(check.definition()).ifPresent(
+			ClosedSetsGuard.valueList(check.definition()).ifPresent(
 					list -> lists.add(new ValueListCheck(check.name(), check.table(), list.column(), list.values())));
 		}
 		return lists;
@@ -287,26 +284,29 @@ class ClosedSetsIT {
 				String.class, table, constraint);
 	}
 
-	/** The column and its allowed values when {@code definition} is a list of values; otherwise empty. */
-	private static Optional<ValueList> valueList(String definition) {
-		for (Pattern whole : List.of(ANY_OF, ONE_OF)) {
-			Matcher matcher = whole.matcher(definition);
-			if (matcher.matches()) {
-				return Optional.of(new ValueList(matcher.group(1), values(matcher.group(2))));
+	/** {@code table.column} to the values the application writes there: from the real converter, or the run's sources. */
+	private static Map<String, Set<String>> writtenValuesByColumn() {
+		Map<Class<?>, AttributeConverter<Object, String>> converters = ClosedSetsGuard.convertersByEnum();
+		Map<String, Set<String>> written = new HashMap<>();
+		for (StoredEnum stored : REGISTRY) {
+			if (stored.sources()) {
+				written.put(stored.where(), runSourceValues());
+			}
+			else if (converters.containsKey(stored.type())) {
+				written.put(stored.where(), ClosedSetsGuard.writtenValues(stored.type(), converters.get(stored.type())));
 			}
 		}
-		Matcher contained = CONTAINED_IN.matcher(definition);
-		return contained.find() ? Optional.of(new ValueList(contained.group(1), values(contained.group(2))))
-				: Optional.empty();
+		return written;
 	}
 
-	private static Set<String> values(String literals) {
-		Set<String> values = new TreeSet<>();
-		Matcher matcher = VALUE.matcher(literals);
-		while (matcher.find()) {
-			values.add(matcher.group(1).replace("''", "'"));
-		}
-		return values;
+	/** What a range run stores in {@code pipeline_runs.sources}: its constructor's write, read back through the entity. */
+	private static Set<String> runSourceValues() {
+		return PipelineRun.range(Instant.parse("2026-01-01T00:00:00Z"), Instant.parse("2026-01-02T00:00:00Z"),
+				List.of(Source.values()), UUID.randomUUID(), null)
+			.getSources()
+			.stream()
+			.map(Source::value)
+			.collect(Collectors.toCollection(TreeSet::new));
 	}
 
 	private static boolean holdsAnEnum(Attribute<?, ?> attribute) {
@@ -314,23 +314,21 @@ class ClosedSetsIT {
 				&& plural.getElementType().getJavaType().isEnum();
 	}
 
-	private static Set<String> difference(Set<String> from, Set<String> without) {
-		return from.stream().filter(value -> !without.contains(value)).collect(Collectors.toCollection(TreeSet::new));
-	}
-
 	/**
-	 * An enum stored in {@code table.column}, as its {@code values}; {@code entity} and {@code attribute}
-	 * are its JPA entity name and attribute ({@code null} when no enum attribute holds it).
+	 * An enum stored in {@code table.column}; {@code entity} and {@code attribute} are its JPA entity name and
+	 * attribute ({@code null} when no enum attribute holds it).
 	 */
-	private record StoredEnum(Class<?> type, Set<String> values, String table, String column,
-			@Nullable String entity, @Nullable String attribute) {
+	private record StoredEnum(Class<?> type, String table, String column, @Nullable String entity,
+			@Nullable String attribute) {
 
-		static <E extends Enum<E>> StoredEnum of(Class<E> type, Function<E, String> value, String table,
-				String column, @Nullable String entity, @Nullable String attribute) {
-			Set<String> values = Arrays.stream(type.getEnumConstants())
-				.map(value)
-				.collect(Collectors.toCollection(TreeSet::new));
-			return new StoredEnum(type, values, table, column, entity, attribute);
+		static StoredEnum of(Class<?> type, String table, String column, @Nullable String entity,
+				@Nullable String attribute) {
+			return new StoredEnum(type, table, column, entity, attribute);
+		}
+
+		/** The one column no converter writes: a {@code List<String>} set by {@code PipelineRun}'s constructor. */
+		boolean sources() {
+			return where().equals("pipeline_runs.sources");
 		}
 
 		String where() {
@@ -341,9 +339,6 @@ class ClosedSetsIT {
 			return type.getName().substring("pl.szczurradar.api.".length()).replace('$', '.');
 		}
 
-	}
-
-	private record ValueList(String column, Set<String> values) {
 	}
 
 	private record Check(String table, String name, String definition) {

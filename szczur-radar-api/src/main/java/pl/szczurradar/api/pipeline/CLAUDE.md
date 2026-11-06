@@ -418,7 +418,7 @@ PipelineRunService.startRange / startPosts → queue (thread pipeline-run) → R
     WARN `Put back N post(s) left assessing by ended runs` and `runEnded` for each run.
   Nothing else asks: no timer, so an idle API still sleeps; reads (`/admin`, `/api/deploy-safety`) never
   write.
-- Whoever ends a run reports it to `RunNotifications.runEnded`; a new way to end a run adds that call.
+- Whoever ends a run reports it to `RunNotifications.runEnded`; a new way to end a run adds that call. `state/RunEndingTest` guards it: every public method of `RunRecorder` is classified (ends a run, with tests that check its notification, or does not, with a reason), and the named tests must exist (`state/RunEndingGuard`, red paths in `RunEndingGuardTest`). A new public method fails it until it is added to `ENDS` or `NOT_ENDING`; it proves the tests exist, not what they check, and does not see a new caller of an existing method or a write of a run's end outside `RunRecorder`.
 - A new path that ends in an ERROR line and that nothing else reports (not a run's ending: `runEnded`
   covers those) gets its own `AlertEvent` constant, whose description says what to check, and calls
   `OperatorAlertQueue.raise` next to that line (S-18, above). Never `OperatorAlerts` directly (it blocks
