@@ -239,8 +239,8 @@ Bez migracji. Przebiegi ze zmianą psującą kod nie zostawiają zmian w `src/ma
 
 #### Automated
 
-- [x] 3.1 Strażnik R-23 i jego testy zielone (`RunEndingTest`, `RunEndingGuardTest`)
-- [x] 3.2 Przebieg R-23 (a): nowa publiczna metoda `RunRecorder` czerwieni `RunEndingTest`, zmiana cofnięta
-- [x] 3.3 Przebieg R-23 (b): usunięte `runEnded` czerwieni nazwany test, zmiana cofnięta
-- [x] 3.4 Pełny `./mvnw -B verify` zielony
-- [x] 3.5 Dokumentacja wskazuje strażnika (`pipeline/CLAUDE.md`, javadoc `ClosedSetsIT`)
+- [x] 3.1 Strażnik R-23 i jego testy zielone (`RunEndingTest`, `RunEndingGuardTest`) — c1fd103
+- [x] 3.2 Przebieg R-23 (a): nowa publiczna metoda `RunRecorder` czerwieni `RunEndingTest`, zmiana cofnięta — c1fd103
+- [x] 3.3 Przebieg R-23 (b): usunięte `runEnded` czerwieni nazwany test, zmiana cofnięta — c1fd103
+- [x] 3.4 Pełny `./mvnw -B verify` zielony — c1fd103
+- [x] 3.5 Dokumentacja wskazuje strażnika (`pipeline/CLAUDE.md`, javadoc `ClosedSetsIT`) — c1fd103
