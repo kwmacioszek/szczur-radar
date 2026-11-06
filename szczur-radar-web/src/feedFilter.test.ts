@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { filterFromQuery, filterToQuery, isFilterActive, normalizeQuery, sameFilter } from './feedFilter'
+import { filterFromQuery, filterToQuery, isFilterActive, normalizeQuery, pageFromQuery, sameFilter } from './feedFilter'
+import { MAX_PAGE } from './api/posts'
 
 describe('feed filter in the address', () => {
   it('reads the known values', () => {
@@ -35,6 +36,16 @@ describe('feed filter in the address', () => {
     expect(normalizeQuery(`${'a'.repeat(99)} b`)).toBe('a'.repeat(99))
   })
 
+  it('drops U+0000, which the API refuses with a 400 (a link such as /?q=a%00b)', () => {
+    expect(filterFromQuery({ q: 'a\u0000b' })).toEqual({ q: 'ab' })
+    expect(normalizeQuery('\u0000orlen\u0000')).toBe('orlen')
+    expect(normalizeQuery('\u0000')).toBeUndefined()
+    expect(normalizeQuery(' \u0000 ')).toBeUndefined()
+    // The 100 characters count what is left, and what is left has no U+0000 and no edge white space.
+    expect(normalizeQuery(`${'a'.repeat(99)}\u0000bc`)).toBe(`${'a'.repeat(99)}b`)
+    expect(normalizeQuery(`a\u0000 ${'b'.repeat(98)}\u0000 c`)).toBe(`a ${'b'.repeat(98)}`)
+  })
+
   it('takes the first value of a repeated key', () => {
     expect(filterFromQuery({ q: ['a', 'b'], kind: ['asset', 'sector'] })).toEqual({ q: 'a', kind: 'asset' })
     expect(filterFromQuery({ q: [null, 'b'] })).toEqual({})
@@ -63,5 +74,32 @@ describe('feed filter in the address', () => {
     expect(sameFilter({ q: 'cdr', kind: 'company' }, { kind: 'company', q: 'cdr' })).toBe(true)
     expect(sameFilter({ q: 'cdr' }, { q: 'xtb' })).toBe(false)
     expect(sameFilter({ direction: 'bullish' }, {})).toBe(false)
+  })
+})
+
+describe('the page in the address', () => {
+  it('reads a page from 0 up to the API\'s largest', () => {
+    expect(pageFromQuery({})).toBe(0)
+    expect(pageFromQuery({ page: '0' })).toBe(0)
+    expect(pageFromQuery({ page: '2' })).toBe(2)
+    expect(pageFromQuery({ page: String(MAX_PAGE) })).toBe(MAX_PAGE)
+  })
+
+  it('takes a page above the API\'s largest as no page, so the feed opens instead of failing with a 400', () => {
+    expect(pageFromQuery({ page: String(MAX_PAGE + 1) })).toBe(0)
+    expect(pageFromQuery({ page: '99999999999' })).toBe(0)
+    // parseInt reads the digits up to the first other character: '1e9' is page 1, as before.
+    expect(pageFromQuery({ page: '1e9' })).toBe(1)
+  })
+
+  it('takes what is not a page as the first one', () => {
+    expect(pageFromQuery({ page: '-1' })).toBe(0)
+    expect(pageFromQuery({ page: 'x' })).toBe(0)
+    expect(pageFromQuery({ page: '' })).toBe(0)
+    expect(pageFromQuery({ page: null })).toBe(0)
+  })
+
+  it('takes the first value of a repeated key', () => {
+    expect(pageFromQuery({ page: ['3', '4'] })).toBe(3)
   })
 })

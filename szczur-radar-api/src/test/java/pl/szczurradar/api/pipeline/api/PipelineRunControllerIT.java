@@ -335,6 +335,23 @@ class PipelineRunControllerIT {
 		jdbc.update("DELETE FROM pipeline_runs WHERE id = ANY(?)", (Object) ids.toArray(UUID[]::new));
 	}
 
+	/** {@code page × size} is an {@code int} offset: 21474836 × 100 fits, the next page used to be a 500. */
+	@Test
+	void aRunsPageBeyondTheOffsetLimitIsAnInvalidRequestAndTheLastOneThatFitsIsEmpty() {
+		assertThat(mvc.get().uri("/api/admin/pipeline-runs?size=100&page=21474837").with(asAdmin()))
+			.hasStatus(HttpStatus.BAD_REQUEST)
+			.bodyJson()
+			.isStrictlyEqualTo("{\"detail\":\"invalid_request\"}");
+
+		MvcTestResult last = mvc.get().uri("/api/admin/pipeline-runs?size=100&page=21474836").with(asAdmin()).exchange();
+
+		assertThat(last).hasStatusOk();
+		assertThat(last).bodyJson().extractingPath("$.items").asArray().isEmpty();
+		// Past the end, the page still says how many runs there are.
+		assertThat(last).bodyJson().extractingPath("$.total")
+			.isEqualTo(jdbc.queryForObject("SELECT count(*) FROM pipeline_runs", Integer.class));
+	}
+
 	@Test
 	void aRunsPageShowsTheScheduledRunWithItsInterruptionProgressAndSteps() {
 		UUID run = jdbc.queryForObject("INSERT INTO pipeline_runs (kind, status, requested_by, range_from, range_to,"

@@ -19,6 +19,7 @@ import {
   type Flag,
   type ItemType,
   MAX_ASSESSMENT_ATTEMPTS,
+  MAX_PAGE,
   type Modifier,
   type Reference,
   type Relevance,
@@ -67,6 +68,7 @@ describe('limits', () => {
     passwordMinLength: PASSWORD_MIN_LENGTH,
     passwordMaxLength: PASSWORD_MAX_LENGTH,
     maxAssessmentAttempts: MAX_ASSESSMENT_ATTEMPTS,
+    pageMax: MAX_PAGE,
   }
 
   it('the SPA knows exactly the limits of the file', () => {
@@ -75,6 +77,10 @@ describe('limits', () => {
 
   it.each(Object.entries(spa))('%s is the API\'s', (name, value) => {
     expect(value).toBe((rules.limits as Record<string, number>)[name])
+  })
+
+  it('the mock answers a 400 for the first page above pageMax, like the API', () => {
+    expect(mockApi).toContain(`pageNumber > ${rules.limits.pageMax}`)
   })
 })
 

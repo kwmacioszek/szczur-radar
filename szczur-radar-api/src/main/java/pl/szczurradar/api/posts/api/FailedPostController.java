@@ -19,6 +19,7 @@ import pl.szczurradar.api.agents.assessor.Provenance;
 import pl.szczurradar.api.agents.assessor.contract.ItemType;
 import pl.szczurradar.api.agents.assessor.validation.FailureClass;
 import pl.szczurradar.api.agents.assessor.validation.Violation;
+import pl.szczurradar.api.config.PageLimits;
 import pl.szczurradar.api.llm.Provider;
 import pl.szczurradar.api.posts.Assessment;
 import pl.szczurradar.api.posts.AssessmentRepository;
@@ -44,10 +45,13 @@ class FailedPostController {
 		this.assessments = assessments;
 	}
 
-	/** {@code page} from 0; {@code size} 1–100, default 50; newest first. */
+	/**
+	 * {@code page} from 0 to {@link PageLimits#MAX_PAGE} (more is a 400 {@code invalid_request}); {@code size}
+	 * 1–100, default 50; newest first.
+	 */
 	@GetMapping("/api/admin/posts/failed")
-	FailedPostPage list(@RequestParam(defaultValue = "0") @Min(0) int page,
-			@RequestParam(defaultValue = "50") @Min(1) @Max(100) int size) {
+	FailedPostPage list(@RequestParam(defaultValue = "0") @Min(0) @Max(PageLimits.MAX_PAGE) int page,
+			@RequestParam(defaultValue = "50") @Min(1) @Max(PageLimits.MAX_SIZE) int size) {
 		Page<Post> found = posts.findFailedPage(page, size);
 		Map<UUID, Assessment> latest = assessments.findLatest(found.map(Post::getId).getContent())
 			.stream()

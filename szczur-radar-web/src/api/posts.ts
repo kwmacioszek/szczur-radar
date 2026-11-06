@@ -7,6 +7,12 @@ export type ItemType = 'post' | 'link' | 'comment'
 /** Failed assessment attempts after which a post is dead: szczur-radar-api posts/Post.MAX_ASSESSMENT_ATTEMPTS. */
 export const MAX_ASSESSMENT_ATTEMPTS = 3
 
+/**
+ * The API's largest `page` of any list (szczur-radar-api `PageLimits.MAX_PAGE`, `Integer.MAX_VALUE / 100`): a
+ * page's offset is an int in the database query, so a page above it is a 400.
+ */
+export const MAX_PAGE = 21474836
+
 export type Relevance = 'investment_related' | 'not_investment_related' | 'unclear'
 
 /** `target.kind` (contract V2 §3), in the contract's order; also the options of the feed filter. */

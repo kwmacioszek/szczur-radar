@@ -28,6 +28,7 @@ import pl.szczurradar.api.agents.assessor.contract.TargetKind;
 import pl.szczurradar.api.agents.assessor.validation.FailureClass;
 import pl.szczurradar.api.auth.Passwords;
 import pl.szczurradar.api.config.ErrorCode;
+import pl.szczurradar.api.config.PageLimits;
 import pl.szczurradar.api.pipeline.api.PipelineRunController;
 import pl.szczurradar.api.pipeline.run.AttentionReason;
 import pl.szczurradar.api.pipeline.run.InterruptionCause;
@@ -62,7 +63,8 @@ class SpaRulesTest {
 			"runsPageMaxSize", PipelineRunController.MAX_PAGE_SIZE,
 			"passwordMinLength", Passwords.MIN_LENGTH,
 			"passwordMaxLength", Passwords.MAX_LENGTH,
-			"maxAssessmentAttempts", Post.MAX_ASSESSMENT_ATTEMPTS);
+			"maxAssessmentAttempts", Post.MAX_ASSESSMENT_ATTEMPTS,
+			"pageMax", PageLimits.MAX_PAGE);
 
 	/**
 	 * The lists of values by their name in {@code rules.json}, which is the name of the SPA's {@code labels}

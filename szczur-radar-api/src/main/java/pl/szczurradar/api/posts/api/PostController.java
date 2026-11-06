@@ -31,6 +31,7 @@ import pl.szczurradar.api.agents.assessor.contract.ItemType;
 import pl.szczurradar.api.agents.assessor.contract.TargetKind;
 import pl.szczurradar.api.config.ApiError;
 import pl.szczurradar.api.config.ErrorCode;
+import pl.szczurradar.api.config.PageLimits;
 import pl.szczurradar.api.posts.Assessment;
 import pl.szczurradar.api.posts.AssessmentRepository;
 import pl.szczurradar.api.posts.Post;
@@ -72,7 +73,8 @@ class PostController {
 	}
 
 	/**
-	 * {@code page} from 0; {@code size} 1–100, default 50; ordered by {@code publishedAt} then id, newest
+	 * {@code page} from 0 to {@link PageLimits#MAX_PAGE} (more is a 400 {@code invalid_request}, an offset the
+	 * database cannot take); {@code size} 1–100, default 50; ordered by {@code publishedAt} then id, newest
 	 * first. The filter (FR-011a; {@link PostRepository#findAssessedPage}) keeps the posts whose latest
 	 * {@code ok} assessment has one target meeting every given condition, and {@code total} counts them:
 	 * {@code q} — its {@code anchor.quote} contains the text, case-insensitively (white space at both ends
@@ -83,8 +85,8 @@ class PostController {
 	 * feed is every assessed post.
 	 */
 	@GetMapping("/api/posts")
-	PostPage list(@RequestParam(defaultValue = "0") @Min(0) int page,
-			@RequestParam(defaultValue = "50") @Min(1) @Max(100) int size,
+	PostPage list(@RequestParam(defaultValue = "0") @Min(0) @Max(PageLimits.MAX_PAGE) int page,
+			@RequestParam(defaultValue = "50") @Min(1) @Max(PageLimits.MAX_SIZE) int size,
 			@RequestParam(required = false) @Size(max = PostFilter.MAX_QUERY_LENGTH) @Pattern(regexp = "[^\\x00]*") @Nullable String q,
 			@RequestParam(required = false) @Nullable TargetKind kind,
 			@RequestParam(required = false) @Nullable Direction direction) {
