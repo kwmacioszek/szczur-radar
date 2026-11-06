@@ -78,6 +78,10 @@ describe('limits', () => {
   it.each(Object.entries(spa))('%s is the API\'s', (name, value) => {
     expect(value).toBe((rules.limits as Record<string, number>)[name])
   })
+
+  it('the mock answers a 400 for the first page above pageMax, like the API', () => {
+    expect(mockApi).toContain(`pageNumber > ${rules.limits.pageMax}`)
+  })
 })
 
 describe('labels', () => {

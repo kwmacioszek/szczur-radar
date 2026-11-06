@@ -88,6 +88,7 @@ describe('the page in the address', () => {
   it('takes a page above the API\'s largest as no page, so the feed opens instead of failing with a 400', () => {
     expect(pageFromQuery({ page: String(MAX_PAGE + 1) })).toBe(0)
     expect(pageFromQuery({ page: '99999999999' })).toBe(0)
+    // parseInt reads the digits up to the first other character: '1e9' is page 1, as before.
     expect(pageFromQuery({ page: '1e9' })).toBe(1)
   })
 

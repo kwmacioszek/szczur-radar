@@ -347,6 +347,9 @@ class PipelineRunControllerIT {
 
 		assertThat(last).hasStatusOk();
 		assertThat(last).bodyJson().extractingPath("$.items").asArray().isEmpty();
+		// Past the end, the page still says how many runs there are.
+		assertThat(last).bodyJson().extractingPath("$.total")
+			.isEqualTo(jdbc.queryForObject("SELECT count(*) FROM pipeline_runs", Integer.class));
 	}
 
 	@Test
