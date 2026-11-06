@@ -2,18 +2,19 @@ package pl.szczurradar.api.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.function.Function;
+import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.metamodel.Attribute;
 import jakarta.persistence.metamodel.PluralAttribute;
@@ -37,6 +38,7 @@ import pl.szczurradar.api.llm.ReasoningEffort;
 import pl.szczurradar.api.llm.ServiceTier;
 import pl.szczurradar.api.notifications.NotificationKind;
 import pl.szczurradar.api.pipeline.run.InterruptionCause;
+import pl.szczurradar.api.pipeline.run.PipelineRun;
 import pl.szczurradar.api.pipeline.run.RunKind;
 import pl.szczurradar.api.pipeline.run.RunStatus;
 import pl.szczurradar.api.pipeline.run.RunStep;
@@ -71,47 +73,48 @@ class ClosedSetsIT {
 			+ " a stored constant is never renamed or removed (append-only).";
 
 	/**
-	 * Each stored enum with the value it is written as (the method reference of its converter, or of the
-	 * write for {@code pipeline_runs.sources}), its column and the entity attribute that holds it.
+	 * Each stored enum with its column and the entity attribute that holds it. The values it is written as
+	 * are not listed here: they come from the real converter of the enum ({@link ClosedSetsGuard}), or, for
+	 * {@code pipeline_runs.sources}, from what {@link PipelineRun#range} stores.
 	 */
 	private static final List<StoredEnum> REGISTRY = List.of(
-			StoredEnum.of(PostStage.class, PostStage::value, "posts", "stage", "Post", "stage"),
-			StoredEnum.of(ItemType.class, ItemType::value, "posts", "item_type", "Post", "itemType"),
-			StoredEnum.of(Source.class, Source::value, "posts", "source", "Post", "source"),
-			StoredEnum.of(Source.class, Source::value, "raw_payloads", "source", "RawPayload", "source"),
-			StoredEnum.of(ContentEncoding.class, ContentEncoding::value, "raw_payloads", "content_encoding",
+			StoredEnum.of(PostStage.class, "posts", "stage", "Post", "stage"),
+			StoredEnum.of(ItemType.class, "posts", "item_type", "Post", "itemType"),
+			StoredEnum.of(Source.class, "posts", "source", "Post", "source"),
+			StoredEnum.of(Source.class, "raw_payloads", "source", "RawPayload", "source"),
+			StoredEnum.of(ContentEncoding.class, "raw_payloads", "content_encoding",
 					"RawPayload", "contentEncoding"),
-			StoredEnum.of(RawMediaType.class, RawMediaType::value, "raw_payloads", "media_type", "RawPayload",
+			StoredEnum.of(RawMediaType.class, "raw_payloads", "media_type", "RawPayload",
 					"mediaType"),
-			// A List<String> of Source::value (PipelineRun's constructor), no converter and no enum attribute.
-			StoredEnum.of(Source.class, Source::value, "pipeline_runs", "sources", null, null),
-			StoredEnum.of(RunStatus.class, RunStatus::value, "pipeline_runs", "status", "PipelineRun", "status"),
-			StoredEnum.of(RunKind.class, RunKind::value, "pipeline_runs", "kind", "PipelineRun", "kind"),
-			StoredEnum.of(InterruptionCause.class, InterruptionCause::value, "pipeline_runs", "interruption_cause",
+			// A List<String> written by PipelineRun's constructor, no converter and no enum attribute.
+			StoredEnum.of(Source.class, "pipeline_runs", "sources", null, null),
+			StoredEnum.of(RunStatus.class, "pipeline_runs", "status", "PipelineRun", "status"),
+			StoredEnum.of(RunKind.class, "pipeline_runs", "kind", "PipelineRun", "kind"),
+			StoredEnum.of(InterruptionCause.class, "pipeline_runs", "interruption_cause",
 					"PipelineRun", "interruptionCause"),
-			StoredEnum.of(StepStatus.class, StepStatus::value, "pipeline_run_steps", "status", "PipelineRunStep",
+			StoredEnum.of(StepStatus.class, "pipeline_run_steps", "status", "PipelineRunStep",
 					"status"),
-			StoredEnum.of(RunStep.class, RunStep::value, "pipeline_run_steps", "step", "PipelineRunStep", "step"),
-			StoredEnum.of(Source.class, Source::value, "pipeline_run_sources", "source", "PipelineRunSource", "source"),
-			StoredEnum.of(SourceFetchStatus.class, SourceFetchStatus::value, "pipeline_run_sources", "status",
+			StoredEnum.of(RunStep.class, "pipeline_run_steps", "step", "PipelineRunStep", "step"),
+			StoredEnum.of(Source.class, "pipeline_run_sources", "source", "PipelineRunSource", "source"),
+			StoredEnum.of(SourceFetchStatus.class, "pipeline_run_sources", "status",
 					"PipelineRunSource", "status"),
-			StoredEnum.of(AssessmentResult.Status.class, AssessmentResult.Status::value, "assessments", "status",
+			StoredEnum.of(AssessmentResult.Status.class, "assessments", "status",
 					"Assessment", "status"),
-			StoredEnum.of(FailureClass.class, FailureClass::value, "assessments", "failure_class", "Assessment",
+			StoredEnum.of(FailureClass.class, "assessments", "failure_class", "Assessment",
 					"failureClass"),
-			StoredEnum.of(Provenance.Source.class, Provenance.Source::value, "assessments", "result_source",
+			StoredEnum.of(Provenance.Source.class, "assessments", "result_source",
 					"Assessment", "resultSource"),
-			StoredEnum.of(Provider.class, Provider::id, "assessments", "provider", "Assessment", "provider"),
-			StoredEnum.of(Channel.class, Channel::value, "assessments", "channel", "Assessment", "channel"),
-			StoredEnum.of(ServiceTier.class, ServiceTier::id, "assessments", "service_tier", "Assessment",
+			StoredEnum.of(Provider.class, "assessments", "provider", "Assessment", "provider"),
+			StoredEnum.of(Channel.class, "assessments", "channel", "Assessment", "channel"),
+			StoredEnum.of(ServiceTier.class, "assessments", "service_tier", "Assessment",
 					"serviceTier"),
-			StoredEnum.of(ReasoningEffort.class, ReasoningEffort::id, "assessments", "reasoning_effort",
+			StoredEnum.of(ReasoningEffort.class, "assessments", "reasoning_effort",
 					"Assessment", "reasoningEffort"),
-			StoredEnum.of(OutputMode.class, OutputMode::value, "assessments", "output_mode", "Assessment",
+			StoredEnum.of(OutputMode.class, "assessments", "output_mode", "Assessment",
 					"outputMode"),
-			StoredEnum.of(NotificationKind.class, NotificationKind::value, "notifications", "kind", "Notification",
+			StoredEnum.of(NotificationKind.class, "notifications", "kind", "Notification",
 					"kind"),
-			StoredEnum.of(Role.class, Role::value, "users", "role", "User", "role"));
+			StoredEnum.of(Role.class, "users", "role", "User", "role"));
 
 	/**
 	 * The {@code CHECK}s with string literals that are not a list of values: rules across columns,
@@ -153,6 +156,7 @@ class ClosedSetsIT {
 	void everyStoredEnumEqualsTheCheckOfItsColumn() {
 		Map<String, List<ValueListCheck>> checksByColumn = valueListChecks().stream()
 			.collect(Collectors.groupingBy(ValueListCheck::where));
+		Map<Class<?>, AttributeConverter<Object, String>> converters = ClosedSetsGuard.convertersByEnum();
 		List<String> mismatches = new ArrayList<>();
 		for (StoredEnum stored : REGISTRY) {
 			List<ValueListCheck> checks = checksByColumn.getOrDefault(stored.where(), List.of());
@@ -162,13 +166,9 @@ class ClosedSetsIT {
 				continue;
 			}
 			Set<String> allowed = checks.getFirst().values();
-			Set<String> missingFromCheck = difference(stored.values(), allowed);
-			Set<String> missingFromEnum = difference(allowed, stored.values());
-			if (!missingFromCheck.isEmpty() || !missingFromEnum.isEmpty()) {
-				mismatches.add(stored.where() + " (" + stored.enumName() + ", " + checks.getFirst().name()
-						+ "): missing from the CHECK: " + missingFromCheck + ", missing from the enum: "
-						+ missingFromEnum);
-			}
+			mismatches.addAll(stored.sources()
+					? ClosedSetsGuard.problems(stored.where(), stored.type(), runSourceValues(), allowed)
+					: ClosedSetsGuard.problems(stored.where(), stored.type(), converters, allowed));
 		}
 
 		assertThat(mismatches).withFailMessage("%s",
@@ -309,6 +309,16 @@ class ClosedSetsIT {
 		return values;
 	}
 
+	/** What a range run stores in {@code pipeline_runs.sources}: its constructor's write, read back through the entity. */
+	private static Set<String> runSourceValues() {
+		return PipelineRun.range(Instant.parse("2026-01-01T00:00:00Z"), Instant.parse("2026-01-02T00:00:00Z"),
+				List.of(Source.values()), UUID.randomUUID(), null)
+			.getSources()
+			.stream()
+			.map(Source::value)
+			.collect(Collectors.toCollection(TreeSet::new));
+	}
+
 	private static boolean holdsAnEnum(Attribute<?, ?> attribute) {
 		return attribute.getJavaType().isEnum() || attribute instanceof PluralAttribute<?, ?, ?> plural
 				&& plural.getElementType().getJavaType().isEnum();
@@ -319,18 +329,20 @@ class ClosedSetsIT {
 	}
 
 	/**
-	 * An enum stored in {@code table.column}, as its {@code values}; {@code entity} and {@code attribute}
-	 * are its JPA entity name and attribute ({@code null} when no enum attribute holds it).
+	 * An enum stored in {@code table.column}; {@code entity} and {@code attribute} are its JPA entity name and
+	 * attribute ({@code null} when no enum attribute holds it).
 	 */
-	private record StoredEnum(Class<?> type, Set<String> values, String table, String column,
-			@Nullable String entity, @Nullable String attribute) {
+	private record StoredEnum(Class<?> type, String table, String column, @Nullable String entity,
+			@Nullable String attribute) {
 
-		static <E extends Enum<E>> StoredEnum of(Class<E> type, Function<E, String> value, String table,
-				String column, @Nullable String entity, @Nullable String attribute) {
-			Set<String> values = Arrays.stream(type.getEnumConstants())
-				.map(value)
-				.collect(Collectors.toCollection(TreeSet::new));
-			return new StoredEnum(type, values, table, column, entity, attribute);
+		static StoredEnum of(Class<?> type, String table, String column, @Nullable String entity,
+				@Nullable String attribute) {
+			return new StoredEnum(type, table, column, entity, attribute);
+		}
+
+		/** The one column no converter writes: a {@code List<String>} set by {@code PipelineRun}'s constructor. */
+		boolean sources() {
+			return where().equals("pipeline_runs.sources");
 		}
 
 		String where() {
