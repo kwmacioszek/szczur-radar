@@ -254,7 +254,7 @@ Brak — każda praca przekrojowa M-4 ma widoczny skutek dla użytkownika, opera
 - **Parallel with:** każdy wycinek
 - **Blockers:** —
 - **Unknowns:** —
-- **Risk:** mały wycinek SPA; etykiety są w rejestrze reguł (`rules.json`, `values`), więc zmienia rejestr i obie strony w jednym PR.
+- **Risk:** mały wycinek SPA; słowa zależą od źródła, więc nie mieszczą się w płaskim `labels` — tabela źródło × typ (`ITEM_TYPE_WORDS`) z własnym testem w `rules.test.ts`; `rules.json` i API bez zmian.
 - **Status:** in-progress
 
 ### S-38: Post odrzucony przy zapisie nie znika po cichu

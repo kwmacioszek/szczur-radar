@@ -99,7 +99,6 @@ describe('PostCard', () => {
   ])('shows a %s %s in the words of its source: %s', (source, itemType, word) => {
     const text = mountCard(post({ source, itemType } as Partial<PostItem>)).find('.type').text()
     expect(text).toBe(word)
-    if (source === 'reddit') expect(['wpis', 'znalezisko']).not.toContain(text)
   })
 
   it('shows the raw type for a post without a source', () => {
