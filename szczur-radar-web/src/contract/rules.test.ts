@@ -25,7 +25,7 @@ import {
   TARGET_KINDS,
 } from '../api/posts'
 import { MAX_QUERY_LENGTH, WHITE_SPACE } from '../feedFilter'
-import { CHANNEL_PREFIXES, labels } from '../labels'
+import { CHANNEL_PREFIXES, ITEM_TYPE_WORDS, labels } from '../labels'
 import { MAX_RANGE_DAYS } from '../missingDays'
 import { attentionReasons, runTone, sourceTone, stepTone } from '../runs'
 import rules from './rules.json'
@@ -93,6 +93,26 @@ describe('labels', () => {
 describe('channel prefixes', () => {
   it('are given for exactly the sources of the file', () => {
     expect(sorted(Object.keys(CHANNEL_PREFIXES))).toEqual(sorted(valuesOf('source')))
+  })
+})
+
+describe('item type words', () => {
+  it('are given for exactly the sources of the file', () => {
+    expect(sorted(Object.keys(ITEM_TYPE_WORDS))).toEqual(sorted(valuesOf('source')))
+  })
+
+  it.each(Object.entries(ITEM_TYPE_WORDS))('%s has a word for each item type and for no other', (_source, words) => {
+    expect(sorted(Object.keys(words))).toEqual(sorted(valuesOf('itemType')))
+  })
+
+  it('has no empty word', () => {
+    const words = Object.values(ITEM_TYPE_WORDS).flatMap((row) => Object.values(row))
+    expect(words.every((word) => word.trim() !== '')).toBe(true)
+  })
+
+  it('never gives Reddit a word of Wykop', () => {
+    expect(Object.values(ITEM_TYPE_WORDS.reddit)).not.toContain('wpis')
+    expect(Object.values(ITEM_TYPE_WORDS.reddit)).not.toContain('znalezisko')
   })
 })
 

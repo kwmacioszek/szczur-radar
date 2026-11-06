@@ -85,6 +85,20 @@ export function postOrigin(source: string, channel: string): string {
   return `${label('source', source)} · ${CHANNEL_PREFIXES[source] ?? ''}${channel}`
 }
 
+/**
+ * The word for a post's item type in each source's own vocabulary (source → item type → word). Wykop's words never
+ * go to Reddit (PRD FR-023, Q-13). Not a set of `labels`: it is the product of two sets of values.
+ */
+export const ITEM_TYPE_WORDS: Record<string, Record<string, string>> = {
+  wykop: { post: 'wpis', link: 'znalezisko', comment: 'komentarz' },
+  reddit: { post: 'post', link: 'link', comment: 'komentarz' },
+}
+
+/** A post's type in its source's words, e.g. `znalezisko` on Wykop, `link` on Reddit; an unknown source or type shows as it came. */
+export function postType(source: string | undefined, itemType: string): string {
+  return (source === undefined ? undefined : ITEM_TYPE_WORDS[source]?.[itemType]) ?? itemType
+}
+
 const dateTime = new Intl.DateTimeFormat('pl-PL', {
   dateStyle: 'short',
   timeStyle: 'short',
