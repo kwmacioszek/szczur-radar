@@ -5,6 +5,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static pl.szczurradar.api.agents.assessor.ContractFixtures.target;
 
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
@@ -403,6 +404,81 @@ class PostsApiIT {
 
 		assertFeed(feed("q", "cdr"), 0);
 		assertFeed(feed("q", "xtb"), 1, post);
+	}
+
+	@Test
+	void equalPublicationTimesKeepAStableOrderAcrossFilteredPages() {
+		String same = "2026-10-01T09:00:00Z";
+		List<UUID> tied = new ArrayList<>(
+				List.of(seeds.post(PostStage.ASSESSED, 0, same), seeds.post(PostStage.ASSESSED, 0, same),
+						seeds.post(PostStage.ASSESSED, 0, same)));
+		UUID older = seeds.post(PostStage.ASSESSED, 0, "2026-10-01T08:00:00Z");
+		List.of(tied.get(0), tied.get(1), tied.get(2), older).forEach(post -> seeds.ok(post, "2026-10-02T08:00:00Z"));
+		// Newest first, and among equal times the greatest id first (the same order as the unfiltered feed).
+		tied.sort((a, b) -> b.toString().compareTo(a.toString()));
+
+		assertFeed(feed("q", "xtb", "page", "0", "size", "2"), 4, tied.get(0), tied.get(1));
+		assertFeed(feed("q", "xtb", "page", "1", "size", "2"), 4, tied.get(2), older);
+	}
+
+	@Test
+	void kindAndDirectionMustBothHoldForTheSameTarget() {
+		UUID post = seeds.post(PostStage.ASSESSED, 0, "2026-10-01T09:00:00Z");
+		seeds.ok(post, "2026-10-02T08:00:00Z", output(target("t1", TargetKind.COMPANY, "CDR", Direction.NOT_EXPRESSED, null),
+				target("t2", TargetKind.MACRO_TOPIC, "rynek", Direction.BULLISH, Assertiveness.UNHEDGED)));
+
+		// Each condition alone finds the post, but a company that is bullish is no target of it.
+		assertFeed(feed("kind", "company"), 1, post);
+		assertFeed(feed("direction", "bullish"), 1, post);
+		assertFeed(feed("kind", "company", "direction", "bullish"), 0);
+		assertFeed(feed("kind", "macro_topic", "direction", "not_expressed"), 0);
+		assertFeed(feed("kind", "company", "direction", "not_expressed"), 1, post);
+		assertFeed(feed("kind", "macro_topic", "direction", "bullish"), 1, post);
+	}
+
+	@Test
+	void anOkAssessmentFollowedByALaterFailedOneIsStillTheOneTheFeedShowsAndFilters() {
+		UUID post = seeds.post(PostStage.ASSESSED, 0, "2026-10-01T09:00:00Z");
+		seeds.ok(post, "2026-10-02T08:00:00Z");
+		seeds.failed(post, "2026-10-02T09:00:00Z", FailureClass.SCHEMA_VIOLATION);
+
+		MvcTestResult filtered = feed("q", "xtb");
+
+		assertFeed(filtered, 1, post);
+		assertThat(filtered).bodyJson().extractingPath("$.items[0].assessment.assessedAt").isEqualTo("2026-10-02T08:00:00Z");
+		assertThat(filtered).bodyJson().extractingPath("$.items[0].assessment.output.relevance").isNotNull();
+		assertFeed(feed(), 1, post);
+	}
+
+	@Test
+	void aPagePastTheEndIsEmptyAndKeepsTheRealTotal() {
+		UUID older = seeds.post(PostStage.ASSESSED, 0, "2026-10-01T08:00:00Z");
+		UUID newer = seeds.post(PostStage.ASSESSED, 0, "2026-10-01T09:00:00Z");
+		List.of(older, newer).forEach(post -> seeds.ok(post, "2026-10-02T08:00:00Z"));
+
+		for (MvcTestResult past : List.of(feed("page", "5", "size", "2"), feed("q", "xtb", "page", "5", "size", "2"))) {
+			assertFeed(past, 2);
+			assertThat(past).bodyJson().extractingPath("$.page").isEqualTo(5);
+			assertThat(past).bodyJson().extractingPath("$.size").isEqualTo(2);
+		}
+		// The page right after the last full one is empty too, not a repeat of the last.
+		assertFeed(feed("page", "1", "size", "2"), 2);
+		assertFeed(feed("page", "1", "size", "1"), 2, older);
+	}
+
+	@Test
+	void aHedgedStanceIsFoundByItsDirectionAndStaysHedged() {
+		UUID post = seeds.post(PostStage.ASSESSED, 0, "2026-10-01T09:00:00Z");
+		seeds.ok(post, "2026-10-02T08:00:00Z",
+				output(target("t1", TargetKind.MACRO_TOPIC, "rynek", Direction.BEARISH, Assertiveness.HEDGED)));
+
+		MvcTestResult found = feed("direction", "bearish");
+
+		assertFeed(found, 1, post);
+		assertThat(found).bodyJson().extractingPath("$.items[0].assessment.output.targets[0].stance.assertiveness")
+			.isEqualTo("hedged");
+		assertFeed(feed("kind", "macro_topic", "direction", "bearish", "q", "RYNEK"), 1, post);
+		assertFeed(feed("direction", "bullish"), 0);
 	}
 
 	@Test

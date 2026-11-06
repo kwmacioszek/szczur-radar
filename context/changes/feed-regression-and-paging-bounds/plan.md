@@ -202,18 +202,18 @@ Brak migracji, brak zmiany schematu ani kontraktu. Klient wysyłający `page` po
 
 #### Automated
 
-- [x] 1.1 Defekt odtworzony: testy dla trzech list czerwone na kodzie sprzed poprawki
-- [x] 1.2 Testy API przechodzą po poprawce: `./mvnw -B verify`
-- [x] 1.3 Celowe zepsucie granicy lub usunięcie `@Max` zaczerwienia testy, zmiana cofnięta
-- [x] 1.4 `AuthorizationCompletenessIT` nadal zielony
+- [x] 1.1 Defekt odtworzony: testy dla trzech list czerwone na kodzie sprzed poprawki — 023a51f
+- [x] 1.2 Testy API przechodzą po poprawce: `./mvnw -B verify` — 023a51f
+- [x] 1.3 Celowe zepsucie granicy lub usunięcie `@Max` zaczerwienia testy, zmiana cofnięta — 023a51f
+- [x] 1.4 `AuthorizationCompletenessIT` nadal zielony — 023a51f
 
 ### Phase 2: Testy regresji feedu (API)
 
 #### Automated
 
-- [ ] 2.1 Pięć nowych testów przechodzi: `./mvnw -B verify -Dit.test=PostsApiIT`
-- [ ] 2.2 Każdy z pięciu testów czerwony na swoim celowym zepsuciu, zepsucie cofnięte
-- [ ] 2.3 Pełny zestaw API zielony: `./mvnw -B verify`
+- [x] 2.1 Pięć nowych testów przechodzi: `./mvnw -B verify -Dit.test=PostsApiIT`
+- [x] 2.2 Każdy z pięciu testów czerwony na swoim celowym zepsuciu, zepsucie cofnięte
+- [x] 2.3 Pełny zestaw API zielony: `./mvnw -B verify`
 
 ### Phase 3: NUL i ogromny `page` w linku feedu (SPA)
 
