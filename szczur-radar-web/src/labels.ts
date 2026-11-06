@@ -1,6 +1,5 @@
 // Polish labels for the API's closed value sets; an unknown value shows as is.
 export const labels: Record<string, Record<string, string>> = {
-  itemType: { post: 'wpis', link: 'znalezisko', comment: 'komentarz' },
   relevance: {
     investment_related: 'inwestycyjny',
     not_investment_related: 'nie inwestycyjny',
@@ -83,6 +82,20 @@ export const CHANNEL_PREFIXES: Record<string, string> = { wykop: '#', reddit: 'r
 /** Where a post came from, e.g. `Wykop · #gielda`; an unknown source shows as it came, its channel bare. */
 export function postOrigin(source: string, channel: string): string {
   return `${label('source', source)} · ${CHANNEL_PREFIXES[source] ?? ''}${channel}`
+}
+
+/**
+ * The word for a post's item type in each source's own vocabulary (source → item type → word). Wykop's words never
+ * go to Reddit (PRD FR-023, Q-13). Not a set of `labels`: it is the product of two sets of values.
+ */
+export const ITEM_TYPE_WORDS: Record<string, Record<string, string>> = {
+  wykop: { post: 'wpis', link: 'znalezisko', comment: 'komentarz' },
+  reddit: { post: 'post', link: 'link', comment: 'komentarz' },
+}
+
+/** A post's type in its source's words, e.g. `znalezisko` on Wykop, `link` on Reddit; an unknown source or type shows as it came. */
+export function postType(source: string | undefined, itemType: string): string {
+  return (source === undefined ? undefined : ITEM_TYPE_WORDS[source]?.[itemType]) ?? itemType
 }
 
 const dateTime = new Intl.DateTimeFormat('pl-PL', {
