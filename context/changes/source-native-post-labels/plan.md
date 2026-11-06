@@ -207,4 +207,4 @@ Brak migracji. API i web wdrażają się niezależnie: starsze API bez `source` 
 
 #### Manual
 
-- [ ] 2.7 Właściciel akceptuje słowa tytułu zastępczego w PR
+- [x] 2.7 Właściciel akceptuje słowa tytułu zastępczego w PR — f7c5d36
