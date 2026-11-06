@@ -198,12 +198,12 @@ Brak migracji. API i web wdrażają się niezależnie: starsze API bez `source` 
 
 #### Automated
 
-- [x] 2.1 Testy SPA przechodzą (`npm test`)
-- [x] 2.2 Typecheck i build przechodzą (`npm run build`)
-- [x] 2.3 Żaden widok nie woła już `label('itemType'` (grep)
-- [x] 2.4 `SpaRulesTest` przechodzi bez zmian po stronie API
-- [x] 2.5 Agent sprawdza karty Wykopu i Reddita przez `playwright-cli` (kitchen sink i feed z mocka, oba motywy, 375 px)
-- [x] 2.6 Agent sprawdza stronę szczegółów posta Reddita w mocku (meta i tytuł zastępczy)
+- [x] 2.1 Testy SPA przechodzą (`npm test`) — a8869b7
+- [x] 2.2 Typecheck i build przechodzą (`npm run build`) — a8869b7
+- [x] 2.3 Żaden widok nie woła już `label('itemType'` (grep) — a8869b7
+- [x] 2.4 `SpaRulesTest` przechodzi bez zmian po stronie API — a8869b7
+- [x] 2.5 Agent sprawdza karty Wykopu i Reddita przez `playwright-cli` (kitchen sink i feed z mocka, oba motywy, 375 px) — a8869b7
+- [x] 2.6 Agent sprawdza stronę szczegółów posta Reddita w mocku (meta i tytuł zastępczy) — a8869b7
 
 #### Manual
 
