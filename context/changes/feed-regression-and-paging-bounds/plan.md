@@ -219,8 +219,8 @@ Brak migracji, brak zmiany schematu ani kontraktu. Klient wysyłający `page` po
 
 #### Automated
 
-- [x] 3.1 Testy SPA przechodzą: `npm test`
-- [x] 3.2 Typecheck i build przechodzą: `npm run build`
-- [x] 3.3 Celowe zepsucie normalizacji i granicy `page` zaczerwienia nowe przypadki, zmiany cofnięte
-- [x] 3.4 `playwright-cli`: `/?q=a%00b` i `/?page=99999999999` na atrapie API pokazują feed, a bez poprawki błąd
-- [x] 3.5 `SpaRulesTest` i `rules.test.ts` zielone z nowym wpisem granicy `page`
+- [x] 3.1 Testy SPA przechodzą: `npm test` — 2eecff4
+- [x] 3.2 Typecheck i build przechodzą: `npm run build` — 2eecff4
+- [x] 3.3 Celowe zepsucie normalizacji i granicy `page` zaczerwienia nowe przypadki, zmiany cofnięte — 2eecff4
+- [x] 3.4 `playwright-cli`: `/?q=a%00b` i `/?page=99999999999` na atrapie API pokazują feed, a bez poprawki błąd — 2eecff4
+- [x] 3.5 `SpaRulesTest` i `rules.test.ts` zielone z nowym wpisem granicy `page` — 2eecff4
