@@ -8,7 +8,7 @@ import AppHeader from '../components/AppHeader.vue'
 import FeedFilter from '../components/FeedFilter.vue'
 import PostCard from '../components/PostCard.vue'
 import StatusMessage from '../components/StatusMessage.vue'
-import { filterFromQuery, filterToQuery, isFilterActive, sameFilter } from '../feedFilter'
+import { filterFromQuery, filterToQuery, isFilterActive, pageFromQuery, sameFilter } from '../feedFilter'
 import { formatDateTime, label } from '../labels'
 import { reportFeedLoaded } from '../router/scroll'
 
@@ -31,10 +31,7 @@ const failed = ref(false)
 let latestLoad = 0
 
 /** The page in the address (`?page=`, from 0), so a refresh keeps it. */
-const page = computed(() => {
-  const value = Number.parseInt(String(route.query.page ?? '0'), 10)
-  return Number.isFinite(value) && value > 0 ? value : 0
-})
+const page = computed(() => pageFromQuery(route.query))
 /** The filter in the address (`?q=&kind=&direction=`); unknown values are dropped. */
 const filter = computed(() => filterFromQuery(route.query))
 const pages = computed(() => (shown.value ? Math.max(1, Math.ceil(shown.value.result.total / PAGE_SIZE)) : 1))

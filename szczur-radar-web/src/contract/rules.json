@@ -10,7 +10,8 @@
     "runsPageMaxSize": 100,
     "passwordMinLength": 12,
     "passwordMaxLength": 128,
-    "maxAssessmentAttempts": 3
+    "maxAssessmentAttempts": 3,
+    "pageMax": 21474836
   },
   "values": {
     "itemType": ["post", "link", "comment"],

@@ -177,6 +177,16 @@ describe('PostDetailView', () => {
     expect(meta.find('.author').text()).toBe('uzytkownik1')
   })
 
+  it.each([
+    ['post', 'post', 'Post użytkownika uzytkownik1'],
+    ['link', 'link', 'Link użytkownika uzytkownik1'],
+  ])('shows a Reddit %s in the words of Reddit', async (itemType, word, fallbackTitle) => {
+    vi.mocked(fetchPost).mockResolvedValue(post({ source: 'reddit', channel: 'ValueInvesting', itemType, title: null } as Partial<PostItem>))
+    const { wrapper } = await mountPost()
+    expect(wrapper.find('.meta .type').text()).toBe(word)
+    expect(wrapper.find('h1').text()).toBe(fallbackTitle)
+  })
+
   it('shows the source and channel between the type and the author', async () => {
     vi.mocked(fetchPost).mockResolvedValue(post())
     const { wrapper } = await mountPost()

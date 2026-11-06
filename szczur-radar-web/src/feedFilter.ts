@@ -1,7 +1,8 @@
 // The feed filter in the address (`/?q=cdr&kind=company&direction=bullish`), so a refresh, a link and
-// back/forward keep it. Read leniently: a hand-made link drops what the API would refuse with a 400.
+// back/forward keep it. Read leniently: a hand-made link drops what the API would refuse with a 400 (an
+// unknown value, a U+0000 in the text, a page above the API's largest).
 import type { LocationQuery, LocationQueryValue } from 'vue-router'
-import { DIRECTIONS, type PostFilter, TARGET_KINDS } from './api/posts'
+import { DIRECTIONS, MAX_PAGE, type PostFilter, TARGET_KINDS } from './api/posts'
 
 /** The API's limit for `q` (PostController, `@Size(max = 100)`). */
 export const MAX_QUERY_LENGTH = 100
@@ -29,11 +30,12 @@ function strip(text: string): string {
 }
 
 /**
- * The text as the API matches it: white space at both ends dropped, at most 100 characters, and
+ * The text as the API matches it: U+0000 dropped (Postgres text cannot hold it, the API answers a 400:
+ * `PostController`, `@Pattern("[^\\x00]*")`), white space at both ends dropped, at most 100 characters, and
  * undefined when nothing is left (blank is no condition).
  */
 export function normalizeQuery(text: string | undefined): string | undefined {
-  const trimmed = text === undefined ? undefined : strip(strip(text).slice(0, MAX_QUERY_LENGTH))
+  const trimmed = text === undefined ? undefined : strip(strip(text.replaceAll('\u0000', '')).slice(0, MAX_QUERY_LENGTH))
   return trimmed ? trimmed : undefined
 }
 
@@ -53,6 +55,15 @@ export function filterFromQuery(query: LocationQuery): PostFilter {
     kind: oneOf(TARGET_KINDS, first(query.kind)),
     direction: oneOf(DIRECTIONS, first(query.direction)),
   })
+}
+
+/**
+ * The page in the address (`?page=`, from 0), so a refresh keeps it. What is not a page, and a page above the
+ * API's largest (`MAX_PAGE`, which answers a 400), is the first page.
+ */
+export function pageFromQuery(query: LocationQuery): number {
+  const value = Number.parseInt(first(query.page) ?? '0', 10)
+  return Number.isFinite(value) && value > 0 && value <= MAX_PAGE ? value : 0
 }
 
 /** The address keys of the filter, only those with a value. */

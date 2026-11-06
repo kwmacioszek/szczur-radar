@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatDate, formatDateTime, formatDuration, formatRelative, label, plural, postOrigin } from './labels'
+import { formatDate, formatDateTime, formatDuration, formatRelative, label, plural, postOrigin, postType } from './labels'
 
 const NOW = Date.parse('2026-10-15T08:00:00Z')
 const SECOND = 1000
@@ -32,6 +32,28 @@ describe('postOrigin', () => {
     ['x', 'y', 'x · y'],
   ])('shows %s and %s as "%s"', (source, channel, text) => {
     expect(postOrigin(source, channel)).toBe(text)
+  })
+})
+
+describe('postType', () => {
+  it.each([
+    ['wykop', 'post', 'wpis'],
+    ['wykop', 'link', 'znalezisko'],
+    ['wykop', 'comment', 'komentarz'],
+    ['reddit', 'post', 'post'],
+    ['reddit', 'link', 'link'],
+    ['reddit', 'comment', 'komentarz'],
+  ])('writes %s %s as "%s"', (source, itemType, word) => {
+    expect(postType(source, itemType)).toBe(word)
+  })
+
+  it.each([
+    ['x', 'link'],
+    [undefined, 'link'],
+    ['reddit', 'poll'],
+    ['wykop', 'poll'],
+  ])('shows the raw type for source %s and type %s', (source, itemType) => {
+    expect(postType(source, itemType)).toBe(itemType)
   })
 })
 

@@ -19,13 +19,14 @@ import {
   type Flag,
   type ItemType,
   MAX_ASSESSMENT_ATTEMPTS,
+  MAX_PAGE,
   type Modifier,
   type Reference,
   type Relevance,
   TARGET_KINDS,
 } from '../api/posts'
 import { MAX_QUERY_LENGTH, WHITE_SPACE } from '../feedFilter'
-import { CHANNEL_PREFIXES, labels } from '../labels'
+import { CHANNEL_PREFIXES, ITEM_TYPE_WORDS, labels } from '../labels'
 import { MAX_RANGE_DAYS } from '../missingDays'
 import { attentionReasons, runTone, sourceTone, stepTone } from '../runs'
 import rules from './rules.json'
@@ -67,6 +68,7 @@ describe('limits', () => {
     passwordMinLength: PASSWORD_MIN_LENGTH,
     passwordMaxLength: PASSWORD_MAX_LENGTH,
     maxAssessmentAttempts: MAX_ASSESSMENT_ATTEMPTS,
+    pageMax: MAX_PAGE,
   }
 
   it('the SPA knows exactly the limits of the file', () => {
@@ -76,12 +78,17 @@ describe('limits', () => {
   it.each(Object.entries(spa))('%s is the API\'s', (name, value) => {
     expect(value).toBe((rules.limits as Record<string, number>)[name])
   })
+
+  it('the mock answers a 400 for the first page above pageMax, like the API', () => {
+    expect(mockApi).toContain(`pageNumber > ${rules.limits.pageMax}`)
+  })
 })
 
 describe('labels', () => {
-  const sets = Object.keys(rules.values).filter((set) => set !== 'attentionReason')
+  // An attention reason has a text, not a label; item type words depend on the source (see `item type words`).
+  const sets = Object.keys(rules.values).filter((set) => set !== 'attentionReason' && set !== 'itemType')
 
-  it('are given for exactly the sets of values of the file (an attention reason has a text, not a label)', () => {
+  it('are given for exactly the sets of values of the file (an attention reason has a text, an item type a word of its source)', () => {
     expect(sorted(Object.keys(labels))).toEqual(sorted(sets))
   })
 
@@ -93,6 +100,26 @@ describe('labels', () => {
 describe('channel prefixes', () => {
   it('are given for exactly the sources of the file', () => {
     expect(sorted(Object.keys(CHANNEL_PREFIXES))).toEqual(sorted(valuesOf('source')))
+  })
+})
+
+describe('item type words', () => {
+  it('are given for exactly the sources of the file', () => {
+    expect(sorted(Object.keys(ITEM_TYPE_WORDS))).toEqual(sorted(valuesOf('source')))
+  })
+
+  it.each(Object.entries(ITEM_TYPE_WORDS))('%s has a word for each item type and for no other', (_source, words) => {
+    expect(sorted(Object.keys(words))).toEqual(sorted(valuesOf('itemType')))
+  })
+
+  it('has no empty word', () => {
+    const words = Object.values(ITEM_TYPE_WORDS).flatMap((row) => Object.values(row))
+    expect(words.every((word) => word.trim() !== '')).toBe(true)
+  })
+
+  it('never gives Reddit a word of Wykop', () => {
+    expect(Object.values(ITEM_TYPE_WORDS.reddit)).not.toContain('wpis')
+    expect(Object.values(ITEM_TYPE_WORDS.reddit)).not.toContain('znalezisko')
   })
 })
 

@@ -29,6 +29,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import pl.szczurradar.api.config.ApiError;
 import pl.szczurradar.api.config.ErrorCode;
+import pl.szczurradar.api.config.PageLimits;
 import pl.szczurradar.api.pipeline.PipelineRunService;
 import pl.szczurradar.api.pipeline.run.AttentionReason;
 import pl.szczurradar.api.pipeline.run.InterruptionCause;
@@ -60,7 +61,7 @@ public class PipelineRunController {
 	public static final int MAX_RANGE_DAYS = 7;
 
 	/** The largest page of runs a request may ask for. */
-	public static final int MAX_PAGE_SIZE = 100;
+	public static final int MAX_PAGE_SIZE = PageLimits.MAX_SIZE;
 
 	/** The most posts a posts run may name. */
 	static final int MAX_POSTS = 100;
@@ -110,7 +111,7 @@ public class PipelineRunController {
 
 	/** The latest runs with their steps and source results, newest first (equal creation times by id). */
 	@GetMapping
-	RunPage list(@RequestParam(defaultValue = "0") @Min(0) int page,
+	RunPage list(@RequestParam(defaultValue = "0") @Min(0) @Max(PageLimits.MAX_PAGE) int page,
 			@RequestParam(defaultValue = "20") @Min(1) @Max(MAX_PAGE_SIZE) int size) {
 		Page<PipelineRun> found = runs.findPage(page, size);
 		List<UUID> ids = found.map(PipelineRun::getId).getContent();
