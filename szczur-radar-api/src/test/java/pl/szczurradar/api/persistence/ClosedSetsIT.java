@@ -54,7 +54,9 @@ import pl.szczurradar.api.user.Role;
 /**
  * Every enum stored in the database has a {@code CHECK} on its column that allows exactly its values:
  * a constant without a migration (or a value in a {@code CHECK} without a constant) is red here, not a
- * {@code CHECK} violation in a production run. {@link #REGISTRY} names each enum with its column; it is
+ * {@code CHECK} violation in a production run. The values compared are the ones the entity's real
+ * converter writes ({@link ClosedSetsGuard}), not a lambda of the registry, so a converter that writes
+ * another value than the {@code CHECK} allows is red here. {@link #REGISTRY} names each enum with its column; it is
  * itself checked against the JPA metamodel (every enum attribute of an entity) and against the
  * migrated schema (every {@code CHECK} with a list of values of one column), so a new enum or a new
  * closed-set column cannot pass unregistered; a {@code CHECK} with literals in any other form must be a
@@ -64,7 +66,8 @@ import pl.szczurradar.api.user.Role;
  * {@code x = ANY (ARRAY[...])}, a single value to {@code x = '...'}, and keeps an array column's
  * {@code x <@ ARRAY[...]} (inside the compound {@code ck_pipeline_runs_sources}). Other compound
  * {@code CHECK}s that mention enum values ({@code ck_posts_stage_attempts}, {@code ck_assessments_outcome},
- * ...) are not lists of values, but their literals are read as {@code column <op> 'literal'} pairs.
+ * ...) are not lists of values, but their literals are read as {@code column <op> 'literal'} pairs, and
+ * each must be a value of that column's enum (a typo in a compound {@code CHECK} is red here).
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, properties = MigrateCommand.ENABLE_FLYWAY)
 @Import(TestcontainersConfiguration.class)

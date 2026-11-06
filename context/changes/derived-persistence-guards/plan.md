@@ -231,16 +231,16 @@ Bez migracji. Przebiegi ze zmianą psującą kod nie zostawiają zmian w `src/ma
 
 #### Automated
 
-- [x] 2.1 Strażnik X2 i testy parsera zielone (`ClosedSetsIT`, `ClosedSetsGuardTest`)
-- [x] 2.2 Przebieg X2: migracja z `'interupted'` czerwieni `ClosedSetsIT`, migracja usunięta
-- [x] 2.3 Pełny `./mvnw -B verify` zielony
+- [x] 2.1 Strażnik X2 i testy parsera zielone (`ClosedSetsIT`, `ClosedSetsGuardTest`) — 8ad27df
+- [x] 2.2 Przebieg X2: migracja z `'interupted'` czerwieni `ClosedSetsIT`, migracja usunięta — 8ad27df
+- [x] 2.3 Pełny `./mvnw -B verify` zielony — 8ad27df
 
 ### Phase 3: R-23 — koniec przebiegu zawsze powiadamia
 
 #### Automated
 
-- [ ] 3.1 Strażnik R-23 i jego testy zielone (`RunEndingTest`, `RunEndingGuardTest`)
-- [ ] 3.2 Przebieg R-23 (a): nowa publiczna metoda `RunRecorder` czerwieni `RunEndingTest`, zmiana cofnięta
-- [ ] 3.3 Przebieg R-23 (b): usunięte `runEnded` czerwieni nazwany test, zmiana cofnięta
-- [ ] 3.4 Pełny `./mvnw -B verify` zielony
-- [ ] 3.5 Dokumentacja wskazuje strażnika (`pipeline/CLAUDE.md`, javadoc `ClosedSetsIT`)
+- [x] 3.1 Strażnik R-23 i jego testy zielone (`RunEndingTest`, `RunEndingGuardTest`)
+- [x] 3.2 Przebieg R-23 (a): nowa publiczna metoda `RunRecorder` czerwieni `RunEndingTest`, zmiana cofnięta
+- [x] 3.3 Przebieg R-23 (b): usunięte `runEnded` czerwieni nazwany test, zmiana cofnięta
+- [x] 3.4 Pełny `./mvnw -B verify` zielony
+- [x] 3.5 Dokumentacja wskazuje strażnika (`pipeline/CLAUDE.md`, javadoc `ClosedSetsIT`)
