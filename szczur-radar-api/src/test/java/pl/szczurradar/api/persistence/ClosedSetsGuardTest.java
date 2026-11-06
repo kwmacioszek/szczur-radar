@@ -1,6 +1,7 @@
 package pl.szczurradar.api.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.List;
 import java.util.Map;
@@ -73,12 +74,45 @@ class ClosedSetsGuardTest {
 
 	@Test
 	void theRealConvertersAreFoundByTheEnumTheyConvert() {
-		assertThat(ClosedSetsGuard.convertersByEnum()).hasSize(21)
+		// A floor against scanning zero converters, not an exact count: a new converter must not turn this red.
+		assertThat(ClosedSetsGuard.convertersByEnum())
+			.as("the scan must find the application's converters (a floor, not an exact count)")
+			.hasSizeGreaterThan(20)
 			.containsKeys(pl.szczurradar.api.pipeline.run.RunKind.class, pl.szczurradar.api.user.Role.class);
 	}
 
 
+	@Test
+	void aConverterWritingNullForAConstantNamesTheEnum() {
+		AttributeConverter<Object, String> nulls = new AttributeConverter<>() {
+			@Override
+			public String convertToDatabaseColumn(Object attribute) {
+				return null;
+			}
+
+			@Override
+			public Object convertToEntityAttribute(String dbData) {
+				return null;
+			}
+		};
+
+		assertThatThrownBy(() -> ClosedSetsGuard.writtenValues(Colour.class, nulls))
+			.isInstanceOf(IllegalStateException.class)
+			.hasMessageContaining("Colour")
+			.hasMessageContaining("DARK_RED")
+			.hasMessageContaining("null");
+	}
+
 	// The definitions below are pg_get_constraintdef's real output on the migrated schema.
+
+	private static final String STAGE_LIST = "CHECK ((stage = ANY (ARRAY['stored'::text, 'assessing'::text,"
+			+ " 'assessed'::text, 'failed'::text, 'dead'::text])))";
+
+	private static final String SOURCE_ONE = "CHECK ((source = 'wykop'::text))";
+
+	private static final String SOURCES = "CHECK ((((kind = 'range'::text) = (sources IS NOT NULL))"
+			+ " AND ((sources IS NULL) OR ((cardinality(sources) > 0)"
+			+ " AND (sources <@ ARRAY['wykop'::text, 'reddit'::text])))))";
 
 	private static final String INTERRUPTION_STATUS = "CHECK (((interruption_cause IS NULL) OR (status = 'interrupted'::text)))";
 
@@ -176,6 +210,51 @@ class ClosedSetsGuardTest {
 	@Test
 	void aLiteralInAFormTheParserCannotReadIsReported() {
 		assertThat(unknown("pipeline_runs", "CHECK ((status ~~ 'inter%'::text))")).singleElement()
+			.satisfies(problem -> assertThat(problem).contains("1 literals", "0 read"));
+	}
+
+	@Test
+	void aListOfValuesIsReadInEveryFormItTakes() {
+		assertThat(ClosedSetsGuard.valueList(STAGE_LIST)).hasValueSatisfying(list -> {
+			assertThat(list.column()).isEqualTo("stage");
+			assertThat(list.values()).containsExactly("assessed", "assessing", "dead", "failed", "stored");
+		});
+		assertThat(ClosedSetsGuard.valueList(SOURCE_ONE)).hasValueSatisfying(list -> {
+			assertThat(list.column()).isEqualTo("source");
+			assertThat(list.values()).containsExactly("wykop");
+		});
+		assertThat(ClosedSetsGuard.valueList(SOURCES)).hasValueSatisfying(list -> {
+			assertThat(list.column()).isEqualTo("sources");
+			assertThat(list.values()).containsExactly("reddit", "wykop");
+		});
+		assertThat(ClosedSetsGuard.isValueList(STAGE_LIST)).isTrue();
+		assertThat(ClosedSetsGuard.isValueList(SOURCE_ONE)).isTrue();
+	}
+
+	@Test
+	void aCompoundCheckIsNotAListOfValues() {
+		for (String compound : List.of(INTERRUPTION_STATUS, REQUESTED_POSTS, RANGE, ASSESSING_OWNER, STAGE_ATTEMPTS,
+				OUTCOME, NOTIFICATIONS_RUN, SOURCES_ERROR, HASH)) {
+			assertThat(ClosedSetsGuard.valueList(compound)).as(compound).isEmpty();
+			assertThat(ClosedSetsGuard.isValueList(compound)).as(compound).isFalse();
+		}
+		// With a <@ fragment it gives the column's list, but as a whole it is still not a list.
+		assertThat(ClosedSetsGuard.isValueList(SOURCES)).isFalse();
+	}
+
+	@Test
+	void theLiteralsOfACompoundCheckWithAnArrayFragmentAreReadWithoutTheFragment() {
+		assertThat(unknown("pipeline_runs", SOURCES)).isEmpty();
+		assertThat(unknown("pipeline_runs", SOURCES.replace("'range'", "'rang'"))).singleElement()
+			.satisfies(problem -> assertThat(problem).contains("pipeline_runs.kind", "'rang'"));
+		// A wrong value inside the fragment is the registry's value-list guard's to report, not reported twice here.
+		assertThat(unknown("pipeline_runs", SOURCES.replace("'reddit'", "'redit'"))).isEmpty();
+	}
+
+	@Test
+	void aLiteralWithAnotherCastIsAFormTheParserCannotReadAndIsReported() {
+		assertThat(ClosedSetsGuard.literalCount("CHECK ((status = 'a'::character varying))")).isEqualTo(1);
+		assertThat(unknown("pipeline_runs", "CHECK ((status = 'a'::character varying))")).singleElement()
 			.satisfies(problem -> assertThat(problem).contains("1 literals", "0 read"));
 	}
 

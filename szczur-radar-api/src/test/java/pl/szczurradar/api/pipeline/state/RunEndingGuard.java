@@ -1,5 +1,6 @@
 package pl.szczurradar.api.pipeline.state;
 
+import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
@@ -7,9 +8,12 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
 
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 
@@ -20,9 +24,17 @@ import org.junit.jupiter.params.ParameterizedTest;
  * what is wrong on purpose. Every answer is a list of problems, empty when all is well.
  *
  * <p>A test is named {@code package.Class#method}. The guard proves the class, the method and its
- * {@code @Test} / {@code @ParameterizedTest} exist, not what the test checks.
+ * {@code @Test} / {@code @ParameterizedTest} exist and run in the unit suite (not {@code @Disabled}, not tagged
+ * {@code measurement}), not what the test checks.
+ *
+ * <p>Limit: only the methods {@code type} declares itself are seen ({@code getDeclaredMethods}): public methods
+ * inherited from a superclass and non-public ending methods are outside the guard ({@code RunRecorder} has no
+ * superclass today).
  */
 final class RunEndingGuard {
+
+	/** The JUnit tag of live runs that the unit run excludes ({@code surefire.excludedGroups}). */
+	private static final String MEASUREMENT = "measurement";
 
 	private RunEndingGuard() {
 	}
@@ -75,7 +87,7 @@ final class RunEndingGuard {
 	 */
 	static List<String> missingCoverage(Map<String, List<String>> testsByMethod) {
 		List<String> problems = new ArrayList<>();
-		testsByMethod.forEach((method, references) -> {
+		new TreeMap<>(testsByMethod).forEach((method, references) -> {
 			if (references.isEmpty()) {
 				problems.add(method + " ends a run and has no test that checks its notification");
 			}
@@ -109,9 +121,48 @@ final class RunEndingGuard {
 		if (named.isEmpty()) {
 			return "the test " + reference + " does not exist";
 		}
-		if (named.stream().noneMatch(method -> method.isAnnotationPresent(Test.class)
-				|| method.isAnnotationPresent(ParameterizedTest.class))) {
+		List<Method> tests = named.stream()
+			.filter(method -> method.isAnnotationPresent(Test.class) || method.isAnnotationPresent(ParameterizedTest.class))
+			.toList();
+		if (tests.isEmpty()) {
 			return reference + " exists but is not a @Test or @ParameterizedTest";
+		}
+		String classReason = notRun(type);
+		if (classReason != null) {
+			return reference + " never runs in the unit suite: its class is " + classReason;
+		}
+		String methodReason = null;
+		for (Method test : tests) {
+			methodReason = notRun(test);
+			if (methodReason == null) {
+				return null;
+			}
+		}
+		return reference + " never runs in the unit suite: it is " + methodReason;
+	}
+
+	/** Why {@code element} (a test method or a class, with the classes around it) does not run in CI; null when it does. */
+	private static String notRun(AnnotatedElement element) {
+		Class<?> type = element instanceof Class<?> declared ? declared : null;
+		AnnotatedElement current = element;
+		while (current != null) {
+			if (current.isAnnotationPresent(Disabled.class)) {
+				return "@Disabled";
+			}
+			if (Arrays.stream(current.getAnnotationsByType(Tag.class)).anyMatch(tag -> tag.value().equals(MEASUREMENT))) {
+				return "tagged \"" + MEASUREMENT + "\" (excluded from the unit run, pom.xml)";
+			}
+			if (type == null && current instanceof Method method) {
+				type = method.getDeclaringClass();
+				current = type;
+			}
+			else if (type != null) {
+				type = type.getEnclosingClass();
+				current = type;
+			}
+			else {
+				current = null;
+			}
 		}
 		return null;
 	}

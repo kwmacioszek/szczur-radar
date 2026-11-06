@@ -7,12 +7,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import jakarta.persistence.AttributeConverter;
@@ -67,7 +64,13 @@ import pl.szczurradar.api.user.Role;
  * {@code x <@ ARRAY[...]} (inside the compound {@code ck_pipeline_runs_sources}). Other compound
  * {@code CHECK}s that mention enum values ({@code ck_posts_stage_attempts}, {@code ck_assessments_outcome},
  * ...) are not lists of values, but their literals are read as {@code column <op> 'literal'} pairs, and
- * each must be a value of that column's enum (a typo in a compound {@code CHECK} is red here).
+ * each must be a value of that column's enum (a typo in a compound {@code CHECK} is red here); this holds
+ * for {@code ck_pipeline_runs_sources} too, whose {@code <@ ARRAY[...]} fragment is the column's list and
+ * whose other literal ({@code 'range'}) is read as a pair.
+ *
+ * <p>Known limit: the guard compares the converter it scans, not the attribute binding. An entity attribute
+ * with {@code @Enumerated} or an explicit different {@code @Convert} would write other values than the scanned
+ * converter while the guard stays green; none exists today.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, properties = MigrateCommand.ENABLE_FLYWAY)
 @Import(TestcontainersConfiguration.class)
@@ -136,22 +139,6 @@ class ClosedSetsIT {
 			"ck_raw_payloads_sha256", "a pattern: the SHA-256 of the payload as 64 lower-case hex digits",
 			"ck_activation_tokens_token_hash", "a pattern: the SHA-256 of the token as 64 lower-case hex digits");
 
-	private static final String LITERAL = "'(?:[^']|'')*'::text";
-
-	private static final String LITERALS = LITERAL + "(?:, " + LITERAL + ")*";
-
-	/** The whole definition: {@code CHECK ((x = ANY (ARRAY['a'::text, 'b'::text])))}. */
-	private static final Pattern ANY_OF = Pattern
-		.compile("CHECK \\(\\((\\w+) = ANY \\(ARRAY\\[(" + LITERALS + ")\\]\\)\\)\\)");
-
-	/** The whole definition: {@code CHECK ((x = 'a'::text))}. */
-	private static final Pattern ONE_OF = Pattern.compile("CHECK \\(\\((\\w+) = (" + LITERAL + ")\\)\\)");
-
-	/** Anywhere in the definition: {@code (x <@ ARRAY['a'::text])}, an array column's values. */
-	private static final Pattern CONTAINED_IN = Pattern.compile("\\((\\w+) <@ ARRAY\\[(" + LITERALS + ")\\]\\)");
-
-	private static final Pattern VALUE = Pattern.compile("'((?:[^']|'')*)'::text");
-
 	@Autowired
 	JdbcTemplate jdbc;
 
@@ -197,8 +184,8 @@ class ClosedSetsIT {
 			.map(stored -> stored.entity() + "." + stored.attribute())
 			.collect(Collectors.toCollection(TreeSet::new));
 
-		Set<String> unregistered = difference(enumAttributes, registered);
-		Set<String> unknown = difference(registered, enumAttributes);
+		Set<String> unregistered = ClosedSetsGuard.difference(enumAttributes, registered);
+		Set<String> unknown = ClosedSetsGuard.difference(registered, enumAttributes);
 		assertThat(unregistered).withFailMessage("%s", "Enum attributes of entities missing from ClosedSetsIT's"
 				+ " registry: " + unregistered + " — add an entry with the enum, its stored value and its column")
 			.isEmpty();
@@ -217,7 +204,7 @@ class ClosedSetsIT {
 			.filter(check -> !registered.contains(check.where()))
 			.map(check -> check.name() + " on " + check.where() + " " + check.values())
 			.toList();
-		Set<String> withoutCheck = difference(registered,
+		Set<String> withoutCheck = ClosedSetsGuard.difference(registered,
 				checks.stream().map(ValueListCheck::where).collect(Collectors.toSet()));
 		assertThat(unregistered).withFailMessage("%s", "CHECKs with a list of values missing from ClosedSetsIT's"
 				+ " registry: " + unregistered + " — a closed-set column must have an enum (lesson: closed value"
@@ -235,13 +222,13 @@ class ClosedSetsIT {
 		List<String> unknown = new ArrayList<>();
 		for (Check check : checks) {
 			if (ClosedSetsGuard.ANY_LITERAL.matcher(check.definition()).find()
-					&& valueList(check.definition()).isEmpty() && !NOT_A_VALUE_LIST.containsKey(check.name())) {
+					&& !ClosedSetsGuard.isValueList(check.definition()) && !NOT_A_VALUE_LIST.containsKey(check.name())) {
 				unknown.addAll(ClosedSetsGuard.unknownLiterals(check.name(), check.table(), check.definition(), written));
 			}
 		}
 		List<String> staleExceptions = ClosedSetsGuard.exceptionProblems(NOT_A_VALUE_LIST,
 				checks.stream().collect(Collectors.toMap(Check::name, Check::definition)),
-				definition -> valueList(definition).isPresent());
+				ClosedSetsGuard::isValueList);
 
 		assertThat(unknown).withFailMessage("%s", "Compound CHECKs whose literals are not values of the enum of their"
 				+ " column (or that the guard cannot read): " + unknown + " — a literal in a CHECK is a value of an"
@@ -254,30 +241,30 @@ class ClosedSetsIT {
 	/** Today's three forms, so a change in Postgres's output is red here, never an empty set read as green. */
 	@Test
 	void theCheckParserReadsEveryFormOfAListOfValues() {
-		assertThat(valueList(definition("posts", "ck_posts_stage"))).hasValueSatisfying(list -> {
+		assertThat(ClosedSetsGuard.valueList(definition("posts", "ck_posts_stage"))).hasValueSatisfying(list -> {
 			assertThat(list.column()).isEqualTo("stage");
 			assertThat(list.values()).contains("stored", "assessing", "assessed", "failed", "dead");
 		});
-		assertThat(valueList(definition("posts", "ck_posts_source"))).hasValueSatisfying(list -> {
+		assertThat(ClosedSetsGuard.valueList(definition("posts", "ck_posts_source"))).hasValueSatisfying(list -> {
 			assertThat(list.column()).isEqualTo("source");
 			assertThat(list.values()).contains("wykop");
 		});
-		assertThat(valueList(definition("pipeline_runs", "ck_pipeline_runs_sources"))).hasValueSatisfying(list -> {
+		assertThat(ClosedSetsGuard.valueList(definition("pipeline_runs", "ck_pipeline_runs_sources"))).hasValueSatisfying(list -> {
 			assertThat(list.column()).isEqualTo("sources");
 			assertThat(list.values()).contains("wykop");
 		});
 		// Compound CHECKs with enum values and other single-column CHECKs are not lists of values.
-		assertThat(valueList(definition("posts", "ck_posts_assessing_owner"))).isEmpty();
-		assertThat(valueList(definition("posts", "ck_posts_stage_attempts"))).isEmpty();
-		assertThat(valueList(definition("posts", "ck_posts_content_hash"))).isEmpty();
-		assertThat(valueList(definition("users", "ck_users_email_lower"))).isEmpty();
+		assertThat(ClosedSetsGuard.valueList(definition("posts", "ck_posts_assessing_owner"))).isEmpty();
+		assertThat(ClosedSetsGuard.valueList(definition("posts", "ck_posts_stage_attempts"))).isEmpty();
+		assertThat(ClosedSetsGuard.valueList(definition("posts", "ck_posts_content_hash"))).isEmpty();
+		assertThat(ClosedSetsGuard.valueList(definition("users", "ck_users_email_lower"))).isEmpty();
 	}
 
 	/** Every {@code CHECK} of the application's tables that is a list of values of one column. */
 	private List<ValueListCheck> valueListChecks() {
 		List<ValueListCheck> lists = new ArrayList<>();
 		for (Check check : checks()) {
-			valueList(check.definition()).ifPresent(
+			ClosedSetsGuard.valueList(check.definition()).ifPresent(
 					list -> lists.add(new ValueListCheck(check.name(), check.table(), list.column(), list.values())));
 		}
 		return lists;
@@ -295,28 +282,6 @@ class ClosedSetsIT {
 		return jdbc.queryForObject(
 				"SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conrelid = ?::regclass AND conname = ?",
 				String.class, table, constraint);
-	}
-
-	/** The column and its allowed values when {@code definition} is a list of values; otherwise empty. */
-	private static Optional<ValueList> valueList(String definition) {
-		for (Pattern whole : List.of(ANY_OF, ONE_OF)) {
-			Matcher matcher = whole.matcher(definition);
-			if (matcher.matches()) {
-				return Optional.of(new ValueList(matcher.group(1), values(matcher.group(2))));
-			}
-		}
-		Matcher contained = CONTAINED_IN.matcher(definition);
-		return contained.find() ? Optional.of(new ValueList(contained.group(1), values(contained.group(2))))
-				: Optional.empty();
-	}
-
-	private static Set<String> values(String literals) {
-		Set<String> values = new TreeSet<>();
-		Matcher matcher = VALUE.matcher(literals);
-		while (matcher.find()) {
-			values.add(matcher.group(1).replace("''", "'"));
-		}
-		return values;
 	}
 
 	/** {@code table.column} to the values the application writes there: from the real converter, or the run's sources. */
@@ -349,10 +314,6 @@ class ClosedSetsIT {
 				&& plural.getElementType().getJavaType().isEnum();
 	}
 
-	private static Set<String> difference(Set<String> from, Set<String> without) {
-		return from.stream().filter(value -> !without.contains(value)).collect(Collectors.toCollection(TreeSet::new));
-	}
-
 	/**
 	 * An enum stored in {@code table.column}; {@code entity} and {@code attribute} are its JPA entity name and
 	 * attribute ({@code null} when no enum attribute holds it).
@@ -378,9 +339,6 @@ class ClosedSetsIT {
 			return type.getName().substring("pl.szczurradar.api.".length()).replace('$', '.');
 		}
 
-	}
-
-	private record ValueList(String column, Set<String> values) {
 	}
 
 	private record Check(String table, String name, String definition) {

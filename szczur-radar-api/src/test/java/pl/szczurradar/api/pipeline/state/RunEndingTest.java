@@ -33,7 +33,6 @@ class RunEndingTest {
 					SERVICE + "aStepsOwnExceptionFailsTheRunWithItsClassAndMessage",
 					RUN_IT + "aFailingSourceFailsTheRunAndTheQueueTakesTheNextRequest"),
 			"interrupt", List.of(
-					SERVICE + "onCloseReportsARunOfItsOwnThatHadAlreadyEnded",
 					RUN_IT + "aStoppingInstanceInterruptsItsRunAndPutsItsPostsBack"),
 			"stall", List.of(
 					SERVICE + "theWatchdogsStopWritesFirstThenInterruptsTheRunsThreadAndItsPostTasksThenNotifies",
