@@ -116,7 +116,7 @@ Na Wykopie (#gielda) i Reddicie codziennie pojawiają się setki postów o inwes
 | S-36 | statement-language-quality        | operator widzi udział tez w innym języku niż post osobno dla każdego źródła, z sygnałem po przekroczeniu progu                     | S-35                     | FR-033; `contract-v2.md` §8 (Q-16); destylacja #1, D-14, R-38                              | proposed |
 | S-37 | source-native-post-labels         | użytkownik widzi typ posta słowami jego źródła: „wpis”/„znalezisko” na Wykopie, „post”/„link” na Reddicie                          | —                        | FR-023 (doprecyzowanie Q-13); destylacja #4, D-12, R-45                                    | ready    |
 | S-38 | post-store-loss-visible           | post odrzucony przy zapisie przez inne ograniczenie niż duplikat jest policzony i widoczny, a nie znika po cichu                   | —                        | FR-005, NFR `prd.md:275`; audyt §6 D-15; destylacja #2, D-15                               | ready    |
-| S-39 | derived-persistence-guards        | konwerter zapisujący inną wartość niż enum, złożony `CHECK` z literałem i nowy koniec przebiegu bez powiadomienia czerwienią CI     | —                        | NFR `prd.md:289`; audyt §1 R-17, X1, X2, §5 R-23; destylacja #6                            | in-progress |
+| S-39 | derived-persistence-guards        | konwerter zapisujący inną wartość niż enum, złożony `CHECK` z literałem i nowy koniec przebiegu bez powiadomienia czerwienią CI     | —                        | NFR `prd.md:289`; audyt §1 R-17, X1, X2, §5 R-23; destylacja #6                            | done |
 | S-40 | derived-route-guards              | każda trasa `/api/admin/**` daje 403 zwykłemu użytkownikowi, a każda `/internal/**` 401 bez tokenu — bez ręcznej listy tras        | —                        | NFR `prd.md:293`, FR-014, FR-015; audyt §1 R-30                                            | ready    |
 | S-41 | api-contract-shapes-round-two     | każdy kształt odpowiedzi, który czyta SPA, ma plik kontraktu z wariantami `null`, a pole zawsze wysyłane przez API jest wymagane w TS | —                        | FR-006; audyt §2, X3; `verification-scope.md`                                              | ready    |
 | S-42 | spa-rules-registry-round-two      | porównanie kodu błędu, limit rozmiaru strony i enumy spoza rejestru są pilnowane testem albo kompilatorem                          | —                        | FR-006; audyt §1 R-22, R-43, X5                                                            | ready    |
@@ -279,7 +279,7 @@ Brak — każda praca przekrojowa M-4 ma widoczny skutek dla użytkownika, opera
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** X1 i X2 przeszły przez `ClosedSetsIT` i złapały je tylko testy zachowania; strażnik R-23 ma wzór w `PostColumnsIT:178-192`. Strażnik zbyt ścisły zablokuje uprawnione zmiany, więc wycinek nazywa wyjątki jawnie.
-- **Status:** in-progress
+- **Status:** done
 
 ### S-40: Strażnik tras admina i `/internal` bez ręcznej listy
 
@@ -467,3 +467,4 @@ Brak — każda praca przekrojowa M-4 ma widoczny skutek dla użytkownika, opera
 - **S-28: operator zna obraz konfiguracji produkcyjnej (`openai/gpt-6-luna`, prompt v2.5) na 396 postach z Reddita i koszt łączny z Wykopem oraz zapisał decyzję o włączeniu; pomiar nie rozstrzyga progów kierunku celów i sprzeczności.** — Archived 2026-10-31 → `context/archive/2026-10-30-reddit-quality-and-cost/`. Lesson: —.
 - **S-29: użytkownik widzi przy każdym poście, z którego źródła pochodzi, a etykieta „Dane zaktualizowane” nie przesuwa się po przebiegu, który nie objął danego źródła — zgodnie z decyzją, czy świeżość jest wspólna, czy per źródło.** — Archived 2026-10-31 → `context/archive/2026-10-30-source-aware-feed/`. Lesson: —.
 - **S-30: wynik CI nie zależy od kolejności, w jakiej uruchamiają się klasy testów integracyjnych: test sprawdza tylko dane, które sam zasiał, a test, który zapisuje dane poza transakcją, sprząta po sobie; kolejność, która dziś czerwieni `main`, jest sprawdzana wprost.** — Archived 2026-11-05 → `context/archive/2026-11-05-it-test-isolation/`. Lesson: —.
+- **S-39: CI czerwienieje, gdy konwerter enuma zapisuje inną wartość, niż dopuszcza `CHECK`, gdy złożony `CHECK` ma literał spoza enuma i gdy nowa ścieżka kończąca przebieg nie wywołuje powiadomienia (R-23).** — Archived 2026-11-06 → `context/archive/2026-11-06-derived-persistence-guards/`. Lesson: —.
