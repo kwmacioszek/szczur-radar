@@ -92,6 +92,21 @@ describe('PostCard', () => {
     expect(mountCard().find('.type').text()).toBe('wpis')
   })
 
+  it.each([
+    ['reddit', 'post', 'post'],
+    ['reddit', 'link', 'link'],
+    ['wykop', 'link', 'znalezisko'],
+  ])('shows a %s %s in the words of its source: %s', (source, itemType, word) => {
+    const text = mountCard(post({ source, itemType } as Partial<PostItem>)).find('.type').text()
+    expect(text).toBe(word)
+  })
+
+  it('shows the raw type for a post without a source', () => {
+    const wrapper = mountCard(post({ source: undefined, itemType: 'link' } as unknown as Partial<PostItem>))
+    expect(wrapper.find('.type').text()).toBe('link')
+    expect(wrapper.find('.meta').text()).not.toContain('undefined')
+  })
+
   it('shows the relevance as a neutral badge', () => {
     const badge = mountCard().find('.meta [data-tone="neutral"]')
     expect(badge.text()).toBe('inwestycyjny')

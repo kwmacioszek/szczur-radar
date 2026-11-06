@@ -302,6 +302,22 @@ const posts: PostItem[] = [
       [authorClaim('c1', 'trade_action', ['t1'], 'I am still holding', 'Autor nadal trzyma akcje Berkshire.')],
     ),
   },
+  {
+    id: 'reddit-link',
+    source: 'reddit',
+    channel: 'stocks',
+    itemType: 'link',
+    publishedAt: '2026-10-12T15:10:00Z',
+    title: 'Berkshire 13F: cash pile at a record high',
+    body: 'Berkshire keeps adding to its cash pile. The filing shows no new large positions.',
+    author: 'cierpliwy_kapital',
+    webUrl: 'https://www.reddit.com/r/stocks/comments/1xgabc2/berkshire_13f_cash_pile_at_a_record_high/',
+    assessment: modelAssessment(
+      [target('t1', 'Berkshire', 'bullish', 'hedged', ['c1'])],
+      [],
+      [authorClaim('c1', 'trade_action', ['t1'], 'keeps adding to its cash pile', 'Autor opisuje rosnącą gotówkę Berkshire.')],
+    ),
+  },
 ]
 
 /** Each direction with an assertiveness and claim_ids allowed by table §7.2 of the contract. */

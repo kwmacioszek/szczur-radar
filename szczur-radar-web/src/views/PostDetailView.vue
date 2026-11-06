@@ -7,7 +7,7 @@ import AppButton from '../components/AppButton.vue'
 import AppHeader from '../components/AppHeader.vue'
 import PostAssessment from '../components/PostAssessment.vue'
 import StatusMessage from '../components/StatusMessage.vue'
-import { formatDateTime, label, postOrigin } from '../labels'
+import { formatDateTime, postOrigin, postType } from '../labels'
 
 const route = useRoute()
 const router = useRouter()
@@ -35,7 +35,7 @@ const title = computed(() => {
   const item = post.value
   if (!item) return 'Post'
   if (item.title) return item.title
-  const type = label('itemType', item.itemType)
+  const type = postType(item.source, item.itemType)
   const capitalized = type.charAt(0).toUpperCase() + type.slice(1)
   return item.author ? `${capitalized} użytkownika ${item.author}` : capitalized
 })
@@ -152,7 +152,7 @@ watch(
       <template v-else-if="post">
         <p class="meta">
           <time :datetime="post.publishedAt">{{ formatDateTime(post.publishedAt) }}</time>
-          <span class="type">{{ label('itemType', post.itemType) }}</span>
+          <span class="type">{{ postType(post.source, post.itemType) }}</span>
           <!-- API and web deploy independently: an older API has no source or channel, so the origin is left out. -->
           <span v-if="post.source" class="origin">{{ postOrigin(post.source, post.channel) }}</span>
           <span v-if="post.author" class="author">{{ post.author }}</span>
