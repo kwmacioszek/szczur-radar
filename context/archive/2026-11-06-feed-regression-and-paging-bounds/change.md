@@ -1,10 +1,10 @@
 ---
 change_id: feed-regression-and-paging-bounds
 title: Feed z testami regresji i granicą numeru strony (S-44)
-status: impl_reviewed
+status: archived
 created: 2026-11-06
 updated: 2026-11-06
-archived_at: null
+archived_at: 2026-11-06T11:33:39Z
 ---
 
 ## Notes
