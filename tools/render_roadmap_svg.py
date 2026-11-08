@@ -202,7 +202,7 @@ lanes3 = {  # the streams of roadmap v4
     "D": ("Silnik", "Stabilne testy silnika przed zmianą szwu źródeł", C["sky"]),
 }
 m4 = {  # lane, title (## Slices), outcome (At a glance), status, prerequisites, change id
-    "S-30": ("A", "Wynik CI nie zależy od kolejności testów", "wynik CI nie zależy od kolejności klas testów integracyjnych; test nie widzi danych zostawionych przez inny test", "ready", "—", "it-test-isolation"),
+    "S-30": ("A", "Wynik CI nie zależy od kolejności testów", "wynik CI nie zależy od kolejności klas testów integracyjnych; test nie widzi danych zostawionych przez inny test", "done", "—", "it-test-isolation"),
     "S-31": ("A", "Ręczne weryfikacje PR env jako scenariusze w CI", "ręczne weryfikacje PR env z S-13, S-17, S-18, S-20, S-27 chodzą w CI jako scenariusze na pełnym API z atrapami źródeł i LLM", "proposed", "S-30", "pr-env-scenarios-in-ci"),
     "S-45": ("A", "Testy mutacyjne rdzenia", "wiadomo, które testy rdzenia łapią błędy: mutanty, które przeżyły, są zabite testem albo przyjęte z powodem", "proposed", "S-30, S-32, S-33, S-38", "core-mutation-testing"),
     "S-32": ("B", "Seria odmów dostawcy zatrzymuje przebieg", "seria odmów dostawcy zatrzymuje przebieg, zanim zużyje próby pozostałych postów, i daje sygnał jak każdy failed", "ready", "—", "provider-refusal-breaker"),
