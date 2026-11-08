@@ -288,8 +288,9 @@ class PostsApiIT {
 	}
 
 	/**
-	 * A full page of the failed list: a failed post with a violation and no technical error; one whose attempt has
-	 * no provider and model; a dead one; a stored one on hold, never assessed, with its technical error.
+	 * A full page of the failed list: a failed post with a violation and no technical error; a link without a body
+	 * whose attempt has no provider and model; a dead one; a stored comment on hold, without an address, never
+	 * assessed, with its technical error.
 	 */
 	@Test
 	void aFailedPostsPageMatchesTheSharedContract() {
@@ -300,8 +301,8 @@ class PostsApiIT {
 				+ "\"path\":\"$.claims[0]\",\"message\":\"required property 'evidence' not found\"}]");
 		UUID withoutProvider = seeds.post(PostStage.FAILED, 2, "2026-10-01T11:00:00Z");
 		seeds.failed(withoutProvider, "2026-10-02T08:00:00Z", FailureClass.TIMEOUT);
-		texts(withoutProvider, ItemType.POST, null, "Ktoś wie, co dalej z CDR?", "uzytkownik1",
-				"https://wykop.pl/wpis/12346");
+		texts(withoutProvider, ItemType.LINK, "CD Projekt: wyniki za kwartał", null, "uzytkownik1",
+				"https://wykop.pl/link/778/cd-projekt-wyniki-za-kwartal");
 		violations(withoutProvider, "[{\"failureClass\":\"timeout\",\"rule\":\"call\",\"path\":\"$\","
 				+ "\"message\":\"no answer within 300s\"}]");
 		// An attempt the provenance of which names no provider or model (both columns are nullable).
@@ -314,7 +315,7 @@ class PostsApiIT {
 				+ "\"path\":\"$.claims[0].evidence.quote\",\"message\":\"quote is not a fragment of item.body\"}]");
 		UUID onHold = technicalFailures(seeds.post(PostStage.STORED, 0, "2026-10-01T09:00:00Z"),
 				Post.MAX_TECHNICAL_FAILURES);
-		texts(onHold, ItemType.POST, null, "Orlen znowu w dół, trzymam.", "uzytkownik4", "https://wykop.pl/wpis/12347");
+		texts(onHold, ItemType.COMMENT, null, "Orlen znowu w dół, trzymam.", "uzytkownik4", null);
 
 		MvcTestResult result = mvc.get().uri("/api/admin/posts/failed?page=0&size=10").with(asAdmin()).exchange();
 

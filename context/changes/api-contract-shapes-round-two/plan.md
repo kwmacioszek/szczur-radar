@@ -380,13 +380,13 @@ Brak migracji bazy. Web i API wdrażają się niezależnie. Usunięcie zgodnośc
 
 #### Automated
 
-- [x] 2.1 Testy stron IT przechodzą: `cd szczur-radar-api && ./mvnw -B -Dit.test='PostsApiIT,PipelineRunControllerIT' -Dtest=none -Dsurefire.failIfNoSpecifiedTests=false verify`
-- [x] 2.2 Testy kształtów i skan przechodzą: `cd szczur-radar-web && npx vitest run src/contract/`
-- [x] 2.3 Całe testy web i typecheck zielone: `cd szczur-radar-web && npm test && npm run build`
-- [x] 2.4 Obraz web buduje się z własnego kontekstu (typecheck testów z `import.meta.glob`): `docker build -t sr-web-contract ./szczur-radar-web && docker rmi sr-web-contract`
-- [x] 2.5 Cały backend zielony: `cd szczur-radar-api && ./mvnw -B verify`
-- [x] 2.6 Powtórzenie X3 (agent wykonuje i cofa): usunięcie `attentionReasons` ze wszystkich plików z `Run` i ich próbek daje błąd `vue-tsc` w `npm run build`; przywrócenie `attentionReasons?:` w `pipeline.ts` daje czerwony skan w `npm test`
-- [x] 2.7 Atrapa nadal działa (agent): `npm run dev` z `dev/mock-api.js`, `playwright-cli` otwiera `/admin` i stronę przebiegu range z atrapy (`/admin/runs/r-source-failed`), w konsoli nie ma błędów
+- [x] 2.1 Testy stron IT przechodzą: `cd szczur-radar-api && ./mvnw -B -Dit.test='PostsApiIT,PipelineRunControllerIT' -Dtest=none -Dsurefire.failIfNoSpecifiedTests=false verify` — 17ba4ba
+- [x] 2.2 Testy kształtów i skan przechodzą: `cd szczur-radar-web && npx vitest run src/contract/` — 17ba4ba
+- [x] 2.3 Całe testy web i typecheck zielone: `cd szczur-radar-web && npm test && npm run build` — 17ba4ba
+- [x] 2.4 Obraz web buduje się z własnego kontekstu (typecheck testów z `import.meta.glob`): `docker build -t sr-web-contract ./szczur-radar-web && docker rmi sr-web-contract` — 17ba4ba
+- [x] 2.5 Cały backend zielony: `cd szczur-radar-api && ./mvnw -B verify` — 17ba4ba
+- [x] 2.6 Powtórzenie X3 (agent wykonuje i cofa): usunięcie `attentionReasons` ze wszystkich plików z `Run` i ich próbek daje błąd `vue-tsc` w `npm run build`; przywrócenie `attentionReasons?:` w `pipeline.ts` daje czerwony skan w `npm test` — 17ba4ba
+- [x] 2.7 Atrapa nadal działa (agent): `npm run dev` z `dev/mock-api.js`, `playwright-cli` otwiera `/admin` i stronę przebiegu range z atrapy (`/admin/runs/r-source-failed`), w konsoli nie ma błędów — 17ba4ba
 
 #### Manual
 
@@ -396,10 +396,10 @@ Brak migracji bazy. Web i API wdrażają się niezależnie. Usunięcie zgodnośc
 
 #### Automated
 
-- [ ] 3.1 Strażnik wariantów przechodzi: `cd szczur-radar-api && ./mvnw -B -Dtest=ContractVariantsTest test`
-- [ ] 3.2 IT tras przechodzi: `cd szczur-radar-api && ./mvnw -B -Dit.test=ContractRoutesIT -Dtest=none -Dsurefire.failIfNoSpecifiedTests=false verify`
-- [ ] 3.3 Cały backend zielony: `cd szczur-radar-api && ./mvnw -B verify`
-- [ ] 3.4 Całe testy web i typecheck zielone: `cd szczur-radar-web && npm test && npm run build`
-- [ ] 3.5 Celowe zepsucie wariantu (agent wykonuje i cofa): zamiana `rangeFrom: null` na wartość we wszystkich plikach z `RunView` daje czerwony `ContractVariantsTest` z nazwą `RunView.rangeFrom`; wpis w `KNOWN_GAPS` dla pola, które ma oba warianty, też jest czerwony
-- [ ] 3.6 Celowe zepsucie trasy (agent wykonuje i cofa): nowy `@GetMapping` pod `/api/admin/` bez wpisu w rejestrze daje czerwony `ContractRoutesIT`
-- [ ] 3.7 Celowe zepsucie pliku (agent wykonuje i cofa): plik `contract/extra.json` bez wpisu w `SHAPES` daje czerwony `ContractVariantsTest`
+- [x] 3.1 Strażnik wariantów przechodzi: `cd szczur-radar-api && ./mvnw -B -Dtest=ContractVariantsTest test`
+- [x] 3.2 IT tras przechodzi: `cd szczur-radar-api && ./mvnw -B -Dit.test=ContractRoutesIT -Dtest=none -Dsurefire.failIfNoSpecifiedTests=false verify`
+- [x] 3.3 Cały backend zielony: `cd szczur-radar-api && ./mvnw -B verify`
+- [x] 3.4 Całe testy web i typecheck zielone: `cd szczur-radar-web && npm test && npm run build`
+- [x] 3.5 Celowe zepsucie wariantu (agent wykonuje i cofa): zamiana `rangeFrom: null` na wartość we wszystkich plikach z `RunView` daje czerwony `ContractVariantsTest` z nazwą `RunView.rangeFrom`; wpis w `KNOWN_GAPS` dla pola, które ma oba warianty, też jest czerwony
+- [x] 3.6 Celowe zepsucie trasy (agent wykonuje i cofa): nowy `@GetMapping` pod `/api/admin/` bez wpisu w rejestrze daje czerwony `ContractRoutesIT`
+- [x] 3.7 Celowe zepsucie pliku (agent wykonuje i cofa): plik `contract/extra.json` bez wpisu w `SHAPES` daje czerwony `ContractVariantsTest`
