@@ -370,23 +370,23 @@ Brak migracji bazy. Web i API wdrażają się niezależnie. Usunięcie zgodnośc
 
 #### Automated
 
-- [x] 1.1 Nowe testy kontraktu IT przechodzą: `cd szczur-radar-api && ./mvnw -B -Dit.test='AuthIT,ActivationIT,NotificationsIT,PipelineRunControllerIT,MissingDaysIT' -Dtest=none -Dsurefire.failIfNoSpecifiedTests=false verify`
-- [x] 1.2 Test kształtów Vitest przechodzi: `cd szczur-radar-web && npx vitest run src/contract/shapes.test.ts`
-- [x] 1.3 Całe testy web i typecheck zielone: `cd szczur-radar-web && npm test && npm run build`
-- [x] 1.4 Cały backend zielony: `cd szczur-radar-api && ./mvnw -B verify`
-- [x] 1.5 Celowe zepsucie (agent wykonuje i cofa): nowy plik `contract/extra.json` bez próbki daje czerwony `shapes.test.ts`; nowe pole w `UserResponse` daje czerwony test kontraktu w `AuthIT` z nowym ciałem w komunikacie
+- [x] 1.1 Nowe testy kontraktu IT przechodzą: `cd szczur-radar-api && ./mvnw -B -Dit.test='AuthIT,ActivationIT,NotificationsIT,PipelineRunControllerIT,MissingDaysIT' -Dtest=none -Dsurefire.failIfNoSpecifiedTests=false verify` — 0176413
+- [x] 1.2 Test kształtów Vitest przechodzi: `cd szczur-radar-web && npx vitest run src/contract/shapes.test.ts` — 0176413
+- [x] 1.3 Całe testy web i typecheck zielone: `cd szczur-radar-web && npm test && npm run build` — 0176413
+- [x] 1.4 Cały backend zielony: `cd szczur-radar-api && ./mvnw -B verify` — 0176413
+- [x] 1.5 Celowe zepsucie (agent wykonuje i cofa): nowy plik `contract/extra.json` bez próbki daje czerwony `shapes.test.ts`; nowe pole w `UserResponse` daje czerwony test kontraktu w `AuthIT` z nowym ciałem w komunikacie — 0176413
 
 ### Phase 2: Pełne strony z wariantami i wymagane pola TS
 
 #### Automated
 
-- [ ] 2.1 Testy stron IT przechodzą: `cd szczur-radar-api && ./mvnw -B -Dit.test='PostsApiIT,PipelineRunControllerIT' -Dtest=none -Dsurefire.failIfNoSpecifiedTests=false verify`
-- [ ] 2.2 Testy kształtów i skan przechodzą: `cd szczur-radar-web && npx vitest run src/contract/`
-- [ ] 2.3 Całe testy web i typecheck zielone: `cd szczur-radar-web && npm test && npm run build`
-- [ ] 2.4 Obraz web buduje się z własnego kontekstu (typecheck testów z `import.meta.glob`): `docker build -t sr-web-contract ./szczur-radar-web && docker rmi sr-web-contract`
-- [ ] 2.5 Cały backend zielony: `cd szczur-radar-api && ./mvnw -B verify`
-- [ ] 2.6 Powtórzenie X3 (agent wykonuje i cofa): usunięcie `attentionReasons` ze wszystkich plików z `Run` i ich próbek daje błąd `vue-tsc` w `npm run build`; przywrócenie `attentionReasons?:` w `pipeline.ts` daje czerwony skan w `npm test`
-- [ ] 2.7 Atrapa nadal działa (agent): `npm run dev` z `dev/mock-api.js`, `playwright-cli` otwiera `/admin` i stronę przebiegu range z atrapy (`/admin/runs/r-source-failed`), w konsoli nie ma błędów
+- [x] 2.1 Testy stron IT przechodzą: `cd szczur-radar-api && ./mvnw -B -Dit.test='PostsApiIT,PipelineRunControllerIT' -Dtest=none -Dsurefire.failIfNoSpecifiedTests=false verify`
+- [x] 2.2 Testy kształtów i skan przechodzą: `cd szczur-radar-web && npx vitest run src/contract/`
+- [x] 2.3 Całe testy web i typecheck zielone: `cd szczur-radar-web && npm test && npm run build`
+- [x] 2.4 Obraz web buduje się z własnego kontekstu (typecheck testów z `import.meta.glob`): `docker build -t sr-web-contract ./szczur-radar-web && docker rmi sr-web-contract`
+- [x] 2.5 Cały backend zielony: `cd szczur-radar-api && ./mvnw -B verify`
+- [x] 2.6 Powtórzenie X3 (agent wykonuje i cofa): usunięcie `attentionReasons` ze wszystkich plików z `Run` i ich próbek daje błąd `vue-tsc` w `npm run build`; przywrócenie `attentionReasons?:` w `pipeline.ts` daje czerwony skan w `npm test`
+- [x] 2.7 Atrapa nadal działa (agent): `npm run dev` z `dev/mock-api.js`, `playwright-cli` otwiera `/admin` i stronę przebiegu range z atrapy (`/admin/runs/r-source-failed`), w konsoli nie ma błędów
 
 #### Manual
 

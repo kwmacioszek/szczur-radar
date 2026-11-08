@@ -60,6 +60,7 @@ function run(overrides: Partial<Run> = {}): Run {
     steps: [
       { step: 'fetch', status: 'succeeded', startedAt: '2026-10-02T06:00:01Z', finishedAt: null, itemsIn: null, itemsOut: 270, error: null },
     ],
+    sourceResults: [],
     ...overrides,
   }
 }

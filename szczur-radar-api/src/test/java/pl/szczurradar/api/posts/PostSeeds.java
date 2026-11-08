@@ -113,9 +113,13 @@ public final class PostSeeds {
 	 * ContractFixtures#validOutput()} with the model's provenance (the shape the SPA gets for most posts).
 	 */
 	public Assessment okByModel(UUID postId, String assessedAt) {
+		return okByModel(postId, assessedAt, ContractFixtures.validOutput());
+	}
+
+	/** An {@code ok} attempt of {@code postId} at {@code assessedAt} as a model answers it, with {@code output}. */
+	public Assessment okByModel(UUID postId, String assessedAt, AssessmentOutputV2 output) {
 		return assessments.saveAndFlush(new Assessment(postId, runId, ContractFixtures.validInput(),
-				new AssessmentResult(AssessmentResult.Status.OK, ContractFixtures.validOutput(), null, List.of(),
-						modelProvenance(assessedAt),
+				new AssessmentResult(AssessmentResult.Status.OK, output, null, List.of(), modelProvenance(assessedAt),
 						"{}")));
 	}
 

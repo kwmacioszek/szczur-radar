@@ -87,12 +87,12 @@ function hasSkipped(run: RunState): boolean {
  * text, as it is (the watchdog's "no progress for …" and an empty source's "NoPostsFetchedException: …" too);
  * `interrupted`: its cause; `source_failed`: the sources that threw, `source_empty`: each source without a post with
  * its counts (both from `sourceResults`, a stand-in text without them); `dead_posts`, `processing_errors`, `skipped`:
- * the run's counter. A code without a text here shows as it came. A run that needs attention without any reason (an API from before S-22 sends none) gets one
- * stand-in text, so "Wymaga uwagi:" is never empty; a run that does not need attention has none.
+ * the run's counter. A code without a text here shows as it came. A run that needs attention with an empty list of
+ * reasons gets one stand-in text, so "Wymaga uwagi:" is never empty; a run that does not need attention has none.
  */
 export function attentionReasons(run: AttentionFields): string[] {
   if (!run.needsAttention) return []
-  const reasons = (run.attentionReasons ?? []).map((code) => attentionReasonText(code, run))
+  const reasons = run.attentionReasons.map((code) => attentionReasonText(code, run))
   return reasons.length > 0 ? reasons : ['sprawdź kroki i błąd przebiegu']
 }
 
@@ -103,12 +103,12 @@ function attentionReasonText(code: AttentionReason, run: AttentionFields): strin
     case 'interrupted':
       return run.interruptionCause ? `przerwany: ${label('interruptionCause', run.interruptionCause)}` : 'przerwany'
     case 'source_failed': {
-      const failed = (run.sourceResults ?? []).filter((result) => result.status === 'failed')
+      const failed = run.sourceResults.filter((result) => result.status === 'failed')
       if (failed.length === 0) return 'błąd pobrania źródła'
       return `błąd pobrania: ${failed.map((result) => label('source', result.source)).join(', ')}`
     }
     case 'source_empty': {
-      const empty = (run.sourceResults ?? []).filter((result) => result.status === 'empty')
+      const empty = run.sourceResults.filter((result) => result.status === 'empty')
       if (empty.length === 0) return 'źródło nie dało postów'
       return empty
         .map((result) => `bez postów: ${label('source', result.source)} (pobrano ${result.fetched}, pominięto ${result.skipped})`)

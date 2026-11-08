@@ -60,6 +60,7 @@ function run(overrides: Partial<Run> = {}): Run {
     inFlight: 0,
     error: null,
     steps: [],
+    sourceResults: [],
     ...overrides,
   }
 }
@@ -212,7 +213,7 @@ describe('attentionReasons', () => {
       ])
     })
 
-    it('gives a stand-in text without the results (an API from before S-20) or without a matching one', () => {
+    it('gives a stand-in text without any result or without a matching one', () => {
       expect(attentionReasons(attention(['source_failed', 'source_empty'], { status: 'partial' }))).toEqual([
         'błąd pobrania źródła',
         'źródło nie dało postów',
@@ -252,10 +253,6 @@ describe('attentionReasons', () => {
   })
 
   it('gives a run that needs attention without any reason a stand-in text', () => {
-    // An API from before S-22 sends the flag without the field.
-    const legacy = run({ needsAttention: true, status: 'failed', error: 'boom' })
-    delete legacy.attentionReasons
-    expect(attentionReasons(legacy)).toEqual(['sprawdź kroki i błąd przebiegu'])
     const empty = attention([], { status: 'partial', dead: 1 })
     expect(attentionReasons(empty)).toEqual(['sprawdź kroki i błąd przebiegu'])
   })

@@ -79,6 +79,7 @@ function run(overrides: Partial<Run> = {}): Run {
     inFlight: 0,
     error: null,
     steps: [step('fetch', { itemsIn: null, itemsOut: 248 }), step('assess', { itemsIn: 213, itemsOut: 209 })],
+    sourceResults: [],
     ...overrides,
   }
 }
@@ -250,7 +251,11 @@ describe('RunDetailView', () => {
     expect(wrapper.find('progress').exists()).toBe(false)
     expect(wrapper.find('.duration').text()).toBe('—')
     expect(wrapper.find('.steps').exists()).toBe(false)
-    expect(page(wrapper).find('.empty').text()).toBe('Żaden krok się jeszcze nie zaczął.')
+    // A queued range run has neither a source's result nor a step yet.
+    expect(page(wrapper).findAll('.empty').map((empty) => empty.text())).toEqual([
+      'Jeszcze żadne źródło nie zakończyło pobrania.',
+      'Żaden krok się jeszcze nie zaczął.',
+    ])
   })
 
   describe('each source’s result', () => {
@@ -335,13 +340,6 @@ describe('RunDetailView', () => {
       )
       const { wrapper } = await mountRun()
       expect(wrapper.find('.source-results').exists()).toBe(false)
-    })
-
-    it('is not there when the API does not send the results (from before S-20)', async () => {
-      vi.mocked(fetchRun).mockResolvedValue(run())
-      const { wrapper } = await mountRun()
-      expect(wrapper.find('.source-results').exists()).toBe(false)
-      expect(page(wrapper).text()).not.toContain('Wynik per źródło')
     })
   })
 
@@ -440,10 +438,7 @@ describe('RunDetailView', () => {
     })
 
     it('never leaves "Wymaga uwagi" empty: a flagged run without reasons gets a stand-in text', async () => {
-      // An API from before S-22 sends the flag without the field.
-      const legacy = run({ status: 'partial', needsAttention: true, dead: 1 })
-      delete legacy.attentionReasons
-      vi.mocked(fetchRun).mockResolvedValue(legacy)
+      vi.mocked(fetchRun).mockResolvedValue(run({ status: 'partial', needsAttention: true, attentionReasons: [], dead: 1 }))
       const { wrapper } = await mountRun()
       expect(wrapper.find('.attention').text()).toBe('Wymaga uwagi: sprawdź kroki i błąd przebiegu')
     })

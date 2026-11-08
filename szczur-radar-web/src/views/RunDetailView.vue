@@ -229,7 +229,7 @@ watch(
         </section>
 
         <section
-          v-if="run.kind === 'range' && run.sourceResults"
+          v-if="run.kind === 'range'"
           class="part source-results"
           aria-labelledby="source-results-title"
         >

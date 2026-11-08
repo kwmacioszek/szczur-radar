@@ -484,6 +484,67 @@ class PipelineRunControllerIT {
 		}
 	}
 
+	/**
+	 * A full page of the run list: the cron's partial range run (as in {@code run.json}), an admin's retry run a
+	 * restart interrupted in its assess step, an admin's run of chosen posts, and the succeeded retry run
+	 * {@link PostSeeds} creates for every test, kept on purpose as the newest. The class keeps the runs of its other
+	 * tests, so this one first deletes every run (and what refers to one) in the order of the foreign keys, then
+	 * seeds its own: the page's total and items are only this test's.
+	 */
+	@Test
+	void aRunsPageMatchesTheSharedContract() {
+		for (String table : List.of("notifications", "pipeline_run_steps", "pipeline_run_sources", "assessments", "posts",
+				"pipeline_runs")) {
+			jdbc.update("DELETE FROM " + table);
+		}
+		seeds = new PostSeeds(posts, assessments, rawPayloads, runs, users, jdbc, entityManager);
+		UUID range = jdbc.queryForObject("INSERT INTO pipeline_runs (kind, status, requested_by, range_from, range_to,"
+				+ " sources, created_at, started_at, finished_at, last_activity_at, fetched, new_posts, assessed_ok,"
+				+ " assessed_failed, processing_errors, dead, skipped, sources_failed, sources_empty, llm_retries,"
+				+ " flex_fallbacks, error) VALUES ('range', 'partial', ?, '2026-10-13T22:00:00Z', '2026-10-14T21:59:59Z',"
+				+ " ARRAY['wykop', 'reddit'], '2026-10-16T00:30:00Z', '2026-10-16T00:30:05Z', '2026-10-16T00:41:00Z',"
+				+ " '2026-10-16T00:41:00Z', 12, 10, 8, 1, 1, 1, 2, 1, 0, 3, 1,"
+				+ " 'reddit failed: IllegalStateException: 503') RETURNING id", UUID.class,
+				SystemAccount.SCHEDULER.id());
+		jdbc.update("INSERT INTO pipeline_run_steps (run_id, step, status, started_at, finished_at, items_out) VALUES"
+				+ " (?, 'fetch', 'succeeded', '2026-10-16T00:30:06Z', '2026-10-16T00:31:00Z', 12)", range);
+		jdbc.update("INSERT INTO pipeline_run_steps (run_id, step, status, started_at, finished_at, items_in, items_out)"
+				+ " VALUES (?, 'store', 'succeeded', '2026-10-16T00:31:01Z', '2026-10-16T00:31:30Z', 10, 10)", range);
+		jdbc.update("INSERT INTO pipeline_run_steps (run_id, step, status, started_at, finished_at, items_in, items_out)"
+				+ " VALUES (?, 'select', 'succeeded', '2026-10-16T00:31:31Z', '2026-10-16T00:31:32Z', 10, 10)", range);
+		jdbc.update("INSERT INTO pipeline_run_steps (run_id, step, status, started_at, finished_at, items_in, items_out)"
+				+ " VALUES (?, 'assess', 'succeeded', '2026-10-16T00:31:33Z', '2026-10-16T00:41:00Z', 10, 8)", range);
+		jdbc.update("INSERT INTO pipeline_run_sources (run_id, source, status, fetched, skipped, error, finished_at)"
+				+ " VALUES (?, 'wykop', 'succeeded', 12, 2, NULL, '2026-10-16T00:30:40Z')", range);
+		jdbc.update("INSERT INTO pipeline_run_sources (run_id, source, status, fetched, skipped, error, finished_at)"
+				+ " VALUES (?, 'reddit', 'failed', 0, 0, 'IllegalStateException: 503', '2026-10-16T00:31:00Z')", range);
+		// Its assess step was open when the restart came: it has the run's error, but neither an end nor an output.
+		UUID interrupted = jdbc.queryForObject("INSERT INTO pipeline_runs (kind, status, requested_by, created_at,"
+				+ " started_at, finished_at, last_activity_at, assessed_ok, assessed_failed, llm_retries,"
+				+ " interruption_cause, error) VALUES ('retry', 'interrupted', ?, '2026-10-16T09:00:00Z',"
+				+ " '2026-10-16T09:00:01Z', '2026-10-16T09:02:00Z', '2026-10-16T09:01:30Z', 2, 1, 1, 'restart',"
+				+ " 'interrupted: the application restarted') RETURNING id", UUID.class, admin);
+		jdbc.update("INSERT INTO pipeline_run_steps (run_id, step, status, started_at, finished_at, items_out) VALUES"
+				+ " (?, 'select', 'succeeded', '2026-10-16T09:00:02Z', '2026-10-16T09:00:03Z', 5)", interrupted);
+		jdbc.update("INSERT INTO pipeline_run_steps (run_id, step, status, started_at, items_in, error) VALUES"
+				+ " (?, 'assess', 'interrupted', '2026-10-16T09:00:04Z', 5, 'interrupted: the application restarted')",
+				interrupted);
+		UUID chosen = jdbc.queryForObject("INSERT INTO pipeline_runs (kind, status, requested_by, requested_post_ids,"
+				+ " created_at, started_at, finished_at, last_activity_at, assessed_ok) VALUES ('posts', 'succeeded', ?,"
+				+ " ARRAY['6f1c1c1e-0000-4000-8000-000000000001', '6f1c1c1e-0000-4000-8000-000000000002']::uuid[],"
+				+ " '2026-10-17T10:00:00Z', '2026-10-17T10:00:01Z', '2026-10-17T10:00:40Z', '2026-10-17T10:00:40Z', 2)"
+				+ " RETURNING id", UUID.class, admin);
+		jdbc.update("INSERT INTO pipeline_run_steps (run_id, step, status, started_at, finished_at, items_out) VALUES"
+				+ " (?, 'select', 'succeeded', '2026-10-17T10:00:02Z', '2026-10-17T10:00:03Z', 2)", chosen);
+		jdbc.update("INSERT INTO pipeline_run_steps (run_id, step, status, started_at, finished_at, items_in, items_out)"
+				+ " VALUES (?, 'assess', 'succeeded', '2026-10-17T10:00:04Z', '2026-10-17T10:00:40Z', 2, 2)", chosen);
+
+		MvcTestResult page = mvc.get().uri("/api/admin/pipeline-runs?page=0&size=10").with(asAdmin()).exchange();
+
+		assertThat(page).hasStatusOk();
+		ContractFiles.assertMatches(body(page), "runs-page.json");
+	}
+
 	@Test
 	void aRunningRunCountsThePostsItIsAssessing() {
 		UUID post = seeds.post(PostStage.STORED, 0, "2026-10-01T08:00:00Z");

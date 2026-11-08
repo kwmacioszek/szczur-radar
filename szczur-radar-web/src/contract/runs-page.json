@@ -1,0 +1,240 @@
+{
+  "items": [
+    {
+      "id": "<uuid>",
+      "kind": "retry",
+      "status": "succeeded",
+      "interruptionCause": null,
+      "needsAttention": false,
+      "attentionReasons": [],
+      "scheduled": false,
+      "rangeFrom": null,
+      "rangeTo": null,
+      "sources": [],
+      "requestedPostIds": null,
+      "createdAt": "<instant>",
+      "startedAt": null,
+      "finishedAt": null,
+      "lastActivityAt": null,
+      "fetched": 0,
+      "newPosts": 0,
+      "assessedOk": 0,
+      "assessedFailed": 0,
+      "processingErrors": 0,
+      "dead": 0,
+      "skipped": 0,
+      "sourcesFailed": 0,
+      "sourcesEmpty": 0,
+      "llmRetries": 0,
+      "flexFallbacks": 0,
+      "inFlight": 0,
+      "error": null,
+      "steps": [],
+      "sourceResults": []
+    },
+    {
+      "id": "<uuid>",
+      "kind": "posts",
+      "status": "succeeded",
+      "interruptionCause": null,
+      "needsAttention": false,
+      "attentionReasons": [],
+      "scheduled": false,
+      "rangeFrom": null,
+      "rangeTo": null,
+      "sources": [],
+      "requestedPostIds": [
+        "<uuid>",
+        "<uuid>"
+      ],
+      "createdAt": "<instant>",
+      "startedAt": "<instant>",
+      "finishedAt": "<instant>",
+      "lastActivityAt": "<instant>",
+      "fetched": 0,
+      "newPosts": 0,
+      "assessedOk": 2,
+      "assessedFailed": 0,
+      "processingErrors": 0,
+      "dead": 0,
+      "skipped": 0,
+      "sourcesFailed": 0,
+      "sourcesEmpty": 0,
+      "llmRetries": 0,
+      "flexFallbacks": 0,
+      "inFlight": 0,
+      "error": null,
+      "steps": [
+        {
+          "step": "select",
+          "status": "succeeded",
+          "startedAt": "<instant>",
+          "finishedAt": "<instant>",
+          "itemsIn": null,
+          "itemsOut": 2,
+          "error": null
+        },
+        {
+          "step": "assess",
+          "status": "succeeded",
+          "startedAt": "<instant>",
+          "finishedAt": "<instant>",
+          "itemsIn": 2,
+          "itemsOut": 2,
+          "error": null
+        }
+      ],
+      "sourceResults": []
+    },
+    {
+      "id": "<uuid>",
+      "kind": "retry",
+      "status": "interrupted",
+      "interruptionCause": "restart",
+      "needsAttention": true,
+      "attentionReasons": [
+        "interrupted"
+      ],
+      "scheduled": false,
+      "rangeFrom": null,
+      "rangeTo": null,
+      "sources": [],
+      "requestedPostIds": null,
+      "createdAt": "<instant>",
+      "startedAt": "<instant>",
+      "finishedAt": "<instant>",
+      "lastActivityAt": "<instant>",
+      "fetched": 0,
+      "newPosts": 0,
+      "assessedOk": 2,
+      "assessedFailed": 1,
+      "processingErrors": 0,
+      "dead": 0,
+      "skipped": 0,
+      "sourcesFailed": 0,
+      "sourcesEmpty": 0,
+      "llmRetries": 1,
+      "flexFallbacks": 0,
+      "inFlight": 0,
+      "error": "interrupted: the application restarted",
+      "steps": [
+        {
+          "step": "select",
+          "status": "succeeded",
+          "startedAt": "<instant>",
+          "finishedAt": "<instant>",
+          "itemsIn": null,
+          "itemsOut": 5,
+          "error": null
+        },
+        {
+          "step": "assess",
+          "status": "interrupted",
+          "startedAt": "<instant>",
+          "finishedAt": null,
+          "itemsIn": 5,
+          "itemsOut": null,
+          "error": "interrupted: the application restarted"
+        }
+      ],
+      "sourceResults": []
+    },
+    {
+      "id": "<uuid>",
+      "kind": "range",
+      "status": "partial",
+      "interruptionCause": null,
+      "needsAttention": true,
+      "attentionReasons": [
+        "source_failed",
+        "dead_posts",
+        "processing_errors",
+        "skipped"
+      ],
+      "scheduled": true,
+      "rangeFrom": "<instant>",
+      "rangeTo": "<instant>",
+      "sources": [
+        "wykop",
+        "reddit"
+      ],
+      "requestedPostIds": null,
+      "createdAt": "<instant>",
+      "startedAt": "<instant>",
+      "finishedAt": "<instant>",
+      "lastActivityAt": "<instant>",
+      "fetched": 12,
+      "newPosts": 10,
+      "assessedOk": 8,
+      "assessedFailed": 1,
+      "processingErrors": 1,
+      "dead": 1,
+      "skipped": 2,
+      "sourcesFailed": 1,
+      "sourcesEmpty": 0,
+      "llmRetries": 3,
+      "flexFallbacks": 1,
+      "inFlight": 0,
+      "error": "reddit failed: IllegalStateException: 503",
+      "steps": [
+        {
+          "step": "fetch",
+          "status": "succeeded",
+          "startedAt": "<instant>",
+          "finishedAt": "<instant>",
+          "itemsIn": null,
+          "itemsOut": 12,
+          "error": null
+        },
+        {
+          "step": "store",
+          "status": "succeeded",
+          "startedAt": "<instant>",
+          "finishedAt": "<instant>",
+          "itemsIn": 10,
+          "itemsOut": 10,
+          "error": null
+        },
+        {
+          "step": "select",
+          "status": "succeeded",
+          "startedAt": "<instant>",
+          "finishedAt": "<instant>",
+          "itemsIn": 10,
+          "itemsOut": 10,
+          "error": null
+        },
+        {
+          "step": "assess",
+          "status": "succeeded",
+          "startedAt": "<instant>",
+          "finishedAt": "<instant>",
+          "itemsIn": 10,
+          "itemsOut": 8,
+          "error": null
+        }
+      ],
+      "sourceResults": [
+        {
+          "source": "wykop",
+          "status": "succeeded",
+          "fetched": 12,
+          "skipped": 2,
+          "error": null,
+          "finishedAt": "<instant>"
+        },
+        {
+          "source": "reddit",
+          "status": "failed",
+          "fetched": 0,
+          "skipped": 0,
+          "error": "IllegalStateException: 503",
+          "finishedAt": "<instant>"
+        }
+      ]
+    }
+  ],
+  "page": 0,
+  "size": 10,
+  "total": 4
+}
