@@ -37,6 +37,7 @@ import org.springframework.test.web.servlet.assertj.MvcTestResult;
 import pl.szczurradar.api.TestcontainersConfiguration;
 import pl.szczurradar.api.cli.MigrateCommand;
 import pl.szczurradar.api.config.SessionConfig;
+import pl.szczurradar.api.contract.ContractFiles;
 import pl.szczurradar.api.user.Role;
 import pl.szczurradar.api.user.SystemAccount;
 import pl.szczurradar.api.user.User;
@@ -47,7 +48,8 @@ import pl.szczurradar.api.user.UserRepository;
  * tests/test_auth.py) on Spring Security + Spring Session JDBC.
  *
  * <p>All tests share one application context, hence one login limiter: each test uses its own
- * e-mails and client IP ({@code X-Real-IP}) so limiter state never leaks between tests.
+ * e-mails (the contract test a fixed one no other test uses) and client IP ({@code X-Real-IP}) so
+ * limiter state never leaks between tests.
  */
 @SpringBootTest(properties = MigrateCommand.ENABLE_FLYWAY)
 @AutoConfigureMockMvc
@@ -59,6 +61,9 @@ class AuthIT {
 	private static final String WRONG_PASSWORD = "wrong password!!";
 
 	private static final long MAX_AGE = Duration.ofDays(30).toSeconds();
+
+	/** The account of the contract test: fixed, because the contract file shows the e-mail as it is. */
+	private static final String CONTRACT_EMAIL = "contract@szczur.test";
 
 	private static final AtomicInteger SEQUENCE = new AtomicInteger();
 
@@ -419,7 +424,26 @@ class AuthIT {
 		assertThat(sessionCookies(result)).noneMatch(c -> c.maxAge() != null && c.maxAge() > 0);
 	}
 
+	// --- the shared contract --------------------------------------------------------------------
+
+	@Test
+	void theAccountOfLoginAndMeMatchesTheSharedContract() {
+		createUser(CONTRACT_EMAIL, PASSWORD, Role.ADMIN);
+
+		MvcTestResult login = login(CONTRACT_EMAIL, PASSWORD);
+		assertThat(login).hasStatusOk();
+		ContractFiles.assertMatches(body(login), "user.json");
+
+		MvcTestResult me = me(singleSessionCookie(login).value());
+		assertThat(me).hasStatusOk();
+		ContractFiles.assertMatches(body(me), "user.json");
+	}
+
 	// --- helpers --------------------------------------------------------------------------------
+
+	private static String body(MvcTestResult result) {
+		return new String(result.getResponse().getContentAsByteArray(), StandardCharsets.UTF_8);
+	}
 
 	private static String ipNumber(int n) {
 		return "10.0." + n / 250 + "." + (n % 250 + 1);

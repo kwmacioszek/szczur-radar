@@ -1,0 +1,41 @@
+{
+  "unread": 1,
+  "items": [
+    {
+      "id": "<uuid>",
+      "kind": "run_attention",
+      "createdAt": "<instant>",
+      "readAt": null,
+      "run": {
+        "id": "<uuid>",
+        "kind": "retry",
+        "status": "interrupted",
+        "interruptionCause": "deploy",
+        "finishedAt": "<instant>",
+        "assessedFailed": 2,
+        "dead": 1,
+        "processingErrors": 3,
+        "skipped": 4,
+        "error": "interrupted: a new deployment took over"
+      }
+    },
+    {
+      "id": "<uuid>",
+      "kind": "run_attention",
+      "createdAt": "<instant>",
+      "readAt": "<instant>",
+      "run": {
+        "id": "<uuid>",
+        "kind": "retry",
+        "status": "partial",
+        "interruptionCause": null,
+        "finishedAt": "<instant>",
+        "assessedFailed": 1,
+        "dead": 1,
+        "processingErrors": 0,
+        "skipped": 0,
+        "error": null
+      }
+    }
+  ]
+}

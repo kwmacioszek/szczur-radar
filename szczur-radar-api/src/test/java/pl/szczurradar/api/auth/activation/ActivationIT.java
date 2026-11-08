@@ -2,6 +2,7 @@ package pl.szczurradar.api.auth.activation;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
@@ -24,6 +25,7 @@ import pl.szczurradar.api.TestcontainersConfiguration;
 import pl.szczurradar.api.auth.Passwords;
 import pl.szczurradar.api.cli.MigrateCommand;
 import pl.szczurradar.api.config.SessionConfig;
+import pl.szczurradar.api.contract.ContractFiles;
 import pl.szczurradar.api.persistence.Sha256;
 import pl.szczurradar.api.user.Role;
 import pl.szczurradar.api.user.SystemAccount;
@@ -33,8 +35,8 @@ import pl.szczurradar.api.user.SystemAccount;
  * password, logging in with it afterwards, the error codes and the Origin guard.
  *
  * <p>Every call to an activation route goes through {@link #activationCall}, which checks that it set no
- * cookie and stored no session. Each test uses its own e-mails; logins come from an address of their
- * own, so the shared login limiter never mixes with {@code AuthIT}.
+ * cookie and stored no session. Each test uses its own e-mails (the contract test a fixed one); logins
+ * come from an address of their own, so the shared login limiter never mixes with {@code AuthIT}.
  */
 @SpringBootTest(properties = MigrateCommand.ENABLE_FLYWAY)
 @AutoConfigureMockMvc
@@ -50,6 +52,9 @@ class ActivationIT {
 	private static final Duration TTL = Duration.ofHours(12);
 
 	private static final String CLIENT_IP = "10.7.0.1";
+
+	/** The account of the contract test: fixed, because the contract file shows the e-mail as it is. */
+	private static final String CONTRACT_EMAIL = "contract@szczur.test";
 
 	private static final AtomicInteger SEQUENCE = new AtomicInteger();
 
@@ -80,6 +85,15 @@ class ActivationIT {
 		for (String invalid : List.of("unknown-" + UUID.randomUUID(), token, "")) {
 			assertLinkInvalid(lookup(invalid));
 		}
+	}
+
+	@Test
+	void lookupMatchesTheSharedContract() {
+		MvcTestResult result = lookup(newLink(CONTRACT_EMAIL));
+
+		assertThat(result).hasStatusOk();
+		ContractFiles.assertMatches(new String(result.getResponse().getContentAsByteArray(), StandardCharsets.UTF_8),
+				"activation-lookup.json");
 	}
 
 	// --- activation -----------------------------------------------------------------------------

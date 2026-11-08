@@ -153,12 +153,13 @@ class PipelineRunControllerIT {
 	}
 
 	@Test
-	void theSourcesListSaysWhichAreConfigured() {
+	void theSourcesListSaysWhichAreConfiguredAndMatchesTheSharedContract() {
 		// Every registered source with its fetcher, in Source order: Wykop on the local server, Reddit without
 		// REDDIT_SUBREDDITS.
-		assertThat(mvc.get().uri("/api/admin/pipeline-runs/sources").with(asAdmin())).hasStatusOk()
-			.bodyJson()
-			.isStrictlyEqualTo("[{\"source\":\"wykop\",\"configured\":true},{\"source\":\"reddit\",\"configured\":false}]");
+		MvcTestResult sources = mvc.get().uri("/api/admin/pipeline-runs/sources").with(asAdmin()).exchange();
+
+		assertThat(sources).hasStatusOk();
+		ContractFiles.assertMatches(body(sources), "sources.json");
 	}
 
 	@Test
@@ -174,6 +175,17 @@ class PipelineRunControllerIT {
 		assertThat(result).bodyJson().extractingPath("$[1].rangeTo").isEqualTo("2026-10-02T21:59:59Z");
 		awaitIdle();
 		assertThat(jdbc.queryForObject("SELECT stage FROM posts WHERE id = ?", String.class, leftover)).isEqualTo("assessed");
+	}
+
+	@Test
+	void theRunsOfAStartedRangeWithLeftoversMatchTheSharedContract() {
+		seeds.post(PostStage.FAILED, 1, "2026-10-01T08:00:00Z");
+
+		MvcTestResult result = start("{\"from\":\"2026-10-01\",\"to\":\"2026-10-02\"}");
+
+		// The retry run, then the range run, both as queued: nothing started, no step or source result yet.
+		assertThat(result).hasStatus(HttpStatus.ACCEPTED);
+		ContractFiles.assertMatches(body(result), "started-runs.json");
 	}
 
 	@Test
@@ -463,8 +475,7 @@ class PipelineRunControllerIT {
 			MvcTestResult page = mvc.get().uri("/api/admin/pipeline-runs/" + run).with(asAdmin()).exchange();
 
 			assertThat(page).hasStatusOk();
-			ContractFiles.assertMatches(
-					new String(page.getResponse().getContentAsByteArray(), StandardCharsets.UTF_8), "run.json");
+			ContractFiles.assertMatches(body(page), "run.json");
 		}
 		finally {
 			jdbc.update("DELETE FROM pipeline_run_steps WHERE run_id = ?", run);
@@ -515,6 +526,10 @@ class PipelineRunControllerIT {
 	private MvcTestResult start(String body) {
 		return mvc.post().uri("/api/admin/pipeline-runs").with(asAdmin()).contentType(MediaType.APPLICATION_JSON).content(body)
 			.exchange();
+	}
+
+	private static String body(MvcTestResult result) {
+		return new String(result.getResponse().getContentAsByteArray(), StandardCharsets.UTF_8);
 	}
 
 	private RequestPostProcessor asAdmin() {

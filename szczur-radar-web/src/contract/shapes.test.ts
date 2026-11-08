@@ -1,26 +1,22 @@
 import { describe, expect, it } from 'vitest'
-import failedPostJson from './failed-post.json'
-import freshnessJson from './freshness.json'
-import postJson from './post.json'
-import runJson from './run.json'
-import { sampleFailedPost, sampleFreshness, samplePost, sampleRun } from './samples'
+import { SAMPLES } from './samples'
 
 // The files are what the API's integration tests compare the real, masked response bodies with; the samples are the
-// TS types' reading of the same bodies. Equal, they say the types describe exactly what the server sends.
+// TS types' reading of the same bodies. Equal, they say the types describe exactly what the server sends. The files
+// are found, not listed: a new file without a sample (or a sample without its file) is red here. rules.json is the
+// registry of copied rules (rules.test.ts), not a response body.
+const FILES = Object.fromEntries(
+  Object.entries(
+    import.meta.glob<unknown>(['./*.json', '!./rules.json'], { eager: true, import: 'default' }),
+  ).map(([path, body]) => [path.replace(/^\.\//, ''), body]),
+)
+
 describe('the shared full bodies', () => {
-  it('a run (GET /api/admin/pipeline-runs/{id}) is the Run type', () => {
-    expect(sampleRun).toEqual(runJson)
+  it('every contract file has its typed sample, and every sample its file', () => {
+    expect(Object.keys(SAMPLES).sort()).toEqual(Object.keys(FILES).sort())
   })
 
-  it('a post (GET /api/posts/{id}) is the PostItem type', () => {
-    expect(samplePost).toEqual(postJson)
-  })
-
-  it('a failed post (GET /api/admin/posts/failed) is the FailedPost type', () => {
-    expect(sampleFailedPost).toEqual(failedPostJson)
-  })
-
-  it('the freshness (GET /api/freshness) is the Freshness type', () => {
-    expect(sampleFreshness).toEqual(freshnessJson)
+  it.each(Object.keys(FILES).sort())('%s equals its typed sample', (file) => {
+    expect(SAMPLES[file]).toEqual(FILES[file])
   })
 })
