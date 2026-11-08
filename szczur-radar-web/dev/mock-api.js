@@ -53,6 +53,10 @@
  *                (POST /api/admin/notifications/<id>/read and …/notifications/read → 204),
  *       'none'   no notifications (unread 0),
  *       'error'  500.
+ * Failed posts (/api/admin/posts/failed, like posts/api/FailedPostController.java): p1 and p2 failed, p3 dead, p4 on
+ * hold. POST /api/admin/posts/restore {postIds} answers like posts/api/DeadPostController.java: each named post that is
+ * still dead becomes stored with no attempts and leaves the list, {restored: N}; 1–100 ids or 400 invalid_request.
+ * A restored post stays restored until the mock is installed again; MODE 'loading' and 'error' apply first.
  * /api/posts answers like posts/api/PostController.java: page, size, total; a page past the end (e.g. /?page=9)
  * is 200 with items [] and the real total. /api/posts/feed-<n> (n from 0 to 119) is the feed's post n, any other
  * id is 404 {"detail":"post_not_found"}; /api/posts/feed-<n>/raw is indented JSON text shaped like a Wykop entry,
@@ -445,7 +449,19 @@ async page => {
       readIds.add(id)
       return route.fulfill({ status: 204 })
     }
-    if (p === '/api/admin/posts/failed') return json(route, { items: MODE === 'empty' ? [] : failed, page: 0, size: 50, total: MODE === 'empty' ? 0 : failed.length })
+    if (p === '/api/admin/posts/failed') {
+      // Like the API: a stored post is on the list only while it is on hold (a restored one is not).
+      const items = MODE === 'empty' ? [] : failed.filter((post) => post.stage !== 'stored' || post.onHold)
+      return json(route, { items, page: 0, size: 50, total: items.length })
+    }
+    if (p === '/api/admin/posts/restore' && route.request().method() === 'POST') {
+      // Like posts/api/DeadPostController.java: each named post that is still dead becomes stored with no attempts.
+      const ids = route.request().postDataJSON()?.postIds
+      if (!Array.isArray(ids) || ids.length === 0 || ids.length > 100) return json(route, { detail: 'invalid_request' }, 400)
+      const dead = MODE === 'empty' ? [] : failed.filter((post) => post.stage === 'dead' && ids.includes(post.id))
+      dead.forEach((post) => Object.assign(post, { stage: 'stored', assessmentAttempts: 0, lastAttempt: null }))
+      return json(route, { restored: dead.length })
+    }
     if (p === '/api/freshness') {
       if (FRESHNESS === 'error') return json(route, { detail: 'internal_error' }, 500)
       return json(route, { sources: FRESHNESS_SOURCES[FRESHNESS] })

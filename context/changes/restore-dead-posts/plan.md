@@ -245,18 +245,18 @@ Brak migracji: ograniczenia `V3` już dopuszczają `stored` z 0 prób. Na produk
 
 #### Automated
 
-- [x] 1.1 Testy integracyjne i jednostkowe backendu przechodzą (`./mvnw -B verify`)
-- [x] 1.2 `PostColumnsIT.everyTransitionHasAScenario` jest czerwony po usunięciu scenariusza `restore`
-- [x] 1.3 `AdminRoleIT` i `AuthorizationCompletenessIT` przechodzą z nową trasą w `ADMIN_ROUTES`
-- [x] 1.4 SVG roadmapy wygenerowany ponownie bez błędu
+- [x] 1.1 Testy integracyjne i jednostkowe backendu przechodzą (`./mvnw -B verify`) — 83d3420
+- [x] 1.2 `PostColumnsIT.everyTransitionHasAScenario` jest czerwony po usunięciu scenariusza `restore` — 83d3420
+- [x] 1.3 `AdminRoleIT` i `AuthorizationCompletenessIT` przechodzą z nową trasą w `ADMIN_ROUTES` — 83d3420
+- [x] 1.4 SVG roadmapy wygenerowany ponownie bez błędu — 83d3420
 
 ### Phase 2: Widok `/admin`
 
 #### Automated
 
-- [ ] 2.1 Testy SPA przechodzą (`npm test`)
-- [ ] 2.2 Typecheck i build przechodzą (`npm run build`)
-- [ ] 2.3 Agent sprawdza sekcję „Nieudane posty” na atrapie przez `playwright-cli` (oba motywy, 375 px, 7 stanów)
+- [x] 2.1 Testy SPA przechodzą (`npm test`)
+- [x] 2.2 Typecheck i build przechodzą (`npm run build`)
+- [x] 2.3 Agent sprawdza sekcję „Nieudane posty” na atrapie przez `playwright-cli` (oba motywy, 375 px, 7 stanów)
 
 #### Manual
 
