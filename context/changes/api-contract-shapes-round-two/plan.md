@@ -396,10 +396,10 @@ Brak migracji bazy. Web i API wdrażają się niezależnie. Usunięcie zgodnośc
 
 #### Automated
 
-- [x] 3.1 Strażnik wariantów przechodzi: `cd szczur-radar-api && ./mvnw -B -Dtest=ContractVariantsTest test`
-- [x] 3.2 IT tras przechodzi: `cd szczur-radar-api && ./mvnw -B -Dit.test=ContractRoutesIT -Dtest=none -Dsurefire.failIfNoSpecifiedTests=false verify`
-- [x] 3.3 Cały backend zielony: `cd szczur-radar-api && ./mvnw -B verify`
-- [x] 3.4 Całe testy web i typecheck zielone: `cd szczur-radar-web && npm test && npm run build`
-- [x] 3.5 Celowe zepsucie wariantu (agent wykonuje i cofa): zamiana `rangeFrom: null` na wartość we wszystkich plikach z `RunView` daje czerwony `ContractVariantsTest` z nazwą `RunView.rangeFrom`; wpis w `KNOWN_GAPS` dla pola, które ma oba warianty, też jest czerwony
-- [x] 3.6 Celowe zepsucie trasy (agent wykonuje i cofa): nowy `@GetMapping` pod `/api/admin/` bez wpisu w rejestrze daje czerwony `ContractRoutesIT`
-- [x] 3.7 Celowe zepsucie pliku (agent wykonuje i cofa): plik `contract/extra.json` bez wpisu w `SHAPES` daje czerwony `ContractVariantsTest`
+- [x] 3.1 Strażnik wariantów przechodzi: `cd szczur-radar-api && ./mvnw -B -Dtest=ContractVariantsTest test` — cdee07c
+- [x] 3.2 IT tras przechodzi: `cd szczur-radar-api && ./mvnw -B -Dit.test=ContractRoutesIT -Dtest=none -Dsurefire.failIfNoSpecifiedTests=false verify` — cdee07c
+- [x] 3.3 Cały backend zielony: `cd szczur-radar-api && ./mvnw -B verify` — cdee07c
+- [x] 3.4 Całe testy web i typecheck zielone: `cd szczur-radar-web && npm test && npm run build` — cdee07c
+- [x] 3.5 Celowe zepsucie wariantu (agent wykonuje i cofa): zamiana `rangeFrom: null` na wartość we wszystkich plikach z `RunView` daje czerwony `ContractVariantsTest` z nazwą `RunView.rangeFrom`; wpis w `KNOWN_GAPS` dla pola, które ma oba warianty, też jest czerwony — cdee07c
+- [x] 3.6 Celowe zepsucie trasy (agent wykonuje i cofa): nowy `@GetMapping` pod `/api/admin/` bez wpisu w rejestrze daje czerwony `ContractRoutesIT` — cdee07c
+- [x] 3.7 Celowe zepsucie pliku (agent wykonuje i cofa): plik `contract/extra.json` bez wpisu w `SHAPES` daje czerwony `ContractVariantsTest` — cdee07c
