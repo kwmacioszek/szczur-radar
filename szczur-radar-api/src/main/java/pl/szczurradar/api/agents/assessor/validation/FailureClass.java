@@ -37,4 +37,12 @@ public enum FailureClass {
 		return name().toLowerCase(Locale.ROOT);
 	}
 
+	/**
+	 * Whether the class comes from the model call itself ({@link #PROVIDER_ERROR}, {@link #TIMEOUT}: the
+	 * call produced no text to judge), not from parsing or validating a response.
+	 */
+	public boolean fromCall() {
+		return this == PROVIDER_ERROR || this == TIMEOUT;
+	}
+
 }
