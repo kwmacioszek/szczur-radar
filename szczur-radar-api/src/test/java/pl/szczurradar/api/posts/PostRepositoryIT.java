@@ -41,7 +41,7 @@ import pl.szczurradar.api.user.UserRepository;
  * The queries of {@link PostRepository} and {@link AssessmentRepository} on Postgres: dedup keys,
  * leftovers (without posts on hold), newest-first pages and the latest attempt with its tie rule; and the
  * conditional writes of {@link PostTransitions}: taking a post, putting a run's posts or orphans back, the
- * technical failures counted on a post. Each test rolls back.
+ * technical failures counted on a post, restoring a dead post. Each test rolls back.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, properties = MigrateCommand.ENABLE_FLYWAY)
 @Import(TestcontainersConfiguration.class)
@@ -284,6 +284,43 @@ class PostRepositoryIT {
 			.containsEntry("assessing_run_id", liveRun);
 		assertThat(owner(ofQueued)).containsEntry("stage", PostStage.ASSESSING.value())
 			.containsEntry("assessing_run_id", queuedRun);
+	}
+
+	@Test
+	void aRestoreBringsBackOnlyDeadPostsKeepingTheirAttemptsHistory() {
+		UUID stored = post(ItemType.POST, "80181", "2026-10-01T08:00:00Z");
+		UUID failed = stage(post(ItemType.POST, "80182", "2026-10-01T09:00:00Z"), PostStage.FAILED, 2);
+		UUID held = post(ItemType.POST, "80183", "2026-10-01T10:00:00Z");
+		assessing(held);
+		UUID assessed = stage(post(ItemType.POST, "80184", "2026-10-01T11:00:00Z"), PostStage.ASSESSED, 0);
+		UUID dead = stage(post(ItemType.POST, "80185", "2026-10-01T12:00:00Z"), PostStage.DEAD, 3);
+		Instant at = Instant.parse("2026-10-06T10:00:00Z");
+		for (int attempt = 0; attempt < Post.MAX_ASSESSMENT_ATTEMPTS; attempt++) {
+			assess(dead, failed(at.plusSeconds(attempt)));
+		}
+		Map<String, Object> storedBefore = technical(stored);
+		Map<String, Object> failedBefore = technical(failed);
+		Map<String, Object> heldBefore = owner(held);
+		Map<String, Object> assessedBefore = technical(assessed);
+		// No leftover yet: the dead post is out of every run.
+		assertThat(posts.findLeftoverIds()).doesNotContain(dead);
+
+		assertThat(transitions.restore(List.of(stored, failed, held, assessed, dead))).isOne();
+
+		assertThat(technical(dead)).containsEntry("stage", PostStage.STORED.value())
+			.containsEntry("assessment_attempts", 0)
+			.containsEntry("technical_failures", 0)
+			.containsEntry("last_technical_error", null);
+		assertThat(technical(stored)).isEqualTo(storedBefore);
+		assertThat(technical(failed)).isEqualTo(failedBefore);
+		assertThat(owner(held)).isEqualTo(heldBefore);
+		assertThat(technical(assessed)).isEqualTo(assessedBefore);
+		// Its attempts stay, and the next retry run takes it.
+		assertThat(jdbc.queryForObject("SELECT count(*) FROM assessments WHERE post_id = ?", Integer.class, dead))
+			.isEqualTo(Post.MAX_ASSESSMENT_ATTEMPTS);
+		assertThat(posts.findLeftoverIds()).contains(dead);
+		// Restored already: a second call changes nothing.
+		assertThat(transitions.restore(List.of(dead))).isZero();
 	}
 
 	@Test

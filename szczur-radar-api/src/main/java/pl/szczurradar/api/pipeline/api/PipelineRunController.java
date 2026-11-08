@@ -63,8 +63,8 @@ public class PipelineRunController {
 	/** The largest page of runs a request may ask for. */
 	public static final int MAX_PAGE_SIZE = PageLimits.MAX_SIZE;
 
-	/** The most posts a posts run may name. */
-	static final int MAX_POSTS = 100;
+	/** The most posts a posts run may name; the restore of dead posts takes as many. */
+	public static final int MAX_POSTS = 100;
 
 	private final PipelineRunService service;
 

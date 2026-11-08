@@ -1,5 +1,6 @@
 package pl.szczurradar.api.pipeline.state;
 
+import java.util.Collection;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
@@ -26,7 +27,8 @@ import pl.szczurradar.api.text.Nul;
  * never written into the SQL. A technical failure (an error of our code or a single provider outage, no
  * attempt) is counted on the
  * post with its message; every stored result resets the count ({@link Post#MAX_TECHNICAL_FAILURES} in a
- * row put the post on hold).
+ * row put the post on hold). A dead post leaves its stage only through an admin's {@link #restore}: back to
+ * {@code stored} with no attempt and no technical failure, for the next run to assess it again.
  */
 @Component
 public class PostTransitions {
@@ -174,6 +176,24 @@ public class PostTransitions {
 				+ " WHERE r.id = posts.assessing_run_id AND r.status IN (:queued, :running))"))
 			.param("queued", RunStatus.QUEUED.value())
 			.param("running", RunStatus.RUNNING.value())
+			.update();
+	}
+
+	/**
+	 * Restores the dead posts among {@code postIds} for assessment (an admin's request, S-33): each goes back to
+	 * {@code stored} with no attempt and no technical failure, so the next run assesses it again with all its
+	 * attempts. Its stored attempts ({@code assessments}) stay. Any other id (not dead any more, another stage,
+	 * unknown) is left as it is; no run ever holds a dead post, so this never meets a running assessment.
+	 *
+	 * @return how many posts were restored
+	 */
+	public int restore(Collection<UUID> postIds) {
+		return jdbc
+			.sql("UPDATE posts SET stage = :stored, assessment_attempts = 0, technical_failures = 0,"
+					+ " last_technical_error = NULL, updated_at = now() WHERE id IN (:ids) AND stage = :dead")
+			.param("stored", PostStage.STORED.value())
+			.param("dead", PostStage.DEAD.value())
+			.param("ids", postIds)
 			.update();
 	}
 

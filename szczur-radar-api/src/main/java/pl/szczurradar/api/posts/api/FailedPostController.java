@@ -31,7 +31,8 @@ import pl.szczurradar.api.posts.PostStage;
  * The admin's list of posts whose assessment failed (1–2 attempts, retryable), that are dead (3) or that are
  * on hold ({@link Post#MAX_TECHNICAL_FAILURES} technical failures in a row), with their latest attempt and
  * their latest technical error — to diagnose them and retry the retryable ones
- * ({@code POST /api/admin/pipeline-runs} with {@code postIds}).
+ * ({@code POST /api/admin/pipeline-runs} with {@code postIds}). Dead posts are restored for assessment by
+ * {@link DeadPostController}.
  */
 @RestController
 class FailedPostController {
