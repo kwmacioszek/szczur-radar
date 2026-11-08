@@ -614,7 +614,11 @@ PipelineRunService.startRange / startPosts → queue (thread pipeline-run) → R
   still has no answer and the call saw the interrupt, neither closes
   nor reports the run again and logs no ERROR), a refused LLM key (`failed`, no attempt), a provider
   unavailable for three calls in a row (`failed` with the breaker's error, no attempt, no technical
-  failure, the admin notified) and an outage of a run a stopping instance interrupted (the interrupt ends
+  failure, the admin notified), a provider refusing every call on every model-assessed post of the day
+  (S-32: `failed` with the refusals' breaker's error and the last refusal's message, 3 to 6 refusals
+  stored — the 4 threads — each a `provider_error` result and its post's one attempt, equal to the run's
+  `assessed_failed`, every other post `stored` without an attempt or a technical failure, no `dead`, no
+  processing error, the admin notified) and an outage of a run a stopping instance interrupted (the interrupt ends
   the held call before its answer, as the stopped run's, at INFO, counting nothing); two sources — Reddit
   is its production client, repository, fetcher and mapper on `sources/reddit/LocalReddit` (a
   `RedditRepository` bean over `LocalRedditServer` answering the real, anonymized Arctic Shift pages of

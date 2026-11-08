@@ -243,11 +243,11 @@ Brak migracji, zmiennej i zmiany kontraktu. Historia bez zmian: posty, które wc
 
 #### Automated
 
-- [ ] 1.1 Testy jednostkowe zielone: `cd szczur-radar-api && ./mvnw -B test`
-- [ ] 1.2 Testy dyspozytora pokrywają bezpiecznik: `grep -c 'Refusal' …/ConcurrentAssessmentDispatcherTest.java` wypisuje co najmniej `6`
-- [ ] 1.3 Stała bez zmiennej: `REFUSAL_STREAK = 3` w dyspozytorze, `REFUSAL` nieobecne w `src/main/resources` i `.railway/railway.ts`
-- [ ] 1.4 Opisy pakietów: `REFUSAL_STREAK` w `pipeline/CLAUDE.md` i `llm/CLAUDE.md`, `callFailed` w `agents/assessor/CLAUDE.md`
-- [ ] 1.5 Renderer i SVG zgodne z roadmapą: S-32 `progress` w `tools/render_roadmap_svg.py`, `docs/visuals/roadmap.svg` zregenerowany
+- [x] 1.1 Testy jednostkowe zielone: `cd szczur-radar-api && ./mvnw -B test` — 8cc4987
+- [x] 1.2 Testy dyspozytora pokrywają bezpiecznik: `grep -c 'Refusal' …/ConcurrentAssessmentDispatcherTest.java` wypisuje co najmniej `6` — 8cc4987
+- [x] 1.3 Stała bez zmiennej: `REFUSAL_STREAK = 3` w dyspozytorze, `REFUSAL` nieobecne w `src/main/resources` i `.railway/railway.ts` — 8cc4987
+- [x] 1.4 Opisy pakietów: `REFUSAL_STREAK` w `pipeline/CLAUDE.md` i `llm/CLAUDE.md`, `callFailed` w `agents/assessor/CLAUDE.md` — 8cc4987
+- [x] 1.5 Renderer i SVG zgodne z roadmapą: S-32 `progress` w `tools/render_roadmap_svg.py`, `docs/visuals/roadmap.svg` zregenerowany — 8cc4987
 
 ### Phase 2: Scenariusz integracyjny i dokumenty produktu
 
