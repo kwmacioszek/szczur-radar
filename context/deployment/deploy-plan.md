@@ -2231,7 +2231,9 @@ Results (filled in as the checks run, plan Phase 3; production's first night goe
 
 | Step | Date (UTC) | Deployment | Run | Status | `provider_error` rows | Log check |
 | --- | --- | --- | --- | --- | --- | --- |
-| 1. RANGE run of one day | | | | | | |
+| 1. RANGE run of one day | 2026-11-09 08:28–08:30 | `d2e72472` (branch head `58f5739`) | `db35738b`: range 2026-11-08 (Warsaw), started by the owner as the PR env's admin; `wykop` 59 + `reddit` 42, both `succeeded` | `partial`, `error` empty: fetched 101, new 101, ok 87, failed 14 (12 `schema_violation`, 2 `fabricated_evidence`), processing errors 0, dead 0; every step `succeeded`, `assess` 1m 06s | 0 (the whole database) | 159 lines since the container's start: no `refused 3 calls in a row`, no ERROR; one WARN, Reddit's `HttpRetry` retrying a search (a source retry) |
+
+The 14 contract violations among 101 calls did not stop the run: they are the model's answers, so they reset the refusals' series, as the rule says.
 
 ### Runbook — after the merge (operator; tracked in issue #142, not in the plan's Progress)
 

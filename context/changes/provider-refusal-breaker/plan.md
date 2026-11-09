@@ -253,10 +253,10 @@ Brak migracji, zmiennej i zmiany kontraktu. Historia bez zmian: posty, które wc
 
 #### Automated
 
-- [ ] 2.1 Pełna weryfikacja zielona (Docker): `cd szczur-radar-api && ./mvnw -B verify`
-- [ ] 2.2 Scenariusz istnieje: `grep -c 'RefusingThreeCallsInARow' …/PipelineRunIT.java` wypisuje `1`
-- [ ] 2.3 PRD ma doprecyzowanie S-32: `grep -c 'S-32 `provider-refusal-breaker`' context/foundation/prd.md` wypisuje `1`
-- [ ] 2.4 Deploy-plan ma sekcję S-32 ze statusem po merge'u (`delivered by PR #…; … issue #142`)
+- [x] 2.1 Pełna weryfikacja zielona (Docker): `cd szczur-radar-api && ./mvnw -B verify` — 58f5739
+- [x] 2.2 Scenariusz istnieje: `grep -c 'RefusingThreeCallsInARow' …/PipelineRunIT.java` wypisuje `1` — 58f5739
+- [x] 2.3 PRD ma doprecyzowanie S-32: `grep -c 'S-32 `provider-refusal-breaker`' context/foundation/prd.md` wypisuje `1` — 58f5739
+- [x] 2.4 Deploy-plan ma sekcję S-32 ze statusem po merge'u (`delivered by PR #…; … issue #142`) — 58f5739
 
 #### Manual
 
@@ -266,9 +266,9 @@ Brak migracji, zmiennej i zmiany kontraktu. Historia bez zmian: posty, które wc
 
 #### Automated
 
-- [ ] 3.1 CI PR zielone: `gh pr checks <nr PR> --watch` bez `fail`
-- [ ] 3.2 Zwykły przebieg w PR env kończy się jak dotąd (SQL: `succeeded`/`partial`, bez `refused 3 calls`; log bez WARN bezpiecznika i bez ERROR)
-- [ ] 3.3 Issue #142 ma komentarz startowy i wynik PR env
+- [x] 3.1 CI PR zielone: `gh pr checks <nr PR> --watch` bez `fail`
+- [x] 3.2 Zwykły przebieg w PR env kończy się jak dotąd (SQL: `succeeded`/`partial`, bez `refused 3 calls`; log bez WARN bezpiecznika i bez ERROR)
+- [x] 3.3 Issue #142 ma komentarz startowy i wynik PR env
 
 #### Manual
 
