@@ -34,4 +34,30 @@ public interface AssessmentRepository extends JpaRepository<Assessment, UUID> {
 			+ " ORDER BY a.post_id, a.assessed_at DESC, a.id DESC", nativeQuery = true)
 	List<Assessment> findLatestOf(Collection<UUID> postIds);
 
+	/**
+	 * How many different posts of each source {@code runId} assessed (a post with two attempts in the run
+	 * counts once; one it put back without an attempt not at all) — the leftovers a retry run took, for the
+	 * night's summary.
+	 */
+	@Query("select new pl.szczurradar.api.posts.SourceCount(p.source, count(distinct a.postId))"
+			+ " from Assessment a join Post p on p.id = a.postId where a.runId = :runId group by p.source")
+	List<SourceCount> countDistinctPostsBySource(UUID runId);
+
+	/**
+	 * The assessments of {@code runIds} summed per source of their posts ({@link SourceAssessmentTotals}): the
+	 * {@code ok} and {@code failed} ones and their tokens, a {@code NULL} count as 0. A source without an
+	 * assessment in them is missing.
+	 */
+	default List<SourceAssessmentTotals> sumBySource(Collection<UUID> runIds) {
+		return runIds.isEmpty() ? List.of()
+				: sumWithStatusesBySource(runIds, AssessmentResult.Status.OK, AssessmentResult.Status.FAILED);
+	}
+
+	@Query("select new pl.szczurradar.api.posts.SourceAssessmentTotals(p.source,"
+			+ " sum(case when a.status = :ok then 1L else 0L end), sum(case when a.status = :failed then 1L else 0L end),"
+			+ " coalesce(sum(a.inputTokens), 0L), coalesce(sum(a.cachedTokens), 0L), coalesce(sum(a.outputTokens), 0L))"
+			+ " from Assessment a join Post p on p.id = a.postId where a.runId in :runIds group by p.source")
+	List<SourceAssessmentTotals> sumWithStatusesBySource(Collection<UUID> runIds, AssessmentResult.Status ok,
+			AssessmentResult.Status failed);
+
 }

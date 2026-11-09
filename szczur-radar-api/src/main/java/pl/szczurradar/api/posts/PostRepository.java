@@ -65,6 +65,31 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
 	@Query("select p.id from Post p where p.firstRunId = :runId and p.stage = :stage order by p.publishedAt, p.id")
 	List<UUID> findIdsFirstStoredBy(UUID runId, PostStage stage);
 
+	/** How many posts of each source {@code runId} stored first (its new posts); a source without one is missing. */
+	@Query("select new pl.szczurradar.api.posts.SourceCount(p.source, count(p)) from Post p"
+			+ " where p.firstRunId = :runId group by p.source")
+	List<SourceCount> countFirstStoredBySource(UUID runId);
+
+	/**
+	 * How many {@link PostStage#DEAD dead} posts of each source one of {@code runIds} killed: the post's
+	 * latest assessment (latest {@code assessed_at}, then greatest id, as {@link AssessmentRepository#findLatest})
+	 * belongs to one of them. A source without one is missing; nothing for no runs.
+	 */
+	default List<SourceCount> countDeadKilledBySource(Collection<UUID> runIds) {
+		if (runIds.isEmpty()) {
+			return List.of();
+		}
+		return countWhoseLatestAssessmentIsIn(PostStage.DEAD.value(), runIds).stream()
+			.map(row -> new SourceCount(Source.fromValue((String) row[0]), ((Number) row[1]).longValue()))
+			.toList();
+	}
+
+	/** {@link #countDeadKilledBySource}, with the stage bound as stored; rows of {@code (source, count)}. */
+	@Query(value = "SELECT p.source, count(*) FROM posts p CROSS JOIN LATERAL (SELECT a.run_id FROM assessments a"
+			+ " WHERE a.post_id = p.id ORDER BY a.assessed_at DESC, a.id DESC LIMIT 1) latest"
+			+ " WHERE p.stage = :stage AND latest.run_id IN (:runIds) GROUP BY p.source", nativeQuery = true)
+	List<Object[]> countWhoseLatestAssessmentIsIn(String stage, Collection<UUID> runIds);
+
 	/** A page of posts in {@code stages}, newest first. */
 	default Page<Post> findPage(Collection<PostStage> stages, int page, int size) {
 		return findByStageIn(stages, PageRequest.of(page, size, NEWEST_FIRST));

@@ -1,6 +1,9 @@
 package pl.szczurradar.api.pipeline.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
 import java.time.Clock;
 import java.time.Duration;
@@ -11,6 +14,8 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import com.jayway.jsonpath.JsonPath;
 import jakarta.servlet.http.Cookie;
@@ -41,6 +46,8 @@ import org.springframework.test.web.servlet.assertj.MockMvcTester.MockMvcRequest
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
 
 import pl.szczurradar.api.TestcontainersConfiguration;
+import pl.szczurradar.api.alerts.AlertEvent;
+import pl.szczurradar.api.alerts.OperatorAlertQueue;
 import pl.szczurradar.api.cli.MigrateCommand;
 import pl.szczurradar.api.config.SessionConfig;
 import pl.szczurradar.api.internal.PipelineTriggerToken;
@@ -61,8 +68,10 @@ import pl.szczurradar.api.user.UserRepository;
 /**
  * The daily cron's routes ({@code /internal/pipeline-runs}) against the real queue: the trigger token
  * and only the token (no session accepted, none created, no cookie set), the token meaning nothing on
- * {@code /api/**}, the daily range on a fixed clock, a run's state with its step and progress, and the
- * admin's refusals. Runs execute in the
+ * {@code /api/**}, the daily range on a fixed clock, a run's state with its step and progress, the
+ * admin's refusals, and the night's summary: its text, the {@code NIGHT_SUMMARY} raised for the range run
+ * (the queue a mock), 400 for a bad body and 404 for an unknown run (what the text is made of is
+ * {@code pipeline/NightSummaryIT}). Runs execute in the
  * background with Wykop on a local server answering an empty day, so a run fails at its fetch step (no
  * post to store); a test can hold the answer to keep a run active. Every test waits until no run is
  * active before it ends.
@@ -82,6 +91,8 @@ class InternalPipelineRunIT {
 	static final String TOKEN = "9f2c4e6a8b0d1f3e5a7c9e1b3d5f7a9c0e2b4d6f8a1c3e5b7d9f0a2c4e6b8d0f";
 
 	private static final String DAILY = "/internal/pipeline-runs/daily";
+
+	private static final String SUMMARY = "/internal/pipeline-runs/nightly-summary";
 
 	private static final String NOT_AUTHENTICATED = "{\"detail\":\"not_authenticated\"}";
 
@@ -112,6 +123,10 @@ class InternalPipelineRunIT {
 	/** No post is assessed here; never a real LLM call. */
 	@MockitoBean
 	LlmClient llmClient;
+
+	/** The server's queue, a mock: the night's summary is raised to it. */
+	@MockitoBean
+	OperatorAlertQueue alerts;
 
 	@Autowired
 	MockMvcTester mvc;
@@ -151,7 +166,12 @@ class InternalPipelineRunIT {
 			.hasStatus(HttpStatus.UNAUTHORIZED)
 			.bodyJson()
 			.isStrictlyEqualTo(NOT_AUTHENTICATED);
+		assertThat(summary(authorization, "{\"runs\":[\"" + UUID.randomUUID() + "\"]}"))
+			.hasStatus(HttpStatus.UNAUTHORIZED)
+			.bodyJson()
+			.isStrictlyEqualTo(NOT_AUTHENTICATED);
 		assertThat(runCount()).isEqualTo(before);
+		verify(alerts, never()).raise(any(), any(), any());
 	}
 
 	@Test
@@ -310,6 +330,77 @@ class InternalPipelineRunIT {
 			.hasStatus(HttpStatus.NOT_FOUND)
 			.bodyJson()
 			.isStrictlyEqualTo("{\"detail\":\"not_found\"}");
+	}
+
+	@Test
+	void theNightlySummaryIsReturnedAndRaisedForTheRangeRun() throws Exception {
+		UUID retry = jdbc.queryForObject("INSERT INTO pipeline_runs (kind, status, requested_by, created_at, started_at,"
+				+ " finished_at, dead) VALUES ('retry', 'partial', ?, '2026-10-26T00:30:00Z', '2026-10-26T00:30:01Z',"
+				+ " '2026-10-26T00:35:00Z', 1) RETURNING id", UUID.class, SystemAccount.SCHEDULER.id());
+		UUID range = jdbc.queryForObject("INSERT INTO pipeline_runs (kind, status, requested_by, created_at, started_at,"
+				+ " finished_at, range_from, range_to, sources, skipped) VALUES ('range', 'succeeded', ?,"
+				+ " '2026-10-26T00:30:00.5Z', '2026-10-26T00:35:01Z', '2026-10-26T00:50:00Z', '2026-10-23T22:00:00Z',"
+				+ " '2026-10-25T22:59:59Z', ARRAY['wykop'], 2) RETURNING id", UUID.class, SystemAccount.SCHEDULER.id());
+		jdbc.update("INSERT INTO pipeline_run_sources (run_id, source, status, fetched, skipped)"
+				+ " VALUES (?, 'wykop', 'succeeded', 7, 2)", range);
+		CLOCK.set(Instant.parse("2026-10-26T00:55:00Z"));
+
+		MvcTestResult result = summary(bearer(TOKEN), "{\"runs\":[\"" + retry + "\",\"" + range + "\"]}");
+
+		assertThat(result).hasStatusOk();
+		String text = JsonPath.read(result.getResponse().getContentAsString(), "$.text");
+		assertThat(result).bodyJson().isStrictlyEqualTo("{\"text\":" + jsonString(text) + "}");
+		assertThat(text).isEqualTo("""
+				Night 2026-10-26 (range 2026-10-24…2026-10-25): retry partial, range succeeded; errors 0, skipped 2
+				wykop: fetched 7, skipped 2, new 0, leftovers 0; assessed 0, failed 0, dead 0; tokens in 0 (cached 0), out 0
+				Dead in admin runs since the previous night: none
+				/admin""");
+		verify(alerts).raise(AlertEvent.NIGHT_SUMMARY, range, text);
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = { "", "{}", "{\"runs\":null}", "{\"runs\":[]}", "{\"runs\":[null]}", "{\"runs\":[\"x\"]}",
+			"{\"runs\":\"" + "00000000-0000-4000-8000-000000000001" + "\"}",
+			"{\"runs\":[\"00000000-0000-4000-8000-000000000001\"],\"other\":1}" })
+	void aNightlySummaryRequestWithoutOneToTenRunIdsIsInvalid(String body) {
+		assertThat(summary(bearer(TOKEN), body)).hasStatus(HttpStatus.BAD_REQUEST)
+			.bodyJson()
+			.isStrictlyEqualTo("{\"detail\":\"invalid_request\"}");
+		verify(alerts, never()).raise(any(), any(), any());
+	}
+
+	@Test
+	void aNightlySummaryOfElevenRunsIsInvalidAndOfAnUnknownRunNotFound() {
+		String eleven = Stream.generate(UUID::randomUUID)
+			.limit(11)
+			.map(id -> "\"" + id + "\"")
+			.collect(Collectors.joining(","));
+
+		assertThat(summary(bearer(TOKEN), "{\"runs\":[" + eleven + "]}")).hasStatus(HttpStatus.BAD_REQUEST)
+			.bodyJson()
+			.isStrictlyEqualTo("{\"detail\":\"invalid_request\"}");
+		assertThat(summary(bearer(TOKEN), "{\"runs\":[\"" + UUID.randomUUID() + "\"]}")).hasStatus(HttpStatus.NOT_FOUND)
+			.bodyJson()
+			.isStrictlyEqualTo("{\"detail\":\"not_found\"}");
+		verify(alerts, never()).raise(any(), any(), any());
+	}
+
+	/** {@code POST /internal/pipeline-runs/nightly-summary} with {@code body}, never touching a session. */
+	private MvcTestResult summary(@Nullable String authorization, String body) {
+		long sessionsBefore = sessionRows();
+		MockMvcRequestBuilder request = mvc.post().uri(SUMMARY).contentType(MediaType.APPLICATION_JSON).content(body);
+		if (authorization != null) {
+			request.header(HttpHeaders.AUTHORIZATION, authorization);
+		}
+		MvcTestResult result = request.exchange();
+		assertThat(result.getResponse().getHeaders(HttpHeaders.SET_COOKIE)).as("POST " + SUMMARY).isEmpty();
+		assertThat(sessionRows()).as("POST " + SUMMARY).isEqualTo(sessionsBefore);
+		return result;
+	}
+
+	/** {@code text} as a JSON string literal (quotes and line breaks escaped). */
+	private static String jsonString(String text) {
+		return "\"" + text.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n") + "\"";
 	}
 
 	/**

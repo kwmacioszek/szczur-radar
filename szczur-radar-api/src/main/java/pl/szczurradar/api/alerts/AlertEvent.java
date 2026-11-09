@@ -2,14 +2,22 @@ package pl.szczurradar.api.alerts;
 
 /**
  * The events the API reports to the operator outside the application ({@link OperatorAlerts}). A
- * closed set: F-04's test signal and S-18's error paths that need a human, which raise them through
- * {@link OperatorAlertQueue}. Each has the ntfy priority of its message (S-34): {@link #DEFAULT_PRIORITY}
- * for a message that needs no reaction by itself, {@link #HIGH_PRIORITY} for one that does.
+ * closed set: F-04's test signal, S-18's error paths that need a human and S-34's nightly summary, which
+ * raise them through {@link OperatorAlertQueue}. Each has the ntfy priority of its message (S-34):
+ * {@link #DEFAULT_PRIORITY} for a message that needs no reaction by itself, {@link #HIGH_PRIORITY} for one
+ * that does.
  */
 public enum AlertEvent {
 
 	/** Sent by the operator command {@code send-test-alert} to check the channel end to end. */
 	TEST_SIGNAL("test of the operator alert channel, nothing is wrong", AlertEvent.DEFAULT_PRIORITY),
+
+	/**
+	 * The night's summary ({@code pipeline/NightSummary}), raised by the cron's
+	 * {@code POST /internal/pipeline-runs/nightly-summary} after its runs — every night, also with no dead
+	 * post; the detail is the summary's text.
+	 */
+	NIGHT_SUMMARY("the nightly pipeline summary; nothing needs attention by itself", AlertEvent.DEFAULT_PRIORITY),
 
 	/** A run ended in a state that notified the admins in the application (the bell). */
 	RUN_NEEDS_ATTENTION("a pipeline run needs attention, the admins were notified in the app; check /admin",
