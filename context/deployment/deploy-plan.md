@@ -1207,6 +1207,8 @@ An API older than S-08 gives `skipped ?`; the deploy order of the API and the cr
   2. after a 2xx, `POST <ping URL>` with `ok`, so the check is up again and the next event alerts again.
 
   One attempt per request (5 s to connect, 10 s per request), no retries, and it never throws: a failure is one WARN line with the event and the status or the exception's class, never the address. In F-04 only the operator command `send-test-alert` reports an event (`TEST_SIGNAL`); S-18 wires the error paths. At start the server logs `Operator alerts: sent to the healthchecks.io check in HEALTHCHECK_PING_URL`, or `Operator alerts: not configured (HEALTHCHECK_PING_URL is not set), nothing is sent outside the application`.
+
+  > Update (2026-11-09, S-34 `dead-posts-daily-digest`): the API's events are no longer a check. `alerts/NtfyAlerts` publishes each one as one message to an ntfy topic (`NTFY_URL`, optional `NTFY_TOKEN`); `checks.sh` no longer creates `<environment>/api-events` (the existing ones are deleted by hand), and `HEALTHCHECK_PING_URL` stays only on the two crons. Section S-34.
 - **Nothing polls production.** Every signal goes out: a cron's check-in, or an API event while the API works anyway. healthchecks.io never calls the application, the API has no new timer, and it still sleeps. Cost: $0 (healthchecks.io Hobbyist, free, 20 checks, F-04 uses 3 per environment; Telegram is free).
 - **A check-in never changes a cron's result.** Each one is one `curl -fsS -m 10 --retry 3`. A failure (an HTTP error, no network, healthchecks.io down) logs only `warning: check-in … to healthchecks.io failed (…); the exit code stays as it is`. A value that is not an `https://` address logs `HEALTHCHECK_PING_URL is not an https:// address; no check-in` and sends nothing, so the armed check alarms after its grace time.
 - **Railway's rule stays.** The account's custom rule "deployment crashed" (sections F-01, S-05) stays as a second signal of a crash. A crashed cron run therefore gives two alarms, a Railway push and a Telegram message, and three once `deploy-verification-hardening` adds its issue with a GitHub Mobile push. Only F-04 sees a night that never ran or never ended.
@@ -1239,6 +1241,8 @@ An API older than S-08 gives `skipped ?`; the deploy order of the API and the cr
 | `szczur-radar-api` | `HEALTHCHECK_PING_URL` | the ping URL of `production/api-events`, set by the operator with `--stdin`, **sealed** | unset: no events. Set by hand only for a verification, to the URL of `szczur-radar-pr-<N>/api-events` |
 | `pipeline-trigger` | `HEALTHCHECK_PING_URL` | the ping URL of `production/pipeline-trigger`, **sealed** | unset: no check-ins. Set by hand only for a verification |
 | `db-backup` | `HEALTHCHECK_PING_URL` | the ping URL of `production/db-backup`, **sealed** | unset: no check-ins. Set by hand only for a verification |
+
+> Update (2026-11-09, S-34): the `szczur-radar-api` row is history. The API reads `NTFY_URL` / `NTFY_TOKEN` instead (section S-34, Variables), its `HEALTHCHECK_PING_URL` was deleted from production before the S-34 merge, and `.railway/railway.ts` declares the name only on the two crons.
 
 - **IaC.** `.railway/railway.ts` declares the three with `preserve()`: IaC never creates, changes or deletes a value, so a hand-set value survives every apply. The name is outside the ignore pattern `pipeline-trigger/TRIGGER_*` (a key both declared and ignored is a plan error, section S-14).
 - **Sealed on production.** Railway copies unsealed variables into a new PR env (section F-03), so an unsealed production value would make a PR env's runs check in to production's checks. A sealed one is not copied.
@@ -1668,6 +1672,8 @@ Rollback: a revert; there is no data, migration or variable to undo.
 ## S-18: błędy wymagające reakcji docierają do operatora (error-visibility)
 
 **Status:** delivered by PR #107; production verification and closure in issue #77. Change: `context/archive/2026-10-24-error-visibility/`. Before S-18 the API's sender (section F-04) was used only by `send-test-alert`. A run that needed attention reached only the bell in `/admin`, and a nightly `partial` with a dead post or a technical error exits the cron with 0, so Telegram never heard of it. Failures of the signal paths themselves (the admins' notification, start-up recovery, closing a run, the watchdog, the S-11 orphan clean-up, the run's counters, audit A5) were one ERROR line in the log. S-18 sends these events to the check `<environment>/api-events` and keeps provider keys out of logged cause chains (audit B7). It also logs why `/api/ready` answers 503 (audit C10).
+
+> Update (2026-11-09, S-34 `dead-posts-daily-digest`): the channel of these events is an ntfy topic now (`NTFY_URL`), one message per event — no "down"/"up" pair and no check `<environment>/api-events` —, and a run whose only attention reason is a dead post no longer raises `RUN_NEEDS_ATTENTION`: the nightly summary `NIGHT_SUMMARY` counts it per source. The events, the queue's limits and the detail's format below are unchanged; where this section says "Telegram" about an API event, read "ntfy". Section S-34.
 
 ### What changes
 
@@ -2170,6 +2176,93 @@ The API and the web deploy independently, in no fixed order:
 ### Rollback
 
 Revert the change: nothing is stored and there is no migration. The deploy window above applies in reverse.
+
+## S-34: podsumowanie nocy w ntfy zamiast alarmu o martwym poście (dead-posts-daily-digest)
+
+**Status:** delivered by PR #162; production verification and closure in issue #144.
+
+Change: `dead-posts-daily-digest` (its folder moves to `context/archive/` when the change is archived). Since Reddit went on (section S-27), a dead post came about 1.4 times a day, so a nightly `partial` with `dead_posts` raised `RUN_NEEDS_ATTENTION` in Telegram on roughly three nights in four (S-28, issue #121), and the message stopped meaning "react" (PRD v3, Q-14). S-34 does three things: the API's operator events leave healthchecks.io for an **ntfy** topic (the owner's decision, 2026-11-08: healthchecks.io watches state — the crons, `deploy-health` —, ntfy notifies); a run whose **only** attention reason is a dead post gives no operator message any more (the bell is unchanged); and every night, after the cron's runs, the operator gets one **summary of the night** through ntfy, also with nothing dead. No migration, no new table or service; two new variables on the API (`NTFY_URL`, `NTFY_TOKEN`), one gone from it (`HEALTHCHECK_PING_URL`, which the crons keep); the cron's exit codes and check-ins are unchanged.
+
+### What changed for the operator
+
+- **The channel.** `alerts/NtfyAlerts` replaces `HealthchecksAlerts`: one event is one `POST` to the topic's address in `NTFY_URL` (e.g. `https://ntfy.sh/<topic>`) with the headers `Title: Szczur Radar <EVENT>`, `Priority` (3 for `TEST_SIGNAL` and `NIGHT_SUMMARY`, 4 for the error events) and, with `NTFY_TOKEN` set, `Authorization: Bearer <token>`; the body is `<EVENT> (<description>): <detail>`, cut to 4096 bytes of UTF-8 (ntfy's message limit) on a character boundary. One attempt (5 s to connect, 10 s per request), no retries; any answer but 2xx — 429 (ntfy's limit) and 401/403 (a wrong token) included —, a transport error or a time-out is `FAILED` with one WARN naming the event and the status or the exception's class, never the address or the token. The queue (`OperatorAlertQueue`, section S-18) and its limits are unchanged: the same event for the same run once per 10 min, at most 2 events a minute, 20 waiting, nothing durable. On the phone one message per event (no "down"/"up" pair any more). The check `<environment>/api-events` is gone: `checks.sh apply` no longer creates it (two checks per environment, plus `production/deploy-health`), `checks.sh delete` no longer deletes it (the existing ones go by hand, runbook below). At start the server logs `Operator alerts: sent to the ntfy topic in NTFY_URL`, or `Operator alerts: not configured (NTFY_URL is not set), nothing is sent outside the application`; each event then logs `Operator alert <EVENT> (run …) taken`, `Operator alert <EVENT> delivered to ntfy` and `… reported: DELIVERED` (or a WARN `Operator alert <EVENT> not delivered: ntfy answered HTTP <status>` and `reported: FAILED`). `send-test-alert` (`szczur-radar-api/README.md`) checks the channel from the API to the phone: exit 0 and `Test alert delivered to the ntfy topic in NTFY_URL …`.
+- **A dead post alone is no alert.** `RunNotifications` still notifies the admins (the bell, `/admin/runs/<id>`) about every run that needs attention, but raises `RUN_NEEDS_ATTENTION` only when the run's `attentionReasons` are not exactly `[dead_posts]`. A dead post next to any other reason (a technical error, a failed or empty source, skipped elements, `failed` / `interrupted`) is raised as before, with `dead N, …` in the detail. The rule `PipelineRun.attentionReasons` (S-22) is untouched: the SPA, `rules.json` and the bell show the same reasons as before.
+- **The night's summary.** After its runs — every run ended, one of them `failed` / `interrupted`, or `not ended within` `TRIGGER_RUN_TIMEOUT` — the cron calls `POST /internal/pipeline-runs/nightly-summary` with `{"runs": [<the ids of its 202>]}` (one attempt, `TRIGGER_REQUEST_TIMEOUT`, the same token). The API composes the text (`pipeline/NightSummary`), raises it as `NIGHT_SUMMARY` for the range run's id (so a repeated call within 10 min is one message) and returns it as `{"text": …}`; the cron logs it line by line as `summary: …` **before** its last line, so the healthchecks.io check-in still carries `OK: …` or the failure. The text, pinned by `NightSummaryTest`:
+
+  ```text
+  Night 2026-11-08 (range 2026-11-06…2026-11-07): retry partial, range partial; errors 0, skipped 0
+  reddit: fetched 104, skipped 0, new 54, leftovers 12; assessed 60, failed 5, dead 1; tokens in 412000 (cached 120000), out 38000
+  wykop: fetched 970, skipped 0, new 518, leftovers 3; assessed 515, failed 6, dead 0; tokens in 2210000 (cached 640000), out 190000
+  Dead in admin runs since the previous night: reddit 1
+  /admin
+  ```
+
+  The first line: the night's date (Warsaw), the range run's range (absent without one), each run's kind and status in creation order (a run the cron stopped waiting for shows `running` or `queued`), and the runs' `processingErrors` and `skipped` summed (technical errors cannot be told per source). One line per source in `Source` order: `fetched N, skipped M` from the range run's result for it — or `failed: <its error, at most 200 characters>`, `empty`, or `not fetched` (no range run, or the run has not reached it) —, `new` (posts the range run stored first), `leftovers` (the different posts the retry run assessed; 0 without one), `assessed` / `failed` (the `ok` / `failed` assessments of the night's runs), `dead` (the dead posts whose last assessment is one of the night's runs), the tokens summed over the night's assessments (in, of them cached, out; no money: the owner's decision). Then the dead posts of the admin's runs created between the previous night's last cron run and this night's first (`none` when there are none), so each admin's run lands in exactly one summary, also across a skipped night; and `/admin`. Any other outcome of the call — no answer, a status other than 200, a 200 without `text` — is one line `WARN: nightly summary not sent: <reason>` in the cron's log and nothing more: the exit code and the last line are the runs' result. No call when the cron got no 202 (401, 503, a busy pipeline, no answer), nor when polling itself failed before the runs ended (`tools/pipeline-trigger/README.md`, step 5).
+- **Unchanged:** both crons' check-ins to healthchecks.io and their Telegram alarms (`production/pipeline-trigger`, `production/db-backup`), `production/deploy-health` and the monitor, the cron's exit codes, the bell and the run page, `attentionReasons`, the SPA and the web contract, the queue's limits, the one rule of the secret `https://` addresses (S-25: `NTFY_URL` follows `AlertSettings.PING_PATTERN` too, so step 9 of `tools/healthchecks/test.sh` is unchanged).
+
+### Variables (names only)
+
+| Service | Variable | Production | PR env |
+| --- | --- | --- | --- |
+| `szczur-radar-api` | `NTFY_URL` | `https://ntfy.sh/<random topic>`, set by the operator with `--stdin`, **sealed** | unset: no events. Set by hand only for a verification, to a random **test** topic, never production's |
+| `szczur-radar-api` | `NTFY_TOKEN` | the access token of the operator's ntfy.sh account, `--stdin`, **sealed**; optional in the code, set on production so that ntfy.sh counts its limits per account instead of per Railway's shared egress IP | unset |
+| `szczur-radar-api` | `HEALTHCHECK_PING_URL` | **deleted before the S-34 merge** (runbook below); the API does not read it since S-34 | — |
+| `pipeline-trigger`, `db-backup` | `HEALTHCHECK_PING_URL` | as in section F-04, unchanged | unchanged |
+
+- **IaC.** `.railway/railway.ts` declares `NTFY_URL` and `NTFY_TOKEN` on the API with `preserve()` and no longer declares `HEALTHCHECK_PING_URL` there (the crons keep theirs). A declaration removed while the variable still exists on production makes the `main` plan propose `variable.delete`, the gate refuses it (`gate.jq`, section S-14) and every deploy on `main` stops. The PR env cannot show this: production's value is sealed, so a PR env never had it and its plan is empty. The only proof before the merge is the agent's read of production's key list (below).
+- **Both are secrets.** Whoever knows the topic's name can read every message and publish to it: a random name (e.g. `szczur-radar-$(openssl rand -hex 12)`), never in an issue, a log or this document; the detail of an event carries no secret (S-18), but the titles and the night's numbers are readable by anyone with the name. The token lets anyone publish as the account. A bad value: `NTFY_URL` outside the S-25 rule, a `NTFY_TOKEN` that is not 1–256 printable ASCII characters without white space, or a token without `NTFY_URL`, stops the server's start (`APPLICATION FAILED TO START`, the variable's name, never the value); `migrate` and the other operator commands do not read them, so the pre-deploy never fails on them; `send-test-alert` exits 2.
+- **Redeploy after a change.** The API reads both at start. Sealing is a staged change (section F-04, step 2): deploy the environment's pending changes under the standing rules.
+
+### Runbook — before the merge (operator; the agent's check in issue #144)
+
+0. **Standing rules.** `GET /api/deploy-safety` → `{"safe":true,"reason":null}`, not between about 00:30 and 01:30 UTC (section S-05), not while the 02:00 UTC backup runs (section S-15): step 4 may redeploy the API.
+1. **ntfy.** An account on ntfy.sh (free), its access token (Account → Access tokens), the ntfy app on the phone subscribed to the production topic — a random name, which from now on is the secret value of `NTFY_URL` (`https://ntfy.sh/<name>`). No reservation of the topic (ntfy's ACLs are out of scope) and no own server.
+2. **The two variables**, with `--stdin` (never as an argument) and `--skip-deploys`, then seal both in the dashboard (service → Variables) and deploy the staged seals (section F-04, step 2):
+   ```bash
+   railway variable set NTFY_URL --stdin -s szczur-radar-api -e production --skip-deploys
+   railway variable set NTFY_TOKEN --stdin -s szczur-radar-api -e production --skip-deploys
+   ```
+   The code on production (before the merge) ignores both; they take effect with the merge's deploy.
+3. **Delete `HEALTHCHECK_PING_URL` from the API** (and only from the API: the crons keep theirs):
+   ```bash
+   railway variable delete HEALTHCHECK_PING_URL -s szczur-radar-api -e production
+   ```
+   `railway variable delete` has no `--skip-deploys` (section S-19): if the deletion is staged, deploy it in the dashboard together with the seals; if it redeploys the API, the old code restarts without the variable and logs `Operator alerts: not configured …` — the API's events are silent from then until the merge's deploy (the bell and the log stay), which is why this step comes shortly before the merge, not days ahead. Without this step the plan on `main` proposes `variable.delete` and the gate stops the deploy (above).
+4. **The agent's check (plan 4.9)**, the key names only (a sealed value is unreadable, the key is what counts):
+   ```bash
+   railway variables -s szczur-radar-api -e production --json | jq -e 'has("NTFY_URL") and (has("HEALTHCHECK_PING_URL") | not)'
+   ```
+   (`railway variable list … --json` is the same listing in the older runbooks.) Exit 0, and `has("NTFY_TOKEN")` is `true` too. The result and its time go into a comment on issue #144 before the PR is handed over for the merge. The crons' `HEALTHCHECK_PING_URL` are not part of it.
+
+### Runbook — after the merge (operator; tracked in issue #144, not in the plan's Progress)
+
+0. **Standing rules** as above; the merge rebuilds the API and `pipeline-trigger` (its `trigger.sh` changed).
+1. **CI on `main`.** All jobs green; `railway-config` plans no change on production (`preserve()` creates no value, and the API has no `HEALTHCHECK_PING_URL` any more). A plan with `variable.delete HEALTHCHECK_PING_URL` on `szczur-radar-api` means step 3 above was skipped: delete it and re-run the job.
+2. **Start.** The API's start log has `Operator alerts: sent to the ntfy topic in NTFY_URL` and no ERROR; `/api/ready` returns 200.
+3. **`send-test-alert` on production.** Wake the API (`curl https://szczur-radar-web-production.up.railway.app/api/health`), then, in your own terminal (as `create-user`, section S-07):
+   ```bash
+   railway ssh -s szczur-radar-api -e production -- java -jar /app/target/szczur-radar-api.jar send-test-alert
+   ```
+   Exit 0 with `Test alert delivered to the ntfy topic in NTFY_URL …`; the phone shows `Szczur Radar TEST_SIGNAL` with `TEST_SIGNAL (test of the operator alert channel, nothing is wrong): send-test-alert from operator` (over `railway ssh` the host is `operator`).
+4. **The first night.** The phone gets `Szczur Radar NIGHT_SUMMARY` with a line per configured source (`reddit: …`, `wykop: …`); the cron's log has the `summary:` lines before `OK: …` and exit 0; `production/pipeline-trigger` in healthchecks.io has `start` and `0` with the `OK:` line as before. A night whose only reason is a dead post gives no `RUN_NEEDS_ATTENTION` — only the bell and `dead N` in the summary.
+5. **The old checks.** Delete `production/api-events` and every `szczur-radar-pr-<N>/api-events` left over in the healthchecks.io dashboard (or `DELETE /api/v3/checks/<uuid>` with the read-write key): since S-34 `checks.sh delete <environment>` removes only the two cron checks and `apply` never deletes anything. The two cron checks and `production/deploy-health` stay.
+6. **Record and close.** Comment on issue #144: the merge commit, the deployment IDs, the start line, the `send-test-alert` result, the first night's summary (the numbers, not the topic) and the deleted checks; never the topic's name or the token. Close #144 only after this verification.
+
+### Every morning: no summary is the signal
+
+- **A summary comes every night, also a quiet one.** Its absence is the only sign that the channel API → ntfy failed (the queue is not durable and nothing retries) or that the cron never reached `/nightly-summary`. Then: Telegram for the cron's own check (`production/pipeline-trigger` down = the night itself failed or did not end on time, sections S-05, F-04); `/admin` for the night's runs and the bell (the dead posts of the night); the cron's log for `WARN: nightly summary not sent: <reason>`; the API's log for `Operator alert NIGHT_SUMMARY … reported: FAILED` with the WARN of `NtfyAlerts` before it (`ntfy answered HTTP 429`: ntfy's limit; `401` / `403`: the token is wrong or revoked; an exception class: transport). **The dead posts of a night whose summary was lost never return in a later summary**: the next night's window starts at this night's cron run. Read them in `/admin`.
+- **Limits.** ntfy.sh counts 250 messages a day and a bucket of 60 requests refilled one per 5 s **per visitor**: per IP without a token — and the API leaves Railway through a shared egress IP, next to every other tenant publishing to ntfy.sh —, per account with `NTFY_TOKEN`. The queue sends at most 2 events a minute, well within it. A 429 streak after the token is set means the account's limits: look at the ntfy.sh account page.
+- **A leaked topic name or token.** Subscribe the phone to a new random topic, set `NTFY_URL` (and a new token) with `--stdin --skip-deploys`, seal, redeploy the API; nothing in the data changes.
+- **An outage of ntfy.sh is silent**, like one of healthchecks.io or Telegram (section F-04): nothing watches it.
+
+### PR-env verification (szczur-radar-pr-162; plan Phase 4, items 3–5, agent)
+
+On a random **test** topic (never production's), set as `NTFY_URL` on the PR env's API with `--stdin --skip-deploys` and a redeploy; `TRIGGER_IN_ANY_ENVIRONMENT=true` on `pipeline-trigger` and a temporary schedule (`tools/pipeline-trigger/README.md`, "PR env"). Evidence read from the topic itself, `curl -s "https://ntfy.sh/<topic>/json?poll=1&since=2h"`: a message titled `Szczur Radar TEST_SIGNAL` after `send-test-alert` over `railway ssh`, and after the cron's run a `Szczur Radar NIGHT_SUMMARY` whose message has a `reddit: ` and a `wykop: ` line; the cron's log (`railway logs -s pipeline-trigger -e szczur-radar-pr-162`) with the `summary:` lines before `OK: …`; no `RUN_NEEDS_ATTENTION` on the topic for a run with a dead post alone (if one occurs; the dead-only path is otherwise proven by `RunNotificationsTest` and `NotificationsIT`). The results go into issue #144, the topic's name nowhere in the repo; afterwards `NTFY_URL` and `TRIGGER_IN_ANY_ENVIRONMENT` are deleted from the PR env.
+
+### Rollback
+
+- **To silence the API's events at once**, without a code change: delete `NTFY_URL` (and `NTFY_TOKEN`) on `szczur-radar-api` and redeploy it; the start logs `not configured`, the bell and the log stay, the crons are not affected.
+- **A revert of PR #162** brings `HealthchecksAlerts`, the `api-events` check and `HEALTHCHECK_PING_URL: preserve()` on the API back and drops the declarations of `NTFY_URL` / `NTFY_TOKEN`, so the same trap applies in reverse: **before** the revert merges, delete `NTFY_URL` and `NTFY_TOKEN` from the production API (`railway variable delete …`, as in step 3 above), otherwise the `main` plan proposes their `variable.delete` and the gate stops the deploy. After the revert's deploy: `tools/healthchecks/checks.sh apply production` of the reverted code creates `production/api-events` again and prints its address — set it as `HEALTHCHECK_PING_URL` on the API with `--stdin --skip-deploys`, seal it and redeploy the API (section F-04, runbook steps 1–4). Nothing in the data changes either way; the dead-only runs of the meantime are in `/admin`.
 
 ## Phases
 
