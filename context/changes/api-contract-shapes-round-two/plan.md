@@ -390,7 +390,7 @@ Brak migracji bazy. Web i API wdrażają się niezależnie. Usunięcie zgodnośc
 
 #### Manual
 
-- [ ] 2.8 Właściciel przegląda `posts-page.json`, `failed-posts-page.json` i `runs-page.json` i potwierdza, że elementy pokazują realistyczne warianty (komentarz bez tytułu, post wstrzymany, przerwany retry)
+- [x] 2.8 Właściciel przegląda `posts-page.json`, `failed-posts-page.json` i `runs-page.json` i potwierdza, że elementy pokazują realistyczne warianty (komentarz bez tytułu, post wstrzymany, przerwany retry) — owner confirmed 2026-11-09
 
 ### Phase 3: Strażnicy wyprowadzani z kodu
 
