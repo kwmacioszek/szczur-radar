@@ -365,18 +365,18 @@ Podsumowanie to kilka zapytań agregujących po `assessments` i `posts` dla 1–
 
 #### Automated
 
-- [x] 2.1 Testy jednostkowe i integracyjne API przechodzą: `cd szczur-radar-api && ./mvnw -B verify`
-- [x] 2.2 Przebieg z samym martwym postem tworzy powiadomienie bez `RUN_NEEDS_ATTENTION`, a z martwym postem i błędem technicznym podnosi je
-- [x] 2.3 Format podsumowania (linia nocy, źródła, „poza nocą”, `/admin`, ≤4096 bajtów) jest przypięty
-- [x] 2.4 Trasa podsumowania zwraca tekst, podnosi `NIGHT_SUMMARY` i odrzuca złe ciało oraz brak tokenu
-- [x] 2.5 Okno „poza nocą” liczy martwy post z przebiegu admina dokładnie raz (IT z dwiema nocami)
+- [x] 2.1 Testy jednostkowe i integracyjne API przechodzą: `cd szczur-radar-api && ./mvnw -B verify` — aced7b1
+- [x] 2.2 Przebieg z samym martwym postem tworzy powiadomienie bez `RUN_NEEDS_ATTENTION`, a z martwym postem i błędem technicznym podnosi je — aced7b1
+- [x] 2.3 Format podsumowania (linia nocy, źródła, „poza nocą”, `/admin`, ≤4096 bajtów) jest przypięty — aced7b1
+- [x] 2.4 Trasa podsumowania zwraca tekst, podnosi `NIGHT_SUMMARY` i odrzuca złe ciało oraz brak tokenu — aced7b1
+- [x] 2.5 Okno „poza nocą” liczy martwy post z przebiegu admina dokładnie raz (IT z dwiema nocami) — aced7b1
 
 ### Phase 3: Cron wysyła podsumowanie
 
 #### Automated
 
-- [ ] 3.1 Test crona na atrapie API przechodzi: `tools/pipeline-trigger/test.sh`
-- [ ] 3.2 Ostatnia niepusta linia logu pozostaje linią końcową crona na wszystkich ścieżkach
+- [x] 3.1 Test crona na atrapie API przechodzi: `tools/pipeline-trigger/test.sh`
+- [x] 3.2 Ostatnia niepusta linia logu pozostaje linią końcową crona na wszystkich ścieżkach
 - [ ] 3.3 CI zielone na PR (wszystkie joby, w tym `pipeline-trigger-test`)
 
 ### Phase 4: Dokumenty i weryfikacja w PR env
