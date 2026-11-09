@@ -254,9 +254,9 @@ Brak migracji: ograniczenia `V3` już dopuszczają `stored` z 0 prób. Na produk
 
 #### Automated
 
-- [x] 2.1 Testy SPA przechodzą (`npm test`)
-- [x] 2.2 Typecheck i build przechodzą (`npm run build`)
-- [x] 2.3 Agent sprawdza sekcję „Nieudane posty” na atrapie przez `playwright-cli` (oba motywy, 375 px, 7 stanów)
+- [x] 2.1 Testy SPA przechodzą (`npm test`) — e022c03
+- [x] 2.2 Typecheck i build przechodzą (`npm run build`) — e022c03
+- [x] 2.3 Agent sprawdza sekcję „Nieudane posty” na atrapie przez `playwright-cli` (oba motywy, 375 px, 7 stanów) — e022c03
 
 #### Manual
 
@@ -266,12 +266,12 @@ Brak migracji: ograniczenia `V3` już dopuszczają `stored` z 0 prób. Na produk
 
 #### Automated
 
-- [ ] 3.1 CI PR jest zielone
-- [ ] 3.2 W PR env przywrócony post ma `stored` i 0 prób (SQL)
-- [ ] 3.3 Po przebiegu w PR env przywrócony post jest oceniony z nowym wierszem `assessments` (SQL)
-- [ ] 3.4 Log API w PR env ma linię przywrócenia
-- [ ] 3.5 Agent sprawdza `/admin` w PR env przez `playwright-cli`
-- [ ] 3.6 Komentarz w issue #143 z gałęzią, PR i dowodami
+- [x] 3.1 CI PR jest zielone
+- [x] 3.2 W PR env przywrócony post ma `stored` i 0 prób (SQL)
+- [x] 3.3 Po przebiegu w PR env przywrócony post jest oceniony z nowym wierszem `assessments` (SQL)
+- [x] 3.4 Log API w PR env ma linię przywrócenia
+- [x] 3.5 Agent sprawdza `/admin` w PR env przez `playwright-cli`
+- [x] 3.6 Komentarz w issue #143 z gałęzią, PR i dowodami
 
 #### Manual
 
