@@ -463,7 +463,8 @@ onMounted(async () => {
             <span class="attempt">
               <template v-if="post.stage === 'dead'"><strong>martwy</strong> · </template>
               <template v-else-if="post.onHold"><strong>wstrzymany</strong> · </template>
-              <!-- A stored post on hold has no stored attempt: only its technical errors. -->
+              <!-- A stored post on hold has no stored attempt since it was stored (a restored one keeps
+                   its older lastAttempt, which is not shown): only its technical errors. -->
               <template v-if="post.stage !== 'stored'">
                 próby {{ post.assessmentAttempts }}
                 <template v-if="post.lastAttempt?.failureClass">

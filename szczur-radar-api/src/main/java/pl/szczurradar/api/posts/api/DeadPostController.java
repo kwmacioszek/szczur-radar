@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import pl.szczurradar.api.config.ApiError;
 import pl.szczurradar.api.config.ErrorCode;
-import pl.szczurradar.api.pipeline.api.PipelineRunController;
+import pl.szczurradar.api.config.PostIdLimits;
 import pl.szczurradar.api.pipeline.state.PostTransitions;
 
 /**
@@ -27,8 +27,8 @@ import pl.szczurradar.api.pipeline.state.PostTransitions;
 @RestController
 class DeadPostController {
 
-	/** The most posts one request may name: as many as a posts run ({@link PipelineRunController#MAX_POSTS}). */
-	static final int MAX_POSTS = PipelineRunController.MAX_POSTS;
+	/** The most posts one request may name: as many as a posts run ({@link PostIdLimits#MAX_POSTS}). */
+	static final int MAX_POSTS = PostIdLimits.MAX_POSTS;
 
 	private static final Logger log = LoggerFactory.getLogger(DeadPostController.class);
 

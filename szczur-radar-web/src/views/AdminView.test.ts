@@ -388,6 +388,24 @@ describe('AdminView', () => {
       expect(restoreButton(wrapper).attributes('disabled')).toBeDefined()
     })
 
+    it('drops from the selection on a reload only the posts gone from the list, a dead one stays checked', async () => {
+      vi.mocked(fetchFailedPosts).mockResolvedValue(mixed)
+      const wrapper = await mountAdmin()
+      await boxes(wrapper)[0]!.setValue(true)
+      await boxes(wrapper)[1]!.setValue(true)
+      expect(retryButton(wrapper).text()).toBe('Ponów zaznaczone (1)')
+      expect(restoreButton(wrapper).text()).toBe('Przywróć martwe (1)')
+
+      // a left the list (assessed meanwhile); b is still dead.
+      vi.mocked(fetchFailedPosts).mockResolvedValue({ ...mixed, items: mixed.items.slice(1), total: 3 })
+      await wrapper.findAll('button').find((button) => button.text() === 'Odśwież')!.trigger('click')
+      await flushPromises()
+
+      expect(retryButton(wrapper).text()).toBe('Ponów zaznaczone (0)')
+      expect(restoreButton(wrapper).text()).toBe('Przywróć martwe (1)')
+      expect((boxes(wrapper)[0]!.element as HTMLInputElement).checked).toBe(true)
+    })
+
     it('retries only the checked posts that are not dead and keeps the dead ones checked', async () => {
       vi.mocked(fetchFailedPosts).mockResolvedValue(mixed)
       vi.mocked(retryPosts).mockResolvedValue([run({ kind: 'posts' })])

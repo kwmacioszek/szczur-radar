@@ -185,9 +185,12 @@ public class PostTransitions {
 	 * attempts. Its stored attempts ({@code assessments}) stay. Any other id (not dead any more, another stage,
 	 * unknown) is left as it is; no run ever holds a dead post, so this never meets a running assessment.
 	 *
-	 * @return how many posts were restored
+	 * @return how many posts were restored (0 for no id)
 	 */
 	public int restore(Collection<UUID> postIds) {
+		if (postIds.isEmpty()) {
+			return 0;
+		}
 		return jdbc
 			.sql("UPDATE posts SET stage = :stored, assessment_attempts = 0, technical_failures = 0,"
 					+ " last_technical_error = NULL, updated_at = now() WHERE id IN (:ids) AND stage = :dead")

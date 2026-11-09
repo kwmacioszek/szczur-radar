@@ -321,6 +321,8 @@ class PostRepositoryIT {
 		assertThat(posts.findLeftoverIds()).contains(dead);
 		// Restored already: a second call changes nothing.
 		assertThat(transitions.restore(List.of(dead))).isZero();
+		// No id: nothing to restore, and no empty IN () reaches the database.
+		assertThat(transitions.restore(List.of())).isZero();
 	}
 
 	@Test

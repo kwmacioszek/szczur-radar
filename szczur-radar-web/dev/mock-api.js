@@ -457,9 +457,12 @@ async page => {
     if (p === '/api/admin/posts/restore' && route.request().method() === 'POST') {
       // Like posts/api/DeadPostController.java: each named post that is still dead becomes stored with no attempts.
       const ids = route.request().postDataJSON()?.postIds
-      if (!Array.isArray(ids) || ids.length === 0 || ids.length > 100) return json(route, { detail: 'invalid_request' }, 400)
+      if (!Array.isArray(ids) || ids.length === 0 || ids.length > 100 || ids.includes(null)) {
+        return json(route, { detail: 'invalid_request' }, 400)
+      }
       const dead = MODE === 'empty' ? [] : failed.filter((post) => post.stage === 'dead' && ids.includes(post.id))
-      dead.forEach((post) => Object.assign(post, { stage: 'stored', assessmentAttempts: 0, lastAttempt: null }))
+      // Its attempts stay, as in the API: lastAttempt is kept.
+      dead.forEach((post) => Object.assign(post, { stage: 'stored', assessmentAttempts: 0 }))
       return json(route, { restored: dead.length })
     }
     if (p === '/api/freshness') {
