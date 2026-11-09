@@ -3,7 +3,7 @@ project: "Szczur Radar"
 version: 5
 status: draft # draft | active | locked
 created: 2026-09-27
-updated: 2026-11-06
+updated: 2026-11-09
 prd_version: 3
 main_goal: quality
 top_blocker: capacity # 16 wycinków, jeden recenzent i osoba mergująca; darmowe runnery GitHuba muszą zmieścić scenariusze i PIT
@@ -111,7 +111,7 @@ Na Wykopie (#gielda) i Reddicie codziennie pojawiają się setki postów o inwes
 | S-31 | pr-env-scenarios-in-ci            | ręczne weryfikacje PR env z S-13, S-17, S-18, S-20, S-27 chodzą w CI jako scenariusze na pełnym API z atrapami źródeł i LLM         | S-30                     | `verification-scope.md` „Scenariusze API”, „done when”; NFR `prd.md:275`                  | proposed |
 | S-32 | provider-refusal-breaker          | seria odmów dostawcy zatrzymuje przebieg, zanim zużyje próby pozostałych postów, i daje sygnał jak każdy `failed`                  | —                        | NFR `prd.md:275` (doprecyzowanie PRD v3); audyt §6 R-41; destylacja #3                     | ready    |
 | S-33 | restore-dead-posts                | admin przywraca zaznaczone martwe posty do oceny, a ich próby są zerowane                                                          | —                        | FR-034, FR-015; destylacja Q-18                                                            | ready    |
-| S-34 | dead-posts-daily-digest           | operator dostaje raz dziennie podsumowanie martwych postów zamiast alarmu przy każdym przebiegu z martwym postem                    | —                        | NFR `prd.md:275` (doprecyzowanie PRD v3); destylacja #5, R-42, Q-14                        | ready    |
+| S-34 | dead-posts-daily-digest           | operator dostaje raz dziennie podsumowanie martwych postów zamiast alarmu przy każdym przebiegu z martwym postem                    | —                        | NFR `prd.md:275` (doprecyzowanie PRD v3); destylacja #5, R-42, Q-14                        | in-progress |
 | S-35 | per-source-failure-quality        | operator widzi udział nieudanych prób według klas błędu osobno dla każdego źródła i dostaje sygnał po przekroczeniu progu           | —                        | FR-033; destylacja #1, R-15                                                                | ready    |
 | S-36 | statement-language-quality        | operator widzi udział tez w innym języku niż post osobno dla każdego źródła, z sygnałem po przekroczeniu progu                     | S-35                     | FR-033; `contract-v2.md` §8 (Q-16); destylacja #1, D-14, R-38                              | proposed |
 | S-37 | source-native-post-labels         | użytkownik widzi typ posta słowami jego źródła: „wpis”/„znalezisko” na Wykopie, „post”/„link” na Reddicie                          | —                        | FR-023 (doprecyzowanie Q-13); destylacja #4, D-12, R-45                                    | done     |
@@ -216,7 +216,7 @@ Brak — każda praca przekrojowa M-4 ma widoczny skutek dla użytkownika, opera
 - **Unknowns:**
   - Kto i kiedy wysyła podsumowanie (cron, API po nocnym przebiegu, healthchecks.io) i czy dzwonek w aplikacji dalej pokazuje martwe posty? — Owner: user (`/10x-plan`; PRD v3 zostawia to planowi). Block: no.
 - **Risk:** zmienia regułę „wymaga uwagi” wspólną dla dzwonka, strony przebiegu i alarmu (S-22); reguła ma zostać jedna, więc różnica dotyczy tylko kanału, nie powodu.
-- **Status:** ready
+- **Status:** in-progress
 
 ### S-35: Jakość ocen per źródło — nieudane próby według klas
 
