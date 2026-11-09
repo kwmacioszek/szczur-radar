@@ -260,7 +260,7 @@ Brak migracji: ograniczenia `V3` już dopuszczają `stored` z 0 prób. Na produk
 
 #### Manual
 
-- [ ] 2.4 Właściciel akceptuje etykiety przycisków i treść komunikatów w PR
+- [x] 2.4 Właściciel akceptuje etykiety przycisków i treść komunikatów w PR
 
 ### Phase 3: Weryfikacja w PR env i runbook
 
@@ -275,5 +275,5 @@ Brak migracji: ograniczenia `V3` już dopuszczają `stored` z 0 prób. Na produk
 
 #### Manual
 
-- [ ] 3.7 Właściciel loguje się w oknie przeglądarki otwartym przez agenta
-- [ ] 3.8 Właściciel akceptuje sekcję S-33 w `deploy-plan.md`
+- [x] 3.7 Właściciel loguje się w oknie przeglądarki otwartym przez agenta
+- [x] 3.8 Właściciel akceptuje sekcję S-33 w `deploy-plan.md`
