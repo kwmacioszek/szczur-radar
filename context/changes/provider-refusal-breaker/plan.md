@@ -266,9 +266,9 @@ Brak migracji, zmiennej i zmiany kontraktu. Historia bez zmian: posty, które wc
 
 #### Automated
 
-- [x] 3.1 CI PR zielone: `gh pr checks <nr PR> --watch` bez `fail`
-- [x] 3.2 Zwykły przebieg w PR env kończy się jak dotąd (SQL: `succeeded`/`partial`, bez `refused 3 calls`; log bez WARN bezpiecznika i bez ERROR)
-- [x] 3.3 Issue #142 ma komentarz startowy i wynik PR env
+- [x] 3.1 CI PR zielone: `gh pr checks <nr PR> --watch` bez `fail` — 8fa4b3f
+- [x] 3.2 Zwykły przebieg w PR env kończy się jak dotąd (SQL: `succeeded`/`partial`, bez `refused 3 calls`; log bez WARN bezpiecznika i bez ERROR) — 8fa4b3f
+- [x] 3.3 Issue #142 ma komentarz startowy i wynik PR env — 8fa4b3f
 
 #### Manual
 
