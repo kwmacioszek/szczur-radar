@@ -2,7 +2,7 @@ package pl.szczurradar.api.alerts;
 
 import org.jspecify.annotations.Nullable;
 
-/** {@link OperatorAlerts} without {@code HEALTHCHECK_PING_URL}: PR envs, local runs and tests. Sends nothing. */
+/** {@link OperatorAlerts} without {@code NTFY_URL}: PR envs, local runs and tests. Sends nothing. */
 public final class NoOperatorAlerts implements OperatorAlerts {
 
 	@Override

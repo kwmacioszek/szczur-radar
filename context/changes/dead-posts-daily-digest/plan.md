@@ -353,13 +353,13 @@ Podsumowanie to kilka zapytań agregujących po `assessments` i `posts` dla 1–
 
 #### Automated
 
-- [ ] 1.1 Testy jednostkowe i integracyjne API przechodzą: `cd szczur-radar-api && ./mvnw -B verify`
-- [ ] 1.2 `NtfyAlertsTest` przypina żądanie (ścieżka, `Title`, `Priority`, treść UTF-8, ucięcie do 4096 bajtów) i brak URL w logu przy błędzie
-- [ ] 1.3 W kodzie produkcyjnym API nie ma już `HEALTHCHECK_PING_URL` ani `HealthchecksAlerts`
-- [ ] 1.4 Test skryptu checków (z krokiem 9 reguły S-25) przechodzi: `tools/healthchecks/test.sh`
-- [ ] 1.5 Test bramki deployu przechodzi: `tools/deploy-gate/test.sh`
+- [x] 1.1 Testy jednostkowe i integracyjne API przechodzą: `cd szczur-radar-api && ./mvnw -B verify`
+- [x] 1.2 `NtfyAlertsTest` przypina żądanie (ścieżka, `Title`, `Priority`, treść UTF-8, ucięcie do 4096 bajtów) i brak URL w logu przy błędzie
+- [x] 1.3 W kodzie produkcyjnym API nie ma już `HEALTHCHECK_PING_URL` ani `HealthchecksAlerts`
+- [x] 1.4 Test skryptu checków (z krokiem 9 reguły S-25) przechodzi: `tools/healthchecks/test.sh`
+- [x] 1.5 Test bramki deployu przechodzi: `tools/deploy-gate/test.sh`
 - [ ] 1.6 Plan IaC dla PR env nie proponuje usunięcia zmiennej ani zasobu (job `railway-config` w CI zielony)
-- [ ] 1.7 Z `NTFY_TOKEN` żądanie ma `Authorization: Bearer`, bez niego nie ma; 429 i 401 kończą się `FAILED` z WARN-em ze statusem; token nigdy w logu ani w komunikacie ustawień
+- [x] 1.7 Z `NTFY_TOKEN` żądanie ma `Authorization: Bearer`, bez niego nie ma; 429 i 401 kończą się `FAILED` z WARN-em ze statusem; token nigdy w logu ani w komunikacie ustawień
 
 ### Phase 2: Podsumowanie nocy w API zamiast alarmu o martwym poście
 

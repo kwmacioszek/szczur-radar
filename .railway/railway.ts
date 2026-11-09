@@ -183,13 +183,16 @@ export default defineRailway(() => {
       // number is refused). Declared so that a value set by the operator is kept,
       // never created here.
       ACTIVATION_LINK_TTL: preserve(),
-      // Out-of-app alert channel (F-04; tools/healthchecks/README.md): the ping URL of
-      // this environment's `<env>/api-events` healthchecks.io check, where the API
-      // reports operator events (alerts/HealthchecksAlerts, `send-test-alert`). A
-      // secret, set by the operator with --stdin and sealed on production, so a new
-      // PR env does not copy it; unset (PR envs, by default) = no alerts sent. Never
-      // a value here.
-      HEALTHCHECK_PING_URL: preserve(),
+      // Out-of-app alert channel (F-04, since S-34 through ntfy; szczur-radar-api/
+      // README.md, `send-test-alert`): the address of the ntfy topic where the API
+      // publishes its operator events (alerts/NtfyAlerts), e.g. https://ntfy.sh/<topic>,
+      // and the optional access token of the ntfy account (`Authorization: Bearer`, so
+      // ntfy.sh counts its limits per account, not per Railway's shared egress IP).
+      // Both secrets, set by the operator with --stdin and sealed on production, so a
+      // new PR env does not copy them; NTFY_URL unset (PR envs, by default) = no alerts
+      // sent. The crons keep HEALTHCHECK_PING_URL below. Never a value here.
+      NTFY_URL: preserve(),
+      NTFY_TOKEN: preserve(),
     },
   });
 

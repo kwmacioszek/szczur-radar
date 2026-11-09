@@ -19,7 +19,7 @@ Pakiet bazowy `pl.szczurradar.api`, pakiety według funkcji — nie według wars
 | `user` | encja `User`, `UserRepository` (Spring Data JPA), `Role` (enum), `Emails` (jedna normalizacja e-maila), `SystemAccount` (konta, które nie są osobami: `SCHEDULER`) |
 | `auth` | logowanie JSON, `/me`, logout, limiter prób, filtr Origin, odnawianie ciasteczka sesji, argon2 (`Passwords`); `auth/activation` — jednorazowe linki aktywacyjne (S-07): `ActivationLinks` (wydanie, reset konta, sprawdzenie i użycie linku), `ActivationSettings` (`WEB_PUBLIC_URL`, `ACTIVATION_LINK_TTL`), encja tokenu (w bazie tylko SHA-256) i publiczny `ActivationController` |
 | `cli` | komendy operatora: `migrate`, `create-admin`, `create-user`, `reset-password`, `send-test-alert` (dyspozytor `CommandLine`; sprawdzenia przed startem Springa w `CommandChecks`; dwie komendy z linkiem aktywacyjnym na wspólnym `LinkCommand`) |
-| `alerts` | zdarzenia dla operatora poza aplikacją (F-04): `AlertSettings` (`HEALTHCHECK_PING_URL`), `AlertEvent` (enum, dziś `TEST_SIGNAL`), `OperatorAlerts` (nigdy nie rzuca) z `HealthchecksAlerts` (check healthchecks.io → Telegram) i `NoOperatorAlerts`; bean tylko w serwerze (`AlertsConfiguration`) |
+| `alerts` | zdarzenia dla operatora poza aplikacją (F-04, od S-34 przez ntfy): `AlertSettings` (`NTFY_URL`, opcjonalny `NTFY_TOKEN`), `AlertEvent` (enum z priorytetem ntfy: `TEST_SIGNAL` 3, zdarzenia błędów 4), `OperatorAlerts` (nigdy nie rzuca) z `NtfyAlerts` (jedna wiadomość `POST` na temat ntfy → telefon operatora) i `NoOperatorAlerts`; `OperatorAlertQueue` (kolejka ścieżek błędów, S-18); bean tylko w serwerze (`AlertsConfiguration`) |
 | `internal` | token crona `PIPELINE_TRIGGER_TOKEN` (`PipelineTriggerToken`) i jego filtr dla tras `/internal/**` (`PipelineTriggerTokenFilter`) |
 | `config` | Spring Security, sesja i ciasteczko, format błędów `{"detail": …}`, konfiguracja dostawcy LLM |
 | `agents` | `agents/assessor` — kontrakt oceny V2 jako kod (model, schemat, parser, walidator D1–D15, odsiew), prompt z wersją i `Assessor` (jedno wywołanie modelu na wpis) |
@@ -228,31 +228,32 @@ Kody wyjścia:
 WEB_PUBLIC_URL=http://localhost:5173 java -jar target/szczur-radar-api.jar create-user --email jan@example.com
 ```
 
-### `send-test-alert` (F-04)
+### `send-test-alert` (F-04, od S-34 przez ntfy)
 
-Wysyła zdarzenie testowe `TEST_SIGNAL` do checka zdarzeń API w healthchecks.io, który alarmuje w Telegramie: przychodzi wiadomość „down” z opisem zdarzenia (np. „TEST_SIGNAL (test of the operator alert channel, nothing is wrong): send-test-alert from <host>”), a zaraz po niej „up”. Tak sprawdza się cały kanał alarmowy od API do telefonu. Komenda nie uruchamia Springa: nie potrzebuje `PG*` ani `LLM_*`, tylko `HEALTHCHECK_PING_URL`, i nie przyjmuje argumentów.
+Wysyła zdarzenie testowe `TEST_SIGNAL` do tematu ntfy, który subskrybuje telefon operatora: przychodzi jedna wiadomość z tytułem „Szczur Radar TEST_SIGNAL” i treścią zdarzenia (np. „TEST_SIGNAL (test of the operator alert channel, nothing is wrong): send-test-alert from <host>”). Tak sprawdza się cały kanał alarmowy od API do telefonu. Komenda nie uruchamia Springa: nie potrzebuje `PG*` ani `LLM_*`, tylko `NTFY_URL` (i opcjonalnego `NTFY_TOKEN`), i nie przyjmuje argumentów.
 
 | Zmienna | Znaczenie |
 | --- | --- |
-| `HEALTHCHECK_PING_URL` | opcjonalna: adres pingu checka zdarzeń API w healthchecks.io, np. `https://hc-ping.com/<uuid>` — **sekret** (kto go zna, może meldować do checka): nigdy w repo, logach, issue ani argumentach. Bez niej (albo pusta) API niczego nie wysyła poza aplikację — tak działają PR envy bez testowego checka, lokalne uruchomienia i testy. Ustawiona musi być bezwzględnym adresem `https://` z hostem, bez zapytania i fragmentu; inaczej serwer nie startuje (blok `APPLICATION FAILED TO START` z nazwą zmiennej, **bez powtórzenia wartości**). Czyta ją serwer przy starcie i `send-test-alert`; `migrate` i pozostałe komendy jej nie czytają, więc zła wartość nie zatrzymuje pre-deployu |
+| `NTFY_URL` | opcjonalna: adres tematu ntfy zdarzeń API, np. `https://ntfy.sh/<temat>` — **sekret** (kto go zna, może czytać temat i do niego publikować; temat ma losową nazwę): nigdy w repo, logach, issue ani argumentach. Bez niej (albo pusta) API niczego nie wysyła poza aplikację — tak działają PR envy bez testowego tematu, lokalne uruchomienia i testy. Ustawiona podlega jednej regule sekretnych adresów `https://` (S-25, tej samej co adresy check-in cronów): nazwa hosta, bez zapytania i fragmentu, tylko ASCII, najwyżej 512 znaków; inaczej serwer nie startuje (blok `APPLICATION FAILED TO START` z nazwą zmiennej, **bez powtórzenia wartości**). Czyta ją serwer przy starcie i `send-test-alert`; `migrate` i pozostałe komendy jej nie czytają, więc zła wartość nie zatrzymuje pre-deployu |
+| `NTFY_TOKEN` | opcjonalna: token dostępu konta ntfy.sh (`tk_…`), wysyłany jako `Authorization: Bearer` — **sekret**, nigdy w logach ani komunikatach. Z nim limity ntfy.sh (250 wiadomości dziennie, kubełek 60 żądań odnawiany co 5 s) liczą się per konto, a nie per współdzielony adres IP wyjściowy Railway. Od 1 do 256 znaków drukowalnego ASCII bez spacji; inna wartość albo token bez `NTFY_URL` to błąd ustawień (jak wyżej, bez powtórzenia wartości) |
 
-Jedno zdarzenie to dwa żądania: `POST <adres>/fail` z opisem (przyciętym do 1000 znaków), a po odpowiedzi 2xx `POST <adres>` z „ok”, bo healthchecks.io alarmuje tylko przy zmianie stanu i bez powrotu do „up” następne zdarzenie nie dałoby wiadomości. Jedna próba na żądanie, bez ponowień, limity 5 s na połączenie i 10 s na żądanie. Porażka nigdy nie psuje wywołującego: kończy się jedną linią WARN ze zdarzeniem i statusem albo klasą wyjątku, nigdy z adresem. W F-04 woła go tylko ta komenda; ścieżki błędów API podłączy S-18.
+Jedno zdarzenie to jedno żądanie `POST <adres tematu>` z nagłówkami `Title: Szczur Radar <ZDARZENIE>`, `Priority` ze zdarzenia (3 dla `TEST_SIGNAL`, 4 dla zdarzeń błędów) i `Content-Type: text/plain; charset=utf-8`, a z `NTFY_TOKEN` także `Authorization: Bearer <token>`; treść „<ZDARZENIE> (<opis>): <szczegół>” jest ucinana do 4096 bajtów UTF-8 (limit wiadomości ntfy) na granicy znaku. Jedna próba, bez ponowień, limity 5 s na połączenie i 10 s na żądanie. Każda odpowiedź spoza 2xx (także 429 — limit ntfy — i 401/403 — zły token), błąd transportu i przekroczony czas to porażka. Porażka nigdy nie psuje wywołującego: kończy się jedną linią WARN ze zdarzeniem i statusem albo klasą wyjątku, nigdy z adresem ani tokenem. Ścieżki błędów API wysyłają swoje zdarzenia tą samą drogą przez kolejkę `OperatorAlertQueue` (S-18).
 
 ```bash
-# lokalnie (adres testowego checka trzymaj poza repo, jak klucz LLM)
-HEALTHCHECK_PING_URL=https://hc-ping.com/<uuid> java -jar target/szczur-radar-api.jar send-test-alert
+# lokalnie (adres testowego tematu trzymaj poza repo, jak klucz LLM)
+NTFY_URL=https://ntfy.sh/<temat> java -jar target/szczur-radar-api.jar send-test-alert
 # produkcja / PR env: jak create-user — najpierw obudź API, potem w powłoce kontenera
-# (zmienna jest już ustawiona w serwisie szczur-radar-api):
+# (zmienne są już ustawione w serwisie szczur-radar-api):
 curl https://<domena-web>/api/health
 railway ssh -s szczur-radar-api -e <środowisko>
 java -jar target/szczur-radar-api.jar send-test-alert
 ```
 
-Na stdout jedna linia o dostarczeniu, na stderr powód porażki; adresu nie wypisuje nigdzie. Kody wyjścia:
+Na stdout jedna linia o dostarczeniu, na stderr powód porażki; adresu ani tokenu nie wypisuje nigdzie. Kody wyjścia:
 
-- 0: zdarzenie dostarczone, check znów „up”;
+- 0: zdarzenie dostarczone (ntfy odpowiedziało 2xx);
 - 1: nie dostarczone (odpowiedź spoza 2xx, brak odpowiedzi, przekroczony czas — przyczyna w linii WARN; bez ponowienia);
-- 2: błąd użycia lub konfiguracji (argument, brak albo zła wartość `HEALTHCHECK_PING_URL`).
+- 2: błąd użycia lub konfiguracji (argument, brak albo zła wartość `NTFY_URL`, zły `NTFY_TOKEN` albo token bez adresu).
 
 ## Obraz Dockera (Railway, CI)
 
