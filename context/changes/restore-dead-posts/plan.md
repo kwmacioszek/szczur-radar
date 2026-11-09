@@ -266,12 +266,12 @@ Brak migracji: ograniczenia `V3` już dopuszczają `stored` z 0 prób. Na produk
 
 #### Automated
 
-- [x] 3.1 CI PR jest zielone
-- [x] 3.2 W PR env przywrócony post ma `stored` i 0 prób (SQL)
-- [x] 3.3 Po przebiegu w PR env przywrócony post jest oceniony z nowym wierszem `assessments` (SQL)
-- [x] 3.4 Log API w PR env ma linię przywrócenia
-- [x] 3.5 Agent sprawdza `/admin` w PR env przez `playwright-cli`
-- [x] 3.6 Komentarz w issue #143 z gałęzią, PR i dowodami
+- [x] 3.1 CI PR jest zielone — d298688
+- [x] 3.2 W PR env przywrócony post ma `stored` i 0 prób (SQL) — d298688
+- [x] 3.3 Po przebiegu w PR env przywrócony post jest oceniony z nowym wierszem `assessments` (SQL) — d298688
+- [x] 3.4 Log API w PR env ma linię przywrócenia — d298688
+- [x] 3.5 Agent sprawdza `/admin` w PR env przez `playwright-cli` — d298688
+- [x] 3.6 Komentarz w issue #143 z gałęzią, PR i dowodami — d298688
 
 #### Manual
 
