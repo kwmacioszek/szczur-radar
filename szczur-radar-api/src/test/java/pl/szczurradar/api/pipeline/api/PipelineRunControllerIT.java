@@ -50,6 +50,7 @@ import pl.szczurradar.api.llm.LlmResponse;
 import pl.szczurradar.api.llm.OutputMode;
 import pl.szczurradar.api.llm.Provider;
 import pl.szczurradar.api.llm.ServiceTier;
+import pl.szczurradar.api.pipeline.OwnRuns;
 import pl.szczurradar.api.pipeline.PipelineRunService;
 import pl.szczurradar.api.pipeline.run.PipelineRunRepository;
 import pl.szczurradar.api.posts.AssessmentRepository;
@@ -127,6 +128,9 @@ class PipelineRunControllerIT {
 	@Autowired
 	EntityManager entityManager;
 
+	@Autowired
+	PipelineRunService service;
+
 	private UUID admin;
 
 	private PostSeeds seeds;
@@ -144,7 +148,9 @@ class PipelineRunControllerIT {
 	void awaitIdle() {
 		wykopGate.countDown();
 		long deadline = System.nanoTime() + Duration.ofSeconds(60).toNanos();
-		while (activeRuns() > 0) {
+		// The status is committed before the queue thread notifies the admins and lets the run go, so the
+		// rows alone return too early: a later test's clean-up would race with those notifications.
+		while (activeRuns() > 0 || !OwnRuns.of(service).isEmpty()) {
 			assertThat(System.nanoTime()).as("runs still active").isLessThan(deadline);
 			sleep(100);
 		}

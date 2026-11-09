@@ -93,6 +93,18 @@ class ContractVariantsTest {
 	}
 
 	@Test
+	void everyExceptionHasItsReason() {
+		Map<String, String> exceptions = new TreeMap<>();
+		KNOWN_GAPS.forEach((component, reason) -> exceptions.put("KNOWN_GAPS " + component, reason));
+		ContractRegistry.NOT_READ_BY_SPA.forEach((route, reason) -> exceptions.put("NOT_READ_BY_SPA " + route, reason));
+
+		assertThat(exceptions).as("the entries of KNOWN_GAPS and NOT_READ_BY_SPA").isNotEmpty();
+		assertThat(exceptions.entrySet().stream().filter(entry -> entry.getValue().isBlank()).map(Map.Entry::getKey))
+			.as("entries without a reason")
+			.isEmpty();
+	}
+
+	@Test
 	void everyNullableAndListComponentHasItsVariants() {
 		Walk walk = walk();
 

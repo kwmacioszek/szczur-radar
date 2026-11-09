@@ -19,9 +19,12 @@ const ALLOWED: Record<string, string[]> = {
   'client.ts': ['handleUnauthorized', 'retryAfter'],
 }
 
-/** Every line declaring an optional field or member (`name?:`, also `readonly name?:`), as `name`. */
+/**
+ * Every optional field, member or parameter (`name?:`, also `readonly name?:` and `name ?:`), as `name`: at the start
+ * of a line, and after `{`, `;`, `,` or `(` for a type or parameter list written on one line.
+ */
 function optionalFields(text: string): string[] {
-  return [...text.matchAll(/^\s*(?:readonly\s+)?([A-Za-z_$][\w$]*)\?:/gm)].map((match) => match[1]!)
+  return [...text.matchAll(/(?:^|[{;,(])\s*(?:readonly\s+)?([A-Za-z_$][\w$]*)\s*\?:/gm)].map((match) => match[1]!)
 }
 
 const found = Object.entries(sources).flatMap(([file, text]) => optionalFields(text).map((name) => ({ file, name })))
@@ -34,6 +37,17 @@ describe('the response types of src/api', () => {
   it('have no optional field but the allowed ones', () => {
     const notAllowed = found.filter(({ file, name }) => !(ALLOWED[file] ?? []).includes(name))
     expect(notAllowed).toEqual([])
+  })
+
+  it('finds a field of a type written on one line', () => {
+    expect(optionalFields('type T = { a: string; b?: number }\ntype U = { c ?: string }')).toEqual(['b', 'c'])
+  })
+
+  it('have no Partial<…> type, which makes every field optional', () => {
+    const partial = Object.entries(sources)
+      .filter(([, text]) => /\bPartial</.test(text))
+      .map(([file]) => file)
+    expect(partial).toEqual([])
   })
 
   it('finds every allowed one, so a changed format does not pass in silence', () => {
