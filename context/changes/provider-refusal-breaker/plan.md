@@ -260,7 +260,7 @@ Brak migracji, zmiennej i zmiany kontraktu. Historia bez zmian: posty, które wc
 
 #### Manual
 
-- [ ] 2.5 Właściciel ocenia tekst doprecyzowania PRD i sekcji S-32 w `deploy-plan.md`
+- [x] 2.5 Właściciel ocenia tekst doprecyzowania PRD i sekcji S-32 w `deploy-plan.md` — 54307ff
 
 ### Phase 3: Weryfikacja w PR env i domknięcie
 
