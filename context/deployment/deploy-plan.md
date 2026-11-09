@@ -2188,7 +2188,7 @@ Change: `restore-dead-posts` (its folder moves to `context/archive/` when the ch
 
 ### After the merge (read-only)
 
-1. When production has a dead post worth restoring, the admin restores it in `/admin`; the API log has the INFO line above, and the post is gone from "Nieudane posty".
+1. When production has a dead post worth restoring, the admin restores it in `/admin`; the API log has the INFO line above, and the post is gone from "Nieudane posty". The ids in that line are only the ones the admin chose (`restored N of M` with N = M = the selection), and no other INFO line names a post nobody meant to restore.
 2. After the next night, the post is `assessed` (or `failed`/`dead` again) — its page or the failed list shows it.
 3. Record both in issue #143 and close it. Without a dead post to restore, record that the button and the route are live (the list shows dead posts checkable) and close.
 
