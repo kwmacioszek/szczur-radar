@@ -50,7 +50,10 @@ public enum ErrorCode {
 	/** A pipeline run is already queued or running; the request created nothing. */
 	PIPELINE_BUSY(HttpStatus.CONFLICT),
 
-	/** A posts run named a dead post (3 failed attempts); reviving one is outside S-02. */
+	/**
+	 * A posts run named a dead post (3 failed attempts); a dead post comes back through
+	 * {@code POST /api/admin/posts/restore} (S-33).
+	 */
 	POST_DEAD(HttpStatus.BAD_REQUEST),
 
 	/** No assessed post has this id (an unknown id, or a stage other than {@code assessed}). */

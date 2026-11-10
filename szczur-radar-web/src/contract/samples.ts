@@ -10,7 +10,7 @@ import type { User } from '../api/auth'
 import type { Freshness } from '../api/freshness'
 import type { NotificationList } from '../api/notifications'
 import type { MissingDays, Run, SourceState } from '../api/pipeline'
-import type { FailedPost, Page, PostItem } from '../api/posts'
+import type { FailedPost, Page, PostItem, RestoreResult } from '../api/posts'
 
 /** A range run of the daily cron that ended partial: one source failed, elements were skipped, a post died. */
 export const sampleRun: Run = {
@@ -854,6 +854,11 @@ export const sampleRunsPage: Page<Run> = {
   total: 4,
 }
 
+/** A restore that named one dead post and one in another stage. */
+export const sampleRestoreResult: RestoreResult = {
+  restored: 1,
+}
+
 /** Every contract file (its name next to this one) with its sample; shapes.test.ts requires one for each file. */
 export const SAMPLES: Record<string, unknown> = {
   'run.json': sampleRun,
@@ -869,4 +874,5 @@ export const SAMPLES: Record<string, unknown> = {
   'posts-page.json': samplePostsPage,
   'failed-posts-page.json': sampleFailedPostsPage,
   'runs-page.json': sampleRunsPage,
+  'restore-result.json': sampleRestoreResult,
 }

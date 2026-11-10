@@ -9,6 +9,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import jakarta.persistence.EntityManager;
 import org.jspecify.annotations.Nullable;
@@ -52,13 +54,14 @@ import pl.szczurradar.api.posts.PostSeeds;
 import pl.szczurradar.api.posts.PostStage;
 import pl.szczurradar.api.raw.RawPayloadStore;
 import pl.szczurradar.api.user.Role;
+import pl.szczurradar.api.user.User;
 import pl.szczurradar.api.user.UserRepository;
 
 /**
  * {@code GET /api/posts} (the feed), {@code GET /api/posts/{id}} and {@code /raw} (one assessed post and its
- * raw payload) and {@code GET /api/admin/posts/failed}: order, pages, totals, which posts, the latest
- * attempt with its tie rule, the raw payload shown without a changed value, and the feed filter (FR-011a).
- * Each test rolls back.
+ * raw payload), {@code GET /api/admin/posts/failed} and {@code POST /api/admin/posts/restore}: order, pages,
+ * totals, which posts, the latest attempt with its tie rule, the raw payload shown without a changed value,
+ * the feed filter (FR-011a), and restoring dead posts (S-33; it starts no run). Each test rolls back.
  */
 @SpringBootTest(properties = MigrateCommand.ENABLE_FLYWAY)
 @AutoConfigureMockMvc
@@ -660,6 +663,80 @@ class PostsApiIT {
 		assertThat(result).bodyJson().extractingPath("$.items[0].lastAttempt.failureClass").isEqualTo("schema_violation");
 	}
 
+	@Test
+	void aRestoredDeadPostLeavesTheFailedListAndKeepsItsAttempts() {
+		UUID dead = seeds.post(PostStage.DEAD, 3, "2026-10-01T09:00:00Z");
+		for (String at : List.of("2026-10-02T08:00:00Z", "2026-10-03T08:00:00Z", "2026-10-04T08:00:00Z")) {
+			seeds.failed(dead, at, FailureClass.SCHEMA_VIOLATION);
+		}
+		assertThat(mvc.get().uri("/api/admin/posts/failed").with(asAdmin())).bodyJson()
+			.extractingPath("$.items[*].id")
+			.asArray()
+			.containsExactly(dead.toString());
+
+		assertThat(restore("{\"postIds\":[\"" + dead + "\"]}")).hasStatusOk()
+			.bodyJson()
+			.isStrictlyEqualTo("{\"restored\":1}");
+
+		assertThat(mvc.get().uri("/api/admin/posts/failed").with(asAdmin())).bodyJson()
+			.extractingPath("$.items")
+			.asArray()
+			.isEmpty();
+		assertThat(jdbc.queryForObject("SELECT count(*) FROM assessments WHERE post_id = ?", Integer.class, dead))
+			.isEqualTo(3);
+		// The check a posts run makes before it is queued: the post is no longer dead.
+		assertThat(posts.findIdsInStage(List.of(dead), PostStage.DEAD)).isEmpty();
+		assertThat(jdbc.queryForMap("SELECT stage, assessment_attempts FROM posts WHERE id = ?", dead))
+			.containsEntry("stage", PostStage.STORED.value())
+			.containsEntry("assessment_attempts", 0);
+	}
+
+	@Test
+	void aRestoreChangesOnlyTheDeadPostsItNamesAndARepeatNothing() {
+		UUID dead = seeds.post(PostStage.DEAD, 3, "2026-10-01T09:00:00Z");
+		UUID failed = seeds.post(PostStage.FAILED, 1, "2026-10-01T10:00:00Z");
+		String body = "{\"postIds\":[\"" + dead + "\",\"" + failed + "\",\"" + UUID.randomUUID() + "\"]}";
+
+		MvcTestResult result = restore(body);
+		assertThat(result).hasStatusOk().bodyJson().isStrictlyEqualTo("{\"restored\":1}");
+		ContractFiles.assertMatches(body(result), "restore-result.json");
+
+		assertThat(jdbc.queryForMap("SELECT stage, assessment_attempts FROM posts WHERE id = ?", failed))
+			.containsEntry("stage", PostStage.FAILED.value())
+			.containsEntry("assessment_attempts", 1);
+		// Restored already: nothing left to restore.
+		assertThat(restore(body)).hasStatusOk().bodyJson().isStrictlyEqualTo("{\"restored\":0}");
+	}
+
+	@Test
+	void malformedRestoreRequestsAreInvalid() {
+		String hundredAndOne = IntStream.range(0, DeadPostController.MAX_POSTS + 1)
+			.mapToObj(i -> "\"" + UUID.randomUUID() + "\"")
+			.collect(Collectors.joining(","));
+		for (String body : List.of("{\"postIds\":[]}", "{\"postIds\":[" + hundredAndOne + "]}",
+				"{\"postIds\":[\"" + UUID.randomUUID() + "\",null]}", "{}", "{\"postIds\":null}")) {
+			assertThat(restore(body)).as(body)
+				.hasStatus(HttpStatus.BAD_REQUEST)
+				.bodyJson()
+				.isStrictlyEqualTo("{\"detail\":\"invalid_request\"}");
+		}
+	}
+
+	@Test
+	void aRestoreWhileARunIsRunningIsAllowed() {
+		UUID dead = seeds.post(PostStage.DEAD, 3, "2026-10-01T09:00:00Z");
+		UUID admin = users.save(new User("restore-" + UUID.randomUUID() + "@example.com", null, Role.ADMIN)).getId();
+		users.flush();
+		// At most one run runs: any other is interrupted, rolled back with the test.
+		jdbc.update("UPDATE pipeline_runs SET status = 'interrupted', finished_at = now() WHERE status = 'running'");
+		jdbc.update("INSERT INTO pipeline_runs (kind, status, requested_by, started_at, last_activity_at)"
+				+ " VALUES ('retry', 'running', ?, now(), now())", admin);
+
+		assertThat(restore("{\"postIds\":[\"" + dead + "\"]}")).hasStatusOk()
+			.bodyJson()
+			.isStrictlyEqualTo("{\"restored\":1}");
+	}
+
 	/**
 	 * Gives a post a fixed text (the body that {@code validOutput()} quotes), author and address, which the
 	 * seed makes from its random id.
@@ -689,6 +766,16 @@ class PostsApiIT {
 				TECHNICAL_ERROR, post);
 		entityManager.clear();
 		return post;
+	}
+
+	/** {@code POST /api/admin/posts/restore} as an admin with {@code body}. */
+	private MvcTestResult restore(String body) {
+		return mvc.post()
+			.uri("/api/admin/posts/restore")
+			.with(asAdmin())
+			.contentType(MediaType.APPLICATION_JSON)
+			.content(body)
+			.exchange();
 	}
 
 	private static String body(MvcTestResult result) {

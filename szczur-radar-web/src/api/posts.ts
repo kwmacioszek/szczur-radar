@@ -1,4 +1,5 @@
-// /api/posts, /api/posts/{id}, /api/posts/{id}/raw and /api/admin/posts/failed — the contract of szczur-radar-api posts/api/*Controller.
+// /api/posts, /api/posts/{id}, /api/posts/{id}/raw, /api/admin/posts/failed and /api/admin/posts/restore — the
+// contract of szczur-radar-api posts/api/*Controller.
 import { apiFetch, apiFetchText } from './client'
 
 /** The shared model's type of a post. */
@@ -174,4 +175,20 @@ export function fetchPostRaw(id: string): Promise<string> {
 /** Failed, dead and on-hold posts with their latest attempt and technical error (admin). */
 export function fetchFailedPosts(page = 0, size = 50): Promise<Page<FailedPost>> {
   return apiFetch<Page<FailedPost>>(`/api/admin/posts/failed?page=${page}&size=${size}`)
+}
+
+/** The answer of a restore: how many of the named posts were dead and are restored now. */
+export interface RestoreResult {
+  restored: number
+}
+
+/**
+ * Restores the given dead posts for assessment (admin, 1–100 ids): each that is still dead becomes `stored` with
+ * no attempts, and the next run assesses it; any other id stays as it is. `restored` counts the restored ones.
+ */
+export function restorePosts(postIds: string[]): Promise<RestoreResult> {
+  return apiFetch<RestoreResult>('/api/admin/posts/restore', {
+    method: 'POST',
+    body: JSON.stringify({ postIds }),
+  })
 }

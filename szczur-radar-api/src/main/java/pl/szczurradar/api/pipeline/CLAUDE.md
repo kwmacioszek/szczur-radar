@@ -48,7 +48,9 @@ Every route starts runs only through `PipelineRunService`; none has its own star
 | `PipelineRunExceptionHandler` | the service's refusals for both run controllers: 409 `pipeline_busy`, 400 `post_dead`, 503 `source_not_configured` | — |
 
 The failed posts' list (`GET /api/admin/posts/failed`, "On hold" below) is not a route of this package:
-`posts/api/FailedPostController`.
+`posts/api/FailedPostController`; nor is restoring dead posts (`POST /api/admin/posts/restore`,
+`posts/api/DeadPostController`, S-33), which writes only through `state/PostTransitions.restore` and starts
+no run.
 
 ```
 PipelineRunService.startRange / startPosts → queue (thread pipeline-run) → RunSequence.run:
@@ -68,7 +70,7 @@ PipelineRunService.startRange / startPosts → queue (thread pipeline-run) → R
 | `assess/AssessmentDispatcher` | the port of the assess step (`dispatch`, which stops like `cancel` when its thread is interrupted while it waits, and `cancel` for a run the watchdog stopped); a Batch API version may replace the concurrent one |
 | `assess/ConcurrentAssessmentDispatcher` | first `LlmClient.check()` (any exception → no post taken, run `failed` with `the LLM check failed: …`; a check that fails on an interrupted thread — the run was stopped during it — ends the step with `RunInterruptedException` instead, at INFO, the check's exception as its cause); the `AssessmentPool` threads (`PIPELINE_LLM_CONCURRENCY`, default 4: a bean passed in, shut down with the context); per post: claim → `Assessor.assess` on `AssessmentInputs.of(post)` → record, or release, then the post's result goes into the run's counters at once (`RunRecorder.count`, below); an `LlmConfigurationException` (revoked key, no credit, unknown model) stops taking posts (WARN with the provider's reason), counts no attempt and fails the run (`AssessedBatch.stoppedBy`); an `LlmUnavailableException` (retries used up) stores nothing and releases the post, and `OUTAGE_STREAK` (3) of them in a row stop the step the same way (the breaker, Rules below); any other exception puts the post back with `releaseFailed` (one more technical failure), and `CLIENT_ERROR_STREAK` (3) `LlmClientException`s in a row (errors the LLM client could not classify) also stop the step (the client's breaker, Rules below); a failed `count` is a WARN and leaves the post's outcome (a stored post is never a technical error), and once every post has finished the step's failed counts give one ERROR and `RUN_COUNTERS_LOST` (below); `cancel(runId)` interrupts the run's post tasks, and so does an interrupt of the thread waiting in `dispatch` (it marks them cancelled first, then throws; below) and the pool's own shutdown when the context closes; a task ending on an interrupted thread counts nothing, whichever of the three interrupted it; a progress line in the log at most once a minute and after the last post |
 | `assess/AssessmentInputs` | a stored post's assessment input, rebuilt from its raw payload by its source's `RawInputMapper` |
-| `state/PostTransitions` | the post's stage changes, each a conditional `UPDATE` with `updated_at = now()`: claim (only while the run is running), record (only while the run owns the post; resets `technical_failures` and `last_technical_error`), release (back without an attempt; says whether this run put it back), releaseFailed (release + one more technical failure with its message, in the same statement, only while the run owns the post), countTechnicalFailure (one more technical failure on a post already put back, `stored` / `failed`, only while the run is still running); the message is cut to 500 characters, without U+0000. A column added to `posts` is classified in `state/PostColumnsIT` (set once by the `INSERT`, or post state with its value after every transition), and a new transition gets a scenario there |
+| `state/PostTransitions` | the post's stage changes, each a conditional `UPDATE` with `updated_at = now()`: claim (only while the run is running), record (only while the run owns the post; resets `technical_failures` and `last_technical_error`), release (back without an attempt; says whether this run put it back), releaseFailed (release + one more technical failure with its message, in the same statement, only while the run owns the post), countTechnicalFailure (one more technical failure on a post already put back, `stored` / `failed`, only while the run is still running), restore (an admin's: `dead` → `stored` with 0 attempts, 0 technical failures and no last error, only from `dead`, the posts' `assessments` rows kept; `posts/api/DeadPostController`, `POST /api/admin/posts/restore`, S-33); the message is cut to 500 characters, without U+0000. A column added to `posts` is classified in `state/PostColumnsIT` (set once by the `INSERT`, or post state with its value after every transition), and a new transition gets a scenario there |
 | `state/RunRecorder` | run status, steps, counters, error, `last_activity_at`, each source's result (`source`: the run's `fetched`, `skipped`, `sources_failed` / `sources_empty`, its activity and the `pipeline_run_sources` row in one statement, only while it runs) — every change conditional on the expected status; a step opens only in a running run and closes only once; `step(…, Function<T, StepOutcome>)` lets a step decide its own end from its result (the assess step whose dispatcher stopped, `AssessedBatch.stoppedBy`, is closed `failed` with that reason though `dispatch` returned), `step(…, ToIntFunction<T>)` closes it `succeeded`; a step that throws is closed `failed` with the error, and when that close fails too (an interrupted thread, the database gone) its failure is suppressed in the step's exception; `interrupt` / `interruptAll` (with the cause), `interruptOrphans` (cause `lost`, all or none; Rules), `stall` (the watchdog) and `fail` (a run that cannot go on: an `Error` escaping its step leaves the step open, `step` catching only `RuntimeException`) close the open steps in the same transaction; status and stage values are bound from their enums, never written into the SQL |
 | `state/RunInterruptedException` | `checkpoint(runId, step)` throws when the run's thread is interrupted (the flag stays set): `PostStore` before each chunk, `SourceIngest` before each source |
 
@@ -317,7 +319,9 @@ PipelineRunService.startRange / startPosts → queue (thread pipeline-run) → R
 - **Attempts: three faults** (S-09, `ConcurrentAssessmentDispatcher`):
   - *the post's fault* — the provider refused the request (a non-retryable error) or the model's answer
     broke the contract: `Assessor` returns a `failed` result, its row is stored and the attempt counts;
-    the third makes the post `dead` (`state/PostTransitions.Outcome`). Only this uses an attempt;
+    the third makes the post `dead` (`state/PostTransitions.Outcome`), which no run takes any more: only an
+    admin's restore (`PostTransitions.restore`, S-33) brings it back, `stored` with all three attempts
+    again. Only this uses an attempt;
   - *the provider's fault* — `LlmUnavailableException` (retries used up on 429/5xx/time-out/connection
     errors, or interrupted between attempts; `llm/CLAUDE.md`), which `Assessor` throws like
     `LlmConfigurationException`: nothing is stored, the post is released (`release`), no attempt;
@@ -361,7 +365,8 @@ PipelineRunService.startRange / startPosts → queue (thread pipeline-run) → R
   and single outages alike — with `last_technical_error`; any stored result (ok or `failed`) resets both
   (`record`). At `Post.MAX_TECHNICAL_FAILURES` (3) the post is on hold: it keeps its stage (`stored` /
   `failed`), `PostRepository.findLeftoverIds` / `existsLeftover` skip it (the RETRY run never takes it,
-  and it alone queues no RETRY), a POSTS run (an admin's "Ponów zaznaczone") still takes it, and
+  and it alone queues no RETRY), a POSTS run (an admin's "Ponów zaznaczone"; dead posts get "Przywróć
+  martwe" instead, `POST /api/admin/posts/restore`) still takes it, and
   `GET /api/admin/posts/failed` lists it with `technicalFailures`, `lastTechnicalError`, `onHold`.
 - Code that runs work in parallel passes its own executor (`availableProcessors()` may be 1).
 - **A source's failure or silence is its own result** (S-20). `SourceIngest.fetch` fetches every source of
@@ -521,14 +526,20 @@ PipelineRunService.startRange / startPosts → queue (thread pipeline-run) → R
   putting back a post claimed just as its run was interrupted and leaving the posts of a queued or
   running run, `releaseFailed` counting only for the run holding
   the post, a long error cut and without U+0000, `record` resetting the count, `countTechnicalFailure`
-  only on a post put back while its run is running. `state/PostColumnsIT` (on Postgres, not rolled back):
+  only on a post put back while its run is running, `restore` only of a `dead` post among every stage (the
+  count, a second call 0, its `assessments` rows kept, the post a leftover again). `state/PostColumnsIT` (on Postgres, not rolled back):
   every `posts` column classified, and each transition's full row on a post with technical failures — the
-  state columns as above, every other column unchanged, `updated_at` moved. `posts/api/PostsApiIT`: the failed list with posts on
-  hold and `failed` posts with technical errors.
+  state columns as above, every other column unchanged, `updated_at` moved (`restore`: a dead post of an
+  ended run). `posts/api/PostsApiIT`: the failed list with posts on
+  hold and `failed` posts with technical errors; `POST /api/admin/posts/restore` — a dead post restored
+  (`{"restored":1}`, off the failed list, its attempts kept, no longer dead for a posts run), only the dead
+  ones of a mixed list, a repeat `{"restored":0}`, 400 `invalid_request` for an empty list, 101 ids, a
+  `null` id or no `postIds`, allowed while a run is running.
 - `api/InternalPipelineRunIT` (+ `InternalPipelineRunWithoutTokenIT`): the token, no session and no
   cookie on `/internal/**`, the D-2…D-1 range for a fixed `Clock` (also a DST day), 409, 404, the exact
   keys of `GET /internal/pipeline-runs/{id}` with `step` and `assessTotal` during the assessment.
-  `api/PipelineRunControllerIT`: the run page, 404, the new fields, `scheduled` for the cron's run.
+  `api/PipelineRunControllerIT`: the run page, 404, the new fields, `scheduled` for the cron's run; a dead
+  post refused (`post_dead`), restored, then assessed by a posts run with one `assessments` row more.
   `api/FreshnessIT`: which runs move each source's date in the label. `api/MissingDaysIT` (fixed `Clock`): which runs cover a day
   (`failed`, `interrupted`, `queued`, `running` and RETRY/POSTS runs do not; `partial` and an admin's do;
   in a `partial` run with a second source — Reddit on `sources/reddit/LocalReddit`, configured only there —,

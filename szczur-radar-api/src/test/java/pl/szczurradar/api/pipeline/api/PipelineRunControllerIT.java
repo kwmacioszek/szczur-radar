@@ -42,6 +42,7 @@ import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import pl.szczurradar.api.TestcontainersConfiguration;
 import pl.szczurradar.api.agents.assessor.Prefilter;
 import pl.szczurradar.api.agents.assessor.contract.ContractJson;
+import pl.szczurradar.api.agents.assessor.validation.FailureClass;
 import pl.szczurradar.api.cli.MigrateCommand;
 import pl.szczurradar.api.contract.ContractFiles;
 import pl.szczurradar.api.llm.Channel;
@@ -301,6 +302,32 @@ class PipelineRunControllerIT {
 		assertThat(retried).bodyJson().extractingPath("$[0].requestedPostIds").asArray().containsExactly(failed.toString());
 		awaitIdle();
 		assertThat(jdbc.queryForObject("SELECT stage FROM posts WHERE id = ?", String.class, failed)).isEqualTo("assessed");
+	}
+
+	@Test
+	void aRestoredDeadPostIsAssessedAgainByARunOfChosenPosts() {
+		UUID dead = seeds.post(PostStage.DEAD, 3, "2026-10-01T08:00:00Z");
+		for (String at : List.of("2026-10-02T08:00:00Z", "2026-10-03T08:00:00Z", "2026-10-04T08:00:00Z")) {
+			seeds.failed(dead, at, FailureClass.SCHEMA_VIOLATION);
+		}
+		String postIds = "{\"postIds\":[\"" + dead + "\"]}";
+
+		assertThat(start(postIds)).hasStatus(HttpStatus.BAD_REQUEST)
+			.bodyJson()
+			.isStrictlyEqualTo("{\"detail\":\"post_dead\"}");
+		assertThat(mvc.post()
+			.uri("/api/admin/posts/restore")
+			.with(asAdmin())
+			.contentType(MediaType.APPLICATION_JSON)
+			.content(postIds)
+			.exchange()).hasStatusOk().bodyJson().isStrictlyEqualTo("{\"restored\":1}");
+		assertThat(start(postIds)).hasStatus(HttpStatus.ACCEPTED);
+		// After the run: awaitIdle turns the leftovers it finds into dead posts.
+		awaitIdle();
+
+		assertThat(jdbc.queryForObject("SELECT stage FROM posts WHERE id = ?", String.class, dead)).isEqualTo("assessed");
+		assertThat(jdbc.queryForObject("SELECT count(*) FROM assessments WHERE post_id = ?", Integer.class, dead))
+			.isEqualTo(4);
 	}
 
 	@Test
