@@ -128,7 +128,11 @@ class PostColumnsIT {
 			// The run ended without putting its post back (an instance stopped mid-claim).
 			new Scenario("releaseOrphans", "releaseOrphans", Given.held(1, RunStatus.FAILED),
 					(transitions, post, run) -> transitions.releaseOrphans() > 0,
-					run -> row(PostStage.FAILED, 1, null, 2, EARLIER_ERROR)));
+					run -> row(PostStage.FAILED, 1, null, 2, EARLIER_ERROR)),
+			// An admin restores a dead post (S-33): no run holds it, its run ended long ago.
+			new Scenario("restore", "restore", Given.free(PostStage.DEAD, 3, RunStatus.SUCCEEDED),
+					(transitions, post, run) -> transitions.restore(List.of(post)) == 1,
+					run -> row(PostStage.STORED, 0, null, 0, null)));
 
 	@Autowired
 	PostTransitions transitions;

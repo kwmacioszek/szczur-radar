@@ -12,7 +12,7 @@ import {
   startErrorMessage,
   startRange,
 } from '../api/pipeline'
-import { type FailedPost, fetchFailedPosts } from '../api/posts'
+import { type FailedPost, fetchFailedPosts, restorePosts } from '../api/posts'
 import AppButton from '../components/AppButton.vue'
 import AppHeader from '../components/AppHeader.vue'
 import StatusBadge from '../components/StatusBadge.vue'
@@ -236,19 +236,28 @@ const failed = ref<FailedPost[]>([])
 /** Loading without a list; a refresh keeps existing failed posts on screen. */
 const failedLoading = ref(true)
 const failedError = ref<string | null>(null)
+/** One selection of the list, of both kinds: the dead posts in it are restored, the others retried. */
 const selected = ref<string[]>([])
 const retrying = ref(false)
 const retryMessage = ref<string | null>(null)
 const retryError = ref<string | null>(null)
-/** Failed posts and posts on hold; never a dead one. */
-const retryable = computed(() => failed.value.filter((post) => post.stage !== 'dead'))
+const restoring = ref(false)
+const restoreMessage = ref<string | null>(null)
+const restoreError = ref<string | null>(null)
+const stageOf = computed(() => new Map(failed.value.map((post) => [post.id, post.stage])))
+/** The checked failed posts and posts on hold: "Ponów zaznaczone" runs them. */
+const selectedRetryable = computed(() =>
+  selected.value.filter((id) => stageOf.value.has(id) && stageOf.value.get(id) !== 'dead'),
+)
+/** The checked dead posts: no run takes them, "Przywróć martwe" gives them back to assessment. */
+const selectedDead = computed(() => selected.value.filter((id) => stageOf.value.get(id) === 'dead'))
 
 async function loadFailed(): Promise<void> {
   failedLoading.value = failed.value.length === 0
   failedError.value = null
   try {
     failed.value = (await fetchFailedPosts()).items
-    selected.value = selected.value.filter((id) => retryable.value.some((post) => post.id === id))
+    selected.value = selected.value.filter((id) => stageOf.value.has(id))
   } catch {
     failedError.value = 'Nie udało się wczytać nieudanych postów.'
   } finally {
@@ -256,20 +265,49 @@ async function loadFailed(): Promise<void> {
   }
 }
 
-async function retry(): Promise<void> {
-  if (retrying.value || selected.value.length === 0) return
-  retrying.value = true
+/** Only the outcome of the latest action on the list stays on screen. */
+function clearFailedMessages(): void {
   retryMessage.value = null
   retryError.value = null
+  restoreMessage.value = null
+  restoreError.value = null
+}
+
+async function retry(): Promise<void> {
+  const postIds = selectedRetryable.value
+  if (retrying.value || restoring.value || postIds.length === 0) return
+  retrying.value = true
+  clearFailedMessages()
   try {
-    await retryPosts(selected.value)
-    retryMessage.value = `Ponowienie ${selected.value.length} post(ów) w kolejce.`
-    selected.value = []
+    await retryPosts(postIds)
+    retryMessage.value = `Ponowienie ${postIds.length} post(ów) w kolejce.`
+    selected.value = selected.value.filter((id) => !postIds.includes(id))
     await loadRuns()
   } catch (err) {
     retryError.value = startErrorMessage(err)
   } finally {
     retrying.value = false
+  }
+}
+
+async function restore(): Promise<void> {
+  const postIds = selectedDead.value
+  if (restoring.value || retrying.value || postIds.length === 0) return
+  restoring.value = true
+  clearFailedMessages()
+  try {
+    const { restored } = await restorePosts(postIds)
+    restoreMessage.value =
+      restored === 0
+        ? 'Żaden z zaznaczonych postów nie był już martwy.'
+        : `Przywrócono ${restored} post(ów) do oceny. Oceni je kolejny przebieg.`
+    selected.value = selected.value.filter((id) => !postIds.includes(id))
+    // A restored post is no longer on the list.
+    await loadFailed()
+  } catch {
+    restoreError.value = 'Nie udało się przywrócić postów.'
+  } finally {
+    restoring.value = false
   }
 }
 
@@ -419,18 +457,14 @@ onMounted(async () => {
         <ul class="failed-posts">
           <li v-for="post in failed" :key="post.id">
             <label>
-              <input
-                v-model="selected"
-                type="checkbox"
-                :value="post.id"
-                :disabled="post.stage === 'dead'"
-              />
+              <input v-model="selected" type="checkbox" :value="post.id" />
               <span class="excerpt">{{ excerpt(post) }}</span>
             </label>
             <span class="attempt">
               <template v-if="post.stage === 'dead'"><strong>martwy</strong> · </template>
               <template v-else-if="post.onHold"><strong>wstrzymany</strong> · </template>
-              <!-- A stored post on hold has no stored attempt: only its technical errors. -->
+              <!-- A stored post on hold has no stored attempt since it was stored (a restored one keeps
+                   its older lastAttempt, which is not shown): only its technical errors. -->
               <template v-if="post.stage !== 'stored'">
                 próby {{ post.assessmentAttempts }}
                 <template v-if="post.lastAttempt?.failureClass">
@@ -447,12 +481,29 @@ onMounted(async () => {
             </span>
           </li>
         </ul>
-        <AppButton :disabled="selected.length === 0" :busy="retrying" busy-label="Ponawianie…" @click="retry">
-          Ponów zaznaczone
-        </AppButton>
+        <div class="failed-actions">
+          <AppButton
+            :disabled="selectedRetryable.length === 0 || restoring"
+            :busy="retrying"
+            busy-label="Ponawianie…"
+            @click="retry"
+          >
+            Ponów zaznaczone ({{ selectedRetryable.length }})
+          </AppButton>
+          <AppButton
+            :disabled="selectedDead.length === 0 || retrying"
+            :busy="restoring"
+            busy-label="Przywracanie…"
+            @click="restore"
+          >
+            Przywróć martwe ({{ selectedDead.length }})
+          </AppButton>
+        </div>
       </template>
       <StatusMessage v-if="retryMessage" tone="ok">{{ retryMessage }}</StatusMessage>
       <StatusMessage v-if="retryError" tone="error">{{ retryError }}</StatusMessage>
+      <StatusMessage v-if="restoreMessage" tone="ok">{{ restoreMessage }}</StatusMessage>
+      <StatusMessage v-if="restoreError" tone="error">{{ restoreError }}</StatusMessage>
     </section>
   </main>
 </template>
@@ -583,6 +634,12 @@ h2 {
 
 .excerpt {
   overflow-wrap: anywhere;
+}
+
+.failed-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
 }
 
 /* Never wider than the row, so a long technical error is cut below instead of pushing the layout. */
