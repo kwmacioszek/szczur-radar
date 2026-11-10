@@ -1,5 +1,6 @@
 package pl.szczurradar.api.notifications;
 
+import java.util.List;
 import java.util.UUID;
 
 import org.slf4j.Logger;
@@ -9,6 +10,7 @@ import org.springframework.stereotype.Component;
 
 import pl.szczurradar.api.alerts.AlertEvent;
 import pl.szczurradar.api.alerts.OperatorAlertQueue;
+import pl.szczurradar.api.pipeline.run.AttentionReason;
 import pl.szczurradar.api.pipeline.run.PipelineRun;
 import pl.szczurradar.api.pipeline.run.PipelineRunRepository;
 import pl.szczurradar.api.pipeline.run.RunStatus;
@@ -23,9 +25,13 @@ import pl.szczurradar.api.pipeline.run.RunStatus;
  *
  * <p>The operator hears of it outside the application too ({@link AlertEvent#RUN_NEEDS_ATTENTION}), once:
  * only when notifications were created. Not for a run of the daily cron ({@link PipelineRun#scheduled()})
- * that ended {@code failed} or {@code interrupted}: the cron reports that one by its exit code. A failure
- * to notify is {@link AlertEvent#NOTIFICATION_FAILED}. Both go through the {@link OperatorAlertQueue},
- * only in the server: an operator command's context has none, and then nothing is raised.
+ * that ended {@code failed} or {@code interrupted}: the cron reports that one by its exit code. Nor for a
+ * run, the cron's or an admin's, whose only reason is a dead post ({@link AttentionReason#DEAD_POSTS}
+ * alone, S-34): the night's summary ({@link AlertEvent#NIGHT_SUMMARY}) counts it per source, so a message
+ * of its own would only teach the operator to ignore the channel; a dead post next to any other reason is
+ * raised as before. A failure to notify is {@link AlertEvent#NOTIFICATION_FAILED}. Both go through the
+ * {@link OperatorAlertQueue}, only in the server: an operator command's context has none, and then nothing
+ * is raised.
  *
  * <p>It never throws: a failure is logged, and the run's ending (or the server's start) goes on. A
  * failure on an interrupted thread (the watchdog's late interrupt) is tried once more first.
@@ -109,7 +115,7 @@ public class RunNotifications {
 		if (created > 0) {
 			log.info("Pipeline run {} ({}) ended {} and needs attention: {} admin(s) notified", runId,
 					run.getKind().value(), run.getStatus().value(), created);
-			if (!reportedByTheCron(run)) {
+			if (!reportedByTheCron(run) && !reportedByTheNightSummary(run)) {
 				OperatorAlertQueue.raise(alerts, AlertEvent.RUN_NEEDS_ATTENTION, runId, attentionDetail(run));
 			}
 		}
@@ -118,6 +124,15 @@ public class RunNotifications {
 	/** A run of the daily cron that ended {@code failed} or {@code interrupted}: the cron's exit code reports it. */
 	private static boolean reportedByTheCron(PipelineRun run) {
 		return run.scheduled() && (run.getStatus() == RunStatus.FAILED || run.getStatus() == RunStatus.INTERRUPTED);
+	}
+
+	/**
+	 * A run whose only reason is a dead post: the night's summary counts it ({@code dead N} per source), so
+	 * no alert of its own. The rule itself ({@link PipelineRun#attentionReasons()}) is untouched: the bell and
+	 * the run's page still show it.
+	 */
+	private static boolean reportedByTheNightSummary(PipelineRun run) {
+		return run.attentionReasons().equals(List.of(AttentionReason.DEAD_POSTS));
 	}
 
 	/**

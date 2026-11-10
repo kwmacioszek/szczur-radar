@@ -19,19 +19,21 @@ import pl.szczurradar.api.alerts.OperatorAlerts.Delivery;
 
 /**
  * {@code send-test-alert} without Spring: the exit code for each delivery, a usage error without a (valid)
- * {@code HEALTHCHECK_PING_URL} before anything is sent, and the URL never printed.
+ * {@code NTFY_URL} or with a bad {@code NTFY_TOKEN} before anything is sent, and neither secret ever printed.
  */
 class SendTestAlertCommandTest {
 
-	private static final String SECRET_UUID = "9d3c1b2a-7e6f-4a5b-8c9d-0e1f2a3b4c5d";
+	private static final String SECRET_TOPIC = "szczur-radar-9d3c1b2a7e6f4a5b8c9d0e1f2a3b4c5d";
 
-	private static final String PING_URL = "https://hc-ping.com/" + SECRET_UUID;
+	private static final String SECRET_TOKEN = "tk_9d3c1b2a7e6f4a5b8c9d0e1f2a3b4c5d";
+
+	private static final String TOPIC_URL = "https://ntfy.sh/" + SECRET_TOPIC;
 
 	private final ByteArrayOutputStream outBytes = new ByteArrayOutputStream();
 
 	private final ByteArrayOutputStream errBytes = new ByteArrayOutputStream();
 
-	private final Map<String, String> environment = new HashMap<>(Map.of(AlertSettings.NAME, PING_URL));
+	private final Map<String, String> environment = new HashMap<>(Map.of(AlertSettings.NAME, TOPIC_URL));
 
 	private final List<String> reports = new ArrayList<>();
 
@@ -42,9 +44,19 @@ class SendTestAlertCommandTest {
 		assertThat(command(Delivery.DELIVERED).run(new String[0])).isEqualTo(ExitCode.OK);
 
 		assertThat(reports).containsExactly(AlertEvent.TEST_SIGNAL + ": send-test-alert from api-container");
-		assertThat(stdout()).contains("Test alert delivered", AlertSettings.NAME);
+		assertThat(stdout()).contains("Test alert delivered", AlertSettings.NAME, "Szczur Radar TEST_SIGNAL");
 		assertThat(stderr()).isEmpty();
-		assertThat(stdout() + stderr()).doesNotContain(SECRET_UUID);
+		assertThat(stdout() + stderr()).doesNotContain(SECRET_TOPIC);
+	}
+
+	@Test
+	void withATokenTheDeliveryPrintsNeitherSecret() {
+		environment.put(AlertSettings.TOKEN_NAME, SECRET_TOKEN);
+
+		assertThat(command(Delivery.DELIVERED).run(new String[0])).isEqualTo(ExitCode.OK);
+
+		assertThat(reports).hasSize(1);
+		assertThat(stdout() + stderr()).doesNotContain(SECRET_TOPIC, SECRET_TOKEN);
 	}
 
 	@Test
@@ -59,7 +71,7 @@ class SendTestAlertCommandTest {
 		assertThat(command(Delivery.FAILED).run(new String[0])).isEqualTo(ExitCode.FAILED);
 
 		assertThat(stderr()).contains("Test alert not delivered");
-		assertThat(stdout() + stderr()).doesNotContain(SECRET_UUID);
+		assertThat(stdout() + stderr()).doesNotContain(SECRET_TOPIC);
 	}
 
 	@Test
@@ -69,18 +81,42 @@ class SendTestAlertCommandTest {
 		assertThat(command(Delivery.DELIVERED).run(new String[0])).isEqualTo(ExitCode.USAGE);
 
 		assertThat(reports).isEmpty();
-		assertThat(stderr()).contains("not configured", "set " + AlertSettings.NAME);
+		assertThat(stderr()).contains("not configured", "set " + AlertSettings.NAME, AlertSettings.TOKEN_NAME);
 	}
 
 	@Test
 	void anInvalidValueIsAUsageErrorWithoutRepeatingIt() {
-		environment.put(AlertSettings.NAME, "http://hc-ping.com/" + SECRET_UUID);
+		environment.put(AlertSettings.NAME, "http://ntfy.sh/" + SECRET_TOPIC);
 
 		assertThat(command(Delivery.DELIVERED).run(new String[0])).isEqualTo(ExitCode.USAGE);
 
 		assertThat(reports).isEmpty();
 		assertThat(stderr()).startsWith("send-test-alert: invalid configuration: Invalid " + AlertSettings.NAME)
-			.doesNotContain(SECRET_UUID);
+			.doesNotContain(SECRET_TOPIC);
+	}
+
+	@Test
+	void anInvalidTokenIsAUsageErrorWithoutRepeatingIt() {
+		environment.put(AlertSettings.TOKEN_NAME, SECRET_TOKEN + " with space");
+
+		assertThat(command(Delivery.DELIVERED).run(new String[0])).isEqualTo(ExitCode.USAGE);
+
+		assertThat(reports).isEmpty();
+		assertThat(stderr()).startsWith("send-test-alert: invalid configuration: Invalid " + AlertSettings.TOKEN_NAME)
+			.doesNotContain(SECRET_TOKEN, SECRET_TOPIC);
+	}
+
+	@Test
+	void aTokenWithoutTheAddressIsAUsageErrorWithoutRepeatingIt() {
+		environment.remove(AlertSettings.NAME);
+		environment.put(AlertSettings.TOKEN_NAME, SECRET_TOKEN);
+
+		assertThat(command(Delivery.DELIVERED).run(new String[0])).isEqualTo(ExitCode.USAGE);
+
+		assertThat(reports).isEmpty();
+		assertThat(stderr()).startsWith("send-test-alert: invalid configuration: Invalid " + AlertSettings.TOKEN_NAME)
+			.contains(AlertSettings.NAME)
+			.doesNotContain(SECRET_TOKEN);
 	}
 
 	@Test

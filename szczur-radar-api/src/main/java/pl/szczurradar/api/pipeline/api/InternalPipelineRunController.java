@@ -7,17 +7,22 @@ import java.util.List;
 import java.util.UUID;
 
 import org.jspecify.annotations.Nullable;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import pl.szczurradar.api.alerts.AlertEvent;
+import pl.szczurradar.api.alerts.OperatorAlertQueue;
 import pl.szczurradar.api.config.ApiError;
 import pl.szczurradar.api.config.ErrorCode;
+import pl.szczurradar.api.pipeline.NightSummary;
 import pl.szczurradar.api.pipeline.PipelineRunService;
 import pl.szczurradar.api.pipeline.run.InterruptionCause;
 import pl.szczurradar.api.pipeline.run.PipelineRun;
@@ -32,7 +37,8 @@ import pl.szczurradar.api.pipeline.run.StepStatus;
 /**
  * The daily cron's routes ({@code /internal/**}: the trigger token only, the system account
  * {@code SCHEDULER} as the requester; see {@code config/SecurityConfig}). The cron starts the daily
- * run and polls each created run until it ends. Starting goes through the same
+ * run, polls each created run until it ends and then asks for the night's summary, which goes to the
+ * operator ({@link AlertEvent#NIGHT_SUMMARY}) and into the cron's log. Starting goes through the same
  * {@link PipelineRunService#startRange} as the admin's button.
  */
 @RestController
@@ -45,13 +51,24 @@ class InternalPipelineRunController {
 
 	private final PipelineRunStepRepository steps;
 
+	private final NightSummary summary;
+
+	/**
+	 * The server's queue ({@code AlertsConfiguration}), resolved when used: an operator command's context
+	 * (the pre-deploy {@code migrate}) builds this controller too and has no queue.
+	 */
+	private final ObjectProvider<OperatorAlertQueue> alerts;
+
 	private final Clock clock;
 
 	InternalPipelineRunController(PipelineRunService service, PipelineRunRepository runs,
-			PipelineRunStepRepository steps, Clock clock) {
+			PipelineRunStepRepository steps, NightSummary summary, ObjectProvider<OperatorAlertQueue> alerts,
+			Clock clock) {
 		this.service = service;
 		this.runs = runs;
 		this.steps = steps;
+		this.summary = summary;
+		this.alerts = alerts;
 		this.clock = clock;
 	}
 
@@ -82,6 +99,27 @@ class InternalPipelineRunController {
 			.orElseGet(() -> ApiError.response(ErrorCode.NOT_FOUND));
 	}
 
+	/**
+	 * The night's summary of the given runs ({@link NightSummary}): raised to the operator as
+	 * {@link AlertEvent#NIGHT_SUMMARY} for the range run (else the first one, so a repeated call within the
+	 * queue's repeat window is one message) and returned as {@code {"text": …}} for the cron's log. 400
+	 * {@code invalid_request} without 1–{@value NightlySummaryRequest#MAX_RUNS} ids; 404 {@code not_found}
+	 * when one of them is no run.
+	 */
+	@PostMapping("/nightly-summary")
+	ResponseEntity<?> nightlySummary(@RequestBody NightlySummaryRequest request) {
+		if (!request.valid()) {
+			return ApiError.response(ErrorCode.INVALID_REQUEST);
+		}
+		NightSummary.Night night = summary.of(request.runs()).orElse(null);
+		if (night == null) {
+			return ApiError.response(ErrorCode.NOT_FOUND);
+		}
+		String text = night.text();
+		OperatorAlertQueue.raise(alerts, AlertEvent.NIGHT_SUMMARY, night.alertRunId(), text);
+		return ResponseEntity.ok(new NightlySummary(text));
+	}
+
 	/** A queued run. */
 	record StartedRun(UUID id, RunKind kind) {
 
@@ -89,6 +127,22 @@ class InternalPipelineRunController {
 			return new StartedRun(run.getId(), run.getKind());
 		}
 
+	}
+
+	/** The runs of one night, as {@code /daily} answered them. */
+	record NightlySummaryRequest(@Nullable List<UUID> runs) {
+
+		/** The most runs of one night: {@code /daily} creates at most two. */
+		static final int MAX_RUNS = 10;
+
+		boolean valid() {
+			return runs != null && !runs.isEmpty() && runs.size() <= MAX_RUNS && !runs.contains(null);
+		}
+
+	}
+
+	/** The night's summary, the text the operator gets. */
+	record NightlySummary(String text) {
 	}
 
 	/**

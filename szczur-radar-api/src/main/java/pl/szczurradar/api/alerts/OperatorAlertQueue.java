@@ -26,20 +26,20 @@ import pl.szczurradar.api.alerts.OperatorAlerts.Delivery;
  * The one entry point of the error paths to the operator alert channel (S-18): {@link #raise} takes an
  * event at once, from any thread, an interrupted one too, and its own platform thread
  * ({@code operator-alerts}) reports it through {@link OperatorAlerts}, so the caller never waits for
- * healthchecks.io.
+ * the channel.
  *
  * <ul>
  *   <li><b>Repeats:</b> the same event for the same run (or for no run) within {@link #REPEAT_WINDOW} of
  *       the last one taken goes once. The repeats are counted, and the next one taken with that key after
  *       the window says how many were not sent.
- *   <li><b>Limit:</b> at most {@link #MAX_PER_MINUTE} reports in {@link #RATE_WINDOW}. healthchecks.io takes
- *       at most 5 pings a minute per check and each report is two; a refused success ping would leave the
- *       check down, and then later events would alert nobody. The rest wait, at most {@link #CAPACITY} of
- *       them; one more is dropped with a WARN naming the event.
+ *   <li><b>Limit:</b> at most {@link #MAX_PER_MINUTE} reports in {@link #RATE_WINDOW}: a storm of events
+ *       (every error path of a night at once) stays a trickle of messages on the operator's phone and far
+ *       below ntfy.sh's limits (250 messages a day, a burst of 60 refilled one every 5 s). The rest wait,
+ *       at most {@link #CAPACITY} of them; one more is dropped with a WARN naming the event.
  *   <li><b>Logs:</b> an INFO line when an event is taken (or not sent as a repeat) and another with the
- *       {@link Delivery} once it was reported, both with the event and the run. Never the ping URL (a
- *       secret, which only {@link HealthchecksAlerts} knows); {@code detail} is text for a human without
- *       secrets, and {@link HealthchecksAlerts} cuts it.
+ *       {@link Delivery} once it was reported, both with the event and the run. Never the topic's address
+ *       or the token (secrets, which only {@link NtfyAlerts} knows); {@code detail} is text for a human
+ *       without secrets, and {@link NtfyAlerts} cuts it.
  *   <li><b>Shutdown:</b> {@link #destroy} sends what is still waiting for at most {@link #DRAIN_TIMEOUT}, then
  *       stops the thread and names the events it dropped. An event raised after it is dropped with an INFO
  *       line: beans that take the queue through an {@code ObjectProvider} do not depend on it, so it may be
@@ -258,7 +258,7 @@ public class OperatorAlertQueue implements DisposableBean {
 					alert.event, runLabel(alert.runId), MAX_PER_MINUTE);
 		}
 		catch (RuntimeException ex) {
-			// OperatorAlerts never throws; only the class, as in HealthchecksAlerts.
+			// OperatorAlerts never throws; only the class, as in NtfyAlerts.
 			log.warn("Operator alert {} ({}) not reported: {}", alert.event, runLabel(alert.runId),
 					ex.getClass().getName());
 		}
