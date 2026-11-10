@@ -16,6 +16,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
 import pl.szczurradar.api.sources.Source;
+import pl.szczurradar.api.user.SystemAccount;
 
 /** Pipeline runs. Status and counters change only through conditional updates, never a blind save. */
 public interface PipelineRunRepository extends JpaRepository<PipelineRun, UUID> {
@@ -134,5 +135,30 @@ public interface PipelineRunRepository extends JpaRepository<PipelineRun, UUID> 
 			where r.kind = :kind and r.status in :statuses and s.status = :sourceStatus and s.source = :source""")
 	Optional<Instant> findEarliestCoveredFrom(RunKind kind, Collection<RunStatus> statuses,
 			SourceFetchStatus sourceStatus, Source source);
+
+	/**
+	 * When the last run of the daily cron ({@link PipelineRun#scheduled()}, requested by
+	 * {@link SystemAccount#SCHEDULER}) created before {@code before} was created, whatever it ended as —
+	 * the previous night, for the night's summary; missing before the first.
+	 */
+	default Optional<Instant> findLastScheduledCreationBefore(Instant before) {
+		return findLastCreationBefore(SystemAccount.SCHEDULER.id(), before);
+	}
+
+	@Query("select max(r.createdAt) from PipelineRun r where r.requestedBy = :requestedBy and r.createdAt < :before")
+	Optional<Instant> findLastCreationBefore(UUID requestedBy, Instant before);
+
+	/**
+	 * The runs that are not the daily cron's (an admin's, whatever their kind and status) created after
+	 * {@code after} and before {@code before}, both exclusive — the runs between two nights, for the night's
+	 * summary.
+	 */
+	default List<UUID> findAdminRunIdsCreatedBetween(Instant after, Instant before) {
+		return findIdsCreatedBetweenNotRequestedBy(SystemAccount.SCHEDULER.id(), after, before);
+	}
+
+	@Query("select r.id from PipelineRun r where r.requestedBy <> :requestedBy"
+			+ " and r.createdAt > :after and r.createdAt < :before order by r.createdAt, r.id")
+	List<UUID> findIdsCreatedBetweenNotRequestedBy(UUID requestedBy, Instant after, Instant before);
 
 }

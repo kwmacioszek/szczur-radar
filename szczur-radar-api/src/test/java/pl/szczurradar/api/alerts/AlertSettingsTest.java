@@ -10,26 +10,32 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import pl.szczurradar.api.settings.InvalidSettingsException;
 
 /**
- * {@code HEALTHCHECK_PING_URL}: optional, a URL matching {@link AlertSettings#PING_PATTERN} when set, and a
- * secret — a refused value is never repeated, not even in part. The cases of the rule are the table
+ * {@code NTFY_URL}: optional, an address matching {@link AlertSettings#PING_PATTERN} when set (the one rule
+ * of the secret https addresses, shared with the crons' check-in addresses), and a secret — a refused
+ * value is never repeated, not even in part. The cases of the rule are the table
  * {@code tools/healthchecks/fixtures/ping-urls.txt}, which the shell copies are tested on too.
+ * {@code NTFY_TOKEN}: optional, printable ASCII without white space, only with the address, and a secret too.
  */
 class AlertSettingsTest {
 
 	/** Relative to the module directory, where Maven runs the tests. */
 	private static final Path TABLE = Path.of("../tools/healthchecks/fixtures/ping-urls.txt");
 
-	private static final String UUID = "5bf66975-d4c7-4bf5-bcc8-b8d8a82ea278";
+	private static final String TOPIC = "szczur-radar-5bf66975d4c74bf5bcc8b8d8a82ea278";
+
+	private static final String TOKEN = "tk_r4nd0mT0kenNeverRepeated";
 
 	@Test
 	void unsetOrBlankIsNotConfigured() {
@@ -37,24 +43,79 @@ class AlertSettingsTest {
 		assertThat(settings("").configured()).isFalse();
 		assertThat(settings(" \t ").configured()).isFalse();
 		assertThat(settings("").toString()).isEqualTo("AlertSettings[<not configured>]");
+		assertThat(settings("").token()).isNull();
 	}
 
 	@Test
 	void anHttpsUrlIsConfiguredAndHidden() {
-		AlertSettings settings = settings("  https://hc-ping.com/" + UUID + "/ ");
+		AlertSettings settings = settings("  https://ntfy.sh/" + TOPIC + "/ ");
 
 		assertThat(settings.configured()).isTrue();
-		assertThat(settings.pingUrl()).isEqualTo(URI.create("https://hc-ping.com/" + UUID));
+		assertThat(settings.topicUrl()).isEqualTo(URI.create("https://ntfy.sh/" + TOPIC));
+		assertThat(settings.token()).isNull();
 		assertThat(settings).hasToString("AlertSettings[<hidden>]");
-		assertThat(settings("HTTPS://healthchecks.example.org/ping/" + UUID).configured()).isTrue();
+		assertThat(settings("HTTPS://ntfy.example.org/" + TOPIC).configured()).isTrue();
 	}
 
 	@Test
-	void readsOnlyItsOwnVariable() {
-		Map<String, String> environment = Map.of(AlertSettings.NAME, "https://hc-ping.com/" + UUID);
+	void readsOnlyItsOwnVariables() {
+		Map<String, String> environment = Map.of(AlertSettings.NAME, "https://ntfy.sh/" + TOPIC);
 
 		assertThat(AlertSettings.from(environment::get).configured()).isTrue();
-		assertThat(AlertSettings.from(Map.of("OTHER", "https://hc-ping.com/" + UUID)::get).configured()).isFalse();
+		assertThat(AlertSettings.from(Map.of("OTHER", "https://ntfy.sh/" + TOPIC)::get).configured()).isFalse();
+		assertThat(AlertSettings.from(Map.of(AlertSettings.NAME, "https://ntfy.sh/" + TOPIC, "OTHER_TOKEN", TOKEN)::get)
+			.token()).isNull();
+	}
+
+	@Test
+	void aTokenIsReadTrimmedAndHidden() {
+		AlertSettings settings = settings("https://ntfy.sh/" + TOPIC, " " + TOKEN + "\t");
+
+		assertThat(settings.configured()).isTrue();
+		assertThat(settings.token()).isEqualTo(TOKEN);
+		assertThat(settings).hasToString("AlertSettings[<hidden>, token <hidden>]");
+		assertThat(settings("https://ntfy.sh/" + TOPIC, "a").token()).isEqualTo("a");
+		assertThat(settings("https://ntfy.sh/" + TOPIC, "!~".repeat(128)).token()).hasSize(256);
+	}
+
+	@Test
+	void aBlankTokenIsNoToken() {
+		assertThat(settings("https://ntfy.sh/" + TOPIC, "").token()).isNull();
+		assertThat(settings("https://ntfy.sh/" + TOPIC, " \t ").token()).isNull();
+		assertThat(settings("", "  ").configured()).isFalse();
+	}
+
+	@ParameterizedTest(name = "{0}")
+	@ValueSource(strings = { "tk_with space", "tk_tab\tinside", "tk_new\nline", "tk_éaccent", "tk_€",
+			"tk_ nbsp" })
+	void aTokenWithWhiteSpaceOrANonAsciiCharacterIsRefusedWithoutRepeatingIt(String token) {
+		assertTokenRefused("https://ntfy.sh/" + TOPIC, token);
+	}
+
+	@Test
+	void aTokenLongerThanTheCapIsRefusedWithoutRepeatingIt() {
+		assertThat(AlertSettings.TOKEN_MAX_LENGTH).isEqualTo(256);
+
+		assertTokenRefused("https://ntfy.sh/" + TOPIC, "t".repeat(AlertSettings.TOKEN_MAX_LENGTH + 1));
+	}
+
+	@Test
+	void aTokenWithoutTheAddressIsRefusedWithoutRepeatingIt() {
+		for (String address : new String[] { "", "  " }) {
+			assertThatExceptionOfType(InvalidSettingsException.class).isThrownBy(() -> settings(address, TOKEN))
+				.satisfies(ex -> assertThat(ex.getMessage()).contains(AlertSettings.TOKEN_NAME, AlertSettings.NAME)
+					.doesNotContain(TOKEN, TOKEN.substring(0, 8)));
+		}
+		assertThatExceptionOfType(InvalidSettingsException.class).isThrownBy(() -> AlertSettings
+			.from(Map.of(AlertSettings.TOKEN_NAME, TOKEN)::get));
+	}
+
+	@Test
+	void aBadAddressIsRefusedBeforeTheTokenIsLookedAt() {
+		assertThatExceptionOfType(InvalidSettingsException.class)
+			.isThrownBy(() -> settings("http://ntfy.sh/" + TOPIC, "bad token"))
+			.satisfies(ex -> assertThat(ex.getMessage()).contains("Invalid " + AlertSettings.NAME)
+				.doesNotContain(TOPIC, "bad token"));
 	}
 
 	@ParameterizedTest(name = "{0}")
@@ -63,7 +124,7 @@ class AlertSettingsTest {
 		AlertSettings settings = settings(row.address());
 
 		assertThat(settings.configured()).isTrue();
-		assertThat(settings.pingUrl().getHost()).isNotNull();
+		assertThat(settings.topicUrl().getHost()).isNotNull();
 	}
 
 	@ParameterizedTest(name = "{0}")
@@ -83,7 +144,7 @@ class AlertSettingsTest {
 
 		assertThat(settings(atTheCap).configured()).isTrue();
 		// The trailing / is dropped, so it does not count, as in the crons.
-		assertThat(settings(atTheCap + "/").pingUrl()).hasToString(atTheCap);
+		assertThat(settings(atTheCap + "/").topicUrl()).hasToString(atTheCap);
 		assertRefusedWithoutRepeatingAnyPartOf(validAddressOfLength(AlertSettings.PING_MAX_LENGTH + 1));
 	}
 
@@ -100,8 +161,8 @@ class AlertSettingsTest {
 	@Test
 	void theDeepestShapesAtTheCapAreDecided() {
 		String labels = "https://" + "a.".repeat((AlertSettings.PING_MAX_LENGTH - "https://hc".length()) / 2) + "hc";
-		String escapes = "https://hc-ping.example/"
-				+ "%41".repeat((AlertSettings.PING_MAX_LENGTH - "https://hc-ping.example/".length()) / 3);
+		String escapes = "https://ntfy.example/"
+				+ "%41".repeat((AlertSettings.PING_MAX_LENGTH - "https://ntfy.example/".length()) / 3);
 
 		assertThat(labels).hasSizeLessThanOrEqualTo(AlertSettings.PING_MAX_LENGTH);
 		assertThat(escapes).hasSizeLessThanOrEqualTo(AlertSettings.PING_MAX_LENGTH);
@@ -110,7 +171,7 @@ class AlertSettingsTest {
 	}
 
 	private static String validAddressOfLength(int length) {
-		StringBuilder address = new StringBuilder("https://hc-ping.example/");
+		StringBuilder address = new StringBuilder("https://ntfy.example/");
 		while (address.length() < length) {
 			address.append("0123456789abcdef");
 		}
@@ -137,6 +198,12 @@ class AlertSettingsTest {
 				.doesNotContain(parts));
 	}
 
+	private static void assertTokenRefused(String address, String token) {
+		assertThatExceptionOfType(InvalidSettingsException.class).isThrownBy(() -> settings(address, token))
+			.satisfies(ex -> assertThat(ex.getMessage()).contains("Invalid " + AlertSettings.TOKEN_NAME)
+				.doesNotContain(token, token.strip(), token.substring(0, Math.min(6, token.length())), TOPIC));
+	}
+
 	@Test
 	void theTableHasCasesOfBothKinds() {
 		List<PingCase> table = PingCase.load(TABLE);
@@ -145,7 +212,7 @@ class AlertSettingsTest {
 		assertThat(table).extracting(PingCase::address)
 			.contains("https://hc-ping.com/00000000-0000-4000-8000-000000000001",
 					// Read as UTF-8: the non-ASCII rows come through as written.
-					"https://h\u00e9.example/00000000-0000-4000-8000-000000000030");
+					"https://hé.example/00000000-0000-4000-8000-000000000030");
 	}
 
 	@Test
@@ -166,6 +233,13 @@ class AlertSettingsTest {
 
 	private static AlertSettings settings(String value) {
 		return AlertSettings.from(Map.of(AlertSettings.NAME, value)::get);
+	}
+
+	private static AlertSettings settings(String value, String token) {
+		Map<String, String> environment = new HashMap<>();
+		environment.put(AlertSettings.NAME, value);
+		environment.put(AlertSettings.TOKEN_NAME, token);
+		return AlertSettings.from(environment::get);
 	}
 
 	/** One line {@code accept <address>} or {@code refuse <address>} of the table. */

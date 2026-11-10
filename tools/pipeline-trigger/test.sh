@@ -23,7 +23,12 @@
 #      in capitals is accepted; no variable, a skipped run or an address that is not https://, has a query
 #      or no host name gives no check-in (an address outside the rule with a warning); no temporary
 #      directory leaves the exit code as it is, with check-ins without the last line;
-#   6. the tokens and the check-in address never appear in the logs.
+#   6. the night's summary (S-34, dead-posts-daily-digest): after the 202, on every end — the runs
+#      ended well or not, or not within TRIGGER_RUN_TIMEOUT — one POST /nightly-summary with exactly the
+#      runs' ids, its text logged line by line before the end line (which stays the last line and the
+#      check-in's body); a 500, no answer or an answer without the text is one WARN line with the exit
+#      code and the last line as without it; without a 202 (401, a busy pipeline, no answer) no call;
+#   7. the tokens and the check-in address never appear in the logs.
 # Needs Docker and openssl (the stub's certificate). Run from anywhere: tools/pipeline-trigger/test.sh
 set -euo pipefail
 
@@ -66,9 +71,12 @@ trap 'exit 130' INT TERM
 #   old_api: true leaves out the fields the API added in S-06 (startedAt, lastActivityAt,
 #         interruptionCause, step, assessTotal) and S-08 (skipped), as an API from before them;
 #   listen_after: seconds before it accepts connections (until then they are refused);
+#   summary: the answer to POST /nightly-summary: 200 (default; the text SUMMARY below), 500 (with the
+#         API error code internal_error), "no-text" (200 with an empty object) or "hang" (as for post);
 #   ping: the status of every check-in (POST /ping/…, on port 8443 over https with STUB_CERT), default 200.
-# Every request to the API without "Bearer $STUB_TOKEN" gets 401 not_authenticated. One line per request
-# on stdout: "<method> <path> <status>", for a check-in followed by its body as a JSON string.
+# Every request to the API without "Bearer $STUB_TOKEN" gets 401 not_authenticated. On stdout first
+# "runs <id> …" (the runs' ids in order), then one line per request: "<method> <path> <status>", for a
+# check-in followed by its body as a JSON string, for a summary request by its body as it came.
 read -r -d '' stub_code <<'PY' || true
 import json, os, ssl, threading, time, uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -80,20 +88,28 @@ runs = [dict(run, id=str(uuid.uuid4())) for run in case.get("runs", [])]
 by_id = {run["id"]: run for run in runs}
 posts = case.get("post", [202])
 post_count = [0]
+# The night's summary as the API composes it (NightSummary; the format is pinned there, not here).
+SUMMARY = ("Night 2026-10-12 (range 2026-10-10…2026-10-11): range succeeded; errors 0, skipped 0\n"
+           "reddit: fetched 104, skipped 0, new 54, leftovers 0; assessed 54, failed 2, dead 1;"
+           " tokens in 412000 (cached 120000), out 38000\n"
+           "wykop: fetched 166, skipped 0, new 197, leftovers 0; assessed 195, failed 0, dead 0;"
+           " tokens in 2210000 (cached 640000), out 190000\n"
+           "Dead in admin runs since the previous night: none\n"
+           "/admin")
 
 
 class Api(BaseHTTPRequestHandler):
     def log_message(self, *args):
         pass
 
-    def answer(self, status, body=None):
+    def answer(self, status, body=None, request=""):
         data = b"upstream not ready" if body is None else json.dumps(body).encode()
         self.send_response(status)
         self.send_header("Content-Type", "text/plain" if body is None else "application/json")
         self.send_header("Content-Length", str(len(data)))
         self.end_headers()
         self.wfile.write(data)
-        print(f"{self.command} {self.path} {status}", flush=True)
+        print(f"{self.command} {self.path} {status}" + (f" {request}" if request else ""), flush=True)
 
     def authorized(self):
         if self.headers.get("Authorization") == "Bearer " + token:
@@ -111,11 +127,26 @@ class Api(BaseHTTPRequestHandler):
         self.wfile.write(b"OK")
         print(f"{self.command} {self.path} {status} {json.dumps(body)}", flush=True)
 
+    def summary(self):
+        body = self.rfile.read(int(self.headers.get("Content-Length") or 0)).decode(errors="replace").strip()
+        status = case.get("summary", 200)
+        if status == "hang":
+            print(f"{self.command} {self.path} hang {body}", flush=True)
+            time.sleep(30)
+            return
+        if status == "no-text":
+            return self.answer(200, {}, body)
+        if status == 200:
+            return self.answer(200, {"text": SUMMARY}, body)
+        self.answer(status, {"detail": "internal_error"}, body)
+
     def do_POST(self):
         if self.path.startswith("/ping/"):
             return self.ping()
         if not self.authorized():
             return
+        if self.path == "/internal/pipeline-runs/nightly-summary":
+            return self.summary()
         if self.path != "/internal/pipeline-runs/daily":
             return self.answer(404, {"detail": "not_found"})
         status = posts[min(post_count[0], len(posts) - 1)]
@@ -166,6 +197,7 @@ tls.load_cert_chain("/tmp/ping.pem")
 pings = ThreadingHTTPServer(("", 8443), Api)
 pings.socket = tls.wrap_socket(pings.socket, server_side=True)
 threading.Thread(target=pings.serve_forever, daemon=True).start()
+print("runs " + " ".join(run["id"] for run in runs), flush=True)
 print("listening", flush=True)
 server.serve_forever()
 PY
@@ -233,13 +265,56 @@ log_says() {
     grep -qF -- "$2" "$tmp/$1.log" || { show "$1"; die "$1: the log does not say '$2'"; }
 }
 
-# Case $1's stub got $2 POST and $3 GET requests to the API (check-ins are not counted).
+# Case $1's stub got $2 POST /daily and $3 GET requests to the API (check-ins and the summary request
+# are not counted: summary_requests_were).
 requests_were() {
     local posts gets
-    posts=$(grep -c '^POST /internal/' "$tmp/$1.requests" || true)
+    posts=$(grep -c '^POST /internal/pipeline-runs/daily ' "$tmp/$1.requests" || true)
     gets=$(grep -c '^GET /internal/' "$tmp/$1.requests" || true)
     [[ $posts == "$2" && $gets == "$3" ]] \
         || { show "$1"; die "$1: $posts POST and $gets GET requests, expected $2 and $3"; }
+}
+
+# Case $1's stub got $2 requests for the night's summary (answered or hanging).
+summary_requests_were() {
+    local summaries
+    summaries=$(grep -c '^POST /internal/pipeline-runs/nightly-summary ' "$tmp/$1.requests" || true)
+    [[ $summaries == "$2" ]] || { show "$1"; die "$1: $summaries summary requests, expected $2"; }
+}
+
+# Case $1's one summary request carried exactly the ids of the 202, in order, as {"runs": [...]}.
+summary_request_was_the_runs() {
+    local ids expected body
+    ids=$(sed -nE 's/^runs (.*)$/\1/p' "$tmp/$1.requests" | tr ' ' '\n' | sed 's/.*/"&"/' | paste -sd ',' -)
+    expected="{\"runs\":[$ids]}"
+    body=$(grep '^POST /internal/pipeline-runs/nightly-summary ' "$tmp/$1.requests" | cut -d ' ' -f 4-)
+    [[ -n $ids && $body == "$expected" ]] \
+        || { show "$1"; die "$1: the summary request's body is '$body', expected '$expected'"; }
+}
+
+# In case $1's log, the (first) line saying $2 comes before the (first) line saying $3.
+log_says_before() {
+    local first second
+    first=$(grep -nF -- "$2" "$tmp/$1.log" | head -n 1 | cut -d : -f 1)
+    second=$(grep -nF -- "$3" "$tmp/$1.log" | head -n 1 | cut -d : -f 1)
+    [[ -n $first && -n $second && $first -lt $second ]] \
+        || { show "$1"; die "$1: the log does not say '$2' before '$3'"; }
+}
+
+# Case $1's last non-empty log line says $2 (what the check-in would send, with or without one).
+last_log_line_says() {
+    local line
+    line=$(awk 'NF { line = $0 } END { print line }' "$tmp/$1.log")
+    [[ $line == *"$2"* ]] || { show "$1"; die "$1: the last log line '$line' does not say '$2'"; }
+}
+
+# Case $1's log has every line of the stub's summary, with the prefix "summary: ".
+log_has_the_summary() {
+    log_says "$1" 'trigger: summary: Night 2026-10-12 (range 2026-10-10…2026-10-11): range succeeded; errors 0, skipped 0'
+    log_says "$1" 'trigger: summary: reddit: fetched 104, skipped 0, new 54, leftovers 0; assessed 54, failed 2, dead 1; tokens in 412000 (cached 120000), out 38000'
+    log_says "$1" 'trigger: summary: wykop: fetched 166, skipped 0, new 197, leftovers 0; assessed 195, failed 0, dead 0; tokens in 2210000 (cached 640000), out 190000'
+    log_says "$1" 'trigger: summary: Dead in admin runs since the previous night: none'
+    log_says "$1" 'trigger: summary: /admin'
 }
 
 # Case $1's stub got the check-ins $2 in this order (start or the exit code, separated by spaces; empty:
@@ -471,7 +546,70 @@ log_says ping-no-tmp 'FAILED: PIPELINE_TRIGGER_TOKEN is not set'
 pings_were ping-no-tmp 'start 2'
 pass "no temporary directory: a warning, /start and /2 without the last line, exit 2 as without it"
 
-step "6. no secrets in the logs"
+step "6. the night's summary (POST /nightly-summary)"
+# A good night: the summary's lines before the OK line, which stays the last line and the check-in's body.
+check_ping_case summary-ok 0 '{"runs": [{"kind": "range", "statuses": ["running", "succeeded"]}]}' "$token" \
+    -e HEALTHCHECK_PING_URL="$ping_url"
+log_has_the_summary summary-ok
+log_says_before summary-ok 'trigger: summary: /admin' 'trigger: OK: range succeeded'
+last_log_line_says summary-ok 'trigger: OK: range succeeded'
+last_ping_says summary-ok ' trigger: OK: range succeeded'
+pings_were summary-ok 'start 0'
+requests_were summary-ok 1 2
+summary_requests_were summary-ok 1
+summary_request_was_the_runs summary-ok
+pass "succeeded: the summary logged line by line before the OK line, exit 0, the check-in's body still the OK line"
+# Two runs: the request carries both ids, in the order of the 202 (the case from step 2).
+summary_requests_were retry-failed 1
+summary_request_was_the_runs retry-failed
+pass "retry + range: the summary request carries exactly both ids, in order"
+check_ping_case summary-failed 1 '{"runs": [{"kind": "range", "statuses": ["running", "failed"]}]}' "$token" \
+    -e HEALTHCHECK_PING_URL="$ping_url"
+log_has_the_summary summary-failed
+log_says_before summary-failed 'trigger: summary: /admin' 'trigger: FAILED: a run did not succeed: range failed'
+last_log_line_says summary-failed 'trigger: FAILED: a run did not succeed: range failed'
+last_ping_says summary-failed ' trigger: FAILED: a run did not succeed: range failed'
+pings_were summary-failed 'start 1'
+summary_requests_were summary-failed 1
+pass "failed: the summary, then the FAILED line as the last line, exit 1"
+check_case summary-run-timeout 1 '{"runs": [{"kind": "range", "statuses": ["running"]}]}' "$token" \
+    -e TRIGGER_RUN_TIMEOUT=3s
+log_has_the_summary summary-run-timeout
+log_says_before summary-run-timeout 'trigger: summary: /admin' 'trigger: FAILED: not ended within 3s: range '
+last_log_line_says summary-run-timeout 'trigger: FAILED: not ended within 3s: range '
+summary_requests_were summary-run-timeout 1
+summary_request_was_the_runs summary-run-timeout
+pass "not ended within TRIGGER_RUN_TIMEOUT=3s: the summary (the run still running), then the FAILED line, exit 1"
+check_ping_case summary-500 0 '{"summary": 500, "runs": [{"kind": "range", "statuses": ["running", "succeeded"]}]}' \
+    "$token" -e HEALTHCHECK_PING_URL="$ping_url"
+log_says summary-500 'trigger: WARN: nightly summary not sent: HTTP 500 internal_error'
+if grep -qF 'trigger: summary: ' "$tmp/summary-500.log"; then show summary-500; die "summary-500: a summary line was logged"; fi
+last_log_line_says summary-500 'trigger: OK: range succeeded'
+last_ping_says summary-500 ' trigger: OK: range succeeded'
+pings_were summary-500 'start 0'
+summary_requests_were summary-500 1
+pass "the summary route answers 500: one WARN line, exit 0 and the OK line as without a summary"
+check_case summary-no-text 0 '{"summary": "no-text", "runs": [{"kind": "range", "statuses": ["succeeded"]}]}' "$token"
+log_says summary-no-text 'trigger: WARN: nightly summary not sent: HTTP 200 without a text'
+last_log_line_says summary-no-text 'trigger: OK: range succeeded'
+pass "a 200 without the text: one WARN line, exit 0 and the OK line"
+check_ping_case summary-no-answer 1 '{"summary": "hang", "runs": [{"kind": "range", "statuses": ["running", "failed"]}]}' \
+    "$token" -e TRIGGER_REQUEST_TIMEOUT=2s -e HEALTHCHECK_PING_URL="$ping_url"
+log_says summary-no-answer 'trigger: WARN: nightly summary not sent: curl: (28)'
+last_log_line_says summary-no-answer 'trigger: FAILED: a run did not succeed: range failed'
+last_ping_says summary-no-answer ' trigger: FAILED: a run did not succeed: range failed'
+pings_were summary-no-answer 'start 1'
+summary_requests_were summary-no-answer 1
+pass "the summary route does not answer (TRIGGER_REQUEST_TIMEOUT=2s): one WARN line, exit 1 and the FAILED line as without a summary"
+# Without a 202 there are no runs to summarize: no call (the cases from steps 3 and 4).
+summary_requests_were unauthorized 0
+summary_requests_were no-source 0
+summary_requests_were no-answer 0
+summary_requests_were busy-timeout 0
+summary_requests_were wake-timeout 0
+pass "401, 503 source_not_configured, no answer to the POST, a busy pipeline and an API that never answers: no summary request"
+
+step "7. no secrets in the logs"
 if grep -lF -e "$token" -e "$wrong_token" -e "$ping_key" "$tmp"/*.log; then
     die "a token or the check-in key appears in a trigger log"
 fi

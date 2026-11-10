@@ -44,7 +44,8 @@ import pl.szczurradar.api.user.SystemAccount;
  * The admins' notifications about runs that need attention: who gets one from
  * {@link RunNotifications#runEnded}, that a second report adds none, and the logged-in admin's list and
  * read marks ({@code /api/admin/notifications}), and the operator alert of an admin's run that needs
- * attention, raised once to the server's queue (here a mock). Runs are written as the pipeline leaves
+ * attention, raised once to the server's queue (here a mock) — not for a run whose only reason is a dead
+ * post, which the night's summary counts (S-34). Runs are written as the pipeline leaves
  * them. Every test has its own admins, so the notifications about other tests' runs (which every admin
  * of this database gets) never reach its assertions.
  */
@@ -95,7 +96,8 @@ class NotificationsIT {
 
 	@Test
 	void anAdminsRunThatNeedsAttentionIsRaisedToTheOperatorOnce() {
-		UUID run = run("partial", 1, 1, 0, admin);
+		// A dead post and a technical error: the dead post alone would be the night's summary's (below).
+		UUID run = run("partial", 1, 1, 1, admin);
 		UUID cronRun = run("failed", 0, 0, 0, SystemAccount.SCHEDULER.id());
 
 		runNotifications.runEnded(run);
@@ -104,11 +106,25 @@ class NotificationsIT {
 
 		assertThat(notifications(admin, run)).isOne();
 		verify(alerts, times(1)).raise(eq(AlertEvent.RUN_NEEDS_ATTENTION), eq(run),
-				argThat(detail -> detail.startsWith("Pipeline run " + run + " (retry, admin) ended partial: dead 1")
-						&& detail.endsWith("/admin/runs/" + run)));
+				argThat(detail -> detail.startsWith("Pipeline run " + run + " (retry, admin) ended partial: dead 1,"
+						+ " errors 1") && detail.endsWith("/admin/runs/" + run)));
 		// The cron's failed run is the cron's to report.
 		assertThat(notifications(admin, cronRun)).isOne();
 		verify(alerts, never()).raise(any(), eq(cronRun), any());
+	}
+
+	@Test
+	void aRunWhoseOnlyReasonIsADeadPostNotifiesTheAdminsButRaisesNothing() {
+		UUID adminsRun = run("partial", 1, 1, 0, admin);
+		UUID cronRun = run("partial", 1, 1, 0, SystemAccount.SCHEDULER.id());
+
+		runNotifications.runEnded(adminsRun);
+		runNotifications.runEnded(cronRun);
+
+		// The bell shows both; the night's summary counts the dead posts per source (S-34).
+		assertThat(notifications(admin, adminsRun)).isOne();
+		assertThat(notifications(admin, cronRun)).isOne();
+		verify(alerts, never()).raise(any(), any(), any());
 	}
 
 	@ParameterizedTest

@@ -15,6 +15,8 @@ pipeline/            entry points — start here
   RunWatchdog              server only: stops a run of this instance without progress (PIPELINE_STALL_TIMEOUT)
   PipelineStallSettings    PIPELINE_STALL_TIMEOUT, read and validated when the server starts
   PipelineStallConfiguration  server only: the one PipelineStallSettings bean (watchdog, queue, deploy safety)
+  NightSummary             S-34: the night's summary of the cron's runs (a line per source, the admin runs' dead posts),
+                           read-only; composed for POST /internal/pipeline-runs/nightly-summary and raised as NIGHT_SUMMARY
   PipelineBusyException, PostDeadException, SourceNotConfiguredException
   api/     the HTTP entries (below)
   run/     the run model: PipelineRun (+ attentionReasons → needsAttention), AttentionReason, PipelineRunStep,
@@ -42,7 +44,7 @@ Every route starts runs only through `PipelineRunService`; none has its own star
 | Class | Route | Who |
 | --- | --- | --- |
 | `PipelineRunController` | `/api/admin/pipeline-runs/**`: start a range or chosen posts, list runs (pages of up to 100, newest first), one run `GET /{id}` (404 `not_found`), sources `GET /sources`, the days without data `GET /missing-days` → `{from, to, days: [{day, sources}]}` (`run/MissingDays`: the window D-15…D-2 of `ZONE` from the injected `Clock`; a day is covered for a configured source by a RANGE run `succeeded`/`partial` whose result for that source (`run/PipelineRunSource`) is `succeeded` — it gave a post; a failed or empty source covers nothing, though the run requested it — the cron's or an admin's (`run/PipelineRunRepository.findCoveringSince` / `findFirstCoveredFrom`); a source's window starts at its first covered day ever, so one never covered misses none; days ascending, `sources` in `Source` order; it starts nothing). A run (`RunView`) has its steps, counters, `scheduled` (requested by `SystemAccount.SCHEDULER`), `needsAttention` and `attentionReasons` (`run/AttentionReason` codes in the rule's order, e.g. `["dead_posts","skipped"]`, empty when it needs none; the SPA turns them into text in `src/runs.ts`), `interruptionCause`, `lastActivityAt`, `llmRetries`, `flexFallbacks`, `inFlight` (`RunRecorder.inFlight`, only for a running run, else 0), `sourcesFailed` / `sourcesEmpty` and `sourceResults` (each source's `run/PipelineRunSource` — `source`, `status`, `fetched`, `skipped`, `error`, `finishedAt` — in `Source` order; the list loads them with one `findByRunIdIn`; empty for a run that is not a range and before its first source ends) | admin session |
-| `InternalPipelineRunController` | `POST /internal/pipeline-runs/daily` (D-2…D-1 of `ZONE` from the injected `Clock`, every configured source, requester `SystemAccount.SCHEDULER`; 202 `[{id, kind}]`), `GET /internal/pipeline-runs/{id}` (status, `startedAt`, `finishedAt`, `lastActivityAt`, `interruptionCause`, the running `step` or `null`, `assessTotal` = the `assess` step's `items_in` or `null`, counters `fetched`, `skipped`, `newPosts`, `assessedOk`, `assessedFailed`, `processingErrors`, `dead`; 404 `not_found`) — the cron's heartbeat reads it | the daily cron `pipeline-trigger`, token `PIPELINE_TRIGGER_TOKEN` only (`internal/`, `config/SecurityConfig`), never a session |
+| `InternalPipelineRunController` | `POST /internal/pipeline-runs/daily` (D-2…D-1 of `ZONE` from the injected `Clock`, every configured source, requester `SystemAccount.SCHEDULER`; 202 `[{id, kind}]`), `GET /internal/pipeline-runs/{id}` (status, `startedAt`, `finishedAt`, `lastActivityAt`, `interruptionCause`, the running `step` or `null`, `assessTotal` = the `assess` step's `items_in` or `null`, counters `fetched`, `skipped`, `newPosts`, `assessedOk`, `assessedFailed`, `processingErrors`, `dead`; 404 `not_found`) — the cron's heartbeat reads it; `POST /internal/pipeline-runs/nightly-summary` (S-34; body `{"runs": [<id>, …]}`, 1–10 ids, else 400 `invalid_request`; an unknown id 404 `not_found`) → 200 `{"text": …}`, the night's summary of those runs (`NightSummary`: the night's line with the range run's range and each run's status, a line per source with fetched/skipped (or `failed: …` / `empty`), new, leftovers, assessed, failed, dead and tokens, the dead posts of the admin's runs since the previous night, `/admin`), raised at once as `AlertEvent.NIGHT_SUMMARY` for the range run's id (else the first) through `OperatorAlertQueue.raise(ObjectProvider, …)` — the controller is built in an operator command's context too, which has no queue | the daily cron `pipeline-trigger`, token `PIPELINE_TRIGGER_TOKEN` only (`internal/`, `config/SecurityConfig`), never a session |
 | `FreshnessController` | `GET /api/freshness` → `{sources: [{source, lastUpdatedAt}]}`, in `Source` order, only the sources with an update (`[]` before the first): for each source, `finished_at` of the RANGE run `succeeded`/`partial` with that source's result `succeeded` whose range reaches furthest, the latest of those (`run/PipelineRunRepository.findLastUpdates`, one query per source, the same rule as `findCoveringSince`; an admin's run over older days leaves the date, and a source that failed or gave no post keeps its own while another moves on) — the feed's label (FR-030, S-29); it reads no configuration; nothing else about runs | any session |
 | `DeploySafetyController` | `GET /api/deploy-safety` → `{safe, reason}`: `reason` (`DeploySafetyReason`) `pipeline_running` before `pipeline_queued` (both can exist: a retry runs, the range waits), `null` when safe (`run/PipelineRunRepository.existsLiveActive` decides it in one statement, then `existsRunning` the reason, over every active run: two statements would both miss a run leaving the queue between them). A dead run — queued or running without activity for `PIPELINE_STALL_TIMEOUT` (`COALESCE(last_activity_at, started_at, created_at)`, the database's clock), and no run ended within it (a queue that just ended a run is alive) — does not hold the deploy (safe when every active run is dead: no instance executes it, and the new instance's start-up recovery interrupts it anyway); it only reads, the next request to start runs interrupts them (`lost`, Rules); 503 `{status: unavailable}` without the database, as `/api/ready` — the CI deploy gate's question (S-14); nothing else about runs | anyone, no session (`PUBLIC_ROUTES`) |
 | `PipelineRunExceptionHandler` | the service's refusals for both run controllers: 409 `pipeline_busy`, 400 `post_dead`, 503 `source_not_configured` | — |
@@ -274,20 +276,44 @@ PipelineRunService.startRange / startPosts → queue (thread pipeline-run) → R
   `RUN_NEEDS_ATTENTION` is raised only when it created rows. The unique key `uq_notifications_recipient_kind_run`
   (`V9`) treats a `NULL` `run_id` as distinct: a future kind without a run needs a new migration with
   `UNIQUE NULLS NOT DISTINCT` (never an edit of `V9`), or its `ON CONFLICT` never fires.
-- **The operator's alert of a run (S-18).** When `runEnded` created notifications (`created > 0`: once per
+- **The operator's alert of a run (S-18, S-34).** When `runEnded` created notifications (`created > 0`: once per
   run, and only with an admin to notify), it also raises `AlertEvent.RUN_NEEDS_ATTENTION` through
-  `alerts/OperatorAlertQueue` (healthchecks.io → Telegram, check `<env>/api-events`), with the detail
+  `alerts/OperatorAlertQueue` (since S-34 one ntfy message per event, `alerts/NtfyAlerts`, topic `NTFY_URL`;
+  before it a healthchecks.io check), with the detail
   `Pipeline run <id> (<kind>, cron|admin) ended <status>[ (<cause>)]: dead N, errors N, skipped N[; error:
-  <the run's error, cut to 300 characters>]; /admin/runs/<id>`. The exception: a run of the daily cron
+  <the run's error, cut to 300 characters>]; /admin/runs/<id>`. Two exceptions. A run of the daily cron
   (`PipelineRun.scheduled()`, requested by `SystemAccount.SCHEDULER`) that ended `failed` or `interrupted`
   — the cron reports it already (exit 1, its own check `<env>/pipeline-trigger`), so an alert would only
-  double that message. A cron run ending `partial` with a failed or empty source, a `dead` post or a technical
+  double that message. And, since S-34, a run — the cron's or an admin's — whose `attentionReasons()` are
+  exactly `[DEAD_POSTS]` (`RunNotifications.reportedByTheNightSummary`): the night's summary counts its dead
+  posts per source (`dead N`, or the line `Dead in admin runs since the previous night`), so a message of
+  its own would only teach the operator to ignore the channel; the rule `PipelineRun.attentionReasons` is
+  untouched, so the bell and the run's page still show it. A dead post next to any other reason is raised
+  as before. A cron run ending `partial` with a failed or empty source or a technical
   error, or with skipped elements, exits 0 and is raised (the source's name is in the run's error the
-  detail carries); an admin's run is raised for every ending that notifies. When the cron
+  detail carries); an admin's run is raised for every ending that notifies but the dead-only one. When the cron
   gives up before its runs end (`not ended within` `TRIGGER_RUN_TIMEOUT` 90 min, the API not answering for
   `TRIGGER_WAKE_TIMEOUT` while it waits, no answer to its `POST`), its exit 1 says only that the run did
   not end; a later `failed` / `interrupted` ending of that run is still the cron's, so it shows in `/admin`
-  and the bell, not in Telegram.
+  and the bell, not in ntfy.
+- **The night's summary (S-34).** After its runs — every run ended, one `failed` / `interrupted`, or `not
+  ended within` its time-out — the cron calls `POST /internal/pipeline-runs/nightly-summary` with their ids
+  (Entries above). `NightSummary.of` reads only: the runs (`findAllById`, sorted by creation), the range run's
+  `pipeline_run_sources` and `posts.first_run_id` counts, the retry run's distinct assessed posts
+  (`AssessmentRepository.countDistinctPostsBySource`), the night's assessments summed per source
+  (`sumBySource`: ok, failed, tokens, `NULL` as 0), the dead posts whose latest assessment is one of the
+  night's runs (`PostRepository.countDeadKilledBySource`), and the admin runs created between the previous
+  night's last cron run (`findLastScheduledCreationBefore`, `EPOCH` without one) and this night's first
+  (`findAdminRunIdsCreatedBetween`) with their dead posts — bounded by creation, never by now, so each admin
+  run is in exactly one summary. The controller raises `NIGHT_SUMMARY` for the range run's id (else the
+  first) through `OperatorAlertQueue.raise(ObjectProvider, …)`, always, also with nothing dead, and returns
+  the text for the cron's log. The format is pinned by `NightSummaryTest` (the plan's example night, a run
+  still running, a failed and an empty source, a source without a result, the admin runs' dead posts in
+  `Source` order, every source failing with the longest error staying within ntfy's bytes), the queries by
+  `NightSummaryIT` on Postgres (two sources with a retry and a range still running, the first night counting
+  the admin's dead posts from the beginning and not those of a later run, an unknown run and a repeated id)
+  and the route by `api/InternalPipelineRunIT` (returned and raised for the range run, 400, 404) and
+  `InternalPipelineRunWithoutTokenIT` (401).
 - **Operator alerts of the error paths (S-18).** Each path that ended in an ERROR line nothing else reported
   now also raises an `alerts/AlertEvent` through `OperatorAlertQueue.raise(event, runId, detail)`; the
   ERROR line stays:
@@ -449,7 +475,7 @@ PipelineRunService.startRange / startPosts → queue (thread pipeline-run) → R
 - A new path that ends in an ERROR line and that nothing else reports (not a run's ending: `runEnded`
   covers those) gets its own `AlertEvent` constant, whose description says what to check, and calls
   `OperatorAlertQueue.raise` next to that line (S-18, above). Never `OperatorAlerts` directly (it blocks
-  for up to two HTTP requests and sends nothing from an interrupted thread), never a Logback appender
+  for an HTTP request and sends nothing from an interrupted thread), never a Logback appender
   or an alert per ERROR line; the detail carries no secret and no exception message.
 - Start-up recovery runs before the web server opens its port (`SmartInitializingSingleton`, not
   `ApplicationReadyEvent`): it interrupts every queued or running run without asking who created it,
@@ -565,7 +591,11 @@ PipelineRunService.startRange / startPosts → queue (thread pipeline-run) → R
   `null` id or no `postIds`, allowed while a run is running.
 - `api/InternalPipelineRunIT` (+ `InternalPipelineRunWithoutTokenIT`): the token, no session and no
   cookie on `/internal/**`, the D-2…D-1 range for a fixed `Clock` (also a DST day), 409, 404, the exact
-  keys of `GET /internal/pipeline-runs/{id}` with `step` and `assessTotal` during the assessment.
+  keys of `GET /internal/pipeline-runs/{id}` with `step` and `assessTotal` during the assessment; since S-34
+  `POST /internal/pipeline-runs/nightly-summary`: the text returned and `NIGHT_SUMMARY` raised for the range
+  run (a mocked `OperatorAlerts`), 400 without 1–10 ids, 404 for an unknown run, 401 without the token.
+  `NightSummaryIT` (the summary's queries on seeded rows) and `NightSummaryTest` (the text) are listed under
+  "The night's summary" above.
   `api/PipelineRunControllerIT`: the run page, 404, the new fields, `scheduled` for the cron's run; a dead
   post refused (`post_dead`), restored, then assessed by a posts run with one `assessments` row more.
   `api/FreshnessIT`: which runs move each source's date in the label. `api/MissingDaysIT` (fixed `Clock`): which runs cover a day

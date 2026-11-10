@@ -5,17 +5,18 @@
 # and headers), the headers and the body. fixtures/ are responses recorded from the real Management API v3
 # (fixtures/README.md).
 # Cases:
-#   1. apply on a fresh project: three upserts (name, tags, schedule, tz, grace, channels, unique), one
+#   1. apply on a fresh project: two upserts (name, tags, schedule, tz, grace, channels, unique), one
 #      arming check-in per cron check (no API key on it), the read-back with both up, the ping URLs on
-#      stdout and nowhere in the log;
+#      stdout and nowhere in the log (the API's events are no check since S-34: they go to ntfy, NTFY_URL);
 #   2. apply when the checks exist and are up: no arming check-in;
 #   3. a cron check still not up after arming (also: an arming check-in that fails) → 1;
-#   4. --schedule and --grace reach both cron bodies, not the API's check;
-#   5. delete: the three checks found by name (another environment's check left alone), a missing one skipped;
+#   4. --schedule and --grace reach both cron bodies;
+#   5. delete: the two checks found by name (another environment's check left alone), a missing one skipped;
 #   6. API errors: 401, 500, no answer, an answer that is not the check → 1, no request after the failure;
 #   7. usage: no key, bad arguments, bad environment names, bad overrides → 2 without a request;
-#   8. production also gets production/deploy-health (the monitor's check), applied and deleted with the rest
-#      (cases 1–6 use a PR env and so check that no other environment gets it);
+#   8. production also gets production/deploy-health (the monitor's check, a simple one, neither armed nor
+#      overridden), applied and deleted with the rest (cases 1–6 use a PR env and so check that no other
+#      environment gets it);
 #   9. the ping URL rule (S-25): the "ping-url rule (S-25)" blocks of tools/db-backup/backup.sh and
 #      tools/pipeline-trigger/trigger.sh are byte for byte the same (markers once in each), their pattern is
 #      the literal of checks.sh and of AlertSettings.PING_PATTERN in the API, their length cap (512) is
@@ -35,10 +36,11 @@ readonly api=https://hc.test/api/v3
 readonly key='hcw_TEST-key-never-shown_0123456789'
 readonly u1=00000000-0000-4000-8000-0000000000a1
 readonly u2=00000000-0000-4000-8000-0000000000a2
-readonly u3=00000000-0000-4000-8000-0000000000a3
 readonly ping1=https://hc-ping.com/$u1
 readonly ping2=https://hc-ping.com/$u2
-readonly ping3=https://hc-ping.com/$u3
+# The recorded simple check (fixtures/post-simple-created.json, UUID u3) only serves case 8 as the source of
+# production/deploy-health (UUID u4); no check of the PR env has it.
+readonly u3=00000000-0000-4000-8000-0000000000a3
 readonly u4=00000000-0000-4000-8000-0000000000a4
 readonly ping4=https://hc-ping.com/$u4
 tmp=$(mktemp -d)
@@ -204,9 +206,9 @@ out_is() {
 readonly checks_url="$api/checks/"
 readonly created1=$fixtures/post-pipeline-trigger-created.json
 readonly created2=$fixtures/post-db-backup-created.json
-readonly created3=$fixtures/post-api-events-created.json
+readonly created_simple=$fixtures/post-simple-created.json
 readonly listed=$fixtures/get-checks.json
-readonly urls_out=("$env_name/pipeline-trigger $ping1" "$env_name/db-backup $ping2" "$env_name/api-events $ping3")
+readonly urls_out=("$env_name/pipeline-trigger $ping1" "$env_name/db-backup $ping2")
 
 step "1. apply on a fresh project"
 script fresh \
@@ -214,40 +216,35 @@ script fresh \
     "POST $ping1 200 -" \
     "POST $checks_url 201 $created2" \
     "POST $ping2 200 -" \
-    "POST $checks_url 201 $created3" \
     "GET $checks_url 200 $listed"
 run_case fresh 0 apply "$env_name"
-requests_are fresh "POST $checks_url" "POST $ping1" "POST $checks_url" "POST $ping2" "POST $checks_url" "GET $checks_url"
+requests_are fresh "POST $checks_url" "POST $ping1" "POST $checks_url" "POST $ping2" "GET $checks_url"
 body_matches fresh 1 '. == {name: "szczur-radar-pr-99/pipeline-trigger", tags: "szczur-radar szczur-radar-pr-99",
     desc: .desc, schedule: "30 0 * * *", tz: "UTC", grace: 11700, channels: "*", unique: ["name"]}
     and (.desc | test("pipeline-trigger"))'
 body_matches fresh 3 '. == {name: "szczur-radar-pr-99/db-backup", tags: "szczur-radar szczur-radar-pr-99",
     desc: .desc, schedule: "0 2 * * *", tz: "UTC", grace: 8100, channels: "*", unique: ["name"]}'
-body_matches fresh 5 '. == {name: "szczur-radar-pr-99/api-events", tags: "szczur-radar szczur-radar-pr-99",
-    desc: .desc, timeout: 31536000, grace: 31536000, channels: "*", unique: ["name"]}'
 grep -qxF 'Content-Type: application/json' "$tmp/fresh.stub/headers.1" || { show fresh; die "fresh: no JSON content type"; }
 key_header fresh 1 yes
 key_header fresh 2 no
-key_header fresh 6 yes
+key_header fresh 5 yes
 grep -qxF 'Content-Type: text/plain' "$tmp/fresh.stub/headers.2" || { show fresh; die "fresh: the check-in is not text/plain"; }
 out_is fresh "${urls_out[@]}"
 log_says fresh "$env_name/pipeline-trigger: created (cron '30 0 * * *' UTC, grace 11700s), status new"
 log_says fresh "$env_name/pipeline-trigger: armed with one success check-in"
-log_says fresh "$env_name/api-events: created (simple, period 31536000s, grace 31536000s), status new"
 log_says fresh "OK: the checks of $env_name are in place, both cron checks up"
-pass "three checks created with their schedules, grace and all channels; both cron checks armed (no key on the check-in); the ping URLs on stdout only"
+! grep -q "api-events" "$tmp/fresh.log" || { show fresh; die "fresh: an api-events check (gone with S-34) was applied"; }
+pass "two checks created with their schedules, grace and all channels; both armed (no key on the check-in); the ping URLs on stdout only"
 
 step "2. apply when the checks exist and are up"
 existing1=$(fixture existing1 '.checks[0]')
 existing2=$(fixture existing2 '.checks[1]')
-existing3=$(fixture existing3 '.checks[2]')
 script existing \
     "POST $checks_url 200 $existing1" \
     "POST $checks_url 200 $existing2" \
-    "POST $checks_url 200 $existing3" \
     "GET $checks_url 200 $listed"
 run_case existing 0 apply "$env_name"
-requests_are existing "POST $checks_url" "POST $checks_url" "POST $checks_url" "GET $checks_url"
+requests_are existing "POST $checks_url" "POST $checks_url" "GET $checks_url"
 log_says existing "$env_name/db-backup: updated (cron '0 2 * * *' UTC, grace 8100s), status up"
 out_is existing "${urls_out[@]}"
 pass "existing up checks: updated, no arming check-in, the ping URLs on stdout"
@@ -259,7 +256,6 @@ script still-new \
     "POST $ping1 200 -" \
     "POST $checks_url 201 $created2" \
     "POST $ping2 fail -" \
-    "POST $checks_url 201 $created3" \
     "GET $checks_url 200 $still_new"
 run_case still-new 1 apply "$env_name"
 log_says still-new "error: arming $env_name/db-backup failed (no answer: curl: (7)"
@@ -270,37 +266,32 @@ down=$(fixture down '.checks[0].status = "down"')
 script down \
     "POST $checks_url 200 $existing1" \
     "POST $checks_url 200 $existing2" \
-    "POST $checks_url 200 $existing3" \
     "GET $checks_url 200 $down"
 run_case down 1 apply "$env_name"
 log_says down "FAILED: not up: $env_name/pipeline-trigger (down)"
 pass "a cron check down: exit 1"
-missing=$(fixture missing 'del(.checks[2])')
+missing=$(fixture missing 'del(.checks[1])')
 script missing \
     "POST $checks_url 200 $existing1" \
     "POST $checks_url 200 $existing2" \
-    "POST $checks_url 200 $existing3" \
     "GET $checks_url 200 $missing"
 run_case missing 1 apply "$env_name"
-log_says missing "FAILED: $env_name/api-events: 0 checks with this name after the upsert (expected 1)"
+log_says missing "FAILED: $env_name/db-backup: 0 checks with this name after the upsert (expected 1)"
 pass "a check missing from the read-back: exit 1"
 
 step "4. --schedule and --grace override both cron checks"
 script override \
     "POST $checks_url 200 $existing1" \
     "POST $checks_url 200 $existing2" \
-    "POST $checks_url 200 $existing3" \
     "GET $checks_url 200 $listed"
 run_case override 0 apply "$env_name" --schedule '*/5 * * * *' --grace 60
 body_matches override 1 '.schedule == "*/5 * * * *" and .grace == 60 and .tz == "UTC" and .name == "szczur-radar-pr-99/pipeline-trigger"'
 body_matches override 2 '.schedule == "*/5 * * * *" and .grace == 60 and .name == "szczur-radar-pr-99/db-backup"'
-body_matches override 3 '.timeout == 31536000 and .grace == 31536000 and (has("schedule") | not)'
 log_says override "$env_name/pipeline-trigger: updated (cron '*/5 * * * *' UTC, grace 60s), status up"
-pass "the overrides reach both cron bodies; the API's check keeps its period and grace"
+pass "the overrides reach both cron bodies"
 script grace-only \
     "POST $checks_url 200 $existing1" \
     "POST $checks_url 200 $existing2" \
-    "POST $checks_url 200 $existing3" \
     "GET $checks_url 200 $listed"
 run_case grace-only 0 apply "$env_name" --grace 600
 body_matches grace-only 1 '.schedule == "30 0 * * *" and .grace == 600'
@@ -311,23 +302,21 @@ step "5. delete"
 script delete \
     "GET $checks_url 200 $listed" \
     "DELETE $api/checks/$u1 200 $existing1" \
-    "DELETE $api/checks/$u2 200 $existing2" \
-    "DELETE $api/checks/$u3 200 $existing3"
+    "DELETE $api/checks/$u2 200 $existing2"
 run_case delete 0 delete "$env_name"
-requests_are delete "GET $checks_url" "DELETE $api/checks/$u1" "DELETE $api/checks/$u2" "DELETE $api/checks/$u3"
+requests_are delete "GET $checks_url" "DELETE $api/checks/$u1" "DELETE $api/checks/$u2"
 key_header delete 2 yes
 log_says delete "$env_name/pipeline-trigger: deleted"
-log_says delete "OK: 3 check(s) of $env_name deleted"
+log_says delete "OK: 2 check(s) of $env_name deleted"
 out_is delete
-pass "the three checks of the environment deleted by UUID (another environment's check left alone), nothing on stdout"
+pass "the two checks of the environment deleted by UUID (another environment's check left alone), nothing on stdout"
 partial=$(fixture partial 'del(.checks[0])')
 script delete-partial \
     "GET $checks_url 200 $partial" \
-    "DELETE $api/checks/$u2 200 $existing2" \
-    "DELETE $api/checks/$u3 200 $existing3"
+    "DELETE $api/checks/$u2 200 $existing2"
 run_case delete-partial 0 delete "$env_name"
 log_says delete-partial "$env_name/pipeline-trigger: not found, nothing to delete"
-log_says delete-partial "OK: 2 check(s) of $env_name deleted"
+log_says delete-partial "OK: 1 check(s) of $env_name deleted"
 pass "a check already gone: skipped, exit 0"
 script delete-error \
     "GET $checks_url 200 $listed" \
@@ -346,7 +335,6 @@ pass "401: exit 1 with the API's message, no further request"
 script server-error \
     "POST $checks_url 200 $existing1" \
     "POST $checks_url 200 $existing2" \
-    "POST $checks_url 200 $existing3" \
     "GET $checks_url 500 -"
 run_case server-error 1 apply "$env_name"
 log_says server-error "FAILED: reading the checks: HTTP 500"
@@ -407,7 +395,8 @@ grep -qF 'usage: checks.sh apply' "$tmp/help.out" || { show help; die "help: no 
 pass "bad arguments, environment names, overrides and API URL: exit 2 without a request (an argument is never echoed)"
 
 step "8. production: also the monitor's check production/deploy-health"
-# The PR env's recorded answers renamed to production; the fourth check is the API's one as deploy-health.
+# The PR env's recorded answers renamed to production; the third check is the recorded simple check (once the
+# API's api-events check, gone with S-34) as deploy-health.
 to_production() { jq 'tojson | gsub("szczur-radar-pr-99"; "production") | fromjson' "$1"; }
 as_deploy_health() {
     jq --arg a "$u3" --arg b "$u4" \
@@ -415,32 +404,39 @@ as_deploy_health() {
 }
 to_production "$existing1" >"$tmp/prod1.json"
 to_production "$existing2" >"$tmp/prod2.json"
-to_production "$existing3" >"$tmp/prod3.json"
-as_deploy_health "$created3" >"$tmp/prod4.json"
+as_deploy_health "$created_simple" >"$tmp/prod4.json"
+jq -e '.name == "production/deploy-health" and .uuid == "'"$u4"'"' "$tmp/prod4.json" >/dev/null \
+    || die "production: the simple fixture did not become production/deploy-health"
 jq --slurpfile d "$tmp/prod4.json" '.checks += [$d[0] | .status = "new"]' <(to_production "$listed") >"$tmp/prod-listed.json"
 script production \
     "POST $checks_url 200 $tmp/prod1.json" \
     "POST $checks_url 200 $tmp/prod2.json" \
-    "POST $checks_url 200 $tmp/prod3.json" \
     "POST $checks_url 201 $tmp/prod4.json" \
     "GET $checks_url 200 $tmp/prod-listed.json"
 run_case production 0 apply production
-requests_are production "POST $checks_url" "POST $checks_url" "POST $checks_url" "POST $checks_url" "GET $checks_url"
-body_matches production 4 '. == {name: "production/deploy-health", tags: "szczur-radar production",
+requests_are production "POST $checks_url" "POST $checks_url" "POST $checks_url" "GET $checks_url"
+body_matches production 3 '. == {name: "production/deploy-health", tags: "szczur-radar production",
     desc: .desc, timeout: 31536000, grace: 31536000, channels: "*", unique: ["name"]}
     and (.desc | test("szczur-radar-monitor"))'
-out_is production "production/pipeline-trigger $ping1" "production/db-backup $ping2" "production/api-events $ping3" \
-    "production/deploy-health $ping4"
+out_is production "production/pipeline-trigger $ping1" "production/db-backup $ping2" "production/deploy-health $ping4"
 log_says production "production/deploy-health: created (simple, period 31536000s, grace 31536000s), status new"
-pass "production: the three checks and production/deploy-health (simple, not armed), its ping URL on stdout"
+pass "production: the two cron checks and production/deploy-health (simple, not armed), its ping URL on stdout"
+script production-override \
+    "POST $checks_url 200 $tmp/prod1.json" \
+    "POST $checks_url 200 $tmp/prod2.json" \
+    "POST $checks_url 201 $tmp/prod4.json" \
+    "GET $checks_url 200 $tmp/prod-listed.json"
+run_case production-override 0 apply production --schedule '*/5 * * * *' --grace 60
+body_matches production-override 1 '.schedule == "*/5 * * * *" and .grace == 60'
+body_matches production-override 3 '.timeout == 31536000 and .grace == 31536000 and (has("schedule") | not)'
+pass "production with overrides: the monitor's check keeps its period and grace"
 script delete-production \
     "GET $checks_url 200 $tmp/prod-listed.json" \
     "DELETE $api/checks/$u1 200 $tmp/prod1.json" \
     "DELETE $api/checks/$u2 200 $tmp/prod2.json" \
-    "DELETE $api/checks/$u3 200 $tmp/prod3.json" \
     "DELETE $api/checks/$u4 200 $tmp/prod4.json"
 run_case delete-production 0 delete production
-log_says delete-production "OK: 4 check(s) of production deleted"
+log_says delete-production "OK: 3 check(s) of production deleted"
 pass "delete production: deploy-health too"
 
 step "9. the ping URL rule: one pattern, two identical cron blocks, one case table"

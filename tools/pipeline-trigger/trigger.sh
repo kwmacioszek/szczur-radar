@@ -6,9 +6,11 @@
 # failed, 2 on a configuration error. Railway marks a cron run that exits non-zero as crashed and
 # notifies it (needs the account's custom notification rule "deployment crashed", all environments).
 # While a run is running it logs a heartbeat with its step and progress (S-06,
-# pipeline-run-history-dashboard), from the answers it polls anyway. With HEALTHCHECK_PING_URL set it
-# checks in to healthchecks.io (F-04, out-of-app-alert-channel): the start, then the exit code with the
-# last log line.
+# pipeline-run-history-dashboard), from the answers it polls anyway. Once the runs are over (or it stops
+# waiting for them) it asks the API for the night's summary (S-34, dead-posts-daily-digest: POST
+# /internal/pipeline-runs/nightly-summary with the runs' ids; the API sends it to the operator over ntfy
+# itself) and logs it before its own last line. With HEALTHCHECK_PING_URL set it checks in to
+# healthchecks.io (F-04, out-of-app-alert-channel): the start, then the exit code with the last log line.
 # Never `set -x`: PIPELINE_TRIGGER_TOKEN is the API's shared secret and HEALTHCHECK_PING_URL a secret
 # address; neither is ever printed.
 set -euo pipefail
@@ -148,15 +150,17 @@ unset token PIPELINE_TRIGGER_TOKEN
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 
-# One request to the API: sets REPLY to the HTTP status (000: no answer) and CONNECTED to whether a
-# connection was made (an answer may then be missing although the API got the request), and leaves the
-# body in $work/body and curl's error in $work/error. `--disable` first: no .curlrc is read.
+# One request to the API, $1 $2 with the JSON file $3 (default: none) as the body: sets REPLY to the HTTP
+# status (000: no answer) and CONNECTED to whether a connection was made (an answer may then be missing
+# although the API got the request), and leaves the body in $work/body and curl's error in $work/error.
+# `--disable` first: no .curlrc is read.
 request() {
-    local out time_connect
+    local out time_connect json=()
+    [[ -z ${3:-} ]] || json=(--header 'Content-Type: application/json' --data-binary "@$3")
     : >"$work/body"
     out=$(curl --disable --silent --show-error --request "$1" --output "$work/body" \
         --write-out '%{http_code} %{time_connect}' --connect-timeout 10 --max-time "$request_timeout" \
-        --config - "$base_url$2" <<<"$curl_auth" 2>"$work/error") || true
+        "${json[@]}" --config - "$base_url$2" <<<"$curl_auth" 2>"$work/error") || true
     read -r REPLY time_connect <<<"$out" || true
     [[ $REPLY =~ ^[0-9]{3}$ ]] || REPLY=000
     CONNECTED=1
@@ -222,6 +226,27 @@ progress() {
         | "\(.status), step \(.step // "?"), assessed \($assessed)/\(.assessTotal // "?")"
             + " (ok \(.assessedOk // "?"), failed \(.assessedFailed // "?"), errors \(.processingErrors // "?")),"
             + " last activity \(.lastActivityAt // "?")"' "$work/body" 2>/dev/null || true
+}
+
+# The night's summary of the runs in $ids (S-34): one POST /nightly-summary with their ids, within
+# TRIGGER_REQUEST_TIMEOUT, no retry. The API composes the summary, sends it to the operator (ntfy) and
+# returns it as {"text": …}, logged here line by line. Anything else — no answer, another status, an
+# answer without the text — is one WARN line and nothing more: the exit code and the last line (the
+# check-in's body) are the runs' result, so this is called before every end line after the 202.
+nightly_summary() {
+    local text line
+    jq -cn '{runs: $ARGS.positional}' --args "${ids[@]}" >"$work/summary-request"
+    request POST /nightly-summary "$work/summary-request"
+    if [[ $REPLY != 200 ]]; then
+        log "WARN: nightly summary not sent: $(outcome)"
+        return 0
+    fi
+    text=$(jq -r 'if type == "object" and (.text | type) == "string" and (.text | length) > 0 then .text
+        else error("no text") end' "$work/body" 2>/dev/null) \
+        || { log "WARN: nightly summary not sent: HTTP 200 without a text"; return 0; }
+    while IFS= read -r line; do
+        log "summary: $line"
+    done <<<"$text"
 }
 
 # 1. Start the daily run. 409 pipeline_busy (e.g. an admin's run) is retried until it is free; every
@@ -331,16 +356,19 @@ while true; do
             [[ -n ${ended[${ids[i]}]:-} ]] \
                 || unfinished+="${unfinished:+, }${kinds[i]} ${ids[i]} (${seen[${ids[i]}]:-no status yet})"
         done
+        nightly_summary
         fail "not ended within $TRIGGER_RUN_TIMEOUT: $unfinished"
     fi
     sleep $(( remaining < poll_interval ? remaining : poll_interval ))
 done
 
-# 3. The result: a partial run counts as done (its failed posts are retried by the next run).
+# 3. The night's summary, then the result: a partial run counts as done (its failed posts are retried by
+# the next run). The result is the last line: the check-in sends the last line of the log.
 summary=""
 for i in "${!ids[@]}"; do
     summary+="${summary:+, }${kinds[i]} ${ended[${ids[i]}]}"
 done
+nightly_summary
 if (( failed )); then
     fail "a run did not succeed: $summary"
 fi

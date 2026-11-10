@@ -19,7 +19,7 @@ public enum CommandType {
 					+ " (--email <e-mail>)"),
 
 	SEND_TEST_ALERT("send-test-alert",
-			"send a test event to the healthchecks.io check in HEALTHCHECK_PING_URL and exit (no database)");
+			"send a test event to the ntfy topic in NTFY_URL and exit (no database)");
 
 	private final String cliName;
 

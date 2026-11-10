@@ -44,7 +44,8 @@ import pl.szczurradar.api.user.SystemAccount;
 /**
  * Which run endings {@link RunNotifications#runEnded} raises to the operator, with mocks: a run that
  * needs attention once its notifications were created, except a cron run that ended {@code failed} or
- * {@code interrupted} (the cron reports it); a failure to notify; and an operator command's context
+ * {@code interrupted} (the cron reports it) and a run whose only reason is a dead post (the night's summary
+ * counts it, S-34; with another reason it is raised); a failure to notify; and an operator command's context
  * without the queue. And a failure on an interrupted thread (the watchdog's late interrupt) tried once
  * more with the flag cleared, the flag restored after it; only the second attempt's failure, or one
  * without an interrupt (never tried again), is raised. Who gets the notifications is in
@@ -108,15 +109,44 @@ class RunNotificationsTest {
 	}
 
 	@Test
-	void aCronRunThatEndedPartialWithADeadPostIsRaised() {
-		PipelineRun run = run(RunKind.RETRY, true, RunStatus.PARTIAL, null, 1, 0, 0, null);
+	void aCronRunThatEndedPartialWithOnlyADeadPostNotifiesTheAdminsButIsLeftToTheNightSummary() {
+		PipelineRun run = partialRetryRun(SystemAccount.SCHEDULER.id(), 1, 0);
 		UUID id = run.getId();
+		assertThat(run.attentionReasons()).containsExactly(AttentionReason.DEAD_POSTS);
+		notified(run, 1);
+
+		runNotifications.runEnded(id);
+
+		// The bell shows it; the night's summary counts it per source.
+		verify(notifications).notifyAdmins(NotificationKind.RUN_ATTENTION, id);
+		verify(alerts, never()).raise(any(), any(), any());
+	}
+
+	@Test
+	void anAdminsRunThatEndedPartialWithOnlyADeadPostIsLeftToTheNightSummaryToo() {
+		PipelineRun run = partialRetryRun(UUID.randomUUID(), 1, 0);
+		UUID id = run.getId();
+		assertThat(run.scheduled()).isFalse();
+		notified(run, 1);
+
+		runNotifications.runEnded(id);
+
+		verify(notifications).notifyAdmins(NotificationKind.RUN_ATTENTION, id);
+		verify(alerts, never()).raise(any(), any(), any());
+	}
+
+	@Test
+	void aCronRunThatEndedPartialWithADeadPostAndATechnicalErrorIsRaised() {
+		PipelineRun run = partialRetryRun(SystemAccount.SCHEDULER.id(), 1, 1);
+		UUID id = run.getId();
+		assertThat(run.attentionReasons()).containsExactly(AttentionReason.DEAD_POSTS,
+				AttentionReason.PROCESSING_ERRORS);
 		notified(run, 1);
 
 		runNotifications.runEnded(id);
 
 		verify(alerts).raise(AlertEvent.RUN_NEEDS_ATTENTION, id, "Pipeline run " + id
-				+ " (retry, cron) ended partial: dead 1, errors 0, skipped 0; /admin/runs/" + id);
+				+ " (retry, cron) ended partial: dead 1, errors 1, skipped 0; /admin/runs/" + id);
 	}
 
 	@Test
@@ -283,6 +313,19 @@ class RunNotificationsTest {
 		when(run.getSkipped()).thenReturn(skipped);
 		when(run.getError()).thenReturn(error);
 		when(run.needsAttention()).thenReturn(true);
+		return run;
+	}
+
+	/**
+	 * A retry run of {@code requestedBy} that ended {@code partial} with these counters — a real run, so its
+	 * reasons are its own rule's, not stubbed.
+	 */
+	private static PipelineRun partialRetryRun(UUID requestedBy, int dead, int processingErrors) {
+		PipelineRun run = PipelineRun.retry(requestedBy, null);
+		ReflectionTestUtils.setField(run, "id", UUID.randomUUID());
+		ReflectionTestUtils.setField(run, "status", RunStatus.PARTIAL);
+		ReflectionTestUtils.setField(run, "dead", dead);
+		ReflectionTestUtils.setField(run, "processingErrors", processingErrors);
 		return run;
 	}
 

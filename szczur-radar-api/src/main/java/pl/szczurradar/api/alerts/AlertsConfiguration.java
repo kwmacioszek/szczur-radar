@@ -8,14 +8,14 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
 
 /**
- * The server's {@link OperatorAlerts}, from {@code HEALTHCHECK_PING_URL} ({@link AlertSettings}):
- * {@link HealthchecksAlerts} when it is set, {@link NoOperatorAlerts} otherwise. An invalid value fails
+ * The server's {@link OperatorAlerts}, from {@code NTFY_URL} and {@code NTFY_TOKEN} ({@link AlertSettings}):
+ * {@link NtfyAlerts} when the address is set, {@link NoOperatorAlerts} otherwise. An invalid value fails
  * the server's start ({@code InvalidSettingsException}: the {@code APPLICATION FAILED TO START} block).
  * Over it the {@link OperatorAlertQueue}, which the error paths raise their events through.
  *
  * <p>Only in the server, like {@code RunWatchdog}: the operator commands start the same context without
  * the web server, so a bad value never stops the pre-deploy {@code migrate}; {@code send-test-alert}
- * reads the setting itself, without Spring.
+ * reads the settings itself, without Spring.
  */
 @Configuration(proxyBeanMethods = false)
 @ConditionalOnWebApplication
@@ -31,8 +31,8 @@ public class AlertsConfiguration {
 					AlertSettings.NAME);
 			return new NoOperatorAlerts();
 		}
-		log.info("Operator alerts: sent to the healthchecks.io check in {}", AlertSettings.NAME);
-		return new HealthchecksAlerts(settings);
+		log.info("Operator alerts: sent to the ntfy topic in {}", AlertSettings.NAME);
+		return new NtfyAlerts(settings);
 	}
 
 	/** The error paths' way to {@link OperatorAlerts}: on its own thread, within the channel's limits. */

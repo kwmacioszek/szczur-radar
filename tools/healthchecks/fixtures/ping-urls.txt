@@ -1,5 +1,6 @@
-# The cases of the one rule for HEALTHCHECK_PING_URL (S-25): read by AlertSettingsTest (the API)
-# and by step 9 of tools/healthchecks/test.sh (the block of backup.sh, the same as trigger.sh).
+# The cases of the one rule of the secret https addresses (S-25): HEALTHCHECK_PING_URL in the crons
+# and NTFY_URL in the API (S-34). Read by AlertSettingsTest (the API) and by step 9 of
+# tools/healthchecks/test.sh (the block of backup.sh, the same as trigger.sh).
 # A line is "accept <address>" or "refuse <address>": the verdict, one space, then the rest of the
 # line is the address, spaces included. Empty lines and lines starting with # are skipped. No
 # address has white space at its ends (trimming is tested by each side on its own). Every address
