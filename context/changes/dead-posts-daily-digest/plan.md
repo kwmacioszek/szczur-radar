@@ -389,7 +389,7 @@ Podsumowanie to kilka zapytań agregujących po `assessments` i `posts` dla 1–
 - [x] 4.4 PR env: nocny przebieg crona daje na temacie `NIGHT_SUMMARY` z linią każdego skonfigurowanego źródła — cb9255f
 - [x] 4.5 PR env: log crona ma podsumowanie przed linią `OK: …`, a przebieg z samym martwym postem nie daje na temacie `RUN_NEEDS_ATTENTION` — cb9255f
 - [x] 4.6 CI zielone na PR po ostatnim commicie — cb9255f
-- [ ] 4.9 Przed merge'em produkcyjne API ma klucz `NTFY_URL` i nie ma `HEALTHCHECK_PING_URL` (`railway variables … --json | jq -e …`)
+- [x] 4.9 Przed merge'em produkcyjne API ma klucz `NTFY_URL` i nie ma `HEALTHCHECK_PING_URL` (`railway variables … --json | jq -e …`)
 
 #### Manual
 
