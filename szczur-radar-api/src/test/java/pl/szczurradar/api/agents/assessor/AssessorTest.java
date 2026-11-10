@@ -65,6 +65,7 @@ class AssessorTest {
 
 		assertThat(client.requests).hasSize(1);
 		assertThat(result.status()).isEqualTo(AssessmentResult.Status.OK);
+		assertThat(result.callFailed()).isFalse();
 		assertThat(result.output()).isEqualTo(ContractFixtures.validOutput());
 		assertThat(result.failureClass()).isNull();
 		assertThat(result.violations()).isEmpty();
@@ -86,6 +87,8 @@ class AssessorTest {
 		assertThat(client.requests).hasSize(1);
 		assertThat(result.status()).isEqualTo(AssessmentResult.Status.FAILED);
 		assertThat(result.failureClass()).isEqualTo(FailureClass.valueOf(failure.name()));
+		// The call itself failed (no text to judge): the predicate of the refusals' breaker in the pipeline.
+		assertThat(result.callFailed()).isTrue();
 		assertThat(result.output()).isNull();
 		assertThat(result.rawText()).isNull();
 		assertThat(result.violations()).singleElement().satisfies(violation -> {
@@ -174,6 +177,7 @@ class AssessorTest {
 
 		assertThat(client.requests).isEmpty();
 		assertThat(result.ok()).isTrue();
+		assertThat(result.callFailed()).isFalse();
 		assertThat(result.output()).isEqualTo(Prefilter.noContentOutput());
 		assertThat(result.rawText()).isNull();
 		assertThat(result.provenance()).isEqualTo(Provenance.prefilter("V2", NOW));
@@ -228,6 +232,8 @@ class AssessorTest {
 		assertThat(client.requests).hasSize(1);
 		assertThat(result.status()).isEqualTo(AssessmentResult.Status.FAILED);
 		assertThat(result.failureClass()).isEqualTo(expected);
+		// The model answered with text: a contract violation, not a failed call.
+		assertThat(result.callFailed()).isFalse();
 		assertThat(result.violations()).isNotEmpty();
 		assertThat(result.output()).isNull();
 		assertThat(result.rawText()).isEqualTo(raw);

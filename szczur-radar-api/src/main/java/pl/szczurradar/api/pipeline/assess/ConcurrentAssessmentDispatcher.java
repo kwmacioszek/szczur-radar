@@ -60,10 +60,13 @@ import pl.szczurradar.api.posts.PostRepository;
  *   <li>taken for the run ({@link PostTransitions#claim}) — when that fails because the run is no
  *       longer running, the remaining posts are left alone;
  *   <li>assessed: {@link Assessor#assess} on the input rebuilt from its raw payload — a call the
- *       provider refused is a {@code failed} result, never an exception; a refused configuration
- *       ({@link LlmConfigurationException}, e.g. a revoked key) stops the step: no attempt is stored
- *       and the remaining posts are not taken; a provider unavailable after the client's retries
- *       ({@link LlmUnavailableException}) stores no attempt and puts the post back, and
+ *       provider refused is a {@code failed} result, never an exception, stored with its attempt like
+ *       any failed result, and {@value #REFUSAL_STREAK} such results in a row
+ *       ({@link AssessmentResult#callFailed()}, in the order the calls end, with no answer of the model
+ *       — ok or breaking the contract — between them) stop the step: no further post is taken; a refused
+ *       configuration ({@link LlmConfigurationException}, e.g. a revoked key) stops the step too: no
+ *       attempt is stored and the remaining posts are not taken; a provider unavailable after the
+ *       client's retries ({@link LlmUnavailableException}) stores no attempt and puts the post back, and
  *       {@value #OUTAGE_STREAK} such calls in a row (in the order they end, with no call answered by
  *       the model between them; the prefilter makes no call) stop the step the same way; so do
  *       {@value #CLIENT_ERROR_STREAK} calls in a row that leave the client with an error it could not
@@ -84,11 +87,17 @@ import pl.szczurradar.api.posts.PostRepository;
  * </ol>
  *
  * A stopped step makes the run {@code failed} ({@link AssessedBatch#stoppedBy}), so neither a bad key
- * nor a provider outage uses up the posts' attempts, and a client error every call ends with costs
- * {@value #CLIENT_ERROR_STREAK} posts a technical failure each, not every post of the run. The client's
+ * nor a provider outage uses up the posts' attempts, a client error every call ends with costs
+ * {@value #CLIENT_ERROR_STREAK} posts a technical failure each, not every post of the run, and a
+ * provider refusing every call costs {@value #REFUSAL_STREAK} posts an attempt each (stored before the
+ * stop is decided; the third attempt still makes a post dead), not every post's. The client's
  * streak counts like the outages' (in the order the calls end, reset only by a stored result whose call
  * reached the model); an outage, the prefilter and an error outside the client (a mapper, a write) leave
- * it as it is, and an error of a cancelled task counts nothing. A single outage the step went on after is a
+ * it as it is, and an error of a cancelled task counts nothing. The refusals' streak is reset only by a
+ * stored result with the model's text (ok or a contract violation), and a refusal resets the other two
+ * (the provider answered); an outage, a client error, any other exception and the prefilter leave it as
+ * it is, and a result the run no longer holds the post for ({@code record} refused) counts nothing. A
+ * single outage the step went on after is a
  * technical error of its post, counted only once every post has finished, and only when nothing stopped
  * the step: the stop may come after the post was put back. Its post counts a technical failure
  * ({@link PostTransitions#countTechnicalFailure}, only while the run is still running and only for a
@@ -116,6 +125,14 @@ public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher {
 	 * and stop the step: such an error is most likely systematic, so it would go through every post.
 	 */
 	static final int CLIENT_ERROR_STREAK = 3;
+
+	/**
+	 * Calls in a row the provider refused ({@link AssessmentResult#callFailed()}: a {@code failed} result of
+	 * the call itself — the request rejected, the answer blocked or without text — stored with its attempt)
+	 * and stop the step: most likely every later call would be refused too, and each would use up its
+	 * post's attempt.
+	 */
+	static final int REFUSAL_STREAK = 3;
 
 	private static final Logger log = LoggerFactory.getLogger(ConcurrentAssessmentDispatcher.class);
 
@@ -195,6 +212,8 @@ public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher {
 		AtomicInteger outages = new AtomicInteger();
 		// Calls in a row, in the order they end, that left the client with an error it could not classify.
 		AtomicInteger clientErrors = new AtomicInteger();
+		// Calls in a row, in the order they end, the provider refused (a stored failed result of the call itself).
+		AtomicInteger refusals = new AtomicInteger();
 		Progress progress = new Progress(runId, postIds.size());
 		// The results whose count fails; reported once every post has finished.
 		LostCounts lost = new LostCounts();
@@ -204,7 +223,7 @@ public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher {
 		try {
 			for (UUID postId : postIds) {
 				tasks.futures().add(executor.submit(() -> {
-					Outcome outcome = assess(runId, postId, runStopped, stoppedBy, outages, clientErrors,
+					Outcome outcome = assess(runId, postId, runStopped, stoppedBy, outages, clientErrors, refusals,
 							tasks.cancelled());
 					count(runId, postId, outcome, lost);
 					progress.finished(outcome);
@@ -270,7 +289,7 @@ public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher {
 	}
 
 	private Outcome assess(UUID runId, UUID postId, AtomicBoolean runStopped, AtomicReference<@Nullable String> stoppedBy,
-			AtomicInteger outages, AtomicInteger clientErrors, AtomicBoolean cancelled) {
+			AtomicInteger outages, AtomicInteger clientErrors, AtomicInteger refusals, AtomicBoolean cancelled) {
 		if (runStopped.get() || cancelled.get()) {
 			return new Outcome.NotTaken();
 		}
@@ -300,6 +319,24 @@ public class ConcurrentAssessmentDispatcher implements AssessmentDispatcher {
 				// errors are in a row any more.
 				outages.set(0);
 				clientErrors.set(0);
+				if (result.callFailed()) {
+					// The provider refused the call: its attempt is stored (above), and every later call would
+					// most likely be refused the same way, each using up its post's attempt: stop taking posts.
+					if (refusals.incrementAndGet() >= REFUSAL_STREAK) {
+						runStopped.set(true);
+						String message = result.violations().getFirst().message();
+						if (stoppedBy.compareAndSet(null, "the LLM provider refused " + REFUSAL_STREAK
+								+ " calls in a row; the last: " + message)) {
+							log.warn("The LLM provider refused {} calls in a row in run {}; no further post is taken:"
+									+ " {}", REFUSAL_STREAK, runId, message);
+						}
+					}
+				}
+				else {
+					// The model answered with text (ok or breaking the contract): the refusals are not in a row
+					// any more.
+					refusals.set(0);
+				}
 			}
 			// The prefilter makes no call (attempts 0).
 			return new Outcome.Stored(result.ok(), !result.ok() && attempts.get() + 1 >= Post.MAX_ASSESSMENT_ATTEMPTS,

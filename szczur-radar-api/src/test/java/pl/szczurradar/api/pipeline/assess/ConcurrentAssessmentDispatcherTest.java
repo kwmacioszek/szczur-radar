@@ -989,6 +989,164 @@ class ConcurrentAssessmentDispatcherTest {
 			.allSatisfy(line -> assertThat(line).contains("LlmClientException"));
 	}
 
+	@Test
+	void threeRefusalsInARowStopTheStepAfterTheirAttemptsAreStored(CapturedOutput output) {
+		List<UUID> ids = List.of(post(ContractFixtures.BODY + REFUSED), post(ContractFixtures.BODY + REFUSED),
+				post(ContractFixtures.BODY + REFUSED), post(ContractFixtures.BODY), post(ContractFixtures.BODY));
+
+		AssessedBatch batch = dispatchOnOneThread(ids);
+
+		assertThat(batch.stoppedBy())
+			.isEqualTo("the LLM provider refused 3 calls in a row; the last: HTTP 400: refused");
+		assertThat(batch.status()).isEqualTo(RunStatus.FAILED);
+		assertThat(batch.failed()).isEqualTo(3);
+		assertThat(batch.dead()).isZero();
+		assertThat(batch.processingErrors()).isEmpty();
+		// The posts after the third refusal are neither taken nor called.
+		assertThat(calls).hasValue(3);
+		verify(transitions, never()).claim(ids.get(3), RUN);
+		verify(transitions, never()).claim(ids.get(4), RUN);
+		// Each refusal is the post's failed result, stored as its first attempt, as before the breaker.
+		assertThat(recorded).extracting(Assessment::getPostId).containsExactlyElementsOf(ids.subList(0, 3));
+		assertThat(recorded).allSatisfy(assessment -> assertThat(assessment.getFailureClass())
+			.isEqualTo(FailureClass.PROVIDER_ERROR));
+		ids.subList(0, 3).forEach(id -> {
+			verify(transitions).record(eq(id), eq(RUN), eq(0), any(Assessment.class));
+			assertThat(stages.get(id)).isEqualTo(PostStage.FAILED);
+		});
+		// The rest never left their stage: no attempt.
+		ids.subList(3, 5).forEach(id -> {
+			verify(transitions, never()).record(eq(id), any(UUID.class), anyInt(), any(Assessment.class));
+			assertThat(stages.get(id)).isEqualTo(PostStage.STORED);
+			assertThat(attempts.get(id)).isZero();
+		});
+		// A refusal is the post's fault, never a technical one: the stop is the run's failure.
+		verify(transitions, never()).releaseFailed(any(UUID.class), any(UUID.class), any(String.class));
+		verify(transitions, never()).countTechnicalFailure(any(UUID.class), any(UUID.class), any(String.class));
+		assertThat(technicalFailures).isEmpty();
+		verify(recorder, times(3)).count(RUN, Counters.assessedFailed(false, 0, false));
+		verify(recorder, times(3)).count(eq(RUN), any(Counters.class));
+		assertThat(output.getAll().lines().filter(line -> line.contains(" WARN "))).singleElement()
+			.satisfies(line -> assertThat(line).contains("The LLM provider refused 3 calls in a row in run " + RUN,
+					"no further post is taken", "HTTP 400: refused"));
+		assertThat(output.getAll().lines().filter(line -> line.contains(" ERROR "))).isEmpty();
+	}
+
+	@Test
+	void aContractViolationBetweenRefusalsEndsTheStreakOfRefusals() {
+		List<UUID> ids = List.of(post(ContractFixtures.BODY + REFUSED), post(ContractFixtures.BODY + REFUSED),
+				post(ContractFixtures.BODY + INVALID), post(ContractFixtures.BODY + REFUSED),
+				post(ContractFixtures.BODY + REFUSED));
+
+		AssessedBatch batch = dispatchOnOneThread(ids);
+
+		// The model answered the third post, though it broke the contract: two refusals, then two, never
+		// three in a row.
+		assertThat(batch.stoppedBy()).isNull();
+		assertThat(batch.status()).isEqualTo(RunStatus.PARTIAL);
+		assertThat(calls).hasValue(5);
+		assertThat(batch.failed()).isEqualTo(5);
+		assertThat(recorded).extracting(Assessment::getPostId).containsExactlyElementsOf(ids);
+		assertThat(recorded).extracting(Assessment::getFailureClass).containsExactly(FailureClass.PROVIDER_ERROR,
+				FailureClass.PROVIDER_ERROR, FailureClass.INVALID_STRUCTURED_OUTPUT, FailureClass.PROVIDER_ERROR,
+				FailureClass.PROVIDER_ERROR);
+		// Every post used its first attempt: its failed result stored.
+		assertThat(stages).allSatisfy((id, stage) -> assertThat(stage).isEqualTo(PostStage.FAILED));
+		assertThat(batch.processingErrors()).isEmpty();
+	}
+
+	@Test
+	void anAnswerOfTheModelBetweenRefusalsEndsTheStreakOfRefusals() {
+		UUID answered = post(ContractFixtures.BODY);
+		List<UUID> ids = List.of(post(ContractFixtures.BODY + REFUSED), post(ContractFixtures.BODY + REFUSED), answered,
+				post(ContractFixtures.BODY + REFUSED), post(ContractFixtures.BODY + REFUSED));
+
+		AssessedBatch batch = dispatchOnOneThread(ids);
+
+		// A valid answer in between: two refusals, then two, never three in a row.
+		assertThat(batch.stoppedBy()).isNull();
+		assertThat(batch.status()).isEqualTo(RunStatus.PARTIAL);
+		assertThat(calls).hasValue(5);
+		assertThat(batch.ok()).isOne();
+		assertThat(batch.failed()).isEqualTo(4);
+		assertThat(stages.get(answered)).isEqualTo(PostStage.ASSESSED);
+		assertThat(recorded).extracting(Assessment::getPostId).containsExactlyElementsOf(ids);
+		assertThat(batch.processingErrors()).isEmpty();
+	}
+
+	@Test
+	void aPostDecidedByThePrefilterDoesNotEndTheStreakOfRefusals() {
+		UUID prefiltered = post("#gielda <url>");
+		UUID after = post(ContractFixtures.BODY);
+		List<UUID> ids = List.of(post(ContractFixtures.BODY + REFUSED), post(ContractFixtures.BODY + REFUSED),
+				prefiltered, post(ContractFixtures.BODY + REFUSED), after);
+
+		AssessedBatch batch = dispatchOnOneThread(ids);
+
+		// No call between the refusals: the third one stops the step.
+		assertThat(batch.stoppedBy()).contains("the LLM provider refused 3 calls in a row");
+		assertThat(batch.status()).isEqualTo(RunStatus.FAILED);
+		assertThat(calls).hasValue(3);
+		assertThat(recorded).extracting(Assessment::getPostId).containsExactly(ids.get(0), ids.get(1), prefiltered,
+				ids.get(3));
+		assertThat(stages.get(prefiltered)).isEqualTo(PostStage.ASSESSED);
+		verify(transitions, never()).claim(after, RUN);
+		assertThat(stages.get(after)).isEqualTo(PostStage.STORED);
+		assertThat(attempts.get(after)).isZero();
+		assertThat(batch.processingErrors()).isEmpty();
+		assertThat(technicalFailures).isEmpty();
+	}
+
+	@Test
+	void anOutageAndAnErrorOfOurCodeNeitherAddToNorEndTheStreakOfRefusals() {
+		UUID outage = post(ContractFixtures.BODY + UNAVAILABLE);
+		UUID boom = post(BOOM);
+		UUID after = post(ContractFixtures.BODY);
+		List<UUID> ids = List.of(post(ContractFixtures.BODY + REFUSED), outage, post(ContractFixtures.BODY + REFUSED),
+				boom, post(ContractFixtures.BODY + REFUSED), after);
+
+		AssessedBatch batch = dispatchOnOneThread(ids);
+
+		// Neither the outage nor the client's bug is an answer of the model: the third refusal, the fifth
+		// post, stops the step.
+		assertThat(batch.stoppedBy()).contains("the LLM provider refused 3 calls in a row");
+		assertThat(batch.status()).isEqualTo(RunStatus.FAILED);
+		assertThat(calls).hasValue(5);
+		verify(transitions, never()).claim(after, RUN);
+		assertThat(recorded).extracting(Assessment::getPostId).containsExactly(ids.get(0), ids.get(2), ids.get(4));
+		assertThat(recorded).allSatisfy(assessment -> assertThat(assessment.getFailureClass())
+			.isEqualTo(FailureClass.PROVIDER_ERROR));
+		// The bug is its post's technical error; the single outage is not counted, as the step stopped.
+		assertThat(batch.processingErrors()).extracting(ProcessingError::postId, ProcessingError::message)
+			.containsExactly(tuple(boom, "IllegalStateException: a bug in the client"));
+		assertThat(stages.get(outage)).isEqualTo(PostStage.STORED);
+		assertThat(attempts.get(outage)).isZero();
+		verify(transitions, never()).countTechnicalFailure(any(UUID.class), any(UUID.class), any(String.class));
+		assertThat(technicalFailures).containsOnlyKeys(boom);
+	}
+
+	@Test
+	void aRefusalEndsTheStreakOfClientErrors() {
+		UUID refused = post(ContractFixtures.BODY + REFUSED);
+		List<UUID> ids = List.of(post(ContractFixtures.BODY + CLIENT_ERROR), post(ContractFixtures.BODY + CLIENT_ERROR),
+				refused, post(ContractFixtures.BODY + CLIENT_ERROR), post(ContractFixtures.BODY + CLIENT_ERROR));
+
+		AssessedBatch batch = dispatchOnOneThread(ids);
+
+		// The provider answered the refused call: two client errors, then two, never three in a row.
+		assertThat(batch.stoppedBy()).isNull();
+		assertThat(batch.status()).isEqualTo(RunStatus.PARTIAL);
+		assertThat(calls).hasValue(5);
+		assertThat(batch.failed()).isOne();
+		assertThat(recorded).singleElement().satisfies(assessment -> {
+			assertThat(assessment.getPostId()).isEqualTo(refused);
+			assertThat(assessment.getFailureClass()).isEqualTo(FailureClass.PROVIDER_ERROR);
+		});
+		assertThat(batch.processingErrors()).extracting(ProcessingError::postId)
+			.containsExactly(ids.get(0), ids.get(1), ids.get(3), ids.get(4));
+		assertThat(technicalFailures).containsOnlyKeys(ids.get(0), ids.get(1), ids.get(3), ids.get(4));
+	}
+
 	private UUID post(String body) {
 		UUID id = UUID.randomUUID();
 		bodies.put(id, body);
