@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from './client'
 import { fetchMissingDays, fetchRun, fetchRuns, fetchSources, retryPosts, startErrorMessage, startRange } from './pipeline'
-import { fetchFailedPosts, fetchPosts } from './posts'
+import { fetchFailedPosts, fetchPosts, restorePosts } from './posts'
 
 function respond(status: number, body: unknown) {
   // A new Response per call: a body can be read only once.
@@ -37,6 +37,16 @@ describe('pipeline and posts API', () => {
     const fetchMock = respond(202, [])
     await retryPosts(['a', 'b'])
     expect(sent(fetchMock).body).toEqual({ postIds: ['a', 'b'] })
+  })
+
+  it('restores the given dead posts', async () => {
+    const fetchMock = respond(200, { restored: 1 })
+    await expect(restorePosts(['a', 'b'])).resolves.toEqual({ restored: 1 })
+    expect(sent(fetchMock)).toEqual({
+      path: '/api/admin/posts/restore',
+      method: 'POST',
+      body: { postIds: ['a', 'b'] },
+    })
   })
 
   it('reads pages of posts, failed posts and runs, and the sources', async () => {

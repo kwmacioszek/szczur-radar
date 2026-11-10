@@ -63,4 +63,14 @@ public record AssessmentResult(Status status, @Nullable AssessmentOutputV2 outpu
 		return status == Status.OK;
 	}
 
+	/**
+	 * Whether the result is a {@code failed} one of the call itself ({@link FailureClass#fromCall()}: the
+	 * provider refused the request or the call timed out, so there was no text to judge) — the result
+	 * {@code Assessor.failed} builds. {@code false} for an {@code ok} result, the prefilter's and a model
+	 * response that broke the contract.
+	 */
+	public boolean callFailed() {
+		return status == Status.FAILED && failureClass != null && failureClass.fromCall();
+	}
+
 }

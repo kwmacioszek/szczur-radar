@@ -50,7 +50,9 @@ Every route starts runs only through `PipelineRunService`; none has its own star
 | `PipelineRunExceptionHandler` | the service's refusals for both run controllers: 409 `pipeline_busy`, 400 `post_dead`, 503 `source_not_configured` | — |
 
 The failed posts' list (`GET /api/admin/posts/failed`, "On hold" below) is not a route of this package:
-`posts/api/FailedPostController`.
+`posts/api/FailedPostController`; nor is restoring dead posts (`POST /api/admin/posts/restore`,
+`posts/api/DeadPostController`, S-33), which writes only through `state/PostTransitions.restore` and starts
+no run.
 
 ```
 PipelineRunService.startRange / startPosts → queue (thread pipeline-run) → RunSequence.run:
@@ -68,9 +70,9 @@ PipelineRunService.startRange / startPosts → queue (thread pipeline-run) → R
 | `step/PostStore` | new posts with their raw payload, once per `(source, item_type, source_item_id)`; `findKeys` in chunks of 1,000; stores chunks of 500 in one transaction each (raw payloads, then posts: JDBC batches), a chunk hitting the unique key again post by post; before each chunk an interrupt checkpoint (`RunInterruptedException`, below), so a stopped run stores at most the chunk it was in |
 | `step/AssessmentSelection` | one attempt per post and request: range → only the posts it stored first; retry → every leftover except posts on hold (`PostRepository.findLeftoverIds`, below); posts → the given ones still assessable (`stored` / `failed`, on hold or not) |
 | `assess/AssessmentDispatcher` | the port of the assess step (`dispatch`, which stops like `cancel` when its thread is interrupted while it waits, and `cancel` for a run the watchdog stopped); a Batch API version may replace the concurrent one |
-| `assess/ConcurrentAssessmentDispatcher` | first `LlmClient.check()` (any exception → no post taken, run `failed` with `the LLM check failed: …`; a check that fails on an interrupted thread — the run was stopped during it — ends the step with `RunInterruptedException` instead, at INFO, the check's exception as its cause); the `AssessmentPool` threads (`PIPELINE_LLM_CONCURRENCY`, default 4: a bean passed in, shut down with the context); per post: claim → `Assessor.assess` on `AssessmentInputs.of(post)` → record, or release, then the post's result goes into the run's counters at once (`RunRecorder.count`, below); an `LlmConfigurationException` (revoked key, no credit, unknown model) stops taking posts (WARN with the provider's reason), counts no attempt and fails the run (`AssessedBatch.stoppedBy`); an `LlmUnavailableException` (retries used up) stores nothing and releases the post, and `OUTAGE_STREAK` (3) of them in a row stop the step the same way (the breaker, Rules below); any other exception puts the post back with `releaseFailed` (one more technical failure), and `CLIENT_ERROR_STREAK` (3) `LlmClientException`s in a row (errors the LLM client could not classify) also stop the step (the client's breaker, Rules below); a failed `count` is a WARN and leaves the post's outcome (a stored post is never a technical error), and once every post has finished the step's failed counts give one ERROR and `RUN_COUNTERS_LOST` (below); `cancel(runId)` interrupts the run's post tasks, and so does an interrupt of the thread waiting in `dispatch` (it marks them cancelled first, then throws; below) and the pool's own shutdown when the context closes; a task ending on an interrupted thread counts nothing, whichever of the three interrupted it; a progress line in the log at most once a minute and after the last post |
+| `assess/ConcurrentAssessmentDispatcher` | first `LlmClient.check()` (any exception → no post taken, run `failed` with `the LLM check failed: …`; a check that fails on an interrupted thread — the run was stopped during it — ends the step with `RunInterruptedException` instead, at INFO, the check's exception as its cause); the `AssessmentPool` threads (`PIPELINE_LLM_CONCURRENCY`, default 4: a bean passed in, shut down with the context); per post: claim → `Assessor.assess` on `AssessmentInputs.of(post)` → record, or release, then the post's result goes into the run's counters at once (`RunRecorder.count`, below); an `LlmConfigurationException` (revoked key, no credit, unknown model) stops taking posts (WARN with the provider's reason), counts no attempt and fails the run (`AssessedBatch.stoppedBy`); an `LlmUnavailableException` (retries used up) stores nothing and releases the post, and `OUTAGE_STREAK` (3) of them in a row stop the step the same way (the breaker, Rules below); any other exception puts the post back with `releaseFailed` (one more technical failure), and `CLIENT_ERROR_STREAK` (3) `LlmClientException`s in a row (errors the LLM client could not classify) also stop the step (the client's breaker, Rules below); a call the provider refused is the post's `failed` result (`provider_error` / `timeout`), stored with its attempt like any failed result, and `REFUSAL_STREAK` (3) of them in a row (`AssessmentResult.callFailed()`, with no answer of the model between them) stop the step after the third is stored (the refusals' breaker, Rules below); a failed `count` is a WARN and leaves the post's outcome (a stored post is never a technical error), and once every post has finished the step's failed counts give one ERROR and `RUN_COUNTERS_LOST` (below); `cancel(runId)` interrupts the run's post tasks, and so does an interrupt of the thread waiting in `dispatch` (it marks them cancelled first, then throws; below) and the pool's own shutdown when the context closes; a task ending on an interrupted thread counts nothing, whichever of the three interrupted it; a progress line in the log at most once a minute and after the last post |
 | `assess/AssessmentInputs` | a stored post's assessment input, rebuilt from its raw payload by its source's `RawInputMapper` |
-| `state/PostTransitions` | the post's stage changes, each a conditional `UPDATE` with `updated_at = now()`: claim (only while the run is running), record (only while the run owns the post; resets `technical_failures` and `last_technical_error`), release (back without an attempt; says whether this run put it back), releaseFailed (release + one more technical failure with its message, in the same statement, only while the run owns the post), countTechnicalFailure (one more technical failure on a post already put back, `stored` / `failed`, only while the run is still running); the message is cut to 500 characters, without U+0000. A column added to `posts` is classified in `state/PostColumnsIT` (set once by the `INSERT`, or post state with its value after every transition), and a new transition gets a scenario there |
+| `state/PostTransitions` | the post's stage changes, each a conditional `UPDATE` with `updated_at = now()`: claim (only while the run is running), record (only while the run owns the post; resets `technical_failures` and `last_technical_error`), release (back without an attempt; says whether this run put it back), releaseFailed (release + one more technical failure with its message, in the same statement, only while the run owns the post), countTechnicalFailure (one more technical failure on a post already put back, `stored` / `failed`, only while the run is still running), restore (an admin's: `dead` → `stored` with 0 attempts, 0 technical failures and no last error, only from `dead`, the posts' `assessments` rows kept; `posts/api/DeadPostController`, `POST /api/admin/posts/restore`, S-33); the message is cut to 500 characters, without U+0000. A column added to `posts` is classified in `state/PostColumnsIT` (set once by the `INSERT`, or post state with its value after every transition), and a new transition gets a scenario there |
 | `state/RunRecorder` | run status, steps, counters, error, `last_activity_at`, each source's result (`source`: the run's `fetched`, `skipped`, `sources_failed` / `sources_empty`, its activity and the `pipeline_run_sources` row in one statement, only while it runs) — every change conditional on the expected status; a step opens only in a running run and closes only once; `step(…, Function<T, StepOutcome>)` lets a step decide its own end from its result (the assess step whose dispatcher stopped, `AssessedBatch.stoppedBy`, is closed `failed` with that reason though `dispatch` returned), `step(…, ToIntFunction<T>)` closes it `succeeded`; a step that throws is closed `failed` with the error, and when that close fails too (an interrupted thread, the database gone) its failure is suppressed in the step's exception; `interrupt` / `interruptAll` (with the cause), `interruptOrphans` (cause `lost`, all or none; Rules), `stall` (the watchdog) and `fail` (a run that cannot go on: an `Error` escaping its step leaves the step open, `step` catching only `RuntimeException`) close the open steps in the same transaction; status and stage values are bound from their enums, never written into the SQL |
 | `state/RunInterruptedException` | `checkpoint(runId, step)` throws when the run's thread is interrupted (the flag stays set): `PostStore` before each chunk, `SourceIngest` before each source |
 
@@ -111,6 +113,8 @@ PipelineRunService.startRange / startPosts → queue (thread pipeline-run) → R
   WARN `The LLM provider is unavailable in run <id>: 3 calls in a row failed after their retries; no
   further post is taken: …` (the breaker, once), WARN `The LLM client failed 3 calls in a row in run <id>
   with an error that is not the provider's; no further post is taken: …` (the client's breaker, once),
+  WARN `The LLM provider refused 3 calls in a row in run <id>; no further post is taken: …` (the
+  refusals' breaker, once; the last refusal's message, cleaned of the key by the client),
   WARN `Assessing post <id> in run <id> found the LLM
   provider unavailable; the post was put back without an attempt, counting a technical failure: …` (each
   single outage counted at the step's end) and ERROR `Assessing post <id> in run <id> failed; the post is
@@ -128,7 +132,7 @@ PipelineRunService.startRange / startPosts → queue (thread pipeline-run) → R
   to a run that is over. `endStep` changes only a step that is still `running`: the step an interruption
   or the watchdog closed stays as they left it. The assess step ends by its result (audit A6): a dispatch
   the dispatcher stopped (`AssessedBatch.stoppedBy`: the LLM check failed, the configuration refused, the
-  breaker, the client's breaker) closes the step `failed` with that reason, so a `failed` run never shows its `assess` step
+  breaker, the client's breaker, the refusals' breaker) closes the step `failed` with that reason, so a `failed` run never shows its `assess` step
   `succeeded`.
 - **Interruption cause** (`run/InterruptionCause`, column `interruption_cause`, only on an
   `interrupted` run; its open steps become `interrupted`):
@@ -343,7 +347,11 @@ PipelineRunService.startRange / startPosts → queue (thread pipeline-run) → R
 - **Attempts: three faults** (S-09, `ConcurrentAssessmentDispatcher`):
   - *the post's fault* — the provider refused the request (a non-retryable error) or the model's answer
     broke the contract: `Assessor` returns a `failed` result, its row is stored and the attempt counts;
-    the third makes the post `dead` (`state/PostTransitions.Outcome`). Only this uses an attempt;
+    the third makes the post `dead` (`state/PostTransitions.Outcome`), which no run takes any more: only an
+    admin's restore (`PostTransitions.restore`, S-33) brings it back, `stored` with all three attempts
+    again. Only this uses an attempt. A refusal on its own is this fault, but three in a row (S-32) are
+    most likely the provider's doing and would go through every post's attempt, so they stop the step
+    (the refusals' breaker, below);
   - *the provider's fault* — `LlmUnavailableException` (retries used up on 429/5xx/time-out/connection
     errors, or interrupted between attempts; `llm/CLAUDE.md`), which `Assessor` throws like
     `LlmConfigurationException`: nothing is stored, the post is released (`release`), no attempt;
@@ -377,6 +385,24 @@ PipelineRunService.startRange / startPosts → queue (thread pipeline-run) → R
   client error of a task `cancel()`, an interrupted `await` or the pool's shutdown cancelled is `NotTaken`,
   never counted. The
   check before the step (`llm.check()`) is outside the streak: any exception there already takes no post.
+- **The refusals' breaker** (S-32, R-41). `REFUSAL_STREAK` (3, a constant, no variable) refusals in a row
+  stop the step the same way: a refusal is a stored `failed` result of the call itself
+  (`AssessmentResult.callFailed()`: `FailureClass.fromCall()`, `provider_error` / `timeout`, built only by
+  `Assessor.failed` — the request rejected by the provider, a blocked answer, an answer without text, a
+  time-out of the last attempt; `llm/CLAUDE.md`), never a contract violation of the model's text. After the
+  third is stored: no further post is taken, `stoppedBy` = `the LLM provider refused 3 calls in a row; the
+  last: <the last refusal's message>` (one WARN), so the run ends `failed` and its `assess` step `failed`
+  (signals as for any `failed` run: the bell, `RUN_NEEDS_ATTENTION` for an admin's run, exit 1 for the
+  cron's). The three posts of the streak keep their stored result and used attempt (the result is stored
+  before the stop is decided, as for any failed result; a third attempt still makes a post `dead`, which
+  FR-034 restores), the remaining posts go back without an attempt or a technical failure, and posts whose
+  calls were already in flight on other threads end as usual (so on `PIPELINE_LLM_CONCURRENCY` threads up
+  to `3 + threads − 1` refusals are stored). "In a row" is in the order the calls end (one counter per
+  step, next to the outages' and the client's); a stored result with the model's text (ok or a contract
+  violation) resets it; a refusal still resets the outages' and the client's streaks (the provider
+  answered); an outage, a client error, any other exception (a mapper, a write) and the prefilter neither
+  add to it nor reset it, and a result `record` refused (the run no longer holds the post) counts nothing.
+  The check before the step (`llm.check()`) is outside the streak, as for the other two.
 - **Deferred counting of single outages.** A post's outage is counted only after `dispatch` has awaited
   every task, and only when nothing stopped the step (`stoppedBy == null`): the breaker may trip after
   that post was put back. Then `countTechnicalFailure` (only while the run is still `running`: a run a
@@ -387,7 +413,8 @@ PipelineRunService.startRange / startPosts → queue (thread pipeline-run) → R
   and single outages alike — with `last_technical_error`; any stored result (ok or `failed`) resets both
   (`record`). At `Post.MAX_TECHNICAL_FAILURES` (3) the post is on hold: it keeps its stage (`stored` /
   `failed`), `PostRepository.findLeftoverIds` / `existsLeftover` skip it (the RETRY run never takes it,
-  and it alone queues no RETRY), a POSTS run (an admin's "Ponów zaznaczone") still takes it, and
+  and it alone queues no RETRY), a POSTS run (an admin's "Ponów zaznaczone"; dead posts get "Przywróć
+  martwe" instead, `POST /api/admin/posts/restore`) still takes it, and
   `GET /api/admin/posts/failed` lists it with `technicalFailures`, `lastTechnicalError`, `onHold`.
 - Code that runs work in parallel passes its own executor (`availableProcessors()` may be 1).
 - **A source's failure or silence is its own result** (S-20). `SourceIngest.fetch` fetches every source of
@@ -518,7 +545,13 @@ PipelineRunService.startRange / startPosts → queue (thread pipeline-run) → R
   put back with `releaseFailed` and a processing error, a stored result between them resets the streak,
   an error outside the client (a plain `IllegalStateException` building the input or from the client)
   neither adds to it nor resets it, nor does an outage, and a client error of a cancelled call counts
-  nothing; `state/RunOutcomeTest` that its stop fails the run with both the stop and the posts' errors),
+  nothing; the refusals' breaker: three refusals in a row stop the step after the third is stored with
+  its attempt (the posts after it never claimed, no technical failure, one WARN, no ERROR), a contract
+  violation and a valid answer between refusals each reset the streak, a prefilter post does not, an
+  outage and an error of our code between them neither add to it nor reset it (the single outage is not
+  counted, as the step stopped), and a refusal still resets the client's streak (the outages' streak is
+  covered by `aRefusedCallEndsTheStreakOfOutages`); `state/RunOutcomeTest` that its stop fails the run
+  with both the stop and the posts' errors),
 
   `run/PipelineRunTest` (`attentionReasons` for every status, with and without failed or empty sources and
   skipped elements, in the rule's order; none for a new run),
@@ -547,10 +580,15 @@ PipelineRunService.startRange / startPosts → queue (thread pipeline-run) → R
   putting back a post claimed just as its run was interrupted and leaving the posts of a queued or
   running run, `releaseFailed` counting only for the run holding
   the post, a long error cut and without U+0000, `record` resetting the count, `countTechnicalFailure`
-  only on a post put back while its run is running. `state/PostColumnsIT` (on Postgres, not rolled back):
+  only on a post put back while its run is running, `restore` only of a `dead` post among every stage (the
+  count, a second call 0, its `assessments` rows kept, the post a leftover again). `state/PostColumnsIT` (on Postgres, not rolled back):
   every `posts` column classified, and each transition's full row on a post with technical failures — the
-  state columns as above, every other column unchanged, `updated_at` moved. `posts/api/PostsApiIT`: the failed list with posts on
-  hold and `failed` posts with technical errors.
+  state columns as above, every other column unchanged, `updated_at` moved (`restore`: a dead post of an
+  ended run). `posts/api/PostsApiIT`: the failed list with posts on
+  hold and `failed` posts with technical errors; `POST /api/admin/posts/restore` — a dead post restored
+  (`{"restored":1}`, off the failed list, its attempts kept, no longer dead for a posts run), only the dead
+  ones of a mixed list, a repeat `{"restored":0}`, 400 `invalid_request` for an empty list, 101 ids, a
+  `null` id or no `postIds`, allowed while a run is running.
 - `api/InternalPipelineRunIT` (+ `InternalPipelineRunWithoutTokenIT`): the token, no session and no
   cookie on `/internal/**`, the D-2…D-1 range for a fixed `Clock` (also a DST day), 409, 404, the exact
   keys of `GET /internal/pipeline-runs/{id}` with `step` and `assessTotal` during the assessment; since S-34
@@ -558,7 +596,8 @@ PipelineRunService.startRange / startPosts → queue (thread pipeline-run) → R
   run (a mocked `OperatorAlerts`), 400 without 1–10 ids, 404 for an unknown run, 401 without the token.
   `NightSummaryIT` (the summary's queries on seeded rows) and `NightSummaryTest` (the text) are listed under
   "The night's summary" above.
-  `api/PipelineRunControllerIT`: the run page, 404, the new fields, `scheduled` for the cron's run.
+  `api/PipelineRunControllerIT`: the run page, 404, the new fields, `scheduled` for the cron's run; a dead
+  post refused (`post_dead`), restored, then assessed by a posts run with one `assessments` row more.
   `api/FreshnessIT`: which runs move each source's date in the label. `api/MissingDaysIT` (fixed `Clock`): which runs cover a day
   (`failed`, `interrupted`, `queued`, `running` and RETRY/POSTS runs do not; `partial` and an admin's do;
   in a `partial` run with a second source — Reddit on `sources/reddit/LocalReddit`, configured only there —,
@@ -616,7 +655,11 @@ PipelineRunService.startRange / startPosts → queue (thread pipeline-run) → R
   still has no answer and the call saw the interrupt, neither closes
   nor reports the run again and logs no ERROR), a refused LLM key (`failed`, no attempt), a provider
   unavailable for three calls in a row (`failed` with the breaker's error, no attempt, no technical
-  failure, the admin notified) and an outage of a run a stopping instance interrupted (the interrupt ends
+  failure, the admin notified), a provider refusing every call on every model-assessed post of the day
+  (S-32: `failed` with the refusals' breaker's error and the last refusal's message, 3 to 6 refusals
+  stored — the 4 threads — each a `provider_error` result and its post's one attempt, equal to the run's
+  `assessed_failed`, every other post `stored` without an attempt or a technical failure, no `dead`, no
+  processing error, the admin notified) and an outage of a run a stopping instance interrupted (the interrupt ends
   the held call before its answer, as the stopped run's, at INFO, counting nothing); two sources — Reddit
   is its production client, repository, fetcher and mapper on `sources/reddit/LocalReddit` (a
   `RedditRepository` bean over `LocalRedditServer` answering the real, anonymized Arctic Shift pages of

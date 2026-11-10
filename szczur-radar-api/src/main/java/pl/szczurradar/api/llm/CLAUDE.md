@@ -55,7 +55,10 @@ whatever the finish reason (`ChatResponses.requireText`).
   (a subclass of `LlmCallException`). `Assessor` rethrows it instead of recording a `failed` result,
   and the pipeline stops the run (`pipeline/CLAUDE.md`), so a revoked key never uses up posts'
   attempts. 403 stays `REJECTED`: a provider may refuse one request's content with it (OpenRouter
-  moderation). The exception is OpenRouter's 403 for a spent budget — `error.message` starting with
+  moderation). A refusal (`REJECTED`, a plain `LlmCallException`) is the post's `failed` result and uses
+  its attempt, but a series of them stops the run in `pipeline/assess/` (`REFUSAL_STREAK`, 3 in a row with
+  no answer of the model between them; `pipeline/CLAUDE.md`, the refusals' breaker), so a provider refusing
+  every request costs at most three posts an attempt, not every post's. The exception is OpenRouter's 403 for a spent budget — `error.message` starting with
   "Key limit exceeded", or `error.metadata.limit_source` `openrouter_key_limit` /
   `openrouter_workspace_budget` / `openrouter_guardrail_budget` (openrouter.ai/docs/api_reference/limits,
   openrouter.ai/docs/guides/best-practices/capping-shared-agent-keys): `OpenRouterClient` makes it

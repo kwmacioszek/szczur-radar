@@ -52,6 +52,7 @@ import pl.szczurradar.api.alerts.OperatorAlertQueue;
 import pl.szczurradar.api.cli.MigrateCommand;
 import pl.szczurradar.api.llm.CallFailure;
 import pl.szczurradar.api.llm.Channel;
+import pl.szczurradar.api.llm.LlmCallException;
 import pl.szczurradar.api.llm.LlmClient;
 import pl.szczurradar.api.llm.LlmConfigurationException;
 import pl.szczurradar.api.llm.LlmRequest;
@@ -667,6 +668,51 @@ class PipelineRunIT {
 		assertThat(post(ids.get(3))).containsEntry("stage", "failed")
 			.containsEntry("assessment_attempts", 2)
 			.containsEntry("technical_failures", 0);
+		awaitClosed(run);
+		assertThat(notified(run)).isOne();
+	}
+
+	@Test
+	void aProviderRefusingThreeCallsInARowFailsTheRunBeforeTheOtherPostsUseAnAttempt() {
+		assessedDay();
+		// Every post of the day the model assessed (the prefilter's make no call), put back as never assessed:
+		// more than the breaker and the pool's 4 threads together, so the stop leaves posts untouched.
+		List<UUID> ids = modelAssessedPosts(16);
+		assertThat(ids).hasSizeGreaterThanOrEqualTo(7);
+		assertThat(jdbc.update("UPDATE posts p SET stage = 'stored', assessment_attempts = 0 WHERE p.stage = 'assessed'"
+				+ " AND EXISTS (SELECT 1 FROM assessments a WHERE a.post_id = p.id AND a.result_source = 'model')"))
+			.isEqualTo(ids.size());
+		// The check passes (the mock's default); the provider then refuses every call: a failed result, no exception.
+		answer(request -> {
+			throw new LlmCallException(CallFailure.PROVIDER_ERROR, "HTTP 403: moderation", 1, ServiceTier.DEFAULT, false,
+					null);
+		});
+
+		UUID run = service.startPosts(ids, admin).getFirst().getId();
+
+		Map<String, Object> finished = finished(run);
+		assertThat(finished).containsEntry("status", "failed")
+			.containsEntry("assessed_ok", 0)
+			.containsEntry("processing_errors", 0)
+			.containsEntry("dead", 0);
+		assertThat((String) finished.get("error")).contains("the LLM provider refused 3 calls in a row",
+				"HTTP 403: moderation");
+		assertThat(steps(run)).contains("select:succeeded", "assess:failed");
+		// The three refusals of the streak are stored with their attempt, and so are those in flight on the other
+		// threads when the third ended: at most 3 + (4 − 1). Each is the run's only kind of result.
+		int refused = count("SELECT count(*) FROM assessments WHERE run_id = ? AND result_source = 'model'"
+				+ " AND status = 'failed' AND failure_class = 'provider_error'", run);
+		assertThat(refused).isBetween(3, 6);
+		assertThat(count("SELECT count(*) FROM assessments WHERE run_id = ?", run)).isEqualTo(refused);
+		assertThat(finished).containsEntry("assessed_failed", refused);
+		assertThat(count("SELECT count(*) FROM posts WHERE stage = 'failed' AND assessment_attempts = 1", null))
+			.isEqualTo(refused);
+		// The other posts were never taken: no attempt, no technical failure, not held by the run.
+		assertThat(count("SELECT count(*) FROM posts WHERE stage = 'stored' AND assessment_attempts = 0"
+				+ " AND technical_failures = 0 AND assessing_run_id IS NULL", null))
+			.isEqualTo(ids.size() - refused)
+			.isGreaterThanOrEqualTo(ids.size() - 6);
+		assertThat(count("SELECT count(*) FROM posts WHERE assessing_run_id IS NOT NULL", null)).isZero();
 		awaitClosed(run);
 		assertThat(notified(run)).isOne();
 	}

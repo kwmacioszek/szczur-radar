@@ -3,7 +3,7 @@ project: "Szczur Radar"
 version: 5
 status: draft # draft | active | locked
 created: 2026-09-27
-updated: 2026-11-09
+updated: 2026-11-10
 prd_version: 3
 main_goal: quality
 top_blocker: capacity # 16 wycinków, jeden recenzent i osoba mergująca; darmowe runnery GitHuba muszą zmieścić scenariusze i PIT
@@ -110,8 +110,8 @@ Na Wykopie (#gielda) i Reddicie codziennie pojawiają się setki postów o inwes
 | ---- | --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ------------------------ | ------------------------------------------------------------------------------------------ | -------- |
 | S-30 | it-test-isolation                 | wynik CI nie zależy od kolejności klas testów integracyjnych; test nie widzi danych zostawionych przez inny test                   | —                        | `verification-scope.md` „Regresja w CI”; run CI 41784416932                               | done |
 | S-31 | pr-env-scenarios-in-ci            | ręczne weryfikacje PR env z S-13, S-17, S-18, S-20, S-27 chodzą w CI jako scenariusze na pełnym API z atrapami źródeł i LLM         | S-30                     | `verification-scope.md` „Scenariusze API”, „done when”; NFR `prd.md:275`                  | proposed |
-| S-32 | provider-refusal-breaker          | seria odmów dostawcy zatrzymuje przebieg, zanim zużyje próby pozostałych postów, i daje sygnał jak każdy `failed`                  | —                        | NFR `prd.md:275` (doprecyzowanie PRD v3); audyt §6 R-41; destylacja #3                     | ready    |
-| S-33 | restore-dead-posts                | admin przywraca zaznaczone martwe posty do oceny, a ich próby są zerowane                                                          | —                        | FR-034, FR-015; destylacja Q-18                                                            | ready    |
+| S-32 | provider-refusal-breaker          | seria odmów dostawcy zatrzymuje przebieg, zanim zużyje próby pozostałych postów, i daje sygnał jak każdy `failed`                  | —                        | NFR `prd.md:275` (doprecyzowanie PRD v3); audyt §6 R-41; destylacja #3                     | done |
+| S-33 | restore-dead-posts                | admin przywraca zaznaczone martwe posty do oceny, a ich próby są zerowane                                                          | —                        | FR-034, FR-015; destylacja Q-18                                                            | done |
 | S-34 | dead-posts-daily-digest           | operator dostaje co noc w ntfy podsumowanie nocy (liczby i tokeny każdego źródła, martwe posty) zamiast alarmu przy każdym przebiegu z samym martwym postem; zdarzenia API idą przez ntfy, dzwonek bez zmian | —                        | NFR `prd.md:275` (doprecyzowanie PRD v3); destylacja #5, R-42, Q-14                        | in-progress |
 | S-35 | per-source-failure-quality        | operator widzi udział nieudanych prób według klas błędu osobno dla każdego źródła i dostaje sygnał po przekroczeniu progu           | —                        | FR-033; destylacja #1, R-15                                                                | ready    |
 | S-36 | statement-language-quality        | operator widzi udział tez w innym języku niż post osobno dla każdego źródła, z sygnałem po przekroczeniu progu                     | S-35                     | FR-033; `contract-v2.md` §8 (Q-16); destylacja #1, D-14, R-38                              | proposed |
@@ -192,7 +192,7 @@ Brak — każda praca przekrojowa M-4 ma widoczny skutek dla użytkownika, opera
 - **Unknowns:**
   - Ile odmów z rzędu to seria i czy pojedyncza udana ocena ją zeruje, jak dziś zeruje licznik awarii? — Owner: user (`/10x-plan`). Block: no.
 - **Risk:** dziś seria jest cicha przez dwie noce, a w trzeciej posty są nieodwracalnie `dead` (`ConcurrentAssessmentDispatcher.java:298-306`); zmienia regułę dyspozytora, którą od S-09 i S-17 pilnują testy, więc stoi przed S-45.
-- **Status:** ready
+- **Status:** done
 
 ### S-33: Admin przywraca martwe posty
 
@@ -204,7 +204,7 @@ Brak — każda praca przekrojowa M-4 ma widoczny skutek dla użytkownika, opera
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** nowa trasa admina i nowe przejście stanu posta; obie mają już strażników (lista tras admina, `PostColumnsIT` dla przejść), więc wycinek dopisuje do nich wpisy, a S-40 później usunie ręczną listę.
-- **Status:** ready
+- **Status:** done
 
 ### S-34: Dzienne podsumowanie martwych postów zamiast alarmu co przebieg
 
@@ -472,3 +472,5 @@ Brak — każda praca przekrojowa M-4 ma widoczny skutek dla użytkownika, opera
 - **S-37: użytkownik widzi przy poście Reddita „post” albo „link”, a przy poście Wykopu „wpis” albo „znalezisko” — na karcie w feedzie i na stronie szczegółów; słowa Wykopu nie pojawiają się przy postach Reddita.** — Archived 2026-11-06 → `context/archive/2026-11-06-source-native-post-labels/`. Lesson: —.
 - **S-44: feed ma testy regresji znanych ścieżek (remisy daty z filtrem, `kind` i `direction` na jednym celu, najnowsza ocena `ok` przy późniejszej `failed`, strona za końcem, stanowisko ostrożne), a ogromny numer strony na listach postów, nieudanych postów i przebiegów oraz NUL w linku feedu dają 400 zamiast błędu serwera albo zawieszonego feedu.** — Archived 2026-11-06 → `context/archive/2026-11-06-feed-regression-and-paging-bounds/`. Lesson: —.
 - **S-39: CI czerwienieje, gdy konwerter enuma zapisuje inną wartość, niż dopuszcza `CHECK`, gdy złożony `CHECK` ma literał spoza enuma i gdy nowa ścieżka kończąca przebieg nie wywołuje powiadomienia (R-23).** — Archived 2026-11-06 → `context/archive/2026-11-06-derived-persistence-guards/`. Lesson: —.
+- **S-33: admin zaznacza martwe posty na liście w `/admin` i przywraca je do oceny: post traci martwy stan, a jego próby oceny są zerowane, więc kolejny przebieg ocenia go od nowa.** — Archived 2026-11-10 → `context/archive/2026-11-08-restore-dead-posts/`. Lesson: —.
+- **S-32: seria odmów dostawcy na kolejnych postach (np. moderacja albo odrzucane żądanie dla każdego posta) zatrzymuje przebieg, zanim zużyje próby pozostałych postów; przebieg kończy się `failed` i daje sygnał jak każdy `failed`, a posty, których nie zdążył ocenić, wracają bez straty próby.** — Archived 2026-11-10 → `context/archive/2026-11-08-provider-refusal-breaker/`. Lesson: W PR env agent sam zakłada jednorazowe konto admina — link i hasło tylko w zmiennych powłoki (`lessons.md`).
