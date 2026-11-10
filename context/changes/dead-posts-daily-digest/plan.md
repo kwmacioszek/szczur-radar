@@ -393,5 +393,5 @@ Podsumowanie to kilka zapytań agregujących po `assessments` i `posts` dla 1–
 
 #### Manual
 
-- [ ] 4.7 Operator ocenia czytelność treści podsumowania z PR env i akceptuje format
-- [ ] 4.8 Operator przed merge'em: aplikacja ntfy, subskrypcja produkcyjnego tematu, zapieczętowane `NTFY_URL` i `NTFY_TOKEN` na produkcyjnym API i usunięty `HEALTHCHECK_PING_URL`, wszystko z `--skip-deploys`
+- [x] 4.7 Operator ocenia czytelność treści podsumowania z PR env i akceptuje format
+- [x] 4.8 Operator przed merge'em: aplikacja ntfy, subskrypcja produkcyjnego tematu, zapieczętowane `NTFY_URL` i `NTFY_TOKEN` na produkcyjnym API i usunięty `HEALTHCHECK_PING_URL`, wszystko z `--skip-deploys`
