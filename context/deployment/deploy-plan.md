@@ -2247,6 +2247,31 @@ The 14 contract violations among 101 calls did not stop the run: they are the mo
 
 Nothing in the data, schema or variables ties the release to the code; repair a bad S-32 release with a new commit (a revert in a PR is one), which goes through CI, the deploy guard and Wait for CI like any merge. A revert brings the old behaviour back: a refusal series goes through every post of the run again.
 
+## S-33: admin przywraca martwe posty (restore-dead-posts)
+
+**Status:** delivered by PR #161; production verification and closure in issue #143.
+
+Change: `restore-dead-posts` (its folder moves to `context/archive/` when the change is archived). A post whose third assessment attempt failed is `dead`, and until S-33 nothing brought it back: a bad night of the provider or a prompt change cost those posts their assessment for good (domain distillation R-04, Q-18). PRD: FR-034.
+
+### What changed for the operator
+
+- **Restoring from `/admin`.** In "Nieudane posty" a dead post (marked "martwy") can now be checked next to the others. Two buttons act on their part of the selection: "Ponów zaznaczone (N)" queues a run of the checked retryable posts, as before; "Przywróć martwe (M)" restores the checked dead posts. The message "Przywrócono N post(ów) do oceny. Oceni je kolejny przebieg." confirms it, and the restored posts leave the list.
+- **What a restore does.** Each restored post goes back to `stored` with 0 attempts and no technical failure, so it gets all three attempts again. Its earlier attempts stay in `assessments` (the history is kept; after another failure its history shows more rows than its counter). A restore starts no run: the next run assesses the post — the nightly cron's RETRY run (a restored post is a leftover), or the RETRY run queued before an admin's range. A RETRY run already past its `select` step takes the post only on the next run.
+- **When to use it.** After a bad night of the provider (a series of refusals that made posts dead), or after a prompt or model change that should give the dead posts another chance. A post that dies again shows up in the list again.
+- **The route.** `POST /api/admin/posts/restore` with `{"postIds": [...]}` (1–100 ids; otherwise 400 `invalid_request`), admin session only, answers 200 `{"restored": N}`. It restores only the ids still `dead`; any other id (restored already, assessed, unknown) is left as it is, so a repeat answers `0`. It is allowed while a run is queued or running: no run ever holds a dead post.
+- **The log line.** INFO `Admin <user id> restored <N> of <M> dead post(s) for assessment: [<ids>]` — the only trace of who restored what (no table, no migration).
+- **Unchanged:** the counters and attention reasons of past runs (`dead`, `dead_posts`), the notifications and alerts (`RUN_NEEDS_ATTENTION`; the daily digest of dead posts is S-34), `POST /api/admin/pipeline-runs` (still 400 `post_dead` for a post that is dead), no new variable, no migration.
+
+### After the merge (read-only)
+
+1. When production has a dead post worth restoring, the admin restores it in `/admin`; the API log has the INFO line above, and the post is gone from "Nieudane posty". The ids in that line are only the dead posts the admin checked (`restored N of M`: M is how many were sent, N ≤ M, and N < M only when a post had stopped being dead, e.g. another admin restored it first), and no other INFO line names a post nobody meant to restore.
+2. After the next night, the post is `assessed` (or `failed`/`dead` again) — its page or the failed list shows it.
+3. Record both in issue #143 and close it. Without a dead post to restore, record that the button and the route are live (the list shows dead posts checkable) and close.
+
+### Rollback
+
+Revert the change: there is no migration, and a restored post is an ordinary `stored` post that the next run assesses.
+
 ## Phases
 
 > Historical (state of 2026-09-26 – 2026-09-27, FastAPI backend); current: the Java API in section F-03, its image in section `api-docker-image`, the pipeline in sections `first-assessed-wykop-feed` and S-05, the database backup in section F-01, CI and the deploy gate in section S-14.

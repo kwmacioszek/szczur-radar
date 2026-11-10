@@ -5,13 +5,13 @@ import { fetchMe } from '../api/auth'
 import { ApiError } from '../api/client'
 import { fetchNotifications } from '../api/notifications'
 import { type MissingDays, type Run, fetchMissingDays, fetchRuns, fetchSources, retryPosts, startRange } from '../api/pipeline'
-import { type FailedPost, fetchFailedPosts } from '../api/posts'
+import { type FailedPost, fetchFailedPosts, restorePosts } from '../api/posts'
 import { resetSession } from '../auth/session'
 import { createAppRouter } from '../router'
 import AdminView from './AdminView.vue'
 
 vi.mock('../api/auth', () => ({ fetchMe: vi.fn(), login: vi.fn(), logout: vi.fn() }))
-vi.mock('../api/posts', () => ({ fetchPosts: vi.fn(), fetchFailedPosts: vi.fn() }))
+vi.mock('../api/posts', () => ({ fetchPosts: vi.fn(), fetchFailedPosts: vi.fn(), restorePosts: vi.fn() }))
 // The header shows an admin the notification bell.
 vi.mock('../api/notifications', () => ({
   fetchNotifications: vi.fn(),
@@ -124,6 +124,7 @@ describe('AdminView', () => {
     vi.mocked(fetchMissingDays).mockReset().mockResolvedValue({ from: '2026-10-09', to: '2026-10-22', days: [] })
     vi.mocked(startRange).mockReset()
     vi.mocked(retryPosts).mockReset()
+    vi.mocked(restorePosts).mockReset()
     // The router scrolls to the top on a path change (router/scroll.ts); jsdom does not implement scrolling.
     vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
   })
@@ -340,28 +341,172 @@ describe('AdminView', () => {
     expect(attempt).not.toContain('timeout')
   })
 
-  it('retries the checked posts, never a dead one', async () => {
-    vi.mocked(fetchFailedPosts).mockResolvedValue({
-      items: [failed('a', 'failed'), failed('b', 'dead'), failed('c', 'failed')],
-      page: 0,
-      size: 50,
-      total: 3,
+  describe('failed posts: retry and restore', () => {
+    /** a and c failed, b and d dead. */
+    const mixed = { items: [failed('a', 'failed'), failed('b', 'dead'), failed('c', 'failed'), failed('d', 'dead')], page: 0, size: 50, total: 4 }
+
+    function section(wrapper: Awaited<ReturnType<typeof mountAdmin>>) {
+      return wrapper.find('section[aria-labelledby="failed-title"]')
+    }
+
+    function boxes(wrapper: Awaited<ReturnType<typeof mountAdmin>>) {
+      return section(wrapper).findAll('.failed-posts input[type="checkbox"]')
+    }
+
+    function retryButton(wrapper: Awaited<ReturnType<typeof mountAdmin>>) {
+      return section(wrapper).findAll('button').find((button) => button.text().startsWith('Ponów zaznaczone'))!
+    }
+
+    function restoreButton(wrapper: Awaited<ReturnType<typeof mountAdmin>>) {
+      return section(wrapper).findAll('button').find((button) => button.text().startsWith('Przywróć martwe'))!
+    }
+
+    it('lets a dead post be checked and counts each kind of the selection in its button', async () => {
+      vi.mocked(fetchFailedPosts).mockResolvedValue(mixed)
+      const wrapper = await mountAdmin()
+      expect(section(wrapper).find('.failed-posts').text()).toContain('martwy')
+      expect(boxes(wrapper).every((box) => box.attributes('disabled') === undefined)).toBe(true)
+      expect(retryButton(wrapper).text()).toBe('Ponów zaznaczone (0)')
+      expect(restoreButton(wrapper).text()).toBe('Przywróć martwe (0)')
+      expect(retryButton(wrapper).attributes('disabled')).toBeDefined()
+      expect(restoreButton(wrapper).attributes('disabled')).toBeDefined()
+
+      await boxes(wrapper)[1]!.setValue(true)
+
+      expect(retryButton(wrapper).text()).toBe('Ponów zaznaczone (0)')
+      expect(retryButton(wrapper).attributes('disabled')).toBeDefined()
+      expect(restoreButton(wrapper).text()).toBe('Przywróć martwe (1)')
+      expect(restoreButton(wrapper).attributes('disabled')).toBeUndefined()
+
+      await boxes(wrapper)[1]!.setValue(false)
+      await boxes(wrapper)[0]!.setValue(true)
+      await boxes(wrapper)[2]!.setValue(true)
+
+      expect(retryButton(wrapper).text()).toBe('Ponów zaznaczone (2)')
+      expect(retryButton(wrapper).attributes('disabled')).toBeUndefined()
+      expect(restoreButton(wrapper).text()).toBe('Przywróć martwe (0)')
+      expect(restoreButton(wrapper).attributes('disabled')).toBeDefined()
     })
-    vi.mocked(retryPosts).mockResolvedValue([run({ kind: 'posts' })])
-    const wrapper = await mountAdmin()
-    const boxes = wrapper.findAll('.failed-posts input[type="checkbox"]')
-    expect(boxes[1]!.attributes('disabled')).toBeDefined()
-    expect(wrapper.find('.failed-posts').text()).toContain('martwy')
-    const retry = wrapper.findAll('button').find((button) => button.text() === 'Ponów zaznaczone')!
-    expect(retry.attributes('disabled')).toBeDefined()
 
-    await boxes[0]!.setValue(true)
-    await boxes[2]!.setValue(true)
-    await retry.trigger('click')
-    await flushPromises()
+    it('drops from the selection on a reload only the posts gone from the list, a dead one stays checked', async () => {
+      vi.mocked(fetchFailedPosts).mockResolvedValue(mixed)
+      const wrapper = await mountAdmin()
+      await boxes(wrapper)[0]!.setValue(true)
+      await boxes(wrapper)[1]!.setValue(true)
+      expect(retryButton(wrapper).text()).toBe('Ponów zaznaczone (1)')
+      expect(restoreButton(wrapper).text()).toBe('Przywróć martwe (1)')
 
-    expect(retryPosts).toHaveBeenCalledWith(['a', 'c'])
-    expect(wrapper.find('[role="status"]').text()).toContain('Ponowienie 2')
+      // a left the list (assessed meanwhile); b is still dead.
+      vi.mocked(fetchFailedPosts).mockResolvedValue({ ...mixed, items: mixed.items.slice(1), total: 3 })
+      await wrapper.findAll('button').find((button) => button.text() === 'Odśwież')!.trigger('click')
+      await flushPromises()
+
+      expect(retryButton(wrapper).text()).toBe('Ponów zaznaczone (0)')
+      expect(restoreButton(wrapper).text()).toBe('Przywróć martwe (1)')
+      expect((boxes(wrapper)[0]!.element as HTMLInputElement).checked).toBe(true)
+    })
+
+    it('retries only the checked posts that are not dead and keeps the dead ones checked', async () => {
+      vi.mocked(fetchFailedPosts).mockResolvedValue(mixed)
+      vi.mocked(retryPosts).mockResolvedValue([run({ kind: 'posts' })])
+      const wrapper = await mountAdmin()
+      for (const box of boxes(wrapper)) await box.setValue(true)
+      expect(retryButton(wrapper).text()).toBe('Ponów zaznaczone (2)')
+      expect(restoreButton(wrapper).text()).toBe('Przywróć martwe (2)')
+
+      await retryButton(wrapper).trigger('click')
+      await flushPromises()
+
+      expect(retryPosts).toHaveBeenCalledWith(['a', 'c'])
+      expect(restorePosts).not.toHaveBeenCalled()
+      expect(section(wrapper).find('[role="status"]').text()).toContain('Ponowienie 2')
+      expect(retryButton(wrapper).text()).toBe('Ponów zaznaczone (0)')
+      expect(restoreButton(wrapper).text()).toBe('Przywróć martwe (2)')
+    })
+
+    it('restores only the checked dead posts, says so and reads the list again without them', async () => {
+      vi.mocked(fetchFailedPosts)
+        .mockResolvedValueOnce(mixed)
+        .mockResolvedValue({ items: [failed('a', 'failed'), failed('c', 'failed')], page: 0, size: 50, total: 2 })
+      vi.mocked(restorePosts).mockResolvedValue({ restored: 2 })
+      const wrapper = await mountAdmin()
+      for (const box of boxes(wrapper)) await box.setValue(true)
+
+      await restoreButton(wrapper).trigger('click')
+      await flushPromises()
+
+      expect(restorePosts).toHaveBeenCalledWith(['b', 'd'])
+      expect(retryPosts).not.toHaveBeenCalled()
+      expect(section(wrapper).find('[role="status"]').text()).toBe(
+        'Przywrócono 2 post(ów) do oceny. Oceni je kolejny przebieg.',
+      )
+      expect(fetchFailedPosts).toHaveBeenCalledTimes(2)
+      expect(section(wrapper).findAll('.failed-posts li')).toHaveLength(2)
+      // The posts to retry stay checked; the restored ones left the selection.
+      expect(boxes(wrapper).map((box) => (box.element as HTMLInputElement).checked)).toEqual([true, true])
+      expect(retryButton(wrapper).text()).toBe('Ponów zaznaczone (2)')
+      expect(restoreButton(wrapper).text()).toBe('Przywróć martwe (0)')
+      expect(restoreButton(wrapper).attributes('disabled')).toBeDefined()
+    })
+
+    it('says none of the checked posts was dead any more', async () => {
+      vi.mocked(fetchFailedPosts).mockResolvedValue(mixed)
+      vi.mocked(restorePosts).mockResolvedValue({ restored: 0 })
+      const wrapper = await mountAdmin()
+      await boxes(wrapper)[1]!.setValue(true)
+
+      await restoreButton(wrapper).trigger('click')
+      await flushPromises()
+
+      expect(section(wrapper).find('[role="status"]').text()).toBe('Żaden z zaznaczonych postów nie był już martwy.')
+    })
+
+    it('says the restore failed and keeps the selection', async () => {
+      vi.mocked(fetchFailedPosts).mockResolvedValue(mixed)
+      vi.mocked(restorePosts).mockRejectedValue(new ApiError(500, 'internal_error'))
+      const wrapper = await mountAdmin()
+      await boxes(wrapper)[1]!.setValue(true)
+
+      await restoreButton(wrapper).trigger('click')
+      await flushPromises()
+
+      expect(section(wrapper).find('[role="alert"]').text()).toBe('Nie udało się przywrócić postów.')
+      expect(section(wrapper).find('[role="status"]').exists()).toBe(false)
+      expect(fetchFailedPosts).toHaveBeenCalledTimes(1)
+      expect(restoreButton(wrapper).text()).toBe('Przywróć martwe (1)')
+    })
+
+    it('says the restore is under way and blocks the retry while the server answers', async () => {
+      vi.mocked(fetchFailedPosts).mockResolvedValue(mixed)
+      vi.mocked(restorePosts).mockReturnValue(never())
+      const wrapper = await mountAdmin()
+      await boxes(wrapper)[0]!.setValue(true)
+      await boxes(wrapper)[1]!.setValue(true)
+      const restore = restoreButton(wrapper)
+      const retry = retryButton(wrapper)
+
+      await restore.trigger('click')
+
+      expect(restore.text()).toBe('Przywracanie…')
+      expect(restore.attributes('aria-busy')).toBe('true')
+      expect(retry.attributes('disabled')).toBeDefined()
+      await retry.trigger('click')
+      expect(retryPosts).not.toHaveBeenCalled()
+    })
+
+    it('blocks the restore while a retry is under way', async () => {
+      vi.mocked(fetchFailedPosts).mockResolvedValue(mixed)
+      vi.mocked(retryPosts).mockReturnValue(never())
+      const wrapper = await mountAdmin()
+      await boxes(wrapper)[0]!.setValue(true)
+      await boxes(wrapper)[1]!.setValue(true)
+
+      await retryButton(wrapper).trigger('click')
+
+      expect(restoreButton(wrapper).attributes('disabled')).toBeDefined()
+      await restoreButton(wrapper).trigger('click')
+      expect(restorePosts).not.toHaveBeenCalled()
+    })
   })
 
   it('shows a post on hold with its technical errors and retries it', async () => {
@@ -378,7 +523,7 @@ describe('AdminView', () => {
     expect(box.attributes('disabled')).toBeUndefined()
 
     await box.setValue(true)
-    await wrapper.findAll('button').find((button) => button.text() === 'Ponów zaznaczone')!.trigger('click')
+    await wrapper.findAll('button').find((button) => button.text() === 'Ponów zaznaczone (1)')!.trigger('click')
     await flushPromises()
 
     expect(retryPosts).toHaveBeenCalledWith(['h'])
@@ -406,7 +551,7 @@ describe('AdminView', () => {
     vi.mocked(retryPosts).mockReturnValue(never())
     const wrapper = await mountAdmin()
     await wrapper.find('.failed-posts input[type="checkbox"]').setValue(true)
-    const retry = wrapper.findAll('button').find((button) => button.text() === 'Ponów zaznaczone')!
+    const retry = wrapper.findAll('button').find((button) => button.text() === 'Ponów zaznaczone (1)')!
     await retry.trigger('click')
     expect(retry.text()).toBe('Ponawianie…')
     expect(retry.attributes('aria-busy')).toBe('true')
