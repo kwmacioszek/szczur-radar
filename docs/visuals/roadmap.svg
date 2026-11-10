@@ -24,17 +24,17 @@
 <text x="56.0" y="202.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="400" fill="#a2afb4">Źródło: context/foundation/roadmap.md  ·  v5  ·  stan 04.11.2026  ·  bez terminów — kolejność wynika z zależności</text>
 <rect x="5118.0" y="36.0" width="820.0" height="214.0" rx="14" fill="url(#hero)" stroke="#2b373e" stroke-width="1" />
 <circle cx="5200.0" cy="136" r="46" fill="none" stroke="#232d32" stroke-width="9"/>
-<path d="M5200.0 90 A46 46 0 1 1 5154.21 140.42" fill="none" stroke="#5fd18f" stroke-width="9" stroke-linecap="round"/>
-<text x="5200.0" y="140.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="22" font-weight="700" fill="#eaf0f2" text-anchor="middle">73%</text>
-<text x="5200.0" y="158.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="500" fill="#a2afb4" text-anchor="middle">36 / 49</text>
+<path d="M5200.0 90 A46 46 0 1 1 5154.02 134.53" fill="none" stroke="#5fd18f" stroke-width="9" stroke-linecap="round"/>
+<text x="5200.0" y="140.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="22" font-weight="700" fill="#eaf0f2" text-anchor="middle">76%</text>
+<text x="5200.0" y="158.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="500" fill="#a2afb4" text-anchor="middle">37 / 49</text>
 <text x="5200.0" y="222.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="700" fill="#a2afb4" text-anchor="middle" letter-spacing="1.2">M-1 … M-4</text>
 <text x="5282.0" y="70.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="700" fill="#a2afb4" letter-spacing="1.6">POSTĘP KAMIENIA MILOWEGO</text>
 <text x="5282.0" y="98.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" font-weight="700" fill="#eaf0f2">M-4 · Weryfikacja i regresja</text>
-<text x="5914.0" y="98.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" font-weight="700" fill="#eaf0f2" text-anchor="end">4 / 16</text>
+<text x="5914.0" y="98.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" font-weight="700" fill="#eaf0f2" text-anchor="end">5 / 16</text>
 <rect x="5282.0" y="114.0" width="34.8" height="12.0" rx="3" fill="#14281d" stroke="#5fd18faa" stroke-width="1" />
 <rect x="5321.8" y="114.0" width="34.8" height="12.0" rx="3" fill="#232d32" stroke="#c3cdd055" stroke-width="1" />
 <rect x="5361.6" y="114.0" width="34.8" height="12.0" rx="3" fill="#13232e" stroke="#8ccbe8aa" stroke-width="1" />
-<rect x="5401.4" y="114.0" width="34.8" height="12.0" rx="3" fill="#33291a" stroke="#f2c46daa" stroke-width="1" />
+<rect x="5401.4" y="114.0" width="34.8" height="12.0" rx="3" fill="#14281d" stroke="#5fd18faa" stroke-width="1" />
 <rect x="5441.2" y="114.0" width="34.8" height="12.0" rx="3" fill="#13232e" stroke="#8ccbe8aa" stroke-width="1" />
 <rect x="5481.1" y="114.0" width="34.8" height="12.0" rx="3" fill="#13232e" stroke="#8ccbe8aa" stroke-width="1" />
 <rect x="5520.9" y="114.0" width="34.8" height="12.0" rx="3" fill="#232d32" stroke="#c3cdd055" stroke-width="1" />
@@ -48,9 +48,9 @@
 <rect x="5839.4" y="114.0" width="34.8" height="12.0" rx="3" fill="#14281d" stroke="#5fd18faa" stroke-width="1" />
 <rect x="5879.2" y="114.0" width="34.8" height="12.0" rx="3" fill="#232d32" stroke="#c3cdd055" stroke-width="1" />
 <circle cx="5286.0" cy="147" r="4" fill="#5fd18f" stroke="#5fd18f" stroke-width="1.2"/>
-<text x="5295.0" y="151.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="500" fill="#eaf0f2">4 ukończone</text>
+<text x="5295.0" y="151.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="500" fill="#eaf0f2">5 ukończonych</text>
 <circle cx="5436.0" cy="147" r="4" fill="#f2c46d" stroke="#f2c46d" stroke-width="1.2"/>
-<text x="5445.0" y="151.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="500" fill="#eaf0f2">1 w toku</text>
+<text x="5445.0" y="151.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="500" fill="#a2afb4">0 w toku</text>
 <circle cx="5586.0" cy="147" r="4" fill="#13232e" stroke="#8ccbe8" stroke-width="1.2"/>
 <text x="5595.0" y="151.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="500" fill="#eaf0f2">7 gotowych do planowania</text>
 <circle cx="5286.0" cy="169" r="4" fill="#232d32" stroke="#c3cdd0" stroke-width="1.2"/>
@@ -130,7 +130,7 @@
 <circle cx="5138.0" cy="316" r="3.5" fill="#f2c46d"/>
 <text x="5164.0" y="290.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="700" fill="#f2c46d">M-4</text>
 <text x="5197.2" y="290.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="700" fill="#eaf0f2">Weryfikacja i regresja</text>
-<text x="5164.0" y="346.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#f2c46d">Otwarty 04.11.2026  ·  4 / 16</text>
+<text x="5164.0" y="346.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#f2c46d">Otwarty 04.11.2026  ·  5 / 16</text>
 <line x1="5138.0" y1="332" x2="5138.0" y2="400" stroke="#f2c46d" stroke-opacity="0.35" stroke-width="1.5" stroke-dasharray="2 5"/>
 <circle cx="6802.0" cy="316" r="9" fill="#0d1316" stroke="#a2afb4" stroke-width="2" stroke-dasharray="3 3"/>
 <text x="6828.0" y="290.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="700" fill="#a2afb4">PO M-4</text>
@@ -881,8 +881,8 @@
 <text x="5146.0" y="466.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="400" fill="#a2afb4">Testy łapią błędy, a nie tylko przechodzą: weryfikacje PR env jako scenariusze w CI, strażnicy liczą zbiory z kodu, mutanty rdzenia zmierzone; obok wymagania PRD v3 z nocy z</text>
 <text x="5146.0" y="484.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="400" fill="#a2afb4">Redditem.</text>
 <rect x="6446.0" y="430.0" width="160.0" height="8.0" rx="4" fill="#232d32" />
-<rect x="6446.0" y="430.0" width="40.0" height="8.0" rx="4" fill="#f2c46d" />
-<text x="6658.0" y="440.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="700" fill="#f2c46d" text-anchor="end">4 / 16</text>
+<rect x="6446.0" y="430.0" width="50.0" height="8.0" rx="4" fill="#f2c46d" />
+<text x="6658.0" y="440.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="700" fill="#f2c46d" text-anchor="end">5 / 16</text>
 <rect x="5142.0" y="498.0" width="593.6" height="780.0" rx="12" fill="#141c21" stroke="#222d33" stroke-width="1" />
 <rect x="5158.0" y="512.0" width="26.0" height="26.0" rx="7" fill="#c3f08c22" stroke="#c3f08c77" stroke-width="1" />
 <text x="5171.0" y="530.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="13" font-weight="700" fill="#c3f08c" text-anchor="middle">A</text>
@@ -895,7 +895,7 @@
 <text x="5788.6" y="530.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="13" font-weight="700" fill="#f2c46d" text-anchor="middle">B</text>
 <text x="5813.6" y="530.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#eaf0f2">Przebieg nie gubi i nie milczy</text>
 <text x="5813.6" y="554.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#a2afb4">Wymagania PRD v3 z nocy z Redditem — niezależne</text>
-<text x="6337.2" y="530.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600" fill="#9aa8ae" text-anchor="end">0 / 4 ukończonych</text>
+<text x="6337.2" y="530.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600" fill="#9aa8ae" text-anchor="end">1 / 4 ukończonych</text>
 <line x1="5775.6" y1="572" x2="6337.200000000001" y2="572" stroke="#222d33"/>
 <rect x="5142.0" y="1296.0" width="902.4" height="433.0" rx="12" fill="#141c21" stroke="#222d33" stroke-width="1" />
 <rect x="5158.0" y="1310.0" width="26.0" height="26.0" rx="7" fill="#8ccbe822" stroke="#8ccbe877" stroke-width="1" />
@@ -996,12 +996,12 @@
 <text x="5849.6" y="839.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="11" font-weight="700" fill="#a2afb4">—</text>
 <text x="5789.6" y="861.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#9aa8ae">provider-refusal-breaker</text>
 </g>
-<g data-id="S-33" data-status="progress">
-<rect x="5775.6" y="943.0" width="252.8" height="299.0" rx="12" fill="#151e23" stroke="#6b5426" stroke-width="1" />
-<text x="5789.6" y="968.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="13" font-weight="700" fill="#f2c46d">S-33</text>
-<rect x="5947.5" y="954.0" width="66.9" height="20.0" rx="5" fill="#33291a" stroke="#f2c46d55" stroke-width="1" />
-<circle cx="5959.5" cy="964.0" r="3" fill="#f2c46d"/>
-<text x="5968.5" y="968.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="600" fill="#f2c46d">W toku</text>
+<g data-id="S-33" data-status="done">
+<rect x="5775.6" y="943.0" width="252.8" height="299.0" rx="12" fill="#151e23" stroke="#2f5a42" stroke-width="1" />
+<text x="5789.6" y="968.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="13" font-weight="700" fill="#5fd18f">S-33</text>
+<rect x="5929.1" y="954.0" width="85.3" height="20.0" rx="5" fill="#14281d" stroke="#5fd18f55" stroke-width="1" />
+<path d="M5938.1 964.0 l3 3 l5.5 -6" fill="none" stroke="#5fd18f" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="5950.1" y="968.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="600" fill="#5fd18f">Ukończone</text>
 <text x="5789.6" y="994.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#eaf0f2">Admin przywraca</text>
 <text x="5789.6" y="1016.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#eaf0f2">martwe posty</text>
 <text x="5789.6" y="1044.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">admin przywraca zaznaczone</text>
