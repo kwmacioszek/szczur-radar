@@ -1351,7 +1351,7 @@ Delete `HEALTHCHECK_PING_URL` on a service and redeploy it: its check-ins or eve
 
 ### What changes
 
-- **The post's fault uses an attempt** (as before): the provider refused the request (a non-retryable 4xx, a refused or blocked answer, no text) or the model's answer broke the contract (`schema_violation`, `fabricated_evidence`, …). A stored `failed` result; the third makes the post `dead`.
+- **The post's fault uses an attempt** (as before): the provider refused the request (a non-retryable 4xx, a refused or blocked answer, no text) or the model's answer broke the contract (`schema_violation`, `fabricated_evidence`, …). A stored `failed` result; the third makes the post `dead`. **Update (S-32, 2026-11-08):** a series of three refusals in a row stops the run (section S-32).
 - **The provider's fault uses none.** A call whose retries ran out on 429, 5xx, time-outs or connection errors (`TransportRetry`; with flex both tiers) means the provider is unavailable:
   - **three such calls in a row** (in the order they end, with no call answered by the model between them; a post the prefilter decides makes no call and does not end the streak) stop the run (the breaker, a constant in code). It ends `failed` with the error `stopped, the remaining posts were put back: the LLM provider is unavailable: 3 calls in a row failed after their retries; the last: failed after N attempts: <provider message>`. Every post goes back as it was: no attempt, no technical failure;
   - **progress, not a stall:** each such call that ends moves the run's `last_activity_at` without counting anything, so the watchdog (`PIPELINE_STALL_TIMEOUT`) stops only a call that hangs, and a run of time-outs ends with the breaker's error above at any `PIPELINE_LLM_CONCURRENCY`, never with `no progress for …`;
@@ -2170,6 +2170,82 @@ The API and the web deploy independently, in no fixed order:
 ### Rollback
 
 Revert the change: nothing is stored and there is no migration. The deploy window above applies in reverse.
+
+## S-32: seria odmów dostawcy zatrzymuje przebieg (provider-refusal-breaker)
+
+**Status:** delivered by PR #160; production verification and closure in issue #142.
+
+Change: `provider-refusal-breaker` (its folder moves to `context/archive/` when the change is archived). Before S-32 a provider refusing every call (moderation, a request it rejects, an answer blocked or without text) went through every post of the run: each refusal was the post's `failed` result, used its attempt and reset both breakers (the outages', section S-09, and the client's, section S-17), so such a night was silent for two nights and made the window's posts `dead` on the third (audit `post-m3-verification-audit`, R-41; domain distillation, candidate #3). S-32 adds a third breaker with the mechanics of the other two: three refusals in a row stop the run. PRD: the S-32 clarification under the failure signal NFR, which closes the PRD v3 point "Wyłącznik serii odmów dostawcy".
+
+### What changes
+
+- **The rule.** A refusal is a stored `failed` result of the call itself — class `provider_error` or `timeout`: the request rejected by the provider with a non-retryable error, the answer blocked or without text, a time-out of the last attempt — never a contract violation of the model's text (`schema_violation`, `fabricated_evidence`, …). Three of them in a row (in the order the calls end; a constant in code, like the other two breakers, no variable) stop the `assess` step after the third is stored: no further post is taken, the run ends `failed` with the error `stopped, the remaining posts were put back: the LLM provider refused 3 calls in a row; the last: <the last refusal's message>`, and its step `assess` is `failed` with the same reason.
+- **What resets the series:** a stored result with the model's text, ok or a contract violation. What leaves it as it is: a post the prefilter decides (no call), a provider outage (section S-09), an error of our code and an error of the LLM client (section S-17). A refusal still resets the outages' and the client's series: the provider answered. A single refusal, or two with an answered call between them, is the post's fault as before (section S-09).
+- **The three posts of the streak keep their attempt.** The result is stored before the stop is decided, as for any `failed` result: each of the three has one `failed` attempt more, and a third attempt still makes a post `dead` (an admin restores it with "Przywróć martwe" in `/admin`, FR-034, section S-33). The remaining posts go back as they were: no attempt, no technical failure; the next RETRY takes them. Posts whose calls were already in flight on the other LLM threads end as usual, so with `PIPELINE_LLM_CONCURRENCY` threads up to `3 + threads − 1` refusals are stored: 6 on production's 4 threads.
+- **Signals:** those of any `failed` run — an in-app notification for every admin (the bell, the run's page), `RUN_NEEDS_ATTENTION` in Telegram for an admin's run (section S-18), and for the cron's run its exit 1 with its own healthchecks.io check (section F-04) and Railway's "deployment crashed" push. No new attention reason.
+- **Nothing else changes.** No variable, no migration, no new counter of the run, no API, SPA or cron contract change; `/api/admin/llm/check` is as before. A normal night runs as before: S-28's measurement counted zero `provider_error` results on production's configuration, and contract violations (16.6 % of first attempts on Reddit) do not count.
+
+### What the operator sees
+
+- **The run's page** (`/admin/runs/<id>`) and `/admin`: status `failed`; `assessed failed 3` — on production with 4 LLM threads 3 to 6, the refusals in flight when the third ended —, `processing errors 0`, `dead` as many of those posts as were at their third attempt; the error `stopped, the remaining posts were put back: the LLM provider refused 3 calls in a row; the last: <message>`; the step `assess` `failed` with the same reason, `summarize` closed. The bell has the run's notification.
+- **API log:** `WARN The LLM provider refused 3 calls in a row in run <id>; no further post is taken: <message>` once — the last refusal's message, cleaned of the key by the client (e.g. `HTTP 403: …`); no ERROR. The progress and end lines count the refusals among `failed`.
+- **The cron's run:** its line `range …: failed (…, assessed failed 3, processing errors 0, dead N)`, `FAILED: a run did not succeed: …`, exit 1 → `<env>/pipeline-trigger` alerts in Telegram, and Railway's push. **An admin's run:** `RUN_NEEDS_ATTENTION` in Telegram with the run's error.
+
+### Runbook — a refusal series (operator)
+
+1. **Open the run's page** from the bell: the error says "the LLM provider refused 3 calls in a row" and ends with the provider's last message (an HTTP status with the provider's reason, "blocked", "no text").
+2. **Read the message.** `HTTP 400` / `HTTP 403` with a moderation or policy reason, a blocked answer or an answer without text is the provider's decision about the request. A refused key, credit or model (`HTTP 401` / `402` / `404`) stops the run at the check instead, with "the LLM check failed" / "refused the configuration" (section S-09), not with this error.
+3. **Every call, or only the assessment's prompt?** `GET /api/admin/llm/check` as the admin. `"ok":false` with the same refusal: every call is refused — the key, the model or the account; repair that (section S-09's runbook, step 3). `"ok":true`: only the assessment's requests are refused — moderation of their content, or a change on the provider's side (the schema, a parameter, the model's policy); read the message, look at the three posts (step 4) and open an issue when the message names the request rather than the content.
+4. **The posts of the streak**, read-only (`railway connect postgres -e production`, or `railway ssh -s postgres -e production -- psql -U postgres -d railway -c "<SQL>"`): the run's refused attempts with their message and their posts' state. The violations are a JSON array of `{failureClass, rule, path, message}`, with `rule` `call` for a call without an answer (section S-09's query):
+
+   ```sql
+   BEGIN READ ONLY;
+   SELECT a.assessed_at, a.post_id, p.source, p.channel, p.stage, p.assessment_attempts,
+          v ->> 'message' AS refusal
+   FROM assessments a
+   JOIN posts p ON p.id = a.post_id
+   CROSS JOIN LATERAL jsonb_array_elements(a.violations) v
+   WHERE a.run_id = '<run id>'
+     AND a.status = 'failed'
+     AND a.failure_class IN ('provider_error', 'timeout')
+     AND v ->> 'rule' = 'call'
+   ORDER BY a.assessed_at, a.id;
+   ROLLBACK;
+   ```
+
+   Without `a.run_id = …` and with `ORDER BY a.assessed_at DESC LIMIT 20` instead, the latest refusals of any run. Outages are not among the rows (since S-09 an outage stores nothing); refusals before S-32 are (their runs went on).
+5. **The same posts refused again the next night.** A refusal specific to the content of the three posts repeats itself, by design, until the posts are `dead`:
+   - night 1: the run (the RANGE, or the RETRY before it) stops after three refusals; the three posts are `failed` with attempt 1, the rest go back `stored`;
+   - nights 2 and 3: the cron's RETRY takes the leftovers (in the order they were published), the three posts among them. When they are refused in a row again — few other leftovers, or a provider refusing every request — it stops the same way (attempt 2, then attempt 3 → `dead`), the cron ends `FAILED` / exit 1 each of these nights (the Telegram alert, section F-04), the other leftovers of that RETRY wait for the next one, and the RANGE run queued behind it runs on its own (a separate run of the queue), so the days do not stay without data (section S-13). When the RETRY assesses other leftovers between them, the series resets and the three posts use their attempt as before S-32 (no stop; the run ends `partial`, which notifies only with a `dead` post — PRD v3, "Nieudane próby bez sygnału");
+   - from night 4 the three posts are `dead` and the nights are healthy.
+   Three alerts in a row with the same message, with `dead` growing by at most three a night, is this case, not an outage. Nothing to repair — unless step 3 shows every call refused. Once the provider takes the requests again, an admin restores the `dead` posts with "Przywróć martwe" in `/admin` ("Nieudane posty", FR-034, section S-33): they go back `stored` with all three attempts, and the next run assesses them. Never merge to `main` while a run is `RUNNING` (section S-05).
+
+### PR-env verification (szczur-radar-pr-160)
+
+A refusal cannot be forced in a PR env (the provider decides, and `/api/admin/llm/check` only proves the key); the breaker's proof is `PipelineRunIT` (a provider refusing every call of a day's posts on the full engine with Postgres: `failed`, 3 to 6 stored refusals, the other posts untouched, the admin notified) and the dispatcher's unit tests. The PR env shows that a normal run is unchanged (plan Phase 3). SQL runs as `railway ssh -s postgres -e szczur-radar-pr-160 -- psql -U postgres -d railway -c "<SQL>"` (section S-11); real Wykop, Arctic Shift and LLM calls are allowed in PR envs.
+
+0. **Preconditions.** The API is deployed from this branch: its pre-deploy `migrate` passed ("Schema is up to date"), `curl -s <web>/api/ready` returns 200; the PR env has an admin account (`create-user --role admin`, section S-08); `SELECT count(*) FROM pipeline_runs WHERE status IN ('queued', 'running')` is 0.
+1. **A RANGE run of one day.** As the admin (logged in by the owner in the browser the agent opens, `playwright-cli`), in `/admin` a range of one day (yesterday) and "Uruchom"; wait for its end. Expected: the newest run `succeeded` or `partial`, its `error` without `refused 3 calls`; `SELECT count(*) FROM assessments WHERE failure_class = 'provider_error'` as an observation (expected 0); the API log of the deployment that ran it (`railway logs -s szczur-radar-api -e szczur-radar-pr-160 --lines 3000 <deployment-id>`, the run's `deployment_id`: without the ID the command reads the newest deployment, which after a documentation-only push is a skipped one with no log) without `refused 3 calls in a row` and without an ERROR line.
+
+Results (filled in as the checks run, plan Phase 3; production's first night goes to issue #142):
+
+| Step | Date (UTC) | Deployment | Run | Status | `provider_error` rows | Log check |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1. RANGE run of one day | 2026-11-09 08:28–08:30 | `d2e72472` (branch head `58f5739`) | `db35738b`: range 2026-11-08 (Warsaw), started by the owner as the PR env's admin; `wykop` 59 + `reddit` 42, both `succeeded` | `partial`, `error` empty: fetched 101, new 101, ok 87, failed 14 (12 `schema_violation`, 2 `fabricated_evidence`), processing errors 0, dead 0; every step `succeeded`, `assess` 1m 06s | 0 (the whole database) | 159 lines since the container's start: no `refused 3 calls in a row`, no ERROR; one WARN, Reddit's `HttpRetry` retrying a search (a source retry) |
+
+The 14 contract violations among 101 calls did not stop the run: they are the model's answers, so they reset the refusals' series, as the rule says.
+
+### Runbook — after the merge (operator; tracked in issue #142, not in the plan's Progress)
+
+0. **Standing rules.** No merge to `main` while `/admin` shows a run `RUNNING`, and not between about 00:30 and 01:30 UTC (section S-05). The merge deploys the API; no migration, no variable or service change.
+1. **CI on `main`.** All jobs green; `railway-config` plans no change.
+2. **Start.** The pre-deploy `migrate` passes ("Schema is up to date"); `/api/ready` 200; no ERROR at start.
+3. **First night.** The cron ends `OK: …` as before; the night's runs on `/admin` end `succeeded` / `partial`; the API log has no `The LLM provider refused 3 calls in a row` WARN and no ERROR from the run.
+4. **Record and close.** Comment on issue #142: the merge commit, the deployment ID, the first night's cron line and run statuses. Close #142 only after this production verification.
+
+### Rollback: fix-forward only
+
+Nothing in the data, schema or variables ties the release to the code; repair a bad S-32 release with a new commit (a revert in a PR is one), which goes through CI, the deploy guard and Wait for CI like any merge. A revert brings the old behaviour back: a refusal series goes through every post of the run again.
 
 ## S-33: admin przywraca martwe posty (restore-dead-posts)
 
