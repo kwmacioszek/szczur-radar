@@ -7,9 +7,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.UUID;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,18 +14,15 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
-import org.springframework.core.MethodParameter;
 import org.springframework.http.HttpMethod;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.method.HandlerMethod;
-import org.springframework.web.servlet.mvc.method.RequestMappingInfo;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
 import pl.szczurradar.api.TestcontainersConfiguration;
 import pl.szczurradar.api.cli.MigrateCommand;
+import pl.szczurradar.api.web.MappedRoutes;
+import pl.szczurradar.api.web.MappedRoutes.Route;
 
 /**
  * Authorization completeness: EVERY mapped route requires a session (ported from the Python
@@ -73,8 +67,6 @@ class AuthorizationCompletenessIT {
 			"POST /api/admin/notifications/{id}/read",
 			"POST /api/admin/notifications/read");
 
-	private static final Pattern PATH_VARIABLE = Pattern.compile("\\{(\\w+)(?::[^}]*)?}");
-
 	@Autowired
 	MockMvcTester mvc;
 
@@ -85,7 +77,7 @@ class AuthorizationCompletenessIT {
 	@Test
 	void allowlistsReferenceExistingRoutes() {
 		Set<String> declared = new TreeSet<>();
-		routes(handlerMapping).forEach(route -> declared.add(route.key()));
+		MappedRoutes.routes(handlerMapping).forEach(route -> declared.add(route.key()));
 
 		assertThat(declared).as("dead PUBLIC_ROUTES").containsAll(PUBLIC_ROUTES.keySet());
 		assertThat(declared).as("dead ADMIN_ROUTES").containsAll(ADMIN_ROUTES);
@@ -96,7 +88,7 @@ class AuthorizationCompletenessIT {
 	void everyNonPublicRouteRequiresASession() {
 		List<String> checked = new ArrayList<>();
 		List<String> unprotected = new ArrayList<>();
-		for (Route route : routes(handlerMapping)) {
+		for (Route route : MappedRoutes.routes(handlerMapping)) {
 			if (PUBLIC_ROUTES.containsKey(route.key())) {
 				continue;
 			}
@@ -115,69 +107,6 @@ class AuthorizationCompletenessIT {
 		assertThat(unprotected)
 			.as("routes answering without a session; guard them or list them in PUBLIC_ROUTES with a reason")
 			.isEmpty();
-	}
-
-	/**
-	 * Every route of {@code handlerMapping}, one per method and pattern; a mapping without a method stands
-	 * for every write and read method. Also for {@code AdminRoleIT}.
-	 */
-	static List<Route> routes(RequestMappingHandlerMapping handlerMapping) {
-		List<Route> routes = new ArrayList<>();
-		for (Map.Entry<RequestMappingInfo, HandlerMethod> entry : handlerMapping.getHandlerMethods().entrySet()) {
-			RequestMappingInfo info = entry.getKey();
-			Set<RequestMethod> methods = info.getMethodsCondition().getMethods();
-			Set<RequestMethod> effective = methods.isEmpty()
-					? Set.of(RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.PATCH,
-							RequestMethod.DELETE)
-					: methods;
-			for (String pattern : info.getPatternValues()) {
-				for (RequestMethod method : effective) {
-					routes.add(new Route(method.name(), pattern, entry.getValue()));
-				}
-			}
-		}
-		return routes;
-	}
-
-	/** A route: its method, its path pattern and the handler that serves it. */
-	record Route(String method, String pattern, HandlerMethod handler) {
-
-		/** {@code "<METHOD> <pattern>"}, as {@code PUBLIC_ROUTES} and {@code ADMIN_ROUTES} list it. */
-		String key() {
-			return method + " " + pattern;
-		}
-
-		/** The pattern with every path variable filled with a dummy of its parameter's type. */
-		String concretePath() {
-			Matcher matcher = PATH_VARIABLE.matcher(pattern);
-			StringBuilder path = new StringBuilder();
-			while (matcher.find()) {
-				matcher.appendReplacement(path, dummyFor(matcher.group(1)));
-			}
-			matcher.appendTail(path);
-			return path.toString();
-		}
-
-		private String dummyFor(String variable) {
-			for (MethodParameter parameter : handler.getMethodParameters()) {
-				PathVariable annotation = parameter.getParameterAnnotation(PathVariable.class);
-				if (annotation == null) {
-					continue;
-				}
-				String name = annotation.value().isEmpty() ? parameter.getParameterName() : annotation.value();
-				if (variable.equals(name)) {
-					Class<?> type = parameter.getParameterType();
-					if (type == UUID.class) {
-						return new UUID(0, 0).toString();
-					}
-					if (Number.class.isAssignableFrom(type) || type.isPrimitive()) {
-						return "1";
-					}
-				}
-			}
-			return "x";
-		}
-
 	}
 
 }

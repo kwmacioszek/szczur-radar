@@ -1,0 +1,102 @@
+{
+  "items": [
+    {
+      "id": "<uuid>",
+      "itemType": "post",
+      "publishedAt": "<instant>",
+      "title": "XTB i CDR po wynikach",
+      "body": "XTB po wynikach poleci w górę, dokupuję.\nAnalityk pisze, że CDR spadnie.\n#gielda ",
+      "webUrl": "https://wykop.pl/wpis/12345",
+      "stage": "failed",
+      "assessmentAttempts": 1,
+      "lastAttempt": {
+        "failureClass": "schema_violation",
+        "violations": [
+          {
+            "failureClass": "schema_violation",
+            "rule": "schema:required",
+            "path": "$.claims[0]",
+            "message": "required property 'evidence' not found"
+          }
+        ],
+        "assessedAt": "<instant>",
+        "provider": "gemini",
+        "model": "gemini-3.1-flash-lite"
+      },
+      "technicalFailures": 0,
+      "lastTechnicalError": null,
+      "onHold": false
+    },
+    {
+      "id": "<uuid>",
+      "itemType": "link",
+      "publishedAt": "<instant>",
+      "title": "CD Projekt: wyniki za kwartał",
+      "body": null,
+      "webUrl": "https://wykop.pl/link/778/cd-projekt-wyniki-za-kwartal",
+      "stage": "failed",
+      "assessmentAttempts": 2,
+      "lastAttempt": {
+        "failureClass": "timeout",
+        "violations": [
+          {
+            "failureClass": "timeout",
+            "rule": "call",
+            "path": "$",
+            "message": "no answer within 300s"
+          }
+        ],
+        "assessedAt": "<instant>",
+        "provider": null,
+        "model": null
+      },
+      "technicalFailures": 0,
+      "lastTechnicalError": null,
+      "onHold": false
+    },
+    {
+      "id": "<uuid>",
+      "itemType": "link",
+      "publishedAt": "<instant>",
+      "title": "PKO BP: dywidenda rekordowa",
+      "body": "Kupuję PKO przed dywidendą.",
+      "webUrl": "https://wykop.pl/link/777/pko-bp-dywidenda-rekordowa",
+      "stage": "dead",
+      "assessmentAttempts": 3,
+      "lastAttempt": {
+        "failureClass": "fabricated_evidence",
+        "violations": [
+          {
+            "failureClass": "fabricated_evidence",
+            "rule": "D6",
+            "path": "$.claims[0].evidence.quote",
+            "message": "quote is not a fragment of item.body"
+          }
+        ],
+        "assessedAt": "<instant>",
+        "provider": "gemini",
+        "model": "gemini-3.1-flash-lite"
+      },
+      "technicalFailures": 0,
+      "lastTechnicalError": null,
+      "onHold": false
+    },
+    {
+      "id": "<uuid>",
+      "itemType": "comment",
+      "publishedAt": "<instant>",
+      "title": null,
+      "body": "Orlen znowu w dół, trzymam.",
+      "webUrl": null,
+      "stage": "stored",
+      "assessmentAttempts": 0,
+      "lastAttempt": null,
+      "technicalFailures": 3,
+      "lastTechnicalError": "IllegalStateException: a bug in the mapper",
+      "onHold": true
+    }
+  ],
+  "page": 0,
+  "size": 10,
+  "total": 4
+}

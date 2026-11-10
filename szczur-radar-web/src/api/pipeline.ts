@@ -64,11 +64,8 @@ export interface Run {
   interruptionCause: InterruptionCause | null
   /** True exactly when `attentionReasons` is not empty (the API's one rule). */
   needsAttention: boolean
-  /**
-   * Why it needs attention, in the API's rule order; empty when it does not. Optional: an API from before S-22 does
-   * not send it.
-   */
-  attentionReasons?: AttentionReason[]
+  /** Why it needs attention, in the API's rule order; empty when it does not. */
+  attentionReasons: AttentionReason[]
   /** Requested by the daily cron, not by an admin. */
   scheduled: boolean
   rangeFrom: string | null
@@ -102,9 +99,9 @@ export interface Run {
   steps: RunStep[]
   /**
    * What each source of a range run fetched so far, in the API's order of sources; empty for any other run and before
-   * its first source ends. Optional: an API from before S-20 does not send it.
+   * its first source ends.
    */
-  sourceResults?: SourceResult[]
+  sourceResults: SourceResult[]
 }
 
 /** A source a range run may fetch, and whether it is configured on the server. */

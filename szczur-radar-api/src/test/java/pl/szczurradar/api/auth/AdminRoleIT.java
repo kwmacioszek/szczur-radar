@@ -19,8 +19,9 @@ import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
 import pl.szczurradar.api.TestcontainersConfiguration;
-import pl.szczurradar.api.auth.AuthorizationCompletenessIT.Route;
 import pl.szczurradar.api.user.Role;
+import pl.szczurradar.api.web.MappedRoutes;
+import pl.szczurradar.api.web.MappedRoutes.Route;
 import pl.szczurradar.probe.AdminProbeController;
 
 /**
@@ -63,7 +64,7 @@ class AdminRoleIT {
 	@Test
 	void listedAdminRoutesRejectPlainUsers() {
 		List<String> checked = new ArrayList<>();
-		for (Route route : AuthorizationCompletenessIT.routes(handlerMapping)) {
+		for (Route route : MappedRoutes.routes(handlerMapping)) {
 			if (!AuthorizationCompletenessIT.ADMIN_ROUTES.contains(route.key())) {
 				continue;
 			}

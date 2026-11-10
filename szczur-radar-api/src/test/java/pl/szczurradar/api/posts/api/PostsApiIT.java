@@ -13,6 +13,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import jakarta.persistence.EntityManager;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,6 +37,10 @@ import pl.szczurradar.api.agents.assessor.contract.Assertiveness;
 import pl.szczurradar.api.agents.assessor.contract.AssessmentOutputV2;
 import pl.szczurradar.api.agents.assessor.contract.ContractJson;
 import pl.szczurradar.api.agents.assessor.contract.Direction;
+import pl.szczurradar.api.agents.assessor.contract.Flag;
+import pl.szczurradar.api.agents.assessor.contract.ItemType;
+import pl.szczurradar.api.agents.assessor.contract.Modifier;
+import pl.szczurradar.api.agents.assessor.contract.Relevance;
 import pl.szczurradar.api.agents.assessor.contract.Target;
 import pl.szczurradar.api.agents.assessor.contract.TargetKind;
 import pl.szczurradar.api.agents.assessor.validation.FailureClass;
@@ -260,23 +265,65 @@ class PostsApiIT {
 		ContractFiles.assertMatches(body(result), "post.json");
 	}
 
+	/**
+	 * A full page of the feed: a model's assessment with a modifier and a flag; a comment without a title, an
+	 * author or an address; a link post without a body that the prefilter assessed.
+	 */
 	@Test
-	void failedPostMatchesTheSharedContract() {
-		UUID failed = technicalFailures(seeds.post(PostStage.FAILED, 1, "2026-10-01T09:00:00Z"), 1);
-		seeds.failed(failed, "2026-10-02T08:00:00Z", FailureClass.SCHEMA_VIOLATION);
-		namePost(failed);
-		// A violation as the parser reports it, in place of the seed's placeholder one.
-		jdbc.update("UPDATE assessments SET violations = ?::jsonb WHERE post_id = ?",
-				"[{\"failureClass\":\"schema_violation\",\"rule\":\"schema:required\",\"path\":\"$.claims[0]\","
-						+ "\"message\":\"required property 'evidence' not found\"}]",
-				failed);
-		entityManager.clear();
+	void aFeedPageMatchesTheSharedContract() {
+		UUID assessed = seeds.post(PostStage.ASSESSED, 0, "2026-10-01T11:00:00Z");
+		AssessmentOutputV2 valid = ContractFixtures.validOutput();
+		seeds.okByModel(assessed, "2026-10-02T08:00:00Z", new AssessmentOutputV2(Relevance.INVESTMENT_RELATED,
+				List.of(Modifier.HUMOR), valid.targets(), valid.claims(), List.of(Flag.POSSIBLE_SARCASM)));
+		namePost(assessed);
+		UUID comment = seeds.post(PostStage.ASSESSED, 0, "2026-10-01T10:00:00Z");
+		seeds.okByModel(comment, "2026-10-02T08:00:00Z");
+		texts(comment, ItemType.COMMENT, null, ContractFixtures.BODY, null, null);
+		UUID link = seeds.redditPost("stocks", PostStage.ASSESSED, 0, "2026-10-01T09:00:00Z");
+		seeds.ok(link, "2026-10-02T08:00:00Z", Prefilter.noContentOutput());
+		texts(link, ItemType.LINK, "\uD83D\uDE80\uD83D\uDE80", null, "uzytkownik2",
+				"https://www.reddit.com/r/stocks/comments/abc123/");
 
-		MvcTestResult result = mvc.get().uri("/api/admin/posts/failed").with(asAdmin()).exchange();
+		MvcTestResult result = mvc.get().uri("/api/posts?page=0&size=10").with(asUser()).exchange();
 
 		assertThat(result).hasStatusOk();
-		assertThat(result).bodyJson().extractingPath("$.items[*].id").asArray().containsExactly(failed.toString());
-		ContractFiles.assertMatches(JSON.writeValueAsString(tree(result).get("items").get(0)), "failed-post.json");
+		ContractFiles.assertMatches(body(result), "posts-page.json");
+	}
+
+	/**
+	 * A full page of the failed list: a failed post with a violation and no technical error; a link without a body
+	 * whose attempt has no provider and model; a dead one; a stored comment on hold, without an address, never
+	 * assessed, with its technical error.
+	 */
+	@Test
+	void aFailedPostsPageMatchesTheSharedContract() {
+		UUID failed = seeds.post(PostStage.FAILED, 1, "2026-10-01T12:00:00Z");
+		seeds.failed(failed, "2026-10-02T08:00:00Z", FailureClass.SCHEMA_VIOLATION);
+		namePost(failed);
+		violations(failed, "[{\"failureClass\":\"schema_violation\",\"rule\":\"schema:required\","
+				+ "\"path\":\"$.claims[0]\",\"message\":\"required property 'evidence' not found\"}]");
+		UUID withoutProvider = seeds.post(PostStage.FAILED, 2, "2026-10-01T11:00:00Z");
+		seeds.failed(withoutProvider, "2026-10-02T08:00:00Z", FailureClass.TIMEOUT);
+		texts(withoutProvider, ItemType.LINK, "CD Projekt: wyniki za kwartał", null, "uzytkownik1",
+				"https://wykop.pl/link/778/cd-projekt-wyniki-za-kwartal");
+		violations(withoutProvider, "[{\"failureClass\":\"timeout\",\"rule\":\"call\",\"path\":\"$\","
+				+ "\"message\":\"no answer within 300s\"}]");
+		// An attempt the provenance of which names no provider or model (both columns are nullable).
+		jdbc.update("UPDATE assessments SET provider = NULL, model = NULL WHERE post_id = ?", withoutProvider);
+		UUID dead = seeds.post(PostStage.DEAD, 3, "2026-10-01T10:00:00Z");
+		seeds.failed(dead, "2026-10-02T08:00:00Z", FailureClass.FABRICATED_EVIDENCE);
+		texts(dead, ItemType.LINK, "PKO BP: dywidenda rekordowa", "Kupuję PKO przed dywidendą.", "uzytkownik3",
+				"https://wykop.pl/link/777/pko-bp-dywidenda-rekordowa");
+		violations(dead, "[{\"failureClass\":\"fabricated_evidence\",\"rule\":\"D6\","
+				+ "\"path\":\"$.claims[0].evidence.quote\",\"message\":\"quote is not a fragment of item.body\"}]");
+		UUID onHold = technicalFailures(seeds.post(PostStage.STORED, 0, "2026-10-01T09:00:00Z"),
+				Post.MAX_TECHNICAL_FAILURES);
+		texts(onHold, ItemType.COMMENT, null, "Orlen znowu w dół, trzymam.", "uzytkownik4", null);
+
+		MvcTestResult result = mvc.get().uri("/api/admin/posts/failed?page=0&size=10").with(asAdmin()).exchange();
+
+		assertThat(result).hasStatusOk();
+		ContractFiles.assertMatches(body(result), "failed-posts-page.json");
 	}
 
 	@Test
@@ -650,7 +697,9 @@ class PostsApiIT {
 		UUID failed = seeds.post(PostStage.FAILED, 1, "2026-10-01T10:00:00Z");
 		String body = "{\"postIds\":[\"" + dead + "\",\"" + failed + "\",\"" + UUID.randomUUID() + "\"]}";
 
-		assertThat(restore(body)).hasStatusOk().bodyJson().isStrictlyEqualTo("{\"restored\":1}");
+		MvcTestResult result = restore(body);
+		assertThat(result).hasStatusOk().bodyJson().isStrictlyEqualTo("{\"restored\":1}");
+		ContractFiles.assertMatches(body(result), "restore-result.json");
 
 		assertThat(jdbc.queryForMap("SELECT stage, assessment_attempts FROM posts WHERE id = ?", failed))
 			.containsEntry("stage", PostStage.FAILED.value())
@@ -693,8 +742,21 @@ class PostsApiIT {
 	 * seed makes from its random id.
 	 */
 	private void namePost(UUID post) {
-		jdbc.update("UPDATE posts SET title = ?, body = ?, author = ?, web_url = ? WHERE id = ?",
-				"XTB i CDR po wynikach", ContractFixtures.BODY, "uzytkownik1", "https://wykop.pl/wpis/12345", post);
+		texts(post, ItemType.POST, "XTB i CDR po wynikach", ContractFixtures.BODY, "uzytkownik1",
+				"https://wykop.pl/wpis/12345");
+	}
+
+	/** Gives a post a fixed type, text, author and address in place of the seed's, made from its random id. */
+	private void texts(UUID post, ItemType itemType, @Nullable String title, @Nullable String body,
+			@Nullable String author, @Nullable String webUrl) {
+		jdbc.update("UPDATE posts SET item_type = ?, title = ?, body = ?, author = ?, web_url = ? WHERE id = ?",
+				itemType.value(), title, body, author, webUrl, post);
+		entityManager.clear();
+	}
+
+	/** Puts {@code violations} (a JSON array as the validator stores it) in place of the seed's placeholder. */
+	private void violations(UUID post, String violations) {
+		jdbc.update("UPDATE assessments SET violations = ?::jsonb WHERE post_id = ?", violations, post);
 		entityManager.clear();
 	}
 

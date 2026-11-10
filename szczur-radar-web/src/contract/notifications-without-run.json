@@ -1,0 +1,12 @@
+{
+  "unread": 1,
+  "items": [
+    {
+      "id": "<uuid>",
+      "kind": "run_attention",
+      "createdAt": "<instant>",
+      "readAt": null,
+      "run": null
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+[
+  {
+    "source": "wykop",
+    "configured": true
+  },
+  {
+    "source": "reddit",
+    "configured": false
+  }
+]

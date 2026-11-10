@@ -3,6 +3,7 @@ package pl.szczurradar.api.pipeline.api;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -26,10 +27,12 @@ import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
+import org.springframework.test.web.servlet.assertj.MvcTestResult;
 import org.springframework.transaction.annotation.Transactional;
 
 import pl.szczurradar.api.TestcontainersConfiguration;
 import pl.szczurradar.api.cli.MigrateCommand;
+import pl.szczurradar.api.contract.ContractFiles;
 import pl.szczurradar.api.pipeline.PipelineRunService;
 import pl.szczurradar.api.pipeline.run.PipelineRun;
 import pl.szczurradar.api.pipeline.run.PipelineRunRepository;
@@ -179,6 +182,26 @@ class MissingDaysIT {
 		assertMissingDays("""
 				{"from":"2026-10-09","to":"2026-10-22","days":[\
 				{"day":"2026-10-19","sources":["reddit"]},{"day":"2026-10-20","sources":["reddit"]}]}""");
+	}
+
+	@Test
+	void theDaysWithoutDataMatchTheSharedContract() {
+		LocalReddit.configure(List.of("stocks"));
+		// Both sources start their windows on 13 October; on 19 October only Reddit is down, 20 October has no
+		// run at all, so it misses both sources.
+		range(RunStatus.SUCCEEDED, SystemAccount.SCHEDULER.id(), "2026-10-13", "2026-10-18",
+				results(SourceFetchStatus.SUCCEEDED, SourceFetchStatus.SUCCEEDED));
+		range(RunStatus.PARTIAL, SystemAccount.SCHEDULER.id(), "2026-10-19", "2026-10-19",
+				results(SourceFetchStatus.SUCCEEDED, SourceFetchStatus.FAILED));
+		range(RunStatus.SUCCEEDED, SystemAccount.SCHEDULER.id(), "2026-10-21", "2026-10-22",
+				results(SourceFetchStatus.SUCCEEDED, SourceFetchStatus.SUCCEEDED));
+
+		MvcTestResult result = mvc.get().uri(MISSING_DAYS).with(user(admin.toString()).roles(Role.ADMIN.name()))
+			.exchange();
+
+		assertThat(result).hasStatusOk();
+		ContractFiles.assertMatches(new String(result.getResponse().getContentAsByteArray(), StandardCharsets.UTF_8),
+				"missing-days.json");
 	}
 
 	@Test

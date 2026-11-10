@@ -11,6 +11,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 
 import java.io.UnsupportedEncodingException;
 import java.sql.Timestamp;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -31,12 +32,17 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
+import tools.jackson.databind.json.JsonMapper;
 
 import pl.szczurradar.api.TestcontainersConfiguration;
 import pl.szczurradar.api.alerts.AlertEvent;
 import pl.szczurradar.api.alerts.OperatorAlertQueue;
 import pl.szczurradar.api.cli.MigrateCommand;
+import pl.szczurradar.api.contract.ContractFiles;
+import pl.szczurradar.api.notifications.NotificationKind;
 import pl.szczurradar.api.notifications.RunNotifications;
+import pl.szczurradar.api.notifications.api.NotificationController.NotificationItem;
+import pl.szczurradar.api.notifications.api.NotificationController.NotificationList;
 import pl.szczurradar.api.user.Role;
 import pl.szczurradar.api.user.SystemAccount;
 
@@ -64,6 +70,9 @@ class NotificationsIT {
 
 	@Autowired
 	RunNotifications runNotifications;
+
+	@Autowired
+	JsonMapper json;
 
 	@MockitoBean
 	OperatorAlertQueue alerts;
@@ -253,6 +262,36 @@ class NotificationsIT {
 		// Again: nothing left to mark, still 204.
 		assertThat(mvc.post().uri(NOTIFICATIONS + "/read").with(as(admin))).hasStatus(HttpStatus.NO_CONTENT);
 		assertThat(list(otherAdmin)).bodyJson().extractingPath("$.unread").isEqualTo(12);
+	}
+
+	@Test
+	void theListMatchesTheSharedContract() {
+		List<UUID> runs = notifiedRuns(2);
+		// The newest: interrupted by a deploy, with its cause and error; still unread.
+		jdbc.update("UPDATE pipeline_runs SET status = 'interrupted', interruption_cause = 'deploy',"
+				+ " assessed_failed = 2, dead = 1, processing_errors = 3, skipped = 4,"
+				+ " error = 'interrupted: a new deployment took over' WHERE id = ?", runs.getLast());
+		// The older one: partial with a dead post, without a cause or an error; already read.
+		jdbc.update("UPDATE pipeline_runs SET status = 'partial', assessed_failed = 1, dead = 1 WHERE id = ?",
+				runs.getFirst());
+		assertThat(read(admin, notificationId(admin, runs.getFirst()))).hasStatus(HttpStatus.NO_CONTENT);
+
+		MvcTestResult list = list(admin);
+
+		assertThat(list).hasStatusOk();
+		ContractFiles.assertMatches(content(list), "notifications.json");
+	}
+
+	@Test
+	void aNotificationWithoutItsRunMatchesTheSharedContract() {
+		// Not a state the database can hold today: V9's ck_notifications_run requires a run for run_attention,
+		// the only kind, and fk_notifications_run keeps the run. The controller's branch for a notification
+		// without a run waits for future kinds, so its shape comes from the list as the application's own
+		// mapper (the one MVC writes the response with) serialises it.
+		NotificationList withoutRun = new NotificationList(1, List.of(new NotificationItem(UUID.randomUUID(),
+				NotificationKind.RUN_ATTENTION, Instant.parse("2026-10-16T00:00:00Z"), null, null)));
+
+		ContractFiles.assertMatches(json.writeValueAsString(withoutRun), "notifications-without-run.json");
 	}
 
 	/**
