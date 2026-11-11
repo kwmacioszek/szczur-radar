@@ -13,11 +13,15 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.server.PathContainer;
 import org.springframework.http.HttpMethod;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
+import org.springframework.web.servlet.function.RouterFunction;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
+import org.springframework.web.util.pattern.PathPatternParser;
 
 import pl.szczurradar.api.TestcontainersConfiguration;
 import pl.szczurradar.api.cli.MigrateCommand;
@@ -30,8 +34,9 @@ import pl.szczurradar.api.web.MappedRoutes.Route;
  *
  * <p>The rule for every new route: it needs no change at all (deny by default in
  * {@code SecurityConfig}), unless it must be public — then it is permitted in {@code SecurityConfig}
- * AND listed in {@link #PUBLIC_ROUTES} with a justification. Admin-only routes go under
- * {@code /api/admin/} and are listed in {@link #ADMIN_ROUTES}.
+ * AND listed in {@link #PUBLIC_ROUTES} with a justification, outside {@code /api/admin/**} and
+ * {@code /internal/**}. Admin-only routes go under {@code /api/admin/}; {@code AdminRoleIT} checks every
+ * mapped route there for 403, with no list.
  *
  * <p>The test walks every handler mapping of the real application and calls each method without a
  * session, so a route that slips past the security rules fails CI. Path variables are filled with
@@ -53,22 +58,11 @@ class AuthorizationCompletenessIT {
 			"POST /api/auth/activation/lookup",
 			"checks a one-time link before the password form; reveals only the e-mail to the link holder");
 
-	/** Routes that a plain user must get 403 on (see {@code AdminRoleIT}). */
-	static final Set<String> ADMIN_ROUTES = Set.of(
-			"POST /api/admin/pipeline-runs",
-			"GET /api/admin/pipeline-runs",
-			"GET /api/admin/pipeline-runs/sources",
-			"GET /api/admin/pipeline-runs/missing-days",
-			"GET /api/admin/pipeline-runs/{id}",
-			"GET /api/admin/posts/failed",
-			"POST /api/admin/posts/restore",
-			"GET /api/admin/llm/check",
-			"GET /api/admin/notifications",
-			"POST /api/admin/notifications/{id}/read",
-			"POST /api/admin/notifications/read");
-
 	@Autowired
 	MockMvcTester mvc;
+
+	@Autowired
+	ApplicationContext applicationContext;
 
 	@Autowired
 	@Qualifier("requestMappingHandlerMapping")
@@ -80,8 +74,25 @@ class AuthorizationCompletenessIT {
 		MappedRoutes.routes(handlerMapping).forEach(route -> declared.add(route.key()));
 
 		assertThat(declared).as("dead PUBLIC_ROUTES").containsAll(PUBLIC_ROUTES.keySet());
-		assertThat(declared).as("dead ADMIN_ROUTES").containsAll(ADMIN_ROUTES);
-		assertThat(ADMIN_ROUTES).doesNotContainAnyElementsOf(PUBLIC_ROUTES.keySet());
+
+		List<String> misplaced = new ArrayList<>();
+		for (String key : PUBLIC_ROUTES.keySet()) {
+			String path = key.substring(key.indexOf(' ') + 1);
+			for (String guarded : List.of(MappedRoutes.ADMIN_PATHS, MappedRoutes.INTERNAL_PATHS)) {
+				if (PathPatternParser.defaultInstance.parse(guarded).matches(PathContainer.parsePath(path))) {
+					misplaced.add(key + " is under " + guarded);
+				}
+			}
+		}
+		assertThat(misplaced).as("PUBLIC_ROUTES entries that belong to the admin or the cron").isEmpty();
+	}
+
+	@Test
+	void everyRouteIsWalkedByMappedRoutes() {
+		assertThat(applicationContext.getBeanNamesForType(RouterFunction.class))
+			.as("RouterFunction beans are invisible to MappedRoutes; extend MappedRoutes first, so that the "
+					+ "authorization tests walk their routes too")
+			.isEmpty();
 	}
 
 	@Test
