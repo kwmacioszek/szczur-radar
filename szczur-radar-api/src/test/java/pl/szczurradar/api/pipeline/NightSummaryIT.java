@@ -1,6 +1,7 @@
 package pl.szczurradar.api.pipeline;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -93,6 +94,12 @@ class NightSummaryIT {
 	void anUnknownRunIsNoNightAndARepeatedIdCountsOnce() {
 		assertThat(summary.of(List.of(nights.range, UUID.randomUUID()))).isEmpty();
 		assertThat(summary.of(List.of(nights.retry, nights.retry)).orElseThrow().runs()).hasSize(1);
+	}
+
+	@Test
+	void noRunIdIsRefused() {
+		assertThatIllegalArgumentException().isThrownBy(() -> summary.of(List.of()))
+			.withMessage("A night's summary needs at least one run id");
 	}
 
 	/** The rows of the class comment. */

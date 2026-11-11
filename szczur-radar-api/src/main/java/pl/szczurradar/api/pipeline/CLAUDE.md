@@ -296,24 +296,29 @@ PipelineRunService.startRange / startPosts → queue (thread pipeline-run) → R
   `TRIGGER_WAKE_TIMEOUT` while it waits, no answer to its `POST`), its exit 1 says only that the run did
   not end; a later `failed` / `interrupted` ending of that run is still the cron's, so it shows in `/admin`
   and the bell, not in ntfy.
-- **The night's summary (S-34).** After its runs — every run ended, one `failed` / `interrupted`, or `not
-  ended within` its time-out — the cron calls `POST /internal/pipeline-runs/nightly-summary` with their ids
-  (Entries above). `NightSummary.of` reads only: the runs (`findAllById`, sorted by creation), the range run's
+- **The night's summary (S-34).** After its runs — every run ended, one `failed` / `interrupted`, `not ended
+  within` its time-out, or a status read the API answered with another status than 200 or with an unknown
+  status (only the API not answering while the cron waits ends it without the call) — the cron calls `POST
+  /internal/pipeline-runs/nightly-summary` with their ids (Entries above). `NightSummary.of` (at least one id,
+  else `IllegalArgumentException`) reads only, in one read-only `REPEATABLE READ` transaction, so the counters
+  of a run still running come from one snapshot: the runs (`findAllById`, sorted by creation), the range run's
   `pipeline_run_sources` and `posts.first_run_id` counts, the retry run's distinct assessed posts
   (`AssessmentRepository.countDistinctPostsBySource`), the night's assessments summed per source
   (`sumBySource`: ok, failed, tokens, `NULL` as 0), the dead posts whose latest assessment is one of the
   night's runs (`PostRepository.countDeadKilledBySource`), and the admin runs created between the previous
   night's last cron run (`findLastScheduledCreationBefore`, `EPOCH` without one) and this night's first
   (`findAdminRunIdsCreatedBetween`) with their dead posts — bounded by creation, never by now, so each admin
-  run is in exactly one summary. The controller raises `NIGHT_SUMMARY` for the range run's id (else the
-  first) through `OperatorAlertQueue.raise(ObjectProvider, …)`, always, also with nothing dead, and returns
-  the text for the cron's log. The format is pinned by `NightSummaryTest` (the plan's example night, a run
-  still running, a failed and an empty source, a source without a result, the admin runs' dead posts in
-  `Source` order, every source failing with the longest error staying within ntfy's bytes), the queries by
+  run is in exactly one summary. The queries by run use `ix_assessments_run` and `ix_posts_first_run` (`V14`,
+  S-34 review F3), so their cost follows the night, not the history. The controller raises `NIGHT_SUMMARY` for
+  the range run's id (else the first) through `OperatorAlertQueue.raise(ObjectProvider, …)`, always, also with
+  nothing dead, and returns the text for the cron's log. The format is pinned by `NightSummaryTest`
+  (production's night of 2026-11-11, the sources in `Source` order whatever order they come in, a run still
+  running, a failed and an empty source, a source without a result, the admin runs' dead posts in `Source`
+  order, every source failing with the longest error staying within ntfy's bytes), the queries by
   `NightSummaryIT` on Postgres (two sources with a retry and a range still running, the first night counting
-  the admin's dead posts from the beginning and not those of a later run, an unknown run and a repeated id)
-  and the route by `api/InternalPipelineRunIT` (returned and raised for the range run, 400, 404) and
-  `InternalPipelineRunWithoutTokenIT` (401).
+  the admin's dead posts from the beginning and not those of a later run, an unknown run and a repeated id, no
+  id refused) and the route by `api/InternalPipelineRunIT` (returned and raised for the range run, 400, 404)
+  and `InternalPipelineRunWithoutTokenIT` (401).
 - **Operator alerts of the error paths (S-18).** Each path that ended in an ERROR line nothing else reported
   now also raises an `alerts/AlertEvent` through `OperatorAlertQueue.raise(event, runId, detail)`; the
   ERROR line stays:
