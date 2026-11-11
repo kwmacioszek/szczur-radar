@@ -331,10 +331,10 @@ V14 tylko dodaje indeks (`CREATE INDEX`, nie `CONCURRENTLY` — Flyway w transak
 
 #### Automated
 
-- [x] 4.1 CI PR-a zielone (`gh pr checks <PR> --watch`)
-- [x] 4.2 `GET /api/admin/assessment-quality` w PR env: 200 z kluczami okna, 401 bez sesji
-- [x] 4.3 Log crona i testowy temat ntfy w PR env z liniami `quality 7d`
-- [x] 4.4 Zrzut sekcji w PR env przez `playwright-cli`, zmienne testowe usunięte z PR env
+- [x] 4.1 CI PR-a zielone (`gh pr checks <PR> --watch`) — f35958a
+- [x] 4.2 `GET /api/admin/assessment-quality` w PR env: 200 z kluczami okna, 401 bez sesji — f35958a
+- [x] 4.3 Log crona i testowy temat ntfy w PR env z liniami `quality 7d` — f35958a
+- [x] 4.4 Zrzut sekcji w PR env przez `playwright-cli`, zmienne testowe usunięte z PR env — f35958a
 
 #### Manual
 
