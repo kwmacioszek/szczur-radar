@@ -433,10 +433,13 @@ guard_case() {
     stop_stub
 }
 
-readonly safe='{"status": 200, "body": {"safe": true, "reason": null}}'
-readonly running='{"status": 200, "body": {"safe": false, "reason": "pipeline_running"}}'
-readonly queued='{"status": 200, "body": {"safe": false, "reason": "pipeline_queued"}}'
-readonly unavailable='{"status": 503, "body": {"status": "unavailable"}}'
+# The API's own answers, fixtures/api/*.json (pinned by DeploySafetyIT and HealthIT), as the stub's
+# {"status": <HTTP code>, "body": <the file>}; the codes stay with the ITs' status assertions.
+api_answer() { jq -c --argjson status "$1" '{status: $status, body: .}' "$here/fixtures/api/$2.json"; }
+safe=$(api_answer 200 deploy-safety-safe); readonly safe
+running=$(api_answer 200 deploy-safety-running); readonly running
+queued=$(api_answer 200 deploy-safety-queued); readonly queued
+unavailable=$(api_answer 503 deploy-safety-unavailable); readonly unavailable
 
 step "10. wait-safe.sh: the deploy guard"
 guard_case safe 0 "[$safe]"
@@ -607,7 +610,7 @@ run_verify() {
     [[ $status == "$expected" ]] || { show_run "$name"; die "$name: exit code $status, expected $expected"; }
 }
 
-readonly ready='{"status": 200, "body": {"status": "ok"}}'
+ready=$(api_answer 200 ready); readonly ready
 
 # Case $1: `verify-apply.sh check` of the services $3 (space-separated) with the snapshot $4 (JSON),
 # while the stub API's /api/ready answers $5 (a JSON list), with the variables after it, must exit

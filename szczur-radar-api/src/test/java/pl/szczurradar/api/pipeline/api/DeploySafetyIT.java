@@ -2,6 +2,7 @@ package pl.szczurradar.api.pipeline.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.nio.file.Path;
 import java.util.Map;
 import java.util.UUID;
 
@@ -23,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import pl.szczurradar.api.TestcontainersConfiguration;
 import pl.szczurradar.api.cli.MigrateCommand;
+import pl.szczurradar.api.contract.ContractFiles;
 import pl.szczurradar.api.pipeline.PipelineStallSettings;
 import pl.szczurradar.api.pipeline.run.PipelineRun;
 import pl.szczurradar.api.pipeline.run.PipelineRunRepository;
@@ -37,6 +39,9 @@ import pl.szczurradar.api.user.SystemAccount;
 class DeploySafetyIT {
 
 	private static final String DEPLOY_SAFETY = "/api/deploy-safety";
+
+	/** The bodies the deploy gate's stubs are built from ({@code tools/deploy-gate/test.sh}). */
+	private static final String FIXTURES = "../tools/deploy-gate/fixtures/api/";
 
 	/**
 	 * Runs are stored through the entity and then given their status as the pipeline would; a dead one
@@ -72,71 +77,71 @@ class DeploySafetyIT {
 		}
 
 		@Test
-		void withoutRunsItIsSafe() {
-			assertDeploySafety("{\"safe\":true,\"reason\":null}");
+		void withoutRunsItIsSafe() throws Exception {
+			assertDeploySafety("deploy-safety-safe.json");
 		}
 
 		@Test
-		void aQueuedRunIsNotSafe() {
+		void aQueuedRunIsNotSafe() throws Exception {
 			run(RunStatus.QUEUED);
 
-			assertDeploySafety("{\"safe\":false,\"reason\":\"pipeline_queued\"}");
+			assertDeploySafety("deploy-safety-queued.json");
 		}
 
 		@Test
-		void aRunningRunIsNotSafe() {
+		void aRunningRunIsNotSafe() throws Exception {
 			run(RunStatus.RUNNING);
 
-			assertDeploySafety("{\"safe\":false,\"reason\":\"pipeline_running\"}");
+			assertDeploySafety("deploy-safety-running.json");
 		}
 
 		@Test
-		void aRunningRunOutranksAQueuedOne() {
+		void aRunningRunOutranksAQueuedOne() throws Exception {
 			// A retry runs, the range waits behind it.
 			run(RunStatus.RUNNING);
 			run(RunStatus.QUEUED);
 
-			assertDeploySafety("{\"safe\":false,\"reason\":\"pipeline_running\"}");
+			assertDeploySafety("deploy-safety-running.json");
 		}
 
 		@Test
-		void aDeadRunningRunIsSafeAndLeftAsItWas() {
+		void aDeadRunningRunIsSafeAndLeftAsItWas() throws Exception {
 			// Its instance was lost without closing it: no one runs it, and only a request to start runs
 			// interrupts it — never this read.
 			UUID id = deadRun(RunStatus.RUNNING);
 			Map<String, Object> before = row(id);
 
-			assertDeploySafety("{\"safe\":true,\"reason\":null}");
+			assertDeploySafety("deploy-safety-safe.json");
 			assertThat(row(id)).isEqualTo(before).containsEntry("status", RunStatus.RUNNING.value());
 		}
 
 		@Test
-		void aDeadQueuedRunIsSafe() {
+		void aDeadQueuedRunIsSafe() throws Exception {
 			// Queued on an instance that was lost before it ran (or whose submit never reached its queue).
 			deadRun(RunStatus.QUEUED);
 
-			assertDeploySafety("{\"safe\":true,\"reason\":null}");
+			assertDeploySafety("deploy-safety-safe.json");
 		}
 
 		@Test
-		void aQueuedRunBehindARunThatJustEndedIsNotSafe() {
+		void aQueuedRunBehindARunThatJustEndedIsNotSafe() throws Exception {
 			// The retry ran longer than the timeout and just ended; the range queued with it has not started.
 			UUID ended = run(RunStatus.SUCCEEDED);
 			jdbc.update("UPDATE pipeline_runs SET created_at = " + DEAD + ", started_at = " + DEAD
 					+ ", last_activity_at = " + DEAD + ", finished_at = now() WHERE id = ?", ended);
 			deadRun(RunStatus.QUEUED);
 
-			assertDeploySafety("{\"safe\":false,\"reason\":\"pipeline_queued\"}");
+			assertDeploySafety("deploy-safety-queued.json");
 		}
 
 		@Test
-		void aRunningRunWithRecentActivityIsNotSafe() {
+		void aRunningRunWithRecentActivityIsNotSafe() throws Exception {
 			// Started long ago, but its last activity is within the timeout: the activity decides.
 			UUID id = run(RunStatus.RUNNING);
 			jdbc.update("UPDATE pipeline_runs SET created_at = " + DEAD + ", started_at = " + DEAD
 					+ ", last_activity_at = now() WHERE id = ?", id);
 
-			assertDeploySafety("{\"safe\":false,\"reason\":\"pipeline_running\"}");
+			assertDeploySafety("deploy-safety-running.json");
 		}
 
 		@Test
@@ -152,10 +157,10 @@ class DeploySafetyIT {
 
 		@ParameterizedTest
 		@EnumSource(value = RunStatus.class, names = { "SUCCEEDED", "PARTIAL", "FAILED", "INTERRUPTED" })
-		void onlyEndedRunsAreSafe(RunStatus status) {
+		void onlyEndedRunsAreSafe(RunStatus status) throws Exception {
 			run(status);
 
-			assertDeploySafety("{\"safe\":true,\"reason\":null}");
+			assertDeploySafety("deploy-safety-safe.json");
 		}
 
 		@Test
@@ -196,8 +201,11 @@ class DeploySafetyIT {
 		}
 
 		/** The answer without a session: the bit and its reason, nothing else about the runs. */
-		private void assertDeploySafety(String body) {
-			assertThat(mvc.get().uri(DEPLOY_SAFETY)).hasStatusOk().bodyJson().isStrictlyEqualTo(body);
+		private void assertDeploySafety(String file) throws Exception {
+			MvcTestResult result = mvc.get().uri(DEPLOY_SAFETY).exchange();
+
+			assertThat(result).hasStatusOk();
+			ContractFiles.assertMatches(result.getResponse().getContentAsString(), Path.of(FIXTURES + file));
 		}
 
 	}
@@ -217,10 +225,12 @@ class DeploySafetyIT {
 		MockMvcTester mvc;
 
 		@Test
-		void itIsUnavailableWithoutDatabase() {
-			assertThat(mvc.get().uri(DEPLOY_SAFETY)).hasStatus(HttpStatus.SERVICE_UNAVAILABLE)
-				.bodyJson()
-				.isStrictlyEqualTo("{\"status\":\"unavailable\"}");
+		void itIsUnavailableWithoutDatabase() throws Exception {
+			MvcTestResult result = mvc.get().uri(DEPLOY_SAFETY).exchange();
+
+			assertThat(result).hasStatus(HttpStatus.SERVICE_UNAVAILABLE);
+			ContractFiles.assertMatches(result.getResponse().getContentAsString(),
+					Path.of(FIXTURES + "deploy-safety-unavailable.json"));
 		}
 
 	}

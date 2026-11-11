@@ -447,17 +447,17 @@ Nie dotyczy: bez migracji, bez zmian w wdrażanym kodzie. Adresy do zrzutów z n
 
 #### Automated
 
-- [x] 3.1 Testy integracyjne API przechodzą: `cd szczur-radar-api && ./mvnw -B verify`
-- [x] 3.2 Test crona przechodzi (Docker): `tools/pipeline-trigger/test.sh`
-- [x] 3.3 Celowe zepsucie kształtu (agent wykonuje i cofa): zmiana nazwy klucza w `run-state-running.json` daje czerwony `InternalPipelineRunIT` z wydrukiem ciała, a ta sama zmiana w nadpisaniu przypadku `test.sh` daje błąd atrapy
-- [x] 3.4 Celowe zepsucie rejestru (agent wykonuje i cofa): usunięcie `partial` z `classify` w kopii `trigger.sh` albo dopisanie wartości do `.values.runStatus` w kopii `rules.json` daje czerwony `test.sh` przed pierwszym przypadkiem
-- [x] 3.5 Atrapa nie wysyła `assessTotal` przed oceną (agent): `test.sh` loguje tętno przebiegu zakończonego `failed` z `assessed …/?` (grep w logu przypadku)
+- [x] 3.1 Testy integracyjne API przechodzą: `cd szczur-radar-api && ./mvnw -B verify` — 472a7f7
+- [x] 3.2 Test crona przechodzi (Docker): `tools/pipeline-trigger/test.sh` — 472a7f7
+- [x] 3.3 Celowe zepsucie kształtu (agent wykonuje i cofa): zmiana nazwy klucza w `run-state-running.json` daje czerwony `InternalPipelineRunIT` z wydrukiem ciała, a ta sama zmiana w nadpisaniu przypadku `test.sh` daje błąd atrapy — 472a7f7
+- [x] 3.4 Celowe zepsucie rejestru (agent wykonuje i cofa): usunięcie `partial` z `classify` w kopii `trigger.sh` albo dopisanie wartości do `.values.runStatus` w kopii `rules.json` daje czerwony `test.sh` przed pierwszym przypadkiem — 472a7f7
+- [x] 3.5 Atrapa nie wysyła `assessTotal` przed oceną (agent): `test.sh` loguje tętno przebiegu zakończonego `failed` z `assessed …/?` (grep w logu przypadku) — 472a7f7
 
 ### Phase 4: Stuby `deploy-gate` z kontraktu
 
 #### Automated
 
-- [ ] 4.1 Testy integracyjne API przechodzą: `cd szczur-radar-api && ./mvnw -B verify`
-- [ ] 4.2 Test bramki przechodzi: `tools/deploy-gate/test.sh`
-- [ ] 4.3 Celowe zepsucie (agent wykonuje i cofa): zmiana klucza `reason` w `deploy-safety-running.json` daje czerwony `DeploySafetyIT` i czerwony `tools/deploy-gate/test.sh` (wait-safe nie widzi powodu)
-- [ ] 4.4 Brak literałów ciał API w stubach (agent): `grep -nE "pipeline_running|pipeline_queued|\"status\": \"(ok|ready|unavailable)\"" tools/deploy-gate/test.sh` nie znajduje nic poza odczytem plików
+- [x] 4.1 Testy integracyjne API przechodzą: `cd szczur-radar-api && ./mvnw -B verify`
+- [x] 4.2 Test bramki przechodzi: `tools/deploy-gate/test.sh`
+- [x] 4.3 Celowe zepsucie (agent wykonuje i cofa): zmiana klucza `reason` w `deploy-safety-running.json` daje czerwony `DeploySafetyIT` i czerwony `tools/deploy-gate/test.sh` (wait-safe nie widzi powodu)
+- [x] 4.4 Brak literałów ciał API w stubach (agent): `grep -nE "pipeline_running|pipeline_queued|\"status\": \"(ok|ready|unavailable)\"" tools/deploy-gate/test.sh` nie znajduje nic poza odczytem plików
