@@ -338,5 +338,5 @@ V14 tylko dodaje indeks (`CREATE INDEX`, nie `CONCURRENTLY` — Flyway w transak
 
 #### Manual
 
-- [ ] 4.5 Właściciel akceptuje format linii jakości i opis `ASSESSMENT_QUALITY`
-- [ ] 4.6 Właściciel akceptuje wygląd i słowa sekcji „Jakość ocen (7 dni)”
+- [x] 4.5 Właściciel akceptuje format linii jakości i opis `ASSESSMENT_QUALITY` — zaakceptowane przez właściciela 2026-11-11
+- [x] 4.6 Właściciel akceptuje wygląd i słowa sekcji „Jakość ocen (7 dni)” — zaakceptowane przez właściciela 2026-11-11 (zrzuty po F2)

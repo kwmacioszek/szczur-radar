@@ -6,6 +6,8 @@ section element only (`section[aria-labelledby="quality-title"]`), in both theme
 1280 px and 375 px. File name: `quality-<variant>-<theme>-<width>.png`. At 375 px the page has no horizontal scroll
 (`scrollWidth` 375 = `innerWidth`).
 
+Retaken 2026-11-11 after review F2 (new wording "próby z wywołaniem modelu (bez prefiltra), z ponowieniami"), on the mock at commit d14f053; the `error` and `loading` shots came out byte-identical (that line is not shown in those states).
+
 | State | Screenshots | Notes |
 | --- | --- | --- |
 | default | `quality-data-{light,dark}-{1280,375}.png`, `quality-few-{light,dark}-{1280,375}.png` | `data`: Wykop `w normie` (success), Reddit `ponad progiem` (warning); `few`: Reddit `za mało prób` (neutral). Window, share of failed attempts with the number of attempts, class shares with their labels, threshold. |

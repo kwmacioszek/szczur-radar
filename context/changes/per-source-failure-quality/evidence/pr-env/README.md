@@ -2,6 +2,8 @@
 
 PR env `szczur-radar-pr-166`, every service deployed from `cb55f3d`. Secrets (activation link, password, session cookie, trigger token, ntfy topic) stayed in shell variables and scratchpad files outside the repo; none is in this folder.
 
+The three `quality-section-*.png` were retaken 2026-11-11 after review F2 (new wording "próby z wywołaniem modelu (bez prefiltra), z ponowieniami") on the PR env at commit d14f053 (API deployment `SUCCESS`; the web build of 76f2952 still served, `SKIPPED` at d14f053 with no web change between them), with the same admin after `reset-password`.
+
 ## Steps
 
 1. One-time admin (lesson "W PR env agent sam zakłada jednorazowe konto admina…"): `railway ssh -s szczur-radar-api -e szczur-radar-pr-166 -- java -jar /app/target/szczur-radar-api.jar create-user --email agent-per-source-failure-quality@example.com --role admin`, link captured into a shell variable, random password from `openssl rand`, `POST /api/auth/activation` → 204, `POST /api/auth/login` (header `Origin`) → 200, cookie jar in the scratchpad.
