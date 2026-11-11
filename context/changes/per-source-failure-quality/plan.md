@@ -321,20 +321,20 @@ V14 tylko dodaje indeks (`CREATE INDEX`, nie `CONCURRENTLY` — Flyway w transak
 
 #### Automated
 
-- [x] 3.1 `AssessmentQualityControllerIT` zielony: 401, 403, treść dla fixed `Clock` równa plikowi kontraktu
-- [x] 3.2 `./mvnw -B verify` zielone (`AuthorizationCompletenessIT`, `ContractRoutesIT`, `ContractVariantsTest`, `SpaRulesTest`)
-- [x] 3.3 `npm test` zielone (`AdminView.test.ts` i testy kontraktu SPA, `styleContract.test.ts`)
-- [x] 3.4 `npm run build` zielone
-- [x] 3.5 Zrzuty `playwright-cli` sekcji na mocku: oba motywy, 375 px, 7 stanów lub N/A z powodem
+- [x] 3.1 `AssessmentQualityControllerIT` zielony: 401, 403, treść dla fixed `Clock` równa plikowi kontraktu — cb55f3d
+- [x] 3.2 `./mvnw -B verify` zielone (`AuthorizationCompletenessIT`, `ContractRoutesIT`, `ContractVariantsTest`, `SpaRulesTest`) — cb55f3d
+- [x] 3.3 `npm test` zielone (`AdminView.test.ts` i testy kontraktu SPA, `styleContract.test.ts`) — cb55f3d
+- [x] 3.4 `npm run build` zielone — cb55f3d
+- [x] 3.5 Zrzuty `playwright-cli` sekcji na mocku: oba motywy, 375 px, 7 stanów lub N/A z powodem — cb55f3d
 
 ### Phase 4: Weryfikacja w PR env
 
 #### Automated
 
-- [ ] 4.1 CI PR-a zielone (`gh pr checks <PR> --watch`)
-- [ ] 4.2 `GET /api/admin/assessment-quality` w PR env: 200 z kluczami okna, 401 bez sesji
-- [ ] 4.3 Log crona i testowy temat ntfy w PR env z liniami `quality 7d`
-- [ ] 4.4 Zrzut sekcji w PR env przez `playwright-cli`, zmienne testowe usunięte z PR env
+- [x] 4.1 CI PR-a zielone (`gh pr checks <PR> --watch`)
+- [x] 4.2 `GET /api/admin/assessment-quality` w PR env: 200 z kluczami okna, 401 bez sesji
+- [x] 4.3 Log crona i testowy temat ntfy w PR env z liniami `quality 7d`
+- [x] 4.4 Zrzut sekcji w PR env przez `playwright-cli`, zmienne testowe usunięte z PR env
 
 #### Manual
 
