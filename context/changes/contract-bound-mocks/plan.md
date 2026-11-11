@@ -436,22 +436,22 @@ Nie dotyczy: bez migracji, bez zmian w wdrażanym kodzie. Adresy do zrzutów z n
 
 #### Automated
 
-- [x] 2.1 Testy web przechodzą: `cd szczur-radar-web && npm test`
-- [x] 2.2 Typecheck i build web przechodzą: `cd szczur-radar-web && npm run build`
-- [x] 2.3 Każdy wiersz tabeli zachowań poza oznaczonymi „zgodne przed fazą” jest czerwony na atrapie z commitu fazy 1 (agent uruchamia strażnik fazy 2 na `git show <sha commitu fazy 1>:szczur-radar-web/dev/mock-api.js` podstawionym w pomocniku albo w tymczasowej kopii i potwierdza czerwień każdego takiego wiersza oraz zieleń wierszy „zgodne przed fazą”; potem przywraca)
-- [x] 2.4 Celowe zepsucie zachowania (agent wykonuje i cofa): przywrócenie 409 dla startu w trybie `accepted` oraz pustej listy `violations` w jednej próbie daje czerwony strażnik
-- [x] 2.5 Atrapa nadal działa w przeglądarce (agent): `npx vite --port 5173 --strictPort` i `playwright-cli run-code --filename=szczur-radar-web/dev/mock-api.js`, potem `playwright-cli` otwiera `/admin`, stronę przebiegu, feed, stronę postu z Reddita (z „Dane dla nerdów”) i `/activate` z adresów z nagłówka atrapy; w każdej trwa render bez błędów w konsoli, a `/admin` pokazuje Reddita w „Dni bez danych”
-- [x] 2.6 Przepływ logowania na atrapie (agent): z `AUTH='anonymous'` strona logowania przyjmuje dane w trybie `LOGIN='ok'` i prowadzi do feedu, a w `LOGIN='invalid'` pokazuje komunikat błędu (`playwright-cli` snapshot)
+- [x] 2.1 Testy web przechodzą: `cd szczur-radar-web && npm test` — 28e924c
+- [x] 2.2 Typecheck i build web przechodzą: `cd szczur-radar-web && npm run build` — 28e924c
+- [x] 2.3 Każdy wiersz tabeli zachowań poza oznaczonymi „zgodne przed fazą” jest czerwony na atrapie z commitu fazy 1 (agent uruchamia strażnik fazy 2 na `git show <sha commitu fazy 1>:szczur-radar-web/dev/mock-api.js` podstawionym w pomocniku albo w tymczasowej kopii i potwierdza czerwień każdego takiego wiersza oraz zieleń wierszy „zgodne przed fazą”; potem przywraca) — 28e924c
+- [x] 2.4 Celowe zepsucie zachowania (agent wykonuje i cofa): przywrócenie 409 dla startu w trybie `accepted` oraz pustej listy `violations` w jednej próbie daje czerwony strażnik — 28e924c
+- [x] 2.5 Atrapa nadal działa w przeglądarce (agent): `npx vite --port 5173 --strictPort` i `playwright-cli run-code --filename=szczur-radar-web/dev/mock-api.js`, potem `playwright-cli` otwiera `/admin`, stronę przebiegu, feed, stronę postu z Reddita (z „Dane dla nerdów”) i `/activate` z adresów z nagłówka atrapy; w każdej trwa render bez błędów w konsoli, a `/admin` pokazuje Reddita w „Dni bez danych” — 28e924c
+- [x] 2.6 Przepływ logowania na atrapie (agent): z `AUTH='anonymous'` strona logowania przyjmuje dane w trybie `LOGIN='ok'` i prowadzi do feedu, a w `LOGIN='invalid'` pokazuje komunikat błędu (`playwright-cli` snapshot) — 28e924c
 
 ### Phase 3: Atrapa crona z kontraktu
 
 #### Automated
 
-- [ ] 3.1 Testy integracyjne API przechodzą: `cd szczur-radar-api && ./mvnw -B verify`
-- [ ] 3.2 Test crona przechodzi (Docker): `tools/pipeline-trigger/test.sh`
-- [ ] 3.3 Celowe zepsucie kształtu (agent wykonuje i cofa): zmiana nazwy klucza w `run-state-running.json` daje czerwony `InternalPipelineRunIT` z wydrukiem ciała, a ta sama zmiana w nadpisaniu przypadku `test.sh` daje błąd atrapy
-- [ ] 3.4 Celowe zepsucie rejestru (agent wykonuje i cofa): usunięcie `partial` z `classify` w kopii `trigger.sh` albo dopisanie wartości do `.values.runStatus` w kopii `rules.json` daje czerwony `test.sh` przed pierwszym przypadkiem
-- [ ] 3.5 Atrapa nie wysyła `assessTotal` przed oceną (agent): `test.sh` loguje tętno przebiegu zakończonego `failed` z `assessed …/?` (grep w logu przypadku)
+- [x] 3.1 Testy integracyjne API przechodzą: `cd szczur-radar-api && ./mvnw -B verify`
+- [x] 3.2 Test crona przechodzi (Docker): `tools/pipeline-trigger/test.sh`
+- [x] 3.3 Celowe zepsucie kształtu (agent wykonuje i cofa): zmiana nazwy klucza w `run-state-running.json` daje czerwony `InternalPipelineRunIT` z wydrukiem ciała, a ta sama zmiana w nadpisaniu przypadku `test.sh` daje błąd atrapy
+- [x] 3.4 Celowe zepsucie rejestru (agent wykonuje i cofa): usunięcie `partial` z `classify` w kopii `trigger.sh` albo dopisanie wartości do `.values.runStatus` w kopii `rules.json` daje czerwony `test.sh` przed pierwszym przypadkiem
+- [x] 3.5 Atrapa nie wysyła `assessTotal` przed oceną (agent): `test.sh` loguje tętno przebiegu zakończonego `failed` z `assessed …/?` (grep w logu przypadku)
 
 ### Phase 4: Stuby `deploy-gate` z kontraktu
 

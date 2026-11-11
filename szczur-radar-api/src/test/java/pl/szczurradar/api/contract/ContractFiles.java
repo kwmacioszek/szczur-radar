@@ -42,8 +42,15 @@ public final class ContractFiles {
 	 * (two-space indent, as {@code JSON.stringify}) to keep the diff to the changed fields.
 	 */
 	public static void assertMatches(String json, String fileName) {
+		assertMatches(json, Path.of(DIRECTORY + fileName));
+	}
+
+	/**
+	 * The same comparison with a file anywhere in the repository, for the bodies a tool reads rather than the
+	 * SPA ({@code tools/<tool>/fixtures/api/}); relative to the module directory like {@link #DIRECTORY}.
+	 */
+	public static void assertMatches(String json, Path file) {
 		JsonNode actual = mask(JSON.readTree(json));
-		Path file = Path.of(DIRECTORY + fileName);
 		String pretty = JSON.writerWithDefaultPrettyPrinter().writeValueAsString(actual);
 		assertThat(file)
 			.as("the contract file %s is missing; the masked body (reformat before committing) is:%n%s", file, pretty)

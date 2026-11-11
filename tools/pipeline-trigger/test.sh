@@ -3,6 +3,9 @@
 # README.md). The image runs in a Docker network next to a stub API: a small Python HTTP server that
 # answers /internal/pipeline-runs like the API, with answers scripted per case, and check-ins to
 # /ping/<key>[/start|/<code>] like healthchecks.io over https (a throwaway certificate). Checks:
+#   0. before any case: the statuses of classify in trigger.sh are those of rules.json values.runStatus,
+#      the stub's error codes are in rules.json errorCodes, and the stub's answers are built from
+#      fixtures/api/*.json (the bodies InternalPipelineRunIT pins);
 #   1. the image runs as a non-root user; outside production (RAILWAY_ENVIRONMENT_NAME) a run is
 #      skipped without a request;
 #   2. 202 → succeeded or partial: exit 0; failed, interrupted (the log gives its cause), or a failed
@@ -46,6 +49,10 @@ token=test-$(od -An -N16 -tx1 /dev/urandom | tr -d ' \n')
 wrong_token=wrong-$(od -An -N16 -tx1 /dev/urandom | tr -d ' \n')
 ping_key=$(od -An -N16 -tx1 /dev/urandom | tr -d ' \n')
 readonly ping_url=https://$ping_host:8443/ping/$ping_key
+readonly fixtures=$here/fixtures/api
+readonly rules=$here/../../szczur-radar-web/src/contract/rules.json
+# The error codes the stub answers with, by role: the stub has no code of its own (checked below).
+readonly stub_errors='{"busy": "pipeline_busy", "not_configured": "source_not_configured", "not_authenticated": "not_authenticated", "internal_error": "internal_error", "not_found": "not_found", "invalid_request": "invalid_request"}'
 tmp=$(mktemp -d)
 
 step() { printf '\n== %s\n' "$*"; }
@@ -62,40 +69,63 @@ cleanup() {
 trap cleanup EXIT
 trap 'exit 130' INT TERM
 
-# The stub API. STUB_CASE (JSON) scripts it:
+# The stub API. Its answers are built from the API's own files, fixtures/api/*.json (STUB_FILES, JSON: file
+# name → body; pinned by InternalPipelineRunIT, README.md in fixtures/): <uuid> becomes the run's id and
+# <instant> a fixed time of the stub, and a case may override only a key its file has (a key the file does
+# not have is an error of the stub, "STUB ERROR" in its log, which fails the case); the error codes are the
+# names in STUB_ERRORS, checked against rules.json before the first case. STUB_CASE (JSON) scripts it:
 #   post: the answers to POST /daily in turn, the last one repeating: 202 (the runs below), 409, 503
 #         (with their API error codes), "503-empty" (no JSON body, as while the API wakes) or "hang"
 #         (the request is logged, then no answer for 30 s);
 #   runs: [{kind, statuses}]: GET /{id} answers the statuses in turn, the last one repeating; a status
 #         is its name, or an object {status, <field>: <value>, …} whose fields replace the answer's;
-#   old_api: true leaves out the fields the API added in S-06 (startedAt, lastActivityAt,
+#   old_api: true deletes the fields the API added in S-06 (startedAt, lastActivityAt,
 #         interruptionCause, step, assessTotal) and S-08 (skipped), as an API from before them;
 #   listen_after: seconds before it accepts connections (until then they are refused);
 #   summary: the answer to POST /nightly-summary: 200 (default; the text SUMMARY below), 500 (with the
 #         API error code internal_error), "no-text" (200 with an empty object) or "hang" (as for post);
 #   ping: the status of every check-in (POST /ping/…, on port 8443 over https with STUB_CERT), default 200.
+#   A run's GET {id} body is the file of its status (queued, running, interrupted; the others take the failed
+#   run's file with the status replaced), with the counters 270 / 251 / 249 / 2 and the run's kind.
+#   POST /nightly-summary answers 400 invalid_request to a body without one to ten run ids and 404 not_found
+#   to the id of an unknown run, as the API does.
 # Every request to the API without "Bearer $STUB_TOKEN" gets 401 not_authenticated. On stdout first
 # "runs <id> …" (the runs' ids in order), then one line per request: "<method> <path> <status>", for a
 # check-in followed by its body as a JSON string, for a summary request by its body as it came.
 read -r -d '' stub_code <<'PY' || true
-import json, os, ssl, threading, time, uuid
+import json, os, ssl, sys, threading, time, uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 case = json.loads(os.environ["STUB_CASE"])
 token = os.environ["STUB_TOKEN"]
-details = {409: "pipeline_busy", 503: "source_not_configured"}
+FILES = json.loads(os.environ["STUB_FILES"])
+ERRORS = json.loads(os.environ["STUB_ERRORS"])
+details = {409: ERRORS["busy"], 503: ERRORS["not_configured"]}
+STATE_FILES = {"queued": "run-state-queued.json", "running": "run-state-running.json",
+               "interrupted": "run-state-interrupted.json"}
+COUNTERS = {"fetched": 270, "newPosts": 251, "assessedOk": 249, "assessedFailed": 2}
+
+
+def stub_error(message):
+    print("STUB ERROR: " + message, flush=True)
+    os._exit(70)
+
+
+def fill(name, template, run_id, times, overrides):
+    """The file's body with <uuid> and <instant> replaced; an override of a key the file lacks is an error."""
+    body = {key: run_id if value == "<uuid>" else times[key] if value == "<instant>" else value
+            for key, value in template.items()}
+    for key, value in overrides.items():
+        if key not in template:
+            stub_error(f"{name} has no key {key}")
+        body[key] = value
+    return body
+
 runs = [dict(run, id=str(uuid.uuid4())) for run in case.get("runs", [])]
 by_id = {run["id"]: run for run in runs}
 posts = case.get("post", [202])
 post_count = [0]
-# The night's summary as the API composes it (NightSummary; the format is pinned there, not here).
-SUMMARY = ("Night 2026-10-12 (range 2026-10-10…2026-10-11): range succeeded; errors 0, skipped 0\n"
-           "reddit: fetched 104, skipped 0, new 54, leftovers 0; assessed 54, failed 2, dead 1;"
-           " tokens in 412000 (cached 120000), out 38000\n"
-           "wykop: fetched 166, skipped 0, new 197, leftovers 0; assessed 195, failed 0, dead 0;"
-           " tokens in 2210000 (cached 640000), out 190000\n"
-           "Dead in admin runs since the previous night: none\n"
-           "/admin")
+SUMMARY = FILES["nightly-summary.json"]
 
 
 class Api(BaseHTTPRequestHandler):
@@ -114,7 +144,7 @@ class Api(BaseHTTPRequestHandler):
     def authorized(self):
         if self.headers.get("Authorization") == "Bearer " + token:
             return True
-        self.answer(401, {"detail": "not_authenticated"})
+        self.answer(401, {"detail": ERRORS["not_authenticated"]})
         return False
 
     def ping(self):
@@ -137,8 +167,16 @@ class Api(BaseHTTPRequestHandler):
         if status == "no-text":
             return self.answer(200, {}, body)
         if status == 200:
-            return self.answer(200, {"text": SUMMARY}, body)
-        self.answer(status, {"detail": "internal_error"}, body)
+            try:
+                ids = json.loads(body)["runs"]
+            except (ValueError, KeyError, TypeError):
+                ids = None
+            if not (isinstance(ids, list) and 1 <= len(ids) <= 10 and all(isinstance(i, str) for i in ids)):
+                return self.answer(400, {"detail": ERRORS["invalid_request"]}, body)
+            if any(i not in by_id for i in ids):
+                return self.answer(404, {"detail": ERRORS["not_found"]}, body)
+            return self.answer(200, SUMMARY, body)
+        self.answer(status, {"detail": ERRORS["internal_error"]}, body)
 
     def do_POST(self):
         if self.path.startswith("/ping/"):
@@ -148,7 +186,7 @@ class Api(BaseHTTPRequestHandler):
         if self.path == "/internal/pipeline-runs/nightly-summary":
             return self.summary()
         if self.path != "/internal/pipeline-runs/daily":
-            return self.answer(404, {"detail": "not_found"})
+            return self.answer(404, {"detail": ERRORS["not_found"]})
         status = posts[min(post_count[0], len(posts) - 1)]
         post_count[0] += 1
         if status == "hang":
@@ -156,7 +194,8 @@ class Api(BaseHTTPRequestHandler):
             time.sleep(30)
             return
         if status == 202:
-            return self.answer(202, [{"id": run["id"], "kind": run["kind"]} for run in runs])
+            return self.answer(202, [fill("daily-started.json", FILES["daily-started.json"][0], run["id"], {},
+                                          {"kind": run["kind"]}) for run in runs])
         if status == "503-empty":
             return self.answer(503)
         self.answer(status, {"detail": details[status]})
@@ -166,22 +205,15 @@ class Api(BaseHTTPRequestHandler):
             return
         run = by_id.get(self.path.removeprefix("/internal/pipeline-runs/"))
         if run is None:
-            return self.answer(404, {"detail": "not_found"})
+            return self.answer(404, {"detail": ERRORS["not_found"]})
         statuses = run["statuses"]
         entry = statuses.pop(0) if len(statuses) > 1 else statuses[0]
         fields = entry if isinstance(entry, dict) else {"status": entry}
         status = fields["status"]
-        queued, running = status == "queued", status == "running"
-        ended = not (queued or running)
-        body = {"id": run["id"], "kind": run["kind"], "status": status,
-                "startedAt": None if queued else "2026-10-12T00:30:09Z",
-                "finishedAt": "2026-10-12T00:41:07Z" if ended else None,
-                "lastActivityAt": None if queued else "2026-10-12T00:40:58Z" if running else "2026-10-12T00:41:07Z",
-                "interruptionCause": "deploy" if status == "interrupted" else None,
-                "step": "assess" if running else None, "assessTotal": None if queued else 251,
-                "fetched": 270, "newPosts": 251, "assessedOk": 249, "assessedFailed": 2, "processingErrors": 0,
-                "dead": 0, "skipped": 0}
-        body.update(fields)
+        name = STATE_FILES.get(status, "run-state-failed.json")
+        times = {"startedAt": "2026-10-12T00:30:09Z", "finishedAt": "2026-10-12T00:41:07Z",
+                 "lastActivityAt": "2026-10-12T00:40:58Z" if status == "running" else "2026-10-12T00:41:07Z"}
+        body = fill(name, FILES[name], run["id"], times, {"kind": run["kind"], **COUNTERS, **fields})
         if case.get("old_api"):
             for name in ("startedAt", "lastActivityAt", "interruptionCause", "step", "assessTotal", "skipped"):
                 del body[name]
@@ -207,9 +239,10 @@ PY
 start_stub() {
     local name=$1 case=$2
     STUB_CASE=$case STUB_TOKEN=$token STUB_CODE=$stub_code STUB_CERT=$(cat "$tmp/ping/ca.pem") \
-        STUB_KEY=$(cat "$tmp/ping-key.pem") docker run --detach --name "$id-stub-$name" \
+        STUB_KEY=$(cat "$tmp/ping-key.pem") STUB_FILES=$stub_files STUB_ERRORS=$stub_errors \
+        docker run --detach --name "$id-stub-$name" \
         --network "$net" --network-alias "$ping_host" -e STUB_CASE -e STUB_TOKEN -e STUB_CODE -e STUB_CERT \
-        -e STUB_KEY "$stub_image" python -u -c 'import os; exec(os.environ["STUB_CODE"])' >/dev/null
+        -e STUB_FILES -e STUB_ERRORS -e STUB_KEY "$stub_image" python -u -c 'import os; exec(os.environ["STUB_CODE"])' >/dev/null
     [[ $case != *listen_after* ]] || return 0
     for attempt in $(seq 1 50); do
         if docker logs "$id-stub-$name" 2>&1 | grep -qx listening; then
@@ -251,6 +284,8 @@ check_case() {
     run_trigger "$name" "$trigger_token" "$@"
     docker logs "$id-stub-$name" 2>&1 | grep -vx listening >"$tmp/$name.requests" || true
     docker rm -f "$id-stub-$name" >/dev/null
+    ! grep -q '^STUB ERROR' "$tmp/$name.requests" \
+        || { show "$name"; die "$name: the stub API failed: $(grep -m 1 '^STUB ERROR' "$tmp/$name.requests")"; }
     [[ $REPLY == "$expected" ]] || { show "$name"; die "$name: exit code $REPLY, expected $expected"; }
 }
 
@@ -308,13 +343,13 @@ last_log_line_says() {
     [[ $line == *"$2"* ]] || { show "$1"; die "$1: the last log line '$line' does not say '$2'"; }
 }
 
-# Case $1's log has every line of the stub's summary, with the prefix "summary: ".
+# Case $1's log has every line of the summary in fixtures/api/nightly-summary.json (the stub's answer), with
+# the prefix "summary: ".
 log_has_the_summary() {
-    log_says "$1" 'trigger: summary: Night 2026-10-12 (range 2026-10-10…2026-10-11): range succeeded; errors 0, skipped 0'
-    log_says "$1" 'trigger: summary: reddit: fetched 104, skipped 0, new 54, leftovers 0; assessed 54, failed 2, dead 1; tokens in 412000 (cached 120000), out 38000'
-    log_says "$1" 'trigger: summary: wykop: fetched 166, skipped 0, new 197, leftovers 0; assessed 195, failed 0, dead 0; tokens in 2210000 (cached 640000), out 190000'
-    log_says "$1" 'trigger: summary: Dead in admin runs since the previous night: none'
-    log_says "$1" 'trigger: summary: /admin'
+    local line
+    while IFS= read -r line; do
+        log_says "$1" "trigger: summary: $line"
+    done < <(jq -r '.text' "$fixtures/nightly-summary.json")
 }
 
 # Case $1's stub got the check-ins $2 in this order (start or the exit code, separated by spaces; empty:
@@ -331,6 +366,24 @@ last_ping_says() {
     body=$(grep '^POST /ping/' "$tmp/$1.requests" | tail -n 1 | cut -d ' ' -f 4-)
     [[ $body == *"$2"* ]] || { show "$1"; die "$1: the last check-in's body $body does not say '$2'"; }
 }
+
+step "0. the statuses of classify and the stub's error codes are those of rules.json"
+command -v jq >/dev/null || die "jq is needed on the host (the stub's files, rules.json)"
+classified=$(sed -n '/^classify() {/,/^}/p' "$here/trigger.sh" | sed -nE 's/^ +([a-z |]+)\) REPLY=.*/\1/p' \
+    | tr '|' '\n' | tr -d ' ' | sort | paste -sd ' ' -)
+registered=$(jq -r '.values.runStatus[]' "$rules" | sort | paste -sd ' ' -)
+[[ -n $classified && $classified == "$registered" ]] \
+    || die "classify in trigger.sh knows '$classified', rules.json values.runStatus is '$registered'"
+pass "classify knows the run statuses of rules.json: $registered"
+unknown=$(jq -nr --argjson stub "$stub_errors" --slurpfile rules "$rules" \
+    '$stub[] | select(. as $code | ($rules[0].errorCodes | index($code)) == null)' | paste -sd ' ' -) \
+    || die "cannot compare the stub's error codes with rules.json"
+[[ -z $unknown ]] || die "the stub answers with error codes not in rules.json errorCodes: $unknown"
+pass "every error code of the stub is in rules.json errorCodes"
+stub_files=$(for file in "$fixtures"/*.json; do
+    jq -c --arg name "$(basename "$file")" '{($name): .}' "$file"
+done | jq -cs 'add') || die "cannot read $fixtures"
+pass "the stub is built from $(jq -r 'keys | join(", ")' <<<"$stub_files")"
 
 step "build $image"
 docker build --quiet --tag "$image" "$here" >/dev/null

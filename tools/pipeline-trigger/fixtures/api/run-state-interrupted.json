@@ -1,0 +1,18 @@
+{
+  "id": "<uuid>",
+  "kind": "retry",
+  "status": "interrupted",
+  "startedAt": "<instant>",
+  "finishedAt": "<instant>",
+  "lastActivityAt": "<instant>",
+  "interruptionCause": "deploy",
+  "step": null,
+  "assessTotal": 10,
+  "fetched": 0,
+  "newPosts": 0,
+  "assessedOk": 3,
+  "assessedFailed": 1,
+  "processingErrors": 0,
+  "dead": 0,
+  "skipped": 0
+}
