@@ -113,7 +113,7 @@ Na Wykopie (#gielda) i Reddicie codziennie pojawiają się setki postów o inwes
 | S-32 | provider-refusal-breaker          | seria odmów dostawcy zatrzymuje przebieg, zanim zużyje próby pozostałych postów, i daje sygnał jak każdy `failed`                  | —                        | NFR `prd.md:275` (doprecyzowanie PRD v3); audyt §6 R-41; destylacja #3                     | done |
 | S-33 | restore-dead-posts                | admin przywraca zaznaczone martwe posty do oceny, a ich próby są zerowane                                                          | —                        | FR-034, FR-015; destylacja Q-18                                                            | done |
 | S-34 | dead-posts-daily-digest           | operator dostaje co noc w ntfy podsumowanie nocy (liczby i tokeny każdego źródła, martwe posty) zamiast alarmu przy każdym przebiegu z samym martwym postem; zdarzenia API idą przez ntfy, dzwonek bez zmian | —                        | NFR `prd.md:275` (doprecyzowanie PRD v3); destylacja #5, R-42, Q-14                        | done |
-| S-35 | per-source-failure-quality        | operator widzi udział nieudanych prób według klas błędu osobno dla każdego źródła i dostaje sygnał po przekroczeniu progu           | —                        | FR-033; destylacja #1, R-15                                                                | ready    |
+| S-35 | per-source-failure-quality        | operator widzi udział nieudanych prób według klas błędu osobno dla każdego źródła i dostaje sygnał po przekroczeniu progu           | —                        | FR-033; destylacja #1, R-15                                                                | in-progress |
 | S-36 | statement-language-quality        | operator widzi udział tez w innym języku niż post osobno dla każdego źródła, z sygnałem po przekroczeniu progu                     | S-35                     | FR-033; `contract-v2.md` §8 (Q-16); destylacja #1, D-14, R-38                              | proposed |
 | S-37 | source-native-post-labels         | użytkownik widzi typ posta słowami jego źródła: „wpis”/„znalezisko” na Wykopie, „post”/„link” na Reddicie                          | —                        | FR-023 (doprecyzowanie Q-13); destylacja #4, D-12, R-45                                    | done     |
 | S-38 | post-store-loss-visible           | post odrzucony przy zapisie przez inne ograniczenie niż duplikat jest policzony i widoczny, a nie znika po cichu                   | —                        | FR-005, NFR `prd.md:275`; audyt §6 D-15; destylacja #2, D-15                               | ready    |
@@ -231,7 +231,7 @@ Brak — każda praca przekrojowa M-4 ma widoczny skutek dla użytkownika, opera
 - **Unknowns:**
   - Jakie progi i w jakim oknie (np. ostatnie 7 nocy)? Punkt odniesienia: S-28 zmierzył 17,3 % nieudanych prób na Reddicie wobec 2,3 % na Wykopie, a noce z #121 dały 16,6 % na pierwszej próbie. — Owner: user. Block: no (rozstrzyga wywiad `/10x-plan`).
 - **Risk:** przejmuje część wpisu Parked „Ochrona przed dryfem modelu” (alarm na rosnący udział klas błędu); próg zbyt niski da alarm co noc, jak martwe posty przed S-34.
-- **Status:** ready
+- **Status:** in-progress
 
 ### S-36: Jakość ocen per źródło — tezy w innym języku niż post
 

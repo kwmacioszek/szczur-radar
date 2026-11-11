@@ -8,7 +8,7 @@ Szczur Radar collects investment posts (Wykop; Reddit through the Arctic Shift a
 - If code contradicts `context/foundation/prd.md`, flag it — don't silently resolve it in code.
 - `szczur-radar-web/` talks to the backend only through its REST API: no direct DB access and no LLM calls from the browser (FR-032).
 - No public registration and no automated email in MVP. Accounts are created, bootstrapped, and recovered via backend CLI commands (PRD § Access Control, FR-026–028).
-- A new data source changes only acquisition and mapping to the shared model; evaluation, persistence, and API layers stay untouched (PRD § Non-Functional Requirements). Registering the source — its `sources/Source` constant plus one migration adding it to the four `CHECK` sets of a source (`posts.source`, `raw_payloads.source`, `pipeline_runs.sources`, `pipeline_run_sources.source`; S-20) — is part of adding it; posts store the shared model's item type (`post`/`link`/`comment`), never a source's own type names.
+- A new data source changes only acquisition and mapping to the shared model; evaluation, persistence, and API layers stay untouched (PRD § Non-Functional Requirements). Registering the source — its `sources/Source` constant with its threshold of failed assessment attempts (`failureThresholdPercent`, S-35) plus one migration adding it to the four `CHECK` sets of a source (`posts.source`, `raw_payloads.source`, `pipeline_runs.sources`, `pipeline_run_sources.source`; S-20) — is part of adding it; posts store the shared model's item type (`post`/`link`/`comment`), never a source's own type names.
 - Check an FR's priority in the PRD before building it: `must-have` first, `nice-to-have` only when asked.
 
 ## Project Structure & Module Organization

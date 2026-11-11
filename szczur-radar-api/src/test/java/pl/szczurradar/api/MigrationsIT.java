@@ -36,7 +36,7 @@ class MigrationsIT {
 		List<Map<String, Object>> history = jdbc.queryForList(
 				"SELECT version, success FROM flyway_schema_history WHERE version IS NOT NULL ORDER BY installed_rank");
 		assertThat(history).extracting(row -> row.get("version")).containsExactly("1", "2", "3", "4", "5", "6", "7",
-				"8", "9", "10", "11", "12", "13", "14");
+				"8", "9", "10", "11", "12", "13", "14", "15");
 		assertThat(history).allSatisfy(row -> assertThat(row.get("success")).isEqualTo(true));
 	}
 
@@ -123,7 +123,7 @@ class MigrationsIT {
 		assertThat(jdbc.queryForList("SELECT indexname FROM pg_indexes WHERE schemaname = 'public'", String.class))
 			.contains("uq_pipeline_runs_one_running", "ix_pipeline_runs_created", "ix_posts_stage_published",
 					"ix_assessments_post_latest", "ix_pipeline_run_steps_run", "ix_posts_assessing_run",
-					"ix_assessments_run", "ix_posts_first_run");
+					"ix_assessments_run", "ix_posts_first_run", "ix_assessments_assessed_at");
 	}
 
 	@Test
