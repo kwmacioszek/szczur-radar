@@ -430,23 +430,23 @@ Bez migracji i bez nowych zmiennych. Stare przebiegi w bazie się nie zmieniają
 
 #### Automated
 
-- [x] 2.1 Testy jednostkowe sekwencji i strażnika przechodzą
-- [x] 2.2 Strażnicy `storeRejected` na Postgresie przechodzą
-- [x] 2.3 Scenariusz z odrzuconym postem i równość przechodzą w `PipelineRunIT`
-- [x] 2.4 Cały backend przechodzi
-- [x] 2.5 Testy SPA bez zmian przechodzą
-- [x] 2.6 Dokumenty wymieniają S-38
+- [x] 2.1 Testy jednostkowe sekwencji i strażnika przechodzą — 1881b78
+- [x] 2.2 Strażnicy `storeRejected` na Postgresie przechodzą — 1881b78
+- [x] 2.3 Scenariusz z odrzuconym postem i równość przechodzą w `PipelineRunIT` — 1881b78
+- [x] 2.4 Cały backend przechodzi — 1881b78
+- [x] 2.5 Testy SPA bez zmian przechodzą — 1881b78
+- [x] 2.6 Dokumenty wymieniają S-38 — 1881b78
 
 ### Phase 3: Weryfikacja w PR env (agent)
 
 #### Automated
 
-- [ ] 3.1 CI PR zielone i API w PR env wdrożone z commitem PR
-- [ ] 3.2 Przebieg admina z tymczasowym `ck_s38_verify` ma `skipped` > 0, `attentionReasons` z `skipped` i `error` od `store rejected`
-- [ ] 3.3 Równość dla `reddit` i zero nowych postów subredditu od `T`
-- [ ] 3.4 Powiadomienie przebiegu jest, a log API nie ma linii ERROR tego przebiegu
-- [ ] 3.5 Strona `/admin/runs/<id>` pokazuje `store rejected` i „pominięte”
-- [ ] 3.6 `ck_s38_verify` usunięte, ciasteczka usunięte, komentarz z dowodami w issue #148
+- [x] 3.1 CI PR zielone i API w PR env wdrożone z commitem PR
+- [x] 3.2 Przebieg admina z tymczasowym `ck_s38_verify` ma `skipped` > 0, `attentionReasons` z `skipped` i `error` od `store rejected`
+- [x] 3.3 Równość dla `reddit` i zero nowych postów subredditu od `T`
+- [x] 3.4 Powiadomienie przebiegu jest, a log API nie ma linii ERROR tego przebiegu
+- [x] 3.5 Strona `/admin/runs/<id>` pokazuje `store rejected` i „pominięte”
+- [x] 3.6 `ck_s38_verify` usunięte, ciasteczka usunięte, komentarz z dowodami w issue #148
 
 #### Manual
 
