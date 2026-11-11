@@ -199,17 +199,17 @@ Brak: bez migracji, bez zmian w IaC i zmiennych.
 
 #### Automated
 
-- [x] 1.1 Strażnik tras admina zielony (`AdminRoleIT`, `AuthorizationCompletenessIT`)
-- [x] 1.2 Przebieg psujący: nowa trasa admina bez roli czerwieni `AdminRoleIT`, zmiana cofnięta
-- [x] 1.3 Przebieg psujący: bean `RouterFunction` czerwieni `AuthorizationCompletenessIT`, zmiana cofnięta
-- [x] 1.4 `ADMIN_ROUTES` zniknęło poza `context/` (`git grep`)
-- [x] 1.5 Pełny `./mvnw -B verify` zielony
+- [x] 1.1 Strażnik tras admina zielony (`AdminRoleIT`, `AuthorizationCompletenessIT`) — 339275f
+- [x] 1.2 Przebieg psujący: nowa trasa admina bez roli czerwieni `AdminRoleIT`, zmiana cofnięta — 339275f
+- [x] 1.3 Przebieg psujący: bean `RouterFunction` czerwieni `AuthorizationCompletenessIT`, zmiana cofnięta — 339275f
+- [x] 1.4 `ADMIN_ROUTES` zniknęło poza `context/` (`git grep`) — 339275f
+- [x] 1.5 Pełny `./mvnw -B verify` zielony — 339275f
 
 ### Phase 2: Trasy `/internal` z mapowań
 
 #### Automated
 
-- [ ] 2.1 Strażnik tras `/internal` zielony (`InternalPipelineRunIT`, `InternalPipelineRunWithoutTokenIT`)
-- [ ] 2.2 Przebieg psujący: token tylko pod `/internal/pipeline-runs/**` czerwieni oba IT na `/internal/probe`, zmiana cofnięta
-- [ ] 2.3 Pełny `./mvnw -B verify` zielony
+- [x] 2.1 Strażnik tras `/internal` zielony (`InternalPipelineRunIT`, `InternalPipelineRunWithoutTokenIT`)
+- [x] 2.2 Przebieg psujący: token tylko pod `/internal/pipeline-runs/**` czerwieni oba IT na `/internal/probe`, zmiana cofnięta
+- [x] 2.3 Pełny `./mvnw -B verify` zielony
 - [ ] 2.4 CI PR zielone (`gh pr checks`)

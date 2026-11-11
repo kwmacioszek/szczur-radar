@@ -10,6 +10,8 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
@@ -28,6 +30,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -44,6 +47,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MockMvcTester.MockMvcRequestBuilder;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
+import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
 import pl.szczurradar.api.TestcontainersConfiguration;
 import pl.szczurradar.api.alerts.AlertEvent;
@@ -64,10 +68,13 @@ import pl.szczurradar.api.user.Role;
 import pl.szczurradar.api.user.SystemAccount;
 import pl.szczurradar.api.user.User;
 import pl.szczurradar.api.user.UserRepository;
+import pl.szczurradar.api.web.MappedRoutes;
+import pl.szczurradar.probe.InternalProbeController;
 
 /**
  * The daily cron's routes ({@code /internal/pipeline-runs}) against the real queue: the trigger token
- * and only the token (no session accepted, none created, no cookie set), the token meaning nothing on
+ * and only the token (no session accepted, none created, no cookie set; every mapped {@code /internal/**}
+ * route is called, computed from the mappings, no list to keep), the token meaning nothing on
  * {@code /api/**}, the daily range on a fixed clock, a run's state with its step and progress, the
  * admin's refusals, and the night's summary: its text, the {@code NIGHT_SUMMARY} raised for the range run
  * (the queue a mock), 400 for a bad body and 404 for an unknown run (what the text is made of is
@@ -83,7 +90,7 @@ import pl.szczurradar.api.user.UserRepository;
 @SpringBootTest(properties = { MigrateCommand.ENABLE_FLYWAY,
 		PipelineTriggerToken.NAME + "=" + InternalPipelineRunIT.TOKEN })
 @AutoConfigureMockMvc
-@Import({ TestcontainersConfiguration.class, InternalPipelineRunIT.TestBeans.class })
+@Import({ TestcontainersConfiguration.class, InternalPipelineRunIT.TestBeans.class, InternalProbeController.class })
 @Timeout(value = 5, unit = TimeUnit.MINUTES)
 class InternalPipelineRunIT {
 
@@ -135,6 +142,10 @@ class InternalPipelineRunIT {
 	JdbcTemplate jdbc;
 
 	@Autowired
+	@Qualifier("requestMappingHandlerMapping")
+	RequestMappingHandlerMapping handlerMapping;
+
+	@Autowired
 	PipelineRunRepository runs;
 
 	@Autowired
@@ -159,17 +170,7 @@ class InternalPipelineRunIT {
 	void withoutTheTokenEveryInternalRouteIs401AndCreatesNothing(@Nullable String authorization) {
 		int before = runCount();
 
-		assertThat(internal(HttpMethod.POST, DAILY, authorization, null)).hasStatus(HttpStatus.UNAUTHORIZED)
-			.bodyJson()
-			.isStrictlyEqualTo(NOT_AUTHENTICATED);
-		assertThat(internal(HttpMethod.GET, "/internal/pipeline-runs/" + UUID.randomUUID(), authorization, null))
-			.hasStatus(HttpStatus.UNAUTHORIZED)
-			.bodyJson()
-			.isStrictlyEqualTo(NOT_AUTHENTICATED);
-		assertThat(summary(authorization, "{\"runs\":[\"" + UUID.randomUUID() + "\"]}"))
-			.hasStatus(HttpStatus.UNAUTHORIZED)
-			.bodyJson()
-			.isStrictlyEqualTo(NOT_AUTHENTICATED);
+		assertEveryInternalRouteIs401(authorization, null);
 		assertThat(runCount()).isEqualTo(before);
 		verify(alerts, never()).raise(any(), any(), any());
 	}
@@ -190,11 +191,7 @@ class InternalPipelineRunIT {
 		assertThat(mvc.get().uri("/api/auth/me").cookie(session)).hasStatusOk();
 		int before = runCount();
 
-		assertThat(internal(HttpMethod.POST, DAILY, null, session)).hasStatus(HttpStatus.UNAUTHORIZED)
-			.bodyJson()
-			.isStrictlyEqualTo(NOT_AUTHENTICATED);
-		assertThat(internal(HttpMethod.GET, "/internal/pipeline-runs/" + UUID.randomUUID(), null, session))
-			.hasStatus(HttpStatus.UNAUTHORIZED);
+		assertEveryInternalRouteIs401(null, session);
 		assertThat(runCount()).isEqualTo(before);
 	}
 
@@ -383,6 +380,37 @@ class InternalPipelineRunIT {
 			.bodyJson()
 			.isStrictlyEqualTo("{\"detail\":\"not_found\"}");
 		verify(alerts, never()).raise(any(), any(), any());
+	}
+
+	/**
+	 * Calls every mapped {@code /internal/**} route without a body (401 comes before binding) and collects
+	 * the ones that do not answer 401 {@code not_authenticated}; the anchors prove the walk saw the probe
+	 * and a real route.
+	 */
+	private void assertEveryInternalRouteIs401(@Nullable String authorization, @Nullable Cookie cookie) {
+		List<MappedRoutes.Route> routes = MappedRoutes.routesUnder(handlerMapping, MappedRoutes.INTERNAL_PATHS);
+		assertThat(routes.stream().map(MappedRoutes.Route::key)).contains("GET /internal/probe",
+				"POST /internal/pipeline-runs/daily");
+		List<String> failures = new ArrayList<>();
+		for (MappedRoutes.Route route : routes) {
+			MvcTestResult result = internal(HttpMethod.valueOf(route.method()), route.concretePath(), authorization,
+					cookie);
+			int status = result.getResponse().getStatus();
+			String body = status == HttpStatus.UNAUTHORIZED.value() ? bodyOf(result) : "";
+			if (status != HttpStatus.UNAUTHORIZED.value() || !NOT_AUTHENTICATED.equals(body)) {
+				failures.add(route.key() + " -> " + status + " " + body);
+			}
+		}
+		assertThat(failures).as("internal routes that did not answer 401 not_authenticated").isEmpty();
+	}
+
+	private static String bodyOf(MvcTestResult result) {
+		try {
+			return result.getResponse().getContentAsString();
+		}
+		catch (java.io.UnsupportedEncodingException ex) {
+			throw new IllegalStateException(ex);
+		}
 	}
 
 	/** {@code POST /internal/pipeline-runs/nightly-summary} with {@code body}, never touching a session. */
