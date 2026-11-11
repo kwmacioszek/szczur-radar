@@ -457,7 +457,7 @@ Nie dotyczy: bez migracji, bez zmian w wdrażanym kodzie. Adresy do zrzutów z n
 
 #### Automated
 
-- [x] 4.1 Testy integracyjne API przechodzą: `cd szczur-radar-api && ./mvnw -B verify`
-- [x] 4.2 Test bramki przechodzi: `tools/deploy-gate/test.sh`
-- [x] 4.3 Celowe zepsucie (agent wykonuje i cofa): zmiana klucza `reason` w `deploy-safety-running.json` daje czerwony `DeploySafetyIT` i czerwony `tools/deploy-gate/test.sh` (wait-safe nie widzi powodu)
-- [x] 4.4 Brak literałów ciał API w stubach (agent): `grep -nE "pipeline_running|pipeline_queued|\"status\": \"(ok|ready|unavailable)\"" tools/deploy-gate/test.sh` nie znajduje nic poza odczytem plików
+- [x] 4.1 Testy integracyjne API przechodzą: `cd szczur-radar-api && ./mvnw -B verify` — 45086be
+- [x] 4.2 Test bramki przechodzi: `tools/deploy-gate/test.sh` — 45086be
+- [x] 4.3 Celowe zepsucie (agent wykonuje i cofa): zmiana klucza `reason` w `deploy-safety-running.json` daje czerwony `DeploySafetyIT` i czerwony `tools/deploy-gate/test.sh` (wait-safe nie widzi powodu) — 45086be
+- [x] 4.4 Brak literałów ciał API w stubach (agent): `grep -nE "pipeline_running|pipeline_queued|\"status\": \"(ok|ready|unavailable)\"" tools/deploy-gate/test.sh` nie znajduje nic poza odczytem plików — 45086be
