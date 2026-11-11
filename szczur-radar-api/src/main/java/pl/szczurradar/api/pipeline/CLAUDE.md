@@ -311,8 +311,10 @@ PipelineRunService.startRange / startPosts → queue (thread pipeline-run) → R
   night's last cron run (`findLastScheduledCreationBefore`, `EPOCH` without one) and this night's first
   (`findAdminRunIdsCreatedBetween`) with their dead posts — bounded by creation, never by now, so each admin
   run is in exactly one summary. The queries by run use `ix_assessments_run` and `ix_posts_first_run` (`V14`,
-  S-34 review F3), so their cost follows the night, not the history. In the same transaction (S-35) the
-  quality of the assessments per source (`posts/AssessmentQuality`, `ZONE` passed in: `posts/` imports nothing
+  S-34 review F3), so their cost follows the night, not the history. Before that transaction, in a read-only
+  one of its own (S-35; review F1: a failure there costs only the quality lines, never the summary — one line
+  `quality 7d (<from>…<to>): unavailable (<the exception's class>)` in their place, an ERROR with the exception
+  in the API log, nothing crossed, so no `ASSESSMENT_QUALITY`), the quality of the assessments per source (`posts/AssessmentQuality`, `ZONE` passed in: `posts/` imports nothing
   from here): the window of the night's date (`window`: the last 7 Warsaw days, every run's attempts with a
   model call, the prefilter's left out, against `Source.failureThresholdPercent()`, at least 100 attempts to be
   checked) gives a quality line per source after the sources' lines — `<source> quality 7d (<from>…<to>):
@@ -331,14 +333,16 @@ PipelineRunService.startRange / startPosts → queue (thread pipeline-run) → R
   route's answer keeps its shape). The format is pinned by `NightSummaryTest`
   (production's night of 2026-11-11, the sources in `Source` order whatever order they come in, a run still
   running, a failed and an empty source, a source without a result, the admin runs' dead posts in `Source`
-  order, the quality lines in each state and the `ASSESSMENT_QUALITY` detail, every source failing with the
+  order, the quality lines in each state, the line `unavailable` and the `ASSESSMENT_QUALITY` detail, every
+  source failing with the
   longest error and every failure class staying within ntfy's bytes), the queries by `NightSummaryIT` on
   Postgres (two sources with a retry and a range still running, the first night counting the admin's dead
   posts from the beginning and not those of a later run, the quality lines from seeded attempts with one
   source crossing and the other above two nights in a row, an unknown run and a repeated id, no id refused),
   the window and its rule by `posts/AssessmentQualityTest` / `AssessmentQualityIT`, and the route by
   `api/InternalPipelineRunIT` (returned and raised for the range run, `ASSESSMENT_QUALITY` once after it for a
-  crossing and never without one, 400, 404) and `InternalPipelineRunWithoutTokenIT` (401). Runbook (what to do
+  crossing and never without one, the summary still raised with the line `unavailable` when the quality window
+  throws, 400, 404) and `InternalPipelineRunWithoutTokenIT` (401). Runbook (what to do
   after `ASSESSMENT_QUALITY`, changing a threshold): `context/deployment/deploy-plan.md`, section S-35.
 - **Operator alerts of the error paths (S-18).** Each path that ended in an ERROR line nothing else reported
   now also raises an `alerts/AlertEvent` through `OperatorAlertQueue.raise(event, runId, detail)`; the

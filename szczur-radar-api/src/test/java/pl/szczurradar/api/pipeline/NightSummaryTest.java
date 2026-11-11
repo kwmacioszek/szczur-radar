@@ -1,6 +1,7 @@
 package pl.szczurradar.api.pipeline;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
@@ -62,7 +63,7 @@ class NightSummaryTest {
 								Map.of(FailureClass.SCHEMA_VIOLATION, 46L, FailureClass.FABRICATED_EVIDENCE, 46L,
 										FailureClass.DOMAIN_INVARIANT_VIOLATION, 9L),
 								25, QualityStatus.OK))),
-				List.of());
+				List.of(), null);
 
 		assertThat(night.text()).isEqualTo("""
 				Night 2026-11-11 (range 2026-11-09…2026-11-10): retry partial, range partial; errors 0, skipped 0
@@ -159,7 +160,7 @@ class NightSummaryTest {
 	void aRunStillRunningShowsItsStatusAndTheErrorsAndSkippedAreTheRunsSums() {
 		Night night = new Night(LocalDate.of(2026, 11, 8), LocalDate.of(2026, 11, 6), LocalDate.of(2026, 11, 7),
 				List.of(new Run(RETRY, RunKind.RETRY, RunStatus.PARTIAL), new Run(RANGE, RunKind.RANGE, RunStatus.RUNNING)),
-				2, 3, List.of(), Map.of(), NO_QUALITY, List.of());
+				2, 3, List.of(), Map.of(), NO_QUALITY, List.of(), null);
 
 		assertThat(night.text()).startsWith(
 				"Night 2026-11-08 (range 2026-11-06…2026-11-07): retry partial, range running; errors 2, skipped 3\n");
@@ -188,7 +189,7 @@ class NightSummaryTest {
 		Night night = new Night(LocalDate.of(2026, 11, 8), null, null,
 				List.of(new Run(RETRY, RunKind.RETRY, RunStatus.SUCCEEDED)), 0, 0,
 				List.of(new SourceLine(Source.WYKOP, null, 0, 0, null, 0, 4, 4, 0, 0, 400, 100, 40)), Map.of(), NO_QUALITY,
-				List.of());
+				List.of(), null);
 
 		assertThat(night.text()).isEqualTo("""
 				Night 2026-11-08: retry succeeded; errors 0, skipped 0
@@ -202,9 +203,32 @@ class NightSummaryTest {
 	void theDeadPostsOfTheAdminsRunsAreListedPerSourceInSourceOrder() {
 		Night night = new Night(LocalDate.of(2026, 11, 8), LocalDate.of(2026, 11, 6), LocalDate.of(2026, 11, 7),
 				List.of(new Run(RANGE, RunKind.RANGE, RunStatus.SUCCEEDED)), 0, 0, List.of(),
-				Map.of(Source.REDDIT, 2L, Source.WYKOP, 1L), NO_QUALITY, List.of());
+				Map.of(Source.REDDIT, 2L, Source.WYKOP, 1L), NO_QUALITY, List.of(), null);
 
 		assertThat(night.text()).contains("\nDead in admin runs since the previous night: wykop 1, reddit 2\n/admin");
+	}
+
+	/** A quality window that could not be read: one line in place of the sources' quality lines, no alarm. */
+	@Test
+	void anUnavailableQualityWindowIsOneLineAndNoAlarm() {
+		Night night = new Night(LocalDate.of(2026, 11, 8), LocalDate.of(2026, 11, 6), LocalDate.of(2026, 11, 7),
+				List.of(new Run(RANGE, RunKind.RANGE, RunStatus.SUCCEEDED)), 0, 0,
+				List.of(new SourceLine(Source.WYKOP, SourceFetchStatus.SUCCEEDED, 5, 0, null, 5, 0, 5, 0, 0, 50, 0, 5)),
+				Map.of(), NO_QUALITY, List.of(), "QueryTimeoutException");
+
+		assertThat(night.text()).isEqualTo("""
+				Night 2026-11-08 (range 2026-11-06…2026-11-07): range succeeded; errors 0, skipped 0
+				wykop: fetched 5, skipped 0, new 5, leftovers 0; assessed 5, failed 0, dead 0; tokens in 50 (cached 0), out 5
+				quality 7d (2026-11-02…2026-11-08): unavailable (QueryTimeoutException)
+				Dead in admin runs since the previous night: none
+				/admin""");
+		assertThat(night.qualityAlert()).isEmpty();
+		assertThatIllegalArgumentException()
+			.as("an unavailable window has nothing to show")
+			.isThrownBy(() -> new Night(night.date(), null, null, night.runs(), 0, 0, List.of(), Map.of(),
+					new QualityWindow(LocalDate.of(2026, 11, 2), LocalDate.of(2026, 11, 8),
+							List.of(new SourceQuality(Source.WYKOP, 1, 0, Map.of(), 5, QualityStatus.NOT_ENOUGH_ATTEMPTS))),
+					List.of(), "QueryTimeoutException"));
 	}
 
 	/**
@@ -255,7 +279,7 @@ class NightSummaryTest {
 			List<QualityCrossing> crossed) {
 		return new Night(LocalDate.of(2026, 11, 8), LocalDate.of(2026, 11, 6), LocalDate.of(2026, 11, 7),
 				List.of(new Run(RETRY, RunKind.RETRY, RunStatus.PARTIAL), new Run(RANGE, RunKind.RANGE, RunStatus.PARTIAL)),
-				0, 0, sources, deadInAdminRuns, quality, crossed);
+				0, 0, sources, deadInAdminRuns, quality, crossed, null);
 	}
 
 }

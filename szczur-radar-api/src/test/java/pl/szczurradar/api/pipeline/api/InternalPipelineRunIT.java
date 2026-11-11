@@ -3,6 +3,7 @@ package pl.szczurradar.api.pipeline.api;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -38,6 +39,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
+import org.springframework.dao.QueryTimeoutException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
@@ -45,6 +47,7 @@ import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MockMvcTester.MockMvcRequestBuilder;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
@@ -59,6 +62,7 @@ import pl.szczurradar.api.llm.LlmClient;
 import pl.szczurradar.api.pipeline.run.PipelineRun;
 import pl.szczurradar.api.pipeline.run.PipelineRunRepository;
 import pl.szczurradar.api.pipeline.run.RunKind;
+import pl.szczurradar.api.posts.AssessmentQuality;
 import pl.szczurradar.api.sources.LocalApiServer.Reply;
 import pl.szczurradar.api.sources.Source;
 import pl.szczurradar.api.sources.wykop.LocalWykopServer;
@@ -132,6 +136,10 @@ class InternalPipelineRunIT {
 	/** The server's queue, a mock: the night's summary is raised to it. */
 	@MockitoBean
 	OperatorAlertQueue alerts;
+
+	/** The real quality window; a test makes it fail (reset after each test). */
+	@MockitoSpyBean
+	AssessmentQuality quality;
 
 	@Autowired
 	MockMvcTester mvc;
@@ -366,6 +374,36 @@ class InternalPipelineRunIT {
 	}
 
 	/**
+	 * The quality window cannot be read (S-35 review F1): the summary still goes out, with one line
+	 * {@code unavailable} in place of the quality lines, and no {@code ASSESSMENT_QUALITY} — the night's
+	 * summary is the operator's every-night signal (S-34) and does not depend on the quality query.
+	 */
+	@Test
+	void aQualityWindowThatCannotBeReadLeavesTheSummaryWithoutItsQualityLines() throws Exception {
+		UUID range = jdbc.queryForObject("INSERT INTO pipeline_runs (kind, status, requested_by, created_at, started_at,"
+				+ " finished_at, range_from, range_to, sources) VALUES ('range', 'succeeded', ?,"
+				+ " '2026-10-26T00:30:00.5Z', '2026-10-26T00:35:01Z', '2026-10-26T00:50:00Z', '2026-10-23T22:00:00Z',"
+				+ " '2026-10-25T22:59:59Z', ARRAY['wykop']) RETURNING id", UUID.class, SystemAccount.SCHEDULER.id());
+		jdbc.update("INSERT INTO pipeline_run_sources (run_id, source, status, fetched, skipped)"
+				+ " VALUES (?, 'wykop', 'succeeded', 7, 0)", range);
+		CLOCK.set(Instant.parse("2026-10-26T00:55:00Z"));
+		doThrow(new QueryTimeoutException("test: the quality query timed out")).when(quality).window(any(), any());
+
+		MvcTestResult result = summary(bearer(TOKEN), "{\"runs\":[\"" + range + "\"]}");
+
+		assertThat(result).hasStatusOk();
+		String text = JsonPath.read(result.getResponse().getContentAsString(), "$.text");
+		assertThat(text).isEqualTo("""
+				Night 2026-10-26 (range 2026-10-24…2026-10-25): range succeeded; errors 0, skipped 0
+				wykop: fetched 7, skipped 0, new 0, leftovers 0; assessed 0, failed 0, dead 0; tokens in 0 (cached 0), out 0
+				quality 7d (2026-10-20…2026-10-26): unavailable (QueryTimeoutException)
+				Dead in admin runs since the previous night: none
+				/admin""");
+		verify(alerts).raise(AlertEvent.NIGHT_SUMMARY, range, text);
+		verify(alerts, never()).raise(eq(AlertEvent.ASSESSMENT_QUALITY), any(), any());
+	}
+
+	/**
 	 * 02:55 in Warsaw on 15 September 2026: Wykop's 100 good attempts on the 10th and an admin's 10 failed
 	 * ones at 14:00 on the 14th, after the previous night's summary — above its threshold only tonight, so
 	 * the summary's quality line says so and one {@code ASSESSMENT_QUALITY} follows {@code NIGHT_SUMMARY}
@@ -403,7 +441,12 @@ class InternalPipelineRunIT {
 			verify(alerts, times(1)).raise(eq(AlertEvent.ASSESSMENT_QUALITY), any(), any());
 		}
 		finally {
+			// Every row this test made, so no later test of the class sees its night or its attempts.
+			UUID raw = jdbc.queryForObject("SELECT raw_payload_id FROM posts WHERE id = ?", UUID.class, post);
 			jdbc.update("DELETE FROM assessments WHERE post_id = ?", post);
+			jdbc.update("DELETE FROM posts WHERE id = ?", post);
+			jdbc.update("DELETE FROM raw_payloads WHERE id = ?", raw);
+			jdbc.update("DELETE FROM pipeline_runs WHERE id = ?", range);
 		}
 	}
 

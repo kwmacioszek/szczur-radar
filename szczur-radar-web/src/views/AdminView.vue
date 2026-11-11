@@ -464,7 +464,7 @@ onMounted(async () => {
       <StatusMessage v-else-if="qualityError" tone="error">{{ qualityError }}</StatusMessage>
       <template v-else-if="quality">
         <p class="quality-window">
-          Od {{ formatDate(quality.from) }} do {{ formatDate(quality.to) }} · próby z odpowiedzią modelu, z ponowieniami;
+          Od {{ formatDate(quality.from) }} do {{ formatDate(quality.to) }} · próby z wywołaniem modelu (bez prefiltra), z ponowieniami;
           próg sprawdzany od {{ quality.minAttempts }} prób
         </p>
         <p v-if="quality.sources.length === 0" class="empty">Brak ocen w ostatnich {{ quality.windowDays }} dniach.</p>

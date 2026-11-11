@@ -11,14 +11,18 @@ import java.util.EnumSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Isolation;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import pl.szczurradar.api.agents.assessor.validation.FailureClass;
 import pl.szczurradar.api.pipeline.run.PipelineRun;
@@ -43,7 +47,9 @@ import pl.szczurradar.api.sources.Source;
  * The night's summary for the operator (S-34): what the runs of one night did, per source, in a few lines
  * of text the daily cron asks for after its runs ({@code POST /internal/pipeline-runs/nightly-summary},
  * raised as {@code AlertEvent.NIGHT_SUMMARY}, also with nothing dead). It only reads, in one read-only
- * transaction on one snapshot ({@code REPEATABLE READ}), so the counters of a run still running agree.
+ * transaction on one snapshot ({@code REPEATABLE READ}), so the counters of a run still running agree; the
+ * quality window (S-35) is read before it, in a read-only transaction of its own, so a failure there costs
+ * only the quality lines, never the summary (below).
  *
  * <pre>
  * Night 2026-11-11 (range 2026-11-09…2026-11-10): retry partial, range partial; errors 0, skipped 0
@@ -81,7 +87,9 @@ import pl.szczurradar.api.sources.Source;
  *       {@value AssessmentQuality#MIN_ATTEMPTS} attempts only their number and {@code threshold not checked}.
  *       The sources that crossed their threshold tonight ({@link AssessmentQuality#crossed}) are
  *       {@link Night#crossed()}, raised apart as {@code AlertEvent.ASSESSMENT_QUALITY}
- *       ({@link Night#qualityAlert()}).
+ *       ({@link Night#qualityAlert()}). When the window cannot be read (any exception: an ERROR line with
+ *       it in the API log), one line {@code quality 7d (<from>…<to>): unavailable (<the exception's
+ *       class>)} stands for them, nothing crossed, and the summary goes out as without S-35.
  *   <li><b>Dead in admin runs since the previous night:</b> always, {@code none} included — the dead posts
  *       whose latest assessment belongs to a run that is not the cron's ({@link PipelineRun#scheduled()}),
  *       created after the last cron run before this night's earliest run (from the beginning of the data
@@ -98,6 +106,8 @@ import pl.szczurradar.api.sources.Source;
  */
 @Component
 public class NightSummary {
+
+	private static final Logger log = LoggerFactory.getLogger(NightSummary.class);
 
 	/** ntfy's bytes of a message ({@code NtfyAlerts.MAX_BODY_BYTES}); {@link Night#text()} stays within it. */
 	public static final int MAX_BYTES = 4096;
@@ -117,26 +127,71 @@ public class NightSummary {
 
 	private final Clock clock;
 
+	/** The summary's one snapshot: read-only, {@code REPEATABLE READ}. */
+	private final TransactionTemplate snapshot;
+
+	/** The quality window's own read-only transaction, apart from the snapshot. */
+	private final TransactionTemplate qualityRead;
+
 	NightSummary(PipelineRunRepository runs, PipelineRunSourceRepository sourceResults, PostRepository posts,
-			AssessmentRepository assessments, AssessmentQuality quality, Clock clock) {
+			AssessmentRepository assessments, AssessmentQuality quality, Clock clock,
+			PlatformTransactionManager transactions) {
 		this.runs = runs;
 		this.sourceResults = sourceResults;
 		this.posts = posts;
 		this.assessments = assessments;
 		this.quality = quality;
 		this.clock = clock;
+		this.snapshot = new TransactionTemplate(transactions);
+		this.snapshot.setReadOnly(true);
+		this.snapshot.setIsolationLevel(TransactionDefinition.ISOLATION_REPEATABLE_READ);
+		this.qualityRead = new TransactionTemplate(transactions);
+		this.qualityRead.setReadOnly(true);
 	}
 
 	/**
-	 * The night of {@code runIds} (a repeated id counts once); empty when one of them is no run.
+	 * The night of {@code runIds} (a repeated id counts once); empty when one of them is no run. The quality
+	 * window is read first, in its own transaction: when that fails, the night has the line
+	 * {@code unavailable} in its place ({@link Night#qualityUnavailable()}) and is still returned.
 	 *
 	 * @throws IllegalArgumentException when {@code runIds} is empty: a night has at least one run
 	 */
-	@Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
 	public Optional<Night> of(Collection<UUID> runIds) {
 		if (runIds.isEmpty()) {
 			throw new IllegalArgumentException("A night's summary needs at least one run id");
 		}
+		Instant now = clock.instant();
+		LocalDate date = LocalDate.ofInstant(now, PipelineRunService.ZONE);
+		NightQuality nightQuality = quality(date, now);
+		return Objects.requireNonNull(snapshot.execute(status -> night(runIds, date, nightQuality)));
+	}
+
+	/**
+	 * The quality window of the night's date and the sources that crossed their threshold tonight (S-35); on
+	 * any exception an empty window of the same days, nothing crossed, and the exception's class — the summary
+	 * goes out without its quality lines rather than not at all (S-34: every night).
+	 */
+	private NightQuality quality(LocalDate date, Instant now) {
+		try {
+			return Objects.requireNonNull(qualityRead.execute(status -> {
+				QualityWindow window = quality.window(date, PipelineRunService.ZONE);
+				return new NightQuality(window, quality.crossed(window, now, PipelineRunService.ZONE), null);
+			}));
+		}
+		catch (RuntimeException ex) {
+			log.error("The quality window of the night {} could not be read; the night's summary goes without it",
+					date, ex);
+			return new NightQuality(new QualityWindow(date.minusDays(AssessmentQuality.WINDOW_DAYS - 1), date,
+					List.of()), List.of(), ex.getClass().getSimpleName());
+		}
+	}
+
+	/** The quality part of a night: its window, the sources that crossed, or why it is unavailable. */
+	private record NightQuality(QualityWindow window, List<QualityCrossing> crossed, @Nullable String unavailable) {
+	}
+
+	/** The night inside the snapshot; {@code date} and the quality were read before it. */
+	private Optional<Night> night(Collection<UUID> runIds, LocalDate date, NightQuality nightQuality) {
 		List<UUID> ids = List.copyOf(new LinkedHashSet<>(runIds));
 		List<PipelineRun> found = new ArrayList<>(runs.findAllById(ids));
 		if (found.size() != ids.size()) {
@@ -179,17 +234,12 @@ public class NightSummary {
 		Map<Source, Long> deadInAdminRuns = SourceCount
 			.bySource(posts.countDeadKilledBySource(runs.findAdminRunIdsCreatedBetween(previousNight, earliest)));
 
-		// The quality window of the night's date and the sources that crossed their threshold tonight (S-35).
-		Instant now = clock.instant();
-		LocalDate date = LocalDate.ofInstant(now, PipelineRunService.ZONE);
-		QualityWindow window = quality.window(date, PipelineRunService.ZONE);
-		List<QualityCrossing> crossed = quality.crossed(window, now, PipelineRunService.ZONE);
-
 		return Optional.of(new Night(date,
 				range == null ? null : day(range.getRangeFrom()), range == null ? null : day(range.getRangeTo()),
 				found.stream().map(run -> new Run(run.getId(), run.getKind(), run.getStatus())).toList(),
 				found.stream().mapToInt(PipelineRun::getProcessingErrors).sum(),
-				found.stream().mapToInt(PipelineRun::getSkipped).sum(), lines, deadInAdminRuns, window, crossed));
+				found.stream().mapToInt(PipelineRun::getSkipped).sum(), lines, deadInAdminRuns, nightQuality.window(),
+				nightQuality.crossed(), nightQuality.unavailable()));
 	}
 
 	private static @Nullable PipelineRun first(List<PipelineRun> runs, RunKind kind) {
@@ -211,14 +261,20 @@ public class NightSummary {
 	 * @param skipped the runs' skipped elements, summed
 	 * @param sources a line per source; kept in {@link Source} order whatever order they come in
 	 * @param deadInAdminRuns the dead posts of the admin's runs since the previous night, per source
-	 * @param quality the quality window of {@code date} (S-35), a line per source in it
+	 * @param quality the quality window of {@code date} (S-35), a line per source in it; without sources when
+	 *     {@code qualityUnavailable}
 	 * @param crossed the sources that crossed their threshold tonight, in {@link Source} order; empty when none
+	 * @param qualityUnavailable the class of the exception the quality window could not be read with, which
+	 *     makes the quality one line {@code unavailable}; {@code null} when it was read
 	 */
 	public record Night(LocalDate date, @Nullable LocalDate rangeFrom, @Nullable LocalDate rangeTo, List<Run> runs,
 			int processingErrors, int skipped, List<SourceLine> sources, Map<Source, Long> deadInAdminRuns,
-			QualityWindow quality, List<QualityCrossing> crossed) {
+			QualityWindow quality, List<QualityCrossing> crossed, @Nullable String qualityUnavailable) {
 
 		public Night {
+			if (qualityUnavailable != null && (!quality.sources().isEmpty() || !crossed.isEmpty())) {
+				throw new IllegalArgumentException("An unavailable quality window has no source and nothing crossed");
+			}
 			runs = List.copyOf(runs);
 			crossed = List.copyOf(crossed);
 			sources = sources.stream().sorted(Comparator.comparing(SourceLine::source)).toList();
@@ -251,6 +307,17 @@ public class NightSummary {
 				.append(skipped);
 			for (SourceLine source : sources) {
 				text.append('\n').append(source.text());
+			}
+			if (qualityUnavailable != null) {
+				text.append("\nquality ")
+					.append(AssessmentQuality.WINDOW_DAYS)
+					.append("d (")
+					.append(quality.from())
+					.append('…')
+					.append(quality.to())
+					.append("): unavailable (")
+					.append(qualityUnavailable)
+					.append(')');
 			}
 			for (SourceQuality source : quality.sources()) {
 				text.append('\n').append(qualityLine(source, quality));

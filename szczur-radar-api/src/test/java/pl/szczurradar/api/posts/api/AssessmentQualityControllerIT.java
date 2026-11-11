@@ -65,9 +65,7 @@ class AssessmentQualityControllerIT {
 
 	@BeforeEach
 	void seed() {
-		// Within this test's transaction no other test's attempt lies near the window.
-		jdbc.update("DELETE FROM assessments WHERE assessed_at >= '2025-02-01' AND assessed_at < '2025-04-01'");
-		cron = jdbc.queryForObject("INSERT INTO pipeline_runs (kind, status, requested_by, created_at, started_at,"
+		cron =jdbc.queryForObject("INSERT INTO pipeline_runs (kind, status, requested_by, created_at, started_at,"
 				+ " finished_at, range_from, range_to, sources) VALUES ('range', 'succeeded', ?, now(), now(), now(),"
 				+ " now(), now(), ARRAY['wykop', 'reddit']) RETURNING id", UUID.class, SystemAccount.SCHEDULER.id());
 		wykop = post("wykop");
