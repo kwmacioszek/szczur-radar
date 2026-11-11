@@ -48,6 +48,8 @@ class RunEndingTest {
 			Map.entry("isRunning", "a read of the run's status"),
 			Map.entry("count", "adds to the counters of a running run"),
 			Map.entry("source", "writes a source's result while the run runs"),
+			Map.entry("storeRejected",
+					"adds the store's rejected posts to the skipped counters of a running run and its source"),
 			Map.entry("touch", "moves the last activity of a running run"),
 			Map.entry("error", "sets the error text while the run runs; the status stays"),
 			Map.entry("inFlight", "a read of the posts the run holds in assessment"),

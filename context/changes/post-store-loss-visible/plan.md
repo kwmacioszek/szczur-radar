@@ -421,21 +421,21 @@ Bez migracji i bez nowych zmiennych. Stare przebiegi w bazie się nie zmieniają
 
 #### Automated
 
-- [x] 1.1 Testy jednostkowe store przechodzą
-- [x] 1.2 Test store na Postgresie przechodzi
-- [x] 1.3 Cały backend przechodzi
-- [x] 1.4 Kod nie łapie już wyjątku jako duplikatu bez sprawdzenia klucza
+- [x] 1.1 Testy jednostkowe store przechodzą — 987c3fd
+- [x] 1.2 Test store na Postgresie przechodzi — 987c3fd
+- [x] 1.3 Cały backend przechodzi — 987c3fd
+- [x] 1.4 Kod nie łapie już wyjątku jako duplikatu bez sprawdzenia klucza — 987c3fd
 
 ### Phase 2: Przebieg liczy i pokazuje odrzucone posty
 
 #### Automated
 
-- [ ] 2.1 Testy jednostkowe sekwencji i strażnika przechodzą
-- [ ] 2.2 Strażnicy `storeRejected` na Postgresie przechodzą
-- [ ] 2.3 Scenariusz z odrzuconym postem i równość przechodzą w `PipelineRunIT`
-- [ ] 2.4 Cały backend przechodzi
-- [ ] 2.5 Testy SPA bez zmian przechodzą
-- [ ] 2.6 Dokumenty wymieniają S-38
+- [x] 2.1 Testy jednostkowe sekwencji i strażnika przechodzą
+- [x] 2.2 Strażnicy `storeRejected` na Postgresie przechodzą
+- [x] 2.3 Scenariusz z odrzuconym postem i równość przechodzą w `PipelineRunIT`
+- [x] 2.4 Cały backend przechodzi
+- [x] 2.5 Testy SPA bez zmian przechodzą
+- [x] 2.6 Dokumenty wymieniają S-38
 
 ### Phase 3: Weryfikacja w PR env (agent)
 

@@ -37,7 +37,8 @@ public enum AttentionReason {
 
 	/**
 	 * A {@link RunStatus#SUCCEEDED succeeded} or {@link RunStatus#PARTIAL partial} run skipped elements:
-	 * fetched, but they could not become a post.
+	 * fetched, but they could not become a post — also a post the database rejected at store (S-38), which the
+	 * run's error names ({@code store rejected …}).
 	 */
 	SKIPPED("skipped");
 

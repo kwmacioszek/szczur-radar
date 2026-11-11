@@ -26,12 +26,14 @@ import java.util.function.ToIntFunction;
 
 import org.junit.jupiter.api.Test;
 
+import pl.szczurradar.api.agents.assessor.contract.ItemType;
 import pl.szczurradar.api.pipeline.assess.AssessmentDispatcher;
 import pl.szczurradar.api.pipeline.flow.RunFlow.AssessedBatch;
 import pl.szczurradar.api.pipeline.flow.RunFlow.FetchedBatch;
 import pl.szczurradar.api.pipeline.flow.RunFlow.PendingAssessments;
 import pl.szczurradar.api.pipeline.flow.RunFlow.ProcessingError;
 import pl.szczurradar.api.pipeline.flow.RunFlow.RangeTarget;
+import pl.szczurradar.api.pipeline.flow.RunFlow.RejectedPost;
 import pl.szczurradar.api.pipeline.flow.RunFlow.RunRequest;
 import pl.szczurradar.api.pipeline.flow.RunFlow.RunSummary;
 import pl.szczurradar.api.pipeline.flow.RunFlow.SelectionTarget;
@@ -73,6 +75,20 @@ class RunSequenceTest {
 	/** The store step's result: both of Wykop's posts new. */
 	private static final StoredBatch STORED = new StoredBatch(RUN, NEW_POSTS,
 			List.of(new SourceStored(Source.WYKOP, 2, 2, 0, 0)), List.of());
+
+	/**
+	 * The store step's result with posts the database rejected (S-38): one of Wykop's, two of Reddit's, Reddit's
+	 * stored first, so the counters' order is {@link Source}'s, not the store's.
+	 */
+	private static final StoredBatch REJECTED = new StoredBatch(RUN, NEW_POSTS,
+			List.of(new SourceStored(Source.WYKOP, 3, 2, 0, 1), new SourceStored(Source.REDDIT, 3, 0, 1, 2)),
+			List.of(new RejectedPost(Source.REDDIT, ItemType.POST, "1abcde", "ck_posts_channel"),
+					new RejectedPost(Source.WYKOP, ItemType.LINK, "17", "SQLState 22021"),
+					new RejectedPost(Source.REDDIT, ItemType.LINK, "1abcdf", "ck_posts_channel")));
+
+	/** {@link #REJECTED}'s part of the run's error. */
+	private static final String REJECTED_ERROR = "store rejected 3 post(s), counted as skipped:"
+			+ " reddit post 1abcde (ck_posts_channel); wykop link 17 (SQLState 22021); reddit link 1abcdf (ck_posts_channel)";
 
 	/** A fetch of Wykop alone, which gave posts (none in the batch: the store step is a mock). */
 	private static final FetchedBatch WYKOP_ONLY = new FetchedBatch(RUN, List.of(), 3, 1,
@@ -116,6 +132,9 @@ class RunSequenceTest {
 				+ (call.getArgument(5) == null ? "" : " " + call.getArgument(5))))
 			.when(recorder)
 			.source(any(), any(), any(), anyInt(), anyInt(), any());
+		doAnswer(call -> events.add("storeRejected " + call.<Source>getArgument(1).value() + " " + call.getArgument(2)))
+			.when(recorder)
+			.storeRejected(any(), any(), anyInt());
 		doAnswer(call -> events.add("error " + call.getArgument(1))).when(recorder).error(any(), anyString());
 		when(recorder.finish(any(), any(), isNull())).thenAnswer(call -> {
 			events.add("finish " + call.<RunStatus>getArgument(1).value());
@@ -142,6 +161,42 @@ class RunSequenceTest {
 		verify(selection).fromStored(STORED);
 		verify(dispatcher).dispatch(RUN, NEW_POSTS);
 		verify(selection, never()).fromTargets(any());
+		// Nothing rejected at store: no skipped counted after the step, no error.
+		verify(recorder, never()).storeRejected(any(), any(), anyInt());
+		verify(recorder, never()).error(any(), anyString());
+	}
+
+	@Test
+	void theStoresRejectedPostsAreCountedAsSkippedPerSourceInSourceOrderAfterTheNewPosts() {
+		when(store.store(any())).thenReturn(REJECTED);
+
+		RunSummary summary = sequence.run(range());
+
+		// Only rejected posts next to a clean fetch and assessment: the status stays, the error names them.
+		assertThat(summary).isEqualTo(new RunSummary(RUN, RunStatus.SUCCEEDED));
+		assertThat(events).containsExactly("fetch:started", "source wykop succeeded 3 1", "fetch:succeeded:3",
+				"store:started", "store:succeeded:2", "count " + Counters.stored(2), "storeRejected wykop 1",
+				"storeRejected reddit 2", "select:started", "select:succeeded:2", "assess:started", "assess:succeeded:2",
+				"error " + REJECTED_ERROR, "summarize:started", "summarize:succeeded:1", "finish succeeded");
+	}
+
+	@Test
+	void theSourcesSummaryTheStoresRejectedPostsAndTheAssessmentsErrorAreJoinedInThisOrder() {
+		fetches(REDDIT_FAILED);
+		// Reddit failed: only Wykop's posts reached the store, one of them rejected.
+		when(store.store(any())).thenReturn(new StoredBatch(RUN, NEW_POSTS,
+				List.of(new SourceStored(Source.WYKOP, 3, 2, 0, 1)),
+				List.of(new RejectedPost(Source.WYKOP, ItemType.LINK, "17", "ck_posts_channel"))));
+		ProcessingError error = new ProcessingError(NEW_POSTS.getFirst(), "IllegalStateException: boom");
+		AssessedBatch assessed = new AssessedBatch(RUN, 1, 0, 0, List.of(error), null);
+		when(dispatcher.dispatch(any(), any())).thenReturn(assessed);
+
+		RunSummary summary = sequence.run(range(Source.WYKOP, Source.REDDIT));
+
+		assertThat(summary).isEqualTo(new RunSummary(RUN, RunStatus.PARTIAL));
+		assertThat(events).contains("storeRejected wykop 1", "error reddit failed: IllegalStateException: HTTP 503"
+				+ " | store rejected 1 post(s), counted as skipped: wykop link 17 (ck_posts_channel) | "
+				+ assessed.errorSummary().orElseThrow(), "finish partial");
 	}
 
 	@Test

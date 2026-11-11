@@ -2370,6 +2370,39 @@ On a random **test** topic (never production's), set as `NTFY_URL` on the PR env
 - **To silence the API's events at once**, without a code change: delete `NTFY_URL` (and `NTFY_TOKEN`) on `szczur-radar-api` and redeploy it; the start logs `not configured`, the bell and the log stay, the crons are not affected.
 - **A revert of PR #162** brings `HealthchecksAlerts`, the `api-events` check and `HEALTHCHECK_PING_URL: preserve()` on the API back and drops the declarations of `NTFY_URL` / `NTFY_TOKEN`, so the same trap applies in reverse: **before** the revert merges, delete `NTFY_URL` and `NTFY_TOKEN` from the production API (`railway variable delete …`, as in step 3 above), otherwise the `main` plan proposes their `variable.delete` and the gate stops the deploy. After the revert's deploy: `tools/healthchecks/checks.sh apply production` of the reverted code creates `production/api-events` again and prints its address — set it as `HEALTHCHECK_PING_URL` on the API with `--stdin --skip-deploys`, seal it and redeploy the API (section F-04, runbook steps 1–4). Nothing in the data changes either way; the dead-only runs of the meantime are in `/admin`.
 
+## S-38: post odrzucony przy zapisie nie znika po cichu (post-store-loss-visible)
+
+**Status:** delivered by PR #167; production verification and closure in issue #148.
+
+Change: `post-store-loss-visible` (its folder moves to `context/archive/` when the change is archived). Before S-38 the store step (`pipeline/step/PostStore`) took every `DataIntegrityViolationException` of a single post's save for "stored meanwhile by another run": a post the database refused for another reason — a `CHECK` (e.g. `ck_posts_channel`), `NOT NULL`, a foreign key, a data error — was neither new nor skipped, with no log line, and the run could end `succeeded` (domain distillation R-06, D-15, ranking #2; issue #148). S-38 tells the two apart by reading the post's key again. PRD: FR-005 and the S-38 clarification under the failure signal NFR.
+
+### What changes
+
+- **Three outcomes per post.** The store step ends each post it gets as new (stored by this run), a duplicate (stored by an earlier run, repeated in the same fetch, or — its save failed and its key, read again, is stored — stored meanwhile by another run) or **rejected** (its save failed and its key is still not stored). A rejected post's raw payload rolls back with it; the rest of its chunk is stored. Any other exception ends the step as before.
+- **A rejected post is skipped.** After the store step the run adds each source's rejected posts to the run's `skipped` and to that source's `skipped` in "Wynik per źródło" (`pipeline_run_sources`), so they give the reason `skipped`: the bell, `RUN_NEEDS_ATTENTION` with `skipped N` and the run's error in its detail (section S-18), and `skipped N` in the night's summary (section S-34). The run's status and the source's result do not change (as for skipped elements, section S-08): a run with only rejected posts next to a clean assessment stays `succeeded`, and a source whose every post was rejected stays `succeeded`, so "Dni bez danych" count its day as covered.
+- **The run's error names them**, after the sources' summary and before the assessment's error, joined ` | `: `store rejected N post(s), counted as skipped: <source> <item type> <source id> (<cause>); …`, at most 10 posts, then `; and M more`. `<cause>` is the violated constraint's name, otherwise `SQLState <code>`, otherwise `unknown` — never the database's message, which holds the row's values.
+- **The equality.** For every range run whose store step succeeded, and each of its sources: fetched = new + duplicates + skipped. `fetched` and `skipped` are on the run and the source's row; new and duplicates per source are in the store's INFO line (duplicates are not stored anywhere else).
+- **Nothing else changes.** No variable, no migration, no new counter or attention reason, no API, SPA or cron contract change. A night without a rejection runs and counts as before.
+
+### What the operator sees
+
+- **API log:** INFO `Run <id> store <source>: <P> post(s), new <A>, duplicates <D>, rejected <R>` for each source with posts (every range run); for each rejected post WARN `Run <id>: the database rejected <source> <item type> <source id> at store (<cause>, <SimpleName>); counted as skipped`, then INFO `Run <id>: <source> store rejected <N>, counted as skipped`. Hibernate's own WARN lines of the failed batch (logger `org.hibernate.orm.jdbc.error`, `Batch entry … insert into posts …`) come before it; there is no ERROR line.
+- **The run's page** (`/admin/runs/<id>`) and `/admin`: "pominięte: N" counts the rejected posts with the elements skipped at mapping, and the error shows `store rejected …`; the bell has the run's notification.
+
+### Runbook — a post rejected at store (operator)
+
+1. Read the cause in the WARN line or the run's error. A constraint's name points at its migration (`szczur-radar-api/src/main/resources/db/migration/`, e.g. `ck_posts_channel` in `V13`); `SQLState 23502` is a `NOT NULL`, `23503` a foreign key, `22…` a data error (e.g. a value the column type refuses).
+2. Decide whose fault it is: the source's mapper (`sources/<source>/<Source>Mapper`, a value the shared model should not carry, e.g. an empty channel) or the migration (a constraint too strict for real data). Fix it in a change of its own; the raw element is not stored, so take it from the source again (the WARN line names the source id).
+3. After the fix is deployed, start a range run for the post's day from `/admin` (or wait for a night whose D-2…D-1 covers it): the post is not stored yet, so that run stores it as new and assesses it; the day's other posts are duplicates. Nothing retries it before that.
+
+### After the merge (read-only)
+
+The operator has nothing to do: no variable, no migration. Production verification is an ordinary night without rejections: the API log has `Run <id> store wykop: …, rejected 0` and `Run <id> store reddit: …, rejected 0` for the cron's range run, no `the database rejected` line, and the run's `skipped` equal to the sum of the mapping's `skipped` in its `Run <id>: <source> succeeded: fetched N, skipped M` lines; per source N = new + duplicates + M. Record it in issue #148 and close it.
+
+### Rollback
+
+Revert the change: there is no migration and no data step. Runs of the meantime keep their counters; a post rejected before the revert stays unstored until a range run over its day after the cause is fixed.
+
 ## Phases
 
 > Historical (state of 2026-09-26 – 2026-09-27, FastAPI backend); current: the Java API in section F-03, its image in section `api-docker-image`, the pipeline in sections `first-assessed-wykop-feed` and S-05, the database backup in section F-01, CI and the deploy gate in section S-14.

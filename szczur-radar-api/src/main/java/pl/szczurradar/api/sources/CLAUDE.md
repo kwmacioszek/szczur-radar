@@ -13,7 +13,7 @@ Spring beans (`List<…>` injected, keyed by `source()`). It never names a sourc
 
 | Interface | Called by | Contract |
 | --- | --- | --- |
-| `SourceFetcher` | fetch step of a range run (`pipeline/step/SourceIngest`) | `source()`; `configured()` (e.g. keys set — an unconfigured source is never fetched and a request naming it is refused); `fetch(from, to)` → `Fetched(posts, fetched, skipped)`: the posts added in the range as `SourcePost`s, each once; elements that cannot become a post are counted as `skipped`, never thrown; a failure of the source itself is thrown: the source's result is `failed`, the run goes on with the other sources (`pipeline/step/SourceIngest`) |
+| `SourceFetcher` | fetch step of a range run (`pipeline/step/SourceIngest`) | `source()`; `configured()` (e.g. keys set — an unconfigured source is never fetched and a request naming it is refused); `fetch(from, to)` → `Fetched(posts, fetched, skipped)`: the posts added in the range as `SourcePost`s, each once; elements that cannot become a post are counted as `skipped`, never thrown; a failure of the source itself is thrown: the source's result is `failed`, the run goes on with the other sources (`pipeline/step/SourceIngest`); a post the database then refuses at store (a `CHECK`, `NOT NULL`, a foreign key, a data error) is not lost either: the store step adds it to the run's and the source's `skipped` and names it in the run's error (S-38, `pipeline/step/PostStore`) |
 | `RawInputMapper` | assess step, for new and retried posts alike (`pipeline/assess/AssessmentInputs`) | `source()`; `map(raw)` → the `AssessmentInputV1` of a stored post, rebuilt from the raw payload the fetcher put in `SourcePost.raw` — so a retry gets exactly the input of the first attempt |
 
 `SourcePost` (`sources/SourcePost`): the shared fields, already mapped — `itemType` (shared
@@ -69,7 +69,9 @@ nothing.
    API gives `channel` without a prefix, and `GET /api/freshness` lists the source after its first update.
 
 Nothing in `pipeline/`, `posts/`, `raw/`, `agents/` or the API changes — in behaviour too: a new
-source that fails or stays silent does not fail the other sources' run. If a step seems to need it,
+source that fails or stays silent does not fail the other sources' run, and a post of it the database
+will not take (a value a constraint refuses) is counted as `skipped` with the reason `skipped`, a WARN line
+and `store rejected …` in the run's error, never dropped in silence (S-38). If a step seems to need it,
 the port is missing something: change the port (and the plan), don't special-case a source.
 
 ## Layout of a source: `sources/<source>/`

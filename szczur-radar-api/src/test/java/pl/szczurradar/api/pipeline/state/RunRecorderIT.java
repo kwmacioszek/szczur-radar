@@ -176,6 +176,51 @@ class RunRecorderIT {
 			.isEqualTo("x".repeat(RunRecorder.MAX_ERROR) + "…");
 	}
 
+	@Test
+	void theStoresRejectedPostsAddToTheSkippedOfTheRunAndOfTheirSourceOnlyAndMoveItsActivity() {
+		UUID running = run("running", null, null);
+		recorder.source(running, Source.WYKOP, SourceFetchStatus.SUCCEEDED, 16, 2, null);
+		recorder.source(running, Source.REDDIT, SourceFetchStatus.SUCCEEDED, 5, 0, null);
+		// Within the test's transaction now() stands still: the activity is set back to see it move.
+		jdbc.update("UPDATE pipeline_runs SET last_activity_at = now() - interval '1 hour' WHERE id = ?", running);
+		Object before = row(running).get("last_activity_at");
+
+		assertThat(recorder.storeRejected(running, Source.WYKOP, 3)).isTrue();
+
+		assertThat(row(running)).containsEntry("fetched", 21).containsEntry("skipped", 5).containsEntry("status", "running");
+		assertThat(row(running).get("last_activity_at")).isNotEqualTo(before);
+		// The other source's row stays as the fetch wrote it.
+		assertThat(sources(running)).containsExactly("reddit:succeeded:5:0:", "wykop:succeeded:16:5:");
+	}
+
+	@Test
+	void theStoresRejectedPostsOfARunThatIsNotRunningChangeNothing() {
+		UUID ended = run("running", null, null);
+		recorder.source(ended, Source.WYKOP, SourceFetchStatus.SUCCEEDED, 16, 2, null);
+		jdbc.update("UPDATE pipeline_runs SET status = 'interrupted', finished_at = now(),"
+				+ " last_activity_at = now() - interval '1 hour' WHERE id = ?", ended);
+		Object before = row(ended).get("last_activity_at");
+
+		assertThat(recorder.storeRejected(ended, Source.WYKOP, 3)).isFalse();
+
+		assertThat(row(ended)).containsEntry("skipped", 2).containsEntry("last_activity_at", before);
+		assertThat(sources(ended)).containsExactly("wykop:succeeded:16:2:");
+	}
+
+	@Test
+	void theStoresRejectedPostsOfASourceWithoutItsRowChangeNothing() {
+		UUID running = run("running", null, "1 hour");
+		recorder.source(running, Source.WYKOP, SourceFetchStatus.SUCCEEDED, 16, 2, null);
+		jdbc.update("UPDATE pipeline_runs SET last_activity_at = now() - interval '1 hour' WHERE id = ?", running);
+		Object before = row(running).get("last_activity_at");
+
+		// Reddit has no row in this run: neither the run's skipped nor its activity move.
+		assertThat(recorder.storeRejected(running, Source.REDDIT, 1)).isFalse();
+
+		assertThat(row(running)).containsEntry("skipped", 2).containsEntry("last_activity_at", before);
+		assertThat(sources(running)).containsExactly("wykop:succeeded:16:2:");
+	}
+
 	/** The violation aborts the test's transaction, so it comes last. */
 	@Test
 	void aSecondResultOfTheSameSourceInARunIsRefused() {

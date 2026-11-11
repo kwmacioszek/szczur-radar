@@ -164,6 +164,37 @@ public class RunRecorder {
 	}
 
 	/**
+	 * Adds the posts the database rejected at store (S-38) to the {@code skipped} of a running range run and
+	 * of its source's row in {@code pipeline_run_sources}, and moves the run's last activity, in one
+	 * conditional statement: both rows or neither. Nothing changes when the run is no longer running or has
+	 * no row of {@code source} (a source with posts always has one, written by the fetch step). The run's
+	 * row is updated first, as in {@link #openStep}; its {@code UPDATE} names the source's row itself, as
+	 * PostgreSQL always executes a data-modifying {@code WITH}.
+	 *
+	 * @param rejected the source's posts the database rejected, counted as skipped
+	 * @return whether both rows were changed
+	 */
+	public boolean storeRejected(UUID runId, Source source, int rejected) {
+		boolean written = statuses(jdbc
+			.sql("WITH run AS (UPDATE pipeline_runs SET skipped = skipped + :rejected, last_activity_at = now()"
+					+ " WHERE id = :id AND status = :running"
+					+ " AND EXISTS (SELECT 1 FROM pipeline_run_sources WHERE run_id = :id AND source = :source)"
+					+ " RETURNING id)"
+					+ " UPDATE pipeline_run_sources s SET skipped = s.skipped + :rejected FROM run"
+					+ " WHERE s.run_id = run.id AND s.source = :source RETURNING s.id"))
+			.param("rejected", rejected)
+			.param("id", runId)
+			.param("source", source.value())
+			.query(UUID.class)
+			.optional()
+			.isPresent();
+		if (written) {
+			log.info("Run {}: {} store rejected {}, counted as skipped", runId, source.value(), rejected);
+		}
+		return written;
+	}
+
+	/**
 	 * Moves the run's last activity while it is running, without changing a counter: a post's call that
 	 * ended with nothing to count yet (the provider unavailable, counted once the step has ended) is
 	 * progress too, so the watchdog never stops a run the breaker would.

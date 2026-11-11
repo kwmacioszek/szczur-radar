@@ -48,6 +48,12 @@ import pl.szczurradar.api.pipeline.step.SourceIngest;
  * written as soon as it ended, and the other sources' posts are stored and assessed. The fetch step fails
  * only when no source gave a post ({@link NoPostsFetchedException}, the run {@code failed}); otherwise the
  * run's status is the assessment's, but {@code partial} when the assessment succeeded and a source did not.
+ * The posts the database rejected at store (S-38) are added to the skipped counters of the run and their
+ * source after the store step, without changing the status.
+ *
+ * <p>A run's error has up to three parts, in this order and joined with {@code " | "}: the fetch's summary
+ * of the sources that did not succeed, the store's rejected posts ({@link StoredBatch#rejectedSummary()}),
+ * and the assessment's error.
  */
 @Component
 public class RunSequence {
@@ -86,14 +92,15 @@ public class RunSequence {
 		};
 	}
 
-	/** The fetch's result goes on to the run's error and status. */
+	/** The fetch's and the store's results go on to the run's error, the fetch's to its status. */
 	private RunSummary range(RangeTarget target) {
 		FetchedBatch fetched = fetch(target);
-		return summarize(assess(selectFromStored(store(fetched)), fetched), fetched);
+		StoredBatch stored = store(fetched);
+		return summarize(assess(selectFromStored(stored), fetched, stored), fetched);
 	}
 
 	private RunSummary chosen(SelectionTarget target) {
-		return summarize(assess(selectFromTargets(target), null), null);
+		return summarize(assess(selectFromTargets(target), null, null), null);
 	}
 
 	/**
@@ -110,10 +117,17 @@ public class RunSequence {
 				FetchedBatch::fetched);
 	}
 
+	/**
+	 * After the step, outside it: the new posts go into the run's counters, then each source's posts the
+	 * database rejected (S-38) into the {@code skipped} of the run and of the source's row
+	 * ({@link RunRecorder#storeRejected}), in {@link pl.szczurradar.api.sources.Source} order. A failed write
+	 * ends the run as any exception of the sequence.
+	 */
 	private StoredBatch store(FetchedBatch batch) {
 		StoredBatch stored = recorder.step(batch.runId(), RunStep.STORE, batch.posts().size(), () -> store.store(batch),
 				(StoredBatch result) -> result.newPostIds().size());
 		recorder.count(batch.runId(), RunRecorder.Counters.stored(stored.newPostIds().size()));
+		stored.rejectedBySource().forEach((source, rejected) -> recorder.storeRejected(batch.runId(), source, rejected));
 		return stored;
 	}
 
@@ -130,17 +144,23 @@ public class RunSequence {
 	/**
 	 * The dispatcher counts each post as it finishes (the run's progress), so the step counts nothing
 	 * itself; a dispatch the dispatcher stopped ({@link AssessedBatch#stoppedBy}) closes the step
-	 * {@code failed} with that reason, though it returned. The run's error is the fetch's summary of the
-	 * sources that did not succeed and the assessment's, joined with {@code " | "}, when either has one.
+	 * {@code failed} with that reason, though it returned. The run's error is, joined with {@code " | "}, the
+	 * parts that have something to say: the fetch's summary of the sources that did not succeed, the store's
+	 * rejected posts ({@link StoredBatch#rejectedSummary()}) and the assessment's error.
 	 *
 	 * @param fetched the range run's fetch; {@code null} for a run that fetches nothing
+	 * @param stored the range run's store; {@code null} for a run that stores nothing
 	 */
-	private AssessedBatch assess(PendingAssessments pending, @Nullable FetchedBatch fetched) {
+	private AssessedBatch assess(PendingAssessments pending, @Nullable FetchedBatch fetched,
+			@Nullable StoredBatch stored) {
 		AssessedBatch assessed = recorder.step(pending.runId(), RunStep.ASSESS, pending.postIds().size(),
 				() -> dispatcher.dispatch(pending.runId(), pending.postIds()), RunSequence::assessed);
-		List<String> errors = new ArrayList<>(2);
+		List<String> errors = new ArrayList<>(3);
 		if (fetched != null && fetched.degraded()) {
 			errors.add(fetched.summary());
+		}
+		if (stored != null) {
+			stored.rejectedSummary().ifPresent(errors::add);
 		}
 		assessed.errorSummary().ifPresent(errors::add);
 		if (!errors.isEmpty()) {
