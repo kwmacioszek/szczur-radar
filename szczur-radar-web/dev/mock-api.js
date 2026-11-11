@@ -1,7 +1,7 @@
 /*
  * Mock /api/* for screenshots of /admin, a run (/admin/runs/:id), the feed (/), a post (/posts/:id) and /activate
  * without a running API (playwright-cli run-code), kept for /10x-ui changes. Another mode = run a copy of this file
- * with MODE, NOTIFICATIONS, AUTH, ACTIVATION, FRESHNESS or MISSING replaced.
+ * with MODE, NOTIFICATIONS, AUTH, ACTIVATION, FRESHNESS, MISSING or QUALITY replaced.
  * MODE: 'data'         runs + failed posts; the feed has 120 posts (3 pages of 50), each with its page and raw data,
  *       'loading'      admin calls (the notification bell's too), /api/posts and /api/posts/:id (with /raw) hang 60 s,
  *       'error'        admin calls (the bell's too), /api/posts and /api/posts/:id (with /raw) answer 500,
@@ -21,6 +21,13 @@
  * /api/admin/pipeline-runs/missing-days of pipeline/api/PipelineRunController.java, relative to today in Warsaw (D):
  *       'gaps'  the window D-15…D-2 with Wykop missing D-9…D-7 and D-4 (a 3-day and a 1-day range), the default,
  *       'none'  the window and no day,
+ *       'error' 500.
+ * QUALITY (the "Jakość ocen (7 dni)" section of /admin; MODE 'loading' and 'error' apply first), like
+ * /api/admin/assessment-quality of posts/api/AssessmentQualityController.java, the window D-6…D:
+ *       'data'  Wykop ok (2.6 % of 3134 attempts against 5 %), Reddit above its threshold (27.4 % of 598 against 25 %),
+ *               the default,
+ *       'few'   Wykop ok, Reddit with 46 attempts: fewer than minAttempts, the threshold not checked,
+ *       'none'  the window and no source (no attempt in it),
  *       'error' 500.
  * Runs (/api/admin/pipeline-runs?page&size, 32 in all: "Pokaż starsze" has a second page of 20) answer like
  * pipeline/api/PipelineRunController.java, the newest first; a run that needs attention has its reason codes in
@@ -377,6 +384,7 @@ async page => {
   const ACTIVATION = 'valid'
   const FRESHNESS = 'date'
   const MISSING = 'gaps'
+  const QUALITY = 'data'
   // Days without data, relative to today in Warsaw: D-n as YYYY-MM-DD (counted on UTC midnights, so no clock change
   // shifts a day).
   const today = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Warsaw' }).format(new Date())
@@ -385,6 +393,23 @@ async page => {
     from: dMinus(15), to: dMinus(2),
     days: MISSING === 'none' ? [] : [9, 8, 7, 4].map((n) => ({ day: dMinus(n), sources: ['wykop'] })),
   })
+  // The quality window by QUALITY: counts per source, the state as the API computes it.
+  const WYKOP_QUALITY = { source: 'wykop', attempts: 3134, failed: 82, classes: [
+    { failureClass: 'schema_violation', count: 10 }, { failureClass: 'invalid_reference', count: 4 },
+    { failureClass: 'fabricated_evidence', count: 62 }, { failureClass: 'domain_invariant_violation', count: 6 },
+  ], thresholdPercent: 5, status: 'ok' }
+  const QUALITY_SOURCES = {
+    data: [WYKOP_QUALITY, { source: 'reddit', attempts: 598, failed: 164, classes: [
+      { failureClass: 'provider_error', count: 3 }, { failureClass: 'schema_violation', count: 80 },
+      { failureClass: 'fabricated_evidence', count: 72 }, { failureClass: 'domain_invariant_violation', count: 9 },
+    ], thresholdPercent: 25, status: 'above_threshold' }],
+    few: [WYKOP_QUALITY, { source: 'reddit', attempts: 46, failed: 7, classes: [
+      { failureClass: 'schema_violation', count: 4 }, { failureClass: 'fabricated_evidence', count: 3 },
+    ], thresholdPercent: 25, status: 'not_enough_attempts' }],
+    none: [],
+  }
+  const assessmentQuality = () => ({ from: dMinus(6), to: today, windowDays: 7, minAttempts: 100,
+    sources: QUALITY_SOURCES[QUALITY] })
   // The sources of /api/freshness by FRESHNESS, in the API's order.
   const WYKOP_UPDATE = { source: 'wykop', lastUpdatedAt: '2026-10-13T03:12:00Z' }
   const FRESHNESS_SOURCES = {
@@ -420,6 +445,9 @@ async page => {
     if (p === '/api/admin/pipeline-runs/sources') return json(route, [{ source: 'wykop', configured: true }])
     if (p === '/api/admin/pipeline-runs/missing-days') {
       return MISSING === 'error' ? json(route, { detail: 'internal_error' }, 500) : json(route, missingDays())
+    }
+    if (p === '/api/admin/assessment-quality') {
+      return QUALITY === 'error' ? json(route, { detail: 'internal_error' }, 500) : json(route, assessmentQuality())
     }
     if (p === '/api/admin/pipeline-runs' && route.request().method() === 'GET') {
       const runs = MODE === 'empty' ? [] : allRuns()

@@ -13,11 +13,12 @@ import {
   startRange,
 } from '../api/pipeline'
 import { type FailedPost, fetchFailedPosts, restorePosts } from '../api/posts'
+import { type QualityStatus, type QualityWindow, type SourceQuality, fetchAssessmentQuality } from '../api/quality'
 import AppButton from '../components/AppButton.vue'
 import AppHeader from '../components/AppHeader.vue'
-import StatusBadge from '../components/StatusBadge.vue'
+import StatusBadge, { type BadgeTone } from '../components/StatusBadge.vue'
 import StatusMessage from '../components/StatusMessage.vue'
-import { formatDate, formatDateTime, formatDuration, label } from '../labels'
+import { formatDate, formatDateTime, formatDuration, label, plural } from '../labels'
 import { type MissingRange, missingRanges } from '../missingDays'
 import { useEvery } from '../polling'
 import { isActive, requester, runDuration, runRange, runStatusLabel, runTone, stepTone } from '../runs'
@@ -122,6 +123,60 @@ function fillForm(range: MissingRange): void {
   fromInput.value?.focus()
 }
 
+// --- assessment quality -----------------------------------------------------------------
+const quality = ref<QualityWindow | null>(null)
+/** Loading without an answer yet; a reload keeps the window on screen. */
+const qualityLoading = ref(true)
+const qualityError = ref<string | null>(null)
+/** The number of the latest read; the answer or error of any earlier one is dropped. */
+let latestQuality = 0
+
+// Read on mount, with "Odśwież" and after a run of the list stops being active: then new attempts may count.
+async function loadQuality(): Promise<void> {
+  const current = ++latestQuality
+  qualityLoading.value = quality.value === null
+  qualityError.value = null
+  try {
+    const answer = await fetchAssessmentQuality()
+    if (current === latestQuality) quality.value = answer
+  } catch {
+    if (current === latestQuality) qualityError.value = 'Nie udało się wczytać jakości ocen.'
+  } finally {
+    if (current === latestQuality) qualityLoading.value = false
+  }
+}
+
+/** The state is the API's; the colour only reinforces its text. */
+const QUALITY_TONES: Record<QualityStatus, BadgeTone> = {
+  ok: 'success',
+  above_threshold: 'warning',
+  not_enough_attempts: 'neutral',
+}
+
+function qualityTone(status: QualityStatus): BadgeTone {
+  return QUALITY_TONES[status] ?? 'neutral'
+}
+
+// Only for display: the state against the threshold comes from the API, never from these numbers.
+const share = new Intl.NumberFormat('pl-PL', { style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 1 })
+const threshold = new Intl.NumberFormat('pl-PL', { style: 'percent', maximumFractionDigits: 0 })
+
+/** `part` of the source's attempts, e.g. `2,6%`. */
+function shareOf(row: SourceQuality, part: number): string {
+  return share.format(part / row.attempts)
+}
+
+/** E.g. `nieudane 5,0% z 200 prób · próg 5%`. */
+function failedText(row: SourceQuality): string {
+  const attempts = `${row.attempts} ${plural(row.attempts, 'próby', 'prób', 'prób')}`
+  return `nieudane ${shareOf(row, row.failed)} z ${attempts} · próg ${threshold.format(row.thresholdPercent / 100)}`
+}
+
+/** E.g. `niezgodność ze schematem 2,0% · zmyślony cytat 3,0%`, in the API's order of classes. */
+function classesText(row: SourceQuality): string {
+  return row.classes.map((item) => `${label('failureClass', item.failureClass)} ${shareOf(row, item.count)}`).join(' · ')
+}
+
 // --- runs -------------------------------------------------------------------------------
 /** Rows per page of "Pokaż starsze". */
 const PAGE_SIZE = 20
@@ -167,8 +222,11 @@ async function loadRuns(): Promise<void> {
     if (current !== latestRefresh) return
     const wasActive = new Set(runs.value.filter(isActive).map((run) => run.id))
     runs.value = mergeRuns(page.items, runs.value)
-    // A run that ended may have covered days without data.
-    if (runs.value.some((run) => wasActive.has(run.id) && !isActive(run))) void loadMissing()
+    // A run that ended may have covered days without data and stored new assessment attempts.
+    if (runs.value.some((run) => wasActive.has(run.id) && !isActive(run))) {
+      void loadMissing()
+      void loadQuality()
+    }
     runsTotal.value = page.total
     pagesLoaded = Math.max(pagesLoaded, 1)
     now.value = Date.now()
@@ -317,11 +375,17 @@ function excerpt(post: FailedPost): string {
 }
 
 async function refresh(): Promise<void> {
-  await Promise.all([loadRuns(), loadFailed(), loadMissing(), sourcesError.value ? loadSources() : undefined])
+  await Promise.all([
+    loadRuns(),
+    loadFailed(),
+    loadMissing(),
+    loadQuality(),
+    sourcesError.value ? loadSources() : undefined,
+  ])
 }
 
 onMounted(async () => {
-  await Promise.all([loadSources(), loadMissing(), loadRuns(), loadFailed()])
+  await Promise.all([loadSources(), loadMissing(), loadQuality(), loadRuns(), loadFailed()])
 })
 </script>
 
@@ -391,6 +455,29 @@ onMounted(async () => {
             Tuż po północy (czasu polskiego) przedwczorajszy dzień może tu być przez 2–3 godziny, zanim pobierze go nocny przebieg.
           </p>
         </template>
+      </template>
+    </section>
+
+    <section aria-labelledby="quality-title" :aria-busy="qualityLoading ? 'true' : undefined">
+      <h2 id="quality-title">Jakość ocen (7 dni)</h2>
+      <p v-if="qualityLoading" class="loading">Wczytywanie…</p>
+      <StatusMessage v-else-if="qualityError" tone="error">{{ qualityError }}</StatusMessage>
+      <template v-else-if="quality">
+        <p class="quality-window">
+          Od {{ formatDate(quality.from) }} do {{ formatDate(quality.to) }} · próby z odpowiedzią modelu, z ponowieniami;
+          próg sprawdzany od {{ quality.minAttempts }} prób
+        </p>
+        <p v-if="quality.sources.length === 0" class="empty">Brak ocen w ostatnich {{ quality.windowDays }} dniach.</p>
+        <ul v-else class="quality-sources">
+          <li v-for="row in quality.sources" :key="row.source" class="quality-source" :data-status="row.status">
+            <p class="quality-head">
+              <strong>{{ label('source', row.source) }}</strong>
+              <StatusBadge :tone="qualityTone(row.status)">{{ label('qualityStatus', row.status) }}</StatusBadge>
+            </p>
+            <p class="quality-failed">{{ failedText(row) }}</p>
+            <p v-if="row.classes.length" class="quality-classes">{{ classesText(row) }}</p>
+          </li>
+        </ul>
       </template>
     </section>
 
@@ -561,7 +648,8 @@ h2 {
 
 .runs,
 .failed-posts,
-.missing-ranges {
+.missing-ranges,
+.quality-sources {
   margin: 0;
   padding: 0;
   list-style: none;
@@ -569,7 +657,8 @@ h2 {
 
 .run,
 .failed-posts li,
-.missing-range {
+.missing-range,
+.quality-source {
   padding: var(--space-2) 0;
   border-bottom: 1px solid var(--border);
 }
@@ -582,8 +671,21 @@ h2 {
   gap: var(--space-1) var(--space-3);
 }
 
-.run p {
+.run p,
+.quality-source p {
   margin: var(--space-0) 0;
+}
+
+.quality-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-3);
+}
+
+.quality-window {
+  margin: 0 0 var(--space-2);
+  font-size: var(--font-size-sm);
 }
 
 .run-head,
@@ -603,7 +705,9 @@ h2 {
 .run-meta,
 .counters,
 .steps,
-.attempt {
+.attempt,
+.quality-failed,
+.quality-classes {
   font-size: var(--font-size-sm);
 }
 

@@ -310,22 +310,22 @@ V14 tylko dodaje indeks (`CREATE INDEX`, nie `CONCURRENTLY` — Flyway w transak
 
 #### Automated
 
-- [x] 2.1 `NightSummaryTest` zielony z liniami `ok`, `ABOVE THRESHOLD`, `fewer than 100` i limitem 4096 bajtów
-- [x] 2.2 `NightSummaryIT` zielony: linie jakości i `crossed` (przejście vs ponad progiem dwa dni z rzędu)
-- [x] 2.3 `InternalPipelineRunIT` zielony: `ASSESSMENT_QUALITY` raz przy przejściu, brak bez przejścia
-- [x] 2.4 `NtfyAlertsTest` zielony: `ASSESSMENT_QUALITY` z `Priority: 4` i tytułem
-- [x] 2.5 `tools/pipeline-trigger/test.sh` zielony
-- [x] 2.6 `./mvnw -B verify` zielone
+- [x] 2.1 `NightSummaryTest` zielony z liniami `ok`, `ABOVE THRESHOLD`, `fewer than 100` i limitem 4096 bajtów — 3d49983
+- [x] 2.2 `NightSummaryIT` zielony: linie jakości i `crossed` (przejście vs ponad progiem dwa dni z rzędu) — 3d49983
+- [x] 2.3 `InternalPipelineRunIT` zielony: `ASSESSMENT_QUALITY` raz przy przejściu, brak bez przejścia — 3d49983
+- [x] 2.4 `NtfyAlertsTest` zielony: `ASSESSMENT_QUALITY` z `Priority: 4` i tytułem — 3d49983
+- [x] 2.5 `tools/pipeline-trigger/test.sh` zielony — 3d49983
+- [x] 2.6 `./mvnw -B verify` zielone — 3d49983
 
 ### Phase 3: Sekcja w `/admin`
 
 #### Automated
 
-- [ ] 3.1 `AssessmentQualityControllerIT` zielony: 401, 403, treść dla fixed `Clock` równa plikowi kontraktu
-- [ ] 3.2 `./mvnw -B verify` zielone (`AuthorizationCompletenessIT`, `ContractRoutesIT`, `ContractVariantsTest`, `SpaRulesTest`)
-- [ ] 3.3 `npm test` zielone (`AdminView.test.ts` i testy kontraktu SPA, `styleContract.test.ts`)
-- [ ] 3.4 `npm run build` zielone
-- [ ] 3.5 Zrzuty `playwright-cli` sekcji na mocku: oba motywy, 375 px, 7 stanów lub N/A z powodem
+- [x] 3.1 `AssessmentQualityControllerIT` zielony: 401, 403, treść dla fixed `Clock` równa plikowi kontraktu
+- [x] 3.2 `./mvnw -B verify` zielone (`AuthorizationCompletenessIT`, `ContractRoutesIT`, `ContractVariantsTest`, `SpaRulesTest`)
+- [x] 3.3 `npm test` zielone (`AdminView.test.ts` i testy kontraktu SPA, `styleContract.test.ts`)
+- [x] 3.4 `npm run build` zielone
+- [x] 3.5 Zrzuty `playwright-cli` sekcji na mocku: oba motywy, 375 px, 7 stanów lub N/A z powodem
 
 ### Phase 4: Weryfikacja w PR env
 
