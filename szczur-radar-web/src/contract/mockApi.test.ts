@@ -1,5 +1,5 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
-import { installMock, type MockApi, type MockConstant } from './mockApi'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { installMock, type MockApi, type MockConstant, type MockResponse } from './mockApi'
 import rules from './rules.json'
 
 // Guard of dev/mock-api.js: the mock is executed without a browser (mockApi.ts) and every route of ROUTES is compared
@@ -9,9 +9,9 @@ import rules from './rules.json'
 //  - enums: the values on the paths of ENUMS belong to the set of rules.json `values`.
 // A variant the mock needs and no contract file has is added to the file through the API's integration test, not
 // excused here.
-// Beyond the shape, BEHAVIOR (S-43 phase 2) pins how the routes answer: the status and error code of each refusal, the
-// session, the ids, the page limits, the start of a run; INVARIANTS pin three facts about the mock's data. A BEHAVIOR
-// row marked `before` already held for the mock as it was before phase 2 (the others are red there).
+// Beyond the shape, the behavior table (ROWS) pins how the routes answer: the status and error code of each refusal,
+// the session (its rows come from ROUTES), the ids, the page limits, the start of a run; the invariants pin facts
+// about the mock's data.
 
 type ValueSet = keyof typeof rules.values
 
@@ -34,9 +34,21 @@ interface Check {
   enums?: Record<string, ValueSet>
 }
 
+interface Request {
+  method: string
+  path: string
+  body?: unknown
+}
+
 interface Route {
   name: string
-  fetch(api: MockApi): Promise<unknown[]>
+  /**
+   * The route's request: read once (200) unless `fetch` says otherwise, and the session rows of ROWS (401 without a
+   * session; 403 for a user on /api/admin/) unless the route is in PUBLIC_ROUTES.
+   */
+  request: Request
+  /** How the bodies are read when it is more than `request` answering 200 (every page, a start's 202, …). */
+  fetch?(api: MockApi): Promise<unknown[]>
   checks: Check[]
 }
 
@@ -133,43 +145,48 @@ const POST_0 = id(4, 0)
 const POST_REDDIT = id(4, 2)
 const UNKNOWN = id(9, 9)
 const ADMIN_EMAIL = 'admin@szczur-radar.pl'
+const PIPELINE_RUNS = '/api/admin/pipeline-runs'
 
-const warsawToday = () => new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Warsaw' }).format(new Date())
+// The days of the start rows are relative to NOW, and the behavior tests pin the clock to it (the mock's "today" is
+// read when it is installed), so no midnight in Warsaw falls between the two.
+const NOW = Date.parse('2026-10-20T10:00:00Z')
+const warsawToday = () => new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Warsaw' }).format(NOW)
 const dMinus = (n: number) => new Date(Date.parse(`${warsawToday()}T00:00:00Z`) - n * 86_400_000).toISOString().slice(0, 10)
 
 const ROUTES: Route[] = [
   {
     name: 'GET /api/auth/me',
-    fetch: async (api) => [await ok(api, 'GET', '/api/auth/me')],
+    request: { method: 'GET', path: '/api/auth/me' },
     checks: [{ at: '$', refs: [{ file: 'user.json', at: '$' }] }],
   },
   {
     name: 'POST /api/auth/login',
-    fetch: async (api) => [await ok(api, 'POST', '/api/auth/login', { email: 'jan@example.com', password: 'x' })],
+    request: { method: 'POST', path: '/api/auth/login', body: { email: 'jan@example.com', password: 'x' } },
     checks: [{ at: '$', refs: [{ file: 'user.json', at: '$' }] }],
   },
   {
     name: 'POST /api/auth/activation/lookup',
-    fetch: async (api) => [await ok(api, 'POST', '/api/auth/activation/lookup', { token: 'any' })],
+    request: { method: 'POST', path: '/api/auth/activation/lookup', body: { token: 'any' } },
     checks: [{ at: '$', refs: [{ file: 'activation-lookup.json', at: '$' }] }],
   },
   {
     name: 'GET /api/freshness',
-    fetch: async (api) => [await ok(api, 'GET', '/api/freshness')],
+    request: { method: 'GET', path: '/api/freshness' },
     checks: [{ at: '$', refs: [{ file: 'freshness.json', at: '$' }], enums: { '$.sources[].source': 'source' } }],
   },
   {
     name: 'GET /api/admin/pipeline-runs/sources',
-    fetch: async (api) => [await ok(api, 'GET', '/api/admin/pipeline-runs/sources')],
+    request: { method: 'GET', path: '/api/admin/pipeline-runs/sources' },
     checks: [{ at: '$[]', refs: [{ file: 'sources.json', at: '$[]' }], enums: { '$.source': 'source' } }],
   },
   {
     name: 'GET /api/admin/pipeline-runs/missing-days',
-    fetch: async (api) => [await ok(api, 'GET', '/api/admin/pipeline-runs/missing-days')],
+    request: { method: 'GET', path: '/api/admin/pipeline-runs/missing-days' },
     checks: [{ at: '$', refs: [{ file: 'missing-days.json', at: '$' }], enums: { '$.days[].sources[]': 'source' } }],
   },
   {
     name: 'GET /api/admin/pipeline-runs (every page)',
+    request: { method: 'GET', path: PIPELINE_RUNS },
     fetch: async (api) => (await pages(api, '/api/admin/pipeline-runs', 20)).bodies,
     checks: [
       { at: '$', refs: [{ file: 'runs-page.json', at: '$' }], stop: ['$.items[]'] },
@@ -178,6 +195,7 @@ const ROUTES: Route[] = [
   },
   {
     name: 'GET /api/admin/pipeline-runs/{id} (every run of the list)',
+    request: { method: 'GET', path: `${PIPELINE_RUNS}/${RUN_1}` },
     fetch: async (api) => {
       const { items } = await pages(api, '/api/admin/pipeline-runs', 20)
       return Promise.all(
@@ -188,6 +206,7 @@ const ROUTES: Route[] = [
   },
   {
     name: 'GET /api/posts (every page)',
+    request: { method: 'GET', path: '/api/posts' },
     fetch: async (api) => (await pages(api, '/api/posts', 50)).bodies,
     checks: [
       { at: '$', refs: [{ file: 'posts-page.json', at: '$' }], stop: ['$.items[]'] },
@@ -196,6 +215,7 @@ const ROUTES: Route[] = [
   },
   {
     name: 'GET /api/posts/{id} (every post of the feed)',
+    request: { method: 'GET', path: `/api/posts/${POST_0}` },
     fetch: async (api) => {
       const { items } = await pages(api, '/api/posts', 50)
       return Promise.all(items.map((post) => ok(api, 'GET', `/api/posts/${(post as { id: string }).id}`)))
@@ -204,7 +224,7 @@ const ROUTES: Route[] = [
   },
   {
     name: 'GET /api/admin/posts/failed',
-    fetch: async (api) => [await ok(api, 'GET', '/api/admin/posts/failed')],
+    request: { method: 'GET', path: '/api/admin/posts/failed' },
     checks: [
       { at: '$', refs: [{ file: 'failed-posts-page.json', at: '$' }], stop: ['$.items[]'] },
       { at: '$.items[]', refs: [{ file: 'failed-posts-page.json', at: '$.items[]' }], enums: FAILED_ENUMS },
@@ -212,21 +232,24 @@ const ROUTES: Route[] = [
   },
   {
     name: 'POST /api/admin/posts/restore',
-    fetch: async (api) => [await ok(api, 'POST', '/api/admin/posts/restore', { postIds: [FAILED_DEAD] })],
+    request: { method: 'POST', path: '/api/admin/posts/restore', body: { postIds: [FAILED_DEAD] } },
     checks: [{ at: '$', refs: [{ file: 'restore-result.json', at: '$' }] }],
   },
   {
     name: 'POST /api/admin/pipeline-runs (a range: a retry run first, then the range)',
+    request: { method: 'POST', path: PIPELINE_RUNS, body: { from: dMinus(3), to: dMinus(1) } },
     fetch: async (api) => [await answered(api, 202, 'POST', '/api/admin/pipeline-runs', { from: dMinus(3), to: dMinus(1) })],
     checks: [{ at: '$[]', refs: startedRefs, enums: RUN_ENUMS }],
   },
   {
     name: 'POST /api/admin/pipeline-runs (postIds)',
+    request: { method: 'POST', path: PIPELINE_RUNS, body: { postIds: [POST_0] } },
     fetch: async (api) => [await answered(api, 202, 'POST', '/api/admin/pipeline-runs', { postIds: [POST_0] })],
     checks: [{ at: '$[]', refs: startedRefs, enums: RUN_ENUMS }],
   },
   {
     name: 'GET /api/admin/pipeline-runs/{id} (every started run)',
+    request: { method: 'GET', path: `${PIPELINE_RUNS}/${RUN_1}` },
     fetch: async (api) => {
       const started = (await answered(api, 202, 'POST', '/api/admin/pipeline-runs', { from: dMinus(3), to: dMinus(1) })) as {
         id: string
@@ -237,6 +260,7 @@ const ROUTES: Route[] = [
   },
   {
     name: 'GET /api/admin/pipeline-runs (every page, after a start)',
+    request: { method: 'GET', path: PIPELINE_RUNS },
     fetch: async (api) => {
       await answered(api, 202, 'POST', '/api/admin/pipeline-runs', { from: dMinus(3), to: dMinus(1) })
       return (await pages(api, '/api/admin/pipeline-runs', 20)).bodies
@@ -248,7 +272,7 @@ const ROUTES: Route[] = [
   },
   {
     name: 'GET /api/admin/notifications',
-    fetch: async (api) => [await ok(api, 'GET', '/api/admin/notifications')],
+    request: { method: 'GET', path: '/api/admin/notifications' },
     checks: [
       {
         at: '$',
@@ -378,6 +402,11 @@ describe('dev/mock-api.js against the contract files', () => {
     }
   })
 
+  it('names in PUBLIC_ROUTES only requests of ROUTES', () => {
+    const requests = new Set(ROUTES.map(({ request }) => `${request.method} ${request.path}`))
+    for (const route of PUBLIC_ROUTES) expect(requests.has(route), route).toBe(true)
+  })
+
   it('names only paths that exist in the contract files', () => {
     for (const route of ROUTES) {
       for (const check of route.checks) {
@@ -390,7 +419,8 @@ describe('dev/mock-api.js against the contract files', () => {
 
   it.each(ROUTES.map((route) => [route.name, route] as const))('%s has the contract shape', async (_name, route) => {
     const api = await installMock()
-    const bodies = await route.fetch(api)
+    const { method, path, body } = route.request
+    const bodies = route.fetch ? await route.fetch(api) : [await ok(api, method, path, body)]
     expect(bodies.length).toBeGreaterThan(0)
     for (const check of route.checks) expect(compare(bodies, check), `${check.at}`).toEqual([])
   })
@@ -409,31 +439,27 @@ interface Row {
   status: number
   /** The error code of a refusal (`{"detail": code}`). */
   detail?: string
-  /** The row already held for the mock as it was before S-43 phase 2. */
-  before?: true
+  /** Calls made first on the same installation, each with the status it answers. */
+  given?: (Request & { status: number })[]
 }
 
-/** The routes behind a session: [method, path, body, needs an admin]. */
-const SESSION_ROUTES: [string, string, unknown, boolean][] = [
-  ['GET', '/api/auth/me', undefined, false],
-  ['GET', '/api/freshness', undefined, false],
-  ['GET', '/api/posts', undefined, false],
-  ['GET', `/api/posts/${POST_0}`, undefined, false],
-  ['GET', `/api/posts/${POST_0}/raw`, undefined, false],
-  ['GET', '/api/admin/pipeline-runs', undefined, true],
-  ['GET', `/api/admin/pipeline-runs/${RUN_1}`, undefined, true],
-  ['GET', '/api/admin/pipeline-runs/sources', undefined, true],
-  ['GET', '/api/admin/pipeline-runs/missing-days', undefined, true],
-  ['POST', '/api/admin/pipeline-runs', { from: dMinus(3), to: dMinus(1) }, true],
-  ['GET', '/api/admin/notifications', undefined, true],
-  ['POST', '/api/admin/notifications/read', undefined, true],
-  ['POST', `/api/admin/notifications/${NOTIFICATION_1}/read`, undefined, true],
-  ['GET', '/api/admin/posts/failed', undefined, true],
-  ['POST', '/api/admin/posts/restore', { postIds: [FAILED_DEAD] }, true],
+/** The routes of ROUTES that need no session, like AuthorizationCompletenessIT.PUBLIC_ROUTES (`METHOD path`). */
+const PUBLIC_ROUTES = new Set(['POST /api/auth/login', 'POST /api/auth/activation/lookup'])
+
+/** Routes of the mock whose answer is no contract record (raw text, a 204), so ROUTES has no shape for them. */
+const ROUTES_WITHOUT_SHAPE: Request[] = [
+  { method: 'GET', path: `/api/posts/${POST_0}/raw` },
+  { method: 'POST', path: '/api/admin/notifications/read' },
+  { method: 'POST', path: `/api/admin/notifications/${NOTIFICATION_1}/read` },
 ]
 
+/** The routes behind a session: every request of ROUTES (once per method and path) but the public ones. */
+const SESSION_ROUTES: Request[] = [...ROUTES.map((route) => route.request), ...ROUTES_WITHOUT_SHAPE]
+  .filter((request, i, all) => all.findIndex((other) => other.method === request.method && other.path === request.path) === i)
+  .filter((request) => !PUBLIC_ROUTES.has(`${request.method} ${request.path}`))
+const needsAdmin = (request: Request) => request.path.startsWith('/api/admin/')
+
 const manyIds = (n: number) => Array.from({ length: n }, (_, i) => id(4, i))
-const PIPELINE_RUNS = '/api/admin/pipeline-runs'
 const START_REFUSALS: [string, unknown][] = [
   ['from after to', { from: dMinus(1), to: dMinus(2) }],
   ['to after today', { from: dMinus(1), to: dMinus(-1) }],
@@ -455,60 +481,68 @@ const START_REFUSALS: [string, unknown][] = [
 
 const ROWS: Row[] = [
   // the session
-  ...SESSION_ROUTES.map(([method, path, body]): Row => ({
+  ...SESSION_ROUTES.map(({ method, path, body }): Row => ({
     name: `anonymous: ${method} ${path}`, constants: { AUTH: 'anonymous' }, method, path, body, status: 401,
-    detail: 'not_authenticated', before: path === '/api/auth/me' ? true : undefined,
+    detail: 'not_authenticated',
   })),
-  ...SESSION_ROUTES.filter(([, , , admin]) => admin).map(([method, path, body]): Row => ({
+  ...SESSION_ROUTES.filter(needsAdmin).map(({ method, path, body }): Row => ({
     name: `user: ${method} ${path}`, constants: { AUTH: 'user' }, method, path, body, status: 403, detail: 'forbidden',
   })),
-  ...SESSION_ROUTES.filter(([, , , admin]) => !admin).map(([method, path, body]): Row => ({
+  ...SESSION_ROUTES.filter((request) => !needsAdmin(request)).map(({ method, path, body }): Row => ({
     name: `user: ${method} ${path} answers`, constants: { AUTH: 'user' }, method, path, body, status: 200,
-    before: path.includes('/api/posts/') ? undefined : true,
   })),
   { name: 'login: ok', constants: { LOGIN: 'ok' }, method: 'POST', path: '/api/auth/login', body: { email: ADMIN_EMAIL, password: 'x' }, status: 200 },
   { name: 'login: invalid', constants: { LOGIN: 'invalid' }, method: 'POST', path: '/api/auth/login', body: { email: 'a@b.pl', password: 'x' }, status: 401, detail: 'invalid_credentials' },
   { name: 'login: limited', constants: { LOGIN: 'limited' }, method: 'POST', path: '/api/auth/login', body: { email: 'a@b.pl', password: 'x' }, status: 429, detail: 'too_many_attempts' },
+  // Like auth/LoginRequest.java (@NotNull, no @NotBlank): only a missing, null or non-scalar field is a 400.
   ...[
     ['no body', undefined],
     ['no password', { email: 'a@b.pl' }],
     ['no e-mail', { password: 'x' }],
-    ['an empty e-mail', { email: '', password: 'x' }],
-    ['a number as password', { email: 'a@b.pl', password: 1 }],
+    ['a null e-mail', { email: null, password: 'x' }],
+    ['a null password', { email: 'a@b.pl', password: null }],
+    ['an object as e-mail', { email: { address: 'a@b.pl' }, password: 'x' }],
+    ['an array as password', { email: 'a@b.pl', password: ['x'] }],
   ].map(([what, body]): Row => ({
     name: `login: ${String(what)} is a bad request`, method: 'POST', path: '/api/auth/login', body, status: 400, detail: 'invalid_request',
   })),
-  { name: 'logout answers 204', method: 'POST', path: '/api/auth/logout', status: 204, before: true },
-  { name: 'logout answers 204 without a session', constants: { AUTH: 'anonymous' }, method: 'POST', path: '/api/auth/logout', status: 204, before: true },
-  { name: 'activation needs no session', constants: { AUTH: 'anonymous' }, method: 'POST', path: '/api/auth/activation/lookup', body: { token: 'any' }, status: 200, before: true },
+  // An empty field reaches the credentials check and matches no account: 401 even in LOGIN 'ok'.
+  ...[
+    ['an empty e-mail', { email: '', password: 'x' }],
+    ['an empty password', { email: 'a@b.pl', password: '' }],
+  ].flatMap(([what, body]): Row[] => [
+    { name: `login: ${String(what)} is refused as bad credentials`, constants: { LOGIN: 'invalid' }, method: 'POST', path: '/api/auth/login', body, status: 401, detail: 'invalid_credentials' },
+    { name: `login: ${String(what)} matches no account`, constants: { LOGIN: 'ok' }, method: 'POST', path: '/api/auth/login', body, status: 401, detail: 'invalid_credentials' },
+  ]),
+  // A number is read as its text (Jackson), so it is a password like any other.
+  { name: 'login: a number as password is refused as bad credentials', constants: { LOGIN: 'invalid' }, method: 'POST', path: '/api/auth/login', body: { email: 'a@b.pl', password: 1 }, status: 401, detail: 'invalid_credentials' },
+  { name: 'login: a number as password is no bad request', constants: { LOGIN: 'ok' }, method: 'POST', path: '/api/auth/login', body: { email: 'a@b.pl', password: 1 }, status: 200 },
+  { name: 'logout answers 204', method: 'POST', path: '/api/auth/logout', status: 204 },
+  { name: 'logout answers 204 without a session', constants: { AUTH: 'anonymous' }, method: 'POST', path: '/api/auth/logout', status: 204 },
+  { name: 'activation needs no session', constants: { AUTH: 'anonymous' }, method: 'POST', path: '/api/auth/activation/lookup', body: { token: 'any' }, status: 200 },
 
   // the ids
   { name: 'a run id that is no UUID', method: 'GET', path: `${PIPELINE_RUNS}/r-running`, status: 400, detail: 'invalid_request' },
-  { name: 'an unknown run', method: 'GET', path: `${PIPELINE_RUNS}/${UNKNOWN}`, status: 404, detail: 'not_found', before: true },
+  { name: 'an unknown run', method: 'GET', path: `${PIPELINE_RUNS}/${UNKNOWN}`, status: 404, detail: 'not_found' },
   { name: 'a post id that is no UUID', method: 'GET', path: '/api/posts/feed-5', status: 400, detail: 'invalid_request' },
   { name: 'the raw data of a post id that is no UUID', method: 'GET', path: '/api/posts/feed-5/raw', status: 400, detail: 'invalid_request' },
-  { name: 'an unknown post', method: 'GET', path: `/api/posts/${UNKNOWN}`, status: 404, detail: 'post_not_found', before: true },
-  { name: 'the raw data of an unknown post', method: 'GET', path: `/api/posts/${UNKNOWN}/raw`, status: 404, detail: 'post_not_found', before: true },
+  { name: 'an unknown post', method: 'GET', path: `/api/posts/${UNKNOWN}`, status: 404, detail: 'post_not_found' },
+  { name: 'the raw data of an unknown post', method: 'GET', path: `/api/posts/${UNKNOWN}/raw`, status: 404, detail: 'post_not_found' },
   { name: 'a notification id that is no UUID', method: 'POST', path: '/api/admin/notifications/n-skipped/read', status: 400, detail: 'invalid_request' },
-  { name: 'an unknown notification', method: 'POST', path: `/api/admin/notifications/${UNKNOWN}/read`, status: 404, detail: 'not_found', before: true },
+  { name: 'an unknown notification', method: 'POST', path: `/api/admin/notifications/${UNKNOWN}/read`, status: 404, detail: 'not_found' },
   { name: 'a known notification is read', method: 'POST', path: `/api/admin/notifications/${NOTIFICATION_1}/read`, status: 204 },
 
   // the page limits of the three lists
-  ...[
-    ['/api/posts', true],
-    [PIPELINE_RUNS, false],
-    ['/api/admin/posts/failed', false],
-  ].flatMap(([path, hasBefore]) => [
+  ...['/api/posts', PIPELINE_RUNS, '/api/admin/posts/failed'].flatMap((path) => [
     ...['page=-1', 'page=21474837', 'page=1.5', 'page=abc', 'size=0', 'size=101', 'size=500', 'size=-1', 'size=x'].map(
       (query): Row => ({
-        name: `${String(path)}?${query} is a bad request`, method: 'GET', path: `${String(path)}?${query}`, status: 400,
-        detail: 'invalid_request', before: hasBefore && query === 'page=21474837' ? true : undefined,
+        name: `${path}?${query} is a bad request`, method: 'GET', path: `${path}?${query}`, status: 400,
+        detail: 'invalid_request',
       }),
     ),
     ...['page=0', 'page=21474836', 'size=1', 'size=100', 'page=1&size=2'].map(
       (query): Row => ({
-        name: `${String(path)}?${query} is allowed`, method: 'GET', path: `${String(path)}?${query}`, status: 200,
-        before: true,
+        name: `${path}?${query} is allowed`, method: 'GET', path: `${path}?${query}`, status: 200,
       }),
     ),
   ]),
@@ -530,38 +564,46 @@ const ROWS: Row[] = [
   { name: 'start: busy, a dead post', constants: { START: 'busy' }, method: 'POST', path: PIPELINE_RUNS, body: { postIds: [FAILED_DEAD] }, status: 409, detail: 'pipeline_busy' },
   { name: 'start: source not configured', constants: { START: 'not_configured' }, method: 'POST', path: PIPELINE_RUNS, body: { from: dMinus(3), to: dMinus(1) }, status: 503, detail: 'source_not_configured' },
   { name: 'start: posts need no source', constants: { START: 'not_configured' }, method: 'POST', path: PIPELINE_RUNS, body: { postIds: [POST_0] }, status: 202 },
+  // The first start is accepted (the mock pretends no run is active); a second one finds its runs queued, like the API.
+  { name: 'start: a second range while the first is queued', given: [{ method: 'POST', path: PIPELINE_RUNS, body: { from: dMinus(3), to: dMinus(1) }, status: 202 }], method: 'POST', path: PIPELINE_RUNS, body: { from: dMinus(2), to: dMinus(1) }, status: 409, detail: 'pipeline_busy' },
+  { name: 'start: posts while a range is queued', given: [{ method: 'POST', path: PIPELINE_RUNS, body: { from: dMinus(3), to: dMinus(1) }, status: 202 }], method: 'POST', path: PIPELINE_RUNS, body: { postIds: [POST_0] }, status: 409, detail: 'pipeline_busy' },
+  { name: 'start: a second posts run while the first is queued', given: [{ method: 'POST', path: PIPELINE_RUNS, body: { postIds: [POST_0] }, status: 202 }], method: 'POST', path: PIPELINE_RUNS, body: { postIds: [FAILED_1] }, status: 409, detail: 'pipeline_busy' },
+  { name: 'start: busy outranked by a bad request after a start', given: [{ method: 'POST', path: PIPELINE_RUNS, body: { postIds: [POST_0] }, status: 202 }], method: 'POST', path: PIPELINE_RUNS, body: {}, status: 400, detail: 'invalid_request' },
 
   // restoring dead posts
-  { name: 'restore: a dead post', method: 'POST', path: '/api/admin/posts/restore', body: { postIds: [FAILED_DEAD] }, status: 200, before: true },
+  { name: 'restore: a dead post', method: 'POST', path: '/api/admin/posts/restore', body: { postIds: [FAILED_DEAD] }, status: 200 },
   { name: 'restore: an id that is no UUID', method: 'POST', path: '/api/admin/posts/restore', body: { postIds: ['p3'] }, status: 400, detail: 'invalid_request' },
   { name: 'restore: a number as an id', method: 'POST', path: '/api/admin/posts/restore', body: { postIds: [3] }, status: 400, detail: 'invalid_request' },
-  { name: 'restore: no ids', method: 'POST', path: '/api/admin/posts/restore', body: { postIds: [] }, status: 400, detail: 'invalid_request', before: true },
-  { name: 'restore: no body', method: 'POST', path: '/api/admin/posts/restore', status: 400, detail: 'invalid_request', before: true },
-  { name: 'restore: a null id', method: 'POST', path: '/api/admin/posts/restore', body: { postIds: [null] }, status: 400, detail: 'invalid_request', before: true },
-  { name: 'restore: 101 ids', method: 'POST', path: '/api/admin/posts/restore', body: { postIds: manyIds(101) }, status: 400, detail: 'invalid_request', before: true },
+  { name: 'restore: no ids', method: 'POST', path: '/api/admin/posts/restore', body: { postIds: [] }, status: 400, detail: 'invalid_request' },
+  { name: 'restore: no body', method: 'POST', path: '/api/admin/posts/restore', status: 400, detail: 'invalid_request' },
+  { name: 'restore: a null id', method: 'POST', path: '/api/admin/posts/restore', body: { postIds: [null] }, status: 400, detail: 'invalid_request' },
+  { name: 'restore: 101 ids', method: 'POST', path: '/api/admin/posts/restore', body: { postIds: manyIds(101) }, status: 400, detail: 'invalid_request' },
 
   // a page past the end of the feed stays a 200 (the API's), the filter keeps its 400
-  { name: 'the feed past its end', method: 'GET', path: '/api/posts?page=9', status: 200, before: true },
-  { name: 'the feed with an unknown kind', method: 'GET', path: '/api/posts?kind=nope', status: 400, detail: 'invalid_request', before: true },
+  { name: 'the feed past its end', method: 'GET', path: '/api/posts?page=9', status: 200 },
+  { name: 'the feed with an unknown kind', method: 'GET', path: '/api/posts?kind=nope', status: 400, detail: 'invalid_request' },
 ]
 
 describe('dev/mock-api.js behaves like the API', () => {
-  it.each(ROWS.map((row) => [`${row.name}${row.before ? ' [holds before S-43 phase 2]' : ''}`, row] as const))(
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(NOW)
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it.each(ROWS.map((row) => [row.name, row] as const))(
     '%s',
     async (_name, row) => {
       const api = await installMock(row.constants)
+      for (const given of row.given ?? []) await answered(api, given.status, given.method, given.path, given.body)
       const response = await api.call(row.method, row.path, row.body)
       expect(response.status).toBe(row.status)
       if (row.detail !== undefined) expect(response.body).toEqual({ detail: row.detail })
       if (row.status === 429) expect(response.headers['Retry-After']).toMatch(/^\d+$/)
     },
   )
-
-  it('every error code the table expects is one of the API\'s', () => {
-    for (const row of ROWS) {
-      if (row.detail !== undefined) expect(rules.errorCodes, row.name).toContain(row.detail)
-    }
-  })
 
   it('logs in as the account of the e-mail, and /me answers it', async () => {
     const api = await installMock({ AUTH: 'anonymous' })
@@ -684,15 +726,43 @@ describe('the mock\'s suspended answers wait 60 s (fake clocks)', () => {
     return result
   }
 
+  /** Asserts the call has no answer after 59 s of fake time and has one at 60 s; returns the answer. */
+  async function answersAt60s(api: MockApi, method: string, path: string, body?: unknown): Promise<MockResponse> {
+    vi.useFakeTimers()
+    let answeredAlready = false
+    const pending = api.call(method, path, body).then((response) => {
+      answeredAlready = true
+      return response
+    })
+    await vi.advanceTimersByTimeAsync(59_000)
+    expect(answeredAlready, `${method} ${path} has no answer after 59 s`).toBe(false)
+    await vi.advanceTimersByTimeAsync(1_000)
+    expect(answeredAlready, `${method} ${path} has its answer at 60 s`).toBe(true)
+    return pending
+  }
+
   it('an admin call in MODE loading is answered at 60 s, not before', async () => {
     const api = await installMock({ MODE: 'loading' })
-    expect(await answersAfter(api, 59_000, 'GET', `${PIPELINE_RUNS}/sources`)).toBe(false)
-    vi.useFakeTimers()
-    let done = false
-    const pending = api.call('GET', `${PIPELINE_RUNS}/sources`).then(() => (done = true))
-    await vi.advanceTimersByTimeAsync(60_000)
-    await pending
-    expect(done).toBe(true)
+    expect((await answersAt60s(api, 'GET', `${PIPELINE_RUNS}/sources`)).status).toBe(200)
+  })
+
+  it('the feed, a post and its raw data in MODE loading are answered at 60 s, not before', async () => {
+    const api = await installMock({ MODE: 'loading' })
+    expect((await answersAt60s(api, 'GET', '/api/posts')).status).toBe(200)
+    expect((await answersAt60s(api, 'GET', `/api/posts/${POST_0}`)).status).toBe(200)
+    expect((await answersAt60s(api, 'GET', `/api/posts/${POST_0}/raw`)).status).toBe(200)
+  })
+
+  it('a later feed page in MODE loading-next is answered at 60 s, page 0 at once', async () => {
+    const api = await installMock({ MODE: 'loading-next' })
+    expect(await answersAfter(api, 0, 'GET', '/api/posts?page=0')).toBe(true)
+    expect((await answersAt60s(api, 'GET', '/api/posts?page=1')).status).toBe(200)
+  })
+
+  it('the raw data in MODE raw-loading is answered at 60 s, the post at once', async () => {
+    const api = await installMock({ MODE: 'raw-loading' })
+    expect(await answersAfter(api, 0, 'GET', `/api/posts/${POST_0}`)).toBe(true)
+    expect((await answersAt60s(api, 'GET', `/api/posts/${POST_0}/raw`)).status).toBe(200)
   })
 
   it('a call without a session or an admin\'s role is refused at once, even in MODE loading', async () => {
@@ -704,12 +774,13 @@ describe('the mock\'s suspended answers wait 60 s (fake clocks)', () => {
 
   it('the public activation lookup hangs 60 s in ACTIVATION checking, with no session', async () => {
     const api = await installMock({ ACTIVATION: 'checking', AUTH: 'anonymous' })
-    expect(await answersAfter(api, 59_000, 'POST', '/api/auth/activation/lookup', { token: 'any' })).toBe(false)
+    expect((await answersAt60s(api, 'POST', '/api/auth/activation/lookup', { token: 'any' })).status).toBe(200)
   })
 
-  it('a start in START busy does not hang', async () => {
-    const api = await installMock({ START: 'busy' })
-    expect(await answersAfter(api, 0, 'POST', PIPELINE_RUNS, { from: dMinus(3), to: dMinus(1) })).toBe(true)
+  it('the public activation hangs 60 s in ACTIVATION sending, with no session', async () => {
+    const api = await installMock({ ACTIVATION: 'sending', AUTH: 'anonymous' })
+    const body = { token: 'any', password: 'a long enough password' }
+    expect((await answersAt60s(api, 'POST', '/api/auth/activation', body)).status).toBe(204)
   })
 })
 

@@ -20,10 +20,10 @@ import pl.szczurradar.api.contract.ContractFiles;
 /** Probe routes, ported from the Python tests/test_health.py. */
 class HealthIT {
 
-	/** The body of {@code /api/ready}, which the deploy gate's stub serves ({@code tools/deploy-gate/test.sh}). */
 	/** The body of {@code /api/ready} without a database, the same file the gate serves for a 503. */
 	private static final Path UNAVAILABLE = Path.of("../tools/deploy-gate/fixtures/api/deploy-safety-unavailable.json");
 
+	/** The body of {@code /api/ready}, which the deploy gate's stub serves ({@code tools/deploy-gate/test.sh}). */
 	private static final Path READY = Path.of("../tools/deploy-gate/fixtures/api/ready.json");
 
 	@Nested

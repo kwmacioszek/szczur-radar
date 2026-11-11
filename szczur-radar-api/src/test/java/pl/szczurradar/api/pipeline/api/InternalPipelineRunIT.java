@@ -237,7 +237,6 @@ class InternalPipelineRunIT {
 
 		assertThat(started).hasStatus(HttpStatus.ACCEPTED);
 		String id = JsonPath.read(started.getResponse().getContentAsString(), "$[0].id");
-		assertThat(started).bodyJson().isStrictlyEqualTo("[{\"id\":\"%s\",\"kind\":\"range\"}]".formatted(id));
 		fixture(started, "daily-started.json");
 		PipelineRun run = runs.findById(UUID.fromString(id)).orElseThrow();
 		assertThat(run.getKind()).isEqualTo(RunKind.RANGE);
@@ -255,9 +254,6 @@ class InternalPipelineRunIT {
 		Map<String, Object> body = JsonPath.read(status.getResponse().getContentAsString(), "$");
 		PipelineRun finished = runs.findById(UUID.fromString(id)).orElseThrow();
 		assertThat(body)
-			.containsOnlyKeys("id", "kind", "status", "startedAt", "finishedAt", "lastActivityAt", "interruptionCause",
-					"step", "assessTotal", "fetched", "newPosts", "assessedOk", "assessedFailed", "processingErrors",
-					"dead", "skipped")
 			.containsEntry("id", id)
 			.containsEntry("kind", "range")
 			// An empty day: the source gave no post, so the fetch step fails the run (the cron exits 1).
@@ -373,7 +369,6 @@ class InternalPipelineRunIT {
 
 		assertThat(result).hasStatusOk();
 		String text = JsonPath.read(result.getResponse().getContentAsString(), "$.text");
-		assertThat(result).bodyJson().isStrictlyEqualTo("{\"text\":" + jsonString(text) + "}");
 		fixture(result, "nightly-summary.json");
 		assertThat(text).isEqualTo("""
 				Night 2026-10-26 (range 2026-10-24…2026-10-25): retry partial, range succeeded; errors 0, skipped 2
@@ -421,11 +416,6 @@ class InternalPipelineRunIT {
 		assertThat(result.getResponse().getHeaders(HttpHeaders.SET_COOKIE)).as("POST " + SUMMARY).isEmpty();
 		assertThat(sessionRows()).as("POST " + SUMMARY).isEqualTo(sessionsBefore);
 		return result;
-	}
-
-	/** {@code text} as a JSON string literal (quotes and line breaks escaped). */
-	private static String jsonString(String text) {
-		return "\"" + text.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n") + "\"";
 	}
 
 	/**

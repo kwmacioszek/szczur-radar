@@ -32,7 +32,8 @@
 #      check-in's body); a 500, no answer or an answer without the text is one WARN line with the exit
 #      code and the last line as without it; without a 202 (401, a busy pipeline, no answer) no call;
 #   7. the tokens and the check-in address never appear in the logs.
-# Needs Docker and openssl (the stub's certificate). Run from anywhere: tools/pipeline-trigger/test.sh
+# Needs Docker, openssl (the stub's certificate) and jq on the host (step 0: the stub's files, rules.json).
+# Run from anywhere: tools/pipeline-trigger/test.sh
 set -euo pipefail
 
 here=$(cd "$(dirname "$0")" && pwd)
@@ -86,7 +87,11 @@ trap 'exit 130' INT TERM
 #         API error code internal_error), "no-text" (200 with an empty object) or "hang" (as for post);
 #   ping: the status of every check-in (POST /ping/…, on port 8443 over https with STUB_CERT), default 200.
 #   A run's GET {id} body is the file of its status (queued, running, interrupted; the others take the failed
-#   run's file with the status replaced), with the counters 270 / 251 / 249 / 2 and the run's kind.
+#   run's file with the status replaced) and the run's kind, with the counters of its status (COUNTERS: a
+#   range run that reached its assess step fetched 270, stored 251 and assesses those 251, assessTotal;
+#   a running one has assessed 120 + 1 of them, an ended one 249 + 2; a retry run fetches and stores
+#   nothing; queued and failed keep their file's counters, the failed file being a run that failed before
+#   the assess step: zeros and no total).
 #   POST /nightly-summary answers 400 invalid_request to a body without one to ten run ids and 404 not_found
 #   to the id of an unknown run, as the API does.
 # Every request to the API without "Bearer $STUB_TOKEN" gets 401 not_authenticated. On stdout first
@@ -103,7 +108,11 @@ ERRORS = json.loads(os.environ["STUB_ERRORS"])
 details = {409: ERRORS["busy"], 503: ERRORS["not_configured"]}
 STATE_FILES = {"queued": "run-state-queued.json", "running": "run-state-running.json",
                "interrupted": "run-state-interrupted.json"}
-COUNTERS = {"fetched": 270, "newPosts": 251, "assessedOk": 249, "assessedFailed": 2}
+# As the API gives them (InternalPipelineRunController.RunState): assessTotal is the assess step's items_in,
+# which for a range run is the posts it stored (AssessmentSelection).
+ASSESSED = {"fetched": 270, "newPosts": 251, "assessTotal": 251, "assessedOk": 249, "assessedFailed": 2}
+COUNTERS = {"running": dict(ASSESSED, assessedOk=120, assessedFailed=1), "interrupted": ASSESSED,
+            "succeeded": ASSESSED, "partial": ASSESSED}
 
 
 def stub_error(message):
@@ -112,9 +121,13 @@ def stub_error(message):
 
 
 def fill(name, template, run_id, times, overrides):
-    """The file's body with <uuid> and <instant> replaced; an override of a key the file lacks is an error."""
-    body = {key: run_id if value == "<uuid>" else times[key] if value == "<instant>" else value
-            for key, value in template.items()}
+    """The file's body with <uuid> and <instant> replaced; an <instant> the stub has no time for, or an
+    override of a key the file lacks, is an error."""
+    body = {}
+    for key, value in template.items():
+        if value == "<instant>" and key not in times:
+            stub_error(f"{name} has an <instant> under {key}, which the stub has no time for")
+        body[key] = run_id if value == "<uuid>" else times[key] if value == "<instant>" else value
     for key, value in overrides.items():
         if key not in template:
             stub_error(f"{name} has no key {key}")
@@ -213,7 +226,11 @@ class Api(BaseHTTPRequestHandler):
         name = STATE_FILES.get(status, "run-state-failed.json")
         times = {"startedAt": "2026-10-12T00:30:09Z", "finishedAt": "2026-10-12T00:41:07Z",
                  "lastActivityAt": "2026-10-12T00:40:58Z" if status == "running" else "2026-10-12T00:41:07Z"}
-        body = fill(name, FILES[name], run["id"], times, {"kind": run["kind"], **COUNTERS, **fields})
+        counters = COUNTERS.get(status, {})
+        if counters and run["kind"] == "retry":
+            # A retry run has no fetch or store step: it assesses leftovers (pipeline/CLAUDE.md, RunSequence).
+            counters = dict(counters, fetched=0, newPosts=0)
+        body = fill(name, FILES[name], run["id"], times, {"kind": run["kind"], **counters, **fields})
         if case.get("old_api"):
             for name in ("startedAt", "lastActivityAt", "interruptionCause", "step", "assessTotal", "skipped"):
                 del body[name]
@@ -425,9 +442,14 @@ pass "a PR env with TRIGGER_IN_ANY_ENVIRONMENT=true runs; partial → exit 0"
 check_case failed 1 '{"runs": [{"kind": "range", "statuses": ["running", "failed"]}]}' "$token"
 log_says failed 'FAILED: a run did not succeed: range failed'
 pass "failed → exit 1"
+# No file pins a run running before its assess step (run-state-running.json is one in that step, as
+# InternalPipelineRunIT makes it), so this case overrides the running file's step and counters with those of
+# run-state-failed.json, the run that failed before the assess step: no total, nothing fetched or assessed.
 check_case failed-before-assess 1 '{"runs": [{"kind": "range", "statuses": ["running",
-    {"status": "running", "step": "fetch", "assessTotal": null, "assessedOk": 0, "assessedFailed": 0},
-    {"status": "running", "step": "fetch", "assessTotal": null, "assessedOk": 0, "assessedFailed": 0},
+    {"status": "running", "step": "fetch", "assessTotal": null, "fetched": 0, "newPosts": 0, "assessedOk": 0,
+        "assessedFailed": 0},
+    {"status": "running", "step": "fetch", "assessTotal": null, "fetched": 0, "newPosts": 0, "assessedOk": 0,
+        "assessedFailed": 0},
     "failed"]}]}' "$token" -e TRIGGER_HEARTBEAT_INTERVAL=1s
 log_says failed-before-assess ': running, step fetch, assessed 0/? (ok 0, failed 0, errors 0)'
 log_says failed-before-assess 'FAILED: a run did not succeed: range failed'
@@ -441,9 +463,9 @@ log_says interrupted ': interrupted (fetched 270, skipped 0, new posts 251, asse
 log_says interrupted 'FAILED: a run did not succeed: range interrupted'
 requests_were interrupted 1 2
 pass "interrupted → its cause in the log, exit 1"
-# An empty range run: the source gave no post to store, so the API ends it failed (S-08).
-check_case empty 1 '{"runs": [{"kind": "range", "statuses": ["running", {"status": "failed", "fetched": 0,
-    "skipped": 0, "newPosts": 0, "assessedOk": 0, "assessedFailed": 0, "assessTotal": null}]}]}' "$token"
+# An empty range run: the source gave no post to store, so the API ends it failed (S-08); the failed run's
+# counters are those of run-state-failed.json, which InternalPipelineRunIT pins on such a run.
+check_case empty 1 '{"runs": [{"kind": "range", "statuses": ["running", "failed"]}]}' "$token"
 log_says empty ': failed (fetched 0, skipped 0, new posts 0, assessed ok 0, assessed failed 0, processing errors 0, dead 0)'
 log_says empty 'FAILED: a run did not succeed: range failed'
 requests_were empty 1 2
@@ -455,11 +477,9 @@ log_says skipped-warning ': succeeded (fetched 270, skipped 3, new posts 251, as
 log_says skipped-warning 'OK: range succeeded'
 requests_were skipped-warning 1 2
 pass "succeeded with skipped 3 → skipped in the log, exit 0"
-check_case heartbeat 0 '{"runs": [{"kind": "range", "statuses": ["running",
-    {"status": "running", "step": "assess", "assessTotal": 10, "assessedOk": 2, "assessedFailed": 1},
-    {"status": "running", "step": "assess", "assessTotal": 10, "assessedOk": 2, "assessedFailed": 1},
-    "succeeded"]}]}' "$token" -e TRIGGER_HEARTBEAT_INTERVAL=1s
-log_says heartbeat ': running, step assess, assessed 3/10 (ok 2, failed 1, errors 0), last activity 2026-10-12T00:40:58Z'
+check_case heartbeat 0 '{"runs": [{"kind": "range", "statuses": ["running", "running", "running", "succeeded"]}]}' \
+    "$token" -e TRIGGER_HEARTBEAT_INTERVAL=1s
+log_says heartbeat ': running, step assess, assessed 121/251 (ok 120, failed 1, errors 0), last activity 2026-10-12T00:40:58Z'
 log_says heartbeat 'OK: range succeeded'
 # None at the status change (the first answer), one at each later answer while it runs.
 beats=$(grep -c ', step ' "$tmp/heartbeat.log" || true)
@@ -476,7 +496,7 @@ requests_were queued-heartbeat 1 4
 pass "a queued run logs its status once and no heartbeat"
 check_case old-api 1 '{"old_api": true, "runs": [{"kind": "range", "statuses": ["running", "running", "interrupted"]}]}' \
     "$token" -e TRIGGER_HEARTBEAT_INTERVAL=1s
-log_says old-api ': running, step ?, assessed 251/? (ok 249, failed 2, errors 0), last activity ?'
+log_says old-api ': running, step ?, assessed 121/? (ok 120, failed 1, errors 0), last activity ?'
 log_says old-api ': interrupted (fetched 270, skipped ?, new posts 251, assessed ok 249, assessed failed 2, processing errors 0, dead 0) (cause ?)'
 log_says old-api 'FAILED: a run did not succeed: range interrupted'
 requests_were old-api 1 3

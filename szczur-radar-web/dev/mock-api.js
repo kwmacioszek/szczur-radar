@@ -55,10 +55,12 @@
  *   one); a malformed id is 400 invalid_request, any other id 404 {"detail":"not_found"}.
  * POST /api/admin/pipeline-runs answers like PipelineRunController.start by START (the request is validated first:
  *   a range from/to up to today in Warsaw, at most 7 days, optional sources, or 1–100 postIds, never both; else 400
- *   invalid_request): 'accepted' 202 with the new queued runs — a range run, after a retry run while a post is
- *   left to retry; postIds → a posts run, but a dead post among them is 400 post_dead (the new runs head the list
- *   and stay until the mock is installed again), 'busy' 409 pipeline_busy, 'not_configured' 503
- *   source_not_configured (a range only).
+ *   invalid_request): 'accepted' pretends the pipeline has no active run, although run 1 on the list is running:
+ *   202 with the new queued runs — a range run, after a retry run while a post is left to retry; postIds → a posts
+ *   run, but a dead post among them is 400 post_dead (the new runs head the list and stay queued until the mock is
+ *   installed again). A second start (a range or postIds) while a run of an earlier start is queued is refused like
+ *   the API refuses it: 409 pipeline_busy, no new run. 'busy' 409 pipeline_busy at once, 'not_configured' 503
+ *   source_not_configured (a range only; postIds as in 'accepted').
  * NOTIFICATIONS (the bell; MODE 'loading' and 'error' apply first), like notifications/api/NotificationController.java:
  *       'unread' 5 unread (notifications 1–5, about runs 3, 4, 5, 7, 8) and 1 read (6, about run 9), the
  *                default; a read one stays read until the mock is installed again
@@ -79,7 +81,9 @@
  * AUTH, the session at the start, kept like the API: 'admin' (/api/auth/me → the admin), 'user' (role user: every
  *   /api/admin/ route is 403 forbidden) or 'anonymous' (no session: every route but login, logout, activation and
  *   health is 401 not_authenticated), for the public /activate and /login. The session then follows the calls.
- * LOGIN, POST /api/auth/login {email, password} (both required, else 400 invalid_request): 'ok' 200 with the account and
+ * LOGIN, POST /api/auth/login {email, password} (like auth/LoginRequest.java: both required — a missing or null one,
+ *   an object or an array is 400 invalid_request; a number is read as its text, like Jackson, and an empty one is
+ *   no bad request: it is 401 invalid_credentials in every mode but 'limited', as no account matches it): 'ok' 200 with the account and
  *   a session (admin@szczur-radar.pl is the admin, any other e-mail a user), 'invalid' 401 invalid_credentials,
  *   'limited' 429 too_many_attempts with Retry-After. POST /api/auth/logout → 204 and no session.
  * START: 'accepted', 'busy' or 'not_configured', see POST /api/admin/pipeline-runs above.
@@ -498,15 +502,21 @@ async page => {
     const method = route.request().method()
     if (p === '/api/auth/login') {
       const body = route.request().postDataJSON()
-      if (typeof body?.email !== 'string' || body.email === '' || typeof body?.password !== 'string' || body.password === '') {
+      // Like LoginRequest (@NotNull String): missing, null or not a scalar is a 400; a number becomes its text.
+      const missing = (v) => v === undefined || v === null || typeof v === 'object'
+      if (typeof body !== 'object' || body === null || Array.isArray(body) || missing(body.email) || missing(body.password)) {
         return invalid(route)
       }
       if (LOGIN === 'limited') {
         return route.fulfill({ status: 429, contentType: 'application/json', headers: { 'Retry-After': '60' },
           body: JSON.stringify({ detail: 'too_many_attempts' }) })
       }
-      if (LOGIN === 'invalid') return json(route, { detail: 'invalid_credentials' }, 401)
-      session = account(body.email.trim().toLowerCase())
+      const email = String(body.email).trim().toLowerCase()
+      // No account has an empty e-mail or an empty password, so the API refuses them in every mode but 'limited'.
+      if (LOGIN === 'invalid' || email === '' || String(body.password) === '') {
+        return json(route, { detail: 'invalid_credentials' }, 401)
+      }
+      session = account(email)
       return json(route, session)
     }
     if (p === '/api/auth/logout') {
@@ -549,6 +559,8 @@ async page => {
       if (request === null) return invalid(route)
       if (START === 'busy') return json(route, { detail: 'pipeline_busy' }, 409)
       if (START === 'not_configured' && request.postIds === undefined) return json(route, { detail: 'source_not_configured' }, 503)
+      // Like PipelineRunService.queue: a run of an earlier start is still queued, so the pipeline is busy.
+      if (started.some((run) => run.status === 'queued')) return json(route, { detail: 'pipeline_busy' }, 409)
       if (request.postIds !== undefined) {
         if (failed.some((post) => post.stage === 'dead' && request.postIds.includes(post.id))) {
           return json(route, { detail: 'post_dead' }, 400)
