@@ -425,6 +425,13 @@ pass "a PR env with TRIGGER_IN_ANY_ENVIRONMENT=true runs; partial → exit 0"
 check_case failed 1 '{"runs": [{"kind": "range", "statuses": ["running", "failed"]}]}' "$token"
 log_says failed 'FAILED: a run did not succeed: range failed'
 pass "failed → exit 1"
+check_case failed-before-assess 1 '{"runs": [{"kind": "range", "statuses": ["running",
+    {"status": "running", "step": "fetch", "assessTotal": null, "assessedOk": 0, "assessedFailed": 0},
+    {"status": "running", "step": "fetch", "assessTotal": null, "assessedOk": 0, "assessedFailed": 0},
+    "failed"]}]}' "$token" -e TRIGGER_HEARTBEAT_INTERVAL=1s
+log_says failed-before-assess ': running, step fetch, assessed 0/? (ok 0, failed 0, errors 0)'
+log_says failed-before-assess 'FAILED: a run did not succeed: range failed'
+pass "a run that ends failed before the assess step: the heartbeat shows the total as ?, not an invented count"
 check_case retry-failed 1 '{"runs": [{"kind": "retry", "statuses": ["running", "failed"]},
     {"kind": "range", "statuses": ["queued", "queued", "running", "succeeded"]}]}' "$token"
 log_says retry-failed 'FAILED: a run did not succeed: retry failed, range succeeded'
