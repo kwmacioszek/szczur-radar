@@ -71,7 +71,10 @@ nothing.
 Nothing in `pipeline/`, `posts/`, `raw/`, `agents/` or the API changes — in behaviour too: a new
 source that fails or stays silent does not fail the other sources' run, and a post of it the database
 will not take (a value a constraint refuses) is counted as `skipped` with the reason `skipped`, a WARN line
-and `store rejected …` in the run's error, never dropped in silence (S-38). If a step seems to need it,
+and `store rejected …` in the run's error, never dropped in silence (S-38). That count relies on a source giving
+at most one post per fetched element (`fetched = posts + skipped`): the store's rejected posts become `skipped`,
+and `pipeline_run_sources` checks `skipped <= fetched`; a source that maps one element to several posts must
+change that count first. If a step seems to need it,
 the port is missing something: change the port (and the plan), don't special-case a source.
 
 ## Layout of a source: `sources/<source>/`

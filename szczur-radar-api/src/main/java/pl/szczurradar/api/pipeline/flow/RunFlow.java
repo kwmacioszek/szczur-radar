@@ -227,8 +227,9 @@ public final class RunFlow {
 	 * A post the database rejected at store although it was not stored (no unique key hit): a {@code CHECK},
 	 * {@code NOT NULL}, a foreign key or a data error.
 	 *
-	 * @param cause the constraint's name, otherwise {@code SQLState <code>}, otherwise {@code unknown}; never
-	 *     the exception's message (it holds the row's values, the post's text)
+	 * @param cause the constraint's name (for a {@code NOT NULL} the column's name, as Hibernate reports it),
+	 *     otherwise {@code SQLState <code>} (in practice a data error), otherwise {@code unknown}; never the
+	 *     exception's message (it holds the row's values, the post's text)
 	 */
 	public record RejectedPost(Source source, ItemType itemType, String sourceItemId, String cause) {
 

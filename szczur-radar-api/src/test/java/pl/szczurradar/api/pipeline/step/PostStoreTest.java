@@ -220,11 +220,15 @@ class PostStoreTest {
 		// A data error (SQLSTATE class 22): Hibernate names no constraint.
 		assertThat(rejectedBy(new DataIntegrityViolationException("could not execute batch",
 				new DataException(ROW_VALUES, new SQLException(ROW_VALUES, "22021"))))).isEqualTo("SQLState 22021");
+		// A NOT NULL: Hibernate's PostgreSQL extractor names the column (its template `column "…"`).
+		assertThat(rejectedBy(new DataIntegrityViolationException("could not execute batch",
+				new ConstraintViolationException(ROW_VALUES, new SQLException(ROW_VALUES, "23502"), "channel"))))
+			.isEqualTo("channel");
 		// A JDBC batch reports its row's error as the batch exception's next exception.
 		BatchUpdateException batchFailure = new BatchUpdateException(ROW_VALUES, null, 0, new int[0]);
-		batchFailure.setNextException(new SQLException(ROW_VALUES, "23502"));
+		batchFailure.setNextException(new SQLException(ROW_VALUES, "22021"));
 		assertThat(rejectedBy(new DataIntegrityViolationException("could not execute batch", batchFailure)))
-			.isEqualTo("SQLState 23502");
+			.isEqualTo("SQLState 22021");
 		// A constraint's name wins over an SQLState nearer the top.
 		BatchUpdateException named = new BatchUpdateException(ROW_VALUES, "23503", 0, new int[0], null);
 		named.setNextException(new SQLException(ROW_VALUES, "23503"));

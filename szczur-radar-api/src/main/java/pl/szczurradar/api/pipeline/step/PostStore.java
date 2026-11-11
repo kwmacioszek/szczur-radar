@@ -47,7 +47,8 @@ import pl.szczurradar.api.sources.SourcePost;
  * <li><b>rejected</b> — its save failed with a {@link DataIntegrityViolationException} and its key is still not
  * stored: the database refused the row (a {@code CHECK}, {@code NOT NULL}, a foreign key, a data error). Its raw
  * payload rolled back with it, the rest of its chunk is stored; it is a {@link RejectedPost} with its cause
- * (the constraint's name, otherwise {@code SQLState <code>}, otherwise {@code unknown}) and a WARN line,
+ * (the constraint's name — for a {@code NOT NULL} the column's name, as Hibernate reports it —, otherwise
+ * {@code SQLState <code>}, in practice a data error, otherwise {@code unknown}) and a WARN line,
  * which the run counts as skipped after the step.
  * </ul>
  *
@@ -161,8 +162,9 @@ public class PostStore {
 
 	/**
 	 * Why the database refused a row: the name of the violated constraint, as Hibernate read it from the
-	 * database's message ({@link ConstraintViolationException#getConstraintName()}), otherwise the first
-	 * non-empty {@code SQLState <code>}, otherwise {@value #UNKNOWN_CAUSE}. Searched in the cause chain and
+	 * database's message ({@link ConstraintViolationException#getConstraintName()}; for a {@code NOT NULL} the
+	 * column's name), otherwise the first non-empty {@code SQLState <code>} (in practice a data error, class
+	 * {@code 22}), otherwise {@value #UNKNOWN_CAUSE}. Searched in the cause chain and
 	 * each {@link SQLException}'s next exceptions (a JDBC batch reports its row's error there).
 	 */
 	static String cause(Throwable failure) {

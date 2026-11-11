@@ -16,9 +16,12 @@ import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.stubbing.Answer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
@@ -47,9 +50,15 @@ import pl.szczurradar.api.user.SystemAccount;
  * that stores the posts first is a row inserted with SQL; each test deletes its posts, their raw payloads and
  * the run afterwards.
  */
+@ExtendWith(OutputCaptureExtension.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, properties = MigrateCommand.ENABLE_FLYWAY)
 @Import(TestcontainersConfiguration.class)
 class PostStoreIT {
+
+	/** The rejected post's text, which no log line may carry. */
+	private static final String REJECTED_TITLE = "Tytuł odrzuconego posta S-38";
+
+	private static final String REJECTED_BODY = "Treść odrzuconego posta S-38, której nie ma w logu";
 
 	/** A spy: it answers as usual except where a test makes the step's first key lookup miss a stored post. */
 	@MockitoSpyBean
@@ -81,13 +90,16 @@ class PostStoreIT {
 	}
 
 	@Test
-	void aPostWithAnEmptyChannelIsRejectedByItsConstraintAndTheRestOfItsChunkIsStoredOnce() {
+	void aPostWithAnEmptyChannelIsRejectedByItsConstraintAndTheRestOfItsChunkIsStoredOnce(CapturedOutput output) {
 		String first = id();
 		String empty = id();
 		String third = id();
 		long rawsBefore = rawPayloads();
+		SourcePost rejectedPost = new SourcePost(Source.WYKOP, ItemType.POST, empty, "",
+				Instant.parse("2026-10-01T08:00:00Z"), REJECTED_TITLE, REJECTED_BODY, "autor", null, null,
+				List.of("gielda"), ("{\"id\":\"" + empty + "\"}").getBytes(StandardCharsets.UTF_8));
 
-		StoredBatch batch = store.store(fetched(post(first, "gielda"), post(empty, ""), post(third, "gielda")));
+		StoredBatch batch = store.store(fetched(post(first, "gielda"), rejectedPost, post(third, "gielda")));
 
 		assertThat(batch.rejected()).containsExactly(new RejectedPost(Source.WYKOP, ItemType.POST, empty, "ck_posts_channel"));
 		assertThat(batch.sources()).containsExactly(new SourceStored(Source.WYKOP, 3, 2, 0, 1));
@@ -100,6 +112,13 @@ class PostStoreIT {
 				jdbc.queryForList("SELECT id FROM posts WHERE first_run_id = ?", UUID.class, runId));
 		// The rejected post's raw payload rolled back with it.
 		assertThat(rawPayloads()).isEqualTo(rawsBefore + 2);
+		// No post text in the log (S-38 review F1, F2: logServerErrorDetail=false), neither in our WARN line nor
+		// in Hibernate's of the failed batch.
+		assertThat(output.getAll())
+			.contains("the database rejected wykop post " + empty + " at store (ck_posts_channel, ")
+			.doesNotContain("Failing row")
+			.doesNotContain(REJECTED_TITLE)
+			.doesNotContain(REJECTED_BODY);
 	}
 
 	@Test

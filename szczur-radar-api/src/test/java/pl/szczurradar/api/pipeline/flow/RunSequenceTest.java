@@ -200,6 +200,35 @@ class RunSequenceTest {
 	}
 
 	@Test
+	void nextToRejectedPostsALongSourcesSummaryIsCutSoTheStoresPartSurvivesTheErrorsLimit() {
+		fetches(redditFailedWith("IllegalStateException: " + "x".repeat(3000)));
+		when(store.store(any())).thenReturn(new StoredBatch(RUN, NEW_POSTS,
+				List.of(new SourceStored(Source.WYKOP, 3, 2, 0, 1)),
+				List.of(new RejectedPost(Source.WYKOP, ItemType.LINK, "17", "ck_posts_channel"))));
+
+		sequence.run(range(Source.WYKOP, Source.REDDIT));
+
+		String error = runError();
+		String rejected = "store rejected 1 post(s), counted as skipped: wykop link 17 (ck_posts_channel)";
+		// RunRecorder cuts the run's error at 2000 characters (MAX_ERROR): the store's part is within it.
+		assertThat(error).hasSizeLessThan(2000).endsWith(" | " + rejected);
+		String fetchPart = error.substring(0, error.length() - (" | " + rejected).length());
+		assertThat(fetchPart).hasSize(RunSequence.FETCH_SUMMARY_WITH_STORE_MAX)
+			.startsWith("reddit failed: IllegalStateException: xxx")
+			.endsWith("x…");
+	}
+
+	@Test
+	void withoutRejectedPostsALongSourcesSummaryIsNotCut() {
+		String failure = "IllegalStateException: " + "x".repeat(3000);
+		fetches(redditFailedWith(failure));
+
+		sequence.run(range(Source.WYKOP, Source.REDDIT));
+
+		assertThat(runError()).isEqualTo("reddit failed: " + failure);
+	}
+
+	@Test
 	void aRetryRunSelectsTheLeftoversAssessesAndSummarizes() {
 		RunSummary summary = sequence.run(new RunRequest(RUN, RunKind.RETRY, null, null, List.of(), null));
 
@@ -356,6 +385,24 @@ class RunSequenceTest {
 	private static RunRequest range(Source... sources) {
 		List<Source> named = sources.length == 0 ? List.of(Source.WYKOP) : List.of(sources);
 		return new RunRequest(RUN, RunKind.RANGE, FROM, TO, named, null);
+	}
+
+	/** Wykop gave posts, Reddit failed with {@code error}. */
+	private static FetchedBatch redditFailedWith(String error) {
+		return new FetchedBatch(RUN, List.of(), 3, 1,
+				List.of(new SourceFetch(Source.WYKOP, SourceFetchStatus.SUCCEEDED, 3, 1, null),
+						new SourceFetch(Source.REDDIT, SourceFetchStatus.FAILED, 0, 0, error)));
+	}
+
+	/** The one error the run's sequence wrote. */
+	private String runError() {
+		return events.stream()
+			.filter(event -> event.startsWith("error "))
+			.map(event -> event.substring("error ".length()))
+			.reduce((first, second) -> {
+				throw new AssertionError("more than one error: " + first + ", " + second);
+			})
+			.orElseThrow();
 	}
 
 	/** The fetch reports each source's result of {@code batch} as {@link SourceIngest} does, then returns it. */
