@@ -65,7 +65,10 @@ class InternalPipelineRunWithoutTokenIT {
 				.exchange();
 			int status = result.getResponse().getStatus();
 			String body = result.getResponse().getContentAsString();
-			if (status != HttpStatus.UNAUTHORIZED.value() || !NOT_AUTHENTICATED.equals(body)) {
+			if (result.getUnresolvedException() != null) {
+				failures.add(route.key() + " -> " + result.getUnresolvedException());
+			}
+			else if (status != HttpStatus.UNAUTHORIZED.value() || !NOT_AUTHENTICATED.equals(body)) {
 				failures.add(route.key() + " -> " + status + " " + body);
 			}
 		}

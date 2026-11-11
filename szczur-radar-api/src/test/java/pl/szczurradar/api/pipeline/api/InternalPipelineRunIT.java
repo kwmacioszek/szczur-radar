@@ -396,8 +396,11 @@ class InternalPipelineRunIT {
 			MvcTestResult result = internal(HttpMethod.valueOf(route.method()), route.concretePath(), authorization,
 					cookie);
 			int status = result.getResponse().getStatus();
-			String body = status == HttpStatus.UNAUTHORIZED.value() ? bodyOf(result) : "";
-			if (status != HttpStatus.UNAUTHORIZED.value() || !NOT_AUTHENTICATED.equals(body)) {
+			String body = bodyOf(result);
+			if (result.getUnresolvedException() != null) {
+				failures.add(route.key() + " -> " + result.getUnresolvedException());
+			}
+			else if (status != HttpStatus.UNAUTHORIZED.value() || !NOT_AUTHENTICATED.equals(body)) {
 				failures.add(route.key() + " -> " + status + " " + body);
 			}
 		}

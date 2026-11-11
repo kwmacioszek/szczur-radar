@@ -16,11 +16,13 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
 import pl.szczurradar.api.TestcontainersConfiguration;
+import pl.szczurradar.api.llm.LlmClient;
 import pl.szczurradar.api.user.Role;
 import pl.szczurradar.api.web.MappedRoutes;
 import pl.szczurradar.api.web.MappedRoutes.Route;
@@ -39,6 +41,10 @@ class AdminRoleIT {
 
 	@Autowired
 	MockMvcTester mvc;
+
+	/** No real provider call if the admin rule ever regresses and the walk reaches {@code /api/admin/llm/check}. */
+	@MockitoBean
+	LlmClient llm;
 
 	@Autowired
 	@Qualifier("requestMappingHandlerMapping")

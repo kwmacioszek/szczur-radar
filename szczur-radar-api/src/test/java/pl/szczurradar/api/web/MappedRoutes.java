@@ -13,13 +13,14 @@ import org.springframework.http.server.PathContainer;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.method.HandlerMethod;
-import org.springframework.web.util.pattern.PathPatternParser;
 import org.springframework.web.servlet.mvc.method.RequestMappingInfo;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
+import org.springframework.web.util.pattern.PathPatternParser;
 
 /**
  * Every route the application maps, for the tests that walk them all ({@code auth/AuthorizationCompletenessIT},
- * {@code auth/AdminRoleIT}, {@code contract/ContractRoutesIT}). It returns everything, {@code /error} and
+ * {@code auth/AdminRoleIT}, {@code contract/ContractRoutesIT}, {@code pipeline/api/InternalPipelineRunIT},
+ * {@code pipeline/api/InternalPipelineRunWithoutTokenIT}). It returns everything, {@code /error} and
  * {@code /internal/**} included; a test that needs fewer filters them itself ({@link #routesUnder}).
  *
  * <p>The enumeration sees only {@code @RequestMapping} routes. A {@code RouterFunction} bean would be
@@ -28,7 +29,10 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandl
  */
 public final class MappedRoutes {
 
-	/** The admin routes' path pattern (the contract of {@code REPOSITORY_GUIDELINES.md}, not {@code SecurityConfig}'s own constant). */
+	/**
+	 * The admin routes' path pattern: the contract of {@code REPOSITORY_GUIDELINES.md}, not read from
+	 * {@code SecurityConfig}.
+	 */
 	public static final String ADMIN_PATHS = "/api/admin/**";
 
 	/** The daily cron's path pattern, likewise a literal of the contract. */
