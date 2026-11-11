@@ -7,9 +7,9 @@
 # notifies it (needs the account's custom notification rule "deployment crashed", all environments).
 # While a run is running it logs a heartbeat with its step and progress (S-06,
 # pipeline-run-history-dashboard), from the answers it polls anyway. Once the runs are over (or it stops
-# waiting for them) it asks the API for the night's summary (S-34, dead-posts-daily-digest: POST
-# /internal/pipeline-runs/nightly-summary with the runs' ids; the API sends it to the operator over ntfy
-# itself) and logs it before its own last line. With HEALTHCHECK_PING_URL set it checks in to
+# waiting for them, or cannot read their status) it asks the API for the night's summary (S-34,
+# dead-posts-daily-digest: POST /internal/pipeline-runs/nightly-summary with the runs' ids; the API sends
+# it to the operator over ntfy itself) and logs it before its own last line. With HEALTHCHECK_PING_URL set it checks in to
 # healthchecks.io (F-04, out-of-app-alert-channel): the start, then the exit code with the last log line.
 # Never `set -x`: PIPELINE_TRIGGER_TOKEN is the API's shared secret and HEALTHCHECK_PING_URL a secret
 # address; neither is ever printed.
@@ -230,12 +230,17 @@ progress() {
 
 # The night's summary of the runs in $ids (S-34): one POST /nightly-summary with their ids, within
 # TRIGGER_REQUEST_TIMEOUT, no retry. The API composes the summary, sends it to the operator (ntfy) and
-# returns it as {"text": …}, logged here line by line. Anything else — no answer, another status, an
-# answer without the text — is one WARN line and nothing more: the exit code and the last line (the
-# check-in's body) are the runs' result, so this is called before every end line after the 202.
+# returns it as {"text": …}, logged here line by line. Anything else — the request cannot be written, no
+# answer, another status, an answer without the text — is one WARN line and nothing more: the exit code
+# and the last line (the check-in's body) are the runs' result, so this is called before every end line
+# after the 202 while the API answers: the runs ended (well or not), not within TRIGGER_RUN_TIMEOUT, a
+# status read the API refused (not 200) or a status it does not know. Only the API not answering while
+# the trigger waits (unreachable) ends without it: the summary would not get through either. It
+# overwrites REPLY and $work/body: a caller's end line is composed before the call.
 nightly_summary() {
     local text line
-    jq -cn '{runs: $ARGS.positional}' --args "${ids[@]}" >"$work/summary-request"
+    jq -cn '{runs: $ARGS.positional}' --args "${ids[@]}" >"$work/summary-request" \
+        || { log "WARN: nightly summary not sent: cannot write the request"; return 0; }
     request POST /nightly-summary "$work/summary-request"
     if [[ $REPLY != 200 ]]; then
         log "WARN: nightly summary not sent: $(outcome)"
@@ -322,10 +327,18 @@ while true; do
                 unreachable "waiting for $kind $id"
                 continue
                 ;;
-            *) fail "cannot read the status of $kind $id: $(outcome)" ;;
+            *)
+                # The API answers, so it gets the summary; the end line is composed before it.
+                end="cannot read the status of $kind $id: $(outcome)"
+                nightly_summary
+                fail "$end"
+                ;;
         esac
         status=$(jq -r 'if (.status | type) == "string" then .status else "" end' "$work/body" 2>/dev/null) || status=""
-        classify "$status" || fail "$kind $id: unexpected status '$status'"
+        if ! classify "$status"; then
+            nightly_summary
+            fail "$kind $id: unexpected status '$status'"
+        fi
         if [[ $REPLY == waiting || $REPLY == active ]]; then
             if [[ ${seen[$id]:-} != "$status" ]]; then
                 log "$kind $id: $status"
