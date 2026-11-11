@@ -441,12 +441,12 @@ Bez migracji i bez nowych zmiennych. Stare przebiegi w bazie się nie zmieniają
 
 #### Automated
 
-- [x] 3.1 CI PR zielone i API w PR env wdrożone z commitem PR
-- [x] 3.2 Przebieg admina z tymczasowym `ck_s38_verify` ma `skipped` > 0, `attentionReasons` z `skipped` i `error` od `store rejected`
-- [x] 3.3 Równość dla `reddit` i zero nowych postów subredditu od `T`
-- [x] 3.4 Powiadomienie przebiegu jest, a log API nie ma linii ERROR tego przebiegu
-- [x] 3.5 Strona `/admin/runs/<id>` pokazuje `store rejected` i „pominięte”
-- [x] 3.6 `ck_s38_verify` usunięte, ciasteczka usunięte, komentarz z dowodami w issue #148
+- [x] 3.1 CI PR zielone i API w PR env wdrożone z commitem PR — d3e8bd3
+- [x] 3.2 Przebieg admina z tymczasowym `ck_s38_verify` ma `skipped` > 0, `attentionReasons` z `skipped` i `error` od `store rejected` — d3e8bd3
+- [x] 3.3 Równość dla `reddit` i zero nowych postów subredditu od `T` — d3e8bd3
+- [x] 3.4 Powiadomienie przebiegu jest, a log API nie ma linii ERROR tego przebiegu — d3e8bd3
+- [x] 3.5 Strona `/admin/runs/<id>` pokazuje `store rejected` i „pominięte” — d3e8bd3
+- [x] 3.6 `ck_s38_verify` usunięte, ciasteczka usunięte, komentarz z dowodami w issue #148 — d3e8bd3
 
 #### Manual
 
