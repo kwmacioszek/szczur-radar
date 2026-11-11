@@ -4,11 +4,12 @@ import mockSource from '../../dev/mock-api.js?raw'
 // arrow function, no export), so its text is evaluated here and given a fake `page` that records the route handler.
 
 /** The mode constants of the mock (`const NAME = '…'` lines); a test replaces them in the text before it runs. */
-export type MockConstant = 'MODE' | 'NOTIFICATIONS' | 'AUTH' | 'ACTIVATION' | 'FRESHNESS' | 'MISSING'
+export type MockConstant = 'MODE' | 'NOTIFICATIONS' | 'AUTH' | 'LOGIN' | 'START' | 'ACTIVATION' | 'FRESHNESS' | 'MISSING'
 
 export interface MockResponse {
   status: number
   contentType: string | undefined
+  headers: Record<string, string>
   body: unknown
 }
 
@@ -25,6 +26,7 @@ interface FakeRequest {
 interface FulfillOptions {
   status?: number
   contentType?: string
+  headers?: Record<string, string>
   body?: string
 }
 
@@ -89,6 +91,7 @@ export async function installMock(constants: Partial<Record<MockConstant, string
       return {
         status: fulfilled.status ?? 200,
         contentType: fulfilled.contentType,
+        headers: fulfilled.headers ?? {},
         body: text === undefined || text === '' ? null : (JSON.parse(text) as unknown),
       }
     },

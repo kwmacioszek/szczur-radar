@@ -424,24 +424,24 @@ Nie dotyczy: bez migracji, bez zmian w wdrażanym kodzie. Adresy do zrzutów z n
 
 #### Automated
 
-- [x] 1.1 Testy web przechodzą, w tym nowy strażnik: `cd szczur-radar-web && npm test`
-- [x] 1.2 Typecheck i build web przechodzą (nowe pliki TS w `src/`): `cd szczur-radar-web && npm run build`
-- [x] 1.3 Celowe zepsucie X4 (agent wykonuje i cofa): `configured` → `enabled` w odpowiedzi `/api/admin/pipeline-runs/sources` atrapy daje czerwony strażnik z nazwą ścieżki
-- [x] 1.4 Celowe zepsucie typu i enumu (agent wykonuje i cofa): `fetched: '3'` zamiast liczby w jednym przebiegu oraz status `'done'` w jednym przebiegu dają czerwony strażnik
-- [x] 1.5 Celowe zepsucie pokrycia (agent wykonuje i cofa): tymczasowy plik `src/contract/extra.json` daje czerwony strażnik pokrycia
-- [x] 1.6 Celowe zepsucie trybu (agent wykonuje i cofa): przemianowanie stałej `MISSING` w atrapie daje błąd pomocnika
-- [x] 1.7 SVG roadmapy odpowiada rendererowi: `python3 tools/render_roadmap_svg.py && git diff --exit-code docs/visuals/roadmap.svg` po commicie
+- [x] 1.1 Testy web przechodzą, w tym nowy strażnik: `cd szczur-radar-web && npm test` — 3f0e05a
+- [x] 1.2 Typecheck i build web przechodzą (nowe pliki TS w `src/`): `cd szczur-radar-web && npm run build` — 3f0e05a
+- [x] 1.3 Celowe zepsucie X4 (agent wykonuje i cofa): `configured` → `enabled` w odpowiedzi `/api/admin/pipeline-runs/sources` atrapy daje czerwony strażnik z nazwą ścieżki — 3f0e05a
+- [x] 1.4 Celowe zepsucie typu i enumu (agent wykonuje i cofa): `fetched: '3'` zamiast liczby w jednym przebiegu oraz status `'done'` w jednym przebiegu dają czerwony strażnik — 3f0e05a
+- [x] 1.5 Celowe zepsucie pokrycia (agent wykonuje i cofa): tymczasowy plik `src/contract/extra.json` daje czerwony strażnik pokrycia — 3f0e05a
+- [x] 1.6 Celowe zepsucie trybu (agent wykonuje i cofa): przemianowanie stałej `MISSING` w atrapie daje błąd pomocnika — 3f0e05a
+- [x] 1.7 SVG roadmapy odpowiada rendererowi: `python3 tools/render_roadmap_svg.py && git diff --exit-code docs/visuals/roadmap.svg` po commicie — 3f0e05a
 
 ### Phase 2: Atrapa SPA odpowiada jak API
 
 #### Automated
 
-- [ ] 2.1 Testy web przechodzą: `cd szczur-radar-web && npm test`
-- [ ] 2.2 Typecheck i build web przechodzą: `cd szczur-radar-web && npm run build`
-- [ ] 2.3 Każdy wiersz tabeli zachowań poza oznaczonymi „zgodne przed fazą” jest czerwony na atrapie z commitu fazy 1 (agent uruchamia strażnik fazy 2 na `git show <sha commitu fazy 1>:szczur-radar-web/dev/mock-api.js` podstawionym w pomocniku albo w tymczasowej kopii i potwierdza czerwień każdego takiego wiersza oraz zieleń wierszy „zgodne przed fazą”; potem przywraca)
-- [ ] 2.4 Celowe zepsucie zachowania (agent wykonuje i cofa): przywrócenie 409 dla startu w trybie `accepted` oraz pustej listy `violations` w jednej próbie daje czerwony strażnik
-- [ ] 2.5 Atrapa nadal działa w przeglądarce (agent): `npx vite --port 5173 --strictPort` i `playwright-cli run-code --filename=szczur-radar-web/dev/mock-api.js`, potem `playwright-cli` otwiera `/admin`, stronę przebiegu, feed, stronę postu z Reddita (z „Dane dla nerdów”) i `/activate` z adresów z nagłówka atrapy; w każdej trwa render bez błędów w konsoli, a `/admin` pokazuje Reddita w „Dni bez danych”
-- [ ] 2.6 Przepływ logowania na atrapie (agent): z `AUTH='anonymous'` strona logowania przyjmuje dane w trybie `LOGIN='ok'` i prowadzi do feedu, a w `LOGIN='invalid'` pokazuje komunikat błędu (`playwright-cli` snapshot)
+- [x] 2.1 Testy web przechodzą: `cd szczur-radar-web && npm test`
+- [x] 2.2 Typecheck i build web przechodzą: `cd szczur-radar-web && npm run build`
+- [x] 2.3 Każdy wiersz tabeli zachowań poza oznaczonymi „zgodne przed fazą” jest czerwony na atrapie z commitu fazy 1 (agent uruchamia strażnik fazy 2 na `git show <sha commitu fazy 1>:szczur-radar-web/dev/mock-api.js` podstawionym w pomocniku albo w tymczasowej kopii i potwierdza czerwień każdego takiego wiersza oraz zieleń wierszy „zgodne przed fazą”; potem przywraca)
+- [x] 2.4 Celowe zepsucie zachowania (agent wykonuje i cofa): przywrócenie 409 dla startu w trybie `accepted` oraz pustej listy `violations` w jednej próbie daje czerwony strażnik
+- [x] 2.5 Atrapa nadal działa w przeglądarce (agent): `npx vite --port 5173 --strictPort` i `playwright-cli run-code --filename=szczur-radar-web/dev/mock-api.js`, potem `playwright-cli` otwiera `/admin`, stronę przebiegu, feed, stronę postu z Reddita (z „Dane dla nerdów”) i `/activate` z adresów z nagłówka atrapy; w każdej trwa render bez błędów w konsoli, a `/admin` pokazuje Reddita w „Dni bez danych”
+- [x] 2.6 Przepływ logowania na atrapie (agent): z `AUTH='anonymous'` strona logowania przyjmuje dane w trybie `LOGIN='ok'` i prowadzi do feedu, a w `LOGIN='invalid'` pokazuje komunikat błędu (`playwright-cli` snapshot)
 
 ### Phase 3: Atrapa crona z kontraktu
 
