@@ -54,7 +54,7 @@ import pl.szczurradar.api.user.UserRepository;
  * either) only in the scenario that names its subreddits. Runs are stored through the entities, then ended
  * as the pipeline would end them, with each source's result written as {@code RunRecorder.source} writes it.
  * Each test rolls back. Who may read it: {@code AuthorizationCompletenessIT} and {@code AdminRoleIT}
- * ({@code ADMIN_ROUTES}).
+ * (every route under {@code /api/admin/}).
  */
 @SpringBootTest(properties = { MigrateCommand.ENABLE_FLYWAY, WykopConfiguration.KEY + "=test-key",
 		WykopConfiguration.SECRET + "=test-secret" })
