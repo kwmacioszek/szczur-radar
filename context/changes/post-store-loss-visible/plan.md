@@ -450,4 +450,4 @@ Bez migracji i bez nowych zmiennych. Stare przebiegi w bazie się nie zmieniają
 
 #### Manual
 
-- [ ] 3.7 Właściciel akceptuje brzmienie linii WARN i błędu przebiegu
+- [x] 3.7 Właściciel akceptuje brzmienie linii WARN i błędu przebiegu
