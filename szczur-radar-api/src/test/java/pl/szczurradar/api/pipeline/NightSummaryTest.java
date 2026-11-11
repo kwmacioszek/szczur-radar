@@ -19,7 +19,8 @@ import pl.szczurradar.api.pipeline.run.SourceFetchStatus;
 import pl.szczurradar.api.sources.Source;
 
 /**
- * The text of the night's summary ({@link Night#text()}) from prepared inputs: the plan's example, a run
+ * The text of the night's summary ({@link Night#text()}) from prepared inputs: production's night of
+ * 2026-11-11 (the docs' example), the sources in {@link Source} order whatever order they come in, a run
  * still running, a source that failed (its error cut) or gave no post, a source without a result, no range
  * run, {@code none} outside the night, which run the alert names, and the whole within ntfy's bytes. What
  * the inputs are built from is {@code NightSummaryIT}.
@@ -30,24 +31,36 @@ class NightSummaryTest {
 
 	private static final UUID RANGE = UUID.fromString("00000000-0000-4000-8000-00000000000b");
 
+	/** Production's night of 2026-11-11, the example of the class comment and the docs. */
 	@Test
-	void thePlansExampleNight() {
-		Night night = new Night(LocalDate.of(2026, 11, 8), LocalDate.of(2026, 11, 6), LocalDate.of(2026, 11, 7),
+	void productionsNightOfTheEleventh() {
+		Night night = new Night(LocalDate.of(2026, 11, 11), LocalDate.of(2026, 11, 9), LocalDate.of(2026, 11, 10),
 				List.of(new Run(RETRY, RunKind.RETRY, RunStatus.PARTIAL), new Run(RANGE, RunKind.RANGE, RunStatus.PARTIAL)),
 				0, 0,
-				List.of(new SourceLine(Source.REDDIT, SourceFetchStatus.SUCCEEDED, 104, 0, null, 54, 12, 60, 5, 1, 412_000,
-						120_000, 38_000),
-						new SourceLine(Source.WYKOP, SourceFetchStatus.SUCCEEDED, 970, 0, null, 518, 3, 515, 6, 0, 2_210_000,
-								640_000, 190_000)),
-				Map.of(Source.REDDIT, 1L));
+				List.of(new SourceLine(Source.WYKOP, SourceFetchStatus.SUCCEEDED, 849, 0, null, 394, 10, 391, 13, 0,
+						1_200_013, 1_148_332, 340_550),
+						new SourceLine(Source.REDDIT, SourceFetchStatus.SUCCEEDED, 105, 0, null, 49, 18, 55, 12, 2, 245_889,
+								213_594, 197_555)),
+				Map.of());
 
 		assertThat(night.text()).isEqualTo("""
-				Night 2026-11-08 (range 2026-11-06…2026-11-07): retry partial, range partial; errors 0, skipped 0
-				reddit: fetched 104, skipped 0, new 54, leftovers 12; assessed 60, failed 5, dead 1; tokens in 412000 (cached 120000), out 38000
-				wykop: fetched 970, skipped 0, new 518, leftovers 3; assessed 515, failed 6, dead 0; tokens in 2210000 (cached 640000), out 190000
-				Dead in admin runs since the previous night: reddit 1
+				Night 2026-11-11 (range 2026-11-09…2026-11-10): retry partial, range partial; errors 0, skipped 0
+				wykop: fetched 849, skipped 0, new 394, leftovers 10; assessed 391, failed 13, dead 0; tokens in 1200013 (cached 1148332), out 340550
+				reddit: fetched 105, skipped 0, new 49, leftovers 18; assessed 55, failed 12, dead 2; tokens in 245889 (cached 213594), out 197555
+				Dead in admin runs since the previous night: none
 				/admin""");
 		assertThat(night.alertRunId()).as("the range run").isEqualTo(RANGE);
+	}
+
+	@Test
+	void theSourcesLinesAreInSourceOrderWhateverOrderTheyComeIn() {
+		Night night = night(List.of(new SourceLine(Source.REDDIT, null, 0, 0, null, 0, 1, 1, 0, 0, 0, 0, 0),
+				new SourceLine(Source.WYKOP, null, 0, 0, null, 0, 2, 2, 0, 0, 0, 0, 0)));
+
+		assertThat(night.sources()).extracting(SourceLine::source).containsExactly(Source.WYKOP, Source.REDDIT);
+		List<String> lines = night.text().lines().toList();
+		assertThat(lines.get(1)).startsWith("wykop: not fetched, new 0, leftovers 2;");
+		assertThat(lines.get(2)).startsWith("reddit: not fetched, new 0, leftovers 1;");
 	}
 
 	@Test

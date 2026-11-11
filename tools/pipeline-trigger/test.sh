@@ -26,11 +26,13 @@
 #      in capitals is accepted; no variable, a skipped run or an address that is not https://, has a query
 #      or no host name gives no check-in (an address outside the rule with a warning); no temporary
 #      directory leaves the exit code as it is, with check-ins without the last line;
-#   6. the night's summary (S-34, dead-posts-daily-digest): after the 202, on every end — the runs
-#      ended well or not, or not within TRIGGER_RUN_TIMEOUT — one POST /nightly-summary with exactly the
-#      runs' ids, its text logged line by line before the end line (which stays the last line and the
-#      check-in's body); a 500, no answer or an answer without the text is one WARN line with the exit
-#      code and the last line as without it; without a 202 (401, a busy pipeline, no answer) no call;
+#   6. the night's summary (S-34, dead-posts-daily-digest): after the 202, on every end while the API
+#      answers — the runs ended well or not, not within TRIGGER_RUN_TIMEOUT, a status read answered 500,
+#      an unknown status — one POST /nightly-summary with exactly the runs' ids, its text logged line by
+#      line before the end line (which stays the last line and the check-in's body); a 500, no answer, an
+#      answer without the text or a request that cannot be written is one WARN line with the exit code
+#      and the last line as without it; without a 202 (401, a busy pipeline, no answer) and with the API
+#      not answering while the trigger waits, no call;
 #   7. the tokens and the check-in address never appear in the logs.
 # Needs Docker, openssl (the stub's certificate) and jq on the host (step 0: the stub's files, rules.json).
 # Run from anywhere: tools/pipeline-trigger/test.sh
@@ -45,6 +47,9 @@ readonly net=$id
 readonly ping_image=$id-ping
 # The stub's name for the check-ins (a network alias, in its certificate).
 readonly ping_host=hc-ping.test
+# The image whose jq fails the summary request's one call (jq -cn), for the case of a request that
+# cannot be written (removed by cleanup).
+readonly nojq_image=$id-nojq
 # Throwaway tokens and check-in key, checked below never to appear in a log.
 token=test-$(od -An -N16 -tx1 /dev/urandom | tr -d ' \n')
 wrong_token=wrong-$(od -An -N16 -tx1 /dev/urandom | tr -d ' \n')
@@ -64,7 +69,7 @@ cleanup() {
     # Every container of this test is named "$id-…" (the stubs and each trigger run).
     docker ps -aq --filter "name=$id-" | xargs docker rm -f >/dev/null 2>&1 || true
     docker network rm "$net" >/dev/null 2>&1 || true
-    docker image rm "$ping_image" >/dev/null 2>&1 || true
+    docker image rm "$ping_image" "$nojq_image" >/dev/null 2>&1 || true
     rm -rf "$tmp"
 }
 trap cleanup EXIT
@@ -79,8 +84,9 @@ trap 'exit 130' INT TERM
 #         (with their API error codes), "503-empty" (no JSON body, as while the API wakes) or "hang"
 #         (the request is logged, then no answer for 30 s);
 #   runs: [{kind, statuses}]: GET /{id} answers the statuses in turn, the last one repeating; a status
-#         is its name, or an object {status, <field>: <value>, …} whose fields replace the answer's;
-#   old_api: true deletes the fields the API added in S-06 (startedAt, lastActivityAt,
+#         is its name, or an object {status, <field>: <value>, …} whose fields replace the answer's, or
+#         {"http": <status>}: that HTTP status with the API error code internal_error;
+#   old_api: true leaves out the fields the API added in S-06 (startedAt, lastActivityAt,
 #         interruptionCause, step, assessTotal) and S-08 (skipped), as an API from before them;
 #   listen_after: seconds before it accepts connections (until then they are refused);
 #   summary: the answer to POST /nightly-summary: 200 (default; the text SUMMARY below), 500 (with the
@@ -221,6 +227,8 @@ class Api(BaseHTTPRequestHandler):
             return self.answer(404, {"detail": ERRORS["not_found"]})
         statuses = run["statuses"]
         entry = statuses.pop(0) if len(statuses) > 1 else statuses[0]
+        if isinstance(entry, dict) and "http" in entry:
+            return self.answer(entry["http"], {"detail": ERRORS["internal_error"]})
         fields = entry if isinstance(entry, dict) else {"status": entry}
         status = fields["status"]
         name = STATE_FILES.get(status, "run-state-failed.json")
@@ -416,7 +424,22 @@ FROM $image
 COPY ca.pem /etc/ping-stub-ca.pem
 ENV CURL_CA_BUNDLE=/etc/ping-stub-ca.pem
 DOCKERFILE
-pass "image built, stub API image $stub_image, $ping_image trusting the stub's certificate"
+# A jq that fails the summary request's one call (`jq -cn …`) and runs every other one: what a full or
+# read-only temporary directory does to that write, without breaking the trigger's other files.
+mkdir "$tmp/nojq"
+cat >"$tmp/nojq/jq" <<'SH'
+#!/bin/sh
+[ "$1" = -cn ] && exit 5
+exec /usr/bin/jq "$@"
+SH
+docker build --quiet --tag "$nojq_image" --file - "$tmp/nojq" >/dev/null <<DOCKERFILE
+FROM $image
+USER root
+COPY jq /usr/local/bin/jq
+RUN chmod 0755 /usr/local/bin/jq
+USER trigger
+DOCKERFILE
+pass "image built, stub API image $stub_image, $ping_image trusting the stub's certificate, $nojq_image without the summary request"
 
 step "1. non-root, and skipped outside production"
 uid=$(docker run --rm --entrypoint id "$image" -u)
@@ -681,6 +704,38 @@ last_ping_says summary-no-answer ' trigger: FAILED: a run did not succeed: range
 pings_were summary-no-answer 'start 1'
 summary_requests_were summary-no-answer 1
 pass "the summary route does not answer (TRIGGER_REQUEST_TIMEOUT=2s): one WARN line, exit 1 and the FAILED line as without a summary"
+# The API answers a status read with an error, or with a status the trigger does not know: the night's
+# summary still goes (the API is up), then the failure as the last line.
+check_ping_case summary-status-error 1 '{"runs": [{"kind": "range", "statuses": ["running", {"http": 500}]}]}' \
+    "$token" -e HEALTHCHECK_PING_URL="$ping_url"
+log_has_the_summary summary-status-error
+log_says_before summary-status-error 'trigger: summary: /admin' 'trigger: FAILED: cannot read the status of range '
+last_log_line_says summary-status-error ': HTTP 500 internal_error'
+last_ping_says summary-status-error 'FAILED: cannot read the status of range '
+pings_were summary-status-error 'start 1'
+summary_requests_were summary-status-error 1
+summary_request_was_the_runs summary-status-error
+pass "a status read answered 500: the summary, then 'cannot read the status' as the last line, exit 1"
+check_case summary-unexpected-status 1 '{"runs": [{"kind": "range", "statuses": ["running", "paused"]}]}' "$token"
+log_has_the_summary summary-unexpected-status
+log_says_before summary-unexpected-status 'trigger: summary: /admin' "unexpected status 'paused'"
+last_log_line_says summary-unexpected-status "trigger: FAILED: range "
+last_log_line_says summary-unexpected-status ": unexpected status 'paused'"
+summary_requests_were summary-unexpected-status 1
+pass "an unknown status: the summary, then 'unexpected status' as the last line, exit 1"
+# The API stops answering while the trigger waits: the summary would not get through, no call.
+check_case summary-unreachable 1 '{"runs": [{"kind": "range", "statuses": ["running", {"http": 503}]}]}' "$token" \
+    -e TRIGGER_WAKE_TIMEOUT=2s
+log_says summary-unreachable 'FAILED: waiting for range '
+last_log_line_says summary-unreachable ': the API did not answer within 2s (HTTP 503 internal_error)'
+summary_requests_were summary-unreachable 0
+pass "the API not answering while the trigger waits (TRIGGER_WAKE_TIMEOUT=2s): no summary request, exit 1"
+# The request cannot be written (jq fails): one WARN line, the exit code and the last line as without it.
+trigger_image=$nojq_image check_case summary-no-request 0 '{"runs": [{"kind": "range", "statuses": ["succeeded"]}]}' "$token"
+log_says summary-no-request 'trigger: WARN: nightly summary not sent: cannot write the request'
+last_log_line_says summary-no-request 'trigger: OK: range succeeded'
+summary_requests_were summary-no-request 0
+pass "the summary request cannot be written: one WARN line, exit 0 and the OK line"
 # Without a 202 there are no runs to summarize: no call (the cases from steps 3 and 4).
 summary_requests_were unauthorized 0
 summary_requests_were no-source 0

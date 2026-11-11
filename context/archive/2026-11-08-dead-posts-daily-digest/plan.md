@@ -353,42 +353,42 @@ Podsumowanie to kilka zapytań agregujących po `assessments` i `posts` dla 1–
 
 #### Automated
 
-- [x] 1.1 Testy jednostkowe i integracyjne API przechodzą: `cd szczur-radar-api && ./mvnw -B verify` — 8a8f040
-- [x] 1.2 `NtfyAlertsTest` przypina żądanie (ścieżka, `Title`, `Priority`, treść UTF-8, ucięcie do 4096 bajtów) i brak URL w logu przy błędzie — 8a8f040
-- [x] 1.3 W kodzie produkcyjnym API nie ma już `HEALTHCHECK_PING_URL` ani `HealthchecksAlerts` — 8a8f040
-- [x] 1.4 Test skryptu checków (z krokiem 9 reguły S-25) przechodzi: `tools/healthchecks/test.sh` — 8a8f040
-- [x] 1.5 Test bramki deployu przechodzi: `tools/deploy-gate/test.sh` — 8a8f040
-- [x] 1.6 Plan IaC dla PR env nie proponuje usunięcia zmiennej ani zasobu (job `railway-config` w CI zielony) — 8a8f040
-- [x] 1.7 Z `NTFY_TOKEN` żądanie ma `Authorization: Bearer`, bez niego nie ma; 429 i 401 kończą się `FAILED` z WARN-em ze statusem; token nigdy w logu ani w komunikacie ustawień — 8a8f040
+- [x] 1.1 Testy jednostkowe i integracyjne API przechodzą: `cd szczur-radar-api && ./mvnw -B verify` — 2deaf39
+- [x] 1.2 `NtfyAlertsTest` przypina żądanie (ścieżka, `Title`, `Priority`, treść UTF-8, ucięcie do 4096 bajtów) i brak URL w logu przy błędzie — 2deaf39
+- [x] 1.3 W kodzie produkcyjnym API nie ma już `HEALTHCHECK_PING_URL` ani `HealthchecksAlerts` — 2deaf39
+- [x] 1.4 Test skryptu checków (z krokiem 9 reguły S-25) przechodzi: `tools/healthchecks/test.sh` — 2deaf39
+- [x] 1.5 Test bramki deployu przechodzi: `tools/deploy-gate/test.sh` — 2deaf39
+- [x] 1.6 Plan IaC dla PR env nie proponuje usunięcia zmiennej ani zasobu (job `railway-config` w CI zielony) — 2deaf39
+- [x] 1.7 Z `NTFY_TOKEN` żądanie ma `Authorization: Bearer`, bez niego nie ma; 429 i 401 kończą się `FAILED` z WARN-em ze statusem; token nigdy w logu ani w komunikacie ustawień — 2deaf39
 
 ### Phase 2: Podsumowanie nocy w API zamiast alarmu o martwym poście
 
 #### Automated
 
-- [x] 2.1 Testy jednostkowe i integracyjne API przechodzą: `cd szczur-radar-api && ./mvnw -B verify` — aced7b1
-- [x] 2.2 Przebieg z samym martwym postem tworzy powiadomienie bez `RUN_NEEDS_ATTENTION`, a z martwym postem i błędem technicznym podnosi je — aced7b1
-- [x] 2.3 Format podsumowania (linia nocy, źródła, „poza nocą”, `/admin`, ≤4096 bajtów) jest przypięty — aced7b1
-- [x] 2.4 Trasa podsumowania zwraca tekst, podnosi `NIGHT_SUMMARY` i odrzuca złe ciało oraz brak tokenu — aced7b1
-- [x] 2.5 Okno „poza nocą” liczy martwy post z przebiegu admina dokładnie raz (IT z dwiema nocami) — aced7b1
+- [x] 2.1 Testy jednostkowe i integracyjne API przechodzą: `cd szczur-radar-api && ./mvnw -B verify` — 2deaf39
+- [x] 2.2 Przebieg z samym martwym postem tworzy powiadomienie bez `RUN_NEEDS_ATTENTION`, a z martwym postem i błędem technicznym podnosi je — 2deaf39
+- [x] 2.3 Format podsumowania (linia nocy, źródła, „poza nocą”, `/admin`, ≤4096 bajtów) jest przypięty — 2deaf39
+- [x] 2.4 Trasa podsumowania zwraca tekst, podnosi `NIGHT_SUMMARY` i odrzuca złe ciało oraz brak tokenu — 2deaf39
+- [x] 2.5 Okno „poza nocą” liczy martwy post z przebiegu admina dokładnie raz (IT z dwiema nocami) — 2deaf39
 
 ### Phase 3: Cron wysyła podsumowanie
 
 #### Automated
 
-- [x] 3.1 Test crona na atrapie API przechodzi: `tools/pipeline-trigger/test.sh` — 2fba6ad
-- [x] 3.2 Ostatnia niepusta linia logu pozostaje linią końcową crona na wszystkich ścieżkach — 2fba6ad
-- [x] 3.3 CI zielone na PR (wszystkie joby, w tym `pipeline-trigger-test`) — 2fba6ad
+- [x] 3.1 Test crona na atrapie API przechodzi: `tools/pipeline-trigger/test.sh` — 2deaf39
+- [x] 3.2 Ostatnia niepusta linia logu pozostaje linią końcową crona na wszystkich ścieżkach — 2deaf39
+- [x] 3.3 CI zielone na PR (wszystkie joby, w tym `pipeline-trigger-test`) — 2deaf39
 
 ### Phase 4: Dokumenty i weryfikacja w PR env
 
 #### Automated
 
-- [x] 4.1 Roadmapa i jej SVG są zgodne — cb9255f
-- [x] 4.2 W wytycznych, dokumentach pakietów, `infrastructure.md` i kodzie API nie ma już opisu zdarzeń API przez `api-events` ani `HEALTHCHECK_PING_URL` na API — cb9255f
-- [x] 4.3 PR env: `send-test-alert` dostarcza wiadomość na testowy temat — cb9255f
-- [x] 4.4 PR env: nocny przebieg crona daje na temacie `NIGHT_SUMMARY` z linią każdego skonfigurowanego źródła — cb9255f
-- [x] 4.5 PR env: log crona ma podsumowanie przed linią `OK: …`, a przebieg z samym martwym postem nie daje na temacie `RUN_NEEDS_ATTENTION` — cb9255f
-- [x] 4.6 CI zielone na PR po ostatnim commicie — cb9255f
+- [x] 4.1 Roadmapa i jej SVG są zgodne — 2deaf39
+- [x] 4.2 W wytycznych, dokumentach pakietów, `infrastructure.md` i kodzie API nie ma już opisu zdarzeń API przez `api-events` ani `HEALTHCHECK_PING_URL` na API — 2deaf39
+- [x] 4.3 PR env: `send-test-alert` dostarcza wiadomość na testowy temat — 2deaf39
+- [x] 4.4 PR env: nocny przebieg crona daje na temacie `NIGHT_SUMMARY` z linią każdego skonfigurowanego źródła — 2deaf39
+- [x] 4.5 PR env: log crona ma podsumowanie przed linią `OK: …`, a przebieg z samym martwym postem nie daje na temacie `RUN_NEEDS_ATTENTION` — 2deaf39
+- [x] 4.6 CI zielone na PR po ostatnim commicie — 2deaf39
 - [x] 4.9 Przed merge'em produkcyjne API ma klucz `NTFY_URL` i nie ma `HEALTHCHECK_PING_URL` (`railway variables … --json | jq -e …`)
 
 #### Manual

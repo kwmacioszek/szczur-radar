@@ -11,7 +11,7 @@ package pl.szczurradar.api.settings;
  * <p>Other settings (e.g. {@code PIPELINE_TRIGGER_TOKEN}, {@code WYKOP_*}, {@code PIPELINE_LLM_CONCURRENCY})
  * still fail with a plain {@link IllegalStateException}.
  *
- * <p>The message names each setting and its problem. It never contains the value of {@code LLM_API_KEY}
+ * <p>The message names each setting and its problem. It never contains the value of {@code LLM_API_KEY},
  * {@code NTFY_URL} or {@code NTFY_TOKEN}, and repeats a refused value only in part when it is long
  * ({@link SettingText#echoed}).
  */
