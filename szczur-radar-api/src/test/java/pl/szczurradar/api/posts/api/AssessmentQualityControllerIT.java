@@ -36,7 +36,7 @@ import pl.szczurradar.api.user.SystemAccount;
  * {@code GET /api/admin/assessment-quality} on Postgres with a fixed clock (today is 12 March 2025 in Warsaw, so
  * the window is 6–12 March): who may read it and the exact answer, compared with the shared contract files.
  * Attempts are stored as the pipeline leaves them; each test rolls back. Every route's session rule:
- * {@code AuthorizationCompletenessIT} and {@code AdminRoleIT} ({@code ADMIN_ROUTES}).
+ * {@code AuthorizationCompletenessIT} and {@code AdminRoleIT} (every mapped route under {@code /api/admin/}, S-40).
  */
 @SpringBootTest(properties = MigrateCommand.ENABLE_FLYWAY)
 @AutoConfigureMockMvc
