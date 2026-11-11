@@ -451,7 +451,7 @@ Nie dotyczy: bez migracji, bez zmian w wdrażanym kodzie. Adresy do zrzutów z n
 - [x] 3.2 Test crona przechodzi (Docker): `tools/pipeline-trigger/test.sh` — 472a7f7
 - [x] 3.3 Celowe zepsucie kształtu (agent wykonuje i cofa): zmiana nazwy klucza w `run-state-running.json` daje czerwony `InternalPipelineRunIT` z wydrukiem ciała, a ta sama zmiana w nadpisaniu przypadku `test.sh` daje błąd atrapy — 472a7f7
 - [x] 3.4 Celowe zepsucie rejestru (agent wykonuje i cofa): usunięcie `partial` z `classify` w kopii `trigger.sh` albo dopisanie wartości do `.values.runStatus` w kopii `rules.json` daje czerwony `test.sh` przed pierwszym przypadkiem — 472a7f7
-- [x] 3.5 Atrapa nie wysyła `assessTotal` przed oceną (agent): `test.sh` loguje tętno przebiegu zakończonego `failed` z `assessed …/?` (grep w logu przypadku)
+- [x] 3.5 Atrapa nie wysyła `assessTotal` przed oceną (agent): `test.sh` loguje tętno przebiegu zakończonego `failed` z `assessed …/?` (grep w logu przypadku) — e4999b9
 
 ### Phase 4: Stuby `deploy-gate` z kontraktu
 
