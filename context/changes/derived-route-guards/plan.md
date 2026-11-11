@@ -209,7 +209,7 @@ Brak: bez migracji, bez zmian w IaC i zmiennych.
 
 #### Automated
 
-- [x] 2.1 Strażnik tras `/internal` zielony (`InternalPipelineRunIT`, `InternalPipelineRunWithoutTokenIT`)
-- [x] 2.2 Przebieg psujący: token tylko pod `/internal/pipeline-runs/**` czerwieni oba IT na `/internal/probe`, zmiana cofnięta
-- [x] 2.3 Pełny `./mvnw -B verify` zielony
-- [ ] 2.4 CI PR zielone (`gh pr checks`)
+- [x] 2.1 Strażnik tras `/internal` zielony (`InternalPipelineRunIT`, `InternalPipelineRunWithoutTokenIT`) — 624ffce
+- [x] 2.2 Przebieg psujący: token tylko pod `/internal/pipeline-runs/**` czerwieni oba IT na `/internal/probe`, zmiana cofnięta — 624ffce
+- [x] 2.3 Pełny `./mvnw -B verify` zielony — 624ffce
+- [x] 2.4 CI PR zielone (`gh pr checks`) — 624ffce
