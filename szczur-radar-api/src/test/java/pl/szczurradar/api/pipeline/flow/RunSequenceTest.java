@@ -36,6 +36,7 @@ import pl.szczurradar.api.pipeline.flow.RunFlow.RunRequest;
 import pl.szczurradar.api.pipeline.flow.RunFlow.RunSummary;
 import pl.szczurradar.api.pipeline.flow.RunFlow.SelectionTarget;
 import pl.szczurradar.api.pipeline.flow.RunFlow.SourceFetch;
+import pl.szczurradar.api.pipeline.flow.RunFlow.SourceStored;
 import pl.szczurradar.api.pipeline.flow.RunFlow.StoredBatch;
 import pl.szczurradar.api.pipeline.run.RunKind;
 import pl.szczurradar.api.pipeline.run.RunStatus;
@@ -68,6 +69,10 @@ class RunSequenceTest {
 	private static final Instant TO = Instant.parse("2026-10-01T21:59:59Z");
 
 	private static final List<UUID> NEW_POSTS = List.of(UUID.randomUUID(), UUID.randomUUID());
+
+	/** The store step's result: both of Wykop's posts new. */
+	private static final StoredBatch STORED = new StoredBatch(RUN, NEW_POSTS,
+			List.of(new SourceStored(Source.WYKOP, 2, 2, 0, 0)), List.of());
 
 	/** A fetch of Wykop alone, which gave posts (none in the batch: the store step is a mock). */
 	private static final FetchedBatch WYKOP_ONLY = new FetchedBatch(RUN, List.of(), 3, 1,
@@ -117,7 +122,7 @@ class RunSequenceTest {
 			return true;
 		});
 		fetches(WYKOP_ONLY);
-		when(store.store(any())).thenReturn(new StoredBatch(RUN, NEW_POSTS));
+		when(store.store(any())).thenReturn(STORED);
 		when(selection.fromStored(any())).thenReturn(new PendingAssessments(RUN, NEW_POSTS));
 		when(selection.fromTargets(any())).thenReturn(new PendingAssessments(RUN, NEW_POSTS));
 		when(dispatcher.dispatch(any(), any())).thenReturn(new AssessedBatch(RUN, 2, 0, 0, List.of(), null));
@@ -134,7 +139,7 @@ class RunSequenceTest {
 				"summarize:succeeded:1", "finish succeeded");
 		verify(ingest).fetch(eq(new RangeTarget(RUN, FROM, TO, List.of(Source.WYKOP))), any());
 		verify(store).store(WYKOP_ONLY);
-		verify(selection).fromStored(new StoredBatch(RUN, NEW_POSTS));
+		verify(selection).fromStored(STORED);
 		verify(dispatcher).dispatch(RUN, NEW_POSTS);
 		verify(selection, never()).fromTargets(any());
 	}

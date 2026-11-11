@@ -2,7 +2,10 @@ package pl.szczurradar.api.pipeline.flow;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
@@ -10,6 +13,7 @@ import java.util.stream.Collectors;
 
 import org.jspecify.annotations.Nullable;
 
+import pl.szczurradar.api.agents.assessor.contract.ItemType;
 import pl.szczurradar.api.pipeline.run.PipelineRun;
 import pl.szczurradar.api.pipeline.run.RunKind;
 import pl.szczurradar.api.pipeline.run.RunStatus;
@@ -114,7 +118,9 @@ public final class RunFlow {
 	 *
 	 * @param fetched elements the sources returned
 	 * @param skipped elements that could not become a post (no id, unsupported type, no text, no time,
-	 *     unexpected shape); their raw payload is not stored
+	 *     unexpected shape); their raw payload is not stored. Posts the database rejects at store are not
+	 *     in it: they are added to the run's {@code skipped} only after the store step
+	 *     ({@link StoredBatch#rejectedBySource()})
 	 * @param sources each source's result, in the order they were fetched
 	 */
 	public record FetchedBatch(UUID runId, List<SourcePost> posts, int fetched, int skipped,
@@ -137,11 +143,104 @@ public final class RunFlow {
 
 	}
 
-	/** The posts this run stored for the first time; duplicates of stored posts are not in it. */
-	public record StoredBatch(UUID runId, List<UUID> newPostIds) {
+	/**
+	 * What the store step did with the posts of a range run: each post is new, a duplicate or rejected by
+	 * the database (S-38). Duplicates and rejected posts are not in {@code newPostIds}.
+	 *
+	 * <p>The posts the database rejected are not yet in {@link FetchedBatch#skipped} nor in the run's
+	 * counters: they are added to {@code skipped} (the run's and their source's) only after the store
+	 * step, from {@link #rejectedBySource()}.
+	 *
+	 * @param newPostIds the posts this run stored for the first time
+	 * @param sources what happened to each source's posts, in {@link Source} order, only sources with posts
+	 * @param rejected the posts the database rejected at store, in the order they were stored
+	 */
+	public record StoredBatch(UUID runId, List<UUID> newPostIds, List<SourceStored> sources,
+			List<RejectedPost> rejected) {
+
+		/** How many rejected posts {@link #rejectedSummary()} names; the rest are only counted. */
+		public static final int REJECTED_LISTED = 10;
 
 		public StoredBatch {
+			Objects.requireNonNull(runId, "runId");
 			newPostIds = List.copyOf(newPostIds);
+			sources = List.copyOf(sources);
+			rejected = List.copyOf(rejected);
+		}
+
+		/** The rejected posts of each source, in {@link Source} order, only sources with a rejected post. */
+		public Map<Source, Integer> rejectedBySource() {
+			Map<Source, Integer> bySource = new EnumMap<>(Source.class);
+			for (RejectedPost post : rejected) {
+				bySource.merge(post.source(), 1, Integer::sum);
+			}
+			return Collections.unmodifiableMap(bySource);
+		}
+
+		/**
+		 * The run's error text about the rejected posts: {@code store rejected N post(s), counted as skipped:
+		 * <source> <item type> <source id> (<cause>); …}, at most {@value #REJECTED_LISTED} of them, then
+		 * {@code ; and M more}; empty when the database rejected none.
+		 */
+		public Optional<String> rejectedSummary() {
+			if (rejected.isEmpty()) {
+				return Optional.empty();
+			}
+			String listed = rejected.stream()
+				.limit(REJECTED_LISTED)
+				.map(RejectedPost::describe)
+				.collect(Collectors.joining("; "));
+			int more = rejected.size() - REJECTED_LISTED;
+			return Optional.of("store rejected " + rejected.size() + " post(s), counted as skipped: " + listed
+					+ (more > 0 ? "; and " + more + " more" : ""));
+		}
+
+	}
+
+	/**
+	 * What the store step did with one source's posts: {@code posts = newPosts + duplicates + rejected}, so a
+	 * post the step took is never lost from the count.
+	 *
+	 * @param posts the source's posts the store step got
+	 * @param newPosts posts stored for the first time
+	 * @param duplicates posts already stored (by an earlier run, or by another run meanwhile) or repeated in
+	 *     the same fetch
+	 * @param rejected posts the database rejected at store ({@link RejectedPost})
+	 */
+	public record SourceStored(Source source, int posts, int newPosts, int duplicates, int rejected) {
+
+		public SourceStored {
+			Objects.requireNonNull(source, "source");
+			if (posts < 0 || newPosts < 0 || duplicates < 0 || rejected < 0) {
+				throw new IllegalArgumentException("negative counts of " + source.value() + ": posts " + posts
+						+ ", new " + newPosts + ", duplicates " + duplicates + ", rejected " + rejected);
+			}
+			if (posts != newPosts + duplicates + rejected) {
+				throw new IllegalArgumentException("the posts of " + source.value() + " do not add up: posts " + posts
+						+ " != new " + newPosts + " + duplicates " + duplicates + " + rejected " + rejected);
+			}
+		}
+
+	}
+
+	/**
+	 * A post the database rejected at store although it was not stored (no unique key hit): a {@code CHECK},
+	 * {@code NOT NULL}, a foreign key or a data error.
+	 *
+	 * @param cause the constraint's name, otherwise {@code SQLState <code>}, otherwise {@code unknown}; never
+	 *     the exception's message (it holds the row's values, the post's text)
+	 */
+	public record RejectedPost(Source source, ItemType itemType, String sourceItemId, String cause) {
+
+		public RejectedPost {
+			Objects.requireNonNull(source, "source");
+			Objects.requireNonNull(itemType, "itemType");
+			Objects.requireNonNull(sourceItemId, "sourceItemId");
+			Objects.requireNonNull(cause, "cause");
+		}
+
+		private String describe() {
+			return source.value() + " " + itemType.value() + " " + sourceItemId + " (" + cause + ")";
 		}
 
 	}
