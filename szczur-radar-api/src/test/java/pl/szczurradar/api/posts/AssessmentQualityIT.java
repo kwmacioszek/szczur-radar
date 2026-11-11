@@ -122,11 +122,13 @@ class AssessmentQualityIT {
 		attempts(reddit, cron, null, "model", "2026-11-03T10:00:00Z", 70);
 		attempts(reddit, cron, FailureClass.SCHEMA_VIOLATION, "model", "2026-11-03T10:00:00Z", 30);
 
-		List<SourceQuality> crossed = quality.crossed(LocalDate.of(2026, 11, 8), Instant.parse("2026-11-08T00:45:00Z"),
-				WARSAW);
+		List<QualityCrossing> crossed = quality.crossed(quality.window(LocalDate.of(2026, 11, 8), WARSAW),
+				Instant.parse("2026-11-08T00:45:00Z"), WARSAW);
 
-		assertThat(crossed).containsExactly(new SourceQuality(Source.WYKOP, 110, 10,
-				Map.of(FailureClass.FABRICATED_EVIDENCE, 10L), 5, QualityStatus.ABOVE_THRESHOLD));
+		assertThat(crossed).containsExactly(new QualityCrossing(
+				new SourceQuality(Source.WYKOP, 110, 10, Map.of(FailureClass.FABRICATED_EVIDENCE, 10L), 5,
+						QualityStatus.ABOVE_THRESHOLD),
+				new SourceQuality(Source.WYKOP, 100, 0, Map.of(), 5, QualityStatus.OK)));
 		assertThat(quality.window(LocalDate.of(2026, 11, 7), WARSAW).sources())
 			.extracting(SourceQuality::source, SourceQuality::status)
 			.containsExactly(tuple(Source.WYKOP, QualityStatus.ABOVE_THRESHOLD),

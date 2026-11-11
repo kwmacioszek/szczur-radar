@@ -224,7 +224,7 @@ Brak — każda praca przekrojowa M-4 ma widoczny skutek dla użytkownika, opera
 
 - **Outcome:** operator widzi osobno dla każdego źródła udział nieudanych prób oceny według klas błędu, liczony z danych produkcyjnych, a przekroczenie progu daje mu sygnał bez czytania logów.
 - **Change ID:** per-source-failure-quality
-- **PRD refs:** FR-033 (nieudane próby według klas); `contract-v2.md` §9 (znaczenie klas błędów); destylacja #1, R-15
+- **PRD refs:** FR-033 (nieudane próby według klas); `contract-v2.md` §12 (znaczenie klas błędów); destylacja #1, R-15
 - **Prerequisites:** —
 - **Parallel with:** każdy wycinek poza S-36 (zależy od S-35)
 - **Blockers:** —

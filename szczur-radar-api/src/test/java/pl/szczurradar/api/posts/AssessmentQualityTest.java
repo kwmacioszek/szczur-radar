@@ -70,15 +70,18 @@ class AssessmentQualityTest {
 	@Test
 	void okYesterdayAndAboveTodayCrosses() {
 		assertThat(AssessmentQuality.crossed(List.of(wykop(QualityStatus.ABOVE_THRESHOLD)),
-				List.of(wykop(QualityStatus.OK)))).containsExactly(wykop(QualityStatus.ABOVE_THRESHOLD));
+				List.of(wykop(QualityStatus.OK))))
+			.containsExactly(new QualityCrossing(wykop(QualityStatus.ABOVE_THRESHOLD), wykop(QualityStatus.OK)));
 	}
 
 	@Test
 	void tooFewAttemptsOrNoneYesterdayAndAboveTodayCrosses() {
 		assertThat(AssessmentQuality.crossed(List.of(wykop(QualityStatus.ABOVE_THRESHOLD)),
-				List.of(wykop(QualityStatus.NOT_ENOUGH_ATTEMPTS)))).containsExactly(wykop(QualityStatus.ABOVE_THRESHOLD));
+				List.of(wykop(QualityStatus.NOT_ENOUGH_ATTEMPTS))))
+			.containsExactly(new QualityCrossing(wykop(QualityStatus.ABOVE_THRESHOLD),
+					wykop(QualityStatus.NOT_ENOUGH_ATTEMPTS)));
 		assertThat(AssessmentQuality.crossed(List.of(wykop(QualityStatus.ABOVE_THRESHOLD)), List.of()))
-			.containsExactly(wykop(QualityStatus.ABOVE_THRESHOLD));
+			.containsExactly(new QualityCrossing(wykop(QualityStatus.ABOVE_THRESHOLD), null));
 	}
 
 	@Test
@@ -99,7 +102,8 @@ class AssessmentQualityTest {
 		SourceQuality redditAbove = new SourceQuality(Source.REDDIT, 100, 30, Map.of(), 25,
 				QualityStatus.ABOVE_THRESHOLD);
 		assertThat(AssessmentQuality.crossed(List.of(wykop(QualityStatus.ABOVE_THRESHOLD), redditAbove),
-				List.of(wykop(QualityStatus.OK), redditAbove))).containsExactly(wykop(QualityStatus.ABOVE_THRESHOLD));
+				List.of(wykop(QualityStatus.OK), redditAbove)))
+			.containsExactly(new QualityCrossing(wykop(QualityStatus.ABOVE_THRESHOLD), wykop(QualityStatus.OK)));
 	}
 
 	@Test
@@ -116,8 +120,8 @@ class AssessmentQualityTest {
 				Instant.parse("2026-10-25T23:00:00Z"));
 
 		// 01:45 in Warsaw on 8 November: the night before is cut at 01:45 on the 7th, not at its end.
-		assertThat(quality.crossed(LocalDate.of(2026, 11, 8), Instant.parse("2026-11-08T00:45:00Z"), WARSAW))
-			.isEmpty();
+		assertThat(quality.crossed(quality.window(LocalDate.of(2026, 11, 8), WARSAW),
+				Instant.parse("2026-11-08T00:45:00Z"), WARSAW)).isEmpty();
 		verify(repository).countModelAttemptsBySourceAndClass(Instant.parse("2026-11-01T23:00:00Z"),
 				Instant.parse("2026-11-08T23:00:00Z"));
 		verify(repository).countModelAttemptsBySourceAndClass(Instant.parse("2026-10-31T23:00:00Z"),
@@ -131,7 +135,8 @@ class AssessmentQualityTest {
 
 		// A night's summary asked for more than a day after the night started: the night before still ends at
 		// the night's start.
-		new AssessmentQuality(repository).crossed(LocalDate.of(2026, 11, 8), Instant.parse("2026-11-08T23:30:00Z"),
+		AssessmentQuality quality = new AssessmentQuality(repository);
+		quality.crossed(quality.window(LocalDate.of(2026, 11, 8), WARSAW), Instant.parse("2026-11-08T23:30:00Z"),
 				WARSAW);
 		verify(repository).countModelAttemptsBySourceAndClass(Instant.parse("2026-10-31T23:00:00Z"),
 				Instant.parse("2026-11-07T23:00:00Z"));

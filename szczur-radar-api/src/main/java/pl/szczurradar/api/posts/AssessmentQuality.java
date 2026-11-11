@@ -34,7 +34,8 @@ import pl.szczurradar.api.sources.Source;
  *       QualityStatus#ABOVE_THRESHOLD} (in integers, {@code failed × 100 > threshold × attempts}: 5.0 % at a
  *       threshold of 5 % is still {@link QualityStatus#OK}).
  *   <li>The crossing ({@link #crossed}): a source above its threshold tonight that was not above it in the
- *       window the previous night's summary saw, computed again from the data, with no stored state.
+ *       window the previous night's summary saw, computed again from the data, with no stored state
+ *       ({@link QualityCrossing}: both windows of the source).
  * </ul>
  */
 @Component
@@ -63,19 +64,20 @@ public class AssessmentQuality {
 	}
 
 	/**
-	 * The sources above their threshold in the window of {@code night} that were not above it the night
-	 * before — not enough attempts or no attempt then counts as not above. The night before is the window
+	 * The sources above their threshold in {@code tonight} that were not above it the night before — not
+	 * enough attempts or no attempt then counts as not above. The night before is the window
 	 * {@code [start of night − 7, min(start of night, now − 24 h))}: what the previous night's summary saw,
 	 * so an admin's attempts of the day before (stored after that summary) count only tonight, and one bad
-	 * episode raises one alarm.
+	 * episode raises one alarm. Tonight's window is the caller's ({@link #window}), so a night reads two
+	 * windows, one query each.
 	 *
-	 * @param night the night's calendar day in {@code zone}
+	 * @param tonight the window of the night's calendar day ({@link QualityWindow#to()}) in {@code zone}
 	 * @param now the caller's clock
 	 * @param zone the calendar's zone
-	 * @return the sources that crossed, as in {@link #window window(night, zone)}, in {@link Source} order
+	 * @return the sources that crossed, each with what the night before saw of it, in {@link Source} order
 	 */
-	public List<SourceQuality> crossed(LocalDate night, Instant now, ZoneId zone) {
-		QualityWindow tonight = window(night, zone);
+	public List<QualityCrossing> crossed(QualityWindow tonight, Instant now, ZoneId zone) {
+		LocalDate night = tonight.to();
 		Instant nightStart = startOf(night, zone);
 		Instant summaryBefore = now.minus(PREVIOUS_NIGHT);
 		Instant until = summaryBefore.isBefore(nightStart) ? summaryBefore : nightStart;
@@ -132,14 +134,25 @@ public class AssessmentQuality {
 		return sources;
 	}
 
-	/** The sources of {@code tonight} above their threshold that are not above it in {@code before}. */
-	static List<SourceQuality> crossed(List<SourceQuality> tonight, List<SourceQuality> before) {
-		return tonight.stream()
-			.filter(quality -> quality.status() == QualityStatus.ABOVE_THRESHOLD)
-			.filter(quality -> before.stream()
-				.noneMatch(earlier -> earlier.source() == quality.source()
-						&& earlier.status() == QualityStatus.ABOVE_THRESHOLD))
-			.toList();
+	/**
+	 * The sources of {@code tonight} above their threshold that are not above it in {@code before}, each with
+	 * its row of {@code before} ({@code null} without one).
+	 */
+	static List<QualityCrossing> crossed(List<SourceQuality> tonight, List<SourceQuality> before) {
+		List<QualityCrossing> crossed = new ArrayList<>();
+		for (SourceQuality quality : tonight) {
+			if (quality.status() != QualityStatus.ABOVE_THRESHOLD) {
+				continue;
+			}
+			SourceQuality earlier = before.stream()
+				.filter(row -> row.source() == quality.source())
+				.findFirst()
+				.orElse(null);
+			if (earlier == null || earlier.status() != QualityStatus.ABOVE_THRESHOLD) {
+				crossed.add(new QualityCrossing(quality, earlier));
+			}
+		}
+		return List.copyOf(crossed);
 	}
 
 	private static Instant startOf(LocalDate day, ZoneId zone) {

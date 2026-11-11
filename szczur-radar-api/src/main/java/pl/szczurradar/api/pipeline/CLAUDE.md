@@ -15,8 +15,10 @@ pipeline/            entry points — start here
   RunWatchdog              server only: stops a run of this instance without progress (PIPELINE_STALL_TIMEOUT)
   PipelineStallSettings    PIPELINE_STALL_TIMEOUT, read and validated when the server starts
   PipelineStallConfiguration  server only: the one PipelineStallSettings bean (watchdog, queue, deploy safety)
-  NightSummary             S-34: the night's summary of the cron's runs (a line per source, the admin runs' dead posts),
-                           read-only; composed for POST /internal/pipeline-runs/nightly-summary and raised as NIGHT_SUMMARY
+  NightSummary             S-34: the night's summary of the cron's runs (a line per source, S-35's quality line per
+                           source, the admin runs' dead posts), read-only; composed for POST
+                           /internal/pipeline-runs/nightly-summary and raised as NIGHT_SUMMARY (+ ASSESSMENT_QUALITY
+                           when a source crossed its threshold)
   PipelineBusyException, PostDeadException, SourceNotConfiguredException
   api/     the HTTP entries (below)
   run/     the run model: PipelineRun (+ attentionReasons → needsAttention), AttentionReason, PipelineRunStep,
@@ -44,7 +46,7 @@ Every route starts runs only through `PipelineRunService`; none has its own star
 | Class | Route | Who |
 | --- | --- | --- |
 | `PipelineRunController` | `/api/admin/pipeline-runs/**`: start a range or chosen posts, list runs (pages of up to 100, newest first), one run `GET /{id}` (404 `not_found`), sources `GET /sources`, the days without data `GET /missing-days` → `{from, to, days: [{day, sources}]}` (`run/MissingDays`: the window D-15…D-2 of `ZONE` from the injected `Clock`; a day is covered for a configured source by a RANGE run `succeeded`/`partial` whose result for that source (`run/PipelineRunSource`) is `succeeded` — it gave a post; a failed or empty source covers nothing, though the run requested it — the cron's or an admin's (`run/PipelineRunRepository.findCoveringSince` / `findFirstCoveredFrom`); a source's window starts at its first covered day ever, so one never covered misses none; days ascending, `sources` in `Source` order; it starts nothing). A run (`RunView`) has its steps, counters, `scheduled` (requested by `SystemAccount.SCHEDULER`), `needsAttention` and `attentionReasons` (`run/AttentionReason` codes in the rule's order, e.g. `["dead_posts","skipped"]`, empty when it needs none; the SPA turns them into text in `src/runs.ts`), `interruptionCause`, `lastActivityAt`, `llmRetries`, `flexFallbacks`, `inFlight` (`RunRecorder.inFlight`, only for a running run, else 0), `sourcesFailed` / `sourcesEmpty` and `sourceResults` (each source's `run/PipelineRunSource` — `source`, `status`, `fetched`, `skipped`, `error`, `finishedAt` — in `Source` order; the list loads them with one `findByRunIdIn`; empty for a run that is not a range and before its first source ends) | admin session |
-| `InternalPipelineRunController` | `POST /internal/pipeline-runs/daily` (D-2…D-1 of `ZONE` from the injected `Clock`, every configured source, requester `SystemAccount.SCHEDULER`; 202 `[{id, kind}]`), `GET /internal/pipeline-runs/{id}` (status, `startedAt`, `finishedAt`, `lastActivityAt`, `interruptionCause`, the running `step` or `null`, `assessTotal` = the `assess` step's `items_in` or `null`, counters `fetched`, `skipped`, `newPosts`, `assessedOk`, `assessedFailed`, `processingErrors`, `dead`; 404 `not_found`) — the cron's heartbeat reads it; `POST /internal/pipeline-runs/nightly-summary` (S-34; body `{"runs": [<id>, …]}`, 1–10 ids, else 400 `invalid_request`; an unknown id 404 `not_found`) → 200 `{"text": …}`, the night's summary of those runs (`NightSummary`: the night's line with the range run's range and each run's status, a line per source with fetched/skipped (or `failed: …` / `empty`), new, leftovers, assessed, failed, dead and tokens, the dead posts of the admin's runs since the previous night, `/admin`), raised at once as `AlertEvent.NIGHT_SUMMARY` for the range run's id (else the first) through `OperatorAlertQueue.raise(ObjectProvider, …)` — the controller is built in an operator command's context too, which has no queue | the daily cron `pipeline-trigger`, token `PIPELINE_TRIGGER_TOKEN` only (`internal/`, `config/SecurityConfig`), never a session |
+| `InternalPipelineRunController` | `POST /internal/pipeline-runs/daily` (D-2…D-1 of `ZONE` from the injected `Clock`, every configured source, requester `SystemAccount.SCHEDULER`; 202 `[{id, kind}]`), `GET /internal/pipeline-runs/{id}` (status, `startedAt`, `finishedAt`, `lastActivityAt`, `interruptionCause`, the running `step` or `null`, `assessTotal` = the `assess` step's `items_in` or `null`, counters `fetched`, `skipped`, `newPosts`, `assessedOk`, `assessedFailed`, `processingErrors`, `dead`; 404 `not_found`) — the cron's heartbeat reads it; `POST /internal/pipeline-runs/nightly-summary` (S-34; body `{"runs": [<id>, …]}`, 1–10 ids, else 400 `invalid_request`; an unknown id 404 `not_found`) → 200 `{"text": …}`, the night's summary of those runs (`NightSummary`: the night's line with the range run's range and each run's status, a line per source with fetched/skipped (or `failed: …` / `empty`), new, leftovers, assessed, failed, dead and tokens, since S-35 a quality line per source with attempts in the 7-day window, the dead posts of the admin's runs since the previous night, `/admin`), raised at once as `AlertEvent.NIGHT_SUMMARY` for the range run's id (else the first) through `OperatorAlertQueue.raise(ObjectProvider, …)`, then, when a source crossed its quality threshold tonight (`Night.qualityAlert()`), `AlertEvent.ASSESSMENT_QUALITY` for the same id — the controller is built in an operator command's context too, which has no queue | the daily cron `pipeline-trigger`, token `PIPELINE_TRIGGER_TOKEN` only (`internal/`, `config/SecurityConfig`), never a session |
 | `FreshnessController` | `GET /api/freshness` → `{sources: [{source, lastUpdatedAt}]}`, in `Source` order, only the sources with an update (`[]` before the first): for each source, `finished_at` of the RANGE run `succeeded`/`partial` with that source's result `succeeded` whose range reaches furthest, the latest of those (`run/PipelineRunRepository.findLastUpdates`, one query per source, the same rule as `findCoveringSince`; an admin's run over older days leaves the date, and a source that failed or gave no post keeps its own while another moves on) — the feed's label (FR-030, S-29); it reads no configuration; nothing else about runs | any session |
 | `DeploySafetyController` | `GET /api/deploy-safety` → `{safe, reason}`: `reason` (`DeploySafetyReason`) `pipeline_running` before `pipeline_queued` (both can exist: a retry runs, the range waits), `null` when safe (`run/PipelineRunRepository.existsLiveActive` decides it in one statement, then `existsRunning` the reason, over every active run: two statements would both miss a run leaving the queue between them). A dead run — queued or running without activity for `PIPELINE_STALL_TIMEOUT` (`COALESCE(last_activity_at, started_at, created_at)`, the database's clock), and no run ended within it (a queue that just ended a run is alive) — does not hold the deploy (safe when every active run is dead: no instance executes it, and the new instance's start-up recovery interrupts it anyway); it only reads, the next request to start runs interrupts them (`lost`, Rules); 503 `{status: unavailable}` without the database, as `/api/ready` — the CI deploy gate's question (S-14); nothing else about runs | anyone, no session (`PUBLIC_ROUTES`) |
 | `PipelineRunExceptionHandler` | the service's refusals for both run controllers: 409 `pipeline_busy`, 400 `post_dead`, 503 `source_not_configured` | — |
@@ -309,16 +311,35 @@ PipelineRunService.startRange / startPosts → queue (thread pipeline-run) → R
   night's last cron run (`findLastScheduledCreationBefore`, `EPOCH` without one) and this night's first
   (`findAdminRunIdsCreatedBetween`) with their dead posts — bounded by creation, never by now, so each admin
   run is in exactly one summary. The queries by run use `ix_assessments_run` and `ix_posts_first_run` (`V14`,
-  S-34 review F3), so their cost follows the night, not the history. The controller raises `NIGHT_SUMMARY` for
-  the range run's id (else the first) through `OperatorAlertQueue.raise(ObjectProvider, …)`, always, also with
-  nothing dead, and returns the text for the cron's log. The format is pinned by `NightSummaryTest`
+  S-34 review F3), so their cost follows the night, not the history. In the same transaction (S-35) the
+  quality of the assessments per source (`posts/AssessmentQuality`, `ZONE` passed in: `posts/` imports nothing
+  from here): the window of the night's date (`window`: the last 7 Warsaw days, every run's attempts with a
+  model call, the prefilter's left out, against `Source.failureThresholdPercent()`, at least 100 attempts to be
+  checked) gives a quality line per source after the sources' lines — `<source> quality 7d (<from>…<to>):
+  failed X.X% of N attempts (<class> X.X%, …); threshold T%`, `; ABOVE THRESHOLD` above it, `N attempts, fewer
+  than 100, threshold not checked` below the minimum, no brackets without a failed attempt, each class's share
+  of all the attempts — and `crossed(window, now, ZONE)` the sources above their threshold tonight that were
+  not above it in the window the previous night's summary saw (`[D−7, min(start of D, now − 24 h))`), each
+  with that row (`posts/QualityCrossing`): two queries by `assessed_at` (`ix_assessments_assessed_at`, `V15`),
+  no stored state, so a source staying above alarms once and shows `ABOVE THRESHOLD` every night. The
+  controller raises `NIGHT_SUMMARY` for the range run's id (else the first) through
+  `OperatorAlertQueue.raise(ObjectProvider, …)`, always, also with nothing dead, then, only when a source
+  crossed, one `ASSESSMENT_QUALITY` (priority 4) for the same id, its detail `Night.qualityAlert()`: per source
+  `<source>: failed X.X% of N attempts in 7 days (<from>…<to>), above its threshold T% (the day before: Y.Y% of
+  M attempts | M attempts, fewer than 100) (<classes>)`, joined `; `, ending `; /admin` — another event, so the
+  queue's repeat window (per event and run) never drops it; and returns the text for the cron's log (the
+  route's answer keeps its shape). The format is pinned by `NightSummaryTest`
   (production's night of 2026-11-11, the sources in `Source` order whatever order they come in, a run still
   running, a failed and an empty source, a source without a result, the admin runs' dead posts in `Source`
-  order, every source failing with the longest error staying within ntfy's bytes), the queries by
-  `NightSummaryIT` on Postgres (two sources with a retry and a range still running, the first night counting
-  the admin's dead posts from the beginning and not those of a later run, an unknown run and a repeated id, no
-  id refused) and the route by `api/InternalPipelineRunIT` (returned and raised for the range run, 400, 404)
-  and `InternalPipelineRunWithoutTokenIT` (401).
+  order, the quality lines in each state and the `ASSESSMENT_QUALITY` detail, every source failing with the
+  longest error and every failure class staying within ntfy's bytes), the queries by `NightSummaryIT` on
+  Postgres (two sources with a retry and a range still running, the first night counting the admin's dead
+  posts from the beginning and not those of a later run, the quality lines from seeded attempts with one
+  source crossing and the other above two nights in a row, an unknown run and a repeated id, no id refused),
+  the window and its rule by `posts/AssessmentQualityTest` / `AssessmentQualityIT`, and the route by
+  `api/InternalPipelineRunIT` (returned and raised for the range run, `ASSESSMENT_QUALITY` once after it for a
+  crossing and never without one, 400, 404) and `InternalPipelineRunWithoutTokenIT` (401). Runbook (what to do
+  after `ASSESSMENT_QUALITY`, changing a threshold): `context/deployment/deploy-plan.md`, section S-35.
 - **Operator alerts of the error paths (S-18).** Each path that ended in an ERROR line nothing else reported
   now also raises an `alerts/AlertEvent` through `OperatorAlertQueue.raise(event, runId, detail)`; the
   ERROR line stays:
@@ -332,6 +353,9 @@ PipelineRunService.startRange / startPosts → queue (thread pipeline-run) → R
   | `RunWatchdog`: a check throws | `WATCHDOG_FAILED` | the run (so once per repeat window and run) |
   | `PipelineRunService.cleanUpOrphans` fails | `ORPHAN_CLEANUP_FAILED` | none |
   | `ConcurrentAssessmentDispatcher`: `RunRecorder.count` failed for results of one `dispatch` (audit A5) | `RUN_COUNTERS_LOST`, once after every post has finished, with ERROR `N post result(s) of run <id> could not be added to its counters (D dead, E technical error(s)); its counters are understated and needsAttention may be false` | the run |
+
+  Two events are no error path and not in this table: `NIGHT_SUMMARY` (S-34) and `ASSESSMENT_QUALITY` (S-35),
+  both raised by the night's summary route (above).
 
   The detail says what failed, the run, the exception's class (never its message: a database exception
   may carry SQL and values) and what happens next, e.g. that the next start request cleans up after

@@ -2,7 +2,10 @@ package pl.szczurradar.api.pipeline.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import java.time.Clock;
@@ -27,6 +30,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.InOrder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -70,7 +74,8 @@ import pl.szczurradar.api.user.UserRepository;
  * and only the token (no session accepted, none created, no cookie set), the token meaning nothing on
  * {@code /api/**}, the daily range on a fixed clock, a run's state with its step and progress, the
  * admin's refusals, and the night's summary: its text, the {@code NIGHT_SUMMARY} raised for the range run
- * (the queue a mock), 400 for a bad body and 404 for an unknown run (what the text is made of is
+ * (the queue a mock), {@code ASSESSMENT_QUALITY} after it only when a source crossed its quality threshold,
+ * 400 for a bad body and 404 for an unknown run (what the text is made of is
  * {@code pipeline/NightSummaryIT}). Runs execute in the
  * background with Wykop on a local server answering an empty day, so a run fails at its fetch step (no
  * post to store); a test can hold the answer to keep a run active. Every test waits until no run is
@@ -356,6 +361,50 @@ class InternalPipelineRunIT {
 				Dead in admin runs since the previous night: none
 				/admin""");
 		verify(alerts).raise(AlertEvent.NIGHT_SUMMARY, range, text);
+		// No source crossed its quality threshold: no alarm.
+		verify(alerts, never()).raise(eq(AlertEvent.ASSESSMENT_QUALITY), any(), any());
+	}
+
+	/**
+	 * 02:55 in Warsaw on 15 September 2026: Wykop's 100 good attempts on the 10th and an admin's 10 failed
+	 * ones at 14:00 on the 14th, after the previous night's summary — above its threshold only tonight, so
+	 * the summary's quality line says so and one {@code ASSESSMENT_QUALITY} follows {@code NIGHT_SUMMARY}
+	 * for the same run; a repeated request within the queue's window is the queue's to drop.
+	 */
+	@Test
+	void aSourceCrossingItsQualityThresholdRaisesOneAlarmAfterTheSummary() throws Exception {
+		UUID range = jdbc.queryForObject("INSERT INTO pipeline_runs (kind, status, requested_by, created_at, started_at,"
+				+ " finished_at, range_from, range_to, sources) VALUES ('range', 'succeeded', ?,"
+				+ " '2026-09-15T00:30:00Z', '2026-09-15T00:30:01Z', '2026-09-15T00:50:00Z', '2026-09-12T22:00:00Z',"
+				+ " '2026-09-14T21:59:59Z', ARRAY['wykop']) RETURNING id", UUID.class, SystemAccount.SCHEDULER.id());
+		UUID post = jdbc.queryForObject("WITH raw AS (INSERT INTO raw_payloads (source, content_encoding,"
+				+ " media_type, payload, sha256) VALUES ('wykop', 'gzip', 'application/json', '\\x00', ?) RETURNING id)"
+				+ " INSERT INTO posts (source, item_type, source_item_id, channel, published_at, raw_payload_id,"
+				+ " content_hash, stage, assessment_attempts, first_run_id) SELECT 'wykop', 'post', ?, 'c', now(),"
+				+ " raw.id, ?, 'assessed', 1, ? FROM raw RETURNING id", UUID.class, "0".repeat(64),
+				UUID.randomUUID().toString(), "0".repeat(64), range);
+		try {
+			attempts(post, range, null, "2026-09-10T10:00:00Z", 100);
+			attempts(post, range, "fabricated_evidence", "2026-09-14T12:00:00Z", 10);
+			CLOCK.set(Instant.parse("2026-09-15T00:55:00Z"));
+
+			MvcTestResult result = summary(bearer(TOKEN), "{\"runs\":[\"" + range + "\"]}");
+
+			assertThat(result).hasStatusOk();
+			String text = JsonPath.read(result.getResponse().getContentAsString(), "$.text");
+			assertThat(result).bodyJson().isStrictlyEqualTo("{\"text\":" + jsonString(text) + "}");
+			assertThat(text).contains("\nwykop quality 7d (2026-09-09…2026-09-15): failed 9.1% of 110 attempts"
+					+ " (fabricated_evidence 9.1%); threshold 5%; ABOVE THRESHOLD\n");
+			InOrder order = inOrder(alerts);
+			order.verify(alerts).raise(AlertEvent.NIGHT_SUMMARY, range, text);
+			order.verify(alerts).raise(AlertEvent.ASSESSMENT_QUALITY, range, "wykop: failed 9.1% of 110 attempts in 7"
+					+ " days (2026-09-09…2026-09-15), above its threshold 5% (the day before: 0.0% of 100 attempts)"
+					+ " (fabricated_evidence 9.1%); /admin");
+			verify(alerts, times(1)).raise(eq(AlertEvent.ASSESSMENT_QUALITY), any(), any());
+		}
+		finally {
+			jdbc.update("DELETE FROM assessments WHERE post_id = ?", post);
+		}
 	}
 
 	@ParameterizedTest
@@ -396,6 +445,20 @@ class InternalPipelineRunIT {
 		assertThat(result.getResponse().getHeaders(HttpHeaders.SET_COOKIE)).as("POST " + SUMMARY).isEmpty();
 		assertThat(sessionRows()).as("POST " + SUMMARY).isEqualTo(sessionsBefore);
 		return result;
+	}
+
+	/**
+	 * {@code count} model attempts of {@code post} in {@code run} at {@code assessedAt}: failed with
+	 * {@code failureClass}, or {@code ok} when it is {@code null}.
+	 */
+	private void attempts(UUID post, UUID run, @Nullable String failureClass, String assessedAt, int count) {
+		boolean ok = failureClass == null;
+		jdbc.update("INSERT INTO assessments (post_id, run_id, status, failure_class, input, input_hash, output,"
+				+ " violations, result_source, flex_fallback, contract_version, assessed_at, duration_ms, attempts)"
+				+ " SELECT CAST(? AS UUID), CAST(? AS UUID), CAST(? AS TEXT), CAST(? AS TEXT), '{}', ?,"
+				+ " CAST(? AS JSONB), '[]', 'model', false, 'V2', CAST(? AS TIMESTAMPTZ), 0, 1"
+				+ " FROM generate_series(1, ?)", post, run, ok ? "ok" : "failed", failureClass, "0".repeat(64),
+				ok ? "{}" : null, assessedAt, count);
 	}
 
 	/** {@code text} as a JSON string literal (quotes and line breaks escaped). */

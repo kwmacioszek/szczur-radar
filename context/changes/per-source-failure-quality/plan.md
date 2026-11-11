@@ -301,21 +301,21 @@ V14 tylko dodaje indeks (`CREATE INDEX`, nie `CONCURRENTLY` — Flyway w transak
 
 #### Automated
 
-- [x] 1.1 `AssessmentQualityTest` (unit): stany, brzegi 99/100 prób i progu, cztery przypadki przejścia, kolejność klas
-- [x] 1.2 `AssessmentQualityIT` (Postgres): prefiltr pominięty, przebiegi admina i crona, granice dni Warszawy z 25-godzinną dobą, dwa źródła, okno porównania ucięte do `now − 24 h`
-- [x] 1.3 Test progów przy `Source` przypina `WYKOP` 5 i `REDDIT` 25
-- [x] 1.4 `./mvnw -B verify` zielone (`JpaSchemaIT`, `MigrationsIT` z V14)
+- [x] 1.1 `AssessmentQualityTest` (unit): stany, brzegi 99/100 prób i progu, cztery przypadki przejścia, kolejność klas — c7c816e
+- [x] 1.2 `AssessmentQualityIT` (Postgres): prefiltr pominięty, przebiegi admina i crona, granice dni Warszawy z 25-godzinną dobą, dwa źródła, okno porównania ucięte do `now − 24 h` — c7c816e
+- [x] 1.3 Test progów przy `Source` przypina `WYKOP` 5 i `REDDIT` 25 — c7c816e
+- [x] 1.4 `./mvnw -B verify` zielone (`JpaSchemaIT`, `MigrationsIT` z V14) — c7c816e
 
 ### Phase 2: Podsumowanie nocy i alarm
 
 #### Automated
 
-- [ ] 2.1 `NightSummaryTest` zielony z liniami `ok`, `ABOVE THRESHOLD`, `fewer than 100` i limitem 4096 bajtów
-- [ ] 2.2 `NightSummaryIT` zielony: linie jakości i `crossed` (przejście vs ponad progiem dwa dni z rzędu)
-- [ ] 2.3 `InternalPipelineRunIT` zielony: `ASSESSMENT_QUALITY` raz przy przejściu, brak bez przejścia
-- [ ] 2.4 `NtfyAlertsTest` zielony: `ASSESSMENT_QUALITY` z `Priority: 4` i tytułem
-- [ ] 2.5 `tools/pipeline-trigger/test.sh` zielony
-- [ ] 2.6 `./mvnw -B verify` zielone
+- [x] 2.1 `NightSummaryTest` zielony z liniami `ok`, `ABOVE THRESHOLD`, `fewer than 100` i limitem 4096 bajtów
+- [x] 2.2 `NightSummaryIT` zielony: linie jakości i `crossed` (przejście vs ponad progiem dwa dni z rzędu)
+- [x] 2.3 `InternalPipelineRunIT` zielony: `ASSESSMENT_QUALITY` raz przy przejściu, brak bez przejścia
+- [x] 2.4 `NtfyAlertsTest` zielony: `ASSESSMENT_QUALITY` z `Priority: 4` i tytułem
+- [x] 2.5 `tools/pipeline-trigger/test.sh` zielony
+- [x] 2.6 `./mvnw -B verify` zielone
 
 ### Phase 3: Sekcja w `/admin`
 
