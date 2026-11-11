@@ -31,7 +31,7 @@ public enum Source {
 	 * The share of failed assessment attempts with a model call, in percent of the source's attempts over the
 	 * quality window ({@code posts/AssessmentQuality}, S-35), above which the source needs the operator's
 	 * attention: a share strictly greater than this is above it. Set from production data of 2026-11-11
-	 * ({@code context/changes/per-source-failure-quality/evidence/README.md}: Wykop steady at 2.0–2.8 %,
+	 * ({@code context/archive/2026-11-11-per-source-failure-quality/evidence/README.md}: Wykop steady at 2.0–2.8 %,
 	 * Reddit at 14.6–18.4 %); a constant, so changing it is a PR, never a setting.
 	 */
 	public int failureThresholdPercent() {
