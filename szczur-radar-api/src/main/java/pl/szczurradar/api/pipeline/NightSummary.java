@@ -17,6 +17,8 @@ import java.util.stream.Collectors;
 
 import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Transactional;
 
 import pl.szczurradar.api.pipeline.run.PipelineRun;
 import pl.szczurradar.api.pipeline.run.PipelineRunRepository;
@@ -34,13 +36,14 @@ import pl.szczurradar.api.sources.Source;
 /**
  * The night's summary for the operator (S-34): what the runs of one night did, per source, in a few lines
  * of text the daily cron asks for after its runs ({@code POST /internal/pipeline-runs/nightly-summary},
- * raised as {@code AlertEvent.NIGHT_SUMMARY}, also with nothing dead). It only reads.
+ * raised as {@code AlertEvent.NIGHT_SUMMARY}, also with nothing dead). It only reads, in one read-only
+ * transaction on one snapshot ({@code REPEATABLE READ}), so the counters of a run still running agree.
  *
  * <pre>
- * Night 2026-11-08 (range 2026-11-06…2026-11-07): retry partial, range partial; errors 0, skipped 0
- * reddit: fetched 104, skipped 0, new 54, leftovers 12; assessed 60, failed 5, dead 1; tokens in 412000 (cached 120000), out 38000
- * wykop: fetched 970, skipped 0, new 518, leftovers 3; assessed 515, failed 6, dead 0; tokens in 2210000 (cached 640000), out 190000
- * Dead in admin runs since the previous night: reddit 1
+ * Night 2026-11-11 (range 2026-11-09…2026-11-10): retry partial, range partial; errors 0, skipped 0
+ * wykop: fetched 849, skipped 0, new 394, leftovers 10; assessed 391, failed 13, dead 0; tokens in 1200013 (cached 1148332), out 340550
+ * reddit: fetched 105, skipped 0, new 49, leftovers 18; assessed 55, failed 12, dead 2; tokens in 245889 (cached 213594), out 197555
+ * Dead in admin runs since the previous night: none
  * /admin
  * </pre>
  *
@@ -104,8 +107,14 @@ public class NightSummary {
 
 	/**
 	 * The night of {@code runIds} (a repeated id counts once); empty when one of them is no run.
+	 *
+	 * @throws IllegalArgumentException when {@code runIds} is empty: a night has at least one run
 	 */
+	@Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
 	public Optional<Night> of(Collection<UUID> runIds) {
+		if (runIds.isEmpty()) {
+			throw new IllegalArgumentException("A night's summary needs at least one run id");
+		}
 		List<UUID> ids = List.copyOf(new LinkedHashSet<>(runIds));
 		List<PipelineRun> found = new ArrayList<>(runs.findAllById(ids));
 		if (found.size() != ids.size()) {
@@ -172,7 +181,7 @@ public class NightSummary {
 	 * @param runs the night's runs in the order they were created
 	 * @param processingErrors the runs' technical errors, summed
 	 * @param skipped the runs' skipped elements, summed
-	 * @param sources a line per source, in {@link Source} order
+	 * @param sources a line per source; kept in {@link Source} order whatever order they come in
 	 * @param deadInAdminRuns the dead posts of the admin's runs since the previous night, per source
 	 */
 	public record Night(LocalDate date, @Nullable LocalDate rangeFrom, @Nullable LocalDate rangeTo, List<Run> runs,
@@ -180,7 +189,7 @@ public class NightSummary {
 
 		public Night {
 			runs = List.copyOf(runs);
-			sources = List.copyOf(sources);
+			sources = sources.stream().sorted(Comparator.comparing(SourceLine::source)).toList();
 			Map<Source, Long> ordered = new EnumMap<>(Source.class);
 			ordered.putAll(deadInAdminRuns);
 			deadInAdminRuns = Map.copyOf(ordered);
