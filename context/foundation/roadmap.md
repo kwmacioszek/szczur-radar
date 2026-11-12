@@ -113,7 +113,7 @@ Na Wykopie (#gielda) i Reddicie codziennie pojawiają się setki postów o inwes
 | S-32 | provider-refusal-breaker          | seria odmów dostawcy zatrzymuje przebieg, zanim zużyje próby pozostałych postów, i daje sygnał jak każdy `failed`                  | —                        | NFR `prd.md:275` (doprecyzowanie PRD v3); audyt §6 R-41; destylacja #3                     | done |
 | S-33 | restore-dead-posts                | admin przywraca zaznaczone martwe posty do oceny, a ich próby są zerowane                                                          | —                        | FR-034, FR-015; destylacja Q-18                                                            | done |
 | S-34 | dead-posts-daily-digest           | operator dostaje co noc w ntfy podsumowanie nocy (liczby i tokeny każdego źródła, martwe posty) zamiast alarmu przy każdym przebiegu z samym martwym postem; zdarzenia API idą przez ntfy, dzwonek bez zmian | —                        | NFR `prd.md:275` (doprecyzowanie PRD v3); destylacja #5, R-42, Q-14                        | done |
-| S-35 | per-source-failure-quality        | operator widzi udział nieudanych prób według klas błędu osobno dla każdego źródła i dostaje sygnał po przekroczeniu progu           | —                        | FR-033; destylacja #1, R-15                                                                | ready    |
+| S-35 | per-source-failure-quality        | operator widzi udział nieudanych prób według klas błędu osobno dla każdego źródła i dostaje sygnał po przekroczeniu progu           | —                        | FR-033; destylacja #1, R-15                                                                | done |
 | S-36 | statement-language-quality        | operator widzi udział tez w innym języku niż post osobno dla każdego źródła, z sygnałem po przekroczeniu progu                     | S-35                     | FR-033; `contract-v2.md` §8 (Q-16); destylacja #1, D-14, R-38                              | proposed |
 | S-37 | source-native-post-labels         | użytkownik widzi typ posta słowami jego źródła: „wpis”/„znalezisko” na Wykopie, „post”/„link” na Reddicie                          | —                        | FR-023 (doprecyzowanie Q-13); destylacja #4, D-12, R-45                                    | done     |
 | S-38 | post-store-loss-visible           | post odrzucony przy zapisie przez inne ograniczenie niż duplikat jest policzony i widoczny, a nie znika po cichu                   | —                        | FR-005, NFR `prd.md:275`; audyt §6 D-15; destylacja #2, D-15                               | ready    |
@@ -224,14 +224,14 @@ Brak — każda praca przekrojowa M-4 ma widoczny skutek dla użytkownika, opera
 
 - **Outcome:** operator widzi osobno dla każdego źródła udział nieudanych prób oceny według klas błędu, liczony z danych produkcyjnych, a przekroczenie progu daje mu sygnał bez czytania logów.
 - **Change ID:** per-source-failure-quality
-- **PRD refs:** FR-033 (nieudane próby według klas); `contract-v2.md` §9 (znaczenie klas błędów); destylacja #1, R-15
+- **PRD refs:** FR-033 (nieudane próby według klas); `contract-v2.md` §12 (znaczenie klas błędów); destylacja #1, R-15
 - **Prerequisites:** —
 - **Parallel with:** każdy wycinek poza S-36 (zależy od S-35)
 - **Blockers:** —
 - **Unknowns:**
   - Jakie progi i w jakim oknie (np. ostatnie 7 nocy)? Punkt odniesienia: S-28 zmierzył 17,3 % nieudanych prób na Reddicie wobec 2,3 % na Wykopie, a noce z #121 dały 16,6 % na pierwszej próbie. — Owner: user. Block: no (rozstrzyga wywiad `/10x-plan`).
 - **Risk:** przejmuje część wpisu Parked „Ochrona przed dryfem modelu” (alarm na rosnący udział klas błędu); próg zbyt niski da alarm co noc, jak martwe posty przed S-34.
-- **Status:** ready
+- **Status:** done
 
 ### S-36: Jakość ocen per źródło — tezy w innym języku niż post
 
@@ -477,3 +477,4 @@ Brak — każda praca przekrojowa M-4 ma widoczny skutek dla użytkownika, opera
 - **S-41: każdy kształt odpowiedzi, który czyta SPA (konto, aktywacja, powiadomienia z `run: null`, wynik źródła, dni bez danych, koperty stron), ma plik kontraktu sprawdzany po obu stronach, warianty `null` są w kontrakcie, a pole, które API zawsze wysyła, jest wymagane w typie TS.** — Archived 2026-11-10 → `context/archive/2026-11-08-api-contract-shapes-round-two/`. Lesson: —.
 - **S-34: przebieg, którego jedynym powodem „wymaga uwagi” jest martwy post, nie daje już operatorowi wiadomości `RUN_NEEDS_ATTENTION` (martwy post obok innego powodu nadal ją daje); zamiast tego operator dostaje co noc, także przy 0 martwych, podsumowanie nocy: linia nocy (zakres, status każdego przebiegu, błędy techniczne, pominięte), linia na każde źródło (pobrane, pominięte, nowe, resztki, ocenione, nieudane, martwe, tokeny wejścia/cache/wyjścia — bez kosztu w pieniądzu) i martwe posty z przebiegów admina od poprzedniej nocy. Wszystkie zdarzenia API (`RUN_NEEDS_ATTENTION`, awarie ścieżek sygnału, `send-test-alert`, podsumowanie `NIGHT_SUMMARY`) przychodzą przez ntfy (`NTFY_URL`, opcjonalny `NTFY_TOKEN`); healthchecks.io → Telegram zostaje dla cronów i `deploy-health`, check `api-events` znika. Dzwonek i strona przebiegu pokazują martwe posty bez zmian.** — Archived 2026-11-11 → `context/archive/2026-11-08-dead-posts-daily-digest/`. Lesson: Nową zmienną z railway.ts ustawiaj na produkcji tuż przed merge'em — inny merge utknie na variable.delete.
 - **S-40: każda zmapowana trasa `/api/admin/**` daje 403 zalogowanemu zwykłemu użytkownikowi, a każda trasa `/internal/**` daje 401 bez tokenu crona; zbiory tras są wyliczane z mapowań, a nie z ręcznej listy.** — Archived 2026-11-11 → `context/archive/2026-11-11-derived-route-guards/`. Lesson: —.
+- **S-35: operator widzi osobno dla każdego źródła udział nieudanych prób oceny według klas błędu, liczony z danych produkcyjnych, a przekroczenie progu daje mu sygnał bez czytania logów.** — Archived 2026-11-11 → `context/archive/2026-11-11-per-source-failure-quality/`. Lesson: —.

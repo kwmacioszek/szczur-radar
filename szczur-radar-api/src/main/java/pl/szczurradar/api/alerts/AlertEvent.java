@@ -2,8 +2,8 @@ package pl.szczurradar.api.alerts;
 
 /**
  * The events the API reports to the operator outside the application ({@link OperatorAlerts}). A
- * closed set: F-04's test signal, S-18's error paths that need a human and S-34's nightly summary, which
- * raise them through {@link OperatorAlertQueue}. Each has the ntfy priority of its message (S-34):
+ * closed set: F-04's test signal, S-18's error paths that need a human, S-34's nightly summary and S-35's
+ * quality alarm, which raise them through {@link OperatorAlertQueue}. Each has the ntfy priority of its message (S-34):
  * {@link #DEFAULT_PRIORITY} for a message that needs no reaction by itself, {@link #HIGH_PRIORITY} for one
  * that does.
  */
@@ -18,6 +18,15 @@ public enum AlertEvent {
 	 * post; the detail is the summary's text.
 	 */
 	NIGHT_SUMMARY("the nightly pipeline summary; nothing needs attention by itself", AlertEvent.DEFAULT_PRIORITY),
+
+	/**
+	 * A source's share of failed assessment attempts went above its threshold over the quality window
+	 * tonight and was not above it the night before ({@code posts/AssessmentQuality#crossed}, S-35): raised by
+	 * the same {@code POST /internal/pipeline-runs/nightly-summary} after {@link #NIGHT_SUMMARY}, once per
+	 * crossing, never while a source stays above; the detail names each source with its shares and classes.
+	 */
+	ASSESSMENT_QUALITY("the share of failed assessment attempts of a source crossed its threshold over the last"
+			+ " 7 days; check the classes in /admin and the failed posts", AlertEvent.HIGH_PRIORITY),
 
 	/** A run ended in a state that notified the admins in the application (the bell). */
 	RUN_NEEDS_ATTENTION("a pipeline run needs attention, the admins were notified in the app; check /admin",

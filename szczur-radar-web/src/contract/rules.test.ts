@@ -25,6 +25,7 @@ import {
   type Relevance,
   TARGET_KINDS,
 } from '../api/posts'
+import type { QualityStatus } from '../api/quality'
 import { MAX_QUERY_LENGTH, WHITE_SPACE } from '../feedFilter'
 import { CHANNEL_PREFIXES, ITEM_TYPE_WORDS, labels } from '../labels'
 import { MAX_RANGE_DAYS } from '../missingDays'
@@ -213,6 +214,8 @@ const FAILURE_CLASSES = [
   'domain_invariant_violation',
 ] as const satisfies readonly FailureClass[]
 
+const QUALITY_STATUSES = ['ok', 'above_threshold', 'not_enough_attempts'] as const satisfies readonly QualityStatus[]
+
 /**
  * The TS unions that have a list of values in the file, as exhaustive tuples. Not here: `TargetKind` and `Direction`
  * (derived from `TARGET_KINDS` and `DIRECTIONS`, compared in order above) and `source`, which the SPA types as `string`.
@@ -233,6 +236,7 @@ const UNION_TUPLES: Partial<Record<ValueSet, readonly string[]>> = {
   attribution: ATTRIBUTIONS satisfies Exhaustive<Attribution, typeof ATTRIBUTIONS>,
   reference: REFERENCES satisfies Exhaustive<Reference, typeof REFERENCES>,
   failureClass: FAILURE_CLASSES satisfies Exhaustive<FailureClass, typeof FAILURE_CLASSES>,
+  qualityStatus: QUALITY_STATUSES satisfies Exhaustive<QualityStatus, typeof QUALITY_STATUSES>,
 }
 
 describe('the unions of src/api', () => {

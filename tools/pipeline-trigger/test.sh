@@ -100,6 +100,10 @@ SUMMARY = ("Night 2026-11-11 (range 2026-11-09…2026-11-10): retry partial, ran
            " tokens in 1200013 (cached 1148332), out 340550\n"
            "reddit: fetched 105, skipped 0, new 49, leftovers 18; assessed 55, failed 12, dead 2;"
            " tokens in 245889 (cached 213594), out 197555\n"
+           "wykop quality 7d (2026-11-05…2026-11-11): failed 2.6% of 3134 attempts (schema_violation 0.3%,"
+           " invalid_reference 0.1%, fabricated_evidence 2.0%, domain_invariant_violation 0.2%); threshold 5%\n"
+           "reddit quality 7d (2026-11-05…2026-11-11): failed 16.9% of 598 attempts (schema_violation 7.7%,"
+           " fabricated_evidence 7.7%, domain_invariant_violation 1.5%); threshold 25%\n"
            "Dead in admin runs since the previous night: none\n"
            "/admin")
 
@@ -321,6 +325,8 @@ log_has_the_summary() {
     log_says "$1" 'trigger: summary: Night 2026-11-11 (range 2026-11-09…2026-11-10): retry partial, range partial; errors 0, skipped 0'
     log_says "$1" 'trigger: summary: wykop: fetched 849, skipped 0, new 394, leftovers 10; assessed 391, failed 13, dead 0; tokens in 1200013 (cached 1148332), out 340550'
     log_says "$1" 'trigger: summary: reddit: fetched 105, skipped 0, new 49, leftovers 18; assessed 55, failed 12, dead 2; tokens in 245889 (cached 213594), out 197555'
+    log_says "$1" 'trigger: summary: wykop quality 7d (2026-11-05…2026-11-11): failed 2.6% of 3134 attempts (schema_violation 0.3%, invalid_reference 0.1%, fabricated_evidence 2.0%, domain_invariant_violation 0.2%); threshold 5%'
+    log_says "$1" 'trigger: summary: reddit quality 7d (2026-11-05…2026-11-11): failed 16.9% of 598 attempts (schema_violation 7.7%, fabricated_evidence 7.7%, domain_invariant_violation 1.5%); threshold 25%'
     log_says "$1" 'trigger: summary: Dead in admin runs since the previous night: none'
     log_says "$1" 'trigger: summary: /admin'
 }

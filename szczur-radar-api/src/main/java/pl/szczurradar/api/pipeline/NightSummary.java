@@ -11,15 +11,20 @@ import java.util.EnumSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Isolation;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.support.TransactionTemplate;
 
+import pl.szczurradar.api.agents.assessor.validation.FailureClass;
 import pl.szczurradar.api.pipeline.run.PipelineRun;
 import pl.szczurradar.api.pipeline.run.PipelineRunRepository;
 import pl.szczurradar.api.pipeline.run.PipelineRunSource;
@@ -27,22 +32,31 @@ import pl.szczurradar.api.pipeline.run.PipelineRunSourceRepository;
 import pl.szczurradar.api.pipeline.run.RunKind;
 import pl.szczurradar.api.pipeline.run.RunStatus;
 import pl.szczurradar.api.pipeline.run.SourceFetchStatus;
+import pl.szczurradar.api.posts.AssessmentQuality;
 import pl.szczurradar.api.posts.AssessmentRepository;
 import pl.szczurradar.api.posts.PostRepository;
+import pl.szczurradar.api.posts.QualityCrossing;
+import pl.szczurradar.api.posts.QualityStatus;
+import pl.szczurradar.api.posts.QualityWindow;
 import pl.szczurradar.api.posts.SourceAssessmentTotals;
 import pl.szczurradar.api.posts.SourceCount;
+import pl.szczurradar.api.posts.SourceQuality;
 import pl.szczurradar.api.sources.Source;
 
 /**
  * The night's summary for the operator (S-34): what the runs of one night did, per source, in a few lines
  * of text the daily cron asks for after its runs ({@code POST /internal/pipeline-runs/nightly-summary},
  * raised as {@code AlertEvent.NIGHT_SUMMARY}, also with nothing dead). It only reads, in one read-only
- * transaction on one snapshot ({@code REPEATABLE READ}), so the counters of a run still running agree.
+ * transaction on one snapshot ({@code REPEATABLE READ}), so the counters of a run still running agree; the
+ * quality window (S-35) is read before it, in a read-only transaction of its own, so a failure there costs
+ * only the quality lines, never the summary (below).
  *
  * <pre>
  * Night 2026-11-11 (range 2026-11-09…2026-11-10): retry partial, range partial; errors 0, skipped 0
  * wykop: fetched 849, skipped 0, new 394, leftovers 10; assessed 391, failed 13, dead 0; tokens in 1200013 (cached 1148332), out 340550
  * reddit: fetched 105, skipped 0, new 49, leftovers 18; assessed 55, failed 12, dead 2; tokens in 245889 (cached 213594), out 197555
+ * wykop quality 7d (2026-11-05…2026-11-11): failed 2.6% of 3134 attempts (schema_violation 0.3%, invalid_reference 0.1%, fabricated_evidence 2.0%, domain_invariant_violation 0.2%); threshold 5%
+ * reddit quality 7d (2026-11-05…2026-11-11): failed 16.9% of 598 attempts (schema_violation 7.7%, fabricated_evidence 7.7%, domain_invariant_violation 1.5%); threshold 25%
  * Dead in admin runs since the previous night: none
  * /admin
  * </pre>
@@ -64,6 +78,18 @@ import pl.szczurradar.api.sources.Source;
  *       one); {@code assessed} / {@code failed}: the {@code ok} / {@code failed} assessments of the night's
  *       runs; {@code dead}: the dead posts whose latest assessment is one of the night's runs (the run
  *       that killed them); {@code tokens}: the sums over the night's assessments, a missing count as 0.
+ *   <li><b>A source's quality line</b> (S-35), in {@link Source} order, for every source with an attempt in
+ *       the quality window of the night's date ({@link AssessmentQuality#window}: the last
+ *       {@value AssessmentQuality#WINDOW_DAYS} Warsaw days, every run's attempts with a model call): the
+ *       share of failed attempts of its attempts, each failure class with a failed one as its share of all
+ *       the attempts (no brackets without a failed one), and the source's threshold, with
+ *       {@code ; ABOVE THRESHOLD} when the share is above it; with fewer than
+ *       {@value AssessmentQuality#MIN_ATTEMPTS} attempts only their number and {@code threshold not checked}.
+ *       The sources that crossed their threshold tonight ({@link AssessmentQuality#crossed}) are
+ *       {@link Night#crossed()}, raised apart as {@code AlertEvent.ASSESSMENT_QUALITY}
+ *       ({@link Night#qualityAlert()}). When the window cannot be read (any exception: an ERROR line with
+ *       it in the API log), one line {@code quality 7d (<from>…<to>): unavailable (<the exception's
+ *       class>)} stands for them, nothing crossed, and the summary goes out as without S-35.
  *   <li><b>Dead in admin runs since the previous night:</b> always, {@code none} included — the dead posts
  *       whose latest assessment belongs to a run that is not the cron's ({@link PipelineRun#scheduled()}),
  *       created after the last cron run before this night's earliest run (from the beginning of the data
@@ -75,10 +101,13 @@ import pl.szczurradar.api.sources.Source;
  * </ul>
  *
  * <p>The text stays within ntfy's {@value #MAX_BYTES} bytes of a message by construction: one line per
- * source, a handful of sources, and a source's error cut; {@code NtfyAlerts} cuts the body anyway.
+ * source and one of its quality, a handful of sources, and a source's error cut; {@code NtfyAlerts} cuts the
+ * body anyway.
  */
 @Component
 public class NightSummary {
+
+	private static final Logger log = LoggerFactory.getLogger(NightSummary.class);
 
 	/** ntfy's bytes of a message ({@code NtfyAlerts.MAX_BODY_BYTES}); {@link Night#text()} stays within it. */
 	public static final int MAX_BYTES = 4096;
@@ -94,27 +123,75 @@ public class NightSummary {
 
 	private final AssessmentRepository assessments;
 
+	private final AssessmentQuality quality;
+
 	private final Clock clock;
 
+	/** The summary's one snapshot: read-only, {@code REPEATABLE READ}. */
+	private final TransactionTemplate snapshot;
+
+	/** The quality window's own read-only transaction, apart from the snapshot. */
+	private final TransactionTemplate qualityRead;
+
 	NightSummary(PipelineRunRepository runs, PipelineRunSourceRepository sourceResults, PostRepository posts,
-			AssessmentRepository assessments, Clock clock) {
+			AssessmentRepository assessments, AssessmentQuality quality, Clock clock,
+			PlatformTransactionManager transactions) {
 		this.runs = runs;
 		this.sourceResults = sourceResults;
 		this.posts = posts;
 		this.assessments = assessments;
+		this.quality = quality;
 		this.clock = clock;
+		this.snapshot = new TransactionTemplate(transactions);
+		this.snapshot.setReadOnly(true);
+		this.snapshot.setIsolationLevel(TransactionDefinition.ISOLATION_REPEATABLE_READ);
+		this.qualityRead = new TransactionTemplate(transactions);
+		this.qualityRead.setReadOnly(true);
 	}
 
 	/**
-	 * The night of {@code runIds} (a repeated id counts once); empty when one of them is no run.
+	 * The night of {@code runIds} (a repeated id counts once); empty when one of them is no run. The quality
+	 * window is read first, in its own transaction: when that fails, the night has the line
+	 * {@code unavailable} in its place ({@link Night#qualityUnavailable()}) and is still returned.
 	 *
 	 * @throws IllegalArgumentException when {@code runIds} is empty: a night has at least one run
 	 */
-	@Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
 	public Optional<Night> of(Collection<UUID> runIds) {
 		if (runIds.isEmpty()) {
 			throw new IllegalArgumentException("A night's summary needs at least one run id");
 		}
+		Instant now = clock.instant();
+		LocalDate date = LocalDate.ofInstant(now, PipelineRunService.ZONE);
+		NightQuality nightQuality = quality(date, now);
+		return Objects.requireNonNull(snapshot.execute(status -> night(runIds, date, nightQuality)));
+	}
+
+	/**
+	 * The quality window of the night's date and the sources that crossed their threshold tonight (S-35); on
+	 * any exception an empty window of the same days, nothing crossed, and the exception's class — the summary
+	 * goes out without its quality lines rather than not at all (S-34: every night).
+	 */
+	private NightQuality quality(LocalDate date, Instant now) {
+		try {
+			return Objects.requireNonNull(qualityRead.execute(status -> {
+				QualityWindow window = quality.window(date, PipelineRunService.ZONE);
+				return new NightQuality(window, quality.crossed(window, now, PipelineRunService.ZONE), null);
+			}));
+		}
+		catch (RuntimeException ex) {
+			log.error("The quality window of the night {} could not be read; the night's summary goes without it",
+					date, ex);
+			return new NightQuality(new QualityWindow(date.minusDays(AssessmentQuality.WINDOW_DAYS - 1), date,
+					List.of()), List.of(), ex.getClass().getSimpleName());
+		}
+	}
+
+	/** The quality part of a night: its window, the sources that crossed, or why it is unavailable. */
+	private record NightQuality(QualityWindow window, List<QualityCrossing> crossed, @Nullable String unavailable) {
+	}
+
+	/** The night inside the snapshot; {@code date} and the quality were read before it. */
+	private Optional<Night> night(Collection<UUID> runIds, LocalDate date, NightQuality nightQuality) {
 		List<UUID> ids = List.copyOf(new LinkedHashSet<>(runIds));
 		List<PipelineRun> found = new ArrayList<>(runs.findAllById(ids));
 		if (found.size() != ids.size()) {
@@ -157,11 +234,12 @@ public class NightSummary {
 		Map<Source, Long> deadInAdminRuns = SourceCount
 			.bySource(posts.countDeadKilledBySource(runs.findAdminRunIdsCreatedBetween(previousNight, earliest)));
 
-		return Optional.of(new Night(LocalDate.ofInstant(clock.instant(), PipelineRunService.ZONE),
+		return Optional.of(new Night(date,
 				range == null ? null : day(range.getRangeFrom()), range == null ? null : day(range.getRangeTo()),
 				found.stream().map(run -> new Run(run.getId(), run.getKind(), run.getStatus())).toList(),
 				found.stream().mapToInt(PipelineRun::getProcessingErrors).sum(),
-				found.stream().mapToInt(PipelineRun::getSkipped).sum(), lines, deadInAdminRuns));
+				found.stream().mapToInt(PipelineRun::getSkipped).sum(), lines, deadInAdminRuns, nightQuality.window(),
+				nightQuality.crossed(), nightQuality.unavailable()));
 	}
 
 	private static @Nullable PipelineRun first(List<PipelineRun> runs, RunKind kind) {
@@ -183,12 +261,22 @@ public class NightSummary {
 	 * @param skipped the runs' skipped elements, summed
 	 * @param sources a line per source; kept in {@link Source} order whatever order they come in
 	 * @param deadInAdminRuns the dead posts of the admin's runs since the previous night, per source
+	 * @param quality the quality window of {@code date} (S-35), a line per source in it; without sources when
+	 *     {@code qualityUnavailable}
+	 * @param crossed the sources that crossed their threshold tonight, in {@link Source} order; empty when none
+	 * @param qualityUnavailable the class of the exception the quality window could not be read with, which
+	 *     makes the quality one line {@code unavailable}; {@code null} when it was read
 	 */
 	public record Night(LocalDate date, @Nullable LocalDate rangeFrom, @Nullable LocalDate rangeTo, List<Run> runs,
-			int processingErrors, int skipped, List<SourceLine> sources, Map<Source, Long> deadInAdminRuns) {
+			int processingErrors, int skipped, List<SourceLine> sources, Map<Source, Long> deadInAdminRuns,
+			QualityWindow quality, List<QualityCrossing> crossed, @Nullable String qualityUnavailable) {
 
 		public Night {
+			if (qualityUnavailable != null && (!quality.sources().isEmpty() || !crossed.isEmpty())) {
+				throw new IllegalArgumentException("An unavailable quality window has no source and nothing crossed");
+			}
 			runs = List.copyOf(runs);
+			crossed = List.copyOf(crossed);
 			sources = sources.stream().sorted(Comparator.comparing(SourceLine::source)).toList();
 			Map<Source, Long> ordered = new EnumMap<>(Source.class);
 			ordered.putAll(deadInAdminRuns);
@@ -220,6 +308,20 @@ public class NightSummary {
 			for (SourceLine source : sources) {
 				text.append('\n').append(source.text());
 			}
+			if (qualityUnavailable != null) {
+				text.append("\nquality ")
+					.append(AssessmentQuality.WINDOW_DAYS)
+					.append("d (")
+					.append(quality.from())
+					.append('…')
+					.append(quality.to())
+					.append("): unavailable (")
+					.append(qualityUnavailable)
+					.append(')');
+			}
+			for (SourceQuality source : quality.sources()) {
+				text.append('\n').append(qualityLine(source, quality));
+			}
 			text.append("\nDead in admin runs since the previous night: ");
 			Map<Source, Long> dead = new EnumMap<>(Source.class);
 			dead.putAll(deadInAdminRuns);
@@ -235,6 +337,98 @@ public class NightSummary {
 			return text.append("\n/admin").toString();
 		}
 
+		/**
+		 * The detail of {@code AlertEvent.ASSESSMENT_QUALITY}; empty when no source crossed its threshold
+		 * tonight. Per source that crossed, its share tonight with the window, its threshold, what the night
+		 * before saw and its classes; the sources joined with {@code ; }, the last part {@code /admin}:
+		 *
+		 * <pre>
+		 * wykop: failed 9.1% of 110 attempts in 7 days (2026-11-02…2026-11-08), above its threshold 5% (the day before: 0.0% of 100 attempts) (fabricated_evidence 9.1%); /admin
+		 * </pre>
+		 */
+		public Optional<String> qualityAlert() {
+			if (crossed.isEmpty()) {
+				return Optional.empty();
+			}
+			return Optional.of(crossed.stream()
+				.map(crossing -> crossingText(crossing, quality))
+				.collect(Collectors.joining("; ")) + "; /admin");
+		}
+
+	}
+
+	/** A source's line of the quality window; see the class. */
+	static String qualityLine(SourceQuality source, QualityWindow window) {
+		StringBuilder line = new StringBuilder(source.source().value()).append(" quality ")
+			.append(AssessmentQuality.WINDOW_DAYS)
+			.append("d (")
+			.append(window.from())
+			.append('…')
+			.append(window.to())
+			.append("): ");
+		if (source.status() == QualityStatus.NOT_ENOUGH_ATTEMPTS) {
+			return line.append(source.attempts())
+				.append(" attempts, fewer than ")
+				.append(AssessmentQuality.MIN_ATTEMPTS)
+				.append(", threshold not checked")
+				.toString();
+		}
+		line.append("failed ")
+			.append(AssessmentQuality.percent(source.failed(), source.attempts()))
+			.append(" of ")
+			.append(source.attempts())
+			.append(" attempts");
+		if (source.failed() > 0) {
+			line.append(" (").append(classes(source)).append(')');
+		}
+		line.append("; threshold ").append(source.thresholdPercent()).append('%');
+		if (source.status() == QualityStatus.ABOVE_THRESHOLD) {
+			line.append("; ABOVE THRESHOLD");
+		}
+		return line.toString();
+	}
+
+	/** One source of {@link Night#qualityAlert()}. */
+	private static String crossingText(QualityCrossing crossing, QualityWindow window) {
+		SourceQuality tonight = crossing.tonight();
+		SourceQuality before = crossing.before();
+		StringBuilder text = new StringBuilder(tonight.source().value()).append(": failed ")
+			.append(AssessmentQuality.percent(tonight.failed(), tonight.attempts()))
+			.append(" of ")
+			.append(tonight.attempts())
+			.append(" attempts in ")
+			.append(AssessmentQuality.WINDOW_DAYS)
+			.append(" days (")
+			.append(window.from())
+			.append('…')
+			.append(window.to())
+			.append("), above its threshold ")
+			.append(tonight.thresholdPercent())
+			.append("% (the day before: ");
+		long attemptsBefore = before == null ? 0 : before.attempts();
+		if (before == null || before.status() == QualityStatus.NOT_ENOUGH_ATTEMPTS) {
+			text.append(attemptsBefore).append(" attempts, fewer than ").append(AssessmentQuality.MIN_ATTEMPTS);
+		}
+		else {
+			text.append(AssessmentQuality.percent(before.failed(), before.attempts()))
+				.append(" of ")
+				.append(before.attempts())
+				.append(" attempts");
+		}
+		return text.append(") (").append(classes(tonight)).append(')').toString();
+	}
+
+	/** The source's failure classes with a failed attempt, each as its share of all the attempts. */
+	private static String classes(SourceQuality source) {
+		return source.classes()
+			.entrySet()
+			.stream()
+			.map(entry -> classShare(entry.getKey(), entry.getValue(), source.attempts()))
+			.collect(Collectors.joining(", "));
+	}
+
+	private static String classShare(FailureClass failureClass, long failed, long attempts) {
+		return failureClass.value() + " " + AssessmentQuality.percent(failed, attempts);
 	}
 
 	/** One of the night's runs. */

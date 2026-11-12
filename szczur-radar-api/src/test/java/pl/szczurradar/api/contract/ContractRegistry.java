@@ -56,6 +56,9 @@ final class ContractRegistry {
 
 	private static final Class<?> RESTORE_RESULT = type("pl.szczurradar.api.posts.api.DeadPostController$RestoreResult");
 
+	private static final Class<?> QUALITY = type(
+			"pl.szczurradar.api.posts.api.AssessmentQualityController$QualityView");
+
 	/** Route ({@code "<METHOD> <pattern>"}, as {@code web/MappedRoutes.Route.key()}) → its files and type. */
 	static final Map<String, List<Shape>> SHAPES = shapes();
 
@@ -92,6 +95,8 @@ final class ContractRegistry {
 		shapes.put("GET /api/posts/{id}", List.of(new Shape("post.json", POST_ITEM)));
 		shapes.put("GET /api/admin/posts/failed", List.of(new Shape("failed-posts-page.json", FAILED_POST_PAGE)));
 		shapes.put("POST /api/admin/posts/restore", List.of(new Shape("restore-result.json", RESTORE_RESULT)));
+		shapes.put("GET /api/admin/assessment-quality", List.of(new Shape("assessment-quality.json", QUALITY),
+				new Shape("assessment-quality-few-attempts.json", QUALITY)));
 		return Map.copyOf(shapes);
 	}
 
