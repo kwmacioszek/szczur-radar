@@ -7,7 +7,7 @@
   "limits": {
     "feedQueryMaxLength": 100,
     "runRangeMaxDays": 7,
-    "runsPageMaxSize": 100,
+    "pageMaxSize": 100,
     "passwordMinLength": 12,
     "passwordMaxLength": 128,
     "maxAssessmentAttempts": 3,

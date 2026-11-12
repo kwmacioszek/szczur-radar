@@ -4,7 +4,7 @@ import { createMemoryHistory } from 'vue-router'
 import { fetchMe } from '../api/auth'
 import { ApiError } from '../api/client'
 import { fetchNotifications } from '../api/notifications'
-import { type MissingDays, type Run, fetchMissingDays, fetchRuns, fetchSources, retryPosts, startRange } from '../api/pipeline'
+import { type MissingDays, RUNS_PAGE_SIZE, type Run, fetchMissingDays, fetchRuns, fetchSources, retryPosts, startRange } from '../api/pipeline'
 import { type FailedPost, fetchFailedPosts, restorePosts } from '../api/posts'
 import { fetchAssessmentQuality } from '../api/quality'
 import { resetSession } from '../auth/session'
@@ -13,7 +13,12 @@ import { createAppRouter } from '../router'
 import AdminView from './AdminView.vue'
 
 vi.mock('../api/auth', () => ({ fetchMe: vi.fn(), login: vi.fn(), logout: vi.fn() }))
-vi.mock('../api/posts', () => ({ fetchPosts: vi.fn(), fetchFailedPosts: vi.fn(), restorePosts: vi.fn() }))
+vi.mock('../api/posts', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../api/posts')>()),
+  fetchPosts: vi.fn(),
+  fetchFailedPosts: vi.fn(),
+  restorePosts: vi.fn(),
+}))
 vi.mock('../api/quality', () => ({ fetchAssessmentQuality: vi.fn() }))
 // The header shows an admin the notification bell.
 vi.mock('../api/notifications', () => ({
@@ -879,14 +884,14 @@ describe('AdminView', () => {
         .mockResolvedValueOnce(page(runsFrom(1, 20), 25))
         .mockResolvedValueOnce({ items: runsFrom(21, 5), page: 1, size: 20, total: 25 })
       const wrapper = await mountAdmin({ attachTo: document.body })
-      expect(fetchRuns).toHaveBeenLastCalledWith(0, 20)
+      expect(fetchRuns).toHaveBeenLastCalledWith(0, RUNS_PAGE_SIZE)
       const older = wrapper.findAll('button').find((button) => button.text() === 'Pokaż starsze')!
       expect(wrapper.findAll('.run')).toHaveLength(20)
 
       await older.trigger('click')
       await flushPromises()
 
-      expect(fetchRuns).toHaveBeenLastCalledWith(1, 20)
+      expect(fetchRuns).toHaveBeenLastCalledWith(1, RUNS_PAGE_SIZE)
       expect(wrapper.findAll('.run').map((row) => row.find('a.details').attributes('href'))).toEqual(
         Array.from({ length: 25 }, (_, at) => `/admin/runs/r${at + 1}`),
       )

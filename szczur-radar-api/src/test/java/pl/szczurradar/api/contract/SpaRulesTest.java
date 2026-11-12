@@ -61,7 +61,7 @@ class SpaRulesTest {
 	private static final Map<String, Integer> LIMITS = Map.of(
 			"feedQueryMaxLength", PostFilter.MAX_QUERY_LENGTH,
 			"runRangeMaxDays", PipelineRunController.MAX_RANGE_DAYS,
-			"runsPageMaxSize", PipelineRunController.MAX_PAGE_SIZE,
+			"pageMaxSize", PageLimits.MAX_SIZE,
 			"passwordMinLength", Passwords.MIN_LENGTH,
 			"passwordMaxLength", Passwords.MAX_LENGTH,
 			"maxAssessmentAttempts", Post.MAX_ASSESSMENT_ATTEMPTS,

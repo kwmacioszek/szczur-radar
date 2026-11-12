@@ -5,7 +5,7 @@ import type { ErrorCode } from '../api/client'
 import {
   type AttentionReason,
   type InterruptionCause,
-  MAX_RUNS_PAGE_SIZE,
+  RUNS_PAGE_SIZE,
   type RunKind,
   type RunStatus,
   type RunStepName,
@@ -17,10 +17,13 @@ import {
   type ClaimKind,
   DIRECTIONS,
   type FailureClass,
+  FAILED_PAGE_SIZE,
+  FEED_PAGE_SIZE,
   type Flag,
   type ItemType,
   MAX_ASSESSMENT_ATTEMPTS,
   MAX_PAGE,
+  MAX_PAGE_SIZE,
   type Modifier,
   type Reference,
   type Relevance,
@@ -66,7 +69,7 @@ describe('limits', () => {
   const spa: Record<keyof typeof rules.limits, number> = {
     feedQueryMaxLength: MAX_QUERY_LENGTH,
     runRangeMaxDays: MAX_RANGE_DAYS,
-    runsPageMaxSize: MAX_RUNS_PAGE_SIZE,
+    pageMaxSize: MAX_PAGE_SIZE,
     passwordMinLength: PASSWORD_MIN_LENGTH,
     passwordMaxLength: PASSWORD_MAX_LENGTH,
     maxAssessmentAttempts: MAX_ASSESSMENT_ATTEMPTS,
@@ -83,6 +86,19 @@ describe('limits', () => {
 
   it('the mock answers a 400 for the first page above pageMax, like the API', () => {
     expect(mockApi).toContain(`pageNumber > ${rules.limits.pageMax}`)
+  })
+
+  it('the mock answers a 400 for a size above pageMaxSize, like the API', () => {
+    expect(mockApi).toContain(`size <= ${rules.limits.pageMaxSize}`)
+  })
+
+  it.each([
+    ['FEED_PAGE_SIZE', FEED_PAGE_SIZE],
+    ['FAILED_PAGE_SIZE', FAILED_PAGE_SIZE],
+    ['RUNS_PAGE_SIZE', RUNS_PAGE_SIZE],
+  ])('%s, the page size the SPA asks for, is within 1…pageMaxSize', (_name, size) => {
+    expect(size).toBeGreaterThanOrEqual(1)
+    expect(size).toBeLessThanOrEqual(rules.limits.pageMaxSize)
   })
 })
 

@@ -557,13 +557,16 @@ const ROWS: Row[] = [
 
   // the page limits of the three lists
   ...['/api/posts', PIPELINE_RUNS, '/api/admin/posts/failed'].flatMap((path) => [
-    ...['page=-1', 'page=21474837', 'page=1.5', 'page=abc', 'size=0', 'size=101', 'size=500', 'size=-1', 'size=x'].map(
+    ...[
+      'page=-1', `page=${rules.limits.pageMax + 1}`, 'page=1.5', 'page=abc', 'size=0', `size=${rules.limits.pageMaxSize + 1}`,
+      `size=${rules.limits.pageMaxSize * 5}`, 'size=-1', 'size=x',
+    ].map(
       (query): Row => ({
         name: `${path}?${query} is a bad request`, method: 'GET', path: `${path}?${query}`, status: 400,
         detail: 'invalid_request',
       }),
     ),
-    ...['page=0', 'page=21474836', 'size=1', 'size=100', 'page=1&size=2'].map(
+    ...['page=0', `page=${rules.limits.pageMax}`, 'size=1', `size=${rules.limits.pageMaxSize}`, 'page=1&size=2'].map(
       (query): Row => ({
         name: `${path}?${query} is allowed`, method: 'GET', path: `${path}?${query}`, status: 200,
       }),

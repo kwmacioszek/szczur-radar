@@ -14,6 +14,15 @@ export const MAX_ASSESSMENT_ATTEMPTS = 3
  */
 export const MAX_PAGE = 21474836
 
+/** The API's largest `size` of any list (szczur-radar-api `PageLimits.MAX_SIZE`). */
+export const MAX_PAGE_SIZE = 100
+
+/** The `size` the feed asks for. */
+export const FEED_PAGE_SIZE = 50
+
+/** The `size` the list of failed posts asks for. */
+export const FAILED_PAGE_SIZE = 50
+
 export type Relevance = 'investment_related' | 'not_investment_related' | 'unclear'
 
 /** `target.kind` (contract V2 §3), in the contract's order; also the options of the feed filter. */
@@ -154,7 +163,7 @@ export interface PostFilter {
 }
 
 /** The feed: assessed posts, newest first. `page` from 0; only the given keys of `filter` are sent. */
-export function fetchPosts(page: number, size = 50, filter: PostFilter = {}): Promise<Page<PostItem>> {
+export function fetchPosts(page: number, size = FEED_PAGE_SIZE, filter: PostFilter = {}): Promise<Page<PostItem>> {
   const params = new URLSearchParams({ page: String(page), size: String(size) })
   if (filter.q) params.set('q', filter.q)
   if (filter.kind) params.set('kind', filter.kind)
@@ -173,7 +182,7 @@ export function fetchPostRaw(id: string): Promise<string> {
 }
 
 /** Failed, dead and on-hold posts with their latest attempt and technical error (admin). */
-export function fetchFailedPosts(page = 0, size = 50): Promise<Page<FailedPost>> {
+export function fetchFailedPosts(page = 0, size = FAILED_PAGE_SIZE): Promise<Page<FailedPost>> {
   return apiFetch<Page<FailedPost>>(`/api/admin/posts/failed?page=${page}&size=${size}`)
 }
 

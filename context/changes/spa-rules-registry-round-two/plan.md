@@ -393,19 +393,19 @@ Brak migracji bazy. Nowe pole w `/api/admin/notifications` jest addytywne. SPA i
 
 #### Automated
 
-- [x] 1.1 Testy web i typecheck zielone: `cd szczur-radar-web && npm test && npm run build`
-- [x] 1.2 Obraz web buduje się z własnego kontekstu (typecheck testów): `docker build -t sr-web-rules ./szczur-radar-web && docker rmi sr-web-rules`
-- [x] 1.3 Powtórzenie X5 (agent wykonuje i cofa): `if (err.detail === 'pipeline_bussy') return 'x'` przed `switch` w `startErrorMessage` daje błąd TS2367 w `npm run build` i czerwony skan w `npm test`; `new ApiError(409, 'pipeline_bussy')` w teście daje błąd `vue-tsc`
-- [x] 1.4 Celowe zepsucie unii (agent wykonuje i cofa): usunięcie `post_dead` z `ErrorCode` daje błąd `vue-tsc` (krotka `Exhaustive` i `case 'post_dead'`)
+- [x] 1.1 Testy web i typecheck zielone: `cd szczur-radar-web && npm test && npm run build` — 86e1677
+- [x] 1.2 Obraz web buduje się z własnego kontekstu (typecheck testów): `docker build -t sr-web-rules ./szczur-radar-web && docker rmi sr-web-rules` — 86e1677
+- [x] 1.3 Powtórzenie X5 (agent wykonuje i cofa): `if (err.detail === 'pipeline_bussy') return 'x'` przed `switch` w `startErrorMessage` daje błąd TS2367 w `npm run build` i czerwony skan w `npm test`; `new ApiError(409, 'pipeline_bussy')` w teście daje błąd `vue-tsc` — 86e1677
+- [x] 1.4 Celowe zepsucie unii (agent wykonuje i cofa): usunięcie `post_dead` z `ErrorCode` daje błąd `vue-tsc` (krotka `Exhaustive` i `case 'post_dead'`) — 86e1677
 
 ### Phase 2: Jeden limit rozmiaru strony
 
 #### Automated
 
-- [ ] 2.1 Rejestr po stronie serwera zgodny: `cd szczur-radar-api && ./mvnw -B -Dtest=SpaRulesTest test`
-- [ ] 2.2 Granice stron przebiegów w API bez zmian: `cd szczur-radar-api && ./mvnw -B -Dit.test=PipelineRunControllerIT -Dtest=none -Dsurefire.failIfNoSpecifiedTests=false verify`
-- [ ] 2.3 Testy web i typecheck zielone: `cd szczur-radar-web && npm test && npm run build`
-- [ ] 2.4 Celowe zepsucie limitu (agent wykonuje i cofa): `pageMaxSize: 40` w `rules.json` daje czerwony `SpaRulesTest` i czerwony `rules.test.ts` (rozmiary feedu i nieudanych 50 > 40, warunek atrapy); `FEED_PAGE_SIZE = 101` daje czerwony `rules.test.ts`
+- [x] 2.1 Rejestr po stronie serwera zgodny: `cd szczur-radar-api && ./mvnw -B -Dtest=SpaRulesTest test`
+- [x] 2.2 Granice stron przebiegów w API bez zmian: `cd szczur-radar-api && ./mvnw -B -Dit.test=PipelineRunControllerIT -Dtest=none -Dsurefire.failIfNoSpecifiedTests=false verify`
+- [x] 2.3 Testy web i typecheck zielone: `cd szczur-radar-web && npm test && npm run build`
+- [x] 2.4 Celowe zepsucie limitu (agent wykonuje i cofa): `pageMaxSize: 40` w `rules.json` daje czerwony `SpaRulesTest` i czerwony `rules.test.ts` (rozmiary feedu i nieudanych 50 > 40, warunek atrapy); `FEED_PAGE_SIZE = 101` daje czerwony `rules.test.ts`
 
 ### Phase 3: Enumy z rejestru, kompletność wyprowadzana
 
