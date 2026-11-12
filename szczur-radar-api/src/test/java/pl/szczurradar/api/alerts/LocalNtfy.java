@@ -1,5 +1,6 @@
 package pl.szczurradar.api.alerts;
 
+import java.net.URI;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.InstantSource;
@@ -128,6 +129,11 @@ public class LocalNtfy {
 				throw new IllegalStateException(ex);
 			}
 		}
+	}
+
+	/** The local topic's address, a secret in production: a message's text never carries it. */
+	public static URI topicUrl() {
+		return SERVER.topicUrl();
 	}
 
 	/** How many reports returned since the last {@link #clear()}: delivered or not, each one the queue took. */

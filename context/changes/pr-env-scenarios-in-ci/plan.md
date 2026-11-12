@@ -515,18 +515,18 @@ Brak migracji, zmiennych i zmian tras. PR dotyka katalogu `szczur-radar-api/` ty
 
 #### Automated
 
-- [x] 2.1 Klasa scenariuszy jest zielona z dwoma scenariuszami
-- [x] 2.2 `InternalPipelineRunIT` jest zielony po przeniesieniu zegara
-- [x] 2.3 Pełny zestaw jest zielony (`./mvnw -B verify`)
-- [x] 2.4 Brak zmian w kodzie produkcyjnym poza dokumentami
+- [x] 2.1 Klasa scenariuszy jest zielona z dwoma scenariuszami — ce321fd
+- [x] 2.2 `InternalPipelineRunIT` jest zielony po przeniesieniu zegara — ce321fd
+- [x] 2.3 Pełny zestaw jest zielony (`./mvnw -B verify`) — ce321fd
+- [x] 2.4 Brak zmian w kodzie produkcyjnym poza dokumentami — ce321fd
 
 ### Phase 3: Scenariusze sygnałów, dni bez danych i nocy
 
 #### Automated
 
-- [ ] 3.1 Klasa scenariuszy jest zielona z ośmioma testami
-- [ ] 3.2 Pełny zestaw jest zielony (`./mvnw -B verify`)
-- [ ] 3.3 Dokument testów opisuje klasę
+- [x] 3.1 Klasa scenariuszy jest zielona z ośmioma testami
+- [x] 3.2 Pełny zestaw jest zielony (`./mvnw -B verify`)
+- [x] 3.3 Dokument testów opisuje klasę
 
 ### Phase 4: CI, lista ręczna i dowód
 

@@ -45,6 +45,7 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 import pl.szczurradar.api.TestcontainersConfiguration;
+import pl.szczurradar.api.alerts.AlertEvent;
 import pl.szczurradar.api.alerts.AlertSettings;
 import pl.szczurradar.api.alerts.LocalNtfy;
 import pl.szczurradar.api.cli.MigrateCommand;
@@ -207,10 +208,7 @@ class PrEnvScenariosIT {
 		jdbc.execute("TRUNCATE notifications, pipeline_run_steps, pipeline_run_sources, assessments, posts,"
 				+ " raw_payloads, pipeline_runs");
 		LocalWykop.reset();
-		LocalReddit.reset();
-		LocalReddit.configure(List.of("inwestowanie", "stocks"));
-		LocalReddit.page("inwestowanie", "search-posts-inwestowanie.json");
-		LocalReddit.page("stocks", "search-posts-stocks.json");
+		redditOfTheDay();
 		LocalNtfy.clear();
 		PROVIDER.clearUnmatched();
 		CLOCK.set(NOW);
@@ -227,15 +225,7 @@ class PrEnvScenariosIT {
 	 */
 	@AfterEach
 	void settle() {
-		long deadline = System.nanoTime() + WAIT.toNanos();
-		while (!quiet()) {
-			if (System.nanoTime() > deadline) {
-				throw new AssertionError("the API did not settle: own runs " + OwnRuns.of(service) + ", LLM pool active "
-						+ llmPool.activeTasks() + ", queued " + llmPool.queuedTasks() + ", alerts taken " + taken()
-						+ ", reported " + LocalNtfy.reported());
-			}
-			pause();
-		}
+		awaitQuiet();
 		assertThat(PROVIDER.unmatched()).extracting(request -> RecordedProvider.userMessage(request.body()))
 			.as("requests to the provider without a recording")
 			.isEmpty();
@@ -334,6 +324,189 @@ class PrEnvScenariosIT {
 	}
 
 	/**
+	 * S-20 (a source's failure is its own result) with S-18's signals: Reddit down in an admin's range, so the run
+	 * ends {@code partial} with {@code source_failed}, Wykop's posts reach the feed, the admin gets the bell and the
+	 * operator one {@code RUN_NEEDS_ATTENTION} message.
+	 */
+	@Test
+	void aSourceDownInAnAdminsRunIsItsOwnResult() {
+		LocalReddit.down();
+
+		List<Started> started = startRange(DAY, DAY);
+
+		assertThat(started).extracting(Started::kind).containsExactly("range");
+		UUID id = started.getFirst().id();
+		JsonNode run = awaitEnded(id);
+		assertThat(run.get("status").asString()).isEqualTo("partial");
+		assertThat(attentionReasons(run)).first().isEqualTo("source_failed");
+		assertThat(run.get("error").asString()).startsWith("reddit failed: RedditApiException");
+		List<String> sources = sourceResults(run);
+		assertThat(sources).hasSize(2);
+		assertThat(sources.getFirst()).isEqualTo("wykop:succeeded:" + WYKOP_FETCHED + ":0:");
+		assertThat(sources.getLast()).startsWith("reddit:failed:0:0:RedditApiException");
+
+		// Wykop's day is assessed (its recordings all pass) and in the feed; Reddit gave nothing.
+		JsonNode feed = get("/api/posts?size=100");
+		assertThat(feed.get("total").asInt()).isEqualTo(WYKOP_FETCHED);
+		assertThat(feed.get("items")).allSatisfy(item -> assertThat(item.get("source").asString()).isEqualTo("wykop"));
+
+		assertThat(notifiedRuns()).contains(id);
+		LocalNtfy.awaitMessage(AlertEvent.RUN_NEEDS_ATTENTION, id, WAIT);
+		awaitQuiet();
+		assertThat(LocalNtfy.messages(AlertEvent.RUN_NEEDS_ATTENTION, id)).singleElement()
+			.extracting(LocalNtfy.Message::body)
+			.asString()
+			.contains("(range, admin) ended partial", "error: reddit failed", "/admin/runs/" + id);
+	}
+
+	/**
+	 * S-20: Reddit silent next to Wykop's posts in the cron's run gives {@code partial} (the cron's exit 0), and
+	 * the API raises it for a run of the cron too.
+	 */
+	@Test
+	void anEmptySourceInTheCronsRunEndsPartial() {
+		LocalReddit.empty();
+
+		List<Started> started = startDaily();
+
+		assertThat(started).extracting(Started::kind).containsExactly("range");
+		UUID id = started.getFirst().id();
+		JsonNode run = awaitEnded(id);
+		assertThat(getInternal("/internal/pipeline-runs/" + id).get("status").asString()).isEqualTo("partial");
+		assertThat(run.get("scheduled").asBoolean()).isTrue();
+		assertThat(attentionReasons(run)).contains("source_empty");
+		assertThat(run.get("error").asString()).contains("reddit gave no post to store (fetched 0, skipped 0)");
+		// The night's range: the day before yesterday and yesterday of the clock.
+		LocalDate today = LocalDate.ofInstant(NOW, PipelineRunService.ZONE);
+		assertThat(day(run.get("rangeFrom"))).isEqualTo(today.minusDays(2));
+		assertThat(day(run.get("rangeTo"))).isEqualTo(today.minusDays(1));
+
+		assertThat(LocalNtfy.awaitMessage(AlertEvent.RUN_NEEDS_ATTENTION, id, WAIT).body())
+			.contains("(range, cron) ended partial");
+	}
+
+	/**
+	 * S-18 steps 3–5 (the run of 2004-01-01) and S-08/S-20's rule: no source gave a post, so the admin's run fails
+	 * in its fetch, the admin gets the bell and the operator one message, which carries neither the topic's token
+	 * nor its address, delivered.
+	 */
+	@Test
+	void noSourceWithAPostFailsTheAdminsRunAndRaisesIt() {
+		LocalWykop.empty();
+		LocalReddit.empty();
+
+		List<Started> started = startRange(DAY, DAY);
+
+		assertThat(started).extracting(Started::kind).containsExactly("range");
+		UUID id = started.getFirst().id();
+		JsonNode run = awaitEnded(id);
+		assertThat(run.get("status").asString()).isEqualTo("failed");
+		assertThat(run.get("error").asString()).contains("NoPostsFetchedException", "wykop gave no post to store",
+				"reddit gave no post to store");
+		assertThat(steps(run)).contains("fetch:failed")
+			.noneMatch(step -> step.startsWith("store:") || step.startsWith("select:") || step.startsWith("assess:"));
+
+		assertThat(notifiedRuns()).contains(id);
+		assertThat(output.getAll()).contains("Operator alert RUN_NEEDS_ATTENTION (run " + id + ") taken");
+		LocalNtfy.Message message = LocalNtfy.awaitMessage(AlertEvent.RUN_NEEDS_ATTENTION, id, WAIT);
+		assertThat(message.body()).contains("(range, admin) ended failed: dead 0, errors 0, skipped 0; error:",
+				"/admin/runs/" + id)
+			.doesNotContain(LocalNtfy.TOKEN, LocalNtfy.topicUrl().toString());
+		awaitLog("Operator alert RUN_NEEDS_ATTENTION (run " + id + ") reported: DELIVERED");
+		awaitQuiet();
+		assertThat(LocalNtfy.messages(AlertEvent.RUN_NEEDS_ATTENTION, id)).hasSize(1);
+	}
+
+	/**
+	 * S-18's rule: the cron's run that ended {@code failed} is reported by the cron's exit code, so the API raises
+	 * nothing for it — though the admin still gets the bell.
+	 */
+	@Test
+	void aFailedCronRunIsReportedOnlyByTheCron() {
+		LocalWykop.empty();
+		LocalReddit.empty();
+
+		List<Started> started = startDaily();
+
+		assertThat(started).extracting(Started::kind).containsExactly("range");
+		UUID id = started.getFirst().id();
+		awaitEnded(id);
+		assertThat(getInternal("/internal/pipeline-runs/" + id).get("status").asString()).isEqualTo("failed");
+		assertThat(notifiedRuns()).contains(id);
+		// The run's thread raises before the instance lets the run go, so the line would be there by now.
+		assertThat(output.getAll()).doesNotContain("Operator alert RUN_NEEDS_ATTENTION (run " + id + ") taken");
+		awaitQuiet();
+		assertThat(LocalNtfy.messages()).noneMatch(message -> message.body().contains(id.toString()));
+	}
+
+	/**
+	 * S-13 step 3.2 and S-20's change of coverage: a day counts as covered for a source only from its
+	 * {@code succeeded} result, not because the run requested it. "Today" is the clock's day D; the window is
+	 * D-15…D-2, and a source's days start at its first covered day.
+	 */
+	@Test
+	void aDayWithoutDataIsListedUntilEachSourceCoversIt() {
+		LocalDate today = LocalDate.ofInstant(NOW, PipelineRunService.ZONE);
+		LocalDate dayBeforeYesterday = today.minusDays(2);
+
+		// No run yet: no source was ever covered, so none misses a day.
+		assertThat(missingDays(today)).isEmpty();
+
+		// D-3 with both sources: D-2 is missing for both.
+		awaitAll(startRange(today.minusDays(3), today.minusDays(3)));
+		assertThat(missingDays(today)).containsExactly(dayBeforeYesterday + ":[wykop, reddit]");
+
+		// D-2 with Reddit down: the run requested Reddit, but only Wykop covers the day.
+		LocalReddit.down();
+		List<JsonNode> withRedditDown = awaitAll(startRange(dayBeforeYesterday, dayBeforeYesterday));
+		assertThat(sourceResults(withRedditDown.getLast())).extracting(result -> result.split(":")[1])
+			.containsExactly("succeeded", "failed");
+		assertThat(missingDays(today)).containsExactly(dayBeforeYesterday + ":[reddit]");
+
+		// D-2 again with Reddit back: nothing is missing.
+		redditOfTheDay();
+		awaitAll(startRange(dayBeforeYesterday, dayBeforeYesterday));
+		assertThat(missingDays(today)).isEmpty();
+	}
+
+	/**
+	 * S-34's PR-env check: the cron's night — its run, then the night's summary of its runs, returned for the
+	 * cron's log and sent to the operator as {@code NIGHT_SUMMARY}; a run that needs no attention (or only for a
+	 * dead post) raises no {@code RUN_NEEDS_ATTENTION} of its own.
+	 */
+	@Test
+	void theCronsNightEndsWithItsSummaryInTheTopic() {
+		List<Started> started = startDaily();
+		List<JsonNode> night = awaitAll(started);
+
+		MvcTestResult result = mvc.post()
+			.uri("/internal/pipeline-runs/nightly-summary")
+			.header(HttpHeaders.AUTHORIZATION, "Bearer " + TOKEN)
+			.contentType(MediaType.APPLICATION_JSON)
+			.content("{\"runs\":" + started.stream().map(run -> "\"" + run.id() + "\"").toList() + "}")
+			.exchange();
+
+		assertThat(result).hasStatusOk();
+		String text = JSON.readTree(body(result)).get("text").asString();
+		assertThat(text.lines()).anySatisfy(
+				line -> assertThat(line).startsWith("wykop: fetched " + WYKOP_FETCHED + ", skipped 0, "));
+		assertThat(text.lines()).anySatisfy(
+				line -> assertThat(line).startsWith("reddit: fetched " + REDDIT_FETCHED + ", skipped 0, "));
+		assertThat(LocalNtfy.awaitMessage(AlertEvent.NIGHT_SUMMARY, text.strip(), WAIT).body()).contains(text.strip());
+
+		for (JsonNode run : night) {
+			UUID id = UUID.fromString(run.get("id").asString());
+			assertThat(attentionReasons(run)).as("run %s needs no attention, or only for a dead post", id)
+				.isSubsetOf("dead_posts");
+			assertThat(output.getAll()).doesNotContain("Operator alert RUN_NEEDS_ATTENTION (run " + id + ") taken");
+		}
+		awaitQuiet();
+		for (Started run : started) {
+			assertThat(LocalNtfy.messages(AlertEvent.RUN_NEEDS_ATTENTION, run.id())).isEmpty();
+		}
+	}
+
+	/**
 	 * The range of the day as its first run ends it: every element fetched and stored, none skipped, each source
 	 * {@code succeeded}, Wykop then Reddit, and nothing that needs attention.
 	 */
@@ -390,11 +563,78 @@ class PrEnvScenariosIT {
 		return get("/api/admin/pipeline-runs/" + runId);
 	}
 
+	/** Waits for each run of a start, in the order the queue runs them, and returns their pages. */
+	private List<JsonNode> awaitAll(List<Started> started) {
+		return started.stream().map(run -> awaitEnded(run.id())).toList();
+	}
+
 	/** {@code GET uri} with the admin's session: 200, its JSON. */
 	private JsonNode get(String uri) {
 		MvcTestResult result = mvc.get().uri(uri).with(asAdmin()).exchange();
 		assertThat(result).as("GET " + uri).hasStatusOk();
 		return JSON.readTree(body(result));
+	}
+
+	/** {@code GET uri} with the cron's token: 200, its JSON. */
+	private JsonNode getInternal(String uri) {
+		MvcTestResult result = mvc.get().uri(uri).header(HttpHeaders.AUTHORIZATION, "Bearer " + TOKEN).exchange();
+		assertThat(result).as("GET " + uri).hasStatusOk();
+		return JSON.readTree(body(result));
+	}
+
+	/** The runs of the admin's notifications ({@code GET /api/admin/notifications}). */
+	private List<UUID> notifiedRuns() {
+		List<UUID> runs = new ArrayList<>();
+		get("/api/admin/notifications").get("items").forEach(item -> {
+			if (!item.get("run").isNull()) {
+				runs.add(UUID.fromString(item.at("/run/id").asString()));
+			}
+		});
+		return runs;
+	}
+
+	/**
+	 * {@code GET /api/admin/pipeline-runs/missing-days}, its window checked to be D-15…D-2 of {@code today}: the
+	 * days as {@code day:[sources]}.
+	 */
+	private List<String> missingDays(LocalDate today) {
+		JsonNode missing = get("/api/admin/pipeline-runs/missing-days");
+		assertThat(missing.get("from").asString()).isEqualTo(today.minusDays(15).toString());
+		assertThat(missing.get("to").asString()).isEqualTo(today.minusDays(2).toString());
+		List<String> days = new ArrayList<>();
+		missing.get("days").forEach(day -> {
+			List<String> sources = new ArrayList<>();
+			day.get("sources").forEach(source -> sources.add(source.asString()));
+			days.add(day.get("day").asString() + ":" + sources);
+		});
+		return days;
+	}
+
+	/**
+	 * Waits until the API is quiet — no run of the service's own, the LLM pool idle, and every event the queue
+	 * took reported (as many returns from {@code NtfyAlerts} as {@code taken} lines in this scenario's output).
+	 */
+	private void awaitQuiet() {
+		long deadline = System.nanoTime() + WAIT.toNanos();
+		while (!quiet()) {
+			if (System.nanoTime() > deadline) {
+				throw new AssertionError("the API did not settle: own runs " + OwnRuns.of(service) + ", LLM pool active "
+						+ llmPool.activeTasks() + ", queued " + llmPool.queuedTasks() + ", alerts taken " + taken()
+						+ ", reported " + LocalNtfy.reported());
+			}
+			pause();
+		}
+	}
+
+	/** Waits until this scenario's output has {@code line}: the queue logs its reports on its own thread. */
+	private void awaitLog(String line) {
+		long deadline = System.nanoTime() + WAIT.toNanos();
+		while (!output.getAll().contains(line)) {
+			if (System.nanoTime() > deadline) {
+				throw new AssertionError("no log line \"" + line + "\" within " + WAIT.toSeconds() + " s");
+			}
+			pause();
+		}
 	}
 
 	/** No run of the service's own, the LLM pool idle and every alert the queue took reported. */
@@ -405,6 +645,19 @@ class PrEnvScenariosIT {
 	/** The events the queue took in this scenario: its {@code taken} lines. */
 	private int taken() {
 		return (int) output.getAll().lines().filter(line -> TAKEN.matcher(line).find()).count();
+	}
+
+	/** Reddit's day: r/inwestowanie and r/stocks, each its own fixture page, nothing down or empty. */
+	private static void redditOfTheDay() {
+		LocalReddit.reset();
+		LocalReddit.configure(List.of("inwestowanie", "stocks"));
+		LocalReddit.page("inwestowanie", "search-posts-inwestowanie.json");
+		LocalReddit.page("stocks", "search-posts-stocks.json");
+	}
+
+	/** An instant of a run's page as its Warsaw calendar day. */
+	private static LocalDate day(JsonNode instant) {
+		return LocalDate.ofInstant(Instant.parse(instant.asString()), PipelineRunService.ZONE);
 	}
 
 	private RequestPostProcessor asAdmin() {
