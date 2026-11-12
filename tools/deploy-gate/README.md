@@ -13,6 +13,7 @@ Bramka wdrożeń Szczur Radar (S-14, `safe-deploy-gate`). Kontroli po deployu ko
 | `web-url.sh` | adres weba środowiska (jedno mapowanie nazwy środowiska na origin) |
 | `lib.sh` | wspólne helpery skryptów (format czasów, adres weba, zapytanie HTTP); dołączany przez `.`, nie uruchamiany |
 | `fixtures/*.json` | plany w formacie `railway config plan --json`, po jednym na przypadek testu; `pr-env-*.json` to prawdziwe plany z PR env |
+| `fixtures/api/*.json` | ciała odpowiedzi API (`deploy-safety-{safe,running,queued,unavailable}.json` dla `/api/deploy-safety`, `ready.json` dla `/api/ready`; `deploy-safety-unavailable.json` służy też 503 z `/api/ready`, co przypina `HealthIT`), które przypinają `DeploySafetyIT` i `HealthIT` (`ContractFiles.assertMatches`); stuby API w `test.sh` budują z nich odpowiedzi jq (`{"status": <kod>, "body": <plik>}`). Zmiana ciała w API czerwieni IT, zmiana pliku — IT albo `test.sh`; `ready.json` służy wierności stuba (`verify-apply.sh` sprawdza tylko kod HTTP), nie bramce. Pętle po planach nie wchodzą do `api/` |
 | `test.sh` | lokalny test bramki na fixture'ach oraz strażnika i kontroli na atrapach API i `railway`, bez Railway, GitHuba i Dockera |
 
 ## Format planu (CLI 5.67.1)

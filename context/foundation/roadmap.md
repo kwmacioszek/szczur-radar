@@ -3,7 +3,7 @@ project: "Szczur Radar"
 version: 5
 status: draft # draft | active | locked
 created: 2026-09-27
-updated: 2026-11-11
+updated: 2026-11-12
 prd_version: 3
 main_goal: quality
 top_blocker: capacity # 16 wycinków, jeden recenzent i osoba mergująca; darmowe runnery GitHuba muszą zmieścić scenariusze i PIT
@@ -121,7 +121,7 @@ Na Wykopie (#gielda) i Reddicie codziennie pojawiają się setki postów o inwes
 | S-40 | derived-route-guards              | każda trasa `/api/admin/**` daje 403 zwykłemu użytkownikowi, a każda `/internal/**` 401 bez tokenu — bez ręcznej listy tras        | —                        | NFR `prd.md:293`, FR-014, FR-015; audyt §1 R-30                                            | done |
 | S-41 | api-contract-shapes-round-two     | każdy kształt odpowiedzi, który czyta SPA, ma plik kontraktu z wariantami `null`, a pole zawsze wysyłane przez API jest wymagane w TS | —                        | FR-006; audyt §2, X3; `verification-scope.md`                                              | done        |
 | S-42 | spa-rules-registry-round-two      | porównanie kodu błędu, limit rozmiaru strony i enumy spoza rejestru są pilnowane testem albo kompilatorem                          | —                        | FR-006; audyt §1 R-22, R-43, X5                                                            | ready    |
-| S-43 | contract-bound-mocks              | atrapa API w SPA i atrapy narzędzi odpowiadają tak jak prawdziwe API, a rozjazd czerwieni test                                     | S-41                     | audyt §3, X4, „Materiał dla M-4” p. 4; `verification-scope.md` „Granice z M-3 i M-5”      | proposed |
+| S-43 | contract-bound-mocks              | atrapa API w SPA i atrapy narzędzi odpowiadają tak jak prawdziwe API, a rozjazd czerwieni test                                     | S-41                     | audyt §3, X4, „Materiał dla M-4” p. 4; `verification-scope.md` „Granice z M-3 i M-5”      | done |
 | S-44 | feed-regression-and-paging-bounds | feed ma testy regresji znanych ścieżek, a ogromny numer strony i NUL w linku dają 400 zamiast błędu serwera albo zawieszonego feedu | —                        | FR-006, FR-007, FR-011a; audyt §4, X6                                                      | done |
 | S-45 | core-mutation-testing             | wiadomo, które testy rdzenia łapią błędy: mutanty, które przeżyły, są zabite testem albo przyjęte z powodem                         | S-30, S-32, S-33, S-38   | `verification-scope.md` „Poprawność testów backendu”, „done when”                         | proposed |
 
@@ -329,7 +329,7 @@ Brak — każda praca przekrojowa M-4 ma widoczny skutek dla użytkownika, opera
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** M-5 postawi testy E2E na tej atrapie (decyzja 2026-11-04: cały Playwright w M-5), więc bez tego wycinka E2E sprawdzałyby atrapę, nie API.
-- **Status:** proposed
+- **Status:** done
 
 ### S-44: Feed z testami regresji i granicą numeru strony
 
@@ -479,3 +479,4 @@ Brak — każda praca przekrojowa M-4 ma widoczny skutek dla użytkownika, opera
 - **S-40: każda zmapowana trasa `/api/admin/**` daje 403 zalogowanemu zwykłemu użytkownikowi, a każda trasa `/internal/**` daje 401 bez tokenu crona; zbiory tras są wyliczane z mapowań, a nie z ręcznej listy.** — Archived 2026-11-11 → `context/archive/2026-11-11-derived-route-guards/`. Lesson: —.
 - **S-35: operator widzi osobno dla każdego źródła udział nieudanych prób oceny według klas błędu, liczony z danych produkcyjnych, a przekroczenie progu daje mu sygnał bez czytania logów.** — Archived 2026-11-11 → `context/archive/2026-11-11-per-source-failure-quality/`. Lesson: —.
 - **S-38: post, którego zapis odrzuca inne ograniczenie bazy niż klucz unikalny (np. `CHECK` albo `NOT NULL`), jest policzony w przebiegu (pominięty albo błąd) i daje powód „wymaga uwagi”; dla każdego przebiegu pobrane = nowe posty + duplikaty + pominięte.** — Archived 2026-11-11 → `context/archive/2026-11-11-post-store-loss-visible/`. Lesson: —.
+- **S-43: `dev/mock-api.js` odpowiada z plików kontraktu albo test porównuje jego odpowiedzi z kontraktem (dziś 7 rozbieżności, m.in. brak Reddita, brak logowania, start przebiegu zawsze 409), a atrapy narzędzi (`pipeline-trigger`, stuby `deploy-gate`) czytają statusy i kształty z rejestru.** — Archived 2026-11-12 → `context/archive/2026-11-11-contract-bound-mocks/`. Lesson: —.

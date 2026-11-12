@@ -2,6 +2,8 @@ package pl.szczurradar.api.health;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.nio.file.Path;
+
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,11 +12,19 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpStatus;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
+import org.springframework.test.web.servlet.assertj.MvcTestResult;
 
 import pl.szczurradar.api.TestcontainersConfiguration;
+import pl.szczurradar.api.contract.ContractFiles;
 
 /** Probe routes, ported from the Python tests/test_health.py. */
 class HealthIT {
+
+	/** The body of {@code /api/ready} without a database, the same file the gate serves for a 503. */
+	private static final Path UNAVAILABLE = Path.of("../tools/deploy-gate/fixtures/api/deploy-safety-unavailable.json");
+
+	/** The body of {@code /api/ready}, which the deploy gate's stub serves ({@code tools/deploy-gate/test.sh}). */
+	private static final Path READY = Path.of("../tools/deploy-gate/fixtures/api/ready.json");
 
 	@Nested
 	@SpringBootTest
@@ -32,9 +42,11 @@ class HealthIT {
 		}
 
 		@Test
-		void readyWhenDatabaseReachable() {
-			assertThat(mvc.get().uri("/api/ready")).hasStatusOk()
-					.bodyJson().isStrictlyEqualTo("{\"status\":\"ready\"}");
+		void readyWhenDatabaseReachable() throws Exception {
+			MvcTestResult result = mvc.get().uri("/api/ready").exchange();
+
+			assertThat(result).hasStatusOk();
+			ContractFiles.assertMatches(result.getResponse().getContentAsString(), READY);
 		}
 
 	}
@@ -64,9 +76,11 @@ class HealthIT {
 		}
 
 		@Test
-		void readyReturns503WhenDatabaseUnavailable() {
-			assertThat(mvc.get().uri("/api/ready")).hasStatus(HttpStatus.SERVICE_UNAVAILABLE)
-					.bodyJson().isStrictlyEqualTo("{\"status\":\"unavailable\"}");
+		void readyReturns503WhenDatabaseUnavailable() throws Exception {
+			MvcTestResult result = mvc.get().uri("/api/ready").exchange();
+
+			assertThat(result).hasStatus(HttpStatus.SERVICE_UNAVAILABLE);
+			ContractFiles.assertMatches(result.getResponse().getContentAsString(), UNAVAILABLE);
 		}
 
 	}

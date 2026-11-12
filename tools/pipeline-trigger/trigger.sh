@@ -204,9 +204,11 @@ answered() {
     fi
 }
 
-# The run statuses of the API (RunStatus), named only here: sets REPLY to ok, failed, interrupted (a
+# The run statuses of the API (RunStatus): sets REPLY to ok, failed, interrupted (a
 # failure whose log line gives the cause), waiting (queued) or active (running). A range run whose
-# source gave no post to store (S-08) ends failed in the API, so it fails here like any other.
+# source gave no post to store (S-08) ends failed in the API, so it fails here like any other. The set of
+# statuses below is guarded by test.sh against rules.json values.runStatus before its first case (a status
+# added there without a branch here, or the other way round, turns the test red).
 classify() {
     case $1 in
         succeeded | partial) REPLY=ok ;;

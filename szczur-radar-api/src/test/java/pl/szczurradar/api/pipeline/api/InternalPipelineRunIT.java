@@ -9,6 +9,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
+import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -61,6 +62,7 @@ import pl.szczurradar.api.alerts.AlertEvent;
 import pl.szczurradar.api.alerts.OperatorAlertQueue;
 import pl.szczurradar.api.cli.MigrateCommand;
 import pl.szczurradar.api.config.SessionConfig;
+import pl.szczurradar.api.contract.ContractFiles;
 import pl.szczurradar.api.internal.PipelineTriggerToken;
 import pl.szczurradar.api.llm.LlmClient;
 import pl.szczurradar.api.pipeline.run.PipelineRun;
@@ -109,6 +111,9 @@ class InternalPipelineRunIT {
 	private static final String DAILY = "/internal/pipeline-runs/daily";
 
 	private static final String SUMMARY = "/internal/pipeline-runs/nightly-summary";
+
+	/** The bodies the cron reads, pinned here and used by the cron's test to build its stub API. */
+	private static final String FIXTURES = "../tools/pipeline-trigger/fixtures/api/";
 
 	private static final String NOT_AUTHENTICATED = "{\"detail\":\"not_authenticated\"}";
 
@@ -242,7 +247,7 @@ class InternalPipelineRunIT {
 
 		assertThat(started).hasStatus(HttpStatus.ACCEPTED);
 		String id = JsonPath.read(started.getResponse().getContentAsString(), "$[0].id");
-		assertThat(started).bodyJson().isStrictlyEqualTo("[{\"id\":\"%s\",\"kind\":\"range\"}]".formatted(id));
+		fixture(started, "daily-started.json");
 		PipelineRun run = runs.findById(UUID.fromString(id)).orElseThrow();
 		assertThat(run.getKind()).isEqualTo(RunKind.RANGE);
 		assertThat(run.getRangeFrom()).isEqualTo(from);
@@ -255,12 +260,10 @@ class InternalPipelineRunIT {
 		awaitStepsClosed(UUID.fromString(id));
 		MvcTestResult status = internal(HttpMethod.GET, "/internal/pipeline-runs/" + id, bearer(TOKEN), null);
 		assertThat(status).hasStatusOk();
+		fixture(status, "run-state-failed.json");
 		Map<String, Object> body = JsonPath.read(status.getResponse().getContentAsString(), "$");
 		PipelineRun finished = runs.findById(UUID.fromString(id)).orElseThrow();
 		assertThat(body)
-			.containsOnlyKeys("id", "kind", "status", "startedAt", "finishedAt", "lastActivityAt", "interruptionCause",
-					"step", "assessTotal", "fetched", "newPosts", "assessedOk", "assessedFailed", "processingErrors",
-					"dead", "skipped")
 			.containsEntry("id", id)
 			.containsEntry("kind", "range")
 			// An empty day: the source gave no post, so the fetch step fails the run (the cron exits 1).
@@ -293,7 +296,7 @@ class InternalPipelineRunIT {
 			jdbc.update("INSERT INTO pipeline_run_steps (run_id, step, started_at, items_in)"
 					+ " VALUES (?, 'assess', '2026-10-26T00:30:08Z', 10)", run);
 
-			Map<String, Object> during = state(run);
+			Map<String, Object> during = state(run, "run-state-running.json");
 
 			assertThat(during).containsEntry("status", "running")
 				.containsEntry("step", "assess")
@@ -311,7 +314,7 @@ class InternalPipelineRunIT {
 			jdbc.update("UPDATE pipeline_run_steps SET status = 'interrupted', finished_at = now() WHERE run_id = ?"
 					+ " AND status = 'running'", run);
 
-			assertThat(state(run)).containsEntry("status", "interrupted")
+			assertThat(state(run, "run-state-interrupted.json")).containsEntry("status", "interrupted")
 				.containsEntry("interruptionCause", "deploy")
 				.containsEntry("step", null)
 				.containsEntry("assessTotal", 10);
@@ -319,6 +322,23 @@ class InternalPipelineRunIT {
 		finally {
 			jdbc.update("UPDATE pipeline_runs SET status = 'failed', finished_at = now() WHERE id = ?"
 					+ " AND status = 'running'", run);
+		}
+	}
+
+	@Test
+	void aQueuedRunHasNoStartNoStepAndNoTotal() throws Exception {
+		UUID run = jdbc.queryForObject("INSERT INTO pipeline_runs (kind, status, requested_by) VALUES ('retry',"
+				+ " 'queued', ?) RETURNING id", UUID.class, SystemAccount.SCHEDULER.id());
+		try {
+			assertThat(state(run, "run-state-queued.json")).containsEntry("status", "queued")
+				.containsEntry("startedAt", null)
+				.containsEntry("lastActivityAt", null)
+				.containsEntry("step", null)
+				.containsEntry("assessTotal", null);
+		}
+		finally {
+			jdbc.update("UPDATE pipeline_runs SET status = 'failed', finished_at = now() WHERE id = ?"
+					+ " AND status = 'queued'", run);
 		}
 	}
 
@@ -359,7 +379,7 @@ class InternalPipelineRunIT {
 
 		assertThat(result).hasStatusOk();
 		String text = JsonPath.read(result.getResponse().getContentAsString(), "$.text");
-		assertThat(result).bodyJson().isStrictlyEqualTo("{\"text\":" + jsonString(text) + "}");
+		fixture(result, "nightly-summary.json");
 		assertThat(text).isEqualTo("""
 				Night 2026-10-26 (range 2026-10-24…2026-10-25): retry partial, range succeeded; errors 0, skipped 2
 				wykop: fetched 7, skipped 2, new 0, leftovers 0; assessed 0, failed 0, dead 0; tokens in 0 (cached 0), out 0
@@ -560,10 +580,16 @@ class InternalPipelineRunIT {
 		return result;
 	}
 
-	/** The cron's view of {@code runId}. */
-	private Map<String, Object> state(UUID runId) throws Exception {
+	/** The body of {@code result} against the cron's file {@code fileName}. */
+	private static void fixture(MvcTestResult result, String fileName) throws Exception {
+		ContractFiles.assertMatches(result.getResponse().getContentAsString(), Path.of(FIXTURES + fileName));
+	}
+
+	/** The cron's view of {@code runId}, which must match the file {@code fileName}. */
+	private Map<String, Object> state(UUID runId, String fileName) throws Exception {
 		MvcTestResult status = internal(HttpMethod.GET, "/internal/pipeline-runs/" + runId, bearer(TOKEN), null);
 		assertThat(status).hasStatusOk();
+		fixture(status, fileName);
 		return JsonPath.read(status.getResponse().getContentAsString(), "$");
 	}
 
