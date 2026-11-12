@@ -70,6 +70,7 @@ export const labels: Record<string, Record<string, string>> = {
   },
   source: { wykop: 'Wykop', reddit: 'Reddit' },
   sourceStatus: { succeeded: 'pobrane', empty: 'bez postów', failed: 'błąd' },
+  qualityStatus: { ok: 'w normie', above_threshold: 'ponad progiem', not_enough_attempts: 'za mało prób' },
 }
 
 export function label(set: keyof typeof labels, value: string): string {

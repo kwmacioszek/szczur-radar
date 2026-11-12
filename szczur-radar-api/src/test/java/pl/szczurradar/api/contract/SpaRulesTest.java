@@ -39,6 +39,7 @@ import pl.szczurradar.api.pipeline.run.SourceFetchStatus;
 import pl.szczurradar.api.pipeline.run.StepStatus;
 import pl.szczurradar.api.posts.Post;
 import pl.szczurradar.api.posts.PostFilter;
+import pl.szczurradar.api.posts.QualityStatus;
 import pl.szczurradar.api.sources.Source;
 import pl.szczurradar.api.text.Whitespace;
 
@@ -94,6 +95,7 @@ class SpaRulesTest {
 		values.put("source", Source.class);
 		values.put("sourceStatus", SourceFetchStatus.class);
 		values.put("attentionReason", AttentionReason.class);
+		values.put("qualityStatus", QualityStatus.class);
 		return values;
 	}
 

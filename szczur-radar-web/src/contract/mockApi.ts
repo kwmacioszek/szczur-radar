@@ -4,7 +4,7 @@ import mockSource from '../../dev/mock-api.js?raw'
 // arrow function, no export), so its text is evaluated here and given a fake `page` that records the route handler.
 
 /** The mode constants of the mock (`const NAME = '…'` lines); a test replaces them in the text before it runs. */
-export type MockConstant = 'MODE' | 'NOTIFICATIONS' | 'AUTH' | 'LOGIN' | 'START' | 'ACTIVATION' | 'FRESHNESS' | 'MISSING'
+export type MockConstant = 'MODE' | 'NOTIFICATIONS' | 'AUTH' | 'LOGIN' | 'START' | 'ACTIVATION' | 'FRESHNESS' | 'MISSING' | 'QUALITY'
 
 export interface MockResponse {
   status: number

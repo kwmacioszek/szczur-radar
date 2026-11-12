@@ -2370,6 +2370,92 @@ On a random **test** topic (never production's), set as `NTFY_URL` on the PR env
 - **To silence the API's events at once**, without a code change: delete `NTFY_URL` (and `NTFY_TOKEN`) on `szczur-radar-api` and redeploy it; the start logs `not configured`, the bell and the log stay, the crons are not affected.
 - **A revert of PR #162** brings `HealthchecksAlerts`, the `api-events` check and `HEALTHCHECK_PING_URL: preserve()` on the API back and drops the declarations of `NTFY_URL` / `NTFY_TOKEN`, so the same trap applies in reverse: **before** the revert merges, delete `NTFY_URL` and `NTFY_TOKEN` from the production API (`railway variable delete …`, as in step 3 above), otherwise the `main` plan proposes their `variable.delete` and the gate stops the deploy. After the revert's deploy: `tools/healthchecks/checks.sh apply production` of the reverted code creates `production/api-events` again and prints its address — set it as `HEALTHCHECK_PING_URL` on the API with `--stdin --skip-deploys`, seal it and redeploy the API (section F-04, runbook steps 1–4). Nothing in the data changes either way; the dead-only runs of the meantime are in `/admin`.
 
+## S-35: jakość ocen per źródło — nieudane próby według klas (per-source-failure-quality)
+
+**Status:** delivered by PR #166; production verification and closure in issue #145.
+
+Change: `per-source-failure-quality` (its folder moves to `context/archive/` when the change is archived). Before S-35 the guardrail "the quality of the LLM's data must be high" (R-15, FR-033) had no measure in production: a failure class was visible only per post in "Nieudane posty", and three different shares were in use (S-28's share of attempts, #121's share of posts on their first attempt, Wykop's attempts with a model answer). S-35 measures one of them, per source, every night, and alarms when a source crosses its threshold. PRD: the S-35 clarification under FR-033. Migration `V15` (an index, below); no new variable, no new service, no change to the cron's script or exit codes.
+
+### What changes for the operator
+
+- **The measure.** The share of failed assessment attempts with a model call (`assessments.result_source = model`, retries included, the prefilter's left out) over the last 7 Warsaw calendar days `[D−6, D]` (`D` = today in Warsaw at the summary), of every run — the cron's and an admin's — per source, split by the contract's failure classes (`contract-v2.md` §12). `posts/AssessmentQuality` computes it from one aggregate query by `assessed_at` (index `ix_assessments_assessed_at`, `V15__assessments_assessed_at_index.sql`; no table, so `tools/db-backup/tables.sh` is unchanged).
+- **The thresholds.** One per source, a constant next to the source (`sources/Source.failureThresholdPercent()`): **Wykop 5 %**, **Reddit 25 %**, set from 35 days of production data (`context/archive/2026-11-11-per-source-failure-quality/evidence/README.md`: Wykop steady at 2.0–2.8 %, Reddit at 14.6–18.4 %). A share **strictly above** the threshold is above it (5.0 % at 5 % is still fine). With **fewer than 100 attempts** in the window the threshold is not checked (a single Wykop night of 60–82 attempts jumps to 10–11 %, the reason for the 7-day window).
+- **The night's summary** (`NIGHT_SUMMARY`, section S-34) gets one line per source with attempts in the window, after the sources' lines and before "Dead in admin runs…", e.g. (production's numbers, window 2026-11-05…2026-11-11):
+
+  ```text
+  wykop quality 7d (2026-11-05…2026-11-11): failed 2.6% of 3134 attempts (schema_violation 0.3%, invalid_reference 0.1%, fabricated_evidence 2.0%, domain_invariant_violation 0.2%); threshold 5%
+  reddit quality 7d (2026-11-05…2026-11-11): failed 16.9% of 598 attempts (schema_violation 7.7%, fabricated_evidence 7.7%, domain_invariant_violation 1.5%); threshold 25%
+  ```
+
+  Each class is its share of **all** the source's attempts (they add up to the failed share, up to rounding), only the classes with a failed attempt, in the contract's order; no brackets without a failed attempt. Above the threshold the line ends `; ABOVE THRESHOLD`; with fewer than 100 attempts it is `reddit quality 7d (…): 46 attempts, fewer than 100, threshold not checked`. The same lines are in the cron's log (`summary:`). The format is pinned by `NightSummaryTest`. The window is read in a transaction of its own before the summary's: when it cannot be read, the summary still goes out with one line `quality 7d (<from>…<to>): unavailable (<the exception's class>)` in place of these lines and no `ASSESSMENT_QUALITY` that night — look for the ERROR `The quality window of the night … could not be read` in the API log (`railway logs -s szczur-radar-api -e production`).
+- **The alarm `ASSESSMENT_QUALITY`** (ntfy, priority 4, title `Szczur Radar ASSESSMENT_QUALITY`) comes only on the night a source **crosses** its threshold: tonight's window is above it, and the window the previous night's summary saw — `[D−7, min(start of D, now − 24 h))`, so an admin's attempts stored during `D−1` count only tonight — was not above it (or had fewer than 100 attempts). The rule is computed again from the data every night (two queries, no stored state): a source that stays above its threshold alarms once and then shows `ABOVE THRESHOLD` in the quiet summary every night; one that drops back and crosses again alarms again. Because nothing is stored and ntfy delivery is never retried, a lost `ASSESSMENT_QUALITY` message is not sent again on a later night: `; ABOVE THRESHOLD` in the summary and the state in `/admin` are the lasting signal, so read them, not only the alarms. The previous night's window is cut at `now − 24 h`, not at the exact time of yesterday's summary: when tonight's runs end much earlier than last night's, the tail of last night's attempts falls out of it, and a source that already alarmed can alarm a second time in the same episode (rare; treat it as the same incident). One event for every source that crossed, raised by the same `POST /internal/pipeline-runs/nightly-summary`, right after `NIGHT_SUMMARY`, for the same run (another event, so the queue's repeat window does not drop it), e.g.:
+
+  ```text
+  ASSESSMENT_QUALITY (the share of failed assessment attempts of a source crossed its threshold over the last 7 days; check the classes in /admin and the failed posts): wykop: failed 19.0% of 147 attempts in 7 days (2026-10-07…2026-10-13), above its threshold 5% (the day before: 46 attempts, fewer than 100) (provider_error 16.3%, schema_violation 0.7%, fabricated_evidence 1.4%, domain_invariant_violation 0.7%); /admin
+  ```
+
+  (the night of 2026-10-13 from the evidence's numbers, after the provider incident of 2026-10-09: on those 35 days the rule gives exactly this one alarm.) No post content and no secret in the detail. No new `AttentionReason`, no bell notification: a failed attempt of a post that still has attempts is no reason for "wymaga uwagi" (PRD v3), so the signal is the window's share, not a run.
+- **What the measure does not count.** Its denominator is the stored attempts (`assessments`), so a provider outage that left no answer after the retries (S-09), errors of the client and of our code (S-17), an interrupted run and the posts left out after the refusals' breaker (S-32) are outside it; they have their own signals (the run's `failed`, `RUN_NEEDS_ATTENTION`, the cron's check). `provider_error` / `timeout` in the measure are only calls that used up an attempt.
+- **Unchanged:** the cron's script, exit codes and check-ins, `RUN_NEEDS_ATTENTION` and the bell, the route's answer `{"text": …}`, the queue's limits, the variables.
+
+### After `ASSESSMENT_QUALITY` (operator)
+
+1. **Which class grows.** Compare tonight's `quality 7d` line of the source with the previous nights' summaries (ntfy history, or `railway logs -s pipeline-trigger -e production`) and with `/admin` (section "Jakość ocen (7 dni)"): one class rising points at its cause.
+2. **The posts.** `/admin` → "Nieudane posty": filter by the source and read the failed posts of that class (the post page has the raw data and the attempts).
+   - `provider_error` / `timeout` rising: likely a provider incident, as on 2026-10-09 (Wykop, `provider_error` 23 of 43 attempts, "`choices` is not set"): check the provider's status page and the API log; once it is over, restore the posts it killed (`POST /api/admin/posts/restore`, section S-33) and let the next run assess them.
+   - `schema_violation` / `invalid_structured_output` / `fabricated_evidence` / `invalid_reference` / `domain_invariant_violation` rising: the model's answers changed — a model or prompt change, or new kind of content in the source. Compare with the recordings (`RecordingsReplayTest`, `src/test/java/.../measurement/`) and, if needed, measure the model on the gold sample before changing `LLM_MODEL` or the prompt (a change of its own, `/10x-plan`).
+3. **Record.** A comment on the slice's or a new issue: the source, the window's numbers, the class and what was done. No alarm comes again until the source drops back below its threshold and crosses again; `ABOVE THRESHOLD` in the summary says it is still above.
+
+### Changing a threshold
+
+A PR changing `Source.failureThresholdPercent()` (its javadoc names the evidence) with `SourceTest` and the numbers that justify it; no variable, no data change. The next night's summary applies it to both windows, tonight's and the night before's: lowering it under a source's current share therefore gives no alarm when the night before was above the new value too, only `ABOVE THRESHOLD` in the line.
+
+### Runbook — after the merge (operator / agent; tracked in issue #145, not in the plan's Progress)
+
+0. **Standing rules** (sections S-05, S-14, S-15): not between about 00:30 and 01:30 UTC, nor while a run is `RUNNING`. The merge redeploys the API; its pre-deploy `migrate` applies `V15` (an index on `assessments`, a write lock of a fraction of a second before the new version starts).
+1. **CI on `main`** green; `railway-config` plans no change on production (no new variable).
+2. **Start.** The API's start log without ERROR, `/api/ready` 200; `V15` in the `migrate` log.
+3. **The first night.** The cron's log (`railway logs -s pipeline-trigger -e production`) has `summary: wykop quality 7d (…)` and `summary: reddit quality 7d (…)` lines before `OK: …`; the phone has `Szczur Radar NIGHT_SUMMARY` with the same lines. With today's shares (Wykop ~2.6 %, Reddit ~17 %) both lines end `; threshold N%` without `ABOVE THRESHOLD` and no `ASSESSMENT_QUALITY` comes.
+4. **Record and close.** Comment on issue #145: the merge commit, the deployment IDs, the first night's quality lines (the numbers, not the topic); close #145 only after this verification.
+
+### Rollback
+
+A revert of PR #166 removes the lines and the alarm; the index from `V15` stays (Flyway is fix-forward, the index is harmless). To silence only the alarm, there is no switch: raise the source's threshold in a PR.
+
+## S-38: post odrzucony przy zapisie nie znika po cichu (post-store-loss-visible)
+
+**Status:** delivered by PR #167; production verification and closure in issue #148.
+
+Change: `post-store-loss-visible` (its folder moves to `context/archive/` when the change is archived). Before S-38 the store step (`pipeline/step/PostStore`) took every `DataIntegrityViolationException` of a single post's save for "stored meanwhile by another run": a post the database refused for another reason — a `CHECK` (e.g. `ck_posts_channel`), `NOT NULL`, a foreign key, a data error — was neither new nor skipped, with no log line, and the run could end `succeeded` (domain distillation R-06, D-15, ranking #2; issue #148). S-38 tells the two apart by reading the post's key again. PRD: FR-005 and the S-38 clarification under the failure signal NFR.
+
+### What changes
+
+- **Three outcomes per post.** The store step ends each post it gets as new (stored by this run), a duplicate (stored by an earlier run, repeated in the same fetch, or — its save failed and its key, read again, is stored — stored meanwhile by another run) or **rejected** (its save failed and its key is still not stored). A rejected post's raw payload rolls back with it; the rest of its chunk is stored. Any other exception ends the step as before.
+- **A rejected post is skipped.** After the store step the run adds each source's rejected posts to the run's `skipped` and to that source's `skipped` in "Wynik per źródło" (`pipeline_run_sources`), so they give the reason `skipped`: the bell, `RUN_NEEDS_ATTENTION` with `skipped N` and the run's error in its detail (section S-18), and `skipped N` in the night's summary (section S-34). The run's status and the source's result do not change (as for skipped elements, section S-08): a run with only rejected posts next to a clean assessment stays `succeeded`, and a source whose every post was rejected stays `succeeded`, so "Dni bez danych" count its day as covered.
+- **The run's error names them**, after the sources' summary and before the assessment's error, joined ` | `: `store rejected N post(s), counted as skipped: <source> <item type> <source id> (<cause>); …`, at most 10 posts, then `; and M more`. `<cause>` is the violated constraint's name (for a `NOT NULL` the column's name), otherwise `SQLState <code>`, otherwise `unknown` — never the database's message, which holds the row's values.
+- **No row values in the driver's messages.** The API's data source sets pgjdbc's `logServerErrorDetail=false` (`szczur-radar-api/src/main/resources/application.properties`, review F1, F2): a failed batch's message no longer carries the statement's parameters, nor the server's `Detail` (`Failing row contains (…)`, `Key (…)=(…)`), so neither the log nor a rejected post's cause carries post text — for every database error of the API, not only the store step.
+- **The equality.** For every range run whose store step succeeded, and each of its sources: fetched = new + duplicates + skipped. `fetched` and `skipped` are on the run and the source's row; new and duplicates per source are in the store's INFO line (duplicates are not stored anywhere else).
+- **Nothing else changes.** No variable, no migration, no new counter or attention reason, no API, SPA or cron contract change. A night without a rejection runs and counts as before.
+
+### What the operator sees
+
+- **API log:** INFO `Run <id> store <source>: <P> post(s), new <A>, duplicates <D>, rejected <R>` for each source with posts (every range run); for each rejected post WARN `Run <id>: the database rejected <source> <item type> <source id> at store (<cause>, <SimpleName>); counted as skipped`, then INFO `Run <id>: <source> store rejected <N>, counted as skipped`. Hibernate's own WARN lines of the failed batch (logger `org.hibernate.orm.jdbc.error`, `Batch entry N <unknown> was aborted: ERROR: … constraint "<name>"`, without the row's values: the data source sets `logServerErrorDetail=false`) come before it; there is no ERROR line.
+- **The run's page** (`/admin/runs/<id>`) and `/admin`: "pominięte: N" counts the rejected posts with the elements skipped at mapping, and the error shows `store rejected …`; the bell has the run's notification.
+
+### Runbook — a post rejected at store (operator)
+
+1. Read the cause in the WARN line or the run's error. A constraint's name points at its migration (`szczur-radar-api/src/main/resources/db/migration/`, e.g. `ck_posts_channel` in `V13`); a `NOT NULL` names its column (e.g. `channel`), a foreign key its constraint (`fk_…`), and `SQLState <code>` appears for data errors (class `22…`, e.g. a value the column type refuses).
+2. Decide whose fault it is: the source's mapper (`sources/<source>/<Source>Mapper`, a value the shared model should not carry, e.g. an empty channel) or the migration (a constraint too strict for real data). Fix it in a change of its own; the raw element is not stored, so take it from the source again (the WARN line names the source id).
+3. After the fix is deployed, start a range run for the post's day from `/admin` (or wait for a night whose D-2…D-1 covers it): the post is not stored yet, so that run stores it as new and assesses it; the day's other posts are duplicates. Nothing retries it before that.
+
+### After the merge (read-only)
+
+The operator has nothing to do: no variable, no migration. Production verification is an ordinary night without rejections: the API log has `Run <id> store wykop: …, rejected 0` and `Run <id> store reddit: …, rejected 0` for the cron's range run, no `the database rejected` line, and the run's `skipped` equal to the sum of the mapping's `skipped` in its `Run <id>: <source> succeeded: fetched N, skipped M` lines; per source N = new + duplicates + M. Record it in issue #148 and close it.
+
+### Rollback
+
+Revert the change: there is no migration and no data step. Runs of the meantime keep their counters; a post rejected before the revert stays unstored until a range run over its day after the cause is fixed.
+
 ## Phases
 
 > Historical (state of 2026-09-26 – 2026-09-27, FastAPI backend); current: the Java API in section F-03, its image in section `api-docker-image`, the pipeline in sections `first-assessed-wykop-feed` and S-05, the database backup in section F-01, CI and the deploy gate in section S-14.

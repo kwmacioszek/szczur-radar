@@ -7,6 +7,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import org.jspecify.annotations.Nullable;
@@ -21,8 +22,13 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import pl.szczurradar.api.TestcontainersConfiguration;
+import pl.szczurradar.api.agents.assessor.validation.FailureClass;
 import pl.szczurradar.api.cli.MigrateCommand;
 import pl.szczurradar.api.pipeline.NightSummary.Night;
+import pl.szczurradar.api.posts.QualityCrossing;
+import pl.szczurradar.api.posts.QualityStatus;
+import pl.szczurradar.api.posts.SourceQuality;
+import pl.szczurradar.api.sources.Source;
 import pl.szczurradar.api.user.SystemAccount;
 
 /**
@@ -37,7 +43,8 @@ import pl.szczurradar.api.user.SystemAccount;
  * 11-08 00:30  G   cron's range, still running — wykop succeeded (3 new posts), reddit failed
  * </pre>
  *
- * The clock stands at 02:00 Warsaw on 8 November 2026.
+ * The clock stands at 02:00 Warsaw on 8 November 2026: the quality window is 2–8 November, and the night
+ * before is cut at 02:00 on the 7th (every attempt above is a model's, the failed ones {@code timeout}).
  */
 @SpringBootTest(properties = MigrateCommand.ENABLE_FLYWAY)
 @Import({ TestcontainersConfiguration.class, NightSummaryIT.TestBeans.class })
@@ -70,10 +77,14 @@ class NightSummaryIT {
 		Night night = summary.of(List.of(nights.range, nights.retry)).orElseThrow();
 
 		assertThat(night.alertRunId()).isEqualTo(nights.range);
+		assertThat(night.crossed()).isEmpty();
+		assertThat(night.qualityAlert()).isEmpty();
 		assertThat(night.text()).isEqualTo("""
 				Night 2026-11-08 (range 2026-11-06…2026-11-07): retry partial, range running; errors 1, skipped 1
 				wykop: fetched 10, skipped 1, new 3, leftovers 1; assessed 2, failed 2, dead 1; tokens in 150 (cached 20), out 15
 				reddit: failed: RedditApiException: HTTP 503 %s…, new 0, leftovers 1; assessed 1, failed 0, dead 0; tokens in 200 (cached 100), out 30
+				wykop quality 7d (2026-11-02…2026-11-08): 6 attempts, fewer than 100, threshold not checked
+				reddit quality 7d (2026-11-02…2026-11-08): 2 attempts, fewer than 100, threshold not checked
 				Dead in admin runs since the previous night: reddit 1
 				/admin""".formatted("x".repeat(NightSummary.MAX_SOURCE_ERROR - 1 - "RedditApiException: HTTP 503 ".length())));
 	}
@@ -86,8 +97,43 @@ class NightSummaryIT {
 		assertThat(night.text()).isEqualTo("""
 				Night 2026-11-08 (range 2026-11-04…2026-11-05): range succeeded; errors 0, skipped 0
 				wykop: fetched 5, skipped 0, new 2, leftovers 0; assessed 0, failed 0, dead 0; tokens in 0 (cached 0), out 0
+				wykop quality 7d (2026-11-02…2026-11-08): 6 attempts, fewer than 100, threshold not checked
+				reddit quality 7d (2026-11-02…2026-11-08): 2 attempts, fewer than 100, threshold not checked
 				Dead in admin runs since the previous night: wykop 1
 				/admin""");
+	}
+
+	/**
+	 * On top of the class comment's rows: Wykop's 100 good attempts on the 3rd and an admin's 10 failed ones
+	 * at 12:00 on the 7th (after the previous night's summary), so Wykop goes above its threshold only tonight
+	 * and crosses; Reddit's 30 of 100 failed on the 3rd keep it above its threshold both nights, no crossing.
+	 */
+	@Test
+	void theQualityLinesAndTheSourceThatCrossedItsThresholdTonight() {
+		UUID wykop = post("wykop", "assessed", 1, nights.firstNight);
+		UUID reddit = post("reddit", "assessed", 1, nights.firstNight);
+		attempts(wykop, nights.firstNight, null, "2026-11-03T10:00:00Z", 100);
+		attempts(wykop, nights.firstNight, FailureClass.FABRICATED_EVIDENCE, "2026-11-07T11:00:00Z", 10);
+		attempts(reddit, nights.firstNight, null, "2026-11-03T10:00:00Z", 70);
+		attempts(reddit, nights.firstNight, FailureClass.SCHEMA_VIOLATION, "2026-11-03T10:00:00Z", 30);
+
+		Night night = summary.of(List.of(nights.range, nights.retry)).orElseThrow();
+
+		assertThat(night.text().lines().filter(line -> line.contains(" quality 7d "))).containsExactly(
+				"wykop quality 7d (2026-11-02…2026-11-08): failed 12.1% of 116 attempts (timeout 3.4%,"
+						+ " fabricated_evidence 8.6%); threshold 5%; ABOVE THRESHOLD",
+				"reddit quality 7d (2026-11-02…2026-11-08): failed 30.4% of 102 attempts (timeout 1.0%,"
+						+ " schema_violation 29.4%); threshold 25%; ABOVE THRESHOLD");
+		assertThat(night.text()).contains("out 30\nwykop quality 7d ", "; ABOVE THRESHOLD\nDead in admin runs");
+		// The night before (1–7 November, cut at 02:00 on the 7th): D0's failed attempt and the 100 good ones.
+		assertThat(night.crossed()).containsExactly(new QualityCrossing(
+				new SourceQuality(Source.WYKOP, 116, 14,
+						Map.of(FailureClass.TIMEOUT, 4L, FailureClass.FABRICATED_EVIDENCE, 10L), 5,
+						QualityStatus.ABOVE_THRESHOLD),
+				new SourceQuality(Source.WYKOP, 101, 1, Map.of(FailureClass.TIMEOUT, 1L), 5, QualityStatus.OK)));
+		assertThat(night.qualityAlert()).contains("wykop: failed 12.1% of 116 attempts in 7 days"
+				+ " (2026-11-02…2026-11-08), above its threshold 5% (the day before: 1.0% of 101 attempts)"
+				+ " (timeout 3.4%, fabricated_evidence 8.6%); /admin");
 	}
 
 	@Test
@@ -180,6 +226,20 @@ class NightSummaryIT {
 				+ " input_tokens, cached_tokens, output_tokens) VALUES (?, ?, ?, ?, '{}', " + HASH + ", CAST(? AS JSONB),"
 				+ " '[]', 'model', false, 'V2', CAST(? AS TIMESTAMPTZ), 0, 1, ?, ?, ?)", post, run, ok ? "ok" : "failed",
 				ok ? null : "timeout", ok ? "{}" : null, assessedAt, inputTokens, cachedTokens, outputTokens);
+	}
+
+	/**
+	 * {@code count} model attempts of {@code post} in {@code run} at {@code assessedAt}: failed with
+	 * {@code failureClass}, or {@code ok} when it is {@code null}.
+	 */
+	private void attempts(UUID post, UUID run, @Nullable FailureClass failureClass, String assessedAt, int count) {
+		boolean ok = failureClass == null;
+		jdbc.update("INSERT INTO assessments (post_id, run_id, status, failure_class, input, input_hash, output,"
+				+ " violations, result_source, flex_fallback, contract_version, assessed_at, duration_ms, attempts)"
+				+ " SELECT CAST(? AS UUID), CAST(? AS UUID), CAST(? AS TEXT), CAST(? AS TEXT), '{}', " + HASH + ","
+				+ " CAST(? AS JSONB), '[]', 'model', false, 'V2', CAST(? AS TIMESTAMPTZ), 0, 1"
+				+ " FROM generate_series(1, ?)", post, run, ok ? "ok" : "failed", ok ? null : failureClass.value(),
+				ok ? "{}" : null, assessedAt, count);
 	}
 
 	/** 02:00 in Warsaw on 8 November 2026. */

@@ -1,5 +1,6 @@
 package pl.szczurradar.api.posts;
 
+import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
@@ -8,6 +9,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
 import pl.szczurradar.api.agents.assessor.AssessmentResult;
+import pl.szczurradar.api.agents.assessor.Provenance;
 
 /**
  * Assessment attempts. The latest attempt of a post is the one with the latest {@code assessed_at},
@@ -59,5 +61,20 @@ public interface AssessmentRepository extends JpaRepository<Assessment, UUID> {
 			+ " from Assessment a join Post p on p.id = a.postId where a.runId in :runIds group by p.source")
 	List<SourceAssessmentTotals> sumWithStatusesBySource(Collection<UUID> runIds, AssessmentResult.Status ok,
 			AssessmentResult.Status failed);
+
+	/**
+	 * The attempts with a model call assessed in {@code [from, until)}, counted per source of their posts and
+	 * failure class ({@link SourceClassCount}; the {@code ok} ones with the class {@code null}), whoever's run
+	 * made them; the prefilter's are left out. The quality window of {@link AssessmentQuality}, by the index
+	 * {@code ix_assessments_assessed_at}.
+	 */
+	default List<SourceClassCount> countModelAttemptsBySourceAndClass(Instant from, Instant until) {
+		return countBySourceAndClass(Provenance.Source.MODEL, from, until);
+	}
+
+	@Query("select new pl.szczurradar.api.posts.SourceClassCount(p.source, a.failureClass, count(a))"
+			+ " from Assessment a join Post p on p.id = a.postId where a.resultSource = :resultSource"
+			+ " and a.assessedAt >= :from and a.assessedAt < :until group by p.source, a.failureClass")
+	List<SourceClassCount> countBySourceAndClass(Provenance.Source resultSource, Instant from, Instant until);
 
 }

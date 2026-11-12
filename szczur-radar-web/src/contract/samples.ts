@@ -11,6 +11,7 @@ import type { Freshness } from '../api/freshness'
 import type { NotificationList } from '../api/notifications'
 import type { MissingDays, Run, SourceState } from '../api/pipeline'
 import type { FailedPost, Page, PostItem, RestoreResult } from '../api/posts'
+import type { QualityWindow } from '../api/quality'
 
 /** A range run of the daily cron that ended partial: one source failed, elements were skipped, a post died. */
 export const sampleRun: Run = {
@@ -859,6 +860,61 @@ export const sampleRestoreResult: RestoreResult = {
   restored: 1,
 }
 
+/**
+ * The quality window (GET /api/admin/assessment-quality) of 6–12 March 2025: Wykop at 5.0 %, its threshold exactly
+ * (`ok`), Reddit at 33.3 % against 25 % (`above_threshold`).
+ */
+export const sampleAssessmentQuality: QualityWindow = {
+  from: '2025-03-06',
+  to: '2025-03-12',
+  windowDays: 7,
+  minAttempts: 100,
+  sources: [
+    {
+      source: 'wykop',
+      attempts: 200,
+      failed: 10,
+      classes: [
+        { failureClass: 'schema_violation', count: 4 },
+        { failureClass: 'fabricated_evidence', count: 6 },
+      ],
+      thresholdPercent: 5,
+      status: 'ok',
+    },
+    {
+      source: 'reddit',
+      attempts: 120,
+      failed: 40,
+      classes: [
+        { failureClass: 'schema_violation', count: 20 },
+        { failureClass: 'fabricated_evidence', count: 15 },
+        { failureClass: 'domain_invariant_violation', count: 5 },
+      ],
+      thresholdPercent: 25,
+      status: 'above_threshold',
+    },
+  ],
+}
+
+/** The same window with fewer than 100 attempts per source: the threshold is not checked; Wykop has no failed one. */
+export const sampleAssessmentQualityFewAttempts: QualityWindow = {
+  from: '2025-03-06',
+  to: '2025-03-12',
+  windowDays: 7,
+  minAttempts: 100,
+  sources: [
+    { source: 'wykop', attempts: 46, failed: 0, classes: [], thresholdPercent: 5, status: 'not_enough_attempts' },
+    {
+      source: 'reddit',
+      attempts: 3,
+      failed: 1,
+      classes: [{ failureClass: 'provider_error', count: 1 }],
+      thresholdPercent: 25,
+      status: 'not_enough_attempts',
+    },
+  ],
+}
+
 /** Every contract file (its name next to this one) with its sample; shapes.test.ts requires one for each file. */
 export const SAMPLES: Record<string, unknown> = {
   'run.json': sampleRun,
@@ -875,4 +931,6 @@ export const SAMPLES: Record<string, unknown> = {
   'failed-posts-page.json': sampleFailedPostsPage,
   'runs-page.json': sampleRunsPage,
   'restore-result.json': sampleRestoreResult,
+  'assessment-quality.json': sampleAssessmentQuality,
+  'assessment-quality-few-attempts.json': sampleAssessmentQualityFewAttempts,
 }

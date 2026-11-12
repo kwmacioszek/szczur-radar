@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 
 import pl.szczurradar.api.agents.assessor.contract.ItemType;
 import pl.szczurradar.api.pipeline.flow.RunFlow.SelectionTarget;
+import pl.szczurradar.api.pipeline.flow.RunFlow.SourceStored;
 import pl.szczurradar.api.pipeline.flow.RunFlow.StoredBatch;
 import pl.szczurradar.api.pipeline.run.RunKind;
 import pl.szczurradar.api.posts.Post;
@@ -37,7 +38,8 @@ class AssessmentSelectionTest {
 		// Only "mine" is still stored among the posts this run stored first (the query's job).
 		when(posts.findIdsFirstStoredBy(RUN, PostStage.STORED)).thenReturn(List.of(mine));
 
-		assertThat(selection.fromStored(new StoredBatch(RUN, List.of(mine, alreadyAssessed))).postIds())
+		assertThat(selection.fromStored(new StoredBatch(RUN, List.of(mine, alreadyAssessed),
+				List.of(new SourceStored(Source.WYKOP, 2, 2, 0, 0)), List.of())).postIds())
 			.containsExactly(mine);
 	}
 
@@ -47,7 +49,8 @@ class AssessmentSelectionTest {
 		UUID notInBatch = UUID.randomUUID();
 		when(posts.findIdsFirstStoredBy(RUN, PostStage.STORED)).thenReturn(List.of(notInBatch, inBatch));
 
-		assertThat(selection.fromStored(new StoredBatch(RUN, List.of(inBatch))).postIds()).containsExactly(inBatch);
+		assertThat(selection.fromStored(new StoredBatch(RUN, List.of(inBatch),
+				List.of(new SourceStored(Source.WYKOP, 1, 1, 0, 0)), List.of())).postIds()).containsExactly(inBatch);
 	}
 
 	@Test

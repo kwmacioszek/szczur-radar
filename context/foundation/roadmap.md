@@ -113,12 +113,12 @@ Na Wykopie (#gielda) i Reddicie codziennie pojawiają się setki postów o inwes
 | S-32 | provider-refusal-breaker          | seria odmów dostawcy zatrzymuje przebieg, zanim zużyje próby pozostałych postów, i daje sygnał jak każdy `failed`                  | —                        | NFR `prd.md:275` (doprecyzowanie PRD v3); audyt §6 R-41; destylacja #3                     | done |
 | S-33 | restore-dead-posts                | admin przywraca zaznaczone martwe posty do oceny, a ich próby są zerowane                                                          | —                        | FR-034, FR-015; destylacja Q-18                                                            | done |
 | S-34 | dead-posts-daily-digest           | operator dostaje co noc w ntfy podsumowanie nocy (liczby i tokeny każdego źródła, martwe posty) zamiast alarmu przy każdym przebiegu z samym martwym postem; zdarzenia API idą przez ntfy, dzwonek bez zmian | —                        | NFR `prd.md:275` (doprecyzowanie PRD v3); destylacja #5, R-42, Q-14                        | done |
-| S-35 | per-source-failure-quality        | operator widzi udział nieudanych prób według klas błędu osobno dla każdego źródła i dostaje sygnał po przekroczeniu progu           | —                        | FR-033; destylacja #1, R-15                                                                | ready    |
+| S-35 | per-source-failure-quality        | operator widzi udział nieudanych prób według klas błędu osobno dla każdego źródła i dostaje sygnał po przekroczeniu progu           | —                        | FR-033; destylacja #1, R-15                                                                | done |
 | S-36 | statement-language-quality        | operator widzi udział tez w innym języku niż post osobno dla każdego źródła, z sygnałem po przekroczeniu progu                     | S-35                     | FR-033; `contract-v2.md` §8 (Q-16); destylacja #1, D-14, R-38                              | proposed |
 | S-37 | source-native-post-labels         | użytkownik widzi typ posta słowami jego źródła: „wpis”/„znalezisko” na Wykopie, „post”/„link” na Reddicie                          | —                        | FR-023 (doprecyzowanie Q-13); destylacja #4, D-12, R-45                                    | done     |
-| S-38 | post-store-loss-visible           | post odrzucony przy zapisie przez inne ograniczenie niż duplikat jest policzony i widoczny, a nie znika po cichu                   | —                        | FR-005, NFR `prd.md:275`; audyt §6 D-15; destylacja #2, D-15                               | ready    |
+| S-38 | post-store-loss-visible           | post odrzucony przy zapisie przez inne ograniczenie niż duplikat jest policzony i widoczny, a nie znika po cichu                   | —                        | FR-005, NFR `prd.md:275`; audyt §6 D-15; destylacja #2, D-15                               | done |
 | S-39 | derived-persistence-guards        | konwerter zapisujący inną wartość niż enum, złożony `CHECK` z literałem i nowy koniec przebiegu bez powiadomienia czerwienią CI     | —                        | NFR `prd.md:289`; audyt §1 R-17, X1, X2, §5 R-23; destylacja #6                            | done |
-| S-40 | derived-route-guards              | każda trasa `/api/admin/**` daje 403 zwykłemu użytkownikowi, a każda `/internal/**` 401 bez tokenu — bez ręcznej listy tras        | —                        | NFR `prd.md:293`, FR-014, FR-015; audyt §1 R-30                                            | ready    |
+| S-40 | derived-route-guards              | każda trasa `/api/admin/**` daje 403 zwykłemu użytkownikowi, a każda `/internal/**` 401 bez tokenu — bez ręcznej listy tras        | —                        | NFR `prd.md:293`, FR-014, FR-015; audyt §1 R-30                                            | done |
 | S-41 | api-contract-shapes-round-two     | każdy kształt odpowiedzi, który czyta SPA, ma plik kontraktu z wariantami `null`, a pole zawsze wysyłane przez API jest wymagane w TS | —                        | FR-006; audyt §2, X3; `verification-scope.md`                                              | done        |
 | S-42 | spa-rules-registry-round-two      | porównanie kodu błędu, limit rozmiaru strony i enumy spoza rejestru są pilnowane testem albo kompilatorem                          | —                        | FR-006; audyt §1 R-22, R-43, X5                                                            | ready    |
 | S-43 | contract-bound-mocks              | atrapa API w SPA i atrapy narzędzi odpowiadają tak jak prawdziwe API, a rozjazd czerwieni test                                     | S-41                     | audyt §3, X4, „Materiał dla M-4” p. 4; `verification-scope.md` „Granice z M-3 i M-5”      | done |
@@ -224,14 +224,14 @@ Brak — każda praca przekrojowa M-4 ma widoczny skutek dla użytkownika, opera
 
 - **Outcome:** operator widzi osobno dla każdego źródła udział nieudanych prób oceny według klas błędu, liczony z danych produkcyjnych, a przekroczenie progu daje mu sygnał bez czytania logów.
 - **Change ID:** per-source-failure-quality
-- **PRD refs:** FR-033 (nieudane próby według klas); `contract-v2.md` §9 (znaczenie klas błędów); destylacja #1, R-15
+- **PRD refs:** FR-033 (nieudane próby według klas); `contract-v2.md` §12 (znaczenie klas błędów); destylacja #1, R-15
 - **Prerequisites:** —
 - **Parallel with:** każdy wycinek poza S-36 (zależy od S-35)
 - **Blockers:** —
 - **Unknowns:**
   - Jakie progi i w jakim oknie (np. ostatnie 7 nocy)? Punkt odniesienia: S-28 zmierzył 17,3 % nieudanych prób na Reddicie wobec 2,3 % na Wykopie, a noce z #121 dały 16,6 % na pierwszej próbie. — Owner: user. Block: no (rozstrzyga wywiad `/10x-plan`).
 - **Risk:** przejmuje część wpisu Parked „Ochrona przed dryfem modelu” (alarm na rosnący udział klas błędu); próg zbyt niski da alarm co noc, jak martwe posty przed S-34.
-- **Status:** ready
+- **Status:** done
 
 ### S-36: Jakość ocen per źródło — tezy w innym języku niż post
 
@@ -269,7 +269,7 @@ Brak — każda praca przekrojowa M-4 ma widoczny skutek dla użytkownika, opera
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** `PostStore.java:68-79` połyka dziś każde naruszenie jako „zapisany przez inny przebieg”, a `PostStoreTest:84-92` to utrwala; realna droga na dzisiejszych danych jest mało prawdopodobna, ryzyko leży w przyszłych ograniczeniach i nowych źródłach.
-- **Status:** ready
+- **Status:** done
 
 ### S-39: Strażnicy zapisu i końca przebiegu liczą zbiory z kodu
 
@@ -293,7 +293,7 @@ Brak — każda praca przekrojowa M-4 ma widoczny skutek dla użytkownika, opera
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** dziś 403 sprawdza ręczna lista 10 tras, a `/internal/**` tylko dwa zakodowane adresy; nowa trasa admina z S-33 jest pierwszą, która by tę lukę pokazała.
-- **Status:** ready
+- **Status:** done
 
 ### S-41: Kontrakt SPA ↔ API, druga runda — kształty
 
@@ -476,4 +476,7 @@ Brak — każda praca przekrojowa M-4 ma widoczny skutek dla użytkownika, opera
 - **S-32: seria odmów dostawcy na kolejnych postach (np. moderacja albo odrzucane żądanie dla każdego posta) zatrzymuje przebieg, zanim zużyje próby pozostałych postów; przebieg kończy się `failed` i daje sygnał jak każdy `failed`, a posty, których nie zdążył ocenić, wracają bez straty próby.** — Archived 2026-11-10 → `context/archive/2026-11-08-provider-refusal-breaker/`. Lesson: W PR env agent sam zakłada jednorazowe konto admina — link i hasło tylko w zmiennych powłoki (`lessons.md`).
 - **S-41: każdy kształt odpowiedzi, który czyta SPA (konto, aktywacja, powiadomienia z `run: null`, wynik źródła, dni bez danych, koperty stron), ma plik kontraktu sprawdzany po obu stronach, warianty `null` są w kontrakcie, a pole, które API zawsze wysyła, jest wymagane w typie TS.** — Archived 2026-11-10 → `context/archive/2026-11-08-api-contract-shapes-round-two/`. Lesson: —.
 - **S-34: przebieg, którego jedynym powodem „wymaga uwagi” jest martwy post, nie daje już operatorowi wiadomości `RUN_NEEDS_ATTENTION` (martwy post obok innego powodu nadal ją daje); zamiast tego operator dostaje co noc, także przy 0 martwych, podsumowanie nocy: linia nocy (zakres, status każdego przebiegu, błędy techniczne, pominięte), linia na każde źródło (pobrane, pominięte, nowe, resztki, ocenione, nieudane, martwe, tokeny wejścia/cache/wyjścia — bez kosztu w pieniądzu) i martwe posty z przebiegów admina od poprzedniej nocy. Wszystkie zdarzenia API (`RUN_NEEDS_ATTENTION`, awarie ścieżek sygnału, `send-test-alert`, podsumowanie `NIGHT_SUMMARY`) przychodzą przez ntfy (`NTFY_URL`, opcjonalny `NTFY_TOKEN`); healthchecks.io → Telegram zostaje dla cronów i `deploy-health`, check `api-events` znika. Dzwonek i strona przebiegu pokazują martwe posty bez zmian.** — Archived 2026-11-11 → `context/archive/2026-11-08-dead-posts-daily-digest/`. Lesson: Nową zmienną z railway.ts ustawiaj na produkcji tuż przed merge'em — inny merge utknie na variable.delete.
+- **S-40: każda zmapowana trasa `/api/admin/**` daje 403 zalogowanemu zwykłemu użytkownikowi, a każda trasa `/internal/**` daje 401 bez tokenu crona; zbiory tras są wyliczane z mapowań, a nie z ręcznej listy.** — Archived 2026-11-11 → `context/archive/2026-11-11-derived-route-guards/`. Lesson: —.
+- **S-35: operator widzi osobno dla każdego źródła udział nieudanych prób oceny według klas błędu, liczony z danych produkcyjnych, a przekroczenie progu daje mu sygnał bez czytania logów.** — Archived 2026-11-11 → `context/archive/2026-11-11-per-source-failure-quality/`. Lesson: —.
+- **S-38: post, którego zapis odrzuca inne ograniczenie bazy niż klucz unikalny (np. `CHECK` albo `NOT NULL`), jest policzony w przebiegu (pominięty albo błąd) i daje powód „wymaga uwagi”; dla każdego przebiegu pobrane = nowe posty + duplikaty + pominięte.** — Archived 2026-11-11 → `context/archive/2026-11-11-post-store-loss-visible/`. Lesson: —.
 - **S-43: `dev/mock-api.js` odpowiada z plików kontraktu albo test porównuje jego odpowiedzi z kontraktem (dziś 7 rozbieżności, m.in. brak Reddita, brak logowania, start przebiegu zawsze 409), a atrapy narzędzi (`pipeline-trigger`, stuby `deploy-gate`) czytają statusy i kształty z rejestru.** — Archived 2026-11-12 → `context/archive/2026-11-11-contract-bound-mocks/`. Lesson: —.

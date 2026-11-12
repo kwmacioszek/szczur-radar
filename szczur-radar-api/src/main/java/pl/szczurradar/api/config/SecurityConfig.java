@@ -37,7 +37,8 @@ import pl.szczurradar.api.user.Role;
 
 /**
  * Two filter chains, each deny by default; {@code AuthorizationCompletenessIT} calls every mapped
- * route without credentials and expects 401.
+ * route without credentials and expects 401, and {@code AdminRoleIT} calls every mapped route under
+ * {@code /api/admin/} as a plain user and expects 403.
  *
  * <ul>
  *   <li>{@link #internalSecurity}, first: {@code /internal/**}, the daily cron's routes. Reachable only

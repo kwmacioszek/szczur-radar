@@ -185,6 +185,29 @@ const ROUTES: Route[] = [
     checks: [{ at: '$', refs: [{ file: 'missing-days.json', at: '$' }], enums: { '$.days[].sources[]': 'source' } }],
   },
   {
+    name: 'GET /api/admin/assessment-quality (QUALITY data, few and none)',
+    request: { method: 'GET', path: '/api/admin/assessment-quality' },
+    fetch: async (api) => [
+      await ok(api, 'GET', '/api/admin/assessment-quality'),
+      await ok(await installMock({ QUALITY: 'few' }), 'GET', '/api/admin/assessment-quality'),
+      await ok(await installMock({ QUALITY: 'none' }), 'GET', '/api/admin/assessment-quality'),
+    ],
+    checks: [
+      {
+        at: '$',
+        refs: [
+          { file: 'assessment-quality.json', at: '$' },
+          { file: 'assessment-quality-few-attempts.json', at: '$' },
+        ],
+        enums: {
+          '$.sources[].source': 'source',
+          '$.sources[].status': 'qualityStatus',
+          '$.sources[].classes[].failureClass': 'failureClass',
+        },
+      },
+    ],
+  },
+  {
     name: 'GET /api/admin/pipeline-runs (every page)',
     request: { method: 'GET', path: PIPELINE_RUNS },
     fetch: async (api) => (await pages(api, '/api/admin/pipeline-runs', 20)).bodies,
@@ -582,6 +605,9 @@ const ROWS: Row[] = [
   // a page past the end of the feed stays a 200 (the API's), the filter keeps its 400
   { name: 'the feed past its end', method: 'GET', path: '/api/posts?page=9', status: 200 },
   { name: 'the feed with an unknown kind', method: 'GET', path: '/api/posts?kind=nope', status: 400, detail: 'invalid_request' },
+
+  // a mode's error answer is the API's unexpected error
+  { name: 'quality: error', constants: { QUALITY: 'error' }, method: 'GET', path: '/api/admin/assessment-quality', status: 500, detail: 'internal_error' },
 ]
 
 describe('dev/mock-api.js behaves like the API', () => {
@@ -787,6 +813,26 @@ describe('the mock\'s suspended answers wait 60 s (fake clocks)', () => {
 // --- invariants of the mock's data -----------------------------------------------------------------------------
 
 describe('the mock\'s data is a state the API produces', () => {
+  it.each(['data', 'few'])('QUALITY %s: each source\'s state follows AssessmentQuality.status from its counts', async (quality) => {
+    const failureClasses: readonly string[] = rules.values.failureClass
+    const body = (await ok(await installMock({ QUALITY: quality }), 'GET', '/api/admin/assessment-quality')) as {
+      minAttempts: number
+      sources: { source: string; attempts: number; failed: number; thresholdPercent: number; status: string
+        classes: { failureClass: string; count: number }[] }[]
+    }
+    expect(body.sources.length).toBeGreaterThan(0)
+    for (const source of body.sources) {
+      // failed is the sum of its classes, each with a count, in the order of FailureClass (EnumMap)
+      expect(source.classes.reduce((sum, c) => sum + c.count, 0), source.source).toBe(source.failed)
+      for (const c of source.classes) expect(c.count, `${source.source} ${c.failureClass}`).toBeGreaterThan(0)
+      const order = source.classes.map((c) => failureClasses.indexOf(c.failureClass))
+      expect(order, source.source).toEqual([...order].sort((a, b) => a - b))
+      const status = source.attempts < body.minAttempts ? 'not_enough_attempts'
+        : source.failed * 100 > source.thresholdPercent * source.attempts ? 'above_threshold' : 'ok'
+      expect(source.status, source.source).toBe(status)
+    }
+  })
+
   it('every last attempt carries at least one violation (AssessmentResult refuses none)', async () => {
     const api = await installMock()
     const page = (await ok(api, 'GET', '/api/admin/posts/failed')) as {

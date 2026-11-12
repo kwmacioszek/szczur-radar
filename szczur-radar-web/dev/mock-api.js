@@ -1,7 +1,7 @@
 /*
  * Mock /api/* for screenshots of /admin, a run (/admin/runs/:id), the feed (/), a post (/posts/:id) and /activate
  * without a running API (playwright-cli run-code), kept for /10x-ui changes. Another mode = run a copy of this file
- * with MODE, NOTIFICATIONS, AUTH, LOGIN, START, ACTIVATION, FRESHNESS or MISSING replaced.
+ * with MODE, NOTIFICATIONS, AUTH, LOGIN, START, ACTIVATION, FRESHNESS, MISSING or QUALITY replaced.
  * Ids are UUIDs like the API's (a malformed id in a path is 400 invalid_request, an unknown one 404): the 5th group
  * is a kind and a number, 00000000-0000-4000-8000-<kind 4 digits><number 8 digits> — kind 0001 a run, 0002 a
  * notification, 0003 a failed post, 0004 a feed post (number from 0), 0005 an account. Below, <run N> is
@@ -25,6 +25,13 @@
  * /api/admin/pipeline-runs/missing-days of pipeline/api/PipelineRunController.java, relative to today in Warsaw (D):
  *       'gaps'  the window D-15…D-2 with Wykop missing D-9…D-7 and D-4, Reddit D-8, D-5 and D-4, the default,
  *       'none'  the window and no day,
+ *       'error' 500.
+ * QUALITY (the "Jakość ocen (7 dni)" section of /admin; MODE 'loading' and 'error' apply first), like
+ * /api/admin/assessment-quality of posts/api/AssessmentQualityController.java, the window D-6…D:
+ *       'data'  Wykop ok (2.6 % of 3134 attempts against 5 %), Reddit above its threshold (27.4 % of 598 against 25 %),
+ *               the default,
+ *       'few'   Wykop ok, Reddit with 46 attempts: fewer than minAttempts, the threshold not checked,
+ *       'none'  the window and no source (no attempt in it),
  *       'error' 500.
  * Runs (/api/admin/pipeline-runs?page&size, 32 in all: "Pokaż starsze" has a second page of 20; page 0…21474836,
  * size 1…100, else 400 invalid_request) answer like
@@ -423,6 +430,7 @@ async page => {
   const ACTIVATION = 'valid'
   const FRESHNESS = 'date'
   const MISSING = 'gaps'
+  const QUALITY = 'data'
   // The session, as the API keeps it: who is signed in now (AUTH sets the start; login and logout change it).
   const ADMIN_EMAIL = 'admin@szczur-radar.pl'
   const account = (email) => ({ id: uuid(5, email === ADMIN_EMAIL ? 1 : 2), email, role: email === ADMIN_EMAIL ? 'admin' : 'user' })
@@ -437,6 +445,23 @@ async page => {
     days: MISSING === 'none' ? [] : [[9, ['wykop']], [8, SOURCES], [7, ['wykop']], [5, ['reddit']], [4, SOURCES]]
       .map(([n, sources]) => ({ day: dMinus(n), sources })),
   })
+  // The quality window by QUALITY: counts per source, the state as the API computes it.
+  const WYKOP_QUALITY = { source: 'wykop', attempts: 3134, failed: 82, classes: [
+    { failureClass: 'schema_violation', count: 10 }, { failureClass: 'invalid_reference', count: 4 },
+    { failureClass: 'fabricated_evidence', count: 62 }, { failureClass: 'domain_invariant_violation', count: 6 },
+  ], thresholdPercent: 5, status: 'ok' }
+  const QUALITY_SOURCES = {
+    data: [WYKOP_QUALITY, { source: 'reddit', attempts: 598, failed: 164, classes: [
+      { failureClass: 'provider_error', count: 3 }, { failureClass: 'schema_violation', count: 80 },
+      { failureClass: 'fabricated_evidence', count: 72 }, { failureClass: 'domain_invariant_violation', count: 9 },
+    ], thresholdPercent: 25, status: 'above_threshold' }],
+    few: [WYKOP_QUALITY, { source: 'reddit', attempts: 46, failed: 7, classes: [
+      { failureClass: 'schema_violation', count: 4 }, { failureClass: 'fabricated_evidence', count: 3 },
+    ], thresholdPercent: 25, status: 'not_enough_attempts' }],
+    none: [],
+  }
+  const assessmentQuality = () => ({ from: dMinus(6), to: today, windowDays: 7, minAttempts: 100,
+    sources: QUALITY_SOURCES[QUALITY] })
   // The sources of /api/freshness by FRESHNESS, in the API's order.
   const WYKOP_UPDATE = { source: 'wykop', lastUpdatedAt: '2026-10-13T03:12:00Z' }
   const FRESHNESS_SOURCES = {
@@ -544,6 +569,9 @@ async page => {
     if (p === '/api/admin/pipeline-runs/sources') return json(route, SOURCES.map((source) => ({ source, configured: true })))
     if (p === '/api/admin/pipeline-runs/missing-days') {
       return MISSING === 'error' ? json(route, { detail: 'internal_error' }, 500) : json(route, missingDays())
+    }
+    if (p === '/api/admin/assessment-quality' && method === 'GET') {
+      return QUALITY === 'error' ? json(route, { detail: 'internal_error' }, 500) : json(route, assessmentQuality())
     }
     if (p === '/api/admin/pipeline-runs' && method === 'GET') {
       const params = pageParams(url, 20)
