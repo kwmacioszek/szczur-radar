@@ -30,7 +30,11 @@ nothing.
 
 ## Adding a source
 
-1. `sources/Source`: the constant (its `value()` is what is stored), and one Flyway migration adding
+1. `sources/Source`: the constant (its `value()` is what is stored) with its threshold of failed
+   assessment attempts (`failureThresholdPercent()`, S-35: the share over the 7-day quality window of
+   `posts/AssessmentQuality` above which the night's summary and `/admin` show the source above it; Wykop
+   5, Reddit 25, from production data — set a new source's from its first measured weeks; a change is a
+   PR), and one Flyway migration adding
    that value to the four `CHECK` sets of a source: `posts.source`, `raw_payloads.source`,
    `pipeline_runs.sources` and `pipeline_run_sources.source` (registering the source; nothing else in
    persistence changes). `persistence/ClosedSetsIT` is red when the constant has no such migration (or

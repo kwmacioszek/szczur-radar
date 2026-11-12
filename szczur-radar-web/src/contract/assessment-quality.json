@@ -1,0 +1,46 @@
+{
+  "from": "2025-03-06",
+  "to": "2025-03-12",
+  "windowDays": 7,
+  "minAttempts": 100,
+  "sources": [
+    {
+      "source": "wykop",
+      "attempts": 200,
+      "failed": 10,
+      "classes": [
+        {
+          "failureClass": "schema_violation",
+          "count": 4
+        },
+        {
+          "failureClass": "fabricated_evidence",
+          "count": 6
+        }
+      ],
+      "thresholdPercent": 5,
+      "status": "ok"
+    },
+    {
+      "source": "reddit",
+      "attempts": 120,
+      "failed": 40,
+      "classes": [
+        {
+          "failureClass": "schema_violation",
+          "count": 20
+        },
+        {
+          "failureClass": "fabricated_evidence",
+          "count": 15
+        },
+        {
+          "failureClass": "domain_invariant_violation",
+          "count": 5
+        }
+      ],
+      "thresholdPercent": 25,
+      "status": "above_threshold"
+    }
+  ]
+}

@@ -38,7 +38,8 @@ import pl.szczurradar.api.pipeline.run.StepStatus;
  * The daily cron's routes ({@code /internal/**}: the trigger token only, the system account
  * {@code SCHEDULER} as the requester; see {@code config/SecurityConfig}). The cron starts the daily
  * run, polls each created run until it ends and then asks for the night's summary, which goes to the
- * operator ({@link AlertEvent#NIGHT_SUMMARY}) and into the cron's log. Starting goes through the same
+ * operator ({@link AlertEvent#NIGHT_SUMMARY}, then {@link AlertEvent#ASSESSMENT_QUALITY} when a source
+ * crossed its quality threshold) and into the cron's log. Starting goes through the same
  * {@link PipelineRunService#startRange} as the admin's button.
  */
 @RestController
@@ -102,7 +103,9 @@ class InternalPipelineRunController {
 	/**
 	 * The night's summary of the given runs ({@link NightSummary}): raised to the operator as
 	 * {@link AlertEvent#NIGHT_SUMMARY} for the range run (else the first one, so a repeated call within the
-	 * queue's repeat window is one message) and returned as {@code {"text": …}} for the cron's log. 400
+	 * queue's repeat window is one message) and returned as {@code {"text": …}} for the cron's log; when a
+	 * source crossed its quality threshold tonight ({@link NightSummary.Night#qualityAlert()}), also
+	 * {@link AlertEvent#ASSESSMENT_QUALITY} for the same run, after the summary. 400
 	 * {@code invalid_request} without 1–{@value NightlySummaryRequest#MAX_RUNS} ids; 404 {@code not_found}
 	 * when one of them is no run.
 	 */
@@ -117,6 +120,9 @@ class InternalPipelineRunController {
 		}
 		String text = night.text();
 		OperatorAlertQueue.raise(alerts, AlertEvent.NIGHT_SUMMARY, night.alertRunId(), text);
+		night.qualityAlert()
+			.ifPresent(detail -> OperatorAlertQueue.raise(alerts, AlertEvent.ASSESSMENT_QUALITY, night.alertRunId(),
+					detail));
 		return ResponseEntity.ok(new NightlySummary(text));
 	}
 

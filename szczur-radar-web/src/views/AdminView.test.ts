@@ -6,12 +6,15 @@ import { ApiError } from '../api/client'
 import { fetchNotifications } from '../api/notifications'
 import { type MissingDays, type Run, fetchMissingDays, fetchRuns, fetchSources, retryPosts, startRange } from '../api/pipeline'
 import { type FailedPost, fetchFailedPosts, restorePosts } from '../api/posts'
+import { fetchAssessmentQuality } from '../api/quality'
 import { resetSession } from '../auth/session'
+import { sampleAssessmentQuality, sampleAssessmentQualityFewAttempts } from '../contract/samples'
 import { createAppRouter } from '../router'
 import AdminView from './AdminView.vue'
 
 vi.mock('../api/auth', () => ({ fetchMe: vi.fn(), login: vi.fn(), logout: vi.fn() }))
 vi.mock('../api/posts', () => ({ fetchPosts: vi.fn(), fetchFailedPosts: vi.fn(), restorePosts: vi.fn() }))
+vi.mock('../api/quality', () => ({ fetchAssessmentQuality: vi.fn() }))
 // The header shows an admin the notification bell.
 vi.mock('../api/notifications', () => ({
   fetchNotifications: vi.fn(),
@@ -123,6 +126,9 @@ describe('AdminView', () => {
     vi.mocked(fetchFailedPosts).mockReset().mockResolvedValue({ items: [], page: 0, size: 50, total: 0 })
     vi.mocked(fetchNotifications).mockReset().mockResolvedValue({ unread: 0, items: [] })
     vi.mocked(fetchMissingDays).mockReset().mockResolvedValue({ from: '2026-10-09', to: '2026-10-22', days: [] })
+    vi.mocked(fetchAssessmentQuality)
+      .mockReset()
+      .mockResolvedValue({ from: '2026-10-16', to: '2026-10-22', windowDays: 7, minAttempts: 100, sources: [] })
     vi.mocked(startRange).mockReset()
     vi.mocked(retryPosts).mockReset()
     vi.mocked(restorePosts).mockReset()
@@ -697,6 +703,77 @@ describe('AdminView', () => {
       await vi.advanceTimersByTimeAsync(10_000)
       await flushPromises()
       expect(fetchMissingDays).toHaveBeenCalledTimes(2)
+    })
+  })
+
+  describe('assessment quality', () => {
+    function section(wrapper: Awaited<ReturnType<typeof mountAdmin>>) {
+      return wrapper.find('section[aria-labelledby="quality-title"]')
+    }
+
+    it('shows the window and, per source, its share of failed attempts, its classes, threshold and state', async () => {
+      vi.mocked(fetchAssessmentQuality).mockResolvedValue(sampleAssessmentQuality)
+      const wrapper = await mountAdmin()
+      expect(section(wrapper).find('h2').text()).toBe('Jakość ocen (7 dni)')
+      expect(section(wrapper).find('.quality-window').text()).toContain('Od 6.03.2025 do 12.03.2025')
+      const rows = section(wrapper).findAll('.quality-source')
+      expect(rows.map((row) => row.find('strong').text())).toEqual(['Wykop', 'Reddit'])
+      expect(rows.map((row) => row.find('.status-badge').text())).toEqual(['w normie', 'ponad progiem'])
+      expect(rows.map((row) => row.find('.status-badge').attributes('data-tone'))).toEqual(['success', 'warning'])
+      expect(rows.map((row) => row.find('.quality-failed').text())).toEqual([
+        'nieudane 5,0% z 200 prób · próg 5%',
+        'nieudane 33,3% z 120 prób · próg 25%',
+      ])
+      expect(rows.map((row) => row.find('.quality-classes').text())).toEqual([
+        'niezgodność ze schematem 2,0% · zmyślony cytat 3,0%',
+        'niezgodność ze schematem 16,7% · zmyślony cytat 12,5% · naruszenie reguł kontraktu 4,2%',
+      ])
+      expect(section(wrapper).attributes('aria-busy')).toBeUndefined()
+    })
+
+    it('says too few attempts in a neutral tone, and shows no classes without a failed attempt', async () => {
+      vi.mocked(fetchAssessmentQuality).mockResolvedValue(sampleAssessmentQualityFewAttempts)
+      const wrapper = await mountAdmin()
+      const rows = section(wrapper).findAll('.quality-source')
+      expect(rows.map((row) => row.find('.status-badge').text())).toEqual(['za mało prób', 'za mało prób'])
+      expect(rows.map((row) => row.find('.status-badge').attributes('data-tone'))).toEqual(['neutral', 'neutral'])
+      expect(rows[0]!.find('.quality-failed').text()).toBe('nieudane 0,0% z 46 prób · próg 5%')
+      expect(rows[0]!.find('.quality-classes').exists()).toBe(false)
+      expect(rows[1]!.find('.quality-failed').text()).toBe('nieudane 33,3% z 3 prób · próg 25%')
+    })
+
+    it('says there is no assessment in the window', async () => {
+      const wrapper = await mountAdmin()
+      expect(section(wrapper).find('.empty').text()).toBe('Brak ocen w ostatnich 7 dniach.')
+      expect(section(wrapper).find('.quality-window').text()).toContain('Od 16.10.2026 do 22.10.2026')
+      expect(section(wrapper).find('.quality-source').exists()).toBe(false)
+    })
+
+    it('says it is loading until the API answers', async () => {
+      vi.mocked(fetchAssessmentQuality).mockReturnValue(never())
+      const wrapper = await mountAdmin()
+      expect(section(wrapper).find('.loading').text()).toBe('Wczytywanie…')
+      expect(section(wrapper).attributes('aria-busy')).toBe('true')
+      expect(section(wrapper).find('.empty').exists()).toBe(false)
+    })
+
+    it('says the quality failed to load', async () => {
+      vi.mocked(fetchAssessmentQuality).mockRejectedValue(new ApiError(500, 'internal_error'))
+      const wrapper = await mountAdmin()
+      expect(section(wrapper).find('[role="alert"]').text()).toBe('Nie udało się wczytać jakości ocen.')
+      expect(section(wrapper).find('.empty').exists()).toBe(false)
+    })
+
+    it('reads the window again with Odśwież', async () => {
+      vi.mocked(fetchAssessmentQuality).mockResolvedValueOnce(sampleAssessmentQuality)
+      const wrapper = await mountAdmin()
+      expect(section(wrapper).findAll('.quality-source')).toHaveLength(2)
+
+      await wrapper.findAll('button').find((button) => button.text() === 'Odśwież')!.trigger('click')
+      await flushPromises()
+
+      expect(fetchAssessmentQuality).toHaveBeenCalledTimes(2)
+      expect(section(wrapper).find('.empty').text()).toBe('Brak ocen w ostatnich 7 dniach.')
     })
   })
 
