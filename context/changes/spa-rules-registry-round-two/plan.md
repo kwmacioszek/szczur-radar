@@ -428,4 +428,4 @@ Brak migracji bazy. Nowe pole w `/api/admin/notifications` jest addytywne. SPA i
 - [x] 4.5 Obraz web buduje się z własnego kontekstu: `docker build -t sr-web-rules ./szczur-radar-web && docker rmi sr-web-rules` — d4eae6f
 - [x] 4.6 Celowe zepsucie R-22 (agent wykonuje i cofa): przywrócenie `run.skipped > 0` w `runTone` albo `hasSkipped` w `runStatusLabel` daje czerwony `runs.test.ts`; usunięcie `attentionReasons` z `notifications.json` i próbki daje błąd `vue-tsc` i czerwony `mockApi.test.ts` — d4eae6f
 - [x] 4.7 Atrapa w przeglądarce (agent): przed zmianą `src/runs.ts` (§3) agent zapisuje w scratchpadzie teksty odznak rozwiniętego dzwonka z `npm run dev` z `dev/mock-api.js` (`playwright-cli`, `/admin` jako admin). Po zmianie te same kroki dają identyczną listę tekstów (np. „przerwany — nowe wdrożenie”), a w konsoli nie ma błędów — d4eae6f
-- [ ] 4.8 CI na PR zielone, z budową obrazu web, testami i `railway-config` dla PR env: `gh pr checks <PR> --watch` kończy się bez czerwonego joba
+- [x] 4.8 CI na PR zielone, z budową obrazu web, testami i `railway-config` dla PR env: `gh pr checks <PR> --watch` kończy się bez czerwonego joba — 937c46c (PR #170)
