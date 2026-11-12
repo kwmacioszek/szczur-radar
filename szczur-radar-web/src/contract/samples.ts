@@ -903,14 +903,14 @@ export const sampleAssessmentQualityFewAttempts: QualityWindow = {
   windowDays: 7,
   minAttempts: 100,
   sources: [
-    { source: 'wykop', attempts: 46, failed: 0, classes: [], thresholdPercent: 5, status: 'not_enough_attempts' },
+    { source: 'wykop', attempts: 46, failed: 0, classes: [], thresholdPercent: 5, status: 'not_enough_data' },
     {
       source: 'reddit',
       attempts: 3,
       failed: 1,
       classes: [{ failureClass: 'provider_error', count: 1 }],
       thresholdPercent: 25,
-      status: 'not_enough_attempts',
+      status: 'not_enough_data',
     },
   ],
 }

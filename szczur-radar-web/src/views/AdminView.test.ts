@@ -735,7 +735,7 @@ describe('AdminView', () => {
       vi.mocked(fetchAssessmentQuality).mockResolvedValue(sampleAssessmentQualityFewAttempts)
       const wrapper = await mountAdmin()
       const rows = section(wrapper).findAll('.quality-source')
-      expect(rows.map((row) => row.find('.status-badge').text())).toEqual(['za mało prób', 'za mało prób'])
+      expect(rows.map((row) => row.find('.status-badge').text())).toEqual(['za mało danych', 'za mało danych'])
       expect(rows.map((row) => row.find('.status-badge').attributes('data-tone'))).toEqual(['neutral', 'neutral'])
       expect(rows[0]!.find('.quality-failed').text()).toBe('nieudane 0,0% z 46 prób · próg 5%')
       expect(rows[0]!.find('.quality-classes').exists()).toBe(false)

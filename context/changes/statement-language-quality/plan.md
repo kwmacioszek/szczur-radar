@@ -422,21 +422,21 @@ V16 dodaje kolumnę, wypełnia ją jednym `UPDATE` według `source` i zakłada `
 
 #### Automated
 
-- [x] 1.1 `LanguageEvidenceTest` zielony: oba języki, brak rozstrzygnięcia, kolejność reguł, słowa wspólne
-- [x] 1.2 `SourceTest` przypina język i próg języka obu źródeł
-- [x] 1.3 `V16BackfillIT` zielony: backfill językiem źródła, `CHECK` odrzuca inną wartość
-- [x] 1.4 `./mvnw -B verify` zielone (`JpaSchemaIT`, `MigrationsIT`, `ClosedSetsIT`, `PostColumnsIT`)
-- [x] 1.5 `tools/db-backup/test.sh` zielony
-- [x] 1.6 `python3 tools/render_roadmap_svg.py` kończy się kodem 0 i zmienia kartę S-36 w `docs/visuals/roadmap.svg`
+- [x] 1.1 `LanguageEvidenceTest` zielony: oba języki, brak rozstrzygnięcia, kolejność reguł, słowa wspólne — 641cce5
+- [x] 1.2 `SourceTest` przypina język i próg języka obu źródeł — 641cce5
+- [x] 1.3 `V16BackfillIT` zielony: backfill językiem źródła, `CHECK` odrzuca inną wartość — 641cce5
+- [x] 1.4 `./mvnw -B verify` zielone (`JpaSchemaIT`, `MigrationsIT`, `ClosedSetsIT`, `PostColumnsIT`) — 641cce5
+- [x] 1.5 `tools/db-backup/test.sh` zielony — 641cce5
+- [x] 1.6 `python3 tools/render_roadmap_svg.py` kończy się kodem 0 i zmienia kartę S-36 w `docs/visuals/roadmap.svg` — 641cce5
 
 ### Phase 2: Miara języka tez
 
 #### Automated
 
-- [ ] 2.1 `AssessmentQualityTest` zielony: brzegi 499/500 tez i progu, nierozstrzygnięta teza, przejścia miary języka
-- [ ] 2.2 `AssessmentQualityIT` zielony: tezy tylko z udanych prób z modelem, `claims` niebędące tablicą pominięte, granice okna, miara czyta `posts.language`
-- [ ] 2.3 `./mvnw -B verify` zielone (`SpaRulesTest`, `ContractVariantsTest` po zmianie nazwy stanu)
-- [ ] 2.4 `npm test` i `npm run build` zielone po zmianie nazwy stanu
+- [x] 2.1 `AssessmentQualityTest` zielony: brzegi 499/500 tez i progu, nierozstrzygnięta teza, przejścia miary języka
+- [x] 2.2 `AssessmentQualityIT` zielony: tezy tylko z udanych prób z modelem, `claims` niebędące tablicą pominięte, granice okna, miara czyta `posts.language`
+- [x] 2.3 `./mvnw -B verify` zielone (`SpaRulesTest`, `ContractVariantsTest` po zmianie nazwy stanu)
+- [x] 2.4 `npm test` i `npm run build` zielone po zmianie nazwy stanu
 
 ### Phase 3: Podsumowanie nocy i alarm
 

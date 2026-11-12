@@ -5,9 +5,9 @@ import type { FailureClass } from './posts'
 /**
  * A source's window against its threshold — posts/QualityStatus, computed by the API: enough attempts and the share
  * of failed ones not above the threshold (`ok`), strictly above it (`above_threshold`), or fewer than `minAttempts`
- * attempts, so the threshold is not checked (`not_enough_attempts`).
+ * attempts, so the threshold is not checked (`not_enough_data`, the state below any measure's minimum).
  */
-export type QualityStatus = 'ok' | 'above_threshold' | 'not_enough_attempts'
+export type QualityStatus = 'ok' | 'above_threshold' | 'not_enough_data'
 
 /** The failed attempts of one failure class. */
 export interface ClassCount {

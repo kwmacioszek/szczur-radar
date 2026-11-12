@@ -457,7 +457,7 @@ async page => {
     ], thresholdPercent: 25, status: 'above_threshold' }],
     few: [WYKOP_QUALITY, { source: 'reddit', attempts: 46, failed: 7, classes: [
       { failureClass: 'schema_violation', count: 4 }, { failureClass: 'fabricated_evidence', count: 3 },
-    ], thresholdPercent: 25, status: 'not_enough_attempts' }],
+    ], thresholdPercent: 25, status: 'not_enough_data' }],
     none: [],
   }
   const assessmentQuality = () => ({ from: dMinus(6), to: today, windowDays: 7, minAttempts: 100,

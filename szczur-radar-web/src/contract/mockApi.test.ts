@@ -827,7 +827,7 @@ describe('the mock\'s data is a state the API produces', () => {
       for (const c of source.classes) expect(c.count, `${source.source} ${c.failureClass}`).toBeGreaterThan(0)
       const order = source.classes.map((c) => failureClasses.indexOf(c.failureClass))
       expect(order, source.source).toEqual([...order].sort((a, b) => a - b))
-      const status = source.attempts < body.minAttempts ? 'not_enough_attempts'
+      const status = source.attempts < body.minAttempts ? 'not_enough_data'
         : source.failed * 100 > source.thresholdPercent * source.attempts ? 'above_threshold' : 'ok'
       expect(source.status, source.source).toBe(status)
     }

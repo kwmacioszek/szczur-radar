@@ -88,7 +88,7 @@ class NightSummaryTest {
 				QualityStatus.ABOVE_THRESHOLD);
 		QualityWindow quality = new QualityWindow(LocalDate.of(2026, 11, 2), LocalDate.of(2026, 11, 8),
 				List.of(wykop, new SourceQuality(Source.REDDIT, 46, 9, Map.of(FailureClass.SCHEMA_VIOLATION, 9L), 25,
-						QualityStatus.NOT_ENOUGH_ATTEMPTS)));
+						QualityStatus.NOT_ENOUGH_DATA)));
 		Night night = night(List.of(new SourceLine(Source.WYKOP, SourceFetchStatus.SUCCEEDED, 5, 0, null, 2, 0, 1, 1,
 				0, 10, 0, 1)), Map.of(Source.WYKOP, 1L), quality,
 				List.of(new QualityCrossing(wykop, new SourceQuality(Source.WYKOP, 100, 0, Map.of(), 5, QualityStatus.OK))));
@@ -134,7 +134,7 @@ class NightSummaryTest {
 				List.of(wykop, reddit));
 		Night night = night(List.of(), Map.of(), quality, List.of(
 				new QualityCrossing(wykop,
-						new SourceQuality(Source.WYKOP, 90, 9, Map.of(), 5, QualityStatus.NOT_ENOUGH_ATTEMPTS)),
+						new SourceQuality(Source.WYKOP, 90, 9, Map.of(), 5, QualityStatus.NOT_ENOUGH_DATA)),
 				new QualityCrossing(reddit, null)));
 
 		assertThat(night.qualityAlert()).contains("wykop: failed 10.0% of 120 attempts in 7 days"
@@ -227,7 +227,7 @@ class NightSummaryTest {
 			.as("an unavailable window has nothing to show")
 			.isThrownBy(() -> new Night(night.date(), null, null, night.runs(), 0, 0, List.of(), Map.of(),
 					new QualityWindow(LocalDate.of(2026, 11, 2), LocalDate.of(2026, 11, 8),
-							List.of(new SourceQuality(Source.WYKOP, 1, 0, Map.of(), 5, QualityStatus.NOT_ENOUGH_ATTEMPTS))),
+							List.of(new SourceQuality(Source.WYKOP, 1, 0, Map.of(), 5, QualityStatus.NOT_ENOUGH_DATA))),
 					List.of(), "QueryTimeoutException"));
 	}
 

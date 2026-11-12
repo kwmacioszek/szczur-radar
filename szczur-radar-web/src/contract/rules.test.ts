@@ -214,7 +214,7 @@ const FAILURE_CLASSES = [
   'domain_invariant_violation',
 ] as const satisfies readonly FailureClass[]
 
-const QUALITY_STATUSES = ['ok', 'above_threshold', 'not_enough_attempts'] as const satisfies readonly QualityStatus[]
+const QUALITY_STATUSES = ['ok', 'above_threshold', 'not_enough_data'] as const satisfies readonly QualityStatus[]
 
 /**
  * The TS unions that have a list of values in the file, as exhaustive tuples. Not here: `TargetKind` and `Direction`

@@ -12,21 +12,30 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.IntStream;
 
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 
 import pl.szczurradar.api.agents.assessor.validation.FailureClass;
 import pl.szczurradar.api.sources.Source;
+import pl.szczurradar.api.text.Language;
 
-/** The quality window's rule, its crossing and its percentages, without Spring or a database. */
+/** The quality windows' rule, their crossings and their percentages, without Spring or a database. */
 class AssessmentQualityTest {
 
 	private static final ZoneId WARSAW = ZoneId.of("Europe/Warsaw");
 
+	private static final String POLISH = "Autor uważa, że kurs wzrośnie";
+
+	private static final String ENGLISH = "The author thinks that the price will rise";
+
+	/** No letter or function word of either language. */
+	private static final String UNDECIDED = "CDR 120 zl target";
+
 	@Test
 	void fewerThanTheMinimumIsNotChecked() {
-		assertThat(AssessmentQuality.status(99, 99, 5)).isEqualTo(QualityStatus.NOT_ENOUGH_ATTEMPTS);
+		assertThat(AssessmentQuality.status(99, 99, 5)).isEqualTo(QualityStatus.NOT_ENOUGH_DATA);
 		assertThat(AssessmentQuality.status(100, 6, 5)).isEqualTo(QualityStatus.ABOVE_THRESHOLD);
 		assertThat(AssessmentQuality.status(100, 0, 5)).isEqualTo(QualityStatus.OK);
 	}
@@ -63,7 +72,7 @@ class AssessmentQualityTest {
 	@Test
 	void aSourceWithoutAFailedAttemptHasNoClassAndOneWithoutRowsIsMissing() {
 		assertThat(AssessmentQuality.sources(List.of(count(Source.REDDIT, null, 40)))).containsExactly(
-				new SourceQuality(Source.REDDIT, 40, 0, Map.of(), 25, QualityStatus.NOT_ENOUGH_ATTEMPTS));
+				new SourceQuality(Source.REDDIT, 40, 0, Map.of(), 25, QualityStatus.NOT_ENOUGH_DATA));
 		assertThat(AssessmentQuality.sources(List.of())).isEmpty();
 	}
 
@@ -77,9 +86,9 @@ class AssessmentQualityTest {
 	@Test
 	void tooFewAttemptsOrNoneYesterdayAndAboveTodayCrosses() {
 		assertThat(AssessmentQuality.crossed(List.of(wykop(QualityStatus.ABOVE_THRESHOLD)),
-				List.of(wykop(QualityStatus.NOT_ENOUGH_ATTEMPTS))))
+				List.of(wykop(QualityStatus.NOT_ENOUGH_DATA))))
 			.containsExactly(new QualityCrossing(wykop(QualityStatus.ABOVE_THRESHOLD),
-					wykop(QualityStatus.NOT_ENOUGH_ATTEMPTS)));
+					wykop(QualityStatus.NOT_ENOUGH_DATA)));
 		assertThat(AssessmentQuality.crossed(List.of(wykop(QualityStatus.ABOVE_THRESHOLD)), List.of()))
 			.containsExactly(new QualityCrossing(wykop(QualityStatus.ABOVE_THRESHOLD), null));
 	}
@@ -92,7 +101,7 @@ class AssessmentQualityTest {
 
 	@Test
 	void tooFewAttemptsOrOkTodayDoesNotCross() {
-		assertThat(AssessmentQuality.crossed(List.of(wykop(QualityStatus.NOT_ENOUGH_ATTEMPTS)),
+		assertThat(AssessmentQuality.crossed(List.of(wykop(QualityStatus.NOT_ENOUGH_DATA)),
 				List.of(wykop(QualityStatus.OK)))).isEmpty();
 		assertThat(AssessmentQuality.crossed(List.of(wykop(QualityStatus.OK)), List.of())).isEmpty();
 	}
@@ -151,6 +160,99 @@ class AssessmentQualityTest {
 		assertThat(AssessmentQuality.percent(0, 46)).isEqualTo("0.0%");
 		assertThat(AssessmentQuality.percent(5, 5)).isEqualTo("100.0%");
 		assertThatIllegalArgumentException().isThrownBy(() -> AssessmentQuality.percent(0, 0));
+	}
+
+	@Test
+	void fewerThanFiveHundredThesesAreNotChecked() {
+		assertThat(AssessmentQuality.languages(wykopTheses(499, 499))).containsExactly(
+				new SourceLanguage(Source.WYKOP, 499, 499, 2, QualityStatus.NOT_ENOUGH_DATA));
+		assertThat(AssessmentQuality.languages(wykopTheses(500, 0))).containsExactly(
+				new SourceLanguage(Source.WYKOP, 500, 0, 2, QualityStatus.OK));
+	}
+
+	@Test
+	void aShareOfThesesEqualToTheThresholdIsStillOkAndOneThesisMoreIsAbove() {
+		// Wykop's threshold is 2 %: 10 of 500 is 2.0 %, 11 of 500 is 2.2 %.
+		assertThat(AssessmentQuality.languages(wykopTheses(500, 10))).containsExactly(
+				new SourceLanguage(Source.WYKOP, 500, 10, 2, QualityStatus.OK));
+		assertThat(AssessmentQuality.languages(wykopTheses(500, 11))).containsExactly(
+				new SourceLanguage(Source.WYKOP, 500, 11, 2, QualityStatus.ABOVE_THRESHOLD));
+	}
+
+	@Test
+	void onlyEvidenceOfAnotherLanguageThanThePostsIsAViolation() {
+		List<SourceLanguage> sources = AssessmentQuality.languages(List.of(
+				new PostStatement(Source.REDDIT, Language.EN, POLISH),
+				new PostStatement(Source.REDDIT, Language.EN, ENGLISH),
+				new PostStatement(Source.REDDIT, Language.EN, UNDECIDED),
+				new PostStatement(Source.WYKOP, Language.PL, ENGLISH),
+				new PostStatement(Source.WYKOP, Language.PL, POLISH),
+				new PostStatement(Source.WYKOP, Language.PL, UNDECIDED),
+				// The post's language decides, not its source's: an English post on Wykop.
+				new PostStatement(Source.WYKOP, Language.EN, POLISH)));
+
+		assertThat(sources).containsExactly(
+				new SourceLanguage(Source.WYKOP, 4, 2, 2, QualityStatus.NOT_ENOUGH_DATA),
+				new SourceLanguage(Source.REDDIT, 3, 1, 30, QualityStatus.NOT_ENOUGH_DATA));
+		assertThat(AssessmentQuality.languages(List.of())).isEmpty();
+	}
+
+	@Test
+	void okYesterdayAndAboveTodayCrossesTheLanguageThreshold() {
+		assertThat(AssessmentQuality.languageCrossed(List.of(wykopLanguage(QualityStatus.ABOVE_THRESHOLD)),
+				List.of(wykopLanguage(QualityStatus.OK))))
+			.containsExactly(new LanguageCrossing(wykopLanguage(QualityStatus.ABOVE_THRESHOLD),
+					wykopLanguage(QualityStatus.OK)));
+	}
+
+	@Test
+	void tooFewThesesOrNoneYesterdayAndAboveTodayCrossesTheLanguageThreshold() {
+		assertThat(AssessmentQuality.languageCrossed(List.of(wykopLanguage(QualityStatus.ABOVE_THRESHOLD)),
+				List.of(wykopLanguage(QualityStatus.NOT_ENOUGH_DATA))))
+			.containsExactly(new LanguageCrossing(wykopLanguage(QualityStatus.ABOVE_THRESHOLD),
+					wykopLanguage(QualityStatus.NOT_ENOUGH_DATA)));
+		assertThat(AssessmentQuality.languageCrossed(List.of(wykopLanguage(QualityStatus.ABOVE_THRESHOLD)),
+				List.of()))
+			.containsExactly(new LanguageCrossing(wykopLanguage(QualityStatus.ABOVE_THRESHOLD), null));
+	}
+
+	@Test
+	void aboveTheLanguageThresholdTwoDaysInARowDoesNotCrossAgain() {
+		assertThat(AssessmentQuality.languageCrossed(List.of(wykopLanguage(QualityStatus.ABOVE_THRESHOLD)),
+				List.of(wykopLanguage(QualityStatus.ABOVE_THRESHOLD)))).isEmpty();
+		assertThat(AssessmentQuality.languageCrossed(List.of(wykopLanguage(QualityStatus.OK)), List.of())).isEmpty();
+	}
+
+	@Test
+	void theLanguageWindowHasTheDaysOfTheQualityWindowAndTheSameNightBefore() {
+		AssessmentRepository repository = mock(AssessmentRepository.class);
+		when(repository.findModelStatements(any(), any())).thenReturn(List.of());
+		AssessmentQuality quality = new AssessmentQuality(repository);
+
+		assertThat(quality.languageWindow(LocalDate.of(2026, 10, 25), WARSAW)).isEqualTo(
+				new LanguageWindow(LocalDate.of(2026, 10, 19), LocalDate.of(2026, 10, 25), List.of()));
+		verify(repository).findModelStatements(Instant.parse("2026-10-18T22:00:00Z"),
+				Instant.parse("2026-10-25T23:00:00Z"));
+
+		assertThat(quality.languageCrossed(quality.languageWindow(LocalDate.of(2026, 11, 8), WARSAW),
+				Instant.parse("2026-11-08T00:45:00Z"), WARSAW)).isEmpty();
+		verify(repository).findModelStatements(Instant.parse("2026-10-31T23:00:00Z"),
+				Instant.parse("2026-11-07T00:45:00Z"));
+		quality.languageCrossed(quality.languageWindow(LocalDate.of(2026, 11, 8), WARSAW),
+				Instant.parse("2026-11-08T23:30:00Z"), WARSAW);
+		verify(repository).findModelStatements(Instant.parse("2026-10-31T23:00:00Z"),
+				Instant.parse("2026-11-07T23:00:00Z"));
+	}
+
+	/** {@code count} theses of Wykop's Polish posts, {@code english} of them in English. */
+	private static List<PostStatement> wykopTheses(int count, int english) {
+		return IntStream.range(0, count)
+			.mapToObj(i -> new PostStatement(Source.WYKOP, Language.PL, i < english ? ENGLISH : POLISH))
+			.toList();
+	}
+
+	private static SourceLanguage wykopLanguage(QualityStatus status) {
+		return new SourceLanguage(Source.WYKOP, 500, status == QualityStatus.ABOVE_THRESHOLD ? 20 : 5, 2, status);
 	}
 
 	private static SourceClassCount count(Source source, @Nullable FailureClass failureClass, long count) {

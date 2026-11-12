@@ -366,7 +366,7 @@ public class NightSummary {
 			.append('…')
 			.append(window.to())
 			.append("): ");
-		if (source.status() == QualityStatus.NOT_ENOUGH_ATTEMPTS) {
+		if (source.status() == QualityStatus.NOT_ENOUGH_DATA) {
 			return line.append(source.attempts())
 				.append(" attempts, fewer than ")
 				.append(AssessmentQuality.MIN_ATTEMPTS)
@@ -406,7 +406,7 @@ public class NightSummary {
 			.append(tonight.thresholdPercent())
 			.append("% (the day before: ");
 		long attemptsBefore = before == null ? 0 : before.attempts();
-		if (before == null || before.status() == QualityStatus.NOT_ENOUGH_ATTEMPTS) {
+		if (before == null || before.status() == QualityStatus.NOT_ENOUGH_DATA) {
 			text.append(attemptsBefore).append(" attempts, fewer than ").append(AssessmentQuality.MIN_ATTEMPTS);
 		}
 		else {

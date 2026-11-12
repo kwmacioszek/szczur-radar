@@ -11,31 +11,41 @@ import java.util.Collection;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 
+import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Component;
 
 import pl.szczurradar.api.agents.assessor.validation.FailureClass;
 import pl.szczurradar.api.sources.Source;
+import pl.szczurradar.api.text.LanguageEvidence;
 
 /**
- * The quality of the assessments per source (S-35, FR-033): the share of failed attempts with a model call
- * over a window of {@value #WINDOW_DAYS} calendar days, per failure class, against the source's threshold
- * ({@link Source#failureThresholdPercent()}). Read only; nothing here is stored.
+ * The quality of the assessments per source (FR-033), two measures over the same window of {@value #WINDOW_DAYS}
+ * calendar days, each against its own threshold of the source. Read only; nothing here is stored.
  *
  * <ul>
- *   <li>The measure: every stored attempt with a model call, retries included and whoever's run (the cron's
- *       or an admin's); the prefilter's are left out ({@link AssessmentRepository#countModelAttemptsBySourceAndClass}).
+ *   <li>Failed attempts (S-35, {@link #window}, {@link #crossed}): the share of failed attempts with a model call,
+ *       per failure class, against {@link Source#failureThresholdPercent()} — every stored attempt with a model
+ *       call, retries included and whoever's run (the cron's or an admin's); the prefilter's are left out
+ *       ({@link AssessmentRepository#countModelAttemptsBySourceAndClass}).
+ *   <li>Theses in another language (S-36, {@link #languageWindow}, {@link #languageCrossed}): the share of theses
+ *       of successful attempts with a model call ({@link AssessmentRepository#findModelStatements}) with evidence
+ *       of another language than their post's ({@link LanguageEvidence}; a thesis without evidence is no
+ *       violation), against {@link Source#otherLanguageThresholdPercent()}. Its own read, so a failure of one
+ *       measure leaves the other one.
  *   <li>The window of day {@code D}: the calendar days {@code [D−6, D]} in the caller's zone, as
  *       {@code [start of D−6, start of D+1)} — a day may have 23 or 25 hours. The zone comes from the
  *       caller ({@code pipeline/PipelineRunService.ZONE}): {@code posts/} imports nothing from
  *       {@code pipeline/}.
- *   <li>The rule ({@link #status}): fewer than {@value #MIN_ATTEMPTS} attempts → {@link
- *       QualityStatus#NOT_ENOUGH_ATTEMPTS}; else a share strictly above the threshold → {@link
- *       QualityStatus#ABOVE_THRESHOLD} (in integers, {@code failed × 100 > threshold × attempts}: 5.0 % at a
- *       threshold of 5 % is still {@link QualityStatus#OK}).
- *   <li>The crossing ({@link #crossed}): a source above its threshold tonight that was not above it in the
- *       window the previous night's summary saw, computed again from the data, with no stored state
- *       ({@link QualityCrossing}: both windows of the source).
+ *   <li>The rule ({@link #status}), one for both: below the measure's minimum ({@value #MIN_ATTEMPTS} attempts,
+ *       {@value #MIN_THESES} theses) → {@link QualityStatus#NOT_ENOUGH_DATA}; else a share strictly above the
+ *       threshold → {@link QualityStatus#ABOVE_THRESHOLD} (in integers, {@code part × 100 > threshold × whole}:
+ *       5.0 % at a threshold of 5 % is still {@link QualityStatus#OK}).
+ *   <li>The crossing, one for both: a source above its threshold tonight that was not above it in the window
+ *       the previous night's summary saw, computed again from the data, with no stored state
+ *       ({@link QualityCrossing}, {@link LanguageCrossing}: both windows of the source).
  * </ul>
  */
 @Component
@@ -44,8 +54,11 @@ public class AssessmentQuality {
 	/** How many calendar days a window has. */
 	public static final int WINDOW_DAYS = 7;
 
-	/** The fewest attempts of a source in a window for its threshold to be checked. */
+	/** The fewest attempts of a source in a window for its threshold of failed attempts to be checked. */
 	public static final int MIN_ATTEMPTS = 100;
+
+	/** The fewest theses of a source in a window for its threshold of theses in another language to be checked. */
+	public static final int MIN_THESES = 500;
 
 	/** How long before this night's summary the previous night's was, give or take the nights' run times. */
 	private static final Duration PREVIOUS_NIGHT = Duration.ofHours(24);
@@ -78,12 +91,35 @@ public class AssessmentQuality {
 	 */
 	public List<QualityCrossing> crossed(QualityWindow tonight, Instant now, ZoneId zone) {
 		LocalDate night = tonight.to();
-		Instant nightStart = startOf(night, zone);
-		Instant summaryBefore = now.minus(PREVIOUS_NIGHT);
-		Instant until = summaryBefore.isBefore(nightStart) ? summaryBefore : nightStart;
-		List<SourceQuality> before = sources(
-				assessments.countModelAttemptsBySourceAndClass(startOf(night.minusDays(WINDOW_DAYS), zone), until));
+		List<SourceQuality> before = sources(assessments.countModelAttemptsBySourceAndClass(
+				startOf(night.minusDays(WINDOW_DAYS), zone), nightBeforeUntil(night, now, zone)));
 		return crossed(tonight.sources(), before);
+	}
+
+	/**
+	 * The language window {@code [to − 6, to]} of calendar days in {@code zone}, the same days as {@link #window},
+	 * per source with a thesis in it.
+	 */
+	public LanguageWindow languageWindow(LocalDate to, ZoneId zone) {
+		LocalDate from = to.minusDays(WINDOW_DAYS - 1);
+		return new LanguageWindow(from, to,
+				languages(assessments.findModelStatements(startOf(from, zone), startOf(to.plusDays(1), zone))));
+	}
+
+	/**
+	 * The sources above their threshold of theses in another language in {@code tonight} that were not above it
+	 * the night before, with the night before as in {@link #crossed}.
+	 *
+	 * @param tonight the language window of the night's calendar day ({@link LanguageWindow#to()}) in {@code zone}
+	 * @param now the caller's clock
+	 * @param zone the calendar's zone
+	 * @return the sources that crossed, each with what the night before saw of it, in {@link Source} order
+	 */
+	public List<LanguageCrossing> languageCrossed(LanguageWindow tonight, Instant now, ZoneId zone) {
+		LocalDate night = tonight.to();
+		List<SourceLanguage> before = languages(assessments.findModelStatements(
+				startOf(night.minusDays(WINDOW_DAYS), zone), nightBeforeUntil(night, now, zone)));
+		return languageCrossed(tonight.sources(), before);
 	}
 
 	/**
@@ -102,10 +138,18 @@ public class AssessmentQuality {
 
 	/** The state of a source's window with {@code attempts}, {@code failed} of them, at {@code thresholdPercent}. */
 	static QualityStatus status(long attempts, long failed, int thresholdPercent) {
-		if (attempts < MIN_ATTEMPTS) {
-			return QualityStatus.NOT_ENOUGH_ATTEMPTS;
+		return status(attempts, failed, thresholdPercent, MIN_ATTEMPTS);
+	}
+
+	/**
+	 * The state of a measure's window with {@code part} of {@code whole} at {@code thresholdPercent}, checked from
+	 * {@code minimum} on: the one rule of both measures.
+	 */
+	static QualityStatus status(long whole, long part, int thresholdPercent, int minimum) {
+		if (whole < minimum) {
+			return QualityStatus.NOT_ENOUGH_DATA;
 		}
-		return failed * 100 > thresholdPercent * attempts ? QualityStatus.ABOVE_THRESHOLD : QualityStatus.OK;
+		return part * 100 > thresholdPercent * whole ? QualityStatus.ABOVE_THRESHOLD : QualityStatus.OK;
 	}
 
 	/** {@code counts} summed per source, each source with a row, in {@link Source} order. */
@@ -135,24 +179,66 @@ public class AssessmentQuality {
 	}
 
 	/**
+	 * {@code statements} counted per source, in {@link Source} order: a thesis is in another language when
+	 * {@link LanguageEvidence} finds a language in it other than its post's; one without evidence is not.
+	 */
+	static List<SourceLanguage> languages(Collection<PostStatement> statements) {
+		Map<Source, Long> theses = new EnumMap<>(Source.class);
+		Map<Source, Long> other = new EnumMap<>(Source.class);
+		for (PostStatement statement : statements) {
+			theses.merge(statement.source(), 1L, Long::sum);
+			boolean otherLanguage = LanguageEvidence.of(statement.statement())
+				.filter(language -> language != statement.postLanguage())
+				.isPresent();
+			other.merge(statement.source(), otherLanguage ? 1L : 0L, Long::sum);
+		}
+		List<SourceLanguage> sources = new ArrayList<>();
+		theses.forEach((source, total) -> {
+			long otherLanguage = other.get(source);
+			int threshold = source.otherLanguageThresholdPercent();
+			sources.add(new SourceLanguage(source, total, otherLanguage, threshold,
+					status(total, otherLanguage, threshold, MIN_THESES)));
+		});
+		return sources;
+	}
+
+	/**
 	 * The sources of {@code tonight} above their threshold that are not above it in {@code before}, each with
 	 * its row of {@code before} ({@code null} without one).
 	 */
 	static List<QualityCrossing> crossed(List<SourceQuality> tonight, List<SourceQuality> before) {
-		List<QualityCrossing> crossed = new ArrayList<>();
-		for (SourceQuality quality : tonight) {
-			if (quality.status() != QualityStatus.ABOVE_THRESHOLD) {
+		return crossed(tonight, before, SourceQuality::source, SourceQuality::status, QualityCrossing::new);
+	}
+
+	/** {@link #crossed(List, List)} of the language measure. */
+	static List<LanguageCrossing> languageCrossed(List<SourceLanguage> tonight, List<SourceLanguage> before) {
+		return crossed(tonight, before, SourceLanguage::source, SourceLanguage::status, LanguageCrossing::new);
+	}
+
+	/** The one crossing rule of both measures, over their rows. */
+	private static <R, C> List<C> crossed(List<R> tonight, List<R> before, Function<R, Source> source,
+			Function<R, QualityStatus> status, BiFunction<R, @Nullable R, C> crossing) {
+		List<C> crossed = new ArrayList<>();
+		for (R row : tonight) {
+			if (status.apply(row) != QualityStatus.ABOVE_THRESHOLD) {
 				continue;
 			}
-			SourceQuality earlier = before.stream()
-				.filter(row -> row.source() == quality.source())
+			@Nullable R earlier = before.stream()
+				.filter(candidate -> source.apply(candidate) == source.apply(row))
 				.findFirst()
 				.orElse(null);
-			if (earlier == null || earlier.status() != QualityStatus.ABOVE_THRESHOLD) {
-				crossed.add(new QualityCrossing(quality, earlier));
+			if (earlier == null || status.apply(earlier) != QualityStatus.ABOVE_THRESHOLD) {
+				crossed.add(crossing.apply(row, earlier));
 			}
 		}
 		return List.copyOf(crossed);
+	}
+
+	/** The end of the night before's window: {@code min(start of night, now − 24 h)}. */
+	private static Instant nightBeforeUntil(LocalDate night, Instant now, ZoneId zone) {
+		Instant nightStart = startOf(night, zone);
+		Instant summaryBefore = now.minus(PREVIOUS_NIGHT);
+		return summaryBefore.isBefore(nightStart) ? summaryBefore : nightStart;
 	}
 
 	private static Instant startOf(LocalDate day, ZoneId zone) {

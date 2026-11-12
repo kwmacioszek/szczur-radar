@@ -150,7 +150,7 @@ async function loadQuality(): Promise<void> {
 const QUALITY_TONES: Record<QualityStatus, BadgeTone> = {
   ok: 'success',
   above_threshold: 'warning',
-  not_enough_attempts: 'neutral',
+  not_enough_data: 'neutral',
 }
 
 function qualityTone(status: QualityStatus): BadgeTone {
