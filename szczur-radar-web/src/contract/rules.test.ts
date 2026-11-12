@@ -187,7 +187,7 @@ describe('tones', () => {
   })
 
   it.each(valuesOf('runStatus'))('run status %s has a tone', (status) => {
-    expect(runTone({ status: status as RunStatus, interruptionCause: null, skipped: 0 })).toBeTypeOf('string')
+    expect(runTone({ status: status as RunStatus, interruptionCause: null, attentionReasons: [], skipped: 0 })).toBeTypeOf('string')
   })
 })
 

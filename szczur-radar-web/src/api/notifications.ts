@@ -1,6 +1,6 @@
 // /api/admin/notifications — the contract of szczur-radar-api notifications/api/NotificationController.
 import { apiFetch } from './client'
-import type { InterruptionCause, RunKind, RunStatus } from './pipeline'
+import type { AttentionReason, InterruptionCause, RunKind, RunStatus } from './pipeline'
 
 /** What a notification is about — notifications/NotificationKind. */
 export type NotificationKind = 'run_attention'
@@ -11,11 +11,13 @@ export interface NotifiedRun {
   kind: RunKind
   status: RunStatus
   interruptionCause: InterruptionCause | null
+  /** Why the run needs attention, from the API's rule in its order; empty when it does not. */
+  attentionReasons: AttentionReason[]
   finishedAt: string | null
   assessedFailed: number
   dead: number
   processingErrors: number
-  /** Elements its source skipped (unexpected shape or not mappable); above 0 a succeeded run needs attention too. */
+  /** Elements its source skipped (unexpected shape or not mappable); the text of the `skipped` reason. */
   skipped: number
   error: string | null
 }

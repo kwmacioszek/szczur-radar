@@ -77,7 +77,7 @@ function notification(
   id: string,
   createdAt: string,
   readAt: string | null,
-  run: Partial<NonNullable<AdminNotification['run']>> & Pick<NonNullable<AdminNotification['run']>, 'status'>,
+  run: Partial<NonNullable<AdminNotification['run']>> & Pick<NonNullable<AdminNotification['run']>, 'status' | 'attentionReasons'>,
 ): AdminNotification {
   return {
     id,
@@ -103,10 +103,12 @@ function notification(
 const notifications: AdminNotification[] = [
   notification('n1', '2026-10-15T07:59:30Z', null, {
     status: 'failed',
+    attentionReasons: ['failed'],
     error: 'no progress for 39m 00s: the run was stopped',
   }),
   notification('n2', '2026-10-15T07:12:00Z', null, {
     status: 'interrupted',
+    attentionReasons: ['interrupted'],
     kind: 'retry',
     interruptionCause: 'deploy',
     error: 'interrupted: a new deployment took over',
@@ -114,16 +116,28 @@ const notifications: AdminNotification[] = [
   // A source failed, the other's posts were assessed: partial, the failed source named in the run's error.
   notification('n7', '2026-10-15T01:30:00Z', '2026-10-15T06:00:00Z', {
     status: 'partial',
+    attentionReasons: ['source_failed'],
     error: 'reddit failed: RedditApiException: Reddit GET /r/inwestowanie/new answered HTTP 503 after 3 attempts',
   }),
-  notification('n3', '2026-10-15T01:05:00Z', '2026-10-15T06:00:00Z', { status: 'partial', dead: 1, assessedFailed: 7 }),
-  notification('n4', '2026-10-14T00:52:00Z', '2026-10-14T06:00:00Z', { status: 'succeeded', skipped: 3 }),
+  notification('n3', '2026-10-15T01:05:00Z', '2026-10-15T06:00:00Z', {
+    status: 'partial',
+    attentionReasons: ['dead_posts'],
+    dead: 1,
+    assessedFailed: 7,
+  }),
+  notification('n4', '2026-10-14T00:52:00Z', '2026-10-14T06:00:00Z', {
+    status: 'succeeded',
+    attentionReasons: ['skipped'],
+    skipped: 3,
+  }),
   notification('n5', '2026-10-13T22:10:03Z', '2026-10-14T06:00:00Z', {
     status: 'failed',
+    attentionReasons: ['failed'],
     error: 'NoPostsFetchedException: wykop gave no post to store (fetched 0, skipped 0)',
   }),
   notification('n6', '2026-10-13T00:58:00Z', '2026-10-13T07:00:00Z', {
     status: 'interrupted',
+    attentionReasons: ['interrupted'],
     interruptionCause: 'restart',
     error: 'interrupted: the application restarted',
   }),

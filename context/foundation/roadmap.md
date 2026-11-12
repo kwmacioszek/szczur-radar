@@ -120,7 +120,7 @@ Na Wykopie (#gielda) i Reddicie codziennie pojawiają się setki postów o inwes
 | S-39 | derived-persistence-guards        | konwerter zapisujący inną wartość niż enum, złożony `CHECK` z literałem i nowy koniec przebiegu bez powiadomienia czerwienią CI     | —                        | NFR `prd.md:289`; audyt §1 R-17, X1, X2, §5 R-23; destylacja #6                            | done |
 | S-40 | derived-route-guards              | każda trasa `/api/admin/**` daje 403 zwykłemu użytkownikowi, a każda `/internal/**` 401 bez tokenu — bez ręcznej listy tras        | —                        | NFR `prd.md:293`, FR-014, FR-015; audyt §1 R-30                                            | done |
 | S-41 | api-contract-shapes-round-two     | każdy kształt odpowiedzi, który czyta SPA, ma plik kontraktu z wariantami `null`, a pole zawsze wysyłane przez API jest wymagane w TS | —                        | FR-006; audyt §2, X3; `verification-scope.md`                                              | done        |
-| S-42 | spa-rules-registry-round-two      | porównanie kodu błędu, limit rozmiaru strony i enumy spoza rejestru są pilnowane testem albo kompilatorem                          | —                        | FR-006; audyt §1 R-22, R-43, X5                                                            | ready    |
+| S-42 | spa-rules-registry-round-two      | porównanie kodu błędu, limit rozmiaru strony i enumy spoza rejestru są pilnowane testem albo kompilatorem                          | —                        | FR-006; audyt §1 R-22, R-43, X5                                                            | in-progress |
 | S-43 | contract-bound-mocks              | atrapa API w SPA i atrapy narzędzi odpowiadają tak jak prawdziwe API, a rozjazd czerwieni test                                     | S-41                     | audyt §3, X4, „Materiał dla M-4” p. 4; `verification-scope.md` „Granice z M-3 i M-5”      | done |
 | S-44 | feed-regression-and-paging-bounds | feed ma testy regresji znanych ścieżek, a ogromny numer strony i NUL w linku dają 400 zamiast błędu serwera albo zawieszonego feedu | —                        | FR-006, FR-007, FR-011a; audyt §4, X6                                                      | done |
 | S-45 | core-mutation-testing             | wiadomo, które testy rdzenia łapią błędy: mutanty, które przeżyły, są zabite testem albo przyjęte z powodem                         | S-30, S-32, S-33, S-38   | `verification-scope.md` „Poprawność testów backendu”, „done when”                         | proposed |
@@ -317,7 +317,7 @@ Brak — każda praca przekrojowa M-4 ma widoczny skutek dla użytkownika, opera
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** X5 przeszedł przez skan kodów błędów i `vue-tsc`; typy SPA sprawdza w CI tylko budowa obrazu web, co wycinek bierze pod uwagę przy wyborze miejsca strażnika.
-- **Status:** ready
+- **Status:** in-progress
 
 ### S-43: Atrapy odpowiadają jak prawdziwe API
 

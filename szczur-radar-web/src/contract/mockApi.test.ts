@@ -108,6 +108,7 @@ const NOTIFICATION_ENUMS: Record<string, ValueSet> = {
   '$.run.kind': 'runKind',
   '$.run.status': 'runStatus',
   '$.run.interruptionCause': 'interruptionCause',
+  '$.run.attentionReasons[]': 'attentionReason',
 }
 
 const runRefs: Ref[] = [

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { AttentionReason, Run, RunStep, SourceResult } from './api/pipeline'
+import type { AttentionReason, InterruptionCause, Run, RunStatus, RunStep, SourceResult } from './api/pipeline'
 import {
   assessProgress,
   attentionReasons,
@@ -65,6 +65,15 @@ function run(overrides: Partial<Run> = {}): Run {
   }
 }
 
+/** What the tone and status text read: the API's reason codes, never a counter. */
+function state(
+  status: RunStatus,
+  attentionReasons: AttentionReason[] = [],
+  overrides: { interruptionCause?: InterruptionCause | null; skipped?: number } = {},
+): Parameters<typeof runTone>[0] {
+  return { status, interruptionCause: null, attentionReasons, skipped: 0, ...overrides }
+}
+
 describe('runTone', () => {
   it.each([
     ['queued', 'neutral'],
@@ -74,20 +83,25 @@ describe('runTone', () => {
     ['failed', 'destructive'],
     ['interrupted', 'warning'],
   ] as const)('gives a %s run the %s tone', (status, tone) => {
-    expect(runTone({ status, interruptionCause: null, skipped: 0 })).toBe(tone)
+    expect(runTone(state(status))).toBe(tone)
   })
 
   it.each(['deploy', 'restart', 'shutdown', 'lost'] as const)(
     'warns about an interruption whatever its cause, %s included',
     (interruptionCause) => {
-      expect(runTone({ status: 'interrupted', interruptionCause, skipped: 0 })).toBe('warning')
+      expect(runTone(state('interrupted', ['interrupted'], { interruptionCause }))).toBe('warning')
     },
   )
 
-  it('warns about a succeeded run with skipped elements; a partial run stays a warning', () => {
-    expect(runTone({ status: 'succeeded', interruptionCause: null, skipped: 3 })).toBe('warning')
-    expect(runTone({ status: 'partial', interruptionCause: null, skipped: 3 })).toBe('warning')
-    expect(runTone({ status: 'failed', interruptionCause: null, skipped: 3 })).toBe('destructive')
+  it('warns about a succeeded run the API gives a reason; a partial run stays a warning', () => {
+    expect(runTone(state('succeeded', ['skipped'], { skipped: 3 }))).toBe('warning')
+    expect(runTone(state('succeeded', ['source_empty']))).toBe('warning')
+    expect(runTone(state('partial', ['skipped'], { skipped: 3 }))).toBe('warning')
+    expect(runTone(state('failed', ['failed'], { skipped: 3 }))).toBe('destructive')
+  })
+
+  it('counts nothing itself: skipped elements without the reason code leave a succeeded run a success', () => {
+    expect(runTone(state('succeeded', [], { skipped: 3 }))).toBe('success')
   })
 })
 
@@ -110,27 +124,33 @@ describe('sourceTone', () => {
 
 describe('runStatusLabel', () => {
   it('adds the cause to an interrupted run', () => {
-    expect(runStatusLabel({ status: 'interrupted', interruptionCause: 'deploy', skipped: 0 })).toBe(
+    expect(runStatusLabel(state('interrupted', ['interrupted'], { interruptionCause: 'deploy' }))).toBe(
       'przerwany — nowe wdrożenie',
     )
-    expect(runStatusLabel({ status: 'interrupted', interruptionCause: 'shutdown', skipped: 0 })).toBe(
+    expect(runStatusLabel(state('interrupted', ['interrupted'], { interruptionCause: 'shutdown' }))).toBe(
       'przerwany — zatrzymanie aplikacji',
     )
-    expect(runStatusLabel({ status: 'interrupted', interruptionCause: 'lost', skipped: 0 })).toBe(
+    expect(runStatusLabel(state('interrupted', ['interrupted'], { interruptionCause: 'lost' }))).toBe(
       'przerwany — utracona instancja',
     )
   })
 
-  it('adds the skipped elements to a succeeded or partial run', () => {
-    expect(runStatusLabel({ status: 'succeeded', interruptionCause: null, skipped: 3 })).toBe('zakończony — pominięte: 3')
-    expect(runStatusLabel({ status: 'partial', interruptionCause: null, skipped: 1 })).toBe('częściowo — pominięte: 1')
+  it('adds the skipped elements to a run the API gives the reason skipped', () => {
+    expect(runStatusLabel(state('succeeded', ['skipped'], { skipped: 3 }))).toBe('zakończony — pominięte: 3')
+    expect(runStatusLabel(state('partial', ['dead_posts', 'skipped'], { skipped: 1 }))).toBe('częściowo — pominięte: 1')
+  })
+
+  it('counts nothing itself: skipped elements without the reason code add no suffix', () => {
+    expect(runStatusLabel(state('succeeded', [], { skipped: 3 }))).toBe('zakończony')
+    expect(runStatusLabel(state('partial', ['dead_posts'], { skipped: 3 }))).toBe('częściowo')
+    expect(runStatusLabel(state('interrupted', ['interrupted'], { skipped: 3 }))).toBe('przerwany')
   })
 
   it('says only the status otherwise, also for an interruption recorded before its cause', () => {
-    expect(runStatusLabel({ status: 'interrupted', interruptionCause: null, skipped: 0 })).toBe('przerwany')
-    expect(runStatusLabel({ status: 'partial', interruptionCause: null, skipped: 0 })).toBe('częściowo')
-    expect(runStatusLabel({ status: 'succeeded', interruptionCause: null, skipped: 0 })).toBe('zakończony')
-    expect(runStatusLabel({ status: 'failed', interruptionCause: null, skipped: 4 })).toBe('błąd')
+    expect(runStatusLabel(state('interrupted', ['interrupted']))).toBe('przerwany')
+    expect(runStatusLabel(state('partial', ['dead_posts']))).toBe('częściowo')
+    expect(runStatusLabel(state('succeeded'))).toBe('zakończony')
+    expect(runStatusLabel(state('failed', ['failed'], { skipped: 4 }))).toBe('błąd')
   })
 })
 

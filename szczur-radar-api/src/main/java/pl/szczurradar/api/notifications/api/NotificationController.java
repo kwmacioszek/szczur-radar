@@ -22,6 +22,7 @@ import pl.szczurradar.api.config.ErrorCode;
 import pl.szczurradar.api.notifications.Notification;
 import pl.szczurradar.api.notifications.NotificationKind;
 import pl.szczurradar.api.notifications.NotificationRepository;
+import pl.szczurradar.api.pipeline.run.AttentionReason;
 import pl.szczurradar.api.pipeline.run.InterruptionCause;
 import pl.szczurradar.api.pipeline.run.PipelineRun;
 import pl.szczurradar.api.pipeline.run.PipelineRunRepository;
@@ -116,18 +117,20 @@ class NotificationController {
 	 * What the notification says about its run now: enough to tell why it needs attention; the run's page
 	 * ({@code GET /api/admin/pipeline-runs/{id}}) has the rest.
 	 *
+	 * @param attentionReasons why the run needs attention, in the rule's order
+	 * ({@link PipelineRun#attentionReasons()}); empty when it does not
 	 * @param processingErrors posts with a technical error and no stored assessment (not failed attempts)
 	 * @param skipped the fetched elements that could not become a post
 	 * @param error the reason of a failed or interrupted run, or the summary of technical errors
 	 */
 	record NotifiedRun(UUID id, RunKind kind, RunStatus status, @Nullable InterruptionCause interruptionCause,
-			@Nullable Instant finishedAt, int assessedFailed, int dead, int processingErrors, int skipped,
-			@Nullable String error) {
+			List<AttentionReason> attentionReasons, @Nullable Instant finishedAt, int assessedFailed, int dead,
+			int processingErrors, int skipped, @Nullable String error) {
 
 		static NotifiedRun of(PipelineRun run) {
 			return new NotifiedRun(run.getId(), run.getKind(), run.getStatus(), run.getInterruptionCause(),
-					run.getFinishedAt(), run.getAssessedFailed(), run.getDead(), run.getProcessingErrors(),
-					run.getSkipped(), run.getError());
+					run.attentionReasons(), run.getFinishedAt(), run.getAssessedFailed(), run.getDead(),
+					run.getProcessingErrors(), run.getSkipped(), run.getError());
 		}
 
 	}

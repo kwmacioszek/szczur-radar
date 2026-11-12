@@ -11,6 +11,9 @@
         "kind": "retry",
         "status": "interrupted",
         "interruptionCause": "deploy",
+        "attentionReasons": [
+          "interrupted"
+        ],
         "finishedAt": "<instant>",
         "assessedFailed": 2,
         "dead": 1,
@@ -29,6 +32,9 @@
         "kind": "retry",
         "status": "partial",
         "interruptionCause": null,
+        "attentionReasons": [
+          "dead_posts"
+        ],
         "finishedAt": "<instant>",
         "assessedFailed": 1,
         "dead": 1,
