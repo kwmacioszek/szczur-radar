@@ -30,7 +30,8 @@ pipeline/            entry points — start here
            NoPostsFetchedException (no source gave a post: the fetch fails)
   assess/  assessing posts: AssessmentDispatcher (port), ConcurrentAssessmentDispatcher, AssessmentInputs,
            AssessmentPool (the LLM threads, PIPELINE_LLM_CONCURRENCY)
-  state/   conditional state writes: RunRecorder (runs, steps, counters, activity, `source`: a source's result),
+  state/   conditional state writes: RunRecorder (runs, steps, counters, activity, `source`: a source's result,
+           `storeRejected`: the store's rejected posts as skipped, S-38),
            PostTransitions (posts),
            RunNoLongerRunningException, RunInterruptedException (a step's checkpoint after an interrupt),
            Durations (durations in log lines and errors)
@@ -66,16 +67,16 @@ PipelineRunService.startRange / startPosts → queue (thread pipeline-run) → R
 
 | Class | Job |
 | --- | --- |
-| `flow/RunFlow` | the data the steps hand to each other (records). A new stage (e.g. ML) = new types and steps between `StoredBatch` and `PendingAssessments` |
-| `flow/RunSequence` | the steps of a run in order — RANGE: fetch → store → select → assess → summarize; RETRY / POSTS: select → assess → summarize — each a call to one service recorded as a step (`RunRecorder.step`). The fetch step writes each source's result as the source ends (`RunRecorder.source`); a range run's error is the fetch's summary of the sources that did not succeed and the assessment's, joined ` \| `, and its status the assessment's, but `partial` when that succeeded and a source did not (below). A step's exception leaves `run` as it was thrown, and no later step starts |
+| `flow/RunFlow` | the data the steps hand to each other (records). A new stage (e.g. ML) = new types and steps between `StoredBatch` and `PendingAssessments`. `StoredBatch` (S-38): the new posts' ids, each source's `SourceStored` (`posts = newPosts + duplicates + rejected`; its constructor refuses counts that do not add up or are negative) and the `RejectedPost`s (source, item type, source id, cause), with `rejectedBySource()` and `rejectedSummary()` (`store rejected N post(s), counted as skipped: <source> <item type> <source id> (<cause>); …`, at most 10, then `; and M more`) |
+| `flow/RunSequence` | the steps of a run in order — RANGE: fetch → store → select → assess → summarize; RETRY / POSTS: select → assess → summarize — each a call to one service recorded as a step (`RunRecorder.step`). The fetch step writes each source's result as the source ends (`RunRecorder.source`); after the store step, outside it, the new posts are counted and each source's posts the database rejected are added to the `skipped` of the run and of the source's row (`RunRecorder.storeRejected`, in `Source` order; S-38); a range run's error has up to three parts, joined ` \| ` in this order — the fetch's summary of the sources that did not succeed, the store's rejected posts (`StoredBatch.rejectedSummary`) and the assessment's error; next to rejected posts the fetch's summary is cut to `FETCH_SUMMARY_WITH_STORE_MAX` (1000) characters, so the store's part survives `RunRecorder`'s 2000 — and its status the assessment's, but `partial` when that succeeded and a source did not (below); rejected posts never change it. A step's exception leaves `run` as it was thrown, and no later step starts |
 | `step/SourceIngest` | which sources a range run fetches (default: every configured one) and the fetch over them, each source isolated: a source that throws (also one not configured any more) is its `failed` result (`<SimpleName>: <message>`, a WARN line with the exception; on an interrupted thread — the run was stopped during the source — the same result at INFO without the exception, `ended with the run's stop`), one without a post its `empty` result, and the next source is fetched; each result is handed to the caller as soon as its source ended, outside the source's `try` (`RunSequence` writes it; a failed write ends the step); the step fails only when no source gave a post (`NoPostsFetchedException`, below); a source with skipped elements gets a WARN line; before each source an interrupt checkpoint (`RunInterruptedException`, below) |
-| `step/PostStore` | new posts with their raw payload, once per `(source, item_type, source_item_id)`; `findKeys` in chunks of 1,000; stores chunks of 500 in one transaction each (raw payloads, then posts: JDBC batches), a chunk hitting the unique key again post by post; before each chunk an interrupt checkpoint (`RunInterruptedException`, below), so a stopped run stores at most the chunk it was in |
+| `step/PostStore` | new posts with their raw payload, once per `(source, item_type, source_item_id)`; `findKeys` in chunks of 1,000; stores chunks of 500 in one transaction each (raw payloads, then posts: JDBC batches; the `INSERT`s go at the commit, so a chunk's failure comes from it), a chunk failing with a `DataIntegrityViolationException` again post by post; each post ends as one of three (S-38): new, a duplicate (stored by an earlier run, repeated in the fetch, or — its save failed and its key, read again after its transaction rolled back, is stored — stored meanwhile by another run) or rejected (its save failed with a `DataIntegrityViolationException` and its key is not stored: its raw payload rolled back with it, the rest of its chunk stored; its cause the constraint's name (for a `NOT NULL` the column's name, as Hibernate reports it), else `SQLState <code>` (in practice a data error), else `unknown`, never the exception's message); any other exception ends the step; before each chunk an interrupt checkpoint (`RunInterruptedException`, below), so a stopped run stores at most the chunk it was in |
 | `step/AssessmentSelection` | one attempt per post and request: range → only the posts it stored first; retry → every leftover except posts on hold (`PostRepository.findLeftoverIds`, below); posts → the given ones still assessable (`stored` / `failed`, on hold or not) |
 | `assess/AssessmentDispatcher` | the port of the assess step (`dispatch`, which stops like `cancel` when its thread is interrupted while it waits, and `cancel` for a run the watchdog stopped); a Batch API version may replace the concurrent one |
 | `assess/ConcurrentAssessmentDispatcher` | first `LlmClient.check()` (any exception → no post taken, run `failed` with `the LLM check failed: …`; a check that fails on an interrupted thread — the run was stopped during it — ends the step with `RunInterruptedException` instead, at INFO, the check's exception as its cause); the `AssessmentPool` threads (`PIPELINE_LLM_CONCURRENCY`, default 4: a bean passed in, shut down with the context); per post: claim → `Assessor.assess` on `AssessmentInputs.of(post)` → record, or release, then the post's result goes into the run's counters at once (`RunRecorder.count`, below); an `LlmConfigurationException` (revoked key, no credit, unknown model) stops taking posts (WARN with the provider's reason), counts no attempt and fails the run (`AssessedBatch.stoppedBy`); an `LlmUnavailableException` (retries used up) stores nothing and releases the post, and `OUTAGE_STREAK` (3) of them in a row stop the step the same way (the breaker, Rules below); any other exception puts the post back with `releaseFailed` (one more technical failure), and `CLIENT_ERROR_STREAK` (3) `LlmClientException`s in a row (errors the LLM client could not classify) also stop the step (the client's breaker, Rules below); a call the provider refused is the post's `failed` result (`provider_error` / `timeout`), stored with its attempt like any failed result, and `REFUSAL_STREAK` (3) of them in a row (`AssessmentResult.callFailed()`, with no answer of the model between them) stop the step after the third is stored (the refusals' breaker, Rules below); a failed `count` is a WARN and leaves the post's outcome (a stored post is never a technical error), and once every post has finished the step's failed counts give one ERROR and `RUN_COUNTERS_LOST` (below); `cancel(runId)` interrupts the run's post tasks, and so does an interrupt of the thread waiting in `dispatch` (it marks them cancelled first, then throws; below) and the pool's own shutdown when the context closes; a task ending on an interrupted thread counts nothing, whichever of the three interrupted it; a progress line in the log at most once a minute and after the last post |
 | `assess/AssessmentInputs` | a stored post's assessment input, rebuilt from its raw payload by its source's `RawInputMapper` |
 | `state/PostTransitions` | the post's stage changes, each a conditional `UPDATE` with `updated_at = now()`: claim (only while the run is running), record (only while the run owns the post; resets `technical_failures` and `last_technical_error`), release (back without an attempt; says whether this run put it back), releaseFailed (release + one more technical failure with its message, in the same statement, only while the run owns the post), countTechnicalFailure (one more technical failure on a post already put back, `stored` / `failed`, only while the run is still running), restore (an admin's: `dead` → `stored` with 0 attempts, 0 technical failures and no last error, only from `dead`, the posts' `assessments` rows kept; `posts/api/DeadPostController`, `POST /api/admin/posts/restore`, S-33); the message is cut to 500 characters, without U+0000. A column added to `posts` is classified in `state/PostColumnsIT` (set once by the `INSERT`, or post state with its value after every transition), and a new transition gets a scenario there |
-| `state/RunRecorder` | run status, steps, counters, error, `last_activity_at`, each source's result (`source`: the run's `fetched`, `skipped`, `sources_failed` / `sources_empty`, its activity and the `pipeline_run_sources` row in one statement, only while it runs) — every change conditional on the expected status; a step opens only in a running run and closes only once; `step(…, Function<T, StepOutcome>)` lets a step decide its own end from its result (the assess step whose dispatcher stopped, `AssessedBatch.stoppedBy`, is closed `failed` with that reason though `dispatch` returned), `step(…, ToIntFunction<T>)` closes it `succeeded`; a step that throws is closed `failed` with the error, and when that close fails too (an interrupted thread, the database gone) its failure is suppressed in the step's exception; `interrupt` / `interruptAll` (with the cause), `interruptOrphans` (cause `lost`, all or none; Rules), `stall` (the watchdog) and `fail` (a run that cannot go on: an `Error` escaping its step leaves the step open, `step` catching only `RuntimeException`) close the open steps in the same transaction; status and stage values are bound from their enums, never written into the SQL |
+| `state/RunRecorder` | run status, steps, counters, error, `last_activity_at`, each source's result (`source`: the run's `fetched`, `skipped`, `sources_failed` / `sources_empty`, its activity and the `pipeline_run_sources` row in one statement, only while it runs), the store's rejected posts (`storeRejected`, S-38: added to the `skipped` of the run and of the source's row, with the run's activity, in one statement, only while it runs and only when the source's row exists — both rows or neither) — every change conditional on the expected status; a step opens only in a running run and closes only once; `step(…, Function<T, StepOutcome>)` lets a step decide its own end from its result (the assess step whose dispatcher stopped, `AssessedBatch.stoppedBy`, is closed `failed` with that reason though `dispatch` returned), `step(…, ToIntFunction<T>)` closes it `succeeded`; a step that throws is closed `failed` with the error, and when that close fails too (an interrupted thread, the database gone) its failure is suppressed in the step's exception; `interrupt` / `interruptAll` (with the cause), `interruptOrphans` (cause `lost`, all or none; Rules), `stall` (the watchdog) and `fail` (a run that cannot go on: an `Error` escaping its step leaves the step open, `step` catching only `RuntimeException`) close the open steps in the same transaction; status and stage values are bound from their enums, never written into the SQL |
 | `state/RunInterruptedException` | `checkpoint(runId, step)` throws when the run's thread is interrupted (the flag stays set): `PostStore` before each chunk, `SourceIngest` before each source |
 
 ## Progress, interruption, watchdog, notifications (S-06)
@@ -111,7 +112,14 @@ PipelineRunService.startRange / startPosts → queue (thread pipeline-run) → R
   source with skipped elements, and `Run <id>: <source> failed: <message>` with the exception, for a source
   that threw (on an interrupted thread — the run was stopped during it — INFO `Run <id>: <source> ended with
   the run's stop: <exception>` instead); each source's result then gives INFO `Run <id>: <source> <status>: fetched N, skipped M[;
-  <error>]` from `RunRecorder.source` (only when written: not for a run already stopped). The assess step adds its own:
+  <error>]` from `RunRecorder.source` (only when written: not for a run already stopped). The store step (S-38): INFO
+  `Run <id> store <source>: <P> post(s), new <A>, duplicates <D>, rejected <R>` for each source with posts, WARN
+  `Run <id>: the database rejected <source> <item type> <source id> at store (<cause>, <SimpleName>); counted as
+  skipped` for each rejected post (without the exception and its message: they hold the row's values), and after
+  the step INFO `Run <id>: <source> store rejected <N>, counted as skipped` from `RunRecorder.storeRejected` (only
+  when written). Hibernate logs its own WARN lines of a failed batch (`org.hibernate.orm.jdbc.error`); they carry no row
+  values (`Batch entry N <unknown> was aborted: ERROR: … constraint "<name>"`, no `Failing row`), because the data
+  source sets pgjdbc's `logServerErrorDetail=false` (`application.properties`). The assess step adds its own:
   WARN `The LLM provider is unavailable in run <id>: 3 calls in a row failed after their retries; no
   further post is taken: …` (the breaker, once), WARN `The LLM client failed 3 calls in a row in run <id>
   with an error that is not the provider's; no further post is taken: …` (the client's breaker, once),
@@ -466,6 +474,15 @@ PipelineRunService.startRange / startPosts → queue (thread pipeline-run) → R
   step, and the source the stop interrupted gets no row (whoever stopped the run wrote first). Retry and
   posts runs fetch nothing and are not affected. Skipped elements next to posts are only a warning: the WARN
   line and `needsAttention`.
+- **A post the database rejects at store is skipped, never silent** (S-38). A post whose save fails with a
+  `DataIntegrityViolationException` other than its unique key (a `CHECK`, `NOT NULL`, a foreign key, a data
+  error — e.g. a future migration's constraint or a new source's value) is counted as `skipped` in the run and in
+  its source's row (`RunRecorder.storeRejected` after the store step), named in the run's error
+  (`store rejected …`) and in a WARN line; so it gives the reason `skipped` (the bell, `RUN_NEEDS_ATTENTION`, the
+  night's summary) without changing the run's status, nor its source's (`succeeded`). For every range run whose
+  store step succeeded, and each of its sources, `fetched = new + duplicates + skipped` (the store's INFO line
+  gives new and duplicates; duplicates are not stored). It is stored by a later range run over its day, once the
+  cause is fixed (`context/deployment/deploy-plan.md`, section S-38).
 - A step with side effects runs once; retries live only below the step (`llm/transport/TransportRetry`, a
   source's client such as `sources/wykop/WykopApiClient`), never around it: a repeated step would repeat
   its writes and be recorded again (seen under a retrying framework: a failed Wykop fetch repeated every
@@ -536,7 +553,11 @@ PipelineRunService.startRange / startPosts → queue (thread pipeline-run) → R
   `finished`, `awaitIdle`), far longer than their wait, so a red one says what it waited for. Only the watchdog's own
   scenarios measure time, against its threshold, each with its margin. A new test of the engine keeps this.
 - Unit (`*Test`, no Spring): `flow/RunSequenceTest` (each kind of run's steps in order and each once,
-  each source's result written inside the fetch step in order and no sums of the step's own, a failed
+  each source's result written inside the fetch step in order and no sums of the step's own, the store's rejected
+  posts counted per source in `Source` order after the new posts and none without them, the run's error in its
+  three parts (sources ` | ` store rejected ` | ` assessment) and `store rejected …` alone with a run still
+  `succeeded` (S-38), a long failed source's summary cut next to rejected posts so the store's part stays within
+  2000 characters, and not cut without them, a failed
   source next to a clean assessment `partial` with the sources' summary as the error, the summary and the
   assessment's error joined ` | `, a fetch without posts failing its step with no later step, the store step counting new posts, the assess step a stopped dispatcher ended closed `failed` with
   its reason and the run's error set, the summary step closed before the finish and `INTERRUPTED` when the
@@ -553,7 +574,7 @@ PipelineRunService.startRange / startPosts → queue (thread pipeline-run) → R
   notification restores not kept for the next run, a run no
   longer running an INFO, an `Error` escaping `execute` logged by its queue task; `stopStalled`: its
   writes, then the interrupt of the run's thread, then `AssessmentDispatcher.cancel`, then the
-  notification, nothing when the stall changed nothing; and the clean-up and alert paths below), `state/RunOutcomeTest`, `state/DurationsTest`, `step/PostStoreTest`,
+  notification, nothing when the stall changed nothing; and the clean-up and alert paths below), `state/RunOutcomeTest`, `state/DurationsTest`, `step/PostStoreTest` (S-38: a post stored meanwhile a duplicate after its key is read again, one without its key rejected with its cause and one WARN without the exception's message, a chunk with a duplicate and a rejection storing the others once, a post repeated in the fetch a duplicate, the cause from a constraint's name, a `NOT NULL`'s column, `SQLState 22021` or `unknown`, the summary listing 10 and `; and 2 more`, `SourceStored` refusing counts that do not add up, `posts = new + duplicates + rejected` in each test),
   `step/AssessmentSelectionTest`, `step/SourceIngestTest` (two sources with the scripted
   `sources/ScriptedSourceFetcher` of the tests, its only user, as the ITs run the real sources: posts of
   both, one empty, one throwing — a WARN with the
@@ -606,7 +627,14 @@ PipelineRunService.startRange / startPosts → queue (thread pipeline-run) → R
   after the threshold, its open steps `failed` with the same error; `interrupt` with its cause and its
   open steps `interrupted`; `interruptAll` naming `deploy` / `restart` by `deployment_id`;
   `interruptOrphans` all or none (both cases; the rest in `OrphanedRunIT`); `source` only in a running run
-  (its counters, activity and row), a second row of a source refused, a long error cut.
+  (its counters, activity and row), a second row of a source refused, a long error cut; `storeRejected` (S-38)
+  adding to the run's and the source's `skipped` and moving the activity, the other source's row unchanged, nothing
+  in a run that is not running and nothing without the source's row.
+- `step/PostStoreIT` (S-38, on Postgres, not rolled back: each test deletes its rows): a chunk of three posts with
+  an empty channel rejected by `ck_posts_channel` — named, its raw payload rolled back, the other two stored once, the
+  log without `Failing row` and without the post's title or body —
+  and a real `uq_posts_source_item` hit (the first `findKeys` of a spied `PostRepository` missing the stored post) a
+  duplicate, not a rejection.
 - `posts/PostRepositoryIT` (outside this package, on Postgres): the RETRY predicates (a post on hold is
   no leftover, one technical failure short of it is), `claim` only of a `stored` / `failed` post and only
   for a running run (returning its attempts), `releaseAll` only of that run's posts, `releaseOrphans`
@@ -709,7 +737,13 @@ PipelineRunService.startRange / startPosts → queue (thread pipeline-run) → R
   row each) and a run stopped while Reddit's search is held (no row for it, Wykop's row kept, the
   interrupt ending the search at INFO without a second attempt, no ERROR); a held call or search waits
   without a bound (only an interrupt or `settle()` ends it; `LocalReddit`'s client time-out, 60 s, is
-  far above any wait); counters and
+  far above any wait); a post rejected at store (S-38: a `CHECK` added for the scenario, `ck_s38_rejects_one`,
+  refusing one entry of the day, dropped in `finally` — `succeeded`, `skipped` 1 on the run and Wykop's row, the
+  reason `skipped`, the run's error `store rejected 1 post(s), …`, the WARN line and no ERROR, neither the post nor
+  its raw payload stored, the admin notified and `RUN_NEEDS_ATTENTION` raised with `skipped 1` and `store rejected`
+  in its detail, read through a spied `OperatorAlertQueue`); `fetched = new + duplicates + skipped` per source and
+  per run (the store's INFO lines) in that scenario, the first range run, the same range again (both runs) and Reddit
+  down; counters and
   `last_activity_at` growing during the assessment; no new step in an interrupted run and no ERROR in the
   log. Each scenario stands alone, in a random order (`@TestMethodOrder(MethodOrderer.Random.class)`, as
   `RunWatchdogIT`): before each one `reset()` checks that nothing runs, empties the run and post tables

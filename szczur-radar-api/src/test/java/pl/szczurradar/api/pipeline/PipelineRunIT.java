@@ -2,7 +2,10 @@ package pl.szczurradar.api.pipeline;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.Duration;
@@ -20,6 +23,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -40,6 +45,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.transaction.support.TransactionTemplate;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
@@ -48,6 +54,7 @@ import tools.jackson.databind.node.ObjectNode;
 import pl.szczurradar.api.TestcontainersConfiguration;
 import pl.szczurradar.api.agents.assessor.Prefilter;
 import pl.szczurradar.api.agents.assessor.contract.ContractJson;
+import pl.szczurradar.api.alerts.AlertEvent;
 import pl.szczurradar.api.alerts.OperatorAlertQueue;
 import pl.szczurradar.api.cli.MigrateCommand;
 import pl.szczurradar.api.llm.CallFailure;
@@ -154,6 +161,13 @@ class PipelineRunIT {
 	private static final JsonNode INWESTOWANIE = MAPPER.readTree(LocalRedditServer.fixture(LocalReddit.DEFAULT_PAGE))
 		.get("data");
 
+	/** The entry of the day the temporary constraint of the store's scenario (S-38) refuses. */
+	private static final String REJECTED_ENTRY = "5";
+
+	/** The store step's line of one source of a run (S-38): its posts, new, duplicates and rejected. */
+	private static final Pattern STORE_LINE = Pattern
+		.compile("Run (\\S+) store (\\w+): (\\d+) post\\(s\\), new (\\d+), duplicates (\\d+), rejected (\\d+)");
+
 	/** Reddit's failure when it stays down ({@link LocalReddit#down()}): after its client's 3 attempts. */
 	private static final String REDDIT_DOWN = "RedditApiException: Reddit GET api/posts/search answered HTTP 500: "
 			+ LocalReddit.DOWN_BODY + " after 3 attempts";
@@ -212,6 +226,10 @@ class PipelineRunIT {
 
 	@Autowired
 	ObjectProvider<OperatorAlertQueue> alerts;
+
+	/** The operator's alert queue as a spy: it raises as usual, and a scenario can read an event's detail. */
+	@MockitoSpyBean
+	OperatorAlertQueue alertQueue;
 
 	/** The latches this scenario's scripted calls wait on; {@link #settle} releases every one. */
 	private final List<CountDownLatch> held = new CopyOnWriteArrayList<>();
@@ -275,7 +293,7 @@ class PipelineRunIT {
 	}
 
 	@Test
-	void aRangeRunFetchesStoresAndAssessesEveryPostOfTheDay() {
+	void aRangeRunFetchesStoresAndAssessesEveryPostOfTheDay(CapturedOutput output) {
 		List<PipelineRun> runs = service.startRange(DAY, DAY, List.of(), admin);
 
 		assertThat(runs).extracting(PipelineRun::getKind).containsExactly(RunKind.RANGE);
@@ -305,10 +323,11 @@ class PipelineRunIT {
 		assertThat(count("SELECT count(*) FROM posts WHERE item_type = 'link'", null)).isEqualTo(4);
 		assertThat(count("SELECT count(*) FROM assessments WHERE run_id = ? AND status = 'ok'", runs.getFirst().getId()))
 			.isEqualTo(16);
+		assertEveryFetchedElementIsAccountedFor(output, runs.getFirst().getId());
 	}
 
 	@Test
-	void theSameRangeAgainStoresNoDuplicatesAndAssessesNothingAssessed() {
+	void theSameRangeAgainStoresNoDuplicatesAndAssessesNothingAssessed(CapturedOutput output) {
 		// Both sources: Wykop's 16 posts and r/inwestowanie's 14, stored and assessed.
 		LocalReddit.configure(List.of("inwestowanie"));
 		int day = 16 + INWESTOWANIE.size();
@@ -333,6 +352,10 @@ class PipelineRunIT {
 		assertThat(count("SELECT count(*) FROM posts WHERE source = 'reddit' AND first_run_id = ?", first))
 			.isEqualTo(INWESTOWANIE.size());
 		assertThat(count("SELECT count(*) FROM assessments", null)).isEqualTo(assessmentsBefore);
+		// Every element of both runs is accounted for: new in the first, a duplicate in the second.
+		assertEveryFetchedElementIsAccountedFor(output, first);
+		assertEveryFetchedElementIsAccountedFor(output, again);
+		awaitLog(output, "Run " + again + " store wykop: 16 post(s), new 0, duplicates 16, rejected 0");
 	}
 
 	@Test
@@ -802,6 +825,49 @@ class PipelineRunIT {
 		assertThat(notified(range)).isOne();
 		awaitLog(output, "Operator alert RUN_NEEDS_ATTENTION (run " + range + ") taken");
 		awaitLog(output, "Run " + range + ": reddit failed: Reddit GET api/posts/search answered HTTP 500");
+		assertEveryFetchedElementIsAccountedFor(output, range);
+	}
+
+	@Test
+	void aPostTheDatabaseRejectsAtStoreIsCountedAsSkippedAndNamedInTheRunsError(CapturedOutput output) {
+		// A constraint today's code does not know (a future migration's, a new source's value): it refuses one entry.
+		jdbc.execute("ALTER TABLE posts ADD CONSTRAINT ck_s38_rejects_one CHECK (source_item_id <> '" + REJECTED_ENTRY
+				+ "')");
+		try {
+			UUID range = service.startRange(DAY, DAY, List.of(), admin).getLast().getId();
+			Map<String, Object> run = finished(range);
+
+			// The day's other 15 posts are stored and assessed; the rejected one is skipped, the status the assessment's.
+			assertThat(run).containsEntry("status", "succeeded")
+				.containsEntry("fetched", 16)
+				.containsEntry("skipped", 1)
+				.containsEntry("new_posts", 15)
+				.containsEntry("assessed_ok", 15)
+				.containsEntry("error", "store rejected 1 post(s), counted as skipped: wykop post " + REJECTED_ENTRY
+						+ " (ck_s38_rejects_one)");
+			assertThat(steps(range)).containsExactly("fetch:succeeded", "store:succeeded", "select:succeeded",
+					"assess:succeeded", "summarize:succeeded");
+			// Mapping skipped nothing: the source's skipped is the rejected post alone.
+			assertThat(sources(range)).containsExactly("wykop:succeeded:16:1:");
+			assertThat(runs.findById(range).orElseThrow().attentionReasons()).containsExactly(AttentionReason.SKIPPED);
+			// Neither the post nor its raw payload is stored.
+			assertThat(count("SELECT count(*) FROM posts WHERE source_item_id = '" + REJECTED_ENTRY + "'", null)).isZero();
+			assertThat(count("SELECT count(*) FROM posts", null)).isEqualTo(15);
+			assertThat(count("SELECT count(*) FROM raw_payloads", null)).isEqualTo(15);
+			awaitLog(output, "Run " + range + ": the database rejected wykop post " + REJECTED_ENTRY
+					+ " at store (ck_s38_rejects_one, DataIntegrityViolationException); counted as skipped");
+			awaitLog(output, "Run " + range + ": wykop store rejected 1, counted as skipped");
+			assertEveryFetchedElementIsAccountedFor(output, range);
+			awaitClosed(range);
+			assertThat(notified(range)).isOne();
+			awaitLog(output, "Operator alert RUN_NEEDS_ATTENTION (run " + range + ") taken");
+			verify(alertQueue).raise(eq(AlertEvent.RUN_NEEDS_ATTENTION), eq(range),
+					argThat(detail -> detail.contains("skipped 1") && detail.contains("store rejected")));
+			assertThat(output.getAll().lines().filter(line -> line.contains(" ERROR "))).isEmpty();
+		}
+		finally {
+			jdbc.execute("ALTER TABLE posts DROP CONSTRAINT IF EXISTS ck_s38_rejects_one");
+		}
 	}
 
 	@Test
@@ -976,6 +1042,38 @@ class PipelineRunIT {
 		assertThat(finished(run)).containsEntry("status", "succeeded").containsEntry("assessed_ok", 16);
 		awaitClosed(run);
 		return run;
+	}
+
+	/**
+	 * The equality of S-38 for a range run whose store step succeeded: each source's {@code fetched} is its new
+	 * posts, its duplicates and its {@code skipped} (the source's row; new and duplicates from the store's line,
+	 * none for a source without posts), and the run's {@code fetched} its {@code new_posts}, the sources'
+	 * duplicates and its {@code skipped}.
+	 */
+	private void assertEveryFetchedElementIsAccountedFor(CapturedOutput output, UUID runId) {
+		List<Map<String, Object>> results = jdbc.queryForList(
+				"SELECT source, status, fetched, skipped FROM pipeline_run_sources WHERE run_id = ?", runId);
+		results.stream()
+			.filter(result -> "succeeded".equals(result.get("status")))
+			.forEach(result -> awaitLog(output, "Run " + runId + " store " + result.get("source") + ": "));
+		Map<String, List<Integer>> stored = new HashMap<>();
+		output.getAll().lines().map(STORE_LINE::matcher).filter(Matcher::find)
+			.filter(line -> line.group(1).equals(runId.toString()))
+			.forEach(line -> stored.put(line.group(2), List.of(Integer.parseInt(line.group(4)),
+					Integer.parseInt(line.group(5)))));
+		int newPosts = 0;
+		int duplicates = 0;
+		for (Map<String, Object> result : results) {
+			List<Integer> line = stored.getOrDefault((String) result.get("source"), List.of(0, 0));
+			assertThat((int) result.get("fetched")).as("%s of run %s: fetched = new + duplicates + skipped",
+					result.get("source"), runId).isEqualTo(line.get(0) + line.get(1) + (int) result.get("skipped"));
+			newPosts += line.get(0);
+			duplicates += line.get(1);
+		}
+		Map<String, Object> run = run(runId);
+		assertThat((int) run.get("new_posts")).as("run %s: new posts", runId).isEqualTo(newPosts);
+		assertThat((int) run.get("fetched")).as("run %s: fetched = new + duplicates + skipped", runId)
+			.isEqualTo((int) run.get("new_posts") + duplicates + (int) run.get("skipped"));
 	}
 
 	/** A second instance of the service, as during a deployment overlap; {@link #settle} waits for its thread. */
