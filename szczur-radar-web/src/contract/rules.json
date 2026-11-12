@@ -32,7 +32,15 @@
     "source": ["wykop", "reddit"],
     "sourceStatus": ["succeeded", "empty", "failed"],
     "attentionReason": ["failed", "interrupted", "source_failed", "source_empty", "dead_posts", "processing_errors", "skipped"],
-    "qualityStatus": ["ok", "above_threshold", "not_enough_attempts"]
+    "qualityStatus": ["ok", "above_threshold", "not_enough_attempts"],
+    "role": ["user", "admin"],
+    "notificationKind": ["run_attention"],
+    "postStage": ["stored", "assessing", "assessed", "failed", "dead"],
+    "resultSource": ["model", "prefilter"],
+    "document": ["item", "parent_post", "parent_comment"],
+    "field": ["title", "body"],
+    "assertiveness": ["hedged", "unhedged"],
+    "provider": ["gemini", "deepseek", "openrouter"]
   },
   "errorCodes": ["invalid_credentials", "not_authenticated", "forbidden", "too_many_attempts", "cross_origin", "invalid_request", "unsupported_media_type", "activation_link_invalid", "password_policy", "pipeline_busy", "post_dead", "post_not_found", "source_not_configured", "not_found", "internal_error"]
 }

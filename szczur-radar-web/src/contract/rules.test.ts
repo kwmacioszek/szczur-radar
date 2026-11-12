@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import mockApi from '../../dev/mock-api.js?raw'
 import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from '../api/activation'
+import type { Role } from '../api/auth'
 import type { ErrorCode } from '../api/client'
+import type { NotificationKind } from '../api/notifications'
 import {
   type AttentionReason,
   type InterruptionCause,
@@ -13,6 +15,7 @@ import {
   type StepStatus,
 } from '../api/pipeline'
 import {
+  type Assertiveness,
   type Attribution,
   type ClaimKind,
   DIRECTIONS,
@@ -25,8 +28,13 @@ import {
   MAX_PAGE,
   MAX_PAGE_SIZE,
   type Modifier,
+  type PostStage,
+  type Provider,
+  type QuoteDocument,
+  type QuoteField,
   type Reference,
   type Relevance,
+  type ResultSource,
   TARGET_KINDS,
 } from '../api/posts'
 import type { QualityStatus } from '../api/quality'
@@ -102,12 +110,30 @@ describe('limits', () => {
   })
 })
 
-describe('labels', () => {
-  // An attention reason has a text, not a label; item type words depend on the source (see `item type words`).
-  const sets = Object.keys(rules.values).filter((set) => set !== 'attentionReason' && set !== 'itemType')
+/** The sets of values that have no entry in `labels`, each with why; every other set must have one. */
+const NO_LABEL: Record<string, string> = {
+  attentionReason: 'has a text (`attentionReasons` in runs.ts), not a label',
+  itemType: 'has a word of its source (`ITEM_TYPE_WORDS`), not a label',
+  role: 'the SPA reads it for permissions, never shows it',
+  notificationKind: 'one value; the bell shows the run, not the kind',
+  postStage: 'the failed list shows the post, and its stage only decides the buttons',
+  resultSource: 'the SPA reads it in the raw data, not as a label',
+  document: 'part of a quote, shown as the quote',
+  field: 'part of a quote, shown as the quote',
+  assertiveness: 'shown as "(ostrożnie)" by StanceText, not as a label',
+  provider: 'shown in the raw data of an attempt as the API wrote it',
+}
 
-  it('are given for exactly the sets of values of the file (an attention reason has a text, an item type a word of its source)', () => {
+describe('labels', () => {
+  const sets = Object.keys(rules.values).filter((set) => !(set in NO_LABEL))
+
+  it('are given for exactly the sets of values of the file, except the ones in NO_LABEL', () => {
     expect(sorted(Object.keys(labels))).toEqual(sorted(sets))
+  })
+
+  it('NO_LABEL names only sets of the file, each with a reason', () => {
+    expect(sorted(Object.keys(NO_LABEL).filter((set) => !(set in rules.values)))).toEqual([])
+    expect(Object.values(NO_LABEL).every((reason) => reason.trim() !== '')).toBe(true)
   })
 
   it.each(sets)('%s has a label for each value and for no other', (set) => {
@@ -250,6 +276,14 @@ const ERROR_CODES = [
 ] as const satisfies readonly ErrorCode[]
 
 const QUALITY_STATUSES = ['ok', 'above_threshold', 'not_enough_attempts'] as const satisfies readonly QualityStatus[]
+const ROLES = ['user', 'admin'] as const satisfies readonly Role[]
+const NOTIFICATION_KINDS = ['run_attention'] as const satisfies readonly NotificationKind[]
+const POST_STAGES = ['stored', 'assessing', 'assessed', 'failed', 'dead'] as const satisfies readonly PostStage[]
+const RESULT_SOURCES = ['model', 'prefilter'] as const satisfies readonly ResultSource[]
+const QUOTE_DOCUMENTS = ['item', 'parent_post', 'parent_comment'] as const satisfies readonly QuoteDocument[]
+const QUOTE_FIELDS = ['title', 'body'] as const satisfies readonly QuoteField[]
+const ASSERTIVENESSES = ['hedged', 'unhedged'] as const satisfies readonly Assertiveness[]
+const PROVIDERS = ['gemini', 'deepseek', 'openrouter'] as const satisfies readonly Provider[]
 
 /**
  * The TS unions that have a list of values in the file, as exhaustive tuples. Not here: `TargetKind` and `Direction`
@@ -272,6 +306,14 @@ const UNION_TUPLES: Partial<Record<ValueSet, readonly string[]>> = {
   reference: REFERENCES satisfies Exhaustive<Reference, typeof REFERENCES>,
   failureClass: FAILURE_CLASSES satisfies Exhaustive<FailureClass, typeof FAILURE_CLASSES>,
   qualityStatus: QUALITY_STATUSES satisfies Exhaustive<QualityStatus, typeof QUALITY_STATUSES>,
+  role: ROLES satisfies Exhaustive<Role, typeof ROLES>,
+  notificationKind: NOTIFICATION_KINDS satisfies Exhaustive<NotificationKind, typeof NOTIFICATION_KINDS>,
+  postStage: POST_STAGES satisfies Exhaustive<PostStage, typeof POST_STAGES>,
+  resultSource: RESULT_SOURCES satisfies Exhaustive<ResultSource, typeof RESULT_SOURCES>,
+  document: QUOTE_DOCUMENTS satisfies Exhaustive<QuoteDocument, typeof QUOTE_DOCUMENTS>,
+  field: QUOTE_FIELDS satisfies Exhaustive<QuoteField, typeof QUOTE_FIELDS>,
+  assertiveness: ASSERTIVENESSES satisfies Exhaustive<Assertiveness, typeof ASSERTIVENESSES>,
+  provider: PROVIDERS satisfies Exhaustive<Provider, typeof PROVIDERS>,
 }
 
 describe('the unions of src/api', () => {

@@ -38,20 +38,25 @@ export type Modifier = 'humor' | 'promotion'
 export type ClaimKind = 'factual_claim' | 'opinion' | 'investment_thesis' | 'question' | 'trade_action'
 export type Attribution = 'author' | 'reported' | 'unclear'
 export type Reference = 'explicit' | 'contextual' | 'ambiguous' | 'unresolved'
-/** `null` where the direction has none (table §7.2 of the contract). */
-export type Assertiveness = 'hedged' | 'unhedged' | null
+/** `stance.assertiveness`; the field is `Assertiveness | null`, `null` where the direction has none (table §7.2). */
+export type Assertiveness = 'hedged' | 'unhedged'
+
+/** `quote.document`: the input document a quote points to (not the DOM's `Document`). */
+export type QuoteDocument = 'item' | 'parent_post' | 'parent_comment'
+/** `quote.field`: the text field of the quoted document. */
+export type QuoteField = 'title' | 'body'
 
 /** A verbatim fragment of one text field of the input (contract V2 §3, §10). */
 export interface Quote {
-  document: 'item' | 'parent_post' | 'parent_comment'
-  field: 'title' | 'body'
+  document: QuoteDocument
+  field: QuoteField
   quote: string
 }
 
 /** The author's stance on one target; `claim_ids` are the claims it rests on (contract V2 §3, §7). */
 export interface Stance {
   direction: Direction
-  assertiveness: Assertiveness
+  assertiveness: Assertiveness | null
   claim_ids: string[]
 }
 
@@ -83,6 +88,9 @@ export interface AssessmentOutput {
   flags: Flag[]
 }
 
+/** What produced an assessment — agents/assessor/Provenance.Source. */
+export type ResultSource = 'model' | 'prefilter'
+
 export interface PostItem {
   id: string
   /** The source the post came from: `wykop` or `reddit`. */
@@ -98,7 +106,7 @@ export interface PostItem {
   assessment: {
     output: AssessmentOutput
     /** `prefilter` for a post without content, decided without the model. */
-    resultSource: 'model' | 'prefilter'
+    resultSource: ResultSource
     assessedAt: string
   } | null
 }
@@ -110,8 +118,14 @@ export interface Page<T> {
   total: number
 }
 
-/** A post's stage on the failed list: `stored` only when the post is on hold. */
-export type PostStage = 'stored' | 'failed' | 'dead'
+/**
+ * A post's stage — posts/PostStage. The failed list gives only `stored` (when the post is on hold), `failed` and
+ * `dead`.
+ */
+export type PostStage = 'stored' | 'assessing' | 'assessed' | 'failed' | 'dead'
+
+/** The LLM provider of an attempt — llm/Provider. */
+export type Provider = 'gemini' | 'deepseek' | 'openrouter'
 
 /** Why an assessment attempt failed — szczur-radar-api agents/assessor/validation/FailureClass. */
 export type FailureClass =
@@ -141,7 +155,7 @@ export interface FailedPost {
     failureClass: FailureClass | null
     violations: { failureClass: FailureClass; rule: string; path: string; message: string }[]
     assessedAt: string
-    provider: string | null
+    provider: Provider | null
     model: string | null
   } | null
   /** Errors of our code or single provider outages in a row since the last stored assessment. */

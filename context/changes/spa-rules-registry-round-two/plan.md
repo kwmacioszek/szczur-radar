@@ -402,20 +402,20 @@ Brak migracji bazy. Nowe pole w `/api/admin/notifications` jest addytywne. SPA i
 
 #### Automated
 
-- [x] 2.1 Rejestr po stronie serwera zgodny: `cd szczur-radar-api && ./mvnw -B -Dtest=SpaRulesTest test`
-- [x] 2.2 Granice stron przebiegów w API bez zmian: `cd szczur-radar-api && ./mvnw -B -Dit.test=PipelineRunControllerIT -Dtest=none -Dsurefire.failIfNoSpecifiedTests=false verify`
-- [x] 2.3 Testy web i typecheck zielone: `cd szczur-radar-web && npm test && npm run build`
-- [x] 2.4 Celowe zepsucie limitu (agent wykonuje i cofa): `pageMaxSize: 40` w `rules.json` daje czerwony `SpaRulesTest` i czerwony `rules.test.ts` (rozmiary feedu i nieudanych 50 > 40, warunek atrapy); `FEED_PAGE_SIZE = 101` daje czerwony `rules.test.ts`
+- [x] 2.1 Rejestr po stronie serwera zgodny: `cd szczur-radar-api && ./mvnw -B -Dtest=SpaRulesTest test` — 0252b48
+- [x] 2.2 Granice stron przebiegów w API bez zmian: `cd szczur-radar-api && ./mvnw -B -Dit.test=PipelineRunControllerIT -Dtest=none -Dsurefire.failIfNoSpecifiedTests=false verify` — 0252b48
+- [x] 2.3 Testy web i typecheck zielone: `cd szczur-radar-web && npm test && npm run build` — 0252b48
+- [x] 2.4 Celowe zepsucie limitu (agent wykonuje i cofa): `pageMaxSize: 40` w `rules.json` daje czerwony `SpaRulesTest` i czerwony `rules.test.ts` (rozmiary feedu i nieudanych 50 > 40, warunek atrapy); `FEED_PAGE_SIZE = 101` daje czerwony `rules.test.ts` — 0252b48
 
 ### Phase 3: Enumy z rejestru, kompletność wyprowadzana
 
 #### Automated
 
-- [ ] 3.1 Rejestr i wyprowadzenie po stronie serwera zielone: `cd szczur-radar-api && ./mvnw -B -Dtest=SpaRulesTest test`
-- [ ] 3.2 Testy web i typecheck zielone: `cd szczur-radar-web && npm test && npm run build`
-- [ ] 3.3 Cały backend zielony: `cd szczur-radar-api && ./mvnw -B verify`
-- [ ] 3.4 Celowe zepsucie wyprowadzenia (agent wykonuje i cofa): usunięcie `provider` z `VALUES` i z `rules.json` daje czerwony `SpaRulesTest` z nazwą `Provider` i ścieżką przez `LastAttempt.provider`; wpis `serviceTier` → `llm/ServiceTier` (enum nieosiągalny z odpowiedzi) dodany do `VALUES` i `rules.json` daje czerwony `SpaRulesTest` w drugą stronę, z nazwą `ServiceTier`
-- [ ] 3.5 Celowe zepsucie wartości (agent wykonuje i cofa): wartość `unhedged` usunięta z unii `Assertiveness` daje błąd `vue-tsc`; rola `superadmin` w danych `dev/mock-api.js` daje czerwony `mockApi.test.ts`
+- [x] 3.1 Rejestr i wyprowadzenie po stronie serwera zielone: `cd szczur-radar-api && ./mvnw -B -Dtest=SpaRulesTest test`
+- [x] 3.2 Testy web i typecheck zielone: `cd szczur-radar-web && npm test && npm run build`
+- [x] 3.3 Cały backend zielony: `cd szczur-radar-api && ./mvnw -B verify`
+- [x] 3.4 Celowe zepsucie wyprowadzenia (agent wykonuje i cofa): usunięcie `provider` z `VALUES` i z `rules.json` daje czerwony `SpaRulesTest` z nazwą `Provider` i ścieżką przez `LastAttempt.provider`; wpis `serviceTier` → `llm/ServiceTier` (enum nieosiągalny z odpowiedzi) dodany do `VALUES` i `rules.json` daje czerwony `SpaRulesTest` w drugą stronę, z nazwą `ServiceTier`
+- [x] 3.5 Celowe zepsucie wartości (agent wykonuje i cofa): wartość `unhedged` usunięta z unii `Assertiveness` daje błąd `vue-tsc`; rola `superadmin` w danych `dev/mock-api.js` daje czerwony `mockApi.test.ts`
 
 ### Phase 4: Powody „wymaga uwagi” w powiadomieniu
 

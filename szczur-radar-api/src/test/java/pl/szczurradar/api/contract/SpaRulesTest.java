@@ -6,19 +6,25 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
+import pl.szczurradar.api.agents.assessor.Provenance;
+import pl.szczurradar.api.agents.assessor.contract.Assertiveness;
 import pl.szczurradar.api.agents.assessor.contract.Attribution;
 import pl.szczurradar.api.agents.assessor.contract.ClaimKind;
 import pl.szczurradar.api.agents.assessor.contract.Direction;
+import pl.szczurradar.api.agents.assessor.contract.Document;
+import pl.szczurradar.api.agents.assessor.contract.Field;
 import pl.szczurradar.api.agents.assessor.contract.Flag;
 import pl.szczurradar.api.agents.assessor.contract.ItemType;
 import pl.szczurradar.api.agents.assessor.contract.Modifier;
@@ -29,6 +35,8 @@ import pl.szczurradar.api.agents.assessor.validation.FailureClass;
 import pl.szczurradar.api.auth.Passwords;
 import pl.szczurradar.api.config.ErrorCode;
 import pl.szczurradar.api.config.PageLimits;
+import pl.szczurradar.api.llm.Provider;
+import pl.szczurradar.api.notifications.NotificationKind;
 import pl.szczurradar.api.pipeline.api.PipelineRunController;
 import pl.szczurradar.api.pipeline.run.AttentionReason;
 import pl.szczurradar.api.pipeline.run.InterruptionCause;
@@ -39,9 +47,11 @@ import pl.szczurradar.api.pipeline.run.SourceFetchStatus;
 import pl.szczurradar.api.pipeline.run.StepStatus;
 import pl.szczurradar.api.posts.Post;
 import pl.szczurradar.api.posts.PostFilter;
+import pl.szczurradar.api.posts.PostStage;
 import pl.szczurradar.api.posts.QualityStatus;
 import pl.szczurradar.api.sources.Source;
 import pl.szczurradar.api.text.Whitespace;
+import pl.szczurradar.api.user.Role;
 
 /**
  * The registry of the rules the SPA copies, {@code szczur-radar-web/src/contract/rules.json}, against the
@@ -69,7 +79,9 @@ class SpaRulesTest {
 
 	/**
 	 * The lists of values by their name in {@code rules.json}, which is the name of the SPA's {@code labels}
-	 * set (and {@code attentionReason}, which has no label), and the enum each one is.
+	 * set where it has one (not always: {@code attentionReason} and the lists the SPA has no label for have a
+	 * name of their own), and the enum each one is. Complete both ways against the enums the response types of
+	 * {@link ContractRegistry#SHAPES} reach ({@link #valuesAreTheEnumsTheResponsesReach()}).
 	 */
 	private static final Map<String, Class<? extends Enum<?>>> VALUES = values();
 
@@ -96,6 +108,14 @@ class SpaRulesTest {
 		values.put("sourceStatus", SourceFetchStatus.class);
 		values.put("attentionReason", AttentionReason.class);
 		values.put("qualityStatus", QualityStatus.class);
+		values.put("role", Role.class);
+		values.put("notificationKind", NotificationKind.class);
+		values.put("postStage", PostStage.class);
+		values.put("resultSource", Provenance.Source.class);
+		values.put("document", Document.class);
+		values.put("field", Field.class);
+		values.put("assertiveness", Assertiveness.class);
+		values.put("provider", Provider.class);
 		return values;
 	}
 
@@ -130,6 +150,59 @@ class SpaRulesTest {
 		assertThat(keys(values)).as("the lists of values in rules.json").isEqualTo(new TreeSet<>(VALUES.keySet()));
 		VALUES.forEach((name, type) -> assertThat(strings(values.get(name))).as("values of %s", name)
 			.isEqualTo(wireValues(type)));
+	}
+
+	@Test
+	void valuesAreTheEnumsTheResponsesReach() {
+		Map<Class<?>, String> reached = ContractTypes.reachableEnums(
+				ContractRegistry.SHAPES.values().stream().flatMap(List::stream).map(ContractRegistry.Shape::type).toList());
+		Set<Class<?>> registered = new LinkedHashSet<>(VALUES.values());
+
+		assertThat(reached).as("the enums the response types reach (a walk that finds nothing proves nothing)")
+			.isNotEmpty();
+		assertThat(describe(reached, registered, false))
+			.withFailMessage("%s", "Enums in a response of ContractRegistry.SHAPES with no list in SpaRulesTest.VALUES"
+					+ " and rules.json: " + describe(reached, registered, false) + " — add the list (in declaration"
+					+ " order) and the SPA's union for it")
+			.isEmpty();
+		assertThat(unreached(reached, registered))
+			.withFailMessage("%s", "Lists in SpaRulesTest.VALUES whose enum no response type reaches: "
+					+ unreached(reached, registered) + " — remove the list from VALUES and rules.json, or the"
+					+ " response type from ContractRegistry")
+			.isEmpty();
+	}
+
+	@Test
+	void anEnumOutsideTheRegistryIsReported() {
+		Map<Class<?>, String> reached = ContractTypes.reachableEnums(List.of(Outer.class));
+
+		assertThat(describe(reached, new LinkedHashSet<>(VALUES.values()), false))
+			.containsExactly(Outer.Colour.class.getName() + " (at Inner.colour)");
+	}
+
+	private record Outer(List<Inner> inners) {
+
+		private enum Colour {
+			RED
+		}
+
+		private record Inner(Colour colour, Role role) {
+		}
+
+	}
+
+	/** The reached enums that are (or, with {@code inRegistry}, are not) in {@code registered}, by binary name. */
+	private static List<String> describe(Map<Class<?>, String> reached, Set<Class<?>> registered,
+			boolean inRegistry) {
+		return reached.entrySet()
+			.stream()
+			.filter(entry -> registered.contains(entry.getKey()) == inRegistry)
+			.map(entry -> entry.getKey().getName() + " (at " + entry.getValue() + ")")
+			.toList();
+	}
+
+	private static List<String> unreached(Map<Class<?>, String> reached, Set<Class<?>> registered) {
+		return registered.stream().filter(type -> !reached.containsKey(type)).map(Class::getName).collect(Collectors.toList());
 	}
 
 	@Test
