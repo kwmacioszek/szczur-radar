@@ -524,21 +524,21 @@ Brak migracji, zmiennych i zmian tras. PR dotyka katalogu `szczur-radar-api/` ty
 
 #### Automated
 
-- [x] 3.1 Klasa scenariuszy jest zielona z ośmioma testami
-- [x] 3.2 Pełny zestaw jest zielony (`./mvnw -B verify`)
-- [x] 3.3 Dokument testów opisuje klasę
+- [x] 3.1 Klasa scenariuszy jest zielona z ośmioma testami — 2f2fe49
+- [x] 3.2 Pełny zestaw jest zielony (`./mvnw -B verify`) — 2f2fe49
+- [x] 3.3 Dokument testów opisuje klasę — 2f2fe49
 
 ### Phase 4: CI, lista ręczna i dowód
 
 #### Automated
 
-- [ ] 4.1 Scenariusze są stabilne przy pięciu ziarnach kolejności
-- [ ] 4.2 Pełny zestaw jest zielony w obu kolejnościach klas
-- [ ] 4.3 Każde z czterech celowych zepsuć czerwieni `PrEnvScenariosIT`
-- [ ] 4.4 Job `backend` ma limit 15 min
+- [x] 4.1 Scenariusze są stabilne przy pięciu ziarnach kolejności
+- [x] 4.2 Pełny zestaw jest zielony w obu kolejnościach klas
+- [x] 4.3 Każde z czterech celowych zepsuć czerwieni `PrEnvScenariosIT`
+- [x] 4.4 Job `backend` ma limit 15 min
 - [ ] 4.5 CI na PR jest zielone
-- [ ] 4.6 Czas scenariuszy mieści się w budżecie
-- [ ] 4.7 Dokumenty mają nowe treści
+- [x] 4.6 Czas scenariuszy mieści się w budżecie
+- [x] 4.7 Dokumenty mają nowe treści
 
 #### Manual
 
