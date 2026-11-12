@@ -503,22 +503,22 @@ Brak migracji, zmiennych i zmian tras. PR dotyka katalogu `szczur-radar-api/` ty
 
 #### Automated
 
-- [x] 1.1 Test kompletności nagrań jest zielony (`RecordedDaysTest`)
-- [x] 1.2 Katalog nagrań ma 33 pliki JSON
-- [x] 1.3 Nagrania nie zawierają klucza
-- [x] 1.4 Wszystkie testy jednostkowe są zielone (`./mvnw -B test`)
-- [x] 1.5 Klasy używające `LocalReddit` są zielone
-- [x] 1.6 SVG roadmapy jest aktualny
-- [ ] 1.7 PR istnieje i ma `Refs #141`
+- [x] 1.1 Test kompletności nagrań jest zielony (`RecordedDaysTest`) — a0e60a1
+- [x] 1.2 Katalog nagrań ma 33 pliki JSON — a0e60a1
+- [x] 1.3 Nagrania nie zawierają klucza — a0e60a1
+- [x] 1.4 Wszystkie testy jednostkowe są zielone (`./mvnw -B test`) — a0e60a1
+- [x] 1.5 Klasy używające `LocalReddit` są zielone — a0e60a1
+- [x] 1.6 SVG roadmapy jest aktualny — a0e60a1
+- [x] 1.7 PR istnieje i ma `Refs #141` — a0e60a1
 
 ### Phase 2: Kontekst scenariuszy i zwykły przebieg
 
 #### Automated
 
-- [ ] 2.1 Klasa scenariuszy jest zielona z dwoma scenariuszami
-- [ ] 2.2 `InternalPipelineRunIT` jest zielony po przeniesieniu zegara
-- [ ] 2.3 Pełny zestaw jest zielony (`./mvnw -B verify`)
-- [ ] 2.4 Brak zmian w kodzie produkcyjnym poza dokumentami
+- [x] 2.1 Klasa scenariuszy jest zielona z dwoma scenariuszami
+- [x] 2.2 `InternalPipelineRunIT` jest zielony po przeniesieniu zegara
+- [x] 2.3 Pełny zestaw jest zielony (`./mvnw -B verify`)
+- [x] 2.4 Brak zmian w kodzie produkcyjnym poza dokumentami
 
 ### Phase 3: Scenariusze sygnałów, dni bez danych i nocy
 
