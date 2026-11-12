@@ -421,11 +421,11 @@ Brak migracji bazy. Nowe pole w `/api/admin/notifications` jest addytywne. SPA i
 
 #### Automated
 
-- [x] 4.1 Kontrakt powiadomień przypięty: `cd szczur-radar-api && ./mvnw -B -Dit.test=NotificationsIT -Dtest=none -Dsurefire.failIfNoSpecifiedTests=false verify`
-- [x] 4.2 Strażnicy kontraktu zieloni: `cd szczur-radar-api && ./mvnw -B -Dtest='ContractVariantsTest,SpaRulesTest' test`
-- [x] 4.3 Cały backend zielony: `cd szczur-radar-api && ./mvnw -B verify`
-- [x] 4.4 Testy web i typecheck zielone: `cd szczur-radar-web && npm test && npm run build`
-- [x] 4.5 Obraz web buduje się z własnego kontekstu: `docker build -t sr-web-rules ./szczur-radar-web && docker rmi sr-web-rules`
-- [x] 4.6 Celowe zepsucie R-22 (agent wykonuje i cofa): przywrócenie `run.skipped > 0` w `runTone` albo `hasSkipped` w `runStatusLabel` daje czerwony `runs.test.ts`; usunięcie `attentionReasons` z `notifications.json` i próbki daje błąd `vue-tsc` i czerwony `mockApi.test.ts`
-- [x] 4.7 Atrapa w przeglądarce (agent): przed zmianą `src/runs.ts` (§3) agent zapisuje w scratchpadzie teksty odznak rozwiniętego dzwonka z `npm run dev` z `dev/mock-api.js` (`playwright-cli`, `/admin` jako admin). Po zmianie te same kroki dają identyczną listę tekstów (np. „przerwany — nowe wdrożenie”), a w konsoli nie ma błędów
+- [x] 4.1 Kontrakt powiadomień przypięty: `cd szczur-radar-api && ./mvnw -B -Dit.test=NotificationsIT -Dtest=none -Dsurefire.failIfNoSpecifiedTests=false verify` — d4eae6f
+- [x] 4.2 Strażnicy kontraktu zieloni: `cd szczur-radar-api && ./mvnw -B -Dtest='ContractVariantsTest,SpaRulesTest' test` — d4eae6f
+- [x] 4.3 Cały backend zielony: `cd szczur-radar-api && ./mvnw -B verify` — d4eae6f
+- [x] 4.4 Testy web i typecheck zielone: `cd szczur-radar-web && npm test && npm run build` — d4eae6f
+- [x] 4.5 Obraz web buduje się z własnego kontekstu: `docker build -t sr-web-rules ./szczur-radar-web && docker rmi sr-web-rules` — d4eae6f
+- [x] 4.6 Celowe zepsucie R-22 (agent wykonuje i cofa): przywrócenie `run.skipped > 0` w `runTone` albo `hasSkipped` w `runStatusLabel` daje czerwony `runs.test.ts`; usunięcie `attentionReasons` z `notifications.json` i próbki daje błąd `vue-tsc` i czerwony `mockApi.test.ts` — d4eae6f
+- [x] 4.7 Atrapa w przeglądarce (agent): przed zmianą `src/runs.ts` (§3) agent zapisuje w scratchpadzie teksty odznak rozwiniętego dzwonka z `npm run dev` z `dev/mock-api.js` (`playwright-cli`, `/admin` jako admin). Po zmianie te same kroki dają identyczną listę tekstów (np. „przerwany — nowe wdrożenie”), a w konsoli nie ma błędów — d4eae6f
 - [ ] 4.8 CI na PR zielone, z budową obrazu web, testami i `railway-config` dla PR env: `gh pr checks <PR> --watch` kończy się bez czerwonego joba
