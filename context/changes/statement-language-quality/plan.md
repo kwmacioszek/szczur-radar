@@ -433,22 +433,22 @@ V16 dodaje kolumnę, wypełnia ją jednym `UPDATE` według `source` i zakłada `
 
 #### Automated
 
-- [x] 2.1 `AssessmentQualityTest` zielony: brzegi 499/500 tez i progu, nierozstrzygnięta teza, przejścia miary języka
-- [x] 2.2 `AssessmentQualityIT` zielony: tezy tylko z udanych prób z modelem, `claims` niebędące tablicą pominięte, granice okna, miara czyta `posts.language`
-- [x] 2.3 `./mvnw -B verify` zielone (`SpaRulesTest`, `ContractVariantsTest` po zmianie nazwy stanu)
-- [x] 2.4 `npm test` i `npm run build` zielone po zmianie nazwy stanu
+- [x] 2.1 `AssessmentQualityTest` zielony: brzegi 499/500 tez i progu, nierozstrzygnięta teza, przejścia miary języka — 9e8485b
+- [x] 2.2 `AssessmentQualityIT` zielony: tezy tylko z udanych prób z modelem, `claims` niebędące tablicą pominięte, granice okna, miara czyta `posts.language` — 9e8485b
+- [x] 2.3 `./mvnw -B verify` zielone (`SpaRulesTest`, `ContractVariantsTest` po zmianie nazwy stanu) — 9e8485b
+- [x] 2.4 `npm test` i `npm run build` zielone po zmianie nazwy stanu — 9e8485b
 
 ### Phase 3: Podsumowanie nocy i alarm
 
 #### Automated
 
-- [ ] 3.1 `NightSummaryTest` zielony: linia języka w trzech stanach, linia `unavailable` samej miary języka, kolejność linii, treść alarmu, limit 4096 bajtów
-- [ ] 3.2 `NightSummaryIT` zielony: linie języka i przejście progu języka z zasianych tez
-- [ ] 3.3 `InternalPipelineRunIT` zielony: `ASSESSMENT_QUALITY` raz przy przejściu języka i przy obu miarach, brak bez przejścia, awaria zapytania o tezy obok działającej miary prób
-- [ ] 3.4 `NtfyAlertsTest` zielony: `ASSESSMENT_QUALITY` z `Priority: 4`
-- [ ] 3.5 `tools/pipeline-trigger/test.sh` zielony
-- [ ] 3.6 `./mvnw -B verify` zielone
-- [ ] 3.7 `python3 tools/render_roadmap_svg.py` kończy się kodem 0 po zamknięciu wpisu Parked
+- [x] 3.1 `NightSummaryTest` zielony: linia języka w trzech stanach, linia `unavailable` samej miary języka, kolejność linii, treść alarmu, limit 4096 bajtów
+- [x] 3.2 `NightSummaryIT` zielony: linie języka i przejście progu języka z zasianych tez
+- [x] 3.3 `InternalPipelineRunIT` zielony: `ASSESSMENT_QUALITY` raz przy przejściu języka i przy obu miarach, brak bez przejścia, awaria zapytania o tezy obok działającej miary prób
+- [x] 3.4 `NtfyAlertsTest` zielony: `ASSESSMENT_QUALITY` z `Priority: 4`
+- [x] 3.5 `tools/pipeline-trigger/test.sh` zielony
+- [x] 3.6 `./mvnw -B verify` zielone
+- [x] 3.7 `python3 tools/render_roadmap_svg.py` kończy się kodem 0 po zamknięciu wpisu Parked
 
 ### Phase 4: Sekcja w `/admin`
 

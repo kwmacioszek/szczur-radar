@@ -34,12 +34,15 @@ import pl.szczurradar.api.pipeline.run.RunStatus;
 import pl.szczurradar.api.pipeline.run.SourceFetchStatus;
 import pl.szczurradar.api.posts.AssessmentQuality;
 import pl.szczurradar.api.posts.AssessmentRepository;
+import pl.szczurradar.api.posts.LanguageCrossing;
+import pl.szczurradar.api.posts.LanguageWindow;
 import pl.szczurradar.api.posts.PostRepository;
 import pl.szczurradar.api.posts.QualityCrossing;
 import pl.szczurradar.api.posts.QualityStatus;
 import pl.szczurradar.api.posts.QualityWindow;
 import pl.szczurradar.api.posts.SourceAssessmentTotals;
 import pl.szczurradar.api.posts.SourceCount;
+import pl.szczurradar.api.posts.SourceLanguage;
 import pl.szczurradar.api.posts.SourceQuality;
 import pl.szczurradar.api.sources.Source;
 
@@ -48,8 +51,9 @@ import pl.szczurradar.api.sources.Source;
  * of text the daily cron asks for after its runs ({@code POST /internal/pipeline-runs/nightly-summary},
  * raised as {@code AlertEvent.NIGHT_SUMMARY}, also with nothing dead). It only reads, in one read-only
  * transaction on one snapshot ({@code REPEATABLE READ}), so the counters of a run still running agree; the
- * quality window (S-35) is read before it, in a read-only transaction of its own, so a failure there costs
- * only the quality lines, never the summary (below).
+ * quality window (S-35) and then the language window (S-36) are read before it, each in a read-only
+ * transaction of its own, so a failure of one costs only its own lines, never the other's or the summary
+ * (below).
  *
  * <pre>
  * Night 2026-11-11 (range 2026-11-09…2026-11-10): retry partial, range partial; errors 0, skipped 0
@@ -57,6 +61,8 @@ import pl.szczurradar.api.sources.Source;
  * reddit: fetched 105, skipped 0, new 49, leftovers 18; assessed 55, failed 12, dead 2; tokens in 245889 (cached 213594), out 197555
  * wykop quality 7d (2026-11-05…2026-11-11): failed 2.6% of 3134 attempts (schema_violation 0.3%, invalid_reference 0.1%, fabricated_evidence 2.0%, domain_invariant_violation 0.2%); threshold 5%
  * reddit quality 7d (2026-11-05…2026-11-11): failed 16.9% of 598 attempts (schema_violation 7.7%, fabricated_evidence 7.7%, domain_invariant_violation 1.5%); threshold 25%
+ * wykop language 7d (2026-11-05…2026-11-11): other language 0.3% of 3476 theses; threshold 2%
+ * reddit language 7d (2026-11-05…2026-11-11): other language 16.1% of 2857 theses; threshold 30%
  * Dead in admin runs since the previous night: none
  * /admin
  * </pre>
@@ -90,6 +96,16 @@ import pl.szczurradar.api.sources.Source;
  *       ({@link Night#qualityAlert()}). When the window cannot be read (any exception: an ERROR line with
  *       it in the API log), one line {@code quality 7d (<from>…<to>): unavailable (<the exception's
  *       class>)} stands for them, nothing crossed, and the summary goes out as without S-35.
+ *   <li><b>A source's language line</b> (S-36), after every quality line, in {@link Source} order, for every
+ *       source with a thesis in the language window of the night's date ({@link AssessmentQuality#languageWindow}:
+ *       the same days, the theses of successful attempts with a model call): the share of theses with evidence
+ *       of another language than their post's, their number and the source's threshold, with
+ *       {@code ; ABOVE THRESHOLD} when the share is above it; with fewer than {@value AssessmentQuality#MIN_THESES}
+ *       theses only their number and {@code threshold not checked}. The sources that crossed tonight
+ *       ({@link AssessmentQuality#languageCrossed}) are {@link Night#languageCrossed()}, in the same
+ *       {@code ASSESSMENT_QUALITY} as the failed attempts' (one event a night). When the theses cannot be read,
+ *       one line {@code language 7d (<from>…<to>): unavailable (<the exception's class>)} stands for them,
+ *       nothing crossed; the quality lines stay as they are.
  *   <li><b>Dead in admin runs since the previous night:</b> always, {@code none} included — the dead posts
  *       whose latest assessment belongs to a run that is not the cron's ({@link PipelineRun#scheduled()}),
  *       created after the last cron run before this night's earliest run (from the beginning of the data
@@ -101,8 +117,8 @@ import pl.szczurradar.api.sources.Source;
  * </ul>
  *
  * <p>The text stays within ntfy's {@value #MAX_BYTES} bytes of a message by construction: one line per
- * source and one of its quality, a handful of sources, and a source's error cut; {@code NtfyAlerts} cuts the
- * body anyway.
+ * source, one of its quality and one of its language, a handful of sources, and a source's error cut;
+ * {@code NtfyAlerts} cuts the body anyway.
  */
 @Component
 public class NightSummary {
@@ -130,8 +146,11 @@ public class NightSummary {
 	/** The summary's one snapshot: read-only, {@code REPEATABLE READ}. */
 	private final TransactionTemplate snapshot;
 
-	/** The quality window's own read-only transaction, apart from the snapshot. */
-	private final TransactionTemplate qualityRead;
+	/**
+	 * The read-only transaction of a measure, apart from the snapshot: the quality window and the language window
+	 * each run in one of their own, so a failed query of one does not abort the other's.
+	 */
+	private final TransactionTemplate measureRead;
 
 	NightSummary(PipelineRunRepository runs, PipelineRunSourceRepository sourceResults, PostRepository posts,
 			AssessmentRepository assessments, AssessmentQuality quality, Clock clock,
@@ -145,14 +164,15 @@ public class NightSummary {
 		this.snapshot = new TransactionTemplate(transactions);
 		this.snapshot.setReadOnly(true);
 		this.snapshot.setIsolationLevel(TransactionDefinition.ISOLATION_REPEATABLE_READ);
-		this.qualityRead = new TransactionTemplate(transactions);
-		this.qualityRead.setReadOnly(true);
+		this.measureRead = new TransactionTemplate(transactions);
+		this.measureRead.setReadOnly(true);
 	}
 
 	/**
 	 * The night of {@code runIds} (a repeated id counts once); empty when one of them is no run. The quality
-	 * window is read first, in its own transaction: when that fails, the night has the line
-	 * {@code unavailable} in its place ({@link Night#qualityUnavailable()}) and is still returned.
+	 * window is read first, then the language window, each in its own transaction: when one fails, the night has
+	 * the line {@code unavailable} in its place ({@link Night#qualityUnavailable()},
+	 * {@link Night#languageUnavailable()}) and is still returned.
 	 *
 	 * @throws IllegalArgumentException when {@code runIds} is empty: a night has at least one run
 	 */
@@ -163,7 +183,8 @@ public class NightSummary {
 		Instant now = clock.instant();
 		LocalDate date = LocalDate.ofInstant(now, PipelineRunService.ZONE);
 		NightQuality nightQuality = quality(date, now);
-		return Objects.requireNonNull(snapshot.execute(status -> night(runIds, date, nightQuality)));
+		NightLanguage nightLanguage = language(date, now);
+		return Objects.requireNonNull(snapshot.execute(status -> night(runIds, date, nightQuality, nightLanguage)));
 	}
 
 	/**
@@ -173,7 +194,7 @@ public class NightSummary {
 	 */
 	private NightQuality quality(LocalDate date, Instant now) {
 		try {
-			return Objects.requireNonNull(qualityRead.execute(status -> {
+			return Objects.requireNonNull(measureRead.execute(status -> {
 				QualityWindow window = quality.window(date, PipelineRunService.ZONE);
 				return new NightQuality(window, quality.crossed(window, now, PipelineRunService.ZONE), null);
 			}));
@@ -190,8 +211,33 @@ public class NightSummary {
 	private record NightQuality(QualityWindow window, List<QualityCrossing> crossed, @Nullable String unavailable) {
 	}
 
-	/** The night inside the snapshot; {@code date} and the quality were read before it. */
-	private Optional<Night> night(Collection<UUID> runIds, LocalDate date, NightQuality nightQuality) {
+	/**
+	 * The language window of the night's date and the sources that crossed their threshold tonight (S-36), as
+	 * {@link #quality}: on any exception an empty window of the same days, nothing crossed, and the exception's
+	 * class — only the language lines are lost.
+	 */
+	private NightLanguage language(LocalDate date, Instant now) {
+		try {
+			return Objects.requireNonNull(measureRead.execute(status -> {
+				LanguageWindow window = quality.languageWindow(date, PipelineRunService.ZONE);
+				return new NightLanguage(window, quality.languageCrossed(window, now, PipelineRunService.ZONE), null);
+			}));
+		}
+		catch (RuntimeException ex) {
+			log.error("The language window of the night {} could not be read; the night's summary goes without it",
+					date, ex);
+			return new NightLanguage(new LanguageWindow(date.minusDays(AssessmentQuality.WINDOW_DAYS - 1), date,
+					List.of()), List.of(), ex.getClass().getSimpleName());
+		}
+	}
+
+	/** The language part of a night: its window, the sources that crossed, or why it is unavailable. */
+	private record NightLanguage(LanguageWindow window, List<LanguageCrossing> crossed, @Nullable String unavailable) {
+	}
+
+	/** The night inside the snapshot; {@code date} and both measures were read before it. */
+	private Optional<Night> night(Collection<UUID> runIds, LocalDate date, NightQuality nightQuality,
+			NightLanguage nightLanguage) {
 		List<UUID> ids = List.copyOf(new LinkedHashSet<>(runIds));
 		List<PipelineRun> found = new ArrayList<>(runs.findAllById(ids));
 		if (found.size() != ids.size()) {
@@ -239,7 +285,8 @@ public class NightSummary {
 				found.stream().map(run -> new Run(run.getId(), run.getKind(), run.getStatus())).toList(),
 				found.stream().mapToInt(PipelineRun::getProcessingErrors).sum(),
 				found.stream().mapToInt(PipelineRun::getSkipped).sum(), lines, deadInAdminRuns, nightQuality.window(),
-				nightQuality.crossed(), nightQuality.unavailable()));
+				nightQuality.crossed(), nightQuality.unavailable(), nightLanguage.window(), nightLanguage.crossed(),
+				nightLanguage.unavailable()));
 	}
 
 	private static @Nullable PipelineRun first(List<PipelineRun> runs, RunKind kind) {
@@ -266,17 +313,28 @@ public class NightSummary {
 	 * @param crossed the sources that crossed their threshold tonight, in {@link Source} order; empty when none
 	 * @param qualityUnavailable the class of the exception the quality window could not be read with, which
 	 *     makes the quality one line {@code unavailable}; {@code null} when it was read
+	 * @param language the language window of {@code date} (S-36), a line per source in it; without sources when
+	 *     {@code languageUnavailable}
+	 * @param languageCrossed the sources whose share of theses in another language crossed their threshold
+	 *     tonight, in {@link Source} order; empty when none
+	 * @param languageUnavailable the class of the exception the language window could not be read with, which
+	 *     makes the language one line {@code unavailable}; {@code null} when it was read
 	 */
 	public record Night(LocalDate date, @Nullable LocalDate rangeFrom, @Nullable LocalDate rangeTo, List<Run> runs,
 			int processingErrors, int skipped, List<SourceLine> sources, Map<Source, Long> deadInAdminRuns,
-			QualityWindow quality, List<QualityCrossing> crossed, @Nullable String qualityUnavailable) {
+			QualityWindow quality, List<QualityCrossing> crossed, @Nullable String qualityUnavailable,
+			LanguageWindow language, List<LanguageCrossing> languageCrossed, @Nullable String languageUnavailable) {
 
 		public Night {
 			if (qualityUnavailable != null && (!quality.sources().isEmpty() || !crossed.isEmpty())) {
 				throw new IllegalArgumentException("An unavailable quality window has no source and nothing crossed");
 			}
+			if (languageUnavailable != null && (!language.sources().isEmpty() || !languageCrossed.isEmpty())) {
+				throw new IllegalArgumentException("An unavailable language window has no source and nothing crossed");
+			}
 			runs = List.copyOf(runs);
 			crossed = List.copyOf(crossed);
+			languageCrossed = List.copyOf(languageCrossed);
 			sources = sources.stream().sorted(Comparator.comparing(SourceLine::source)).toList();
 			Map<Source, Long> ordered = new EnumMap<>(Source.class);
 			ordered.putAll(deadInAdminRuns);
@@ -322,6 +380,20 @@ public class NightSummary {
 			for (SourceQuality source : quality.sources()) {
 				text.append('\n').append(qualityLine(source, quality));
 			}
+			if (languageUnavailable != null) {
+				text.append("\nlanguage ")
+					.append(AssessmentQuality.WINDOW_DAYS)
+					.append("d (")
+					.append(language.from())
+					.append('…')
+					.append(language.to())
+					.append("): unavailable (")
+					.append(languageUnavailable)
+					.append(')');
+			}
+			for (SourceLanguage source : language.sources()) {
+				text.append('\n').append(languageLine(source, language));
+			}
 			text.append("\nDead in admin runs since the previous night: ");
 			Map<Source, Long> dead = new EnumMap<>(Source.class);
 			dead.putAll(deadInAdminRuns);
@@ -338,21 +410,25 @@ public class NightSummary {
 		}
 
 		/**
-		 * The detail of {@code AlertEvent.ASSESSMENT_QUALITY}; empty when no source crossed its threshold
-		 * tonight. Per source that crossed, its share tonight with the window, its threshold, what the night
-		 * before saw and its classes; the sources joined with {@code ; }, the last part {@code /admin}:
+		 * The detail of {@code AlertEvent.ASSESSMENT_QUALITY}; empty when no source crossed a threshold of either
+		 * measure tonight. First per source whose share of failed attempts crossed: its share tonight with the
+		 * window, its threshold, what the night before saw and its classes; then per source whose share of theses
+		 * in another language crossed (S-36): its share with the window, its threshold and what the night before
+		 * saw; each group in {@link Source} order, the parts joined with {@code ; }, the last part {@code /admin}:
 		 *
 		 * <pre>
-		 * wykop: failed 9.1% of 110 attempts in 7 days (2026-11-02…2026-11-08), above its threshold 5% (the day before: 0.0% of 100 attempts) (fabricated_evidence 9.1%); /admin
+		 * wykop: failed 9.1% of 110 attempts in 7 days (2026-11-02…2026-11-08), above its threshold 5% (the day before: 0.0% of 100 attempts) (fabricated_evidence 9.1%); reddit: other language 31.0% of 600 theses in 7 days (2026-11-02…2026-11-08), above its threshold 30% (the day before: 498 theses, fewer than 500); /admin
 		 * </pre>
 		 */
 		public Optional<String> qualityAlert() {
-			if (crossed.isEmpty()) {
+			if (crossed.isEmpty() && languageCrossed.isEmpty()) {
 				return Optional.empty();
 			}
-			return Optional.of(crossed.stream()
-				.map(crossing -> crossingText(crossing, quality))
-				.collect(Collectors.joining("; ")) + "; /admin");
+			List<String> parts = new ArrayList<>(crossed.size() + languageCrossed.size() + 1);
+			crossed.forEach(crossing -> parts.add(crossingText(crossing, quality)));
+			languageCrossed.forEach(crossing -> parts.add(languageCrossingText(crossing, language)));
+			parts.add("/admin");
+			return Optional.of(String.join("; ", parts));
 		}
 
 	}
@@ -388,7 +464,66 @@ public class NightSummary {
 		return line.toString();
 	}
 
-	/** One source of {@link Night#qualityAlert()}. */
+	/** A source's line of the language window; see the class. */
+	static String languageLine(SourceLanguage source, LanguageWindow window) {
+		StringBuilder line = new StringBuilder(source.source().value()).append(" language ")
+			.append(AssessmentQuality.WINDOW_DAYS)
+			.append("d (")
+			.append(window.from())
+			.append('…')
+			.append(window.to())
+			.append("): ");
+		if (source.status() == QualityStatus.NOT_ENOUGH_DATA) {
+			return line.append(source.theses())
+				.append(" theses, fewer than ")
+				.append(AssessmentQuality.MIN_THESES)
+				.append(", threshold not checked")
+				.toString();
+		}
+		line.append("other language ")
+			.append(AssessmentQuality.percent(source.otherLanguage(), source.theses()))
+			.append(" of ")
+			.append(source.theses())
+			.append(" theses; threshold ")
+			.append(source.thresholdPercent())
+			.append('%');
+		if (source.status() == QualityStatus.ABOVE_THRESHOLD) {
+			line.append("; ABOVE THRESHOLD");
+		}
+		return line.toString();
+	}
+
+	/** One source of {@link Night#qualityAlert()} whose share of theses in another language crossed. */
+	private static String languageCrossingText(LanguageCrossing crossing, LanguageWindow window) {
+		SourceLanguage tonight = crossing.tonight();
+		SourceLanguage before = crossing.before();
+		StringBuilder text = new StringBuilder(tonight.source().value()).append(": other language ")
+			.append(AssessmentQuality.percent(tonight.otherLanguage(), tonight.theses()))
+			.append(" of ")
+			.append(tonight.theses())
+			.append(" theses in ")
+			.append(AssessmentQuality.WINDOW_DAYS)
+			.append(" days (")
+			.append(window.from())
+			.append('…')
+			.append(window.to())
+			.append("), above its threshold ")
+			.append(tonight.thresholdPercent())
+			.append("% (the day before: ");
+		long thesesBefore = before == null ? 0 : before.theses();
+		if (before == null || before.status() == QualityStatus.NOT_ENOUGH_DATA) {
+			text.append(thesesBefore).append(" theses, fewer than ").append(AssessmentQuality.MIN_THESES);
+		}
+		else {
+			text.append(AssessmentQuality.percent(before.otherLanguage(), before.theses()))
+				.append(" of ")
+				.append(before.theses())
+				.append(" theses");
+		}
+		return text.append(')').toString();
+	}
+
+	/** One source of {@link Night#qualityAlert()} whose share of failed attempts crossed. */
 	private static String crossingText(QualityCrossing crossing, QualityWindow window) {
 		SourceQuality tonight = crossing.tonight();
 		SourceQuality before = crossing.before();

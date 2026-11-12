@@ -37,8 +37,11 @@ nothing.
    PR), the language of its posts (`language()`, S-36: a `text/Language`, stored with each of its posts in
    `posts.language`, `V16`; Wykop `pl`, Reddit `en` — a source in a new language adds the value to `Language`
    and the column's `CHECK` in its migration) and its threshold of theses in another language than their post
-   (`otherLanguageThresholdPercent()`, S-36: Wykop 2, Reddit 30, from production data in
-   `context/changes/statement-language-quality/evidence/README.md`; a change is a PR), and one Flyway migration adding
+   (`otherLanguageThresholdPercent()`, S-36: the share over the same 7-day window above which the night's
+   `language 7d` line, the `ASSESSMENT_QUALITY` alarm and `/admin` show the source above it; Wykop 2, Reddit 30,
+   from production data in `context/changes/statement-language-quality/evidence/README.md`; a change is a PR —
+   a channel in another language than its source's counts its correct theses as violations), and one Flyway
+   migration adding
    that value to the four `CHECK` sets of a source: `posts.source`, `raw_payloads.source`,
    `pipeline_runs.sources` and `pipeline_run_sources.source` (registering the source; nothing else in
    persistence changes). `persistence/ClosedSetsIT` is red when the constant has no such migration (or

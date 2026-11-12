@@ -19,9 +19,12 @@ import pl.szczurradar.api.pipeline.NightSummary.SourceLine;
 import pl.szczurradar.api.pipeline.run.RunKind;
 import pl.szczurradar.api.pipeline.run.RunStatus;
 import pl.szczurradar.api.pipeline.run.SourceFetchStatus;
+import pl.szczurradar.api.posts.LanguageCrossing;
+import pl.szczurradar.api.posts.LanguageWindow;
 import pl.szczurradar.api.posts.QualityCrossing;
 import pl.szczurradar.api.posts.QualityStatus;
 import pl.szczurradar.api.posts.QualityWindow;
+import pl.szczurradar.api.posts.SourceLanguage;
 import pl.szczurradar.api.posts.SourceQuality;
 import pl.szczurradar.api.sources.Source;
 
@@ -29,8 +32,9 @@ import pl.szczurradar.api.sources.Source;
  * The text of the night's summary ({@link Night#text()}) from prepared inputs: production's night of
  * 2026-11-11 (the docs' example), the sources in {@link Source} order whatever order they come in, a run
  * still running, a source that failed (its error cut) or gave no post, a source without a result, no range
- * run, {@code none} outside the night, which run the alert names, the quality lines in each state with the
- * {@code ASSESSMENT_QUALITY} detail, and the whole within ntfy's bytes. What the inputs are built from is
+ * run, {@code none} outside the night, which run the alert names, the quality lines and the language lines
+ * (S-36) in each state, each measure's line {@code unavailable} next to the other's lines, the
+ * {@code ASSESSMENT_QUALITY} detail with either measure and both, and the whole within ntfy's bytes. What the inputs are built from is
  * {@code NightSummaryIT}.
  */
 class NightSummaryTest {
@@ -43,7 +47,14 @@ class NightSummaryTest {
 	private static final QualityWindow NO_QUALITY = new QualityWindow(LocalDate.of(2026, 11, 2),
 			LocalDate.of(2026, 11, 8), List.of());
 
-	/** Production's night of 2026-11-11, the example of the class comment and the docs. */
+	/** A language window without a thesis: no language line. */
+	private static final LanguageWindow NO_LANGUAGE = new LanguageWindow(LocalDate.of(2026, 11, 2),
+			LocalDate.of(2026, 11, 8), List.of());
+
+	/**
+	 * Production's night of 2026-11-11, the example of the class comment and the docs; its language lines carry
+	 * production's theses of the window that ended a day later (2026-11-06…2026-11-12, S-36's evidence).
+	 */
 	@Test
 	void productionsNightOfTheEleventh() {
 		Night night = new Night(LocalDate.of(2026, 11, 11), LocalDate.of(2026, 11, 9), LocalDate.of(2026, 11, 10),
@@ -63,6 +74,10 @@ class NightSummaryTest {
 								Map.of(FailureClass.SCHEMA_VIOLATION, 46L, FailureClass.FABRICATED_EVIDENCE, 46L,
 										FailureClass.DOMAIN_INVARIANT_VIOLATION, 9L),
 								25, QualityStatus.OK))),
+				List.of(), null,
+				new LanguageWindow(LocalDate.of(2026, 11, 5), LocalDate.of(2026, 11, 11),
+						List.of(new SourceLanguage(Source.WYKOP, 3476, 10, 2, QualityStatus.OK),
+								new SourceLanguage(Source.REDDIT, 2857, 460, 30, QualityStatus.OK))),
 				List.of(), null);
 
 		assertThat(night.text()).isEqualTo("""
@@ -71,6 +86,8 @@ class NightSummaryTest {
 				reddit: fetched 105, skipped 0, new 49, leftovers 18; assessed 55, failed 12, dead 2; tokens in 245889 (cached 213594), out 197555
 				wykop quality 7d (2026-11-05…2026-11-11): failed 2.6% of 3134 attempts (schema_violation 0.3%, invalid_reference 0.1%, fabricated_evidence 2.0%, domain_invariant_violation 0.2%); threshold 5%
 				reddit quality 7d (2026-11-05…2026-11-11): failed 16.9% of 598 attempts (schema_violation 7.7%, fabricated_evidence 7.7%, domain_invariant_violation 1.5%); threshold 25%
+				wykop language 7d (2026-11-05…2026-11-11): other language 0.3% of 3476 theses; threshold 2%
+				reddit language 7d (2026-11-05…2026-11-11): other language 16.1% of 2857 theses; threshold 30%
 				Dead in admin runs since the previous night: none
 				/admin""");
 		assertThat(night.alertRunId()).as("the range run").isEqualTo(RANGE);
@@ -160,7 +177,7 @@ class NightSummaryTest {
 	void aRunStillRunningShowsItsStatusAndTheErrorsAndSkippedAreTheRunsSums() {
 		Night night = new Night(LocalDate.of(2026, 11, 8), LocalDate.of(2026, 11, 6), LocalDate.of(2026, 11, 7),
 				List.of(new Run(RETRY, RunKind.RETRY, RunStatus.PARTIAL), new Run(RANGE, RunKind.RANGE, RunStatus.RUNNING)),
-				2, 3, List.of(), Map.of(), NO_QUALITY, List.of(), null);
+				2, 3, List.of(), Map.of(), NO_QUALITY, List.of(), null, NO_LANGUAGE, List.of(), null);
 
 		assertThat(night.text()).startsWith(
 				"Night 2026-11-08 (range 2026-11-06…2026-11-07): retry partial, range running; errors 2, skipped 3\n");
@@ -189,7 +206,7 @@ class NightSummaryTest {
 		Night night = new Night(LocalDate.of(2026, 11, 8), null, null,
 				List.of(new Run(RETRY, RunKind.RETRY, RunStatus.SUCCEEDED)), 0, 0,
 				List.of(new SourceLine(Source.WYKOP, null, 0, 0, null, 0, 4, 4, 0, 0, 400, 100, 40)), Map.of(), NO_QUALITY,
-				List.of(), null);
+				List.of(), null, NO_LANGUAGE, List.of(), null);
 
 		assertThat(night.text()).isEqualTo("""
 				Night 2026-11-08: retry succeeded; errors 0, skipped 0
@@ -203,7 +220,7 @@ class NightSummaryTest {
 	void theDeadPostsOfTheAdminsRunsAreListedPerSourceInSourceOrder() {
 		Night night = new Night(LocalDate.of(2026, 11, 8), LocalDate.of(2026, 11, 6), LocalDate.of(2026, 11, 7),
 				List.of(new Run(RANGE, RunKind.RANGE, RunStatus.SUCCEEDED)), 0, 0, List.of(),
-				Map.of(Source.REDDIT, 2L, Source.WYKOP, 1L), NO_QUALITY, List.of(), null);
+				Map.of(Source.REDDIT, 2L, Source.WYKOP, 1L), NO_QUALITY, List.of(), null, NO_LANGUAGE, List.of(), null);
 
 		assertThat(night.text()).contains("\nDead in admin runs since the previous night: wykop 1, reddit 2\n/admin");
 	}
@@ -214,7 +231,7 @@ class NightSummaryTest {
 		Night night = new Night(LocalDate.of(2026, 11, 8), LocalDate.of(2026, 11, 6), LocalDate.of(2026, 11, 7),
 				List.of(new Run(RANGE, RunKind.RANGE, RunStatus.SUCCEEDED)), 0, 0,
 				List.of(new SourceLine(Source.WYKOP, SourceFetchStatus.SUCCEEDED, 5, 0, null, 5, 0, 5, 0, 0, 50, 0, 5)),
-				Map.of(), NO_QUALITY, List.of(), "QueryTimeoutException");
+				Map.of(), NO_QUALITY, List.of(), "QueryTimeoutException", NO_LANGUAGE, List.of(), null);
 
 		assertThat(night.text()).isEqualTo("""
 				Night 2026-11-08 (range 2026-11-06…2026-11-07): range succeeded; errors 0, skipped 0
@@ -228,12 +245,111 @@ class NightSummaryTest {
 			.isThrownBy(() -> new Night(night.date(), null, null, night.runs(), 0, 0, List.of(), Map.of(),
 					new QualityWindow(LocalDate.of(2026, 11, 2), LocalDate.of(2026, 11, 8),
 							List.of(new SourceQuality(Source.WYKOP, 1, 0, Map.of(), 5, QualityStatus.NOT_ENOUGH_DATA))),
-					List.of(), "QueryTimeoutException"));
+					List.of(), "QueryTimeoutException", NO_LANGUAGE, List.of(), null));
 	}
 
 	/**
-	 * Every source failing with the longest error, the largest counters, and a quality line with every
-	 * failure class above the threshold for each; its alert with every source too.
+	 * The language lines after every quality line, in {@link Source} order, in each state: Wykop above its threshold, Reddit with too few theses; a share equal to the threshold is not above.
+	 */
+	@Test
+	void theLanguageLinesComeAfterTheQualityLinesInEachState() {
+		QualityWindow quality = new QualityWindow(LocalDate.of(2026, 11, 2), LocalDate.of(2026, 11, 8),
+				List.of(new SourceQuality(Source.WYKOP, 200, 0, Map.of(), 5, QualityStatus.OK),
+						new SourceQuality(Source.REDDIT, 150, 0, Map.of(), 25, QualityStatus.OK)));
+		LanguageWindow language = new LanguageWindow(LocalDate.of(2026, 11, 2), LocalDate.of(2026, 11, 8),
+				List.of(new SourceLanguage(Source.WYKOP, 520, 20, 2, QualityStatus.ABOVE_THRESHOLD),
+						new SourceLanguage(Source.REDDIT, 46, 20, 30, QualityStatus.NOT_ENOUGH_DATA)));
+
+		Night night = night(List.of(new SourceLine(Source.WYKOP, SourceFetchStatus.SUCCEEDED, 5, 0, null, 2, 0, 1, 1,
+				0, 10, 0, 1)), Map.of(), quality, List.of(), language, List.of());
+
+		assertThat(night.text()).isEqualTo("""
+				Night 2026-11-08 (range 2026-11-06…2026-11-07): retry partial, range partial; errors 0, skipped 0
+				wykop: fetched 5, skipped 0, new 2, leftovers 0; assessed 1, failed 1, dead 0; tokens in 10 (cached 0), out 1
+				wykop quality 7d (2026-11-02…2026-11-08): failed 0.0% of 200 attempts; threshold 5%
+				reddit quality 7d (2026-11-02…2026-11-08): failed 0.0% of 150 attempts; threshold 25%
+				wykop language 7d (2026-11-02…2026-11-08): other language 3.8% of 520 theses; threshold 2%; ABOVE THRESHOLD
+				reddit language 7d (2026-11-02…2026-11-08): 46 theses, fewer than 500, threshold not checked
+				Dead in admin runs since the previous night: none
+				/admin""");
+		assertThat(night.qualityAlert()).as("nothing crossed: staying above raises nothing").isEmpty();
+		assertThat(NightSummary.languageLine(new SourceLanguage(Source.REDDIT, 1000, 300, 30, QualityStatus.OK),
+				language)).isEqualTo("reddit language 7d (2026-11-02…2026-11-08): other language 30.0% of 1000 theses;"
+						+ " threshold 30%");
+	}
+
+	/** The theses could not be read: one line in place of the language lines, the quality lines as they are. */
+	@Test
+	void anUnavailableLanguageWindowIsOneLineNextToTheQualityLines() {
+		SourceQuality wykop = new SourceQuality(Source.WYKOP, 110, 10, Map.of(FailureClass.FABRICATED_EVIDENCE, 10L),
+				5, QualityStatus.ABOVE_THRESHOLD);
+		QualityWindow quality = new QualityWindow(LocalDate.of(2026, 11, 2), LocalDate.of(2026, 11, 8),
+				List.of(wykop, new SourceQuality(Source.REDDIT, 46, 0, Map.of(), 25, QualityStatus.NOT_ENOUGH_DATA)));
+		Night night = new Night(LocalDate.of(2026, 11, 8), LocalDate.of(2026, 11, 6), LocalDate.of(2026, 11, 7),
+				List.of(new Run(RANGE, RunKind.RANGE, RunStatus.SUCCEEDED)), 0, 0, List.of(), Map.of(), quality,
+				List.of(new QualityCrossing(wykop, null)), null, NO_LANGUAGE, List.of(), "QueryTimeoutException");
+
+		assertThat(night.text()).isEqualTo("""
+				Night 2026-11-08 (range 2026-11-06…2026-11-07): range succeeded; errors 0, skipped 0
+				wykop quality 7d (2026-11-02…2026-11-08): failed 9.1% of 110 attempts (fabricated_evidence 9.1%); threshold 5%; ABOVE THRESHOLD
+				reddit quality 7d (2026-11-02…2026-11-08): 46 attempts, fewer than 100, threshold not checked
+				language 7d (2026-11-02…2026-11-08): unavailable (QueryTimeoutException)
+				Dead in admin runs since the previous night: none
+				/admin""");
+		assertThat(night.qualityAlert()).as("the failed attempts' alarm stays").contains("wykop: failed 9.1% of 110"
+				+ " attempts in 7 days (2026-11-02…2026-11-08), above its threshold 5% (the day before: 0 attempts,"
+				+ " fewer than 100) (fabricated_evidence 9.1%); /admin");
+		assertThatIllegalArgumentException()
+			.as("an unavailable language window has nothing to show")
+			.isThrownBy(() -> new Night(night.date(), null, null, night.runs(), 0, 0, List.of(), Map.of(), NO_QUALITY,
+					List.of(), null, NO_LANGUAGE,
+					List.of(new LanguageCrossing(new SourceLanguage(Source.WYKOP, 600, 60, 2,
+							QualityStatus.ABOVE_THRESHOLD), null)),
+					"QueryTimeoutException"));
+	}
+
+	/** Only the language measure crossed: its parts in {@link Source} order, each with its night before. */
+	@Test
+	void theQualityAlertWithOnlyTheLanguageMeasureCrossing() {
+		SourceLanguage wykop = new SourceLanguage(Source.WYKOP, 520, 20, 2, QualityStatus.ABOVE_THRESHOLD);
+		SourceLanguage reddit = new SourceLanguage(Source.REDDIT, 600, 186, 30, QualityStatus.ABOVE_THRESHOLD);
+		LanguageWindow language = new LanguageWindow(LocalDate.of(2026, 11, 2), LocalDate.of(2026, 11, 8),
+				List.of(wykop, reddit));
+
+		Night night = night(List.of(), Map.of(), NO_QUALITY, List.of(), language,
+				List.of(new LanguageCrossing(wykop, new SourceLanguage(Source.WYKOP, 500, 0, 2, QualityStatus.OK)),
+						new LanguageCrossing(reddit,
+								new SourceLanguage(Source.REDDIT, 498, 150, 30, QualityStatus.NOT_ENOUGH_DATA))));
+
+		assertThat(night.qualityAlert()).contains("wykop: other language 3.8% of 520 theses in 7 days"
+				+ " (2026-11-02…2026-11-08), above its threshold 2% (the day before: 0.0% of 500 theses);"
+				+ " reddit: other language 31.0% of 600 theses in 7 days (2026-11-02…2026-11-08), above its threshold"
+				+ " 30% (the day before: 498 theses, fewer than 500); /admin");
+	}
+
+	/** Both measures crossed: the failed attempts' parts first, then the language's, one detail. */
+	@Test
+	void theQualityAlertWithBothMeasuresCrossingListsTheFailedAttemptsFirst() {
+		SourceQuality reddit = new SourceQuality(Source.REDDIT, 100, 30, Map.of(FailureClass.SCHEMA_VIOLATION, 30L), 25,
+				QualityStatus.ABOVE_THRESHOLD);
+		SourceLanguage wykop = new SourceLanguage(Source.WYKOP, 520, 20, 2, QualityStatus.ABOVE_THRESHOLD);
+		QualityWindow quality = new QualityWindow(LocalDate.of(2026, 11, 2), LocalDate.of(2026, 11, 8),
+				List.of(reddit));
+		LanguageWindow language = new LanguageWindow(LocalDate.of(2026, 11, 2), LocalDate.of(2026, 11, 8),
+				List.of(wykop));
+
+		Night night = night(List.of(), Map.of(), quality, List.of(new QualityCrossing(reddit, null)), language,
+				List.of(new LanguageCrossing(wykop, null)));
+
+		assertThat(night.qualityAlert()).contains("reddit: failed 30.0% of 100 attempts in 7 days"
+				+ " (2026-11-02…2026-11-08), above its threshold 25% (the day before: 0 attempts, fewer than 100)"
+				+ " (schema_violation 30.0%); wykop: other language 3.8% of 520 theses in 7 days"
+				+ " (2026-11-02…2026-11-08), above its threshold 2% (the day before: 0 theses, fewer than 500); /admin");
+	}
+
+	/**
+	 * Every source failing with the longest error, the largest counters, a quality line with every failure
+	 * class and a language line above the threshold for each; its alert with every source of both measures.
 	 */
 	@Test
 	void everySourceFailingWithTheLongestErrorOfFourByteCharactersStaysWithinNtfysBytes() {
@@ -258,17 +374,29 @@ class NightSummaryTest {
 			.map(tonight -> new QualityCrossing(tonight, new SourceQuality(tonight.source(), Long.MAX_VALUE, 0,
 					Map.of(), tonight.thresholdPercent(), QualityStatus.OK)))
 			.toList();
+		List<SourceLanguage> languages = List.of(Source.values())
+			.stream()
+			.map(source -> new SourceLanguage(source, Long.MAX_VALUE, Long.MAX_VALUE / 8 * 7,
+					source.otherLanguageThresholdPercent(), QualityStatus.ABOVE_THRESHOLD))
+			.toList();
+		LanguageWindow language = new LanguageWindow(LocalDate.of(2026, 11, 2), LocalDate.of(2026, 11, 8), languages);
+		List<LanguageCrossing> languageCrossed = languages.stream()
+			.map(tonight -> new LanguageCrossing(tonight, new SourceLanguage(tonight.source(), Long.MAX_VALUE, 0,
+					tonight.thresholdPercent(), QualityStatus.OK)))
+			.toList();
 
-		Night night = night(sources, dead, quality, crossed);
+		Night night = night(sources, dead, quality, crossed, language, languageCrossed);
 		String text = night.text();
 
 		assertThat(text.getBytes(StandardCharsets.UTF_8).length).isLessThanOrEqualTo(NightSummary.MAX_BYTES);
 		assertThat(text).endsWith("\n/admin");
 		assertThat(text.lines().filter(line -> line.contains(" quality 7d ") && line.endsWith("; ABOVE THRESHOLD")))
 			.hasSize(Source.values().length);
+		assertThat(text.lines().filter(line -> line.contains(" language 7d ") && line.endsWith("; ABOVE THRESHOLD")))
+			.hasSize(Source.values().length);
 		String alert = night.qualityAlert().orElseThrow();
 		assertThat(alert.getBytes(StandardCharsets.UTF_8).length).isLessThanOrEqualTo(NightSummary.MAX_BYTES);
-		assertThat(alert).endsWith("; /admin");
+		assertThat(alert).endsWith("; /admin").contains(" theses in 7 days ");
 	}
 
 	private static Night night(List<SourceLine> sources) {
@@ -277,9 +405,14 @@ class NightSummaryTest {
 
 	private static Night night(List<SourceLine> sources, Map<Source, Long> deadInAdminRuns, QualityWindow quality,
 			List<QualityCrossing> crossed) {
+		return night(sources, deadInAdminRuns, quality, crossed, NO_LANGUAGE, List.of());
+	}
+
+	private static Night night(List<SourceLine> sources, Map<Source, Long> deadInAdminRuns, QualityWindow quality,
+			List<QualityCrossing> crossed, LanguageWindow language, List<LanguageCrossing> languageCrossed) {
 		return new Night(LocalDate.of(2026, 11, 8), LocalDate.of(2026, 11, 6), LocalDate.of(2026, 11, 7),
 				List.of(new Run(RETRY, RunKind.RETRY, RunStatus.PARTIAL), new Run(RANGE, RunKind.RANGE, RunStatus.PARTIAL)),
-				0, 0, sources, deadInAdminRuns, quality, crossed, null);
+				0, 0, sources, deadInAdminRuns, quality, crossed, null, language, languageCrossed, null);
 	}
 
 }

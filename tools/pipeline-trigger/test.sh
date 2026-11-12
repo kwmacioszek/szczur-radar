@@ -369,9 +369,12 @@ last_log_line_says() {
 }
 
 # Case $1's log has every line of the summary in fixtures/api/nightly-summary.json (the stub's answer), with
-# the prefix "summary: ".
+# the prefix "summary: ". The file is the API's answer with a quality line (S-35) and a language line (S-36),
+# so those lines reach the log as every other.
 log_has_the_summary() {
     local line
+    log_says "$1" "trigger: summary: wykop quality 7d ("
+    log_says "$1" "trigger: summary: wykop language 7d ("
     while IFS= read -r line; do
         log_says "$1" "trigger: summary: $line"
     done < <(jq -r '.text' "$fixtures/nightly-summary.json")

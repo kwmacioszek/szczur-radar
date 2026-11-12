@@ -260,6 +260,7 @@ Stanowisko kierunkowe (`bullish`, `bearish`, `neutral`, `mixed`) zawsze opiera s
 
 - `statement` jest w języku posta (post po polsku → po polsku, post po angielsku → po angielsku).
   > Doprecyzowanie (2026-11-04, PRD v3, decyzja właściciela Q-16): reguła obowiązuje bez wyjątków, także dla Reddita. Walidator jej nie sprawdza (tak jak reguł §5–§7.1): pilnuje jej prompt, a udział tez w innym języku niż post jest mierzony osobno dla każdego źródła na danych produkcyjnych (PRD, FR-033). Pomiar S-28 dał 22,1 % tez po polsku na postach angielskich.
+  > Doprecyzowanie (2026-11-12, S-36 `statement-language-quality`): jak reguła jest mierzona, bez zmiany samej reguły. Naruszeniem jest teza udanej oceny modelu z dowodem innego języka niż `posts.language` (język źródła posta): polska litera albo co najmniej 2 polskie słowa funkcyjne, inaczej co najmniej 2 angielskie; teza bez dowodu nie jest naruszeniem. Udział na źródło w oknie 7 dni ma próg (Wykop 2 %, Reddit 30 %, minimum 500 tez) i alarm przy przejściu (PRD, FR-033; dane w `context/changes/statement-language-quality/evidence/`). Na produkcji: Wykop 0,32 % (2026-10-09…2026-11-12), Reddit 16,98 % (2026-11-01…2026-11-12).
 - Anchor i cytaty są zawsze w oryginale (§10).
 
 ---
