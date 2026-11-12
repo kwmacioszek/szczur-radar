@@ -212,10 +212,11 @@ class NightSummaryIT {
 	private UUID post(String source, String stage, int attempts, UUID firstRun) {
 		return jdbc.queryForObject("WITH raw AS (INSERT INTO raw_payloads (source, content_encoding, media_type,"
 				+ " payload, sha256) VALUES (?, 'gzip', 'application/json', '\\x00', " + HASH + ") RETURNING id)"
-				+ " INSERT INTO posts (source, item_type, source_item_id, channel, published_at, raw_payload_id,"
+				+ " INSERT INTO posts (source, item_type, source_item_id, channel, language, published_at, raw_payload_id,"
 				+ " content_hash, stage, assessment_attempts, first_run_id)"
-				+ " SELECT ?, 'post', ?, 'c', now(), raw.id, " + HASH + ", ?, ?, ? FROM raw RETURNING id", UUID.class,
-				source, source, UUID.randomUUID().toString(), stage, attempts, firstRun);
+				+ " SELECT ?, 'post', ?, 'c', ?, now(), raw.id, " + HASH + ", ?, ?, ? FROM raw RETURNING id", UUID.class,
+				source, source, UUID.randomUUID().toString(), Source.fromValue(source).language().value(), stage,
+				attempts, firstRun);
 	}
 
 	/** An assessment of {@code post} in {@code run}; {@code null} tokens as the prefilter leaves them. */

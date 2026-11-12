@@ -434,8 +434,8 @@ class InternalPipelineRunIT {
 				+ " '2026-09-14T21:59:59Z', ARRAY['wykop']) RETURNING id", UUID.class, SystemAccount.SCHEDULER.id());
 		UUID post = jdbc.queryForObject("WITH raw AS (INSERT INTO raw_payloads (source, content_encoding,"
 				+ " media_type, payload, sha256) VALUES ('wykop', 'gzip', 'application/json', '\\x00', ?) RETURNING id)"
-				+ " INSERT INTO posts (source, item_type, source_item_id, channel, published_at, raw_payload_id,"
-				+ " content_hash, stage, assessment_attempts, first_run_id) SELECT 'wykop', 'post', ?, 'c', now(),"
+				+ " INSERT INTO posts (source, item_type, source_item_id, channel, language, published_at, raw_payload_id,"
+				+ " content_hash, stage, assessment_attempts, first_run_id) SELECT 'wykop', 'post', ?, 'c', 'pl', now(),"
 				+ " raw.id, ?, 'assessed', 1, ? FROM raw RETURNING id", UUID.class, "0".repeat(64),
 				UUID.randomUUID().toString(), "0".repeat(64), range);
 		try {

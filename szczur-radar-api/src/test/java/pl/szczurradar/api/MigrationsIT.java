@@ -36,7 +36,7 @@ class MigrationsIT {
 		List<Map<String, Object>> history = jdbc.queryForList(
 				"SELECT version, success FROM flyway_schema_history WHERE version IS NOT NULL ORDER BY installed_rank");
 		assertThat(history).extracting(row -> row.get("version")).containsExactly("1", "2", "3", "4", "5", "6", "7",
-				"8", "9", "10", "11", "12", "13", "14", "15");
+				"8", "9", "10", "11", "12", "13", "14", "15", "16");
 		assertThat(history).allSatisfy(row -> assertThat(row.get("success")).isEqualTo(true));
 	}
 
@@ -115,7 +115,7 @@ class MigrationsIT {
 				"ck_pipeline_runs_interruption_cause", "ck_pipeline_runs_interruption_status");
 		assertThat(constraintsOf("posts")).contains("uq_posts_source_item", "uq_posts_raw_payload", "ck_posts_stage",
 				"ck_posts_stage_attempts", "ck_posts_assessing_owner", "fk_posts_raw_payload", "ck_posts_item_type",
-				"ck_posts_source", "ck_posts_technical_failures", "ck_posts_channel")
+				"ck_posts_source", "ck_posts_technical_failures", "ck_posts_channel", "ck_posts_language")
 			.doesNotContain("ck_posts_resource");
 		assertThat(constraintsOf("assessments")).contains("ck_assessments_outcome", "ck_assessments_failure_class",
 				"ck_assessments_provider", "fk_assessments_post", "fk_assessments_run");
@@ -204,8 +204,8 @@ class MigrationsIT {
 		String hash = "'" + "0".repeat(64) + "'";
 		jdbc.update("WITH raw AS (INSERT INTO raw_payloads (source, content_encoding, media_type, payload, sha256)"
 				+ " VALUES ('reddit', 'gzip', 'application/json', '\\x00', " + hash + ") RETURNING id)"
-				+ " INSERT INTO posts (source, item_type, source_item_id, channel, published_at, raw_payload_id,"
-				+ " content_hash, first_run_id) SELECT 'reddit', 'post', '70401', 'ValueInvesting', now(), raw.id, " + hash
+				+ " INSERT INTO posts (source, item_type, source_item_id, channel, language, published_at, raw_payload_id,"
+				+ " content_hash, first_run_id) SELECT 'reddit', 'post', '70401', 'ValueInvesting', 'en', now(), raw.id, " + hash
 				+ ", ? FROM raw", run);
 		assertRejected("INSERT INTO raw_payloads (source, content_encoding, media_type, payload, sha256) VALUES"
 				+ " ('twitter', 'gzip', 'application/json', '\\x00', " + hash + ")", "ck_raw_payloads_source");
@@ -417,9 +417,9 @@ class MigrationsIT {
 		String hash = "'" + "0".repeat(64) + "'";
 		return "WITH raw AS (INSERT INTO raw_payloads (source, content_encoding, media_type, payload, sha256)"
 				+ " VALUES ('wykop', 'gzip', 'application/json', '\\x00', " + hash + ") RETURNING id)"
-				+ " INSERT INTO posts (source, item_type, source_item_id, channel, published_at, raw_payload_id,"
+				+ " INSERT INTO posts (source, item_type, source_item_id, channel, language, published_at, raw_payload_id,"
 				+ " content_hash, stage, assessment_attempts, assessing_run_id, first_run_id) SELECT 'wykop', '" + itemType
-				+ "', '" + sourceItemId + "', 'gielda', now(), raw.id, " + hash + ", '" + stage + "', " + attempts + ", "
+				+ "', '" + sourceItemId + "', 'gielda', 'pl', now(), raw.id, " + hash + ", '" + stage + "', " + attempts + ", "
 				+ (assessingRun == null ? "NULL" : "'" + assessingRun + "'") + ", '" + firstRun + "' FROM raw";
 	}
 

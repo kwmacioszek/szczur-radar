@@ -34,7 +34,11 @@ nothing.
    assessment attempts (`failureThresholdPercent()`, S-35: the share over the 7-day quality window of
    `posts/AssessmentQuality` above which the night's summary and `/admin` show the source above it; Wykop
    5, Reddit 25, from production data — set a new source's from its first measured weeks; a change is a
-   PR), and one Flyway migration adding
+   PR), the language of its posts (`language()`, S-36: a `text/Language`, stored with each of its posts in
+   `posts.language`, `V16`; Wykop `pl`, Reddit `en` — a source in a new language adds the value to `Language`
+   and the column's `CHECK` in its migration) and its threshold of theses in another language than their post
+   (`otherLanguageThresholdPercent()`, S-36: Wykop 2, Reddit 30, from production data in
+   `context/changes/statement-language-quality/evidence/README.md`; a change is a PR), and one Flyway migration adding
    that value to the four `CHECK` sets of a source: `posts.source`, `raw_payloads.source`,
    `pipeline_runs.sources` and `pipeline_run_sources.source` (registering the source; nothing else in
    persistence changes). `persistence/ClosedSetsIT` is red when the constant has no such migration (or

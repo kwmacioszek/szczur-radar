@@ -148,10 +148,11 @@ class AssessmentQualityIT {
 	private UUID post(String source) {
 		return jdbc.queryForObject("WITH raw AS (INSERT INTO raw_payloads (source, content_encoding, media_type,"
 				+ " payload, sha256) VALUES (?, 'gzip', 'application/json', '\\x00', " + HASH + ") RETURNING id)"
-				+ " INSERT INTO posts (source, item_type, source_item_id, channel, published_at, raw_payload_id,"
+				+ " INSERT INTO posts (source, item_type, source_item_id, channel, language, published_at, raw_payload_id,"
 				+ " content_hash, stage, assessment_attempts, first_run_id)"
-				+ " SELECT ?, 'post', ?, 'c', now(), raw.id, " + HASH + ", 'assessed', 1, ? FROM raw RETURNING id",
-				UUID.class, source, source, UUID.randomUUID().toString(), cron);
+				+ " SELECT ?, 'post', ?, 'c', ?, now(), raw.id, " + HASH + ", 'assessed', 1, ? FROM raw RETURNING id",
+				UUID.class, source, source, UUID.randomUUID().toString(), Source.fromValue(source).language().value(),
+				cron);
 	}
 
 	/**
