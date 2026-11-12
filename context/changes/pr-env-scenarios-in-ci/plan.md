@@ -532,13 +532,13 @@ Brak migracji, zmiennych i zmian tras. PR dotyka katalogu `szczur-radar-api/` ty
 
 #### Automated
 
-- [x] 4.1 Scenariusze są stabilne przy pięciu ziarnach kolejności
-- [x] 4.2 Pełny zestaw jest zielony w obu kolejnościach klas
-- [x] 4.3 Każde z czterech celowych zepsuć czerwieni `PrEnvScenariosIT`
-- [x] 4.4 Job `backend` ma limit 15 min
-- [ ] 4.5 CI na PR jest zielone
-- [x] 4.6 Czas scenariuszy mieści się w budżecie
-- [x] 4.7 Dokumenty mają nowe treści
+- [x] 4.1 Scenariusze są stabilne przy pięciu ziarnach kolejności — f761555
+- [x] 4.2 Pełny zestaw jest zielony w obu kolejnościach klas — f761555
+- [x] 4.3 Każde z czterech celowych zepsuć czerwieni `PrEnvScenariosIT` — f761555
+- [x] 4.4 Job `backend` ma limit 15 min — f761555
+- [x] 4.5 CI na PR jest zielone — f761555
+- [x] 4.6 Czas scenariuszy mieści się w budżecie — f761555
+- [x] 4.7 Dokumenty mają nowe treści — f761555
 
 #### Manual
 
