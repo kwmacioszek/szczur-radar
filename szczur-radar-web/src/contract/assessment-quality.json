@@ -3,6 +3,7 @@
   "to": "2025-03-12",
   "windowDays": 7,
   "minAttempts": 100,
+  "minTheses": 500,
   "sources": [
     {
       "source": "wykop",
@@ -19,7 +20,13 @@
         }
       ],
       "thresholdPercent": 5,
-      "status": "ok"
+      "status": "ok",
+      "language": {
+        "theses": 500,
+        "otherLanguage": 10,
+        "thresholdPercent": 2,
+        "status": "ok"
+      }
     },
     {
       "source": "reddit",
@@ -40,7 +47,13 @@
         }
       ],
       "thresholdPercent": 25,
-      "status": "above_threshold"
+      "status": "above_threshold",
+      "language": {
+        "theses": 501,
+        "otherLanguage": 151,
+        "thresholdPercent": 30,
+        "status": "above_threshold"
+      }
     }
   ]
 }

@@ -442,23 +442,23 @@ V16 dodaje kolumnę, wypełnia ją jednym `UPDATE` według `source` i zakłada `
 
 #### Automated
 
-- [x] 3.1 `NightSummaryTest` zielony: linia języka w trzech stanach, linia `unavailable` samej miary języka, kolejność linii, treść alarmu, limit 4096 bajtów
-- [x] 3.2 `NightSummaryIT` zielony: linie języka i przejście progu języka z zasianych tez
-- [x] 3.3 `InternalPipelineRunIT` zielony: `ASSESSMENT_QUALITY` raz przy przejściu języka i przy obu miarach, brak bez przejścia, awaria zapytania o tezy obok działającej miary prób
-- [x] 3.4 `NtfyAlertsTest` zielony: `ASSESSMENT_QUALITY` z `Priority: 4`
-- [x] 3.5 `tools/pipeline-trigger/test.sh` zielony
-- [x] 3.6 `./mvnw -B verify` zielone
-- [x] 3.7 `python3 tools/render_roadmap_svg.py` kończy się kodem 0 po zamknięciu wpisu Parked
+- [x] 3.1 `NightSummaryTest` zielony: linia języka w trzech stanach, linia `unavailable` samej miary języka, kolejność linii, treść alarmu, limit 4096 bajtów — 4f97588
+- [x] 3.2 `NightSummaryIT` zielony: linie języka i przejście progu języka z zasianych tez — 4f97588
+- [x] 3.3 `InternalPipelineRunIT` zielony: `ASSESSMENT_QUALITY` raz przy przejściu języka i przy obu miarach, brak bez przejścia, awaria zapytania o tezy obok działającej miary prób — 4f97588
+- [x] 3.4 `NtfyAlertsTest` zielony: `ASSESSMENT_QUALITY` z `Priority: 4` — 4f97588
+- [x] 3.5 `tools/pipeline-trigger/test.sh` zielony — 4f97588
+- [x] 3.6 `./mvnw -B verify` zielone — 4f97588
+- [x] 3.7 `python3 tools/render_roadmap_svg.py` kończy się kodem 0 po zamknięciu wpisu Parked — 4f97588
 
 ### Phase 4: Sekcja w `/admin`
 
 #### Automated
 
-- [ ] 4.1 `AssessmentQualityControllerIT` zielony: treść równa trzem plikom kontraktu, miara języka w trzech stanach i `language: null` przy awarii odczytu tez
-- [ ] 4.2 `./mvnw -B verify` zielone (`ContractRoutesIT`, `ContractVariantsTest`, `SpaRulesTest`)
-- [ ] 4.3 `npm test` zielone (`AdminView.test.ts`, testy kontraktu SPA i atrapy, `styleContract.test.ts`)
-- [ ] 4.4 `npm run build` zielone
-- [ ] 4.5 Zrzuty `playwright-cli` sekcji na mocku: oba motywy, 375 px, 7 stanów lub N/A z powodem
+- [x] 4.1 `AssessmentQualityControllerIT` zielony: treść równa trzem plikom kontraktu, miara języka w trzech stanach i `language: null` przy awarii odczytu tez
+- [x] 4.2 `./mvnw -B verify` zielone (`ContractRoutesIT`, `ContractVariantsTest`, `SpaRulesTest`)
+- [x] 4.3 `npm test` zielone (`AdminView.test.ts`, testy kontraktu SPA i atrapy, `styleContract.test.ts`)
+- [x] 4.4 `npm run build` zielone
+- [x] 4.5 Zrzuty `playwright-cli` sekcji na mocku: oba motywy, 375 px, 7 stanów lub N/A z powodem
 
 ### Phase 5: Weryfikacja w PR env
 

@@ -96,7 +96,8 @@ final class ContractRegistry {
 		shapes.put("GET /api/admin/posts/failed", List.of(new Shape("failed-posts-page.json", FAILED_POST_PAGE)));
 		shapes.put("POST /api/admin/posts/restore", List.of(new Shape("restore-result.json", RESTORE_RESULT)));
 		shapes.put("GET /api/admin/assessment-quality", List.of(new Shape("assessment-quality.json", QUALITY),
-				new Shape("assessment-quality-few-attempts.json", QUALITY)));
+				new Shape("assessment-quality-few-attempts.json", QUALITY),
+				new Shape("assessment-quality-language-unavailable.json", QUALITY)));
 		return Map.copyOf(shapes);
 	}
 

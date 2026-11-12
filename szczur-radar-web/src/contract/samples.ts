@@ -861,14 +861,16 @@ export const sampleRestoreResult: RestoreResult = {
 }
 
 /**
- * The quality window (GET /api/admin/assessment-quality) of 6–12 March 2025: Wykop at 5.0 %, its threshold exactly
- * (`ok`), Reddit at 33.3 % against 25 % (`above_threshold`).
+ * The quality window (GET /api/admin/assessment-quality) of 6–12 March 2025: failed attempts — Wykop at 5.0 %, its
+ * threshold exactly (`ok`), Reddit at 33.3 % against 25 % (`above_threshold`); theses in another language — Wykop at
+ * 2.0 % of 500, its threshold exactly (`ok`), Reddit at 30.1 % of 501 against 30 % (`above_threshold`).
  */
 export const sampleAssessmentQuality: QualityWindow = {
   from: '2025-03-06',
   to: '2025-03-12',
   windowDays: 7,
   minAttempts: 100,
+  minTheses: 500,
   sources: [
     {
       source: 'wykop',
@@ -880,6 +882,7 @@ export const sampleAssessmentQuality: QualityWindow = {
       ],
       thresholdPercent: 5,
       status: 'ok',
+      language: { theses: 500, otherLanguage: 10, thresholdPercent: 2, status: 'ok' },
     },
     {
       source: 'reddit',
@@ -892,18 +895,31 @@ export const sampleAssessmentQuality: QualityWindow = {
       ],
       thresholdPercent: 25,
       status: 'above_threshold',
+      language: { theses: 501, otherLanguage: 151, thresholdPercent: 30, status: 'above_threshold' },
     },
   ],
 }
 
-/** The same window with fewer than 100 attempts per source: the threshold is not checked; Wykop has no failed one. */
+/**
+ * The same window with fewer than 100 attempts and 500 theses per source: the thresholds are not checked; Wykop has
+ * no failed attempt and 46 theses, Reddit no thesis at all.
+ */
 export const sampleAssessmentQualityFewAttempts: QualityWindow = {
   from: '2025-03-06',
   to: '2025-03-12',
   windowDays: 7,
   minAttempts: 100,
+  minTheses: 500,
   sources: [
-    { source: 'wykop', attempts: 46, failed: 0, classes: [], thresholdPercent: 5, status: 'not_enough_data' },
+    {
+      source: 'wykop',
+      attempts: 46,
+      failed: 0,
+      classes: [],
+      thresholdPercent: 5,
+      status: 'not_enough_data',
+      language: { theses: 46, otherLanguage: 1, thresholdPercent: 2, status: 'not_enough_data' },
+    },
     {
       source: 'reddit',
       attempts: 3,
@@ -911,6 +927,36 @@ export const sampleAssessmentQualityFewAttempts: QualityWindow = {
       classes: [{ failureClass: 'provider_error', count: 1 }],
       thresholdPercent: 25,
       status: 'not_enough_data',
+      language: { theses: 0, otherLanguage: 0, thresholdPercent: 30, status: 'not_enough_data' },
+    },
+  ],
+}
+
+/** The same window when the API could not read the theses: no language measure, the failed attempts as usual. */
+export const sampleAssessmentQualityLanguageUnavailable: QualityWindow = {
+  from: '2025-03-06',
+  to: '2025-03-12',
+  windowDays: 7,
+  minAttempts: 100,
+  minTheses: 500,
+  sources: [
+    {
+      source: 'wykop',
+      attempts: 123,
+      failed: 3,
+      classes: [{ failureClass: 'schema_violation', count: 3 }],
+      thresholdPercent: 5,
+      status: 'ok',
+      language: null,
+    },
+    {
+      source: 'reddit',
+      attempts: 2,
+      failed: 0,
+      classes: [],
+      thresholdPercent: 25,
+      status: 'not_enough_data',
+      language: null,
     },
   ],
 }
@@ -933,4 +979,5 @@ export const SAMPLES: Record<string, unknown> = {
   'restore-result.json': sampleRestoreResult,
   'assessment-quality.json': sampleAssessmentQuality,
   'assessment-quality-few-attempts.json': sampleAssessmentQualityFewAttempts,
+  'assessment-quality-language-unavailable.json': sampleAssessmentQualityLanguageUnavailable,
 }

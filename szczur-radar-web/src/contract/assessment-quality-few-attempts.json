@@ -3,6 +3,7 @@
   "to": "2025-03-12",
   "windowDays": 7,
   "minAttempts": 100,
+  "minTheses": 500,
   "sources": [
     {
       "source": "wykop",
@@ -10,7 +11,13 @@
       "failed": 0,
       "classes": [],
       "thresholdPercent": 5,
-      "status": "not_enough_data"
+      "status": "not_enough_data",
+      "language": {
+        "theses": 46,
+        "otherLanguage": 1,
+        "thresholdPercent": 2,
+        "status": "not_enough_data"
+      }
     },
     {
       "source": "reddit",
@@ -23,7 +30,13 @@
         }
       ],
       "thresholdPercent": 25,
-      "status": "not_enough_data"
+      "status": "not_enough_data",
+      "language": {
+        "theses": 0,
+        "otherLanguage": 0,
+        "thresholdPercent": 30,
+        "status": "not_enough_data"
+      }
     }
   ]
 }

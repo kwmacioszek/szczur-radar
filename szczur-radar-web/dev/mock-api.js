@@ -28,11 +28,14 @@
  *       'error' 500.
  * QUALITY (the "Jakość ocen (7 dni)" section of /admin; MODE 'loading' and 'error' apply first), like
  * /api/admin/assessment-quality of posts/api/AssessmentQualityController.java, the window D-6…D:
- *       'data'  Wykop ok (2.6 % of 3134 attempts against 5 %), Reddit above its threshold (27.4 % of 598 against 25 %),
- *               the default,
- *       'few'   Wykop ok, Reddit with 46 attempts: fewer than minAttempts, the threshold not checked,
- *       'none'  the window and no source (no attempt in it),
- *       'error' 500.
+ *       'data'   failed attempts: Wykop ok (2.6 % of 3134 attempts against 5 %), Reddit above its threshold (27.4 % of
+ *                598 against 25 %); theses in another language: Wykop ok (0.3 % of 3476 against 2 %), Reddit above its
+ *                threshold (31.0 % of 2857 against 30 %); the default,
+ *       'few'    Wykop as in 'data', Reddit with 46 attempts and 120 theses: fewer than minAttempts and minTheses, neither
+ *                threshold checked,
+ *       'nolang' as 'data', but the theses could not be read: every source's language is null,
+ *       'none'   the window and no source (no attempt in it),
+ *       'error'  500.
  * Runs (/api/admin/pipeline-runs?page&size, 32 in all: "Pokaż starsze" has a second page of 20; page 0…21474836,
  * size 1…100, else 400 invalid_request) answer like
  * pipeline/api/PipelineRunController.java, the newest first; a run that needs attention has its reason codes in
@@ -449,18 +452,23 @@ async page => {
   const WYKOP_QUALITY = { source: 'wykop', attempts: 3134, failed: 82, classes: [
     { failureClass: 'schema_violation', count: 10 }, { failureClass: 'invalid_reference', count: 4 },
     { failureClass: 'fabricated_evidence', count: 62 }, { failureClass: 'domain_invariant_violation', count: 6 },
-  ], thresholdPercent: 5, status: 'ok' }
+  ], thresholdPercent: 5, status: 'ok',
+  language: { theses: 3476, otherLanguage: 11, thresholdPercent: 2, status: 'ok' } }
+  const REDDIT_QUALITY = { source: 'reddit', attempts: 598, failed: 164, classes: [
+    { failureClass: 'provider_error', count: 3 }, { failureClass: 'schema_violation', count: 80 },
+    { failureClass: 'fabricated_evidence', count: 72 }, { failureClass: 'domain_invariant_violation', count: 9 },
+  ], thresholdPercent: 25, status: 'above_threshold',
+  language: { theses: 2857, otherLanguage: 886, thresholdPercent: 30, status: 'above_threshold' } }
   const QUALITY_SOURCES = {
-    data: [WYKOP_QUALITY, { source: 'reddit', attempts: 598, failed: 164, classes: [
-      { failureClass: 'provider_error', count: 3 }, { failureClass: 'schema_violation', count: 80 },
-      { failureClass: 'fabricated_evidence', count: 72 }, { failureClass: 'domain_invariant_violation', count: 9 },
-    ], thresholdPercent: 25, status: 'above_threshold' }],
+    data: [WYKOP_QUALITY, REDDIT_QUALITY],
     few: [WYKOP_QUALITY, { source: 'reddit', attempts: 46, failed: 7, classes: [
       { failureClass: 'schema_violation', count: 4 }, { failureClass: 'fabricated_evidence', count: 3 },
-    ], thresholdPercent: 25, status: 'not_enough_data' }],
+    ], thresholdPercent: 25, status: 'not_enough_data',
+    language: { theses: 120, otherLanguage: 21, thresholdPercent: 30, status: 'not_enough_data' } }],
+    nolang: [WYKOP_QUALITY, REDDIT_QUALITY].map((source) => ({ ...source, language: null })),
     none: [],
   }
-  const assessmentQuality = () => ({ from: dMinus(6), to: today, windowDays: 7, minAttempts: 100,
+  const assessmentQuality = () => ({ from: dMinus(6), to: today, windowDays: 7, minAttempts: 100, minTheses: 500,
     sources: QUALITY_SOURCES[QUALITY] })
   // The sources of /api/freshness by FRESHNESS, in the API's order.
   const WYKOP_UPDATE = { source: 'wykop', lastUpdatedAt: '2026-10-13T03:12:00Z' }

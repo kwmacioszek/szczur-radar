@@ -185,11 +185,12 @@ const ROUTES: Route[] = [
     checks: [{ at: '$', refs: [{ file: 'missing-days.json', at: '$' }], enums: { '$.days[].sources[]': 'source' } }],
   },
   {
-    name: 'GET /api/admin/assessment-quality (QUALITY data, few and none)',
+    name: 'GET /api/admin/assessment-quality (QUALITY data, few, nolang and none)',
     request: { method: 'GET', path: '/api/admin/assessment-quality' },
     fetch: async (api) => [
       await ok(api, 'GET', '/api/admin/assessment-quality'),
       await ok(await installMock({ QUALITY: 'few' }), 'GET', '/api/admin/assessment-quality'),
+      await ok(await installMock({ QUALITY: 'nolang' }), 'GET', '/api/admin/assessment-quality'),
       await ok(await installMock({ QUALITY: 'none' }), 'GET', '/api/admin/assessment-quality'),
     ],
     checks: [
@@ -198,10 +199,12 @@ const ROUTES: Route[] = [
         refs: [
           { file: 'assessment-quality.json', at: '$' },
           { file: 'assessment-quality-few-attempts.json', at: '$' },
+          { file: 'assessment-quality-language-unavailable.json', at: '$' },
         ],
         enums: {
           '$.sources[].source': 'source',
           '$.sources[].status': 'qualityStatus',
+          '$.sources[].language.status': 'qualityStatus',
           '$.sources[].classes[].failureClass': 'failureClass',
         },
       },
@@ -813,12 +816,14 @@ describe('the mock\'s suspended answers wait 60 s (fake clocks)', () => {
 // --- invariants of the mock's data -----------------------------------------------------------------------------
 
 describe('the mock\'s data is a state the API produces', () => {
-  it.each(['data', 'few'])('QUALITY %s: each source\'s state follows AssessmentQuality.status from its counts', async (quality) => {
+  it.each(['data', 'few', 'nolang'])('QUALITY %s: each source\'s state follows AssessmentQuality.status from its counts', async (quality) => {
     const failureClasses: readonly string[] = rules.values.failureClass
     const body = (await ok(await installMock({ QUALITY: quality }), 'GET', '/api/admin/assessment-quality')) as {
       minAttempts: number
+      minTheses: number
       sources: { source: string; attempts: number; failed: number; thresholdPercent: number; status: string
-        classes: { failureClass: string; count: number }[] }[]
+        classes: { failureClass: string; count: number }[]
+        language: { theses: number; otherLanguage: number; thresholdPercent: number; status: string } | null }[]
     }
     expect(body.sources.length).toBeGreaterThan(0)
     for (const source of body.sources) {
@@ -830,6 +835,18 @@ describe('the mock\'s data is a state the API produces', () => {
       const status = source.attempts < body.minAttempts ? 'not_enough_data'
         : source.failed * 100 > source.thresholdPercent * source.attempts ? 'above_threshold' : 'ok'
       expect(source.status, source.source).toBe(status)
+      // the language measure: null only when the theses could not be read (QUALITY nolang), else the same rule
+      // from its counts and minTheses (AssessmentQuality.languages)
+      const { language } = source
+      if (quality === 'nolang') {
+        expect(language, source.source).toBeNull()
+        continue
+      }
+      expect(language, source.source).not.toBeNull()
+      expect(language!.otherLanguage, source.source).toBeLessThanOrEqual(language!.theses)
+      const languageStatus = language!.theses < body.minTheses ? 'not_enough_data'
+        : language!.otherLanguage * 100 > language!.thresholdPercent * language!.theses ? 'above_threshold' : 'ok'
+      expect(language!.status, `${source.source} language`).toBe(languageStatus)
     }
   })
 

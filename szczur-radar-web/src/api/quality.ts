@@ -3,9 +3,9 @@ import { apiFetch } from './client'
 import type { FailureClass } from './posts'
 
 /**
- * A source's window against its threshold — posts/QualityStatus, computed by the API: enough attempts and the share
- * of failed ones not above the threshold (`ok`), strictly above it (`above_threshold`), or fewer than `minAttempts`
- * attempts, so the threshold is not checked (`not_enough_data`, the state below any measure's minimum).
+ * A measure's window against its threshold — posts/QualityStatus, computed by the API, one rule for both measures:
+ * enough attempts (theses) and the share not above the threshold (`ok`), strictly above it (`above_threshold`), or
+ * fewer than `minAttempts` attempts (`minTheses` theses), so the threshold is not checked (`not_enough_data`).
  */
 export type QualityStatus = 'ok' | 'above_threshold' | 'not_enough_data'
 
@@ -13,6 +13,18 @@ export type QualityStatus = 'ok' | 'above_threshold' | 'not_enough_data'
 export interface ClassCount {
   failureClass: FailureClass
   count: number
+}
+
+/**
+ * One source's theses of successful attempts with a model call in the window (S-36): how many, how many of them with
+ * evidence of another language than their post's, the source's threshold and the state. Counts, not shares.
+ */
+export interface LanguageShare {
+  theses: number
+  otherLanguage: number
+  /** The source's threshold in percent of its theses. */
+  thresholdPercent: number
+  status: QualityStatus
 }
 
 /** One source's assessment attempts with a model call in the window (retries included, the prefilter's left out). */
@@ -26,6 +38,8 @@ export interface SourceQuality {
   /** The source's threshold in percent of its attempts. */
   thresholdPercent: number
   status: QualityStatus
+  /** The source's theses in another language than their post; `null` only when the API could not read the theses. */
+  language: LanguageShare | null
 }
 
 /** The window `from`–`to` (both included, `YYYY-MM-DD`: D-6…D in Warsaw) and its sources. */
@@ -33,8 +47,10 @@ export interface QualityWindow {
   from: string
   to: string
   windowDays: number
-  /** The fewest attempts of a source for its threshold to be checked. */
+  /** The fewest attempts of a source for its threshold of failed attempts to be checked. */
   minAttempts: number
+  /** The fewest theses of a source for its threshold of theses in another language to be checked. */
+  minTheses: number
   /** Each source with an attempt in the window, in the API's order of sources; empty without one. */
   sources: SourceQuality[]
 }
