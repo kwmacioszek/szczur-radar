@@ -464,10 +464,10 @@ V16 dodaje kolumnę, wypełnia ją jednym `UPDATE` według `source` i zakłada `
 
 #### Automated
 
-- [x] 5.1 CI PR-a zielone (`gh pr checks <PR> --watch`)
-- [x] 5.2 `GET /api/admin/assessment-quality` w PR env: 200 z `minTheses` i `language` przy każdym źródle, 401 bez sesji
-- [x] 5.3 Log crona i testowy temat ntfy w PR env z liniami `language 7d`
-- [x] 5.4 Zrzut sekcji w PR env przez `playwright-cli`, zmienne testowe usunięte z PR env
+- [x] 5.1 CI PR-a zielone (`gh pr checks <PR> --watch`) — 1ae1804
+- [x] 5.2 `GET /api/admin/assessment-quality` w PR env: 200 z `minTheses` i `language` przy każdym źródle, 401 bez sesji — 1ae1804
+- [x] 5.3 Log crona i testowy temat ntfy w PR env z liniami `language 7d` — 1ae1804
+- [x] 5.4 Zrzut sekcji w PR env przez `playwright-cli`, zmienne testowe usunięte z PR env — 1ae1804
 
 #### Manual
 
