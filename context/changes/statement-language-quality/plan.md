@@ -454,20 +454,20 @@ V16 dodaje kolumnę, wypełnia ją jednym `UPDATE` według `source` i zakłada `
 
 #### Automated
 
-- [x] 4.1 `AssessmentQualityControllerIT` zielony: treść równa trzem plikom kontraktu, miara języka w trzech stanach i `language: null` przy awarii odczytu tez
-- [x] 4.2 `./mvnw -B verify` zielone (`ContractRoutesIT`, `ContractVariantsTest`, `SpaRulesTest`)
-- [x] 4.3 `npm test` zielone (`AdminView.test.ts`, testy kontraktu SPA i atrapy, `styleContract.test.ts`)
-- [x] 4.4 `npm run build` zielone
-- [x] 4.5 Zrzuty `playwright-cli` sekcji na mocku: oba motywy, 375 px, 7 stanów lub N/A z powodem
+- [x] 4.1 `AssessmentQualityControllerIT` zielony: treść równa trzem plikom kontraktu, miara języka w trzech stanach i `language: null` przy awarii odczytu tez — 8b3488d
+- [x] 4.2 `./mvnw -B verify` zielone (`ContractRoutesIT`, `ContractVariantsTest`, `SpaRulesTest`) — 8b3488d
+- [x] 4.3 `npm test` zielone (`AdminView.test.ts`, testy kontraktu SPA i atrapy, `styleContract.test.ts`) — 8b3488d
+- [x] 4.4 `npm run build` zielone — 8b3488d
+- [x] 4.5 Zrzuty `playwright-cli` sekcji na mocku: oba motywy, 375 px, 7 stanów lub N/A z powodem — 8b3488d
 
 ### Phase 5: Weryfikacja w PR env
 
 #### Automated
 
-- [ ] 5.1 CI PR-a zielone (`gh pr checks <PR> --watch`)
-- [ ] 5.2 `GET /api/admin/assessment-quality` w PR env: 200 z `minTheses` i `language` przy każdym źródle, 401 bez sesji
-- [ ] 5.3 Log crona i testowy temat ntfy w PR env z liniami `language 7d`
-- [ ] 5.4 Zrzut sekcji w PR env przez `playwright-cli`, zmienne testowe usunięte z PR env
+- [x] 5.1 CI PR-a zielone (`gh pr checks <PR> --watch`)
+- [x] 5.2 `GET /api/admin/assessment-quality` w PR env: 200 z `minTheses` i `language` przy każdym źródle, 401 bez sesji
+- [x] 5.3 Log crona i testowy temat ntfy w PR env z liniami `language 7d`
+- [x] 5.4 Zrzut sekcji w PR env przez `playwright-cli`, zmienne testowe usunięte z PR env
 
 #### Manual
 
