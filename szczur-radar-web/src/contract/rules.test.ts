@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import mockApi from '../../dev/mock-api.js?raw'
 import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from '../api/activation'
+import type { ErrorCode } from '../api/client'
 import {
   type AttentionReason,
   type InterruptionCause,
@@ -214,6 +215,24 @@ const FAILURE_CLASSES = [
   'domain_invariant_violation',
 ] as const satisfies readonly FailureClass[]
 
+const ERROR_CODES = [
+  'invalid_credentials',
+  'not_authenticated',
+  'forbidden',
+  'too_many_attempts',
+  'cross_origin',
+  'invalid_request',
+  'unsupported_media_type',
+  'activation_link_invalid',
+  'password_policy',
+  'pipeline_busy',
+  'post_dead',
+  'post_not_found',
+  'source_not_configured',
+  'not_found',
+  'internal_error',
+] as const satisfies readonly ErrorCode[]
+
 const QUALITY_STATUSES = ['ok', 'above_threshold', 'not_enough_attempts'] as const satisfies readonly QualityStatus[]
 
 /**
@@ -251,6 +270,11 @@ describe('the unions of src/api', () => {
 })
 
 describe('error codes', () => {
+  it('the ErrorCode union lists the codes of the file, in its order', () => {
+    const codes: readonly string[] = ERROR_CODES satisfies Exhaustive<ErrorCode, typeof ERROR_CODES>
+    expect(codes).toEqual(rules.errorCodes)
+  })
+
   const files = import.meta.glob<string>('../**/*.{ts,vue}', { query: '?raw', import: 'default', eager: true })
   const sources: Record<string, string> = {}
   for (const [path, text] of Object.entries(files)) {
@@ -258,17 +282,41 @@ describe('error codes', () => {
   }
   sources['dev/mock-api.js'] = mockApi
 
-  /** The codes written as `detail: '<code>'`, `new ApiError(<status>, '<code>')`, and `case '<code>'` after `.detail)`. */
+  /**
+   * The codes written as `detail: '<code>'`, `new ApiError(<status>, '<code>')`, `.detail === '<code>'` / `!==`
+   * (also reversed: `'<code>' === x.detail`), `.detail).toBe('<code>')` / `.toEqual('<code>')`, and `case '<code>'`
+   * after `.detail)`.
+   */
   function literals(text: string): string[] {
     const found = [
       ...text.matchAll(/\bdetail:\s*['"`]([a-z_]+)['"`]/g),
       ...text.matchAll(/new ApiError\(\s*\d+,\s*['"`]([a-z_]+)['"`]/g),
+      ...text.matchAll(/\.detail\s*[!=]==?\s*['"`]([a-z_]+)['"`]/g),
+      ...text.matchAll(/['"`]([a-z_]+)['"`]\s*[!=]==?\s*[\w$.?]*\.detail\b/g),
+      ...text.matchAll(/\.detail\)\s*\.(?:not\.)?(?:toBe|toEqual)\(\s*['"`]([a-z_]+)['"`]/g),
     ]
     if (text.includes('.detail)')) found.push(...text.matchAll(/\bcase\s+['"`]([a-z_]+)['"`]/g))
     return found.map((match) => match[1])
   }
 
   const hits = Object.entries(sources).flatMap(([path, text]) => literals(text).map((code) => ({ path, code })))
+
+  it('recognises every form', () => {
+    const forms = [
+      `{ detail: 'code_a' }`,
+      `new ApiError(409, 'code_b')`,
+      `if (err.detail === 'code_c') return`,
+      `if (err.detail !== 'code_d') return`,
+      `if ('code_e' === err.detail) return`,
+      `if ('code_f' !== err?.detail) return`,
+      `expect(error.detail).toBe('code_g')`,
+      `expect(error.detail).toEqual('code_h')`,
+      `switch (err.detail) { case 'code_i': break }`,
+    ]
+    expect(forms.flatMap((form) => literals(form))).toEqual([
+      'code_a', 'code_b', 'code_c', 'code_d', 'code_e', 'code_f', 'code_g', 'code_h', 'code_i',
+    ])
+  })
 
   it('finds the codes, so a broken pattern does not pass in silence', () => {
     expect(hits.length).toBeGreaterThanOrEqual(20)
