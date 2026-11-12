@@ -221,6 +221,32 @@ again. `RecordingsReplayTest` (a plain `*Test`, in CI, no secrets) judges every 
 again and fails on a changed verdict, and — once `default` is set — requires a current recording of
 every gold post for it and every `GoldMetrics` threshold met.
 
+## Scenario days (`ScenarioDaysRecorder`, S-31)
+
+The scenarios answer the pipeline's model calls with real OpenRouter answers
+(`scenario/RecordedProvider` on a local `sources/LocalApiServer`), one per post of the sources' fixture days
+that goes to the model (`scenario/RecordedDays`: 33 posts — 13 of Wykop, 14 of r/inwestowanie, 6 of r/stocks).
+The recorder sends each post's request through the production OpenRouter client in the configuration `luna`
+of `models.json` (only the key and `LLM_TIMEOUT` come from `LLM_*`; a `LLM_SERVICE_TIER` in the env file is
+ignored) to a local relay that passes it on and keeps the raw answer:
+
+```bash
+( source ~/.config/szczur-radar/openrouter.env && ./mvnw -Pmeasurement test -Dtest=ScenarioDaysRecorder )
+```
+
+- Each answer goes unchanged into `src/test/resources/fixtures/llm/scenario-days/<post>.json`
+  (`wykop-entry-<id>`, `wykop-link-<id>`, `reddit-<id>`), and only when the client returned the model's text
+  from it; an answer the validator rejects is a good recording. A failed call (a refusal, the content filter,
+  no text, no `choices`, an `error` in a 200, another status) is tried again, up to 3 times; a post still
+  without a recording fails the run with its name, and the owner decides (a failed call in a recording would
+  feed the refusals' breaker in whatever order the parallel calls end).
+- A post with a recording is skipped, so a run resumes; delete a file to record it again.
+- Last, it replays every recording through the client and the validator and prints a table: file → `ok` or
+  the failure class. Copy it into the directory's `README.md`, with the date.
+- Record again (delete the files, run it) when the assessment contract or a source fixture or mapper changes;
+  `scenario/RecordedDaysTest` fails on a post without a recording or a recording without a post. A prompt
+  change alone needs none: a recording is matched by the user message, which has no system prompt.
+
 ## Reddit sample
 
 Measures what production's configuration does with real Reddit posts, for the decision on enabling

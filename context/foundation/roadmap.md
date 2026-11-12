@@ -109,7 +109,7 @@ Na Wykopie (#gielda) i Reddicie codziennie pojawiają się setki postów o inwes
 | ID   | Change ID                         | Outcome (user can …)                                                                                                               | Prerequisites            | PRD refs                                                                                   | Status   |
 | ---- | --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ------------------------ | ------------------------------------------------------------------------------------------ | -------- |
 | S-30 | it-test-isolation                 | wynik CI nie zależy od kolejności klas testów integracyjnych; test nie widzi danych zostawionych przez inny test                   | —                        | `verification-scope.md` „Regresja w CI”; run CI 41784416932                               | done |
-| S-31 | pr-env-scenarios-in-ci            | ręczne weryfikacje PR env z S-13, S-17, S-18, S-20, S-27 chodzą w CI jako scenariusze na pełnym API z atrapami źródeł i LLM         | S-30                     | `verification-scope.md` „Scenariusze API”, „done when”; NFR `prd.md:275`                  | proposed |
+| S-31 | pr-env-scenarios-in-ci            | ręczne weryfikacje PR env z S-13, S-17, S-18, S-20, S-27 chodzą w CI jako scenariusze na pełnym API z atrapami źródeł i LLM         | S-30                     | `verification-scope.md` „Scenariusze API”, „done when”; NFR `prd.md:275`                  | in-progress |
 | S-32 | provider-refusal-breaker          | seria odmów dostawcy zatrzymuje przebieg, zanim zużyje próby pozostałych postów, i daje sygnał jak każdy `failed`                  | —                        | NFR `prd.md:275` (doprecyzowanie PRD v3); audyt §6 R-41; destylacja #3                     | done |
 | S-33 | restore-dead-posts                | admin przywraca zaznaczone martwe posty do oceny, a ich próby są zerowane                                                          | —                        | FR-034, FR-015; destylacja Q-18                                                            | done |
 | S-34 | dead-posts-daily-digest           | operator dostaje co noc w ntfy podsumowanie nocy (liczby i tokeny każdego źródła, martwe posty) zamiast alarmu przy każdym przebiegu z samym martwym postem; zdarzenia API idą przez ntfy, dzwonek bez zmian | —                        | NFR `prd.md:275` (doprecyzowanie PRD v3); destylacja #5, R-42, Q-14                        | done |
@@ -179,7 +179,7 @@ Brak — każda praca przekrojowa M-4 ma widoczny skutek dla użytkownika, opera
   - Które kroki z sekcji S-13, S-17, S-18, S-20 i S-27 w `deploy-plan.md` da się odtworzyć w CI, a które zostają na liście ręcznej (Telegram, deploy na Railway, prawdziwe API, harmonogram cronów)? — Owner: team (`/10x-plan`). Block: no.
   - Ile czasu CI na darmowych runnerach mogą zająć scenariusze? — Owner: user. Block: no.
 - **Risk:** gwiazda przewodnia; scenariusze sprawdzają zachowanie przez API, więc łapią to, co strażnicy przepuścili (X1, X2), ale wydłużają job `backend` — kontrola czasu CI jest częścią wycinka.
-- **Status:** proposed
+- **Status:** in-progress
 
 ### S-32: Seria odmów dostawcy zatrzymuje przebieg
 
