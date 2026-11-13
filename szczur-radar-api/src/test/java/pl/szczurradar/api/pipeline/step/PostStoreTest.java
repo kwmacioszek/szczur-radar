@@ -1,6 +1,7 @@
 package pl.szczurradar.api.pipeline.step;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.assertj.core.api.Assertions.entry;
 import static org.assertj.core.api.Assertions.tuple;
@@ -41,6 +42,7 @@ import pl.szczurradar.api.pipeline.flow.RunFlow.SourceFetch;
 import pl.szczurradar.api.pipeline.flow.RunFlow.SourceStored;
 import pl.szczurradar.api.pipeline.flow.RunFlow.StoredBatch;
 import pl.szczurradar.api.pipeline.run.SourceFetchStatus;
+import pl.szczurradar.api.pipeline.state.RunInterruptedException;
 import pl.szczurradar.api.posts.Post;
 import pl.szczurradar.api.posts.PostKey;
 import pl.szczurradar.api.posts.PostRepository;
@@ -238,6 +240,35 @@ class PostStoreTest {
 	}
 
 	@Test
+	void aConstraintWithoutANameOrWithABlankOneGivesWayToTheSqlState() {
+		assertThat(rejectedBy(new DataIntegrityViolationException("x",
+				new ConstraintViolationException(ROW_VALUES, new SQLException(ROW_VALUES, "23502"), null))))
+			.isEqualTo("SQLState 23502");
+		assertThat(rejectedBy(new DataIntegrityViolationException("x",
+				new ConstraintViolationException(ROW_VALUES, new SQLException(ROW_VALUES, "23502"), " "))))
+			.isEqualTo("SQLState 23502");
+	}
+
+	@Test
+	void anSqlExceptionWithoutAStateOrWithABlankOneIsUnknown() {
+		assertThat(rejectedBy(new DataIntegrityViolationException("x", new SQLException(ROW_VALUES))))
+			.isEqualTo("unknown");
+		assertThat(rejectedBy(new DataIntegrityViolationException("x", new SQLException(ROW_VALUES, " "))))
+			.isEqualTo("unknown");
+	}
+
+	@Test
+	void aCauseChainThatLoopsBackEndsItsSearch() {
+		// A batch's next exceptions pointing back at the batch: each is searched once.
+		SQLException batch = new SQLException(ROW_VALUES);
+		SQLException row = new SQLException(ROW_VALUES);
+		batch.setNextException(row);
+		row.setNextException(batch);
+
+		assertThat(rejectedBy(new DataIntegrityViolationException("x", batch))).isEqualTo("unknown");
+	}
+
+	@Test
 	void theRejectedSummaryNamesTenPostsAndCountsTheRest() {
 		List<RejectedPost> rejected = new ArrayList<>();
 		IntStream.rangeClosed(1, 10).forEach(i -> rejected.add(new RejectedPost(Source.WYKOP, ItemType.POST, "w" + i,
@@ -284,6 +315,57 @@ class PostStoreTest {
 	}
 
 	@Test
+	void exactlyOneChunkOfNewPostsIsOneTransaction() {
+		when(posts.findKeys(eq(Source.WYKOP), anyCollection())).thenReturn(List.of());
+		List<SourcePost> chunk = IntStream.range(0, PostStore.STORE_CHUNK)
+			.mapToObj(i -> post(ItemType.POST, String.valueOf(i)))
+			.toList();
+
+		StoredBatch batch = store.store(fetched(chunk));
+
+		assertThat(transactions).hasSize(1);
+		assertThat(batch.newPostIds()).hasSize(PostStore.STORE_CHUNK);
+	}
+
+	@Test
+	void aFetchOfOnlyStoredPostsOpensNoTransaction() {
+		when(posts.findKeys(eq(Source.WYKOP), anyCollection()))
+			.thenReturn(List.of(new PostKey(ItemType.POST, "1"), new PostKey(ItemType.POST, "2")));
+
+		StoredBatch batch = store.store(fetched(List.of(post(ItemType.POST, "1"), post(ItemType.POST, "2"))));
+
+		assertThat(transactions).isEmpty();
+		assertThat(batch.newPostIds()).isEmpty();
+		assertThat(batch.sources()).containsExactly(new SourceStored(Source.WYKOP, 2, 0, 2, 0));
+	}
+
+	@Test
+	void anInterruptStoresNoFurtherChunk() {
+		when(posts.findKeys(eq(Source.WYKOP), anyCollection())).thenReturn(List.of());
+		// The run is stopped while its first chunk is stored.
+		when(posts.save(any(Post.class))).thenAnswer(invocation -> {
+			Thread.currentThread().interrupt();
+			Post post = invocation.getArgument(0);
+			setId(post);
+			saved.add(post);
+			return post;
+		});
+		List<SourcePost> many = IntStream.range(0, PostStore.STORE_CHUNK + 1)
+			.mapToObj(i -> post(ItemType.POST, String.valueOf(i)))
+			.toList();
+
+		try {
+			assertThatExceptionOfType(RunInterruptedException.class).isThrownBy(() -> store.store(fetched(many)));
+		}
+		finally {
+			Thread.interrupted();
+		}
+
+		assertThat(transactions).hasSize(1);
+		assertThat(saved).hasSize(PostStore.STORE_CHUNK);
+	}
+
+	@Test
 	void keysAreLookedUpInChunks() {
 		List<List<String>> lookups = new ArrayList<>();
 		when(posts.findKeys(eq(Source.WYKOP), anyCollection())).thenAnswer(invocation -> {
@@ -296,6 +378,22 @@ class PostStoreTest {
 
 		assertThat(lookups).extracting(List::size).containsExactly(1000, 1000, 500);
 		assertThat(batch.sources()).containsExactly(new SourceStored(Source.WYKOP, 2_500, 2_500, 0, 0));
+	}
+
+	@Test
+	void keysOfExactlyOneLookupChunkAreLookedUpOnce() {
+		List<List<String>> lookups = new ArrayList<>();
+		when(posts.findKeys(eq(Source.WYKOP), anyCollection())).thenAnswer(invocation -> {
+			lookups.add(List.copyOf(invocation.<Collection<String>>getArgument(1)));
+			return List.of();
+		});
+		List<SourcePost> many = IntStream.range(0, 2 * PostStore.KEY_CHUNK)
+			.mapToObj(i -> post(ItemType.POST, String.valueOf(i)))
+			.toList();
+
+		store.store(fetched(many));
+
+		assertThat(lookups).extracting(List::size).containsExactly(PostStore.KEY_CHUNK, PostStore.KEY_CHUNK);
 	}
 
 	/** The cause {@link PostStore} names for a single post whose save fails with {@code failure}. */

@@ -475,20 +475,20 @@ Nie dotyczy: bez zmian schematu, danych i zmiennych Railway. Nowy job w `ci.yml`
 
 #### Automated
 
-- [x] 3.1 `./mvnw -B test` zielony
-- [x] 3.2 Brak ocalałych bez wpisu w `agents.assessor.*` i `posts.AssessmentQuality*`
-- [x] 3.3 Brak zmian w `src/main`
-- [x] 3.4 Powody wpisów z prefiksem kategorii, pilnowane przez `MutantRegistryTest` z Fazy 2
+- [x] 3.1 `./mvnw -B test` zielony — 53fa884
+- [x] 3.2 Brak ocalałych bez wpisu w `agents.assessor.*` i `posts.AssessmentQuality*` — 53fa884
+- [x] 3.3 Brak zmian w `src/main` — 53fa884
+- [x] 3.4 Powody wpisów z prefiksem kategorii, pilnowane przez `MutantRegistryTest` z Fazy 2 — 53fa884
 
 ### Phase 4: Ocalałe — przebieg
 
 #### Automated
 
-- [ ] 4.1 `./mvnw -B -Pmutation test` zielony
-- [ ] 4.2 `./mvnw -B verify` zielony
-- [ ] 4.3 Brak zmian w `src/main`
-- [ ] 4.4 Usunięty wpis rejestru czerwieni strażnika
-- [ ] 4.5 Tabela „po S-45” w `mutation-baseline.md`
+- [x] 4.1 `./mvnw -B -Pmutation test` zielony
+- [x] 4.2 `./mvnw -B verify` zielony
+- [x] 4.3 Brak zmian w `src/main`
+- [x] 4.4 Usunięty wpis rejestru czerwieni strażnika
+- [x] 4.5 Tabela „po S-45” w `mutation-baseline.md`
 
 ### Phase 5: Ręczne zepsucia SQL
 

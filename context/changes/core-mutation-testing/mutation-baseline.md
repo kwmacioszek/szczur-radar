@@ -189,3 +189,108 @@ Duże części `NO_COVERAGE` mają też klasy:
 - `pipeline.run.PipelineRun`: 20 z 65;
 - `pipeline.assess.ConcurrentAssessmentDispatcher`: 10 ze 160.
 
+
+## Po S-45 (Faza 4)
+
+- **Pomiar:** `./mvnw -B -Pmutation test`, `threads=4`, 336 s lokalnie (8 CPU), kod wyjścia 0, strażnik `SurvivingMutantsTest` zielony. Kod produkcyjny bez zmian względem `5baf6fa` (`git diff --stat origin/main -- szczur-radar-api/src/main` pusty).
+- **Ocalałe:** 47 (43 `SURVIVED`, 4 `NO_COVERAGE`), każdy z wpisem w `AcceptedMutants`. Bazowo było ich 255, więc 208 zabiły nowe testy zachowania.
+
+| Obszar | Wpisy `AcceptedMutants` | `równoważny:` | `obronny:` | `tekst:` |
+|---|---:|---:|---:|---:|
+| walidator V2 (`agents.assessor.*`) | 13 | 7 | 2 | 4 |
+| jakość ocen (`posts.AssessmentQuality*`) | 0 | 0 | 0 | 0 |
+| przebieg (`pipeline.*`) | 34 | 31 | 2 | 1 |
+| **Łącznie** | **47** | **38** | **4** | **5** |
+
+### Tabela per klasa po S-45
+
+| Klasa | Wygenerowane | KILLED | SURVIVED | NO_COVERAGE | TIMED_OUT | inne wykryte | Siła testów |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| `agents.assessor.AssessmentResult` | 28 | 26 | 2 | 0 | 0 | 0 | 93% |
+| `agents.assessor.AssessmentResult$Status` | 1 | 1 | 0 | 0 | 0 | 0 | 100% |
+| `agents.assessor.Assessor` | 16 | 16 | 0 | 0 | 0 | 0 | 100% |
+| `agents.assessor.Prefilter` | 8 | 8 | 0 | 0 | 0 | 0 | 100% |
+| `agents.assessor.Provenance` | 38 | 38 | 0 | 0 | 0 | 0 | 100% |
+| `agents.assessor.Provenance$Source` | 1 | 1 | 0 | 0 | 0 | 0 | 100% |
+| `agents.assessor.contract.Assertiveness` | 1 | 1 | 0 | 0 | 0 | 0 | 100% |
+| `agents.assessor.contract.AssessmentInputV1` | 5 | 5 | 0 | 0 | 0 | 0 | 100% |
+| `agents.assessor.contract.Attribution` | 1 | 1 | 0 | 0 | 0 | 0 | 100% |
+| `agents.assessor.contract.ClaimKind` | 1 | 1 | 0 | 0 | 0 | 0 | 100% |
+| `agents.assessor.contract.Direction` | 1 | 1 | 0 | 0 | 0 | 0 | 100% |
+| `agents.assessor.contract.Document` | 1 | 1 | 0 | 0 | 0 | 0 | 100% |
+| `agents.assessor.contract.Field` | 1 | 1 | 0 | 0 | 0 | 0 | 100% |
+| `agents.assessor.contract.Flag` | 1 | 1 | 0 | 0 | 0 | 0 | 100% |
+| `agents.assessor.contract.Item` | 1 | 1 | 0 | 0 | 0 | 0 | 100% |
+| `agents.assessor.contract.ItemType` | 1 | 1 | 0 | 0 | 0 | 0 | 100% |
+| `agents.assessor.contract.Modifier` | 1 | 1 | 0 | 0 | 0 | 0 | 100% |
+| `agents.assessor.contract.Parent` | 1 | 1 | 0 | 0 | 0 | 0 | 100% |
+| `agents.assessor.contract.Reference` | 1 | 1 | 0 | 0 | 0 | 0 | 100% |
+| `agents.assessor.contract.Relevance` | 1 | 1 | 0 | 0 | 0 | 0 | 100% |
+| `agents.assessor.contract.TargetKind` | 1 | 1 | 0 | 0 | 0 | 0 | 100% |
+| `agents.assessor.contract.TextFields` | 10 | 10 | 0 | 0 | 0 | 0 | 100% |
+| `agents.assessor.prompt.AssessmentPrompt` | 2 | 2 | 0 | 0 | 0 | 0 | 100% |
+| `agents.assessor.validation.ContractV2Rules` | 1 | 1 | 0 | 0 | 0 | 0 | 100% |
+| `agents.assessor.validation.FailureClass` | 6 | 6 | 0 | 0 | 0 | 0 | 100% |
+| `agents.assessor.validation.OutputParser` | 17 | 13 | 3 | 1 | 0 | 0 | 81% |
+| `agents.assessor.validation.OutputParser$Rejected` | 3 | 3 | 0 | 0 | 0 | 0 | 100% |
+| `agents.assessor.validation.RuleBasedValidator` | 5 | 5 | 0 | 0 | 0 | 0 | 100% |
+| `agents.assessor.validation.RuleId` | 2 | 2 | 0 | 0 | 0 | 0 | 100% |
+| `agents.assessor.validation.StanceTable` | 29 | 27 | 2 | 0 | 0 | 0 | 93% |
+| `agents.assessor.validation.ValidationResult` | 9 | 9 | 0 | 0 | 0 | 0 | 100% |
+| `agents.assessor.validation.rules.AnchorFromItemRule` | 9 | 9 | 0 | 0 | 0 | 0 | 100% |
+| `agents.assessor.validation.rules.ClaimTargetsExistRule` | 10 | 10 | 0 | 0 | 0 | 0 | 100% |
+| `agents.assessor.validation.rules.ContextualAnchorFromParentRule` | 9 | 9 | 0 | 0 | 0 | 0 | 100% |
+| `agents.assessor.validation.rules.DirectionalStanceAuthorClaimRule` | 15 | 15 | 0 | 0 | 0 | 0 | 100% |
+| `agents.assessor.validation.rules.EvidenceFromItemRule` | 7 | 7 | 0 | 0 | 0 | 0 | 100% |
+| `agents.assessor.validation.rules.IrrelevantHasNoContentRule` | 9 | 8 | 1 | 0 | 0 | 0 | 89% |
+| `agents.assessor.validation.rules.NoRepeatedReferencesRule` | 15 | 15 | 0 | 0 | 0 | 0 | 100% |
+| `agents.assessor.validation.rules.QuoteIsFragmentRule` | 8 | 8 | 0 | 0 | 0 | 0 | 100% |
+| `agents.assessor.validation.rules.QuoteNotEmptyRule` | 8 | 8 | 0 | 0 | 0 | 0 | 100% |
+| `agents.assessor.validation.rules.QuoteReferenceRule` | 6 | 6 | 0 | 0 | 0 | 0 | 100% |
+| `agents.assessor.validation.rules.QuotedText` | 17 | 15 | 2 | 0 | 0 | 0 | 88% |
+| `agents.assessor.validation.rules.StanceAssertivenessRule` | 9 | 7 | 2 | 0 | 0 | 0 | 78% |
+| `agents.assessor.validation.rules.StanceClaimCountRule` | 7 | 7 | 0 | 0 | 0 | 0 | 100% |
+| `agents.assessor.validation.rules.StanceClaimsCoverTargetRule` | 13 | 13 | 0 | 0 | 0 | 0 | 100% |
+| `agents.assessor.validation.rules.StanceClaimsExistRule` | 10 | 10 | 0 | 0 | 0 | 0 | 100% |
+| `agents.assessor.validation.rules.UniqueIdsRule` | 12 | 12 | 0 | 0 | 0 | 0 | 100% |
+| **Suma: walidator V2 (agents.assessor.*)** | **359** | **346** | **12** | **1** | **0** | **0** | **97%** |
+| `posts.AssessmentQuality` | 56 | 56 | 0 | 0 | 0 | 0 | 100% |
+| **Suma: jakość ocen (posts.AssessmentQuality*)** | **56** | **56** | **0** | **0** | **0** | **0** | **100%** |
+| `pipeline.PipelineRunService` | 137 | 122 | 9 | 1 | 5 | 0 | 93% |
+| `pipeline.RunWatchdog` | 10 | 7 | 2 | 0 | 1 | 0 | 80% |
+| `pipeline.assess.AssessmentInputs` | 3 | 3 | 0 | 0 | 0 | 0 | 100% |
+| `pipeline.assess.AssessmentPool` | 12 | 11 | 0 | 0 | 1 | 0 | 100% |
+| `pipeline.assess.ConcurrentAssessmentDispatcher` | 160 | 137 | 18 | 2 | 3 | 0 | 89% |
+| `pipeline.assess.ConcurrentAssessmentDispatcher$LostCounts` | 6 | 6 | 0 | 0 | 0 | 0 | 100% |
+| `pipeline.assess.ConcurrentAssessmentDispatcher$Progress` | 17 | 16 | 1 | 0 | 0 | 0 | 94% |
+| `pipeline.flow.RunFlow$AssessedBatch` | 18 | 17 | 1 | 0 | 0 | 0 | 94% |
+| `pipeline.flow.RunFlow$FetchedBatch` | 6 | 6 | 0 | 0 | 0 | 0 | 100% |
+| `pipeline.flow.RunFlow$RejectedPost` | 1 | 1 | 0 | 0 | 0 | 0 | 100% |
+| `pipeline.flow.RunFlow$RunRequest` | 1 | 1 | 0 | 0 | 0 | 0 | 100% |
+| `pipeline.flow.RunFlow$SourceFetch` | 13 | 13 | 0 | 0 | 0 | 0 | 100% |
+| `pipeline.flow.RunFlow$SourceStored` | 16 | 16 | 0 | 0 | 0 | 0 | 100% |
+| `pipeline.flow.RunFlow$StoredBatch` | 8 | 8 | 0 | 0 | 0 | 0 | 100% |
+| `pipeline.flow.RunSequence` | 53 | 53 | 0 | 0 | 0 | 0 | 100% |
+| `pipeline.run.AttentionReason` | 1 | 1 | 0 | 0 | 0 | 0 | 100% |
+| `pipeline.run.InterruptionCause` | 2 | 2 | 0 | 0 | 0 | 0 | 100% |
+| `pipeline.run.PipelineRun` | 65 | 65 | 0 | 0 | 0 | 0 | 100% |
+| `pipeline.run.PipelineRunRepository` | 14 | 14 | 0 | 0 | 0 | 0 | 100% |
+| `pipeline.run.PipelineRunSource` | 8 | 8 | 0 | 0 | 0 | 0 | 100% |
+| `pipeline.run.PipelineRunStep` | 9 | 9 | 0 | 0 | 0 | 0 | 100% |
+| `pipeline.run.RunKind` | 1 | 1 | 0 | 0 | 0 | 0 | 100% |
+| `pipeline.run.RunStatus` | 1 | 1 | 0 | 0 | 0 | 0 | 100% |
+| `pipeline.run.RunStep` | 1 | 1 | 0 | 0 | 0 | 0 | 100% |
+| `pipeline.run.SourceFetchStatus` | 1 | 1 | 0 | 0 | 0 | 0 | 100% |
+| `pipeline.run.StepStatus` | 1 | 1 | 0 | 0 | 0 | 0 | 100% |
+| `pipeline.state.Durations` | 24 | 24 | 0 | 0 | 0 | 0 | 100% |
+| `pipeline.state.PostTransitions$Outcome` | 8 | 8 | 0 | 0 | 0 | 0 | 100% |
+| `pipeline.state.RunInterruptedException` | 3 | 3 | 0 | 0 | 0 | 0 | 100% |
+| `pipeline.step.AssessmentSelection` | 8 | 8 | 0 | 0 | 0 | 0 | 100% |
+| `pipeline.step.NoPostsFetchedException` | 3 | 3 | 0 | 0 | 0 | 0 | 100% |
+| `pipeline.step.PostStore` | 63 | 62 | 0 | 0 | 1 | 0 | 100% |
+| `pipeline.step.PostStore$SourceKey` | 1 | 1 | 0 | 0 | 0 | 0 | 100% |
+| `pipeline.step.SourceIngest` | 36 | 36 | 0 | 0 | 0 | 0 | 100% |
+| **Suma: przebieg (pipeline.*)** | **711** | **666** | **31** | **3** | **11** | **0** | **96%** |
+| **Łącznie** | **1126** | **1068** | **43** | **4** | **11** | **0** | **96%** |
+
+statuses: {'KILLED': 1068, 'SURVIVED': 43, 'NO_COVERAGE': 4, 'TIMED_OUT': 11}
