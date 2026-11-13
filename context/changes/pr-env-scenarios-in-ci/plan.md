@@ -542,4 +542,4 @@ Brak migracji, zmiennych i zmian tras. PR dotyka katalogu `szczur-radar-api/` ty
 
 #### Manual
 
-- [ ] 4.8 Właściciel akceptuje treść listy ręcznej i reguły
+- [x] 4.8 Właściciel akceptuje treść listy ręcznej i reguły — zaakceptowane przez właściciela 2026-11-13
