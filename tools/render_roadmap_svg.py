@@ -203,7 +203,7 @@ lanes3 = {  # the streams of roadmap v4
 }
 m4 = {  # lane, title (## Slices), outcome (At a glance), status, prerequisites, change id
     "S-30": ("A", "Wynik CI nie zależy od kolejności testów", "wynik CI nie zależy od kolejności klas testów integracyjnych; test nie widzi danych zostawionych przez inny test", "done", "—", "it-test-isolation"),
-    "S-31": ("A", "Ręczne weryfikacje PR env jako scenariusze w CI", "ręczne weryfikacje PR env z S-13, S-17, S-18, S-20, S-27 chodzą w CI jako scenariusze na pełnym API z atrapami źródeł i LLM", "proposed", "S-30", "pr-env-scenarios-in-ci"),
+    "S-31": ("A", "Ręczne weryfikacje PR env jako scenariusze w CI", "ręczne weryfikacje PR env z S-13, S-17, S-18, S-20, S-27 chodzą w CI jako scenariusze na pełnym API z atrapami źródeł i LLM", "done", "S-30", "pr-env-scenarios-in-ci"),
     "S-45": ("A", "Testy mutacyjne rdzenia", "wiadomo, które testy rdzenia łapią błędy: mutanty, które przeżyły, są zabite testem albo przyjęte z powodem", "proposed", "S-30, S-32, S-33, S-38", "core-mutation-testing"),
     "S-32": ("B", "Seria odmów dostawcy zatrzymuje przebieg", "seria odmów dostawcy zatrzymuje przebieg, zanim zużyje próby pozostałych postów, i daje sygnał jak każdy failed", "done", "—", "provider-refusal-breaker"),
     "S-33": ("B", "Admin przywraca martwe posty", "admin przywraca zaznaczone martwe posty do oceny, a ich próby są zerowane", "done", "—", "restore-dead-posts"),
@@ -216,7 +216,7 @@ m4 = {  # lane, title (## Slices), outcome (At a glance), status, prerequisites,
     "S-40": ("D", "Strażnik tras admina i /internal", "każda trasa /api/admin/** daje 403 zwykłemu użytkownikowi, a każda /internal/** 401 bez tokenu — bez ręcznej listy tras", "done", "—", "derived-route-guards"),
     "S-41": ("E", "Kontrakt SPA ↔ API: kształty", "każdy kształt odpowiedzi, który czyta SPA, ma plik kontraktu z wariantami null, a pole zawsze wysyłane przez API jest wymagane w TS", "done", "—", "api-contract-shapes-round-two"),
     "S-43": ("E", "Atrapy odpowiadają jak prawdziwe API", "atrapa API w SPA i atrapy narzędzi odpowiadają tak jak prawdziwe API, a rozjazd czerwieni test", "done", "S-41", "contract-bound-mocks"),
-    "S-42": ("E", "Rejestr reguł SPA, druga runda", "porównanie kodu błędu, limit rozmiaru strony i enumy spoza rejestru są pilnowane testem albo kompilatorem", "ready", "—", "spa-rules-registry-round-two"),
+    "S-42": ("E", "Rejestr reguł SPA, druga runda", "porównanie kodu błędu, limit rozmiaru strony i enumy spoza rejestru są pilnowane testem albo kompilatorem", "done", "—", "spa-rules-registry-round-two"),
     "S-44": ("E", "Feed: regresja i granica numeru strony", "feed ma testy regresji znanych ścieżek, a ogromny numer strony i NUL w linku dają 400 zamiast błędu serwera albo zawieszonego feedu", "done", "—", "feed-regression-and-paging-bounds"),
 }
 lanes4 = {  # the streams of roadmap v5

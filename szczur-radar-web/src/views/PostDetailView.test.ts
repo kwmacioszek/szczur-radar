@@ -2,7 +2,7 @@ import { type VueWrapper, enableAutoUnmount, flushPromises, mount } from '@vue/t
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { type RouterHistory, createMemoryHistory } from 'vue-router'
 import { fetchMe } from '../api/auth'
-import { ApiError } from '../api/client'
+import { ApiError, type ErrorCode } from '../api/client'
 import { type PostItem, fetchPost, fetchPostRaw } from '../api/posts'
 import { resetSession } from '../auth/session'
 import { createAppRouter } from '../router'
@@ -144,7 +144,7 @@ describe('PostDetailView', () => {
     expect(wrapper.find('.empty').exists()).toBe(false)
   })
 
-  it.each([
+  it.each<[number, ErrorCode]>([
     [404, 'post_not_found'],
     [400, 'invalid_request'],
   ])('says there is no such post on %i, with a link to the list', async (status, detail) => {

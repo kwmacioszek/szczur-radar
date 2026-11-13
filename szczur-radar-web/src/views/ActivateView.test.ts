@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMemoryHistory } from 'vue-router'
 import { activate, lookupActivation } from '../api/activation'
 import { fetchMe, logout } from '../api/auth'
-import { ApiError } from '../api/client'
+import { ApiError, type ErrorCode } from '../api/client'
 import { currentUser, resetSession } from '../auth/session'
 import { createAppRouter } from '../router'
 import ActivateView from './ActivateView.vue'
@@ -96,7 +96,7 @@ describe('ActivateView', () => {
     expect(wrapper.find('[role="alert"]').exists()).toBe(false)
   })
 
-  it.each(['activation_link_invalid', 'invalid_request'])('calls the link invalid on %s', async (detail) => {
+  it.each<ErrorCode>(['activation_link_invalid', 'invalid_request'])('calls the link invalid on %s', async (detail) => {
     vi.mocked(lookupActivation).mockRejectedValue(new ApiError(400, detail))
     const { wrapper } = await mountActivate()
     expect(wrapper.find('[role="alert"]').text()).toBe(INVALID_LINK)

@@ -144,8 +144,16 @@ Reference implementations: `sources/wykop/` and `sources/reddit/` (Reddit's diff
 - The whole run over a source: `pipeline/PipelineRunIT` (Wykop on `LocalWykopServer`; Reddit on
   `sources/reddit/LocalReddit` — the production client, repository, fetcher and mapper over
   `LocalRedditServer`, configured per scenario by `LocalReddit.configure`, its answers switched by
-  `down`, `empty`, `page`, `hold`, `delay`). No Spring test sets `REDDIT_SUBREDDITS`: a second
+  `down`, `empty`, `page`, `hold`, `delay`; `page(subreddit, fixture)` gives one subreddit's searches a
+  fixture of their own, read from the query's `subreddit`, and a subreddit without one answers the page of
+  `page(fixture)`). No Spring test sets `REDDIT_SUBREDDITS`: a second
   `RedditRepository` bean next to `LocalReddit`'s would make the fetcher's `Optional` ambiguous.
+- The PR env's scenarios: `scenario/PrEnvScenariosIT` (`pipeline/CLAUDE.md`, "## Tests") reads Wykop through
+  `sources/wykop/LocalWykop` — the production client, repository, fetcher and mapper over `LocalWykopServer`, as
+  `LocalReddit` is for Reddit: the #gielda day of 2026-10-01 (12 entries, `pagination.total` 12, and 4 links),
+  switched by `down` (HTTP 503) and `empty`, `reset` bringing the day back — and Reddit through `LocalReddit`
+  with r/inwestowanie and r/stocks each on its own page. The older ITs (`PipelineRunIT`, `LlmOutageIT` and others)
+  keep their own nested Wykop servers.
 
 ## Live use
 

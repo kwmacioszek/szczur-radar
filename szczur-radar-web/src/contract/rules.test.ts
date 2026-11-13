@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import mockApi from '../../dev/mock-api.js?raw'
 import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from '../api/activation'
+import type { Role } from '../api/auth'
+import type { ErrorCode } from '../api/client'
+import type { NotificationKind } from '../api/notifications'
 import {
   type AttentionReason,
   type InterruptionCause,
-  MAX_RUNS_PAGE_SIZE,
+  RUNS_PAGE_SIZE,
   type RunKind,
   type RunStatus,
   type RunStepName,
@@ -12,17 +15,26 @@ import {
   type StepStatus,
 } from '../api/pipeline'
 import {
+  type Assertiveness,
   type Attribution,
   type ClaimKind,
   DIRECTIONS,
   type FailureClass,
+  FAILED_PAGE_SIZE,
+  FEED_PAGE_SIZE,
   type Flag,
   type ItemType,
   MAX_ASSESSMENT_ATTEMPTS,
   MAX_PAGE,
+  MAX_PAGE_SIZE,
   type Modifier,
+  type PostStage,
+  type Provider,
+  type QuoteDocument,
+  type QuoteField,
   type Reference,
   type Relevance,
+  type ResultSource,
   TARGET_KINDS,
 } from '../api/posts'
 import type { QualityStatus } from '../api/quality'
@@ -65,7 +77,7 @@ describe('limits', () => {
   const spa: Record<keyof typeof rules.limits, number> = {
     feedQueryMaxLength: MAX_QUERY_LENGTH,
     runRangeMaxDays: MAX_RANGE_DAYS,
-    runsPageMaxSize: MAX_RUNS_PAGE_SIZE,
+    pageMaxSize: MAX_PAGE_SIZE,
     passwordMinLength: PASSWORD_MIN_LENGTH,
     passwordMaxLength: PASSWORD_MAX_LENGTH,
     maxAssessmentAttempts: MAX_ASSESSMENT_ATTEMPTS,
@@ -83,14 +95,45 @@ describe('limits', () => {
   it('the mock answers a 400 for the first page above pageMax, like the API', () => {
     expect(mockApi).toContain(`pageNumber > ${rules.limits.pageMax}`)
   })
+
+  it('the mock answers a 400 for a size above pageMaxSize, like the API', () => {
+    expect(mockApi).toContain(`size <= ${rules.limits.pageMaxSize}`)
+  })
+
+  it.each([
+    ['FEED_PAGE_SIZE', FEED_PAGE_SIZE],
+    ['FAILED_PAGE_SIZE', FAILED_PAGE_SIZE],
+    ['RUNS_PAGE_SIZE', RUNS_PAGE_SIZE],
+  ])('%s, the page size the SPA asks for, is within 1…pageMaxSize', (_name, size) => {
+    expect(size).toBeGreaterThanOrEqual(1)
+    expect(size).toBeLessThanOrEqual(rules.limits.pageMaxSize)
+  })
 })
 
-describe('labels', () => {
-  // An attention reason has a text, not a label; item type words depend on the source (see `item type words`).
-  const sets = Object.keys(rules.values).filter((set) => set !== 'attentionReason' && set !== 'itemType')
+/** The sets of values that have no entry in `labels`, each with why; every other set must have one. */
+const NO_LABEL: Record<string, string> = {
+  attentionReason: 'has a text (`attentionReasons` in runs.ts), not a label',
+  itemType: 'has a word of its source (`ITEM_TYPE_WORDS`), not a label',
+  role: 'the SPA reads it for permissions, never shows it',
+  notificationKind: 'one value; the bell shows the run, not the kind',
+  postStage: 'the failed list shows the post, and its stage only decides the buttons',
+  resultSource: 'the SPA reads it in the raw data, not as a label',
+  document: 'part of a quote, shown as the quote',
+  field: 'part of a quote, shown as the quote',
+  assertiveness: 'shown as "(ostrożnie)" by StanceText, not as a label',
+  provider: 'shown in the raw data of an attempt as the API wrote it',
+}
 
-  it('are given for exactly the sets of values of the file (an attention reason has a text, an item type a word of its source)', () => {
+describe('labels', () => {
+  const sets = Object.keys(rules.values).filter((set) => !(set in NO_LABEL))
+
+  it('are given for exactly the sets of values of the file, except the ones in NO_LABEL', () => {
     expect(sorted(Object.keys(labels))).toEqual(sorted(sets))
+  })
+
+  it('NO_LABEL names only sets of the file, each with a reason', () => {
+    expect(sorted(Object.keys(NO_LABEL).filter((set) => !(set in rules.values)))).toEqual([])
+    expect(Object.values(NO_LABEL).every((reason) => reason.trim() !== '')).toBe(true)
   })
 
   it.each(sets)('%s has a label for each value and for no other', (set) => {
@@ -144,7 +187,7 @@ describe('tones', () => {
   })
 
   it.each(valuesOf('runStatus'))('run status %s has a tone', (status) => {
-    expect(runTone({ status: status as RunStatus, interruptionCause: null, skipped: 0 })).toBeTypeOf('string')
+    expect(runTone({ status: status as RunStatus, interruptionCause: null, attentionReasons: [], skipped: 0 })).toBeTypeOf('string')
   })
 })
 
@@ -214,7 +257,33 @@ const FAILURE_CLASSES = [
   'domain_invariant_violation',
 ] as const satisfies readonly FailureClass[]
 
+const ERROR_CODES = [
+  'invalid_credentials',
+  'not_authenticated',
+  'forbidden',
+  'too_many_attempts',
+  'cross_origin',
+  'invalid_request',
+  'unsupported_media_type',
+  'activation_link_invalid',
+  'password_policy',
+  'pipeline_busy',
+  'post_dead',
+  'post_not_found',
+  'source_not_configured',
+  'not_found',
+  'internal_error',
+] as const satisfies readonly ErrorCode[]
+
 const QUALITY_STATUSES = ['ok', 'above_threshold', 'not_enough_data'] as const satisfies readonly QualityStatus[]
+const ROLES = ['user', 'admin'] as const satisfies readonly Role[]
+const NOTIFICATION_KINDS = ['run_attention'] as const satisfies readonly NotificationKind[]
+const POST_STAGES = ['stored', 'assessing', 'assessed', 'failed', 'dead'] as const satisfies readonly PostStage[]
+const RESULT_SOURCES = ['model', 'prefilter'] as const satisfies readonly ResultSource[]
+const QUOTE_DOCUMENTS = ['item', 'parent_post', 'parent_comment'] as const satisfies readonly QuoteDocument[]
+const QUOTE_FIELDS = ['title', 'body'] as const satisfies readonly QuoteField[]
+const ASSERTIVENESSES = ['hedged', 'unhedged'] as const satisfies readonly Assertiveness[]
+const PROVIDERS = ['gemini', 'deepseek', 'openrouter'] as const satisfies readonly Provider[]
 
 /**
  * The TS unions that have a list of values in the file, as exhaustive tuples. Not here: `TargetKind` and `Direction`
@@ -237,6 +306,14 @@ const UNION_TUPLES: Partial<Record<ValueSet, readonly string[]>> = {
   reference: REFERENCES satisfies Exhaustive<Reference, typeof REFERENCES>,
   failureClass: FAILURE_CLASSES satisfies Exhaustive<FailureClass, typeof FAILURE_CLASSES>,
   qualityStatus: QUALITY_STATUSES satisfies Exhaustive<QualityStatus, typeof QUALITY_STATUSES>,
+  role: ROLES satisfies Exhaustive<Role, typeof ROLES>,
+  notificationKind: NOTIFICATION_KINDS satisfies Exhaustive<NotificationKind, typeof NOTIFICATION_KINDS>,
+  postStage: POST_STAGES satisfies Exhaustive<PostStage, typeof POST_STAGES>,
+  resultSource: RESULT_SOURCES satisfies Exhaustive<ResultSource, typeof RESULT_SOURCES>,
+  document: QUOTE_DOCUMENTS satisfies Exhaustive<QuoteDocument, typeof QUOTE_DOCUMENTS>,
+  field: QUOTE_FIELDS satisfies Exhaustive<QuoteField, typeof QUOTE_FIELDS>,
+  assertiveness: ASSERTIVENESSES satisfies Exhaustive<Assertiveness, typeof ASSERTIVENESSES>,
+  provider: PROVIDERS satisfies Exhaustive<Provider, typeof PROVIDERS>,
 }
 
 describe('the unions of src/api', () => {
@@ -251,6 +328,11 @@ describe('the unions of src/api', () => {
 })
 
 describe('error codes', () => {
+  it('the ErrorCode union lists the codes of the file, in its order', () => {
+    const codes: readonly string[] = ERROR_CODES satisfies Exhaustive<ErrorCode, typeof ERROR_CODES>
+    expect(codes).toEqual(rules.errorCodes)
+  })
+
   const files = import.meta.glob<string>('../**/*.{ts,vue}', { query: '?raw', import: 'default', eager: true })
   const sources: Record<string, string> = {}
   for (const [path, text] of Object.entries(files)) {
@@ -258,17 +340,42 @@ describe('error codes', () => {
   }
   sources['dev/mock-api.js'] = mockApi
 
-  /** The codes written as `detail: '<code>'`, `new ApiError(<status>, '<code>')`, and `case '<code>'` after `.detail)`. */
+  /**
+   * The codes written as `detail: '<code>'`, `new ApiError(<status>, '<code>')`, `.detail === '<code>'` / `!==`
+   * (also reversed: `'<code>' === x.detail`), `.detail).toBe('<code>')` / `.toEqual('<code>')` (also after `.not`), and `case '<code>'`
+   * after `.detail)`.
+   */
   function literals(text: string): string[] {
     const found = [
       ...text.matchAll(/\bdetail:\s*['"`]([a-z_]+)['"`]/g),
       ...text.matchAll(/new ApiError\(\s*\d+,\s*['"`]([a-z_]+)['"`]/g),
+      ...text.matchAll(/\.detail\s*[!=]==?\s*['"`]([a-z_]+)['"`]/g),
+      ...text.matchAll(/['"`]([a-z_]+)['"`]\s*[!=]==?\s*[\w$.?]*\.detail\b/g),
+      ...text.matchAll(/\.detail\)\s*\.(?:not\.)?(?:toBe|toEqual)\(\s*['"`]([a-z_]+)['"`]/g),
     ]
     if (text.includes('.detail)')) found.push(...text.matchAll(/\bcase\s+['"`]([a-z_]+)['"`]/g))
     return found.map((match) => match[1])
   }
 
   const hits = Object.entries(sources).flatMap(([path, text]) => literals(text).map((code) => ({ path, code })))
+
+  it('recognises every form', () => {
+    const forms = [
+      `{ detail: 'code_a' }`,
+      `new ApiError(409, 'code_b')`,
+      `if (err.detail === 'code_c') return`,
+      `if (err.detail !== 'code_d') return`,
+      `if ('code_e' === err.detail) return`,
+      `if ('code_f' !== err?.detail) return`,
+      `expect(error.detail).toBe('code_g')`,
+      `expect(error.detail).toEqual('code_h')`,
+      `expect(error.detail).not.toBe('code_i')`,
+      `switch (err.detail) { case 'code_j': break }`,
+    ]
+    expect(forms.flatMap((form) => literals(form))).toEqual([
+      'code_a', 'code_b', 'code_c', 'code_d', 'code_e', 'code_f', 'code_g', 'code_h', 'code_i', 'code_j',
+    ])
+  })
 
   it('finds the codes, so a broken pattern does not pass in silence', () => {
     expect(hits.length).toBeGreaterThanOrEqual(20)

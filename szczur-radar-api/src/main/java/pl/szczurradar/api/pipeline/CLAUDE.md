@@ -560,7 +560,7 @@ PipelineRunService.startRange / startPosts → queue (thread pipeline-run) → R
   Wykop gate) has no bound of its own: it sits under the class's `@Timeout` — `@Timeout(60)` on
   `PipelineRunServiceTest`, `RunWatchdogTest`, `assess/ConcurrentAssessmentDispatcherTest`;
   `@Timeout(value = 5, unit = TimeUnit.MINUTES)` on `RunWatchdogIT`, `PipelineRunIT`, `OrphanedRunIT`,
-  `LlmOutageIT`, `api/PipelineRunControllerIT`, `api/InternalPipelineRunIT` — and a hang ends there with a
+  `LlmOutageIT`, `api/PipelineRunControllerIT`, `api/InternalPipelineRunIT`, `scenario/PrEnvScenariosIT` — and a hang ends there with a
   dump of every thread on stdout (the CI `backend` job's log): `src/test/resources/junit-platform.properties`
   sets `junit.jupiter.execution.timeout.threaddump.enabled=true`, with no default timeout (only a class
   that declares `@Timeout` has one). A duration is not an assertion when the property can be said as an
@@ -673,7 +673,7 @@ PipelineRunService.startRange / startPosts → queue (thread pipeline-run) → R
   cookie on `/internal/**`, the D-2…D-1 range for a fixed `Clock` (also a DST day), 409, 404, the exact
   keys of `GET /internal/pipeline-runs/{id}` with `step` and `assessTotal` during the assessment; since S-34
   `POST /internal/pipeline-runs/nightly-summary`: the text returned and `NIGHT_SUMMARY` raised for the range
-  run (a mocked `OperatorAlerts`; the measures' scenarios under "The night's summary" above), 400 without 1–10 ids, 404 for an unknown run, 401 without the token.
+  run (a mocked `OperatorAlertQueue`; the measures' scenarios under "The night's summary" above), 400 without 1–10 ids, 404 for an unknown run, 401 without the token.
   `NightSummaryIT` (the summary's queries on seeded rows) and `NightSummaryTest` (the text) are listed under
   "The night's summary" above.
   `api/PipelineRunControllerIT`: the run page, 404, the new fields, `scheduled` for the cron's run; a dead
@@ -780,3 +780,31 @@ PipelineRunService.startRange / startPosts → queue (thread pipeline-run) → R
   after the check and 3 × 3 HTTP requests, with no model assessment, no attempt, no technical failure and
   the admin notified. The only test of transport → `Assessor` → dispatcher: a PR env cannot make the
   provider fail.
+- `scenario/PrEnvScenariosIT` (S-31, outside this package): the PR env's verification steps that fakes can
+  replay, on the whole API in one context — a run started over HTTP (`POST /api/admin/pipeline-runs` as an admin
+  or `POST /internal/pipeline-runs/daily` with the cron's token), really ended with assessed posts, read through
+  the API's routes and the messages of the operator's topic. Its fakes: `sources/wykop/LocalWykop` and
+  `sources/reddit/LocalReddit` (r/inwestowanie and r/stocks on their own pages; `sources/CLAUDE.md`), the production
+  OpenRouter client from `LlmClientFactory` on a `LocalApiServer` answering each post by its user message with its
+  recorded provider answer (`scenario/RecordedProvider`, `scenario/RecordedDays`, `fixtures/llm/scenario-days/`:
+  31 pass the validator, 2 Reddit posts are rejected on every attempt, so they are `failed`, then leftovers, dead at
+  the third), the real `OperatorAlertQueue` and `NtfyAlerts` to `alerts/LocalNtfy` (`@Primary` beans of their own
+  names, the queue on a virtual clock, so its limit of 2 a minute costs no wait) and "today" 2026-10-29 11:00 in
+  Warsaw (`config/MutableClock`). The scenarios: A — an admin's range of both sources from its start to the feed
+  (every step `succeeded`, each source's result, the deploy guard safe, a Reddit post with its channel, URL and
+  `/raw`, a Wykop post with its recorded targets, the log's removed r/stocks posts, no ERROR; S-17, S-20, S-27,
+  S-32); B — the same range again (`[retry, range]`, the leftovers' second attempt, no post stored twice; S-27); C
+  — Reddit down in an admin's run (`partial`, `source_failed`, Wykop's posts in the feed, the bell, one
+  `RUN_NEEDS_ATTENTION` with `(range, admin) ended partial`; S-20, S-18); D — Reddit empty in the cron's run
+  (`partial`, `scheduled`, `source_empty`, the range D-2…D-1, `RUN_NEEDS_ATTENTION` with `(range, cron)`; S-20);
+  E — no source with a post in an admin's run (`failed` at `fetch` with `NoPostsFetchedException` naming both, no
+  later step, the bell, one `RUN_NEEDS_ATTENTION` without the topic's token or address, `reported: DELIVERED`;
+  S-18, S-08); F — the same in the cron's run (`failed`, the bell, no `taken` line and no message once the queue is
+  quiet; S-18); G — `missing-days` from no run, a D-3 run, D-2 with Reddit down (only Wykop covers it) and D-2
+  again (S-13, S-20); H — the cron's night and `POST /internal/pipeline-runs/nightly-summary` (the `wykop:` and
+  `reddit:` lines, the same text as `NIGHT_SUMMARY` in the topic, no `RUN_NEEDS_ATTENTION` for its run; the
+  `quality 7d` lines are not checked; S-34). Each scenario stands alone, in a random order (`-Dit.seed`, as
+  `PipelineRunIT`); after each one `settle()` waits until no instance has a run of its own, the LLM pool is idle and
+  the topic's reports equal the scenario's `Operator alert … taken` lines, then requires that every request to the
+  provider had its recording. Every wait follows the order the run's thread writes in: the run's status, then the
+  instance letting it go (`OwnRuns`: notification written, alert raised or left out), then the queue's delivery.

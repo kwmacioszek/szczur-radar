@@ -2,7 +2,7 @@
 import { computed, nextTick, onMounted, ref, useTemplateRef } from 'vue'
 import {
   type MissingDays,
-  MAX_RUNS_PAGE_SIZE,
+  RUNS_PAGE_SIZE,
   type Run,
   type SourceState,
   fetchMissingDays,
@@ -12,7 +12,7 @@ import {
   startErrorMessage,
   startRange,
 } from '../api/pipeline'
-import { type FailedPost, fetchFailedPosts, restorePosts } from '../api/posts'
+import { type FailedPost, MAX_PAGE_SIZE, fetchFailedPosts, restorePosts } from '../api/posts'
 import {
   type LanguageShare,
   type QualityStatus,
@@ -199,8 +199,6 @@ function classesText(row: SourceQuality): string {
 }
 
 // --- runs -------------------------------------------------------------------------------
-/** Rows per page of "Pokaż starsze". */
-const PAGE_SIZE = 20
 /** How often the list is read again while a run is queued or running. */
 const REFRESH_MS = 10 * 1000
 
@@ -215,7 +213,7 @@ const olderLoading = ref(false)
 const olderError = ref<string | null>(null)
 /** The time durations of running runs count to: the last read. */
 const now = ref(Date.now())
-/** Pages of PAGE_SIZE read so far (the next "Pokaż starsze" reads this page number). */
+/** Pages of RUNS_PAGE_SIZE read so far (the next "Pokaż starsze" reads this page number). */
 let pagesLoaded = 0
 /** The number of the latest refresh; the answer or error of any earlier one is dropped. */
 let latestRefresh = 0
@@ -230,7 +228,7 @@ function mergeRuns(fresh: Run[], shown: Run[]): Run[] {
 }
 
 /**
- * Reads the newest runs again: page 0 as large as the rows on screen (at most MAX_RUNS_PAGE_SIZE; older rows stay), so
+ * Reads the newest runs again: page 0 as large as the rows on screen (at most MAX_PAGE_SIZE; older rows stay), so
  * the pages read with "Pokaż starsze" do not disappear. Rows are merged by id: a new run shifts the pages.
  */
 async function loadRuns(): Promise<void> {
@@ -239,7 +237,7 @@ async function loadRuns(): Promise<void> {
   runsLoading.value = runs.value.length === 0
   runsError.value = null
   try {
-    const page = await fetchRuns(0, Math.min(Math.max(runs.value.length, PAGE_SIZE), MAX_RUNS_PAGE_SIZE))
+    const page = await fetchRuns(0, Math.min(Math.max(runs.value.length, RUNS_PAGE_SIZE), MAX_PAGE_SIZE))
     if (current !== latestRefresh) return
     const wasActive = new Set(runs.value.filter(isActive).map((run) => run.id))
     runs.value = mergeRuns(page.items, runs.value)
@@ -269,7 +267,7 @@ async function loadOlder(): Promise<void> {
   olderError.value = null
   let firstAdded: string | null = null
   try {
-    const page = await fetchRuns(pagesLoaded, PAGE_SIZE)
+    const page = await fetchRuns(pagesLoaded, RUNS_PAGE_SIZE)
     const ids = new Set(runs.value.map((run) => run.id))
     const added = page.items.filter((run) => !ids.has(run.id))
     runs.value = [...runs.value, ...added]

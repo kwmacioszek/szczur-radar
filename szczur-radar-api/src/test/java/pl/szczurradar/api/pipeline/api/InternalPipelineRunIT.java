@@ -15,8 +15,6 @@ import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
-import java.time.ZoneId;
-import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -64,6 +62,7 @@ import pl.szczurradar.api.TestcontainersConfiguration;
 import pl.szczurradar.api.alerts.AlertEvent;
 import pl.szczurradar.api.alerts.OperatorAlertQueue;
 import pl.szczurradar.api.cli.MigrateCommand;
+import pl.szczurradar.api.config.MutableClock;
 import pl.szczurradar.api.config.SessionConfig;
 import pl.szczurradar.api.contract.ContractFiles;
 import pl.szczurradar.api.internal.PipelineTriggerToken;
@@ -814,36 +813,6 @@ class InternalPipelineRunIT {
 		@Primary
 		Clock testClock() {
 			return CLOCK;
-		}
-
-	}
-
-	/** A clock a test sets; UTC like the application's. */
-	static final class MutableClock extends Clock {
-
-		private volatile Instant now;
-
-		MutableClock(Instant now) {
-			this.now = now;
-		}
-
-		void set(Instant now) {
-			this.now = now;
-		}
-
-		@Override
-		public ZoneId getZone() {
-			return ZoneOffset.UTC;
-		}
-
-		@Override
-		public Clock withZone(ZoneId zone) {
-			return Clock.fixed(now, zone);
-		}
-
-		@Override
-		public Instant instant() {
-			return now;
 		}
 
 	}

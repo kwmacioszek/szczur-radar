@@ -73,30 +73,42 @@ const RUN_ENUMS: Record<string, ValueSet> = {
   '$.sourceResults[].status': 'sourceStatus',
 }
 
+const USER_ENUMS: Record<string, ValueSet> = { '$.role': 'role' }
+
 const TARGETS = '$.assessment.output.targets[]'
 const POST_ENUMS: Record<string, ValueSet> = {
   '$.source': 'source',
   '$.itemType': 'itemType',
+  '$.assessment.resultSource': 'resultSource',
   '$.assessment.output.relevance': 'relevance',
   '$.assessment.output.modifiers[]': 'modifier',
   '$.assessment.output.flags[]': 'flag',
   [`${TARGETS}.kind`]: 'targetKind',
+  [`${TARGETS}.anchor.document`]: 'document',
+  [`${TARGETS}.anchor.field`]: 'field',
   [`${TARGETS}.stance.direction`]: 'direction',
+  [`${TARGETS}.stance.assertiveness`]: 'assertiveness',
   [`${TARGETS}.reference`]: 'reference',
+  '$.assessment.output.claims[].evidence.document': 'document',
+  '$.assessment.output.claims[].evidence.field': 'field',
   '$.assessment.output.claims[].kind': 'claimKind',
   '$.assessment.output.claims[].attribution': 'attribution',
 }
 
 const FAILED_ENUMS: Record<string, ValueSet> = {
   '$.itemType': 'itemType',
+  '$.stage': 'postStage',
+  '$.lastAttempt.provider': 'provider',
   '$.lastAttempt.failureClass': 'failureClass',
   '$.lastAttempt.violations[].failureClass': 'failureClass',
 }
 
 const NOTIFICATION_ENUMS: Record<string, ValueSet> = {
+  '$.kind': 'notificationKind',
   '$.run.kind': 'runKind',
   '$.run.status': 'runStatus',
   '$.run.interruptionCause': 'interruptionCause',
+  '$.run.attentionReasons[]': 'attentionReason',
 }
 
 const runRefs: Ref[] = [
@@ -157,12 +169,12 @@ const ROUTES: Route[] = [
   {
     name: 'GET /api/auth/me',
     request: { method: 'GET', path: '/api/auth/me' },
-    checks: [{ at: '$', refs: [{ file: 'user.json', at: '$' }] }],
+    checks: [{ at: '$', refs: [{ file: 'user.json', at: '$' }], enums: USER_ENUMS }],
   },
   {
     name: 'POST /api/auth/login',
     request: { method: 'POST', path: '/api/auth/login', body: { email: 'jan@example.com', password: 'x' } },
-    checks: [{ at: '$', refs: [{ file: 'user.json', at: '$' }] }],
+    checks: [{ at: '$', refs: [{ file: 'user.json', at: '$' }], enums: USER_ENUMS }],
   },
   {
     name: 'POST /api/auth/activation/lookup',
@@ -560,13 +572,16 @@ const ROWS: Row[] = [
 
   // the page limits of the three lists
   ...['/api/posts', PIPELINE_RUNS, '/api/admin/posts/failed'].flatMap((path) => [
-    ...['page=-1', 'page=21474837', 'page=1.5', 'page=abc', 'size=0', 'size=101', 'size=500', 'size=-1', 'size=x'].map(
+    ...[
+      'page=-1', `page=${rules.limits.pageMax + 1}`, 'page=1.5', 'page=abc', 'size=0', `size=${rules.limits.pageMaxSize + 1}`,
+      `size=${rules.limits.pageMaxSize * 5}`, 'size=-1', 'size=x',
+    ].map(
       (query): Row => ({
         name: `${path}?${query} is a bad request`, method: 'GET', path: `${path}?${query}`, status: 400,
         detail: 'invalid_request',
       }),
     ),
-    ...['page=0', 'page=21474836', 'size=1', 'size=100', 'page=1&size=2'].map(
+    ...['page=0', `page=${rules.limits.pageMax}`, 'size=1', `size=${rules.limits.pageMaxSize}`, 'page=1&size=2'].map(
       (query): Row => ({
         name: `${path}?${query} is allowed`, method: 'GET', path: `${path}?${query}`, status: 200,
       }),
