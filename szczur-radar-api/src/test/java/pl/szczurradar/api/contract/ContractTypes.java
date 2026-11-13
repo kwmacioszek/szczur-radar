@@ -65,7 +65,9 @@ final class ContractTypes {
 
 	/**
 	 * The enums reachable from {@code types}, each with the first {@code <Record>.<component>} that holds it.
-	 * Keyed by class, as two enums may share a simple name.
+	 * Keyed by class, as two enums may share a simple name. A component of any other shape than {@code List<X>},
+	 * a record or a {@link #leaf leaf} ({@code Optional}, {@code Set}, {@code Map}, an array, an interface) throws,
+	 * so an enum held that way is never skipped in silence.
 	 */
 	static Map<Class<?>, String> reachableEnums(Iterable<? extends Type> types) {
 		Map<Class<?>, String> enums = new LinkedHashMap<>();
@@ -73,10 +75,17 @@ final class ContractTypes {
 		for (Type type : types) {
 			reach(type, visited::add, record -> {
 				for (RecordComponent component : record.getRecordComponents()) {
+					String at = record.getSimpleName() + "." + component.getName();
 					Type held = component.getGenericType();
-					Type element = listElement(held);
-					if ((element != null ? element : held) instanceof Class<?> heldType && heldType.isEnum()) {
-						enums.putIfAbsent(heldType, record.getSimpleName() + "." + component.getName());
+					for (Type element = listElement(held); element != null; element = listElement(held)) {
+						held = element;
+					}
+					if (!leaf(held) && !(held instanceof Class<?> nested && nested.isRecord())) {
+						throw new IllegalStateException(at + " is a " + held.getTypeName()
+								+ ", a shape the contract walk does not know: List<X>, a record or a leaf only");
+					}
+					if (held instanceof Class<?> heldType && heldType.isEnum()) {
+						enums.putIfAbsent(heldType, at);
 					}
 				}
 			});

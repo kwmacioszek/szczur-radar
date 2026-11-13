@@ -178,7 +178,6 @@ function classesText(row: SourceQuality): string {
 }
 
 // --- runs -------------------------------------------------------------------------------
-/** Rows per page of "Pokaż starsze". */
 /** How often the list is read again while a run is queued or running. */
 const REFRESH_MS = 10 * 1000
 

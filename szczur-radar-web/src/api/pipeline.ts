@@ -126,11 +126,11 @@ export function retryPosts(postIds: string[]): Promise<Run[]> {
   })
 }
 
-/** The `size` the list of runs asks for. */
+/** The `size` the list of runs asks for: rows per page of "Pokaż starsze" in /admin. */
 export const RUNS_PAGE_SIZE = 20
 
 /** The runs, newest first; `page` from 0, `size` at most `MAX_PAGE_SIZE`. */
-export function fetchRuns(page = 0, size = 20): Promise<Page<Run>> {
+export function fetchRuns(page = 0, size = RUNS_PAGE_SIZE): Promise<Page<Run>> {
   return apiFetch<Page<Run>>(`/api/admin/pipeline-runs?page=${page}&size=${size}`)
 }
 

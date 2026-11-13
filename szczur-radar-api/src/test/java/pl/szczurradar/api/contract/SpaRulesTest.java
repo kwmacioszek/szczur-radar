@@ -1,6 +1,7 @@
 package pl.szczurradar.api.contract;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -10,6 +11,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -155,14 +157,18 @@ class SpaRulesTest {
 	@Test
 	void valuesAreTheEnumsTheResponsesReach() {
 		Map<Class<?>, String> reached = ContractTypes.reachableEnums(
-				ContractRegistry.SHAPES.values().stream().flatMap(List::stream).map(ContractRegistry.Shape::type).toList());
+				new TreeMap<>(ContractRegistry.SHAPES).values() // by route, so the path in a message is the same each run
+					.stream()
+					.flatMap(List::stream)
+					.map(ContractRegistry.Shape::type)
+					.toList());
 		Set<Class<?>> registered = new LinkedHashSet<>(VALUES.values());
 
 		assertThat(reached).as("the enums the response types reach (a walk that finds nothing proves nothing)")
 			.isNotEmpty();
-		assertThat(describe(reached, registered, false))
+		assertThat(unregistered(reached, registered))
 			.withFailMessage("%s", "Enums in a response of ContractRegistry.SHAPES with no list in SpaRulesTest.VALUES"
-					+ " and rules.json: " + describe(reached, registered, false) + " — add the list (in declaration"
+					+ " and rules.json: " + unregistered(reached, registered) + " — add the list (in declaration"
 					+ " order) and the SPA's union for it")
 			.isEmpty();
 		assertThat(unreached(reached, registered))
@@ -176,7 +182,7 @@ class SpaRulesTest {
 	void anEnumOutsideTheRegistryIsReported() {
 		Map<Class<?>, String> reached = ContractTypes.reachableEnums(List.of(Outer.class));
 
-		assertThat(describe(reached, new LinkedHashSet<>(VALUES.values()), false))
+		assertThat(unregistered(reached, new LinkedHashSet<>(VALUES.values())))
 			.containsExactly(Outer.Colour.class.getName() + " (at Inner.colour)");
 	}
 
@@ -191,12 +197,21 @@ class SpaRulesTest {
 
 	}
 
-	/** The reached enums that are (or, with {@code inRegistry}, are not) in {@code registered}, by binary name. */
-	private static List<String> describe(Map<Class<?>, String> reached, Set<Class<?>> registered,
-			boolean inRegistry) {
+	@Test
+	void anEnumInAShapeTheWalkDoesNotKnowIsAnError() {
+		assertThatThrownBy(() -> ContractTypes.reachableEnums(List.of(Hidden.class)))
+			.isInstanceOf(IllegalStateException.class)
+			.hasMessageStartingWith("Hidden.colours is a java.util.Set<");
+	}
+
+	private record Hidden(Set<Outer.Colour> colours) {
+	}
+
+	/** The reached enums that are not in {@code registered}, by binary name, each with its path. */
+	private static List<String> unregistered(Map<Class<?>, String> reached, Set<Class<?>> registered) {
 		return reached.entrySet()
 			.stream()
-			.filter(entry -> registered.contains(entry.getKey()) == inRegistry)
+			.filter(entry -> !registered.contains(entry.getKey()))
 			.map(entry -> entry.getKey().getName() + " (at " + entry.getValue() + ")")
 			.toList();
 	}

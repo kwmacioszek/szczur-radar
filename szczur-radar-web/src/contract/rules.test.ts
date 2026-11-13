@@ -342,7 +342,7 @@ describe('error codes', () => {
 
   /**
    * The codes written as `detail: '<code>'`, `new ApiError(<status>, '<code>')`, `.detail === '<code>'` / `!==`
-   * (also reversed: `'<code>' === x.detail`), `.detail).toBe('<code>')` / `.toEqual('<code>')`, and `case '<code>'`
+   * (also reversed: `'<code>' === x.detail`), `.detail).toBe('<code>')` / `.toEqual('<code>')` (also after `.not`), and `case '<code>'`
    * after `.detail)`.
    */
   function literals(text: string): string[] {
@@ -369,10 +369,11 @@ describe('error codes', () => {
       `if ('code_f' !== err?.detail) return`,
       `expect(error.detail).toBe('code_g')`,
       `expect(error.detail).toEqual('code_h')`,
-      `switch (err.detail) { case 'code_i': break }`,
+      `expect(error.detail).not.toBe('code_i')`,
+      `switch (err.detail) { case 'code_j': break }`,
     ]
     expect(forms.flatMap((form) => literals(form))).toEqual([
-      'code_a', 'code_b', 'code_c', 'code_d', 'code_e', 'code_f', 'code_g', 'code_h', 'code_i',
+      'code_a', 'code_b', 'code_c', 'code_d', 'code_e', 'code_f', 'code_g', 'code_h', 'code_i', 'code_j',
     ])
   })
 

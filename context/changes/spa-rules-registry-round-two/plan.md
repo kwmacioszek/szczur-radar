@@ -377,6 +377,8 @@ Brak: zmiany dotyczą testów, typów i jednego pola listy powiadomień (lista z
 
 Brak migracji bazy. Nowe pole w `/api/admin/notifications` jest addytywne. SPA i API wdrażają się z tego samego merge'a, a SPA czyta pole dopiero w tej samej wersji.
 
+Dopisek z przeglądu (F1, `reviews/impl-review.md`): web i API wdrażają się osobno, a API ma pre-deploy `migrate`, więc przez chwilę nowe SPA może dostać od starego API przebieg w powiadomieniu bez `attentionReasons`. Dzwonek admina nie narysuje wtedy listy (`TypeError` w `runTone`). Naprawia się przy następnym odczycie listy. Przyjęte świadomie, tak jak przy `RunView.attentionReasons`.
+
 ## References
 
 - Audyt: `context/changes/post-m3-verification-audit/research.md` (§1 R-22, R-43, X5; „Materiał dla M-4” p. 3)
