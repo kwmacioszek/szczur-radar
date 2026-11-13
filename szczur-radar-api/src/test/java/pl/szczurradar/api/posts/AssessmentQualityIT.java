@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
@@ -176,15 +177,16 @@ class AssessmentQualityIT {
 		// An English post on Wykop: its Polish thesis is in another language, its English one is not.
 		attempt(englishOnWykop, "model", claims(POLISH, ENGLISH), "2026-10-21T10:00:00Z");
 
-		assertThat(repository.findModelStatements(Instant.parse("2026-10-18T22:00:00Z"),
-				Instant.parse("2026-10-25T23:00:00Z")))
-			.containsExactlyInAnyOrder(new PostStatement(Source.WYKOP, Language.PL, POLISH),
+		try (Stream<PostStatement> statements = repository.findModelStatements(Instant.parse("2026-10-18T22:00:00Z"),
+				Instant.parse("2026-10-25T23:00:00Z"))) {
+			assertThat(statements).containsExactlyInAnyOrder(new PostStatement(Source.WYKOP, Language.PL, POLISH),
 					new PostStatement(Source.WYKOP, Language.PL, ENGLISH),
 					new PostStatement(Source.WYKOP, Language.PL, UNDECIDED),
 					new PostStatement(Source.WYKOP, Language.EN, POLISH),
 					new PostStatement(Source.WYKOP, Language.EN, ENGLISH),
 					new PostStatement(Source.REDDIT, Language.EN, POLISH),
 					new PostStatement(Source.REDDIT, Language.EN, ENGLISH));
+		}
 
 		LanguageWindow window = quality.languageWindow(LocalDate.of(2026, 10, 25), WARSAW);
 

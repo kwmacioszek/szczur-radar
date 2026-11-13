@@ -4,9 +4,13 @@ import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Stream;
 
+import jakarta.persistence.QueryHint;
+import org.hibernate.jpa.HibernateHints;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.QueryHints;
 
 import pl.szczurradar.api.agents.assessor.AssessmentResult;
 import pl.szczurradar.api.agents.assessor.Provenance;
@@ -85,14 +89,18 @@ public interface AssessmentRepository extends JpaRepository<Assessment, UUID> {
 	 * the prefilter's and the failed ones are left out. An attempt without theses gives no row, and so does one
 	 * whose {@code claims} is not an array or a claim whose {@code statement} is not a string. The language
 	 * window of {@link AssessmentQuality}, by the index {@code ix_assessments_assessed_at}.
+	 * <p>
+	 * A stream read in pages of {@value #STATEMENTS_FETCH_SIZE} rows, so the caller counts the theses without
+	 * holding them all (review F4): it needs an open transaction and must be closed.
 	 */
-	default List<PostStatement> findModelStatements(Instant from, Instant until) {
+	default Stream<PostStatement> findModelStatements(Instant from, Instant until) {
 		return findStatementsWith(AssessmentResult.Status.OK.value(), Provenance.Source.MODEL.value(), from, until)
-			.stream()
 			.map(row -> new PostStatement(Source.fromValue((String) row[0]), Language.fromValue((String) row[1]),
-					(String) row[2]))
-			.toList();
+					(String) row[2]));
 	}
+
+	/** The rows {@link #findModelStatements} fetches from Postgres at a time. */
+	int STATEMENTS_FETCH_SIZE = 500;
 
 	/**
 	 * {@link #findModelStatements}, with the status and the result source bound as stored; rows of
@@ -105,6 +113,7 @@ public interface AssessmentRepository extends JpaRepository<Assessment, UUID> {
 			+ " WHERE a.status = :status AND a.result_source = :resultSource"
 			+ " AND a.assessed_at >= :from AND a.assessed_at < :until AND jsonb_typeof(c -> 'statement') = 'string'",
 			nativeQuery = true)
-	List<Object[]> findStatementsWith(String status, String resultSource, Instant from, Instant until);
+	@QueryHints(@QueryHint(name = HibernateHints.HINT_FETCH_SIZE, value = "" + STATEMENTS_FETCH_SIZE))
+	Stream<Object[]> findStatementsWith(String status, String resultSource, Instant from, Instant until);
 
 }

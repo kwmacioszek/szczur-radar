@@ -13,9 +13,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.stream.Stream;
 
 import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import pl.szczurradar.api.agents.assessor.validation.FailureClass;
 import pl.szczurradar.api.sources.Source;
@@ -105,10 +107,10 @@ public class AssessmentQuality {
 	 * The language window {@code [to − 6, to]} of calendar days in {@code zone}, the same days as {@link #window},
 	 * per source with a thesis in it.
 	 */
+	@Transactional(readOnly = true)
 	public LanguageWindow languageWindow(LocalDate to, ZoneId zone) {
 		LocalDate from = windowFrom(to);
-		return new LanguageWindow(from, to,
-				languages(assessments.findModelStatements(startOf(from, zone), startOf(to.plusDays(1), zone))));
+		return new LanguageWindow(from, to, languagesIn(startOf(from, zone), startOf(to.plusDays(1), zone)));
 	}
 
 	/**
@@ -120,11 +122,22 @@ public class AssessmentQuality {
 	 * @param zone the calendar's zone
 	 * @return the sources that crossed, each with what the night before saw of it, in {@link Source} order
 	 */
+	@Transactional(readOnly = true)
 	public List<LanguageCrossing> languageCrossed(LanguageWindow tonight, Instant now, ZoneId zone) {
 		LocalDate night = tonight.to();
-		List<SourceLanguage> before = languages(assessments.findModelStatements(
-				startOf(night.minusDays(WINDOW_DAYS), zone), nightBeforeUntil(night, now, zone)));
+		List<SourceLanguage> before = languagesIn(startOf(night.minusDays(WINDOW_DAYS), zone),
+				nightBeforeUntil(night, now, zone));
 		return languageCrossed(tonight.sources(), before);
+	}
+
+	/**
+	 * The theses of {@code [from, until)} counted per source as they are read, none of them held (review F4);
+	 * in the caller's transaction (the night's summary's own) or one of its own ({@code /admin}).
+	 */
+	private List<SourceLanguage> languagesIn(Instant from, Instant until) {
+		try (Stream<PostStatement> statements = assessments.findModelStatements(from, until)) {
+			return languages(statements);
+		}
 	}
 
 	/**
@@ -187,16 +200,16 @@ public class AssessmentQuality {
 	 * {@code statements} counted per source, in {@link Source} order: a thesis is in another language when
 	 * {@link LanguageEvidence} finds a language in it other than its post's; one without evidence is not.
 	 */
-	static List<SourceLanguage> languages(Collection<PostStatement> statements) {
+	static List<SourceLanguage> languages(Stream<PostStatement> statements) {
 		Map<Source, Long> theses = new EnumMap<>(Source.class);
 		Map<Source, Long> other = new EnumMap<>(Source.class);
-		for (PostStatement statement : statements) {
+		statements.forEach(statement -> {
 			theses.merge(statement.source(), 1L, Long::sum);
 			boolean otherLanguage = LanguageEvidence.of(statement.statement())
 				.filter(language -> language != statement.postLanguage())
 				.isPresent();
 			other.merge(statement.source(), otherLanguage ? 1L : 0L, Long::sum);
-		}
+		});
 		List<SourceLanguage> sources = new ArrayList<>();
 		theses.forEach((source, total) -> {
 			long otherLanguage = other.get(source);

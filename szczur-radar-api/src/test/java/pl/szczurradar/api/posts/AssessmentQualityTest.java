@@ -12,7 +12,9 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
@@ -181,7 +183,7 @@ class AssessmentQualityTest {
 
 	@Test
 	void onlyEvidenceOfAnotherLanguageThanThePostsIsAViolation() {
-		List<SourceLanguage> sources = AssessmentQuality.languages(List.of(
+		List<SourceLanguage> sources = AssessmentQuality.languages(Stream.of(
 				new PostStatement(Source.REDDIT, Language.EN, POLISH),
 				new PostStatement(Source.REDDIT, Language.EN, ENGLISH),
 				new PostStatement(Source.REDDIT, Language.EN, UNDECIDED),
@@ -194,7 +196,7 @@ class AssessmentQualityTest {
 		assertThat(sources).containsExactly(
 				new SourceLanguage(Source.WYKOP, 4, 2, 2, QualityStatus.NOT_ENOUGH_DATA),
 				new SourceLanguage(Source.REDDIT, 3, 1, 30, QualityStatus.NOT_ENOUGH_DATA));
-		assertThat(AssessmentQuality.languages(List.of())).isEmpty();
+		assertThat(AssessmentQuality.languages(Stream.empty())).isEmpty();
 	}
 
 	@Test
@@ -226,7 +228,7 @@ class AssessmentQualityTest {
 	@Test
 	void theLanguageWindowHasTheDaysOfTheQualityWindowAndTheSameNightBefore() {
 		AssessmentRepository repository = mock(AssessmentRepository.class);
-		when(repository.findModelStatements(any(), any())).thenReturn(List.of());
+		when(repository.findModelStatements(any(), any())).thenAnswer(invocation -> Stream.empty());
 		AssessmentQuality quality = new AssessmentQuality(repository);
 
 		assertThat(quality.languageWindow(LocalDate.of(2026, 10, 25), WARSAW)).isEqualTo(
@@ -244,11 +246,26 @@ class AssessmentQualityTest {
 				Instant.parse("2026-11-07T23:00:00Z"));
 	}
 
+	@Test
+	void theThesesAreCountedAsTheyAreReadAndTheirStreamIsClosed() {
+		AssessmentRepository repository = mock(AssessmentRepository.class);
+		AtomicInteger closed = new AtomicInteger();
+		when(repository.findModelStatements(any(), any()))
+			.thenAnswer(invocation -> wykopTheses(500, 11).onClose(closed::incrementAndGet));
+		AssessmentQuality quality = new AssessmentQuality(repository);
+
+		LanguageWindow window = quality.languageWindow(LocalDate.of(2026, 11, 8), WARSAW);
+		quality.languageCrossed(window, Instant.parse("2026-11-08T00:45:00Z"), WARSAW);
+
+		assertThat(window.sources()).containsExactly(
+				new SourceLanguage(Source.WYKOP, 500, 11, 2, QualityStatus.ABOVE_THRESHOLD));
+		assertThat(closed).hasValue(2);
+	}
+
 	/** {@code count} theses of Wykop's Polish posts, {@code english} of them in English. */
-	private static List<PostStatement> wykopTheses(int count, int english) {
+	private static Stream<PostStatement> wykopTheses(int count, int english) {
 		return IntStream.range(0, count)
-			.mapToObj(i -> new PostStatement(Source.WYKOP, Language.PL, i < english ? ENGLISH : POLISH))
-			.toList();
+			.mapToObj(i -> new PostStatement(Source.WYKOP, Language.PL, i < english ? ENGLISH : POLISH));
 	}
 
 	private static SourceLanguage wykopLanguage(QualityStatus status) {
