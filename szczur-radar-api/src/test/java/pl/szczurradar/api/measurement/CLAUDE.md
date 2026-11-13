@@ -38,4 +38,12 @@ post goes into the gold files or `models.json`, and the sample lives in the chan
 directories `RecordingsReplayTest` and `GoldDataTest` read. The live classes are tagged `measurement`; only
 `RedditMeasuresTest` and `RedditAnonymizerTest` run in CI.
 
+## Scenario days (S-31)
+
+`ScenarioDaysRecorder` records production's model (`luna`) once on the posts of the sources' fixture days
+(`scenario/RecordedDays`) into `src/test/resources/fixtures/llm/scenario-days/`, which the scenarios replay
+(`scenario/RecordedProvider`). It is not part of the CI gate either: that directory is no configuration of
+`models.json`, so `RecordingsReplayTest` and `GoldRecorder` never read it; `scenario/RecordedDaysTest` (in CI)
+checks that every such post has its recording.
+
 Keys only from the shell, never in the repo, recordings or logs (`README.md`).

@@ -19,10 +19,11 @@ import com.sun.net.httpserver.HttpServer;
 import org.jspecify.annotations.Nullable;
 
 /**
- * A local HTTP server in place of a source's API (Wykop, Arctic Shift): every request is recorded and
- * answered by a test-supplied function, each on its own thread (an answer may wait for another request).
- * Public for the pipeline's integration tests; each source has a thin subclass with its API's root and
- * fixtures ({@code LocalWykopServer}, {@code LocalRedditServer}).
+ * A local HTTP server in place of an external API (a source's — Wykop, Arctic Shift — or the LLM provider's in
+ * the scenarios): every request is recorded and answered by a test-supplied function, each on its own thread (an
+ * answer may wait for another request). Public for the pipeline's integration tests; each source has a thin
+ * subclass with its API's root and fixtures ({@code LocalWykopServer}, {@code LocalRedditServer}), and the
+ * provider's answers come from {@code scenario/RecordedProvider}.
  */
 public class LocalApiServer implements AutoCloseable {
 
@@ -101,6 +102,11 @@ public class LocalApiServer implements AutoCloseable {
 
 	public List<Request> requests() {
 		return List.copyOf(requests);
+	}
+
+	/** Forgets the requests received so far. */
+	public void clear() {
+		requests.clear();
 	}
 
 	/** A real, anonymized answer of a source from {@code fixtures/<dir>/}. */

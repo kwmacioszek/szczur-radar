@@ -24,7 +24,7 @@ import com.sun.net.httpserver.HttpServer;
  * A local HTTP server in place of {@code https://ntfy.sh/}: every request is recorded with its headers
  * and answered with the status a test-supplied function returns (ntfy answers the message as JSON; the
  * sender reads only the status). The topic lives at {@link #topicUrl()}, a path with a random name like a
- * real secret one.
+ * real secret one. Used by {@code NtfyAlertsTest} and, for the scenarios' context, by {@link LocalNtfy}.
  */
 final class LocalNtfyServer implements AutoCloseable {
 
@@ -76,6 +76,11 @@ final class LocalNtfyServer implements AutoCloseable {
 
 	List<Request> requests() {
 		return List.copyOf(requests);
+	}
+
+	/** Forgets the requests recorded so far (a scenario of {@link LocalNtfy} starts with none). */
+	void clear() {
+		requests.clear();
 	}
 
 	@Override

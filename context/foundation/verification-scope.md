@@ -29,10 +29,16 @@ Większość weryfikacji wycinka i regresja działają same w CI przy każdym PR
 
 ## Co zostanie ręczne (CI tego nie zobaczy)
 
-- Dostarczenie alertu do Telegrama (healthchecks.io).
-- Przerwanie przebiegu przez deploy na Railway i zachowanie Wait for CI.
-- Prawdziwe API Wykopu, Reddita i dostawcy LLM.
+- Dostarczenie alertu na telefon: Telegram przez healthchecks.io dla cronów i `deploy-health`, aplikacja ntfy dla zdarzeń API (od S-34).
+- Przerwanie przebiegu przez deploy na Railway (SIGTERM, nakładanie się instancji) i zachowanie Wait for CI.
+- Prawdziwe API Wykopu, Arctic Shift i dostawcy LLM: dostępność, format, limity, jakość ocen modelu.
 - Harmonogram cronów.
+- Wygląd i teksty widoków w przeglądarce (do M-5, Playwright).
+- Pomiary na Railway: czas startu po wybudzeniu, czytelność logów.
+- Migracja na danych produkcji: pre-deploy `migrate`, backfill.
+- Zmienne i sekrety środowisk Railway: krok CI ustawiający wartości w PR env, zapieczętowane wartości produkcji.
+
+Resztę kroków PR env z S-13, S-17, S-18, S-20, S-27 i S-34 pokrywają scenariusze S-31 w CI (`szczur-radar-api/src/test/java/pl/szczurradar/api/scenario/PrEnvScenariosIT.java`; mapa kroków w `context/deployment/deploy-plan.md`, sekcja S-31).
 
 ## Granice z M-3 i M-5
 

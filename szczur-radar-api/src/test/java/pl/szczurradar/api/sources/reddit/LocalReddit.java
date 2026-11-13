@@ -3,6 +3,8 @@ package pl.szczurradar.api.sources.reddit;
 import java.time.Duration;
 import java.time.InstantSource;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 
@@ -23,7 +25,9 @@ import pl.szczurradar.api.sources.LocalApiServer.Request;
  *
  * <p>Every search answers the real, anonymized day of r/inwestowanie ({@value #DEFAULT_PAGE}: 14 posts,
  * none removed) unless a scenario switches it: {@link #down()} (HTTP 500 with an error envelope, every
- * attempt), {@link #empty()} (no post), {@link #page(String)} (another fixture), {@link #hold()} (each search
+ * attempt), {@link #empty()} (no post), {@link #page(String)} (another fixture), {@link #page(String, String)}
+ * (another fixture for one subreddit's searches, read from the query's {@code subreddit}; a subreddit without
+ * one answers the page of {@link #page(String)}), {@link #hold()} (each search
  * waits without a bound until {@link #release()} or an interrupt) or {@link #delay(Duration)} (only the
  * watchdog's scenarios, which measure time). Not configured until a scenario names its subreddits
  * ({@link #configure(List)}): the repository's {@link RedditRepository#subreddits()} is that list, empty by
@@ -60,6 +64,9 @@ public class LocalReddit {
 	private static volatile boolean empty;
 
 	private static volatile String page = DEFAULT_PAGE;
+
+	/** The pages of {@link #page(String, String)}, by subreddit as the query names it. */
+	private static final Map<String, String> PAGES = new ConcurrentHashMap<>();
 
 	private static volatile @Nullable CountDownLatch hold;
 
@@ -102,6 +109,11 @@ public class LocalReddit {
 		page = fixture;
 	}
 
+	/** The searches of {@code subreddit} (as the query names it) answer {@code fixture} from {@code fixtures/reddit/}. */
+	public static void page(String subreddit, String fixture) {
+		PAGES.put(subreddit, fixture);
+	}
+
 	/** Holds each search until {@link #release()} (or an interrupt of the server's thread) before it answers. */
 	public static void hold() {
 		hold = new CountDownLatch(1);
@@ -121,8 +133,8 @@ public class LocalReddit {
 	}
 
 	/**
-	 * Back to the start: not configured, the default page, no outage, hold (a held search released) or delay,
-	 * no search recorded.
+	 * Back to the start: not configured, the default page and no subreddit's page, no outage, hold (a held search
+	 * released) or delay, no search recorded.
 	 */
 	public static void reset() {
 		release();
@@ -130,6 +142,7 @@ public class LocalReddit {
 		down = false;
 		empty = false;
 		page = DEFAULT_PAGE;
+		PAGES.clear();
 		hold = null;
 		delay = null;
 		REQUESTS.clear();
@@ -143,6 +156,16 @@ public class LocalReddit {
 	/** How many searches arrived since the last {@link #reset()}. */
 	public static int calls() {
 		return REQUESTS.size();
+	}
+
+	/** The query's {@code subreddit}, or an empty string. */
+	private static String subreddit(Request request) {
+		for (String parameter : request.query().split("&")) {
+			if (parameter.startsWith("subreddit=")) {
+				return parameter.substring("subreddit=".length());
+			}
+		}
+		return "";
 	}
 
 	/** The answer to a search, on the server's thread: recorded first, then held or delayed, then answered. */
@@ -170,7 +193,7 @@ public class LocalReddit {
 		if (empty) {
 			return Reply.ok("{\"data\":[]}");
 		}
-		return Reply.ok(LocalRedditServer.fixture(page));
+		return Reply.ok(LocalRedditServer.fixture(PAGES.getOrDefault(subreddit(request), page)));
 	}
 
 }

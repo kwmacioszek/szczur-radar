@@ -20,6 +20,9 @@ jobs:
   backend:
     name: backend (Maven verify)
     runs-on: ${{ (github.event_name == 'pull_request' && vars.CI_RUNNER_PR) || (github.event_name == 'push' && vars.CI_RUNNER_MAIN) || vars.CI_RUNNER || 'ubuntu-latest' }}
+    # A hung test must not hold the run for GitHub's default 6 h: Railway's Wait
+    # for CI gives up after 2 h. The job takes about 4 min (S-31).
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: szczur-radar-api
