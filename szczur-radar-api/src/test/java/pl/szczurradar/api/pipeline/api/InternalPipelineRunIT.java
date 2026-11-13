@@ -1,8 +1,10 @@
 package pl.szczurradar.api.pipeline.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
@@ -43,6 +45,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
+import org.springframework.dao.DataAccessException;
 import org.springframework.dao.QueryTimeoutException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -547,7 +550,9 @@ class InternalPipelineRunIT {
 	/**
 	 * The theses cannot be read (S-36): the summary keeps its quality lines, one line {@code language 7d …
 	 * unavailable} stands for the language lines, and the failed attempts' crossing still raises its alarm —
-	 * the language window's own transaction leaves the quality window's alone.
+	 * the language window's own transaction leaves the quality window's alone. The query fails inside Postgres,
+	 * which aborts its whole transaction, so the night's snapshot read after it proves it runs in a transaction
+	 * of its own.
 	 */
 	@Test
 	void thesesThatCannotBeReadCostOnlyTheLanguageLines() throws Exception {
@@ -555,8 +560,12 @@ class InternalPipelineRunIT {
 		try {
 			attempts(night.post(), night.range(), null, "2026-09-10T10:00:00Z", 100);
 			attempts(night.post(), night.range(), "fabricated_evidence", "2026-09-14T12:00:00Z", 10);
-			doThrow(new QueryTimeoutException("test: the theses' query timed out")).when(assessments)
-				.findModelStatements(any(), any());
+			doAnswer(invocation -> {
+				assertThatThrownBy(() -> jdbc.execute("SELECT 1 / 0")).isInstanceOf(DataAccessException.class);
+				assertThatThrownBy(() -> jdbc.queryForObject("SELECT 1", Integer.class))
+					.hasMessageContaining("current transaction is aborted");
+				throw new QueryTimeoutException("test: the theses' query timed out");
+			}).when(assessments).findModelStatements(any(), any());
 
 			MvcTestResult result = summary(bearer(TOKEN), "{\"runs\":[\"" + night.range() + "\"]}");
 
