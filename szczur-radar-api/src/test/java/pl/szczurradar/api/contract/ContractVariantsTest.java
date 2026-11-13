@@ -3,13 +3,10 @@ package pl.szczurradar.api.contract;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
-import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.RecordComponent;
 import java.lang.reflect.Type;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.Instant;
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -17,7 +14,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
-import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -176,24 +172,6 @@ class ContractVariantsTest {
 		return from.stream().filter(value -> !without.contains(value)).collect(Collectors.toCollection(TreeSet::new));
 	}
 
-	/** {@code List<X>} → {@code X}; anything else → {@code null}. */
-	private static @Nullable Type listElement(Type type) {
-		if (type instanceof ParameterizedType parameterized && parameterized.getRawType() == List.class) {
-			return parameterized.getActualTypeArguments()[0];
-		}
-		return null;
-	}
-
-	/** A value without inner structure: what the walk does not descend into. */
-	private static boolean leaf(Type type) {
-		if (!(type instanceof Class<?> scalar)) {
-			return false;
-		}
-		return scalar.isEnum() || scalar.isPrimitive() || scalar == String.class || scalar == UUID.class
-				|| scalar == Instant.class || scalar == LocalDate.class || scalar == Integer.class || scalar == Long.class
-				|| scalar == Boolean.class;
-	}
-
 	/** The JSON name of a component: its {@code @JsonProperty} value, else its name. */
 	private static String jsonName(RecordComponent component) {
 		JsonProperty property = component.getAccessor().getAnnotation(JsonProperty.class);
@@ -248,7 +226,7 @@ class ContractVariantsTest {
 
 		/** {@code node} (at {@code path} in {@code file}) as a value of {@code type}. */
 		void value(Type type, JsonNode node, String file, String path) {
-			Type element = listElement(type);
+			Type element = ContractTypes.listElement(type);
 			if (element != null) {
 				reach(element, file);
 				if (node.isNull()) {
@@ -267,7 +245,7 @@ class ContractVariantsTest {
 				}
 				return;
 			}
-			assertThat(leaf(type)).as("%s %s: a type the walk knows (a record, List<X>, an enum or a scalar): %s",
+			assertThat(ContractTypes.leaf(type)).as("%s %s: a type the walk knows (a record, List<X>, an enum or a scalar): %s",
 					file, path, type)
 				.isTrue();
 		}
@@ -277,28 +255,19 @@ class ContractVariantsTest {
 		 * file holds a value of, and notes that {@code file} can hold them.
 		 */
 		private void reach(Type type, String file) {
-			Type element = listElement(type);
-			if (element != null) {
-				reach(element, file);
-				return;
-			}
-			if (!(type instanceof Class<?> record) || !record.isRecord()) {
-				return;
-			}
-			if (!filesOf.computeIfAbsent(record, key -> new TreeSet<>()).add(file)) {
-				return;
-			}
-			Class<?> named = records.putIfAbsent(record.getSimpleName(), record);
-			assertThat(named == null || named == record)
-				.as("two contract records named %s: %s and %s", record.getSimpleName(), named, record)
-				.isTrue();
-			for (RecordComponent component : record.getRecordComponents()) {
-				String name = record.getSimpleName() + "." + component.getName();
-				components.putIfAbsent(name, new Component(record, name,
-						component.getAnnotatedType().isAnnotationPresent(Nullable.class),
-						listElement(component.getGenericType()) != null));
-				reach(component.getGenericType(), file);
-			}
+			ContractTypes.reach(type, record -> filesOf.computeIfAbsent(record, key -> new TreeSet<>()).add(file),
+					record -> {
+						Class<?> named = records.putIfAbsent(record.getSimpleName(), record);
+						assertThat(named == null || named == record)
+							.as("two contract records named %s: %s and %s", record.getSimpleName(), named, record)
+							.isTrue();
+						for (RecordComponent component : record.getRecordComponents()) {
+							String name = record.getSimpleName() + "." + component.getName();
+							components.putIfAbsent(name, new Component(record, name,
+									component.getAnnotatedType().isAnnotationPresent(Nullable.class),
+									ContractTypes.listElement(component.getGenericType()) != null));
+						}
+					});
 		}
 
 		private void record(Class<?> record, JsonNode node, String file, String path) {

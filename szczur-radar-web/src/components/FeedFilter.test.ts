@@ -1,6 +1,7 @@
 import { enableAutoUnmount, mount } from '@vue/test-utils'
 import { afterEach, describe, expect, it } from 'vitest'
 import type { PostFilter } from '../api/posts'
+import { MAX_QUERY_LENGTH } from '../feedFilter'
 import FeedFilter from './FeedFilter.vue'
 
 function mountFilter(filter: PostFilter = {}, attachTo?: HTMLElement) {
@@ -30,7 +31,7 @@ describe('FeedFilter', () => {
       'Rodzaj celu',
       'Stanowisko',
     ])
-    expect(labels[0]!.find('input[type="search"]').attributes('maxlength')).toBe('100')
+    expect(labels[0]!.find('input[type="search"]').attributes('maxlength')).toBe(String(MAX_QUERY_LENGTH))
     expect(labels[1]!.find('select').exists()).toBe(true)
     expect(labels[2]!.find('select').exists()).toBe(true)
   })

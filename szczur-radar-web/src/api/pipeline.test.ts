@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { ApiError } from './client'
+import { ApiError, type ErrorCode } from './client'
 import { fetchMissingDays, fetchRun, fetchRuns, fetchSources, retryPosts, startErrorMessage, startRange } from './pipeline'
 import { fetchFailedPosts, fetchPosts, restorePosts } from './posts'
 
@@ -98,7 +98,7 @@ describe('pipeline and posts API', () => {
   })
 
   // The statuses the API sends with these codes.
-  it.each([
+  it.each<[number, ErrorCode, string]>([
     [409, 'pipeline_busy', 'Przebieg już trwa.'],
     [400, 'post_dead', 'nie można już ponowić'],
     [503, 'source_not_configured', 'nie jest skonfigurowane'],

@@ -198,12 +198,13 @@ class NotificationsIT {
 			.containsEntry("createdAt", "2026-10-16T00:11:00Z")
 			.containsEntry("readAt", null);
 		assertThat(JsonPath.<Map<String, Object>>read(content(list), "$.items[0].run"))
-			.containsOnlyKeys("id", "kind", "status", "interruptionCause", "finishedAt", "assessedFailed", "dead",
-					"processingErrors", "skipped", "error")
+			.containsOnlyKeys("id", "kind", "status", "interruptionCause", "attentionReasons", "finishedAt",
+					"assessedFailed", "dead", "processingErrors", "skipped", "error")
 			.containsEntry("id", newest.toString())
 			.containsEntry("kind", "retry")
 			.containsEntry("status", "interrupted")
 			.containsEntry("interruptionCause", "deploy")
+			.containsEntry("attentionReasons", List.of("interrupted"))
 			.containsEntry("finishedAt", "2026-10-16T00:41:00Z")
 			.containsEntry("assessedFailed", 2)
 			.containsEntry("dead", 1)

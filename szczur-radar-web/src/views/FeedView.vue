@@ -2,7 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, ref, useTemplateRef, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { type Freshness, fetchFreshness } from '../api/freshness'
-import { type Page, type PostFilter, type PostItem, fetchPosts } from '../api/posts'
+import { FEED_PAGE_SIZE, type Page, type PostFilter, type PostItem, fetchPosts } from '../api/posts'
 import AppButton from '../components/AppButton.vue'
 import AppHeader from '../components/AppHeader.vue'
 import FeedFilter from '../components/FeedFilter.vue'
@@ -11,8 +11,6 @@ import StatusMessage from '../components/StatusMessage.vue'
 import { filterFromQuery, filterToQuery, isFilterActive, pageFromQuery, sameFilter } from '../feedFilter'
 import { formatDateTime, label } from '../labels'
 import { reportFeedLoaded } from '../router/scroll'
-
-const PAGE_SIZE = 50
 
 const route = useRoute()
 const router = useRouter()
@@ -34,7 +32,7 @@ let latestLoad = 0
 const page = computed(() => pageFromQuery(route.query))
 /** The filter in the address (`?q=&kind=&direction=`); unknown values are dropped. */
 const filter = computed(() => filterFromQuery(route.query))
-const pages = computed(() => (shown.value ? Math.max(1, Math.ceil(shown.value.result.total / PAGE_SIZE)) : 1))
+const pages = computed(() => (shown.value ? Math.max(1, Math.ceil(shown.value.result.total / FEED_PAGE_SIZE)) : 1))
 /** The answer on screen has no post for its filter. */
 const noMatch = computed(
   () => shown.value !== null && shown.value.result.total === 0 && isFilterActive(shown.value.filter),
@@ -80,7 +78,7 @@ async function load(target: number, conditions: PostFilter, { moveFocus = false 
   loadingPage.value = target
   failed.value = false
   try {
-    const result = await fetchPosts(target, PAGE_SIZE, conditions)
+    const result = await fetchPosts(target, FEED_PAGE_SIZE, conditions)
     if (id !== latestLoad) return
     shown.value = { page: target, filter: conditions, result }
     loadingPage.value = null

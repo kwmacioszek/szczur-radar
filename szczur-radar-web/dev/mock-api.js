@@ -268,8 +268,8 @@ async page => {
   // (or all) is kept until the mock is installed again.
   const readIds = new Set()
   const notifiedRun = (r) => ({ id: r.id, kind: r.kind, status: r.status, interruptionCause: r.interruptionCause,
-    finishedAt: r.finishedAt, assessedFailed: r.assessedFailed, dead: r.dead, processingErrors: r.processingErrors,
-    skipped: r.skipped, error: r.error })
+    attentionReasons: r.attentionReasons, finishedAt: r.finishedAt, assessedFailed: r.assessedFailed, dead: r.dead,
+    processingErrors: r.processingErrors, skipped: r.skipped, error: r.error })
   const allNotifications = () => {
     const byId = Object.fromEntries(allRuns().map((r) => [r.id, r]))
     const about = (key) => notifiedRun(byId[runId(key)])

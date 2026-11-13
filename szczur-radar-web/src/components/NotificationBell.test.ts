@@ -35,6 +35,7 @@ function notification(id: string, overrides: Partial<AdminNotification> = {}): A
       kind: 'range',
       status: 'interrupted',
       interruptionCause: 'deploy',
+      attentionReasons: ['interrupted'],
       finishedAt: '2026-10-15T07:00:00Z',
       assessedFailed: 0,
       dead: 0,
@@ -130,7 +131,7 @@ describe('NotificationBell', () => {
 
   it('opens the list below the bell and closes it with Escape, the focus back on the bell', async () => {
     vi.mocked(fetchNotifications).mockResolvedValue(
-      list([notification('a'), notification('b', { readAt: '2026-10-15T07:30:00Z', run: { ...notification('b').run!, status: 'partial', interruptionCause: null, dead: 1 } })]),
+      list([notification('a'), notification('b', { readAt: '2026-10-15T07:30:00Z', run: { ...notification('b').run!, status: 'partial', interruptionCause: null, attentionReasons: ['dead_posts'], dead: 1 } })]),
     )
     const { wrapper } = await mountBell({ attachTo: document.body })
     expect(bell(wrapper).attributes('aria-expanded')).toBe('false')

@@ -2,12 +2,30 @@
 // proxied by Caddy in production and by Vite locally), so the HttpOnly session
 // cookie travels automatically and the SPA never sees the token.
 
+/** The `detail` codes of the API's errors, in the order of the API's `config/ErrorCode` (`rules.json` `errorCodes`). */
+export type ErrorCode =
+  | 'invalid_credentials'
+  | 'not_authenticated'
+  | 'forbidden'
+  | 'too_many_attempts'
+  | 'cross_origin'
+  | 'invalid_request'
+  | 'unsupported_media_type'
+  | 'activation_link_invalid'
+  | 'password_policy'
+  | 'pipeline_busy'
+  | 'post_dead'
+  | 'post_not_found'
+  | 'source_not_configured'
+  | 'not_found'
+  | 'internal_error'
+
 export class ApiError extends Error {
   readonly status: number
-  readonly detail: string | null
+  readonly detail: ErrorCode | null
   readonly retryAfter?: number
 
-  constructor(status: number, detail: string | null, retryAfter?: number) {
+  constructor(status: number, detail: ErrorCode | null, retryAfter?: number) {
     super(`API ${status}${detail ? `: ${detail}` : ''}`)
     this.name = 'ApiError'
     this.status = status
@@ -40,12 +58,16 @@ function parseRetryAfter(value: string | null): number | undefined {
   return Number.isFinite(seconds) && seconds >= 0 ? seconds : undefined
 }
 
-async function readDetail(response: Response): Promise<string | null> {
+/**
+ * The `detail` of an error body, cast to `ErrorCode` at this boundary: a code of a newer API than this SPA is not
+ * in the union at run time and lands in the default branch of the caller's `switch`.
+ */
+async function readDetail(response: Response): Promise<ErrorCode | null> {
   try {
     const body: unknown = await response.json()
     if (body && typeof body === 'object' && 'detail' in body) {
       const { detail } = body as { detail: unknown }
-      return typeof detail === 'string' ? detail : null
+      return typeof detail === 'string' ? (detail as ErrorCode) : null
     }
   } catch {
     // Non-JSON error body (e.g. a proxy error page).

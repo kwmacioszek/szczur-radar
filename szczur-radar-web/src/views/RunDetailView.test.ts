@@ -2,7 +2,7 @@ import { type VueWrapper, enableAutoUnmount, flushPromises, mount } from '@vue/t
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMemoryHistory } from 'vue-router'
 import { fetchMe } from '../api/auth'
-import { ApiError } from '../api/client'
+import { ApiError, type ErrorCode } from '../api/client'
 import { fetchNotifications } from '../api/notifications'
 import { type AttentionReason, type Run, type RunStep, type SourceResult, fetchRun } from '../api/pipeline'
 import { resetSession } from '../auth/session'
@@ -156,7 +156,7 @@ describe('RunDetailView', () => {
     expect(wrapper.find('h1').text()).toBe('Przebieg')
   })
 
-  it.each([
+  it.each<[number, ErrorCode]>([
     [404, 'not_found'],
     [400, 'invalid_request'],
   ])('says there is no such run on %i, with a link to the panel', async (status, detail) => {

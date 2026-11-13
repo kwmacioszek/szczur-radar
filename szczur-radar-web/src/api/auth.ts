@@ -1,10 +1,13 @@
 // /api/auth/* — the contract of szczur-radar-api/src/main/java/pl/szczurradar/api/auth/AuthController.java.
 import { apiFetch } from './client'
 
+/** An account's role — szczur-radar-api user/Role. */
+export type Role = 'user' | 'admin'
+
 export interface User {
   id: string
   email: string
-  role: 'user' | 'admin'
+  role: Role
 }
 
 /** Sets the session cookie. 401 = wrong credentials, 429 = too many attempts. */

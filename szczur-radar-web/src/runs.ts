@@ -5,8 +5,17 @@ import type { AttentionReason, InterruptionCause, Run, RunStatus, SourceFetchSta
 import type { BadgeTone } from './components/StatusBadge.vue'
 import { formatDate, label, plural } from './labels'
 
-/** What the tone and status text need; a run of the list and the run of a notification both have it. */
-type RunState = { status: RunStatus; interruptionCause: InterruptionCause | null; skipped: number }
+/**
+ * What the tone and status text need; a run of the list and the run of a notification both have it. The reason codes
+ * come from the API (pipeline/run/PipelineRun.attentionReasons); nothing in this file works out whether a run needs
+ * attention. `skipped` is only the counter for the text.
+ */
+type RunState = {
+  status: RunStatus
+  interruptionCause: InterruptionCause | null
+  attentionReasons: AttentionReason[]
+  skipped: number
+}
 
 /** The API's reason codes and what their text is built from. */
 type AttentionFields = Pick<
@@ -33,10 +42,11 @@ const statusTone: Record<RunStatus, BadgeTone> = {
 /**
  * The badge tone of a run. Every interruption is a `warning`, whatever its cause: the API's rule
  * (pipeline/run/PipelineRun.attentionReasons) says an interrupted run needs attention, a new deployment's included.
- * A succeeded run whose source skipped elements is a `warning` too.
+ * A succeeded run the API gives a reason to need attention (a skipped element, a source without a post) is a
+ * `warning` too.
  */
 export function runTone(run: RunState): BadgeTone {
-  if (run.status === 'succeeded' && run.skipped > 0) return 'warning'
+  if (run.status === 'succeeded' && run.attentionReasons.length > 0) return 'warning'
   return statusTone[run.status]
 }
 
@@ -65,20 +75,15 @@ export function sourceTone(status: SourceFetchStatus): BadgeTone {
 
 /**
  * The status in words with the interruption's cause, e.g. `przerwany — nowe wdrożenie`, or with the skipped elements
- * of a succeeded or partial run, e.g. `zakończony — pominięte: 3`.
+ * of a run the API gave the reason `skipped`, e.g. `zakończony — pominięte: 3`.
  */
 export function runStatusLabel(run: RunState): string {
   const status = label('runStatus', run.status)
   if (run.status === 'interrupted' && run.interruptionCause) {
     return `${status} — ${label('interruptionCause', run.interruptionCause)}`
   }
-  if (hasSkipped(run)) return `${status} — pominięte: ${run.skipped}`
+  if (run.attentionReasons.includes('skipped')) return `${status} — pominięte: ${run.skipped}`
   return status
-}
-
-/** A succeeded or partial run whose source skipped elements (unexpected shape or not mappable). */
-function hasSkipped(run: RunState): boolean {
-  return (run.status === 'succeeded' || run.status === 'partial') && run.skipped > 0
 }
 
 /**
