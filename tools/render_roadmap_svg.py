@@ -216,7 +216,7 @@ m4 = {  # lane, title (## Slices), outcome (At a glance), status, prerequisites,
     "S-40": ("D", "Strażnik tras admina i /internal", "każda trasa /api/admin/** daje 403 zwykłemu użytkownikowi, a każda /internal/** 401 bez tokenu — bez ręcznej listy tras", "done", "—", "derived-route-guards"),
     "S-41": ("E", "Kontrakt SPA ↔ API: kształty", "każdy kształt odpowiedzi, który czyta SPA, ma plik kontraktu z wariantami null, a pole zawsze wysyłane przez API jest wymagane w TS", "done", "—", "api-contract-shapes-round-two"),
     "S-43": ("E", "Atrapy odpowiadają jak prawdziwe API", "atrapa API w SPA i atrapy narzędzi odpowiadają tak jak prawdziwe API, a rozjazd czerwieni test", "done", "S-41", "contract-bound-mocks"),
-    "S-42": ("E", "Rejestr reguł SPA, druga runda", "porównanie kodu błędu, limit rozmiaru strony i enumy spoza rejestru są pilnowane testem albo kompilatorem", "progress", "—", "spa-rules-registry-round-two"),
+    "S-42": ("E", "Rejestr reguł SPA, druga runda", "porównanie kodu błędu, limit rozmiaru strony i enumy spoza rejestru są pilnowane testem albo kompilatorem", "done", "—", "spa-rules-registry-round-two"),
     "S-44": ("E", "Feed: regresja i granica numeru strony", "feed ma testy regresji znanych ścieżek, a ogromny numer strony i NUL w linku dają 400 zamiast błędu serwera albo zawieszonego feedu", "done", "—", "feed-regression-and-paging-bounds"),
 }
 lanes4 = {  # the streams of roadmap v5
