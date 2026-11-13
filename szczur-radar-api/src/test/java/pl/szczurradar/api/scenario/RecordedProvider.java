@@ -52,6 +52,10 @@ public final class RecordedProvider implements Function<Request, Reply> {
 	private final List<Request> unmatched = Collections.synchronizedList(new ArrayList<>());
 
 	public RecordedProvider() {
+		if (!Files.isDirectory(RecordedDays.DIR)) {
+			throw new IllegalStateException("No recordings in " + RecordedDays.DIR.toAbsolutePath()
+					+ ": the tests read them from the API module's root (szczur-radar-api/), where Maven runs them");
+		}
 		answers.put(LlmClient.CHECK_REQUEST.userMessage(), LocalApiServer.fixture("openrouter", "chat-completion.json"));
 		for (RecordedDays.Post post : RecordedDays.posts()) {
 			if (Files.exists(post.recording())) {

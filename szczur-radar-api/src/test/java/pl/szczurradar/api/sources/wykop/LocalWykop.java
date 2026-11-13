@@ -75,13 +75,14 @@ public class LocalWykop {
 		empty = true;
 	}
 
-	/** Back to the day: no outage, no empty range. */
+	/** Back to the day: no outage, no empty range, no requests remembered. */
 	public static void reset() {
 		down = false;
 		empty = false;
+		SERVER.clear();
 	}
 
-	/** Every request the server got (the token's included), in order. */
+	/** Every request the server got since the last {@link #reset()} (the token's included), in order. */
 	public static List<Request> requests() {
 		return SERVER.requests();
 	}

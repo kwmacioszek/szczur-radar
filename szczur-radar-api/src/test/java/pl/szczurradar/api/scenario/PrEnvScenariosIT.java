@@ -83,7 +83,10 @@ import pl.szczurradar.api.user.UserRepository;
  *       model, those of the {@link #REJECTED} recordings fail the validator on every attempt, the others pass;</li>
  *   <li><b>Alerts:</b> the real queue and {@code NtfyAlerts} to a local topic ({@link LocalNtfy}), on a virtual
  *       clock;</li>
- *   <li><b>Clock:</b> "today" is {@link #NOW} ({@link MutableClock}).</li>
+ *   <li><b>Clock:</b> "today" is {@link #NOW} ({@link MutableClock}). Only the context's clock is fixed: the
+ *       assessor stamps {@code assessed_at} with the JVM's clock, so the night summary's {@code quality 7d}
+ *       window never sees this class's attempts and {@code ASSESSMENT_QUALITY} cannot be raised here (both are
+ *       {@code NightSummaryIT}'s).</li>
  * </ul>
  *
  * <p>Each scenario stands alone, as in {@code PipelineRunIT}, and the methods run in a random order (the seed is
@@ -246,6 +249,13 @@ class PrEnvScenariosIT {
 		assertThat(run.get("newPosts").asInt()).isEqualTo(FETCHED);
 		assertThat(run.get("assessedOk").asInt()).isEqualTo(PREFILTERED + MODEL_OK);
 		assertThat(run.get("assessedFailed").asInt()).isEqualTo(REJECTED.size());
+		// The failed posts are those of the rejected recordings, not merely as many.
+		assertThat(jdbc.queryForList("SELECT source_item_id FROM posts WHERE stage = 'failed'", String.class))
+			.containsExactlyInAnyOrderElementsOf(RecordedDays.posts()
+				.stream()
+				.filter(post -> REJECTED.contains(post.file()))
+				.map(RecordedDays.Post::id)
+				.toList());
 		assertThat(run.get("dead").asInt()).isZero();
 		assertThat(run.get("processingErrors").asInt()).isZero();
 		assertThat(run.get("needsAttention").asBoolean()).isFalse();

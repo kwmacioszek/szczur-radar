@@ -104,6 +104,11 @@ public class LocalApiServer implements AutoCloseable {
 		return List.copyOf(requests);
 	}
 
+	/** Forgets the requests received so far. */
+	public void clear() {
+		requests.clear();
+	}
+
 	/** A real, anonymized answer of a source from {@code fixtures/<dir>/}. */
 	public static String fixture(String dir, String name) {
 		try (InputStream in = LocalApiServer.class.getResourceAsStream("/fixtures/" + dir + "/" + name)) {

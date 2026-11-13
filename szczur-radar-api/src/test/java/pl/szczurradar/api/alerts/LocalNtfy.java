@@ -141,10 +141,14 @@ public class LocalNtfy {
 		return REPORTED.get();
 	}
 
-	/** Forgets the messages and the count of reports. */
+	/**
+	 * Forgets the messages and the count of reports, and moves the queue's virtual time past its repeat and
+	 * rate windows, so an event the last scenario raised is no repeat in the next one, whatever their order.
+	 */
 	public static void clear() {
 		SERVER.clear();
 		REPORTED.set(0);
+		NOW.updateAndGet(now -> now.plus(OperatorAlertQueue.REPEAT_WINDOW).plus(OperatorAlertQueue.RATE_WINDOW));
 	}
 
 }
