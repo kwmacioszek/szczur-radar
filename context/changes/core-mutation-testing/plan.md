@@ -484,20 +484,20 @@ Nie dotyczy: bez zmian schematu, danych i zmiennych Railway. Nowy job w `ci.yml`
 
 #### Automated
 
-- [x] 4.1 `./mvnw -B -Pmutation test` zielony
-- [x] 4.2 `./mvnw -B verify` zielony
-- [x] 4.3 Brak zmian w `src/main`
-- [x] 4.4 Usunięty wpis rejestru czerwieni strażnika
-- [x] 4.5 Tabela „po S-45” w `mutation-baseline.md`
+- [x] 4.1 `./mvnw -B -Pmutation test` zielony — d6b1460
+- [x] 4.2 `./mvnw -B verify` zielony — d6b1460
+- [x] 4.3 Brak zmian w `src/main` — d6b1460
+- [x] 4.4 Usunięty wpis rejestru czerwieni strażnika — d6b1460
+- [x] 4.5 Tabela „po S-45” w `mutation-baseline.md` — d6b1460
 
 ### Phase 5: Ręczne zepsucia SQL
 
 #### Automated
 
-- [ ] 5.1 `sql-breaks.md` ma wiersz z łapiącym testem dla każdego strażnika SQL
-- [ ] 5.2 Każdy nowy IT dowiedziony zepsuciem
-- [ ] 5.3 `./mvnw -B verify` zielony
-- [ ] 5.4 Brak zmian w `src/main`
+- [x] 5.1 `sql-breaks.md` ma wiersz z łapiącym testem dla każdego strażnika SQL
+- [x] 5.2 Każdy nowy IT dowiedziony zepsuciem
+- [x] 5.3 `./mvnw -B verify` zielony
+- [x] 5.4 Brak zmian w `src/main`
 
 ### Phase 6: Job `mutation` w CI i dokumentacja
 

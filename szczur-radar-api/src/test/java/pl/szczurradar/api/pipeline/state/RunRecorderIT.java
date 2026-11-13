@@ -9,12 +9,14 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import jakarta.persistence.EntityManager;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,17 +24,25 @@ import org.springframework.transaction.annotation.Transactional;
 import pl.szczurradar.api.TestcontainersConfiguration;
 import pl.szczurradar.api.cli.MigrateCommand;
 import pl.szczurradar.api.pipeline.run.InterruptionCause;
+import pl.szczurradar.api.pipeline.run.PipelineRunRepository;
 import pl.szczurradar.api.pipeline.run.RunStatus;
 import pl.szczurradar.api.pipeline.run.RunStep;
 import pl.szczurradar.api.pipeline.run.SourceFetchStatus;
 import pl.szczurradar.api.pipeline.run.StepStatus;
 import pl.szczurradar.api.pipeline.state.RunRecorder.Counters;
 import pl.szczurradar.api.pipeline.state.RunRecorder.StepOutcome;
+import pl.szczurradar.api.posts.AssessmentRepository;
+import pl.szczurradar.api.posts.PostRepository;
+import pl.szczurradar.api.posts.PostSeeds;
+import pl.szczurradar.api.posts.PostStage;
+import pl.szczurradar.api.raw.RawPayloadStore;
 import pl.szczurradar.api.sources.Source;
+import pl.szczurradar.api.user.UserRepository;
 
 /**
  * The conditional writes of {@link RunRecorder} on Postgres, each guard on its own: which status a write
- * needs, what it leaves alone, and how steps are opened and closed. Runs are rows inserted with SQL. Each
+ * needs, what it leaves alone, and how steps are opened and closed. Runs are rows inserted with SQL, posts
+ * come from {@link PostSeeds}. Each
  * test rolls back; within it the database's {@code now()} is the transaction's start, so an age is set
  * with an interval. The runs other tests of this context committed are made finished a day ago first
  * (rolled back too): the statements over every queued or running run must see only this test's.
@@ -47,6 +57,24 @@ class RunRecorderIT {
 
 	@Autowired
 	JdbcTemplate jdbc;
+
+	@Autowired
+	PostRepository posts;
+
+	@Autowired
+	AssessmentRepository assessments;
+
+	@Autowired
+	RawPayloadStore rawPayloads;
+
+	@Autowired
+	PipelineRunRepository runs;
+
+	@Autowired
+	UserRepository users;
+
+	@Autowired
+	EntityManager entityManager;
 
 	private UUID adminId;
 
@@ -117,6 +145,22 @@ class RunRecorderIT {
 		assertThat(row(running)).containsEntry("status", "partial")
 			.containsEntry("fetched", 3)
 			.containsEntry("error", "1 post with a technical error");
+	}
+
+	@Test
+	void inFlightCountsOnlyThePostsTheRunHolds() {
+		PostSeeds seeds = new PostSeeds(posts, assessments, rawPayloads, runs, users, jdbc, entityManager);
+		UUID running = run("running", null, null);
+		// An ended run that left its post in assessment (put back only by the next clean-up).
+		UUID interrupted = run("interrupted", null, null);
+		UUID held = seeds.post(PostStage.STORED, 0, "2026-11-01T10:00:00Z");
+		UUID leftBehind = seeds.post(PostStage.STORED, 0, "2026-11-01T11:00:00Z");
+		seeds.post(PostStage.STORED, 0, "2026-11-01T12:00:00Z");
+		jdbc.update("UPDATE posts SET stage = 'assessing', assessing_run_id = ? WHERE id = ?", running, held);
+		jdbc.update("UPDATE posts SET stage = 'assessing', assessing_run_id = ? WHERE id = ?", interrupted, leftBehind);
+
+		assertThat(recorder.inFlight(running)).isOne();
+		assertThat(recorder.inFlight(interrupted)).isOne();
 	}
 
 	@Test
@@ -302,6 +346,23 @@ class RunRecorderIT {
 
 		assertThat(steps(running)).containsExactly("assess:interrupted:2:::true");
 		assertThat(row(running)).containsEntry("status", "interrupted").containsEntry("interruption_cause", "shutdown");
+	}
+
+	/** The work's failed statement aborts the test's transaction, so nothing is read after the step. */
+	@Test
+	void aStepWhoseCloseFailsThrowsItsOwnExceptionWithTheCloseSuppressed() {
+		UUID running = run("running", null, null);
+		IllegalStateException own = new IllegalStateException("the step's own");
+
+		// Closing the step fails as the database would be gone: its transaction no longer takes a statement.
+		assertThatThrownBy(() -> recorder.step(running, RunStep.ASSESS, 1, () -> {
+			assertThatThrownBy(() -> jdbc.execute("SELECT 1 / 0")).isInstanceOf(DataAccessException.class);
+			throw own;
+		}, Integer::intValue)).isSameAs(own)
+			.satisfies(thrown -> assertThat(thrown.getSuppressed()).singleElement()
+				.isInstanceOf(DataAccessException.class)
+				.asString()
+				.contains("current transaction is aborted"));
 	}
 
 	@Test
