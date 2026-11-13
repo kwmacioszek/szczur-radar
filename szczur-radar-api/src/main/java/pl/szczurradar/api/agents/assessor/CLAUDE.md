@@ -20,6 +20,8 @@ Source of truth: `context/foundation/llm-assessment/contract-v2.md`. Code follow
 
 Lengths are Unicode code points (`codePointCount`), never `String.length()`.
 
+The whole package is in PIT's scope (S-45, profile `mutation` of `pom.xml`): `./mvnw -Pmutation test` mutates it against the `*Test` classes, and a mutant that survives is killed by a test of behavior or gets an entry with its reason (`równoważny:`, `obronny:`, `tekst:`) in `src/test/java/pl/szczurradar/api/mutation/AcceptedMutants.java`, else the CI job `mutation` is red.
+
 `FailureClass`, `AssessmentResult.Status`, `Provenance.Source` and `ItemType` values are stored in
 `assessments`/`posts` (`persistence/converters/`): append-only — never rename or remove a constant, or old rows
 no longer load. `persistence/ClosedSetsIT` keeps their constants equal to their column's `CHECK`.

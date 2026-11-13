@@ -285,6 +285,21 @@ source ~/.config/szczur-radar/llm.env   # LLM_API_PROVIDER, LLM_MODEL, LLM_API_K
 - **`measurement`** (tag JUnit, kod tylko w `src/test/java/.../measurement/`): przebiegi na żywych API z kluczami z powłoki — domyślne `test`/`verify` (i CI) je pomijają; uruchomienie: `./mvnw -Pmeasurement test -Dtest=<Klasa>` (bez Springa i Dockera), opis w `src/test/java/pl/szczurradar/api/measurement/README.md`.
 - **Fixture'y usług zewnętrznych** (Wykop, Arctic Shift dla Reddita, dostawcy LLM): prawdziwe odpowiedzi jako JSON w `src/test/resources/fixtures/<usługa>/`, bez wymyślanych przykładów.
 
+## Testy mutacyjne (PIT, S-45)
+
+Zielony test mówi tylko, że kod robi to, co test sprawdza. Pomiar mutacyjny sprawdza, czy testy rdzenia łapią błąd: PIT wprowadza do skompilowanego kodu małe zmiany (mutanty: odwrócony warunek, zmieniona granica, usunięte wywołanie, inna wartość zwracana) i dla każdej uruchamia testy, które ją pokrywają.
+
+```bash
+./mvnw -B -Pmutation test   # PIT, potem strażnik rejestru; bez Dockera i bez ustawień LLM
+```
+
+- **Zakres:** klasy rdzenia z profilu `mutation` w `pom.xml` — walidator kontraktu V2 (`agents/assessor`), przebieg (`pipeline/assess`, `flow`, `state`, `run`, `step`, `PipelineRunService`, `RunWatchdog`) i jakość ocen (`posts/AssessmentQuality`). Mutatory `STRONGER`, 4 wątki (`-Dpit.threads=<n>`).
+- **Tylko `*Test`:** PIT uruchamia wyłącznie testy jednostkowe, bez `*IT`, bez Springa i Testcontainers, bez testów z tagiem `measurement`. `RunRecorder` i `PostTransitions` (poza `PostTransitions$Outcome`, czyli liczeniem prób) są wyłączone: to opakowania SQL, które testy jednostkowe tylko mockują. Ich strażników SQL i logikę Javy zepsuto raz ręcznie, a każde zepsucie łapie test IT (`context/changes/core-mutation-testing/sql-breaks.md`); w CI pilnują ich te IT w jobie `backend`.
+- **Czas:** ok. 5 min lokalnie (266–336 s przy 4 wątkach na 8 CPU, `context/changes/core-mutation-testing/mutation-baseline.md`).
+- **Strażnik:** po PIT, w tym samym poleceniu, `mutation/SurvivingMutantsTest` (tag `mutation`, zwykłe `test`/`verify` go pomija) porównuje `target/pit-reports/mutations.xml` z rejestrem `src/test/java/pl/szczurradar/api/mutation/AcceptedMutants.java` w obie strony. Czerwony, gdy mutant `SURVIVED` albo `NO_COVERAGE` nie ma wpisu (komunikat wypisuje go jako gotowy do wklejenia wpis, z linią w komentarzu) albo gdy wpis nie odpowiada już żadnemu ocalałemu (mutant zabity, `TIMED_OUT` albo zniknął). Bez raportu pada z poleceniem do uruchomienia, nie jest pomijany. Logikę porównania sprawdza `MutantRegistryTest` w zwykłym `./mvnw test`.
+- **Ocalały mutant:** najpierw test na zachowaniu (wynik, rodzaj naruszenia, status przebiegu, liczba, próg — nie samo `verify()` na mocku), który go zabija. Wpis w `AcceptedMutants` tylko wtedy, gdy żaden test go nie odróżni albo jego zabicie nic nie chroni, z konkretnym powodem zaczynającym się od kategorii: `równoważny:` (dlaczego zachowanie się nie zmienia), `obronny:` (gałąź nieosiągalna przy kontrakcie wejścia, z miejscem, które ją wyklucza) albo `tekst:` (zmienia tylko tekst komunikatu, który nie jest kontraktem). Klucz wpisu nie ma numeru linii, a metoda lambdy jest bez numeru (`lambda$name`). Mutant, który ujawnia prawdziwy błąd, to sprawa dla właściciela, nie wpis.
+- **Raport:** `target/pit-reports/index.html` (per klasa i linia) i `mutations.xml`, który czyta strażnik. CI (job `mutation`) uruchamia to samo polecenie i przy czerwonym wyniku zostawia raport jako artefakt `pit-reports` na 7 dni.
+
 ## API i sesja (kontrakt z SPA)
 
 - Trasy: `GET /api/health`, `GET /api/ready`, `POST /api/auth/login` (JSON `{email, password}`), `POST /api/auth/logout` (zawsze 204), `GET /api/auth/me` → `{id, email, role}`.

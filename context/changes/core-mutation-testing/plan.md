@@ -494,19 +494,19 @@ Nie dotyczy: bez zmian schematu, danych i zmiennych Railway. Nowy job w `ci.yml`
 
 #### Automated
 
-- [x] 5.1 `sql-breaks.md` ma wiersz z łapiącym testem dla każdego strażnika SQL
-- [x] 5.2 Każdy nowy IT dowiedziony zepsuciem
-- [x] 5.3 `./mvnw -B verify` zielony
-- [x] 5.4 Brak zmian w `src/main`
+- [x] 5.1 `sql-breaks.md` ma wiersz z łapiącym testem dla każdego strażnika SQL — 3969757
+- [x] 5.2 Każdy nowy IT dowiedziony zepsuciem — 3969757
+- [x] 5.3 `./mvnw -B verify` zielony — 3969757
+- [x] 5.4 Brak zmian w `src/main` — 3969757
 
 ### Phase 6: Job `mutation` w CI i dokumentacja
 
 #### Automated
 
-- [ ] 6.1 `mutation` w `needs:` joba `railway-config`
+- [x] 6.1 `mutation` w `needs:` joba `railway-config`
 - [ ] 6.2 Job `mutation` zielony na PR i ≤ 10 min
 - [ ] 6.3 Cały `ci.yml` zielony na PR
-- [ ] 6.4 Wytyczne i README opisują `-Pmutation` i `AcceptedMutants`
+- [x] 6.4 Wytyczne i README opisują `-Pmutation` i `AcceptedMutants`
 - [ ] 6.5 Job `mutation` zielony także w drugim przebiegu
 
 #### Manual

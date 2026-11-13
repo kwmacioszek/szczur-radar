@@ -571,6 +571,12 @@ PipelineRunService.startRange / startPosts → queue (thread pipeline-run) → R
   asserted) and the IT helper loops that poll the database or the log (`awaitLog`, `awaitClosed`, `settle`,
   `finished`, `awaitIdle`), far longer than their wait, so a red one says what it waited for. Only the watchdog's own
   scenarios measure time, against its threshold, each with its margin. A new test of the engine keeps this.
+- **Mutation testing (S-45).** `assess/`, `flow/`, `state/`, `run/` (but `MissingDays`), `step/`, `PipelineRunService` and
+  `RunWatchdog` are in PIT's scope (profile `mutation` of `pom.xml`, `./mvnw -Pmutation test`, the CI job `mutation`):
+  a mutant the `*Test` classes leave alive is killed by a test of behavior or gets an entry with its reason in
+  `src/test/java/pl/szczurradar/api/mutation/AcceptedMutants.java`. `state/RunRecorder` and `state/PostTransitions`
+  (not its `Outcome`) are excluded — mocks in every unit test —: their SQL guards and Java logic were broken once by
+  hand, each caught by an IT (`context/changes/core-mutation-testing/sql-breaks.md`).
 - Unit (`*Test`, no Spring): `flow/RunSequenceTest` (each kind of run's steps in order and each once,
   each source's result written inside the fetch step in order and no sums of the step's own, the store's rejected
   posts counted per source in `Source` order after the new posts and none without them, the run's error in its
@@ -648,7 +654,9 @@ PipelineRunService.startRange / startPosts → queue (thread pipeline-run) → R
   `interruptOrphans` all or none (both cases; the rest in `OrphanedRunIT`); `source` only in a running run
   (its counters, activity and row), a second row of a source refused, a long error cut; `storeRejected` (S-38)
   adding to the run's and the source's `skipped` and moving the activity, the other source's row unchanged, nothing
-  in a run that is not running and nothing without the source's row.
+  in a run that is not running and nothing without the source's row; `inFlight` counting only the posts the run
+  holds (not those an interrupted run left `assessing`), and a step whose close fails too throwing its own
+  exception with the close's failure suppressed (S-45).
 - `step/PostStoreIT` (S-38, on Postgres, not rolled back: each test deletes its rows): a chunk of three posts with
   an empty channel rejected by `ck_posts_channel` — named, its raw payload rolled back, the other two stored once, the
   log without `Failing row` and without the post's title or body —
