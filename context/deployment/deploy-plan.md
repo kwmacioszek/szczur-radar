@@ -2456,6 +2456,79 @@ The operator has nothing to do: no variable, no migration. Production verificati
 
 Revert the change: there is no migration and no data step. Runs of the meantime keep their counters; a post rejected before the revert stays unstored until a range run over its day after the cause is fixed.
 
+## S-31: ręczne weryfikacje PR env jako scenariusze w CI (pr-env-scenarios-in-ci)
+
+**Status:** delivered by PR #171; production verification and closure in issue #141.
+
+Change: `pr-env-scenarios-in-ci` (its folder moves to `context/archive/` when the change is archived). Until S-31 a slice's PR-env verification was clicked by hand (by the owner or the agent): a run started from `/admin`, ended on the real Wykop, Arctic Shift and LLM, and was read on its page, in `missing-days`, the feed, `/raw`, the bell and the alert's log. No test ran that chain in one piece: the runs that end with assessed posts were started on the service and checked with SQL, and the tests that start over HTTP had a Wykop with an empty day. S-31 replays those steps in CI as scenarios (`PrEnvScenariosIT`) and names what stays manual. Tests and documents only: no migration, variable, route or service, and no change to production code (outside the packages' `CLAUDE.md`).
+
+### What changes
+
+- **The scenarios.** `szczur-radar-api/src/test/java/pl/szczurradar/api/scenario/PrEnvScenariosIT.java`, part of `./mvnw -B verify` in the `backend` job: one class, one Spring context and one Postgres for 8 scenarios. Each starts a run over HTTP (`POST /api/admin/pipeline-runs` as an admin or `POST /internal/pipeline-runs/daily` with the cron's token), waits for its end, and reads the result through the API's routes and the messages a local ntfy topic received. The fakes: Wykop (`LocalWykop`, #gielda of 2026-10-01: 12 entries, 4 links) and Reddit (`LocalReddit`, r/inwestowanie of 2026-10-27: 14 posts, r/stocks of the same day: 6 posts and 19 taken down) through their production clients on local servers; the production OpenRouter client on a local server that answers each post with its recorded provider answer (below); the real `OperatorAlertQueue` and `NtfyAlerts` to `LocalNtfy`, on a virtual clock; a fixed "today" 2026-10-29 11:00 in Warsaw (`MutableClock`). Details: `REPOSITORY_GUIDELINES.md` ("Coding Style & Testing") and `szczur-radar-api/src/main/java/pl/szczurradar/api/pipeline/CLAUDE.md` ("## Tests").
+- **The `backend` job has `timeout-minutes: 15`** (`.github/workflows/ci.yml`): a hung test ends the run instead of holding it for GitHub's default 6 h, past Railway's 2 h Wait for CI window. No other job changes, no path filter.
+- **The rule for the next slices** (`REPOSITORY_GUIDELINES.md`): a PR-env verification step that the fakes can replay is added as a scenario in `PrEnvScenariosIT`, not clicked in the PR env; only the items of the manual list stay for the PR env.
+
+### PR-env steps and their scenarios
+
+| Scenario (`PrEnvScenariosIT`) | Slice and PR-env step it replaces |
+| --- | --- |
+| A `aRangeOfTwoSourcesRunsFromItsStartToTheFeed` — an admin's range of one day, no source named: every step `succeeded`, `wykop` and `reddit` `succeeded`, `/api/deploy-safety` safe, a Reddit post with its channel, `webUrl` and `/raw`, a Wykop post with its recorded targets, the r/stocks line of removed posts, no ERROR | S-17 step 1 (section S-17, "PR-env verification"); S-20 plan criterion 5.2 (the run's `sourceResults`); S-27 plan criteria 5.4–5.5 (Reddit `succeeded` without skipped elements, a Reddit post in the feed with its raw payload; the scenario's subreddit is r/inwestowanie, the PR env's was r/ValueInvesting); S-32 step 1 (a normal run unchanged) |
+| B `theSameRangeAgainStoresNoDuplicates` — the same range again: `[retry, range]`, the range `newPosts` 0, both sources `succeeded`, no post stored twice | S-27 plan criterion 5.6 |
+| C `aSourceDownInAnAdminsRunIsItsOwnResult` — Reddit down: `partial`, `source_failed`, `reddit failed: RedditApiException…`, Wykop's posts in the feed, the bell, one `RUN_NEEDS_ATTENTION` with `(range, admin) ended partial` and `/admin/runs/<id>` | S-20's main behaviour, which its PR env could not check (no second source yet, section S-20), with S-18's signals |
+| D `anEmptySourceInTheCronsRunEndsPartial` — Reddit empty in the cron's run: `/internal/pipeline-runs/{id}` `partial` (the cron's exit 0), `scheduled`, `source_empty`, the range D-2…D-1, `RUN_NEEDS_ATTENTION` with `(range, cron) ended partial` | S-20 (an empty source next to another's posts; the API raises a cron run that exits 0); no PR-env step before |
+| E `noSourceWithAPostFailsTheAdminsRunAndRaisesIt` — both sources empty in an admin's run: `failed` at `fetch` with `NoPostsFetchedException` naming both, no later step, the bell, one `RUN_NEEDS_ATTENTION` without the topic's token or address, `taken` and `reported: DELIVERED` in the log | S-18 steps 3–4 and the content of step 5 (the run of 2004-01-01; section S-18, "PR-env verification"); S-08 / S-20's empty-run rule. The delivery to the phone stays manual |
+| F `aFailedCronRunIsReportedOnlyByTheCron` — both sources empty in the cron's run: `failed`, the bell, no `taken` line and no message on the topic | S-18's rule "The cron's run is the cron's"; no PR-env step before |
+| G `aDayWithoutDataIsListedUntilEachSourceCoversIt` — `missing-days` with no run (empty), after D-3 (D-2 for `[wykop, reddit]`), after D-2 with Reddit down (D-2 for `[reddit]`), after D-2 again (empty); window D-15…D-2 | S-13 plan criterion 3.2 (D-3 → list D-2 → fill → empty list; PR env pr-106, evidence in issue #72; section S-13 has no PR-env subsection); S-20's per-source coverage |
+| H `theCronsNightEndsWithItsSummaryInTheTopic` — the cron's night, then `POST /internal/pipeline-runs/nightly-summary`: the `wykop:` and `reddit:` lines with fetched 16 and 20, the same text as `NIGHT_SUMMARY` on the topic, no `RUN_NEEDS_ATTENTION` for the night's runs (the `quality 7d` lines are not checked) | S-34's PR-env verification (plan criteria 4.4–4.5); the cron's `summary:` lines are `tools/pipeline-trigger/test.sh`'s |
+
+Steps not replayed stay on the manual list: S-17 steps 2–4 (the interruption by a deploy, the start-up time, the log's readability in Railway), the delivery of S-18's and S-34's messages to the phone (`send-test-alert` included), the real archive and LLM of S-27 (and its quality of assessments), the screenshots of S-13 and S-20.
+
+### What stays manual
+
+The list "Co zostanie ręczne (CI tego nie zobaczy)" in `context/foundation/verification-scope.md`: 8 items (the alert's delivery to the phone, the interruption by a deploy and Wait for CI, the real sources' and provider's APIs, the crons' schedule, the views in the browser, measurements on Railway, a migration on production's data, Railway's variables and secrets). M-4's "done when" rests on it.
+
+### Recordings of the provider's answers
+
+`szczur-radar-api/src/test/resources/fixtures/llm/scenario-days/`: one real OpenRouter body per post of the fixture days that goes to the model, 33 posts (13 Wykop, 14 r/inwestowanie, 6 r/stocks; the prefilter decides Wykop's entries 1, 4 and 8 without a call), recorded 2026-11-12 with the configuration `luna` of `fixtures/llm/models.json` (`openrouter`, `openai/gpt-6-luna`), matched by the request's user message (`scenario/RecordedProvider`). 31 pass the validator; 2 fail it on every attempt (`reddit-1xgrbst.json` `schema_violation`, `reddit-1xgnw3d.json` `fabricated_evidence`), so scenario A's run ends `partial` with no attention reason, and a later range of the same day queues a RETRY of those two first. Only a body from which the production client returns the model's text is written; a refusal or another failed call never is.
+
+- **Record again** when the assessment contract or a source fixture or mapper changes (a system-prompt change alone needs none): delete the files and run, from `szczur-radar-api/`, with the key only in the shell:
+
+  ```bash
+  ( source ~/.config/szczur-radar/openrouter.env && ./mvnw -Pmeasurement test -Dtest=ScenarioDaysRecorder )
+  ```
+
+  Then copy the recorder's table of verdicts into the directory's `README.md` and the rejected files into `PrEnvScenariosIT.REJECTED`. `scenario/RecordedDaysTest` (Surefire, no Spring) is red on a post without a recording or a recording without a post, before any scenario fails.
+
+### Deliberate breaks (2026-11-12)
+
+Each break alone in production code, run with `./mvnw -B verify -Dtest=RecordedDaysTest -Dit.test=PrEnvScenariosIT`, then restored with `git checkout`; afterwards `git status --porcelain szczur-radar-api/src/main` was empty.
+
+| # | Break | Red |
+| --- | --- | --- |
+| 1 | `persistence/converters/RunKindConverter` writes `RunKind::name` instead of `RunKind::value` (the audit's experiment X1) | all 8 scenarios, at the run's start (`startRange` / `startDaily`) |
+| 2 | `PipelineRunRepository.findRangesEndingSince` (behind `findCoveringSince`) matches any source status instead of `succeeded` | only G (`PrEnvScenariosIT.java:464`, its step 3) |
+| 3 | `RunNotifications.reportedByTheCron` drops `FAILED` (a cron run ended `failed` raises `RUN_NEEDS_ATTENTION`) | only F (`:437`) |
+| 4 | `InternalPipelineRunController.nightlySummary` does not raise `NIGHT_SUMMARY` | only H (`:495`, after the 60 s wait; the class took 73.9 s) |
+
+### CI time
+
+| | Job `backend (Maven verify)` |
+| --- | --- |
+| before: 6 green runs on `main` (`af30467`, `cb2bea8`, `f2ee5fa`, `5853642`, `bd1cf54`, `7b263b0`) | 224, 190, 226, 209, 204, 208 s (mean 210 s) |
+| after: PR #171, run 43257646226 on `2f2fe49` | 225 s; `PrEnvScenariosIT` 8 tests, `Time elapsed: 8.267 s`; `RecordedDaysTest` 3.600 s |
+
+The budget is 60 s for the scenarios (the owner's decision); locally the class takes 8–16 s. The job's time is a measurement, not a threshold: the runner's spread over 6 runs (190–226 s) is larger than the scenarios' cost.
+
+### Runbook — after the merge (operator; tracked in issue #141, not in the plan's Progress)
+
+0. **Standing rules.** No merge to `main` while `/admin` shows a run `RUNNING`, not between about 00:30 and 01:30 UTC (section S-05), and not while the 02:00 UTC backup runs (section S-15): the merge touches `szczur-radar-api/**`, so Railway rebuilds and redeploys the API (the same behaviour; the pre-deploy `migrate` has nothing to apply). No migration, variable or service change.
+1. **CI on `main`.** All jobs green; `railway-config` plans no change. The `backend` job's Failsafe log has the scenarios: `gh run view <id> --log | grep "PrEnvScenariosIT"` shows `Tests run: 8, Failures: 0, Errors: 0, Skipped: 0` for `pl.szczurradar.api.scenario.PrEnvScenariosIT`.
+2. **Record and close.** Comment on issue #141: the merge commit, the CI run's id and its `PrEnvScenariosIT` line. Close #141 only after this verification.
+
+### Rollback
+
+A revert in a PR: tests, fixtures and documents only, nothing in the data, schema or variables.
+
 ## Phases
 
 > Historical (state of 2026-09-26 – 2026-09-27, FastAPI backend); current: the Java API in section F-03, its image in section `api-docker-image`, the pipeline in sections `first-assessed-wykop-feed` and S-05, the database backup in section F-01, CI and the deploy gate in section S-14.

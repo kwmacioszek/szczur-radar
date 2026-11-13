@@ -19,7 +19,9 @@ llm/            the API — the only part the rest of the application imports
 
 Each provider package builds its own SDK client in a static `create(properties, baseUrl, retry,
 messages)`; `LlmClientFactory.create(properties, baseUrl, sleeper)` is the test seam (a local
-`ScriptedProviderServer`, recorded waits).
+`ScriptedProviderServer`, recorded waits). In the scenarios the provider stand-in is
+`sources/LocalApiServer` answering with `scenario/RecordedProvider`: the real OpenRouter answers from
+`src/test/resources/fixtures/llm/scenario-days/`, chosen by the request's user message.
 
 Infrastructure only: no assessment contract here (the contract lives in `agents/assessor`; this
 package must not import it). `LlmClient.complete(LlmRequest)` returns the model's raw text and the
@@ -132,7 +134,7 @@ whatever the finish reason (`ChatResponses.requireText`).
 3. Its schema subset in `transport/ProviderSchemas`.
 4. Record one real success response (`src/test/java/.../measurement/README.md`) into
    `src/test/resources/fixtures/<provider>/` and test it in `llm/<provider>/<Provider>ClientTest` on
-   `ScriptedProviderServer`: what is sent,
+   `ScriptedProviderServer` (the scenarios' recorded provider above is OpenRouter's only): what is sent,
    text and usage read, and request counts for 429 → success, 5xx × 4, 400 and time-out (the count
    proves no hidden retries); an SDK exception without I/O in its cause chain leaves `complete` as an
    `LlmClientException` (an `IllegalStateException`, not an `LlmCallException`) after one call, with a `CleanedProviderException`
