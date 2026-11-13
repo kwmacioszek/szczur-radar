@@ -25,8 +25,10 @@ import pl.szczurradar.api.TestcontainersConfiguration;
 import pl.szczurradar.api.agents.assessor.validation.FailureClass;
 import pl.szczurradar.api.cli.MigrateCommand;
 import pl.szczurradar.api.pipeline.NightSummary.Night;
+import pl.szczurradar.api.posts.LanguageCrossing;
 import pl.szczurradar.api.posts.QualityCrossing;
 import pl.szczurradar.api.posts.QualityStatus;
+import pl.szczurradar.api.posts.SourceLanguage;
 import pl.szczurradar.api.posts.SourceQuality;
 import pl.szczurradar.api.sources.Source;
 import pl.szczurradar.api.user.SystemAccount;
@@ -44,13 +46,18 @@ import pl.szczurradar.api.user.SystemAccount;
  * </pre>
  *
  * The clock stands at 02:00 Warsaw on 8 November 2026: the quality window is 2–8 November, and the night
- * before is cut at 02:00 on the 7th (every attempt above is a model's, the failed ones {@code timeout}).
+ * before is cut at 02:00 on the 7th (every attempt above is a model's, the failed ones {@code timeout}). None
+ * of these attempts has a thesis, so the language lines (S-36) come only from the theses a scenario seeds.
  */
 @SpringBootTest(properties = MigrateCommand.ENABLE_FLYWAY)
 @Import({ TestcontainersConfiguration.class, NightSummaryIT.TestBeans.class })
 class NightSummaryIT {
 
 	private static final String HASH = "'" + "0".repeat(64) + "'";
+
+	private static final String POLISH = "Autor uważa, że kurs wzrośnie";
+
+	private static final String ENGLISH = "The author thinks that the price will rise";
 
 	@Autowired
 	NightSummary summary;
@@ -136,6 +143,42 @@ class NightSummaryIT {
 				+ " (timeout 3.4%, fabricated_evidence 8.6%); /admin");
 	}
 
+	/**
+	 * On top of the class comment's rows (none with a thesis): Wykop's 500 Polish theses on the 3rd and an
+	 * admin's attempt with 20 English ones at 12:00 on the 7th (after the previous night's summary), so Wykop
+	 * goes above its threshold of 2% only tonight and crosses; Reddit's 200 Polish theses of 600 on the 3rd keep
+	 * it above its 30% both nights, no crossing. Each seeded attempt is one {@code ok} attempt more of the
+	 * quality window, which stays below its minimum.
+	 */
+	@Test
+	void theLanguageLinesAndTheSourceThatCrossedItsLanguageThresholdTonight() {
+		UUID wykop = post("wykop", "assessed", 1, nights.firstNight);
+		UUID reddit = post("reddit", "assessed", 1, nights.firstNight);
+		theses(wykop, nights.firstNight, POLISH, "2026-11-03T10:00:00Z", 500);
+		theses(wykop, nights.firstNight, ENGLISH, "2026-11-07T11:00:00Z", 20);
+		theses(reddit, nights.firstNight, POLISH, "2026-11-03T10:00:00Z", 200);
+		theses(reddit, nights.firstNight, ENGLISH, "2026-11-03T10:00:00Z", 400);
+
+		Night night = summary.of(List.of(nights.range, nights.retry)).orElseThrow();
+
+		List<String> lines = night.text().lines().toList();
+		assertThat(lines.subList(3, lines.size())).containsExactly(
+				"wykop quality 7d (2026-11-02…2026-11-08): 8 attempts, fewer than 100, threshold not checked",
+				"reddit quality 7d (2026-11-02…2026-11-08): 4 attempts, fewer than 100, threshold not checked",
+				"wykop language 7d (2026-11-02…2026-11-08): other language 3.8% of 520 theses; threshold 2%;"
+						+ " ABOVE THRESHOLD",
+				"reddit language 7d (2026-11-02…2026-11-08): other language 33.3% of 600 theses; threshold 30%;"
+						+ " ABOVE THRESHOLD",
+				"Dead in admin runs since the previous night: reddit 1", "/admin");
+		assertThat(night.crossed()).as("the failed attempts' measure crossed nothing").isEmpty();
+		// The night before (1–7 November, cut at 02:00 on the 7th): only the 500 Polish theses.
+		assertThat(night.languageCrossed()).containsExactly(new LanguageCrossing(
+				new SourceLanguage(Source.WYKOP, 520, 20, 2, QualityStatus.ABOVE_THRESHOLD),
+				new SourceLanguage(Source.WYKOP, 500, 0, 2, QualityStatus.OK)));
+		assertThat(night.qualityAlert()).contains("wykop: other language 3.8% of 520 theses in 7 days"
+				+ " (2026-11-02…2026-11-08), above its threshold 2% (the day before: 0.0% of 500 theses); /admin");
+	}
+
 	@Test
 	void anUnknownRunIsNoNightAndARepeatedIdCountsOnce() {
 		assertThat(summary.of(List.of(nights.range, UUID.randomUUID()))).isEmpty();
@@ -212,10 +255,11 @@ class NightSummaryIT {
 	private UUID post(String source, String stage, int attempts, UUID firstRun) {
 		return jdbc.queryForObject("WITH raw AS (INSERT INTO raw_payloads (source, content_encoding, media_type,"
 				+ " payload, sha256) VALUES (?, 'gzip', 'application/json', '\\x00', " + HASH + ") RETURNING id)"
-				+ " INSERT INTO posts (source, item_type, source_item_id, channel, published_at, raw_payload_id,"
+				+ " INSERT INTO posts (source, item_type, source_item_id, channel, language, published_at, raw_payload_id,"
 				+ " content_hash, stage, assessment_attempts, first_run_id)"
-				+ " SELECT ?, 'post', ?, 'c', now(), raw.id, " + HASH + ", ?, ?, ? FROM raw RETURNING id", UUID.class,
-				source, source, UUID.randomUUID().toString(), stage, attempts, firstRun);
+				+ " SELECT ?, 'post', ?, 'c', ?, now(), raw.id, " + HASH + ", ?, ?, ? FROM raw RETURNING id", UUID.class,
+				source, source, UUID.randomUUID().toString(), Source.fromValue(source).language().value(), stage,
+				attempts, firstRun);
 	}
 
 	/** An assessment of {@code post} in {@code run}; {@code null} tokens as the prefilter leaves them. */
@@ -240,6 +284,19 @@ class NightSummaryIT {
 				+ " CAST(? AS JSONB), '[]', 'model', false, 'V2', CAST(? AS TIMESTAMPTZ), 0, 1"
 				+ " FROM generate_series(1, ?)", post, run, ok ? "ok" : "failed", ok ? null : failureClass.value(),
 				ok ? "{}" : null, assessedAt, count);
+	}
+
+	/**
+	 * One {@code ok} model attempt of {@code post} in {@code run} at {@code assessedAt} with {@code count} theses,
+	 * each {@code statement}.
+	 */
+	private void theses(UUID post, UUID run, String statement, String assessedAt, int count) {
+		jdbc.update("INSERT INTO assessments (post_id, run_id, status, input, input_hash, output, violations,"
+				+ " result_source, flex_fallback, contract_version, assessed_at, duration_ms, attempts)"
+				+ " VALUES (?, ?, 'ok', '{}', " + HASH + ", (SELECT jsonb_build_object('claims',"
+				+ " jsonb_agg(jsonb_build_object('id', 'c' || n, 'statement', CAST(? AS TEXT))))"
+				+ " FROM generate_series(1, ?) n), '[]', 'model', false, 'V2', CAST(? AS TIMESTAMPTZ), 0, 1)", post, run,
+				statement, count, assessedAt);
 	}
 
 	/** 02:00 in Warsaw on 8 November 2026. */

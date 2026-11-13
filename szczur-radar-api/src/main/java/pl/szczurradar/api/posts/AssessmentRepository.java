@@ -4,12 +4,18 @@ import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Stream;
 
+import jakarta.persistence.QueryHint;
+import org.hibernate.jpa.HibernateHints;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.QueryHints;
 
 import pl.szczurradar.api.agents.assessor.AssessmentResult;
 import pl.szczurradar.api.agents.assessor.Provenance;
+import pl.szczurradar.api.sources.Source;
+import pl.szczurradar.api.text.Language;
 
 /**
  * Assessment attempts. The latest attempt of a post is the one with the latest {@code assessed_at},
@@ -76,5 +82,38 @@ public interface AssessmentRepository extends JpaRepository<Assessment, UUID> {
 			+ " from Assessment a join Post p on p.id = a.postId where a.resultSource = :resultSource"
 			+ " and a.assessedAt >= :from and a.assessedAt < :until group by p.source, a.failureClass")
 	List<SourceClassCount> countBySourceAndClass(Provenance.Source resultSource, Instant from, Instant until);
+
+	/**
+	 * Every thesis ({@code output.claims[].statement}) of the {@code ok} attempts with a model call assessed in
+	 * {@code [from, until)}, with its post's source and language ({@link PostStatement}), whoever's run made them;
+	 * the prefilter's and the failed ones are left out. An attempt without theses gives no row, and so does one
+	 * whose {@code claims} is not an array or a claim whose {@code statement} is not a string. The language
+	 * window of {@link AssessmentQuality}, by the index {@code ix_assessments_assessed_at}.
+	 * <p>
+	 * A stream read in pages of {@value #STATEMENTS_FETCH_SIZE} rows, so the caller counts the theses without
+	 * holding them all (review F4): it needs an open transaction and must be closed.
+	 */
+	default Stream<PostStatement> findModelStatements(Instant from, Instant until) {
+		return findStatementsWith(AssessmentResult.Status.OK.value(), Provenance.Source.MODEL.value(), from, until)
+			.map(row -> new PostStatement(Source.fromValue((String) row[0]), Language.fromValue((String) row[1]),
+					(String) row[2]));
+	}
+
+	/** The rows {@link #findModelStatements} fetches from Postgres at a time. */
+	int STATEMENTS_FETCH_SIZE = 500;
+
+	/**
+	 * {@link #findModelStatements}, with the status and the result source bound as stored; rows of
+	 * {@code (source, language, statement)}. The {@code CASE} keeps {@code jsonb_array_elements} off anything but
+	 * an array, whatever order Postgres evaluates the conditions in.
+	 */
+	@Query(value = "SELECT p.source, p.language, c ->> 'statement' FROM assessments a JOIN posts p ON p.id = a.post_id"
+			+ " CROSS JOIN LATERAL jsonb_array_elements(CASE WHEN jsonb_typeof(a.output -> 'claims') = 'array'"
+			+ " THEN a.output -> 'claims' ELSE CAST('[]' AS jsonb) END) c"
+			+ " WHERE a.status = :status AND a.result_source = :resultSource"
+			+ " AND a.assessed_at >= :from AND a.assessed_at < :until AND jsonb_typeof(c -> 'statement') = 'string'",
+			nativeQuery = true)
+	@QueryHints(@QueryHint(name = HibernateHints.HINT_FETCH_SIZE, value = "" + STATEMENTS_FETCH_SIZE))
+	Stream<Object[]> findStatementsWith(String status, String resultSource, Instant from, Instant until);
 
 }

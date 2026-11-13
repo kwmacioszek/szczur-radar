@@ -13,7 +13,13 @@ import {
   startRange,
 } from '../api/pipeline'
 import { type FailedPost, MAX_PAGE_SIZE, fetchFailedPosts, restorePosts } from '../api/posts'
-import { type QualityStatus, type QualityWindow, type SourceQuality, fetchAssessmentQuality } from '../api/quality'
+import {
+  type LanguageShare,
+  type QualityStatus,
+  type QualityWindow,
+  type SourceQuality,
+  fetchAssessmentQuality,
+} from '../api/quality'
 import AppButton from '../components/AppButton.vue'
 import AppHeader from '../components/AppHeader.vue'
 import StatusBadge, { type BadgeTone } from '../components/StatusBadge.vue'
@@ -150,7 +156,7 @@ async function loadQuality(): Promise<void> {
 const QUALITY_TONES: Record<QualityStatus, BadgeTone> = {
   ok: 'success',
   above_threshold: 'warning',
-  not_enough_attempts: 'neutral',
+  not_enough_data: 'neutral',
 }
 
 function qualityTone(status: QualityStatus): BadgeTone {
@@ -170,6 +176,21 @@ function shareOf(row: SourceQuality, part: number): string {
 function failedText(row: SourceQuality): string {
   const attempts = `${row.attempts} ${plural(row.attempts, 'próby', 'prób', 'prób')}`
   return `nieudane ${shareOf(row, row.failed)} z ${attempts} · próg ${threshold.format(row.thresholdPercent / 100)}`
+}
+
+const LANGUAGE_MEASURE = 'tezy w innym języku niż post'
+
+/**
+ * E.g. `tezy w innym języku niż post 0,3% z 3476 tez · próg 2%`, also below `minTheses` like the failed attempts'
+ * row (the badge says the threshold is not checked); without a thesis `tezy w innym języku niż post: 0 tez · próg 30%`.
+ */
+function languageText(language: LanguageShare): string {
+  const limit = `próg ${threshold.format(language.thresholdPercent / 100)}`
+  if (language.theses === 0) {
+    return `${LANGUAGE_MEASURE}: 0 tez · ${limit}`
+  }
+  const theses = `${language.theses} ${plural(language.theses, 'tezy', 'tez', 'tez')}`
+  return `${LANGUAGE_MEASURE} ${share.format(language.otherLanguage / language.theses)} z ${theses} · ${limit}`
 }
 
 /** E.g. `niezgodność ze schematem 2,0% · zmyślony cytat 3,0%`, in the API's order of classes. */
@@ -463,7 +484,7 @@ onMounted(async () => {
       <template v-else-if="quality">
         <p class="quality-window">
           Od {{ formatDate(quality.from) }} do {{ formatDate(quality.to) }} · próby z wywołaniem modelu (bez prefiltra), z ponowieniami;
-          próg sprawdzany od {{ quality.minAttempts }} prób
+          próg sprawdzany od {{ quality.minAttempts }} prób; tezy udanych ocen, próg sprawdzany od {{ quality.minTheses }} tez
         </p>
         <p v-if="quality.sources.length === 0" class="empty">Brak ocen w ostatnich {{ quality.windowDays }} dniach.</p>
         <ul v-else class="quality-sources">
@@ -474,6 +495,11 @@ onMounted(async () => {
             </p>
             <p class="quality-failed">{{ failedText(row) }}</p>
             <p v-if="row.classes.length" class="quality-classes">{{ classesText(row) }}</p>
+            <p v-if="row.language" class="quality-language" :data-status="row.language.status">
+              <span>{{ languageText(row.language) }}</span>
+              <StatusBadge :tone="qualityTone(row.language.status)">{{ label('qualityStatus', row.language.status) }}</StatusBadge>
+            </p>
+            <p v-else class="quality-language">{{ LANGUAGE_MEASURE }}: nie udało się policzyć</p>
           </li>
         </ul>
       </template>
@@ -674,7 +700,8 @@ h2 {
   margin: var(--space-0) 0;
 }
 
-.quality-head {
+.quality-head,
+.quality-language {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
@@ -705,7 +732,8 @@ h2 {
 .steps,
 .attempt,
 .quality-failed,
-.quality-classes {
+.quality-classes,
+.quality-language {
   font-size: var(--font-size-sm);
 }
 

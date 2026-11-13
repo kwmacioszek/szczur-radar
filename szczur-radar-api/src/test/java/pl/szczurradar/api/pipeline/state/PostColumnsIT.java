@@ -76,8 +76,8 @@ class PostColumnsIT {
 
 	/** Written by the {@code INSERT} only ({@code step/PostStore}); no transition may change them. */
 	private static final Set<String> SET_ONCE = Set.of("id", "source", "item_type", "source_item_id", "channel",
-			"published_at", "title", "body", "author", "slug", "web_url", "tags", "raw_payload_id", "content_hash",
-			"first_run_id", "created_at");
+			"language", "published_at", "title", "body", "author", "slug", "web_url", "tags", "raw_payload_id",
+			"content_hash", "first_run_id", "created_at");
 
 	/** The post's assessment state: what {@link PostTransitions} writes. */
 	private static final Set<String> STATE = Set.of("stage", "assessment_attempts", "assessing_run_id",

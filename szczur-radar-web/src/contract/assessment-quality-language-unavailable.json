@@ -1,0 +1,32 @@
+{
+  "from": "2025-03-06",
+  "to": "2025-03-12",
+  "windowDays": 7,
+  "minAttempts": 100,
+  "minTheses": 500,
+  "sources": [
+    {
+      "source": "wykop",
+      "attempts": 123,
+      "failed": 3,
+      "classes": [
+        {
+          "failureClass": "schema_violation",
+          "count": 3
+        }
+      ],
+      "thresholdPercent": 5,
+      "status": "ok",
+      "language": null
+    },
+    {
+      "source": "reddit",
+      "attempts": 2,
+      "failed": 0,
+      "classes": [],
+      "thresholdPercent": 25,
+      "status": "not_enough_data",
+      "language": null
+    }
+  ]
+}

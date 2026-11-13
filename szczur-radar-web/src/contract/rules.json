@@ -32,7 +32,7 @@
     "source": ["wykop", "reddit"],
     "sourceStatus": ["succeeded", "empty", "failed"],
     "attentionReason": ["failed", "interrupted", "source_failed", "source_empty", "dead_posts", "processing_errors", "skipped"],
-    "qualityStatus": ["ok", "above_threshold", "not_enough_attempts"],
+    "qualityStatus": ["ok", "above_threshold", "not_enough_data"],
     "role": ["user", "admin"],
     "notificationKind": ["run_attention"],
     "postStage": ["stored", "assessing", "assessed", "failed", "dead"],

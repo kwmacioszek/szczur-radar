@@ -275,7 +275,7 @@ const ERROR_CODES = [
   'internal_error',
 ] as const satisfies readonly ErrorCode[]
 
-const QUALITY_STATUSES = ['ok', 'above_threshold', 'not_enough_attempts'] as const satisfies readonly QualityStatus[]
+const QUALITY_STATUSES = ['ok', 'above_threshold', 'not_enough_data'] as const satisfies readonly QualityStatus[]
 const ROLES = ['user', 'admin'] as const satisfies readonly Role[]
 const NOTIFICATION_KINDS = ['run_attention'] as const satisfies readonly NotificationKind[]
 const POST_STAGES = ['stored', 'assessing', 'assessed', 'failed', 'dead'] as const satisfies readonly PostStage[]

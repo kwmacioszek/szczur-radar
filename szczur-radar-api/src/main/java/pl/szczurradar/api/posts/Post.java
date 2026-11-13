@@ -21,6 +21,7 @@ import pl.szczurradar.api.agents.assessor.contract.ItemType;
 import pl.szczurradar.api.persistence.Sha256;
 import pl.szczurradar.api.raw.RawPayloadRef;
 import pl.szczurradar.api.sources.Source;
+import pl.szczurradar.api.text.Language;
 import pl.szczurradar.api.text.Nul;
 
 /**
@@ -65,6 +66,13 @@ public class Post {
 	 */
 	@Column(nullable = false)
 	private String channel;
+
+	/**
+	 * The post's language: its source's ({@link Source#language()}), not one detected from its text
+	 * ({@code V16__posts_language.sql}, S-36).
+	 */
+	@Column(nullable = false)
+	private Language language;
 
 	@Column(name = "published_at", nullable = false)
 	private Instant publishedAt;
@@ -139,6 +147,7 @@ public class Post {
 		this.itemType = Objects.requireNonNull(itemType, "itemType");
 		this.sourceItemId = Objects.requireNonNull(sourceItemId, "sourceItemId");
 		this.channel = Nul.removed(Objects.requireNonNull(channel, "channel"));
+		this.language = source.language();
 		this.publishedAt = Objects.requireNonNull(publishedAt, "publishedAt");
 		this.title = Nul.removed(title);
 		this.body = Nul.removed(body);
@@ -175,6 +184,10 @@ public class Post {
 
 	public String getChannel() {
 		return channel;
+	}
+
+	public Language getLanguage() {
+		return language;
 	}
 
 	public Instant getPublishedAt() {

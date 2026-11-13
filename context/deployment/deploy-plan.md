@@ -2422,6 +2422,63 @@ A PR changing `Source.failureThresholdPercent()` (its javadoc names the evidence
 
 A revert of PR #166 removes the lines and the alarm; the index from `V15` stays (Flyway is fix-forward, the index is harmless). To silence only the alarm, there is no switch: raise the source's threshold in a PR.
 
+## S-36: jakość ocen per źródło — tezy w innym języku niż post (statement-language-quality)
+
+**Status:** delivered by PR #169; production verification and closure in issue #146.
+
+Change: `statement-language-quality` (its folder moves to `context/archive/` when the change is archived). The contract's rule "`statement` is in the post's language" (`contract-v2.md` §8, Q-16) holds without exceptions, but only the prompt kept it and nothing measured it in production (R-38, D-14). S-36 adds the second measure of FR-033 next to S-35's, per source, in the same 7-day window and through the same channel. PRD: the S-36 clarifications under FR-033 and under FR-023 (the post's language, stored and not shown). Migration `V16` (`posts.language`, below); no new variable, no new service, no new event, no change to the cron's script or exit codes.
+
+### What changes for the operator
+
+- **The post's language.** Every post has `posts.language` (`pl` / `en`, `CHECK ck_posts_language`): a new post gets its source's language (`sources/Source.language()`: Wykop `pl`, Reddit `en`) when it is stored, the existing ones were filled by `V16` from `source`. It is stored, not shown (no API field, no UI). A Wykop post written in English has `pl` (43 of 9 331 posts on 2026-11-12): the known limit of the measure, worth 0.04 pp.
+- **The measure.** The share of theses (`output -> 'claims' -> i ->> 'statement'`) of successful attempts with a model call (`status = ok`, `result_source = model`) over the last 7 Warsaw calendar days `[D−6, D]` with evidence of another language than their post's `posts.language` (`text/LanguageEvidence`): Polish on a Polish letter or at least 2 Polish function words, else English on at least 2 English function words, else undecided — and an undecided thesis (numbers, tickers, a short sentence) is **no violation**. `posts/AssessmentQuality.languageWindow` reads the theses with one query by `assessed_at` (`AssessmentRepository.findModelStatements`, index `ix_assessments_assessed_at`) and classifies them in Java.
+- **The thresholds.** One per source, a constant next to the source (`Source.otherLanguageThresholdPercent()`): **Wykop 2 %**, **Reddit 30 %**, from production data (`context/changes/statement-language-quality/evidence/README.md`: Wykop's 7-day windows 0.09–0.86 %, Reddit's 14.01–20.76 %; zero alarms on those data). The same rule as S-35: strictly above is above; with **fewer than 500 theses** in the window the threshold is not checked.
+- **The night's summary** (`NIGHT_SUMMARY`) gets one line per source with a thesis in the window, after **every** `quality 7d` line and before "Dead in admin runs…", e.g. (production's theses of the window 2026-11-06…2026-11-12):
+
+  ```text
+  wykop language 7d (2026-11-06…2026-11-12): other language 0.3% of 3476 theses; threshold 2%
+  reddit language 7d (2026-11-06…2026-11-12): other language 16.1% of 2857 theses; threshold 30%
+  ```
+
+  Above the threshold the line ends `; ABOVE THRESHOLD`; with fewer than 500 theses it is `reddit language 7d (…): 46 theses, fewer than 500, threshold not checked`. The same lines are in the cron's log (`summary:`). The format is pinned by `NightSummaryTest`.
+- **`language 7d (<from>…<to>): unavailable (<the exception's class>)`.** The theses are read after the quality window, in a read-only transaction of their own: when that read fails, this one line stands for the language lines, nothing of the language measure crosses, and the `quality 7d` lines and their alarm stay as they are (a failed statement aborts its whole Postgres transaction, hence the separate one). Look for the ERROR `The language window of the night … could not be read` in the API log (`railway logs -s szczur-radar-api -e production`). One such night costs that night's language lines only; several in a row are a bug to fix (a change of its own).
+- **The alarm `ASSESSMENT_QUALITY`** (ntfy, priority 4) keeps its rule — a source above its threshold tonight that was not above it in the window the previous night's summary saw (or had fewer than 500 theses), computed again from the data, no stored state — and now covers **both measures in one event a night**: a second `raise` of the same event for the same run would be dropped by the queue's repeat window. Its detail lists the failed attempts' crossings first, then the language's, each group in `Source` order, joined `; `, ending `; /admin`, e.g.:
+
+  ```text
+  ASSESSMENT_QUALITY (the share of failed assessment attempts or of theses in another language than the post of a source crossed its threshold over the last 7 days; check the source's quality in /admin, the failed posts and the theses on the posts' pages): wykop: failed 8.9% of 112 attempts in 7 days (2026-09-09…2026-09-15), above its threshold 5% (the day before: 0.0% of 101 attempts) (fabricated_evidence 8.9%); wykop: other language 3.8% of 520 theses in 7 days (2026-09-09…2026-09-15), above its threshold 2% (the day before: 0.0% of 500 theses); /admin
+  ```
+
+  (`InternalPipelineRunIT`'s night with both measures crossing; with no thesis the night before the part says `(the day before: 0 theses, fewer than 500)`.) As for S-35: a source staying above alarms once and shows `ABOVE THRESHOLD` every night, and a lost message is not sent again — the summary and `/admin` are the lasting signal.
+- **`/admin`, section "Jakość ocen (7 dni)"** shows a second row per source: the share of theses in another language, their number, the threshold and the state (`w normie` / `ponad progiem` / `za mało danych` — the label that replaced "za mało prób" for both measures); "nie udało się policzyć" when the theses could not be read (the failed attempts' row stays). `GET /api/admin/assessment-quality` waits for both reads. The API and the web deploy apart, so for the minutes between their deploys the section may look wrong: an old SPA shows the raw `not_enough_data` with a neutral badge, and a new SPA on the old API shows "nie udało się policzyć" and "próg sprawdzany od undefined tez". A reload after both deploys fixes it; nothing else is affected.
+- **Unchanged:** the S-35 measure and its records, the cron's script, exit codes and check-ins, `RUN_NEEDS_ATTENTION` and the bell, the route's answer `{"text": …}`, the queue's limits, the variables, the prompt and the contract's schema.
+
+### After `ASSESSMENT_QUALITY` with a language part (operator)
+
+1. **Which source and since when.** Compare tonight's `language 7d` line with the previous nights' summaries (ntfy history, or `railway logs -s pipeline-trigger -e production`) and with `/admin`.
+2. **The theses.** Open recent posts of the source (the feed, filter by text; the post page shows the assessment with its theses) and read which theses are in the other language. Typical causes:
+   - **the model changed at the provider** (same `LLM_MODEL`, new behaviour): compare with the recordings (`RecordingsReplayTest`, `src/test/java/.../measurement/`) and measure on the gold sample before switching the model;
+   - **a prompt change** (a new `PROMPT_VERSION`): revert or fix it in a change of its own (`/10x-plan`, contract §16);
+   - **a new channel in another language** (a subreddit in Polish, an English tag on Wykop): its posts carry the source's language, so their correct theses count as violations — drop the channel (`REDDIT_SUBREDDITS`) or plan language detection from the text (roadmap, `## Parked`).
+3. **Record.** A comment on the slice's or a new issue: the source, the window's numbers, the cause and what was done.
+
+### Changing a threshold
+
+A PR changing `Source.otherLanguageThresholdPercent()` (its javadoc names the evidence) with `SourceTest` and the numbers that justify it; no variable, no data change. The next night applies it to both windows, as in S-35.
+
+### Runbook — after the merge (operator / agent; tracked in issue #146, not in the plan's Progress)
+
+0. **Standing rules** (sections S-05, S-14, S-15): not between about 00:30 and 01:30 UTC, nor while a run is `RUNNING` — the more so here: `V16` makes `posts.language` `NOT NULL` without a default, and the old API between the pre-deploy `migrate` and the new version's start stores no language (its posts would be rejected at store, counted as `skipped`, S-38). A revert of the PR needs a new migration dropping the `NOT NULL` (fix-forward), never an edit of `V16`.
+1. **CI on `main`** green; `railway-config` plans no change on production (no new variable).
+2. **Start.** The API's start log without ERROR, `/api/ready` 200; `V16` in the `migrate` log.
+3. **The backfill**, read-only (`railway ssh -s postgres -e production`, the S-35 procedure with `SET default_transaction_read_only = on;`): `SELECT language, count(*) FROM posts GROUP BY 1` — only `pl` and `en`, `pl` equal to Wykop's posts and `en` to Reddit's (`SELECT source, language, count(*) FROM posts GROUP BY 1, 2`).
+4. **The admin route's time.** `/admin` with the section "Jakość ocen (7 dni)" opens without a noticeable wait; the route reads about 7 000 theses of ~3 500 attempts. A slow answer (seconds) is worth a comment on #146 with the time and a follow-up issue; nothing to roll back.
+5. **The first night.** The cron's log has `summary: wykop language 7d (…)` and `summary: reddit language 7d (…)` after the `quality 7d` lines and before `OK: …`; the phone has `Szczur Radar NIGHT_SUMMARY` with the same lines. With today's shares (Wykop ~0.3 %, Reddit ~16–17 %) both end `; threshold N%` without `ABOVE THRESHOLD`, and no `ASSESSMENT_QUALITY` comes; no `language 7d (…): unavailable` line.
+6. **Record and close.** Comment on issue #146: the merge commit, the deployment IDs, the backfill's counts, the first night's language lines (the numbers, not the topic); close #146 only after this verification.
+
+### Rollback
+
+A revert of PR #169 must carry a migration `V17` dropping `NOT NULL` from `posts.language` (the old code does not set it; above); the column itself stays (fix-forward). To silence only the language part of the alarm, there is no switch: raise the source's threshold in a PR.
+
 ## S-38: post odrzucony przy zapisie nie znika po cichu (post-store-loss-visible)
 
 **Status:** delivered by PR #167; production verification and closure in issue #148.

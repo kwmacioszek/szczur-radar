@@ -73,13 +73,16 @@ class NtfyAlertsTest {
 	@Test
 	void theQualityAlarmHasTheHighPriority() {
 		try (LocalNtfyServer server = new LocalNtfyServer(request -> 200)) {
-			alerts(server.topicUrl()).report(AlertEvent.ASSESSMENT_QUALITY, "wykop: failed 9.1% of 110 attempts; /admin");
+			alerts(server.topicUrl()).report(AlertEvent.ASSESSMENT_QUALITY,
+					"wykop: failed 9.1% of 110 attempts; reddit: other language 31.0% of 600 theses; /admin");
 
 			Request request = server.requests().getFirst();
 			assertThat(request.header("Priority")).isEqualTo("4");
 			assertThat(request.header("Title")).isEqualTo("Szczur Radar ASSESSMENT_QUALITY");
 			assertThat(request.body()).isEqualTo("ASSESSMENT_QUALITY (" + AlertEvent.ASSESSMENT_QUALITY.description()
-					+ "): wykop: failed 9.1% of 110 attempts; /admin");
+					+ "): wykop: failed 9.1% of 110 attempts; reddit: other language 31.0% of 600 theses; /admin");
+			assertThat(AlertEvent.ASSESSMENT_QUALITY.description()).as("both measures")
+				.contains("failed assessment attempts", "theses in another language", "/admin");
 		}
 	}
 

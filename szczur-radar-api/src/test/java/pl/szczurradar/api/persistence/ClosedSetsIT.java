@@ -46,6 +46,7 @@ import pl.szczurradar.api.posts.PostStage;
 import pl.szczurradar.api.raw.ContentEncoding;
 import pl.szczurradar.api.raw.RawMediaType;
 import pl.szczurradar.api.sources.Source;
+import pl.szczurradar.api.text.Language;
 import pl.szczurradar.api.user.Role;
 
 /**
@@ -88,6 +89,7 @@ class ClosedSetsIT {
 			StoredEnum.of(PostStage.class, "posts", "stage", "Post", "stage"),
 			StoredEnum.of(ItemType.class, "posts", "item_type", "Post", "itemType"),
 			StoredEnum.of(Source.class, "posts", "source", "Post", "source"),
+			StoredEnum.of(Language.class, "posts", "language", "Post", "language"),
 			StoredEnum.of(Source.class, "raw_payloads", "source", "RawPayload", "source"),
 			StoredEnum.of(ContentEncoding.class, "raw_payloads", "content_encoding",
 					"RawPayload", "contentEncoding"),
