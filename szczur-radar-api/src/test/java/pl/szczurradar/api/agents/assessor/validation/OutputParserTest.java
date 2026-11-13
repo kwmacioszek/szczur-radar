@@ -1,6 +1,7 @@
 package pl.szczurradar.api.agents.assessor.validation;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
 import java.util.Collections;
 import java.util.List;
@@ -146,6 +147,12 @@ class OutputParserTest {
 		assertRejected(json(ContractFixtures.investment(List.of(ContractFixtures.target("t1", "XTB",
 				Direction.BULLISH, Assertiveness.HEDGED, "c1", "c2", "c3", "c4", "c5")), List.of())),
 				FailureClass.SCHEMA_VIOLATION);
+	}
+
+	@Test
+	void aRejectionWithoutAViolationIsRefused() {
+		assertThatIllegalArgumentException().isThrownBy(() -> new OutputParser.Rejected(List.of()))
+			.withMessage("a rejection needs at least one violation");
 	}
 
 	private String withAnchor(String quote) {

@@ -467,18 +467,18 @@ Nie dotyczy: bez zmian schematu, danych i zmiennych Railway. Nowy job w `ci.yml`
 
 #### Automated
 
-- [x] 2.1 `./mvnw -B test` uruchamia `MutantRegistryTest`, nie `SurvivingMutantsTest`
-- [x] 2.2 Strażnik przy pustym rejestrze zgłasza tylu ocalałych, ile pomiar bazowy
-- [x] 2.3 Celowe zepsucie porównania czerwieni `MutantRegistryTest`
+- [x] 2.1 `./mvnw -B test` uruchamia `MutantRegistryTest`, nie `SurvivingMutantsTest` — cc15976
+- [x] 2.2 Strażnik przy pustym rejestrze zgłasza tylu ocalałych, ile pomiar bazowy — cc15976
+- [x] 2.3 Celowe zepsucie porównania czerwieni `MutantRegistryTest` — cc15976
 
 ### Phase 3: Ocalałe — walidator V2 i jakość ocen
 
 #### Automated
 
-- [ ] 3.1 `./mvnw -B test` zielony
-- [ ] 3.2 Brak ocalałych bez wpisu w `agents.assessor.*` i `posts.AssessmentQuality*`
-- [ ] 3.3 Brak zmian w `src/main`
-- [ ] 3.4 Powody wpisów z prefiksem kategorii, pilnowane przez `MutantRegistryTest` z Fazy 2
+- [x] 3.1 `./mvnw -B test` zielony
+- [x] 3.2 Brak ocalałych bez wpisu w `agents.assessor.*` i `posts.AssessmentQuality*`
+- [x] 3.3 Brak zmian w `src/main`
+- [x] 3.4 Powody wpisów z prefiksem kategorii, pilnowane przez `MutantRegistryTest` z Fazy 2
 
 ### Phase 4: Ocalałe — przebieg
 
