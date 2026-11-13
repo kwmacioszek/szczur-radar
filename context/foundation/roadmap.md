@@ -3,7 +3,7 @@ project: "Szczur Radar"
 version: 5
 status: draft # draft | active | locked
 created: 2026-09-27
-updated: 2026-11-12
+updated: 2026-11-13
 prd_version: 3
 main_goal: quality
 top_blocker: capacity # 16 wycinków, jeden recenzent i osoba mergująca; darmowe runnery GitHuba muszą zmieścić scenariusze i PIT
@@ -114,7 +114,7 @@ Na Wykopie (#gielda) i Reddicie codziennie pojawiają się setki postów o inwes
 | S-33 | restore-dead-posts                | admin przywraca zaznaczone martwe posty do oceny, a ich próby są zerowane                                                          | —                        | FR-034, FR-015; destylacja Q-18                                                            | done |
 | S-34 | dead-posts-daily-digest           | operator dostaje co noc w ntfy podsumowanie nocy (liczby i tokeny każdego źródła, martwe posty) zamiast alarmu przy każdym przebiegu z samym martwym postem; zdarzenia API idą przez ntfy, dzwonek bez zmian | —                        | NFR `prd.md:275` (doprecyzowanie PRD v3); destylacja #5, R-42, Q-14                        | done |
 | S-35 | per-source-failure-quality        | operator widzi udział nieudanych prób według klas błędu osobno dla każdego źródła i dostaje sygnał po przekroczeniu progu           | —                        | FR-033; destylacja #1, R-15                                                                | done |
-| S-36 | statement-language-quality        | operator widzi udział tez w innym języku niż post osobno dla każdego źródła, z sygnałem po przekroczeniu progu                     | S-35                     | FR-033; `contract-v2.md` §8 (Q-16); destylacja #1, D-14, R-38                              | in-progress |
+| S-36 | statement-language-quality        | operator widzi udział tez w innym języku niż post osobno dla każdego źródła, z sygnałem po przekroczeniu progu                     | S-35                     | FR-033; `contract-v2.md` §8 (Q-16); destylacja #1, D-14, R-38                              | done        |
 | S-37 | source-native-post-labels         | użytkownik widzi typ posta słowami jego źródła: „wpis”/„znalezisko” na Wykopie, „post”/„link” na Reddicie                          | —                        | FR-023 (doprecyzowanie Q-13); destylacja #4, D-12, R-45                                    | done     |
 | S-38 | post-store-loss-visible           | post odrzucony przy zapisie przez inne ograniczenie niż duplikat jest policzony i widoczny, a nie znika po cichu                   | —                        | FR-005, NFR `prd.md:275`; audyt §6 D-15; destylacja #2, D-15                               | done |
 | S-39 | derived-persistence-guards        | konwerter zapisujący inną wartość niż enum, złożony `CHECK` z literałem i nowy koniec przebiegu bez powiadomienia czerwienią CI     | —                        | NFR `prd.md:289`; audyt §1 R-17, X1, X2, §5 R-23; destylacja #6                            | done |
@@ -245,7 +245,7 @@ Brak — każda praca przekrojowa M-4 ma widoczny skutek dla użytkownika, opera
   - Skąd wiadomo, w jakim języku jest post i teza: pole w wyjściu modelu (nowa `PROMPT_VERSION`, ścieżka §16 kontraktu) czy wykrywanie w backendzie bez LLM; i czy przy okazji powstaje `posts.language` (wpis w `## Parked`)? — Owner: user + właściciel kontraktu. Block: no (rozstrzyga `/10x-plan`).
   - Jaki próg? S-28 zmierzył 22,1 % tez w innym języku niż post na Reddicie. — Owner: user. Block: no.
 - **Risk:** wybór wykrywania języka może zmienić prompt albo schemat, więc stoi po S-35, który ustala kanał sygnału i okno pomiaru.
-- **Status:** in-progress
+- **Status:** done
 
 ### S-37: Typ posta słowami jego źródła
 
@@ -480,3 +480,4 @@ Brak — każda praca przekrojowa M-4 ma widoczny skutek dla użytkownika, opera
 - **S-35: operator widzi osobno dla każdego źródła udział nieudanych prób oceny według klas błędu, liczony z danych produkcyjnych, a przekroczenie progu daje mu sygnał bez czytania logów.** — Archived 2026-11-11 → `context/archive/2026-11-11-per-source-failure-quality/`. Lesson: —.
 - **S-38: post, którego zapis odrzuca inne ograniczenie bazy niż klucz unikalny (np. `CHECK` albo `NOT NULL`), jest policzony w przebiegu (pominięty albo błąd) i daje powód „wymaga uwagi”; dla każdego przebiegu pobrane = nowe posty + duplikaty + pominięte.** — Archived 2026-11-11 → `context/archive/2026-11-11-post-store-loss-visible/`. Lesson: —.
 - **S-43: `dev/mock-api.js` odpowiada z plików kontraktu albo test porównuje jego odpowiedzi z kontraktem (dziś 7 rozbieżności, m.in. brak Reddita, brak logowania, start przebiegu zawsze 409), a atrapy narzędzi (`pipeline-trigger`, stuby `deploy-gate`) czytają statusy i kształty z rejestru.** — Archived 2026-11-12 → `context/archive/2026-11-11-contract-bound-mocks/`. Lesson: —.
+- **S-36: operator widzi osobno dla każdego źródła udział tez (`statement`) w innym języku niż post, a przekroczenie progu daje sygnał tym samym kanałem co S-35.** — Archived 2026-11-13 → `context/archive/2026-11-12-statement-language-quality/`. Lesson: —.
