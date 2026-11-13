@@ -755,12 +755,12 @@ describe('AdminView', () => {
       expect(rows.map((row) => row.find('.status-badge').attributes('data-tone'))).toEqual(['success', 'warning'])
     })
 
-    it('shows only the number of theses below minTheses, in a neutral tone, also without a thesis', async () => {
+    it('shows the share below minTheses like the failed attempts, in a neutral tone, and no share without a thesis', async () => {
       vi.mocked(fetchAssessmentQuality).mockResolvedValue(sampleAssessmentQualityFewAttempts)
       const wrapper = await mountAdmin()
       const rows = section(wrapper).findAll('.quality-language')
       expect(rows.map((row) => row.find('span').text())).toEqual([
-        'tezy w innym języku niż post: 46 tez · próg 2%',
+        'tezy w innym języku niż post 2,2% z 46 tez · próg 2%',
         'tezy w innym języku niż post: 0 tez · próg 30%',
       ])
       expect(rows.map((row) => row.find('.status-badge').text())).toEqual(['za mało danych', 'za mało danych'])

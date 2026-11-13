@@ -181,14 +181,13 @@ function failedText(row: SourceQuality): string {
 const LANGUAGE_MEASURE = 'tezy w innym języku niż post'
 
 /**
- * E.g. `tezy w innym języku niż post 0,3% z 3476 tez · próg 2%`; below `minTheses` only the number of theses,
- * e.g. `tezy w innym języku niż post: 46 tez · próg 2%`.
+ * E.g. `tezy w innym języku niż post 0,3% z 3476 tez · próg 2%`, also below `minTheses` like the failed attempts'
+ * row (the badge says the threshold is not checked); without a thesis `tezy w innym języku niż post: 0 tez · próg 30%`.
  */
 function languageText(language: LanguageShare): string {
   const limit = `próg ${threshold.format(language.thresholdPercent / 100)}`
-  if (language.status === 'not_enough_data') {
-    const theses = `${language.theses} ${plural(language.theses, 'teza', 'tezy', 'tez')}`
-    return `${LANGUAGE_MEASURE}: ${theses} · ${limit}`
+  if (language.theses === 0) {
+    return `${LANGUAGE_MEASURE}: 0 tez · ${limit}`
   }
   const theses = `${language.theses} ${plural(language.theses, 'tezy', 'tez', 'tez')}`
   return `${LANGUAGE_MEASURE} ${share.format(language.otherLanguage / language.theses)} z ${theses} · ${limit}`

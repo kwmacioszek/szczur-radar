@@ -9,7 +9,7 @@ copies of the mock with `QUALITY` (or `MODE`) replaced. Widths 1280 px and 375 p
 | `data-dark-1280.png` | `data` | dark | 1280 | the same |
 | `data-light-375.png` | `data` | light | 375 | the same, wrapped |
 | `data-dark-375.png` | `data` | dark | 375 | the same, wrapped |
-| `few-light-1280.png` | `QUALITY = 'few'` | light | 1280 | Reddit's language below `minTheses`: `…: 120 tez · próg 30%` with `za mało danych` (neutral) |
+| `few-light-1280.png` | `QUALITY = 'few'` | light | 1280 | Reddit's language below `minTheses`: `… 17,5% z 120 tez · próg 30%` with `za mało danych` (neutral); the share shows below the minimum as in the failed attempts' row (review F6, retaken 2026-11-13) |
 | `few-dark-375.png` | `few` | dark | 375 | the same |
 | `nolang-light-1280.png` | `QUALITY = 'nolang'` | light | 1280 | `language: null`: "tezy w innym języku niż post: nie udało się policzyć" without a badge, the failed attempts unchanged |
 | `nolang-dark-1280.png` | `nolang` | dark | 1280 | the same |
