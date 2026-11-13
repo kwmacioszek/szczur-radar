@@ -14,6 +14,12 @@ class LanguageEvidenceTest {
 	}
 
 	@Test
+	void aDecomposedPolishLetterIsPolishToo() {
+		// "Kupię CDR" with ę written as e + U+0328 (combining ogonek), as NFD text would carry it.
+		assertThat(LanguageEvidence.of("Kupię CDR")).contains(Language.PL);
+	}
+
+	@Test
 	void twoPolishFunctionWordsArePolishAndOneIsNoEvidence() {
 		assertThat(LanguageEvidence.of("Autor nie kupuje CDR, jest sceptyczny")).contains(Language.PL);
 		assertThat(LanguageEvidence.of("nie nie")).as("every occurrence counts").contains(Language.PL);

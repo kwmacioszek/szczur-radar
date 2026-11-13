@@ -1,5 +1,6 @@
 package pl.szczurradar.api.text;
 
+import java.text.Normalizer;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
@@ -15,7 +16,8 @@ import org.jspecify.annotations.Nullable;
  * stays Polish. A short text without function words (numbers, tickers, a few nouns) has no evidence and is
  * never taken for either language.
  *
- * <p>A word is a run of Unicode letters after {@link Locale#ROOT} lower-casing; every occurrence counts. Neither
+ * <p>The text is read in Unicode NFC, so a decomposed letter counts as its composed one. A word is a run of
+ * Unicode letters after {@link Locale#ROOT} lower-casing; every occurrence counts. Neither
  * list holds a word both languages use ({@code to, on, by, do, we, a, i, no, as, was, but}). The Polish list is
  * S-28's ({@code measurement/RedditMeasures}); the English one and the rule's check on production data are in
  * {@code context/changes/statement-language-quality/evidence/README.md}.
@@ -41,10 +43,12 @@ public final class LanguageEvidence {
 	}
 
 	/** The language {@code text} shows evidence of; empty for {@code null}, a text without letters or no evidence. */
-	public static Optional<Language> of(@Nullable String text) {
-		if (text == null) {
+	public static Optional<Language> of(@Nullable String raw) {
+		if (raw == null) {
 			return Optional.empty();
 		}
+		// A decomposed letter (e + U+0328) would match neither the Polish letters nor one word (review F5).
+		String text = Normalizer.normalize(raw, Normalizer.Form.NFC);
 		if (POLISH_LETTER.matcher(text).find()) {
 			return Optional.of(Language.PL);
 		}
