@@ -456,20 +456,20 @@ Nie dotyczy: bez zmian schematu, danych i zmiennych Railway. Nowy job w `ci.yml`
 
 #### Automated
 
-- [x] 1.1 `./mvnw -B test` zielony bez testów z tagiem `mutation`
-- [x] 1.2 `./mvnw -B -Pmutation test` tworzy `mutations.xml` z zabitym mutantem w `agents.assessor.validation`
-- [x] 1.3 Brak mutantów w klasach spoza zakresu
-- [x] 1.4 PIT nie uruchamia `*IT` ani testów `measurement`
-- [x] 1.5 `mutation-baseline.md` z tabelą per klasa i czasem ≤ 10 min (albo decyzja właściciela)
-- [x] 1.6 Dwa pomiary dają identyczne statusy mutantów
+- [x] 1.1 `./mvnw -B test` zielony bez testów z tagiem `mutation` — 3f8a5ed
+- [x] 1.2 `./mvnw -B -Pmutation test` tworzy `mutations.xml` z zabitym mutantem w `agents.assessor.validation` — 3f8a5ed
+- [x] 1.3 Brak mutantów w klasach spoza zakresu — 3f8a5ed
+- [x] 1.4 PIT nie uruchamia `*IT` ani testów `measurement` — 3f8a5ed
+- [x] 1.5 `mutation-baseline.md` z tabelą per klasa i czasem ≤ 10 min (albo decyzja właściciela) — 3f8a5ed
+- [x] 1.6 Dwa pomiary dają identyczne statusy mutantów — 3f8a5ed
 
 ### Phase 2: Rejestr i strażnik
 
 #### Automated
 
-- [ ] 2.1 `./mvnw -B test` uruchamia `MutantRegistryTest`, nie `SurvivingMutantsTest`
-- [ ] 2.2 Strażnik przy pustym rejestrze zgłasza tylu ocalałych, ile pomiar bazowy
-- [ ] 2.3 Celowe zepsucie porównania czerwieni `MutantRegistryTest`
+- [x] 2.1 `./mvnw -B test` uruchamia `MutantRegistryTest`, nie `SurvivingMutantsTest`
+- [x] 2.2 Strażnik przy pustym rejestrze zgłasza tylu ocalałych, ile pomiar bazowy
+- [x] 2.3 Celowe zepsucie porównania czerwieni `MutantRegistryTest`
 
 ### Phase 3: Ocalałe — walidator V2 i jakość ocen
 

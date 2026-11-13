@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mutations partial="true">
+<mutation detected='false' status='SURVIVED' numberOfTestsRun='63'><sourceFile>StanceTable.java</sourceFile><mutatedClass>pl.szczurradar.api.agents.assessor.validation.StanceTable</mutatedClass><mutatedMethod>allowsClaimIdCount</mutatedMethod><methodDescription>(I)Z</methodDescription><lineNumber>84</lineNumber><mutator>org.pitest.mutationtest.engine.gregor.mutators.ConditionalsBoundaryMutator</mutator><indexes><index>23</index></indexes><blocks><block>5</block></blocks><killingTest/><description>changed conditional boundary</description></mutation>
+</mutations>
