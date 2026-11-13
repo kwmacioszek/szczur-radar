@@ -69,9 +69,14 @@ public class AssessmentQuality {
 		this.assessments = assessments;
 	}
 
+	/** The first day of the window that ends on {@code to}: {@code to − 6}, the same for both measures. */
+	public static LocalDate windowFrom(LocalDate to) {
+		return to.minusDays(WINDOW_DAYS - 1);
+	}
+
 	/** The window {@code [to − 6, to]} of calendar days in {@code zone}, per source with an attempt in it. */
 	public QualityWindow window(LocalDate to, ZoneId zone) {
-		LocalDate from = to.minusDays(WINDOW_DAYS - 1);
+		LocalDate from = windowFrom(to);
 		return new QualityWindow(from, to, sources(assessments
 			.countModelAttemptsBySourceAndClass(startOf(from, zone), startOf(to.plusDays(1), zone))));
 	}
@@ -101,7 +106,7 @@ public class AssessmentQuality {
 	 * per source with a thesis in it.
 	 */
 	public LanguageWindow languageWindow(LocalDate to, ZoneId zone) {
-		LocalDate from = to.minusDays(WINDOW_DAYS - 1);
+		LocalDate from = windowFrom(to);
 		return new LanguageWindow(from, to,
 				languages(assessments.findModelStatements(startOf(from, zone), startOf(to.plusDays(1), zone))));
 	}

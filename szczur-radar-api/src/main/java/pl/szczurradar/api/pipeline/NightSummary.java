@@ -202,8 +202,8 @@ public class NightSummary {
 		catch (RuntimeException ex) {
 			log.error("The quality window of the night {} could not be read; the night's summary goes without it",
 					date, ex);
-			return new NightQuality(new QualityWindow(date.minusDays(AssessmentQuality.WINDOW_DAYS - 1), date,
-					List.of()), List.of(), ex.getClass().getSimpleName());
+			return new NightQuality(new QualityWindow(AssessmentQuality.windowFrom(date), date, List.of()), List.of(),
+					ex.getClass().getSimpleName());
 		}
 	}
 
@@ -226,8 +226,8 @@ public class NightSummary {
 		catch (RuntimeException ex) {
 			log.error("The language window of the night {} could not be read; the night's summary goes without it",
 					date, ex);
-			return new NightLanguage(new LanguageWindow(date.minusDays(AssessmentQuality.WINDOW_DAYS - 1), date,
-					List.of()), List.of(), ex.getClass().getSimpleName());
+			return new NightLanguage(new LanguageWindow(AssessmentQuality.windowFrom(date), date, List.of()), List.of(),
+					ex.getClass().getSimpleName());
 		}
 	}
 
@@ -367,29 +367,14 @@ public class NightSummary {
 				text.append('\n').append(source.text());
 			}
 			if (qualityUnavailable != null) {
-				text.append("\nquality ")
-					.append(AssessmentQuality.WINDOW_DAYS)
-					.append("d (")
-					.append(quality.from())
-					.append('…')
-					.append(quality.to())
-					.append("): unavailable (")
-					.append(qualityUnavailable)
-					.append(')');
+				text.append('\n').append(unavailableLine("quality", quality.from(), quality.to(), qualityUnavailable));
 			}
 			for (SourceQuality source : quality.sources()) {
 				text.append('\n').append(qualityLine(source, quality));
 			}
 			if (languageUnavailable != null) {
-				text.append("\nlanguage ")
-					.append(AssessmentQuality.WINDOW_DAYS)
-					.append("d (")
-					.append(language.from())
-					.append('…')
-					.append(language.to())
-					.append("): unavailable (")
-					.append(languageUnavailable)
-					.append(')');
+				text.append('\n')
+					.append(unavailableLine("language", language.from(), language.to(), languageUnavailable));
 			}
 			for (SourceLanguage source : language.sources()) {
 				text.append('\n').append(languageLine(source, language));
@@ -433,15 +418,20 @@ public class NightSummary {
 
 	}
 
+	/** The head of a measure's line, {@code <measure> 7d (<from>…<to>): }; see the class. */
+	private static String measureHead(String measure, LocalDate from, LocalDate to) {
+		return measure + " " + AssessmentQuality.WINDOW_DAYS + "d (" + from + '…' + to + "): ";
+	}
+
+	/** The one line standing for a measure's lines when its window could not be read; see the class. */
+	private static String unavailableLine(String measure, LocalDate from, LocalDate to, String cause) {
+		return measureHead(measure, from, to) + "unavailable (" + cause + ')';
+	}
+
 	/** A source's line of the quality window; see the class. */
 	static String qualityLine(SourceQuality source, QualityWindow window) {
-		StringBuilder line = new StringBuilder(source.source().value()).append(" quality ")
-			.append(AssessmentQuality.WINDOW_DAYS)
-			.append("d (")
-			.append(window.from())
-			.append('…')
-			.append(window.to())
-			.append("): ");
+		StringBuilder line = new StringBuilder(source.source().value()).append(' ')
+			.append(measureHead("quality", window.from(), window.to()));
 		if (source.status() == QualityStatus.NOT_ENOUGH_DATA) {
 			return line.append(source.attempts())
 				.append(" attempts, fewer than ")
@@ -466,13 +456,8 @@ public class NightSummary {
 
 	/** A source's line of the language window; see the class. */
 	static String languageLine(SourceLanguage source, LanguageWindow window) {
-		StringBuilder line = new StringBuilder(source.source().value()).append(" language ")
-			.append(AssessmentQuality.WINDOW_DAYS)
-			.append("d (")
-			.append(window.from())
-			.append('…')
-			.append(window.to())
-			.append("): ");
+		StringBuilder line = new StringBuilder(source.source().value()).append(' ')
+			.append(measureHead("language", window.from(), window.to()));
 		if (source.status() == QualityStatus.NOT_ENOUGH_DATA) {
 			return line.append(source.theses())
 				.append(" theses, fewer than ")
