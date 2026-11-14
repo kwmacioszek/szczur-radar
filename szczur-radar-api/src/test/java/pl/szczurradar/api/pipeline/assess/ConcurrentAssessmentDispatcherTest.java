@@ -8,6 +8,7 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
@@ -50,6 +51,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.InOrder;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.test.system.CapturedOutput;
@@ -170,6 +173,21 @@ class ConcurrentAssessmentDispatcherTest {
 
 	/** Added to a post: as {@link #SHUT_DOWN_UNAVAILABLE}, the call ending with an error of the client. */
 	private static final String SHUT_DOWN_CLIENT_ERROR = " cut off by the pool's shutdown in the client";
+
+	/**
+	 * Added to a post: while its call is in flight, a stopping instance interrupts the run and puts its posts
+	 * back, and the call still answers (valid), so the run can no longer store the result.
+	 */
+	private static final String LOST = " answered after its run lost it";
+
+	/**
+	 * Added to a post: an interrupt ends its call (as {@link #HELD}) without the interrupt flag kept, as a
+	 * client that clears it would; the call ends with an error of our code.
+	 */
+	private static final String SWALLOWED = " ends its interrupt without keeping the flag";
+
+	/** Added to a post: its call takes exactly {@link ConcurrentAssessmentDispatcher#PROGRESS_INTERVAL}. */
+	private static final String ON_THE_MINUTE = " assessed in exactly the progress interval";
 
 	/** The message of an outage's processing error and technical failure. */
 	private static final String OUTAGE = "LlmUnavailableException: HTTP 503 after 3 attempts";
@@ -1147,6 +1165,276 @@ class ConcurrentAssessmentDispatcherTest {
 		assertThat(technicalFailures).containsOnlyKeys(ids.get(0), ids.get(1), ids.get(3), ids.get(4));
 	}
 
+	@Test
+	void aStepWithoutPostsMakesNoCallNotEvenTheCheck(CapturedOutput output) {
+		// A revoked key would fail the check: a step with nothing to assess must not fail the run for it.
+		checkFailure.set(revoked());
+
+		AssessedBatch batch = dispatcher().dispatch(RUN, List.of());
+
+		assertThat(batch).isEqualTo(new AssessedBatch(RUN, 0, 0, 0, List.of(), null));
+		assertThat(batch.status()).isEqualTo(RunStatus.SUCCEEDED);
+		assertThat(output.getAll()).doesNotContain("Run " + RUN + " assess:", "The LLM check");
+		verifyNoInteractions(transitions);
+	}
+
+	@Test
+	void aRunNoLongerRunningLeavesItsRemainingPostsUntaken() {
+		// The run was stopped (the watchdog, a newer instance's recovery) before its first post was taken.
+		running.set(false);
+		when(recorder.isRunning(RUN)).thenReturn(false);
+		doReturn(Optional.empty()).when(transitions).claim(any(UUID.class), any(UUID.class));
+		List<UUID> ids = List.of(post(ContractFixtures.BODY), post(ContractFixtures.BODY), post(ContractFixtures.BODY));
+
+		AssessedBatch batch = dispatchOnOneThread(ids);
+
+		// Asked once: the posts after the first one are not even tried.
+		assertThat(batch).isEqualTo(new AssessedBatch(RUN, 0, 0, 0, List.of(), null));
+		verify(transitions).claim(ids.getFirst(), RUN);
+		verify(transitions, times(1)).claim(any(UUID.class), any(UUID.class));
+		assertThat(calls).hasValue(0);
+	}
+
+	@Test
+	void aPostAnotherRunHoldsDoesNotStopTheStep() {
+		UUID held = post(ContractFixtures.BODY);
+		// Taken meanwhile by another run (or assessed already): not this run's, but the run still runs.
+		stages.put(held, PostStage.ASSESSING);
+		UUID next = post(ContractFixtures.BODY);
+
+		AssessedBatch batch = dispatchOnOneThread(List.of(held, next));
+
+		assertThat(batch).isEqualTo(new AssessedBatch(RUN, 1, 0, 0, List.of(), null));
+		assertThat(stages.get(next)).isEqualTo(PostStage.ASSESSED);
+		assertThat(stages.get(held)).isEqualTo(PostStage.ASSESSING);
+	}
+
+	@Test
+	void aResultTheRunCanNoLongerStoreCountsNothing() {
+		UUID lost = post(ContractFixtures.BODY + LOST);
+
+		AssessedBatch batch = dispatchOnOneThread(List.of(lost));
+
+		// The stopping instance put the post back while the call was in flight: the answer is not stored and
+		// the post is neither this run's result nor its technical error.
+		assertThat(batch).isEqualTo(new AssessedBatch(RUN, 0, 0, 0, List.of(), null));
+		assertThat(calls).hasValue(1);
+		assertThat(recorded).isEmpty();
+		assertThat(stages.get(lost)).isEqualTo(PostStage.STORED);
+		assertThat(attempts.get(lost)).isZero();
+		assertThat(technicalFailures).isEmpty();
+		verify(recorder, never()).count(any(), any());
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = {REFUSED, UNAVAILABLE, CLIENT_ERROR, REVOKED})
+	void aBreakerTrippedByCallsEndingTogetherIsLoggedOnce(String marker, CapturedOutput output) {
+		// Four calls in flight at once, each ending the same way: the streak passes its limit more than once (or,
+		// for a refused configuration, every call stops the step), yet the stop is one WARN line.
+		AssessedBatch batch = dispatchAllAtOnce(4, marker);
+
+		assertThat(batch.stoppedBy()).isNotNull();
+		assertThat(batch.status()).isEqualTo(RunStatus.FAILED);
+		assertThat(calls).hasValue(4);
+		assertThat(output.getAll().lines().filter(line -> line.contains(" WARN "))).singleElement()
+			.satisfies(line -> assertThat(line).contains("in run " + RUN, "no further post is taken"));
+	}
+
+	@Test
+	void aPostsLastChanceMakesItDeadOnlyWhenItFails(CapturedOutput output) {
+		UUID fails = post(ContractFixtures.BODY + INVALID);
+		UUID answered = post(ContractFixtures.BODY);
+		for (UUID id : List.of(fails, answered)) {
+			stages.put(id, PostStage.FAILED);
+			attempts.put(id, Post.MAX_ASSESSMENT_ATTEMPTS - 1);
+		}
+		// Every count fails, so the operator's alert carries the step's own dead count.
+		doThrow(new IllegalStateException("the database is gone for a moment")).when(recorder)
+			.count(eq(RUN), any(Counters.class));
+
+		AssessedBatch batch = dispatchOnOneThread(List.of(fails, answered));
+
+		assertThat(batch).isEqualTo(new AssessedBatch(RUN, 1, 1, 1, List.of(), null));
+		assertThat(stages.get(fails)).isEqualTo(PostStage.FAILED);
+		assertThat(stages.get(answered)).isEqualTo(PostStage.ASSESSED);
+		verify(recorder).count(RUN, Counters.assessedFailed(true, 1, false));
+		verify(recorder).count(RUN, Counters.assessedOk(0, false));
+		verify(alerts).raise(eq(AlertEvent.RUN_COUNTERS_LOST), eq(RUN),
+				argThat(detail -> detail.contains("2 post result(s) of pipeline run " + RUN)
+						&& detail.contains("(1 dead, 0 technical error(s))")));
+		String run = "Run " + RUN + " assess: ";
+		assertThat(output.getAll().lines().filter(line -> line.contains(run)).map(line -> line.substring(line.indexOf(run))))
+			.containsExactly(run + "2/2 (ok 1, failed 1, dead 1, errors 0, unavailable 0), in flight 0, retries 1,"
+					+ " flex fallbacks 0");
+		// A stored post is never put back: its result is its stage.
+		verify(transitions, never()).release(any(UUID.class), any(UUID.class));
+		verify(transitions, never()).releaseFailed(any(UUID.class), any(UUID.class), any(String.class));
+	}
+
+	@Test
+	void aProgressLineIsDueOnceExactlyTheIntervalHasPassed(CapturedOutput output) {
+		List<UUID> ids = List.of(post(ContractFixtures.BODY + ON_THE_MINUTE), post(ContractFixtures.BODY));
+
+		dispatchOnOneThread(ids);
+
+		String run = "Run " + RUN + " assess: ";
+		assertThat(output.getAll().lines().filter(line -> line.contains(run)).map(line -> line.substring(line.indexOf(run))))
+			.containsExactly(
+					run + "1/2 (ok 1, failed 0, dead 0, errors 0, unavailable 0), in flight 0, retries 0, flex fallbacks 0",
+					run + "2/2 (ok 2, failed 0, dead 0, errors 0, unavailable 0), in flight 0, retries 0, flex fallbacks 0");
+	}
+
+	@Test
+	void aTaskFailingBeforeItsPostIsTakenIsATechnicalErrorCountedOnce(CapturedOutput output) {
+		UUID broken = post(ContractFixtures.BODY);
+		UUID fine = post(ContractFixtures.BODY);
+		// Taking the post fails (the database for a moment): the task fails outside what assess() catches.
+		doThrow(new IllegalStateException("the database is gone for a moment")).when(transitions).claim(broken, RUN);
+
+		AssessedBatch batch = dispatchOnOneThread(List.of(broken, fine));
+
+		assertThat(batch.ok()).isOne();
+		assertThat(batch.processingErrors()).singleElement().satisfies(error -> {
+			assertThat(error.postId()).isEqualTo(broken);
+			assertThat(error.message()).contains("IllegalStateException: the database is gone for a moment");
+		});
+		assertThat(batch.status()).isEqualTo(RunStatus.PARTIAL);
+		// Never taken, so nothing to put back; counted once in the run's counters and in the progress line.
+		assertThat(stages.get(broken)).isEqualTo(PostStage.STORED);
+		verify(recorder).count(RUN, Counters.processingError());
+		verify(recorder).count(RUN, Counters.assessedOk(0, false));
+		verify(recorder, times(2)).count(eq(RUN), any(Counters.class));
+		String run = "Run " + RUN + " assess: ";
+		assertThat(output.getAll().lines().filter(line -> line.contains(run)).map(line -> line.substring(line.indexOf(run))))
+			.containsExactly(run + "2/2 (ok 1, failed 0, dead 0, errors 1, unavailable 0), in flight 0, retries 0,"
+					+ " flex fallbacks 0");
+	}
+
+	@Test
+	void aSingleOutageWhoseTechnicalFailureCannotBeWrittenIsNotAProcessingError(CapturedOutput output) {
+		UUID outage = post(ContractFixtures.BODY + UNAVAILABLE);
+		UUID answered = post(ContractFixtures.BODY);
+		doThrow(new IllegalStateException("the database is gone for a moment")).when(transitions)
+			.countTechnicalFailure(any(UUID.class), any(UUID.class), any(String.class));
+
+		AssessedBatch batch = dispatchOnOneThread(List.of(outage, answered));
+
+		// Not counted on the post, so not counted in the run either: it counts like a post not taken.
+		assertThat(batch).isEqualTo(new AssessedBatch(RUN, 1, 0, 0, List.of(), null));
+		assertThat(stages.get(outage)).isEqualTo(PostStage.STORED);
+		verify(recorder, never()).count(RUN, Counters.processingError());
+		assertThat(output.getAll().lines().filter(line -> line.contains(" WARN "))).singleElement()
+			.satisfies(line -> assertThat(line).contains("The outage of post " + outage + " in run " + RUN,
+					"could not be counted as its technical failure"));
+	}
+
+	@Test
+	void cancellingARunCountsOnlyItsTasksNotFinished(CapturedOutput output) throws Exception {
+		UUID done = post(ContractFixtures.BODY + " (finished before the stop)");
+		UUID held = post(ContractFixtures.BODY + HELD);
+		Semaphore awaited = new Semaphore(0);
+		ExecutorService twoThreads = awaitedPool(2, awaited);
+		ConcurrentAssessmentDispatcher dispatcher = dispatcher(twoThreads);
+		ExecutorService caller = Executors.newSingleThreadExecutor();
+		try {
+			Future<AssessedBatch> step = caller.submit(() -> dispatcher.dispatch(RUN, List.of(done, held)));
+			holding.acquire();
+			// The step waits for its second post: its first one has finished.
+			awaited.acquire(2);
+
+			dispatcher.cancel(RUN);
+
+			assertThat(step.get()).isEqualTo(new AssessedBatch(RUN, 1, 0, 0, List.of(), null));
+			twoThreads.shutdown();
+			assertThat(twoThreads.awaitTermination(1, TimeUnit.DAYS)).isTrue();
+		}
+		finally {
+			twoThreads.shutdownNow();
+			caller.shutdownNow();
+		}
+
+		assertThat(output.getAll()).contains("Run " + RUN + " assess: stopped, 1 post task(s) not finished were cancelled");
+		assertThat(stages.get(done)).isEqualTo(PostStage.ASSESSED);
+		assertThat(stages.get(held)).isEqualTo(PostStage.STORED);
+	}
+
+	@Test
+	void afterCancelAnOutageWithoutAnInterruptAndAPostNotStartedCountNothing(CapturedOutput output) throws Exception {
+		UUID held = post(ContractFixtures.BODY + HELD + UNAVAILABLE);
+		UUID waiting = post(ContractFixtures.BODY);
+		Semaphore awaited = new Semaphore(0);
+
+		// One thread: the second post waits for it; cancel() reaches neither task, only the run's mark.
+		AssessedBatch batch = cancelWhileHeld(tooLatePool(1, awaited), awaited, List.of(held, waiting));
+
+		assertThat(batch).isEqualTo(new AssessedBatch(RUN, 0, 0, 0, List.of(), null));
+		assertThat(interrupted).isEmpty();
+		// The held call's outage is the stopped run's, not the provider's: no activity, no technical failure.
+		verify(recorder, never()).touch(RUN);
+		verify(transitions, never()).countTechnicalFailure(any(UUID.class), any(UUID.class), any(String.class));
+		assertThat(stages.get(held)).isEqualTo(PostStage.STORED);
+		// The post not started yet is never taken.
+		verify(transitions, never()).claim(waiting, RUN);
+		assertThat(stages.get(waiting)).isEqualTo(PostStage.STORED);
+		assertThat(calls).hasValue(1);
+		verify(recorder, never()).count(any(), any());
+		assertThat(output.getAll().lines().filter(line -> line.contains(" WARN ") || line.contains(" ERROR "))).isEmpty();
+	}
+
+	@Test
+	void afterCancelAClientErrorWithoutAnInterruptCountsNothing(CapturedOutput output) throws Exception {
+		UUID held = post(ContractFixtures.BODY + HELD + CLIENT_ERROR);
+		Semaphore awaited = new Semaphore(0);
+
+		AssessedBatch batch = cancelWhileHeld(tooLatePool(1, awaited), awaited, List.of(held));
+
+		assertThat(batch).isEqualTo(new AssessedBatch(RUN, 0, 0, 0, List.of(), null));
+		assertThat(interrupted).isEmpty();
+		// Not the post's technical error: back without one.
+		assertThat(stages.get(held)).isEqualTo(PostStage.STORED);
+		assertThat(technicalFailures).isEmpty();
+		verify(transitions, never()).releaseFailed(any(UUID.class), any(UUID.class), any(String.class));
+		verify(recorder, never()).count(any(), any());
+		assertThat(output.getAll().lines().filter(line -> line.contains(" WARN ") || line.contains(" ERROR "))).isEmpty();
+	}
+
+	@Test
+	void anInterruptedDispatchMarksItsTasksCancelledEvenForACallThatDropsTheInterrupt(CapturedOutput output)
+			throws Exception {
+		UUID held = post(ContractFixtures.BODY + HELD + SWALLOWED);
+		ConcurrentAssessmentDispatcher dispatcher = dispatcher();
+		AtomicReference<@Nullable Throwable> thrown = new AtomicReference<>();
+		AtomicBoolean flagKept = new AtomicBoolean();
+		Thread step = Thread.ofPlatform().start(() -> {
+			try {
+				dispatcher.dispatch(RUN, List.of(held));
+			}
+			catch (Throwable ex) {
+				thrown.set(ex);
+				flagKept.set(Thread.currentThread().isInterrupted());
+			}
+		});
+		holding.acquire();
+
+		step.interrupt();
+
+		step.join();
+		assertThat(thrown.get()).isInstanceOf(IllegalStateException.class)
+			.hasMessage("interrupted while assessing run " + RUN);
+		// The run's thread keeps its interrupt for whoever runs it (PipelineRunService.execute).
+		assertThat(flagKept).isTrue();
+		executor.shutdown();
+		assertThat(executor.awaitTermination(1, TimeUnit.DAYS)).isTrue();
+		assertThat(interrupted).singleElement().satisfies(message -> assertThat(message).contains(SWALLOWED));
+		// The call ended without the flag, with an error of our code: the mark alone keeps it from being the
+		// post's technical error.
+		assertThat(stages.get(held)).isEqualTo(PostStage.STORED);
+		assertThat(technicalFailures).isEmpty();
+		verify(transitions, never()).releaseFailed(any(UUID.class), any(UUID.class), any(String.class));
+		verify(recorder, never()).count(any(), any());
+		assertThat(output.getAll().lines().filter(line -> line.contains(" WARN ") || line.contains(" ERROR "))).isEmpty();
+	}
+
 	private UUID post(String body) {
 		UUID id = UUID.randomUUID();
 		bodies.put(id, body);
@@ -1192,6 +1480,74 @@ class ConcurrentAssessmentDispatcherTest {
 			}
 
 		};
+	}
+
+	/**
+	 * As {@link #awaitedPool}, but every {@link Future#cancel} comes too late: it neither stops a task nor
+	 * interrupts its thread, as for a task a thread took just before the stop, whose call then ends without
+	 * seeing an interrupt. Only the dispatcher's own mark of the stop ({@code cancel}) is left to decide.
+	 */
+	private static ExecutorService tooLatePool(int threads, Semaphore awaited) {
+		return new ThreadPoolExecutor(threads, threads, 0, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>()) {
+
+			@Override
+			protected <T> RunnableFuture<T> newTaskFor(Callable<T> callable) {
+				return new FutureTask<>(callable) {
+
+					@Override
+					public T get() throws InterruptedException, ExecutionException {
+						awaited.release();
+						return super.get();
+					}
+
+					@Override
+					public boolean cancel(boolean mayInterruptIfRunning) {
+						return false;
+					}
+
+				};
+			}
+
+		};
+	}
+
+	/**
+	 * Dispatches {@code ids} on {@code pool} from a thread of its own, cancels the run once the held call is
+	 * in flight and the step waits for its posts, lets the held calls answer, and returns the step's result.
+	 */
+	private AssessedBatch cancelWhileHeld(ExecutorService pool, Semaphore awaited, List<UUID> ids) throws Exception {
+		ConcurrentAssessmentDispatcher dispatcher = dispatcher(pool);
+		ExecutorService caller = Executors.newSingleThreadExecutor();
+		try {
+			Future<AssessedBatch> step = caller.submit(() -> dispatcher.dispatch(RUN, ids));
+			holding.acquire();
+			awaited.acquire();
+
+			dispatcher.cancel(RUN);
+			release.countDown();
+
+			return step.get();
+		}
+		finally {
+			pool.shutdownNow();
+			caller.shutdownNow();
+		}
+	}
+
+	/** {@code count} posts whose calls are all in flight at once on as many threads, each ending as {@code marker} says. */
+	private AssessedBatch dispatchAllAtOnce(int count, String marker) {
+		List<UUID> ids = new ArrayList<>();
+		for (int i = 0; i < count; i++) {
+			ids.add(post(ContractFixtures.BODY + marker));
+		}
+		overlap.set(new CountDownLatch(count));
+		ExecutorService pool = Executors.newFixedThreadPool(count);
+		try {
+			return dispatcher(pool).dispatch(RUN, ids);
+		}
+		finally {
+			pool.shutdownNow();
+		}
 	}
 
 	private ConcurrentAssessmentDispatcher dispatcher(ExecutorService pool) {
@@ -1243,6 +1599,11 @@ class ConcurrentAssessmentDispatcherTest {
 					stages.keySet().forEach(this::putBack);
 					throw unavailable();
 				}
+				if (request.userMessage().contains(LOST)) {
+					// onClose of a stopping instance while the call is in flight; the call still answers.
+					running.set(false);
+					stages.keySet().forEach(this::putBack);
+				}
 				if (request.userMessage().contains(UNAVAILABLE)) {
 					throw unavailable();
 				}
@@ -1262,6 +1623,9 @@ class ConcurrentAssessmentDispatcherTest {
 				if (request.userMessage().contains(SLOW)) {
 					nanoTime.addAndGet(ConcurrentAssessmentDispatcher.PROGRESS_INTERVAL.plusSeconds(1).toNanos());
 				}
+				if (request.userMessage().contains(ON_THE_MINUTE)) {
+					nanoTime.addAndGet(ConcurrentAssessmentDispatcher.PROGRESS_INTERVAL.toNanos());
+				}
 				if (request.userMessage().contains(INVALID)) {
 					return response("no JSON here", 2, false);
 				}
@@ -1271,7 +1635,9 @@ class ConcurrentAssessmentDispatcherTest {
 			catch (InterruptedException ex) {
 				// As the HTTP client of a call in flight: an interrupt ends the call.
 				interrupted.add(request.userMessage());
-				Thread.currentThread().interrupt();
+				if (!request.userMessage().contains(SWALLOWED)) {
+					Thread.currentThread().interrupt();
+				}
 				if (request.userMessage().contains(UNAVAILABLE)) {
 					// As TransportRetry, interrupted between two attempts.
 					throw unavailable();

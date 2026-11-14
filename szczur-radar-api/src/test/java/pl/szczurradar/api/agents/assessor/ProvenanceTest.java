@@ -1,10 +1,16 @@
 package pl.szczurradar.api.agents.assessor;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
 import java.time.Instant;
+import java.util.function.Supplier;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -14,10 +20,46 @@ import pl.szczurradar.api.llm.Provider;
 import pl.szczurradar.api.llm.ReasoningEffort;
 import pl.szczurradar.api.llm.ServiceTier;
 
-/** {@link Provenance} as JSON: every closed value in lower case, as stored and recorded. */
+/**
+ * {@link Provenance} as JSON (every closed value in lower case, as stored and recorded) and its invariants (§15): a
+ * prefilter result has no call details, a model result has a prompt version, a tier and an attempt.
+ */
 class ProvenanceTest {
 
 	private static final JsonMapper MAPPER = JsonMapper.builder().build();
+
+	private static final Instant AT = Instant.parse("2026-10-06T10:00:00Z");
+
+	/** The prefilter's provenance with one call detail set: each must be refused on its own. */
+	static Stream<Arguments> prefilterWithOneCallDetail() {
+		return Stream.of(
+				detail("provider", () -> prefilter(Provider.OPENROUTER, null, null, null, false, null, null, null, null,
+						null, null, 0, 0)),
+				detail("model", () -> prefilter(null, "openai/gpt-6-luna", null, null, false, null, null, null, null, null,
+						null, 0, 0)),
+				detail("channel", () -> prefilter(null, null, Channel.OPENAI_FLEX, null, false, null, null, null, null,
+						null, null, 0, 0)),
+				detail("serviceTier", () -> prefilter(null, null, null, ServiceTier.FLEX, false, null, null, null, null,
+						null, null, 0, 0)),
+				detail("flexFallback", () -> prefilter(null, null, null, null, true, null, null, null, null, null, null, 0,
+						0)),
+				detail("reasoningEffort", () -> prefilter(null, null, null, null, false, ReasoningEffort.LOW, null, null,
+						null, null, null, 0, 0)),
+				detail("outputMode", () -> prefilter(null, null, null, null, false, null, OutputMode.JSON_SCHEMA, null,
+						null, null, null, 0, 0)),
+				detail("promptVersion", () -> prefilter(null, null, null, null, false, null, null, "p1", null, null, null,
+						0, 0)),
+				detail("inputTokens", () -> prefilter(null, null, null, null, false, null, null, null, 1200, null, null,
+						0, 0)),
+				detail("outputTokens", () -> prefilter(null, null, null, null, false, null, null, null, null, 300, null,
+						0, 0)),
+				detail("cachedTokens", () -> prefilter(null, null, null, null, false, null, null, null, null, null, 1024,
+						0, 0)),
+				detail("durationMs", () -> prefilter(null, null, null, null, false, null, null, null, null, null, null, 1,
+						0)),
+				detail("attempts", () -> prefilter(null, null, null, null, false, null, null, null, null, null, null, 0,
+						1)));
+	}
 
 	@Test
 	void everyEnumIsWrittenAsItsLowerCaseId() {
@@ -36,6 +78,38 @@ class ProvenanceTest {
 		assertThat(MAPPER.treeToValue(json, Provenance.class)).isEqualTo(provenance);
 	}
 
+	@ParameterizedTest(name = "{0}")
+	@MethodSource("prefilterWithOneCallDetail")
+	void aPrefilterResultWithAnyOneCallDetailIsRefused(String detail, Supplier<Provenance> provenance) {
+		assertThatIllegalArgumentException().isThrownBy(() -> provenance.get())
+			.withMessage("a prefilter result has no call details");
+	}
+
+	@Test
+	void aPrefilterResultWithoutCallDetailsIsAccepted() {
+		assertThat(prefilter(null, null, null, null, false, null, null, null, null, null, null, 0, 0))
+			.isEqualTo(Provenance.prefilter("V2", AT));
+	}
+
+	@Test
+	void aModelResultWithoutAPromptVersionATierOrWithZeroAttemptsIsRefused() {
+		assertThatIllegalArgumentException().isThrownBy(() -> model(null, ServiceTier.FLEX, 1))
+			.withMessage("a model result needs a prompt version, a tier and an attempt");
+		assertThatIllegalArgumentException().isThrownBy(() -> model("p1", null, 1))
+			.withMessage("a model result needs a prompt version, a tier and an attempt");
+		assertThatIllegalArgumentException().isThrownBy(() -> model("p1", ServiceTier.FLEX, 0))
+			.withMessage("a model result needs a prompt version, a tier and an attempt");
+	}
+
+	@Test
+	void aModelResultWithOneAttemptAndNoResponseFieldsIsAccepted() {
+		// A call that produced no text (Assessor.failed): no channel, effort, output mode or tokens.
+		Provenance provenance = model("p1", ServiceTier.DEFAULT, 1);
+
+		assertThat(provenance.attempts()).isEqualTo(1);
+		assertThat(provenance.channel()).isNull();
+	}
+
 	@Test
 	void everyProviderTierAndEffortIdIsItsJsonValue() {
 		for (Provider provider : Provider.values()) {
@@ -47,6 +121,23 @@ class ProvenanceTest {
 		for (ReasoningEffort effort : ReasoningEffort.values()) {
 			assertThat(MAPPER.writeValueAsString(effort)).isEqualTo("\"" + effort.id() + "\"");
 		}
+	}
+
+	private static Arguments detail(String name, Supplier<Provenance> provenance) {
+		return Arguments.of(name, provenance);
+	}
+
+	private static Provenance prefilter(Provider provider, String model, Channel channel, ServiceTier serviceTier,
+			boolean flexFallback, ReasoningEffort reasoningEffort, OutputMode outputMode, String promptVersion,
+			Integer inputTokens, Integer outputTokens, Integer cachedTokens, long durationMs, int attempts) {
+		return new Provenance(Provenance.Source.PREFILTER, provider, model, channel, serviceTier, flexFallback,
+				reasoningEffort, outputMode, promptVersion, "V2", AT, inputTokens, outputTokens, cachedTokens, durationMs,
+				attempts);
+	}
+
+	private static Provenance model(String promptVersion, ServiceTier serviceTier, int attempts) {
+		return new Provenance(Provenance.Source.MODEL, Provider.GEMINI, "gemini-3.1-flash-lite", null, serviceTier,
+				false, null, null, promptVersion, "V2", AT, null, null, null, 15, attempts);
 	}
 
 }

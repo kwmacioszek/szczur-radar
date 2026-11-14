@@ -155,6 +155,22 @@ class PostRepositoryIT {
 	}
 
 	@Test
+	void aTechnicalErrorOfTheLongestLengthIsKeptWholeAndOneCharacterMoreIsCut() {
+		// PostTransitions.MAX_ERROR_LENGTH (package-private there).
+		int longest = 500;
+		UUID atTheLimit = post(ItemType.POST, "80123", "2026-10-01T08:00:00Z");
+		UUID overTheLimit = post(ItemType.POST, "80124", "2026-10-01T08:00:00Z");
+		assessing(atTheLimit);
+		assessing(overTheLimit);
+
+		assertThat(transitions.releaseFailed(atTheLimit, runId, "y".repeat(longest))).contains(1);
+		assertThat(transitions.releaseFailed(overTheLimit, runId, "y".repeat(longest + 1))).contains(1);
+
+		assertThat(technical(atTheLimit)).containsEntry("last_technical_error", "y".repeat(longest));
+		assertThat(technical(overTheLimit)).containsEntry("last_technical_error", "y".repeat(longest) + "…");
+	}
+
+	@Test
 	void aStoredResultResetsTheTechnicalFailures() {
 		UUID held = technicalFailures(post(ItemType.POST, "80131", "2026-10-01T08:00:00Z"), 2);
 		assessing(held);

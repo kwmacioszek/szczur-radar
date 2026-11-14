@@ -89,6 +89,14 @@ class SourceIngestTest {
 	}
 
 	@Test
+	void everyKnownSourceIsListedInSourceOrderWithWhetherItIsConfigured() {
+		wykop.configured(false);
+
+		assertThat(new SourceIngest(List.of(reddit, wykop)).states()).containsExactly(
+				new SourceIngest.SourceState(Source.WYKOP, false), new SourceIngest.SourceState(Source.REDDIT, true));
+	}
+
+	@Test
 	void theFetchAddsUpTheNamedSources() {
 		wykop.answer(new SourceFetcher.Fetched(List.of(wykop.post("1")), 3, 2));
 

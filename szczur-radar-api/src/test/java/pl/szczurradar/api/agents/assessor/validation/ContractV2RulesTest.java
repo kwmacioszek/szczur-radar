@@ -11,6 +11,7 @@ import static pl.szczurradar.api.agents.assessor.ContractFixtures.validInput;
 import static pl.szczurradar.api.agents.assessor.ContractFixtures.validOutput;
 
 import java.util.List;
+import java.util.stream.IntStream;
 
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -22,6 +23,7 @@ import pl.szczurradar.api.agents.assessor.contract.Assertiveness;
 import pl.szczurradar.api.agents.assessor.contract.AssessmentInputV1;
 import pl.szczurradar.api.agents.assessor.contract.AssessmentOutputV2;
 import pl.szczurradar.api.agents.assessor.contract.Attribution;
+import pl.szczurradar.api.agents.assessor.contract.Claim;
 import pl.szczurradar.api.agents.assessor.contract.Context;
 import pl.szczurradar.api.agents.assessor.contract.Direction;
 import pl.szczurradar.api.agents.assessor.contract.Document;
@@ -376,6 +378,31 @@ class ContractV2RulesTest {
 		}
 
 		@Test
+		void directionalStanceWithoutClaimIdsBreaksD13AndD14() {
+			// D13 on its own: the count of claim_ids, apart from D14's author claim.
+			AssessmentOutputV2 output = investment(
+					List.of(target("t1", "XTB", Direction.BULLISH, Assertiveness.HEDGED)), List.of());
+			ValidationResult result = validator.validate(validInput(), output);
+			assertThat(result.violations()).extracting(Violation::rule, Violation::path)
+				.containsExactly(tuple("D13", "$.targets[0].stance.claim_ids"),
+						tuple("D14", "$.targets[0].stance.claim_ids"));
+		}
+
+		@ParameterizedTest
+		@ValueSource(strings = { "BULLISH", "UNCLEAR" })
+		void fourClaimIdsAreTheUpperBoundAndValid(Direction direction) {
+			assertValid(validInput(), withClaimIds(direction, 4));
+		}
+
+		@ParameterizedTest
+		@ValueSource(strings = { "BULLISH", "UNCLEAR" })
+		void fiveClaimIdsAreOneAboveTheUpperBoundAndBreakD13(Direction direction) {
+			// The schema caps claim_ids at 4 before the validator; the table (§9) still refuses a fifth.
+			assertOnly(validInput(), withClaimIds(direction, 5), RuleId.D13, "$.targets[0].stance.claim_ids",
+					FailureClass.DOMAIN_INVARIANT_VIOLATION);
+		}
+
+		@Test
 		void unclearMayRestOnAReportedClaimOrNone() {
 			assertValid(validInput(), investment(List.of(target("t1", "XTB", Direction.UNCLEAR, null, "c1"),
 					target("t2", "CDR", Direction.UNCLEAR, null)), List.of(claim("c1", Attribution.REPORTED, "XTB", "t1"))));
@@ -409,6 +436,20 @@ class ContractV2RulesTest {
 					validOutput().claims(), List.of(Flag.MISSING_CONTEXT)));
 		}
 
+	}
+
+	/**
+	 * One target of {@code direction} (hedged when directional, else without assertiveness) resting on the first
+	 * {@code count} author claims about it, each quoting a different fragment of {@code BODY}.
+	 */
+	private static AssessmentOutputV2 withClaimIds(Direction direction, int count) {
+		List<String> quotes = List.of("XTB", "po wynikach", "poleci", "w górę", "dokupuję");
+		List<Claim> claims = IntStream.range(0, count)
+			.mapToObj(i -> claim("c" + i, Attribution.AUTHOR, quotes.get(i), "t1"))
+			.toList();
+		Assertiveness assertiveness = direction == Direction.UNCLEAR ? null : Assertiveness.HEDGED;
+		return investment(List.of(target("t1", "XTB", direction, assertiveness,
+				claims.stream().map(Claim::id).toArray(String[]::new))), claims);
 	}
 
 	private static AssessmentInputV1 withParentPost() {

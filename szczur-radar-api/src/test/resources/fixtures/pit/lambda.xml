@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mutations partial="true">
+<mutation detected='false' status='SURVIVED' numberOfTestsRun='3'><sourceFile>ConcurrentAssessmentDispatcher.java</sourceFile><mutatedClass>pl.szczurradar.api.pipeline.assess.ConcurrentAssessmentDispatcher</mutatedClass><mutatedMethod>lambda$cancel$3</mutatedMethod><methodDescription>(Ljava/util/concurrent/Future;)Z</methodDescription><lineNumber>287</lineNumber><mutator>org.pitest.mutationtest.engine.gregor.mutators.returns.BooleanTrueReturnValsMutator</mutator><indexes><index>6</index></indexes><blocks><block>1</block></blocks><killingTest/><description>replaced boolean return with true for pl/szczurradar/api/pipeline/assess/ConcurrentAssessmentDispatcher::lambda$cancel$3</description></mutation>
+</mutations>
