@@ -576,7 +576,7 @@ PipelineRunService.startRange / startPosts → queue (thread pipeline-run) → R
   a mutant the `*Test` classes leave alive is killed by a test of behavior or gets an entry with its reason in
   `src/test/java/pl/szczurradar/api/mutation/AcceptedMutants.java`. `state/RunRecorder` and `state/PostTransitions`
   (not their nested records `Counters`, `StepOutcome`, `Outcome`) are excluded — mocks in every unit test —: their SQL guards and Java logic were broken once by
-  hand, each caught by an IT (`context/changes/core-mutation-testing/sql-breaks.md`).
+  hand, each caught by an IT (`context/archive/2026-11-13-core-mutation-testing/sql-breaks.md`).
 - Unit (`*Test`, no Spring): `flow/RunSequenceTest` (each kind of run's steps in order and each once,
   each source's result written inside the fetch step in order and no sums of the step's own, the store's rejected
   posts counted per source in `Source` order after the new posts and none without them, the run's error in its
