@@ -25,9 +25,16 @@
 		<openai-java.version>4.49.0</openai-java.version>
 		<!-- The version Spring AI 2.0.1 brings (Jackson 3); the assessor validates model output with it. -->
 		<json-schema-validator.version>3.0.1</json-schema-validator.version>
-		<!-- JUnit tags of the unit test run: everything except live LLM/API runs (profile measurement). -->
+		<!-- JUnit tags of the unit test run: everything except live LLM/API runs (profile measurement) and
+		     the surviving-mutant guard, which reads PIT's report and runs only in the profile mutation. -->
 		<surefire.groups></surefire.groups>
-		<surefire.excludedGroups>measurement</surefire.excludedGroups>
+		<surefire.excludedGroups>measurement,mutation</surefire.excludedGroups>
+		<!-- PIT and its JUnit Platform plugin (profile mutation); PIT 1.30.2 reads Java 25 bytecode, the
+		     plugin 1.2.3 needs PIT >= 1.19.4. -->
+		<pitest.version>1.30.2</pitest.version>
+		<pitest-junit5-plugin.version>1.2.3</pitest-junit5-plugin.version>
+		<!-- PIT's worker threads: the 4 vCPUs of GitHub's ubuntu-latest; -Dpit.threads=<n> locally. -->
+		<pit.threads>4</pit.threads>
 		<!-- The seed of the random method order of the engine's ITs (MethodOrderer.Random): a number of the
 		     build's time, so every build tries another order; the classes log it when they start, and
 		     ./mvnw -B verify -Dit.seed=<n> repeats the order of a red run. -->
@@ -217,6 +224,90 @@
 				<surefire.groups>measurement</surefire.groups>
 				<surefire.excludedGroups></surefire.excludedGroups>
 			</properties>
+		</profile>
+		<!-- Mutation testing of the core (S-45): ./mvnw -B -Pmutation test. PIT mutates the core's classes and
+		     runs only the unit tests (*Test, no Spring, no Docker, no secrets) against them; the report lands in
+		     target/pit-reports/ (mutations.xml, index.html). PIT runs in process-test-classes, before the phase
+		     test, so the profile's Surefire run, which keeps only the tag `mutation` (the guard reading the
+		     report), starts after it in the same command. -->
+		<profile>
+			<id>mutation</id>
+			<properties>
+				<surefire.groups>mutation</surefire.groups>
+				<surefire.excludedGroups>measurement</surefire.excludedGroups>
+			</properties>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.pitest</groupId>
+						<artifactId>pitest-maven</artifactId>
+						<version>${pitest.version}</version>
+						<dependencies>
+							<dependency>
+								<groupId>org.pitest</groupId>
+								<artifactId>pitest-junit5-plugin</artifactId>
+								<version>${pitest-junit5-plugin.version}</version>
+							</dependency>
+						</dependencies>
+						<configuration>
+							<!-- The core: the assessment contract V2 validator, the run (steps, state, attention
+							     reasons, attempt counting, the dispatcher) and the assessment quality measures. -->
+							<targetClasses>
+								<param>pl.szczurradar.api.agents.assessor.*</param>
+								<param>pl.szczurradar.api.pipeline.assess.*</param>
+								<param>pl.szczurradar.api.pipeline.flow.*</param>
+								<param>pl.szczurradar.api.pipeline.state.*</param>
+								<param>pl.szczurradar.api.pipeline.run.*</param>
+								<param>pl.szczurradar.api.pipeline.step.*</param>
+								<param>pl.szczurradar.api.pipeline.PipelineRunService*</param>
+								<param>pl.szczurradar.api.pipeline.RunWatchdog*</param>
+								<param>pl.szczurradar.api.posts.AssessmentQuality*</param>
+							</targetClasses>
+							<!-- PIT's glob `*` also matches dots, so the api subpackages are spelled from the base
+							     package (a bare *.api.* would match pl.szczurradar.api itself). RunRecorder and
+							     PostTransitions wrap SQL and are mocks in every unit test: only ITs cover them, so
+							     their logic is broken by hand against the ITs (sql-breaks.md) instead. No `*` after
+							     PostTransitions: its nested Outcome (attempt counting) stays measured. -->
+							<excludedClasses>
+								<param>pl.szczurradar.api.pipeline.run.MissingDays*</param>
+								<param>pl.szczurradar.api.*.api.*</param>
+								<param>pl.szczurradar.api.pipeline.state.RunRecorder*</param>
+								<param>pl.szczurradar.api.pipeline.state.PostTransitions</param>
+							</excludedClasses>
+							<!-- Only unit tests: without targetTests PIT would run the *IT classes too. PIT reads no
+							     tags from Surefire (it would take the profile's groups=mutation and run only the
+							     guard), so it excludes live runs and the guard itself. -->
+							<targetTests>
+								<param>pl.szczurradar.api.*Test</param>
+							</targetTests>
+							<parseSurefireConfig>false</parseSurefireConfig>
+							<excludedGroups>
+								<param>measurement</param>
+								<param>mutation</param>
+							</excludedGroups>
+							<mutators>
+								<mutator>STRONGER</mutator>
+							</mutators>
+							<outputFormats>
+								<param>XML</param>
+								<param>HTML</param>
+							</outputFormats>
+							<!-- A fixed path the guard reads: target/pit-reports/mutations.xml. -->
+							<timestampedReports>false</timestampedReports>
+							<threads>${pit.threads}</threads>
+						</configuration>
+						<executions>
+							<execution>
+								<id>mutation-coverage</id>
+								<phase>process-test-classes</phase>
+								<goals>
+									<goal>mutationCoverage</goal>
+								</goals>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
 		</profile>
 	</profiles>
 

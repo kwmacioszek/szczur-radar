@@ -123,6 +123,20 @@ class AssessorTest {
 		assertThat(client.requests).hasSize(1);
 	}
 
+	@ParameterizedTest
+	@EnumSource(value = CallFailure.class)
+	void aFailedCallWithoutAMessageIsDescribedByItsClass(CallFailure failure) {
+		ScriptedClient client = ScriptedClient.failing(new LlmCallException(failure, null, 1, ServiceTier.DEFAULT,
+				false, null));
+
+		AssessmentResult result = assessor(client).assess(INPUT);
+
+		FailureClass failureClass = FailureClass.valueOf(failure.name());
+		assertThat(result.failureClass()).isEqualTo(failureClass);
+		assertThat(result.violations()).singleElement()
+			.satisfies(violation -> assertThat(violation.message()).isEqualTo(failureClass.value()));
+	}
+
 	@Test
 	void failedOnAPreparedRequestEqualsAssessOnAClientFailingIt() {
 		LlmCallException failure = new LlmCallException(CallFailure.TIMEOUT, "timed out after 3 attempts", 3,

@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mutations partial="true">
+<mutation detected='false' status='SURVIVED' numberOfTestsRun='1'><sourceFile>AssessmentQuality.java</sourceFile><mutatedClass>pl.szczurradar.api.posts.AssessmentQuality</mutatedClass><mutatedMethod>status</mutatedMethod><methodDescription>(JJI)Lpl/szczurradar/api/posts/QualityStatus;</methodDescription><lineNumber>159</lineNumber><mutator>org.pitest.mutationtest.engine.gregor.mutators.returns.NullReturnValsMutator</mutator><indexes><index>8</index></indexes><blocks><block>1</block></blocks><killingTest/><description>replaced return value with null for pl/szczurradar/api/posts/AssessmentQuality::status</description></mutation>
+</mutations>

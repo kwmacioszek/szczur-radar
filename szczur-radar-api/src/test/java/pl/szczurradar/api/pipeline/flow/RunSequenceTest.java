@@ -219,6 +219,46 @@ class RunSequenceTest {
 	}
 
 	@Test
+	void nextToRejectedPostsASourcesSummaryOfExactlyTheLimitIsNotCut() {
+		String prefix = "reddit failed: ";
+		String failure = "IllegalStateException: "
+				+ "x".repeat(RunSequence.FETCH_SUMMARY_WITH_STORE_MAX - prefix.length() - "IllegalStateException: ".length());
+		fetches(redditFailedWith(failure));
+		when(store.store(any())).thenReturn(new StoredBatch(RUN, NEW_POSTS,
+				List.of(new SourceStored(Source.WYKOP, 3, 2, 0, 1)),
+				List.of(new RejectedPost(Source.WYKOP, ItemType.LINK, "17", "ck_posts_channel"))));
+
+		sequence.run(range(Source.WYKOP, Source.REDDIT));
+
+		assertThat(prefix + failure).hasSize(RunSequence.FETCH_SUMMARY_WITH_STORE_MAX);
+		assertThat(runError()).isEqualTo(prefix + failure
+				+ " | store rejected 1 post(s), counted as skipped: wykop link 17 (ck_posts_channel)");
+	}
+
+	@Test
+	void theAssessStepsItemsOutAreItsStoredResultsOkAndFailed() {
+		when(dispatcher.dispatch(any(), any())).thenReturn(new AssessedBatch(RUN, 1, 2, 1, List.of(), null));
+
+		RunSummary summary = sequence.run(new RunRequest(RUN, RunKind.RETRY, null, null, List.of(), null));
+
+		assertThat(summary).isEqualTo(new RunSummary(RUN, RunStatus.PARTIAL));
+		assertThat(events).contains("assess:succeeded:3");
+	}
+
+	@Test
+	void aStoppedAssessmentNextToAFailedSourceLeavesTheRunFailed() {
+		fetches(REDDIT_FAILED);
+		String stoppedBy = "the LLM provider is unavailable: 3 calls in a row failed after their retries; the last: x";
+		when(dispatcher.dispatch(any(), any())).thenReturn(new AssessedBatch(RUN, 0, 0, 0, List.of(), stoppedBy));
+
+		RunSummary summary = sequence.run(range(Source.WYKOP, Source.REDDIT));
+
+		// The source makes a succeeded assessment partial, never a failed one better.
+		assertThat(summary).isEqualTo(new RunSummary(RUN, RunStatus.FAILED));
+		assertThat(events).contains("finish failed");
+	}
+
+	@Test
 	void withoutRejectedPostsALongSourcesSummaryIsNotCut() {
 		String failure = "IllegalStateException: " + "x".repeat(3000);
 		fetches(redditFailedWith(failure));

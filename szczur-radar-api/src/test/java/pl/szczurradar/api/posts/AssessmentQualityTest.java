@@ -79,6 +79,14 @@ class AssessmentQualityTest {
 	}
 
 	@Test
+	void aSourceWhoseRowsAddUpToZeroAttemptsIsMissing() {
+		// Boundary of "a source with an attempt": zero attempts is no row, one attempt is a row.
+		assertThat(AssessmentQuality.sources(List.of(count(Source.WYKOP, null, 0),
+				count(Source.WYKOP, FailureClass.TIMEOUT, 0), count(Source.REDDIT, null, 1))))
+			.containsExactly(new SourceQuality(Source.REDDIT, 1, 0, Map.of(), 25, QualityStatus.NOT_ENOUGH_DATA));
+	}
+
+	@Test
 	void okYesterdayAndAboveTodayCrosses() {
 		assertThat(AssessmentQuality.crossed(List.of(wykop(QualityStatus.ABOVE_THRESHOLD)),
 				List.of(wykop(QualityStatus.OK))))
@@ -137,6 +145,21 @@ class AssessmentQualityTest {
 				Instant.parse("2026-11-08T23:00:00Z"));
 		verify(repository).countModelAttemptsBySourceAndClass(Instant.parse("2026-10-31T23:00:00Z"),
 				Instant.parse("2026-11-07T00:45:00Z"));
+	}
+
+	@Test
+	void aSourceAboveTonightAndOkInTheNightBeforeReadFromTheRepositoryCrosses() {
+		AssessmentRepository repository = mock(AssessmentRepository.class);
+		// The night before: Wykop at 2 of 100, below its 5 %.
+		when(repository.countModelAttemptsBySourceAndClass(any(), any())).thenReturn(
+				List.of(count(Source.WYKOP, null, 98), count(Source.WYKOP, FailureClass.PROVIDER_ERROR, 2)));
+		AssessmentQuality quality = new AssessmentQuality(repository);
+		QualityWindow tonight = new QualityWindow(LocalDate.of(2026, 11, 2), LocalDate.of(2026, 11, 8),
+				List.of(wykop(QualityStatus.ABOVE_THRESHOLD)));
+
+		assertThat(quality.crossed(tonight, Instant.parse("2026-11-08T00:45:00Z"), WARSAW))
+			.containsExactly(new QualityCrossing(wykop(QualityStatus.ABOVE_THRESHOLD), new SourceQuality(Source.WYKOP,
+					100, 2, Map.of(FailureClass.PROVIDER_ERROR, 2L), 5, QualityStatus.OK)));
 	}
 
 	@Test
@@ -244,6 +267,20 @@ class AssessmentQualityTest {
 				Instant.parse("2026-11-08T23:30:00Z"), WARSAW);
 		verify(repository).findModelStatements(Instant.parse("2026-10-31T23:00:00Z"),
 				Instant.parse("2026-11-07T23:00:00Z"));
+	}
+
+	@Test
+	void aSourceAboveTheLanguageThresholdTonightAndOkInTheNightBeforeReadFromTheRepositoryCrosses() {
+		AssessmentRepository repository = mock(AssessmentRepository.class);
+		// The night before: 10 of Wykop's 500 theses in English, exactly its 2 %.
+		when(repository.findModelStatements(any(), any())).thenAnswer(invocation -> wykopTheses(500, 10));
+		AssessmentQuality quality = new AssessmentQuality(repository);
+		LanguageWindow tonight = new LanguageWindow(LocalDate.of(2026, 11, 2), LocalDate.of(2026, 11, 8),
+				List.of(wykopLanguage(QualityStatus.ABOVE_THRESHOLD)));
+
+		assertThat(quality.languageCrossed(tonight, Instant.parse("2026-11-08T00:45:00Z"), WARSAW))
+			.containsExactly(new LanguageCrossing(wykopLanguage(QualityStatus.ABOVE_THRESHOLD),
+					new SourceLanguage(Source.WYKOP, 500, 10, 2, QualityStatus.OK)));
 	}
 
 	@Test

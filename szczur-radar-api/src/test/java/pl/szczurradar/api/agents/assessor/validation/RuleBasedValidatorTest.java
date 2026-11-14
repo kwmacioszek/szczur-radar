@@ -89,6 +89,25 @@ class RuleBasedValidatorTest {
 	}
 
 	@Test
+	void fabricatedEvidenceOutranksADomainViolationFoundBeforeIt() {
+		// D7 runs before D6: the first violation is a domain one, yet the class is fabricated_evidence.
+		AssessmentOutputV2 output = investment(List.of(), List.of(claim("c1", Attribution.AUTHOR, " "),
+				claim("c2", Attribution.AUTHOR, "zmyślony cytat")));
+		ValidationResult result = RuleBasedValidator.contractV2().validate(validInput(), output);
+		assertThat(result.violations()).extracting(Violation::rule).containsExactly("D7", "D6");
+		assertThat(result.failureClass()).contains(FailureClass.FABRICATED_EVIDENCE);
+	}
+
+	@Test
+	void theClassFollowsThePrecedenceNotTheOrderOfTheViolations() {
+		ValidationResult result = new ValidationResult(List.of(
+				new Violation(FailureClass.DOMAIN_INVARIANT_VIOLATION, "D13", "$.targets[0].stance.claim_ids", "x"),
+				new Violation(FailureClass.FABRICATED_EVIDENCE, "D6", "$.claims[0].evidence.quote", "x"),
+				new Violation(FailureClass.INVALID_REFERENCE, "D2", "$.claims[0].target_ids[0]", "x")));
+		assertThat(result.failureClass()).contains(FailureClass.INVALID_REFERENCE);
+	}
+
+	@Test
 	void fabricatedEvidenceOutranksDomainViolations() {
 		AssessmentOutputV2 output = investment(List.of(target("t1", "XTB", Direction.BULLISH, null, "c1")),
 				List.of(claim("c1", Attribution.AUTHOR, "zmyślony cytat", "t1")));

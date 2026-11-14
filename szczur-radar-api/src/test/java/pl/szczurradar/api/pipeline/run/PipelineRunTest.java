@@ -1,21 +1,32 @@
 package pl.szczurradar.api.pipeline.run;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
+import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.springframework.test.util.ReflectionTestUtils;
 
+import pl.szczurradar.api.sources.Source;
 import pl.szczurradar.api.user.SystemAccount;
 
 /**
  * Why runs need an admin's attention ({@link PipelineRun#attentionReasons()}, and so
  * {@link PipelineRun#needsAttention()}), for every status and in the rule's order, and which the daily cron
- * requested ({@link PipelineRun#scheduled()}).
+ * requested ({@link PipelineRun#scheduled()}). What each kind of new run holds and refuses, and that a run
+ * loaded from its row reads back the columns only the database writes (set as Hibernate's field access sets
+ * them).
  */
 class PipelineRunTest {
+
+	private static final Instant FROM = Instant.parse("2026-09-30T22:00:00Z");
+
+	private static final Instant TO = Instant.parse("2026-10-01T21:59:59Z");
 
 	@Test
 	void aFailedRunHasOnlyItsOwnReasonWhateverItsCounters() {
@@ -96,6 +107,105 @@ class PipelineRunTest {
 
 		assertThat(run.attentionReasons()).isEmpty();
 		assertThat(run.needsAttention()).isFalse();
+	}
+
+	@Test
+	void aNewRangeRunHoldsItsRangeSourcesRequesterAndDeployment() {
+		UUID admin = UUID.randomUUID();
+
+		PipelineRun run = PipelineRun.range(FROM, TO, List.of(Source.REDDIT, Source.WYKOP), admin, "deployment-7");
+
+		assertThat(run.getKind()).isEqualTo(RunKind.RANGE);
+		assertThat(run.getStatus()).isEqualTo(RunStatus.QUEUED);
+		assertThat(run.getRangeFrom()).isEqualTo(FROM);
+		assertThat(run.getRangeTo()).isEqualTo(TO);
+		assertThat(run.getSources()).containsExactly(Source.REDDIT, Source.WYKOP);
+		assertThat(run.getRequestedPostIds()).isNull();
+		assertThat(run.getRequestedBy()).isEqualTo(admin);
+		assertThat(run.getDeploymentId()).isEqualTo("deployment-7");
+	}
+
+	@Test
+	void aRangeOfOneInstantIsARange() {
+		assertThat(PipelineRun.range(FROM, FROM, List.of(Source.WYKOP), UUID.randomUUID(), null).getRangeTo())
+			.isEqualTo(FROM);
+	}
+
+	@Test
+	void aRangeEndingBeforeItStartsOrWithoutASourceIsRefused() {
+		assertThatIllegalArgumentException()
+			.isThrownBy(() -> PipelineRun.range(TO, FROM, List.of(Source.WYKOP), UUID.randomUUID(), null))
+			.withMessageContaining("is after");
+		assertThatIllegalArgumentException()
+			.isThrownBy(() -> PipelineRun.range(FROM, TO, List.of(), UUID.randomUUID(), null))
+			.withMessageContaining("at least one source");
+	}
+
+	@Test
+	void aNewPostsRunHoldsItsPostsAndNoSources() {
+		List<UUID> posts = List.of(UUID.randomUUID(), UUID.randomUUID());
+
+		PipelineRun run = PipelineRun.posts(posts, UUID.randomUUID(), null);
+
+		assertThat(run.getKind()).isEqualTo(RunKind.POSTS);
+		assertThat(run.getRequestedPostIds()).isEqualTo(posts);
+		assertThat(run.getSources()).isEmpty();
+		assertThat(run.getRangeFrom()).isNull();
+		assertThat(run.getRangeTo()).isNull();
+		assertThat(run.getDeploymentId()).isNull();
+	}
+
+	@Test
+	void aPostsRunWithoutAPostIsRefused() {
+		assertThatIllegalArgumentException().isThrownBy(() -> PipelineRun.posts(List.of(), UUID.randomUUID(), null))
+			.withMessageContaining("at least one post");
+	}
+
+	@Test
+	void aRetryRunHasNoSourcesRangeOrPosts() {
+		PipelineRun run = PipelineRun.retry(UUID.randomUUID(), null);
+
+		assertThat(run.getKind()).isEqualTo(RunKind.RETRY);
+		assertThat(run.getSources()).isEmpty();
+		assertThat(run.getRequestedPostIds()).isNull();
+	}
+
+	@Test
+	void aRunLoadedFromItsRowReadsBackWhatOnlyTheDatabaseWrites() {
+		PipelineRun run = PipelineRun.retry(UUID.randomUUID(), null);
+		Instant created = Instant.parse("2026-10-02T00:30:00Z");
+		Instant started = Instant.parse("2026-10-02T00:30:01Z");
+		Instant activity = Instant.parse("2026-10-02T00:40:00Z");
+		Instant finished = Instant.parse("2026-10-02T00:41:00Z");
+		ReflectionTestUtils.setField(run, "createdAt", created);
+		ReflectionTestUtils.setField(run, "startedAt", started);
+		ReflectionTestUtils.setField(run, "lastActivityAt", activity);
+		ReflectionTestUtils.setField(run, "finishedAt", finished);
+		ReflectionTestUtils.setField(run, "fetched", 11);
+		ReflectionTestUtils.setField(run, "newPosts", 10);
+		ReflectionTestUtils.setField(run, "assessedOk", 8);
+		ReflectionTestUtils.setField(run, "assessedFailed", 2);
+		ReflectionTestUtils.setField(run, "skipped", 1);
+		ReflectionTestUtils.setField(run, "llmRetries", 3);
+		ReflectionTestUtils.setField(run, "flexFallbacks", 4);
+		ReflectionTestUtils.setField(run, "sourcesFailed", 1);
+		ReflectionTestUtils.setField(run, "sourcesEmpty", 2);
+		ReflectionTestUtils.setField(run, "interruptionCause", InterruptionCause.LOST);
+
+		assertThat(run.getCreatedAt()).isEqualTo(created);
+		assertThat(run.getStartedAt()).isEqualTo(started);
+		assertThat(run.getLastActivityAt()).isEqualTo(activity);
+		assertThat(run.getFinishedAt()).isEqualTo(finished);
+		assertThat(run.getFetched()).isEqualTo(11);
+		assertThat(run.getNewPosts()).isEqualTo(10);
+		assertThat(run.getAssessedOk()).isEqualTo(8);
+		assertThat(run.getAssessedFailed()).isEqualTo(2);
+		assertThat(run.getSkipped()).isEqualTo(1);
+		assertThat(run.getLlmRetries()).isEqualTo(3);
+		assertThat(run.getFlexFallbacks()).isEqualTo(4);
+		assertThat(run.getSourcesFailed()).isEqualTo(1);
+		assertThat(run.getSourcesEmpty()).isEqualTo(2);
+		assertThat(run.getInterruptionCause()).isEqualTo(InterruptionCause.LOST);
 	}
 
 }
