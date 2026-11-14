@@ -461,7 +461,7 @@ Nie dotyczy: bez zmian schematu, danych i zmiennych Railway. Nowy job w `ci.yml`
 - [x] 1.3 Brak mutantów w klasach spoza zakresu — 3f8a5ed
 - [x] 1.4 PIT nie uruchamia `*IT` ani testów `measurement` — 3f8a5ed
 - [x] 1.5 `mutation-baseline.md` z tabelą per klasa i czasem ≤ 10 min (albo decyzja właściciela) — 3f8a5ed
-- [x] 1.6 Dwa pomiary dają identyczne statusy mutantów — 3f8a5ed
+- [ ] 1.6 Dwa pomiary dają identyczne statusy mutantów
 
 ### Phase 2: Rejestr i strażnik
 
