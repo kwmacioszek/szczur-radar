@@ -174,6 +174,8 @@ To interpretacja agenta kryterium 1.6 („identyczny status każdego mutanta”)
 
 ## Klasy bez pokrycia testami jednostkowymi
 
+- **Decyzja właściciela (2026-11-14):** klasy pokryte wcześniej tylko przez IT (`PipelineRunRepository`, `PipelineRunStep`, `PipelineRunSource`, `AssessmentPool`, część `PipelineRun` i `PipelineRunService`) zostają w zakresie PIT; ich mutanty zabijają testy jednostkowe z Fazy 4 (d6b1460). Nie wykluczamy ich w `pom.xml`.
+
 To tylko fakt z pomiaru. Decyzja, czy wykluczyć te klasy, czy zabić ich mutanty testem jednostkowym, należy do Fazy 4.
 
 Wszystkie mutanty tych klas w zakresie są `NO_COVERAGE`: żaden `*Test` ich nie wykonuje.
