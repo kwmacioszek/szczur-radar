@@ -123,7 +123,7 @@ Na Wykopie (#gielda) i Reddicie codziennie pojawiają się setki postów o inwes
 | S-42 | spa-rules-registry-round-two      | porównanie kodu błędu, limit rozmiaru strony i enumy spoza rejestru są pilnowane testem albo kompilatorem                          | —                        | FR-006; audyt §1 R-22, R-43, X5                                                            | done        |
 | S-43 | contract-bound-mocks              | atrapa API w SPA i atrapy narzędzi odpowiadają tak jak prawdziwe API, a rozjazd czerwieni test                                     | S-41                     | audyt §3, X4, „Materiał dla M-4” p. 4; `verification-scope.md` „Granice z M-3 i M-5”      | done |
 | S-44 | feed-regression-and-paging-bounds | feed ma testy regresji znanych ścieżek, a ogromny numer strony i NUL w linku dają 400 zamiast błędu serwera albo zawieszonego feedu | —                        | FR-006, FR-007, FR-011a; audyt §4, X6                                                      | done |
-| S-45 | core-mutation-testing             | wiadomo, które testy rdzenia łapią błędy: mutanty, które przeżyły, są zabite testem albo przyjęte z powodem                         | S-30, S-32, S-33, S-38   | `verification-scope.md` „Poprawność testów backendu”, „done when”                         | proposed |
+| S-45 | core-mutation-testing             | wiadomo, które testy rdzenia łapią błędy: mutanty, które przeżyły, są zabite testem albo przyjęte z powodem                         | S-30, S-32, S-33, S-38   | `verification-scope.md` „Poprawność testów backendu”, „done when”                         | in-progress |
 
 ## Streams
 
@@ -354,7 +354,7 @@ Brak — każda praca przekrojowa M-4 ma widoczny skutek dla użytkownika, opera
 - **Unknowns:**
   - Czy PIT chodzi przy każdym PR, czy tylko na żądanie albo na `main` (czas CI; `ci.yml` jest jedynym workflow i nie ma filtrów ścieżek)? — Owner: user (`/10x-plan`). Block: no.
 - **Risk:** ostatni, bo S-32, S-33 i S-38 zmieniają rdzeń, który mierzy; zmierzony wcześniej dałby wynik do powtórki. Testy integracyjne (Testcontainers) są wolne pod PIT, więc zakres pomiaru wybiera plan.
-- **Status:** proposed
+- **Status:** in-progress
 
 ## Backlog Handoff
 
