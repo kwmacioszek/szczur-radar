@@ -154,6 +154,8 @@ Pełna macierz zmienia status mutantów tylko między `KILLED` a `TIMED_OUT`, bo
 
 ## Stabilność
 
+- **Decyzja właściciela (2026-11-14):** `KILLED` i `TIMED_OUT` (oba wykryte) liczą się jako ten sam status; kryterium 1.6 porównuje podział „wykryty / ocalały”, w którym oba pomiary są identyczne. Ustawień timeoutu PIT nie zmieniamy.
+
 Porównaliśmy status każdego mutanta w obu przebiegach. Klucz to `mutatedClass`, `mutatedMethod` z numerem lambdy obciętym do `lambda$name`, `methodDescription`, `mutator`, `description` i `lineNumber`. Porównanie zrobiliśmy też z `indexes` i `blocks` i wynik jest ten sam.
 
 Status 1125 z 1126 mutantów jest identyczny. Różni się jeden:
