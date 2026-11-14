@@ -511,4 +511,4 @@ Nie dotyczy: bez zmian schematu, danych i zmiennych Railway. Nowy job w `ci.yml`
 
 #### Manual
 
-- [ ] 6.6 Właściciel akceptuje powody w `AcceptedMutants` i tabelę `sql-breaks.md`
+- [x] 6.6 Właściciel akceptuje powody w `AcceptedMutants` i tabelę `sql-breaks.md` — zaakceptowane przez właściciela 2026-11-14 (po poprawkach z impl-review, 8801f6c)
