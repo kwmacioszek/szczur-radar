@@ -87,3 +87,5 @@ cd /home/gha/actions-runner-1 && sudo ./svc.sh uninstall && sudo -u gha ./config
 ```
 
 Runner aktualizuje się sam. Runner offline dłużej niż 14 dni GitHub usuwa i trzeba go zarejestrować ponownie (`setup.sh` po skasowaniu katalogu `actions-runner-N`).
+
+Job `mutation` (PIT, S-45) uruchamia 4 wątki PIT (`pit.threads` w `szczur-radar-api/pom.xml`). Na `ubuntu-latest` (4 vCPU) trwa 6,5–8,5 min. Na VM z mniejszą liczbą CPU zagłodzone wątki mogą zmienić status mutanta: przyjęty `SURVIVED` staje się `TIMED_OUT`, wpis w `AcceptedMutants` jest wtedy zbędny i strażnik czerwieni job. Taką VM dawaj co najmniej 4 vCPU. Jeśli to niemożliwe, uruchom job z `-Dpit.threads=<liczba CPU>` i porównaj wynik z przebiegiem na `ubuntu-latest`.

@@ -267,13 +267,23 @@
 							     package (a bare *.api.* would match pl.szczurradar.api itself). RunRecorder and
 							     PostTransitions wrap SQL and are mocks in every unit test: only ITs cover them, so
 							     their logic is broken by hand against the ITs (sql-breaks.md) instead. No `*` after
-							     PostTransitions: its nested Outcome (attempt counting) stays measured. -->
+							     either class: their nested records stay measured (PostTransitions' Outcome, the
+							     attempt counting; RunRecorder's Counters, what one post adds to the counters). -->
 							<excludedClasses>
 								<param>pl.szczurradar.api.pipeline.run.MissingDays*</param>
 								<param>pl.szczurradar.api.*.api.*</param>
-								<param>pl.szczurradar.api.pipeline.state.RunRecorder*</param>
+								<param>pl.szczurradar.api.pipeline.state.RunRecorder</param>
 								<param>pl.szczurradar.api.pipeline.state.PostTransitions</param>
 							</excludedClasses>
+							<!-- OutputParser.readSchemaText runs once per JVM, in the class initializer of its holder
+							     SchemaText. Whether that initializer already ran in PIT's minion before a mutant is
+							     inserted depends on the order of PIT's work, so its mutants would flip between
+							     KILLED and SURVIVED and make an AcceptedMutants entry needless at random. Every
+							     OutputParser test reads the schema, so a broken read fails them outside PIT. The
+							     name is unique in the measured classes. -->
+							<excludedMethods>
+								<param>readSchemaText</param>
+							</excludedMethods>
 							<!-- Only unit tests: without targetTests PIT would run the *IT classes too. PIT reads no
 							     tags from Surefire (it would take the profile's groups=mutation and run only the
 							     guard), so it excludes live runs and the guard itself. -->

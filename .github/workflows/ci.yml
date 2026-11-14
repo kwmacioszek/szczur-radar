@@ -77,8 +77,10 @@ jobs:
     # behavior, or add its entry with a reason starting `równoważny:`, `obronny:`
     # or `tekst:`; delete a superfluous entry. Same run locally:
     # `./mvnw -Pmutation test` (szczur-radar-api/README.md).
-    # Measured 266–336 s locally at 4 threads (8 CPUs, mutation-baseline.md); a
-    # hang must not hold the run near Railway's 2 h Wait for CI window.
+    # Measured 266–336 s locally at 4 threads (8 CPUs, mutation-baseline.md) and
+    # 6:27–8:26 on ubuntu-latest (5 runs of PR #172), so it is the longest test
+    # job and sets the time to the apply. A hang must not hold the run near
+    # Railway's 2 h Wait for CI window.
     timeout-minutes: 15
     defaults:
       run:

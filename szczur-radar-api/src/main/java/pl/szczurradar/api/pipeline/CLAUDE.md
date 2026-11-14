@@ -575,7 +575,7 @@ PipelineRunService.startRange / startPosts → queue (thread pipeline-run) → R
   `RunWatchdog` are in PIT's scope (profile `mutation` of `pom.xml`, `./mvnw -Pmutation test`, the CI job `mutation`):
   a mutant the `*Test` classes leave alive is killed by a test of behavior or gets an entry with its reason in
   `src/test/java/pl/szczurradar/api/mutation/AcceptedMutants.java`. `state/RunRecorder` and `state/PostTransitions`
-  (not its `Outcome`) are excluded — mocks in every unit test —: their SQL guards and Java logic were broken once by
+  (not their nested records `Counters`, `StepOutcome`, `Outcome`) are excluded — mocks in every unit test —: their SQL guards and Java logic were broken once by
   hand, each caught by an IT (`context/changes/core-mutation-testing/sql-breaks.md`).
 - Unit (`*Test`, no Spring): `flow/RunSequenceTest` (each kind of run's steps in order and each once,
   each source's result written inside the fetch step in order and no sums of the step's own, the store's rejected

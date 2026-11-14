@@ -170,13 +170,9 @@ Linia 190 to `if (postIds.isEmpty())`. Mutant sprawia, że `dispatch` zawsze zwr
 
 Według reguły „Statusy” z planu oba statusy to „wykryty”. Strażnik (Faza 2) dzieli mutanty tylko na „wykryte” (`KILLED`, `TIMED_OUT`, `MEMORY_ERROR`, `RUN_ERROR`, `NON_VIABLE`) i „ocalałe” (`SURVIVED`, `NO_COVERAGE`). Pod tym podziałem oba przebiegi są identyczne, więc strażnik nie zmieniłby wyniku. Ustawień czasu PIT (`timeoutFactor`, `timeoutConstant`) ani `threads` nie zmienialiśmy.
 
-To interpretacja agenta kryterium 1.6 („identyczny status każdego mutanta”). Czeka na przegląd właściciela.
-
 ## Klasy bez pokrycia testami jednostkowymi
 
 - **Decyzja właściciela (2026-11-14):** klasy pokryte wcześniej tylko przez IT (`PipelineRunRepository`, `PipelineRunStep`, `PipelineRunSource`, `AssessmentPool`, część `PipelineRun` i `PipelineRunService`) zostają w zakresie PIT; ich mutanty zabijają testy jednostkowe z Fazy 4 (d6b1460). Nie wykluczamy ich w `pom.xml`.
-
-To tylko fakt z pomiaru. Decyzja, czy wykluczyć te klasy, czy zabić ich mutanty testem jednostkowym, należy do Fazy 4.
 
 Wszystkie mutanty tych klas w zakresie są `NO_COVERAGE`: żaden `*Test` ich nie wykonuje.
 
@@ -297,4 +293,20 @@ Duże części `NO_COVERAGE` mają też klasy:
 | **Suma: przebieg (pipeline.*)** | **711** | **666** | **31** | **3** | **11** | **0** | **96%** |
 | **Łącznie** | **1126** | **1068** | **43** | **4** | **11** | **0** | **96%** |
 
-statuses: {'KILLED': 1068, 'SURVIVED': 43, 'NO_COVERAGE': 4, 'TIMED_OUT': 11}
+
+## Po przeglądzie implementacji (2026-11-14)
+
+Zmiany z `reviews/impl-review.md` (F1, F2), zmierzone `./mvnw -B -Pmutation test` lokalnie (`threads=4`, 8 CPU): 269 s, kod wyjścia 0, strażnik zielony.
+
+- **F1:** wykluczony jest tylko `pipeline.state.RunRecorder` (bez `*`), więc `RunRecorder$Counters` i `RunRecorder$StepOutcome` są w pomiarze. `Counters` ma 10 mutantów, wszystkie `KILLED` przez nowy `pipeline/state/CountersTest`. `StepOutcome` nie ma mutantów (pusty record).
+- **F2:** `OutputParser.readSchemaText` jest w `excludedMethods`. Jej status zależał od tego, czy inicjalizator `OutputParser.SchemaText` wykonał się wcześniej w procesie PIT. `OutputParser` ma teraz 14 mutantów (13 `KILLED`, 1 `NO_COVERAGE`), a jego trzy wpisy rejestru zniknęły.
+- **Liczby:** 1133 mutantów: 1089 wykrytych (w tym 11 `TIMED_OUT` i 1 `RUN_ERROR`) i 44 ocalałe (40 `SURVIVED`, 4 `NO_COVERAGE`), każdy z wpisem.
+- **`RUN_ERROR`:** `pipeline.step.PostStore#cause` (linia 173). Proces PIT padł po trzech timeoutach z rzędu. Strażnik liczy `RUN_ERROR` jako wykryty, tak jak `KILLED`, więc wynik się nie zmienia.
+- **F4:** pięć powodów zmieniło kategorię z `równoważny:` na `obronny:` (gałąź nieosiągalna z odwołaniem do linii), a kilka innych dostało odwołania do linii. Klucze się nie zmieniły.
+
+| Obszar | Wpisy `AcceptedMutants` | `równoważny:` | `obronny:` | `tekst:` |
+|---|---:|---:|---:|---:|
+| walidator V2 (`agents.assessor.*`) | 10 | 5 | 1 | 4 |
+| jakość ocen (`posts.AssessmentQuality*`) | 0 | 0 | 0 | 0 |
+| przebieg (`pipeline.*`) | 34 | 26 | 7 | 1 |
+| **Łącznie** | **44** | **31** | **8** | **5** |
