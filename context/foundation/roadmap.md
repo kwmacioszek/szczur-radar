@@ -3,7 +3,7 @@ project: "Szczur Radar"
 version: 5
 status: draft # draft | active | locked
 created: 2026-09-27
-updated: 2026-11-13
+updated: 2026-11-14
 prd_version: 3
 main_goal: quality
 top_blocker: capacity # 16 wycinków, jeden recenzent i osoba mergująca; darmowe runnery GitHuba muszą zmieścić scenariusze i PIT
@@ -123,7 +123,7 @@ Na Wykopie (#gielda) i Reddicie codziennie pojawiają się setki postów o inwes
 | S-42 | spa-rules-registry-round-two      | porównanie kodu błędu, limit rozmiaru strony i enumy spoza rejestru są pilnowane testem albo kompilatorem                          | —                        | FR-006; audyt §1 R-22, R-43, X5                                                            | done        |
 | S-43 | contract-bound-mocks              | atrapa API w SPA i atrapy narzędzi odpowiadają tak jak prawdziwe API, a rozjazd czerwieni test                                     | S-41                     | audyt §3, X4, „Materiał dla M-4” p. 4; `verification-scope.md` „Granice z M-3 i M-5”      | done |
 | S-44 | feed-regression-and-paging-bounds | feed ma testy regresji znanych ścieżek, a ogromny numer strony i NUL w linku dają 400 zamiast błędu serwera albo zawieszonego feedu | —                        | FR-006, FR-007, FR-011a; audyt §4, X6                                                      | done |
-| S-45 | core-mutation-testing             | wiadomo, które testy rdzenia łapią błędy: mutanty, które przeżyły, są zabite testem albo przyjęte z powodem                         | S-30, S-32, S-33, S-38   | `verification-scope.md` „Poprawność testów backendu”, „done when”                         | in-progress |
+| S-45 | core-mutation-testing             | wiadomo, które testy rdzenia łapią błędy: mutanty, które przeżyły, są zabite testem albo przyjęte z powodem                         | S-30, S-32, S-33, S-38   | `verification-scope.md` „Poprawność testów backendu”, „done when”                         | done |
 
 ## Streams
 
@@ -354,7 +354,7 @@ Brak — każda praca przekrojowa M-4 ma widoczny skutek dla użytkownika, opera
 - **Unknowns:**
   - Czy PIT chodzi przy każdym PR, czy tylko na żądanie albo na `main` (czas CI; `ci.yml` jest jedynym workflow i nie ma filtrów ścieżek)? — Owner: user (`/10x-plan`). Block: no.
 - **Risk:** ostatni, bo S-32, S-33 i S-38 zmieniają rdzeń, który mierzy; zmierzony wcześniej dałby wynik do powtórki. Testy integracyjne (Testcontainers) są wolne pod PIT, więc zakres pomiaru wybiera plan.
-- **Status:** in-progress
+- **Status:** done
 
 ## Backlog Handoff
 
@@ -483,3 +483,4 @@ Brak — każda praca przekrojowa M-4 ma widoczny skutek dla użytkownika, opera
 - **S-31: ręczne kroki weryfikacji PR env z wycinków S-13, S-17, S-18, S-20 i S-27 chodzą w CI jako scenariusze na pełnym API z Postgresem, z atrapami źródeł i LLM z prawdziwych payloadów; to, czego CI nie zobaczy, jest na krótkiej, nazwanej liście ręcznej.** — Archived 2026-11-13 → `context/archive/2026-11-12-pr-env-scenarios-in-ci/`. Lesson: —.
 - **S-42: porównanie kodu błędu w SPA (`err.detail === '<kod>'`) jest pilnowane kompilatorem albo skanem, limit rozmiaru strony i enumy dziś spoza `rules.json` są w rejestrze, a SPA nie liczy sama warunku powodu „wymaga uwagi”.** — Archived 2026-11-13 → `context/archive/2026-11-12-spa-rules-registry-round-two/`. Lesson: —.
 - **S-36: operator widzi osobno dla każdego źródła udział tez (`statement`) w innym języku niż post, a przekroczenie progu daje sygnał tym samym kanałem co S-35.** — Archived 2026-11-13 → `context/archive/2026-11-12-statement-language-quality/`. Lesson: —.
+- **S-45: testy mutacyjne (PIT) mierzą rdzeń — przebieg i warunkowe zapisy stanu, walidator kontraktu V2, rozliczanie prób oceny — a każdy mutant, który przeżył, jest zabity testem albo przyjęty z zapisanym powodem; pomiar da się powtórzyć w CI.** — Archived 2026-11-14 → `context/archive/2026-11-13-core-mutation-testing/`. Lesson: —.
