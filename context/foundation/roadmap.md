@@ -1,20 +1,20 @@
 ---
 project: "Szczur Radar"
-version: 5
+version: 6
 status: draft # draft | active | locked
 created: 2026-09-27
 updated: 2026-11-15
-prd_version: 3
+prd_version: 4
 main_goal: quality
-top_blocker: capacity # 16 wycinków, jeden recenzent i osoba mergująca; darmowe runnery GitHuba muszą zmieścić scenariusze i PIT
-milestone_id: verified-core-and-regression
-milestone_seq: 4
-milestone_status: done
+top_blocker: capacity # 17 pozycji, jeden recenzent i osoba mergująca; fundament UI dotyka wspólnych plików (tokeny, komponenty, router), więc pierwsze fale są sekwencyjne; darmowe runnery GitHuba muszą zmieścić testy w przeglądarce i zrzuty
+milestone_id: new-ui-on-tested-foundation
+milestone_seq: 5
+milestone_status: open
 ---
 
 # Roadmap: Szczur Radar
 
-> Derived from (M-4) `context/foundation/prd.md` (v3) + `context/foundation/verification-scope.md` + audyt `context/changes/post-m3-verification-audit/research.md` + destylacja `context/domain/domain-distillation.md` (ranking, 2026-11-01). M-3 derived from `context/foundation/prd.md` (v2, kolejna transza) + audyt `context/changes/post-m2-audit/research.md` + destylacja `context/domain/domain-distillation.md` + mapa projektu `context/map/repo-map.md` (2026-10-27). M-2 derived from the user's milestone description + `context/map/repo-map.md` (mapa projektu, 2026-10-17) + `context/archive/2026-10-17-post-mvp-pipeline-audit/research.md` (audyt diagnostyczny pipeline'u i operacji, HEAD `5b6eabb`) + PRD v2 NFRs + auto-researched codebase baseline (z mapy i audytu). M-1 derived from `context/foundation/prd.md` (v2) + `context/foundation/llm-assessment/` + `shape-notes.md` + `tech-stack-api.md` / `tech-stack-web.md` / `infrastructure.md` / `deploy-plan.md`.
+> Derived from (M-5) `context/foundation/prd.md` (v4) + `context/foundation/ui-ux-proposals.md` + audyt `context/changes/post-m4-ui-readiness-audit/research.md` (z decyzjami właściciela z 2026-11-15) + mapa projektu `context/map/repo-map.md` i destylacja `context/domain/domain-distillation.md` (2026-11-15). M-4 derived from `context/foundation/prd.md` (v3) + `context/foundation/verification-scope.md` + audyt `context/changes/post-m3-verification-audit/research.md` + destylacja `context/domain/domain-distillation.md` (ranking, 2026-11-01). M-3 derived from `context/foundation/prd.md` (v2, kolejna transza) + audyt `context/changes/post-m2-audit/research.md` + destylacja `context/domain/domain-distillation.md` + mapa projektu `context/map/repo-map.md` (2026-10-27). M-2 derived from the user's milestone description + `context/map/repo-map.md` (mapa projektu, 2026-10-17) + `context/archive/2026-10-17-post-mvp-pipeline-audit/research.md` (audyt diagnostyczny pipeline'u i operacji, HEAD `5b6eabb`) + PRD v2 NFRs + auto-researched codebase baseline (z mapy i audytu). M-1 derived from `context/foundation/prd.md` (v2) + `context/foundation/llm-assessment/` + `shape-notes.md` + `tech-stack-api.md` / `tech-stack-web.md` / `infrastructure.md` / `deploy-plan.md`.
 > Edit-in-place; the next milestone continues this file. Archive only when an independent roadmap replaces it.
 > Slices below are listed in dependency order. The "At a glance" table is the index.
 > ID-y kontynuują numerację M-1 (F-04, S-08 …), bo `## Done` i issues GitHuba (`S-NN: …`) już używają F-01–F-03 i S-01–S-07.
@@ -87,316 +87,333 @@ milestone_status: done
 
 > v5.2 (2026-11-15): M-4 zamknięty (`/10x-roadmap`): S-30–S-45 `done`, wszystkie issues M-4 (#139, #141–#155) zamknięte; wpis w `## Milestone History`. Blok S-30 dostaje `Status: done` (tabela „At a glance” miała go od archiwizacji 2026-11-05, blok został na `ready`). M-5 jeszcze nieotwarty; kandydat w `## Parked` (nowe UI/UX z całym Playwrightem na atrapie z S-43).
 
+> v6 (2026-11-15): otwarty M-5 „Nowe UI na sprawdzonym fundamencie” (`/10x-roadmap`) z PRD v4, `ui-ux-proposals.md` i audytu `post-m4-ui-readiness-audit`; ramy od użytkownika: cel `quality`, gwiazda przewodnia S-51 (strumień z inspektorem oceny), główne ryzyko `capacity`. Decyzje właściciela z 2026-11-15: M-5 „uczciwie duży” — najpierw testy w przeglądarce (F-05) i zrzuty porównawcze z testem dostępności w wersji odchudzonej (F-06), potem motyw, shell, wspólne stany, logowanie i panel admina, potem widoki; agregacja po tekście celu bez rozpoznawania spółek; z nice-to-have tylko sortowanie. Fundamenty F-05, F-06 i wycinki S-46–S-60. Z `## Parked` usunięte: kandydat M-5 (otwarty), FR-008 / FR-011b (wchodzą jako S-54) i język posta w bazie (zrobione w S-36, `posts.language` od V16); dopisane pozycje odłożone poza M-5 i kandydaci na M-6.
+
 ## Milestone
 
-**M-4: Weryfikacja i regresja** — Status: done
+**M-5: Nowe UI na sprawdzonym fundamencie** — Status: open
 
-- **Intent:** Testy łapią błędy, a nie tylko przechodzą: ręczne weryfikacje wycinków w PR env chodzą jako scenariusze w CI, strażnicy reguł wyprowadzają zbiory z kodu zamiast z ręcznych list, a mutanty rdzenia są zabite albo świadomie przyjęte. Obok tego wymagania PRD v3 z nocy z Redditem: seria odmów dostawcy nie zabija ocen bez drogi powrotu, martwe posty da się przywrócić i nie alarmują co noc, a operator widzi jakość ocen osobno dla każdego źródła.
-- **Source materials:** `context/foundation/prd.md` (v3: FR-033, FR-034, doprecyzowanie FR-023 Q-13, doprecyzowanie PRD v3 NFR o sygnale `prd.md:275`); `context/foundation/verification-scope.md` (zakres i „done when” M-4); audyt `context/changes/post-m3-verification-audit/research.md` (eksperymenty X1–X6, sekcje 1–6, „Materiał dla M-4”); destylacja domeny `context/domain/domain-distillation.md` (ranking #1–#6).
-- **Done when:** every S-NN below is `done`; ręczne kroki weryfikacji PR env z wycinków S-13, S-17, S-18, S-20 i S-27 chodzą jako scenariusze w CI; mutanty, które przeżyły na rdzeniu, są zabite testem albo przyjęte z powodem; ręczna lista po deployu zawiera tylko pozycje z `verification-scope.md`, sekcja „Co zostanie ręczne”.
-- **Scope anchors:** FR-033, FR-034, FR-023 (doprecyzowanie Q-13), FR-005, FR-006, FR-007, FR-011a, FR-014, FR-015, NFR `prd.md:275` (sygnał dla operatora, doprecyzowanie PRD v3), NFR `prd.md:289` (nowe źródło = pozyskanie + mapowanie), NFR `prd.md:293` (kompletny zestaw testów autoryzacji); `verification-scope.md` (kandydaci na zakres, „done when”); ustalenia audytu i rozbieżności destylacji wymienione przy wycinkach.
+- **Intent:** Aplikacja webowa dostaje nowy, spójny interfejs — strumień wpisów z inspektorem oceny, czytnik z cytatami podświetlonymi w treści, katalog celów z proporcjami stanowisk i przegląd dnia — zbudowany na wspólnym fundamencie (motywy jasny i ciemny, stała nawigacja, wspólne stany widoków), a każdy przepływ i wygląd pilnują w CI testy w przeglądarce, więc zmiany UI nie wymagają ręcznego klikania.
+- **Source materials:** `context/foundation/prd.md` (v4: FR-035–FR-040, doprecyzowania v4 przy FR-007, FR-008, FR-009, FR-011a, FR-011b, FR-033 i Non-Goals, NFR o testach w przeglądarce `prd.md:328`); `context/foundation/ui-ux-proposals.md` (cztery układy: Czytnik, Karta podmiotu, Strumień + Inspektor, Przegląd; makiety w `docs/visuals/ui-ux-proposals/`); audyt `context/changes/post-m4-ui-readiness-audit/research.md` (fundament SPA, luki API wobec makiet, podłoga E2E, pomiar „kanał jako cel”, sekcja „Decyzje właściciela (2026-11-15)”); mapa projektu `context/map/repo-map.md` i destylacja `context/domain/domain-distillation.md` z 2026-11-15.
+- **Done when:** every F-NN and S-NN below is `done`; każdy przepływ użytkownika z NFR `prd.md:328` ma test w przeglądarce w CI; wygląd katalogu komponentów i każdego widoku jest pilnowany zrzutami porównawczymi w obu motywach i przy 375 px, a ręczna weryfikacja wycinka UI to ocena różnic obrazków w PR.
+- **Scope anchors:** FR-035, FR-036, FR-037, FR-038, FR-039, FR-040 (nowe w PRD v4); FR-007 (doprecyzowanie v4, Q-15), FR-008 i FR-011b (sortowanie wybrane do M-5), FR-009 (doprecyzowanie v4: podświetlenie cytatów, poprzedni i następny wpis), FR-010, FR-011a (doprecyzowanie v4: agregacja po tekście celu), FR-033 (doprecyzowanie v4: „kanał jako cel”, Q-20), FR-006, FR-014, FR-015, FR-021, FR-026–FR-028 (widoki istniejące, przenoszone na nowy fundament); NFR `prd.md:328` (testy w przeglądarce, wizualne i dostępności); Non-Goals `prd.md:369` z doprecyzowaniem v4 (granica: bez rozpoznawania spółek, trendu i automatycznego „warte uwagi”).
 
 ## Vision recap
 
-Na Wykopie (#gielda) i Reddicie codziennie pojawiają się setki postów o inwestowaniu; Szczur Radar pobiera je, a LLM według zamkniętego kontraktu opisuje, czego dotyczą, jakie stanowisko autor zajmuje wobec każdej spółki lub tematu i jakie tezy przedstawia — każdą z dosłownym cytatem. M-1–M-3 zbudowały to dla dwóch źródeł na rdzeniu, który nie milczy i nie gubi danych. M-4 sprawdza, czy testy tego rdzenia naprawdę łapią błędy (audyt po M-3: trzy zepsucia SPA przeszły przez wszystkie testy), i domyka to, czego nauczyły pierwsze noce z Redditem.
+Na Wykopie (#gielda) i Reddicie codziennie pojawiają się setki postów o inwestowaniu; Szczur Radar pobiera je, a LLM według zamkniętego kontraktu opisuje, czego dotyczą, jakie stanowisko autor zajmuje wobec każdej spółki lub tematu i jakie tezy przedstawia — każdą z dosłownym cytatem. M-1–M-4 zbudowały i utwardziły ten rdzeń dla dwóch źródeł oraz siatkę regresji w CI. M-5 zmienia to, jak użytkownik czyta te oceny: z jednej kolumny kart w układ, w którym widać źródło oceny w treści, wpisy wokół jednego celu i obraz dnia — bez rozpoznawania spółek i bez decyzji za użytkownika, co jest warte uwagi.
 
 ## North star
 
-**S-31: Ręczne weryfikacje PR env chodzą jako scenariusze w CI** — to pierwsze kryterium „done when” z `verification-scope.md` i najbardziej bezpośredni dowód celu `quality`: weryfikacja wycinka przestaje być klikaniem w PR env, a regresja chodzi przy każdym PR.
+**S-51: Użytkownik przegląda strumień wpisów i czyta ocenę wybranego wpisu w panelu inspektora** — to najmniejszy przepływ, który sprawdza cały nowy fundament (motyw, nawigacja, wspólne stany, testy wizualne) na codziennej pracy użytkownika i zastępuje dzisiejszy feed oraz stronę posta; przy celu `quality` stoi zaraz po fundamencie, a nie po nowych funkcjach.
 
-> „Gwiazda przewodnia” (north star) oznacza tu najmniejszy wycinek od początku do końca, którego udane dostarczenie potwierdza cel kamienia milowego — dlatego stoi tak wcześnie, jak pozwalają jego warunki wstępne (zaraz po S-30, bez którego CI bywa czerwone bez powodu).
+> „Gwiazda przewodnia” (north star) oznacza tu najmniejszy wycinek od początku do końca, którego udane dostarczenie potwierdza cel kamienia milowego — dlatego stoi tak wcześnie, jak pozwalają jego warunki wstępne.
 
 ## At a glance
 
-| ID   | Change ID                         | Outcome (user can …)                                                                                                               | Prerequisites            | PRD refs                                                                                   | Status   |
-| ---- | --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ------------------------ | ------------------------------------------------------------------------------------------ | -------- |
-| S-30 | it-test-isolation                 | wynik CI nie zależy od kolejności klas testów integracyjnych; test nie widzi danych zostawionych przez inny test                   | —                        | `verification-scope.md` „Regresja w CI”; run CI 41784416932                               | done |
-| S-31 | pr-env-scenarios-in-ci            | ręczne weryfikacje PR env z S-13, S-17, S-18, S-20, S-27 chodzą w CI jako scenariusze na pełnym API z atrapami źródeł i LLM         | S-30                     | `verification-scope.md` „Scenariusze API”, „done when”; NFR `prd.md:275`                  | done        |
-| S-32 | provider-refusal-breaker          | seria odmów dostawcy zatrzymuje przebieg, zanim zużyje próby pozostałych postów, i daje sygnał jak każdy `failed`                  | —                        | NFR `prd.md:275` (doprecyzowanie PRD v3); audyt §6 R-41; destylacja #3                     | done |
-| S-33 | restore-dead-posts                | admin przywraca zaznaczone martwe posty do oceny, a ich próby są zerowane                                                          | —                        | FR-034, FR-015; destylacja Q-18                                                            | done |
-| S-34 | dead-posts-daily-digest           | operator dostaje co noc w ntfy podsumowanie nocy (liczby i tokeny każdego źródła, martwe posty) zamiast alarmu przy każdym przebiegu z samym martwym postem; zdarzenia API idą przez ntfy, dzwonek bez zmian | —                        | NFR `prd.md:275` (doprecyzowanie PRD v3); destylacja #5, R-42, Q-14                        | done |
-| S-35 | per-source-failure-quality        | operator widzi udział nieudanych prób według klas błędu osobno dla każdego źródła i dostaje sygnał po przekroczeniu progu           | —                        | FR-033; destylacja #1, R-15                                                                | done |
-| S-36 | statement-language-quality        | operator widzi udział tez w innym języku niż post osobno dla każdego źródła, z sygnałem po przekroczeniu progu                     | S-35                     | FR-033; `contract-v2.md` §8 (Q-16); destylacja #1, D-14, R-38                              | done        |
-| S-37 | source-native-post-labels         | użytkownik widzi typ posta słowami jego źródła: „wpis”/„znalezisko” na Wykopie, „post”/„link” na Reddicie                          | —                        | FR-023 (doprecyzowanie Q-13); destylacja #4, D-12, R-45                                    | done     |
-| S-38 | post-store-loss-visible           | post odrzucony przy zapisie przez inne ograniczenie niż duplikat jest policzony i widoczny, a nie znika po cichu                   | —                        | FR-005, NFR `prd.md:275`; audyt §6 D-15; destylacja #2, D-15                               | done |
-| S-39 | derived-persistence-guards        | konwerter zapisujący inną wartość niż enum, złożony `CHECK` z literałem i nowy koniec przebiegu bez powiadomienia czerwienią CI     | —                        | NFR `prd.md:289`; audyt §1 R-17, X1, X2, §5 R-23; destylacja #6                            | done |
-| S-40 | derived-route-guards              | każda trasa `/api/admin/**` daje 403 zwykłemu użytkownikowi, a każda `/internal/**` 401 bez tokenu — bez ręcznej listy tras        | —                        | NFR `prd.md:293`, FR-014, FR-015; audyt §1 R-30                                            | done |
-| S-41 | api-contract-shapes-round-two     | każdy kształt odpowiedzi, który czyta SPA, ma plik kontraktu z wariantami `null`, a pole zawsze wysyłane przez API jest wymagane w TS | —                        | FR-006; audyt §2, X3; `verification-scope.md`                                              | done        |
-| S-42 | spa-rules-registry-round-two      | porównanie kodu błędu, limit rozmiaru strony i enumy spoza rejestru są pilnowane testem albo kompilatorem                          | —                        | FR-006; audyt §1 R-22, R-43, X5                                                            | done        |
-| S-43 | contract-bound-mocks              | atrapa API w SPA i atrapy narzędzi odpowiadają tak jak prawdziwe API, a rozjazd czerwieni test                                     | S-41                     | audyt §3, X4, „Materiał dla M-4” p. 4; `verification-scope.md` „Granice z M-3 i M-5”      | done |
-| S-44 | feed-regression-and-paging-bounds | feed ma testy regresji znanych ścieżek, a ogromny numer strony i NUL w linku dają 400 zamiast błędu serwera albo zawieszonego feedu | —                        | FR-006, FR-007, FR-011a; audyt §4, X6                                                      | done |
-| S-45 | core-mutation-testing             | wiadomo, które testy rdzenia łapią błędy: mutanty, które przeżyły, są zabite testem albo przyjęte z powodem                         | S-30, S-32, S-33, S-38   | `verification-scope.md` „Poprawność testów backendu”, „done when”                         | done |
+| ID   | Change ID                     | Outcome (user can …)                                                                                                     | Prerequisites | PRD refs                                   | Status   |
+| ---- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ------------- | ------------------------------------------ | -------- |
+| F-05 | e2e-harness                   | (foundation) testy w przeglądarce w repo i w CI na atrapie API ustawianej z testu; smoke obecnych przepływów            | —             | NFR `prd.md:328`                           | ready    |
+| F-06 | visual-regression             | (foundation) zrzuty porównawcze katalogu komponentów i widoków w obu motywach i przy 375 px oraz test dostępności w CI   | F-05          | NFR `prd.md:328` (doprecyzowanie v4)       | proposed |
+| S-46 | light-dark-theme-switch       | użytkownik przełącza motyw jasny i ciemny w nowej palecie, a wybór jest zapamiętany                                      | F-06          | FR-040                                     | proposed |
+| S-47 | app-shell-navigation          | użytkownik porusza się po aplikacji przez stałą nawigację w układzie paneli, bez nagłówka stawianego przez każdy widok   | S-46          | FR-007, FR-021, FR-030                     | proposed |
+| S-48 | shared-view-states            | użytkownik widzi w każdym widoku te same stany ładowania, pustej listy i błędu z ponowieniem                             | S-47          | FR-007, FR-009, NFR `prd.md:328`           | proposed |
+| S-49 | login-on-shared-foundation    | użytkownik loguje się i aktywuje konto na ekranach zbudowanych ze wspólnych komponentów i tokenów                        | S-46          | FR-026, FR-027, FR-028                     | proposed |
+| S-50 | admin-panel-components        | admin pracuje w panelu złożonym z komponentów, w nowym układzie                                                          | S-48          | FR-014, FR-015, FR-021, FR-022, FR-034     | proposed |
+| S-51 | stream-and-inspector          | użytkownik przegląda strumień wpisów i czyta ocenę wybranego wpisu w panelu inspektora                                   | S-48          | FR-006, FR-007, FR-009, FR-010, FR-011a    | proposed |
+| S-52 | investment-posts-by-default   | użytkownik widzi domyślnie tylko posty inwestycyjne, a przełącznik „pokaż wszystkie” przywraca resztę                    | S-51          | FR-007 (doprecyzowanie v4)                 | proposed |
+| S-53 | reader-quote-highlighting     | użytkownik czyta wpis z podświetlonymi fragmentami, na których oparto ocenę, i przechodzi do poprzedniego i następnego   | S-51          | FR-009 (doprecyzowanie v4)                 | proposed |
+| S-54 | post-list-sorting             | użytkownik sortuje listę wpisów po dacie, źródle i polach oceny                                                          | S-51          | FR-008, FR-011b                            | proposed |
+| S-55 | publication-date-filter       | użytkownik zawęża listę do dnia albo zakresu dat publikacji                                                              | S-51          | FR-035                                     | proposed |
+| S-56 | post-content-search           | użytkownik wyszukuje wpisy po słowach w tytule i treści                                                                  | S-51          | FR-036                                     | proposed |
+| S-57 | target-catalog                | użytkownik widzi katalog celów z liczbą wpisów i przechodzi do wpisów wybranego celu                                     | S-52          | FR-037, FR-011a (doprecyzowanie v4)        | proposed |
+| S-58 | target-card-stance-shares     | użytkownik widzi na karcie celu proporcje stanowisk autorów i wypowiedzi o tym celu                                      | S-57          | FR-038                                     | proposed |
+| S-59 | daily-overview                | użytkownik widzi przegląd dnia: liczby, cele dnia z proporcjami i najczęściej omawiane cele z najnowszymi wpisami        | S-55, S-58    | FR-039                                     | proposed |
+| S-60 | channel-as-target-quality     | operator widzi udział celów równych kanałowi posta per źródło i dostaje sygnał po przekroczeniu progu                    | S-50          | FR-033 (doprecyzowanie v4)                 | proposed |
 
 ## Streams
 
 Navigation aid — groups items that share a Prerequisites chain. Canonical ordering still lives in the dependency graph below; this table is the proposed reading order across parallel tracks.
 
-| Stream | Theme                               | Chain                                     | Note                                                                                                                    |
-| ------ | ----------------------------------- | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| A      | Weryfikacja w CI                    | `S-30` → `S-31` · `S-45`                  | Gwiazda przewodnia zaraz po stabilnym CI; `S-45` dołącza też po `S-32`, `S-33`, `S-38` ze strumienia B.                 |
-| B      | Przebieg nie gubi i nie milczy      | `S-32` · `S-33` · `S-34` · `S-38`         | Wymagania PRD v3 z nocy z Redditem i cicha utrata posta; niezależne, ale dotykają tych samych pakietów przebiegu.       |
-| C      | Ocena per źródło                    | `S-35` → `S-36` · `S-37`                  | FR-033 w dwóch krokach (klasy błędów, potem język tez) i słowa źródła przy typie posta.                                 |
-| D      | Strażnicy wyprowadzani automatycznie | `S-39` · `S-40`                          | Przy celu `quality` strażnik ma liczyć zbiór z kodu; eksperymenty X1 i X2 przeszły przez dzisiejsze ręczne listy.       |
-| E      | Kontrakt i atrapy                   | `S-41` → `S-43` · `S-42` · `S-44`         | Druga runda kontraktu SPA ↔ API; atrapa zgodna z kontraktem to podłoga pod testy E2E w M-5.                             |
+| Stream | Theme                    | Chain                                                      | Note                                                                                                                         |
+| ------ | ------------------------ | ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| A      | Siatka i fundament UI    | `F-05` → `F-06` → `S-46` → `S-47` → `S-48` → `S-50` · `S-49` | Przy celu `quality` testy działania i wyglądu idą przed przebudową; wspólne pliki (tokeny, komponenty, router) — fala sekwencyjna. |
+| B      | Widok wpisu              | `S-51` → `S-52` · `S-53` · `S-54` · `S-55` · `S-56`        | Gwiazda przewodnia zaraz po fundamencie; potem przekroje listy, które mogą iść równolegle.                                   |
+| C      | Wokół celu               | `S-57` → `S-58` → `S-59`                                   | Agregacja po tekście celu (FR-011a v4); dołącza do B przy `S-52` (domyślne ukrywanie) i `S-55` (dzień dla przeglądu).        |
+| D      | Jakość ocen              | `S-60`                                                     | Miara „kanał jako cel” chroni widoki C przy zmianie modelu; dołącza do A przy `S-50` (sekcja jakości w panelu admina).        |
 
 ## Baseline
 
-What's already in place in the codebase as of `2026-11-04` (`main` `244ef6c`; z audytu `post-m3-verification-audit` i roadmapy M-3, potwierdzone przez użytkownika).
+What's already in place in the codebase as of `2026-11-15` (`main` `ef56ddc`; z mapy projektu i audytu `post-m4-ui-readiness-audit`, potwierdzone przez użytkownika).
 Wycinki niżej zakładają te warstwy i ich nie budują od nowa.
 
-- **Frontend:** present — SPA Vue (feed z filtrem i etykietą pochodzenia, widok posta, `/admin`, strona przebiegu, dzwonek, aktywacja); 513 testów Vitest; kontrakt z API w `szczur-radar-web/src/contract/` (S-24); bez Playwrighta.
-- **Backend / API:** present — przebieg jako sekwencja kroków w Javie z izolacją źródeł (S-20), dwa źródła: Wykop i Reddit przez Arctic Shift (S-27); kontrakt oceny V2 egzekwowany kodem.
-- **Data:** present — Postgres, Flyway V1–V13 (`posts.channel` od V13); `ClosedSetsIT` z ręcznym rejestrem 24 kolumn.
-- **Auth:** present — Spring Session JDBC, role `user`/`admin`, deny-by-default z `AuthorizationCompletenessIT` (trasy publiczne wyliczane automatycznie, trasy admina z ręcznej listy 10 tras), token crona dla `/internal/**`.
-- **Deploy / infra:** present z luką — CI na darmowych runnerach GitHuba od 2026-10-24 (repo publiczne), pula `szczur-ci` jako rezerwa; luka: wynik testów integracyjnych zależy od kolejności klas (`PostRepositoryIT` po `MigrationsIT`, run 41784416932 na `main` 2026-11-04).
-- **Observability:** present z luką — alarmy healthchecks.io → Telegram, powiadomienia w aplikacji, „Dni bez danych”; luka: brak miary jakości ocen na produkcji (destylacja #1) i brak testów mutacyjnych.
+- **Frontend:** partial — SPA Vue 3 + TypeScript: feed z filtrem po celu i stanowisku, widok posta z oceną i surowymi danymi, `/admin`, strona przebiegu, dzwonek, logowanie i aktywacja; wspólne komponenty treści (karta posta, ocena, stanowisko, status, przycisk, filtr) i tokeny jednego motywu z `prefers-color-scheme`; brak warstwy układu (`App.vue` to sam `RouterView`), wspólnych stanów, katalogu celów i podświetlenia cytatów; `LoginView` poza listą `CLEANED`, `AdminView` (790 linii) z sekcjami wpisanymi inline.
+- **Backend / API:** present — feed `/api/posts` (strona, rozmiar, cel tekstowo, rodzaj celu, stanowisko), post z oceną i `/raw`, trasy admina; brak filtra daty publikacji, wyszukiwania w treści, katalogu i agregacji po celu.
+- **Data:** present — Postgres 18 + Flyway V1–V16; ocena w `assessments.output` (JSONB z celami, stanowiskami i tezami z cytatem); `posts.language` od V16.
+- **Auth:** present — Spring Session JDBC, role `user`/`admin`, deny-by-default z trasami wyliczanymi z mapowań (S-40), token crona dla `/internal/**`.
+- **Deploy / infra:** present z luką — CI na darmowych runnerach GitHuba z bramką wdrożeń, scenariuszami PR env (S-31) i PIT (S-45); luka: brak testów w przeglądarce i joba z przeglądarką.
+- **Observability:** present z luką — alarmy ntfy (API) i healthchecks.io → Telegram (crony), podsumowanie nocy, jakość ocen per źródło (S-35, S-36); luka: brak miary „kanał jako cel”.
+- **Weryfikacja:** present z luką — kontrakt SPA ↔ API strzeżony po obu stronach (S-41–S-43), atrapa `dev/mock-api.js` obsługuje wszystkie 20 tras czytanych przez SPA; luka: atrapa to skrypt `playwright-cli` z trybami wpisanymi w tekst, bez ustawiania z testu i bez resetu stanu.
 
 ## Foundations
 
-Brak — każda praca przekrojowa M-4 ma widoczny skutek dla użytkownika, operatora albo CI i jest wycinkiem. Plan testów (`/10x-test-plan`) nie jest fundamentem: zakres M-4 ustalają `verification-scope.md` i audyt (wpis w `## Parked`).
+### F-05: Testy w przeglądarce w CI na atrapie API
+
+- **Outcome:** (foundation) testy w przeglądarce leżą w repo i chodzą w CI przy każdym PR na atrapie API zgodnej z kontraktem, której tryby (sesja, rola, dane, pusto, błąd, ładowanie) ustawia test; smoke obejmuje obecne przepływy: logowanie i wylogowanie, feed z filtrem, widok posta, panel admina.
+- **Change ID:** e2e-harness
+- **PRD refs:** NFR `prd.md:328`
+- **Unlocks:** F-06; ścieżka weryfikacji „test w przeglądarce w CI” dla S-46–S-59 (każdy wycinek UI kończy się testem swojego przepływu); smoke obecnych widoków jako siatka regresji przebudowy w S-46–S-51.
+- **Prerequisites:** —
+- **Parallel with:** —
+- **Blockers:** —
+- **Unknowns:**
+  - Czy atrapa zostaje jednym skryptem z trybami podmienianymi przez test, czy staje się modułem z trybami jako parametrami i resetem stanu (S-43 świadomie odłożyło to do M-5)? — Owner: team (`/10x-plan`). Block: no.
+  - Brakujące warianty atrapy (wygaśnięcie sesji w trakcie pracy, błąd i ładowanie `/auth/me`, logowania i świeżości, osobne zawieszenie sekcji admina) — które dopisać w F-05, a które w wycinkach, które ich potrzebują? — Owner: team. Block: no.
+- **Risk:** pierwszy, bo bez niego przebudowa w S-46–S-51 nie ma czym sprawdzić, że obecne przepływy nadal działają; testy widoków w Vitest mockują API, więc przepięcia układu i routera mogą przez nie przejść.
+- **Status:** ready
+
+### F-06: Zrzuty porównawcze i test dostępności w CI
+
+- **Outcome:** (foundation) wygląd jest pilnowany zrzutami porównawczymi w CI — katalog komponentów we wszystkich stanach w obu motywach i przy 375 px oraz po jednym zrzucie każdego widoku z danymi w obu motywach, przy 375 px i na desktopie — a każdy z tych widoków przechodzi automatyczny test dostępności; zmiana wyglądu aktualizuje wzorce w tym samym PR.
+- **Change ID:** visual-regression
+- **PRD refs:** NFR `prd.md:328` (doprecyzowanie v4)
+- **Unlocks:** ścieżka weryfikacji „przegląd różnic obrazków w PR” zamiast ręcznych zrzutów dla S-46–S-59; S-46 (nowa paleta zmienia wszystkie wzorce raz, jako świadoma akceptacja).
+- **Prerequisites:** F-05
+- **Parallel with:** —
+- **Blockers:** —
+- **Unknowns:**
+  - Jak zapewnić identyczne renderowanie zrzutów lokalnie i w CI (kontener z przypiętą przeglądarką i czcionkami) i jaki próg różnicy? — Owner: team (`/10x-plan`). Block: no.
+  - Ile czasu CI na darmowych runnerach mogą zająć zrzuty w dwóch motywach i dwóch szerokościach? — Owner: user. Block: no.
+- **Risk:** wersja odchudzona z wyboru (decyzja 2026-11-15): stany widoków sprawdza F-05 funkcjonalnie, a zrzuty pilnują katalogu komponentów i jednego stanu widoku — przy kilkudziesięciu wzorcach zmienianych w każdym wycinku przebudowy łatwo o odruchowe zatwierdzanie.
+- **Status:** proposed
 
 ## Slices
 
-### S-30: Wynik CI nie zależy od kolejności testów
+### S-46: Motyw jasny i ciemny z przełącznikiem
 
-- **Outcome:** wynik CI nie zależy od kolejności, w jakiej uruchamiają się klasy testów integracyjnych: test sprawdza tylko dane, które sam zasiał, a test, który zapisuje dane poza transakcją, sprząta po sobie; kolejność, która dziś czerwieni `main`, jest sprawdzana wprost.
-- **Change ID:** it-test-isolation
-- **PRD refs:** `verification-scope.md` „Regresja w CI”; run CI 41784416932 (`main`, 2026-11-04: `PostRepositoryIT` zobaczył 6 postów zostawionych przez `MigrationsIT`)
-- **Prerequisites:** —
-- **Parallel with:** każdy wycinek poza S-31 i S-45 (zależą od S-30)
-- **Blockers:** —
-- **Unknowns:** —
-- **Risk:** pierwszy, bo do jego końca każdy merge może dać czerwony `main` bez błędu w kodzie (ponawiać run, nigdy nie omijać bramki); inne klasy z tym samym wzorcem (zapis poza transakcją, zapytanie po całej bazie) mogą się ujawnić dopiero przy innej kolejności.
-- **Status:** done
-
-### S-31: Ręczne weryfikacje PR env chodzą jako scenariusze w CI
-
-- **Outcome:** ręczne kroki weryfikacji PR env z wycinków S-13, S-17, S-18, S-20 i S-27 chodzą w CI jako scenariusze na pełnym API z Postgresem, z atrapami źródeł i LLM z prawdziwych payloadów; to, czego CI nie zobaczy, jest na krótkiej, nazwanej liście ręcznej.
-- **Change ID:** pr-env-scenarios-in-ci
-- **PRD refs:** `verification-scope.md` „Scenariusze API zamiast ręcznego klikania”, „Kandydat na done when”; NFR `prd.md:275`
-- **Prerequisites:** S-30
-- **Parallel with:** każdy wycinek poza S-30
+- **Outcome:** użytkownik przełącza motyw aplikacji między jasnym i ciemnym w nowej palecie pod układy paneli, wybór jest zapamiętany, a domyślnie obowiązuje ustawienie systemu; każda para tekstu spełnia kontrast co najmniej 4.5:1 w obu motywach.
+- **Change ID:** light-dark-theme-switch
+- **PRD refs:** FR-040
+- **Prerequisites:** F-06
+- **Parallel with:** —
 - **Blockers:** —
 - **Unknowns:**
-  - Które kroki z sekcji S-13, S-17, S-18, S-20 i S-27 w `deploy-plan.md` da się odtworzyć w CI, a które zostają na liście ręcznej (Telegram, deploy na Railway, prawdziwe API, harmonogram cronów)? — Owner: team (`/10x-plan`). Block: no.
-  - Ile czasu CI na darmowych runnerach mogą zająć scenariusze? — Owner: user. Block: no.
-- **Risk:** gwiazda przewodnia; scenariusze sprawdzają zachowanie przez API, więc łapią to, co strażnicy przepuścili (X1, X2), ale wydłużają job `backend` — kontrola czasu CI jest częścią wycinka.
-- **Status:** done
+  - Paleta, druga powierzchnia, rola podświetlenia cytatu, kolory stanowisk `neutral` i `mixed`, typografia i skala odstępów pod panele — kto i na czym zatwierdza wygląd (właściciel na zrzutach F-06)? — Owner: user. Block: no.
+- **Risk:** zmienia wszystkie wzorce F-06 naraz (zamierzone); tokeny są wspólne dla każdego widoku, więc idzie przed shellem i widokami, żeby nie przebudowywać ich drugi raz.
+- **Status:** proposed
 
-### S-32: Seria odmów dostawcy zatrzymuje przebieg
+### S-47: Stała nawigacja i układ paneli
 
-- **Outcome:** seria odmów dostawcy na kolejnych postach (np. moderacja albo odrzucane żądanie dla każdego posta) zatrzymuje przebieg, zanim zużyje próby pozostałych postów; przebieg kończy się `failed` i daje sygnał jak każdy `failed`, a posty, których nie zdążył ocenić, wracają bez straty próby.
-- **Change ID:** provider-refusal-breaker
-- **PRD refs:** NFR `prd.md:275` (doprecyzowanie PRD v3, „Wyłącznik serii odmów dostawcy”); audyt §6 R-41; destylacja #3, R-41, R-04, Q-18
-- **Prerequisites:** —
-- **Parallel with:** każdy wycinek poza S-45 (zależy od S-32)
+- **Outcome:** użytkownik porusza się po aplikacji przez stałą nawigację w jednym układzie z panelami (strumień, katalog celów, przegląd, panel admina dla admina), z datą aktualizacji danych per źródło, zamiast nagłówka stawianego osobno przez każdy widok; obecne widoki działają w nowym układzie.
+- **Change ID:** app-shell-navigation
+- **PRD refs:** FR-007, FR-021, FR-030
+- **Prerequisites:** S-46
+- **Parallel with:** S-49
+- **Blockers:** —
+- **Unknowns:** —
+- **Risk:** przepina router i nagłówek każdego widoku (dziś każdy widok renderuje własny nagłówek, a dzwonek trzyma stan w store z tego powodu); smoke F-05 i zrzuty F-06 łapią regresje przepięcia.
+- **Status:** proposed
+
+### S-48: Wspólne stany widoków
+
+- **Outcome:** użytkownik widzi w każdym widoku te same stany ładowania, pustej listy i błędu z ponowieniem, pokazane w katalogu komponentów we wszystkich wariantach; widoki przestają kopiować kontener strony i wzorzec stanów.
+- **Change ID:** shared-view-states
+- **PRD refs:** FR-007, FR-009, NFR `prd.md:328`
+- **Prerequisites:** S-47
+- **Parallel with:** S-49
+- **Blockers:** —
+- **Unknowns:** —
+- **Risk:** dziś ten wzorzec jest skopiowany w czterech widokach, a kontener strony w pięciu (audyt, sekcja 1); bez tego każdy nowy widok skopiowałby go po raz kolejny.
+- **Status:** proposed
+
+### S-49: Logowanie i aktywacja na wspólnym fundamencie
+
+- **Outcome:** użytkownik loguje się i aktywuje konto na ekranach zbudowanych ze wspólnych komponentów i tokenów w obu motywach; ekran logowania jest na liście plików wolnych od literałów stylu.
+- **Change ID:** login-on-shared-foundation
+- **PRD refs:** FR-026, FR-027, FR-028
+- **Prerequisites:** S-46
+- **Parallel with:** S-47, S-48, S-50, S-51
+- **Blockers:** —
+- **Unknowns:** —
+- **Risk:** mały i oddzielny od shellu (ekrany publiczne nie mają nawigacji); domyka zaległy dług `login-view-ui-hardening`, na który wskazuje komentarz w teście stylu.
+- **Status:** proposed
+
+### S-50: Panel admina z komponentów
+
+- **Outcome:** admin uruchamia przebieg, widzi dni bez danych, jakość ocen, ostatnie przebiegi oraz nieudane i martwe posty w nowym układzie, w sekcjach zbudowanych ze wspólnych komponentów zamiast wierszy wpisanych w widok; strona przebiegu korzysta z tych samych elementów.
+- **Change ID:** admin-panel-components
+- **PRD refs:** FR-014, FR-015, FR-021, FR-022, FR-034
+- **Prerequisites:** S-48
+- **Parallel with:** S-49, S-51, S-52–S-56
+- **Blockers:** —
+- **Unknowns:** —
+- **Risk:** największy widok (790 linii, w M-4 +261) i najwięcej stylu lokalnego; zrzuty F-06 i scenariusze admina w F-05 pilnują, że rozbicie nie zmienia działania.
+- **Status:** proposed
+
+### S-51: Strumień wpisów z inspektorem oceny
+
+- **Outcome:** użytkownik przegląda strumień wpisów (źródło, czas, tytuł, cele ze stanowiskiem), filtruje go po celu i stanowisku i czyta ocenę wybranego wpisu w panelu inspektora obok listy: cele ze stanowiskiem, tezy z cytatem, link do oryginału i surowe dane; zastępuje dzisiejszy feed i stronę posta.
+- **Change ID:** stream-and-inspector
+- **PRD refs:** FR-006, FR-007, FR-009, FR-010, FR-011a
+- **Prerequisites:** S-48
+- **Parallel with:** S-49, S-50
 - **Blockers:** —
 - **Unknowns:**
-  - Ile odmów z rzędu to seria i czy pojedyncza udana ocena ją zeruje, jak dziś zeruje licznik awarii? — Owner: user (`/10x-plan`). Block: no.
-- **Risk:** dziś seria jest cicha przez dwie noce, a w trzeciej posty są nieodwracalnie `dead` (`ConcurrentAssessmentDispatcher.java:298-306`); zmienia regułę dyspozytora, którą od S-09 i S-17 pilnują testy, więc stoi przed S-45.
-- **Status:** done
+  - Czy wybrany wpis ma własny adres (link do inspektora otwarty z zewnątrz, np. z powiadomienia), czy inspektor żyje tylko obok listy? — Owner: team (`/10x-plan`). Block: no.
+- **Risk:** gwiazda przewodnia; jedna etykieta stanowiska na cały wpis (makieta) jest sprzeczna z kontraktem bez globalnego sentymentu posta (`prd.md:132`), więc wiersz pokazuje stanowisko per cel.
+- **Status:** proposed
 
-### S-33: Admin przywraca martwe posty
+### S-52: Domyślnie tylko posty inwestycyjne
 
-- **Outcome:** admin zaznacza martwe posty na liście w `/admin` i przywraca je do oceny: post traci martwy stan, a jego próby oceny są zerowane, więc kolejny przebieg ocenia go od nowa.
-- **Change ID:** restore-dead-posts
-- **PRD refs:** FR-034, FR-015 (doprecyzowanie PRD v3, grupa (a)); `prd.md` § Access Control; destylacja Q-18, R-04
-- **Prerequisites:** —
-- **Parallel with:** każdy wycinek poza S-45 (zależy od S-33)
+- **Outcome:** użytkownik widzi w listach domyślnie tylko posty inwestycyjne, bez postów `not_investment_related` i wyniku odsiewu (wpis bez treści); przełącznik „pokaż wszystkie” przywraca resztę, a liczniki i proporcje liczą się tak samo.
+- **Change ID:** investment-posts-by-default
+- **PRD refs:** FR-007 (doprecyzowanie v4)
+- **Prerequisites:** S-51
+- **Parallel with:** S-53, S-54, S-55, S-56, S-50
 - **Blockers:** —
 - **Unknowns:** —
-- **Risk:** nowa trasa admina i nowe przejście stanu posta; obie mają już strażników (lista tras admina, `PostColumnsIT` dla przejść), więc wycinek dopisuje do nich wpisy, a S-40 później usunie ręczną listę.
-- **Status:** done
+- **Risk:** zmienia domyślną odpowiedź feedu, którą dziś pilnują testy integracyjne i kontrakt („Without a condition the feed is every assessed post”); przed katalogiem celów, żeby liczby w C od początku liczyły się po tej regule.
+- **Status:** proposed
 
-### S-34: Dzienne podsumowanie martwych postów zamiast alarmu co przebieg
+### S-53: Czytnik z podświetlonymi cytatami
 
-- **Outcome:** przebieg, którego jedynym powodem „wymaga uwagi” jest martwy post, nie daje już operatorowi wiadomości `RUN_NEEDS_ATTENTION` (martwy post obok innego powodu nadal ją daje); zamiast tego operator dostaje co noc, także przy 0 martwych, podsumowanie nocy: linia nocy (zakres, status każdego przebiegu, błędy techniczne, pominięte), linia na każde źródło (pobrane, pominięte, nowe, resztki, ocenione, nieudane, martwe, tokeny wejścia/cache/wyjścia — bez kosztu w pieniądzu) i martwe posty z przebiegów admina od poprzedniej nocy. Wszystkie zdarzenia API (`RUN_NEEDS_ATTENTION`, awarie ścieżek sygnału, `send-test-alert`, podsumowanie `NIGHT_SUMMARY`) przychodzą przez ntfy (`NTFY_URL`, opcjonalny `NTFY_TOKEN`); healthchecks.io → Telegram zostaje dla cronów i `deploy-health`, check `api-events` znika. Dzwonek i strona przebiegu pokazują martwe posty bez zmian.
-- **Change ID:** dead-posts-daily-digest
-- **PRD refs:** NFR `prd.md:275` (doprecyzowanie PRD v3, „Martwe posty bez alarmu na każdy przebieg”; doprecyzowanie S-34 z 2026-11-09); destylacja #5, R-42, D-13, Q-14
-- **Prerequisites:** —
-- **Parallel with:** każdy wycinek poza S-45
+- **Outcome:** użytkownik czyta wpis z podświetlonymi w treści fragmentami, na których oparto ocenę (anchory celów i cytaty tez), może podświetlenie wyłączyć i przechodzi do poprzedniego i następnego wpisu bieżącej listy.
+- **Change ID:** reader-quote-highlighting
+- **PRD refs:** FR-009 (doprecyzowanie v4)
+- **Prerequisites:** S-51
+- **Parallel with:** S-52, S-54, S-55, S-56, S-50
 - **Blockers:** —
 - **Unknowns:**
-  - Kto i kiedy wysyła podsumowanie (cron, API po nocnym przebiegu, healthchecks.io) i czy dzwonek w aplikacji dalej pokazuje martwe posty? — Owner: user (`/10x-plan`; PRD v3 zostawia to planowi). Block: no. **Rozstrzygnięte (plan 2026-11-08):** cron `pipeline-trigger` po swoich przebiegach (także po `failed`/`interrupted` i po `TRIGGER_RUN_TIMEOUT`) woła `POST /internal/pipeline-runs/nightly-summary`, API składa podsumowanie i samo wysyła je przez ntfy (API nie dostaje zegara, więc dalej śpi); dzwonek bez zmian — martwy post dalej „wymaga uwagi”, różni się tylko kanał.
-- **Decision (właściciel, 2026-11-08/09):** rozdzielić role kanałów — healthchecks.io obserwuje stan (crony, deploy-health), a ntfy powiadamia: **wszystkie** zdarzenia API przechodzą na ntfy, nie tylko podsumowanie; na produkcji z tokenem konta ntfy.sh (`NTFY_TOKEN`), żeby limity liczyły się per konto, nie per współdzielone IP Railway; podsumowanie zawsze (także przy 0 martwych) i z samymi tokenami, bez kosztu w $.
-- **Risk:** zmienia regułę „wymaga uwagi” wspólną dla dzwonka, strony przebiegu i alarmu (S-22); reguła ma zostać jedna, więc różnica dotyczy tylko kanału, nie powodu.
-- **Status:** done
+  - Które wystąpienie podświetlić, gdy cytat powtarza się w treści, i jak pokazać nachodzące na siebie anchor i cytat? Cytat nie ma pozycji, tylko pole i tekst (audyt, sekcja 2). — Owner: team (`/10x-plan`). Block: no.
+- **Risk:** zapisany tytuł i treść to dokładnie wejście modelu, więc podświetlenie nie wymaga nowych danych; ryzyko leży w mapowaniu pozycji po normalizacji białych znaków (`contract-v2.md` §10) z powrotem na tekst.
+- **Status:** proposed
 
-### S-35: Jakość ocen per źródło — nieudane próby według klas
+### S-54: Sortowanie listy
 
-- **Outcome:** operator widzi osobno dla każdego źródła udział nieudanych prób oceny według klas błędu, liczony z danych produkcyjnych, a przekroczenie progu daje mu sygnał bez czytania logów.
-- **Change ID:** per-source-failure-quality
-- **PRD refs:** FR-033 (nieudane próby według klas); `contract-v2.md` §12 (znaczenie klas błędów); destylacja #1, R-15
-- **Prerequisites:** —
-- **Parallel with:** każdy wycinek poza S-36 (zależy od S-35)
+- **Outcome:** użytkownik sortuje listę wpisów po dacie i źródle oraz po wybranych polach oceny; domyślnym porządkiem zostaje chronologia.
+- **Change ID:** post-list-sorting
+- **PRD refs:** FR-008, FR-011b
+- **Prerequisites:** S-51
+- **Parallel with:** S-52, S-53, S-55, S-56, S-50
 - **Blockers:** —
 - **Unknowns:**
-  - Jakie progi i w jakim oknie (np. ostatnie 7 nocy)? Punkt odniesienia: S-28 zmierzył 17,3 % nieudanych prób na Reddicie wobec 2,3 % na Wykopie, a noce z #121 dały 16,6 % na pierwszej próbie. — Owner: user. Block: no (rozstrzyga wywiad `/10x-plan`).
-- **Risk:** przejmuje część wpisu Parked „Ochrona przed dryfem modelu” (alarm na rosnący udział klas błędu); próg zbyt niski da alarm co noc, jak martwe posty przed S-34.
-- **Status:** done
+  - Po których polach oceny sortować (np. liczba celów, liczba tez, trafność), skoro kontrakt nie ma miary „ważności” (FR-007, Socrates)? — Owner: user. Block: no.
+- **Risk:** jedyny nice-to-have w M-5 (wybór właściciela); sortowanie po polach JSONB oceny może wymagać innego zapytania niż dzisiejsza stała kolejność.
+- **Status:** proposed
 
-### S-36: Jakość ocen per źródło — tezy w innym języku niż post
+### S-55: Filtr po dacie publikacji
 
-- **Outcome:** operator widzi osobno dla każdego źródła udział tez (`statement`) w innym języku niż post, a przekroczenie progu daje sygnał tym samym kanałem co S-35.
-- **Change ID:** statement-language-quality
-- **PRD refs:** FR-033 (tezy w innym języku niż post); `contract-v2.md` §8 (doprecyzowanie Q-16: reguła bez wyjątków, pilnowana pomiarem, nie walidatorem); destylacja #1, D-14, R-38
-- **Prerequisites:** S-35
-- **Parallel with:** każdy wycinek poza S-35
+- **Outcome:** użytkownik zawęża listę do dnia albo zakresu dat publikacji (kalendarz warszawski), także razem z pozostałymi filtrami.
+- **Change ID:** publication-date-filter
+- **PRD refs:** FR-035
+- **Prerequisites:** S-51
+- **Parallel with:** S-52, S-53, S-54, S-56, S-50
+- **Blockers:** —
+- **Unknowns:** —
+- **Risk:** nowy parametr w kontrakcie listy po obu stronach (plik kontraktu, typ TS, atrapa); przegląd dnia (S-59) stoi na nim.
+- **Status:** proposed
+
+### S-56: Wyszukiwanie w treści
+
+- **Outcome:** użytkownik wyszukuje wpisy po słowach w tytule i treści, obok filtra po celu.
+- **Change ID:** post-content-search
+- **PRD refs:** FR-036
+- **Prerequisites:** S-51
+- **Parallel with:** S-52, S-53, S-54, S-55, S-50
 - **Blockers:** —
 - **Unknowns:**
-  - Skąd wiadomo, w jakim języku jest post i teza: pole w wyjściu modelu (nowa `PROMPT_VERSION`, ścieżka §16 kontraktu) czy wykrywanie w backendzie bez LLM; i czy przy okazji powstaje `posts.language` (wpis w `## Parked`)? — Owner: user + właściciel kontraktu. Block: no (rozstrzyga `/10x-plan`).
-  - Jaki próg? S-28 zmierzył 22,1 % tez w innym języku niż post na Reddicie. — Owner: user. Block: no.
-- **Risk:** wybór wykrywania języka może zmienić prompt albo schemat, więc stoi po S-35, który ustala kanał sygnału i okno pomiaru.
-- **Status:** done
+  - Dopasowanie „zawiera” jak dziś dla celu czy wyszukiwanie pełnotekstowe; polskie znaki bez `unaccent` („zabka” nie znajduje „ŻABKA”, audyt, sekcja 2)? — Owner: team (`/10x-plan`). Block: no.
+- **Risk:** pełne skanowanie treści przy rosnącej bazie (wpis Parked o wydajności filtra feedu); dziś ~10 tys. postów.
+- **Status:** proposed
 
-### S-37: Typ posta słowami jego źródła
+### S-57: Katalog celów
 
-- **Outcome:** użytkownik widzi przy poście Reddita „post” albo „link”, a przy poście Wykopu „wpis” albo „znalezisko” — na karcie w feedzie i na stronie szczegółów; słowa Wykopu nie pojawiają się przy postach Reddita.
-- **Change ID:** source-native-post-labels
-- **PRD refs:** FR-023 (doprecyzowanie PRD v3, decyzja Q-13); destylacja #4, D-12, R-45, B-11
-- **Prerequisites:** —
-- **Parallel with:** każdy wycinek
-- **Blockers:** —
-- **Unknowns:** —
-- **Risk:** mały wycinek SPA; słowa zależą od źródła, więc nie mieszczą się w płaskim `labels` — tabela źródło × typ (`ITEM_TYPE_WORDS`) z własnym testem w `rules.test.ts`; `rules.json` i API bez zmian.
-- **Status:** done
-
-### S-38: Post odrzucony przy zapisie nie znika po cichu
-
-- **Outcome:** post, którego zapis odrzuca inne ograniczenie bazy niż klucz unikalny (np. `CHECK` albo `NOT NULL`), jest policzony w przebiegu (pominięty albo błąd) i daje powód „wymaga uwagi”; dla każdego przebiegu pobrane = nowe posty + duplikaty + pominięte.
-- **Change ID:** post-store-loss-visible
-- **PRD refs:** FR-005, NFR `prd.md:275`; audyt §6 D-15; destylacja #2, D-15, R-06, R-01
-- **Prerequisites:** —
-- **Parallel with:** każdy wycinek poza S-45 (zależy od S-38)
-- **Blockers:** —
-- **Unknowns:** —
-- **Risk:** `PostStore.java:68-79` połyka dziś każde naruszenie jako „zapisany przez inny przebieg”, a `PostStoreTest:84-92` to utrwala; realna droga na dzisiejszych danych jest mało prawdopodobna, ryzyko leży w przyszłych ograniczeniach i nowych źródłach.
-- **Status:** done
-
-### S-39: Strażnicy zapisu i końca przebiegu liczą zbiory z kodu
-
-- **Outcome:** CI czerwienieje, gdy konwerter enuma zapisuje inną wartość, niż dopuszcza `CHECK`, gdy złożony `CHECK` ma literał spoza enuma i gdy nowa ścieżka kończąca przebieg nie wywołuje powiadomienia (R-23).
-- **Change ID:** derived-persistence-guards
-- **PRD refs:** NFR `prd.md:289` (rejestracja źródła w zbiorach `CHECK`); audyt §1 R-17, eksperymenty X1, X2; audyt §5 R-23; destylacja #6, R-17, R-23
-- **Prerequisites:** —
-- **Parallel with:** każdy wycinek
-- **Blockers:** —
-- **Unknowns:** —
-- **Risk:** X1 i X2 przeszły przez `ClosedSetsIT` i złapały je tylko testy zachowania; strażnik R-23 ma wzór w `PostColumnsIT:178-192`. Strażnik zbyt ścisły zablokuje uprawnione zmiany, więc wycinek nazywa wyjątki jawnie.
-- **Status:** done
-
-### S-40: Strażnik tras admina i `/internal` bez ręcznej listy
-
-- **Outcome:** każda zmapowana trasa `/api/admin/**` daje 403 zalogowanemu zwykłemu użytkownikowi, a każda trasa `/internal/**` daje 401 bez tokenu crona; zbiory tras są wyliczane z mapowań, a nie z ręcznej listy.
-- **Change ID:** derived-route-guards
-- **PRD refs:** NFR `prd.md:293` (kompletny zestaw testów autoryzacji), FR-014, FR-015; audyt §1 R-30
-- **Prerequisites:** —
-- **Parallel with:** każdy wycinek
-- **Blockers:** —
-- **Unknowns:** —
-- **Risk:** dziś 403 sprawdza ręczna lista 10 tras, a `/internal/**` tylko dwa zakodowane adresy; nowa trasa admina z S-33 jest pierwszą, która by tę lukę pokazała.
-- **Status:** done
-
-### S-41: Kontrakt SPA ↔ API, druga runda — kształty
-
-- **Outcome:** każdy kształt odpowiedzi, który czyta SPA (konto, aktywacja, powiadomienia z `run: null`, wynik źródła, dni bez danych, koperty stron), ma plik kontraktu sprawdzany po obu stronach, warianty `null` są w kontrakcie, a pole, które API zawsze wysyła, jest wymagane w typie TS.
-- **Change ID:** api-contract-shapes-round-two
-- **PRD refs:** FR-006; audyt §2 (tabela kształtów bez powiązania z TS), eksperyment X3; `verification-scope.md`
-- **Prerequisites:** —
-- **Parallel with:** każdy wycinek poza S-43 (zależy od S-41)
-- **Blockers:** —
-- **Unknowns:** —
-- **Risk:** X3 (usunięcie `attentionReasons` z pliku i próbki) przeszło przez 513 testów i `vue-tsc`, bo pole jest opcjonalne w TS; wycinek zmienia typy SPA w wielu plikach naraz.
-- **Status:** done
-
-### S-42: Rejestr reguł SPA, druga runda
-
-- **Outcome:** porównanie kodu błędu w SPA (`err.detail === '<kod>'`) jest pilnowane kompilatorem albo skanem, limit rozmiaru strony i enumy dziś spoza `rules.json` są w rejestrze, a SPA nie liczy sama warunku powodu „wymaga uwagi”.
-- **Change ID:** spa-rules-registry-round-two
-- **PRD refs:** FR-006; audyt §1 R-22 (kopia warunku `skipped` w `runs.ts`), R-43 (kopie limitu strony, enumy spoza rejestru), eksperyment X5
-- **Prerequisites:** —
-- **Parallel with:** każdy wycinek
-- **Blockers:** —
-- **Unknowns:** —
-- **Risk:** X5 przeszedł przez skan kodów błędów i `vue-tsc`; typy SPA sprawdza w CI tylko budowa obrazu web, co wycinek bierze pod uwagę przy wyborze miejsca strażnika.
-- **Status:** done
-
-### S-43: Atrapy odpowiadają jak prawdziwe API
-
-- **Outcome:** `dev/mock-api.js` odpowiada z plików kontraktu albo test porównuje jego odpowiedzi z kontraktem (dziś 7 rozbieżności, m.in. brak Reddita, brak logowania, start przebiegu zawsze 409), a atrapy narzędzi (`pipeline-trigger`, stuby `deploy-gate`) czytają statusy i kształty z rejestru.
-- **Change ID:** contract-bound-mocks
-- **PRD refs:** audyt §3, eksperyment X4, „Materiał dla M-4” p. 4; `verification-scope.md` „Granice z M-3 i M-5” (atrapa jako podłoga pod testy E2E)
-- **Prerequisites:** S-41
-- **Parallel with:** każdy wycinek poza S-41
-- **Blockers:** —
-- **Unknowns:** —
-- **Risk:** M-5 postawi testy E2E na tej atrapie (decyzja 2026-11-04: cały Playwright w M-5), więc bez tego wycinka E2E sprawdzałyby atrapę, nie API.
-- **Status:** done
-
-### S-44: Feed z testami regresji i granicą numeru strony
-
-- **Outcome:** feed ma testy regresji znanych ścieżek (remisy daty z filtrem, `kind` i `direction` na jednym celu, najnowsza ocena `ok` przy późniejszej `failed`, strona za końcem, stanowisko ostrożne), a ogromny numer strony na listach postów, nieudanych postów i przebiegów oraz NUL w linku feedu dają 400 zamiast błędu serwera albo zawieszonego feedu.
-- **Change ID:** feed-regression-and-paging-bounds
-- **PRD refs:** FR-006, FR-007, FR-011a; audyt §4, eksperyment X6
-- **Prerequisites:** —
-- **Parallel with:** każdy wycinek
-- **Blockers:** —
-- **Unknowns:** —
-- **Risk:** X6 to potwierdzony defekt (`Page offset exceeds Integer.MAX_VALUE` jako nieobsłużony wyjątek); ta sama wada w `FailedPostController` i `PipelineRunController` nie była uruchamiana, więc wycinek ją najpierw sprawdza.
-- **Status:** done
-
-### S-45: Testy mutacyjne rdzenia
-
-- **Outcome:** testy mutacyjne (PIT) mierzą rdzeń — przebieg i warunkowe zapisy stanu, walidator kontraktu V2, rozliczanie prób oceny — a każdy mutant, który przeżył, jest zabity testem albo przyjęty z zapisanym powodem; pomiar da się powtórzyć w CI.
-- **Change ID:** core-mutation-testing
-- **PRD refs:** `verification-scope.md` „Poprawność testów backendu”, „Kandydat na done when”
-- **Prerequisites:** S-30, S-32, S-33, S-38
-- **Parallel with:** S-31, S-34, S-35, S-36, S-37, S-39, S-40, S-41, S-42, S-43, S-44
+- **Outcome:** użytkownik widzi katalog celów z postów z wybranego okresu z liczbą wpisów o każdym celu, filtruje go po nazwie i przechodzi do wpisów wybranego celu; cele są grupowane po znormalizowanym tekście `anchor`, bez rozpoznawania spółek.
+- **Change ID:** target-catalog
+- **PRD refs:** FR-037, FR-011a (doprecyzowanie v4)
+- **Prerequisites:** S-52
+- **Parallel with:** S-53, S-54, S-55, S-56, S-50
 - **Blockers:** —
 - **Unknowns:**
-  - Czy PIT chodzi przy każdym PR, czy tylko na żądanie albo na `main` (czas CI; `ci.yml` jest jedynym workflow i nie ma filtrów ścieżek)? — Owner: user (`/10x-plan`). Block: no.
-- **Risk:** ostatni, bo S-32, S-33 i S-38 zmieniają rdzeń, który mierzy; zmierzony wcześniej dałby wynik do powtórki. Testy integracyjne (Testcontainers) są wolne pod PIT, więc zakres pomiaru wybiera plan.
-- **Status:** done
+  - Jaki jest domyślny okres katalogu (dzień, 7 dni, wszystko) i od ilu wpisów cel trafia do katalogu? — Owner: user. Block: no.
+- **Risk:** odmiany („Orlen”, „Orlenu”, „#orlen”) zostają osobnymi pozycjami z wyboru (agregacja po tekście, Non-Goals `prd.md:369`); cel równy kanałowi posta zanieczyściłby katalog przy zmianie modelu (S-60).
+- **Status:** proposed
+
+### S-58: Karta celu z proporcjami stanowisk
+
+- **Outcome:** użytkownik widzi na karcie celu proporcje stanowisk autorów (wzrostowe, spadkowe, pozostałe) liczone ze stanowisk wobec tego celu w postach z wybranego okresu, jako migawkę bez trendu, oraz wypowiedzi o tym celu ze źródłem, czasem i stanowiskiem.
+- **Change ID:** target-card-stance-shares
+- **PRD refs:** FR-038
+- **Prerequisites:** S-57
+- **Parallel with:** S-53, S-54, S-55, S-56, S-50
+- **Blockers:** —
+- **Unknowns:** —
+- **Risk:** proporcje liczy API, nie SPA (dziś SPA musiałoby przejść wszystkie strony po 100 postów i powtórzyć dopasowanie tekstu); „teza z wypowiedzi” z makiety nie jest wybierana automatycznie (Non-Goals).
+- **Status:** proposed
+
+### S-59: Przegląd dnia
+
+- **Outcome:** użytkownik widzi przegląd wybranego dnia: liczbę wpisów, liczbę celów ze stanowiskiem, źródła danych, cele dnia z proporcjami stanowisk oraz najczęściej omawiane cele z najnowszymi wpisami o nich; wszystkie wybory są jawnie liczbowe.
+- **Change ID:** daily-overview
+- **PRD refs:** FR-039
+- **Prerequisites:** S-55, S-58
+- **Parallel with:** S-53, S-54, S-56, S-60
+- **Blockers:** —
+- **Unknowns:** —
+- **Risk:** zamyka M-5, bo składa się z filtra dnia (S-55) i proporcji (S-58); „Warto przeczytać” i „Wątek dnia” z makiety dostają kryteria liczbowe, więc nie wolno im przemycić oceny wartości (`prd.md:311`).
+- **Status:** proposed
+
+### S-60: Miara „kanał jako cel”
+
+- **Outcome:** operator widzi osobno dla każdego źródła udział celów, których anchor równa się kanałowi posta, w oknie 7 dni w podsumowaniu nocy i w `/admin`, i dostaje sygnał przy przejściu progu, tym samym kanałem co pozostałe miary jakości.
+- **Change ID:** channel-as-target-quality
+- **PRD refs:** FR-033 (doprecyzowanie v4)
+- **Prerequisites:** S-50
+- **Parallel with:** S-51–S-59
+- **Blockers:** —
+- **Unknowns:**
+  - Jakie progi? Na nagraniach z promptem v2.5 model produkcyjny ma 0 takich celów na 674, tańsze modele 6 (audyt, sekcja 4); na produkcji nikt tego nie mierzył. — Owner: user (`/10x-plan`). Block: no.
+- **Risk:** reguła kontraktu `contract-v2.md` §6.4 jest dziś przestrzegana, ale strzeże jej tylko prompt; miara chroni widoki po celu przy zmianie modelu i dopisuje trzecią linię do podsumowania nocy (`NightSummary`, strefa „watch” mapy projektu).
+- **Status:** proposed
 
 ## Backlog Handoff
 
-| Roadmap ID | Change ID                         | Suggested issue title                                                     | Ready for `/10x-plan` | Notes                                                        |
-| ---------- | --------------------------------- | ------------------------------------------------------------------------- | --------------------- | ------------------------------------------------------------ |
-| S-30       | it-test-isolation                 | S-30: wynik CI nie zależy od kolejności testów integracyjnych             | yes                   | Run `/10x-plan it-test-isolation`; pierwszy (decyzja 2026-11-04) |
-| S-31       | pr-env-scenarios-in-ci            | S-31: ręczne weryfikacje PR env jako scenariusze w CI (gwiazda przewodnia M-4) | no                | Po S-30                                                      |
-| S-32       | provider-refusal-breaker          | S-32: seria odmów dostawcy zatrzymuje przebieg                            | yes                   | Run `/10x-plan provider-refusal-breaker`                     |
-| S-33       | restore-dead-posts                | S-33: admin przywraca martwe posty                                        | yes                   | Run `/10x-plan restore-dead-posts`                           |
-| S-34       | dead-posts-daily-digest           | S-34: dzienne podsumowanie martwych postów zamiast alarmu co przebieg     | yes                   | Run `/10x-plan dead-posts-daily-digest`                      |
-| S-35       | per-source-failure-quality        | S-35: jakość ocen per źródło — nieudane próby według klas                 | yes                   | Run `/10x-plan per-source-failure-quality`                   |
-| S-36       | statement-language-quality        | S-36: jakość ocen per źródło — tezy w innym języku niż post               | no                    | Po S-35                                                      |
-| S-37       | source-native-post-labels         | S-37: typ posta słowami jego źródła                                       | yes                   | Run `/10x-plan source-native-post-labels`                    |
-| S-38       | post-store-loss-visible           | S-38: post odrzucony przy zapisie nie znika po cichu                      | yes                   | Run `/10x-plan post-store-loss-visible`                      |
-| S-39       | derived-persistence-guards        | S-39: strażnicy zapisu i końca przebiegu liczą zbiory z kodu              | yes                   | Run `/10x-plan derived-persistence-guards`                   |
-| S-40       | derived-route-guards              | S-40: strażnik tras admina i `/internal` bez ręcznej listy                | yes                   | Run `/10x-plan derived-route-guards`                         |
-| S-41       | api-contract-shapes-round-two     | S-41: kontrakt SPA ↔ API, druga runda — kształty                          | yes                   | Run `/10x-plan api-contract-shapes-round-two`                |
-| S-42       | spa-rules-registry-round-two      | S-42: rejestr reguł SPA, druga runda                                      | yes                   | Run `/10x-plan spa-rules-registry-round-two`                 |
-| S-43       | contract-bound-mocks              | S-43: atrapy odpowiadają jak prawdziwe API                                | no                    | Po S-41                                                      |
-| S-44       | feed-regression-and-paging-bounds | S-44: feed z testami regresji i granicą numeru strony                     | yes                   | Run `/10x-plan feed-regression-and-paging-bounds`            |
-| S-45       | core-mutation-testing             | S-45: testy mutacyjne rdzenia                                             | no                    | Po S-30, S-32, S-33, S-38                                    |
+| Roadmap ID | Change ID                    | Suggested issue title                                                           | Ready for `/10x-plan` | Notes                          |
+| ---------- | ---------------------------- | ------------------------------------------------------------------------------- | --------------------- | ------------------------------ |
+| F-05       | e2e-harness                  | F-05: testy w przeglądarce w CI na atrapie API                                  | yes                   | Run `/10x-plan e2e-harness`    |
+| F-06       | visual-regression            | F-06: zrzuty porównawcze i test dostępności w CI                                | no                    | Po F-05                        |
+| S-46       | light-dark-theme-switch      | S-46: motyw jasny i ciemny z przełącznikiem                                     | no                    | Po F-06                        |
+| S-47       | app-shell-navigation         | S-47: stała nawigacja i układ paneli                                            | no                    | Po S-46                        |
+| S-48       | shared-view-states           | S-48: wspólne stany widoków                                                     | no                    | Po S-47                        |
+| S-49       | login-on-shared-foundation   | S-49: logowanie i aktywacja na wspólnym fundamencie                             | no                    | Po S-46                        |
+| S-50       | admin-panel-components       | S-50: panel admina z komponentów                                                | no                    | Po S-48                        |
+| S-51       | stream-and-inspector         | S-51: strumień wpisów z inspektorem oceny (gwiazda przewodnia M-5)              | no                    | Po S-48                        |
+| S-52       | investment-posts-by-default  | S-52: domyślnie tylko posty inwestycyjne                                        | no                    | Po S-51                        |
+| S-53       | reader-quote-highlighting    | S-53: czytnik z podświetlonymi cytatami                                         | no                    | Po S-51                        |
+| S-54       | post-list-sorting            | S-54: sortowanie listy                                                          | no                    | Po S-51                        |
+| S-55       | publication-date-filter      | S-55: filtr po dacie publikacji                                                 | no                    | Po S-51                        |
+| S-56       | post-content-search          | S-56: wyszukiwanie w treści                                                     | no                    | Po S-51                        |
+| S-57       | target-catalog               | S-57: katalog celów                                                             | no                    | Po S-52                        |
+| S-58       | target-card-stance-shares    | S-58: karta celu z proporcjami stanowisk                                        | no                    | Po S-57                        |
+| S-59       | daily-overview               | S-59: przegląd dnia                                                             | no                    | Po S-55, S-58                  |
+| S-60       | channel-as-target-quality    | S-60: miara „kanał jako cel”                                                    | no                    | Po S-50                        |
 
 ## Open Roadmap Questions
 
-1. **Weryfikacja produkcji z M-1:** lokalizacja bazy dla filtra S-04 (runbook z issue #17, krok 2: `C`/`POSIX` po cichu psuje `KĘTY`→`Kęty`) i pierwsza noc S-06 (runbook z issue #19). Owner: operator. Block: — (przeniesione z M-2; wynik `C`/`POSIX` dałby nowy wycinek).
+1. **Weryfikacja produkcji z M-1:** lokalizacja bazy dla filtra S-04 (runbook z issue #17, krok 2: `C`/`POSIX` po cichu psuje `KĘTY`→`Kęty`) i pierwsza noc S-06 (runbook z issue #19). Owner: operator. Block: — (przeniesione z M-2; wynik `C`/`POSIX` dałby nowy wycinek; dotyczy też dopasowania tekstu w S-56 i S-57).
 2. **Ustalenia z żywego Railway** (audyt M-2, Open Questions 2–7): czy redeploy po `config apply` zmiany, która deployuje, czeka na CI (S-21); czy reguła „deployment crashed” obejmuje crash loop API; okno SIGTERM→SIGKILL; przyczyna przebiegu „trwającego” 22 h z 2026-10-09. Owner: operator. Block: —. Rozstrzygnięte przez audyt `post-m2-audit` (P2): merge samej dokumentacji daje `SKIPPED` na wszystkich usługach; apply `source.checkSuites` nie wywołuje żadnego deploymentu; deployment API z czerwonym CI jest pomijany przez Wait for CI.
 3. **Kanał i próg dla FR-025 (powiadomienia o obiecującym trendzie)** — nie ustalono, czym jest „obiecujący trend” liczbowo ani gdzie ma trafiać powiadomienie. Owner: użytkownik. Block: — (FR-025 odroczone).
 4. **Budżet kosztów LLM na przebieg** — guardrail PRD każe minimalizować koszt zapytań, ale nie podaje pułapu (na dzień ani na post); twardy pułap to $10/mies. na kluczu OpenRouter produkcji. Drugie źródło zwiększy liczbę ocen. Owner: użytkownik. Rozstrzygnięte 2026-10-31 w S-28: limit $10/mies. zostaje, bez osobnego pułapu; koszt łączny z Wykopem to $3,21/mies. na `flex` (górna granica $4,67), Reddit włączany.
-5. **PRD ma status `draft` i ostatnią zmianę 2026-10-13** — nowsze decyzje żyją w blokach „Doprecyzowanie” i w roadmapie (destylacja, sekcja „Stale documents”: FR-029 krótka sesja vs 30 dni, „zakres dat/godzin”, FR-022 warunkowe). Czy odświeżyć PRD do v3 przed planowaniem Reddita? Owner: użytkownik. Block: — (destylacja D-02, D-03, D-10). Rozstrzygnięte 2026-11-04: PRD v3 (`prd.md` `version: 3`) zamyka D-02, D-03, D-10 i D-16 oraz zapisuje decyzje Q-13, Q-14, Q-16 i Q-18.
-6. **Pytania z destylacji domeny bez odpowiedzi** (`domain-distillation.md`, sekcja Questions): Q-08 (kto woła `/api/admin/llm/check`), Q-11 (usuwanie lub deaktywacja konta), Q-12 (`content_hash`, `slug`, `tags` bez czytelnika), Q-15 (czy feed domyślnie pokazuje posty `not_investment_related`; do M-5). Owner: właściciel produktu. Block: — (żaden wycinek M-4 od nich nie zależy).
+5. **PRD ma status `draft` i ostatnią zmianę 2026-10-13** — nowsze decyzje żyją w blokach „Doprecyzowanie” i w roadmapie (destylacja, sekcja „Stale documents”: FR-029 krótka sesja vs 30 dni, „zakres dat/godzin”, FR-022 warunkowe). Czy odświeżyć PRD do v3 przed planowaniem Reddita? Owner: użytkownik. Block: — (destylacja D-02, D-03, D-10). Rozstrzygnięte 2026-11-04: PRD v3 (`prd.md` `version: 3`) zamyka D-02, D-03, D-10 i D-16 oraz zapisuje decyzje Q-13, Q-14, Q-16 i Q-18; PRD v4 z 2026-11-15 zapisuje decyzje przed M-5.
+6. **Pytania z destylacji domeny bez odpowiedzi** (`domain-distillation.md`, sekcja Questions): Q-08 (kto woła `/api/admin/llm/check`), Q-11 (usuwanie lub deaktywacja konta i sprzątanie wygasłych linków), Q-12 (`content_hash`, `slug`, `tags` bez czytelnika), Q-19 (czy 30 % tez w innym języku na Reddicie to poziom przyjęty na stałe). Owner: właściciel produktu. Block: — (żaden wycinek M-5 od nich nie zależy). Q-15 i Q-20 rozstrzygnięte przez PRD v4 (FR-007 i FR-033, doprecyzowania v4).
+7. **Elementy makiet bez znaczenia w PRD:** „Analizy”, „Wątki”, „Ostatnie obserwacje”, „Przejdź do źródła ↓” i strzałka „↑” przy odsetku (`ui-ux-proposals.md`, audyt `post-m4-ui-readiness-audit`, sekcja 2). Owner: użytkownik. Block: — (wycinki M-5 ich nie budują; „Wątki” jako wątki komentarzy byłyby sprzeczne z Non-Goals).
 
 ## Parked
 
-- **M-5 (kandydat): nowe UI i UX aplikacji webowej z testami E2E (Playwright)** — Why parked: decyzja użytkownika 2026-10-27 (najpierw jako M-4, przesunięte za weryfikację i regresję, żeby przebudowa miała gotową siatkę regresji); projektować raz, gdy feed ma już dwa źródła i oznaczenie źródła (S-27, S-29). Cztery propozycje układu od użytkownika (czytnik z adnotacjami, karta podmiotu, strumień z inspektorem wpisu, przegląd „Co mówi dziś rynek?”) opisane w `context/foundation/ui-ux-proposals.md`; wygląd do ustalenia w M-5, a każdy nowy widok dostaje test E2E. Decyzja użytkownika 2026-11-04: cały Playwright, także konfiguracja i smoke, jest w M-5 (M-4 nie pisze testów obecnych widoków, które M-5 wymieni); testy E2E stoją na atrapie API zgodnej z kontraktem z S-43 (M-4). Kandydaci do tego samego kamienia: FR-008/FR-011b, FR-031, FR-020 oraz dwie pozycje UX niżej (komunikat przy nieudanym odczycie daty, przybliżony koniec przebiegu). Widoki agregujące wokół spółki dotykają `prd.md:314` (rozpoznawanie spółek poza zakresem) i FR-024/FR-025.
-- **FR-008 / FR-011b — sortowanie po dacie, źródle i polach oceny** — Why parked: nice-to-have; chronologia wystarcza na start (cel `speed`).
 - **FR-016 / FR-017 / FR-019 — panel kont w aplikacji + wysyłka maila z zaproszeniem** — Why parked: nice-to-have; CLI (S-07) daje ten sam efekt; PRD §Non-Goals wyklucza wymaganą wysyłkę e-maili.
-- **FR-020 — własna nazwa wyświetlana** — Why parked: nice-to-have; e-mail wystarcza w MVP.
+- **FR-020 — własna nazwa wyświetlana** — Why parked: nice-to-have; e-mail wystarcza w MVP. Poza M-5 decyzją właściciela z 2026-11-15 (z nice-to-have do M-5 weszło tylko sortowanie); kandydat na M-6.
 - **FR-024 / FR-025 — wykres giełdowy z trendem sygnałów i powiadomienia o trendzie** — Why parked: nice-to-have, poza MVP; wymaga integracji danych giełdowych, rozpoznawania spółek i rozstrzygnięcia Open Question 4.
 - **FR-029 — automatyczne wygasanie krótkich sesji** — Why parked: nice-to-have; krótki timeout uciążliwy przy czytaniu. F-03 stosuje 30 dni bezczynności z odnawianiem ciasteczka; krótsze limity pozostają odroczone.
-- **FR-031 — eksport widocznej listy do CSV/JSON** — Why parked: nice-to-have, nie blokuje głównego przepływu.
+- **FR-031 — eksport widocznej listy do CSV/JSON** — Why parked: nice-to-have, nie blokuje głównego przepływu. Poza M-5 decyzją właściciela z 2026-11-15; kandydat na M-6.
 - **FR-032 — „Ask szczur” (pytanie do LLM o wybrany sygnał)** — Why parked: nice-to-have; dodatkowy koszt LLM wbrew guardrailowi kosztów.
 - **Przetwarzanie komentarzy pod postami** — Why parked: PRD §Non-Goals (kontrakt V2 zachowuje typ `comment` i kontekst rodzica w kształcie wejścia — gotowe na przyszłość, nieużywane w MVP).
 - **Rozpoznawanie spółek, automatyczna decyzja „wartościowy sygnał”, nowość informacji, trend, zaangażowanie, raporty** — Why parked: PRD v2 §Non-Goals; kontrakt V2 §15 umieszcza je poza oceną LLM jako osobne, dalsze etapy.
@@ -421,11 +438,14 @@ Brak — każda praca przekrojowa M-4 ma widoczny skutek dla użytkownika, opera
 - **Alarm watchdoga budowany w `catch (Throwable)` bez osobnej ochrony (S-18, przegląd F5)** — Why parked: `RunWatchdog.check` buduje tekst `WATCHDOG_FAILED` w bloku, który ma nie wypuścić niczego do `scheduleWithFixedDelay`; przy `OutOfMemoryError` składanie tekstu może rzucić drugi raz i zatrzymać kolejne sprawdzenia. Linia ERROR przed nim ma to samo ryzyko, a przypadek jest skrajny. **Powrót** przy najbliższej zmianie `RunWatchdog`: owinąć `alerts.raise(...)` w osobny `try`/`catch (Throwable)` (`…/reviews/impl-review.md`, F5).
 - **Krótszy start API po obudzeniu (Spring AOT, flagi JVM, AOT cache JDK 25)** — Why parked: nice-to-have po S-17; JVM startuje w ok. 6 s (produkcja po S-17: 5,6–6,0 s), a klient widzi 8–10 s razem ze startem kontenera Railway. Kolejność prób: `JAVA_TOOL_OPTIONS` (`-XX:TieredStopAtLevel=1`, `-XX:+UseSerialGC`) zmierzone w PR env; `spring-boot-maven-plugin` `process-aot` + `-Dspring.aot.enabled=true` jako mała zmiana; AOT cache JDK 25 (trening z bazą albo cache na wolumenie) tylko gdy poprzednie nie zejdą poniżej ok. 4 s; bez `spring.main.lazy-initialization` (kłóci się z fail-fast S-10) i bez wyłączania usypiania (decyzja F-03). Pomiary: `deploy-plan.md`, S-17 „Startup time”.
 - **Ustalenia niskiej wagi z audytu po M-2 (`post-m2-audit`)** — Why parked: cel M-3 `quality` bierze do wycinków ustalenia wysokiej i średniej wagi; te zostają do najbliższej pracy w tym samym obszarze. A7 dla przebiegu przerwanego przez odzyskiwanie nowszej instancji (zombie zapisuje posty do SIGTERM; nic nie ginie), A8 cz. 1 (`submit` przy zamykanym executorze → 500 i `queued` do sprzątania), A4 i B10 bez zmian (E3); harmonogramy i karencje checków w trzech źródłach bez testu krzyżowego (P6); po `TRIGGER_RUN_TIMEOUT` fałszywy alarm idzie dwoma kanałami (P8, rozszerza C8); statusy GitHub Deployment `success` dla commita z deploymentem `SKIPPED` — kandydat na lekcję (P9); atrapa `dev/mock-api.js` poza testami, id nie-UUID, brak logowania (K5); limiter logowań w pamięci jednej repliki (destylacja R-33, Q-10); kaskady `ON DELETE` bez ścieżki usuwania konta (R-29, Q-11); pola `content_hash`, `slug`, `requested_by` bez czytelnika (destylacja #10, Q-12). Szczegóły i kotwice: `context/changes/post-m2-audit/research.md`, `context/domain/domain-distillation.md`.
-- **Język posta w bazie (`posts.language`)** — Why parked: plan S-28 z 2026-10-30 wyłączył to z pomiaru (prompt i kontrakt bez zmian), a stanowisko właściciela z 2026-10-29 („ma być zapisany”) pozostaje. Warianty: pole `language` w wyjściu modelu (ścieżka §16 kontraktu, nowa `PROMPT_VERSION`) albo detekcja w backendzie bez LLM, w obu kolumna `posts.language` z backfillem. Do tego czasu język da się przybliżyć z `posts.channel`. Wraca, gdy właściciel wróci do tej potrzeby. Od M-4 wybór wykrywania języka rozstrzyga S-36 (FR-033) i może przywrócić tę pozycję. **Zamknięte przez S-36 (2026-11-12):** kolumna `posts.language` jest (migracja `V16`, język źródła posta: Wykop `pl`, Reddit `en`, decyzja właściciela 2026-11-12) i czyta ją miara języka tez; wykrywanie języka z tekstu posta zostaje możliwym następnym krokiem.
 - **Naprawy oceny Reddita (`claim_ids`, dopasowanie cytatów `D6`, tezy po polsku, filtr megawątków)** — Why parked: decyzja użytkownika 2026-10-31 o włączeniu bez napraw, bo Arctic Shift może przestać dostarczać dane między styczniem a marcem 2027. Wraca, gdyby Reddit został z nami dłużej.
 - **Porównanie modeli na postach z Reddita (DeepSeek, Haiku 5.5)** — Why parked: pomysł użytkownika z 2026-10-31, poza S-28. Bez niezależnych etykiet pokaże odrzucenia, koszt i liczbę celów, a nie to, który model ocenia lepiej; Haiku 5.5 nie ma w `models.json`. Zarys: osobna zmiana, około 50 długich postów w osobnym katalogu.
 - **Plan testów (`/10x-test-plan`, `context/foundation/test-plan.md`)** — Why parked: decyzja przy otwieraniu M-4 (2026-11-04): zakres weryfikacji M-4 ustalają `verification-scope.md` i audyt `post-m3-verification-audit` (eksperymenty X1–X6, mapa strażników), a S-31 i S-45 wybierają scenariusze i zakres pomiaru w swoich planach. Wraca przed M-5, gdy dojdą ryzyka testów E2E nowego UI.
 - **Polityki z destylacji bez incydentu (ranking #7–#10)** — Why parked: cel M-4 `quality` bierze pozycje #1–#6; te są dziś pilnowane albo bez ekspozycji danych: przejścia stanu przebiegu tylko w aplikacji (R-18, R-19, R-21), limiter logowań zerowany przy uśpieniu API (R-33), kaskady bez ścieżki usuwania (R-29, Q-11), pola bez czytelnika (`tags`, `slug`, `content_hash`, Q-12). Każda wraca z decyzją właściciela albo z najbliższą pracą w tym obszarze.
+- **Rozpoznawanie spółek, trend i wykres jako kierunek M-6 (kandydat)** — Why parked: decyzja właściciela z 2026-11-15: M-5 agreguje po tekście celu (FR-037–FR-039), a scalanie odmian i nazw jednej spółki, tickery, trend (FR-024, FR-025) i automatyczny wybór „wartych uwagi” zostają poza zakresem PRD v4 (Non-Goals `prd.md:369`); pełna karta podmiotu i przegląd dają pełną wartość dopiero z nimi.
+- **„Zapisane” (zapisy wpisów per użytkownik)** — Why parked: w nawigacji makiet 1 i 3 (`ui-ux-proposals.md`), ale decyzją właściciela z 2026-11-15 poza M-5; brak FR w PRD v4 (NFR o danych kontowych by na to pozwalał); kandydat na M-6.
+- **Status przebiegów dla zwykłego użytkownika („Pipeline gotowy”)** — Why parked: decyzja właściciela z 2026-11-15: zostaje jak w PRD (FR-030: użytkownik widzi datę aktualizacji per źródło, status przebiegów tylko admin, `prd.md:226-229`).
+- **Wyłączenie Reddita przy wygaśnięciu Arctic Shift** — Why parked: dostęp do danych Reddita może wygasnąć między styczniem a marcem 2027; plan operatora (2026-11-15): wtedy usunąć `REDDIT_SUBREDDITS` na produkcji — Reddit staje się źródłem nieskonfigurowanym, nocny przebieg i „Dni bez danych” go pomijają, kod bez zmian, posty zostają w bazie. Drugie źródło w miejsce Reddita (oficjalne API albo inne forum) to kandydat na M-6.
 
 ## Milestone History
 
