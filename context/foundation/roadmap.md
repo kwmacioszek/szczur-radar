@@ -3,13 +3,13 @@ project: "Szczur Radar"
 version: 5
 status: draft # draft | active | locked
 created: 2026-09-27
-updated: 2026-11-14
+updated: 2026-11-15
 prd_version: 3
 main_goal: quality
 top_blocker: capacity # 16 wycinków, jeden recenzent i osoba mergująca; darmowe runnery GitHuba muszą zmieścić scenariusze i PIT
 milestone_id: verified-core-and-regression
 milestone_seq: 4
-milestone_status: open
+milestone_status: done
 ---
 
 # Roadmap: Szczur Radar
@@ -85,9 +85,11 @@ milestone_status: open
 > v5 (2026-11-04): otwarty M-4 „Weryfikacja i regresja” (`/10x-roadmap`) z PRD v3, `verification-scope.md`, audytu `post-m3-verification-audit` i rankingu destylacji; ramy od użytkownika: cel `quality`, gwiazda przewodnia S-31 (scenariusze PR env w CI), główne ryzyko `capacity`. Wycinki S-30–S-45, bez fundamentów; S-30 (niestabilne testy integracyjne z runu 41784416932) pierwszy z decyzji użytkownika. Decyzja użytkownika: cały Playwright, także smoke na obecnych widokach, idzie do M-5 razem z nowym UI; M-4 przygotowuje atrapę API zgodną z kontraktem (S-43). Plan testów (`/10x-test-plan`) w `## Parked`. Z `## Parked` usunięte: kandydat M-4 (otwarty) i drugi runner CI w Proxmoxie (od 2026-10-24 CI idzie na darmowych runnerach GitHuba, repo publiczne; pula `szczur-ci` to rezerwa). Open Roadmap Question 5 rozstrzygnięte przez PRD v3.
 > v5.1 (2026-11-09): S-34 (`dead-posts-daily-digest`) w realizacji (PR #162, issue #144) — niewiadoma rozstrzygnięta: podsumowanie nocy składa API na żądanie crona (`POST /internal/pipeline-runs/nightly-summary` po przebiegach nocy) i wysyła je samo; dzwonek pokazuje martwe posty bez zmian. Decyzja właściciela (2026-11-08/09): kanał zdarzeń API przechodzi z checka healthchecks.io `api-events` na ntfy (`NTFY_URL`, token `NTFY_TOKEN`), healthchecks.io → Telegram zostaje dla cronów i `deploy-health`; podsumowanie zawsze, także przy 0 martwych, z tokenami bez kosztu w $. Outcome S-34 przepisany na to, co zbudowano; doprecyzowanie NFR o sygnale w PRD.
 
+> v5.2 (2026-11-15): M-4 zamknięty (`/10x-roadmap`): S-30–S-45 `done`, wszystkie issues M-4 (#139, #141–#155) zamknięte; wpis w `## Milestone History`. Blok S-30 dostaje `Status: done` (tabela „At a glance” miała go od archiwizacji 2026-11-05, blok został na `ready`). M-5 jeszcze nieotwarty; kandydat w `## Parked` (nowe UI/UX z całym Playwrightem na atrapie z S-43).
+
 ## Milestone
 
-**M-4: Weryfikacja i regresja** — Status: open
+**M-4: Weryfikacja i regresja** — Status: done
 
 - **Intent:** Testy łapią błędy, a nie tylko przechodzą: ręczne weryfikacje wycinków w PR env chodzą jako scenariusze w CI, strażnicy reguł wyprowadzają zbiory z kodu zamiast z ręcznych list, a mutanty rdzenia są zabite albo świadomie przyjęte. Obok tego wymagania PRD v3 z nocy z Redditem: seria odmów dostawcy nie zabija ocen bez drogi powrotu, martwe posty da się przywrócić i nie alarmują co noc, a operator widzi jakość ocen osobno dla każdego źródła.
 - **Source materials:** `context/foundation/prd.md` (v3: FR-033, FR-034, doprecyzowanie FR-023 Q-13, doprecyzowanie PRD v3 NFR o sygnale `prd.md:275`); `context/foundation/verification-scope.md` (zakres i „done when” M-4); audyt `context/changes/post-m3-verification-audit/research.md` (eksperymenty X1–X6, sekcje 1–6, „Materiał dla M-4”); destylacja domeny `context/domain/domain-distillation.md` (ranking #1–#6).
@@ -165,7 +167,7 @@ Brak — każda praca przekrojowa M-4 ma widoczny skutek dla użytkownika, opera
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** pierwszy, bo do jego końca każdy merge może dać czerwony `main` bez błędu w kodzie (ponawiać run, nigdy nie omijać bramki); inne klasy z tym samym wzorcem (zapis poza transakcją, zapytanie po całej bazie) mogą się ujawnić dopiero przy innej kolejności.
-- **Status:** ready
+- **Status:** done
 
 ### S-31: Ręczne weryfikacje PR env chodzą jako scenariusze w CI
 
@@ -430,6 +432,7 @@ Brak — każda praca przekrojowa M-4 ma widoczny skutek dla użytkownika, opera
 - **M-1: MVP — ocenione sygnały z Wykopu dla zaproszonych osób** (`mvp-wykop-signal-radar`) — closed 2026-10-17. Wszystkie konieczne FR i historyjki US-01, US-02 dostarczone na produkcji (F-01–F-03, S-01–S-07); domknięcie runbooków produkcji S-04 (#17) i S-06 (#19) przeniesione do Open Roadmap Questions M-2.
 - **M-2: MVP Quality & Reliability Hardening** (`mvp-quality-reliability-hardening`) — closed 2026-10-27. Istniejące MVP nie milczy i nie gubi danych: kanał alarmowy poza aplikacją (F-04), sygnały pustej i brakującej nocy, awarie dostawców bez utraty prób, samonaprawa utkniętych przebiegów, bezpieczna bramka wdrożeń, pełna kontrola kopii bazy, kompletne pobieranie z Wykopu, przebieg bez Embabel i błędy wymagające reakcji w Telegramie (F-04, S-08–S-11, S-13–S-19, produkcja zweryfikowana); S-12 zaparkowany decyzją użytkownika (v3.3). Pierwsza noc crona na silniku S-17 (2026-10-28) pod nadzorem F-04; otwarte ustalenie S-14 z issue #73: fałszywa kontrola po apply w `verify-apply.sh` (zmiana bez deployu, `SKIPPED` z równoległego pusha); drugie ustalenie z #73 („deploy `2abc64c` mimo czerwonego CI”) okazało się błędną diagnozą — deployment API został `SKIPPED` przez Wait for CI (audyt `post-m2-audit`).
 - **M-3: Drugie źródło na utwardzonym rdzeniu** (`second-source-on-hardened-core`) — closed 2026-11-01. Reddit jest drugim źródłem na produkcji (od 2026-11-01, trzy subreddity), ocenianym tym samym kontraktem co Wykop, na rdzeniu, w którym awaria albo cisza jednego źródła nie psuje przebiegu pozostałych (S-20, gwiazda przewodnia); źródło widoczne w feedzie i świeżość bez kłamstwa przy dwóch źródłach (S-29); obraz jakości i kosztu Reddita przed włączeniem i decyzja o włączeniu bez napraw (S-28); domknięte ślepe punkty z audytu po M-2: bramka wdrożeń przy zmianie bez deployu (S-21), reguły w jednym miejscu (S-22, S-25), zamknięte zbiory i kontrakt SPA ↔ API pilnowane w CI (S-23, S-24), testy silnika bez zależności od zegara (S-26). Weryfikacja nocy z Redditem otwarta w issue #121 — nie blokuje zamknięcia (decyzja użytkownika, v4.3).
+- **M-4: Weryfikacja i regresja** (`verified-core-and-regression`) — closed 2026-11-15. Testy łapią błędy, a nie tylko przechodzą: ręczne weryfikacje PR env z S-13, S-17, S-18, S-20 i S-27 chodzą w CI jako scenariusze na pełnym API z atrapami źródeł i LLM (S-31, gwiazda przewodnia), wynik CI nie zależy od kolejności testów (S-30), a PIT na rdzeniu w jobie `mutation` przy każdym PR zostawia 44 z 1133 mutantów, każdy z zapisanym powodem (S-45); strażnicy liczą zbiory z kodu zamiast z ręcznych list (S-39, S-40), kontrakt SPA ↔ API, rejestr reguł i atrapy odpowiadają jak prawdziwe API (S-41–S-43), feed ma testy regresji i granicę numeru strony (S-44). Wymagania PRD v3 z nocy z Redditem: seria odmów dostawcy zatrzymuje przebieg (S-32), admin przywraca martwe posty (S-33), zamiast alarmu o martwym poście co noc podsumowanie w ntfy — kanał zdarzeń API przeniesiony z healthchecks.io na ntfy (S-34), post odrzucony przy zapisie jest policzony (S-38), jakość ocen per źródło z sygnałem progu (S-35, S-36), typ posta słowami źródła (S-37).
 
 ## Done
 

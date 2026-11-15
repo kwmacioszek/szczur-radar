@@ -4,7 +4,7 @@
 The data is copied by hand from context/foundation/roadmap.md (v3); the M-1 prerequisites and streams come
 from the roadmap before M-1 closed (v2.22, commit 5b6eabb), because v3 keeps M-1 only in `## Done`.
 M-3 (closed 2026-11-01, v4.3) comes from v4: streams from `## Streams`, card titles from `## Slices`, card texts from the
-`## At a glance` outcomes. M-4 (open since 2026-11-04, v5) comes from v5 the same way, and its slice
+`## At a glance` outcomes. M-4 (open 2026-11-04, closed 2026-11-15, v5.2) comes from v5 the same way, and its slice
 states drive the progress card.
 Every card carries data-id / data-status and every dependency arrow data-from / data-to, so the drawing
 can be checked against the roadmap. When roadmap.md changes, update the data below and run:
@@ -343,7 +343,7 @@ text(M + 52, 57, "Szczur Radar", 17, 700)
 text(M + 52, 75, "MARKET INTELLIGENCE", 9.5, 600, C["muted"], spacing="2.4")
 text(M, 134, "MILESTONES I ZALEŻNOŚCI", 11, 700, C["muted"], spacing="2")
 text(M, 172, "Roadmapa produktu", 31, 700)
-text(M, 202, "Źródło: context/foundation/roadmap.md  ·  v5  ·  stan 04.11.2026  ·  bez terminów — kolejność wynika z zależności", 13, 400, C["muted"])
+text(M, 202, "Źródło: context/foundation/roadmap.md  ·  v5.2  ·  stan 15.11.2026  ·  bez terminów — kolejność wynika z zależności", 13, 400, C["muted"])
 
 # M-2 slice states; every counter below is derived from them (M-1 closed with all 10 done)
 m2_order = [("F-04", "done"), ("S-08", "done"), ("S-09", "done"), ("S-10", "done"), ("S-11", "done"), ("S-12", "parked"),
@@ -433,17 +433,18 @@ text(c2 + 52, y3, "przerywana: od zablokowanego", 12.5, 400, C["muted"])
 # ================= timeline axis =================
 AX_Y = 316
 x_end = P5X + P5W
-# Track: done (M-1, M-2, M-3), current (M-4), deferred (after M-4).
+# Track: done (M-1, M-2, M-3, M-4), deferred (after M-4).
 add(f'<line x1="{P1X+20}" y1="{AX_Y}" x2="{P2X+20}" y2="{AX_Y}" stroke="{C["done"]}" stroke-width="4" stroke-linecap="round"/>')
 add(f'<line x1="{P2X+20}" y1="{AX_Y}" x2="{P3X+20}" y2="{AX_Y}" stroke="{C["done"]}" stroke-width="4" stroke-linecap="round"/>')
 add(f'<line x1="{P3X+20}" y1="{AX_Y}" x2="{P4X+20}" y2="{AX_Y}" stroke="{C["done"]}" stroke-width="4" stroke-linecap="round"/>')
-add(f'<line x1="{P4X+20}" y1="{AX_Y}" x2="{x_end-14}" y2="{AX_Y}" stroke="{C["muted"]}" stroke-opacity="0.45" stroke-width="3" stroke-dasharray="2 9" stroke-linecap="round"/>')
+add(f'<line x1="{P4X+20}" y1="{AX_Y}" x2="{P5X+20}" y2="{AX_Y}" stroke="{C["done"]}" stroke-width="4" stroke-linecap="round"/>')
+add(f'<line x1="{P5X+20}" y1="{AX_Y}" x2="{x_end-14}" y2="{AX_Y}" stroke="{C["muted"]}" stroke-opacity="0.45" stroke-width="3" stroke-dasharray="2 9" stroke-linecap="round"/>')
 add(f'<path d="M{x_end-22} {AX_Y-8} L{x_end-10} {AX_Y} L{x_end-22} {AX_Y+8}" fill="none" stroke="{C["muted"]}" stroke-opacity="0.6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>')
 nodes = [
     (P1X, "M-1", "MVP — ocenione sygnały z Wykopu", "Zamknięty 17.10.2026  ·  10 / 10", "done"),
     (P2X, "M-2", "MVP Quality & Reliability Hardening", f"Zamknięty 27.10.2026  ·  {M2_DONE} / {M2_TOTAL}", "done"),
     (P3X, "M-3", "Drugie źródło na utwardzonym rdzeniu", f"Zamknięty 01.11.2026  ·  {M3_DONE} / {M3_TOTAL}", "done"),
-    (P4X, "M-4", "Weryfikacja i regresja", f"Otwarty 04.11.2026  ·  {M4_DONE} / {M4_TOTAL}", "now"),
+    (P4X, "M-4", "Weryfikacja i regresja", f"Zamknięty 15.11.2026  ·  {M4_DONE} / {M4_TOTAL}", "done"),
     (P5X, "PO M-4", "Odroczone", f"Backlog  ·  {DEFERRED} {plural(DEFERRED, 'pozycje', 'pozycji')}", "later"),
 ]
 for nx, tag, name, state, kind in nodes:
@@ -638,9 +639,9 @@ for ids in (("S-21", "S-25"), ("S-22", "S-23", "S-24")):
 
 # ================= M-4 container =================
 container(P4X, P4W, "M-4", "Weryfikacja i regresja",
-          ("Otwarty 04.11.2026", C["amber"], C["amberSoft"], 10.5, False, 600, "dot"),
+          ("Zamknięty 15.11.2026", C["done"], C["doneSoft"], 10.5, False, 600, "check"),
           "Testy łapią błędy, a nie tylko przechodzą: weryfikacje PR env jako scenariusze w CI, strażnicy liczą zbiory z kodu, mutanty rdzenia zmierzone; obok wymagania PRD v3 z nocy z Redditem.",
-          (f"{M4_DONE} / {M4_TOTAL}", M4_DONE / M4_TOTAL, C["amber"]), C["border2"])
+          (f"{M4_DONE} / {M4_TOTAL}", M4_DONE / M4_TOTAL, C["done"]), C["border"])
 box4 = {}
 ry = TOP + 98
 for ri, row in enumerate(rows4):
@@ -709,12 +710,12 @@ for gi, (gname, items) in enumerate(groups):
         text(gx + 34, iy + len(label_lines) * 20, ref, 12, 600, C["dim"], family=MONO)
 
 # ================= footer + assembly =================
-text(M, H - 30, "Strzałki pomijają zależności wynikające ze ścieżek pośrednich i (w M-4) między strumieniami. Pełne wymagania: na kartach. · Źródło: context/foundation/roadmap.md v5", 11, 400, C["dim"])
+text(M, H - 30, "Strzałki pomijają zależności wynikające ze ścieżek pośrednich i (w M-4) między strumieniami. Pełne wymagania: na kartach. · Źródło: context/foundation/roadmap.md v5.2", 11, 400, C["dim"])
 text(W - M, H - 30, "MAPA ZALEŻNOŚCI · BEZ TERMINÓW", 10.5, 700, C["dim"], anchor="end", spacing="1.6")
 head = [
     f'<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{H}" viewBox="0 0 {W} {H}" role="img" aria-labelledby="t d">',
     '<title id="t">Szczur Radar — roadmapa produktu: M-1 → M-2 → M-3 → M-4 → Po M-4</title>',
-    '<desc id="d">Roadmapa z context/foundation/roadmap.md v5 jako oś od lewej do prawej: kamień milowy M-1 (F-01–F-03, S-01–S-07, ukończony), M-2 MVP Quality &amp; Reliability Hardening (F-04, S-08–S-19, zamknięty 27.10.2026, S-12 zaparkowany), M-3 Drugie źródło na utwardzonym rdzeniu (S-20–S-29, zamknięty 01.11.2026, gwiazda przewodnia S-20), M-4 Weryfikacja i regresja (S-30–S-45, otwarty 04.11.2026, gwiazda przewodnia S-31) i pozycje odroczone. Strzałka prowadzi od warunku wstępnego do elementu, który od niego zależy.</desc>',
+    '<desc id="d">Roadmapa z context/foundation/roadmap.md v5.2 jako oś od lewej do prawej: kamień milowy M-1 (F-01–F-03, S-01–S-07, ukończony), M-2 MVP Quality &amp; Reliability Hardening (F-04, S-08–S-19, zamknięty 27.10.2026, S-12 zaparkowany), M-3 Drugie źródło na utwardzonym rdzeniu (S-20–S-29, zamknięty 01.11.2026, gwiazda przewodnia S-20), M-4 Weryfikacja i regresja (S-30–S-45, zamknięty 15.11.2026, gwiazda przewodnia S-31) i pozycje odroczone. Strzałka prowadzi od warunku wstępnego do elementu, który od niego zależy.</desc>',
     '<defs>',
 ]
 for name, col in (("lime", C["lime"]), ("done", C["done"]), ("sky", C["sky"]), ("coral", C["coral"]), ("amber", C["amber"]), ("gray", C["muted"])):
