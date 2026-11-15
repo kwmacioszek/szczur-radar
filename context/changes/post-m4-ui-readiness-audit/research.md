@@ -9,6 +9,7 @@ tags: [research, audit, m-5, ui, spa, design-tokens, components, api-gaps, prd, 
 status: complete
 last_updated: 2026-11-15
 last_updated_by: kwmacioszek (Claude Opus 5.5)
+last_updated_note: "Dopisane decyzje właściciela z 2026-11-15 (odpowiedzi na Open Questions 1–8)"
 ---
 
 # Research: audyt gotowości po M-4 pod M-5
@@ -342,3 +343,19 @@ Dla właściciela produktu, przed PRD v4 i `/10x-roadmap`:
 6. **Q-15:** czy feed domyślnie pokazuje posty `not_investment_related` i wynik odsiewu? To wpływa na każdy nowy widok listy.
 7. **Q-20 / R-39:** czy mierzyć „kanał jako cel” na produkcji (tak jak język tez), skoro dziś ryzyko pojawia się tylko przy zmianie modelu?
 8. **E2E:** czy atrapa ma zostać skryptem `run-code`, czy stać się modułem z trybami ustawianymi z testu? (S-43 odłożyło to do M-5.)
+
+## Decyzje właściciela (2026-11-15)
+
+Odpowiedzi na *Open Questions* powyżej, zebrane po audycie. Są wejściem do PRD v4 i do otwarcia M-5; badanie ich nie weryfikuje.
+
+| Pytanie | Decyzja |
+|---|---|
+| 1. Które układy w M-5 | wszystkie cztery, w „uczciwie dużym” M-5. Kolejność: siatka E2E, potem kierunek wizualny i fundament (shell, wspólne stany, `LoginView`, rozbicie `AdminView`), potem Czytnik i Strumień + Inspektor, na końcu Karta podmiotu i Przegląd. Termin oddania projektu kursowego to styczeń 2027, a nie `hard_deadline: 2026-12-06` z `prd.md:15` |
+| 2. Agregacja po celu | po znormalizowanym tekście anchora (wielkość liter, wiodący `#`); odmiany zostają osobno; rozpoznawanie spółek, trend i automatyczny wybór „wartych uwagi” zostają poza M-5 (`prd.md:344`) |
+| 3. Nowe pojęcia | filtr po dacie publikacji i wyszukiwanie w tytule i treści: **tak**; „Zapisane”: nie; status przebiegów dla zwykłego użytkownika: nie (FR-030 bez zmian, `prd.md:226-229`) |
+| 4. Elementy sprzeczne z Non-Goals | „Warto przeczytać”, „Wątek dnia” i „Aktywny wątek” stają się jawnie liczbowe (np. najczęściej omawiane cele dnia i najnowsze wpisy o nich); trend i jedna etykieta stanowiska na wpis odpadają |
+| 5. Motyw | jasny i ciemny z ręcznym przełącznikiem, nowa paleta pod układy paneli; test kontrastu zostaje dla dwóch motywów |
+| 6. Q-15 | w nowych widokach listy posty `not_investment_related` i wynik odsiewu są domyślnie ukryte, z przełącznikiem „pokaż wszystkie” |
+| 7. Q-20 / R-39 | mierzyć „kanał jako cel” na produkcji jak język tez: okno 7 dni, podsumowanie nocy, `/admin`, alarm przy przejściu progu |
+| 8. Atrapa pod E2E | decyzja techniczna dla `/10x-plan` wycinka E2E; nie rozstrzygana tutaj |
+| Nice-to-have | tylko sortowanie (FR-008, FR-011b); bez „Zapisanych”, FR-020 i FR-031 |
