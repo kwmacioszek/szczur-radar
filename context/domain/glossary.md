@@ -1,103 +1,101 @@
 ---
 artifact: domain-glossary
-created: 2026-11-01
+created: 2026-11-15
 source: context/domain/domain-distillation.md
 ---
 
 # Glossary: Szczur Radar
 
-Use these words in code, tests, commits and conversations. When a name in the code differs from the term, the term wins in new code; renaming old code is a separate decision.
+Używaj tych słów w kodzie, testach, commitach i rozmowach. Gdy nazwa w kodzie różni się od terminu, w nowym kodzie wygrywa termin. Zmiana nazw w starym kodzie to osobna decyzja.
 
-## Pozyskanie i wspólny model
-
-| term | means | name in code | don't call it |
-|---|---|---|---|
-| źródło | Serwis, z którego produkt pobiera posty; dziś Wykop i Reddit. | `Source` | źródło wyniku (to `model`/`prefilter`, kontekst oceny) |
-| źródło zarejestrowane / skonfigurowane | Znane schematowi (stała i cztery `CHECK`) / mające ustawienia, więc pobierane. | `Source`, `SourceFetcher.configured()` | włączone |
-| element | Pozycja zwrócona przez źródło, zanim stanie się postem. | `WykopItem`, `RedditItem` | post, entry |
-| pozyskanie i mapowanie | Jedyna rzecz, którą zmienia nowe źródło: pobranie i przełożenie na wspólny model. | `SourceFetcher`, `RawInputMapper`, `<Source>Mapper` | ingest (tylko jako nazwa kroku) |
-| wspólny model | Kształt posta niezależny od źródła. | `SourcePost`, `AssessmentInputV1` | — |
-| post | Zapisana wypowiedź ze źródła, każdego typu. | `Post`, `posts` | wpis, entry, item |
-| typ posta | Wartość wspólnego modelu: `post`, `link`, `comment`. | `ItemType`, `item_type` | zasób, `resource` (to pojęcie Wykopu) |
-| wpis / znalezisko | Słowa Wykopu dla typów `post` i `link`; na Reddicie decyzja otwarta (Q-13). | `WykopResource.ENTRY`, `WykopResource.LINK` | nazwa typu niezależna od źródła |
-| komentarz | Typ zarezerwowany, poza MVP; nic go dziś nie tworzy. | `ItemType.COMMENT` | — |
-| kanał posta | Miejsce w źródle: tag Wykopu albo subreddit. | `posts.channel`, `SourcePost.channel` | kanał (bez dopełnienia), `Channel` (to trasa modelu) |
-| pochodzenie posta | Źródło i kanał razem, np. `Reddit · r/stocks`. | `postOrigin` | — |
-| duplikat | Post o tym samym kluczu źródłowym; treściowo podobne posty duplikatami nie są. | `uq_posts_source_item`, `PostKey` | — |
-| RAW | Oryginalny payload źródła, trzymany bezstratnie osobno. | `RawPayload`, `raw_payloads` | „Dane dla nerdów” (tylko etykieta UI) |
-| pominięty element | Pobrany element, z którego nie powstał post. | `skipped` | post zdjęty |
-| post zdjęty | Post usunięty w źródle przed pobraniem; nie jest elementem pobrania. | `RedditItem.removed()` | skipped, pominięty |
-| megawątek | Cykliczny wątek zbiorczy Reddita; produkt go nie filtruje. | *missing in code* | — |
-| horyzont Arctic Shift | Ryzyko końca danych Reddita w styczniu–marcu 2027; runbook operatora. | *missing in code* | — |
-
-## Ocena
+## Zbieranie i wspólny model
 
 | term | means | name in code | don't call it |
 |---|---|---|---|
-| ocena | Opis posta wykonany przez model według kontraktu; nie werdykt. | `Assessment`, `assessments` | osąd, decyzja (to rola człowieka), signal |
-| kontrakt oceny | Normatywny kształt i reguły oceny, wersja V2. | `AssessmentOutputV2`, `RuleId` | kontrakt (bez dopełnienia; jest też kontrakt SPA ↔ API) |
-| wejście oceny | To, co widzi model: typ, data, kanały, tytuł, treść. | `AssessmentInputV1`, `Item` | — |
-| trafność | Czy post dotyczy inwestowania. | `Relevance` | — |
-| cel | Podmiot wypowiedzi: spółka, aktywo, sektor, temat; bez rozpoznania tożsamości. | `Target` | spółka (cel nią nie musi być), `RangeTarget` (to zakres przebiegu) |
-| anchor | Najkrótszy fragment tekstu nazywający cel. | `Anchor` | ticker, nazwa spółki |
-| stanowisko | Kierunek autora wobec jednego celu. | `Stance`, `Direction` | sentyment, wydźwięk |
-| teza | Każde twierdzenie autora z cytatem. | `Claim` | teza inwestycyjna (to jeden `ClaimKind`) |
-| teza inwestycyjna | Rodzaj tezy: ocena wyceny lub przyszłego zachowania inwestycji. | `ClaimKind.INVESTMENT_THESIS` | teza (bez dopełnienia) |
-| cytat | Dosłowny fragment posta popierający tezę. | `Evidence`, `Quote` | dowód |
-| flagi, modyfikatory | Jawna niepewność i charakter treści. | `Flag`, `Modifier` | — |
-| klasa błędu | Zamknięty powód nieudanej oceny. | `FailureClass` | `fabricated_evidence` = zmyślenie (to niedopasowany cytat) |
-| pochodzenie oceny | Czym i którą wersją powstała ocena. | `Provenance` | pochodzenie posta |
-| źródło wyniku | `model` albo `prefilter`. | `Provenance.Source`, `result_source` | źródło (bez dopełnienia) |
-| wpis bez treści | Post bez 3 znaków treści; dostaje wynik bez modelu. | `Prefilter` | — |
-| zestaw wzorcowy | Oznaczone ręcznie posty do pomiaru progów; tylko testy. | *missing in code* (produktu), `measurement/` | — |
-| budżet LLM | Limit $10/mies. na kluczu dostawcy; bez pułapu w kodzie. | *missing in code* | — |
+| źródło | platforma, z której pobieramy posty: Wykop albo Reddit | `Source` (`sources/Source`) | `Provenance.Source` (to źródło wyniku, kontekst oceny) |
+| element źródła | jedna pozycja z API źródła, zanim stanie się postem | `WykopItem`, `RedditItem` | post (jeszcze nim nie jest) |
+| wspólny model | kształt posta niezależny od źródła, do zapisu i do oceny | `SourcePost`, `AssessmentInputV1` | model Wykopu |
+| post | zebrana jednostka: wpis albo link, z etapem oceny | `Post`, tabela `posts` | wpis (słowo Wykopu), entry, item |
+| typ posta | wspólna wartość `post` / `link` / `comment` | `ItemType`, `posts.item_type` | resource, typ Wykopu |
+| kanał posta | miejsce w źródle: tag Wykopu albo nazwa subredditu | `posts.channel`, `SourcePost.channel` | kanał (bez dopowiedzenia), `llm.Channel`, kanał alarmowy |
+| język posta | język posta zapisany przy poście; dziś język źródła | `posts.language`, `Language` | język tezy |
+| duplikat | post o tym samym kluczu (źródło, typ, id w źródle), nie zapisywany drugi raz | `duplicates` | podobny post (podobne treściowo nie są duplikatami) |
+| pominięty element | element pobrany, który nie stał się postem, także odrzucony przy zapisie | `skipped`, `rejected` | błąd, zgubiony post |
+| RAW | oryginalny payload źródła, trzymany osobno od danych aplikacji | `RawPayload`, `raw_payloads` | dane posta |
+| post zdjęty | post Reddita usunięty przez moderację lub autora; nie jest pobierany ani liczony | (bez typu; `RedditItem`) | pominięty element |
+| źródło skonfigurowane | źródło, które ma ustawienia i może brać udział w przebiegu | `source_not_configured` (gdy nie) | źródło zarejestrowane (to stała i CHECK) |
+| megawątek | zbiorczy wątek subredditu; filtru nie ma | *missing in code* | — |
+| horyzont Arctic Shift | data, po której dostęp do danych Reddita może wygasnąć | *missing in code* | — |
 
-## Feed
+## Ocena treści (kontrakt V2)
 
 | term | means | name in code | don't call it |
 |---|---|---|---|
-| feed | Chronologiczna lista ocenionych postów. | `findAssessedPage`, `FeedView` (bez typu) | — |
-| filtr | Zawężenie feedu po celu i stanowisku. | `PostFilter`, `q`/`kind`/`direction` | — |
-| świeżość | Per źródło: data ostatniego udanego pobrania tego źródła. | `Freshness`, `SourceUpdate` | aktualizacja (bez dopełnienia), pokrycie dnia |
+| ocena | opis posta przez model według kontraktu V2; każda próba to osobny wiersz | `Assessment`, `AssessmentResult`, `assessments` | decyzja o sygnale (należy do człowieka), sentyment |
+| kontrakt oceny | zamknięta specyfikacja wejścia, wyjścia i reguł oceny | `AssessmentOutputV2`, `ContractV2Rules` | kontrakt API (to pliki SPA ↔ API) |
+| wejście oceny | treść posta plus typ, data publikacji i kanał; bez autora i źródła | `AssessmentInputV1`, `Item` | payload |
+| trafność | czy post dotyczy inwestowania: `investment_related`, `not_investment_related`, `unclear` | `Relevance` | ważność, wartość |
+| cel | podmiot, o którym mówi autor: spółka, aktywo, sektor, temat | `Target`, `TargetKind` | encja, ticker, spółka rozpoznana |
+| anchor | najkrótszy dosłowny fragment tekstu nazywający cel | `anchor.quote` | nazwa spółki, ticker |
+| stanowisko | kierunek autora wobec jednego celu, z ostrożnością | `Stance`, `Direction`, `Assertiveness` | sentyment, sentyment posta |
+| teza | każdy element `claims`: twierdzenie, opinia, fakt, pytanie, działanie, z cytatem | `Claim`, `statement` | teza inwestycyjna (to jeden rodzaj tezy) |
+| teza inwestycyjna | rodzaj tezy: ocena wyceny lub przyszłego zachowania inwestycji | `ClaimKind.INVESTMENT_THESIS` | teza (ogólnie) |
+| cytat | dosłowny fragment pola posta, sprawdzany jako podciąg po normalizacji białych znaków | `evidence.quote`, `QuoteIsFragmentRule` | parafraza |
+| klasa błędu oceny | powód, dla którego próba nie jest poprawną oceną | `FailureClass`, `failure_class` | status przebiegu |
+| odsiew | wpis bez treści dostaje gotowy wynik bez wywołania modelu | `Prefilter`, `result_source = prefilter` | ocena modelu |
+| źródło wyniku | czy wynik dał model, czy odsiew | `Provenance.Source`, `result_source` | źródło (to Wykop/Reddit) |
+| pochodzenie oceny | dostawca, model, kanał LLM, wersje promptu i kontraktu przy ocenie | `Provenance` | — |
+| kanał LLM | ścieżka wywołania modelu u dostawcy | `llm.Channel`, `assessments.channel` | kanał posta, kanał alarmowy |
+| zestaw wzorcowy | ręcznie oznaczone posty do pomiaru modelu; tylko w testach | *missing in code* (tylko `measurement/`) | dane produkcyjne |
+| budżet LLM | pułap kosztu modelu; dziś tylko limit na kluczu poza repo | *missing in code* | — |
+
+## Przegląd ocenionych postów
+
+| term | means | name in code | don't call it |
+|---|---|---|---|
+| feed | chronologiczna lista ocenionych postów z filtrem | `GET /api/posts`, `FeedView` | dashboard |
+| filtr | wybór po tekście celu, rodzaju celu i kierunku stanowiska | `PostFilter`, `feedFilter.ts` | wyszukiwarka spółek |
+| widok posta | ocena obok surowych danych posta | `PostDetailView`, `GET /api/posts/{id}` | — |
+| pochodzenie posta | źródło i kanał przy poście, np. „Reddit · r/stocks” | `postOrigin` | źródło (samo) |
+| typ posta słowami źródła | słowo typu wyświetlane per źródło: Wykop „wpis”/„znalezisko”, Reddit „post”/„link” | `ITEM_TYPE_WORDS` | typ posta (to wartość wspólna) |
+| świeżość | data ostatniej udanej aktualizacji, osobno dla każdego źródła | `GET /api/freshness` | data ostatniego przebiegu |
 
 ## Przebiegi
 
 | term | means | name in code | don't call it |
 |---|---|---|---|
-| przebieg | Jedno wykonanie sekwencji kroków. | `PipelineRun` | przepływ, uruchomienie, pipeline |
-| rodzaj przebiegu | `RANGE`, `RETRY` albo `POSTS`. | `RunKind` | — |
-| przebieg resztek / wybranych postów | `RETRY` ponawia resztki; `POSTS` uruchamia „Ponów zaznaczone”. | `RunKind.RETRY`, `RunKind.POSTS` | ponowienie (bez dopełnienia), `retryPosts` |
-| przebieg dzienny | `RANGE` z crona dla dni D-2…D-1 czasu warszawskiego. | `scheduled()`, `SCHEDULER` (bez typu) | osobny rodzaj przebiegu |
-| krok | Etap: `fetch`, `store`, `select`, `assess`, `summarize`. | `RunStep`, `PipelineRunStep` | — |
-| status przebiegu | `queued`, `running`, `succeeded`, `partial`, `failed`, `interrupted`. | `RunStatus` | — |
-| przebieg zakończony błędem | Przebieg `failed` albo `interrupted`; `failed` bez żadnego źródła z postem to pusty przebieg. | `RunStatus`, `NoPostsFetchedException` | failed (bez rzeczownika) |
-| wynik źródła | `succeeded`, `empty` albo `failed` jednego źródła w przebiegu. | `PipelineRunSource`, `SourceFetchStatus` | outcome, sourceStatus |
-| etap posta | `stored`, `assessing`, `assessed`, `failed`, `dead`. | `PostStage` | status posta |
-| próba oceny | Zapisana nieudana ocena; trzy czynią post martwym. | `assessment_attempts` | `assessments.attempts` (to próby HTTP), wiersz oceny |
-| post martwy | Post bez poprawnej oceny po trzech próbach; stan końcowy. | `PostStage.DEAD` | przebieg `dead` (to sierota) |
-| resztki | Posty do ponowienia przez przebieg resztek. | `findLeftoverIds` (bez typu) | — |
-| błąd techniczny | Awaria niezawiniona przez post; nie zużywa próby. | `technical_failures`, `ProcessingError` | próba |
-| post wstrzymany | Post po trzech błędach technicznych z rzędu; zachowuje etap. | `onHold` (bez stanu) | etap |
-| trzy winy | Podział porażki: post, dostawca, nasz kod. | `Assessor`, `ConcurrentAssessmentDispatcher` (bez typu) | — |
-| bezpiecznik | Zatrzymanie kroku po serii awarii. | `OUTAGE_STREAK`, `CLIENT_ERROR_STREAK` | strażnik |
-| ponowienie wywołania | Ponowienie HTTP, poniżej kroku. | `TransportRetry`, `HttpRetry` | próba, retry przebiegu |
-| strażnik | Kończy przebieg własnej instancji bez aktywności. | `RunWatchdog` | bramka wdrożeń, deploy guard |
-| przerwanie | Koniec `interrupted` z przyczyną. | `InterruptionCause` | — |
-| sierota | Przebieg bez wykonawcy, oznaczany `lost` przy żądaniu startu. | `interruptOrphans`, `lost` | dead run, zombie |
-| wymaga uwagi | Jedna reguła API: przebieg ma powody uwagi. | `attentionReasons`, `AttentionReason` | — |
-| dni bez danych | Dni bez pokrycia per źródło, uzupełniane ręcznie. | `MissingDays` | świeżość |
-| pokrycie dnia | Dzień w udanym przebiegu z wynikiem `succeeded` źródła. | `CoveredRange` | aktualizacja |
-| pobrane | Elementy pobrania bez postów zdjętych. | `fetched` | „Pobrane” z raportu S-28 (ze zdjętymi) |
+| przebieg | jedno wykonanie pobrania i oceny: `range`, `retry` albo `posts` | `PipelineRun`, `pipeline_runs` | przepływ, pipeline, job |
+| przebieg dzienny | przebieg zakresu D-2…D-1 zlecony przez cron | `RANGE` od `SystemAccount.SCHEDULER` | osobny rodzaj przebiegu |
+| zakres dat | pełne dni kalendarza warszawskiego; godzin nie ma | `range_from`, `range_to` | zakres godzin |
+| status przebiegu | `queued`, `running`, `succeeded`, `partial`, `failed`, `interrupted` | `RunStatus` | etap (to post), wynik źródła |
+| krok | faza przebiegu: pobranie, zapis, wybór, ocena, podsumowanie | `RunStep` | etap (to post) |
+| wynik źródła | wynik jednego źródła w przebiegu: `succeeded`, `empty`, `failed` | `PipelineRunSource`, `SourceFetchStatus` | status przebiegu |
+| etap posta | `stored`, `assessing`, `assessed`, `failed`, `dead` | `PostStage`, `posts.stage` | krok, status |
+| próba posta | nieudana ocena z winy posta (odmowa albo zła odpowiedź); trzecia czyni post martwym | `assessment_attempts` | wywołanie modelu, ponowienie |
+| martwy post | post po trzeciej próbie; wraca tylko przywróceniem admina | `PostStage.DEAD` | martwy przebieg |
+| przywrócenie martwych | admin zeruje próby martwych postów; następny przebieg ocenia je od nowa | `restore`, `DeadPostController` | ponowienie (to przebieg `posts`) |
+| resztki | posty `stored` i `failed` z próbami, brane przez przebieg `retry` | `leftovers`, `RunKind.RETRY` | martwe posty |
+| błąd techniczny | awaria przy poście, po której przebieg idzie dalej; nie zużywa próby | `technical_failures`, `processing_errors` | próba |
+| wstrzymany post | post po trzech błędach technicznych z rzędu; `retry` go pomija | (bez stanu; licznik) | martwy post |
+| wyłącznik serii | trzy awarie dostawcy, błędy klienta albo odmowy z rzędu kończą przebieg `failed` | `ConcurrentAssessmentDispatcher` | bezpiecznik posta |
+| strażnik | zatrzymuje przebieg bez postępu przez `PIPELINE_STALL_TIMEOUT` | `RunWatchdog` | — |
+| osierocony przebieg | aktywny przebieg bez aktywności, oznaczany `interrupted`/`lost` przy żądaniu startu | `orphans`, `InterruptionCause.LOST` | martwy post |
+| wymaga uwagi | jedna reguła powodów przebiegu dla dzwonka, strony i alertu | `AttentionReason`, `attentionReasons()` | `run_attention`, `RUN_NEEDS_ATTENTION` jako osobne pojęcia |
+| dni bez danych | dni z ostatnich 14 bez udanego wyniku źródła | `MissingDays` | luka w danych |
+| ponowienie wywołania | powtórzenie wywołania transportu (LLM albo źródła) | `TransportRetry`, `HttpRetry` | ponowienie resztek (`retry`) |
 
-## Operacje i dostęp
+## Sygnał dla operatora i jakość ocen
 
 | term | means | name in code | don't call it |
 |---|---|---|---|
-| admin | Rola konta w aplikacji; odbiorca dzwonka. | `Role.ADMIN` | operator |
-| operator | Człowiek z dostępem do CLI i Railway; odbiorca alertów. | bez typu (`OperatorAlerts`) | admin |
-| konto systemowe | Konto bez hasła, zleceniodawca przebiegu dziennego. | `SystemAccount.SCHEDULER` | — |
-| powiadomienie | Wiersz w aplikacji dla każdego admina; dzwonek. | `Notification` | alert |
-| alert | Wiadomość do operatora poza aplikacją. | `AlertEvent`, `OperatorAlertQueue` | powiadomienie, sygnał |
-| kanał alarmowy | Droga alertu: healthchecks.io i Telegram. | `HealthchecksAlerts` | kanał (bez dopełnienia) |
-| kopia bazy | Dump sprawdzony pełnym odtworzeniem; poza API. | `tools/db-backup/` | — |
-| sygnał inwestycyjny | Decyzja człowieka, że post jest wart uwagi; model jej nie wydaje. | brak (celowo) | sygnał (bez dopełnienia), alert |
+| admin | konto z rolą `admin`: dzwonek, panel, przywracanie | `Role.ADMIN` | operator |
+| operator | osoba z dostępem do CLI, Railway, ntfy i Telegrama | (bez typu; `OperatorAlerts`) | admin |
+| powiadomienie | wpis w dzwonku admina o przebiegu, który wymaga uwagi | `Notification` | alert |
+| alert operatora | wiadomość do operatora poza aplikacją; zdarzenia API idą przez ntfy | `AlertEvent`, `NtfyAlerts` | powiadomienie |
+| kanał alarmowy | droga alertów: ntfy dla API, healthchecks.io → Telegram dla cronów | `NTFY_URL`, `HEALTHCHECK_PING_URL` | kanał posta, kanał LLM |
+| podsumowanie nocy | codzienna wiadomość z wynikami nocy, także przy 0 martwych | `NightSummary`, `NIGHT_SUMMARY` | alarm |
+| noc | przebiegi jednego wywołania crona | (bez typu; lista id w żądaniu) | doba, dzień |
+| jakość ocen per źródło | udział nieudanych prób i tez w innym języku w oknie 7 dni | `AssessmentQuality`, `QualityStatus` | jakość modelu (pomiar testowy) |
+| przejście przez próg | noc, w której miara przekracza próg, a poprzednia nie; jedyny moment alarmu | `QualityCrossing`, `ASSESSMENT_QUALITY` | stan ponad progiem |
+| kopia bazy | codzienny zrzut sprawdzony pełnym odtworzeniem, robiony poza API | `tools/db-backup` | backup w aplikacji |
+| konto systemowe | konto crona, które nigdy się nie loguje | `SystemAccount.SCHEDULER` | admin |

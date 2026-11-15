@@ -223,7 +223,7 @@ W oknie jest jedna osoba, operator (`kwmacioszek`). Koncentracja 100% jest więc
 
 ## Pierwszy dzień
 
-1. **`REPOSITORY_GUIDELINES.md` i `context/foundation/roadmap.md`** (`## Milestone History`, `## Parked`): co produkt robi i co świadomie odłożono. Uwaga: wytyczne nadal opisują usunięty `HealthchecksAlerts` (patrz Ograniczenia).
+1. **`REPOSITORY_GUIDELINES.md` i `context/foundation/roadmap.md`** (`## Milestone History`, `## Parked`): co produkt robi i co świadomie odłożono.
 2. **`szczur-radar-api/src/main/java/pl/szczurradar/api/pipeline/PipelineRunService.java` → `pipeline/flow/RunSequence.java` → `pipeline/assess/ConcurrentAssessmentDispatcher.java`**: wejście do przebiegu i miejsce, gdzie dzieje się ocena. Stan żyje w `pipeline/state/PostTransitions.java` i `RunRecorder.java`.
 3. **`szczur-radar-api/src/main/java/pl/szczurradar/api/agents/assessor/Assessor.java` i `src/main/resources/assessor/system-prompt.md`**: kontrakt oceny V2, od którego zależy każdy widok.
 4. **`szczur-radar-api/src/main/java/pl/szczurradar/api/sources/Source.java` i `pipeline/step/SourceIngest.java`**: rejestr źródeł (z progami jakości od M-4) i krok pozyskania.
@@ -256,7 +256,7 @@ W oknie jest jedna osoba, operator (`kwmacioszek`). Koncentracja 100% jest więc
 
 **Korekty dowodów:**
 - `evidence/2-discussion.md` podaje, że `deploy-verification-hardening` jest nieśledzone. W rzeczywistości ta zmiana jest zarchiwizowana w `context/archive/2026-10-20-deploy-verification-hardening/`. Nieśledzona kopia folderu leży tylko w głównym checkoucie, jako lokalny ślad.
-- Rozjazd dokumentacji: `REPOSITORY_GUIDELINES.md` opisuje `alerts/HealthchecksAlerts` i `HEALTHCHECK_PING_URL` w API. M-4 zastąpił je przez `NtfyAlerts` i `NTFY_URL`/`NTFY_TOKEN`; w `szczur-radar-api` nie ma już żadnego wystąpienia tamtych nazw.
+- `evidence/3-structure.md` (Unknowns, „Rozjazd dokumentacji”) podaje, że `REPOSITORY_GUIDELINES.md` opisuje `alerts/HealthchecksAlerts`. To nieprawda na `ef56ddc`: plik w repo opisuje `NtfyAlerts` i `NTFY_URL`/`NTFY_TOKEN` (zmieniony w S-34), a `HealthchecksAlerts` nie występuje w nim ani razu. Podagent czytał starszą kopię wytycznych z kontekstu sesji. Ustalenie wycofane.
 
 **Czego mapa nie mówi:**
 - Nie mówi, czy zanikające możliwości (llm-providers, auth, accounts, db-backup) są stabilne, czy tylko nietykane. To rozstrzygnęłyby logi produkcji, których tu nie ma.
