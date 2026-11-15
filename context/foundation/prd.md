@@ -1,9 +1,9 @@
 ---
 project: "Szczur Radar"
-version: 3
+version: 4
 status: draft
 created: 2026-09-26
-updated: 2026-11-04
+updated: 2026-11-15
 context_type: greenfield
 product_type: data-pipeline
 target_scale:
@@ -12,11 +12,13 @@ target_scale:
   data_volume: small
 timeline_budget:
   mvp_weeks: 10
-  hard_deadline: 2026-12-06
+  hard_deadline: "2027-01" # styczeń 2027 (ostatni termin oddania projektu kursowego; dokładny dzień nieustalony) — zmienione w v4 z 2026-12-06
   after_hours_only: true
 ---
 
 > **v3 (2026-11-04), po M-3.** Odświeżenie po zamknięciu M-3 (Reddit na produkcji od 2026-11-01) i przed otwarciem M-4. Zmiany: zakres przebiegu w dniach, a nie godzinach (FR-001); FR-022 i FR-023 zrealizowane; FR-029 zastąpione decyzją F-03 (sesja 30 dni); wejście oceny opisane zgodnie z kontraktem (Business Logic); decyzje właściciela z 2026-11-01 i 2026-11-04 (pytania Q-13, Q-14, Q-16, Q-18 z `context/domain/domain-distillation.md`) jako doprecyzowania i nowe wymagania FR-033 i FR-034. Doprecyzowania w FR i NFR są dopisywane chronologicznie: obowiązuje najnowsze, a starsze zostają jako historia decyzji.
+
+> **v4 (2026-11-15), po M-4.** Odświeżenie po zamknięciu M-4 (weryfikacja i regresja) i przed otwarciem M-5 (nowe UI/UX z testami E2E). Źródła: audyt `context/changes/post-m4-ui-readiness-audit/research.md` (fundament SPA, luki API wobec makiet z `context/foundation/ui-ux-proposals.md`, podłoga E2E, pomiar „kanał jako cel”) i decyzje właściciela z 2026-11-15 (sekcja „Decyzje właściciela” w tym audycie; pytania Q-15 i Q-20 z `context/domain/domain-distillation.md`). Zmiany: nowe wymagania FR-035–FR-040 (filtr po dacie publikacji, wyszukiwanie w treści, katalog celów, proporcje stanowisk per cel, przegląd dnia, przełącznik motywu); doprecyzowania FR-007 (domyślne ukrywanie postów nieinwestycyjnych, Q-15), FR-008 i FR-011b (sortowanie wybrane do M-5), FR-009 (podświetlenie cytatów, poprzedni i następny wpis), FR-011a i Non-Goals (agregacja po tekście celu nie jest rozpoznawaniem spółek), FR-033 (miara „kanał jako cel”, Q-20); nowe NFR o testach E2E; `hard_deadline` przesunięty na styczeń 2027.
 
 ## Vision & Problem Statement
 
@@ -111,15 +113,18 @@ Administrator (operator wdrożenia) — zarządza dostępem: tworzy konta dla za
   > sygnału mogłaby lepiej decydować o kolejności." Rozwiązanie: chronologia zostaje domyślnym porządkiem w MVP
   > (nie ma jeszcze zdefiniowanej miary "ważności" — zależy od schematu LLM, patrz Open Questions); zmiana
   > porządku przez usera to FR-008/FR-011b.
+  > Doprecyzowanie (2026-11-15, PRD v4; decyzja właściciela Q-15): w widokach listy (lista postów, wpisy celu, przegląd dnia) posty z trafnością `not_investment_related` oraz wynik odsiewu (wpis bez treści, `result_source = prefilter`) są domyślnie ukryte; przełącznik „pokaż wszystkie” je przywraca, a ukryte posty zostają w bazie i w RAW. Dotyczy też liczników i proporcji z FR-037–FR-039.
 - FR-008: Użytkownik może sortować listę postów po dacie i źródle. Priority: nice-to-have
   > Socrates: Kontrargument rozważony (przez użytkownika wprost): "lista ma sensowny domyślny porządek
   > (chronologia), więc dodatkowe sortowanie po dacie/źródle nie jest konieczne do podstawowego działania
   > produktu." Rozwiązanie: obniżone do nice-to-have — przy niewielkiej, zapraszanej grupie userów (target_scale:
   > small) chronologiczny porządek wystarcza na start; dodatkowe sortowanie to wygoda, nie konieczność.
+  > Doprecyzowanie (2026-11-15, PRD v4): sortowanie wchodzi do M-5 z wyboru właściciela; priorytet zostaje nice-to-have. Domyślnym porządkiem zostaje chronologia (FR-007).
 - FR-009: Użytkownik widzi widok szczegółowy posta w czytelnej, przetworzonej formie; surowy JSON jest dostępny opcjonalnie (np. pod przełącznikiem "dane dla nerdów"), nie pokazywany domyślnie. Priority: must-have
   > Socrates: Kontrargument rozważony: "surowy JSON bez formatowania to tryb debug, niekoniecznie potrzebny
   > użytkownikowi końcowemu." Rozwiązanie: przyjęte — przetworzona wersja jest domyślna, surowa dostępna
   > opcjonalnie.
+  > Doprecyzowanie (2026-11-15, PRD v4): widok posta podświetla w treści fragmenty, na których oparto ocenę (`anchor` celów i cytaty tez), z przełącznikiem, który podświetlenie wyłącza; cytat jest podciągiem pola po normalizacji białych znaków (`contract-v2.md` §10), więc podświetlenie nie wymaga nowych danych, a przy powtórzonym fragmencie wybór wystąpienia ustala plan. Z widoku posta można przejść do poprzedniego i następnego wpisu bieżącej listy.
 - FR-010: Widok posta zawiera link do oryginalnego posta na platformie źródłowej (Wykop/Reddit), umożliwiający przejście do pełnego kontekstu. Priority: must-have
   > Socrates: Kontrargumenty rozważone: "post źródłowy może zostać usunięty/edytowany — link donikąd" oraz
   > "zależność od stabilności URL Wykopu/Reddita." Rozwiązanie: oba ryzyka zaakceptowane — link to dodatek do
@@ -131,9 +136,11 @@ Administrator (operator wdrożenia) — zarządza dostępem: tworzy konta dla za
   > Socrates: Kontrargument rozważony: "dokładny schemat klasyfikacji LLM jeszcze nieustalony." Rozwiązanie:
   > przyjęte jako kwestia kolejności prac (schemat powstaje przy uszczegółowieniu Business Logic, patrz Open
   > Questions), nie powód do rezygnacji z tej funkcji w MVP; FR zostaje must-have.
+  > Doprecyzowanie (2026-11-15, PRD v4): katalog celów (FR-037) i proporcje stanowisk (FR-038) grupują cele po znormalizowanym tekście `anchor` (bez rozróżniania wielkości liter i bez wiodącego `#`); odmiany („Orlen”, „Orlenu”) zostają osobnymi pozycjami. To nadal dopasowanie tekstowe, nie rozpoznawanie spółek (Non-Goals).
 - FR-011b: Użytkownik może sortować posty po wybranych wartościach wynikających z klasyfikacji LLM. Priority: nice-to-have
   > Socrates: Kontrargument rozważony: "zależy w pełni od jeszcze nieustalonego schematu klasyfikacji."
   > Rozwiązanie: przyjęte do wiadomości — FR zostaje nice-to-have, doprecyzowany po ustaleniu schematu.
+  > Doprecyzowanie (2026-11-15, PRD v4): wchodzi do M-5 razem z FR-008 z wyboru właściciela; priorytet zostaje nice-to-have.
 
 ### Kontrola dostępu i konta
 - FR-012: Użytkownik może zalogować się do aplikacji przy użyciu adresu e-mail i hasła. Priority: must-have
@@ -270,8 +277,23 @@ Administrator (operator wdrożenia) — zarządza dostępem: tworzy konta dla za
   > Uzasadnienie (2026-11-04): guardrail „jakość danych z LLM musi być wysoka” nie ma dziś żadnej miary po wdrożeniu; mierzy go tylko harness poza CI (destylacja domeny, kandydat #1, R-15). Reguła języka tez zostaje bez wyjątków i nie jest sprawdzana przez walidator (decyzja właściciela Q-16, `contract-v2.md` §8). Progi ustala plan wycinka na danych z produkcji.
   > Doprecyzowanie (2026-11-11, S-35 `per-source-failure-quality`; część o nieudanych próbach): miarą jest udział nieudanych prób oceny z wywołaniem modelu (`result_source = model`, ponowienia włącznie, próby prefiltra pominięte) we wszystkich przebiegach, cronu i admina, w oknie 7 dni kalendarza warszawskiego `[D−6, D]`, z podziałem na klasy błędu kontraktu (`contract-v2.md` §12). Próg jest osobny dla każdego źródła i jest stałą przy źródle (zmiana progu to PR): Wykop 5 %, Reddit 25 %; przy mniej niż 100 próbach w oknie progu się nie sprawdza. Udział jest ponad progiem, gdy jest od niego ostro większy. Miarę widać co noc w podsumowaniu nocy (linia `quality 7d` na źródło) i w `/admin`; sygnałem jest osobny alarm operatora (`ASSESSMENT_QUALITY`) tylko przy przejściu przez próg — okno dzisiejsze ponad progiem, a okno, które widziało poprzednie podsumowanie, nie (albo miało mniej niż 100 prób) — a nie co noc, dopóki udział jest ponad progiem. Progi ustalono na danych z produkcji z 35 dni (`context/archive/2026-11-11-per-source-failure-quality/evidence/`: Wykop w stanie ustalonym 2,0–2,8 %, Reddit 14,6–18,4 %); dałyby jeden alarm, Wykop 2026-10-13 (incydent dostawcy z 2026-10-09). Mianownikiem są zapisane próby (`assessments`), więc awaria dostawcy bez odpowiedzi po ponowieniach (S-09), błędy klienta i naszego kodu (S-17), przerwany przebieg i posty pominięte po wyłączniku odmów (S-32) są poza miarą i mają własne sygnały (`failed` przebiegu); `provider_error` i `timeout` w mierze to tylko wywołania, które zużyły próbę. Część o języku tez robi S-36 tym samym kanałem i w tym samym oknie. Szczegóły: `context/deployment/deploy-plan.md`, sekcja S-35.
   > Doprecyzowanie (2026-11-12, S-36 `statement-language-quality`; część o języku tez): miarą jest udział tez (`statement`) udanych prób oceny z wywołaniem modelu (`status = ok`, `result_source = model`) w innym języku niż post, w tym samym oknie 7 dni `[D−6, D]` i z tą samą regułą progu i przejścia co S-35. Naruszeniem jest tylko dowód drugiego języka: teza jest polska przy polskiej literze albo co najmniej 2 polskich słowach funkcyjnych, angielska przy co najmniej 2 angielskich słowach funkcyjnych, a teza bez dowodu (liczby, tickery, krótkie zdanie) jest nierozstrzygnięta i nie jest naruszeniem. Język posta to `posts.language`, dziś język źródła (Wykop `pl`, Reddit `en`). Próg jest osobny dla każdego źródła i jest stałą przy źródle (zmiana progu to PR): Wykop 2 %, Reddit 30 %; przy mniej niż 500 tezach w oknie progu się nie sprawdza. Miarę widać co noc w podsumowaniu nocy (linia `language 7d` na źródło) i w `/admin`; przejście którejkolwiek miary daje jeden alarm `ASSESSMENT_QUALITY` z obiema miarami w treści. Progi ustalono na danych z produkcji (`context/changes/statement-language-quality/evidence/`, po archiwizacji w `context/archive/`: okna Wykopu 0,09–0,86 %, Reddita 14,01–20,76 %; na tych danych zero alarmów). Znane ograniczenie: angielskie wpisy na Wykopie (43 z 9 331 postów) mają zapisane `pl`, więc ich angielskie tezy liczą się jako naruszenia, a polskie są pomijane (różnica w mierze 0,04 pp.). Szczegóły: `context/deployment/deploy-plan.md`, sekcja S-36.
+  > Doprecyzowanie (2026-11-15, PRD v4; decyzja właściciela Q-20): trzecią miarą jest udział celów, których `anchor` równa się kanałowi posta (tag Wykopu albo nazwa subredditu, po tej samej normalizacji co w FR-011a), z wywołań modelu w tym samym oknie 7 dni, z tą samą regułą progu i przejścia co S-35 i S-36; progi ustala plan wycinka. Kontrakt mówi, że tagi kanału „nigdy nie są celem” (`contract-v2.md` §6.4), a strzeże tego tylko prompt; na nagraniach z promptem v2.5 model produkcyjny nie zrobił takiego celu ani razu, a tańsze modele zrobiły 6 na 674 cele (audyt `post-m4-ui-readiness-audit`, sekcja 4). Miara pilnuje widoków agregujących po celu (FR-037–FR-039) przy zmianie modelu.
 - FR-034: Administrator może przywrócić zaznaczone martwe posty (`dead`) do oceny: post traci martwy stan, a jego próby oceny są zerowane, więc kolejny przebieg ocenia go od nowa. Priority: must-have
   > Uzasadnienie (2026-11-04, decyzja właściciela Q-18): `dead` jest dziś nieodwracalne, więc zła noc dostawcy albo zmiana promptu nie mają drogi powrotu. Obok tego seria odmów dostawcy zatrzymuje przebieg, zanim zużyje próby kolejnych postów (NFR o sygnale dla operatora, doprecyzowanie PRD v3).
+
+### Przegląd i przekroje (od PRD v4, M-5)
+- FR-035: Użytkownik może zawęzić listę postów do dnia albo zakresu dat publikacji (kalendarz warszawski), także razem z pozostałymi filtrami. Priority: must-have
+  > Uzasadnienie (2026-11-15, decyzja właściciela): makiety Czytnika („wydanie dnia”) i Przeglądu (wybór dnia, archiwum) zakładają listę jednego dnia; FR-011a filtruje tylko po polach oceny, a FR-001 dotyczy zakresu przebiegu, nie widoku.
+- FR-036: Użytkownik może wyszukać posty po słowach w tytule i treści, obok filtra po celu z FR-011a. Priority: must-have
+  > Uzasadnienie (2026-11-15, decyzja właściciela): makieta Strumienia ma wyszukiwanie „po treści lub spółce”; FR-011a dopasowuje tylko fragment, którym post wskazuje cel.
+- FR-037: Użytkownik widzi katalog celów z postów (z wybranego okresu) z liczbą wpisów o każdym celu i może przejść do wpisów wybranego celu. Cele są grupowane po znormalizowanym tekście `anchor` (FR-011a), bez rozpoznawania spółek. Priority: must-have
+  > Uzasadnienie (2026-11-15, decyzja właściciela): makiety Karty podmiotu i Przeglądu stoją na liście celów; agregacja po tekście celu mieści się w granicy Non-Goals, a scalanie odmian i nazw jednej spółki zostaje poza zakresem.
+- FR-038: Użytkownik widzi dla celu proporcje stanowisk autorów (wzrostowe, spadkowe, pozostałe) liczone ze stanowisk wobec tego celu w postach z wybranego okresu, jako migawkę bez trendu. Priority: must-have
+  > Uzasadnienie (2026-11-15, decyzja właściciela): paski proporcji z makiet Karty podmiotu i Przeglądu. Kontrakt nie ma globalnego sentymentu posta, więc proporcje liczy się ze stanowisk per cel; agregacja w czasie i trend zostają w FR-024 i FR-025.
+- FR-039: Użytkownik widzi przegląd wybranego dnia: liczbę wpisów, liczbę celów ze stanowiskiem, źródła danych, cele dnia z proporcjami stanowisk oraz najczęściej omawiane cele z najnowszymi wpisami o nich. Wszystkie wybory są jawnie liczbowe; przegląd nie ocenia, co jest „warte przeczytania”. Priority: must-have
+  > Uzasadnienie (2026-11-15, decyzja właściciela): makieta Przeglądu ma „Aktywny wątek”, „Wątek dnia” i „Warto przeczytać”; automatyczny wybór wartości łamie Non-Goals i zasadę, że ocenę robi użytkownik, więc te elementy dostają kryteria liczbowe (np. najwięcej wpisów danego dnia).
+- FR-040: Użytkownik może przełączyć motyw aplikacji między jasnym i ciemnym; wybór jest zapamiętany, a domyślnie obowiązuje ustawienie systemu. Priority: must-have
+  > Uzasadnienie (2026-11-15, decyzja właściciela): kierunek wizualny M-5 to dwa motywy z ręcznym przełącznikiem i nową paletą pod układy paneli; każda para kolorów tekstu spełnia kontrast co najmniej 4.5:1 w obu motywach.
 
 ## Non-Functional Requirements
 
@@ -303,6 +325,8 @@ Administrator (operator wdrożenia) — zarządza dostępem: tworzy konta dla za
   > Zmiana (2026-10-11, F-01 `production-data-gate`): wcześniej „bezpieczeństwo przed utratą danych jest odpowiedzialnością platformy hostingowej”. Plan Railway Hobby nie ma jednak kopii wolumenu ani PITR (to funkcje planu Pro), więc kopie robi serwis cron `db-backup` (`tools/db-backup/`): `pg_dump` sprawdzany odtworzeniem, bucket Railway (14 dziennych + 12 miesięcznych kopii) i NAS operatora. Szczegóły i runbook odtworzenia: `context/deployment/deploy-plan.md`, sekcja F-01.
   > Doprecyzowanie (2026-10-30, S-27 `reddit-source`): posty Reddita i ich surowe payloady (pełny obiekt posta z archiwum trzeciej strony, Arctic Shift) są przechowywane jak posty Wykopu: bezterminowo, a RAW bezstratnie. Reguły wiki Data API Reddita każą usuwać treści skasowane na Reddicie (zalecane w 48 h); właściciel uznał je 2026-10-29, bez analizy prawnej, za niewiążące dla tej ścieżki, bo projekt nie korzysta z API Reddita bezpośrednio, a Arctic Shift nie publikuje własnych warunków. Synchronizacji usunięć nie ma: post zdjęty albo skasowany na Reddicie po pobraniu zostaje w bazie i w RAW, a jego liczniki (`score`, `num_comments`) zostają z chwili pobrania. Szczegóły: `context/deployment/deploy-plan.md`, sekcja S-27.
 - Oryginalny payload źródłowy każdego zebranego posta pozostaje dostępny bez utraty informacji, ale jest utrzymywany niezależnie od znormalizowanych danych używanych przez aplikację. Sposób jego przechowywania musi pozwalać na niezależną, bezstratną kompresję lub przeniesienie surowych danych bez zmiany zachowania aplikacji ani utraty dostępu do widoku surowego posta.
+- Każdy przepływ użytkownika w aplikacji webowej (logowanie, lista z filtrami, widok posta, katalog i przegląd, panel admina) ma test w przeglądarce (E2E), który szuka elementów po rolach i tekstach i działa na atrapie API zgodnej z kontraktem; testy E2E chodzą w CI przy każdym PR.
+  > Uzasadnienie (2026-11-15, PRD v4): M-4 przygotował atrapę API strzeżoną kontraktem (S-43), a przeniesienie testów w przeglądarce do M-5 to decyzja właściciela z 2026-11-04 (`context/foundation/roadmap.md`, v5). Przebudowa UI w M-5 zaczyna się od tych testów na obecnych widokach, żeby były siatką regresji przebudowy.
 
 ## Business Logic
 
@@ -342,6 +366,7 @@ Poza zakresem MVP (przyszłość): drugi czynnik uwierzytelniania, samodzielny r
 - **Wysoka dostępność / multi-region** — pojedyncza instancja na jednej platformie wystarcza dla małej, zapraszanej grupy userów.
 - **Dodatkowe źródła danych poza Wykop/Reddit** (np. Twitter/X, fora branżowe) — poza zakresem MVP i jego zaplanowanego rozszerzenia.
 - **Rozpoznawanie spółek (entity resolution) oraz automatyczna decyzja „wartościowy sygnał”** — MVP nie ustala, o którą konkretnie spółkę chodzi (ticker/ISIN), ani nie wylicza nowości, trendu czy końcowej decyzji o sygnale; kontrakt oceny LLM (V2) umieszcza te kroki poza oceną jako osobne, dalsze etapy. Są warunkiem przyszłych FR-024/FR-025.
+  > Doprecyzowanie (2026-11-15, PRD v4): katalog celów, proporcje stanowisk i przegląd dnia (FR-037–FR-039) grupują cele po znormalizowanym tekście `anchor` i nie są rozpoznawaniem spółek; scalanie odmian i nazw jednej spółki (np. „Orlen” = „PKN”), tickery, trend i automatyczny wybór „wartych uwagi” wpisów zostają poza zakresem.
 - **Personalizacja samej logiki oceny LLM** ("co znaczy wartościowy sygnał") per user — kryterium wartościowości pozostaje wspólne dla wszystkich; personalizowalne jest wyłącznie filtrowanie widoku na już obliczonej, wspólnej klasyfikacji (FR-011a/b), nie sama reguła oceny.
 - **Rozbudowany system zarządzania tożsamością poza modelem `user`/`admin`** — dodatkowe role, granularne uprawnienia, rozbudowana edycja/deaktywacja kont, publiczna rejestracja oraz samodzielny reset hasła przez użytkownika i zarządzanie kluczami dostępu pozostają poza zakresem MVP. (Nie wyklucza to FR-016/FR-017/FR-019 — panel webowy tworzenia kont i automatyczna wysyłka maila zaproszenia pozostają nice-to-have zgodnie z aktualnymi FR.)
 
