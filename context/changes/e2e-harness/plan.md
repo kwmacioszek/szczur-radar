@@ -532,8 +532,8 @@ Job `web-e2e` w CI blokuje wdrożenie przy czerwonym E2E. Wytyczne repo mówią,
 
 #### Automated
 
-- [x] 4.1 Workflow jest poprawnym YAML-em, a web-e2e jest w needs joba railway-config
-- [x] 4.2 PR gałęzi feature/e2e-harness ma w opisie Refs #176
-- [ ] 4.3 Job web-e2e na PR jest zielony i przeszedł 18 testów
-- [ ] 4.4 Każdy job CI na PR jest zielony, w tym railway-config
-- [ ] 4.5 Job czerwienieje na czerwonym teście i oddaje raport
+- [x] 4.1 Workflow jest poprawnym YAML-em, a web-e2e jest w needs joba railway-config — 734f14c
+- [x] 4.2 PR gałęzi feature/e2e-harness ma w opisie Refs #176 — 734f14c
+- [x] 4.3 Job web-e2e na PR jest zielony i przeszedł 18 testów — 734f14c
+- [x] 4.4 Każdy job CI na PR jest zielony, w tym railway-config — 734f14c
+- [x] 4.5 Job czerwienieje na czerwonym teście i oddaje raport — 734f14c

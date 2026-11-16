@@ -1,7 +1,7 @@
 ---
 change_id: e2e-harness
 title: "F-05: testy w przeglądarce w CI na atrapie API"
-status: implementing
+status: implemented
 created: 2026-11-16
 updated: 2026-11-16
 archived_at: null
