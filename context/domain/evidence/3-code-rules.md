@@ -1,314 +1,232 @@
 # Evidence: rules guarded in the code
 
-**Zakres:** cały zakres kodu z `0-sources.md`: `szczur-radar-api/`, `szczur-radar-web/`, `tools/pipeline-trigger/`, `tools/db-backup/` (bez podziału na grupy). Stan: head 5b4ac92.
+Zakres: cały `code_scope` z `0-sources.md` (jeden agent, bez podziału): `szczur-radar-api/` (main + wybrane testy-strażnicy), `szczur-radar-web/src/` i `dev/` (poza `KitchenSinkView.vue`), `tools/pipeline-trigger/`, `tools/db-backup/`. Harmonogramy przeczytane tylko jako konfiguracja w `.railway/railway.ts`. HEAD `66d4199` (kod jak `ef56ddc`). Aliasy jak w inwentaryzacji: `api/` = `szczur-radar-api/src/main/java/pl/szczurradar/api/`, `web/` = `szczur-radar-web/src/`, `mig/` = `szczur-radar-api/src/main/resources/db/migration/`; `test/` = `szczur-radar-api/src/test/java/pl/szczurradar/api/`.
 
-**Aliasy:** `api/` = `szczur-radar-api/src/main/java/pl/szczurradar/api/`; `web/` = `szczur-radar-web/src/`; `mig/` = `szczur-radar-api/src/main/resources/db/migration/`.
+Warstwy przeszukane i sposób:
+- **trwałość**: wszystkie 16 migracji przeczytane w całości (CHECK, UNIQUE, NOT NULL, FK, indeksy częściowe, backfille); każdy zapis w kodzie main znaleziony grepem `UPDATE|INSERT INTO|DELETE FROM|.save(|.saveAll(|.saveAndFlush(|.delete(|@Modifying` (pełna lista pisarzy niżej);
+- **wejścia HTTP**: wszystkie `@*Mapping` (grep) + `config/SecurityConfig.java`; przeczytane kontrolery: pipeline-runs (admin i internal), deploy-safety, posts, dead/failed posts, notifications, auth, activation; pozostałe (freshness, llm check, assessment-quality, health) tylko nagłówki;
+- **CLI**: `cli/AdminBootstrap.java` w całości, pozostałe komendy grepem warunków / kodów wyjścia;
+- **logika**: przeczytane `PipelineRunService`, `RunRecorder`, `PostTransitions`, `RunSequence`, `SourceIngest`, `PostStore`, `AssessmentSelection`, `RunWatchdog`, `PipelineStartupRecovery`, `RunNotifications`, `ActivationLinks`, `AccountDetailsService`, `Assessor`, nagłówek `ConcurrentAssessmentDispatcher`; grepem `throw new|if (|static final` w `sources/**`, `alerts/**`, `posts/**`, `agents/assessor/validation/**`;
+- **UI**: router, `AppHeader`, `AdminView` (formularz, lista nieudanych), `FeedFilter`, `ActivateView`, `missingDays.ts`, `api/client.ts`, `auth/session.ts`, `contract/rules.json` — grep `confirm(|:disabled|maxlength|role ===|MAX_`;
+- **zadania**: `trigger.sh`, `backup.sh`, `restore-check.sh` grepem warunków i `exit`;
+- **testy-strażnicy**: lista wszystkich `*IT.java`, nagłówki pięciu strażników strukturalnych.
 
-**Warstwy przeszukane:** baza (V1–V13), kod domenowy i aplikacyjny, wejścia HTTP/CLI/cron, UI, transakcje, praca w tle.
-
-**Metoda:** przeczytane w całości V1–V13, `pipeline/**` (poza prostymi enumami), `posts/**`, `raw/**`, `notifications/**`, `auth/**`, `user/**`, `internal/**`, `cli/**` (poza `CommandLine`, `PasswordPrompt`), `config/` (Security, Session, ErrorCode, wyjątki), `sources/**` (poza dalszą częścią `WykopApiClient`/`RedditApiClient`), `agents/assessor/**` (poza `prompt/`), `trigger.sh`, `backup.sh` (poza liniami 31–59), `tables.sh`. Selektywnie (grep): `llm/**`, `alerts/**`, `restore-check.sh`, `nas-retention.sh`, `web/`.
-
-**Czego nie pokryto:** `tools/deploy-gate`, `tools/healthchecks`, `.github` (wykluczone); `agents/assessor/prompt/` (treść promptu); klienci dostawców LLM poza grepem; testy tylko jako fakt istnienia (`AuthorizationCompletenessIT`, `ClosedSetsIT`, `JpaSchemaIT`, `SpaRulesTest`, `PostColumnsIT`, `web/contract/rules.test.ts`), bez czytania ich treści.
-
-**Skażenie źródeł:** w trakcie pracy harness sam wstrzyknął treść `api/pipeline/CLAUDE.md` do kontekstu (nie była czytana z wyboru). Nie użyto jej jako dowodu: każdy wpis niżej ma cytat z kodu przeczytanego w tej sesji.
-
-**Oznaczenia:** kolumna „reguła" to zawsze moje słowa (`inference`). Istnienie strażnika i cytat to `evidence`, o ile nie zaznaczono inaczej. Komentarze w kodzie przytaczam jako słowa kodu, nie jako dowód działania.
+Nie przeszukane (niewiadome, nie „brak reguł”): ciała 15 strategii reguł D1–D15 w `api/agents/assessor/validation/rules/` (cytuję tylko enum `RuleId`), `OutputParser`, `StanceTable`, `NightSummary.java` (620 wierszy), `AssessmentQuality.java` poza stałymi i `status`, klienci LLM (`api/llm/**`), `HttpRetry` / `TransportRetry` poza stałymi, `WykopRepository` / `RedditRepository` poza grepem, `tools/db-backup/nas-retention.sh`, `tables.sh` poza grepem, `szczur-radar-web/dev/mock-api.js`, widoki `FeedView`, `PostDetailView`, `RunDetailView`, `LoginView` poza grepem, ciała ok. 100 plików `*Test.java`.
 
 ## Guarded rules
 
-### 1. Kolejka i cykl życia przebiegu (`pipeline_runs`)
+Kolumna „reguła” to moje sformułowanie (inference); cytaty źródła podaję w `„…”`.
 
-| reguła | strzeżona w | ścieżki | ścisłość | obsługa błędu |
+### Konta, logowanie, dostęp
+
+| reguła (inference) | strzeżona w (warstwa: path:line) | pokryte ścieżki | ścisłość | obsługa porażki |
 |---|---|---|---|---|
-| Co najwyżej jeden przebieg `running` | DB: `uq_pipeline_runs_one_running` `mig/V3:39`; wątek: `newSingleThreadExecutor` `api/pipeline/PipelineRunService.java:136-137` | każdy zapis `status`; jedyny zapis → `running` to `RunRecorder.start` `api/pipeline/state/RunRecorder.java:63-68` | hard (data) | named error po stronie DB; aplikacja nie mapuje tego błędu: `execute` łapie `RuntimeException` (`PipelineRunService.java:346`) |
-| Nowe żądanie startu jest odrzucane, gdy cokolwiek jest `queued`/`running` | app: `queue()` `PipelineRunService.java:217-223`, `existsActive` `api/pipeline/run/PipelineRunRepository.java:32-34`, advisory lock `PipelineRunService.java:274-276` | oba wejścia (admin `api/pipeline/api/PipelineRunController.java:104-106`, cron `.../InternalPipelineRunController.java:68`) idą przez `startRange`/`startPosts` | hard (app), DB nie ma odpowiednika dla `queued` | named error `pipeline_busy` 409 `.../PipelineRunExceptionHandler.java:20-23`, `api/config/ErrorCode.java:51` |
-| Start tylko z `queued` | `RunRecorder.java:64-65` | jedyna ścieżka | hard (app) | `false` → przebieg się nie wykonuje (`PipelineRunService.java:339`) |
-| Stan końcowy się nie zmienia: każda zmiana jest warunkowym `UPDATE` na oczekiwany status | `finish:81-82`, `fail:98-99`, `count:114`, `source:145`, `touch:172`, `error:179`, `interrupt:253`, `stall:272-274`, `interruptAll:294`, `interruptOrphans:328` (wszystko `RunRecorder.java`) | wszyscy pisarze `pipeline_runs.status` znalezieni w kodzie | hard (app): baza przyjęłaby dowolne przejście (brak triggera) | cicho: 0 wierszy, bez logu; to działanie zamierzone |
-| Encja nie zmienia stanu przebiegu | brak setterów w `api/pipeline/run/PipelineRun.java`; kolumny postępu `insertable=false, updatable=false` `:102-127`; „blind save" tylko przy tworzeniu `PipelineRunService.java:222` | jedyne `saveAll` | hard (app) | n/d |
-| Rodzaj przebiegu spina pola: `range` ma zakres i źródła, `posts` ma identyfikatory, inni nie mają | DB: `ck_pipeline_runs_range` `mig/V4:19-22`, `ck_pipeline_runs_requested_posts` `mig/V3:35`, `ck_pipeline_runs_sources` `mig/V12:29-31`; app: fabryki `PipelineRun.java:155-160,179-181` | zawsze | hard (data) | `IllegalArgumentException` / naruszenie CHECK |
-| `from <= to` | DB `mig/V4:22`; encja `PipelineRun.java:155`; kontroler `PipelineRunController.java:189` | trzy warstwy | hard (data) | 400 `invalid_request` |
-| Zakres admina: `to <= dziś`, najwyżej 7 dni, `postIds` 1–100 bez nulli i bez pól zakresu | kontroler: `PipelineRunController.java:60,66,184-191`; SPA: `web/missingDays.ts:5` (tylko dzielenie podpowiedzi) | **tylko** `POST /api/admin/pipeline-runs`; `PipelineRunService.startRange` i `PipelineRun.range` limitów nie sprawdzają | hard (app): drugie wejście (cron) ma stałe D-2…D-1 `InternalPipelineRunController.java:67-68` | 400 `invalid_request` |
-| Przyczyna przerwania tylko na `interrupted`; zbiór przyczyn zamknięty | `ck_pipeline_runs_interruption_status` `mig/V8:17-18`, `ck_pipeline_runs_interruption_cause` `mig/V11:10-11`; enum `.../run/InterruptionCause.java:12-28` | zawsze; odwrotności (`interrupted` ⇒ przyczyna) baza nie wymaga | hard (data), w jedną stronę | CHECK |
-| Krok tylko w przebiegu `running`, zamykany raz | `openStep` `RunRecorder.java:347-351`, `endStep:366-367`, `closeSteps:389-390` | wszystkie kroki przez `RunRecorder.step` | hard (app) | `RunNoLongerRunningException` (INFO `PipelineRunService.java:358-359`) |
-| Przebieg bez postępu przez `PIPELINE_STALL_TIMEOUT` kończy `failed` | `stall` `RunRecorder.java:269-281`, `stopStalled` `PipelineRunService.java:461-482`, `RunWatchdog.java:93-113`; granice ustawienia `PipelineStallSettings.java:42-51,108-115` | tylko przebiegi tej instancji (`own`) | hard (app) dla własnych; cudze: reguła niżej | run `failed` z tekstem „no progress for …" `RunRecorder.java:270` |
-| Martwa kolejka: przebiegi bez aktywności są oznaczane `lost`, wszystkie albo żaden | `interruptOrphans` `RunRecorder.java:325-339`, wywołanie tylko gdy `own.isEmpty()` `PipelineRunService.java:246` | tylko przy żądaniu startu | soft: bez żądania nic tego nie zrobi; to samo kryterium żywotności drugi raz w SQL `PipelineRunRepository.java:58-63` | logs and continues + `ORPHAN_CLEANUP_FAILED` `PipelineRunService.java:250-256` |
-| Deploy nie przerywa żywego przebiegu | `GET /api/deploy-safety` `.../DeploySafetyController.java:50-70` | tylko odpowiedź dla bramki CI (brama wykluczona z zakresu); kod nie blokuje deployu | soft; bypass: `tools/deploy-gate` poza zakresem, instancja i tak zamyka przebieg `onClose` `PipelineRunService.java:539-565` | 503 bez bazy `:55-57` |
+| E-mail konta jest unikalny i zapisany małymi literami | DB: `mig/V1__create_users.sql:10` `uq_users_email`, `:11` `ck_users_email_lower`; app: `api/user/Emails.java:18-19` (`strip().toLowerCase`), `api/auth/activation/ActivationLinks.java:83-86`, `:92-98` (wyścig rozpoznany po `DataIntegrityViolationException`), `api/cli/AdminBootstrap.java:63-66` | wszyscy trzej pisarze `users` (`ActivationLinks.java:88`, `AdminBootstrap.java:81`, seed `mig/V6…:11-12`) | hard (data) | named error: `IssueOutcome.Reason.EMAIL_TAKEN`; CLI „An account with e-mail … already exists.” |
+| Rola konta to `user` albo `admin` | DB: `mig/V1__create_users.sql:12` `ck_users_role` | wszyscy pisarze | hard (data) | generic (constraint) |
+| Konto systemowe nigdy się nie loguje i nigdy nie ma hasła | DB: `mig/V6__users_login_enabled_scheduler.sql:9` `ck_users_login_password CHECK (login_enabled OR password_hash IS NULL)`; app: `api/auth/AccountDetailsService.java:45` (niezdatny hash zamiast hasła), `ActivationLinks.java:119-121` (reset odmawia), `:162-166` (aktywacja = „invalid link”), `ActivationTokenRepository.java:35-36` (`u.loginEnabled = true` w lookup) | logowanie, reset, aktywacja, lookup | hard (data) + hard (app) | named: `SYSTEM_ACCOUNT`, `LINK_INVALID`; logowanie = zwykłe `invalid_credentials` (celowo nierozróżnialne, `AccountDetailsService.java:21-26`) |
+| Konto bez hasła (oczekujące aktywacji) nie loguje się | app: `AccountDetailsService.java:45` | logowanie | hard (app) | `invalid_credentials` (`AuthController.java:104-107`) |
+| Pierwszego admina tworzy się tylko wtedy, gdy żaden admin nie istnieje | app: `api/cli/AdminBootstrap.java:55` (`pg_advisory_xact_lock`), `:56-62` (`existsByRole(Role.ADMIN)`) | tylko `create-admin`; `create-user --role admin` celowo omija (komunikat `:57-60`) | hard (app) dla bootstrapu | named: `ExitCode.REFUSED` + „Admin already exists — …” |
+| Hasło ma 12–128 znaków | app: `api/auth/Passwords.java:12`, `:14`, `:32-37`; wywołania `ActivationLinks.java:150-154`, `AdminBootstrap.java:73-79`; UI: `web/views/ActivateView.vue:52-57` (liczy punkty kodowe); rejestr `web/contract/rules.json` (`passwordMinLength`, `passwordMaxLength`) | aktywacja (API), create-admin (CLI); UI powtarza | hard (app) | named: `password_policy` (link nadal ważny, `ActivationController.java:50-51`) |
+| Hasło powtórzone dwa razy musi się zgadzać | CLI: `AdminBootstrap.java:69-72`; UI: `web/views/ActivateView.vue:56` (`mismatch`) | CLI i formularz aktywacji; API aktywacji przyjmuje jedno pole (`ActivationController.java:82-83`) | client-only na ścieżce aktywacji (stan formularza — inference: właściwe miejsce) | named (UI / CLI) |
+| Limit prób logowania: 5 porażek na e-mail i 20 na IP w 15 min | app: `api/auth/LoginRateLimiter.java:32-36`, `:91-110`; użycie `api/auth/AuthController.java:83-88`, `:114-116` | jedyna ścieżka logowania | hard (app), ale stan w pamięci procesu („correct while the API runs a single replica”, `LoginRateLimiter.java:26-27`) | named: 429 `too_many_attempts` + `Retry-After` |
+| Awaria magazynu kont nie jest werdyktem o poświadczeniach | app: `AuthController.java:97-103` | logowanie | hard (app) | 500 `internal_error`, próba nie liczy się do limitu (`:71-75`) |
+| Każda trasa wymaga sesji, poza jawną listą publicznych; `/api/admin/**` wymaga roli admin | app: `api/config/SecurityConfig.java:100-108`; testy: `test/auth/AuthorizationCompletenessIT.java:31-39`, `test/auth/AdminRoleIT.java:31-36` (wszystkie zmapowane trasy, bez listy) | wszystkie trasy `/api/**` | hard (app) + strażnik testowy | 401 / 403 JSON (`JsonAuthenticationEntryPoint`, `JsonAccessDeniedHandler`) |
+| `/internal/**` przyjmuje tylko token crona, nigdy sesję; token ma ≥ 32 znaki | app: `SecurityConfig.java:73-91`; `api/internal/PipelineTriggerToken.java:24`, `:44-46` (krótki token psuje start), `:61-64` (porównanie stałoczasowe SHA-256); `api/internal/PipelineTriggerTokenFilter.java:48-52` (principal = `SystemAccount.SCHEDULER`) | `/daily`, `/{id}`, `/nightly-summary` | hard (app) | 401; brak tokenu na serwerze = każde żądanie 401 (`SecurityConfig.java:47-48`) |
+| Zapisy cross-origin na `/api/**` są odrzucane | app: `api/auth/OriginGuardFilter.java:40`, `:46-50`; cookie `SameSite=Strict` `api/config/SessionConfig.java:41` | POST/PUT/PATCH/DELETE pod `/api/**` | soft: żądanie **bez** nagłówka `Origin` przechodzi (`OriginGuardFilter.java:47`) | named: 403 `cross_origin` |
+| Sesja wygasa po 30 dniach bezczynności | config: `szczur-radar-api/src/main/resources/application.properties:47`; `SessionConfig.java:42`; odnowienie cookie `api/auth/SessionCookieRenewalFilter.java:20-31` | każda uwierzytelniona odpowiedź 2xx | hard (app/framework) | — |
+| Logowanie zmienia id istniejącej sesji (fixation) | app: `AuthController.java:145-149` | logowanie | hard (app) | — |
 
-### 2. Etapy postu (`posts`)
+### Linki aktywacyjne
 
-| reguła | strzeżona w | ścieżki | ścisłość | obsługa błędu |
+| reguła (inference) | strzeżona w | pokryte ścieżki | ścisłość | obsługa porażki |
 |---|---|---|---|---|
-| Spójność etap↔liczba prób: `stored`=0, `failed`=1–2, `dead`=3, `assessing`/`assessed`≤2 | DB `ck_posts_stage_attempts` `mig/V3:116-121`; stałe `api/posts/Post.java:40`, `web/api/posts.ts:8`, `web/contract/rules.json` (`maxAssessmentAttempts`) | każdy zapis | hard (data) | CHECK |
-| `assessing` ⇔ ma właściciela | `ck_posts_assessing_owner` `mig/V3:122` | każdy zapis | hard (data) | CHECK |
-| Przejścia etapów: `stored`/`failed`→`assessing`→`assessed`/`failed`/`dead` albo powrót | `api/pipeline/state/PostTransitions.java`: `claim:72-75`, `record:95-97`, `release:119`, `releaseFailed:132-133`, `releaseAll:162`, `releaseOrphans:173-174`, `Outcome.after:203-209` | jedyny pisarz `posts.stage` poza `INSERT` (grep po `api/`) | hard (app): baza przyjmie `assessed`→`failed` z attempts=1 | 0 wierszy → `NotTaken`, bez błędu |
-| Claim tylko w przebiegu `running` | `PostTransitions.java:74` | jedyna ścieżka | hard (app) | pusty `Optional` → pomijamy post |
-| Wynik zapisywany tylko gdy przebieg nadal trzyma post | `PostTransitions.java:97`, `:104-106` | jedyna ścieżka do `assessments` (`:107`) | hard (app) | `false` → wynik LLM porzucany, `NotTaken` `ConcurrentAssessmentDispatcher.java:294-297` |
-| Post `dead` nie wraca: brak ożywiania | `claim` wymaga `stored`/`failed`; `startPosts` odrzuca `PipelineRunService.java:198-201`; `AssessmentSelection.java:63-64`; SPA `web/views/AdminView.vue:426,244`; żadnego pisarza z `dead` | wszystkie ścieżki | hard (app) | named error `post_dead` 400 |
-| Próbę zużywa tylko zapisany `failed`; błąd kodu i awaria dostawcy nie | `PostTransitions.record` (jedyna inkrementacja `assessment_attempts`); dyspozytor `ConcurrentAssessmentDispatcher.java:308-337,338-358`; `Assessor.java:131-136` | jedyna ścieżka | hard (app) | różne, zob. niżej |
-| Trzy kolejne błędy techniczne wstrzymują post („on hold"), admin nadal może go wziąć | `Post.java:46`, `PostRepository.java:43-44,56-57`, `countTechnicalFailure`/`releaseFailed` w `PostTransitions`; reset `:96`; CHECK tylko `>= 0` `mig/V10:11` | retry pomija; POSTS bierze `AssessmentSelection.java:60-65` | soft z założenia; bypass: `POST /api/admin/pipeline-runs` z `postIds` | brak stanu w DB: wyliczane z licznika `posts/api/FailedPostController.java:92` |
-| Jeden przebieg zakresowy ocenia tylko to, co sam zapisał pierwszy raz | `AssessmentSelection.fromStored` `:37-44`, `PostRepository.java:65-66` | RANGE | hard (app) | n/d |
-| Retry bierze resztki bez limitu liczby | `findLeftoverIds` `PostRepository.java:38-45`; komentarz „no cap in S-02" `AssessmentSelection.java:48-49` | RETRY; kolejkowany tylko przy `startRange` `PipelineRunService.java:185` | hard (app) | n/d |
+| Konto ma najwyżej jeden link; nowy unieważnia poprzedni | DB: `mig/V7__create_activation_tokens.sql:11` (PK `user_id`), `:13` (`uq_activation_tokens_token_hash`); app: `api/auth/activation/ActivationTokenRepository.java:45-48` (`ON CONFLICT (user_id) DO UPDATE`) | create-user, reset-password | hard (data) | — |
+| W bazie tylko hex SHA-256 tokenu | DB: `mig/V7…:14` `ck_activation_tokens_token_hash`; app: `ActivationLinks.java:187`, `:155` | wszyscy pisarze | hard (data) na kształt, hard (app) na hash | — |
+| Link jest jednorazowy i wygasa | app: `ActivationTokenRepository.java:28` (`t.expiresAt > :now`), `ActivationLinks.java:157` (`findValidForUpdate`, blokada wiersza), `:168` (usunięcie po użyciu) | lookup, aktywacja | hard (app) | named: 400 `activation_link_invalid` („unknown, used, expired or replaced link (indistinguishable)”, `ActivationController.java:40`) |
+| Ważność linku dodatnia; ustawienie `ACTIVATION_LINK_TTL` 1 min–7 dni, domyślnie 12 h | app: `ActivationLinks.java:211-215`; `api/auth/activation/ActivationSettings.java:40-44` | create-user, reset-password | hard (app) | `IllegalArgumentException` / błąd ustawień |
+| Reset hasła i aktywacja kończą wszystkie sesje konta | app: `ActivationLinks.java:125-126`, `:171`, `:195-199` (`DELETE FROM spring_session WHERE principal_name = :principal`) | reset (CLI), aktywacja (API) | hard (app) | — |
 
-### 3. Tożsamość i przechowywanie postu
+### Przebiegi potoku (runs)
 
-| reguła | strzeżona w | ścieżki | ścisłość | obsługa błędu |
+| reguła (inference) | strzeżona w | pokryte ścieżki | ścisłość | obsługa porażki |
 |---|---|---|---|---|
-| Post raz na `(source, item_type, source_item_id)` | DB `uq_posts_source_item` `mig/V4:16`; app `PostStore.java:62-63,99-112` | `PostStore` jedyny `INSERT` (`posts.save` `:91`) | hard (data) | **swallowed silently** `PostStore.java:76-78`, zob. Failure handling |
-| Źródło z zamkniętego zbioru, rejestrowane w czterech CHECK | `ck_posts_source` `mig/V12:25`, `ck_raw_payloads_source` `:27`, `ck_pipeline_runs_sources` `:29-31`, `ck_pipeline_run_sources_source` `:44`; `api/sources/Source.java:9-18`; `web/contract/rules.json:31` | każdy zapis | hard (data) | CHECK |
-| Typ pozycji wspólnego modelu, nie nazwa źródła | `ck_posts_item_type` `mig/V4:15`; `api/agents/assessor/contract/ItemType.java:10`; `WykopMapper.java:49-61`; `RedditMapper.java:50` | każdy zapis | hard (data) | CHECK |
-| Kanał niepusty; zbiór otwarty | `ck_posts_channel` `mig/V13:13`; `Post.java:141`; `SourcePost.java:35` | każdy zapis | hard (data) | CHECK, ale przy zapisie patrz swallowed silently |
-| Treść surowa oddzielnie, jeden post = jeden payload | `uq_posts_raw_payload` `mig/V3:107`, `fk_posts_raw_payload :108`, `RawPayloadStore.java:14-27` | `PostStore.save` | hard (data) | CHECK |
-| Integralność surowego payloadu | `ck_raw_payloads_sha256` `mig/V3:78`, weryfikacja przy każdym odczycie `api/raw/PostgresRawPayloadStore.java:43-45` | każdy `load` | hard (app) dla zawartości | `IllegalStateException` → błąd techniczny postu albo 500 |
-| Ocena budowana z surowego payloadu, nie z kolumn postu | `api/pipeline/assess/AssessmentInputs.java:32-38` | każda ocena | hard (app) | `IllegalStateException` przy braku mappera `:34-36` |
-| Autor, URL, id nie trafiają do modelu | `Item` nie ma takich pól `.../contract/Item.java:15-17`; mappery `WykopMapper.java:65`, `RedditMapper.java:56-57` | każda ocena | hard (app), z typu | n/d |
-| NUL nie trafia do bazy | `api/text/Nul.java`; `Post.java:141-148`; `Assessment.java:153-158`; `PostTransitions.java:185` | teksty postu i oceny; `source_item_id` **nie** jest czyszczony `Post.java:140` | hard (app) | **silently corrects** |
+| Rodzaj przebiegu: `range` / `retry` / `posts`; status z zamkniętego zbioru | DB: `mig/V3__create_pipeline_and_posts.sql:29`, `:30-31` | wszyscy pisarze | hard (data) | generic |
+| Przebieg `range` ma oba końce zakresu i `from <= to`; inne nie mają żadnego | DB: `mig/V4__posts_shared_item_type.sql:19-22` `ck_pipeline_runs_range`; app: `api/pipeline/run/PipelineRun.java:155-157` | `PipelineRunService.java:182-184` | hard (data) | `IllegalArgumentException` / constraint |
+| Przebieg `range` nazywa ≥ 1 zarejestrowane źródło; inne nie nazywają | DB: `mig/V12__pipeline_run_sources.sql:29-31`; app: `PipelineRun.java:158-160`, `api/pipeline/step/SourceIngest.java:48-60` | admin i cron (`startRange`) | hard (data) + hard (app) | named: 503 `source_not_configured` (`PipelineRunExceptionHandler.java:30-32`) |
+| Przebieg `posts` ma listę postów (≥ 1, ≤ 100, bez `null`); inne jej nie mają | DB: `mig/V3…:35`; app: `PipelineRun.java:179-181`; `api/pipeline/api/PipelineRunController.java:184-186`; `api/config/PostIdLimits.java:11` | admin | hard (data) na obecność, hard (app) na liczbę | 400 `invalid_request` |
+| Zakres żądania admina: oba dni, `from <= to <= dziś` (Warszawa), najwyżej 7 dni | app: `PipelineRunController.java:62`, `:99-101`, `:188-189`; UI: brak walidacji zakresu w formularzu (`web/views/AdminView.vue:419-420` tylko `required`); `web/missingDays.ts:5`, `:28` używa limitu tylko do grupowania dni bez danych | admin; cron nie przechodzi przez `valid` — stałe D-2…D-1 (`api/pipeline/api/InternalPipelineRunController.java:85-87`) | hard (app) — obaj znalezieni pisarze spełniają | 400 `invalid_request` |
+| Najwyżej jeden przebieg naraz jest `running` | DB: `mig/V3…:39` `uq_pipeline_runs_one_running` (komentarz `:38` „second line of defence”); app: jednowątkowy executor `api/pipeline/PipelineRunService.java:136-137` | wszyscy | hard (data) | constraint → przebieg kończy się `failed` przez `execute` |
+| Nowe przebiegi powstają tylko, gdy żaden nie jest `queued`/`running` | app: `PipelineRunService.java:216-226` (`lock()` `:274-276` = `pg_advisory_xact_lock`, `existsActive()` `:219-221`) | admin i cron (oba przez `startRange` / `startPosts`) | hard (app); baza przyjęłaby wiele `queued` | named: 409 `pipeline_busy`; cron ponawia 409 do `TRIGGER_BUSY_TIMEOUT` (`tools/pipeline-trigger/trigger.sh:284-290`) |
+| Nie można uruchomić przebiegu `posts` z martwym postem | app: `PipelineRunService.java:198-201` | admin | hard (app) | named: 400 `post_dead` |
+| Przebieg startuje tylko z `queued`; każda zmiana przebiegu wymaga oczekiwanego statusu | app: `api/pipeline/state/RunRecorder.java:63-68`, `:79-87`, `:96-105`, `:108-126`, `:140-158`, `:203-213`, `:377-388` (każdy `UPDATE … WHERE … status = :running`) | wszystkie zapisy `pipeline_runs` (pełna lista pisarzy niżej) | hard (app); „no row locks” (`RunRecorder.java:28-31`) | zapis „nic nie zmienia”, zwraca `false`; krok odmawia `RunNoLongerRunningException` (`:252`) |
+| Przyczyna przerwania tylko przy `interrupted`, ze zbioru `deploy`/`restart`/`shutdown`/`lost` | DB: `mig/V8__pipeline_run_progress.sql:17-18`, `mig/V11__pipeline_run_interruption_lost.sql:10-11` | `RunRecorder.java:278-290`, `:320-333`, `:356-370` | hard (data) | — |
+| Wynik źródła w przebiegu: jeden wiersz na (przebieg, źródło); `failed` ⇔ ma błąd; `skipped <= fetched` | DB: `mig/V12…:44-48`; app: `RunRecorder.java:140-158` (tylko gdy przebieg `running`); `api/pipeline/flow/RunFlow.java:91-92`, `:215`, `:219` | jedyny pisarz `RunRecorder.source` / `storeRejected` | hard (data) | constraint / `IllegalArgumentException` |
+| Przebieg `range`, w którym żadne źródło nie dało posta, kończy się `failed` | app: `SourceIngest.java:136-138` (`NoPostsFetchedException`) | fetch każdego `range` | hard (app) | named exception → `failed` |
+| Źródło, które rzuciło lub nic nie dało, jest osobnym wynikiem; reszta idzie dalej | app: `SourceIngest.java:105-107`, `:114-116`, `:118-129` | fetch | hard (app) | logs and continues (WARN), wynik `failed`/`empty` |
+| Status końcowy: `failed` gdy ocena zatrzymana; `succeeded` bez porażek, martwych i błędów technicznych; inaczej `partial`; `succeeded` z gorszym źródłem → `partial` | app: `RunFlow.java:299-304`; `api/pipeline/flow/RunSequence.java:200-203` | koniec każdego przebiegu | hard (app) | — |
+| Kiedy przebieg „wymaga uwagi” (jedna reguła dla dzwonka, listy, strony, alertu) | app: `api/pipeline/run/PipelineRun.java:316-347`, `:350-352` | `RunNotifications.java:111`, `PipelineRunController.java:254` | hard (app) | — |
+| Przebieg bez postępu przez `PIPELINE_STALL_TIMEOUT` (domyślnie najdłuższe wywołanie LLM + 5 min, min. 15 min; zakres 1 ms–1 d) zostaje zatrzymany `failed` | app: `RunRecorder.java:300-312`; `PipelineRunService.java:461-482`; `api/pipeline/PipelineStallSettings.java:42-51`; `api/pipeline/RunWatchdog.java:71-77`, `:93-113` | tylko przebiegi tej instancji (`RunWatchdog.java:28-30`) | hard (app) | named (status `failed`, błąd „no progress for … : the run was stopped”) |
+| Osierocone przebiegi (żaden aktywny bez aktywności przez timeout, żaden nie skończył się w tym oknie) → `interrupted`/`lost`, wszystkie albo żaden | app: `RunRecorder.java:356-370`; `PipelineRunService.java:240-271` | tylko żądanie startu przebiegu (`:181`, `:196`) | hard (app), wyzwalane wyłącznie żądaniem | porażka: logs and continues + alert `ORPHAN_CLEANUP_FAILED` (`:250-256`) |
+| Przy starcie serwera każdy `queued`/`running` → `interrupted` (`deploy` vs `restart` po `deployment_id`) | app: `api/pipeline/PipelineStartupRecovery.java:84-115`; `RunRecorder.java:320-333` | start serwera (nie komendy CLI, `@ConditionalOnWebApplication` `:53`) | hard (app) | porażka: logs and continues + `RECOVERY_FAILED` (`:101-107`) |
+| Deploy jest „bezpieczny”, gdy nie ma żywego aktywnego przebiegu | app: `api/pipeline/api/DeploySafetyController.java:64-70`; `PipelineRunRepository.java:53` | `GET /api/deploy-safety` (publiczny) | hard (app) | błąd bazy → 503 `{"status":"unavailable"}` (`:55-57`) |
 
-### 4. Oceny (`assessments`) i kontrakt V2
+### Posty: zapis, etapy, próby
 
-| reguła | strzeżona w | ścieżki | ścisłość | obsługa błędu |
+| reguła (inference) | strzeżona w | pokryte ścieżki | ścisłość | obsługa porażki |
 |---|---|---|---|---|
-| `ok` ma output i brak klasy błędu; `failed` odwrotnie | DB `ck_assessments_outcome` `mig/V3:165-167`; `AssessmentResult.java:45-50` | każdy zapis | hard (data) | CHECK / `IllegalArgumentException` |
-| Provenance: prefiltr bez szczegółów wywołania, model z wersją promptu, tierem i ≥1 próbą | `Provenance.java:69-77` | aplikacja; baza tylko `NOT NULL`/CHECK wartości `mig/V3:169-175` | hard (app) | `IllegalArgumentException` |
-| Ocena niezmienna po zapisie | wszystkie kolumny `updatable=false` `api/posts/Assessment.java:64-140`; repozytorium bez `UPDATE` | jedyny pisarz `PostTransitions.java:107` | hard (app); baza przyjęłaby `UPDATE` | n/d |
-| Najnowsza próba: `assessed_at DESC, id DESC` | `AssessmentRepository.java:29-35`, `PostRepository.java:113` | odczyty | hard (app) | n/d |
-| Parser nic nie naprawia: ścisły JSON, potem schemat V2 | `OutputParser.java:68-94`; `ContractJson.java:16-23` | każda odpowiedź modelu | hard (app) | `invalid_structured_output`/`schema_violation`, zapisana próba `failed` |
-| Limity kształtu: `targets` ≤12, `claims` ≤24, `anchor.quote` 1–100, `evidence.quote` 1–320, `statement` 1–240, `claim_ids` ≤4, `target_ids` ≤12, bez dodatkowych pól | `src/main/resources/assessor/assessment-output-v2.schema.json:19,24,67,83,102,106,116` | każda odpowiedź | hard (app) | jw. |
-| D1–D15: identyfikatory, cytaty dosłowne, tabela stance, D14 stanowisko oparte na claimie autora, D15 nieinwestycyjne bez treści | `.../validation/RuleId.java:14-57`; `ContractV2Rules.java:30-35`; `validation/rules/*`; `StanceTable.java:13-18` | każda odpowiedź przez `Assessor.evaluate` `:100` | hard (app) | `failed` z listą naruszeń, próba się liczy |
-| Pierwszeństwo klasy błędu | `ValidationResult.java:10-11,26-31` | jw. | hard (app) | n/d |
-| Cytat: zgodność po normalizacji białych znaków, wielkość liter musi się zgadzać | `QuoteIsFragmentRule.java:27-29`, `Whitespace.java:36-53` | jw. | hard (app) | `fabricated_evidence` |
-| Brak treści: mniej niż 3 punkty kodowe po usunięciu URL/tagów/wzmianek → bez wywołania LLM, `relevance=unclear`, `insufficient_content` | `Prefilter.java:20,27-29,35-44`, `Assessor.java:72-75` | każda ocena; wynik **omija** walidator D1–D15 | hard (app) | `ok` z `result_source=prefilter` |
-| Tekst niepusty, `null` zamiast pustego; schema_version stała | `TextFields.java:16-28`; `AssessmentInputV1.java:18-23` | konstrukcja | hard (app) | `IllegalArgumentException` |
-| Zamknięte zbiory dostawców, kanałów, tierów | `mig/V3:162-175` + enumy `api/llm/` | zapis | hard (data) | CHECK |
-| `flex` i `reasoning_effort` tylko dla OpenRouter; timeout 10 s–30 min | `api/llm/LlmProviderProperties.java:63-66,104-113`; `api/config/LlmConfigurationCheck.java:17` | start każdego kontekstu | hard (app) | `InvalidSettingsException`, start pada |
-| OpenRouter tylko do wskazanego upstreamu, bez fallbacków | `api/llm/openrouter/OpenRouterClient.java:170` | jedyna ścieżka | hard (app) | n/d |
+| Post jest zapisany raz na (źródło, typ elementu, id w źródle) | DB: `mig/V4…:16` `uq_posts_source_item`; app: `api/pipeline/step/PostStore.java:99-109` (wcześniejsze klucze i powtórki w pobraniu), `:126-130` (wyścig: „Stored meanwhile by another run”) | jedyny pisarz `posts` przy INSERT (`PostStore.java:213`) | hard (data) | duplikat liczony, post „left as it is” (`PostStore.java:45-46`) |
+| Typ elementu to model współdzielony `post`/`link`/`comment`; źródło `wykop`/`reddit`; język `pl`/`en` = język źródła; kanał niepusty | DB: `mig/V4…:15`, `mig/V12…:25`, `mig/V16__posts_language.sql:13-14`, `mig/V13__posts_channel.sql:12-13`; app: `api/posts/Post.java:150` (`this.language = source.language()`), `api/sources/Source.java:18`, `:25` | INSERT | hard (data) | odrzucony wiersz → `rejected`, liczony jako `skipped` (`PostStore.java:47-52`, `:155-161`) |
+| Surowy payload: jeden na post, gzip JSON, SHA-256 | DB: `mig/V3…:75-78`, `:107` `uq_posts_raw_payload`, `:108` FK | `api/raw/PostgresRawPayloadStore.java:32` | hard (data) | — |
+| Etap posta z `stored/assessing/assessed/failed/dead` sprzężony z liczbą prób: `stored`=0, `failed`=1–2, `dead`=3, `assessing`/`assessed` ≤ 2 | DB: `mig/V3…:114`, `:116-121` `ck_posts_stage_attempts`; app: `api/pipeline/state/PostTransitions.java:224-232` (`Outcome.after`), `api/posts/Post.java:41` (`MAX_ASSESSMENT_ATTEMPTS = 3`) | wszystkie zmiany etapu (tylko `PostTransitions`) | hard (data) | constraint |
+| Post `assessing` ma właściciela-przebieg i tylko wtedy | DB: `mig/V3…:122` `ck_posts_assessing_owner`; app: `PostTransitions.java:72-83` (claim tylko gdy przebieg `running`), `:93-112` (wynik tylko, gdy przebieg nadal posiada post) | dispatcher | hard (data) + hard (app) | wynik niezapisany → `false` (post nie zmieniony) |
+| Ocenić można tylko post `stored` lub `failed` (nie `assessed`, nie `dead`) | app: `PostTransitions.java:75`; `api/pipeline/step/AssessmentSelection.java:60-65` | wszystkie przebiegi | hard (app) | post pominięty bez komunikatu (patrz „Failure handling”) |
+| Trzecia zapisana nieudana próba czyni post martwym; martwy opuszcza etap tylko przez przywrócenie admina | app: `PostTransitions.java:229-231`, `:190-201`; `api/posts/api/DeadPostController.java:46-56` | dispatcher; `POST /api/admin/posts/restore` | hard (data) (CHECK) + hard (app) | — |
+| Przywrócenie: tylko posty `dead`, 1–100 id; wraca do `stored` z 0 prób i 0 błędów technicznych; stare próby zostają | app: `PostTransitions.java:190-201`; `DeadPostController.java:61-63` | jedyny pisarz | hard (app) | 400 `invalid_request`; inne id „left as it is” (zwraca liczbę przywróconych) |
+| 3 błędy techniczne z rzędu = post „wstrzymany”: przebieg `retry` go nie bierze, przebieg `posts` admina tak; każdy zapisany wynik zeruje licznik | DB: `mig/V10__posts_technical_failures.sql:11` (tylko `>= 0`); app: `api/posts/Post.java:47`; `api/posts/PostRepository.java:38-45`, `:52-58`; `PostTransitions.java:98` (zerowanie), `:133-141`, `:151-160` | retry (leftovers), `existsLeftover` | hard (app) | — |
+| Przebieg `range` ocenia tylko posty, które sam zapisał jako pierwszy | app: `AssessmentSelection.java:37-44`; `PostRepository.java:65-66` | range | hard (app) | — |
+| Przebieg `retry` powstaje tylko obok żądania zakresu, gdy są leftovers | app: `PipelineRunService.java:185-186` | admin i cron | hard (app) | — |
+| Ocena: wynik `ok` ma output i nie ma klasy porażki; `failed` odwrotnie; klasy, źródło wyniku, dostawca, kanał, tier, effort, tryb — zbiory zamknięte | DB: `mig/V3…:161-175`; test: `test/persistence/ClosedSetsIT.java:52-60` | `PostTransitions.java:109` (jedyny pisarz `assessments`) | hard (data) | — |
+| Wpis bez treści (< 3 punkty kodowe po usunięciu URL, tagów, wzmianek) nie trafia do modelu; dostaje gotową ocenę `unclear` bez celów | app: `api/agents/assessor/Prefilter.java:20`, `:35-37`, `:41-42`; `api/agents/assessor/Assessor.java:71-75` | każda ocena | hard (app) | silently corrects (inference): post kończy jako `assessed` z oceną `prefilter`, widoczny w feedzie (`PostController.java:161`) |
+| Odpowiedź modelu musi spełnić schemat i reguły domenowe D1–D15 kontraktu V2; każde naruszenie = nieudana próba z klasą porażki | app: `api/agents/assessor/validation/RuleId.java:14-57`; `RuleBasedValidator.java:21-26`, `:40-46`; `Assessor.java:96-105` | każda odpowiedź modelu | hard (app) | named: `AssessmentResult.failed(failureClass, violations…)` |
+| Zatrzymanie kroku oceny: 3 odmowy z rzędu, 3 niedostępności z rzędu, 3 nieklasyfikowane błędy klienta z rzędu, odrzucona konfiguracja; wstępne sprawdzenie klucza przed pierwszym postem | app: `api/pipeline/assess/ConcurrentAssessmentDispatcher.java:54-57`, `:121`, `:127`, `:135` | assess | hard (app) | krok `failed` z przyczyną → przebieg `failed` (`RunSequence.java:215-218`, `RunFlow.java:300-301`) |
 
-### 5. Pobieranie źródeł
+### Feed, widoczność, powiadomienia
 
-**Kod wspólny:**
-
-| reguła | strzeżona w | ścieżki | ścisłość | obsługa błędu |
+| reguła (inference) | strzeżona w | pokryte ścieżki | ścisłość | obsługa porażki |
 |---|---|---|---|---|
-| Żądane źródło musi być skonfigurowane; puste = wszystkie skonfigurowane | `SourceIngest.resolve` `:48-60` przed `queue` `PipelineRunService.java:183` | oba wejścia | hard (app) | `source_not_configured` 503 |
-| Awaria lub milczenie źródła jest jego wynikiem | `SourceIngest.fetch:104-130` | RANGE | hard (app) | **logs and continues** + wiersz `failed` |
-| Brak postów ze wszystkich źródeł = przebieg `failed` | `SourceIngest.java:136-138`, `NoPostsFetchedException.java:22-27` | RANGE | hard (app) | named error, także dla pustego dnia |
-| Wynik źródła zapisuje się razem z licznikami, raz na `(run, source)` | `RunRecorder.source:142-158`; `uq_pipeline_run_sources_run_source` `mig/V12:48`; `ck_..._counts :46`, `ck_..._error :47` | jedyny pisarz | hard (data) | CHECK |
-| Dzień pokryty dla źródła tylko przy `succeeded`/`partial` i wyniku źródła `succeeded` | `PipelineRunRepository.java:29,92-99,112-117,132-136`; `MissingDays.java:23-33` | trzy zapytania z tą samą regułą; okno 14 dni do D-2 `MissingDays.java:48,56` | hard (app) | n/d |
-| Retries źródła: 3 próby, 2 s/4 s, `Retry-After` ≤30 s, nic po deadline | `api/sources/transport/HttpRetry.java:42-48,97-99,112-156,164-174` | oba klienty | hard (app) | `*ApiException` → wynik `failed` |
-| Deadline pobierania 10 min na źródło | `WykopRepository.java:61,123`, `RedditRepository.java:60,115` | każde pobranie | hard (app); aktywność przebiegu rusza się po każdym źródle (`RunRecorder.java:145`), więc próg strażnika działa na jedno źródło (`inference`) | `DEADLINE_EXCEEDED` |
+| Użytkownik widzi w feedzie, szczególe i surowych danych tylko posty `assessed` | app: `api/posts/api/PostController.java:93`, `:126-130`; `api/posts/PostRepository.java:123-130`, `:137-143` | `GET /api/posts`, `/{id}`, `/{id}/raw` | hard (app) | named: 404 `post_not_found` („an unknown id and any other stage are alike not found”) |
+| Filtr feedu działa na najnowszej ocenie `ok` i na jednym celu spełniającym wszystkie warunki | app: `PostRepository.java:115-122`, `:137-143` | `GET /api/posts` | hard (app) | — |
+| Fraza filtra ≤ 100 znaków, bez NUL; nieznana wartość `kind`/`direction` = błąd | app: `PostController.java:90-92`; `api/posts/PostFilter.java:24`; UI: `web/components/FeedFilter.vue:57` (`maxlength`) | feed | hard (app) | 400 `invalid_request` |
+| Nieudane, martwe i wstrzymane posty widzi tylko admin | app: `api/posts/PostRepository.java:105-113`; trasa `/api/admin/posts/failed` (`FailedPostController.java`) za `SecurityConfig.java:107` | admin | hard (app) | 403 |
+| Powiadomienie o przebiegu: jedno na (odbiorca, rodzaj, przebieg); dostaje je każdy admin, który może się logować | DB: `mig/V9__create_notifications.sql:17-19`; app: `api/notifications/NotificationRepository.java:51-53` (`ON CONFLICT … DO NOTHING`), `api/notifications/RunNotifications.java:109-122` | każdy koniec przebiegu (własny, watchdog, shutdown, osieroty, recovery) | hard (data) — idempotentne | — |
+| Admin widzi i oznacza tylko swoje powiadomienia; ponowne przeczytanie zachowuje pierwszy czas | app: `api/notifications/api/NotificationController.java:54-57`, `:73-79`; `NotificationRepository.java:64-65` (`COALESCE(read_at, now())`, `recipient_id = :recipientId`), `:75` | `/api/admin/notifications/**` | hard (app) | named: 404 `not_found` „for an unknown id and for another admin's” |
+| Alert operatora `RUN_NEEDS_ATTENTION` tylko gdy powstały powiadomienia; nie dla przebiegu crona `failed`/`interrupted` i nie, gdy jedyny powód to martwe posty | app: `RunNotifications.java:115-120`, `:125-127`, `:134-136` | `runEnded` | hard (app) | — |
+| Kolejka alertów: to samo zdarzenie i przebieg raz na 10 min, ≤ 2 na minutę, ≤ 20 czekających | app: `api/alerts/OperatorAlertQueue.java:56`, `:59`, `:64`, `:184`, `:196` | każdy `raise` | hard (app) | logs and continues: odrzucony alert = INFO/WARN (`:174`, `:184`, `:196-200`) |
+| Jakość ocen źródła: powyżej progu, gdy udział porażek (> 5 % Wykop, > 25 % Reddit) lub tez w innym języku (> 2 % / > 30 %) przekracza próg przy ≥ 100 próbach / ≥ 500 tezach w oknie 7 dni | app: `api/sources/Source.java:18`, `:25`; `api/posts/AssessmentQuality.java:57`, `:60`, `:63`, `:166-170` | podsumowanie nocy, `/admin` | hard (app) (tylko odczyt, „nothing here is stored”, `AssessmentQuality.java:28`) | alert `ASSESSMENT_QUALITY` (`InternalPipelineRunController.java:123-125`) |
+| „Dni bez danych”: okno 14 dni do D-2; dzień pokryty dla źródła tylko jego wynikiem `succeeded` w przebiegu `range` `succeeded`/`partial` | app: `api/pipeline/run/MissingDays.java:48`, `:55`, `:62-68`; `PipelineRunController.java:153-170`; `PipelineRunRepository.java:113-117`, `:133-136` | `GET …/missing-days` | hard (app) (tylko odczyt; „nothing here starts a run”) | — |
 
-**Zachowanie per źródło (brak tu nie jest jeszcze błędem; to niesymetryczności):**
+### Źródła (pozyskanie i mapowanie)
 
-| aspekt | Wykop | Reddit (Arctic Shift) |
-|---|---|---|
-| Konfiguracja | `WYKOP_KEY` i `WYKOP_SECRET` razem; jeden bez drugiego zabija start `WykopConfiguration.java:33-37` | `REDDIT_SUBREDDITS`; nazwa 2–21 znaków, zła zabija start `RedditConfiguration.java:39,63-66,71-73` |
-| Kanał | stała `gielda` `WykopPosts.java:24`, także przy odtwarzaniu `:35` | z payloadu `subreddit` `RedditPosts.java:50,52` |
-| Typ | `entry`→post, `link`→link, inne odrzucone `WykopMapper.java:43-61` | `is_self==true`→post, cokolwiek innego (także brak pola)→link `RedditMapper.java:50` |
-| Tekst | wpis tylko body, link title+description `WykopMapper.java:50-59` | title+selftext `RedditMapper.java:51-52` |
-| Usunięte posty | brak filtra (szukane w `sources/wykop`: tylko komentarze o paginacji) | wycięte **przed** liczeniem: ani fetched, ani skipped `RedditRepository.java:187-190`, `RedditItem.java:42-44`; druga kopia reguły `RedditMapper.java:44-46`, węższa (bez `removed_by_category`) |
-| Skipped | `null` tekst/id, zły kształt → `skipped` → powód uwagi admina `WykopFetcher.java:48-55` | jw. `RedditFetcher.java:48-55` |
-| Paginacja | strony + `pagination.total`, drugi odczyt przy niespójności `WykopRepository.java:138-148`, limit 200×50 `:48,51` | po czasie, bez drugiego odczytu, porażka całości przy luce `RedditRepository.java:161-164,196-203`; limit 50×100 na subreddit `:47,50` |
-| Odpowiedź bez `total` | koniec na krótkiej stronie, **bez kontroli** `WykopRepository.java:198-203` | n/d (zawsze krótka strona) `:193-195` |
-| Czas | `created_at` lokalny warszawski `WykopMapper.java:30,74` | `created_utc` `RedditMapper.java:68` |
-| Autor | `author.username` `WykopPosts.java:52` | `[deleted]`→`null` `RedditPosts.java:51` |
-| Statusy retry | 429, 5xx | dodatkowo 422 `RedditApiClient.java:53,87` |
-| Filtr zakresu po stronie kodu | brak: zaufanie do API (`inference`, nie znaleziono porównania z `from`/`to` po pobraniu w `sources/wykop`) | brak: `after`/`before` w zapytaniu `RedditRepository.java:142-143,151-152` |
-
-### 6. Konta, logowanie, sesje
-
-| reguła | strzeżona w | ścieżki | ścisłość | obsługa błędu |
+| reguła (inference) | strzeżona w | pokryte ścieżki | ścisłość | obsługa porażki |
 |---|---|---|---|---|
-| Brak samorejestracji: konto tylko z komendy operatora lub migracji | pisarze `users`: `cli/AdminBootstrap.java:81`, `auth/activation/ActivationLinks.java:88`, `mig/V6:11-12` (grep po `api/`) | wszystkie | hard (app) | n/d |
-| E-mail unikalny, małymi literami | `uq_users_email`, `ck_users_email_lower` `mig/V1:10-11`; `user/Emails.java:18-20` | login + CLI | hard (data) | **silently corrects** w `Emails.normalize`; CLI `EMAIL_TAKEN` |
-| Rola zamknięta | `ck_users_role` `mig/V1:12`; `user/Role.java:15` | zapis | hard (data) | CHECK |
-| Konto systemowe nigdy nie ma hasła | `ck_users_login_password` `mig/V6:9`; `ActivationLinks.java:119-121,162-166`; `AccountDetailsService.java:45`; `ActivationTokenRepository.java:35-36` | cztery warstwy | hard (data) | `SYSTEM_ACCOUNT` / `LINK_INVALID` / jak złe hasło |
-| Pierwszy admin raz | `AdminBootstrap.java:55-62` pod advisory lock | tylko `create-admin`; **bypass z założenia**: `create-user --role admin` bez locka i bez sprawdzenia `CreateUserCommand.java:46-52` | soft | `ExitCode.REFUSED` |
-| Polityka hasła 12–128 punktów kodowych | `auth/Passwords.java:12,14,30-38`; `ActivationLinks.java:150`; `AdminBootstrap.java:74`; SPA `web/views/ActivateView.vue:52-55`, `web/api/activation.ts:8-9`, `rules.json`; `@Size(max=1024)` `ActivationController.java:83`, `LoginRequest.java:14` | wszystkie ustawienia hasła | hard (app) | `password_policy` 400, link działa dalej |
-| Konto bez hasła nie zaloguje się, odpowiedź nieodróżnialna | `AccountDetailsService.java:45`, `ErrorCode.java:17-21` | login | hard (app) | `invalid_credentials` |
-| Link jednorazowy, tylko SHA-256, ważny do `expires_at`, jeden na konto | `activation_tokens` PK/uq/CHECK `mig/V7:11-14`; `findValidForUpdate` `ActivationTokenRepository.java:26-29`; `upsert :45-49`; `ActivationLinks.java:157-168` | jedyny pisarz | hard (data) dla jednego na konto; ważność hard (app) | `activation_link_invalid` 400 |
-| TTL linku 1 min–7 dni | `ActivationSettings.java:40-44,81-83`, `ActivationLinks.java:211-214` | CLI | hard (app) | `ExitCode.USAGE` |
-| Reset wylogowuje wszędzie i kasuje hasło | `ActivationLinks.java:113-128`, `deleteSessions :195-199` | CLI | hard (app) | `NO_ACCOUNT` / `SYSTEM_ACCOUNT` |
-| Aktywacja też kasuje sesje | `ActivationLinks.java:171` | jedyna | hard (app) | n/d |
-| Limit logowania: 5 błędów/15 min na e-mail, 20 na IP | `auth/LoginRateLimiter.java:32-36,91-110`, jedyny użytkownik `AuthController.java:83` | **tylko** login; aktywacja bez limitu | soft: stan w pamięci procesu `:26-27`, restart zeruje; IP z `X-Real-IP` `ClientIp.java:15-21`, którego wiarygodność zależy od krawędzi (`inference`) | `too_many_attempts` 429 + `Retry-After` |
-| Zapis cross-origin odrzucony | `auth/OriginGuardFilter.java:39-52`; `SameSite=Strict` `config/SessionConfig.java:41` | `/api/**`; bez nagłówka `Origin` przechodzi `:47`; łańcuch `/internal` bez filtra | soft: bypass poza przeglądarką (curl) z założenia, ale potrzebna sesja | `cross_origin` 403 |
+| Element bez id, bez tekstu, bez poprawnej daty, bez subreddita, usunięty lub skasowany nie staje się postem | app: `api/sources/wykop/WykopPosts.java:46-47`, `WykopMapper.java:62-63`, `:70-71`; `api/sources/reddit/RedditMapper.java:44-55`, `:63-73`, `RedditPosts.java:47` | oba fetchery | hard (app) | `UnmappableItemException` → `skipped++` (`WykopFetcher.java:52-53`, `RedditFetcher.java:52-53`), logs and continues |
+| Posty Reddita zdjęte przez moderację lub autora są pomijane przed liczeniem | app: `api/sources/reddit/RedditItem.java:42-43`; `RedditRepository.java:187-188`, `:126-127` | Reddit | hard (app) | logs and continues (INFO z liczbą; nie wchodzą do `fetched` ani `skipped`) |
+| Wykop: tylko tag `gielda` | app: `api/sources/wykop/WykopPosts.java:24` | Wykop | hard (app) | — |
+| `REDDIT_SUBREDDITS`: nazwy `[A-Za-z0-9_]{2,21}`, bez powtórzeń, ≥ 1 | app: `api/sources/reddit/RedditConfiguration.java:39`, `:63-64`, `:71-72` | start aplikacji | hard (app) | błąd ustawień psuje start |
+| Niespójne stronicowanie lub limit stron źródła = porażka źródła | app: `WykopRepository.java:139-146`, `:221`; `RedditRepository.java:162`, `:197-207` | fetch | hard (app) | named `WykopApiException` / `RedditApiException` → wynik źródła `failed` |
 
-### 7. Dostęp i widoczność
+### UI (SPA)
 
-| reguła | strzeżona w | ścieżki | ścisłość | obsługa błędu |
-|---|---|---|---|---|
-| Deny-by-default; publiczne tylko health, ready, deploy-safety, login, logout, aktywacja | `config/SecurityConfig.java:99-107` | cały `/api` | hard (app) | 401 `not_authenticated` |
-| `/api/admin/**` tylko admin | `SecurityConfig.java:106`; SPA `web/router/index.ts:68-70`, `web/components/AppHeader.vue:13,36,39` | HTTP + UI | hard (app) | 403 `forbidden`; SPA przekierowanie |
-| `/internal/**` tylko token, nigdy sesja | `SecurityConfig.java:75-76,81`; `internal/PipelineTriggerTokenFilter.java:47-54`; `PipelineTriggerToken.java:44-46,60-65` (≥32 znaki, stały czas, brak tokena = fail closed) | cron | hard (app) | 401 |
-| Feed i szczegół tylko `assessed` | `PostRepository.java:98-105,112-118`; `PostController.java:124-128` (`list:91`, `detail:102`, `raw:113`) | wszystkie trzy trasy | hard (app) | `post_not_found` 404, nie odróżnia nieznanego id od innego etapu |
-| Lista nieudanych tylko dla admina | `posts/api/FailedPostController.java:48`, `PostRepository.java:80-88` | jedyna | hard (app) | n/d |
-| Filtr feedu działa na **jednym** celu najnowszej oceny `ok` | `PostRepository.java:112-118` | jedyna; prefiltr nigdy nie pasuje `:96` | hard (app) | nieznana wartość → 400; SPA **silently corrects** `web/feedFilter.ts:49-56` |
-| Feed nie wycina `not_investment_related` ani wyniku prefiltra | szukane: `relevance` w `api/posts/`, `api/pipeline/`, `web/views/FeedView.vue`: brak filtra; tylko etykieta `web/components/PostCard.vue:27` | wszystkie | to brak strażnika, nie strażnik | dotyczy Unknowns |
-| Powiadomienia widzi i oznacza tylko adresat | `NotificationRepository.java:33,64-66,75`; `NotificationController.java:55,74-75` | wszystkie | hard (app) | `not_found` 404 dla cudzego |
-| Świeżość mówi tylko „kiedy" | `FreshnessController.java:34-41` | każda sesja | hard (app) | n/d |
-| Deploy-safety ujawnia jeden bit i powód | `DeploySafetyController.java:50-70` | publiczne | hard (app) | 503 |
+| reguła (inference) | strzeżona w | ścisłość | uwagi |
+|---|---|---|---|
+| Strony wymagają sesji poza `/login`, `/activate`; `/admin` i `/admin/runs/:id` tylko dla admina | `web/router/index.ts:40-41`, `:62-69` | client-only, ale API strzeże tego samego (`SecurityConfig.java:107`; komentarz `web/router/index.ts:29` „the API answers 403 anyway”) | właściwa dwuwarstwowość |
+| Link do panelu i dzwonek tylko dla admina | `web/components/AppHeader.vue:13`, `:36`, `:39` | client-only (ukrycie), API strzeże | — |
+| „Uruchom” wyłączone bez wybranego źródła; nieskonfigurowane źródło nie do zaznaczenia | `web/views/AdminView.vue:51-56`, `:434`, `:443` | client + API (`SourceIngest.java:48-60`) | — |
+| „Ponów zaznaczone” bierze tylko nie-martwe; „Przywróć martwe” tylko martwe; przyciski wzajemnie blokowane | `web/views/AdminView.vue:326-330`, `:597`, `:605` | client + API (`PipelineRunService.java:198-201`, `PostTransitions.java:196`) | — |
+| 401 z dowolnego wywołania kończy sesję w SPA | `web/api/client.ts:96`; `web/auth/session.ts:55-56` | client (stan po stronie klienta z założenia) | — |
+| Brak okien potwierdzenia | grep `confirm(` w `web/views/*.vue`, `web/components/*.vue` — 0 trafień | — | przywrócenie martwych i ponowienie działają bez potwierdzenia (evidence) |
+| Reguły kopiowane z API do SPA zebrane w rejestrze | `web/contract/rules.json` (`limits`: `feedQueryMaxLength`, `runRangeMaxDays`, `pageMaxSize`, `passwordMinLength`, `passwordMaxLength`, `maxAssessmentAttempts`, `pageMax`) | strażnik testowy (nie czytałem `rules.test.ts` ani `SpaRulesTest`) | — |
 
-### 8. Powiadomienia i uwaga admina
+### Zadania cykliczne
 
-| reguła | strzeżona w | ścieżki | ścisłość | obsługa błędu |
-|---|---|---|---|---|
-| Jedna reguła „wymaga uwagi", liczona przez API | `PipelineRun.java:316-347`; SPA tylko tekst `web/runs.ts:89-118` | notyfikacje, lista, strona, dzwonek | hard (app) | n/d |
-| Powiadomienie raz na adresata i przebieg, tylko admin z `login_enabled` | `uq_notifications_recipient_kind_run` `mig/V9:19`; `NotificationRepository.java:51-53` | `runEnded` z pięciu miejsc: `PipelineRunService.java:270,386,480,551`, `PipelineStartupRecovery.java:113` | hard (data) dla `run_attention` (`ck_notifications_run :18`); dla wierszy bez `run_id` NULL byłby różny (`mig/V9:19`, `inference`) | `DO NOTHING` |
-| Przebieg crona `failed`/`interrupted` nie wysyła alertu operatora | `RunNotifications.java:112,119-121`, `PipelineRun.java:295-297` | jedyna | hard (app) | cron zgłasza kodem wyjścia `trigger.sh:320-322,344-346` |
-| Cron: `partial` = sukces | `trigger.sh:206-215`; stan zduplikowany `RunStatus.java:13`, `mig/V3:31`, `rules.json:26`, `web/api/pipeline.ts:7` | cron | hard (app) | exit 0 |
-
-### 9. Kopia zapasowa
-
-| reguła | strzeżona w | ścieżki | ścisłość | obsługa błędu |
-|---|---|---|---|---|
-| Tylko produkcja, chyba że `BACKUP_IN_ANY_ENVIRONMENT=true` | `backup.sh:35-37` (cron analogicznie `trigger.sh:24-27`) | Railway; poza Railway zmienna pusta i job działa | soft z założenia | exit 0, „skipped" |
-| Pusta tabela `posts` nigdy nie idzie do kopii | `backup.sh:237-238` | każdy przebieg; zgoda tego nie znosi | hard (app) | `fail` |
-| Żadna liczona tabela nie maleje względem ostatniego manifestu | `backup.sh:272-284`; klasyfikacja `tools/db-backup/tables.sh:17-30` | bypass jawny: `BACKUP_ACCEPT_SHRINK` musi nazwać manifest `:276-285` | soft z jawną zgodą | `fail`, nic nie zrzucone |
-| Dane sesji nie trafiają do zrzutu | `backup.sh:26,293,300-302`; `restore-check.sh:116-117` | zrzut i weryfikacja | hard (app) | `fail` |
-| Kopia wysyłana dopiero po pełnym teście odtworzenia | `backup.sh:329-330,336-337`; `restore-check.sh:91,105,114,130` (brak/nieznana tabela, zakres liczników) | każdy przebieg | hard (app) | `fail`, nic nie wysłane |
-| Tabela nowa musi być sklasyfikowana | `restore-check.sh:114`, `tables.sh:7-8` | przy backupie | hard (app) | `fail` |
-| Retencja 14+12, bieżący zrzut chroniony | `backup.sh:118-119,189-205` | `prune` | hard (app) | `fail` |
+| reguła (inference) | strzeżona w | ścisłość | obsługa porażki |
+|---|---|---|---|
+| Codzienny przebieg tylko na produkcji (poza `TRIGGER_IN_ANY_ENVIRONMENT=true`) | `tools/pipeline-trigger/trigger.sh:26-29` | hard (job) | exit 0 „skipped” |
+| Cron kończy się błędem, gdy któryś przebieg nocy `failed`/`interrupted`; `partial` = sukces | `trigger.sh:357-361`, `:380-389` | hard (job) | exit 1 (`:19`); błąd konfiguracji exit 2 (`:20`) |
+| Kopia tylko na produkcji; odmowa przy pustym `posts` lub mniejszej liczbie wierszy niż w ostatnim manifeście, chyba że `BACKUP_ACCEPT_SHRINK` wskazuje ten manifest | `tools/db-backup/backup.sh:35-38`, `:238`, `:256-284` | hard (job) | `fail` → exit 1 (`:29`), nic nie wysłane |
+| Wiersze sesji nigdy w kopii | `backup.sh:26`, `:293`, `:300`; `restore-check.sh:134` | hard (job) | exit 1 |
+| Kopia wysyłana dopiero po udanym pełnym odtworzeniu; każda tabela musi być sklasyfikowana | `backup.sh:330`, `:336-337`; `tools/db-backup/restore-check.sh:107-114` | hard (job) | „restore-check failed; nothing uploaded” |
+| Retencja 14 dziennych + 12 miesięcznych (dodatnie liczby całkowite) | `backup.sh:118-121`, `:189-203` | hard (job) | `fail` |
 
 ## Soft and client-only rules
 
-| reguła | gdzie sprawdzana | bypass | typ |
-|---|---|---|---|
-| „Co najmniej jedno źródło" w formularzu | `web/views/AdminView.vue:322` | API: puste `sources` znaczy **wszystkie skonfigurowane** `SourceIngest.java:49-50`, `PipelineRunController.java:106`; bezpośrednie wywołanie nie jest odrzucane, ma inne znaczenie | client-only, semantyka rozjazdowa |
-| Nieskonfigurowane źródło nie do zaznaczenia | `AdminView.vue:313` | API i tak odmawia `SourceIngest.java:55-58` | client + server |
-| Martwego postu nie można zaznaczyć | `AdminView.vue:426` | API i tak odmawia `PipelineRunService.java:198-201` | client + server |
-| Limit 7 dni | formularz nie ogranicza (`AdminView.vue:298-299`); tylko komunikat `web/api/pipeline.ts:180` i dzielenie `web/missingDays.ts:24-30` | serwer odmawia | server-only (UI pokazuje po fakcie) |
-| Limit 100 postów w POSTS | tylko serwer; SPA czyta jedną stronę listy nieudanych `AdminView.vue:250` | n/d | server-only |
-| Dostęp do widoków admina | `web/router/index.ts:68` | API 403 | client + server |
-| Polityka hasła | `ActivateView.vue:52-55` | API 400 | client + server |
-| Limit `q` | `FeedFilter.vue:57`, `feedFilter.ts:36` | API 400 `PostController.java:88` | client + server |
-| Limit logowania | `LoginRateLimiter` | restart procesu zeruje; druga replika nie dzieli stanu `LoginRateLimiter.java:26-27` | soft |
-| Limit logowania nie obejmuje aktywacji | `ActivationController` bez limitera | token 256 bitów `ActivationLinks.java:46`, więc nieistotne (`inference`) | soft |
-| Sprzątanie osieroconych przebiegów | tylko przy żądaniu startu | zob. Scheduled | soft |
-| Deploy safety | tylko odpowiedź | `onClose` przerwie przebieg niezależnie | soft |
-| Wstrzymanie postu | filtr RETRY | POSTS bierze | soft z założenia |
-| Pierwszy admin | `AdminBootstrap` | `create-user --role admin` | soft z założenia |
-
-Jedyną regułą stanu po stronie klienta z założenia jest `currentUser` w pamięci SPA `web/auth/session.ts:10`: sesja i tak jest po stronie serwera.
+- **Odrzucanie zapisów cross-origin** — soft. Brak nagłówka `Origin` przepuszcza żądanie (`api/auth/OriginGuardFilter.java:47`: `if (origin != null && isCrossOrigin(…))`). Ochronę dla przeglądarki daje też cookie `SameSite=Strict` (`api/config/SessionConfig.java:41`). Obejście: klient spoza przeglądarki bez `Origin` z ważnym cookie (inference).
+- **Limit logowania** — hard (app) w jednej replice. Stan jest w pamięci (`LoginRateLimiter.java:60-66`), więc restart procesu go zeruje, a druga replika miałaby osobny licznik (`:26-27`, evidence z komentarza).
+- **Zgodność dwóch wpisanych haseł przy aktywacji** — client-only (`web/views/ActivateView.vue:56`). API przyjmuje jedno hasło (`ActivationController.java:82-83`). To stan formularza, więc inference: właściwe miejsce.
+- **Limit 7 dni i `to <= dziś`** — tylko serwer (`PipelineRunController.java:188-189`). Formularz ma tylko `required` (`AdminView.vue:419-420`), więc błąd użytkownik widzi dopiero z 400 (evidence).
+- **Czyszczenie osieroconych przebiegów** — soft co do czasu. Działa tylko przy żądaniu startu (`PipelineRunService.java:181`, `:196`; „The API asks the database nothing more while idle: only a request does it.” `:76`). Bez żądań martwy przebieg zostaje `running` w bazie. `/api/deploy-safety` uznaje go za bezpieczny (`DeploySafetyController.java:65`).
+- **Wstrzymanie posta (3 błędy techniczne)** — soft z założenia. `retry` go pomija (`PostRepository.java:43-45`), ale przebieg `posts` admina go bierze (`AssessmentSelection.java:50-51`, `:60-65`). Baza ma tylko `technical_failures >= 0` (`mig/V10…:11`).
 
 ## Writers that work against a guard
 
-- `mig/V8:31-36` zamyka kroki wstecz (`interrupted`) i `mig/V12:51-88` wylicza wyniki źródeł z historii: migracje piszą poza `RunRecorder`, choć `PipelineRunSource` deklaruje pisarza jedynego (`.../PipelineRunSource.java:20-22`). Dotyczy tylko historii sprzed V12.
-- `RunRecorder.interruptOrphans` oznacza `lost` przebieg innej instancji, choć ten mógł się poruszyć na progu: kod przyznaje to wprost `RunRecorder.java:315-321` i dopuszcza.
-- Nie znaleziono żadnego pisarza wstecz z `dead`, `assessed` ani z końcowych statusów przebiegu (grep `UPDATE posts`, `UPDATE pipeline_runs` po `api/`). Nie znaleziono ścieżki usuwania `users`, `posts`, `assessments`, `pipeline_runs`, `notifications` (`DELETE FROM` tylko sesje, `tokens.delete` tylko tokeny): zgodne z komentarzem `tools/db-backup/tables.sh:13-14`.
+Pełna lista pisarzy w kodzie main (grep, `api/**`): `posts` — `PostStore.java:213` (INSERT), `PostTransitions.java:44/74/97/152/195`; `assessments` — `PostTransitions.java:109`; `pipeline_runs`, `pipeline_run_steps`, `pipeline_run_sources` — `PipelineRunService.java:222` (INSERT) i `RunRecorder.java:64-420`; `users` — `ActivationLinks.java:88`, `AdminBootstrap.java:81`, encja przez `User.setPassword`/`clearPassword` (`User.java:92-102`); `activation_tokens` — `ActivationTokenRepository.java:45`, `ActivationLinks.java:168`; `spring_session` — `ActivationLinks.java:196`; `raw_payloads` — `PostgresRawPayloadStore.java:32`; `notifications` — `NotificationRepository.java:51/64/75`. Nie znalazłem innych pisarzy `posts` poza `PostTransitions` i INSERT w `PostStore`, co potwierdza też strażnik `test/pipeline/state/PostColumnsIT.java:56-64`.
+
+- **`PostTransitions.restore`** (`PostTransitions.java:190-201`) robi celowo coś odwrotnego niż reguła „trzecia porażka = martwy”: zeruje `assessment_attempts` i `technical_failures` martwego posta. To jedyne wyjście z `dead` (`:30-31`), a stare próby zostają w `assessments` (`:185`).
+- **`ActivationLinks.resetPassword`** (`ActivationLinks.java:111-129`) zdejmuje hasło dowolnemu kontu z logowaniem, adminowi też. Na koncie systemowym odmawia.
+- **`create-user --role admin`** omija regułę „jeden admin z bootstrapu”. `AdminBootstrap.java:57-60` wprost na nią wskazuje.
+- **Migracje z backfillem** zapisują dane z pominięciem aplikacji: `mig/V8…:31-36` zamyka kroki, `mig/V12…:51-88` wylicza wyniki źródeł heurystyką `f.error LIKE '%gave no post to store%'` (`:57`), `mig/V13…:11` ustawia kanał, `mig/V16…:12` ustawia język.
 
 ## Failure handling
 
-**Swallowed silently (znaleziska):**
+Wpisuję tylko przypadki inne niż *named error*.
 
-- `PostStore.java:76-78`: `catch (DataIntegrityViolationException duplicate)` na zapisie pojedynczego postu, z komentarzem o unikacie. Łapie **każde** naruszenie integralności, także CHECK/NOT NULL, bez logu i licznika. Post znika: `fetched` go liczy, `skipped` nie, `new_posts` nie, przebieg może skończyć `succeeded`. Nie ustalono, czy dziś istnieje dane wejściowe, które to wywoła (`channel`, `published_at`, tekst są chronione wcześniej).
-- `AssessmentSelection.java:60-65`: `POSTS` z nieznanym id albo postem `assessed`/`assessing` jest przyjmowany (202) i po cichu zawężany; `requested_post_ids` bez FK `mig/V3:13`. Przebieg może być `succeeded` bez żadnej pracy (`dispatch` z pustą listą `ConcurrentAssessmentDispatcher.java:173-175`).
-
-**Silently corrects:**
-
-- `Nul.removed`/`replaced`/`replacedInJson` `api/text/Nul.java:21-37`.
-- `Emails.normalize` `user/Emails.java:18-20`.
-- `Boolean.TRUE.equals(item.isSelf())` `RedditMapper.java:50`: brak pola = `link`.
-- Normalizacja `REDDIT_SUBREDDITS`: `r/` i powtórki `RedditConfiguration.java:62,67`.
-- `PostStore.java:63` deduplikuje w paczce.
-- `web/feedFilter.ts:49-56` wyrzuca nieznane parametry.
-- `web/auth/session.ts:25-27`: awaria sieci = traktowany jak wylogowany.
-
-**Logs and continues:**
-
-- `cleanUpOrphans` `PipelineRunService.java:250-256`, `PipelineStartupRecovery.java:101-108`, `close :508-523`, `onClose :553-561`, `RunNotifications.java:90-93`, `RunWatchdog.java:98-110`: każde z alertem operatora. Alert nie jest gwarantowany: kolejka odrzuca przy 20 oczekujących i ogranicza do 2/min `api/alerts/OperatorAlertQueue.java:56-64,196-200`.
-- `count` `ConcurrentAssessmentDispatcher.java:401-405` + `RUN_COUNTERS_LOST :502-514`. Skutek: `attentionReasons` liczy się z liczników, a status z pamięci kroku, więc `dead > 0` może nie dać powodu uwagi (`inference`, potwierdza tekst logu `:507-509`).
-- Reddit: post usunięty liczony tylko w logu INFO `RedditRepository.java:126-127`.
-- Check-in healthchecks nie zmienia kodu wyjścia `trigger.sh:79-82`.
-
-**Named errors (zamknięty zbiór):** `api/config/ErrorCode.java:21-72`, `api/alerts/AlertEvent.java:10-37`, `Violation`/`FailureClass`, `WykopFailure`, `RedditFailure`, `IssueOutcome.Reason`, `ExitCode`.
-
-**Generic error:** `RejectedExecutionException` z `submit` po `shutdownNow` nie ma mapowania w `PipelineRunExceptionHandler.java:17-33`, więc 500 `internal_error`, po zatwierdzeniu transakcji (`inference` z kodu: `queue` nie czyta `stopping`, `PipelineRunService.java:216-226,282-287`).
-
-**Klasyfikacja LLM (trzy winy):**
-
-| sytuacja | klasyfikacja | zapis | zużywa próbę |
-|---|---|---|---|
-| 401, 402, 404 | `CONFIGURATION` `TransportException.java:87-88` → stop kroku | nic | nie |
-| 429, 408, 5xx, timeout, połączenie po retry | `LlmUnavailableException` `TransportRetry.java:118-121` → 3 z rzędu stop `ConcurrentAssessmentDispatcher.java:112,324-332` | nic; pojedynczy = błąd techniczny | nie |
-| inne 4xx (w tym **403**), brak tekstu `ChatResponses.java:34-37` | `REJECTED` → `LlmCallException` `TransportRetry.java:103-105` → `provider_error` | `failed` | **tak** |
-| błąd modelu względem kontraktu | `Assessor.java:96-105` | `failed` | tak |
-| nieklasyfikowany błąd klienta | `LlmClientException`, 3 z rzędu stop `:118,345-355` | nic, błąd techniczny | nie |
-
-Znalezisko: systematyczna odmowa 403 lub filtr treści dostawcy zużywa próby i prowadzi do `dead`, a `dead` jest nieodwracalne (brak ścieżki ożywienia); nie ma wyłącznika dla serii `REJECTED`, a zapisany wynik zeruje liczniki serii `:298-303` (`inference` co do częstości, `evidence` co do mechaniki).
+- **silently corrects**:
+  - Znak U+0000 jest usuwany z tekstów posta (`api/posts/Post.java:149`, `:152-157`; `RedditMapper.java:78`) i zastępowany w błędzie technicznym (`PostTransitions.java:207-210`).
+  - Błędy są obcinane: przebiegu i kroku do 2000 znaków (`RunRecorder.java:42`, `:435-437`), posta do 500 (`PostTransitions.java:37`), w alercie do 300 (`RunNotifications.java:43`), a podsumowanie fetch do 1000 obok odrzuconych (`RunSequence.java:68`, `:209-212`).
+  - Fraza filtra jest przycinana z białych znaków, a pusta znaczy brak warunku (`PostFilter.java:29-36`).
+  - Wpis bez treści dostaje syntetyczną ocenę `unclear` i staje się `assessed` (`Prefilter.java:41-42`, `Assessor.java:72-74`).
+- **swallowed silently**:
+  - Przebieg `posts` z id nieznanymi, `assessed` albo już ocenianymi zostaje zakolejkowany i ten post po prostu pomija (`AssessmentSelection.java:60-65`, bez logu; walidacja odrzuca tylko martwe, `PipelineRunService.java:198-201`). Przebieg z samymi takimi id kończy się `succeeded` z 0 ocen (inference z `RunFlow.java:303`).
+  - Przywracanie ignoruje id niemartwe. Wynik zwraca tylko liczbę, ale `DeadPostController.java:53-54` loguje INFO.
+- **logs and continues**:
+  - Elementy niemapowalne źródła trafiają do `skipped` (`SourceIngest.java:109-111`), a usunięte z Reddita są pomijane z INFO (`RedditRepository.java:126-127`).
+  - Wiersz posta odrzucony przez bazę idzie do `skipped` z WARN bez treści (`PostStore.java:155-161`).
+  - Porażka sprzątania osieroconych przebiegów nie blokuje decyzji (`PipelineRunService.java:250-256`).
+  - Porażka recovery przy starcie nie zatrzymuje serwera (`PipelineStartupRecovery.java:101-107`).
+  - Porażka powiadomień jest ponawiana raz, potem idzie alert (`RunNotifications.java:74-106`, „It never throws”).
+  - Utracone liczniki przebiegu dają alert `RUN_COUNTERS_LOST` (`ConcurrentAssessmentDispatcher.java:81-86`).
+  - Alerty ponad limit są porzucane z WARN (`OperatorAlertQueue.java:196-200`).
+  - Nieudany check-in healthchecks nie zmienia kodu wyjścia crona (`trigger.sh:83`).
+- **generic error**: naruszenia CHECK, UNIQUE i NOT NULL poza ścieżką `PostStore` kończą się wyjątkiem bazy. Przebieg wtedy kończy się `failed` z `"<SimpleName>: <message>"` (`PipelineRunService.java:367-369`).
 
 ## Atomicity
 
-| operacja | atomowa? | cytat |
+| operacja | jedna transakcja? | cytat |
 |---|---|---|
-| Utworzenie konta + token | tak, 1 TX | `ActivationLinks.java:82-90` |
-| Reset: token, hasło, sesje | tak, 1 TX | `:113-128` |
-| Aktywacja: hasło, token, sesje | tak, 1 TX + `FOR UPDATE` | `:156-173` |
-| Pierwszy admin | tak, 1 TX + advisory lock; **prompt hasła wewnątrz transakcji** | `AdminBootstrap.java:54-83`; limit 300 s `application.properties:13-20` |
-| Kolejkowanie retry + range | tak, 1 TX; `submit` **po** commicie, więc padnięcie między nimi zostawia `queued` | `PipelineRunService.java:217-224` |
-| Sprzątanie osieroconych | tak, własna TX, zostaje także przy odmowie | `:244-248` |
-| Zapis oceny + przejście postu | tak, 1 TX | `PostTransitions.java:93-109` |
-| Zapis oceny + licznik przebiegu | **nie**: strata możliwa, sygnał `RUN_COUNTERS_LOST` | `ConcurrentAssessmentDispatcher.java:209,386-406` |
-| Wynik źródła + liczniki | tak, jeden statement (CTE) | `RunRecorder.java:143-147` |
-| Zapis paczki postów + payloady | tak dla paczki 500, **nie** dla kroku; zapisane posty zostają `stored` i bierze je retry | `PostStore.java:65-81` |
-| Zamknięcie kroku + aktywność | **nie**: dwa statementy z założenia | `RunRecorder.java:361-363` |
-| Koniec przebiegu w `close`: `fail` + `releaseAll` | **nie**: dwa osobne zapisy, awaria między nimi zostawia posty `assessing` do `releaseOrphans` | `PipelineRunService.java:497-498` |
-| Koniec przez strażnika / shutdown / recovery | tak, 1 TX | `:463-469`, `:544-548`, `PipelineStartupRecovery.java:92-99` |
-| Koniec przebiegu + powiadomienia | **nie**: po commicie; porażka to brak powiadomienia na zawsze (alert jednorazowy), brak ponowienia | `RunNotifications.java:68-100` |
-| Powiadomienia + alert operatora | **nie** | `:108-114` |
-| Upload: zrzut przed manifestem; kopia miesięczna | **nie**, ale kolejność celowa; pół pary miesięcznej zastępowane | `backup.sh:335-349` |
+| Utworzenie przebiegów (retry + range) z kontrolą „nic aktywnego” | tak, pod blokadą doradczą; kolejkowanie dopiero po commicie | `PipelineRunService.java:216-226` |
+| Sprzątanie osierot (przebiegi `lost` + zwolnienie postów) | tak, osobno od decyzji: zostaje zatwierdzone nawet przy odmowie | `PipelineRunService.java:243-248`, `:210-214` |
+| Zatrzymanie przez watchdog (przebieg `failed` + posty z powrotem) | tak | `PipelineRunService.java:463-469` |
+| **Zamknięcie przebiegu po końcu / wyjątku** (`fail` + `releaseAll`) | **nie**: `fail` ma własną transakcję (`RunRecorder.java:96-105`), a `releaseAll` to osobne polecenie (`PipelineRunService.java:497-498`) | Gdy `releaseAll` zawiedzie, przebieg jest `failed`, a posty zostają `assessing`. Naprawia je dopiero `releaseOrphans` przy następnym żądaniu startu lub starcie serwera (`PostTransitions.java:174-180`). **Finding** (inference) |
+| Zamknięcie przy wyłączaniu instancji (interrupt + release) | tak | `PipelineRunService.java:544-548` |
+| Recovery przy starcie (przebiegi + osierocone posty) | tak | `PipelineStartupRecovery.java:92-99` |
+| Przebieg kończy się z zamknięciem otwartych kroków (`fail`, `interrupt`, `stall`, `interruptAll`, `interruptOrphans`) | tak | `RunRecorder.java:96-105`, `:278-290`, `:300-312`, `:320-333`, `:356-370` |
+| Zamknięcie pojedynczego kroku | nie, celowo: dwa polecenia bez transakcji | `RunRecorder.java:390-394` |
+| Wynik źródła (liczniki przebiegu + wiersz źródła) i `storeRejected` | tak, jedno polecenie `WITH … UPDATE … INSERT/UPDATE` | `RunRecorder.java:140-158`, `:177-190` |
+| Zapis oceny (etap posta + wiersz `assessments`) | tak | `PostTransitions.java:93-112` |
+| **Wynik posta a liczniki przebiegu** | **nie**: `record` (`ConcurrentAssessmentDispatcher.java:312`) i `recorder.count` (`:423-431`) to osobne zapisy | Licznik może się zgubić, wtedy idzie ERROR i alert `RUN_COUNTERS_LOST`. Status przebiegu „may not show that it needs attention” (`:81-86`). **Finding** (evidence z komentarza) |
+| Zapis nowych postów | paczki po 500 (surowe + posty w jednej transakcji), przy błędzie integralności po jednym | `PostStore.java:116`, `:123` |
+| **Nowe posty a licznik `new_posts`** | **nie**: licznik idzie po kroku (`RunSequence.java:138`). Według komentarza „A failed write ends the run as any exception” (`:132-133`), a zapisane posty zostają | inference |
+| Utworzenie konta z linkiem / reset (link + bez hasła + usunięcie sesji) / aktywacja (hasło + usunięcie tokenu + sesji) | tak, każda osobno | `ActivationLinks.java:82-90`, `:113-128`, `:156-173` |
+| Bootstrap admina | tak, z blokadą doradczą | `AdminBootstrap.java:54-83` |
+| Powiadomienia dla adminów | jedno polecenie `INSERT … SELECT … ON CONFLICT DO NOTHING`; alert po nim, poza transakcją | `NotificationRepository.java:51-53`; `RunNotifications.java:114-120` |
 
 ## Scheduled and asynchronous work
 
-| praca | wyzwalacz | handler | dociera? |
+| reguła zależna od późniejszego działania | wyzwalacz | handler | dochodzi? |
 |---|---|---|---|
-| Dzienny przebieg | Railway cron `30 0 * * *` `.railway/railway.ts:286` | `trigger.sh:232` → `POST /internal/pipeline-runs/daily` → `InternalPipelineRunController.java:65-71` → `startRange` | tak; poza produkcją pominięty `trigger.sh:24-28` |
-| Kopia zapasowa | Railway cron `0 2 * * *` `.railway/railway.ts:239` | `backup.sh` | tak; tylko produkcja |
-| Strażnik przebiegu | `scheduleWithFixedDelay` `RunWatchdog.java:83` (1/5 progu, max 1 min, min 100 ms `:71-77`) | `stopStalled` | tak; `@ConditionalOnWebApplication` `:44`, bez własnych przebiegów nie pyta bazy `:94` |
-| Recovery przy starcie | `SmartInitializingSingleton` `PipelineStartupRecovery.java:84-86` | `recover` | tak; tylko serwer `:53` |
-| Zamknięcie instancji | `@EventListener(ContextClosedEvent)` `PipelineRunService.java:539` | `onClose` | tak |
-| Migracje | Railway pre-deploy `.railway/railway.ts:118`; serwer ma Flyway wyłączony `application.properties:23` | `cli/MigrateCommand.java:46-58` | tak; porażka zatrzymuje deploy przez kod wyjścia `cli/ExitCode.java:4-6` |
-| Sprzątanie osieroconych | **brak timera**: tylko żądanie startu `PipelineRunService.java:181,196` | `cleanUpOrphans` | zależne od żądania; w produkcji cron daje raz na dobę (`inference`) |
-| Ponowienie resztek | tylko przy `startRange`, gdy są resztki `:185` | przebieg RETRY | tak; `startPosts` nie kolejkuje retry |
-| Wygasanie linków aktywacyjnych | brak zadania; sprawdzenie przy odczycie `ActivationTokenRepository.java:28,36` | n/d | reguła działa bez zadania; **przeterminowane wiersze zostają** (nie znaleziono sprzątania w `api/`) |
-| Wygasanie sesji | biblioteka Spring Session JDBC, `spring.session.timeout=30d` `application.properties:42` | n/d | `unknown`: w `api/` brak `@Scheduled` i brak ustawienia cleanup; zależne od biblioteki |
-| Alert operatora | własny wątek `OperatorAlertQueue`, limity `:56-67` | `HealthchecksAlerts` | tak; tylko serwer; w CLI nic się nie dzieje `RunNotifications.java:27-28` |
-| Dzwonek i listy w SPA | `useEvery` `web/components/NotificationBell.vue:27`, `AdminView.vue:129`, `RunDetailView.vue:121` | odczyt | tak; tylko karta widoczna |
-| Retencja NAS | `tools/db-backup/nas-retention.sh` | ta sama reguła 14+12 | `unknown`: wyzwalacz poza repozytorium (nagłówek pliku mówi o harmonogramie DSM) |
-
-**Handler bez wyzwalacza / zapis bez czytelnika:**
-
-- `posts.content_hash`: pisany `Post.java:150`, CHECK `mig/V3:113`, komentarz V3 „to notice an edited post" (`mig/V3:97`), a getter `Post.java:212` nie ma czytelnika w `api/` (grep). Edytowany post nie jest wykrywany: `PostStore` zostawia istniejące bez zmian (`PostStore.java:29-30`).
-- `failure_class = timeout`: jedyny konstruktor `new LlmCallException` daje `PROVIDER_ERROR` `TransportRetry.java:104`, a `TIMEOUT` idzie tylko w `LlmUnavailableException` `:118-121`, którego `Assessor.call` nie zapisuje `Assessor.java:131-133`. Wartość z CHECK `mig/V3:162` jest nieosiągalna z produkcyjnej ścieżki (`evidence`, grep po `api/`).
-- `ItemType.COMMENT`, `Context.parentPost/parentComment`: dopuszczone w kontrakcie i CHECK, żaden mapper ich nie tworzy (`WykopMapper.java:65`, `RedditMapper.java:56-57` zawsze `Context.NONE`). Skutek (`inference`): cel z `reference=contextual` nie ma jak spełnić D5 i D10 jednocześnie, więc zawsze jest porażką.
-
-## Duplicated rules
-
-| reguła | miejsca |
-|---|---|
-| Polityka hasła | `Passwords.java:12,14`; `web/api/activation.ts:8-9`; `ActivateView.vue:53-55`; `rules.json` |
-| Maks. prób | `Post.java:40`; `mig/V3:116-121`; `web/api/posts.ts:8`; `rules.json` |
-| Maks. dni zakresu | `PipelineRunController.java:60`; `web/missingDays.ts:5`; `rules.json` |
-| `q` ≤100 | `PostFilter.java:24`; `web/feedFilter.ts:7`; `rules.json` |
-| Rozmiar strony | `PipelineRunController.java:63`; literał `@Max(100)` `PostController.java:87`, `FailedPostController.java:50`; `web/api/pipeline.ts:133` |
-| Zbiór białych znaków | `Whitespace.java:17-29`; `web/feedFilter.ts:24`; `rules.json:2-5`; regex `Whitespace.java:72-75` |
-| Statusy przebiegu | `RunStatus.java:13`; `mig/V3:31`; `trigger.sh:206-215`; `web/api/pipeline.ts:7`; `rules.json:26` |
-| Żywotność kolejki (SQL) | `RunRecorder.java:328-333`; `PipelineRunRepository.java:58-63` |
-| Pokrycie dnia | `PipelineRunRepository.java:29,92-99,112-117,132-136`; `MissingDays.java:23-33` |
-| Reguła adresu check-in | `AlertSettings.java:49`; `trigger.sh:60`; `backup.sh:56` |
-| Post usunięty | `RedditItem.java:42-44`; `RedditMapper.java:44-46` (węższa) |
-| Strefa Warszawy | `PipelineRunService.java:97`; `WykopMapper.java:30`; `web/labels.ts:91,99`; `AdminView.vue:28` |
-| Strip tokenu | `PipelineTriggerToken.java:40,64`; `trigger.sh:139-141` |
-| Tekst „gave no post to store" | `RunFlow.java:106`; `mig/V12:57` (LIKE) |
+| Codzienny przebieg D-2…D-1 + podsumowanie nocy | `.railway/railway.ts:289` `cronSchedule: "30 0 * * *"` → `tools/pipeline-trigger/trigger.sh:261` (`/daily`), `:246` (`/nightly-summary`) | `InternalPipelineRunController.java:83-89`, `:112-127` | tak (evidence: harmonogram + trasy) |
+| Codzienna kopia bazy | `.railway/railway.ts:242` `cronSchedule: "0 2 * * *"` | `tools/db-backup/backup.sh` | tak |
+| Watchdog przebiegu | `RunWatchdog.java:81-83` `scheduleWithFixedDelay` w `afterPropertiesSet`, tylko serwer (`@ConditionalOnWebApplication` `:44`) | `PipelineRunService.stopStalled` `:461` | tak, ale tylko dla przebiegów tej instancji (`RunWatchdog.java:94`) |
+| Recovery przy starcie | `SmartInitializingSingleton.afterSingletonsInstantiated` (`PipelineStartupRecovery.java:84-86`) | `recover()` `:89` | tak |
+| Przerwanie przy wyłączaniu | `@EventListener(ContextClosedEvent.class)` (`PipelineRunService.java:539`) | `onClose` | tak |
+| Sprzątanie osieroconych przebiegów i postów | **brak timera**: tylko żądanie startu (`PipelineRunService.java:181`, `:196`) | `cleanUpOrphans` `:240` | tak, ale przy braku żądań nie działa wcale (celowo, `:76`; uzasadnienie w `RunWatchdog.java:31-33`) |
+| Ponowna ocena leftovers (`stored` / `failed` z próbami) | tylko przy żądaniu zakresu (`PipelineRunService.java:185`), czyli w nocy przez cron | `AssessmentSelection.fromTargets` RETRY | tak |
+| Ponowna ocena przywróconego martwego posta | następny przebieg (komentarz `DeadPostController.java:23-24`) | jak wyżej | tak |
+| Wygaśnięcie linku aktywacyjnego | sprawdzane przy odczycie (`ActivationTokenRepository.java:28`, `:35-36`) | — | nie potrzebuje wyzwalacza. Nie znalazłem kodu usuwającego wygasłe tokeny (grep `expires_at <`, `delete.*activation` w `api/**`), więc wiersze zostają do nowego linku lub użycia (evidence) |
+| Wygaśnięcie sesji po 30 dniach | `application.properties:47` | sprzątanie wygasłych wierszy `SPRING_SESSION`: **unknown**. W kodzie main nie ma `@Scheduled` ani `cleanup-cron` (grep), więc to domyślne zachowanie Spring Session JDBC, którego nie weryfikowałem. Komentarze o uśpieniu API (`RunWatchdog.java:31-33`) sugerują, że cykliczne zapytania mają znaczenie | unknown |
+| Wysyłka alertów operatora | własny wątek `OperatorAlertQueue` (`:56-67`), 5 s na opróżnienie przy zamknięciu (`:67`, `:241-244`) | `NtfyAlerts` (`api/alerts/NtfyAlerts.java`) | tak. Kanał w kodzie to ntfy (`NtfyAlerts.java:34-39`; `trigger.sh:234` „sends it to the operator (ntfy)”) (evidence) |
+| Odświeżanie dzwonka | `web/components/NotificationBell.vue:38`, `:91` (po zmianie strony, przy widocznej karcie, tylko na stronach admina) | `GET /api/admin/notifications` | tak (UI) |
 
 ## Unknowns
 
-- Czy to, że feed pokazuje `not_investment_related` i wynik prefiltra, jest zamierzone: kod tego nie rozstrzyga.
-- Czy kiedykolwiek zachodzi cichy spadek postu w `PostStore.java:76-78`: nie ustalono danych, które by go wywołały.
-- Czy Spring Session JDBC faktycznie czyści wygasłe sesje przy usypianiu API: zachowanie biblioteki, nieprzeczytane.
-- Czy po stronie Railway istnieje tylko jedna replika (limiter w pamięci): `LoginRateLimiter.java:26-27` tak twierdzi, `.railway/railway.ts` nie sprawdzono pod tym kątem.
-- Treść promptu (`agents/assessor/prompt/`) nieprzeczytana: nie wiadomo, czy model jest informowany o niedostępności `contextual`.
-- `ClientIp`: czy `X-Real-IP` faktycznie jest nadpisywany przez krawędź: tylko twierdzenie w komentarzu `ClientIp.java:6-8`.
+- Ciała reguł D1–D15 (`api/agents/assessor/validation/rules/*.java`), `StanceTable` (§7.2) i `OutputParser` — cytuję tylko deklaracje `RuleId.java:14-57`. Jak każda reguła sprawdza dane, nie weryfikowałem.
+- `NightSummary.java` (treść i progi podsumowania nocy) oraz `AssessmentQuality.java` poza `status` i stałymi — nie czytane.
+- Klienci LLM i `TransportRetry` (retry, flex fallback, czyszczenie klucza z komunikatów) — nie czytane. Reguły „klucz nigdy w logu” nie weryfikowałem.
+- Odświeżanie ról w sesji: rola trafia do sesji przy logowaniu (`AccountDetailsService.java:48`). Nie znalazłem pisarza zmieniającego `users.role` (lista pisarzy wyżej), więc ryzyko starej roli w sesji nie ma dziś ścieżki (inference).
+- Sprzątanie wygasłych sesji Spring Session (wyżej) — unknown.
+- `content_hash` („to notice an edited post”, `mig/V3…:97`) jest liczony (`Post.java:159`), ale w kodzie main go nie porównuję: jedyny odczyt `getContentHash` jest w `test/JpaSchemaIT.java:181`, a duplikat „left as it is” (`PostStore.java:45-46`). Edycja posta w źródle nie jest więc wykrywana (inference; grep `contentHash|content_hash` w `src/main` i `src/test`).
+- `tools/db-backup/nas-retention.sh`, `tables.sh` (klasyfikacja tabel) i `szczur-radar-web/dev/mock-api.js` — nie czytane poza grepem.
+- Widoki `FeedView`, `PostDetailView`, `RunDetailView`, `LoginView` — tylko grep `:disabled|confirm(|maxlength`. Innych strażników UI w nich nie wykluczam.
+- Strażnicy testowi: znam nagłówki `AuthorizationCompletenessIT`, `AdminRoleIT`, `ClosedSetsIT`, `PostColumnsIT`, `RunRecorderIT` i grep nazw constraintów w `MigrationsIT.java:114-190`. Testy `rules.test.ts`, `SpaRulesTest`, `PrEnvScenariosIT` i rejestr mutantów PIT (`test/mutation/`) tylko zlokalizowałem.
 
-## Commands run
-
-- `git status --short`, `ls`, `ls -R`, `find`, `wc -l`, `cat -n`, `sed -n`
-- `grep -rn` / `grep -rnE` po `api/`, `web/`, `tools/`, `.railway/railway.ts` (zapisy SQL, `.save(`, `@Scheduled`, `@Transactional`, `content_hash`, `relevance`, `CallFailure.TIMEOUT`, `Europe/Warsaw`, `LoginRateLimiter`)
-- `python3` (odczyt limitów ze schematu JSON i kluczy `rules.json`)
+Polecenia: `git ls-files --cached --others --exclude-standard` (zakres); `wc -l` (rozmiary); `cat -n` / `sed -n` (odczyt plików); `grep -n -E` po: `@(Get|Post|…)Mapping`, `throw new|if \(|static final`, `UPDATE|INSERT INTO|DELETE FROM|.save(|@Modifying`, `@Scheduled|@EventListener|scheduleWithFixedDelay|cleanup`, `contentHash|content_hash`, `confirm\(|:disabled|maxlength|role ===|MAX_`, `cronSchedule`, `exit [0-9]|fail` w skryptach; `python3 -c` (klucze `rules.json`).
