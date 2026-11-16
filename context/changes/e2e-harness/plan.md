@@ -526,7 +526,7 @@ Job `web-e2e` w CI blokuje wdrożenie przy czerwonym E2E. Wytyczne repo mówią,
 
 #### Manual
 
-- [ ] 3.6 Właściciel akceptuje listę 18 testów jako siatkę regresji
+- [x] 3.6 Właściciel akceptuje listę 18 testów jako siatkę regresji — 3874026
 
 ### Phase 4: CI i dokumentacja
 
