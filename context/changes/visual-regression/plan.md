@@ -569,11 +569,11 @@ Run id i wynik trafiają do sekcji.
 
 #### Automated
 
-- [x] 3.1 Każda bramka czerwienieje na swoim złamaniu
-- [x] 3.2 Zapas z artefaktu CI daje działające wzorce
-- [x] 3.3 Wytyczne opisują polecenia i reguły
-- [x] 3.4 verification-scope.md nie liczy wyglądu jako ręcznej kontroli
-- [ ] 3.5 Każdy job CI na PR jest zielony
+- [x] 3.1 Każda bramka czerwienieje na swoim złamaniu — dbc7731
+- [x] 3.2 Zapas z artefaktu CI daje działające wzorce — dbc7731
+- [x] 3.3 Wytyczne opisują polecenia i reguły — dbc7731
+- [x] 3.4 verification-scope.md nie liczy wyglądu jako ręcznej kontroli — dbc7731
+- [x] 3.5 Każdy job CI na PR jest zielony — dbc7731
 
 #### Manual
 
