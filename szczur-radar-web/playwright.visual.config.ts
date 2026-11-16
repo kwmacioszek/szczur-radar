@@ -47,8 +47,10 @@ export default defineConfig({
       pathTemplate: '{testDir}/__screenshots__/{projectName}/{arg}{ext}',
       animations: 'disabled',
       caret: 'hide',
-      // Two runs give byte-identical screenshots: no pixel may differ.
+      // Two runs give byte-identical screenshots: no pixel may differ, by no amount. The default threshold (0.2)
+      // lets a subtle colour change through (a button's hover darkened by a 15 % mix went unseen with it).
       maxDiffPixels: 0,
+      threshold: 0,
     },
   },
   use: {

@@ -1,8 +1,9 @@
 // What the visual tests screenshot (F-06), as data: the projects (theme × width), the views with their mock modes and
-// the moment each one is ready. views.spec.ts screenshots them, and the baselines guard (phase 2) derives the
-// expected files under visual/__screenshots__/<project>/ from the same tables. playwright.visual.config.ts builds its
-// projects and its dev server from here.
-import { expect, type Page } from '@playwright/test'
+// the moment each one is ready, the catalogue's sections and the hover and focus states. views.spec.ts and
+// kitchen-sink.spec.ts screenshot them, and the baselines guard (baselines.spec.ts) derives the expected files under
+// visual/__screenshots__/<project>/ from the same tables and the same enumeration of the catalogue.
+// playwright.visual.config.ts builds its projects and its dev server from here.
+import { expect, type Locator, type Page } from '@playwright/test'
 import type { MockModes } from '../src/contract/mockModes.ts'
 
 /** The four projects: a baseline per view lives in visual/__screenshots__/<name>/. */
@@ -140,9 +141,114 @@ export const VIEWS: readonly View[] = [
   },
 ]
 
-/** A hover or focus state of a shared control on /kitchen-sink (phase 2): its baseline is its region's screenshot. */
-export interface State {
-  name: string
+/** The component catalogue, served by vite dev only. */
+export const CATALOG_URL = `${DEV_SERVER_URL}/kitchen-sink`
+
+/** Opens the catalogue (the test's mock answers the router's /api/auth/me) and waits for its heading. */
+export async function openCatalog(page: Page): Promise<Locator> {
+  await page.goto(CATALOG_URL)
+  const main = page.getByRole('main')
+  await expect(main.getByRole('heading', { level: 1, name: 'Kitchen sink', exact: true })).toBeVisible()
+  return main
 }
 
-export const STATES: readonly State[] = []
+/** A section's file name part: lower-case ASCII, Polish letters without their marks, spaces as `-`. */
+export function slug(name: string): string {
+  const text = name
+    .toLowerCase()
+    .replaceAll('ł', 'l')
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .replace(/\s+/g, '-')
+  if (!/^[a-z0-9-]+$/.test(text)) throw new Error(`nazwa sekcji „${name}” nie daje sluga z małych liter ASCII: „${text}”`)
+  return text
+}
+
+export interface CatalogSection {
+  name: string
+  slug: string
+  region: Locator
+}
+
+/**
+ * The catalogue's sections, each a region named by its level-2 heading, in page order. Enumerated by the headings, not
+ * by every region: the bell's open panels are regions too („Powiadomienia”), and a post card's heading is a level-2
+ * heading inside its article, not a section's. A new section gets its baseline by itself; two sections with one slug
+ * are an error (they would share a file).
+ */
+export async function catalogSections(main: Locator): Promise<CatalogSection[]> {
+  const headings = await main.getByRole('heading', { level: 2 }).allTextContents()
+  const cardHeadings = await main.getByRole('article').getByRole('heading', { level: 2 }).allTextContents()
+  const names = headings.map((heading) => heading.trim())
+  for (const cardHeading of cardHeadings) {
+    const index = names.indexOf(cardHeading.trim())
+    if (index < 0) throw new Error(`nagłówek karty „${cardHeading}” nie jest nagłówkiem poziomu 2 w main`)
+    names.splice(index, 1)
+  }
+
+  const sections = names.map((name) => ({ name, slug: slug(name), region: main.getByRole('region', { name, exact: true }) }))
+  const slugs = sections.map((section) => section.slug)
+  const repeated = slugs.filter((value, index) => slugs.indexOf(value) !== index)
+  if (repeated.length > 0) throw new Error(`dwie sekcje katalogu mają ten sam slug: ${[...new Set(repeated)].join(', ')}`)
+  for (const section of sections) await expect(section.region, `region sekcji „${section.name}”`).toHaveCount(1)
+  return sections
+}
+
+/** The states a control's style has beside its default one: the pointer over it, the keyboard's focus ring. */
+export type ControlState = 'hover' | 'focus'
+
+/** A hover or focus state of a shared control on /kitchen-sink: its baseline is its region's screenshot. */
+export interface State {
+  /** The baseline's file name, without .png. */
+  name: string
+  /** What breaks when this test is red: the test's name. */
+  risk: string
+  /** The catalogue section (its level-2 heading) the control is in. */
+  region: string
+  /** The control, by role and name, inside its region. */
+  control: (region: Locator) => Locator
+  state: ControlState
+}
+
+// The two button rows of „Przyciski” have no role or name, so both „Domyślny” buttons share one name; they follow the
+// order of the catalogue's variants: primary, then secondary.
+const primaryButton = (region: Locator) => region.getByRole('button', { name: 'Domyślny', exact: true }).nth(0)
+const secondaryButton = (region: Locator) => region.getByRole('button', { name: 'Domyślny', exact: true }).nth(1)
+
+export const STATES: readonly State[] = [
+  {
+    name: 'state-przyciski-primary-hover',
+    risk: 'hover przycisku głównego nie zmienia wyglądu',
+    region: 'Przyciski',
+    control: primaryButton,
+    state: 'hover',
+  },
+  {
+    name: 'state-przyciski-primary-focus',
+    risk: 'pierścień fokusu przycisku głównego nie zmienia wyglądu',
+    region: 'Przyciski',
+    control: primaryButton,
+    state: 'focus',
+  },
+  {
+    name: 'state-przyciski-secondary-hover',
+    risk: 'hover przycisku pomocniczego nie zmienia wyglądu',
+    region: 'Przyciski',
+    control: secondaryButton,
+    state: 'hover',
+  },
+  {
+    name: 'state-przyciski-secondary-focus',
+    risk: 'pierścień fokusu przycisku pomocniczego nie zmienia wyglądu',
+    region: 'Przyciski',
+    control: secondaryButton,
+    state: 'focus',
+  },
+  {
+    name: 'state-pola-search-focus',
+    risk: 'pierścień fokusu pola wyszukiwania nie zmienia wyglądu',
+    region: 'Pola',
+    control: (region) => region.getByRole('searchbox', { name: 'Puste', exact: true }),
+    state: 'focus',
+  },
+]

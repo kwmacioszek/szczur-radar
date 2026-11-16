@@ -543,26 +543,26 @@ Run id i wynik trafiają do sekcji.
 
 #### Automated
 
-- [x] 1.1 Testy jednostkowe frontu przechodzą, a Vitest nie zbiera visual/
-- [x] 1.2 vue-tsc -b sprawdza kod testów wyglądu
-- [x] 1.3 Zestaw wyglądu przechodzi dwa razy z rzędu w kontenerze
-- [x] 1.4 Wzorców widoków jest 24
-- [x] 1.5 Poza obrazem konfiguracja odmawia
-- [x] 1.6 Kontener nie podmienia node_modules hosta
-- [x] 1.7 W testach wyglądu nie ma lokatorów CSS, XPath ani czekania na czas
-- [x] 1.8 Obraz web nie dostaje wzorców ani raportów wyglądu
-- [ ] 1.9 PR ma w opisie Refs #177
-- [ ] 1.10 Wzorce z Maca przechodzą w CI
+- [x] 1.1 Testy jednostkowe frontu przechodzą, a Vitest nie zbiera visual/ — cccf28a
+- [x] 1.2 vue-tsc -b sprawdza kod testów wyglądu — cccf28a
+- [x] 1.3 Zestaw wyglądu przechodzi dwa razy z rzędu w kontenerze — cccf28a
+- [x] 1.4 Wzorców widoków jest 24 — cccf28a
+- [x] 1.5 Poza obrazem konfiguracja odmawia — cccf28a
+- [x] 1.6 Kontener nie podmienia node_modules hosta — cccf28a
+- [x] 1.7 W testach wyglądu nie ma lokatorów CSS, XPath ani czekania na czas — cccf28a
+- [x] 1.8 Obraz web nie dostaje wzorców ani raportów wyglądu — cccf28a
+- [x] 1.9 PR ma w opisie Refs #177 — cccf28a
+- [x] 1.10 Wzorce z Maca przechodzą w CI — cccf28a
 
 ### Phase 2: Katalog komponentów
 
 #### Automated
 
-- [ ] 2.1 Cały zestaw przechodzi w kontenerze
-- [ ] 2.2 Wzorców jest 54
-- [ ] 2.3 Zestaw jest stabilny przy powtórzeniach i równoległości
-- [ ] 2.4 W testach wyglądu nie ma lokatorów CSS, XPath ani czekania na czas
-- [ ] 2.5 Testy jednostkowe i build przechodzą
+- [x] 2.1 Cały zestaw przechodzi w kontenerze
+- [x] 2.2 Wzorców jest 54
+- [x] 2.3 Zestaw jest stabilny przy powtórzeniach i równoległości
+- [x] 2.4 W testach wyglądu nie ma lokatorów CSS, XPath ani czekania na czas
+- [x] 2.5 Testy jednostkowe i build przechodzą
 - [ ] 2.6 CI na PR zielone z nowymi wzorcami
 
 ### Phase 3: Celowe złamania i dokumentacja
