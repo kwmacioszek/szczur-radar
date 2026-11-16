@@ -20,5 +20,5 @@ test('anonimowy link do posta prowadzi przez logowanie z powrotem do tego posta'
 
   await expect(page).toHaveURL(POST_5)
   await expect(page.getByRole('heading', { level: 1, name: 'Orlen ogłasza buyback za 4 mld zł' })).toBeVisible()
-  await expect(page.getByRole('banner').getByRole('link', { name: 'Panel admina' })).not.toBeVisible()
+  await expect(page.getByRole('banner').getByRole('link', { name: 'Panel admina' })).toBeVisible()
 })
