@@ -508,21 +508,21 @@ Job `web-e2e` w CI blokuje wdrożenie przy czerwonym E2E. Wytyczne repo mówią,
 
 #### Automated
 
-- [x] 2.1 Seed przechodzi na zimnym serwerze
-- [x] 2.2 Seed czerwienieje przy celowym zepsuciu
-- [x] 2.3 Vitest nie zbiera e2e/
-- [x] 2.4 vue-tsc -b sprawdza kod E2E
-- [x] 2.5 test-stack.md ma każde wymagane pole schematu
+- [x] 2.1 Seed przechodzi na zimnym serwerze — 56deab6
+- [x] 2.2 Seed czerwienieje przy celowym zepsuciu — 56deab6
+- [x] 2.3 Vitest nie zbiera e2e/ — 56deab6
+- [x] 2.4 vue-tsc -b sprawdza kod E2E — 56deab6
+- [x] 2.5 test-stack.md ma każde wymagane pole schematu — 56deab6
 
 ### Phase 3: Smoke obecnych przepływów
 
 #### Automated
 
-- [ ] 3.1 Cały zestaw przechodzi na zimnym serwerze
-- [ ] 3.2 Zestaw jest stabilny przy powtórzeniach i równoległości
-- [ ] 3.3 Każdy plik smoke czerwienieje przy swoim zepsuciu
-- [ ] 3.4 W testach nie ma lokatorów CSS, XPath ani czekania na czas
-- [ ] 3.5 Testy jednostkowe frontu dalej przechodzą
+- [x] 3.1 Cały zestaw przechodzi na zimnym serwerze
+- [x] 3.2 Zestaw jest stabilny przy powtórzeniach i równoległości
+- [x] 3.3 Każdy plik smoke czerwienieje przy swoim zepsuciu
+- [x] 3.4 W testach nie ma lokatorów CSS, XPath ani czekania na czas
+- [x] 3.5 Testy jednostkowe frontu dalej przechodzą
 
 #### Manual
 
