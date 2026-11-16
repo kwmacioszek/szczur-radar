@@ -518,11 +518,11 @@ Job `web-e2e` w CI blokuje wdrożenie przy czerwonym E2E. Wytyczne repo mówią,
 
 #### Automated
 
-- [x] 3.1 Cały zestaw przechodzi na zimnym serwerze
-- [x] 3.2 Zestaw jest stabilny przy powtórzeniach i równoległości
-- [x] 3.3 Każdy plik smoke czerwienieje przy swoim zepsuciu
-- [x] 3.4 W testach nie ma lokatorów CSS, XPath ani czekania na czas
-- [x] 3.5 Testy jednostkowe frontu dalej przechodzą
+- [x] 3.1 Cały zestaw przechodzi na zimnym serwerze — 93df399
+- [x] 3.2 Zestaw jest stabilny przy powtórzeniach i równoległości — 93df399
+- [x] 3.3 Każdy plik smoke czerwienieje przy swoim zepsuciu — 93df399
+- [x] 3.4 W testach nie ma lokatorów CSS, XPath ani czekania na czas — 93df399
+- [x] 3.5 Testy jednostkowe frontu dalej przechodzą — 93df399
 
 #### Manual
 
@@ -532,8 +532,8 @@ Job `web-e2e` w CI blokuje wdrożenie przy czerwonym E2E. Wytyczne repo mówią,
 
 #### Automated
 
-- [ ] 4.1 Workflow jest poprawnym YAML-em, a web-e2e jest w needs joba railway-config
-- [ ] 4.2 PR gałęzi feature/e2e-harness ma w opisie Refs #176
+- [x] 4.1 Workflow jest poprawnym YAML-em, a web-e2e jest w needs joba railway-config
+- [x] 4.2 PR gałęzi feature/e2e-harness ma w opisie Refs #176
 - [ ] 4.3 Job web-e2e na PR jest zielony i przeszedł 18 testów
 - [ ] 4.4 Każdy job CI na PR jest zielony, w tym railway-config
 - [ ] 4.5 Job czerwienieje na czerwonym teście i oddaje raport
