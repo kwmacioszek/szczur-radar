@@ -499,20 +499,20 @@ Job `web-e2e` w CI blokuje wdrożenie przy czerwonym E2E. Wytyczne repo mówią,
 
 #### Automated
 
-- [x] 1.1 Testy jednostkowe frontu przechodzą, w tym nowe przypadki strażnika
-- [x] 1.2 Typecheck i build przechodzą
-- [x] 1.3 W tekście atrapy nie ma już stałych trybów
-- [x] 1.4 Procedura zrzutów działa bez zmian i z trybem
+- [x] 1.1 Testy jednostkowe frontu przechodzą, w tym nowe przypadki strażnika — 51b8706
+- [x] 1.2 Typecheck i build przechodzą — 51b8706
+- [x] 1.3 W tekście atrapy nie ma już stałych trybów — 51b8706
+- [x] 1.4 Procedura zrzutów działa bez zmian i z trybem — 51b8706
 
 ### Phase 2: Infrastruktura Playwright i seed
 
 #### Automated
 
-- [ ] 2.1 Seed przechodzi na zimnym serwerze
-- [ ] 2.2 Seed czerwienieje przy celowym zepsuciu
-- [ ] 2.3 Vitest nie zbiera e2e/
-- [ ] 2.4 vue-tsc -b sprawdza kod E2E
-- [ ] 2.5 test-stack.md ma każde wymagane pole schematu
+- [x] 2.1 Seed przechodzi na zimnym serwerze
+- [x] 2.2 Seed czerwienieje przy celowym zepsuciu
+- [x] 2.3 Vitest nie zbiera e2e/
+- [x] 2.4 vue-tsc -b sprawdza kod E2E
+- [x] 2.5 test-stack.md ma każde wymagane pole schematu
 
 ### Phase 3: Smoke obecnych przepływów
 
