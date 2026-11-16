@@ -142,6 +142,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install dependencies
+        id: install
         run: npm ci
       - name: Check Playwright version against the image
         # Reads the image from `container:` above in this file, so a bump of
@@ -156,6 +157,30 @@ jobs:
           echo "Playwright $installed matches the image $image"
       - name: Run E2E tests
         run: npm run e2e
+      # Visual tests (F-06, playwright.visual.config.ts): screenshots against
+      # the baselines in szczur-radar-web/visual/__screenshots__/ and axe-core,
+      # also after red E2E tests. This image on amd64 renders the baselines
+      # (the config refuses any other platform); CI never writes one. When the
+      # step is red, the artifact visual-baselines holds the new baselines:
+      # unpacked into szczur-radar-web/visual/__screenshots__/ they are the
+      # baselines to review.
+      - name: Run visual tests
+        id: visual
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: npm run visual
+      - name: Produce baselines for review
+        # An explicit status function: without it the default success() is
+        # false after the red step above, and this step would always be skipped.
+        if: ${{ !cancelled() && steps.visual.outcome == 'failure' }}
+        continue-on-error: true
+        run: npm run visual -- --update-snapshots=changed --reporter=list
+      - name: Keep the new baselines
+        if: ${{ !cancelled() && steps.visual.outcome == 'failure' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-baselines
+          path: szczur-radar-web/visual/__screenshots__/
+          retention-days: 7
       - name: Keep the Playwright report
         # cancelled(): a run past timeout-minutes is cancelled, not failed, and
         # its report and traces are the ones worth keeping.
@@ -166,6 +191,8 @@ jobs:
           path: |
             szczur-radar-web/playwright-report/
             szczur-radar-web/test-results/
+            szczur-radar-web/playwright-report-visual/
+            szczur-radar-web/test-results-visual/
           retention-days: 7
           if-no-files-found: ignore
       - name: Give the workspace back to the runner's user
