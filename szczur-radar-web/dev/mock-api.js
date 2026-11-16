@@ -14,8 +14,8 @@
  * The control it returns:
  *   endSession()  ends the session as if it expired on the server: every later call of a route behind a session is
  *                 401 not_authenticated, and a login (the form) starts a new one,
- *   dispose()     ends every suspended answer without answering it; after it the mock never fulfills a route (a test
- *                 calls it once its page is closed),
+ *   dispose()     ends every suspended answer without answering it; after it the mock never fulfills a route (the E2E
+ *                 fixture calls it when its test is over, before the page closes),
  *   modeValues    MODE_VALUES, for the guard.
  * Ids are UUIDs like the API's (a malformed id in a path is 400 invalid_request, an unknown one 404): the 5th group
  * is a kind and a number, 00000000-0000-4000-8000-<kind 4 digits><number 8 digits> — kind 0001 a run, 0002 a

@@ -22,5 +22,5 @@ test('post otwarty z listy pokazuje ocenę i surowe dane, a powrót wraca do lis
   // The header has a "Posty" link too: the back link is the one in main.
   await main.getByRole('link', { name: 'Posty', exact: true }).click()
   await expect(page).toHaveURL('/')
-  await expect(page.getByRole('heading', { level: 1, name: 'Posty' })).toBeVisible()
+  await expect(main.getByRole('heading', { level: 1, name: 'Posty' })).toBeVisible()
 })

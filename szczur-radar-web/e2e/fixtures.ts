@@ -18,7 +18,8 @@ export const test = base.extend<{ modes: MockModes; mock: MockControl }>({
       const install = (0, eval)(MOCK_SOURCE) as InstallMock
       const control = await install(page, { ...modes, now: FIXED_NOW })
       await use(control)
-      // A suspended answer must not fulfill a route of the closed page.
+      // The test is over and its page closes next (this fixture depends on it): a suspended answer must not fulfill a
+      // route of that page later.
       control.dispose()
     },
     { auto: true },

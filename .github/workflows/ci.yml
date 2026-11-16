@@ -144,20 +144,22 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: Check Playwright version against the image
-        env:
-          # The tag of `container:` above, without the `v` and `-noble`.
-          IMAGE_VERSION: "1.65.1"
+        # Reads the image from `container:` above in this file, so a bump of
+        # either side alone is red here, not later with a missing browser.
         run: |
           installed="$(npx playwright --version | awk '{print $2}')"
-          if [ "$installed" != "$IMAGE_VERSION" ]; then
-            echo "::error::@playwright/test is $installed but the job's image is v$IMAGE_VERSION: change the image tag (container: and IMAGE_VERSION in .github/workflows/ci.yml) or the exact version in szczur-radar-web/package.json so they match"
+          image="$(sed -n 's/^ *container: *\(mcr\.microsoft\.com\/playwright:[^ ]*\) *$/\1/p' "$GITHUB_WORKSPACE/.github/workflows/ci.yml")"
+          if [ "$image" != "mcr.microsoft.com/playwright:v$installed-noble" ]; then
+            echo "::error::@playwright/test is $installed but the job's image is $image: change the image tag (container: of web-e2e in .github/workflows/ci.yml) or the exact version in szczur-radar-web/package.json so they match"
             exit 1
           fi
-          echo "Playwright $installed matches the image v$IMAGE_VERSION"
+          echo "Playwright $installed matches the image $image"
       - name: Run E2E tests
         run: npm run e2e
       - name: Keep the Playwright report
-        if: failure()
+        # cancelled(): a run past timeout-minutes is cancelled, not failed, and
+        # its report and traces are the ones worth keeping.
+        if: failure() || cancelled()
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report
@@ -168,10 +170,11 @@ jobs:
           if-no-files-found: ignore
       - name: Give the workspace back to the runner's user
         # The container runs as root; a persistent self-hosted runner runs as
-        # `gha` and could not clean root-owned files in its next job. On
-        # GitHub's runners this changes nothing.
+        # `gha` and could not clean root-owned files in its next job: the
+        # workspace and $HOME (the runner's _temp/_github_home, where npm ci
+        # keeps its cache). On GitHub's runners this changes nothing.
         if: always()
-        run: chown -R "$(stat -c '%u:%g' "$GITHUB_WORKSPACE")" "$GITHUB_WORKSPACE"
+        run: chown -R "$(stat -c '%u:%g' "$GITHUB_WORKSPACE")" "$GITHUB_WORKSPACE" "$HOME"
 
   web-container-smoke:
     name: web container smoke test

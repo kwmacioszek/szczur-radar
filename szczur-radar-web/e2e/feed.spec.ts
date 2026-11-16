@@ -12,8 +12,8 @@ test('filtr po celu i stanowisku trafia do adresu i zawęża listę', async ({ p
   const main = page.getByRole('main')
   await expect(main.getByRole('status')).toHaveText('Ocenione posty: 120')
 
-  await main.getByLabel('Spółka lub temat').fill('orlen')
-  await main.getByLabel('Stanowisko').selectOption({ label: 'wzrostowo' })
+  await main.getByLabel('Spółka lub temat', { exact: true }).fill('orlen')
+  await main.getByRole('combobox', { name: 'Stanowisko', exact: true }).selectOption({ label: 'wzrostowo' })
   await main.getByRole('button', { name: 'Filtruj' }).click()
 
   await expect(page).toHaveURL('/?q=orlen&direction=bullish')
@@ -64,10 +64,12 @@ test.describe('błąd', () => {
     const main = page.getByRole('main')
     await expect(main.getByRole('alert')).toHaveText('Nie udało się wczytać postów.')
 
-    const reload = page.waitForRequest((request) =>
-      request.method() === 'GET' && new URL(request.url()).pathname === '/api/posts')
+    // The retry's own answer, not just its request: the alert below is the one the retry rendered.
+    const retried = page.waitForResponse((response) =>
+      response.request().method() === 'GET' && new URL(response.url()).pathname === '/api/posts'
+      && response.status() === 500)
     await main.getByRole('button', { name: 'Spróbuj ponownie' }).click()
-    await reload
+    await retried
 
     await expect(main.getByRole('alert')).toHaveText('Nie udało się wczytać postów.')
   })

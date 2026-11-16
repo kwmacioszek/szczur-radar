@@ -7,23 +7,25 @@ test.describe('logowanie anonimowego', () => {
 
   test('złe hasło zostaje na logowaniu z komunikatem', async ({ page }) => {
     await page.goto('/login')
+    const main = page.getByRole('main')
 
-    await page.getByLabel('E-mail').fill('admin@szczur-radar.pl')
-    await page.getByLabel('Hasło', { exact: true }).fill('zle-haslo')
-    await page.getByRole('button', { name: 'Zaloguj się' }).click()
+    await main.getByLabel('E-mail', { exact: true }).fill('admin@szczur-radar.pl')
+    await main.getByLabel('Hasło', { exact: true }).fill('zle-haslo')
+    await main.getByRole('button', { name: 'Zaloguj się' }).click()
 
-    await expect(page.getByRole('alert')).toHaveText('Nieprawidłowy e-mail lub hasło.')
+    await expect(main.getByRole('alert')).toHaveText('Nieprawidłowy e-mail lub hasło.')
     await expect(page).toHaveURL('/login')
   })
 })
 
 test('wylogowanie kończy sesję, a chroniona strona wraca do logowania', async ({ page }) => {
   await page.goto('/')
-  await expect(page.getByRole('heading', { level: 1, name: 'Posty' })).toBeVisible()
+  const main = page.getByRole('main')
+  await expect(main.getByRole('heading', { level: 1, name: 'Posty' })).toBeVisible()
 
   await page.getByRole('banner').getByRole('button', { name: 'Wyloguj' }).click()
   await expect(page).toHaveURL('/login')
-  await expect(page.getByRole('heading', { level: 1, name: 'Logowanie' })).toBeVisible()
+  await expect(main.getByRole('heading', { level: 1, name: 'Logowanie' })).toBeVisible()
 
   // A new page load asks the server again: the session is gone. vue-router does not encode `/` in a query value.
   await page.goto('/')
@@ -39,12 +41,12 @@ test('wygaśnięcie sesji w trakcie pracy prowadzi do logowania i z powrotem', a
   await main.getByRole('button', { name: 'Starsze' }).click()
 
   await expect(page).toHaveURL('/login?redirect=/?page=1')
-  await page.getByLabel('E-mail').fill('admin@szczur-radar.pl')
-  await page.getByLabel('Hasło', { exact: true }).fill('dowolne-haslo')
-  await page.getByRole('button', { name: 'Zaloguj się' }).click()
+  await main.getByLabel('E-mail', { exact: true }).fill('admin@szczur-radar.pl')
+  await main.getByLabel('Hasło', { exact: true }).fill('dowolne-haslo')
+  await main.getByRole('button', { name: 'Zaloguj się' }).click()
 
   await expect(page).toHaveURL('/?page=1')
-  await expect(page.getByRole('main').getByText('Strona 2 z 3')).toBeVisible()
+  await expect(main.getByText('Strona 2 z 3')).toBeVisible()
 })
 
 test.describe('zwykły użytkownik', () => {
@@ -60,6 +62,6 @@ test.describe('zwykły użytkownik', () => {
 
     await page.goto('/admin')
     await expect(page).toHaveURL('/')
-    await expect(page.getByRole('heading', { level: 1, name: 'Posty' })).toBeVisible()
+    await expect(page.getByRole('main').getByRole('heading', { level: 1, name: 'Posty' })).toBeVisible()
   })
 })
