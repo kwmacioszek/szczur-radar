@@ -558,21 +558,21 @@ Run id i wynik trafiają do sekcji.
 
 #### Automated
 
-- [x] 2.1 Cały zestaw przechodzi w kontenerze
-- [x] 2.2 Wzorców jest 54
-- [x] 2.3 Zestaw jest stabilny przy powtórzeniach i równoległości
-- [x] 2.4 W testach wyglądu nie ma lokatorów CSS, XPath ani czekania na czas
-- [x] 2.5 Testy jednostkowe i build przechodzą
-- [ ] 2.6 CI na PR zielone z nowymi wzorcami
+- [x] 2.1 Cały zestaw przechodzi w kontenerze — b99eae4
+- [x] 2.2 Wzorców jest 54 — b99eae4
+- [x] 2.3 Zestaw jest stabilny przy powtórzeniach i równoległości — b99eae4
+- [x] 2.4 W testach wyglądu nie ma lokatorów CSS, XPath ani czekania na czas — b99eae4
+- [x] 2.5 Testy jednostkowe i build przechodzą — b99eae4
+- [x] 2.6 CI na PR zielone z nowymi wzorcami — b99eae4
 
 ### Phase 3: Celowe złamania i dokumentacja
 
 #### Automated
 
-- [ ] 3.1 Każda bramka czerwienieje na swoim złamaniu
-- [ ] 3.2 Zapas z artefaktu CI daje działające wzorce
-- [ ] 3.3 Wytyczne opisują polecenia i reguły
-- [ ] 3.4 verification-scope.md nie liczy wyglądu jako ręcznej kontroli
+- [x] 3.1 Każda bramka czerwienieje na swoim złamaniu
+- [x] 3.2 Zapas z artefaktu CI daje działające wzorce
+- [x] 3.3 Wytyczne opisują polecenia i reguły
+- [x] 3.4 verification-scope.md nie liczy wyglądu jako ręcznej kontroli
 - [ ] 3.5 Każdy job CI na PR jest zielony
 
 #### Manual

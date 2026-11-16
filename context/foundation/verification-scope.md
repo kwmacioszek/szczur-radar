@@ -33,7 +33,7 @@ Większość weryfikacji wycinka i regresja działają same w CI przy każdym PR
 - Przerwanie przebiegu przez deploy na Railway (SIGTERM, nakładanie się instancji) i zachowanie Wait for CI.
 - Prawdziwe API Wykopu, Arctic Shift i dostawcy LLM: dostępność, format, limity, jakość ocen modelu.
 - Harmonogram cronów.
-- Wygląd widoków w przeglądarce (do F-06: zrzuty porównawcze i test dostępności). Przepływy i teksty widoków pokrywają od F-05 testy E2E w CI (`szczur-radar-web/e2e/`, job `web-e2e`).
+- Akceptacja nowego wyglądu: ocena różnic obrazków w PR („Files changed”). Każdą zmianę wyglądu i naruszenie dostępności łapią w CI od F-06 zrzuty porównawcze i axe (`szczur-radar-web/visual/`, job `web-e2e`). Przepływy i teksty widoków pokrywają od F-05 testy E2E w CI (`szczur-radar-web/e2e/`, job `web-e2e`).
 - Pomiary na Railway: czas startu po wybudzeniu, czytelność logów.
 - Migracja na danych produkcji: pre-deploy `migrate`, backfill.
 - Zmienne i sekrety środowisk Railway: krok CI ustawiający wartości w PR env, zapieczętowane wartości produkcji.
