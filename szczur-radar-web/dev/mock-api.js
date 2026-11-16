@@ -1,7 +1,22 @@
 /*
  * Mock /api/* for screenshots of /admin, a run (/admin/runs/:id), the feed (/), a post (/posts/:id) and /activate
- * without a running API (playwright-cli run-code), kept for /10x-ui changes. Another mode = run a copy of this file
- * with MODE, NOTIFICATIONS, AUTH, LOGIN, START, ACTIVATION, FRESHNESS, MISSING or QUALITY replaced.
+ * without a running API (playwright-cli run-code), kept for /10x-ui changes and the browser tests. The file is one
+ * expression, the function `async (page, modes = {}) => control` (no export, no trailing semicolon, no code outside
+ * it): `playwright-cli run-code`, the guard (src/contract/mockApi.ts) and the E2E fixture all evaluate this text.
+ * The modes are the keys of `modes`: MODE, NOTIFICATIONS, AUTH, LOGIN, START, ACTIVATION, FRESHNESS, MISSING and
+ * QUALITY, each with the values below; MODE_VALUES lists them, the first value of each key its default (what
+ * `playwright-cli run-code`, which passes `page` alone, gets). An unknown key or a value outside its list throws
+ * before any route is registered; src/contract/mockModes.ts (MOCK_MODE_VALUES) is the same table for TypeScript, and
+ * the guard compares the two both ways.
+ * `modes.now` (an ISO instant, e.g. '2026-10-20T10:00:00Z', optional) stops the mock's clock at that moment: today in
+ * Warsaw (the days without data, the quality window, the latest day a run may take), run 1's times, a notification's
+ * readAt and a started run's createdAt are read from it. Without it the clock is the machine's, as it runs.
+ * The control it returns:
+ *   endSession()  ends the session as if it expired on the server: every later call of a route behind a session is
+ *                 401 not_authenticated, and a login (the form) starts a new one,
+ *   dispose()     ends every suspended answer without answering it; after it the mock never fulfills a route (the E2E
+ *                 fixture calls it when its test is over, before the page closes),
+ *   modeValues    MODE_VALUES, for the guard.
  * Ids are UUIDs like the API's (a malformed id in a path is 400 invalid_request, an unknown one 404): the 5th group
  * is a kind and a number, 00000000-0000-4000-8000-<kind 4 digits><number 8 digits> — kind 0001 a run, 0002 a
  * notification, 0003 a failed post, 0004 a feed post (number from 0), 0005 an account. Below, <run N> is
@@ -14,7 +29,7 @@
  *       'error-next'   feed page 0 answers, later pages answer 500 (admin as in 'data'),
  *       'raw-loading'  /api/posts/:id/raw hangs 60 s (the rest as in 'data'),
  *       'raw-error'    /api/posts/:id/raw answers 500 (the rest as in 'data').
- * FRESHNESS (independent of MODE; another variant = a copy of this file with FRESHNESS replaced), the label above the
+ * FRESHNESS (independent of MODE), the label above the
  * feed — /api/freshness answers like pipeline/api/FreshnessController.java:
  *       'date'  { sources: [wykop, reddit] }, both 2026-10-13T03:12:00Z (05:12 in Warsaw), the default,
  *       'apart' both sources, Reddit older: 2026-10-11T03:12:00Z (a night it failed or gave no post since),
@@ -109,22 +124,63 @@
  * 0 with or without a filter.
  * Only paths starting with /api/ are mocked — a '**\/api/**' glob would also catch Vite's /src/api/*.ts modules.
  * failureClass values are the API's FailureClass (agents/assessor/validation/FailureClass.java), lower case.
- * With AUTH = 'admin' the header shows "Panel admina" and the notification bell on every view.
+ * With AUTH 'admin' the header shows "Panel admina" and the notification bell on every view.
  * /kitchen-sink needs no mock: dev only, no session, fixed data.
  *
  *   cd szczur-radar-web && npx vite --port 5173 --strictPort &
  *   cd <repo root>   # playwright-cli open reads .playwright/cli.config.json (Chromium) from the cwd; the file is
- *                    # not in git, so from a git worktree add --config=<main checkout>/.playwright/cli.config.json
+ *                    # in git, so a git worktree has it too
  *   playwright-cli open && playwright-cli resize 1280 900
- *   playwright-cli run-code --filename=szczur-radar-web/dev/mock-api.js
+ *   playwright-cli run-code --filename=szczur-radar-web/dev/mock-api.js   # the default modes
+ *   # another mode: the same text called with its modes (installing again replaces the routes and starts afresh)
+ *   playwright-cli run-code "async page => ($(cat szczur-radar-web/dev/mock-api.js))(page, { MODE: 'error' })"
  *   playwright-cli goto http://localhost:5173/admin   # the feed: http://localhost:5173/ (?page=N, from 0);
  *                                                    # a run: http://localhost:5173/admin/runs/00000000-0000-4000-8000-000100000001;
  *                                                    # a post: http://localhost:5173/posts/00000000-0000-4000-8000-000400000005
  *                                                    # (a Reddit one: post 2, …000400000002);
- *                                                    # /activate#token with AUTH = 'anonymous'
+ *                                                    # /activate#token with { AUTH: 'anonymous' }
  *   playwright-cli set-color-scheme light|dark && playwright-cli screenshot --full-page --filename=<png>
  */
-async page => {
+async (page, modes = {}) => {
+  // The modes and their values, the first one the default (src/contract/mockModes.ts has the same table).
+  const MODE_VALUES = {
+    MODE: ['data', 'loading', 'error', 'empty', 'loading-next', 'error-next', 'raw-loading', 'raw-error'],
+    NOTIFICATIONS: ['unread', 'none', 'error'],
+    AUTH: ['admin', 'user', 'anonymous'],
+    LOGIN: ['ok', 'invalid', 'limited'],
+    START: ['accepted', 'busy', 'not_configured'],
+    ACTIVATION: ['valid', 'invalid', 'policy', 'checking', 'sending', 'error'],
+    FRESHNESS: ['date', 'apart', 'wykop', 'none', 'error'],
+    MISSING: ['gaps', 'none', 'error'],
+    QUALITY: ['data', 'few', 'nolang', 'none', 'error'],
+  }
+  // An unknown key or value throws before any route is registered, so a typo never runs the default in silence.
+  const INSTANT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,3})?(Z|[+-]\d{2}:\d{2})$/
+  for (const [key, value] of Object.entries(modes ?? {})) {
+    if (value === undefined) continue
+    if (key === 'now') {
+      if (typeof value !== 'string' || !INSTANT.test(value) || Number.isNaN(Date.parse(value))) {
+        throw new Error(`dev/mock-api.js: now '${String(value)}' is no ISO instant (e.g. '2026-10-20T10:00:00Z')`)
+      }
+    } else if (!Object.hasOwn(MODE_VALUES, key)) {
+      throw new Error(`dev/mock-api.js: no mode ${key} (given '${String(value)}'); the modes: ${Object.keys(MODE_VALUES).join(', ')}`)
+    } else if (!MODE_VALUES[key].includes(value)) {
+      throw new Error(`dev/mock-api.js: ${key} '${String(value)}' is none of ${MODE_VALUES[key].join(', ')}`)
+    }
+  }
+  const mode = (key) => modes?.[key] ?? MODE_VALUES[key][0]
+  const MODE = mode('MODE')
+  const NOTIFICATIONS = mode('NOTIFICATIONS')
+  const AUTH = mode('AUTH')
+  const LOGIN = mode('LOGIN')
+  const START = mode('START')
+  const ACTIVATION = mode('ACTIVATION')
+  const FRESHNESS = mode('FRESHNESS')
+  const MISSING = mode('MISSING')
+  const QUALITY = mode('QUALITY')
+  // The mock's one clock: stopped at modes.now when given, else the machine's.
+  const fixedNow = modes?.now === undefined ? null : Date.parse(modes.now)
+  const clock = () => fixedNow ?? Date.now()
   // Runs as pipeline/api/PipelineRunController.java answers them: range instants (Warsaw days), steps with their
   // statuses, progress counters. Built per request, so the running run's times stay "a moment ago".
   const MIN = 60000
@@ -137,7 +193,7 @@ async page => {
   const RUN_KEYS = ['running', 'source-empty', 'source-failed', 'skipped', 'deploy', 'lost', 'empty', 'stalled', 'dead',
     'ok', ...Array.from({ length: 22 }, (_, n) => olderDay(n))]
   const runId = (key) => uuid(1, RUN_KEYS.indexOf(key) + 1)
-  const ago = (ms) => new Date(Date.now() - ms).toISOString()
+  const ago = (ms) => new Date(clock() - ms).toISOString()
   const step = (name, status, startedAt, finishedAt, itemsIn, itemsOut, error = null) =>
     ({ step: name, status, startedAt, finishedAt, itemsIn, itemsOut, error })
   // A night's steps from 00:30 UTC of `day` (YYYY-MM-DD) with `posts` to assess; `assess` ends with `last`.
@@ -283,7 +339,7 @@ async page => {
       { id: uuid(2, 4), createdAt: '2026-10-14T22:10:04Z', readAt: null, run: about('empty') },
       { id: uuid(2, 5), createdAt: '2026-10-14T01:20:31Z', readAt: null, run: about('stalled') },
       { id: uuid(2, 6), createdAt: '2026-10-13T00:52:11Z', readAt: '2026-10-13T06:10:00Z', run: about('dead') },
-    ].map((n) => ({ kind: 'run_attention', ...n, readAt: n.readAt ?? (readIds.has(n.id) ? new Date().toISOString() : null) }))
+    ].map((n) => ({ kind: 'run_attention', ...n, readAt: n.readAt ?? (readIds.has(n.id) ? new Date(clock()).toISOString() : null) }))
   }
   // Failed posts as posts/api/FailedPostController.java answers them, newest first (ids 1–4): p1 failed, p2 failed with a single
   // provider outage counted as a technical error (both reasons), p3 dead, p4 stored on hold (three technical errors
@@ -425,22 +481,13 @@ async page => {
     (q === null || t.anchor.quote.toLocaleLowerCase('pl').includes(q))
     && (kind === null || t.kind === kind)
     && (direction === null || t.stance.direction === direction))
-  const MODE = 'data'
-  const NOTIFICATIONS = 'unread'
-  const AUTH = 'admin'
-  const LOGIN = 'ok'
-  const START = 'accepted'
-  const ACTIVATION = 'valid'
-  const FRESHNESS = 'date'
-  const MISSING = 'gaps'
-  const QUALITY = 'data'
   // The session, as the API keeps it: who is signed in now (AUTH sets the start; login and logout change it).
   const ADMIN_EMAIL = 'admin@szczur-radar.pl'
   const account = (email) => ({ id: uuid(5, email === ADMIN_EMAIL ? 1 : 2), email, role: email === ADMIN_EMAIL ? 'admin' : 'user' })
   let session = AUTH === 'anonymous' ? null : account(AUTH === 'user' ? 'user@szczur-radar.pl' : ADMIN_EMAIL)
   // Days without data, relative to today in Warsaw: D-n as YYYY-MM-DD (counted on UTC midnights, so no clock change
   // shifts a day).
-  const today = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Warsaw' }).format(new Date())
+  const today = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Warsaw' }).format(new Date(clock()))
   const dMinus = (n) => new Date(Date.parse(`${today}T00:00:00Z`) - n * 24 * 60 * MIN).toISOString().slice(0, 10)
   const SOURCES = ['wykop', 'reddit']
   const missingDays = () => ({
@@ -478,8 +525,33 @@ async page => {
     wykop: [WYKOP_UPDATE],
     none: [],
   }
-  const hang = () => new Promise((r) => setTimeout(r, 60000))
-  const json = (route, body, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) })
+  // A suspended answer waits 60 s, or until dispose() ends it; after dispose() no route is fulfilled, and a fulfill
+  // that fails because the page is closed is ignored (the test that opened it is over).
+  let disposed = false
+  const suspended = new Set()
+  const hang = () => new Promise((resolve) => {
+    if (disposed) return resolve()
+    const end = () => {
+      clearTimeout(timer)
+      suspended.delete(end)
+      resolve()
+    }
+    const timer = setTimeout(end, 60000)
+    suspended.add(end)
+  })
+  const dispose = () => {
+    disposed = true
+    for (const end of [...suspended]) end()
+  }
+  const fulfill = async (route, options) => {
+    if (disposed) return
+    try {
+      await route.fulfill(options)
+    } catch (error) {
+      if (!disposed && !(page.isClosed?.() ?? false)) throw error
+    }
+  }
+  const json = (route, body, status = 200) => fulfill(route, { status, contentType: 'application/json', body: JSON.stringify(body) })
   const invalid = (route) => json(route, { detail: 'invalid_request' }, 400)
   // `page` and `size` as the API reads them (PageLimits): whole numbers, page 0…MAX_PAGE, size 1…100, an absent or
   // empty one is the default; null = a 400 invalid_request.
@@ -505,7 +577,7 @@ async page => {
   const queuedRun = (kind, o = {}) => ({
     id: uuid(1, 1000 + started.length), kind, status: 'queued', interruptionCause: null, needsAttention: false,
     attentionReasons: [], scheduled: false, rangeFrom: null, rangeTo: null, sources: [], requestedPostIds: null,
-    createdAt: new Date().toISOString(), startedAt: null, finishedAt: null, lastActivityAt: null, fetched: 0,
+    createdAt: new Date(clock()).toISOString(), startedAt: null, finishedAt: null, lastActivityAt: null, fetched: 0,
     newPosts: 0, assessedOk: 0, assessedFailed: 0, processingErrors: 0, dead: 0, skipped: 0, sourcesFailed: 0,
     sourcesEmpty: 0, llmRetries: 0, flexFallbacks: 0, inFlight: 0, error: null, steps: [], sourceResults: [], ...o,
   })
@@ -530,6 +602,8 @@ async page => {
   }
   await page.unrouteAll().catch(() => {})
   await page.route((u) => u.pathname.startsWith('/api/'), async (route) => {
+    // After dispose() nothing is answered: the test that installed the mock is over.
+    if (disposed) return
     const url = new URL(route.request().url())
     const p = url.pathname
     const method = route.request().method()
@@ -541,7 +615,7 @@ async page => {
         return invalid(route)
       }
       if (LOGIN === 'limited') {
-        return route.fulfill({ status: 429, contentType: 'application/json', headers: { 'Retry-After': '60' },
+        return fulfill(route, { status: 429, contentType: 'application/json', headers: { 'Retry-After': '60' },
           body: JSON.stringify({ detail: 'too_many_attempts' }) })
       }
       const email = String(body.email).trim().toLowerCase()
@@ -554,7 +628,7 @@ async page => {
     }
     if (p === '/api/auth/logout') {
       session = null
-      return route.fulfill({ status: 204 })
+      return fulfill(route, { status: 204 })
     }
     if (p.startsWith('/api/auth/activation')) {
       const lookup = p === '/api/auth/activation/lookup'
@@ -564,7 +638,7 @@ async page => {
       if (ACTIVATION === 'invalid') return json(route, { detail: 'activation_link_invalid' }, 400)
       if (lookup) return json(route, { email: 'jan.kowalski@example.com' })
       if (ACTIVATION === 'policy') return json(route, { detail: 'password_policy' }, 400)
-      return route.fulfill({ status: 204 })
+      return fulfill(route, { status: 204 })
     }
     // Like the API (deny by default): every other route needs a session, /api/admin/ an admin's.
     if (!['/api/health', '/api/ready', '/api/deploy-safety'].includes(p)) {
@@ -628,7 +702,7 @@ async page => {
     }
     if (p === '/api/admin/notifications/read') {
       allNotifications().forEach((n) => readIds.add(n.id))
-      return route.fulfill({ status: 204 })
+      return fulfill(route, { status: 204 })
     }
     const readPath = p.match(/^\/api\/admin\/notifications\/([^/]+)\/read$/)
     if (readPath) {
@@ -636,7 +710,7 @@ async page => {
       if (!UUID.test(id)) return invalid(route)
       if (NOTIFICATIONS === 'none' || !allNotifications().some((n) => n.id === id)) return json(route, { detail: 'not_found' }, 404)
       readIds.add(id)
-      return route.fulfill({ status: 204 })
+      return fulfill(route, { status: 204 })
     }
     if (p === '/api/admin/posts/failed') {
       const params = pageParams(url, 50)
@@ -694,8 +768,13 @@ async page => {
       if (MODE === 'error' || (MODE === 'raw-error' && raw)) return json(route, { detail: 'internal_error' }, 500)
       const n = id.startsWith(uuid(4, 0).slice(0, 28)) ? Number(id.slice(28)) : NaN
       if (MODE === 'empty' || !(n < FEED_TOTAL)) return json(route, { detail: 'post_not_found' }, 404)
-      return raw ? route.fulfill({ status: 200, contentType: 'application/json', body: feedRaw(n) }) : json(route, feedItem(n))
+      return raw ? fulfill(route, { status: 200, contentType: 'application/json', body: feedRaw(n) }) : json(route, feedItem(n))
     }
     return json(route, { detail: 'not_found' }, 404)
   })
+  // The session ends as when it expires on the server: the next call behind a session is a 401, a login starts anew.
+  const endSession = () => {
+    session = null
+  }
+  return { endSession, dispose, modeValues: MODE_VALUES }
 }

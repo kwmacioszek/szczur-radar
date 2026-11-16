@@ -3,7 +3,7 @@ project: "Szczur Radar"
 version: 6
 status: draft # draft | active | locked
 created: 2026-09-27
-updated: 2026-11-15
+updated: 2026-11-16
 prd_version: 4
 main_goal: quality
 top_blocker: capacity # 17 pozycji, jeden recenzent i osoba mergująca; fundament UI dotyka wspólnych plików (tokeny, komponenty, router), więc pierwsze fale są sekwencyjne; darmowe runnery GitHuba muszą zmieścić testy w przeglądarce i zrzuty
@@ -112,7 +112,7 @@ Na Wykopie (#gielda) i Reddicie codziennie pojawiają się setki postów o inwes
 
 | ID   | Change ID                     | Outcome (user can …)                                                                                                     | Prerequisites | PRD refs                                   | Status   |
 | ---- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ------------- | ------------------------------------------ | -------- |
-| F-05 | e2e-harness                   | (foundation) testy w przeglądarce w repo i w CI na atrapie API ustawianej z testu; smoke obecnych przepływów            | —             | NFR `prd.md:328`                           | ready    |
+| F-05 | e2e-harness                   | (foundation) testy w przeglądarce w repo i w CI na atrapie API ustawianej z testu; smoke obecnych przepływów            | —             | NFR `prd.md:328`                           | done     |
 | F-06 | visual-regression             | (foundation) zrzuty porównawcze katalogu komponentów i widoków w obu motywach i przy 375 px oraz test dostępności w CI   | F-05          | NFR `prd.md:328` (doprecyzowanie v4)       | proposed |
 | S-46 | light-dark-theme-switch       | użytkownik przełącza motyw jasny i ciemny w nowej palecie, a wybór jest zapamiętany                                      | F-06          | FR-040                                     | proposed |
 | S-47 | app-shell-navigation          | użytkownik porusza się po aplikacji przez stałą nawigację w układzie paneli, bez nagłówka stawianego przez każdy widok   | S-46          | FR-007, FR-021, FR-030                     | proposed |
@@ -169,7 +169,7 @@ Wycinki niżej zakładają te warstwy i ich nie budują od nowa.
   - Czy atrapa zostaje jednym skryptem z trybami podmienianymi przez test, czy staje się modułem z trybami jako parametrami i resetem stanu (S-43 świadomie odłożyło to do M-5)? — Owner: team (`/10x-plan`). Block: no.
   - Brakujące warianty atrapy (wygaśnięcie sesji w trakcie pracy, błąd i ładowanie `/auth/me`, logowania i świeżości, osobne zawieszenie sekcji admina) — które dopisać w F-05, a które w wycinkach, które ich potrzebują? — Owner: team. Block: no.
 - **Risk:** pierwszy, bo bez niego przebudowa w S-46–S-51 nie ma czym sprawdzić, że obecne przepływy nadal działają; testy widoków w Vitest mockują API, więc przepięcia układu i routera mogą przez nie przejść.
-- **Status:** ready
+- **Status:** done
 
 ### F-06: Zrzuty porównawcze i test dostępności w CI
 
@@ -507,3 +507,4 @@ Wycinki niżej zakładają te warstwy i ich nie budują od nowa.
 - **S-42: porównanie kodu błędu w SPA (`err.detail === '<kod>'`) jest pilnowane kompilatorem albo skanem, limit rozmiaru strony i enumy dziś spoza `rules.json` są w rejestrze, a SPA nie liczy sama warunku powodu „wymaga uwagi”.** — Archived 2026-11-13 → `context/archive/2026-11-12-spa-rules-registry-round-two/`. Lesson: —.
 - **S-36: operator widzi osobno dla każdego źródła udział tez (`statement`) w innym języku niż post, a przekroczenie progu daje sygnał tym samym kanałem co S-35.** — Archived 2026-11-13 → `context/archive/2026-11-12-statement-language-quality/`. Lesson: —.
 - **S-45: testy mutacyjne (PIT) mierzą rdzeń — przebieg i warunkowe zapisy stanu, walidator kontraktu V2, rozliczanie prób oceny — a każdy mutant, który przeżył, jest zabity testem albo przyjęty z zapisanym powodem; pomiar da się powtórzyć w CI.** — Archived 2026-11-14 → `context/archive/2026-11-13-core-mutation-testing/`. Lesson: —.
+- **F-05: (foundation) testy w przeglądarce leżą w repo i chodzą w CI przy każdym PR na atrapie API zgodnej z kontraktem, której tryby (sesja, rola, dane, pusto, błąd, ładowanie) ustawia test; smoke obejmuje obecne przepływy: logowanie i wylogowanie, feed z filtrem, widok posta, panel admina.** — Archived 2026-11-16 → `context/archive/2026-11-16-e2e-harness/`. Lesson: —.
