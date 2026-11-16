@@ -31,7 +31,7 @@
 <text x="6946.0" y="70.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="700" fill="#a2afb4" letter-spacing="1.6">POSTĘP KAMIENIA MILOWEGO</text>
 <text x="6946.0" y="98.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" font-weight="700" fill="#eaf0f2">M-5 · Nowe UI na sprawdzonym fundamencie</text>
 <text x="7578.0" y="98.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" font-weight="700" fill="#eaf0f2" text-anchor="end">0 / 17</text>
-<rect x="6946.0" y="114.0" width="32.5" height="12.0" rx="3" fill="#13232e" stroke="#8ccbe8aa" stroke-width="1" />
+<rect x="6946.0" y="114.0" width="32.5" height="12.0" rx="3" fill="#33291a" stroke="#f2c46daa" stroke-width="1" />
 <rect x="6983.5" y="114.0" width="32.5" height="12.0" rx="3" fill="#232d32" stroke="#c3cdd055" stroke-width="1" />
 <rect x="7020.9" y="114.0" width="32.5" height="12.0" rx="3" fill="#232d32" stroke="#c3cdd055" stroke-width="1" />
 <rect x="7058.4" y="114.0" width="32.5" height="12.0" rx="3" fill="#232d32" stroke="#c3cdd055" stroke-width="1" />
@@ -51,9 +51,9 @@
 <circle cx="6950.0" cy="147" r="4" fill="#5fd18f" stroke="#5fd18f" stroke-width="1.2"/>
 <text x="6959.0" y="151.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="500" fill="#a2afb4">0 ukończonych</text>
 <circle cx="7100.0" cy="147" r="4" fill="#f2c46d" stroke="#f2c46d" stroke-width="1.2"/>
-<text x="7109.0" y="151.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="500" fill="#a2afb4">0 w toku</text>
+<text x="7109.0" y="151.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="500" fill="#eaf0f2">1 w toku</text>
 <circle cx="7250.0" cy="147" r="4" fill="#13232e" stroke="#8ccbe8" stroke-width="1.2"/>
-<text x="7259.0" y="151.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="500" fill="#eaf0f2">1 gotowe do planowania</text>
+<text x="7259.0" y="151.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="500" fill="#a2afb4">0 gotowych do planowania</text>
 <circle cx="6950.0" cy="169" r="4" fill="#232d32" stroke="#c3cdd0" stroke-width="1.2"/>
 <text x="6959.0" y="173.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="500" fill="#eaf0f2">16 proponowanych</text>
 <circle cx="7100.0" cy="169" r="4" fill="#141c21" stroke="#9aa8ae" stroke-width="1.2"/>
@@ -1285,12 +1285,12 @@
 <path d="M7074.8 1657.0 L7102.8 1657.0 L7102.8 1820.5 L7130.8 1820.5" fill="none" stroke="#8ccbe8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-sky)" data-from="S-51" data-to="S-53"/>
 <path d="M7074.8 2251.5 L7130.8 2251.5" fill="none" stroke="#8ccbe8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-sky)" data-from="S-57" data-to="S-58"/>
 <path d="M7383.6 2251.5 L7439.6 2251.5" fill="none" stroke="#8ccbe8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-sky)" data-from="S-58" data-to="S-59"/>
-<g data-id="F-05" data-status="ready">
-<rect x="6822.0" y="759.5" width="252.8" height="279.0" rx="12" fill="#151e23" stroke="#2e4d60" stroke-width="1" />
-<text x="6836.0" y="784.5" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="13" font-weight="700" fill="#8ccbe8">F-05</text>
-<rect x="6907.9" y="770.5" width="152.8" height="20.0" rx="5" fill="#13232e" stroke="#8ccbe855" stroke-width="1" />
-<circle cx="6919.9" cy="780.5" r="3" fill="#8ccbe8"/>
-<text x="6928.9" y="784.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="600" fill="#8ccbe8">Gotowe do planowania</text>
+<g data-id="F-05" data-status="progress">
+<rect x="6822.0" y="759.5" width="252.8" height="279.0" rx="12" fill="#151e23" stroke="#6b5426" stroke-width="1" />
+<text x="6836.0" y="784.5" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="13" font-weight="700" fill="#f2c46d">F-05</text>
+<rect x="6993.9" y="770.5" width="66.9" height="20.0" rx="5" fill="#33291a" stroke="#f2c46d55" stroke-width="1" />
+<circle cx="7005.9" cy="780.5" r="3" fill="#f2c46d"/>
+<text x="7014.9" y="784.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="600" fill="#f2c46d">W toku</text>
 <text x="6836.0" y="810.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#eaf0f2">Testy w przeglądarce</text>
 <text x="6836.0" y="832.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#eaf0f2">w CI</text>
 <text x="6836.0" y="860.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">(fundament) testy w</text>

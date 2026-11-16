@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { installMock, type MockApi, type MockConstant, type MockResponse } from './mockApi'
+import { installMock, type MockApi, type MockResponse } from './mockApi'
+import { FIXED_NOW, MOCK_MODE_VALUES, type MockModes } from './mockModes'
 import rules from './rules.json'
 
 // Guard of dev/mock-api.js: the mock is executed without a browser (mockApi.ts) and every route of ROUTES is compared
@@ -160,8 +161,8 @@ const ADMIN_EMAIL = 'admin@szczur-radar.pl'
 const PIPELINE_RUNS = '/api/admin/pipeline-runs'
 
 // The days of the start rows are relative to NOW, and the behavior tests pin the clock to it (the mock's "today" is
-// read when it is installed), so no midnight in Warsaw falls between the two.
-const NOW = Date.parse('2026-10-20T10:00:00Z')
+// read when it is installed), so no midnight in Warsaw falls between the two. FIXED_NOW is the E2E tests' moment too.
+const NOW = Date.parse(FIXED_NOW)
 const warsawToday = () => new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Warsaw' }).format(NOW)
 const dMinus = (n: number) => new Date(Date.parse(`${warsawToday()}T00:00:00Z`) - n * 86_400_000).toISOString().slice(0, 10)
 
@@ -466,7 +467,7 @@ describe('dev/mock-api.js against the contract files', () => {
 
 // --- behavior --------------------------------------------------------------------------------------------------
 
-type Constants = Partial<Record<MockConstant, string>>
+type Constants = MockModes
 
 interface Row {
   name: string
@@ -750,6 +751,79 @@ describe('dev/mock-api.js behaves like the API', () => {
   })
 })
 
+// --- the modes and the control ---------------------------------------------------------------------------------
+
+const EVERY_MODE_VALUE = Object.entries(MOCK_MODE_VALUES)
+  .flatMap(([key, values]) => values.map((value): [string, string] => [key, value]))
+
+describe('dev/mock-api.js takes its modes as a parameter', () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(NOW)
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it.each([
+    ['an unknown mode', { NOPE: 'data' }, /no mode NOPE \(given 'data'\)/],
+    ['a mode in lower case', { mode: 'data' }, /no mode mode/],
+    ['a value outside its mode', { MODE: 'nope' }, /MODE 'nope' is none of data, loading/],
+    ['a value of another mode', { AUTH: 'ok' }, /AUTH 'ok' is none of admin, user, anonymous/],
+    ['a now that is no instant', { now: '2026-10-20' }, /now '2026-10-20' is no ISO instant/],
+  ])('%s throws', async (_what, modes, message) => {
+    await expect(installMock(modes as unknown as MockModes)).rejects.toThrow(message)
+  })
+
+  it('has the table of MOCK_MODE_VALUES, keys and values in their order', async () => {
+    const { control } = await installMock()
+    expect(Object.keys(control.modeValues)).toEqual(Object.keys(MOCK_MODE_VALUES))
+    for (const [key, values] of Object.entries(MOCK_MODE_VALUES)) expect(control.modeValues[key], key).toEqual(values)
+  })
+
+  it.each(EVERY_MODE_VALUE)('installs with %s %s', async (key, value) => {
+    const api = await installMock({ [key]: value } as MockModes)
+    expect(api.control.modeValues).toHaveProperty(key)
+  })
+
+  it('endSession() ends the session: the routes behind one are 401 until a login starts a new one', async () => {
+    const api = await installMock()
+    expect((await api.call('GET', '/api/posts')).status).toBe(200)
+    api.control.endSession()
+    for (const path of ['/api/auth/me', '/api/posts']) {
+      const response = await api.call('GET', path)
+      expect(response.status, path).toBe(401)
+      expect(response.body, path).toEqual({ detail: 'not_authenticated' })
+    }
+    await ok(api, 'POST', '/api/auth/login', { email: ADMIN_EMAIL, password: 'x' })
+    expect(await ok(api, 'GET', '/api/auth/me')).toMatchObject({ email: ADMIN_EMAIL, role: 'admin' })
+    expect((await api.call('GET', '/api/posts')).status).toBe(200)
+  })
+
+  it('with now, today and the times are that moment\'s, and they stand while the machine\'s clock moves', async () => {
+    // 10:30 in Warsaw on 2026-01-14, months away from the machine's (faked) clock.
+    const now = '2026-01-14T09:30:00Z'
+    const api = await installMock({ now })
+    expect(await ok(api, 'GET', `${PIPELINE_RUNS}/missing-days`)).toMatchObject({ from: '2025-12-30', to: '2026-01-12' })
+    expect(await ok(api, 'GET', '/api/admin/assessment-quality')).toMatchObject({ from: '2026-01-08', to: '2026-01-14' })
+    const lastActivity = async () => ((await ok(api, 'GET', `${PIPELINE_RUNS}/${RUN_1}`)) as { lastActivityAt: string }).lastActivityAt
+    expect(Date.parse(await lastActivity())).toBe(Date.parse(now) - 20_000)
+    vi.setSystemTime(NOW + 3_600_000)
+    expect(Date.parse(await lastActivity())).toBe(Date.parse(now) - 20_000)
+
+    const created = (await answered(api, 202, 'POST', PIPELINE_RUNS, { from: '2026-01-14', to: '2026-01-14' })) as {
+      createdAt: string
+    }[]
+    expect(created.map((run) => Date.parse(run.createdAt))).toEqual(created.map(() => Date.parse(now)))
+    await answered(await installMock({ now }), 400, 'POST', PIPELINE_RUNS, { from: '2026-01-14', to: '2026-01-15' })
+
+    await answered(api, 204, 'POST', `/api/admin/notifications/${NOTIFICATION_1}/read`)
+    const { items } = (await ok(api, 'GET', '/api/admin/notifications')) as { items: { id: string; readAt: string | null }[] }
+    const readAt = items.find((notification) => notification.id === NOTIFICATION_1)?.readAt
+    expect(readAt && Date.parse(readAt)).toBe(Date.parse(now))
+  })
+})
+
 describe('the mock\'s suspended answers wait 60 s (fake clocks)', () => {
   afterEach(() => {
     vi.useRealTimers()
@@ -826,12 +900,30 @@ describe('the mock\'s suspended answers wait 60 s (fake clocks)', () => {
     const body = { token: 'any', password: 'a long enough password' }
     expect((await answersAt60s(api, 'POST', '/api/auth/activation', body)).status).toBe(204)
   })
+
+  it('dispose() ends a suspended call at once without an answer, and no later call is answered', async () => {
+    const api = await installMock({ MODE: 'loading' })
+    vi.useFakeTimers()
+    let outcome: string | undefined
+    const pending = api.call('GET', '/api/posts').then(
+      () => { outcome = 'answered' },
+      (error: Error) => { outcome = error.message },
+    )
+    await vi.advanceTimersByTimeAsync(0)
+    expect(outcome, 'suspended before dispose()').toBeUndefined()
+    api.control.dispose()
+    await vi.advanceTimersByTimeAsync(0)
+    expect(outcome).toBe('the mock did not answer GET /api/posts')
+    expect(vi.getTimerCount(), 'its 60 s timer is cleared').toBe(0)
+    await pending
+    await expect(api.call('GET', '/api/auth/me')).rejects.toThrow('the mock did not answer GET /api/auth/me')
+  })
 })
 
 // --- invariants of the mock's data -----------------------------------------------------------------------------
 
 describe('the mock\'s data is a state the API produces', () => {
-  it.each(['data', 'few', 'nolang'])('QUALITY %s: each source\'s state follows AssessmentQuality.status from its counts', async (quality) => {
+  it.each(['data', 'few', 'nolang'] as const)('QUALITY %s: each source\'s state follows AssessmentQuality.status from its counts', async (quality) => {
     const failureClasses: readonly string[] = rules.values.failureClass
     const body = (await ok(await installMock({ QUALITY: quality }), 'GET', '/api/admin/assessment-quality')) as {
       minAttempts: number

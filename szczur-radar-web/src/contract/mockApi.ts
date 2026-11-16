@@ -1,10 +1,9 @@
 import mockSource from '../../dev/mock-api.js?raw'
+import type { MockControl, MockModes } from './mockModes'
 
 // Runs dev/mock-api.js without a browser, for tests only. The file is a `playwright-cli run-code` script (one async
-// arrow function, no export), so its text is evaluated here and given a fake `page` that records the route handler.
-
-/** The mode constants of the mock (`const NAME = '…'` lines); a test replaces them in the text before it runs. */
-export type MockConstant = 'MODE' | 'NOTIFICATIONS' | 'AUTH' | 'LOGIN' | 'START' | 'ACTIVATION' | 'FRESHNESS' | 'MISSING' | 'QUALITY'
+// arrow function `(page, modes) => control`, no export), so its text is evaluated here once and each installation
+// calls it with a fake `page` that records the route handler, and with its modes.
 
 export interface MockResponse {
   status: number
@@ -15,6 +14,8 @@ export interface MockResponse {
 
 export interface MockApi {
   call(method: string, path: string, body?: unknown): Promise<MockResponse>
+  /** What the mock returned: endSession(), dispose() and its table of modes. */
+  control: MockControl
 }
 
 interface FakeRequest {
@@ -37,23 +38,14 @@ interface FakeRoute {
 
 type RouteHandler = (route: FakeRoute) => Promise<unknown>
 type UrlMatcher = (url: URL) => boolean
+type MockScript = (page: unknown, modes: MockModes) => Promise<MockControl>
 
 const ORIGIN = 'http://localhost:5173'
 
-/** Replaces `const NAME = '…'` in the mock's text; throws when no such line exists, so a renamed constant is loud. */
-function withConstants(source: string, constants: Partial<Record<MockConstant, string>>): string {
-  let text = source
-  for (const [name, value] of Object.entries(constants)) {
-    const line = new RegExp(`^(\\s*const ${name} = )'[^'\\n]*'`, 'm')
-    if (!line.test(text)) throw new Error(`dev/mock-api.js has no line "const ${name} = '…'"`)
-    text = text.replace(line, `$1'${value}'`)
-  }
-  return text
-}
+const script = (0, eval)(mockSource) as MockScript
 
-/** Installs the mock (optionally with other mode constants) and returns a way to call its routes. */
-export async function installMock(constants: Partial<Record<MockConstant, string>> = {}): Promise<MockApi> {
-  const script = (0, eval)(withConstants(mockSource, constants)) as (page: unknown) => Promise<void>
+/** Installs the mock with its modes (absent = the defaults) and returns a way to call its routes. */
+export async function installMock(modes: MockModes = {}): Promise<MockApi> {
   let matcher: UrlMatcher | undefined
   let handler: RouteHandler | undefined
   const page = {
@@ -64,12 +56,13 @@ export async function installMock(constants: Partial<Record<MockConstant, string
       return Promise.resolve()
     },
   }
-  await script(page)
+  const control = await script(page, modes)
   if (!matcher || !handler) throw new Error('dev/mock-api.js did not register a route handler')
   const installedMatcher = matcher
   const installedHandler = handler
 
   return {
+    control,
     async call(method, path, body) {
       const url = new URL(path, ORIGIN)
       if (!installedMatcher(url)) throw new Error(`the mock does not handle ${method} ${path}`)
