@@ -17,6 +17,8 @@ test-results/
 playwright-report/
 blob-report/
 playwright/.cache/
+playwright-report-visual/
+test-results-visual/
 
 # Editor directories and files
 .vscode/*

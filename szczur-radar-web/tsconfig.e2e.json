@@ -20,5 +20,11 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["e2e/**/*.ts", "playwright.config.ts", "src/contract/mockModes.ts"]
+  "include": [
+    "e2e/**/*.ts",
+    "visual/**/*.ts",
+    "playwright.config.ts",
+    "playwright.visual.config.ts",
+    "src/contract/mockModes.ts"
+  ]
 }

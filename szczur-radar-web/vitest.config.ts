@@ -8,8 +8,8 @@ export default mergeConfig(
   defineConfig({
     test: {
       environment: 'jsdom',
-      // e2e/ is Playwright's (npm run e2e), not Vitest's.
-      exclude: [...configDefaults.exclude, 'e2e/**'],
+      // e2e/ and visual/ are Playwright's (npm run e2e, npm run visual), not Vitest's.
+      exclude: [...configDefaults.exclude, 'e2e/**', 'visual/**'],
       // Vitest empties every CSS import by default, `?raw` ones too; keep the text of `?raw`
       // imports so src/styleContract.test.ts can read the tokens of style.css.
       css: { include: /\.css\?raw$/ },
