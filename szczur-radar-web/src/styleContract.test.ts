@@ -33,7 +33,19 @@ const PAIRS = [
   ['--success', '--bg'],
   ['--warning', '--bg'],
   ['--destructive', '--bg'],
+  ['--stance-neutral', '--bg'],
+  ['--stance-mixed', '--bg'],
+  ['--text', '--surface'],
+  ['--text-h', '--surface'],
+  ['--accent', '--surface'],
+  ['--success', '--surface'],
+  ['--warning', '--surface'],
+  ['--destructive', '--surface'],
+  ['--stance-neutral', '--surface'],
+  ['--stance-mixed', '--surface'],
   ['--on-accent', '--accent'],
+  ['--text-h', '--highlight'],
+  ['--text', '--highlight'],
 ] as const
 
 const source = css.replace(/\/\*[\s\S]*?\*\//g, '')

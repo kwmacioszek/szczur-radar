@@ -16,6 +16,13 @@
   --success: #188038;
   --warning: #b06000;
   --destructive: #d93025;
+  /* Panels and cards. */
+  --surface: #fcfcfd;
+  /* Background of a highlighted quote. */
+  --highlight: #fff1b8;
+  /* Text colour of an author's neutral and mixed stance. */
+  --stance-neutral: #4b5563;
+  --stance-mixed: #8f5200;
   --ring: var(--accent);
   /* Dividing lines, decorative only. */
   --border: color-mix(in srgb, var(--text) 25%, transparent);
@@ -66,6 +73,10 @@
   --success: #4ade80;
   --warning: #fbbf24;
   --destructive: #f87171;
+  --surface: #20222a;
+  --highlight: #3a331c;
+  --stance-neutral: #9ca3af;
+  --stance-mixed: #e0b25a;
   color-scheme: dark;
 }
 

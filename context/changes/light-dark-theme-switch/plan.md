@@ -309,22 +309,22 @@ Brak danych do migracji. Użytkownik bez zapamiętanego wyboru widzi po wdrożen
 
 #### Automated
 
-- [x] 1.1 Testy jednostkowe zielone, w tym `theme.test.ts`, `ThemeToggle.test.ts` i test kontrastu na nowym bloku
-- [x] 1.2 Typecheck i build produkcyjny przechodzą
-- [x] 1.3 `style.css` nie ma już media query motywu
-- [x] 1.4 Testy E2E zielone, w tym 4 testy `e2e/theme.spec.ts`
-- [x] 1.5 Testy wyglądu zielone po przerysowaniu; zmienione tylko 4 widoki z nagłówkiem w 4 projektach i nowe `kitchen-sink-motyw.png` (18 plików)
-- [x] 1.6 Skrypt w `index.html` klasyczny w `<head>` przed modułem aplikacji
+- [x] 1.1 Testy jednostkowe zielone, w tym `theme.test.ts`, `ThemeToggle.test.ts` i test kontrastu na nowym bloku — 16016a4
+- [x] 1.2 Typecheck i build produkcyjny przechodzą — 16016a4
+- [x] 1.3 `style.css` nie ma już media query motywu — 16016a4
+- [x] 1.4 Testy E2E zielone, w tym 4 testy `e2e/theme.spec.ts` — 16016a4
+- [x] 1.5 Testy wyglądu zielone po przerysowaniu; zmienione tylko 4 widoki z nagłówkiem w 4 projektach i nowe `kitchen-sink-motyw.png` (18 plików) — 16016a4
+- [x] 1.6 Skrypt w `index.html` klasyczny w `<head>` przed modułem aplikacji — 16016a4
 
 ### Phase 2: Nowe role i dwa warianty palety
 
 #### Automated
 
-- [ ] 2.1 Test kontrastu ma 38 przypadków par (19 × 2 motywy) i jest zielony
-- [ ] 2.2 Oba warianty przechodzą ten sam test na tymczasowej podmianie, `style.css` wraca do zacommitowanej treści, wynik w `palette.md`
-- [ ] 2.3 8 zrzutów i `palette.md` z obiema tabelami w folderze zmiany
-- [ ] 2.4 Build i całe testy jednostkowe zielone
-- [ ] 2.5 Testy wyglądu zielone; zmieniona tylko sekcja „Tokeny” w obu projektach 375
+- [x] 2.1 Test kontrastu ma 38 przypadków par (19 × 2 motywy) i jest zielony
+- [x] 2.2 Oba warianty przechodzą ten sam test na tymczasowej podmianie, `style.css` wraca do zacommitowanej treści, wynik w `palette.md`
+- [x] 2.3 8 zrzutów i `palette.md` z obiema tabelami w folderze zmiany
+- [x] 2.4 Build i całe testy jednostkowe zielone
+- [x] 2.5 Testy wyglądu zielone; zmieniona tylko sekcja „Tokeny” w obu projektach 375
 
 #### Manual
 
