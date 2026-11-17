@@ -57,4 +57,4 @@ Prawdziwy test `npx vitest run src/styleContract.test.ts` na tymczasowej podmian
 
 ## Decyzja właściciela
 
-Wybór (A / B / poprawki konkretnych ról): _do uzupełnienia_
+Wybór (A / B / poprawki konkretnych ról): **A** (akcent niebieski: jasny `#1d4fa8`, ciemny `#7fb0ff`), bez poprawek ról. Wybór właściciela z 2026-11-17 (odpowiedź „a”, potwierdzona „Aaaaaaa”); wartości w `variant-a.css`.
