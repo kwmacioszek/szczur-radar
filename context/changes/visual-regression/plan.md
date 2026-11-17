@@ -577,4 +577,4 @@ Run id i wynik trafiają do sekcji.
 
 #### Manual
 
-- [ ] 3.6 Właściciel przegląda 54 wzorce i akceptuje je jako stan odniesienia przed S-46
+- [x] 3.6 Właściciel przegląda 54 wzorce i akceptuje je jako stan odniesienia przed S-46 — zaakceptowane przez właściciela 2026-11-17
