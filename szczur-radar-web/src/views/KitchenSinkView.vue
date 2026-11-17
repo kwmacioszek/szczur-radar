@@ -26,6 +26,7 @@ import PostCard from '../components/PostCard.vue'
 import StanceText from '../components/StanceText.vue'
 import StatusBadge, { type BadgeTone } from '../components/StatusBadge.vue'
 import StatusMessage from '../components/StatusMessage.vue'
+import ThemeToggle from '../components/ThemeToggle.vue'
 
 /** The colour roles of :root in src/style.css, in the order of the plan's token table. */
 const colourRoles = [
@@ -700,6 +701,13 @@ const assessments: { id: string; title: string; assessment: NonNullable<PostItem
           <PostAssessment :assessment="sample.assessment" />
         </li>
       </ul>
+    </section>
+
+    <section aria-labelledby="theme-title">
+      <h2 id="theme-title">Motyw</h2>
+      <div class="row">
+        <ThemeToggle />
+      </div>
     </section>
   </main>
 </template>

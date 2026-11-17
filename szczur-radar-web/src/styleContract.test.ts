@@ -9,6 +9,7 @@ import postCard from './components/PostCard.vue?raw'
 import stanceText from './components/StanceText.vue?raw'
 import statusBadge from './components/StatusBadge.vue?raw'
 import statusMessage from './components/StatusMessage.vue?raw'
+import themeToggle from './components/ThemeToggle.vue?raw'
 import css from './style.css?raw'
 import activateView from './views/ActivateView.vue?raw'
 import adminView from './views/AdminView.vue?raw'
@@ -56,11 +57,11 @@ function declarations(text: string): Map<string, string> {
   )
 }
 
-// The first :root is the light one. The dark theme gets no fallback to it: every colour role is
-// tuned per theme, so the dark block must redefine each of them.
+// The first :root is the light one; the dark theme is the :root[data-theme='dark'] block. It gets no
+// fallback to the light one: every colour role is tuned per theme, so the dark block must redefine each of them.
 const ROLES: Record<Theme, Map<string, string>> = {
   light: declarations(block(source, ':root')),
-  dark: declarations(block(block(source, '@media (prefers-color-scheme: dark)'), ':root')),
+  dark: declarations(block(source, ":root[data-theme='dark']")),
 }
 
 function role(theme: Theme, name: string): string {
@@ -109,6 +110,7 @@ const CLEANED: Record<string, string> = {
   'src/components/NotificationBell.vue': notificationBell,
   'src/components/NotificationMenu.vue': notificationMenu,
   'src/views/RunDetailView.vue': runDetailView,
+  'src/components/ThemeToggle.vue': themeToggle,
 }
 
 /** The hardcoded-value scan of /10x-ui: colour literals, arbitrary values and palette classes. */
@@ -144,6 +146,12 @@ describe('style contract', () => {
 
     it.each(cases)(`$fg on $bg ($theme) ≥ ${MIN_CONTRAST}:1`, ({ theme, fg, bg }) => {
       expect(contrast(role(theme, fg), role(theme, bg))).toBeGreaterThanOrEqual(MIN_CONTRAST)
+    })
+  })
+
+  describe('theme source', () => {
+    it('has no prefers-color-scheme media query: data-theme is the only source of the theme', () => {
+      expect(source).not.toContain('prefers-color-scheme')
     })
   })
 

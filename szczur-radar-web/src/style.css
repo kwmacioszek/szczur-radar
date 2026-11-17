@@ -2,7 +2,9 @@
  * Design tokens. Values come from the Phase 2 table of the admin-panel-ui-hardening change plan
  * (context/changes/, later context/archive/); contrast is the WCAG 2.x formula: every text role on
  * --bg, and --on-accent on --accent, is at least 4.5:1 in both themes (src/styleContract.test.ts).
- * The dark theme redefines only the colour roles; --ring and the borders follow --accent and --text.
+ * The theme is the data-theme attribute of <html>, set before the first paint by the script in index.html
+ * and kept by src/theme.ts: the :root block below is the light theme (also without the attribute), and
+ * :root[data-theme='dark'] redefines only the colour roles; --ring and the borders follow --accent and --text.
  * Radius rule: --radius for buttons, fields and field groups; --radius-sm for small badges and chips.
  */
 :root {
@@ -42,7 +44,7 @@
 
   font: 18px/145% var(--sans);
   letter-spacing: 0.18px;
-  color-scheme: light dark;
+  color-scheme: light;
   color: var(--text);
   background: var(--bg);
   font-synthesis: none;
@@ -55,17 +57,16 @@
   }
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #16171d;
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --accent: #86aef0;
-    --on-accent: #16171d;
-    --success: #4ade80;
-    --warning: #fbbf24;
-    --destructive: #f87171;
-  }
+:root[data-theme='dark'] {
+  --bg: #16171d;
+  --text: #9ca3af;
+  --text-h: #f3f4f6;
+  --accent: #86aef0;
+  --on-accent: #16171d;
+  --success: #4ade80;
+  --warning: #fbbf24;
+  --destructive: #f87171;
+  color-scheme: dark;
 }
 
 body {

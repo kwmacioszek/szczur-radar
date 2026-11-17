@@ -154,7 +154,7 @@ describe('PostDetailView', () => {
     expect(message.text()).toContain('Nie ma takiego posta albo nie został jeszcze oceniony.')
     expect(message.find('a').attributes('href')).toBe('/')
     expect(wrapper.find('[role="alert"]').exists()).toBe(false)
-    expect(wrapper.find('button').text()).toBe('Wyloguj')
+    expect(wrapper.findAll('button').map((button) => button.text())).toContain('Wyloguj')
   })
 
   it.each([

@@ -6,6 +6,7 @@ import { clearSession, currentUser } from '../auth/session'
 import AppButton from './AppButton.vue'
 import NotificationBell from './NotificationBell.vue'
 import StatusMessage from './StatusMessage.vue'
+import ThemeToggle from './ThemeToggle.vue'
 
 const router = useRouter()
 const loggingOut = ref(false)
@@ -37,6 +38,7 @@ async function signOut(): Promise<void> {
     </nav>
     <span class="who">{{ currentUser?.email }}</span>
     <NotificationBell v-if="isAdmin" />
+    <ThemeToggle />
     <AppButton :busy="loggingOut" @click="signOut">Wyloguj</AppButton>
   </header>
   <div v-if="error" class="notice">
