@@ -145,6 +145,7 @@ jobs:
         id: install
         run: npm ci
       - name: Check Playwright version against the image
+        id: version
         # Reads the image from `container:` above in this file, so a bump of
         # either side alone is red here, not later with a missing browser.
         run: |
@@ -163,17 +164,22 @@ jobs:
       # (the config refuses any other platform); CI never writes one. When the
       # step is red, the artifact visual-baselines holds the new baselines:
       # unpacked into szczur-radar-web/visual/__screenshots__/ they are the
-      # baselines to review.
+      # baselines to review. An artifact equal to the repo's baselines means
+      # the red was not a screenshot (axe, the font or the baselines guard).
+      # It needs the version check green: with another image there is no
+      # browser to run it, only a useless artifact.
       - name: Run visual tests
         id: visual
-        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.version.outcome == 'success' }}
         run: npm run visual
       - name: Produce baselines for review
         # An explicit status function: without it the default success() is
         # false after the red step above, and this step would always be skipped.
         if: ${{ !cancelled() && steps.visual.outcome == 'failure' }}
+        # Its own output directory: Playwright empties outputDir at the start,
+        # so test-results-visual/ keeps the red run's diffs for the report.
         continue-on-error: true
-        run: npm run visual -- --update-snapshots=changed --reporter=list
+        run: npm run visual -- --update-snapshots=changed --reporter=list --output=test-results-visual-update
       - name: Keep the new baselines
         if: ${{ !cancelled() && steps.visual.outcome == 'failure' }}
         uses: actions/upload-artifact@v4

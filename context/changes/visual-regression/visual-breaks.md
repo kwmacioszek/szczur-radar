@@ -25,6 +25,8 @@ Rozbieżności z kolumną „Oczekiwany czerwony”:
 - **2:** brak nazwy pola łapie warunek gotowości `view-login` (`getByLabel('E-mail')`), zanim test dojdzie do zrzutu i axe; reguła `label` się nie pojawia. Bramka czerwienieje, ale z innego powodu niż w planie. Wiersz 2b pokazuje na polu, którego gotowość nie czyta, że axe blokuje brak etykiety (`label`, critical).
 - **5:** bez aliasu Chromium rysuje WenQuanYi Zen Hei, więc oprócz strażnika fontu czerwienieją wszystkie zrzuty. Strażnik nazywa przyczynę („fonty nagłówka „Logowanie””, Received `WenQuanYi Zen Hei`), a zrzuty pokazują tylko skutek.
 
+Odchylenie od planu (próg różnicy): plan (Faza 1, punkt 4, „domyślny `threshold` 0.2 i zero dopuszczalnych pikseli różnicy”) i `plan-brief.md` mówią o progu 0.2. Konfiguracja ma `threshold: 0` i `maxDiffPixels: 0` (`playwright.visual.config.ts`, commit `b99eae4`). Przy 0.2 złamanie 4 (usunięte reguły hover) było zielone, bo `.primary:hover` przyciemnia przycisk mieszanką 15 % (`color-mix`), a 0.2 to percepcyjna odległość koloru na piksel, która tę różnicę wchłania. Zrzuty są identyczne bajt w bajt między biegami i platformami (kryterium 1.10, zapas z artefaktu w obie strony), więc próg 0 nie dokłada niestabilności. Wiersz 4 tabeli to bieg przy progu 0.
+
 Po cofnięciu wszystkich złamań: `test -z "$(git status --porcelain szczur-radar-web)"` czyste, a pełny `npm run visual:docker` zielony: `40 passed`, `20 skipped` (2.7m), bez `flaky`.
 
 ## Zapas z artefaktu CI

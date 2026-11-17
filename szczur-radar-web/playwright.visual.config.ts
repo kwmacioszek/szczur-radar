@@ -38,10 +38,11 @@ export default defineConfig({
     ? [['list'], ['html', { outputFolder: 'playwright-report-visual', open: 'never' }]]
     : 'list',
   // A full-page screenshot of a tall view takes several seconds under amd64 emulation on an arm64 host (the local
-  // loop); the defaults (30 s a test, 5 s an assertion) are too short there, not in CI.
-  timeout: 90_000,
+  // loop); the defaults (30 s a test, 5 s an assertion) are too short there. CI runs natively on amd64 and keeps the
+  // defaults, so a hang there is red early.
+  timeout: process.env.CI ? 30_000 : 90_000,
   expect: {
-    timeout: 20_000,
+    timeout: process.env.CI ? 5_000 : 20_000,
     toHaveScreenshot: {
       // One baseline per project, no platform suffix: only the image renders them.
       pathTemplate: '{testDir}/__screenshots__/{projectName}/{arg}{ext}',

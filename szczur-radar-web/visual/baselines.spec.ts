@@ -1,6 +1,8 @@
 // The baselines guard: every file under visual/__screenshots__/<project>/ belongs to a current target and every target
 // has its file, both ways, so a view or section rebuilt away leaves no orphan baseline that guards nothing. The expected
 // files come from the same tables (VIEWS, STATES) and the same enumeration of the catalogue as the screenshot tests.
+// Every entry counts, not only a project's PNG files (a loose file, a non-PNG one), except hidden files such as
+// Finder's .DS_Store, which is never a baseline and would turn a local run red.
 import { readdirSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { expect, test } from '../e2e/fixtures.ts'
@@ -25,13 +27,16 @@ test('każdy wzorzec należy do celu zrzutu i każdy cel ma wzorzec', async ({ p
   }
 
   const projectNames: readonly string[] = PROJECTS.map((project) => project.name)
-  const directories = readdirSync(SCREENSHOTS, { withFileTypes: true }).filter((entry) => entry.isDirectory())
+  const visible = (name: string) => !name.startsWith('.')
+  const entries = readdirSync(SCREENSHOTS, { withFileTypes: true }).filter((entry) => visible(entry.name))
+  const directories = entries.filter((entry) => entry.isDirectory())
+  const looseFiles = entries.filter((entry) => !entry.isDirectory()).map((entry) => entry.name)
   const unknownProjects = directories.map((entry) => entry.name).filter((name) => !projectNames.includes(name))
   const actual = new Set<string>()
   for (const directory of directories) {
     if (!projectNames.includes(directory.name)) continue
-    for (const file of readdirSync(`${SCREENSHOTS}${directory.name}`)) {
-      if (file.endsWith('.png')) actual.add(`${directory.name}/${file}`)
+    for (const file of readdirSync(`${SCREENSHOTS}${directory.name}`).filter(visible)) {
+      actual.add(`${directory.name}/${file}`)
     }
   }
 
@@ -39,6 +44,7 @@ test('każdy wzorzec należy do celu zrzutu i każdy cel ma wzorzec', async ({ p
   const missing = [...expected].filter((file) => !actual.has(file)).sort()
   const problems = [
     ...unknownProjects.map((name) => `nieznany projekt (katalog do usunięcia): visual/__screenshots__/${name}/`),
+    ...looseFiles.map((name) => `plik poza katalogiem projektu (do usunięcia): visual/__screenshots__/${name}`),
     ...orphans.map((file) => `wzorzec osierocony (do usunięcia): visual/__screenshots__/${file}`),
     ...missing.map((file) => `brak wzorca (npm run visual:update): visual/__screenshots__/${file}`),
   ]
