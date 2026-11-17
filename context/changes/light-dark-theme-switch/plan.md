@@ -320,11 +320,11 @@ Brak danych do migracji. Użytkownik bez zapamiętanego wyboru widzi po wdrożen
 
 #### Automated
 
-- [x] 2.1 Test kontrastu ma 38 przypadków par (19 × 2 motywy) i jest zielony
-- [x] 2.2 Oba warianty przechodzą ten sam test na tymczasowej podmianie, `style.css` wraca do zacommitowanej treści, wynik w `palette.md`
-- [x] 2.3 8 zrzutów i `palette.md` z obiema tabelami w folderze zmiany
-- [x] 2.4 Build i całe testy jednostkowe zielone
-- [x] 2.5 Testy wyglądu zielone; zmieniona tylko sekcja „Tokeny” w obu projektach 375
+- [x] 2.1 Test kontrastu ma 38 przypadków par (19 × 2 motywy) i jest zielony — 8d88557
+- [x] 2.2 Oba warianty przechodzą ten sam test na tymczasowej podmianie, `style.css` wraca do zacommitowanej treści, wynik w `palette.md` — 8d88557
+- [x] 2.3 8 zrzutów i `palette.md` z obiema tabelami w folderze zmiany — 8d88557
+- [x] 2.4 Build i całe testy jednostkowe zielone — 8d88557
+- [x] 2.5 Testy wyglądu zielone; zmieniona tylko sekcja „Tokeny” w obu projektach 375 — 8d88557
 
 #### Manual
 
