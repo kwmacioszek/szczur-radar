@@ -339,7 +339,7 @@ Brak danych do migracji. Użytkownik bez zapamiętanego wyboru widzi po wdrożen
 - [x] 3.3 Testy E2E zielone — e85114d
 - [x] 3.4 Testy wyglądu zielone na przerysowanych wzorcach, w tym axe — e85114d
 - [x] 3.5 `REPOSITORY_GUIDELINES.md` nie opisuje już motywu przez `prefers-color-scheme` — e85114d
-- [ ] 3.6 CI w PR zielone, w tym `web-e2e`
+- [x] 3.6 CI w PR zielone, w tym `web-e2e` — e85114d
 
 #### Manual
 
