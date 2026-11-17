@@ -334,11 +334,11 @@ Brak danych do migracji. Użytkownik bez zapamiętanego wyboru widzi po wdrożen
 
 #### Automated
 
-- [x] 3.1 Wartości ról w `style.css` równe tabeli wybranego wariantu w `palette.md`, test kontrastu zielony
-- [x] 3.2 Build przechodzi
-- [x] 3.3 Testy E2E zielone
-- [x] 3.4 Testy wyglądu zielone na przerysowanych wzorcach, w tym axe
-- [x] 3.5 `REPOSITORY_GUIDELINES.md` nie opisuje już motywu przez `prefers-color-scheme`
+- [x] 3.1 Wartości ról w `style.css` równe tabeli wybranego wariantu w `palette.md`, test kontrastu zielony — e85114d
+- [x] 3.2 Build przechodzi — e85114d
+- [x] 3.3 Testy E2E zielone — e85114d
+- [x] 3.4 Testy wyglądu zielone na przerysowanych wzorcach, w tym axe — e85114d
+- [x] 3.5 `REPOSITORY_GUIDELINES.md` nie opisuje już motywu przez `prefers-color-scheme` — e85114d
 - [ ] 3.6 CI w PR zielone, w tym `web-e2e`
 
 #### Manual
