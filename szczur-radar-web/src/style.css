@@ -1,7 +1,8 @@
 /*
  * Design tokens. Values come from the chosen palette variant in context/changes/light-dark-theme-switch/palette/palette.md
- * (later context/archive/); contrast is the WCAG 2.x formula: every text role on
- * --bg, and --on-accent on --accent, is at least 4.5:1 in both themes (src/styleContract.test.ts).
+ * (later context/archive/); contrast is the WCAG 2.x formula: every text role on --bg and on --surface,
+ * --on-accent on --accent, and --text-h / --text on --highlight are at least 4.5:1 in both themes
+ * (src/styleContract.test.ts).
  * The theme is the data-theme attribute of <html>, set before the first paint by the script in index.html
  * and kept by src/theme.ts: the :root block below is the light theme (also without the attribute), and
  * :root[data-theme='dark'] redefines only the colour roles; --ring and the borders follow --accent and --text.

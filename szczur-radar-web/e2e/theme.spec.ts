@@ -91,7 +91,7 @@ test.describe('logowanie', () => {
     await page.emulateMedia({ colorScheme: 'light' })
     await page.addInitScript(() => localStorage.setItem('szczur-radar-theme', 'dark'))
     await page.goto('/login')
-    await expect(page.getByRole('main').getByRole('heading', { level: 1, name: 'Logowanie' })).toBeVisible()
+    await expect(page.getByRole('main').getByRole('heading', { level: 1, name: 'Logowanie', exact: true })).toBeVisible()
 
     await expect.poll(() => seen(page)).toEqual(DARK)
   })
