@@ -45,6 +45,21 @@ function stopFollowingSystem(): void {
   stopFollowing = null
 }
 
+let stopSyncing: (() => void) | null = null
+
+/** A choice made in another tab of the page: applied here too, and the system no longer followed. */
+function syncAcrossTabs(): void {
+  stopSyncing?.()
+  const onStorage = (event: StorageEvent): void => {
+    if (event.key !== THEME_STORAGE_KEY) return
+    if (event.newValue !== 'light' && event.newValue !== 'dark') return
+    stopFollowingSystem()
+    apply(event.newValue)
+  }
+  window.addEventListener('storage', onStorage)
+  stopSyncing = () => window.removeEventListener('storage', onStorage)
+}
+
 /** Choose a theme: applied now, kept in the browser and no longer following the system. */
 export function setTheme(next: Theme): void {
   stopFollowingSystem()
@@ -63,6 +78,8 @@ export function toggleTheme(): void {
 /** Forget the theme: no listener, light, no attribute (tests). */
 export function resetTheme(): void {
   stopFollowingSystem()
+  stopSyncing?.()
+  stopSyncing = null
   theme.value = 'light'
   delete document.documentElement.dataset.theme
 }
@@ -70,6 +87,7 @@ export function resetTheme(): void {
 /** Take over from the script in index.html. Without a stored choice the page follows the system's theme. */
 export function initTheme(): void {
   stopFollowingSystem()
+  syncAcrossTabs()
   theme.value = attributeTheme()
   const stored = storedChoice()
   if (stored === 'light' || stored === 'dark') return

@@ -197,6 +197,40 @@ describe('theme state', () => {
     expect(document.documentElement.dataset.theme).toBe('light')
   })
 
+  it('a choice made in another tab is applied and stops following the system', () => {
+    const system = stubSystem(false)
+    document.documentElement.dataset.theme = 'light'
+    initTheme()
+
+    window.dispatchEvent(new StorageEvent('storage', { key: THEME_STORAGE_KEY, newValue: 'dark' }))
+    expect(currentTheme.value).toBe('dark')
+    expect(document.documentElement.dataset.theme).toBe('dark')
+    expect(system.listeners()).toBe(0)
+    system.change(false)
+    expect(currentTheme.value).toBe('dark')
+  })
+
+  it('ignores another key and an unknown value from another tab', () => {
+    stubSystem(false)
+    document.documentElement.dataset.theme = 'light'
+    initTheme()
+
+    window.dispatchEvent(new StorageEvent('storage', { key: 'other', newValue: 'dark' }))
+    window.dispatchEvent(new StorageEvent('storage', { key: THEME_STORAGE_KEY, newValue: 'sepia' }))
+    window.dispatchEvent(new StorageEvent('storage', { key: THEME_STORAGE_KEY, newValue: null }))
+    expect(currentTheme.value).toBe('light')
+  })
+
+  it('initTheme called twice listens to other tabs once', () => {
+    stubSystem(false)
+    const add = vi.spyOn(window, 'addEventListener')
+    const remove = vi.spyOn(window, 'removeEventListener')
+    initTheme()
+    initTheme()
+    const storageCalls = (spy: typeof add) => spy.mock.calls.filter(([type]) => type === 'storage').length
+    expect(storageCalls(add) - storageCalls(remove)).toBe(1)
+  })
+
   it('a storage that throws on read follows the system, and one that throws on write still switches', () => {
     const system = stubSystem(false)
     vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
