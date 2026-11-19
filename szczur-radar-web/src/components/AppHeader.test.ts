@@ -44,10 +44,15 @@ describe('AppHeader', () => {
     expect(fetchNotifications).toHaveBeenCalledTimes(1)
   })
 
+  it('has the theme button next to the logout button', async () => {
+    const wrapper = await mountHeader('user')
+    expect(wrapper.find('button[aria-pressed]').text()).toBe('Ciemny motyw')
+  })
+
   it('shows a plain user no bell and asks for no notifications', async () => {
     const wrapper = await mountHeader('user')
     expect(wrapper.find('button[aria-controls]').exists()).toBe(false)
-    expect(wrapper.findAll('button').map((button) => button.text())).toEqual(['Wyloguj'])
+    expect(wrapper.findAll('button').map((button) => button.text())).toEqual(['Ciemny motyw', 'Wyloguj'])
     expect(fetchNotifications).not.toHaveBeenCalled()
   })
 })

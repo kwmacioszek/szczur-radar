@@ -26,6 +26,7 @@ import PostCard from '../components/PostCard.vue'
 import StanceText from '../components/StanceText.vue'
 import StatusBadge, { type BadgeTone } from '../components/StatusBadge.vue'
 import StatusMessage from '../components/StatusMessage.vue'
+import ThemeToggle from '../components/ThemeToggle.vue'
 
 /** The colour roles of :root in src/style.css, in the order of the plan's token table. */
 const colourRoles = [
@@ -37,17 +38,21 @@ const colourRoles = [
   '--success',
   '--warning',
   '--destructive',
+  '--surface',
+  '--highlight',
+  '--stance-neutral',
+  '--stance-mixed',
   '--border',
   '--ring',
 ] as const
 
 type ColourRole = (typeof colourRoles)[number]
 
-/** A tile filled with the role; --on-accent is a text colour, so it shows as text on --accent. */
+/** A tile filled with the role; --on-accent is a text colour, so it shows as text on --accent, --highlight as a background under text. */
 function swatchStyle(role: ColourRole): Record<string, string> {
-  return role === '--on-accent'
-    ? { background: 'var(--accent)', color: 'var(--on-accent)' }
-    : { background: `var(${role})` }
+  if (role === '--on-accent') return { background: 'var(--accent)', color: 'var(--on-accent)' }
+  if (role === '--highlight') return { background: 'var(--highlight)', color: 'var(--text-h)' }
+  return { background: `var(${role})` }
 }
 
 const variants = [
@@ -592,7 +597,7 @@ const assessments: { id: string; title: string; assessment: NonNullable<PostItem
       <ul class="swatches">
         <li v-for="role in colourRoles" :key="role" class="swatch">
           <span class="tile" :style="swatchStyle(role)" aria-hidden="true">
-            <template v-if="role === '--on-accent'">Aa</template>
+            <template v-if="role === '--on-accent' || role === '--highlight'">Aa</template>
           </span>
           <code>{{ role }}</code>
         </li>
@@ -700,6 +705,13 @@ const assessments: { id: string; title: string; assessment: NonNullable<PostItem
           <PostAssessment :assessment="sample.assessment" />
         </li>
       </ul>
+    </section>
+
+    <section aria-labelledby="theme-title">
+      <h2 id="theme-title">Motyw</h2>
+      <div class="row">
+        <ThemeToggle />
+      </div>
     </section>
   </main>
 </template>

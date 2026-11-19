@@ -5,6 +5,25 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Szczur Radar</title>
+    <!--
+      Theme before the first paint: a classic (not module) script, so it runs while the head is parsed.
+      The rule (a valid stored choice, else the system's theme) is also src/theme.ts resolveTheme;
+      src/theme.test.ts runs this script against the same table. The key is THEME_STORAGE_KEY.
+    -->
+    <script>
+      (function () {
+        var stored = null
+        try {
+          stored = localStorage.getItem('szczur-radar-theme')
+        } catch (error) {}
+        var dark = false
+        try {
+          dark = window.matchMedia('(prefers-color-scheme: dark)').matches
+        } catch (error) {}
+        document.documentElement.dataset.theme =
+          stored === 'light' || stored === 'dark' ? stored : dark ? 'dark' : 'light'
+      })()
+    </script>
   </head>
   <body>
     <div id="app"></div>
