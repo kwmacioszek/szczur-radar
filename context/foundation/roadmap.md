@@ -116,7 +116,7 @@ Na Wykopie (#gielda) i Reddicie codziennie pojawiają się setki postów o inwes
 | ---- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ------------- | ------------------------------------------ | -------- |
 | F-05 | e2e-harness                   | (foundation) testy w przeglądarce w repo i w CI na atrapie API ustawianej z testu; smoke obecnych przepływów            | —             | NFR `prd.md:328`                           | done     |
 | F-06 | visual-regression             | (foundation) zrzuty porównawcze katalogu komponentów i widoków w obu motywach i przy 375 px oraz test dostępności w CI   | F-05          | NFR `prd.md:328` (doprecyzowanie v4)       | done |
-| F-07 | ui-design-system              | (foundation) zaakceptowany projekt UI/UX całej aplikacji według standardów: architektura informacji, tokeny, komponenty, prototypy | —             | FR-040, NFR `prd.md:328`                   | planning |
+| F-07 | ui-design-system              | (foundation) zaakceptowany projekt UI/UX całej aplikacji według standardów: architektura informacji, tokeny, komponenty, prototypy | —             | FR-040, NFR `prd.md:328`                   | in-progress |
 | F-08 | design-tokens-and-components  | (foundation) język wizualny z F-07 w tokenach i komponentach katalogu, obecne widoki przepięte                           | F-07, S-46    | FR-040, NFR `prd.md:328`                   | proposed |
 | S-46 | light-dark-theme-switch       | użytkownik przełącza motyw jasny i ciemny w nowej palecie, a wybór jest zapamiętany                                      | F-06          | FR-040                                     | done |
 | S-47 | app-shell-navigation          | użytkownik porusza się po aplikacji przez stałą nawigację w układzie paneli, bez nagłówka stawianego przez każdy widok   | F-08          | FR-007, FR-021, FR-030                     | proposed |
@@ -203,7 +203,7 @@ Wycinki niżej zakładają te warstwy i ich nie budują od nowa.
   - Czy projekt zmienia architekturę informacji (inne ekrany, inny podział panelu admina, katalog i karta celu w jednym widoku)? Jeśli tak, `/10x-roadmap` przecina S-47–S-59 na nowo (v6.2), z tymi samymi ID i issue. — Owner: user (akceptacja projektu). Block: no.
   - Krój pisma (polskie znaki, licencja, hostowany u nas) i czy paleta A z S-46 zostaje. — Owner: team (`/10x-plan`), decyzja: user. Block: no.
 - **Risk:** bez wspólnego projektu plan każdego wycinka bierze z makiet tylko układ, a wygląd zostaje surowy (decyzja właściciela 2026-11-19); dokumentacja i prototypy bez kodu aplikacji, więc wzorce F-06 się nie zmieniają.
-- **Status:** planning
+- **Status:** in-progress
 
 ### F-08: Tokeny i komponenty z projektu
 

@@ -1,0 +1,16 @@
+/* A small valid token set: the green path of selftest. */
+:root {
+  --bg: #ffffff;
+  --surface: #f4f4f5;
+  --text: #1f2328;
+  --accent: #0b5cad;
+  --on-accent: #ffffff;
+}
+
+:root[data-theme='dark'] {
+  --bg: #111418;
+  --surface: #1b1f24;
+  --text: #e6e8ea;
+  --accent: #8ab4f8;
+  --on-accent: #0b1220;
+}

@@ -1,0 +1,2 @@
+:root { --bg: #ffffff; --text: oklch(0.3 0.02 250); }
+:root[data-theme='dark'] { --bg: #111418; --text: var(--bg); }

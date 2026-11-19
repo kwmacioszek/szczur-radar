@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Czcionka systemowa</title>
+<script>document.documentElement.dataset.theme = new URLSearchParams(location.search).get("theme") === "dark" ? "dark" : "light"</script>
+<link rel="stylesheet" href="../ok/tokens.css">
+<style>
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: sans-serif; }
+  main { padding: 16px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Czcionka systemowa</h1>
+  <p>Strona bez żadnego @font-face: tekst rysuje font systemowy.</p>
+</main>
+</body>
+</html>

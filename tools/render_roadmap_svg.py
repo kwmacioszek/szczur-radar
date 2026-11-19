@@ -230,7 +230,7 @@ m5 = {  # lane, title (## Foundations / ## Slices), outcome (At a glance, shorte
     "F-05": ("A", "Testy w przeglądarce w CI", "(fundament) testy w przeglądarce w repo i w CI na atrapie API ustawianej z testu; smoke obecnych przepływów", "done", "—", "e2e-harness"),
     "F-06": ("A", "Zrzuty porównawcze i dostępność", "(fundament) zrzuty katalogu komponentów i widoków w obu motywach i przy 375 px oraz test dostępności w CI", "done", "F-05", "visual-regression"),
     "S-46": ("A", "Motyw jasny i ciemny", "użytkownik przełącza motyw jasny i ciemny w nowej palecie, a wybór jest zapamiętany", "done", "F-06", "light-dark-theme-switch"),
-    "F-07": ("A", "Projekt UI/UX całej aplikacji", "(fundament) projekt UI/UX od nowa według standardów: architektura informacji, tokeny, komponenty, prototypy ekranów", "ready", "—", "ui-design-system"),
+    "F-07": ("A", "Projekt UI/UX całej aplikacji", "(fundament) projekt UI/UX od nowa według standardów: architektura informacji, tokeny, komponenty, prototypy ekranów", "progress", "—", "ui-design-system"),
     "F-08": ("A", "Tokeny i komponenty z projektu", "(fundament) język wizualny z F-07 w tokenach i komponentach katalogu, obecne widoki przepięte", "proposed", "F-07, S-46", "design-tokens-and-components"),
     "S-49": ("A", "Logowanie na wspólnym fundamencie", "logowanie i aktywacja na wspólnych komponentach i tokenach, bez literałów stylu", "proposed", "F-08", "login-on-shared-foundation"),
     "S-47": ("A", "Stała nawigacja i układ paneli", "użytkownik porusza się przez stałą nawigację w układzie paneli, bez nagłówka w każdym widoku", "proposed", "F-08", "app-shell-navigation"),

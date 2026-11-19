@@ -1,0 +1,6 @@
+[
+  { "fg": "--text", "bg": "--bg", "min": 4.5, "kind": "text" },
+  { "fg": "--text", "bg": "--surface", "min": 4.5, "kind": "text" },
+  { "fg": "--accent", "bg": "--bg", "min": 3.0, "kind": "ui" },
+  { "fg": "--on-accent", "bg": "--accent", "min": 4.5, "kind": "text" }
+]

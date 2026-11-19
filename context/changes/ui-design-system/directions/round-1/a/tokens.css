@@ -1,0 +1,52 @@
+/*
+ * Wariant A „Papier”. Dwanaście ról koloru to paleta A z S-46 bez zmiany wartości
+ * (szczur-radar-web/src/style.css); pod nimi role, których projekt potrzebuje dodatkowo.
+ */
+:root {
+  --bg: #f7f4ee;
+  --surface: #fffdf8;
+  --text: #4d5560;
+  --text-h: #1a1814;
+  --accent: #1d4fa8;
+  --on-accent: #ffffff;
+  --success: #1a7a3e;
+  --warning: #8f5400;
+  --destructive: #bf2f28;
+  --highlight: #f4e3a0;
+  --stance-neutral: #55606b;
+  --stance-mixed: #8a5200;
+
+  --text-muted: #5e656e;
+  --line: #e4ddd0;
+  --border: #857f73;
+  --ring: #1d4fa8;
+
+  --font-read: 'Literata', Georgia, serif;
+  --font-ui: 'Public Sans', system-ui, sans-serif;
+
+  --icon-stroke: 1.5;
+  --bar-height: 0.5rem;
+  --radius: 6px;
+}
+
+:root[data-theme='dark'] {
+  --bg: #101a20;
+  --surface: #17252d;
+  --text: #a7b4bc;
+  --text-h: #eef3f5;
+  --accent: #7fb0ff;
+  --on-accent: #101a20;
+  --success: #4cc77c;
+  --warning: #e6b04a;
+  --destructive: #f0786f;
+  --highlight: #3a3519;
+  --stance-neutral: #93a2ac;
+  --stance-mixed: #e0b25a;
+
+  --text-muted: #8f9da6;
+  --line: #24343d;
+  --border: #6c7d87;
+  --ring: #7fb0ff;
+
+  color-scheme: dark;
+}

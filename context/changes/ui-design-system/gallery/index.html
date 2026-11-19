@@ -1,0 +1,374 @@
+<title>Warianty wyglądu Szczur Radar</title>
+<!-- Runda 2: Radar (a), Parkiet (b), Salon (c) i połączenie zlecone przez właściciela: Salon w kolorach Radaru (d). Runda 1 jest w directions/round-1/. -->
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@600;700&display=swap">
+<style>
+  /* Układ: pasek wyboru (ekran, motyw, widok) nad sceną; scena to trzy warianty obok siebie albo jeden duży. */
+  :root {
+    --bg: #f2f3f5;
+    --panel: #ffffff;
+    --fg: #1b2026;
+    --muted: #59626d;
+    --line: #d5dae0;
+    --accent: #1f4fd1;
+    --on-accent: #ffffff;
+    --frame: #c3c9d1;
+    --display: 'Space Grotesk', system-ui, sans-serif;
+    --body: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) {
+      --bg: #14171b;
+      --panel: #1d2127;
+      --fg: #eef1f4;
+      --muted: #a3acb7;
+      --line: #333a43;
+      --accent: #8fb0ff;
+      --on-accent: #10141a;
+      --frame: #454d58;
+      color-scheme: dark;
+    }
+  }
+
+  :root[data-theme='dark'] {
+    --bg: #14171b;
+    --panel: #1d2127;
+    --fg: #eef1f4;
+    --muted: #a3acb7;
+    --line: #333a43;
+    --accent: #8fb0ff;
+    --on-accent: #10141a;
+    --frame: #454d58;
+    color-scheme: dark;
+  }
+
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font: 400 15px/1.5 var(--body);
+  }
+
+  .wrap {
+    max-width: 1680px;
+    margin: 0 auto;
+    padding-block: 28px 56px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+
+  h1 {
+    margin: 0;
+    font: 700 28px/1.2 var(--display);
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+  }
+
+  .lead {
+    max-width: 68ch;
+    margin: 8px 0 0;
+    color: var(--muted);
+  }
+
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 28px;
+    margin-top: 24px;
+    padding: 14px 16px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--panel);
+  }
+
+  fieldset {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  legend {
+    float: left;
+    margin-right: 6px;
+    padding: 0;
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  .opt {
+    position: relative;
+  }
+
+  .opt input {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+
+  .opt span {
+    display: block;
+    padding: 6px 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    font-weight: 500;
+  }
+
+  .opt input:checked + span {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: var(--on-accent);
+  }
+
+  .opt input:focus-visible + span {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .stage {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 20px;
+    margin-top: 20px;
+  }
+
+  .stage.single {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .variant[hidden] {
+    display: none;
+  }
+
+  .variant {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .variant h2 {
+    margin: 0;
+    font: 600 19px/1.25 var(--display);
+    letter-spacing: -0.01em;
+  }
+
+  .variant p {
+    margin: 2px 0 0;
+    color: var(--muted);
+    font-size: 14px;
+  }
+
+  .shot {
+    display: block;
+    width: 100%;
+    padding: 0;
+    border: 1px solid var(--frame);
+    border-radius: 10px;
+    background: var(--panel);
+    overflow: hidden;
+    cursor: zoom-in;
+  }
+
+  .stage.single .shot {
+    max-width: 1280px;
+    cursor: default;
+  }
+
+  .stage.phone .shot {
+    max-width: 375px;
+  }
+
+  .shot:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+  }
+
+  .shot img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  .notes {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px 32px;
+    margin-top: 36px;
+    padding-top: 24px;
+    border-top: 1px solid var(--line);
+  }
+
+  .notes h2 {
+    margin: 0 0 6px;
+    font: 600 16px/1.3 var(--display);
+  }
+
+  .notes ul {
+    margin: 0;
+    padding-left: 18px;
+    color: var(--muted);
+  }
+
+  .notes li + li {
+    margin-top: 4px;
+  }
+
+  @media (max-width: 900px) {
+    .stage {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Salon w kolorach Radaru</h1>
+    <p class="lead">Połączenie, o które prosiłeś: układ, litery i miękkie kształty z Salonu, kolory z Radaru (granat, świecący błękit, bursztynowe cytaty) i pierścienie radaru przy znaku. Obok oba warianty źródłowe do porównania.</p>
+  </header>
+
+  <form class="controls" id="controls">
+    <fieldset>
+      <legend>Ekran</legend>
+      <label class="opt"><input type="radio" name="screen" id="screen-stream" value="stream-1280" checked><span>Posty z oceną obok</span></label>
+      <label class="opt"><input type="radio" name="screen" id="screen-overview" value="overview-1280"><span>Przegląd dnia</span></label>
+      <label class="opt"><input type="radio" name="screen" id="screen-phone" value="stream-375"><span>Posty na telefonie</span></label>
+    </fieldset>
+    <fieldset>
+      <legend>Motyw</legend>
+      <label class="opt"><input type="radio" name="theme" id="theme-dark" value="dark" checked><span>Ciemny</span></label>
+      <label class="opt"><input type="radio" name="theme" id="theme-light" value="light"><span>Jasny</span></label>
+    </fieldset>
+    <fieldset>
+      <legend>Widok</legend>
+      <label class="opt"><input type="radio" name="view" id="view-trio" value="trio" checked><span>Połączenie i źródła</span></label>
+      <label class="opt"><input type="radio" name="view" id="view-d" value="d"><span>Tylko połączenie</span></label>
+      <label class="opt"><input type="radio" name="view" id="view-a" value="a"><span>Tylko Radar</span></label>
+      <label class="opt"><input type="radio" name="view" id="view-c" value="c"><span>Tylko Salon</span></label>
+      <label class="opt"><input type="radio" name="view" id="view-b" value="b"><span>Tylko Parkiet</span></label>
+    </fieldset>
+  </form>
+
+  <main class="stage" id="stage">
+    <section class="variant" data-variant="d">
+      <div>
+        <h2>Salon w kolorach Radaru</h2>
+        <p>Połączenie. Szeryfowe nagłówki i treść, jedna miękka powierzchnia i lekka kolumna z Salonu; granat, błękit i bursztyn z Radaru.</p>
+      </div>
+      <button type="button" class="shot" data-variant="d" aria-label="Pokaż tylko wariant Salon w kolorach Radaru"><img alt="" width="2560" height="1800"></button>
+    </section>
+    <section class="variant" data-variant="a">
+      <div>
+        <h2>Radar</h2>
+        <p>Źródło kolorów. Głęboki granat, świecący błękit, pierścienie radaru przy znaku.</p>
+      </div>
+      <button type="button" class="shot" data-variant="a" aria-label="Pokaż tylko wariant Radar"><img alt="" width="2560" height="1800"></button>
+    </section>
+    <section class="variant" data-variant="c">
+      <div>
+        <h2>Salon</h2>
+        <p>Źródło wyglądu. Ciepły grafit, szeryfowe nagłówki i treść, miękkie kształty.</p>
+      </div>
+      <button type="button" class="shot" data-variant="c" aria-label="Pokaż tylko wariant Salon"><img alt="" width="2560" height="1800"></button>
+    </section>
+    <section class="variant" data-variant="b">
+      <div>
+        <h2>Parkiet</h2>
+        <p>Trzeci wariant z tej rundy, dla porównania. Czerń, wielkie nagłówki, pełne barwne bloki.</p>
+      </div>
+      <button type="button" class="shot" data-variant="b" aria-label="Pokaż tylko wariant Parkiet"><img alt="" width="2560" height="1800"></button>
+    </section>
+  </main>
+
+  <section class="notes" aria-label="Uwagi do wariantów">
+    <div>
+      <h2>Wspólne we wszystkich trzech</h2>
+      <ul>
+        <li>Wiersz listy pokazuje cele posta i stanowisko autora wobec każdego: znak, słowo i kolor.</li>
+        <li>Ocena wybranego posta otwiera się obok listy, z tezami pod dosłownymi cytatami.</li>
+        <li>Fragmenty, na których oparto ocenę, są podświetlone w treści.</li>
+        <li>Przegląd dnia pokazuje liczby wprost, bez trendu i bez wyboru „wartych przeczytania”.</li>
+      </ul>
+    </div>
+    <div>
+      <h2>Sprawdzone automatycznie</h2>
+      <ul>
+        <li>Kontrast tekstu co najmniej 4,5:1 w jasnym i ciemnym motywie.</li>
+        <li>Reguły dostępności WCAG 2.2 AA, w tym rozmiar celów dotyku.</li>
+        <li>Brak przewijania w poziomie od szerokości 320 px.</li>
+        <li>Polskie znaki rysowane krojem wariantu, bez kroju zastępczego.</li>
+      </ul>
+    </div>
+    <div>
+      <h2>Czego tu jeszcze nie ma</h2>
+      <ul>
+        <li>Pozostałe ekrany i komponenty powstaną w wybranym wariancie.</li>
+        <li>Na telefonie widać samą listę; ocena posta będzie tam osobnym ekranem.</li>
+        <li>Część pól filtra i przegląd dnia pokazują stan docelowy, którego aplikacja jeszcze nie obsługuje.</li>
+      </ul>
+    </div>
+  </section>
+</div>
+
+<script>
+  // Every screenshot of the variants; the paths are relative to the published page.
+  const SHOTS = [
+    'a/stream-light-1280.png', 'a/stream-dark-1280.png', 'a/overview-light-1280.png', 'a/overview-dark-1280.png', 'a/stream-light-375.png', 'a/stream-dark-375.png',
+    'b/stream-light-1280.png', 'b/stream-dark-1280.png', 'b/overview-light-1280.png', 'b/overview-dark-1280.png', 'b/stream-light-375.png', 'b/stream-dark-375.png',
+    'c/stream-light-1280.png', 'c/stream-dark-1280.png', 'c/overview-light-1280.png', 'c/overview-dark-1280.png', 'c/stream-light-375.png', 'c/stream-dark-375.png',
+    'd/stream-light-1280.png', 'd/stream-dark-1280.png', 'd/overview-light-1280.png', 'd/overview-dark-1280.png', 'd/stream-light-375.png', 'd/stream-dark-375.png',
+  ]
+  // Opened from the repository (gallery/index.html) the screenshots sit in ../directions/.
+  const ROOT = location.protocol === 'file:' ? '../directions/' : ''
+  const SCREEN_NAMES = { 'stream-1280': 'posty z oceną obok', 'overview-1280': 'przegląd dnia', 'stream-375': 'posty na telefonie' }
+  const THEME_NAMES = { light: 'motyw jasny', dark: 'motyw ciemny' }
+  const VARIANT_NAMES = { a: 'Radar', b: 'Parkiet', c: 'Salon', d: 'Salon w kolorach Radaru' }
+
+  const form = document.getElementById('controls')
+  const stage = document.getElementById('stage')
+
+  function render() {
+    const data = new FormData(form)
+    const [name, width] = String(data.get('screen')).split('-')
+    const theme = String(data.get('theme'))
+    const view = String(data.get('view'))
+    const phone = width === '375'
+    stage.classList.toggle('single', view !== 'trio')
+    stage.classList.toggle('phone', phone)
+    for (const section of stage.querySelectorAll('.variant')) {
+      const variant = section.dataset.variant
+      const path = `${variant}/${name}-${theme}-${width}.png`
+      const img = section.querySelector('img')
+      section.hidden = view === 'trio' ? variant === 'b' : view !== variant
+      if (!SHOTS.includes(path)) continue
+      img.src = ROOT + path
+      img.width = phone ? 750 : 2560
+      img.height = phone ? 1624 : 1800
+      img.alt = `Wariant ${VARIANT_NAMES[variant]}: ${SCREEN_NAMES[`${name}-${width}`]}, ${THEME_NAMES[theme]}`
+    }
+  }
+
+  form.addEventListener('change', render)
+  form.addEventListener('submit', (event) => event.preventDefault())
+  stage.addEventListener('click', (event) => {
+    const shot = event.target.closest('.shot')
+    if (!shot || stage.classList.contains('single')) return
+    document.getElementById(`view-${shot.dataset.variant}`).checked = true
+    render()
+    window.scrollTo({ top: 0 })
+  })
+  render()
+</script>

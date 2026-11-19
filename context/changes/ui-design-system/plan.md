@@ -350,19 +350,19 @@ Brak danych i kodu do migracji. Projekt wchodzi do aplikacji w F-08 (tokeny, kom
 
 #### Automated
 
-- [ ] 1.1 Trzy warianty mają komplet plików i 18 zrzutów
-- [ ] 1.2 Każdy wariant spełnia progi kontrastu w obu motywach
-- [ ] 1.3 Strony wariantów przechodzą kontrolę stron (axe, brak przewijania w poziomie, rozmiar celów, kroje z polskimi znakami)
-- [ ] 1.4 `ui-design.md` ma wymagane nagłówki i tabelę ekranów pokrywającą listę wymagań
-- [ ] 1.5 Galeria odwołuje się do każdego zrzutu wariantów
-- [ ] 1.6 Kod aplikacji bez zmian
-- [ ] 1.7 SVG roadmapy zgodne z danymi skryptu
-- [ ] 1.8 Skrypt kontroli wykrywa celowe złamania
-- [ ] 1.9 Parser kontrastu czyta plik tokenów tak jak test aplikacji
+- [x] 1.1 Trzy warianty mają komplet plików i 18 zrzutów
+- [x] 1.2 Każdy wariant spełnia progi kontrastu w obu motywach
+- [x] 1.3 Strony wariantów przechodzą kontrolę stron (axe, brak przewijania w poziomie, rozmiar celów, kroje z polskimi znakami)
+- [x] 1.4 `ui-design.md` ma wymagane nagłówki i tabelę ekranów pokrywającą listę wymagań
+- [x] 1.5 Galeria odwołuje się do każdego zrzutu wariantów
+- [x] 1.6 Kod aplikacji bez zmian
+- [x] 1.7 SVG roadmapy zgodne z danymi skryptu
+- [x] 1.8 Skrypt kontroli wykrywa celowe złamania
+- [x] 1.9 Parser kontrastu czyta plik tokenów tak jak test aplikacji
 
 #### Manual
 
-- [ ] 1.10 Właściciel wybiera wariant A, B albo C (albo zleca połączenie lub poprawki) na galerii, a wybór jest zapisany w `directions/directions.md`, sekcja „Decyzja właściciela”
+- [x] 1.10 Właściciel wybiera wariant A, B albo C (albo zleca połączenie lub poprawki) na galerii, a wybór jest zapisany w `directions/directions.md`, sekcja „Decyzja właściciela”
 
 ### Phase 2: Język wizualny i komponenty
 
