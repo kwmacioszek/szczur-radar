@@ -328,7 +328,7 @@ Brak danych do migracji. Użytkownik bez zapamiętanego wyboru widzi po wdrożen
 
 #### Manual
 
-- [ ] 2.6 Właściciel wybiera wariant A albo B (albo zleca poprawki) na zrzutach z `palette/`, wybór zapisany w `palette.md`
+- [x] 2.6 Właściciel wybiera wariant A albo B (albo zleca poprawki) na zrzutach z `palette/`, wybór zapisany w `palette.md` — e85114d
 
 ### Phase 3: Wybrana paleta i wzorce
 
