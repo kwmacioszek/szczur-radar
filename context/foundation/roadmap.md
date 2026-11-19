@@ -3,7 +3,7 @@ project: "Szczur Radar"
 version: 6
 status: draft # draft | active | locked
 created: 2026-09-27
-updated: 2026-11-17
+updated: 2026-11-19
 prd_version: 4
 main_goal: quality
 top_blocker: capacity # 17 pozycji, jeden recenzent i osoba mergująca; fundament UI dotyka wspólnych plików (tokeny, komponenty, router), więc pierwsze fale są sekwencyjne; darmowe runnery GitHuba muszą zmieścić testy w przeglądarce i zrzuty
@@ -114,7 +114,7 @@ Na Wykopie (#gielda) i Reddicie codziennie pojawiają się setki postów o inwes
 | ---- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ------------- | ------------------------------------------ | -------- |
 | F-05 | e2e-harness                   | (foundation) testy w przeglądarce w repo i w CI na atrapie API ustawianej z testu; smoke obecnych przepływów            | —             | NFR `prd.md:328`                           | done     |
 | F-06 | visual-regression             | (foundation) zrzuty porównawcze katalogu komponentów i widoków w obu motywach i przy 375 px oraz test dostępności w CI   | F-05          | NFR `prd.md:328` (doprecyzowanie v4)       | done |
-| S-46 | light-dark-theme-switch       | użytkownik przełącza motyw jasny i ciemny w nowej palecie, a wybór jest zapamiętany                                      | F-06          | FR-040                                     | in-progress |
+| S-46 | light-dark-theme-switch       | użytkownik przełącza motyw jasny i ciemny w nowej palecie, a wybór jest zapamiętany                                      | F-06          | FR-040                                     | done |
 | S-47 | app-shell-navigation          | użytkownik porusza się po aplikacji przez stałą nawigację w układzie paneli, bez nagłówka stawianego przez każdy widok   | S-46          | FR-007, FR-021, FR-030                     | proposed |
 | S-48 | shared-view-states            | użytkownik widzi w każdym widoku te same stany ładowania, pustej listy i błędu z ponowieniem                             | S-47          | FR-007, FR-009, NFR `prd.md:328`           | proposed |
 | S-49 | login-on-shared-foundation    | użytkownik loguje się i aktywuje konto na ekranach zbudowanych ze wspólnych komponentów i tokenów                        | S-46          | FR-026, FR-027, FR-028                     | proposed |
@@ -199,7 +199,7 @@ Wycinki niżej zakładają te warstwy i ich nie budują od nowa.
 - **Unknowns:**
   - Paleta, druga powierzchnia, rola podświetlenia cytatu, kolory stanowisk `neutral` i `mixed`, typografia i skala odstępów pod panele — kto i na czym zatwierdza wygląd (właściciel na zrzutach F-06)? — Owner: user. Block: no.
 - **Risk:** zmienia wszystkie wzorce F-06 naraz (zamierzone); tokeny są wspólne dla każdego widoku, więc idzie przed shellem i widokami, żeby nie przebudowywać ich drugi raz.
-- **Status:** in-progress
+- **Status:** done
 
 ### S-47: Stała nawigacja i układ paneli
 
@@ -509,3 +509,4 @@ Wycinki niżej zakładają te warstwy i ich nie budują od nowa.
 - **S-45: testy mutacyjne (PIT) mierzą rdzeń — przebieg i warunkowe zapisy stanu, walidator kontraktu V2, rozliczanie prób oceny — a każdy mutant, który przeżył, jest zabity testem albo przyjęty z zapisanym powodem; pomiar da się powtórzyć w CI.** — Archived 2026-11-14 → `context/archive/2026-11-13-core-mutation-testing/`. Lesson: —.
 - **F-05: (foundation) testy w przeglądarce leżą w repo i chodzą w CI przy każdym PR na atrapie API zgodnej z kontraktem, której tryby (sesja, rola, dane, pusto, błąd, ładowanie) ustawia test; smoke obejmuje obecne przepływy: logowanie i wylogowanie, feed z filtrem, widok posta, panel admina.** — Archived 2026-11-16 → `context/archive/2026-11-16-e2e-harness/`. Lesson: —.
 - **F-06: (foundation) wygląd jest pilnowany zrzutami porównawczymi w CI — katalog komponentów we wszystkich stanach w obu motywach i przy 375 px oraz po jednym zrzucie każdego widoku z danymi w obu motywach, przy 375 px i na desktopie — a każdy z tych widoków przechodzi automatyczny test dostępności; zmiana wyglądu aktualizuje wzorce w tym samym PR.** — Archived 2026-11-17 → `context/archive/2026-11-16-visual-regression/`. Lesson: —.
+- **S-46: użytkownik przełącza motyw aplikacji między jasnym i ciemnym w nowej palecie pod układy paneli, wybór jest zapamiętany, a domyślnie obowiązuje ustawienie systemu; każda para tekstu spełnia kontrast co najmniej 4.5:1 w obu motywach.** — Archived 2026-11-19 → `context/archive/2026-11-17-light-dark-theme-switch/`. Lesson: —.
