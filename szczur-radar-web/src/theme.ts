@@ -66,9 +66,12 @@ export function initTheme(): void {
   theme.value = attributeTheme()
   const stored = storedChoice()
   if (stored === 'light' || stored === 'dark') return
-  if (typeof window.matchMedia !== 'function') return
-  const query = window.matchMedia(DARK_QUERY)
-  const onChange = (event: MediaQueryListEvent): void => apply(resolveTheme(null, event.matches))
-  query.addEventListener('change', onChange)
-  stopFollowing = () => query.removeEventListener('change', onChange)
+  try {
+    const query = window.matchMedia(DARK_QUERY)
+    const onChange = (event: MediaQueryListEvent): void => apply(resolveTheme(null, event.matches))
+    query.addEventListener('change', onChange)
+    stopFollowing = () => query.removeEventListener('change', onChange)
+  } catch {
+    // No usable matchMedia (missing, throwing, or without addEventListener): the theme the script set stays.
+  }
 }

@@ -172,6 +172,25 @@ describe('theme state', () => {
     expect(system.listeners()).toBe(1)
   })
 
+  it.each([
+    ['is missing', undefined],
+    [
+      'throws',
+      () => {
+        throw new Error('blocked')
+      },
+    ],
+    ['has no addEventListener', () => ({ matches: true })],
+  ])('initTheme keeps the attribute and the toggle works when matchMedia %s', (_case, matchMedia) => {
+    vi.stubGlobal('matchMedia', matchMedia)
+    document.documentElement.dataset.theme = 'dark'
+    expect(() => initTheme()).not.toThrow()
+    expect(currentTheme.value).toBe('dark')
+
+    toggleTheme()
+    expect(document.documentElement.dataset.theme).toBe('light')
+  })
+
   it('a storage that throws on read follows the system, and one that throws on write still switches', () => {
     const system = stubSystem(false)
     vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
