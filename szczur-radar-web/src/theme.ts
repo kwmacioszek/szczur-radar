@@ -60,6 +60,13 @@ export function toggleTheme(): void {
   setTheme(theme.value === 'dark' ? 'light' : 'dark')
 }
 
+/** Forget the theme: no listener, light, no attribute (tests). */
+export function resetTheme(): void {
+  stopFollowingSystem()
+  theme.value = 'light'
+  delete document.documentElement.dataset.theme
+}
+
 /** Take over from the script in index.html. Without a stored choice the page follows the system's theme. */
 export function initTheme(): void {
   stopFollowingSystem()

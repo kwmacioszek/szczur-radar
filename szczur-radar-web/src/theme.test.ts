@@ -1,6 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import indexHtml from '../index.html?raw'
-import { currentTheme, initTheme, resolveTheme, setTheme, THEME_STORAGE_KEY, toggleTheme, type Theme } from './theme'
+import {
+  currentTheme,
+  initTheme,
+  resetTheme,
+  resolveTheme,
+  setTheme,
+  THEME_STORAGE_KEY,
+  toggleTheme,
+  type Theme,
+} from './theme'
 
 /** Stored value × system dark → the theme; the rule of resolveTheme and of the script in index.html. */
 const TABLE: { stored: string | null; systemDark: boolean; theme: Theme }[] = [
@@ -60,10 +69,7 @@ beforeEach(() => {
 afterEach(() => {
   vi.unstubAllGlobals()
   vi.restoreAllMocks()
-  // Stop following the system between tests.
-  stubSystem(false)
-  initTheme()
-  vi.unstubAllGlobals()
+  resetTheme()
 })
 
 describe('resolveTheme', () => {

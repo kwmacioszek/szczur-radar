@@ -1,12 +1,12 @@
 import { mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { setTheme } from '../theme'
+import { resetTheme, setTheme } from '../theme'
 import ThemeToggle from './ThemeToggle.vue'
 
 describe('ThemeToggle', () => {
   beforeEach(() => {
     localStorage.clear()
-    setTheme('light')
+    resetTheme()
   })
 
   it('is pressed in the dark theme and not in the light one, under one name', async () => {
