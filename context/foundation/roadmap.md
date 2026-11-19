@@ -114,7 +114,7 @@ Na Wykopie (#gielda) i Reddicie codziennie pojawiają się setki postów o inwes
 | ---- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ------------- | ------------------------------------------ | -------- |
 | F-05 | e2e-harness                   | (foundation) testy w przeglądarce w repo i w CI na atrapie API ustawianej z testu; smoke obecnych przepływów            | —             | NFR `prd.md:328`                           | done     |
 | F-06 | visual-regression             | (foundation) zrzuty porównawcze katalogu komponentów i widoków w obu motywach i przy 375 px oraz test dostępności w CI   | F-05          | NFR `prd.md:328` (doprecyzowanie v4)       | done |
-| S-46 | light-dark-theme-switch       | użytkownik przełącza motyw jasny i ciemny w nowej palecie, a wybór jest zapamiętany                                      | F-06          | FR-040                                     | proposed |
+| S-46 | light-dark-theme-switch       | użytkownik przełącza motyw jasny i ciemny w nowej palecie, a wybór jest zapamiętany                                      | F-06          | FR-040                                     | in-progress |
 | S-47 | app-shell-navigation          | użytkownik porusza się po aplikacji przez stałą nawigację w układzie paneli, bez nagłówka stawianego przez każdy widok   | S-46          | FR-007, FR-021, FR-030                     | proposed |
 | S-48 | shared-view-states            | użytkownik widzi w każdym widoku te same stany ładowania, pustej listy i błędu z ponowieniem                             | S-47          | FR-007, FR-009, NFR `prd.md:328`           | proposed |
 | S-49 | login-on-shared-foundation    | użytkownik loguje się i aktywuje konto na ekranach zbudowanych ze wspólnych komponentów i tokenów                        | S-46          | FR-026, FR-027, FR-028                     | proposed |
@@ -199,7 +199,7 @@ Wycinki niżej zakładają te warstwy i ich nie budują od nowa.
 - **Unknowns:**
   - Paleta, druga powierzchnia, rola podświetlenia cytatu, kolory stanowisk `neutral` i `mixed`, typografia i skala odstępów pod panele — kto i na czym zatwierdza wygląd (właściciel na zrzutach F-06)? — Owner: user. Block: no.
 - **Risk:** zmienia wszystkie wzorce F-06 naraz (zamierzone); tokeny są wspólne dla każdego widoku, więc idzie przed shellem i widokami, żeby nie przebudowywać ich drugi raz.
-- **Status:** proposed
+- **Status:** in-progress
 
 ### S-47: Stała nawigacja i układ paneli
 
