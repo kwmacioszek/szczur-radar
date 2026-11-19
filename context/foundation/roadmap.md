@@ -6,7 +6,7 @@ created: 2026-09-27
 updated: 2026-11-19
 prd_version: 4
 main_goal: quality
-top_blocker: capacity # 17 pozycji, jeden recenzent i osoba mergująca; fundament UI dotyka wspólnych plików (tokeny, komponenty, router), więc pierwsze fale są sekwencyjne; darmowe runnery GitHuba muszą zmieścić testy w przeglądarce i zrzuty
+top_blocker: capacity # 19 pozycji, jeden recenzent i osoba mergująca; fundament UI dotyka wspólnych plików (tokeny, komponenty, router), więc pierwsze fale są sekwencyjne; darmowe runnery GitHuba muszą zmieścić testy w przeglądarce i zrzuty
 milestone_id: new-ui-on-tested-foundation
 milestone_seq: 5
 milestone_status: open
@@ -89,13 +89,15 @@ milestone_status: open
 
 > v6 (2026-11-15): otwarty M-5 „Nowe UI na sprawdzonym fundamencie” (`/10x-roadmap`) z PRD v4, `ui-ux-proposals.md` i audytu `post-m4-ui-readiness-audit`; ramy od użytkownika: cel `quality`, gwiazda przewodnia S-51 (strumień z inspektorem oceny), główne ryzyko `capacity`. Decyzje właściciela z 2026-11-15: M-5 „uczciwie duży” — najpierw testy w przeglądarce (F-05) i zrzuty porównawcze z testem dostępności w wersji odchudzonej (F-06), potem motyw, shell, wspólne stany, logowanie i panel admina, potem widoki; agregacja po tekście celu bez rozpoznawania spółek; z nice-to-have tylko sortowanie. Fundamenty F-05, F-06 i wycinki S-46–S-60. Z `## Parked` usunięte: kandydat M-5 (otwarty), FR-008 / FR-011b (wchodzą jako S-54) i język posta w bazie (zrobione w S-36, `posts.language` od V16); dopisane pozycje odłożone poza M-5 i kandydaci na M-6.
 
+> v6.1 (2026-11-19): decyzja właściciela po S-46 — aplikacja ma wyglądać jak dopracowany produkt, a nie surowy panel; makiety z `ui-ux-proposals.md` dawały plan tylko układu. Nowy fundament F-07 (`ui-design-system`): projekt UI/UX całej aplikacji od nowa według standardów i wzorców projektowych (Fable), z makietami jako materiałem wejściowym, akceptowany przez właściciela na prototypach; F-08 (`design-tokens-and-components`) wdraża go w tokenach i komponentach przed S-47 i S-49. S-46 domknięty bez zmian (mechanizm motywu i paleta A), więc wzorce F-06 zmienią się drugi raz w F-08. Wycinki UI wdrażają projekt F-07; otwarte pytanie 7 przechodzi do F-07. Jeśli projekt zmieni architekturę informacji, `/10x-roadmap` przetnie S-47–S-59 na nowo (v6.2).
+
 ## Milestone
 
 **M-5: Nowe UI na sprawdzonym fundamencie** — Status: open
 
 - **Intent:** Aplikacja webowa dostaje nowy, spójny interfejs — strumień wpisów z inspektorem oceny, czytnik z cytatami podświetlonymi w treści, katalog celów z proporcjami stanowisk i przegląd dnia — zbudowany na wspólnym fundamencie (motywy jasny i ciemny, stała nawigacja, wspólne stany widoków), a każdy przepływ i wygląd pilnują w CI testy w przeglądarce, więc zmiany UI nie wymagają ręcznego klikania.
-- **Source materials:** `context/foundation/prd.md` (v4: FR-035–FR-040, doprecyzowania v4 przy FR-007, FR-008, FR-009, FR-011a, FR-011b, FR-033 i Non-Goals, NFR o testach w przeglądarce `prd.md:328`); `context/foundation/ui-ux-proposals.md` (cztery układy: Czytnik, Karta podmiotu, Strumień + Inspektor, Przegląd; makiety w `docs/visuals/ui-ux-proposals/`); audyt `context/changes/post-m4-ui-readiness-audit/research.md` (fundament SPA, luki API wobec makiet, podłoga E2E, pomiar „kanał jako cel”, sekcja „Decyzje właściciela (2026-11-15)”); mapa projektu `context/map/repo-map.md` i destylacja `context/domain/domain-distillation.md` z 2026-11-15.
-- **Done when:** every F-NN and S-NN below is `done`; każdy przepływ użytkownika z NFR `prd.md:328` ma test w przeglądarce w CI; wygląd katalogu komponentów i każdego widoku jest pilnowany zrzutami porównawczymi w obu motywach i przy 375 px, a ręczna weryfikacja wycinka UI to ocena różnic obrazków w PR.
+- **Source materials:** `context/foundation/prd.md` (v4: FR-035–FR-040, doprecyzowania v4 przy FR-007, FR-008, FR-009, FR-011a, FR-011b, FR-033 i Non-Goals, NFR o testach w przeglądarce `prd.md:328`); `context/foundation/ui-ux-proposals.md` (cztery układy: Czytnik, Karta podmiotu, Strumień + Inspektor, Przegląd; makiety w `docs/visuals/ui-ux-proposals/`); audyt `context/changes/post-m4-ui-readiness-audit/research.md` (fundament SPA, luki API wobec makiet, podłoga E2E, pomiar „kanał jako cel”, sekcja „Decyzje właściciela (2026-11-15)”); mapa projektu `context/map/repo-map.md` i destylacja `context/domain/domain-distillation.md` z 2026-11-15; od v6.1 projekt UI/UX `context/foundation/ui-design.md` (F-07).
+- **Done when:** every F-NN and S-NN below is `done`; każdy przepływ użytkownika z NFR `prd.md:328` ma test w przeglądarce w CI; wygląd katalogu komponentów i każdego widoku jest pilnowany zrzutami porównawczymi w obu motywach i przy 375 px, a ręczna weryfikacja wycinka UI to ocena różnic obrazków w PR; każdy widok wdraża zaakceptowany projekt UI/UX z F-07 (opis PR wycinka UI pokazuje zrzut obok prototypu).
 - **Scope anchors:** FR-035, FR-036, FR-037, FR-038, FR-039, FR-040 (nowe w PRD v4); FR-007 (doprecyzowanie v4, Q-15), FR-008 i FR-011b (sortowanie wybrane do M-5), FR-009 (doprecyzowanie v4: podświetlenie cytatów, poprzedni i następny wpis), FR-010, FR-011a (doprecyzowanie v4: agregacja po tekście celu), FR-033 (doprecyzowanie v4: „kanał jako cel”, Q-20), FR-006, FR-014, FR-015, FR-021, FR-026–FR-028 (widoki istniejące, przenoszone na nowy fundament); NFR `prd.md:328` (testy w przeglądarce, wizualne i dostępności); Non-Goals `prd.md:369` z doprecyzowaniem v4 (granica: bez rozpoznawania spółek, trendu i automatycznego „warte uwagi”).
 
 ## Vision recap
@@ -114,10 +116,12 @@ Na Wykopie (#gielda) i Reddicie codziennie pojawiają się setki postów o inwes
 | ---- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ------------- | ------------------------------------------ | -------- |
 | F-05 | e2e-harness                   | (foundation) testy w przeglądarce w repo i w CI na atrapie API ustawianej z testu; smoke obecnych przepływów            | —             | NFR `prd.md:328`                           | done     |
 | F-06 | visual-regression             | (foundation) zrzuty porównawcze katalogu komponentów i widoków w obu motywach i przy 375 px oraz test dostępności w CI   | F-05          | NFR `prd.md:328` (doprecyzowanie v4)       | done |
+| F-07 | ui-design-system              | (foundation) zaakceptowany projekt UI/UX całej aplikacji według standardów: architektura informacji, tokeny, komponenty, prototypy | —             | FR-040, NFR `prd.md:328`                   | ready    |
+| F-08 | design-tokens-and-components  | (foundation) język wizualny z F-07 w tokenach i komponentach katalogu, obecne widoki przepięte                           | F-07, S-46    | FR-040, NFR `prd.md:328`                   | proposed |
 | S-46 | light-dark-theme-switch       | użytkownik przełącza motyw jasny i ciemny w nowej palecie, a wybór jest zapamiętany                                      | F-06          | FR-040                                     | done |
-| S-47 | app-shell-navigation          | użytkownik porusza się po aplikacji przez stałą nawigację w układzie paneli, bez nagłówka stawianego przez każdy widok   | S-46          | FR-007, FR-021, FR-030                     | proposed |
+| S-47 | app-shell-navigation          | użytkownik porusza się po aplikacji przez stałą nawigację w układzie paneli, bez nagłówka stawianego przez każdy widok   | F-08          | FR-007, FR-021, FR-030                     | proposed |
 | S-48 | shared-view-states            | użytkownik widzi w każdym widoku te same stany ładowania, pustej listy i błędu z ponowieniem                             | S-47          | FR-007, FR-009, NFR `prd.md:328`           | proposed |
-| S-49 | login-on-shared-foundation    | użytkownik loguje się i aktywuje konto na ekranach zbudowanych ze wspólnych komponentów i tokenów                        | S-46          | FR-026, FR-027, FR-028                     | proposed |
+| S-49 | login-on-shared-foundation    | użytkownik loguje się i aktywuje konto na ekranach zbudowanych ze wspólnych komponentów i tokenów                        | F-08          | FR-026, FR-027, FR-028                     | proposed |
 | S-50 | admin-panel-components        | admin pracuje w panelu złożonym z komponentów, w nowym układzie                                                          | S-48          | FR-014, FR-015, FR-021, FR-022, FR-034     | proposed |
 | S-51 | stream-and-inspector          | użytkownik przegląda strumień wpisów i czyta ocenę wybranego wpisu w panelu inspektora                                   | S-48          | FR-006, FR-007, FR-009, FR-010, FR-011a    | proposed |
 | S-52 | investment-posts-by-default   | użytkownik widzi domyślnie tylko posty inwestycyjne, a przełącznik „pokaż wszystkie” przywraca resztę                    | S-51          | FR-007 (doprecyzowanie v4)                 | proposed |
@@ -136,7 +140,7 @@ Navigation aid — groups items that share a Prerequisites chain. Canonical orde
 
 | Stream | Theme                    | Chain                                                      | Note                                                                                                                         |
 | ------ | ------------------------ | ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| A      | Siatka i fundament UI    | `F-05` → `F-06` → `S-46` → `S-47` → `S-48` → `S-50` · `S-49` | Przy celu `quality` testy działania i wyglądu idą przed przebudową; wspólne pliki (tokeny, komponenty, router) — fala sekwencyjna. |
+| A      | Siatka i fundament UI    | `F-05` → `F-06` → `S-46` · `F-07` → `F-08` → `S-47` → `S-48` → `S-50` · `S-49` | Przy celu `quality` testy działania i wyglądu idą przed przebudową; od v6.1 projekt UI/UX (F-07) i jego tokeny (F-08) przed shellem; wspólne pliki (tokeny, komponenty, router) — fala sekwencyjna. |
 | B      | Widok wpisu              | `S-51` → `S-52` · `S-53` · `S-54` · `S-55` · `S-56`        | Gwiazda przewodnia zaraz po fundamencie; potem przekroje listy, które mogą iść równolegle.                                   |
 | C      | Wokół celu               | `S-57` → `S-58` → `S-59`                                   | Agregacja po tekście celu (FR-011a v4); dołącza do B przy `S-52` (domyślne ukrywanie) i `S-55` (dzień dla przeglądu).        |
 | D      | Jakość ocen              | `S-60`                                                     | Miara „kanał jako cel” chroni widoki C przy zmianie modelu; dołącza do A przy `S-50` (sekcja jakości w panelu admina).        |
@@ -186,7 +190,38 @@ Wycinki niżej zakładają te warstwy i ich nie budują od nowa.
 - **Risk:** wersja odchudzona z wyboru (decyzja 2026-11-15): stany widoków sprawdza F-05 funkcjonalnie, a zrzuty pilnują katalogu komponentów i jednego stanu widoku — przy kilkudziesięciu wzorcach zmienianych w każdym wycinku przebudowy łatwo o odruchowe zatwierdzanie.
 - **Status:** done
 
+### F-07: Projekt UI/UX całej aplikacji
+
+- **Outcome:** (foundation) aplikacja ma zaakceptowany przez właściciela projekt UI/UX opracowany od nowa według standardów (WCAG 2.2 AA, heurystyki Nielsena, wzorce dojrzałych systemów projektowych): zasady, architekturę informacji i nawigację, język wizualny jako tokeny (typografia, siatka i odstępy, role kolorów, promienie, ikony), komponenty z ich stanami oraz prototypy każdego ekranu M-5 w obu motywach i przy 375 px, w `context/foundation/ui-design.md`; makiety z `ui-ux-proposals.md` są materiałem wejściowym, nie wzorem do skopiowania.
+- **Change ID:** ui-design-system
+- **PRD refs:** FR-040, NFR `prd.md:328`; widoki z FR-006–FR-039 (PRD v4)
+- **Unlocks:** F-08; kryterium akceptacji wyglądu i układu dla S-47–S-59; rozstrzyga otwarte pytanie 7 (elementy makiet bez znaczenia w PRD).
+- **Prerequisites:** — (korzysta z mechanizmu motywu z S-46 i kontenera zrzutów z F-06)
+- **Parallel with:** —
+- **Blockers:** —
+- **Unknowns:**
+  - Czy projekt zmienia architekturę informacji (inne ekrany, inny podział panelu admina, katalog i karta celu w jednym widoku)? Jeśli tak, `/10x-roadmap` przecina S-47–S-59 na nowo (v6.2), z tymi samymi ID i issue. — Owner: user (akceptacja projektu). Block: no.
+  - Krój pisma (polskie znaki, licencja, hostowany u nas) i czy paleta A z S-46 zostaje. — Owner: team (`/10x-plan`), decyzja: user. Block: no.
+- **Risk:** bez wspólnego projektu plan każdego wycinka bierze z makiet tylko układ, a wygląd zostaje surowy (decyzja właściciela 2026-11-19); dokumentacja i prototypy bez kodu aplikacji, więc wzorce F-06 się nie zmieniają.
+- **Status:** ready
+
+### F-08: Tokeny i komponenty z projektu
+
+- **Outcome:** (foundation) język wizualny z F-07 jest w aplikacji: tokeny w `style.css` (typografia, odstępy, role kolorów w obu motywach na mechanizmie z S-46), komponenty bazowe z projektu w katalogu komponentów we wszystkich stanach, a obecne widoki są na nie przepięte; wzorce F-06 zmieniają się raz, jako akceptacja wyglądu.
+- **Change ID:** design-tokens-and-components
+- **PRD refs:** FR-040, NFR `prd.md:328`
+- **Unlocks:** S-47, S-49 (a przez nie resztę strumieni A i B).
+- **Prerequisites:** F-07, S-46
+- **Parallel with:** —
+- **Blockers:** —
+- **Unknowns:**
+  - Które widoki przepiąć od razu, a które zostawić ich wycinkom (S-47–S-59 i tak je przebudują)? — Owner: team (`/10x-plan`). Block: no.
+- **Risk:** zmienia wszystkie wzorce F-06 drugi raz po S-46 (zamierzone); tokeny są wspólne dla każdego widoku, więc idzie przed shellem, żeby S-47–S-59 budowały od razu na projekcie.
+- **Status:** proposed
+
 ## Slices
+
+> Od v6.1 (2026-11-19): każdy wycinek UI (S-47–S-59) wdraża swój widok według zaakceptowanego projektu F-07 (`context/foundation/ui-design.md`) na tokenach i komponentach z F-08, a opis PR pokazuje zrzut F-06 obok prototypu ekranu.
 
 ### S-46: Motyw jasny i ciemny z przełącznikiem
 
@@ -206,7 +241,7 @@ Wycinki niżej zakładają te warstwy i ich nie budują od nowa.
 - **Outcome:** użytkownik porusza się po aplikacji przez stałą nawigację w jednym układzie z panelami (strumień, katalog celów, przegląd, panel admina dla admina), z datą aktualizacji danych per źródło, zamiast nagłówka stawianego osobno przez każdy widok; obecne widoki działają w nowym układzie.
 - **Change ID:** app-shell-navigation
 - **PRD refs:** FR-007, FR-021, FR-030
-- **Prerequisites:** S-46
+- **Prerequisites:** F-08
 - **Parallel with:** S-49
 - **Blockers:** —
 - **Unknowns:** —
@@ -230,7 +265,7 @@ Wycinki niżej zakładają te warstwy i ich nie budują od nowa.
 - **Outcome:** użytkownik loguje się i aktywuje konto na ekranach zbudowanych ze wspólnych komponentów i tokenów w obu motywach; ekran logowania jest na liście plików wolnych od literałów stylu.
 - **Change ID:** login-on-shared-foundation
 - **PRD refs:** FR-026, FR-027, FR-028
-- **Prerequisites:** S-46
+- **Prerequisites:** F-08
 - **Parallel with:** S-47, S-48, S-50, S-51
 - **Blockers:** —
 - **Unknowns:** —
@@ -381,10 +416,12 @@ Wycinki niżej zakładają te warstwy i ich nie budują od nowa.
 | ---------- | ---------------------------- | ------------------------------------------------------------------------------- | --------------------- | ------------------------------ |
 | F-05       | e2e-harness                  | F-05: testy w przeglądarce w CI na atrapie API                                  | yes                   | Run `/10x-plan e2e-harness`    |
 | F-06       | visual-regression            | F-06: zrzuty porównawcze i test dostępności w CI                                | no                    | Po F-05                        |
+| F-07       | ui-design-system             | F-07: projekt UI/UX całej aplikacji                                             | yes                   | Run `/10x-research ui-design-system`, potem `/10x-plan` |
+| F-08       | design-tokens-and-components | F-08: tokeny i komponenty z projektu                                            | no                    | Po F-07                        |
 | S-46       | light-dark-theme-switch      | S-46: motyw jasny i ciemny z przełącznikiem                                     | no                    | Po F-06                        |
-| S-47       | app-shell-navigation         | S-47: stała nawigacja i układ paneli                                            | no                    | Po S-46                        |
+| S-47       | app-shell-navigation         | S-47: stała nawigacja i układ paneli                                            | no                    | Po F-08                        |
 | S-48       | shared-view-states           | S-48: wspólne stany widoków                                                     | no                    | Po S-47                        |
-| S-49       | login-on-shared-foundation   | S-49: logowanie i aktywacja na wspólnym fundamencie                             | no                    | Po S-46                        |
+| S-49       | login-on-shared-foundation   | S-49: logowanie i aktywacja na wspólnym fundamencie                             | no                    | Po F-08                        |
 | S-50       | admin-panel-components       | S-50: panel admina z komponentów                                                | no                    | Po S-48                        |
 | S-51       | stream-and-inspector         | S-51: strumień wpisów z inspektorem oceny (gwiazda przewodnia M-5)              | no                    | Po S-48                        |
 | S-52       | investment-posts-by-default  | S-52: domyślnie tylko posty inwestycyjne                                        | no                    | Po S-51                        |
@@ -405,7 +442,7 @@ Wycinki niżej zakładają te warstwy i ich nie budują od nowa.
 4. **Budżet kosztów LLM na przebieg** — guardrail PRD każe minimalizować koszt zapytań, ale nie podaje pułapu (na dzień ani na post); twardy pułap to $10/mies. na kluczu OpenRouter produkcji. Drugie źródło zwiększy liczbę ocen. Owner: użytkownik. Rozstrzygnięte 2026-10-31 w S-28: limit $10/mies. zostaje, bez osobnego pułapu; koszt łączny z Wykopem to $3,21/mies. na `flex` (górna granica $4,67), Reddit włączany.
 5. **PRD ma status `draft` i ostatnią zmianę 2026-10-13** — nowsze decyzje żyją w blokach „Doprecyzowanie” i w roadmapie (destylacja, sekcja „Stale documents”: FR-029 krótka sesja vs 30 dni, „zakres dat/godzin”, FR-022 warunkowe). Czy odświeżyć PRD do v3 przed planowaniem Reddita? Owner: użytkownik. Block: — (destylacja D-02, D-03, D-10). Rozstrzygnięte 2026-11-04: PRD v3 (`prd.md` `version: 3`) zamyka D-02, D-03, D-10 i D-16 oraz zapisuje decyzje Q-13, Q-14, Q-16 i Q-18; PRD v4 z 2026-11-15 zapisuje decyzje przed M-5.
 6. **Pytania z destylacji domeny bez odpowiedzi** (`domain-distillation.md`, sekcja Questions): Q-08 (kto woła `/api/admin/llm/check`), Q-11 (usuwanie lub deaktywacja konta i sprzątanie wygasłych linków), Q-12 (`content_hash`, `slug`, `tags` bez czytelnika), Q-19 (czy 30 % tez w innym języku na Reddicie to poziom przyjęty na stałe). Owner: właściciel produktu. Block: — (żaden wycinek M-5 od nich nie zależy). Q-15 i Q-20 rozstrzygnięte przez PRD v4 (FR-007 i FR-033, doprecyzowania v4).
-7. **Elementy makiet bez znaczenia w PRD:** „Analizy”, „Wątki”, „Ostatnie obserwacje”, „Przejdź do źródła ↓” i strzałka „↑” przy odsetku (`ui-ux-proposals.md`, audyt `post-m4-ui-readiness-audit`, sekcja 2). Owner: użytkownik. Block: — (wycinki M-5 ich nie budują; „Wątki” jako wątki komentarzy byłyby sprzeczne z Non-Goals).
+7. **Elementy makiet bez znaczenia w PRD:** „Analizy”, „Wątki”, „Ostatnie obserwacje”, „Przejdź do źródła ↓” i strzałka „↑” przy odsetku (`ui-ux-proposals.md`, audyt `post-m4-ui-readiness-audit`, sekcja 2). Owner: użytkownik. Block: — (wycinki M-5 ich nie budują; „Wątki” jako wątki komentarzy byłyby sprzeczne z Non-Goals). Od v6.1 rozstrzyga je projekt F-07 (`ui-design-system`).
 
 ## Parked
 

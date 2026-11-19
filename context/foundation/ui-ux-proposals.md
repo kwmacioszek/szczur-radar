@@ -2,6 +2,8 @@
 
 Zapis decyzji użytkownika z 2026-10-27: **nowe UI i UX** aplikacji webowej to kamień milowy **M-5**, po M-3 (drugie źródło) i M-4 (weryfikacja i regresja, `context/foundation/verification-scope.md`). Pierwotnie było to M-4; przesunięte tego samego dnia, żeby przebudowa UI miała gotową siatkę regresji. Poniżej cztery propozycje **układu** przekazane przez użytkownika jako makiety (dane demonstracyjne). To nie jest projekt wizualny ani zakres — kolory, typografię i szczegóły wyglądu ustali M-5 (`/10x-ui`, `/10x-roadmap`). Termin: bez presji.
 
+> Od 2026-11-19 (roadmapa v6.1): projekt wizualny i UX całej aplikacji powstaje w F-07 (`ui-design-system`, `context/foundation/ui-design.md`) od nowa, według standardów i wzorców projektowych. Makiety poniżej są dla niego materiałem wejściowym, a nie wzorem do skopiowania; wycinki UI wdrażają zaakceptowany projekt F-07, nie makiety.
+
 Makiety (PNG 1500×950) leżą w `docs/visuals/ui-ux-proposals/`; każda sekcja niżej linkuje swoją.
 
 ## 1. „Czytnik” (Research Edition) — czytanie jednego wpisu z adnotacjami

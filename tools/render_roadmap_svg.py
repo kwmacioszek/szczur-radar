@@ -230,8 +230,10 @@ m5 = {  # lane, title (## Foundations / ## Slices), outcome (At a glance, shorte
     "F-05": ("A", "Testy w przeglądarce w CI", "(fundament) testy w przeglądarce w repo i w CI na atrapie API ustawianej z testu; smoke obecnych przepływów", "done", "—", "e2e-harness"),
     "F-06": ("A", "Zrzuty porównawcze i dostępność", "(fundament) zrzuty katalogu komponentów i widoków w obu motywach i przy 375 px oraz test dostępności w CI", "done", "F-05", "visual-regression"),
     "S-46": ("A", "Motyw jasny i ciemny", "użytkownik przełącza motyw jasny i ciemny w nowej palecie, a wybór jest zapamiętany", "done", "F-06", "light-dark-theme-switch"),
-    "S-49": ("A", "Logowanie na wspólnym fundamencie", "logowanie i aktywacja na wspólnych komponentach i tokenach, bez literałów stylu", "proposed", "S-46", "login-on-shared-foundation"),
-    "S-47": ("A", "Stała nawigacja i układ paneli", "użytkownik porusza się przez stałą nawigację w układzie paneli, bez nagłówka w każdym widoku", "proposed", "S-46", "app-shell-navigation"),
+    "F-07": ("A", "Projekt UI/UX całej aplikacji", "(fundament) projekt UI/UX od nowa według standardów: architektura informacji, tokeny, komponenty, prototypy ekranów", "ready", "—", "ui-design-system"),
+    "F-08": ("A", "Tokeny i komponenty z projektu", "(fundament) język wizualny z F-07 w tokenach i komponentach katalogu, obecne widoki przepięte", "proposed", "F-07, S-46", "design-tokens-and-components"),
+    "S-49": ("A", "Logowanie na wspólnym fundamencie", "logowanie i aktywacja na wspólnych komponentach i tokenach, bez literałów stylu", "proposed", "F-08", "login-on-shared-foundation"),
+    "S-47": ("A", "Stała nawigacja i układ paneli", "użytkownik porusza się przez stałą nawigację w układzie paneli, bez nagłówka w każdym widoku", "proposed", "F-08", "app-shell-navigation"),
     "S-48": ("A", "Wspólne stany widoków", "każdy widok pokazuje te same stany ładowania, pustej listy i błędu z ponowieniem", "proposed", "S-47", "shared-view-states"),
     "S-50": ("A", "Panel admina z komponentów", "admin pracuje w panelu złożonym z komponentów, w nowym układzie", "proposed", "S-48", "admin-panel-components"),
     "S-51": ("B", "Strumień z inspektorem oceny", "użytkownik przegląda strumień wpisów i czyta ocenę wybranego wpisu w panelu inspektora", "proposed", "S-48", "stream-and-inspector"),
@@ -245,8 +247,8 @@ m5 = {  # lane, title (## Foundations / ## Slices), outcome (At a glance, shorte
     "S-59": ("C", "Przegląd dnia", "liczby dnia, cele z proporcjami i najczęściej omawiane cele — wybory jawnie liczbowe", "proposed", "S-55, S-58", "daily-overview"),
     "S-60": ("D", "Miara „kanał jako cel”", "operator widzi udział celów równych kanałowi posta per źródło, z sygnałem przy progu", "proposed", "S-50", "channel-as-target-quality"),
 }
-lanes5 = {  # the streams of roadmap v6
-    "A": ("Siatka i fundament UI", "Testy działania i wyglądu przed przebudową; wspólne pliki, fala sekwencyjna", C["lime"]),
+lanes5 = {  # the streams of roadmap v6.1
+    "A": ("Siatka i fundament UI", "Testy, projekt UI/UX i jego tokeny przed przebudową; fala sekwencyjna", C["lime"]),
     "B": ("Widok wpisu", "Gwiazda przewodnia, potem przekroje listy równolegle", C["sky"]),
     "C": ("Wokół celu", "Agregacja po tekście celu; dołącza do B przy S-52 i S-55", C["sky"]),
     "D": ("Jakość ocen", "Chroni widoki po celu", C["amber"]),
@@ -353,7 +355,7 @@ P5W = P2W
 rows5 = [[("A", 5)], [("B", 4), ("D", 1)], [("C", 3)]]
 M5_COLUMNS = [P5X + INNER + PAD + i * (CW2 + M2_GRID_GAP) for i in range(5)]
 M5_PLACE = {  # column, vertical slot in a two-card row: 0 top, 1 bottom, 0.5 centred
-    "F-05": (0, 0.5), "F-06": (1, 0.5), "S-46": (2, 0), "S-49": (2, 1), "S-47": (3, 0.5), "S-48": (4, 0), "S-50": (4, 1),
+    "F-05": (0, 0), "F-06": (0, 1), "S-46": (1, 0), "F-07": (1, 1), "F-08": (2, 0.5), "S-47": (3, 0), "S-49": (3, 1), "S-48": (4, 0), "S-50": (4, 1),
     "S-51": (0, 0.5), "S-52": (1, 0), "S-53": (1, 1), "S-54": (2, 0), "S-55": (2, 1), "S-56": (3, 0.5), "S-60": (4, 0.5),
     "S-57": (0, 0), "S-58": (1, 0), "S-59": (2, 0),
 }
@@ -383,7 +385,7 @@ text(M + 52, 57, "Szczur Radar", 17, 700)
 text(M + 52, 75, "MARKET INTELLIGENCE", 9.5, 600, C["muted"], spacing="2.4")
 text(M, 134, "MILESTONES I ZALEŻNOŚCI", 11, 700, C["muted"], spacing="2")
 text(M, 172, "Roadmapa produktu", 31, 700)
-text(M, 202, "Źródło: context/foundation/roadmap.md  ·  v6  ·  stan 15.11.2026  ·  bez terminów — kolejność wynika z zależności", 13, 400, C["muted"])
+text(M, 202, "Źródło: context/foundation/roadmap.md  ·  v6.1  ·  stan 19.11.2026  ·  bez terminów — kolejność wynika z zależności", 13, 400, C["muted"])
 
 # M-2 slice states; every counter below is derived from them (M-1 closed with all 10 done)
 m2_order = [("F-04", "done"), ("S-08", "done"), ("S-09", "done"), ("S-10", "done"), ("S-11", "done"), ("S-12", "parked"),
@@ -771,12 +773,15 @@ def L5(k): x, y, w, h = box5[k]; return (x, y + h / 2)
 def R5(k): x, y, w, h = box5[k]; return (x + w, y + h / 2)
 def T5(k, f=0.5): x, y, w, h = box5[k]; return (x + w * f, y)
 def B5(k, f=0.5): x, y, w, h = box5[k]; return (x + w * f, y + h)
+def elbow5(a, b): mx = (R5(a)[0] + L5(b)[0]) / 2; return [R5(a), (mx, R5(a)[1]), (mx, L5(b)[1]), L5(b)]
 e5 = [  # only arrows inside a stream; cross-stream prerequisites are on the cards
-    (("F-05", "F-06"), [R5("F-05"), L5("F-06")], C["lime"], False, "lime"),
-    (("F-06", "S-46"), [R5("F-06"), ((R5("F-06")[0] + L5("S-46")[0]) / 2, R5("F-06")[1]), ((R5("F-06")[0] + L5("S-46")[0]) / 2, L5("S-46")[1]), L5("S-46")], C["lime"], False, "lime"),
-    (("S-46", "S-47"), [R5("S-46"), ((R5("S-46")[0] + L5("S-47")[0]) / 2, R5("S-46")[1]), ((R5("S-46")[0] + L5("S-47")[0]) / 2, L5("S-47")[1]), L5("S-47")], C["lime"], False, "lime"),
-    (("S-46", "S-49"), [B5("S-46"), T5("S-49")], C["sky"], False, "sky"),
-    (("S-47", "S-48"), [R5("S-47"), ((R5("S-47")[0] + L5("S-48")[0]) / 2, R5("S-47")[1]), ((R5("S-47")[0] + L5("S-48")[0]) / 2, L5("S-48")[1]), L5("S-48")], C["lime"], False, "lime"),
+    (("F-05", "F-06"), [B5("F-05"), T5("F-06")], C["lime"], False, "lime"),
+    (("F-06", "S-46"), elbow5("F-06", "S-46"), C["lime"], False, "lime"),
+    (("S-46", "F-08"), elbow5("S-46", "F-08"), C["lime"], False, "lime"),
+    (("F-07", "F-08"), elbow5("F-07", "F-08"), C["lime"], False, "lime"),
+    (("F-08", "S-47"), elbow5("F-08", "S-47"), C["lime"], False, "lime"),
+    (("F-08", "S-49"), elbow5("F-08", "S-49"), C["sky"], False, "sky"),
+    (("S-47", "S-48"), [R5("S-47"), L5("S-48")], C["lime"], False, "lime"),
     (("S-48", "S-50"), [B5("S-48"), T5("S-50")], C["sky"], False, "sky"),
     (("S-51", "S-52"), [R5("S-51"), ((R5("S-51")[0] + L5("S-52")[0]) / 2, R5("S-51")[1]), ((R5("S-51")[0] + L5("S-52")[0]) / 2, L5("S-52")[1]), L5("S-52")], C["sky"], False, "sky"),
     (("S-51", "S-53"), [R5("S-51"), ((R5("S-51")[0] + L5("S-53")[0]) / 2, R5("S-51")[1]), ((R5("S-51")[0] + L5("S-53")[0]) / 2, L5("S-53")[1]), L5("S-53")], C["sky"], False, "sky"),
@@ -816,12 +821,12 @@ for gi, (gname, items) in enumerate(groups):
         text(gx + 34, iy + len(label_lines) * 20, ref, 12, 600, C["dim"], family=MONO)
 
 # ================= footer + assembly =================
-text(M, H - 30, "Strzałki pomijają zależności wynikające ze ścieżek pośrednich i (w M-4, M-5) między strumieniami. Pełne wymagania: na kartach. · Źródło: context/foundation/roadmap.md v6", 11, 400, C["dim"])
+text(M, H - 30, "Strzałki pomijają zależności wynikające ze ścieżek pośrednich i (w M-4, M-5) między strumieniami. Pełne wymagania: na kartach. · Źródło: context/foundation/roadmap.md v6.1", 11, 400, C["dim"])
 text(W - M, H - 30, "MAPA ZALEŻNOŚCI · BEZ TERMINÓW", 10.5, 700, C["dim"], anchor="end", spacing="1.6")
 head = [
     f'<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{H}" viewBox="0 0 {W} {H}" role="img" aria-labelledby="t d">',
     '<title id="t">Szczur Radar — roadmapa produktu: M-1 → M-2 → M-3 → M-4 → M-5 → Po M-5</title>',
-    '<desc id="d">Roadmapa z context/foundation/roadmap.md v6 jako oś od lewej do prawej: kamień milowy M-1 (F-01–F-03, S-01–S-07, ukończony), M-2 MVP Quality &amp; Reliability Hardening (F-04, S-08–S-19, zamknięty 27.10.2026, S-12 zaparkowany), M-3 Drugie źródło na utwardzonym rdzeniu (S-20–S-29, zamknięty 01.11.2026, gwiazda przewodnia S-20), M-4 Weryfikacja i regresja (S-30–S-45, zamknięty 15.11.2026, gwiazda przewodnia S-31), M-5 Nowe UI na sprawdzonym fundamencie (F-05, F-06, S-46–S-60, otwarty 15.11.2026, gwiazda przewodnia S-51) i pozycje odroczone. Strzałka prowadzi od warunku wstępnego do elementu, który od niego zależy.</desc>',
+    '<desc id="d">Roadmapa z context/foundation/roadmap.md v6.1 jako oś od lewej do prawej: kamień milowy M-1 (F-01–F-03, S-01–S-07, ukończony), M-2 MVP Quality &amp; Reliability Hardening (F-04, S-08–S-19, zamknięty 27.10.2026, S-12 zaparkowany), M-3 Drugie źródło na utwardzonym rdzeniu (S-20–S-29, zamknięty 01.11.2026, gwiazda przewodnia S-20), M-4 Weryfikacja i regresja (S-30–S-45, zamknięty 15.11.2026, gwiazda przewodnia S-31), M-5 Nowe UI na sprawdzonym fundamencie (F-05–F-08, S-46–S-60, otwarty 15.11.2026, gwiazda przewodnia S-51) i pozycje odroczone. Strzałka prowadzi od warunku wstępnego do elementu, który od niego zależy.</desc>',
     '<defs>',
 ]
 for name, col in (("lime", C["lime"]), ("done", C["done"]), ("sky", C["sky"]), ("coral", C["coral"]), ("amber", C["amber"]), ("gray", C["muted"])):
