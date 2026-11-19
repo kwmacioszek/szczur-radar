@@ -343,4 +343,4 @@ Brak danych do migracji. Użytkownik bez zapamiętanego wyboru widzi po wdrożen
 
 #### Manual
 
-- [ ] 3.7 Właściciel akceptuje różnice obrazków w PR
+- [x] 3.7 Właściciel akceptuje różnice obrazków w PR — e1263bb
