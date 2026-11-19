@@ -44,10 +44,24 @@ test.describe('przełącznik motywu zalogowanego', () => {
     await expect(toggle).toHaveAttribute('aria-pressed', 'false')
     await expect.poll(() => seen(page)).toEqual(LIGHT)
 
-    // The system goes light and dark again: the choice stays, on the page and after a reload.
+    // The system goes light and dark again: the choice stays, on the page and after a reload. A probe listener,
+    // added after the app's own one would have been, records each change, so the theme is read only once the browser
+    // has delivered it (a listener still following the system would have run first). Each change is awaited on its
+    // own: two quick ones back to the starting scheme may reach the page as none.
+    await page.evaluate(() => {
+      const probe = globalThis as unknown as { schemeChanges: boolean[] }
+      probe.schemeChanges = []
+      matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (event) => {
+        probe.schemeChanges.push(event.matches)
+      })
+    })
+    const changes = () => page.evaluate(() => (globalThis as unknown as { schemeChanges: boolean[] }).schemeChanges)
     await page.emulateMedia({ colorScheme: 'light' })
+    await expect.poll(changes).toEqual([false])
+    expect(await seen(page)).toEqual(LIGHT)
     await page.emulateMedia({ colorScheme: 'dark' })
-    await expect.poll(() => seen(page)).toEqual(LIGHT)
+    await expect.poll(changes).toEqual([false, true])
+    expect(await seen(page)).toEqual(LIGHT)
     await page.reload()
     await expect(toggle).toHaveAttribute('aria-pressed', 'false')
     await expect.poll(() => seen(page)).toEqual(LIGHT)
