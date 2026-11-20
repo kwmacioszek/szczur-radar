@@ -368,11 +368,11 @@ Brak danych i kodu do migracji. Projekt wchodzi do aplikacji w F-08 (tokeny, kom
 
 #### Automated
 
-- [ ] 2.1 Tokeny spełniają progi kontrastu i format zgodny z testem aplikacji
-- [ ] 2.2 Arkusz komponentów przechodzi kontrolę stron w obu motywach przy 1280 i 375 px
-- [ ] 2.3 Każdy komponent z tabeli w `ui-design.md` ma kotwicę w arkuszu, a arkusz ma zrzuty
-- [ ] 2.4 Pliki krojów i ikon mają pliki licencji, a `prototype.css` nie zawiera literałów kolorów
-- [ ] 2.5 Kod aplikacji bez zmian
+- [x] 2.1 Tokeny spełniają progi kontrastu i format zgodny z testem aplikacji
+- [x] 2.2 Arkusz komponentów przechodzi kontrolę stron w obu motywach przy 1280 i 375 px
+- [x] 2.3 Każdy komponent z tabeli w `ui-design.md` ma kotwicę w arkuszu, a arkusz ma zrzuty
+- [x] 2.4 Pliki krojów i ikon mają pliki licencji, a `prototype.css` nie zawiera literałów kolorów
+- [x] 2.5 Kod aplikacji bez zmian
 
 ### Phase 3: Prototypy wszystkich ekranów
 

@@ -41,6 +41,7 @@ Every theme-aware page sets `data-theme` on `<html>` itself from the address: `?
 | Path | What it is |
 | --- | --- |
 | `design-check.mjs` | the script |
+| `inline-sprite.mjs` | puts `context/foundation/ui-design/icons/sprite.svg` into prototype pages between `<!--sprite-->` and `<!--/sprite-->` (a page opened from a file cannot load an external `<use>`): `node tools/design-check/inline-sprite.mjs <page.html \| directory>...`; rerun after the sprite changes |
 | `fixtures/ok/` | a small valid set (`tokens.css`, `pairs.json`, `page.html`); `selftest` runs its `pages` without the font check, because the repository holds no text font file to declare (the font check is proved by `broken/system-font.html`) |
 | `fixtures/broken/` | deliberately broken samples, one per kind of violation |
 | `fixtures/app-pairs.json` | the 19 pairs of `PAIRS` in `szczur-radar-web/src/styleContract.test.ts` with `min` 4.5: `contrast szczur-radar-web/src/style.css tools/design-check/fixtures/app-pairs.json` exits 0, which proves the parser reads the application's file as its test does |

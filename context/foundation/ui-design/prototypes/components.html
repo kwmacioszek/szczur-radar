@@ -1,0 +1,940 @@
+<!doctype html>
+<html lang="pl" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Komponenty – Szczur Radar</title>
+<script>
+  // Motyw to atrybut data-theme na <html>, jak w aplikacji; prototyp bierze go z ?theme=dark.
+  document.documentElement.dataset.theme =
+    new URLSearchParams(location.search).get('theme') === 'dark' ? 'dark' : 'light'
+</script>
+<link rel="stylesheet" href="../tokens.css">
+<link rel="stylesheet" href="prototype.css">
+</head>
+<body>
+
+<!--sprite-->
+<svg class="sprite" aria-hidden="true" focusable="false">
+<symbol id="i-arrow-down-up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+    <path d="m3 16 4 4 4-4" />
+    <path d="M7 20V4" />
+    <path d="m21 8-4-4-4 4" />
+    <path d="M17 4v16" />
+  </symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M10.268 21a2 2 0 0 0 3.464 0" />
+    <path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326" />
+  </symbol>
+  <symbol id="i-braces" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M8 3H7a2 2 0 0 0-2 2v5a2 2 0 0 1-2 2 2 2 0 0 1 2 2v5c0 1.1.9 2 2 2h1" />
+    <path d="M16 21h1a2 2 0 0 0 2-2v-5c0-1.1.9-2 2-2a2 2 0 0 1-2-2V5a2 2 0 0 0-2-2h-1" />
+  </symbol>
+  <symbol id="i-calendar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M8 2v3" />
+    <path d="M16 2v3" />
+    <rect x="3" y="3" width="18" height="18" rx="2" />
+    <path d="M3 9h18" />
+  </symbol>
+  <symbol id="i-chevron-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+    <path d="m6 9 6 6 6-6" />
+  </symbol>
+  <symbol id="i-chevron-left" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+    <path d="m15 18-6-6 6-6" />
+  </symbol>
+  <symbol id="i-chevron-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+    <path d="m9 18 6-6-6-6" />
+  </symbol>
+  <symbol id="i-circle-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="10" />
+    <line x1="12" x2="12" y1="8" y2="12" />
+    <line x1="12" x2="12.01" y1="16" y2="16" />
+  </symbol>
+  <symbol id="i-circle-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="10" />
+    <path d="m16 9-5.5 5.5L8 12" />
+  </symbol>
+  <symbol id="i-external-link" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M15 3h6v6" />
+    <path d="M10 14 21 3" />
+    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+  </symbol>
+  <symbol id="i-inbox" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="22 12 16 12 14 15 10 15 8 12 2 12" />
+    <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" />
+  </symbol>
+  <symbol id="i-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="10" />
+    <path d="M12 16v-4" />
+    <path d="M12 8h.01" />
+  </symbol>
+  <symbol id="i-list-filter" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M2 5h20" />
+    <path d="M6 12h12" />
+    <path d="M9 19h6" />
+  </symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401" />
+  </symbol>
+  <symbol id="i-play" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z" />
+  </symbol>
+  <symbol id="i-refresh-cw" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+    <path d="M21 3v5h-5" />
+    <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
+    <path d="M8 16H3v5" />
+  </symbol>
+  <symbol id="i-rotate-ccw" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+    <path d="M3 3v5h5" />
+  </symbol>
+  <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+    <path d="m21 21-4.34-4.34" />
+    <circle cx="11" cy="11" r="8" />
+  </symbol>
+  <symbol id="i-triangle-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+    <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3" />
+    <path d="M12 9v4" />
+    <path d="M12 17h.01" />
+  </symbol>
+  <symbol id="i-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M18 6 6 18" />
+    <path d="m6 6 12 12" />
+  </symbol>
+  <symbol id="i-brand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 12 18.4 5.6"/><path d="M12 7a5 5 0 0 1 5 5"/></symbol>
+  <symbol id="s-up" viewBox="0 0 12 12" fill="currentColor"><path d="M6 2 11 10H1Z"/></symbol>
+  <symbol id="s-down" viewBox="0 0 12 12" fill="currentColor"><path d="M6 10 1 2h10Z"/></symbol>
+  <symbol id="s-flat" viewBox="0 0 12 12" fill="currentColor"><rect x="1" y="5" width="10" height="2" rx="1"/></symbol>
+  <symbol id="s-mixed" viewBox="0 0 12 12" fill="currentColor"><path d="M6 .5 9.5 5h-7ZM6 11.5 2.5 7h7Z"/></symbol>
+  <symbol id="s-none" viewBox="0 0 12 12" fill="currentColor"><path fill-rule="evenodd" d="M6 1.5a4.5 4.5 0 1 0 0 9 4.5 4.5 0 0 0 0-9Zm0 1.5a3 3 0 1 1 0 6 3 3 0 0 1 0-6Z"/></symbol>
+</svg>
+<!--/sprite-->
+
+<header class="app-bar" id="c-nawigacja">
+  <a class="brand" href="#c-nawigacja">
+    <svg class="icon brand-mark" aria-hidden="true"><use href="#i-brand"/></svg>
+    <span>Szczur Radar</span>
+  </a>
+  <nav class="nav" aria-label="Główna">
+    <a href="#c-klocek-liczby">Przegląd</a>
+    <a href="#c-wiersz-posta" aria-current="page">Posty</a>
+    <a href="#c-karta-tematu">Cele</a>
+    <a href="#c-tabela">Panel admina</a>
+  </nav>
+  <div class="session">
+    <p class="freshness">Dane z <time datetime="2026-10-20T09:52">09:52</time> (Wykop) i <time datetime="2026-10-20T08:40">08:40</time> (Reddit)</p>
+    <button type="button" class="icon-btn" aria-label="Powiadomienia, 2 nieprzeczytane" aria-expanded="false">
+      <svg class="icon" aria-hidden="true"><use href="#i-bell"/></svg>
+      <span class="bell-count" aria-hidden="true">2</span>
+    </button>
+    <button type="button" class="icon-btn" aria-pressed="false" aria-label="Ciemny motyw">
+      <svg class="icon" aria-hidden="true"><use href="#i-moon"/></svg>
+    </button>
+    <span class="who">admin@szczur-radar.example</span>
+    <button type="button" class="btn">Wyloguj</button>
+  </div>
+</header>
+
+<main>
+<div class="sheet-head">
+  <h1>Komponenty</h1>
+  <p class="page-sub">Każdy element interfejsu Szczur Radar w każdym stanie. Pasek u góry strony to komponent „Nawigacja”.</p>
+  <ul class="sheet-toc">
+    <li><a class="link" href="#c-podstawy">Podstawy</a></li>
+    <li><a class="link" href="#c-przycisk">Przycisk</a></li>
+    <li><a class="link" href="#c-odnosnik">Odnośnik</a></li>
+    <li><a class="link" href="#c-pola">Pola</a></li>
+    <li><a class="link" href="#c-przelacznik">Przełącznik zakresu</a></li>
+    <li><a class="link" href="#c-znacznik-stanu">Znacznik stanu</a></li>
+    <li><a class="link" href="#c-stanowisko">Stanowisko</a></li>
+    <li><a class="link" href="#c-cel">Cel ze stanowiskiem</a></li>
+    <li><a class="link" href="#c-pasek-proporcji">Pasek proporcji</a></li>
+    <li><a class="link" href="#c-naglowek-strony">Nagłówek strony</a></li>
+    <li><a class="link" href="#c-klocek-liczby">Klocek liczby</a></li>
+    <li><a class="link" href="#c-karta-tematu">Karta celu dnia</a></li>
+    <li><a class="link" href="#c-wiersz-posta">Wiersz posta</a></li>
+    <li><a class="link" href="#c-filtry">Filtry</a></li>
+    <li><a class="link" href="#c-stronicowanie">Stronicowanie</a></li>
+    <li><a class="link" href="#c-panel">Panel boczny</a></li>
+    <li><a class="link" href="#c-cytat">Cytat w treści</a></li>
+    <li><a class="link" href="#c-karta-celu">Cel w ocenie</a></li>
+    <li><a class="link" href="#c-powiadomienia">Powiadomienia</a></li>
+    <li><a class="link" href="#c-podnawigacja">Części panelu</a></li>
+    <li><a class="link" href="#c-tabela">Tabela</a></li>
+    <li><a class="link" href="#c-komunikat">Komunikat</a></li>
+    <li><a class="link" href="#c-szkielet">Ładowanie</a></li>
+    <li><a class="link" href="#c-pusta-lista">Pusta lista</a></li>
+    <li><a class="link" href="#c-blad">Błąd z ponowieniem</a></li>
+    <li><a class="link" href="#c-motyw">Motyw</a></li>
+    <li><a class="link" href="#c-ikony">Ikony</a></li>
+  </ul>
+</div>
+
+<div class="page">
+
+<section class="sheet-section" id="c-podstawy" aria-labelledby="t-podstawy">
+  <h2 class="h-section" id="t-podstawy">Podstawy</h2>
+  <p class="note">Role koloru i skala pisma. Każdy komponent bierze wartości wyłącznie stąd.</p>
+  <ul class="swatches">
+    <li class="swatch"><span class="swatch-chip" style="background: var(--bg)"></span><code>--bg</code>tło strony</li>
+    <li class="swatch"><span class="swatch-chip" style="background: var(--surface)"></span><code>--surface</code>karty, listy, panele</li>
+    <li class="swatch"><span class="swatch-chip" style="background: var(--surface-2)"></span><code>--surface-2</code>wskazany wiersz, blok w panelu</li>
+    <li class="swatch"><span class="swatch-chip" style="background: var(--selected)"></span><code>--selected</code>wybrany wiersz i opcja</li>
+    <li class="swatch"><span class="swatch-chip" style="background: var(--text-h)"></span><code>--text-h</code>nagłówki i treść główna</li>
+    <li class="swatch"><span class="swatch-chip" style="background: var(--text)"></span><code>--text</code>tekst zwykły</li>
+    <li class="swatch"><span class="swatch-chip" style="background: var(--text-muted)"></span><code>--text-muted</code>metadane</li>
+    <li class="swatch"><span class="swatch-chip" style="background: var(--accent)"></span><code>--accent</code>działanie główne, odnośniki, fokus</li>
+    <li class="swatch"><span class="swatch-chip" style="background: var(--border)"></span><code>--border</code>krawędź pola i przycisku</li>
+    <li class="swatch"><span class="swatch-chip" style="background: var(--line)"></span><code>--line</code>linie podziału</li>
+    <li class="swatch"><span class="swatch-chip" style="background: var(--success)"></span><code>--success</code>wzrost, powodzenie</li>
+    <li class="swatch"><span class="swatch-chip" style="background: var(--destructive)"></span><code>--destructive</code>spadek, błąd</li>
+    <li class="swatch"><span class="swatch-chip" style="background: var(--warning)"></span><code>--warning</code>uwaga, stanowisko mieszane</li>
+    <li class="swatch"><span class="swatch-chip" style="background: var(--stance-neutral)"></span><code>--stance-neutral</code>stanowisko neutralne</li>
+    <li class="swatch"><span class="swatch-chip" style="background: var(--highlight)"></span><code>--highlight</code>cytat w treści</li>
+    <li class="swatch"><span class="swatch-chip" style="background: var(--success-soft)"></span><code>--success-soft</code>tło znacznika</li>
+    <li class="swatch"><span class="swatch-chip" style="background: var(--destructive-soft)"></span><code>--destructive-soft</code>tło znacznika</li>
+    <li class="swatch"><span class="swatch-chip" style="background: var(--warning-soft)"></span><code>--warning-soft</code>tło znacznika</li>
+    <li class="swatch"><span class="swatch-chip" style="background: var(--neutral-soft)"></span><code>--neutral-soft</code>tło znacznika</li>
+  </ul>
+  <div class="type-samples">
+    <p class="type-sample"><code>display · 48</code><span class="t-display" style="font-size: var(--font-size-display)">Przegląd dnia</span></p>
+    <p class="type-sample"><code>6xl · 38</code><span class="t-display" style="font-size: var(--font-size-6xl)">Tytuł otwartego posta</span></p>
+    <p class="type-sample"><code>5xl · 32</code><span class="t-display" style="font-size: var(--font-size-5xl)">KGHM</span></p>
+    <p class="type-sample"><code>4xl · 26</code><span class="t-display" style="font-size: var(--font-size-4xl)">Najczęściej omawiane</span></p>
+    <p class="type-sample"><code>3xl · 22</code><span class="t-display" style="font-size: var(--font-size-3xl)">Nazwa celu w ocenie</span></p>
+    <p class="type-sample"><code>2xl · 20</code><span style="font-family: var(--font-display); font-size: var(--font-size-2xl); line-height: var(--leading-relaxed)">Treść posta czyta się szeryfem, w wierszach do 38 rem.</span></p>
+    <p class="type-sample"><code>xl · 18</code><span style="font-family: var(--font-display); font-size: var(--font-size-xl); font-weight: var(--weight-medium)">Tytuł posta w liście</span></p>
+    <p class="type-sample"><code>lg · 16</code><span style="font-size: var(--font-size-lg)">Duże pole wyszukiwania</span></p>
+    <p class="type-sample"><code>md · 15</code><span style="font-size: var(--font-size-md)">Tekst interfejsu, przyciski, pola, twierdzenia</span></p>
+    <p class="type-sample"><code>sm · 14</code><span style="font-size: var(--font-size-sm)">Znaczniki, etykiety pól, nagłówek dnia</span></p>
+    <p class="type-sample"><code>xs · 13</code><span style="font-size: var(--font-size-xs)">Metadane: godzina, źródło, rodzaj celu, model oceny</span></p>
+    <p class="type-sample"><code>mono · 13</code><span style="font-family: var(--font-mono); font-size: var(--font-size-xs)">{ "source": "wykop", "itemType": "post" }</span></p>
+  </div>
+</section>
+
+<section class="sheet-section" id="c-przycisk" aria-labelledby="t-przycisk">
+  <h2 class="h-section" id="t-przycisk">Przycisk</h2>
+  <p class="note">Jeden główny przycisk na widok. Reszta to przyciski zwykłe albo same ikony z nazwą dla czytnika ekranu.</p>
+  <div class="demo">
+    <div class="demo-item"><span class="demo-label">Główny: domyślny, wskazany, fokus</span>
+      <div class="demo-row">
+        <button type="button" class="btn btn-primary">Uruchom</button>
+        <button type="button" class="btn btn-primary is-hover">Uruchom</button>
+        <button type="button" class="btn btn-primary is-focus">Uruchom</button>
+      </div></div>
+    <div class="demo-item"><span class="demo-label">Główny: wyłączony, w toku</span>
+      <div class="demo-row">
+        <button type="button" class="btn btn-primary" disabled>Uruchom</button>
+        <button type="button" class="btn btn-primary" aria-busy="true"><span class="spinner" aria-hidden="true"></span>Uruchamianie…</button>
+      </div></div>
+    <div class="demo-item"><span class="demo-label">Zwykły: domyślny, wskazany, fokus</span>
+      <div class="demo-row">
+        <button type="button" class="btn">Wyczyść filtry</button>
+        <button type="button" class="btn is-hover">Wyczyść filtry</button>
+        <button type="button" class="btn is-focus">Wyczyść filtry</button>
+      </div></div>
+    <div class="demo-item"><span class="demo-label">Zwykły: wyłączony, w toku</span>
+      <div class="demo-row">
+        <button type="button" class="btn" disabled>Wyloguj</button>
+        <button type="button" class="btn" aria-busy="true"><span class="spinner" aria-hidden="true"></span>Wylogowywanie…</button>
+      </div></div>
+    <div class="demo-item"><span class="demo-label">Z ikoną</span>
+      <div class="demo-row">
+        <button type="button" class="btn"><svg class="icon" aria-hidden="true"><use href="#i-list-filter"/></svg>Filtry</button>
+        <button type="button" class="btn"><svg class="icon" aria-hidden="true"><use href="#i-refresh-cw"/></svg>Spróbuj ponownie</button>
+        <button type="button" class="btn btn-primary"><svg class="icon" aria-hidden="true"><use href="#i-play"/></svg>Uruchom</button>
+      </div></div>
+    <div class="demo-item"><span class="demo-label">Duży, obok dużego pola wyszukiwania</span>
+      <button type="button" class="btn btn-lg"><svg class="icon" aria-hidden="true"><use href="#i-list-filter"/></svg>Filtry</button></div>
+    <div class="demo-item"><span class="demo-label">Sama ikona: domyślna, wskazana, fokus, wyłączona, włączona</span>
+      <div class="demo-row">
+        <button type="button" class="icon-btn" aria-label="Poprzedni post"><svg class="icon" aria-hidden="true"><use href="#i-chevron-left"/></svg></button>
+        <button type="button" class="icon-btn is-hover" aria-label="Następny post"><svg class="icon" aria-hidden="true"><use href="#i-chevron-right"/></svg></button>
+        <button type="button" class="icon-btn is-focus" aria-label="Zamknij"><svg class="icon" aria-hidden="true"><use href="#i-x"/></svg></button>
+        <button type="button" class="icon-btn" aria-label="Poprzedni dzień" disabled><svg class="icon" aria-hidden="true"><use href="#i-chevron-left"/></svg></button>
+        <button type="button" class="icon-btn" aria-pressed="true" aria-label="Surowe dane"><svg class="icon" aria-hidden="true"><use href="#i-braces"/></svg></button>
+      </div></div>
+  </div>
+</section>
+
+<section class="sheet-section" id="c-odnosnik" aria-labelledby="t-odnosnik">
+  <h2 class="h-section" id="t-odnosnik">Odnośnik</h2>
+  <p class="note">Odnośnik prowadzi do innego miejsca, przycisk coś robi. Odnośnik poza aplikację ma ikonę i otwiera nową kartę.</p>
+  <div class="demo">
+    <div class="demo-item"><span class="demo-label">Domyślny, wskazany, fokus</span>
+      <div class="demo-row">
+        <a class="link" href="#c-odnosnik">Wszystkie posty o KGHM</a>
+        <a class="link is-hover" href="#c-odnosnik">Wszystkie posty o KGHM</a>
+        <a class="link is-focus" href="#c-odnosnik">Wszystkie posty o KGHM</a>
+      </div></div>
+    <div class="demo-item"><span class="demo-label">Poza aplikację</span>
+      <a class="ext" href="#c-odnosnik" aria-label="Otwórz oryginał na wykop.pl (otwiera się w nowej karcie)">Oryginał na wykop.pl<svg class="icon" aria-hidden="true"><use href="#i-external-link"/></svg></a></div>
+  </div>
+</section>
+
+<section class="sheet-section" id="c-pola" aria-labelledby="t-pola">
+  <h2 class="h-section" id="t-pola">Pola</h2>
+  <p class="note">Każde pole ma widoczną etykietę nad sobą. Błąd stoi pod polem, słowami, z ikoną.</p>
+  <div class="demo">
+    <div class="demo-item demo-stretch"><div class="field"><label for="f-email">E-mail</label><input type="email" id="f-email" value="admin@szczur-radar.example" autocomplete="off"></div><span class="demo-label">Tekst: wypełnione</span></div>
+    <div class="demo-item demo-stretch"><div class="field"><label for="f-email-empty">E-mail</label><input type="email" id="f-email-empty" autocomplete="off"></div><span class="demo-label">Tekst: puste</span></div>
+    <div class="demo-item demo-stretch"><div class="field"><label for="f-email-hover">E-mail</label><input type="email" id="f-email-hover" class="is-hover" autocomplete="off"></div><span class="demo-label">Tekst: wskazane</span></div>
+    <div class="demo-item demo-stretch"><div class="field"><label for="f-email-focus">E-mail</label><input type="email" id="f-email-focus" class="is-focus" autocomplete="off"></div><span class="demo-label">Tekst: fokus</span></div>
+    <div class="demo-item demo-stretch"><div class="field"><label for="f-email-off">E-mail</label><input type="email" id="f-email-off" value="admin@szczur-radar.example" disabled></div><span class="demo-label">Tekst: wyłączone</span></div>
+    <div class="demo-item demo-stretch"><div class="field"><label for="f-pass">Hasło</label><input type="password" id="f-pass" value="haslo-probne" aria-invalid="true" aria-describedby="f-pass-err" autocomplete="off"><p class="field-error" id="f-pass-err"><svg class="icon" aria-hidden="true"><use href="#i-circle-alert"/></svg>Hasło musi mieć co najmniej 12 znaków.</p></div><span class="demo-label">Hasło: błąd</span></div>
+    <div class="demo-item demo-stretch"><div class="field"><label for="f-pass2">Powtórz hasło</label><input type="password" id="f-pass2" aria-describedby="f-pass2-hint" autocomplete="off"><p class="field-hint" id="f-pass2-hint">Te same znaki co wyżej.</p></div><span class="demo-label">Hasło: z podpowiedzią</span></div>
+    <div class="demo-item demo-stretch"><div class="field"><label for="f-search">Spółka lub temat</label><span class="input-wrap"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg><input type="search" id="f-search" value="KGHM"></span></div><span class="demo-label">Wyszukiwanie</span></div>
+    <div class="demo-item demo-stretch"><div class="field"><label for="f-date">Dzień</label><input type="date" id="f-date" value="2026-10-20"></div><span class="demo-label">Data</span></div>
+    <div class="demo-item demo-stretch"><div class="field"><label for="f-kind">Rodzaj celu</label><select id="f-kind"><option>dowolny</option><option>spółka</option><option>aktywo</option><option>sektor</option><option>makro i rynek</option></select></div><span class="demo-label">Lista wyboru</span></div>
+    <div class="demo-item demo-stretch"><div class="field"><label for="f-kind-off">Stanowisko</label><select id="f-kind-off" disabled><option>dowolne</option></select></div><span class="demo-label">Lista wyboru: wyłączona</span></div>
+    <div class="demo-item"><div class="demo-row">
+      <label class="check"><input type="checkbox" checked>Podświetl cytaty</label>
+      <label class="check"><input type="checkbox">Tylko ostrożne</label>
+      <label class="check"><input type="checkbox" disabled>Wyłączone</label>
+    </div><span class="demo-label">Pole wyboru: zaznaczone, puste, wyłączone</span></div>
+  </div>
+  <div class="demo demo-wide">
+    <div class="demo-item demo-stretch"><span class="demo-label">Duże wyszukiwanie nad listą postów: puste z podpowiedzią</span>
+      <span class="input-wrap input-lg"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg><input type="search" aria-label="Szukaj w postach" placeholder="Szukaj spółki lub tematu"></span></div>
+  </div>
+</section>
+
+<section class="sheet-section" id="c-przelacznik" aria-labelledby="t-przelacznik">
+  <h2 class="h-section" id="t-przelacznik">Przełącznik zakresu</h2>
+  <p class="note">Dwie opcje z liczbą postów. Zmienia zakres całego widoku: listy, klocków i tabeli.</p>
+  <div class="demo demo-roomy">
+    <div class="demo-item"><span class="demo-label">Domyślny: „Inwestycyjne”</span>
+      <div class="scope" role="group" aria-label="Zakres postów">
+        <button type="button" class="scope-opt" aria-pressed="true">Inwestycyjne <span class="scope-n">128</span></button>
+        <button type="button" class="scope-opt" aria-pressed="false">Wszystkie <span class="scope-n">165</span></button>
+      </div></div>
+    <div class="demo-item"><span class="demo-label">Druga opcja wskazana</span>
+      <div class="scope" role="group" aria-label="Zakres postów, opcja wskazana">
+        <button type="button" class="scope-opt" aria-pressed="true">Inwestycyjne <span class="scope-n">128</span></button>
+        <button type="button" class="scope-opt is-hover" aria-pressed="false">Wszystkie <span class="scope-n">165</span></button>
+      </div></div>
+    <div class="demo-item"><span class="demo-label">Fokus na drugiej opcji</span>
+      <div class="scope" role="group" aria-label="Zakres postów, fokus">
+        <button type="button" class="scope-opt" aria-pressed="true">Inwestycyjne <span class="scope-n">128</span></button>
+        <button type="button" class="scope-opt is-focus" aria-pressed="false">Wszystkie <span class="scope-n">165</span></button>
+      </div></div>
+    <div class="demo-item"><span class="demo-label">Wybrane „Wszystkie”</span>
+      <div class="scope" role="group" aria-label="Zakres postów, wszystkie">
+        <button type="button" class="scope-opt" aria-pressed="false">Inwestycyjne <span class="scope-n">128</span></button>
+        <button type="button" class="scope-opt" aria-pressed="true">Wszystkie <span class="scope-n">165</span></button>
+      </div></div>
+    <div class="demo-item"><span class="demo-label">Ładowanie: bez liczb, wyłączony</span>
+      <div class="scope" role="group" aria-label="Zakres postów, ładowanie">
+        <button type="button" class="scope-opt" aria-pressed="true" disabled>Inwestycyjne</button>
+        <button type="button" class="scope-opt" aria-pressed="false" disabled>Wszystkie</button>
+      </div></div>
+    <div class="demo-item"><span class="demo-label">Pusty dzień</span>
+      <div class="scope" role="group" aria-label="Zakres postów, pusty dzień">
+        <button type="button" class="scope-opt" aria-pressed="true">Inwestycyjne <span class="scope-n">0</span></button>
+        <button type="button" class="scope-opt" aria-pressed="false">Wszystkie <span class="scope-n">0</span></button>
+      </div></div>
+  </div>
+</section>
+
+<section class="sheet-section" id="c-znacznik-stanu" aria-labelledby="t-znacznik-stanu">
+  <h2 class="h-section" id="t-znacznik-stanu">Znacznik stanu</h2>
+  <p class="note">Stan przebiegu, kroku albo źródła. Stan mówi tekst, kolor go tylko wzmacnia.</p>
+  <div class="demo demo-roomy">
+    <div class="demo-item"><span class="demo-label">Stany przebiegu</span>
+      <div class="demo-row">
+        <span class="badge badge-neutral">w kolejce</span>
+        <span class="badge badge-info">trwa</span>
+        <span class="badge badge-success">zakończony</span>
+        <span class="badge badge-warning">częściowo</span>
+        <span class="badge badge-warning">przerwany – nowe wdrożenie</span>
+        <span class="badge badge-destructive">błąd</span>
+      </div></div>
+    <div class="demo-item"><span class="demo-label">Z ikoną, gdy stan wymaga uwagi</span>
+      <div class="demo-row">
+        <span class="badge badge-warning"><svg class="icon" aria-hidden="true"><use href="#i-triangle-alert"/></svg>zakończony – pominięte: 3</span>
+        <span class="badge badge-destructive"><svg class="icon" aria-hidden="true"><use href="#i-circle-alert"/></svg>błąd</span>
+      </div></div>
+  </div>
+</section>
+
+<section class="sheet-section" id="c-stanowisko" aria-labelledby="t-stanowisko">
+  <h2 class="h-section" id="t-stanowisko">Stanowisko</h2>
+  <p class="note">Stanowisko autora wobec celu: znak, słowo i kolor naraz. Sześć kierunków, każdy może być ostrożny.</p>
+  <div class="demo demo-roomy">
+    <div class="demo-item"><span class="demo-label">Sześć kierunków</span>
+      <div class="demo-row">
+        <span class="stance stance-bullish"><svg class="mark" aria-hidden="true"><use href="#s-up"/></svg><span class="t-stance">wzrostowo</span></span>
+        <span class="stance stance-bearish"><svg class="mark" aria-hidden="true"><use href="#s-down"/></svg><span class="t-stance">spadkowo</span></span>
+        <span class="stance stance-neutral"><svg class="mark" aria-hidden="true"><use href="#s-flat"/></svg><span class="t-stance">neutralnie</span></span>
+        <span class="stance stance-mixed"><svg class="mark" aria-hidden="true"><use href="#s-mixed"/></svg><span class="t-stance">mieszanie</span></span>
+        <span class="stance stance-none"><svg class="mark" aria-hidden="true"><use href="#s-none"/></svg><span class="t-stance">bez stanowiska</span></span>
+        <span class="stance stance-none"><svg class="mark" aria-hidden="true"><use href="#s-none"/></svg><span class="t-stance">niejasno</span></span>
+      </div></div>
+    <div class="demo-item"><span class="demo-label">Ostrożnie</span>
+      <div class="demo-row">
+        <span class="stance stance-bullish"><svg class="mark" aria-hidden="true"><use href="#s-up"/></svg><span class="t-stance">wzrostowo</span> <span class="t-hedge">ostrożnie</span></span>
+        <span class="stance stance-bearish"><svg class="mark" aria-hidden="true"><use href="#s-down"/></svg><span class="t-stance">spadkowo</span> <span class="t-hedge">ostrożnie</span></span>
+      </div></div>
+  </div>
+</section>
+
+<section class="sheet-section" id="c-cel" aria-labelledby="t-cel">
+  <h2 class="h-section" id="t-cel">Cel ze stanowiskiem</h2>
+  <p class="note">Nazwa celu i stanowisko autora w jednym znaczniku. Rodzaj celu pojawia się tam, gdzie jest miejsce.</p>
+  <div class="demo demo-roomy">
+    <div class="demo-item"><span class="demo-label">W liście postów: nazwa i stanowisko</span>
+      <div class="demo-row">
+        <span class="stance stance-bullish"><span class="t-name">KGHM</span><svg class="mark" aria-hidden="true"><use href="#s-up"/></svg><span class="t-stance">wzrostowo</span></span>
+        <span class="stance stance-bearish"><span class="t-name">CD Projekt</span><svg class="mark" aria-hidden="true"><use href="#s-down"/></svg><span class="t-stance">spadkowo</span> <span class="t-hedge">ostrożnie</span></span>
+        <span class="stance stance-neutral"><span class="t-name">złoto</span><svg class="mark" aria-hidden="true"><use href="#s-flat"/></svg><span class="t-stance">neutralnie</span></span>
+      </div></div>
+    <div class="demo-item"><span class="demo-label">Z rodzajem celu</span>
+      <div class="demo-row">
+        <span class="stance stance-bullish"><span class="t-name">KGHM</span><span class="kind">spółka</span><svg class="mark" aria-hidden="true"><use href="#s-up"/></svg><span class="t-stance">wzrostowo</span></span>
+        <span class="stance stance-mixed"><span class="t-name">stopy procentowe</span><span class="kind">makro i rynek</span><svg class="mark" aria-hidden="true"><use href="#s-mixed"/></svg><span class="t-stance">mieszanie</span></span>
+        <span class="stance stance-none"><span class="t-name">banki</span><span class="kind">sektor</span><svg class="mark" aria-hidden="true"><use href="#s-none"/></svg><span class="t-stance">bez stanowiska</span></span>
+      </div></div>
+  </div>
+</section>
+
+<section class="sheet-section" id="c-pasek-proporcji" aria-labelledby="t-pasek-proporcji">
+  <h2 class="h-section" id="t-pasek-proporcji">Pasek proporcji stanowisk</h2>
+  <p class="note">Udział stanowisk wzrostowych, spadkowych i pozostałych. Pasek jest obrazkiem, liczby stoją obok jako tekst.</p>
+  <div class="demo">
+    <div class="demo-item demo-stretch"><span class="demo-label">Trzy części z liczbami</span>
+      <div class="bar bar-lg" role="img" aria-label="Stanowiska: 14 wzrostowych, 5 spadkowych, 4 pozostałe">
+        <span class="seg seg-up" style="flex-grow: 14"></span><span class="seg seg-down" style="flex-grow: 5"></span><span class="seg seg-rest" style="flex-grow: 4"></span>
+      </div>
+      <p class="shares-legend"><span class="share-up">14 wzrostowych</span><span class="share-down">5 spadkowych</span><span class="share-rest">4 pozostałe</span></p></div>
+    <div class="demo-item demo-stretch"><span class="demo-label">Jedna strona</span>
+      <div class="bar bar-lg" role="img" aria-label="Stanowiska: 0 wzrostowych, 7 spadkowych, 0 pozostałych">
+        <span class="seg seg-down" style="flex-grow: 7"></span>
+      </div>
+      <p class="shares-legend"><span class="share-rest">0 wzrostowych</span><span class="share-down">7 spadkowych</span><span class="share-rest">0 pozostałych</span></p></div>
+    <div class="demo-item demo-stretch"><span class="demo-label">Cienki, w wierszu tabeli</span>
+      <div class="bar" role="img" aria-label="Stanowiska: 9 wzrostowych, 8 spadkowych, 2 pozostałe">
+        <span class="seg seg-up" style="flex-grow: 9"></span><span class="seg seg-down" style="flex-grow: 8"></span><span class="seg seg-rest" style="flex-grow: 2"></span>
+      </div></div>
+    <div class="demo-item demo-stretch"><span class="demo-label">Pusty: cel bez stanowisk</span>
+      <div class="bar bar-lg bar-empty" role="img" aria-label="Brak stanowisk"></div>
+      <p class="shares-legend"><span class="share-rest">Brak stanowisk</span></p></div>
+  </div>
+</section>
+
+<section class="sheet-section" id="c-naglowek-strony" aria-labelledby="t-naglowek-strony">
+  <h2 class="h-section" id="t-naglowek-strony">Nagłówek strony</h2>
+  <p class="note">Tytuł mówi, gdzie jesteś. Po prawej tylko to, co zmienia cały widok: zakres i dzień.</p>
+  <div class="demo demo-wide">
+    <div class="demo-item demo-stretch"><span class="demo-label">Przegląd dnia: tytuł, dzień, zakres i wybór dnia</span>
+      <div class="page-head">
+        <div>
+          <p class="page-title">Przegląd dnia</p>
+          <p class="page-sub">wtorek, 20 października 2026</p>
+        </div>
+        <div class="view-tools">
+          <div class="scope" role="group" aria-label="Zakres postów w nagłówku">
+            <button type="button" class="scope-opt" aria-pressed="true">Inwestycyjne <span class="scope-n">128</span></button>
+            <button type="button" class="scope-opt" aria-pressed="false">Wszystkie <span class="scope-n">165</span></button>
+          </div>
+          <div class="day-nav">
+            <button type="button" class="icon-btn" aria-label="Poprzedni dzień"><svg class="icon" aria-hidden="true"><use href="#i-chevron-left"/></svg></button>
+            <input type="date" aria-label="Dzień" value="2026-10-20">
+            <button type="button" class="icon-btn" aria-label="Następny dzień" disabled><svg class="icon" aria-hidden="true"><use href="#i-chevron-right"/></svg></button>
+          </div>
+        </div>
+      </div></div>
+  </div>
+</section>
+
+<section class="sheet-section" id="c-klocek-liczby" aria-labelledby="t-klocek-liczby">
+  <h2 class="h-section" id="t-klocek-liczby">Klocek liczby</h2>
+  <p class="note">Jedna liczba dnia z podpisem. Pięć klocków odpowiada na pytanie „na czym stoimy” bez czytania zdań.</p>
+  <div class="demo demo-wide">
+    <div class="demo-item demo-stretch"><span class="demo-label">Dzień z danymi</span>
+      <dl class="figures" style="margin-top: 0">
+        <div class="figure"><dt>Posty</dt><dd><span class="num">128</span><span class="sub">Wykop 92, Reddit 36</span></dd></div>
+        <div class="figure"><dt>Cele ze stanowiskiem</dt><dd><span class="num">41</span><span class="sub">w 97 postach</span></dd></div>
+        <div class="figure figure-up"><dt>Wzrostowe</dt><dd><span class="num"><svg class="mark" aria-hidden="true"><use href="#s-up"/></svg>45%</span><span class="sub">82 stanowiska</span></dd></div>
+        <div class="figure figure-down"><dt>Spadkowe</dt><dd><span class="num"><svg class="mark" aria-hidden="true"><use href="#s-down"/></svg>23%</span><span class="sub">42 stanowiska</span></dd></div>
+        <div class="figure figure-rest"><dt>Pozostałe</dt><dd><span class="num">32%</span><span class="sub">58 stanowisk</span></dd></div>
+      </dl></div>
+    <div class="demo-item demo-stretch"><span class="demo-label">Ładowanie i pusty dzień</span>
+      <dl class="figures" style="margin-top: 0">
+        <div class="figure" aria-busy="true"><dt>Posty</dt><dd><span class="skeleton skeleton-num"></span></dd></div>
+        <div class="figure" aria-busy="true"><dt>Cele ze stanowiskiem</dt><dd><span class="skeleton skeleton-num"></span></dd></div>
+        <div class="figure"><dt>Wzrostowe</dt><dd><span class="num">–</span><span class="sub">brak stanowisk</span></dd></div>
+        <div class="figure"><dt>Spadkowe</dt><dd><span class="num">–</span><span class="sub">brak stanowisk</span></dd></div>
+        <div class="figure"><dt>Pozostałe</dt><dd><span class="num">–</span><span class="sub">brak stanowisk</span></dd></div>
+      </dl></div>
+  </div>
+</section>
+
+<section class="sheet-section" id="c-karta-tematu" aria-labelledby="t-karta-tematu">
+  <h2 class="h-section" id="t-karta-tematu">Karta celu dnia</h2>
+  <p class="note">Najczęściej omawiany cel: nazwa, liczba postów, udział stanowisk i najnowsze posty. Nazwa prowadzi do strony celu.</p>
+  <div class="demo demo-wide">
+    <div class="demo-item demo-stretch">
+      <div class="topics" style="margin-top: 0">
+        <article class="topic">
+          <div class="topic-head"><h3 class="topic-title"><a href="#c-karta-tematu">KGHM</a></h3><span class="topic-count">23 posty</span></div>
+          <div class="topic-shares">
+            <div class="bar bar-lg" role="img" aria-label="Stanowiska wobec KGHM: 14 wzrostowych, 5 spadkowych, 4 pozostałe"><span class="seg seg-up" style="flex-grow: 14"></span><span class="seg seg-down" style="flex-grow: 5"></span><span class="seg seg-rest" style="flex-grow: 4"></span></div>
+            <p class="shares-legend"><span class="share-up">14 wzrostowych</span><span class="share-down">5 spadkowych</span><span class="share-rest">4 pozostałe</span></p>
+          </div>
+          <ul class="topic-posts">
+            <li><a href="#c-karta-tematu"><time datetime="2026-10-20T09:41">09:41</time><span class="tp-title">Miedź przebija szczyty, a KGHM dopiero się rozkręca</span><span class="stance stance-bullish"><svg class="mark" aria-hidden="true"><use href="#s-up"/></svg><span class="t-stance">wzrostowo</span></span></a></li>
+            <li><a href="#c-karta-tematu"><time datetime="2026-10-20T08:12">08:12</time><span class="tp-title">Podatek od kopalin zostaje. Co to znaczy dla wyniku</span><span class="stance stance-bearish"><svg class="mark" aria-hidden="true"><use href="#s-down"/></svg><span class="t-stance">spadkowo</span> <span class="t-hedge">ostrożnie</span></span></a></li>
+          </ul>
+        </article>
+        <article class="topic">
+          <div class="topic-head"><h3 class="topic-title"><a href="#c-karta-tematu">stopy procentowe</a></h3><span class="topic-count">1 post</span></div>
+          <div class="topic-shares">
+            <div class="bar bar-lg bar-empty" role="img" aria-label="Brak stanowisk wobec stóp procentowych"></div>
+            <p class="shares-legend"><span class="share-rest">Brak stanowisk</span></p>
+          </div>
+          <ul class="topic-posts">
+            <li><a href="#c-karta-tematu"><time datetime="2026-10-20T07:30">07:30</time><span class="tp-title">Kiedy Rada obniży stopy? Zebrałem, co mówią członkowie</span><span class="stance stance-none"><svg class="mark" aria-hidden="true"><use href="#s-none"/></svg><span class="t-stance">bez stanowiska</span></span></a></li>
+          </ul>
+        </article>
+        <div class="topic" aria-busy="true">
+          <span class="visually-hidden">Wczytywanie celu</span>
+          <span class="skeleton" style="width: 55%; height: 2rem"></span>
+          <div class="topic-shares"><span class="skeleton" style="height: var(--bar-height-lg)"></span><span class="skeleton" style="width: 70%"></span></div>
+          <span class="skeleton" style="width: 90%"></span>
+        </div>
+      </div>
+      <span class="demo-label">Z danymi, jeden post bez stanowisk, ładowanie</span></div>
+  </div>
+</section>
+
+<section class="sheet-section" id="c-wiersz-posta" aria-labelledby="t-wiersz-posta">
+  <h2 class="h-section" id="t-wiersz-posta">Wiersz posta</h2>
+  <p class="note">Jeden post w jednej linii: godzina i źródło, tytuł, cele ze stanowiskami. Cały wiersz otwiera ocenę w panelu bocznym.</p>
+  <div class="demo demo-wide">
+    <div class="demo-item demo-stretch">
+      <div class="day-group" style="margin-top: 0">
+        <h3 class="day-title">Dzisiaj, 20 października</h3>
+        <ol class="posts">
+          <li><a class="post" href="#c-wiersz-posta">
+            <span class="post-meta"><span class="src">Wykop</span><span>#gielda</span><time datetime="2026-10-20T09:41">09:41</time></span>
+            <span class="post-title">Miedź przebija szczyty, a KGHM dopiero się rozkręca</span>
+            <span class="post-targets"><span class="stance stance-bullish"><span class="t-name">KGHM</span><svg class="mark" aria-hidden="true"><use href="#s-up"/></svg><span class="t-stance">wzrostowo</span></span></span>
+          </a></li>
+          <li><a class="post is-hover" href="#c-wiersz-posta">
+            <span class="post-meta"><span class="src">Reddit</span><span>r/stocks</span><time datetime="2026-10-20T09:18">09:18</time></span>
+            <span class="post-title">Wskazany: Nvidia earnings preview and what the options market implies</span>
+            <span class="post-targets"><span class="stance stance-mixed"><span class="t-name">Nvidia</span><svg class="mark" aria-hidden="true"><use href="#s-mixed"/></svg><span class="t-stance">mieszanie</span></span></span>
+          </a></li>
+          <li><a class="post is-focus" href="#c-wiersz-posta">
+            <span class="post-meta"><span class="src">Wykop</span><span>#inwestycje</span><time datetime="2026-10-20T08:57">08:57</time></span>
+            <span class="post-title">Fokus: obligacje skarbowe czy lokata na ostatni kwartał</span>
+            <span class="post-targets"><span class="stance stance-neutral"><span class="t-name">obligacje skarbowe</span><svg class="mark" aria-hidden="true"><use href="#s-flat"/></svg><span class="t-stance">neutralnie</span></span></span>
+          </a></li>
+          <li><a class="post" href="#c-wiersz-posta" aria-current="true">
+            <span class="post-meta"><span class="src">Wykop</span><span>#gielda</span><time datetime="2026-10-20T08:12">08:12</time></span>
+            <span class="post-title">Wybrany: podatek od kopalin zostaje. Co to znaczy dla wyniku</span>
+            <span class="post-targets"><span class="stance stance-bearish"><span class="t-name">KGHM</span><svg class="mark" aria-hidden="true"><use href="#s-down"/></svg><span class="t-stance">spadkowo</span> <span class="t-hedge">ostrożnie</span></span></span>
+          </a></li>
+          <li><a class="post" href="#c-wiersz-posta">
+            <span class="post-meta"><span class="src">Reddit</span><span>r/investing</span><time datetime="2026-10-20T07:48">07:48</time></span>
+            <span class="post-title">Wiele celów: portfolio review after a rough quarter for European banks and energy</span>
+            <span class="post-targets">
+              <span class="stance stance-bearish"><span class="t-name">banki</span><svg class="mark" aria-hidden="true"><use href="#s-down"/></svg><span class="t-stance">spadkowo</span></span>
+              <span class="stance stance-bullish"><span class="t-name">Orlen</span><svg class="mark" aria-hidden="true"><use href="#s-up"/></svg><span class="t-stance">wzrostowo</span></span>
+              <span class="kind">i 3 inne</span>
+            </span>
+          </a></li>
+          <li><a class="post" href="#c-wiersz-posta">
+            <span class="post-meta"><span class="src">Wykop</span><span>#gielda</span><time datetime="2026-10-20T07:05">07:05</time></span>
+            <span class="post-title">Bez oceny: ktoś ma link do wczorajszej konferencji wynikowej</span>
+            <span class="post-targets"><span class="flag">czeka na ocenę</span></span>
+          </a></li>
+          <li><a class="post" href="#c-wiersz-posta">
+            <span class="post-meta"><span class="src">Wykop</span><span>#gielda</span><time datetime="2026-10-20T06:40">06:40</time></span>
+            <span class="post-title">Nieinwestycyjny: dzień dobry, kawa i wykresy</span>
+            <span class="post-targets"><span class="kind">nie inwestycyjny</span></span>
+          </a></li>
+          <li><a class="post" href="#c-wiersz-posta">
+            <span class="post-meta"><span class="src">Reddit</span><span>r/stocks</span><time datetime="2026-10-20T06:02">06:02</time></span>
+            <span class="post-title">Ocena nieudana: thoughts on the semiconductor cycle</span>
+            <span class="post-targets"><span class="flag">ocena nieudana</span></span>
+          </a></li>
+        </ol>
+      </div>
+      <span class="demo-label">Od góry: domyślny, wskazany, fokus, wybrany, wiele celów, bez oceny, nieinwestycyjny, ocena nieudana</span></div>
+  </div>
+</section>
+
+<section class="sheet-section" id="c-filtry" aria-labelledby="t-filtry">
+  <h2 class="h-section" id="t-filtry">Filtry</h2>
+  <p class="note">Nad listą widać tylko wyszukiwanie i przycisk „Filtry”. Pozostałe pola otwierają się pod przyciskiem.</p>
+  <div class="demo demo-wide">
+    <div class="demo-item demo-stretch"><span class="demo-label">Zamknięte, bez filtrów</span>
+      <div class="toolbar" style="margin-top: 0">
+        <span class="input-wrap input-lg field-search"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg><input type="search" aria-label="Szukaj w postach, przykład" placeholder="Szukaj spółki lub tematu"></span>
+        <button type="button" class="btn btn-lg" aria-expanded="false"><svg class="icon" aria-hidden="true"><use href="#i-list-filter"/></svg>Filtry</button>
+      </div></div>
+    <div class="demo-item demo-stretch"><span class="demo-label">Zamknięte, dwa filtry włączone</span>
+      <div class="toolbar" style="margin-top: 0">
+        <span class="input-wrap input-lg field-search"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg><input type="search" aria-label="Szukaj w postach, przykład z filtrami" value="KGHM"></span>
+        <button type="button" class="btn btn-lg" aria-expanded="false"><svg class="icon" aria-hidden="true"><use href="#i-list-filter"/></svg>Filtry: 2</button>
+      </div></div>
+    <div class="demo-item"><span class="demo-label">Otwarte</span>
+      <form class="popover" role="search" aria-label="Filtr postów">
+        <div class="popover-head"><span class="popover-title">Filtry</span>
+          <button type="button" class="icon-btn" aria-label="Zamknij filtry"><svg class="icon" aria-hidden="true"><use href="#i-x"/></svg></button></div>
+        <div class="popover-body">
+          <div class="filters">
+            <div class="field"><label for="fl-kind">Rodzaj celu</label><select id="fl-kind"><option>spółka</option><option>dowolny</option></select></div>
+            <div class="field"><label for="fl-dir">Stanowisko</label><select id="fl-dir"><option>wzrostowo</option><option>dowolne</option></select></div>
+            <div class="field"><label for="fl-from">Od</label><input type="date" id="fl-from" value="2026-10-14"></div>
+            <div class="field"><label for="fl-to">Do</label><input type="date" id="fl-to" value="2026-10-20"></div>
+            <div class="field wide"><label for="fl-sort">Kolejność</label><select id="fl-sort"><option>od najnowszych</option><option>od najstarszych</option></select></div>
+          </div>
+          <div class="filters-actions">
+            <button type="button" class="btn">Wyczyść filtry</button>
+            <button type="submit" class="btn btn-primary">Filtruj</button>
+          </div>
+        </div>
+      </form></div>
+  </div>
+</section>
+
+<section class="sheet-section" id="c-stronicowanie" aria-labelledby="t-stronicowanie">
+  <h2 class="h-section" id="t-stronicowanie">Stronicowanie</h2>
+  <p class="note">Pod listą: nowsze i starsze posty oraz numer strony. Na pierwszej stronie „Nowsze” jest wyłączone.</p>
+  <div class="demo demo-wide">
+    <div class="demo-item demo-stretch"><span class="demo-label">Pierwsza strona</span>
+      <div class="pager" style="margin-top: 0">
+        <button type="button" class="btn" disabled><svg class="icon" aria-hidden="true"><use href="#i-chevron-left"/></svg>Nowsze</button>
+        <span class="pager-pos">Strona 1 z 7</span>
+        <button type="button" class="btn">Starsze<svg class="icon" aria-hidden="true"><use href="#i-chevron-right"/></svg></button>
+      </div></div>
+    <div class="demo-item demo-stretch"><span class="demo-label">W środku, podczas wczytywania następnej strony</span>
+      <div class="pager" style="margin-top: 0">
+        <button type="button" class="btn"><svg class="icon" aria-hidden="true"><use href="#i-chevron-left"/></svg>Nowsze</button>
+        <span class="pager-pos">Strona 3 z 7</span>
+        <button type="button" class="btn" aria-busy="true"><span class="spinner" aria-hidden="true"></span>Wczytywanie…</button>
+      </div></div>
+  </div>
+</section>
+
+<section class="sheet-section" id="c-panel" aria-labelledby="t-panel">
+  <h2 class="h-section" id="t-panel">Panel boczny</h2>
+  <p class="note">Ocena posta wysuwa się z prawej, lista zostaje widoczna w tle. Pasek panelu: skąd post, który z kolei, poprzedni, następny, zamknij.</p>
+  <div class="demo demo-wide">
+    <div class="demo-item demo-stretch">
+      <div class="panel panel-demo">
+        <div class="panel-bar">
+          <p class="post-meta"><span class="src">Wykop</span><span>#gielda</span><span class="type">wpis</span><time datetime="2026-10-20T08:12">20.10.2026, 08:12</time></p>
+          <div class="panel-nav">
+            <span class="pv-pos">4 z 128</span>
+            <button type="button" class="icon-btn" aria-label="Poprzedni post"><svg class="icon" aria-hidden="true"><use href="#i-chevron-left"/></svg></button>
+            <button type="button" class="icon-btn" aria-label="Następny post"><svg class="icon" aria-hidden="true"><use href="#i-chevron-right"/></svg></button>
+            <button type="button" class="icon-btn panel-close" aria-label="Zamknij post"><svg class="icon" aria-hidden="true"><use href="#i-x"/></svg></button>
+          </div>
+        </div>
+        <div class="panel-body">
+          <article class="reading" id="c-cytat">
+            <h3 class="reading-title">Podatek od kopalin zostaje. Co to znaczy dla wyniku</h3>
+            <p class="byline"><span class="author">konto_przykladowe</span>
+              <a class="ext" href="#c-panel" aria-label="Otwórz oryginał na wykop.pl (otwiera się w nowej karcie)">Oryginał<svg class="icon" aria-hidden="true"><use href="#i-external-link"/></svg></a></p>
+            <div class="body">
+              <p>Ministerstwo potwierdziło, że stawki zostają do końca przyszłego roku. <mark>Przy obecnej cenie miedzi to nadal ponad trzy miliardy złotych rocznie</mark>, których spółka nie pokaże w zysku.</p>
+              <p>Nie sprzedaję, ale <mark>na tym poziomie nie dokupuję</mark>. Poczekam na wyniki za trzeci kwartał.</p>
+            </div>
+            <label class="check marks-toggle"><input type="checkbox" checked>Podświetl cytaty z oceny</label>
+          </article>
+
+          <section class="assessment" aria-labelledby="pv-assess">
+            <div class="assess-head">
+              <h3 class="h-section" id="pv-assess">Ocena</h3>
+              <span class="assess-meta">inwestycyjny · 1 cel · 2 twierdzenia</span>
+            </div>
+            <article class="target" id="c-karta-celu">
+              <div class="target-head">
+                <h4 class="target-title">KGHM</h4><span class="kind">spółka</span>
+                <span class="stance stance-bearish"><svg class="mark" aria-hidden="true"><use href="#s-down"/></svg><span class="t-stance">spadkowo</span> <span class="t-hedge">ostrożnie</span></span>
+              </div>
+              <ul class="claims">
+                <li>
+                  <p class="statement">Podatek od kopalin przy obecnej cenie miedzi zabiera spółce ponad trzy miliardy złotych rocznie. <span class="claim-kind">informacja</span></p>
+                  <blockquote>Przy obecnej cenie miedzi to nadal ponad trzy miliardy złotych rocznie</blockquote>
+                </li>
+                <li>
+                  <p class="statement">Autor nie dokupuje akcji na obecnym poziomie. <span class="claim-kind">działanie</span></p>
+                  <blockquote>na tym poziomie nie dokupuję</blockquote>
+                </li>
+              </ul>
+            </article>
+            <div class="assess-foot">
+              <span>Oceniono 20.10.2026, 08:31 · model oceny V2</span>
+              <button type="button" class="btn" aria-expanded="true"><svg class="icon" aria-hidden="true"><use href="#i-braces"/></svg>Surowe dane</button>
+            </div>
+            <pre class="raw" tabindex="0" role="region" aria-label="Surowe dane posta">{
+  "source": "wykop",
+  "itemType": "post",
+  "channel": "gielda",
+  "language": "pl"
+}</pre>
+          </section>
+        </div>
+      </div>
+      <span class="demo-label">Panel z treścią posta, podświetlonymi cytatami, oceną celu i surowymi danymi</span></div>
+  </div>
+  <div class="demo demo-roomy">
+    <div class="demo-item demo-stretch"><span class="demo-label">Cytaty wyłączone</span>
+      <div class="body marks-off" style="margin-top: 0"><p>Nie sprzedaję, ale <mark>na tym poziomie nie dokupuję</mark>.</p></div></div>
+    <div class="demo-item demo-stretch"><span class="demo-label">Cel bez twierdzeń</span>
+      <article class="target" style="margin-top: 0">
+        <div class="target-head">
+          <h3 class="target-title">Orlen</h3><span class="kind">spółka</span>
+          <span class="stance stance-none"><svg class="mark" aria-hidden="true"><use href="#s-none"/></svg><span class="t-stance">bez stanowiska</span></span>
+        </div>
+        <p class="note" style="margin-top: var(--space-2)">Wspomniany, bez twierdzeń.</p>
+      </article></div>
+    <div class="demo-item demo-stretch"><span class="demo-label">Post bez oceny</span>
+      <div class="message message-warning"><svg class="icon" aria-hidden="true"><use href="#i-info"/></svg><p>Ten post czeka na ocenę. Pojawi się po najbliższym przebiegu.</p></div></div>
+  </div>
+</section>
+
+<section class="sheet-section" id="c-powiadomienia" aria-labelledby="t-powiadomienia">
+  <h2 class="h-section" id="t-powiadomienia">Powiadomienia</h2>
+  <p class="note">Dzwonek w pasku widzi tylko administrator. Lista otwiera się pod dzwonkiem, powiadomienie prowadzi do przebiegu.</p>
+  <div class="demo">
+    <div class="demo-item"><span class="demo-label">Dzwonek: bez nowych, z nowymi, wskazany, fokus, otwarty</span>
+      <div class="demo-row">
+        <button type="button" class="icon-btn" aria-label="Powiadomienia, brak nieprzeczytanych" aria-expanded="false"><svg class="icon" aria-hidden="true"><use href="#i-bell"/></svg></button>
+        <button type="button" class="icon-btn" aria-label="Powiadomienia, 2 nieprzeczytane (przykład)" aria-expanded="false"><svg class="icon" aria-hidden="true"><use href="#i-bell"/></svg><span class="bell-count" aria-hidden="true">2</span></button>
+        <button type="button" class="icon-btn is-hover" aria-label="Powiadomienia, 12 nieprzeczytanych" aria-expanded="false"><svg class="icon" aria-hidden="true"><use href="#i-bell"/></svg><span class="bell-count" aria-hidden="true">12</span></button>
+        <button type="button" class="icon-btn is-focus" aria-label="Powiadomienia, 1 nieprzeczytane" aria-expanded="false"><svg class="icon" aria-hidden="true"><use href="#i-bell"/></svg><span class="bell-count" aria-hidden="true">1</span></button>
+        <button type="button" class="icon-btn" aria-pressed="true" aria-label="Powiadomienia, lista otwarta" aria-expanded="true"><svg class="icon" aria-hidden="true"><use href="#i-bell"/></svg></button>
+      </div></div>
+  </div>
+  <div class="demo demo-roomy">
+    <div class="demo-item demo-stretch"><span class="demo-label">Lista z nowymi</span>
+      <div class="popover" role="region" aria-labelledby="n-title-1">
+        <div class="popover-head"><span class="popover-title" id="n-title-1">Powiadomienia</span>
+          <button type="button" class="btn">Oznacz wszystkie jako przeczytane</button></div>
+        <a class="notif notif-unread" href="#c-powiadomienia">
+          <span class="demo-row"><span class="badge badge-destructive">błąd</span></span>
+          <span class="notif-title">Przebieg nocny nie pobrał postów z żadnego źródła</span>
+          <span class="notif-meta">zakres dat · 2 h temu</span>
+        </a>
+        <a class="notif notif-unread is-hover" href="#c-powiadomienia">
+          <span class="demo-row"><span class="badge badge-warning">częściowo</span></span>
+          <span class="notif-title">Reddit nie dał postów, Wykop pobrany</span>
+          <span class="notif-meta">zakres dat · 19.10.2026, 02:41</span>
+        </a>
+        <a class="notif" href="#c-powiadomienia">
+          <span class="demo-row"><span class="badge badge-warning">zakończony – pominięte: 3</span></span>
+          <span class="notif-title">Trzy elementy nie stały się postami</span>
+          <span class="notif-meta">ponowienie resztek · 18.10.2026, 02:39</span>
+        </a>
+      </div></div>
+    <div class="demo-item demo-stretch"><span class="demo-label">Pusta</span>
+      <div class="popover" role="region" aria-labelledby="n-title-2">
+        <div class="popover-head"><span class="popover-title" id="n-title-2">Powiadomienia</span></div>
+        <div class="popover-body"><p class="note">Brak powiadomień.</p></div>
+      </div></div>
+    <div class="demo-item demo-stretch"><span class="demo-label">Ładowanie</span>
+      <div class="popover" role="region" aria-labelledby="n-title-3" aria-busy="true">
+        <div class="popover-head"><span class="popover-title" id="n-title-3">Powiadomienia</span></div>
+        <div class="popover-body" style="display: grid; gap: var(--space-3)">
+          <span class="visually-hidden">Wczytywanie…</span>
+          <span class="skeleton" style="width: 40%"></span><span class="skeleton"></span><span class="skeleton" style="width: 60%"></span>
+        </div>
+      </div></div>
+    <div class="demo-item demo-stretch"><span class="demo-label">Błąd</span>
+      <div class="popover" role="region" aria-labelledby="n-title-4">
+        <div class="popover-head"><span class="popover-title" id="n-title-4">Powiadomienia</span></div>
+        <div class="popover-body" style="display: grid; gap: var(--space-3); justify-items: start">
+          <div class="message message-error" role="alert"><svg class="icon" aria-hidden="true"><use href="#i-circle-alert"/></svg><p>Nie udało się wczytać powiadomień.</p></div>
+          <button type="button" class="btn"><svg class="icon" aria-hidden="true"><use href="#i-refresh-cw"/></svg>Spróbuj ponownie</button>
+        </div>
+      </div></div>
+  </div>
+</section>
+
+<section class="sheet-section" id="c-podnawigacja" aria-labelledby="t-podnawigacja">
+  <h2 class="h-section" id="t-podnawigacja">Części panelu admina</h2>
+  <p class="note">Panel admina ma trzy części. Każda to osobna strona z własnym adresem, a pasek pokazuje, w której jesteś.</p>
+  <div class="demo demo-wide">
+    <div class="demo-item demo-stretch">
+      <div class="subnav">
+        <a href="#c-podnawigacja" aria-current="page">Przebiegi</a>
+        <a href="#c-podnawigacja" class="is-hover">Jakość ocen</a>
+        <a href="#c-podnawigacja" class="is-focus">Nieudane posty <span class="badge badge-warning">7</span></a>
+      </div>
+      <span class="demo-label">Bieżąca, wskazana, fokus z licznikiem</span></div>
+  </div>
+</section>
+
+<section class="sheet-section" id="c-tabela" aria-labelledby="t-tabela">
+  <h2 class="h-section" id="t-tabela">Tabela</h2>
+  <p class="note">Dane w wierszach i kolumnach: cele dnia, przebiegi, posty do naprawy. Liczby wyrównane do prawej, nazwa prowadzi dalej.</p>
+  <div class="demo demo-wide">
+    <div class="demo-item demo-stretch"><span class="demo-label">Cele dnia: domyślny, wskazany, cel bez stanowisk</span>
+      <div class="table-wrap" style="margin-top: 0">
+        <table class="table">
+          <caption class="visually-hidden">Cele dnia z udziałem stanowisk</caption>
+          <thead><tr><th scope="col">Cel</th><th scope="col" class="n">Posty</th><th scope="col" class="n">Wzrostowe</th><th scope="col" class="n">Spadkowe</th><th scope="col" class="n">Pozostałe</th><th scope="col" class="bar-col">Udział</th></tr></thead>
+          <tbody>
+            <tr><th scope="row" class="cell-name"><a href="#c-tabela">KGHM</a> <span class="kind">spółka</span></th><td class="n">23</td><td class="n up">14</td><td class="n down">5</td><td class="n rest">4</td>
+              <td class="bar-col"><div class="bar" role="img" aria-label="14 wzrostowych, 5 spadkowych, 4 pozostałe"><span class="seg seg-up" style="flex-grow: 14"></span><span class="seg seg-down" style="flex-grow: 5"></span><span class="seg seg-rest" style="flex-grow: 4"></span></div></td></tr>
+            <tr class="is-hover"><th scope="row" class="cell-name"><a href="#c-tabela">Nvidia</a> <span class="kind">spółka</span></th><td class="n">19</td><td class="n up">9</td><td class="n down">8</td><td class="n rest">2</td>
+              <td class="bar-col"><div class="bar" role="img" aria-label="9 wzrostowych, 8 spadkowych, 2 pozostałe"><span class="seg seg-up" style="flex-grow: 9"></span><span class="seg seg-down" style="flex-grow: 8"></span><span class="seg seg-rest" style="flex-grow: 2"></span></div></td></tr>
+            <tr><th scope="row" class="cell-name"><a href="#c-tabela">złoto</a> <span class="kind">aktywo</span></th><td class="n">11</td><td class="n up">6</td><td class="n zero">0</td><td class="n rest">5</td>
+              <td class="bar-col"><div class="bar" role="img" aria-label="6 wzrostowych, 0 spadkowych, 5 pozostałych"><span class="seg seg-up" style="flex-grow: 6"></span><span class="seg seg-rest" style="flex-grow: 5"></span></div></td></tr>
+            <tr><th scope="row" class="cell-name"><a href="#c-tabela">stopy procentowe</a> <span class="kind">makro i rynek</span></th><td class="n">1</td><td class="n zero">0</td><td class="n zero">0</td><td class="n zero">0</td>
+              <td class="bar-col"><div class="bar bar-empty" role="img" aria-label="Brak stanowisk"></div></td></tr>
+          </tbody>
+        </table>
+      </div></div>
+    <div class="demo-item demo-stretch"><span class="demo-label">Przebiegi w panelu admina</span>
+      <div class="table-wrap" style="margin-top: 0">
+        <table class="table">
+          <caption class="visually-hidden">Historia przebiegów</caption>
+          <thead><tr><th scope="col">Przebieg</th><th scope="col">Stan</th><th scope="col">Zakres</th><th scope="col" class="n">Ocenione</th><th scope="col" class="n">Nieudane</th><th scope="col" class="n">Czas</th></tr></thead>
+          <tbody>
+            <tr><th scope="row"><a class="link" href="#c-tabela" aria-label="Szczegóły przebiegu z 20.10.2026, 02:30">20.10.2026, 02:30</a></th><td><span class="badge badge-success">zakończony</span></td><td>18.10–19.10.2026</td><td class="n">165</td><td class="n zero">0</td><td class="n">11 min</td></tr>
+            <tr><th scope="row"><a class="link" href="#c-tabela" aria-label="Szczegóły przebiegu z 19.10.2026, 02:30">19.10.2026, 02:30</a></th><td><span class="badge badge-warning">częściowo</span></td><td>17.10–18.10.2026</td><td class="n">92</td><td class="n down">4</td><td class="n">9 min</td></tr>
+            <tr><th scope="row"><a class="link" href="#c-tabela" aria-label="Szczegóły przebiegu z 18.10.2026, 14:05">18.10.2026, 14:05</a></th><td><span class="badge badge-info">trwa</span></td><td>16.10–17.10.2026</td><td class="n">37</td><td class="n zero">0</td><td class="n">3 min</td></tr>
+          </tbody>
+        </table>
+      </div></div>
+    <div class="demo-item demo-stretch"><span class="demo-label">Nieudane posty: wiersz zaznaczony do przywrócenia</span>
+      <div class="table-wrap" style="margin-top: 0">
+        <table class="table">
+          <caption class="visually-hidden">Posty, których ocena się nie udała</caption>
+          <thead><tr><th scope="col"><span class="visually-hidden">Zaznacz</span></th><th scope="col">Post</th><th scope="col">Źródło</th><th scope="col" class="n">Próby</th><th scope="col">Ostatni błąd</th></tr></thead>
+          <tbody>
+            <tr class="is-selected"><td><input type="checkbox" checked aria-label="Zaznacz post: Thoughts on the semiconductor cycle"></td><th scope="row" class="cell-strong"><a class="link" href="#c-tabela">Thoughts on the semiconductor cycle</a></th><td>Reddit · r/stocks</td><td class="n">3</td><td>odpowiedź modelu niezgodna ze schematem</td></tr>
+            <tr><td><input type="checkbox" aria-label="Zaznacz post: Czy ktoś liczył dywidendę za ten rok"></td><th scope="row" class="cell-strong"><a class="link" href="#c-tabela">Czy ktoś liczył dywidendę za ten rok</a></th><td>Wykop · #gielda</td><td class="n">3</td><td>przekroczony czas odpowiedzi modelu</td></tr>
+          </tbody>
+        </table>
+      </div></div>
+    <div class="demo-item demo-stretch"><span class="demo-label">Ładowanie</span>
+      <div class="table-wrap" style="margin-top: 0" aria-busy="true">
+        <span class="visually-hidden">Wczytywanie tabeli</span>
+        <div class="skeleton-row" style="padding-left: 0; padding-right: 0"><span class="skeleton" style="width: 60%"></span><span class="skeleton" style="width: 80%"></span><span class="skeleton"></span></div>
+        <div class="skeleton-row" style="padding-left: 0; padding-right: 0"><span class="skeleton" style="width: 45%"></span><span class="skeleton" style="width: 65%"></span><span class="skeleton"></span></div>
+      </div></div>
+  </div>
+</section>
+
+<section class="sheet-section" id="c-komunikat" aria-labelledby="t-komunikat">
+  <h2 class="h-section" id="t-komunikat">Komunikat</h2>
+  <p class="note">Wynik działania albo stan, który trzeba znać. Powodzenie czyta się spokojnie, błąd od razu.</p>
+  <div class="demo">
+    <div class="demo-item demo-stretch"><span class="demo-label">Powodzenie</span>
+      <div class="message message-ok" role="status"><svg class="icon" aria-hidden="true"><use href="#i-circle-check"/></svg><p>Hasło ustawione. Zaloguj się.</p></div></div>
+    <div class="demo-item demo-stretch"><span class="demo-label">Błąd</span>
+      <div class="message message-error" role="alert"><svg class="icon" aria-hidden="true"><use href="#i-circle-alert"/></svg><p>Nieprawidłowy e-mail lub hasło.</p></div></div>
+    <div class="demo-item demo-stretch"><span class="demo-label">Uwaga</span>
+      <div class="message message-warning" role="status"><svg class="icon" aria-hidden="true"><use href="#i-triangle-alert"/></svg><p>Przebieg trwa. Nowy stanie w kolejce.</p></div></div>
+  </div>
+</section>
+
+<section class="sheet-section" id="c-szkielet" aria-labelledby="t-szkielet">
+  <h2 class="h-section" id="t-szkielet">Ładowanie</h2>
+  <p class="note">Zanim przyjdą dane, widok pokazuje swój kształt. Czytnik ekranu słyszy „Wczytywanie…”.</p>
+  <div class="demo demo-wide">
+    <div class="demo-item demo-stretch">
+      <div class="posts" style="margin-top: 0" aria-busy="true">
+        <span class="visually-hidden">Wczytywanie postów</span>
+        <div class="skeleton-row"><span class="skeleton" style="width: 70%"></span><span class="skeleton" style="width: 85%"></span><span class="skeleton"></span></div>
+        <div class="skeleton-row"><span class="skeleton" style="width: 55%"></span><span class="skeleton" style="width: 60%"></span><span class="skeleton" style="width: 70%"></span></div>
+        <div class="skeleton-row"><span class="skeleton" style="width: 65%"></span><span class="skeleton" style="width: 75%"></span><span class="skeleton" style="width: 50%"></span></div>
+      </div>
+      <span class="demo-label">Lista postów podczas wczytywania</span></div>
+  </div>
+</section>
+
+<section class="sheet-section" id="c-pusta-lista" aria-labelledby="t-pusta-lista">
+  <h2 class="h-section" id="t-pusta-lista">Pusta lista</h2>
+  <p class="note">Pusty widok mówi dlaczego jest pusty i co można zrobić.</p>
+  <div class="demo demo-roomy">
+    <div class="demo-item demo-stretch"><span class="demo-label">Filtry niczego nie znalazły</span>
+      <div class="state"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg>
+        <p class="state-title">Brak postów dla tych filtrów</p>
+        <p class="state-text">Żaden post z 20 października nie pasuje do „KGHM”, stanowisko spadkowo.</p>
+        <button type="button" class="btn">Wyczyść filtry</button></div></div>
+    <div class="demo-item demo-stretch"><span class="demo-label">Dzień bez danych</span>
+      <div class="state"><svg class="icon" aria-hidden="true"><use href="#i-inbox"/></svg>
+        <p class="state-title">Brak postów z tego dnia</p>
+        <p class="state-text">Posty z 21 października pojawią się po nocnym przebiegu.</p>
+        <a class="btn" href="#c-pusta-lista">Pokaż ostatni dzień z danymi</a></div></div>
+  </div>
+</section>
+
+<section class="sheet-section" id="c-blad" aria-labelledby="t-blad">
+  <h2 class="h-section" id="t-blad">Błąd z ponowieniem</h2>
+  <p class="note">Gdy widok się nie wczytał: co się stało i jeden przycisk, który próbuje jeszcze raz.</p>
+  <div class="demo demo-roomy">
+    <div class="demo-item demo-stretch"><span class="demo-label">Domyślny</span>
+      <div class="state state-error" role="alert"><svg class="icon" aria-hidden="true"><use href="#i-circle-alert"/></svg>
+        <p class="state-title">Nie udało się wczytać postów</p>
+        <p class="state-text">Serwer nie odpowiedział. Twoje filtry zostały.</p>
+        <button type="button" class="btn"><svg class="icon" aria-hidden="true"><use href="#i-refresh-cw"/></svg>Spróbuj ponownie</button></div></div>
+    <div class="demo-item demo-stretch"><span class="demo-label">Podczas ponawiania</span>
+      <div class="state state-error"><svg class="icon" aria-hidden="true"><use href="#i-circle-alert"/></svg>
+        <p class="state-title">Nie udało się wczytać postów</p>
+        <p class="state-text">Serwer nie odpowiedział. Twoje filtry zostały.</p>
+        <button type="button" class="btn" aria-busy="true"><span class="spinner" aria-hidden="true"></span>Wczytywanie…</button></div></div>
+  </div>
+</section>
+
+<section class="sheet-section" id="c-motyw" aria-labelledby="t-motyw">
+  <h2 class="h-section" id="t-motyw">Motyw</h2>
+  <p class="note">Przycisk „Ciemny motyw” w pasku. Bez wyboru strona idzie za ustawieniem systemu.</p>
+  <div class="demo">
+    <div class="demo-item"><span class="demo-label">Wyłączony, wskazany, fokus, włączony</span>
+      <div class="demo-row">
+        <button type="button" class="icon-btn" aria-pressed="false" aria-label="Ciemny motyw, wyłączony"><svg class="icon" aria-hidden="true"><use href="#i-moon"/></svg></button>
+        <button type="button" class="icon-btn is-hover" aria-pressed="false" aria-label="Ciemny motyw, wskazany"><svg class="icon" aria-hidden="true"><use href="#i-moon"/></svg></button>
+        <button type="button" class="icon-btn is-focus" aria-pressed="false" aria-label="Ciemny motyw, fokus"><svg class="icon" aria-hidden="true"><use href="#i-moon"/></svg></button>
+        <button type="button" class="icon-btn" aria-pressed="true" aria-label="Ciemny motyw, włączony"><svg class="icon" aria-hidden="true"><use href="#i-moon"/></svg></button>
+      </div></div>
+  </div>
+</section>
+
+<section class="sheet-section" id="c-ikony" aria-labelledby="t-ikony">
+  <h2 class="h-section" id="t-ikony">Ikony</h2>
+  <p class="note">Jeden zestaw o tej samej grubości kreski. Ikona nigdy nie stoi sama bez nazwy: ma tekst obok albo nazwę dla czytnika ekranu.</p>
+  <ul class="icon-grid">
+    <li><svg class="icon" aria-hidden="true"><use href="#i-brand"/></svg>brand-mark</li>
+    <li><svg class="icon" aria-hidden="true"><use href="#i-bell"/></svg>bell</li>
+    <li><svg class="icon" aria-hidden="true"><use href="#i-moon"/></svg>moon</li>
+    <li><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg>search</li>
+    <li><svg class="icon" aria-hidden="true"><use href="#i-list-filter"/></svg>list-filter</li>
+    <li><svg class="icon" aria-hidden="true"><use href="#i-chevron-left"/></svg>chevron-left</li>
+    <li><svg class="icon" aria-hidden="true"><use href="#i-chevron-right"/></svg>chevron-right</li>
+    <li><svg class="icon" aria-hidden="true"><use href="#i-chevron-down"/></svg>chevron-down</li>
+    <li><svg class="icon" aria-hidden="true"><use href="#i-x"/></svg>x</li>
+    <li><svg class="icon" aria-hidden="true"><use href="#i-external-link"/></svg>external-link</li>
+    <li><svg class="icon" aria-hidden="true"><use href="#i-braces"/></svg>braces</li>
+    <li><svg class="icon" aria-hidden="true"><use href="#i-circle-alert"/></svg>circle-alert</li>
+    <li><svg class="icon" aria-hidden="true"><use href="#i-circle-check"/></svg>circle-check</li>
+    <li><svg class="icon" aria-hidden="true"><use href="#i-triangle-alert"/></svg>triangle-alert</li>
+    <li><svg class="icon" aria-hidden="true"><use href="#i-info"/></svg>info</li>
+    <li><svg class="icon" aria-hidden="true"><use href="#i-refresh-cw"/></svg>refresh-cw</li>
+    <li><svg class="icon" aria-hidden="true"><use href="#i-play"/></svg>play</li>
+    <li><svg class="icon" aria-hidden="true"><use href="#i-rotate-ccw"/></svg>rotate-ccw</li>
+    <li><svg class="icon" aria-hidden="true"><use href="#i-inbox"/></svg>inbox</li>
+    <li><svg class="icon" aria-hidden="true"><use href="#i-arrow-down-up"/></svg>arrow-down-up</li>
+    <li><svg class="icon" aria-hidden="true"><use href="#i-calendar"/></svg>calendar</li>
+    <li><svg class="mark" aria-hidden="true"><use href="#s-up"/></svg>stance-up</li>
+    <li><svg class="mark" aria-hidden="true"><use href="#s-down"/></svg>stance-down</li>
+    <li><svg class="mark" aria-hidden="true"><use href="#s-flat"/></svg>stance-flat</li>
+    <li><svg class="mark" aria-hidden="true"><use href="#s-mixed"/></svg>stance-mixed</li>
+    <li><svg class="mark" aria-hidden="true"><use href="#s-none"/></svg>stance-none</li>
+  </ul>
+</section>
+
+</div>
+</main>
+
+</body>
+</html>

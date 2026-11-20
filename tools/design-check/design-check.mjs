@@ -701,7 +701,8 @@ function filled(section) {
 function checkDoc(docFile, stage) {
   const violations = []
   const label = rel(docFile)
-  const uiDir = path.join(path.dirname(docFile), 'ui-design')
+  // Absolute, because the component links are compared with path.resolve() results.
+  const uiDir = path.resolve(path.dirname(docFile), 'ui-design')
   const text = fs.readFileSync(docFile, 'utf8')
   const all = sections(text)
   const byTitle = new Map(all.map((s) => [s.title, s]))
