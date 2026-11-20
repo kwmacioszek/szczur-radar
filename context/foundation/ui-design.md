@@ -61,6 +61,7 @@ Standardy dobiera projekt, a ich spełnienie sprawdza agent poleceniem albo niez
 | Każdy element interaktywny ma rolę i nazwę dostępną; przycisk z samą ikoną ma etykietę | 4.1.2 | reguły axe (`button-name`, `link-name`, `label`) |
 | Struktura jest w znacznikach: jeden `main`, jeden `banner`, nawigacja i sekcje jako nazwane regiony, nagłówki w kolejności, tabele z nagłówkami | 1.3.1, 2.4.6 | `design-check pages` (role), reguły axe |
 | Błąd w formularzu jest opisany słowami przy polu, a pole ma etykietę nad sobą | 3.3.1, 3.3.2 | arkusz komponentów (stan błędu), przegląd |
+| Pola logowania i hasła mają `autocomplete` (`username`, `current-password`, `new-password`), więc działa menedżer haseł i wklejanie | 1.3.5, 3.3.8 | przegląd; testy widoków logowania i aktywacji |
 | Treść nie zależy od ruchu; ruch można wyłączyć ustawieniem systemu | 2.2.2, 2.3.3 (AAA, jako wskazówka) | przegląd; `prefers-reduced-motion` w stylach |
 
 ### Użyteczność: dziesięć heurystyk Nielsena
@@ -130,7 +131,7 @@ Nawigacja jest w pasku u góry strony, bez bocznej kolumny (decyzja właściciel
 
 ### Zakres postów
 
-Posty nieinwestycyjne i posty bez treści są domyślnie ukryte (FR-007). Zamiast zdania o ukrytych postach każdy ekran z listą albo liczbami ma przełącznik dwóch stanów z liczbami: „Inwestycyjne 128 | Wszystkie 165”. Na przeglądzie dnia stoi obok wyboru dnia, na ekranie postów przy nagłówku. Przełącza cały widok: listę, liczniki i proporcje.
+Posty nieinwestycyjne i posty bez treści są domyślnie ukryte (FR-007). Zamiast zdania o ukrytych postach każdy ekran z listą albo liczbami ma przełącznik dwóch stanów z liczbami: „Inwestycyjne 128 | Wszystkie 165”. Na przeglądzie dnia stoi obok wyboru dnia, na ekranie postów przy nagłówku, w katalogu celów obok okresu, a na karcie celu pod paskiem proporcji. Przełącza cały widok: listę, liczniki i proporcje. Liczby w przełączniku to liczba postów w bieżącym wyniku (po filtrach, dla wybranego dnia albo okresu) w każdym z dwóch zakresów.
 
 ### Ekran startowy
 
@@ -152,7 +153,7 @@ Trzy części pod wspólnym nagłówkiem „Panel admina”, każda z własnym a
 
 - **Przebiegi**: nowy przebieg (zakres dat, źródła), dni bez danych z uzupełnieniem, ostatnie przebiegi. To praca codzienna, więc ta część otwiera panel.
 - **Jakość ocen**: miary z 7 dni per źródło (nieudane próby, tezy w innym języku, po S-60 „kanał jako cel”) z progami.
-- **Nieudane posty**: lista z etapem i ostatnią próbą, przywracanie zaznaczonych.
+- **Nieudane posty**: lista ze stanem posta (martwy, wstrzymany, do ponowienia), liczbą prób i ostatnim błędem; „Ponów zaznaczone” dla postów do ponowienia i „Przywróć martwe” dla martwych, każdy przycisk z liczbą zaznaczonych, których dotyczy.
 
 Strona przebiegu zostaje osobnym ekranem (liczniki, wynik per źródło, kroki, błąd), z powrotem do części „Przebiegi”.
 
@@ -164,24 +165,24 @@ Strona przebiegu zostaje osobnym ekranem (liczniki, wynik per źródło, kroki, 
 
 ## Ekrany
 
-Ekrany M-5 z wymaganiami i źródłem danych. „Dziś” znaczy, że API już daje te dane; numer wycinka wskazuje, kto dostarcza brakujące API albo widok. Prototypy każdego ekranu (oba motywy, 1280 i 375 px) powstają w fazie 3 w `ui-design/prototypes/screens/`.
+Ekrany M-5 z wymaganiami i źródłem danych. „Dziś” znaczy, że API już daje te dane; numer wycinka wskazuje, kto dostarcza brakujące API albo widok. Prototypy są w `ui-design/prototypes/screens/`, ich spis z wymaganiami i wycinkami w [`ui-design/screens.json`](ui-design/screens.json), a zrzuty każdego ekranu (jasny i ciemny, 1280 i 375 px) w `ui-design/screens/` pod nazwą `<ekran>-<motyw>-<szerokość>.png`. Zrzut obejmuje całą stronę; ekrany z otwartym panelem bocznym (`post`, `target`) mają zrzut kadru okna, bo panel przewija się niezależnie od strony.
 
-| Ekran | Cel ekranu | Wymagania | Dane | Prototyp (faza 3) |
+| Ekran | Cel ekranu | Wymagania | Dane | Prototyp |
 | --- | --- | --- | --- | --- |
-| Przegląd dnia | Obraz wybranego dnia na pierwszy rzut oka: klocki z liczbą postów (ze źródłami), liczbą celów ze stanowiskiem i udziałem stanowisk wzrostowych, spadkowych i pozostałych; trzy najczęściej omawiane cele z proporcjami i najnowszymi postami; tabela wszystkich celów dnia | FR-039, FR-038, FR-035, FR-007 | S-59 (na S-55 i S-58) | `overview` |
-| Posty: lista i ocena w panelu | Przejrzeć posty na liście zwartej i przeczytać ocenę wybranego w panelu z prawej: cele ze stanowiskiem, tezy z cytatem, link do oryginału, dane surowe | FR-007, FR-009, FR-010, FR-011a, FR-030 | dziś (lista, filtr po celu i stanowisku, ocena, link, dane surowe); układ S-51 | `posts`, `post` |
-| Posty: filtry i kolejność | Zawęzić listę: szukanie w treści na wierzchu; cel, stanowisko, dzień albo zakres dat i kolejność pod przyciskiem „Filtry”; przełącznik zakresu „Inwestycyjne / Wszystkie” | FR-036, FR-035, FR-008, FR-011b, FR-007 | S-56, S-55, S-54, S-52 | `posts-filters` |
-| Post z podświetlonymi cytatami | W panelu oceny: zobaczyć w treści fragmenty, na których oparto ocenę; wyłączyć podświetlenie; przejść do poprzedniego i następnego | FR-009 | dziś (cytaty są w ocenie); widok S-53 | `post` |
-| Cele: katalog i karta celu w panelu | Znaleźć cel po nazwie, zobaczyć liczbę postów i proporcje stanowisk (wzrostowe, spadkowe, pozostałe), przejść do wypowiedzi o celu | FR-037, FR-038, FR-011a | S-57, S-58 | `targets`, `target` |
-| Logowanie | Zalogować się e-mailem i hasłem; komunikaty błędnych danych i limitu prób | FR-012, FR-040 | dziś; widok S-49 | `login` |
-| Aktywacja konta | Ustawić hasło z jednorazowego linku; link nieważny, reguły hasła | FR-018 | dziś; widok S-49 | `activate` |
+| Przegląd dnia | Obraz wybranego dnia na pierwszy rzut oka: klocki z liczbą postów (ze źródłami), liczbą celów ze stanowiskiem i udziałem stanowisk wzrostowych, spadkowych i pozostałych; trzy najczęściej omawiane cele z proporcjami i najnowszymi postami; tabela wszystkich celów dnia | FR-039, FR-038, FR-035, FR-007 | S-59 (na S-55 i S-58) | [`overview`](ui-design/prototypes/screens/overview.html) |
+| Posty: lista i ocena w panelu | Przejrzeć posty na liście zwartej i przeczytać ocenę wybranego w panelu z prawej: cele ze stanowiskiem, tezy z cytatem, link do oryginału, dane surowe | FR-007, FR-009, FR-010, FR-011a, FR-030 | dziś (lista, filtr po celu i stanowisku, ocena, link, dane surowe); układ S-51 | [`posts`](ui-design/prototypes/screens/posts.html), [`post`](ui-design/prototypes/screens/post.html) |
+| Posty: filtry i kolejność | Zawęzić listę: szukanie w treści na wierzchu; cel, stanowisko, dzień albo zakres dat i kolejność pod przyciskiem „Filtry”; przełącznik zakresu „Inwestycyjne / Wszystkie” | FR-036, FR-035, FR-008, FR-011b, FR-007 | S-56, S-55, S-54, S-52 | [`posts-filters`](ui-design/prototypes/screens/posts-filters.html) |
+| Post z podświetlonymi cytatami | W panelu oceny: zobaczyć w treści fragmenty, na których oparto ocenę; wyłączyć podświetlenie; przejść do poprzedniego i następnego | FR-009 | dziś (cytaty są w ocenie); widok S-53 | [`post`](ui-design/prototypes/screens/post.html) |
+| Cele: katalog i karta celu w panelu | Znaleźć cel po nazwie, zobaczyć liczbę postów i proporcje stanowisk (wzrostowe, spadkowe, pozostałe), przejść do wypowiedzi o celu | FR-037, FR-038, FR-011a | S-57, S-58 | [`targets`](ui-design/prototypes/screens/targets.html), [`target`](ui-design/prototypes/screens/target.html) |
+| Logowanie | Zalogować się e-mailem i hasłem; komunikaty błędnych danych i limitu prób | FR-012, FR-040 | dziś; widok S-49 | [`login`](ui-design/prototypes/screens/login.html) |
+| Aktywacja konta | Ustawić hasło z jednorazowego linku; link nieważny, reguły hasła | FR-018 | dziś; widok S-49 | [`activate`](ui-design/prototypes/screens/activate.html) |
 | Powłoka aplikacji | Nawigacja u góry według roli, data aktualizacji danych, przełącznik motywu, wylogowanie | FR-015, FR-013, FR-030, FR-040 | dziś; widok S-47 | na każdym ekranie zalogowanym |
-| Panel admina: Przebiegi | Uruchomić przebieg, uzupełnić dni bez danych, zobaczyć ostatnie przebiegi i ich stan | FR-021, FR-022, FR-015 | dziś; widok S-50 | `admin-runs` |
-| Panel admina: Jakość ocen | Sprawdzić miary jakości per źródło wobec progów | FR-033 | dziś; „kanał jako cel” S-60 | `admin-quality` |
-| Panel admina: Nieudane posty | Zobaczyć nieudane i martwe posty, przywrócić zaznaczone | FR-034 | dziś; widok S-50 | `admin-posts` |
-| Przebieg | Liczniki, wynik per źródło, kroki, błąd i powody „wymaga uwagi” jednego przebiegu | FR-021 | dziś; widok S-50 | `run` |
-| Powiadomienia admina | Lista przebiegów wymagających uwagi z przejściem do przebiegu | FR-021, FR-015 | dziś | `notifications` |
-| Wspólne stany | Ładowanie, pusta lista i błąd z ponowieniem, takie same w każdym widoku | FR-007, FR-009 | dziś; komponenty S-48 | `state-loading`, `state-empty`, `state-error` |
+| Panel admina: Przebiegi | Uruchomić przebieg, uzupełnić dni bez danych, zobaczyć ostatnie przebiegi i ich stan | FR-021, FR-022, FR-015 | dziś; widok S-50 | [`admin-runs`](ui-design/prototypes/screens/admin-runs.html) |
+| Panel admina: Jakość ocen | Sprawdzić miary jakości per źródło wobec progów | FR-033 | dziś; „kanał jako cel” S-60 | [`admin-quality`](ui-design/prototypes/screens/admin-quality.html) |
+| Panel admina: Nieudane posty | Zobaczyć nieudane i martwe posty, przywrócić zaznaczone | FR-034 | dziś; widok S-50 | [`admin-posts`](ui-design/prototypes/screens/admin-posts.html) |
+| Przebieg | Liczniki, wynik per źródło, kroki, błąd i powody „wymaga uwagi” jednego przebiegu | FR-021 | dziś; widok S-50 | [`run`](ui-design/prototypes/screens/run.html) |
+| Powiadomienia admina | Lista przebiegów wymagających uwagi z przejściem do przebiegu | FR-021, FR-015 | dziś | [`notifications`](ui-design/prototypes/screens/notifications.html) |
+| Wspólne stany | Ładowanie, pusta lista i błąd z ponowieniem, takie same w każdym widoku | FR-007, FR-009 | dziś; komponenty S-48 | [`state-loading`](ui-design/prototypes/screens/state-loading.html), [`state-empty`](ui-design/prototypes/screens/state-empty.html), [`state-error`](ui-design/prototypes/screens/state-error.html) na liście postów; [`admin-loading`](ui-design/prototypes/screens/admin-loading.html), [`admin-empty`](ui-design/prototypes/screens/admin-empty.html), [`admin-error`](ui-design/prototypes/screens/admin-error.html) w panelu admina |
 
 Dni bez danych są częścią ekranu „Panel admina: Przebiegi”. Elementy zależne od wycinków, których niewiadome należą do właściciela (pola sortowania S-54, domyślny okres i próg katalogu S-57, progi S-60), prototypy pokazują jako propozycję niewiążącą do czasu planu danego wycinka.
 
@@ -315,7 +316,7 @@ Im większy element, tym większy promień. Element wewnątrz ma promień mniejs
 
 ### Wyniesienie i warstwy
 
-Karty i listy leżą płasko: od tła odróżnia je kolor `--surface` i linia `--line`, bez cienia. Cień `--shadow-overlay` (`0 1.5rem 4rem -1rem color-mix(in srgb, var(--scrim) 40%, transparent)`) mają tylko warstwy nad stroną: panel boczny, lista powiadomień i panel filtrów. Kolejność warstw: `--z-scrim` (10) dla przyciemnienia, `--z-overlay` (20) dla tego, co nad nim.
+Karty i listy leżą płasko: od tła odróżnia je kolor `--surface` i linia `--line`, bez cienia. Cień `--shadow-overlay` (`0 1.5rem 4rem -1rem color-mix(in srgb, var(--scrim) 40%, transparent)`) mają tylko warstwy nad stroną: panel boczny, lista powiadomień i panel filtrów. Kolejność warstw: `--z-bar` (5) dla paska aplikacji z jego listą powiadomień, `--z-scrim` (10) dla przyciemnienia, `--z-overlay` (20) dla tego, co nad nim.
 
 ### Wymiary i układ
 
@@ -346,7 +347,7 @@ Ruch jest tylko odpowiedzią na działanie użytkownika. Nic nie wjeżdża przy 
 
 ### Ikony
 
-Ikony pochodzą z jednego zestawu, [Lucide](https://lucide.dev/) 1.77.0 (licencja ISC), plus sześć własnych: znak marki i pięć znaków stanowiska. Pliki i licencja są w [`ui-design/icons/`](ui-design/icons/README.md). Każda ikona rysuje się kolorem tekstu (`currentColor`), kreską `--icon-stroke`. Ikona nigdy nie stoi sama bez nazwy: ma tekst obok albo nazwę dla czytnika ekranu na przycisku, a sama jest ukryta przed czytnikiem.
+Ikony pochodzą z jednego zestawu, [Lucide](https://lucide.dev/) 1.77.0 (licencja ISC, 19 ikon), plus sześć własnych: znak marki i pięć znaków stanowiska. Pliki i licencja są w [`ui-design/icons/`](ui-design/icons/README.md). Każda ikona rysuje się kolorem tekstu (`currentColor`), kreską `--icon-stroke`. Ikona nigdy nie stoi sama bez nazwy: ma tekst obok albo nazwę dla czytnika ekranu na przycisku, a sama jest ukryta przed czytnikiem.
 
 | Ikona | Gdzie |
 | --- | --- |
@@ -362,14 +363,13 @@ Ikony pochodzą z jednego zestawu, [Lucide](https://lucide.dev/) 1.77.0 (licencj
 | `braces` | przycisk „Surowe dane” |
 | `circle-alert` | błąd: komunikat, błąd pola, stan błędu widoku, znacznik „błąd” |
 | `circle-check` | komunikat powodzenia |
-| `triangle-alert` | komunikat uwagi, znacznik stanu wymagającego uwagi |
+| `triangle-alert` | komunikat uwagi, znacznik „wymaga uwagi” i stan źródła bez postów |
 | `info` | informacja bez oceny: post czeka na ocenę |
 | `refresh-cw` | „Spróbuj ponownie” |
 | `play` | „Uruchom” przebieg |
-| `rotate-ccw` | „Przywróć zaznaczone” nieudane posty |
+| `rotate-ccw` | „Przywróć martwe” w nieudanych postach |
 | `inbox` | pusta lista: dzień bez danych |
 | `arrow-down-up` | kolejność listy |
-| `calendar` | dzień w nagłówku listy tam, gdzie nie ma pola daty |
 | `stance-up`, `stance-down`, `stance-flat`, `stance-mixed`, `stance-none` | znak stanowiska: wzrostowo, spadkowo, neutralnie, mieszanie, bez stanowiska i niejasno |
 
 ## Komponenty
@@ -414,7 +414,7 @@ Siedem stanów każdego komponentu. „tak” znaczy, że arkusz pokazuje ten st
 | Klocek liczby | tak | A | A | A | D | tak | tak |
 | Karta celu dnia | tak | tak | tak | C | D | tak | tak |
 | Wiersz posta | tak | tak | tak | C | tak („ocena nieudana”) | tak („czeka na ocenę”) | tak |
-| Filtry | tak | E | E | E | D | tak (bez filtrów) | B |
+| Filtry | tak | E | E | E | D | tak (bez filtrów: bez wiersza włączonych filtrów) | B |
 | Stronicowanie | tak | E | E | tak | D | C | tak |
 | Panel boczny | tak | E | E | C | F | tak (post bez oceny) | F |
 | Cytat w treści | tak | A | A | tak (podświetlenie wyłączone) | B | B | B |
@@ -442,13 +442,13 @@ Siedem stanów każdego komponentu. „tak” znaczy, że arkusz pokazuje ten st
 
 **[Odnośnik](ui-design/prototypes/components.html#c-odnosnik)**. Prowadzi do innego miejsca. Kolor `--accent`, zawsze podkreślony; wskazany ma grubsze podkreślenie. Odnośnik poza aplikację ma ikonę `external-link`, otwiera nową kartę i mówi o tym w `aria-label` („otwiera się w nowej karcie”).
 
-**[Pola](ui-design/prototypes/components.html#c-pola)**. Tekst, hasło, wyszukiwanie, data, lista wyboru, pole wyboru. Budowa: etykieta nad polem, pole, pod polem podpowiedź albo błąd. Wysokość jak przycisk, więc wiersz pól i przycisków się wyrównuje. Błąd: czerwona krawędź, ikona i zdanie pod polem. Dostępność: `label` powiązany z polem; błąd i podpowiedź przez `aria-describedby`, błędne pole ma `aria-invalid="true"`; tekst zastępczy nie zastępuje etykiety (duże wyszukiwanie nad listą ma `aria-label`). Pole daty jest natywne: format i kalendarz daje przeglądarka.
+**[Pola](ui-design/prototypes/components.html#c-pola)**. Tekst, hasło, wyszukiwanie, data, lista wyboru, pole wyboru. Budowa: etykieta nad polem, pole, pod polem podpowiedź albo błąd. Wysokość jak przycisk, więc wiersz pól i przycisków się wyrównuje. Błąd: czerwona krawędź, ikona i zdanie pod polem. Dostępność: `label` powiązany z polem; błąd i podpowiedź przez `aria-describedby`, błędne pole ma `aria-invalid="true"`; tekst zastępczy nie zastępuje etykiety (duże wyszukiwanie nad listą ma nazwę „Szukaj w postach” w `aria-label`). Pole daty jest natywne: format i kalendarz daje przeglądarka.
 
 **[Przełącznik zakresu](ui-design/prototypes/components.html#c-przelacznik)**. Dwie opcje z liczbą postów: „Inwestycyjne” (domyślna) i „Wszystkie”. Przełącza cały widok. Wybrana opcja ma tło `--selected`, obwódkę akcentu i grubszy tekst. Dostępność: `role="group"` z nazwą „Zakres postów”, opcje to przyciski z `aria-pressed`. Podczas ładowania opcje są wyłączone i bez liczb.
 
-**[Filtry](ui-design/prototypes/components.html#c-filtry)**. Nad listą: duże wyszukiwanie i przycisk „Filtry”. Pod przyciskiem otwiera się panel z polami (rodzaj celu, stanowisko, zakres dat, kolejność) i przyciskami „Filtruj” oraz „Wyczyść filtry”. Włączone filtry widać na przycisku jako liczbę („Filtry: 2”). Dostępność: formularz `role="search"` z nazwą „Filtr postów”; przycisk ma `aria-expanded`; Esc zamyka panel i oddaje fokus przyciskowi. Filtr dalej żyje w adresie strony.
+**[Filtry](ui-design/prototypes/components.html#c-filtry)**. Nad listą: duże pole „Szukaj w postach”, które szuka słów w tytule i treści (FR-036), i przycisk „Filtry”. Pod przyciskiem otwiera się panel z polami: „Spółka lub temat” (filtr po celu, FR-011a), rodzaj celu, stanowisko, zakres dat i kolejność, oraz przyciskami „Filtruj” i „Wyczyść filtry”. Szukanie w treści i filtr po celu to dwa osobne pola, bo znaczą co innego: „Orlen” w treści znajdzie też posty, w których Orlen nie jest celem. Włączone filtry stoją nad listą jako wiersz znaczników („Cel: Orlen”, „14.10–20.10.2026”); każdy znacznik jest przyciskiem, który zdejmuje swój filtr, a na końcu wiersza jest „Wyczyść filtry”. Przycisk pokazuje ich liczbę („Filtry: 2”). Lista nie ma ukrytego domyślnego okresu: bez filtra dat pokazuje wszystkie posty od najnowszych. Dostępność: formularz `role="search"` z nazwą „Filtr postów”; przycisk ma `aria-expanded`, a panel stoi w dokumencie zaraz po nim; Esc zamyka panel i oddaje fokus przyciskowi; znacznik filtra ma nazwę „Usuń filtr: …”. Poniżej 900 px pole szukania zajmuje cały wiersz, a przycisk „Filtry” stoi pod nim. Filtr dalej żyje w adresie strony.
 
-**[Stronicowanie](ui-design/prototypes/components.html#c-stronicowanie)**. „Nowsze”, numer strony, „Starsze”. Na pierwszej stronie „Nowsze” jest wyłączone, na ostatniej „Starsze”. Dostępność: `nav` z nazwą „Strony”.
+**[Stronicowanie](ui-design/prototypes/components.html#c-stronicowanie)**. „Nowsze”, numer strony, „Starsze” dla list ułożonych w czasie (posty). Lista ułożona inaczej (katalog celów według liczby postów) ma „Poprzednie” i „Następne”. Na pierwszej stronie pierwszy przycisk jest wyłączony, na ostatniej drugi. Dostępność: `nav` z nazwą „Strony”. Prototypy pokazują skróconą listę; strona ma do 50 pozycji.
 
 **[Motyw](ui-design/prototypes/components.html#c-motyw)**. Przycisk z ikoną księżyca i nazwą „Ciemny motyw”; `aria-pressed` mówi, czy ciemny motyw jest włączony. Zachowanie z S-46 bez zmian.
 
@@ -460,15 +460,15 @@ Siedem stanów każdego komponentu. „tak” znaczy, że arkusz pokazuje ten st
 
 **[Cel ze stanowiskiem](ui-design/prototypes/components.html#c-cel)**. Nazwa celu i stanowisko w jednym znaczniku; tam, gdzie jest miejsce, także rodzaj celu. Znacznik zostaje w jednej linii; na bardzo wąskim ekranie skraca się nazwa celu, nie stanowisko.
 
-**[Pasek proporcji](ui-design/prototypes/components.html#c-pasek-proporcji)**. Udział stanowisk wzrostowych, spadkowych i pozostałych wobec celu. Dostępność: pasek to `role="img"` z opisem liczbami; te same liczby stoją obok jako tekst. Cel bez stanowisk ma pusty pasek i napis „Brak stanowisk”.
+**[Pasek proporcji](ui-design/prototypes/components.html#c-pasek-proporcji)**. Udział stanowisk wzrostowych, spadkowych i pozostałych wobec celu. „Pozostałe” to wszystko poza wzrostowym i spadkowym: neutralne, mieszane, niejasne i brak stanowiska; ekran z proporcjami mówi to pod tabelą albo nagłówkiem. Dostępność: pasek to `role="img"` z opisem liczbami w tej samej odmianie co tekst obok („33 wzrostowe, 17 spadkowych, 11 pozostałych”); te same liczby stoją obok jako tekst. Cel bez stanowisk ma pusty pasek i napis „Brak stanowisk”.
 
-**[Cytat w treści](ui-design/prototypes/components.html#c-cytat)**. Fragment treści posta, na którym oparto ocenę: element `mark` z tłem `--highlight` i kreską `--warning`. Pole wyboru „Podświetl cytaty z oceny” wyłącza podświetlenie; tekst się wtedy nie przesuwa.
+**[Cytat w treści](ui-design/prototypes/components.html#c-cytat)**. Fragment treści posta, na którym oparto ocenę: element `mark` z tłem `--highlight` i kreską `--warning`. Podświetlony jest każdy fragment, na który wskazuje ocena: cytat twierdzenia i miejsce, w którym cel pada w treści, także gdy cel nie ma twierdzeń. Gdy cytat pochodzi z tytułu, podświetlony jest tytuł w panelu. Pole wyboru „Podświetl fragmenty, na których oparto ocenę” wyłącza podświetlenie; tekst się wtedy nie przesuwa.
 
 **[Komunikat](ui-design/prototypes/components.html#c-komunikat)**. Wynik działania albo stan, który trzeba znać: powodzenie (`role="status"`), błąd (`role="alert"`), uwaga (`role="status"`). Budowa: ikona tonu i zdanie. Stoi przy tym, czego dotyczy, nie na górze strony.
 
 ### Treść
 
-**[Wiersz posta](ui-design/prototypes/components.html#c-wiersz-posta)**. Jeden post w jednej linii: godzina, źródło i kanał; tytuł szeryfem; z prawej cele ze stanowiskami. Wiersze jednego dnia stoją w jednej ramce pod nagłówkiem dnia. Cały wiersz jest odnośnikiem do posta i otwiera panel boczny. Wybrany wiersz ma tło `--selected`, pasek akcentu z lewej i `aria-current="true"`. Gdy celów jest więcej niż się mieści, wiersz pokazuje dwa i napis „i 3 inne”. Post bez oceny ma „czeka na ocenę”, nieinwestycyjny „nie inwestycyjny”, z nieudaną oceną „ocena nieudana”. Poniżej 900 px wiersz ma kilka linii: metadane, tytuł, cele.
+**[Wiersz posta](ui-design/prototypes/components.html#c-wiersz-posta)**. Jeden post w jednej linii: godzina, źródło i kanał; tytuł szeryfem; z prawej cele ze stanowiskami. Wiersze jednego dnia stoją w jednej ramce pod nagłówkiem dnia. Post bez tytułu (wpis i komentarz) pokazuje w miejscu tytułu początek treści, zwykłą grubością i kolorem `--text`, żeby nie udawał tytułu. Cały wiersz jest odnośnikiem do posta i otwiera panel boczny. Wybrany wiersz ma tło `--selected`, pasek akcentu z lewej i `aria-current="true"`. Gdy celów jest więcej niż się mieści, wiersz pokazuje dwa i napis „i 3 inne”. Flaga niepewności oceny („możliwy sarkazm”, „brak kontekstu”) stoi za celami kolorem `--warning`. Post bez oceny ma „czeka na ocenę”, nieinwestycyjny „nie inwestycyjny”, z nieudaną oceną „ocena nieudana”. Poniżej 900 px wiersz ma kilka linii: metadane, tytuł, cele.
 
 **[Panel boczny](ui-design/prototypes/components.html#c-panel)**. Ocena wybranego posta albo karta wybranego celu. Wysuwa się z prawej (szerokość `--width-panel`), lista przesuwa się do lewej krawędzi i zostaje widoczna pod lekkim przyciemnieniem. Budowa: pasek (źródło, kanał, typ i data posta; „4 z 128”; poprzedni, następny, zamknij) i przewijana treść. Dostępność: `role="dialog"` z nazwą z tytułu posta i `aria-modal="true"`; po otwarciu fokus przechodzi do panelu, Tab krąży w panelu, Esc zamyka, a fokus wraca na wybrany wiersz (wzorzec dialogu z WAI-ARIA Authoring Practices). Poniżej 900 px panel zajmuje cały ekran. Wybrany post ma własny adres.
 
@@ -482,13 +482,13 @@ Siedem stanów każdego komponentu. „tak” znaczy, że arkusz pokazuje ten st
 
 ### Powłoka i nawigacja
 
-**[Nawigacja](ui-design/prototypes/components.html#c-nawigacja)**. Pasek u góry każdej strony po zalogowaniu: znak i nazwa aplikacji, pozycje (Przegląd, Posty, Cele, dla admina Panel admina), data danych per źródło, dzwonek (admin), motyw, e-mail, „Wyloguj”. Bieżąca pozycja ma `aria-current="page"`. Dostępność: jeden `banner` na stronie, `nav` z nazwą „Główna”. Poniżej 900 px pozycje schodzą do drugiego wiersza, a data danych i e-mail znikają z paska.
+**[Nawigacja](ui-design/prototypes/components.html#c-nawigacja)**. Pasek u góry każdej strony po zalogowaniu: znak i nazwa aplikacji, pozycje (Przegląd, Posty, Cele, dla admina Panel admina), data danych per źródło, dzwonek (admin), motyw, e-mail, „Wyloguj”. Bieżąca pozycja ma `aria-current="page"`. Dostępność: jeden `banner` na stronie, `nav` z nazwą „Główna”. Data danych ma dla każdego źródła dzień i godzinę („Dane: Wykop 20.10.2026, 10:15” i pod spodem „Reddit 20.10.2026, 10:15”, jedno źródło w jednej linii), bo ostatnia udana aktualizacja mogła być wczoraj. Poniżej 900 px pozycje schodzą do drugiego wiersza, data danych do trzeciego (zostaje widoczna, FR-030), a e-mail znika z paska.
 
 **[Nagłówek strony](ui-design/prototypes/components.html#c-naglowek-strony)**. Tytuł strony (`h1`, jeden na stronie) i opcjonalny podtytuł; z prawej tylko to, co zmienia cały widok: przełącznik zakresu i wybór dnia (poprzedni, pole daty, następny). Po zmianie widoku fokus przechodzi na tytuł.
 
 **[Części panelu admina](ui-design/prototypes/components.html#c-podnawigacja)**. Pasek pod nagłówkiem „Panel admina”: Przebiegi, Jakość ocen, Nieudane posty. Każda część ma własny adres, więc to odnośniki w `nav` z nazwą „Panel admina”, a bieżąca ma `aria-current="page"`. Część może mieć licznik.
 
-**[Powiadomienia](ui-design/prototypes/components.html#c-powiadomienia)**. Dzwonek z licznikiem nieprzeczytanych i lista pod nim. Powiadomienie: znacznik stanu przebiegu, zdanie, rodzaj przebiegu i czas; nieprzeczytane ma pasek akcentu i grubszy tekst. Dostępność: przycisk z nazwą „Powiadomienia, 2 nieprzeczytane” i `aria-expanded`; lista to `region` z nazwą „Powiadomienia”; Esc zamyka. Widzi je tylko administrator.
+**[Powiadomienia](ui-design/prototypes/components.html#c-powiadomienia)**. Dzwonek z licznikiem nieprzeczytanych i lista pod nim. Powiadomienie: znacznik stanu przebiegu, zdanie, rodzaj przebiegu i czas; nieprzeczytane ma znacznik „nowe”, pasek akcentu i grubszy tekst. Dostępność: przycisk z nazwą „Powiadomienia, 2 nieprzeczytane” i `aria-expanded`; lista to `region` z nazwą „Powiadomienia” i stoi w dokumencie zaraz po dzwonku, więc Tab z dzwonka wchodzi do listy; Esc zamyka. Poniżej 900 px lista otwiera się w pasku i przesuwa treść w dół. Widzi je tylko administrator.
 
 ### Stany widoku
 
@@ -523,10 +523,11 @@ Etykiety, po których testy E2E znajdują elementy, zostają. Zmiany są w ostat
 | Pasek aplikacji | „Wyloguj”, „Ciemny motyw”, „Powiadomienia, N nieprzeczytanych” | te same | bez zmian |
 | Tytuły stron | „Przegląd dnia”, „Posty”, „Cele”, „Panel admina”, „Logowanie”, „Ustawienie hasła” | „Posty”, „Logowanie”, „Ustawienie hasła” | istniejące bez zmian |
 | Zakres postów | „Inwestycyjne”, „Wszystkie” | brak | nowy przełącznik zamiast zdania o ukrytych postach |
-| Wyszukiwanie | „Spółka lub temat”; tekst zastępczy „Szukaj spółki lub tematu” | „Spółka lub temat” | nazwa pola bez zmian |
-| Filtry | „Filtry”, „Rodzaj celu”, „Stanowisko”, „Od”, „Do”, „Kolejność”, „Filtruj”, „Wyczyść filtry” | „Rodzaj celu”, „Stanowisko”, „Filtruj”, „Wyczyść filtry” | istniejące bez zmian; nowe: przycisk „Filtry”, zakres dat, kolejność |
-| Stronicowanie | „Nowsze”, „Starsze”, „Strona 1 z 7” | te same | bez zmian |
-| Panel posta | „Poprzedni post”, „Następny post”, „Zamknij post”, „Oryginał”, „Podświetl cytaty z oceny” | „Otwórz oryginał na … (otwiera się w nowej karcie)” | nazwa odnośnika do oryginału dla czytnika bez zmian; reszta nowa |
+| Okres w katalogu celów | „Dziś”, „7 dni”, „30 dni” | brak | nowy przełącznik (S-57; domyślny okres ustali plan wycinka) |
+| Wyszukiwanie w treści | „Szukaj w postach”; tekst zastępczy „Szukaj w tytule i treści” | brak | nowe pole (FR-036, S-56) |
+| Filtry | „Filtry”, „Spółka lub temat”, „Rodzaj celu”, „Stanowisko”, „Od”, „Do”, „Kolejność”, „Filtruj”, „Wyczyść filtry”; znacznik włączonego filtra „Usuń filtr: …” | „Spółka lub temat”, „Rodzaj celu”, „Stanowisko”, „Filtruj”, „Wyczyść filtry” | istniejące bez zmian („Spółka lub temat” zostaje nazwą filtra po celu); nowe: przycisk „Filtry”, zakres dat, kolejność, znaczniki włączonych filtrów |
+| Stronicowanie | „Nowsze”, „Starsze”, „Strona 1 z 7”; w katalogu celów „Poprzednie”, „Następne” | te same | istniejące bez zmian; para dla katalogu celów nowa |
+| Panel posta | „Poprzedni post”, „Następny post”, „Zamknij post”, „Otwórz oryginał”, „Podświetl fragmenty, na których oparto ocenę” | „Otwórz oryginał na … (otwiera się w nowej karcie)” | nazwa odnośnika do oryginału dla czytnika bez zmian; reszta nowa |
 | Panel posta | „Surowe dane” | „Dane dla nerdów: surowy JSON źródła” | zmiana: nazwa mówi wprost, co się otworzy; test E2E zmienia etykietę w wycinku, który przebuduje ten widok |
 | Logowanie | „E-mail”, „Hasło”, „Zaloguj się” | te same | bez zmian |
 | Aktywacja | „Nowe hasło”, „Powtórz hasło”, „Ustaw hasło” | te same | bez zmian |
@@ -543,11 +544,13 @@ Słowa wartości (stany przebiegu, stanowiska, rodzaje celu i twierdzenia, typy 
 | Dzień | `dd.mm.rrrr` | 20.10.2026 |
 | Dzień z godziną | `dd.mm.rrrr, gg:mm` | 20.10.2026, 08:12 |
 | Godzina posta w liście dnia | `gg:mm` | 09:41 |
-| Nagłówek dnia w liście | słownie, z „Dzisiaj” i „Wczoraj” | Dzisiaj, 20 października |
+| Nagłówek dnia w liście | słownie, z „Dziś” i „Wczoraj” | Dziś, 20 października |
 | Podtytuł przeglądu dnia | dzień tygodnia i pełna data | wtorek, 20 października 2026 |
 | Zakres dni | półpauza bez spacji | 18.10–19.10.2026 |
-| Czas w powiadomieniach | względny do doby („przed chwilą”, „N min temu”, „N h temu”), potem dzień z godziną | 2 h temu; 19.10.2026, 02:41 |
-| Udział | procent bez miejsc po przecinku | 45% |
+| Czas w powiadomieniach | względny do doby („przed chwilą”, „N min temu”, „N h temu”), potem dzień z godziną | 2 h temu; 19.10.2026, 02:39 |
+| Data danych w pasku aplikacji | źródło oraz dzień z godziną ostatniej udanej aktualizacji, jedno źródło w jednej linii | Wykop 20.10.2026, 10:15 |
+| Udział stanowisk | procent bez miejsc po przecinku | 45% |
+| Miara jakości ocen | procent z jednym miejscem po przecinku, bo progi to pojedyncze procenty | 6,1% |
 | Liczba z rzeczownikiem | odmiana przez `plural` | 1 post, 23 posty, 128 postów |
 | Duża liczba | odstęp co trzy cyfry od pięciu cyfr, jak `Intl.NumberFormat('pl-PL')` | 3134; 12 345 |
 | Brak wartości | półpauza i słowa obok | – brak stanowisk |
@@ -572,4 +575,13 @@ Wszystkie daty i godziny są w czasie warszawskim (`Europe/Warsaw`), jak dziś w
 
 ## Decyzja właściciela
 
-> Do uzupełnienia w fazie 3.
+Właściciel ocenia projekt na obrazkach: w galerii zrzutów każdego ekranu w obu motywach, na komputerze i telefonie. Decyzje projektowe (kroje, kolory, wzorce) podejmuje projektant według standardów z sekcji „Zasady i standardy”.
+
+| Data | Decyzja |
+| --- | --- |
+| 2026-11-19 | Aplikacja jest używana głównie na komputerze. Ekranem startowym ma być docelowo przegląd dnia. |
+| 2026-11-20 | Wygląd: „Salon w kolorach Radaru” (granat i błękit, szeryf do czytania, grotesk do obsługi), motyw ciemny jako pierwszy, jasny jako drugi, domyślnie według systemu. Pierwsza runda wariantów odrzucona jako „trochę lepszy panel”. |
+| 2026-11-20 | Układ: „Kanał”. Nawigacja u góry, jedna kolumna, lista postów zwarta, ocena posta w panelu wysuwanym z prawej z listą widoczną w tle, przegląd dnia z klockami liczb zamiast zdania, przełącznik „Inwestycyjne / Wszystkie” zamiast zdania o ukrytych postach. Układ z kolumną boczną i panelem stałym odrzucony jako „panel administratora”. |
+| 2026-11-20 | **Akceptacja kompletu**: 19 ekranów z `ui-design/screens.json` i arkusz komponentów, w obu motywach, przy 1280 i 375 px. Bez poprawek („Jest okej”). |
+
+Przed akceptacją komplet przeszedł niezależny przegląd heurystyczny w dwóch przejściach (heurystyki Nielsena, wybrane reguły WCAG 2.2 AA, zgodność z PRD, bolączki właściciela): dziewięć ustaleń blokujących poprawiono i zamknięto, zero zostało otwartych. Zaakceptowany stan to prototypy w `ui-design/prototypes/` i zrzuty w `ui-design/screens/` z tego samego commitu co ten zapis.

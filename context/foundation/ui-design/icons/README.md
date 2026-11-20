@@ -23,7 +23,6 @@ Ikony projektu UI/UX Szczur Radar (F-07). Pliki Lucide są skopiowane bez zmian 
 | `rotate-ccw.svg` | `i-rotate-ccw` | Lucide 1.77.0 | ISC | „Przywróć zaznaczone” nieudane posty |
 | `inbox.svg` | `i-inbox` | Lucide 1.77.0 | ISC | pusta lista: dzień bez danych |
 | `arrow-down-up.svg` | `i-arrow-down-up` | Lucide 1.77.0 | ISC | kolejność listy |
-| `calendar.svg` | `i-calendar` | Lucide 1.77.0 | ISC | dzień w nagłówku listy bez pola daty |
 | `brand-mark.svg` | `i-brand` | własna | własna, na licencji repozytorium | znak marki w pasku aplikacji |
 | `stance-up.svg` | `s-up` | własna | własna, na licencji repozytorium | stanowisko autora: wzrost |
 | `stance-down.svg` | `s-down` | własna | własna, na licencji repozytorium | stanowisko autora: spadek |

@@ -111,6 +111,7 @@
   --ease-out: cubic-bezier(0.2, 0, 0, 1);
 
   /* --- Warstwy --- */
+  --z-bar: 5;
   --z-scrim: 10;
   --z-overlay: 20;
 }

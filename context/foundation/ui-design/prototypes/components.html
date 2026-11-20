@@ -30,12 +30,6 @@
     <path d="M8 3H7a2 2 0 0 0-2 2v5a2 2 0 0 1-2 2 2 2 0 0 1 2 2v5c0 1.1.9 2 2 2h1" />
     <path d="M16 21h1a2 2 0 0 0 2-2v-5c0-1.1.9-2 2-2a2 2 0 0 1-2-2V5a2 2 0 0 0-2-2h-1" />
   </symbol>
-  <symbol id="i-calendar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M8 2v3" />
-    <path d="M16 2v3" />
-    <rect x="3" y="3" width="18" height="18" rx="2" />
-    <path d="M3 9h18" />
-  </symbol>
   <symbol id="i-chevron-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
     <path d="m6 9 6 6 6-6" />
   </symbol>
@@ -123,7 +117,7 @@
     <a href="#c-tabela">Panel admina</a>
   </nav>
   <div class="session">
-    <p class="freshness">Dane z <time datetime="2026-10-20T09:52">09:52</time> (Wykop) i <time datetime="2026-10-20T08:40">08:40</time> (Reddit)</p>
+    <p class="freshness"><span>Dane:</span><span class="freshness-list"><span>Wykop <time datetime="2026-10-20T10:15">20.10.2026, 10:15</time></span><span>Reddit <time datetime="2026-10-20T10:15">20.10.2026, 10:15</time></span></span></p>
     <button type="button" class="icon-btn" aria-label="Powiadomienia, 2 nieprzeczytane" aria-expanded="false">
       <svg class="icon" aria-hidden="true"><use href="#i-bell"/></svg>
       <span class="bell-count" aria-hidden="true">2</span>
@@ -277,13 +271,13 @@
   <h2 class="h-section" id="t-pola">Pola</h2>
   <p class="note">Każde pole ma widoczną etykietę nad sobą. Błąd stoi pod polem, słowami, z ikoną.</p>
   <div class="demo">
-    <div class="demo-item demo-stretch"><div class="field"><label for="f-email">E-mail</label><input type="email" id="f-email" value="admin@szczur-radar.example" autocomplete="off"></div><span class="demo-label">Tekst: wypełnione</span></div>
-    <div class="demo-item demo-stretch"><div class="field"><label for="f-email-empty">E-mail</label><input type="email" id="f-email-empty" autocomplete="off"></div><span class="demo-label">Tekst: puste</span></div>
-    <div class="demo-item demo-stretch"><div class="field"><label for="f-email-hover">E-mail</label><input type="email" id="f-email-hover" class="is-hover" autocomplete="off"></div><span class="demo-label">Tekst: wskazane</span></div>
-    <div class="demo-item demo-stretch"><div class="field"><label for="f-email-focus">E-mail</label><input type="email" id="f-email-focus" class="is-focus" autocomplete="off"></div><span class="demo-label">Tekst: fokus</span></div>
+    <div class="demo-item demo-stretch"><div class="field"><label for="f-email">E-mail</label><input type="email" id="f-email" value="admin@szczur-radar.example"></div><span class="demo-label">Tekst: wypełnione</span></div>
+    <div class="demo-item demo-stretch"><div class="field"><label for="f-email-empty">E-mail</label><input type="email" id="f-email-empty"></div><span class="demo-label">Tekst: puste</span></div>
+    <div class="demo-item demo-stretch"><div class="field"><label for="f-email-hover">E-mail</label><input type="email" id="f-email-hover" class="is-hover"></div><span class="demo-label">Tekst: wskazane</span></div>
+    <div class="demo-item demo-stretch"><div class="field"><label for="f-email-focus">E-mail</label><input type="email" id="f-email-focus" class="is-focus"></div><span class="demo-label">Tekst: fokus</span></div>
     <div class="demo-item demo-stretch"><div class="field"><label for="f-email-off">E-mail</label><input type="email" id="f-email-off" value="admin@szczur-radar.example" disabled></div><span class="demo-label">Tekst: wyłączone</span></div>
-    <div class="demo-item demo-stretch"><div class="field"><label for="f-pass">Hasło</label><input type="password" id="f-pass" value="haslo-probne" aria-invalid="true" aria-describedby="f-pass-err" autocomplete="off"><p class="field-error" id="f-pass-err"><svg class="icon" aria-hidden="true"><use href="#i-circle-alert"/></svg>Hasło musi mieć co najmniej 12 znaków.</p></div><span class="demo-label">Hasło: błąd</span></div>
-    <div class="demo-item demo-stretch"><div class="field"><label for="f-pass2">Powtórz hasło</label><input type="password" id="f-pass2" aria-describedby="f-pass2-hint" autocomplete="off"><p class="field-hint" id="f-pass2-hint">Te same znaki co wyżej.</p></div><span class="demo-label">Hasło: z podpowiedzią</span></div>
+    <div class="demo-item demo-stretch"><div class="field"><label for="f-pass">Hasło</label><input type="password" id="f-pass" value="haslo-probne" aria-invalid="true" aria-describedby="f-pass-err"><p class="field-error" id="f-pass-err"><svg class="icon" aria-hidden="true"><use href="#i-circle-alert"/></svg>Hasło musi mieć co najmniej 12 znaków.</p></div><span class="demo-label">Hasło: błąd</span></div>
+    <div class="demo-item demo-stretch"><div class="field"><label for="f-pass2">Powtórz hasło</label><input type="password" id="f-pass2" aria-describedby="f-pass2-hint"><p class="field-hint" id="f-pass2-hint">Te same znaki co wyżej.</p></div><span class="demo-label">Hasło: z podpowiedzią</span></div>
     <div class="demo-item demo-stretch"><div class="field"><label for="f-search">Spółka lub temat</label><span class="input-wrap"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg><input type="search" id="f-search" value="KGHM"></span></div><span class="demo-label">Wyszukiwanie</span></div>
     <div class="demo-item demo-stretch"><div class="field"><label for="f-date">Dzień</label><input type="date" id="f-date" value="2026-10-20"></div><span class="demo-label">Data</span></div>
     <div class="demo-item demo-stretch"><div class="field"><label for="f-kind">Rodzaj celu</label><select id="f-kind"><option>dowolny</option><option>spółka</option><option>aktywo</option><option>sektor</option><option>makro i rynek</option></select></div><span class="demo-label">Lista wyboru</span></div>
@@ -296,7 +290,7 @@
   </div>
   <div class="demo demo-wide">
     <div class="demo-item demo-stretch"><span class="demo-label">Duże wyszukiwanie nad listą postów: puste z podpowiedzią</span>
-      <span class="input-wrap input-lg"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg><input type="search" aria-label="Szukaj w postach" placeholder="Szukaj spółki lub tematu"></span></div>
+      <span class="input-wrap input-lg"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg><input type="search" aria-label="Szukaj w postach" placeholder="Szukaj w tytule i treści"></span></div>
   </div>
 </section>
 
@@ -514,7 +508,7 @@
   <div class="demo demo-wide">
     <div class="demo-item demo-stretch">
       <div class="day-group" style="margin-top: 0">
-        <h3 class="day-title">Dzisiaj, 20 października</h3>
+        <h3 class="day-title">Dziś, 20 października</h3>
         <ol class="posts">
           <li><a class="post" href="#c-wiersz-posta">
             <span class="post-meta"><span class="src">Wykop</span><span>#gielda</span><time datetime="2026-10-20T09:41">09:41</time></span>
@@ -568,26 +562,28 @@
 
 <section class="sheet-section" id="c-filtry" aria-labelledby="t-filtry">
   <h2 class="h-section" id="t-filtry">Filtry</h2>
-  <p class="note">Nad listą widać tylko wyszukiwanie i przycisk „Filtry”. Pozostałe pola otwierają się pod przyciskiem.</p>
+  <p class="note">Nad listą widać wyszukiwanie w treści i przycisk „Filtry”. Cel, stanowisko, daty i kolejność otwierają się pod przyciskiem, a włączone filtry stoją nad listą.</p>
   <div class="demo demo-wide">
     <div class="demo-item demo-stretch"><span class="demo-label">Zamknięte, bez filtrów</span>
       <div class="toolbar" style="margin-top: 0">
-        <span class="input-wrap input-lg field-search"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg><input type="search" aria-label="Szukaj w postach, przykład" placeholder="Szukaj spółki lub tematu"></span>
+        <span class="input-wrap input-lg field-search"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg><input type="search" aria-label="Szukaj w postach (przykład)" placeholder="Szukaj w tytule i treści"></span>
         <button type="button" class="btn btn-lg" aria-expanded="false"><svg class="icon" aria-hidden="true"><use href="#i-list-filter"/></svg>Filtry</button>
       </div></div>
-    <div class="demo-item demo-stretch"><span class="demo-label">Zamknięte, dwa filtry włączone</span>
+    <div class="demo-item demo-stretch"><span class="demo-label">Zamknięte, dwa filtry włączone: widać je nad listą i każdy da się zdjąć</span>
       <div class="toolbar" style="margin-top: 0">
-        <span class="input-wrap input-lg field-search"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg><input type="search" aria-label="Szukaj w postach, przykład z filtrami" value="KGHM"></span>
+        <span class="input-wrap input-lg field-search"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg><input type="search" aria-label="Szukaj w postach (przykład z filtrami)" placeholder="Szukaj w tytule i treści"></span>
         <button type="button" class="btn btn-lg" aria-expanded="false"><svg class="icon" aria-hidden="true"><use href="#i-list-filter"/></svg>Filtry: 2</button>
-      </div></div>
+      </div>
+      <ul class="chips" aria-label="Włączone filtry"><li><button type="button" class="chip" aria-label="Usuń filtr: Cel: KGHM">Cel: KGHM<svg class="icon" aria-hidden="true"><use href="#i-x"/></svg></button></li><li><button type="button" class="chip is-hover" aria-label="Usuń filtr: 14.10–20.10.2026">14.10–20.10.2026<svg class="icon" aria-hidden="true"><use href="#i-x"/></svg></button></li><li><button type="button" class="btn-text">Wyczyść filtry</button></li></ul></div>
     <div class="demo-item"><span class="demo-label">Otwarte</span>
       <form class="popover" role="search" aria-label="Filtr postów">
         <div class="popover-head"><span class="popover-title">Filtry</span>
           <button type="button" class="icon-btn" aria-label="Zamknij filtry"><svg class="icon" aria-hidden="true"><use href="#i-x"/></svg></button></div>
         <div class="popover-body">
           <div class="filters">
-            <div class="field"><label for="fl-kind">Rodzaj celu</label><select id="fl-kind"><option>spółka</option><option>dowolny</option></select></div>
-            <div class="field"><label for="fl-dir">Stanowisko</label><select id="fl-dir"><option>wzrostowo</option><option>dowolne</option></select></div>
+            <div class="field wide"><label for="fl-target">Spółka lub temat</label><input type="text" id="fl-target" value="KGHM"></div>
+            <div class="field"><label for="fl-kind">Rodzaj celu</label><select id="fl-kind"><option>dowolny</option><option>spółka</option></select></div>
+            <div class="field"><label for="fl-dir">Stanowisko</label><select id="fl-dir"><option>dowolne</option><option>wzrostowo</option></select></div>
             <div class="field"><label for="fl-from">Od</label><input type="date" id="fl-from" value="2026-10-14"></div>
             <div class="field"><label for="fl-to">Do</label><input type="date" id="fl-to" value="2026-10-20"></div>
             <div class="field wide"><label for="fl-sort">Kolejność</label><select id="fl-sort"><option>od najnowszych</option><option>od najstarszych</option></select></div>
@@ -639,12 +635,12 @@
           <article class="reading" id="c-cytat">
             <h3 class="reading-title">Podatek od kopalin zostaje. Co to znaczy dla wyniku</h3>
             <p class="byline"><span class="author">konto_przykladowe</span>
-              <a class="ext" href="#c-panel" aria-label="Otwórz oryginał na wykop.pl (otwiera się w nowej karcie)">Oryginał<svg class="icon" aria-hidden="true"><use href="#i-external-link"/></svg></a></p>
+              <a class="ext" href="#c-panel" aria-label="Otwórz oryginał na wykop.pl (otwiera się w nowej karcie)">Otwórz oryginał<svg class="icon" aria-hidden="true"><use href="#i-external-link"/></svg></a></p>
             <div class="body">
               <p>Ministerstwo potwierdziło, że stawki zostają do końca przyszłego roku. <mark>Przy obecnej cenie miedzi to nadal ponad trzy miliardy złotych rocznie</mark>, których spółka nie pokaże w zysku.</p>
               <p>Nie sprzedaję, ale <mark>na tym poziomie nie dokupuję</mark>. Poczekam na wyniki za trzeci kwartał.</p>
             </div>
-            <label class="check marks-toggle"><input type="checkbox" checked>Podświetl cytaty z oceny</label>
+            <label class="check marks-toggle"><input type="checkbox" checked>Podświetl fragmenty, na których oparto ocenę</label>
           </article>
 
           <section class="assessment" aria-labelledby="pv-assess">
@@ -709,7 +705,7 @@
         <button type="button" class="icon-btn" aria-label="Powiadomienia, 2 nieprzeczytane (przykład)" aria-expanded="false"><svg class="icon" aria-hidden="true"><use href="#i-bell"/></svg><span class="bell-count" aria-hidden="true">2</span></button>
         <button type="button" class="icon-btn is-hover" aria-label="Powiadomienia, 12 nieprzeczytanych" aria-expanded="false"><svg class="icon" aria-hidden="true"><use href="#i-bell"/></svg><span class="bell-count" aria-hidden="true">12</span></button>
         <button type="button" class="icon-btn is-focus" aria-label="Powiadomienia, 1 nieprzeczytane" aria-expanded="false"><svg class="icon" aria-hidden="true"><use href="#i-bell"/></svg><span class="bell-count" aria-hidden="true">1</span></button>
-        <button type="button" class="icon-btn" aria-pressed="true" aria-label="Powiadomienia, lista otwarta" aria-expanded="true"><svg class="icon" aria-hidden="true"><use href="#i-bell"/></svg></button>
+        <button type="button" class="icon-btn" aria-label="Powiadomienia, lista otwarta" aria-expanded="true"><svg class="icon" aria-hidden="true"><use href="#i-bell"/></svg></button>
       </div></div>
   </div>
   <div class="demo demo-roomy">
@@ -718,12 +714,12 @@
         <div class="popover-head"><span class="popover-title" id="n-title-1">Powiadomienia</span>
           <button type="button" class="btn">Oznacz wszystkie jako przeczytane</button></div>
         <a class="notif notif-unread" href="#c-powiadomienia">
-          <span class="demo-row"><span class="badge badge-destructive">błąd</span></span>
+          <span class="demo-row"><span class="badge badge-info">nowe</span><span class="badge badge-destructive">błąd</span></span>
           <span class="notif-title">Przebieg nocny nie pobrał postów z żadnego źródła</span>
           <span class="notif-meta">zakres dat · 2 h temu</span>
         </a>
         <a class="notif notif-unread is-hover" href="#c-powiadomienia">
-          <span class="demo-row"><span class="badge badge-warning">częściowo</span></span>
+          <span class="demo-row"><span class="badge badge-info">nowe</span><span class="badge badge-warning">częściowo</span></span>
           <span class="notif-title">Reddit nie dał postów, Wykop pobrany</span>
           <span class="notif-meta">zakres dat · 19.10.2026, 02:41</span>
         </a>
@@ -834,6 +830,10 @@
       <div class="message message-error" role="alert"><svg class="icon" aria-hidden="true"><use href="#i-circle-alert"/></svg><p>Nieprawidłowy e-mail lub hasło.</p></div></div>
     <div class="demo-item demo-stretch"><span class="demo-label">Uwaga</span>
       <div class="message message-warning" role="status"><svg class="icon" aria-hidden="true"><use href="#i-triangle-alert"/></svg><p>Przebieg trwa. Nowy stanie w kolejce.</p></div></div>
+    <div class="demo-item demo-stretch"><span class="demo-label">Logowanie: limit prób</span>
+      <div class="message message-error" role="alert"><svg class="icon" aria-hidden="true"><use href="#i-circle-alert"/></svg><p>Zbyt wiele prób. Spróbuj ponownie za 5 min.</p></div></div>
+    <div class="demo-item demo-stretch"><span class="demo-label">Aktywacja: link nieważny</span>
+      <div class="message message-error" role="alert"><svg class="icon" aria-hidden="true"><use href="#i-circle-alert"/></svg><p>Link jest nieważny lub wygasł. Poproś administratora o nowy.</p></div></div>
   </div>
 </section>
 
@@ -924,7 +924,6 @@
     <li><svg class="icon" aria-hidden="true"><use href="#i-rotate-ccw"/></svg>rotate-ccw</li>
     <li><svg class="icon" aria-hidden="true"><use href="#i-inbox"/></svg>inbox</li>
     <li><svg class="icon" aria-hidden="true"><use href="#i-arrow-down-up"/></svg>arrow-down-up</li>
-    <li><svg class="icon" aria-hidden="true"><use href="#i-calendar"/></svg>calendar</li>
     <li><svg class="mark" aria-hidden="true"><use href="#s-up"/></svg>stance-up</li>
     <li><svg class="mark" aria-hidden="true"><use href="#s-down"/></svg>stance-down</li>
     <li><svg class="mark" aria-hidden="true"><use href="#s-flat"/></svg>stance-flat</li>

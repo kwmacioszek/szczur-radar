@@ -368,26 +368,26 @@ Brak danych i kodu do migracji. Projekt wchodzi do aplikacji w F-08 (tokeny, kom
 
 #### Automated
 
-- [x] 2.1 Tokeny spełniają progi kontrastu i format zgodny z testem aplikacji
-- [x] 2.2 Arkusz komponentów przechodzi kontrolę stron w obu motywach przy 1280 i 375 px
-- [x] 2.3 Każdy komponent z tabeli w `ui-design.md` ma kotwicę w arkuszu, a arkusz ma zrzuty
-- [x] 2.4 Pliki krojów i ikon mają pliki licencji, a `prototype.css` nie zawiera literałów kolorów
-- [x] 2.5 Kod aplikacji bez zmian
+- [x] 2.1 Tokeny spełniają progi kontrastu i format zgodny z testem aplikacji — b01bc4a
+- [x] 2.2 Arkusz komponentów przechodzi kontrolę stron w obu motywach przy 1280 i 375 px — b01bc4a
+- [x] 2.3 Każdy komponent z tabeli w `ui-design.md` ma kotwicę w arkuszu, a arkusz ma zrzuty — b01bc4a
+- [x] 2.4 Pliki krojów i ikon mają pliki licencji, a `prototype.css` nie zawiera literałów kolorów — b01bc4a
+- [x] 2.5 Kod aplikacji bez zmian — b01bc4a
 
 ### Phase 3: Prototypy wszystkich ekranów
 
 #### Automated
 
-- [ ] 3.1 Każdy ekran ze `screens.json` ma prototyp i cztery zrzuty
-- [ ] 3.2 Wszystkie prototypy ekranów przechodzą kontrolę stron w obu motywach przy 1280 i 375 px
-- [ ] 3.3 Tabela „Ekrany” jest zgodna ze `screens.json` i pokrywa listę wymagań
-- [ ] 3.4 Przegląd heurystyczny nie ma otwartych ustaleń blokujących
-- [ ] 3.5 Galeria odwołuje się do każdego zrzutu ekranów
-- [ ] 3.6 Kod aplikacji bez zmian
+- [x] 3.1 Każdy ekran ze `screens.json` ma prototyp i cztery zrzuty
+- [x] 3.2 Wszystkie prototypy ekranów przechodzą kontrolę stron w obu motywach przy 1280 i 375 px
+- [x] 3.3 Tabela „Ekrany” jest zgodna ze `screens.json` i pokrywa listę wymagań
+- [x] 3.4 Przegląd heurystyczny nie ma otwartych ustaleń blokujących
+- [x] 3.5 Galeria odwołuje się do każdego zrzutu ekranów
+- [x] 3.6 Kod aplikacji bez zmian
 
 #### Manual
 
-- [ ] 3.7 Właściciel akceptuje komplet ekranów na galerii albo zleca poprawki, a decyzja jest zapisana w `ui-design.md`, sekcja „Decyzja właściciela”
+- [x] 3.7 Właściciel akceptuje komplet ekranów na galerii albo zleca poprawki, a decyzja jest zapisana w `ui-design.md`, sekcja „Decyzja właściciela”
 
 ### Phase 4: Przekazanie do wdrożenia
 

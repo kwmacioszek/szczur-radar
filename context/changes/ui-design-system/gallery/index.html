@@ -1,6 +1,6 @@
 <title>Warianty wyglądu Szczur Radar</title>
-<!-- Na górze układ „Kanał” (e) wybrany przez właściciela: jedna kolumna, lista zwarta, ocena posta w panelu z prawej.
-     Niżej wcześniejsze warianty: Radar (a), Parkiet (b), Salon (c), Salon w kolorach Radaru (d). Runda 1 jest w directions/round-1/. -->
+<!-- Komplet ekranów projektu (context/foundation/ui-design/screens.json) i arkusz komponentów; niżej, zwinięte,
+     wcześniejsze warianty: Radar (a), Parkiet (b), Salon (c), Salon w kolorach Radaru (d), Kanał (e). Runda 1: directions/round-1/. -->
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@600;700&display=swap">
 <style>
@@ -271,12 +271,41 @@
       grid-template-columns: minmax(0, 1fr);
     }
   }
+
+  .group {
+    margin-top: 40px;
+  }
+
+  .screen h3 {
+    margin: 0;
+    font: 600 17px/1.3 var(--display);
+  }
+
+  #groups.phone .screens {
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  }
+
+  #groups.phone .screen .shot {
+    max-width: 375px;
+  }
+
+  #groups.phone .screen.wide {
+    grid-column: auto;
+  }
+
+  details.older > summary {
+    cursor: pointer;
+  }
+
+  details.older > summary h2 {
+    display: inline;
+  }
 </style>
 
 <div class="wrap">
   <header>
-    <h1>Wybrany układ i wygląd</h1>
-    <p class="lead">Stan po Twoich decyzjach: wygląd Salonu w kolorach Radaru, jedna kolumna, lista postów zwarta, ocena posta w panelu wysuwanym z prawej, przegląd dnia z klockami liczb. Kliknięcie zrzutu przełącza jego rozmiar.</p>
+    <h1>Komplet ekranów</h1>
+    <p class="lead">Wszystkie ekrany w zaakceptowanym wyglądzie i układzie: jedna kolumna, lista zwarta, szczegóły w panelu z prawej. Wybierz motyw i szerokość; kliknięcie zrzutu przełącza jego rozmiar.</p>
   </header>
 
   <form class="controls" id="controls">
@@ -285,43 +314,19 @@
       <label class="opt"><input type="radio" name="theme" id="theme-dark" value="dark" checked><span>Ciemny</span></label>
       <label class="opt"><input type="radio" name="theme" id="theme-light" value="light"><span>Jasny</span></label>
     </fieldset>
+    <fieldset>
+      <legend>Szerokość</legend>
+      <label class="opt"><input type="radio" name="width" id="width-1280" value="1280" checked><span>Komputer</span></label>
+      <label class="opt"><input type="radio" name="width" id="width-375" value="375"><span>Telefon</span></label>
+    </fieldset>
   </form>
 
   <main>
-    <div class="screens" id="screens">
-      <figure class="screen" data-shot="e/stream-THEME-1280.png">
-        <figcaption>
-          <h2>Posty</h2>
-          <p>Lista zwarta: jeden post w jednej linii (godzina i źródło, tytuł, stanowiska), jedna ramka na dzień. Na wierzchu szukanie i przełącznik „Inwestycyjne / Wszystkie”, pozostałe filtry pod przyciskiem „Filtry”.</p>
-        </figcaption>
-        <button type="button" class="shot" aria-label="Powiększ albo zmniejsz zrzut"><img alt="" width="2560" height="1800"></button>
-      </figure>
-      <figure class="screen" data-shot="e/post-sheet-THEME-1280.png">
-        <figcaption>
-          <h2>Ocena posta</h2>
-          <p>Po kliknięciu posta panel wysuwa się z prawej. Lista przesuwa się do lewej krawędzi i zostaje widoczna w tle; wybrany post jest zaznaczony.</p>
-        </figcaption>
-        <button type="button" class="shot" aria-label="Powiększ albo zmniejsz zrzut"><img alt="" width="2560" height="1800"></button>
-      </figure>
-      <figure class="screen" data-shot="e/overview-THEME-1280.png">
-        <figcaption>
-          <h2>Przegląd dnia</h2>
-          <p>Klocki z liczbami dnia, przełącznik „Inwestycyjne / Wszystkie” obok wyboru dnia, trzy karty najczęściej omawianych celów, pełna tabela niżej.</p>
-        </figcaption>
-        <button type="button" class="shot" aria-label="Powiększ albo zmniejsz zrzut"><img alt="" width="2560" height="1800"></button>
-      </figure>
-      <figure class="screen phone" data-shot="e/stream-THEME-375.png">
-        <figcaption>
-          <h2>Posty na telefonie</h2>
-          <p>Na wąskim ekranie każdy post zajmuje kilka linii w jednej kolumnie, a ocena posta otwiera się na cały ekran.</p>
-        </figcaption>
-        <button type="button" class="shot" aria-label="Powiększ albo zmniejsz zrzut"><img alt="" width="750" height="1624"></button>
-      </figure>
-    </div>
+    <div id="groups"></div>
 
-    <section class="older" aria-labelledby="older-title">
-      <h2 id="older-title">Wcześniejsze warianty, dla porównania</h2>
-      <p class="lead">Układ z panelami obok siebie w czterech wyglądach z poprzedniej rundy.</p>
+    <details class="older" id="older">
+      <summary><h2 id="older-title">Wcześniejsze warianty, dla porównania</h2></summary>
+      <p class="lead">Układ z panelami obok siebie w czterech wyglądach z pierwszych rund.</p>
       <form class="controls" id="older-controls">
         <fieldset>
           <legend>Ekran</legend>
@@ -331,7 +336,8 @@
         </fieldset>
         <fieldset>
           <legend>Wariant</legend>
-          <label class="opt"><input type="radio" name="view" id="view-d" value="d" checked><span>Salon w kolorach Radaru</span></label>
+          <label class="opt"><input type="radio" name="view" id="view-e" value="e" checked><span>Kanał (wybrany układ)</span></label>
+          <label class="opt"><input type="radio" name="view" id="view-d" value="d"><span>Salon w kolorach Radaru</span></label>
           <label class="opt"><input type="radio" name="view" id="view-a" value="a"><span>Radar</span></label>
           <label class="opt"><input type="radio" name="view" id="view-c" value="c"><span>Salon</span></label>
           <label class="opt"><input type="radio" name="view" id="view-b" value="b"><span>Parkiet</span></label>
@@ -339,43 +345,43 @@
       </form>
       <div class="stage single" id="stage">
         <div class="variant">
-          <div class="shot"><img id="older-img" alt="" width="2560" height="1800"></div>
+          <div class="shot"><img id="older-img" alt="" width="2560" height="1800" loading="lazy"></div>
         </div>
       </div>
-    </section>
+    </details>
   </main>
 
   <section class="notes" aria-label="Uwagi">
     <div>
-      <h2>Co zostaje bez zmian</h2>
+      <h2>Na co patrzeć</h2>
       <ul>
-        <li>Karta posta pokazuje cele i stanowisko autora wobec każdego: znak, słowo i kolor.</li>
-        <li>Ocena to tezy pod dosłownymi cytatami; te same fragmenty są podświetlone w treści.</li>
-        <li>Wybrany post ma własny adres, a strzałki przechodzą do poprzedniego i następnego.</li>
-        <li>Przegląd dnia pokazuje liczby wprost, bez trendu i bez wyboru „wartych przeczytania”.</li>
+        <li>Czy od razu wiadomo, gdzie jesteś i co możesz zrobić.</li>
+        <li>Czy sedno posta (cele i stanowiska) widać bez otwierania go.</li>
+        <li>Czy panel admina czyta się jak trzy osobne sprawy, a nie jedna ściana.</li>
+        <li>Czy któryś ekran dalej wygląda „jak panel administratora”.</li>
       </ul>
     </div>
     <div>
-      <h2>Sprawdzone automatycznie</h2>
+      <h2>Sprawdzone automatycznie i przez recenzenta</h2>
       <ul>
-        <li>Kontrast tekstu co najmniej 4,5:1 w jasnym i ciemnym motywie.</li>
-        <li>Reguły dostępności WCAG 2.2 AA, w tym rozmiar celów dotyku.</li>
+        <li>Kontrast tekstu co najmniej 4,5:1 w obu motywach (63 pary kolorów).</li>
+        <li>Reguły dostępności WCAG 2.2 AA na każdym ekranie przy 1280, 375 i 320 px.</li>
         <li>Brak przewijania w poziomie od szerokości 320 px.</li>
-        <li>Polskie znaki rysowane krojem wariantu, bez kroju zastępczego.</li>
+        <li>Niezależny przegląd według heurystyk Nielsena, WCAG i wymagań produktu, w dwóch przejściach.</li>
       </ul>
     </div>
     <div>
-      <h2>Czego tu jeszcze nie ma</h2>
+      <h2>Czego prototyp nie pokazuje</h2>
       <ul>
-        <li>Rozwiniętego panelu filtrów, pozostałych ekranów i komponentów: powstaną w kolejnych fazach, w tym układzie i wyglądzie.</li>
-        <li>Szukanie w treści, dodatkowe filtry i przegląd dnia pokazują stan docelowy, którego aplikacja jeszcze nie obsługuje.</li>
+        <li>Listy są skrócone, a dane przykładowe. Zrzut z otwartym panelem pokazuje kadr okna, bo panel przewija się osobno.</li>
+        <li>Szukanie w treści, filtry dat, kolejność, katalog celów i przegląd dnia pokazują stan docelowy, którego aplikacja jeszcze nie obsługuje.</li>
       </ul>
     </div>
   </section>
 </div>
 
 <script>
-  // Every screenshot of the variants; the paths are relative to the published page.
+  // Every screenshot of the variants and of the screens; the paths are relative to the published page.
   const SHOTS = [
     'a/stream-light-1280.png', 'a/stream-dark-1280.png', 'a/overview-light-1280.png', 'a/overview-dark-1280.png', 'a/stream-light-375.png', 'a/stream-dark-375.png',
     'b/stream-light-1280.png', 'b/stream-dark-1280.png', 'b/overview-light-1280.png', 'b/overview-dark-1280.png', 'b/stream-light-375.png', 'b/stream-dark-375.png',
@@ -383,44 +389,135 @@
     'd/stream-light-1280.png', 'd/stream-dark-1280.png', 'd/overview-light-1280.png', 'd/overview-dark-1280.png', 'd/stream-light-375.png', 'd/stream-dark-375.png',
     'e/stream-light-1280.png', 'e/stream-dark-1280.png', 'e/overview-light-1280.png', 'e/overview-dark-1280.png', 'e/stream-light-375.png', 'e/stream-dark-375.png',
     'e/post-sheet-light-1280.png', 'e/post-sheet-dark-1280.png',
+    'screens/overview-light-1280.png', 'screens/overview-light-375.png', 'screens/overview-dark-1280.png', 'screens/overview-dark-375.png',
+    'screens/posts-light-1280.png', 'screens/posts-light-375.png', 'screens/posts-dark-1280.png', 'screens/posts-dark-375.png',
+    'screens/post-light-1280.png', 'screens/post-light-375.png', 'screens/post-dark-1280.png', 'screens/post-dark-375.png',
+    'screens/posts-filters-light-1280.png', 'screens/posts-filters-light-375.png', 'screens/posts-filters-dark-1280.png', 'screens/posts-filters-dark-375.png',
+    'screens/targets-light-1280.png', 'screens/targets-light-375.png', 'screens/targets-dark-1280.png', 'screens/targets-dark-375.png',
+    'screens/target-light-1280.png', 'screens/target-light-375.png', 'screens/target-dark-1280.png', 'screens/target-dark-375.png',
+    'screens/login-light-1280.png', 'screens/login-light-375.png', 'screens/login-dark-1280.png', 'screens/login-dark-375.png',
+    'screens/activate-light-1280.png', 'screens/activate-light-375.png', 'screens/activate-dark-1280.png', 'screens/activate-dark-375.png',
+    'screens/admin-runs-light-1280.png', 'screens/admin-runs-light-375.png', 'screens/admin-runs-dark-1280.png', 'screens/admin-runs-dark-375.png',
+    'screens/admin-quality-light-1280.png', 'screens/admin-quality-light-375.png', 'screens/admin-quality-dark-1280.png', 'screens/admin-quality-dark-375.png',
+    'screens/admin-posts-light-1280.png', 'screens/admin-posts-light-375.png', 'screens/admin-posts-dark-1280.png', 'screens/admin-posts-dark-375.png',
+    'screens/run-light-1280.png', 'screens/run-light-375.png', 'screens/run-dark-1280.png', 'screens/run-dark-375.png',
+    'screens/notifications-light-1280.png', 'screens/notifications-light-375.png', 'screens/notifications-dark-1280.png', 'screens/notifications-dark-375.png',
+    'screens/state-loading-light-1280.png', 'screens/state-loading-light-375.png', 'screens/state-loading-dark-1280.png', 'screens/state-loading-dark-375.png',
+    'screens/state-empty-light-1280.png', 'screens/state-empty-light-375.png', 'screens/state-empty-dark-1280.png', 'screens/state-empty-dark-375.png',
+    'screens/state-error-light-1280.png', 'screens/state-error-light-375.png', 'screens/state-error-dark-1280.png', 'screens/state-error-dark-375.png',
+    'screens/admin-loading-light-1280.png', 'screens/admin-loading-light-375.png', 'screens/admin-loading-dark-1280.png', 'screens/admin-loading-dark-375.png',
+    'screens/admin-empty-light-1280.png', 'screens/admin-empty-light-375.png', 'screens/admin-empty-dark-1280.png', 'screens/admin-empty-dark-375.png',
+    'screens/admin-error-light-1280.png', 'screens/admin-error-light-375.png', 'screens/admin-error-dark-1280.png', 'screens/admin-error-dark-375.png',
+    'screens/components-light-1280.png', 'screens/components-light-375.png', 'screens/components-dark-1280.png', 'screens/components-dark-375.png',
   ]
-  // Opened from the repository (gallery/index.html) the screenshots sit in ../directions/. The published page is
-  // built by gallery/inline.py, which embeds every screenshot (window.GALLERY_INLINE), so it needs no other file.
-  const ROOT = location.protocol === 'file:' ? '../directions/' : ''
-  const src = (path) => (window.GALLERY_INLINE && window.GALLERY_INLINE[path]) || ROOT + path
+  // The screens of the design, in the order the owner meets them; `name` is the name in ui-design/screens.json.
+  const GROUPS = [
+    { title: 'Codzienna praca', screens: [
+      { name: 'overview', title: 'Przegląd dnia', text: 'Obraz dnia na pierwszy rzut oka: pięć liczb, trzy najczęściej omawiane cele i tabela wszystkich celów dnia.' },
+      { name: 'posts', title: 'Posty', text: 'Lista zwarta: jeden post w jednej linii, jedna ramka na dzień. Na wierzchu szukanie w treści i przełącznik „Inwestycyjne / Wszystkie”.' },
+      { name: 'post', title: 'Post w panelu', text: 'Ocena wybranego posta wysuwa się z prawej, lista zostaje w tle. Fragmenty, na których oparto ocenę, są podświetlone.' },
+      { name: 'posts-filters', title: 'Posty z filtrami', text: 'Cel, stanowisko, daty i kolejność pod przyciskiem „Filtry”. Włączone filtry stoją nad listą i każdy da się zdjąć.' },
+      { name: 'targets', title: 'Cele', text: 'Katalog celów z liczbą postów i udziałem stanowisk; odmiany nazwy są osobnymi pozycjami.' },
+      { name: 'target', title: 'Cel w panelu', text: 'Karta celu: udział stanowisk i wypowiedzi o celu z cytatami, z przejściem do postów.' },
+    ] },
+    { title: 'Wejście', screens: [
+      { name: 'login', title: 'Logowanie', text: 'E-mail, hasło i komunikat błędnych danych.' },
+      { name: 'activate', title: 'Aktywacja konta', text: 'Ustawienie hasła z jednorazowego linku, z błędem przy polu.' },
+    ] },
+    { title: 'Panel admina', screens: [
+      { name: 'admin-runs', title: 'Przebiegi', text: 'Nowy przebieg, dni bez danych i ostatnie przebiegi ze stanem.' },
+      { name: 'admin-quality', title: 'Jakość ocen', text: 'Miary z 7 dni dla każdego źródła wobec progu; kreska na pasku to próg.' },
+      { name: 'admin-posts', title: 'Nieudane posty', text: 'Posty, których ocena się nie udała: ponowienie zaznaczonych i przywrócenie martwych.' },
+      { name: 'run', title: 'Przebieg', text: 'Jeden przebieg: powód „wymaga uwagi”, liczniki, wynik per źródło i kroki.' },
+      { name: 'notifications', title: 'Powiadomienia', text: 'Lista pod dzwonkiem: przebiegi, które wymagają uwagi.' },
+    ] },
+    { title: 'Stany: ładowanie, pustka, błąd', screens: [
+      { name: 'state-loading', title: 'Posty: ładowanie', text: 'Zanim przyjdą dane, lista pokazuje swój kształt.' },
+      { name: 'state-empty', title: 'Posty: brak wyników', text: 'Pusty wynik mówi dlaczego i daje jeden następny krok.' },
+      { name: 'state-error', title: 'Posty: błąd', text: 'Co się nie udało i jeden przycisk „Spróbuj ponownie”.' },
+      { name: 'admin-loading', title: 'Panel admina: ładowanie', text: 'Te same szkielety w panelu admina.' },
+      { name: 'admin-empty', title: 'Panel admina: pusto', text: 'Brak nieudanych postów.' },
+      { name: 'admin-error', title: 'Panel admina: błąd', text: 'Jedna część się nie wczytała, pozostałe działają.' },
+    ] },
+    { title: 'Komponenty', screens: [
+      { name: 'components', title: 'Arkusz komponentów', text: 'Każdy element interfejsu w każdym stanie: przyciski, pola, znaczniki, wiersze, panel, komunikaty.' },
+    ] },
+  ]
+  // Opened from the repository (gallery/index.html) the shots sit in ../directions/ and in the design's own folder.
+  // The published page is built by gallery/inline.py, which embeds every shot (window.GALLERY_INLINE).
+  const local = location.protocol === 'file:'
+  const root = (path) => (path.startsWith('screens/') ? (local ? '../../../foundation/ui-design/' : '') : (local ? '../directions/' : ''))
+  const src = (path) => (window.GALLERY_INLINE && window.GALLERY_INLINE[path]) || root(path) + path
   const THEME_NAMES = { light: 'motyw jasny', dark: 'motyw ciemny' }
-  const VARIANT_NAMES = { a: 'Radar', b: 'Parkiet', c: 'Salon', d: 'Salon w kolorach Radaru' }
+  const WIDTH_NAMES = { 1280: 'komputer', 375: 'telefon' }
+  const VARIANT_NAMES = { a: 'Radar', b: 'Parkiet', c: 'Salon', d: 'Salon w kolorach Radaru', e: 'Kanał' }
   const SCREEN_NAMES = { 'stream-1280': 'posty z oceną obok', 'overview-1280': 'przegląd dnia', 'stream-375': 'posty na telefonie' }
 
   const controls = document.getElementById('controls')
   const older = document.getElementById('older-controls')
   const stage = document.getElementById('stage')
   const olderImg = document.getElementById('older-img')
+  const groups = document.getElementById('groups')
+
+  for (const group of GROUPS) {
+    const section = document.createElement('section')
+    section.className = 'group'
+    const heading = document.createElement('h2')
+    heading.textContent = group.title
+    const list = document.createElement('div')
+    list.className = 'screens'
+    for (const screen of group.screens) {
+      const figure = document.createElement('figure')
+      figure.className = 'screen'
+      figure.dataset.name = screen.name
+      const caption = document.createElement('figcaption')
+      const title = document.createElement('h3')
+      title.textContent = screen.title
+      const text = document.createElement('p')
+      text.textContent = screen.text
+      caption.append(title, text)
+      const button = document.createElement('button')
+      button.type = 'button'
+      button.className = 'shot'
+      button.setAttribute('aria-label', `Powiększ albo zmniejsz zrzut: ${screen.title}`)
+      const img = document.createElement('img')
+      img.loading = 'lazy'
+      img.alt = ''
+      button.append(img)
+      figure.append(caption, button)
+      list.append(figure)
+    }
+    section.append(heading, list)
+    groups.append(section)
+  }
 
   function render() {
-    const theme = String(new FormData(controls).get('theme'))
-    for (const figure of document.querySelectorAll('#screens .screen')) {
-      const path = figure.dataset.shot.replace('THEME', theme)
+    const data = new FormData(controls)
+    const theme = String(data.get('theme'))
+    const width = String(data.get('width'))
+    groups.classList.toggle('phone', width === '375')
+    for (const figure of groups.querySelectorAll('.screen')) {
+      const path = `screens/${figure.dataset.name}-${theme}-${width}.png`
       if (!SHOTS.includes(path)) continue
       const img = figure.querySelector('img')
       img.src = src(path)
-      img.alt = `${figure.querySelector('h2').textContent}, ${THEME_NAMES[theme]}`
+      img.alt = `${figure.querySelector('h3').textContent}, ${THEME_NAMES[theme]}, ${WIDTH_NAMES[width]}`
     }
-    const data = new FormData(older)
-    const [name, width] = String(data.get('screen')).split('-')
-    const variant = String(data.get('view'))
-    const phone = width === '375'
-    const path = `${variant}/${name}-${theme}-${width}.png`
+    const old = new FormData(older)
+    const [name, oldWidth] = String(old.get('screen')).split('-')
+    const variant = String(old.get('view'))
+    const phone = oldWidth === '375'
+    const path = `${variant}/${name}-${theme}-${oldWidth}.png`
     stage.classList.toggle('phone', phone)
     if (SHOTS.includes(path)) {
       olderImg.src = src(path)
       olderImg.width = phone ? 750 : 2560
       olderImg.height = phone ? 1624 : 1800
-      olderImg.alt = `Wariant ${VARIANT_NAMES[variant]}: ${SCREEN_NAMES[`${name}-${width}`]}, ${THEME_NAMES[theme]}`
+      olderImg.alt = `Wariant ${VARIANT_NAMES[variant]}: ${SCREEN_NAMES[`${name}-${oldWidth}`]}, ${THEME_NAMES[theme]}`
     }
   }
 
-  document.getElementById('screens').addEventListener('click', (event) => {
+  groups.addEventListener('click', (event) => {
     const shot = event.target.closest('.shot')
     if (shot) shot.closest('.screen').classList.toggle('wide')
   })
