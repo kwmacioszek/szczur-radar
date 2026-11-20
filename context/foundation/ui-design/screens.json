@@ -56,6 +56,16 @@
       "data": "S-52, S-54, S-55, S-56"
     },
     {
+      "name": "posts-all",
+      "title": "Posty: zakres „Wszystkie”",
+      "html": "prototypes/screens/posts-all.html",
+      "fr": [
+        "FR-007"
+      ],
+      "slice": "S-52",
+      "data": "dziś (lista z postami nieinwestycyjnymi i odsianymi); przełącznik S-52"
+    },
+    {
       "name": "targets",
       "title": "Cele: katalog",
       "html": "prototypes/screens/targets.html",

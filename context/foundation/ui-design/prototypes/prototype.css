@@ -88,7 +88,7 @@ body {
   min-height: 100vh;
   margin: 0;
   background:
-    radial-gradient(64rem 30rem at 82% -14%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 62%),
+    radial-gradient(64rem 30rem at 82% -14%, var(--bg-glow), transparent 62%),
     var(--bg);
   color: var(--text);
   font-family: var(--font-ui);
@@ -594,7 +594,7 @@ input[type='checkbox'] {
 
 .bar {
   display: flex;
-  gap: 2px;
+  gap: var(--space-0);
   height: var(--bar-height);
   min-width: 6rem;
   overflow: hidden;

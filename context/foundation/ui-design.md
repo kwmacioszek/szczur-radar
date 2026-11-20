@@ -10,15 +10,6 @@ Zakres to dokładnie wymagania [PRD v4](prd.md) dla aplikacji webowej (FR-006–
 
 Makiety z [`ui-ux-proposals.md`](ui-ux-proposals.md) były listą funkcji, a nie wzorem wyglądu. Projekt nie zawiera ich elementów bez pokrycia w wymaganiach: tickerów i nazw kanonicznych spółek, scalania odmian celu, trendu, jednej etykiety stanowiska na cały post, „Zapisanych”, „Analiz”, „Wątków”, „Ostatnich obserwacji”, statusu pipeline'u dla zwykłego użytkownika i wyboru postów „wartych przeczytania”.
 
-Stan sekcji:
-
-| Sekcja | Stan |
-| --- | --- |
-| Cel i zakres, Użytkownik i zadania, Zasady i standardy, Architektura informacji i nawigacja, Ekrany | gotowe (faza 1) |
-| Język wizualny, Komponenty, Treść i etykiety | po wyborze wariantu wyglądu (faza 2) |
-| Prototypy ekranów, Decyzja właściciela | faza 3 |
-| Kontrakt dla testów E2E, Wdrożenie, Różnice wobec roadmapy, Propozycje poza PRD | faza 4 |
-
 ## Użytkownik i zadania
 
 Aplikacji używają zaproszone osoby (rola użytkownika) i administrator (rola admina, zarazem operator). Korzystają głównie z komputera; telefon jest urządzeniem dodatkowym. Projekt układa więc ekrany pod szeroki ekran, a na wąskim daje jedną kolumnę bez utraty funkcji.
@@ -35,7 +26,7 @@ Bolączki zgłoszone przez właściciela (2026-11-19) i odpowiedź projektu:
 
 | Bolączka | Odpowiedź projektu |
 | --- | --- |
-| Surowy wygląd | Jeden język wizualny: krój pisma w plikach aplikacji, skala typografii i odstępów, role kolorów, komponenty ze wszystkimi stanami. Wygląd wybiera właściciel spośród trzech wariantów. |
+| Surowy wygląd | Jeden język wizualny: krój pisma w plikach aplikacji, skala typografii i odstępów, role kolorów, komponenty ze wszystkimi stanami. Wygląd wybrał właściciel na obrazkach, po dwóch rundach wariantów (sekcja „Decyzja właściciela”). |
 | Trudno wyłapać sedno posta | Wiersz listy pokazuje w jednej linii tytuł albo początek treści i cele ze stanowiskiem wobec każdego (znak, słowo, kolor). |
 | Za dużo klikania | Ocena wybranego posta wysuwa się w panelu z prawej; lista zostaje widoczna w tle z zaznaczonym postem. Przyciski „poprzedni” i „następny” przechodzą po bieżącej liście bez zamykania panelu. |
 | Nieczytelny panel admina | Panel podzielony na trzy części o jednym temacie każda (przebiegi, jakość ocen, nieudane posty) zamiast jednej długiej strony z pięcioma sekcjami. |
@@ -170,19 +161,20 @@ Ekrany M-5 z wymaganiami i źródłem danych. „Dziś” znaczy, że API już d
 | Ekran | Cel ekranu | Wymagania | Dane | Prototyp |
 | --- | --- | --- | --- | --- |
 | Przegląd dnia | Obraz wybranego dnia na pierwszy rzut oka: klocki z liczbą postów (ze źródłami), liczbą celów ze stanowiskiem i udziałem stanowisk wzrostowych, spadkowych i pozostałych; trzy najczęściej omawiane cele z proporcjami i najnowszymi postami; tabela wszystkich celów dnia | FR-039, FR-038, FR-035, FR-007 | S-59 (na S-55 i S-58) | [`overview`](ui-design/prototypes/screens/overview.html) |
-| Posty: lista i ocena w panelu | Przejrzeć posty na liście zwartej i przeczytać ocenę wybranego w panelu z prawej: cele ze stanowiskiem, tezy z cytatem, link do oryginału, dane surowe | FR-007, FR-009, FR-010, FR-011a, FR-030 | dziś (lista, filtr po celu i stanowisku, ocena, link, dane surowe); układ S-51 | [`posts`](ui-design/prototypes/screens/posts.html), [`post`](ui-design/prototypes/screens/post.html) |
-| Posty: filtry i kolejność | Zawęzić listę: szukanie w treści na wierzchu; cel, stanowisko, dzień albo zakres dat i kolejność pod przyciskiem „Filtry”; przełącznik zakresu „Inwestycyjne / Wszystkie” | FR-036, FR-035, FR-008, FR-011b, FR-007 | S-56, S-55, S-54, S-52 | [`posts-filters`](ui-design/prototypes/screens/posts-filters.html) |
-| Post z podświetlonymi cytatami | W panelu oceny: zobaczyć w treści fragmenty, na których oparto ocenę; wyłączyć podświetlenie; przejść do poprzedniego i następnego | FR-009 | dziś (cytaty są w ocenie); widok S-53 | [`post`](ui-design/prototypes/screens/post.html) |
+| Posty: lista i ocena w panelu | Przejrzeć posty na liście zwartej i przeczytać ocenę wybranego w panelu z prawej: cele ze stanowiskiem, tezy z cytatem, link do oryginału, dane surowe | FR-007, FR-009, FR-010, FR-011a, FR-013, FR-015, FR-030, FR-040 | dziś (lista, filtr po celu i stanowisku, ocena, link, dane surowe); układ S-51 | [`posts`](ui-design/prototypes/screens/posts.html), [`post`](ui-design/prototypes/screens/post.html) |
+| Posty: filtry i kolejność | Zawęzić listę: szukanie w treści na wierzchu; cel, stanowisko, dzień albo zakres dat i kolejność pod przyciskiem „Filtry”; przełącznik zakresu „Inwestycyjne / Wszystkie” | FR-036, FR-035, FR-008, FR-011a, FR-011b, FR-007 | S-56, S-55, S-54, S-52 | [`posts-filters`](ui-design/prototypes/screens/posts-filters.html) |
+| Posty: zakres „Wszystkie” | Zobaczyć także posty ukryte domyślnie: nieinwestycyjne („nie inwestycyjny”) i odsiane przed modelem („za mało treści”, bez celów); liczby obu zakresów stoją w przełączniku | FR-007 | dziś (lista ocenionych postów z nieinwestycyjnymi i odsianymi); przełącznik S-52 | [`posts-all`](ui-design/prototypes/screens/posts-all.html) |
+| Post z podświetlonymi cytatami | W panelu oceny: zobaczyć w treści fragmenty, na których oparto ocenę; wyłączyć podświetlenie; przejść do poprzedniego i następnego | FR-009, FR-010, FR-011a | dziś (cytaty są w ocenie); widok S-53 | [`post`](ui-design/prototypes/screens/post.html) |
 | Cele: katalog i karta celu w panelu | Znaleźć cel po nazwie, zobaczyć liczbę postów i proporcje stanowisk (wzrostowe, spadkowe, pozostałe), przejść do wypowiedzi o celu | FR-037, FR-038, FR-011a | S-57, S-58 | [`targets`](ui-design/prototypes/screens/targets.html), [`target`](ui-design/prototypes/screens/target.html) |
 | Logowanie | Zalogować się e-mailem i hasłem; komunikaty błędnych danych i limitu prób | FR-012, FR-040 | dziś; widok S-49 | [`login`](ui-design/prototypes/screens/login.html) |
 | Aktywacja konta | Ustawić hasło z jednorazowego linku; link nieważny, reguły hasła | FR-018 | dziś; widok S-49 | [`activate`](ui-design/prototypes/screens/activate.html) |
 | Powłoka aplikacji | Nawigacja u góry według roli, data aktualizacji danych, przełącznik motywu, wylogowanie | FR-015, FR-013, FR-030, FR-040 | dziś; widok S-47 | na każdym ekranie zalogowanym |
 | Panel admina: Przebiegi | Uruchomić przebieg, uzupełnić dni bez danych, zobaczyć ostatnie przebiegi i ich stan | FR-021, FR-022, FR-015 | dziś; widok S-50 | [`admin-runs`](ui-design/prototypes/screens/admin-runs.html) |
 | Panel admina: Jakość ocen | Sprawdzić miary jakości per źródło wobec progów | FR-033 | dziś; „kanał jako cel” S-60 | [`admin-quality`](ui-design/prototypes/screens/admin-quality.html) |
-| Panel admina: Nieudane posty | Zobaczyć nieudane i martwe posty, przywrócić zaznaczone | FR-034 | dziś; widok S-50 | [`admin-posts`](ui-design/prototypes/screens/admin-posts.html) |
+| Panel admina: Nieudane posty | Zobaczyć nieudane i martwe posty, ponowić zaznaczone i przywrócić martwe | FR-034 | dziś; widok S-50 | [`admin-posts`](ui-design/prototypes/screens/admin-posts.html) |
 | Przebieg | Liczniki, wynik per źródło, kroki, błąd i powody „wymaga uwagi” jednego przebiegu | FR-021 | dziś; widok S-50 | [`run`](ui-design/prototypes/screens/run.html) |
 | Powiadomienia admina | Lista przebiegów wymagających uwagi z przejściem do przebiegu | FR-021, FR-015 | dziś | [`notifications`](ui-design/prototypes/screens/notifications.html) |
-| Wspólne stany | Ładowanie, pusta lista i błąd z ponowieniem, takie same w każdym widoku | FR-007, FR-009 | dziś; komponenty S-48 | [`state-loading`](ui-design/prototypes/screens/state-loading.html), [`state-empty`](ui-design/prototypes/screens/state-empty.html), [`state-error`](ui-design/prototypes/screens/state-error.html) na liście postów; [`admin-loading`](ui-design/prototypes/screens/admin-loading.html), [`admin-empty`](ui-design/prototypes/screens/admin-empty.html), [`admin-error`](ui-design/prototypes/screens/admin-error.html) w panelu admina |
+| Wspólne stany | Ładowanie, pusta lista i błąd z ponowieniem, takie same w każdym widoku | FR-007, FR-009, FR-021, FR-033, FR-034, FR-036 | dziś; komponenty S-48 | [`state-loading`](ui-design/prototypes/screens/state-loading.html), [`state-empty`](ui-design/prototypes/screens/state-empty.html), [`state-error`](ui-design/prototypes/screens/state-error.html) na liście postów; [`admin-loading`](ui-design/prototypes/screens/admin-loading.html), [`admin-empty`](ui-design/prototypes/screens/admin-empty.html), [`admin-error`](ui-design/prototypes/screens/admin-error.html) w panelu admina |
 
 Dni bez danych są częścią ekranu „Panel admina: Przebiegi”. Elementy zależne od wycinków, których niewiadome należą do właściciela (pola sortowania S-54, domyślny okres i próg katalogu S-57, progi S-60), prototypy pokazują jako propozycję niewiążącą do czasu planu danego wycinka.
 
@@ -206,6 +198,7 @@ Znak marki to tarcza radaru z wiązką. Za nim, w lewym rogu paska aplikacji, s�
 | Rola | Jasny | Ciemny | Do czego | Zasada |
 | --- | --- | --- | --- | --- |
 | `--bg` | `#eef2f8` | `#0a1020` | tło strony | Nic poza stroną nie ma tego tła; na nim leżą karty i listy. |
+| `--bg-glow` | `#dee8f5` | `#14263b` | najciemniejszy punkt poświaty w prawym górnym rogu tła strony | Tylko jako początek gradientu tła; każda rola tekstu i krawędzi leżąca na `--bg` ma parę także na `--bg-glow`. |
 | `--surface` | `#ffffff` | `#101a2e` | karty, ramki list, panele, pola | Jedna powierzchnia na grupę treści, bez karty w karcie. |
 | `--surface-2` | `#f3f6fb` | `#16223a` | wskazany wiersz, blok wewnątrz panelu, wyłączone pole | Drugi poziom tylko wewnątrz `--surface`. |
 | `--selected` | `#e2ecfb` | `#152847` | wybrany wiersz, wybrana opcja przełącznika, włączony przycisk-ikona | Zawsze razem z drugim sygnałem: paskiem akcentu, obwódką albo `aria-current`/`aria-pressed`. |
@@ -241,18 +234,18 @@ Zasady użycia:
 
 ### Kontrast
 
-Kontrola `tools/design-check` sprawdza 63 pary z `pairs.json` w obu motywach: tekst co najmniej 4,5:1, elementy interfejsu i fokus co najmniej 3:1 (WCAG 1.4.3 i 1.4.11). Wszystkie przechodzą. Osiem par najbliżej progu:
+Kontrola `tools/design-check` sprawdza 73 pary z `pairs.json` w obu motywach: tekst co najmniej 4,5:1, elementy interfejsu i fokus co najmniej 3:1 (WCAG 1.4.3 i 1.4.11). Wszystkie przechodzą. Poświata tła ma własną rolę `--bg-glow`, bo axe nie ocenia kontrastu tekstu na gradiencie (takie węzły trafiają do `incomplete`, nie do naruszeń); dlatego jej najciemniejszy punkt jest parą w `pairs.json`. Osiem par najbliżej progu:
 
 | Para | Rodzaj | Próg | Jasny | Ciemny |
 | --- | --- | --- | --- | --- |
+| `--destructive` na `--bg-glow` | tekst | 4,5:1 | 4,55:1 | 6,08:1 |
 | `--destructive` na `--destructive-soft` | tekst | 4,5:1 | 4,62:1 | 6,07:1 |
+| `--accent` na `--bg-glow` | tekst | 4,5:1 | 4,66:1 | 8,15:1 |
+| `--success` na `--bg-glow` | tekst | 4,5:1 | 4,67:1 | 8,80:1 |
+| `--text-muted` na `--bg-glow` | tekst | 4,5:1 | 4,71:1 | 5,45:1 |
 | `--destructive` na `--selected` | tekst | 4,5:1 | 4,72:1 | 5,84:1 |
+| `--border` na `--bg-glow` | element interfejsu | 3:1 | 3,28:1 | 3,20:1 |
 | `--accent` na `--selected` | tekst | 4,5:1 | 4,84:1 | 7,82:1 |
-| `--success` na `--selected` | tekst | 4,5:1 | 4,85:1 | 8,45:1 |
-| `--text-muted` na `--selected` | tekst | 4,5:1 | 4,89:1 | 5,23:1 |
-| `--text-muted` na `--neutral-soft` | tekst | 4,5:1 | 4,91:1 | 5,09:1 |
-| `--success` na `--success-soft` | tekst | 4,5:1 | 4,95:1 | 7,94:1 |
-| `--border` na `--surface-2` | element interfejsu | 3:1 | 3,75:1 | 3,31:1 |
 
 Nowa para koloru tekstu i tła w komponencie trafia do `pairs.json`, zanim trafi do widoku.
 
@@ -347,7 +340,7 @@ Ruch jest tylko odpowiedzią na działanie użytkownika. Nic nie wjeżdża przy 
 
 ### Ikony
 
-Ikony pochodzą z jednego zestawu, [Lucide](https://lucide.dev/) 1.77.0 (licencja ISC, 19 ikon), plus sześć własnych: znak marki i pięć znaków stanowiska. Pliki i licencja są w [`ui-design/icons/`](ui-design/icons/README.md). Każda ikona rysuje się kolorem tekstu (`currentColor`), kreską `--icon-stroke`. Ikona nigdy nie stoi sama bez nazwy: ma tekst obok albo nazwę dla czytnika ekranu na przycisku, a sama jest ukryta przed czytnikiem.
+Ikony pochodzą z jednego zestawu, [Lucide](https://lucide.dev/) 1.77.0 (licencja ISC, 19 ikon), plus sześć własnych na tej samej licencji ISC: znak marki i pięć znaków stanowiska. Pliki i licencja są w [`ui-design/icons/`](ui-design/icons/README.md). Każda ikona rysuje się kolorem tekstu (`currentColor`), kreską `--icon-stroke`. Ikona nigdy nie stoi sama bez nazwy: ma tekst obok albo nazwę dla czytnika ekranu na przycisku, a sama jest ukryta przed czytnikiem.
 
 | Ikona | Gdzie |
 | --- | --- |
@@ -583,6 +576,7 @@ Przepływy powłoki: klik pozycji nawigacji otwiera jej ekran i przenosi `aria-c
 | `posts` | nagłówek 1 „Posty”; grupa „Zakres postów”; formularz `search` „Filtr postów” z polem „Szukaj w postach” i przyciskiem „Filtry” (`aria-expanded`); regiony dni z nagłówkiem 2 („Dziś, 20 października”); wiersz posta to odnośnik w elemencie listy; `navigation` „Strony” z „Nowsze”, „Starsze” i tekstem „Strona 1 z 3” | klik wiersza: otwiera post w panelu; „Starsze”: druga strona i numer strony w adresie; „Wszystkie”: lista i liczby obejmują posty nieinwestycyjne, a stan jest w adresie | `MODE` (`data`, `loading-next`, `error-next`) |
 | `post` | `dialog` o nazwie równej tytułowi posta (post bez tytułu: „Wpis użytkownika …”, jak dziś); przyciski „Poprzedni post”, „Następny post”, „Zamknij post”; odnośnik „Otwórz oryginał na … (otwiera się w nowej karcie)”; pole wyboru „Podświetl fragmenty, na których oparto ocenę”; nagłówek „Ocena”; nagłówki z nazwami celów; przycisk „Surowe dane” (`aria-expanded`) i region „Surowe dane posta” | klik wiersza: dialog jest otwarty, adres to adres posta, fokus jest w dialogu, wiersz ma `aria-current`; „Zamknij post” albo Esc: dialog znika, fokus wraca na wiersz, adres wraca do listy z tym samym filtrem i stroną; „Następny post”: treść i adres następnego posta listy; odznaczenie pola: w treści nie ma elementów `mark`; „Surowe dane”: widać JSON źródła; wejście na adres posta bez sesji: logowanie, a po nim ten post; poniżej 900 px „wstecz” przeglądarki zamyka panel | `MODE` (`raw-loading`, `raw-error`), `AUTH` |
 | `posts-filters` | przycisk „Filtry: N”; w panelu pola „Spółka lub temat”, „Rodzaj celu”, „Stanowisko”, „Od”, „Do”, „Kolejność” oraz przyciski „Filtruj”, „Wyczyść filtry”, „Zamknij filtry”; lista „Włączone filtry” z przyciskami „Usuń filtr: …” | wpisanie celu i wybór stanowiska, „Filtruj”: parametry są w adresie, nad listą stoją znaczniki, lista i liczby w przełączniku są zawężone; „Usuń filtr: …”: znika jeden filtr z adresu i z listy znaczników; wpisanie słów w „Szukaj w postach”: lista zawiera tylko posty z tymi słowami (S-56); „Od” i „Do”: lista z zakresu dni (S-55); „Kolejność”: porządek listy (S-54); Esc: panel zamknięty, fokus na przycisku „Filtry” | `MODE` (`data`, `empty`) |
+| `posts-all` | jak `posts`; w grupie „Zakres postów” przycisk „Wszystkie” ma `aria-pressed="true"`; wiersze z tekstem „nie inwestycyjny” i „za mało treści”; tekst „Strona 1 z 4” | wejście z zakresem „Wszystkie” w adresie: lista obejmuje posty nieinwestycyjne i odsiane, a przełącznik pokazuje liczby obu zakresów; „Inwestycyjne”: wiersze „nie inwestycyjny” i „za mało treści” znikają, zakres w adresie się zmienia, a liczby w przełączniku zostają; przeładowanie: zakres zostaje | nowy tryb albo parametr atrapy dla zakresu postów (S-52) |
 | `targets` | nagłówek 1 „Cele”; grupy „Zakres postów” i „Okres” (przyciski „Dziś”, „7 dni”, „30 dni”); pole „Szukaj celu”; przycisk „Kolejność: …”; tabela z nagłówkami kolumn „Cel”, „Posty”, „Wzrostowe”, „Spadkowe”, „Pozostałe”, „Udział”; nagłówek wiersza to odnośnik z nazwą celu; `navigation` „Strony” z „Poprzednie”, „Następne” | wpisanie nazwy: w tabeli zostają pasujące cele; zmiana okresu: liczby z nowego okresu i okres w adresie; klik nazwy celu: karta celu w panelu | nowy tryb dla katalogu (dane, ładowanie, błąd, brak celów) |
 | `target` | `dialog` o nazwie celu; przyciski „Poprzedni cel”, „Następny cel”, „Zamknij cel”; obraz „Stanowiska wobec …” z liczbami; grupa „Zakres postów o celu”; nagłówek „Wypowiedzi”; odnośniki z tytułami postów; odnośnik „Wszystkie posty o …” | klik celu: dialog otwarty, adres celu, fokus w dialogu; klik tytułu wypowiedzi: post w panelu na ekranie postów; „Wszystkie posty o …”: ekran postów ze znacznikiem „Cel: …”; „Zamknij cel”: fokus wraca na wiersz celu | jak `targets` |
 | `login` | nagłówek 1 „Logowanie”; pola „E-mail” i „Hasło”; przycisk „Zaloguj się”; komunikat `alert`; przycisk „Ciemny motyw” | poprawne dane: ekran startowy; złe hasło: zostaje na logowaniu z komunikatem „Nieprawidłowy e-mail lub hasło.”; limit prób: komunikat „Zbyt wiele prób. …”; zapamiętany motyw jest zastosowany | `AUTH: anonymous`, `LOGIN` |
@@ -663,7 +657,7 @@ W aplikacji kroje mają `font-display: swap` i wstępne ładowanie dwóch plikó
 
 Uwaga na nazwę `--border`: dziś znaczy linię ozdobną, w projekcie krawędź kontrolki. F-08 zmienia obie nazwy w jednym commicie (`--border` na `--line`, `--border-strong` na `--border`), żeby żaden widok nie dostał grubszej linii przez pomyłkę.
 
-Nowe tokeny, których dziś nie ma: role `--surface-2`, `--selected`, `--scrim`, `--text-muted`, pięć teł `-soft`; `--font-display`; rozmiary `--font-size-xs`, `-xl`, `-3xl`, `-4xl`, `-6xl`; interlinie `--leading-*`, grubości `--weight-*`, światła `--tracking-*`; odstępy `--space-6` … `--space-9`; promienie `--radius-lg`, `-xl`, `-2xl`, `-full`; `--shadow-overlay`; wymiary `--control-height*`, `--icon-size`, `--icon-stroke`, `--bar-height*`, `--width-*`; ruch `--duration*`, `--ease-out`; warstwy `--z-*`. Pełna lista z opisem jest w sekcji „Język wizualny”.
+Nowe tokeny, których dziś nie ma: role `--bg-glow` (z gradientem tła strony), `--surface-2`, `--selected`, `--scrim`, `--text-muted`, pięć teł `-soft`; `--font-display`; rozmiary `--font-size-xs`, `-xl`, `-3xl`, `-4xl`, `-6xl`; interlinie `--leading-*`, grubości `--weight-*`, światła `--tracking-*`; odstępy `--space-6` … `--space-9`; promienie `--radius-lg`, `-xl`, `-2xl`, `-full`; `--shadow-overlay`; wymiary `--control-height*`, `--icon-size`, `--icon-stroke`, `--bar-height*`, `--width-*`; ruch `--duration*`, `--ease-out`; warstwy `--z-*`. Pełna lista z opisem jest w sekcji „Język wizualny”.
 
 ### Mapa komponentów
 
@@ -703,8 +697,8 @@ Każdy komponent wspólny trafia do `src/components/` i na `/kitchen-sink` we ws
 | Bramka | Dziś | Po F-08 |
 | --- | --- | --- |
 | `visual/font.spec.ts` i `visual/fonts.conf` | test oczekuje `Liberation Sans` dla nagłówka „Logowanie” i etykiety „Hasło”; alias zamienia `system-ui` i `sans-serif` na Liberation Sans | aplikacja ma własne kroje, więc test oczekuje `Newsreader` dla nagłówka i `Hanken Grotesk` dla etykiety; alias zostaje tylko jako kroje zastępcze i nie decyduje o zrzutach; test dalej jest czerwony, gdy tekst rysuje inny krój |
-| `PAIRS` i `MIN_CONTRAST` w `src/styleContract.test.ts` | 19 par, jeden próg 4,5 | 63 pary z `ui-design/pairs.json`, próg osobny dla pary: 4,5 dla tekstu, 3,0 dla elementów interfejsu i fokusu; role w parach są hexem, w tym `--ring` i `--border` |
-| lista `CLEANED` | 17 plików; `LoginView.vue` poza listą | pliki zostają na liście po przepięciu; `LoginView.vue` dochodzi w S-49; każdy nowy komponent dochodzi w chwili powstania |
+| `PAIRS` i `MIN_CONTRAST` w `src/styleContract.test.ts` | 19 par, jeden próg 4,5 | 73 pary z `ui-design/pairs.json`, próg osobny dla pary: 4,5 dla tekstu, 3,0 dla elementów interfejsu i fokusu; role w parach są hexem, w tym `--ring` i `--border` |
+| lista `CLEANED` | 17 plików; `LoginView.vue` poza listą | pliki zostają na liście po przepięciu; `LoginView.vue` dochodzi w S-49; każdy nowy komponent dochodzi w chwili powstania. `prototype.css` ma dwie wartości `-1px`, które skan `OFF_SCALE` by odrzucił: `.visually-hidden` (`margin: -1px`) trafia do globalnego `style.css`, którego lista nie obejmuje, a `.subnav a` (`margin-bottom: -1px`, podkreślenie zakładki nachodzi na linię pod paskiem o jej grubość) F-08 zapisuje bez literału, np. przez token grubości linii |
 | wzorce F-06 | 56 plików PNG | wszystkie zmieniają się raz w F-08 (nowe kolory, kroje, rozmiary), potem grupami w wycinkach ekranów; opis PR mówi, które grupy i dlaczego |
 | wysokość pól, `style.css:170-175` | `calc(1.45rem + 14px)`, liczona z pisma strony | `--control-height` (2,5 rem) dla pól i przycisków; duże wyszukiwanie `--control-height-lg` |
 | nazwy sekcji `/kitchen-sink` | nazwa sekcji daje nazwę wzorca `kitchen-sink-<slug>.png` | sekcje nazywają się jak komponenty w tym dokumencie, więc wzorce zmieniają nazwy; strażnik wzorców wymaga zgodności w obie strony |
@@ -781,8 +775,10 @@ Właściciel ocenia projekt na obrazkach: w galerii zrzutów każdego ekranu w o
 | Data | Decyzja |
 | --- | --- |
 | 2026-11-19 | Aplikacja jest używana głównie na komputerze. Ekranem startowym ma być docelowo przegląd dnia. |
-| 2026-11-20 | Wygląd: „Salon w kolorach Radaru” (granat i błękit, szeryf do czytania, grotesk do obsługi), motyw ciemny jako pierwszy, jasny jako drugi, domyślnie według systemu. Pierwsza runda wariantów odrzucona jako „trochę lepszy panel”. |
+| 2026-11-19 | Wygląd: „Salon w kolorach Radaru” (granat i błękit, szeryf do czytania, grotesk do obsługi), motyw ciemny jako pierwszy, jasny jako drugi, domyślnie według systemu. Pierwsza runda wariantów odrzucona jako „trochę lepszy panel”. |
 | 2026-11-20 | Układ: „Kanał”. Nawigacja u góry, jedna kolumna, lista postów zwarta, ocena posta w panelu wysuwanym z prawej z listą widoczną w tle, przegląd dnia z klockami liczb zamiast zdania, przełącznik „Inwestycyjne / Wszystkie” zamiast zdania o ukrytych postach. Układ z kolumną boczną i panelem stałym odrzucony jako „panel administratora”. |
 | 2026-11-20 | **Akceptacja kompletu**: 19 ekranów z `ui-design/screens.json` i arkusz komponentów, w obu motywach, przy 1280 i 375 px. Bez poprawek („Jest okej”). |
 
 Przed akceptacją komplet przeszedł niezależny przegląd heurystyczny w dwóch przejściach (heurystyki Nielsena, wybrane reguły WCAG 2.2 AA, zgodność z PRD, bolączki właściciela): dziewięć ustaleń blokujących poprawiono i zamknięto, zero zostało otwartych. Zaakceptowany stan to prototypy w `ui-design/prototypes/` i zrzuty w `ui-design/screens/` z tego samego commitu co ten zapis.
+
+Po akceptacji, w przeglądzie implementacji (2026-11-20, ustalenie F1), doszedł ekran [`posts-all`](ui-design/prototypes/screens/posts-all.html): zakres „Wszystkie” z postem nieinwestycyjnym i postem odsianym przed oceną („za mało treści”), których plan wymagał na ekranach. Jest złożony wyłącznie z komponentów arkusza i przechodzi kontrole `tools/design-check`. Nie przeszedł przeglądu heurystycznego, a właściciel ogląda go w galerii.

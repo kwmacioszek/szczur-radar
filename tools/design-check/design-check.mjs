@@ -202,7 +202,8 @@ function checkContrast(tokensFile, pairsFile) {
       if (fg === null || bg === null) continue
       const ratio = contrastRatio(fg, bg)
       row[theme] = ratio.toFixed(2)
-      if (Number(row[theme]) < pair.min) {
+      // Compare the exact ratio, as styleContract.test.ts does; the rounded value is only for the table.
+      if (ratio < pair.min) {
         violations.push(violation('contrast', label,
           `${pair.fg} on ${pair.bg} (${pair.kind}) is ${row[theme]}:1, below ${pair.min}:1`, theme))
         row[theme] += ' (!)'
@@ -376,6 +377,14 @@ async function checkPages(pages, options = {}) {
             reducedMotion: 'reduce',
             locale: 'pl-PL',
             timezoneId: 'Europe/Warsaw',
+          })
+          // The design loads nothing from outside the repository (no font CDN, no UI library): any request that is
+          // not a local file is refused and reported.
+          await context.route('**/*', (route) => {
+            const url = route.request().url()
+            if (url.startsWith('file:')) return route.continue()
+            violations.push(violation('network', label, `request outside the repository: ${url}`, theme, width))
+            return route.abort()
           })
           try {
             const page = await openPage(context, file, theme, width, label, violations)
@@ -842,25 +851,30 @@ async function runSelftest(args) {
   const okDir = path.join(FIXTURES, 'ok')
   const okContrast = checkContrast(path.join(okDir, 'tokens.css'), path.join(okDir, 'pairs.json'))
   line('ok/contrast', 'no violation', okContrast.violations.length === 0, kinds(okContrast.violations))
-  // No woff2 is available in the repository, so the font check is proved by broken/system-font.html alone.
-  const okPages = await checkPages(collectHtml([okDir]), { skipFonts: true })
-  line('ok/pages (fonts skipped)', 'no violation', okPages.length === 0, kinds(okPages))
+  // With the font check: ok/page.html draws its text with the design's woff2 (fixtures/font.css).
+  const okPages = await checkPages(collectHtml([okDir]), {})
+  line('ok/pages', 'no violation', okPages.length === 0, kinds(okPages))
 
   // The breaks: each must give a violation of the expected kind.
   const broken = path.join(FIXTURES, 'broken')
-  for (const [name, expected] of [['low-contrast', 'contrast'], ['non-hex', 'non-hex'], ['prefers-color-scheme', 'prefers-color-scheme']]) {
+  for (const [name, expected] of [['low-contrast', 'contrast'], ['near-threshold', 'contrast'], ['non-hex', 'non-hex'], ['prefers-color-scheme', 'prefers-color-scheme']]) {
     const dir = path.join(broken, name)
     const { violations } = checkContrast(path.join(dir, 'tokens.css'), path.join(dir, 'pairs.json'))
     line(`broken/${name}`, `violation ${expected}`, violations.some((v) => v.kind === expected), kinds(violations))
   }
+  // A sample with a message pattern must give a violation of its kind whose message matches it, so each branch of
+  // the font check is proved on its own: no @font-face at all, and one element drawn by a system font.
   const samples = [
     ['overflow-375.html', 'overflow', { skipFonts: true }],
     ['button-no-name.html', 'axe:button-name', { skipFonts: true }],
-    ['system-font.html', 'font', {}],
+    ['external-request.html', 'network', { skipFonts: true }],
+    ['system-font.html', 'font', {}, /no custom \(@font-face\) font was used/],
+    ['mixed-font.html', 'font', {}, /drawn with the system font .*"a ten jeden element/],
   ]
-  for (const [name, expected, options] of samples) {
+  for (const [name, expected, options, message] of samples) {
     const violations = await checkPages(collectHtml([path.join(broken, name)]), options)
-    line(`broken/${name}`, `violation ${expected}`, violations.some((v) => v.kind === expected), kinds(violations))
+    const found = violations.some((v) => v.kind === expected && (message === undefined || message.test(v.message)))
+    line(`broken/${name}`, `violation ${expected}${message ? ` (${message.source})` : ''}`, found, kinds(violations))
   }
   console.log(failed === 0 ? 'OK: the green path passes and every break is detected' : `FAILED: ${failed} check(s) of the selftest`)
   return failed === 0 ? 0 : 1
@@ -889,7 +903,10 @@ async function main(argv) {
       console.error(`error: ${error.message}`)
       return 3
     }
-    throw error
+    // Anything else (an unreadable file, a malformed link, a page that times out) is not a violation: exit code 4,
+    // so 1 always means that the checks ran and found violations.
+    console.error(`unexpected error: ${error?.stack ?? error}`)
+    return 4
   }
 }
 

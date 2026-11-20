@@ -20,15 +20,15 @@ Ikony projektu UI/UX Szczur Radar (F-07). Pliki Lucide są skopiowane bez zmian 
 | `info.svg` | `i-info` | Lucide 1.77.0 | ISC | informacja: post czeka na ocenę |
 | `refresh-cw.svg` | `i-refresh-cw` | Lucide 1.77.0 | ISC | „Spróbuj ponownie” |
 | `play.svg` | `i-play` | Lucide 1.77.0 | ISC | „Uruchom” przebieg |
-| `rotate-ccw.svg` | `i-rotate-ccw` | Lucide 1.77.0 | ISC | „Przywróć zaznaczone” nieudane posty |
+| `rotate-ccw.svg` | `i-rotate-ccw` | Lucide 1.77.0 | ISC | „Przywróć martwe” w nieudanych postach |
 | `inbox.svg` | `i-inbox` | Lucide 1.77.0 | ISC | pusta lista: dzień bez danych |
 | `arrow-down-up.svg` | `i-arrow-down-up` | Lucide 1.77.0 | ISC | kolejność listy |
-| `brand-mark.svg` | `i-brand` | własna | własna, na licencji repozytorium | znak marki w pasku aplikacji |
-| `stance-up.svg` | `s-up` | własna | własna, na licencji repozytorium | stanowisko autora: wzrost |
-| `stance-down.svg` | `s-down` | własna | własna, na licencji repozytorium | stanowisko autora: spadek |
-| `stance-flat.svg` | `s-flat` | własna | własna, na licencji repozytorium | stanowisko autora: bez zmiany |
-| `stance-mixed.svg` | `s-mixed` | własna | własna, na licencji repozytorium | stanowisko autora: mieszane |
-| `stance-none.svg` | `s-none` | własna | własna, na licencji repozytorium | brak stanowiska |
-| `sprite.svg` | — | złożony z powyższych | ISC i własna | jeden plik z `<symbol>` dla wszystkich ikon |
+| `brand-mark.svg` | `i-brand` | własna | ISC (jak Lucide) | znak marki w pasku aplikacji |
+| `stance-up.svg` | `s-up` | własna | ISC (jak Lucide) | stanowisko autora: wzrost |
+| `stance-down.svg` | `s-down` | własna | ISC (jak Lucide) | stanowisko autora: spadek |
+| `stance-flat.svg` | `s-flat` | własna | ISC (jak Lucide) | stanowisko autora: bez zmiany |
+| `stance-mixed.svg` | `s-mixed` | własna | ISC (jak Lucide) | stanowisko autora: mieszane |
+| `stance-none.svg` | `s-none` | własna | ISC (jak Lucide) | brak stanowiska |
+| `sprite.svg` | — | złożony z powyższych | ISC | jeden plik z `<symbol>` dla wszystkich ikon |
 
 Strony prototypu mają własną kopię `sprite.svg` między znacznikami `<!--sprite-->` i `<!--/sprite-->` (strona otwarta z pliku nie wczyta zewnętrznego `<use>`); po zmianie ikon odświeża ją `node tools/design-check/inline-sprite.mjs context/foundation/ui-design/prototypes`.

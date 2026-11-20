@@ -23,7 +23,17 @@ if (pages.length === 0) {
 let failed = false
 for (const page of pages) {
   const html = fs.readFileSync(page, 'utf8')
-  const next = html.replace(/<!--sprite-->(?:[\s\S]*?<!--\/sprite-->)?/, block)
+  const opening = html.split('<!--sprite-->').length - 1
+  const closing = html.split('<!--/sprite-->').length - 1
+  // A bare opening marker is a first run; an opening marker without its closing one on a page that already has a
+  // sprite would put a second sprite with the same ids in front of the old one, so it is an error.
+  if (opening > 1 || closing > 1 || (closing === 0 && opening === 1 && html.includes('class="sprite"'))) {
+    console.error(`${page}: the sprite markers are broken (${opening} <!--sprite-->, ${closing} <!--/sprite-->); fix the page by hand`)
+    failed = true
+    continue
+  }
+  // A function, so that a "$&" or "$'" in the sprite is never read as a replacement pattern.
+  const next = html.replace(/<!--sprite-->(?:[\s\S]*?<!--\/sprite-->)?/, () => block)
   if (!next.includes('<!--/sprite-->')) {
     console.error(`${page}: no <!--sprite--> marker`)
     failed = true

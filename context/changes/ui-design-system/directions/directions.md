@@ -6,7 +6,7 @@ Zrzuty na wariant: `stream-{light,dark}-1280.png`, `overview-{light,dark}-1280.p
 
 ## Dwie rundy
 
-**Runda 1** (2026-11-19): „Papier”, „Pulpit” i „Miękki”, w katalogu `round-1/` (style i strony, bez zrzutów; zrzuty odtwarza polecenie powyżej). Właściciel odrzucił wszystkie trzy: „nadal wygląda jak trochę lepszy panel”, brakuje stylu i kolorystyki. Przyczyna: warianty różniły się krojem, gęstością i kształtem ramek, a kolor był w nich zarezerwowany dla znaczenia, więc żaden nie miał własnej tożsamości.
+**Runda 1** (2026-11-19): „Papier”, „Pulpit” i „Miękki”, w katalogach `round-1/a/`, `round-1/b/` i `round-1/c/` (style i strony, bez zrzutów; zrzuty odtwarza polecenie powyżej). Właściciel odrzucił wszystkie trzy: „nadal wygląda jak trochę lepszy panel”, brakuje stylu i kolorystyki. Przyczyna: warianty różniły się krojem, gęstością i kształtem ramek, a kolor był w nich zarezerwowany dla znaczenia, więc żaden nie miał własnej tożsamości.
 
 **Runda 2** (2026-11-19): „Radar”, „Parkiet” i „Salon”, w katalogach `a/`, `b/`, `c/`. Wskazówki właściciela: lubi ciemne motywy (jasny zostaje jako drugi, domyślnie według systemu), podoba mu się wygląd aplikacji Claude na telefon. Każdy wariant jest projektowany od ciemnego motywu i ma własną tożsamość: kolor marki, motyw albo charakter typografii.
 
@@ -303,9 +303,60 @@ Dwie rzeczy do zapisania w fazie 4 (różnice wobec roadmapy i PRD):
 
 Zrzuty: sześć standardowych (2×) oraz `post-sheet-{light,dark}-1280.png`. Zrzuty wariantów `a/`–`d/` są od 2026-11-20 w skali 1×, bo decyzja o wyglądzie już zapadła, a zrzuty 2× zajmowały ponad 8 MB.
 
+### Kontrast „Kanał”
+
+Te same role i wartości co `d/` oraz rola `--scrim`. Najniższy wynik dla tekstu: jasny 4.62, ciemny 5.09 (wymagane 4,5).
+
+| pair | kind | min | light | dark |
+| --- | --- | --- | --- | --- |
+| `--text` on `--bg` | text | 4.5 | 7.62 | 9.44 |
+| `--text` on `--surface` | text | 4.5 | 8.56 | 8.65 |
+| `--text` on `--surface-2` | text | 4.5 | 7.90 | 7.90 |
+| `--text` on `--selected` | text | 4.5 | 7.18 | 7.33 |
+| `--text-h` on `--bg` | text | 4.5 | 16.22 | 17.34 |
+| `--text-h` on `--surface` | text | 4.5 | 18.23 | 15.89 |
+| `--text-muted` on `--bg` | text | 4.5 | 5.19 | 6.73 |
+| `--text-muted` on `--surface` | text | 4.5 | 5.83 | 6.17 |
+| `--text-muted` on `--surface-2` | text | 4.5 | 5.38 | 5.64 |
+| `--text-muted` on `--selected` | text | 4.5 | 4.89 | 5.23 |
+| `--accent` on `--bg` | text | 4.5 | 5.13 | 10.07 |
+| `--accent` on `--surface` | text | 4.5 | 5.77 | 9.23 |
+| `--accent` on `--surface-2` | text | 4.5 | 5.32 | 8.43 |
+| `--on-accent` on `--accent` | text | 4.5 | 5.77 | 9.55 |
+| `--success` on `--surface` | text | 4.5 | 5.78 | 9.97 |
+| `--success` on `--surface-2` | text | 4.5 | 5.34 | 9.10 |
+| `--success` on `--success-soft` | text | 4.5 | 4.95 | 7.94 |
+| `--warning` on `--surface` | text | 4.5 | 6.21 | 10.79 |
+| `--warning` on `--selected` | text | 4.5 | 5.21 | 9.15 |
+| `--destructive` on `--surface` | text | 4.5 | 5.63 | 6.89 |
+| `--destructive` on `--surface-2` | text | 4.5 | 5.19 | 6.29 |
+| `--destructive` on `--destructive-soft` | text | 4.5 | 4.62 | 6.07 |
+| `--stance-neutral` on `--surface` | text | 4.5 | 7.19 | 7.88 |
+| `--stance-neutral` on `--surface-2` | text | 4.5 | 6.64 | 7.20 |
+| `--stance-neutral` on `--neutral-soft` | text | 4.5 | 6.06 | 6.50 |
+| `--stance-mixed` on `--surface` | text | 4.5 | 6.21 | 10.79 |
+| `--stance-mixed` on `--mixed-soft` | text | 4.5 | 5.31 | 8.10 |
+| `--text-h` on `--success-soft` | text | 4.5 | 15.61 | 12.65 |
+| `--text-h` on `--destructive-soft` | text | 4.5 | 14.96 | 13.99 |
+| `--text-h` on `--neutral-soft` | text | 4.5 | 15.35 | 13.10 |
+| `--text-h` on `--mixed-soft` | text | 4.5 | 15.59 | 11.92 |
+| `--text-muted` on `--neutral-soft` | text | 4.5 | 4.91 | 5.09 |
+| `--text-h` on `--highlight` | text | 4.5 | 15.17 | 10.96 |
+| `--border` on `--bg` | ui | 3 | 3.61 | 3.95 |
+| `--border` on `--surface` | ui | 3 | 4.06 | 3.62 |
+| `--border` on `--surface-2` | ui | 3 | 3.75 | 3.31 |
+| `--ring` on `--bg` | ui | 3 | 5.13 | 10.07 |
+| `--ring` on `--surface` | ui | 3 | 5.77 | 9.23 |
+| `--success` on `--surface` | ui | 3 | 5.78 | 9.97 |
+| `--destructive` on `--surface` | ui | 3 | 5.63 | 6.89 |
+| `--accent` on `--selected` | text | 4.5 | 4.84 | 7.82 |
+| `--text-h` on `--selected` | text | 4.5 | 15.30 | 13.47 |
+| `--stance-mixed` on `--surface-2` | text | 4.5 | 5.74 | 9.86 |
+| `--text` on `--highlight` | text | 4.5 | 7.12 | 5.96 |
+
 ## Wynik kontroli stron
 
-`node tools/design-check/design-check.mjs pages context/changes/ui-design-system/directions` (2026-11-19): 17 stron (6 z rundy 2, 2 połączenia, 3 układu „Kanał” i 6 z rundy 1), oba motywy, szerokości 1280, 375 i 320 px, 0 naruszeń. Kontrola obejmuje reguły axe z tagami WCAG 2.0/2.1/2.2 A i AA (w tym rozmiar celu), brak przewijania strony w poziomie, jeden `main` i jeden `banner`, oraz to, że cały tekst rysują kroje wariantu (polskie znaki bez kroju zastępczego).
+`node tools/design-check/design-check.mjs pages context/changes/ui-design-system/directions` (2026-11-20, po dodaniu układu „Kanał”): 17 stron (6 z rundy 2, 2 połączenia, 3 układu „Kanał” i 6 z rundy 1), oba motywy, szerokości 1280, 375 i 320 px, 0 naruszeń. Kontrola obejmuje reguły axe z tagami WCAG 2.0/2.1/2.2 A i AA (w tym rozmiar celu), brak przewijania strony w poziomie, jeden `main` i jeden `banner`, oraz to, że cały tekst rysują kroje wariantu (polskie znaki bez kroju zastępczego).
 
 ## Ograniczenia tablic wariantów
 

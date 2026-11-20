@@ -7,6 +7,8 @@
 :root {
   /* --- Role koloru: tła i powierzchnie --- */
   --bg: #eef2f8;
+  /* Najciemniejszy punkt poświaty tła strony (gradient w prototype.css): tekst leżący na --bg ma parę także na nim. */
+  --bg-glow: #dee8f5;
   --surface: #ffffff;
   --surface-2: #f3f6fb;
   --selected: #e2ecfb;
@@ -118,6 +120,7 @@
 
 :root[data-theme='dark'] {
   --bg: #0a1020;
+  --bg-glow: #14263b;
   --surface: #101a2e;
   --surface-2: #16223a;
   --selected: #152847;

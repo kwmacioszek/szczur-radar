@@ -362,7 +362,7 @@ Brak danych i kodu do migracji. Projekt wchodzi do aplikacji w F-08 (tokeny, kom
 
 #### Manual
 
-- [x] 1.10 Właściciel wybiera wariant A, B albo C (albo zleca połączenie lub poprawki) na galerii, a wybór jest zapisany w `directions/directions.md`, sekcja „Decyzja właściciela” — ef6f7eb
+- [x] 1.10 Właściciel wybiera wariant A, B albo C (albo zleca połączenie lub poprawki) na galerii, a wybór jest zapisany w `directions/directions.md`, sekcja „Decyzja właściciela” — ef6f7eb, 03fb73f
 
 ### Phase 2: Język wizualny i komponenty
 

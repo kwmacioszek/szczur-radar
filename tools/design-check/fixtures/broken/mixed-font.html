@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jeden element w kroju systemowym</title>
+<script>document.documentElement.dataset.theme = new URLSearchParams(location.search).get("theme") === "dark" ? "dark" : "light"</script>
+<link rel="stylesheet" href="../ok/tokens.css">
+<link rel="stylesheet" href="../font.css">
+<style>
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: 'Hanken Grotesk', sans-serif; }
+  main { padding: 16px; }
+  .raw { font-family: monospace; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Krój projektu na stronie</h1>
+  <p>Zażółć gęślą jaźń: ten akapit rysuje krój z @font-face.</p>
+  <p class="raw">a ten jeden element rysuje krój systemowy</p>
+</main>
+</body>
+</html>
