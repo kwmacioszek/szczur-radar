@@ -2,7 +2,7 @@
 
 Kierunki wizualne dla całej aplikacji, pokazane na tych samych dwóch ekranach z tą samą treścią: lista postów z oceną wybranego posta obok (`stream.html`) i przegląd dnia (`overview.html`). Strony każdego wariantu są identyczne co do znaku; różni je wyłącznie `tokens.css` i `direction.css`. Wspólna podstawa (reset, ikony, fokus) jest w `base.css`, a pliki krojów z licencjami w `fonts/`.
 
-Zrzuty na wariant: `stream-{light,dark}-1280.png`, `overview-{light,dark}-1280.png`, `stream-{light,dark}-375.png` (kadr okna, 2×). Powstają poleceniem `node tools/design-check/design-check.mjs shots <katalog wariantu> --scale 2 --only stream:1280,stream:375,overview:1280`.
+Zrzuty na wariant: `stream-{light,dark}-1280.png`, `overview-{light,dark}-1280.png`, `stream-{light,dark}-375.png` (kadr okna; 2× dla układu `e/`, 1× dla pozostałych). Powstają poleceniem `node tools/design-check/design-check.mjs shots <katalog wariantu> --scale 2 --only stream:1280,stream:375,overview:1280`.
 
 ## Dwie rundy
 
@@ -274,9 +274,38 @@ Najniższy wynik dla tekstu: jasny 4.62, ciemny 5.09 (wymagane 4,5).
 | `--stance-mixed` on `--surface-2` | text | 4.5 | 5.74 | 9.86 |
 | `--text` on `--highlight` | text | 4.5 | 7.12 | 5.96 |
 
+## Układ „Kanał” (`e/`)
+
+Po potwierdzeniu wyglądu (wariant `d/`) właściciel wrócił do fazy 1 (2026-11-20): „to nadal wygląda jak panel administratora”, „trochę się gubię”, „może trochę inny układ stron”. Przyczyna leżała w układzie, nie w kolorach: boczne menu, formularz z czterema filtrami, lista i stały panel ze szczegółami pokazywały wszystko naraz. Właściciel nie chce odchodzić od roadmapy i zaproponował, żeby ocena posta była wyskakującym dialogiem wkomponowanym w ekran, a nie sekcją wciśniętą obok listy.
+
+Układ `e/` zachowuje wygląd `d/` (te same tokeny i kroje; doszła rola `--scrim` dla przyciemnienia tła) i zmienia strukturę stron. Stan po decyzjach właściciela z 2026-11-20:
+
+- **Posty** (`stream.html`): jedna kolumna. Lista **zwarta**: jeden post w jednej linii (godzina i źródło, tytuł, stanowiska po prawej), jedna ramka na dzień, posty pogrupowane po dniach. Na wierzchu szukanie i przełącznik zakresu; pozostałe filtry (cel, stanowisko, dzień, kolejność) pod przyciskiem „Filtry”.
+- **Ocena posta** (`post-sheet.html`): **panel wysuwany z prawej** nad listę (`role="dialog"`, własny adres posta, „poprzedni”/„następny”, „Zamknij”). Lista przesuwa się do lewej krawędzi, jest lekko przyciemniona i zostaje widoczna w tle; wybrany post jest zaznaczony. Na wąskim ekranie panel zajmuje cały ekran.
+- **Przegląd dnia** (`overview.html`): pięć klocków z liczbami dnia (posty, cele ze stanowiskiem, udział stanowisk wzrostowych, spadkowych i pozostałych), trzy karty najczęściej omawianych celów z paskiem proporcji i najnowszymi postami, pełna tabela celów niżej.
+- **Zakres postów**: przełącznik „Inwestycyjne 128 | Wszystkie 165” na obu ekranach (na przeglądzie obok wyboru dnia) zamiast zdania o ukrytych postach i pola „Pokaż wszystkie” (FR-007).
+- **Nawigacja**: u góry zamiast bocznej kolumny.
+
+Formy pokazane właścicielowi i odrzucone (plików nie ma w repo, opis dla porządku):
+
+| Element | Odrzucona forma | Powód (słowa właściciela albo wybór) |
+| --- | --- | --- |
+| Lista postów | karty, każdy post w osobnej ramce | „nie podoba mi się układ z klockami” |
+| Lista postów | wiersze bez ramek z godziną po lewej | „lista zwarta jest czytelniejsza” |
+| Ocena posta | dialog pośrodku ekranu (treść po lewej, ocena po prawej) | wybrany panel z prawej, „żeby było widać w tle listę” |
+| Nagłówek przeglądu | zdanie z liczbami dnia | „lepiej dać kilka prostych klocków z liczbami, jakimiś % na + albo −” |
+| Zakres postów | zdanie „Bez 37 postów nieinwestycyjnych i bez treści” z polem wyboru | „może jakoś inaczej to pokazać”; wybrany przełącznik |
+
+Dwie rzeczy do zapisania w fazie 4 (różnice wobec roadmapy i PRD):
+
+- S-51 mówi o „panelu inspektora obok listy”. Panel na życzenie spełnia te same wymagania (FR-009, FR-010); zmienia się sformułowanie wycinka.
+- Klocki „Wzrostowe / Spadkowe / Pozostałe” pokazują udział stanowisk w całym dniu. FR-039 wymienia liczbę postów, liczbę celów, źródła i proporcje per cel, ale nie udział w całym dniu; to suma danych, które przegląd i tak liczy. Właściciel poprosił o te klocki (2026-11-20), więc jest to doprecyzowanie FR-039 do zatwierdzenia w PRD. Udział nie jest zmianą względem poprzedniego dnia (trend zostaje poza zakresem).
+
+Zrzuty: sześć standardowych (2×) oraz `post-sheet-{light,dark}-1280.png`. Zrzuty wariantów `a/`–`d/` są od 2026-11-20 w skali 1×, bo decyzja o wyglądzie już zapadła, a zrzuty 2× zajmowały ponad 8 MB.
+
 ## Wynik kontroli stron
 
-`node tools/design-check/design-check.mjs pages context/changes/ui-design-system/directions` (2026-11-19): 14 stron (6 z rundy 2, 2 połączenia i 6 z rundy 1), oba motywy, szerokości 1280, 375 i 320 px, 0 naruszeń. Kontrola obejmuje reguły axe z tagami WCAG 2.0/2.1/2.2 A i AA (w tym rozmiar celu), brak przewijania strony w poziomie, jeden `main` i jeden `banner`, oraz to, że cały tekst rysują kroje wariantu (polskie znaki bez kroju zastępczego).
+`node tools/design-check/design-check.mjs pages context/changes/ui-design-system/directions` (2026-11-19): 17 stron (6 z rundy 2, 2 połączenia, 3 układu „Kanał” i 6 z rundy 1), oba motywy, szerokości 1280, 375 i 320 px, 0 naruszeń. Kontrola obejmuje reguły axe z tagami WCAG 2.0/2.1/2.2 A i AA (w tym rozmiar celu), brak przewijania strony w poziomie, jeden `main` i jeden `banner`, oraz to, że cały tekst rysują kroje wariantu (polskie znaki bez kroju zastępczego).
 
 ## Ograniczenia tablic wariantów
 
@@ -290,3 +319,5 @@ Najniższy wynik dla tekstu: jasny 4.62, ciemny 5.09 (wymagane 4,5).
 Runda 1: żaden wariant (2026-11-19).
 
 Runda 2: połączenie, kolory z „Radaru” i wygląd z „Salonu” (2026-11-19). Wariant `d/` „Salon w kolorach Radaru” przygotowany i **potwierdzony przez właściciela 2026-11-19** (odpowiedź „Tak” na pytanie, czy to wybrany wygląd), bez poprawek. To jest wariant dla faz 2 i 3.
+
+Układ stron (2026-11-20): właściciel wrócił do fazy 1 i poprosił o inny układ z oceną posta w dialogu. Wybory właściciela w układzie `e/` „Kanał”: lista zwarta („lista zwarta jest czytelniejsza”), ocena posta w panelu z prawej („żeby było widać w tle listę”), nagłówek przeglądu jako klocki z liczbami, przełącznik „Inwestycyjne / Wszystkie”. Całość potwierdzona przez właściciela 2026-11-20 (zatwierdzenie commita układu). Wariant `e/` „Kanał” jest podstawą faz 2 i 3: wygląd z `d/`, układ z `e/`.

@@ -1,0 +1,69 @@
+/*
+ * Wariant „Kanał” (układ zlecony przez właściciela po wyborze połączenia): jedna kolumna, ocena posta
+ * w panelu albo dialogu na życzenie. Wygląd jak „Salon w kolorach Radaru”. Kolory z wariantu „Radar”:
+ * głęboki granat, świecący błękit, bursztyn dla cytatów. Kroje, kształty i układ z wariantu „Salon”.
+ * Pierwszy blok to motyw jasny, zgodnie z formatem style.css.
+ */
+:root {
+  --bg: #eef2f8;
+  --surface: #ffffff;
+  --text: #3f4d63;
+  --text-h: #0b1528;
+  --accent: #0b63c9;
+  --on-accent: #ffffff;
+  --success: #12753b;
+  --warning: #8a5500;
+  --destructive: #c0322b;
+  --highlight: #ffe9a8;
+  --stance-neutral: #4a5870;
+  --stance-mixed: #8a5500;
+
+  --text-muted: #57667d;
+  --surface-2: #f3f6fb;
+  --line: #d3dbe8;
+  --border: #6f7f99;
+  --ring: #0b63c9;
+  --scrim: #0a1020;
+  --selected: #e2ecfb;
+  --success-soft: #dcf3e4;
+  --destructive-soft: #fde3e0;
+  --neutral-soft: #e7ecf3;
+  --mixed-soft: #fbeccb;
+
+  --font-display: 'Newsreader', Georgia, serif;
+  --font-ui: 'Hanken Grotesk', system-ui, sans-serif;
+
+  --icon-stroke: 1.5;
+  --bar-height: 0.5rem;
+  --radius: 10px;
+  --radius-block: 20px;
+}
+
+:root[data-theme='dark'] {
+  --bg: #0a1020;
+  --surface: #101a2e;
+  --text: #a9b8d0;
+  --text-h: #f0f5ff;
+  --accent: #5cc8ff;
+  --on-accent: #04182a;
+  --success: #4ade80;
+  --warning: #f5c563;
+  --destructive: #ff7b72;
+  --highlight: #40360f;
+  --stance-neutral: #9fb0c9;
+  --stance-mixed: #f5c563;
+
+  --text-muted: #8a9bb8;
+  --surface-2: #16223a;
+  --line: #22314d;
+  --border: #5f7396;
+  --ring: #5cc8ff;
+  --scrim: #03060d;
+  --selected: #152847;
+  --success-soft: #0f3323;
+  --destructive-soft: #40191b;
+  --neutral-soft: #1d2a44;
+  --mixed-soft: #3a3012;
+
+  color-scheme: dark;
+}

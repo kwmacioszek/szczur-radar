@@ -1,9 +1,10 @@
 <title>Warianty wyglądu Szczur Radar</title>
-<!-- Runda 2: Radar (a), Parkiet (b), Salon (c) i połączenie zlecone przez właściciela: Salon w kolorach Radaru (d). Runda 1 jest w directions/round-1/. -->
+<!-- Na górze układ „Kanał” (e) wybrany przez właściciela: jedna kolumna, lista zwarta, ocena posta w panelu z prawej.
+     Niżej wcześniejsze warianty: Radar (a), Parkiet (b), Salon (c), Salon w kolorach Radaru (d). Runda 1 jest w directions/round-1/. -->
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@600;700&display=swap">
 <style>
-  /* Układ: pasek wyboru (ekran, motyw, widok) nad sceną; scena to trzy warianty obok siebie albo jeden duży. */
+  /* Układ: wybór motywu u góry, pod nim ekrany nowego układu w dwóch kolumnach, na dole wcześniejsze warianty. */
   :root {
     --bg: #f2f3f5;
     --panel: #ffffff;
@@ -70,8 +71,14 @@
     text-wrap: balance;
   }
 
+  h2 {
+    margin: 0;
+    font: 600 19px/1.25 var(--display);
+    letter-spacing: -0.01em;
+  }
+
   .lead {
-    max-width: 68ch;
+    max-width: 70ch;
     margin: 8px 0 0;
     color: var(--muted);
   }
@@ -138,34 +145,26 @@
     outline-offset: 2px;
   }
 
-  .stage {
+  .screens {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 20px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 28px 20px;
     margin-top: 20px;
   }
 
-  .stage.single {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .variant[hidden] {
-    display: none;
-  }
-
-  .variant {
+  .screen {
     display: flex;
     flex-direction: column;
     gap: 10px;
     min-width: 0;
-  }
-
-  .variant h2 {
     margin: 0;
-    font: 600 19px/1.25 var(--display);
-    letter-spacing: -0.01em;
   }
 
+  .screen.wide {
+    grid-column: 1 / -1;
+  }
+
+  .screen p,
   .variant p {
     margin: 2px 0 0;
     color: var(--muted);
@@ -180,7 +179,57 @@
     border-radius: 10px;
     background: var(--panel);
     overflow: hidden;
+  }
+
+  button.shot:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+  }
+
+  .shot img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  .screen.phone .shot {
+    max-width: 375px;
+  }
+
+  .older {
+    margin-top: 44px;
+    padding-top: 28px;
+    border-top: 1px solid var(--line);
+  }
+
+  .stage {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px;
+    margin-top: 16px;
+  }
+
+  .stage.single {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .variant {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .variant[hidden] {
+    display: none;
+  }
+
+  button.shot {
     cursor: zoom-in;
+  }
+
+  .screen.wide button.shot {
+    cursor: zoom-out;
   }
 
   .stage.single .shot {
@@ -190,17 +239,6 @@
 
   .stage.phone .shot {
     max-width: 375px;
-  }
-
-  .shot:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 3px;
-  }
-
-  .shot img {
-    display: block;
-    width: 100%;
-    height: auto;
   }
 
   .notes {
@@ -214,7 +252,7 @@
 
   .notes h2 {
     margin: 0 0 6px;
-    font: 600 16px/1.3 var(--display);
+    font-size: 16px;
   }
 
   .notes ul {
@@ -228,6 +266,7 @@
   }
 
   @media (max-width: 900px) {
+    .screens,
     .stage {
       grid-template-columns: minmax(0, 1fr);
     }
@@ -236,70 +275,83 @@
 
 <div class="wrap">
   <header>
-    <h1>Salon w kolorach Radaru</h1>
-    <p class="lead">Połączenie, o które prosiłeś: układ, litery i miękkie kształty z Salonu, kolory z Radaru (granat, świecący błękit, bursztynowe cytaty) i pierścienie radaru przy znaku. Obok oba warianty źródłowe do porównania.</p>
+    <h1>Wybrany układ i wygląd</h1>
+    <p class="lead">Stan po Twoich decyzjach: wygląd Salonu w kolorach Radaru, jedna kolumna, lista postów zwarta, ocena posta w panelu wysuwanym z prawej, przegląd dnia z klockami liczb. Kliknięcie zrzutu przełącza jego rozmiar.</p>
   </header>
 
   <form class="controls" id="controls">
-    <fieldset>
-      <legend>Ekran</legend>
-      <label class="opt"><input type="radio" name="screen" id="screen-stream" value="stream-1280" checked><span>Posty z oceną obok</span></label>
-      <label class="opt"><input type="radio" name="screen" id="screen-overview" value="overview-1280"><span>Przegląd dnia</span></label>
-      <label class="opt"><input type="radio" name="screen" id="screen-phone" value="stream-375"><span>Posty na telefonie</span></label>
-    </fieldset>
     <fieldset>
       <legend>Motyw</legend>
       <label class="opt"><input type="radio" name="theme" id="theme-dark" value="dark" checked><span>Ciemny</span></label>
       <label class="opt"><input type="radio" name="theme" id="theme-light" value="light"><span>Jasny</span></label>
     </fieldset>
-    <fieldset>
-      <legend>Widok</legend>
-      <label class="opt"><input type="radio" name="view" id="view-trio" value="trio" checked><span>Połączenie i źródła</span></label>
-      <label class="opt"><input type="radio" name="view" id="view-d" value="d"><span>Tylko połączenie</span></label>
-      <label class="opt"><input type="radio" name="view" id="view-a" value="a"><span>Tylko Radar</span></label>
-      <label class="opt"><input type="radio" name="view" id="view-c" value="c"><span>Tylko Salon</span></label>
-      <label class="opt"><input type="radio" name="view" id="view-b" value="b"><span>Tylko Parkiet</span></label>
-    </fieldset>
   </form>
 
-  <main class="stage" id="stage">
-    <section class="variant" data-variant="d">
-      <div>
-        <h2>Salon w kolorach Radaru</h2>
-        <p>Połączenie. Szeryfowe nagłówki i treść, jedna miękka powierzchnia i lekka kolumna z Salonu; granat, błękit i bursztyn z Radaru.</p>
+  <main>
+    <div class="screens" id="screens">
+      <figure class="screen" data-shot="e/stream-THEME-1280.png">
+        <figcaption>
+          <h2>Posty</h2>
+          <p>Lista zwarta: jeden post w jednej linii (godzina i źródło, tytuł, stanowiska), jedna ramka na dzień. Na wierzchu szukanie i przełącznik „Inwestycyjne / Wszystkie”, pozostałe filtry pod przyciskiem „Filtry”.</p>
+        </figcaption>
+        <button type="button" class="shot" aria-label="Powiększ albo zmniejsz zrzut"><img alt="" width="2560" height="1800"></button>
+      </figure>
+      <figure class="screen" data-shot="e/post-sheet-THEME-1280.png">
+        <figcaption>
+          <h2>Ocena posta</h2>
+          <p>Po kliknięciu posta panel wysuwa się z prawej. Lista przesuwa się do lewej krawędzi i zostaje widoczna w tle; wybrany post jest zaznaczony.</p>
+        </figcaption>
+        <button type="button" class="shot" aria-label="Powiększ albo zmniejsz zrzut"><img alt="" width="2560" height="1800"></button>
+      </figure>
+      <figure class="screen" data-shot="e/overview-THEME-1280.png">
+        <figcaption>
+          <h2>Przegląd dnia</h2>
+          <p>Klocki z liczbami dnia, przełącznik „Inwestycyjne / Wszystkie” obok wyboru dnia, trzy karty najczęściej omawianych celów, pełna tabela niżej.</p>
+        </figcaption>
+        <button type="button" class="shot" aria-label="Powiększ albo zmniejsz zrzut"><img alt="" width="2560" height="1800"></button>
+      </figure>
+      <figure class="screen phone" data-shot="e/stream-THEME-375.png">
+        <figcaption>
+          <h2>Posty na telefonie</h2>
+          <p>Na wąskim ekranie każdy post zajmuje kilka linii w jednej kolumnie, a ocena posta otwiera się na cały ekran.</p>
+        </figcaption>
+        <button type="button" class="shot" aria-label="Powiększ albo zmniejsz zrzut"><img alt="" width="750" height="1624"></button>
+      </figure>
+    </div>
+
+    <section class="older" aria-labelledby="older-title">
+      <h2 id="older-title">Wcześniejsze warianty, dla porównania</h2>
+      <p class="lead">Układ z panelami obok siebie w czterech wyglądach z poprzedniej rundy.</p>
+      <form class="controls" id="older-controls">
+        <fieldset>
+          <legend>Ekran</legend>
+          <label class="opt"><input type="radio" name="screen" id="screen-stream" value="stream-1280" checked><span>Posty z oceną obok</span></label>
+          <label class="opt"><input type="radio" name="screen" id="screen-overview" value="overview-1280"><span>Przegląd dnia</span></label>
+          <label class="opt"><input type="radio" name="screen" id="screen-phone" value="stream-375"><span>Posty na telefonie</span></label>
+        </fieldset>
+        <fieldset>
+          <legend>Wariant</legend>
+          <label class="opt"><input type="radio" name="view" id="view-d" value="d" checked><span>Salon w kolorach Radaru</span></label>
+          <label class="opt"><input type="radio" name="view" id="view-a" value="a"><span>Radar</span></label>
+          <label class="opt"><input type="radio" name="view" id="view-c" value="c"><span>Salon</span></label>
+          <label class="opt"><input type="radio" name="view" id="view-b" value="b"><span>Parkiet</span></label>
+        </fieldset>
+      </form>
+      <div class="stage single" id="stage">
+        <div class="variant">
+          <div class="shot"><img id="older-img" alt="" width="2560" height="1800"></div>
+        </div>
       </div>
-      <button type="button" class="shot" data-variant="d" aria-label="Pokaż tylko wariant Salon w kolorach Radaru"><img alt="" width="2560" height="1800"></button>
-    </section>
-    <section class="variant" data-variant="a">
-      <div>
-        <h2>Radar</h2>
-        <p>Źródło kolorów. Głęboki granat, świecący błękit, pierścienie radaru przy znaku.</p>
-      </div>
-      <button type="button" class="shot" data-variant="a" aria-label="Pokaż tylko wariant Radar"><img alt="" width="2560" height="1800"></button>
-    </section>
-    <section class="variant" data-variant="c">
-      <div>
-        <h2>Salon</h2>
-        <p>Źródło wyglądu. Ciepły grafit, szeryfowe nagłówki i treść, miękkie kształty.</p>
-      </div>
-      <button type="button" class="shot" data-variant="c" aria-label="Pokaż tylko wariant Salon"><img alt="" width="2560" height="1800"></button>
-    </section>
-    <section class="variant" data-variant="b">
-      <div>
-        <h2>Parkiet</h2>
-        <p>Trzeci wariant z tej rundy, dla porównania. Czerń, wielkie nagłówki, pełne barwne bloki.</p>
-      </div>
-      <button type="button" class="shot" data-variant="b" aria-label="Pokaż tylko wariant Parkiet"><img alt="" width="2560" height="1800"></button>
     </section>
   </main>
 
-  <section class="notes" aria-label="Uwagi do wariantów">
+  <section class="notes" aria-label="Uwagi">
     <div>
-      <h2>Wspólne we wszystkich trzech</h2>
+      <h2>Co zostaje bez zmian</h2>
       <ul>
-        <li>Wiersz listy pokazuje cele posta i stanowisko autora wobec każdego: znak, słowo i kolor.</li>
-        <li>Ocena wybranego posta otwiera się obok listy, z tezami pod dosłownymi cytatami.</li>
-        <li>Fragmenty, na których oparto ocenę, są podświetlone w treści.</li>
+        <li>Karta posta pokazuje cele i stanowisko autora wobec każdego: znak, słowo i kolor.</li>
+        <li>Ocena to tezy pod dosłownymi cytatami; te same fragmenty są podświetlone w treści.</li>
+        <li>Wybrany post ma własny adres, a strzałki przechodzą do poprzedniego i następnego.</li>
         <li>Przegląd dnia pokazuje liczby wprost, bez trendu i bez wyboru „wartych przeczytania”.</li>
       </ul>
     </div>
@@ -315,9 +367,8 @@
     <div>
       <h2>Czego tu jeszcze nie ma</h2>
       <ul>
-        <li>Pozostałe ekrany i komponenty powstaną w wybranym wariancie.</li>
-        <li>Na telefonie widać samą listę; ocena posta będzie tam osobnym ekranem.</li>
-        <li>Część pól filtra i przegląd dnia pokazują stan docelowy, którego aplikacja jeszcze nie obsługuje.</li>
+        <li>Rozwiniętego panelu filtrów, pozostałych ekranów i komponentów: powstaną w kolejnych fazach, w tym układzie i wyglądzie.</li>
+        <li>Szukanie w treści, dodatkowe filtry i przegląd dnia pokazują stan docelowy, którego aplikacja jeszcze nie obsługuje.</li>
       </ul>
     </div>
   </section>
@@ -330,45 +381,52 @@
     'b/stream-light-1280.png', 'b/stream-dark-1280.png', 'b/overview-light-1280.png', 'b/overview-dark-1280.png', 'b/stream-light-375.png', 'b/stream-dark-375.png',
     'c/stream-light-1280.png', 'c/stream-dark-1280.png', 'c/overview-light-1280.png', 'c/overview-dark-1280.png', 'c/stream-light-375.png', 'c/stream-dark-375.png',
     'd/stream-light-1280.png', 'd/stream-dark-1280.png', 'd/overview-light-1280.png', 'd/overview-dark-1280.png', 'd/stream-light-375.png', 'd/stream-dark-375.png',
+    'e/stream-light-1280.png', 'e/stream-dark-1280.png', 'e/overview-light-1280.png', 'e/overview-dark-1280.png', 'e/stream-light-375.png', 'e/stream-dark-375.png',
+    'e/post-sheet-light-1280.png', 'e/post-sheet-dark-1280.png',
   ]
-  // Opened from the repository (gallery/index.html) the screenshots sit in ../directions/.
+  // Opened from the repository (gallery/index.html) the screenshots sit in ../directions/. The published page is
+  // built by gallery/inline.py, which embeds every screenshot (window.GALLERY_INLINE), so it needs no other file.
   const ROOT = location.protocol === 'file:' ? '../directions/' : ''
-  const SCREEN_NAMES = { 'stream-1280': 'posty z oceną obok', 'overview-1280': 'przegląd dnia', 'stream-375': 'posty na telefonie' }
+  const src = (path) => (window.GALLERY_INLINE && window.GALLERY_INLINE[path]) || ROOT + path
   const THEME_NAMES = { light: 'motyw jasny', dark: 'motyw ciemny' }
   const VARIANT_NAMES = { a: 'Radar', b: 'Parkiet', c: 'Salon', d: 'Salon w kolorach Radaru' }
+  const SCREEN_NAMES = { 'stream-1280': 'posty z oceną obok', 'overview-1280': 'przegląd dnia', 'stream-375': 'posty na telefonie' }
 
-  const form = document.getElementById('controls')
+  const controls = document.getElementById('controls')
+  const older = document.getElementById('older-controls')
   const stage = document.getElementById('stage')
+  const olderImg = document.getElementById('older-img')
 
   function render() {
-    const data = new FormData(form)
-    const [name, width] = String(data.get('screen')).split('-')
-    const theme = String(data.get('theme'))
-    const view = String(data.get('view'))
-    const phone = width === '375'
-    stage.classList.toggle('single', view !== 'trio')
-    stage.classList.toggle('phone', phone)
-    for (const section of stage.querySelectorAll('.variant')) {
-      const variant = section.dataset.variant
-      const path = `${variant}/${name}-${theme}-${width}.png`
-      const img = section.querySelector('img')
-      section.hidden = view === 'trio' ? variant === 'b' : view !== variant
+    const theme = String(new FormData(controls).get('theme'))
+    for (const figure of document.querySelectorAll('#screens .screen')) {
+      const path = figure.dataset.shot.replace('THEME', theme)
       if (!SHOTS.includes(path)) continue
-      img.src = ROOT + path
-      img.width = phone ? 750 : 2560
-      img.height = phone ? 1624 : 1800
-      img.alt = `Wariant ${VARIANT_NAMES[variant]}: ${SCREEN_NAMES[`${name}-${width}`]}, ${THEME_NAMES[theme]}`
+      const img = figure.querySelector('img')
+      img.src = src(path)
+      img.alt = `${figure.querySelector('h2').textContent}, ${THEME_NAMES[theme]}`
+    }
+    const data = new FormData(older)
+    const [name, width] = String(data.get('screen')).split('-')
+    const variant = String(data.get('view'))
+    const phone = width === '375'
+    const path = `${variant}/${name}-${theme}-${width}.png`
+    stage.classList.toggle('phone', phone)
+    if (SHOTS.includes(path)) {
+      olderImg.src = src(path)
+      olderImg.width = phone ? 750 : 2560
+      olderImg.height = phone ? 1624 : 1800
+      olderImg.alt = `Wariant ${VARIANT_NAMES[variant]}: ${SCREEN_NAMES[`${name}-${width}`]}, ${THEME_NAMES[theme]}`
     }
   }
 
-  form.addEventListener('change', render)
-  form.addEventListener('submit', (event) => event.preventDefault())
-  stage.addEventListener('click', (event) => {
+  document.getElementById('screens').addEventListener('click', (event) => {
     const shot = event.target.closest('.shot')
-    if (!shot || stage.classList.contains('single')) return
-    document.getElementById(`view-${shot.dataset.variant}`).checked = true
-    render()
-    window.scrollTo({ top: 0 })
+    if (shot) shot.closest('.screen').classList.toggle('wide')
   })
+  for (const form of [controls, older]) {
+    form.addEventListener('change', render)
+    form.addEventListener('submit', (event) => event.preventDefault())
+  }
   render()
 </script>

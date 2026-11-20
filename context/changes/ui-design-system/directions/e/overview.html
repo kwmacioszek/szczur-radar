@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="pl" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Przegląd dnia – Szczur Radar</title>
+<script>
+  // The theme is the data-theme attribute of <html>, as in the app; the prototype takes it from ?theme=dark.
+  document.documentElement.dataset.theme =
+    new URLSearchParams(location.search).get('theme') === 'dark' ? 'dark' : 'light'
+</script>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="direction.css">
+</head>
+<body class="page-overview">
+
+<svg class="sprite" aria-hidden="true" focusable="false">
+  <symbol id="i-brand" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 12 18.4 5.6"/><path d="M12 7a5 5 0 0 1 5 5"/></symbol>
+  <symbol id="i-overview" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></symbol>
+  <symbol id="i-posts" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></symbol>
+  <symbol id="i-targets" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></symbol>
+  <symbol id="i-admin" viewBox="0 0 24 24"><path d="M4 6h8M20 6h-2M4 12h2M12 12h8M4 18h10M20 18h0"/><circle cx="15" cy="6" r="2.5"/><circle cx="9" cy="12" r="2.5"/><circle cx="17" cy="18" r="2.5"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></symbol>
+  <symbol id="i-logout" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></symbol>
+  <symbol id="i-external" viewBox="0 0 24 24"><path d="M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></symbol>
+  <symbol id="i-prev" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+  <symbol id="i-next" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+  <symbol id="i-code" viewBox="0 0 24 24"><path d="m16 18 6-6-6-6M8 6l-6 6 6 6"/></symbol>
+  <symbol id="s-up" viewBox="0 0 12 12"><path d="M6 2 11 10H1Z"/></symbol>
+  <symbol id="s-down" viewBox="0 0 12 12"><path d="M6 10 1 2h10Z"/></symbol>
+  <symbol id="s-flat" viewBox="0 0 12 12"><rect x="1" y="5" width="10" height="2" rx="1"/></symbol>
+  <symbol id="s-mixed" viewBox="0 0 12 12"><path d="M6 .5 9.5 5h-7ZM6 11.5 2.5 7h7Z"/></symbol>
+  <symbol id="s-none" viewBox="0 0 12 12"><path fill-rule="evenodd" d="M6 1.5a4.5 4.5 0 1 0 0 9 4.5 4.5 0 0 0 0-9Zm0 1.5a3 3 0 1 1 0 6 3 3 0 0 1 0-6Z"/></symbol>
+  <symbol id="i-close" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+  <symbol id="i-filter" viewBox="0 0 24 24"><path d="M4 6h16M7 12h10M10 18h4"/></symbol>
+</svg>
+
+<header class="app-bar">
+  <a class="brand" href="overview.html">
+    <svg class="icon brand-mark" aria-hidden="true"><use href="#i-brand"/></svg>
+    <span class="brand-name">Szczur Radar</span>
+  </a>
+  <nav class="nav" aria-label="Główna">
+    <a href="overview.html" aria-current="page">Przegląd</a>
+    <a href="stream.html">Posty</a>
+    <a href="#cele">Cele</a>
+    <a href="#admin">Panel admina</a>
+  </nav>
+  <div class="session">
+    <p class="freshness">Dane z <time datetime="2026-10-20T09:52">09:52</time> (Wykop) i <time datetime="2026-10-20T08:40">08:40</time> (Reddit)</p>
+    <button type="button" class="icon-btn bell" aria-label="Powiadomienia, 2 nieprzeczytane">
+      <svg class="icon" aria-hidden="true"><use href="#i-bell"/></svg>
+      <span class="bell-count" aria-hidden="true">2</span>
+    </button>
+    <button type="button" class="icon-btn theme-toggle" aria-pressed="false" aria-label="Ciemny motyw">
+      <svg class="icon" aria-hidden="true"><use href="#i-moon"/></svg>
+    </button>
+    <span class="who">admin@szczur-radar.pl</span>
+    <button type="button" class="btn btn-quiet logout">Wyloguj</button>
+  </div>
+</header>
+
+<main>
+<div class="front">
+  <div class="front-head">
+    <div class="day-title">
+      <h1>Przegląd dnia</h1>
+      <p class="day-date">wtorek, 20 października 2026</p>
+    </div>
+    <div class="view-tools">
+    <div class="scope" role="group" aria-label="Zakres postów">
+      <button type="button" class="scope-opt" aria-pressed="true">Inwestycyjne <span class="scope-n">128</span></button>
+      <button type="button" class="scope-opt" aria-pressed="false">Wszystkie <span class="scope-n">165</span></button>
+    </div>
+    <div class="day-nav" role="group" aria-label="Wybór dnia">
+      <button type="button" class="icon-btn" aria-label="Poprzedni dzień"><svg class="icon" aria-hidden="true"><use href="#i-prev"/></svg></button>
+      <label class="visually-hidden" for="day">Dzień</label>
+      <input id="day" type="date" value="2026-10-20">
+      <button type="button" class="icon-btn" aria-label="Następny dzień" disabled><svg class="icon" aria-hidden="true"><use href="#i-next"/></svg></button>
+    </div>
+    </div>
+  </div>
+
+  <dl class="day-figures">
+    <div class="figure">
+      <dt>Posty</dt>
+      <dd><span class="num">128</span><span class="sub">Wykop 96, Reddit 32</span></dd>
+    </div>
+    <div class="figure">
+      <dt>Cele ze stanowiskiem</dt>
+      <dd><span class="num">41</span><span class="sub">164 stanowiska autorów</span></dd>
+    </div>
+    <div class="figure figure-up">
+      <dt>Wzrostowe</dt>
+      <dd><span class="num"><svg class="mark" aria-hidden="true"><use href="#s-up"/></svg>45%</span><span class="sub">74 stanowiska</span></dd>
+    </div>
+    <div class="figure figure-down">
+      <dt>Spadkowe</dt>
+      <dd><span class="num"><svg class="mark" aria-hidden="true"><use href="#s-down"/></svg>23%</span><span class="sub">38 stanowisk</span></dd>
+    </div>
+    <div class="figure figure-rest">
+      <dt>Pozostałe</dt>
+      <dd><span class="num"><svg class="mark" aria-hidden="true"><use href="#s-flat"/></svg>32%</span><span class="sub">52 stanowiska</span></dd>
+    </div>
+  </dl>
+  <section class="most-discussed" aria-labelledby="h-most">
+    <div class="sec-head">
+      <h2 id="h-most">Najczęściej omawiane</h2>
+      <p class="sec-note">Trzy cele z największą liczbą postów i najnowsze posty o każdym z nich.</p>
+    </div>
+    <div class="topics">
+      <article class="topic">
+        <header class="topic-head"><h3><a href="#cel-orlen">Orlen</a></h3><span class="topic-count">20 postów</span></header>
+        <p class="topic-shares">
+          <span class="bar" aria-hidden="true"><span class="seg seg-up" style="flex:12"></span><span class="seg seg-down" style="flex:3"></span><span class="seg seg-rest" style="flex:5"></span></span>
+          <span class="share up">12 wzrostowych</span><span class="share down">3 spadkowe</span><span class="share rest">5 pozostałych</span>
+        </p>
+        <ul class="topic-posts">
+          <li><a href="stream.html"><time datetime="2026-10-20T09:41">09:41</time><span class="tp-title">Orlen ogłasza buyback za 4 mld zł</span><span class="stance stance-bullish"><svg class="mark" aria-hidden="true"><use href="#s-up"/></svg><span class="t-stance">wzrostowo</span></span></a></li>
+          <li><a href="stream.html"><time datetime="2026-10-20T08:02">08:02</time><span class="tp-title">Buyback zamiast dywidendy to dla mnie sygnał, że zarząd nie ma pomysłu na inwestycje</span><span class="stance stance-bearish"><svg class="mark" aria-hidden="true"><use href="#s-down"/></svg><span class="t-stance">spadkowo</span></span></a></li>
+          <li><a href="stream.html"><time datetime="2026-10-20T07:44">07:44</time><span class="tp-title">Orlen: marże rafineryjne w górę, czekam na raport</span><span class="stance stance-neutral"><svg class="mark" aria-hidden="true"><use href="#s-flat"/></svg><span class="t-stance">neutralnie</span></span></a></li>
+        </ul>
+      </article>
+      <article class="topic">
+        <header class="topic-head"><h3><a href="#cel-cdr">CDR</a></h3><span class="topic-count">14 postów</span></header>
+        <p class="topic-shares">
+          <span class="bar" aria-hidden="true"><span class="seg seg-up" style="flex:6"></span><span class="seg seg-down" style="flex:5"></span><span class="seg seg-rest" style="flex:3"></span></span>
+          <span class="share up">6 wzrostowych</span><span class="share down">5 spadkowych</span><span class="share rest">3 pozostałe</span>
+        </p>
+        <ul class="topic-posts">
+          <li><a href="stream.html"><time datetime="2026-10-20T08:55">08:55</time><span class="tp-title">CDR po wynikach -8% na otwarciu, ktoś jeszcze trzyma?</span><span class="stance stance-bullish"><svg class="mark" aria-hidden="true"><use href="#s-up"/></svg><span class="t-stance">wzrostowo</span><span class="t-hedge">ostrożnie</span></span></a></li>
+          <li><a href="stream.html"><time datetime="2026-10-20T08:20">08:20</time><span class="tp-title">Opóźnienie premiery to nie koniec świata, ale wycena tego nie uwzględnia</span><span class="stance stance-bearish"><svg class="mark" aria-hidden="true"><use href="#s-down"/></svg><span class="t-stance">spadkowo</span></span></a></li>
+        </ul>
+      </article>
+      <article class="topic">
+        <header class="topic-head"><h3><a href="#cel-nvda">NVDA</a></h3><span class="topic-count">11 postów</span></header>
+        <p class="topic-shares">
+          <span class="bar" aria-hidden="true"><span class="seg seg-up" style="flex:8"></span><span class="seg seg-down" style="flex:1"></span><span class="seg seg-rest" style="flex:2"></span></span>
+          <span class="share up">8 wzrostowych</span><span class="share down">1 spadkowe</span><span class="share rest">2 pozostałe</span>
+        </p>
+        <ul class="topic-posts">
+          <li><a href="stream.html"><time datetime="2026-10-20T09:12">09:12</time><span class="tp-title" lang="en">NVDA guidance looks conservative, adding on dips</span><span class="stance stance-bullish"><svg class="mark" aria-hidden="true"><use href="#s-up"/></svg><span class="t-stance">wzrostowo</span><span class="t-hedge">ostrożnie</span></span></a></li>
+          <li><a href="stream.html"><time datetime="2026-10-20T06:31">06:31</time><span class="tp-title" lang="en">Data center capex is not slowing, NVDA still the cleanest way to play it</span><span class="stance stance-bullish"><svg class="mark" aria-hidden="true"><use href="#s-up"/></svg><span class="t-stance">wzrostowo</span></span></a></li>
+        </ul>
+      </article>
+    </div>
+  </section>
+
+  <section class="targets-day" aria-labelledby="h-targets">
+    <div class="sec-head">
+      <h2 id="h-targets">Wszystkie cele dnia</h2>
+      <p class="sec-note">Stanowiska autorów wobec celu w postach z tego dnia. Nazwa celu to tekst z posta, więc odmiany są osobno.</p>
+    </div>
+      <div class="table-scroll">
+      <table class="shares">
+        <thead>
+          <tr>
+            <th scope="col">Cel</th>
+            <th scope="col" class="n">Posty</th>
+            <th scope="col" class="bar-col">Proporcje</th>
+            <th scope="col" class="n">Wzrostowe</th>
+            <th scope="col" class="n">Spadkowe</th>
+            <th scope="col" class="n">Pozostałe</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row"><a href="#cel-orlen">Orlen</a></th><td class="n">20</td>
+            <td class="bar-col"><span class="bar" aria-hidden="true"><span class="seg seg-up" style="flex:12"></span><span class="seg seg-down" style="flex:3"></span><span class="seg seg-rest" style="flex:5"></span></span></td>
+            <td class="n up">12</td><td class="n down">3</td><td class="n rest">5</td>
+          </tr>
+          <tr>
+            <th scope="row"><a href="#cel-cdr">CDR</a></th><td class="n">14</td>
+            <td class="bar-col"><span class="bar" aria-hidden="true"><span class="seg seg-up" style="flex:6"></span><span class="seg seg-down" style="flex:5"></span><span class="seg seg-rest" style="flex:3"></span></span></td>
+            <td class="n up">6</td><td class="n down">5</td><td class="n rest">3</td>
+          </tr>
+          <tr>
+            <th scope="row"><a href="#cel-nvda">NVDA</a></th><td class="n">11</td>
+            <td class="bar-col"><span class="bar" aria-hidden="true"><span class="seg seg-up" style="flex:8"></span><span class="seg seg-down" style="flex:1"></span><span class="seg seg-rest" style="flex:2"></span></span></td>
+            <td class="n up">8</td><td class="n down">1</td><td class="n rest">2</td>
+          </tr>
+          <tr>
+            <th scope="row"><a href="#cel-xtb">XTB</a></th><td class="n">9</td>
+            <td class="bar-col"><span class="bar" aria-hidden="true"><span class="seg seg-up" style="flex:2"></span><span class="seg seg-down" style="flex:6"></span><span class="seg seg-rest" style="flex:1"></span></span></td>
+            <td class="n up">2</td><td class="n down">6</td><td class="n rest">1</td>
+          </tr>
+          <tr>
+            <th scope="row"><a href="#cel-pko">PKO</a></th><td class="n">7</td>
+            <td class="bar-col"><span class="bar" aria-hidden="true"><span class="seg seg-up" style="flex:4"></span><span class="seg seg-rest" style="flex:3"></span></span></td>
+            <td class="n up">4</td><td class="n down zero">0</td><td class="n rest">3</td>
+          </tr>
+          <tr>
+            <th scope="row"><a href="#cel-banki">banki</a></th><td class="n">6</td>
+            <td class="bar-col"><span class="bar" aria-hidden="true"><span class="seg seg-up" style="flex:3"></span><span class="seg seg-down" style="flex:1"></span><span class="seg seg-rest" style="flex:2"></span></span></td>
+            <td class="n up">3</td><td class="n down">1</td><td class="n rest">2</td>
+          </tr>
+          <tr>
+            <th scope="row"><a href="#cel-orlenu">Orlenu</a></th><td class="n">4</td>
+            <td class="bar-col"><span class="bar" aria-hidden="true"><span class="seg seg-up" style="flex:1"></span><span class="seg seg-down" style="flex:1"></span><span class="seg seg-rest" style="flex:2"></span></span></td>
+            <td class="n up">1</td><td class="n down">1</td><td class="n rest">2</td>
+          </tr>
+          <tr>
+            <th scope="row"><a href="#cel-ropa">ropa</a></th><td class="n">4</td>
+            <td class="bar-col"><span class="bar" aria-hidden="true"><span class="seg seg-down" style="flex:3"></span><span class="seg seg-rest" style="flex:1"></span></span></td>
+            <td class="n up zero">0</td><td class="n down">3</td><td class="n rest">1</td>
+          </tr>
+        </tbody>
+      </table>
+      </div>
+      <p class="sec-foot"><a href="#cele">Wszystkie cele z tego dnia (41)</a></p>
+  </section>
+</div>
+</main>
+
+</body>
+</html>

@@ -6,7 +6,7 @@
 
 Aplikacja ma wyglądać i działać jak dopracowany produkt, a nie surowy panel. Ten dokument opisuje projekt całej aplikacji webowej: zasady i standardy, zadania użytkownika, układ ekranów i nawigację, język wizualny, komponenty, treść etykiet oraz to, czego potrzebują wdrożenie i testy.
 
-Zakres to dokładnie wymagania [PRD v4](prd.md) dla aplikacji webowej (FR-006–FR-040) i ekrany kamienia milowego M-5 z [roadmapy](roadmap.md). Projekt nie dodaje wymagań. Pomysły wynikające ze standardów, których PRD nie obejmuje, są w sekcji „Propozycje poza PRD” i nie mają prototypów.
+Zakres to dokładnie wymagania [PRD v4](prd.md) dla aplikacji webowej (FR-006–FR-040) i ekrany kamienia milowego M-5 z [roadmapy](roadmap.md). Projekt nie dodaje wymagań. Pomysły wynikające ze standardów, których PRD nie obejmuje, są w sekcji „Propozycje poza PRD” i nie mają prototypów. Jedno doprecyzowanie na prośbę właściciela (2026-11-20): przegląd dnia pokazuje udział stanowisk wzrostowych, spadkowych i pozostałych w całym dniu. To suma danych, które FR-039 i tak każe policzyć (proporcje per cel), a nie zmiana względem poprzedniego dnia; czeka na zatwierdzenie w PRD (sekcja „Różnice wobec roadmapy”).
 
 Makiety z [`ui-ux-proposals.md`](ui-ux-proposals.md) były listą funkcji, a nie wzorem wyglądu. Projekt nie zawiera ich elementów bez pokrycia w wymaganiach: tickerów i nazw kanonicznych spółek, scalania odmian celu, trendu, jednej etykiety stanowiska na cały post, „Zapisanych”, „Analiz”, „Wątków”, „Ostatnich obserwacji”, statusu pipeline'u dla zwykłego użytkownika i wyboru postów „wartych przeczytania”.
 
@@ -21,7 +21,7 @@ Stan sekcji:
 
 ## Użytkownik i zadania
 
-Aplikacji używają zaproszone osoby (rola użytkownika) i administrator (rola admina, zarazem operator). Korzystają głównie z komputera; telefon jest urządzeniem dodatkowym. Projekt układa więc ekrany pod szeroki ekran (panele obok siebie), a na wąskim daje jedną kolumnę bez utraty funkcji.
+Aplikacji używają zaproszone osoby (rola użytkownika) i administrator (rola admina, zarazem operator). Korzystają głównie z komputera; telefon jest urządzeniem dodatkowym. Projekt układa więc ekrany pod szeroki ekran, a na wąskim daje jedną kolumnę bez utraty funkcji.
 
 Zadania w kolejności ważności:
 
@@ -36,9 +36,10 @@ Bolączki zgłoszone przez właściciela (2026-11-19) i odpowiedź projektu:
 | Bolączka | Odpowiedź projektu |
 | --- | --- |
 | Surowy wygląd | Jeden język wizualny: krój pisma w plikach aplikacji, skala typografii i odstępów, role kolorów, komponenty ze wszystkimi stanami. Wygląd wybiera właściciel spośród trzech wariantów. |
-| Trudno wyłapać sedno posta | Wiersz listy pokazuje cele ze stanowiskiem wobec każdego (znak, słowo, kolor). Tytuł albo początek treści jest pod spodem, a nie zamiast tego. |
-| Za dużo klikania | Ocena wybranego posta otwiera się obok listy; lista zostaje na miejscu z zaznaczonym wierszem. Przyciski „poprzedni” i „następny” przechodzą po bieżącej liście. |
+| Trudno wyłapać sedno posta | Wiersz listy pokazuje w jednej linii tytuł albo początek treści i cele ze stanowiskiem wobec każdego (znak, słowo, kolor). |
+| Za dużo klikania | Ocena wybranego posta wysuwa się w panelu z prawej; lista zostaje widoczna w tle z zaznaczonym postem. Przyciski „poprzedni” i „następny” przechodzą po bieżącej liście bez zamykania panelu. |
 | Nieczytelny panel admina | Panel podzielony na trzy części o jednym temacie każda (przebiegi, jakość ocen, nieudane posty) zamiast jednej długiej strony z pięcioma sekcjami. |
+| „Wygląda jak panel administratora, gubię się” (2026-11-20, po pierwszych prototypach z panelami obok siebie) | Jedna kolumna i jedna rzecz naraz: lista zwarta, filtry pod jednym przyciskiem, szczegóły dopiero po kliknięciu, menu u góry zamiast bocznej kolumny. Zdania objaśniające zastąpione klockami z liczbami i przełącznikami. |
 
 ## Zasady i standardy
 
@@ -69,7 +70,7 @@ Standardy dobiera projekt, a ich spełnienie sprawdza agent poleceniem albo niez
 1. **Widoczność stanu systemu.** Data ostatniej aktualizacji danych per źródło jest zawsze widoczna. Ładowanie, pusta lista i błąd wyglądają tak samo w każdym widoku. Zaznaczony wiersz pokazuje, którego posta dotyczy panel obok.
 2. **Zgodność ze światem użytkownika.** Słowa źródeł (Wykop: wpis, znalezisko; Reddit: post, link), stanowiska słowami z oceny, daty w czasie warszawskim.
 3. **Kontrola i swoboda.** Wybrany post ma własny adres, więc działają „wstecz”, odświeżenie i link z powiadomienia. Filtry da się wyczyścić jednym przyciskiem.
-4. **Spójność i standardy.** Ten sam wzorzec „lista ze szczegółami obok” dla postów i celów; te same komponenty i etykiety w każdym widoku.
+4. **Spójność i standardy.** Ten sam wzorzec dla postów i celów: lista, a szczegóły w panelu wysuwanym z prawej; te same komponenty i etykiety w każdym widoku.
 5. **Zapobieganie błędom.** Akcje admina o skutkach (start przebiegu, przywrócenie postów) mówią przed kliknięciem, czego dotyczą; niedostępna akcja jest wyłączona z podanym powodem.
 6. **Rozpoznawanie zamiast przypominania.** Nawigacja ma opisy, nie same ikony. Aktywne filtry są widoczne przy liście.
 7. **Elastyczność i sprawność.** Filtr i sortowanie żyją w adresie strony. Lista i ocena przewijają się niezależnie.
@@ -81,12 +82,12 @@ Standardy dobiera projekt, a ich spełnienie sprawdza agent poleceniem albo niez
 
 | Wzorzec | Źródło | Zastosowanie |
 | --- | --- | --- |
-| Lista ze szczegółami obok (list-detail) | [Material Design 3, układy kanoniczne](https://m3.material.io/foundations/layout/canonical-layouts) | Posty z oceną obok; katalog celów z kartą celu obok. Na wąskim ekranie lista i szczegóły to osobne ekrany. |
+| Lista ze szczegółami (list-detail) w panelu bocznym | [Material Design 3, układy kanoniczne](https://m3.material.io/foundations/layout/canonical-layouts) i [panele boczne](https://m3.material.io/components/side-sheets/overview) | Posty i katalog celów: lista w jednej kolumnie, szczegóły (ocena posta, karta celu) w panelu wysuwanym z prawej na życzenie, z listą widoczną w tle. Na wąskim ekranie panel zajmuje cały ekran. |
 | Stała nawigacja główna | [Material Design 3, nawigacja](https://m3.material.io/components/navigation-rail/overview); [Carbon, UI shell](https://carbondesignsystem.com/components/UI-shell-header/usage/) | Jedna nawigacja w powłoce aplikacji zamiast nagłówka w każdym widoku. |
 | Tabela danych | [Carbon, data table](https://carbondesignsystem.com/components/data-table/usage/) | Cele dnia, przebiegi, nieudane posty: nagłówki kolumn, liczby do prawej, wiersz jako cel kliknięcia. |
 | Formularze | [GOV.UK Design System](https://design-system.service.gov.uk/components/text-input/) | Etykieta nad polem, podpowiedź pod etykietą, błąd słowami przy polu, jedna kolumna. |
 | Pusty stan, ładowanie, błąd | [Carbon, empty states](https://carbondesignsystem.com/patterns/empty-states-pattern/) i [loading](https://carbondesignsystem.com/patterns/loading-pattern/) | Pusty stan mówi, co zrobić dalej; ładowanie jako szkielet treści o kształcie wyniku; błąd z przyciskiem ponowienia. |
-| Zachowanie widżetów | [WAI-ARIA Authoring Practices](https://www.w3.org/WAI/ARIA/apg/patterns/) | Lista powiadomień jako rozwijany panel (disclosure), części panelu admina jako karty (tabs). |
+| Zachowanie widżetów | [WAI-ARIA Authoring Practices](https://www.w3.org/WAI/ARIA/apg/patterns/), w tym [dialog](https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/) | Panel oceny posta i karty celu jako dialog (fokus w panelu, Esc zamyka, fokus wraca na wybrany wiersz), lista powiadomień jako rozwijany panel (disclosure), części panelu admina jako karty (tabs), przełącznik zakresu jako grupa przycisków ze stanem. |
 
 ### Typografia, siatka i ruch
 
@@ -106,8 +107,8 @@ Standardy dobiera projekt, a ich spełnienie sprawdza agent poleceniem albo niez
 | Logowanie | każdy | `/login` (bez zmian) | adres aplikacji bez sesji |
 | Aktywacja konta | każdy | `/activate` (bez zmian) | jednorazowy link |
 | Przegląd dnia | użytkownik | `/` (ekran startowy docelowo) | nawigacja „Przegląd” |
-| Posty: lista z oceną obok | użytkownik | `/posts`, wybrany post `/posts/:id` (ten adres już istnieje) | nawigacja „Posty”; link z przeglądu i z karty celu |
-| Cele: katalog z kartą celu obok | użytkownik | `/targets`, wybrany cel `/targets/:name` | nawigacja „Cele”; link z przeglądu |
+| Posty: lista, ocena w panelu z prawej | użytkownik | `/posts`, wybrany post `/posts/:id` (ten adres już istnieje) | nawigacja „Posty”; link z przeglądu i z karty celu |
+| Cele: katalog, karta celu w panelu z prawej | użytkownik | `/targets`, wybrany cel `/targets/:name` | nawigacja „Cele”; link z przeglądu |
 | Panel admina: Przebiegi | admin | `/admin` (bez zmian) | nawigacja „Panel admina” |
 | Panel admina: Jakość ocen | admin | `/admin/quality` | karta w panelu admina |
 | Panel admina: Nieudane posty | admin | `/admin/posts` | karta w panelu admina |
@@ -117,7 +118,7 @@ Wybrany post ma własny adres: działa link z powiadomienia i z innego ekranu, �
 
 Czytanie posta z podświetlonymi cytatami nie jest osobnym ekranem. Podświetlenie i przejścia „poprzedni”/„następny” należą do panelu oceny (S-53 dodaje je do ekranu z S-51). Na wąskim ekranie panel oceny jest osobnym ekranem pod adresem posta.
 
-Katalog celów i karta celu to jeden ekran w tym samym wzorcu co posty: lista celów po lewej, karta wybranego celu po prawej.
+Katalog celów i karta celu to jeden ekran w tym samym wzorcu co posty: lista celów, a karta wybranego celu w panelu z prawej.
 
 ### Nawigacja
 
@@ -125,7 +126,11 @@ Nawigacja główna jest częścią powłoki aplikacji (jeden `banner` na stronie
 
 Obok nawigacji, w tej samej powłoce: data ostatniej aktualizacji danych per źródło (FR-030), powiadomienia (tylko admin), przełącznik „Ciemny motyw” (FR-040), e-mail zalogowanego i „Wyloguj” (FR-013). Ekrany publiczne (logowanie, aktywacja) nie mają nawigacji.
 
-Położenie nawigacji (góra albo bok) należy do wariantu wyglądu i jest opisane w sekcji „Język wizualny”.
+Nawigacja jest w pasku u góry strony, bez bocznej kolumny (decyzja właściciela, 2026-11-20).
+
+### Zakres postów
+
+Posty nieinwestycyjne i posty bez treści są domyślnie ukryte (FR-007). Zamiast zdania o ukrytych postach każdy ekran z listą albo liczbami ma przełącznik dwóch stanów z liczbami: „Inwestycyjne 128 | Wszystkie 165”. Na przeglądzie dnia stoi obok wyboru dnia, na ekranie postów przy nagłówku. Przełącza cały widok: listę, liczniki i proporcje.
 
 ### Ekran startowy
 
@@ -153,8 +158,8 @@ Strona przebiegu zostaje osobnym ekranem (liczniki, wynik per źródło, kroki, 
 
 ### Szeroki i wąski ekran
 
-- **Od 900 px**: powłoka z nawigacją i dwa panele obok siebie na ekranach list (lista około 30 rem, szczegóły reszta). Panele przewijają się niezależnie, strona nie.
-- **Poniżej 900 px**: jedna kolumna. Lista i szczegóły to osobne ekrany; ze szczegółów wraca się przyciskiem „wstecz” przeglądarki albo linkiem do listy. Nawigacja zwija się do wiersza pod nazwą aplikacji.
+- **Od 900 px**: pasek nawigacji u góry i jedna kolumna treści. Lista jest zwarta (jeden post w jednej linii) i zajmuje całą kolumnę, do około 70 rem. Szczegóły otwierają się w panelu wysuwanym z prawej (około 44 rem): lista przesuwa się do lewej krawędzi, jest lekko przyciemniona i zostaje widoczna, a wybrany wiersz jest zaznaczony. Panel przewija się niezależnie od listy.
+- **Poniżej 900 px**: jedna kolumna. Post na liście zajmuje kilka linii, a panel szczegółów otwiera się na cały ekran; zamyka go przycisk „Zamknij” albo „wstecz” przeglądarki. Nawigacja zwija się do wiersza pod nazwą aplikacji.
 - **Od 320 px**: strona nie przewija się w poziomie.
 
 ## Ekrany
@@ -163,14 +168,14 @@ Ekrany M-5 z wymaganiami i źródłem danych. „Dziś” znaczy, że API już d
 
 | Ekran | Cel ekranu | Wymagania | Dane | Prototyp (faza 3) |
 | --- | --- | --- | --- | --- |
-| Przegląd dnia | Obraz wybranego dnia: liczba postów, liczba celów ze stanowiskiem, źródła, cele dnia z proporcjami, najczęściej omawiane cele z najnowszymi postami | FR-039, FR-038, FR-035, FR-007 | S-59 (na S-55 i S-58) | `overview` |
-| Posty: lista z oceną obok | Przejrzeć posty i przeczytać ocenę wybranego: cele ze stanowiskiem, tezy z cytatem, link do oryginału, dane surowe | FR-007, FR-009, FR-010, FR-011a, FR-030 | dziś (lista, filtr po celu i stanowisku, ocena, link, dane surowe); układ S-51 | `posts` |
-| Posty: filtry i kolejność | Zawęzić listę: szukanie w treści, dzień albo zakres dat, kolejność, przełącznik „Pokaż wszystkie” | FR-036, FR-035, FR-008, FR-011b, FR-007 | S-56, S-55, S-54, S-52 | `posts-filters` |
-| Post z podświetlonymi cytatami | Zobaczyć w treści fragmenty, na których oparto ocenę; wyłączyć podświetlenie; przejść do poprzedniego i następnego | FR-009 | dziś (cytaty są w ocenie); widok S-53 | `post` |
-| Cele: katalog z kartą celu | Znaleźć cel po nazwie, zobaczyć liczbę postów i proporcje stanowisk (wzrostowe, spadkowe, pozostałe), przejść do wypowiedzi o celu | FR-037, FR-038, FR-011a | S-57, S-58 | `targets` |
+| Przegląd dnia | Obraz wybranego dnia na pierwszy rzut oka: klocki z liczbą postów (ze źródłami), liczbą celów ze stanowiskiem i udziałem stanowisk wzrostowych, spadkowych i pozostałych; trzy najczęściej omawiane cele z proporcjami i najnowszymi postami; tabela wszystkich celów dnia | FR-039, FR-038, FR-035, FR-007 | S-59 (na S-55 i S-58) | `overview` |
+| Posty: lista i ocena w panelu | Przejrzeć posty na liście zwartej i przeczytać ocenę wybranego w panelu z prawej: cele ze stanowiskiem, tezy z cytatem, link do oryginału, dane surowe | FR-007, FR-009, FR-010, FR-011a, FR-030 | dziś (lista, filtr po celu i stanowisku, ocena, link, dane surowe); układ S-51 | `posts`, `post` |
+| Posty: filtry i kolejność | Zawęzić listę: szukanie w treści na wierzchu; cel, stanowisko, dzień albo zakres dat i kolejność pod przyciskiem „Filtry”; przełącznik zakresu „Inwestycyjne / Wszystkie” | FR-036, FR-035, FR-008, FR-011b, FR-007 | S-56, S-55, S-54, S-52 | `posts-filters` |
+| Post z podświetlonymi cytatami | W panelu oceny: zobaczyć w treści fragmenty, na których oparto ocenę; wyłączyć podświetlenie; przejść do poprzedniego i następnego | FR-009 | dziś (cytaty są w ocenie); widok S-53 | `post` |
+| Cele: katalog i karta celu w panelu | Znaleźć cel po nazwie, zobaczyć liczbę postów i proporcje stanowisk (wzrostowe, spadkowe, pozostałe), przejść do wypowiedzi o celu | FR-037, FR-038, FR-011a | S-57, S-58 | `targets`, `target` |
 | Logowanie | Zalogować się e-mailem i hasłem; komunikaty błędnych danych i limitu prób | FR-012, FR-040 | dziś; widok S-49 | `login` |
 | Aktywacja konta | Ustawić hasło z jednorazowego linku; link nieważny, reguły hasła | FR-018 | dziś; widok S-49 | `activate` |
-| Powłoka aplikacji | Nawigacja według roli, data aktualizacji danych, przełącznik motywu, wylogowanie | FR-015, FR-013, FR-030, FR-040 | dziś; widok S-47 | na każdym ekranie zalogowanym |
+| Powłoka aplikacji | Nawigacja u góry według roli, data aktualizacji danych, przełącznik motywu, wylogowanie | FR-015, FR-013, FR-030, FR-040 | dziś; widok S-47 | na każdym ekranie zalogowanym |
 | Panel admina: Przebiegi | Uruchomić przebieg, uzupełnić dni bez danych, zobaczyć ostatnie przebiegi i ich stan | FR-021, FR-022, FR-015 | dziś; widok S-50 | `admin-runs` |
 | Panel admina: Jakość ocen | Sprawdzić miary jakości per źródło wobec progów | FR-033 | dziś; „kanał jako cel” S-60 | `admin-quality` |
 | Panel admina: Nieudane posty | Zobaczyć nieudane i martwe posty, przywrócić zaznaczone | FR-034 | dziś; widok S-50 | `admin-posts` |
