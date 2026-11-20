@@ -378,24 +378,24 @@ Brak danych i kodu do migracji. Projekt wchodzi do aplikacji w F-08 (tokeny, kom
 
 #### Automated
 
-- [x] 3.1 Każdy ekran ze `screens.json` ma prototyp i cztery zrzuty
-- [x] 3.2 Wszystkie prototypy ekranów przechodzą kontrolę stron w obu motywach przy 1280 i 375 px
-- [x] 3.3 Tabela „Ekrany” jest zgodna ze `screens.json` i pokrywa listę wymagań
-- [x] 3.4 Przegląd heurystyczny nie ma otwartych ustaleń blokujących
-- [x] 3.5 Galeria odwołuje się do każdego zrzutu ekranów
-- [x] 3.6 Kod aplikacji bez zmian
+- [x] 3.1 Każdy ekran ze `screens.json` ma prototyp i cztery zrzuty — f479451
+- [x] 3.2 Wszystkie prototypy ekranów przechodzą kontrolę stron w obu motywach przy 1280 i 375 px — f479451
+- [x] 3.3 Tabela „Ekrany” jest zgodna ze `screens.json` i pokrywa listę wymagań — f479451
+- [x] 3.4 Przegląd heurystyczny nie ma otwartych ustaleń blokujących — f479451
+- [x] 3.5 Galeria odwołuje się do każdego zrzutu ekranów — f479451
+- [x] 3.6 Kod aplikacji bez zmian — f479451
 
 #### Manual
 
-- [x] 3.7 Właściciel akceptuje komplet ekranów na galerii albo zleca poprawki, a decyzja jest zapisana w `ui-design.md`, sekcja „Decyzja właściciela”
+- [x] 3.7 Właściciel akceptuje komplet ekranów na galerii albo zleca poprawki, a decyzja jest zapisana w `ui-design.md`, sekcja „Decyzja właściciela” — f479451
 
 ### Phase 4: Przekazanie do wdrożenia
 
 #### Automated
 
-- [ ] 4.1 `ui-design.md` ma wszystkie sekcje wypełnione, linki względne działają, a kontrakt E2E wymienia każdy ekran ze `screens.json`
-- [ ] 4.2 Roadmapa zawiera zdanie o teście E2E w każdym wycinku
-- [ ] 4.3 Wytyczne repo wskazują dokument projektu
-- [ ] 4.4 SVG roadmapy zgodne z danymi skryptu
-- [ ] 4.5 Kod aplikacji bez zmian
+- [x] 4.1 `ui-design.md` ma wszystkie sekcje wypełnione, linki względne działają, a kontrakt E2E wymienia każdy ekran ze `screens.json`
+- [x] 4.2 Roadmapa zawiera zdanie o teście E2E w każdym wycinku
+- [x] 4.3 Wytyczne repo wskazują dokument projektu
+- [x] 4.4 SVG roadmapy zgodne z danymi skryptu
+- [x] 4.5 Kod aplikacji bez zmian
 - [ ] 4.6 CI w PR jest zielone

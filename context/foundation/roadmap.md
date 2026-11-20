@@ -3,7 +3,7 @@ project: "Szczur Radar"
 version: 6
 status: draft # draft | active | locked
 created: 2026-09-27
-updated: 2026-11-19
+updated: 2026-11-20
 prd_version: 4
 main_goal: quality
 top_blocker: capacity # 19 pozycji, jeden recenzent i osoba mergująca; fundament UI dotyka wspólnych plików (tokeny, komponenty, router), więc pierwsze fale są sekwencyjne; darmowe runnery GitHuba muszą zmieścić testy w przeglądarce i zrzuty
@@ -221,7 +221,7 @@ Wycinki niżej zakładają te warstwy i ich nie budują od nowa.
 
 ## Slices
 
-> Od v6.1 (2026-11-19): każdy wycinek UI (S-47–S-59) wdraża swój widok według zaakceptowanego projektu F-07 (`context/foundation/ui-design.md`) na tokenach i komponentach z F-08, a opis PR pokazuje zrzut F-06 obok prototypu ekranu.
+> Od v6.1 (2026-11-19): każdy wycinek UI (S-47–S-59) wdraża swój widok według zaakceptowanego projektu F-07 (`context/foundation/ui-design.md`) na tokenach i komponentach z F-08, a opis PR pokazuje zrzut F-06 obok prototypu ekranu. Każdy wycinek S-47–S-59 kończy się testem E2E swoich przepływów według sekcji „Kontrakt dla testów E2E” w `context/foundation/ui-design.md` (od 2026-11-20).
 
 ### S-46: Motyw jasny i ciemny z przełącznikiem
 

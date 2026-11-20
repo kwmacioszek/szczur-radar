@@ -559,19 +559,220 @@ Wszystkie daty i godziny są w czasie warszawskim (`Europe/Warsaw`), jak dziś w
 
 ## Kontrakt dla testów E2E
 
-> Do uzupełnienia w fazie 4.
+Każdy wycinek S-47–S-59 kończy się testem E2E swoich przepływów (NFR `prd.md:328`, zasady w `REPOSITORY_GUIDELINES.md`: lokatory po roli, etykiecie i tekście w obrębie `banner`, `main` albo nazwanego regionu; bez selektorów CSS). Ta sekcja mówi, po czym test znajduje elementy i co ma przeklikać. Nazwy są takie jak w prototypach; zmiana nazwy w kodzie to zmiana tego dokumentu.
+
+### Powłoka (każdy ekran po zalogowaniu)
+
+| Element | Rola i nazwa |
+| --- | --- |
+| Pasek aplikacji | `banner` (jeden na stronie) |
+| Nawigacja | `navigation` „Główna” z odnośnikami „Przegląd”, „Posty”, „Cele” i, dla admina, „Panel admina”; bieżący ma `aria-current="page"` |
+| Data danych | tekst „Dane:” i po jednym wierszu na źródło, np. „Wykop 20.10.2026, 10:15” (element `time`) |
+| Powiadomienia (admin) | przycisk „Powiadomienia, N nieprzeczytanych” z `aria-expanded` |
+| Motyw | przycisk „Ciemny motyw” z `aria-pressed` |
+| Sesja | tekst z e-mailem (od 900 px) i przycisk „Wyloguj” |
+| Treść | `main` (jeden na stronie) z jednym nagłówkiem poziomu 1 |
+
+Przepływy powłoki: klik pozycji nawigacji otwiera jej ekran i przenosi `aria-current`; zwykły użytkownik nie ma odnośnika „Panel admina” ani dzwonka; „Wyloguj” kończy sesję i prowadzi do logowania; „Ciemny motyw” zmienia `data-theme` i przetrwa przeładowanie. Tryby atrapy: `AUTH`, `FRESHNESS`, `NOTIFICATIONS`.
+
+### Ekrany
+
+| Ekran | Role i nazwy | Przepływy: krok i oczekiwany wynik | Tryby atrapy |
+| --- | --- | --- | --- |
+| `overview` | nagłówek 1 „Przegląd dnia”; grupa „Zakres postów” z przyciskami „Inwestycyjne” i „Wszystkie” (`aria-pressed`); przyciski „Poprzedni dzień”, „Następny dzień”, pole „Dzień”; terminy „Posty”, „Cele ze stanowiskiem”, „Wzrostowe”, „Spadkowe”, „Pozostałe”; regiony „Najczęściej omawiane” (nagłówki 3 z nazwą celu) i „Wszystkie cele dnia” (tabela) | zmiana dnia: liczby i cele są z wybranego dnia, a dzień jest w adresie; „Wszystkie”: liczby rosną o posty nieinwestycyjne; klik nazwy celu: otwiera kartę celu; klik posta na karcie celu dnia: otwiera post w panelu | nowy tryb dla przeglądu (dane, ładowanie, błąd, dzień bez danych), `FRESHNESS` |
+| `posts` | nagłówek 1 „Posty”; grupa „Zakres postów”; formularz `search` „Filtr postów” z polem „Szukaj w postach” i przyciskiem „Filtry” (`aria-expanded`); regiony dni z nagłówkiem 2 („Dziś, 20 października”); wiersz posta to odnośnik w elemencie listy; `navigation` „Strony” z „Nowsze”, „Starsze” i tekstem „Strona 1 z 3” | klik wiersza: otwiera post w panelu; „Starsze”: druga strona i numer strony w adresie; „Wszystkie”: lista i liczby obejmują posty nieinwestycyjne, a stan jest w adresie | `MODE` (`data`, `loading-next`, `error-next`) |
+| `post` | `dialog` o nazwie równej tytułowi posta (post bez tytułu: „Wpis użytkownika …”, jak dziś); przyciski „Poprzedni post”, „Następny post”, „Zamknij post”; odnośnik „Otwórz oryginał na … (otwiera się w nowej karcie)”; pole wyboru „Podświetl fragmenty, na których oparto ocenę”; nagłówek „Ocena”; nagłówki z nazwami celów; przycisk „Surowe dane” (`aria-expanded`) i region „Surowe dane posta” | klik wiersza: dialog jest otwarty, adres to adres posta, fokus jest w dialogu, wiersz ma `aria-current`; „Zamknij post” albo Esc: dialog znika, fokus wraca na wiersz, adres wraca do listy z tym samym filtrem i stroną; „Następny post”: treść i adres następnego posta listy; odznaczenie pola: w treści nie ma elementów `mark`; „Surowe dane”: widać JSON źródła; wejście na adres posta bez sesji: logowanie, a po nim ten post; poniżej 900 px „wstecz” przeglądarki zamyka panel | `MODE` (`raw-loading`, `raw-error`), `AUTH` |
+| `posts-filters` | przycisk „Filtry: N”; w panelu pola „Spółka lub temat”, „Rodzaj celu”, „Stanowisko”, „Od”, „Do”, „Kolejność” oraz przyciski „Filtruj”, „Wyczyść filtry”, „Zamknij filtry”; lista „Włączone filtry” z przyciskami „Usuń filtr: …” | wpisanie celu i wybór stanowiska, „Filtruj”: parametry są w adresie, nad listą stoją znaczniki, lista i liczby w przełączniku są zawężone; „Usuń filtr: …”: znika jeden filtr z adresu i z listy znaczników; wpisanie słów w „Szukaj w postach”: lista zawiera tylko posty z tymi słowami (S-56); „Od” i „Do”: lista z zakresu dni (S-55); „Kolejność”: porządek listy (S-54); Esc: panel zamknięty, fokus na przycisku „Filtry” | `MODE` (`data`, `empty`) |
+| `targets` | nagłówek 1 „Cele”; grupy „Zakres postów” i „Okres” (przyciski „Dziś”, „7 dni”, „30 dni”); pole „Szukaj celu”; przycisk „Kolejność: …”; tabela z nagłówkami kolumn „Cel”, „Posty”, „Wzrostowe”, „Spadkowe”, „Pozostałe”, „Udział”; nagłówek wiersza to odnośnik z nazwą celu; `navigation` „Strony” z „Poprzednie”, „Następne” | wpisanie nazwy: w tabeli zostają pasujące cele; zmiana okresu: liczby z nowego okresu i okres w adresie; klik nazwy celu: karta celu w panelu | nowy tryb dla katalogu (dane, ładowanie, błąd, brak celów) |
+| `target` | `dialog` o nazwie celu; przyciski „Poprzedni cel”, „Następny cel”, „Zamknij cel”; obraz „Stanowiska wobec …” z liczbami; grupa „Zakres postów o celu”; nagłówek „Wypowiedzi”; odnośniki z tytułami postów; odnośnik „Wszystkie posty o …” | klik celu: dialog otwarty, adres celu, fokus w dialogu; klik tytułu wypowiedzi: post w panelu na ekranie postów; „Wszystkie posty o …”: ekran postów ze znacznikiem „Cel: …”; „Zamknij cel”: fokus wraca na wiersz celu | jak `targets` |
+| `login` | nagłówek 1 „Logowanie”; pola „E-mail” i „Hasło”; przycisk „Zaloguj się”; komunikat `alert`; przycisk „Ciemny motyw” | poprawne dane: ekran startowy; złe hasło: zostaje na logowaniu z komunikatem „Nieprawidłowy e-mail lub hasło.”; limit prób: komunikat „Zbyt wiele prób. …”; zapamiętany motyw jest zastosowany | `AUTH: anonymous`, `LOGIN` |
+| `activate` | nagłówek 1 „Ustawienie hasła”; pola „Nowe hasło” i „Powtórz hasło”; przycisk „Ustaw hasło”; błąd przy polu | poprawne hasło: logowanie z komunikatem „Hasło ustawione. Zaloguj się.”; za krótkie hasło: błąd przy polu, fokus na polu; nieważny link: komunikat i brak formularza | `AUTH: anonymous`, `ACTIVATION` |
+| `admin-runs` | nagłówek 1 „Panel admina”; `navigation` „Panel admina” z odnośnikami „Przebiegi”, „Jakość ocen”, „Nieudane posty”; regiony „Nowy przebieg” (pola „Od”, „Do”, grupa „Źródła”, przycisk „Uruchom”), „Dni bez danych” (przyciski „Wpisz do formularza: …”), „Ostatnie przebiegi” (tabela, odnośniki „Szczegóły przebiegu z …”, przyciski „Odśwież”, „Pokaż starsze”) | „Uruchom”: nowy przebieg na górze tabeli; zajęty pipeline: komunikat i brak nowego wiersza; „Wpisz do formularza: …”: pola „Od” i „Do” mają ten zakres, fokus na „Od”; „Pokaż starsze”: tabela się wydłuża; klik części: jej adres i `aria-current` | `START`, `MISSING` |
+| `admin-quality` | region „Jakość ocen (7 dni)”; nagłówki 3 z nazwą źródła; nazwa miary, wartość, próg i stan słowami („w normie”, „ponad progiem”, „za mało danych”); obraz paska z tym samym opisem | wejście z paska części: adres części; każda miara ma wartość, próg i stan słowami | `QUALITY` |
+| `admin-posts` | region „Nieudane posty”; tabela; pola wyboru „Zaznacz post: …”; przyciski „Ponów zaznaczone (N)” i „Przywróć martwe (N)” | zaznaczenie postów: liczby w przyciskach rosną osobno dla postów do ponowienia i martwych; „Ponów zaznaczone”: komunikat powodzenia; „Przywróć martwe”: posty znikają z listy; klik tytułu: post w panelu | `MODE` (`data`; `empty` to brak przebiegów i nieudanych postów) |
+| `run` | odnośnik „Panel admina” (powrót); nagłówek 1 „Przebieg z …” i znacznik stanu; komunikat „Wymaga uwagi: …”; nagłówki 2 „Liczniki”, „Wynik per źródło”, „Kroki” | „Szczegóły przebiegu z …” z tabeli: strona przebiegu; „Panel admina”: powrót do części „Przebiegi”; trwający przebieg odświeża się sam | `MODE: data` (przebiegi atrapy z powodami „wymaga uwagi”) |
+| `notifications` | przycisk „Powiadomienia, N nieprzeczytanych” (`aria-expanded="true"`); region „Powiadomienia”; przycisk „Oznacz wszystkie jako przeczytane”; odnośniki powiadomień ze znacznikiem „nowe” | klik dzwonka: lista otwarta, Tab wchodzi do listy; klik powiadomienia: strona przebiegu i licznik mniejszy o jeden; Esc: lista zamknięta, fokus na dzwonku | `NOTIFICATIONS` |
+| `state-loading` | region listy z `aria-busy="true"` i tekstem „Wczytywanie…”; przełącznik zakresu wyłączony | lista w trakcie wczytywania pokazuje szkielet i tekst dla czytnika | `MODE: loading` |
+| `state-empty` | nagłówek „Brak postów dla tych filtrów”; lista „Włączone filtry”; przycisk „Wyczyść filtry” | filtr bez wyników: pusty stan i znaczniki; „Wyczyść filtry”: pełna lista i adres bez filtrów. Pusta lista bez filtrów zostaje z dzisiejszym tekstem „Brak ocenionych postów. Pojawią się po najbliższej aktualizacji danych.” | `MODE: empty` |
+| `state-error` | komunikat `alert` z nagłówkiem „Nie udało się wczytać postów”; przycisk „Spróbuj ponownie” | błąd listy: komunikat; „Spróbuj ponownie”: lista się wczytuje, filtry zostają | `MODE: error` |
+| `admin-loading` | regiony części z `aria-busy="true"` i tekstem „Wczytywanie…”; „Odśwież” wyłączone | każda sekcja pokazuje szkielet do czasu swoich danych | `MODE: loading` (wstrzymuje odpowiedzi panelu admina) |
+| `admin-empty` | region „Nieudane posty” z tekstem „Brak nieudanych postów”; odnośnik „Pokaż przebiegi” | brak nieudanych postów: pusty stan bez tabeli i bez licznika w pasku części | `MODE: empty` |
+| `admin-error` | komunikat `alert` „Nie udało się wczytać jakości ocen”; przycisk „Spróbuj ponownie” | błąd jednej części: komunikat w tej części, pozostałe części działają; „Spróbuj ponownie” wczytuje ją | `QUALITY: error` (jedna część); `MODE: error` (cały panel) |
+
+Nowy tryb atrapy to wpis w `MODE_VALUES` atrapy i w `MOCK_MODE_VALUES`, przypadek w `src/contract/mockApi.test.ts` i wiersz w nagłówku atrapy.
+
+### Istniejące testy, które zmiana łamie
+
+| Plik i test | Co się zmienia | Wycinek |
+| --- | --- | --- |
+| `e2e/feed.spec.ts`: „filtr po celu i stanowisku trafia do adresu i zawęża listę” | pola „Spółka lub temat” i „Stanowisko” są w panelu pod przyciskiem „Filtry”, więc test najpierw go otwiera; teksty stanu „Ocenione posty: 120” i „Pasujące do filtra: N” zastępują liczby w przełączniku zakresu; karty (`article` z nagłówkiem 2) stają się wierszami listy | S-51, S-52 |
+| `e2e/feed.spec.ts`: „filtr bez wyników pozwala wrócić do pełnej listy” | pusty stan ma nagłówek „Brak postów dla tych filtrów” i znaczniki włączonych filtrów; „Wyczyść filtry” zostaje | S-48, S-51 |
+| `e2e/feed.spec.ts`: „przejście na starszą stronę zmienia adres i stronę”, „ładowanie listy jest widoczne”, „błąd listy pozwala ponowić wczytanie”, „pusta lista mówi, kiedy pojawią się posty” | etykiety zostają („Starsze”, „Strona 2 z 3”, „Wczytywanie…”, „Spróbuj ponownie”); zmienia się adres listy z `/` na `/posts`, gdy ekranem startowym zostanie przegląd | S-59 |
+| `e2e/post.spec.ts`: „post otwarty z listy pokazuje ocenę i surowe dane, a powrót wraca do listy” | post jest dialogiem nad listą, a nie stroną z nagłówkiem 1 w `main`; „Dane dla nerdów: surowy JSON źródła” to przycisk „Surowe dane”; powrót to „Zamknij post”, nie odnośnik „Posty” w `main`; poziomy nagłówków oceny są inne | S-51, S-53 |
+| `e2e/session-guard.spec.ts`: „anonimowy link do posta prowadzi przez logowanie z powrotem do tego posta” | po logowaniu widać listę z otwartym dialogiem posta; asercja na nagłówek posta przechodzi na nazwę dialogu | S-51 |
+| `e2e/admin.spec.ts`: „panel admina wczytuje wszystkie sekcje” | pięć sekcji jednej strony to trzy części z własnymi adresami: „Nowy przebieg”, „Dni bez danych” i „Ostatnie przebiegi” w „Przebiegi”, „Jakość ocen (7 dni)” i „Nieudane posty” osobno; tekst miary jakości ma inny układ (nazwa miary, wartość, „N z M prób · próg P%”) | S-50 |
+| `e2e/admin.spec.ts`: „uruchomienie przebiegu dodaje go na górę listy”, „zajęty pipeline odrzuca start z komunikatem”, „szczegóły przebiegu otwierają jego stronę”, „powiadomienie z dzwonka otwiera przebieg i zmniejsza licznik” | nazwy zostają („Uruchom”, „Szczegóły przebiegu z …”, „Powiadomienia, N nieprzeczytanych”); lista przebiegów jest tabelą, więc lokator wiersza się zmienia | S-50 |
+| `e2e/auth.spec.ts`, `e2e/activation.spec.ts`, `e2e/theme.spec.ts` | nazwy pól i przycisków zostają; po S-59 ekranem po zalogowaniu jest przegląd dnia | S-49, S-59 |
+| `visual/targets.ts`: `view-feed`, `view-post`, `view-admin`, `view-run` | warunki gotowości widoków (nagłówki i regiony) zmieniają się razem z ekranami; dochodzą cele dla nowych ekranów | każdy wycinek ekranu |
 
 ## Wdrożenie
 
-> Do uzupełnienia w fazie 4.
+Projekt wdrażają F-08 (tokeny, kroje, komponenty bazowe, bramki) i wycinki S-47–S-59 (ekrany). Kryterium akceptacji wycinka to prototyp jego ekranu z sekcji „Ekrany” i kontrakt z sekcji „Kontrakt dla testów E2E”; opis PR pokazuje zrzut F-06 obok zrzutu prototypu.
+
+### Co skąd brać
+
+| Zasób | Skąd | Dokąd |
+| --- | --- | --- |
+| Tokeny | `ui-design/tokens.css` | `szczur-radar-web/src/style.css`, bloki `:root` i `:root[data-theme='dark']` |
+| Pary kontrastu | `ui-design/pairs.json` | `PAIRS` w `src/styleContract.test.ts` |
+| Kroje | `ui-design/fonts/*.woff2` z licencjami | zasoby modułu web z regułami `@font-face` (zakresy `unicode-range` w `ui-design/fonts/README.md`) |
+| Ikony | `ui-design/icons/*.svg` z licencją | komponent ikony albo wspólny sprite; grubość kreski z `--icon-stroke` |
+| Style komponentów | `ui-design/prototypes/prototype.css` | wzór do odczytania wartości i reguł, nie plik do skopiowania: klasy prototypu nie są nazwami w aplikacji |
+
+W aplikacji kroje mają `font-display: swap` i wstępne ładowanie dwóch plików podzbioru łacińskiego używanych na każdym ekranie (prototypy mają `block`, żeby zrzut nie złapał kroju zastępczego).
+
+### Mapa tokenów
+
+| Dziś w `style.css` | Wartość dziś (jasny / ciemny) | W projekcie | Wartość w projekcie (jasny / ciemny) |
+| --- | --- | --- | --- |
+| `--bg` | `#f7f4ee` / `#101a20` | `--bg` | `#eef2f8` / `#0a1020` |
+| `--surface` | `#fffdf8` / `#17252d` | `--surface` | `#ffffff` / `#101a2e` |
+| `--text` | `#4d5560` / `#a7b4bc` | `--text` | `#3f4d63` / `#a9b8d0` |
+| `--text-h` | `#1a1814` / `#eef3f5` | `--text-h` | `#0b1528` / `#f0f5ff` |
+| `--accent` | `#1d4fa8` / `#7fb0ff` | `--accent` | `#0b63c9` / `#5cc8ff` |
+| `--on-accent` | `#ffffff` / `#101a20` | `--on-accent` | `#ffffff` / `#04182a` |
+| `--success` | `#1a7a3e` / `#4cc77c` | `--success` | `#12753b` / `#4ade80` |
+| `--warning` | `#8f5400` / `#e6b04a` | `--warning` | `#8a5500` / `#f5c563` |
+| `--destructive` | `#bf2f28` / `#f0786f` | `--destructive` | `#c0322b` / `#ff7b72` |
+| `--highlight` | `#f4e3a0` / `#3a3519` | `--highlight` | `#ffe9a8` / `#40360f` |
+| `--stance-neutral` | `#55606b` / `#93a2ac` | `--stance-neutral` | `#4a5870` / `#9fb0c9` |
+| `--stance-mixed` | `#8a5200` / `#e0b25a` | `--stance-mixed` | `#8a5500` / `#f5c563` |
+| `--ring` | `var(--accent)` | `--ring` | `#0b63c9` / `#5cc8ff` (hex, bo jest w parach kontrastu) |
+| `--border` (linie ozdobne) | `color-mix(…, var(--text) 25%, transparent)` | `--line` | `#d3dbe8` / `#22314d` |
+| `--border-strong` (krawędź pola) | `var(--text)` | `--border` | `#6f7f99` / `#5f7396` |
+| `--sans` | `system-ui, …` | `--font-ui` | `'Hanken Grotesk', system-ui, sans-serif` |
+| `--mono` | `ui-monospace, …` | `--font-mono` | `'JetBrains Mono', ui-monospace, monospace` |
+| `--font-size-sm` | 14 px | `--font-size-sm` | 14 px |
+| `--font-size-md` | 16 px | `--font-size-md` i `--font-size-lg` | 15 px (tekst interfejsu) i 16 px |
+| `--font-size-lg` | 20 px | `--font-size-2xl` | 20 px |
+| `--font-size-xl` | 32 px | `--font-size-5xl` | 32 px |
+| `--font-size-display` | 44 px | `--font-size-display` | 48 px |
+| `--space-0` … `--space-5` | 2, 4, 8, 12, 16, 24 px | `--space-0` … `--space-5` | te same wartości w rem |
+| `--radius`, `--radius-sm` | 8 px, 6 px | `--radius`, `--radius-sm` | 10 px, 6 px |
+| pismo strony `18px/145%`, 16 px do 1024 px, `letter-spacing: 0.18px` | | pismo strony | `--font-size-md` / `--leading-normal`, bez zmiany rozmiaru przy 1024 px i bez światła między literami |
+
+Uwaga na nazwę `--border`: dziś znaczy linię ozdobną, w projekcie krawędź kontrolki. F-08 zmienia obie nazwy w jednym commicie (`--border` na `--line`, `--border-strong` na `--border`), żeby żaden widok nie dostał grubszej linii przez pomyłkę.
+
+Nowe tokeny, których dziś nie ma: role `--surface-2`, `--selected`, `--scrim`, `--text-muted`, pięć teł `-soft`; `--font-display`; rozmiary `--font-size-xs`, `-xl`, `-3xl`, `-4xl`, `-6xl`; interlinie `--leading-*`, grubości `--weight-*`, światła `--tracking-*`; odstępy `--space-6` … `--space-9`; promienie `--radius-lg`, `-xl`, `-2xl`, `-full`; `--shadow-overlay`; wymiary `--control-height*`, `--icon-size`, `--icon-stroke`, `--bar-height*`, `--width-*`; ruch `--duration*`, `--ease-out`; warstwy `--z-*`. Pełna lista z opisem jest w sekcji „Język wizualny”.
+
+### Mapa komponentów
+
+Nazwy nowych komponentów są propozycją; ustala je plan wycinka.
+
+| Komponent projektu | W aplikacji | Kto buduje |
+| --- | --- | --- |
+| Przycisk | `AppButton` (dochodzą: z ikoną, sama ikona, duży) | F-08 |
+| Komunikat | `StatusMessage` (dochodzi ton „uwaga” i ikona) | F-08 |
+| Znacznik stanu | `StatusBadge` | F-08 |
+| Stanowisko, Cel ze stanowiskiem | `StanceText` (dochodzi znak i tło; wariant z nazwą celu) | F-08 |
+| Motyw | `ThemeToggle` (sama ikona) | F-08 |
+| Pola, Odnośnik | style globalne w `style.css` | F-08 |
+| Ikony | nowy komponent ikony | F-08 |
+| Nawigacja, Nagłówek strony | `AppHeader`; nowy nagłówek strony | S-47 |
+| Powiadomienia | `NotificationMenu`, `NotificationBell` | S-47 |
+| Ładowanie, Pusta lista, Błąd z ponowieniem, Stronicowanie | nowe wspólne komponenty | S-48 |
+| Części panelu admina, Tabela | nowe | S-50 |
+| Wiersz posta | `PostCard` staje się wierszem | S-51 |
+| Panel boczny, Cel w ocenie | nowy panel; `PostAssessment` | S-51 |
+| Filtry | `FeedFilter` (panel pod przyciskiem, znaczniki) | S-51, potem S-54, S-55, S-56 |
+| Przełącznik zakresu | nowy | S-52 |
+| Cytat w treści | nowy | S-53 |
+| Pasek proporcji | nowy | S-57, S-58 |
+| Klocek liczby, Karta celu dnia | nowe | S-59 |
+
+Każdy komponent wspólny trafia do `src/components/` i na `/kitchen-sink` we wszystkich stanach z arkusza komponentów.
+
+### Kolejność
+
+1. **F-08**: tokeny i kroje w `style.css`, pary kontrastu, komponenty bazowe, przepięcie obecnych widoków na nowe tokeny, wzorce F-06 od nowa. Po F-08 aplikacja ma nowy wygląd w starym układzie.
+2. **S-47**: powłoka z nawigacją u góry i datą danych w pasku. **S-48**: wspólne stany. **S-49**: logowanie i aktywacja.
+3. **S-50**: panel admina w trzech częściach. **S-51**: lista zwarta i panel posta. Dalej S-52–S-59 w kolejności roadmapy.
+
+### Zmiany bramek, które F-08 robi świadomie
+
+| Bramka | Dziś | Po F-08 |
+| --- | --- | --- |
+| `visual/font.spec.ts` i `visual/fonts.conf` | test oczekuje `Liberation Sans` dla nagłówka „Logowanie” i etykiety „Hasło”; alias zamienia `system-ui` i `sans-serif` na Liberation Sans | aplikacja ma własne kroje, więc test oczekuje `Newsreader` dla nagłówka i `Hanken Grotesk` dla etykiety; alias zostaje tylko jako kroje zastępcze i nie decyduje o zrzutach; test dalej jest czerwony, gdy tekst rysuje inny krój |
+| `PAIRS` i `MIN_CONTRAST` w `src/styleContract.test.ts` | 19 par, jeden próg 4,5 | 63 pary z `ui-design/pairs.json`, próg osobny dla pary: 4,5 dla tekstu, 3,0 dla elementów interfejsu i fokusu; role w parach są hexem, w tym `--ring` i `--border` |
+| lista `CLEANED` | 17 plików; `LoginView.vue` poza listą | pliki zostają na liście po przepięciu; `LoginView.vue` dochodzi w S-49; każdy nowy komponent dochodzi w chwili powstania |
+| wzorce F-06 | 56 plików PNG | wszystkie zmieniają się raz w F-08 (nowe kolory, kroje, rozmiary), potem grupami w wycinkach ekranów; opis PR mówi, które grupy i dlaczego |
+| wysokość pól, `style.css:170-175` | `calc(1.45rem + 14px)`, liczona z pisma strony | `--control-height` (2,5 rem) dla pól i przycisków; duże wyszukiwanie `--control-height-lg` |
+| nazwy sekcji `/kitchen-sink` | nazwa sekcji daje nazwę wzorca `kitchen-sink-<slug>.png` | sekcje nazywają się jak komponenty w tym dokumencie, więc wzorce zmieniają nazwy; strażnik wzorców wymaga zgodności w obie strony |
+| stany hover i fokus w `visual/targets.ts` | pięć stanów (`state-*`) | te same stany na nowych komponentach; dochodzą stany nowych kontrolek (opcja przełącznika, wiersz posta) |
+
+`design-check` z `tools/design-check/` sprawdza projekt, nie aplikację, i nie jest zadaniem CI. Po F-08 źródłem prawdy o tokenach w aplikacji jest `style.css` z jego testem; `ui-design/tokens.css` zostaje zapisem projektu i musi być z nim zgodny przy każdej zmianie projektu.
 
 ## Różnice wobec roadmapy
 
-> Do uzupełnienia w fazie 4.
+Lista dla `/10x-roadmap` (v6.2). Numery i issue wycinków zostają; zmieniają się opisy.
+
+| Pozycja | Roadmapa v6.1 | Projekt |
+| --- | --- | --- |
+| Ekran startowy | nieokreślony | docelowo przegląd dnia (po S-59); do tego czasu lista postów. Pozycje nawigacji dochodzą razem ze swoimi ekranami (tabela w „Ekran startowy”). |
+| Adresy | `/`, `/posts/:id`, `/admin`, `/admin/runs/:id` | `/` (ekran startowy), `/posts`, `/posts/:id`, `/targets`, `/targets/:name`, `/admin`, `/admin/quality`, `/admin/posts`, `/admin/runs/:id` |
+| S-47 | „stała nawigacja i układ paneli” | pasek u góry i jedna kolumna, bez paneli stałych i bez kolumny bocznej; data danych per źródło w pasku, z dniem i godziną (dziś stoi nad listą postów) |
+| S-48 | wspólne stany | cztery wspólne komponenty: ładowanie (szkielet), pusta lista, błąd z ponowieniem, stronicowanie |
+| S-50 | panel admina w sekcjach | trzy części z własnymi adresami (Przebiegi, Jakość ocen, Nieudane posty) i pasek części; strona przebiegu osobno; lista przebiegów i nieudanych postów jako tabele |
+| S-51 | „strumień wpisów z inspektorem oceny obok listy” | lista zwarta (jeden post w jednej linii) i ocena w panelu wysuwanym z prawej na życzenie; wybrany post ma własny adres (rekomendacja dla niewiadomej wycinka); słowo „post”, nie „wpis” |
+| S-52 | przełącznik „pokaż wszystkie” | przełącznik dwóch stanów z liczbami „Inwestycyjne N / Wszystkie M” na ekranie postów, przeglądzie dnia, w katalogu i na karcie celu |
+| S-53 | czytnik z podświetlonymi cytatami | nie osobny ekran: podświetlenie, jego wyłącznik i przejścia „poprzedni”/„następny” są częścią panelu posta; podświetlony jest też tytuł, gdy cytat z niego pochodzi, i miejsce celu bez twierdzeń |
+| S-54 | sortowanie listy | pole „Kolejność” w panelu filtrów; prototyp pokazuje tylko „od najnowszych” i „od najstarszych”; pola oceny zostają niewiadomą właściciela |
+| S-55 | filtr po dacie | pola „Od” i „Do” w panelu filtrów; zakres widać jako znacznik nad listą; lista nie ma ukrytego domyślnego okresu |
+| S-56 | wyszukiwanie w treści obok filtra po celu | duże pole „Szukaj w postach” nad listą; filtr po celu „Spółka lub temat” w panelu filtrów |
+| S-57 | katalog celów | tabela celów z liczbą postów i udziałem stanowisk; okres „Dziś / 7 dni / 30 dni” (propozycja, domyślnie 7 dni); cel z jednym postem jest w katalogu (propozycja progu: brak). Obie rzeczy zostają niewiadomą właściciela. |
+| S-58 | karta celu | karta w panelu z prawej na ekranie katalogu, nie osobna strona; S-57 i S-58 dzielą jeden ekran i jeden wzorzec z postami |
+| S-59 | przegląd dnia | pięć klocków liczb (posty, cele ze stanowiskiem, udział stanowisk wzrostowych, spadkowych i pozostałych), trzy najczęściej omawiane cele, tabela celów dnia |
+| S-60 | miara „kanał jako cel” | wchodzi do części „Jakość ocen” w tym samym wzorze miary; prototyp jej nie rysuje, bo próg i mianownik ustali wycinek |
+| F-08 | tokeny i komponenty | zakres według sekcji „Wdrożenie”: mapa tokenów, kroje w aplikacji, zmiany bramek |
+
+Do uzgodnienia z PRD przy v6.2:
+
+- **FR-039**: klocki „Wzrostowe”, „Spadkowe”, „Pozostałe” na przeglądzie dnia to udział stanowisk w wybranym dniu (prośba właściciela z 2026-11-20). To migawka jednego dnia, nie trend dzień do dnia, którego PRD v4 nie przewiduje.
+- **FR-030**: data danych przechodzi z listy postów do paska aplikacji i jest na każdym ekranie po zalogowaniu.
+- **FR-007**: przełącznik zakresu jest także w katalogu celów i na karcie celu, zgodnie z doprecyzowaniem v4.
+
+Rozstrzygnięcia:
+
+- **Otwarte pytanie 7** (elementy makiet bez znaczenia w PRD): „Analizy”, „Wątki”, „Ostatnie obserwacje”, „Przejdź do źródła ↓” i strzałka „↑” przy odsetku nie wchodzą do projektu. „Wątki” byłyby sprzeczne z Non-Goals, strzałka przy odsetku sugeruje trend, a pozostałe nie mają danych w kontrakcie. Odnośnik do źródła to „Otwórz oryginał” w panelu posta.
+- **Niewiadome F-07**: krój to Newsreader (czytanie), Hanken Grotesk (obsługa) i JetBrains Mono (surowe dane), na licencji OFL, w plikach repozytorium. Paleta A z S-46 jest zastąpiona paletą „Salon w kolorach Radaru”; nazwy ról i mechanizm motywu z S-46 zostają. Projekt zmienia architekturę informacji (jedna kolumna z panelem na życzenie, trzy części panelu admina, katalog i karta celu na jednym ekranie), więc opisy S-47, S-50, S-51, S-53, S-57 i S-58 wymagają przecięcia na nowo.
+
+Wycinek i jego prototypy:
+
+| Wycinek | Prototypy |
+| --- | --- |
+| F-08 | arkusz komponentów (`ui-design/prototypes/components.html`) |
+| S-47 | pasek aplikacji na każdym ekranie; `notifications` |
+| S-48 | `state-loading`, `state-empty`, `state-error`, `admin-loading`, `admin-empty`, `admin-error` |
+| S-49 | `login`, `activate` |
+| S-50 | `admin-runs`, `admin-quality`, `admin-posts`, `run` |
+| S-51 | `posts`, `post` |
+| S-52 | przełącznik zakresu na `posts`, `overview`, `targets`, `target` |
+| S-53 | `post` (podświetlenia, poprzedni i następny) |
+| S-54, S-55, S-56 | `posts-filters` |
+| S-57 | `targets` |
+| S-58 | `target` |
+| S-59 | `overview` |
+| S-60 | `admin-quality` (wzór miary) |
 
 ## Propozycje poza PRD
 
-> Do uzupełnienia w fazie 4.
+Pomysły, które wynikają ze standardów albo z pracy nad projektem, a których PRD v4 nie obejmuje. Nie mają prototypów i nie są częścią M-5; każdy wymaga decyzji właściciela i wpisu w PRD.
+
+- **Skróty klawiatury w panelu posta** (następny, poprzedni, zamknij). Nielsen 7: przyspieszenie dla kogoś, kto czyta kilkadziesiąt postów dziennie. PRD nie wspomina o skrótach.
+- **Zapamiętanie ostatniego zakresu i okresu** („Inwestycyjne / Wszystkie”, „7 dni”) dla użytkownika. Dziś każdy wybór żyje w adresie strony; zapamiętanie wymaga stanu po stronie przeglądarki albo konta.
+- **Podpowiedź odmian celu** na karcie celu („zobacz też: Orlenu, PKN”). Katalog grupuje cele po tekście, bez rozpoznawania spółek, więc odmiany są osobnymi pozycjami; łączenie ich to rozpoznawanie encji, którego PRD nie przewiduje.
+- **Znak „nowe od ostatniej wizyty”** na liście postów. Wymaga stanu przeczytania per użytkownik, którego model danych nie ma.
+- **Powiadomienia dla zwykłego użytkownika** (na przykład o nowych postach o wybranym celu). Dziś powiadomienia dotyczą tylko przebiegów i tylko admina; MVP nie ma automatycznych wiadomości.
 
 ## Decyzja właściciela
 
