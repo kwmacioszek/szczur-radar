@@ -393,9 +393,9 @@ Brak danych i kodu do migracji. Projekt wchodzi do aplikacji w F-08 (tokeny, kom
 
 #### Automated
 
-- [x] 4.1 `ui-design.md` ma wszystkie sekcje wypełnione, linki względne działają, a kontrakt E2E wymienia każdy ekran ze `screens.json`
-- [x] 4.2 Roadmapa zawiera zdanie o teście E2E w każdym wycinku
-- [x] 4.3 Wytyczne repo wskazują dokument projektu
-- [x] 4.4 SVG roadmapy zgodne z danymi skryptu
-- [x] 4.5 Kod aplikacji bez zmian
-- [ ] 4.6 CI w PR jest zielone
+- [x] 4.1 `ui-design.md` ma wszystkie sekcje wypełnione, linki względne działają, a kontrakt E2E wymienia każdy ekran ze `screens.json` — e5137d8
+- [x] 4.2 Roadmapa zawiera zdanie o teście E2E w każdym wycinku — e5137d8
+- [x] 4.3 Wytyczne repo wskazują dokument projektu — e5137d8
+- [x] 4.4 SVG roadmapy zgodne z danymi skryptu — e5137d8
+- [x] 4.5 Kod aplikacji bez zmian — e5137d8
+- [x] 4.6 CI w PR jest zielone — e5137d8
