@@ -142,7 +142,7 @@ watch(
       <h1 id="post-title" ref="post-title" tabindex="-1">{{ title }}</h1>
       <p v-if="state === 'loading'" class="loading">Wczytywanie posta…</p>
       <template v-else-if="state === 'failed'">
-        <StatusMessage tone="error">Nie udało się wczytać posta.</StatusMessage>
+        <StatusMessage tone="error" class="message">Nie udało się wczytać posta.</StatusMessage>
         <AppButton @click="retry">Spróbuj ponownie</AppButton>
       </template>
       <p v-else-if="state === 'missing'" class="empty">
@@ -179,7 +179,7 @@ watch(
           <summary ref="raw-summary">Dane dla nerdów: surowy JSON źródła</summary>
           <p v-if="rawState === 'loading'" class="loading">Wczytywanie danych…</p>
           <template v-else-if="rawState === 'failed'">
-            <StatusMessage tone="error">Nie udało się wczytać danych źródła.</StatusMessage>
+            <StatusMessage tone="error" class="message">Nie udało się wczytać danych źródła.</StatusMessage>
             <AppButton @click="retryRaw">Spróbuj ponownie</AppButton>
           </template>
           <pre v-else-if="rawState === 'loaded'">{{ raw }}</pre>
@@ -204,15 +204,6 @@ watch(
   }
 }
 
-a {
-  color: var(--accent);
-  text-decoration: none;
-}
-
-a:hover {
-  text-decoration: underline;
-}
-
 .back {
   display: inline-block;
   margin-top: var(--space-2);
@@ -221,8 +212,8 @@ a:hover {
 h1 {
   margin: var(--space-4) 0 var(--space-2);
   font-size: var(--font-size-2xl);
-  letter-spacing: normal;
-  line-height: 1.45;
+  line-height: var(--leading-snug);
+  letter-spacing: var(--tracking-snug);
   overflow-wrap: anywhere;
 }
 
@@ -241,6 +232,11 @@ p {
   margin: var(--space-4) 0;
 }
 
+/* Apart from the retry button below it; the page's selector outranks the message's own zero margin. */
+.post-detail .message {
+  margin-block: var(--space-3);
+}
+
 /* Date and time stay on one line; the rest wraps. */
 .meta {
   display: flex;
@@ -251,7 +247,7 @@ p {
 
 .meta time {
   color: var(--text-h);
-  font-weight: 600;
+  font-weight: var(--weight-medium);
   white-space: nowrap;
 }
 
@@ -260,9 +256,11 @@ p {
   overflow-wrap: anywhere;
 }
 
-/* The post's own line breaks; a long URL wraps instead of widening the page. */
+/* What is read is set in the serif. The post's own line breaks; a long URL wraps instead of widening the page. */
 .body {
   color: var(--text-h);
+  font-family: var(--font-display);
+  line-height: var(--leading-relaxed);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }

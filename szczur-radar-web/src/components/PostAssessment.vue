@@ -116,12 +116,10 @@ p {
   border-top: 1px solid var(--line);
 }
 
+/* A target's name (or the group's title) in the serif of the global h3 (style.css). */
 .heading {
   margin: 0;
   font-size: var(--font-size-md);
-  font-weight: 600;
-  line-height: 1.45;
-  color: var(--text-h);
   overflow-wrap: anywhere;
 }
 
@@ -147,7 +145,7 @@ p {
 
 .basis {
   color: var(--text-h);
-  font-weight: 600;
+  font-weight: var(--weight-semibold);
 }
 
 .statement {
@@ -155,12 +153,13 @@ p {
   overflow-wrap: anywhere;
 }
 
-/* A verbatim quote of the post; up to 320 characters, wraps instead of scrolling at 375 px. */
+/* A verbatim quote of the post, in the serif of what is read (upright: the app has no italic face); up to 320
+   characters, wraps instead of scrolling at 375 px. */
 .evidence {
   margin: 0;
   padding-left: var(--space-3);
   border-left: 2px solid var(--warning);
-  font-style: italic;
+  font-family: var(--font-display);
   overflow-wrap: anywhere;
 }
 </style>

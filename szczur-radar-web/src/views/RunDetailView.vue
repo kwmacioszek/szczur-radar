@@ -161,7 +161,7 @@ watch(
       </div>
       <p v-if="state === 'loading'" class="loading">Wczytywanie przebiegu…</p>
       <template v-else-if="state === 'failed'">
-        <StatusMessage tone="error">Nie udało się wczytać przebiegu.</StatusMessage>
+        <StatusMessage tone="error" class="message">Nie udało się wczytać przebiegu.</StatusMessage>
         <AppButton @click="retry">Spróbuj ponownie</AppButton>
       </template>
       <p v-else-if="state === 'missing'" class="empty">
@@ -302,15 +302,6 @@ watch(
   }
 }
 
-a {
-  color: var(--accent);
-  text-decoration: none;
-}
-
-a:hover {
-  text-decoration: underline;
-}
-
 .back {
   display: inline-block;
   margin-top: var(--space-2);
@@ -327,8 +318,8 @@ a:hover {
 h1 {
   margin: 0;
   font-size: var(--font-size-2xl);
-  letter-spacing: normal;
-  line-height: 1.45;
+  line-height: var(--leading-snug);
+  letter-spacing: var(--tracking-snug);
 }
 
 h2 {
@@ -344,6 +335,13 @@ p {
 .loading,
 .empty {
   margin: var(--space-4) 0;
+}
+
+/* Apart from what is above and below them; the page's selector outranks the message's own zero margin. */
+.run-detail .message,
+.run-detail .attention,
+.run-detail .refresh-error {
+  margin-block: var(--space-3);
 }
 
 .meta {

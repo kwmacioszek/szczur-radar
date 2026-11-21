@@ -138,12 +138,12 @@ defineExpose({ focusToggle })
           Oznacz wszystkie jako przeczytane
         </AppButton>
       </div>
-      <StatusMessage v-if="props.markAllFailed" tone="error">
+      <StatusMessage v-if="props.markAllFailed" tone="error" class="message">
         Nie udało się oznaczyć powiadomień jako przeczytanych.
       </StatusMessage>
       <p v-if="props.state === 'loading'" class="loading">Wczytywanie…</p>
       <template v-else-if="props.state === 'error'">
-        <StatusMessage tone="error">Nie udało się wczytać powiadomień.</StatusMessage>
+        <StatusMessage tone="error" class="message">Nie udało się wczytać powiadomień.</StatusMessage>
         <AppButton @click="retry">Spróbuj ponownie</AppButton>
       </template>
       <p v-else-if="props.items.length === 0" class="empty">Brak powiadomień.</p>
@@ -186,8 +186,8 @@ defineExpose({ focusToggle })
   background: var(--accent);
   color: var(--on-accent);
   font-size: var(--font-size-sm);
-  font-weight: 600;
-  line-height: 1.45;
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-normal);
   text-align: center;
 }
 
@@ -201,10 +201,10 @@ defineExpose({ focusToggle })
   max-height: 70vh;
   overflow-y: auto;
   padding: var(--space-3);
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: var(--radius);
-  background: var(--bg);
-  box-shadow: 0 var(--space-1) var(--space-3) color-mix(in srgb, var(--text-h) 15%, transparent);
+  background: var(--surface);
+  box-shadow: var(--shadow-overlay);
 }
 
 /* The root font size is 16px at every width; above 1024px the limit is what 18px gave (design-tokens-and-components). */
@@ -226,12 +226,17 @@ defineExpose({ focusToggle })
 .panel-title {
   margin: 0;
   color: var(--text-h);
-  font-weight: 600;
+  font-weight: var(--weight-semibold);
 }
 
 .loading,
 .empty {
   margin: var(--space-2) 0;
+}
+
+/* Apart from the list's head and the retry button; the panel's selector outranks the message's own zero margin. */
+.panel .message {
+  margin-block: var(--space-3);
 }
 
 .items {
@@ -256,7 +261,7 @@ defineExpose({ focusToggle })
 }
 
 a.item:hover {
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  background: var(--surface-2);
 }
 
 .item-head {

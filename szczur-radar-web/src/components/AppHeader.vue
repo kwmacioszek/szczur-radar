@@ -71,7 +71,7 @@ async function signOut(): Promise<void> {
 
 .nav a.router-link-exact-active {
   color: var(--text-h);
-  font-weight: 600;
+  font-weight: var(--weight-semibold);
 }
 
 .who {
@@ -80,7 +80,8 @@ async function signOut(): Promise<void> {
   overflow-wrap: anywhere;
 }
 
+/* The message has no margin of its own: the container spaces it from the bar and from the page below. */
 .notice {
-  padding: 0 var(--space-4);
+  padding: var(--space-3) var(--space-4);
 }
 </style>

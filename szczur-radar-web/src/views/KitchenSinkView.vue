@@ -954,7 +954,7 @@ h3 {
   margin: 0 0 var(--space-3);
   color: var(--text-h);
   font-size: var(--font-size-sm);
-  font-weight: 600;
+  font-weight: var(--weight-semibold);
 }
 
 /* An open bell keeps room below its bar for the panel, which overlays the page. */
@@ -1007,7 +1007,7 @@ h3 {
   height: 2.5rem;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  font-weight: 600;
+  font-weight: var(--weight-semibold);
 }
 
 /* Fields as a view lays them out: a label above the field, a hint or an error below it. The look is the global one. */

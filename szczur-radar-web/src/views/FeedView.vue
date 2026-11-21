@@ -186,7 +186,7 @@ watch(
       <div class="posts" :aria-busy="loadingPage !== null ? 'true' : undefined">
         <p v-if="loadingPage !== null" class="loading">{{ loadingText }}</p>
         <template v-else-if="failed">
-          <StatusMessage tone="error">Nie udało się wczytać postów.</StatusMessage>
+          <StatusMessage tone="error" class="message">Nie udało się wczytać postów.</StatusMessage>
           <AppButton @click="retry">Spróbuj ponownie</AppButton>
         </template>
         <!-- The result line says that nothing matches; the way out stays next to it. -->
@@ -255,6 +255,11 @@ h1:has(+ .freshness) {
 .loading,
 .empty {
   margin: var(--space-4) 0;
+}
+
+/* Apart from the retry button below it; the list's selector outranks the message's own zero margin. */
+.posts .message {
+  margin-block: var(--space-3);
 }
 
 /* The cards keep their own spacing; the pager sits under the last one. */

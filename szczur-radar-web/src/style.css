@@ -246,6 +246,16 @@ h1 {
   font-size: var(--font-size-5xl);
 }
 
+/* Section and card headings: the serif of what is read, at the smaller titles' line height and tracking. */
+h2,
+h3 {
+  font-family: var(--font-display);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-snug);
+  letter-spacing: var(--tracking-snug);
+  color: var(--text-h);
+}
+
 .visually-hidden {
   position: absolute;
   width: 1px;
@@ -277,11 +287,10 @@ h1 {
   }
 }
 
+/* Sentence case, no tracking: the design has no capitals in labels. */
 .eyebrow {
   margin: 0 0 var(--space-3);
   font-size: var(--font-size-sm);
-  letter-spacing: 2px;
-  text-transform: uppercase;
   color: var(--accent);
 }
 

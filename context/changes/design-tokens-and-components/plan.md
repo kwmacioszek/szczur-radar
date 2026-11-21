@@ -649,20 +649,20 @@ Bez innych edycji roadmapy: status F-08 zmieniają skille.
 
 #### Automated
 
-- [x] 2.1 Testy jednostkowe przechodzą, w tym strażnik zbioru ikon, warianty komponentów i `CLEANED`
-- [x] 2.2 Typecheck i build przechodzą
-- [x] 2.3 Testy E2E przechodzą bez zmian w specach
-- [x] 2.4 Celowe złamanie: symbol usunięty z kopii sprite'a czerwieni `AppIcon.test.ts`
+- [x] 2.1 Testy jednostkowe przechodzą, w tym strażnik zbioru ikon, warianty komponentów i `CLEANED` — e16cfd4
+- [x] 2.2 Typecheck i build przechodzą — e16cfd4
+- [x] 2.3 Testy E2E przechodzą bez zmian w specach — e16cfd4
+- [x] 2.4 Celowe złamanie: symbol usunięty z kopii sprite'a czerwieni `AppIcon.test.ts` — e16cfd4
 
 ### Phase 3: Widoki w nowym wyglądzie i wzorce F-06 od nowa
 
 #### Automated
 
-- [ ] 3.1 Testy jednostkowe przechodzą, w tym skan `CLEANED`
-- [ ] 3.2 Typecheck i build przechodzą
-- [ ] 3.3 Testy E2E przechodzą
-- [ ] 3.4 Testy wizualne i axe przechodzą na nowych wzorcach
-- [ ] 3.5 Drugi przebieg testów wizualnych bez zmian w kodzie jest zielony
+- [x] 3.1 Testy jednostkowe przechodzą, w tym skan `CLEANED`
+- [x] 3.2 Typecheck i build przechodzą
+- [x] 3.3 Testy E2E przechodzą
+- [x] 3.4 Testy wizualne i axe przechodzą na nowych wzorcach
+- [x] 3.5 Drugi przebieg testów wizualnych bez zmian w kodzie jest zielony
 - [ ] 3.6 CI na PR jest zielone, w tym `web-e2e` i `web-container-smoke`
 - [ ] 3.7 W środowisku PR tekst rysują kroje aplikacji, a pliki `woff2` przychodzą jako `font/woff2`
 
