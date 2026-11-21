@@ -658,13 +658,13 @@ Bez innych edycji roadmapy: status F-08 zmieniają skille.
 
 #### Automated
 
-- [x] 3.1 Testy jednostkowe przechodzą, w tym skan `CLEANED`
-- [x] 3.2 Typecheck i build przechodzą
-- [x] 3.3 Testy E2E przechodzą
-- [x] 3.4 Testy wizualne i axe przechodzą na nowych wzorcach
-- [x] 3.5 Drugi przebieg testów wizualnych bez zmian w kodzie jest zielony
-- [ ] 3.6 CI na PR jest zielone, w tym `web-e2e` i `web-container-smoke`
-- [ ] 3.7 W środowisku PR tekst rysują kroje aplikacji, a pliki `woff2` przychodzą jako `font/woff2`
+- [x] 3.1 Testy jednostkowe przechodzą, w tym skan `CLEANED` — 367a0fd
+- [x] 3.2 Typecheck i build przechodzą — 367a0fd
+- [x] 3.3 Testy E2E przechodzą — 367a0fd
+- [x] 3.4 Testy wizualne i axe przechodzą na nowych wzorcach — 367a0fd
+- [x] 3.5 Drugi przebieg testów wizualnych bez zmian w kodzie jest zielony — 367a0fd
+- [x] 3.6 CI na PR jest zielone, w tym `web-e2e` i `web-container-smoke` — 367a0fd
+- [x] 3.7 W środowisku PR tekst rysują kroje aplikacji, a pliki `woff2` przychodzą jako `font/woff2` — 367a0fd
 
 #### Manual
 
@@ -674,9 +674,9 @@ Bez innych edycji roadmapy: status F-08 zmieniają skille.
 
 #### Automated
 
-- [x] 4.1 Strażnik zgodności `design-check app` przechodzi na repozytorium
-- [x] 4.2 Selftest wykrywa każdy rodzaj rozjazdu i przechodzi na zielonej próbce
-- [x] 4.3 Celowe złamanie: zmieniona rola w `style.css` daje `VIOLATION [app]`
-- [x] 4.4 Dokument projektu przechodzi `design-check doc --stage 4`
-- [x] 4.5 `fixtures/app-pairs.json` usunięty i bez odwołań
-- [x] 4.6 Testy jednostkowe i build dalej przechodzą
+- [x] 4.1 Strażnik zgodności `design-check app` przechodzi na repozytorium — 3733e79
+- [x] 4.2 Selftest wykrywa każdy rodzaj rozjazdu i przechodzi na zielonej próbce — 3733e79
+- [x] 4.3 Celowe złamanie: zmieniona rola w `style.css` daje `VIOLATION [app]` — 3733e79
+- [x] 4.4 Dokument projektu przechodzi `design-check doc --stage 4` — 3733e79
+- [x] 4.5 `fixtures/app-pairs.json` usunięty i bez odwołań — 3733e79
+- [x] 4.6 Testy jednostkowe i build dalej przechodzą — 3733e79
