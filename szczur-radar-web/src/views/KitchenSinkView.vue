@@ -5,6 +5,7 @@
 -->
 <script setup lang="ts">
 import { reactive } from 'vue'
+import { RouterLink } from 'vue-router'
 import type { AdminNotification } from '../api/notifications'
 import type {
   AssessmentOutput,
@@ -19,7 +20,9 @@ import type {
   TargetKind,
 } from '../api/posts'
 import AppButton from '../components/AppButton.vue'
+import AppIcon from '../components/AppIcon.vue'
 import FeedFilter from '../components/FeedFilter.vue'
+import { ICON_NAMES } from '../components/iconNames'
 import NotificationMenu from '../components/NotificationMenu.vue'
 import PostAssessment from '../components/PostAssessment.vue'
 import PostCard from '../components/PostCard.vue'
@@ -27,23 +30,35 @@ import StanceText from '../components/StanceText.vue'
 import StatusBadge, { type BadgeTone } from '../components/StatusBadge.vue'
 import StatusMessage from '../components/StatusMessage.vue'
 import ThemeToggle from '../components/ThemeToggle.vue'
+import { label } from '../labels'
 
-/** The colour roles of :root in src/style.css, in the order of the plan's token table. */
+/** The colour roles of :root in src/style.css, in the order of tokens.css (context/foundation/ui-design/). */
 const colourRoles = [
   '--bg',
+  '--bg-glow',
+  '--surface',
+  '--surface-2',
+  '--selected',
+  '--scrim',
   '--text',
   '--text-h',
+  '--text-muted',
   '--accent',
   '--on-accent',
+  '--ring',
+  '--line',
+  '--border',
   '--success',
   '--warning',
   '--destructive',
-  '--surface',
-  '--highlight',
   '--stance-neutral',
   '--stance-mixed',
-  '--border',
-  '--ring',
+  '--success-soft',
+  '--warning-soft',
+  '--destructive-soft',
+  '--neutral-soft',
+  '--mixed-soft',
+  '--highlight',
 ] as const
 
 type ColourRole = (typeof colourRoles)[number]
@@ -54,11 +69,6 @@ function swatchStyle(role: ColourRole): Record<string, string> {
   if (role === '--highlight') return { background: 'var(--highlight)', color: 'var(--text-h)' }
   return { background: `var(${role})` }
 }
-
-const variants = [
-  { name: 'primary', title: 'Główny' },
-  { name: 'secondary', title: 'Pomocniczy' },
-] as const
 
 /** Every tone with the run statuses and markers the admin panel shows in it (src/runs.ts). */
 const badges: { tone: BadgeTone; text: string }[] = [
@@ -339,15 +349,50 @@ const posts: PostItem[] = [
   },
 ]
 
-/** Each direction with an assertiveness and claim_ids allowed by table §7.2 of the contract. */
+/**
+ * Each direction as table §7.2 of the contract allows: assertiveness `unhedged` for bullish, bearish and neutral,
+ * `null` for mixed, unclear and not_expressed; claim_ids 1–4 for the directional ones, none for not_expressed.
+ */
 const stances: Stance[] = [
-  { direction: 'bullish', assertiveness: 'hedged', claim_ids: ['c1'] },
+  { direction: 'bullish', assertiveness: 'unhedged', claim_ids: ['c1'] },
   { direction: 'bearish', assertiveness: 'unhedged', claim_ids: ['c1'] },
   { direction: 'neutral', assertiveness: 'unhedged', claim_ids: ['c1'] },
   { direction: 'mixed', assertiveness: null, claim_ids: ['c1', 'c2'] },
   { direction: 'not_expressed', assertiveness: null, claim_ids: [] },
   { direction: 'unclear', assertiveness: null, claim_ids: [] },
 ]
+
+/** The three directions that can be hedged ("(ostrożnie)"): `hedged` is theirs only (table §7.2). */
+const hedgedStances: Stance[] = [
+  { direction: 'bullish', assertiveness: 'hedged', claim_ids: ['c1'] },
+  { direction: 'bearish', assertiveness: 'hedged', claim_ids: ['c1'] },
+  { direction: 'neutral', assertiveness: 'hedged', claim_ids: ['c1'] },
+]
+
+/** A target with its stance: in a list of posts (name and stance), with its kind, and a name too long for its box. */
+const targetStances: { id: string; title: string; items: { target: string; kind?: string; stance: Stance }[] }[] = [
+  {
+    id: 'name',
+    title: 'W liście postów: nazwa i stanowisko',
+    items: [
+      { target: 'KGHM', stance: stances[0] },
+      { target: 'CD Projekt', stance: hedgedStances[1] },
+      { target: 'złoto', stance: stances[2] },
+    ],
+  },
+  {
+    id: 'kind',
+    title: 'Z rodzajem celu',
+    items: [
+      { target: 'KGHM', kind: label('targetKind', 'company'), stance: stances[0] },
+      { target: 'stopy procentowe', kind: label('targetKind', 'macro_topic'), stance: stances[3] },
+      { target: 'banki', kind: label('targetKind', 'sector'), stance: stances[4] },
+    ],
+  },
+]
+
+/** The name of a target that does not fit its box: the name is cut short, the stance stays. */
+const longTarget = 'Powszechny Zakład Ubezpieczeń Spółka Akcyjna'
 
 /** A quote from the post's body. */
 function quote(text: string): Claim['evidence'] {
@@ -605,26 +650,210 @@ const assessments: { id: string; title: string; assessment: NonNullable<PostItem
     </section>
 
     <section aria-labelledby="buttons-title">
-      <h2 id="buttons-title">Przyciski</h2>
-      <div v-for="variant in variants" :key="variant.name" class="row">
-        <span class="row-title">{{ variant.title }}</span>
-        <AppButton :variant="variant.name">Domyślny</AppButton>
-        <AppButton :variant="variant.name" disabled>Wyłączony</AppButton>
-        <AppButton :variant="variant.name" busy busy-label="W toku…">W toku</AppButton>
+      <h2 id="buttons-title">Przycisk</h2>
+      <div class="row">
+        <span class="row-title">Główny</span>
+        <AppButton variant="primary">Uruchom</AppButton>
+        <AppButton variant="primary" disabled>Zapisz</AppButton>
+        <AppButton variant="primary" busy busy-label="Uruchamianie…">Uruchom przebieg</AppButton>
+      </div>
+      <div class="row">
+        <span class="row-title">Zwykły</span>
+        <AppButton>Wyczyść filtry</AppButton>
+        <AppButton disabled>Wyloguj</AppButton>
+        <AppButton busy busy-label="Wylogowywanie…">Wyloguj się</AppButton>
+      </div>
+      <div class="row">
+        <span class="row-title">Z ikoną</span>
+        <AppButton icon="i-refresh-cw">Spróbuj ponownie</AppButton>
+        <AppButton icon="i-rotate-ccw">Przywróć martwe</AppButton>
+        <AppButton variant="primary" icon="i-play">Uruchom przebieg</AppButton>
+      </div>
+      <div class="row">
+        <span class="row-title">Duży</span>
+        <AppButton size="lg" icon="i-list-filter">Filtry</AppButton>
+      </div>
+      <div class="row">
+        <span class="row-title">Sama ikona</span>
+        <AppButton icon="i-chevron-left" icon-only aria-label="Poprzedni post" />
+        <AppButton icon="i-chevron-right" icon-only aria-label="Następny post" />
+        <AppButton icon="i-x" icon-only aria-label="Zamknij" />
+        <AppButton icon="i-chevron-left" icon-only disabled aria-label="Poprzedni dzień" />
+        <AppButton icon="i-braces" icon-only aria-pressed="true" aria-label="Surowe dane" />
+      </div>
+    </section>
+
+    <section aria-labelledby="links-title">
+      <h2 id="links-title">Odnośnik</h2>
+      <div class="row">
+        <span class="row-title">Wewnętrzny</span>
+        <RouterLink :to="{ name: 'home' }">Wszystkie posty o KGHM</RouterLink>
+      </div>
+      <div class="row">
+        <span class="row-title">Zewnętrzny</span>
+        <a
+          class="ext"
+          href="https://wykop.pl/"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Oryginał na wykop.pl (otwiera się w nowej karcie)"
+        >
+          Oryginał na wykop.pl
+          <AppIcon name="i-external-link" />
+        </a>
+      </div>
+    </section>
+
+    <section aria-labelledby="fields-title">
+      <h2 id="fields-title">Pola</h2>
+      <div class="fields">
+        <div class="field">
+          <label for="field-email">E-mail</label>
+          <input id="field-email" type="email" value="jan@example.pl" />
+        </div>
+        <div class="field">
+          <label for="field-email-empty">E-mail (puste)</label>
+          <input id="field-email-empty" type="email" />
+        </div>
+        <div class="field">
+          <label for="field-email-off">E-mail (wyłączone)</label>
+          <input id="field-email-off" type="email" value="jan@example.pl" disabled />
+        </div>
+        <div class="field wide">
+          <label for="field-password">Hasło</label>
+          <input
+            id="field-password"
+            type="password"
+            value="haslo-probne"
+            aria-invalid="true"
+            aria-describedby="field-password-error"
+          />
+          <p id="field-password-error" class="field-error">
+            <AppIcon name="i-circle-alert" />
+            Hasło musi mieć co najmniej 12 znaków.
+          </p>
+        </div>
+        <div class="field wide">
+          <label for="field-password-repeat">Powtórz hasło</label>
+          <input id="field-password-repeat" type="password" aria-describedby="field-password-repeat-hint" />
+          <p id="field-password-repeat-hint" class="field-hint">Te same znaki co wyżej.</p>
+        </div>
+        <div class="field">
+          <label for="field-search-empty">Puste</label>
+          <span class="input-wrap">
+            <AppIcon name="i-search" />
+            <input id="field-search-empty" type="search" />
+          </span>
+        </div>
+        <div class="field">
+          <label for="field-search-filled">Wypełnione</label>
+          <span class="input-wrap">
+            <AppIcon name="i-search" />
+            <input id="field-search-filled" type="search" value="KGHM" />
+          </span>
+        </div>
+        <div class="field">
+          <label for="field-date">Dzień</label>
+          <input id="field-date" type="date" value="2026-10-20" />
+        </div>
+        <div class="field">
+          <label for="field-kind">Rodzaj celu</label>
+          <select id="field-kind">
+            <option>dowolny</option>
+            <option>spółka</option>
+            <option>aktywo</option>
+            <option>sektor</option>
+            <option>makro i rynek</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="field-stance">Stanowisko</label>
+          <select id="field-stance" disabled>
+            <option>dowolne</option>
+          </select>
+        </div>
+      </div>
+      <div class="row">
+        <label class="check"><input type="checkbox" checked /> Podświetl cytaty</label>
+        <label class="check"><input type="checkbox" /> Tylko ostrożne</label>
+        <label class="check"><input type="checkbox" disabled /> Wyłączone</label>
+      </div>
+      <div class="input-wrap input-lg">
+        <AppIcon name="i-search" />
+        <input type="search" aria-label="Szukaj w postach" placeholder="Szukaj w tytule i treści" />
       </div>
     </section>
 
     <section aria-labelledby="messages-title">
-      <h2 id="messages-title">Komunikaty</h2>
-      <StatusMessage tone="ok">Uruchomiono: zakres dat.</StatusMessage>
-      <StatusMessage tone="error">Przebieg już trwa. Poczekaj, aż się zakończy, i spróbuj ponownie.</StatusMessage>
+      <h2 id="messages-title">Komunikat</h2>
+      <div class="stack">
+        <StatusMessage tone="ok">Hasło ustawione. Zaloguj się.</StatusMessage>
+        <StatusMessage tone="error">Przebieg już trwa. Poczekaj, aż się zakończy, i spróbuj ponownie.</StatusMessage>
+        <StatusMessage tone="warning">Przebieg trwa. Nowy stanie w kolejce.</StatusMessage>
+      </div>
     </section>
 
     <section aria-labelledby="badges-title">
-      <h2 id="badges-title">Znaczniki</h2>
+      <h2 id="badges-title">Znacznik stanu</h2>
       <div class="row">
         <StatusBadge v-for="badge in badges" :key="badge.text" :tone="badge.tone">{{ badge.text }}</StatusBadge>
       </div>
+      <div class="row">
+        <span class="row-title">Z ikoną</span>
+        <StatusBadge tone="warning" icon>zakończony — pominięte: 3</StatusBadge>
+        <StatusBadge tone="destructive" icon>wymaga uwagi</StatusBadge>
+      </div>
+    </section>
+
+    <section aria-labelledby="stances-title">
+      <h2 id="stances-title">Stanowisko</h2>
+      <ul class="samples">
+        <li v-for="stance in stances" :key="stance.direction" class="row">
+          <code class="row-title">{{ stance.direction }}</code>
+          <StanceText :stance="stance" />
+        </li>
+        <li v-for="stance in hedgedStances" :key="`hedged-${stance.direction}`" class="row">
+          <code class="row-title">{{ stance.direction }}, ostrożnie</code>
+          <StanceText :stance="stance" />
+        </li>
+      </ul>
+    </section>
+
+    <section aria-labelledby="targets-title">
+      <h2 id="targets-title">Cel ze stanowiskiem</h2>
+      <div v-for="sample in targetStances" :key="sample.id" class="row">
+        <span class="row-title">{{ sample.title }}</span>
+        <StanceText
+          v-for="item in sample.items"
+          :key="item.target"
+          :stance="item.stance"
+          :target="item.target"
+          :kind="item.kind"
+        />
+      </div>
+      <div class="row">
+        <span class="row-title">Za długa nazwa</span>
+        <div class="narrow">
+          <StanceText :stance="stances[0]" :target="longTarget" :kind="label('targetKind', 'company')" />
+        </div>
+      </div>
+    </section>
+
+    <section aria-labelledby="theme-title">
+      <h2 id="theme-title">Motyw</h2>
+      <div class="row">
+        <ThemeToggle />
+      </div>
+    </section>
+
+    <section aria-labelledby="icons-title">
+      <h2 id="icons-title">Ikony</h2>
+      <ul class="icons">
+        <li v-for="name in ICON_NAMES" :key="name" class="icon-sample">
+          <AppIcon :name="name" />
+          <code>{{ name }}</code>
+        </li>
+      </ul>
     </section>
 
     <section aria-labelledby="bell-title">
@@ -645,35 +874,6 @@ const assessments: { id: string; title: string; assessment: NonNullable<PostItem
       </ul>
     </section>
 
-    <section aria-labelledby="fields-title">
-      <h2 id="fields-title">Pola</h2>
-      <div class="row">
-        <label>Od <input type="date" value="2026-10-09" /></label>
-        <label><input type="checkbox" /> Niezaznaczone</label>
-        <label><input type="checkbox" checked /> Zaznaczone</label>
-        <label><input type="checkbox" disabled /> Wyłączone</label>
-      </div>
-      <div class="row">
-        <label>Puste <input type="search" /></label>
-        <label>Z tekstem <input type="search" value="CD Projekt" /></label>
-      </div>
-      <div class="row">
-        <label>
-          Wybór
-          <select>
-            <option>dowolny</option>
-            <option>spółka</option>
-          </select>
-        </label>
-        <label>
-          Wyłączony
-          <select disabled>
-            <option>dowolne</option>
-          </select>
-        </label>
-      </div>
-    </section>
-
     <section aria-labelledby="filter-title">
       <h2 id="filter-title">Filtr</h2>
       <h3>Bez filtra</h3>
@@ -687,16 +887,6 @@ const assessments: { id: string; title: string; assessment: NonNullable<PostItem
       <PostCard v-for="post in posts" :key="post.id" :post="post" />
     </section>
 
-    <section aria-labelledby="stances-title">
-      <h2 id="stances-title">Stanowisko</h2>
-      <ul class="samples">
-        <li v-for="stance in stances" :key="stance.direction" class="row">
-          <code class="row-title">{{ stance.direction }}</code>
-          <StanceText :stance="stance" />
-        </li>
-      </ul>
-    </section>
-
     <section aria-labelledby="assessments-title">
       <h2 id="assessments-title">Ocena posta</h2>
       <ul class="samples">
@@ -705,13 +895,6 @@ const assessments: { id: string; title: string; assessment: NonNullable<PostItem
           <PostAssessment :assessment="sample.assessment" />
         </li>
       </ul>
-    </section>
-
-    <section aria-labelledby="theme-title">
-      <h2 id="theme-title">Motyw</h2>
-      <div class="row">
-        <ThemeToggle />
-      </div>
     </section>
   </main>
 </template>
@@ -730,7 +913,7 @@ h1 {
 
 h2 {
   margin: var(--space-5) 0 var(--space-2);
-  font-size: var(--font-size-lg);
+  font-size: var(--font-size-2xl);
   color: var(--text-h);
 }
 
@@ -763,7 +946,7 @@ h3 {
 .sample {
   margin-bottom: var(--space-4);
   padding: var(--space-4) var(--space-5);
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: var(--radius);
 }
 
@@ -771,7 +954,7 @@ h3 {
   margin: 0 0 var(--space-3);
   color: var(--text-h);
   font-size: var(--font-size-sm);
-  font-weight: 600;
+  font-weight: var(--weight-semibold);
 }
 
 /* An open bell keeps room below its bar for the panel, which overlays the page. */
@@ -794,7 +977,7 @@ h3 {
   display: flex;
   justify-content: flex-end;
   padding: var(--space-2) var(--space-4);
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: var(--radius);
 }
 
@@ -822,8 +1005,141 @@ h3 {
   flex: none;
   width: 2.5rem;
   height: 2.5rem;
-  border: 1px solid var(--border-strong);
+  border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  font-weight: 600;
+  font-weight: var(--weight-semibold);
+}
+
+/* Fields as a view lays them out: a label above the field, a hint or an error below it. The look is the global one. */
+.fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.field {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+  align-content: start;
+}
+
+/* A field with a hint or an error below it takes the whole row, so the sentence does not wrap. */
+.field.wide {
+  grid-column: 1 / -1;
+}
+
+.field label {
+  color: var(--text-h);
+  font-size: var(--font-size-sm);
+  font-weight: var(--weight-medium);
+}
+
+.field input:not([type='checkbox']),
+.field select {
+  width: 100%;
+}
+
+.field-hint,
+.field-error {
+  margin: 0;
+  font-size: var(--font-size-xs);
+}
+
+.field-hint {
+  color: var(--text-muted);
+}
+
+.field-error {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--destructive);
+  font-weight: var(--weight-medium);
+}
+
+.field-error .app-icon {
+  --icon-size: 0.9375rem;
+}
+
+/* A search field with its icon inside, on the left. */
+.input-wrap {
+  position: relative;
+  display: block;
+}
+
+.input-wrap .app-icon {
+  --icon-size: 1.125rem;
+
+  position: absolute;
+  top: 50%;
+  left: var(--space-3);
+  color: var(--text-muted);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.input-wrap input {
+  width: 100%;
+  padding-left: var(--space-7);
+}
+
+/* The large search above a list of posts. */
+.input-lg .app-icon {
+  --icon-size: 1.1875rem;
+
+  left: var(--space-4);
+}
+
+.input-lg input {
+  height: var(--control-height-lg);
+  padding-left: var(--space-8);
+  border-radius: var(--radius-lg);
+  font-size: var(--font-size-lg);
+}
+
+.check {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-h);
+  cursor: pointer;
+}
+
+.stack {
+  display: grid;
+  gap: var(--space-3);
+}
+
+/* A link to a page outside the app: the icon follows the text. */
+.ext {
+  --icon-size: 0.9375rem;
+
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+/* A box narrower than the marker's content, to show the name being cut short. */
+.narrow {
+  display: flex;
+  max-width: 14rem;
+}
+
+.icons {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.icon-sample {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-h);
 }
 </style>

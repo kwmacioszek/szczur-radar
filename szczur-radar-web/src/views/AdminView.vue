@@ -449,14 +449,14 @@ onMounted(async () => {
         </AppButton>
       </form>
       <p v-if="startHint" id="start-hint" class="hint">{{ startHint }}</p>
-      <StatusMessage v-if="startMessage" tone="ok">{{ startMessage }}</StatusMessage>
-      <StatusMessage v-if="startError" tone="error">{{ startError }}</StatusMessage>
+      <StatusMessage v-if="startMessage" tone="ok" class="message">{{ startMessage }}</StatusMessage>
+      <StatusMessage v-if="startError" tone="error" class="message">{{ startError }}</StatusMessage>
     </section>
 
     <section aria-labelledby="missing-title" :aria-busy="missingLoading ? 'true' : undefined">
       <h2 id="missing-title">Dni bez danych</h2>
       <p v-if="missingLoading" class="loading">Wczytywanie…</p>
-      <StatusMessage v-else-if="missingError" tone="error">{{ missingError }}</StatusMessage>
+      <StatusMessage v-else-if="missingError" tone="error" class="message">{{ missingError }}</StatusMessage>
       <template v-else-if="missing">
         <p v-if="ranges.length === 0" class="empty">
           Brak dni bez danych od {{ formatDate(missing.from) }} do {{ formatDate(missing.to) }}.
@@ -480,7 +480,7 @@ onMounted(async () => {
     <section aria-labelledby="quality-title" :aria-busy="qualityLoading ? 'true' : undefined">
       <h2 id="quality-title">Jakość ocen (7 dni)</h2>
       <p v-if="qualityLoading" class="loading">Wczytywanie…</p>
-      <StatusMessage v-else-if="qualityError" tone="error">{{ qualityError }}</StatusMessage>
+      <StatusMessage v-else-if="qualityError" tone="error" class="message">{{ qualityError }}</StatusMessage>
       <template v-else-if="quality">
         <p class="quality-window">
           Od {{ formatDate(quality.from) }} do {{ formatDate(quality.to) }} · próby z wywołaniem modelu (bez prefiltra), z ponowieniami;
@@ -511,7 +511,7 @@ onMounted(async () => {
         <AppButton @click="refresh">Odśwież</AppButton>
       </div>
       <p v-if="runsLoading" class="loading">Wczytywanie…</p>
-      <StatusMessage v-else-if="runsError" tone="error">{{ runsError }}</StatusMessage>
+      <StatusMessage v-else-if="runsError" tone="error" class="message">{{ runsError }}</StatusMessage>
       <p v-else-if="runs.length === 0" class="empty">Jeszcze nie było przebiegu.</p>
       <template v-else>
         <ul class="runs">
@@ -555,14 +555,14 @@ onMounted(async () => {
         <AppButton v-if="hasOlder" class="older" :busy="olderLoading" busy-label="Wczytywanie…" @click="loadOlder">
           Pokaż starsze
         </AppButton>
-        <StatusMessage v-if="olderError" tone="error">{{ olderError }}</StatusMessage>
+        <StatusMessage v-if="olderError" tone="error" class="message">{{ olderError }}</StatusMessage>
       </template>
     </section>
 
     <section aria-labelledby="failed-title" :aria-busy="failedLoading ? 'true' : undefined">
       <h2 id="failed-title">Nieudane posty</h2>
       <p v-if="failedLoading" class="loading">Wczytywanie…</p>
-      <StatusMessage v-else-if="failedError" tone="error">{{ failedError }}</StatusMessage>
+      <StatusMessage v-else-if="failedError" tone="error" class="message">{{ failedError }}</StatusMessage>
       <p v-else-if="failed.length === 0" class="empty">Brak nieudanych postów.</p>
       <template v-else>
         <ul class="failed-posts">
@@ -611,10 +611,10 @@ onMounted(async () => {
           </AppButton>
         </div>
       </template>
-      <StatusMessage v-if="retryMessage" tone="ok">{{ retryMessage }}</StatusMessage>
-      <StatusMessage v-if="retryError" tone="error">{{ retryError }}</StatusMessage>
-      <StatusMessage v-if="restoreMessage" tone="ok">{{ restoreMessage }}</StatusMessage>
-      <StatusMessage v-if="restoreError" tone="error">{{ restoreError }}</StatusMessage>
+      <StatusMessage v-if="retryMessage" tone="ok" class="message">{{ retryMessage }}</StatusMessage>
+      <StatusMessage v-if="retryError" tone="error" class="message">{{ retryError }}</StatusMessage>
+      <StatusMessage v-if="restoreMessage" tone="ok" class="message">{{ restoreMessage }}</StatusMessage>
+      <StatusMessage v-if="restoreError" tone="error" class="message">{{ restoreError }}</StatusMessage>
     </section>
   </main>
 </template>
@@ -627,13 +627,20 @@ onMounted(async () => {
   box-sizing: border-box;
 }
 
+/* The root font size is 16px at every width; above 1024px the width is what 18px gave (design-tokens-and-components). */
+@media (min-width: 1025px) {
+  .admin {
+    max-width: 63rem;
+  }
+}
+
 h1 {
   margin: var(--space-2) 0 var(--space-4);
 }
 
 h2 {
   margin: var(--space-5) 0 var(--space-2);
-  font-size: var(--font-size-lg);
+  font-size: var(--font-size-2xl);
   color: var(--text-h);
 }
 
@@ -650,18 +657,19 @@ h2 {
   gap: var(--space-3);
   margin: 0;
   padding: var(--space-1) var(--space-2);
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: var(--radius);
-}
-
-/* The parent's selector outranks the message's own margin, so it sits in the fieldset row. */
-.sources .sources-error {
-  margin: 0;
 }
 
 .hint {
   margin: var(--space-2) 0 0;
   font-size: var(--font-size-sm);
+}
+
+/* A message standing alone in its section, apart from what is above and below it; the page's selector outranks the
+   message's own zero margin. In the sources' fieldset its row's gap spaces it. */
+.admin .message {
+  margin-block: var(--space-3);
 }
 
 .section-head {
@@ -684,7 +692,7 @@ h2 {
 .missing-range,
 .quality-source {
   padding: var(--space-2) 0;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--line);
 }
 
 .missing-range {
@@ -735,15 +743,6 @@ h2 {
 .quality-classes,
 .quality-language {
   font-size: var(--font-size-sm);
-}
-
-.details {
-  color: var(--accent);
-  text-decoration: none;
-}
-
-.details:hover {
-  text-decoration: underline;
 }
 
 .older {

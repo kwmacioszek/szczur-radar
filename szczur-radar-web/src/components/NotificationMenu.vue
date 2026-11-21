@@ -11,6 +11,7 @@ import type { AdminNotification } from '../api/notifications'
 import { formatRelative, label, plural } from '../labels'
 import { runStatusLabel, runTone } from '../runs'
 import AppButton from './AppButton.vue'
+import AppIcon from './AppIcon.vue'
 import StatusBadge from './StatusBadge.vue'
 import StatusMessage from './StatusMessage.vue'
 
@@ -114,20 +115,7 @@ defineExpose({ focusToggle })
       :aria-controls="panelId"
       @click="open = !open"
     >
-      <svg
-        class="icon"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        aria-hidden="true"
-        focusable="false"
-      >
-        <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
-        <path d="M13.7 21a2 2 0 0 1-3.4 0" />
-      </svg>
+      <AppIcon name="i-bell" />
       <span v-if="props.unread" class="count" aria-hidden="true">{{ props.unread }}</span>
     </AppButton>
     <div
@@ -150,12 +138,12 @@ defineExpose({ focusToggle })
           Oznacz wszystkie jako przeczytane
         </AppButton>
       </div>
-      <StatusMessage v-if="props.markAllFailed" tone="error">
+      <StatusMessage v-if="props.markAllFailed" tone="error" class="message">
         Nie udało się oznaczyć powiadomień jako przeczytanych.
       </StatusMessage>
       <p v-if="props.state === 'loading'" class="loading">Wczytywanie…</p>
       <template v-else-if="props.state === 'error'">
-        <StatusMessage tone="error">Nie udało się wczytać powiadomień.</StatusMessage>
+        <StatusMessage tone="error" class="message">Nie udało się wczytać powiadomień.</StatusMessage>
         <AppButton @click="retry">Spróbuj ponownie</AppButton>
       </template>
       <p v-else-if="props.items.length === 0" class="empty">Brak powiadomień.</p>
@@ -190,12 +178,6 @@ defineExpose({ focusToggle })
   gap: var(--space-1);
 }
 
-.icon {
-  width: 1.25em;
-  height: 1.25em;
-  flex: none;
-}
-
 /* Text on --accent is always --on-accent. */
 .count {
   min-width: 1.25em;
@@ -204,8 +186,8 @@ defineExpose({ focusToggle })
   background: var(--accent);
   color: var(--on-accent);
   font-size: var(--font-size-sm);
-  font-weight: 600;
-  line-height: 1.45;
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-normal);
   text-align: center;
 }
 
@@ -219,10 +201,17 @@ defineExpose({ focusToggle })
   max-height: 70vh;
   overflow-y: auto;
   padding: var(--space-3);
-  border: 1px solid var(--border-strong);
+  border: 1px solid var(--line);
   border-radius: var(--radius);
-  background: var(--bg);
-  box-shadow: 0 var(--space-1) var(--space-3) color-mix(in srgb, var(--text-h) 15%, transparent);
+  background: var(--surface);
+  box-shadow: var(--shadow-overlay);
+}
+
+/* The root font size is 16px at every width; above 1024px the limit is what 18px gave (design-tokens-and-components). */
+@media (min-width: 1025px) {
+  .panel {
+    width: min(27rem, calc(100% - 2 * var(--space-4)));
+  }
 }
 
 .panel-head {
@@ -237,12 +226,17 @@ defineExpose({ focusToggle })
 .panel-title {
   margin: 0;
   color: var(--text-h);
-  font-weight: 600;
+  font-weight: var(--weight-semibold);
 }
 
 .loading,
 .empty {
   margin: var(--space-2) 0;
+}
+
+/* Apart from the list's head and the retry button; the panel's selector outranks the message's own zero margin. */
+.panel .message {
+  margin-block: var(--space-3);
 }
 
 .items {
@@ -252,7 +246,7 @@ defineExpose({ focusToggle })
 }
 
 .items li + li {
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--line);
 }
 
 .item {
@@ -267,7 +261,7 @@ defineExpose({ focusToggle })
 }
 
 a.item:hover {
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  background: var(--surface-2);
 }
 
 .item-head {

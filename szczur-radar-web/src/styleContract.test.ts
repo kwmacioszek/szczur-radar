@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import appButton from './components/AppButton.vue?raw'
 import appHeader from './components/AppHeader.vue?raw'
+import appIcon from './components/AppIcon.vue?raw'
 import feedFilter from './components/FeedFilter.vue?raw'
+import iconSprite from './components/IconSprite.vue?raw'
 import notificationBell from './components/NotificationBell.vue?raw'
 import notificationMenu from './components/NotificationMenu.vue?raw'
 import postAssessment from './components/PostAssessment.vue?raw'
@@ -10,6 +12,7 @@ import stanceText from './components/StanceText.vue?raw'
 import statusBadge from './components/StatusBadge.vue?raw'
 import statusMessage from './components/StatusMessage.vue?raw'
 import themeToggle from './components/ThemeToggle.vue?raw'
+import pairs from './contrastPairs.json'
 import css from './style.css?raw'
 import activateView from './views/ActivateView.vue?raw'
 import adminView from './views/AdminView.vue?raw'
@@ -22,31 +25,18 @@ type Theme = 'light' | 'dark'
 
 const THEMES: Theme[] = ['light', 'dark']
 
-/** WCAG 2.x AA for normal text. */
-const MIN_CONTRAST = 4.5
+/**
+ * Foreground role on background role with its own threshold: 4.5 for text, 3.0 for interface elements and
+ * focus. The pairs are src/contrastPairs.json, a byte copy of context/foundation/ui-design/pairs.json.
+ */
+interface Pair {
+  fg: string
+  bg: string
+  min: number
+  kind: string
+}
 
-/** Foreground role on background role, as in the Phase 2 table of the change plan. */
-const PAIRS = [
-  ['--text', '--bg'],
-  ['--text-h', '--bg'],
-  ['--accent', '--bg'],
-  ['--success', '--bg'],
-  ['--warning', '--bg'],
-  ['--destructive', '--bg'],
-  ['--stance-neutral', '--bg'],
-  ['--stance-mixed', '--bg'],
-  ['--text', '--surface'],
-  ['--text-h', '--surface'],
-  ['--accent', '--surface'],
-  ['--success', '--surface'],
-  ['--warning', '--surface'],
-  ['--destructive', '--surface'],
-  ['--stance-neutral', '--surface'],
-  ['--stance-mixed', '--surface'],
-  ['--on-accent', '--accent'],
-  ['--text-h', '--highlight'],
-  ['--text', '--highlight'],
-] as const
+const PAIRS: Pair[] = pairs
 
 const source = css.replace(/\/\*[\s\S]*?\*\//g, '')
 
@@ -102,13 +92,15 @@ function contrast(a: string, b: string): number {
  * Files without colour literals and without values off the scale: colours come from the roles of
  * style.css, spacing, type and radii from its --space-*, --font-size-* and --radius tokens. Add a
  * view or component here once it is cleaned; style.css itself, the token source, is never on the
- * list. src/views/LoginView.vue is off it until the change login-view-ui-hardening: px in its
- * spacing, type and radii (LoginView.vue:77-102).
+ * list. src/views/LoginView.vue is off it until S-49 (its screen): px in its spacing, type and radii
+ * (LoginView.vue:84-131).
  */
 const CLEANED: Record<string, string> = {
   'src/views/AdminView.vue': adminView,
   'src/components/AppHeader.vue': appHeader,
   'src/components/AppButton.vue': appButton,
+  'src/components/AppIcon.vue': appIcon,
+  'src/components/IconSprite.vue': iconSprite,
   'src/components/StatusMessage.vue': statusMessage,
   'src/components/StatusBadge.vue': statusBadge,
   'src/views/KitchenSinkView.vue': kitchenSinkView,
@@ -154,10 +146,10 @@ function literalHits(file: string, text: string): string[] {
 
 describe('style contract', () => {
   describe('colour roles', () => {
-    const cases = THEMES.flatMap((theme) => PAIRS.map(([fg, bg]) => ({ theme, fg, bg })))
+    const cases = THEMES.flatMap((theme) => PAIRS.map((pair) => ({ theme, ...pair })))
 
-    it.each(cases)(`$fg on $bg ($theme) ≥ ${MIN_CONTRAST}:1`, ({ theme, fg, bg }) => {
-      expect(contrast(role(theme, fg), role(theme, bg))).toBeGreaterThanOrEqual(MIN_CONTRAST)
+    it.each(cases)('$fg on $bg ($theme, $kind) ≥ $min:1', ({ theme, fg, bg, min }) => {
+      expect(contrast(role(theme, fg), role(theme, bg))).toBeGreaterThanOrEqual(min)
     })
   })
 
@@ -203,7 +195,7 @@ describe('style contract', () => {
     font-size: var(--font-size-md);
     border-radius: var(--radius);
     color: var(--text);
-    border: 1px solid var(--border);
+    border: 1px solid var(--line);
     max-width: 48rem;
     grid-template-columns: 9rem minmax(0, 1fr);
   }
