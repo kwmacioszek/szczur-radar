@@ -729,7 +729,7 @@ Lista dla `/10x-roadmap` (v6.2). Numery i issue wycinków zostają; zmieniają s
 | S-60 | miara „kanał jako cel” | wchodzi do części „Jakość ocen” w tym samym wzorze miary; prototyp jej nie rysuje, bo próg i mianownik ustali wycinek |
 | F-08 | tokeny i komponenty | zakres według sekcji „Wdrożenie”: mapa tokenów, kroje w aplikacji, zmiany bramek |
 
-Do uzgodnienia z PRD przy v6.2:
+Uzgodnione z PRD przy v6.2 (2026-11-21: właściciel potwierdził, PRD ma bloki „Doprecyzowanie” przy tych wymaganiach):
 
 - **FR-039**: klocki „Wzrostowe”, „Spadkowe”, „Pozostałe” na przeglądzie dnia to udział stanowisk w wybranym dniu (prośba właściciela z 2026-11-20). To migawka jednego dnia, nie trend dzień do dnia, którego PRD v4 nie przewiduje.
 - **FR-030**: data danych przechodzi z listy postów do paska aplikacji i jest na każdym ekranie po zalogowaniu.
