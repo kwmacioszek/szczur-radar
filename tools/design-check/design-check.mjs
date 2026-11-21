@@ -99,21 +99,48 @@ function rel(file) {
 // ---------------------------------------------------------------------------------------------------------------
 // contrast
 
+// Skip quoted and escaped characters when looking for structural CSS delimiters.
+const CSS_DELIMITERS = /"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|\\.|[{}\[\]();]/gs
+const CUSTOM_PROPERTY = /^\s*(--[\w-]+)\s*:/
+
 /** The text between the brace after the first `selector` in `text` and its matching closing brace; null if absent. */
 function block(text, selector) {
   const at = text.indexOf(selector)
   const open = at < 0 ? -1 : text.indexOf('{', at)
   if (open < 0) return null
   let depth = 0
-  for (let i = open; i < text.length; i++) {
-    if (text[i] === '{') depth++
-    if (text[i] === '}' && --depth === 0) return text.slice(open + 1, i)
+  for (const match of text.slice(open).matchAll(CSS_DELIMITERS)) {
+    if (match[0] === '{') depth++
+    if (match[0] === '}' && --depth === 0) return text.slice(open + 1, open + match.index)
   }
   return null
 }
 
 function declarations(text) {
-  return new Map([...text.matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)].map((m) => [m[1], m[2].trim()]))
+  // Keep in step with styleContract.test.ts. Read direct declarations, including one at the end without a semicolon.
+  const tokens = new Map()
+  let start = 0
+  let depth = 0
+  let nestedRule = false
+  for (const match of (text + ';').matchAll(CSS_DELIMITERS)) {
+    const delimiter = match[0]
+    if ('{[('.includes(delimiter)) {
+      if (delimiter === '{' && depth === 0) nestedRule = !CUSTOM_PROPERTY.test(text.slice(start, match.index))
+      depth++
+    } else if ('}])'.includes(delimiter)) {
+      depth--
+      if (delimiter === '}' && depth === 0 && nestedRule) {
+        start = match.index + 1
+        nestedRule = false
+      }
+    } else if (delimiter === ';' && depth === 0) {
+      const statement = text.slice(start, match.index)
+      const property = CUSTOM_PROPERTY.exec(statement)
+      if (property) tokens.set(property[1], statement.slice(property[0].length).trim())
+      start = match.index + 1
+    }
+  }
+  return tokens
 }
 
 /** Relative luminance (WCAG 2.x, sRGB threshold 0.04045); same as styleContract.test.ts. */
@@ -281,9 +308,11 @@ function checkApp(designDir, webDir) {
     if (!exists) violations.push(violation('app', rel(file), `missing file (${side})`))
     return exists
   }
+  /** Both files exist; a missing one is reported on each side, never hidden by the other. */
+  const bothExist = (source, copy) => [missing(source, 'the design'), missing(copy, 'the application')].every(Boolean)
 
   // Tokens, both directions, per theme.
-  if (missing(design.tokens, 'the design') && missing(web.style, 'the application')) {
+  if (bothExist(design.tokens, web.style)) {
     const from = tokenBlocks(design.tokens)
     const to = tokenBlocks(web.style)
     for (const theme of THEMES) {
@@ -305,7 +334,7 @@ function checkApp(designDir, webDir) {
 
   // Byte-for-byte copies: the pairs and the sprite.
   const compareCopy = (source, copy, what) => {
-    if (!missing(source, 'the design') || !missing(copy, 'the application')) return
+    if (!bothExist(source, copy)) return
     const [a, b] = [fs.readFileSync(source), fs.readFileSync(copy)]
     if (!a.equals(b)) violations.push(violation('app', rel(copy), `${what} differs from ${rel(source)} (${b.length} bytes, the design has ${a.length})`))
   }
@@ -1004,6 +1033,7 @@ async function runSelftest(args) {
     ['token-value', [], /--text differs: .*"#1f2328".*"#1f2329"/],
     ['token-missing', [], /--space-3 is missing in .*style\.css/],
     ['token-extra', [], /--space-9 is missing in .*tokens\.css/],
+    ['token-nested', [], /--space-3 differs: .*"12px".*"16px"/],
     ['pairs', [], /contrast pairs file differs from/],
     ['sprite', [], /icon sprite differs from/],
     ['font-bytes', [], /font file differs from .*a\.woff2/],
@@ -1023,6 +1053,17 @@ async function runSelftest(args) {
     } finally {
       fs.rmSync(scratch, { recursive: true, force: true })
     }
+  }
+  // Two empty directories: tokens, pairs and sprite are each reported missing on both sides.
+  const empty = fs.mkdtempSync(path.join(os.tmpdir(), 'design-check-app-'))
+  try {
+    const [designDir, webDir] = ['design', 'web'].map((name) => path.join(empty, name))
+    for (const dir of [designDir, webDir]) fs.mkdirSync(dir)
+    const { violations } = checkApp(designDir, webDir)
+    const reported = (side) => violations.filter((v) => v.kind === 'app' && v.message === `missing file (${side})`).length
+    line('app/empty', 'missing file on both sides (3 + 3)', reported('the design') === 3 && reported('the application') === 3, kinds(violations))
+  } finally {
+    fs.rmSync(empty, { recursive: true, force: true })
   }
   console.log(failed === 0 ? 'OK: the green path passes and every break is detected' : `FAILED: ${failed} check(s) of the selftest`)
   return failed === 0 ? 0 : 1

@@ -40,23 +40,48 @@ const PAIRS: Pair[] = pairs
 
 const source = css.replace(/\/\*[\s\S]*?\*\//g, '')
 
+// Skip quoted and escaped characters when looking for structural CSS delimiters.
+const CSS_DELIMITERS = /"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|\\.|[{}\[\]();]/gs
+const CUSTOM_PROPERTY = /^\s*(--[\w-]+)\s*:/
+
 /** The text between the brace after the first `selector` in `text` and its matching closing brace. */
 function block(text: string, selector: string): string {
   const at = text.indexOf(selector)
   const open = at < 0 ? -1 : text.indexOf('{', at)
   if (open < 0) return ''
   let depth = 0
-  for (let i = open; i < text.length; i++) {
-    if (text[i] === '{') depth++
-    if (text[i] === '}' && --depth === 0) return text.slice(open + 1, i)
+  for (const match of text.slice(open).matchAll(CSS_DELIMITERS)) {
+    if (match[0] === '{') depth++
+    if (match[0] === '}' && --depth === 0) return text.slice(open + 1, open + match.index)
   }
   return ''
 }
 
 function declarations(text: string): Map<string, string> {
-  return new Map(
-    [...text.matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)].map((match): [string, string] => [match[1], match[2].trim()]),
-  )
+  // Keep in step with design-check.mjs. Read direct declarations, including one at the end without a semicolon.
+  const tokens = new Map<string, string>()
+  let start = 0
+  let depth = 0
+  let nestedRule = false
+  for (const match of (text + ';').matchAll(CSS_DELIMITERS)) {
+    const delimiter = match[0]
+    if ('{[('.includes(delimiter)) {
+      if (delimiter === '{' && depth === 0) nestedRule = !CUSTOM_PROPERTY.test(text.slice(start, match.index))
+      depth++
+    } else if ('}])'.includes(delimiter)) {
+      depth--
+      if (delimiter === '}' && depth === 0 && nestedRule) {
+        start = match.index + 1
+        nestedRule = false
+      }
+    } else if (delimiter === ';' && depth === 0) {
+      const statement = text.slice(start, match.index)
+      const property = CUSTOM_PROPERTY.exec(statement)
+      if (property) tokens.set(property[1], statement.slice(property[0].length).trim())
+      start = match.index + 1
+    }
+  }
+  return tokens
 }
 
 // The first :root is the light one; the dark theme is the :root[data-theme='dark'] block. It gets no
@@ -145,6 +170,21 @@ function literalHits(file: string, text: string): string[] {
 }
 
 describe('style contract', () => {
+  describe('token declarations', () => {
+    it('reads the last declaration without a trailing semicolon', () => {
+      const stylesheet = ':root { --text: #111111; --bg: #ffffff }'
+      expect(declarations(block(stylesheet, ':root')).get('--bg')).toBe('#ffffff')
+    })
+
+    it('keeps the base token value when a nested rule redefines it', () => {
+      const stylesheet = ':root { --text: #333333; @media (min-width: 100rem) { --text: #111111; } --bg: #ffffff; }'
+      expect([...declarations(block(stylesheet, ':root'))]).toEqual([
+        ['--text', '#333333'],
+        ['--bg', '#ffffff'],
+      ])
+    })
+  })
+
   describe('colour roles', () => {
     const cases = THEMES.flatMap((theme) => PAIRS.map((pair) => ({ theme, ...pair })))
 

@@ -232,7 +232,7 @@ m5 = {  # lane, title (## Foundations / ## Slices), outcome (At a glance, shorte
     "F-06": ("A", "Zrzuty porównawcze i dostępność", "(fundament) zrzuty katalogu komponentów i widoków w obu motywach i przy 375 px oraz test dostępności w CI", "done", "F-05", "visual-regression"),
     "S-46": ("A", "Motyw jasny i ciemny", "użytkownik przełącza motyw jasny i ciemny w nowej palecie, a wybór jest zapamiętany", "done", "F-06", "light-dark-theme-switch"),
     "F-07": ("A", "Projekt UI/UX całej aplikacji", "(fundament) projekt UI/UX od nowa według standardów: architektura informacji, tokeny, komponenty, prototypy ekranów", "done", "—", "ui-design-system"),
-    "F-08": ("A", "Tokeny, kroje i komponenty bazowe", "(fundament) tokeny, kroje i komponenty bazowe z projektu F-07 w aplikacji; obecne widoki w nowym wyglądzie, w starym układzie", "ready", "F-07, S-46", "design-tokens-and-components"),
+    "F-08": ("A", "Tokeny, kroje i komponenty bazowe", "(fundament) tokeny, kroje i komponenty bazowe z projektu F-07 w aplikacji; obecne widoki w nowym wyglądzie, w starym układzie", "progress", "F-07, S-46", "design-tokens-and-components"),
     "S-49": ("A", "Logowanie na wspólnym fundamencie", "logowanie i aktywacja na wspólnych komponentach i tokenach, bez literałów stylu", "proposed", "F-08", "login-on-shared-foundation"),
     "S-47": ("A", "Powłoka z nawigacją u góry", "pasek u góry: nawigacja według roli, data danych per źródło, motyw, wylogowanie; treść w jednej kolumnie", "proposed", "F-08", "app-shell-navigation"),
     "S-48": ("A", "Wspólne stany i stronicowanie", "każdy widok ma to samo ładowanie, pustą listę, błąd z ponowieniem i stronicowanie", "proposed", "S-47", "shared-view-states"),
@@ -270,7 +270,8 @@ groups = [
         ("Non-Goal", "HA / multi-region, backup w kodzie"), ("S-04 F6", "Wydajność filtra przy ~20k postów"),
         ("audyt", "Porządki granic pakietów"), ("audyt", "Drobne ryzyka (A8, B8, B10, B11, C8, C14)"),
         ("roadmap", "Plan testów (/10x-test-plan)"), ("destylacja", "Polityki #7–#10 bez incydentu"),
-        ("Arctic Shift", "Wyłączenie Reddita po wygaśnięciu")]),
+        ("Arctic Shift", "Wyłączenie Reddita po wygaśnięciu"),
+        ("F-08", "Test zgodności projektu w CI")]),
 ]
 
 DEFERRED = sum(len(items) for _, items in groups)

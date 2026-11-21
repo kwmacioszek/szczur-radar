@@ -9,7 +9,7 @@
   --text: #1f2328;
   --font-ui: 'Hanken Grotesk', system-ui, sans-serif;
   --space-3: 12px;
-  --space-9: 96px;
+  --space-9: 96px
 }
 
 :root[data-theme='dark'] {

@@ -25,7 +25,9 @@ const props = withDefaults(
 )
 
 const attrs = useAttrs()
-if (import.meta.env.DEV && props.iconOnly && !attrs['aria-label'] && !attrs['aria-labelledby']) {
+// A name of white space only is no name.
+const named = (value: unknown) => typeof value === 'string' && value.trim() !== ''
+if (import.meta.env.DEV && props.iconOnly && !named(attrs['aria-label']) && !named(attrs['aria-labelledby'])) {
   console.warn('AppButton: an icon-only button needs an aria-label')
 }
 </script>
@@ -55,7 +57,7 @@ if (import.meta.env.DEV && props.iconOnly && !attrs['aria-label'] && !attrs['ari
 }
 
 /* Darker in the light theme, lighter in the dark one: --text-h is the far end of each. */
-.primary:hover:not(:disabled) {
+.primary:hover:not(:disabled, .icon-only) {
   background: color-mix(in srgb, var(--accent) 86%, var(--text-h));
 }
 
@@ -72,7 +74,7 @@ if (import.meta.env.DEV && props.iconOnly && !attrs['aria-label'] && !attrs['ari
   background: var(--surface);
 }
 
-.secondary.large:hover:not(:disabled) {
+.secondary.large:hover:not(:disabled, .icon-only) {
   background: var(--surface-2);
 }
 
@@ -92,7 +94,8 @@ button:not(.large, .icon-only) {
   color: var(--text);
 }
 
-.icon-only:hover:not(:disabled) {
+/* Keep the hover less specific than the pressed and expanded states below. */
+.icon-only:where(:hover:not(:disabled)) {
   background: var(--surface-2);
   color: var(--text-h);
 }

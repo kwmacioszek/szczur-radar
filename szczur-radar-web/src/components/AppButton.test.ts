@@ -85,6 +85,12 @@ describe('AppButton', () => {
     expect(warn).toHaveBeenCalledTimes(1)
   })
 
+  it('warns about an icon-only button whose name is only white space', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    mount(AppButton, { props: { icon: 'i-x', iconOnly: true }, attrs: { 'aria-label': '  ' } })
+    expect(warn).toHaveBeenCalledTimes(1)
+  })
+
   it('replaces the icon with the mark of work while busy and keeps the icon-only name', () => {
     const wrapper = mount(AppButton, {
       props: { icon: 'i-play', iconOnly: true, busy: true },
