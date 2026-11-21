@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="pl" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Orlen – Szczur Radar</title>
+<script>
+  // Motyw to atrybut data-theme na <html>, jak w aplikacji; prototyp bierze go z ?theme=dark.
+  document.documentElement.dataset.theme =
+    new URLSearchParams(location.search).get('theme') === 'dark' ? 'dark' : 'light'
+</script>
+<link rel="stylesheet" href="../../tokens.css">
+<link rel="stylesheet" href="../prototype.css">
+</head>
+<body class="panel-open">
+
+<!--sprite-->
+<svg class="sprite" aria-hidden="true" focusable="false">
+<symbol id="i-arrow-down-up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+    <path d="m3 16 4 4 4-4" />
+    <path d="M7 20V4" />
+    <path d="m21 8-4-4-4 4" />
+    <path d="M17 4v16" />
+  </symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M10.268 21a2 2 0 0 0 3.464 0" />
+    <path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326" />
+  </symbol>
+  <symbol id="i-braces" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M8 3H7a2 2 0 0 0-2 2v5a2 2 0 0 1-2 2 2 2 0 0 1 2 2v5c0 1.1.9 2 2 2h1" />
+    <path d="M16 21h1a2 2 0 0 0 2-2v-5c0-1.1.9-2 2-2a2 2 0 0 1-2-2V5a2 2 0 0 0-2-2h-1" />
+  </symbol>
+  <symbol id="i-chevron-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+    <path d="m6 9 6 6 6-6" />
+  </symbol>
+  <symbol id="i-chevron-left" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+    <path d="m15 18-6-6 6-6" />
+  </symbol>
+  <symbol id="i-chevron-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+    <path d="m9 18 6-6-6-6" />
+  </symbol>
+  <symbol id="i-circle-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="10" />
+    <line x1="12" x2="12" y1="8" y2="12" />
+    <line x1="12" x2="12.01" y1="16" y2="16" />
+  </symbol>
+  <symbol id="i-circle-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="10" />
+    <path d="m16 9-5.5 5.5L8 12" />
+  </symbol>
+  <symbol id="i-external-link" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M15 3h6v6" />
+    <path d="M10 14 21 3" />
+    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+  </symbol>
+  <symbol id="i-inbox" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="22 12 16 12 14 15 10 15 8 12 2 12" />
+    <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" />
+  </symbol>
+  <symbol id="i-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="10" />
+    <path d="M12 16v-4" />
+    <path d="M12 8h.01" />
+  </symbol>
+  <symbol id="i-list-filter" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M2 5h20" />
+    <path d="M6 12h12" />
+    <path d="M9 19h6" />
+  </symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401" />
+  </symbol>
+  <symbol id="i-play" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z" />
+  </symbol>
+  <symbol id="i-refresh-cw" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+    <path d="M21 3v5h-5" />
+    <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
+    <path d="M8 16H3v5" />
+  </symbol>
+  <symbol id="i-rotate-ccw" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+    <path d="M3 3v5h5" />
+  </symbol>
+  <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+    <path d="m21 21-4.34-4.34" />
+    <circle cx="11" cy="11" r="8" />
+  </symbol>
+  <symbol id="i-triangle-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+    <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3" />
+    <path d="M12 9v4" />
+    <path d="M12 17h.01" />
+  </symbol>
+  <symbol id="i-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M18 6 6 18" />
+    <path d="m6 6 12 12" />
+  </symbol>
+  <symbol id="i-brand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 12 18.4 5.6"/><path d="M12 7a5 5 0 0 1 5 5"/></symbol>
+  <symbol id="s-up" viewBox="0 0 12 12" fill="currentColor"><path d="M6 2 11 10H1Z"/></symbol>
+  <symbol id="s-down" viewBox="0 0 12 12" fill="currentColor"><path d="M6 10 1 2h10Z"/></symbol>
+  <symbol id="s-flat" viewBox="0 0 12 12" fill="currentColor"><rect x="1" y="5" width="10" height="2" rx="1"/></symbol>
+  <symbol id="s-mixed" viewBox="0 0 12 12" fill="currentColor"><path d="M6 .5 9.5 5h-7ZM6 11.5 2.5 7h7Z"/></symbol>
+  <symbol id="s-none" viewBox="0 0 12 12" fill="currentColor"><path fill-rule="evenodd" d="M6 1.5a4.5 4.5 0 1 0 0 9 4.5 4.5 0 0 0 0-9Zm0 1.5a3 3 0 1 1 0 6 3 3 0 0 1 0-6Z"/></symbol>
+</svg>
+<!--/sprite-->
+
+<header class="app-bar" inert>
+  <a class="brand" href="overview.html">
+    <svg class="icon brand-mark" aria-hidden="true"><use href="#i-brand"/></svg>
+    <span>Szczur Radar</span>
+  </a>
+  <nav class="nav" aria-label="Główna">
+    <a href="overview.html">Przegląd</a>
+    <a href="posts.html">Posty</a>
+    <a href="targets.html" aria-current="page">Cele</a>
+    <a href="admin-runs.html">Panel admina</a>
+  </nav>
+  <div class="session">
+    <p class="freshness"><span>Dane:</span><span class="freshness-list"><span>Wykop <time datetime="2026-10-20T10:15">20.10.2026, 10:15</time></span><span>Reddit <time datetime="2026-10-20T10:15">20.10.2026, 10:15</time></span></span></p>
+    <button type="button" class="icon-btn" aria-label="Powiadomienia, 2 nieprzeczytane" aria-expanded="false">
+      <svg class="icon" aria-hidden="true"><use href="#i-bell"/></svg>
+      <span class="bell-count" aria-hidden="true">2</span>
+    </button>
+    <button type="button" class="icon-btn" aria-pressed="false" aria-label="Ciemny motyw">
+      <svg class="icon" aria-hidden="true"><use href="#i-moon"/></svg>
+    </button>
+    <span class="who">admin@szczur-radar.example</span>
+    <button type="button" class="btn">Wyloguj</button>
+  </div>
+</header>
+
+<main inert>
+<div class="page">
+<div class="page-head">
+  <div>
+    <h1>Cele</h1>
+    <p class="page-sub">118 celów w postach z ostatnich 7 dni</p>
+  </div>
+  <div class="view-tools">
+    <div class="scope" role="group" aria-label="Zakres postów">
+      <button type="button" class="scope-opt" aria-pressed="true">Inwestycyjne <span class="scope-n">412</span></button>
+      <button type="button" class="scope-opt" aria-pressed="false">Wszystkie <span class="scope-n">506</span></button>
+    </div>
+    <div class="scope" role="group" aria-label="Okres">
+      <button type="button" class="scope-opt" aria-pressed="false">Dziś</button>
+      <button type="button" class="scope-opt" aria-pressed="true">7 dni</button>
+      <button type="button" class="scope-opt" aria-pressed="false">30 dni</button>
+    </div>
+  </div>
+</div>
+
+<div class="toolbar">
+  <span class="input-wrap input-lg field-search"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg><input type="search" aria-label="Szukaj celu" placeholder="Szukaj celu po nazwie"></span>
+  <button type="button" class="btn btn-lg" aria-expanded="false"><svg class="icon" aria-hidden="true"><use href="#i-arrow-down-up"/></svg>Kolejność: liczba postów</button>
+</div>
+
+<section class="section" aria-labelledby="targets-title">
+  <h2 class="visually-hidden" id="targets-title">Lista celów</h2>
+  <div class="table-wrap" style="margin-top: 0">
+    <table class="table">
+      <caption class="visually-hidden">Cele z liczbą postów i udziałem stanowisk, ostatnie 7 dni</caption>
+      <thead><tr><th scope="col">Cel</th><th scope="col" class="n">Posty</th><th scope="col" class="n">Wzrostowe</th><th scope="col" class="n">Spadkowe</th><th scope="col" class="n">Pozostałe</th><th scope="col" class="bar-col">Udział</th></tr></thead>
+      <tbody>
+        <tr class="is-selected"><th scope="row" class="cell-name"><a href="target.html" aria-current="true">Orlen</a> <span class="kind">spółka</span></th><td class="n">61</td><td class="n up">33</td><td class="n down">17</td><td class="n rest">11</td><td class="bar-col"><div class="bar" role="img" aria-label="Stanowiska wobec Orlen: 33 wzrostowe, 17 spadkowych, 11 pozostałych"><span class="seg seg-up" style="flex-grow: 33"></span><span class="seg seg-down" style="flex-grow: 17"></span><span class="seg seg-rest" style="flex-grow: 11"></span></div></td></tr>
+        <tr><th scope="row" class="cell-name"><a href="target.html">NVDA</a> <span class="kind">spółka</span></th><td class="n">54</td><td class="n up">24</td><td class="n down">22</td><td class="n rest">8</td><td class="bar-col"><div class="bar" role="img" aria-label="Stanowiska wobec NVDA: 24 wzrostowe, 22 spadkowe, 8 pozostałych"><span class="seg seg-up" style="flex-grow: 24"></span><span class="seg seg-down" style="flex-grow: 22"></span><span class="seg seg-rest" style="flex-grow: 8"></span></div></td></tr>
+        <tr><th scope="row" class="cell-name"><a href="target.html">CDR</a> <span class="kind">spółka</span></th><td class="n">38</td><td class="n up">12</td><td class="n down">19</td><td class="n rest">7</td><td class="bar-col"><div class="bar" role="img" aria-label="Stanowiska wobec CDR: 12 wzrostowych, 19 spadkowych, 7 pozostałych"><span class="seg seg-up" style="flex-grow: 12"></span><span class="seg seg-down" style="flex-grow: 19"></span><span class="seg seg-rest" style="flex-grow: 7"></span></div></td></tr>
+        <tr><th scope="row" class="cell-name"><a href="target.html">złoto</a> <span class="kind">aktywo</span></th><td class="n">33</td><td class="n up">21</td><td class="n down">2</td><td class="n rest">10</td><td class="bar-col"><div class="bar" role="img" aria-label="Stanowiska wobec złoto: 21 wzrostowych, 2 spadkowe, 10 pozostałych"><span class="seg seg-up" style="flex-grow: 21"></span><span class="seg seg-down" style="flex-grow: 2"></span><span class="seg seg-rest" style="flex-grow: 10"></span></div></td></tr>
+        <tr><th scope="row" class="cell-name"><a href="target.html">XTB</a> <span class="kind">spółka</span></th><td class="n">29</td><td class="n up">9</td><td class="n down">14</td><td class="n rest">6</td><td class="bar-col"><div class="bar" role="img" aria-label="Stanowiska wobec XTB: 9 wzrostowych, 14 spadkowych, 6 pozostałych"><span class="seg seg-up" style="flex-grow: 9"></span><span class="seg seg-down" style="flex-grow: 14"></span><span class="seg seg-rest" style="flex-grow: 6"></span></div></td></tr>
+        <tr><th scope="row" class="cell-name"><a href="target.html">stopy procentowe</a> <span class="kind">makro i rynek</span></th><td class="n">27</td><td class="n up">3</td><td class="n down">4</td><td class="n rest">20</td><td class="bar-col"><div class="bar" role="img" aria-label="Stanowiska wobec stopy procentowe: 3 wzrostowe, 4 spadkowe, 20 pozostałych"><span class="seg seg-up" style="flex-grow: 3"></span><span class="seg seg-down" style="flex-grow: 4"></span><span class="seg seg-rest" style="flex-grow: 20"></span></div></td></tr>
+        <tr><th scope="row" class="cell-name"><a href="target.html">PKO</a> <span class="kind">spółka</span></th><td class="n">22</td><td class="n up">11</td><td class="n down">6</td><td class="n rest">5</td><td class="bar-col"><div class="bar" role="img" aria-label="Stanowiska wobec PKO: 11 wzrostowych, 6 spadkowych, 5 pozostałych"><span class="seg seg-up" style="flex-grow: 11"></span><span class="seg seg-down" style="flex-grow: 6"></span><span class="seg seg-rest" style="flex-grow: 5"></span></div></td></tr>
+        <tr><th scope="row" class="cell-name"><a href="target.html">banki</a> <span class="kind">sektor</span></th><td class="n">19</td><td class="n up">10</td><td class="n down">6</td><td class="n rest">3</td><td class="bar-col"><div class="bar" role="img" aria-label="Stanowiska wobec banki: 10 wzrostowych, 6 spadkowych, 3 pozostałe"><span class="seg seg-up" style="flex-grow: 10"></span><span class="seg seg-down" style="flex-grow: 6"></span><span class="seg seg-rest" style="flex-grow: 3"></span></div></td></tr>
+        <tr><th scope="row" class="cell-name"><a href="target.html">ropa</a> <span class="kind">aktywo</span></th><td class="n">12</td><td class="n up">2</td><td class="n down">7</td><td class="n rest">3</td><td class="bar-col"><div class="bar" role="img" aria-label="Stanowiska wobec ropa: 2 wzrostowe, 7 spadkowych, 3 pozostałe"><span class="seg seg-up" style="flex-grow: 2"></span><span class="seg seg-down" style="flex-grow: 7"></span><span class="seg seg-rest" style="flex-grow: 3"></span></div></td></tr>
+        <tr><th scope="row" class="cell-name"><a href="target.html">Orlenu</a> <span class="kind">spółka</span></th><td class="n">9</td><td class="n up">3</td><td class="n down">3</td><td class="n rest">3</td><td class="bar-col"><div class="bar" role="img" aria-label="Stanowiska wobec Orlenu: 3 wzrostowe, 3 spadkowe, 3 pozostałe"><span class="seg seg-up" style="flex-grow: 3"></span><span class="seg seg-down" style="flex-grow: 3"></span><span class="seg seg-rest" style="flex-grow: 3"></span></div></td></tr>
+        <tr><th scope="row" class="cell-name"><a href="target.html">CD Projekt</a> <span class="kind">spółka</span></th><td class="n">6</td><td class="n up">1</td><td class="n down">4</td><td class="n rest">1</td><td class="bar-col"><div class="bar" role="img" aria-label="Stanowiska wobec CD Projekt: 1 wzrostowe, 4 spadkowe, 1 pozostałe"><span class="seg seg-up" style="flex-grow: 1"></span><span class="seg seg-down" style="flex-grow: 4"></span><span class="seg seg-rest" style="flex-grow: 1"></span></div></td></tr>
+        <tr><th scope="row" class="cell-name"><a href="target.html">PKN</a> <span class="kind">spółka</span></th><td class="n">4</td><td class="n zero">0</td><td class="n zero">0</td><td class="n rest">4</td><td class="bar-col"><div class="bar" role="img" aria-label="Stanowiska wobec PKN: 0 wzrostowych, 0 spadkowych, 4 pozostałe"><span class="seg seg-rest" style="flex-grow: 4"></span></div></td></tr>
+        <tr><th scope="row" class="cell-name"><a href="target.html">dolar</a> <span class="kind">aktywo</span></th><td class="n">3</td><td class="n zero">0</td><td class="n zero">0</td><td class="n rest">3</td><td class="bar-col"><div class="bar" role="img" aria-label="Stanowiska wobec dolar: 0 wzrostowych, 0 spadkowych, 3 pozostałe"><span class="seg seg-rest" style="flex-grow: 3"></span></div></td></tr>
+        <tr><th scope="row" class="cell-name"><a href="target.html">Tauron</a> <span class="kind">spółka</span></th><td class="n">1</td><td class="n zero">0</td><td class="n down">1</td><td class="n zero">0</td><td class="bar-col"><div class="bar" role="img" aria-label="Stanowiska wobec Tauron: 0 wzrostowych, 1 spadkowe, 0 pozostałych"><span class="seg seg-down" style="flex-grow: 1"></span></div></td></tr>
+        <tr><th scope="row" class="cell-name"><a href="target.html">regional banks</a> <span class="kind">sektor</span></th><td class="n">1</td><td class="n zero">0</td><td class="n zero">0</td><td class="n rest">1</td><td class="bar-col"><div class="bar" role="img" aria-label="Stanowiska wobec regional banks: 0 wzrostowych, 0 spadkowych, 1 pozostałe"><span class="seg seg-rest" style="flex-grow: 1"></span></div></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="note">Pozostałe to stanowiska neutralne, mieszane, niejasne i posty bez stanowiska wobec celu.</p>
+  <nav class="pager" aria-label="Strony">
+    <button type="button" class="btn" disabled><svg class="icon" aria-hidden="true"><use href="#i-chevron-left"/></svg>Poprzednie</button>
+    <span class="pager-pos">Strona 1 z 3</span>
+    <button type="button" class="btn">Następne<svg class="icon" aria-hidden="true"><use href="#i-chevron-right"/></svg></button>
+  </nav>
+</section>
+</div>
+</main>
+
+<div class="scrim"></div>
+
+<section class="panel panel-fixed" role="dialog" aria-modal="true" aria-labelledby="tg-title">
+  <div class="panel-bar">
+    <p class="post-meta"><span class="src">Cel</span><span>spółka</span><span>ostatnie 7 dni</span></p>
+    <div class="panel-nav">
+      <span class="pv-pos">1 z 118</span>
+      <button type="button" class="icon-btn" aria-label="Poprzedni cel" disabled><svg class="icon" aria-hidden="true"><use href="#i-chevron-left"/></svg></button>
+      <button type="button" class="icon-btn" aria-label="Następny cel"><svg class="icon" aria-hidden="true"><use href="#i-chevron-right"/></svg></button>
+      <button type="button" class="icon-btn panel-close" aria-label="Zamknij cel"><svg class="icon" aria-hidden="true"><use href="#i-x"/></svg></button>
+    </div>
+  </div>
+  <div class="panel-body">
+    <article class="reading">
+      <h2 class="reading-title" id="tg-title">Orlen</h2>
+      <div class="target-summary">
+        <div class="bar bar-lg" role="img" aria-label="Stanowiska wobec Orlen: 33 wzrostowe, 17 spadkowych, 11 pozostałych"><span class="seg seg-up" style="flex-grow: 33"></span><span class="seg seg-down" style="flex-grow: 17"></span><span class="seg seg-rest" style="flex-grow: 11"></span></div>
+        <p class="shares-legend"><span class="share-up">33 wzrostowe</span><span class="share-down">17 spadkowych</span><span class="share-rest">11 pozostałych</span></p>
+        <div class="scope" role="group" aria-label="Zakres postów o celu" style="justify-self: start">
+          <button type="button" class="scope-opt" aria-pressed="true">Inwestycyjne <span class="scope-n">61</span></button>
+          <button type="button" class="scope-opt" aria-pressed="false">Wszystkie <span class="scope-n">64</span></button>
+        </div>
+      </div>
+    </article>
+
+    <section class="assessment" aria-labelledby="tg-said">
+      <div class="assess-head">
+        <h3 class="h-section" id="tg-said">Wypowiedzi</h3>
+        <span class="assess-meta">od najnowszych</span>
+      </div>
+      <ul class="said">
+        <li>
+          <div class="said-head">
+            <p class="post-meta"><span class="src">Wykop</span><span>#gielda</span><time datetime="2026-10-20T09:41">20.10.2026, 09:41</time></p>
+            <span class="stance stance-bullish"><svg class="mark" aria-hidden="true"><use href="#s-up"/></svg><span class="t-stance">wzrostowo</span></span>
+          </div>
+          <a class="said-title" href="post.html">Orlen ogłasza buyback za 4 mld zł</a>
+          <p class="statement">Skup akcji to dobra wiadomość dla Orlenu. <span class="claim-kind">teza inwestycyjna</span></p>
+          <blockquote>„Dla Orlenu to dobra wiadomość, PKN wyceniam bez zmian”</blockquote>
+        </li>
+        <li>
+          <div class="said-head">
+            <p class="post-meta"><span class="src">Wykop</span><span>#gielda</span><time datetime="2026-10-20T08:02">20.10.2026, 08:02</time></p>
+            <span class="stance stance-bearish"><svg class="mark" aria-hidden="true"><use href="#s-down"/></svg><span class="t-stance">spadkowo</span></span>
+          </div>
+          <a class="said-title" href="post.html">Buyback zamiast dywidendy to dla mnie sygnał, że zarząd nie ma pomysłu na inwestycje</a>
+          <p class="statement">Skup akcji zamiast dywidendy znaczy, że zarząd nie ma pomysłu na inwestycje. <span class="claim-kind">opinia</span></p>
+          <blockquote>„zarząd nie ma pomysłu na inwestycje”</blockquote>
+        </li>
+        <li>
+          <div class="said-head">
+            <p class="post-meta"><span class="src">Wykop</span><span>#gielda</span><time datetime="2026-10-20T07:44">20.10.2026, 07:44</time></p>
+            <span class="stance stance-neutral"><svg class="mark" aria-hidden="true"><use href="#s-flat"/></svg><span class="t-stance">neutralnie</span></span>
+          </div>
+          <a class="said-title" href="post.html">Orlen: marże rafineryjne w górę, czekam na raport</a>
+          <p class="statement">Autor czeka z decyzją na raport kwartalny. <span class="claim-kind">działanie</span></p>
+          <blockquote>„czekam na raport”</blockquote>
+        </li>
+        <li>
+          <div class="said-head">
+            <p class="post-meta"><span class="src">Reddit</span><span>r/ValueInvesting</span><time datetime="2026-10-19T21:30">19.10.2026, 21:30</time></p>
+            <span class="stance stance-bullish"><svg class="mark" aria-hidden="true"><use href="#s-up"/></svg><span class="t-stance">wzrostowo</span> <span class="t-hedge">ostrożnie</span></span>
+          </div>
+          <a class="said-title" href="post.html">Polish refiners after the windfall tax debate</a>
+          <p class="statement">Wycena Orlenu jest niska wobec europejskich rafinerii, o ile podatek nie wróci. <span class="claim-kind">teza inwestycyjna</span></p>
+          <blockquote>„cheap versus European peers, unless the tax comes back”</blockquote>
+        </li>
+      </ul>
+      <div class="assess-foot">
+        <span>Pokazano 4 z 61</span>
+        <a class="btn" href="posts-filters.html">Wszystkie posty o Orlen</a>
+      </div>
+    </section>
+  </div>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,218 @@
+/*
+ * Wspólna podstawa trzech wariantów: reset, ikony, fokus, elementy niewidoczne dla oka.
+ * Wygląd (kolor, krój, gęstość, kształt, układ) należy do direction.css każdego wariantu.
+ */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 100%;
+  -webkit-text-size-adjust: 100%;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+body,
+h1,
+h2,
+h3,
+h4,
+p,
+ol,
+ul,
+dl,
+dd,
+blockquote,
+figure {
+  margin: 0;
+}
+
+ol,
+ul {
+  padding: 0;
+  list-style: none;
+}
+
+button,
+input,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+a {
+  color: inherit;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+mark {
+  color: inherit;
+}
+
+.sprite {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+.icon {
+  flex: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: var(--icon-stroke);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.mark {
+  flex: none;
+  width: 0.625rem;
+  height: 0.625rem;
+  fill: currentColor;
+}
+
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Stanowisko: znak i słowo niosą znaczenie, kolor je tylko wzmacnia (WCAG 1.4.1). */
+.stance {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  white-space: nowrap;
+}
+
+.stance-bullish {
+  --stance: var(--success);
+}
+
+.stance-bearish {
+  --stance: var(--destructive);
+}
+
+.stance-neutral {
+  --stance: var(--stance-neutral);
+}
+
+.stance-mixed {
+  --stance: var(--stance-mixed);
+}
+
+.stance-none {
+  --stance: var(--text-muted);
+}
+
+.t-hedge::before {
+  content: '(';
+}
+
+.t-hedge::after {
+  content: ')';
+}
+
+.check {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+.check input {
+  width: 1.125rem;
+  height: 1.125rem;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+.bar {
+  display: flex;
+  gap: 2px;
+  height: var(--bar-height);
+  min-width: 6rem;
+}
+
+.seg {
+  min-width: 3px;
+}
+
+.seg-up {
+  background: var(--success);
+}
+
+.seg-down {
+  background: var(--destructive);
+}
+
+.seg-rest {
+  background: var(--border);
+}
+
+/* Tabela danych może przewijać się w poziomie wewnątrz własnej ramki (wyjątek WCAG 1.4.10), strona nie. */
+.table-scroll {
+  overflow-x: auto;
+}
+
+.pair {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.4375rem;
+  white-space: nowrap;
+}
+
+td.n,
+th.n {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+time,
+.num,
+.count,
+.insp-pos,
+.pager-pos {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Na wąskim ekranie tablica wariantu pokazuje samą listę; ocena wpisu jest osobnym ekranem (faza 3). */
+@media (max-width: 899px) {
+  .inspector {
+    display: none;
+  }
+
+  .who,
+  .freshness {
+    display: none;
+  }
+}

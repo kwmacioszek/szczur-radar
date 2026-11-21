@@ -1,0 +1,82 @@
+/*
+ * Wariant „Radar” (runda 2). Projektowany od ciemnego motywu: głęboki granat, świecący błękit
+ * jako akcent, bursztyn dla cytatów. Boczna kolumna jest granatowa w obu motywach (role --shell-*).
+ * Pierwszy blok to motyw jasny, zgodnie z formatem style.css.
+ */
+:root {
+  --bg: #eef2f8;
+  --surface: #ffffff;
+  --text: #3f4d63;
+  --text-h: #0b1528;
+  --accent: #0b63c9;
+  --on-accent: #ffffff;
+  --success: #12753b;
+  --warning: #8a5500;
+  --destructive: #c0322b;
+  --highlight: #ffe9a8;
+  --stance-neutral: #4a5870;
+  --stance-mixed: #8a5500;
+
+  --text-muted: #57667d;
+  --surface-2: #f3f6fb;
+  --line: #d3dbe8;
+  --border: #6f7f99;
+  --ring: #0b63c9;
+  --selected: #e2ecfb;
+  --success-soft: #dcf3e4;
+  --destructive-soft: #fde3e0;
+  --neutral-soft: #e7ecf3;
+  --mixed-soft: #fbeccb;
+
+  --shell-bg: #0a1020;
+  --shell-surface: #131d33;
+  --shell-text: #b4c2d9;
+  --shell-text-h: #f2f6ff;
+  --shell-muted: #8b9cb8;
+  --shell-accent: #5cc8ff;
+  --shell-line: #223050;
+
+  --font-display: 'Red Hat Display', system-ui, sans-serif;
+  --font-ui: 'Red Hat Text', system-ui, sans-serif;
+
+  --icon-stroke: 1.75;
+  --bar-height: 0.625rem;
+  --radius: 10px;
+  --radius-block: 14px;
+}
+
+:root[data-theme='dark'] {
+  --bg: #0a1020;
+  --surface: #101a2e;
+  --text: #a9b8d0;
+  --text-h: #f0f5ff;
+  --accent: #5cc8ff;
+  --on-accent: #04182a;
+  --success: #4ade80;
+  --warning: #f5c563;
+  --destructive: #ff7b72;
+  --highlight: #40360f;
+  --stance-neutral: #9fb0c9;
+  --stance-mixed: #f5c563;
+
+  --text-muted: #8a9bb8;
+  --surface-2: #16223a;
+  --line: #22314d;
+  --border: #5f7396;
+  --ring: #5cc8ff;
+  --selected: #152847;
+  --success-soft: #0f3323;
+  --destructive-soft: #40191b;
+  --neutral-soft: #1d2a44;
+  --mixed-soft: #3a3012;
+
+  --shell-bg: #0a1020;
+  --shell-surface: #131d33;
+  --shell-text: #b4c2d9;
+  --shell-text-h: #f2f6ff;
+  --shell-muted: #8b9cb8;
+  --shell-accent: #5cc8ff;
+  --shell-line: #223050;
+
+  color-scheme: dark;
+}

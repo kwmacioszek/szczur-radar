@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="9290" height="2519" viewBox="0 0 9290 2519" role="img" aria-labelledby="t d">
+<svg xmlns="http://www.w3.org/2000/svg" width="9290" height="2609" viewBox="0 0 9290 2609" role="img" aria-labelledby="t d">
 <title id="t">Szczur Radar — roadmapa produktu: M-1 → M-2 → M-3 → M-4 → M-5 → Po M-5</title>
-<desc id="d">Roadmapa z context/foundation/roadmap.md v6 jako oś od lewej do prawej: kamień milowy M-1 (F-01–F-03, S-01–S-07, ukończony), M-2 MVP Quality &amp; Reliability Hardening (F-04, S-08–S-19, zamknięty 27.10.2026, S-12 zaparkowany), M-3 Drugie źródło na utwardzonym rdzeniu (S-20–S-29, zamknięty 01.11.2026, gwiazda przewodnia S-20), M-4 Weryfikacja i regresja (S-30–S-45, zamknięty 15.11.2026, gwiazda przewodnia S-31), M-5 Nowe UI na sprawdzonym fundamencie (F-05, F-06, S-46–S-60, otwarty 15.11.2026, gwiazda przewodnia S-51) i pozycje odroczone. Strzałka prowadzi od warunku wstępnego do elementu, który od niego zależy.</desc>
+<desc id="d">Roadmapa z context/foundation/roadmap.md v6.2 jako oś od lewej do prawej: kamień milowy M-1 (F-01–F-03, S-01–S-07, ukończony), M-2 MVP Quality &amp; Reliability Hardening (F-04, S-08–S-19, zamknięty 27.10.2026, S-12 zaparkowany), M-3 Drugie źródło na utwardzonym rdzeniu (S-20–S-29, zamknięty 01.11.2026, gwiazda przewodnia S-20), M-4 Weryfikacja i regresja (S-30–S-45, zamknięty 15.11.2026, gwiazda przewodnia S-31), M-5 Nowe UI na sprawdzonym fundamencie (F-05–F-08, S-46–S-60, otwarty 15.11.2026, gwiazda przewodnia S-51) i pozycje odroczone. Strzałka prowadzi od warunku wstępnego do elementu, który od niego zależy.</desc>
 <defs>
 <marker id="arrow-lime" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1 L9 5 L1 9" fill="none" stroke="#c3f08c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></marker>
 <marker id="arrow-done" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1 L9 5 L1 9" fill="none" stroke="#5fd18f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></marker>
@@ -12,8 +12,8 @@
 <linearGradient id="hero" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#141c21"/><stop offset="1" stop-color="#121c17"/></linearGradient>
 <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse"><path d="M32 0 H0 V32" fill="none" stroke="#ffffff" stroke-opacity="0.025" stroke-width="1"/></pattern>
 </defs>
-<rect x="0.0" y="0.0" width="9290.0" height="2519.0" rx="0" fill="#0d1316" />
-<rect x="0.0" y="0.0" width="9290.0" height="2519.0" rx="0" fill="url(#grid)" />
+<rect x="0.0" y="0.0" width="9290.0" height="2609.0" rx="0" fill="#0d1316" />
+<rect x="0.0" y="0.0" width="9290.0" height="2609.0" rx="0" fill="url(#grid)" />
 <rect x="56.0" y="40.0" width="40.0" height="40.0" rx="10" fill="#c3f08c" />
 <text x="66.0" y="67.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="20" font-weight="800" fill="#0d1316">S</text>
 <circle cx="84" cy="66" r="2.6" fill="#0d1316"/>
@@ -21,39 +21,41 @@
 <text x="108.0" y="75.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="9.5" font-weight="600" fill="#a2afb4" letter-spacing="2.4">MARKET INTELLIGENCE</text>
 <text x="56.0" y="134.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="700" fill="#a2afb4" letter-spacing="2">MILESTONES I ZALEŻNOŚCI</text>
 <text x="56.0" y="172.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="31" font-weight="700" fill="#eaf0f2">Roadmapa produktu</text>
-<text x="56.0" y="202.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="400" fill="#a2afb4">Źródło: context/foundation/roadmap.md  ·  v6  ·  stan 15.11.2026  ·  bez terminów — kolejność wynika z zależności</text>
+<text x="56.0" y="202.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="400" fill="#a2afb4">Źródło: context/foundation/roadmap.md  ·  v6.2  ·  stan 21.11.2026  ·  bez terminów — kolejność wynika z zależności</text>
 <rect x="6782.0" y="36.0" width="820.0" height="214.0" rx="14" fill="url(#hero)" stroke="#2b373e" stroke-width="1" />
 <circle cx="6864.0" cy="136" r="46" fill="none" stroke="#232d32" stroke-width="9"/>
-<path d="M6864.0 90 A46 46 0 1 1 6818.47 129.45" fill="none" stroke="#5fd18f" stroke-width="9" stroke-linecap="round"/>
-<text x="6864.0" y="140.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="22" font-weight="700" fill="#eaf0f2" text-anchor="middle">77%</text>
-<text x="6864.0" y="158.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="500" fill="#a2afb4" text-anchor="middle">51 / 66</text>
+<path d="M6864.0 90 A46 46 0 1 1 6818.20 131.76" fill="none" stroke="#5fd18f" stroke-width="9" stroke-linecap="round"/>
+<text x="6864.0" y="140.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="22" font-weight="700" fill="#eaf0f2" text-anchor="middle">76%</text>
+<text x="6864.0" y="158.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="500" fill="#a2afb4" text-anchor="middle">52 / 68</text>
 <text x="6864.0" y="222.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="700" fill="#a2afb4" text-anchor="middle" letter-spacing="1.2">M-1 … M-5</text>
 <text x="6946.0" y="70.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="700" fill="#a2afb4" letter-spacing="1.6">POSTĘP KAMIENIA MILOWEGO</text>
 <text x="6946.0" y="98.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" font-weight="700" fill="#eaf0f2">M-5 · Nowe UI na sprawdzonym fundamencie</text>
-<text x="7578.0" y="98.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" font-weight="700" fill="#eaf0f2" text-anchor="end">3 / 17</text>
-<rect x="6946.0" y="114.0" width="32.5" height="12.0" rx="3" fill="#14281d" stroke="#5fd18faa" stroke-width="1" />
-<rect x="6983.5" y="114.0" width="32.5" height="12.0" rx="3" fill="#14281d" stroke="#5fd18faa" stroke-width="1" />
-<rect x="7020.9" y="114.0" width="32.5" height="12.0" rx="3" fill="#14281d" stroke="#5fd18faa" stroke-width="1" />
-<rect x="7058.4" y="114.0" width="32.5" height="12.0" rx="3" fill="#232d32" stroke="#c3cdd055" stroke-width="1" />
-<rect x="7095.9" y="114.0" width="32.5" height="12.0" rx="3" fill="#232d32" stroke="#c3cdd055" stroke-width="1" />
-<rect x="7133.4" y="114.0" width="32.5" height="12.0" rx="3" fill="#232d32" stroke="#c3cdd055" stroke-width="1" />
-<rect x="7170.8" y="114.0" width="32.5" height="12.0" rx="3" fill="#232d32" stroke="#c3cdd055" stroke-width="1" />
-<rect x="7208.3" y="114.0" width="32.5" height="12.0" rx="3" fill="#232d32" stroke="#c3cdd055" stroke-width="1" />
-<rect x="7245.8" y="114.0" width="32.5" height="12.0" rx="3" fill="#232d32" stroke="#c3cdd055" stroke-width="1" />
-<rect x="7283.2" y="114.0" width="32.5" height="12.0" rx="3" fill="#232d32" stroke="#c3cdd055" stroke-width="1" />
-<rect x="7320.7" y="114.0" width="32.5" height="12.0" rx="3" fill="#232d32" stroke="#c3cdd055" stroke-width="1" />
-<rect x="7358.2" y="114.0" width="32.5" height="12.0" rx="3" fill="#232d32" stroke="#c3cdd055" stroke-width="1" />
-<rect x="7395.6" y="114.0" width="32.5" height="12.0" rx="3" fill="#232d32" stroke="#c3cdd055" stroke-width="1" />
-<rect x="7433.1" y="114.0" width="32.5" height="12.0" rx="3" fill="#232d32" stroke="#c3cdd055" stroke-width="1" />
-<rect x="7470.6" y="114.0" width="32.5" height="12.0" rx="3" fill="#232d32" stroke="#c3cdd055" stroke-width="1" />
-<rect x="7508.1" y="114.0" width="32.5" height="12.0" rx="3" fill="#232d32" stroke="#c3cdd055" stroke-width="1" />
-<rect x="7545.5" y="114.0" width="32.5" height="12.0" rx="3" fill="#232d32" stroke="#c3cdd055" stroke-width="1" />
+<text x="7578.0" y="98.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" font-weight="700" fill="#eaf0f2" text-anchor="end">4 / 19</text>
+<rect x="6946.0" y="114.0" width="28.5" height="12.0" rx="3" fill="#14281d" stroke="#5fd18faa" stroke-width="1" />
+<rect x="6979.5" y="114.0" width="28.5" height="12.0" rx="3" fill="#14281d" stroke="#5fd18faa" stroke-width="1" />
+<rect x="7013.1" y="114.0" width="28.5" height="12.0" rx="3" fill="#14281d" stroke="#5fd18faa" stroke-width="1" />
+<rect x="7046.6" y="114.0" width="28.5" height="12.0" rx="3" fill="#13232e" stroke="#8ccbe8aa" stroke-width="1" />
+<rect x="7080.1" y="114.0" width="28.5" height="12.0" rx="3" fill="#14281d" stroke="#5fd18faa" stroke-width="1" />
+<rect x="7113.6" y="114.0" width="28.5" height="12.0" rx="3" fill="#232d32" stroke="#c3cdd055" stroke-width="1" />
+<rect x="7147.2" y="114.0" width="28.5" height="12.0" rx="3" fill="#232d32" stroke="#c3cdd055" stroke-width="1" />
+<rect x="7180.7" y="114.0" width="28.5" height="12.0" rx="3" fill="#232d32" stroke="#c3cdd055" stroke-width="1" />
+<rect x="7214.2" y="114.0" width="28.5" height="12.0" rx="3" fill="#232d32" stroke="#c3cdd055" stroke-width="1" />
+<rect x="7247.7" y="114.0" width="28.5" height="12.0" rx="3" fill="#232d32" stroke="#c3cdd055" stroke-width="1" />
+<rect x="7281.3" y="114.0" width="28.5" height="12.0" rx="3" fill="#232d32" stroke="#c3cdd055" stroke-width="1" />
+<rect x="7314.8" y="114.0" width="28.5" height="12.0" rx="3" fill="#232d32" stroke="#c3cdd055" stroke-width="1" />
+<rect x="7348.3" y="114.0" width="28.5" height="12.0" rx="3" fill="#232d32" stroke="#c3cdd055" stroke-width="1" />
+<rect x="7381.8" y="114.0" width="28.5" height="12.0" rx="3" fill="#232d32" stroke="#c3cdd055" stroke-width="1" />
+<rect x="7415.4" y="114.0" width="28.5" height="12.0" rx="3" fill="#232d32" stroke="#c3cdd055" stroke-width="1" />
+<rect x="7448.9" y="114.0" width="28.5" height="12.0" rx="3" fill="#232d32" stroke="#c3cdd055" stroke-width="1" />
+<rect x="7482.4" y="114.0" width="28.5" height="12.0" rx="3" fill="#232d32" stroke="#c3cdd055" stroke-width="1" />
+<rect x="7515.9" y="114.0" width="28.5" height="12.0" rx="3" fill="#232d32" stroke="#c3cdd055" stroke-width="1" />
+<rect x="7549.5" y="114.0" width="28.5" height="12.0" rx="3" fill="#232d32" stroke="#c3cdd055" stroke-width="1" />
 <circle cx="6950.0" cy="147" r="4" fill="#5fd18f" stroke="#5fd18f" stroke-width="1.2"/>
-<text x="6959.0" y="151.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="500" fill="#eaf0f2">3 ukończone</text>
+<text x="6959.0" y="151.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="500" fill="#eaf0f2">4 ukończone</text>
 <circle cx="7100.0" cy="147" r="4" fill="#f2c46d" stroke="#f2c46d" stroke-width="1.2"/>
 <text x="7109.0" y="151.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="500" fill="#a2afb4">0 w toku</text>
 <circle cx="7250.0" cy="147" r="4" fill="#13232e" stroke="#8ccbe8" stroke-width="1.2"/>
-<text x="7259.0" y="151.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="500" fill="#a2afb4">0 gotowych do planowania</text>
+<text x="7259.0" y="151.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="500" fill="#eaf0f2">1 gotowe do planowania</text>
 <circle cx="6950.0" cy="169" r="4" fill="#232d32" stroke="#c3cdd0" stroke-width="1.2"/>
 <text x="6959.0" y="173.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="500" fill="#eaf0f2">14 proponowanych</text>
 <circle cx="7100.0" cy="169" r="4" fill="#141c21" stroke="#9aa8ae" stroke-width="1.2"/>
@@ -142,7 +144,7 @@
 <circle cx="6802.0" cy="316" r="3.5" fill="#f2c46d"/>
 <text x="6828.0" y="290.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="700" fill="#f2c46d">M-5</text>
 <text x="6861.2" y="290.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="700" fill="#eaf0f2">Nowe UI na sprawdzonym fundamencie</text>
-<text x="6828.0" y="346.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#f2c46d">Otwarty 15.11.2026  ·  3 / 17</text>
+<text x="6828.0" y="346.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#f2c46d">Otwarty 15.11.2026  ·  4 / 19</text>
 <line x1="6802.0" y1="332" x2="6802.0" y2="400" stroke="#f2c46d" stroke-opacity="0.35" stroke-width="1.5" stroke-dasharray="2 5"/>
 <circle cx="8466.0" cy="316" r="9" fill="#0d1316" stroke="#a2afb4" stroke-width="2" stroke-dasharray="3 3"/>
 <text x="8492.0" y="290.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="700" fill="#a2afb4">PO M-5</text>
@@ -1237,338 +1239,384 @@
 <line x1="6084.4" y1="1887" x2="6646.0" y2="1887" stroke="#a2afb4" stroke-opacity="0.35" stroke-dasharray="2 4"/>
 <rect x="6285.9" y="1878.0" width="158.5" height="18.0" rx="9" fill="#141c21" />
 <text x="6365.2" y="1891.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10" font-weight="600" fill="#9aa8ae" text-anchor="middle" letter-spacing="1">niezależne · równolegle</text>
-<rect x="6782.0" y="400.0" width="1568.0" height="2047.0" rx="16" fill="#11181c" stroke="#c3f08c40" stroke-width="1" />
+<rect x="6782.0" y="400.0" width="1568.0" height="2137.0" rx="16" fill="#11181c" stroke="#c3f08c40" stroke-width="1" />
 <text x="6810.0" y="440.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="13" font-weight="700" fill="#a2afb4">M-5</text>
 <text x="6847.1" y="440.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#eaf0f2">Nowe UI na sprawdzonym fundamencie</text>
 <rect x="7223.1" y="425.0" width="140.6" height="20.0" rx="5" fill="#33291a" stroke="#f2c46d55" stroke-width="1" />
 <circle cx="7235.1" cy="435.0" r="3" fill="#f2c46d"/>
 <text x="7244.1" y="439.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="600" fill="#f2c46d">Otwarty 15.11.2026</text>
-<text x="6810.0" y="466.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="400" fill="#a2afb4">Nowy, spójny interfejs — strumień z inspektorem oceny, czytnik z podświetlonymi cytatami, katalog celów z proporcjami stanowisk i przegląd dnia — na wspólnym fundamencie, a działanie</text>
-<text x="6810.0" y="484.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="400" fill="#a2afb4">i wygląd pilnują testy w przeglądarce w CI.</text>
+<text x="6810.0" y="466.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="400" fill="#a2afb4">Nowy, spójny interfejs według zaakceptowanego projektu — lista postów z oceną w panelu i podświetlonymi cytatami, katalog celów z proporcjami stanowisk i przegląd dnia — na wspólnym</text>
+<text x="6810.0" y="484.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="400" fill="#a2afb4">fundamencie, a działanie i wygląd pilnują testy w przeglądarce w CI.</text>
 <rect x="8110.0" y="430.0" width="160.0" height="8.0" rx="4" fill="#232d32" />
-<rect x="8110.0" y="430.0" width="28.2" height="8.0" rx="4" fill="#c3f08c" />
-<text x="8322.0" y="440.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="700" fill="#c3f08c" text-anchor="end">3 / 17</text>
-<rect x="6806.0" y="498.0" width="1520.0" height="740.0" rx="12" fill="#141c21" stroke="#222d33" stroke-width="1" />
+<rect x="8110.0" y="430.0" width="33.7" height="8.0" rx="4" fill="#c3f08c" />
+<text x="8322.0" y="440.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="700" fill="#c3f08c" text-anchor="end">4 / 19</text>
+<rect x="6806.0" y="498.0" width="1520.0" height="776.0" rx="12" fill="#141c21" stroke="#222d33" stroke-width="1" />
 <rect x="6822.0" y="512.0" width="26.0" height="26.0" rx="7" fill="#c3f08c22" stroke="#c3f08c77" stroke-width="1" />
 <text x="6835.0" y="530.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="13" font-weight="700" fill="#c3f08c" text-anchor="middle">A</text>
 <text x="6860.0" y="530.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#eaf0f2">Siatka i fundament UI</text>
-<text x="6860.0" y="554.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#a2afb4">Testy działania i wyglądu przed przebudową; wspólne pliki, fala sekwencyjna</text>
-<text x="8310.0" y="530.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600" fill="#9aa8ae" text-anchor="end">3 / 7 ukończonych</text>
+<text x="6860.0" y="554.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#a2afb4">Testy, projekt UI/UX i jego tokeny przed przebudową; fala sekwencyjna</text>
+<text x="8310.0" y="530.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600" fill="#9aa8ae" text-anchor="end">4 / 9 ukończonych</text>
 <line x1="6822.0" y1="572" x2="8310.0" y2="572" stroke="#222d33"/>
-<rect x="6806.0" y="1256.0" width="1211.2" height="740.0" rx="12" fill="#141c21" stroke="#222d33" stroke-width="1" />
-<rect x="6822.0" y="1270.0" width="26.0" height="26.0" rx="7" fill="#8ccbe822" stroke="#8ccbe877" stroke-width="1" />
-<text x="6835.0" y="1288.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="13" font-weight="700" fill="#8ccbe8" text-anchor="middle">B</text>
-<text x="6860.0" y="1288.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#eaf0f2">Widok wpisu</text>
-<text x="6860.0" y="1312.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#a2afb4">Gwiazda przewodnia, potem przekroje listy równolegle</text>
-<text x="8001.2" y="1288.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600" fill="#9aa8ae" text-anchor="end">0 / 6 ukończonych</text>
-<line x1="6822.0" y1="1330" x2="8001.2" y2="1330" stroke="#222d33"/>
-<rect x="8041.2" y="1256.0" width="284.8" height="740.0" rx="12" fill="#141c21" stroke="#222d33" stroke-width="1" />
-<rect x="8057.2" y="1270.0" width="26.0" height="26.0" rx="7" fill="#f2c46d22" stroke="#f2c46d77" stroke-width="1" />
-<text x="8070.2" y="1288.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="13" font-weight="700" fill="#f2c46d" text-anchor="middle">D</text>
-<text x="8095.2" y="1288.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#eaf0f2">Jakość ocen</text>
-<text x="8095.2" y="1312.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#a2afb4">Chroni widoki po celu</text>
-<text x="8310.0" y="1288.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600" fill="#9aa8ae" text-anchor="end">0 / 1 ukończonych</text>
-<line x1="8057.2" y1="1330" x2="8310.0" y2="1330" stroke="#222d33"/>
-<rect x="6806.0" y="2014.0" width="902.4" height="413.0" rx="12" fill="#141c21" stroke="#222d33" stroke-width="1" />
-<rect x="6822.0" y="2028.0" width="26.0" height="26.0" rx="7" fill="#8ccbe822" stroke="#8ccbe877" stroke-width="1" />
-<text x="6835.0" y="2046.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="13" font-weight="700" fill="#8ccbe8" text-anchor="middle">C</text>
-<text x="6860.0" y="2046.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#eaf0f2">Wokół celu</text>
-<text x="6860.0" y="2070.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#a2afb4">Agregacja po tekście celu; dołącza do B przy S-52 i S-55</text>
-<text x="7692.4" y="2046.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600" fill="#9aa8ae" text-anchor="end">0 / 3 ukończonych</text>
-<line x1="6822.0" y1="2088" x2="7692.4" y2="2088" stroke="#222d33"/>
-<path d="M7074.8 899.0 L7130.8 899.0" fill="none" stroke="#c3f08c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-lime)" data-from="F-05" data-to="F-06"/>
-<path d="M7383.6 899.0 L7411.6 899.0 L7411.6 735.5 L7439.6 735.5" fill="none" stroke="#c3f08c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-lime)" data-from="F-06" data-to="S-46"/>
-<path d="M7692.4 735.5 L7720.4 735.5 L7720.4 899.0 L7748.4 899.0" fill="none" stroke="#c3f08c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-lime)" data-from="S-46" data-to="S-47"/>
-<path d="M7566.0 875.0 L7566.0 923.0" fill="none" stroke="#8ccbe8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-sky)" data-from="S-46" data-to="S-49"/>
-<path d="M8001.2 899.0 L8029.2 899.0 L8029.2 735.5 L8057.2 735.5" fill="none" stroke="#c3f08c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-lime)" data-from="S-47" data-to="S-48"/>
-<path d="M8183.6 875.0 L8183.6 923.0" fill="none" stroke="#8ccbe8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-sky)" data-from="S-48" data-to="S-50"/>
-<path d="M7074.8 1657.0 L7102.8 1657.0 L7102.8 1493.5 L7130.8 1493.5" fill="none" stroke="#8ccbe8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-sky)" data-from="S-51" data-to="S-52"/>
-<path d="M7074.8 1657.0 L7102.8 1657.0 L7102.8 1820.5 L7130.8 1820.5" fill="none" stroke="#8ccbe8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-sky)" data-from="S-51" data-to="S-53"/>
-<path d="M7074.8 2251.5 L7130.8 2251.5" fill="none" stroke="#8ccbe8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-sky)" data-from="S-57" data-to="S-58"/>
-<path d="M7383.6 2251.5 L7439.6 2251.5" fill="none" stroke="#8ccbe8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-sky)" data-from="S-58" data-to="S-59"/>
+<rect x="6806.0" y="1292.0" width="1211.2" height="776.0" rx="12" fill="#141c21" stroke="#222d33" stroke-width="1" />
+<rect x="6822.0" y="1306.0" width="26.0" height="26.0" rx="7" fill="#8ccbe822" stroke="#8ccbe877" stroke-width="1" />
+<text x="6835.0" y="1324.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="13" font-weight="700" fill="#8ccbe8" text-anchor="middle">B</text>
+<text x="6860.0" y="1324.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#eaf0f2">Posty: lista i panel</text>
+<text x="6860.0" y="1348.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#a2afb4">Gwiazda przewodnia, potem przekroje listy we wspólnym panelu filtrów</text>
+<text x="8001.2" y="1324.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600" fill="#9aa8ae" text-anchor="end">0 / 6 ukończonych</text>
+<line x1="6822.0" y1="1366" x2="8001.2" y2="1366" stroke="#222d33"/>
+<rect x="8041.2" y="1292.0" width="284.8" height="776.0" rx="12" fill="#141c21" stroke="#222d33" stroke-width="1" />
+<rect x="8057.2" y="1306.0" width="26.0" height="26.0" rx="7" fill="#f2c46d22" stroke="#f2c46d77" stroke-width="1" />
+<text x="8070.2" y="1324.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="13" font-weight="700" fill="#f2c46d" text-anchor="middle">D</text>
+<text x="8095.2" y="1324.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#eaf0f2">Jakość ocen</text>
+<text x="8095.2" y="1348.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#a2afb4">Chroni widoki po celu</text>
+<text x="8310.0" y="1324.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600" fill="#9aa8ae" text-anchor="end">0 / 1 ukończonych</text>
+<line x1="8057.2" y1="1366" x2="8310.0" y2="1366" stroke="#222d33"/>
+<rect x="6806.0" y="2086.0" width="902.4" height="431.0" rx="12" fill="#141c21" stroke="#222d33" stroke-width="1" />
+<rect x="6822.0" y="2100.0" width="26.0" height="26.0" rx="7" fill="#8ccbe822" stroke="#8ccbe877" stroke-width="1" />
+<text x="6835.0" y="2118.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="13" font-weight="700" fill="#8ccbe8" text-anchor="middle">C</text>
+<text x="6860.0" y="2118.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#eaf0f2">Wokół celu</text>
+<text x="6860.0" y="2142.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#a2afb4">Katalog i karta celu na jednym ekranie; dołącza do B przy S-52 i S-55</text>
+<text x="7692.4" y="2118.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600" fill="#9aa8ae" text-anchor="end">0 / 3 ukończonych</text>
+<line x1="6822.0" y1="2160" x2="7692.4" y2="2160" stroke="#222d33"/>
+<path d="M6948.4 893.0 L6948.4 941.0" fill="none" stroke="#c3f08c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-lime)" data-from="F-05" data-to="F-06"/>
+<path d="M7074.8 1089.5 L7102.8 1089.5 L7102.8 744.5 L7130.8 744.5" fill="none" stroke="#c3f08c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-lime)" data-from="F-06" data-to="S-46"/>
+<path d="M7383.6 744.5 L7411.6 744.5 L7411.6 917.0 L7439.6 917.0" fill="none" stroke="#c3f08c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-lime)" data-from="S-46" data-to="F-08"/>
+<path d="M7383.6 1089.5 L7411.6 1089.5 L7411.6 917.0 L7439.6 917.0" fill="none" stroke="#c3f08c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-lime)" data-from="F-07" data-to="F-08"/>
+<path d="M7692.4 917.0 L7720.4 917.0 L7720.4 744.5 L7748.4 744.5" fill="none" stroke="#c3f08c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-lime)" data-from="F-08" data-to="S-47"/>
+<path d="M7692.4 917.0 L7720.4 917.0 L7720.4 1089.5 L7748.4 1089.5" fill="none" stroke="#8ccbe8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-sky)" data-from="F-08" data-to="S-49"/>
+<path d="M8001.2 744.5 L8057.2 744.5" fill="none" stroke="#c3f08c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-lime)" data-from="S-47" data-to="S-48"/>
+<path d="M8183.6 893.0 L8183.6 941.0" fill="none" stroke="#8ccbe8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-sky)" data-from="S-48" data-to="S-50"/>
+<path d="M7074.8 1711.0 L7102.8 1711.0 L7102.8 1538.5 L7130.8 1538.5" fill="none" stroke="#8ccbe8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-sky)" data-from="S-51" data-to="S-52"/>
+<path d="M7074.8 1711.0 L7102.8 1711.0 L7102.8 1883.5 L7130.8 1883.5" fill="none" stroke="#8ccbe8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-sky)" data-from="S-51" data-to="S-53"/>
+<path d="M7074.8 2332.5 L7130.8 2332.5" fill="none" stroke="#8ccbe8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-sky)" data-from="S-57" data-to="S-58"/>
+<path d="M7383.6 2332.5 L7439.6 2332.5" fill="none" stroke="#8ccbe8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-sky)" data-from="S-58" data-to="S-59"/>
 <g data-id="F-05" data-status="done">
-<rect x="6822.0" y="759.5" width="252.8" height="279.0" rx="12" fill="#151e23" stroke="#2f5a42" stroke-width="1" />
-<text x="6836.0" y="784.5" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="13" font-weight="700" fill="#5fd18f">F-05</text>
-<rect x="6975.5" y="770.5" width="85.3" height="20.0" rx="5" fill="#14281d" stroke="#5fd18f55" stroke-width="1" />
-<path d="M6984.5 780.5 l3 3 l5.5 -6" fill="none" stroke="#5fd18f" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-<text x="6996.5" y="784.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="600" fill="#5fd18f">Ukończone</text>
-<text x="6836.0" y="810.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#eaf0f2">Testy w przeglądarce</text>
-<text x="6836.0" y="832.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#eaf0f2">w CI</text>
-<text x="6836.0" y="860.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">(fundament) testy w</text>
-<text x="6836.0" y="880.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">przeglądarce w repo i w CI</text>
-<text x="6836.0" y="900.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">na atrapie API ustawianej z</text>
-<text x="6836.0" y="920.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">testu; smoke obecnych</text>
-<text x="6836.0" y="940.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">przepływów</text>
-<line x1="6836.0" y1="964.5" x2="7060.8" y2="964.5" stroke="#222d33"/>
-<text x="6836.0" y="982.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="9.5" font-weight="700" fill="#9aa8ae" letter-spacing="1.2">WYMAGA</text>
-<text x="6896.0" y="982.5" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="11" font-weight="700" fill="#a2afb4">—</text>
-<text x="6836.0" y="1004.5" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#9aa8ae">e2e-harness</text>
+<rect x="6822.0" y="596.0" width="252.8" height="297.0" rx="12" fill="#151e23" stroke="#2f5a42" stroke-width="1" />
+<text x="6836.0" y="621.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="13" font-weight="700" fill="#5fd18f">F-05</text>
+<rect x="6975.5" y="607.0" width="85.3" height="20.0" rx="5" fill="#14281d" stroke="#5fd18f55" stroke-width="1" />
+<path d="M6984.5 617.0 l3 3 l5.5 -6" fill="none" stroke="#5fd18f" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="6996.5" y="621.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="600" fill="#5fd18f">Ukończone</text>
+<text x="6836.0" y="647.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#eaf0f2">Testy w przeglądarce</text>
+<text x="6836.0" y="669.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#eaf0f2">w CI</text>
+<text x="6836.0" y="697.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">(fundament) testy w</text>
+<text x="6836.0" y="717.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">przeglądarce w repo i w CI</text>
+<text x="6836.0" y="737.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">na atrapie API ustawianej z</text>
+<text x="6836.0" y="757.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">testu; smoke obecnych</text>
+<text x="6836.0" y="777.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">przepływów</text>
+<line x1="6836.0" y1="819" x2="7060.8" y2="819" stroke="#222d33"/>
+<text x="6836.0" y="837.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="9.5" font-weight="700" fill="#9aa8ae" letter-spacing="1.2">WYMAGA</text>
+<text x="6896.0" y="837.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="11" font-weight="700" fill="#a2afb4">—</text>
+<text x="6836.0" y="859.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#9aa8ae">e2e-harness</text>
 </g>
 <g data-id="F-06" data-status="done">
-<rect x="7130.8" y="759.5" width="252.8" height="279.0" rx="12" fill="#151e23" stroke="#2f5a42" stroke-width="1" />
-<text x="7144.8" y="784.5" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="13" font-weight="700" fill="#5fd18f">F-06</text>
-<rect x="7284.3" y="770.5" width="85.3" height="20.0" rx="5" fill="#14281d" stroke="#5fd18f55" stroke-width="1" />
-<path d="M7293.3 780.5 l3 3 l5.5 -6" fill="none" stroke="#5fd18f" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-<text x="7305.3" y="784.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="600" fill="#5fd18f">Ukończone</text>
-<text x="7144.8" y="810.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#eaf0f2">Zrzuty porównawcze i</text>
-<text x="7144.8" y="832.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#eaf0f2">dostępność</text>
-<text x="7144.8" y="860.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">(fundament) zrzuty katalogu</text>
-<text x="7144.8" y="880.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">komponentów i widoków w obu</text>
-<text x="7144.8" y="900.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">motywach i przy 375 px oraz</text>
-<text x="7144.8" y="920.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">test dostępności w CI</text>
-<line x1="7144.8" y1="964.5" x2="7369.6" y2="964.5" stroke="#222d33"/>
-<text x="7144.8" y="982.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="9.5" font-weight="700" fill="#9aa8ae" letter-spacing="1.2">WYMAGA</text>
-<text x="7204.8" y="982.5" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="11" font-weight="700" fill="#eaf0f2">F-05</text>
-<text x="7144.8" y="1004.5" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#9aa8ae">visual-regression</text>
+<rect x="6822.0" y="941.0" width="252.8" height="297.0" rx="12" fill="#151e23" stroke="#2f5a42" stroke-width="1" />
+<text x="6836.0" y="966.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="13" font-weight="700" fill="#5fd18f">F-06</text>
+<rect x="6975.5" y="952.0" width="85.3" height="20.0" rx="5" fill="#14281d" stroke="#5fd18f55" stroke-width="1" />
+<path d="M6984.5 962.0 l3 3 l5.5 -6" fill="none" stroke="#5fd18f" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="6996.5" y="966.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="600" fill="#5fd18f">Ukończone</text>
+<text x="6836.0" y="992.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#eaf0f2">Zrzuty porównawcze i</text>
+<text x="6836.0" y="1014.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#eaf0f2">dostępność</text>
+<text x="6836.0" y="1042.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">(fundament) zrzuty katalogu</text>
+<text x="6836.0" y="1062.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">komponentów i widoków w obu</text>
+<text x="6836.0" y="1082.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">motywach i przy 375 px oraz</text>
+<text x="6836.0" y="1102.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">test dostępności w CI</text>
+<line x1="6836.0" y1="1164" x2="7060.8" y2="1164" stroke="#222d33"/>
+<text x="6836.0" y="1182.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="9.5" font-weight="700" fill="#9aa8ae" letter-spacing="1.2">WYMAGA</text>
+<text x="6896.0" y="1182.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="11" font-weight="700" fill="#eaf0f2">F-05</text>
+<text x="6836.0" y="1204.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#9aa8ae">visual-regression</text>
 </g>
 <g data-id="S-46" data-status="done">
-<rect x="7439.6" y="596.0" width="252.8" height="279.0" rx="12" fill="#151e23" stroke="#2f5a42" stroke-width="1" />
-<text x="7453.6" y="621.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="13" font-weight="700" fill="#5fd18f">S-46</text>
-<rect x="7593.1" y="607.0" width="85.3" height="20.0" rx="5" fill="#14281d" stroke="#5fd18f55" stroke-width="1" />
-<path d="M7602.1 617.0 l3 3 l5.5 -6" fill="none" stroke="#5fd18f" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-<text x="7614.1" y="621.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="600" fill="#5fd18f">Ukończone</text>
-<text x="7453.6" y="647.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#eaf0f2">Motyw jasny i ciemny</text>
-<text x="7453.6" y="675.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">użytkownik przełącza motyw</text>
-<text x="7453.6" y="695.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">jasny i ciemny w nowej</text>
-<text x="7453.6" y="715.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">palecie, a wybór jest</text>
-<text x="7453.6" y="735.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">zapamiętany</text>
-<line x1="7453.6" y1="801" x2="7678.400000000001" y2="801" stroke="#222d33"/>
-<text x="7453.6" y="819.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="9.5" font-weight="700" fill="#9aa8ae" letter-spacing="1.2">WYMAGA</text>
-<text x="7513.6" y="819.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="11" font-weight="700" fill="#eaf0f2">F-06</text>
-<text x="7453.6" y="841.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#9aa8ae">light-dark-theme-switch</text>
+<rect x="7130.8" y="596.0" width="252.8" height="297.0" rx="12" fill="#151e23" stroke="#2f5a42" stroke-width="1" />
+<text x="7144.8" y="621.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="13" font-weight="700" fill="#5fd18f">S-46</text>
+<rect x="7284.3" y="607.0" width="85.3" height="20.0" rx="5" fill="#14281d" stroke="#5fd18f55" stroke-width="1" />
+<path d="M7293.3 617.0 l3 3 l5.5 -6" fill="none" stroke="#5fd18f" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="7305.3" y="621.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="600" fill="#5fd18f">Ukończone</text>
+<text x="7144.8" y="647.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#eaf0f2">Motyw jasny i ciemny</text>
+<text x="7144.8" y="675.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">użytkownik przełącza motyw</text>
+<text x="7144.8" y="695.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">jasny i ciemny w nowej</text>
+<text x="7144.8" y="715.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">palecie, a wybór jest</text>
+<text x="7144.8" y="735.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">zapamiętany</text>
+<line x1="7144.8" y1="819" x2="7369.6" y2="819" stroke="#222d33"/>
+<text x="7144.8" y="837.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="9.5" font-weight="700" fill="#9aa8ae" letter-spacing="1.2">WYMAGA</text>
+<text x="7204.8" y="837.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="11" font-weight="700" fill="#eaf0f2">F-06</text>
+<text x="7144.8" y="859.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#9aa8ae">light-dark-theme-switch</text>
+</g>
+<g data-id="F-07" data-status="done">
+<rect x="7130.8" y="941.0" width="252.8" height="297.0" rx="12" fill="#151e23" stroke="#2f5a42" stroke-width="1" />
+<text x="7144.8" y="966.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="13" font-weight="700" fill="#5fd18f">F-07</text>
+<rect x="7284.3" y="952.0" width="85.3" height="20.0" rx="5" fill="#14281d" stroke="#5fd18f55" stroke-width="1" />
+<path d="M7293.3 962.0 l3 3 l5.5 -6" fill="none" stroke="#5fd18f" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="7305.3" y="966.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="600" fill="#5fd18f">Ukończone</text>
+<text x="7144.8" y="992.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#eaf0f2">Projekt UI/UX całej</text>
+<text x="7144.8" y="1014.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#eaf0f2">aplikacji</text>
+<text x="7144.8" y="1042.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">(fundament) projekt UI/UX</text>
+<text x="7144.8" y="1062.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">od nowa według standardów:</text>
+<text x="7144.8" y="1082.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">architektura informacji,</text>
+<text x="7144.8" y="1102.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">tokeny, komponenty,</text>
+<text x="7144.8" y="1122.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">prototypy ekranów</text>
+<line x1="7144.8" y1="1164" x2="7369.6" y2="1164" stroke="#222d33"/>
+<text x="7144.8" y="1182.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="9.5" font-weight="700" fill="#9aa8ae" letter-spacing="1.2">WYMAGA</text>
+<text x="7204.8" y="1182.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="11" font-weight="700" fill="#a2afb4">—</text>
+<text x="7144.8" y="1204.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#9aa8ae">ui-design-system</text>
+</g>
+<g data-id="F-08" data-status="ready">
+<rect x="7439.6" y="768.5" width="252.8" height="297.0" rx="12" fill="#151e23" stroke="#2e4d60" stroke-width="1" />
+<text x="7453.6" y="793.5" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="13" font-weight="700" fill="#8ccbe8">F-08</text>
+<rect x="7525.6" y="779.5" width="152.8" height="20.0" rx="5" fill="#13232e" stroke="#8ccbe855" stroke-width="1" />
+<circle cx="7537.6" cy="789.5" r="3" fill="#8ccbe8"/>
+<text x="7546.6" y="793.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="600" fill="#8ccbe8">Gotowe do planowania</text>
+<text x="7453.6" y="819.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#eaf0f2">Tokeny, kroje i</text>
+<text x="7453.6" y="841.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#eaf0f2">komponenty bazowe</text>
+<text x="7453.6" y="869.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">(fundament) tokeny, kroje i</text>
+<text x="7453.6" y="889.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">komponenty bazowe z</text>
+<text x="7453.6" y="909.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">projektu F-07 w aplikacji;</text>
+<text x="7453.6" y="929.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">obecne widoki w nowym</text>
+<text x="7453.6" y="949.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">wyglądzie, w starym</text>
+<text x="7453.6" y="969.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">układzie</text>
+<line x1="7453.6" y1="991.5" x2="7678.400000000001" y2="991.5" stroke="#222d33"/>
+<text x="7453.6" y="1009.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="9.5" font-weight="700" fill="#9aa8ae" letter-spacing="1.2">WYMAGA</text>
+<text x="7513.6" y="1009.5" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="11" font-weight="700" fill="#eaf0f2">F-07, S-46</text>
+<text x="7453.6" y="1031.5" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#9aa8ae">design-tokens-and-components</text>
 </g>
 <g data-id="S-49" data-status="proposed">
-<rect x="7439.6" y="923.0" width="252.8" height="279.0" rx="12" fill="#151e23" stroke="#2f3b42" stroke-width="1" />
-<text x="7453.6" y="948.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="13" font-weight="700" fill="#c3cdd0">S-49</text>
-<rect x="7580.8" y="934.0" width="97.6" height="20.0" rx="5" fill="#232d32" stroke="#c3cdd055" stroke-width="1" />
-<circle cx="7592.8" cy="944.0" r="3" fill="#c3cdd0"/>
-<text x="7601.8" y="948.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="600" fill="#c3cdd0">Proponowane</text>
-<text x="7453.6" y="974.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#eaf0f2">Logowanie na wspólnym</text>
-<text x="7453.6" y="996.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#eaf0f2">fundamencie</text>
-<text x="7453.6" y="1024.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">logowanie i aktywacja na</text>
-<text x="7453.6" y="1044.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">wspólnych komponentach i</text>
-<text x="7453.6" y="1064.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">tokenach, bez literałów</text>
-<text x="7453.6" y="1084.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">stylu</text>
-<line x1="7453.6" y1="1128" x2="7678.400000000001" y2="1128" stroke="#222d33"/>
-<text x="7453.6" y="1146.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="9.5" font-weight="700" fill="#9aa8ae" letter-spacing="1.2">WYMAGA</text>
-<text x="7513.6" y="1146.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="11" font-weight="700" fill="#eaf0f2">S-46</text>
-<text x="7453.6" y="1168.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#9aa8ae">login-on-shared-foundation</text>
+<rect x="7748.4" y="941.0" width="252.8" height="297.0" rx="12" fill="#151e23" stroke="#2f3b42" stroke-width="1" />
+<text x="7762.4" y="966.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="13" font-weight="700" fill="#c3cdd0">S-49</text>
+<rect x="7889.6" y="952.0" width="97.6" height="20.0" rx="5" fill="#232d32" stroke="#c3cdd055" stroke-width="1" />
+<circle cx="7901.6" cy="962.0" r="3" fill="#c3cdd0"/>
+<text x="7910.6" y="966.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="600" fill="#c3cdd0">Proponowane</text>
+<text x="7762.4" y="992.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#eaf0f2">Logowanie na wspólnym</text>
+<text x="7762.4" y="1014.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#eaf0f2">fundamencie</text>
+<text x="7762.4" y="1042.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">logowanie i aktywacja na</text>
+<text x="7762.4" y="1062.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">wspólnych komponentach i</text>
+<text x="7762.4" y="1082.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">tokenach, bez literałów</text>
+<text x="7762.4" y="1102.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">stylu</text>
+<line x1="7762.4" y1="1164" x2="7987.2" y2="1164" stroke="#222d33"/>
+<text x="7762.4" y="1182.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="9.5" font-weight="700" fill="#9aa8ae" letter-spacing="1.2">WYMAGA</text>
+<text x="7822.4" y="1182.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="11" font-weight="700" fill="#eaf0f2">F-08</text>
+<text x="7762.4" y="1204.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#9aa8ae">login-on-shared-foundation</text>
 </g>
 <g data-id="S-47" data-status="proposed">
-<rect x="7748.4" y="759.5" width="252.8" height="279.0" rx="12" fill="#151e23" stroke="#2f3b42" stroke-width="1" />
-<text x="7762.4" y="784.5" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="13" font-weight="700" fill="#c3cdd0">S-47</text>
-<rect x="7889.6" y="770.5" width="97.6" height="20.0" rx="5" fill="#232d32" stroke="#c3cdd055" stroke-width="1" />
-<circle cx="7901.6" cy="780.5" r="3" fill="#c3cdd0"/>
-<text x="7910.6" y="784.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="600" fill="#c3cdd0">Proponowane</text>
-<text x="7762.4" y="810.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#eaf0f2">Stała nawigacja i</text>
-<text x="7762.4" y="832.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#eaf0f2">układ paneli</text>
-<text x="7762.4" y="860.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">użytkownik porusza się</text>
-<text x="7762.4" y="880.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">przez stałą nawigację w</text>
-<text x="7762.4" y="900.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">układzie paneli, bez</text>
-<text x="7762.4" y="920.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">nagłówka w każdym widoku</text>
-<line x1="7762.4" y1="964.5" x2="7987.2" y2="964.5" stroke="#222d33"/>
-<text x="7762.4" y="982.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="9.5" font-weight="700" fill="#9aa8ae" letter-spacing="1.2">WYMAGA</text>
-<text x="7822.4" y="982.5" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="11" font-weight="700" fill="#eaf0f2">S-46</text>
-<text x="7762.4" y="1004.5" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#9aa8ae">app-shell-navigation</text>
+<rect x="7748.4" y="596.0" width="252.8" height="297.0" rx="12" fill="#151e23" stroke="#2f3b42" stroke-width="1" />
+<text x="7762.4" y="621.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="13" font-weight="700" fill="#c3cdd0">S-47</text>
+<rect x="7889.6" y="607.0" width="97.6" height="20.0" rx="5" fill="#232d32" stroke="#c3cdd055" stroke-width="1" />
+<circle cx="7901.6" cy="617.0" r="3" fill="#c3cdd0"/>
+<text x="7910.6" y="621.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="600" fill="#c3cdd0">Proponowane</text>
+<text x="7762.4" y="647.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#eaf0f2">Powłoka z nawigacją u</text>
+<text x="7762.4" y="669.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#eaf0f2">góry</text>
+<text x="7762.4" y="697.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">pasek u góry: nawigacja</text>
+<text x="7762.4" y="717.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">według roli, data danych</text>
+<text x="7762.4" y="737.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">per źródło, motyw,</text>
+<text x="7762.4" y="757.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">wylogowanie; treść w jednej</text>
+<text x="7762.4" y="777.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">kolumnie</text>
+<line x1="7762.4" y1="819" x2="7987.2" y2="819" stroke="#222d33"/>
+<text x="7762.4" y="837.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="9.5" font-weight="700" fill="#9aa8ae" letter-spacing="1.2">WYMAGA</text>
+<text x="7822.4" y="837.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="11" font-weight="700" fill="#eaf0f2">F-08</text>
+<text x="7762.4" y="859.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#9aa8ae">app-shell-navigation</text>
 </g>
 <g data-id="S-48" data-status="proposed">
-<rect x="8057.2" y="596.0" width="252.8" height="279.0" rx="12" fill="#151e23" stroke="#2f3b42" stroke-width="1" />
+<rect x="8057.2" y="596.0" width="252.8" height="297.0" rx="12" fill="#151e23" stroke="#2f3b42" stroke-width="1" />
 <text x="8071.2" y="621.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="13" font-weight="700" fill="#c3cdd0">S-48</text>
 <rect x="8198.4" y="607.0" width="97.6" height="20.0" rx="5" fill="#232d32" stroke="#c3cdd055" stroke-width="1" />
 <circle cx="8210.4" cy="617.0" r="3" fill="#c3cdd0"/>
 <text x="8219.4" y="621.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="600" fill="#c3cdd0">Proponowane</text>
-<text x="8071.2" y="647.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#eaf0f2">Wspólne stany widoków</text>
-<text x="8071.2" y="675.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">każdy widok pokazuje te</text>
-<text x="8071.2" y="695.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">same stany ładowania,</text>
-<text x="8071.2" y="715.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">pustej listy i błędu z</text>
-<text x="8071.2" y="735.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">ponowieniem</text>
-<line x1="8071.2" y1="801" x2="8296.0" y2="801" stroke="#222d33"/>
-<text x="8071.2" y="819.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="9.5" font-weight="700" fill="#9aa8ae" letter-spacing="1.2">WYMAGA</text>
-<text x="8131.2" y="819.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="11" font-weight="700" fill="#eaf0f2">S-47</text>
-<text x="8071.2" y="841.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#9aa8ae">shared-view-states</text>
+<text x="8071.2" y="647.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#eaf0f2">Wspólne stany i</text>
+<text x="8071.2" y="669.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#eaf0f2">stronicowanie</text>
+<text x="8071.2" y="697.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">każdy widok ma to samo</text>
+<text x="8071.2" y="717.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">ładowanie, pustą listę,</text>
+<text x="8071.2" y="737.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">błąd z ponowieniem i</text>
+<text x="8071.2" y="757.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">stronicowanie</text>
+<line x1="8071.2" y1="819" x2="8296.0" y2="819" stroke="#222d33"/>
+<text x="8071.2" y="837.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="9.5" font-weight="700" fill="#9aa8ae" letter-spacing="1.2">WYMAGA</text>
+<text x="8131.2" y="837.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="11" font-weight="700" fill="#eaf0f2">S-47</text>
+<text x="8071.2" y="859.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#9aa8ae">shared-view-states</text>
 </g>
 <g data-id="S-50" data-status="proposed">
-<rect x="8057.2" y="923.0" width="252.8" height="279.0" rx="12" fill="#151e23" stroke="#2f3b42" stroke-width="1" />
-<text x="8071.2" y="948.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="13" font-weight="700" fill="#c3cdd0">S-50</text>
-<rect x="8198.4" y="934.0" width="97.6" height="20.0" rx="5" fill="#232d32" stroke="#c3cdd055" stroke-width="1" />
-<circle cx="8210.4" cy="944.0" r="3" fill="#c3cdd0"/>
-<text x="8219.4" y="948.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="600" fill="#c3cdd0">Proponowane</text>
-<text x="8071.2" y="974.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#eaf0f2">Panel admina z</text>
-<text x="8071.2" y="996.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#eaf0f2">komponentów</text>
-<text x="8071.2" y="1024.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">admin pracuje w panelu</text>
-<text x="8071.2" y="1044.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">złożonym z komponentów, w</text>
-<text x="8071.2" y="1064.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">nowym układzie</text>
-<line x1="8071.2" y1="1128" x2="8296.0" y2="1128" stroke="#222d33"/>
-<text x="8071.2" y="1146.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="9.5" font-weight="700" fill="#9aa8ae" letter-spacing="1.2">WYMAGA</text>
-<text x="8131.2" y="1146.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="11" font-weight="700" fill="#eaf0f2">S-48</text>
-<text x="8071.2" y="1168.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#9aa8ae">admin-panel-components</text>
+<rect x="8057.2" y="941.0" width="252.8" height="297.0" rx="12" fill="#151e23" stroke="#2f3b42" stroke-width="1" />
+<text x="8071.2" y="966.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="13" font-weight="700" fill="#c3cdd0">S-50</text>
+<rect x="8198.4" y="952.0" width="97.6" height="20.0" rx="5" fill="#232d32" stroke="#c3cdd055" stroke-width="1" />
+<circle cx="8210.4" cy="962.0" r="3" fill="#c3cdd0"/>
+<text x="8219.4" y="966.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="600" fill="#c3cdd0">Proponowane</text>
+<text x="8071.2" y="992.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#eaf0f2">Panel admina w trzech</text>
+<text x="8071.2" y="1014.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#eaf0f2">częściach</text>
+<text x="8071.2" y="1042.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">Przebiegi, Jakość ocen i</text>
+<text x="8071.2" y="1062.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">Nieudane posty pod własnymi</text>
+<text x="8071.2" y="1082.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">adresami; strona przebiegu</text>
+<text x="8071.2" y="1102.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">osobno</text>
+<line x1="8071.2" y1="1164" x2="8296.0" y2="1164" stroke="#222d33"/>
+<text x="8071.2" y="1182.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="9.5" font-weight="700" fill="#9aa8ae" letter-spacing="1.2">WYMAGA</text>
+<text x="8131.2" y="1182.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="11" font-weight="700" fill="#eaf0f2">S-48</text>
+<text x="8071.2" y="1204.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#9aa8ae">admin-panel-components</text>
 </g>
 <g data-id="S-51" data-status="proposed">
-<rect x="6822.0" y="1517.5" width="252.8" height="279.0" rx="12" fill="url(#star)" stroke="#c3f08c" stroke-width="1.8" />
-<text x="6836.0" y="1542.5" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="13" font-weight="700" fill="#c3f08c">S-51</text>
-<path d="M6882.9 1530.5 l2.3 4.7 5.2 .8 -3.8 3.6 .9 5.1 -4.6 -2.4 -4.6 2.4 .9 -5.1 -3.8 -3.6 5.2 -.8z" fill="#c3f08c"/>
-<rect x="6963.2" y="1528.5" width="97.6" height="20.0" rx="5" fill="#232d32" stroke="#c3cdd055" stroke-width="1" />
-<circle cx="6975.2" cy="1538.5" r="3" fill="#c3cdd0"/>
-<text x="6984.2" y="1542.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="600" fill="#c3cdd0">Proponowane</text>
-<text x="6836.0" y="1568.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#eaf0f2">Strumień z</text>
-<text x="6836.0" y="1590.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#eaf0f2">inspektorem oceny</text>
-<text x="6836.0" y="1618.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">użytkownik przegląda</text>
-<text x="6836.0" y="1638.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">strumień wpisów i czyta</text>
-<text x="6836.0" y="1658.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">ocenę wybranego wpisu w</text>
-<text x="6836.0" y="1678.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">panelu inspektora</text>
-<line x1="6836.0" y1="1722.5" x2="7060.8" y2="1722.5" stroke="#222d33"/>
-<text x="6836.0" y="1740.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="9.5" font-weight="700" fill="#9aa8ae" letter-spacing="1.2">WYMAGA</text>
-<text x="6896.0" y="1740.5" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="11" font-weight="700" fill="#eaf0f2">S-48</text>
-<text x="6836.0" y="1762.5" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#9aa8ae">stream-and-inspector</text>
+<rect x="6822.0" y="1562.5" width="252.8" height="297.0" rx="12" fill="url(#star)" stroke="#c3f08c" stroke-width="1.8" />
+<text x="6836.0" y="1587.5" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="13" font-weight="700" fill="#c3f08c">S-51</text>
+<path d="M6882.9 1575.5 l2.3 4.7 5.2 .8 -3.8 3.6 .9 5.1 -4.6 -2.4 -4.6 2.4 .9 -5.1 -3.8 -3.6 5.2 -.8z" fill="#c3f08c"/>
+<rect x="6963.2" y="1573.5" width="97.6" height="20.0" rx="5" fill="#232d32" stroke="#c3cdd055" stroke-width="1" />
+<circle cx="6975.2" cy="1583.5" r="3" fill="#c3cdd0"/>
+<text x="6984.2" y="1587.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="600" fill="#c3cdd0">Proponowane</text>
+<text x="6836.0" y="1613.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#eaf0f2">Lista postów z oceną</text>
+<text x="6836.0" y="1635.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#eaf0f2">w panelu</text>
+<text x="6836.0" y="1663.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">użytkownik przegląda zwartą</text>
+<text x="6836.0" y="1683.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">listę postów i czyta ocenę</text>
+<text x="6836.0" y="1703.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">wybranego posta w panelu</text>
+<text x="6836.0" y="1723.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">wysuwanym z prawej</text>
+<line x1="6836.0" y1="1785.5" x2="7060.8" y2="1785.5" stroke="#222d33"/>
+<text x="6836.0" y="1803.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="9.5" font-weight="700" fill="#9aa8ae" letter-spacing="1.2">WYMAGA</text>
+<text x="6896.0" y="1803.5" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="11" font-weight="700" fill="#eaf0f2">S-48</text>
+<text x="6836.0" y="1825.5" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#9aa8ae">stream-and-inspector</text>
 </g>
 <g data-id="S-52" data-status="proposed">
-<rect x="7130.8" y="1354.0" width="252.8" height="279.0" rx="12" fill="#151e23" stroke="#2f3b42" stroke-width="1" />
-<text x="7144.8" y="1379.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="13" font-weight="700" fill="#c3cdd0">S-52</text>
-<rect x="7272.0" y="1365.0" width="97.6" height="20.0" rx="5" fill="#232d32" stroke="#c3cdd055" stroke-width="1" />
-<circle cx="7284.0" cy="1375.0" r="3" fill="#c3cdd0"/>
-<text x="7293.0" y="1379.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="600" fill="#c3cdd0">Proponowane</text>
-<text x="7144.8" y="1405.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#eaf0f2">Domyślnie posty</text>
-<text x="7144.8" y="1427.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#eaf0f2">inwestycyjne</text>
-<text x="7144.8" y="1455.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">listy domyślnie bez postów</text>
-<text x="7144.8" y="1475.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">nieinwestycyjnych i</text>
-<text x="7144.8" y="1495.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">odsiewu, z przełącznikiem</text>
-<text x="7144.8" y="1515.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">„pokaż wszystkie”</text>
-<line x1="7144.8" y1="1559" x2="7369.6" y2="1559" stroke="#222d33"/>
-<text x="7144.8" y="1577.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="9.5" font-weight="700" fill="#9aa8ae" letter-spacing="1.2">WYMAGA</text>
-<text x="7204.8" y="1577.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="11" font-weight="700" fill="#eaf0f2">S-51</text>
-<text x="7144.8" y="1599.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#9aa8ae">investment-posts-by-default</text>
+<rect x="7130.8" y="1390.0" width="252.8" height="297.0" rx="12" fill="#151e23" stroke="#2f3b42" stroke-width="1" />
+<text x="7144.8" y="1415.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="13" font-weight="700" fill="#c3cdd0">S-52</text>
+<rect x="7272.0" y="1401.0" width="97.6" height="20.0" rx="5" fill="#232d32" stroke="#c3cdd055" stroke-width="1" />
+<circle cx="7284.0" cy="1411.0" r="3" fill="#c3cdd0"/>
+<text x="7293.0" y="1415.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="600" fill="#c3cdd0">Proponowane</text>
+<text x="7144.8" y="1441.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#eaf0f2">Domyślnie posty</text>
+<text x="7144.8" y="1463.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#eaf0f2">inwestycyjne</text>
+<text x="7144.8" y="1491.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">listy domyślnie bez postów</text>
+<text x="7144.8" y="1511.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">nieinwestycyjnych i</text>
+<text x="7144.8" y="1531.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">odsiewu; przełącznik</text>
+<text x="7144.8" y="1551.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">„Inwestycyjne N / Wszystkie</text>
+<text x="7144.8" y="1571.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">M”</text>
+<line x1="7144.8" y1="1613" x2="7369.6" y2="1613" stroke="#222d33"/>
+<text x="7144.8" y="1631.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="9.5" font-weight="700" fill="#9aa8ae" letter-spacing="1.2">WYMAGA</text>
+<text x="7204.8" y="1631.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="11" font-weight="700" fill="#eaf0f2">S-51</text>
+<text x="7144.8" y="1653.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#9aa8ae">investment-posts-by-default</text>
 </g>
 <g data-id="S-53" data-status="proposed">
-<rect x="7130.8" y="1681.0" width="252.8" height="279.0" rx="12" fill="#151e23" stroke="#2f3b42" stroke-width="1" />
-<text x="7144.8" y="1706.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="13" font-weight="700" fill="#c3cdd0">S-53</text>
-<rect x="7272.0" y="1692.0" width="97.6" height="20.0" rx="5" fill="#232d32" stroke="#c3cdd055" stroke-width="1" />
-<circle cx="7284.0" cy="1702.0" r="3" fill="#c3cdd0"/>
-<text x="7293.0" y="1706.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="600" fill="#c3cdd0">Proponowane</text>
-<text x="7144.8" y="1732.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#eaf0f2">Czytnik z</text>
-<text x="7144.8" y="1754.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#eaf0f2">podświetlonymi</text>
-<text x="7144.8" y="1776.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#eaf0f2">cytatami</text>
-<text x="7144.8" y="1804.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">fragmenty, na których</text>
-<text x="7144.8" y="1824.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">oparto ocenę, podświetlone</text>
-<text x="7144.8" y="1844.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">w treści; poprzedni i</text>
-<text x="7144.8" y="1864.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">następny wpis</text>
-<line x1="7144.8" y1="1886" x2="7369.6" y2="1886" stroke="#222d33"/>
-<text x="7144.8" y="1904.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="9.5" font-weight="700" fill="#9aa8ae" letter-spacing="1.2">WYMAGA</text>
-<text x="7204.8" y="1904.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="11" font-weight="700" fill="#eaf0f2">S-51</text>
-<text x="7144.8" y="1926.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#9aa8ae">reader-quote-highlighting</text>
+<rect x="7130.8" y="1735.0" width="252.8" height="297.0" rx="12" fill="#151e23" stroke="#2f3b42" stroke-width="1" />
+<text x="7144.8" y="1760.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="13" font-weight="700" fill="#c3cdd0">S-53</text>
+<rect x="7272.0" y="1746.0" width="97.6" height="20.0" rx="5" fill="#232d32" stroke="#c3cdd055" stroke-width="1" />
+<circle cx="7284.0" cy="1756.0" r="3" fill="#c3cdd0"/>
+<text x="7293.0" y="1760.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="600" fill="#c3cdd0">Proponowane</text>
+<text x="7144.8" y="1786.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#eaf0f2">Podświetlone cytaty w</text>
+<text x="7144.8" y="1808.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#eaf0f2">panelu posta</text>
+<text x="7144.8" y="1836.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">fragmenty, na których</text>
+<text x="7144.8" y="1856.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">oparto ocenę, podświetlone</text>
+<text x="7144.8" y="1876.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">w panelu posta; poprzedni i</text>
+<text x="7144.8" y="1896.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">następny post</text>
+<line x1="7144.8" y1="1958" x2="7369.6" y2="1958" stroke="#222d33"/>
+<text x="7144.8" y="1976.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="9.5" font-weight="700" fill="#9aa8ae" letter-spacing="1.2">WYMAGA</text>
+<text x="7204.8" y="1976.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="11" font-weight="700" fill="#eaf0f2">S-51</text>
+<text x="7144.8" y="1998.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#9aa8ae">reader-quote-highlighting</text>
 </g>
 <g data-id="S-54" data-status="proposed">
-<rect x="7439.6" y="1354.0" width="252.8" height="279.0" rx="12" fill="#151e23" stroke="#2f3b42" stroke-width="1" />
-<text x="7453.6" y="1379.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="13" font-weight="700" fill="#c3cdd0">S-54</text>
-<rect x="7580.8" y="1365.0" width="97.6" height="20.0" rx="5" fill="#232d32" stroke="#c3cdd055" stroke-width="1" />
-<circle cx="7592.8" cy="1375.0" r="3" fill="#c3cdd0"/>
-<text x="7601.8" y="1379.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="600" fill="#c3cdd0">Proponowane</text>
-<text x="7453.6" y="1405.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#eaf0f2">Sortowanie listy</text>
-<text x="7453.6" y="1433.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">użytkownik sortuje listę po</text>
-<text x="7453.6" y="1453.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">dacie, źródle i polach</text>
-<text x="7453.6" y="1473.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">oceny (FR-008, FR-011b)</text>
-<line x1="7453.6" y1="1559" x2="7678.400000000001" y2="1559" stroke="#222d33"/>
-<text x="7453.6" y="1577.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="9.5" font-weight="700" fill="#9aa8ae" letter-spacing="1.2">WYMAGA</text>
-<text x="7513.6" y="1577.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="11" font-weight="700" fill="#eaf0f2">S-51</text>
-<text x="7453.6" y="1599.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#9aa8ae">post-list-sorting</text>
+<rect x="7439.6" y="1390.0" width="252.8" height="297.0" rx="12" fill="#151e23" stroke="#2f3b42" stroke-width="1" />
+<text x="7453.6" y="1415.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="13" font-weight="700" fill="#c3cdd0">S-54</text>
+<rect x="7580.8" y="1401.0" width="97.6" height="20.0" rx="5" fill="#232d32" stroke="#c3cdd055" stroke-width="1" />
+<circle cx="7592.8" cy="1411.0" r="3" fill="#c3cdd0"/>
+<text x="7601.8" y="1415.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="600" fill="#c3cdd0">Proponowane</text>
+<text x="7453.6" y="1441.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#eaf0f2">Sortowanie listy</text>
+<text x="7453.6" y="1469.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">kolejność listy w panelu</text>
+<text x="7453.6" y="1489.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">filtrów: data, źródło i</text>
+<text x="7453.6" y="1509.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">pola oceny (FR-008,</text>
+<text x="7453.6" y="1529.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">FR-011b)</text>
+<line x1="7453.6" y1="1613" x2="7678.400000000001" y2="1613" stroke="#222d33"/>
+<text x="7453.6" y="1631.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="9.5" font-weight="700" fill="#9aa8ae" letter-spacing="1.2">WYMAGA</text>
+<text x="7513.6" y="1631.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="11" font-weight="700" fill="#eaf0f2">S-51</text>
+<text x="7453.6" y="1653.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#9aa8ae">post-list-sorting</text>
 </g>
 <g data-id="S-55" data-status="proposed">
-<rect x="7439.6" y="1681.0" width="252.8" height="279.0" rx="12" fill="#151e23" stroke="#2f3b42" stroke-width="1" />
-<text x="7453.6" y="1706.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="13" font-weight="700" fill="#c3cdd0">S-55</text>
-<rect x="7580.8" y="1692.0" width="97.6" height="20.0" rx="5" fill="#232d32" stroke="#c3cdd055" stroke-width="1" />
-<circle cx="7592.8" cy="1702.0" r="3" fill="#c3cdd0"/>
-<text x="7601.8" y="1706.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="600" fill="#c3cdd0">Proponowane</text>
-<text x="7453.6" y="1732.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#eaf0f2">Filtr po dacie</text>
-<text x="7453.6" y="1754.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#eaf0f2">publikacji</text>
-<text x="7453.6" y="1782.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">użytkownik zawęża listę do</text>
-<text x="7453.6" y="1802.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">dnia albo zakresu dat</text>
-<text x="7453.6" y="1822.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">publikacji</text>
-<line x1="7453.6" y1="1886" x2="7678.400000000001" y2="1886" stroke="#222d33"/>
-<text x="7453.6" y="1904.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="9.5" font-weight="700" fill="#9aa8ae" letter-spacing="1.2">WYMAGA</text>
-<text x="7513.6" y="1904.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="11" font-weight="700" fill="#eaf0f2">S-51</text>
-<text x="7453.6" y="1926.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#9aa8ae">publication-date-filter</text>
+<rect x="7439.6" y="1735.0" width="252.8" height="297.0" rx="12" fill="#151e23" stroke="#2f3b42" stroke-width="1" />
+<text x="7453.6" y="1760.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="13" font-weight="700" fill="#c3cdd0">S-55</text>
+<rect x="7580.8" y="1746.0" width="97.6" height="20.0" rx="5" fill="#232d32" stroke="#c3cdd055" stroke-width="1" />
+<circle cx="7592.8" cy="1756.0" r="3" fill="#c3cdd0"/>
+<text x="7601.8" y="1760.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="600" fill="#c3cdd0">Proponowane</text>
+<text x="7453.6" y="1786.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#eaf0f2">Filtr po dacie</text>
+<text x="7453.6" y="1808.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#eaf0f2">publikacji</text>
+<text x="7453.6" y="1836.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">dzień albo zakres dat</text>
+<text x="7453.6" y="1856.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">polami „Od” i „Do” w panelu</text>
+<text x="7453.6" y="1876.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">filtrów, ze znacznikiem nad</text>
+<text x="7453.6" y="1896.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">listą</text>
+<line x1="7453.6" y1="1958" x2="7678.400000000001" y2="1958" stroke="#222d33"/>
+<text x="7453.6" y="1976.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="9.5" font-weight="700" fill="#9aa8ae" letter-spacing="1.2">WYMAGA</text>
+<text x="7513.6" y="1976.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="11" font-weight="700" fill="#eaf0f2">S-51</text>
+<text x="7453.6" y="1998.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#9aa8ae">publication-date-filter</text>
 </g>
 <g data-id="S-56" data-status="proposed">
-<rect x="7748.4" y="1517.5" width="252.8" height="279.0" rx="12" fill="#151e23" stroke="#2f3b42" stroke-width="1" />
-<text x="7762.4" y="1542.5" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="13" font-weight="700" fill="#c3cdd0">S-56</text>
-<rect x="7889.6" y="1528.5" width="97.6" height="20.0" rx="5" fill="#232d32" stroke="#c3cdd055" stroke-width="1" />
-<circle cx="7901.6" cy="1538.5" r="3" fill="#c3cdd0"/>
-<text x="7910.6" y="1542.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="600" fill="#c3cdd0">Proponowane</text>
-<text x="7762.4" y="1568.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#eaf0f2">Wyszukiwanie w treści</text>
-<text x="7762.4" y="1596.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">użytkownik wyszukuje wpisy</text>
-<text x="7762.4" y="1616.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">po słowach w tytule i</text>
-<text x="7762.4" y="1636.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">treści</text>
-<line x1="7762.4" y1="1722.5" x2="7987.2" y2="1722.5" stroke="#222d33"/>
-<text x="7762.4" y="1740.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="9.5" font-weight="700" fill="#9aa8ae" letter-spacing="1.2">WYMAGA</text>
-<text x="7822.4" y="1740.5" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="11" font-weight="700" fill="#eaf0f2">S-51</text>
-<text x="7762.4" y="1762.5" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#9aa8ae">post-content-search</text>
+<rect x="7748.4" y="1562.5" width="252.8" height="297.0" rx="12" fill="#151e23" stroke="#2f3b42" stroke-width="1" />
+<text x="7762.4" y="1587.5" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="13" font-weight="700" fill="#c3cdd0">S-56</text>
+<rect x="7889.6" y="1573.5" width="97.6" height="20.0" rx="5" fill="#232d32" stroke="#c3cdd055" stroke-width="1" />
+<circle cx="7901.6" cy="1583.5" r="3" fill="#c3cdd0"/>
+<text x="7910.6" y="1587.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="600" fill="#c3cdd0">Proponowane</text>
+<text x="7762.4" y="1613.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#eaf0f2">Wyszukiwanie w treści</text>
+<text x="7762.4" y="1641.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">pole „Szukaj w postach” nad</text>
+<text x="7762.4" y="1661.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">listą; filtr po celu osobno</text>
+<text x="7762.4" y="1681.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">w panelu filtrów</text>
+<line x1="7762.4" y1="1785.5" x2="7987.2" y2="1785.5" stroke="#222d33"/>
+<text x="7762.4" y="1803.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="9.5" font-weight="700" fill="#9aa8ae" letter-spacing="1.2">WYMAGA</text>
+<text x="7822.4" y="1803.5" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="11" font-weight="700" fill="#eaf0f2">S-51</text>
+<text x="7762.4" y="1825.5" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#9aa8ae">post-content-search</text>
 </g>
 <g data-id="S-57" data-status="proposed">
-<rect x="6822.0" y="2112.0" width="252.8" height="279.0" rx="12" fill="#151e23" stroke="#2f3b42" stroke-width="1" />
-<text x="6836.0" y="2137.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="13" font-weight="700" fill="#c3cdd0">S-57</text>
-<rect x="6963.2" y="2123.0" width="97.6" height="20.0" rx="5" fill="#232d32" stroke="#c3cdd055" stroke-width="1" />
-<circle cx="6975.2" cy="2133.0" r="3" fill="#c3cdd0"/>
-<text x="6984.2" y="2137.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="600" fill="#c3cdd0">Proponowane</text>
-<text x="6836.0" y="2163.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#eaf0f2">Katalog celów</text>
-<text x="6836.0" y="2191.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">katalog celów z liczbą</text>
-<text x="6836.0" y="2211.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">wpisów, po tekście celu,</text>
-<text x="6836.0" y="2231.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">bez rozpoznawania spółek</text>
-<line x1="6836.0" y1="2317" x2="7060.8" y2="2317" stroke="#222d33"/>
-<text x="6836.0" y="2335.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="9.5" font-weight="700" fill="#9aa8ae" letter-spacing="1.2">WYMAGA</text>
-<text x="6896.0" y="2335.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="11" font-weight="700" fill="#eaf0f2">S-52</text>
-<text x="6836.0" y="2357.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#9aa8ae">target-catalog</text>
+<rect x="6822.0" y="2184.0" width="252.8" height="297.0" rx="12" fill="#151e23" stroke="#2f3b42" stroke-width="1" />
+<text x="6836.0" y="2209.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="13" font-weight="700" fill="#c3cdd0">S-57</text>
+<rect x="6963.2" y="2195.0" width="97.6" height="20.0" rx="5" fill="#232d32" stroke="#c3cdd055" stroke-width="1" />
+<circle cx="6975.2" cy="2205.0" r="3" fill="#c3cdd0"/>
+<text x="6984.2" y="2209.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="600" fill="#c3cdd0">Proponowane</text>
+<text x="6836.0" y="2235.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#eaf0f2">Katalog celów</text>
+<text x="6836.0" y="2263.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">tabela celów z liczbą</text>
+<text x="6836.0" y="2283.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">postów i udziałem</text>
+<text x="6836.0" y="2303.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">stanowisk, po tekście celu,</text>
+<text x="6836.0" y="2323.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">bez rozpoznawania spółek</text>
+<line x1="6836.0" y1="2407" x2="7060.8" y2="2407" stroke="#222d33"/>
+<text x="6836.0" y="2425.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="9.5" font-weight="700" fill="#9aa8ae" letter-spacing="1.2">WYMAGA</text>
+<text x="6896.0" y="2425.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="11" font-weight="700" fill="#eaf0f2">S-52</text>
+<text x="6836.0" y="2447.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#9aa8ae">target-catalog</text>
 </g>
 <g data-id="S-58" data-status="proposed">
-<rect x="7130.8" y="2112.0" width="252.8" height="279.0" rx="12" fill="#151e23" stroke="#2f3b42" stroke-width="1" />
-<text x="7144.8" y="2137.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="13" font-weight="700" fill="#c3cdd0">S-58</text>
-<rect x="7272.0" y="2123.0" width="97.6" height="20.0" rx="5" fill="#232d32" stroke="#c3cdd055" stroke-width="1" />
-<circle cx="7284.0" cy="2133.0" r="3" fill="#c3cdd0"/>
-<text x="7293.0" y="2137.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="600" fill="#c3cdd0">Proponowane</text>
-<text x="7144.8" y="2163.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#eaf0f2">Karta celu z</text>
-<text x="7144.8" y="2185.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#eaf0f2">proporcjami</text>
-<text x="7144.8" y="2213.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">karta celu z proporcjami</text>
-<text x="7144.8" y="2233.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">stanowisk autorów (migawka,</text>
-<text x="7144.8" y="2253.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">bez trendu) i wypowiedziami</text>
-<line x1="7144.8" y1="2317" x2="7369.6" y2="2317" stroke="#222d33"/>
-<text x="7144.8" y="2335.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="9.5" font-weight="700" fill="#9aa8ae" letter-spacing="1.2">WYMAGA</text>
-<text x="7204.8" y="2335.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="11" font-weight="700" fill="#eaf0f2">S-57</text>
-<text x="7144.8" y="2357.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#9aa8ae">target-card-stance-shares</text>
+<rect x="7130.8" y="2184.0" width="252.8" height="297.0" rx="12" fill="#151e23" stroke="#2f3b42" stroke-width="1" />
+<text x="7144.8" y="2209.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="13" font-weight="700" fill="#c3cdd0">S-58</text>
+<rect x="7272.0" y="2195.0" width="97.6" height="20.0" rx="5" fill="#232d32" stroke="#c3cdd055" stroke-width="1" />
+<circle cx="7284.0" cy="2205.0" r="3" fill="#c3cdd0"/>
+<text x="7293.0" y="2209.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="600" fill="#c3cdd0">Proponowane</text>
+<text x="7144.8" y="2235.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#eaf0f2">Karta celu z</text>
+<text x="7144.8" y="2257.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#eaf0f2">proporcjami</text>
+<text x="7144.8" y="2285.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">karta celu w panelu na</text>
+<text x="7144.8" y="2305.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">ekranie katalogu: proporcje</text>
+<text x="7144.8" y="2325.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">stanowisk (migawka, bez</text>
+<text x="7144.8" y="2345.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">trendu) i wypowiedzi</text>
+<line x1="7144.8" y1="2407" x2="7369.6" y2="2407" stroke="#222d33"/>
+<text x="7144.8" y="2425.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="9.5" font-weight="700" fill="#9aa8ae" letter-spacing="1.2">WYMAGA</text>
+<text x="7204.8" y="2425.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="11" font-weight="700" fill="#eaf0f2">S-57</text>
+<text x="7144.8" y="2447.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#9aa8ae">target-card-stance-shares</text>
 </g>
 <g data-id="S-59" data-status="proposed">
-<rect x="7439.6" y="2112.0" width="252.8" height="279.0" rx="12" fill="#151e23" stroke="#2f3b42" stroke-width="1" />
-<text x="7453.6" y="2137.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="13" font-weight="700" fill="#c3cdd0">S-59</text>
-<rect x="7580.8" y="2123.0" width="97.6" height="20.0" rx="5" fill="#232d32" stroke="#c3cdd055" stroke-width="1" />
-<circle cx="7592.8" cy="2133.0" r="3" fill="#c3cdd0"/>
-<text x="7601.8" y="2137.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="600" fill="#c3cdd0">Proponowane</text>
-<text x="7453.6" y="2163.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#eaf0f2">Przegląd dnia</text>
-<text x="7453.6" y="2191.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">liczby dnia, cele z</text>
-<text x="7453.6" y="2211.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">proporcjami i najczęściej</text>
-<text x="7453.6" y="2231.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">omawiane cele — wybory</text>
-<text x="7453.6" y="2251.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">jawnie liczbowe</text>
-<line x1="7453.6" y1="2317" x2="7678.400000000001" y2="2317" stroke="#222d33"/>
-<text x="7453.6" y="2335.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="9.5" font-weight="700" fill="#9aa8ae" letter-spacing="1.2">WYMAGA</text>
-<text x="7513.6" y="2335.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="11" font-weight="700" fill="#eaf0f2">S-55, S-58</text>
-<text x="7453.6" y="2357.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#9aa8ae">daily-overview</text>
+<rect x="7439.6" y="2184.0" width="252.8" height="297.0" rx="12" fill="#151e23" stroke="#2f3b42" stroke-width="1" />
+<text x="7453.6" y="2209.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="13" font-weight="700" fill="#c3cdd0">S-59</text>
+<rect x="7580.8" y="2195.0" width="97.6" height="20.0" rx="5" fill="#232d32" stroke="#c3cdd055" stroke-width="1" />
+<circle cx="7592.8" cy="2205.0" r="3" fill="#c3cdd0"/>
+<text x="7601.8" y="2209.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="600" fill="#c3cdd0">Proponowane</text>
+<text x="7453.6" y="2235.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#eaf0f2">Przegląd dnia</text>
+<text x="7453.6" y="2263.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">ekran startowy: pięć liczb</text>
+<text x="7453.6" y="2283.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">dnia, trzy najczęściej</text>
+<text x="7453.6" y="2303.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">omawiane cele i tabela</text>
+<text x="7453.6" y="2323.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">celów dnia</text>
+<line x1="7453.6" y1="2407" x2="7678.400000000001" y2="2407" stroke="#222d33"/>
+<text x="7453.6" y="2425.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="9.5" font-weight="700" fill="#9aa8ae" letter-spacing="1.2">WYMAGA</text>
+<text x="7513.6" y="2425.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="11" font-weight="700" fill="#eaf0f2">S-55, S-58</text>
+<text x="7453.6" y="2447.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#9aa8ae">daily-overview</text>
 </g>
 <g data-id="S-60" data-status="proposed">
-<rect x="8057.2" y="1517.5" width="252.8" height="279.0" rx="12" fill="#151e23" stroke="#2f3b42" stroke-width="1" />
-<text x="8071.2" y="1542.5" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="13" font-weight="700" fill="#c3cdd0">S-60</text>
-<rect x="8198.4" y="1528.5" width="97.6" height="20.0" rx="5" fill="#232d32" stroke="#c3cdd055" stroke-width="1" />
-<circle cx="8210.4" cy="1538.5" r="3" fill="#c3cdd0"/>
-<text x="8219.4" y="1542.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="600" fill="#c3cdd0">Proponowane</text>
-<text x="8071.2" y="1568.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#eaf0f2">Miara „kanał jako</text>
-<text x="8071.2" y="1590.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#eaf0f2">cel”</text>
-<text x="8071.2" y="1618.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">operator widzi udział celów</text>
-<text x="8071.2" y="1638.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">równych kanałowi posta per</text>
-<text x="8071.2" y="1658.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">źródło, z sygnałem przy</text>
-<text x="8071.2" y="1678.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">progu</text>
-<line x1="8071.2" y1="1722.5" x2="8296.0" y2="1722.5" stroke="#222d33"/>
-<text x="8071.2" y="1740.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="9.5" font-weight="700" fill="#9aa8ae" letter-spacing="1.2">WYMAGA</text>
-<text x="8131.2" y="1740.5" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="11" font-weight="700" fill="#eaf0f2">S-50</text>
-<text x="8071.2" y="1762.5" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#9aa8ae">channel-as-target-quality</text>
+<rect x="8057.2" y="1562.5" width="252.8" height="297.0" rx="12" fill="#151e23" stroke="#2f3b42" stroke-width="1" />
+<text x="8071.2" y="1587.5" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="13" font-weight="700" fill="#c3cdd0">S-60</text>
+<rect x="8198.4" y="1573.5" width="97.6" height="20.0" rx="5" fill="#232d32" stroke="#c3cdd055" stroke-width="1" />
+<circle cx="8210.4" cy="1583.5" r="3" fill="#c3cdd0"/>
+<text x="8219.4" y="1587.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="600" fill="#c3cdd0">Proponowane</text>
+<text x="8071.2" y="1613.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#eaf0f2">Miara „kanał jako</text>
+<text x="8071.2" y="1635.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#eaf0f2">cel”</text>
+<text x="8071.2" y="1663.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">operator widzi udział celów</text>
+<text x="8071.2" y="1683.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">równych kanałowi posta per</text>
+<text x="8071.2" y="1703.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">źródło, z sygnałem przy</text>
+<text x="8071.2" y="1723.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">progu</text>
+<line x1="8071.2" y1="1785.5" x2="8296.0" y2="1785.5" stroke="#222d33"/>
+<text x="8071.2" y="1803.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="9.5" font-weight="700" fill="#9aa8ae" letter-spacing="1.2">WYMAGA</text>
+<text x="8131.2" y="1803.5" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="11" font-weight="700" fill="#eaf0f2">S-50</text>
+<text x="8071.2" y="1825.5" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#9aa8ae">channel-as-target-quality</text>
 </g>
-<line x1="7439.6" y1="1980" x2="8001.2" y2="1980" stroke="#a2afb4" stroke-opacity="0.35" stroke-dasharray="2 4"/>
-<rect x="7611.9" y="1971.0" width="217.0" height="18.0" rx="9" fill="#141c21" />
-<text x="7720.4" y="1984.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10" font-weight="600" fill="#9aa8ae" text-anchor="middle" letter-spacing="1">po S-51 · niezależne · równolegle</text>
+<line x1="7439.6" y1="2052" x2="8001.2" y2="2052" stroke="#a2afb4" stroke-opacity="0.35" stroke-dasharray="2 4"/>
+<rect x="7579.7" y="2043.0" width="281.4" height="18.0" rx="9" fill="#141c21" />
+<text x="7720.4" y="2056.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10" font-weight="600" fill="#9aa8ae" text-anchor="middle" letter-spacing="1">po S-51 · równolegle · wspólny panel filtrów</text>
 <rect x="8446.0" y="400.0" width="788.0" height="1392.0" rx="16" fill="#11181c" stroke="#222d33" stroke-width="1" />
 <text x="8474.0" y="440.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="13" font-weight="700" fill="#a2afb4">PO M-5</text>
 <text x="8536.2" y="440.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#eaf0f2">Odroczone</text>
@@ -1674,6 +1722,6 @@
 <circle cx="8872.0" cy="1686" r="2.6" fill="#9aa8ae"/>
 <text x="8884.0" y="1690.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="500" fill="#eaf0f2">Wyłączenie Reddita po wygaśnięciu</text>
 <text x="8884.0" y="1710.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="600" fill="#9aa8ae">Arctic Shift</text>
-<text x="56.0" y="2489.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#9aa8ae">Strzałki pomijają zależności wynikające ze ścieżek pośrednich i (w M-4, M-5) między strumieniami. Pełne wymagania: na kartach. · Źródło: context/foundation/roadmap.md v6</text>
-<text x="9234.0" y="2489.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="700" fill="#9aa8ae" text-anchor="end" letter-spacing="1.6">MAPA ZALEŻNOŚCI · BEZ TERMINÓW</text>
+<text x="56.0" y="2579.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#9aa8ae">Strzałki pomijają zależności wynikające ze ścieżek pośrednich i (w M-4, M-5) między strumieniami. Pełne wymagania: na kartach. · Źródło: context/foundation/roadmap.md v6.2</text>
+<text x="9234.0" y="2579.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="700" fill="#9aa8ae" text-anchor="end" letter-spacing="1.6">MAPA ZALEŻNOŚCI · BEZ TERMINÓW</text>
 </svg>

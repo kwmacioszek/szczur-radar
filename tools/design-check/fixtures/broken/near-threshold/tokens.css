@@ -1,0 +1,3 @@
+/* 4.4994:1 on white: shown as 4.50, still below 4.5 (the app's test compares the exact ratio). */
+:root { --bg: #ffffff; --text: #118a11; }
+:root[data-theme='dark'] { --bg: #111418; --text: #e6e8ea; }

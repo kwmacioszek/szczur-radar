@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Poprawna strona</title>
+<script>document.documentElement.dataset.theme = new URLSearchParams(location.search).get("theme") === "dark" ? "dark" : "light"</script>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="../font.css">
+<style>
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: 'Hanken Grotesk', sans-serif; }
+  button { font: inherit; }
+  main { padding: 16px; }
+</style>
+</head>
+<body>
+<header><p>Szczur Radar</p></header>
+<main>
+  <h1>Przegląd dnia</h1>
+  <p>Zażółć gęślą jaźń: tekst z polskimi znakami na tle z tokenów.</p>
+  <button type="button" style="background: var(--accent); color: var(--on-accent); border: 0; min-width: 44px; min-height: 44px">Zapisz</button>
+</main>
+</body>
+</html>

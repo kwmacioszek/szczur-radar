@@ -1,0 +1,61 @@
+/*
+ * Wariant B „Pulpit”. Chłodna, jednobarwna paleta: akcentem jest atrament (kolor nagłówków),
+ * a barwy niosą wyłącznie znaczenie (stanowisko, stan). Nazwy ról z style.css zachowane.
+ */
+:root {
+  --bg: #eef1f4;
+  --surface: #ffffff;
+  --text: #414b57;
+  --text-h: #0f1720;
+  --accent: #17202b;
+  --on-accent: #ffffff;
+  --success: #14713a;
+  --warning: #8a5300;
+  --destructive: #b42a25;
+  --highlight: #ffe58a;
+  --stance-neutral: #4b5866;
+  --stance-mixed: #865000;
+
+  --text-muted: #5b6672;
+  --line: #d8dee4;
+  --border: #76828f;
+  --ring: #17202b;
+  --selected: #e3e8ee;
+  --success-soft: #dff2e5;
+  --destructive-soft: #fbe3e1;
+  --neutral-soft: #e6eaee;
+  --mixed-soft: #f8ecd2;
+
+  --font-ui: 'IBM Plex Sans', system-ui, sans-serif;
+
+  --icon-stroke: 1.75;
+  --bar-height: 0.375rem;
+  --radius: 4px;
+}
+
+:root[data-theme='dark'] {
+  --bg: #0e1318;
+  --surface: #151b22;
+  --text: #a9b4bf;
+  --text-h: #f2f5f8;
+  --accent: #f2f5f8;
+  --on-accent: #0e1318;
+  --success: #57c785;
+  --warning: #e3ad4b;
+  --destructive: #f27d74;
+  --highlight: #4a4016;
+  --stance-neutral: #97a3ae;
+  --stance-mixed: #dfb159;
+
+  --text-muted: #8c98a4;
+  --line: #26303a;
+  --border: #71808e;
+  --ring: #f2f5f8;
+  --selected: #202a35;
+  --success-soft: #153424;
+  --destructive-soft: #3c1d1b;
+  --neutral-soft: #232d37;
+  --mixed-soft: #3a2e12;
+
+  color-scheme: dark;
+}

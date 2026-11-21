@@ -1,0 +1,228 @@
+{
+  "screens": [
+    {
+      "name": "overview",
+      "title": "Przegląd dnia",
+      "html": "prototypes/screens/overview.html",
+      "fr": [
+        "FR-039",
+        "FR-038",
+        "FR-035",
+        "FR-007"
+      ],
+      "slice": "S-59",
+      "data": "S-59 (na S-55 i S-58)"
+    },
+    {
+      "name": "posts",
+      "title": "Posty: lista",
+      "html": "prototypes/screens/posts.html",
+      "fr": [
+        "FR-007",
+        "FR-010",
+        "FR-013",
+        "FR-015",
+        "FR-030",
+        "FR-040"
+      ],
+      "slice": "S-51, powłoka S-47",
+      "data": "dziś"
+    },
+    {
+      "name": "post",
+      "title": "Post: ocena w panelu z podświetlonymi cytatami",
+      "html": "prototypes/screens/post.html",
+      "fr": [
+        "FR-009",
+        "FR-010",
+        "FR-011a"
+      ],
+      "slice": "S-51, S-53",
+      "data": "dziś"
+    },
+    {
+      "name": "posts-filters",
+      "title": "Posty: filtry i kolejność",
+      "html": "prototypes/screens/posts-filters.html",
+      "fr": [
+        "FR-011a",
+        "FR-036",
+        "FR-035",
+        "FR-008",
+        "FR-011b",
+        "FR-007"
+      ],
+      "slice": "S-52, S-54, S-55, S-56",
+      "data": "S-52, S-54, S-55, S-56"
+    },
+    {
+      "name": "posts-all",
+      "title": "Posty: zakres „Wszystkie”",
+      "html": "prototypes/screens/posts-all.html",
+      "fr": [
+        "FR-007"
+      ],
+      "slice": "S-52",
+      "data": "dziś (lista z postami nieinwestycyjnymi i odsianymi); przełącznik S-52"
+    },
+    {
+      "name": "targets",
+      "title": "Cele: katalog",
+      "html": "prototypes/screens/targets.html",
+      "fr": [
+        "FR-037",
+        "FR-038"
+      ],
+      "slice": "S-57",
+      "data": "S-57, S-58"
+    },
+    {
+      "name": "target",
+      "title": "Cel: karta celu w panelu",
+      "html": "prototypes/screens/target.html",
+      "fr": [
+        "FR-037",
+        "FR-038",
+        "FR-011a"
+      ],
+      "slice": "S-58",
+      "data": "S-57, S-58"
+    },
+    {
+      "name": "login",
+      "title": "Logowanie",
+      "html": "prototypes/screens/login.html",
+      "fr": [
+        "FR-012",
+        "FR-040"
+      ],
+      "slice": "S-49",
+      "data": "dziś"
+    },
+    {
+      "name": "activate",
+      "title": "Aktywacja konta",
+      "html": "prototypes/screens/activate.html",
+      "fr": [
+        "FR-018"
+      ],
+      "slice": "S-49",
+      "data": "dziś"
+    },
+    {
+      "name": "admin-runs",
+      "title": "Panel admina: Przebiegi",
+      "html": "prototypes/screens/admin-runs.html",
+      "fr": [
+        "FR-021",
+        "FR-022",
+        "FR-015"
+      ],
+      "slice": "S-50",
+      "data": "dziś"
+    },
+    {
+      "name": "admin-quality",
+      "title": "Panel admina: Jakość ocen",
+      "html": "prototypes/screens/admin-quality.html",
+      "fr": [
+        "FR-033"
+      ],
+      "slice": "S-50",
+      "data": "dziś; miara „kanał jako cel” dojdzie w S-60"
+    },
+    {
+      "name": "admin-posts",
+      "title": "Panel admina: Nieudane posty",
+      "html": "prototypes/screens/admin-posts.html",
+      "fr": [
+        "FR-034"
+      ],
+      "slice": "S-50",
+      "data": "dziś"
+    },
+    {
+      "name": "run",
+      "title": "Przebieg",
+      "html": "prototypes/screens/run.html",
+      "fr": [
+        "FR-021"
+      ],
+      "slice": "S-50",
+      "data": "dziś"
+    },
+    {
+      "name": "notifications",
+      "title": "Powiadomienia admina",
+      "html": "prototypes/screens/notifications.html",
+      "fr": [
+        "FR-021",
+        "FR-015"
+      ],
+      "slice": "S-47",
+      "data": "dziś"
+    },
+    {
+      "name": "state-loading",
+      "title": "Posty: ładowanie",
+      "html": "prototypes/screens/state-loading.html",
+      "fr": [
+        "FR-007"
+      ],
+      "slice": "S-48",
+      "data": "dziś"
+    },
+    {
+      "name": "state-empty",
+      "title": "Posty: brak wyników",
+      "html": "prototypes/screens/state-empty.html",
+      "fr": [
+        "FR-007",
+        "FR-036"
+      ],
+      "slice": "S-48",
+      "data": "dziś"
+    },
+    {
+      "name": "state-error",
+      "title": "Posty: błąd z ponowieniem",
+      "html": "prototypes/screens/state-error.html",
+      "fr": [
+        "FR-007",
+        "FR-009"
+      ],
+      "slice": "S-48",
+      "data": "dziś"
+    },
+    {
+      "name": "admin-loading",
+      "title": "Panel admina: ładowanie",
+      "html": "prototypes/screens/admin-loading.html",
+      "fr": [
+        "FR-021"
+      ],
+      "slice": "S-48, S-50",
+      "data": "dziś"
+    },
+    {
+      "name": "admin-empty",
+      "title": "Panel admina: brak nieudanych postów",
+      "html": "prototypes/screens/admin-empty.html",
+      "fr": [
+        "FR-034"
+      ],
+      "slice": "S-48, S-50",
+      "data": "dziś"
+    },
+    {
+      "name": "admin-error",
+      "title": "Panel admina: błąd z ponowieniem",
+      "html": "prototypes/screens/admin-error.html",
+      "fr": [
+        "FR-033"
+      ],
+      "slice": "S-48, S-50",
+      "data": "dziś"
+    }
+  ]
+}

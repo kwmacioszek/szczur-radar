@@ -1,0 +1,531 @@
+<title>Warianty wyglądu Szczur Radar</title>
+<!-- Komplet ekranów projektu (context/foundation/ui-design/screens.json) i arkusz komponentów; niżej, zwinięte,
+     wcześniejsze warianty: Radar (a), Parkiet (b), Salon (c), Salon w kolorach Radaru (d), Kanał (e). Runda 1: directions/round-1/. -->
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@600;700&display=swap">
+<style>
+  /* Układ: wybór motywu u góry, pod nim ekrany nowego układu w dwóch kolumnach, na dole wcześniejsze warianty. */
+  :root {
+    --bg: #f2f3f5;
+    --panel: #ffffff;
+    --fg: #1b2026;
+    --muted: #59626d;
+    --line: #d5dae0;
+    --accent: #1f4fd1;
+    --on-accent: #ffffff;
+    --frame: #c3c9d1;
+    --display: 'Space Grotesk', system-ui, sans-serif;
+    --body: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) {
+      --bg: #14171b;
+      --panel: #1d2127;
+      --fg: #eef1f4;
+      --muted: #a3acb7;
+      --line: #333a43;
+      --accent: #8fb0ff;
+      --on-accent: #10141a;
+      --frame: #454d58;
+      color-scheme: dark;
+    }
+  }
+
+  :root[data-theme='dark'] {
+    --bg: #14171b;
+    --panel: #1d2127;
+    --fg: #eef1f4;
+    --muted: #a3acb7;
+    --line: #333a43;
+    --accent: #8fb0ff;
+    --on-accent: #10141a;
+    --frame: #454d58;
+    color-scheme: dark;
+  }
+
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font: 400 15px/1.5 var(--body);
+  }
+
+  .wrap {
+    max-width: 1680px;
+    margin: 0 auto;
+    padding-block: 28px 56px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+
+  h1 {
+    margin: 0;
+    font: 700 28px/1.2 var(--display);
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+  }
+
+  h2 {
+    margin: 0;
+    font: 600 19px/1.25 var(--display);
+    letter-spacing: -0.01em;
+  }
+
+  .lead {
+    max-width: 70ch;
+    margin: 8px 0 0;
+    color: var(--muted);
+  }
+
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 28px;
+    margin-top: 24px;
+    padding: 14px 16px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--panel);
+  }
+
+  fieldset {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  legend {
+    float: left;
+    margin-right: 6px;
+    padding: 0;
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  .opt {
+    position: relative;
+  }
+
+  .opt input {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+
+  .opt span {
+    display: block;
+    padding: 6px 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    font-weight: 500;
+  }
+
+  .opt input:checked + span {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: var(--on-accent);
+  }
+
+  .opt input:focus-visible + span {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .screens {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 28px 20px;
+    margin-top: 20px;
+  }
+
+  .screen {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 0;
+    margin: 0;
+  }
+
+  .screen.wide {
+    grid-column: 1 / -1;
+  }
+
+  .screen p,
+  .variant p {
+    margin: 2px 0 0;
+    color: var(--muted);
+    font-size: 14px;
+  }
+
+  .shot {
+    display: block;
+    width: 100%;
+    padding: 0;
+    border: 1px solid var(--frame);
+    border-radius: 10px;
+    background: var(--panel);
+    overflow: hidden;
+  }
+
+  button.shot:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+  }
+
+  .shot img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  .screen.phone .shot {
+    max-width: 375px;
+  }
+
+  .older {
+    margin-top: 44px;
+    padding-top: 28px;
+    border-top: 1px solid var(--line);
+  }
+
+  .stage {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px;
+    margin-top: 16px;
+  }
+
+  .stage.single {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .variant {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .variant[hidden] {
+    display: none;
+  }
+
+  button.shot {
+    cursor: zoom-in;
+  }
+
+  .screen.wide button.shot {
+    cursor: zoom-out;
+  }
+
+  .stage.single .shot {
+    max-width: 1280px;
+    cursor: default;
+  }
+
+  .stage.phone .shot {
+    max-width: 375px;
+  }
+
+  .notes {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px 32px;
+    margin-top: 36px;
+    padding-top: 24px;
+    border-top: 1px solid var(--line);
+  }
+
+  .notes h2 {
+    margin: 0 0 6px;
+    font-size: 16px;
+  }
+
+  .notes ul {
+    margin: 0;
+    padding-left: 18px;
+    color: var(--muted);
+  }
+
+  .notes li + li {
+    margin-top: 4px;
+  }
+
+  @media (max-width: 900px) {
+    .screens,
+    .stage {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  .group {
+    margin-top: 40px;
+  }
+
+  .screen h3 {
+    margin: 0;
+    font: 600 17px/1.3 var(--display);
+  }
+
+  #groups.phone .screens {
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  }
+
+  #groups.phone .screen .shot {
+    max-width: 375px;
+  }
+
+  #groups.phone .screen.wide {
+    grid-column: auto;
+  }
+
+  details.older > summary {
+    cursor: pointer;
+  }
+
+  details.older > summary h2 {
+    display: inline;
+  }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Komplet ekranów</h1>
+    <p class="lead">Wszystkie ekrany w zaakceptowanym wyglądzie i układzie: jedna kolumna, lista zwarta, szczegóły w panelu z prawej. Wybierz motyw i szerokość; kliknięcie zrzutu przełącza jego rozmiar.</p>
+  </header>
+
+  <form class="controls" id="controls">
+    <fieldset>
+      <legend>Motyw</legend>
+      <label class="opt"><input type="radio" name="theme" id="theme-dark" value="dark" checked><span>Ciemny</span></label>
+      <label class="opt"><input type="radio" name="theme" id="theme-light" value="light"><span>Jasny</span></label>
+    </fieldset>
+    <fieldset>
+      <legend>Szerokość</legend>
+      <label class="opt"><input type="radio" name="width" id="width-1280" value="1280" checked><span>Komputer</span></label>
+      <label class="opt"><input type="radio" name="width" id="width-375" value="375"><span>Telefon</span></label>
+    </fieldset>
+  </form>
+
+  <main>
+    <div id="groups"></div>
+
+    <details class="older" id="older">
+      <summary><h2 id="older-title">Wcześniejsze warianty, dla porównania</h2></summary>
+      <p class="lead">Układ z panelami obok siebie w czterech wyglądach z pierwszych rund.</p>
+      <form class="controls" id="older-controls">
+        <fieldset>
+          <legend>Ekran</legend>
+          <label class="opt"><input type="radio" name="screen" id="screen-stream" value="stream-1280" checked><span>Posty z oceną obok</span></label>
+          <label class="opt"><input type="radio" name="screen" id="screen-overview" value="overview-1280"><span>Przegląd dnia</span></label>
+          <label class="opt"><input type="radio" name="screen" id="screen-phone" value="stream-375"><span>Posty na telefonie</span></label>
+        </fieldset>
+        <fieldset>
+          <legend>Wariant</legend>
+          <label class="opt"><input type="radio" name="view" id="view-e" value="e" checked><span>Kanał (wybrany układ)</span></label>
+          <label class="opt"><input type="radio" name="view" id="view-d" value="d"><span>Salon w kolorach Radaru</span></label>
+          <label class="opt"><input type="radio" name="view" id="view-a" value="a"><span>Radar</span></label>
+          <label class="opt"><input type="radio" name="view" id="view-c" value="c"><span>Salon</span></label>
+          <label class="opt"><input type="radio" name="view" id="view-b" value="b"><span>Parkiet</span></label>
+        </fieldset>
+      </form>
+      <div class="stage single" id="stage">
+        <div class="variant">
+          <div class="shot"><img id="older-img" alt="" width="2560" height="1800" loading="lazy"></div>
+        </div>
+      </div>
+    </details>
+  </main>
+
+  <section class="notes" aria-label="Uwagi">
+    <div>
+      <h2>Na co patrzeć</h2>
+      <ul>
+        <li>Czy od razu wiadomo, gdzie jesteś i co możesz zrobić.</li>
+        <li>Czy sedno posta (cele i stanowiska) widać bez otwierania go.</li>
+        <li>Czy panel admina czyta się jak trzy osobne sprawy, a nie jedna ściana.</li>
+        <li>Czy któryś ekran dalej wygląda „jak panel administratora”.</li>
+      </ul>
+    </div>
+    <div>
+      <h2>Sprawdzone automatycznie i przez recenzenta</h2>
+      <ul>
+        <li>Kontrast tekstu co najmniej 4,5:1 w obu motywach (73 pary kolorów).</li>
+        <li>Reguły dostępności WCAG 2.2 AA na każdym ekranie przy 1280, 375 i 320 px.</li>
+        <li>Brak przewijania w poziomie od szerokości 320 px.</li>
+        <li>Niezależny przegląd według heurystyk Nielsena, WCAG i wymagań produktu, w dwóch przejściach.</li>
+      </ul>
+    </div>
+    <div>
+      <h2>Czego prototyp nie pokazuje</h2>
+      <ul>
+        <li>Listy są skrócone, a dane przykładowe. Zrzut z otwartym panelem pokazuje kadr okna, bo panel przewija się osobno.</li>
+        <li>Szukanie w treści, filtry dat, kolejność, katalog celów i przegląd dnia pokazują stan docelowy, którego aplikacja jeszcze nie obsługuje.</li>
+      </ul>
+    </div>
+  </section>
+</div>
+
+<script>
+  // Every screenshot of the variants and of the screens; the paths are relative to the published page.
+  const SHOTS = [
+    'a/stream-light-1280.png', 'a/stream-dark-1280.png', 'a/overview-light-1280.png', 'a/overview-dark-1280.png', 'a/stream-light-375.png', 'a/stream-dark-375.png',
+    'b/stream-light-1280.png', 'b/stream-dark-1280.png', 'b/overview-light-1280.png', 'b/overview-dark-1280.png', 'b/stream-light-375.png', 'b/stream-dark-375.png',
+    'c/stream-light-1280.png', 'c/stream-dark-1280.png', 'c/overview-light-1280.png', 'c/overview-dark-1280.png', 'c/stream-light-375.png', 'c/stream-dark-375.png',
+    'd/stream-light-1280.png', 'd/stream-dark-1280.png', 'd/overview-light-1280.png', 'd/overview-dark-1280.png', 'd/stream-light-375.png', 'd/stream-dark-375.png',
+    'e/stream-light-1280.png', 'e/stream-dark-1280.png', 'e/overview-light-1280.png', 'e/overview-dark-1280.png', 'e/stream-light-375.png', 'e/stream-dark-375.png',
+    'e/post-sheet-light-1280.png', 'e/post-sheet-dark-1280.png',
+    'screens/overview-light-1280.png', 'screens/overview-light-375.png', 'screens/overview-dark-1280.png', 'screens/overview-dark-375.png',
+    'screens/posts-light-1280.png', 'screens/posts-light-375.png', 'screens/posts-dark-1280.png', 'screens/posts-dark-375.png',
+    'screens/post-light-1280.png', 'screens/post-light-375.png', 'screens/post-dark-1280.png', 'screens/post-dark-375.png',
+    'screens/posts-filters-light-1280.png', 'screens/posts-filters-light-375.png', 'screens/posts-filters-dark-1280.png', 'screens/posts-filters-dark-375.png',
+    'screens/posts-all-light-1280.png', 'screens/posts-all-light-375.png', 'screens/posts-all-dark-1280.png', 'screens/posts-all-dark-375.png',
+    'screens/targets-light-1280.png', 'screens/targets-light-375.png', 'screens/targets-dark-1280.png', 'screens/targets-dark-375.png',
+    'screens/target-light-1280.png', 'screens/target-light-375.png', 'screens/target-dark-1280.png', 'screens/target-dark-375.png',
+    'screens/login-light-1280.png', 'screens/login-light-375.png', 'screens/login-dark-1280.png', 'screens/login-dark-375.png',
+    'screens/activate-light-1280.png', 'screens/activate-light-375.png', 'screens/activate-dark-1280.png', 'screens/activate-dark-375.png',
+    'screens/admin-runs-light-1280.png', 'screens/admin-runs-light-375.png', 'screens/admin-runs-dark-1280.png', 'screens/admin-runs-dark-375.png',
+    'screens/admin-quality-light-1280.png', 'screens/admin-quality-light-375.png', 'screens/admin-quality-dark-1280.png', 'screens/admin-quality-dark-375.png',
+    'screens/admin-posts-light-1280.png', 'screens/admin-posts-light-375.png', 'screens/admin-posts-dark-1280.png', 'screens/admin-posts-dark-375.png',
+    'screens/run-light-1280.png', 'screens/run-light-375.png', 'screens/run-dark-1280.png', 'screens/run-dark-375.png',
+    'screens/notifications-light-1280.png', 'screens/notifications-light-375.png', 'screens/notifications-dark-1280.png', 'screens/notifications-dark-375.png',
+    'screens/state-loading-light-1280.png', 'screens/state-loading-light-375.png', 'screens/state-loading-dark-1280.png', 'screens/state-loading-dark-375.png',
+    'screens/state-empty-light-1280.png', 'screens/state-empty-light-375.png', 'screens/state-empty-dark-1280.png', 'screens/state-empty-dark-375.png',
+    'screens/state-error-light-1280.png', 'screens/state-error-light-375.png', 'screens/state-error-dark-1280.png', 'screens/state-error-dark-375.png',
+    'screens/admin-loading-light-1280.png', 'screens/admin-loading-light-375.png', 'screens/admin-loading-dark-1280.png', 'screens/admin-loading-dark-375.png',
+    'screens/admin-empty-light-1280.png', 'screens/admin-empty-light-375.png', 'screens/admin-empty-dark-1280.png', 'screens/admin-empty-dark-375.png',
+    'screens/admin-error-light-1280.png', 'screens/admin-error-light-375.png', 'screens/admin-error-dark-1280.png', 'screens/admin-error-dark-375.png',
+    'screens/components-light-1280.png', 'screens/components-light-375.png', 'screens/components-dark-1280.png', 'screens/components-dark-375.png',
+  ]
+  // The screens of the design, in the order the owner meets them; `name` is the name in ui-design/screens.json.
+  const GROUPS = [
+    { title: 'Codzienna praca', screens: [
+      { name: 'overview', title: 'Przegląd dnia', text: 'Obraz dnia na pierwszy rzut oka: pięć liczb, trzy najczęściej omawiane cele i tabela wszystkich celów dnia.' },
+      { name: 'posts', title: 'Posty', text: 'Lista zwarta: jeden post w jednej linii, jedna ramka na dzień. Na wierzchu szukanie w treści i przełącznik „Inwestycyjne / Wszystkie”.' },
+      { name: 'post', title: 'Post w panelu', text: 'Ocena wybranego posta wysuwa się z prawej, lista zostaje w tle. Fragmenty, na których oparto ocenę, są podświetlone.' },
+      { name: 'posts-filters', title: 'Posty z filtrami', text: 'Cel, stanowisko, daty i kolejność pod przyciskiem „Filtry”. Włączone filtry stoją nad listą i każdy da się zdjąć.' },
+      { name: 'posts-all', title: 'Posty: wszystkie', text: 'Zakres „Wszystkie” pokazuje też posty ukryte domyślnie: nieinwestycyjne i odsiane przed oceną („za mało treści”).' },
+      { name: 'targets', title: 'Cele', text: 'Katalog celów z liczbą postów i udziałem stanowisk; odmiany nazwy są osobnymi pozycjami.' },
+      { name: 'target', title: 'Cel w panelu', text: 'Karta celu: udział stanowisk i wypowiedzi o celu z cytatami, z przejściem do postów.' },
+    ] },
+    { title: 'Wejście', screens: [
+      { name: 'login', title: 'Logowanie', text: 'E-mail, hasło i komunikat błędnych danych.' },
+      { name: 'activate', title: 'Aktywacja konta', text: 'Ustawienie hasła z jednorazowego linku, z błędem przy polu.' },
+    ] },
+    { title: 'Panel admina', screens: [
+      { name: 'admin-runs', title: 'Przebiegi', text: 'Nowy przebieg, dni bez danych i ostatnie przebiegi ze stanem.' },
+      { name: 'admin-quality', title: 'Jakość ocen', text: 'Miary z 7 dni dla każdego źródła wobec progu; kreska na pasku to próg.' },
+      { name: 'admin-posts', title: 'Nieudane posty', text: 'Posty, których ocena się nie udała: ponowienie zaznaczonych i przywrócenie martwych.' },
+      { name: 'run', title: 'Przebieg', text: 'Jeden przebieg: powód „wymaga uwagi”, liczniki, wynik per źródło i kroki.' },
+      { name: 'notifications', title: 'Powiadomienia', text: 'Lista pod dzwonkiem: przebiegi, które wymagają uwagi.' },
+    ] },
+    { title: 'Stany: ładowanie, pustka, błąd', screens: [
+      { name: 'state-loading', title: 'Posty: ładowanie', text: 'Zanim przyjdą dane, lista pokazuje swój kształt.' },
+      { name: 'state-empty', title: 'Posty: brak wyników', text: 'Pusty wynik mówi dlaczego i daje jeden następny krok.' },
+      { name: 'state-error', title: 'Posty: błąd', text: 'Co się nie udało i jeden przycisk „Spróbuj ponownie”.' },
+      { name: 'admin-loading', title: 'Panel admina: ładowanie', text: 'Te same szkielety w panelu admina.' },
+      { name: 'admin-empty', title: 'Panel admina: pusto', text: 'Brak nieudanych postów.' },
+      { name: 'admin-error', title: 'Panel admina: błąd', text: 'Jedna część się nie wczytała, pozostałe działają.' },
+    ] },
+    { title: 'Komponenty', screens: [
+      { name: 'components', title: 'Arkusz komponentów', text: 'Każdy element interfejsu w każdym stanie: przyciski, pola, znaczniki, wiersze, panel, komunikaty.' },
+    ] },
+  ]
+  // Opened from the repository (gallery/index.html) the shots sit in ../directions/ and in the design's own folder.
+  // The published page is built by gallery/inline.py, which embeds every shot (window.GALLERY_INLINE).
+  const local = location.protocol === 'file:'
+  const root = (path) => (path.startsWith('screens/') ? (local ? '../../../foundation/ui-design/' : '') : (local ? '../directions/' : ''))
+  const src = (path) => (window.GALLERY_INLINE && window.GALLERY_INLINE[path]) || root(path) + path
+  const THEME_NAMES = { light: 'motyw jasny', dark: 'motyw ciemny' }
+  const WIDTH_NAMES = { 1280: 'komputer', 375: 'telefon' }
+  const VARIANT_NAMES = { a: 'Radar', b: 'Parkiet', c: 'Salon', d: 'Salon w kolorach Radaru', e: 'Kanał' }
+  const SCREEN_NAMES = { 'stream-1280': 'posty z oceną obok', 'overview-1280': 'przegląd dnia', 'stream-375': 'posty na telefonie' }
+
+  const controls = document.getElementById('controls')
+  const older = document.getElementById('older-controls')
+  const stage = document.getElementById('stage')
+  const olderImg = document.getElementById('older-img')
+  const groups = document.getElementById('groups')
+
+  for (const group of GROUPS) {
+    const section = document.createElement('section')
+    section.className = 'group'
+    const heading = document.createElement('h2')
+    heading.textContent = group.title
+    const list = document.createElement('div')
+    list.className = 'screens'
+    for (const screen of group.screens) {
+      const figure = document.createElement('figure')
+      figure.className = 'screen'
+      figure.dataset.name = screen.name
+      const caption = document.createElement('figcaption')
+      const title = document.createElement('h3')
+      title.textContent = screen.title
+      const text = document.createElement('p')
+      text.textContent = screen.text
+      caption.append(title, text)
+      const button = document.createElement('button')
+      button.type = 'button'
+      button.className = 'shot'
+      button.setAttribute('aria-label', `Powiększ albo zmniejsz zrzut: ${screen.title}`)
+      const img = document.createElement('img')
+      img.loading = 'lazy'
+      img.alt = ''
+      button.append(img)
+      figure.append(caption, button)
+      list.append(figure)
+    }
+    section.append(heading, list)
+    groups.append(section)
+  }
+
+  function render() {
+    const data = new FormData(controls)
+    const theme = String(data.get('theme'))
+    const width = String(data.get('width'))
+    groups.classList.toggle('phone', width === '375')
+    for (const figure of groups.querySelectorAll('.screen')) {
+      const path = `screens/${figure.dataset.name}-${theme}-${width}.png`
+      if (!SHOTS.includes(path)) continue
+      const img = figure.querySelector('img')
+      img.src = src(path)
+      img.alt = `${figure.querySelector('h3').textContent}, ${THEME_NAMES[theme]}, ${WIDTH_NAMES[width]}`
+    }
+    const old = new FormData(older)
+    const [name, oldWidth] = String(old.get('screen')).split('-')
+    const variant = String(old.get('view'))
+    const phone = oldWidth === '375'
+    const path = `${variant}/${name}-${theme}-${oldWidth}.png`
+    stage.classList.toggle('phone', phone)
+    if (SHOTS.includes(path)) {
+      olderImg.src = src(path)
+      olderImg.width = phone ? 750 : 2560
+      olderImg.height = phone ? 1624 : 1800
+      olderImg.alt = `Wariant ${VARIANT_NAMES[variant]}: ${SCREEN_NAMES[`${name}-${oldWidth}`]}, ${THEME_NAMES[theme]}`
+    }
+  }
+
+  groups.addEventListener('click', (event) => {
+    const shot = event.target.closest('.shot')
+    if (shot) shot.closest('.screen').classList.toggle('wide')
+  })
+  for (const form of [controls, older]) {
+    form.addEventListener('change', render)
+    form.addEventListener('submit', (event) => event.preventDefault())
+  }
+  render()
+</script>

@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zasób spoza repozytorium</title>
+<script>document.documentElement.dataset.theme = new URLSearchParams(location.search).get("theme") === "dark" ? "dark" : "light"</script>
+<link rel="stylesheet" href="../ok/tokens.css">
+<!-- A font from a CDN: the request is refused by pages and reported as a network violation (never really sent). -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter&amp;display=swap">
+<style>
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: sans-serif; }
+  main { padding: 16px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Zasób spoza repozytorium</h1>
+  <p>Strona ładuje arkusz krojów z zewnętrznego serwera.</p>
+</main>
+</body>
+</html>

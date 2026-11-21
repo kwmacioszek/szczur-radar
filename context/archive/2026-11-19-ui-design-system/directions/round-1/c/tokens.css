@@ -1,0 +1,62 @@
+/*
+ * Wariant C „Miękki”. Chłodne tło z odcieniem fioletu, akcent indygo; bloki odróżnia ton
+ * powierzchni i zaokrąglenie, nie linie. Nazwy ról z style.css zachowane.
+ */
+:root {
+  --bg: #f1f0f6;
+  --surface: #ffffff;
+  --text: #474a5c;
+  --text-h: #171829;
+  --accent: #4338b8;
+  --on-accent: #ffffff;
+  --success: #17753c;
+  --warning: #8a5200;
+  --destructive: #b92d3a;
+  --highlight: #fde68a;
+  --stance-neutral: #55586b;
+  --stance-mixed: #865100;
+
+  --text-muted: #5f6277;
+  --surface-2: #f6f5fa;
+  --border: #7b7d92;
+  --ring: #4338b8;
+  --selected: #e9e7fb;
+  --success-soft: #e0f3e6;
+  --destructive-soft: #fce4e6;
+  --neutral-soft: #ebeaf2;
+  --mixed-soft: #f9edd3;
+
+  --font-ui: 'Schibsted Grotesk', system-ui, sans-serif;
+
+  --icon-stroke: 2;
+  --bar-height: 0.625rem;
+  --radius: 10px;
+  --radius-block: 16px;
+}
+
+:root[data-theme='dark'] {
+  --bg: #111120;
+  --surface: #1a1a2c;
+  --text: #b0b2c6;
+  --text-h: #f3f3fa;
+  --accent: #aaa4ff;
+  --on-accent: #14132a;
+  --success: #5fcf8e;
+  --warning: #e8b455;
+  --destructive: #f5848c;
+  --highlight: #45390f;
+  --stance-neutral: #9da0b6;
+  --stance-mixed: #e2b560;
+
+  --text-muted: #9a9db3;
+  --surface-2: #212136;
+  --border: #7a7c96;
+  --ring: #aaa4ff;
+  --selected: #2a2850;
+  --success-soft: #163526;
+  --destructive-soft: #3f1d23;
+  --neutral-soft: #2a2a40;
+  --mixed-soft: #3b2f13;
+
+  color-scheme: dark;
+}

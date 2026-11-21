@@ -1,0 +1,83 @@
+/*
+ * Wariant „Parkiet” (runda 2). Projektowany od ciemnego motywu: czerń i mocne, pełne kolory.
+ * Stanowiska to pełne barwne bloki (zieleń, czerwień, fiolet dla mieszanego), cytat to żółty
+ * zakreślacz, akcent to elektryczny błękit. Pasek u góry jest czarny w obu motywach (role --shell-*).
+ * Pierwszy blok to motyw jasny, zgodnie z formatem style.css.
+ */
+:root {
+  --bg: #f4f4f2;
+  --surface: #ffffff;
+  --text: #3d3f44;
+  --text-h: #0c0d0f;
+  --accent: #1d5fe0;
+  --on-accent: #ffffff;
+  --success: #12753b;
+  --warning: #8a5300;
+  --destructive: #c62828;
+  --highlight: #ffe45c;
+  --stance-neutral: #4b5563;
+  --stance-mixed: #6d3fc4;
+
+  --text-muted: #5b5e66;
+  --surface-2: #ececea;
+  --line: #d9d9d5;
+  --border: #74777f;
+  --ring: #1d5fe0;
+  --selected: #dfe8fd;
+  --stance-ink: #ffffff;
+  --highlight-ink: #0c0d0f;
+  --invert-bg: #0c0d0f;
+  --invert-text: #ffffff;
+
+  --shell-bg: #0c0d0f;
+  --shell-surface: #1c1e22;
+  --shell-text: #c9ccd3;
+  --shell-text-h: #ffffff;
+  --shell-muted: #9498a1;
+  --shell-accent: #6ea0ff;
+  --shell-line: #2c2f35;
+
+  --font-display: 'Bricolage Grotesque', system-ui, sans-serif;
+  --font-ui: 'Figtree', system-ui, sans-serif;
+
+  --icon-stroke: 2;
+  --bar-height: 1rem;
+  --radius: 6px;
+  --radius-block: 8px;
+}
+
+:root[data-theme='dark'] {
+  --bg: #0c0d0f;
+  --surface: #17181b;
+  --text: #b7bac1;
+  --text-h: #ffffff;
+  --accent: #6ea0ff;
+  --on-accent: #06122b;
+  --success: #3ddc84;
+  --warning: #ffb84d;
+  --destructive: #ff6b6b;
+  --highlight: #ffe45c;
+  --stance-neutral: #a3adba;
+  --stance-mixed: #b79cff;
+
+  --text-muted: #9093a0;
+  --surface-2: #212327;
+  --line: #2c2f35;
+  --border: #6b6f7a;
+  --ring: #6ea0ff;
+  --selected: #16233f;
+  --stance-ink: #0c0d0f;
+  --highlight-ink: #0c0d0f;
+  --invert-bg: #ffffff;
+  --invert-text: #0c0d0f;
+
+  --shell-bg: #0c0d0f;
+  --shell-surface: #1c1e22;
+  --shell-text: #c9ccd3;
+  --shell-text-h: #ffffff;
+  --shell-muted: #9498a1;
+  --shell-accent: #6ea0ff;
+  --shell-line: #2c2f35;
+
+  color-scheme: dark;
+}

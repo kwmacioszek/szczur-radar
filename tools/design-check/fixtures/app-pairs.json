@@ -1,0 +1,116 @@
+[
+  {
+    "fg": "--text",
+    "bg": "--bg",
+    "min": 4.5,
+    "kind": "text"
+  },
+  {
+    "fg": "--text-h",
+    "bg": "--bg",
+    "min": 4.5,
+    "kind": "text"
+  },
+  {
+    "fg": "--accent",
+    "bg": "--bg",
+    "min": 4.5,
+    "kind": "text"
+  },
+  {
+    "fg": "--success",
+    "bg": "--bg",
+    "min": 4.5,
+    "kind": "text"
+  },
+  {
+    "fg": "--warning",
+    "bg": "--bg",
+    "min": 4.5,
+    "kind": "text"
+  },
+  {
+    "fg": "--destructive",
+    "bg": "--bg",
+    "min": 4.5,
+    "kind": "text"
+  },
+  {
+    "fg": "--stance-neutral",
+    "bg": "--bg",
+    "min": 4.5,
+    "kind": "text"
+  },
+  {
+    "fg": "--stance-mixed",
+    "bg": "--bg",
+    "min": 4.5,
+    "kind": "text"
+  },
+  {
+    "fg": "--text",
+    "bg": "--surface",
+    "min": 4.5,
+    "kind": "text"
+  },
+  {
+    "fg": "--text-h",
+    "bg": "--surface",
+    "min": 4.5,
+    "kind": "text"
+  },
+  {
+    "fg": "--accent",
+    "bg": "--surface",
+    "min": 4.5,
+    "kind": "text"
+  },
+  {
+    "fg": "--success",
+    "bg": "--surface",
+    "min": 4.5,
+    "kind": "text"
+  },
+  {
+    "fg": "--warning",
+    "bg": "--surface",
+    "min": 4.5,
+    "kind": "text"
+  },
+  {
+    "fg": "--destructive",
+    "bg": "--surface",
+    "min": 4.5,
+    "kind": "text"
+  },
+  {
+    "fg": "--stance-neutral",
+    "bg": "--surface",
+    "min": 4.5,
+    "kind": "text"
+  },
+  {
+    "fg": "--stance-mixed",
+    "bg": "--surface",
+    "min": 4.5,
+    "kind": "text"
+  },
+  {
+    "fg": "--on-accent",
+    "bg": "--accent",
+    "min": 4.5,
+    "kind": "text"
+  },
+  {
+    "fg": "--text-h",
+    "bg": "--highlight",
+    "min": 4.5,
+    "kind": "text"
+  },
+  {
+    "fg": "--text",
+    "bg": "--highlight",
+    "min": 4.5,
+    "kind": "text"
+  }
+]

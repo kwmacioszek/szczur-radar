@@ -1,0 +1,66 @@
+/*
+ * Wariant „Salon” (runda 2). Projektowany od ciemnego motywu, w duchu spokojnych aplikacji do
+ * czytania i rozmowy: ciepły grafit, kość słoniowa w jasnym, szeryfowe nagłówki, miękkie kształty,
+ * akcent w kolorze wypalonej gliny. Pierwszy blok to motyw jasny, zgodnie z formatem style.css.
+ */
+:root {
+  --bg: #f6f2ea;
+  --surface: #fffdf8;
+  --text: #534f47;
+  --text-h: #1f1d19;
+  --accent: #a8481f;
+  --on-accent: #ffffff;
+  --success: #2f7045;
+  --warning: #8a5300;
+  --destructive: #b3324a;
+  --highlight: #f6e3a6;
+  --stance-neutral: #5c584f;
+  --stance-mixed: #845400;
+
+  --text-muted: #6b655b;
+  --surface-2: #efe9dd;
+  --line: #e2dccf;
+  --border: #857f73;
+  --ring: #a8481f;
+  --selected: #f3e6d9;
+  --success-soft: #e3efe0;
+  --destructive-soft: #f8e2e3;
+  --neutral-soft: #ebe6da;
+  --mixed-soft: #f6ead0;
+
+  --font-display: 'Newsreader', Georgia, serif;
+  --font-ui: 'Hanken Grotesk', system-ui, sans-serif;
+
+  --icon-stroke: 1.5;
+  --bar-height: 0.5rem;
+  --radius: 10px;
+  --radius-block: 20px;
+}
+
+:root[data-theme='dark'] {
+  --bg: #1c1b19;
+  --surface: #262522;
+  --text: #c3beb3;
+  --text-h: #f3efe6;
+  --accent: #e2905f;
+  --on-accent: #2a1408;
+  --success: #8fce9b;
+  --warning: #e6b566;
+  --destructive: #ef7f8e;
+  --highlight: #4a3d18;
+  --stance-neutral: #b3ada0;
+  --stance-mixed: #e3b565;
+
+  --text-muted: #a59f93;
+  --surface-2: #302e2a;
+  --line: #3a3833;
+  --border: #857f73;
+  --ring: #e2905f;
+  --selected: #3a2c22;
+  --success-soft: #223528;
+  --destructive-soft: #40242a;
+  --neutral-soft: #34322d;
+  --mixed-soft: #3d3219;
+
+  color-scheme: dark;
+}
