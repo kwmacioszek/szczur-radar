@@ -91,22 +91,24 @@ milestone_status: open
 
 > v6.1 (2026-11-19): decyzja właściciela po S-46 — aplikacja ma wyglądać jak dopracowany produkt, a nie surowy panel; makiety z `ui-ux-proposals.md` dawały plan tylko układu. Nowy fundament F-07 (`ui-design-system`): projekt UI/UX całej aplikacji od nowa według standardów i wzorców projektowych (Fable), z makietami jako materiałem wejściowym, akceptowany przez właściciela na prototypach; F-08 (`design-tokens-and-components`) wdraża go w tokenach i komponentach przed S-47 i S-49. S-46 domknięty bez zmian (mechanizm motywu i paleta A), więc wzorce F-06 zmienią się drugi raz w F-08. Wycinki UI wdrażają projekt F-07; otwarte pytanie 7 przechodzi do F-07. Jeśli projekt zmieni architekturę informacji, `/10x-roadmap` przetnie S-47–S-59 na nowo (v6.2).
 
+> v6.2 (2026-11-21): F-07 zarchiwizowany, projekt UI/UX zaakceptowany przez właściciela 2026-11-20 (`context/foundation/ui-design.md`). Projekt zmienił architekturę informacji, więc `/10x-roadmap` przecina F-08 i S-47–S-60 według jego sekcji „Różnice wobec roadmapy”: te same ID, Change ID, issue i zależności, nowe opisy. Najważniejsze zmiany: pasek nawigacji u góry i jedna kolumna zamiast paneli stałych (S-47); panel admina w trzech częściach z własnymi adresami (S-50); zwarta lista postów z oceną w panelu wysuwanym z prawej (S-51); podświetlenie cytatów jako część tego panelu, a nie osobny ekran (S-53); filtry, daty i kolejność w jednym panelu filtrów (S-54–S-56); katalog i karta celu na jednym ekranie (S-57, S-58); przegląd dnia jako ekran startowy (S-59). Słowo „post” zastępuje „wpis”. F-08 jest `ready`. Otwarte pytanie 7 rozstrzygnięte; nowe pytanie 8 (doprecyzowania PRD). Change ID `stream-and-inspector` i `reader-quote-highlighting` zostają jako stabilne identyfikatory mimo nowych nazw.
+
 ## Milestone
 
 **M-5: Nowe UI na sprawdzonym fundamencie** — Status: open
 
-- **Intent:** Aplikacja webowa dostaje nowy, spójny interfejs — strumień wpisów z inspektorem oceny, czytnik z cytatami podświetlonymi w treści, katalog celów z proporcjami stanowisk i przegląd dnia — zbudowany na wspólnym fundamencie (motywy jasny i ciemny, stała nawigacja, wspólne stany widoków), a każdy przepływ i wygląd pilnują w CI testy w przeglądarce, więc zmiany UI nie wymagają ręcznego klikania.
+- **Intent:** Aplikacja webowa dostaje nowy, spójny interfejs według zaakceptowanego projektu UI/UX — zwartą listę postów z oceną w panelu bocznym i cytatami podświetlonymi w treści, katalog celów z proporcjami stanowisk i przegląd dnia — zbudowany na wspólnym fundamencie (motywy jasny i ciemny, nawigacja u góry, wspólne stany widoków), a każdy przepływ i wygląd pilnują w CI testy w przeglądarce, więc zmiany UI nie wymagają ręcznego klikania.
 - **Source materials:** `context/foundation/prd.md` (v4: FR-035–FR-040, doprecyzowania v4 przy FR-007, FR-008, FR-009, FR-011a, FR-011b, FR-033 i Non-Goals, NFR o testach w przeglądarce `prd.md:328`); `context/foundation/ui-ux-proposals.md` (cztery układy: Czytnik, Karta podmiotu, Strumień + Inspektor, Przegląd; makiety w `docs/visuals/ui-ux-proposals/`); audyt `context/changes/post-m4-ui-readiness-audit/research.md` (fundament SPA, luki API wobec makiet, podłoga E2E, pomiar „kanał jako cel”, sekcja „Decyzje właściciela (2026-11-15)”); mapa projektu `context/map/repo-map.md` i destylacja `context/domain/domain-distillation.md` z 2026-11-15; od v6.1 projekt UI/UX `context/foundation/ui-design.md` (F-07).
 - **Done when:** every F-NN and S-NN below is `done`; każdy przepływ użytkownika z NFR `prd.md:328` ma test w przeglądarce w CI; wygląd katalogu komponentów i każdego widoku jest pilnowany zrzutami porównawczymi w obu motywach i przy 375 px, a ręczna weryfikacja wycinka UI to ocena różnic obrazków w PR; każdy widok wdraża zaakceptowany projekt UI/UX z F-07 (opis PR wycinka UI pokazuje zrzut obok prototypu).
 - **Scope anchors:** FR-035, FR-036, FR-037, FR-038, FR-039, FR-040 (nowe w PRD v4); FR-007 (doprecyzowanie v4, Q-15), FR-008 i FR-011b (sortowanie wybrane do M-5), FR-009 (doprecyzowanie v4: podświetlenie cytatów, poprzedni i następny wpis), FR-010, FR-011a (doprecyzowanie v4: agregacja po tekście celu), FR-033 (doprecyzowanie v4: „kanał jako cel”, Q-20), FR-006, FR-014, FR-015, FR-021, FR-026–FR-028 (widoki istniejące, przenoszone na nowy fundament); NFR `prd.md:328` (testy w przeglądarce, wizualne i dostępności); Non-Goals `prd.md:369` z doprecyzowaniem v4 (granica: bez rozpoznawania spółek, trendu i automatycznego „warte uwagi”).
 
 ## Vision recap
 
-Na Wykopie (#gielda) i Reddicie codziennie pojawiają się setki postów o inwestowaniu; Szczur Radar pobiera je, a LLM według zamkniętego kontraktu opisuje, czego dotyczą, jakie stanowisko autor zajmuje wobec każdej spółki lub tematu i jakie tezy przedstawia — każdą z dosłownym cytatem. M-1–M-4 zbudowały i utwardziły ten rdzeń dla dwóch źródeł oraz siatkę regresji w CI. M-5 zmienia to, jak użytkownik czyta te oceny: z jednej kolumny kart w układ, w którym widać źródło oceny w treści, wpisy wokół jednego celu i obraz dnia — bez rozpoznawania spółek i bez decyzji za użytkownika, co jest warte uwagi.
+Na Wykopie (#gielda) i Reddicie codziennie pojawiają się setki postów o inwestowaniu; Szczur Radar pobiera je, a LLM według zamkniętego kontraktu opisuje, czego dotyczą, jakie stanowisko autor zajmuje wobec każdej spółki lub tematu i jakie tezy przedstawia — każdą z dosłownym cytatem. M-1–M-4 zbudowały i utwardziły ten rdzeń dla dwóch źródeł oraz siatkę regresji w CI. M-5 zmienia to, jak użytkownik czyta te oceny: z jednej kolumny kart w układ, w którym widać źródło oceny w treści, posty wokół jednego celu i obraz dnia — bez rozpoznawania spółek i bez decyzji za użytkownika, co jest warte uwagi.
 
 ## North star
 
-**S-51: Użytkownik przegląda strumień wpisów i czyta ocenę wybranego wpisu w panelu inspektora** — to najmniejszy przepływ, który sprawdza cały nowy fundament (motyw, nawigacja, wspólne stany, testy wizualne) na codziennej pracy użytkownika i zastępuje dzisiejszy feed oraz stronę posta; przy celu `quality` stoi zaraz po fundamencie, a nie po nowych funkcjach.
+**S-51: Użytkownik przegląda zwartą listę postów i czyta ocenę wybranego posta w panelu bocznym** — to najmniejszy przepływ, który sprawdza cały nowy fundament (motyw, nawigacja, wspólne stany, testy wizualne) na codziennej pracy użytkownika i zastępuje dzisiejszy feed oraz stronę posta; przy celu `quality` stoi zaraz po fundamencie, a nie po nowych funkcjach.
 
 > „Gwiazda przewodnia” (north star) oznacza tu najmniejszy wycinek od początku do końca, którego udane dostarczenie potwierdza cel kamienia milowego — dlatego stoi tak wcześnie, jak pozwalają jego warunki wstępne.
 
@@ -117,22 +119,22 @@ Na Wykopie (#gielda) i Reddicie codziennie pojawiają się setki postów o inwes
 | F-05 | e2e-harness                   | (foundation) testy w przeglądarce w repo i w CI na atrapie API ustawianej z testu; smoke obecnych przepływów            | —             | NFR `prd.md:328`                           | done     |
 | F-06 | visual-regression             | (foundation) zrzuty porównawcze katalogu komponentów i widoków w obu motywach i przy 375 px oraz test dostępności w CI   | F-05          | NFR `prd.md:328` (doprecyzowanie v4)       | done |
 | F-07 | ui-design-system              | (foundation) zaakceptowany projekt UI/UX całej aplikacji według standardów: architektura informacji, tokeny, komponenty, prototypy | —             | FR-040, NFR `prd.md:328`                   | done |
-| F-08 | design-tokens-and-components  | (foundation) język wizualny z F-07 w tokenach i komponentach katalogu, obecne widoki przepięte                           | F-07, S-46    | FR-040, NFR `prd.md:328`                   | proposed |
+| F-08 | design-tokens-and-components  | (foundation) tokeny, kroje i komponenty bazowe z projektu F-07 w aplikacji; obecne widoki w nowym wyglądzie, jeszcze w starym układzie | F-07, S-46    | FR-040, NFR `prd.md:328` | ready |
 | S-46 | light-dark-theme-switch       | użytkownik przełącza motyw jasny i ciemny w nowej palecie, a wybór jest zapamiętany                                      | F-06          | FR-040                                     | done |
-| S-47 | app-shell-navigation          | użytkownik porusza się po aplikacji przez stałą nawigację w układzie paneli, bez nagłówka stawianego przez każdy widok   | F-08          | FR-007, FR-021, FR-030                     | proposed |
-| S-48 | shared-view-states            | użytkownik widzi w każdym widoku te same stany ładowania, pustej listy i błędu z ponowieniem                             | S-47          | FR-007, FR-009, NFR `prd.md:328`           | proposed |
-| S-49 | login-on-shared-foundation    | użytkownik loguje się i aktywuje konto na ekranach zbudowanych ze wspólnych komponentów i tokenów                        | F-08          | FR-026, FR-027, FR-028                     | proposed |
-| S-50 | admin-panel-components        | admin pracuje w panelu złożonym z komponentów, w nowym układzie                                                          | S-48          | FR-014, FR-015, FR-021, FR-022, FR-034     | proposed |
-| S-51 | stream-and-inspector          | użytkownik przegląda strumień wpisów i czyta ocenę wybranego wpisu w panelu inspektora                                   | S-48          | FR-006, FR-007, FR-009, FR-010, FR-011a    | proposed |
-| S-52 | investment-posts-by-default   | użytkownik widzi domyślnie tylko posty inwestycyjne, a przełącznik „pokaż wszystkie” przywraca resztę                    | S-51          | FR-007 (doprecyzowanie v4)                 | proposed |
-| S-53 | reader-quote-highlighting     | użytkownik czyta wpis z podświetlonymi fragmentami, na których oparto ocenę, i przechodzi do poprzedniego i następnego   | S-51          | FR-009 (doprecyzowanie v4)                 | proposed |
-| S-54 | post-list-sorting             | użytkownik sortuje listę wpisów po dacie, źródle i polach oceny                                                          | S-51          | FR-008, FR-011b                            | proposed |
-| S-55 | publication-date-filter       | użytkownik zawęża listę do dnia albo zakresu dat publikacji                                                              | S-51          | FR-035                                     | proposed |
-| S-56 | post-content-search           | użytkownik wyszukuje wpisy po słowach w tytule i treści                                                                  | S-51          | FR-036                                     | proposed |
-| S-57 | target-catalog                | użytkownik widzi katalog celów z liczbą wpisów i przechodzi do wpisów wybranego celu                                     | S-52          | FR-037, FR-011a (doprecyzowanie v4)        | proposed |
-| S-58 | target-card-stance-shares     | użytkownik widzi na karcie celu proporcje stanowisk autorów i wypowiedzi o tym celu                                      | S-57          | FR-038                                     | proposed |
-| S-59 | daily-overview                | użytkownik widzi przegląd dnia: liczby, cele dnia z proporcjami i najczęściej omawiane cele z najnowszymi wpisami        | S-55, S-58    | FR-039                                     | proposed |
-| S-60 | channel-as-target-quality     | operator widzi udział celów równych kanałowi posta per źródło i dostaje sygnał po przekroczeniu progu                    | S-50          | FR-033 (doprecyzowanie v4)                 | proposed |
+| S-47 | app-shell-navigation          | użytkownik porusza się po aplikacji przez pasek u góry (nawigacja według roli, data danych per źródło, motyw, wylogowanie), z treścią w jednej kolumnie | F-08          | FR-007, FR-013, FR-015, FR-021, FR-030 | proposed |
+| S-48 | shared-view-states            | użytkownik widzi w każdym widoku to samo ładowanie, pustą listę, błąd z ponowieniem i stronicowanie | S-47          | FR-007, FR-009, NFR `prd.md:328` | proposed |
+| S-49 | login-on-shared-foundation    | użytkownik loguje się i aktywuje konto na ekranach zbudowanych ze wspólnych komponentów i tokenów | F-08          | FR-026, FR-027, FR-028 | proposed |
+| S-50 | admin-panel-components        | admin pracuje w panelu z trzema częściami pod własnymi adresami (Przebiegi, Jakość ocen, Nieudane posty); strona przebiegu osobno | S-48          | FR-014, FR-015, FR-021, FR-022, FR-033, FR-034 | proposed |
+| S-51 | stream-and-inspector          | użytkownik przegląda zwartą listę postów i czyta ocenę wybranego posta w panelu wysuwanym z prawej | S-48          | FR-006, FR-007, FR-009, FR-010, FR-011a | proposed |
+| S-52 | investment-posts-by-default   | użytkownik widzi domyślnie tylko posty inwestycyjne, a przełącznik „Inwestycyjne N / Wszystkie M” pokazuje resztę | S-51          | FR-007 (doprecyzowanie v4) | proposed |
+| S-53 | reader-quote-highlighting     | użytkownik widzi w panelu posta podświetlone fragmenty, na których oparto ocenę, i przechodzi do poprzedniego i następnego posta | S-51          | FR-009 (doprecyzowanie v4) | proposed |
+| S-54 | post-list-sorting             | użytkownik ustawia kolejność listy postów w panelu filtrów (data, źródło, pola oceny) | S-51          | FR-008, FR-011b | proposed |
+| S-55 | publication-date-filter       | użytkownik zawęża listę do dnia albo zakresu dat publikacji polami „Od” i „Do” w panelu filtrów | S-51          | FR-035 | proposed |
+| S-56 | post-content-search           | użytkownik wyszukuje posty po słowach w tytule i treści w polu „Szukaj w postach” nad listą | S-51          | FR-036 | proposed |
+| S-57 | target-catalog                | użytkownik widzi katalog celów z liczbą postów i udziałem stanowisk i przechodzi do postów wybranego celu | S-52          | FR-037, FR-038, FR-011a (doprecyzowanie v4) | proposed |
+| S-58 | target-card-stance-shares     | użytkownik otwiera kartę celu w panelu na ekranie katalogu: proporcje stanowisk autorów i wypowiedzi o tym celu | S-57          | FR-038 | proposed |
+| S-59 | daily-overview                | użytkownik widzi po zalogowaniu przegląd dnia: pięć liczb dnia, trzy najczęściej omawiane cele i tabelę celów dnia | S-55, S-58    | FR-039 | proposed |
+| S-60 | channel-as-target-quality     | operator widzi udział celów równych kanałowi posta per źródło (noc i część „Jakość ocen”) i dostaje sygnał po przekroczeniu progu | S-50          | FR-033 (doprecyzowanie v4) | proposed |
 
 ## Streams
 
@@ -140,10 +142,10 @@ Navigation aid — groups items that share a Prerequisites chain. Canonical orde
 
 | Stream | Theme                    | Chain                                                      | Note                                                                                                                         |
 | ------ | ------------------------ | ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| A      | Siatka i fundament UI    | `F-05` → `F-06` → `S-46` · `F-07` → `F-08` → `S-47` → `S-48` → `S-50` · `S-49` | Przy celu `quality` testy działania i wyglądu idą przed przebudową; od v6.1 projekt UI/UX (F-07) i jego tokeny (F-08) przed shellem; wspólne pliki (tokeny, komponenty, router) — fala sekwencyjna. |
-| B      | Widok wpisu              | `S-51` → `S-52` · `S-53` · `S-54` · `S-55` · `S-56`        | Gwiazda przewodnia zaraz po fundamencie; potem przekroje listy, które mogą iść równolegle.                                   |
-| C      | Wokół celu               | `S-57` → `S-58` → `S-59`                                   | Agregacja po tekście celu (FR-011a v4); dołącza do B przy `S-52` (domyślne ukrywanie) i `S-55` (dzień dla przeglądu).        |
-| D      | Jakość ocen              | `S-60`                                                     | Miara „kanał jako cel” chroni widoki C przy zmianie modelu; dołącza do A przy `S-50` (sekcja jakości w panelu admina).        |
+| A      | Siatka i fundament UI    | `F-05` → `F-06` → `S-46` · `F-07` → `F-08` → `S-47` → `S-48` → `S-50` · `S-49` | Przy celu `quality` testy działania i wyglądu idą przed przebudową; projekt UI/UX (F-07, zaakceptowany) i jego tokeny (F-08) przed powłoką; wspólne pliki (tokeny, komponenty, router) — fala sekwencyjna. |
+| B      | Posty: lista i panel     | `S-51` → `S-52` · `S-53` · `S-54` · `S-55` · `S-56`        | Gwiazda przewodnia zaraz po fundamencie; potem przekroje listy. Od v6.2 S-54, S-55 i S-56 dzielą jeden panel filtrów, a S-53 panel posta — równolegle tylko z ustaloną kolejnością merge. |
+| C      | Wokół celu               | `S-57` → `S-58` → `S-59`                                   | Agregacja po tekście celu (FR-011a v4); katalog i karta celu to jeden ekran; dołącza do B przy `S-52` (zakres postów) i `S-55` (dzień dla przeglądu); S-59 zmienia ekran startowy. |
+| D      | Jakość ocen              | `S-60`                                                     | Miara „kanał jako cel” chroni widoki C przy zmianie modelu; dołącza do A przy `S-50` (część „Jakość ocen” panelu admina).     |
 
 ## Baseline
 
@@ -205,23 +207,23 @@ Wycinki niżej zakładają te warstwy i ich nie budują od nowa.
 - **Risk:** bez wspólnego projektu plan każdego wycinka bierze z makiet tylko układ, a wygląd zostaje surowy (decyzja właściciela 2026-11-19); dokumentacja i prototypy bez kodu aplikacji, więc wzorce F-06 się nie zmieniają.
 - **Status:** done
 
-### F-08: Tokeny i komponenty z projektu
+### F-08: Tokeny, kroje i komponenty bazowe z projektu
 
-- **Outcome:** (foundation) język wizualny z F-07 jest w aplikacji: tokeny w `style.css` (typografia, odstępy, role kolorów w obu motywach na mechanizmie z S-46), komponenty bazowe z projektu w katalogu komponentów we wszystkich stanach, a obecne widoki są na nie przepięte; wzorce F-06 zmieniają się raz, jako akceptacja wyglądu.
+- **Outcome:** (foundation) język wizualny z F-07 jest w aplikacji: tokeny projektu w `style.css` w obu motywach na mechanizmie z S-46, trzy kroje hostowane w aplikacji, ikony oraz komponenty bazowe (przycisk, komunikat, znacznik stanu, stanowisko, przełącznik motywu, pola, odnośnik) w katalogu komponentów we wszystkich stanach; obecne widoki działają na nowych tokenach, jeszcze w starym układzie, a wzorce F-06 zmieniają się raz, jako akceptacja wyglądu.
 - **Change ID:** design-tokens-and-components
 - **PRD refs:** FR-040, NFR `prd.md:328`
-- **Unlocks:** S-47, S-49 (a przez nie resztę strumieni A i B).
+- **Prototypy:** arkusz komponentów `ui-design/prototypes/components.html`; zakres w `ui-design.md`, sekcja „Wdrożenie” (co skąd brać, mapa tokenów, mapa komponentów, zmiany bramek).
+- **Unlocks:** S-47, S-49 (a przez nie resztę strumieni A i B); bramki wyglądu dla S-47–S-59: pary kontrastu z projektu z progiem osobnym dla tekstu i elementów interfejsu, test kroju, lista plików bez literałów stylu.
 - **Prerequisites:** F-07, S-46
 - **Parallel with:** —
 - **Blockers:** —
-- **Unknowns:**
-  - Które widoki przepiąć od razu, a które zostawić ich wycinkom (S-47–S-59 i tak je przebudują)? — Owner: team (`/10x-plan`). Block: no.
-- **Risk:** zmienia wszystkie wzorce F-06 drugi raz po S-46 (zamierzone); tokeny są wspólne dla każdego widoku, więc idzie przed shellem, żeby S-47–S-59 budowały od razu na projekcie.
-- **Status:** proposed
+- **Unknowns:** — (zakres przepięcia rozstrzygnął projekt: F-08 przenosi wszystkie obecne widoki na nowe tokeny bez zmiany układu; układ zmieniają wycinki ekranów)
+- **Risk:** zmienia wszystkie wzorce F-06 drugi raz po S-46 (zamierzone) i świadomie zmienia bramki opisane w projekcie (test kroju, pary kontrastu, nazwy sekcji katalogu komponentów); nazwa `--border` zmienia znaczenie z linii ozdobnej na krawędź kontrolki, więc obie nazwy zmieniają się w jednym commicie; tokeny są wspólne dla każdego widoku, więc idzie przed powłoką.
+- **Status:** ready
 
 ## Slices
 
-> Od v6.1 (2026-11-19): każdy wycinek UI (S-47–S-59) wdraża swój widok według zaakceptowanego projektu F-07 (`context/foundation/ui-design.md`) na tokenach i komponentach z F-08, a opis PR pokazuje zrzut F-06 obok prototypu ekranu. Każdy wycinek S-47–S-59 kończy się testem E2E swoich przepływów według sekcji „Kontrakt dla testów E2E” w `context/foundation/ui-design.md` (od 2026-11-20).
+> Od v6.1 (2026-11-19): każdy wycinek UI (S-47–S-59) wdraża swój widok według zaakceptowanego projektu F-07 (`context/foundation/ui-design.md`) na tokenach i komponentach z F-08, a opis PR pokazuje zrzut F-06 obok prototypu ekranu. Każdy wycinek S-47–S-59 kończy się testem E2E swoich przepływów według sekcji „Kontrakt dla testów E2E” w `context/foundation/ui-design.md` (od 2026-11-20). Od v6.2 (2026-11-21) bloki S-47–S-60 opisują ekrany tak, jak je pokazuje projekt; pole „Prototypy” wskazuje ekrany z `ui-design/screens.json`, które są kryterium akceptacji wycinka.
 
 ### S-46: Motyw jasny i ciemny z przełącznikiem
 
@@ -236,23 +238,26 @@ Wycinki niżej zakładają te warstwy i ich nie budują od nowa.
 - **Risk:** zmienia wszystkie wzorce F-06 naraz (zamierzone); tokeny są wspólne dla każdego widoku, więc idzie przed shellem i widokami, żeby nie przebudowywać ich drugi raz.
 - **Status:** done
 
-### S-47: Stała nawigacja i układ paneli
+### S-47: Powłoka aplikacji z nawigacją u góry
 
-- **Outcome:** użytkownik porusza się po aplikacji przez stałą nawigację w jednym układzie z panelami (strumień, katalog celów, przegląd, panel admina dla admina), z datą aktualizacji danych per źródło, zamiast nagłówka stawianego osobno przez każdy widok; obecne widoki działają w nowym układzie.
+- **Outcome:** użytkownik porusza się po aplikacji przez pasek u góry strony: nawigacja według roli (po tym wycinku „Posty” i „Panel admina” dla admina; „Cele” i „Przegląd” dochodzą ze swoimi ekranami w S-57 i S-59), data ostatniej aktualizacji danych per źródło z dniem i godziną, powiadomienia admina, przełącznik motywu, e-mail zalogowanego i „Wyloguj”; treść jest w jednej kolumnie, bez kolumny bocznej i paneli stałych, a obecne widoki działają w powłoce zamiast stawiać własny nagłówek.
 - **Change ID:** app-shell-navigation
-- **PRD refs:** FR-007, FR-021, FR-030
+- **PRD refs:** FR-007, FR-013, FR-015, FR-021, FR-030
+- **Prototypy:** pasek aplikacji na każdym ekranie zalogowanym; `notifications`.
 - **Prerequisites:** F-08
 - **Parallel with:** S-49
 - **Blockers:** —
-- **Unknowns:** —
-- **Risk:** przepina router i nagłówek każdego widoku (dziś każdy widok renderuje własny nagłówek, a dzwonek trzyma stan w store z tego powodu); smoke F-05 i zrzuty F-06 łapią regresje przepięcia.
+- **Unknowns:**
+  - Czy adres `/posts` powstaje już tutaj (ekran startowy `/` pokazuje listę postów do czasu S-59), czy dopiero z ekranem postów w S-51? — Owner: team (`/10x-plan`). Block: no.
+- **Risk:** przepina router i nagłówek każdego widoku (dziś każdy widok renderuje własny nagłówek, a dzwonek trzyma stan w store z tego powodu); data danych przechodzi znad listy postów do paska (doprecyzowanie FR-030, otwarte pytanie 8); smoke F-05 i zrzuty F-06 łapią regresje przepięcia.
 - **Status:** proposed
 
-### S-48: Wspólne stany widoków
+### S-48: Wspólne stany widoków i stronicowanie
 
-- **Outcome:** użytkownik widzi w każdym widoku te same stany ładowania, pustej listy i błędu z ponowieniem, pokazane w katalogu komponentów we wszystkich wariantach; widoki przestają kopiować kontener strony i wzorzec stanów.
+- **Outcome:** użytkownik widzi w każdym widoku te same cztery wspólne elementy: ładowanie jako szkielet, pustą listę, błąd z ponowieniem i stronicowanie, pokazane w katalogu komponentów we wszystkich wariantach; widoki przestają kopiować kontener strony i wzorzec stanów.
 - **Change ID:** shared-view-states
 - **PRD refs:** FR-007, FR-009, NFR `prd.md:328`
+- **Prototypy:** `state-loading`, `state-empty`, `state-error` (lista postów); `admin-loading`, `admin-empty`, `admin-error` (panel admina).
 - **Prerequisites:** S-47
 - **Parallel with:** S-49
 - **Blockers:** —
@@ -265,55 +270,60 @@ Wycinki niżej zakładają te warstwy i ich nie budują od nowa.
 - **Outcome:** użytkownik loguje się i aktywuje konto na ekranach zbudowanych ze wspólnych komponentów i tokenów w obu motywach; ekran logowania jest na liście plików wolnych od literałów stylu.
 - **Change ID:** login-on-shared-foundation
 - **PRD refs:** FR-026, FR-027, FR-028
+- **Prototypy:** `login`, `activate`.
 - **Prerequisites:** F-08
 - **Parallel with:** S-47, S-48, S-50, S-51
 - **Blockers:** —
 - **Unknowns:** —
-- **Risk:** mały i oddzielny od shellu (ekrany publiczne nie mają nawigacji); domyka zaległy dług `login-view-ui-hardening`, na który wskazuje komentarz w teście stylu.
+- **Risk:** mały i oddzielny od powłoki (ekrany publiczne nie mają nawigacji); domyka zaległy dług `login-view-ui-hardening`, na który wskazuje komentarz w teście stylu.
 - **Status:** proposed
 
-### S-50: Panel admina z komponentów
+### S-50: Panel admina w trzech częściach
 
-- **Outcome:** admin uruchamia przebieg, widzi dni bez danych, jakość ocen, ostatnie przebiegi oraz nieudane i martwe posty w nowym układzie, w sekcjach zbudowanych ze wspólnych komponentów zamiast wierszy wpisanych w widok; strona przebiegu korzysta z tych samych elementów.
+- **Outcome:** admin pracuje w panelu podzielonym na trzy części z własnymi adresami, przełączane paskiem pod nagłówkiem: „Przebiegi” (nowy przebieg, dni bez danych z uzupełnieniem, ostatnie przebiegi jako tabela), „Jakość ocen” (miary z 7 dni per źródło wobec progów) i „Nieudane posty” (tabela ze stanem posta, liczbą prób i ostatnim błędem; ponowienie zaznaczonych i przywrócenie martwych); strona przebiegu zostaje osobnym ekranem złożonym z tych samych elementów.
 - **Change ID:** admin-panel-components
-- **PRD refs:** FR-014, FR-015, FR-021, FR-022, FR-034
+- **PRD refs:** FR-014, FR-015, FR-021, FR-022, FR-033, FR-034
+- **Prototypy:** `admin-runs`, `admin-quality`, `admin-posts`, `run`.
 - **Prerequisites:** S-48
 - **Parallel with:** S-49, S-51, S-52–S-56
 - **Blockers:** —
 - **Unknowns:** —
-- **Risk:** największy widok (790 linii, w M-4 +261) i najwięcej stylu lokalnego; zrzuty F-06 i scenariusze admina w F-05 pilnują, że rozbicie nie zmienia działania.
+- **Risk:** największy widok (790 linii, w M-4 +261) i najwięcej stylu lokalnego; dziś jedna strona, po wycinku trzy adresy, więc zmieniają się testy E2E i wzorce panelu admina; zrzuty F-06 i scenariusze admina w F-05 pilnują, że rozbicie nie zmienia działania.
 - **Status:** proposed
 
-### S-51: Strumień wpisów z inspektorem oceny
+### S-51: Lista postów z oceną w panelu bocznym
 
-- **Outcome:** użytkownik przegląda strumień wpisów (źródło, czas, tytuł, cele ze stanowiskiem), filtruje go po celu i stanowisku i czyta ocenę wybranego wpisu w panelu inspektora obok listy: cele ze stanowiskiem, tezy z cytatem, link do oryginału i surowe dane; zastępuje dzisiejszy feed i stronę posta.
+- **Outcome:** użytkownik przegląda zwartą listę postów (jeden post w jednej linii: źródło, czas, tytuł, cele ze stanowiskiem), filtruje ją po celu i stanowisku w panelu „Filtry” z widocznymi znacznikami aktywnych filtrów i czyta ocenę wybranego posta w panelu wysuwanym z prawej, z listą widoczną w tle: cele ze stanowiskiem, tezy z cytatem, „Otwórz oryginał” i surowe dane; na wąskim ekranie panel zajmuje cały ekran; zastępuje dzisiejszy feed i stronę posta.
 - **Change ID:** stream-and-inspector
 - **PRD refs:** FR-006, FR-007, FR-009, FR-010, FR-011a
+- **Prototypy:** `posts`, `post`.
 - **Prerequisites:** S-48
 - **Parallel with:** S-49, S-50
 - **Blockers:** —
 - **Unknowns:**
-  - Czy wybrany wpis ma własny adres (link do inspektora otwarty z zewnątrz, np. z powiadomienia), czy inspektor żyje tylko obok listy? — Owner: team (`/10x-plan`). Block: no.
-- **Risk:** gwiazda przewodnia; jedna etykieta stanowiska na cały wpis (makieta) jest sprzeczna z kontraktem bez globalnego sentymentu posta (`prd.md:132`), więc wiersz pokazuje stanowisko per cel.
+  - Czy wybrany post ma własny adres? Projekt rekomenduje: tak (działa link z powiadomienia i z innego ekranu, „wstecz” wraca do listy z filtrem, odświeżenie nie gubi wyboru). — Owner: team (`/10x-plan`). Block: no.
+- **Risk:** gwiazda przewodnia; jedna etykieta stanowiska na cały post (makieta) jest sprzeczna z kontraktem bez globalnego sentymentu posta (`prd.md:132`), więc wiersz pokazuje stanowisko per cel; panel jest oknem nad listą, więc fokus klawiatury i „wstecz” przeglądarki wymagają testu w przeglądarce.
 - **Status:** proposed
 
 ### S-52: Domyślnie tylko posty inwestycyjne
 
-- **Outcome:** użytkownik widzi w listach domyślnie tylko posty inwestycyjne, bez postów `not_investment_related` i wyniku odsiewu (wpis bez treści); przełącznik „pokaż wszystkie” przywraca resztę, a liczniki i proporcje liczą się tak samo.
+- **Outcome:** użytkownik widzi w listach domyślnie tylko posty inwestycyjne, bez postów `not_investment_related` i wyniku odsiewu (post bez treści); przełącznik dwóch stanów z liczbami „Inwestycyjne N / Wszystkie M” na ekranie postów pokazuje resztę i przełącza cały widok (listę, liczniki, proporcje); katalog celów, karta celu i przegląd dnia dostają ten sam przełącznik w S-57, S-58 i S-59.
 - **Change ID:** investment-posts-by-default
 - **PRD refs:** FR-007 (doprecyzowanie v4)
+- **Prototypy:** `posts`, `posts-all`; ten sam przełącznik na `targets`, `target`, `overview`.
 - **Prerequisites:** S-51
 - **Parallel with:** S-53, S-54, S-55, S-56, S-50
 - **Blockers:** —
 - **Unknowns:** —
-- **Risk:** zmienia domyślną odpowiedź feedu, którą dziś pilnują testy integracyjne i kontrakt („Without a condition the feed is every assessed post”); przed katalogiem celów, żeby liczby w C od początku liczyły się po tej regule.
+- **Risk:** zmienia domyślną odpowiedź feedu, którą dziś pilnują testy integracyjne i kontrakt („Without a condition the feed is every assessed post”); przełącznik pokazuje liczbę postów bieżącego wyniku w obu zakresach, więc odpowiedź listy dostaje nowe liczby; przed katalogiem celów, żeby liczby w C od początku liczyły się po tej regule.
 - **Status:** proposed
 
-### S-53: Czytnik z podświetlonymi cytatami
+### S-53: Podświetlone cytaty w panelu posta
 
-- **Outcome:** użytkownik czyta wpis z podświetlonymi w treści fragmentami, na których oparto ocenę (anchory celów i cytaty tez), może podświetlenie wyłączyć i przechodzi do poprzedniego i następnego wpisu bieżącej listy.
+- **Outcome:** użytkownik widzi w panelu posta podświetlone w treści fragmenty, na których oparto ocenę (anchory celów i cytaty tez; także w tytule, gdy cytat z niego pochodzi, oraz miejsce celu bez twierdzeń), może podświetlenie wyłączyć i przechodzi do poprzedniego i następnego posta bieżącej listy; to część panelu z S-51, a nie osobny ekran.
 - **Change ID:** reader-quote-highlighting
 - **PRD refs:** FR-009 (doprecyzowanie v4)
+- **Prototypy:** `post` (podświetlenia, wyłącznik, „poprzedni” i „następny”).
 - **Prerequisites:** S-51
 - **Parallel with:** S-52, S-54, S-55, S-56, S-50
 - **Blockers:** —
@@ -324,89 +334,96 @@ Wycinki niżej zakładają te warstwy i ich nie budują od nowa.
 
 ### S-54: Sortowanie listy
 
-- **Outcome:** użytkownik sortuje listę wpisów po dacie i źródle oraz po wybranych polach oceny; domyślnym porządkiem zostaje chronologia.
+- **Outcome:** użytkownik ustawia kolejność listy postów polem „Kolejność” w panelu filtrów: po dacie i źródle oraz po wybranych polach oceny; domyślnym porządkiem zostaje chronologia od najnowszych.
 - **Change ID:** post-list-sorting
 - **PRD refs:** FR-008, FR-011b
+- **Prototypy:** `posts-filters` (pole „Kolejność”; prototyp pokazuje tylko „od najnowszych” i „od najstarszych”).
 - **Prerequisites:** S-51
 - **Parallel with:** S-52, S-53, S-55, S-56, S-50
 - **Blockers:** —
 - **Unknowns:**
-  - Po których polach oceny sortować (np. liczba celów, liczba tez, trafność), skoro kontrakt nie ma miary „ważności” (FR-007, Socrates)? — Owner: user. Block: no.
-- **Risk:** jedyny nice-to-have w M-5 (wybór właściciela); sortowanie po polach JSONB oceny może wymagać innego zapytania niż dzisiejsza stała kolejność.
+  - Po których polach oceny sortować (np. liczba celów, liczba tez, trafność), skoro kontrakt nie ma miary „ważności” (FR-007, Socrates)? Projekt nie rozstrzyga; pokazuje tylko kolejność po dacie. — Owner: user. Block: no.
+- **Risk:** jedyny nice-to-have w M-5 (wybór właściciela); sortowanie po polach JSONB oceny może wymagać innego zapytania niż dzisiejsza stała kolejność; dzieli panel filtrów z S-55 i S-56.
 - **Status:** proposed
 
 ### S-55: Filtr po dacie publikacji
 
-- **Outcome:** użytkownik zawęża listę do dnia albo zakresu dat publikacji (kalendarz warszawski), także razem z pozostałymi filtrami.
+- **Outcome:** użytkownik zawęża listę do dnia albo zakresu dat publikacji (kalendarz warszawski) polami „Od” i „Do” w panelu filtrów, także razem z pozostałymi filtrami; wybrany zakres widać jako znacznik nad listą, a lista nie ma ukrytego domyślnego okresu.
 - **Change ID:** publication-date-filter
 - **PRD refs:** FR-035
+- **Prototypy:** `posts-filters` (pola „Od” i „Do”, znacznik zakresu).
 - **Prerequisites:** S-51
 - **Parallel with:** S-52, S-53, S-54, S-56, S-50
 - **Blockers:** —
 - **Unknowns:** —
-- **Risk:** nowy parametr w kontrakcie listy po obu stronach (plik kontraktu, typ TS, atrapa); przegląd dnia (S-59) stoi na nim.
+- **Risk:** nowy parametr w kontrakcie listy po obu stronach (plik kontraktu, typ TS, atrapa); przegląd dnia (S-59) stoi na nim; dzieli panel filtrów z S-54 i S-56.
 - **Status:** proposed
 
 ### S-56: Wyszukiwanie w treści
 
-- **Outcome:** użytkownik wyszukuje wpisy po słowach w tytule i treści, obok filtra po celu.
+- **Outcome:** użytkownik wyszukuje posty po słowach w tytule i treści w dużym polu „Szukaj w postach” nad listą; filtr po celu („Spółka lub temat”) zostaje osobnym polem w panelu filtrów, więc jedno pole nie znaczy dwóch rzeczy.
 - **Change ID:** post-content-search
 - **PRD refs:** FR-036
+- **Prototypy:** `posts-filters` (pole „Szukaj w postach”, pole „Spółka lub temat”).
 - **Prerequisites:** S-51
 - **Parallel with:** S-52, S-53, S-54, S-55, S-50
 - **Blockers:** —
 - **Unknowns:**
   - Dopasowanie „zawiera” jak dziś dla celu czy wyszukiwanie pełnotekstowe; polskie znaki bez `unaccent` („zabka” nie znajduje „ŻABKA”, audyt, sekcja 2)? — Owner: team (`/10x-plan`). Block: no.
-- **Risk:** pełne skanowanie treści przy rosnącej bazie (wpis Parked o wydajności filtra feedu); dziś ~10 tys. postów.
+- **Risk:** pełne skanowanie treści przy rosnącej bazie (wpis Parked o wydajności filtra feedu); dziś ~10 tys. postów; dzieli panel filtrów z S-54 i S-55.
 - **Status:** proposed
 
 ### S-57: Katalog celów
 
-- **Outcome:** użytkownik widzi katalog celów z postów z wybranego okresu z liczbą wpisów o każdym celu, filtruje go po nazwie i przechodzi do wpisów wybranego celu; cele są grupowane po znormalizowanym tekście `anchor`, bez rozpoznawania spółek.
+- **Outcome:** użytkownik widzi katalog celów z postów z wybranego okresu jako tabelę: nazwa celu, liczba postów i udział stanowisk (wzrostowe, spadkowe, pozostałe); filtruje go po nazwie, zmienia okres i zakres postów i przechodzi do postów wybranego celu; cele są grupowane po znormalizowanym tekście `anchor`, bez rozpoznawania spółek; w nawigacji pojawia się „Cele”.
 - **Change ID:** target-catalog
-- **PRD refs:** FR-037, FR-011a (doprecyzowanie v4)
+- **PRD refs:** FR-037, FR-038, FR-011a (doprecyzowanie v4)
+- **Prototypy:** `targets`.
 - **Prerequisites:** S-52
 - **Parallel with:** S-53, S-54, S-55, S-56, S-50
 - **Blockers:** —
 - **Unknowns:**
-  - Jaki jest domyślny okres katalogu (dzień, 7 dni, wszystko) i od ilu wpisów cel trafia do katalogu? — Owner: user. Block: no.
-- **Risk:** odmiany („Orlen”, „Orlenu”, „#orlen”) zostają osobnymi pozycjami z wyboru (agregacja po tekście, Non-Goals `prd.md:369`); cel równy kanałowi posta zanieczyściłby katalog przy zmianie modelu (S-60).
+  - Jaki jest domyślny okres katalogu i od ilu postów cel trafia do katalogu? Projekt proponuje okres „Dziś / 7 dni / 30 dni” z domyślnym „7 dni” i brak progu (cel z jednym postem jest w katalogu). — Owner: user. Block: no.
+- **Risk:** odmiany („Orlen”, „Orlenu”, „#orlen”) zostają osobnymi pozycjami z wyboru (agregacja po tekście, Non-Goals `prd.md:369`); cel równy kanałowi posta zanieczyściłby katalog przy zmianie modelu (S-60); udział stanowisk w tabeli wymaga tej samej agregacji co karta celu, więc liczenie proporcji w API powstaje tutaj, a S-58 z niego korzysta.
 - **Status:** proposed
 
 ### S-58: Karta celu z proporcjami stanowisk
 
-- **Outcome:** użytkownik widzi na karcie celu proporcje stanowisk autorów (wzrostowe, spadkowe, pozostałe) liczone ze stanowisk wobec tego celu w postach z wybranego okresu, jako migawkę bez trendu, oraz wypowiedzi o tym celu ze źródłem, czasem i stanowiskiem.
+- **Outcome:** użytkownik otwiera kartę celu w panelu z prawej na ekranie katalogu, pod własnym adresem celu i w tym samym wzorcu co panel posta: proporcje stanowisk autorów (wzrostowe, spadkowe, pozostałe) liczone ze stanowisk wobec tego celu w postach z wybranego okresu, jako migawka bez trendu, przełącznik zakresu postów oraz wypowiedzi o tym celu ze źródłem, czasem i stanowiskiem, z przejściem do posta.
 - **Change ID:** target-card-stance-shares
 - **PRD refs:** FR-038
+- **Prototypy:** `target`.
 - **Prerequisites:** S-57
 - **Parallel with:** S-53, S-54, S-55, S-56, S-50
 - **Blockers:** —
 - **Unknowns:** —
-- **Risk:** proporcje liczy API, nie SPA (dziś SPA musiałoby przejść wszystkie strony po 100 postów i powtórzyć dopasowanie tekstu); „teza z wypowiedzi” z makiety nie jest wybierana automatycznie (Non-Goals).
+- **Risk:** dzieli ekran z katalogiem (S-57) i wzorzec panelu z postem (S-51), więc idzie po nich; proporcje liczy API, nie SPA; „teza z wypowiedzi” z makiety nie jest wybierana automatycznie (Non-Goals).
 - **Status:** proposed
 
 ### S-59: Przegląd dnia
 
-- **Outcome:** użytkownik widzi przegląd wybranego dnia: liczbę wpisów, liczbę celów ze stanowiskiem, źródła danych, cele dnia z proporcjami stanowisk oraz najczęściej omawiane cele z najnowszymi wpisami o nich; wszystkie wybory są jawnie liczbowe.
+- **Outcome:** użytkownik widzi po zalogowaniu przegląd wybranego dnia: pięć klocków liczb (posty ze źródłami, cele ze stanowiskiem oraz udział stanowisk wzrostowych, spadkowych i pozostałych w tym dniu), trzy najczęściej omawiane cele z proporcjami i najnowszymi postami oraz tabelę wszystkich celów dnia, z wyborem dnia i przełącznikiem zakresu postów; wszystkie wybory są jawnie liczbowe; przegląd staje się ekranem startowym, a w nawigacji pojawia się „Przegląd”.
 - **Change ID:** daily-overview
 - **PRD refs:** FR-039
+- **Prototypy:** `overview`.
 - **Prerequisites:** S-55, S-58
 - **Parallel with:** S-53, S-54, S-56, S-60
 - **Blockers:** —
 - **Unknowns:** —
-- **Risk:** zamyka M-5, bo składa się z filtra dnia (S-55) i proporcji (S-58); „Warto przeczytać” i „Wątek dnia” z makiety dostają kryteria liczbowe, więc nie wolno im przemycić oceny wartości (`prd.md:311`).
+- **Risk:** zamyka M-5, bo składa się z filtra dnia (S-55) i proporcji (S-58); klocki udziału stanowisk to migawka jednego dnia, nie trend (prośba właściciela z 2026-11-20, doprecyzowanie FR-039, otwarte pytanie 8); zmiana ekranu startowego przepina testy wejścia do aplikacji; „Warto przeczytać” i „Wątek dnia” z makiety nie wchodzą, więc nie wolno przemycić oceny wartości (`prd.md:311`).
 - **Status:** proposed
 
 ### S-60: Miara „kanał jako cel”
 
-- **Outcome:** operator widzi osobno dla każdego źródła udział celów, których anchor równa się kanałowi posta, w oknie 7 dni w podsumowaniu nocy i w `/admin`, i dostaje sygnał przy przejściu progu, tym samym kanałem co pozostałe miary jakości.
+- **Outcome:** operator widzi osobno dla każdego źródła udział celów, których anchor równa się kanałowi posta, w oknie 7 dni w podsumowaniu nocy i w części „Jakość ocen” panelu admina, w tym samym wzorze miary co pozostałe, i dostaje sygnał przy przejściu progu tym samym kanałem co pozostałe miary jakości.
 - **Change ID:** channel-as-target-quality
 - **PRD refs:** FR-033 (doprecyzowanie v4)
+- **Prototypy:** `admin-quality` (wzór miary; tej miary prototyp nie rysuje, bo próg i mianownik ustali wycinek).
 - **Prerequisites:** S-50
 - **Parallel with:** S-51–S-59
 - **Blockers:** —
 - **Unknowns:**
-  - Jakie progi? Na nagraniach z promptem v2.5 model produkcyjny ma 0 takich celów na 674, tańsze modele 6 (audyt, sekcja 4); na produkcji nikt tego nie mierzył. — Owner: user (`/10x-plan`). Block: no.
+  - Jakie progi i jaki mianownik? Na nagraniach z promptem v2.5 model produkcyjny ma 0 takich celów na 674, tańsze modele 6 (audyt, sekcja 4); na produkcji nikt tego nie mierzył. — Owner: user (`/10x-plan`). Block: no.
 - **Risk:** reguła kontraktu `contract-v2.md` §6.4 jest dziś przestrzegana, ale strzeże jej tylko prompt; miara chroni widoki po celu przy zmianie modelu i dopisuje trzecią linię do podsumowania nocy (`NightSummary`, strefa „watch” mapy projektu).
 - **Status:** proposed
 
@@ -417,15 +434,15 @@ Wycinki niżej zakładają te warstwy i ich nie budują od nowa.
 | F-05       | e2e-harness                  | F-05: testy w przeglądarce w CI na atrapie API                                  | yes                   | Run `/10x-plan e2e-harness`    |
 | F-06       | visual-regression            | F-06: zrzuty porównawcze i test dostępności w CI                                | no                    | Po F-05                        |
 | F-07       | ui-design-system             | F-07: projekt UI/UX całej aplikacji                                             | yes                   | Run `/10x-research ui-design-system`, potem `/10x-plan` |
-| F-08       | design-tokens-and-components | F-08: tokeny i komponenty z projektu                                            | no                    | Po F-07                        |
+| F-08       | design-tokens-and-components | F-08: tokeny, kroje i komponenty bazowe z projektu                              | yes                   | Run `/10x-plan design-tokens-and-components` |
 | S-46       | light-dark-theme-switch      | S-46: motyw jasny i ciemny z przełącznikiem                                     | no                    | Po F-06                        |
-| S-47       | app-shell-navigation         | S-47: stała nawigacja i układ paneli                                            | no                    | Po F-08                        |
-| S-48       | shared-view-states           | S-48: wspólne stany widoków                                                     | no                    | Po S-47                        |
+| S-47       | app-shell-navigation         | S-47: powłoka aplikacji z nawigacją u góry                                      | no                    | Po F-08                        |
+| S-48       | shared-view-states           | S-48: wspólne stany widoków i stronicowanie                                     | no                    | Po S-47                        |
 | S-49       | login-on-shared-foundation   | S-49: logowanie i aktywacja na wspólnym fundamencie                             | no                    | Po F-08                        |
-| S-50       | admin-panel-components       | S-50: panel admina z komponentów                                                | no                    | Po S-48                        |
-| S-51       | stream-and-inspector         | S-51: strumień wpisów z inspektorem oceny (gwiazda przewodnia M-5)              | no                    | Po S-48                        |
+| S-50       | admin-panel-components       | S-50: panel admina w trzech częściach                                           | no                    | Po S-48                        |
+| S-51       | stream-and-inspector         | S-51: lista postów z oceną w panelu bocznym (gwiazda przewodnia M-5)            | no                    | Po S-48                        |
 | S-52       | investment-posts-by-default  | S-52: domyślnie tylko posty inwestycyjne                                        | no                    | Po S-51                        |
-| S-53       | reader-quote-highlighting    | S-53: czytnik z podświetlonymi cytatami                                         | no                    | Po S-51                        |
+| S-53       | reader-quote-highlighting    | S-53: podświetlone cytaty w panelu posta                                        | no                    | Po S-51                        |
 | S-54       | post-list-sorting            | S-54: sortowanie listy                                                          | no                    | Po S-51                        |
 | S-55       | publication-date-filter      | S-55: filtr po dacie publikacji                                                 | no                    | Po S-51                        |
 | S-56       | post-content-search          | S-56: wyszukiwanie w treści                                                     | no                    | Po S-51                        |
@@ -442,7 +459,8 @@ Wycinki niżej zakładają te warstwy i ich nie budują od nowa.
 4. **Budżet kosztów LLM na przebieg** — guardrail PRD każe minimalizować koszt zapytań, ale nie podaje pułapu (na dzień ani na post); twardy pułap to $10/mies. na kluczu OpenRouter produkcji. Drugie źródło zwiększy liczbę ocen. Owner: użytkownik. Rozstrzygnięte 2026-10-31 w S-28: limit $10/mies. zostaje, bez osobnego pułapu; koszt łączny z Wykopem to $3,21/mies. na `flex` (górna granica $4,67), Reddit włączany.
 5. **PRD ma status `draft` i ostatnią zmianę 2026-10-13** — nowsze decyzje żyją w blokach „Doprecyzowanie” i w roadmapie (destylacja, sekcja „Stale documents”: FR-029 krótka sesja vs 30 dni, „zakres dat/godzin”, FR-022 warunkowe). Czy odświeżyć PRD do v3 przed planowaniem Reddita? Owner: użytkownik. Block: — (destylacja D-02, D-03, D-10). Rozstrzygnięte 2026-11-04: PRD v3 (`prd.md` `version: 3`) zamyka D-02, D-03, D-10 i D-16 oraz zapisuje decyzje Q-13, Q-14, Q-16 i Q-18; PRD v4 z 2026-11-15 zapisuje decyzje przed M-5.
 6. **Pytania z destylacji domeny bez odpowiedzi** (`domain-distillation.md`, sekcja Questions): Q-08 (kto woła `/api/admin/llm/check`), Q-11 (usuwanie lub deaktywacja konta i sprzątanie wygasłych linków), Q-12 (`content_hash`, `slug`, `tags` bez czytelnika), Q-19 (czy 30 % tez w innym języku na Reddicie to poziom przyjęty na stałe). Owner: właściciel produktu. Block: — (żaden wycinek M-5 od nich nie zależy). Q-15 i Q-20 rozstrzygnięte przez PRD v4 (FR-007 i FR-033, doprecyzowania v4).
-7. **Elementy makiet bez znaczenia w PRD:** „Analizy”, „Wątki”, „Ostatnie obserwacje”, „Przejdź do źródła ↓” i strzałka „↑” przy odsetku (`ui-ux-proposals.md`, audyt `post-m4-ui-readiness-audit`, sekcja 2). Owner: użytkownik. Block: — (wycinki M-5 ich nie budują; „Wątki” jako wątki komentarzy byłyby sprzeczne z Non-Goals). Od v6.1 rozstrzyga je projekt F-07 (`ui-design-system`).
+7. **Elementy makiet bez znaczenia w PRD:** „Analizy”, „Wątki”, „Ostatnie obserwacje”, „Przejdź do źródła ↓” i strzałka „↑” przy odsetku (`ui-ux-proposals.md`, audyt `post-m4-ui-readiness-audit`, sekcja 2). Owner: użytkownik. Block: — (wycinki M-5 ich nie budują; „Wątki” jako wątki komentarzy byłyby sprzeczne z Non-Goals). Rozstrzygnięte 2026-11-20 przez projekt F-07 (`ui-design.md`, „Różnice wobec roadmapy”): żaden z tych elementów nie wchodzi do projektu — „Wątki” byłyby sprzeczne z Non-Goals, strzałka przy odsetku sugeruje trend, pozostałe nie mają danych w kontrakcie; odnośnik do źródła to „Otwórz oryginał” w panelu posta.
+8. **Doprecyzowania PRD po projekcie UI/UX (v6.2):** (a) FR-039 — klocki „Wzrostowe”, „Spadkowe”, „Pozostałe” na przeglądzie dnia to udział stanowisk w wybranym dniu, migawka bez trendu (prośba właściciela z 2026-11-20); (b) FR-030 — data danych jest w pasku aplikacji na każdym ekranie po zalogowaniu, a nie nad listą postów; (c) FR-007 — przełącznik zakresu postów jest także w katalogu celów, na karcie celu i na przeglądzie dnia. Do zapisania w PRD jako bloki „Doprecyzowanie”. Owner: użytkownik. Block: — (projekt jest zaakceptowany; S-47, S-52, S-57–S-59 budują według niego).
 
 ## Parked
 
@@ -483,6 +501,7 @@ Wycinki niżej zakładają te warstwy i ich nie budują od nowa.
 - **„Zapisane” (zapisy wpisów per użytkownik)** — Why parked: w nawigacji makiet 1 i 3 (`ui-ux-proposals.md`), ale decyzją właściciela z 2026-11-15 poza M-5; brak FR w PRD v4 (NFR o danych kontowych by na to pozwalał); kandydat na M-6.
 - **Status przebiegów dla zwykłego użytkownika („Pipeline gotowy”)** — Why parked: decyzja właściciela z 2026-11-15: zostaje jak w PRD (FR-030: użytkownik widzi datę aktualizacji per źródło, status przebiegów tylko admin, `prd.md:226-229`).
 - **Wyłączenie Reddita przy wygaśnięciu Arctic Shift** — Why parked: dostęp do danych Reddita może wygasnąć między styczniem a marcem 2027; plan operatora (2026-11-15): wtedy usunąć `REDDIT_SUBREDDITS` na produkcji — Reddit staje się źródłem nieskonfigurowanym, nocny przebieg i „Dni bez danych” go pomijają, kod bez zmian, posty zostają w bazie. Drugie źródło w miejsce Reddita (oficjalne API albo inne forum) to kandydat na M-6.
+- **Propozycje z projektu UI/UX poza PRD v4** — Why parked: `ui-design.md`, sekcja „Propozycje poza PRD”: skróty klawiatury w panelu posta, zapamiętanie ostatniego zakresu i okresu, podpowiedź odmian celu na karcie celu, znak „nowe od ostatniej wizyty”, powiadomienia dla zwykłego użytkownika. Żadna nie ma prototypu ani FR; każda wymaga decyzji właściciela i wpisu w PRD; kandydaci na M-6.
 
 ## Milestone History
 

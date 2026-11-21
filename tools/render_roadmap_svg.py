@@ -5,7 +5,8 @@ The data is copied by hand from context/foundation/roadmap.md (v3); the M-1 prer
 from the roadmap before M-1 closed (v2.22, commit 5b6eabb), because v3 keeps M-1 only in `## Done`.
 M-3 (closed 2026-11-01, v4.3) comes from v4: streams from `## Streams`, card titles from `## Slices`, card texts from the
 `## At a glance` outcomes. M-4 (open 2026-11-04, closed 2026-11-15, v5.2) comes from v5 the same way. M-5 (open since
-2026-11-15, v6) comes from v6 the same way, and its item states drive the progress card.
+2026-11-15, v6; re-cut after the accepted UI/UX design in v6.2) comes from v6.2 the same way, and its item states drive
+the progress card.
 Every card carries data-id / data-status and every dependency arrow data-from / data-to, so the drawing
 can be checked against the roadmap. When roadmap.md changes, update the data below and run:
 
@@ -231,26 +232,26 @@ m5 = {  # lane, title (## Foundations / ## Slices), outcome (At a glance, shorte
     "F-06": ("A", "Zrzuty porównawcze i dostępność", "(fundament) zrzuty katalogu komponentów i widoków w obu motywach i przy 375 px oraz test dostępności w CI", "done", "F-05", "visual-regression"),
     "S-46": ("A", "Motyw jasny i ciemny", "użytkownik przełącza motyw jasny i ciemny w nowej palecie, a wybór jest zapamiętany", "done", "F-06", "light-dark-theme-switch"),
     "F-07": ("A", "Projekt UI/UX całej aplikacji", "(fundament) projekt UI/UX od nowa według standardów: architektura informacji, tokeny, komponenty, prototypy ekranów", "done", "—", "ui-design-system"),
-    "F-08": ("A", "Tokeny i komponenty z projektu", "(fundament) język wizualny z F-07 w tokenach i komponentach katalogu, obecne widoki przepięte", "proposed", "F-07, S-46", "design-tokens-and-components"),
+    "F-08": ("A", "Tokeny, kroje i komponenty bazowe", "(fundament) tokeny, kroje i komponenty bazowe z projektu F-07 w aplikacji; obecne widoki w nowym wyglądzie, w starym układzie", "ready", "F-07, S-46", "design-tokens-and-components"),
     "S-49": ("A", "Logowanie na wspólnym fundamencie", "logowanie i aktywacja na wspólnych komponentach i tokenach, bez literałów stylu", "proposed", "F-08", "login-on-shared-foundation"),
-    "S-47": ("A", "Stała nawigacja i układ paneli", "użytkownik porusza się przez stałą nawigację w układzie paneli, bez nagłówka w każdym widoku", "proposed", "F-08", "app-shell-navigation"),
-    "S-48": ("A", "Wspólne stany widoków", "każdy widok pokazuje te same stany ładowania, pustej listy i błędu z ponowieniem", "proposed", "S-47", "shared-view-states"),
-    "S-50": ("A", "Panel admina z komponentów", "admin pracuje w panelu złożonym z komponentów, w nowym układzie", "proposed", "S-48", "admin-panel-components"),
-    "S-51": ("B", "Strumień z inspektorem oceny", "użytkownik przegląda strumień wpisów i czyta ocenę wybranego wpisu w panelu inspektora", "proposed", "S-48", "stream-and-inspector"),
-    "S-52": ("B", "Domyślnie posty inwestycyjne", "listy domyślnie bez postów nieinwestycyjnych i odsiewu, z przełącznikiem „pokaż wszystkie”", "proposed", "S-51", "investment-posts-by-default"),
-    "S-53": ("B", "Czytnik z podświetlonymi cytatami", "fragmenty, na których oparto ocenę, podświetlone w treści; poprzedni i następny wpis", "proposed", "S-51", "reader-quote-highlighting"),
-    "S-54": ("B", "Sortowanie listy", "użytkownik sortuje listę po dacie, źródle i polach oceny (FR-008, FR-011b)", "proposed", "S-51", "post-list-sorting"),
-    "S-55": ("B", "Filtr po dacie publikacji", "użytkownik zawęża listę do dnia albo zakresu dat publikacji", "proposed", "S-51", "publication-date-filter"),
-    "S-56": ("B", "Wyszukiwanie w treści", "użytkownik wyszukuje wpisy po słowach w tytule i treści", "proposed", "S-51", "post-content-search"),
-    "S-57": ("C", "Katalog celów", "katalog celów z liczbą wpisów, po tekście celu, bez rozpoznawania spółek", "proposed", "S-52", "target-catalog"),
-    "S-58": ("C", "Karta celu z proporcjami", "karta celu z proporcjami stanowisk autorów (migawka, bez trendu) i wypowiedziami", "proposed", "S-57", "target-card-stance-shares"),
-    "S-59": ("C", "Przegląd dnia", "liczby dnia, cele z proporcjami i najczęściej omawiane cele — wybory jawnie liczbowe", "proposed", "S-55, S-58", "daily-overview"),
+    "S-47": ("A", "Powłoka z nawigacją u góry", "pasek u góry: nawigacja według roli, data danych per źródło, motyw, wylogowanie; treść w jednej kolumnie", "proposed", "F-08", "app-shell-navigation"),
+    "S-48": ("A", "Wspólne stany i stronicowanie", "każdy widok ma to samo ładowanie, pustą listę, błąd z ponowieniem i stronicowanie", "proposed", "S-47", "shared-view-states"),
+    "S-50": ("A", "Panel admina w trzech częściach", "Przebiegi, Jakość ocen i Nieudane posty pod własnymi adresami; strona przebiegu osobno", "proposed", "S-48", "admin-panel-components"),
+    "S-51": ("B", "Lista postów z oceną w panelu", "użytkownik przegląda zwartą listę postów i czyta ocenę wybranego posta w panelu wysuwanym z prawej", "proposed", "S-48", "stream-and-inspector"),
+    "S-52": ("B", "Domyślnie posty inwestycyjne", "listy domyślnie bez postów nieinwestycyjnych i odsiewu; przełącznik „Inwestycyjne N / Wszystkie M”", "proposed", "S-51", "investment-posts-by-default"),
+    "S-53": ("B", "Podświetlone cytaty w panelu posta", "fragmenty, na których oparto ocenę, podświetlone w panelu posta; poprzedni i następny post", "proposed", "S-51", "reader-quote-highlighting"),
+    "S-54": ("B", "Sortowanie listy", "kolejność listy w panelu filtrów: data, źródło i pola oceny (FR-008, FR-011b)", "proposed", "S-51", "post-list-sorting"),
+    "S-55": ("B", "Filtr po dacie publikacji", "dzień albo zakres dat polami „Od” i „Do” w panelu filtrów, ze znacznikiem nad listą", "proposed", "S-51", "publication-date-filter"),
+    "S-56": ("B", "Wyszukiwanie w treści", "pole „Szukaj w postach” nad listą; filtr po celu osobno w panelu filtrów", "proposed", "S-51", "post-content-search"),
+    "S-57": ("C", "Katalog celów", "tabela celów z liczbą postów i udziałem stanowisk, po tekście celu, bez rozpoznawania spółek", "proposed", "S-52", "target-catalog"),
+    "S-58": ("C", "Karta celu z proporcjami", "karta celu w panelu na ekranie katalogu: proporcje stanowisk (migawka, bez trendu) i wypowiedzi", "proposed", "S-57", "target-card-stance-shares"),
+    "S-59": ("C", "Przegląd dnia", "ekran startowy: pięć liczb dnia, trzy najczęściej omawiane cele i tabela celów dnia", "proposed", "S-55, S-58", "daily-overview"),
     "S-60": ("D", "Miara „kanał jako cel”", "operator widzi udział celów równych kanałowi posta per źródło, z sygnałem przy progu", "proposed", "S-50", "channel-as-target-quality"),
 }
-lanes5 = {  # the streams of roadmap v6.1
+lanes5 = {  # the streams of roadmap v6.2
     "A": ("Siatka i fundament UI", "Testy, projekt UI/UX i jego tokeny przed przebudową; fala sekwencyjna", C["lime"]),
-    "B": ("Widok wpisu", "Gwiazda przewodnia, potem przekroje listy równolegle", C["sky"]),
-    "C": ("Wokół celu", "Agregacja po tekście celu; dołącza do B przy S-52 i S-55", C["sky"]),
+    "B": ("Posty: lista i panel", "Gwiazda przewodnia, potem przekroje listy we wspólnym panelu filtrów", C["sky"]),
+    "C": ("Wokół celu", "Katalog i karta celu na jednym ekranie; dołącza do B przy S-52 i S-55", C["sky"]),
     "D": ("Jakość ocen", "Chroni widoki po celu", C["amber"]),
 }
 groups = [
@@ -385,7 +386,7 @@ text(M + 52, 57, "Szczur Radar", 17, 700)
 text(M + 52, 75, "MARKET INTELLIGENCE", 9.5, 600, C["muted"], spacing="2.4")
 text(M, 134, "MILESTONES I ZALEŻNOŚCI", 11, 700, C["muted"], spacing="2")
 text(M, 172, "Roadmapa produktu", 31, 700)
-text(M, 202, "Źródło: context/foundation/roadmap.md  ·  v6.1  ·  stan 19.11.2026  ·  bez terminów — kolejność wynika z zależności", 13, 400, C["muted"])
+text(M, 202, "Źródło: context/foundation/roadmap.md  ·  v6.2  ·  stan 21.11.2026  ·  bez terminów — kolejność wynika z zależności", 13, 400, C["muted"])
 
 # M-2 slice states; every counter below is derived from them (M-1 closed with all 10 done)
 m2_order = [("F-04", "done"), ("S-08", "done"), ("S-09", "done"), ("S-10", "done"), ("S-11", "done"), ("S-12", "parked"),
@@ -742,7 +743,7 @@ for ids in (("S-32", "S-34"), ("S-39", "S-40")):
 # ================= M-5 container (open) =================
 container(P5X, P5W, "M-5", "Nowe UI na sprawdzonym fundamencie",
           ("Otwarty 15.11.2026", C["amber"], C["amberSoft"], 10.5, False, 600, "dot"),
-          "Nowy, spójny interfejs — strumień z inspektorem oceny, czytnik z podświetlonymi cytatami, katalog celów z proporcjami stanowisk i przegląd dnia — na wspólnym fundamencie, a działanie i wygląd pilnują testy w przeglądarce w CI.",
+          "Nowy, spójny interfejs według zaakceptowanego projektu — lista postów z oceną w panelu i podświetlonymi cytatami, katalog celów z proporcjami stanowisk i przegląd dnia — na wspólnym fundamencie, a działanie i wygląd pilnują testy w przeglądarce w CI.",
           (f"{M5_DONE} / {M5_TOTAL}", M5_DONE / M5_TOTAL, C["lime"]), C["lime"] + "40")
 box5 = {}
 ry = TOP + 98
@@ -796,9 +797,9 @@ for k, (ln, title, desc, st, req, cid) in m5.items():
 x0 = box5["S-54"][0]; x1 = box5["S-56"][0] + box5["S-56"][2]
 y = box5["S-55"][1] + box5["S-55"][3] + 20
 add(f'<line x1="{x0}" y1="{y}" x2="{x1}" y2="{y}" stroke="{C["muted"]}" stroke-opacity="0.35" stroke-dasharray="2 4"/>')
-tw = width("po S-51 · niezależne · równolegle", 10, 600) + 24
+tw = width("po S-51 · równolegle · wspólny panel filtrów", 10, 600) + 24
 rect((x0 + x1) / 2 - tw / 2, y - 9, tw, 18, 9, C["panel2"])
-text((x0 + x1) / 2, y + 4, "po S-51 · niezależne · równolegle", 10, 600, C["dim"], anchor="middle", spacing="1")
+text((x0 + x1) / 2, y + 4, "po S-51 · równolegle · wspólny panel filtrów", 10, 600, C["dim"], anchor="middle", spacing="1")
 
 # ================= Po M-5 container (backlog) =================
 container(P6X, P6W, "PO M-5", "Odroczone",
@@ -821,12 +822,12 @@ for gi, (gname, items) in enumerate(groups):
         text(gx + 34, iy + len(label_lines) * 20, ref, 12, 600, C["dim"], family=MONO)
 
 # ================= footer + assembly =================
-text(M, H - 30, "Strzałki pomijają zależności wynikające ze ścieżek pośrednich i (w M-4, M-5) między strumieniami. Pełne wymagania: na kartach. · Źródło: context/foundation/roadmap.md v6.1", 11, 400, C["dim"])
+text(M, H - 30, "Strzałki pomijają zależności wynikające ze ścieżek pośrednich i (w M-4, M-5) między strumieniami. Pełne wymagania: na kartach. · Źródło: context/foundation/roadmap.md v6.2", 11, 400, C["dim"])
 text(W - M, H - 30, "MAPA ZALEŻNOŚCI · BEZ TERMINÓW", 10.5, 700, C["dim"], anchor="end", spacing="1.6")
 head = [
     f'<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{H}" viewBox="0 0 {W} {H}" role="img" aria-labelledby="t d">',
     '<title id="t">Szczur Radar — roadmapa produktu: M-1 → M-2 → M-3 → M-4 → M-5 → Po M-5</title>',
-    '<desc id="d">Roadmapa z context/foundation/roadmap.md v6.1 jako oś od lewej do prawej: kamień milowy M-1 (F-01–F-03, S-01–S-07, ukończony), M-2 MVP Quality &amp; Reliability Hardening (F-04, S-08–S-19, zamknięty 27.10.2026, S-12 zaparkowany), M-3 Drugie źródło na utwardzonym rdzeniu (S-20–S-29, zamknięty 01.11.2026, gwiazda przewodnia S-20), M-4 Weryfikacja i regresja (S-30–S-45, zamknięty 15.11.2026, gwiazda przewodnia S-31), M-5 Nowe UI na sprawdzonym fundamencie (F-05–F-08, S-46–S-60, otwarty 15.11.2026, gwiazda przewodnia S-51) i pozycje odroczone. Strzałka prowadzi od warunku wstępnego do elementu, który od niego zależy.</desc>',
+    '<desc id="d">Roadmapa z context/foundation/roadmap.md v6.2 jako oś od lewej do prawej: kamień milowy M-1 (F-01–F-03, S-01–S-07, ukończony), M-2 MVP Quality &amp; Reliability Hardening (F-04, S-08–S-19, zamknięty 27.10.2026, S-12 zaparkowany), M-3 Drugie źródło na utwardzonym rdzeniu (S-20–S-29, zamknięty 01.11.2026, gwiazda przewodnia S-20), M-4 Weryfikacja i regresja (S-30–S-45, zamknięty 15.11.2026, gwiazda przewodnia S-31), M-5 Nowe UI na sprawdzonym fundamencie (F-05–F-08, S-46–S-60, otwarty 15.11.2026, gwiazda przewodnia S-51) i pozycje odroczone. Strzałka prowadzi od warunku wstępnego do elementu, który od niego zależy.</desc>',
     '<defs>',
 ]
 for name, col in (("lime", C["lime"]), ("done", C["done"]), ("sky", C["sky"]), ("coral", C["coral"]), ("amber", C["amber"]), ("gray", C["muted"])):
