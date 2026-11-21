@@ -668,7 +668,7 @@ Bez innych edycji roadmapy: status F-08 zmieniają skille.
 
 #### Manual
 
-- [ ] 3.8 Właściciel akceptuje nowy wygląd widoków i katalogu w galerii zrzutów obok prototypów
+- [x] 3.8 Właściciel akceptuje nowy wygląd widoków i katalogu w galerii zrzutów obok prototypów — zaakceptowane przez właściciela 2026-11-21
 
 ### Phase 4: Strażnik zgodności i dokumentacja
 
