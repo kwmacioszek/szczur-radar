@@ -161,7 +161,7 @@ onMounted(() => {
               :aria-invalid="repeatInvalid ? 'true' : undefined"
             />
           </label>
-          <StatusMessage v-if="problem" tone="error" class="problem">{{ PROBLEM_MESSAGES[problem] }}</StatusMessage>
+          <StatusMessage v-if="problem" tone="error">{{ PROBLEM_MESSAGES[problem] }}</StatusMessage>
           <AppButton type="submit" variant="primary" :busy="submitting" busy-label="Zapisywanie…">
             Ustaw hasło
           </AppButton>

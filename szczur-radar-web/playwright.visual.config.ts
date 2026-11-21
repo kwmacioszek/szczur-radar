@@ -59,7 +59,10 @@ export default defineConfig({
     trace: 'on-first-retry',
     locale: 'pl-PL',
     timezoneId: 'Europe/Warsaw',
-    launchOptions: { env: browserEnv },
+    // Skia picks its SIMD code by the CPU it runs on (AVX2, AVX-512…), and GitHub's runners differ by region: rounded
+    // corners came out ±1 per channel apart. The baseline code path draws the same pixels on every CPU, also under
+    // amd64 emulation on an arm64 host (Chromium's own pixel tests run with this switch).
+    launchOptions: { env: browserEnv, args: ['--disable-skia-runtime-opts'] },
   },
   projects: PROJECTS.map((project) => ({
     name: project.name,

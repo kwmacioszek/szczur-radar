@@ -476,6 +476,13 @@ Widoki stosują reguły projektu bez zmiany układu. Wszystkie wzorce F-06 powst
 - Galeria pokazuje każdy widok w czterech projektach obok najbliższego zrzutu z `context/foundation/ui-design/screens/`, a sekcje katalogu obok `components-*-375.png`. Podpis przy widokach mówi, że układ zmieniają dopiero S-47–S-59.
 - Opis PR wymienia grupy: wszystkie `view-*` (kolory, kroje, rozmiary), `kitchen-sink-*` (nowe nazwy sekcji, nowe komponenty), `state-*` (nowe kontrolki).
 
+#### Odstępstwo: siatka celów w karcie posta (przegląd fazy 3)
+
+- `003fd78` zmienia siatkę `.targets` w `PostCard.vue` z `fit-content(50%) minmax(0, 1fr)` na `minmax(0, max-content) max-content` z `align-items: start`. To odstępstwo od „Układ bez zmian”.
+- Powód: znacznik stanowiska z fazy 2 ma `white-space: nowrap` i wystawał z kolumny `1fr` w wąskiej karcie.
+- Skutek przy 320 px: kolumna nazwy celu ma 40 px, a nazwa łamie się na 3 linie w środku słowa. Strona nie przewija się w poziomie. Przy 375 px nazwa mieści się w jednej linii.
+- Wąski wiersz posta naprawia S-51+, który przebudowuje wiersz posta. Właściciel ocenia zrzut przy 320 px ([przegląd fazy 3](reviews/impl-review-phase-3.md), F2).
+
 ### Success Criteria:
 
 #### Automated Verification:

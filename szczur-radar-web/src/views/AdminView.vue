@@ -422,7 +422,7 @@ onMounted(async () => {
           <legend>Źródła</legend>
           <span v-if="sourcesLoading" class="loading">Wczytywanie…</span>
           <template v-else-if="sourcesError">
-            <StatusMessage tone="error" class="sources-error">{{ sourcesError }}</StatusMessage>
+            <StatusMessage tone="error">{{ sourcesError }}</StatusMessage>
             <AppButton @click="loadSources">Spróbuj ponownie</AppButton>
           </template>
           <template v-else>

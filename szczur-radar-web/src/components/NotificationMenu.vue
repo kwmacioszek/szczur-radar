@@ -195,7 +195,7 @@ defineExpose({ focusToggle })
   position: absolute;
   top: 100%;
   right: var(--space-4);
-  z-index: 1;
+  z-index: var(--z-overlay);
   box-sizing: border-box;
   width: min(24rem, calc(100% - 2 * var(--space-4)));
   max-height: 70vh;
