@@ -674,9 +674,9 @@ Bez innych edycji roadmapy: status F-08 zmieniają skille.
 
 #### Automated
 
-- [ ] 4.1 Strażnik zgodności `design-check app` przechodzi na repozytorium
-- [ ] 4.2 Selftest wykrywa każdy rodzaj rozjazdu i przechodzi na zielonej próbce
-- [ ] 4.3 Celowe złamanie: zmieniona rola w `style.css` daje `VIOLATION [app]`
-- [ ] 4.4 Dokument projektu przechodzi `design-check doc --stage 4`
-- [ ] 4.5 `fixtures/app-pairs.json` usunięty i bez odwołań
-- [ ] 4.6 Testy jednostkowe i build dalej przechodzą
+- [x] 4.1 Strażnik zgodności `design-check app` przechodzi na repozytorium
+- [x] 4.2 Selftest wykrywa każdy rodzaj rozjazdu i przechodzi na zielonej próbce
+- [x] 4.3 Celowe złamanie: zmieniona rola w `style.css` daje `VIOLATION [app]`
+- [x] 4.4 Dokument projektu przechodzi `design-check doc --stage 4`
+- [x] 4.5 `fixtures/app-pairs.json` usunięty i bez odwołań
+- [x] 4.6 Testy jednostkowe i build dalej przechodzą

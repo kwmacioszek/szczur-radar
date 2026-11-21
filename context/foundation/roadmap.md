@@ -119,7 +119,7 @@ Na Wykopie (#gielda) i Reddicie codziennie pojawiają się setki postów o inwes
 | F-05 | e2e-harness                   | (foundation) testy w przeglądarce w repo i w CI na atrapie API ustawianej z testu; smoke obecnych przepływów            | —             | NFR `prd.md:328`                           | done     |
 | F-06 | visual-regression             | (foundation) zrzuty porównawcze katalogu komponentów i widoków w obu motywach i przy 375 px oraz test dostępności w CI   | F-05          | NFR `prd.md:328` (doprecyzowanie v4)       | done |
 | F-07 | ui-design-system              | (foundation) zaakceptowany projekt UI/UX całej aplikacji według standardów: architektura informacji, tokeny, komponenty, prototypy | —             | FR-040, NFR `prd.md:328`                   | done |
-| F-08 | design-tokens-and-components  | (foundation) tokeny, kroje i komponenty bazowe z projektu F-07 w aplikacji; obecne widoki w nowym wyglądzie, jeszcze w starym układzie | F-07, S-46    | FR-040, NFR `prd.md:328` | ready |
+| F-08 | design-tokens-and-components  | (foundation) tokeny, kroje i komponenty bazowe z projektu F-07 w aplikacji; obecne widoki w nowym wyglądzie, jeszcze w starym układzie | F-07, S-46    | FR-040, NFR `prd.md:328` | in-progress |
 | S-46 | light-dark-theme-switch       | użytkownik przełącza motyw jasny i ciemny w nowej palecie, a wybór jest zapamiętany                                      | F-06          | FR-040                                     | done |
 | S-47 | app-shell-navigation          | użytkownik porusza się po aplikacji przez pasek u góry (nawigacja według roli, data danych per źródło, motyw, wylogowanie), z treścią w jednej kolumnie | F-08          | FR-007, FR-013, FR-015, FR-021, FR-030 | proposed |
 | S-48 | shared-view-states            | użytkownik widzi w każdym widoku to samo ładowanie, pustą listę, błąd z ponowieniem i stronicowanie | S-47          | FR-007, FR-009, NFR `prd.md:328` | proposed |
@@ -219,7 +219,7 @@ Wycinki niżej zakładają te warstwy i ich nie budują od nowa.
 - **Blockers:** —
 - **Unknowns:** — (zakres przepięcia rozstrzygnął projekt: F-08 przenosi wszystkie obecne widoki na nowe tokeny bez zmiany układu; układ zmieniają wycinki ekranów)
 - **Risk:** zmienia wszystkie wzorce F-06 drugi raz po S-46 (zamierzone) i świadomie zmienia bramki opisane w projekcie (test kroju, pary kontrastu, nazwy sekcji katalogu komponentów); nazwa `--border` zmienia znaczenie z linii ozdobnej na krawędź kontrolki, więc obie nazwy zmieniają się w jednym commicie; tokeny są wspólne dla każdego widoku, więc idzie przed powłoką.
-- **Status:** ready
+- **Status:** in-progress
 
 ## Slices
 
@@ -502,6 +502,7 @@ Wycinki niżej zakładają te warstwy i ich nie budują od nowa.
 - **Status przebiegów dla zwykłego użytkownika („Pipeline gotowy”)** — Why parked: decyzja właściciela z 2026-11-15: zostaje jak w PRD (FR-030: użytkownik widzi datę aktualizacji per źródło, status przebiegów tylko admin, `prd.md:226-229`).
 - **Wyłączenie Reddita przy wygaśnięciu Arctic Shift** — Why parked: dostęp do danych Reddita może wygasnąć między styczniem a marcem 2027; plan operatora (2026-11-15): wtedy usunąć `REDDIT_SUBREDDITS` na produkcji — Reddit staje się źródłem nieskonfigurowanym, nocny przebieg i „Dni bez danych” go pomijają, kod bez zmian, posty zostają w bazie. Drugie źródło w miejsce Reddita (oficjalne API albo inne forum) to kandydat na M-6.
 - **Propozycje z projektu UI/UX poza PRD v4** — Why parked: `ui-design.md`, sekcja „Propozycje poza PRD”: skróty klawiatury w panelu posta, zapamiętanie ostatniego zakresu i okresu, podpowiedź odmian celu na karcie celu, znak „nowe od ostatniej wizyty”, powiadomienia dla zwykłego użytkownika. Żadna nie ma prototypu ani FR; każda wymaga decyzji właściciela i wpisu w PRD; kandydaci na M-6.
+- **Test zgodności projektu i aplikacji w CI (TODO przed zamknięciem M-5)** — Why parked: decyzja właściciela (F-08, `design-tokens-and-components`): dziś `design-check app` (`tools/design-check/`) to polecenie ręczne, które porównuje `ui-design/tokens.css`, `pairs.json`, sprite ikon i pliki krojów z kopiami w `szczur-radar-web/`, uruchamiane przy każdej zmianie projektu; zadania CI na to nie ma. Warunek powrotu: przed zamknięciem M-5 ocenić, ile zmian projektu w S-47–S-60 rozjechało te kopie, i dopiero wtedy zdecydować, czy test w CI jest wart swojego kosztu. Pytanie otwarte: jak test w CI ma czytać `context/`, skoro obraz web buduje się z samego `szczur-radar-web/`.
 
 ## Milestone History
 
