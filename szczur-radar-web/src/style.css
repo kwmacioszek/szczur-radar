@@ -300,28 +300,45 @@ h1 {
 }
 
 /*
- * Buttons and form fields of the signed-in views (header, feed, admin panel). The global button is
- * the secondary (outlined) variant. Its states sit in :where() to keep element specificity, so a
- * scoped style (e.g. the filled login button) always wins.
+ * Buttons, links and form fields. The global button is the plain variant of the design (the edge of a control, --text-h
+ * text, as tall as a field): a view's own button looks like it, AppButton adds the primary variant, an icon, the large
+ * size and icon-only. Its states sit in :where() to keep element specificity, so a scoped style (e.g. the filled login
+ * button) always wins.
  */
 button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: var(--control-height);
+  padding: var(--space-1) var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: none;
+  color: var(--text-h);
   font: inherit;
   font-size: var(--font-size-md);
-  padding: 6px 14px;
-  border: 1px solid var(--accent);
-  border-radius: var(--radius);
-  background: transparent;
-  color: var(--accent);
+  font-weight: var(--weight-medium);
   cursor: pointer;
 }
 
 button:where(:hover:not(:disabled)) {
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  background: var(--surface-2);
 }
 
 button:disabled {
-  opacity: 0.6;
+  opacity: 0.45;
   cursor: not-allowed;
+}
+
+/* Links: the accent, always underlined; pointing at one thickens the line. */
+a {
+  color: var(--accent);
+  text-underline-offset: 0.2em;
+}
+
+a:where(:hover) {
+  text-decoration-thickness: 2px;
 }
 
 /* Keyboard focus on every control: buttons, links, fields and checkboxes. */
@@ -331,37 +348,81 @@ button:disabled {
 }
 
 /*
- * Text, date and choice fields share one look; a view gives them no style of its own. They are as
- * tall as a button at every width: its line is the page's line height (--font-size-md times
- * --leading-normal), plus 6px padding twice and 2px of border. Without it a select (whose line height the
- * browser fixes) is lower than a text field.
+ * Text, password, e-mail, search, date and choice fields share one look; a view gives them no style of its own and
+ * sets only where they sit. They are as tall as a button (--control-height), so a row of fields and buttons lines up.
+ * The list of types is explicit: a control of another type is not styled here. The login form keeps its own local style
+ * until its screen is rebuilt (S-49): the descendants of .login-form are left out of every rule below, in :where() so
+ * the selectors keep their specificity.
  */
-input[type='date'],
-input[type='search'],
-select {
+:is(
+    input[type='text'],
+    input[type='email'],
+    input[type='password'],
+    input[type='search'],
+    input[type='date'],
+    select
+  ):where(:not(.login-form *)) {
   box-sizing: border-box;
-  height: calc(var(--font-size-md) * var(--leading-normal) + 14px);
-  font: inherit;
-  font-size: var(--font-size-md);
-  padding: var(--space-1) var(--space-2);
+  height: var(--control-height);
+  padding: 0 var(--space-3);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: transparent;
+  background: var(--surface);
   color: var(--text-h);
+  font: inherit;
+  font-size: var(--font-size-md);
 }
 
-/* The open list of a select is drawn by the system on its own background, not the page's. */
-select option {
-  background: var(--bg);
-  color: var(--text-h);
+:is(
+    input[type='text'],
+    input[type='email'],
+    input[type='password'],
+    input[type='search'],
+    input[type='date'],
+    select
+  ):where(:not(.login-form *)):where(:hover:not(:disabled)) {
+  border-color: var(--text);
 }
 
-/* Readable as a disabled button. */
-select:disabled {
+/* An invalid field keeps its red edge and inner shadow under the pointer too (it outranks the hover above). */
+:is(
+    input[type='text'],
+    input[type='email'],
+    input[type='password'],
+    input[type='search'],
+    input[type='date'],
+    select
+  )[aria-invalid='true']:where(:not(.login-form *)) {
+  border-color: var(--destructive);
+  box-shadow: inset 0 0 0 1px var(--destructive);
+}
+
+:is(
+    input[type='text'],
+    input[type='email'],
+    input[type='password'],
+    input[type='search'],
+    input[type='date'],
+    select
+  ):where(:not(.login-form *)):disabled {
+  background: var(--surface-2);
   opacity: 0.6;
   cursor: not-allowed;
 }
 
+:is(input[type='text'], input[type='email'], input[type='password'], input[type='search']):where(:not(.login-form *))::placeholder {
+  color: var(--text-muted);
+  opacity: 1;
+}
+
+/* The open list of a select is drawn by the system on its own background, not the field's. */
+select option {
+  background: var(--surface);
+  color: var(--text-h);
+}
+
 input[type='checkbox'] {
+  width: 1.125rem;
+  height: 1.125rem;
   accent-color: var(--accent);
 }

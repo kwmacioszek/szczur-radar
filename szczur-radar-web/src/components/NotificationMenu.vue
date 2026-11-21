@@ -11,6 +11,7 @@ import type { AdminNotification } from '../api/notifications'
 import { formatRelative, label, plural } from '../labels'
 import { runStatusLabel, runTone } from '../runs'
 import AppButton from './AppButton.vue'
+import AppIcon from './AppIcon.vue'
 import StatusBadge from './StatusBadge.vue'
 import StatusMessage from './StatusMessage.vue'
 
@@ -114,20 +115,7 @@ defineExpose({ focusToggle })
       :aria-controls="panelId"
       @click="open = !open"
     >
-      <svg
-        class="icon"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        aria-hidden="true"
-        focusable="false"
-      >
-        <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
-        <path d="M13.7 21a2 2 0 0 1-3.4 0" />
-      </svg>
+      <AppIcon name="i-bell" />
       <span v-if="props.unread" class="count" aria-hidden="true">{{ props.unread }}</span>
     </AppButton>
     <div
@@ -188,12 +176,6 @@ defineExpose({ focusToggle })
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
-}
-
-.icon {
-  width: 1.25em;
-  height: 1.25em;
-  flex: none;
 }
 
 /* Text on --accent is always --on-accent. */

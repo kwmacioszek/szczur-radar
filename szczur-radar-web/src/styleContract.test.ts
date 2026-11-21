@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import appButton from './components/AppButton.vue?raw'
 import appHeader from './components/AppHeader.vue?raw'
+import appIcon from './components/AppIcon.vue?raw'
 import feedFilter from './components/FeedFilter.vue?raw'
+import iconSprite from './components/IconSprite.vue?raw'
 import notificationBell from './components/NotificationBell.vue?raw'
 import notificationMenu from './components/NotificationMenu.vue?raw'
 import postAssessment from './components/PostAssessment.vue?raw'
@@ -97,6 +99,8 @@ const CLEANED: Record<string, string> = {
   'src/views/AdminView.vue': adminView,
   'src/components/AppHeader.vue': appHeader,
   'src/components/AppButton.vue': appButton,
+  'src/components/AppIcon.vue': appIcon,
+  'src/components/IconSprite.vue': iconSprite,
   'src/components/StatusMessage.vue': statusMessage,
   'src/components/StatusBadge.vue': statusBadge,
   'src/views/KitchenSinkView.vue': kitchenSinkView,

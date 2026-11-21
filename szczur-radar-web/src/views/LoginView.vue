@@ -55,7 +55,7 @@ async function submit(): Promise<void> {
     <section class="card" aria-labelledby="login-title">
       <p class="eyebrow">Szczur Radar</p>
       <h1 id="login-title">Logowanie</h1>
-      <form class="form" novalidate @submit.prevent="submit">
+      <form class="form login-form" novalidate @submit.prevent="submit">
         <StatusMessage v-if="activated" tone="ok" class="notice">Hasło ustawione. Zaloguj się.</StatusMessage>
         <label>
           E-mail

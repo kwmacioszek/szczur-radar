@@ -636,23 +636,23 @@ Bez innych edycji roadmapy: status F-08 zmieniają skille.
 
 #### Automated
 
-- [x] 1.1 Testy jednostkowe przechodzą, w tym 73 pary × 2 motywy i skan `CLEANED`
-- [x] 1.2 Typecheck i build przechodzą
-- [x] 1.3 Testy E2E przechodzą bez zmian w specach
-- [x] 1.4 W `szczur-radar-web/src/` nie ma starych nazw (`--border-strong`, `--sans`, `--mono`)
-- [x] 1.5 Parser `design-check` czyta nowy `style.css` z parami aplikacji
-- [x] 1.6 Strażnik kroju przechodzi w obrazie Playwright
-- [x] 1.7 Smoke kontenera z nowym krokiem przechodzi lokalnie
-- [x] 1.8 Celowe złamanie: usunięty plik kroju czerwieni smoke i `font.spec.ts`
+- [x] 1.1 Testy jednostkowe przechodzą, w tym 73 pary × 2 motywy i skan `CLEANED` — 2813926
+- [x] 1.2 Typecheck i build przechodzą — 2813926
+- [x] 1.3 Testy E2E przechodzą bez zmian w specach — 2813926
+- [x] 1.4 W `szczur-radar-web/src/` nie ma starych nazw (`--border-strong`, `--sans`, `--mono`) — 2813926
+- [x] 1.5 Parser `design-check` czyta nowy `style.css` z parami aplikacji — 2813926
+- [x] 1.6 Strażnik kroju przechodzi w obrazie Playwright — 2813926
+- [x] 1.7 Smoke kontenera z nowym krokiem przechodzi lokalnie — 2813926
+- [x] 1.8 Celowe złamanie: usunięty plik kroju czerwieni smoke i `font.spec.ts` — 2813926
 
 ### Phase 2: Ikony i komponenty bazowe
 
 #### Automated
 
-- [ ] 2.1 Testy jednostkowe przechodzą, w tym strażnik zbioru ikon, warianty komponentów i `CLEANED`
-- [ ] 2.2 Typecheck i build przechodzą
-- [ ] 2.3 Testy E2E przechodzą bez zmian w specach
-- [ ] 2.4 Celowe złamanie: symbol usunięty z kopii sprite'a czerwieni `AppIcon.test.ts`
+- [x] 2.1 Testy jednostkowe przechodzą, w tym strażnik zbioru ikon, warianty komponentów i `CLEANED`
+- [x] 2.2 Typecheck i build przechodzą
+- [x] 2.3 Testy E2E przechodzą bez zmian w specach
+- [x] 2.4 Celowe złamanie: symbol usunięty z kopii sprite'a czerwieni `AppIcon.test.ts`
 
 ### Phase 3: Widoki w nowym wyglądzie i wzorce F-06 od nowa
 
