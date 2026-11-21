@@ -220,6 +220,13 @@ watch(
   box-sizing: border-box;
 }
 
+/* The root font size is 16px at every width; above 1024px the width is what 18px gave (design-tokens-and-components). */
+@media (min-width: 1025px) {
+  .feed {
+    max-width: 54rem;
+  }
+}
+
 h1 {
   margin: var(--space-2) 0 var(--space-4);
 }

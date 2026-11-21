@@ -627,13 +627,20 @@ onMounted(async () => {
   box-sizing: border-box;
 }
 
+/* The root font size is 16px at every width; above 1024px the width is what 18px gave (design-tokens-and-components). */
+@media (min-width: 1025px) {
+  .admin {
+    max-width: 63rem;
+  }
+}
+
 h1 {
   margin: var(--space-2) 0 var(--space-4);
 }
 
 h2 {
   margin: var(--space-5) 0 var(--space-2);
-  font-size: var(--font-size-lg);
+  font-size: var(--font-size-2xl);
   color: var(--text-h);
 }
 
@@ -650,7 +657,7 @@ h2 {
   gap: var(--space-3);
   margin: 0;
   padding: var(--space-1) var(--space-2);
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: var(--radius);
 }
 
@@ -684,7 +691,7 @@ h2 {
 .missing-range,
 .quality-source {
   padding: var(--space-2) 0;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--line);
 }
 
 .missing-range {

@@ -113,7 +113,7 @@ p {
   flex-direction: column;
   gap: var(--space-1);
   padding-top: var(--space-3);
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--line);
 }
 
 .heading {
@@ -159,7 +159,7 @@ p {
 .evidence {
   margin: 0;
   padding-left: var(--space-3);
-  border-left: 2px solid var(--border-strong);
+  border-left: 2px solid var(--warning);
   font-style: italic;
   overflow-wrap: anywhere;
 }

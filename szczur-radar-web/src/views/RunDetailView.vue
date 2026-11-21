@@ -295,6 +295,13 @@ watch(
   box-sizing: border-box;
 }
 
+/* The root font size is 16px at every width; above 1024px the width is what 18px gave (design-tokens-and-components). */
+@media (min-width: 1025px) {
+  .run-detail {
+    max-width: 54rem;
+  }
+}
+
 a {
   color: var(--accent);
   text-decoration: none;
@@ -319,7 +326,7 @@ a:hover {
 
 h1 {
   margin: 0;
-  font-size: var(--font-size-lg);
+  font-size: var(--font-size-2xl);
   letter-spacing: normal;
   line-height: 1.45;
 }
@@ -360,7 +367,7 @@ p {
 .part {
   margin-top: var(--space-5);
   padding-top: var(--space-4);
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--line);
 }
 
 .progress-label {
@@ -411,7 +418,7 @@ progress {
 
 .step + .step,
 .source-result + .source-result {
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--line);
 }
 
 .step p,

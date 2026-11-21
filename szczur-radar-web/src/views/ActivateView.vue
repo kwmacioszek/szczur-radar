@@ -202,7 +202,7 @@ label {
 input {
   font: inherit;
   padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--border-strong);
+  border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--bg);
   color: var(--text-h);

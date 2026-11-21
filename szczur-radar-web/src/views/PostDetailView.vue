@@ -197,6 +197,13 @@ watch(
   box-sizing: border-box;
 }
 
+/* The root font size is 16px at every width; above 1024px the width is what 18px gave (design-tokens-and-components). */
+@media (min-width: 1025px) {
+  .post-detail {
+    max-width: 54rem;
+  }
+}
+
 a {
   color: var(--accent);
   text-decoration: none;
@@ -213,7 +220,7 @@ a:hover {
 
 h1 {
   margin: var(--space-4) 0 var(--space-2);
-  font-size: var(--font-size-lg);
+  font-size: var(--font-size-2xl);
   letter-spacing: normal;
   line-height: 1.45;
   overflow-wrap: anywhere;
@@ -263,7 +270,7 @@ p {
 .part {
   margin-top: var(--space-5);
   padding-top: var(--space-4);
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--line);
 }
 
 summary {
@@ -275,10 +282,10 @@ summary {
 pre {
   margin: var(--space-3) 0 0;
   padding: var(--space-3);
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: var(--radius);
   color: var(--text-h);
-  font-family: var(--mono);
+  font-family: var(--font-mono);
   font-size: var(--font-size-sm);
   white-space: pre-wrap;
   overflow-wrap: anywhere;

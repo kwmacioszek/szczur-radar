@@ -239,6 +239,16 @@ jobs:
           curl -fsS http://localhost:8080/healthz | grep -q "ok"
           # SPA fallback must serve index.html (the app mount point) for unknown routes.
           curl -fsS http://localhost:8080/some/deep/route | grep -q 'id="app"'
+          # A font file must come as a font: for a missing file the try_files fallback returns index.html
+          # with 200, which curl -f accepts, so the content type decides.
+          font_type=$(curl -fsS -o /dev/null -w '%{content_type}' http://localhost:8080/fonts/hanken-grotesk-latin-wght-normal.woff2)
+          case "$font_type" in
+            font/woff2*) ;;
+            *)
+              echo "::error::/fonts/hanken-grotesk-latin-wght-normal.woff2 came as '$font_type', not font/woff2"
+              exit 1
+              ;;
+          esac
       - name: Container logs
         if: always()
         run: |

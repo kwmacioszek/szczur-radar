@@ -152,6 +152,14 @@ export async function openCatalog(page: Page): Promise<Locator> {
   return main
 }
 
+/**
+ * Waits until the fonts the page asked for are loaded (font-display: swap draws a fallback first, whose metrics move
+ * content and controls). Call it after the text is visible, before a screenshot, a measurement or a hover or focus.
+ */
+export async function waitForFonts(page: Page): Promise<void> {
+  await page.evaluate(() => document.fonts.ready)
+}
+
 /** A section's file name part: lower-case ASCII, Polish letters without their marks, spaces as `-`. */
 export function slug(name: string): string {
   const text = name

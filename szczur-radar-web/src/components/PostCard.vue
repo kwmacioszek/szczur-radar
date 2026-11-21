@@ -53,7 +53,7 @@ const output = computed(() => props.post.assessment?.output)
   gap: var(--space-2) var(--space-5);
   margin-bottom: var(--space-4);
   padding: var(--space-4) var(--space-5);
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: var(--radius);
 }
 
@@ -64,7 +64,7 @@ const output = computed(() => props.post.assessment?.output)
   align-items: center;
   gap: var(--space-1) var(--space-3);
   padding-bottom: var(--space-2);
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--line);
   font-size: var(--font-size-sm);
 }
 
@@ -151,7 +151,14 @@ const output = computed(() => props.post.assessment?.output)
     gap: var(--space-1);
     padding: 0 var(--space-4) 0 0;
     border-bottom: none;
-    border-right: 1px solid var(--border);
+    border-right: 1px solid var(--line);
+  }
+}
+
+/* The root font size is 16px at every width; above 1024px the column is what 18px gave (design-tokens-and-components). */
+@media (min-width: 1025px) {
+  .post-card {
+    grid-template-columns: 10.125rem minmax(0, 1fr);
   }
 }
 </style>

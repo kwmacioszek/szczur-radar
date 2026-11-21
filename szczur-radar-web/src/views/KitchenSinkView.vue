@@ -28,22 +28,33 @@ import StatusBadge, { type BadgeTone } from '../components/StatusBadge.vue'
 import StatusMessage from '../components/StatusMessage.vue'
 import ThemeToggle from '../components/ThemeToggle.vue'
 
-/** The colour roles of :root in src/style.css, in the order of the plan's token table. */
+/** The colour roles of :root in src/style.css, in the order of tokens.css (context/foundation/ui-design/). */
 const colourRoles = [
   '--bg',
+  '--bg-glow',
+  '--surface',
+  '--surface-2',
+  '--selected',
+  '--scrim',
   '--text',
   '--text-h',
+  '--text-muted',
   '--accent',
   '--on-accent',
+  '--ring',
+  '--line',
+  '--border',
   '--success',
   '--warning',
   '--destructive',
-  '--surface',
-  '--highlight',
   '--stance-neutral',
   '--stance-mixed',
-  '--border',
-  '--ring',
+  '--success-soft',
+  '--warning-soft',
+  '--destructive-soft',
+  '--neutral-soft',
+  '--mixed-soft',
+  '--highlight',
 ] as const
 
 type ColourRole = (typeof colourRoles)[number]
@@ -730,7 +741,7 @@ h1 {
 
 h2 {
   margin: var(--space-5) 0 var(--space-2);
-  font-size: var(--font-size-lg);
+  font-size: var(--font-size-2xl);
   color: var(--text-h);
 }
 
@@ -763,7 +774,7 @@ h3 {
 .sample {
   margin-bottom: var(--space-4);
   padding: var(--space-4) var(--space-5);
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: var(--radius);
 }
 
@@ -794,7 +805,7 @@ h3 {
   display: flex;
   justify-content: flex-end;
   padding: var(--space-2) var(--space-4);
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: var(--radius);
 }
 
@@ -822,7 +833,7 @@ h3 {
   flex: none;
   width: 2.5rem;
   height: 2.5rem;
-  border: 1px solid var(--border-strong);
+  border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   font-weight: 600;
 }

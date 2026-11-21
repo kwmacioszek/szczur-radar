@@ -219,10 +219,17 @@ defineExpose({ focusToggle })
   max-height: 70vh;
   overflow-y: auto;
   padding: var(--space-3);
-  border: 1px solid var(--border-strong);
+  border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--bg);
   box-shadow: 0 var(--space-1) var(--space-3) color-mix(in srgb, var(--text-h) 15%, transparent);
+}
+
+/* The root font size is 16px at every width; above 1024px the limit is what 18px gave (design-tokens-and-components). */
+@media (min-width: 1025px) {
+  .panel {
+    width: min(27rem, calc(100% - 2 * var(--space-4)));
+  }
 }
 
 .panel-head {
@@ -252,7 +259,7 @@ defineExpose({ focusToggle })
 }
 
 .items li + li {
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--line);
 }
 
 .item {
