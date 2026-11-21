@@ -1,10 +1,10 @@
 ---
 change_id: ui-design-system
 title: Ui design system
-status: impl_reviewed
+status: archived
 created: 2026-11-19
-updated: 2026-11-20
-archived_at: null
+updated: 2026-11-21
+archived_at: 2026-11-21T09:29:32Z
 ---
 
 ## Notes

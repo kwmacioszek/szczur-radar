@@ -3,7 +3,7 @@ project: "Szczur Radar"
 version: 6
 status: draft # draft | active | locked
 created: 2026-09-27
-updated: 2026-11-20
+updated: 2026-11-21
 prd_version: 4
 main_goal: quality
 top_blocker: capacity # 19 pozycji, jeden recenzent i osoba mergująca; fundament UI dotyka wspólnych plików (tokeny, komponenty, router), więc pierwsze fale są sekwencyjne; darmowe runnery GitHuba muszą zmieścić testy w przeglądarce i zrzuty
@@ -116,7 +116,7 @@ Na Wykopie (#gielda) i Reddicie codziennie pojawiają się setki postów o inwes
 | ---- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ------------- | ------------------------------------------ | -------- |
 | F-05 | e2e-harness                   | (foundation) testy w przeglądarce w repo i w CI na atrapie API ustawianej z testu; smoke obecnych przepływów            | —             | NFR `prd.md:328`                           | done     |
 | F-06 | visual-regression             | (foundation) zrzuty porównawcze katalogu komponentów i widoków w obu motywach i przy 375 px oraz test dostępności w CI   | F-05          | NFR `prd.md:328` (doprecyzowanie v4)       | done |
-| F-07 | ui-design-system              | (foundation) zaakceptowany projekt UI/UX całej aplikacji według standardów: architektura informacji, tokeny, komponenty, prototypy | —             | FR-040, NFR `prd.md:328`                   | in-progress |
+| F-07 | ui-design-system              | (foundation) zaakceptowany projekt UI/UX całej aplikacji według standardów: architektura informacji, tokeny, komponenty, prototypy | —             | FR-040, NFR `prd.md:328`                   | done |
 | F-08 | design-tokens-and-components  | (foundation) język wizualny z F-07 w tokenach i komponentach katalogu, obecne widoki przepięte                           | F-07, S-46    | FR-040, NFR `prd.md:328`                   | proposed |
 | S-46 | light-dark-theme-switch       | użytkownik przełącza motyw jasny i ciemny w nowej palecie, a wybór jest zapamiętany                                      | F-06          | FR-040                                     | done |
 | S-47 | app-shell-navigation          | użytkownik porusza się po aplikacji przez stałą nawigację w układzie paneli, bez nagłówka stawianego przez każdy widok   | F-08          | FR-007, FR-021, FR-030                     | proposed |
@@ -203,7 +203,7 @@ Wycinki niżej zakładają te warstwy i ich nie budują od nowa.
   - Czy projekt zmienia architekturę informacji (inne ekrany, inny podział panelu admina, katalog i karta celu w jednym widoku)? Jeśli tak, `/10x-roadmap` przecina S-47–S-59 na nowo (v6.2), z tymi samymi ID i issue. — Owner: user (akceptacja projektu). Block: no.
   - Krój pisma (polskie znaki, licencja, hostowany u nas) i czy paleta A z S-46 zostaje. — Owner: team (`/10x-plan`), decyzja: user. Block: no.
 - **Risk:** bez wspólnego projektu plan każdego wycinka bierze z makiet tylko układ, a wygląd zostaje surowy (decyzja właściciela 2026-11-19); dokumentacja i prototypy bez kodu aplikacji, więc wzorce F-06 się nie zmieniają.
-- **Status:** in-progress
+- **Status:** done
 
 ### F-08: Tokeny i komponenty z projektu
 
@@ -547,3 +547,4 @@ Wycinki niżej zakładają te warstwy i ich nie budują od nowa.
 - **F-05: (foundation) testy w przeglądarce leżą w repo i chodzą w CI przy każdym PR na atrapie API zgodnej z kontraktem, której tryby (sesja, rola, dane, pusto, błąd, ładowanie) ustawia test; smoke obejmuje obecne przepływy: logowanie i wylogowanie, feed z filtrem, widok posta, panel admina.** — Archived 2026-11-16 → `context/archive/2026-11-16-e2e-harness/`. Lesson: —.
 - **F-06: (foundation) wygląd jest pilnowany zrzutami porównawczymi w CI — katalog komponentów we wszystkich stanach w obu motywach i przy 375 px oraz po jednym zrzucie każdego widoku z danymi w obu motywach, przy 375 px i na desktopie — a każdy z tych widoków przechodzi automatyczny test dostępności; zmiana wyglądu aktualizuje wzorce w tym samym PR.** — Archived 2026-11-17 → `context/archive/2026-11-16-visual-regression/`. Lesson: —.
 - **S-46: użytkownik przełącza motyw aplikacji między jasnym i ciemnym w nowej palecie pod układy paneli, wybór jest zapamiętany, a domyślnie obowiązuje ustawienie systemu; każda para tekstu spełnia kontrast co najmniej 4.5:1 w obu motywach.** — Archived 2026-11-19 → `context/archive/2026-11-17-light-dark-theme-switch/`. Lesson: —.
+- **F-07: (foundation) aplikacja ma zaakceptowany przez właściciela projekt UI/UX opracowany od nowa według standardów (WCAG 2.2 AA, heurystyki Nielsena, wzorce dojrzałych systemów projektowych): zasady, architekturę informacji i nawigację, język wizualny jako tokeny (typografia, siatka i odstępy, role kolorów, promienie, ikony), komponenty z ich stanami oraz prototypy każdego ekranu M-5 w obu motywach i przy 375 px, w `context/foundation/ui-design.md`; makiety z `ui-ux-proposals.md` są materiałem wejściowym, nie wzorem do skopiowania.** — Archived 2026-11-21 → `context/archive/2026-11-19-ui-design-system/`. Lesson: —.
