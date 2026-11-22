@@ -3,7 +3,7 @@ project: "Szczur Radar"
 version: 6
 status: draft # draft | active | locked
 created: 2026-09-27
-updated: 2026-11-21
+updated: 2026-11-22
 prd_version: 4
 main_goal: quality
 top_blocker: capacity # 19 pozycji, jeden recenzent i osoba mergująca; fundament UI dotyka wspólnych plików (tokeny, komponenty, router), więc pierwsze fale są sekwencyjne; darmowe runnery GitHuba muszą zmieścić testy w przeglądarce i zrzuty
@@ -119,7 +119,7 @@ Na Wykopie (#gielda) i Reddicie codziennie pojawiają się setki postów o inwes
 | F-05 | e2e-harness                   | (foundation) testy w przeglądarce w repo i w CI na atrapie API ustawianej z testu; smoke obecnych przepływów            | —             | NFR `prd.md:328`                           | done     |
 | F-06 | visual-regression             | (foundation) zrzuty porównawcze katalogu komponentów i widoków w obu motywach i przy 375 px oraz test dostępności w CI   | F-05          | NFR `prd.md:328` (doprecyzowanie v4)       | done |
 | F-07 | ui-design-system              | (foundation) zaakceptowany projekt UI/UX całej aplikacji według standardów: architektura informacji, tokeny, komponenty, prototypy | —             | FR-040, NFR `prd.md:328`                   | done |
-| F-08 | design-tokens-and-components  | (foundation) tokeny, kroje i komponenty bazowe z projektu F-07 w aplikacji; obecne widoki w nowym wyglądzie, jeszcze w starym układzie | F-07, S-46    | FR-040, NFR `prd.md:328` | in-progress |
+| F-08 | design-tokens-and-components  | (foundation) tokeny, kroje i komponenty bazowe z projektu F-07 w aplikacji; obecne widoki w nowym wyglądzie, jeszcze w starym układzie | F-07, S-46    | FR-040, NFR `prd.md:328` | done |
 | S-46 | light-dark-theme-switch       | użytkownik przełącza motyw jasny i ciemny w nowej palecie, a wybór jest zapamiętany                                      | F-06          | FR-040                                     | done |
 | S-47 | app-shell-navigation          | użytkownik porusza się po aplikacji przez pasek u góry (nawigacja według roli, data danych per źródło, motyw, wylogowanie), z treścią w jednej kolumnie | F-08          | FR-007, FR-013, FR-015, FR-021, FR-030 | proposed |
 | S-48 | shared-view-states            | użytkownik widzi w każdym widoku to samo ładowanie, pustą listę, błąd z ponowieniem i stronicowanie | S-47          | FR-007, FR-009, NFR `prd.md:328` | proposed |
@@ -219,7 +219,7 @@ Wycinki niżej zakładają te warstwy i ich nie budują od nowa.
 - **Blockers:** —
 - **Unknowns:** — (zakres przepięcia rozstrzygnął projekt: F-08 przenosi wszystkie obecne widoki na nowe tokeny bez zmiany układu; układ zmieniają wycinki ekranów)
 - **Risk:** zmienia wszystkie wzorce F-06 drugi raz po S-46 (zamierzone) i świadomie zmienia bramki opisane w projekcie (test kroju, pary kontrastu, nazwy sekcji katalogu komponentów); nazwa `--border` zmienia znaczenie z linii ozdobnej na krawędź kontrolki, więc obie nazwy zmieniają się w jednym commicie; tokeny są wspólne dla każdego widoku, więc idzie przed powłoką.
-- **Status:** in-progress
+- **Status:** done
 
 ## Slices
 
@@ -568,3 +568,4 @@ Wycinki niżej zakładają te warstwy i ich nie budują od nowa.
 - **F-06: (foundation) wygląd jest pilnowany zrzutami porównawczymi w CI — katalog komponentów we wszystkich stanach w obu motywach i przy 375 px oraz po jednym zrzucie każdego widoku z danymi w obu motywach, przy 375 px i na desktopie — a każdy z tych widoków przechodzi automatyczny test dostępności; zmiana wyglądu aktualizuje wzorce w tym samym PR.** — Archived 2026-11-17 → `context/archive/2026-11-16-visual-regression/`. Lesson: —.
 - **S-46: użytkownik przełącza motyw aplikacji między jasnym i ciemnym w nowej palecie pod układy paneli, wybór jest zapamiętany, a domyślnie obowiązuje ustawienie systemu; każda para tekstu spełnia kontrast co najmniej 4.5:1 w obu motywach.** — Archived 2026-11-19 → `context/archive/2026-11-17-light-dark-theme-switch/`. Lesson: —.
 - **F-07: (foundation) aplikacja ma zaakceptowany przez właściciela projekt UI/UX opracowany od nowa według standardów (WCAG 2.2 AA, heurystyki Nielsena, wzorce dojrzałych systemów projektowych): zasady, architekturę informacji i nawigację, język wizualny jako tokeny (typografia, siatka i odstępy, role kolorów, promienie, ikony), komponenty z ich stanami oraz prototypy każdego ekranu M-5 w obu motywach i przy 375 px, w `context/foundation/ui-design.md`; makiety z `ui-ux-proposals.md` są materiałem wejściowym, nie wzorem do skopiowania.** — Archived 2026-11-21 → `context/archive/2026-11-19-ui-design-system/`. Lesson: —.
+- **F-08: (foundation) język wizualny z F-07 jest w aplikacji: tokeny projektu w `style.css` w obu motywach na mechanizmie z S-46, trzy kroje hostowane w aplikacji, ikony oraz komponenty bazowe (przycisk, komunikat, znacznik stanu, stanowisko, przełącznik motywu, pola, odnośnik) w katalogu komponentów we wszystkich stanach; obecne widoki działają na nowych tokenach, jeszcze w starym układzie, a wzorce F-06 zmieniają się raz, jako akceptacja wyglądu.** — Archived 2026-11-22 → `context/archive/2026-11-21-design-tokens-and-components/`. Lesson: —.
