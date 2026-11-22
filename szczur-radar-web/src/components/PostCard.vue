@@ -46,7 +46,6 @@ const output = computed(() => props.post.assessment?.output)
 </template>
 
 <style scoped>
-/* Not `.card`: style.css has a global one (the centred login card) that a scoped style does not undo. */
 .post-card {
   display: grid;
   grid-template-columns: minmax(0, 1fr);

@@ -327,27 +327,27 @@ Bez migracji danych i bez zmian API. Wzorce F-06 `view-login` i `view-activate` 
 
 #### Automated
 
-- [x] 2.1 Testy widoku logowania przechodzą
-- [x] 2.2 Pełne testy jednostkowe przechodzą (LoginView na liście CLEANED)
-- [x] 2.3 Wyjątek login-form usunięty z kodu
-- [x] 2.4 Typecheck i build przechodzą
-- [x] 2.5 Testy w przeglądarce zielone, w tym limit prób i motyw na logowaniu
-- [x] 2.6 Zgodność z projektem i kontrast (design-check app)
-- [x] 2.7 Wzorce view-login w czterech projektach zaktualizowane, nic innego
+- [x] 2.1 Testy widoku logowania przechodzą — 38269d0
+- [x] 2.2 Pełne testy jednostkowe przechodzą (LoginView na liście CLEANED) — 38269d0
+- [x] 2.3 Wyjątek login-form usunięty z kodu — 38269d0
+- [x] 2.4 Typecheck i build przechodzą — 38269d0
+- [x] 2.5 Testy w przeglądarce zielone, w tym limit prób i motyw na logowaniu — 38269d0
+- [x] 2.6 Zgodność z projektem i kontrast (design-check app) — 38269d0
+- [x] 2.7 Wzorce view-login w czterech projektach zaktualizowane, nic innego — 38269d0
 - [x] 2.8 Testy wizualne i axe zielone
 
 ### Phase 3: Aktywacja z błędem przy polu
 
 #### Automated
 
-- [ ] 3.1 Testy widoku aktywacji przechodzą
-- [ ] 3.2 Pełne testy jednostkowe przechodzą
-- [ ] 3.3 Martwe style globalne usunięte
-- [ ] 3.4 Typecheck i build przechodzą
-- [ ] 3.5 Testy w przeglądarce zielone
-- [ ] 3.6 Zgodność z projektem i kontrast (design-check app)
-- [ ] 3.7 Wzorce view-activate w czterech projektach zaktualizowane, nic innego
-- [ ] 3.8 Testy wizualne i axe zielone
+- [x] 3.1 Testy widoku aktywacji przechodzą
+- [x] 3.2 Pełne testy jednostkowe przechodzą
+- [x] 3.3 Martwe style globalne usunięte
+- [x] 3.4 Typecheck i build przechodzą
+- [x] 3.5 Testy w przeglądarce zielone
+- [x] 3.6 Zgodność z projektem i kontrast (design-check app)
+- [x] 3.7 Wzorce view-activate w czterech projektach zaktualizowane, nic innego
+- [x] 3.8 Testy wizualne i axe zielone
 
 ### Phase 4: Stany błędu w zrzutach, dokumentacja i pełne bramki
 

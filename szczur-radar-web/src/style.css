@@ -266,48 +266,6 @@ h3 {
   white-space: nowrap;
 }
 
-/* Centered single-card page (login). */
-.page {
-  min-height: 100svh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-5) var(--space-4);
-  box-sizing: border-box;
-}
-
-.card {
-  width: 100%;
-  max-width: 34rem;
-  text-align: center;
-
-  /* The root font size is 16px at every width; above 1024px the width is what 18px gave. */
-  @media (min-width: 1025px) {
-    max-width: 38.25rem;
-  }
-}
-
-/* Sentence case, no tracking: the design has no capitals in labels. */
-.eyebrow {
-  margin: 0 0 var(--space-3);
-  font-size: var(--font-size-sm);
-  color: var(--accent);
-}
-
-.card h1 {
-  margin: 0 0 var(--space-4);
-  font-size: var(--font-size-display);
-
-  @media (max-width: 1024px) {
-    font-size: var(--font-size-5xl);
-  }
-}
-
-.lead {
-  color: var(--text);
-  line-height: var(--leading-normal);
-}
-
 /*
  * Buttons, links and form fields. The global button is the plain variant of the design (the edge of a control, --text-h
  * text, as tall as a field): a view's own button looks like it, AppButton adds the primary variant, an icon, the large
