@@ -7,7 +7,7 @@ import { useRoute } from 'vue-router'
 import { ApiError } from '../api/client'
 import { type Run, fetchRun } from '../api/pipeline'
 import AppButton from '../components/AppButton.vue'
-import AppHeader from '../components/AppHeader.vue'
+import PageHeader from '../components/PageHeader.vue'
 import StatusBadge from '../components/StatusBadge.vue'
 import StatusMessage from '../components/StatusMessage.vue'
 import { formatDateTime, formatDuration, formatRelative, label } from '../labels'
@@ -31,7 +31,7 @@ import {
 const REFRESH_MS = 10 * 1000
 
 const route = useRoute()
-const heading = useTemplateRef<HTMLHeadingElement>('run-title')
+const header = useTemplateRef<InstanceType<typeof PageHeader>>('header')
 
 /** `missing`: 404 or 400, an id that is not a run; `failed`: any other error. */
 type LoadState = 'loading' | 'failed' | 'missing' | 'loaded'
@@ -107,7 +107,7 @@ async function load(id: string): Promise<void> {
     now.value = Date.now()
     state.value = 'loaded'
     await nextTick()
-    if (current === latestLoad) heading.value?.focus()
+    if (current === latestLoad) header.value?.focus()
   } catch (error) {
     if (current !== latestLoad) return
     const missing = error instanceof ApiError && (error.status === 404 || error.status === 400)
@@ -151,14 +151,14 @@ watch(
 </script>
 
 <template>
-  <AppHeader />
-  <main class="run-detail">
+  <div class="run-detail">
     <RouterLink class="back" :to="{ name: 'admin' }"><span aria-hidden="true">←</span> Panel admina</RouterLink>
     <section aria-labelledby="run-title" :aria-busy="state === 'loading' ? 'true' : undefined">
-      <div class="title-row">
-        <h1 id="run-title" ref="run-title" tabindex="-1">{{ title }}</h1>
-        <StatusBadge v-if="run" class="status" :tone="runTone(run)">{{ runStatusLabel(run) }}</StatusBadge>
-      </div>
+      <PageHeader ref="header" class="head" :title="title" heading-id="run-title">
+        <template #status>
+          <StatusBadge v-if="run" class="status" :tone="runTone(run)">{{ runStatusLabel(run) }}</StatusBadge>
+        </template>
+      </PageHeader>
       <p v-if="state === 'loading'" class="loading">Wczytywanie przebiegu…</p>
       <template v-else-if="state === 'failed'">
         <StatusMessage tone="error" class="message">Nie udało się wczytać przebiegu.</StatusMessage>
@@ -284,15 +284,13 @@ watch(
         </section>
       </template>
     </section>
-  </main>
+  </div>
 </template>
 
 <style scoped>
 .run-detail {
   max-width: 48rem;
   margin: 0 auto;
-  padding: var(--space-4);
-  box-sizing: border-box;
 }
 
 /* The root font size is 16px at every width; above 1024px the width is what 18px gave (design-tokens-and-components). */
@@ -307,19 +305,9 @@ watch(
   margin-top: var(--space-2);
 }
 
-.title-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: var(--space-2) var(--space-3);
+/* The title with the run's badge stands apart from the link back above it and from the run below it. */
+.head {
   margin: var(--space-4) 0 var(--space-2);
-}
-
-h1 {
-  margin: 0;
-  font-size: var(--font-size-2xl);
-  line-height: var(--leading-snug);
-  letter-spacing: var(--tracking-snug);
 }
 
 h2 {

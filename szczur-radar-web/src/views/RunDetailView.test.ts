@@ -3,7 +3,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMemoryHistory } from 'vue-router'
 import { fetchMe } from '../api/auth'
 import { ApiError, type ErrorCode } from '../api/client'
-import { fetchNotifications } from '../api/notifications'
 import { type AttentionReason, type Run, type RunStep, type SourceResult, fetchRun } from '../api/pipeline'
 import { resetSession } from '../auth/session'
 import { createAppRouter } from '../router'
@@ -13,12 +12,6 @@ vi.mock('../api/auth', () => ({ fetchMe: vi.fn(), login: vi.fn(), logout: vi.fn(
 vi.mock('../api/pipeline', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../api/pipeline')>()),
   fetchRun: vi.fn(),
-}))
-// The header shows an admin the notification bell.
-vi.mock('../api/notifications', () => ({
-  fetchNotifications: vi.fn(),
-  markNotificationRead: vi.fn(),
-  markAllNotificationsRead: vi.fn(),
 }))
 
 const MINUTE = 60 * 1000
@@ -119,11 +112,6 @@ async function mountRun(path = '/admin/runs/r1', { attachTo }: { attachTo?: HTML
   return { wrapper, router }
 }
 
-/** The page without its header: the header's notification bell has a list (and states) of its own. */
-function page(wrapper: VueWrapper) {
-  return wrapper.find('main')
-}
-
 function button(wrapper: VueWrapper, text: string) {
   const found = wrapper.findAll('button').find((candidate) => candidate.text() === text)
   if (!found) throw new Error(`no button "${text}"`)
@@ -137,7 +125,6 @@ describe('RunDetailView', () => {
     resetSession()
     vi.mocked(fetchMe).mockReset().mockResolvedValue({ id: '1', email: 'admin@example.com', role: 'admin' })
     vi.mocked(fetchRun).mockReset()
-    vi.mocked(fetchNotifications).mockReset().mockResolvedValue({ unread: 0, items: [] })
     // The router scrolls to the top on a path change (router/scroll.ts); jsdom does not implement scrolling.
     vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
   })
@@ -151,7 +138,7 @@ describe('RunDetailView', () => {
     vi.mocked(fetchRun).mockReturnValue(never())
     const { wrapper } = await mountRun()
     expect(fetchRun).toHaveBeenCalledWith('r1')
-    expect(page(wrapper).find('.loading').text()).toBe('Wczytywanie przebiegu…')
+    expect(wrapper.find('.loading').text()).toBe('Wczytywanie przebiegu…')
     expect(wrapper.find('section[aria-labelledby="run-title"]').attributes('aria-busy')).toBe('true')
     expect(wrapper.find('h1').text()).toBe('Przebieg')
   })
@@ -162,23 +149,23 @@ describe('RunDetailView', () => {
   ])('says there is no such run on %i, with a link to the panel', async (status, detail) => {
     vi.mocked(fetchRun).mockRejectedValue(new ApiError(status, detail))
     const { wrapper } = await mountRun('/admin/runs/x')
-    const message = page(wrapper).find('.empty')
+    const message = wrapper.find('.empty')
     expect(message.text()).toContain('Nie ma takiego przebiegu.')
     expect(message.find('a').attributes('href')).toBe('/admin')
-    expect(page(wrapper).find('[role="alert"]').exists()).toBe(false)
+    expect(wrapper.find('[role="alert"]').exists()).toBe(false)
   })
 
   it('offers a retry after an error and shows the run when it succeeds', async () => {
     vi.mocked(fetchRun).mockRejectedValueOnce(new ApiError(500, 'internal_error')).mockResolvedValueOnce(run())
     const { wrapper } = await mountRun()
-    expect(page(wrapper).find('[role="alert"]').text()).toBe('Nie udało się wczytać przebiegu.')
-    expect(page(wrapper).find('.empty').exists()).toBe(false)
+    expect(wrapper.find('[role="alert"]').text()).toBe('Nie udało się wczytać przebiegu.')
+    expect(wrapper.find('.empty').exists()).toBe(false)
 
     await button(wrapper, 'Spróbuj ponownie').trigger('click')
     await flushPromises()
 
     expect(fetchRun).toHaveBeenCalledTimes(2)
-    expect(page(wrapper).find('[role="alert"]').exists()).toBe(false)
+    expect(wrapper.find('[role="alert"]').exists()).toBe(false)
     expect(wrapper.find('h1').text()).toBe('Przebieg: zakres dat')
   })
 
@@ -252,7 +239,7 @@ describe('RunDetailView', () => {
     expect(wrapper.find('.duration').text()).toBe('—')
     expect(wrapper.find('.steps').exists()).toBe(false)
     // A queued range run has neither a source's result nor a step yet.
-    expect(page(wrapper).findAll('.empty').map((empty) => empty.text())).toEqual([
+    expect(wrapper.findAll('.empty').map((empty) => empty.text())).toEqual([
       'Jeszcze żadne źródło nie zakończyło pobrania.',
       'Żaden krok się jeszcze nie zaczął.',
     ])
@@ -281,7 +268,7 @@ describe('RunDetailView', () => {
       const { wrapper } = await mountRun()
       const section = wrapper.find('.source-results')
       expect(section.find('h2').text()).toBe('Wynik per źródło')
-      const titles = page(wrapper).findAll('h2').map((heading) => heading.text())
+      const titles = wrapper.findAll('h2').map((heading) => heading.text())
       expect(titles.indexOf('Wynik per źródło')).toBe(titles.indexOf('Liczniki') + 1)
       expect(titles.indexOf('Kroki')).toBe(titles.indexOf('Wynik per źródło') + 1)
       const [wykop, reddit] = section.findAll('.source-result')

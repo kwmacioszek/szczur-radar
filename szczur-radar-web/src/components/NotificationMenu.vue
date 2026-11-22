@@ -3,7 +3,7 @@
 // kitchen sink from fixed data. A disclosure (a button that shows a panel after it), not an ARIA menu: Tab goes from
 // the button through the panel's links and buttons. Escape and a click outside close it; Escape, and a click that
 // would leave the focus nowhere, put the focus back on the button.
-// The panel is placed below the nearest positioned ancestor and aligned to its right edge (AppHeader's bar), so it
+// The panel is placed below the nearest positioned ancestor and aligned to its right edge (AppBar's header), so it
 // fits at 375 px wherever the bell lands in the wrapped header.
 import { onBeforeUnmount, useId, useTemplateRef, watch } from 'vue'
 import { useRouter } from 'vue-router'

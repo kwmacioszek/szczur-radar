@@ -42,6 +42,11 @@ async function bellLoaded(page: Page): Promise<void> {
   await expect(page.getByRole('banner').getByRole('button', { name: /^Powiadomienia, / })).toBeVisible()
 }
 
+/** Every logged-in page is ready only with the date of the data in the bar (it sets the bar's height and its row). */
+async function freshnessLoaded(page: Page): Promise<void> {
+  await expect(page.getByRole('banner').getByText('Dane:', { exact: true })).toBeVisible()
+}
+
 export interface View {
   /** The baseline's file name, without .png. */
   name: string
@@ -125,8 +130,8 @@ export const VIEWS: readonly View[] = [
     ready: async (page) => {
       const main = page.getByRole('main')
       await expect(main.getByRole('article')).toHaveCount(FEED_PAGE)
-      await expect(main.getByText('Dane zaktualizowane:')).toBeVisible()
       await expect(main.getByRole('status')).toHaveText('Ocenione posty: 120')
+      await freshnessLoaded(page)
     },
     clipToArticle: FEED_SHOWN_ARTICLES,
   },
@@ -140,6 +145,7 @@ export const VIEWS: readonly View[] = [
       await expect(main.getByRole('heading', { level: 1, name: 'Wpis użytkownika uzytkownik0' })).toBeVisible()
       await expect(main.getByRole('heading', { level: 2, name: 'Ocena', exact: true })).toBeVisible()
       await expect(main.getByRole('heading', { level: 3, name: 'CDR', exact: true })).toBeVisible()
+      await freshnessLoaded(page)
     },
   },
   {
@@ -161,6 +167,7 @@ export const VIEWS: readonly View[] = [
       await expect(region('Nieudane posty').getByRole('checkbox')).toHaveCount(4)
       await expect(main.getByText('Wczytywanie…', { exact: true })).toHaveCount(0)
       await bellLoaded(page)
+      await freshnessLoaded(page)
     },
   },
   {
@@ -173,6 +180,7 @@ export const VIEWS: readonly View[] = [
       await expect(main.getByRole('heading', { level: 2, name: 'Wynik per źródło', exact: true })).toBeVisible()
       await expect(main.getByRole('heading', { level: 2, name: 'Kroki', exact: true })).toBeVisible()
       await bellLoaded(page)
+      await freshnessLoaded(page)
     },
   },
 ]
@@ -256,8 +264,20 @@ export interface State {
   pressedByTheme?: true
 }
 
+/**
+ * The navigation's link that is not the current one, in the bar of the administrator (the first variant of „Pasek
+ * aplikacji”): the four bars of the section share their link names, so the bar is found by its title, not by `nth`.
+ */
+function navigationLink(region: Locator): Locator {
+  return region
+    .getByRole('listitem')
+    .filter({ hasText: 'Administrator z dzwonkiem' })
+    .getByRole('navigation', { name: 'Główna', exact: true })
+    .getByRole('link', { name: 'Panel admina', exact: true })
+}
+
 // The catalogue gives each control of a state its own accessible name within its region (no `nth`): the primary and the
-// plain button, the icon-only one, the link, the e-mail and search fields and the theme toggle.
+// plain button, the icon-only one, the link, the e-mail and search fields, the theme toggle and (below) the bar's link.
 export const STATES: readonly State[] = [
   {
     name: 'state-przycisk-primary-hover',
@@ -351,5 +371,19 @@ export const STATES: readonly State[] = [
     control: (region) => region.getByRole('button', { name: 'Ciemny motyw', exact: true }),
     state: 'focus',
     pressedByTheme: true,
+  },
+  {
+    name: 'state-nawigacja-hover',
+    risk: 'hover pozycji nawigacji w pasku nie zmienia wyglądu',
+    region: 'Pasek aplikacji',
+    control: navigationLink,
+    state: 'hover',
+  },
+  {
+    name: 'state-nawigacja-focus',
+    risk: 'pierścień fokusu pozycji nawigacji w pasku nie zmienia wyglądu',
+    region: 'Pasek aplikacji',
+    control: navigationLink,
+    state: 'focus',
   },
 ]

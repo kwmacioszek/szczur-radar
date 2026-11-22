@@ -12,6 +12,7 @@ import {
 } from 'vue-router'
 import { onUnauthorized } from '../api/client'
 import { ensureSession } from '../auth/session'
+import AppShell from '../components/AppShell.vue'
 import ActivateView from '../views/ActivateView.vue'
 import AdminView from '../views/AdminView.vue'
 import FeedView from '../views/FeedView.vue'
@@ -22,12 +23,17 @@ import { scrollBehavior } from './scroll'
 
 export { safeRedirect } from './redirect'
 
+/** The item of the main navigation a page belongs to (components/AppShell.vue marks it with aria-current). */
+export type AppSection = 'posts' | 'admin'
+
 declare module 'vue-router' {
   interface RouteMeta {
     /** Reachable without a session. */
     public?: boolean
     /** Only for the admin role; others go to the feed (the API answers 403 anyway). */
     admin?: boolean
+    /** The navigation item of the shell's pages; the other routes have none. */
+    section?: AppSection
   }
 }
 
@@ -35,10 +41,23 @@ export const routes: RouteRecordRaw[] = [
   { path: '/login', name: 'login', component: LoginView, meta: { public: true } },
   // The link of the operator's CLI: /activate#<token>, the token only in the fragment.
   { path: '/activate', name: 'activate', component: ActivateView, meta: { public: true } },
-  { path: '/', name: 'home', component: FeedView },
-  { path: '/posts/:id', name: 'post', component: PostDetailView },
-  { path: '/admin', name: 'admin', component: AdminView, meta: { admin: true } },
-  { path: '/admin/runs/:id', name: 'admin-run', component: RunDetailView, meta: { admin: true } },
+  // The logged-in pages share one shell, mounted once: the bar on top, the page in its column. `to.meta` merges the
+  // parent's and the child's, so the guard below reads `admin` as before.
+  {
+    path: '/',
+    component: AppShell,
+    children: [
+      { path: '', name: 'home', component: FeedView, meta: { section: 'posts' } },
+      { path: 'posts/:id', name: 'post', component: PostDetailView, meta: { section: 'posts' } },
+      { path: 'admin', name: 'admin', component: AdminView, meta: { admin: true, section: 'admin' } },
+      {
+        path: 'admin/runs/:id',
+        name: 'admin-run',
+        component: RunDetailView,
+        meta: { admin: true, section: 'admin' },
+      },
+    ],
+  },
   // Every component in every state, for screenshots. `npm run build` replaces import.meta.env.DEV
   // with false, so the route and its chunk are not in dist/.
   ...(import.meta.env.DEV

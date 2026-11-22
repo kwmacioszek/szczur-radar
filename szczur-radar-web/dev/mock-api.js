@@ -29,8 +29,8 @@
  *       'error-next'   feed page 0 answers, later pages answer 500 (admin as in 'data'),
  *       'raw-loading'  /api/posts/:id/raw hangs 60 s (the rest as in 'data'),
  *       'raw-error'    /api/posts/:id/raw answers 500 (the rest as in 'data').
- * FRESHNESS (independent of MODE), the label above the
- * feed — /api/freshness answers like pipeline/api/FreshnessController.java:
+ * FRESHNESS (independent of MODE), the date of the data in the shell's app bar
+ * — /api/freshness answers like pipeline/api/FreshnessController.java:
  *       'date'  { sources: [wykop, reddit] }, both 2026-10-13T03:12:00Z (05:12 in Warsaw), the default,
  *       'apart' both sources, Reddit older: 2026-10-11T03:12:00Z (a night it failed or gave no post since),
  *       'wykop' Wykop alone: the one source with an update, as on production until S-28,
@@ -125,7 +125,7 @@
  * 0 with or without a filter.
  * Only paths starting with /api/ are mocked — a '**\/api/**' glob would also catch Vite's /src/api/*.ts modules.
  * failureClass values are the API's FailureClass (agents/assessor/validation/FailureClass.java), lower case.
- * With AUTH 'admin' the header shows "Panel admina" and the notification bell on every view.
+ * With AUTH 'admin' the app bar of the shell shows "Panel admina" and the notification bell on every logged-in view.
  * /kitchen-sink needs no mock: dev only, no session, fixed data.
  *
  *   cd szczur-radar-web && npx vite --port 5173 --strictPort &

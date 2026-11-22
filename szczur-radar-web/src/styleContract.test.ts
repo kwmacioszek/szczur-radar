@@ -1,14 +1,16 @@
 import { describe, expect, it } from 'vitest'
+import appBar from './components/AppBar.vue?raw'
 import appBrand from './components/AppBrand.vue?raw'
 import appButton from './components/AppButton.vue?raw'
-import appHeader from './components/AppHeader.vue?raw'
 import appIcon from './components/AppIcon.vue?raw'
+import appShell from './components/AppShell.vue?raw'
 import authLayout from './components/AuthLayout.vue?raw'
 import feedFilter from './components/FeedFilter.vue?raw'
 import formField from './components/FormField.vue?raw'
 import iconSprite from './components/IconSprite.vue?raw'
 import notificationBell from './components/NotificationBell.vue?raw'
 import notificationMenu from './components/NotificationMenu.vue?raw'
+import pageHeader from './components/PageHeader.vue?raw'
 import postAssessment from './components/PostAssessment.vue?raw'
 import postCard from './components/PostCard.vue?raw'
 import stanceText from './components/StanceText.vue?raw'
@@ -125,7 +127,6 @@ function contrast(a: string, b: string): number {
  */
 const CLEANED: Record<string, string> = {
   'src/views/AdminView.vue': adminView,
-  'src/components/AppHeader.vue': appHeader,
   'src/components/AppButton.vue': appButton,
   'src/components/AppIcon.vue': appIcon,
   'src/components/IconSprite.vue': iconSprite,
@@ -143,6 +144,9 @@ const CLEANED: Record<string, string> = {
   'src/components/NotificationMenu.vue': notificationMenu,
   'src/views/RunDetailView.vue': runDetailView,
   'src/components/ThemeToggle.vue': themeToggle,
+  'src/components/AppBar.vue': appBar,
+  'src/components/AppShell.vue': appShell,
+  'src/components/PageHeader.vue': pageHeader,
   'src/components/AppBrand.vue': appBrand,
   'src/components/FormField.vue': formField,
   'src/components/AuthLayout.vue': authLayout,

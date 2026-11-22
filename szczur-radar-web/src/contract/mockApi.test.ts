@@ -183,8 +183,13 @@ const ROUTES: Route[] = [
     checks: [{ at: '$', refs: [{ file: 'activation-lookup.json', at: '$' }] }],
   },
   {
-    name: 'GET /api/freshness',
+    name: 'GET /api/freshness (FRESHNESS date, apart and none)',
     request: { method: 'GET', path: '/api/freshness' },
+    fetch: async (api) => [
+      await ok(api, 'GET', '/api/freshness'),
+      await ok(await installMock({ FRESHNESS: 'apart' }), 'GET', '/api/freshness'),
+      await ok(await installMock({ FRESHNESS: 'none' }), 'GET', '/api/freshness'),
+    ],
     checks: [{ at: '$', refs: [{ file: 'freshness.json', at: '$' }], enums: { '$.sources[].source': 'source' } }],
   },
   {
@@ -628,6 +633,7 @@ const ROWS: Row[] = [
   { name: 'the feed with an unknown kind', method: 'GET', path: '/api/posts?kind=nope', status: 400, detail: 'invalid_request' },
 
   // a mode's error answer is the API's unexpected error
+  { name: 'freshness: error', constants: { FRESHNESS: 'error' }, method: 'GET', path: '/api/freshness', status: 500, detail: 'internal_error' },
   { name: 'quality: error', constants: { QUALITY: 'error' }, method: 'GET', path: '/api/admin/assessment-quality', status: 500, detail: 'internal_error' },
 ]
 

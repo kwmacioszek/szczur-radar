@@ -1,7 +1,7 @@
-// The admin's notifications for the bell, kept in the module like the session (auth/session.ts): every view renders
-// its own AppHeader, so the bell is mounted again on each page and finds the list it had, without a loading state or
-// another request. NotificationBell decides when to read it again; the session empties it when it ends, so the next
-// account never sees the previous admin's notifications.
+// The admin's notifications for the bell, kept in the module like the session (auth/session.ts): the list lives as
+// long as the session does, not as long as the bell. NotificationBell decides when to read it again; the session
+// empties it when it ends, so the next account never sees the previous admin's notifications, and the shell mounts
+// anew after the next login and starts from an empty list.
 import { ref } from 'vue'
 import {
   type AdminNotification,

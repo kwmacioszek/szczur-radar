@@ -1,11 +1,12 @@
 <!--
   Dev only: router/index.ts adds /kitchen-sink when import.meta.env.DEV, so this view is not in the
   production build. Every colour role and shared component in every state on one page, for /10x-ui
-  screenshots. Fixed data: no API calls, no session, no AppHeader.
+  screenshots. Fixed data: no API calls, no session.
 -->
 <script setup lang="ts">
-import { reactive } from 'vue'
+import { reactive, ref } from 'vue'
 import { RouterLink } from 'vue-router'
+import type { Freshness } from '../api/freshness'
 import type { AdminNotification } from '../api/notifications'
 import type {
   AssessmentOutput,
@@ -19,6 +20,7 @@ import type {
   Target,
   TargetKind,
 } from '../api/posts'
+import AppBar, { type NavItem } from '../components/AppBar.vue'
 import AppBrand from '../components/AppBrand.vue'
 import AppButton from '../components/AppButton.vue'
 import AppIcon from '../components/AppIcon.vue'
@@ -26,6 +28,7 @@ import FeedFilter from '../components/FeedFilter.vue'
 import FormField from '../components/FormField.vue'
 import { ICON_NAMES } from '../components/iconNames'
 import NotificationMenu from '../components/NotificationMenu.vue'
+import PageHeader from '../components/PageHeader.vue'
 import PostAssessment from '../components/PostAssessment.vue'
 import PostCard from '../components/PostCard.vue'
 import StanceText from '../components/StanceText.vue'
@@ -181,6 +184,61 @@ const bells: {
 const bellOpen = reactive<Record<string, boolean>>(
   Object.fromEntries(bells.map((bell) => [bell.id, bell.id.startsWith('open')])),
 )
+
+/** The two items of an admin's navigation; the user has the first. The page belongs to "Posty". */
+const postsItem: NavItem = { label: 'Posty', to: { name: 'home' }, current: true }
+const adminItem: NavItem = { label: 'Panel admina', to: { name: 'admin' }, current: false }
+
+/** One source per day and hour, the older one a few days back: the label shows the day, not only the hour. */
+const barFreshness: Freshness = {
+  sources: [
+    { source: 'wykop', lastUpdatedAt: '2026-10-13T03:12:00Z' },
+    { source: 'reddit', lastUpdatedAt: '2026-10-11T03:12:00Z' },
+  ],
+}
+
+/** The bar's variants: the admin with the bell, a user, no update yet, and a date that could not be read. */
+const bars: {
+  id: string
+  title: string
+  items: NavItem[]
+  freshness: Freshness | null
+  email: string
+  bell?: true
+}[] = [
+  {
+    id: 'admin',
+    title: 'Administrator z dzwonkiem, dwa źródła, zaznaczone Posty',
+    items: [postsItem, adminItem],
+    freshness: barFreshness,
+    email: 'admin@szczur-radar.example',
+    bell: true,
+  },
+  {
+    id: 'user',
+    title: 'Użytkownik, zaznaczone Posty',
+    items: [postsItem],
+    freshness: barFreshness,
+    email: 'jan.kowalski@szczur-radar.example',
+  },
+  {
+    id: 'none',
+    title: 'Bez żadnej aktualizacji',
+    items: [postsItem],
+    freshness: { sources: [] },
+    email: 'jan.kowalski@szczur-radar.example',
+  },
+  {
+    id: 'error',
+    title: 'Bez etykiety daty (błąd odczytu)',
+    items: [postsItem],
+    freshness: null,
+    email: 'jan.kowalski@szczur-radar.example',
+  },
+]
+
+/** The admin variant's bell can be opened, to see its panel under the bar. */
+const barBellOpen = ref(false)
 
 /**
  * A target named in the body (a company unless `kind` says otherwise), as table §7.2 of the contract allows:
@@ -905,6 +963,57 @@ const assessments: { id: string; title: string; assessment: NonNullable<PostItem
         <AppBrand />
       </div>
     </section>
+
+    <section aria-labelledby="app-bar-title">
+      <h2 id="app-bar-title">Pasek aplikacji</h2>
+      <ul class="samples">
+        <li v-for="bar in bars" :key="bar.id" class="bar-sample" :class="{ open: bar.bell && barBellOpen }">
+          <p class="sample-title">{{ bar.title }}</p>
+          <div class="bar-frame">
+            <AppBar :items="bar.items" :freshness="bar.freshness" :email="bar.email" :logging-out="false">
+              <template v-if="bar.bell" #notifications>
+                <NotificationMenu v-model:open="barBellOpen" state="loaded" :unread="2" :items="notifications" :now="BELL_NOW" />
+              </template>
+            </AppBar>
+          </div>
+        </li>
+      </ul>
+    </section>
+
+    <section aria-labelledby="page-header-title">
+      <h2 id="page-header-title">Nagłówek strony</h2>
+      <ul class="samples">
+        <li class="sample">
+          <p class="sample-title">Sam tytuł</p>
+          <PageHeader title="Posty" />
+        </li>
+        <li class="sample">
+          <p class="sample-title">Z podtytułem</p>
+          <PageHeader title="Przegląd dnia" subtitle="wtorek, 20 października 2026" />
+        </li>
+        <li class="sample">
+          <p class="sample-title">Ze stanem przy tytule</p>
+          <PageHeader title="Przebieg z 19.10.2026, 02:30">
+            <template #status>
+              <StatusBadge tone="warning">częściowo</StatusBadge>
+            </template>
+          </PageHeader>
+        </li>
+        <li class="sample">
+          <p class="sample-title">Tytuł do czytania (post)</p>
+          <PageHeader title="Orlen ogłasza buyback za 4 mld zł" size="reading" />
+        </li>
+        <li class="sample">
+          <p class="sample-title">Z narzędziami widoku po prawej</p>
+          <PageHeader title="Posty" subtitle="wtorek, 20 października 2026">
+            <template #tools>
+              <AppButton icon="i-chevron-left" icon-only aria-label="Poprzedni dzień" />
+              <AppButton icon="i-chevron-right" icon-only aria-label="Następny dzień" />
+            </template>
+          </PageHeader>
+        </li>
+      </ul>
+    </section>
   </main>
 </template>
 
@@ -980,12 +1089,27 @@ h3 {
   min-height: 43rem;
 }
 
-/* A bar like AppHeader's: positioned, so the panel opens below it, aligned to its right edge. */
+/* A bar like the application's: positioned, so the panel opens below it, aligned to its right edge. */
 .bell-bar {
   position: relative;
   display: flex;
   justify-content: flex-end;
   padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+/* The bar stands in a frame; the frame is not positioned, so the open bell's panel is placed by the bar's header. */
+.bar-sample {
+  margin-bottom: var(--space-4);
+}
+
+/* An open bell keeps room below the bar for the panel, which overlays the page. */
+.bar-sample.open {
+  min-height: 43rem;
+}
+
+.bar-frame {
   border: 1px solid var(--line);
   border-radius: var(--radius);
 }
