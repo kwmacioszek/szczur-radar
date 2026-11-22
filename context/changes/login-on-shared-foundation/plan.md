@@ -321,7 +321,7 @@ Bez migracji danych i bez zmian API. Wzorce F-06 `view-login` i `view-activate` 
 - [x] 1.3 Typecheck i build przechodzą — c116b1a
 - [x] 1.4 Kopie projektu zgodne z tokenami i kontrast (design-check app) — c116b1a
 - [x] 1.5 Wzorce katalogu: nowy kitchen-sink-marka w dwóch projektach, kitchen-sink-pola bez zmian — c116b1a
-- [x] 1.6 Testy wizualne i axe zielone
+- [x] 1.6 Testy wizualne i axe zielone — c116b1a
 
 ### Phase 2: Logowanie na wspólnych komponentach
 
@@ -334,32 +334,32 @@ Bez migracji danych i bez zmian API. Wzorce F-06 `view-login` i `view-activate` 
 - [x] 2.5 Testy w przeglądarce zielone, w tym limit prób i motyw na logowaniu — 38269d0
 - [x] 2.6 Zgodność z projektem i kontrast (design-check app) — 38269d0
 - [x] 2.7 Wzorce view-login w czterech projektach zaktualizowane, nic innego — 38269d0
-- [x] 2.8 Testy wizualne i axe zielone
+- [x] 2.8 Testy wizualne i axe zielone — 38269d0
 
 ### Phase 3: Aktywacja z błędem przy polu
 
 #### Automated
 
-- [x] 3.1 Testy widoku aktywacji przechodzą
-- [x] 3.2 Pełne testy jednostkowe przechodzą
-- [x] 3.3 Martwe style globalne usunięte
-- [x] 3.4 Typecheck i build przechodzą
-- [x] 3.5 Testy w przeglądarce zielone
-- [x] 3.6 Zgodność z projektem i kontrast (design-check app)
-- [x] 3.7 Wzorce view-activate w czterech projektach zaktualizowane, nic innego
-- [x] 3.8 Testy wizualne i axe zielone
+- [x] 3.1 Testy widoku aktywacji przechodzą — 0572e8a
+- [x] 3.2 Pełne testy jednostkowe przechodzą — 0572e8a
+- [x] 3.3 Martwe style globalne usunięte — 0572e8a
+- [x] 3.4 Typecheck i build przechodzą — 0572e8a
+- [x] 3.5 Testy w przeglądarce zielone — 0572e8a
+- [x] 3.6 Zgodność z projektem i kontrast (design-check app) — 0572e8a
+- [x] 3.7 Wzorce view-activate w czterech projektach zaktualizowane, nic innego — 0572e8a
+- [x] 3.8 Testy wizualne i axe zielone — 0572e8a
 
 ### Phase 4: Stany błędu w zrzutach, dokumentacja i pełne bramki
 
 #### Automated
 
-- [ ] 4.1 Nowe wzorce błędu w czterech projektach, nic innego
-- [ ] 4.2 Testy wizualne i axe zielone, także na stanach błędu
-- [ ] 4.3 Testy jednostkowe przechodzą
-- [ ] 4.4 Typecheck i build przechodzą
-- [ ] 4.5 Testy w przeglądarce zielone
-- [ ] 4.6 Zgodność z projektem, kontrast i strony (design-check app)
-- [ ] 4.7 Dokumentacja zaktualizowana
+- [x] 4.1 Nowe wzorce błędu w czterech projektach, nic innego
+- [x] 4.2 Testy wizualne i axe zielone, także na stanach błędu
+- [x] 4.3 Testy jednostkowe przechodzą
+- [x] 4.4 Typecheck i build przechodzą
+- [x] 4.5 Testy w przeglądarce zielone
+- [x] 4.6 Zgodność z projektem, kontrast i strony (design-check app)
+- [x] 4.7 Dokumentacja zaktualizowana
 - [ ] 4.8 CI na PR zielone
 - [ ] 4.9 Opis PR zawiera grupy wzorców i Refs
 - [ ] 4.10 Strony publiczne w PR env wyglądają jak prototypy
