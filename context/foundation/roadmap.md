@@ -123,7 +123,7 @@ Na Wykopie (#gielda) i Reddicie codziennie pojawiają się setki postów o inwes
 | S-46 | light-dark-theme-switch       | użytkownik przełącza motyw jasny i ciemny w nowej palecie, a wybór jest zapamiętany                                      | F-06          | FR-040                                     | done |
 | S-47 | app-shell-navigation          | użytkownik porusza się po aplikacji przez pasek u góry (nawigacja według roli, data danych per źródło, motyw, wylogowanie), z treścią w jednej kolumnie | F-08          | FR-007, FR-013, FR-015, FR-021, FR-030 | done |
 | S-48 | shared-view-states            | użytkownik widzi w każdym widoku to samo ładowanie, pustą listę, błąd z ponowieniem i stronicowanie | S-47          | FR-007, FR-009, NFR `prd.md:328` | proposed |
-| S-49 | login-on-shared-foundation    | użytkownik loguje się i aktywuje konto na ekranach zbudowanych ze wspólnych komponentów i tokenów | F-08          | FR-026, FR-027, FR-028 | proposed |
+| S-49 | login-on-shared-foundation    | użytkownik loguje się i aktywuje konto na ekranach zbudowanych ze wspólnych komponentów i tokenów | F-08          | FR-026, FR-027, FR-028 | done |
 | S-50 | admin-panel-components        | admin pracuje w panelu z trzema częściami pod własnymi adresami (Przebiegi, Jakość ocen, Nieudane posty); strona przebiegu osobno | S-48          | FR-014, FR-015, FR-021, FR-022, FR-033, FR-034 | proposed |
 | S-51 | stream-and-inspector          | użytkownik przegląda zwartą listę postów i czyta ocenę wybranego posta w panelu wysuwanym z prawej | S-48          | FR-006, FR-007, FR-009, FR-010, FR-011a | proposed |
 | S-52 | investment-posts-by-default   | użytkownik widzi domyślnie tylko posty inwestycyjne, a przełącznik „Inwestycyjne N / Wszystkie M” pokazuje resztę | S-51          | FR-007 (doprecyzowanie v4) | proposed |
@@ -276,7 +276,7 @@ Wycinki niżej zakładają te warstwy i ich nie budują od nowa.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** mały i oddzielny od powłoki (ekrany publiczne nie mają nawigacji); domyka zaległy dług `login-view-ui-hardening`, na który wskazuje komentarz w teście stylu.
-- **Status:** proposed
+- **Status:** done
 
 ### S-50: Panel admina w trzech częściach
 
@@ -569,4 +569,5 @@ Wycinki niżej zakładają te warstwy i ich nie budują od nowa.
 - **S-46: użytkownik przełącza motyw aplikacji między jasnym i ciemnym w nowej palecie pod układy paneli, wybór jest zapamiętany, a domyślnie obowiązuje ustawienie systemu; każda para tekstu spełnia kontrast co najmniej 4.5:1 w obu motywach.** — Archived 2026-11-19 → `context/archive/2026-11-17-light-dark-theme-switch/`. Lesson: —.
 - **F-07: (foundation) aplikacja ma zaakceptowany przez właściciela projekt UI/UX opracowany od nowa według standardów (WCAG 2.2 AA, heurystyki Nielsena, wzorce dojrzałych systemów projektowych): zasady, architekturę informacji i nawigację, język wizualny jako tokeny (typografia, siatka i odstępy, role kolorów, promienie, ikony), komponenty z ich stanami oraz prototypy każdego ekranu M-5 w obu motywach i przy 375 px, w `context/foundation/ui-design.md`; makiety z `ui-ux-proposals.md` są materiałem wejściowym, nie wzorem do skopiowania.** — Archived 2026-11-21 → `context/archive/2026-11-19-ui-design-system/`. Lesson: —.
 - **F-08: (foundation) język wizualny z F-07 jest w aplikacji: tokeny projektu w `style.css` w obu motywach na mechanizmie z S-46, trzy kroje hostowane w aplikacji, ikony oraz komponenty bazowe (przycisk, komunikat, znacznik stanu, stanowisko, przełącznik motywu, pola, odnośnik) w katalogu komponentów we wszystkich stanach; obecne widoki działają na nowych tokenach, jeszcze w starym układzie, a wzorce F-06 zmieniają się raz, jako akceptacja wyglądu.** — Archived 2026-11-22 → `context/archive/2026-11-21-design-tokens-and-components/`. Lesson: —.
+- **S-49: użytkownik loguje się i aktywuje konto na ekranach zbudowanych ze wspólnych komponentów i tokenów w obu motywach; ekran logowania jest na liście plików wolnych od literałów stylu.** — Archived 2026-11-22 → `context/archive/2026-11-22-login-on-shared-foundation/`. Lesson: —.
 - **S-47: użytkownik porusza się po aplikacji przez pasek u góry strony: nawigacja według roli (po tym wycinku „Posty” i „Panel admina” dla admina; „Cele” i „Przegląd” dochodzą ze swoimi ekranami w S-57 i S-59), data ostatniej aktualizacji danych per źródło z dniem i godziną, powiadomienia admina, przełącznik motywu, e-mail zalogowanego i „Wyloguj”; treść jest w jednej kolumnie, bez kolumny bocznej i paneli stałych, a obecne widoki działają w powłoce zamiast stawiać własny nagłówek.** — Archived 2026-11-22 → `context/archive/2026-11-22-app-shell-navigation/`. Lesson: —.

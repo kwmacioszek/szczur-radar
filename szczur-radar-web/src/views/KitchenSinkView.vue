@@ -21,9 +21,11 @@ import type {
   TargetKind,
 } from '../api/posts'
 import AppBar, { type NavItem } from '../components/AppBar.vue'
+import AppBrand from '../components/AppBrand.vue'
 import AppButton from '../components/AppButton.vue'
 import AppIcon from '../components/AppIcon.vue'
 import FeedFilter from '../components/FeedFilter.vue'
+import FormField from '../components/FormField.vue'
 import { ICON_NAMES } from '../components/iconNames'
 import NotificationMenu from '../components/NotificationMenu.vue'
 import PageHeader from '../components/PageHeader.vue'
@@ -765,71 +767,70 @@ const assessments: { id: string; title: string; assessment: NonNullable<PostItem
     <section aria-labelledby="fields-title">
       <h2 id="fields-title">Pola</h2>
       <div class="fields">
-        <div class="field">
-          <label for="field-email">E-mail</label>
-          <input id="field-email" type="email" value="jan@example.pl" />
-        </div>
-        <div class="field">
-          <label for="field-email-empty">E-mail (puste)</label>
-          <input id="field-email-empty" type="email" />
-        </div>
-        <div class="field">
-          <label for="field-email-off">E-mail (wyłączone)</label>
-          <input id="field-email-off" type="email" value="jan@example.pl" disabled />
-        </div>
-        <div class="field wide">
-          <label for="field-password">Hasło</label>
-          <input
-            id="field-password"
-            type="password"
-            value="haslo-probne"
-            aria-invalid="true"
-            aria-describedby="field-password-error"
-          />
-          <p id="field-password-error" class="field-error">
-            <AppIcon name="i-circle-alert" />
-            Hasło musi mieć co najmniej 12 znaków.
-          </p>
-        </div>
-        <div class="field wide">
-          <label for="field-password-repeat">Powtórz hasło</label>
-          <input id="field-password-repeat" type="password" aria-describedby="field-password-repeat-hint" />
-          <p id="field-password-repeat-hint" class="field-hint">Te same znaki co wyżej.</p>
-        </div>
-        <div class="field">
-          <label for="field-search-empty">Puste</label>
-          <span class="input-wrap">
-            <AppIcon name="i-search" />
-            <input id="field-search-empty" type="search" />
-          </span>
-        </div>
-        <div class="field">
-          <label for="field-search-filled">Wypełnione</label>
-          <span class="input-wrap">
-            <AppIcon name="i-search" />
-            <input id="field-search-filled" type="search" value="KGHM" />
-          </span>
-        </div>
-        <div class="field">
-          <label for="field-date">Dzień</label>
-          <input id="field-date" type="date" value="2026-10-20" />
-        </div>
-        <div class="field">
-          <label for="field-kind">Rodzaj celu</label>
-          <select id="field-kind">
-            <option>dowolny</option>
-            <option>spółka</option>
-            <option>aktywo</option>
-            <option>sektor</option>
-            <option>makro i rynek</option>
-          </select>
-        </div>
-        <div class="field">
-          <label for="field-stance">Stanowisko</label>
-          <select id="field-stance" disabled>
-            <option>dowolne</option>
-          </select>
-        </div>
+        <FormField label="E-mail">
+          <template #default="{ fieldProps }">
+            <input v-bind="fieldProps" type="email" value="jan@example.pl" />
+          </template>
+        </FormField>
+        <FormField label="E-mail (puste)">
+          <template #default="{ fieldProps }">
+            <input v-bind="fieldProps" type="email" />
+          </template>
+        </FormField>
+        <FormField label="E-mail (wyłączone)">
+          <template #default="{ fieldProps }">
+            <input v-bind="fieldProps" type="email" value="jan@example.pl" disabled />
+          </template>
+        </FormField>
+        <FormField class="wide" label="Hasło" error="Hasło musi mieć co najmniej 12 znaków.">
+          <template #default="{ fieldProps }">
+            <input v-bind="fieldProps" type="password" value="haslo-probne" />
+          </template>
+        </FormField>
+        <FormField class="wide" label="Powtórz hasło" hint="Te same znaki co wyżej.">
+          <template #default="{ fieldProps }">
+            <input v-bind="fieldProps" type="password" />
+          </template>
+        </FormField>
+        <FormField label="Puste">
+          <template #default="{ fieldProps }">
+            <span class="input-wrap">
+              <AppIcon name="i-search" />
+              <input v-bind="fieldProps" type="search" />
+            </span>
+          </template>
+        </FormField>
+        <FormField label="Wypełnione">
+          <template #default="{ fieldProps }">
+            <span class="input-wrap">
+              <AppIcon name="i-search" />
+              <input v-bind="fieldProps" type="search" value="KGHM" />
+            </span>
+          </template>
+        </FormField>
+        <FormField label="Dzień">
+          <template #default="{ fieldProps }">
+            <input v-bind="fieldProps" type="date" value="2026-10-20" />
+          </template>
+        </FormField>
+        <FormField label="Rodzaj celu">
+          <template #default="{ fieldProps }">
+            <select v-bind="fieldProps">
+              <option>dowolny</option>
+              <option>spółka</option>
+              <option>aktywo</option>
+              <option>sektor</option>
+              <option>makro i rynek</option>
+            </select>
+          </template>
+        </FormField>
+        <FormField label="Stanowisko">
+          <template #default="{ fieldProps }">
+            <select v-bind="fieldProps" disabled>
+              <option>dowolne</option>
+            </select>
+          </template>
+        </FormField>
       </div>
       <div class="row">
         <label class="check"><input type="checkbox" checked /> Podświetl cytaty</label>
@@ -953,6 +954,14 @@ const assessments: { id: string; title: string; assessment: NonNullable<PostItem
           <PostAssessment :assessment="sample.assessment" />
         </li>
       </ul>
+    </section>
+
+    <section aria-labelledby="brand-title">
+      <h2 id="brand-title">Marka</h2>
+      <p>Rozmiar nazwy zależy od szerokości okna (poniżej 900 px mniejszy); zrzut katalogu jest przy 375 px.</p>
+      <div class="row">
+        <AppBrand />
+      </div>
     </section>
 
     <section aria-labelledby="app-bar-title">
@@ -1134,7 +1143,7 @@ h3 {
   font-weight: var(--weight-semibold);
 }
 
-/* Fields as a view lays them out: a label above the field, a hint or an error below it. The look is the global one. */
+/* Fields as a view lays them out: the FormField component does the label, hint and error; the look is the global one. */
 .fields {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
@@ -1142,49 +1151,9 @@ h3 {
   margin-bottom: var(--space-4);
 }
 
-.field {
-  display: grid;
-  gap: var(--space-1);
-  min-width: 0;
-  align-content: start;
-}
-
 /* A field with a hint or an error below it takes the whole row, so the sentence does not wrap. */
-.field.wide {
+.wide {
   grid-column: 1 / -1;
-}
-
-.field label {
-  color: var(--text-h);
-  font-size: var(--font-size-sm);
-  font-weight: var(--weight-medium);
-}
-
-.field input:not([type='checkbox']),
-.field select {
-  width: 100%;
-}
-
-.field-hint,
-.field-error {
-  margin: 0;
-  font-size: var(--font-size-xs);
-}
-
-.field-hint {
-  color: var(--text-muted);
-}
-
-.field-error {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-  color: var(--destructive);
-  font-weight: var(--weight-medium);
-}
-
-.field-error .app-icon {
-  --icon-size: 0.9375rem;
 }
 
 /* A search field with its icon inside, on the left. */

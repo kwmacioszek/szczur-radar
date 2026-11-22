@@ -14,7 +14,10 @@ import {
 import { logout } from '../api/auth'
 import { clearSession, ensureSession } from '../auth/session'
 import AppButton from '../components/AppButton.vue'
+import AuthLayout from '../components/AuthLayout.vue'
+import FormField from '../components/FormField.vue'
 import StatusMessage from '../components/StatusMessage.vue'
+import { restoreFocus } from '../focus'
 
 /** Checking the link, a link that cannot be used, a check that failed (network, 5xx), or the form. */
 type Phase = 'checking' | 'invalid' | 'lookup_failed' | 'form'
@@ -42,6 +45,7 @@ const repeat = ref('')
 const submitting = ref(false)
 const problem = ref<FormProblem | null>(null)
 const passwordInput = ref<HTMLInputElement | null>(null)
+const repeatInput = ref<HTMLInputElement | null>(null)
 
 const passwordInvalid = computed(
   () => problem.value === 'too_short' || problem.value === 'too_long' || problem.value === 'password_policy',
@@ -85,18 +89,41 @@ async function endOtherSession(): Promise<void> {
   clearSession()
 }
 
+/**
+ * Puts the problem where it was made: the field it is about. `unavailable` is the form's: the focus goes back to where
+ * the form was sent from (`restoreFocus` in `submit`).
+ */
+async function focusProblem(): Promise<void> {
+  await nextTick()
+  if (passwordInvalid.value) passwordInput.value?.focus()
+  else if (repeatInvalid.value) repeatInput.value?.focus()
+}
+
 async function submit(): Promise<void> {
   if (submitting.value) return
-  problem.value = formProblem()
-  if (problem.value) return
+  const sender = document.activeElement
   submitting.value = true
+  // Clear first and let the page render: the same problem sent again appears anew in the field's live region and is
+  // announced again.
+  problem.value = null
+  await nextTick()
+  problem.value = formProblem()
+  if (problem.value) {
+    submitting.value = false
+    await focusProblem()
+    return
+  }
   try {
     await activate(token, password.value)
   } catch (err) {
     const failure = activationFailure(err)
     if (failure === 'link_invalid') phase.value = 'invalid'
-    else problem.value = failure
+    else {
+      problem.value = failure
+      await focusProblem()
+    }
     submitting.value = false
+    await restoreFocus(sender)
     return
   }
   // The link is used up: the button stays busy until the login screen replaces this page.
@@ -115,97 +142,56 @@ onMounted(() => {
 </script>
 
 <template>
-  <main class="page">
-    <section
-      class="card"
-      aria-labelledby="activate-title"
-      :aria-busy="phase === 'checking' ? 'true' : undefined"
-    >
-      <p class="eyebrow">Szczur Radar</p>
-      <h1 id="activate-title">Ustawienie hasła</h1>
-      <div class="content">
-        <p v-if="phase === 'checking'" class="lead">Sprawdzanie linku…</p>
-        <StatusMessage v-else-if="phase === 'invalid'" tone="error">Link jest nieważny lub wygasł. Poproś administratora o nowy.</StatusMessage>
-        <template v-else-if="phase === 'lookup_failed'">
-          <StatusMessage tone="error" class="message">Nie udało się sprawdzić linku. Spróbuj ponownie.</StatusMessage>
-          <AppButton @click="check">Spróbuj ponownie</AppButton>
-        </template>
-        <form v-else class="form" novalidate @submit.prevent="submit">
-          <p class="lead">Ustaw hasło dla <strong>{{ email }}</strong>.</p>
-          <!-- For password managers: the account the new password belongs to. -->
-          <input type="email" name="email" autocomplete="username" :value="email" readonly hidden />
-          <div class="field">
-            <label>
-              Nowe hasło
-              <input
-                ref="passwordInput"
-                v-model="password"
-                type="password"
-                name="password"
-                autocomplete="new-password"
-                required
-                aria-describedby="password-hint"
-                :aria-invalid="passwordInvalid ? 'true' : undefined"
-              />
-            </label>
-            <span id="password-hint" class="hint">Od {{ PASSWORD_MIN_LENGTH }} do {{ PASSWORD_MAX_LENGTH }} znaków.</span>
-          </div>
-          <label>
-            Powtórz hasło
-            <input
-              v-model="repeat"
-              type="password"
-              name="password-repeat"
-              autocomplete="new-password"
-              required
-              :aria-invalid="repeatInvalid ? 'true' : undefined"
-            />
-          </label>
-          <StatusMessage v-if="problem" tone="error">{{ PROBLEM_MESSAGES[problem] }}</StatusMessage>
-          <AppButton type="submit" variant="primary" :busy="submitting" busy-label="Zapisywanie…">
-            Ustaw hasło
-          </AppButton>
-        </form>
-      </div>
-    </section>
-  </main>
+  <AuthLayout title="Ustawienie hasła" :busy="phase === 'checking'">
+    <p v-if="phase === 'checking'">Sprawdzanie linku…</p>
+    <StatusMessage v-else-if="phase === 'invalid'" tone="error">Link jest nieważny lub wygasł. Poproś administratora o nowy.</StatusMessage>
+    <template v-else-if="phase === 'lookup_failed'">
+      <StatusMessage tone="error">Nie udało się sprawdzić linku. Spróbuj ponownie.</StatusMessage>
+      <AppButton @click="check">Spróbuj ponownie</AppButton>
+    </template>
+    <form v-else novalidate @submit.prevent="submit">
+      <p class="intro">Ustaw hasło dla <strong>{{ email }}</strong>.</p>
+      <!-- For password managers: the account the new password belongs to. -->
+      <input type="email" name="email" autocomplete="username" :value="email" readonly hidden />
+      <FormField
+        v-slot="{ fieldProps }"
+        label="Nowe hasło"
+        :hint="`Od ${PASSWORD_MIN_LENGTH} do ${PASSWORD_MAX_LENGTH} znaków.`"
+        :error="passwordInvalid && problem ? PROBLEM_MESSAGES[problem] : null"
+      >
+        <input
+          ref="passwordInput"
+          v-model="password"
+          v-bind="fieldProps"
+          type="password"
+          name="password"
+          autocomplete="new-password"
+          required
+        />
+      </FormField>
+      <FormField
+        v-slot="{ fieldProps }"
+        label="Powtórz hasło"
+        :error="repeatInvalid && problem ? PROBLEM_MESSAGES[problem] : null"
+      >
+        <input
+          ref="repeatInput"
+          v-model="repeat"
+          v-bind="fieldProps"
+          type="password"
+          name="password-repeat"
+          autocomplete="new-password"
+          required
+        />
+      </FormField>
+      <StatusMessage v-if="problem === 'unavailable'" tone="error">{{ PROBLEM_MESSAGES.unavailable }}</StatusMessage>
+      <AppButton type="submit" variant="primary" :busy="submitting" busy-label="Zapisywanie…">Ustaw hasło</AppButton>
+    </form>
+  </AuthLayout>
 </template>
 
 <style scoped>
-.content {
-  text-align: left;
-}
-
-.lead {
-  margin: 0;
+.intro {
   overflow-wrap: anywhere;
-}
-
-.form {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-}
-
-.field,
-label {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
-label {
-  color: var(--text-h);
-  font-size: var(--font-size-md);
-}
-
-.hint {
-  font-size: var(--font-size-sm);
-}
-
-/* Apart from the retry button below it; the parent's selector outranks the message's own zero margin. The form's gap
-   spaces its own message. */
-.content .message {
-  margin-block: var(--space-3);
 }
 </style>

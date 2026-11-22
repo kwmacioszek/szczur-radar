@@ -9,7 +9,7 @@ export const MOCK_MODE_VALUES = {
   AUTH: ['admin', 'user', 'anonymous'],
   LOGIN: ['ok', 'invalid', 'limited'],
   START: ['accepted', 'busy', 'not_configured'],
-  ACTIVATION: ['valid', 'invalid', 'policy', 'checking', 'sending', 'error'],
+  ACTIVATION: ['valid', 'invalid', 'policy', 'checking', 'sending', 'error', 'unavailable'],
   FRESHNESS: ['date', 'apart', 'wykop', 'none', 'error'],
   MISSING: ['gaps', 'none', 'error'],
   QUALITY: ['data', 'few', 'nolang', 'none', 'error'],

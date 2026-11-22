@@ -564,6 +564,8 @@ const ROWS: Row[] = [
   { name: 'logout answers 204', method: 'POST', path: '/api/auth/logout', status: 204 },
   { name: 'logout answers 204 without a session', constants: { AUTH: 'anonymous' }, method: 'POST', path: '/api/auth/logout', status: 204 },
   { name: 'activation needs no session', constants: { AUTH: 'anonymous' }, method: 'POST', path: '/api/auth/activation/lookup', body: { token: 'any' }, status: 200 },
+  { name: 'activation: the link works in ACTIVATION unavailable', constants: { AUTH: 'anonymous', ACTIVATION: 'unavailable' }, method: 'POST', path: '/api/auth/activation/lookup', body: { token: 'any' }, status: 200 },
+  { name: 'activation: setting the password fails in ACTIVATION unavailable', constants: { AUTH: 'anonymous', ACTIVATION: 'unavailable' }, method: 'POST', path: '/api/auth/activation', body: { token: 'any', password: 'a long enough password' }, status: 500, detail: 'internal_error' },
 
   // the ids
   { name: 'a run id that is no UUID', method: 'GET', path: `${PIPELINE_RUNS}/r-running`, status: 400, detail: 'invalid_request' },

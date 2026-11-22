@@ -1,8 +1,8 @@
 <script setup lang="ts">
 // The bar of every logged-in page, from props: AppShell feeds it from the session, the router and /api/freshness, the
-// kitchen sink from fixed data. The mark and the name lead home, the main navigation marks the page's section with
-// aria-current (the caller decides which: a run's page is still "Panel admina"), the date of the data says per source
-// when it was last updated, and the session's controls come last. The bell is the caller's, in the `notifications`
+// kitchen sink from fixed data. The brand (AppBrand, the same as on the public pages) leads home, the main navigation
+// marks the page's section with aria-current (the caller decides which: a run's page is still "Panel admina"), the date
+// of the data says per source when it was last updated, and the session's controls come last. The bell is the caller's, in the `notifications`
 // slot: its panel opens below the nearest positioned ancestor, which is this header, aligned to its right edge, so
 // nothing between the header and the bell is positioned.
 // Below 900 px the controls are the first row, the navigation the second and the date of the data the third, the
@@ -12,7 +12,7 @@ import { RouterLink } from 'vue-router'
 import type { Freshness } from '../api/freshness'
 import { formatDateTime, label } from '../labels'
 import AppButton from './AppButton.vue'
-import AppIcon from './AppIcon.vue'
+import AppBrand from './AppBrand.vue'
 import ThemeToggle from './ThemeToggle.vue'
 
 export interface NavItem {
@@ -39,8 +39,7 @@ defineSlots<{ notifications?(): unknown }>()
   <header class="app-bar">
     <RouterLink v-slot="{ href, navigate }" :to="{ name: 'home' }" custom>
       <a class="brand" :href="href" @click="navigate">
-        <AppIcon class="brand-mark" name="i-brand" />
-        <span>Szczur Radar</span>
+        <AppBrand />
       </a>
     </RouterLink>
     <nav class="nav" aria-label="Główna">
@@ -103,26 +102,7 @@ defineSlots<{ notifications?(): unknown }>()
 
 .brand {
   display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  color: var(--text-h);
-  font-family: var(--font-display);
-  font-size: var(--font-size-3xl);
-  font-weight: var(--weight-medium);
-  line-height: 1;
-  letter-spacing: var(--tracking-snug);
   text-decoration: none;
-  white-space: nowrap;
-}
-
-.brand-mark {
-  --icon-size: 2.125rem;
-
-  box-sizing: border-box;
-  padding: var(--space-1);
-  border-radius: var(--radius-full);
-  background: conic-gradient(from 20deg, color-mix(in srgb, var(--accent) 40%, transparent), transparent 32%);
-  color: var(--accent);
 }
 
 .nav {
@@ -198,10 +178,6 @@ defineSlots<{ notifications?(): unknown }>()
     gap: var(--space-1) var(--space-2);
     min-height: 0;
     padding: var(--space-3) var(--space-3) var(--space-2);
-  }
-
-  .brand {
-    font-size: var(--font-size-2xl);
   }
 
   /* The session's parts become the bar's own: the controls in the first row (pushed right), the navigation in the

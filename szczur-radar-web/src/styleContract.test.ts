@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import appBar from './components/AppBar.vue?raw'
+import appBrand from './components/AppBrand.vue?raw'
 import appButton from './components/AppButton.vue?raw'
 import appIcon from './components/AppIcon.vue?raw'
 import appShell from './components/AppShell.vue?raw'
+import authLayout from './components/AuthLayout.vue?raw'
 import feedFilter from './components/FeedFilter.vue?raw'
+import formField from './components/FormField.vue?raw'
 import iconSprite from './components/IconSprite.vue?raw'
 import notificationBell from './components/NotificationBell.vue?raw'
 import notificationMenu from './components/NotificationMenu.vue?raw'
@@ -20,6 +23,7 @@ import activateView from './views/ActivateView.vue?raw'
 import adminView from './views/AdminView.vue?raw'
 import feedView from './views/FeedView.vue?raw'
 import kitchenSinkView from './views/KitchenSinkView.vue?raw'
+import loginView from './views/LoginView.vue?raw'
 import postDetailView from './views/PostDetailView.vue?raw'
 import runDetailView from './views/RunDetailView.vue?raw'
 
@@ -119,8 +123,7 @@ function contrast(a: string, b: string): number {
  * Files without colour literals and without values off the scale: colours come from the roles of
  * style.css, spacing, type and radii from its --space-*, --font-size-* and --radius tokens. Add a
  * view or component here once it is cleaned; style.css itself, the token source, is never on the
- * list. src/views/LoginView.vue is off it until S-49 (its screen): px in its spacing, type and radii
- * (LoginView.vue:84-131).
+ * list.
  */
 const CLEANED: Record<string, string> = {
   'src/views/AdminView.vue': adminView,
@@ -144,6 +147,10 @@ const CLEANED: Record<string, string> = {
   'src/components/AppBar.vue': appBar,
   'src/components/AppShell.vue': appShell,
   'src/components/PageHeader.vue': pageHeader,
+  'src/components/AppBrand.vue': appBrand,
+  'src/components/FormField.vue': formField,
+  'src/components/AuthLayout.vue': authLayout,
+  'src/views/LoginView.vue': loginView,
 }
 
 /** The hardcoded-value scan of /10x-ui: colour literals, arbitrary values and palette classes. */
