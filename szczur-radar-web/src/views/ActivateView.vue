@@ -127,7 +127,7 @@ onMounted(() => {
         <p v-if="phase === 'checking'" class="lead">Sprawdzanie linku…</p>
         <StatusMessage v-else-if="phase === 'invalid'" tone="error">Link jest nieważny lub wygasł. Poproś administratora o nowy.</StatusMessage>
         <template v-else-if="phase === 'lookup_failed'">
-          <StatusMessage tone="error">Nie udało się sprawdzić linku. Spróbuj ponownie.</StatusMessage>
+          <StatusMessage tone="error" class="message">Nie udało się sprawdzić linku. Spróbuj ponownie.</StatusMessage>
           <AppButton @click="check">Spróbuj ponownie</AppButton>
         </template>
         <form v-else class="form" novalidate @submit.prevent="submit">
@@ -161,7 +161,7 @@ onMounted(() => {
               :aria-invalid="repeatInvalid ? 'true' : undefined"
             />
           </label>
-          <StatusMessage v-if="problem" tone="error" class="problem">{{ PROBLEM_MESSAGES[problem] }}</StatusMessage>
+          <StatusMessage v-if="problem" tone="error">{{ PROBLEM_MESSAGES[problem] }}</StatusMessage>
           <AppButton type="submit" variant="primary" :busy="submitting" busy-label="Zapisywanie…">
             Ustaw hasło
           </AppButton>
@@ -199,25 +199,13 @@ label {
   font-size: var(--font-size-md);
 }
 
-input {
-  font: inherit;
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius);
-  background: var(--bg);
-  color: var(--text-h);
-}
-
-input[aria-invalid='true'] {
-  border-color: var(--destructive);
-}
-
 .hint {
   font-size: var(--font-size-sm);
 }
 
-/* The form's gap spaces the message; the parent's selector outranks the message's own margin. */
-.form .problem {
-  margin: 0;
+/* Apart from the retry button below it; the parent's selector outranks the message's own zero margin. The form's gap
+   spaces its own message. */
+.content .message {
+  margin-block: var(--space-3);
 }
 </style>

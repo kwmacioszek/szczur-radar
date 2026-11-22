@@ -704,7 +704,7 @@ Każdy komponent wspólny trafia do `src/components/` i na `/kitchen-sink` we ws
 | nazwy sekcji `/kitchen-sink` | nazwa sekcji daje nazwę wzorca `kitchen-sink-<slug>.png` | sekcje nazywają się jak komponenty w tym dokumencie, więc wzorce zmieniają nazwy; strażnik wzorców wymaga zgodności w obie strony |
 | stany hover i fokus w `visual/targets.ts` | pięć stanów (`state-*`) | te same stany na nowych komponentach; dochodzą stany nowych kontrolek (opcja przełącznika, wiersz posta) |
 
-`design-check` z `tools/design-check/` sprawdza projekt, nie aplikację, i nie jest zadaniem CI. Po F-08 źródłem prawdy o tokenach w aplikacji jest `style.css` z jego testem; `ui-design/tokens.css` zostaje zapisem projektu i musi być z nim zgodny przy każdej zmianie projektu.
+`design-check` z `tools/design-check/` nie jest zadaniem CI. Po F-08 źródłem prawdy o tokenach w aplikacji jest `style.css` z jego testem; `ui-design/tokens.css` zostaje zapisem projektu. Zgodność obu sprawdza `node tools/design-check/design-check.mjs app`, uruchamiane przy każdej zmianie projektu: porównuje tokeny obu motywów, pary kontrastu, sprite ikon i pliki krojów z kopiami w `szczur-radar-web/` i uruchamia kontrast na plikach aplikacji.
 
 ## Różnice wobec roadmapy
 

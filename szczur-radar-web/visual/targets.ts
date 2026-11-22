@@ -152,6 +152,14 @@ export async function openCatalog(page: Page): Promise<Locator> {
   return main
 }
 
+/**
+ * Waits until the fonts the page asked for are loaded (font-display: swap draws a fallback first, whose metrics move
+ * content and controls). Call it after the text is visible, before a screenshot, a measurement or a hover or focus.
+ */
+export async function waitForFonts(page: Page): Promise<void> {
+  await page.evaluate(() => document.fonts.ready)
+}
+
 /** A section's file name part: lower-case ASCII, Polish letters without their marks, spaces as `-`. */
 export function slug(name: string): string {
   const text = name
@@ -208,40 +216,81 @@ export interface State {
   /** The control, by role and name, inside its region. */
   control: (region: Locator) => Locator
   state: ControlState
+  /** The control is a toggle of the theme: before the screenshot it is pressed exactly in the dark projects. */
+  pressedByTheme?: true
 }
 
-// The two button rows of „Przyciski” have no role or name, so both „Domyślny” buttons share one name; they follow the
-// order of the catalogue's variants: primary, then secondary.
-const primaryButton = (region: Locator) => region.getByRole('button', { name: 'Domyślny', exact: true }).nth(0)
-const secondaryButton = (region: Locator) => region.getByRole('button', { name: 'Domyślny', exact: true }).nth(1)
-
+// The catalogue gives each control of a state its own accessible name within its region (no `nth`): the primary and the
+// plain button, the icon-only one, the link, the e-mail and search fields and the theme toggle.
 export const STATES: readonly State[] = [
   {
-    name: 'state-przyciski-primary-hover',
+    name: 'state-przycisk-primary-hover',
     risk: 'hover przycisku głównego nie zmienia wyglądu',
-    region: 'Przyciski',
-    control: primaryButton,
+    region: 'Przycisk',
+    control: (region) => region.getByRole('button', { name: 'Uruchom', exact: true }),
     state: 'hover',
   },
   {
-    name: 'state-przyciski-primary-focus',
+    name: 'state-przycisk-primary-focus',
     risk: 'pierścień fokusu przycisku głównego nie zmienia wyglądu',
-    region: 'Przyciski',
-    control: primaryButton,
+    region: 'Przycisk',
+    control: (region) => region.getByRole('button', { name: 'Uruchom', exact: true }),
     state: 'focus',
   },
   {
-    name: 'state-przyciski-secondary-hover',
-    risk: 'hover przycisku pomocniczego nie zmienia wyglądu',
-    region: 'Przyciski',
-    control: secondaryButton,
+    name: 'state-przycisk-secondary-hover',
+    risk: 'hover przycisku zwykłego nie zmienia wyglądu',
+    region: 'Przycisk',
+    control: (region) => region.getByRole('button', { name: 'Wyczyść filtry', exact: true }),
     state: 'hover',
   },
   {
-    name: 'state-przyciski-secondary-focus',
-    risk: 'pierścień fokusu przycisku pomocniczego nie zmienia wyglądu',
-    region: 'Przyciski',
-    control: secondaryButton,
+    name: 'state-przycisk-secondary-focus',
+    risk: 'pierścień fokusu przycisku zwykłego nie zmienia wyglądu',
+    region: 'Przycisk',
+    control: (region) => region.getByRole('button', { name: 'Wyczyść filtry', exact: true }),
+    state: 'focus',
+  },
+  {
+    name: 'state-przycisk-icon-hover',
+    risk: 'hover przycisku z samą ikoną nie zmienia wyglądu',
+    region: 'Przycisk',
+    control: (region) => region.getByRole('button', { name: 'Następny post', exact: true }),
+    state: 'hover',
+  },
+  {
+    name: 'state-przycisk-icon-focus',
+    risk: 'pierścień fokusu przycisku z samą ikoną nie zmienia wyglądu',
+    region: 'Przycisk',
+    control: (region) => region.getByRole('button', { name: 'Następny post', exact: true }),
+    state: 'focus',
+  },
+  {
+    name: 'state-odnosnik-hover',
+    risk: 'hover odnośnika (grubsze podkreślenie) nie zmienia wyglądu',
+    region: 'Odnośnik',
+    control: (region) => region.getByRole('link', { name: 'Wszystkie posty o KGHM', exact: true }),
+    state: 'hover',
+  },
+  {
+    name: 'state-odnosnik-focus',
+    risk: 'pierścień fokusu odnośnika nie zmienia wyglądu',
+    region: 'Odnośnik',
+    control: (region) => region.getByRole('link', { name: 'Wszystkie posty o KGHM', exact: true }),
+    state: 'focus',
+  },
+  {
+    name: 'state-pola-email-hover',
+    risk: 'hover pola tekstowego (ciemniejsza krawędź) nie zmienia wyglądu',
+    region: 'Pola',
+    control: (region) => region.getByRole('textbox', { name: 'E-mail', exact: true }),
+    state: 'hover',
+  },
+  {
+    name: 'state-pola-email-focus',
+    risk: 'pierścień fokusu pola tekstowego nie zmienia wyglądu',
+    region: 'Pola',
+    control: (region) => region.getByRole('textbox', { name: 'E-mail', exact: true }),
     state: 'focus',
   },
   {
@@ -250,5 +299,21 @@ export const STATES: readonly State[] = [
     region: 'Pola',
     control: (region) => region.getByRole('searchbox', { name: 'Puste', exact: true }),
     state: 'focus',
+  },
+  {
+    name: 'state-motyw-hover',
+    risk: 'hover przycisku motywu nie zmienia wyglądu',
+    region: 'Motyw',
+    control: (region) => region.getByRole('button', { name: 'Ciemny motyw', exact: true }),
+    state: 'hover',
+    pressedByTheme: true,
+  },
+  {
+    name: 'state-motyw-focus',
+    risk: 'pierścień fokusu przycisku motywu nie zmienia wyglądu',
+    region: 'Motyw',
+    control: (region) => region.getByRole('button', { name: 'Ciemny motyw', exact: true }),
+    state: 'focus',
+    pressedByTheme: true,
   },
 ]

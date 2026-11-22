@@ -1,0 +1,12 @@
+/* The design's tokens, as small as the app check needs. */
+:root {
+  --bg: #ffffff;
+  --text: #1f2328;
+  --font-ui: 'Hanken Grotesk', system-ui, sans-serif;
+  --space-3: 12px;
+}
+
+:root[data-theme='dark'] {
+  --bg: #111418;
+  --text: #e6e8ea;
+}

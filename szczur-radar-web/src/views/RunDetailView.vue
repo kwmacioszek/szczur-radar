@@ -161,7 +161,7 @@ watch(
       </div>
       <p v-if="state === 'loading'" class="loading">Wczytywanie przebiegu…</p>
       <template v-else-if="state === 'failed'">
-        <StatusMessage tone="error">Nie udało się wczytać przebiegu.</StatusMessage>
+        <StatusMessage tone="error" class="message">Nie udało się wczytać przebiegu.</StatusMessage>
         <AppButton @click="retry">Spróbuj ponownie</AppButton>
       </template>
       <p v-else-if="state === 'missing'" class="empty">
@@ -295,13 +295,11 @@ watch(
   box-sizing: border-box;
 }
 
-a {
-  color: var(--accent);
-  text-decoration: none;
-}
-
-a:hover {
-  text-decoration: underline;
+/* The root font size is 16px at every width; above 1024px the width is what 18px gave (design-tokens-and-components). */
+@media (min-width: 1025px) {
+  .run-detail {
+    max-width: 54rem;
+  }
 }
 
 .back {
@@ -319,9 +317,9 @@ a:hover {
 
 h1 {
   margin: 0;
-  font-size: var(--font-size-lg);
-  letter-spacing: normal;
-  line-height: 1.45;
+  font-size: var(--font-size-2xl);
+  line-height: var(--leading-snug);
+  letter-spacing: var(--tracking-snug);
 }
 
 h2 {
@@ -337,6 +335,13 @@ p {
 .loading,
 .empty {
   margin: var(--space-4) 0;
+}
+
+/* Apart from what is above and below them; the page's selector outranks the message's own zero margin. */
+.run-detail .message,
+.run-detail .attention,
+.run-detail .refresh-error {
+  margin-block: var(--space-3);
 }
 
 .meta {
@@ -360,7 +365,7 @@ p {
 .part {
   margin-top: var(--space-5);
   padding-top: var(--space-4);
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--line);
 }
 
 .progress-label {
@@ -411,7 +416,7 @@ progress {
 
 .step + .step,
 .source-result + .source-result {
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--line);
 }
 
 .step p,

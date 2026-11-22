@@ -1,0 +1,22 @@
+/* The application's stylesheet: the same custom properties as the design, plus rules that are not tokens. */
+@font-face {
+  font-family: 'Hanken Grotesk';
+  src: url('/fonts/a.woff2') format('woff2');
+}
+
+:root {
+  --bg: #ffffff;
+  --text: #1f2328;
+  --font-ui: 'Hanken Grotesk', system-ui, sans-serif;
+  --space-3: 12px;
+}
+
+:root[data-theme='dark'] {
+  --bg: #111418;
+  --text: #e6e8ea;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+}

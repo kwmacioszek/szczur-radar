@@ -4,12 +4,13 @@
 //
 //   node tools/design-check/design-check.mjs <command> [arguments]
 //
-// Commands: contrast, pages, shots, inventory, doc, selftest (see tools/design-check/README.md).
+// Commands: contrast, app, pages, shots, inventory, doc, selftest (see tools/design-check/README.md).
 // Exit code: 0 only without violations, 1 with violations, 2 for a usage error, 3 for a missing environment
 // (szczur-radar-web/node_modules or the Chromium of its Playwright version).
 // Playwright and axe come from szczur-radar-web/node_modules; no dependency of its own, no package.json here.
 import { createRequire } from 'node:module'
 import fs from 'node:fs'
+import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
@@ -53,10 +54,14 @@ const FR_LIST = [
 ]
 const PLACEHOLDER = 'Do uzupełnienia w fazie'
 const DEFAULT_DOC = 'context/foundation/ui-design.md'
+const DEFAULT_DESIGN_DIR = 'context/foundation/ui-design'
+const DEFAULT_WEB_DIR = 'szczur-radar-web'
 
 const USAGE = `Usage: node tools/design-check/design-check.mjs <command> [arguments]
 
   contrast <tokens.css> <pairs.json>     contrast of the role pairs in both themes (or: contrast <dir>)
+  app [--design <dir>] [--web <dir>]     the application's copies of the design (tokens, pairs, sprite, fonts) and its contrast
+                                         (defaults ${DEFAULT_DESIGN_DIR} and ${DEFAULT_WEB_DIR})
   pages <dir | file.html> [...]          axe, horizontal scroll, landmarks, fonts; light/dark x 1280/375/320
   shots <dir | file.html> [--out <dir>] [--scale <n>] [--full-page] [--only <name>:<width>[,...]]
   inventory <dir | screens.json> [--gallery <file.html>] [--assets]
@@ -94,21 +99,48 @@ function rel(file) {
 // ---------------------------------------------------------------------------------------------------------------
 // contrast
 
+// Skip quoted and escaped characters when looking for structural CSS delimiters.
+const CSS_DELIMITERS = /"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|\\.|[{}\[\]();]/gs
+const CUSTOM_PROPERTY = /^\s*(--[\w-]+)\s*:/
+
 /** The text between the brace after the first `selector` in `text` and its matching closing brace; null if absent. */
 function block(text, selector) {
   const at = text.indexOf(selector)
   const open = at < 0 ? -1 : text.indexOf('{', at)
   if (open < 0) return null
   let depth = 0
-  for (let i = open; i < text.length; i++) {
-    if (text[i] === '{') depth++
-    if (text[i] === '}' && --depth === 0) return text.slice(open + 1, i)
+  for (const match of text.slice(open).matchAll(CSS_DELIMITERS)) {
+    if (match[0] === '{') depth++
+    if (match[0] === '}' && --depth === 0) return text.slice(open + 1, open + match.index)
   }
   return null
 }
 
 function declarations(text) {
-  return new Map([...text.matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)].map((m) => [m[1], m[2].trim()]))
+  // Keep in step with styleContract.test.ts. Read direct declarations, including one at the end without a semicolon.
+  const tokens = new Map()
+  let start = 0
+  let depth = 0
+  let nestedRule = false
+  for (const match of (text + ';').matchAll(CSS_DELIMITERS)) {
+    const delimiter = match[0]
+    if ('{[('.includes(delimiter)) {
+      if (delimiter === '{' && depth === 0) nestedRule = !CUSTOM_PROPERTY.test(text.slice(start, match.index))
+      depth++
+    } else if ('}])'.includes(delimiter)) {
+      depth--
+      if (delimiter === '}' && depth === 0 && nestedRule) {
+        start = match.index + 1
+        nestedRule = false
+      }
+    } else if (delimiter === ';' && depth === 0) {
+      const statement = text.slice(start, match.index)
+      const property = CUSTOM_PROPERTY.exec(statement)
+      if (property) tokens.set(property[1], statement.slice(property[0].length).trim())
+      start = match.index + 1
+    }
+  }
+  return tokens
 }
 
 /** Relative luminance (WCAG 2.x, sRGB threshold 0.04045); same as styleContract.test.ts. */
@@ -235,6 +267,121 @@ function runContrast(args) {
   const { violations, rows } = checkContrast(tokens, pairs)
   printContrastTable(rows)
   return report(violations, `${rows.length} pair(s) meet their thresholds in both themes`)
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// app
+
+/** The files of the design's fonts/ directory that the application copies: the fonts and their licences (not README.md). */
+const FONT_FILE = /\.woff2$|^OFL-.*\.txt$/
+
+/** The custom properties of the light and the dark block of a stylesheet, comments removed, white space collapsed. */
+function tokenBlocks(file) {
+  const source = fs.readFileSync(file, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
+  const read = (selector) => new Map([...declarations(block(source, selector) ?? '')]
+    .map(([name, value]) => [name, value.replace(/\s+/g, ' ')]))
+  return { light: read(':root'), dark: read(":root[data-theme='dark']") }
+}
+
+/**
+ * Compares the copies the application keeps of the design (F-08, ui-design.md "Wdrożenie"): the custom properties of
+ * both theme blocks, the contrast pairs, the icon sprite and the font files, then runs the contrast check on the
+ * application's own files. Every difference is a violation of kind `app`.
+ * @returns {{violations: Violation[], rows: object[]}}
+ */
+function checkApp(designDir, webDir) {
+  const violations = []
+  const design = {
+    tokens: path.join(designDir, 'tokens.css'),
+    pairs: path.join(designDir, 'pairs.json'),
+    sprite: path.join(designDir, 'icons', 'sprite.svg'),
+    fonts: path.join(designDir, 'fonts'),
+  }
+  const web = {
+    style: path.join(webDir, 'src', 'style.css'),
+    pairs: path.join(webDir, 'src', 'contrastPairs.json'),
+    sprite: path.join(webDir, 'src', 'assets', 'icons', 'sprite.svg'),
+    fonts: path.join(webDir, 'public', 'fonts'),
+  }
+  const missing = (file, side) => {
+    const exists = fs.existsSync(file)
+    if (!exists) violations.push(violation('app', rel(file), `missing file (${side})`))
+    return exists
+  }
+  /** Both files exist; a missing one is reported on each side, never hidden by the other. */
+  const bothExist = (source, copy) => [missing(source, 'the design'), missing(copy, 'the application')].every(Boolean)
+
+  // Tokens, both directions, per theme.
+  if (bothExist(design.tokens, web.style)) {
+    const from = tokenBlocks(design.tokens)
+    const to = tokenBlocks(web.style)
+    for (const theme of THEMES) {
+      for (const [name, value] of from[theme]) {
+        const actual = to[theme].get(name)
+        if (actual === undefined) {
+          violations.push(violation('app', rel(web.style), `${name} is missing in ${rel(web.style)} (the design has "${value}")`, theme))
+        } else if (actual !== value) {
+          violations.push(violation('app', rel(web.style), `${name} differs: ${rel(design.tokens)} has "${value}", ${rel(web.style)} has "${actual}"`, theme))
+        }
+      }
+      for (const [name, value] of to[theme]) {
+        if (!from[theme].has(name)) {
+          violations.push(violation('app', rel(web.style), `${name} is missing in ${rel(design.tokens)} (the application has "${value}")`, theme))
+        }
+      }
+    }
+  }
+
+  // Byte-for-byte copies: the pairs and the sprite.
+  const compareCopy = (source, copy, what) => {
+    if (!bothExist(source, copy)) return
+    const [a, b] = [fs.readFileSync(source), fs.readFileSync(copy)]
+    if (!a.equals(b)) violations.push(violation('app', rel(copy), `${what} differs from ${rel(source)} (${b.length} bytes, the design has ${a.length})`))
+  }
+  compareCopy(design.pairs, web.pairs, 'the contrast pairs file')
+  compareCopy(design.sprite, web.sprite, 'the icon sprite')
+
+  // The fonts and their licences, by name, both directions.
+  const fontNames = (dir, side) => {
+    if (!fs.existsSync(dir) || !fs.statSync(dir).isDirectory()) {
+      violations.push(violation('app', rel(dir), `missing directory (${side})`))
+      return null
+    }
+    return new Set(fs.readdirSync(dir).filter((name) => FONT_FILE.test(name)))
+  }
+  const designFonts = fontNames(design.fonts, 'the design')
+  const webFonts = fontNames(web.fonts, 'the application')
+  if (designFonts !== null && webFonts !== null) {
+    for (const name of [...new Set([...designFonts, ...webFonts])].sort()) {
+      if (!webFonts.has(name)) violations.push(violation('app', rel(path.join(web.fonts, name)), `missing font file; the design has ${rel(path.join(design.fonts, name))}`))
+      else if (!designFonts.has(name)) violations.push(violation('app', rel(path.join(web.fonts, name)), `font file not in the design (${rel(design.fonts)})`))
+      else if (!fs.readFileSync(path.join(design.fonts, name)).equals(fs.readFileSync(path.join(web.fonts, name)))) {
+        violations.push(violation('app', rel(path.join(web.fonts, name)), `font file differs from ${rel(path.join(design.fonts, name))}`))
+      }
+    }
+  }
+
+  // The contrast of the application's own files, as styleContract.test.ts reads them.
+  let rows = []
+  if (fs.existsSync(web.style) && fs.existsSync(web.pairs)) {
+    const result = checkContrast(web.style, web.pairs)
+    violations.push(...result.violations)
+    rows = result.rows
+  }
+  return { violations, rows }
+}
+
+function runApp(args) {
+  const { positional, options } = parseOptions(args, ['--design', '--web'], [])
+  if (positional.length > 0) throw new UsageError(`unexpected argument ${positional[0]}`)
+  const designDir = options.design ?? DEFAULT_DESIGN_DIR
+  const webDir = options.web ?? DEFAULT_WEB_DIR
+  for (const dir of [designDir, webDir]) {
+    if (!fs.existsSync(dir) || !fs.statSync(dir).isDirectory()) throw new UsageError(`no such directory: ${dir}`)
+  }
+  const { violations, rows } = checkApp(designDir, webDir)
+  if (rows.length > 0) printContrastTable(rows)
+  return report(violations, `${rel(webDir)} matches ${rel(designDir)} (tokens, pairs, sprite, fonts) and its ${rows.length} pair(s) meet their thresholds`)
 }
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -876,6 +1023,48 @@ async function runSelftest(args) {
     const found = violations.some((v) => v.kind === expected && (message === undefined || message.test(v.message)))
     line(`broken/${name}`, `violation ${expected}${message ? ` (${message.source})` : ''}`, found, kinds(violations))
   }
+  // `app`: fixtures/app/ok has a design directory and a web module directory that agree. Each broken sample holds
+  // only the one file of the web module that drifts (at its path in the module), laid over a copy of ok/web in a
+  // temporary directory; `remove` deletes a file of the copy. The violation of kind `app` must name the drift.
+  const appOk = path.join(FIXTURES, 'app', 'ok')
+  const appGreen = checkApp(path.join(appOk, 'design'), path.join(appOk, 'web'))
+  line('app/ok', 'no violation', appGreen.violations.length === 0, kinds(appGreen.violations))
+  const appSamples = [
+    ['token-value', [], /--text differs: .*"#1f2328".*"#1f2329"/],
+    ['token-missing', [], /--space-3 is missing in .*style\.css/],
+    ['token-extra', [], /--space-9 is missing in .*tokens\.css/],
+    ['token-nested', [], /--space-3 differs: .*"12px".*"16px"/],
+    ['pairs', [], /contrast pairs file differs from/],
+    ['sprite', [], /icon sprite differs from/],
+    ['font-bytes', [], /font file differs from .*a\.woff2/],
+    ['font-missing', ['public/fonts/a.woff2'], /missing font file; the design has .*a\.woff2/],
+  ]
+  for (const [name, remove, message] of appSamples) {
+    const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'design-check-app-'))
+    try {
+      const web = path.join(scratch, 'web')
+      fs.cpSync(path.join(appOk, 'web'), web, { recursive: true })
+      const overlay = path.join(FIXTURES, 'app', 'broken', name)
+      if (fs.existsSync(overlay)) fs.cpSync(overlay, web, { recursive: true })
+      for (const file of remove) fs.rmSync(path.join(web, file))
+      const { violations } = checkApp(path.join(appOk, 'design'), web)
+      const found = violations.some((v) => v.kind === 'app' && message.test(v.message))
+      line(`app/${name}`, `violation app (${message.source})`, found, kinds(violations))
+    } finally {
+      fs.rmSync(scratch, { recursive: true, force: true })
+    }
+  }
+  // Two empty directories: tokens, pairs and sprite are each reported missing on both sides.
+  const empty = fs.mkdtempSync(path.join(os.tmpdir(), 'design-check-app-'))
+  try {
+    const [designDir, webDir] = ['design', 'web'].map((name) => path.join(empty, name))
+    for (const dir of [designDir, webDir]) fs.mkdirSync(dir)
+    const { violations } = checkApp(designDir, webDir)
+    const reported = (side) => violations.filter((v) => v.kind === 'app' && v.message === `missing file (${side})`).length
+    line('app/empty', 'missing file on both sides (3 + 3)', reported('the design') === 3 && reported('the application') === 3, kinds(violations))
+  } finally {
+    fs.rmSync(empty, { recursive: true, force: true })
+  }
   console.log(failed === 0 ? 'OK: the green path passes and every break is detected' : `FAILED: ${failed} check(s) of the selftest`)
   return failed === 0 ? 0 : 1
 }
@@ -887,6 +1076,7 @@ async function main(argv) {
   try {
     switch (command) {
       case 'contrast': return runContrast(args)
+      case 'app': return runApp(args)
       case 'pages': return await runPages(args)
       case 'shots': return await runShots(args)
       case 'inventory': return runInventory(args)

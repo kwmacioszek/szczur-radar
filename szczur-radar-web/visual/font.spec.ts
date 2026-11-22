@@ -1,9 +1,11 @@
-// The font guard: the baselines are drawn with Liberation Sans, the alias visual/fonts.conf gives the browser. If a
-// future image or a config change loses the alias, this is red instead of baselines quietly drawn in another font.
+// The font guard: the baselines are drawn with the app's own typefaces (public/fonts/, @font-face in src/style.css):
+// Newsreader for the headings, Hanken Grotesk for the interface text. If a file is missing or does not load, or a config
+// change makes the browser take a fallback (visual/fonts.conf maps only the fallbacks to Liberation), this is red instead
+// of baselines quietly drawn in another font.
 // Chromium's CSS.getPlatformFontsForNode names the fonts it really drew a node's text with.
 import type { Locator, Page } from '@playwright/test'
 import { expect, test } from '../e2e/fixtures.ts'
-import { GUARD_PROJECT } from './targets.ts'
+import { GUARD_PROJECT, waitForFonts } from './targets.ts'
 
 test.use({ modes: { AUTH: 'anonymous' } })
 
@@ -28,7 +30,7 @@ async function platformFonts(page: Page, locator: Locator): Promise<string[]> {
   }
 }
 
-test('zrzuty rysuje tylko font z aliasu testów (Liberation Sans)', async ({ page }, testInfo) => {
+test('zrzuty rysuje tylko kroje aplikacji (Newsreader i Hanken Grotesk)', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== GUARD_PROJECT, `strażnik fontu działa tylko w projekcie ${GUARD_PROJECT}`)
   await page.goto('/login')
   const main = page.getByRole('main')
@@ -37,7 +39,11 @@ test('zrzuty rysuje tylko font z aliasu testów (Liberation Sans)', async ({ pag
   const label = main.getByText('Hasło', { exact: true })
   await expect(heading).toBeVisible()
   await expect(label).toBeVisible()
+  // The swap fallback is drawn first; the families are read only after the files are loaded.
+  await waitForFonts(page)
 
-  expect(await platformFonts(page, heading), 'fonty nagłówka „Logowanie”').toEqual(['Liberation Sans'])
-  expect(await platformFonts(page, label), 'fonty etykiety „Hasło”').toEqual(['Liberation Sans'])
+  // CDP names the family from the font file, not from @font-face: Newsreader's file is a variable font with an optical
+  // size axis, whose name Chromium reports as "Newsreader 16pt 16pt" (observed in Playwright's image).
+  expect(await platformFonts(page, heading), 'fonty nagłówka „Logowanie”').toEqual(['Newsreader 16pt 16pt'])
+  expect(await platformFonts(page, label), 'fonty etykiety „Hasło”').toEqual(['Hanken Grotesk'])
 })

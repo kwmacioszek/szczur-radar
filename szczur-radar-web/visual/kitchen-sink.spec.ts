@@ -4,7 +4,7 @@
 // a screenshot: either closes the bell's open panels. No wait for aria-busy to clear: the catalogue shows it on purpose.
 import { expect, test } from '../e2e/fixtures.ts'
 import { expectNoAxeViolations } from './axe.ts'
-import { NARROW_PROJECTS, STATES, catalogSections, openCatalog } from './targets.ts'
+import { NARROW_PROJECTS, PROJECTS, STATES, catalogSections, openCatalog, waitForFonts } from './targets.ts'
 
 // The router asks /api/auth/me on every navigation; the mock answers it (without it vite dev proxies it to :8000).
 test.use({ modes: { AUTH: 'anonymous' } })
@@ -15,6 +15,7 @@ test.beforeEach(({}, testInfo) => {
 
 test('sekcje katalogu komponentów nie zmieniają wyglądu', async ({ page }) => {
   const main = await openCatalog(page)
+  await waitForFonts(page)
   for (const section of await catalogSections(main)) {
     await expect.soft(section.region).toHaveScreenshot(`kitchen-sink-${section.slug}.png`)
   }
@@ -26,10 +27,16 @@ test('katalog komponentów nie łamie dostępności', async ({ page }) => {
 })
 
 for (const state of STATES) {
-  test(state.risk, async ({ page }) => {
+  test(state.risk, async ({ page }, testInfo) => {
     const main = await openCatalog(page)
+    await waitForFonts(page)
     const region = main.getByRole('region', { name: state.region, exact: true })
     const control = state.control(region)
+    if (state.pressedByTheme) {
+      // The theme follows the project's colour scheme: the toggle is pressed in the dark projects and only there.
+      const dark = PROJECTS.find((project) => project.name === testInfo.project.name)?.colorScheme === 'dark'
+      await expect(control, 'przycisk motywu przed zrzutem').toHaveAttribute('aria-pressed', dark ? 'true' : 'false')
+    }
     // The whole region in view first, so its screenshot does not scroll it away from under the pointer.
     await region.scrollIntoViewIfNeeded()
 

@@ -53,7 +53,7 @@ const output = computed(() => props.post.assessment?.output)
   gap: var(--space-2) var(--space-5);
   margin-bottom: var(--space-4);
   padding: var(--space-4) var(--space-5);
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: var(--radius);
 }
 
@@ -64,14 +64,14 @@ const output = computed(() => props.post.assessment?.output)
   align-items: center;
   gap: var(--space-1) var(--space-3);
   padding-bottom: var(--space-2);
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--line);
   font-size: var(--font-size-sm);
 }
 
 /* Date and time stay on one line. */
 .date {
   color: var(--text-h);
-  font-weight: 600;
+  font-weight: var(--weight-medium);
   white-space: nowrap;
 }
 
@@ -87,12 +87,10 @@ const output = computed(() => props.post.assessment?.output)
   min-width: 0;
 }
 
+/* The post's title in the serif of the global h2 (style.css). */
 .heading {
   margin: 0;
   font-size: var(--font-size-md);
-  font-weight: 600;
-  line-height: 1.45;
-  color: var(--text-h);
   overflow-wrap: anywhere;
 }
 
@@ -106,24 +104,27 @@ const output = computed(() => props.post.assessment?.output)
   text-decoration: underline;
 }
 
-/* A target (quote · kind) and its stance per row; a long quote wraps at half the width instead of overflowing. */
+/* A target (quote · kind) and its stance per row. The stance marker stays on one line at its full width; a long quote
+   wraps in the room left beside it instead of pushing the marker out of the card. */
 .targets {
   display: grid;
-  grid-template-columns: fit-content(50%) minmax(0, 1fr);
+  grid-template-columns: minmax(0, max-content) max-content;
+  /* A marker beside a wrapped quote keeps its own height, level with the quote's first line. */
+  align-items: start;
   gap: var(--space-1) var(--space-4);
   margin: 0;
   font-size: var(--font-size-md);
 }
 
 .targets dt {
-  font-weight: 600;
+  font-weight: var(--weight-semibold);
   color: var(--text-h);
   overflow-wrap: anywhere;
 }
 
 /* The target's kind: secondary to the quote it follows. */
 .targets .kind {
-  font-weight: 400;
+  font-weight: var(--weight-regular);
   color: var(--text);
 }
 
@@ -151,7 +152,14 @@ const output = computed(() => props.post.assessment?.output)
     gap: var(--space-1);
     padding: 0 var(--space-4) 0 0;
     border-bottom: none;
-    border-right: 1px solid var(--border);
+    border-right: 1px solid var(--line);
+  }
+}
+
+/* The root font size is 16px at every width; above 1024px the column is what 18px gave (design-tokens-and-components). */
+@media (min-width: 1025px) {
+  .post-card {
+    grid-template-columns: 10.125rem minmax(0, 1fr);
   }
 }
 </style>
