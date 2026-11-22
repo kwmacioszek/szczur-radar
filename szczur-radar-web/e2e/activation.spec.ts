@@ -60,3 +60,20 @@ test.describe('polityka haseł serwera', () => {
     await expect(main.getByRole('alert')).toHaveCount(0)
   })
 })
+
+test.describe('błąd serwera przy ustawianiu hasła', () => {
+  test.use({ modes: { AUTH: 'anonymous', ACTIVATION: 'unavailable' } })
+
+  test('po kliknięciu i błędzie serwera fokus wraca na przycisk, nie spada na początek strony', async ({ page }) => {
+    await page.goto('/activate#token')
+    const main = page.getByRole('main')
+    await main.getByLabel('Nowe hasło', { exact: true }).fill('dlugie-haslo-123')
+    await main.getByLabel('Powtórz hasło', { exact: true }).fill('dlugie-haslo-123')
+    const button = main.getByRole('button', { name: 'Ustaw hasło' })
+    await button.click()
+
+    await expect(main.getByRole('alert')).toHaveText('Nie udało się ustawić hasła. Spróbuj ponownie.')
+    await expect(button).toBeFocused()
+    await expect(page).toHaveURL('/activate')
+  })
+})

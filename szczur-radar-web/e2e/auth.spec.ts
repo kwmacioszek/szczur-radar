@@ -16,6 +16,18 @@ test.describe('logowanie anonimowego', () => {
     await expect(main.getByRole('alert')).toHaveText('Nieprawidłowy e-mail lub hasło.')
     await expect(page).toHaveURL('/login')
   })
+
+  test('po kliknięciu i odmowie fokus wraca na przycisk, nie spada na początek strony', async ({ page }) => {
+    await page.goto('/login')
+    const main = page.getByRole('main')
+    await main.getByLabel('E-mail', { exact: true }).fill('admin@szczur-radar.pl')
+    await main.getByLabel('Hasło', { exact: true }).fill('zle-haslo')
+    const button = main.getByRole('button', { name: 'Zaloguj się' })
+    await button.click()
+
+    await expect(main.getByRole('alert')).toHaveText('Nieprawidłowy e-mail lub hasło.')
+    await expect(button).toBeFocused()
+  })
 })
 
 test.describe('logowanie z wyczerpanym limitem prób', () => {

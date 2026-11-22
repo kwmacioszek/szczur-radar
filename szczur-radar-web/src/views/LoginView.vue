@@ -8,6 +8,7 @@ import AppButton from '../components/AppButton.vue'
 import AuthLayout from '../components/AuthLayout.vue'
 import FormField from '../components/FormField.vue'
 import StatusMessage from '../components/StatusMessage.vue'
+import { restoreFocus } from '../focus'
 import { safeRedirect } from '../router/redirect'
 
 const route = useRoute()
@@ -39,6 +40,7 @@ function errorMessage(err: unknown): string {
 
 async function submit(): Promise<void> {
   if (submitting.value) return
+  const sender = document.activeElement
   submitting.value = true
   error.value = null
   activated.value = false
@@ -50,6 +52,8 @@ async function submit(): Promise<void> {
   } finally {
     submitting.value = false
   }
+  // A refusal: a clicked button lost the focus while it was busy. After a login the page is gone: nothing to do.
+  await restoreFocus(sender)
 }
 </script>
 

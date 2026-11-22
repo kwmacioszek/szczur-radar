@@ -17,6 +17,7 @@ import AppButton from '../components/AppButton.vue'
 import AuthLayout from '../components/AuthLayout.vue'
 import FormField from '../components/FormField.vue'
 import StatusMessage from '../components/StatusMessage.vue'
+import { restoreFocus } from '../focus'
 
 /** Checking the link, a link that cannot be used, a check that failed (network, 5xx), or the form. */
 type Phase = 'checking' | 'invalid' | 'lookup_failed' | 'form'
@@ -88,7 +89,10 @@ async function endOtherSession(): Promise<void> {
   clearSession()
 }
 
-/** Puts the problem where it was made: the field it is about; `unavailable` is the form's, the focus stays. */
+/**
+ * Puts the problem where it was made: the field it is about. `unavailable` is the form's: the focus goes back to where
+ * the form was sent from (`restoreFocus` in `submit`).
+ */
 async function focusProblem(): Promise<void> {
   await nextTick()
   if (passwordInvalid.value) passwordInput.value?.focus()
@@ -97,6 +101,7 @@ async function focusProblem(): Promise<void> {
 
 async function submit(): Promise<void> {
   if (submitting.value) return
+  const sender = document.activeElement
   submitting.value = true
   // Clear first and let the page render: the same problem sent again appears anew in the field's live region and is
   // announced again.
@@ -118,6 +123,7 @@ async function submit(): Promise<void> {
       await focusProblem()
     }
     submitting.value = false
+    await restoreFocus(sender)
     return
   }
   // The link is used up: the button stays busy until the login screen replaces this page.
