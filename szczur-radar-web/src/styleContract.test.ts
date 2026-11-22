@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest'
+import appBrand from './components/AppBrand.vue?raw'
 import appButton from './components/AppButton.vue?raw'
 import appHeader from './components/AppHeader.vue?raw'
 import appIcon from './components/AppIcon.vue?raw'
+import authLayout from './components/AuthLayout.vue?raw'
 import feedFilter from './components/FeedFilter.vue?raw'
+import formField from './components/FormField.vue?raw'
 import iconSprite from './components/IconSprite.vue?raw'
 import notificationBell from './components/NotificationBell.vue?raw'
 import notificationMenu from './components/NotificationMenu.vue?raw'
@@ -140,6 +143,9 @@ const CLEANED: Record<string, string> = {
   'src/components/NotificationMenu.vue': notificationMenu,
   'src/views/RunDetailView.vue': runDetailView,
   'src/components/ThemeToggle.vue': themeToggle,
+  'src/components/AppBrand.vue': appBrand,
+  'src/components/FormField.vue': formField,
+  'src/components/AuthLayout.vue': authLayout,
 }
 
 /** The hardcoded-value scan of /10x-ui: colour literals, arbitrary values and palette classes. */
