@@ -21,6 +21,7 @@ import activateView from './views/ActivateView.vue?raw'
 import adminView from './views/AdminView.vue?raw'
 import feedView from './views/FeedView.vue?raw'
 import kitchenSinkView from './views/KitchenSinkView.vue?raw'
+import loginView from './views/LoginView.vue?raw'
 import postDetailView from './views/PostDetailView.vue?raw'
 import runDetailView from './views/RunDetailView.vue?raw'
 
@@ -120,8 +121,7 @@ function contrast(a: string, b: string): number {
  * Files without colour literals and without values off the scale: colours come from the roles of
  * style.css, spacing, type and radii from its --space-*, --font-size-* and --radius tokens. Add a
  * view or component here once it is cleaned; style.css itself, the token source, is never on the
- * list. src/views/LoginView.vue is off it until S-49 (its screen): px in its spacing, type and radii
- * (LoginView.vue:84-131).
+ * list.
  */
 const CLEANED: Record<string, string> = {
   'src/views/AdminView.vue': adminView,
@@ -146,6 +146,7 @@ const CLEANED: Record<string, string> = {
   'src/components/AppBrand.vue': appBrand,
   'src/components/FormField.vue': formField,
   'src/components/AuthLayout.vue': authLayout,
+  'src/views/LoginView.vue': loginView,
 }
 
 /** The hardcoded-value scan of /10x-ui: colour literals, arbitrary values and palette classes. */

@@ -44,4 +44,8 @@ describe('AuthLayout', () => {
     expect(authLayout).toContain(":deep(form > button[type='submit'])")
     expect(authLayout).toMatch(/:deep\(form > button\[type='submit'\]\)\s*\{[^}]*width:\s*100%/)
   })
+
+  it('drops the margin of a paragraph directly in the card or in its form, so the gap alone spaces it', () => {
+    expect(authLayout).toMatch(/\.auth > :deep\(p\),\s*\.auth :deep\(form > p\)\s*\{[^}]*margin:\s*0/)
+  })
 })

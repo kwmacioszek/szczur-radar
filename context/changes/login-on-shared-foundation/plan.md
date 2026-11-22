@@ -316,25 +316,25 @@ Bez migracji danych i bez zmian API. Wzorce F-06 `view-login` i `view-activate` 
 
 #### Automated
 
-- [x] 1.1 Testy nowych komponentów przechodzą (AppBrand, FormField, AuthLayout)
-- [x] 1.2 Pełne testy jednostkowe przechodzą, w tym skan literałów dla nowych plików
-- [x] 1.3 Typecheck i build przechodzą
-- [x] 1.4 Kopie projektu zgodne z tokenami i kontrast (design-check app)
-- [x] 1.5 Wzorce katalogu: nowy kitchen-sink-marka w dwóch projektach, kitchen-sink-pola bez zmian
+- [x] 1.1 Testy nowych komponentów przechodzą (AppBrand, FormField, AuthLayout) — c116b1a
+- [x] 1.2 Pełne testy jednostkowe przechodzą, w tym skan literałów dla nowych plików — c116b1a
+- [x] 1.3 Typecheck i build przechodzą — c116b1a
+- [x] 1.4 Kopie projektu zgodne z tokenami i kontrast (design-check app) — c116b1a
+- [x] 1.5 Wzorce katalogu: nowy kitchen-sink-marka w dwóch projektach, kitchen-sink-pola bez zmian — c116b1a
 - [x] 1.6 Testy wizualne i axe zielone
 
 ### Phase 2: Logowanie na wspólnych komponentach
 
 #### Automated
 
-- [ ] 2.1 Testy widoku logowania przechodzą
-- [ ] 2.2 Pełne testy jednostkowe przechodzą (LoginView na liście CLEANED)
-- [ ] 2.3 Wyjątek login-form usunięty z kodu
-- [ ] 2.4 Typecheck i build przechodzą
-- [ ] 2.5 Testy w przeglądarce zielone, w tym limit prób i motyw na logowaniu
-- [ ] 2.6 Zgodność z projektem i kontrast (design-check app)
-- [ ] 2.7 Wzorce view-login w czterech projektach zaktualizowane, nic innego
-- [ ] 2.8 Testy wizualne i axe zielone
+- [x] 2.1 Testy widoku logowania przechodzą
+- [x] 2.2 Pełne testy jednostkowe przechodzą (LoginView na liście CLEANED)
+- [x] 2.3 Wyjątek login-form usunięty z kodu
+- [x] 2.4 Typecheck i build przechodzą
+- [x] 2.5 Testy w przeglądarce zielone, w tym limit prób i motyw na logowaniu
+- [x] 2.6 Zgodność z projektem i kontrast (design-check app)
+- [x] 2.7 Wzorce view-login w czterech projektach zaktualizowane, nic innego
+- [x] 2.8 Testy wizualne i axe zielone
 
 ### Phase 3: Aktywacja z błędem przy polu
 

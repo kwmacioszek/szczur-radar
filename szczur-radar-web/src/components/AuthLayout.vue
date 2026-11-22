@@ -81,4 +81,10 @@ main {
 .auth :deep(form > button[type='submit']) {
   width: 100%;
 }
+
+/* The prototype resets the margin of a paragraph; the card's gap alone spaces a paragraph of the slot (a note, an intro). */
+.auth > :deep(p),
+.auth :deep(form > p) {
+  margin: 0;
+}
 </style>

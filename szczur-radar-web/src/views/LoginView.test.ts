@@ -111,4 +111,51 @@ describe('LoginView', () => {
     await submit(wrapper)
     expect(router.currentRoute.value.fullPath).toBe('/')
   })
+
+  it('shows the brand and the theme switch of a public screen', async () => {
+    const { wrapper } = await mountLogin()
+    expect(wrapper.find('main').text()).toContain('Szczur Radar')
+    expect(wrapper.find('button[aria-label="Ciemny motyw"]').exists()).toBe(true)
+  })
+
+  it('shows the error as a status message with its icon, announced at once', async () => {
+    vi.mocked(login).mockRejectedValue(new ApiError(401, 'invalid_credentials'))
+    const { wrapper } = await mountLogin()
+    await submit(wrapper)
+    const alerts = wrapper.findAll('[role="alert"]')
+    expect(alerts).toHaveLength(1)
+    expect(alerts[0].classes()).toContain('status-message')
+    expect(alerts[0].find('svg').exists()).toBe(true)
+  })
+
+  it('tells password managers which field is which', async () => {
+    const { wrapper } = await mountLogin()
+    expect(wrapper.find('input[type="email"]').attributes('autocomplete')).toBe('username')
+    expect(wrapper.find('input[type="password"]').attributes('autocomplete')).toBe('current-password')
+  })
+
+  it('names the fields by their labels and tells that an administrator creates the account', async () => {
+    const { wrapper } = await mountLogin()
+    expect(wrapper.find('label[for="' + wrapper.find('input[type="email"]').attributes('id') + '"]').text()).toBe('E-mail')
+    expect(wrapper.find('label[for="' + wrapper.find('input[type="password"]').attributes('id') + '"]').text()).toBe('Hasło')
+    expect(wrapper.find('form').text()).toContain('Konto zakłada administrator.')
+  })
+
+  it('keeps no class of its own on the form (the old exception class is gone): the shared layout and the global field style do it', async () => {
+    const { wrapper } = await mountLogin()
+    expect(wrapper.find('form').classes()).toEqual([])
+  })
+
+  it('marks the button busy while the login is in progress', async () => {
+    let finish: (user: { id: string; email: string; role: 'admin' }) => void = () => {}
+    vi.mocked(login).mockReturnValue(new Promise((resolve) => (finish = resolve)))
+    const { wrapper } = await mountLogin()
+    await wrapper.find('form').trigger('submit')
+    const button = wrapper.find('button[type="submit"]')
+    expect(button.attributes('aria-busy')).toBe('true')
+    expect(button.text()).toBe('Logowanie…')
+    expect(button.attributes('disabled')).toBeDefined()
+    finish({ id: '1', email: 'admin@example.com', role: 'admin' })
+    await flushPromises()
+  })
 })

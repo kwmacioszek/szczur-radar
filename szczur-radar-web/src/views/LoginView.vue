@@ -4,6 +4,9 @@ import { useRoute, useRouter } from 'vue-router'
 import { login } from '../api/auth'
 import { ApiError } from '../api/client'
 import { setSession } from '../auth/session'
+import AppButton from '../components/AppButton.vue'
+import AuthLayout from '../components/AuthLayout.vue'
+import FormField from '../components/FormField.vue'
 import StatusMessage from '../components/StatusMessage.vue'
 import { safeRedirect } from '../router/redirect'
 
@@ -51,82 +54,32 @@ async function submit(): Promise<void> {
 </script>
 
 <template>
-  <main class="page">
-    <section class="card" aria-labelledby="login-title">
-      <p class="eyebrow">Szczur Radar</p>
-      <h1 id="login-title">Logowanie</h1>
-      <form class="form login-form" novalidate @submit.prevent="submit">
-        <StatusMessage v-if="activated" tone="ok" class="notice">Hasło ustawione. Zaloguj się.</StatusMessage>
-        <label>
-          E-mail
-          <input v-model="email" type="email" name="email" autocomplete="username" required />
-        </label>
-        <label>
-          Hasło
-          <input
-            v-model="password"
-            type="password"
-            name="password"
-            autocomplete="current-password"
-            required
-          />
-        </label>
-        <p v-if="error" class="error" role="alert">{{ error }}</p>
-        <button type="submit" :disabled="submitting">
-          {{ submitting ? 'Logowanie…' : 'Zaloguj się' }}
-        </button>
-      </form>
-    </section>
-  </main>
+  <AuthLayout title="Logowanie">
+    <form novalidate @submit.prevent="submit">
+      <StatusMessage v-if="activated" tone="ok">Hasło ustawione. Zaloguj się.</StatusMessage>
+      <StatusMessage v-if="error" tone="error">{{ error }}</StatusMessage>
+      <FormField v-slot="{ fieldProps }" label="E-mail">
+        <input v-model="email" v-bind="fieldProps" type="email" name="email" autocomplete="username" required />
+      </FormField>
+      <FormField v-slot="{ fieldProps }" label="Hasło">
+        <input
+          v-model="password"
+          v-bind="fieldProps"
+          type="password"
+          name="password"
+          autocomplete="current-password"
+          required
+        />
+      </FormField>
+      <AppButton type="submit" variant="primary" :busy="submitting" busy-label="Logowanie…">Zaloguj się</AppButton>
+      <p class="note">Konto zakłada administrator.</p>
+    </form>
+  </AuthLayout>
 </template>
 
 <style scoped>
-.form {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  text-align: left;
-}
-
-label {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  color: var(--text-h);
-  font-size: 16px;
-}
-
-input {
-  font: inherit;
-  padding: 10px 12px;
-  border: 1px solid var(--text);
-  border-radius: 8px;
-  background: var(--bg);
-  color: var(--text-h);
-}
-
-button {
-  font: inherit;
-  padding: 10px 16px;
-  border: 0;
-  border-radius: 8px;
-  background: var(--accent);
-  color: var(--on-accent);
-  cursor: pointer;
-}
-
-button:disabled {
-  opacity: 0.6;
-  cursor: progress;
-}
-
-.error {
-  margin: 0;
-  color: var(--destructive);
-}
-
-/* The form's gap spaces the notice; the parent's selector outranks the message's own margin. */
-.form .notice {
-  margin: 0;
+.note {
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
 }
 </style>

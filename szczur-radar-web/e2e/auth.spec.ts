@@ -18,6 +18,22 @@ test.describe('logowanie anonimowego', () => {
   })
 })
 
+test.describe('logowanie z wyczerpanym limitem prób', () => {
+  test.use({ modes: { AUTH: 'anonymous', LOGIN: 'limited' } })
+
+  test('limit prób zostaje na logowaniu z komunikatem o ponowieniu', async ({ page }) => {
+    await page.goto('/login')
+    const main = page.getByRole('main')
+
+    await main.getByLabel('E-mail', { exact: true }).fill('admin@szczur-radar.pl')
+    await main.getByLabel('Hasło', { exact: true }).fill('dowolne-haslo')
+    await main.getByRole('button', { name: 'Zaloguj się' }).click()
+
+    await expect(main.getByRole('alert')).toContainText(/^Zbyt wiele prób\./)
+    await expect(page).toHaveURL('/login')
+  })
+})
+
 test('wylogowanie kończy sesję, a chroniona strona wraca do logowania', async ({ page }) => {
   await page.goto('/')
   const main = page.getByRole('main')
