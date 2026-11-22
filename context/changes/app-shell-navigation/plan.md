@@ -454,9 +454,9 @@ Brak zmian danych i API. Wdrożenie web jest niezależne od API: powłoka toleru
 
 #### Automated
 
-- [x] 3.1 Testy jednostkowe przechodzą, w tym strażnik atrapy
-- [x] 3.2 Testy E2E przechodzą, w tym shell.spec.ts
-- [x] 3.3 Testy wizualne i axe przechodzą
+- [x] 3.1 Testy jednostkowe przechodzą, w tym strażnik atrapy — 3469327
+- [x] 3.2 Testy E2E przechodzą, w tym shell.spec.ts — 3469327
+- [x] 3.3 Testy wizualne i axe przechodzą — 3469327
 - [ ] 3.4 CI na PR jest zielone, w tym web-e2e i web-container-smoke
 - [ ] 3.5 W PR env pasek działa na prawdziwym API (kontrola agenta przez playwright-cli)
 
