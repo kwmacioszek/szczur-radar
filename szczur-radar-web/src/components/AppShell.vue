@@ -65,7 +65,10 @@ let readAt: number | null = null
 let reading = false
 let mounted = false
 
-/** Reads the date again unless a read is under way or the last one is fresh, while someone is logged in. */
+/**
+ * Reads the date again unless a read is under way or the last one is fresh, while someone is logged in. One read at a
+ * time: the API client has no time limit, so a request that hangs holds the next reads until the browser ends it.
+ */
 function refreshFreshness(): void {
   // Logging out runs the page change to /login while the shell is still mounted: no one to ask for.
   if (!mounted || reading || !currentUser.value) return

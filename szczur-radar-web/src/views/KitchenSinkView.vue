@@ -991,6 +991,10 @@ const assessments: { id: string; title: string; assessment: NonNullable<PostItem
           </PageHeader>
         </li>
         <li class="sample">
+          <p class="sample-title">Tytuł do czytania (post)</p>
+          <PageHeader title="Orlen ogłasza buyback za 4 mld zł" size="reading" />
+        </li>
+        <li class="sample">
           <p class="sample-title">Z narzędziami widoku po prawej</p>
           <PageHeader title="Posty" subtitle="wtorek, 20 października 2026">
             <template #tools>

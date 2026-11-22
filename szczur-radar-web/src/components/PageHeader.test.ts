@@ -43,6 +43,12 @@ describe('PageHeader', () => {
     expect(row.get('.badge').text()).toBe('częściowo')
   })
 
+  it("sets a text's own title as a reading title and a page's name as a page title", () => {
+    expect(mount(PageHeader, { props: { title: 'Posty' } }).get('.page-head').classes()).not.toContain('reading')
+    const wrapper = mount(PageHeader, { props: { title: 'Orlen ogłasza buyback', size: 'reading' } })
+    expect(wrapper.get('.page-head').classes()).toContain('reading')
+  })
+
   it('shows the tools slot beside the title and nothing when there are none', () => {
     expect(mount(PageHeader, { props: { title: 'Posty' } }).find('.view-tools').exists()).toBe(false)
     const wrapper = mount(PageHeader, { props: { title: 'Posty' }, slots: { tools: '<button type="button">Dzień</button>' } })

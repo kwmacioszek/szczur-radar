@@ -10,6 +10,8 @@ defineProps<{
   /** The id of the h1, for the `aria-labelledby` of the view's section. */
   headingId?: string
   subtitle?: string
+  /** `reading`: the title is a text's own (a post's), set as the design's reading title, smaller than a page's name. */
+  size?: 'page' | 'reading'
 }>()
 defineSlots<{ status?(): unknown; tools?(): unknown }>()
 
@@ -23,7 +25,7 @@ defineExpose({ focus })
 </script>
 
 <template>
-  <div class="page-head">
+  <div class="page-head" :class="{ reading: size === 'reading' }">
     <div>
       <div class="title-row" :class="{ 'with-status': $slots.status }">
         <h1 :id="headingId" ref="heading" tabindex="-1">{{ title }}</h1>
@@ -65,6 +67,11 @@ h1 {
   font-size: var(--font-size-6xl);
 }
 
+/* A post's title is the design's reading title, not a page's name (`.reading-title` in the prototype). */
+.reading h1 {
+  font-size: var(--font-size-6xl);
+}
+
 .page-sub {
   margin: var(--space-1) 0 0;
   color: var(--text);
@@ -86,7 +93,8 @@ h1 {
     font-size: var(--font-size-6xl);
   }
 
-  .with-status h1 {
+  .with-status h1,
+  .reading h1 {
     font-size: var(--font-size-5xl);
   }
 }

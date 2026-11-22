@@ -198,7 +198,7 @@ describe('shell', () => {
     app.unmount()
   })
 
-  it('mounts the shell again after leaving it for /login', async () => {
+  it('mounts the shell again after leaving it for a public page', async () => {
     const router = createAppRouter(createMemoryHistory())
     await router.push('/')
     const app = mount({ render: () => h(RouterView) }, { global: { plugins: [router] } })

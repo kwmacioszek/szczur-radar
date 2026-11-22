@@ -1,7 +1,7 @@
 import { type VueWrapper, enableAutoUnmount, flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { h } from 'vue'
-import { RouterView, createMemoryHistory } from 'vue-router'
+import { type Router, RouterView, createMemoryHistory } from 'vue-router'
 import { type User, fetchMe, logout } from '../api/auth'
 import { type Freshness, fetchFreshness } from '../api/freshness'
 import { fetchNotifications } from '../api/notifications'
@@ -27,10 +27,14 @@ const MINUTE = 60 * 1000
 const START = new Date('2026-10-13T08:00:00Z')
 const WYKOP: Freshness = { sources: [{ source: 'wykop', lastUpdatedAt: '2026-10-13T03:12:00Z' }] }
 
-/** The shell on `path`, logged in as `role`, in the router of the application: a host that only renders its view. */
-async function mountShell(role: User['role'], path = '/') {
+/**
+ * The shell on `path`, logged in as `role`, in the router of the application: a host that only renders its view.
+ * `prepare` sees the router before the shell mounts.
+ */
+async function mountShell(role: User['role'], path = '/', prepare?: (router: Router) => void) {
   vi.mocked(fetchMe).mockResolvedValue({ id: '1', email: `${role}@example.com`, role })
   const router = createAppRouter(createMemoryHistory())
+  prepare?.(router)
   await router.push(path)
   const wrapper = mount({ render: () => h(RouterView) }, { global: { plugins: [router] }, attachTo: document.body })
   await flushPromises()
@@ -272,6 +276,19 @@ describe('AppShell', () => {
       expect(wrapper.get('header').text()).toContain('Wykop 13.10.2026, 05:12')
     })
 
+    it('asks only once while a read is under way', async () => {
+      vi.mocked(fetchFreshness).mockReturnValue(new Promise(() => {}))
+      const { router } = await mountShell('user')
+
+      await router.push('/posts/1')
+      await router.push('/')
+      visibility('visible')
+      document.dispatchEvent(new Event('visibilitychange'))
+      await flushPromises()
+
+      expect(fetchFreshness).toHaveBeenCalledTimes(1)
+    })
+
     it('shows the new date when a later read succeeds', async () => {
       const { wrapper, router } = await mountShell('user')
       vi.mocked(fetchFreshness).mockResolvedValue({ sources: [{ source: 'wykop', lastUpdatedAt: '2026-10-14T03:12:00Z' }] })
@@ -303,8 +320,26 @@ describe('AppShell', () => {
     })
 
     it('stops listening when it is unmounted', async () => {
-      const { wrapper, router } = await mountShell('user')
+      // The router's own hooks are registered before `prepare`: what is recorded here is the shell's.
+      const removers: (() => void)[] = []
+      const added = vi.spyOn(document, 'addEventListener')
+      const removed = vi.spyOn(document, 'removeEventListener')
+      const { wrapper, router } = await mountShell('user', '/', (target) => {
+        const register = target.afterEach.bind(target)
+        vi.spyOn(target, 'afterEach').mockImplementation((guard) => {
+          const remove = vi.fn(register(guard))
+          removers.push(remove)
+          return remove
+        })
+      })
+      const listener = added.mock.calls.find(([type]) => type === 'visibilitychange')?.[1]
+      expect(listener).toBeTypeOf('function')
+      expect(removers).toHaveLength(1)
+
       wrapper.unmount()
+
+      for (const remove of removers) expect(remove).toHaveBeenCalledTimes(1)
+      expect(removed).toHaveBeenCalledWith('visibilitychange', listener)
       vi.setSystemTime(START.getTime() + MINUTE)
 
       await router.push('/posts/1')

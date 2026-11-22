@@ -138,7 +138,7 @@ watch(
   <div class="post-detail">
     <a class="back" :href="listHref" @click="toList"><span aria-hidden="true">←</span> Posty</a>
     <section aria-labelledby="post-title" :aria-busy="state === 'loading' ? 'true' : undefined">
-      <PageHeader ref="header" class="head" :title="title" heading-id="post-title" />
+      <PageHeader ref="header" class="head" :title="title" heading-id="post-title" size="reading" />
       <p v-if="state === 'loading'" class="loading">Wczytywanie posta…</p>
       <template v-else-if="state === 'failed'">
         <StatusMessage tone="error" class="message">Nie udało się wczytać posta.</StatusMessage>
