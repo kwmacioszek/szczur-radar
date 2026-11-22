@@ -53,7 +53,15 @@ Kryteria automatyczne fazy 3 sprawdzone w tym przeglądzie:
   - Tradeoff: Osłabia bramkę, którą F-06 celowo zaostrzył: domyślne 0,2 przepuściło przyciemniony hover. Trzeba powtórzyć dowód z `visual-breaks.md`, a regułę musi zmienić właściciel.
   - Confidence: HIGH — progi YIQ w Playwright pomijają różnice tej wielkości.
   - Blind spot: Nie sprawdzono, czy próg 0,05 dalej łapie przyciemniony hover z F-06.
-- **Decision**: PENDING
+- **Decision**: FIXED (Fix A, rozszerzony) — Chromium w testach wizualnych ma dwie flagi:
+  - `--disable-skia-runtime-opts` (`c589529`): z nią CI w westus3 dało te same piksele co lokalna emulacja dla 6 z 7 wzorców zależnych od procesora.
+  - `--disable-partial-raster` (`e0737de`): została jedna niestabilność, w obrębie jednego przebiegu. Rogi pola „Powtórz hasło” w `view-activate` (promień 10 px, dolna krawędź na y = 489,625 px) wychodziły w dwóch wariantach. Wariant zależał od tego, czy kafel był dorysowany częściowo po późnych zmianach strony (formularz zastępuje „sprawdzanie”, fokus, kroje). Z pełnym rysowaniem lokalny render jest bajt w bajt równy dawnemu wzorcowi z CI. Ta sama przyczyna tłumaczy rozjazd `light-375/kitchen-sink-pola` między lokalnymi przebiegami 2026-11-21, a nie HMR.
+  - Nowe wzorce: `view-activate` (light-375 i light-1280), `kitchen-sink-pola`, `state-pola-email-hover` i `state-pola-search-focus` (oba projekty 375 px).
+  - `REPOSITORY_GUIDELINES.md` opisuje obie flagi (`4647f9b`).
+- **Weryfikacja poprawki**:
+  - Lokalnie dwa pełne `npm run visual:docker` są zielone (56 testów) i nie zmieniają żadnego wzorca.
+  - W CI krok wizualny jest zielony bez niestabilnych testów na runnerach w trzech regionach: us-east-1 (`e0737de`, przebieg 44994050961), southcentralus (`4647f9b`, 44994686833) i eastus3 (ponowione `web-e2e` tego przebiegu).
+  - `gh pr checks 199` daje 11/11, łącznie z `railway config`.
 
 ### F2 — Siatka celów w karcie posta zmieniona bez zapisu, przy 320 px nazwa celu ma 40 px
 
@@ -82,17 +90,17 @@ Kryteria automatyczne fazy 3 sprawdzone w tym przeglądzie:
 - **Location**: PR #199 (opis), commit `81f666b`
 - **Detail**: `81f666b` (odhaczenie 3.8) nie jest wypchnięty, więc PR kończy się na `11e4b36`. Opis PR nadal mówi „Do akceptacji właściciela”, choć właściciel zaakceptował wygląd 2026-11-21. Opis nie wspomina zmiany siatki z F2 ani poprawek F1–F5 z pierwszego przeglądu (nowy wzorzec `dark-375/state-motyw-hover.png`). `81f666b` ma `Refs: #199` (PR) zamiast issue `#197`.
 - **Fix**: Wypchnąć gałąź i poprawić opis PR (akceptacja, odstępstwo siatki, poprawki z przeglądu), z `Refs #197`.
-- **Decision**: PENDING
+- **Decision**: FIXED — `81f666b` był już na `origin`, kolejne commity są wypchnięte. Opis PR #199 podaje akceptację właściciela, odstępstwo siatki, restyl panelu powiadomień, obie flagi Chromium, przebiegi CI, dowód ze środowiska PR i oba raporty przeglądu (`Refs #197`). Historii commitów nie przepisano.
 
 ### F4 — Dowód kryterium 3.7 to tylko jedno zdanie
 
 - **Severity**: 💡 OBSERVATION
 - **Impact**: 🏃 LOW — quick decision; fix is obvious and narrowly scoped
 - **Dimension**: Success Criteria
-- **Location**: [plan.md:492](../plan.md#L492), PR #199, issue #197
+- **Location**: [plan.md:499](../plan.md#L499), PR #199, issue #197
 - **Detail**: Plan zapisuje wyniki pomiarów w środowisku PR jako dowód (wzór: weryfikacja S-36, `evidence/pr-env/README.md`). Folder zmiany nie ma takiego pliku. Opis PR i komentarz w issue mają po jednym zdaniu, bez rodzin z CDP, statusów i typów plików, także dla feedu po zalogowaniu. Ten przegląd powtórzył tylko część anonimową, z wynikiem zielonym.
 - **Fix**: Dopisać krótki plik `evidence/pr-env.md` z wynikami obu przejść (rodziny z CDP, statusy i `Content-Type` plików `woff2`) albo dodać je w komentarzu PR przy następnej weryfikacji.
-- **Decision**: PENDING
+- **Decision**: FIXED — [evidence/pr-env.md](../evidence/pr-env.md) ma wyniki obu przejść na webie z `e0737de`: anonimowego `/login` i feedu z sesją jednorazowego konta. Nagłówki rysuje Newsreader, etykiety Hanken Grotesk, a trzy pliki `woff2`, w tym latin-ext, przychodzą jako `200 font/woff2`. Sekrety zostały w zmiennych i w usuniętym pliku tymczasowym.
 
 ### F5 — Martwe klasy po usuniętych regułach
 
@@ -113,3 +121,7 @@ Kryteria automatyczne fazy 3 sprawdzone w tym przeglądzie:
 - **Detail**: Panel dostał `--surface`, krawędź `--line` i `--shadow-overlay`, jak `.popover` w `prototype.css:1623-1630`. Kontrakt fazy 3 tego nie wymienia, ale to mieści się w jego intencji. Panel zachował `z-index: 1`, choć `style.css` ma dla tej warstwy `--z-overlay: 20`.
 - **Fix**: Ustawić `z-index: var(--z-overlay)` i dopisać restyl panelu do opisu PR.
 - **Decision**: FIXED — panel ma `z-index: var(--z-overlay)`. To jedyny `z-index` w aplikacji, więc piksele się nie zmieniają. Restyl panelu jest opisany w PR.
+
+## Triage
+
+Triage zakończony 2026-11-22. Wszystkie ustalenia są naprawione (F1 rozszerzonym Fix A, F2 przez Fix A, F3–F6). Żadne nie zostało pominięte, zaakceptowane jako ryzyko ani zapisane jako lekcja. Po poprawkach kryteria 3.4–3.7 przechodzą: lokalny `visual:docker`, CI na PR (11/11) i środowisko PR.
