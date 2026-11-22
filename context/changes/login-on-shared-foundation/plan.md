@@ -366,4 +366,4 @@ Bez migracji danych i bez zmian API. Wzorce F-06 `view-login` i `view-activate` 
 
 #### Manual
 
-- [ ] 4.11 Właściciel ogląda zrzuty obok prototypów w obu motywach i akceptuje wygląd
+- [x] 4.11 Właściciel ogląda zrzuty obok prototypów w obu motywach i akceptuje wygląd — zaakceptowane przez właściciela 2026-11-22
