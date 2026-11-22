@@ -1,5 +1,5 @@
 import { flushPromises, mount } from '@vue/test-utils'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMemoryHistory } from 'vue-router'
 import { activate, lookupActivation } from '../api/activation'
 import { fetchMe, logout } from '../api/auth'
@@ -24,15 +24,20 @@ const TOKEN = 'Abc-123_xyz'
 const INVALID_LINK = 'Link jest nieważny lub wygasł. Poproś administratora o nowy.'
 const PASSWORD = 'correct horse battery'
 
+type Wrapper = ReturnType<typeof mount>
+
+// Mounted in the document: the focus a problem moves exists only there.
+const mounted: Wrapper[] = []
+
 async function mountActivate(path = `/activate#${TOKEN}`) {
   const router = createAppRouter(createMemoryHistory())
   await router.push(path)
-  const wrapper = mount(ActivateView, { global: { plugins: [router] } })
+  const wrapper = mount(ActivateView, { global: { plugins: [router] }, attachTo: document.body })
+  mounted.push(wrapper)
   await flushPromises()
   return { wrapper, router }
 }
 
-type Wrapper = Awaited<ReturnType<typeof mountActivate>>['wrapper']
 
 async function fillAndSubmit(wrapper: Wrapper, password = PASSWORD, repeat = password) {
   const [first, second] = wrapper.findAll('input[autocomplete="new-password"]')
@@ -42,11 +47,26 @@ async function fillAndSubmit(wrapper: Wrapper, password = PASSWORD, repeat = pas
   await flushPromises()
 }
 
+/** The error the field names in `aria-describedby`, and that the field is marked and holds the focus. */
+function expectFieldProblem(wrapper: Wrapper, name: string, message: string) {
+  const input = wrapper.find(`input[name="${name}"]`)
+  expect(input.attributes('aria-invalid')).toBe('true')
+  const described = (input.attributes('aria-describedby') ?? '').split(' ')
+  const texts = described.map((id) => wrapper.find(`[id="${id}"]`).text())
+  expect(texts).toContain(message)
+  expect(document.activeElement).toBe(input.element)
+  expect(wrapper.find('[role="alert"]').exists()).toBe(false)
+}
+
 function never<T>(): Promise<T> {
   return new Promise(() => {})
 }
 
 describe('ActivateView', () => {
+  afterEach(() => {
+    for (const wrapper of mounted.splice(0)) wrapper.unmount()
+  })
+
   beforeEach(() => {
     resetSession()
     vi.mocked(fetchMe).mockReset().mockRejectedValue(new ApiError(401, 'not_authenticated'))
@@ -69,12 +89,8 @@ describe('ActivateView', () => {
   })
 
   it('moves the focus to the new password once the form shows', async () => {
-    const router = createAppRouter(createMemoryHistory())
-    await router.push(`/activate#${TOKEN}`)
-    const wrapper = mount(ActivateView, { global: { plugins: [router] }, attachTo: document.body })
-    await flushPromises()
+    const { wrapper } = await mountActivate()
     expect(document.activeElement).toBe(wrapper.find('input[name="password"]').element)
-    wrapper.unmount()
   })
 
   it('shows the check of the link while it runs', async () => {
@@ -109,7 +125,8 @@ describe('ActivateView', () => {
       .mockResolvedValueOnce({ email: 'jan@example.com' })
     const { wrapper } = await mountActivate()
     expect(wrapper.find('[role="alert"]').text()).toBe('Nie udało się sprawdzić linku. Spróbuj ponownie.')
-    await wrapper.find('button').trigger('click')
+    const retry = wrapper.findAll('button').find((button) => button.text() === 'Spróbuj ponownie')
+    await retry?.trigger('click')
     await flushPromises()
     expect(lookupActivation).toHaveBeenCalledTimes(2)
     expect(wrapper.find('form').text()).toContain('jan@example.com')
@@ -119,15 +136,25 @@ describe('ActivateView', () => {
     const { wrapper } = await mountActivate()
     // 11 characters, 22 UTF-16 units.
     await fillAndSubmit(wrapper, '😀'.repeat(11))
-    expect(wrapper.find('[role="alert"]').text()).toBe('Hasło musi mieć co najmniej 12 znaków.')
-    expect(wrapper.find('input[name="password"]').attributes('aria-invalid')).toBe('true')
+    expectFieldProblem(wrapper, 'password', 'Hasło musi mieć co najmniej 12 znaków.')
     expect(activate).not.toHaveBeenCalled()
+  })
+
+  it('writes the same problem anew when the form is sent again, so the live region announces it again', async () => {
+    const { wrapper } = await mountActivate()
+    await fillAndSubmit(wrapper, 'krotkie')
+    const first = wrapper.find('input[name="password"]').attributes('aria-describedby')?.split(' ').pop() ?? ''
+    const firstError = wrapper.find(`[id="${first}"]`).element
+    await wrapper.find('form').trigger('submit')
+    await flushPromises()
+    expect(wrapper.find(`[id="${first}"]`).element).not.toBe(firstError)
+    expectFieldProblem(wrapper, 'password', 'Hasło musi mieć co najmniej 12 znaków.')
   })
 
   it('refuses a password longer than 128 characters', async () => {
     const { wrapper } = await mountActivate()
     await fillAndSubmit(wrapper, 'a'.repeat(129))
-    expect(wrapper.find('[role="alert"]').text()).toBe('Hasło może mieć najwyżej 128 znaków.')
+    expectFieldProblem(wrapper, 'password', 'Hasło może mieć najwyżej 128 znaków.')
     expect(activate).not.toHaveBeenCalled()
   })
 
@@ -140,8 +167,7 @@ describe('ActivateView', () => {
   it('refuses two different passwords', async () => {
     const { wrapper } = await mountActivate()
     await fillAndSubmit(wrapper, PASSWORD, `${PASSWORD}!`)
-    expect(wrapper.find('[role="alert"]').text()).toBe('Hasła nie są takie same.')
-    expect(wrapper.find('input[name="password-repeat"]').attributes('aria-invalid')).toBe('true')
+    expectFieldProblem(wrapper, 'password-repeat', 'Hasła nie są takie same.')
     expect(wrapper.find('input[name="password"]').attributes('aria-invalid')).toBeUndefined()
     expect(activate).not.toHaveBeenCalled()
   })
@@ -150,7 +176,7 @@ describe('ActivateView', () => {
     vi.mocked(activate).mockRejectedValue(new ApiError(400, 'password_policy'))
     const { wrapper } = await mountActivate()
     await fillAndSubmit(wrapper)
-    expect(wrapper.find('[role="alert"]').text()).toBe('Hasło musi mieć od 12 do 128 znaków.')
+    expectFieldProblem(wrapper, 'password', 'Hasło musi mieć od 12 do 128 znaków.')
     expect(wrapper.find('form').exists()).toBe(true)
     expect(wrapper.find('button[type="submit"]').attributes('disabled')).toBeUndefined()
   })
@@ -161,9 +187,13 @@ describe('ActivateView', () => {
   ])('shows a generic failure on %s', async (_, error) => {
     vi.mocked(activate).mockRejectedValue(error)
     const { wrapper } = await mountActivate()
+    // The focus that the form took when it showed: a server failure is the form's, it moves nothing.
+    ;(document.activeElement as HTMLElement).blur()
     await fillAndSubmit(wrapper)
     expect(wrapper.find('[role="alert"]').text()).toBe('Nie udało się ustawić hasła. Spróbuj ponownie.')
     expect(wrapper.find('form').exists()).toBe(true)
+    expect(wrapper.find('input[aria-invalid="true"]').exists()).toBe(false)
+    expect(document.activeElement).toBe(document.body)
   })
 
   it('calls the link invalid when it was used up before the form was sent', async () => {

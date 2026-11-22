@@ -82,6 +82,42 @@ export const VIEWS: readonly View[] = [
     },
   },
   {
+    name: 'view-login-error',
+    risk: 'komunikat błędu logowania nie zmienia wyglądu i nie łamie dostępności',
+    path: '/login',
+    modes: { AUTH: 'anonymous', LOGIN: 'invalid' },
+    // Submitted with Enter in the password field, never by a click: the pointer over the button would put its hover
+    // into the baseline.
+    ready: async (page) => {
+      const main = page.getByRole('main')
+      await expect(main.getByRole('heading', { level: 1, name: 'Logowanie', exact: true })).toBeVisible()
+      await main.getByLabel('E-mail', { exact: true }).fill('jan.kowalski@example.com')
+      const password = main.getByLabel('Hasło', { exact: true })
+      await password.fill('zle-haslo')
+      await password.press('Enter')
+      await expect(main.getByRole('alert')).toHaveText('Nieprawidłowy e-mail lub hasło.')
+    },
+  },
+  {
+    name: 'view-activate-error',
+    risk: 'błąd przy polu hasła aktywacji nie zmienia wyglądu i nie łamie dostępności',
+    path: '/activate#token',
+    modes: { AUTH: 'anonymous', ACTIVATION: 'valid' },
+    // A too short password in both fields, submitted with Enter in the second one (not by a click, see above): the
+    // problem is shown at the first field, which takes the focus back.
+    ready: async (page) => {
+      const main = page.getByRole('main')
+      const password = main.getByLabel('Nowe hasło', { exact: true })
+      await expect(password).toBeFocused()
+      await password.fill('krotkie')
+      const repeat = main.getByLabel('Powtórz hasło', { exact: true })
+      await repeat.fill('krotkie')
+      await repeat.press('Enter')
+      await expect(main.getByText('Hasło musi mieć co najmniej 12 znaków.')).toBeVisible()
+      await expect(password).toBeFocused()
+    },
+  },
+  {
     name: 'view-feed',
     risk: 'widok feedu nie zmienia wyglądu i nie łamie dostępności',
     path: '/',

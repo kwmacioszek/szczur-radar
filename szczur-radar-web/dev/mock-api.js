@@ -114,7 +114,8 @@
  * START: 'accepted', 'busy' or 'not_configured', see POST /api/admin/pipeline-runs above.
  * ACTIVATION (/activate#<any token>; the token is not checked): 'valid' (lookup → e-mail, activation → 204, then
  *   /login with the "password set" notice), 'invalid' (both → 400 activation_link_invalid), 'policy' (activation →
- *   400 password_policy), 'checking' (lookup hangs 60 s), 'sending' (activation hangs 60 s), 'error' (both → 500).
+ *   400 password_policy), 'checking' (lookup hangs 60 s), 'sending' (activation hangs 60 s), 'error' (both → 500),
+ *   'unavailable' (lookup → e-mail, activation → 500: the link works, setting the password fails).
  *   Client-side validation errors need no mode: submit a short or mismatched password.
  * The filter (FR-011a) has the API's meaning: q, kind and direction keep the posts with one target meeting every
  * given condition — its quote contains q (Polish lower case, q stripped of the contract §10 white space, blank = no
@@ -149,7 +150,7 @@ async (page, modes = {}) => {
     AUTH: ['admin', 'user', 'anonymous'],
     LOGIN: ['ok', 'invalid', 'limited'],
     START: ['accepted', 'busy', 'not_configured'],
-    ACTIVATION: ['valid', 'invalid', 'policy', 'checking', 'sending', 'error'],
+    ACTIVATION: ['valid', 'invalid', 'policy', 'checking', 'sending', 'error', 'unavailable'],
     FRESHNESS: ['date', 'apart', 'wykop', 'none', 'error'],
     MISSING: ['gaps', 'none', 'error'],
     QUALITY: ['data', 'few', 'nolang', 'none', 'error'],
@@ -638,6 +639,7 @@ async (page, modes = {}) => {
       if (ACTIVATION === 'invalid') return json(route, { detail: 'activation_link_invalid' }, 400)
       if (lookup) return json(route, { email: 'jan.kowalski@example.com' })
       if (ACTIVATION === 'policy') return json(route, { detail: 'password_policy' }, 400)
+      if (ACTIVATION === 'unavailable') return json(route, { detail: 'internal_error' }, 500)
       return fulfill(route, { status: 204 })
     }
     // Like the API (deny by default): every other route needs a session, /api/admin/ an admin's.

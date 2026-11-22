@@ -233,7 +233,7 @@ m5 = {  # lane, title (## Foundations / ## Slices), outcome (At a glance, shorte
     "S-46": ("A", "Motyw jasny i ciemny", "użytkownik przełącza motyw jasny i ciemny w nowej palecie, a wybór jest zapamiętany", "done", "F-06", "light-dark-theme-switch"),
     "F-07": ("A", "Projekt UI/UX całej aplikacji", "(fundament) projekt UI/UX od nowa według standardów: architektura informacji, tokeny, komponenty, prototypy ekranów", "done", "—", "ui-design-system"),
     "F-08": ("A", "Tokeny, kroje i komponenty bazowe", "(fundament) tokeny, kroje i komponenty bazowe z projektu F-07 w aplikacji; obecne widoki w nowym wyglądzie, w starym układzie", "done", "F-07, S-46", "design-tokens-and-components"),
-    "S-49": ("A", "Logowanie na wspólnym fundamencie", "logowanie i aktywacja na wspólnych komponentach i tokenach, bez literałów stylu", "proposed", "F-08", "login-on-shared-foundation"),
+    "S-49": ("A", "Logowanie na wspólnym fundamencie", "logowanie i aktywacja na wspólnych komponentach i tokenach, bez literałów stylu", "done", "F-08", "login-on-shared-foundation"),
     "S-47": ("A", "Powłoka z nawigacją u góry", "pasek u góry: nawigacja według roli, data danych per źródło, motyw, wylogowanie; treść w jednej kolumnie", "proposed", "F-08", "app-shell-navigation"),
     "S-48": ("A", "Wspólne stany i stronicowanie", "każdy widok ma to samo ładowanie, pustą listę, błąd z ponowieniem i stronicowanie", "proposed", "S-47", "shared-view-states"),
     "S-50": ("A", "Panel admina w trzech częściach", "Przebiegi, Jakość ocen i Nieudane posty pod własnymi adresami; strona przebiegu osobno", "proposed", "S-48", "admin-panel-components"),

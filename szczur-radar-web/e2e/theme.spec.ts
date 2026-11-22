@@ -95,4 +95,22 @@ test.describe('logowanie', () => {
 
     await expect.poll(() => seen(page)).toEqual(DARK)
   })
+
+  test('wybór motywu na logowaniu przetrwa przeładowanie strony', async ({ page }) => {
+    await page.emulateMedia({ colorScheme: 'light' })
+    await page.goto('/login')
+    // The switch stands in the corner of the page, outside <main> and without a banner (there is no header here).
+    const toggle = page.getByRole('button', { name: 'Ciemny motyw', exact: true })
+    await expect(page.getByRole('main').getByRole('button', { name: 'Ciemny motyw', exact: true })).toHaveCount(0)
+    await expect(page.getByRole('banner')).toHaveCount(0)
+    await expect(toggle).toHaveAttribute('aria-pressed', 'false')
+
+    await toggle.click()
+    await expect(toggle).toHaveAttribute('aria-pressed', 'true')
+    await expect.poll(() => seen(page)).toEqual(DARK)
+
+    await page.reload()
+    await expect(toggle).toHaveAttribute('aria-pressed', 'true')
+    await expect.poll(() => seen(page)).toEqual(DARK)
+  })
 })

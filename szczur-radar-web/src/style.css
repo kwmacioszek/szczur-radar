@@ -266,53 +266,10 @@ h3 {
   white-space: nowrap;
 }
 
-/* Centered single-card page (login). */
-.page {
-  min-height: 100svh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-5) var(--space-4);
-  box-sizing: border-box;
-}
-
-.card {
-  width: 100%;
-  max-width: 34rem;
-  text-align: center;
-
-  /* The root font size is 16px at every width; above 1024px the width is what 18px gave. */
-  @media (min-width: 1025px) {
-    max-width: 38.25rem;
-  }
-}
-
-/* Sentence case, no tracking: the design has no capitals in labels. */
-.eyebrow {
-  margin: 0 0 var(--space-3);
-  font-size: var(--font-size-sm);
-  color: var(--accent);
-}
-
-.card h1 {
-  margin: 0 0 var(--space-4);
-  font-size: var(--font-size-display);
-
-  @media (max-width: 1024px) {
-    font-size: var(--font-size-5xl);
-  }
-}
-
-.lead {
-  color: var(--text);
-  line-height: var(--leading-normal);
-}
-
 /*
  * Buttons, links and form fields. The global button is the plain variant of the design (the edge of a control, --text-h
  * text, as tall as a field): a view's own button looks like it, AppButton adds the primary variant, an icon, the large
- * size and icon-only. Its states sit in :where() to keep element specificity, so a scoped style (e.g. the filled login
- * button) always wins.
+ * size and icon-only. Its states sit in :where() to keep element specificity, so a scoped style always wins.
  */
 button {
   display: inline-flex;
@@ -359,9 +316,7 @@ a:where(:hover) {
 /*
  * Text, password, e-mail, search, date and choice fields share one look; a view gives them no style of its own and
  * sets only where they sit. They are as tall as a button (--control-height), so a row of fields and buttons lines up.
- * The list of types is explicit: a control of another type is not styled here. The login form keeps its own local style
- * until its screen is rebuilt (S-49): the descendants of .login-form are left out of every rule below, in :where() so
- * the selectors keep their specificity.
+ * The list of types is explicit: a control of another type is not styled here.
  */
 :is(
     input[type='text'],
@@ -370,7 +325,7 @@ a:where(:hover) {
     input[type='search'],
     input[type='date'],
     select
-  ):where(:not(.login-form *)) {
+  ) {
   box-sizing: border-box;
   height: var(--control-height);
   padding: 0 var(--space-3);
@@ -389,7 +344,7 @@ a:where(:hover) {
     input[type='search'],
     input[type='date'],
     select
-  ):where(:not(.login-form *)):where(:hover:not(:disabled)) {
+  ):where(:hover:not(:disabled)) {
   border-color: var(--text);
 }
 
@@ -401,7 +356,7 @@ a:where(:hover) {
     input[type='search'],
     input[type='date'],
     select
-  )[aria-invalid='true']:where(:not(.login-form *)) {
+  )[aria-invalid='true'] {
   border-color: var(--destructive);
   box-shadow: inset 0 0 0 1px var(--destructive);
 }
@@ -413,13 +368,13 @@ a:where(:hover) {
     input[type='search'],
     input[type='date'],
     select
-  ):where(:not(.login-form *)):disabled {
+  ):disabled {
   background: var(--surface-2);
   opacity: 0.6;
   cursor: not-allowed;
 }
 
-:is(input[type='text'], input[type='email'], input[type='password'], input[type='search']):where(:not(.login-form *))::placeholder {
+:is(input[type='text'], input[type='email'], input[type='password'], input[type='search'])::placeholder {
   color: var(--text-muted);
   opacity: 1;
 }
