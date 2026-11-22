@@ -442,21 +442,21 @@ Brak zmian danych i API. Wdrożenie web jest niezależne od API: powłoka toleru
 
 #### Automated
 
-- [x] 2.1 Testy jednostkowe przechodzą, w tym router, AppShell, widoki i skan CLEANED
-- [x] 2.2 Typecheck i build przechodzą
-- [x] 2.3 Dotychczasowe testy E2E przechodzą bez zmian w ich lokatorach
-- [x] 2.4 Testy wizualne i axe przechodzą na nowych wzorcach widoków
-- [x] 2.5 Drugi przebieg bez zmian w kodzie jest zielony (zrzuty powtarzalne)
-- [x] 2.6 W kodzie nie ma odwołań do AppHeader
-- [x] 2.7 Powrót z posta do listy przywraca pozycję i fokus na odnośniku posta
+- [x] 2.1 Testy jednostkowe przechodzą, w tym router, AppShell, widoki i skan CLEANED — 92234f0
+- [x] 2.2 Typecheck i build przechodzą — 92234f0
+- [x] 2.3 Dotychczasowe testy E2E przechodzą bez zmian w ich lokatorach — 92234f0
+- [x] 2.4 Testy wizualne i axe przechodzą na nowych wzorcach widoków — 92234f0
+- [x] 2.5 Drugi przebieg bez zmian w kodzie jest zielony (zrzuty powtarzalne) — 92234f0
+- [x] 2.6 W kodzie nie ma odwołań do AppHeader — 92234f0
+- [x] 2.7 Powrót z posta do listy przywraca pozycję i fokus na odnośniku posta — 92234f0
 
 ### Phase 3: Testy E2E powłoki i weryfikacja
 
 #### Automated
 
-- [ ] 3.1 Testy jednostkowe przechodzą, w tym strażnik atrapy
-- [ ] 3.2 Testy E2E przechodzą, w tym shell.spec.ts
-- [ ] 3.3 Testy wizualne i axe przechodzą
+- [x] 3.1 Testy jednostkowe przechodzą, w tym strażnik atrapy
+- [x] 3.2 Testy E2E przechodzą, w tym shell.spec.ts
+- [x] 3.3 Testy wizualne i axe przechodzą
 - [ ] 3.4 CI na PR jest zielone, w tym web-e2e i web-container-smoke
 - [ ] 3.5 W PR env pasek działa na prawdziwym API (kontrola agenta przez playwright-cli)
 
