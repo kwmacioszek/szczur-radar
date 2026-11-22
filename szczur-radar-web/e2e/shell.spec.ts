@@ -135,6 +135,24 @@ test.describe('data danych', () => {
       await expect(banner.getByText('admin@szczur-radar.pl', { exact: true })).toBeHidden()
       await expect(banner.getByRole('button', { name: 'Wyloguj', exact: true })).toBeVisible()
     })
+
+    test('pasek z datą danych nie poszerza strony na wąskim ekranie', async ({ page }) => {
+      await page.goto('/')
+      await expect(page.getByRole('banner').getByText('Dane:', { exact: true })).toBeVisible()
+
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375)
+    })
+
+    test.describe('bez żadnej aktualizacji', () => {
+      test.use({ modes: { FRESHNESS: 'none' } })
+
+      test('pasek z napisem o braku aktualizacji nie poszerza strony na wąskim ekranie', async ({ page }) => {
+        await page.goto('/')
+        await expect(page.getByRole('banner').getByText('Dane nie były jeszcze aktualizowane.')).toBeVisible()
+
+        expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375)
+      })
+    })
   })
 })
 

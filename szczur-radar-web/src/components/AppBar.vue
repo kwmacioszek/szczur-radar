@@ -225,9 +225,12 @@ defineSlots<{ notifications?(): unknown }>()
     padding: 0 var(--space-3);
   }
 
+  /* border-box: with `flex: 0 0 100%` the padding would otherwise add to the bar's width and the page would scroll
+     sideways by the bar's own gutter (found in the PR env, where the label reads "Dane nie były jeszcze …"). */
   .freshness {
     order: 4;
     flex: 0 0 100%;
+    box-sizing: border-box;
     margin: 0;
     padding: 0 var(--space-3);
   }
