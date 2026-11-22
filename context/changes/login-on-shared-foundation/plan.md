@@ -353,16 +353,16 @@ Bez migracji danych i bez zmian API. Wzorce F-06 `view-login` i `view-activate` 
 
 #### Automated
 
-- [x] 4.1 Nowe wzorce błędu w czterech projektach, nic innego
-- [x] 4.2 Testy wizualne i axe zielone, także na stanach błędu
-- [x] 4.3 Testy jednostkowe przechodzą
-- [x] 4.4 Typecheck i build przechodzą
-- [x] 4.5 Testy w przeglądarce zielone
-- [x] 4.6 Zgodność z projektem, kontrast i strony (design-check app)
-- [x] 4.7 Dokumentacja zaktualizowana
-- [ ] 4.8 CI na PR zielone
-- [ ] 4.9 Opis PR zawiera grupy wzorców i Refs
-- [ ] 4.10 Strony publiczne w PR env wyglądają jak prototypy
+- [x] 4.1 Nowe wzorce błędu w czterech projektach, nic innego — 2123d07
+- [x] 4.2 Testy wizualne i axe zielone, także na stanach błędu — 2123d07
+- [x] 4.3 Testy jednostkowe przechodzą — 2123d07
+- [x] 4.4 Typecheck i build przechodzą — 2123d07
+- [x] 4.5 Testy w przeglądarce zielone — 2123d07
+- [x] 4.6 Zgodność z projektem, kontrast i strony (design-check app) — 2123d07
+- [x] 4.7 Dokumentacja zaktualizowana — 2123d07
+- [x] 4.8 CI na PR zielone — 2123d07
+- [x] 4.9 Opis PR zawiera grupy wzorców i Refs — 2123d07
+- [x] 4.10 Strony publiczne w PR env wyglądają jak prototypy — 2123d07
 
 #### Manual
 
