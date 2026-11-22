@@ -220,8 +220,20 @@ export interface State {
   pressedByTheme?: true
 }
 
+/**
+ * The navigation's link that is not the current one, in the bar of the administrator (the first variant of „Pasek
+ * aplikacji”): the four bars of the section share their link names, so the bar is found by its title, not by `nth`.
+ */
+function navigationLink(region: Locator): Locator {
+  return region
+    .getByRole('listitem')
+    .filter({ hasText: 'Administrator z dzwonkiem' })
+    .getByRole('navigation', { name: 'Główna', exact: true })
+    .getByRole('link', { name: 'Panel admina', exact: true })
+}
+
 // The catalogue gives each control of a state its own accessible name within its region (no `nth`): the primary and the
-// plain button, the icon-only one, the link, the e-mail and search fields and the theme toggle.
+// plain button, the icon-only one, the link, the e-mail and search fields, the theme toggle and (below) the bar's link.
 export const STATES: readonly State[] = [
   {
     name: 'state-przycisk-primary-hover',
@@ -315,5 +327,19 @@ export const STATES: readonly State[] = [
     control: (region) => region.getByRole('button', { name: 'Ciemny motyw', exact: true }),
     state: 'focus',
     pressedByTheme: true,
+  },
+  {
+    name: 'state-nawigacja-hover',
+    risk: 'hover pozycji nawigacji w pasku nie zmienia wyglądu',
+    region: 'Pasek aplikacji',
+    control: navigationLink,
+    state: 'hover',
+  },
+  {
+    name: 'state-nawigacja-focus',
+    risk: 'pierścień fokusu pozycji nawigacji w pasku nie zmienia wyglądu',
+    region: 'Pasek aplikacji',
+    control: navigationLink,
+    state: 'focus',
   },
 ]
