@@ -42,6 +42,11 @@ async function bellLoaded(page: Page): Promise<void> {
   await expect(page.getByRole('banner').getByRole('button', { name: /^Powiadomienia, / })).toBeVisible()
 }
 
+/** Every logged-in page is ready only with the date of the data in the bar (it sets the bar's height and its row). */
+async function freshnessLoaded(page: Page): Promise<void> {
+  await expect(page.getByRole('banner').getByText('Dane:', { exact: true })).toBeVisible()
+}
+
 export interface View {
   /** The baseline's file name, without .png. */
   name: string
@@ -89,8 +94,8 @@ export const VIEWS: readonly View[] = [
     ready: async (page) => {
       const main = page.getByRole('main')
       await expect(main.getByRole('article')).toHaveCount(FEED_PAGE)
-      await expect(main.getByText('Dane zaktualizowane:')).toBeVisible()
       await expect(main.getByRole('status')).toHaveText('Ocenione posty: 120')
+      await freshnessLoaded(page)
     },
     clipToArticle: FEED_SHOWN_ARTICLES,
   },
@@ -104,6 +109,7 @@ export const VIEWS: readonly View[] = [
       await expect(main.getByRole('heading', { level: 1, name: 'Wpis użytkownika uzytkownik0' })).toBeVisible()
       await expect(main.getByRole('heading', { level: 2, name: 'Ocena', exact: true })).toBeVisible()
       await expect(main.getByRole('heading', { level: 3, name: 'CDR', exact: true })).toBeVisible()
+      await freshnessLoaded(page)
     },
   },
   {
@@ -125,6 +131,7 @@ export const VIEWS: readonly View[] = [
       await expect(region('Nieudane posty').getByRole('checkbox')).toHaveCount(4)
       await expect(main.getByText('Wczytywanie…', { exact: true })).toHaveCount(0)
       await bellLoaded(page)
+      await freshnessLoaded(page)
     },
   },
   {
@@ -137,6 +144,7 @@ export const VIEWS: readonly View[] = [
       await expect(main.getByRole('heading', { level: 2, name: 'Wynik per źródło', exact: true })).toBeVisible()
       await expect(main.getByRole('heading', { level: 2, name: 'Kroki', exact: true })).toBeVisible()
       await bellLoaded(page)
+      await freshnessLoaded(page)
     },
   },
 ]

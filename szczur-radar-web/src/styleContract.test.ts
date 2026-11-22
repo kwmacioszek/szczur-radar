@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import appBar from './components/AppBar.vue?raw'
 import appButton from './components/AppButton.vue?raw'
-import appHeader from './components/AppHeader.vue?raw'
 import appIcon from './components/AppIcon.vue?raw'
+import appShell from './components/AppShell.vue?raw'
 import feedFilter from './components/FeedFilter.vue?raw'
 import iconSprite from './components/IconSprite.vue?raw'
 import notificationBell from './components/NotificationBell.vue?raw'
@@ -124,7 +124,6 @@ function contrast(a: string, b: string): number {
  */
 const CLEANED: Record<string, string> = {
   'src/views/AdminView.vue': adminView,
-  'src/components/AppHeader.vue': appHeader,
   'src/components/AppButton.vue': appButton,
   'src/components/AppIcon.vue': appIcon,
   'src/components/IconSprite.vue': iconSprite,
@@ -143,6 +142,7 @@ const CLEANED: Record<string, string> = {
   'src/views/RunDetailView.vue': runDetailView,
   'src/components/ThemeToggle.vue': themeToggle,
   'src/components/AppBar.vue': appBar,
+  'src/components/AppShell.vue': appShell,
   'src/components/PageHeader.vue': pageHeader,
 }
 

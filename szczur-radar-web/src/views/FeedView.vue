@@ -1,20 +1,18 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref, useTemplateRef, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { type Freshness, fetchFreshness } from '../api/freshness'
 import { FEED_PAGE_SIZE, type Page, type PostFilter, type PostItem, fetchPosts } from '../api/posts'
 import AppButton from '../components/AppButton.vue'
-import AppHeader from '../components/AppHeader.vue'
 import FeedFilter from '../components/FeedFilter.vue'
+import PageHeader from '../components/PageHeader.vue'
 import PostCard from '../components/PostCard.vue'
 import StatusMessage from '../components/StatusMessage.vue'
 import { filterFromQuery, filterToQuery, isFilterActive, pageFromQuery, sameFilter } from '../feedFilter'
-import { formatDateTime, label } from '../labels'
 import { reportFeedLoaded } from '../router/scroll'
 
 const route = useRoute()
 const router = useRouter()
-const heading = useTemplateRef<HTMLHeadingElement>('feed-title')
+const header = useTemplateRef<InstanceType<typeof PageHeader>>('header')
 
 /**
  * The page on screen: the requested page number and filter with their answer. The result line, the
@@ -53,25 +51,9 @@ const resultText = computed(() => {
 })
 
 /**
- * When each source's data was last updated, read once on entry alongside the first page, not on every
- * page change. Null while loading and after an error: the label is then left out and the list stays.
- * An answer without `sources` leaves it out too: API and web deploy independently, so an older API may
- * answer with its old shape for a while. `freshnessSettled` resolves (never rejects) once the label is
- * shown or left out.
- */
-const freshness = ref<Freshness | null>(null)
-const freshnessSettled = fetchFreshness()
-  .then((result) => {
-    freshness.value = result
-  })
-  .catch(() => {})
-
-/**
  * `moveFocus`: after a successful load, focus the heading, the start of the new list. Each load
  * that is still the latest one reports how it ended, so a return from a post can restore the
- * position once the list is on screen (router/scroll.ts). A list is reported only after the
- * freshness label is settled: the label sits above the list, so the page then has the height the
- * saved position was taken at.
+ * position once the list is on screen (router/scroll.ts).
  */
 async function load(target: number, conditions: PostFilter, { moveFocus = false } = {}): Promise<void> {
   const id = ++latestLoad
@@ -82,8 +64,7 @@ async function load(target: number, conditions: PostFilter, { moveFocus = false 
     if (id !== latestLoad) return
     shown.value = { page: target, filter: conditions, result }
     loadingPage.value = null
-    if (moveFocus) heading.value?.focus()
-    await freshnessSettled
+    if (moveFocus) header.value?.focus()
     await nextTick()
     if (id !== latestLoad) return
     reportFeedLoaded('ok')
@@ -162,23 +143,9 @@ watch(
 </script>
 
 <template>
-  <AppHeader />
-  <main class="feed">
+  <div class="feed">
     <section aria-labelledby="feed-title">
-      <h1 id="feed-title" ref="feed-title" tabindex="-1">Posty</h1>
-      <p v-if="freshness?.sources" class="freshness">
-        <template v-if="freshness.sources.length > 0">
-          Dane zaktualizowane:
-          <template v-for="(update, index) in freshness.sources" :key="update.source">
-            <template v-if="index > 0"> · </template>
-            <span class="source-update">
-              {{ label('source', update.source) }}
-              <time :datetime="update.lastUpdatedAt">{{ formatDateTime(update.lastUpdatedAt) }}</time>
-            </span>
-          </template>
-        </template>
-        <template v-else>Dane nie były jeszcze aktualizowane.</template>
-      </p>
+      <PageHeader ref="header" class="head" title="Posty" heading-id="feed-title" />
       <FeedFilter :filter="filter" @apply="applyFilter" @clear="clearFilter" />
       <!-- In the document from the start, so a screen reader announces each new count. -->
       <p class="result" role="status">{{ resultText }}</p>
@@ -209,15 +176,13 @@ watch(
         </template>
       </div>
     </section>
-  </main>
+  </div>
 </template>
 
 <style scoped>
 .feed {
   max-width: 48rem;
   margin: 0 auto;
-  padding: var(--space-4);
-  box-sizing: border-box;
 }
 
 /* The root font size is 16px at every width; above 1024px the width is what 18px gave (design-tokens-and-components). */
@@ -227,24 +192,9 @@ watch(
   }
 }
 
-h1 {
-  margin: var(--space-2) 0 var(--space-4);
-}
-
-/* Closer to the heading than to the list it describes. */
-h1:has(+ .freshness) {
-  margin-bottom: var(--space-2);
-}
-
-.freshness {
-  margin: 0 0 var(--space-4);
-  font-size: var(--font-size-sm);
-  color: var(--text);
-}
-
-/* A source and its date stay on one line; the label breaks between the sources. */
-.source-update {
-  white-space: nowrap;
+/* The page's width is the shell's column's; the title stands apart from the filter below it. */
+.head {
+  margin-bottom: var(--space-4);
 }
 
 .result {

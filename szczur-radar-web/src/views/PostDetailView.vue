@@ -4,14 +4,14 @@ import { useRoute, useRouter } from 'vue-router'
 import { ApiError } from '../api/client'
 import { type PostItem, fetchPost, fetchPostRaw } from '../api/posts'
 import AppButton from '../components/AppButton.vue'
-import AppHeader from '../components/AppHeader.vue'
+import PageHeader from '../components/PageHeader.vue'
 import PostAssessment from '../components/PostAssessment.vue'
 import StatusMessage from '../components/StatusMessage.vue'
 import { formatDateTime, postOrigin, postType } from '../labels'
 
 const route = useRoute()
 const router = useRouter()
-const heading = useTemplateRef<HTMLHeadingElement>('post-title')
+const header = useTemplateRef<InstanceType<typeof PageHeader>>('header')
 const rawSummary = useTemplateRef<HTMLElement>('raw-summary')
 
 /** `missing`: 404 or 400, an id that is not an assessed post; `failed`: any other error. */
@@ -65,7 +65,7 @@ async function load(id: string): Promise<void> {
     post.value = result
     state.value = 'loaded'
     await nextTick()
-    if (current === latestLoad) heading.value?.focus()
+    if (current === latestLoad) header.value?.focus()
   } catch (error) {
     if (current !== latestLoad) return
     const missing = error instanceof ApiError && (error.status === 404 || error.status === 400)
@@ -135,11 +135,10 @@ watch(
 </script>
 
 <template>
-  <AppHeader />
-  <main class="post-detail">
+  <div class="post-detail">
     <a class="back" :href="listHref" @click="toList"><span aria-hidden="true">←</span> Posty</a>
     <section aria-labelledby="post-title" :aria-busy="state === 'loading' ? 'true' : undefined">
-      <h1 id="post-title" ref="post-title" tabindex="-1">{{ title }}</h1>
+      <PageHeader ref="header" class="head" :title="title" heading-id="post-title" />
       <p v-if="state === 'loading'" class="loading">Wczytywanie posta…</p>
       <template v-else-if="state === 'failed'">
         <StatusMessage tone="error" class="message">Nie udało się wczytać posta.</StatusMessage>
@@ -186,15 +185,13 @@ watch(
         </details>
       </template>
     </section>
-  </main>
+  </div>
 </template>
 
 <style scoped>
 .post-detail {
   max-width: 48rem;
   margin: 0 auto;
-  padding: var(--space-4);
-  box-sizing: border-box;
 }
 
 /* The root font size is 16px at every width; above 1024px the width is what 18px gave (design-tokens-and-components). */
@@ -209,12 +206,9 @@ watch(
   margin-top: var(--space-2);
 }
 
-h1 {
+/* The title stands apart from the link back above it and from the post below it. */
+.head {
   margin: var(--space-4) 0 var(--space-2);
-  font-size: var(--font-size-2xl);
-  line-height: var(--leading-snug);
-  letter-spacing: var(--tracking-snug);
-  overflow-wrap: anywhere;
 }
 
 h2 {

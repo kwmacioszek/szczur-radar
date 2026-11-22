@@ -1,7 +1,7 @@
 <script setup lang="ts">
-// The admin's notifications in the header (AppHeader renders it for an admin only). The list lives in
-// notificationsStore, so the bell mounted again on the next page (each view renders its own AppHeader) shows it at
-// once. It is read again on mount, after a page change and when the tab becomes visible, unless it is fresh
+// The admin's notifications in the header (AppShell renders it for an admin only). The list lives in
+// notificationsStore, which lives with the session: the session's end empties it, and the shell mounts anew after the
+// next login. It is read again on mount, after a page change and when the tab becomes visible, unless it is fresh
 // (FRESH_MS); every 60 s only on the admin's pages (/admin, /admin/runs/:id) while the tab is visible, so an open
 // feed tab lets the API sleep. A chosen notification is marked read and its run's page opens. A failed refresh keeps
 // the list on screen; only without a list is it an error. NotificationMenu draws it.
@@ -76,8 +76,7 @@ let removeAfterEach: (() => void) | undefined
 
 onMounted(() => {
   refresh()
-  // A page change within this view (another run's page) and to another view: this bell is still mounted when the
-  // router reports it, the next view's bell finds the read under way.
+  // A page change, also to another view: the shell, and with it this bell, stays mounted.
   removeAfterEach = router.afterEach((_to, _from, failure) => {
     if (!failure) refresh()
   })

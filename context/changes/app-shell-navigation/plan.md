@@ -433,22 +433,22 @@ Brak zmian danych i API. Wdrożenie web jest niezależne od API: powłoka toleru
 
 #### Automated
 
-- [x] 1.1 Testy jednostkowe przechodzą, w tym AppBar, PageHeader i skan CLEANED
-- [x] 1.2 Typecheck i build przechodzą
-- [x] 1.3 Testy wizualne i axe przechodzą z nowymi wzorcami katalogu
-- [x] 1.4 W kitchen sink przy 320 px sekcja „Pasek aplikacji” nie przewija strony w poziomie, także z otwartą listą dzwonka
+- [x] 1.1 Testy jednostkowe przechodzą, w tym AppBar, PageHeader i skan CLEANED — 2ed6633
+- [x] 1.2 Typecheck i build przechodzą — 2ed6633
+- [x] 1.3 Testy wizualne i axe przechodzą z nowymi wzorcami katalogu — 2ed6633
+- [x] 1.4 W kitchen sink przy 320 px sekcja „Pasek aplikacji” nie przewija strony w poziomie, także z otwartą listą dzwonka — 2ed6633
 
 ### Phase 2: Powłoka w routerze i widoki w niej
 
 #### Automated
 
-- [ ] 2.1 Testy jednostkowe przechodzą, w tym router, AppShell, widoki i skan CLEANED
-- [ ] 2.2 Typecheck i build przechodzą
-- [ ] 2.3 Dotychczasowe testy E2E przechodzą bez zmian w ich lokatorach
-- [ ] 2.4 Testy wizualne i axe przechodzą na nowych wzorcach widoków
-- [ ] 2.5 Drugi przebieg bez zmian w kodzie jest zielony (zrzuty powtarzalne)
-- [ ] 2.6 W kodzie nie ma odwołań do AppHeader
-- [ ] 2.7 Powrót z posta do listy przywraca pozycję i fokus na odnośniku posta
+- [x] 2.1 Testy jednostkowe przechodzą, w tym router, AppShell, widoki i skan CLEANED
+- [x] 2.2 Typecheck i build przechodzą
+- [x] 2.3 Dotychczasowe testy E2E przechodzą bez zmian w ich lokatorach
+- [x] 2.4 Testy wizualne i axe przechodzą na nowych wzorcach widoków
+- [x] 2.5 Drugi przebieg bez zmian w kodzie jest zielony (zrzuty powtarzalne)
+- [x] 2.6 W kodzie nie ma odwołań do AppHeader
+- [x] 2.7 Powrót z posta do listy przywraca pozycję i fokus na odnośniku posta
 
 ### Phase 3: Testy E2E powłoki i weryfikacja
 

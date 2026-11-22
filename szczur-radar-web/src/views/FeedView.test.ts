@@ -2,7 +2,6 @@ import { type VueWrapper, enableAutoUnmount, flushPromises, mount } from '@vue/t
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMemoryHistory } from 'vue-router'
 import { fetchMe } from '../api/auth'
-import { type Freshness, fetchFreshness } from '../api/freshness'
 import { type Page, type PostItem, fetchPosts } from '../api/posts'
 import { resetSession } from '../auth/session'
 import { createAppRouter } from '../router'
@@ -16,7 +15,6 @@ vi.mock('../api/posts', async (importOriginal) => ({
   fetchPosts: vi.fn(),
   fetchFailedPosts: vi.fn(),
 }))
-vi.mock('../api/freshness', () => ({ fetchFreshness: vi.fn() }))
 vi.mock('../router/scroll', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../router/scroll')>()),
   reportFeedLoaded: vi.fn(),
@@ -89,8 +87,6 @@ function button(wrapper: VueWrapper, text: string) {
   return found
 }
 
-const WYKOP_UPDATE = { source: 'wykop', lastUpdatedAt: '2026-10-13T03:12:00Z' }
-
 enableAutoUnmount(afterEach)
 
 describe('FeedView', () => {
@@ -98,7 +94,6 @@ describe('FeedView', () => {
     resetSession()
     vi.mocked(fetchMe).mockReset().mockResolvedValue({ id: '1', email: 'user@example.com', role: 'user' })
     vi.mocked(fetchPosts).mockReset()
-    vi.mocked(fetchFreshness).mockReset().mockResolvedValue({ sources: [WYKOP_UPDATE] })
     vi.mocked(reportFeedLoaded).mockReset()
     // jsdom does not implement scrolling.
     vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
@@ -253,31 +248,6 @@ describe('FeedView', () => {
     expect(listShown).toBe(true)
   })
 
-  it('reports a loaded page only once the freshness label is settled', async () => {
-    let settle: (value: Freshness) => void = () => {}
-    vi.mocked(fetchFreshness).mockImplementation(() => new Promise((resolve) => (settle = resolve)))
-    vi.mocked(fetchPosts).mockResolvedValue(answer([post('1')], 1))
-    let labelShown = false
-    vi.mocked(reportFeedLoaded).mockImplementation(() => {
-      labelShown = document.querySelector('.freshness') !== null
-    })
-    const { wrapper } = await mountFeed('/', document.body)
-    expect(wrapper.find('article').exists()).toBe(true)
-    expect(reportFeedLoaded).not.toHaveBeenCalled()
-
-    settle({ sources: [WYKOP_UPDATE] })
-    await flushPromises()
-    expect(reportFeedLoaded).toHaveBeenCalledExactlyOnceWith('ok')
-    expect(labelShown).toBe(true)
-  })
-
-  it('reports a loaded page when the freshness label fails', async () => {
-    vi.mocked(fetchFreshness).mockRejectedValue(new TypeError('Failed to fetch'))
-    vi.mocked(fetchPosts).mockResolvedValue(answer([post('1')], 1))
-    await mountFeed()
-    expect(reportFeedLoaded).toHaveBeenCalledExactlyOnceWith('ok')
-  })
-
   it('reports a failed load', async () => {
     vi.mocked(fetchPosts).mockRejectedValue(new TypeError('Failed to fetch'))
     await mountFeed()
@@ -332,92 +302,6 @@ describe('FeedView', () => {
     expect(fetchPosts).toHaveBeenLastCalledWith(0, 50, {})
     expect(wrapper.find('[role="alert"]').exists()).toBe(false)
     expect(wrapper.find('article').text()).toContain('Wpis 1 o XTB')
-  })
-
-  describe('freshness label', () => {
-    it('says when a source was last updated, with the instant from the API', async () => {
-      vi.mocked(fetchPosts).mockResolvedValue(answer([post('1')], 1))
-      const { wrapper } = await mountFeed()
-      const label = wrapper.find('.freshness')
-      expect(label.text()).toBe('Dane zaktualizowane: Wykop 13.10.2026, 05:12')
-      expect(label.find('time').attributes('datetime')).toBe('2026-10-13T03:12:00Z')
-      expect(label.find('time').text()).toBe('13.10.2026, 05:12')
-      expect(label.attributes('role')).toBeUndefined()
-      // The region "Posty" starts with its heading; only the list under the label is busy while paging.
-      expect(wrapper.find('section[aria-labelledby="feed-title"] > h1#feed-title + .freshness').exists()).toBe(true)
-      expect(wrapper.find('[aria-busy] .freshness').exists()).toBe(false)
-    })
-
-    it('spells out every source, even with equal dates', async () => {
-      vi.mocked(fetchFreshness).mockResolvedValue({
-        sources: [WYKOP_UPDATE, { source: 'reddit', lastUpdatedAt: '2026-10-13T03:12:00Z' }],
-      })
-      vi.mocked(fetchPosts).mockResolvedValue(answer([post('1')], 1))
-      const { wrapper } = await mountFeed()
-      expect(wrapper.find('.freshness').text()).toBe(
-        'Dane zaktualizowane: Wykop 13.10.2026, 05:12 · Reddit 13.10.2026, 05:12',
-      )
-    })
-
-    it('gives each source its own date, each kept whole on its line', async () => {
-      vi.mocked(fetchFreshness).mockResolvedValue({
-        sources: [WYKOP_UPDATE, { source: 'reddit', lastUpdatedAt: '2026-10-11T22:45:00Z' }],
-      })
-      vi.mocked(fetchPosts).mockResolvedValue(answer([post('1')], 1))
-      const { wrapper } = await mountFeed()
-      const updates = wrapper.findAll('.freshness .source-update')
-      expect(updates.map((update) => update.text())).toEqual(['Wykop 13.10.2026, 05:12', 'Reddit 12.10.2026, 00:45'])
-      expect(updates.map((update) => update.find('time').attributes('datetime'))).toEqual([
-        '2026-10-13T03:12:00Z',
-        '2026-10-11T22:45:00Z',
-      ])
-    })
-
-    it('says the data was never updated before the first update', async () => {
-      vi.mocked(fetchFreshness).mockResolvedValue({ sources: [] })
-      vi.mocked(fetchPosts).mockResolvedValue(answer([], 0))
-      const { wrapper } = await mountFeed()
-      expect(wrapper.find('.freshness').text()).toBe('Dane nie były jeszcze aktualizowane.')
-      expect(wrapper.find('.freshness time').exists()).toBe(false)
-    })
-
-    it('shows nothing while loading', async () => {
-      vi.mocked(fetchFreshness).mockReturnValue(never())
-      vi.mocked(fetchPosts).mockResolvedValue(answer([post('1')], 1))
-      const { wrapper } = await mountFeed()
-      expect(wrapper.find('.freshness').exists()).toBe(false)
-    })
-
-    it('shows nothing when it cannot be read, and the posts still render', async () => {
-      vi.mocked(fetchFreshness).mockRejectedValue(new TypeError('Failed to fetch'))
-      vi.mocked(fetchPosts).mockResolvedValue(answer([post('1')], 1))
-      const { wrapper } = await mountFeed()
-      expect(wrapper.find('.freshness').exists()).toBe(false)
-      expect(wrapper.find('[role="alert"]').exists()).toBe(false)
-      expect(wrapper.find('article').text()).toContain('Wpis 1 o XTB')
-    })
-
-    it('shows nothing for an answer without sources, and the posts still render', async () => {
-      // An API not deployed yet answers with its own shape (API and web deploy independently).
-      vi.mocked(fetchFreshness).mockResolvedValue({ lastUpdatedAt: '2026-10-13T03:12:00Z' } as unknown as Freshness)
-      vi.mocked(fetchPosts).mockResolvedValue(answer([post('1')], 1))
-      const { wrapper } = await mountFeed()
-      expect(wrapper.find('.freshness').exists()).toBe(false)
-      expect(wrapper.find('article').text()).toContain('Wpis 1 o XTB')
-    })
-
-    it('is read once on entry, not again when the page changes', async () => {
-      vi.mocked(fetchPosts).mockResolvedValue(answer([post('1')], 120))
-      const { wrapper } = await mountFeed()
-      expect(fetchFreshness).toHaveBeenCalledTimes(1)
-
-      await button(wrapper, 'Starsze').trigger('click')
-      await flushPromises()
-
-      expect(fetchPosts).toHaveBeenLastCalledWith(1, 50, {})
-      expect(fetchFreshness).toHaveBeenCalledTimes(1)
-      expect(wrapper.find('.freshness').exists()).toBe(true)
-    })
   })
 
   describe('filter', () => {

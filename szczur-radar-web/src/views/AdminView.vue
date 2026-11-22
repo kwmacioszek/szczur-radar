@@ -21,7 +21,7 @@ import {
   fetchAssessmentQuality,
 } from '../api/quality'
 import AppButton from '../components/AppButton.vue'
-import AppHeader from '../components/AppHeader.vue'
+import PageHeader from '../components/PageHeader.vue'
 import StatusBadge, { type BadgeTone } from '../components/StatusBadge.vue'
 import StatusMessage from '../components/StatusMessage.vue'
 import { formatDate, formatDateTime, formatDuration, label, plural } from '../labels'
@@ -409,9 +409,8 @@ onMounted(async () => {
 </script>
 
 <template>
-  <AppHeader />
-  <main class="admin">
-    <h1>Panel admina</h1>
+  <div class="admin">
+    <PageHeader class="head" title="Panel admina" />
 
     <section aria-labelledby="start-title">
       <h2 id="start-title">Nowy przebieg</h2>
@@ -616,15 +615,13 @@ onMounted(async () => {
       <StatusMessage v-if="restoreMessage" tone="ok" class="message">{{ restoreMessage }}</StatusMessage>
       <StatusMessage v-if="restoreError" tone="error" class="message">{{ restoreError }}</StatusMessage>
     </section>
-  </main>
+  </div>
 </template>
 
 <style scoped>
 .admin {
   max-width: 56rem;
   margin: 0 auto;
-  padding: var(--space-4);
-  box-sizing: border-box;
 }
 
 /* The root font size is 16px at every width; above 1024px the width is what 18px gave (design-tokens-and-components). */
@@ -634,8 +631,8 @@ onMounted(async () => {
   }
 }
 
-h1 {
-  margin: var(--space-2) 0 var(--space-4);
+.head {
+  margin-bottom: var(--space-4);
 }
 
 h2 {

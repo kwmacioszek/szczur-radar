@@ -3,7 +3,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMemoryHistory } from 'vue-router'
 import { fetchMe } from '../api/auth'
 import { ApiError } from '../api/client'
-import { fetchNotifications } from '../api/notifications'
 import { type MissingDays, RUNS_PAGE_SIZE, type Run, fetchMissingDays, fetchRuns, fetchSources, retryPosts, startRange } from '../api/pipeline'
 import { type FailedPost, fetchFailedPosts, restorePosts } from '../api/posts'
 import { fetchAssessmentQuality } from '../api/quality'
@@ -24,12 +23,6 @@ vi.mock('../api/posts', async (importOriginal) => ({
   restorePosts: vi.fn(),
 }))
 vi.mock('../api/quality', () => ({ fetchAssessmentQuality: vi.fn() }))
-// The header shows an admin the notification bell.
-vi.mock('../api/notifications', () => ({
-  fetchNotifications: vi.fn(),
-  markNotificationRead: vi.fn(),
-  markAllNotificationsRead: vi.fn(),
-}))
 vi.mock('../api/pipeline', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../api/pipeline')>()),
   startRange: vi.fn(),
@@ -133,7 +126,6 @@ describe('AdminView', () => {
     vi.mocked(fetchSources).mockReset().mockResolvedValue([{ source: 'wykop', configured: true }])
     vi.mocked(fetchRuns).mockReset().mockResolvedValue({ items: [], page: 0, size: 20, total: 0 })
     vi.mocked(fetchFailedPosts).mockReset().mockResolvedValue({ items: [], page: 0, size: 50, total: 0 })
-    vi.mocked(fetchNotifications).mockReset().mockResolvedValue({ unread: 0, items: [] })
     vi.mocked(fetchMissingDays).mockReset().mockResolvedValue({ from: '2026-10-09', to: '2026-10-22', days: [] })
     vi.mocked(fetchAssessmentQuality)
       .mockReset()

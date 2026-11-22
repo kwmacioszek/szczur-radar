@@ -53,9 +53,11 @@ defineExpose({ focus })
   gap: var(--space-2) var(--space-4);
 }
 
+/* A post's title can be one long word (a link): it wraps instead of widening the page. */
 h1 {
   margin: 0;
   font-size: var(--font-size-display);
+  overflow-wrap: anywhere;
 }
 
 /* A title with a state beside it is set smaller, as the run page's in the design. */
