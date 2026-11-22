@@ -80,7 +80,7 @@ Kryteria automatyczne fazy 3 sprawdzone w tym przeglądzie:
   - Tradeoff: Kolejna zmiana układu w F-08 i nowe wzorce `view-feed` oraz `kitchen-sink-*`. Zawijanie znacznika zmienia też komponent z fazy 2.
   - Confidence: MED — zachowanie zawijanego znacznika przy 320 px nie jest sprawdzone.
   - Blind spot: Wpływ na `StanceText` w `PostAssessment` i na wzorce 375 px.
-- **Decision**: FIXED (Fix A) — odstępstwo zapisane w `plan.md` (faza 3, „Odstępstwo: siatka celów w karcie posta”) i w opisie PR. Zrzut karty przy 320 px w obu motywach trafia do właściciela. Wąski wiersz posta naprawia S-51+.
+- **Decision**: FIXED (Fix A) — odstępstwo zapisane w `plan.md` (faza 3, „Odstępstwo: siatka celów w karcie posta”) i w opisie PR. Właściciel obejrzał zrzuty karty przy 320 px 2026-11-22: nazwa celu się rozjeżdża, ale akceptuje to do S-51+, który naprawi wąski wiersz posta.
 
 ### F3 — Gałąź i opis PR nie mówią o stanie po akceptacji
 
