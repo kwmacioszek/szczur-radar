@@ -1,5 +1,5 @@
 // Smoke of the session and the role (F-05): logging in, logging out, a session that expires while the app is open
-// and a user without the admin role — the behaviour S-47 (the shell) and S-49 (the login) rebuild.
+// and a user without the admin role — the behaviour S-49 (the login) rebuilt and S-47 (the shell) rebuilds.
 import { expect, test } from './fixtures.ts'
 
 test.describe('logowanie anonimowego', () => {

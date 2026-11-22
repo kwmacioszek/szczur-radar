@@ -1,5 +1,5 @@
 // Smoke of the activation link (F-05): the only way an account gets its first password (FR-026–028), on the screen
-// S-49 rebuilds.
+// S-49 rebuilt on the shared components.
 import { expect, test } from './fixtures.ts'
 
 test.use({ modes: { AUTH: 'anonymous' } })
@@ -64,7 +64,7 @@ test.describe('polityka haseł serwera', () => {
 test.describe('błąd serwera przy ustawianiu hasła', () => {
   test.use({ modes: { AUTH: 'anonymous', ACTIVATION: 'unavailable' } })
 
-  test('po kliknięciu i błędzie serwera fokus wraca na przycisk, nie spada na początek strony', async ({ page }) => {
+  test('po kliknięciu i błędzie serwera fokus wraca na przycisk, nie na początek strony', async ({ page }) => {
     await page.goto('/activate#token')
     const main = page.getByRole('main')
     await main.getByLabel('Nowe hasło', { exact: true }).fill('dlugie-haslo-123')
