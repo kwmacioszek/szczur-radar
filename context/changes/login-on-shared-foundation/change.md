@@ -1,7 +1,7 @@
 ---
 change_id: login-on-shared-foundation
 title: Logowanie i aktywacja na wspólnym fundamencie (S-49)
-status: implemented
+status: impl_reviewed
 created: 2026-11-22
 updated: 2026-11-22
 archived_at: null
