@@ -613,8 +613,8 @@ Brak zmian danych i API. Wdrożenie web jest niezależne od API.
 - [x] 4.3 Testy wizualne i axe przechodzą — c15653f
 - [x] 4.4 Każdy nowy test E2E jest czerwony na swoim złamaniu (evidence/e2e-breaks.md) — c15653f
 - [x] 4.5 CI na PR jest zielone, w tym web-e2e i web-container-smoke — c15653f
-- [ ] 4.6 W PR env lista i panel działają na prawdziwym API (kontrola agenta przez playwright-cli)
+- [x] 4.6 W PR env lista i panel działają na prawdziwym API (kontrola agenta przez playwright-cli) — 2712cb0
 
 #### Manual
 
-- [ ] 4.7 Właściciel akceptuje wygląd stanów i stronicowania w galerii zrzutów obok prototypów
+- [x] 4.7 Właściciel akceptuje wygląd stanów i stronicowania w galerii zrzutów obok prototypów — akceptacja właściciela w czacie 2026-11-23, bez opublikowanej galerii
