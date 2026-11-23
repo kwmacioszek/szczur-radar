@@ -575,23 +575,23 @@ Brak zmian danych i API. Wdrożenie web jest niezależne od API.
 
 #### Automated
 
-- [x] 1.1 Testy jednostkowe przechodzą, w tym cztery nowe komponenty, AppButton i skan CLEANED
-- [x] 1.2 Typecheck i build przechodzą
-- [x] 1.3 Testy wizualne i axe przechodzą z nowymi wzorcami katalogu
-- [x] 1.4 Bez ruchu szkielet i znak pracy stoją, z ruchem są animowane (kontrola agenta przez playwright-cli)
-- [x] 1.5 W katalogu przy 320 px nowe sekcje nie przewijają strony w poziomie
+- [x] 1.1 Testy jednostkowe przechodzą, w tym cztery nowe komponenty, AppButton i skan CLEANED — fed862a
+- [x] 1.2 Typecheck i build przechodzą — fed862a
+- [x] 1.3 Testy wizualne i axe przechodzą z nowymi wzorcami katalogu — fed862a
+- [x] 1.4 Bez ruchu szkielet i znak pracy stoją, z ruchem są animowane (kontrola agenta przez playwright-cli) — fed862a
+- [x] 1.5 W katalogu przy 320 px nowe sekcje nie przewijają strony w poziomie — fed862a
 
 ### Phase 2: Kolumna w trasie oraz stany listy, posta i przebiegu
 
 #### Automated
 
-- [ ] 2.1 Testy jednostkowe przechodzą, w tym router, AppShell, FeedView, PostDetailView i RunDetailView
-- [ ] 2.2 Typecheck i build przechodzą
-- [ ] 2.3 Po samym przeniesieniu kolumny testy wizualne przechodzą bez aktualizacji wzorców
-- [ ] 2.4 Testy E2E przechodzą, w tym poprawione testy stanów listy
-- [ ] 2.5 Testy wizualne i axe przechodzą z nowymi wzorcami stanów listy, dwa przebiegi zielone
-- [ ] 2.6 W widokach nie ma klas starego wzorca stanów ani kontenera szerokości
-- [ ] 2.7 Powrót z posta do listy przywraca pozycję i fokus na odnośniku posta
+- [x] 2.1 Testy jednostkowe przechodzą, w tym router, AppShell, FeedView, PostDetailView i RunDetailView
+- [x] 2.2 Typecheck i build przechodzą
+- [x] 2.3 Po samym przeniesieniu kolumny testy wizualne przechodzą bez aktualizacji wzorców
+- [x] 2.4 Testy E2E przechodzą, w tym poprawione testy stanów listy
+- [x] 2.5 Testy wizualne i axe przechodzą z nowymi wzorcami stanów listy, dwa przebiegi zielone
+- [x] 2.6 W widokach nie ma klas starego wzorca stanów ani kontenera szerokości
+- [x] 2.7 Powrót z posta do listy przywraca pozycję i fokus na odnośniku posta
 
 ### Phase 3: Panel admina na wspólnych stanach
 

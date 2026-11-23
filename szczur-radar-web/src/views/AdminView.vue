@@ -619,18 +619,6 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-.admin {
-  max-width: 56rem;
-  margin: 0 auto;
-}
-
-/* The root font size is 16px at every width; above 1024px the width is what 18px gave (design-tokens-and-components). */
-@media (min-width: 1025px) {
-  .admin {
-    max-width: 63rem;
-  }
-}
-
 .head {
   margin-bottom: var(--space-4);
 }

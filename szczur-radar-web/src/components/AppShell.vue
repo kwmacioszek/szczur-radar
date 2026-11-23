@@ -23,6 +23,8 @@ const FRESHNESS_FRESH_MS = 60_000
 const route = useRoute()
 const router = useRouter()
 
+const column = computed(() => route.meta.column)
+
 const isAdmin = computed(() => currentUser.value?.role === 'admin')
 
 const items = computed<NavItem[]>(() => {
@@ -126,7 +128,10 @@ onBeforeUnmount(() => {
     <StatusMessage tone="error">{{ logoutError }}</StatusMessage>
   </div>
   <main class="page">
-    <RouterView />
+    <!-- The page's own width comes from its route (`meta.column`); a route without one spans the whole column. -->
+    <div :class="column ? `column column-${column}` : undefined">
+      <RouterView />
+    </div>
   </main>
 </template>
 
@@ -144,6 +149,30 @@ onBeforeUnmount(() => {
   max-width: var(--width-content);
   margin: 0 auto;
   padding: var(--space-3) var(--space-5) 0;
+}
+
+/* The widths of the pages' columns (`meta.column`), inside the shell's column. */
+.column {
+  margin: 0 auto;
+}
+
+.column-narrow {
+  max-width: 48rem;
+}
+
+.column-wide {
+  max-width: 56rem;
+}
+
+/* The root font size is 16px at every width; above 1024px the width is what 18px gave (design-tokens-and-components). */
+@media (min-width: 1025px) {
+  .column-narrow {
+    max-width: 54rem;
+  }
+
+  .column-wide {
+    max-width: 63rem;
+  }
 }
 
 @media (max-width: 899px) {

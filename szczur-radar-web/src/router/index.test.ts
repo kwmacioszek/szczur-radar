@@ -5,7 +5,7 @@ import { RouterView, createMemoryHistory } from 'vue-router'
 import { fetchMe, type User } from '../api/auth'
 import { ApiError } from '../api/client'
 import { resetSession } from '../auth/session'
-import { createAppRouter, safeRedirect } from './index'
+import { createAppRouter, routes, safeRedirect } from './index'
 
 vi.mock('../api/auth', () => ({
   fetchMe: vi.fn(),
@@ -173,6 +173,25 @@ describe('shell', () => {
     expect(router.currentRoute.value.meta.section).toBe(section)
     // Every page of the shell is a child of its one route.
     expect(router.currentRoute.value.matched).toHaveLength(2)
+  })
+
+  it.each([
+    ['/', 'narrow'],
+    ['/posts/x', 'narrow'],
+    ['/admin', 'wide'],
+    ['/admin/runs/x', 'narrow'],
+  ])('gives %s the %s column', async (path, column) => {
+    const router = createAppRouter(createMemoryHistory())
+    await router.push(path)
+    expect(router.currentRoute.value.meta.column).toBe(column)
+  })
+
+  it('gives every page of the shell a column', () => {
+    const shell = routes.find((route) => route.children)
+    expect(shell?.children?.length).toBeGreaterThan(0)
+    for (const child of shell?.children ?? []) {
+      expect(child.meta?.column, String(child.name)).toBeDefined()
+    }
   })
 
   it.each(['/login', '/activate', '/kitchen-sink'])('keeps %s outside the shell, with no section', async (path) => {

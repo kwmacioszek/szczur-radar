@@ -84,6 +84,38 @@ describe('AppShell', () => {
       expect(wrapper.findAll('main')).toHaveLength(1)
     })
 
+    it.each([
+      ['/', 'column-narrow'],
+      ['/posts/1', 'column-narrow'],
+      ['/admin', 'column-wide'],
+      ['/admin/runs/1', 'column-narrow'],
+    ])('puts %s in the %s container, inside main', async (path, expected) => {
+      const { wrapper } = await mountShell('admin', path)
+      const container = wrapper.get('main > div')
+      expect(container.classes()).toContain('column')
+      expect(container.classes()).toContain(expected)
+    })
+
+    it('follows the column of the route when the page changes', async () => {
+      const { wrapper, router } = await mountShell('admin')
+      expect(wrapper.get('main > div').classes()).toContain('column-narrow')
+
+      await router.push('/admin')
+
+      expect(wrapper.get('main > div').classes()).toContain('column-wide')
+      expect(wrapper.get('main > div').classes()).not.toContain('column-narrow')
+    })
+
+    it('gives a route without a column the whole column of the shell', async () => {
+      const { wrapper } = await mountShell('admin', '/', (target) => {
+        // The record of this router only: its meta is replaced, the shared route table stays as it is.
+        const home = target.getRoutes().find((record) => record.name === 'home')!
+        home.meta = { section: 'posts' }
+      })
+
+      expect(wrapper.get('main > div').classes()).toEqual([])
+    })
+
     it('keeps the bar when the page changes between its children', async () => {
       const { wrapper, router } = await mountShell('admin')
       const bar = wrapper.get('header').element

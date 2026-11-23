@@ -72,6 +72,17 @@ function never<T>(): Promise<T> {
   return new Promise(() => {})
 }
 
+/** A promise with its resolve and reject, for a load that ends when the test says so. */
+function deferred<T>() {
+  let resolve: (value: T) => void = () => {}
+  let reject: (reason: unknown) => void = () => {}
+  const promise = new Promise<T>((onResolve, onReject) => {
+    resolve = onResolve
+    reject = onReject
+  })
+  return { promise, resolve, reject }
+}
+
 /** `attachTo`: in the document, for focus. */
 async function mountFeed(path = '/', attachTo?: HTMLElement) {
   const router = createAppRouter(createMemoryHistory())
@@ -119,8 +130,12 @@ describe('FeedView', () => {
   it('shows an empty state, not an error, when there are no posts', async () => {
     vi.mocked(fetchPosts).mockResolvedValue({ items: [], page: 0, size: 50, total: 0 })
     const { wrapper } = await mountFeed()
-    expect(wrapper.find('.empty').text()).toBe('Brak ocenionych postów. Pojawią się po najbliższej aktualizacji danych.')
+    const empty = wrapper.find('.posts .state')
+    expect(empty.find('h2').text()).toBe('Brak ocenionych postów')
+    expect(empty.find('.state-text').text()).toBe('Pojawią się po najbliższej aktualizacji danych.')
+    expect(empty.find('button').exists()).toBe(false)
     expect(wrapper.find('[role="alert"]').exists()).toBe(false)
+    expect(wrapper.find('nav[aria-label="Strony"]').exists()).toBe(false)
   })
 
   it('reads the page from the address and pages through the results', async () => {
@@ -129,33 +144,50 @@ describe('FeedView', () => {
     expect(fetchPosts).toHaveBeenLastCalledWith(1, 50, {})
     expect(wrapper.find('.position').text()).toBe('Strona 2 z 3')
 
-    await wrapper.findAll('.pager button')[1]!.trigger('click')
+    await button(wrapper, 'Starsze').trigger('click')
     await flushPromises()
     expect(router.currentRoute.value.query.page).toBe('2')
     expect(fetchPosts).toHaveBeenLastCalledWith(2, 50, {})
 
-    await wrapper.findAll('.pager button')[0]!.trigger('click')
+    await button(wrapper, 'Nowsze').trigger('click')
     await flushPromises()
     expect(router.currentRoute.value.query.page).toBe('1')
   })
 
-  it('disables paging past the ends', async () => {
+  it('draws no pager on a single page', async () => {
     vi.mocked(fetchPosts).mockResolvedValue({ items: [post('1')], page: 0, size: 50, total: 1 })
     const { wrapper } = await mountFeed()
-    const [newer, older] = wrapper.findAll('.pager button')
-    expect(newer!.attributes('disabled')).toBeDefined()
-    expect(older!.attributes('disabled')).toBeDefined()
+    expect(wrapper.find('article').exists()).toBe(true)
+    expect(wrapper.find('nav[aria-label="Strony"]').exists()).toBe(false)
+  })
+
+  it('disables the newer page on the first one and the older page on the last one', async () => {
+    vi.mocked(fetchPosts).mockResolvedValue(answer([post('1')], 120))
+    const { wrapper, router } = await mountFeed()
+    expect(button(wrapper, 'Nowsze').attributes('disabled')).toBeDefined()
+    expect(button(wrapper, 'Starsze').attributes('disabled')).toBeUndefined()
+
+    await router.push('/?page=2')
+    await flushPromises()
+
+    expect(wrapper.find('.position').text()).toBe('Strona 3 z 3')
+    expect(button(wrapper, 'Nowsze').attributes('disabled')).toBeUndefined()
+    expect(button(wrapper, 'Starsze').attributes('disabled')).toBeDefined()
   })
 
   it('shows an error when the posts cannot be loaded', async () => {
     vi.mocked(fetchPosts).mockRejectedValue(new TypeError('Failed to fetch'))
     const { wrapper } = await mountFeed()
-    expect(wrapper.find('[role="alert"]').text()).toContain('Nie udało się wczytać postów')
+    const alert = wrapper.find('.posts [role="alert"]')
+    expect(alert.find('h2').text()).toBe('Nie udało się wczytać postów')
+    expect(alert.find('.state-text').text()).toBe('Serwer nie odpowiedział.')
+    expect(alert.find('button').text()).toBe('Spróbuj ponownie')
+    expect(wrapper.find('nav[aria-label="Strony"]').exists()).toBe(false)
   })
 
-  it('replaces the list with the loading of the next page, not the old posts under a new number', async () => {
+  it('keeps the old list while the next page loads, with the button towards it busy', async () => {
     vi.mocked(fetchPosts).mockResolvedValueOnce(answer([post('1')], 120)).mockReturnValue(never())
-    const { wrapper } = await mountFeed()
+    const { wrapper } = await mountFeed('/', document.body)
     const list = wrapper.find('section[aria-labelledby="feed-title"] .posts')
     expect(list.attributes('aria-busy')).toBeUndefined()
 
@@ -163,28 +195,114 @@ describe('FeedView', () => {
     await flushPromises()
 
     expect(fetchPosts).toHaveBeenLastCalledWith(1, 50, {})
-    expect(wrapper.find('article').exists()).toBe(false)
-    expect(wrapper.find('.loading').text()).toBe('Wczytywanie strony 2…')
+    expect(wrapper.find('article').text()).toContain('Wpis 1 o XTB')
+    expect(wrapper.find('.loading-state').exists()).toBe(false)
     expect(list.attributes('aria-busy')).toBe('true')
-    expect(wrapper.find('.pager').exists()).toBe(false)
+    expect(wrapper.find('.position').text()).toBe('Strona 1 z 3')
+    const busy = wrapper.find('nav[aria-label="Strony"] button[aria-busy="true"]')
+    expect(busy.text()).toBe('Wczytywanie…')
+    expect(wrapper.findAll('nav[aria-label="Strony"] button[aria-busy="true"]')).toHaveLength(1)
+    expect(button(wrapper, 'Nowsze').attributes('aria-busy')).toBeUndefined()
+    // Neither the top nor the heading before the page is there: the busy button would be hidden under the list.
+    expect(window.scrollTo).not.toHaveBeenCalled()
+    expect(document.activeElement).not.toBe(wrapper.find('h1').element)
+    // The count belongs to the list that stays.
+    expect(wrapper.find('[role="status"]').text()).toBe('Ocenione posty: 120')
   })
 
-  it('says only that it is loading on the first entry', async () => {
+  it('makes the newer page’s button busy on a way back through history', async () => {
+    vi.mocked(fetchPosts).mockResolvedValueOnce(answer([post('51')], 120)).mockReturnValue(never())
+    const { wrapper, router } = await mountFeed('/?page=1')
+
+    await router.push('/')
+    await flushPromises()
+
+    expect(wrapper.find('article').text()).toContain('Wpis 51 o XTB')
+    expect(wrapper.find('nav[aria-label="Strony"] button[aria-busy="true"]').text()).toBe('Wczytywanie…')
+    expect(button(wrapper, 'Starsze').attributes('aria-busy')).toBeUndefined()
+  })
+
+  it('shows a skeleton of rows on the first entry, with the list busy', async () => {
     vi.mocked(fetchPosts).mockReturnValue(never())
     const { wrapper } = await mountFeed()
-    expect(wrapper.find('.loading').text()).toBe('Wczytywanie…')
+    const skeleton = wrapper.find('.posts .loading-state')
+    expect(skeleton.classes()).toContain('rows')
+    expect(skeleton.text()).toBe('Wczytywanie…')
     expect(wrapper.find('.posts').attributes('aria-busy')).toBe('true')
   })
 
-  it('scrolls to the top when the page changes, not on the first entry', async () => {
+  it('shows a skeleton, not the old list, while a new filter loads', async () => {
     vi.mocked(fetchPosts).mockResolvedValueOnce(answer([post('1')], 120)).mockReturnValue(never())
+    const { wrapper, router } = await mountFeed()
+
+    await router.push('/?q=xtb')
+    await flushPromises()
+
+    expect(wrapper.find('article').exists()).toBe(false)
+    expect(wrapper.find('.posts .loading-state').exists()).toBe(true)
+    expect(wrapper.find('nav[aria-label="Strony"]').exists()).toBe(false)
+    expect(wrapper.find('.posts').attributes('aria-busy')).toBe('true')
+  })
+
+  it('scrolls to the top once the new page is loaded, not at the click and not on the first entry', async () => {
+    const next = deferred<Page<PostItem>>()
+    vi.mocked(fetchPosts).mockResolvedValueOnce(answer([post('1')], 120)).mockReturnValueOnce(next.promise)
     const { wrapper } = await mountFeed()
     expect(window.scrollTo).not.toHaveBeenCalled()
 
     await button(wrapper, 'Starsze').trigger('click')
     await flushPromises()
+    expect(window.scrollTo).not.toHaveBeenCalled()
 
-    expect(window.scrollTo).toHaveBeenCalledWith({ top: 0 })
+    next.resolve(answer([post('51')], 120))
+    await flushPromises()
+    expect(window.scrollTo).toHaveBeenCalledExactlyOnceWith({ top: 0 })
+  })
+
+  it('goes to the top and the heading when the next page fails, and shows the error', async () => {
+    const next = deferred<Page<PostItem>>()
+    vi.mocked(fetchPosts).mockResolvedValueOnce(answer([post('1')], 120)).mockReturnValueOnce(next.promise)
+    const { wrapper } = await mountFeed('/', document.body)
+
+    await button(wrapper, 'Starsze').trigger('click')
+    await flushPromises()
+    next.reject(new TypeError('Failed to fetch'))
+    await flushPromises()
+
+    expect(wrapper.find('article').exists()).toBe(false)
+    expect(wrapper.find('.posts [role="alert"] h2').text()).toBe('Nie udało się wczytać postów')
+    expect(window.scrollTo).toHaveBeenCalledExactlyOnceWith({ top: 0 })
+    expect(document.activeElement).toBe(wrapper.find('h1').element)
+  })
+
+  it('shows a skeleton when the page changes with no list on screen, then goes to the top and the heading', async () => {
+    const previous = deferred<Page<PostItem>>()
+    vi.mocked(fetchPosts)
+      .mockResolvedValueOnce(answer([post('1')], 120))
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+      .mockReturnValueOnce(previous.promise)
+    const { wrapper, router } = await mountFeed('/', document.body)
+    await button(wrapper, 'Starsze').trigger('click')
+    await flushPromises()
+    expect(wrapper.find('[role="alert"]').exists()).toBe(true)
+    vi.mocked(window.scrollTo).mockClear()
+    ;(document.activeElement as HTMLElement | null)?.blur()
+
+    // Back after the error of the next page.
+    await router.push('/')
+    await flushPromises()
+
+    expect(wrapper.find('.state-error').exists()).toBe(false)
+    expect(wrapper.find('.posts .loading-state').exists()).toBe(true)
+    expect(wrapper.find('.posts').attributes('aria-busy')).toBe('true')
+    expect(window.scrollTo).not.toHaveBeenCalled()
+
+    previous.resolve(answer([post('1')], 120))
+    await flushPromises()
+
+    expect(wrapper.find('article').text()).toContain('Wpis 1 o XTB')
+    expect(window.scrollTo).toHaveBeenCalledExactlyOnceWith({ top: 0 })
+    expect(document.activeElement).toBe(wrapper.find('h1').element)
   })
 
   it('focuses the heading once the new page is loaded, not on the first entry', async () => {
@@ -203,16 +321,29 @@ describe('FeedView', () => {
   })
 
   it('says where the posts end for a page past the last one and goes there', async () => {
-    vi.mocked(fetchPosts).mockResolvedValue(answer([], 120))
-    const { wrapper, router } = await mountFeed('/?page=9')
-    expect(wrapper.find('.empty').text()).toBe('Nie ma strony 10. Posty kończą się na stronie 3.')
-    expect(wrapper.find('.pager').exists()).toBe(false)
+    const last = deferred<Page<PostItem>>()
+    vi.mocked(fetchPosts).mockResolvedValueOnce(answer([], 120)).mockReturnValueOnce(last.promise)
+    const { wrapper, router } = await mountFeed('/?page=9', document.body)
+    const empty = wrapper.find('.posts .state')
+    expect(empty.find('h2').text()).toBe('Nie ma strony 10')
+    expect(empty.find('.state-text').text()).toBe('Posty kończą się na stronie 3.')
+    expect(wrapper.find('nav[aria-label="Strony"]').exists()).toBe(false)
 
     await button(wrapper, 'Przejdź do strony 3').trigger('click')
     await flushPromises()
 
     expect(router.currentRoute.value.query.page).toBe('2')
     expect(fetchPosts).toHaveBeenLastCalledWith(2, 50, {})
+    // No list to keep: the skeleton, and the top only once the page is there.
+    expect(wrapper.find('.posts .loading-state').exists()).toBe(true)
+    expect(window.scrollTo).not.toHaveBeenCalled()
+
+    last.resolve(answer([post('101')], 120))
+    await flushPromises()
+
+    expect(wrapper.find('article').text()).toContain('Wpis 101 o XTB')
+    expect(window.scrollTo).toHaveBeenCalledExactlyOnceWith({ top: 0 })
+    expect(document.activeElement).toBe(wrapper.find('h1').element)
   })
 
   it('ignores the answer of an earlier load that arrives after the latest one', async () => {
@@ -287,21 +418,54 @@ describe('FeedView', () => {
     expect(reportFeedLoaded).toHaveBeenCalledExactlyOnceWith('ok')
   })
 
-  it('offers a retry after an error and shows the posts when it succeeds', async () => {
-    vi.mocked(fetchPosts)
-      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
-      .mockResolvedValueOnce(answer([post('1')], 1))
-    const { wrapper } = await mountFeed()
-    expect(wrapper.find('[role="alert"]').text()).toBe('Nie udało się wczytać postów.')
-    expect(wrapper.find('.pager').exists()).toBe(false)
+  it('offers a retry after an error, keeps the error busy until the answer and shows the posts when it succeeds', async () => {
+    const retried = deferred<Page<PostItem>>()
+    vi.mocked(fetchPosts).mockRejectedValueOnce(new TypeError('Failed to fetch')).mockReturnValueOnce(retried.promise)
+    const { wrapper } = await mountFeed('/', document.body)
+    expect(wrapper.find('[role="alert"] h2').text()).toBe('Nie udało się wczytać postów')
 
     await button(wrapper, 'Spróbuj ponownie').trigger('click')
     await flushPromises()
 
     expect(fetchPosts).toHaveBeenCalledTimes(2)
     expect(fetchPosts).toHaveBeenLastCalledWith(0, 50, {})
+    // The error stays, no longer an alert, with its button busy; no skeleton in its place.
+    const error = wrapper.find('.posts .state-error')
+    expect(error.find('h2').text()).toBe('Nie udało się wczytać postów')
+    expect(error.attributes('role')).toBeUndefined()
+    expect(error.find('button').attributes('aria-busy')).toBe('true')
+    expect(error.find('button').text()).toBe('Wczytywanie…')
+    expect(wrapper.find('.loading-state').exists()).toBe(false)
+    expect(wrapper.find('.posts').attributes('aria-busy')).toBe('true')
+
+    retried.resolve(answer([post('1')], 1))
+    await flushPromises()
+
     expect(wrapper.find('[role="alert"]').exists()).toBe(false)
+    expect(wrapper.find('.state-error').exists()).toBe(false)
     expect(wrapper.find('article').text()).toContain('Wpis 1 o XTB')
+    expect(document.activeElement).toBe(wrapper.find('h1').element)
+    expect(window.scrollTo).not.toHaveBeenCalled()
+  })
+
+  it('announces another failed retry again and gives the focus back to "Spróbuj ponownie"', async () => {
+    const retried = deferred<Page<PostItem>>()
+    vi.mocked(fetchPosts).mockRejectedValueOnce(new TypeError('Failed to fetch')).mockReturnValueOnce(retried.promise)
+    const { wrapper } = await mountFeed('/', document.body)
+    const first = wrapper.find('[role="alert"]').element
+
+    await button(wrapper, 'Spróbuj ponownie').trigger('click')
+    await flushPromises()
+    retried.reject(new TypeError('Failed to fetch'))
+    await flushPromises()
+
+    const alert = wrapper.find('.posts [role="alert"]')
+    expect(alert.find('h2').text()).toBe('Nie udało się wczytać postów')
+    // A new element: a region whose role only comes back is not announced again.
+    expect(alert.element).not.toBe(first)
+    expect(document.activeElement).toBe(alert.find('button').element)
+    expect(wrapper.find('.posts').attributes('aria-busy')).toBeUndefined()
+    expect(reportFeedLoaded).toHaveBeenLastCalledWith('error')
   })
 
   describe('filter', () => {
@@ -394,14 +558,19 @@ describe('FeedView', () => {
       vi.mocked(fetchPosts).mockRejectedValue(new TypeError('Failed to fetch'))
       const failed = await mountFeed('/?q=xtb')
       expect(failed.wrapper.find('[role="status"]').text()).toBe('')
-      expect(failed.wrapper.find('[role="alert"]').text()).toBe('Nie udało się wczytać postów.')
+      const alert = failed.wrapper.find('[role="alert"]')
+      expect(alert.find('h2').text()).toBe('Nie udało się wczytać postów')
+      expect(alert.find('.state-text').text()).toBe('Serwer nie odpowiedział. Twoje filtry zostały.')
     })
 
     it('tells an empty filter result from an empty feed and clears the filter', async () => {
       vi.mocked(fetchPosts).mockResolvedValueOnce(answer([], 0)).mockResolvedValueOnce(answer([post('1')], 120))
       const { wrapper, router } = await mountFeed('/?q=zzz&kind=asset', document.body)
       expect(wrapper.find('[role="status"]').text()).toBe('Żaden post nie pasuje do filtra.')
-      expect(wrapper.find('.empty').exists()).toBe(false)
+      const empty = wrapper.find('.posts .state')
+      expect(empty.find('h2').text()).toBe('Brak postów dla tych filtrów')
+      expect(empty.find('.state-text').text()).toBe('Zmień filtr albo wyczyść go, żeby zobaczyć wszystkie posty.')
+      expect(wrapper.text()).not.toContain('Brak ocenionych postów')
       const clear = wrapper.findAll('.posts button')
       expect(clear.map((candidate) => candidate.text())).toEqual(['Wyczyść filtry'])
 

@@ -136,6 +136,43 @@ export const VIEWS: readonly View[] = [
     clipToArticle: FEED_SHOWN_ARTICLES,
   },
   {
+    name: 'view-feed-loading',
+    risk: 'szkielet ładowania listy nie zmienia wyglądu i nie łamie dostępności',
+    path: '/',
+    modes: { AUTH: 'user', MODE: 'loading' },
+    // The skeleton's text for assistive technology: the list's aria-busy has no role to find it by (as in E2E).
+    ready: async (page) => {
+      const main = page.getByRole('main')
+      await expect(main.getByText('Wczytywanie…', { exact: true })).toBeVisible()
+      await freshnessLoaded(page)
+    },
+  },
+  {
+    name: 'view-feed-empty',
+    risk: 'pusty wynik filtra listy nie zmienia wyglądu i nie łamie dostępności',
+    path: '/?q=zzz',
+    modes: { AUTH: 'user' },
+    ready: async (page) => {
+      const main = page.getByRole('main')
+      await expect(main.getByRole('heading', { level: 2, name: 'Brak postów dla tych filtrów', exact: true })).toBeVisible()
+      await expect(main.getByRole('status')).toHaveText('Żaden post nie pasuje do filtra.')
+      await freshnessLoaded(page)
+    },
+  },
+  {
+    name: 'view-feed-error',
+    risk: 'błąd listy z ponowieniem nie zmienia wyglądu i nie łamie dostępności',
+    path: '/',
+    modes: { AUTH: 'user', MODE: 'error' },
+    ready: async (page) => {
+      const main = page.getByRole('main')
+      await expect(
+        main.getByRole('alert').getByRole('heading', { level: 2, name: 'Nie udało się wczytać postów', exact: true }),
+      ).toBeVisible()
+      await freshnessLoaded(page)
+    },
+  },
+  {
     name: 'view-post',
     risk: 'widok posta nie zmienia wyglądu i nie łamie dostępności',
     path: `/posts/${POST_0}`,
