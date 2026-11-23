@@ -597,20 +597,20 @@ Brak zmian danych i API. Wdrożenie web jest niezależne od API.
 
 #### Automated
 
-- [x] 3.1 Testy jednostkowe przechodzą, w tym AdminView
-- [x] 3.2 Typecheck i build przechodzą
-- [x] 3.3 Dotychczasowe testy E2E przechodzą
-- [x] 3.4 Testy wizualne i axe przechodzą z nowymi wzorcami stanów panelu, view-admin bez zmian, dwa przebiegi zielone
-- [x] 3.5 W panelu admina nie ma klas starego wzorca stanów
+- [x] 3.1 Testy jednostkowe przechodzą, w tym AdminView — 7823ba7
+- [x] 3.2 Typecheck i build przechodzą — 7823ba7
+- [x] 3.3 Dotychczasowe testy E2E przechodzą — 7823ba7
+- [x] 3.4 Testy wizualne i axe przechodzą z nowymi wzorcami stanów panelu, view-admin bez zmian, dwa przebiegi zielone — 7823ba7
+- [x] 3.5 W panelu admina nie ma klas starego wzorca stanów — 7823ba7
 
 ### Phase 4: Testy E2E stanów i weryfikacja
 
 #### Automated
 
-- [ ] 4.1 Testy jednostkowe przechodzą
-- [ ] 4.2 Testy E2E przechodzą, w tym states.spec.ts
-- [ ] 4.3 Testy wizualne i axe przechodzą
-- [ ] 4.4 Każdy nowy test E2E jest czerwony na swoim złamaniu (evidence/e2e-breaks.md)
+- [x] 4.1 Testy jednostkowe przechodzą
+- [x] 4.2 Testy E2E przechodzą, w tym states.spec.ts
+- [x] 4.3 Testy wizualne i axe przechodzą
+- [x] 4.4 Każdy nowy test E2E jest czerwony na swoim złamaniu (evidence/e2e-breaks.md)
 - [ ] 4.5 CI na PR jest zielone, w tym web-e2e i web-container-smoke
 - [ ] 4.6 W PR env lista i panel działają na prawdziwym API (kontrola agenta przez playwright-cli)
 

@@ -674,7 +674,7 @@ Nazwy nowych komponentów są propozycją; ustala je plan wycinka.
 | Ikony | nowy komponent ikony | F-08 |
 | Nawigacja, Nagłówek strony | `AppHeader`; nowy nagłówek strony | S-47 |
 | Powiadomienia | `NotificationMenu`, `NotificationBell` | S-47 |
-| Ładowanie, Pusta lista, Błąd z ponowieniem, Stronicowanie | nowe wspólne komponenty | S-48 |
+| Ładowanie, Pusta lista, Błąd z ponowieniem, Stronicowanie | `LoadingState`, `EmptyState`, `ErrorState`, `PagerNav` | S-48 |
 | Części panelu admina, Tabela | nowe | S-50 |
 | Wiersz posta | `PostCard` staje się wierszem | S-51 |
 | Panel boczny, Cel w ocenie | nowy panel; `PostAssessment` | S-51 |
