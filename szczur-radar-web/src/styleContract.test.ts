@@ -5,12 +5,16 @@ import appButton from './components/AppButton.vue?raw'
 import appIcon from './components/AppIcon.vue?raw'
 import appShell from './components/AppShell.vue?raw'
 import authLayout from './components/AuthLayout.vue?raw'
+import emptyState from './components/EmptyState.vue?raw'
+import errorState from './components/ErrorState.vue?raw'
 import feedFilter from './components/FeedFilter.vue?raw'
 import formField from './components/FormField.vue?raw'
 import iconSprite from './components/IconSprite.vue?raw'
+import loadingState from './components/LoadingState.vue?raw'
 import notificationBell from './components/NotificationBell.vue?raw'
 import notificationMenu from './components/NotificationMenu.vue?raw'
 import pageHeader from './components/PageHeader.vue?raw'
+import pagerNav from './components/PagerNav.vue?raw'
 import postAssessment from './components/PostAssessment.vue?raw'
 import postCard from './components/PostCard.vue?raw'
 import stanceText from './components/StanceText.vue?raw'
@@ -151,6 +155,10 @@ const CLEANED: Record<string, string> = {
   'src/components/FormField.vue': formField,
   'src/components/AuthLayout.vue': authLayout,
   'src/views/LoginView.vue': loginView,
+  'src/components/LoadingState.vue': loadingState,
+  'src/components/EmptyState.vue': emptyState,
+  'src/components/ErrorState.vue': errorState,
+  'src/components/PagerNav.vue': pagerNav,
 }
 
 /** The hardcoded-value scan of /10x-ui: colour literals, arbitrary values and palette classes. */

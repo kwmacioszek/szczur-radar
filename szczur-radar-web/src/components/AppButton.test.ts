@@ -2,6 +2,13 @@ import { mount } from '@vue/test-utils'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import AppButton from './AppButton.vue'
 
+/** The element and non-blank text children of a node, by tag: what a reader of the button meets in order. */
+function parts(element: Element): string[] {
+  return [...element.childNodes]
+    .filter((node) => node.nodeType === Node.ELEMENT_NODE || (node.nodeType === Node.TEXT_NODE && node.textContent?.trim()))
+    .map((node) => node.nodeName.toLowerCase())
+}
+
 describe('AppButton', () => {
   afterEach(() => {
     vi.restoreAllMocks()
@@ -59,6 +66,37 @@ describe('AppButton', () => {
     expect(wrapper.find('use').attributes('href')).toBe('#i-refresh-cw')
     expect(wrapper.find('svg').attributes('aria-hidden')).toBe('true')
     expect(wrapper.text()).toBe('Spróbuj ponownie')
+  })
+
+  it('draws an icon after its text on request, and the mark of work still comes first while busy', () => {
+    const wrapper = mount(AppButton, {
+      props: { icon: 'i-chevron-right', iconPosition: 'end' },
+      slots: { default: 'Starsze' },
+    })
+    expect(parts(wrapper.element)).toEqual(['#text', 'svg'])
+    expect(wrapper.find('use').attributes('href')).toBe('#i-chevron-right')
+    expect(wrapper.text()).toBe('Starsze')
+
+    const start = mount(AppButton, { props: { icon: 'i-chevron-left' }, slots: { default: 'Nowsze' } })
+    expect(parts(start.element)).toEqual(['svg', '#text'])
+
+    const busy = mount(AppButton, {
+      props: { icon: 'i-chevron-right', iconPosition: 'end', busy: true, busyLabel: 'Wczytywanie…' },
+      slots: { default: 'Starsze' },
+    })
+    expect(busy.find('use').exists()).toBe(false)
+    expect(parts(busy.element)).toEqual(['span', '#text'])
+    expect(busy.find('.spinner').exists()).toBe(true)
+    expect(busy.text()).toBe('Wczytywanie…')
+  })
+
+  it('ignores the icon position for an icon-only button', () => {
+    const wrapper = mount(AppButton, {
+      props: { icon: 'i-chevron-right', iconPosition: 'end', iconOnly: true },
+      attrs: { 'aria-label': 'Następny post' },
+    })
+    expect(wrapper.findAll('svg')).toHaveLength(1)
+    expect(wrapper.find('use').attributes('href')).toBe('#i-chevron-right')
   })
 
   it('takes the large size', () => {
