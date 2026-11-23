@@ -222,6 +222,24 @@ describe('FeedView', () => {
     expect(button(wrapper, 'Starsze').attributes('aria-busy')).toBeUndefined()
   })
 
+  it('fetches nothing when the way back returns to the page on screen while the next one loads', async () => {
+    vi.mocked(fetchPosts).mockResolvedValueOnce(answer([post('1')], 120)).mockReturnValue(never())
+    const { wrapper, router } = await mountFeed('/', document.body)
+    await button(wrapper, 'Starsze').trigger('click')
+    await flushPromises()
+    expect(fetchPosts).toHaveBeenCalledTimes(2)
+
+    router.back()
+    await flushPromises()
+
+    expect(fetchPosts).toHaveBeenCalledTimes(2)
+    expect(wrapper.find('nav[aria-label="Strony"] button[aria-busy="true"]').exists()).toBe(false)
+    expect(wrapper.find('.posts').attributes('aria-busy')).toBeUndefined()
+    expect(wrapper.find('.position').text()).toBe('Strona 1 z 3')
+    expect(window.scrollTo).toHaveBeenCalledWith({ top: 0 })
+    expect(document.activeElement).toBe(wrapper.find('h1').element)
+  })
+
   it('shows a skeleton of rows on the first entry, with the list busy', async () => {
     vi.mocked(fetchPosts).mockReturnValue(never())
     const { wrapper } = await mountFeed()

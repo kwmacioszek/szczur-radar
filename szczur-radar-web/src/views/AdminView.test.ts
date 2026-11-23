@@ -288,7 +288,7 @@ describe('AdminView', () => {
       expect(error.find('button').attributes('aria-busy')).toBe('true')
       expect(error.find('button').text()).toBe('Wczytywanie…')
       expect(section.find('.loading-state').exists()).toBe(false)
-      expect(section.attributes('aria-busy')).toBeUndefined()
+      expect(section.attributes('aria-busy')).toBe('true')
     }
 
     const hasItems = response === 'data'
@@ -296,6 +296,7 @@ describe('AdminView', () => {
     await flushPromises()
 
     expect(runsSection.find('.state-error').exists()).toBe(false)
+    expect(runsSection.attributes('aria-busy')).toBeUndefined()
     expect(runsSection.findAll('.run')).toHaveLength(hasItems ? 1 : 0)
     expect(runsSection.find('.state-title').exists()).toBe(!hasItems)
     expect(failedSection.find('.state-error button').attributes('aria-busy')).toBe('true')
@@ -428,6 +429,45 @@ describe('AdminView', () => {
       const alert = section.find('[role="alert"]')
       expect(alert.element).not.toBe(first)
       expect(document.activeElement).toBe(alert.find('button').element)
+    })
+
+    it('moves the focus after a retry also when a read nobody pressed for superseded it', async () => {
+      vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval', 'setTimeout', 'clearTimeout'] })
+      vi.mocked(fetchRuns)
+        .mockResolvedValueOnce(page([run({ status: 'running', finishedAt: null })], 1))
+        .mockResolvedValue(page([run({ status: 'succeeded' })], 1))
+      vi.mocked(fetchMissingDays)
+        .mockRejectedValueOnce(new ApiError(500, 'internal_error'))
+        // The retry's answer never comes; the read after the run ended answers first.
+        .mockReturnValueOnce(new Promise(() => {}))
+      const wrapper = await mountAdmin({ attachTo: document.body })
+
+      await wrapper.find('section[aria-labelledby="missing-title"] .state-error button').trigger('click')
+      await vi.advanceTimersByTimeAsync(10_000)
+      await flushPromises()
+
+      expect(fetchMissingDays).toHaveBeenCalledTimes(3)
+      expect(wrapper.find('section[aria-labelledby="missing-title"] .state-error').exists()).toBe(false)
+      expect(document.activeElement).toBe(wrapper.find('#missing-title').element)
+    })
+
+    it('leaves the focus on Odśwież when it supersedes a retry', async () => {
+      let answer: (value: Awaited<ReturnType<typeof fetchAssessmentQuality>>) => void = () => {}
+      vi.mocked(fetchAssessmentQuality)
+        .mockRejectedValueOnce(new ApiError(500, 'internal_error'))
+        .mockReturnValueOnce(new Promise(() => {}))
+        .mockReturnValueOnce(new Promise((resolve) => (answer = resolve)))
+      const wrapper = await mountAdmin({ attachTo: document.body })
+      await wrapper.find('section[aria-labelledby="quality-title"] .state-error button').trigger('click')
+      const refresh = refreshButton(wrapper)
+      ;(refresh.element as HTMLElement).focus()
+
+      await refresh.trigger('click')
+      answer({ from: '2026-10-16', to: '2026-10-22', windowDays: 7, minAttempts: 100, minTheses: 500, sources: [] })
+      await flushPromises()
+
+      expect(wrapper.find('section[aria-labelledby="quality-title"] .state-error').exists()).toBe(false)
+      expect(document.activeElement).toBe(refresh.element)
     })
 
     it('leaves the focus on Odśwież when it retries a section in error', async () => {
@@ -844,17 +884,21 @@ describe('AdminView', () => {
       expect(section(wrapper).find('.missing-range').exists()).toBe(false)
     })
 
-    it('fills the range without moving the focus when the form is not there', async () => {
+    it('disables Wpisz do formularza while the form is not there, and enables it once the sources load', async () => {
       vi.mocked(fetchMissingDays).mockResolvedValue(example)
-      vi.mocked(fetchSources).mockRejectedValue(new ApiError(500, 'internal_error'))
+      vi.mocked(fetchSources).mockRejectedValueOnce(new ApiError(500, 'internal_error'))
       const wrapper = await mountAdmin({ attachTo: document.body })
-      const fill = fillButtons(wrapper)[0]!
-      ;(fill.element as HTMLElement).focus()
       expect(wrapper.find('form').exists()).toBe(false)
+      expect(fillButtons(wrapper).length).toBeGreaterThan(0)
+      expect(fillButtons(wrapper).map((fill) => fill.attributes('disabled'))).not.toContain(undefined)
 
-      await fill.trigger('click')
+      await wrapper.find('section[aria-labelledby="start-title"] .state-error button').trigger('click')
+      await flushPromises()
 
-      expect(document.activeElement).toBe(fill.element)
+      expect(wrapper.find('form').exists()).toBe(true)
+      expect(fillButtons(wrapper).map((fill) => fill.attributes('disabled'))).toEqual(
+        fillButtons(wrapper).map(() => undefined),
+      )
     })
 
     it('reads the days again with Odśwież', async () => {
@@ -1197,6 +1241,25 @@ describe('AdminView', () => {
       await vi.advanceTimersByTimeAsync(60_000)
       await flushPromises()
       expect(fetchRuns).toHaveBeenCalledTimes(3)
+    })
+
+    it('does not refresh while the section shows its error', async () => {
+      vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval', 'setTimeout', 'clearTimeout'] })
+      vi.mocked(fetchRuns)
+        .mockResolvedValueOnce(page([run({ status: 'running', finishedAt: null })], 1))
+        .mockRejectedValue(new Error('down'))
+      const wrapper = await mountAdmin()
+
+      await vi.advanceTimersByTimeAsync(10_000)
+      await flushPromises()
+      expect(fetchRuns).toHaveBeenCalledTimes(2)
+      expect(wrapper.find('section[aria-labelledby="runs-title"] [role="alert"]').text()).toContain(
+        'Nie udało się wczytać przebiegów',
+      )
+
+      await vi.advanceTimersByTimeAsync(60_000)
+      await flushPromises()
+      expect(fetchRuns).toHaveBeenCalledTimes(2)
     })
 
     it('does not refresh when no run is queued or running', async () => {

@@ -180,6 +180,17 @@ watch(
     // Another query key changed (or none: the filter is recomputed for every change of the address).
     if (!first && !filterChanged && !pageChanged) return
     const pageOnly = pageChanged && !filterChanged && !fromForm
+    // Back to the page on screen while another one loads ("Starsze", then back): that load is dropped and nothing
+    // is fetched; the view goes to the top and the heading, as after any page change.
+    if (pageOnly && loading.value?.kind === 'page' && shown.value?.page === nextPage && sameFilter(shown.value.filter, nextFilter)) {
+      latestLoad++
+      loading.value = null
+      void nextTick(() => {
+        window.scrollTo({ top: 0 })
+        header.value?.focus()
+      })
+      return
+    }
     const after: After = pageOnly ? 'top' : focusAfterClear ? 'heading' : 'none'
     focusAfterClear = false
     void load(nextPage, nextFilter, pageOnly && listOnScreen.value ? 'page' : 'fresh', after)

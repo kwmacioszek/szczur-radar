@@ -491,6 +491,7 @@ Przepływy stanów z kontraktu projektu (`ui-design.md`, wiersze `state-loading`
   - sekcje katalogu obok `components-*-375.png`;
   - jasny i ciemny motyw, 375 i 1280 px.
 - Opis PR wymienia grupy wzorców: nowe `view-feed-*` i `view-admin-*`, nowe sekcje katalogu, zmieniony `kitchen-sink-przycisk`, oraz `view-*` bez zmian. Zawiera `Refs #180`.
+  - Dochodzi grupa, której przed fazą 1 nie przewidziano (fed862a, przegląd implementacji F3): w `light-375` i `dark-375` sekcje katalogu pod nowymi sekcjami (`dzwoneczek`, `filtr`, `ikony`, `marka`, `naglowek-strony`, `ocena-posta`, `pasek-aplikacji`, `pola`, `posty`, `znacznik-stanu`, w ciemnym też `stanowisko`) oraz stany `state-przycisk-*`, `state-nawigacja-*`, `state-pola-email-hover` i `state-pola-search-focus`. Przesunęły się w dół i zostały przerasteryzowane, bez zmiany wyglądu. `state-przycisk-*` zmieniło się też dlatego, że sekcja „Przycisk” urosła.
 
 ### Success Criteria:
 

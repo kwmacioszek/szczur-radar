@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref, useTemplateRef } from 'vue'
+import { type ShallowRef, computed, nextTick, onMounted, ref, useTemplateRef } from 'vue'
 import {
   type MissingDays,
   RUNS_PAGE_SIZE,
@@ -41,11 +41,11 @@ function yesterday(): string {
 /**
  * Every section reads its own data and has its own states (the shared ones): a skeleton while it loads with nothing on
  * screen, an error with its own "Spróbuj ponownie", an empty list. A section's error stays on screen, its button busy,
- * until the answer of a new read (`xRetrying`), whoever started it. `{ retry: true }` is a read started by that button:
- * the busy button loses the focus, so after the answer it goes to the section's heading (`tabindex="-1"`), or back to
- * "Spróbuj ponownie" after another failure. A read from "Odśwież" never moves the focus.
+ * until the answer of a new read (`xRetrying`), whoever started it. `by` says who started a read: `retry` is that
+ * button, `action` another control the user pressed ("Odśwież", "Uruchom", "Ponów zaznaczone", "Przywróć martwe"),
+ * none a read nobody pressed for (mount, a run that ended, the poll).
  */
-type Read = { retry?: boolean }
+type Read = { by?: 'retry' | 'action' }
 
 const startHeading = useTemplateRef<HTMLElement>('start-heading')
 const missingHeading = useTemplateRef<HTMLElement>('missing-heading')
@@ -58,12 +58,36 @@ const qualityErrorState = useTemplateRef<InstanceType<typeof ErrorState>>('quali
 const runsErrorState = useTemplateRef<InstanceType<typeof ErrorState>>('runs-error-state')
 const failedErrorState = useTemplateRef<InstanceType<typeof ErrorState>>('failed-error-state')
 
-/** After a read of the section's own button: the heading after a success, "Spróbuj ponownie" after a failure. */
-async function settleFocus(ok: boolean, heading: HTMLElement | null | undefined, errorState: { focus(): void } | null) {
-  await nextTick()
-  if (ok) heading?.focus()
-  else errorState?.focus()
+/**
+ * The focus a section's own retry owes: its busy button lost the focus, so the latest read of the section to settle
+ * puts it on the heading (`tabindex="-1"`) after a success, or back on "Spróbuj ponownie" after another failure, also
+ * when a read nobody pressed for superseded the retry. A read from another control leaves the focus on that control.
+ */
+function sectionFocus(
+  heading: Readonly<ShallowRef<HTMLElement | null>>,
+  errorState: Readonly<ShallowRef<{ focus(): void } | null>>,
+) {
+  let owed = false
+  return {
+    claim({ by }: Read): void {
+      if (by === 'retry') owed = true
+      else if (by === 'action') owed = false
+    },
+    async settle(ok: boolean): Promise<void> {
+      if (!owed) return
+      owed = false
+      await nextTick()
+      if (ok) heading.value?.focus()
+      else errorState.value?.focus()
+    },
+  }
 }
+
+const sourcesFocus = sectionFocus(startHeading, sourcesErrorState)
+const missingFocus = sectionFocus(missingHeading, missingErrorState)
+const qualityFocus = sectionFocus(qualityHeading, qualityErrorState)
+const runsFocus = sectionFocus(runsHeading, runsErrorState)
+const failedFocus = sectionFocus(failedHeading, failedErrorState)
 
 // --- start a range run ------------------------------------------------------------------
 const from = ref(yesterday())
@@ -91,8 +115,9 @@ const startHint = computed(() => {
 
 // Loaded until the first success (on mount, "Spróbuj ponownie", "Odśwież" after an error), so the
 // configured sources are checked by default once and the admin's later choice is kept.
-async function loadSources({ retry = false }: Read = {}): Promise<void> {
+async function loadSources(read: Read = {}): Promise<void> {
   const current = ++latestSources
+  sourcesFocus.claim(read)
   sourcesRetrying.value = sourcesError.value
   sourcesLoading.value = !sourcesError.value
   let ok = false
@@ -110,9 +135,9 @@ async function loadSources({ retry = false }: Read = {}): Promise<void> {
     if (current === latestSources) {
       sourcesLoading.value = false
       sourcesRetrying.value = false
+      await sourcesFocus.settle(ok)
     }
   }
-  if (retry) await settleFocus(ok, startHeading.value, sourcesErrorState.value)
 }
 
 async function start(): Promise<void> {
@@ -123,7 +148,7 @@ async function start(): Promise<void> {
   try {
     const runs = await startRange(from.value, to.value, chosenSources.value)
     startMessage.value = `Uruchomiono: ${runs.map((run) => label('runKind', run.kind)).join(', ')}.`
-    await loadRuns()
+    await loadRuns({ by: 'action' })
   } catch (err) {
     startError.value = startErrorMessage(err)
   } finally {
@@ -143,8 +168,9 @@ let latestMissing = 0
 const ranges = computed(() => (missing.value ? missingRanges(missing.value.days) : []))
 
 // Read on mount, with "Odśwież" and after a run of the list stops being active: then the coverage may have changed.
-async function loadMissing({ retry = false }: Read = {}): Promise<void> {
+async function loadMissing(read: Read = {}): Promise<void> {
   const current = ++latestMissing
+  missingFocus.claim(read)
   missingRetrying.value = missingError.value
   missingLoading.value = missing.value === null && !missingError.value
   let ok = false
@@ -161,9 +187,9 @@ async function loadMissing({ retry = false }: Read = {}): Promise<void> {
     if (current === latestMissing) {
       missingLoading.value = false
       missingRetrying.value = false
+      await missingFocus.settle(ok)
     }
   }
-  if (retry) await settleFocus(ok, missingHeading.value, missingErrorState.value)
 }
 
 /** The days, as a run's range is shown, and the sources; a `YYYY-MM-DD` day is its UTC midnight, that day in Warsaw. */
@@ -172,8 +198,15 @@ function rangeText(range: MissingRange): string {
   return `${days} · ${range.sources.map((source) => label('source', source)).join(', ')}`
 }
 
-/** Puts the range into "Nowy przebieg" (only configured sources can be checked) and moves the focus to "Od". */
+/** The form of "Nowy przebieg" is on screen: not while its sources load or failed (a state stands in its place). */
+const formShown = computed(() => !sourcesLoading.value && !sourcesError.value)
+
+/**
+ * Puts the range into "Nowy przebieg" (only configured sources can be checked) and moves the focus to "Od". Without
+ * the form there is nothing to fill: the button is disabled, as the range's sources cannot be checked yet.
+ */
 function fillForm(range: MissingRange): void {
+  if (!formShown.value) return
   from.value = range.from
   to.value = range.to
   chosenSources.value = range.sources.filter((source) =>
@@ -194,8 +227,9 @@ const qualityRetrying = ref(false)
 let latestQuality = 0
 
 // Read on mount, with "Odśwież" and after a run of the list stops being active: then new attempts may count.
-async function loadQuality({ retry = false }: Read = {}): Promise<void> {
+async function loadQuality(read: Read = {}): Promise<void> {
   const current = ++latestQuality
+  qualityFocus.claim(read)
   qualityRetrying.value = qualityError.value
   qualityLoading.value = quality.value === null && !qualityError.value
   let ok = false
@@ -212,9 +246,9 @@ async function loadQuality({ retry = false }: Read = {}): Promise<void> {
     if (current === latestQuality) {
       qualityLoading.value = false
       qualityRetrying.value = false
+      await qualityFocus.settle(ok)
     }
   }
-  if (retry) await settleFocus(ok, qualityHeading.value, qualityErrorState.value)
 }
 
 /** The state is the API's; the colour only reinforces its text. */
@@ -299,8 +333,9 @@ function mergeRuns(fresh: Run[], shown: Run[]): Run[] {
  * Reads the newest runs again: page 0 as large as the rows on screen (at most MAX_PAGE_SIZE; older rows stay), so
  * the pages read with "Pokaż starsze" do not disappear. Rows are merged by id: a new run shifts the pages.
  */
-async function loadRuns({ retry = false }: Read = {}): Promise<void> {
+async function loadRuns(read: Read = {}): Promise<void> {
   const current = ++latestRefresh
+  runsFocus.claim(read)
   refreshing = true
   runsRetrying.value = runsError.value
   runsLoading.value = !runsLoaded && !runsError.value
@@ -329,9 +364,9 @@ async function loadRuns({ retry = false }: Read = {}): Promise<void> {
       runsLoading.value = false
       runsRetrying.value = false
       refreshing = false
+      await runsFocus.settle(ok)
     }
   }
-  if (retry) await settleFocus(ok, runsHeading.value, runsErrorState.value)
 }
 
 /** The next page of older runs, appended without the rows already shown. */
@@ -362,8 +397,9 @@ async function loadOlder(): Promise<void> {
   }
 }
 
+// While the section shows its error there is nothing to refresh: "Spróbuj ponownie" or "Odśwież" reads it again.
 useEvery(REFRESH_MS, () => {
-  if (!refreshing && runs.value.some(isActive)) void loadRuns()
+  if (!refreshing && !runsError.value && runs.value.some(isActive)) void loadRuns()
 })
 
 function duration(run: Run): string | null {
@@ -393,7 +429,7 @@ let failedLoaded = false
 let latestFailed = 0
 /** One selection of the list, of both kinds: the dead posts in it are restored, the others retried. */
 const selected = ref<string[]>([])
-const retrying = ref(false)
+const retryingSelected = ref(false)
 const retryMessage = ref<string | null>(null)
 const retryError = ref<string | null>(null)
 const restoring = ref(false)
@@ -407,8 +443,9 @@ const selectedRetryable = computed(() =>
 /** The checked dead posts: no run takes them, "Przywróć martwe" gives them back to assessment. */
 const selectedDead = computed(() => selected.value.filter((id) => stageOf.value.get(id) === 'dead'))
 
-async function loadFailed({ retry = false }: Read = {}): Promise<void> {
+async function loadFailed(read: Read = {}): Promise<void> {
   const current = ++latestFailed
+  failedFocus.claim(read)
   failedRetrying.value = failedError.value
   failedLoading.value = !failedLoaded && !failedError.value
   let ok = false
@@ -427,9 +464,9 @@ async function loadFailed({ retry = false }: Read = {}): Promise<void> {
     if (current === latestFailed) {
       failedLoading.value = false
       failedRetrying.value = false
+      await failedFocus.settle(ok)
     }
   }
-  if (retry) await settleFocus(ok, failedHeading.value, failedErrorState.value)
 }
 
 /** Only the outcome of the latest action on the list stays on screen. */
@@ -440,26 +477,26 @@ function clearFailedMessages(): void {
   restoreError.value = null
 }
 
-async function retry(): Promise<void> {
+async function retrySelected(): Promise<void> {
   const postIds = selectedRetryable.value
-  if (retrying.value || restoring.value || postIds.length === 0) return
-  retrying.value = true
+  if (retryingSelected.value || restoring.value || postIds.length === 0) return
+  retryingSelected.value = true
   clearFailedMessages()
   try {
     await retryPosts(postIds)
     retryMessage.value = `Ponowienie ${postIds.length} post(ów) w kolejce.`
     selected.value = selected.value.filter((id) => !postIds.includes(id))
-    await loadRuns()
+    await loadRuns({ by: 'action' })
   } catch (err) {
     retryError.value = startErrorMessage(err)
   } finally {
-    retrying.value = false
+    retryingSelected.value = false
   }
 }
 
 async function restore(): Promise<void> {
   const postIds = selectedDead.value
-  if (restoring.value || retrying.value || postIds.length === 0) return
+  if (restoring.value || retryingSelected.value || postIds.length === 0) return
   restoring.value = true
   clearFailedMessages()
   try {
@@ -470,7 +507,7 @@ async function restore(): Promise<void> {
         : `Przywrócono ${restored} post(ów) do oceny. Oceni je kolejny przebieg.`
     selected.value = selected.value.filter((id) => !postIds.includes(id))
     // A restored post is no longer on the list.
-    await loadFailed()
+    await loadFailed({ by: 'action' })
   } catch {
     restoreError.value = 'Nie udało się przywrócić postów.'
   } finally {
@@ -484,12 +521,13 @@ function excerpt(post: FailedPost): string {
 }
 
 async function refresh(): Promise<void> {
+  const read: Read = { by: 'action' }
   await Promise.all([
-    loadRuns(),
-    loadFailed(),
-    loadMissing(),
-    loadQuality(),
-    sourcesError.value ? loadSources() : undefined,
+    loadRuns(read),
+    loadFailed(read),
+    loadMissing(read),
+    loadQuality(read),
+    sourcesError.value ? loadSources(read) : undefined,
   ])
 }
 
@@ -502,7 +540,7 @@ onMounted(async () => {
   <div class="admin">
     <PageHeader class="head" title="Panel admina" />
 
-    <section aria-labelledby="start-title" :aria-busy="sourcesLoading ? 'true' : undefined">
+    <section aria-labelledby="start-title" :aria-busy="sourcesLoading || sourcesRetrying ? 'true' : undefined">
       <h2 id="start-title" ref="start-heading" tabindex="-1">Nowy przebieg</h2>
       <LoadingState v-if="sourcesLoading" class="section-state" shape="form" />
       <ErrorState
@@ -511,7 +549,7 @@ onMounted(async () => {
         class="section-state"
         title="Nie udało się wczytać listy źródeł"
         :retrying="sourcesRetrying"
-        @retry="loadSources({ retry: true })"
+        @retry="loadSources({ by: 'retry' })"
       >
         Bez listy źródeł nie da się uruchomić przebiegu.
       </ErrorState>
@@ -548,7 +586,7 @@ onMounted(async () => {
       <StatusMessage v-if="startError" tone="error" class="message">{{ startError }}</StatusMessage>
     </section>
 
-    <section aria-labelledby="missing-title" :aria-busy="missingLoading ? 'true' : undefined">
+    <section aria-labelledby="missing-title" :aria-busy="missingLoading || missingRetrying ? 'true' : undefined">
       <h2 id="missing-title" ref="missing-heading" tabindex="-1">Dni bez danych</h2>
       <LoadingState v-if="missingLoading" class="section-state" shape="lines" />
       <ErrorState
@@ -557,7 +595,7 @@ onMounted(async () => {
         class="section-state"
         title="Nie udało się wczytać dni bez danych"
         :retrying="missingRetrying"
-        @retry="loadMissing({ retry: true })"
+        @retry="loadMissing({ by: 'retry' })"
       >
         Pozostałe sekcje działają osobno.
       </ErrorState>
@@ -569,7 +607,11 @@ onMounted(async () => {
           <ul class="missing-ranges">
             <li v-for="range in ranges" :key="range.from" class="missing-range">
               <span class="missing-days">{{ rangeText(range) }}</span>
-              <AppButton :aria-label="`Wpisz do formularza: ${rangeText(range)}`" @click="fillForm(range)">
+              <AppButton
+                :aria-label="`Wpisz do formularza: ${rangeText(range)}`"
+                :disabled="!formShown"
+                @click="fillForm(range)"
+              >
                 Wpisz do formularza
               </AppButton>
             </li>
@@ -581,7 +623,7 @@ onMounted(async () => {
       </template>
     </section>
 
-    <section aria-labelledby="quality-title" :aria-busy="qualityLoading ? 'true' : undefined">
+    <section aria-labelledby="quality-title" :aria-busy="qualityLoading || qualityRetrying ? 'true' : undefined">
       <h2 id="quality-title" ref="quality-heading" tabindex="-1">Jakość ocen (7 dni)</h2>
       <LoadingState v-if="qualityLoading" class="section-state" shape="lines" />
       <ErrorState
@@ -590,7 +632,7 @@ onMounted(async () => {
         class="section-state"
         title="Nie udało się wczytać jakości ocen"
         :retrying="qualityRetrying"
-        @retry="loadQuality({ retry: true })"
+        @retry="loadQuality({ by: 'retry' })"
       >
         Pozostałe sekcje działają osobno.
       </ErrorState>
@@ -625,7 +667,7 @@ onMounted(async () => {
       </template>
     </section>
 
-    <section ref="runs-section" aria-labelledby="runs-title" :aria-busy="runsLoading ? 'true' : undefined">
+    <section ref="runs-section" aria-labelledby="runs-title" :aria-busy="runsLoading || runsRetrying ? 'true' : undefined">
       <div class="section-head">
         <h2 id="runs-title" ref="runs-heading" tabindex="-1">Ostatnie przebiegi</h2>
         <AppButton :disabled="runsLoading" @click="refresh">Odśwież</AppButton>
@@ -637,7 +679,7 @@ onMounted(async () => {
         class="section-state"
         title="Nie udało się wczytać przebiegów"
         :retrying="runsRetrying"
-        @retry="loadRuns({ retry: true })"
+        @retry="loadRuns({ by: 'retry' })"
       >
         Pozostałe sekcje działają osobno.
       </ErrorState>
@@ -690,7 +732,7 @@ onMounted(async () => {
       </template>
     </section>
 
-    <section aria-labelledby="failed-title" :aria-busy="failedLoading ? 'true' : undefined">
+    <section aria-labelledby="failed-title" :aria-busy="failedLoading || failedRetrying ? 'true' : undefined">
       <h2 id="failed-title" ref="failed-heading" tabindex="-1">Nieudane posty</h2>
       <LoadingState v-if="failedLoading" class="section-state" shape="rows" />
       <ErrorState
@@ -699,7 +741,7 @@ onMounted(async () => {
         class="section-state"
         title="Nie udało się wczytać nieudanych postów"
         :retrying="failedRetrying"
-        @retry="loadFailed({ retry: true })"
+        @retry="loadFailed({ by: 'retry' })"
       >
         Pozostałe sekcje działają osobno.
       </ErrorState>
@@ -737,14 +779,14 @@ onMounted(async () => {
         <div class="failed-actions">
           <AppButton
             :disabled="selectedRetryable.length === 0 || restoring"
-            :busy="retrying"
+            :busy="retryingSelected"
             busy-label="Ponawianie…"
-            @click="retry"
+            @click="retrySelected"
           >
             Ponów zaznaczone ({{ selectedRetryable.length }})
           </AppButton>
           <AppButton
-            :disabled="selectedDead.length === 0 || retrying"
+            :disabled="selectedDead.length === 0 || retryingSelected"
             :busy="restoring"
             busy-label="Przywracanie…"
             @click="restore"
