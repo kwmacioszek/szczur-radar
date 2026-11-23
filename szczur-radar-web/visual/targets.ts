@@ -208,6 +208,55 @@ export const VIEWS: readonly View[] = [
     },
   },
   {
+    name: 'view-admin-loading',
+    risk: 'szkielety sekcji panelu admina nie zmieniają wyglądu i nie łamią dostępności',
+    path: '/admin',
+    modes: { AUTH: 'admin', MODE: 'loading' },
+    // Every admin call hangs in this mode, the bell's too: only its button is there (no count), not `bellLoaded`.
+    ready: async (page) => {
+      const main = page.getByRole('main')
+      for (const name of ['Nowy przebieg', 'Dni bez danych', 'Jakość ocen (7 dni)', 'Ostatnie przebiegi', 'Nieudane posty']) {
+        await expect(main.getByRole('region', { name, exact: true })).toHaveAttribute('aria-busy', 'true')
+      }
+      await expect(main.getByRole('button', { name: 'Odśwież', exact: true })).toBeDisabled()
+      await expect(page.getByRole('banner').getByRole('button', { name: /^Powiadomienia/ })).toBeVisible()
+      await freshnessLoaded(page)
+    },
+  },
+  {
+    name: 'view-admin-empty',
+    risk: 'puste sekcje panelu admina nie zmieniają wyglądu i nie łamią dostępności',
+    path: '/admin',
+    modes: { AUTH: 'admin', MODE: 'empty' },
+    ready: async (page) => {
+      const main = page.getByRole('main')
+      await expect(main.getByText('Brak nieudanych postów', { exact: true })).toBeVisible()
+      await expect(main.getByText('Jeszcze nie było przebiegu', { exact: true })).toBeVisible()
+      await expect(main.getByText('Wczytywanie…', { exact: true })).toHaveCount(0)
+      await bellLoaded(page)
+      await freshnessLoaded(page)
+    },
+  },
+  {
+    name: 'view-admin-error',
+    risk: 'błąd jednej sekcji panelu admina nie zmienia wyglądu i nie łamie dostępności',
+    path: '/admin',
+    modes: { AUTH: 'admin', QUALITY: 'error' },
+    // As `view-admin`, but the quality section is the error: the other sections show their data.
+    ready: async (page) => {
+      const main = page.getByRole('main')
+      const region = (name: string) => main.getByRole('region', { name, exact: true })
+      await expect(region('Jakość ocen (7 dni)').getByRole('alert')).toContainText('Nie udało się wczytać jakości ocen')
+      await expect(region('Nowy przebieg').getByRole('checkbox')).toHaveCount(2)
+      await expect(region('Dni bez danych').getByRole('button', { name: /^Wpisz do formularza: / }).first()).toBeVisible()
+      await expect(region('Ostatnie przebiegi').getByRole('link', { name: /^Szczegóły przebiegu z / })).toHaveCount(20)
+      await expect(region('Nieudane posty').getByRole('checkbox')).toHaveCount(4)
+      await expect(main.getByText('Wczytywanie…', { exact: true })).toHaveCount(0)
+      await bellLoaded(page)
+      await freshnessLoaded(page)
+    },
+  },
+  {
     name: 'view-run',
     risk: 'strona przebiegu nie zmienia wyglądu i nie łamie dostępności',
     path: `/admin/runs/${RUN_3}`,

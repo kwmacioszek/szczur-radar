@@ -21,6 +21,9 @@ import {
   fetchAssessmentQuality,
 } from '../api/quality'
 import AppButton from '../components/AppButton.vue'
+import EmptyState from '../components/EmptyState.vue'
+import ErrorState from '../components/ErrorState.vue'
+import LoadingState from '../components/LoadingState.vue'
 import PageHeader from '../components/PageHeader.vue'
 import StatusBadge, { type BadgeTone } from '../components/StatusBadge.vue'
 import StatusMessage from '../components/StatusMessage.vue'
@@ -35,13 +38,44 @@ function yesterday(): string {
   return new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Warsaw' }).format(date)
 }
 
+/**
+ * Every section reads its own data and has its own states (the shared ones): a skeleton while it loads with nothing on
+ * screen, an error with its own "Spróbuj ponownie", an empty list. A section's error stays on screen, its button busy,
+ * until the answer of a new read (`xRetrying`), whoever started it. `{ retry: true }` is a read started by that button:
+ * the busy button loses the focus, so after the answer it goes to the section's heading (`tabindex="-1"`), or back to
+ * "Spróbuj ponownie" after another failure. A read from "Odśwież" never moves the focus.
+ */
+type Read = { retry?: boolean }
+
+const startHeading = useTemplateRef<HTMLElement>('start-heading')
+const missingHeading = useTemplateRef<HTMLElement>('missing-heading')
+const qualityHeading = useTemplateRef<HTMLElement>('quality-heading')
+const runsHeading = useTemplateRef<HTMLElement>('runs-heading')
+const failedHeading = useTemplateRef<HTMLElement>('failed-heading')
+const sourcesErrorState = useTemplateRef<InstanceType<typeof ErrorState>>('sources-error-state')
+const missingErrorState = useTemplateRef<InstanceType<typeof ErrorState>>('missing-error-state')
+const qualityErrorState = useTemplateRef<InstanceType<typeof ErrorState>>('quality-error-state')
+const runsErrorState = useTemplateRef<InstanceType<typeof ErrorState>>('runs-error-state')
+const failedErrorState = useTemplateRef<InstanceType<typeof ErrorState>>('failed-error-state')
+
+/** After a read of the section's own button: the heading after a success, "Spróbuj ponownie" after a failure. */
+async function settleFocus(ok: boolean, heading: HTMLElement | null | undefined, errorState: { focus(): void } | null) {
+  await nextTick()
+  if (ok) heading?.focus()
+  else errorState?.focus()
+}
+
 // --- start a range run ------------------------------------------------------------------
 const from = ref(yesterday())
 const to = ref(yesterday())
 const sources = ref<SourceState[]>([])
-/** True until the first answer about the sources. */
+/** True until the first answer about the sources, unless an error is on screen. */
 const sourcesLoading = ref(true)
-const sourcesError = ref<string | null>(null)
+const sourcesError = ref(false)
+/** A new read runs while the error is on screen. */
+const sourcesRetrying = ref(false)
+/** The number of the latest read; the answer or error of any earlier one is dropped. */
+let latestSources = 0
 const chosenSources = ref<string[]>([])
 const starting = ref(false)
 const startMessage = ref<string | null>(null)
@@ -57,17 +91,28 @@ const startHint = computed(() => {
 
 // Loaded until the first success (on mount, "Spróbuj ponownie", "Odśwież" after an error), so the
 // configured sources are checked by default once and the admin's later choice is kept.
-async function loadSources(): Promise<void> {
-  sourcesLoading.value = true
-  sourcesError.value = null
+async function loadSources({ retry = false }: Read = {}): Promise<void> {
+  const current = ++latestSources
+  sourcesRetrying.value = sourcesError.value
+  sourcesLoading.value = !sourcesError.value
+  let ok = false
   try {
-    sources.value = await fetchSources()
-    chosenSources.value = sources.value.filter((s) => s.configured).map((s) => s.source)
+    const answer = await fetchSources()
+    if (current !== latestSources) return
+    sources.value = answer
+    chosenSources.value = answer.filter((s) => s.configured).map((s) => s.source)
+    sourcesError.value = false
+    ok = true
   } catch {
-    sourcesError.value = 'Nie udało się wczytać listy źródeł.'
+    if (current !== latestSources) return
+    sourcesError.value = true
   } finally {
-    sourcesLoading.value = false
+    if (current === latestSources) {
+      sourcesLoading.value = false
+      sourcesRetrying.value = false
+    }
   }
+  if (retry) await settleFocus(ok, startHeading.value, sourcesErrorState.value)
 }
 
 async function start(): Promise<void> {
@@ -89,26 +134,36 @@ async function start(): Promise<void> {
 // --- days without data ------------------------------------------------------------------
 const fromInput = useTemplateRef<HTMLInputElement>('from-input')
 const missing = ref<MissingDays | null>(null)
-/** Loading without an answer yet; a reload keeps the ranges on screen. */
+/** Loading without an answer yet (and no error on screen); a reload keeps the ranges on screen. */
 const missingLoading = ref(true)
-const missingError = ref<string | null>(null)
+const missingError = ref(false)
+const missingRetrying = ref(false)
 /** The number of the latest read; the answer or error of any earlier one is dropped. */
 let latestMissing = 0
 const ranges = computed(() => (missing.value ? missingRanges(missing.value.days) : []))
 
 // Read on mount, with "Odśwież" and after a run of the list stops being active: then the coverage may have changed.
-async function loadMissing(): Promise<void> {
+async function loadMissing({ retry = false }: Read = {}): Promise<void> {
   const current = ++latestMissing
-  missingLoading.value = missing.value === null
-  missingError.value = null
+  missingRetrying.value = missingError.value
+  missingLoading.value = missing.value === null && !missingError.value
+  let ok = false
   try {
     const answer = await fetchMissingDays()
-    if (current === latestMissing) missing.value = answer
+    if (current !== latestMissing) return
+    missing.value = answer
+    missingError.value = false
+    ok = true
   } catch {
-    if (current === latestMissing) missingError.value = 'Nie udało się wczytać dni bez danych.'
+    if (current !== latestMissing) return
+    missingError.value = true
   } finally {
-    if (current === latestMissing) missingLoading.value = false
+    if (current === latestMissing) {
+      missingLoading.value = false
+      missingRetrying.value = false
+    }
   }
+  if (retry) await settleFocus(ok, missingHeading.value, missingErrorState.value)
 }
 
 /** The days, as a run's range is shown, and the sources; a `YYYY-MM-DD` day is its UTC midnight, that day in Warsaw. */
@@ -133,23 +188,33 @@ function fillForm(range: MissingRange): void {
 const quality = ref<QualityWindow | null>(null)
 /** Loading without an answer yet; a reload keeps the window on screen. */
 const qualityLoading = ref(true)
-const qualityError = ref<string | null>(null)
+const qualityError = ref(false)
+const qualityRetrying = ref(false)
 /** The number of the latest read; the answer or error of any earlier one is dropped. */
 let latestQuality = 0
 
 // Read on mount, with "Odśwież" and after a run of the list stops being active: then new attempts may count.
-async function loadQuality(): Promise<void> {
+async function loadQuality({ retry = false }: Read = {}): Promise<void> {
   const current = ++latestQuality
-  qualityLoading.value = quality.value === null
-  qualityError.value = null
+  qualityRetrying.value = qualityError.value
+  qualityLoading.value = quality.value === null && !qualityError.value
+  let ok = false
   try {
     const answer = await fetchAssessmentQuality()
-    if (current === latestQuality) quality.value = answer
+    if (current !== latestQuality) return
+    quality.value = answer
+    qualityError.value = false
+    ok = true
   } catch {
-    if (current === latestQuality) qualityError.value = 'Nie udało się wczytać jakości ocen.'
+    if (current !== latestQuality) return
+    qualityError.value = true
   } finally {
-    if (current === latestQuality) qualityLoading.value = false
+    if (current === latestQuality) {
+      qualityLoading.value = false
+      qualityRetrying.value = false
+    }
   }
+  if (retry) await settleFocus(ok, qualityHeading.value, qualityErrorState.value)
 }
 
 /** The state is the API's; the colour only reinforces its text. */
@@ -206,9 +271,12 @@ const runsSection = useTemplateRef<HTMLElement>('runs-section')
 const runs = ref<Run[]>([])
 /** All runs in the API, from the latest answer. */
 const runsTotal = ref(0)
-/** Loading without a list; a refresh keeps existing runs on screen. */
+/** Loading for the first time (and no error on screen); a refresh keeps the runs, or their empty state, on screen. */
 const runsLoading = ref(true)
-const runsError = ref<string | null>(null)
+const runsError = ref(false)
+const runsRetrying = ref(false)
+/** An answer came at least once. */
+let runsLoaded = false
 const olderLoading = ref(false)
 const olderError = ref<string | null>(null)
 /** The time durations of running runs count to: the last read. */
@@ -231,11 +299,12 @@ function mergeRuns(fresh: Run[], shown: Run[]): Run[] {
  * Reads the newest runs again: page 0 as large as the rows on screen (at most MAX_PAGE_SIZE; older rows stay), so
  * the pages read with "Pokaż starsze" do not disappear. Rows are merged by id: a new run shifts the pages.
  */
-async function loadRuns(): Promise<void> {
+async function loadRuns({ retry = false }: Read = {}): Promise<void> {
   const current = ++latestRefresh
   refreshing = true
-  runsLoading.value = runs.value.length === 0
-  runsError.value = null
+  runsRetrying.value = runsError.value
+  runsLoading.value = !runsLoaded && !runsError.value
+  let ok = false
   try {
     const page = await fetchRuns(0, Math.min(Math.max(runs.value.length, RUNS_PAGE_SIZE), MAX_PAGE_SIZE))
     if (current !== latestRefresh) return
@@ -249,15 +318,20 @@ async function loadRuns(): Promise<void> {
     runsTotal.value = page.total
     pagesLoaded = Math.max(pagesLoaded, 1)
     now.value = Date.now()
+    runsLoaded = true
+    runsError.value = false
+    ok = true
   } catch {
     if (current !== latestRefresh) return
-    runsError.value = 'Nie udało się wczytać przebiegów.'
+    runsError.value = true
   } finally {
     if (current === latestRefresh) {
       runsLoading.value = false
+      runsRetrying.value = false
       refreshing = false
     }
   }
+  if (retry) await settleFocus(ok, runsHeading.value, runsErrorState.value)
 }
 
 /** The next page of older runs, appended without the rows already shown. */
@@ -310,9 +384,13 @@ function counters(run: Run): string {
 
 // --- failed posts -----------------------------------------------------------------------
 const failed = ref<FailedPost[]>([])
-/** Loading without a list; a refresh keeps existing failed posts on screen. */
+/** Loading for the first time (and no error on screen); a refresh keeps the list, or its empty state, on screen. */
 const failedLoading = ref(true)
-const failedError = ref<string | null>(null)
+const failedError = ref(false)
+const failedRetrying = ref(false)
+let failedLoaded = false
+/** The number of the latest read; the answer or error of any earlier one is dropped. */
+let latestFailed = 0
 /** One selection of the list, of both kinds: the dead posts in it are restored, the others retried. */
 const selected = ref<string[]>([])
 const retrying = ref(false)
@@ -329,17 +407,29 @@ const selectedRetryable = computed(() =>
 /** The checked dead posts: no run takes them, "Przywróć martwe" gives them back to assessment. */
 const selectedDead = computed(() => selected.value.filter((id) => stageOf.value.get(id) === 'dead'))
 
-async function loadFailed(): Promise<void> {
-  failedLoading.value = failed.value.length === 0
-  failedError.value = null
+async function loadFailed({ retry = false }: Read = {}): Promise<void> {
+  const current = ++latestFailed
+  failedRetrying.value = failedError.value
+  failedLoading.value = !failedLoaded && !failedError.value
+  let ok = false
   try {
-    failed.value = (await fetchFailedPosts()).items
+    const answer = (await fetchFailedPosts()).items
+    if (current !== latestFailed) return
+    failed.value = answer
     selected.value = selected.value.filter((id) => stageOf.value.has(id))
+    failedLoaded = true
+    failedError.value = false
+    ok = true
   } catch {
-    failedError.value = 'Nie udało się wczytać nieudanych postów.'
+    if (current !== latestFailed) return
+    failedError.value = true
   } finally {
-    failedLoading.value = false
+    if (current === latestFailed) {
+      failedLoading.value = false
+      failedRetrying.value = false
+    }
   }
+  if (retry) await settleFocus(ok, failedHeading.value, failedErrorState.value)
 }
 
 /** Only the outcome of the latest action on the list stays on screen. */
@@ -412,19 +502,25 @@ onMounted(async () => {
   <div class="admin">
     <PageHeader class="head" title="Panel admina" />
 
-    <section aria-labelledby="start-title">
-      <h2 id="start-title">Nowy przebieg</h2>
-      <form class="start" @submit.prevent="start">
-        <label>Od <input ref="from-input" v-model="from" type="date" required /></label>
-        <label>Do <input v-model="to" type="date" required /></label>
-        <fieldset class="sources" :aria-busy="sourcesLoading ? 'true' : undefined">
-          <legend>Źródła</legend>
-          <span v-if="sourcesLoading" class="loading">Wczytywanie…</span>
-          <template v-else-if="sourcesError">
-            <StatusMessage tone="error">{{ sourcesError }}</StatusMessage>
-            <AppButton @click="loadSources">Spróbuj ponownie</AppButton>
-          </template>
-          <template v-else>
+    <section aria-labelledby="start-title" :aria-busy="sourcesLoading ? 'true' : undefined">
+      <h2 id="start-title" ref="start-heading" tabindex="-1">Nowy przebieg</h2>
+      <LoadingState v-if="sourcesLoading" class="section-state" shape="form" />
+      <ErrorState
+        v-else-if="sourcesError"
+        ref="sources-error-state"
+        class="section-state"
+        title="Nie udało się wczytać listy źródeł"
+        :retrying="sourcesRetrying"
+        @retry="loadSources({ retry: true })"
+      >
+        Bez listy źródeł nie da się uruchomić przebiegu.
+      </ErrorState>
+      <template v-else>
+        <form class="start" @submit.prevent="start">
+          <label>Od <input ref="from-input" v-model="from" type="date" required /></label>
+          <label>Do <input v-model="to" type="date" required /></label>
+          <fieldset class="sources">
+            <legend>Źródła</legend>
             <label v-for="source in sources" :key="source.source">
               <input
                 v-model="chosenSources"
@@ -434,32 +530,41 @@ onMounted(async () => {
               />
               {{ label('source', source.source) }}<template v-if="!source.configured"> (nieskonfigurowane)</template>
             </label>
-          </template>
-        </fieldset>
-        <AppButton
-          type="submit"
-          variant="primary"
-          :disabled="chosenSources.length === 0"
-          :busy="starting"
-          busy-label="Uruchamianie…"
-          :aria-describedby="startHint ? 'start-hint' : undefined"
-        >
-          Uruchom
-        </AppButton>
-      </form>
-      <p v-if="startHint" id="start-hint" class="hint">{{ startHint }}</p>
+          </fieldset>
+          <AppButton
+            type="submit"
+            variant="primary"
+            :disabled="chosenSources.length === 0"
+            :busy="starting"
+            busy-label="Uruchamianie…"
+            :aria-describedby="startHint ? 'start-hint' : undefined"
+          >
+            Uruchom
+          </AppButton>
+        </form>
+        <p v-if="startHint" id="start-hint" class="hint">{{ startHint }}</p>
+      </template>
       <StatusMessage v-if="startMessage" tone="ok" class="message">{{ startMessage }}</StatusMessage>
       <StatusMessage v-if="startError" tone="error" class="message">{{ startError }}</StatusMessage>
     </section>
 
     <section aria-labelledby="missing-title" :aria-busy="missingLoading ? 'true' : undefined">
-      <h2 id="missing-title">Dni bez danych</h2>
-      <p v-if="missingLoading" class="loading">Wczytywanie…</p>
-      <StatusMessage v-else-if="missingError" tone="error" class="message">{{ missingError }}</StatusMessage>
+      <h2 id="missing-title" ref="missing-heading" tabindex="-1">Dni bez danych</h2>
+      <LoadingState v-if="missingLoading" class="section-state" shape="lines" />
+      <ErrorState
+        v-else-if="missingError"
+        ref="missing-error-state"
+        class="section-state"
+        title="Nie udało się wczytać dni bez danych"
+        :retrying="missingRetrying"
+        @retry="loadMissing({ retry: true })"
+      >
+        Pozostałe sekcje działają osobno.
+      </ErrorState>
       <template v-else-if="missing">
-        <p v-if="ranges.length === 0" class="empty">
-          Brak dni bez danych od {{ formatDate(missing.from) }} do {{ formatDate(missing.to) }}.
-        </p>
+        <EmptyState v-if="ranges.length === 0" class="section-state" icon="i-circle-check" title="Brak dni bez danych">
+          Każdy dzień od {{ formatDate(missing.from) }} do {{ formatDate(missing.to) }} ma dane.
+        </EmptyState>
         <template v-else>
           <ul class="missing-ranges">
             <li v-for="range in ranges" :key="range.from" class="missing-range">
@@ -477,15 +582,31 @@ onMounted(async () => {
     </section>
 
     <section aria-labelledby="quality-title" :aria-busy="qualityLoading ? 'true' : undefined">
-      <h2 id="quality-title">Jakość ocen (7 dni)</h2>
-      <p v-if="qualityLoading" class="loading">Wczytywanie…</p>
-      <StatusMessage v-else-if="qualityError" tone="error" class="message">{{ qualityError }}</StatusMessage>
+      <h2 id="quality-title" ref="quality-heading" tabindex="-1">Jakość ocen (7 dni)</h2>
+      <LoadingState v-if="qualityLoading" class="section-state" shape="lines" />
+      <ErrorState
+        v-else-if="qualityError"
+        ref="quality-error-state"
+        class="section-state"
+        title="Nie udało się wczytać jakości ocen"
+        :retrying="qualityRetrying"
+        @retry="loadQuality({ retry: true })"
+      >
+        Pozostałe sekcje działają osobno.
+      </ErrorState>
       <template v-else-if="quality">
         <p class="quality-window">
           Od {{ formatDate(quality.from) }} do {{ formatDate(quality.to) }} · próby z wywołaniem modelu (bez prefiltra), z ponowieniami;
           próg sprawdzany od {{ quality.minAttempts }} prób; tezy udanych ocen, próg sprawdzany od {{ quality.minTheses }} tez
         </p>
-        <p v-if="quality.sources.length === 0" class="empty">Brak ocen w ostatnich {{ quality.windowDays }} dniach.</p>
+        <EmptyState
+          v-if="quality.sources.length === 0"
+          class="section-state"
+          icon="i-inbox"
+          :title="`Brak ocen w ostatnich ${quality.windowDays} dniach`"
+        >
+          Miary pojawią się po ocenach z kolejnego przebiegu.
+        </EmptyState>
         <ul v-else class="quality-sources">
           <li v-for="row in quality.sources" :key="row.source" class="quality-source" :data-status="row.status">
             <p class="quality-head">
@@ -506,12 +627,23 @@ onMounted(async () => {
 
     <section ref="runs-section" aria-labelledby="runs-title" :aria-busy="runsLoading ? 'true' : undefined">
       <div class="section-head">
-        <h2 id="runs-title">Ostatnie przebiegi</h2>
-        <AppButton @click="refresh">Odśwież</AppButton>
+        <h2 id="runs-title" ref="runs-heading" tabindex="-1">Ostatnie przebiegi</h2>
+        <AppButton :disabled="runsLoading" @click="refresh">Odśwież</AppButton>
       </div>
-      <p v-if="runsLoading" class="loading">Wczytywanie…</p>
-      <StatusMessage v-else-if="runsError" tone="error" class="message">{{ runsError }}</StatusMessage>
-      <p v-else-if="runs.length === 0" class="empty">Jeszcze nie było przebiegu.</p>
+      <LoadingState v-if="runsLoading" class="section-state" shape="rows" />
+      <ErrorState
+        v-else-if="runsError"
+        ref="runs-error-state"
+        class="section-state"
+        title="Nie udało się wczytać przebiegów"
+        :retrying="runsRetrying"
+        @retry="loadRuns({ retry: true })"
+      >
+        Pozostałe sekcje działają osobno.
+      </ErrorState>
+      <EmptyState v-else-if="runs.length === 0" class="section-state" icon="i-inbox" title="Jeszcze nie było przebiegu">
+        Pierwszy uruchomisz w sekcji „Nowy przebieg”.
+      </EmptyState>
       <template v-else>
         <ul class="runs">
           <li v-for="run in runs" :key="run.id" class="run" :data-status="run.status">
@@ -559,10 +691,21 @@ onMounted(async () => {
     </section>
 
     <section aria-labelledby="failed-title" :aria-busy="failedLoading ? 'true' : undefined">
-      <h2 id="failed-title">Nieudane posty</h2>
-      <p v-if="failedLoading" class="loading">Wczytywanie…</p>
-      <StatusMessage v-else-if="failedError" tone="error" class="message">{{ failedError }}</StatusMessage>
-      <p v-else-if="failed.length === 0" class="empty">Brak nieudanych postów.</p>
+      <h2 id="failed-title" ref="failed-heading" tabindex="-1">Nieudane posty</h2>
+      <LoadingState v-if="failedLoading" class="section-state" shape="rows" />
+      <ErrorState
+        v-else-if="failedError"
+        ref="failed-error-state"
+        class="section-state"
+        title="Nie udało się wczytać nieudanych postów"
+        :retrying="failedRetrying"
+        @retry="loadFailed({ retry: true })"
+      >
+        Pozostałe sekcje działają osobno.
+      </ErrorState>
+      <EmptyState v-else-if="failed.length === 0" class="section-state" icon="i-circle-check" title="Brak nieudanych postów">
+        Żaden post nie czeka na ponowienie ani nie jest martwy.
+      </EmptyState>
       <template v-else>
         <ul class="failed-posts">
           <li v-for="post in failed" :key="post.id">
@@ -652,9 +795,14 @@ h2 {
 }
 
 /* A message standing alone in its section, apart from what is above and below it; the page's selector outranks the
-   message's own zero margin. In the sources' fieldset its row's gap spaces it. */
+   message's own zero margin. */
 .admin .message {
   margin-block: var(--space-3);
+}
+
+/* The state of a section (loading, error, empty) stands apart from the heading above it. */
+.section-state {
+  margin-top: var(--space-4);
 }
 
 .section-head {

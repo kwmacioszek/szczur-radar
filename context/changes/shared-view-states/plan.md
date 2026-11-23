@@ -585,23 +585,23 @@ Brak zmian danych i API. Wdrożenie web jest niezależne od API.
 
 #### Automated
 
-- [x] 2.1 Testy jednostkowe przechodzą, w tym router, AppShell, FeedView, PostDetailView i RunDetailView
-- [x] 2.2 Typecheck i build przechodzą
-- [x] 2.3 Po samym przeniesieniu kolumny testy wizualne przechodzą bez aktualizacji wzorców
-- [x] 2.4 Testy E2E przechodzą, w tym poprawione testy stanów listy
-- [x] 2.5 Testy wizualne i axe przechodzą z nowymi wzorcami stanów listy, dwa przebiegi zielone
-- [x] 2.6 W widokach nie ma klas starego wzorca stanów ani kontenera szerokości
-- [x] 2.7 Powrót z posta do listy przywraca pozycję i fokus na odnośniku posta
+- [x] 2.1 Testy jednostkowe przechodzą, w tym router, AppShell, FeedView, PostDetailView i RunDetailView — f2bb6c2
+- [x] 2.2 Typecheck i build przechodzą — f2bb6c2
+- [x] 2.3 Po samym przeniesieniu kolumny testy wizualne przechodzą bez aktualizacji wzorców — f2bb6c2
+- [x] 2.4 Testy E2E przechodzą, w tym poprawione testy stanów listy — f2bb6c2
+- [x] 2.5 Testy wizualne i axe przechodzą z nowymi wzorcami stanów listy, dwa przebiegi zielone — f2bb6c2
+- [x] 2.6 W widokach nie ma klas starego wzorca stanów ani kontenera szerokości — f2bb6c2
+- [x] 2.7 Powrót z posta do listy przywraca pozycję i fokus na odnośniku posta — f2bb6c2
 
 ### Phase 3: Panel admina na wspólnych stanach
 
 #### Automated
 
-- [ ] 3.1 Testy jednostkowe przechodzą, w tym AdminView
-- [ ] 3.2 Typecheck i build przechodzą
-- [ ] 3.3 Dotychczasowe testy E2E przechodzą
-- [ ] 3.4 Testy wizualne i axe przechodzą z nowymi wzorcami stanów panelu, view-admin bez zmian, dwa przebiegi zielone
-- [ ] 3.5 W panelu admina nie ma klas starego wzorca stanów
+- [x] 3.1 Testy jednostkowe przechodzą, w tym AdminView
+- [x] 3.2 Typecheck i build przechodzą
+- [x] 3.3 Dotychczasowe testy E2E przechodzą
+- [x] 3.4 Testy wizualne i axe przechodzą z nowymi wzorcami stanów panelu, view-admin bez zmian, dwa przebiegi zielone
+- [x] 3.5 W panelu admina nie ma klas starego wzorca stanów
 
 ### Phase 4: Testy E2E stanów i weryfikacja
 
