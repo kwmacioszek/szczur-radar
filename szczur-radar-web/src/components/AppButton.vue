@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // The shared button. Secondary is the look of the global `button` in style.css; primary is the filled main action
-// (one per view). It can carry an icon before its text, be large, or be icon-only (a name for assistive technology
-// is then required: `aria-label`). Never a submit button unless asked: inside a form it would send it.
+// (one per view). It can carry an icon before its text (or after it: a way forward, "Starsze →"), be large, or be
+// icon-only (a name for assistive technology is then required: `aria-label`). Never a submit button unless asked: inside a form it would send it.
 import { useAttrs } from 'vue'
 import AppIcon from './AppIcon.vue'
 import type { IconName } from './iconNames'
@@ -11,8 +11,10 @@ const props = withDefaults(
     variant?: 'primary' | 'secondary'
     type?: 'button' | 'submit'
     size?: 'md' | 'lg'
-    /** An icon before the text. */
+    /** An icon, before the text unless `iconPosition` says otherwise. */
     icon?: IconName
+    /** Where the icon stands: before the text or after it. The mark of work in progress always stands before. */
+    iconPosition?: 'start' | 'end'
     /** Only the icon (needs `icon` and an `aria-label`). A pressed or expanded one is filled with --selected. */
     iconOnly?: boolean
     disabled?: boolean
@@ -21,7 +23,7 @@ const props = withDefaults(
     /** The text while busy; without it the button keeps its own. */
     busyLabel?: string
   }>(),
-  { variant: 'secondary', type: 'button', size: 'md', icon: undefined, busyLabel: undefined },
+  { variant: 'secondary', type: 'button', size: 'md', icon: undefined, iconPosition: 'start', busyLabel: undefined },
 )
 
 const attrs = useAttrs()
@@ -40,11 +42,12 @@ if (import.meta.env.DEV && props.iconOnly && !named(attrs['aria-label']) && !nam
     :aria-busy="busy ? 'true' : undefined"
   >
     <span v-if="busy" class="spinner" aria-hidden="true"></span>
-    <AppIcon v-else-if="icon" :name="icon" />
+    <AppIcon v-else-if="icon && (iconOnly || iconPosition === 'start')" :name="icon" />
     <template v-if="!iconOnly">
       <template v-if="busy && busyLabel">{{ busyLabel }}</template>
       <slot v-else />
     </template>
+    <AppIcon v-if="icon && !busy && !iconOnly && iconPosition === 'end'" :name="icon" />
   </button>
 </template>
 

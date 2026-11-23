@@ -26,6 +26,9 @@ export { safeRedirect } from './redirect'
 /** The item of the main navigation a page belongs to (components/AppShell.vue marks it with aria-current). */
 export type AppSection = 'posts' | 'admin'
 
+/** The width of a shell page's column: the shell sets it (components/AppShell.vue), a view has no container of its own. */
+export type PageColumn = 'narrow' | 'wide'
+
 declare module 'vue-router' {
   interface RouteMeta {
     /** Reachable without a session. */
@@ -34,6 +37,8 @@ declare module 'vue-router' {
     admin?: boolean
     /** The navigation item of the shell's pages; the other routes have none. */
     section?: AppSection
+    /** The width of the shell page's column; without it the page spans the shell's whole column. */
+    column?: PageColumn
   }
 }
 
@@ -47,14 +52,14 @@ export const routes: RouteRecordRaw[] = [
     path: '/',
     component: AppShell,
     children: [
-      { path: '', name: 'home', component: FeedView, meta: { section: 'posts' } },
-      { path: 'posts/:id', name: 'post', component: PostDetailView, meta: { section: 'posts' } },
-      { path: 'admin', name: 'admin', component: AdminView, meta: { admin: true, section: 'admin' } },
+      { path: '', name: 'home', component: FeedView, meta: { section: 'posts', column: 'narrow' } },
+      { path: 'posts/:id', name: 'post', component: PostDetailView, meta: { section: 'posts', column: 'narrow' } },
+      { path: 'admin', name: 'admin', component: AdminView, meta: { admin: true, section: 'admin', column: 'wide' } },
       {
         path: 'admin/runs/:id',
         name: 'admin-run',
         component: RunDetailView,
-        meta: { admin: true, section: 'admin' },
+        meta: { admin: true, section: 'admin', column: 'narrow' },
       },
     ],
   },

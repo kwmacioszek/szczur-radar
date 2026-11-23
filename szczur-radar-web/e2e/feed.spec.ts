@@ -1,5 +1,5 @@
-// Smoke of the feed (F-05): the list with its filter in the address, the pager and the list's states — what S-48
-// and S-51 rebuild.
+// Smoke of the feed (F-05): the list with its filter in the address, the pager and the list's states (the shared
+// loading, empty and error states of S-48).
 import { expect, test } from './fixtures.ts'
 
 const ORLEN_TITLE = 'Orlen ogłasza buyback za 4 mld zł'
@@ -27,6 +27,7 @@ test('filtr bez wyników pozwala wrócić do pełnej listy', async ({ page }) =>
   await page.goto('/?q=zzz')
   const main = page.getByRole('main')
   await expect(main.getByRole('status')).toHaveText('Żaden post nie pasuje do filtra.')
+  await expect(main.getByRole('heading', { level: 2, name: 'Brak postów dla tych filtrów', exact: true })).toBeVisible()
 
   // Both "Wyczyść filtry" are in main: the form's (first in the document) and the empty result's.
   await main.getByRole('button', { name: 'Wyczyść filtry' }).last().click()
@@ -52,6 +53,7 @@ test.describe('ładowanie', () => {
   test('ładowanie listy jest widoczne', async ({ page }) => {
     await page.goto('/')
 
+    // The skeleton's text for assistive technology; the list's aria-busy has no role to find it by (FeedView.test.ts).
     await expect(page.getByRole('main').getByText('Wczytywanie…', { exact: true })).toBeVisible()
   })
 })
@@ -62,7 +64,8 @@ test.describe('błąd', () => {
   test('błąd listy pozwala ponowić wczytanie', async ({ page }) => {
     await page.goto('/')
     const main = page.getByRole('main')
-    await expect(main.getByRole('alert')).toHaveText('Nie udało się wczytać postów.')
+    const title = main.getByRole('alert').getByRole('heading', { level: 2, name: 'Nie udało się wczytać postów', exact: true })
+    await expect(title).toBeVisible()
 
     // The retry's own answer, not just its request: the alert below is the one the retry rendered.
     const retried = page.waitForResponse((response) =>
@@ -71,7 +74,7 @@ test.describe('błąd', () => {
     await main.getByRole('button', { name: 'Spróbuj ponownie' }).click()
     await retried
 
-    await expect(main.getByRole('alert')).toHaveText('Nie udało się wczytać postów.')
+    await expect(title).toBeVisible()
   })
 })
 
@@ -80,8 +83,9 @@ test.describe('pusto', () => {
 
   test('pusta lista mówi, kiedy pojawią się posty', async ({ page }) => {
     await page.goto('/')
+    const main = page.getByRole('main')
 
-    await expect(page.getByRole('main')
-      .getByText('Brak ocenionych postów. Pojawią się po najbliższej aktualizacji danych.')).toBeVisible()
+    await expect(main.getByRole('heading', { level: 2, name: 'Brak ocenionych postów', exact: true })).toBeVisible()
+    await expect(main.getByText('Pojawią się po najbliższej aktualizacji danych.', { exact: true })).toBeVisible()
   })
 })

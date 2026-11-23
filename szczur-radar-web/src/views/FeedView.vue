@@ -3,16 +3,20 @@ import { computed, nextTick, onBeforeUnmount, ref, useTemplateRef, watch } from 
 import { useRoute, useRouter } from 'vue-router'
 import { FEED_PAGE_SIZE, type Page, type PostFilter, type PostItem, fetchPosts } from '../api/posts'
 import AppButton from '../components/AppButton.vue'
+import EmptyState from '../components/EmptyState.vue'
+import ErrorState from '../components/ErrorState.vue'
 import FeedFilter from '../components/FeedFilter.vue'
+import LoadingState from '../components/LoadingState.vue'
 import PageHeader from '../components/PageHeader.vue'
+import PagerNav from '../components/PagerNav.vue'
 import PostCard from '../components/PostCard.vue'
-import StatusMessage from '../components/StatusMessage.vue'
 import { filterFromQuery, filterToQuery, isFilterActive, pageFromQuery, sameFilter } from '../feedFilter'
 import { reportFeedLoaded } from '../router/scroll'
 
 const route = useRoute()
 const router = useRouter()
 const header = useTemplateRef<InstanceType<typeof PageHeader>>('header')
+const errorState = useTemplateRef<InstanceType<typeof ErrorState>>('error-state')
 
 /**
  * The page on screen: the requested page number and filter with their answer. The result line, the
@@ -20,8 +24,19 @@ const header = useTemplateRef<InstanceType<typeof PageHeader>>('header')
  * answer.
  */
 const shown = ref<{ page: number; filter: PostFilter; result: Page<PostItem> } | null>(null)
-/** The page being loaded (from 0); null when no load is in progress. */
-const loadingPage = ref<number | null>(null)
+
+/**
+ * How a load replaces what is on screen:
+ * - `fresh`: the first entry, a filter change, or a page change with no list on screen: a skeleton;
+ * - `page`: a page change at the same filter with the list on screen: the list stays, the pager's button towards the
+ *   target page is busy;
+ * - `retry`: "Spróbuj ponownie": the error stays, its button busy, until the answer.
+ */
+type LoadKind = 'fresh' | 'page' | 'retry'
+
+/** The load in progress (its page from 0 and its kind); null when none is. */
+const loading = ref<{ page: number; kind: LoadKind } | null>(null)
+/** The last load that ended failed; its error stays on screen during a retry. */
 const failed = ref(false)
 /** The number of the latest load; the answer or error of any earlier one is dropped. */
 let latestLoad = 0
@@ -35,43 +50,75 @@ const pages = computed(() => (shown.value ? Math.max(1, Math.ceil(shown.value.re
 const noMatch = computed(
   () => shown.value !== null && shown.value.result.total === 0 && isFilterActive(shown.value.filter),
 )
+/** The cards with their pager are on screen, so a page change at the same filter can leave them there. */
+const listOnScreen = computed(() => !failed.value && shown.value !== null && shown.value.result.items.length > 0)
 
-const loadingText = computed(() =>
-  shown.value === null && loadingPage.value === 0
-    ? 'Wczytywanie…'
-    : `Wczytywanie strony ${(loadingPage.value ?? 0) + 1}…`,
-)
+/** The error stays during its own retry; any other load replaces it. */
+const showError = computed(() => failed.value && (loading.value === null || loading.value.kind === 'retry'))
+/** The skeleton: a load whose answer replaces what is on screen. */
+const showSkeleton = computed(() => loading.value !== null && loading.value.kind === 'fresh')
 
-/** The line over the list, announced by its status region; empty while loading and after an error. */
+/** The pager's button towards the page being loaded, while the list stays. */
+const pagerBusy = computed<'previous' | 'next' | null>(() => {
+  if (loading.value?.kind !== 'page' || !shown.value) return null
+  return loading.value.page > shown.value.page ? 'next' : 'previous'
+})
+
+/** The line over the list, announced by its status region; empty while a new list loads and after an error. */
 const resultText = computed(() => {
-  if (loadingPage.value !== null || failed.value || !shown.value) return ''
+  if (failed.value || !shown.value || (loading.value !== null && loading.value.kind !== 'page')) return ''
   const { total } = shown.value.result
   if (!isFilterActive(shown.value.filter)) return total > 0 ? `Ocenione posty: ${total}` : ''
   return total > 0 ? `Pasujące do filtra: ${total}` : 'Żaden post nie pasuje do filtra.'
 })
 
+/** What stayed after the error: the filter in the form, when there is one. */
+const errorText = computed(() =>
+  isFilterActive(filter.value) ? 'Serwer nie odpowiedział. Twoje filtry zostały.' : 'Serwer nie odpowiedział.',
+)
+
 /**
- * `moveFocus`: after a successful load, focus the heading, the start of the new list. Each load
- * that is still the latest one reports how it ended, so a return from a post can restore the
- * position once the list is on screen (router/scroll.ts).
+ * After the load, where the view goes:
+ * - `top`: a page change: once the page (or its error) is on screen, to the top and the focus to the heading; never at
+ *   the click, which would hide the busy button under the list;
+ * - `heading`: the focus to the heading after a successful load (the empty result's "Wyczyść filtry" is gone);
+ * - `retry`: the heading after a success, "Spróbuj ponownie" again after another failure (the busy button lost it);
+ * - `none`: the first entry and a filter change: the focus stays in the form and the result line announces the count.
  */
-async function load(target: number, conditions: PostFilter, { moveFocus = false } = {}): Promise<void> {
+type After = 'top' | 'heading' | 'retry' | 'none'
+
+/**
+ * Each load that is still the latest one reports how it ended, so a return from a post can restore the position once
+ * the list is on screen (router/scroll.ts).
+ */
+async function load(target: number, conditions: PostFilter, kind: LoadKind, after: After): Promise<void> {
   const id = ++latestLoad
-  loadingPage.value = target
-  failed.value = false
+  loading.value = { page: target, kind }
+  // A retry keeps its error until the answer; any other load replaces it.
+  if (kind !== 'retry') failed.value = false
   try {
     const result = await fetchPosts(target, FEED_PAGE_SIZE, conditions)
     if (id !== latestLoad) return
     shown.value = { page: target, filter: conditions, result }
-    loadingPage.value = null
-    if (moveFocus) header.value?.focus()
+    failed.value = false
+    loading.value = null
     await nextTick()
     if (id !== latestLoad) return
+    if (after === 'top') window.scrollTo({ top: 0 })
+    if (after !== 'none') header.value?.focus()
     reportFeedLoaded('ok')
   } catch {
     if (id !== latestLoad) return
     failed.value = true
-    loadingPage.value = null
+    loading.value = null
+    await nextTick()
+    if (id !== latestLoad) return
+    if (after === 'top') {
+      window.scrollTo({ top: 0 })
+      header.value?.focus()
+    } else if (after === 'retry') {
+      errorState.value?.focus()
+    }
     reportFeedLoaded('error')
   }
 }
@@ -82,9 +129,9 @@ onBeforeUnmount(() => {
   latestLoad++
 })
 
-/** The retry button disappears while loading, so the focus goes to the heading afterwards. */
+/** The same page and filter again; the error stays with its busy button until the answer. */
 function retry(): void {
-  void load(page.value, filter.value, { moveFocus: true })
+  void load(page.value, filter.value, 'retry', 'retry')
 }
 
 /** The filter keys stay in the address. */
@@ -121,8 +168,8 @@ function clearFromEmptyResult(): void {
 }
 
 // The first entry neither scrolls nor takes the focus (e.g. from the header link). A page change
-// (pager, back/forward) goes to the top at once and focuses the heading once the page is loaded. A
-// filter change does neither: the focus stays in the form and the result line announces the count.
+// (pager, back/forward) goes to the top and focuses the heading once the page is loaded. A filter
+// change does neither: the focus stays in the form and the result line announces the count.
 watch(
   [page, filter],
   ([nextPage, nextFilter], [previousPage, previousFilter]) => {
@@ -133,10 +180,20 @@ watch(
     // Another query key changed (or none: the filter is recomputed for every change of the address).
     if (!first && !filterChanged && !pageChanged) return
     const pageOnly = pageChanged && !filterChanged && !fromForm
-    if (pageOnly) window.scrollTo({ top: 0 })
-    const moveFocus = pageOnly || focusAfterClear
+    // Back to the page on screen while another one loads ("Starsze", then back): that load is dropped and nothing
+    // is fetched; the view goes to the top and the heading, as after any page change.
+    if (pageOnly && loading.value?.kind === 'page' && shown.value?.page === nextPage && sameFilter(shown.value.filter, nextFilter)) {
+      latestLoad++
+      loading.value = null
+      void nextTick(() => {
+        window.scrollTo({ top: 0 })
+        header.value?.focus()
+      })
+      return
+    }
+    const after: After = pageOnly ? 'top' : focusAfterClear ? 'heading' : 'none'
     focusAfterClear = false
-    void load(nextPage, nextFilter, { moveFocus })
+    void load(nextPage, nextFilter, pageOnly && listOnScreen.value ? 'page' : 'fresh', after)
   },
   { immediate: true },
 )
@@ -150,29 +207,55 @@ watch(
       <!-- In the document from the start, so a screen reader announces each new count. -->
       <p class="result" role="status">{{ resultText }}</p>
       <!-- Only the list is busy while a page loads: the heading, the label, the form and the count do not change. -->
-      <div class="posts" :aria-busy="loadingPage !== null ? 'true' : undefined">
-        <p v-if="loadingPage !== null" class="loading">{{ loadingText }}</p>
-        <template v-else-if="failed">
-          <StatusMessage tone="error" class="message">Nie udało się wczytać postów.</StatusMessage>
-          <AppButton @click="retry">Spróbuj ponownie</AppButton>
-        </template>
+      <div class="posts" :aria-busy="loading !== null ? 'true' : undefined">
+        <ErrorState
+          v-if="showError"
+          ref="error-state"
+          title-tag="h2"
+          title="Nie udało się wczytać postów"
+          :retrying="loading !== null"
+          @retry="retry"
+        >
+          {{ errorText }}
+        </ErrorState>
+        <LoadingState v-else-if="showSkeleton" shape="rows" />
         <!-- The result line says that nothing matches; the way out stays next to it. -->
-        <AppButton v-else-if="noMatch" @click="clearFromEmptyResult">Wyczyść filtry</AppButton>
-        <p v-else-if="shown && shown.result.total === 0" class="empty">
-          Brak ocenionych postów. Pojawią się po najbliższej aktualizacji danych.
-        </p>
+        <EmptyState v-else-if="noMatch" title-tag="h2" icon="i-search" title="Brak postów dla tych filtrów">
+          Zmień filtr albo wyczyść go, żeby zobaczyć wszystkie posty.
+          <template #action>
+            <AppButton @click="clearFromEmptyResult">Wyczyść filtry</AppButton>
+          </template>
+        </EmptyState>
+        <EmptyState
+          v-else-if="shown && shown.result.total === 0"
+          title-tag="h2"
+          icon="i-inbox"
+          title="Brak ocenionych postów"
+        >
+          Pojawią się po najbliższej aktualizacji danych.
+        </EmptyState>
         <!-- An old link past the last page: the API answers with no items and the real total. -->
-        <template v-else-if="shown && shown.result.items.length === 0">
-          <p class="empty">Nie ma strony {{ shown.page + 1 }}. Posty kończą się na stronie {{ pages }}.</p>
-          <AppButton @click="goTo(pages - 1)">Przejdź do strony {{ pages }}</AppButton>
-        </template>
+        <EmptyState
+          v-else-if="shown && shown.result.items.length === 0"
+          title-tag="h2"
+          icon="i-inbox"
+          :title="`Nie ma strony ${shown.page + 1}`"
+        >
+          Posty kończą się na stronie {{ pages }}.
+          <template #action>
+            <AppButton @click="goTo(pages - 1)">Przejdź do strony {{ pages }}</AppButton>
+          </template>
+        </EmptyState>
         <template v-else-if="shown">
           <PostCard v-for="post in shown.result.items" :key="post.id" :post="post" />
-          <nav class="pager" aria-label="Strony">
-            <AppButton :disabled="shown.page === 0" @click="goTo(shown.page - 1)">Nowsze</AppButton>
-            <span class="position">Strona {{ shown.page + 1 }} z {{ pages }}</span>
-            <AppButton :disabled="shown.page + 1 >= pages" @click="goTo(shown.page + 1)">Starsze</AppButton>
-          </nav>
+          <PagerNav
+            class="list-pager"
+            :page="shown.page"
+            :pages="pages"
+            :busy="pagerBusy"
+            @previous="goTo(shown.page - 1)"
+            @next="goTo(shown.page + 1)"
+          />
         </template>
       </div>
     </section>
@@ -180,18 +263,6 @@ watch(
 </template>
 
 <style scoped>
-.feed {
-  max-width: 48rem;
-  margin: 0 auto;
-}
-
-/* The root font size is 16px at every width; above 1024px the width is what 18px gave (design-tokens-and-components). */
-@media (min-width: 1025px) {
-  .feed {
-    max-width: 54rem;
-  }
-}
-
 /* The page's width is the shell's column's; the title stands apart from the filter below it. */
 .head {
   margin-bottom: var(--space-4);
@@ -202,22 +273,8 @@ watch(
   color: var(--text-h);
 }
 
-.loading,
-.empty {
-  margin: var(--space-4) 0;
-}
-
-/* Apart from the retry button below it; the list's selector outranks the message's own zero margin. */
-.posts .message {
-  margin-block: var(--space-3);
-}
-
-/* The cards keep their own spacing; the pager sits under the last one. */
-.pager {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-  padding: var(--space-4) 0;
+/* The cards keep their own spacing; the pager stands apart under the last one. */
+.list-pager {
+  margin-top: var(--space-5);
 }
 </style>

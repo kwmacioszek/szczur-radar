@@ -3,7 +3,7 @@ project: "Szczur Radar"
 version: 6
 status: draft # draft | active | locked
 created: 2026-09-27
-updated: 2026-11-22
+updated: 2026-11-23
 prd_version: 4
 main_goal: quality
 top_blocker: capacity # 19 pozycji, jeden recenzent i osoba mergująca; fundament UI dotyka wspólnych plików (tokeny, komponenty, router), więc pierwsze fale są sekwencyjne; darmowe runnery GitHuba muszą zmieścić testy w przeglądarce i zrzuty
@@ -122,7 +122,7 @@ Na Wykopie (#gielda) i Reddicie codziennie pojawiają się setki postów o inwes
 | F-08 | design-tokens-and-components  | (foundation) tokeny, kroje i komponenty bazowe z projektu F-07 w aplikacji; obecne widoki w nowym wyglądzie, jeszcze w starym układzie | F-07, S-46    | FR-040, NFR `prd.md:328` | done |
 | S-46 | light-dark-theme-switch       | użytkownik przełącza motyw jasny i ciemny w nowej palecie, a wybór jest zapamiętany                                      | F-06          | FR-040                                     | done |
 | S-47 | app-shell-navigation          | użytkownik porusza się po aplikacji przez pasek u góry (nawigacja według roli, data danych per źródło, motyw, wylogowanie), z treścią w jednej kolumnie | F-08          | FR-007, FR-013, FR-015, FR-021, FR-030 | done |
-| S-48 | shared-view-states            | użytkownik widzi w każdym widoku to samo ładowanie, pustą listę, błąd z ponowieniem i stronicowanie | S-47          | FR-007, FR-009, NFR `prd.md:328` | proposed |
+| S-48 | shared-view-states            | użytkownik widzi w każdym widoku to samo ładowanie, pustą listę, błąd z ponowieniem i stronicowanie | S-47          | FR-007, FR-009, NFR `prd.md:328` | done |
 | S-49 | login-on-shared-foundation    | użytkownik loguje się i aktywuje konto na ekranach zbudowanych ze wspólnych komponentów i tokenów | F-08          | FR-026, FR-027, FR-028 | done |
 | S-50 | admin-panel-components        | admin pracuje w panelu z trzema częściami pod własnymi adresami (Przebiegi, Jakość ocen, Nieudane posty); strona przebiegu osobno | S-48          | FR-014, FR-015, FR-021, FR-022, FR-033, FR-034 | proposed |
 | S-51 | stream-and-inspector          | użytkownik przegląda zwartą listę postów i czyta ocenę wybranego posta w panelu wysuwanym z prawej | S-48          | FR-006, FR-007, FR-009, FR-010, FR-011a | proposed |
@@ -263,7 +263,7 @@ Wycinki niżej zakładają te warstwy i ich nie budują od nowa.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** dziś ten wzorzec jest skopiowany w czterech widokach, a kontener strony w pięciu (audyt, sekcja 1); bez tego każdy nowy widok skopiowałby go po raz kolejny.
-- **Status:** proposed
+- **Status:** done
 
 ### S-49: Logowanie i aktywacja na wspólnym fundamencie
 
@@ -571,3 +571,4 @@ Wycinki niżej zakładają te warstwy i ich nie budują od nowa.
 - **F-08: (foundation) język wizualny z F-07 jest w aplikacji: tokeny projektu w `style.css` w obu motywach na mechanizmie z S-46, trzy kroje hostowane w aplikacji, ikony oraz komponenty bazowe (przycisk, komunikat, znacznik stanu, stanowisko, przełącznik motywu, pola, odnośnik) w katalogu komponentów we wszystkich stanach; obecne widoki działają na nowych tokenach, jeszcze w starym układzie, a wzorce F-06 zmieniają się raz, jako akceptacja wyglądu.** — Archived 2026-11-22 → `context/archive/2026-11-21-design-tokens-and-components/`. Lesson: —.
 - **S-49: użytkownik loguje się i aktywuje konto na ekranach zbudowanych ze wspólnych komponentów i tokenów w obu motywach; ekran logowania jest na liście plików wolnych od literałów stylu.** — Archived 2026-11-22 → `context/archive/2026-11-22-login-on-shared-foundation/`. Lesson: —.
 - **S-47: użytkownik porusza się po aplikacji przez pasek u góry strony: nawigacja według roli (po tym wycinku „Posty” i „Panel admina” dla admina; „Cele” i „Przegląd” dochodzą ze swoimi ekranami w S-57 i S-59), data ostatniej aktualizacji danych per źródło z dniem i godziną, powiadomienia admina, przełącznik motywu, e-mail zalogowanego i „Wyloguj”; treść jest w jednej kolumnie, bez kolumny bocznej i paneli stałych, a obecne widoki działają w powłoce zamiast stawiać własny nagłówek.** — Archived 2026-11-22 → `context/archive/2026-11-22-app-shell-navigation/`. Lesson: —.
+- **S-48: użytkownik widzi w każdym widoku te same cztery wspólne elementy: ładowanie jako szkielet, pustą listę, błąd z ponowieniem i stronicowanie, pokazane w katalogu komponentów we wszystkich wariantach; widoki przestają kopiować kontener strony i wzorzec stanów.** — Archived 2026-11-23 → `context/archive/2026-11-23-shared-view-states/`. Lesson: —.

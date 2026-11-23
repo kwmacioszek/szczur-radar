@@ -24,10 +24,14 @@ import AppBar, { type NavItem } from '../components/AppBar.vue'
 import AppBrand from '../components/AppBrand.vue'
 import AppButton from '../components/AppButton.vue'
 import AppIcon from '../components/AppIcon.vue'
+import EmptyState from '../components/EmptyState.vue'
+import ErrorState from '../components/ErrorState.vue'
 import FeedFilter from '../components/FeedFilter.vue'
 import FormField from '../components/FormField.vue'
 import { ICON_NAMES } from '../components/iconNames'
+import LoadingState from '../components/LoadingState.vue'
 import NotificationMenu from '../components/NotificationMenu.vue'
+import PagerNav from '../components/PagerNav.vue'
 import PageHeader from '../components/PageHeader.vue'
 import PostAssessment from '../components/PostAssessment.vue'
 import PostCard from '../components/PostCard.vue'
@@ -730,6 +734,12 @@ const assessments: { id: string; title: string; assessment: NonNullable<PostItem
         <AppButton variant="primary" icon="i-play">Uruchom przebieg</AppButton>
       </div>
       <div class="row">
+        <span class="row-title">Ikona na końcu</span>
+        <AppButton icon="i-chevron-right" icon-position="end">Starsze</AppButton>
+        <AppButton icon="i-chevron-right" icon-position="end" disabled>Następne</AppButton>
+        <AppButton icon="i-chevron-right" icon-position="end" busy busy-label="Wczytywanie…">Starsze</AppButton>
+      </div>
+      <div class="row">
         <span class="row-title">Duży</span>
         <AppButton size="lg" icon="i-list-filter">Filtry</AppButton>
       </div>
@@ -850,6 +860,96 @@ const assessments: { id: string; title: string; assessment: NonNullable<PostItem
         <StatusMessage tone="error">Przebieg już trwa. Poczekaj, aż się zakończy, i spróbuj ponownie.</StatusMessage>
         <StatusMessage tone="warning">Przebieg trwa. Nowy stanie w kolejce.</StatusMessage>
       </div>
+    </section>
+
+    <section aria-labelledby="pager-title">
+      <h2 id="pager-title">Stronicowanie</h2>
+      <p>Pod listą: nowsze i starsze posty oraz numer strony. Na pierwszej stronie „Nowsze” jest wyłączone.</p>
+      <ul class="samples">
+        <li class="variant">
+          <p class="sample-title">Pierwsza strona</p>
+          <PagerNav :page="0" :pages="7" />
+        </li>
+        <li class="variant">
+          <p class="sample-title">W środku, podczas wczytywania następnej strony</p>
+          <PagerNav :page="2" :pages="7" busy="next" />
+        </li>
+        <li class="variant">
+          <p class="sample-title">Ostatnia strona</p>
+          <PagerNav :page="6" :pages="7" />
+        </li>
+        <li class="variant">
+          <p class="sample-title">Poprzednie i następne (lista w ustalonej kolejności), pierwsza strona</p>
+          <PagerNav :page="0" :pages="5" labels="order" />
+        </li>
+        <li class="variant">
+          <p class="sample-title">Jedna strona</p>
+          <PagerNav :page="0" :pages="1" />
+          <p>Przy jednej stronie stronicowania nie ma.</p>
+        </li>
+      </ul>
+    </section>
+
+    <section aria-labelledby="loading-title">
+      <h2 id="loading-title">Ładowanie</h2>
+      <p>Zanim przyjdą dane, widok pokazuje swój kształt. Czytnik ekranu słyszy „Wczytywanie…”.</p>
+      <ul class="samples">
+        <li class="variant">
+          <p class="sample-title">Wiersze listy</p>
+          <div aria-busy="true"><LoadingState shape="rows" :count="3" /></div>
+        </li>
+        <li class="variant">
+          <p class="sample-title">Linie karty</p>
+          <div aria-busy="true"><LoadingState shape="lines" /></div>
+        </li>
+        <li class="variant">
+          <p class="sample-title">Formularz</p>
+          <div aria-busy="true"><LoadingState shape="form" /></div>
+        </li>
+      </ul>
+    </section>
+
+    <section aria-labelledby="empty-title">
+      <h2 id="empty-title">Pusta lista</h2>
+      <p>Pusty widok mówi, czego nie ma i dlaczego, i daje jeden następny krok.</p>
+      <ul class="samples">
+        <li class="variant">
+          <p class="sample-title">Filtry niczego nie znalazły</p>
+          <EmptyState icon="i-search" title="Brak postów dla tych filtrów">
+            Zmień filtr albo wyczyść go, żeby zobaczyć wszystkie posty.
+            <template #action><AppButton>Wyczyść filtry</AppButton></template>
+          </EmptyState>
+        </li>
+        <li class="variant">
+          <p class="sample-title">Brak danych</p>
+          <EmptyState icon="i-inbox" title="Brak ocenionych postów">
+            Pojawią się po najbliższej aktualizacji danych.
+          </EmptyState>
+        </li>
+        <li class="variant">
+          <p class="sample-title">Nic do zrobienia</p>
+          <EmptyState icon="i-circle-check" title="Brak nieudanych postów">
+            Żaden post nie czeka na ponowienie ani nie jest martwy.
+          </EmptyState>
+        </li>
+      </ul>
+    </section>
+
+    <section aria-labelledby="error-state-title">
+      <h2 id="error-state-title">Błąd z ponowieniem</h2>
+      <p>Gdy widok się nie wczytał: co się stało i jeden przycisk, który próbuje jeszcze raz.</p>
+      <ul class="samples">
+        <li class="variant">
+          <p class="sample-title">Domyślny</p>
+          <ErrorState title="Nie udało się wczytać postów">Serwer nie odpowiedział. Twoje filtry zostały.</ErrorState>
+        </li>
+        <li class="variant">
+          <p class="sample-title">Podczas ponawiania</p>
+          <ErrorState title="Nie udało się wczytać postów" retrying>
+            Serwer nie odpowiedział. Twoje filtry zostały.
+          </ErrorState>
+        </li>
+      </ul>
     </section>
 
     <section aria-labelledby="badges-title">
@@ -1058,6 +1158,11 @@ h3 {
   margin: 0;
   padding: 0;
   list-style: none;
+}
+
+/* A shared state or the pager in each variant: the sample's title above it, the component draws its own frame. */
+.variant {
+  margin-bottom: var(--space-4);
 }
 
 /* Each variant of the assessment framed like a card, so the variants stay apart. */

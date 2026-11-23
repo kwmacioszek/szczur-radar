@@ -6,7 +6,9 @@ import { computed, nextTick, ref, useTemplateRef, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { ApiError } from '../api/client'
 import { type Run, fetchRun } from '../api/pipeline'
-import AppButton from '../components/AppButton.vue'
+import EmptyState from '../components/EmptyState.vue'
+import ErrorState from '../components/ErrorState.vue'
+import LoadingState from '../components/LoadingState.vue'
 import PageHeader from '../components/PageHeader.vue'
 import StatusBadge from '../components/StatusBadge.vue'
 import StatusMessage from '../components/StatusMessage.vue'
@@ -32,11 +34,14 @@ const REFRESH_MS = 10 * 1000
 
 const route = useRoute()
 const header = useTemplateRef<InstanceType<typeof PageHeader>>('header')
+const errorState = useTemplateRef<InstanceType<typeof ErrorState>>('error-state')
 
 /** `missing`: 404 or 400, an id that is not a run; `failed`: any other error. */
 type LoadState = 'loading' | 'failed' | 'missing' | 'loaded'
 
 const state = ref<LoadState>('loading')
+/** A retry is in progress: its error stays, with the button busy, until the answer. */
+const retrying = ref(false)
 const run = ref<Run | null>(null)
 /** The last refresh of a running run failed; the run on screen is the one read before. */
 const refreshFailed = ref(false)
@@ -95,9 +100,14 @@ function duration(ms: number | null): string {
   return ms === null ? '—' : formatDuration(ms)
 }
 
-async function load(id: string): Promise<void> {
+/**
+ * `retry`: from the error's own button, whose error stays until the answer. The busy button loses the focus, so after
+ * the answer it goes to the heading, or back to "Spróbuj ponownie" after another failure.
+ */
+async function load(id: string, { retry = false } = {}): Promise<void> {
   const current = ++latestLoad
-  state.value = 'loading'
+  retrying.value = retry
+  if (!retry) state.value = 'loading'
   run.value = null
   refreshFailed.value = false
   try {
@@ -106,12 +116,19 @@ async function load(id: string): Promise<void> {
     run.value = result
     now.value = Date.now()
     state.value = 'loaded'
+    retrying.value = false
     await nextTick()
     if (current === latestLoad) header.value?.focus()
   } catch (error) {
     if (current !== latestLoad) return
     const missing = error instanceof ApiError && (error.status === 404 || error.status === 400)
     state.value = missing ? 'missing' : 'failed'
+    retrying.value = false
+    if (!retry) return
+    await nextTick()
+    if (current !== latestLoad) return
+    if (missing) header.value?.focus()
+    else errorState.value?.focus()
   }
 }
 
@@ -136,7 +153,7 @@ async function refresh(): Promise<void> {
 }
 
 function retry(): void {
-  if (runId.value !== null) void load(runId.value)
+  if (runId.value !== null) void load(runId.value, { retry: true })
 }
 
 useEvery(REFRESH_MS, () => void refresh())
@@ -153,21 +170,36 @@ watch(
 <template>
   <div class="run-detail">
     <RouterLink class="back" :to="{ name: 'admin' }"><span aria-hidden="true">←</span> Panel admina</RouterLink>
-    <section aria-labelledby="run-title" :aria-busy="state === 'loading' ? 'true' : undefined">
+    <section aria-labelledby="run-title" :aria-busy="state === 'loading' || retrying ? 'true' : undefined">
       <PageHeader ref="header" class="head" :title="title" heading-id="run-title">
         <template #status>
           <StatusBadge v-if="run" class="status" :tone="runTone(run)">{{ runStatusLabel(run) }}</StatusBadge>
         </template>
       </PageHeader>
-      <p v-if="state === 'loading'" class="loading">Wczytywanie przebiegu…</p>
-      <template v-else-if="state === 'failed'">
-        <StatusMessage tone="error" class="message">Nie udało się wczytać przebiegu.</StatusMessage>
-        <AppButton @click="retry">Spróbuj ponownie</AppButton>
-      </template>
-      <p v-else-if="state === 'missing'" class="empty">
-        Nie ma takiego przebiegu.
-        <RouterLink :to="{ name: 'admin' }">Wróć do panelu admina</RouterLink>
-      </p>
+      <LoadingState v-if="state === 'loading'" class="view-state" shape="lines" :count="4" />
+      <ErrorState
+        v-else-if="state === 'failed'"
+        ref="error-state"
+        class="view-state"
+        title-tag="h2"
+        title="Nie udało się wczytać przebiegu"
+        :retrying="retrying"
+        @retry="retry"
+      >
+        Serwer nie odpowiedział.
+      </ErrorState>
+      <EmptyState
+        v-else-if="state === 'missing'"
+        class="view-state"
+        title-tag="h2"
+        icon="i-inbox"
+        title="Nie ma takiego przebiegu"
+      >
+        Przebieg nie istnieje albo został usunięty z historii.
+        <template #action>
+          <RouterLink :to="{ name: 'admin' }">Wróć do panelu admina</RouterLink>
+        </template>
+      </EmptyState>
       <template v-else-if="run">
         <StatusMessage v-if="run.needsAttention" tone="error" class="attention">
           <strong>Wymaga uwagi:</strong> {{ attentionReasons(run).join('; ') }}
@@ -234,7 +266,7 @@ watch(
           aria-labelledby="source-results-title"
         >
           <h2 id="source-results-title">Wynik per źródło</h2>
-          <p v-if="run.sourceResults.length === 0" class="empty">Jeszcze żadne źródło nie zakończyło pobrania.</p>
+          <p v-if="run.sourceResults.length === 0" class="none">Jeszcze żadne źródło nie zakończyło pobrania.</p>
           <ul v-else class="source-list">
             <li
               v-for="result in run.sourceResults"
@@ -258,7 +290,7 @@ watch(
 
         <section class="part" aria-labelledby="steps-title">
           <h2 id="steps-title">Kroki</h2>
-          <p v-if="run.steps.length === 0" class="empty">Żaden krok się jeszcze nie zaczął.</p>
+          <p v-if="run.steps.length === 0" class="none">Żaden krok się jeszcze nie zaczął.</p>
           <ol v-else class="steps">
             <li v-for="step in run.steps" :key="step.step + step.startedAt" class="step" :data-status="step.status">
               <p class="step-head">
@@ -288,18 +320,6 @@ watch(
 </template>
 
 <style scoped>
-.run-detail {
-  max-width: 48rem;
-  margin: 0 auto;
-}
-
-/* The root font size is 16px at every width; above 1024px the width is what 18px gave (design-tokens-and-components). */
-@media (min-width: 1025px) {
-  .run-detail {
-    max-width: 54rem;
-  }
-}
-
 .back {
   display: inline-block;
   margin-top: var(--space-2);
@@ -320,13 +340,17 @@ p {
   margin: 0 0 var(--space-2);
 }
 
-.loading,
-.empty {
+/* The state of the run (loading, error, none) stands apart from the title above it. */
+.view-state {
+  margin-top: var(--space-4);
+}
+
+/* A part of a loaded run with nothing in it yet. */
+.none {
   margin: var(--space-4) 0;
 }
 
 /* Apart from what is above and below them; the page's selector outranks the message's own zero margin. */
-.run-detail .message,
 .run-detail .attention,
 .run-detail .refresh-error {
   margin-block: var(--space-3);

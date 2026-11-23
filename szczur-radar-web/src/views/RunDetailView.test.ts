@@ -103,6 +103,15 @@ function never<T>(): Promise<T> {
   return new Promise(() => {})
 }
 
+/** A promise with its resolve, for a load that ends when the test says so. */
+function deferred<T>() {
+  let resolve: (value: T) => void = () => {}
+  const promise = new Promise<T>((onResolve) => {
+    resolve = onResolve
+  })
+  return { promise, resolve }
+}
+
 /** `attachTo`: in the document, for focus. */
 async function mountRun(path = '/admin/runs/r1', { attachTo }: { attachTo?: HTMLElement } = {}) {
   const router = createAppRouter(createMemoryHistory())
@@ -134,11 +143,14 @@ describe('RunDetailView', () => {
     vi.useRealTimers()
   })
 
-  it('says it is loading the run', async () => {
+  it('shows a skeleton of four lines while it loads the run', async () => {
     vi.mocked(fetchRun).mockReturnValue(never())
     const { wrapper } = await mountRun()
     expect(fetchRun).toHaveBeenCalledWith('r1')
-    expect(wrapper.find('.loading').text()).toBe('Wczytywanie przebiegu…')
+    const skeleton = wrapper.find('section[aria-labelledby="run-title"] .loading-state')
+    expect(skeleton.classes()).toContain('lines')
+    expect(skeleton.findAll('.skeleton')).toHaveLength(4)
+    expect(skeleton.text()).toBe('Wczytywanie…')
     expect(wrapper.find('section[aria-labelledby="run-title"]').attributes('aria-busy')).toBe('true')
     expect(wrapper.find('h1').text()).toBe('Przebieg')
   })
@@ -149,24 +161,56 @@ describe('RunDetailView', () => {
   ])('says there is no such run on %i, with a link to the panel', async (status, detail) => {
     vi.mocked(fetchRun).mockRejectedValue(new ApiError(status, detail))
     const { wrapper } = await mountRun('/admin/runs/x')
-    const message = wrapper.find('.empty')
-    expect(message.text()).toContain('Nie ma takiego przebiegu.')
-    expect(message.find('a').attributes('href')).toBe('/admin')
+    const empty = wrapper.find('.state')
+    expect(empty.find('h2').text()).toBe('Nie ma takiego przebiegu')
+    expect(empty.find('.state-text').text()).toBe('Przebieg nie istnieje albo został usunięty z historii.')
+    const link = empty.find('.state-action a')
+    expect(link.text()).toBe('Wróć do panelu admina')
+    expect(link.attributes('href')).toBe('/admin')
     expect(wrapper.find('[role="alert"]').exists()).toBe(false)
   })
 
-  it('offers a retry after an error and shows the run when it succeeds', async () => {
-    vi.mocked(fetchRun).mockRejectedValueOnce(new ApiError(500, 'internal_error')).mockResolvedValueOnce(run())
-    const { wrapper } = await mountRun()
-    expect(wrapper.find('[role="alert"]').text()).toBe('Nie udało się wczytać przebiegu.')
-    expect(wrapper.find('.empty').exists()).toBe(false)
+  it('offers a retry after an error, keeps the error busy until the answer and shows the run when it succeeds', async () => {
+    const retried = deferred<Run>()
+    vi.mocked(fetchRun).mockRejectedValueOnce(new ApiError(500, 'internal_error')).mockReturnValueOnce(retried.promise)
+    const { wrapper } = await mountRun('/admin/runs/r1', { attachTo: document.body })
+    const alert = wrapper.find('[role="alert"]')
+    expect(alert.find('h2').text()).toBe('Nie udało się wczytać przebiegu')
+    expect(alert.find('.state-text').text()).toBe('Serwer nie odpowiedział.')
+    expect(wrapper.text()).not.toContain('Nie ma takiego przebiegu')
 
     await button(wrapper, 'Spróbuj ponownie').trigger('click')
     await flushPromises()
 
     expect(fetchRun).toHaveBeenCalledTimes(2)
-    expect(wrapper.find('[role="alert"]').exists()).toBe(false)
+    const error = wrapper.find('.state-error')
+    expect(error.attributes('role')).toBeUndefined()
+    expect(error.find('button').attributes('aria-busy')).toBe('true')
+    expect(error.find('button').text()).toBe('Wczytywanie…')
+    expect(wrapper.find('.loading-state').exists()).toBe(false)
+    expect(wrapper.find('section[aria-labelledby="run-title"]').attributes('aria-busy')).toBe('true')
+
+    retried.resolve(run())
+    await flushPromises()
+
+    expect(wrapper.find('.state-error').exists()).toBe(false)
     expect(wrapper.find('h1').text()).toBe('Przebieg: zakres dat')
+    expect(document.activeElement).toBe(wrapper.find('h1').element)
+  })
+
+  it('announces another failed retry again and gives the focus back to "Spróbuj ponownie"', async () => {
+    vi.mocked(fetchRun).mockRejectedValue(new ApiError(500, 'internal_error'))
+    const { wrapper } = await mountRun('/admin/runs/r1', { attachTo: document.body })
+    const first = wrapper.find('[role="alert"]').element
+
+    await button(wrapper, 'Spróbuj ponownie').trigger('click')
+    await flushPromises()
+
+    const alert = wrapper.find('[role="alert"]')
+    expect(alert.find('h2').text()).toBe('Nie udało się wczytać przebiegu')
+    expect(alert.element).not.toBe(first)
+    expect(document.activeElement).toBe(alert.find('button').element)
+    expect(wrapper.find('section[aria-labelledby="run-title"]').attributes('aria-busy')).toBeUndefined()
   })
 
   it('links back to the panel and focuses the heading once the run is loaded', async () => {
@@ -239,7 +283,7 @@ describe('RunDetailView', () => {
     expect(wrapper.find('.duration').text()).toBe('—')
     expect(wrapper.find('.steps').exists()).toBe(false)
     // A queued range run has neither a source's result nor a step yet.
-    expect(wrapper.findAll('.empty').map((empty) => empty.text())).toEqual([
+    expect(wrapper.findAll('.none').map((none) => none.text())).toEqual([
       'Jeszcze żadne źródło nie zakończyło pobrania.',
       'Żaden krok się jeszcze nie zaczął.',
     ])
@@ -317,7 +361,7 @@ describe('RunDetailView', () => {
       )
       const { wrapper } = await mountRun()
       const section = wrapper.find('.source-results')
-      expect(section.find('.empty').text()).toBe('Jeszcze żadne źródło nie zakończyło pobrania.')
+      expect(section.find('.none').text()).toBe('Jeszcze żadne źródło nie zakończyło pobrania.')
       expect(section.find('.source-list').exists()).toBe(false)
     })
 

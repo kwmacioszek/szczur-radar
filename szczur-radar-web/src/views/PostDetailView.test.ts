@@ -68,6 +68,17 @@ function never<T>(): Promise<T> {
   return new Promise(() => {})
 }
 
+/** A promise with its resolve and reject, for a load that ends when the test says so. */
+function deferred<T>() {
+  let resolve: (value: T) => void = () => {}
+  let reject: (reason: unknown) => void = () => {}
+  const promise = new Promise<T>((onResolve, onReject) => {
+    resolve = onResolve
+    reject = onReject
+  })
+  return { promise, resolve, reject }
+}
+
 /** A memory history whose entries say `back` is the entry before them, as the browser's history does. */
 function historyWithBack(back: string | null): RouterHistory {
   const history = createMemoryHistory()
@@ -115,33 +126,65 @@ describe('PostDetailView', () => {
     vi.mocked(window.scrollTo).mockRestore()
   })
 
-  it('says it is loading the post', async () => {
+  it('shows a skeleton of four lines while it loads the post', async () => {
     vi.mocked(fetchPost).mockReturnValue(never())
     const { wrapper } = await mountPost()
     expect(fetchPost).toHaveBeenCalledWith('1')
-    expect(wrapper.find('.loading').text()).toBe('Wczytywanie posta…')
+    const skeleton = wrapper.find('section[aria-labelledby="post-title"] .loading-state')
+    expect(skeleton.classes()).toContain('lines')
+    expect(skeleton.findAll('.skeleton')).toHaveLength(4)
+    expect(skeleton.text()).toBe('Wczytywanie…')
     expect(wrapper.find('section[aria-labelledby="post-title"]').attributes('aria-busy')).toBe('true')
   })
 
-  it('offers a retry after an error and shows the post when it succeeds', async () => {
-    vi.mocked(fetchPost).mockRejectedValueOnce(new TypeError('Failed to fetch')).mockResolvedValueOnce(post())
-    const { wrapper } = await mountPost()
-    expect(wrapper.find('[role="alert"]').text()).toBe('Nie udało się wczytać posta.')
+  it('offers a retry after an error, keeps the error busy until the answer and shows the post when it succeeds', async () => {
+    const retried = deferred<PostItem>()
+    vi.mocked(fetchPost).mockRejectedValueOnce(new TypeError('Failed to fetch')).mockReturnValueOnce(retried.promise)
+    const { wrapper } = await mountPost('/posts/1', { attachTo: document.body })
+    const alert = wrapper.find('[role="alert"]')
+    expect(alert.find('h2').text()).toBe('Nie udało się wczytać posta')
+    expect(alert.find('.state-text').text()).toBe('Serwer nie odpowiedział.')
 
     await button(wrapper, 'Spróbuj ponownie').trigger('click')
     await flushPromises()
 
     expect(fetchPost).toHaveBeenCalledTimes(2)
-    expect(wrapper.find('[role="alert"]').exists()).toBe(false)
+    const error = wrapper.find('.state-error')
+    expect(error.attributes('role')).toBeUndefined()
+    expect(error.find('button').attributes('aria-busy')).toBe('true')
+    expect(error.find('button').text()).toBe('Wczytywanie…')
+    expect(wrapper.find('.loading-state').exists()).toBe(false)
+    expect(wrapper.find('section').attributes('aria-busy')).toBe('true')
+
+    retried.resolve(post())
+    await flushPromises()
+
+    expect(wrapper.find('.state-error').exists()).toBe(false)
     expect(wrapper.find('h1').text()).toBe('Wpis użytkownika uzytkownik1')
+    expect(wrapper.find('section').attributes('aria-busy')).toBeUndefined()
+    expect(document.activeElement).toBe(wrapper.find('h1').element)
+  })
+
+  it('announces another failed retry again and gives the focus back to "Spróbuj ponownie"', async () => {
+    vi.mocked(fetchPost).mockRejectedValue(new TypeError('Failed to fetch'))
+    const { wrapper } = await mountPost('/posts/1', { attachTo: document.body })
+    const first = wrapper.find('[role="alert"]').element
+
+    await button(wrapper, 'Spróbuj ponownie').trigger('click')
+    await flushPromises()
+
+    const alert = wrapper.find('[role="alert"]')
+    expect(alert.find('h2').text()).toBe('Nie udało się wczytać posta')
+    expect(alert.element).not.toBe(first)
+    expect(document.activeElement).toBe(alert.find('button').element)
     expect(wrapper.find('section').attributes('aria-busy')).toBeUndefined()
   })
 
   it('treats a server error as an error, not as a missing post', async () => {
     vi.mocked(fetchPost).mockRejectedValue(new ApiError(500, 'internal_error'))
     const { wrapper } = await mountPost()
-    expect(wrapper.find('[role="alert"]').text()).toBe('Nie udało się wczytać posta.')
-    expect(wrapper.find('.empty').exists()).toBe(false)
+    expect(wrapper.find('[role="alert"] h2').text()).toBe('Nie udało się wczytać posta')
+    expect(wrapper.text()).not.toContain('Nie ma takiego posta')
   })
 
   it.each<[number, ErrorCode]>([
@@ -150,9 +193,12 @@ describe('PostDetailView', () => {
   ])('says there is no such post on %i, with a link to the list', async (status, detail) => {
     vi.mocked(fetchPost).mockRejectedValue(new ApiError(status, detail))
     const { wrapper } = await mountPost('/posts/x')
-    const message = wrapper.find('.empty')
-    expect(message.text()).toContain('Nie ma takiego posta albo nie został jeszcze oceniony.')
-    expect(message.find('a').attributes('href')).toBe('/')
+    const empty = wrapper.find('.state')
+    expect(empty.find('h2').text()).toBe('Nie ma takiego posta')
+    expect(empty.find('.state-text').text()).toBe('Post nie istnieje albo nie został jeszcze oceniony.')
+    const link = empty.find('.state-action a')
+    expect(link.text()).toBe('Przejdź do listy postów')
+    expect(link.attributes('href')).toBe('/')
     expect(wrapper.find('[role="alert"]').exists()).toBe(false)
   })
 
@@ -255,7 +301,7 @@ describe('PostDetailView', () => {
     await flushPromises()
 
     expect(wrapper.find('.post-assessment').exists()).toBe(false)
-    expect(wrapper.find('.part .empty').text()).toBe('Brak oceny.')
+    expect(wrapper.find('.part .none').text()).toBe('Brak oceny.')
   })
 
   it('focuses the heading once the post is loaded', async () => {
@@ -297,12 +343,14 @@ describe('PostDetailView', () => {
       expect(fetchPostRaw).toHaveBeenCalledTimes(1)
     })
 
-    it('says it is loading the data', async () => {
+    it('shows a skeleton while it loads the data', async () => {
       vi.mocked(fetchPost).mockResolvedValue(post())
       vi.mocked(fetchPostRaw).mockReturnValue(never())
       const { wrapper } = await mountPost()
       await toggleRaw(wrapper, true)
-      expect(wrapper.find('details .loading').text()).toBe('Wczytywanie danych…')
+      const skeleton = wrapper.find('details .loading-state')
+      expect(skeleton.classes()).toContain('lines')
+      expect(skeleton.text()).toBe('Wczytywanie…')
     })
 
     it('offers a retry after an error', async () => {
@@ -310,7 +358,10 @@ describe('PostDetailView', () => {
       vi.mocked(fetchPostRaw).mockRejectedValueOnce(new TypeError('Failed to fetch')).mockResolvedValueOnce(RAW)
       const { wrapper } = await mountPost()
       await toggleRaw(wrapper, true)
-      expect(wrapper.find('details [role="alert"]').text()).toBe('Nie udało się wczytać danych źródła.')
+      const alert = wrapper.find('details [role="alert"]')
+      // A paragraph, not a heading: the section has its summary.
+      expect(alert.find('p.state-title').text()).toBe('Nie udało się wczytać danych źródła')
+      expect(alert.find('.state-text').text()).toBe('Ocena posta zostaje bez zmian.')
 
       await wrapper.find('details button').trigger('click')
       await flushPromises()
@@ -320,16 +371,19 @@ describe('PostDetailView', () => {
       expect(wrapper.find('pre').element.textContent).toBe(RAW)
     })
 
-    it('keeps the focus in the section when the retry button goes away', async () => {
+    it('keeps the error busy during the retry, with the focus in the section', async () => {
       vi.mocked(fetchPost).mockResolvedValue(post())
-      vi.mocked(fetchPostRaw).mockRejectedValueOnce(new TypeError('Failed to fetch')).mockReturnValue(new Promise(() => {}))
+      vi.mocked(fetchPostRaw).mockRejectedValueOnce(new TypeError('Failed to fetch')).mockReturnValue(never())
       const { wrapper } = await mountPost('/posts/1', { attachTo: document.body })
       await toggleRaw(wrapper, true)
 
       await wrapper.find('details button').trigger('click')
       await flushPromises()
 
-      expect(wrapper.find('details .loading').exists()).toBe(true)
+      const error = wrapper.find('details .state-error')
+      expect(error.attributes('role')).toBeUndefined()
+      expect(error.find('button').attributes('aria-busy')).toBe('true')
+      expect(wrapper.find('details .loading-state').exists()).toBe(false)
       expect(document.activeElement).toBe(wrapper.find('summary').element)
     })
   })
