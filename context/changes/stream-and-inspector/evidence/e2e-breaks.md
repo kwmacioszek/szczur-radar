@@ -28,3 +28,14 @@ Wszystkie złamania sprawdzono na całym `e2e/post.spec.ts`. Kolumna „Czerwone
 | `scrollBehavior` przewija przy otwarciu (`scroll.ts`: warunek ekranu postów wyłączony) | „otwarcie i zamknięcie panelu nie przewija listy na górę” (`scrollY` 0 zamiast 1892) |
 
 Ostatniego złamania początkowo nie łapał żaden test: wszystkie 10 testów `post.spec.ts` było zielonych. Dopisałem więc test „otwarcie i zamknięcie panelu nie przewija listy na górę”. Pierwsza próba usunęła import `withinPostsScreen`, przez co `vue-tsc` przerywał build i testy nie ruszały. Druga próba zostawiła import w użyciu (`&& false`).
+
+## Faza 3
+
+Każde złamanie sprawdzono na `e2e/feed.spec.ts` i `e2e/states.spec.ts` razem.
+
+| Złamanie | Czerwone testy |
+| --- | --- |
+| znacznik zdejmuje wszystkie filtry (`feedFilter.ts`: `withoutFilterKey` zwraca `{}`) | „znacznik zdejmuje tylko swój filtr z adresu i z listy znaczników” (adres `/posts` zamiast `/posts?q=orlen&direction=bullish`) |
+| Esc nie oddaje fokusu (`FeedFilter.vue`: Escape tylko zamyka panel, bez `focusToggle`) | „Esc zamyka panel filtrów bez stosowania i oddaje fokus przyciskowi „Filtry”” (`toBeFocused`: inactive) |
+| liczba w przycisku liczy puste klucze (`feedFilter.ts`: `activeFilterKeys` zwraca każdy klucz) | „stary adres listy z filtrem prowadzi na /posts z tym samym filtrem” („Filtry: 3” zamiast 2), „filtr po celu i stanowisku trafia do adresu i zawęża listę” |
+| „Wyczyść filtry” w znacznikach nic nie robi (`FilterChips.vue`: bez `emit('clear')`) | „„Wyczyść filtry” w znacznikach wraca do pełnej listy” |

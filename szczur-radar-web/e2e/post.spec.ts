@@ -22,7 +22,8 @@ function postDialog(page: Page, name: string) {
 
 /** The first row of the list on screen. */
 function firstRow(page: Page) {
-  return page.getByRole('main').getByRole('listitem').first().getByRole('link')
+  // The first row's link: the markers of the filter over the list are list items too, without a link.
+  return page.getByRole('main').getByRole('listitem').getByRole('link').first()
 }
 
 test('klik wiersza otwiera post w panelu nad listą, z jego adresem, fokusem w panelu i zaznaczonym wierszem', async ({ page }) => {

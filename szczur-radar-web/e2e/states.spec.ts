@@ -74,7 +74,8 @@ test.describe('lista postów', () => {
 
       await expect(alert.getByRole('heading', { level: 2, name: 'Nie udało się wczytać postów', exact: true })).toBeVisible()
       await expect(page).toHaveURL('/posts?q=orlen')
-      await expect(main.getByLabel('Spółka lub temat', { exact: true })).toHaveValue('orlen')
+      await expect(main.getByRole('list', { name: 'Włączone filtry', exact: true })
+        .getByRole('button', { name: 'Usuń filtr: Cel: orlen', exact: true })).toBeVisible()
     })
   })
 

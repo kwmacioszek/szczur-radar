@@ -37,9 +37,17 @@ const POST_0 = '00000000-0000-4000-8000-000400000000'
 const POSTS_PAGE = 50
 export const POSTS_SHOWN_ROWS = 6
 
+// dev/mock-api.js: of the 120 posts, the 20 of variant 5 have the target "Orlen", bullish (e2e/feed.spec.ts).
+const ORLEN_BULLISH_POSTS = 20
+
 /** The rows of the list of posts: each row is one link in an item of its day's list. */
 export function postRows(main: Locator): Locator {
   return main.getByRole('listitem').getByRole('link')
+}
+
+/** The markers of the applied filter over the list of posts. */
+function filterChips(main: Locator): Locator {
+  return main.getByRole('list', { name: 'Włączone filtry', exact: true })
 }
 
 /** The admin's pages are ready only with the bell's notifications in the header (its count is on the screenshot). */
@@ -169,8 +177,33 @@ export const VIEWS: readonly View[] = [
       const main = page.getByRole('main')
       await expect(main.getByRole('heading', { level: 2, name: 'Brak postów dla tych filtrów', exact: true })).toBeVisible()
       await expect(main.getByRole('status')).toHaveText('Żaden post nie pasuje do filtra.')
+      await expect(filterChips(main).getByRole('button', { name: 'Usuń filtr: Cel: zzz', exact: true })).toBeVisible()
       await freshnessLoaded(page)
     },
+  },
+  {
+    name: 'view-posts-filters',
+    risk: 'otwarty panel filtrów ze znacznikami nie zmienia wyglądu i nie łamie dostępności',
+    path: '/posts?q=orlen&direction=bullish',
+    modes: { AUTH: 'user' },
+    // The filter in the address, its markers over the list, and the panel opened by a click on "Filtry: 2": the pointer
+    // then leaves for the window's corner, so no hover is on the screenshot (and a click gives no focus ring).
+    ready: async (page) => {
+      const main = page.getByRole('main')
+      await expect(postRows(main)).toHaveCount(ORLEN_BULLISH_POSTS)
+      await expect(main.getByRole('status')).toHaveText(`Pasujące do filtra: ${ORLEN_BULLISH_POSTS}`)
+      await expect(filterChips(main).getByRole('button', { name: /^Usuń filtr: / })).toHaveCount(2)
+      await freshnessLoaded(page)
+      await waitForFonts(page)
+      const toggle = main.getByRole('button', { name: 'Filtry: 2', exact: true })
+      await toggle.click()
+      await page.mouse.move(0, 0)
+      await expect(toggle).toHaveAttribute('aria-expanded', 'true')
+      const panel = main.getByRole('group', { name: 'Filtry', exact: true })
+      await expect(panel.getByLabel('Spółka lub temat', { exact: true })).toHaveValue('orlen')
+      await expect(panel.getByRole('button', { name: 'Filtruj', exact: true })).toBeVisible()
+    },
+    viewportOnly: true,
   },
   {
     name: 'view-posts-error',
@@ -476,6 +509,20 @@ export const STATES: readonly State[] = [
     control: (region) => region.getByRole('button', { name: 'Ciemny motyw', exact: true }),
     state: 'focus',
     pressedByTheme: true,
+  },
+  {
+    name: 'state-filtry-przycisk-hover',
+    risk: 'hover przycisku „Filtry” nie zmienia wyglądu',
+    region: 'Filtry',
+    control: (region) => region.getByRole('button', { name: 'Filtry', exact: true }),
+    state: 'hover',
+  },
+  {
+    name: 'state-filtry-znacznik-focus',
+    risk: 'pierścień fokusu znacznika filtra nie zmienia wyglądu',
+    region: 'Filtry',
+    control: (region) => region.getByRole('button', { name: 'Usuń filtr: Cel: orlen', exact: true }),
+    state: 'focus',
   },
   {
     name: 'state-nawigacja-hover',

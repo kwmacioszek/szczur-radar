@@ -689,7 +689,116 @@ describe('FeedView', () => {
 
       expect(router.currentRoute.value.fullPath).toBe('/posts')
       expect(fetchPosts).toHaveBeenLastCalledWith(0, 50, {})
-      expect(wrapper.findAll('form button').map((candidate) => candidate.text())).toEqual(['Filtruj'])
+      expect(wrapper.find('form button[aria-expanded]').text()).toBe('Filtry')
+      expect(wrapper.find('ul[aria-label="Włączone filtry"]').exists()).toBe(false)
+    })
+
+    describe('markers of the applied filter', () => {
+      function chips(wrapper: VueWrapper) {
+        return wrapper.find('ul[aria-label="Włączone filtry"]')
+      }
+
+      function chip(wrapper: VueWrapper, name: string) {
+        const found = chips(wrapper).findAll('button').find((candidate) => candidate.attributes('aria-label') === name)
+        if (!found) throw new Error(`no marker "${name}"`)
+        return found
+      }
+
+      function filtersButton(wrapper: VueWrapper) {
+        return wrapper.find('form button[aria-expanded]')
+      }
+
+      it('stand between the form and the result line, with the count in the button "Filtry"', async () => {
+        vi.mocked(fetchPosts).mockResolvedValue(answer([post('1')], 3))
+        const { wrapper } = await mountFeed('/posts?q=orlen&direction=bullish')
+        const list = chips(wrapper)
+        expect(list.findAll('button').map((candidate) => candidate.text())).toEqual([
+          'Cel: orlen',
+          'Stanowisko: wzrostowo',
+          'Wyczyść filtry',
+        ])
+        expect(wrapper.find('form[role="search"]').element.nextElementSibling).toBe(list.element)
+        expect(list.element.nextElementSibling).toBe(wrapper.find('[role="status"]').element)
+        expect(filtersButton(wrapper).text()).toBe('Filtry: 2')
+      })
+
+      it('are not there without a filter', async () => {
+        vi.mocked(fetchPosts).mockResolvedValue(answer([post('1')], 120))
+        const { wrapper } = await mountFeed('/posts')
+        expect(chips(wrapper).exists()).toBe(false)
+        expect(filtersButton(wrapper).text()).toBe('Filtry')
+      })
+
+      it('take one key off the address, from the first page, and put the focus on the next marker', async () => {
+        vi.mocked(fetchPosts).mockResolvedValue(answer([post('1')], 120))
+        const { wrapper, router } = await mountFeed('/posts?q=orlen&kind=company&direction=bullish&page=1', document.body)
+
+        await chip(wrapper, 'Usuń filtr: Rodzaj: spółka').trigger('click')
+        await flushPromises()
+
+        expect(router.currentRoute.value.query).toEqual({ q: 'orlen', direction: 'bullish' })
+        expect(fetchPosts).toHaveBeenLastCalledWith(0, 50, { q: 'orlen', direction: 'bullish' })
+        expect(chips(wrapper).findAll('button').map((candidate) => candidate.text())).toEqual([
+          'Cel: orlen',
+          'Stanowisko: wzrostowo',
+          'Wyczyść filtry',
+        ])
+        expect(document.activeElement).toBe(chip(wrapper, 'Usuń filtr: Stanowisko: wzrostowo').element)
+        expect(window.scrollTo).not.toHaveBeenCalled()
+      })
+
+      it('put the focus on the button "Filtry" after the last marker is taken off', async () => {
+        vi.mocked(fetchPosts).mockResolvedValue(answer([post('1')], 120))
+        const { wrapper, router } = await mountFeed('/posts?q=orlen&direction=bullish', document.body)
+
+        await chip(wrapper, 'Usuń filtr: Stanowisko: wzrostowo').trigger('click')
+        await flushPromises()
+
+        expect(router.currentRoute.value.query).toEqual({ q: 'orlen' })
+        expect(document.activeElement).toBe(filtersButton(wrapper).element)
+
+        await chip(wrapper, 'Usuń filtr: Cel: orlen').trigger('click')
+        await flushPromises()
+
+        expect(router.currentRoute.value.fullPath).toBe('/posts')
+        expect(chips(wrapper).exists()).toBe(false)
+        expect(document.activeElement).toBe(filtersButton(wrapper).element)
+      })
+
+      it('stand over an empty filter result, whose region is named by its heading', async () => {
+        vi.mocked(fetchPosts).mockResolvedValue(answer([], 0))
+        const { wrapper } = await mountFeed('/posts?q=zzz')
+        expect(chips(wrapper).exists()).toBe(true)
+        const region = wrapper.find('.posts section')
+        expect(wrapper.find(`#${region.attributes('aria-labelledby')}`).text()).toBe('Brak postów dla tych filtrów')
+      })
+
+      it.each([
+        ['the markers', (wrapper: VueWrapper) => chips(wrapper).findAll('button').at(-1)!],
+        ['the empty result', (wrapper: VueWrapper) => wrapper.find('.posts button')],
+      ])('"Wyczyść filtry" of %s clears the same filter', async (_where, clear) => {
+        vi.mocked(fetchPosts).mockResolvedValueOnce(answer([], 0)).mockResolvedValueOnce(answer([post('1')], 120))
+        const { wrapper, router } = await mountFeed('/posts?q=zzz&kind=asset&page=1')
+        expect(clear(wrapper).text()).toBe('Wyczyść filtry')
+
+        await clear(wrapper).trigger('click')
+        await flushPromises()
+
+        expect(router.currentRoute.value.fullPath).toBe('/posts')
+        expect(fetchPosts).toHaveBeenLastCalledWith(0, 50, {})
+        expect(wrapper.find('[role="status"]').text()).toBe('Ocenione posty: 120')
+        expect(chips(wrapper).exists()).toBe(false)
+      })
+
+      it('"Wyczyść filtry" of the markers puts the focus on the button "Filtry"', async () => {
+        vi.mocked(fetchPosts).mockResolvedValue(answer([post('1')], 3))
+        const { wrapper } = await mountFeed('/posts?q=xtb', document.body)
+
+        await chips(wrapper).findAll('button').at(-1)!.trigger('click')
+        await flushPromises()
+
+        expect(document.activeElement).toBe(filtersButton(wrapper).element)
+      })
     })
 
     it('drops an unknown value from the address instead of sending it', async () => {

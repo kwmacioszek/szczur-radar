@@ -6,17 +6,29 @@ import AppButton from '../components/AppButton.vue'
 import EmptyState from '../components/EmptyState.vue'
 import ErrorState from '../components/ErrorState.vue'
 import FeedFilter from '../components/FeedFilter.vue'
+import FilterChips from '../components/FilterChips.vue'
 import LoadingState from '../components/LoadingState.vue'
 import PageHeader from '../components/PageHeader.vue'
 import PagerNav from '../components/PagerNav.vue'
 import PostRow from '../components/PostRow.vue'
-import { filterFromQuery, filterToQuery, isFilterActive, pageFromQuery, sameFilter } from '../feedFilter'
+import {
+  type FilterKey,
+  activeFilterKeys,
+  filterFromQuery,
+  filterToQuery,
+  isFilterActive,
+  pageFromQuery,
+  sameFilter,
+  withoutFilterKey,
+} from '../feedFilter'
 import { groupByDay } from '../postDays'
 
 const route = useRoute()
 const router = useRouter()
 const header = useTemplateRef<InstanceType<typeof PageHeader>>('header')
 const errorState = useTemplateRef<InstanceType<typeof ErrorState>>('error-state')
+const feedFilter = useTemplateRef<InstanceType<typeof FeedFilter>>('feed-filter')
+const chips = useTemplateRef<InstanceType<typeof FilterChips>>('chips')
 
 /**
  * The page on screen: the requested page number and filter with their answer. The result line, the
@@ -100,7 +112,8 @@ const errorText = computed(() =>
  *   the click, which would hide the busy button under the list;
  * - `heading`: the focus to the heading after a successful load (the empty result's "Wyczyść filtry" is gone);
  * - `retry`: the heading after a success, "Spróbuj ponownie" again after another failure (the busy button lost it);
- * - `none`: the first entry and a filter change: the focus stays in the form and the result line announces the count.
+ * - `none`: the first entry and a filter change: the focus stays in the form or the markers and the result line
+ *   announces the count.
  */
 type After = 'top' | 'heading' | 'retry' | 'none'
 
@@ -186,6 +199,24 @@ function clearFilter(): void {
   void router.push({ query: {} })
 }
 
+/** The markers go with the filter: the focus goes to the button "Filtry". */
+async function clearFromChips(): Promise<void> {
+  await router.push({ query: {} })
+  feedFilter.value?.focusToggle()
+}
+
+/**
+ * One marker's key leaves the address, from the first page. The focus stays in the row of markers: on the marker that
+ * followed the removed one, or on the button "Filtry" after the last one.
+ */
+async function removeFilterKey(key: FilterKey): Promise<void> {
+  const keys = activeFilterKeys(filter.value)
+  const next = keys[keys.indexOf(key) + 1]
+  await router.push({ query: filterToQuery(withoutFilterKey(filter.value, key)) })
+  await nextTick()
+  if (next === undefined || !chips.value?.focus(next)) feedFilter.value?.focusToggle()
+}
+
 /** Set by the empty result's own button: it disappears while loading, like the retry button. */
 let focusAfterClear = false
 
@@ -196,7 +227,7 @@ function clearFromEmptyResult(): void {
 
 // The first entry neither scrolls nor takes the focus (e.g. from the header link). A page change
 // (pager, back/forward) goes to the top and focuses the heading once the page is loaded. A filter
-// change does neither: the focus stays in the form and the result line announces the count.
+// change does neither: the focus stays in the form or the markers and the result line announces the count.
 watch(
   [page, filter],
   ([nextPage, nextFilter], [previousPage, previousFilter]) => {
@@ -230,7 +261,8 @@ watch(
   <div class="feed">
     <section aria-labelledby="feed-title">
       <PageHeader ref="header" class="head" title="Posty" heading-id="feed-title" />
-      <FeedFilter :filter="filter" @apply="applyFilter" @clear="clearFilter" />
+      <FeedFilter ref="feed-filter" :filter="filter" @apply="applyFilter" @clear="clearFilter" />
+      <FilterChips ref="chips" class="chips" :filter="filter" @remove="removeFilterKey" @clear="clearFromChips" />
       <!-- In the document from the start, so a screen reader announces each new count. -->
       <p class="result" role="status">{{ resultText }}</p>
       <!-- Only the list is busy while a page loads: the heading, the label, the form and the count do not change. -->
@@ -247,12 +279,14 @@ watch(
         </ErrorState>
         <LoadingState v-else-if="showSkeleton" shape="rows" />
         <!-- The result line says that nothing matches; the way out stays next to it. -->
-        <EmptyState v-else-if="noMatch" title-tag="h2" icon="i-search" title="Brak postów dla tych filtrów">
-          Zmień filtr albo wyczyść go, żeby zobaczyć wszystkie posty.
-          <template #action>
-            <AppButton @click="clearFromEmptyResult">Wyczyść filtry</AppButton>
-          </template>
-        </EmptyState>
+        <section v-else-if="noMatch" aria-labelledby="no-match-title">
+          <EmptyState title-tag="h2" title-id="no-match-title" icon="i-search" title="Brak postów dla tych filtrów">
+            Zmień filtr albo wyczyść go, żeby zobaczyć wszystkie posty.
+            <template #action>
+              <AppButton @click="clearFromEmptyResult">Wyczyść filtry</AppButton>
+            </template>
+          </EmptyState>
+        </section>
         <EmptyState
           v-else-if="shown && shown.result.total === 0"
           title-tag="h2"
@@ -305,9 +339,14 @@ watch(
 </template>
 
 <style scoped>
-/* The page's width is the shell's column's; the title stands apart from the filter below it. */
+/* The page's width is the shell's column's; the title stands apart from the filter below it, the markers sit close
+   under it. */
 .head {
   margin-bottom: var(--space-4);
+}
+
+.chips {
+  margin-top: var(--space-3);
 }
 
 .result {

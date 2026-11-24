@@ -535,22 +535,22 @@ Brak zmian danych i API. Stare adresy działają: `/?…` przekierowuje na `/pos
 
 #### Automated
 
-- [x] 2.1 Testy jednostkowe przechodzą: `cd szczur-radar-web && npm test`
-- [x] 2.2 Typy i build przechodzą: `cd szczur-radar-web && npm run build`
-- [x] 2.3 Testy E2E przechodzą, w tym `post.spec.ts` i `session-guard.spec.ts`: `cd szczur-radar-web && npm run e2e`
-- [x] 2.4 Testy wizualne i axe przechodzą z nowym `view-post`: `cd szczur-radar-web && npm run visual:docker`
-- [x] 2.5 Brak odwołań do `PostDetailView` i `reportFeedLoaded`
-- [x] 2.6 Każdy nowy test E2E panelu jest czerwony na swoim złamaniu (`evidence/e2e-breaks.md`)
+- [x] 2.1 Testy jednostkowe przechodzą: `cd szczur-radar-web && npm test` — 02028e8
+- [x] 2.2 Typy i build przechodzą: `cd szczur-radar-web && npm run build` — 02028e8
+- [x] 2.3 Testy E2E przechodzą, w tym `post.spec.ts` i `session-guard.spec.ts`: `cd szczur-radar-web && npm run e2e` — 02028e8
+- [x] 2.4 Testy wizualne i axe przechodzą z nowym `view-post`: `cd szczur-radar-web && npm run visual:docker` — 02028e8
+- [x] 2.5 Brak odwołań do `PostDetailView` i `reportFeedLoaded` — 02028e8
+- [x] 2.6 Każdy nowy test E2E panelu jest czerwony na swoim złamaniu (`evidence/e2e-breaks.md`) — 02028e8
 
 ### Phase 3: Panel „Filtry”
 
 #### Automated
 
-- [ ] 3.1 Testy jednostkowe przechodzą: `cd szczur-radar-web && npm test`
-- [ ] 3.2 Typy i build przechodzą: `cd szczur-radar-web && npm run build`
-- [ ] 3.3 Testy E2E przechodzą: `cd szczur-radar-web && npm run e2e`
-- [ ] 3.4 Testy wizualne i axe przechodzą z `view-posts-filters`: `cd szczur-radar-web && npm run visual:docker`
-- [ ] 3.5 Każdy nowy test E2E filtrów jest czerwony na swoim złamaniu (`evidence/e2e-breaks.md`)
+- [x] 3.1 Testy jednostkowe przechodzą: `cd szczur-radar-web && npm test`
+- [x] 3.2 Typy i build przechodzą: `cd szczur-radar-web && npm run build`
+- [x] 3.3 Testy E2E przechodzą: `cd szczur-radar-web && npm run e2e`
+- [x] 3.4 Testy wizualne i axe przechodzą z `view-posts-filters`: `cd szczur-radar-web && npm run visual:docker`
+- [x] 3.5 Każdy nowy test E2E filtrów jest czerwony na swoim złamaniu (`evidence/e2e-breaks.md`)
 
 ### Phase 4: Domknięcie i weryfikacja
 

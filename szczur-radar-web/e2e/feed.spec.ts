@@ -1,5 +1,7 @@
-// Smoke of the list of posts (F-05): the list under /posts in the frames of its days, its filter in the address, the
-// pager and the list's states (the shared loading, empty and error states of S-48).
+// Smoke of the list of posts (F-05): the list under /posts in the frames of its days, its filter under the button
+// "Filtry" and in the address with its markers over the list (S-51), the pager and the list's states (the shared
+// loading, empty and error states of S-48).
+import type { Locator } from '@playwright/test'
 import { expect, test } from './fixtures.ts'
 
 const ORLEN_TITLE = 'Orlen ogłasza buyback za 4 mld zł'
@@ -7,21 +9,85 @@ const ORLEN_TITLE = 'Orlen ogłasza buyback za 4 mld zł'
 // whose quote holds "orlen" — "Orlen", bullish. 120 / 6 = 20 posts, all on the first page of 50.
 const ORLEN_BULLISH_POSTS = 20
 
+/** The form "Filtr postów": its button "Filtry" and, once opened, its panel. */
+function filterForm(main: Locator): Locator {
+  return main.getByRole('search', { name: 'Filtr postów', exact: true })
+}
+
+function filterPanel(main: Locator): Locator {
+  return filterForm(main).getByRole('group', { name: 'Filtry', exact: true })
+}
+
+/** The markers of the applied filter over the list; "Wyczyść filtry" is also in the panel and the empty result. */
+function filterChips(main: Locator): Locator {
+  return main.getByRole('list', { name: 'Włączone filtry', exact: true })
+}
+
 test('filtr po celu i stanowisku trafia do adresu i zawęża listę', async ({ page }) => {
   await page.goto('/posts')
   const main = page.getByRole('main')
   await expect(main.getByRole('status')).toHaveText('Ocenione posty: 120')
+  await expect(filterChips(main)).toHaveCount(0)
 
-  await main.getByLabel('Spółka lub temat', { exact: true }).fill('orlen')
-  await main.getByRole('combobox', { name: 'Stanowisko', exact: true }).selectOption({ label: 'wzrostowo' })
-  await main.getByRole('button', { name: 'Filtruj' }).click()
+  const toggle = filterForm(main).getByRole('button', { name: 'Filtry', exact: true })
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false')
+  await toggle.click()
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true')
+  const panel = filterPanel(main)
+  await panel.getByLabel('Spółka lub temat', { exact: true }).fill('orlen')
+  await panel.getByRole('combobox', { name: 'Stanowisko', exact: true }).selectOption({ label: 'wzrostowo' })
+  await panel.getByRole('button', { name: 'Filtruj', exact: true }).click()
 
   await expect(page).toHaveURL('/posts?q=orlen&direction=bullish')
+  await expect(panel).toBeHidden()
+  await expect(filterForm(main).getByRole('button', { name: 'Filtry: 2', exact: true })).toBeVisible()
+  await expect(filterChips(main).getByRole('button', { name: /^Usuń filtr: / })).toHaveText([
+    'Cel: orlen',
+    'Stanowisko: wzrostowo',
+  ])
   await expect(main.getByRole('status')).toHaveText(`Pasujące do filtra: ${ORLEN_BULLISH_POSTS}`)
   // Each row is one link in an item of its day's list.
   const rows = main.getByRole('listitem').getByRole('link')
   await expect(rows).toHaveCount(ORLEN_BULLISH_POSTS)
   await expect(rows).toContainText(Array(ORLEN_BULLISH_POSTS).fill(ORLEN_TITLE))
+})
+
+test('znacznik zdejmuje tylko swój filtr z adresu i z listy znaczników', async ({ page }) => {
+  await page.goto('/posts?q=orlen&kind=company&direction=bullish')
+  const main = page.getByRole('main')
+  const chips = filterChips(main).getByRole('button', { name: /^Usuń filtr: / })
+  await expect(chips).toHaveText(['Cel: orlen', 'Rodzaj: spółka', 'Stanowisko: wzrostowo'])
+
+  await filterChips(main).getByRole('button', { name: 'Usuń filtr: Rodzaj: spółka', exact: true }).click()
+
+  await expect(page).toHaveURL('/posts?q=orlen&direction=bullish')
+  await expect(chips).toHaveText(['Cel: orlen', 'Stanowisko: wzrostowo'])
+  await expect(filterForm(main).getByRole('button', { name: 'Filtry: 2', exact: true })).toBeVisible()
+  await expect(main.getByRole('status')).toHaveText(`Pasujące do filtra: ${ORLEN_BULLISH_POSTS}`)
+  // The focus stays in the row: on the marker that followed the removed one.
+  await expect(filterChips(main).getByRole('button', { name: 'Usuń filtr: Stanowisko: wzrostowo', exact: true }))
+    .toBeFocused()
+})
+
+test('Esc zamyka panel filtrów bez stosowania i oddaje fokus przyciskowi „Filtry”', async ({ page }) => {
+  await page.goto('/posts?q=orlen')
+  const main = page.getByRole('main')
+  const toggle = filterForm(main).getByRole('button', { name: 'Filtry: 1', exact: true })
+  await toggle.click()
+  const panel = filterPanel(main)
+  const text = panel.getByLabel('Spółka lub temat', { exact: true })
+  await expect(text).toHaveValue('orlen')
+  await text.fill('kghm')
+
+  await text.press('Escape')
+
+  await expect(panel).toBeHidden()
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false')
+  await expect(toggle).toBeFocused()
+  await expect(page).toHaveURL('/posts?q=orlen')
+  // The draft is gone: the panel opens again with the applied filter.
+  await toggle.press('Enter')
+  await expect(text).toHaveValue('orlen')
 })
 
 test('stary adres listy z filtrem prowadzi na /posts z tym samym filtrem', async ({ page }) => {
@@ -30,7 +96,10 @@ test('stary adres listy z filtrem prowadzi na /posts z tym samym filtrem', async
 
   await expect(page).toHaveURL('/posts?q=orlen&direction=bullish')
   await expect(main.getByRole('status')).toHaveText(`Pasujące do filtra: ${ORLEN_BULLISH_POSTS}`)
-  await expect(main.getByLabel('Spółka lub temat', { exact: true })).toHaveValue('orlen')
+  await expect(filterChips(main).getByRole('button', { name: /^Usuń filtr: / })).toHaveText([
+    'Cel: orlen',
+    'Stanowisko: wzrostowo',
+  ])
   await expect(main.getByRole('listitem').getByRole('link')).toHaveCount(ORLEN_BULLISH_POSTS)
 })
 
@@ -69,16 +138,37 @@ test.describe('na najwęższym ekranie', () => {
 })
 
 test('filtr bez wyników pozwala wrócić do pełnej listy', async ({ page }) => {
-  await page.goto('/posts?q=zzz')
+  await page.goto('/posts?q=zzz&direction=bullish')
   const main = page.getByRole('main')
   await expect(main.getByRole('status')).toHaveText('Żaden post nie pasuje do filtra.')
-  await expect(main.getByRole('heading', { level: 2, name: 'Brak postów dla tych filtrów', exact: true })).toBeVisible()
+  const empty = main.getByRole('region', { name: 'Brak postów dla tych filtrów', exact: true })
+  await expect(empty.getByRole('heading', { level: 2, name: 'Brak postów dla tych filtrów', exact: true })).toBeVisible()
+  // The markers stand over the empty result.
+  await expect(filterChips(main).getByRole('button', { name: /^Usuń filtr: / })).toHaveText([
+    'Cel: zzz',
+    'Stanowisko: wzrostowo',
+  ])
 
-  // Both "Wyczyść filtry" are in main: the form's (first in the document) and the empty result's.
-  await main.getByRole('button', { name: 'Wyczyść filtry' }).last().click()
+  // "Wyczyść filtry" is also in the markers and the panel: this is the empty result's.
+  await empty.getByRole('button', { name: 'Wyczyść filtry', exact: true }).click()
 
   await expect(main.getByRole('status')).toHaveText('Ocenione posty: 120')
   await expect(page).toHaveURL('/posts')
+  await expect(filterChips(main)).toHaveCount(0)
+  await expect(main.getByRole('listitem').getByRole('link')).toHaveCount(50)
+})
+
+test('„Wyczyść filtry” w znacznikach wraca do pełnej listy', async ({ page }) => {
+  await page.goto('/posts?q=zzz')
+  const main = page.getByRole('main')
+  await expect(main.getByRole('status')).toHaveText('Żaden post nie pasuje do filtra.')
+
+  await filterChips(main).getByRole('button', { name: 'Wyczyść filtry', exact: true }).click()
+
+  await expect(main.getByRole('status')).toHaveText('Ocenione posty: 120')
+  await expect(page).toHaveURL('/posts')
+  await expect(filterChips(main)).toHaveCount(0)
+  await expect(filterForm(main).getByRole('button', { name: 'Filtry', exact: true })).toBeFocused()
 })
 
 test('przejście na starszą stronę zmienia adres i stronę', async ({ page }) => {

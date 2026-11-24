@@ -8,6 +8,7 @@ import authLayout from './components/AuthLayout.vue?raw'
 import emptyState from './components/EmptyState.vue?raw'
 import errorState from './components/ErrorState.vue?raw'
 import feedFilter from './components/FeedFilter.vue?raw'
+import filterChips from './components/FilterChips.vue?raw'
 import formField from './components/FormField.vue?raw'
 import iconSprite from './components/IconSprite.vue?raw'
 import loadingState from './components/LoadingState.vue?raw'
@@ -150,6 +151,7 @@ const CLEANED: Record<string, string> = {
   'src/components/PostPanelBar.vue': postPanelBar,
   'src/views/PostPanel.vue': postPanel,
   'src/components/FeedFilter.vue': feedFilter,
+  'src/components/FilterChips.vue': filterChips,
   'src/components/NotificationBell.vue': notificationBell,
   'src/components/NotificationMenu.vue': notificationMenu,
   'src/views/RunDetailView.vue': runDetailView,

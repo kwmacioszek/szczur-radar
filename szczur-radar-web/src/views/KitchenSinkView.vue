@@ -27,6 +27,7 @@ import AppIcon from '../components/AppIcon.vue'
 import EmptyState from '../components/EmptyState.vue'
 import ErrorState from '../components/ErrorState.vue'
 import FeedFilter from '../components/FeedFilter.vue'
+import FilterChips from '../components/FilterChips.vue'
 import FormField from '../components/FormField.vue'
 import { ICON_NAMES } from '../components/iconNames'
 import LoadingState from '../components/LoadingState.vue'
@@ -284,6 +285,12 @@ function modelAssessment(targets: Target[], flags: Flag[], claims: Claim[] = [])
 
 /** The feed filter as applied from the address, every field set. */
 const activeFilter: PostFilter = { q: 'orlen', kind: 'company', direction: 'bullish' }
+
+/** The feed filter of the list's markers: a target and a stance. */
+const twoKeyFilter: PostFilter = { q: 'orlen', direction: 'bullish' }
+
+/** The open sample of "Filtry" (a click outside or Escape closes it, as in the app). */
+const filterOpen = ref(true)
 
 /**
  * Every variant of the list's row, newest first: one, two, three and five targets of four kinds, flags, a post the model
@@ -984,11 +991,22 @@ const panelSamples: { id: string; title: string; post: PostItem }[] = [
     </section>
 
     <section aria-labelledby="filter-title">
-      <h2 id="filter-title">Filtr</h2>
-      <h3>Bez filtra</h3>
-      <FeedFilter :filter="{}" />
-      <h3>Aktywny filtr</h3>
-      <FeedFilter :filter="activeFilter" />
+      <h2 id="filter-title">Filtry</h2>
+      <ul class="samples">
+        <li class="variant">
+          <p class="sample-title">Zamknięte, bez filtrów</p>
+          <FeedFilter :filter="{}" />
+        </li>
+        <li class="variant">
+          <p class="sample-title">Zamknięte, dwa filtry: liczba w przycisku i znaczniki nad listą</p>
+          <FeedFilter :filter="twoKeyFilter" />
+          <FilterChips class="sample-chips" :filter="twoKeyFilter" />
+        </li>
+        <li class="variant filter-sample" :class="{ open: filterOpen }">
+          <p class="sample-title">Otwarte, trzy filtry</p>
+          <FeedFilter v-model:open="filterOpen" :filter="activeFilter" />
+        </li>
+      </ul>
     </section>
 
     <section aria-labelledby="post-row-title">
@@ -1155,6 +1173,16 @@ h3 {
 /* Seven notifications wrap to about 41rem at 375 px. */
 .bell-sample.open.list {
   min-height: 43rem;
+}
+
+/* The markers under their button, as on the list of posts (FeedView). */
+.sample-chips {
+  margin-top: var(--space-3);
+}
+
+/* An open filter keeps room below its button for the panel, which overlays the page (one column at 375 px). */
+.filter-sample.open {
+  min-height: 33rem;
 }
 
 /* A bar like the application's: positioned, so the panel opens below it, aligned to its right edge. */

@@ -77,6 +77,23 @@ export function isFilterActive(filter: PostFilter): boolean {
   return Boolean(filter.q || filter.kind || filter.direction)
 }
 
+/** The filter's keys in the order of the form and of the markers over the list. */
+export const FILTER_KEYS = ['q', 'kind', 'direction'] as const satisfies readonly (keyof PostFilter)[]
+
+export type FilterKey = (typeof FILTER_KEYS)[number]
+
+/** The keys with a value, in the order of `FILTER_KEYS`: an empty key is no filter, and is not counted. */
+export function activeFilterKeys(filter: PostFilter): FilterKey[] {
+  return FILTER_KEYS.filter((key) => Boolean(filter[key]))
+}
+
+/** The filter without one of its keys; the others stay as they are. */
+export function withoutFilterKey(filter: PostFilter, key: FilterKey): PostFilter {
+  const rest = compact(filter)
+  delete rest[key]
+  return rest
+}
+
 export function sameFilter(a: PostFilter, b: PostFilter): boolean {
   return (a.q ?? '') === (b.q ?? '') && a.kind === b.kind && a.direction === b.direction
 }
