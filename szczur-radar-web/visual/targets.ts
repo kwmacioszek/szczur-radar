@@ -213,6 +213,7 @@ export const VIEWS: readonly View[] = [
       }
       await expect(region('Nowy przebieg').getByRole('checkbox')).toHaveCount(2)
       await expect(region('Dni bez danych').getByRole('button', { name: /^Wpisz do formularza: / }).first()).toBeVisible()
+      await expect(region('Ostatnie przebiegi').getByRole('table')).toBeVisible()
       await expect(region('Ostatnie przebiegi').getByRole('link', { name: /^Szczegóły przebiegu z / })).toHaveCount(20)
       await adminPartsLoaded(page)
       await expect(main.getByText('Wczytywanie…', { exact: true })).toHaveCount(0)
@@ -277,7 +278,9 @@ export const VIEWS: readonly View[] = [
     ready: async (page) => {
       const main = page.getByRole('main')
       const quality = main.getByRole('region', { name: 'Jakość ocen (7 dni)', exact: true })
-      await expect(quality.getByText(/^nieudane .* z 3134 prób/)).toBeVisible()
+      await expect(quality.getByRole('heading', { level: 3 })).toHaveText(['Wykop', 'Reddit'])
+      await expect(quality.getByRole('img', { name: /^Nieudane próby oceny: / })).toHaveCount(2)
+      await expect(quality.getByRole('img', { name: /^Tezy w innym języku niż post: / })).toHaveCount(2)
       await adminPartsLoaded(page)
       await expect(main.getByText('Wczytywanie…', { exact: true })).toHaveCount(0)
       await bellLoaded(page)
@@ -291,7 +294,9 @@ export const VIEWS: readonly View[] = [
     modes: { AUTH: 'admin' },
     ready: async (page) => {
       const main = page.getByRole('main')
-      await expect(main.getByRole('region', { name: 'Nieudane posty', exact: true }).getByRole('checkbox')).toHaveCount(4)
+      const failed = main.getByRole('region', { name: 'Nieudane posty', exact: true })
+      await expect(failed.getByRole('table')).toBeVisible()
+      await expect(failed.getByRole('checkbox')).toHaveCount(4)
       await adminPartsLoaded(page)
       await expect(main.getByText('Wczytywanie…', { exact: true })).toHaveCount(0)
       await bellLoaded(page)

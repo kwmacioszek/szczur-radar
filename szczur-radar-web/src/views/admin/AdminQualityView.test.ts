@@ -1,16 +1,18 @@
 import { enableAutoUnmount, flushPromises } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { fetchMe } from '../../api/auth'
-import { ApiError } from '../../api/client'
+import { ApiError, type ErrorCode } from '../../api/client'
 import { fetchMissingDays, fetchRuns, fetchSources } from '../../api/pipeline'
 import { fetchFailedPosts } from '../../api/posts'
-import { fetchAssessmentQuality } from '../../api/quality'
+import { type QualityWindow, fetchAssessmentQuality } from '../../api/quality'
 import { resetSession } from '../../auth/session'
 import {
   sampleAssessmentQuality,
   sampleAssessmentQualityFewAttempts,
   sampleAssessmentQualityLanguageUnavailable,
 } from '../../contract/samples'
+import { installMock } from '../../contract/mockApi'
+import type { MockModes } from '../../contract/mockModes'
 import AdminQualityView from './AdminQualityView.vue'
 import { mountPart, never } from './testing'
 
@@ -144,87 +146,143 @@ describe('AdminQualityView', () => {
   })
 
   describe('assessment quality', () => {
-    function section(wrapper: Awaited<ReturnType<typeof mountAdmin>>) {
+    type Wrapper = Awaited<ReturnType<typeof mountAdmin>>
+
+    function section(wrapper: Wrapper) {
       return wrapper.find('section[aria-labelledby="quality-title"]')
     }
 
-    it('shows the window and, per source, its share of failed attempts, its classes, threshold and state', async () => {
+    function cards(wrapper: Wrapper) {
+      return section(wrapper).findAll('.quality-source')
+    }
+
+    /** A measure as its card shows it: name, value, counts, state, the bar's name and fill. */
+    function measure(card: ReturnType<typeof cards>[number], kind: 'failed' | 'language') {
+      const shown = card.find(`.quality-${kind}`)
+      const meter = shown.find('.meter')
+      return {
+        name: shown.find('.measure-name').text(),
+        value: shown.find('.measure-value').text(),
+        counts: shown.find('.measure-counts').text(),
+        status: [shown.find('.measure-meta .status-badge').text(), shown.find('.measure-meta .status-badge').attributes('data-tone')],
+        bar: [meter.attributes('role'), meter.attributes('aria-label'), meter.find('.meter-fill').attributes('style')],
+      }
+    }
+
+    it('shows a card per source with its name as a heading and the badge of its worst measure', async () => {
       vi.mocked(fetchAssessmentQuality).mockResolvedValue(sampleAssessmentQuality)
       const wrapper = await mountAdmin()
       expect(section(wrapper).find('h2').text()).toBe('Jakość ocen (7 dni)')
-      expect(section(wrapper).find('.quality-window').text()).toContain('Od 6.03.2025 do 12.03.2025')
-      const rows = section(wrapper).findAll('.quality-source')
-      expect(rows.map((row) => row.find('strong').text())).toEqual(['Wykop', 'Reddit'])
-      expect(rows.map((row) => row.find('.status-badge').text())).toEqual(['w normie', 'ponad progiem'])
-      expect(rows.map((row) => row.find('.status-badge').attributes('data-tone'))).toEqual(['success', 'warning'])
-      expect(rows.map((row) => row.find('.quality-failed').text())).toEqual([
-        'nieudane 5,0% z 200 prób · próg 5%',
-        'nieudane 33,3% z 120 prób · próg 25%',
+      expect(section(wrapper).find('.quality-window').text()).toBe('6.03.2025 – 12.03.2025')
+      expect(cards(wrapper).map((card) => card.find('h3').text())).toEqual(['Wykop', 'Reddit'])
+      for (const card of cards(wrapper)) {
+        expect(card.element.tagName).toBe('SECTION')
+        expect(card.attributes('aria-labelledby')).toBe(card.find('h3').attributes('id'))
+      }
+      expect(cards(wrapper).map((card) => [card.find('.source-status').text(), card.find('.source-status').attributes('data-tone')])).toEqual([
+        ['w normie', 'success'],
+        ['ponad progiem', 'destructive'],
       ])
-      expect(rows.map((row) => row.find('.quality-classes').text())).toEqual([
-        'niezgodność ze schematem 2,0% · zmyślony cytat 3,0%',
-        'niezgodność ze schematem 16,7% · zmyślony cytat 12,5% · naruszenie reguł kontraktu 4,2%',
-      ])
+      expect(cards(wrapper)[1]!.find('.source-status use').attributes('href')).toBe('#i-circle-alert')
+      expect(cards(wrapper)[0]!.find('.source-status use').exists()).toBe(false)
       expect(section(wrapper).attributes('aria-busy')).toBeUndefined()
     })
 
-    it('names both minimums in the window', async () => {
+    it('shows each measure with its value, counts, threshold, state in words and a bar named by the same text', async () => {
       vi.mocked(fetchAssessmentQuality).mockResolvedValue(sampleAssessmentQuality)
       const wrapper = await mountAdmin()
-      const window = section(wrapper).find('.quality-window').text()
-      expect(window).toContain('próg sprawdzany od 100 prób')
-      expect(window).toContain('próg sprawdzany od 500 tez')
+      const [wykop, reddit] = cards(wrapper)
+      expect(measure(wykop!, 'failed')).toEqual({
+        name: 'Nieudane próby oceny',
+        value: '5,0%',
+        counts: '10 z 200 prób · próg 5%',
+        status: ['w normie', 'success'],
+        // 5% on a scale of 1.5 × 5%: two thirds, at the threshold's mark.
+        bar: ['img', 'Nieudane próby oceny: 5,0%, 10 z 200 prób · próg 5%', 'width: 66.7%;'],
+      })
+      expect(measure(wykop!, 'language')).toEqual({
+        name: 'Tezy w innym języku niż post',
+        value: '2,0%',
+        counts: '10 z 500 tez · próg 2%',
+        status: ['w normie', 'success'],
+        bar: ['img', 'Tezy w innym języku niż post: 2,0%, 10 z 500 tez · próg 2%', 'width: 66.7%;'],
+      })
+      expect(measure(reddit!, 'failed')).toEqual({
+        name: 'Nieudane próby oceny',
+        value: '33,3%',
+        counts: '40 z 120 prób · próg 25%',
+        status: ['ponad progiem', 'destructive'],
+        bar: ['img', 'Nieudane próby oceny: 33,3%, 40 z 120 prób · próg 25%', 'width: 88.9%;'],
+      })
+      expect(measure(reddit!, 'language')).toEqual({
+        name: 'Tezy w innym języku niż post',
+        value: '30,1%',
+        counts: '151 z 501 tez · próg 30%',
+        status: ['ponad progiem', 'destructive'],
+        bar: ['img', 'Tezy w innym języku niż post: 30,1%, 151 z 501 tez · próg 30%', 'width: 67%;'],
+      })
+      expect(reddit!.find('.quality-failed').classes()).toContain('measure-over')
+      expect(wykop!.find('.quality-failed').classes()).not.toContain('measure-over')
     })
 
-    it('shows, per source, its share of theses in another language with their number, threshold and state', async () => {
+    it('fills the bar at most to its end, however far above the threshold', async () => {
+      vi.mocked(fetchAssessmentQuality).mockResolvedValue({
+        ...sampleAssessmentQuality,
+        sources: [{ ...sampleAssessmentQuality.sources[0]!, failed: 100, classes: [], status: 'above_threshold' }],
+      })
+      const wrapper = await mountAdmin()
+      expect(measure(cards(wrapper)[0]!, 'failed').bar[2]).toBe('width: 100%;')
+    })
+
+    it('shows the classes of the failed attempts under their measure, as shares of the attempts', async () => {
       vi.mocked(fetchAssessmentQuality).mockResolvedValue(sampleAssessmentQuality)
       const wrapper = await mountAdmin()
-      const rows = section(wrapper).findAll('.quality-language')
-      expect(rows.map((row) => row.find('span').text())).toEqual([
-        'tezy w innym języku niż post 2,0% z 500 tez · próg 2%',
-        'tezy w innym języku niż post 30,1% z 501 tez · próg 30%',
+      expect(cards(wrapper).map((card) => card.find('.quality-failed .quality-classes').text())).toEqual([
+        'niezgodność ze schematem 2,0% · zmyślony cytat 3,0%',
+        'niezgodność ze schematem 16,7% · zmyślony cytat 12,5% · naruszenie reguł kontraktu 4,2%',
       ])
-      expect(rows.map((row) => row.find('.status-badge').text())).toEqual(['w normie', 'ponad progiem'])
-      expect(rows.map((row) => row.find('.status-badge').attributes('data-tone'))).toEqual(['success', 'warning'])
     })
 
-    it('shows the share below minTheses like the failed attempts, in a neutral tone, and no share without a thesis', async () => {
+    it('names both minimums and the threshold mark in the note under the cards', async () => {
+      vi.mocked(fetchAssessmentQuality).mockResolvedValue(sampleAssessmentQuality)
+      const wrapper = await mountAdmin()
+      expect(section(wrapper).find('.quality-note').text().replace(/\s+/g, ' ')).toBe(
+        'Próg jest sprawdzany od 100 prób i od 500 tez. Kreska na pasku to próg.',
+      )
+    })
+
+    it('shows the measures below their minimums in a neutral tone with a muted bar, and a dash without a thesis', async () => {
       vi.mocked(fetchAssessmentQuality).mockResolvedValue(sampleAssessmentQualityFewAttempts)
       const wrapper = await mountAdmin()
-      const rows = section(wrapper).findAll('.quality-language')
-      expect(rows.map((row) => row.find('span').text())).toEqual([
-        'tezy w innym języku niż post 2,2% z 46 tez · próg 2%',
-        'tezy w innym języku niż post: 0 tez · próg 30%',
-      ])
-      expect(rows.map((row) => row.find('.status-badge').text())).toEqual(['za mało danych', 'za mało danych'])
-      expect(rows.map((row) => row.find('.status-badge').attributes('data-tone'))).toEqual(['neutral', 'neutral'])
+      const [wykop, reddit] = cards(wrapper)
+      expect(measure(wykop!, 'failed')).toMatchObject({ value: '0,0%', counts: '0 z 46 prób · próg 5%', status: ['za mało danych', 'neutral'] })
+      expect(measure(wykop!, 'language')).toMatchObject({ value: '2,2%', counts: '1 z 46 tez · próg 2%', status: ['za mało danych', 'neutral'] })
+      expect(measure(reddit!, 'failed')).toMatchObject({ value: '33,3%', counts: '1 z 3 prób · próg 25%' })
+      expect(measure(reddit!, 'language')).toEqual({
+        name: 'Tezy w innym języku niż post',
+        value: '–',
+        counts: '0 tez · próg 30%',
+        status: ['za mało danych', 'neutral'],
+        bar: ['img', 'Tezy w innym języku niż post: 0 tez · próg 30%', 'width: 0%;'],
+      })
+      expect(wykop!.find('.quality-failed').classes()).toContain('measure-idle')
+      expect(cards(wrapper).map((card) => card.find('.source-status').text())).toEqual(['za mało danych', 'za mało danych'])
+      // No failed attempt, no classes.
+      expect(wykop!.find('.quality-classes').exists()).toBe(false)
     })
 
-    it('says the theses could not be counted, without a state, and keeps the failed attempts', async () => {
+    it('says the theses could not be counted, without a state or a bar, and keeps the failed attempts', async () => {
       vi.mocked(fetchAssessmentQuality).mockResolvedValue(sampleAssessmentQualityLanguageUnavailable)
       const wrapper = await mountAdmin()
-      const rows = section(wrapper).findAll('.quality-source')
-      expect(rows.map((row) => row.find('.quality-language').text())).toEqual([
-        'tezy w innym języku niż post: nie udało się policzyć',
-        'tezy w innym języku niż post: nie udało się policzyć',
+      expect(cards(wrapper).map((card) => card.find('.quality-language').text())).toEqual([
+        'Tezy w innym języku niż post: nie udało się policzyć',
+        'Tezy w innym języku niż post: nie udało się policzyć',
       ])
-      expect(rows.map((row) => row.find('.quality-language').find('.status-badge').exists())).toEqual([false, false])
-      expect(rows.map((row) => row.find('.quality-failed').text())).toEqual([
-        'nieudane 2,4% z 123 prób · próg 5%',
-        'nieudane 0,0% z 2 prób · próg 25%',
-      ])
-      expect(rows.map((row) => row.find('.quality-head .status-badge').text())).toEqual(['w normie', 'za mało danych'])
-    })
-
-    it('says too few attempts in a neutral tone, and shows no classes without a failed attempt', async () => {
-      vi.mocked(fetchAssessmentQuality).mockResolvedValue(sampleAssessmentQualityFewAttempts)
-      const wrapper = await mountAdmin()
-      const rows = section(wrapper).findAll('.quality-source')
-      expect(rows.map((row) => row.find('.status-badge').text())).toEqual(['za mało danych', 'za mało danych'])
-      expect(rows.map((row) => row.find('.status-badge').attributes('data-tone'))).toEqual(['neutral', 'neutral'])
-      expect(rows[0]!.find('.quality-failed').text()).toBe('nieudane 0,0% z 46 prób · próg 5%')
-      expect(rows[0]!.find('.quality-classes').exists()).toBe(false)
-      expect(rows[1]!.find('.quality-failed').text()).toBe('nieudane 33,3% z 3 prób · próg 25%')
+      expect(cards(wrapper).map((card) => card.find('.quality-language .status-badge').exists())).toEqual([false, false])
+      expect(cards(wrapper).map((card) => card.find('.quality-language .meter').exists())).toEqual([false, false])
+      expect(cards(wrapper).map((card) => card.findAll('.meter'))).toHaveLength(2)
+      expect(cards(wrapper).map((card) => measure(card, 'failed').counts)).toEqual(['3 z 123 prób · próg 5%', '0 z 2 prób · próg 25%'])
+      expect(cards(wrapper).map((card) => card.find('.source-status').text())).toEqual(['w normie', 'za mało danych'])
     })
 
     it('says there is no assessment in the window', async () => {
@@ -233,8 +291,9 @@ describe('AdminQualityView', () => {
       expect(empty.find('.state-title').text()).toBe('Brak ocen w ostatnich 7 dniach')
       expect(empty.find('.state-text').text()).toBe('Miary pojawią się po ocenach z kolejnego przebiegu.')
       expect(empty.find('use').attributes('href')).toBe('#i-inbox')
-      expect(section(wrapper).find('.quality-window').text()).toContain('Od 16.10.2026 do 22.10.2026')
+      expect(section(wrapper).find('.quality-window').text()).toBe('16.10.2026 – 22.10.2026')
       expect(section(wrapper).find('.quality-source').exists()).toBe(false)
+      expect(section(wrapper).find('.quality-note').exists()).toBe(false)
     })
 
     it('says it is loading until the API answers', async () => {
@@ -260,13 +319,85 @@ describe('AdminQualityView', () => {
     it('reads the window again on every entry into the part', async () => {
       vi.mocked(fetchAssessmentQuality).mockResolvedValueOnce(sampleAssessmentQuality)
       const first = await mountAdmin()
-      expect(section(first).findAll('.quality-source')).toHaveLength(2)
+      expect(cards(first)).toHaveLength(2)
       first.unmount()
 
       const wrapper = await mountAdmin()
 
       expect(fetchAssessmentQuality).toHaveBeenCalledTimes(2)
       expect(section(wrapper).find('.state-title').text()).toBe('Brak ocen w ostatnich 7 dniach')
+    })
+
+    // The part on each answer of the mock's QUALITY modes (dev/mock-api.js), what the screenshots and E2E tests see.
+    describe('on the mock', () => {
+      async function fromMock(quality: NonNullable<MockModes['QUALITY']>) {
+        const answer = await (await installMock({ QUALITY: quality, now: '2026-10-20T10:00:00Z' })).call('GET', '/api/admin/assessment-quality')
+        if (answer.status === 200) vi.mocked(fetchAssessmentQuality).mockResolvedValue(answer.body as QualityWindow)
+        else vi.mocked(fetchAssessmentQuality).mockRejectedValue(new ApiError(answer.status, (answer.body as { detail: ErrorCode }).detail))
+        return mountAdmin()
+      }
+
+      function summary(wrapper: Wrapper) {
+        return cards(wrapper).map((card) => ({
+          source: card.find('h3').text(),
+          badge: card.find('.source-status').text(),
+          failed: card.find('.quality-failed .meter').attributes('aria-label'),
+          language: card.find('.quality-language .meter').exists()
+            ? card.find('.quality-language .meter').attributes('aria-label')
+            : card.find('.quality-language').text(),
+        }))
+      }
+
+      it('data: both sources, Reddit above both thresholds', async () => {
+        const wrapper = await fromMock('data')
+        expect(section(wrapper).find('.quality-window').text()).toBe('14.10.2026 – 20.10.2026')
+        expect(summary(wrapper)).toEqual([
+          {
+            source: 'Wykop',
+            badge: 'w normie',
+            failed: 'Nieudane próby oceny: 2,6%, 82 z 3134 prób · próg 5%',
+            language: 'Tezy w innym języku niż post: 0,3%, 11 z 3476 tez · próg 2%',
+          },
+          {
+            source: 'Reddit',
+            badge: 'ponad progiem',
+            failed: 'Nieudane próby oceny: 27,4%, 164 z 598 prób · próg 25%',
+            language: 'Tezy w innym języku niż post: 31,0%, 886 z 2857 tez · próg 30%',
+          },
+        ])
+      })
+
+      it('few: Reddit below both minimums, neither threshold checked', async () => {
+        const wrapper = await fromMock('few')
+        expect(summary(wrapper)[1]).toEqual({
+          source: 'Reddit',
+          badge: 'za mało danych',
+          failed: 'Nieudane próby oceny: 15,2%, 7 z 46 prób · próg 25%',
+          language: 'Tezy w innym języku niż post: 17,5%, 21 z 120 tez · próg 30%',
+        })
+        expect(cards(wrapper)[1]!.findAll('.measure-idle')).toHaveLength(2)
+      })
+
+      it('nolang: the theses of no source could be counted, the failed attempts still decide the badge', async () => {
+        const wrapper = await fromMock('nolang')
+        expect(summary(wrapper).map(({ badge, language }) => [badge, language])).toEqual([
+          ['w normie', 'Tezy w innym języku niż post: nie udało się policzyć'],
+          ['ponad progiem', 'Tezy w innym języku niż post: nie udało się policzyć'],
+        ])
+      })
+
+      it('none: the empty state under the window', async () => {
+        const wrapper = await fromMock('none')
+        expect(section(wrapper).find('.state-title').text()).toBe('Brak ocen w ostatnich 7 dniach')
+        expect(cards(wrapper)).toHaveLength(0)
+      })
+
+      it('error: the part\'s error with its retry', async () => {
+        const wrapper = await fromMock('error')
+        const alert = section(wrapper).find('[role="alert"]')
+        expect(alert.find('.state-title').text()).toBe('Nie udało się wczytać jakości ocen')
+        expect(alert.find('button').text()).toBe('Spróbuj ponownie')
+      })
     })
   })
 })

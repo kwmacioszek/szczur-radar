@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatDate, formatDateTime, formatDuration, formatRelative, label, plural, postOrigin, postType } from './labels'
+import { formatCount, formatDate, formatDateTime, formatDuration, formatRelative, label, plural, postOrigin, postType } from './labels'
 
 const NOW = Date.parse('2026-10-15T08:00:00Z')
 const SECOND = 1000
@@ -102,6 +102,17 @@ describe('formatDate', () => {
   it('gives the Warsaw day of an instant', () => {
     expect(formatDate('2026-10-10T22:00:00Z')).toBe('11.10.2026')
     expect(formatDate('2026-10-11T21:59:59Z')).toBe('11.10.2026')
+  })
+})
+
+describe('formatCount', () => {
+  // ui-design.md, "Daty, godziny i liczby": a space every three digits only from five digits on.
+  it.each([
+    [0, '0'],
+    [3134, '3134'],
+    [12345, '12\u00a0345'],
+  ])('writes %i as %s', (value, text) => {
+    expect(formatCount(value)).toBe(text)
   })
 })
 

@@ -35,6 +35,7 @@ test('panel admina wczytuje każdą część z paska części', async ({ page })
   await expect(region('Nowy przebieg').getByRole('checkbox')).toHaveCount(2)
   await expect(region('Dni bez danych').getByRole('button', { name: /^Wpisz do formularza: / }).first()).toBeVisible()
   const runs = region('Ostatnie przebiegi')
+  await expect(runs.getByRole('table')).toBeVisible()
   await expect(runs.getByRole('link', { name: /^Szczegóły przebiegu z / })).toHaveCount(20)
   await expect(runs.getByRole('button', { name: 'Pokaż starsze' })).toBeVisible()
   await expect(main.getByText('Wczytywanie…', { exact: true })).toHaveCount(0)
@@ -44,7 +45,9 @@ test('panel admina wczytuje każdą część z paska części', async ({ page })
   await expect(page).toHaveURL('/admin/quality')
   await sections(['Jakość ocen (7 dni)'])
   await current(1)
-  await expect(region('Jakość ocen (7 dni)').getByText(/^nieudane .* z 3134 prób/)).toBeVisible()
+  const quality = region('Jakość ocen (7 dni)')
+  await expect(quality.getByRole('heading', { level: 3 })).toHaveText(['Wykop', 'Reddit'])
+  await expect(quality.getByText('82 z 3134 prób · próg 5%', { exact: true })).toBeVisible()
   await expect(main.getByText('Wczytywanie…', { exact: true })).toHaveCount(0)
   // The layout stays: the focus stays on the clicked link of the bar.
   await expect(part('Jakość ocen')).toBeFocused()
@@ -54,6 +57,7 @@ test('panel admina wczytuje każdą część z paska części', async ({ page })
   await expect(page).toHaveURL('/admin/posts')
   await sections(['Nieudane posty'])
   await current(2)
+  await expect(region('Nieudane posty').getByRole('table')).toBeVisible()
   await expect(region('Nieudane posty').getByRole('checkbox')).toHaveCount(4)
   await expect(main.getByText('Wczytywanie…', { exact: true })).toHaveCount(0)
 
@@ -79,12 +83,13 @@ test('uruchomienie przebiegu dodaje go na górę listy', async ({ page }) => {
   await expect(form.getByLabel('Od', { exact: true })).toHaveValue('2026-10-19')
   await expect(form.getByLabel('Do', { exact: true })).toHaveValue('2026-10-19')
   const runs = page.getByRole('main').getByRole('region', { name: 'Ostatnie przebiegi', exact: true })
-  await expect(runs.getByRole('listitem').first().getByText('trwa', { exact: true })).toBeVisible()
+  // The first row of the table is its header.
+  await expect(runs.getByRole('row').nth(1).getByText('trwa', { exact: true })).toBeVisible()
 
   await form.getByRole('button', { name: 'Uruchom' }).click()
 
   await expect(form.getByRole('status')).toHaveText(/^Uruchomiono:/)
-  await expect(runs.getByRole('listitem').first().getByText('w kolejce', { exact: true })).toBeVisible()
+  await expect(runs.getByRole('row').nth(1).getByText('w kolejce', { exact: true })).toBeVisible()
 })
 
 test.describe('zajęty pipeline', () => {

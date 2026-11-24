@@ -2,7 +2,7 @@
 // The part "Przebiegi" of the admin panel (/admin): starting a run, the days without data and the latest runs. The
 // three sections read and fail on their own; "Odśwież" reads them together, a started run reads the runs again and a
 // run that ends reads the days again (it may have covered some).
-import { computed, nextTick, onMounted, ref, useTemplateRef } from 'vue'
+import { computed, nextTick, onMounted, ref, useId, useTemplateRef } from 'vue'
 import {
   type MissingDays,
   RUNS_PAGE_SIZE,
@@ -16,15 +16,16 @@ import {
 } from '../../api/pipeline'
 import { MAX_PAGE_SIZE } from '../../api/posts'
 import AppButton from '../../components/AppButton.vue'
+import DataTable from '../../components/DataTable.vue'
 import EmptyState from '../../components/EmptyState.vue'
 import ErrorState from '../../components/ErrorState.vue'
 import LoadingState from '../../components/LoadingState.vue'
 import StatusBadge from '../../components/StatusBadge.vue'
 import StatusMessage from '../../components/StatusMessage.vue'
-import { formatDate, formatDateTime, formatDuration, label } from '../../labels'
+import { formatCount, formatDate, formatDateTime, formatDuration, label } from '../../labels'
 import { type MissingRange, missingRanges } from '../../missingDays'
 import { useEvery } from '../../polling'
-import { isActive, requester, runDuration, runRange, runStatusLabel, runTone, stepTone } from '../../runs'
+import { isActive, runDuration, runRange, runStatusLabel, runTone } from '../../runs'
 import { useAdminPanel } from './adminPanel'
 import { type Read, sectionFocus } from './sectionState'
 
@@ -117,6 +118,8 @@ async function start(): Promise<void> {
 
 // --- days without data ------------------------------------------------------------------
 const fromInput = useTemplateRef<HTMLInputElement>('from-input')
+const fromId = useId()
+const toId = useId()
 const missing = ref<MissingDays | null>(null)
 /** Loading without an answer yet (and no error on screen); a reload keeps the ranges on screen. */
 const missingLoading = ref(true)
@@ -152,10 +155,18 @@ async function loadMissing(read: Read = {}): Promise<void> {
   }
 }
 
-/** The days, as a run's range is shown, and the sources; a `YYYY-MM-DD` day is its UTC midnight, that day in Warsaw. */
+/** The days, as a run's range is shown; a `YYYY-MM-DD` day is its UTC midnight, that day in Warsaw. */
+function rangeDays(range: MissingRange): string {
+  return runRange({ rangeFrom: range.from, rangeTo: range.to }) ?? ''
+}
+
+function rangeSources(range: MissingRange): string {
+  return range.sources.map((source) => label('source', source)).join(', ')
+}
+
+/** The days and the sources, the name of the range's button. */
 function rangeText(range: MissingRange): string {
-  const days = runRange({ rangeFrom: range.from, rangeTo: range.to })
-  return `${days} · ${range.sources.map((source) => label('source', source)).join(', ')}`
+  return `${rangeDays(range)} · ${rangeSources(range)}`
 }
 
 /** The form of "Nowy przebieg" is on screen: not while its sources load or failed (a state stands in its place). */
@@ -287,15 +298,13 @@ function duration(run: Run): string | null {
   return ms === null ? null : formatDuration(ms)
 }
 
-function counters(run: Run): string {
-  return [
-    `pobrane ${run.fetched}`,
-    `nowe ${run.newPosts}`,
-    `ocenione ${run.assessedOk}`,
-    `nieudane ${run.assessedFailed}`,
-    `martwe ${run.dead}`,
-    `pominięte ${run.skipped}`,
-  ].join(' · ')
+/**
+ * The classes of a count's cell: a 0 is muted; above 0 a count of failed or dead posts is bad news (`down`, the
+ * destructive tone).
+ */
+function countClass(value: number, bad = false): string | undefined {
+  if (value === 0) return 'zero'
+  return bad ? 'down' : undefined
 }
 
 async function refresh(): Promise<void> {
@@ -310,93 +319,111 @@ onMounted(async () => {
 
 <template>
   <div class="admin-part">
-    <section aria-labelledby="start-title" :aria-busy="sourcesLoading || sourcesRetrying ? 'true' : undefined">
-      <h2 id="start-title" ref="start-heading" tabindex="-1">Nowy przebieg</h2>
-      <LoadingState v-if="sourcesLoading" class="section-state" shape="form" />
-      <ErrorState
-        v-else-if="sourcesError"
-        ref="sources-error-state"
-        class="section-state"
-        title="Nie udało się wczytać listy źródeł"
-        :retrying="sourcesRetrying"
-        @retry="loadSources({ by: 'retry' })"
-      >
-        Bez listy źródeł nie da się uruchomić przebiegu.
-      </ErrorState>
-      <template v-else>
-        <form class="start" @submit.prevent="start">
-          <label>Od <input ref="from-input" v-model="from" type="date" required /></label>
-          <label>Do <input v-model="to" type="date" required /></label>
-          <fieldset class="sources">
-            <legend>Źródła</legend>
-            <label v-for="source in sources" :key="source.source">
-              <input
-                v-model="chosenSources"
-                type="checkbox"
-                :value="source.source"
-                :disabled="!source.configured"
-              />
-              {{ label('source', source.source) }}<template v-if="!source.configured"> (nieskonfigurowane)</template>
-            </label>
-          </fieldset>
-          <AppButton
-            type="submit"
-            variant="primary"
-            :disabled="chosenSources.length === 0"
-            :busy="starting"
-            busy-label="Uruchamianie…"
-            :aria-describedby="startHint ? 'start-hint' : undefined"
-          >
-            Uruchom
-          </AppButton>
-        </form>
-        <p v-if="startHint" id="start-hint" class="hint">{{ startHint }}</p>
-      </template>
-      <StatusMessage v-if="startMessage" tone="ok" class="message">{{ startMessage }}</StatusMessage>
-      <StatusMessage v-if="startError" tone="error" class="message">{{ startError }}</StatusMessage>
-    </section>
-
-    <section aria-labelledby="missing-title" :aria-busy="missingLoading || missingRetrying ? 'true' : undefined">
-      <h2 id="missing-title" ref="missing-heading" tabindex="-1">Dni bez danych</h2>
-      <LoadingState v-if="missingLoading" class="section-state" shape="lines" />
-      <ErrorState
-        v-else-if="missingError"
-        ref="missing-error-state"
-        class="section-state"
-        title="Nie udało się wczytać dni bez danych"
-        :retrying="missingRetrying"
-        @retry="loadMissing({ by: 'retry' })"
-      >
-        Pozostałe sekcje działają osobno.
-      </ErrorState>
-      <template v-else-if="missing">
-        <EmptyState v-if="ranges.length === 0" class="section-state" icon="i-circle-check" title="Brak dni bez danych">
-          Każdy dzień od {{ formatDate(missing.from) }} do {{ formatDate(missing.to) }} ma dane.
-        </EmptyState>
+    <div class="cols-2 part-top">
+      <section class="card" aria-labelledby="start-title" :aria-busy="sourcesLoading || sourcesRetrying ? 'true' : undefined">
+        <h2 id="start-title" ref="start-heading" class="card-title" tabindex="-1">Nowy przebieg</h2>
+        <LoadingState v-if="sourcesLoading" class="section-state" shape="form" />
+        <ErrorState
+          v-else-if="sourcesError"
+          ref="sources-error-state"
+          class="section-state"
+          title="Nie udało się wczytać listy źródeł"
+          :retrying="sourcesRetrying"
+          @retry="loadSources({ by: 'retry' })"
+        >
+          Bez listy źródeł nie da się uruchomić przebiegu.
+        </ErrorState>
         <template v-else>
-          <ul class="missing-ranges">
-            <li v-for="range in ranges" :key="range.from" class="missing-range">
-              <span class="missing-days">{{ rangeText(range) }}</span>
-              <AppButton
-                :aria-label="`Wpisz do formularza: ${rangeText(range)}`"
-                :disabled="!formShown"
-                @click="fillForm(range)"
-              >
-                Wpisz do formularza
-              </AppButton>
-            </li>
-          </ul>
-          <p class="hint">
-            Tuż po północy (czasu polskiego) przedwczorajszy dzień może tu być przez 2–3 godziny, zanim pobierze go nocny przebieg.
-          </p>
+          <form class="start" @submit.prevent="start">
+            <div class="field">
+              <label :for="fromId">Od</label>
+              <input :id="fromId" ref="from-input" v-model="from" type="date" required />
+            </div>
+            <div class="field">
+              <label :for="toId">Do</label>
+              <input :id="toId" v-model="to" type="date" required />
+            </div>
+            <fieldset class="sources">
+              <legend>Źródła</legend>
+              <label v-for="source in sources" :key="source.source" class="check">
+                <input
+                  v-model="chosenSources"
+                  type="checkbox"
+                  :value="source.source"
+                  :disabled="!source.configured"
+                />
+                {{ label('source', source.source) }}<template v-if="!source.configured"> (nieskonfigurowane)</template>
+              </label>
+            </fieldset>
+            <AppButton
+              type="submit"
+              variant="primary"
+              icon="i-play"
+              :disabled="chosenSources.length === 0"
+              :busy="starting"
+              busy-label="Uruchamianie…"
+              :aria-describedby="startHint ? 'start-hint' : undefined"
+            >
+              Uruchom
+            </AppButton>
+          </form>
+          <p v-if="startHint" id="start-hint" class="note hint">{{ startHint }}</p>
         </template>
-      </template>
-    </section>
+        <StatusMessage v-if="startMessage" tone="ok" class="message">{{ startMessage }}</StatusMessage>
+        <StatusMessage v-if="startError" tone="error" class="message">{{ startError }}</StatusMessage>
+      </section>
 
-    <section ref="runs-section" aria-labelledby="runs-title" :aria-busy="runsLoading || runsRetrying ? 'true' : undefined">
+      <section class="card" aria-labelledby="missing-title" :aria-busy="missingLoading || missingRetrying ? 'true' : undefined">
+        <h2 id="missing-title" ref="missing-heading" class="card-title" tabindex="-1">Dni bez danych</h2>
+        <LoadingState v-if="missingLoading" class="section-state" shape="lines" />
+        <ErrorState
+          v-else-if="missingError"
+          ref="missing-error-state"
+          class="section-state"
+          title="Nie udało się wczytać dni bez danych"
+          :retrying="missingRetrying"
+          @retry="loadMissing({ by: 'retry' })"
+        >
+          Pozostałe sekcje działają osobno.
+        </ErrorState>
+        <template v-else-if="missing">
+          <EmptyState v-if="ranges.length === 0" class="section-state" icon="i-circle-check" title="Brak dni bez danych">
+            Każdy dzień od {{ formatDate(missing.from) }} do {{ formatDate(missing.to) }} ma dane.
+          </EmptyState>
+          <template v-else>
+            <ul class="rows missing-ranges">
+              <li v-for="range in ranges" :key="range.from" class="missing-range">
+                <span>
+                  <span class="row-main missing-days">{{ rangeDays(range) }}</span>
+                  {{ ' ' }}
+                  <span class="row-sub missing-sources">{{ rangeSources(range) }}</span>
+                </span>
+                <AppButton
+                  :aria-label="`Wpisz do formularza: ${rangeText(range)}`"
+                  :disabled="!formShown"
+                  @click="fillForm(range)"
+                >
+                  Wpisz do formularza
+                </AppButton>
+              </li>
+            </ul>
+            <p class="note hint">
+              Tuż po północy (czasu polskiego) przedwczorajszy dzień może tu być przez 2–3 godziny, zanim pobierze go nocny przebieg.
+            </p>
+          </template>
+        </template>
+      </section>
+    </div>
+
+    <section
+      ref="runs-section"
+      class="part-section"
+      aria-labelledby="runs-title"
+      :aria-busy="runsLoading || runsRetrying ? 'true' : undefined"
+    >
       <div class="section-head">
-        <h2 id="runs-title" ref="runs-heading" tabindex="-1">Ostatnie przebiegi</h2>
-        <AppButton :disabled="runsLoading" @click="refresh">Odśwież</AppButton>
+        <h2 id="runs-title" ref="runs-heading" class="section-title" tabindex="-1">Ostatnie przebiegi</h2>
+        <AppButton icon="i-refresh-cw" :disabled="runsLoading" @click="refresh">Odśwież</AppButton>
       </div>
       <LoadingState v-if="runsLoading" class="section-state" shape="rows" />
       <ErrorState
@@ -413,47 +440,50 @@ onMounted(async () => {
         Pierwszy uruchomisz w sekcji „Nowy przebieg”.
       </EmptyState>
       <template v-else>
-        <ul class="runs">
-          <li v-for="run in runs" :key="run.id" class="run" :data-status="run.status">
-            <p class="run-head">
-              <strong>{{ label('runKind', run.kind) }}</strong>
-              <StatusBadge class="status" :tone="runTone(run)">{{ runStatusLabel(run) }}</StatusBadge>
-              <StatusBadge v-if="run.needsAttention" class="attention" tone="destructive">wymaga uwagi</StatusBadge>
-              <span>{{ formatDateTime(run.createdAt) }}</span>
-              <span v-if="run.sources.length">{{ run.sources.map((s) => label('source', s)).join(', ') }}</span>
-              <RouterLink
-                class="details"
-                :to="{ name: 'admin-run', params: { id: run.id } }"
-                :aria-label="`Szczegóły przebiegu z ${formatDateTime(run.createdAt)}`"
-              >
-                Szczegóły
-              </RouterLink>
-            </p>
-            <p class="run-meta">
-              <span v-if="runRange(run)" class="range">zakres {{ runRange(run) }}</span>
-              <span class="requester">uruchomił {{ requester(run) }}</span>
-              <span v-if="duration(run)" class="duration">czas {{ duration(run) }}</span>
-            </p>
-            <p class="counters">
-              {{ counters(run) }}
-              · <span :class="{ alarm: run.processingErrors > 0 }">błędy techniczne {{ run.processingErrors }}</span>
-            </p>
-            <p v-if="run.steps.length" class="steps">
-              <template v-for="step in run.steps" :key="step.step + step.startedAt">
-                <span v-if="step.status === 'succeeded'">
-                  {{ label('step', step.step) }}<template v-if="step.itemsOut !== null"> ({{ step.itemsOut }})</template>
+        <DataTable class="section-state" caption="Ostatnie przebiegi, od najnowszego">
+          <thead>
+            <tr>
+              <th scope="col">Przebieg</th>
+              <th scope="col">Rodzaj</th>
+              <th scope="col">Stan</th>
+              <th scope="col">Zakres</th>
+              <th scope="col" class="num">Ocenione</th>
+              <th scope="col" class="num">Nieudane</th>
+              <th scope="col" class="num">Martwe</th>
+              <th scope="col" class="num">Czas</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="run in runs" :key="run.id" class="run" :data-status="run.status">
+              <th scope="row">
+                <RouterLink
+                  class="details"
+                  :to="{ name: 'admin-run', params: { id: run.id } }"
+                  :aria-label="`Szczegóły przebiegu z ${formatDateTime(run.createdAt)}`"
+                >
+                  {{ formatDateTime(run.createdAt) }}
+                </RouterLink>
+              </th>
+              <td class="kind">{{ label('runKind', run.kind) }}</td>
+              <td class="state-cell">
+                <span class="badges">
+                  <StatusBadge class="status" :tone="runTone(run)">{{ runStatusLabel(run) }}</StatusBadge>
+                  <StatusBadge v-if="run.needsAttention" class="attention" tone="destructive" icon>wymaga uwagi</StatusBadge>
                 </span>
-                <StatusBadge v-else :tone="stepTone(step.status)">
-                  {{ label('step', step.step) }} ({{ label('stepStatus', step.status) }})
-                </StatusBadge>
-              </template>
-            </p>
-            <p v-if="run.error" class="run-error">{{ run.error }}</p>
-          </li>
-        </ul>
-        <AppButton v-if="hasOlder" class="older" :busy="olderLoading" busy-label="Wczytywanie…" @click="loadOlder">
-          Pokaż starsze
-        </AppButton>
+              </td>
+              <td class="range">{{ runRange(run) }}</td>
+              <td class="num assessed" :class="countClass(run.assessedOk)">{{ formatCount(run.assessedOk) }}</td>
+              <td class="num failed" :class="countClass(run.assessedFailed, true)">{{ formatCount(run.assessedFailed) }}</td>
+              <td class="num dead" :class="countClass(run.dead, true)">{{ formatCount(run.dead) }}</td>
+              <td class="num duration">{{ duration(run) }}</td>
+            </tr>
+          </tbody>
+        </DataTable>
+        <div v-if="hasOlder" class="actions">
+          <AppButton icon="i-chevron-down" :busy="olderLoading" busy-label="Wczytywanie…" @click="loadOlder">
+            Pokaż starsze
+          </AppButton>
+        </div>
         <StatusMessage v-if="olderError" tone="error" class="message">{{ olderError }}</StatusMessage>
       </template>
     </section>
@@ -461,102 +491,174 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-h2 {
-  margin: var(--space-5) 0 var(--space-2);
-  font-size: var(--font-size-2xl);
-  color: var(--text-h);
+/* The part starts apart from the bar of the parts, and its runs apart from the cards above them (the design's
+   `.section`). */
+.part-top,
+.part-section {
+  margin-top: var(--space-8);
 }
 
-.start {
+/* "Nowy przebieg" and "Dni bez danych" side by side, one under the other below 900 px. */
+.cols-2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: var(--space-4);
+}
+
+.card {
+  min-width: 0;
+  padding: var(--space-5);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+}
+
+.card-title {
+  margin: 0;
+  font-size: var(--font-size-3xl);
+}
+
+.section-title {
+  margin: 0;
+  font-size: var(--font-size-4xl);
+}
+
+.section-head {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+}
+
+/* The fields, the sources and "Uruchom" in one row where they fit, lined up at their bottom. */
+.start {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
   gap: var(--space-3) var(--space-4);
+  margin-top: var(--space-4);
+}
+
+.field {
+  display: grid;
+  flex: 1 1 9rem;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.field label,
+.sources legend {
+  color: var(--text-h);
+  font-size: var(--font-size-sm);
+  font-weight: var(--weight-medium);
+}
+
+.sources legend {
+  margin-bottom: var(--space-1);
+  padding: 0;
 }
 
 .sources {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-2) var(--space-4);
+  min-width: 0;
+  min-height: var(--control-height);
   margin: 0;
-  padding: var(--space-1) var(--space-2);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
+  padding: 0;
+  border: 0;
+}
+
+.check {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-h);
+  cursor: pointer;
+}
+
+.note {
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
 }
 
 .hint {
-  margin: var(--space-2) 0 0;
-  font-size: var(--font-size-sm);
+  margin: var(--space-3) 0 0;
 }
 
 /* A message standing alone in its section, apart from what is above and below it; the part's selector outranks the
    message's own zero margin. */
 .admin-part .message {
-  margin-block: var(--space-3);
+  margin-block: var(--space-3) 0;
 }
 
-/* The state of a section (loading, error, empty) stands apart from the heading above it. */
+/* The state of a section (loading, error, empty) and the table stand apart from the heading above them. */
 .section-state {
   margin-top: var(--space-4);
 }
 
-.section-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.runs,
-.missing-ranges {
-  margin: 0;
+.rows {
+  margin: var(--space-3) 0 0;
   padding: 0;
   list-style: none;
 }
 
-.run,
-.missing-range {
-  padding: var(--space-2) 0;
-  border-bottom: 1px solid var(--line);
-}
-
-.missing-range {
+.rows > li {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-1) var(--space-3);
+  gap: var(--space-2) var(--space-4);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--line);
 }
 
-.run p {
-  margin: var(--space-0) 0;
+.rows > li:last-child {
+  border-bottom: 0;
 }
 
-.run-head,
-.run-meta,
-.steps {
+.row-main {
+  color: var(--text-h);
+  font-weight: var(--weight-medium);
+}
+
+.row-sub {
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+}
+
+/* The only cell that wraps: a run's state and its "wymaga uwagi" go one under the other where the row is short of
+   room, so the table keeps its columns in the frame on a wide screen (each badge stays in one line). */
+.state-cell {
+  white-space: normal;
+}
+
+.badges {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+  padding-block: var(--space-1);
+}
+
+.badges > * {
+  white-space: nowrap;
+}
+
+.actions {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
-  gap: var(--space-1) var(--space-3);
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  margin-top: var(--space-4);
 }
 
-.alarm,
-.run-error {
-  color: var(--destructive);
-}
-
-.run-meta,
-.counters,
-.steps {
-  font-size: var(--font-size-sm);
-}
-
-.older {
-  margin-top: var(--space-3);
-}
-
-.run-error {
-  font-size: var(--font-size-sm);
-  overflow-wrap: anywhere;
+@media (max-width: 899px) {
+  .cols-2 {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 </style>

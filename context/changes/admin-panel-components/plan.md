@@ -685,26 +685,26 @@ Bez migracji bazy. Odpowiedź `GET /api/admin/posts/failed` dostaje dwa nowe pol
 
 #### Automated
 
-- [x] 3.1 Testy webu przechodzą (router, układ, trzy części, CLEANED): `npm test`
-- [x] 3.2 Build przechodzi: `npm run build`
-- [x] 3.3 Nie zostało nic ze starego widoku (`! grep AdminView`)
-- [x] 3.4 Testy E2E przechodzą: `npm run e2e`
-- [x] 3.5 Wzorce widoków panelu zapisane od nowa, inne bez zmian (`visual:update` + `git status`)
-- [x] 3.6 Testy wizualne i dostępności przechodzą dwa razy z rzędu: `npm run visual:docker`
-- [x] 3.7 Bez przewijania w poziomie przy 320 px na każdej części (`playwright-cli`)
+- [x] 3.1 Testy webu przechodzą (router, układ, trzy części, CLEANED): `npm test` — 31f7c4e
+- [x] 3.2 Build przechodzi: `npm run build` — 31f7c4e
+- [x] 3.3 Nie zostało nic ze starego widoku (`! grep AdminView`) — 31f7c4e
+- [x] 3.4 Testy E2E przechodzą: `npm run e2e` — 31f7c4e
+- [x] 3.5 Wzorce widoków panelu zapisane od nowa, inne bez zmian (`visual:update` + `git status`) — 31f7c4e
+- [x] 3.6 Testy wizualne i dostępności przechodzą dwa razy z rzędu: `npm run visual:docker` — 31f7c4e
+- [x] 3.7 Bez przewijania w poziomie przy 320 px na każdej części (`playwright-cli`) — 31f7c4e
 
 ### Phase 4: Części według prototypów
 
 #### Automated
 
-- [ ] 4.1 Testy webu przechodzą (tabele, paski jakości, stronicowanie, zaznaczenie, komunikat z odnośnikiem, przywrócenie, odnośnik do oryginału, CLEANED): `npm test`
-- [ ] 4.2 Build przechodzi: `npm run build`
-- [ ] 4.3 Testy E2E przechodzą: `npm run e2e`
-- [ ] 4.4 Wzorce części zapisane od nowa, inne bez zmian (`visual:update` + `git status`)
-- [ ] 4.5 Testy wizualne i dostępności przechodzą dwa razy z rzędu: `npm run visual:docker`
-- [ ] 4.6 Kopie projektu zgodne: `design-check.mjs app`
-- [ ] 4.7 Bez przewijania strony w poziomie przy 320 px na trzech częściach, także z FAILED many (`playwright-cli`)
-- [ ] 4.8 Zrzuty albo N/A stanów spoza wzorców w `evidence/states/`
+- [x] 4.1 Testy webu przechodzą (tabele, paski jakości, stronicowanie, zaznaczenie, komunikat z odnośnikiem, przywrócenie, odnośnik do oryginału, CLEANED): `npm test`
+- [x] 4.2 Build przechodzi: `npm run build`
+- [x] 4.3 Testy E2E przechodzą: `npm run e2e`
+- [x] 4.4 Wzorce części zapisane od nowa, inne bez zmian (`visual:update` + `git status`)
+- [x] 4.5 Testy wizualne i dostępności przechodzą dwa razy z rzędu: `npm run visual:docker`
+- [x] 4.6 Kopie projektu zgodne: `design-check.mjs app`
+- [x] 4.7 Bez przewijania strony w poziomie przy 320 px na trzech częściach, także z FAILED many (`playwright-cli`)
+- [x] 4.8 Zrzuty albo N/A stanów spoza wzorców w `evidence/states/`
 
 ### Phase 5: Strona przebiegu według prototypu
 

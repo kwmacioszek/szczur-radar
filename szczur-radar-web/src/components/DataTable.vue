@@ -5,7 +5,8 @@
 // table scrolls sideways inside its frame, never the page (WCAG 1.4.10 allows it for a table); the frame is a region
 // named by the caption and takes the focus, so the keyboard can scroll it too (WCAG 2.1.1).
 // The caller marks its cells: `num` on a number's header and cells (to the right, tabular figures), `zero` on a 0
-// (muted), `is-selected` on a row chosen by its checkbox. The row's first header cell is `th scope="row"`.
+// (muted), `down` on a number that is bad news above 0 (the failed and dead posts of a run: the destructive tone),
+// `is-selected` on a row chosen by its checkbox. The row's first header cell is `th scope="row"`.
 import { useId } from 'vue'
 
 defineProps<{
@@ -80,6 +81,11 @@ table {
 
 :slotted(td.zero) {
   color: var(--text-muted);
+}
+
+:slotted(td.down) {
+  color: var(--destructive);
+  font-weight: var(--weight-semibold);
 }
 
 @media (max-width: 899px) {

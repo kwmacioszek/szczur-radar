@@ -84,6 +84,27 @@ describe('AdminRunsView', () => {
     expect(fetchRuns).toHaveBeenCalledTimes(2)
   })
 
+  it('puts the started run at the top of the table, labels the fields and leads Uruchom with its icon', async () => {
+    const started = run({ id: 'new', status: 'queued', startedAt: null, finishedAt: null, createdAt: '2026-10-02T07:00:00Z' })
+    vi.mocked(fetchRuns)
+      .mockResolvedValueOnce(page([run({ id: 'old' })], 1))
+      .mockResolvedValue(page([started, run({ id: 'old' })], 2))
+    vi.mocked(startRange).mockResolvedValue([started])
+    const wrapper = await mountAdmin()
+    const [fromField, toField] = wrapper.findAll('input[type="date"]')
+    expect(wrapper.find(`label[for="${fromField!.attributes('id')}"]`).text()).toBe('Od')
+    expect(wrapper.find(`label[for="${toField!.attributes('id')}"]`).text()).toBe('Do')
+    expect(wrapper.find('form legend').text()).toBe('Źródła')
+    expect(wrapper.find('form button[type="submit"] use').attributes('href')).toBe('#i-play')
+
+    await wrapper.find('form').trigger('submit')
+    await flushPromises()
+
+    const rows = wrapper.findAll('.run')
+    expect(rows.map((row) => row.find('a.details').attributes('href'))).toEqual(['/admin/runs/new', '/admin/runs/old'])
+    expect(rows[0]!.find('.status').text()).toBe('w kolejce')
+  })
+
   it('blocks the button until the server answers', async () => {
     let answer: (runs: Run[]) => void = () => {}
     vi.mocked(startRange).mockReturnValue(new Promise((resolve) => (answer = resolve)))
@@ -320,19 +341,67 @@ describe('AdminRunsView', () => {
     expect(start.find('form').exists()).toBe(true)
   })
 
-  it('shows a partial run with its technical errors and error text', async () => {
-    vi.mocked(fetchRuns).mockResolvedValue({
-      items: [run({ status: 'partial', processingErrors: 1, error: '1 post(s) with a technical error: x (IllegalStateException)' })],
-      page: 0,
-      size: 20,
-      total: 1,
-    })
+  // Before S-50 each run was an item of a list with its counters, steps and error; the table of the design shows the
+  // run's row (the counters, steps and error are on the run's page).
+  it('shows the runs as a table in the order of the design, each run a row headed by its link', async () => {
+    vi.mocked(fetchRuns).mockResolvedValue(page([run({ assessedOk: 12345 })], 1))
     const wrapper = await mountAdmin()
-    const shown = wrapper.find('.run')
-    expect(shown.find('.status').text()).toBe('częściowo')
-    expect(shown.find('.alarm').text()).toBe('błędy techniczne 1')
-    expect(shown.find('.run-error').text()).toContain('IllegalStateException')
-    expect(shown.text()).toContain('pobranie (270)')
+    const frame = wrapper.find('section[aria-labelledby="runs-title"] .data-table')
+    expect(frame.find('caption').text()).toBe('Ostatnie przebiegi, od najnowszego')
+    expect(frame.findAll('thead th').map((cell) => [cell.text(), cell.attributes('scope'), cell.classes('num')])).toEqual([
+      ['Przebieg', 'col', false],
+      ['Rodzaj', 'col', false],
+      ['Stan', 'col', false],
+      ['Zakres', 'col', false],
+      ['Ocenione', 'col', true],
+      ['Nieudane', 'col', true],
+      ['Martwe', 'col', true],
+      ['Czas', 'col', true],
+    ])
+    const row = frame.find('tbody tr.run')
+    const head = row.find('th')
+    expect(head.attributes('scope')).toBe('row')
+    expect(head.find('a.details').text()).toBe('2.10.2026, 08:00')
+    expect(head.find('a.details').attributes('aria-label')).toBe('Szczegóły przebiegu z 2.10.2026, 08:00')
+    expect(row.findAll('td').map((cell) => cell.text())).toEqual([
+      'zakres dat',
+      'zakończony',
+      '1.10.2026',
+      '12\u00a0345',
+      '8',
+      '0',
+      '19 min 59 s',
+    ])
+  })
+
+  it('mutes a count of 0 and gives failed and dead posts above 0 the destructive tone', async () => {
+    vi.mocked(fetchRuns).mockResolvedValue(
+      page([run({ id: 'bad', assessedOk: 0, assessedFailed: 4, dead: 2 }), run({ id: 'good', assessedOk: 165, assessedFailed: 0, dead: 0 })], 2),
+    )
+    const wrapper = await mountAdmin()
+    const [bad, good] = wrapper.findAll('.run')
+    const cells = (row: typeof bad) => ['.assessed', '.failed', '.dead'].map((cell) => row!.find(cell).classes())
+    expect(cells(bad)).toEqual([
+      ['num', 'assessed', 'zero'],
+      ['num', 'failed', 'down'],
+      ['num', 'dead', 'down'],
+    ])
+    expect(cells(good)).toEqual([
+      ['num', 'assessed'],
+      ['num', 'failed', 'zero'],
+      ['num', 'dead', 'zero'],
+    ])
+  })
+
+  it('leaves the range and the time empty for a run without them', async () => {
+    vi.mocked(fetchRuns).mockResolvedValue(
+      page([run({ kind: 'retry', rangeFrom: null, rangeTo: null, status: 'queued', startedAt: null, finishedAt: null })], 1),
+    )
+    const wrapper = await mountAdmin()
+    const row = wrapper.find('.run')
+    expect(row.find('.kind').text()).toBe('ponowienie resztek')
+    expect(row.find('.range').text()).toBe('')
+    expect(row.find('.duration').text()).toBe('')
   })
 
   it.each([
@@ -348,22 +417,6 @@ describe('AdminRunsView', () => {
     const badge = wrapper.find('.run .status')
     expect(badge.text()).toBe(text)
     expect(badge.attributes('data-tone')).toBe(tone)
-  })
-
-  it('says in text which step failed and which is running', async () => {
-    const step = (name: 'fetch' | 'assess', status: 'succeeded' | 'failed' | 'running') => ({
-      step: name, status, startedAt: '2026-10-02T06:00:01Z', finishedAt: null, itemsIn: null, itemsOut: null, error: null,
-    })
-    vi.mocked(fetchRuns).mockResolvedValue({
-      items: [run({ id: 'r1', status: 'failed', steps: [step('fetch', 'failed')] }), run({ id: 'r2', status: 'running', steps: [step('assess', 'running')] })],
-      page: 0,
-      size: 20,
-      total: 2,
-    })
-    const wrapper = await mountAdmin()
-    const [failedRun, runningRun] = wrapper.findAll('.run')
-    expect(failedRun!.find('.steps').text()).toBe('pobranie (błąd)')
-    expect(runningRun!.find('.steps').text()).toBe('ocena (trwa)')
   })
 
   describe('a section retries on its own', () => {
@@ -534,7 +587,9 @@ describe('AdminRunsView', () => {
       vi.mocked(fetchMissingDays).mockResolvedValue(example)
       const wrapper = await mountAdmin()
       const rows = section(wrapper).findAll('.missing-range')
-      expect(rows.map((row) => row.find('.missing-days').text())).toEqual(['19.10.2026 – 20.10.2026 · Wykop'])
+      expect(rows.map((row) => [row.find('.missing-days').text(), row.find('.missing-sources').text()])).toEqual([
+        ['19.10.2026 – 20.10.2026', 'Wykop'],
+      ])
       expect(fillButtons(wrapper)).toHaveLength(1)
       expect(fillButtons(wrapper)[0]!.attributes('aria-label')).toBe(
         'Wpisz do formularza: 19.10.2026 – 20.10.2026 · Wykop',
@@ -693,7 +748,7 @@ describe('AdminRunsView', () => {
       vi.useRealTimers()
     })
 
-    it('shows the range, the duration and who started a run', async () => {
+    it('shows the range and the duration of a run, none for a queued one', async () => {
       vi.mocked(fetchRuns).mockResolvedValue(
         page(
           [
@@ -706,13 +761,11 @@ describe('AdminRunsView', () => {
       )
       const wrapper = await mountAdmin()
       const [cron, admin, queued] = wrapper.findAll('.run')
-      expect(cron!.find('.range').text()).toBe('zakres 1.10.2026')
-      expect(cron!.find('.requester').text()).toBe('uruchomił cron')
-      expect(cron!.find('.duration').text()).toBe('czas 19 min 59 s')
-      expect(admin!.find('.range').text()).toBe('zakres 29.09.2026 – 1.10.2026')
-      expect(admin!.find('.requester').text()).toBe('uruchomił admin')
-      expect(queued!.find('.range').exists()).toBe(false)
-      expect(queued!.find('.duration').exists()).toBe(false)
+      expect(cron!.find('.range').text()).toBe('1.10.2026')
+      expect(cron!.find('.duration').text()).toBe('19 min 59 s')
+      expect(admin!.find('.range').text()).toBe('29.09.2026 – 1.10.2026')
+      expect(queued!.find('.range').text()).toBe('')
+      expect(queued!.find('.duration').text()).toBe('')
     })
 
     it('marks a run that needs attention, names the cause of an interruption and links the run', async () => {
@@ -737,8 +790,9 @@ describe('AdminRunsView', () => {
       expect(interrupted!.find('.status').attributes('data-tone')).toBe('warning')
       expect(interrupted!.find('.attention').text()).toBe('wymaga uwagi')
       expect(interrupted!.find('.attention').attributes('data-tone')).toBe('destructive')
+      expect(interrupted!.find('.attention use').attributes('href')).toBe('#i-circle-alert')
       const link = interrupted!.find('a.details')
-      expect(link.text()).toBe('Szczegóły')
+      expect(link.text()).toBe('2.10.2026, 08:00')
       expect(link.attributes('href')).toBe('/admin/runs/r1')
       expect(link.attributes('aria-label')).toBe('Szczegóły przebiegu z 2.10.2026, 08:00')
       expect(partial!.find('.attention').exists()).toBe(false)
@@ -759,30 +813,9 @@ describe('AdminRunsView', () => {
       expect(succeeded!.find('.status').text()).toBe('zakończony — pominięte: 3')
       expect(succeeded!.find('.status').attributes('data-tone')).toBe('warning')
       expect(succeeded!.find('.attention').text()).toBe('wymaga uwagi')
-      expect(succeeded!.find('.counters').text()).toContain('pominięte 3')
       expect(partial!.find('.status').text()).toBe('częściowo — pominięte: 1')
       expect(partial!.find('.status').attributes('data-tone')).toBe('warning')
       expect(partial!.find('.attention').text()).toBe('wymaga uwagi')
-    })
-
-    it('shows an interrupted step in words', async () => {
-      vi.mocked(fetchRuns).mockResolvedValue(
-        page(
-          [
-            run({
-              status: 'interrupted',
-              interruptionCause: 'restart',
-              steps: [
-                { step: 'assess', status: 'interrupted', startedAt: '2026-10-02T06:00:01Z', finishedAt: '2026-10-02T06:05:00Z', itemsIn: 41, itemsOut: null, error: null },
-              ],
-            }),
-          ],
-          1,
-        ),
-      )
-      const wrapper = await mountAdmin()
-      expect(wrapper.find('.run .steps').text()).toBe('ocena (przerwany)')
-      expect(wrapper.find('.run .steps [data-tone]').attributes('data-tone')).toBe('warning')
     })
 
     it('reads older runs with Pokaż starsze until all are on screen', async () => {
@@ -838,7 +871,7 @@ describe('AdminRunsView', () => {
       await vi.advanceTimersByTimeAsync(10_000)
       await flushPromises()
       expect(fetchRuns).toHaveBeenCalledTimes(2)
-      expect(wrapper.find('.run .counters').text()).toContain('ocenione 30')
+      expect(wrapper.find('.run .assessed').text()).toBe('30')
 
       await vi.advanceTimersByTimeAsync(10_000)
       await flushPromises()
