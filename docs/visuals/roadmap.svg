@@ -40,7 +40,7 @@
 <rect x="7147.2" y="114.0" width="28.5" height="12.0" rx="3" fill="#14281d" stroke="#5fd18faa" stroke-width="1" />
 <rect x="7180.7" y="114.0" width="28.5" height="12.0" rx="3" fill="#14281d" stroke="#5fd18faa" stroke-width="1" />
 <rect x="7214.2" y="114.0" width="28.5" height="12.0" rx="3" fill="#232d32" stroke="#c3cdd055" stroke-width="1" />
-<rect x="7247.7" y="114.0" width="28.5" height="12.0" rx="3" fill="#232d32" stroke="#c3cdd055" stroke-width="1" />
+<rect x="7247.7" y="114.0" width="28.5" height="12.0" rx="3" fill="#33291a" stroke="#f2c46daa" stroke-width="1" />
 <rect x="7281.3" y="114.0" width="28.5" height="12.0" rx="3" fill="#232d32" stroke="#c3cdd055" stroke-width="1" />
 <rect x="7314.8" y="114.0" width="28.5" height="12.0" rx="3" fill="#232d32" stroke="#c3cdd055" stroke-width="1" />
 <rect x="7348.3" y="114.0" width="28.5" height="12.0" rx="3" fill="#232d32" stroke="#c3cdd055" stroke-width="1" />
@@ -53,11 +53,11 @@
 <circle cx="6950.0" cy="147" r="4" fill="#5fd18f" stroke="#5fd18f" stroke-width="1.2"/>
 <text x="6959.0" y="151.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="500" fill="#eaf0f2">8 ukończonych</text>
 <circle cx="7100.0" cy="147" r="4" fill="#f2c46d" stroke="#f2c46d" stroke-width="1.2"/>
-<text x="7109.0" y="151.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="500" fill="#a2afb4">0 w toku</text>
+<text x="7109.0" y="151.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="500" fill="#eaf0f2">1 w toku</text>
 <circle cx="7250.0" cy="147" r="4" fill="#13232e" stroke="#8ccbe8" stroke-width="1.2"/>
 <text x="7259.0" y="151.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="500" fill="#a2afb4">0 gotowych do planowania</text>
 <circle cx="6950.0" cy="169" r="4" fill="#232d32" stroke="#c3cdd0" stroke-width="1.2"/>
-<text x="6959.0" y="173.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="500" fill="#eaf0f2">11 proponowanych</text>
+<text x="6959.0" y="173.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="500" fill="#eaf0f2">10 proponowanych</text>
 <circle cx="7100.0" cy="169" r="4" fill="#141c21" stroke="#9aa8ae" stroke-width="1.2"/>
 <text x="7109.0" y="173.0" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="500" fill="#a2afb4">0 zaparkowanych</text>
 <circle cx="7250.0" cy="169" r="4" fill="#f28b9c" stroke="#f28b9c" stroke-width="1.2"/>
@@ -1447,13 +1447,13 @@
 <text x="8131.2" y="1182.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="11" font-weight="700" fill="#eaf0f2">S-48</text>
 <text x="8071.2" y="1204.0" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#9aa8ae">admin-panel-components</text>
 </g>
-<g data-id="S-51" data-status="proposed">
+<g data-id="S-51" data-status="progress">
 <rect x="6822.0" y="1562.5" width="252.8" height="297.0" rx="12" fill="url(#star)" stroke="#c3f08c" stroke-width="1.8" />
 <text x="6836.0" y="1587.5" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" font-size="13" font-weight="700" fill="#c3f08c">S-51</text>
 <path d="M6882.9 1575.5 l2.3 4.7 5.2 .8 -3.8 3.6 .9 5.1 -4.6 -2.4 -4.6 2.4 .9 -5.1 -3.8 -3.6 5.2 -.8z" fill="#c3f08c"/>
-<rect x="6963.2" y="1573.5" width="97.6" height="20.0" rx="5" fill="#232d32" stroke="#c3cdd055" stroke-width="1" />
-<circle cx="6975.2" cy="1583.5" r="3" fill="#c3cdd0"/>
-<text x="6984.2" y="1587.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="600" fill="#c3cdd0">Proponowane</text>
+<rect x="6993.9" y="1573.5" width="66.9" height="20.0" rx="5" fill="#33291a" stroke="#f2c46d55" stroke-width="1" />
+<circle cx="7005.9" cy="1583.5" r="3" fill="#f2c46d"/>
+<text x="7014.9" y="1587.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="600" fill="#f2c46d">W toku</text>
 <text x="6836.0" y="1613.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#eaf0f2">Lista postów z oceną</text>
 <text x="6836.0" y="1635.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#eaf0f2">w panelu</text>
 <text x="6836.0" y="1663.5" font-family="Inter, 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#a2afb4">użytkownik przegląda zwartą</text>

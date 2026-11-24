@@ -47,7 +47,7 @@ test.describe('logowanie z wyczerpanym limitem prób', () => {
 })
 
 test('wylogowanie kończy sesję, a chroniona strona wraca do logowania', async ({ page }) => {
-  await page.goto('/')
+  await page.goto('/posts')
   const main = page.getByRole('main')
   await expect(main.getByRole('heading', { level: 1, name: 'Posty' })).toBeVisible()
 
@@ -57,23 +57,23 @@ test('wylogowanie kończy sesję, a chroniona strona wraca do logowania', async 
 
   // A new page load asks the server again: the session is gone. vue-router does not encode `/` in a query value.
   await page.goto('/')
-  await expect(page).toHaveURL('/login?redirect=/')
+  await expect(page).toHaveURL('/login?redirect=/posts')
 })
 
 test('wygaśnięcie sesji w trakcie pracy prowadzi do logowania i z powrotem', async ({ page, mock }) => {
-  await page.goto('/')
+  await page.goto('/posts')
   const main = page.getByRole('main')
   await expect(main.getByText('Strona 1 z 3')).toBeVisible()
 
   mock.endSession()
   await main.getByRole('button', { name: 'Starsze' }).click()
 
-  await expect(page).toHaveURL('/login?redirect=/?page=1')
+  await expect(page).toHaveURL('/login?redirect=/posts?page=1')
   await main.getByLabel('E-mail', { exact: true }).fill('admin@szczur-radar.pl')
   await main.getByLabel('Hasło', { exact: true }).fill('dowolne-haslo')
   await main.getByRole('button', { name: 'Zaloguj się' }).click()
 
-  await expect(page).toHaveURL('/?page=1')
+  await expect(page).toHaveURL('/posts?page=1')
   await expect(main.getByText('Strona 2 z 3')).toBeVisible()
 })
 
@@ -81,7 +81,7 @@ test.describe('zwykły użytkownik', () => {
   test.use({ modes: { AUTH: 'user' } })
 
   test('zwykły użytkownik nie widzi panelu admina', async ({ page }) => {
-    await page.goto('/')
+    await page.goto('/posts')
     const banner = page.getByRole('banner')
     // The header is there (the user's own e-mail), so the missing admin controls are not just a page still loading.
     await expect(banner.getByText('user@szczur-radar.pl')).toBeVisible()
@@ -89,7 +89,7 @@ test.describe('zwykły użytkownik', () => {
     await expect(banner.getByRole('button', { name: /^Powiadomienia/ })).toHaveCount(0)
 
     await page.goto('/admin')
-    await expect(page).toHaveURL('/')
+    await expect(page).toHaveURL('/posts')
     await expect(page.getByRole('main').getByRole('heading', { level: 1, name: 'Posty' })).toBeVisible()
   })
 })

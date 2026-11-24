@@ -237,7 +237,7 @@ m5 = {  # lane, title (## Foundations / ## Slices), outcome (At a glance, shorte
     "S-47": ("A", "Powłoka z nawigacją u góry", "pasek u góry: nawigacja według roli, data danych per źródło, motyw, wylogowanie; treść w jednej kolumnie", "done", "F-08", "app-shell-navigation"),
     "S-48": ("A", "Wspólne stany i stronicowanie", "każdy widok ma to samo ładowanie, pustą listę, błąd z ponowieniem i stronicowanie", "done", "S-47", "shared-view-states"),
     "S-50": ("A", "Panel admina w trzech częściach", "Przebiegi, Jakość ocen i Nieudane posty pod własnymi adresami; strona przebiegu osobno", "proposed", "S-48", "admin-panel-components"),
-    "S-51": ("B", "Lista postów z oceną w panelu", "użytkownik przegląda zwartą listę postów i czyta ocenę wybranego posta w panelu wysuwanym z prawej", "proposed", "S-48", "stream-and-inspector"),
+    "S-51": ("B", "Lista postów z oceną w panelu", "użytkownik przegląda zwartą listę postów i czyta ocenę wybranego posta w panelu wysuwanym z prawej", "progress", "S-48", "stream-and-inspector"),
     "S-52": ("B", "Domyślnie posty inwestycyjne", "listy domyślnie bez postów nieinwestycyjnych i odsiewu; przełącznik „Inwestycyjne N / Wszystkie M”", "proposed", "S-51", "investment-posts-by-default"),
     "S-53": ("B", "Podświetlone cytaty w panelu posta", "fragmenty, na których oparto ocenę, podświetlone w panelu posta; poprzedni i następny post", "proposed", "S-51", "reader-quote-highlighting"),
     "S-54": ("B", "Sortowanie listy", "kolejność listy w panelu filtrów: data, źródło i pola oceny (FR-008, FR-011b)", "proposed", "S-51", "post-list-sorting"),

@@ -28,14 +28,27 @@ export const DEV_PORT = Number(process.env.E2E_DEV_PORT ?? 5173)
 export const DEV_SERVER_URL = `http://localhost:${DEV_PORT}`
 
 // Ids of dev/mock-api.js (its header): run 3 is the cron's finished night with the failed Reddit source, post 0 the
-// first post of the feed.
+// first post of the list.
 const RUN_3 = '00000000-0000-4000-8000-000100000003'
 const POST_0 = '00000000-0000-4000-8000-000400000000'
 
-// The feed's first page: post n is variant n % 6 (e2e/feed.spec.ts), so the first 6 articles show every variant and
-// the 7th is where the feed's screenshot ends.
-const FEED_PAGE = 50
-export const FEED_SHOWN_ARTICLES = 6
+// The list's first page, one day (2026-10-12): post n is variant n % 6 (e2e/feed.spec.ts), so the first 6 rows show
+// every variant and the 7th is where the list's screenshot ends.
+const POSTS_PAGE = 50
+export const POSTS_SHOWN_ROWS = 6
+
+// dev/mock-api.js: of the 120 posts, the 20 of variant 5 have the target "Orlen", bullish (e2e/feed.spec.ts).
+const ORLEN_BULLISH_POSTS = 20
+
+/** The rows of the list of posts: each row is one link in an item of its day's list. */
+export function postRows(main: Locator): Locator {
+  return main.getByRole('listitem').getByRole('link')
+}
+
+/** The markers of the applied filter over the list of posts. */
+function filterChips(main: Locator): Locator {
+  return main.getByRole('list', { name: 'Włączone filtry', exact: true })
+}
 
 /** The admin's pages are ready only with the bell's notifications in the header (its count is on the screenshot). */
 async function bellLoaded(page: Page): Promise<void> {
@@ -56,8 +69,16 @@ export interface View {
   modes: MockModes
   /** Resolves once the view shows all its data: nothing on it changes afterwards. */
   ready: (page: Page) => Promise<void>
-  /** Screenshot the page from its top to the top of this article (0-based), not the whole page. */
-  clipToArticle?: number
+  /**
+   * Screenshot the page from its top to the top of this row of the list of posts (0-based), not the whole page; past
+   * the page's last row, to the top of its pager.
+   */
+  clipToRow?: number
+  /**
+   * Screenshot only the window, not the whole page: a panel over the page fills the window (the design's screens are
+   * the window's frame), and the page under it, inert and darkened, is the list's own baseline.
+   */
+  viewportOnly?: true
 }
 
 export const VIEWS: readonly View[] = [
@@ -123,22 +144,22 @@ export const VIEWS: readonly View[] = [
     },
   },
   {
-    name: 'view-feed',
-    risk: 'widok feedu nie zmienia wyglądu i nie łamie dostępności',
-    path: '/',
+    name: 'view-posts',
+    risk: 'lista postów nie zmienia wyglądu i nie łamie dostępności',
+    path: '/posts',
     modes: { AUTH: 'user' },
     ready: async (page) => {
       const main = page.getByRole('main')
-      await expect(main.getByRole('article')).toHaveCount(FEED_PAGE)
+      await expect(postRows(main)).toHaveCount(POSTS_PAGE)
       await expect(main.getByRole('status')).toHaveText('Ocenione posty: 120')
       await freshnessLoaded(page)
     },
-    clipToArticle: FEED_SHOWN_ARTICLES,
+    clipToRow: POSTS_SHOWN_ROWS,
   },
   {
-    name: 'view-feed-loading',
+    name: 'view-posts-loading',
     risk: 'szkielet ładowania listy nie zmienia wyglądu i nie łamie dostępności',
-    path: '/',
+    path: '/posts',
     modes: { AUTH: 'user', MODE: 'loading' },
     // The skeleton's text for assistive technology: the list's aria-busy has no role to find it by (as in E2E).
     ready: async (page) => {
@@ -148,21 +169,46 @@ export const VIEWS: readonly View[] = [
     },
   },
   {
-    name: 'view-feed-empty',
+    name: 'view-posts-empty',
     risk: 'pusty wynik filtra listy nie zmienia wyglądu i nie łamie dostępności',
-    path: '/?q=zzz',
+    path: '/posts?q=zzz',
     modes: { AUTH: 'user' },
     ready: async (page) => {
       const main = page.getByRole('main')
       await expect(main.getByRole('heading', { level: 2, name: 'Brak postów dla tych filtrów', exact: true })).toBeVisible()
       await expect(main.getByRole('status')).toHaveText('Żaden post nie pasuje do filtra.')
+      await expect(filterChips(main).getByRole('button', { name: 'Usuń filtr: Cel: zzz', exact: true })).toBeVisible()
       await freshnessLoaded(page)
     },
   },
   {
-    name: 'view-feed-error',
+    name: 'view-posts-filters',
+    risk: 'otwarty panel filtrów ze znacznikami nie zmienia wyglądu i nie łamie dostępności',
+    path: '/posts?q=orlen&direction=bullish',
+    modes: { AUTH: 'user' },
+    // The filter in the address, its markers over the list, and the panel opened by a click on "Filtry: 2": the pointer
+    // then leaves for the window's corner, so no hover is on the screenshot (and a click gives no focus ring).
+    ready: async (page) => {
+      const main = page.getByRole('main')
+      await expect(postRows(main)).toHaveCount(ORLEN_BULLISH_POSTS)
+      await expect(main.getByRole('status')).toHaveText(`Pasujące do filtra: ${ORLEN_BULLISH_POSTS}`)
+      await expect(filterChips(main).getByRole('button', { name: /^Usuń filtr: / })).toHaveCount(2)
+      await freshnessLoaded(page)
+      await waitForFonts(page)
+      const toggle = main.getByRole('button', { name: 'Filtry: 2', exact: true })
+      await toggle.click()
+      await page.mouse.move(0, 0)
+      await expect(toggle).toHaveAttribute('aria-expanded', 'true')
+      const panel = main.getByRole('group', { name: 'Filtry', exact: true })
+      await expect(panel.getByLabel('Spółka lub temat', { exact: true })).toHaveValue('orlen')
+      await expect(panel.getByRole('button', { name: 'Filtruj', exact: true })).toBeVisible()
+    },
+    viewportOnly: true,
+  },
+  {
+    name: 'view-posts-error',
     risk: 'błąd listy z ponowieniem nie zmienia wyglądu i nie łamie dostępności',
-    path: '/',
+    path: '/posts',
     modes: { AUTH: 'user', MODE: 'error' },
     ready: async (page) => {
       const main = page.getByRole('main')
@@ -174,16 +220,22 @@ export const VIEWS: readonly View[] = [
   },
   {
     name: 'view-post',
-    risk: 'widok posta nie zmienia wyglądu i nie łamie dostępności',
+    risk: 'panel posta nad listą nie zmienia wyglądu i nie łamie dostępności',
     path: `/posts/${POST_0}`,
     modes: { AUTH: 'user' },
+    // The post of the list's first row: the panel over the list with the row selected. The list under it is loaded too,
+    // and the panel has the focus on its title.
     ready: async (page) => {
+      const dialog = page.getByRole('dialog', { name: 'Wpis użytkownika uzytkownik0', exact: true })
+      await expect(dialog.getByRole('heading', { level: 2, name: 'Wpis użytkownika uzytkownik0', exact: true })).toBeFocused()
+      await expect(dialog.getByRole('heading', { level: 3, name: 'Ocena', exact: true })).toBeVisible()
+      await expect(dialog.getByRole('heading', { level: 4, name: 'CDR', exact: true })).toBeVisible()
       const main = page.getByRole('main')
-      await expect(main.getByRole('heading', { level: 1, name: 'Wpis użytkownika uzytkownik0' })).toBeVisible()
-      await expect(main.getByRole('heading', { level: 2, name: 'Ocena', exact: true })).toBeVisible()
-      await expect(main.getByRole('heading', { level: 3, name: 'CDR', exact: true })).toBeVisible()
+      await expect(postRows(main)).toHaveCount(POSTS_PAGE)
+      await expect(postRows(main).first()).toHaveAttribute('aria-current', 'true')
       await freshnessLoaded(page)
     },
+    viewportOnly: true,
   },
   {
     name: 'view-admin',
@@ -457,6 +509,20 @@ export const STATES: readonly State[] = [
     control: (region) => region.getByRole('button', { name: 'Ciemny motyw', exact: true }),
     state: 'focus',
     pressedByTheme: true,
+  },
+  {
+    name: 'state-filtry-przycisk-hover',
+    risk: 'hover przycisku „Filtry” nie zmienia wyglądu',
+    region: 'Filtry',
+    control: (region) => region.getByRole('button', { name: 'Filtry', exact: true }),
+    state: 'hover',
+  },
+  {
+    name: 'state-filtry-znacznik-focus',
+    risk: 'pierścień fokusu znacznika filtra nie zmienia wyglądu',
+    region: 'Filtry',
+    control: (region) => region.getByRole('button', { name: 'Usuń filtr: Cel: orlen', exact: true }),
+    state: 'focus',
   },
   {
     name: 'state-nawigacja-hover',

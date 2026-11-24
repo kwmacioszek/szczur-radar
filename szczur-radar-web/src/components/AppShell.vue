@@ -1,12 +1,12 @@
 <script setup lang="ts">
-// The shell of the logged-in pages, the parent route of the feed, a post, /admin and a run (router/index.ts): it is
-// mounted once and stays while the child pages change, so the bar does not blink and keeps its data. It joins the
-// session, the router and /api/freshness to AppBar and gives the page its column.
+// The shell of the logged-in pages, the parent route of the list of posts (with a post over it), /admin and a run
+// (router/index.ts): it is mounted once and stays while the child pages change, so the bar does not blink and keeps its
+// data. It joins the session, the router and /api/freshness to AppBar and gives the page its column.
 // The main navigation's item is the page's section (`meta.section`), not the exact address: a run's page is still
 // "Panel admina". The date of the data is read on mount, after every page change and when the tab becomes visible,
 // unless the last read is fresher than FRESHNESS_FRESH_MS (no polling in the background: an idle tab lets the API
-// sleep). While it is read again the previous date stays, so the height of the bar does not change under the scroll
-// position that a return to the feed restores (router/scroll.ts).
+// sleep). While it is read again the previous date stays, so the height of the bar does not change under the list's
+// scroll position while a post opens and closes over it (router/scroll.ts).
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { logout } from '../api/auth'
@@ -29,7 +29,7 @@ const isAdmin = computed(() => currentUser.value?.role === 'admin')
 
 const items = computed<NavItem[]>(() => {
   const entries: { label: string; name: string; section: AppSection }[] = [
-    { label: 'Posty', name: 'home', section: 'posts' },
+    { label: 'Posty', name: 'posts', section: 'posts' },
   ]
   if (isAdmin.value) entries.push({ label: 'Panel admina', name: 'admin', section: 'admin' })
   return entries.map((entry) => ({

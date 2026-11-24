@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { filterFromQuery, filterToQuery, isFilterActive, normalizeQuery, pageFromQuery, sameFilter } from './feedFilter'
+import {
+  activeFilterKeys,
+  filterFromQuery,
+  filterToQuery,
+  isFilterActive,
+  normalizeQuery,
+  pageFromQuery,
+  sameFilter,
+  withoutFilterKey,
+} from './feedFilter'
 import { MAX_PAGE } from './api/posts'
 
 describe('feed filter in the address', () => {
@@ -67,6 +76,21 @@ describe('feed filter in the address', () => {
     expect(isFilterActive({ q: 'cdr' })).toBe(true)
     expect(isFilterActive({ kind: 'asset' })).toBe(true)
     expect(isFilterActive({ direction: 'unclear' })).toBe(true)
+  })
+
+  it('lists the keys with a value in a fixed order, never an empty one', () => {
+    expect(activeFilterKeys({})).toEqual([])
+    expect(activeFilterKeys({ q: '' })).toEqual([])
+    expect(activeFilterKeys({ direction: 'bullish', q: 'cdr' })).toEqual(['q', 'direction'])
+    expect(activeFilterKeys({ direction: 'mixed', kind: 'asset', q: 'xtb' })).toEqual(['q', 'kind', 'direction'])
+  })
+
+  it('drops one key and keeps the others', () => {
+    expect(withoutFilterKey({ q: 'cdr', kind: 'company', direction: 'bullish' }, 'kind')).toEqual({
+      q: 'cdr',
+      direction: 'bullish',
+    })
+    expect(withoutFilterKey({ q: 'cdr' }, 'q')).toEqual({})
   })
 
   it('compares filters by their conditions', () => {

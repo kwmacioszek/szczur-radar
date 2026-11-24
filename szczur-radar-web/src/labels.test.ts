@@ -1,5 +1,16 @@
 import { describe, expect, it } from 'vitest'
-import { formatDate, formatDateTime, formatDuration, formatRelative, label, plural, postOrigin, postType } from './labels'
+import {
+  formatDate,
+  formatDateTime,
+  formatDuration,
+  formatRelative,
+  formatTime,
+  label,
+  plural,
+  postOrigin,
+  postTitle,
+  postType,
+} from './labels'
 
 const NOW = Date.parse('2026-10-15T08:00:00Z')
 const SECOND = 1000
@@ -57,6 +68,18 @@ describe('postType', () => {
   })
 })
 
+describe('postTitle', () => {
+  it.each([
+    ['its title', { title: 'Orlen ogłasza buyback za 4 mld zł', source: 'wykop', itemType: 'link', author: 'zbyszek' }, 'Orlen ogłasza buyback za 4 mld zł'],
+    ['the type and author without a title', { title: null, source: 'wykop', itemType: 'post', author: 'uzytkownik1' }, 'Wpis użytkownika uzytkownik1'],
+    ['the type alone without an author', { title: null, source: 'wykop', itemType: 'comment', author: null }, 'Komentarz'],
+    ["Reddit's word for a post", { title: null, source: 'reddit', itemType: 'post', author: 'kapital' }, 'Post użytkownika kapital'],
+    ["Reddit's word for a link", { title: null, source: 'reddit', itemType: 'link', author: 'kapital' }, 'Link użytkownika kapital'],
+  ] as const)('names a post by %s', (_, post, title) => {
+    expect(postTitle(post)).toBe(title)
+  })
+})
+
 describe('formatRelative', () => {
   it.each([
     [0, 'przed chwilą'],
@@ -102,6 +125,15 @@ describe('formatDate', () => {
   it('gives the Warsaw day of an instant', () => {
     expect(formatDate('2026-10-10T22:00:00Z')).toBe('11.10.2026')
     expect(formatDate('2026-10-11T21:59:59Z')).toBe('11.10.2026')
+  })
+})
+
+describe('formatTime', () => {
+  it('gives the Warsaw time of day of an instant, with two-digit hours', () => {
+    expect(formatTime('2026-10-20T07:41:00Z')).toBe('09:41')
+    expect(formatTime('2026-10-11T22:05:00Z')).toBe('00:05')
+    // Winter time: one hour ahead of UTC.
+    expect(formatTime('2026-12-31T22:59:00Z')).toBe('23:59')
   })
 })
 

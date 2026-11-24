@@ -18,7 +18,7 @@ vi.mock('../api/notifications', () => ({
 // The pages inside the shell are not under test: each is an empty component, the routes stay the real ones.
 const page = vi.hoisted(() => ({ render: () => null }))
 vi.mock('../views/FeedView.vue', () => ({ default: page }))
-vi.mock('../views/PostDetailView.vue', () => ({ default: page }))
+vi.mock('../views/PostPanel.vue', () => ({ default: page }))
 vi.mock('../views/AdminView.vue', () => ({ default: page }))
 vi.mock('../views/RunDetailView.vue', () => ({ default: page }))
 vi.mock('../views/LoginView.vue', () => ({ default: page }))
@@ -31,7 +31,7 @@ const WYKOP: Freshness = { sources: [{ source: 'wykop', lastUpdatedAt: '2026-10-
  * The shell on `path`, logged in as `role`, in the router of the application: a host that only renders its view.
  * `prepare` sees the router before the shell mounts.
  */
-async function mountShell(role: User['role'], path = '/', prepare?: (router: Router) => void) {
+async function mountShell(role: User['role'], path = '/posts', prepare?: (router: Router) => void) {
   vi.mocked(fetchMe).mockResolvedValue({ id: '1', email: `${role}@example.com`, role })
   const router = createAppRouter(createMemoryHistory())
   prepare?.(router)
@@ -85,8 +85,6 @@ describe('AppShell', () => {
     })
 
     it.each([
-      ['/', 'column-narrow'],
-      ['/posts/1', 'column-narrow'],
       ['/admin', 'column-wide'],
       ['/admin/runs/1', 'column-narrow'],
     ])('puts %s in the %s container, inside main', async (path, expected) => {
@@ -97,22 +95,27 @@ describe('AppShell', () => {
     })
 
     it('follows the column of the route when the page changes', async () => {
-      const { wrapper, router } = await mountShell('admin')
+      const { wrapper, router } = await mountShell('admin', '/admin/runs/1')
       expect(wrapper.get('main > div').classes()).toContain('column-narrow')
 
       await router.push('/admin')
 
       expect(wrapper.get('main > div').classes()).toContain('column-wide')
       expect(wrapper.get('main > div').classes()).not.toContain('column-narrow')
+
+      await router.push('/posts')
+
+      expect(wrapper.get('main > div').classes()).toEqual([])
     })
 
-    it('gives a route without a column the whole column of the shell', async () => {
-      const { wrapper } = await mountShell('admin', '/', (target) => {
-        // The record of this router only: its meta is replaced, the shared route table stays as it is.
-        const home = target.getRoutes().find((record) => record.name === 'home')!
-        home.meta = { section: 'posts' }
-      })
+    it.each([
+      ['/posts', 'posts'],
+      ['/posts/1', 'post'],
+    ])('gives a route without a column, the list of posts on %s, the whole column of the shell', async (path, name) => {
+      const { wrapper, router } = await mountShell('admin', path)
 
+      expect(router.currentRoute.value.name).toBe(name)
+      expect(router.currentRoute.value.meta.column).toBeUndefined()
       expect(wrapper.get('main > div').classes()).toEqual([])
     })
 
@@ -140,7 +143,7 @@ describe('AppShell', () => {
     })
 
     it.each([
-      ['/', 'Posty'],
+      ['/posts', 'Posty'],
       ['/posts/1', 'Posty'],
       ['/admin', 'Panel admina'],
       ['/admin/runs/1', 'Panel admina'],
@@ -203,7 +206,7 @@ describe('AppShell', () => {
 
       expect(wrapper.get('[role="alert"]').text()).toBe('Nie udało się wylogować. Spróbuj ponownie.')
       expect(currentUser.value).not.toBeNull()
-      expect(router.currentRoute.value.name).toBe('home')
+      expect(router.currentRoute.value.name).toBe('posts')
     })
   })
 
@@ -277,7 +280,7 @@ describe('AppShell', () => {
       vi.setSystemTime(START.getTime() + MINUTE)
 
       // The same address again: the router ends it with a failure.
-      const failure = await router.push('/')
+      const failure = await router.push('/posts')
       await flushPromises()
 
       expect(failure).toBeTruthy()
@@ -313,7 +316,7 @@ describe('AppShell', () => {
       const { router } = await mountShell('user')
 
       await router.push('/posts/1')
-      await router.push('/')
+      await router.push('/posts')
       visibility('visible')
       document.dispatchEvent(new Event('visibilitychange'))
       await flushPromises()

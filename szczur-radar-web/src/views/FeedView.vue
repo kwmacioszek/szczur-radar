@@ -6,17 +6,29 @@ import AppButton from '../components/AppButton.vue'
 import EmptyState from '../components/EmptyState.vue'
 import ErrorState from '../components/ErrorState.vue'
 import FeedFilter from '../components/FeedFilter.vue'
+import FilterChips from '../components/FilterChips.vue'
 import LoadingState from '../components/LoadingState.vue'
 import PageHeader from '../components/PageHeader.vue'
 import PagerNav from '../components/PagerNav.vue'
-import PostCard from '../components/PostCard.vue'
-import { filterFromQuery, filterToQuery, isFilterActive, pageFromQuery, sameFilter } from '../feedFilter'
-import { reportFeedLoaded } from '../router/scroll'
+import PostRow from '../components/PostRow.vue'
+import {
+  type FilterKey,
+  activeFilterKeys,
+  filterFromQuery,
+  filterToQuery,
+  isFilterActive,
+  pageFromQuery,
+  sameFilter,
+  withoutFilterKey,
+} from '../feedFilter'
+import { groupByDay } from '../postDays'
 
 const route = useRoute()
 const router = useRouter()
 const header = useTemplateRef<InstanceType<typeof PageHeader>>('header')
 const errorState = useTemplateRef<InstanceType<typeof ErrorState>>('error-state')
+const feedFilter = useTemplateRef<InstanceType<typeof FeedFilter>>('feed-filter')
+const chips = useTemplateRef<InstanceType<typeof FilterChips>>('chips')
 
 /**
  * The page on screen: the requested page number and filter with their answer. The result line, the
@@ -50,8 +62,25 @@ const pages = computed(() => (shown.value ? Math.max(1, Math.ceil(shown.value.re
 const noMatch = computed(
   () => shown.value !== null && shown.value.result.total === 0 && isFilterActive(shown.value.filter),
 )
-/** The cards with their pager are on screen, so a page change at the same filter can leave them there. */
+/** The rows with their pager are on screen, so a page change at the same filter can leave them there. */
 const listOnScreen = computed(() => !failed.value && shown.value !== null && shown.value.result.items.length > 0)
+
+/** The page on screen in the frames of its days. */
+const days = computed(() => (shown.value ? groupByDay(shown.value.result.items, Date.now()) : []))
+
+/** The rows of the page on screen, for the panel of a post over the list (its child route); none while none are shown. */
+const panelItems = computed(() => (listOnScreen.value && shown.value ? shown.value.result.items : []))
+
+/** The id of the post open in the panel over the list, if any: its row is the selected one. */
+const openPostId = computed(() => (route.name === 'post' && typeof route.params.id === 'string' ? route.params.id : null))
+
+/** The rows on screen by their post's id, for the focus to come back to one when its panel closes. */
+const rows = new Map<string, InstanceType<typeof PostRow>>()
+
+function setRow(id: string, row: unknown): void {
+  if (row) rows.set(id, row as InstanceType<typeof PostRow>)
+  else rows.delete(id)
+}
 
 /** The error stays during its own retry; any other load replaces it. */
 const showError = computed(() => failed.value && (loading.value === null || loading.value.kind === 'retry'))
@@ -83,14 +112,11 @@ const errorText = computed(() =>
  *   the click, which would hide the busy button under the list;
  * - `heading`: the focus to the heading after a successful load (the empty result's "Wyczyść filtry" is gone);
  * - `retry`: the heading after a success, "Spróbuj ponownie" again after another failure (the busy button lost it);
- * - `none`: the first entry and a filter change: the focus stays in the form and the result line announces the count.
+ * - `none`: the first entry and a filter change: the focus stays in the form or the markers and the result line
+ *   announces the count.
  */
 type After = 'top' | 'heading' | 'retry' | 'none'
 
-/**
- * Each load that is still the latest one reports how it ended, so a return from a post can restore the position once
- * the list is on screen (router/scroll.ts).
- */
 async function load(target: number, conditions: PostFilter, kind: LoadKind, after: After): Promise<void> {
   const id = ++latestLoad
   loading.value = { page: target, kind }
@@ -106,7 +132,6 @@ async function load(target: number, conditions: PostFilter, kind: LoadKind, afte
     if (id !== latestLoad) return
     if (after === 'top') window.scrollTo({ top: 0 })
     if (after !== 'none') header.value?.focus()
-    reportFeedLoaded('ok')
   } catch {
     if (id !== latestLoad) return
     failed.value = true
@@ -119,15 +144,30 @@ async function load(target: number, conditions: PostFilter, kind: LoadKind, afte
     } else if (after === 'retry') {
       errorState.value?.focus()
     }
-    reportFeedLoaded('error')
   }
 }
 
-// A load that ends after the view is gone (e.g. forward to a post mid-load) is dropped like an
-// overtaken one, so it never reports to a later return to the feed (router/scroll.ts).
+/** Set while the view goes: the panel over it goes with it, and nothing is left to take the focus. */
+let leaving = false
+
+// A load that ends after the view is gone is dropped like an overtaken one.
 onBeforeUnmount(() => {
+  leaving = true
   latestLoad++
 })
+
+/**
+ * The panel of a post is gone (closed, or "back"): the focus goes back to that post's row, or to the heading when the
+ * post is not on this page. Once the panel has left the page, so the list is no longer inert.
+ */
+function onPanelClosed(id: string): void {
+  void nextTick(() => {
+    if (leaving) return
+    const row = rows.get(id)
+    if (row) row.focus()
+    else header.value?.focus()
+  })
+}
 
 /** The same page and filter again; the error stays with its busy button until the answer. */
 function retry(): void {
@@ -159,6 +199,24 @@ function clearFilter(): void {
   void router.push({ query: {} })
 }
 
+/** The markers go with the filter: the focus goes to the button "Filtry". */
+async function clearFromChips(): Promise<void> {
+  await router.push({ query: {} })
+  feedFilter.value?.focusToggle()
+}
+
+/**
+ * One marker's key leaves the address, from the first page. The focus stays in the row of markers: on the marker that
+ * followed the removed one, or on the button "Filtry" after the last one.
+ */
+async function removeFilterKey(key: FilterKey): Promise<void> {
+  const keys = activeFilterKeys(filter.value)
+  const next = keys[keys.indexOf(key) + 1]
+  await router.push({ query: filterToQuery(withoutFilterKey(filter.value, key)) })
+  await nextTick()
+  if (next === undefined || !chips.value?.focus(next)) feedFilter.value?.focusToggle()
+}
+
 /** Set by the empty result's own button: it disappears while loading, like the retry button. */
 let focusAfterClear = false
 
@@ -169,7 +227,7 @@ function clearFromEmptyResult(): void {
 
 // The first entry neither scrolls nor takes the focus (e.g. from the header link). A page change
 // (pager, back/forward) goes to the top and focuses the heading once the page is loaded. A filter
-// change does neither: the focus stays in the form and the result line announces the count.
+// change does neither: the focus stays in the form or the markers and the result line announces the count.
 watch(
   [page, filter],
   ([nextPage, nextFilter], [previousPage, previousFilter]) => {
@@ -203,7 +261,8 @@ watch(
   <div class="feed">
     <section aria-labelledby="feed-title">
       <PageHeader ref="header" class="head" title="Posty" heading-id="feed-title" />
-      <FeedFilter :filter="filter" @apply="applyFilter" @clear="clearFilter" />
+      <FeedFilter ref="feed-filter" :filter="filter" @apply="applyFilter" @clear="clearFilter" />
+      <FilterChips ref="chips" class="chips" :filter="filter" @remove="removeFilterKey" @clear="clearFromChips" />
       <!-- In the document from the start, so a screen reader announces each new count. -->
       <p class="result" role="status">{{ resultText }}</p>
       <!-- Only the list is busy while a page loads: the heading, the label, the form and the count do not change. -->
@@ -220,12 +279,14 @@ watch(
         </ErrorState>
         <LoadingState v-else-if="showSkeleton" shape="rows" />
         <!-- The result line says that nothing matches; the way out stays next to it. -->
-        <EmptyState v-else-if="noMatch" title-tag="h2" icon="i-search" title="Brak postów dla tych filtrów">
-          Zmień filtr albo wyczyść go, żeby zobaczyć wszystkie posty.
-          <template #action>
-            <AppButton @click="clearFromEmptyResult">Wyczyść filtry</AppButton>
-          </template>
-        </EmptyState>
+        <section v-else-if="noMatch" aria-labelledby="no-match-title">
+          <EmptyState title-tag="h2" title-id="no-match-title" icon="i-search" title="Brak postów dla tych filtrów">
+            Zmień filtr albo wyczyść go, żeby zobaczyć wszystkie posty.
+            <template #action>
+              <AppButton @click="clearFromEmptyResult">Wyczyść filtry</AppButton>
+            </template>
+          </EmptyState>
+        </section>
         <EmptyState
           v-else-if="shown && shown.result.total === 0"
           title-tag="h2"
@@ -247,7 +308,20 @@ watch(
           </template>
         </EmptyState>
         <template v-else-if="shown">
-          <PostCard v-for="post in shown.result.items" :key="post.id" :post="post" />
+          <section v-for="day in days" :key="day.key" class="day" :aria-labelledby="`day-${day.key}`">
+            <h2 :id="`day-${day.key}`" class="day-title">{{ day.title }}</h2>
+            <ol class="rows">
+              <!-- The row keeps the list's query, so opening the post neither reloads nor moves the list under it. -->
+              <PostRow
+                v-for="post in day.items"
+                :key="post.id"
+                :ref="(row) => setRow(post.id, row)"
+                :post="post"
+                :to="{ name: 'post', params: { id: post.id }, query: route.query }"
+                :selected="post.id === openPostId"
+              />
+            </ol>
+          </section>
           <PagerNav
             class="list-pager"
             :page="shown.page"
@@ -259,13 +333,20 @@ watch(
         </template>
       </div>
     </section>
+    <!-- A post opened from the list, in a panel over it (views/PostPanel.vue), with the rows of the page on screen. -->
+    <RouterView :items="panelItems" @closed="onPanelClosed" />
   </div>
 </template>
 
 <style scoped>
-/* The page's width is the shell's column's; the title stands apart from the filter below it. */
+/* The page's width is the shell's column's; the title stands apart from the filter below it, the markers sit close
+   under it. */
 .head {
   margin-bottom: var(--space-4);
+}
+
+.chips {
+  margin-top: var(--space-3);
 }
 
 .result {
@@ -273,7 +354,42 @@ watch(
   color: var(--text-h);
 }
 
-/* The cards keep their own spacing; the pager stands apart under the last one. */
+/* A day: its heading with a line to the end of the column, then its rows in one frame. */
+.day + .day {
+  margin-top: var(--space-6);
+}
+
+.day-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin: 0;
+  color: var(--text-muted);
+  font-family: var(--font-ui);
+  font-size: var(--font-size-sm);
+  font-weight: var(--weight-semibold);
+  letter-spacing: normal;
+}
+
+.day-title::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+
+/* The rows draw the lines between them; the frame clips the selected row's background to its corners. */
+.rows {
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+  list-style: none;
+}
+
+/* The pager stands apart under the last day. */
 .list-pager {
   margin-top: var(--space-5);
 }

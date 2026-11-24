@@ -1,8 +1,9 @@
 /*
- * Mock /api/* for screenshots of /admin, a run (/admin/runs/:id), the feed (/), a post (/posts/:id) and /activate
- * without a running API (playwright-cli run-code), kept for /10x-ui changes and the browser tests. The file is one
- * expression, the function `async (page, modes = {}) => control` (no export, no trailing semicolon, no code outside
- * it): `playwright-cli run-code`, the guard (src/contract/mockApi.ts) and the E2E fixture all evaluate this text.
+ * Mock /api/* for screenshots of /admin, a run (/admin/runs/:id), the list of posts (/posts), a post in its panel over
+ * the list (/posts/:id) and /activate without a running API (playwright-cli run-code), kept for /10x-ui changes and
+ * the browser tests. The file is one expression, the function `async (page, modes = {}) => control` (no export, no
+ * trailing semicolon, no code outside it): `playwright-cli run-code`, the guard (src/contract/mockApi.ts) and the E2E
+ * fixture all evaluate this text.
  * The modes are the keys of `modes`: MODE, NOTIFICATIONS, AUTH, LOGIN, START, ACTIVATION, FRESHNESS, MISSING and
  * QUALITY, each with the values below; MODE_VALUES lists them, the first value of each key its default (what
  * `playwright-cli run-code`, which passes `page` alone, gets). An unknown key or a value outside its list throws
@@ -96,7 +97,7 @@
  * failed, 3 dead, 4 on hold, each attempt with its violations). POST /api/admin/posts/restore {postIds} answers like posts/api/DeadPostController.java: each named post that is
  * still dead becomes stored with no attempts and leaves the list, {restored: N}; 1–100 post UUIDs or 400 invalid_request.
  * A restored post stays restored until the mock is installed again; MODE 'loading' and 'error' apply first.
- * /api/posts answers like posts/api/PostController.java: page, size, total; a page past the end (e.g. /?page=9)
+ * /api/posts answers like posts/api/PostController.java: page, size, total; a page past the end (e.g. /posts?page=9)
  * is 200 with items [] and the real total. /api/posts/<feed post N> (N from 0 to 119, e.g. post 5 =
  * 00000000-0000-4000-8000-000400000005) is the feed's post N, a malformed id is 400 invalid_request, any other id
  * 404 {"detail":"post_not_found"}; its /raw is indented JSON text shaped like a Wykop entry, and for a Reddit post
@@ -121,8 +122,8 @@
  * given condition — its quote contains q (Polish lower case, q stripped of the contract §10 white space, blank = no
  * condition), its kind, its stance's direction (an empty kind or direction = no condition); total counts them; an
  * unknown kind or direction, or a q over 100 characters or with a NUL, is 400 invalid_request.
- * E.g. /?q=orlen&direction=bullish, /?kind=macro_topic, and an empty filter result: /?q=zzz. In 'empty' mode total is
- * 0 with or without a filter.
+ * E.g. /posts?q=orlen&direction=bullish, /posts?kind=macro_topic, and an empty filter result: /posts?q=zzz. In
+ * 'empty' mode total is 0 with or without a filter.
  * Only paths starting with /api/ are mocked — a '**\/api/**' glob would also catch Vite's /src/api/*.ts modules.
  * failureClass values are the API's FailureClass (agents/assessor/validation/FailureClass.java), lower case.
  * With AUTH 'admin' the app bar of the shell shows "Panel admina" and the notification bell on every logged-in view.
@@ -135,9 +136,9 @@
  *   playwright-cli run-code --filename=szczur-radar-web/dev/mock-api.js   # the default modes
  *   # another mode: the same text called with its modes (installing again replaces the routes and starts afresh)
  *   playwright-cli run-code "async page => ($(cat szczur-radar-web/dev/mock-api.js))(page, { MODE: 'error' })"
- *   playwright-cli goto http://localhost:5173/admin   # the feed: http://localhost:5173/ (?page=N, from 0);
+ *   playwright-cli goto http://localhost:5173/admin   # the list: http://localhost:5173/posts (?page=N, from 0);
  *                                                    # a run: http://localhost:5173/admin/runs/00000000-0000-4000-8000-000100000001;
- *                                                    # a post: http://localhost:5173/posts/00000000-0000-4000-8000-000400000005
+ *                                                    # a post in its panel: http://localhost:5173/posts/00000000-0000-4000-8000-000400000005
  *                                                    # (a Reddit one: post 2, …000400000002);
  *                                                    # /activate#token with { AUTH: 'anonymous' }
  *   playwright-cli set-color-scheme light|dark && playwright-cli screenshot --full-page --filename=<png>

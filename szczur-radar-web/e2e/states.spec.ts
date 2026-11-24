@@ -17,17 +17,17 @@ test.describe('lista postów', () => {
     test.use({ modes: { MODE: 'loading-next' } })
 
     test('kolejna strona wczytuje się z listą na ekranie', async ({ page }) => {
-      await page.goto('/')
+      await page.goto('/posts')
       const main = page.getByRole('main')
       const pager = main.getByRole('navigation', { name: 'Strony', exact: true })
       await expect(pager.getByText('Strona 1 z 3', { exact: true })).toBeVisible()
 
       await pager.getByRole('button', { name: 'Starsze' }).click()
 
-      await expect(page).toHaveURL('/?page=1')
+      await expect(page).toHaveURL('/posts?page=1')
       await expect(pager.getByRole('button', { name: 'Wczytywanie…', exact: true })).toHaveAttribute('aria-busy', 'true')
       // The old page stays on the screen, not a skeleton, until the next one comes (it hangs in this mode).
-      await expect(main.getByRole('article')).toHaveCount(PAGE_SIZE)
+      await expect(main.getByRole('listitem').getByRole('link')).toHaveCount(PAGE_SIZE)
       await expect(main.getByText('Wczytywanie…', { exact: true })).toHaveCount(1)
     })
   })
@@ -36,7 +36,7 @@ test.describe('lista postów', () => {
     test.use({ modes: { MODE: 'error-next' } })
 
     test('błąd kolejnej strony pozwala ją ponowić', async ({ page }) => {
-      await page.goto('/')
+      await page.goto('/posts')
       const main = page.getByRole('main')
       await main.getByRole('navigation', { name: 'Strony', exact: true }).getByRole('button', { name: 'Starsze' }).click()
 
@@ -52,7 +52,7 @@ test.describe('lista postów', () => {
       await retried
 
       await expect(title).toBeVisible()
-      await expect(page).toHaveURL('/?page=1')
+      await expect(page).toHaveURL('/posts?page=1')
     })
   })
 
@@ -60,7 +60,7 @@ test.describe('lista postów', () => {
     test.use({ modes: { MODE: 'error' } })
 
     test('błąd listy ponawia ten sam filtr', async ({ page }) => {
-      await page.goto('/?q=orlen')
+      await page.goto('/posts?q=orlen')
       const main = page.getByRole('main')
       const alert = main.getByRole('alert')
       await expect(alert.getByRole('heading', { level: 2, name: 'Nie udało się wczytać postów', exact: true })).toBeVisible()
@@ -73,16 +73,17 @@ test.describe('lista postów', () => {
       await retried
 
       await expect(alert.getByRole('heading', { level: 2, name: 'Nie udało się wczytać postów', exact: true })).toBeVisible()
-      await expect(page).toHaveURL('/?q=orlen')
-      await expect(main.getByLabel('Spółka lub temat', { exact: true })).toHaveValue('orlen')
+      await expect(page).toHaveURL('/posts?q=orlen')
+      await expect(main.getByRole('list', { name: 'Włączone filtry', exact: true })
+        .getByRole('button', { name: 'Usuń filtr: Cel: orlen', exact: true })).toBeVisible()
     })
   })
 
   test('lista mieszcząca się na jednej stronie nie ma stronicowania', async ({ page }) => {
-    await page.goto('/?q=orlen')
+    await page.goto('/posts?q=orlen')
     const main = page.getByRole('main')
     await expect(main.getByRole('status')).toHaveText(`Pasujące do filtra: ${ORLEN_POSTS}`)
-    await expect(main.getByRole('article')).toHaveCount(ORLEN_POSTS)
+    await expect(main.getByRole('listitem').getByRole('link')).toHaveCount(ORLEN_POSTS)
 
     await expect(main.getByRole('navigation', { name: 'Strony', exact: true })).toHaveCount(0)
   })

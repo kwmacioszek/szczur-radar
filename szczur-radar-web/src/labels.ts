@@ -1,4 +1,6 @@
 // Polish labels for the API's closed value sets; an unknown value shows as is.
+import type { PostItem } from './api/posts'
+
 export const labels: Record<string, Record<string, string>> = {
   relevance: {
     investment_related: 'inwestycyjny',
@@ -99,6 +101,17 @@ export function postType(source: string | undefined, itemType: string): string {
   return (source === undefined ? undefined : ITEM_TYPE_WORDS[source]?.[itemType]) ?? itemType
 }
 
+/**
+ * A post's title; without one (a Wykop entry, a comment), "{Type} użytkownika {author}" in its source's words, or the
+ * type alone without an author. The heading of the post's panel and the name of its dialog.
+ */
+export function postTitle(post: Pick<PostItem, 'title' | 'source' | 'itemType' | 'author'>): string {
+  if (post.title) return post.title
+  const type = postType(post.source, post.itemType)
+  const capitalized = type.charAt(0).toUpperCase() + type.slice(1)
+  return post.author ? `${capitalized} użytkownika ${post.author}` : capitalized
+}
+
 const dateTime = new Intl.DateTimeFormat('pl-PL', {
   dateStyle: 'short',
   timeStyle: 'short',
@@ -108,6 +121,13 @@ const dateTime = new Intl.DateTimeFormat('pl-PL', {
 /** An instant as Warsaw date and time, e.g. `1.10.2026, 09:15`. */
 export function formatDateTime(iso: string): string {
   return dateTime.format(new Date(iso))
+}
+
+const time = new Intl.DateTimeFormat('pl-PL', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Warsaw' })
+
+/** An instant's Warsaw time of day, e.g. `09:41`: a post's time in the list of its day. */
+export function formatTime(iso: string): string {
+  return time.format(new Date(iso))
 }
 
 const date = new Intl.DateTimeFormat('pl-PL', { dateStyle: 'short', timeZone: 'Europe/Warsaw' })

@@ -3,7 +3,7 @@ project: "Szczur Radar"
 version: 6
 status: draft # draft | active | locked
 created: 2026-09-27
-updated: 2026-11-23
+updated: 2026-11-24
 prd_version: 4
 main_goal: quality
 top_blocker: capacity # 19 pozycji, jeden recenzent i osoba mergująca; fundament UI dotyka wspólnych plików (tokeny, komponenty, router), więc pierwsze fale są sekwencyjne; darmowe runnery GitHuba muszą zmieścić testy w przeglądarce i zrzuty
@@ -125,7 +125,7 @@ Na Wykopie (#gielda) i Reddicie codziennie pojawiają się setki postów o inwes
 | S-48 | shared-view-states            | użytkownik widzi w każdym widoku to samo ładowanie, pustą listę, błąd z ponowieniem i stronicowanie | S-47          | FR-007, FR-009, NFR `prd.md:328` | done |
 | S-49 | login-on-shared-foundation    | użytkownik loguje się i aktywuje konto na ekranach zbudowanych ze wspólnych komponentów i tokenów | F-08          | FR-026, FR-027, FR-028 | done |
 | S-50 | admin-panel-components        | admin pracuje w panelu z trzema częściami pod własnymi adresami (Przebiegi, Jakość ocen, Nieudane posty); strona przebiegu osobno | S-48          | FR-014, FR-015, FR-021, FR-022, FR-033, FR-034 | proposed |
-| S-51 | stream-and-inspector          | użytkownik przegląda zwartą listę postów i czyta ocenę wybranego posta w panelu wysuwanym z prawej | S-48          | FR-006, FR-007, FR-009, FR-010, FR-011a | proposed |
+| S-51 | stream-and-inspector          | użytkownik przegląda zwartą listę postów i czyta ocenę wybranego posta w panelu wysuwanym z prawej | S-48          | FR-006, FR-007, FR-009, FR-010, FR-011a | in-progress |
 | S-52 | investment-posts-by-default   | użytkownik widzi domyślnie tylko posty inwestycyjne, a przełącznik „Inwestycyjne N / Wszystkie M” pokazuje resztę | S-51          | FR-007 (doprecyzowanie v4) | proposed |
 | S-53 | reader-quote-highlighting     | użytkownik widzi w panelu posta podświetlone fragmenty, na których oparto ocenę, i przechodzi do poprzedniego i następnego posta | S-51          | FR-009 (doprecyzowanie v4) | proposed |
 | S-54 | post-list-sorting             | użytkownik ustawia kolejność listy postów w panelu filtrów (data, źródło, pola oceny) | S-51          | FR-008, FR-011b | proposed |
@@ -303,7 +303,7 @@ Wycinki niżej zakładają te warstwy i ich nie budują od nowa.
 - **Unknowns:**
   - Czy wybrany post ma własny adres? Projekt rekomenduje: tak (działa link z powiadomienia i z innego ekranu, „wstecz” wraca do listy z filtrem, odświeżenie nie gubi wyboru). — Owner: team (`/10x-plan`). Block: no.
 - **Risk:** gwiazda przewodnia; jedna etykieta stanowiska na cały post (makieta) jest sprzeczna z kontraktem bez globalnego sentymentu posta (`prd.md:132`), więc wiersz pokazuje stanowisko per cel; panel jest oknem nad listą, więc fokus klawiatury i „wstecz” przeglądarki wymagają testu w przeglądarce.
-- **Status:** proposed
+- **Status:** in-progress
 
 ### S-52: Domyślnie tylko posty inwestycyjne
 

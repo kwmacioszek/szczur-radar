@@ -4,7 +4,8 @@
 // next login. It is read again on mount, after a page change and when the tab becomes visible, unless it is fresh
 // (FRESH_MS); every 60 s only on the admin's pages (/admin, /admin/runs/:id) while the tab is visible, so an open
 // feed tab lets the API sleep. A chosen notification is marked read and its run's page opens. A failed refresh keeps
-// the list on screen; only without a list is it an error. NotificationMenu draws it.
+// the list on screen; only without a list is it an error. NotificationMenu draws it. Opening or closing a post over the
+// list is no page change: the posts screen stays (router/screens.ts), so the list is not read again.
 import { onBeforeUnmount, onMounted, ref, useTemplateRef } from 'vue'
 import { useRouter } from 'vue-router'
 import type { AdminNotification } from '../api/notifications'
@@ -21,6 +22,7 @@ import {
   unreadNotifications,
 } from '../notificationsStore'
 import { useEvery } from '../polling'
+import { withinPostsScreen } from '../router/screens'
 import NotificationMenu from './NotificationMenu.vue'
 
 /** How often the list is read again on the admin's pages while the tab is visible. */
@@ -77,8 +79,8 @@ let removeAfterEach: (() => void) | undefined
 onMounted(() => {
   refresh()
   // A page change, also to another view: the shell, and with it this bell, stays mounted.
-  removeAfterEach = router.afterEach((_to, _from, failure) => {
-    if (!failure) refresh()
+  removeAfterEach = router.afterEach((to, from, failure) => {
+    if (!failure && !withinPostsScreen(to, from)) refresh()
   })
   document.addEventListener('visibilitychange', refreshWhenVisible)
 })

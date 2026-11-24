@@ -415,22 +415,47 @@ describe('NotificationBell', () => {
       const { router } = await mountBell({ path: '/' })
       expect(fetchNotifications).toHaveBeenCalledTimes(1)
 
-      // The feed: no reads on a timer, so an open tab lets the API sleep.
+      // The list of posts and a post over it: no reads on a timer, so an open tab lets the API sleep.
       await vi.advanceTimersByTimeAsync(180_000)
       expect(fetchNotifications).toHaveBeenCalledTimes(1)
       await router.push('/posts/p1')
       await flushPromises()
-      expect(fetchNotifications).toHaveBeenCalledTimes(2)
       await vi.advanceTimersByTimeAsync(180_000)
-      expect(fetchNotifications).toHaveBeenCalledTimes(2)
+      expect(fetchNotifications).toHaveBeenCalledTimes(1)
 
       // A run's page: read on the way in, then every 60 s.
       await router.push('/admin/runs/r1')
       await flushPromises()
-      expect(fetchNotifications).toHaveBeenCalledTimes(3)
+      expect(fetchNotifications).toHaveBeenCalledTimes(2)
       await vi.advanceTimersByTimeAsync(60_000)
       await flushPromises()
-      expect(fetchNotifications).toHaveBeenCalledTimes(4)
+      expect(fetchNotifications).toHaveBeenCalledTimes(3)
+    })
+
+    it('does not read the list again when a post opens over the list of posts or closes, in either direction', async () => {
+      const { router } = await mountBell({ path: '/posts' })
+      expect(fetchNotifications).toHaveBeenCalledTimes(1)
+
+      // Past the freshness of the list: any other page change would read it.
+      await vi.advanceTimersByTimeAsync(10_000)
+      await router.push('/posts/p1?page=1')
+      await flushPromises()
+      await router.push('/posts/p2?page=1')
+      await flushPromises()
+      await router.push('/posts?page=1')
+      await flushPromises()
+      expect(fetchNotifications).toHaveBeenCalledTimes(1)
+
+      // Leaving the posts screen, from a post too, reads it.
+      await router.push('/posts/p1')
+      await flushPromises()
+      await router.push('/admin')
+      await flushPromises()
+      expect(fetchNotifications).toHaveBeenCalledTimes(2)
+      await vi.advanceTimersByTimeAsync(10_000)
+      await router.push('/posts/p1')
+      await flushPromises()
+      expect(fetchNotifications).toHaveBeenCalledTimes(3)
     })
 
     it('reads the list again when the tab becomes visible, unless it is fresh', async () => {

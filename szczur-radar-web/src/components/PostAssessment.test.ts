@@ -50,68 +50,78 @@ function mountAssessment(value: Assessment = assessment()) {
   return mount(PostAssessment, { props: { assessment: value } })
 }
 
-/** Each section's heading with the statements of its claims. */
-function sections(wrapper: ReturnType<typeof mountAssessment>) {
-  return wrapper.findAll('section').map((section) => ({
-    heading: section.find('h3').text(),
-    statements: section.findAll('.statement').map((statement) => statement.text()),
+/** Each target's card: its heading with the statements of its claims. */
+function cards(wrapper: ReturnType<typeof mountAssessment>) {
+  return wrapper.findAll('article').map((card) => ({
+    heading: card.find('h4').text(),
+    statements: card.findAll('.statement').map((statement) => statement.element.firstChild?.textContent?.trim()),
   }))
 }
 
 describe('PostAssessment', () => {
   it('lists each claim under its target, a claim with two targets under both, in the model order', () => {
-    expect(sections(mountAssessment()).slice(0, 2)).toEqual([
+    expect(cards(mountAssessment()).slice(0, 2)).toEqual([
       { heading: 'CDR', statements: ['teza c1', 'teza c2'] },
       { heading: 'PKO', statements: ['teza c2'] },
     ])
   })
 
-  it('shows the target kind, reference and stance under its heading', () => {
-    const section = mountAssessment().find('section')
-    expect(section.find('.target-meta').text()).toBe('spółka · nazwany wprost')
-    expect(section.find('.stance').text()).toBe('wzrostowo')
+  it('heads each target with its name at level 4, its kind and its stance', () => {
+    const card = mountAssessment().find('article')
+    expect(card.find('h4').text()).toBe('CDR')
+    expect(card.find('.kind').text()).toBe('spółka')
+    expect(card.find('.stance').text()).toBe('wzrostowo')
+  })
+
+  it('says a target without claims is only mentioned', () => {
+    const wrapper = mountAssessment(assessment({ targets: [target('t1', 'Lotos', [])], claims: [] }))
+    const card = wrapper.find('article')
+    expect(card.find('h4').text()).toBe('Lotos')
+    expect(card.find('.claims').exists()).toBe(false)
+    expect(card.find('.note').text()).toBe('Wspomniany, bez twierdzeń.')
+    expect(mountAssessment().find('article .note').exists()).toBe(false)
   })
 
   it('lists the claims without a target under "Tezy ogólne", and only when there are such claims', () => {
-    expect(sections(mountAssessment())[2]).toEqual({ heading: 'Tezy ogólne', statements: ['teza c3'] })
+    expect(cards(mountAssessment())[2]).toEqual({ heading: 'Tezy ogólne', statements: ['teza c3'] })
     const withoutGeneral = mountAssessment(assessment({ claims: [claim('c1', ['t1']), claim('c2', ['t2'])] }))
     expect(withoutGeneral.text()).not.toContain('Tezy ogólne')
   })
 
-  it('notes "podstawa stanowiska" only for the claims in that target\'s stance.claim_ids', () => {
-    const [cdr, pko, general] = mountAssessment().findAll('section')
-    const basis = (section: typeof cdr) => section!.findAll('.claim').map((item) => item.find('.basis').exists())
-    expect(basis(cdr)).toEqual([true, false])
-    expect(basis(pko)).toEqual([true])
-    expect(basis(general)).toEqual([false])
+  it('notes after each statement its kind, whose it is when not the author\'s, a quote of the title and the basis of the stance', () => {
+    const wrapper = mountAssessment(
+      assessment({
+        claims: [
+          claim('c1', ['t1'], { evidence: { document: 'item', field: 'title', quote: 'cytat c1' } }),
+          claim('c2', ['t1', 't2'], { kind: 'factual_claim', attribution: 'reported' }),
+          claim('c3', [], { kind: 'opinion', attribution: 'unclear' }),
+        ],
+      }),
+    )
+    expect(wrapper.findAll('.claim-note').map((note) => note.text())).toEqual([
+      'teza inwestycyjna, z tytułu, podstawa stanowiska',
+      'informacja, przytoczone',
+      'informacja, przytoczone, podstawa stanowiska',
+      'opinia, nie wiadomo czyje',
+    ])
   })
 
-  it('shows each claim with its kind, attribution, statement and quote', () => {
+  it('shows each claim with its statement and its quote', () => {
     const claims = mountAssessment().findAll('.claim')
-    expect(claims.map((item) => item.find('.claim-meta').text())).toEqual([
-      'teza inwestycyjna · autor · podstawa stanowiska',
-      'informacja · przytoczone',
-      'informacja · przytoczone · podstawa stanowiska',
-      'opinia · nie wiadomo czyje',
-    ])
+    expect(claims[0]!.find('.statement').text()).toBe('teza c1 teza inwestycyjna, podstawa stanowiska')
     expect(claims[0]!.find('blockquote').text()).toBe('cytat c1')
   })
 
-  it('shows the relevance and each modifier as neutral badges, with the assessment date', () => {
+  it('shows each modifier as a neutral badge', () => {
     const wrapper = mountAssessment(assessment({ modifiers: ['humor', 'promotion'] }))
-    expect(wrapper.findAll('.meta [data-tone="neutral"]').map((badge) => badge.text())).toEqual([
-      'inwestycyjny',
-      'humor',
-      'promocja',
-    ])
-    expect(wrapper.find('.meta time').text()).toBe('2.10.2026, 10:00')
-    expect(wrapper.find('.meta').text()).toContain('oceniono 2.10.2026, 10:00')
+    expect(wrapper.findAll('.modifiers [data-tone="neutral"]').map((badge) => badge.text())).toEqual(['humor', 'promocja'])
+    expect(mountAssessment().find('.modifiers').exists()).toBe(false)
   })
 
   it('shows the flags as neutral badges under "Zastrzeżenia"', () => {
     const wrapper = mountAssessment(assessment({ flags: ['possible_sarcasm', 'missing_context'] }))
-    const flags = wrapper.findAll('section').at(-1)!
-    expect(flags.find('h3').text()).toBe('Zastrzeżenia')
+    const flags = wrapper.findAll('article').at(-1)!
+    expect(flags.find('h4').text()).toBe('Zastrzeżenia')
     expect(flags.findAll('[data-tone="neutral"]').map((badge) => badge.text())).toEqual(['możliwy sarkazm', 'brak kontekstu'])
     expect(mountAssessment().text()).not.toContain('Zastrzeżenia')
   })
@@ -127,7 +137,7 @@ describe('PostAssessment', () => {
     const wrapper = mountAssessment(
       assessment({ relevance: 'unclear', targets: [], claims: [], flags: ['insufficient_content'] }, 'prefilter'),
     )
-    expect(wrapper.find('.note').text()).toBe('bez treści, bez oceny modelu')
+    expect(wrapper.find('.note').text()).toBe('za mało treści, bez oceny modelu')
     expect(wrapper.find('.empty').exists()).toBe(false)
   })
 })
