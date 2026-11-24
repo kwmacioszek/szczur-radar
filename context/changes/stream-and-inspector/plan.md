@@ -546,11 +546,11 @@ Brak zmian danych i API. Stare adresy działają: `/?…` przekierowuje na `/pos
 
 #### Automated
 
-- [x] 3.1 Testy jednostkowe przechodzą: `cd szczur-radar-web && npm test`
-- [x] 3.2 Typy i build przechodzą: `cd szczur-radar-web && npm run build`
-- [x] 3.3 Testy E2E przechodzą: `cd szczur-radar-web && npm run e2e`
-- [x] 3.4 Testy wizualne i axe przechodzą z `view-posts-filters`: `cd szczur-radar-web && npm run visual:docker`
-- [x] 3.5 Każdy nowy test E2E filtrów jest czerwony na swoim złamaniu (`evidence/e2e-breaks.md`)
+- [x] 3.1 Testy jednostkowe przechodzą: `cd szczur-radar-web && npm test` — cde219e
+- [x] 3.2 Typy i build przechodzą: `cd szczur-radar-web && npm run build` — cde219e
+- [x] 3.3 Testy E2E przechodzą: `cd szczur-radar-web && npm run e2e` — cde219e
+- [x] 3.4 Testy wizualne i axe przechodzą z `view-posts-filters`: `cd szczur-radar-web && npm run visual:docker` — cde219e
+- [x] 3.5 Każdy nowy test E2E filtrów jest czerwony na swoim złamaniu (`evidence/e2e-breaks.md`) — cde219e
 
 ### Phase 4: Domknięcie i weryfikacja
 
