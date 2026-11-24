@@ -1,7 +1,7 @@
 ---
 change_id: stream-and-inspector
 title: Stream and inspector
-status: implementing
+status: implemented
 created: 2026-11-24
 updated: 2026-11-24
 archived_at: null

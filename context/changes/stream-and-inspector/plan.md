@@ -560,7 +560,7 @@ Brak zmian danych i API. Stare adresy działają: `/?…` przekierowuje na `/pos
 - [x] 4.2 Testy E2E przechodzą: `cd szczur-radar-web && npm run e2e` — 90030f9
 - [x] 4.3 Testy wizualne i axe przechodzą: `cd szczur-radar-web && npm run visual:docker` — 90030f9
 - [x] 4.4 CI na PR jest zielone, w tym `web-e2e` i `web-container-smoke`: `gh pr checks` — 90030f9
-- [ ] 4.5 W PR env lista i panel działają na prawdziwym API (kontrola agenta przez `playwright-cli`, `evidence/pr-env/README.md`)
+- [x] 4.5 W PR env lista i panel działają na prawdziwym API (kontrola agenta przez `playwright-cli`, `evidence/pr-env/README.md`) — 90030f9
 
 #### Manual
 
