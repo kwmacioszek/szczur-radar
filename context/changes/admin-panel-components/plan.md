@@ -697,26 +697,26 @@ Bez migracji bazy. Odpowiedź `GET /api/admin/posts/failed` dostaje dwa nowe pol
 
 #### Automated
 
-- [x] 4.1 Testy webu przechodzą (tabele, paski jakości, stronicowanie, zaznaczenie, komunikat z odnośnikiem, przywrócenie, odnośnik do oryginału, CLEANED): `npm test`
-- [x] 4.2 Build przechodzi: `npm run build`
-- [x] 4.3 Testy E2E przechodzą: `npm run e2e`
-- [x] 4.4 Wzorce części zapisane od nowa, inne bez zmian (`visual:update` + `git status`)
-- [x] 4.5 Testy wizualne i dostępności przechodzą dwa razy z rzędu: `npm run visual:docker`
-- [x] 4.6 Kopie projektu zgodne: `design-check.mjs app`
-- [x] 4.7 Bez przewijania strony w poziomie przy 320 px na trzech częściach, także z FAILED many (`playwright-cli`)
-- [x] 4.8 Zrzuty albo N/A stanów spoza wzorców w `evidence/states/`
+- [x] 4.1 Testy webu przechodzą (tabele, paski jakości, stronicowanie, zaznaczenie, komunikat z odnośnikiem, przywrócenie, odnośnik do oryginału, CLEANED): `npm test` — 079ee63
+- [x] 4.2 Build przechodzi: `npm run build` — 079ee63
+- [x] 4.3 Testy E2E przechodzą: `npm run e2e` — 079ee63
+- [x] 4.4 Wzorce części zapisane od nowa, inne bez zmian (`visual:update` + `git status`) — 079ee63
+- [x] 4.5 Testy wizualne i dostępności przechodzą dwa razy z rzędu: `npm run visual:docker` — 079ee63
+- [x] 4.6 Kopie projektu zgodne: `design-check.mjs app` — 079ee63
+- [x] 4.7 Bez przewijania strony w poziomie przy 320 px na trzech częściach, także z FAILED many (`playwright-cli`) — 079ee63
+- [x] 4.8 Zrzuty albo N/A stanów spoza wzorców w `evidence/states/` — 079ee63
 
 ### Phase 5: Strona przebiegu według prototypu
 
 #### Automated
 
-- [ ] 5.1 Testy webu przechodzą (RunDetailView, CLEANED): `npm test`
-- [ ] 5.2 Build przechodzi: `npm run build`
-- [ ] 5.3 Testy E2E przechodzą: `npm run e2e`
-- [ ] 5.4 Zmienił się tylko wzorzec view-run (`visual:update` + `git status`)
-- [ ] 5.5 Testy wizualne i dostępności przechodzą dwa razy z rzędu: `npm run visual:docker`
-- [ ] 5.6 Bez przewijania w poziomie przy 320 px na stronie przebiegu (`playwright-cli`)
-- [ ] 5.7 Zrzuty stanów strony przebiegu spoza wzorców w `evidence/states/`
+- [x] 5.1 Testy webu przechodzą (RunDetailView, CLEANED): `npm test`
+- [x] 5.2 Build przechodzi: `npm run build`
+- [x] 5.3 Testy E2E przechodzą: `npm run e2e`
+- [x] 5.4 Zmienił się tylko wzorzec view-run (`visual:update` + `git status`)
+- [x] 5.5 Testy wizualne i dostępności przechodzą dwa razy z rzędu: `npm run visual:docker`
+- [x] 5.6 Bez przewijania w poziomie przy 320 px na stronie przebiegu (`playwright-cli`)
+- [x] 5.7 Zrzuty stanów strony przebiegu spoza wzorców w `evidence/states/`
 
 ### Phase 6: Testy przepływów, dokumentacja i weryfikacja
 

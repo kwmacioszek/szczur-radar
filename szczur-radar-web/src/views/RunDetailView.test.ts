@@ -121,6 +121,16 @@ async function mountRun(path = '/admin/runs/r1', { attachTo }: { attachTo?: HTML
   return { wrapper, router }
 }
 
+/** The counters as their names to their figures, in the order shown. */
+function counters(wrapper: VueWrapper): [string, string][] {
+  return wrapper.findAll('.counters .stat').map((stat) => [stat.find('dt').text(), stat.find('dd').text()])
+}
+
+/** The run's details as their names to their values, in the order shown. */
+function details(wrapper: VueWrapper): [string, string][] {
+  return wrapper.findAll('.meta > div').map((detail) => [detail.find('dt').text(), detail.find('dd').text()])
+}
+
 function button(wrapper: VueWrapper, text: string) {
   const found = wrapper.findAll('button').find((candidate) => candidate.text() === text)
   if (!found) throw new Error(`no button "${text}"`)
@@ -194,7 +204,7 @@ describe('RunDetailView', () => {
     await flushPromises()
 
     expect(wrapper.find('.state-error').exists()).toBe(false)
-    expect(wrapper.find('h1').text()).toBe('Przebieg: zakres dat')
+    expect(wrapper.find('h1').text()).toBe('Przebieg z 13.10.2026, 02:30')
     expect(document.activeElement).toBe(wrapper.find('h1').element)
   })
 
@@ -217,32 +227,106 @@ describe('RunDetailView', () => {
     vi.mocked(fetchRun).mockResolvedValue(run())
     const { wrapper } = await mountRun('/admin/runs/r1', { attachTo: document.body })
     const back = wrapper.find('a.back')
-    expect(back.text()).toBe('← Panel admina')
+    expect(back.text()).toBe('Panel admina')
     expect(back.attributes('href')).toBe('/admin')
+    expect(back.find('svg').attributes('aria-hidden')).toBe('true')
+    expect(back.find('use').attributes('href')).toBe('#i-chevron-left')
     expect(document.activeElement).toBe(wrapper.find('h1').element)
   })
 
-  it('shows who started the run, its range, times, counters and steps', async () => {
+  it('names the run by its creation time, as the link of the runs table does', async () => {
+    // Queued at 02:30 and started 7 minutes later: the title takes the creation time, not the start.
+    vi.mocked(fetchRun).mockResolvedValue(run({ createdAt: '2026-10-13T00:30:00Z', startedAt: '2026-10-13T00:37:00Z' }))
+    const { wrapper } = await mountRun()
+    const heading = wrapper.find('h1')
+    expect(heading.text()).toBe('Przebieg z 13.10.2026, 02:30')
+    expect(heading.attributes('id')).toBe('run-title')
+    // The badge stands beside the title, in the section the title names.
+    expect(wrapper.find('section[aria-labelledby="run-title"] .status').text()).toBe('zakończony')
+  })
+
+  it('shows its kind, range, sources, who started it and its times', async () => {
     vi.mocked(fetchRun).mockResolvedValue(run())
     const { wrapper } = await mountRun()
     expect(wrapper.find('.status').text()).toBe('zakończony')
     expect(wrapper.find('.status').attributes('data-tone')).toBe('success')
-    expect(wrapper.find('.requester').text()).toBe('cron')
-    expect(wrapper.find('.range').text()).toBe('11.10.2026 – 12.10.2026')
-    expect(wrapper.find('.duration').text()).toBe('13 min 50 s')
-    expect(wrapper.find('.meta').text()).toContain('Wykop')
-    expect(wrapper.find('.meta').text()).toContain('13.10.2026, 02:43')
+    expect(details(wrapper)).toEqual([
+      ['Rodzaj', 'zakres dat'],
+      ['Zakres', '11.10.2026 – 12.10.2026'],
+      ['Źródła', 'Wykop'],
+      ['Uruchomił', 'cron'],
+      ['Start', '13.10.2026, 02:30'],
+      ['Koniec', '13.10.2026, 02:43'],
+      ['Czas trwania', '13 min 50 s'],
+    ])
+    expect(wrapper.find('.started time').attributes('datetime')).toBe('2026-10-13T00:30:01Z')
+    expect(wrapper.find('.finished time').attributes('datetime')).toBe('2026-10-13T00:43:51Z')
     expect(wrapper.find('.progress').exists()).toBe(false)
     expect(wrapper.find('.attention').exists()).toBe(false)
-    const counters = wrapper.find('.counters').text()
-    for (const figure of ['pobrane 248', 'nowe 213', 'ocenione 209', 'nieudane 4', 'ponowienia LLM 6', 'powroty z flex 2']) {
-      expect(counters).toContain(figure)
-    }
-    const [fetchStep, assessStep] = wrapper.findAll('.step')
-    expect(fetchStep!.find('.step-head strong').text()).toBe('pobranie')
-    expect(fetchStep!.find('.step-head [data-tone]').text()).toBe('zakończony')
-    expect(fetchStep!.find('.step-meta').text()).toBe('start 13.10.2026, 02:30 · czas 20 s · wejście — · wyjście 248')
-    expect(assessStep!.find('.step-meta').text()).toContain('wejście 213 · wyjście 209')
+  })
+
+  it('shows every counter as a figure and sets failed and dead posts apart only above none', async () => {
+    vi.mocked(fetchRun).mockResolvedValue(run({ dead: 0, assessedFailed: 4, fetched: 12345 }))
+    const { wrapper } = await mountRun()
+    expect(wrapper.find('#counters-title').text()).toBe('Liczniki')
+    expect(counters(wrapper)).toEqual([
+      // Polish digit groups: a no-break space every three digits from five digits on (formatCount).
+      ['Pobrane', '12\u00a0345'],
+      ['Nowe', '213'],
+      ['Ocenione', '209'],
+      ['Nieudane', '4'],
+      ['Martwe', '0'],
+      ['Pominięte', '0'],
+      ['Błędy techniczne', '0'],
+      ['Ponowienia LLM', '6'],
+      ['Powroty z flex', '2'],
+    ])
+    const alarms = wrapper.findAll('.counters .stat-alarm').map((stat) => stat.find('dt').text())
+    expect(alarms).toEqual(['Nieudane'])
+  })
+
+  it('sets the dead posts apart when there are some', async () => {
+    vi.mocked(fetchRun).mockResolvedValue(run({ dead: 2, assessedFailed: 0 }))
+    const { wrapper } = await mountRun()
+    const alarms = wrapper.findAll('.counters .stat-alarm').map((stat) => stat.find('dt').text())
+    expect(alarms).toEqual(['Martwe'])
+  })
+
+  it('lists the steps in order with their name, elements out, time and status', async () => {
+    vi.mocked(fetchRun).mockResolvedValue(run())
+    const { wrapper } = await mountRun()
+    const list = wrapper.find('ol.steps')
+    const [fetchStep, assessStep] = list.findAll('li.step')
+    expect(fetchStep!.find('.step-no').text()).toBe('1')
+    expect(fetchStep!.find('.step-no').attributes('aria-hidden')).toBe('true')
+    expect(fetchStep!.find('.step-name').text()).toBe('pobranie')
+    expect(fetchStep!.find('[data-tone]').text()).toBe('zakończony')
+    expect(fetchStep!.find('[data-tone]').attributes('data-tone')).toBe('success')
+    expect(fetchStep!.find('.step-detail').text()).toBe('248 elementów · 20 s')
+    expect(fetchStep!.find('.step-error').exists()).toBe(false)
+    expect(assessStep!.find('.step-no').text()).toBe('2')
+    expect(assessStep!.find('.step-detail').text()).toBe('209 elementów · 20 s')
+  })
+
+  it('says a step without elements out only by its time, and a dash without either', async () => {
+    vi.mocked(fetchRun).mockResolvedValue(
+      run({
+        steps: [
+          step('fetch', { itemsIn: null, itemsOut: 1 }),
+          step('store', { itemsOut: 3 }),
+          step('summarize', { itemsIn: null, itemsOut: null }),
+          step('assess', { status: 'failed', finishedAt: null, itemsOut: null, error: 'boom' }),
+        ],
+      }),
+    )
+    const { wrapper } = await mountRun()
+    expect(wrapper.findAll('.step-detail').map((detail) => detail.text())).toEqual([
+      '1 element · 20 s',
+      '3 elementy · 20 s',
+      '20 s',
+      '—',
+    ])
+    expect(wrapper.find('.step[data-status="failed"] .step-error').text()).toBe('boom')
   })
 
   it('says an admin started a run without a range', async () => {
@@ -250,13 +334,23 @@ describe('RunDetailView', () => {
       run({ kind: 'posts', scheduled: false, rangeFrom: null, rangeTo: null, sources: [], requestedPostIds: ['p1'] }),
     )
     const { wrapper } = await mountRun()
-    expect(wrapper.find('h1').text()).toBe('Przebieg: wybrane posty')
-    expect(wrapper.find('.requester').text()).toBe('admin')
+    expect(wrapper.find('h1').text()).toBe('Przebieg z 13.10.2026, 02:30')
+    expect(details(wrapper)).toEqual([
+      ['Rodzaj', 'wybrane posty'],
+      ['Źródła', '—'],
+      ['Uruchomił', 'admin'],
+      ['Start', '13.10.2026, 02:30'],
+      ['Koniec', '13.10.2026, 02:43'],
+      ['Czas trwania', '13 min 50 s'],
+    ])
     expect(wrapper.find('.range').exists()).toBe(false)
   })
 
   it('shows the progress of a running run', async () => {
-    vi.mocked(fetchRun).mockResolvedValue(running())
+    const shown = running()
+    // The assessment started 3 minutes ago, so its time so far is known.
+    shown.steps[3] = { ...shown.steps[3]!, startedAt: new Date(Date.now() - 3 * MINUTE).toISOString() }
+    vi.mocked(fetchRun).mockResolvedValue(shown)
     const { wrapper } = await mountRun()
     const progress = wrapper.find('.progress')
     expect(progress.find('.current-step').text()).toBe('Krok: ocena')
@@ -270,7 +364,10 @@ describe('RunDetailView', () => {
     }
     expect(progress.find('.activity').text()).toBe('Ostatnia aktywność: 2 min temu')
     expect(wrapper.find('.status').text()).toBe('trwa')
-    expect(wrapper.find('.step[data-status="running"] .step-meta').text()).toContain('wyjście —')
+    // The running step has given nothing out yet: only its time so far.
+    expect(wrapper.find('.step[data-status="running"] .step-detail').text()).toMatch(/^3 min( \d+ s)?$/)
+    expect(wrapper.find('.step[data-status="running"] [data-tone]').text()).toBe('trwa')
+    expect(wrapper.find('.finished').text()).toBe('—')
   })
 
   it('shows a queued run waiting, without a bar', async () => {
@@ -281,6 +378,7 @@ describe('RunDetailView', () => {
     expect(wrapper.find('.current-step').text()).toBe('Krok: w kolejce')
     expect(wrapper.find('progress').exists()).toBe(false)
     expect(wrapper.find('.duration').text()).toBe('—')
+    expect(wrapper.find('.started').text()).toBe('—')
     expect(wrapper.find('.steps').exists()).toBe(false)
     // A queued range run has neither a source's result nor a step yet.
     expect(wrapper.findAll('.none').map((none) => none.text())).toEqual([
@@ -316,18 +414,21 @@ describe('RunDetailView', () => {
       expect(titles.indexOf('Wynik per źródło')).toBe(titles.indexOf('Liczniki') + 1)
       expect(titles.indexOf('Kroki')).toBe(titles.indexOf('Wynik per źródło') + 1)
       const [wykop, reddit] = section.findAll('.source-result')
-      expect(wykop!.find('.source-head strong').text()).toBe('Wykop')
+      expect(wykop!.find('.source-head h3').text()).toBe('Wykop')
       expect(wykop!.find('.source-head [data-tone]').text()).toBe('pobrane')
       expect(wykop!.find('.source-head [data-tone]').attributes('data-tone')).toBe('success')
+      // A source that gave its posts needs no icon; one that failed or gave none has its tone's.
+      expect(wykop!.find('.source-head [data-tone] svg').exists()).toBe(false)
       expect(wykop!.find('.source-meta').text()).toBe('pobrane 248 · pominięte 0 · posty 248')
       expect(wykop!.find('.source-error').exists()).toBe(false)
-      expect(reddit!.find('.source-head strong').text()).toBe('Reddit')
+      expect(reddit!.find('.source-head h3').text()).toBe('Reddit')
       expect(reddit!.find('.source-head [data-tone]').text()).toBe('błąd')
       expect(reddit!.find('.source-head [data-tone]').attributes('data-tone')).toBe('destructive')
+      expect(reddit!.find('.source-head [data-tone] use').attributes('href')).toBe('#i-circle-alert')
       expect(reddit!.find('.source-meta').text()).toBe('pobrane 0 · pominięte 0 · posty 0')
       expect(reddit!.find('.source-error').text()).toBe('WykopApiException: HTTP 503')
       // The requested sources stay in the run's details.
-      expect(wrapper.find('.meta').text()).toContain('Wykop, Reddit')
+      expect(wrapper.find('.sources').text()).toBe('Wykop, Reddit')
     })
 
     it('names the failed source in "Wymaga uwagi"', async () => {
@@ -351,6 +452,7 @@ describe('RunDetailView', () => {
       const empty = wrapper.find('.source-result[data-status="empty"]')
       expect(empty.find('[data-tone]').text()).toBe('bez postów')
       expect(empty.find('[data-tone]').attributes('data-tone')).toBe('warning')
+      expect(empty.find('[data-tone] use').attributes('href')).toBe('#i-triangle-alert')
       expect(empty.find('.source-meta').text()).toBe('pobrane 3 · pominięte 3 · posty 0')
       expect(wrapper.find('.attention').text()).toBe('Wymaga uwagi: bez postów: Reddit (pobrano 3, pominięto 3)')
     })
@@ -408,8 +510,8 @@ describe('RunDetailView', () => {
       expect(wrapper.find('.status').text()).toBe('przerwany — nowe wdrożenie')
       expect(wrapper.find('.status').attributes('data-tone')).toBe('warning')
       expect(wrapper.find('.attention').text()).toBe('Wymaga uwagi: przerwany: nowe wdrożenie')
-      const interrupted = wrapper.find('.step[data-status="interrupted"] .step-head')
-      expect(interrupted.find('strong').text()).toBe('ocena')
+      const interrupted = wrapper.find('.step[data-status="interrupted"]')
+      expect(interrupted.find('.step-name').text()).toBe('ocena')
       expect(interrupted.find('[data-tone]').text()).toBe('przerwany')
       expect(interrupted.find('[data-tone]').attributes('data-tone')).toBe('warning')
       expect(wrapper.find('.progress').exists()).toBe(false)
@@ -550,6 +652,6 @@ describe('RunDetailView', () => {
     answers.get('r1')!(run())
     await flushPromises()
 
-    expect(wrapper.find('h1').text()).toBe('Przebieg: ponowienie resztek')
+    expect(wrapper.find('.kind').text()).toBe('ponowienie resztek')
   })
 })

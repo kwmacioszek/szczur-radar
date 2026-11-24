@@ -310,6 +310,11 @@ export const VIEWS: readonly View[] = [
     modes: { AUTH: 'admin' },
     ready: async (page) => {
       const main = page.getByRole('main')
+      // Run 3 is the cron's night of 16.10, created at 00:30 UTC (dev/mock-api.js): 02:30 in Warsaw.
+      const title = main.getByRole('heading', { level: 1, name: 'Przebieg z 16.10.2026, 02:30', exact: true })
+      await expect(title).toBeVisible()
+      await expect(main.getByText('Wymaga uwagi:', { exact: true })).toBeVisible()
+      await expect(main.getByRole('heading', { level: 2, name: 'Liczniki', exact: true })).toBeVisible()
       await expect(main.getByRole('heading', { level: 2, name: 'Wynik per źródło', exact: true })).toBeVisible()
       await expect(main.getByRole('heading', { level: 2, name: 'Kroki', exact: true })).toBeVisible()
       await bellLoaded(page)

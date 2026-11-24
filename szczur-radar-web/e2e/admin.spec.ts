@@ -4,6 +4,9 @@
 import { expect, test } from './fixtures.ts'
 
 const RUN_1 = '/admin/runs/00000000-0000-4000-8000-000100000001'
+// Run 1 is created 12 minutes before the stopped clock (FIXED_NOW, 10:00 UTC): 11:48 in Warsaw, the time its page
+// is named by.
+const RUN_1_TITLE = 'Przebieg z 20.10.2026, 11:48'
 // Notification 1, the newest, is about run 3 (dev/mock-api.js).
 const RUN_3 = '/admin/runs/00000000-0000-4000-8000-000100000003'
 
@@ -113,7 +116,7 @@ test('szczegóły przebiegu otwierają jego stronę', async ({ page }) => {
 
   await expect(page).toHaveURL(RUN_1)
   const main = page.getByRole('main')
-  await expect(main.getByRole('heading', { level: 1, name: 'Przebieg: zakres dat' })).toBeVisible()
+  await expect(main.getByRole('heading', { level: 1, name: RUN_1_TITLE })).toBeVisible()
   await expect(main.getByRole('heading', { level: 2, name: 'Postęp' })).toBeVisible()
 })
 
