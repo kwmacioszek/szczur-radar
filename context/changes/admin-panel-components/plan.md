@@ -679,7 +679,7 @@ Bez migracji bazy. Odpowiedź `GET /api/admin/posts/failed` dostaje dwa nowe pol
 - [x] 2.3 Wzorce nowych sekcji i stanów zapisane, innych plików nie ruszono (`visual:update` + `git status`) — 6a96857
 - [x] 2.4 Testy wizualne i dostępności przechodzą dwa razy z rzędu: `npm run visual:docker` — 6a96857
 - [x] 2.5 Kopie projektu zgodne: `design-check.mjs app` — 6a96857
-- [ ] 2.6 Katalog bez przewijania w poziomie przy 320 px (`playwright-cli`)
+- [x] 2.6 Katalog bez przewijania w poziomie przy 320 px (`playwright-cli`)
 
 ### Phase 3: Rozbicie panelu na trzy adresy
 

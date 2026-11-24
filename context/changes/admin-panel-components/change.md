@@ -1,7 +1,7 @@
 ---
 change_id: admin-panel-components
 title: Admin panel components
-status: implementing
+status: implemented
 created: 2026-11-24
 updated: 2026-11-24
 archived_at: null
