@@ -19,7 +19,7 @@ vi.mock('../api/notifications', () => ({
 const page = vi.hoisted(() => ({ render: () => null }))
 vi.mock('../views/FeedView.vue', () => ({ default: page }))
 vi.mock('../views/PostDetailView.vue', () => ({ default: page }))
-vi.mock('../views/AdminView.vue', () => ({ default: page }))
+vi.mock('../views/admin/AdminPanelView.vue', () => ({ default: page }))
 vi.mock('../views/RunDetailView.vue', () => ({ default: page }))
 vi.mock('../views/LoginView.vue', () => ({ default: page }))
 

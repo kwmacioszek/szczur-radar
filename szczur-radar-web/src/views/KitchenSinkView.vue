@@ -699,9 +699,9 @@ const assessments: { id: string; title: string; assessment: NonNullable<PostItem
 /** The admin panel's parts: the first is current and has the count of failed posts, the second none (0 hides it). */
 function adminParts(current: string, failed: number): AdminPart[] {
   return [
-    { label: 'Przebiegi', to: '/admin', current: current === 'Przebiegi' },
-    { label: 'Jakość ocen', to: '/admin/quality', current: current === 'Jakość ocen' },
-    { label: 'Nieudane posty', to: '/admin/posts', current: current === 'Nieudane posty', count: failed },
+    { label: 'Przebiegi', to: { name: 'admin' }, current: current === 'Przebiegi' },
+    { label: 'Jakość ocen', to: { name: 'admin-quality' }, current: current === 'Jakość ocen' },
+    { label: 'Nieudane posty', to: { name: 'admin-posts' }, current: current === 'Nieudane posty', count: failed },
   ]
 }
 

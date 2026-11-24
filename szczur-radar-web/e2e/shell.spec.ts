@@ -56,6 +56,8 @@ test.describe('każdy ekran po zalogowaniu ma jeden pasek, jedną treść i jede
     { name: 'lista postów', path: '/', title: 'Posty', section: 'Posty' },
     { name: 'post', path: POST_0, title: 'Wpis użytkownika uzytkownik0', section: 'Posty' },
     { name: 'panel admina', path: '/admin', title: 'Panel admina', section: 'Panel admina' },
+    { name: 'jakość ocen', path: '/admin/quality', title: 'Panel admina', section: 'Panel admina' },
+    { name: 'nieudane posty', path: '/admin/posts', title: 'Panel admina', section: 'Panel admina' },
     { name: 'przebieg', path: RUN_1, title: 'Przebieg: zakres dat', section: 'Panel admina' },
   ]
 

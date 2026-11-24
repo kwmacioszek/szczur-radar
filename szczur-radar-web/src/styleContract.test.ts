@@ -26,7 +26,10 @@ import themeToggle from './components/ThemeToggle.vue?raw'
 import pairs from './contrastPairs.json'
 import css from './style.css?raw'
 import activateView from './views/ActivateView.vue?raw'
-import adminView from './views/AdminView.vue?raw'
+import adminFailedPostsView from './views/admin/AdminFailedPostsView.vue?raw'
+import adminPanelView from './views/admin/AdminPanelView.vue?raw'
+import adminQualityView from './views/admin/AdminQualityView.vue?raw'
+import adminRunsView from './views/admin/AdminRunsView.vue?raw'
 import feedView from './views/FeedView.vue?raw'
 import kitchenSinkView from './views/KitchenSinkView.vue?raw'
 import loginView from './views/LoginView.vue?raw'
@@ -132,7 +135,10 @@ function contrast(a: string, b: string): number {
  * list.
  */
 const CLEANED: Record<string, string> = {
-  'src/views/AdminView.vue': adminView,
+  'src/views/admin/AdminPanelView.vue': adminPanelView,
+  'src/views/admin/AdminRunsView.vue': adminRunsView,
+  'src/views/admin/AdminQualityView.vue': adminQualityView,
+  'src/views/admin/AdminFailedPostsView.vue': adminFailedPostsView,
   'src/components/AppButton.vue': appButton,
   'src/components/AppIcon.vue': appIcon,
   'src/components/IconSprite.vue': iconSprite,

@@ -1,7 +1,7 @@
 // Every route except /login, /activate (and the dev-only /kitchen-sink) requires a session; a logged-in
-// user never sees /login, and only an admin sees /admin and /admin/runs/:id. /activate stays open to a
-// logged-in user: the link may be for another account (ActivateView ends that session after setting the
-// password).
+// user never sees /login, and only an admin sees /admin, its parts /admin/quality and /admin/posts, and
+// /admin/runs/:id. /activate stays open to a logged-in user: the link may be for another account (ActivateView
+// ends that session after setting the password).
 // History mode: Caddy (and Vite) serve index.html for deep links.
 import {
   createRouter,
@@ -14,11 +14,14 @@ import { onUnauthorized } from '../api/client'
 import { ensureSession } from '../auth/session'
 import AppShell from '../components/AppShell.vue'
 import ActivateView from '../views/ActivateView.vue'
-import AdminView from '../views/AdminView.vue'
 import FeedView from '../views/FeedView.vue'
 import LoginView from '../views/LoginView.vue'
 import PostDetailView from '../views/PostDetailView.vue'
 import RunDetailView from '../views/RunDetailView.vue'
+import AdminFailedPostsView from '../views/admin/AdminFailedPostsView.vue'
+import AdminPanelView from '../views/admin/AdminPanelView.vue'
+import AdminQualityView from '../views/admin/AdminQualityView.vue'
+import AdminRunsView from '../views/admin/AdminRunsView.vue'
 import { scrollBehavior } from './scroll'
 
 export { safeRedirect } from './redirect'
@@ -54,7 +57,18 @@ export const routes: RouteRecordRaw[] = [
     children: [
       { path: '', name: 'home', component: FeedView, meta: { section: 'posts', column: 'narrow' } },
       { path: 'posts/:id', name: 'post', component: PostDetailView, meta: { section: 'posts', column: 'narrow' } },
-      { path: 'admin', name: 'admin', component: AdminView, meta: { admin: true, section: 'admin', column: 'wide' } },
+      // The admin panel: one layout (its heading and the bar of its parts) around the part of each address; the
+      // children inherit its meta. A run's page is not a part: it has its own heading.
+      {
+        path: 'admin',
+        component: AdminPanelView,
+        meta: { admin: true, section: 'admin', column: 'wide' },
+        children: [
+          { path: '', name: 'admin', component: AdminRunsView },
+          { path: 'quality', name: 'admin-quality', component: AdminQualityView },
+          { path: 'posts', name: 'admin-posts', component: AdminFailedPostsView },
+        ],
+      },
       {
         path: 'admin/runs/:id',
         name: 'admin-run',

@@ -42,6 +42,20 @@ async function bellLoaded(page: Page): Promise<void> {
   await expect(page.getByRole('banner').getByRole('button', { name: /^Powiadomienia, / })).toBeVisible()
 }
 
+/** The bar of the admin panel's parts (S-50). */
+function adminParts(page: Page): Locator {
+  return page.getByRole('main').getByRole('navigation', { name: 'Panel admina', exact: true })
+}
+
+/**
+ * The admin panel's pages are ready only with the bar's count of the mock's 4 failed posts, and the focus on the
+ * heading, which it takes once the part's first section is read (both are on the screenshot).
+ */
+async function adminPartsLoaded(page: Page): Promise<void> {
+  await expect(adminParts(page).getByRole('link', { name: 'Nieudane posty 4', exact: true })).toBeVisible()
+  await expect(page.getByRole('main').getByRole('heading', { level: 1, name: 'Panel admina' })).toBeFocused()
+}
+
 /** Every logged-in page is ready only with the date of the data in the bar (it sets the bar's height and its row). */
 async function freshnessLoaded(page: Page): Promise<void> {
   await expect(page.getByRole('banner').getByText('Dane:', { exact: true })).toBeVisible()
@@ -187,21 +201,20 @@ export const VIEWS: readonly View[] = [
   },
   {
     name: 'view-admin',
-    risk: 'panel admina nie zmienia wyglądu i nie łamie dostępności',
+    risk: 'część „Przebiegi” panelu admina nie zmienia wyglądu i nie łamie dostępności',
     path: '/admin',
     modes: { AUTH: 'admin' },
-    // As e2e/admin.spec.ts: every section with its data, none still loading.
+    // As e2e/admin.spec.ts: every section of the part with its data, none still loading, and the bar's count.
     ready: async (page) => {
       const main = page.getByRole('main')
       const region = (name: string) => main.getByRole('region', { name, exact: true })
-      for (const name of ['Nowy przebieg', 'Dni bez danych', 'Jakość ocen (7 dni)', 'Ostatnie przebiegi', 'Nieudane posty']) {
+      for (const name of ['Nowy przebieg', 'Dni bez danych', 'Ostatnie przebiegi']) {
         await expect(main.getByRole('heading', { level: 2, name, exact: true })).toBeVisible()
       }
       await expect(region('Nowy przebieg').getByRole('checkbox')).toHaveCount(2)
       await expect(region('Dni bez danych').getByRole('button', { name: /^Wpisz do formularza: / }).first()).toBeVisible()
-      await expect(region('Jakość ocen (7 dni)').getByText(/^nieudane .* z 3134 prób/)).toBeVisible()
       await expect(region('Ostatnie przebiegi').getByRole('link', { name: /^Szczegóły przebiegu z / })).toHaveCount(20)
-      await expect(region('Nieudane posty').getByRole('checkbox')).toHaveCount(4)
+      await adminPartsLoaded(page)
       await expect(main.getByText('Wczytywanie…', { exact: true })).toHaveCount(0)
       await bellLoaded(page)
       await freshnessLoaded(page)
@@ -212,26 +225,30 @@ export const VIEWS: readonly View[] = [
     risk: 'szkielety sekcji panelu admina nie zmieniają wyglądu i nie łamią dostępności',
     path: '/admin',
     modes: { AUTH: 'admin', MODE: 'loading' },
-    // Every admin call hangs in this mode, the bell's too: only its button is there (no count), not `bellLoaded`.
+    // Every admin call hangs in this mode, the bell's and the bar's count too: only the bell's button is there (no
+    // count), not `bellLoaded`, and the bar has no count.
     ready: async (page) => {
       const main = page.getByRole('main')
-      for (const name of ['Nowy przebieg', 'Dni bez danych', 'Jakość ocen (7 dni)', 'Ostatnie przebiegi', 'Nieudane posty']) {
+      for (const name of ['Nowy przebieg', 'Dni bez danych', 'Ostatnie przebiegi']) {
         await expect(main.getByRole('region', { name, exact: true })).toHaveAttribute('aria-busy', 'true')
       }
       await expect(main.getByRole('button', { name: 'Odśwież', exact: true })).toBeDisabled()
+      await expect(adminParts(page).getByRole('link', { name: 'Nieudane posty', exact: true })).toBeVisible()
       await expect(page.getByRole('banner').getByRole('button', { name: /^Powiadomienia/ })).toBeVisible()
       await freshnessLoaded(page)
     },
   },
   {
     name: 'view-admin-empty',
-    risk: 'puste sekcje panelu admina nie zmieniają wyglądu i nie łamią dostępności',
-    path: '/admin',
+    risk: 'pusta część „Nieudane posty” panelu admina nie zmienia wyglądu i nie łamie dostępności',
+    path: '/admin/posts',
     modes: { AUTH: 'admin', MODE: 'empty' },
+    // No failed post: the bar has no count. The heading takes the focus once the list is read: it is on the shot.
     ready: async (page) => {
       const main = page.getByRole('main')
       await expect(main.getByText('Brak nieudanych postów', { exact: true })).toBeVisible()
-      await expect(main.getByText('Jeszcze nie było przebiegu', { exact: true })).toBeVisible()
+      await expect(adminParts(page).getByRole('link', { name: 'Nieudane posty', exact: true })).toBeVisible()
+      await expect(main.getByRole('heading', { level: 1, name: 'Panel admina' })).toBeFocused()
       await expect(main.getByText('Wczytywanie…', { exact: true })).toHaveCount(0)
       await bellLoaded(page)
       await freshnessLoaded(page)
@@ -239,18 +256,43 @@ export const VIEWS: readonly View[] = [
   },
   {
     name: 'view-admin-error',
-    risk: 'błąd jednej sekcji panelu admina nie zmienia wyglądu i nie łamie dostępności',
-    path: '/admin',
+    risk: 'błąd części „Jakość ocen” panelu admina nie zmienia wyglądu i nie łamie dostępności',
+    path: '/admin/quality',
     modes: { AUTH: 'admin', QUALITY: 'error' },
-    // As `view-admin`, but the quality section is the error: the other sections show their data.
     ready: async (page) => {
       const main = page.getByRole('main')
-      const region = (name: string) => main.getByRole('region', { name, exact: true })
-      await expect(region('Jakość ocen (7 dni)').getByRole('alert')).toContainText('Nie udało się wczytać jakości ocen')
-      await expect(region('Nowy przebieg').getByRole('checkbox')).toHaveCount(2)
-      await expect(region('Dni bez danych').getByRole('button', { name: /^Wpisz do formularza: / }).first()).toBeVisible()
-      await expect(region('Ostatnie przebiegi').getByRole('link', { name: /^Szczegóły przebiegu z / })).toHaveCount(20)
-      await expect(region('Nieudane posty').getByRole('checkbox')).toHaveCount(4)
+      await expect(main.getByRole('region', { name: 'Jakość ocen (7 dni)', exact: true }).getByRole('alert'))
+        .toContainText('Nie udało się wczytać jakości ocen')
+      await adminPartsLoaded(page)
+      await expect(main.getByText('Wczytywanie…', { exact: true })).toHaveCount(0)
+      await bellLoaded(page)
+      await freshnessLoaded(page)
+    },
+  },
+  {
+    name: 'view-admin-quality',
+    risk: 'część „Jakość ocen” panelu admina nie zmienia wyglądu i nie łamie dostępności',
+    path: '/admin/quality',
+    modes: { AUTH: 'admin' },
+    ready: async (page) => {
+      const main = page.getByRole('main')
+      const quality = main.getByRole('region', { name: 'Jakość ocen (7 dni)', exact: true })
+      await expect(quality.getByText(/^nieudane .* z 3134 prób/)).toBeVisible()
+      await adminPartsLoaded(page)
+      await expect(main.getByText('Wczytywanie…', { exact: true })).toHaveCount(0)
+      await bellLoaded(page)
+      await freshnessLoaded(page)
+    },
+  },
+  {
+    name: 'view-admin-posts',
+    risk: 'część „Nieudane posty” panelu admina nie zmienia wyglądu i nie łamie dostępności',
+    path: '/admin/posts',
+    modes: { AUTH: 'admin' },
+    ready: async (page) => {
+      const main = page.getByRole('main')
+      await expect(main.getByRole('region', { name: 'Nieudane posty', exact: true }).getByRole('checkbox')).toHaveCount(4)
+      await adminPartsLoaded(page)
       await expect(main.getByText('Wczytywanie…', { exact: true })).toHaveCount(0)
       await bellLoaded(page)
       await freshnessLoaded(page)

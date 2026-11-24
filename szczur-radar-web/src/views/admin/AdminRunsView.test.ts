@@ -1,30 +1,24 @@
-import { enableAutoUnmount, flushPromises, mount } from '@vue/test-utils'
+import { enableAutoUnmount, flushPromises } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { createMemoryHistory } from 'vue-router'
-import { fetchMe } from '../api/auth'
-import { ApiError } from '../api/client'
-import { type MissingDays, RUNS_PAGE_SIZE, type Run, fetchMissingDays, fetchRuns, fetchSources, retryPosts, startRange } from '../api/pipeline'
-import { type FailedPost, fetchFailedPosts, restorePosts } from '../api/posts'
-import { fetchAssessmentQuality } from '../api/quality'
-import { resetSession } from '../auth/session'
-import {
-  sampleAssessmentQuality,
-  sampleAssessmentQualityFewAttempts,
-  sampleAssessmentQualityLanguageUnavailable,
-} from '../contract/samples'
-import { createAppRouter } from '../router'
-import AdminView from './AdminView.vue'
+import { fetchMe } from '../../api/auth'
+import { ApiError } from '../../api/client'
+import { type MissingDays, RUNS_PAGE_SIZE, type Run, fetchMissingDays, fetchRuns, fetchSources, retryPosts, startRange } from '../../api/pipeline'
+import { fetchFailedPosts, restorePosts } from '../../api/posts'
+import { fetchAssessmentQuality } from '../../api/quality'
+import { resetSession } from '../../auth/session'
+import AdminRunsView from './AdminRunsView.vue'
+import { mountPart, never, page, run, runsFrom } from './testing'
 
-vi.mock('../api/auth', () => ({ fetchMe: vi.fn(), login: vi.fn(), logout: vi.fn() }))
-vi.mock('../api/posts', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../api/posts')>()),
+vi.mock('../../api/auth', () => ({ fetchMe: vi.fn(), login: vi.fn(), logout: vi.fn() }))
+vi.mock('../../api/posts', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../api/posts')>()),
   fetchPosts: vi.fn(),
   fetchFailedPosts: vi.fn(),
   restorePosts: vi.fn(),
 }))
-vi.mock('../api/quality', () => ({ fetchAssessmentQuality: vi.fn() }))
-vi.mock('../api/pipeline', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../api/pipeline')>()),
+vi.mock('../../api/quality', () => ({ fetchAssessmentQuality: vi.fn() }))
+vi.mock('../../api/pipeline', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../api/pipeline')>()),
   startRange: vi.fn(),
   retryPosts: vi.fn(),
   fetchRuns: vi.fn(),
@@ -32,100 +26,28 @@ vi.mock('../api/pipeline', async (importOriginal) => ({
   fetchMissingDays: vi.fn(),
 }))
 
-function run(overrides: Partial<Run> = {}): Run {
-  return {
-    id: 'r1',
-    kind: 'range',
-    status: 'succeeded',
-    interruptionCause: null,
-    needsAttention: false,
-    attentionReasons: [],
-    scheduled: false,
-    rangeFrom: '2026-09-30T22:00:00Z',
-    rangeTo: '2026-10-01T21:59:59Z',
-    sources: ['wykop'],
-    requestedPostIds: null,
-    createdAt: '2026-10-02T06:00:00Z',
-    startedAt: '2026-10-02T06:00:01Z',
-    finishedAt: '2026-10-02T06:20:00Z',
-    lastActivityAt: '2026-10-02T06:20:00Z',
-    fetched: 270,
-    newPosts: 268,
-    assessedOk: 260,
-    assessedFailed: 8,
-    processingErrors: 0,
-    dead: 0,
-    skipped: 0,
-    sourcesFailed: 0,
-    sourcesEmpty: 0,
-    llmRetries: 0,
-    flexFallbacks: 0,
-    inFlight: 0,
-    error: null,
-    steps: [
-      { step: 'fetch', status: 'succeeded', startedAt: '2026-10-02T06:00:01Z', finishedAt: null, itemsIn: null, itemsOut: 270, error: null },
-    ],
-    sourceResults: [],
-    ...overrides,
-  }
-}
-
-function failed(id: string, stage: FailedPost['stage'], overrides: Partial<FailedPost> = {}): FailedPost {
-  return {
-    id,
-    source: 'wykop',
-    channel: 'gielda',
-    itemType: 'post',
-    publishedAt: '2026-10-01T07:00:00Z',
-    title: null,
-    body: `Wpis ${id}`,
-    webUrl: null,
-    stage,
-    assessmentAttempts: stage === 'dead' ? 3 : 1,
-    lastAttempt: { failureClass: 'timeout', violations: [], assessedAt: '2026-10-02T06:10:00Z', provider: 'gemini', model: 'm' },
-    technicalFailures: 0,
-    lastTechnicalError: null,
-    onHold: false,
-    ...overrides,
-  }
-}
-
-/** A stored post on hold: no stored attempt, three technical failures in a row. */
-function onHold(id: string, lastTechnicalError = 'IllegalStateException: a bug in the mapper'): FailedPost {
-  return failed(id, 'stored', { assessmentAttempts: 0, lastAttempt: null, technicalFailures: 3, lastTechnicalError, onHold: true })
-}
-
-/** `attachTo`: in the document, for focus. */
+/** The part "Przebiegi" on /admin. `attachTo`: in the document, for focus. */
 async function mountAdmin({ attachTo }: { attachTo?: HTMLElement } = {}) {
-  const router = createAppRouter(createMemoryHistory())
-  await router.push('/admin')
-  const wrapper = mount(AdminView, { global: { plugins: [router] }, attachTo })
-  await flushPromises()
-  return wrapper
-}
-
-function never<T>(): Promise<T> {
-  return new Promise(() => {})
+  return (await mountPart(AdminRunsView, '/admin', { attachTo })).wrapper
 }
 
 function refreshButton(wrapper: Awaited<ReturnType<typeof mountAdmin>>) {
   return wrapper.findAll('button').find((button) => button.text() === 'Odśwież')!
 }
 
-/** `count` succeeded runs `r<from>`, `r<from+1>`, …, created a minute apart, newest first. */
-function runsFrom(from: number, count: number): Run[] {
-  return Array.from({ length: count }, (_, at) =>
-    run({ id: `r${from + at}`, createdAt: new Date(Date.UTC(2026, 9, 2, 6) - (from + at) * 60_000).toISOString() }),
-  )
-}
-
-function page(items: Run[], total: number, size = 20) {
-  return { items, page: 0, size, total }
+/** The plan's example: today 2026-10-24, Wykop has no data on 19 and 20 October. */
+const MISSING_EXAMPLE: MissingDays = {
+  from: '2026-10-09',
+  to: '2026-10-22',
+  days: [
+    { day: '2026-10-19', sources: ['wykop'] },
+    { day: '2026-10-20', sources: ['wykop'] },
+  ],
 }
 
 enableAutoUnmount(afterEach)
 
-describe('AdminView', () => {
+describe('AdminRunsView', () => {
   beforeEach(() => {
     resetSession()
     vi.mocked(fetchMe).mockReset().mockResolvedValue({ id: '1', email: 'admin@example.com', role: 'admin' })
@@ -218,14 +140,12 @@ describe('AdminView', () => {
   it('says it is loading, not that there is nothing, until the API answers', async () => {
     vi.mocked(fetchSources).mockReturnValue(never())
     vi.mocked(fetchRuns).mockReturnValue(never())
-    vi.mocked(fetchFailedPosts).mockReturnValue(never())
     const wrapper = await mountAdmin()
     expect(wrapper.text()).not.toContain('Jeszcze nie było przebiegu.')
-    expect(wrapper.text()).not.toContain('Brak nieudanych postów.')
     const skeletons = wrapper.findAll('.loading-state')
-    expect(skeletons.map((shown) => shown.classes()[1])).toEqual(['form', 'rows', 'rows'])
-    expect(skeletons.map((shown) => shown.text())).toEqual(['Wczytywanie…', 'Wczytywanie…', 'Wczytywanie…'])
-    expect(wrapper.findAll('section[aria-busy="true"]')).toHaveLength(3)
+    expect(skeletons.map((shown) => shown.classes()[1])).toEqual(['form', 'rows'])
+    expect(skeletons.map((shown) => shown.text())).toEqual(['Wczytywanie…', 'Wczytywanie…'])
+    expect(wrapper.findAll('section[aria-busy="true"]')).toHaveLength(2)
     expect(wrapper.find('#start-hint').exists()).toBe(false)
     expect(wrapper.find('form').exists()).toBe(false)
     expect(refreshButton(wrapper).attributes('disabled')).toBeDefined()
@@ -234,20 +154,12 @@ describe('AdminView', () => {
   it('has every section loading at once, each marked busy, and Odśwież disabled', async () => {
     vi.mocked(fetchSources).mockReturnValue(never())
     vi.mocked(fetchMissingDays).mockReturnValue(never())
-    vi.mocked(fetchAssessmentQuality).mockReturnValue(never())
     vi.mocked(fetchRuns).mockReturnValue(never())
-    vi.mocked(fetchFailedPosts).mockReturnValue(never())
     const wrapper = await mountAdmin()
     const sections = wrapper.findAll('section')
-    expect(sections).toHaveLength(5)
-    expect(sections.map((shown) => shown.attributes('aria-busy'))).toEqual(['true', 'true', 'true', 'true', 'true'])
-    expect(sections.map((shown) => shown.find('.loading-state').classes()[1])).toEqual([
-      'form',
-      'lines',
-      'lines',
-      'rows',
-      'rows',
-    ])
+    expect(sections).toHaveLength(3)
+    expect(sections.map((shown) => shown.attributes('aria-busy'))).toEqual(['true', 'true', 'true'])
+    expect(sections.map((shown) => shown.find('.loading-state').classes()[1])).toEqual(['form', 'lines', 'rows'])
     expect(refreshButton(wrapper).attributes('disabled')).toBeDefined()
   })
 
@@ -264,26 +176,26 @@ describe('AdminView', () => {
 
   it.each(['empty', 'data'] as const)('keeps the errors with a busy button while recovering, then the %s response', async (response) => {
     let answerRuns: (value: Awaited<ReturnType<typeof fetchRuns>>) => void = () => {}
-    let answerFailed: (value: Awaited<ReturnType<typeof fetchFailedPosts>>) => void = () => {}
+    let answerMissing: (value: MissingDays) => void = () => {}
     vi.mocked(fetchRuns)
       .mockRejectedValueOnce(new ApiError(500, 'internal_error'))
       .mockReturnValueOnce(new Promise((resolve) => (answerRuns = resolve)))
-    vi.mocked(fetchFailedPosts)
+    vi.mocked(fetchMissingDays)
       .mockRejectedValueOnce(new ApiError(500, 'internal_error'))
-      .mockReturnValueOnce(new Promise((resolve) => (answerFailed = resolve)))
+      .mockReturnValueOnce(new Promise((resolve) => (answerMissing = resolve)))
     const wrapper = await mountAdmin()
     const runsSection = wrapper.find('section[aria-labelledby="runs-title"]')
-    const failedSection = wrapper.find('section[aria-labelledby="failed-title"]')
+    const missingSection = wrapper.find('section[aria-labelledby="missing-title"]')
     expect(runsSection.find('[role="alert"] .state-title').text()).toBe('Nie udało się wczytać przebiegów')
     expect(runsSection.find('[role="alert"] .state-text').text()).toBe('Pozostałe sekcje działają osobno.')
-    expect(failedSection.find('[role="alert"] .state-title').text()).toBe('Nie udało się wczytać nieudanych postów')
+    expect(missingSection.find('[role="alert"] .state-title').text()).toBe('Nie udało się wczytać dni bez danych')
     expect(refreshButton(wrapper).attributes('disabled')).toBeUndefined()
 
     await refreshButton(wrapper).trigger('click')
 
     expect(fetchRuns).toHaveBeenCalledTimes(2)
-    expect(fetchFailedPosts).toHaveBeenCalledTimes(2)
-    for (const section of [runsSection, failedSection]) {
+    expect(fetchMissingDays).toHaveBeenCalledTimes(2)
+    for (const section of [runsSection, missingSection]) {
       const error = section.find('.state-error')
       expect(error.exists()).toBe(true)
       expect(error.attributes('role')).toBeUndefined()
@@ -301,41 +213,72 @@ describe('AdminView', () => {
     expect(runsSection.attributes('aria-busy')).toBeUndefined()
     expect(runsSection.findAll('.run')).toHaveLength(hasItems ? 1 : 0)
     expect(runsSection.find('.state-title').exists()).toBe(!hasItems)
-    expect(failedSection.find('.state-error button').attributes('aria-busy')).toBe('true')
+    expect(missingSection.find('.state-error button').attributes('aria-busy')).toBe('true')
 
-    answerFailed({ items: hasItems ? [failed('a', 'failed')] : [], page: 0, size: 50, total: hasItems ? 1 : 0 })
+    answerMissing(hasItems ? MISSING_EXAMPLE : { ...MISSING_EXAMPLE, days: [] })
     await flushPromises()
 
-    expect(failedSection.find('.state-error').exists()).toBe(false)
-    expect(failedSection.findAll('.failed-posts li')).toHaveLength(hasItems ? 1 : 0)
-    expect(failedSection.find('.state-title').exists()).toBe(!hasItems)
-    expect(failedSection.attributes('aria-busy')).toBeUndefined()
+    expect(missingSection.find('.state-error').exists()).toBe(false)
+    expect(missingSection.findAll('.missing-range')).toHaveLength(hasItems ? 1 : 0)
+    expect(missingSection.find('.state-title').exists()).toBe(!hasItems)
+    expect(missingSection.attributes('aria-busy')).toBeUndefined()
   })
 
-  it('shows an empty list of runs and of failed posts as the shared empty state', async () => {
+  it('shows an empty list of runs as the shared empty state', async () => {
     const wrapper = await mountAdmin()
     const runsEmpty = wrapper.find('section[aria-labelledby="runs-title"] .state')
     expect(runsEmpty.find('.state-title').text()).toBe('Jeszcze nie było przebiegu')
     expect(runsEmpty.find('.state-title').element.tagName).toBe('P')
     expect(runsEmpty.find('.state-text').text()).toBe('Pierwszy uruchomisz w sekcji „Nowy przebieg”.')
     expect(runsEmpty.find('use').attributes('href')).toBe('#i-inbox')
-    const failedEmpty = wrapper.find('section[aria-labelledby="failed-title"] .state')
-    expect(failedEmpty.find('.state-title').text()).toBe('Brak nieudanych postów')
-    expect(failedEmpty.find('.state-text').text()).toBe('Żaden post nie czeka na ponowienie ani nie jest martwy.')
-    expect(failedEmpty.find('use').attributes('href')).toBe('#i-circle-check')
     expect(wrapper.find('section[aria-busy="true"]').exists()).toBe(false)
   })
 
-  it('keeps the runs and failed posts on screen while refreshing', async () => {
+  it('keeps the runs on screen while refreshing', async () => {
     vi.mocked(fetchRuns).mockResolvedValueOnce({ items: [run()], page: 0, size: 20, total: 1 }).mockReturnValue(never())
-    vi.mocked(fetchFailedPosts).mockResolvedValueOnce({ items: [failed('a', 'failed')], page: 0, size: 50, total: 1 }).mockReturnValue(never())
     const wrapper = await mountAdmin()
     await wrapper.findAll('button').find((button) => button.text() === 'Odśwież')!.trigger('click')
     expect(fetchRuns).toHaveBeenCalledTimes(2)
-    expect(fetchFailedPosts).toHaveBeenCalledTimes(2)
     expect(wrapper.findAll('.run')).toHaveLength(1)
-    expect(wrapper.findAll('.failed-posts li')).toHaveLength(1)
     expect(wrapper.find('.loading').exists()).toBe(false)
+  })
+
+  it('reads with Odśwież only the sections of this part, not the assessment quality nor the failed posts', async () => {
+    const wrapper = await mountAdmin()
+    await refreshButton(wrapper).trigger('click')
+    await flushPromises()
+    expect(fetchRuns).toHaveBeenCalledTimes(2)
+    expect(fetchMissingDays).toHaveBeenCalledTimes(2)
+    expect(fetchAssessmentQuality).not.toHaveBeenCalled()
+    expect(fetchFailedPosts).not.toHaveBeenCalled()
+  })
+
+  describe('the focus on the panel title', () => {
+    it('is asked for once, after the first section is on screen', async () => {
+      vi.mocked(fetchSources).mockReturnValue(never())
+      vi.mocked(fetchRuns).mockReturnValue(never())
+      let answer: (value: MissingDays) => void = () => {}
+      vi.mocked(fetchMissingDays).mockReturnValue(new Promise((resolve) => (answer = resolve)))
+      const { panel } = await mountPart(AdminRunsView, '/admin')
+      expect(panel.focusTitle).not.toHaveBeenCalled()
+
+      answer(MISSING_EXAMPLE)
+      await flushPromises()
+
+      expect(panel.focusTitle).toHaveBeenCalledTimes(1)
+    })
+
+    it('is not asked for again by the other sections, a refresh or a retry', async () => {
+      vi.mocked(fetchMissingDays).mockRejectedValueOnce(new ApiError(500, 'internal_error'))
+      const { wrapper, panel } = await mountPart(AdminRunsView, '/admin')
+      expect(panel.focusTitle).toHaveBeenCalledTimes(1)
+
+      await wrapper.find('section[aria-labelledby="missing-title"] .state-error button').trigger('click')
+      await refreshButton(wrapper).trigger('click')
+      await flushPromises()
+
+      expect(panel.focusTitle).toHaveBeenCalledTimes(1)
+    })
   })
 
   it.each(['Spróbuj ponownie', 'Odśwież'])('loads the sources again after an error with %s', async (name) => {
@@ -377,18 +320,67 @@ describe('AdminView', () => {
     expect(start.find('form').exists()).toBe(true)
   })
 
+  it('shows a partial run with its technical errors and error text', async () => {
+    vi.mocked(fetchRuns).mockResolvedValue({
+      items: [run({ status: 'partial', processingErrors: 1, error: '1 post(s) with a technical error: x (IllegalStateException)' })],
+      page: 0,
+      size: 20,
+      total: 1,
+    })
+    const wrapper = await mountAdmin()
+    const shown = wrapper.find('.run')
+    expect(shown.find('.status').text()).toBe('częściowo')
+    expect(shown.find('.alarm').text()).toBe('błędy techniczne 1')
+    expect(shown.find('.run-error').text()).toContain('IllegalStateException')
+    expect(shown.text()).toContain('pobranie (270)')
+  })
+
+  it.each([
+    ['succeeded', 'zakończony', 'success'],
+    ['partial', 'częściowo', 'warning'],
+    ['interrupted', 'przerwany', 'warning'],
+    ['failed', 'błąd', 'destructive'],
+    ['running', 'trwa', 'info'],
+    ['queued', 'w kolejce', 'neutral'],
+  ] as const)('marks a %s run with the %s badge in the %s tone', async (status, text, tone) => {
+    vi.mocked(fetchRuns).mockResolvedValue({ items: [run({ status })], page: 0, size: 20, total: 1 })
+    const wrapper = await mountAdmin()
+    const badge = wrapper.find('.run .status')
+    expect(badge.text()).toBe(text)
+    expect(badge.attributes('data-tone')).toBe(tone)
+  })
+
+  it('says in text which step failed and which is running', async () => {
+    const step = (name: 'fetch' | 'assess', status: 'succeeded' | 'failed' | 'running') => ({
+      step: name, status, startedAt: '2026-10-02T06:00:01Z', finishedAt: null, itemsIn: null, itemsOut: null, error: null,
+    })
+    vi.mocked(fetchRuns).mockResolvedValue({
+      items: [run({ id: 'r1', status: 'failed', steps: [step('fetch', 'failed')] }), run({ id: 'r2', status: 'running', steps: [step('assess', 'running')] })],
+      page: 0,
+      size: 20,
+      total: 2,
+    })
+    const wrapper = await mountAdmin()
+    const [failedRun, runningRun] = wrapper.findAll('.run')
+    expect(failedRun!.find('.steps').text()).toBe('pobranie (błąd)')
+    expect(runningRun!.find('.steps').text()).toBe('ocena (trwa)')
+  })
+
   describe('a section retries on its own', () => {
     const SECTIONS = [
       ['start-title', 'Nowy przebieg', 'sources'],
       ['missing-title', 'Dni bez danych', 'missing'],
-      ['quality-title', 'Jakość ocen (7 dni)', 'quality'],
       ['runs-title', 'Ostatnie przebiegi', 'runs'],
-      ['failed-title', 'Nieudane posty', 'failed'],
     ] as const
 
+    /** Every read of the panel, also those of the other parts: none of them may follow a retry here. */
     function reads() {
       return { sources: fetchSources, missing: fetchMissingDays, quality: fetchAssessmentQuality, runs: fetchRuns, failed: fetchFailedPosts }
     }
+
+    afterEach(() => {
+      vi.useRealTimers()
+    })
 
     it.each(SECTIONS)('%s: its "Spróbuj ponownie" reads only %s', async (id, _name, key) => {
       vi.mocked(reads()[key]).mockRejectedValueOnce(new ApiError(500, 'internal_error'))
@@ -453,27 +445,29 @@ describe('AdminView', () => {
       expect(document.activeElement).toBe(wrapper.find('#missing-title').element)
     })
 
+    // The quality section, which these cases used before S-50, is in its own part now, without "Odśwież": the days
+    // without data are this part's section that "Odśwież" reads besides the runs.
     it('leaves the focus on Odśwież when it supersedes a retry', async () => {
-      let answer: (value: Awaited<ReturnType<typeof fetchAssessmentQuality>>) => void = () => {}
-      vi.mocked(fetchAssessmentQuality)
+      let answer: (value: MissingDays) => void = () => {}
+      vi.mocked(fetchMissingDays)
         .mockRejectedValueOnce(new ApiError(500, 'internal_error'))
         .mockReturnValueOnce(new Promise(() => {}))
         .mockReturnValueOnce(new Promise((resolve) => (answer = resolve)))
       const wrapper = await mountAdmin({ attachTo: document.body })
-      await wrapper.find('section[aria-labelledby="quality-title"] .state-error button').trigger('click')
+      await wrapper.find('section[aria-labelledby="missing-title"] .state-error button').trigger('click')
       const refresh = refreshButton(wrapper)
       ;(refresh.element as HTMLElement).focus()
 
       await refresh.trigger('click')
-      answer({ from: '2026-10-16', to: '2026-10-22', windowDays: 7, minAttempts: 100, minTheses: 500, sources: [] })
+      answer({ from: '2026-10-09', to: '2026-10-22', days: [] })
       await flushPromises()
 
-      expect(wrapper.find('section[aria-labelledby="quality-title"] .state-error').exists()).toBe(false)
+      expect(wrapper.find('section[aria-labelledby="missing-title"] .state-error').exists()).toBe(false)
       expect(document.activeElement).toBe(refresh.element)
     })
 
     it('leaves the focus on Odśwież when it retries a section in error', async () => {
-      vi.mocked(fetchAssessmentQuality).mockRejectedValueOnce(new ApiError(500, 'internal_error'))
+      vi.mocked(fetchMissingDays).mockRejectedValueOnce(new ApiError(500, 'internal_error'))
       const wrapper = await mountAdmin({ attachTo: document.body })
       const refresh = refreshButton(wrapper)
       ;(refresh.element as HTMLElement).focus()
@@ -486,8 +480,8 @@ describe('AdminView', () => {
     })
 
     it('keeps the error busy until the answer when the retry comes from Odśwież, and leaves the focus', async () => {
-      let answer: (value: Awaited<ReturnType<typeof fetchAssessmentQuality>>) => void = () => {}
-      vi.mocked(fetchAssessmentQuality)
+      let answer: (value: MissingDays) => void = () => {}
+      vi.mocked(fetchMissingDays)
         .mockRejectedValueOnce(new ApiError(500, 'internal_error'))
         .mockReturnValueOnce(new Promise((resolve) => (answer = resolve)))
       const wrapper = await mountAdmin({ attachTo: document.body })
@@ -496,19 +490,19 @@ describe('AdminView', () => {
 
       await refresh.trigger('click')
 
-      const error = wrapper.find('section[aria-labelledby="quality-title"] .state-error')
+      const error = wrapper.find('section[aria-labelledby="missing-title"] .state-error')
       expect(error.attributes('role')).toBeUndefined()
       expect(error.find('button').attributes('aria-busy')).toBe('true')
 
-      answer({ from: '2026-10-16', to: '2026-10-22', windowDays: 7, minAttempts: 100, minTheses: 500, sources: [] })
+      answer({ from: '2026-10-09', to: '2026-10-22', days: [] })
       await flushPromises()
 
-      expect(wrapper.find('section[aria-labelledby="quality-title"] .state-error').exists()).toBe(false)
+      expect(wrapper.find('section[aria-labelledby="missing-title"] .state-error').exists()).toBe(false)
       expect(document.activeElement).toBe(refresh.element)
     })
 
     it('leaves the focus when another failure follows a retry from Odśwież', async () => {
-      vi.mocked(fetchAssessmentQuality).mockRejectedValue(new ApiError(500, 'internal_error'))
+      vi.mocked(fetchMissingDays).mockRejectedValue(new ApiError(500, 'internal_error'))
       const wrapper = await mountAdmin({ attachTo: document.body })
       const refresh = refreshButton(wrapper)
       ;(refresh.element as HTMLElement).focus()
@@ -516,291 +510,13 @@ describe('AdminView', () => {
       await refresh.trigger('click')
       await flushPromises()
 
-      expect(wrapper.find('section[aria-labelledby="quality-title"] [role="alert"]').exists()).toBe(true)
+      expect(wrapper.find('section[aria-labelledby="missing-title"] [role="alert"]').exists()).toBe(true)
       expect(document.activeElement).toBe(refresh.element)
     })
   })
 
-  it('shows a partial run with its technical errors and error text', async () => {
-    vi.mocked(fetchRuns).mockResolvedValue({
-      items: [run({ status: 'partial', processingErrors: 1, error: '1 post(s) with a technical error: x (IllegalStateException)' })],
-      page: 0,
-      size: 20,
-      total: 1,
-    })
-    const wrapper = await mountAdmin()
-    const shown = wrapper.find('.run')
-    expect(shown.find('.status').text()).toBe('częściowo')
-    expect(shown.find('.alarm').text()).toBe('błędy techniczne 1')
-    expect(shown.find('.run-error').text()).toContain('IllegalStateException')
-    expect(shown.text()).toContain('pobranie (270)')
-  })
-
-  it.each([
-    ['succeeded', 'zakończony', 'success'],
-    ['partial', 'częściowo', 'warning'],
-    ['interrupted', 'przerwany', 'warning'],
-    ['failed', 'błąd', 'destructive'],
-    ['running', 'trwa', 'info'],
-    ['queued', 'w kolejce', 'neutral'],
-  ] as const)('marks a %s run with the %s badge in the %s tone', async (status, text, tone) => {
-    vi.mocked(fetchRuns).mockResolvedValue({ items: [run({ status })], page: 0, size: 20, total: 1 })
-    const wrapper = await mountAdmin()
-    const badge = wrapper.find('.run .status')
-    expect(badge.text()).toBe(text)
-    expect(badge.attributes('data-tone')).toBe(tone)
-  })
-
-  it('says in text which step failed and which is running', async () => {
-    const step = (name: 'fetch' | 'assess', status: 'succeeded' | 'failed' | 'running') => ({
-      step: name, status, startedAt: '2026-10-02T06:00:01Z', finishedAt: null, itemsIn: null, itemsOut: null, error: null,
-    })
-    vi.mocked(fetchRuns).mockResolvedValue({
-      items: [run({ id: 'r1', status: 'failed', steps: [step('fetch', 'failed')] }), run({ id: 'r2', status: 'running', steps: [step('assess', 'running')] })],
-      page: 0,
-      size: 20,
-      total: 2,
-    })
-    const wrapper = await mountAdmin()
-    const [failedRun, runningRun] = wrapper.findAll('.run')
-    expect(failedRun!.find('.steps').text()).toBe('pobranie (błąd)')
-    expect(runningRun!.find('.steps').text()).toBe('ocena (trwa)')
-  })
-
-  it('names the failure class of the last attempt in Polish', async () => {
-    vi.mocked(fetchFailedPosts).mockResolvedValue({ items: [failed('a', 'failed')], page: 0, size: 50, total: 1 })
-    const wrapper = await mountAdmin()
-    const attempt = wrapper.find('.failed-posts .attempt').text()
-    expect(attempt).toContain('przekroczony czas')
-    expect(attempt).not.toContain('timeout')
-  })
-
-  describe('failed posts: retry and restore', () => {
-    /** a and c failed, b and d dead. */
-    const mixed = { items: [failed('a', 'failed'), failed('b', 'dead'), failed('c', 'failed'), failed('d', 'dead')], page: 0, size: 50, total: 4 }
-
-    function section(wrapper: Awaited<ReturnType<typeof mountAdmin>>) {
-      return wrapper.find('section[aria-labelledby="failed-title"]')
-    }
-
-    function boxes(wrapper: Awaited<ReturnType<typeof mountAdmin>>) {
-      return section(wrapper).findAll('.failed-posts input[type="checkbox"]')
-    }
-
-    function retryButton(wrapper: Awaited<ReturnType<typeof mountAdmin>>) {
-      return section(wrapper).findAll('button').find((button) => button.text().startsWith('Ponów zaznaczone'))!
-    }
-
-    function restoreButton(wrapper: Awaited<ReturnType<typeof mountAdmin>>) {
-      return section(wrapper).findAll('button').find((button) => button.text().startsWith('Przywróć martwe'))!
-    }
-
-    it('lets a dead post be checked and counts each kind of the selection in its button', async () => {
-      vi.mocked(fetchFailedPosts).mockResolvedValue(mixed)
-      const wrapper = await mountAdmin()
-      expect(section(wrapper).find('.failed-posts').text()).toContain('martwy')
-      expect(boxes(wrapper).every((box) => box.attributes('disabled') === undefined)).toBe(true)
-      expect(retryButton(wrapper).text()).toBe('Ponów zaznaczone (0)')
-      expect(restoreButton(wrapper).text()).toBe('Przywróć martwe (0)')
-      expect(retryButton(wrapper).attributes('disabled')).toBeDefined()
-      expect(restoreButton(wrapper).attributes('disabled')).toBeDefined()
-
-      await boxes(wrapper)[1]!.setValue(true)
-
-      expect(retryButton(wrapper).text()).toBe('Ponów zaznaczone (0)')
-      expect(retryButton(wrapper).attributes('disabled')).toBeDefined()
-      expect(restoreButton(wrapper).text()).toBe('Przywróć martwe (1)')
-      expect(restoreButton(wrapper).attributes('disabled')).toBeUndefined()
-
-      await boxes(wrapper)[1]!.setValue(false)
-      await boxes(wrapper)[0]!.setValue(true)
-      await boxes(wrapper)[2]!.setValue(true)
-
-      expect(retryButton(wrapper).text()).toBe('Ponów zaznaczone (2)')
-      expect(retryButton(wrapper).attributes('disabled')).toBeUndefined()
-      expect(restoreButton(wrapper).text()).toBe('Przywróć martwe (0)')
-      expect(restoreButton(wrapper).attributes('disabled')).toBeDefined()
-    })
-
-    it('drops from the selection on a reload only the posts gone from the list, a dead one stays checked', async () => {
-      vi.mocked(fetchFailedPosts).mockResolvedValue(mixed)
-      const wrapper = await mountAdmin()
-      await boxes(wrapper)[0]!.setValue(true)
-      await boxes(wrapper)[1]!.setValue(true)
-      expect(retryButton(wrapper).text()).toBe('Ponów zaznaczone (1)')
-      expect(restoreButton(wrapper).text()).toBe('Przywróć martwe (1)')
-
-      // a left the list (assessed meanwhile); b is still dead.
-      vi.mocked(fetchFailedPosts).mockResolvedValue({ ...mixed, items: mixed.items.slice(1), total: 3 })
-      await wrapper.findAll('button').find((button) => button.text() === 'Odśwież')!.trigger('click')
-      await flushPromises()
-
-      expect(retryButton(wrapper).text()).toBe('Ponów zaznaczone (0)')
-      expect(restoreButton(wrapper).text()).toBe('Przywróć martwe (1)')
-      expect((boxes(wrapper)[0]!.element as HTMLInputElement).checked).toBe(true)
-    })
-
-    it('retries only the checked posts that are not dead and keeps the dead ones checked', async () => {
-      vi.mocked(fetchFailedPosts).mockResolvedValue(mixed)
-      vi.mocked(retryPosts).mockResolvedValue([run({ kind: 'posts' })])
-      const wrapper = await mountAdmin()
-      for (const box of boxes(wrapper)) await box.setValue(true)
-      expect(retryButton(wrapper).text()).toBe('Ponów zaznaczone (2)')
-      expect(restoreButton(wrapper).text()).toBe('Przywróć martwe (2)')
-
-      await retryButton(wrapper).trigger('click')
-      await flushPromises()
-
-      expect(retryPosts).toHaveBeenCalledWith(['a', 'c'])
-      expect(restorePosts).not.toHaveBeenCalled()
-      expect(section(wrapper).find('[role="status"]').text()).toContain('Ponowienie 2')
-      expect(retryButton(wrapper).text()).toBe('Ponów zaznaczone (0)')
-      expect(restoreButton(wrapper).text()).toBe('Przywróć martwe (2)')
-    })
-
-    it('restores only the checked dead posts, says so and reads the list again without them', async () => {
-      vi.mocked(fetchFailedPosts)
-        .mockResolvedValueOnce(mixed)
-        .mockResolvedValue({ items: [failed('a', 'failed'), failed('c', 'failed')], page: 0, size: 50, total: 2 })
-      vi.mocked(restorePosts).mockResolvedValue({ restored: 2 })
-      const wrapper = await mountAdmin()
-      for (const box of boxes(wrapper)) await box.setValue(true)
-
-      await restoreButton(wrapper).trigger('click')
-      await flushPromises()
-
-      expect(restorePosts).toHaveBeenCalledWith(['b', 'd'])
-      expect(retryPosts).not.toHaveBeenCalled()
-      expect(section(wrapper).find('[role="status"]').text()).toBe(
-        'Przywrócono 2 post(ów) do oceny. Oceni je kolejny przebieg.',
-      )
-      expect(fetchFailedPosts).toHaveBeenCalledTimes(2)
-      expect(section(wrapper).findAll('.failed-posts li')).toHaveLength(2)
-      // The posts to retry stay checked; the restored ones left the selection.
-      expect(boxes(wrapper).map((box) => (box.element as HTMLInputElement).checked)).toEqual([true, true])
-      expect(retryButton(wrapper).text()).toBe('Ponów zaznaczone (2)')
-      expect(restoreButton(wrapper).text()).toBe('Przywróć martwe (0)')
-      expect(restoreButton(wrapper).attributes('disabled')).toBeDefined()
-    })
-
-    it('says none of the checked posts was dead any more', async () => {
-      vi.mocked(fetchFailedPosts).mockResolvedValue(mixed)
-      vi.mocked(restorePosts).mockResolvedValue({ restored: 0 })
-      const wrapper = await mountAdmin()
-      await boxes(wrapper)[1]!.setValue(true)
-
-      await restoreButton(wrapper).trigger('click')
-      await flushPromises()
-
-      expect(section(wrapper).find('[role="status"]').text()).toBe('Żaden z zaznaczonych postów nie był już martwy.')
-    })
-
-    it('says the restore failed and keeps the selection', async () => {
-      vi.mocked(fetchFailedPosts).mockResolvedValue(mixed)
-      vi.mocked(restorePosts).mockRejectedValue(new ApiError(500, 'internal_error'))
-      const wrapper = await mountAdmin()
-      await boxes(wrapper)[1]!.setValue(true)
-
-      await restoreButton(wrapper).trigger('click')
-      await flushPromises()
-
-      expect(section(wrapper).find('[role="alert"]').text()).toBe('Nie udało się przywrócić postów.')
-      expect(section(wrapper).find('[role="status"]').exists()).toBe(false)
-      expect(fetchFailedPosts).toHaveBeenCalledTimes(1)
-      expect(restoreButton(wrapper).text()).toBe('Przywróć martwe (1)')
-    })
-
-    it('says the restore is under way and blocks the retry while the server answers', async () => {
-      vi.mocked(fetchFailedPosts).mockResolvedValue(mixed)
-      vi.mocked(restorePosts).mockReturnValue(never())
-      const wrapper = await mountAdmin()
-      await boxes(wrapper)[0]!.setValue(true)
-      await boxes(wrapper)[1]!.setValue(true)
-      const restore = restoreButton(wrapper)
-      const retry = retryButton(wrapper)
-
-      await restore.trigger('click')
-
-      expect(restore.text()).toBe('Przywracanie…')
-      expect(restore.attributes('aria-busy')).toBe('true')
-      expect(retry.attributes('disabled')).toBeDefined()
-      await retry.trigger('click')
-      expect(retryPosts).not.toHaveBeenCalled()
-    })
-
-    it('blocks the restore while a retry is under way', async () => {
-      vi.mocked(fetchFailedPosts).mockResolvedValue(mixed)
-      vi.mocked(retryPosts).mockReturnValue(never())
-      const wrapper = await mountAdmin()
-      await boxes(wrapper)[0]!.setValue(true)
-      await boxes(wrapper)[1]!.setValue(true)
-
-      await retryButton(wrapper).trigger('click')
-
-      expect(restoreButton(wrapper).attributes('disabled')).toBeDefined()
-      await restoreButton(wrapper).trigger('click')
-      expect(restorePosts).not.toHaveBeenCalled()
-    })
-  })
-
-  it('shows a post on hold with its technical errors and retries it', async () => {
-    vi.mocked(fetchFailedPosts).mockResolvedValue({ items: [onHold('h'), failed('b', 'dead')], page: 0, size: 50, total: 2 })
-    vi.mocked(retryPosts).mockResolvedValue([run({ kind: 'posts' })])
-    const wrapper = await mountAdmin()
-    const [held] = wrapper.findAll('.failed-posts li')
-    const attempt = held!.find('.attempt')
-    expect(attempt.text()).toContain('wstrzymany')
-    expect(attempt.text()).toContain('błędy techniczne 3')
-    expect(attempt.text()).not.toContain('próby')
-    expect(attempt.find('.technical-error').text()).toBe('IllegalStateException: a bug in the mapper')
-    const box = held!.find('input[type="checkbox"]')
-    expect(box.attributes('disabled')).toBeUndefined()
-
-    await box.setValue(true)
-    await wrapper.findAll('button').find((button) => button.text() === 'Ponów zaznaczone (1)')!.trigger('click')
-    await flushPromises()
-
-    expect(retryPosts).toHaveBeenCalledWith(['h'])
-  })
-
-  it('shows both reasons for a failed post with technical errors, and the whole error in its title', async () => {
-    const error = `LlmUnavailableException: ${'connection reset '.repeat(20)}`
-    vi.mocked(fetchFailedPosts).mockResolvedValue({
-      items: [failed('a', 'failed', { technicalFailures: 1, lastTechnicalError: error })],
-      page: 0,
-      size: 50,
-      total: 1,
-    })
-    const wrapper = await mountAdmin()
-    const attempt = wrapper.find('.failed-posts .attempt')
-    expect(attempt.text()).toContain('próby 1')
-    expect(attempt.text()).toContain('przekroczony czas')
-    expect(attempt.text()).toContain('błędy techniczne 1')
-    expect(attempt.text()).not.toContain('wstrzymany')
-    expect(attempt.find('.technical-error').attributes('title')).toBe(error)
-  })
-
-  it('says the retry is under way while the server answers', async () => {
-    vi.mocked(fetchFailedPosts).mockResolvedValue({ items: [failed('a', 'failed')], page: 0, size: 50, total: 1 })
-    vi.mocked(retryPosts).mockReturnValue(never())
-    const wrapper = await mountAdmin()
-    await wrapper.find('.failed-posts input[type="checkbox"]').setValue(true)
-    const retry = wrapper.findAll('button').find((button) => button.text() === 'Ponów zaznaczone (1)')!
-    await retry.trigger('click')
-    expect(retry.text()).toBe('Ponawianie…')
-    expect(retry.attributes('aria-busy')).toBe('true')
-  })
-
   describe('days without data', () => {
-    /** The plan's example: today 2026-10-24, Wykop has no data on 19 and 20 October. */
-    const example = {
-      from: '2026-10-09',
-      to: '2026-10-22',
-      days: [
-        { day: '2026-10-19', sources: ['wykop'] },
-        { day: '2026-10-20', sources: ['wykop'] },
-      ],
-    }
+    const example = MISSING_EXAMPLE
 
     function section(wrapper: Awaited<ReturnType<typeof mountAdmin>>) {
       return wrapper.find('section[aria-labelledby="missing-title"]')
@@ -956,130 +672,19 @@ describe('AdminView', () => {
       await flushPromises()
       expect(fetchMissingDays).toHaveBeenCalledTimes(2)
     })
-  })
+    // Before S-50 the assessment quality stood on the same page and was read again too; its part reads it on entry.
+    it('does not read the assessment quality when a run of the list ends', async () => {
+      vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval', 'setTimeout', 'clearTimeout'] })
+      vi.mocked(fetchRuns)
+        .mockResolvedValueOnce(page([run({ status: 'running', finishedAt: null })], 1))
+        .mockResolvedValue(page([run({ status: 'succeeded' })], 1))
+      await mountAdmin()
 
-  describe('assessment quality', () => {
-    function section(wrapper: Awaited<ReturnType<typeof mountAdmin>>) {
-      return wrapper.find('section[aria-labelledby="quality-title"]')
-    }
-
-    it('shows the window and, per source, its share of failed attempts, its classes, threshold and state', async () => {
-      vi.mocked(fetchAssessmentQuality).mockResolvedValue(sampleAssessmentQuality)
-      const wrapper = await mountAdmin()
-      expect(section(wrapper).find('h2').text()).toBe('Jakość ocen (7 dni)')
-      expect(section(wrapper).find('.quality-window').text()).toContain('Od 6.03.2025 do 12.03.2025')
-      const rows = section(wrapper).findAll('.quality-source')
-      expect(rows.map((row) => row.find('strong').text())).toEqual(['Wykop', 'Reddit'])
-      expect(rows.map((row) => row.find('.status-badge').text())).toEqual(['w normie', 'ponad progiem'])
-      expect(rows.map((row) => row.find('.status-badge').attributes('data-tone'))).toEqual(['success', 'warning'])
-      expect(rows.map((row) => row.find('.quality-failed').text())).toEqual([
-        'nieudane 5,0% z 200 prób · próg 5%',
-        'nieudane 33,3% z 120 prób · próg 25%',
-      ])
-      expect(rows.map((row) => row.find('.quality-classes').text())).toEqual([
-        'niezgodność ze schematem 2,0% · zmyślony cytat 3,0%',
-        'niezgodność ze schematem 16,7% · zmyślony cytat 12,5% · naruszenie reguł kontraktu 4,2%',
-      ])
-      expect(section(wrapper).attributes('aria-busy')).toBeUndefined()
-    })
-
-    it('names both minimums in the window', async () => {
-      vi.mocked(fetchAssessmentQuality).mockResolvedValue(sampleAssessmentQuality)
-      const wrapper = await mountAdmin()
-      const window = section(wrapper).find('.quality-window').text()
-      expect(window).toContain('próg sprawdzany od 100 prób')
-      expect(window).toContain('próg sprawdzany od 500 tez')
-    })
-
-    it('shows, per source, its share of theses in another language with their number, threshold and state', async () => {
-      vi.mocked(fetchAssessmentQuality).mockResolvedValue(sampleAssessmentQuality)
-      const wrapper = await mountAdmin()
-      const rows = section(wrapper).findAll('.quality-language')
-      expect(rows.map((row) => row.find('span').text())).toEqual([
-        'tezy w innym języku niż post 2,0% z 500 tez · próg 2%',
-        'tezy w innym języku niż post 30,1% z 501 tez · próg 30%',
-      ])
-      expect(rows.map((row) => row.find('.status-badge').text())).toEqual(['w normie', 'ponad progiem'])
-      expect(rows.map((row) => row.find('.status-badge').attributes('data-tone'))).toEqual(['success', 'warning'])
-    })
-
-    it('shows the share below minTheses like the failed attempts, in a neutral tone, and no share without a thesis', async () => {
-      vi.mocked(fetchAssessmentQuality).mockResolvedValue(sampleAssessmentQualityFewAttempts)
-      const wrapper = await mountAdmin()
-      const rows = section(wrapper).findAll('.quality-language')
-      expect(rows.map((row) => row.find('span').text())).toEqual([
-        'tezy w innym języku niż post 2,2% z 46 tez · próg 2%',
-        'tezy w innym języku niż post: 0 tez · próg 30%',
-      ])
-      expect(rows.map((row) => row.find('.status-badge').text())).toEqual(['za mało danych', 'za mało danych'])
-      expect(rows.map((row) => row.find('.status-badge').attributes('data-tone'))).toEqual(['neutral', 'neutral'])
-    })
-
-    it('says the theses could not be counted, without a state, and keeps the failed attempts', async () => {
-      vi.mocked(fetchAssessmentQuality).mockResolvedValue(sampleAssessmentQualityLanguageUnavailable)
-      const wrapper = await mountAdmin()
-      const rows = section(wrapper).findAll('.quality-source')
-      expect(rows.map((row) => row.find('.quality-language').text())).toEqual([
-        'tezy w innym języku niż post: nie udało się policzyć',
-        'tezy w innym języku niż post: nie udało się policzyć',
-      ])
-      expect(rows.map((row) => row.find('.quality-language').find('.status-badge').exists())).toEqual([false, false])
-      expect(rows.map((row) => row.find('.quality-failed').text())).toEqual([
-        'nieudane 2,4% z 123 prób · próg 5%',
-        'nieudane 0,0% z 2 prób · próg 25%',
-      ])
-      expect(rows.map((row) => row.find('.quality-head .status-badge').text())).toEqual(['w normie', 'za mało danych'])
-    })
-
-    it('says too few attempts in a neutral tone, and shows no classes without a failed attempt', async () => {
-      vi.mocked(fetchAssessmentQuality).mockResolvedValue(sampleAssessmentQualityFewAttempts)
-      const wrapper = await mountAdmin()
-      const rows = section(wrapper).findAll('.quality-source')
-      expect(rows.map((row) => row.find('.status-badge').text())).toEqual(['za mało danych', 'za mało danych'])
-      expect(rows.map((row) => row.find('.status-badge').attributes('data-tone'))).toEqual(['neutral', 'neutral'])
-      expect(rows[0]!.find('.quality-failed').text()).toBe('nieudane 0,0% z 46 prób · próg 5%')
-      expect(rows[0]!.find('.quality-classes').exists()).toBe(false)
-      expect(rows[1]!.find('.quality-failed').text()).toBe('nieudane 33,3% z 3 prób · próg 25%')
-    })
-
-    it('says there is no assessment in the window', async () => {
-      const wrapper = await mountAdmin()
-      const empty = section(wrapper).find('.state')
-      expect(empty.find('.state-title').text()).toBe('Brak ocen w ostatnich 7 dniach')
-      expect(empty.find('.state-text').text()).toBe('Miary pojawią się po ocenach z kolejnego przebiegu.')
-      expect(empty.find('use').attributes('href')).toBe('#i-inbox')
-      expect(section(wrapper).find('.quality-window').text()).toContain('Od 16.10.2026 do 22.10.2026')
-      expect(section(wrapper).find('.quality-source').exists()).toBe(false)
-    })
-
-    it('says it is loading until the API answers', async () => {
-      vi.mocked(fetchAssessmentQuality).mockReturnValue(never())
-      const wrapper = await mountAdmin()
-      expect(section(wrapper).find('.loading-state').classes()).toContain('lines')
-      expect(section(wrapper).find('.loading-state').text()).toBe('Wczytywanie…')
-      expect(section(wrapper).attributes('aria-busy')).toBe('true')
-      expect(section(wrapper).find('.state').exists()).toBe(false)
-    })
-
-    it('says the quality failed to load', async () => {
-      vi.mocked(fetchAssessmentQuality).mockRejectedValue(new ApiError(500, 'internal_error'))
-      const wrapper = await mountAdmin()
-      const alert = section(wrapper).find('[role="alert"]')
-      expect(alert.find('.state-title').text()).toBe('Nie udało się wczytać jakości ocen')
-      expect(alert.find('.state-text').text()).toBe('Pozostałe sekcje działają osobno.')
-      expect(section(wrapper).find('.quality-source').exists()).toBe(false)
-    })
-
-    it('reads the window again with Odśwież', async () => {
-      vi.mocked(fetchAssessmentQuality).mockResolvedValueOnce(sampleAssessmentQuality)
-      const wrapper = await mountAdmin()
-      expect(section(wrapper).findAll('.quality-source')).toHaveLength(2)
-
-      await wrapper.findAll('button').find((button) => button.text() === 'Odśwież')!.trigger('click')
+      await vi.advanceTimersByTimeAsync(10_000)
       await flushPromises()
 
-      expect(fetchAssessmentQuality).toHaveBeenCalledTimes(2)
-      expect(section(wrapper).find('.state-title').text()).toBe('Brak ocen w ostatnich 7 dniach')
+      expect(fetchMissingDays).toHaveBeenCalledTimes(2)
+      expect(fetchAssessmentQuality).not.toHaveBeenCalled()
     })
   })
 

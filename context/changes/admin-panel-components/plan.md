@@ -674,24 +674,24 @@ Bez migracji bazy. Odpowiedź `GET /api/admin/posts/failed` dostaje dwa nowe pol
 
 #### Automated
 
-- [x] 2.1 Testy webu przechodzą (komponenty, CLEANED): `npm test`
-- [x] 2.2 Build przechodzi: `npm run build`
-- [x] 2.3 Wzorce nowych sekcji i stanów zapisane, innych plików nie ruszono (`visual:update` + `git status`)
-- [x] 2.4 Testy wizualne i dostępności przechodzą dwa razy z rzędu: `npm run visual:docker`
-- [x] 2.5 Kopie projektu zgodne: `design-check.mjs app`
-- [x] 2.6 Katalog bez przewijania w poziomie przy 320 px (`playwright-cli`)
+- [x] 2.1 Testy webu przechodzą (komponenty, CLEANED): `npm test` — 6a96857
+- [x] 2.2 Build przechodzi: `npm run build` — 6a96857
+- [x] 2.3 Wzorce nowych sekcji i stanów zapisane, innych plików nie ruszono (`visual:update` + `git status`) — 6a96857
+- [x] 2.4 Testy wizualne i dostępności przechodzą dwa razy z rzędu: `npm run visual:docker` — 6a96857
+- [x] 2.5 Kopie projektu zgodne: `design-check.mjs app` — 6a96857
+- [x] 2.6 Katalog bez przewijania w poziomie przy 320 px (`playwright-cli`) — 6a96857
 
 ### Phase 3: Rozbicie panelu na trzy adresy
 
 #### Automated
 
-- [ ] 3.1 Testy webu przechodzą (router, układ, trzy części, CLEANED): `npm test`
-- [ ] 3.2 Build przechodzi: `npm run build`
-- [ ] 3.3 Nie zostało nic ze starego widoku (`! grep AdminView`)
-- [ ] 3.4 Testy E2E przechodzą: `npm run e2e`
-- [ ] 3.5 Wzorce widoków panelu zapisane od nowa, inne bez zmian (`visual:update` + `git status`)
-- [ ] 3.6 Testy wizualne i dostępności przechodzą dwa razy z rzędu: `npm run visual:docker`
-- [ ] 3.7 Bez przewijania w poziomie przy 320 px na każdej części (`playwright-cli`)
+- [x] 3.1 Testy webu przechodzą (router, układ, trzy części, CLEANED): `npm test`
+- [x] 3.2 Build przechodzi: `npm run build`
+- [x] 3.3 Nie zostało nic ze starego widoku (`! grep AdminView`)
+- [x] 3.4 Testy E2E przechodzą: `npm run e2e`
+- [x] 3.5 Wzorce widoków panelu zapisane od nowa, inne bez zmian (`visual:update` + `git status`)
+- [x] 3.6 Testy wizualne i dostępności przechodzą dwa razy z rzędu: `npm run visual:docker`
+- [x] 3.7 Bez przewijania w poziomie przy 320 px na każdej części (`playwright-cli`)
 
 ### Phase 4: Części według prototypów
 
