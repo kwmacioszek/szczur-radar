@@ -732,4 +732,4 @@ Bez migracji bazy. Odpowiedź `GET /api/admin/posts/failed` dostaje dwa nowe pol
 
 #### Manual
 
-- [ ] 6.8 Właściciel akceptuje wygląd trzech części i strony przebiegu w galerii zrzutów obok prototypów
+- [x] 6.8 Właściciel akceptuje wygląd trzech części i strony przebiegu w galerii zrzutów obok prototypów
