@@ -73,6 +73,8 @@ function run(overrides: Partial<Run> = {}): Run {
 function failed(id: string, stage: FailedPost['stage'], overrides: Partial<FailedPost> = {}): FailedPost {
   return {
     id,
+    source: 'wykop',
+    channel: 'gielda',
     itemType: 'post',
     publishedAt: '2026-10-01T07:00:00Z',
     title: null,
