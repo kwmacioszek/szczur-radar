@@ -1,14 +1,22 @@
 // The flows of the shared view states (S-48, ui-design.md "Kontrakt dla testów E2E": state-loading, state-empty,
 // state-error, admin-loading, admin-empty, admin-error and the pager of posts) that feed.spec.ts does not cover: the
 // list stays while the next page loads, an error of a page or a filter is retried with the same request, one page has
-// no pager, and each section of /admin has its own skeleton, error with its own retry, and empty state.
+// no pager, and each section of the admin panel's parts has its own skeleton, error with its own retry, and empty
+// state.
 import { FIXED_NOW } from '../src/contract/mockModes.ts'
+import type { Page } from '@playwright/test'
 import { expect, test } from './fixtures.ts'
 
 // dev/mock-api.js: 120 feed posts in pages of 50; 20 of them match "orlen", all on one page (feed.spec.ts).
 const PAGE_SIZE = 50
 const ORLEN_POSTS = 20
-const SECTIONS = ['Nowy przebieg', 'Dni bez danych', 'Jakość ocen (7 dni)', 'Ostatnie przebiegi', 'Nieudane posty']
+// The admin panel's parts (S-50) with their sections.
+const PARTS = [
+  { path: '/admin', sections: ['Nowy przebieg', 'Dni bez danych', 'Ostatnie przebiegi'] },
+  { path: '/admin/quality', sections: ['Jakość ocen (7 dni)'] },
+  { path: '/admin/posts', sections: ['Nieudane posty'] },
+]
+const RUNS_SECTIONS = PARTS[0]!.sections
 
 const isPostsRequest = (url: string) => new URL(url).pathname === '/api/posts'
 
@@ -92,11 +100,11 @@ test.describe('panel admina', () => {
   test.describe('ładowanie', () => {
     test.use({ modes: { MODE: 'loading' } })
 
-    test('każda sekcja panelu pokazuje szkielet do czasu swoich danych', async ({ page }) => {
+    test('każda sekcja przebiegów pokazuje szkielet do czasu swoich danych', async ({ page }) => {
       await page.goto('/admin')
       const main = page.getByRole('main')
 
-      for (const name of SECTIONS) {
+      for (const name of RUNS_SECTIONS) {
         const section = main.getByRole('region', { name, exact: true })
         await expect(section).toHaveAttribute('aria-busy', 'true')
         await expect(section.getByText('Wczytywanie…', { exact: true })).toBeVisible()
@@ -107,8 +115,55 @@ test.describe('panel admina', () => {
     })
   })
 
-  test.describe('błąd jednej sekcji', () => {
+  // The bell reads /api/admin/notifications on its own, so it is not counted.
+  function adminRequests(page: Page): string[] {
+    const requests: string[] = []
+    page.on('request', (request) => {
+      const path = new URL(request.url()).pathname
+      if (path.startsWith('/api/admin/') && !path.startsWith('/api/admin/notifications')) {
+        requests.push(`${request.method()} ${path}`)
+      }
+    })
+    return requests
+  }
+
+  test.describe('błąd jednej części', () => {
     test.use({ modes: { QUALITY: 'error' } })
+
+    test('błąd jednej części nie psuje pozostałych, a jej ponowienie wczytuje tylko ją', async ({ page }) => {
+      await page.goto('/admin/quality')
+      const main = page.getByRole('main')
+      const region = (name: string) => main.getByRole('region', { name, exact: true })
+      const quality = region('Jakość ocen (7 dni)')
+
+      await expect(quality.getByRole('alert')).toContainText('Nie udało się wczytać jakości ocen')
+      await expect(main.getByRole('alert')).toHaveCount(1)
+      // The bar's count of failed posts is there before the retry, so its read is not counted.
+      const parts = main.getByRole('navigation', { name: 'Panel admina', exact: true })
+      await expect(parts.getByRole('link', { name: 'Nieudane posty 4', exact: true })).toBeVisible()
+
+      const requests = adminRequests(page)
+      const retried = page.waitForResponse((response) =>
+        new URL(response.url()).pathname === '/api/admin/assessment-quality' && response.status() === 500)
+      await quality.getByRole('button', { name: 'Spróbuj ponownie' }).click()
+      await retried
+
+      await expect(quality.getByRole('alert')).toContainText('Nie udało się wczytać jakości ocen')
+      expect(requests).toEqual(['GET /api/admin/assessment-quality'])
+
+      // The other parts work: "Przebiegi" has its data.
+      await parts.getByRole('link', { name: 'Przebiegi', exact: true }).click()
+
+      await expect(page).toHaveURL('/admin')
+      await expect(region('Nowy przebieg').getByRole('checkbox')).toHaveCount(2)
+      await expect(region('Dni bez danych').getByRole('button', { name: /^Wpisz do formularza: / }).first()).toBeVisible()
+      await expect(region('Ostatnie przebiegi').getByRole('link', { name: /^Szczegóły przebiegu z / })).toHaveCount(20)
+      await expect(main.getByRole('alert')).toHaveCount(0)
+    })
+  })
+
+  test.describe('błąd jednej sekcji', () => {
+    test.use({ modes: { MISSING: 'error' } })
 
     test('błąd jednej sekcji nie psuje pozostałych, a jej ponowienie wczytuje tylko ją', async ({ page }) => {
       // Timers stand still, Date stays at FIXED_NOW: the runs' poll every 10 s (run 1 is running) never falls into
@@ -118,46 +173,41 @@ test.describe('panel admina', () => {
       await page.goto('/admin')
       const main = page.getByRole('main')
       const region = (name: string) => main.getByRole('region', { name, exact: true })
-      const quality = region('Jakość ocen (7 dni)')
+      const missing = region('Dni bez danych')
 
-      await expect(quality.getByRole('alert')).toContainText('Nie udało się wczytać jakości ocen')
+      await expect(missing.getByRole('alert')).toContainText('Nie udało się wczytać dni bez danych')
       await expect(main.getByRole('alert')).toHaveCount(1)
       // The other sections have their data.
       await expect(region('Nowy przebieg').getByRole('checkbox')).toHaveCount(2)
-      await expect(region('Dni bez danych').getByRole('button', { name: /^Wpisz do formularza: / }).first()).toBeVisible()
       await expect(region('Ostatnie przebiegi').getByRole('link', { name: /^Szczegóły przebiegu z / })).toHaveCount(20)
-      await expect(region('Nieudane posty').getByRole('checkbox')).toHaveCount(4)
+      await expect(main.getByRole('navigation', { name: 'Panel admina', exact: true })
+        .getByRole('link', { name: 'Nieudane posty 4', exact: true })).toBeVisible()
 
-      // The bell reads /api/admin/notifications on its own, so it is not counted.
-      const requests: string[] = []
-      page.on('request', (request) => {
-        const path = new URL(request.url()).pathname
-        if (path.startsWith('/api/admin/') && !path.startsWith('/api/admin/notifications')) {
-          requests.push(`${request.method()} ${path}`)
-        }
-      })
+      const requests = adminRequests(page)
       const retried = page.waitForResponse((response) =>
-        new URL(response.url()).pathname === '/api/admin/assessment-quality' && response.status() === 500)
-      await quality.getByRole('button', { name: 'Spróbuj ponownie' }).click()
+        new URL(response.url()).pathname === '/api/admin/pipeline-runs/missing-days' && response.status() === 500)
+      await missing.getByRole('button', { name: 'Spróbuj ponownie' }).click()
       await retried
 
-      await expect(quality.getByRole('alert')).toContainText('Nie udało się wczytać jakości ocen')
+      await expect(missing.getByRole('alert')).toContainText('Nie udało się wczytać dni bez danych')
       await expect(region('Ostatnie przebiegi').getByRole('link', { name: /^Szczegóły przebiegu z / })).toHaveCount(20)
-      expect(requests).toEqual(['GET /api/admin/assessment-quality'])
+      expect(requests).toEqual(['GET /api/admin/pipeline-runs/missing-days'])
     })
   })
 
   test.describe('błąd całego panelu', () => {
     test.use({ modes: { MODE: 'error' } })
 
-    test('błąd całego panelu daje ponowienie w każdej sekcji', async ({ page }) => {
-      await page.goto('/admin')
-      const main = page.getByRole('main')
+    test('błąd całego panelu daje ponowienie w każdej sekcji każdej części', async ({ page }) => {
+      for (const part of PARTS) {
+        await page.goto(part.path)
+        const main = page.getByRole('main')
 
-      for (const name of SECTIONS) {
-        const section = main.getByRole('region', { name, exact: true })
-        await expect(section.getByRole('alert')).toHaveCount(1)
-        await expect(section.getByRole('alert').getByRole('button', { name: 'Spróbuj ponownie' })).toBeVisible()
+        for (const name of part.sections) {
+          const section = main.getByRole('region', { name, exact: true })
+          await expect(section.getByRole('alert')).toHaveCount(1)
+          await expect(section.getByRole('alert').getByRole('button', { name: 'Spróbuj ponownie' })).toBeVisible()
+        }
       }
     })
   })
@@ -166,13 +216,17 @@ test.describe('panel admina', () => {
     test.use({ modes: { MODE: 'empty' } })
 
     test('brak nieudanych postów to pusty stan bez listy', async ({ page }) => {
-      await page.goto('/admin')
+      await page.goto('/admin/posts')
       const main = page.getByRole('main')
       const failed = main.getByRole('region', { name: 'Nieudane posty', exact: true })
 
       await expect(failed.getByText('Brak nieudanych postów', { exact: true })).toBeVisible()
       await expect(failed.getByRole('checkbox')).toHaveCount(0)
-      await expect(main.getByRole('region', { name: 'Ostatnie przebiegi', exact: true })
+    })
+
+    test('brak przebiegów to pusty stan listy przebiegów', async ({ page }) => {
+      await page.goto('/admin')
+      await expect(page.getByRole('main').getByRole('region', { name: 'Ostatnie przebiegi', exact: true })
         .getByText('Jeszcze nie było przebiegu', { exact: true })).toBeVisible()
     })
   })

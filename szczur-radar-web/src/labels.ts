@@ -117,6 +117,13 @@ export function formatDate(iso: string): string {
   return date.format(new Date(iso))
 }
 
+const count = new Intl.NumberFormat('pl-PL')
+
+/** A count as Polish text: a space every three digits from five digits on, e.g. `3134`, `12 345`. */
+export function formatCount(value: number): string {
+  return count.format(value)
+}
+
 const pluralRules = new Intl.PluralRules('pl-PL')
 
 /** The Polish form for `count`: `one` (1), `few` (2–4, 22–24, …) or `many` (0, 5–21, …). */

@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest'
+import adminPartsNav from './components/AdminPartsNav.vue?raw'
 import appBar from './components/AppBar.vue?raw'
 import appBrand from './components/AppBrand.vue?raw'
 import appButton from './components/AppButton.vue?raw'
 import appIcon from './components/AppIcon.vue?raw'
 import appShell from './components/AppShell.vue?raw'
 import authLayout from './components/AuthLayout.vue?raw'
+import dataTable from './components/DataTable.vue?raw'
 import emptyState from './components/EmptyState.vue?raw'
 import errorState from './components/ErrorState.vue?raw'
 import feedFilter from './components/FeedFilter.vue?raw'
@@ -24,7 +26,10 @@ import themeToggle from './components/ThemeToggle.vue?raw'
 import pairs from './contrastPairs.json'
 import css from './style.css?raw'
 import activateView from './views/ActivateView.vue?raw'
-import adminView from './views/AdminView.vue?raw'
+import adminFailedPostsView from './views/admin/AdminFailedPostsView.vue?raw'
+import adminPanelView from './views/admin/AdminPanelView.vue?raw'
+import adminQualityView from './views/admin/AdminQualityView.vue?raw'
+import adminRunsView from './views/admin/AdminRunsView.vue?raw'
 import feedView from './views/FeedView.vue?raw'
 import kitchenSinkView from './views/KitchenSinkView.vue?raw'
 import loginView from './views/LoginView.vue?raw'
@@ -130,7 +135,10 @@ function contrast(a: string, b: string): number {
  * list.
  */
 const CLEANED: Record<string, string> = {
-  'src/views/AdminView.vue': adminView,
+  'src/views/admin/AdminPanelView.vue': adminPanelView,
+  'src/views/admin/AdminRunsView.vue': adminRunsView,
+  'src/views/admin/AdminQualityView.vue': adminQualityView,
+  'src/views/admin/AdminFailedPostsView.vue': adminFailedPostsView,
   'src/components/AppButton.vue': appButton,
   'src/components/AppIcon.vue': appIcon,
   'src/components/IconSprite.vue': iconSprite,
@@ -159,6 +167,8 @@ const CLEANED: Record<string, string> = {
   'src/components/EmptyState.vue': emptyState,
   'src/components/ErrorState.vue': errorState,
   'src/components/PagerNav.vue': pagerNav,
+  'src/components/AdminPartsNav.vue': adminPartsNav,
+  'src/components/DataTable.vue': dataTable,
 }
 
 /** The hardcoded-value scan of /10x-ui: colour literals, arbitrary values and palette classes. */

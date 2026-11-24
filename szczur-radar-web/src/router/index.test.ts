@@ -13,8 +13,9 @@ vi.mock('../api/auth', () => ({
   logout: vi.fn(),
 }))
 
-// The pages are empty and the shell only counts how often it is set up: how many times it mounted.
-const mounted = vi.hoisted(() => ({ shell: 0 }))
+// The pages are empty, and the shell and the admin panel's layout only count how often they are set up: how many
+// times each mounted.
+const mounted = vi.hoisted(() => ({ shell: 0, panel: 0 }))
 vi.mock('../components/AppShell.vue', async () => {
   const { defineComponent, h } = await import('vue')
   const { RouterView } = await import('vue-router')
@@ -27,10 +28,24 @@ vi.mock('../components/AppShell.vue', async () => {
     }),
   }
 })
+vi.mock('../views/admin/AdminPanelView.vue', async () => {
+  const { defineComponent, h } = await import('vue')
+  const { RouterView } = await import('vue-router')
+  return {
+    default: defineComponent({
+      setup() {
+        mounted.panel++
+        return () => h(RouterView)
+      },
+    }),
+  }
+})
 const emptyPage = vi.hoisted(() => ({ render: () => null }))
 vi.mock('../views/FeedView.vue', () => ({ default: emptyPage }))
 vi.mock('../views/PostDetailView.vue', () => ({ default: emptyPage }))
-vi.mock('../views/AdminView.vue', () => ({ default: emptyPage }))
+vi.mock('../views/admin/AdminRunsView.vue', () => ({ default: emptyPage }))
+vi.mock('../views/admin/AdminQualityView.vue', () => ({ default: emptyPage }))
+vi.mock('../views/admin/AdminFailedPostsView.vue', () => ({ default: emptyPage }))
 vi.mock('../views/RunDetailView.vue', () => ({ default: emptyPage }))
 
 const ADMIN: User = { id: '1', email: 'admin@example.com', role: 'admin' }
@@ -46,6 +61,7 @@ describe('route guard', () => {
     resetSession()
     vi.mocked(fetchMe).mockReset()
     mounted.shell = 0
+    mounted.panel = 0
     // The router scrolls to the top on a path change (router/scroll.ts); jsdom does not implement scrolling.
     vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
   })
@@ -102,6 +118,22 @@ describe('route guard', () => {
     expect(await navigate('/admin')).toBe('/')
   })
 
+  it.each([
+    ['/admin/quality', 'admin-quality'],
+    ['/admin/posts', 'admin-posts'],
+  ])('lets an admin into the part %s (%s)', async (path, name) => {
+    vi.mocked(fetchMe).mockResolvedValue(ADMIN)
+    const router = createAppRouter(createMemoryHistory())
+    await router.push(path)
+    expect(router.currentRoute.value.fullPath).toBe(path)
+    expect(router.currentRoute.value.name).toBe(name)
+  })
+
+  it.each(['/admin/quality', '/admin/posts'])('sends a plain user away from the part %s to the feed', async (path) => {
+    vi.mocked(fetchMe).mockResolvedValue({ ...ADMIN, role: 'user' })
+    expect(await navigate(path)).toBe('/')
+  })
+
   it("lets an admin into a run's page", async () => {
     vi.mocked(fetchMe).mockResolvedValue(ADMIN)
     const router = createAppRouter(createMemoryHistory())
@@ -154,6 +186,7 @@ describe('shell', () => {
     resetSession()
     vi.mocked(fetchMe).mockReset().mockResolvedValue(ADMIN)
     mounted.shell = 0
+    mounted.panel = 0
     vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
   })
 
@@ -162,23 +195,27 @@ describe('shell', () => {
   })
 
   it.each([
-    ['/', 'home', 'posts'],
-    ['/posts/x', 'post', 'posts'],
-    ['/admin', 'admin', 'admin'],
-    ['/admin/runs/x', 'admin-run', 'admin'],
-  ])('puts %s (%s) in the navigation section %s', async (path, name, section) => {
+    ['/', 'home', 'posts', 2],
+    ['/posts/x', 'post', 'posts', 2],
+    ['/admin', 'admin', 'admin', 3],
+    ['/admin/quality', 'admin-quality', 'admin', 3],
+    ['/admin/posts', 'admin-posts', 'admin', 3],
+    ['/admin/runs/x', 'admin-run', 'admin', 2],
+  ])('puts %s (%s) in the navigation section %s', async (path, name, section, depth) => {
     const router = createAppRouter(createMemoryHistory())
     await router.push(path)
     expect(router.currentRoute.value.name).toBe(name)
     expect(router.currentRoute.value.meta.section).toBe(section)
-    // Every page of the shell is a child of its one route.
-    expect(router.currentRoute.value.matched).toHaveLength(2)
+    // Every page of the shell is a child of its one route; a part of the admin panel also of the panel's layout.
+    expect(router.currentRoute.value.matched).toHaveLength(depth)
   })
 
   it.each([
     ['/', 'narrow'],
     ['/posts/x', 'narrow'],
     ['/admin', 'wide'],
+    ['/admin/quality', 'wide'],
+    ['/admin/posts', 'wide'],
     ['/admin/runs/x', 'narrow'],
   ])('gives %s the %s column', async (path, column) => {
     const router = createAppRouter(createMemoryHistory())
@@ -190,7 +227,12 @@ describe('shell', () => {
     const shell = routes.find((route) => route.children)
     expect(shell?.children?.length).toBeGreaterThan(0)
     for (const child of shell?.children ?? []) {
-      expect(child.meta?.column, String(child.name)).toBeDefined()
+      // A layout's children (the admin panel's parts) inherit its column, or have their own.
+      const pages = child.children ?? [child]
+      expect(pages.length, String(child.path)).toBeGreaterThan(0)
+      for (const page of pages) {
+        expect(page.meta?.column ?? child.meta?.column, String(page.name)).toBeDefined()
+      }
     }
   })
 
@@ -214,6 +256,22 @@ describe('shell', () => {
     await router.push('/')
 
     expect(mounted.shell).toBe(1)
+    app.unmount()
+  })
+
+  it('mounts neither the shell nor the admin panel again when the part of the panel changes', async () => {
+    const router = createAppRouter(createMemoryHistory())
+    await router.push('/admin')
+    const app = mount({ render: () => h(RouterView) }, { global: { plugins: [router] } })
+    expect(mounted.shell).toBe(1)
+    expect(mounted.panel).toBe(1)
+
+    await router.push('/admin/quality')
+    await router.push('/admin/posts')
+    await router.push('/admin')
+
+    expect(mounted.shell).toBe(1)
+    expect(mounted.panel).toBe(1)
     app.unmount()
   })
 

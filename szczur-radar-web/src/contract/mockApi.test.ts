@@ -708,6 +708,24 @@ describe('dev/mock-api.js behaves like the API', () => {
     expect(past.items).toEqual([])
   })
 
+  it('FAILED many gives 57 failed posts: 50 on page 0 and 7 on page 1, and MODE empty still gives none', async () => {
+    const many = await installMock({ FAILED: 'many' })
+    const first = (await ok(many, 'GET', '/api/admin/posts/failed')) as { items: { id: string }[]; total: number }
+    expect(first.total).toBe(57)
+    expect(first.items).toHaveLength(50)
+    const second = (await ok(many, 'GET', '/api/admin/posts/failed?page=1')) as { items: { id: string }[]; total: number }
+    expect(second.total).toBe(57)
+    expect(second.items).toHaveLength(7)
+    const ids = [...first.items, ...second.items].map((item) => item.id)
+    expect(new Set(ids).size).toBe(57)
+    expect(ids.slice(0, 5)).toEqual([1, 2, 3, 4, 5].map((n) => id(3, n)))
+    const empty = (await ok(await installMock({ MODE: 'empty', FAILED: 'many' }), 'GET', '/api/admin/posts/failed')) as {
+      items: unknown[]
+      total: number
+    }
+    expect(empty).toMatchObject({ items: [], total: 0 })
+  })
+
   it('a started range is the newest run, behind a retry run when posts are left', async () => {
     const api = await installMock()
     const created = (await answered(api, 202, 'POST', PIPELINE_RUNS, { from: dMinus(3), to: dMinus(1) })) as {

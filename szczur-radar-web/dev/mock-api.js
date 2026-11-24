@@ -3,8 +3,8 @@
  * without a running API (playwright-cli run-code), kept for /10x-ui changes and the browser tests. The file is one
  * expression, the function `async (page, modes = {}) => control` (no export, no trailing semicolon, no code outside
  * it): `playwright-cli run-code`, the guard (src/contract/mockApi.ts) and the E2E fixture all evaluate this text.
- * The modes are the keys of `modes`: MODE, NOTIFICATIONS, AUTH, LOGIN, START, ACTIVATION, FRESHNESS, MISSING and
- * QUALITY, each with the values below; MODE_VALUES lists them, the first value of each key its default (what
+ * The modes are the keys of `modes`: MODE, NOTIFICATIONS, AUTH, LOGIN, START, ACTIVATION, FRESHNESS, MISSING, QUALITY
+ * and FAILED, each with the values below; MODE_VALUES lists them, the first value of each key its default (what
  * `playwright-cli run-code`, which passes `page` alone, gets). An unknown key or a value outside its list throws
  * before any route is registered; src/contract/mockModes.ts (MOCK_MODE_VALUES) is the same table for TypeScript, and
  * the guard compares the two both ways.
@@ -51,6 +51,11 @@
  *       'nolang' as 'data', but the theses could not be read: every source's language is null,
  *       'none'   the window and no source (no attempt in it),
  *       'error'  500.
+ * FAILED (the failed posts, /api/admin/posts/failed; MODE 'empty' gives no post whatever FAILED says, 'loading' and 'error'
+ * apply first):
+ *       'data' the 4 failed posts below, the default,
+ *       'many' 57 of them, two pages of 50: the 4 and 53 more of stage failed (failed posts 5–57, older than the 4,
+ *              Wykop's and Reddit's in turn).
  * Runs (/api/admin/pipeline-runs?page&size, 32 in all: "Pokaż starsze" has a second page of 20; page 0…21474836,
  * size 1…100, else 400 invalid_request) answer like
  * pipeline/api/PipelineRunController.java, the newest first; a run that needs attention has its reason codes in
@@ -93,7 +98,8 @@
  *       'none'   no notifications (unread 0),
  *       'error'  500.
  * Failed posts (/api/admin/posts/failed?page&size, like posts/api/FailedPostController.java; failed posts 1 and 2
- * failed, 3 dead, 4 on hold, each attempt with its violations). POST /api/admin/posts/restore {postIds} answers like posts/api/DeadPostController.java: each named post that is
+ * failed, 3 dead, 4 on hold, each attempt with its violations; posts 1 and 3 are Wykop's, channel gielda, posts 2 and 4
+ * Reddit's, channel stocks). POST /api/admin/posts/restore {postIds} answers like posts/api/DeadPostController.java: each named post that is
  * still dead becomes stored with no attempts and leaves the list, {restored: N}; 1–100 post UUIDs or 400 invalid_request.
  * A restored post stays restored until the mock is installed again; MODE 'loading' and 'error' apply first.
  * /api/posts answers like posts/api/PostController.java: page, size, total; a page past the end (e.g. /?page=9)
@@ -154,6 +160,7 @@ async (page, modes = {}) => {
     FRESHNESS: ['date', 'apart', 'wykop', 'none', 'error'],
     MISSING: ['gaps', 'none', 'error'],
     QUALITY: ['data', 'few', 'nolang', 'none', 'error'],
+    FAILED: ['data', 'many'],
   }
   // An unknown key or value throws before any route is registered, so a typo never runs the default in silence.
   const INSTANT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,3})?(Z|[+-]\d{2}:\d{2})$/
@@ -179,6 +186,7 @@ async (page, modes = {}) => {
   const FRESHNESS = mode('FRESHNESS')
   const MISSING = mode('MISSING')
   const QUALITY = mode('QUALITY')
+  const FAILED = mode('FAILED')
   // The mock's one clock: stopped at modes.now when given, else the machine's.
   const fixedNow = modes?.now === undefined ? null : Date.parse(modes.now)
   const clock = () => fixedNow ?? Date.now()
@@ -347,12 +355,28 @@ async (page, modes = {}) => {
   // in a row, no stored attempt; its long error is cut in the row, whole in its title).
   const violation = (failureClass, rule, path, message) => ({ failureClass, rule, path, message })
   const noTechnical = { technicalFailures: 0, lastTechnicalError: null, onHold: false }
-  const failed = [
-    { id: uuid(3, 1), itemType: 'post', publishedAt: '2026-10-08T12:00:00Z', title: null, body: 'CDR po wynikach -8% na otwarciu, ktoś jeszcze trzyma? Ja dobieram, bo wycena po spadku wygląda rozsądnie, a guidance na Q4 nie zmieniło się mimo opóźnienia premiery.', webUrl: 'https://wykop.pl/wpis/1', stage: 'failed', assessmentAttempts: 1, lastAttempt: { failureClass: 'schema_violation', violations: [violation('schema_violation', 'schema:required', '$.claims[0]', "required property 'evidence' not found")], assessedAt: '2026-10-09T05:02:00Z', provider: 'openrouter', model: 'luna' }, ...noTechnical },
-    { id: uuid(3, 2), itemType: 'link', publishedAt: '2026-10-08T09:00:00Z', title: 'KNF ostrzega przed nowym schematem piramidy finansowej', body: null, webUrl: 'https://wykop.pl/link/2', stage: 'failed', assessmentAttempts: 2, lastAttempt: { failureClass: 'provider_error', violations: [violation('provider_error', 'call', '$', 'openrouter: HTTP 503 Service Unavailable, failed after 3 attempts')], assessedAt: '2026-10-09T05:02:00Z', provider: 'openrouter', model: 'luna' }, technicalFailures: 1, lastTechnicalError: 'LlmUnavailableException: openrouter: HTTP 503 Service Unavailable, failed after 3 attempts', onHold: false },
-    { id: uuid(3, 3), itemType: 'post', publishedAt: '2026-10-07T18:00:00Z', title: null, body: 'Kupiłem PKO, zobaczymy', webUrl: 'https://wykop.pl/wpis/3', stage: 'dead', assessmentAttempts: 3, lastAttempt: { failureClass: 'fabricated_evidence', violations: [violation('fabricated_evidence', 'D6', '$.claims[0].evidence.quote', 'quote is not a fragment of item.body')], assessedAt: '2026-10-09T05:02:00Z', provider: 'openrouter', model: 'luna' }, ...noTechnical },
-    { id: uuid(3, 4), itemType: 'comment', publishedAt: '2026-10-07T09:00:00Z', title: null, body: 'Ten wykres XTB to klasyczna głowa z ramionami, ja bym uważał.', webUrl: 'https://wykop.pl/wpis/4#comment-4', stage: 'stored', assessmentAttempts: 0, lastAttempt: null, technicalFailures: 3, lastTechnicalError: 'IllegalStateException: the parent post of comment 81234567 is missing from the source payload, so the comment cannot be mapped to AssessmentInputV1 without its context', onHold: true },
+  const FAILED_FIRST = [
+    { id: uuid(3, 1), source: 'wykop', channel: 'gielda', itemType: 'post', publishedAt: '2026-10-08T12:00:00Z', title: null, body: 'CDR po wynikach -8% na otwarciu, ktoś jeszcze trzyma? Ja dobieram, bo wycena po spadku wygląda rozsądnie, a guidance na Q4 nie zmieniło się mimo opóźnienia premiery.', webUrl: 'https://wykop.pl/wpis/1', stage: 'failed', assessmentAttempts: 1, lastAttempt: { failureClass: 'schema_violation', violations: [violation('schema_violation', 'schema:required', '$.claims[0]', "required property 'evidence' not found")], assessedAt: '2026-10-09T05:02:00Z', provider: 'openrouter', model: 'luna' }, ...noTechnical },
+    { id: uuid(3, 2), source: 'reddit', channel: 'stocks', itemType: 'link', publishedAt: '2026-10-08T09:00:00Z', title: 'KNF ostrzega przed nowym schematem piramidy finansowej', body: null, webUrl: 'https://www.reddit.com/r/stocks/comments/2/', stage: 'failed', assessmentAttempts: 2, lastAttempt: { failureClass: 'provider_error', violations: [violation('provider_error', 'call', '$', 'openrouter: HTTP 503 Service Unavailable, failed after 3 attempts')], assessedAt: '2026-10-09T05:02:00Z', provider: 'openrouter', model: 'luna' }, technicalFailures: 1, lastTechnicalError: 'LlmUnavailableException: openrouter: HTTP 503 Service Unavailable, failed after 3 attempts', onHold: false },
+    { id: uuid(3, 3), source: 'wykop', channel: 'gielda', itemType: 'post', publishedAt: '2026-10-07T18:00:00Z', title: null, body: 'Kupiłem PKO, zobaczymy', webUrl: 'https://wykop.pl/wpis/3', stage: 'dead', assessmentAttempts: 3, lastAttempt: { failureClass: 'fabricated_evidence', violations: [violation('fabricated_evidence', 'D6', '$.claims[0].evidence.quote', 'quote is not a fragment of item.body')], assessedAt: '2026-10-09T05:02:00Z', provider: 'openrouter', model: 'luna' }, ...noTechnical },
+    { id: uuid(3, 4), source: 'reddit', channel: 'stocks', itemType: 'comment', publishedAt: '2026-10-07T09:00:00Z', title: null, body: 'Ten wykres XTB to klasyczna głowa z ramionami, ja bym uważał.', webUrl: 'https://www.reddit.com/r/stocks/comments/4/_/c4/', stage: 'stored', assessmentAttempts: 0, lastAttempt: null, technicalFailures: 3, lastTechnicalError: 'IllegalStateException: the parent post of comment 81234567 is missing from the source payload, so the comment cannot be mapped to AssessmentInputV1 without its context', onHold: true },
   ]
+  // FAILED 'many': 53 more failed posts (ids 5–57), each 17 minutes older than the one before, Wykop's and Reddit's in
+  // turn (their addresses as the feed's, `feedOrigin`), every one with a schema violation on its single attempt.
+  const FAILED_MORE = Array.from({ length: 53 }, (_, i) => {
+    const n = i + 5
+    const reddit = n % 2 === 0
+    return {
+      id: uuid(3, n), source: reddit ? 'reddit' : 'wykop', channel: reddit ? 'stocks' : 'gielda', itemType: 'post',
+      publishedAt: new Date(Date.UTC(2026, 9, 7, 9, 0) - i * 17 * MIN - 17 * MIN).toISOString(), title: null,
+      body: `Wpis ${n}: spółka po wynikach, ocena nie przeszła walidacji.`,
+      webUrl: reddit ? `https://www.reddit.com/r/stocks/comments/${n}/` : `https://wykop.pl/wpis/${n}`,
+      stage: 'failed', assessmentAttempts: 1,
+      lastAttempt: { failureClass: 'schema_violation', violations: [violation('schema_violation', 'schema:required', '$.claims[0]', "required property 'evidence' not found")], assessedAt: '2026-10-09T05:02:00Z', provider: 'openrouter', model: 'luna' },
+      ...noTechnical,
+    }
+  })
+  const failed = FAILED === 'many' ? [...FAILED_FIRST, ...FAILED_MORE] : FAILED_FIRST
   // The feed: post n is variant n % 6 — a long text (cut at 200 characters), a link without a body, a short post,
   // a comment with two targets, a bare URL without spaces (no content: the prefilter's output) and a link with five
   // (a card shows a link's title, so its body is seen only on the post's page). The targets cover four kinds:

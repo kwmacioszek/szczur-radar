@@ -5,6 +5,9 @@ import { expect, test } from './fixtures.ts'
 
 const POST_0 = '/posts/00000000-0000-4000-8000-000400000000'
 const RUN_1 = '/admin/runs/00000000-0000-4000-8000-000100000001'
+// Run 1 is created 12 minutes before the stopped clock (FIXED_NOW, 10:00 UTC): 11:48 in Warsaw, the time its page
+// is named by.
+const RUN_1_TITLE = 'Przebieg z 20.10.2026, 11:48'
 
 test('pozycja nawigacji otwiera swój ekran i przenosi zaznaczenie', async ({ page }) => {
   await page.goto('/')
@@ -31,7 +34,7 @@ test('pozycja nawigacji otwiera swój ekran i przenosi zaznaczenie', async ({ pa
     .click()
 
   await expect(page).toHaveURL(RUN_1)
-  await expect(main.getByRole('heading', { level: 1, name: 'Przebieg: zakres dat' })).toBeVisible()
+  await expect(main.getByRole('heading', { level: 1, name: RUN_1_TITLE })).toBeVisible()
   await expect(admin).toHaveAttribute('aria-current', 'page')
   await expect(posts).not.toHaveAttribute('aria-current', 'page')
 
@@ -56,7 +59,9 @@ test.describe('każdy ekran po zalogowaniu ma jeden pasek, jedną treść i jede
     { name: 'lista postów', path: '/', title: 'Posty', section: 'Posty' },
     { name: 'post', path: POST_0, title: 'Wpis użytkownika uzytkownik0', section: 'Posty' },
     { name: 'panel admina', path: '/admin', title: 'Panel admina', section: 'Panel admina' },
-    { name: 'przebieg', path: RUN_1, title: 'Przebieg: zakres dat', section: 'Panel admina' },
+    { name: 'jakość ocen', path: '/admin/quality', title: 'Panel admina', section: 'Panel admina' },
+    { name: 'nieudane posty', path: '/admin/posts', title: 'Panel admina', section: 'Panel admina' },
+    { name: 'przebieg', path: RUN_1, title: RUN_1_TITLE, section: 'Panel admina' },
   ]
 
   for (const screen of SCREENS) {

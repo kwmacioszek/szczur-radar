@@ -26,6 +26,7 @@ import pl.szczurradar.api.posts.AssessmentRepository;
 import pl.szczurradar.api.posts.Post;
 import pl.szczurradar.api.posts.PostRepository;
 import pl.szczurradar.api.posts.PostStage;
+import pl.szczurradar.api.sources.Source;
 
 /**
  * The admin's list of posts whose assessment failed (1–2 attempts, retryable), that are dead (3) or that are
@@ -78,6 +79,9 @@ class FailedPostController {
 	 * (S-33), the last attempt from before the restore.</li>
 	 * </ul>
 	 *
+	 * @param source the {@link Source} it came from: {@code wykop} or {@code reddit}
+	 * @param channel the source's channel in the source's own spelling, without a prefix: {@code gielda},
+	 *     {@code ValueInvesting}
 	 * @param stage {@code failed} (retryable), {@code dead} or {@code stored} (on hold)
 	 * @param lastAttempt the latest assessment attempt (by time, then id)
 	 * @param technicalFailures errors of our code or single provider outages in a row since the last stored
@@ -86,15 +90,16 @@ class FailedPostController {
 	 * @param onHold whether the retry run no longer takes the post ({@code technicalFailures} reached
 	 * {@link Post#MAX_TECHNICAL_FAILURES} and the post is not dead)
 	 */
-	record FailedPost(UUID id, ItemType itemType, Instant publishedAt, @Nullable String title, @Nullable String body,
-			@Nullable String webUrl, PostStage stage, int assessmentAttempts, @Nullable LastAttempt lastAttempt,
-			int technicalFailures, @Nullable String lastTechnicalError, boolean onHold) {
+	record FailedPost(UUID id, Source source, String channel, ItemType itemType, Instant publishedAt,
+			@Nullable String title, @Nullable String body, @Nullable String webUrl, PostStage stage,
+			int assessmentAttempts, @Nullable LastAttempt lastAttempt, int technicalFailures,
+			@Nullable String lastTechnicalError, boolean onHold) {
 
 		static FailedPost of(Post post, @Nullable Assessment latest) {
-			return new FailedPost(post.getId(), post.getItemType(), post.getPublishedAt(), post.getTitle(), post.getBody(),
-					post.getWebUrl(), post.getStage(), post.getAssessmentAttempts(),
-					latest == null ? null : LastAttempt.of(latest), post.getTechnicalFailures(),
-					post.getLastTechnicalError(),
+			return new FailedPost(post.getId(), post.getSource(), post.getChannel(), post.getItemType(),
+					post.getPublishedAt(), post.getTitle(), post.getBody(), post.getWebUrl(), post.getStage(),
+					post.getAssessmentAttempts(), latest == null ? null : LastAttempt.of(latest),
+					post.getTechnicalFailures(), post.getLastTechnicalError(),
 					post.getTechnicalFailures() >= Post.MAX_TECHNICAL_FAILURES && post.getStage() != PostStage.DEAD);
 		}
 

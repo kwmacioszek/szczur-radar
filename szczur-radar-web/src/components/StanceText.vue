@@ -50,6 +50,8 @@ const MARKS: Record<Direction, IconName> = {
   justify-self: start;
   gap: var(--space-2);
   width: fit-content;
+  /* As a flex item it may shrink below its text, so max-width holds and the target's name is cut. */
+  min-width: 0;
   max-width: 100%;
   padding: var(--space-0) var(--space-3);
   border-radius: var(--radius-full);

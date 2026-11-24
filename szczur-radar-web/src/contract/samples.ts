@@ -518,13 +518,15 @@ export const samplePostsPage: Page<PostItem> = {
 
 /**
  * A page of the failed list (GET /api/admin/posts/failed?page=0&size=10), newest first: a failed post with one
- * violation and no technical error, a failed one whose attempt names no provider or model, a dead one, and a stored
- * one on hold, never assessed, with its technical error.
+ * violation and no technical error, a failed one whose attempt names no provider or model, a failed Reddit one, a dead one, and a
+ * stored one on hold, never assessed, with its technical error.
  */
 export const sampleFailedPostsPage: Page<FailedPost> = {
   items: [
     {
       id: '<uuid>',
+      source: 'wykop',
+      channel: 'gielda',
       itemType: 'post',
       publishedAt: '<instant>',
       title: 'XTB i CDR po wynikach',
@@ -552,6 +554,8 @@ export const sampleFailedPostsPage: Page<FailedPost> = {
     },
     {
       id: '<uuid>',
+      source: 'wykop',
+      channel: 'gielda',
       itemType: 'link',
       publishedAt: '<instant>',
       title: 'CD Projekt: wyniki za kwartał',
@@ -579,6 +583,37 @@ export const sampleFailedPostsPage: Page<FailedPost> = {
     },
     {
       id: '<uuid>',
+      source: 'reddit',
+      channel: 'stocks',
+      itemType: 'post',
+      publishedAt: '<instant>',
+      title: 'NVDA earnings thread',
+      body: 'Guidance looks strong, adding more.',
+      webUrl: 'https://www.reddit.com/r/stocks/comments/abc123/',
+      stage: 'failed',
+      assessmentAttempts: 1,
+      lastAttempt: {
+        failureClass: 'schema_violation',
+        violations: [
+          {
+            failureClass: 'schema_violation',
+            rule: 'schema:required',
+            path: '$.claims[0]',
+            message: 'required property \'evidence\' not found',
+          },
+        ],
+        assessedAt: '<instant>',
+        provider: 'gemini',
+        model: 'gemini-3.1-flash-lite',
+      },
+      technicalFailures: 0,
+      lastTechnicalError: null,
+      onHold: false,
+    },
+    {
+      id: '<uuid>',
+      source: 'wykop',
+      channel: 'gielda',
       itemType: 'link',
       publishedAt: '<instant>',
       title: 'PKO BP: dywidenda rekordowa',
@@ -606,6 +641,8 @@ export const sampleFailedPostsPage: Page<FailedPost> = {
     },
     {
       id: '<uuid>',
+      source: 'wykop',
+      channel: 'gielda',
       itemType: 'comment',
       publishedAt: '<instant>',
       title: null,
@@ -621,7 +658,7 @@ export const sampleFailedPostsPage: Page<FailedPost> = {
   ],
   page: 0,
   size: 10,
-  total: 4,
+  total: 5,
 }
 
 /**

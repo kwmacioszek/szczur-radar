@@ -13,6 +13,7 @@ export const MOCK_MODE_VALUES = {
   FRESHNESS: ['date', 'apart', 'wykop', 'none', 'error'],
   MISSING: ['gaps', 'none', 'error'],
   QUALITY: ['data', 'few', 'nolang', 'none', 'error'],
+  FAILED: ['data', 'many'],
 } as const
 
 /** The second parameter of the mock: a value per mode (absent = its default) and `now`, an ISO instant that stops its clock. */

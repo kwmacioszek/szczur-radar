@@ -1,18 +1,21 @@
 <script setup lang="ts">
-// One pipeline run (admin), also one beyond the list in /admin: status with its cause, why it needs attention,
-// who started it, its range, times, counters, each source's result (a range run), steps and error; while it is
-// queued or running, its progress, read again every 10 s until it ends.
+// One pipeline run (admin), also one beyond the list in /admin, laid out as ui-design/prototypes/screens/run.html: the
+// run named by its creation time (as the link of the runs table names it) with its status and cause, why it needs
+// attention, its kind, range, sources, who started it and its times, the counters as figures, each source's result as
+// a card (a range run), the steps as a numbered list and the error; while it is queued or running, its progress, read
+// again every 10 s until it ends.
 import { computed, nextTick, ref, useTemplateRef, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { ApiError } from '../api/client'
-import { type Run, fetchRun } from '../api/pipeline'
+import { type Run, type RunStep, fetchRun } from '../api/pipeline'
+import AppIcon from '../components/AppIcon.vue'
 import EmptyState from '../components/EmptyState.vue'
 import ErrorState from '../components/ErrorState.vue'
 import LoadingState from '../components/LoadingState.vue'
 import PageHeader from '../components/PageHeader.vue'
 import StatusBadge from '../components/StatusBadge.vue'
 import StatusMessage from '../components/StatusMessage.vue'
-import { formatDateTime, formatDuration, formatRelative, label } from '../labels'
+import { formatCount, formatDateTime, formatDuration, formatRelative, label, plural } from '../labels'
 import { useEvery } from '../polling'
 import {
   assessProgress,
@@ -56,7 +59,8 @@ const runId = computed(() =>
   route.name === 'admin-run' && typeof route.params.id === 'string' ? route.params.id : null,
 )
 
-const title = computed(() => (run.value ? `Przebieg: ${label('runKind', run.value.kind)}` : 'Przebieg'))
+/** The same time as the label of the run's link in the runs table: `Szczegóły przebiegu z <createdAt>`. */
+const title = computed(() => (run.value ? `Przebieg z ${formatDateTime(run.value.createdAt)}` : 'Przebieg'))
 const range = computed(() => (run.value ? runRange(run.value) : null))
 const progress = computed(() => (run.value ? assessProgress(run.value) : null))
 /** The step running now; `w kolejce` before the first one. */
@@ -67,20 +71,20 @@ const stepNow = computed(() => {
   return run.value.status === 'queued' ? 'w kolejce' : '—'
 })
 
-/** A figure with its name, as shown in a list of counters. */
-type Figure = { name: string; value: number }
+/** A figure with its name, as shown in a list of counters; `alarm`: more than none is set in the destructive tone. */
+type Figure = { name: string; value: number; alarm?: boolean }
 
 function figures(shown: Run): Figure[] {
   return [
-    { name: 'pobrane', value: shown.fetched },
-    { name: 'nowe', value: shown.newPosts },
-    { name: 'ocenione', value: shown.assessedOk },
-    { name: 'nieudane', value: shown.assessedFailed },
-    { name: 'martwe', value: shown.dead },
-    { name: 'pominięte', value: shown.skipped },
-    { name: 'błędy techniczne', value: shown.processingErrors },
-    { name: 'ponowienia LLM', value: shown.llmRetries },
-    { name: 'powroty z flex', value: shown.flexFallbacks },
+    { name: 'Pobrane', value: shown.fetched },
+    { name: 'Nowe', value: shown.newPosts },
+    { name: 'Ocenione', value: shown.assessedOk },
+    { name: 'Nieudane', value: shown.assessedFailed, alarm: true },
+    { name: 'Martwe', value: shown.dead, alarm: true },
+    { name: 'Pominięte', value: shown.skipped },
+    { name: 'Błędy techniczne', value: shown.processingErrors },
+    { name: 'Ponowienia LLM', value: shown.llmRetries },
+    { name: 'Powroty z flex', value: shown.flexFallbacks },
   ]
 }
 
@@ -98,6 +102,20 @@ function progressFigures(shown: Run): Figure[] {
 
 function duration(ms: number | null): string {
   return ms === null ? '—' : formatDuration(ms)
+}
+
+/**
+ * A step's elements out and its time, e.g. `248 elementów · 20 s`; only the time while it has given nothing out yet
+ * (running, or ended without a count), a dash with neither.
+ */
+function stepDetail(shown: RunStep): string {
+  const parts: string[] = []
+  if (shown.itemsOut !== null) {
+    parts.push(`${formatCount(shown.itemsOut)} ${plural(shown.itemsOut, 'element', 'elementy', 'elementów')}`)
+  }
+  const time = stepDuration(shown, now.value)
+  if (time !== null) parts.push(formatDuration(time))
+  return parts.length > 0 ? parts.join(' · ') : '—'
 }
 
 /**
@@ -169,7 +187,7 @@ watch(
 
 <template>
   <div class="run-detail">
-    <RouterLink class="back" :to="{ name: 'admin' }"><span aria-hidden="true">←</span> Panel admina</RouterLink>
+    <RouterLink class="back" :to="{ name: 'admin' }"><AppIcon class="back-icon" name="i-chevron-left" />Panel admina</RouterLink>
     <section aria-labelledby="run-title" :aria-busy="state === 'loading' || retrying ? 'true' : undefined">
       <PageHeader ref="header" class="head" :title="title" heading-id="run-title">
         <template #status>
@@ -209,135 +227,162 @@ watch(
         </StatusMessage>
 
         <dl class="meta">
-          <dt>Uruchomił</dt>
-          <dd class="requester">{{ requester(run) }}</dd>
-          <template v-if="range">
+          <div>
+            <dt>Rodzaj</dt>
+            <dd class="kind">{{ label('runKind', run.kind) }}</dd>
+          </div>
+          <div v-if="range">
             <dt>Zakres</dt>
             <dd class="range">{{ range }}</dd>
-          </template>
-          <dt>Źródła</dt>
-          <dd>{{ run.sources.length ? run.sources.map((source) => label('source', source)).join(', ') : '—' }}</dd>
-          <dt>Utworzony</dt>
-          <dd><time :datetime="run.createdAt">{{ formatDateTime(run.createdAt) }}</time></dd>
-          <dt>Start</dt>
-          <dd>
-            <time v-if="run.startedAt" :datetime="run.startedAt">{{ formatDateTime(run.startedAt) }}</time>
-            <template v-else>—</template>
-          </dd>
-          <dt>Koniec</dt>
-          <dd>
-            <time v-if="run.finishedAt" :datetime="run.finishedAt">{{ formatDateTime(run.finishedAt) }}</time>
-            <template v-else>—</template>
-          </dd>
-          <dt>Czas trwania</dt>
-          <dd class="duration">{{ duration(runDuration(run, now)) }}</dd>
+          </div>
+          <div>
+            <dt>Źródła</dt>
+            <dd class="sources">
+              {{ run.sources.length ? run.sources.map((source) => label('source', source)).join(', ') : '—' }}
+            </dd>
+          </div>
+          <div>
+            <dt>Uruchomił</dt>
+            <dd class="requester">{{ requester(run) }}</dd>
+          </div>
+          <div>
+            <dt>Start</dt>
+            <dd class="started">
+              <time v-if="run.startedAt" :datetime="run.startedAt">{{ formatDateTime(run.startedAt) }}</time>
+              <template v-else>—</template>
+            </dd>
+          </div>
+          <div>
+            <dt>Koniec</dt>
+            <dd class="finished">
+              <time v-if="run.finishedAt" :datetime="run.finishedAt">{{ formatDateTime(run.finishedAt) }}</time>
+              <template v-else>—</template>
+            </dd>
+          </div>
+          <div>
+            <dt>Czas trwania</dt>
+            <dd class="duration">{{ duration(runDuration(run, now)) }}</dd>
+          </div>
         </dl>
-
-        <section v-if="isActive(run)" class="part progress" aria-labelledby="progress-title">
-          <h2 id="progress-title">Postęp</h2>
-          <p class="current-step">Krok: <strong>{{ stepNow }}</strong></p>
-          <template v-if="progress?.total">
-            <label class="progress-label" for="assess-progress">Ocena: {{ progress.done }} z {{ progress.total }}</label>
-            <progress id="assess-progress" :value="progress.done" :max="progress.total" />
-          </template>
-          <ul class="figures">
-            <li v-for="figure in progressFigures(run)" :key="figure.name">
-              {{ figure.name }} <strong>{{ figure.value }}</strong>
-            </li>
-          </ul>
-          <p v-if="run.lastActivityAt" class="activity">
-            Ostatnia aktywność:
-            <time :datetime="run.lastActivityAt">{{ formatRelative(run.lastActivityAt, now) }}</time>
-          </p>
-        </section>
-
-        <section class="part" aria-labelledby="counters-title">
-          <h2 id="counters-title">Liczniki</h2>
-          <ul class="figures counters">
-            <li v-for="figure in figures(run)" :key="figure.name">
-              {{ figure.name }} <strong>{{ figure.value }}</strong>
-            </li>
-          </ul>
-        </section>
-
-        <section
-          v-if="run.kind === 'range'"
-          class="part source-results"
-          aria-labelledby="source-results-title"
-        >
-          <h2 id="source-results-title">Wynik per źródło</h2>
-          <p v-if="run.sourceResults.length === 0" class="none">Jeszcze żadne źródło nie zakończyło pobrania.</p>
-          <ul v-else class="source-list">
-            <li
-              v-for="result in run.sourceResults"
-              :key="result.source"
-              class="source-result"
-              :data-status="result.status"
-            >
-              <p class="source-head">
-                <strong>{{ label('source', result.source) }}</strong>
-                <StatusBadge :tone="sourceTone(result.status)">
-                  {{ label('sourceStatus', result.status) }}
-                </StatusBadge>
-              </p>
-              <p class="source-meta">
-                pobrane {{ result.fetched }} · pominięte {{ result.skipped }} · posty {{ result.fetched - result.skipped }}
-              </p>
-              <p v-if="result.error" class="source-error">{{ result.error }}</p>
-            </li>
-          </ul>
-        </section>
-
-        <section class="part" aria-labelledby="steps-title">
-          <h2 id="steps-title">Kroki</h2>
-          <p v-if="run.steps.length === 0" class="none">Żaden krok się jeszcze nie zaczął.</p>
-          <ol v-else class="steps">
-            <li v-for="step in run.steps" :key="step.step + step.startedAt" class="step" :data-status="step.status">
-              <p class="step-head">
-                <strong>{{ label('step', step.step) }}</strong>
-                <StatusBadge :tone="stepTone(step.status)">
-                  {{ label('stepStatus', step.status) }}
-                </StatusBadge>
-              </p>
-              <p class="step-meta">
-                start <time :datetime="step.startedAt">{{ formatDateTime(step.startedAt) }}</time>
-                · czas {{ duration(stepDuration(step, now)) }}
-                · wejście {{ step.itemsIn ?? '—' }}
-                · wyjście {{ step.itemsOut ?? '—' }}
-              </p>
-              <p v-if="step.error" class="step-error">{{ step.error }}</p>
-            </li>
-          </ol>
-        </section>
-
-        <section v-if="run.error" class="part" aria-labelledby="error-title">
-          <h2 id="error-title">Błąd przebiegu</h2>
-          <p class="run-error">{{ run.error }}</p>
-        </section>
       </template>
     </section>
+
+    <template v-if="state === 'loaded' && run">
+      <section v-if="isActive(run)" class="part progress" aria-labelledby="progress-title">
+        <h2 id="progress-title">Postęp</h2>
+        <p class="current-step">Krok: <strong>{{ stepNow }}</strong></p>
+        <template v-if="progress?.total">
+          <label class="progress-label" for="assess-progress">Ocena: {{ progress.done }} z {{ progress.total }}</label>
+          <progress id="assess-progress" :value="progress.done" :max="progress.total" />
+        </template>
+        <ul class="figures">
+          <li v-for="figure in progressFigures(run)" :key="figure.name">
+            {{ figure.name }} <strong>{{ figure.value }}</strong>
+          </li>
+        </ul>
+        <p v-if="run.lastActivityAt" class="activity">
+          Ostatnia aktywność:
+          <time :datetime="run.lastActivityAt">{{ formatRelative(run.lastActivityAt, now) }}</time>
+        </p>
+      </section>
+
+      <section class="part" aria-labelledby="counters-title">
+        <h2 id="counters-title">Liczniki</h2>
+        <dl class="stats counters">
+          <div
+            v-for="figure in figures(run)"
+            :key="figure.name"
+            class="stat"
+            :class="{ 'stat-alarm': figure.alarm && figure.value > 0 }"
+          >
+            <dt>{{ figure.name }}</dt>
+            <dd>{{ formatCount(figure.value) }}</dd>
+          </div>
+        </dl>
+      </section>
+
+      <section v-if="run.kind === 'range'" class="part source-results" aria-labelledby="source-results-title">
+        <h2 id="source-results-title">Wynik per źródło</h2>
+        <p v-if="run.sourceResults.length === 0" class="none">Jeszcze żadne źródło nie zakończyło pobrania.</p>
+        <ul v-else class="source-list">
+          <li
+            v-for="result in run.sourceResults"
+            :key="result.source"
+            class="source-result"
+            :data-status="result.status"
+          >
+            <div class="source-head">
+              <h3 class="source-name">{{ label('source', result.source) }}</h3>
+              <StatusBadge :tone="sourceTone(result.status)" :icon="result.status !== 'succeeded'">
+                {{ label('sourceStatus', result.status) }}
+              </StatusBadge>
+            </div>
+            <p class="source-meta">
+              pobrane {{ formatCount(result.fetched) }} · pominięte {{ formatCount(result.skipped) }} · posty
+              {{ formatCount(result.fetched - result.skipped) }}
+            </p>
+            <p v-if="result.error" class="source-error">{{ result.error }}</p>
+          </li>
+        </ul>
+      </section>
+
+      <section class="part" aria-labelledby="steps-title">
+        <h2 id="steps-title">Kroki</h2>
+        <p v-if="run.steps.length === 0" class="none">Żaden krok się jeszcze nie zaczął.</p>
+        <ol v-else class="steps">
+          <li
+            v-for="(shown, index) in run.steps"
+            :key="shown.step + shown.startedAt"
+            class="step"
+            :data-status="shown.status"
+          >
+            <!-- The list numbers its items for assistive technology; the number on screen is only the look. -->
+            <span class="step-no" aria-hidden="true">{{ index + 1 }}</span>
+            <span class="step-name">{{ label('step', shown.step) }}</span>
+            <span class="step-detail">{{ stepDetail(shown) }}</span>
+            <StatusBadge class="step-status" :tone="stepTone(shown.status)">
+              {{ label('stepStatus', shown.status) }}
+            </StatusBadge>
+            <span v-if="shown.error" class="step-error">{{ shown.error }}</span>
+          </li>
+        </ol>
+      </section>
+
+      <section v-if="run.error" class="part" aria-labelledby="error-title">
+        <h2 id="error-title">Błąd przebiegu</h2>
+        <p class="run-error">{{ run.error }}</p>
+      </section>
+    </template>
   </div>
 </template>
 
 <style scoped>
+/* The way back to the panel, small and above the title (the design's `.back`). */
 .back {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 1.5rem;
+  margin-top: var(--space-2);
+  font-size: var(--font-size-sm);
+}
+
+.back-icon {
+  --icon-size: 1rem;
+}
+
+.head {
   margin-top: var(--space-2);
 }
 
-/* The title with the run's badge stands apart from the link back above it and from the run below it. */
-.head {
-  margin: var(--space-4) 0 var(--space-2);
-}
-
+/* The design's section heading. */
 h2 {
-  margin: 0 0 var(--space-3);
-  font-size: var(--font-size-md);
-  color: var(--text-h);
+  margin: 0;
+  font-size: var(--font-size-4xl);
 }
 
 p {
-  margin: 0 0 var(--space-2);
+  margin: 0;
 }
 
 /* The state of the run (loading, error, none) stands apart from the title above it. */
@@ -347,25 +392,26 @@ p {
 
 /* A part of a loaded run with nothing in it yet. */
 .none {
-  margin: var(--space-4) 0;
+  margin-top: var(--space-4);
 }
 
-/* Apart from what is above and below them; the page's selector outranks the message's own zero margin. */
+/* Apart from the title above them; the page's selector outranks the message's own zero margin. */
 .run-detail .attention,
 .run-detail .refresh-error {
-  margin-block: var(--space-3);
+  margin-top: var(--space-4);
 }
 
+/* The run's details side by side, as many as fit: one under the other on a phone. */
 .meta {
   display: grid;
-  grid-template-columns: max-content minmax(0, 1fr);
-  gap: var(--space-1) var(--space-4);
-  margin: var(--space-4) 0 0;
-  font-size: var(--font-size-sm);
+  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+  gap: var(--space-4) var(--space-5);
+  margin: var(--space-5) 0 0;
 }
 
 .meta dt {
-  color: var(--text);
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
 }
 
 .meta dd {
@@ -374,10 +420,14 @@ p {
   overflow-wrap: anywhere;
 }
 
+/* Each part of the run stands apart from the one above it (the design's `.section`). */
 .part {
-  margin-top: var(--space-5);
-  padding-top: var(--space-4);
-  border-top: 1px solid var(--line);
+  margin-top: var(--space-8);
+}
+
+.current-step,
+.progress-label {
+  margin-top: var(--space-4);
 }
 
 .progress-label {
@@ -398,7 +448,7 @@ progress {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-1) var(--space-4);
-  margin: 0 0 var(--space-2);
+  margin: var(--space-3) 0 var(--space-2);
   padding: 0;
   list-style: none;
   font-size: var(--font-size-sm);
@@ -413,40 +463,126 @@ progress {
   font-size: var(--font-size-sm);
 }
 
-.steps,
-.source-list {
+/* The counters as a grid of figures (the design's `.stats`). */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr));
+  gap: var(--space-3);
+  margin: var(--space-4) 0 0;
+}
+
+.stat {
+  display: grid;
+  gap: var(--space-0);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+
+.stat dt {
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.stat dd {
   margin: 0;
+  color: var(--text-h);
+  font-family: var(--font-display);
+  font-size: var(--font-size-4xl);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-snug);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Failed or dead posts: the figure in the destructive tone; its name and number say it. */
+.stat-alarm dd {
+  color: var(--destructive);
+}
+
+/* Each source's result as a card, side by side, one under the other below 900 px. */
+.source-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: var(--space-4);
+  margin: var(--space-4) 0 0;
   padding: 0;
   list-style: none;
 }
 
-/* A line between steps (and between source results) only: the next section draws its own. */
-.step,
 .source-result {
-  padding: var(--space-2) 0;
+  min-width: 0;
+  padding: var(--space-5);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  background: var(--surface);
 }
 
-.step + .step,
-.source-result + .source-result {
-  border-top: 1px solid var(--line);
-}
-
-.step p,
-.source-result p {
-  margin: var(--space-0) 0;
-}
-
-.step-head,
 .source-head {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
-  gap: var(--space-1) var(--space-3);
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
 }
 
-.step-meta,
+.source-name {
+  margin: 0;
+  font-size: var(--font-size-3xl);
+}
+
 .source-meta {
+  margin-top: var(--space-1);
+  color: var(--text-muted);
   font-size: var(--font-size-sm);
+}
+
+.source-error {
+  margin-top: var(--space-2);
+}
+
+/* The steps in one panel, a numbered row each (the design's `.steps`). */
+.steps {
+  margin: var(--space-4) 0 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+  list-style: none;
+}
+
+.step {
+  display: grid;
+  grid-template-columns: 2rem 10rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-1) var(--space-4);
+  padding: var(--space-3) var(--space-5);
+  border-bottom: 1px solid var(--line);
+}
+
+.step:last-child {
+  border-bottom: 0;
+}
+
+.step-no {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.step-name {
+  color: var(--text-h);
+  font-weight: var(--weight-medium);
+}
+
+.step-detail {
+  color: var(--text);
+  font-size: var(--font-size-sm);
+}
+
+.step-error {
+  grid-column: 2 / -1;
 }
 
 .step-error,
@@ -455,5 +591,31 @@ progress {
   color: var(--destructive);
   font-size: var(--font-size-sm);
   overflow-wrap: anywhere;
+}
+
+.run-error {
+  margin-top: var(--space-4);
+}
+
+@media (max-width: 899px) {
+  .source-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* The name with its badge on the first line, its detail and error below the name. */
+  .step {
+    grid-template-columns: 2rem minmax(0, 1fr) auto;
+    padding: var(--space-3) var(--space-4);
+  }
+
+  .step-status {
+    grid-row: 1;
+    grid-column: 3;
+  }
+
+  .step-detail,
+  .step-error {
+    grid-column: 2 / -1;
+  }
 }
 </style>

@@ -292,8 +292,8 @@ class PostsApiIT {
 
 	/**
 	 * A full page of the failed list: a failed post with a violation and no technical error; a link without a body
-	 * whose attempt has no provider and model; a dead one; a stored comment on hold, without an address, never
-	 * assessed, with its technical error.
+	 * whose attempt has no provider and model; a failed Reddit post (its origin is not Wykop's); a dead one; a
+	 * stored comment on hold, without an address, never assessed, with its technical error.
 	 */
 	@Test
 	void aFailedPostsPageMatchesTheSharedContract() {
@@ -310,6 +310,12 @@ class PostsApiIT {
 				+ "\"message\":\"no answer within 300s\"}]");
 		// An attempt the provenance of which names no provider or model (both columns are nullable).
 		jdbc.update("UPDATE assessments SET provider = NULL, model = NULL WHERE post_id = ?", withoutProvider);
+		UUID reddit = seeds.redditPost("stocks", PostStage.FAILED, 1, "2026-10-01T10:30:00Z");
+		seeds.failed(reddit, "2026-10-02T08:00:00Z", FailureClass.SCHEMA_VIOLATION);
+		texts(reddit, ItemType.POST, "NVDA earnings thread", "Guidance looks strong, adding more.", "uzytkownik5",
+				"https://www.reddit.com/r/stocks/comments/abc123/");
+		violations(reddit, "[{\"failureClass\":\"schema_violation\",\"rule\":\"schema:required\","
+				+ "\"path\":\"$.claims[0]\",\"message\":\"required property 'evidence' not found\"}]");
 		UUID dead = seeds.post(PostStage.DEAD, 3, "2026-10-01T10:00:00Z");
 		seeds.failed(dead, "2026-10-02T08:00:00Z", FailureClass.FABRICATED_EVIDENCE);
 		texts(dead, ItemType.LINK, "PKO BP: dywidenda rekordowa", "Kupuję PKO przed dywidendą.", "uzytkownik3",
@@ -323,6 +329,9 @@ class PostsApiIT {
 		MvcTestResult result = mvc.get().uri("/api/admin/posts/failed?page=0&size=10").with(asAdmin()).exchange();
 
 		assertThat(result).hasStatusOk();
+		assertThat(result).bodyJson().extractingPath("$.items[2].id").isEqualTo(reddit.toString());
+		assertThat(result).bodyJson().extractingPath("$.items[2].source").isEqualTo("reddit");
+		assertThat(result).bodyJson().extractingPath("$.items[2].channel").isEqualTo("stocks");
 		ContractFiles.assertMatches(body(result), "failed-posts-page.json");
 	}
 
