@@ -1,11 +1,10 @@
 import { type VueWrapper, enableAutoUnmount, flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { createMemoryHistory } from 'vue-router'
+import { createMemoryHistory, viewDepthKey } from 'vue-router'
 import { fetchMe } from '../api/auth'
 import { type Page, type PostItem, fetchPosts } from '../api/posts'
 import { resetSession } from '../auth/session'
 import { createAppRouter } from '../router'
-import { reportFeedLoaded } from '../router/scroll'
 import FeedView from './FeedView.vue'
 
 vi.mock('../api/auth', () => ({ fetchMe: vi.fn(), login: vi.fn(), logout: vi.fn() }))
@@ -15,10 +14,23 @@ vi.mock('../api/posts', async (importOriginal) => ({
   fetchPosts: vi.fn(),
   fetchFailedPosts: vi.fn(),
 }))
-vi.mock('../router/scroll', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../router/scroll')>()),
-  reportFeedLoaded: vi.fn(),
-}))
+// The panel of a post over the list is not under test here (PostPanel.test.ts): it shows the ids of the rows it was
+// given and, as the real one, says which post it showed when it goes.
+vi.mock('./PostPanel.vue', async () => {
+  const { defineComponent, h, onBeforeUnmount } = await import('vue')
+  const { useRoute } = await import('vue-router')
+  return {
+    default: defineComponent({
+      props: { items: { type: Array as () => PostItem[], default: () => [] } },
+      emits: ['closed'],
+      setup(props, { emit }) {
+        const id = String(useRoute().params.id)
+        onBeforeUnmount(() => emit('closed', id))
+        return () => h('div', { class: 'panel-stub', 'data-items': props.items.map((item) => item.id).join(',') })
+      },
+    }),
+  }
+})
 
 function post(id: string, overrides: Partial<PostItem> = {}): PostItem {
   return {
@@ -91,7 +103,8 @@ async function mountFeed(path = '/posts', attachTo?: HTMLElement) {
   // (router/scroll.ts), not the view's.
   await flushPromises()
   vi.mocked(window.scrollTo).mockClear()
-  const wrapper = mount(FeedView, { global: { plugins: [router] }, attachTo })
+  // Under the shell's RouterView, as in the app: the view's own RouterView renders the post's panel, its child.
+  const wrapper = mount(FeedView, { global: { plugins: [router], provide: { [viewDepthKey as symbol]: 2 } }, attachTo })
   await flushPromises()
   return { wrapper, router }
 }
@@ -109,7 +122,6 @@ describe('FeedView', () => {
     resetSession()
     vi.mocked(fetchMe).mockReset().mockResolvedValue({ id: '1', email: 'user@example.com', role: 'user' })
     vi.mocked(fetchPosts).mockReset()
-    vi.mocked(reportFeedLoaded).mockReset()
     // jsdom does not implement scrolling.
     vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
   })
@@ -433,56 +445,6 @@ describe('FeedView', () => {
     expect(wrapper.find('.posts').attributes('aria-busy')).toBeUndefined()
   })
 
-  it('reports a loaded page once its list is on screen', async () => {
-    vi.mocked(fetchPosts).mockResolvedValue(answer([post('1')], 1))
-    let listShown = false
-    vi.mocked(reportFeedLoaded).mockImplementation(() => {
-      listShown = document.querySelector('ol > li') !== null
-    })
-    await mountFeed('/posts', document.body)
-    expect(reportFeedLoaded).toHaveBeenCalledExactlyOnceWith('ok')
-    expect(listShown).toBe(true)
-  })
-
-  it('reports a failed load', async () => {
-    vi.mocked(fetchPosts).mockRejectedValue(new TypeError('Failed to fetch'))
-    await mountFeed()
-    expect(reportFeedLoaded).toHaveBeenCalledExactlyOnceWith('error')
-  })
-
-  it('stays silent about a load that ends after it was unmounted', async () => {
-    let finish: (value: Page<PostItem>) => void = () => {}
-    vi.mocked(fetchPosts).mockImplementation(() => new Promise((resolve) => (finish = resolve)))
-    const { wrapper } = await mountFeed()
-
-    wrapper.unmount()
-    finish(answer([post('1')], 1))
-    await flushPromises()
-
-    expect(reportFeedLoaded).not.toHaveBeenCalled()
-  })
-
-  it('does not report a load overtaken by a later one', async () => {
-    const answers = new Map<number, (value: Page<PostItem>) => void>()
-    vi.mocked(fetchPosts)
-      .mockResolvedValueOnce(answer([post('1')], 120))
-      .mockImplementation((page) => new Promise((resolve) => answers.set(page, resolve)))
-    const { router } = await mountFeed()
-    vi.mocked(reportFeedLoaded).mockClear()
-
-    await router.push('/posts?page=1')
-    await flushPromises()
-    await router.push('/posts?page=2')
-    await flushPromises()
-    answers.get(1)!(answer([post('51')], 120))
-    await flushPromises()
-    expect(reportFeedLoaded).not.toHaveBeenCalled()
-
-    answers.get(2)!(answer([post('101')], 120))
-    await flushPromises()
-    expect(reportFeedLoaded).toHaveBeenCalledExactlyOnceWith('ok')
-  })
-
   it('offers a retry after an error, keeps the error busy until the answer and shows the posts when it succeeds', async () => {
     const retried = deferred<Page<PostItem>>()
     vi.mocked(fetchPosts).mockRejectedValueOnce(new TypeError('Failed to fetch')).mockReturnValueOnce(retried.promise)
@@ -530,7 +492,75 @@ describe('FeedView', () => {
     expect(alert.element).not.toBe(first)
     expect(document.activeElement).toBe(alert.find('button').element)
     expect(wrapper.find('.posts').attributes('aria-busy')).toBeUndefined()
-    expect(reportFeedLoaded).toHaveBeenLastCalledWith('error')
+  })
+
+  describe('a post open over the list', () => {
+    function rowLink(wrapper: VueWrapper, id: string) {
+      const found = wrapper.findAll('ol > li a').find((link) => link.attributes('href')?.startsWith(`/posts/${id}`))
+      if (!found) throw new Error(`no row of post ${id}`)
+      return found
+    }
+
+    it('links each row to its post with the query of the list, so the list stays as it is', async () => {
+      vi.mocked(fetchPosts).mockResolvedValue(answer([post('1')], 120))
+      const { wrapper } = await mountFeed('/posts?q=xtb&page=1')
+      expect(rowLink(wrapper, '1').attributes('href')).toBe('/posts/1?q=xtb&page=1')
+    })
+
+    it('gives the panel the rows of the page on screen and marks the row of its post', async () => {
+      vi.mocked(fetchPosts).mockResolvedValue(answer([post('1'), post('2')], 2))
+      const { wrapper } = await mountFeed('/posts/2')
+      expect(wrapper.find('.panel-stub').attributes('data-items')).toBe('1,2')
+      expect(rowLink(wrapper, '2').attributes('aria-current')).toBe('true')
+      expect(rowLink(wrapper, '1').attributes('aria-current')).toBeUndefined()
+    })
+
+    it('gives the panel no rows while the list loads or after its error', async () => {
+      vi.mocked(fetchPosts).mockReturnValueOnce(never())
+      const loading = await mountFeed('/posts/1')
+      expect(loading.wrapper.find('.panel-stub').attributes('data-items')).toBe('')
+      loading.wrapper.unmount()
+
+      vi.mocked(fetchPosts).mockRejectedValueOnce(new TypeError('Failed to fetch'))
+      const failed = await mountFeed('/posts/1')
+      expect(failed.wrapper.find('.panel-stub').attributes('data-items')).toBe('')
+    })
+
+    it('neither reloads nor scrolls the list when a post opens over it and closes', async () => {
+      vi.mocked(fetchPosts).mockResolvedValue(answer([post('51')], 120))
+      const { wrapper, router } = await mountFeed('/posts?page=1&direction=bullish')
+
+      await router.push('/posts/51?page=1&direction=bullish')
+      await flushPromises()
+      expect(wrapper.find('.panel-stub').exists()).toBe(true)
+      await router.push('/posts?page=1&direction=bullish')
+      await flushPromises()
+
+      expect(wrapper.find('.panel-stub').exists()).toBe(false)
+      expect(fetchPosts).toHaveBeenCalledTimes(1)
+      expect(window.scrollTo).not.toHaveBeenCalled()
+    })
+
+    it('puts the focus back on the row of the post whose panel closed', async () => {
+      vi.mocked(fetchPosts).mockResolvedValue(answer([post('1'), post('2')], 2))
+      const { wrapper, router } = await mountFeed('/posts/2', document.body)
+
+      await router.push('/posts')
+      await flushPromises()
+
+      expect(document.activeElement).toBe(rowLink(wrapper, '2').element)
+      expect(rowLink(wrapper, '2').attributes('aria-current')).toBeUndefined()
+    })
+
+    it('puts the focus on the heading when the closed post is not on the page', async () => {
+      vi.mocked(fetchPosts).mockResolvedValue(answer([post('1')], 120))
+      const { wrapper, router } = await mountFeed('/posts/99', document.body)
+
+      await router.push('/posts')
+      await flushPromises()
+
+      expect(document.activeElement).toBe(wrapper.find('h1').element)
+    })
   })
 
   describe('filter', () => {

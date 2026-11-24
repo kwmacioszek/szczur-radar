@@ -17,7 +17,7 @@ import ActivateView from '../views/ActivateView.vue'
 import AdminView from '../views/AdminView.vue'
 import FeedView from '../views/FeedView.vue'
 import LoginView from '../views/LoginView.vue'
-import PostDetailView from '../views/PostDetailView.vue'
+import PostPanel from '../views/PostPanel.vue'
 import RunDetailView from '../views/RunDetailView.vue'
 import { scrollBehavior } from './scroll'
 
@@ -55,9 +55,16 @@ export const routes: RouteRecordRaw[] = [
       // The day's overview comes here with S-59; until then the old address of the list leads to it, its filter and
       // page kept.
       { path: '', redirect: (to) => ({ name: 'posts', query: to.query }) },
-      // The compact list spans the shell's whole column (ui-design.md, "Szeroki i wąski ekran"): no `column`.
-      { path: 'posts', name: 'posts', component: FeedView, meta: { section: 'posts' } },
-      { path: 'posts/:id', name: 'post', component: PostDetailView, meta: { section: 'posts', column: 'narrow' } },
+      // The compact list spans the shell's whole column (ui-design.md, "Szeroki i wąski ekran"): no `column`. A post
+      // opens in a panel over the list, which stays mounted under it: its route is the list's child, which FeedView
+      // renders with the rows of its page (views/PostPanel.vue).
+      {
+        path: 'posts',
+        name: 'posts',
+        component: FeedView,
+        meta: { section: 'posts' },
+        children: [{ path: ':id', name: 'post', component: PostPanel, meta: { section: 'posts' } }],
+      },
       { path: 'admin', name: 'admin', component: AdminView, meta: { admin: true, section: 'admin', column: 'wide' } },
       {
         path: 'admin/runs/:id',

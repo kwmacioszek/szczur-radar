@@ -16,7 +16,10 @@ import notificationMenu from './components/NotificationMenu.vue?raw'
 import pageHeader from './components/PageHeader.vue?raw'
 import pagerNav from './components/PagerNav.vue?raw'
 import postAssessment from './components/PostAssessment.vue?raw'
+import postInspector from './components/PostInspector.vue?raw'
+import postPanelBar from './components/PostPanelBar.vue?raw'
 import postRow from './components/PostRow.vue?raw'
+import sidePanel from './components/SidePanel.vue?raw'
 import stanceText from './components/StanceText.vue?raw'
 import statusBadge from './components/StatusBadge.vue?raw'
 import statusMessage from './components/StatusMessage.vue?raw'
@@ -28,7 +31,7 @@ import adminView from './views/AdminView.vue?raw'
 import feedView from './views/FeedView.vue?raw'
 import kitchenSinkView from './views/KitchenSinkView.vue?raw'
 import loginView from './views/LoginView.vue?raw'
-import postDetailView from './views/PostDetailView.vue?raw'
+import postPanel from './views/PostPanel.vue?raw'
 import runDetailView from './views/RunDetailView.vue?raw'
 
 type Theme = 'light' | 'dark'
@@ -142,7 +145,10 @@ const CLEANED: Record<string, string> = {
   'src/views/ActivateView.vue': activateView,
   'src/components/StanceText.vue': stanceText,
   'src/components/PostAssessment.vue': postAssessment,
-  'src/views/PostDetailView.vue': postDetailView,
+  'src/components/SidePanel.vue': sidePanel,
+  'src/components/PostInspector.vue': postInspector,
+  'src/components/PostPanelBar.vue': postPanelBar,
+  'src/views/PostPanel.vue': postPanel,
   'src/components/FeedFilter.vue': feedFilter,
   'src/components/NotificationBell.vue': notificationBell,
   'src/components/NotificationMenu.vue': notificationMenu,

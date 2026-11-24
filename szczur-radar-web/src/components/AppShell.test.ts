@@ -18,7 +18,7 @@ vi.mock('../api/notifications', () => ({
 // The pages inside the shell are not under test: each is an empty component, the routes stay the real ones.
 const page = vi.hoisted(() => ({ render: () => null }))
 vi.mock('../views/FeedView.vue', () => ({ default: page }))
-vi.mock('../views/PostDetailView.vue', () => ({ default: page }))
+vi.mock('../views/PostPanel.vue', () => ({ default: page }))
 vi.mock('../views/AdminView.vue', () => ({ default: page }))
 vi.mock('../views/RunDetailView.vue', () => ({ default: page }))
 vi.mock('../views/LoginView.vue', () => ({ default: page }))
@@ -85,7 +85,6 @@ describe('AppShell', () => {
     })
 
     it.each([
-      ['/posts/1', 'column-narrow'],
       ['/admin', 'column-wide'],
       ['/admin/runs/1', 'column-narrow'],
     ])('puts %s in the %s container, inside main', async (path, expected) => {
@@ -96,7 +95,7 @@ describe('AppShell', () => {
     })
 
     it('follows the column of the route when the page changes', async () => {
-      const { wrapper, router } = await mountShell('admin', '/posts/1')
+      const { wrapper, router } = await mountShell('admin', '/admin/runs/1')
       expect(wrapper.get('main > div').classes()).toContain('column-narrow')
 
       await router.push('/admin')
@@ -109,10 +108,13 @@ describe('AppShell', () => {
       expect(wrapper.get('main > div').classes()).toEqual([])
     })
 
-    it('gives a route without a column, the list of posts, the whole column of the shell', async () => {
-      const { wrapper, router } = await mountShell('admin')
+    it.each([
+      ['/posts', 'posts'],
+      ['/posts/1', 'post'],
+    ])('gives a route without a column, the list of posts on %s, the whole column of the shell', async (path, name) => {
+      const { wrapper, router } = await mountShell('admin', path)
 
-      expect(router.currentRoute.value.name).toBe('posts')
+      expect(router.currentRoute.value.name).toBe(name)
       expect(router.currentRoute.value.meta.column).toBeUndefined()
       expect(wrapper.get('main > div').classes()).toEqual([])
     })

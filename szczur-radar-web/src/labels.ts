@@ -1,4 +1,6 @@
 // Polish labels for the API's closed value sets; an unknown value shows as is.
+import type { PostItem } from './api/posts'
+
 export const labels: Record<string, Record<string, string>> = {
   relevance: {
     investment_related: 'inwestycyjny',
@@ -97,6 +99,17 @@ export const ITEM_TYPE_WORDS: Record<string, Record<string, string>> = {
 /** A post's type in its source's words, e.g. `znalezisko` on Wykop, `link` on Reddit; an unknown source or type shows as it came. */
 export function postType(source: string | undefined, itemType: string): string {
   return (source === undefined ? undefined : ITEM_TYPE_WORDS[source]?.[itemType]) ?? itemType
+}
+
+/**
+ * A post's title; without one (a Wykop entry, a comment), "{Type} użytkownika {author}" in its source's words, or the
+ * type alone without an author. The heading of the post's panel and the name of its dialog.
+ */
+export function postTitle(post: Pick<PostItem, 'title' | 'source' | 'itemType' | 'author'>): string {
+  if (post.title) return post.title
+  const type = postType(post.source, post.itemType)
+  const capitalized = type.charAt(0).toUpperCase() + type.slice(1)
+  return post.author ? `${capitalized} użytkownika ${post.author}` : capitalized
 }
 
 const dateTime = new Intl.DateTimeFormat('pl-PL', {

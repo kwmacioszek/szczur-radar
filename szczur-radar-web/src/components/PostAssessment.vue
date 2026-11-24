@@ -1,10 +1,12 @@
 <script setup lang="ts">
-// The full contract V2 assessment of a post, grouped by target: each target with its stance and the
-// claims about it, so the stance stands beside the claims it rests on; then the general claims and
-// the flags. Everything in the model's order.
+// The full contract V2 assessment of a post, grouped by target, in the layout of "Cel w ocenie" (ui-design.md;
+// prototype post.html): each target is an article with its name (the quote that names it, a level-4 heading under the
+// panel's "Ocena"), its kind and the author's stance; under it the claims about it, each with its statement, its kind
+// and the quote it rests on. A target without claims says so. Then the general claims and the flags, at the same
+// level. Everything in the model's order. The relevance and the date of the assessment are the panel's (PostInspector).
 import { computed } from 'vue'
 import type { Claim, PostItem, Target } from '../api/posts'
-import { formatDateTime, label } from '../labels'
+import { label } from '../labels'
 import StanceText from './StanceText.vue'
 import StatusBadge from './StatusBadge.vue'
 
@@ -33,119 +35,131 @@ const groups = computed<Group[]>(() => {
   return general.length ? [...byTarget, { key: 'general', target: null, claims: general }] : byTarget
 })
 
-/** A claim the target's stance rests on (`stance.claim_ids`). */
-function isBasis(target: Target | null, claim: Claim): boolean {
-  return target?.stance.claim_ids.includes(claim.id) ?? false
+/**
+ * What a claim is, after its statement: its kind; whose it is when not the author's; "z tytułu" for a quote of the
+ * title; "podstawa stanowiska" for a claim the target's stance rests on (`stance.claim_ids`).
+ */
+function claimNote(target: Target | null, claim: Claim): string {
+  const parts = [label('claimKind', claim.kind)]
+  if (claim.attribution !== 'author') parts.push(label('attribution', claim.attribution))
+  if (claim.evidence.field === 'title') parts.push('z tytułu')
+  if (target?.stance.claim_ids.includes(claim.id)) parts.push('podstawa stanowiska')
+  return parts.join(', ')
 }
 </script>
 
 <template>
   <div class="post-assessment">
-    <p class="meta">
-      <StatusBadge tone="neutral">{{ label('relevance', output.relevance) }}</StatusBadge>
-      <StatusBadge v-for="modifier in output.modifiers" :key="modifier" class="modifier" tone="neutral">{{ label('modifier', modifier) }}</StatusBadge>
-      <span v-if="prefilter" class="note">bez treści, bez oceny modelu</span>
-      <span class="assessed">oceniono <time :datetime="assessment.assessedAt">{{ formatDateTime(assessment.assessedAt) }}</time></span>
+    <p v-if="output.modifiers.length" class="modifiers">
+      <StatusBadge v-for="modifier in output.modifiers" :key="modifier" tone="neutral">{{ label('modifier', modifier) }}</StatusBadge>
     </p>
+    <p v-if="prefilter" class="note">za mało treści, bez oceny modelu</p>
 
-    <section v-for="group in groups" :key="group.key" class="group">
-      <template v-if="group.target">
-        <h3 class="heading">{{ group.target.anchor.quote }}</h3>
-        <p class="target-meta">{{ label('targetKind', group.target.kind) }} · {{ label('reference', group.target.reference) }}</p>
-        <p class="stance"><StanceText :stance="group.target.stance" /></p>
-      </template>
-      <h3 v-else class="heading">Tezy ogólne</h3>
+    <article v-for="group in groups" :key="group.key" class="target">
+      <div class="target-head">
+        <h4 class="target-title">{{ group.target ? group.target.anchor.quote : 'Tezy ogólne' }}</h4>
+        <template v-if="group.target">
+          <span class="kind">{{ label('targetKind', group.target.kind) }}</span>
+          <StanceText class="stance" :stance="group.target.stance" />
+        </template>
+      </div>
       <ul v-if="group.claims.length" class="claims">
         <li v-for="claim in group.claims" :key="claim.id" class="claim">
-          <p class="claim-meta">
-            {{ label('claimKind', claim.kind) }} · {{ label('attribution', claim.attribution) }}<template v-if="isBasis(group.target, claim)"> · <span class="basis">podstawa stanowiska</span></template>
-          </p>
-          <p class="statement">{{ claim.statement }}</p>
+          <p class="statement">{{ claim.statement }} <span class="claim-note">{{ claimNote(group.target, claim) }}</span></p>
           <blockquote class="evidence">{{ claim.evidence.quote }}</blockquote>
         </li>
       </ul>
-    </section>
+      <p v-else class="note">Wspomniany, bez twierdzeń.</p>
+    </article>
 
     <p v-if="!prefilter && !output.targets.length && !output.claims.length" class="empty">Model nie wskazał celów ani tez.</p>
 
-    <section v-if="output.flags.length" class="group">
-      <h3 class="heading">Zastrzeżenia</h3>
+    <article v-if="output.flags.length" class="target">
+      <div class="target-head">
+        <h4 class="target-title">Zastrzeżenia</h4>
+      </div>
       <p class="flags">
         <StatusBadge v-for="flag in output.flags" :key="flag" tone="neutral">{{ label('flag', flag) }}</StatusBadge>
       </p>
-    </section>
+    </article>
   </div>
 </template>
 
 <style scoped>
 .post-assessment {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
+  display: grid;
+  gap: var(--space-3);
   min-width: 0;
-  font-size: var(--font-size-md);
 }
 
 p {
   margin: 0;
 }
 
-.meta,
+.modifiers,
 .flags {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-1) var(--space-3);
-  font-size: var(--font-size-sm);
-}
-
-.flags {
   gap: var(--space-2);
 }
 
-/* Date and time stay on one line. */
-.assessed {
-  white-space: nowrap;
+.flags {
+  margin-top: var(--space-2);
 }
 
-.group {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  padding-top: var(--space-3);
-  border-top: 1px solid var(--line);
-}
-
-/* A target's name (or the group's title) in the serif of the global h3 (style.css). */
-.heading {
-  margin: 0;
-  font-size: var(--font-size-md);
-  overflow-wrap: anywhere;
-}
-
-.target-meta,
-.claim-meta {
+.note,
+.empty {
+  color: var(--text-muted);
   font-size: var(--font-size-sm);
 }
 
-.claims {
+/* A target on its soft card: the name in the serif, its kind, the stance at the right end. */
+.target {
+  padding: var(--space-4) var(--space-5);
+  border-radius: var(--radius-lg);
+  background: var(--surface-2);
+}
+
+.target-head {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-2);
+}
+
+.target-title {
+  margin: 0;
+  color: var(--text-h);
+  font-family: var(--font-display);
+  font-size: var(--font-size-3xl);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-snug);
+  letter-spacing: var(--tracking-snug);
+  overflow-wrap: anywhere;
+}
+
+.kind {
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.stance {
+  align-self: center;
+  margin-left: auto;
+  font-weight: var(--weight-semibold);
+}
+
+.target .note {
+  margin-top: var(--space-2);
+}
+
+.claims {
+  display: grid;
+  gap: var(--space-4);
   margin: var(--space-2) 0 0;
   padding: 0;
   list-style: none;
-}
-
-.claim {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
-.basis {
-  color: var(--text-h);
-  font-weight: var(--weight-semibold);
 }
 
 .statement {
@@ -153,13 +167,21 @@ p {
   overflow-wrap: anywhere;
 }
 
+.claim-note {
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+}
+
 /* A verbatim quote of the post, in the serif of what is read (upright: the app has no italic face); up to 320
    characters, wraps instead of scrolling at 375 px. */
 .evidence {
-  margin: 0;
-  padding-left: var(--space-3);
+  margin: var(--space-2) 0 0;
+  padding-left: var(--space-4);
   border-left: 2px solid var(--warning);
+  color: var(--text);
   font-family: var(--font-display);
+  font-size: var(--font-size-xl);
+  line-height: var(--leading-normal);
   overflow-wrap: anywhere;
 }
 </style>

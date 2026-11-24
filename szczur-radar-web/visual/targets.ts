@@ -66,6 +66,11 @@ export interface View {
    * the page's last row, to the top of its pager.
    */
   clipToRow?: number
+  /**
+   * Screenshot only the window, not the whole page: a panel over the page fills the window (the design's screens are
+   * the window's frame), and the page under it, inert and darkened, is the list's own baseline.
+   */
+  viewportOnly?: true
 }
 
 export const VIEWS: readonly View[] = [
@@ -182,16 +187,22 @@ export const VIEWS: readonly View[] = [
   },
   {
     name: 'view-post',
-    risk: 'widok posta nie zmienia wyglądu i nie łamie dostępności',
+    risk: 'panel posta nad listą nie zmienia wyglądu i nie łamie dostępności',
     path: `/posts/${POST_0}`,
     modes: { AUTH: 'user' },
+    // The post of the list's first row: the panel over the list with the row selected. The list under it is loaded too,
+    // and the panel has the focus on its title.
     ready: async (page) => {
+      const dialog = page.getByRole('dialog', { name: 'Wpis użytkownika uzytkownik0', exact: true })
+      await expect(dialog.getByRole('heading', { level: 2, name: 'Wpis użytkownika uzytkownik0', exact: true })).toBeFocused()
+      await expect(dialog.getByRole('heading', { level: 3, name: 'Ocena', exact: true })).toBeVisible()
+      await expect(dialog.getByRole('heading', { level: 4, name: 'CDR', exact: true })).toBeVisible()
       const main = page.getByRole('main')
-      await expect(main.getByRole('heading', { level: 1, name: 'Wpis użytkownika uzytkownik0' })).toBeVisible()
-      await expect(main.getByRole('heading', { level: 2, name: 'Ocena', exact: true })).toBeVisible()
-      await expect(main.getByRole('heading', { level: 3, name: 'CDR', exact: true })).toBeVisible()
+      await expect(postRows(main)).toHaveCount(POSTS_PAGE)
+      await expect(postRows(main).first()).toHaveAttribute('aria-current', 'true')
       await freshnessLoaded(page)
     },
+    viewportOnly: true,
   },
   {
     name: 'view-admin',

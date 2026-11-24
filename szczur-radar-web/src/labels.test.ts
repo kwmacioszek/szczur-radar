@@ -8,6 +8,7 @@ import {
   label,
   plural,
   postOrigin,
+  postTitle,
   postType,
 } from './labels'
 
@@ -64,6 +65,18 @@ describe('postType', () => {
     ['wykop', 'poll'],
   ])('shows the raw type for source %s and type %s', (source, itemType) => {
     expect(postType(source, itemType)).toBe(itemType)
+  })
+})
+
+describe('postTitle', () => {
+  it.each([
+    ['its title', { title: 'Orlen ogłasza buyback za 4 mld zł', source: 'wykop', itemType: 'link', author: 'zbyszek' }, 'Orlen ogłasza buyback za 4 mld zł'],
+    ['the type and author without a title', { title: null, source: 'wykop', itemType: 'post', author: 'uzytkownik1' }, 'Wpis użytkownika uzytkownik1'],
+    ['the type alone without an author', { title: null, source: 'wykop', itemType: 'comment', author: null }, 'Komentarz'],
+    ["Reddit's word for a post", { title: null, source: 'reddit', itemType: 'post', author: 'kapital' }, 'Post użytkownika kapital'],
+    ["Reddit's word for a link", { title: null, source: 'reddit', itemType: 'link', author: 'kapital' }, 'Link użytkownika kapital'],
+  ] as const)('names a post by %s', (_, post, title) => {
+    expect(postTitle(post)).toBe(title)
   })
 })
 

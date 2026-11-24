@@ -3,8 +3,9 @@
 // first targets with their stance and the assessment's notes. The whole row is the one link to the post; the selected
 // one is `aria-current="true"`. The stance is a target's, never the post's: the contract has none for a post (PRD
 // FR-012). Below 900 px the row takes a few lines: the metadata, the title (up to three lines), the targets.
-// The element is the list's item: the caller gives it its list (`ol`) and the frame of its day.
-import { computed } from 'vue'
+// The element is the list's item: the caller gives it its list (`ol`) and the frame of its day. `focus()` puts the
+// focus on its link: the list does so when the post's panel closes.
+import { computed, useTemplateRef } from 'vue'
 import { type RouteLocationRaw, RouterLink } from 'vue-router'
 import type { PostItem } from '../api/posts'
 import { formatTime, label, plural, postOrigin, postType } from '../labels'
@@ -30,6 +31,14 @@ const heading = computed(() => {
   return text.length > EXCERPT_LENGTH ? `${text.slice(0, EXCERPT_LENGTH)}…` : text
 })
 
+const item = useTemplateRef<HTMLLIElement>('item')
+
+function focus(): void {
+  item.value?.querySelector('a')?.focus()
+}
+
+defineExpose({ focus })
+
 const output = computed(() => props.post.assessment?.output ?? null)
 const shownTargets = computed(() => output.value?.targets.slice(0, SHOWN_TARGETS) ?? [])
 const otherTargets = computed(() => Math.max(0, (output.value?.targets.length ?? 0) - SHOWN_TARGETS))
@@ -41,7 +50,7 @@ const noTargets = computed(
 </script>
 
 <template>
-  <li class="post-row">
+  <li ref="item" class="post-row">
     <RouterLink class="row" :to="to" :aria-current="selected ? 'true' : undefined">
       <span class="meta">
         <time :datetime="post.publishedAt">{{ formatTime(post.publishedAt) }}</time>

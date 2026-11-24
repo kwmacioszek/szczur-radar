@@ -29,7 +29,7 @@ vi.mock('../components/AppShell.vue', async () => {
 })
 const emptyPage = vi.hoisted(() => ({ render: () => null }))
 vi.mock('../views/FeedView.vue', () => ({ default: emptyPage }))
-vi.mock('../views/PostDetailView.vue', () => ({ default: emptyPage }))
+vi.mock('../views/PostPanel.vue', () => ({ default: emptyPage }))
 vi.mock('../views/AdminView.vue', () => ({ default: emptyPage }))
 vi.mock('../views/RunDetailView.vue', () => ({ default: emptyPage }))
 
@@ -171,7 +171,6 @@ describe('shell', () => {
 
   it.each([
     ['/posts', 'posts', 'posts'],
-    ['/posts/x', 'post', 'posts'],
     ['/admin', 'admin', 'admin'],
     ['/admin/runs/x', 'admin-run', 'admin'],
   ])('puts %s (%s) in the navigation section %s', async (path, name, section) => {
@@ -183,8 +182,17 @@ describe('shell', () => {
     expect(router.currentRoute.value.matched).toHaveLength(2)
   })
 
+  it('opens a post over the list: a child of the list, in the section of the posts', async () => {
+    const router = createAppRouter(createMemoryHistory())
+    await router.push('/posts/x?page=1')
+    expect(router.currentRoute.value.name).toBe('post')
+    expect(router.currentRoute.value.meta.section).toBe('posts')
+    expect(router.currentRoute.value.matched.map((record) => record.name)).toEqual([undefined, 'posts', 'post'])
+    // Every record has its component: one without makes vue-router warn on every navigation.
+    expect(router.currentRoute.value.matched.every((record) => record.components?.default !== undefined)).toBe(true)
+  })
+
   it.each([
-    ['/posts/x', 'narrow'],
     ['/admin', 'wide'],
     ['/admin/runs/x', 'narrow'],
   ])('gives %s the %s column', async (path, column) => {
@@ -193,9 +201,9 @@ describe('shell', () => {
     expect(router.currentRoute.value.meta.column).toBe(column)
   })
 
-  it("gives the compact list of posts the shell's whole column", async () => {
+  it.each(['/posts', '/posts/x'])("gives the compact list of posts on %s the shell's whole column", async (path) => {
     const router = createAppRouter(createMemoryHistory())
-    await router.push('/posts')
+    await router.push(path)
     expect(router.currentRoute.value.meta.column).toBeUndefined()
   })
 

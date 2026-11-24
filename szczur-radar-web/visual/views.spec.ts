@@ -15,7 +15,9 @@ for (const view of VIEWS) {
       // Fonts loaded before the page is screenshotted and before the list's row is measured below.
       await waitForFonts(page)
 
-      if (view.clipToRow === undefined) {
+      if (view.viewportOnly) {
+        await expect.soft(page).toHaveScreenshot(`${view.name}.png`)
+      } else if (view.clipToRow === undefined) {
         await expect.soft(page).toHaveScreenshot(`${view.name}.png`, { fullPage: true })
       } else {
         // From the top of the page to the top of that row (or of the pager past the last row), the full width: the

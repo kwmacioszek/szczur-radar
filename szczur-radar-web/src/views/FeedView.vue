@@ -12,7 +12,6 @@ import PagerNav from '../components/PagerNav.vue'
 import PostRow from '../components/PostRow.vue'
 import { filterFromQuery, filterToQuery, isFilterActive, pageFromQuery, sameFilter } from '../feedFilter'
 import { groupByDay } from '../postDays'
-import { reportFeedLoaded } from '../router/scroll'
 
 const route = useRoute()
 const router = useRouter()
@@ -57,6 +56,20 @@ const listOnScreen = computed(() => !failed.value && shown.value !== null && sho
 /** The page on screen in the frames of its days. */
 const days = computed(() => (shown.value ? groupByDay(shown.value.result.items, Date.now()) : []))
 
+/** The rows of the page on screen, for the panel of a post over the list (its child route); none while none are shown. */
+const panelItems = computed(() => (listOnScreen.value && shown.value ? shown.value.result.items : []))
+
+/** The id of the post open in the panel over the list, if any: its row is the selected one. */
+const openPostId = computed(() => (route.name === 'post' && typeof route.params.id === 'string' ? route.params.id : null))
+
+/** The rows on screen by their post's id, for the focus to come back to one when its panel closes. */
+const rows = new Map<string, InstanceType<typeof PostRow>>()
+
+function setRow(id: string, row: unknown): void {
+  if (row) rows.set(id, row as InstanceType<typeof PostRow>)
+  else rows.delete(id)
+}
+
 /** The error stays during its own retry; any other load replaces it. */
 const showError = computed(() => failed.value && (loading.value === null || loading.value.kind === 'retry'))
 /** The skeleton: a load whose answer replaces what is on screen. */
@@ -91,10 +104,6 @@ const errorText = computed(() =>
  */
 type After = 'top' | 'heading' | 'retry' | 'none'
 
-/**
- * Each load that is still the latest one reports how it ended, so a return from a post can restore the position once
- * the list is on screen (router/scroll.ts).
- */
 async function load(target: number, conditions: PostFilter, kind: LoadKind, after: After): Promise<void> {
   const id = ++latestLoad
   loading.value = { page: target, kind }
@@ -110,7 +119,6 @@ async function load(target: number, conditions: PostFilter, kind: LoadKind, afte
     if (id !== latestLoad) return
     if (after === 'top') window.scrollTo({ top: 0 })
     if (after !== 'none') header.value?.focus()
-    reportFeedLoaded('ok')
   } catch {
     if (id !== latestLoad) return
     failed.value = true
@@ -123,15 +131,30 @@ async function load(target: number, conditions: PostFilter, kind: LoadKind, afte
     } else if (after === 'retry') {
       errorState.value?.focus()
     }
-    reportFeedLoaded('error')
   }
 }
 
-// A load that ends after the view is gone (e.g. forward to a post mid-load) is dropped like an
-// overtaken one, so it never reports to a later return to the feed (router/scroll.ts).
+/** Set while the view goes: the panel over it goes with it, and nothing is left to take the focus. */
+let leaving = false
+
+// A load that ends after the view is gone is dropped like an overtaken one.
 onBeforeUnmount(() => {
+  leaving = true
   latestLoad++
 })
+
+/**
+ * The panel of a post is gone (closed, or "back"): the focus goes back to that post's row, or to the heading when the
+ * post is not on this page. Once the panel has left the page, so the list is no longer inert.
+ */
+function onPanelClosed(id: string): void {
+  void nextTick(() => {
+    if (leaving) return
+    const row = rows.get(id)
+    if (row) row.focus()
+    else header.value?.focus()
+  })
+}
 
 /** The same page and filter again; the error stays with its busy button until the answer. */
 function retry(): void {
@@ -254,12 +277,14 @@ watch(
           <section v-for="day in days" :key="day.key" class="day" :aria-labelledby="`day-${day.key}`">
             <h2 :id="`day-${day.key}`" class="day-title">{{ day.title }}</h2>
             <ol class="rows">
+              <!-- The row keeps the list's query, so opening the post neither reloads nor moves the list under it. -->
               <PostRow
                 v-for="post in day.items"
                 :key="post.id"
+                :ref="(row) => setRow(post.id, row)"
                 :post="post"
-                :to="{ name: 'post', params: { id: post.id } }"
-                :selected="false"
+                :to="{ name: 'post', params: { id: post.id }, query: route.query }"
+                :selected="post.id === openPostId"
               />
             </ol>
           </section>
@@ -274,6 +299,8 @@ watch(
         </template>
       </div>
     </section>
+    <!-- A post opened from the list, in a panel over it (views/PostPanel.vue), with the rows of the page on screen. -->
+    <RouterView :items="panelItems" @closed="onPanelClosed" />
   </div>
 </template>
 

@@ -20,6 +20,8 @@ test('anonimowy link do posta prowadzi przez logowanie z powrotem do tego posta'
   await main.getByRole('button', { name: 'Zaloguj się' }).click()
 
   await expect(page).toHaveURL(POST_5)
-  await expect(main.getByRole('heading', { level: 1, name: 'Orlen ogłasza buyback za 4 mld zł' })).toBeVisible()
+  // The post opens in its panel over the list: a dialog named by its title, out of `main`.
+  await expect(page.getByRole('dialog', { name: 'Orlen ogłasza buyback za 4 mld zł', exact: true })).toBeVisible()
+  await expect(main.getByRole('heading', { level: 1, name: 'Posty', exact: true })).toBeVisible()
   await expect(page.getByRole('banner').getByRole('link', { name: 'Panel admina' })).toBeVisible()
 })

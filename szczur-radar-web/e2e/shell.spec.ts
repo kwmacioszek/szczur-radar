@@ -42,11 +42,11 @@ test('pozycja nawigacji otwiera swój ekran i przenosi zaznaczenie', async ({ pa
   await expect(posts).toHaveAttribute('aria-current', 'page')
   await expect(admin).not.toHaveAttribute('aria-current', 'page')
 
-  // A post's page is still the posts' section.
+  // A post open over the list is still the posts' section.
   await main.getByRole('listitem').first().getByRole('link').click()
 
   await expect(page).toHaveURL(POST_0)
-  await expect(main.getByRole('heading', { level: 1, name: 'Wpis użytkownika uzytkownik0' })).toBeVisible()
+  await expect(page.getByRole('dialog', { name: 'Wpis użytkownika uzytkownik0', exact: true })).toBeVisible()
   await expect(posts).toHaveAttribute('aria-current', 'page')
   await expect(admin).not.toHaveAttribute('aria-current', 'page')
 })
@@ -54,7 +54,8 @@ test('pozycja nawigacji otwiera swój ekran i przenosi zaznaczenie', async ({ pa
 test.describe('każdy ekran po zalogowaniu ma jeden pasek, jedną treść i jeden nagłówek 1', () => {
   const SCREENS = [
     { name: 'lista postów', path: '/posts', title: 'Posty', section: 'Posty' },
-    { name: 'post', path: POST_0, title: 'Wpis użytkownika uzytkownik0', section: 'Posty' },
+    // The post is a panel over the list: the page is still the list's, with its heading.
+    { name: 'post', path: POST_0, title: 'Posty', section: 'Posty' },
     { name: 'panel admina', path: '/admin', title: 'Panel admina', section: 'Panel admina' },
     { name: 'przebieg', path: RUN_1, title: 'Przebieg: zakres dat', section: 'Panel admina' },
   ]

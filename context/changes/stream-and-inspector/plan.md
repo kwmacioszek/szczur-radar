@@ -523,24 +523,24 @@ Brak zmian danych i API. Stare adresy działają: `/?…` przekierowuje na `/pos
 
 #### Automated
 
-- [x] 1.1 Testy jednostkowe przechodzą: `cd szczur-radar-web && npm test`
-- [x] 1.2 Typy i build przechodzą: `cd szczur-radar-web && npm run build`
-- [x] 1.3 Testy E2E przechodzą: `cd szczur-radar-web && npm run e2e`
-- [x] 1.4 Testy wizualne i axe przechodzą, bez osieroconych i brakujących wzorców: `cd szczur-radar-web && npm run visual:docker`
-- [x] 1.5 `design-check app` przechodzi: `node tools/design-check/design-check.mjs app`
-- [x] 1.6 Przy 320 px strona `/posts` nie przewija się w poziomie (test E2E)
-- [x] 1.7 Każdy nowy test E2E jest czerwony na swoim złamaniu (`evidence/e2e-breaks.md`)
+- [x] 1.1 Testy jednostkowe przechodzą: `cd szczur-radar-web && npm test` — 2d95550
+- [x] 1.2 Typy i build przechodzą: `cd szczur-radar-web && npm run build` — 2d95550
+- [x] 1.3 Testy E2E przechodzą: `cd szczur-radar-web && npm run e2e` — 2d95550
+- [x] 1.4 Testy wizualne i axe przechodzą, bez osieroconych i brakujących wzorców: `cd szczur-radar-web && npm run visual:docker` — 2d95550
+- [x] 1.5 `design-check app` przechodzi: `node tools/design-check/design-check.mjs app` — 2d95550
+- [x] 1.6 Przy 320 px strona `/posts` nie przewija się w poziomie (test E2E) — 2d95550
+- [x] 1.7 Każdy nowy test E2E jest czerwony na swoim złamaniu (`evidence/e2e-breaks.md`) — 2d95550
 
 ### Phase 2: Panel posta
 
 #### Automated
 
-- [ ] 2.1 Testy jednostkowe przechodzą: `cd szczur-radar-web && npm test`
-- [ ] 2.2 Typy i build przechodzą: `cd szczur-radar-web && npm run build`
-- [ ] 2.3 Testy E2E przechodzą, w tym `post.spec.ts` i `session-guard.spec.ts`: `cd szczur-radar-web && npm run e2e`
-- [ ] 2.4 Testy wizualne i axe przechodzą z nowym `view-post`: `cd szczur-radar-web && npm run visual:docker`
-- [ ] 2.5 Brak odwołań do `PostDetailView` i `reportFeedLoaded`
-- [ ] 2.6 Każdy nowy test E2E panelu jest czerwony na swoim złamaniu (`evidence/e2e-breaks.md`)
+- [x] 2.1 Testy jednostkowe przechodzą: `cd szczur-radar-web && npm test`
+- [x] 2.2 Typy i build przechodzą: `cd szczur-radar-web && npm run build`
+- [x] 2.3 Testy E2E przechodzą, w tym `post.spec.ts` i `session-guard.spec.ts`: `cd szczur-radar-web && npm run e2e`
+- [x] 2.4 Testy wizualne i axe przechodzą z nowym `view-post`: `cd szczur-radar-web && npm run visual:docker`
+- [x] 2.5 Brak odwołań do `PostDetailView` i `reportFeedLoaded`
+- [x] 2.6 Każdy nowy test E2E panelu jest czerwony na swoim złamaniu (`evidence/e2e-breaks.md`)
 
 ### Phase 3: Panel „Filtry”
 

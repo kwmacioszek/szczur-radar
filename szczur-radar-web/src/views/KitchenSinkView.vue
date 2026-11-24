@@ -33,8 +33,10 @@ import LoadingState from '../components/LoadingState.vue'
 import NotificationMenu from '../components/NotificationMenu.vue'
 import PagerNav from '../components/PagerNav.vue'
 import PageHeader from '../components/PageHeader.vue'
-import PostAssessment from '../components/PostAssessment.vue'
+import PostInspector from '../components/PostInspector.vue'
+import PostPanelBar from '../components/PostPanelBar.vue'
 import PostRow from '../components/PostRow.vue'
+import SidePanel from '../components/SidePanel.vue'
 import StanceText from '../components/StanceText.vue'
 import StatusBadge, { type BadgeTone } from '../components/StatusBadge.vue'
 import StatusMessage from '../components/StatusMessage.vue'
@@ -499,10 +501,10 @@ function assessed(output: AssessmentOutput): NonNullable<PostItem['assessment']>
 }
 
 /**
- * Every variant of the full assessment. The data satisfy contract V2: each stance.claim_ids entry
- * is a claim with that target in target_ids, and a directional stance rests on an author's claim.
+ * Two full assessments for the panel's variants below. The data satisfy contract V2: each stance.claim_ids entry is a
+ * claim with that target in target_ids, and a directional stance rests on an author's claim.
  */
-const assessments: { id: string; title: string; assessment: NonNullable<PostItem['assessment']> }[] = [
+const [generalClaims, mentionedTarget] = [
   {
     id: 'targets',
     title: 'Cele z tezami, teza o dwóch celach i tezy ogólne',
@@ -621,108 +623,25 @@ const assessments: { id: string; title: string; assessment: NonNullable<PostItem
       flags: ['possible_sarcasm', 'missing_context'],
     }),
   },
+]
+
+/**
+ * The panel of a post (PostInspector in SidePanel's frame, in place: no dialog, no layers) in its variants: a title, no
+ * title, the prefilter's result, a target without claims, general claims. Each gets its own heading id.
+ */
+const panelSamples: { id: string; title: string; post: PostItem }[] = [
+  { id: 'title', title: 'Z tytułem', post: posts[1]! },
+  { id: 'untitled', title: 'Bez tytułu (wpis): tytuł z typu i autora, zastrzeżenia', post: posts[0]! },
+  { id: 'prefilter', title: 'Prefiltr', post: posts[2]! },
   {
-    id: 'attribution',
-    title: 'Tezy przytoczone i nie wiadomo czyje',
-    assessment: assessed({
-      relevance: 'investment_related',
-      modifiers: [],
-      targets: [
-        {
-          id: 't1',
-          kind: 'company',
-          anchor: quote('PKO'),
-          stance: { direction: 'neutral', assertiveness: 'unhedged', claim_ids: ['c3'] },
-          reference: 'explicit',
-        },
-      ],
-      claims: [
-        {
-          id: 'c1',
-          kind: 'factual_claim',
-          attribution: 'reported',
-          target_ids: ['t1'],
-          evidence: quote('Analitycy mBanku podnieśli cenę docelową PKO do 90 zł'),
-          statement: 'Analitycy mBanku podnieśli cenę docelową PKO do 90 zł.',
-        },
-        {
-          id: 'c2',
-          kind: 'opinion',
-          attribution: 'unclear',
-          target_ids: ['t1'],
-          evidence: quote('Ktoś pisał na mirko, że to pod emisję'),
-          statement: 'Podwyżka ceny docelowej PKO ma być przygotowaniem pod emisję.',
-        },
-        {
-          id: 'c3',
-          kind: 'trade_action',
-          attribution: 'author',
-          target_ids: ['t1'],
-          evidence: quote('Ja tam trzymam i nic nie robię'),
-          statement: 'Autor trzyma akcje PKO i nic nie zmienia.',
-        },
-        {
-          id: 'c4',
-          kind: 'question',
-          attribution: 'author',
-          target_ids: ['t1'],
-          evidence: quote('Ktoś wie, kiedy dywidenda?'),
-          statement: 'Kiedy PKO wypłaci dywidendę?',
-        },
-      ],
-      flags: [],
-    }),
+    id: 'mentioned',
+    title: 'Cel bez twierdzeń, modyfikatory i cel nieokreślony',
+    post: { ...posts[4]!, id: 'mentioned', assessment: mentionedTarget!.assessment },
   },
   {
-    id: 'long-quote',
-    title: 'Cytat dowodu o długości 320 znaków',
-    assessment: assessed({
-      relevance: 'investment_related',
-      modifiers: [],
-      targets: [
-        {
-          id: 't1',
-          kind: 'macro_topic',
-          anchor: quote('giełdę'),
-          stance: { direction: 'bullish', assertiveness: 'hedged', claim_ids: ['c1'] },
-          reference: 'explicit',
-        },
-        {
-          id: 't2',
-          kind: 'sector',
-          anchor: quote('banki'),
-          stance: { direction: 'bearish', assertiveness: 'hedged', claim_ids: ['c1'] },
-          reference: 'explicit',
-        },
-      ],
-      claims: [
-        {
-          id: 'c1',
-          kind: 'investment_thesis',
-          attribution: 'author',
-          target_ids: ['t1', 't2'],
-          evidence: quote(
-            'RPP pewnie jeszcze w tym roku zetnie stopy o kolejne 50 punktów bazowych, bo inflacja bazowa spada szybciej, niż zakładali ekonomiści, a złoty trzyma się mocno, więc lokaty i obligacje też przestaną się opłacać i kasa z banków popłynie na giełdę, tylko że najpierw dostaną po głowie same banki, którym skurczy się marża.',
-          ),
-          statement: 'Obniżki stóp skierują pieniądze z lokat na giełdę, ale najpierw obniżą marże banków.',
-        },
-      ],
-      flags: [],
-    }),
-  },
-  {
-    id: 'empty',
-    title: 'Ocena modelu bez celów i tez',
-    assessment: assessed({ relevance: 'not_investment_related', modifiers: ['humor'], targets: [], claims: [], flags: [] }),
-  },
-  {
-    id: 'prefilter',
-    title: 'Prefiltr',
-    assessment: {
-      output: { relevance: 'unclear', modifiers: [], targets: [], claims: [], flags: ['insufficient_content'] },
-      resultSource: 'prefilter',
-      assessedAt: '2026-10-12T21:00:00Z',
-    },
+    id: 'general',
+    title: 'Tezy ogólne i teza o dwóch celach',
+    post: { ...posts[0]!, id: 'general', assessment: generalClaims!.assessment },
   },
 ]
 </script>
@@ -1086,12 +1005,16 @@ const assessments: { id: string; title: string; assessment: NonNullable<PostItem
       </ol>
     </section>
 
-    <section aria-labelledby="assessments-title">
-      <h2 id="assessments-title">Ocena posta</h2>
+    <section aria-labelledby="side-panel-title">
+      <h2 id="side-panel-title">Panel boczny</h2>
+      <p>Ocena posta w ramce panelu, w miejscu strony: na ekranie posta panel jest dialogiem nad listą.</p>
       <ul class="samples">
-        <li v-for="sample in assessments" :key="sample.id" class="sample">
+        <li v-for="sample in panelSamples" :key="sample.id" class="variant">
           <p class="sample-title">{{ sample.title }}</p>
-          <PostAssessment :assessment="sample.assessment" />
+          <SidePanel inline :labelledby="`panel-${sample.id}`">
+            <template #bar><PostPanelBar :post="sample.post" /></template>
+            <PostInspector :post="sample.post" :heading-id="`panel-${sample.id}`" />
+          </SidePanel>
         </li>
       </ul>
     </section>

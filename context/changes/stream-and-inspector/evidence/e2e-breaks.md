@@ -14,3 +14,17 @@ Dwie pierwsze próby niczego nie zepsuły, więc test został zielony. Za drugim
 
 - **Przekierowanie bez `query`** (`redirect: () => ({ name: 'posts' })`): vue-router sam dokleja pierwotne `query` i `hash` do celu, który nie ma własnych. To złamanie nie zmienia więc zachowania.
 - **Siatka wiersza `grid-template-columns: 30rem`** w `PostRow.vue`: ramka dnia ma `overflow: hidden` dla zaokrąglonych rogów i obcina wiersz. Nadmiar nie dociera do strony. Przewijanie w poziomie może wywołać tylko element ponad ramką albo sama ramka.
+
+## Faza 2
+
+Wszystkie złamania sprawdzono na całym `e2e/post.spec.ts`. Kolumna „Czerwone testy” wymienia testy, które padły.
+
+| Złamanie | Czerwone testy |
+| --- | --- |
+| odnośnik wiersza bez zapytania (`FeedView.vue`: `:to` bez `query: route.query`) | „„Zamknij post” zamyka panel…”, „Esc zamyka panel…” (adres bez filtra i strony), „przy 375 px panel zajmuje całe okno…” (fokus) |
+| zamknięcie bez powrotu fokusu (`FeedView.vue`: bez `row.focus()` / `header.focus()`) | „Esc zamyka panel…”, „„Zamknij post” zamyka panel…”, „link do posta spoza strony listy…” (`toBeFocused`) |
+| brak `inert` (`SidePanel.vue`: bez `setAttribute('inert')`) | „klik wiersza otwiera post w panelu…” (`#app` bez `inert`) |
+| Esc nie zamyka (`SidePanel.vue`: bez `emit('close')` na Escape) | „Esc zamyka panel…” (dialog zostaje) |
+| `scrollBehavior` przewija przy otwarciu (`scroll.ts`: warunek ekranu postów wyłączony) | „otwarcie i zamknięcie panelu nie przewija listy na górę” (`scrollY` 0 zamiast 1892) |
+
+Ostatniego złamania początkowo nie łapał żaden test: wszystkie 10 testów `post.spec.ts` było zielonych. Dopisałem więc test „otwarcie i zamknięcie panelu nie przewija listy na górę”. Pierwsza próba usunęła import `withinPostsScreen`, przez co `vue-tsc` przerywał build i testy nie ruszały. Druga próba zostawiła import w użyciu (`&& false`).
