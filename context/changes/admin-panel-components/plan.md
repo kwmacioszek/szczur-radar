@@ -710,25 +710,25 @@ Bez migracji bazy. Odpowiedź `GET /api/admin/posts/failed` dostaje dwa nowe pol
 
 #### Automated
 
-- [x] 5.1 Testy webu przechodzą (RunDetailView, CLEANED): `npm test`
-- [x] 5.2 Build przechodzi: `npm run build`
-- [x] 5.3 Testy E2E przechodzą: `npm run e2e`
-- [x] 5.4 Zmienił się tylko wzorzec view-run (`visual:update` + `git status`)
-- [x] 5.5 Testy wizualne i dostępności przechodzą dwa razy z rzędu: `npm run visual:docker`
-- [x] 5.6 Bez przewijania w poziomie przy 320 px na stronie przebiegu (`playwright-cli`)
-- [x] 5.7 Zrzuty stanów strony przebiegu spoza wzorców w `evidence/states/`
+- [x] 5.1 Testy webu przechodzą (RunDetailView, CLEANED): `npm test` — c428ec8
+- [x] 5.2 Build przechodzi: `npm run build` — c428ec8
+- [x] 5.3 Testy E2E przechodzą: `npm run e2e` — c428ec8
+- [x] 5.4 Zmienił się tylko wzorzec view-run (`visual:update` + `git status`) — c428ec8
+- [x] 5.5 Testy wizualne i dostępności przechodzą dwa razy z rzędu: `npm run visual:docker` — c428ec8
+- [x] 5.6 Bez przewijania w poziomie przy 320 px na stronie przebiegu (`playwright-cli`) — c428ec8
+- [x] 5.7 Zrzuty stanów strony przebiegu spoza wzorców w `evidence/states/` — c428ec8
 
 ### Phase 6: Testy przepływów, dokumentacja i weryfikacja
 
 #### Automated
 
-- [ ] 6.1 Wszystkie testy E2E przechodzą: `npm run e2e`
-- [ ] 6.2 Każdy nowy test E2E był raz czerwony na celowym złamaniu (`evidence/e2e-breaks.md`)
-- [ ] 6.3 Testy webu, build, wizualne dwa razy i kopie projektu przechodzą
-- [ ] 6.4 Testy backendu przechodzą: `./mvnw -B verify`
-- [ ] 6.5 Opis PR zawiera grupy wzorców i `Refs #182` (`gh pr view`)
+- [x] 6.1 Wszystkie testy E2E przechodzą: `npm run e2e`
+- [x] 6.2 Każdy nowy test E2E był raz czerwony na celowym złamaniu (`evidence/e2e-breaks.md`)
+- [x] 6.3 Testy webu, build, wizualne dwa razy i kopie projektu przechodzą
+- [x] 6.4 Testy backendu przechodzą: `./mvnw -B verify`
+- [x] 6.5 Opis PR zawiera grupy wzorców i `Refs #182` (`gh pr view`)
 - [ ] 6.6 CI PR zielone: `gh pr checks`
-- [ ] 6.7 PR env: trzy części i strona przebiegu zgodne z API, bez przewijania przy 375 px (`evidence/pr-env/README.md`)
+- [x] 6.7 PR env: trzy części i strona przebiegu zgodne z API, bez przewijania przy 375 px (`evidence/pr-env/README.md`)
 
 #### Manual
 
