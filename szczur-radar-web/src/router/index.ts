@@ -33,7 +33,7 @@ declare module 'vue-router' {
   interface RouteMeta {
     /** Reachable without a session. */
     public?: boolean
-    /** Only for the admin role; others go to the feed (the API answers 403 anyway). */
+    /** Only for the admin role; others go to the list of posts (the API answers 403 anyway). */
     admin?: boolean
     /** The navigation item of the shell's pages; the other routes have none. */
     section?: AppSection
@@ -52,7 +52,11 @@ export const routes: RouteRecordRaw[] = [
     path: '/',
     component: AppShell,
     children: [
-      { path: '', name: 'home', component: FeedView, meta: { section: 'posts', column: 'narrow' } },
+      // The day's overview comes here with S-59; until then the old address of the list leads to it, its filter and
+      // page kept.
+      { path: '', redirect: (to) => ({ name: 'posts', query: to.query }) },
+      // The compact list spans the shell's whole column (ui-design.md, "Szeroki i wąski ekran"): no `column`.
+      { path: 'posts', name: 'posts', component: FeedView, meta: { section: 'posts' } },
       { path: 'posts/:id', name: 'post', component: PostDetailView, meta: { section: 'posts', column: 'narrow' } },
       { path: 'admin', name: 'admin', component: AdminView, meta: { admin: true, section: 'admin', column: 'wide' } },
       {

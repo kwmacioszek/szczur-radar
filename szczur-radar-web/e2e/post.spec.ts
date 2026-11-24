@@ -5,10 +5,10 @@ import { expect, test } from './fixtures.ts'
 const POST_0 = '/posts/00000000-0000-4000-8000-000400000000'
 
 test('post otwarty z listy pokazuje ocenę i surowe dane, a powrót wraca do listy', async ({ page }) => {
-  await page.goto('/')
+  await page.goto('/posts')
   const main = page.getByRole('main')
 
-  await main.getByRole('article').first().getByRole('link').click()
+  await main.getByRole('listitem').first().getByRole('link').click()
 
   await expect(page).toHaveURL(POST_0)
   // Post 0 has no title: the view names it "{Type} użytkownika {author}".
@@ -21,6 +21,6 @@ test('post otwarty z listy pokazuje ocenę i surowe dane, a powrót wraca do lis
 
   // The header has a "Posty" link too: the back link is the one in main.
   await main.getByRole('link', { name: 'Posty', exact: true }).click()
-  await expect(page).toHaveURL('/')
+  await expect(page).toHaveURL('/posts')
   await expect(main.getByRole('heading', { level: 1, name: 'Posty' })).toBeVisible()
 })

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // The bar of every logged-in page, from props: AppShell feeds it from the session, the router and /api/freshness, the
-// kitchen sink from fixed data. The brand (AppBrand, the same as on the public pages) leads home, the main navigation
-// marks the page's section with aria-current (the caller decides which: a run's page is still "Panel admina"), the date
+// kitchen sink from fixed data. The brand (AppBrand, the same as on the public pages) leads to the posts, the main
+// navigation marks the page's section with aria-current (the caller decides which: a run's page is still "Panel admina"), the date
 // of the data says per source when it was last updated, and the session's controls come last. The bell is the caller's, in the `notifications`
 // slot: its panel opens below the nearest positioned ancestor, which is this header, aligned to its right edge, so
 // nothing between the header and the bell is positioned.
@@ -37,7 +37,7 @@ defineSlots<{ notifications?(): unknown }>()
 
 <template>
   <header class="app-bar">
-    <RouterLink v-slot="{ href, navigate }" :to="{ name: 'home' }" custom>
+    <RouterLink v-slot="{ href, navigate }" :to="{ name: 'posts' }" custom>
       <a class="brand" :href="href" @click="navigate">
         <AppBrand />
       </a>

@@ -78,7 +78,7 @@ describe('LoginView', () => {
     await submit(wrapper)
     expect(login).toHaveBeenCalledWith('admin@example.com', 'correct horse battery')
     expect(currentUser.value?.email).toBe('admin@example.com')
-    expect(router.currentRoute.value.fullPath).toBe('/?tab=2')
+    expect(router.currentRoute.value.fullPath).toBe('/posts?tab=2')
   })
 
   it('fills in the e-mail and confirms the password after an activation', async () => {
@@ -109,7 +109,7 @@ describe('LoginView', () => {
     vi.mocked(login).mockResolvedValue({ id: '1', email: 'admin@example.com', role: 'admin' })
     const { wrapper, router } = await mountLogin('/login?redirect=//evil.com')
     await submit(wrapper)
-    expect(router.currentRoute.value.fullPath).toBe('/')
+    expect(router.currentRoute.value.fullPath).toBe('/posts')
   })
 
   it('shows the brand and the theme switch of a public screen', async () => {

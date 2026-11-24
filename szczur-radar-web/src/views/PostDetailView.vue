@@ -127,16 +127,16 @@ function retry(): void {
   if (postId.value !== null) void load(postId.value, { retry: true })
 }
 
-/** The previous history entry when it is the feed (e.g. `/?page=2`); null after a deep link. */
+/** The previous history entry when it is the feed (e.g. `/posts?page=2`); null after a deep link. */
 function previousFeed(): string | null {
   const back = router.options.history.state.back
-  return typeof back === 'string' && router.resolve(back).name === 'home' ? back : null
+  return typeof back === 'string' && router.resolve(back).name === 'posts' ? back : null
 }
 
 /** Re-read on every navigation: the history entry behind this one changes with it. */
 const listHref = computed(() => {
   void route.fullPath
-  return previousFeed() ?? router.resolve({ name: 'home' }).href
+  return previousFeed() ?? router.resolve({ name: 'posts' }).href
 })
 
 /** Back to the same place of the list when the user came from it; to the list's start otherwise. */
@@ -145,7 +145,7 @@ function toList(event: MouseEvent): void {
   if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return
   event.preventDefault()
   if (previousFeed() !== null) router.back()
-  else void router.push({ name: 'home' })
+  else void router.push({ name: 'posts' })
 }
 
 watch(
@@ -183,7 +183,7 @@ watch(
       >
         Post nie istnieje albo nie został jeszcze oceniony.
         <template #action>
-          <RouterLink :to="{ name: 'home' }">Przejdź do listy postów</RouterLink>
+          <RouterLink :to="{ name: 'posts' }">Przejdź do listy postów</RouterLink>
         </template>
       </EmptyState>
       <template v-else-if="post">

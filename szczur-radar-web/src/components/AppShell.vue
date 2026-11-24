@@ -29,7 +29,7 @@ const isAdmin = computed(() => currentUser.value?.role === 'admin')
 
 const items = computed<NavItem[]>(() => {
   const entries: { label: string; name: string; section: AppSection }[] = [
-    { label: 'Posty', name: 'home', section: 'posts' },
+    { label: 'Posty', name: 'posts', section: 'posts' },
   ]
   if (isAdmin.value) entries.push({ label: 'Panel admina', name: 'admin', section: 'admin' })
   return entries.map((entry) => ({

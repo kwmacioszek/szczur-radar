@@ -44,7 +44,7 @@ function focusLinkTo(path: string): void {
 }
 
 export const scrollBehavior: RouterScrollBehavior = async (to, from, savedPosition) => {
-  if (savedPosition && from.name === 'post' && to.name === 'home') {
+  if (savedPosition && from.name === 'post' && to.name === 'posts') {
     if ((await nextFeedLoad()) !== 'ok') return false
     focusLinkTo(from.path)
     return savedPosition

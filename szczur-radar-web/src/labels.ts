@@ -110,6 +110,13 @@ export function formatDateTime(iso: string): string {
   return dateTime.format(new Date(iso))
 }
 
+const time = new Intl.DateTimeFormat('pl-PL', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Warsaw' })
+
+/** An instant's Warsaw time of day, e.g. `09:41`: a post's time in the list of its day. */
+export function formatTime(iso: string): string {
+  return time.format(new Date(iso))
+}
+
 const date = new Intl.DateTimeFormat('pl-PL', { dateStyle: 'short', timeZone: 'Europe/Warsaw' })
 
 /** The Warsaw calendar day of an instant, e.g. `1.10.2026`. */

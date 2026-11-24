@@ -16,7 +16,7 @@ import notificationMenu from './components/NotificationMenu.vue?raw'
 import pageHeader from './components/PageHeader.vue?raw'
 import pagerNav from './components/PagerNav.vue?raw'
 import postAssessment from './components/PostAssessment.vue?raw'
-import postCard from './components/PostCard.vue?raw'
+import postRow from './components/PostRow.vue?raw'
 import stanceText from './components/StanceText.vue?raw'
 import statusBadge from './components/StatusBadge.vue?raw'
 import statusMessage from './components/StatusMessage.vue?raw'
@@ -138,7 +138,7 @@ const CLEANED: Record<string, string> = {
   'src/components/StatusBadge.vue': statusBadge,
   'src/views/KitchenSinkView.vue': kitchenSinkView,
   'src/views/FeedView.vue': feedView,
-  'src/components/PostCard.vue': postCard,
+  'src/components/PostRow.vue': postRow,
   'src/views/ActivateView.vue': activateView,
   'src/components/StanceText.vue': stanceText,
   'src/components/PostAssessment.vue': postAssessment,

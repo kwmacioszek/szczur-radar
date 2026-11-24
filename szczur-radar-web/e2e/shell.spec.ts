@@ -7,7 +7,7 @@ const POST_0 = '/posts/00000000-0000-4000-8000-000400000000'
 const RUN_1 = '/admin/runs/00000000-0000-4000-8000-000100000001'
 
 test('pozycja nawigacji otwiera swój ekran i przenosi zaznaczenie', async ({ page }) => {
-  await page.goto('/')
+  await page.goto('/posts')
   const nav = page.getByRole('banner').getByRole('navigation', { name: 'Główna', exact: true })
   const main = page.getByRole('main')
   const posts = nav.getByRole('link', { name: 'Posty', exact: true })
@@ -37,13 +37,13 @@ test('pozycja nawigacji otwiera swój ekran i przenosi zaznaczenie', async ({ pa
 
   await posts.click()
 
-  await expect(page).toHaveURL('/')
+  await expect(page).toHaveURL('/posts')
   await expect(main.getByRole('heading', { level: 1, name: 'Posty' })).toBeVisible()
   await expect(posts).toHaveAttribute('aria-current', 'page')
   await expect(admin).not.toHaveAttribute('aria-current', 'page')
 
   // A post's page is still the posts' section.
-  await main.getByRole('article').first().getByRole('link').click()
+  await main.getByRole('listitem').first().getByRole('link').click()
 
   await expect(page).toHaveURL(POST_0)
   await expect(main.getByRole('heading', { level: 1, name: 'Wpis użytkownika uzytkownik0' })).toBeVisible()
@@ -53,7 +53,7 @@ test('pozycja nawigacji otwiera swój ekran i przenosi zaznaczenie', async ({ pa
 
 test.describe('każdy ekran po zalogowaniu ma jeden pasek, jedną treść i jeden nagłówek 1', () => {
   const SCREENS = [
-    { name: 'lista postów', path: '/', title: 'Posty', section: 'Posty' },
+    { name: 'lista postów', path: '/posts', title: 'Posty', section: 'Posty' },
     { name: 'post', path: POST_0, title: 'Wpis użytkownika uzytkownik0', section: 'Posty' },
     { name: 'panel admina', path: '/admin', title: 'Panel admina', section: 'Panel admina' },
     { name: 'przebieg', path: RUN_1, title: 'Przebieg: zakres dat', section: 'Panel admina' },
@@ -84,7 +84,7 @@ test.describe('data danych', () => {
     test.use({ modes: { FRESHNESS: 'apart' } })
 
     test('data danych pokazuje dzień i godzinę każdego źródła', async ({ page }) => {
-      await page.goto('/')
+      await page.goto('/posts')
       const banner = page.getByRole('banner')
 
       await expect(banner.getByText('Dane:', { exact: true })).toBeVisible()
@@ -101,7 +101,7 @@ test.describe('data danych', () => {
     test.use({ modes: { FRESHNESS: 'none' } })
 
     test('bez aktualizacji pasek mówi, że danych jeszcze nie ma', async ({ page }) => {
-      await page.goto('/')
+      await page.goto('/posts')
       const banner = page.getByRole('banner')
 
       await expect(banner.getByText('Dane nie były jeszcze aktualizowane.', { exact: true })).toBeVisible()
@@ -113,7 +113,7 @@ test.describe('data danych', () => {
     test.use({ modes: { FRESHNESS: 'error' } })
 
     test('błąd daty danych nie psuje strony', async ({ page }) => {
-      await page.goto('/')
+      await page.goto('/posts')
       const main = page.getByRole('main')
 
       await expect(main.getByRole('status')).toHaveText('Ocenione posty: 120')
@@ -128,7 +128,7 @@ test.describe('data danych', () => {
     test.use({ viewport: { width: 375, height: 812 } })
 
     test('na wąskim ekranie data danych zostaje w pasku', async ({ page }) => {
-      await page.goto('/')
+      await page.goto('/posts')
       const banner = page.getByRole('banner')
 
       await expect(banner.getByText('Dane:', { exact: true })).toBeVisible()
@@ -137,7 +137,7 @@ test.describe('data danych', () => {
     })
 
     test('pasek z datą danych nie poszerza strony na wąskim ekranie', async ({ page }) => {
-      await page.goto('/')
+      await page.goto('/posts')
       await expect(page.getByRole('banner').getByText('Dane:', { exact: true })).toBeVisible()
 
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375)
@@ -147,7 +147,7 @@ test.describe('data danych', () => {
       test.use({ modes: { FRESHNESS: 'none' } })
 
       test('pasek z napisem o braku aktualizacji nie poszerza strony na wąskim ekranie', async ({ page }) => {
-        await page.goto('/')
+        await page.goto('/posts')
         await expect(page.getByRole('banner').getByText('Dane nie były jeszcze aktualizowane.')).toBeVisible()
 
         expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375)

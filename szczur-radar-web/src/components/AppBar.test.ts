@@ -9,13 +9,13 @@ enableAutoUnmount(afterEach)
 const router = createRouter({
   history: createMemoryHistory(),
   routes: [
-    { path: '/', name: 'home', component: { render: () => null } },
+    { path: '/posts', name: 'posts', component: { render: () => null } },
     { path: '/admin', name: 'admin', component: { render: () => null } },
   ],
 })
 
 const ITEMS = [
-  { label: 'Posty', to: { name: 'home' }, current: true },
+  { label: 'Posty', to: { name: 'posts' }, current: true },
   { label: 'Panel admina', to: { name: 'admin' }, current: false },
 ]
 
@@ -35,12 +35,12 @@ function mountBar(props: Partial<InstanceType<typeof AppBar>['$props']> = {}, sl
 }
 
 describe('AppBar', () => {
-  it('is the banner with the name of the application leading to the home page', () => {
+  it('is the banner with the name of the application leading to the posts', () => {
     const wrapper = mountBar()
     expect(wrapper.element.tagName).toBe('HEADER')
     const brand = wrapper.get('a.brand')
     expect(brand.text()).toBe('Szczur Radar')
-    expect(brand.attributes('href')).toBe('/')
+    expect(brand.attributes('href')).toBe('/posts')
     // The mark is a decoration: the name beside it is the link's.
     expect(brand.get('svg').attributes('aria-hidden')).toBe('true')
   })
@@ -48,7 +48,7 @@ describe('AppBar', () => {
   it('lists the links of its items in the main navigation, in order', () => {
     const links = mountBar().get('nav[aria-label="Główna"]').findAll('a')
     expect(links.map((link) => link.text())).toEqual(['Posty', 'Panel admina'])
-    expect(links.map((link) => link.attributes('href'))).toEqual(['/', '/admin'])
+    expect(links.map((link) => link.attributes('href'))).toEqual(['/posts', '/admin'])
   })
 
   it('marks only the current item with aria-current, also where the address is not exactly its own', () => {

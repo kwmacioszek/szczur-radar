@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest'
-import { formatDate, formatDateTime, formatDuration, formatRelative, label, plural, postOrigin, postType } from './labels'
+import {
+  formatDate,
+  formatDateTime,
+  formatDuration,
+  formatRelative,
+  formatTime,
+  label,
+  plural,
+  postOrigin,
+  postType,
+} from './labels'
 
 const NOW = Date.parse('2026-10-15T08:00:00Z')
 const SECOND = 1000
@@ -102,6 +112,15 @@ describe('formatDate', () => {
   it('gives the Warsaw day of an instant', () => {
     expect(formatDate('2026-10-10T22:00:00Z')).toBe('11.10.2026')
     expect(formatDate('2026-10-11T21:59:59Z')).toBe('11.10.2026')
+  })
+})
+
+describe('formatTime', () => {
+  it('gives the Warsaw time of day of an instant, with two-digit hours', () => {
+    expect(formatTime('2026-10-20T07:41:00Z')).toBe('09:41')
+    expect(formatTime('2026-10-11T22:05:00Z')).toBe('00:05')
+    // Winter time: one hour ahead of UTC.
+    expect(formatTime('2026-12-31T22:59:00Z')).toBe('23:59')
   })
 })
 

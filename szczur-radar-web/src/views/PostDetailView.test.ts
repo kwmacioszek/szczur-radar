@@ -198,7 +198,7 @@ describe('PostDetailView', () => {
     expect(empty.find('.state-text').text()).toBe('Post nie istnieje albo nie został jeszcze oceniony.')
     const link = empty.find('.state-action a')
     expect(link.text()).toBe('Przejdź do listy postów')
-    expect(link.attributes('href')).toBe('/')
+    expect(link.attributes('href')).toBe('/posts')
     expect(wrapper.find('[role="alert"]').exists()).toBe(false)
   })
 
@@ -391,12 +391,12 @@ describe('PostDetailView', () => {
   describe('the link back to the list', () => {
     it('goes back in history when the previous entry is the list', async () => {
       vi.mocked(fetchPost).mockResolvedValue(post())
-      const { wrapper, router } = await mountPost('/posts/1', { history: historyWithBack('/?page=1') })
+      const { wrapper, router } = await mountPost('/posts/1', { history: historyWithBack('/posts?page=1') })
       const back = vi.spyOn(router, 'back').mockImplementation(() => {})
       const link = wrapper.find('a.back')
       expect(link.text()).toBe('← Posty')
       expect(link.find('span[aria-hidden="true"]').text()).toBe('←')
-      expect(link.attributes('href')).toBe('/?page=1')
+      expect(link.attributes('href')).toBe('/posts?page=1')
 
       await link.trigger('click')
 
@@ -407,13 +407,13 @@ describe('PostDetailView', () => {
       vi.mocked(fetchPost).mockResolvedValue(post())
       const { wrapper, router } = await mountPost()
       const back = vi.spyOn(router, 'back')
-      expect(wrapper.find('a.back').attributes('href')).toBe('/')
+      expect(wrapper.find('a.back').attributes('href')).toBe('/posts')
 
       await wrapper.find('a.back').trigger('click')
       await flushPromises()
 
       expect(back).not.toHaveBeenCalled()
-      expect(router.currentRoute.value.fullPath).toBe('/')
+      expect(router.currentRoute.value.fullPath).toBe('/posts')
     })
 
     it('goes to the list when the previous entry is another page', async () => {
@@ -425,7 +425,7 @@ describe('PostDetailView', () => {
       await flushPromises()
 
       expect(back).not.toHaveBeenCalled()
-      expect(router.currentRoute.value.fullPath).toBe('/')
+      expect(router.currentRoute.value.fullPath).toBe('/posts')
     })
   })
 })

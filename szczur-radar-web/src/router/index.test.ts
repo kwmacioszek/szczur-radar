@@ -54,29 +54,37 @@ describe('route guard', () => {
     vi.mocked(window.scrollTo).mockRestore()
   })
 
-  it('sends an anonymous visitor on / to /login with a redirect back', async () => {
+  it('sends an anonymous visitor on / to /login with a redirect back to the posts', async () => {
     vi.mocked(fetchMe).mockRejectedValue(new ApiError(401, 'not_authenticated'))
-    expect(await navigate('/')).toBe('/login?redirect=/')
+    expect(await navigate('/')).toBe('/login?redirect=/posts')
   })
 
   it('sends an anonymous visitor on an unknown path to /login', async () => {
     vi.mocked(fetchMe).mockRejectedValue(new ApiError(401, 'not_authenticated'))
-    expect(await navigate('/some/deep/route')).toBe('/login?redirect=/')
+    expect(await navigate('/some/deep/route')).toBe('/login?redirect=/posts')
   })
 
   it('treats a failed session probe as logged out', async () => {
     vi.mocked(fetchMe).mockRejectedValue(new TypeError('Failed to fetch'))
-    expect(await navigate('/')).toBe('/login?redirect=/')
+    expect(await navigate('/')).toBe('/login?redirect=/posts')
   })
 
   it('lets a logged-in user in', async () => {
     vi.mocked(fetchMe).mockResolvedValue(ADMIN)
-    expect(await navigate('/')).toBe('/')
+    expect(await navigate('/posts')).toBe('/posts')
   })
 
-  it('sends a logged-in user away from /login', async () => {
+  it('leads the old address of the list to /posts with the same filter and page', async () => {
     vi.mocked(fetchMe).mockResolvedValue(ADMIN)
-    expect(await navigate('/login')).toBe('/')
+    const router = createAppRouter(createMemoryHistory())
+    await router.push('/?q=orlen&direction=bullish&page=1')
+    expect(router.currentRoute.value.name).toBe('posts')
+    expect(router.currentRoute.value.fullPath).toBe('/posts?q=orlen&direction=bullish&page=1')
+  })
+
+  it('sends a logged-in user away from /login to the posts', async () => {
+    vi.mocked(fetchMe).mockResolvedValue(ADMIN)
+    expect(await navigate('/login')).toBe('/posts')
   })
 
   it('sends an anonymous visitor on a post to /login with a redirect back', async () => {
@@ -97,9 +105,9 @@ describe('route guard', () => {
     expect(await navigate('/admin')).toBe('/admin')
   })
 
-  it('sends a plain user away from /admin to the feed', async () => {
+  it('sends a plain user away from /admin to the posts', async () => {
     vi.mocked(fetchMe).mockResolvedValue({ ...ADMIN, role: 'user' })
-    expect(await navigate('/admin')).toBe('/')
+    expect(await navigate('/admin')).toBe('/posts')
   })
 
   it("lets an admin into a run's page", async () => {
@@ -110,9 +118,9 @@ describe('route guard', () => {
     expect(router.currentRoute.value.params.id).toBe('x')
   })
 
-  it("sends a plain user away from a run's page to the feed", async () => {
+  it("sends a plain user away from a run's page to the posts", async () => {
     vi.mocked(fetchMe).mockResolvedValue({ ...ADMIN, role: 'user' })
-    expect(await navigate('/admin/runs/x')).toBe('/')
+    expect(await navigate('/admin/runs/x')).toBe('/posts')
   })
 
   it("sends an anonymous visitor on a run's page to /login with a redirect back", async () => {
@@ -143,7 +151,7 @@ describe('route guard', () => {
   it('asks the server for the session only once', async () => {
     vi.mocked(fetchMe).mockResolvedValue(ADMIN)
     const router = createAppRouter(createMemoryHistory())
-    await router.push('/')
+    await router.push('/posts')
     await router.push('/login')
     expect(fetchMe).toHaveBeenCalledTimes(1)
   })
@@ -162,7 +170,7 @@ describe('shell', () => {
   })
 
   it.each([
-    ['/', 'home', 'posts'],
+    ['/posts', 'posts', 'posts'],
     ['/posts/x', 'post', 'posts'],
     ['/admin', 'admin', 'admin'],
     ['/admin/runs/x', 'admin-run', 'admin'],
@@ -176,7 +184,6 @@ describe('shell', () => {
   })
 
   it.each([
-    ['/', 'narrow'],
     ['/posts/x', 'narrow'],
     ['/admin', 'wide'],
     ['/admin/runs/x', 'narrow'],
@@ -186,10 +193,17 @@ describe('shell', () => {
     expect(router.currentRoute.value.meta.column).toBe(column)
   })
 
-  it('gives every page of the shell a column', () => {
+  it("gives the compact list of posts the shell's whole column", async () => {
+    const router = createAppRouter(createMemoryHistory())
+    await router.push('/posts')
+    expect(router.currentRoute.value.meta.column).toBeUndefined()
+  })
+
+  it('gives every other page of the shell a column', () => {
     const shell = routes.find((route) => route.children)
-    expect(shell?.children?.length).toBeGreaterThan(0)
-    for (const child of shell?.children ?? []) {
+    const pages = (shell?.children ?? []).filter((child) => child.name !== undefined && child.name !== 'posts')
+    expect(pages.length).toBeGreaterThan(0)
+    for (const child of pages) {
       expect(child.meta?.column, String(child.name)).toBeDefined()
     }
   })
@@ -204,14 +218,14 @@ describe('shell', () => {
 
   it('does not mount the shell again when the page changes between its children', async () => {
     const router = createAppRouter(createMemoryHistory())
-    await router.push('/')
+    await router.push('/posts')
     const app = mount({ render: () => h(RouterView) }, { global: { plugins: [router] } })
     expect(mounted.shell).toBe(1)
 
     await router.push('/posts/x')
     await router.push('/admin')
     await router.push('/admin/runs/x')
-    await router.push('/')
+    await router.push('/posts')
 
     expect(mounted.shell).toBe(1)
     app.unmount()
@@ -219,10 +233,10 @@ describe('shell', () => {
 
   it('mounts the shell again after leaving it for a public page', async () => {
     const router = createAppRouter(createMemoryHistory())
-    await router.push('/')
+    await router.push('/posts')
     const app = mount({ render: () => h(RouterView) }, { global: { plugins: [router] } })
     await router.push('/activate#token')
-    await router.push('/')
+    await router.push('/posts')
     expect(mounted.shell).toBe(2)
     app.unmount()
   })

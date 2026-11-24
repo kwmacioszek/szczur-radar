@@ -9,8 +9,9 @@ import FeedFilter from '../components/FeedFilter.vue'
 import LoadingState from '../components/LoadingState.vue'
 import PageHeader from '../components/PageHeader.vue'
 import PagerNav from '../components/PagerNav.vue'
-import PostCard from '../components/PostCard.vue'
+import PostRow from '../components/PostRow.vue'
 import { filterFromQuery, filterToQuery, isFilterActive, pageFromQuery, sameFilter } from '../feedFilter'
+import { groupByDay } from '../postDays'
 import { reportFeedLoaded } from '../router/scroll'
 
 const route = useRoute()
@@ -50,8 +51,11 @@ const pages = computed(() => (shown.value ? Math.max(1, Math.ceil(shown.value.re
 const noMatch = computed(
   () => shown.value !== null && shown.value.result.total === 0 && isFilterActive(shown.value.filter),
 )
-/** The cards with their pager are on screen, so a page change at the same filter can leave them there. */
+/** The rows with their pager are on screen, so a page change at the same filter can leave them there. */
 const listOnScreen = computed(() => !failed.value && shown.value !== null && shown.value.result.items.length > 0)
+
+/** The page on screen in the frames of its days. */
+const days = computed(() => (shown.value ? groupByDay(shown.value.result.items, Date.now()) : []))
 
 /** The error stays during its own retry; any other load replaces it. */
 const showError = computed(() => failed.value && (loading.value === null || loading.value.kind === 'retry'))
@@ -247,7 +251,18 @@ watch(
           </template>
         </EmptyState>
         <template v-else-if="shown">
-          <PostCard v-for="post in shown.result.items" :key="post.id" :post="post" />
+          <section v-for="day in days" :key="day.key" class="day" :aria-labelledby="`day-${day.key}`">
+            <h2 :id="`day-${day.key}`" class="day-title">{{ day.title }}</h2>
+            <ol class="rows">
+              <PostRow
+                v-for="post in day.items"
+                :key="post.id"
+                :post="post"
+                :to="{ name: 'post', params: { id: post.id } }"
+                :selected="false"
+              />
+            </ol>
+          </section>
           <PagerNav
             class="list-pager"
             :page="shown.page"
@@ -273,7 +288,42 @@ watch(
   color: var(--text-h);
 }
 
-/* The cards keep their own spacing; the pager stands apart under the last one. */
+/* A day: its heading with a line to the end of the column, then its rows in one frame. */
+.day + .day {
+  margin-top: var(--space-6);
+}
+
+.day-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin: 0;
+  color: var(--text-muted);
+  font-family: var(--font-ui);
+  font-size: var(--font-size-sm);
+  font-weight: var(--weight-semibold);
+  letter-spacing: normal;
+}
+
+.day-title::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+
+/* The rows draw the lines between them; the frame clips the selected row's background to its corners. */
+.rows {
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+  list-style: none;
+}
+
+/* The pager stands apart under the last day. */
 .list-pager {
   margin-top: var(--space-5);
 }

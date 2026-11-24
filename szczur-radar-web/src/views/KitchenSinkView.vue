@@ -34,7 +34,7 @@ import NotificationMenu from '../components/NotificationMenu.vue'
 import PagerNav from '../components/PagerNav.vue'
 import PageHeader from '../components/PageHeader.vue'
 import PostAssessment from '../components/PostAssessment.vue'
-import PostCard from '../components/PostCard.vue'
+import PostRow from '../components/PostRow.vue'
 import StanceText from '../components/StanceText.vue'
 import StatusBadge, { type BadgeTone } from '../components/StatusBadge.vue'
 import StatusMessage from '../components/StatusMessage.vue'
@@ -190,7 +190,7 @@ const bellOpen = reactive<Record<string, boolean>>(
 )
 
 /** The two items of an admin's navigation; the user has the first. The page belongs to "Posty". */
-const postsItem: NavItem = { label: 'Posty', to: { name: 'home' }, current: true }
+const postsItem: NavItem = { label: 'Posty', to: { name: 'posts' }, current: true }
 const adminItem: NavItem = { label: 'Panel admina', to: { name: 'admin' }, current: false }
 
 /** One source per day and hour, the older one a few days back: the label shows the day, not only the hour. */
@@ -271,7 +271,7 @@ function authorClaim(id: string, kind: ClaimKind, targetIds: string[], evidence:
   return { id, kind, attribution: 'author', target_ids: targetIds, evidence: quote(evidence), statement }
 }
 
-/** The card shows no claims; they are here so that each stance has the claims it rests on. */
+/** The row shows no claims; they are here so that each stance has the claims it rests on. */
 function modelAssessment(targets: Target[], flags: Flag[], claims: Claim[] = []): PostItem['assessment'] {
   return {
     output: { relevance: 'investment_related', modifiers: [], targets, claims, flags },
@@ -283,7 +283,10 @@ function modelAssessment(targets: Target[], flags: Flag[], claims: Claim[] = [])
 /** The feed filter as applied from the address, every field set. */
 const activeFilter: PostFilter = { q: 'orlen', kind: 'company', direction: 'bullish' }
 
-/** Every variant of the feed's card, newest first; the targets cover four kinds, the last post is Reddit's. */
+/**
+ * Every variant of the list's row, newest first: one, two, three and five targets of four kinds, flags, a post the model
+ * found no target in, one not about investing, the prefilter's, one without an assessment and Reddit's.
+ */
 const posts: PostItem[] = [
   {
     id: 'model',
@@ -348,6 +351,34 @@ const posts: PostItem[] = [
     assessment: {
       output: { relevance: 'unclear', modifiers: [], targets: [], claims: [], flags: ['insufficient_content'] },
       resultSource: 'prefilter',
+      assessedAt: '2026-10-12T21:00:00Z',
+    },
+  },
+  {
+    id: 'no-targets',
+    source: 'wykop',
+    channel: 'gielda',
+    itemType: 'link',
+    publishedAt: '2026-10-12T17:10:00Z',
+    title: 'KNF ostrzega przed nowym schematem piramidy finansowej',
+    body: 'Komisja ostrzega przed platformą obiecującą 30% miesięcznie.',
+    author: 'dywidendowy_zbyszek',
+    webUrl: 'https://wykop.pl/link/7712399',
+    assessment: modelAssessment([], ['missing_context']),
+  },
+  {
+    id: 'not-investment',
+    source: 'wykop',
+    channel: 'gielda',
+    itemType: 'post',
+    publishedAt: '2026-10-12T16:40:00Z',
+    title: null,
+    body: 'Ktoś poleci dobrą kawiarnię w okolicy GPW? Po sesji trzeba gdzieś odpocząć.',
+    author: 'wykresiarz',
+    webUrl: 'https://wykop.pl/wpis/81230007',
+    assessment: {
+      output: { relevance: 'not_investment_related', modifiers: ['humor'], targets: [], claims: [], flags: [] },
+      resultSource: 'model',
       assessedAt: '2026-10-12T21:00:00Z',
     },
   },
@@ -757,7 +788,7 @@ const assessments: { id: string; title: string; assessment: NonNullable<PostItem
       <h2 id="links-title">Odnośnik</h2>
       <div class="row">
         <span class="row-title">Wewnętrzny</span>
-        <RouterLink :to="{ name: 'home' }">Wszystkie posty o KGHM</RouterLink>
+        <RouterLink :to="{ name: 'posts' }">Wszystkie posty o KGHM</RouterLink>
       </div>
       <div class="row">
         <span class="row-title">Zewnętrzny</span>
@@ -1041,9 +1072,18 @@ const assessments: { id: string; title: string; assessment: NonNullable<PostItem
       <FeedFilter :filter="activeFilter" />
     </section>
 
-    <section aria-labelledby="posts-title">
-      <h2 id="posts-title">Posty</h2>
-      <PostCard v-for="post in posts" :key="post.id" :post="post" />
+    <section aria-labelledby="post-row-title">
+      <h2 id="post-row-title">Wiersz posta</h2>
+      <p>Wiersze jednego dnia w jego ramce; wiersz posta otwartego w panelu jest wybrany (tu: post z Reddita).</p>
+      <ol class="rows">
+        <PostRow
+          v-for="post in posts"
+          :key="post.id"
+          :post="post"
+          :to="{ name: 'post', params: { id: post.id } }"
+          :selected="post.id === 'reddit'"
+        />
+      </ol>
     </section>
 
     <section aria-labelledby="assessments-title">
@@ -1317,6 +1357,17 @@ h3 {
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
+}
+
+/* The frame of a day's rows, as on the list of posts (FeedView). */
+.rows {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+  list-style: none;
 }
 
 /* A box narrower than the marker's content, to show the name being cut short. */
