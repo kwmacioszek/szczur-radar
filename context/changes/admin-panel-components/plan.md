@@ -665,21 +665,21 @@ Bez migracji bazy. Odpowiedź `GET /api/admin/posts/failed` dostaje dwa nowe pol
 
 #### Automated
 
-- [x] 1.1 Testy backendu przechodzą (PostsApiIT, ContractVariantsTest, ContractRoutesIT): `./mvnw -B verify`
-- [x] 1.2 Testy webu przechodzą (shapes, responseTypes, mockApi z trybem FAILED): `npm test`
-- [x] 1.3 Typy i build przechodzą: `npm run build`
-- [x] 1.4 Plik kontraktu ma pochodzenie w każdym elemencie (`jq -e`)
+- [x] 1.1 Testy backendu przechodzą (PostsApiIT, ContractVariantsTest, ContractRoutesIT): `./mvnw -B verify` — 7334a7a
+- [x] 1.2 Testy webu przechodzą (shapes, responseTypes, mockApi z trybem FAILED): `npm test` — 7334a7a
+- [x] 1.3 Typy i build przechodzą: `npm run build` — 7334a7a
+- [x] 1.4 Plik kontraktu ma pochodzenie w każdym elemencie (`jq -e`) — 7334a7a
 
 ### Phase 2: Komponenty „Części panelu admina” i „Tabela”
 
 #### Automated
 
-- [ ] 2.1 Testy webu przechodzą (komponenty, CLEANED): `npm test`
-- [ ] 2.2 Build przechodzi: `npm run build`
-- [ ] 2.3 Wzorce nowych sekcji i stanów zapisane, innych plików nie ruszono (`visual:update` + `git status`)
-- [ ] 2.4 Testy wizualne i dostępności przechodzą dwa razy z rzędu: `npm run visual:docker`
-- [ ] 2.5 Kopie projektu zgodne: `design-check.mjs app`
-- [ ] 2.6 Katalog bez przewijania w poziomie przy 320 px (`playwright-cli`)
+- [x] 2.1 Testy webu przechodzą (komponenty, CLEANED): `npm test`
+- [x] 2.2 Build przechodzi: `npm run build`
+- [x] 2.3 Wzorce nowych sekcji i stanów zapisane, innych plików nie ruszono (`visual:update` + `git status`)
+- [x] 2.4 Testy wizualne i dostępności przechodzą dwa razy z rzędu: `npm run visual:docker`
+- [x] 2.5 Kopie projektu zgodne: `design-check.mjs app`
+- [x] 2.6 Katalog bez przewijania w poziomie przy 320 px (`playwright-cli`)
 
 ### Phase 3: Rozbicie panelu na trzy adresy
 

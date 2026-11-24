@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest'
+import adminPartsNav from './components/AdminPartsNav.vue?raw'
 import appBar from './components/AppBar.vue?raw'
 import appBrand from './components/AppBrand.vue?raw'
 import appButton from './components/AppButton.vue?raw'
 import appIcon from './components/AppIcon.vue?raw'
 import appShell from './components/AppShell.vue?raw'
 import authLayout from './components/AuthLayout.vue?raw'
+import dataTable from './components/DataTable.vue?raw'
 import emptyState from './components/EmptyState.vue?raw'
 import errorState from './components/ErrorState.vue?raw'
 import feedFilter from './components/FeedFilter.vue?raw'
@@ -159,6 +161,8 @@ const CLEANED: Record<string, string> = {
   'src/components/EmptyState.vue': emptyState,
   'src/components/ErrorState.vue': errorState,
   'src/components/PagerNav.vue': pagerNav,
+  'src/components/AdminPartsNav.vue': adminPartsNav,
+  'src/components/DataTable.vue': dataTable,
 }
 
 /** The hardcoded-value scan of /10x-ui: colour literals, arbitrary values and palette classes. */

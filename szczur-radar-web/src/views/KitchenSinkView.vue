@@ -20,10 +20,12 @@ import type {
   Target,
   TargetKind,
 } from '../api/posts'
+import AdminPartsNav, { type AdminPart } from '../components/AdminPartsNav.vue'
 import AppBar, { type NavItem } from '../components/AppBar.vue'
 import AppBrand from '../components/AppBrand.vue'
 import AppButton from '../components/AppButton.vue'
 import AppIcon from '../components/AppIcon.vue'
+import DataTable from '../components/DataTable.vue'
 import EmptyState from '../components/EmptyState.vue'
 import ErrorState from '../components/ErrorState.vue'
 import FeedFilter from '../components/FeedFilter.vue'
@@ -694,6 +696,125 @@ const assessments: { id: string; title: string; assessment: NonNullable<PostItem
     },
   },
 ]
+/** The admin panel's parts: the first is current and has the count of failed posts, the second none (0 hides it). */
+function adminParts(current: string, failed: number): AdminPart[] {
+  return [
+    { label: 'Przebiegi', to: '/admin', current: current === 'Przebiegi' },
+    { label: 'Jakość ocen', to: '/admin/quality', current: current === 'Jakość ocen' },
+    { label: 'Nieudane posty', to: '/admin/posts', current: current === 'Nieudane posty', count: failed },
+  ]
+}
+
+const partBars: { id: string; title: string; items: AdminPart[] }[] = [
+  { id: 'runs', title: 'Bieżące Przebiegi, licznik nieudanych postów', items: adminParts('Przebiegi', 7) },
+  { id: 'posts', title: 'Bieżące Nieudane posty, bez licznika (0 nieudanych)', items: adminParts('Nieudane posty', 0) },
+]
+
+/** The runs table of the admin panel, as in the design: a link in the row header, the state's badges, zeros. */
+const runRows: {
+  id: string
+  createdAt: string
+  kind: string
+  badges: { tone: BadgeTone; text: string; icon?: true }[]
+  range: string
+  assessed: number
+  failed: number
+  dead: number
+  duration: string
+}[] = [
+  {
+    id: '00000000-0000-4000-8000-000100000001',
+    createdAt: '20.10.2026, 10:18',
+    kind: 'wybrane posty',
+    badges: [{ tone: 'info', text: 'trwa' }],
+    range: '',
+    assessed: 3,
+    failed: 0,
+    dead: 0,
+    duration: '2 min',
+  },
+  {
+    id: '00000000-0000-4000-8000-000100000002',
+    createdAt: '20.10.2026, 02:30',
+    kind: 'zakres dat',
+    badges: [{ tone: 'success', text: 'zakończony' }],
+    range: '18.10–19.10.2026',
+    assessed: 165,
+    failed: 0,
+    dead: 0,
+    duration: '11 min',
+  },
+  {
+    id: '00000000-0000-4000-8000-000100000003',
+    createdAt: '19.10.2026, 02:30',
+    kind: 'zakres dat',
+    badges: [
+      { tone: 'warning', text: 'częściowo' },
+      { tone: 'destructive', text: 'wymaga uwagi', icon: true },
+    ],
+    range: '17.10–18.10.2026',
+    assessed: 88,
+    failed: 4,
+    dead: 2,
+    duration: '9 min',
+  },
+  {
+    id: '00000000-0000-4000-8000-000100000004',
+    createdAt: '18.10.2026, 14:05',
+    kind: 'ponowienie resztek',
+    badges: [{ tone: 'success', text: 'zakończony' }],
+    range: '',
+    assessed: 12,
+    failed: 0,
+    dead: 0,
+    duration: '2 min',
+  },
+]
+
+/** Failed posts with their checkboxes; the first is chosen, so its row is selected. */
+const failedRows: {
+  id: string
+  title: string
+  url: string
+  origin: string
+  state: BadgeTone
+  stateText: string
+  attempts: number
+  error: string
+}[] = [
+  {
+    id: 'semis',
+    title: 'Thoughts on the semiconductor cycle',
+    url: 'https://www.reddit.com/r/stocks/comments/1xgabc3/thoughts_on_the_semiconductor_cycle/',
+    origin: 'Reddit · r/stocks',
+    state: 'destructive',
+    stateText: 'martwy',
+    attempts: 3,
+    error: 'niezgodność ze schematem',
+  },
+  {
+    id: 'dywidenda',
+    title: 'Czy ktoś liczył dywidendę za ten rok',
+    url: 'https://wykop.pl/wpis/81230099',
+    origin: 'Wykop · #gielda',
+    state: 'neutral',
+    stateText: 'do ponowienia',
+    attempts: 2,
+    error: 'zmyślony cytat',
+  },
+  {
+    id: 'dollar',
+    title: 'Is the dollar rally over',
+    url: 'https://www.reddit.com/r/investing/comments/1xgabc4/is_the_dollar_rally_over/',
+    origin: 'Reddit · r/investing',
+    state: 'warning',
+    stateText: 'wstrzymany',
+    attempts: 0,
+    error: 'błędy techniczne: 2',
+  },
+]
+
+const chosenPosts = ref<string[]>(['semis'])
 </script>
 
 <template>
@@ -1114,6 +1235,94 @@ const assessments: { id: string; title: string; assessment: NonNullable<PostItem
         </li>
       </ul>
     </section>
+    <section aria-labelledby="admin-parts-title">
+      <h2 id="admin-parts-title">Części panelu admina</h2>
+      <p>Pasek pod nagłówkiem „Panel admina”: każda część ma własny adres, bieżąca jest podkreślona.</p>
+      <ul class="samples">
+        <li v-for="bar in partBars" :key="bar.id" class="variant">
+          <p class="sample-title">{{ bar.title }}</p>
+          <AdminPartsNav label="Panel admina" :items="bar.items" />
+        </li>
+      </ul>
+    </section>
+
+    <section aria-labelledby="table-title">
+      <h2 id="table-title">Tabela</h2>
+      <p>Liczby do prawej, zero wyszarzone; na wąskim ekranie tabela przewija się w swojej ramce.</p>
+      <ul class="samples">
+        <li class="variant">
+          <p class="sample-title">Przebiegi: odnośnik w nagłówku wiersza, znaczniki stanu i zera</p>
+          <DataTable caption="Ostatnie przebiegi, od najnowszego">
+            <thead>
+              <tr>
+                <th scope="col">Przebieg</th>
+                <th scope="col">Rodzaj</th>
+                <th scope="col">Stan</th>
+                <th scope="col">Zakres</th>
+                <th scope="col" class="num">Ocenione</th>
+                <th scope="col" class="num">Nieudane</th>
+                <th scope="col" class="num">Martwe</th>
+                <th scope="col" class="num">Czas</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="run in runRows" :key="run.id">
+                <th scope="row">
+                  <RouterLink
+                    :to="{ name: 'admin-run', params: { id: run.id } }"
+                    :aria-label="`Szczegóły przebiegu z ${run.createdAt}`"
+                  >
+                    {{ run.createdAt }}
+                  </RouterLink>
+                </th>
+                <td>{{ run.kind }}</td>
+                <td>
+                  <span class="badges">
+                    <StatusBadge v-for="badge in run.badges" :key="badge.text" :tone="badge.tone" :icon="badge.icon">
+                      {{ badge.text }}
+                    </StatusBadge>
+                  </span>
+                </td>
+                <td>{{ run.range }}</td>
+                <td class="num">{{ run.assessed }}</td>
+                <td class="num" :class="{ zero: run.failed === 0 }">{{ run.failed }}</td>
+                <td class="num" :class="{ zero: run.dead === 0 }">{{ run.dead }}</td>
+                <td class="num">{{ run.duration }}</td>
+              </tr>
+            </tbody>
+          </DataTable>
+        </li>
+        <li class="variant">
+          <p class="sample-title">Nieudane posty: pola wyboru, zaznaczony wiersz</p>
+          <DataTable caption="Posty, których ocena się nie udała">
+            <thead>
+              <tr>
+                <th scope="col"><span class="visually-hidden">Zaznacz</span></th>
+                <th scope="col">Post</th>
+                <th scope="col">Źródło</th>
+                <th scope="col">Stan</th>
+                <th scope="col" class="num">Próby</th>
+                <th scope="col">Ostatni błąd</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="post in failedRows" :key="post.id" :class="{ 'is-selected': chosenPosts.includes(post.id) }">
+                <td>
+                  <input v-model="chosenPosts" type="checkbox" :value="post.id" :aria-label="`Zaznacz post: ${post.title}`" />
+                </td>
+                <th scope="row"><a :href="post.url">{{ post.title }}</a></th>
+                <td>{{ post.origin }}</td>
+                <td>
+                  <StatusBadge :tone="post.state">{{ post.stateText }}</StatusBadge>
+                </td>
+                <td class="num" :class="{ zero: post.attempts === 0 }">{{ post.attempts }}</td>
+                <td>{{ post.error }}</td>
+              </tr>
+            </tbody>
+          </DataTable>
+        </li>
+      </ul>
+    </section>
   </main>
 </template>
 
@@ -1317,6 +1526,12 @@ h3 {
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
+}
+
+/* A run's state and its "wymaga uwagi" side by side in their cell. */
+.badges {
+  display: inline-flex;
+  gap: var(--space-2);
 }
 
 /* A box narrower than the marker's content, to show the name being cut short. */

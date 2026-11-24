@@ -362,8 +362,32 @@ function navigationLink(region: Locator): Locator {
     .getByRole('link', { name: 'Panel admina', exact: true })
 }
 
+/**
+ * A part of the admin panel that is not the current one, in the bar whose sample has the count (the first variant of
+ * „Części panelu admina”): both bars of the section share their link names, so the bar is found by its title.
+ */
+function adminPartLink(name: string): (region: Locator) => Locator {
+  return (region) =>
+    region
+      .getByRole('listitem')
+      .filter({ hasText: 'Bieżące Przebiegi, licznik nieudanych postów' })
+      .getByRole('navigation', { name: 'Panel admina', exact: true })
+      .getByRole('link', { name, exact: true })
+}
+
+/**
+ * A cell of a run's row in the runs table of „Tabela”, in its second column, which is in the frame at 375 px: the
+ * pointer over it is over the row, and the frame does not scroll sideways to bring it into view.
+ */
+function runRowCell(region: Locator): Locator {
+  return region
+    .getByRole('table', { name: 'Ostatnie przebiegi, od najnowszego', exact: true })
+    .getByRole('cell', { name: 'ponowienie resztek', exact: true })
+}
+
 // The catalogue gives each control of a state its own accessible name within its region (no `nth`): the primary and the
-// plain button, the icon-only one, the link, the e-mail and search fields, the theme toggle and (below) the bar's link.
+// plain button, the icon-only one, the link, the e-mail and search fields, the theme toggle and (below) the bar's link,
+// the admin panel's parts and a cell of a table's row.
 export const STATES: readonly State[] = [
   {
     name: 'state-przycisk-primary-hover',
@@ -471,5 +495,26 @@ export const STATES: readonly State[] = [
     region: 'Pasek aplikacji',
     control: navigationLink,
     state: 'focus',
+  },
+  {
+    name: 'state-czesci-panelu-admina-hover',
+    risk: 'hover części panelu admina nie zmienia wyglądu',
+    region: 'Części panelu admina',
+    control: adminPartLink('Jakość ocen'),
+    state: 'hover',
+  },
+  {
+    name: 'state-czesci-panelu-admina-focus',
+    risk: 'pierścień fokusu części panelu admina z licznikiem nie zmienia wyglądu',
+    region: 'Części panelu admina',
+    control: adminPartLink('Nieudane posty 7'),
+    state: 'focus',
+  },
+  {
+    name: 'state-tabela-wiersz-hover',
+    risk: 'hover wiersza tabeli nie zmienia wyglądu',
+    region: 'Tabela',
+    control: runRowCell,
+    state: 'hover',
   },
 ]
