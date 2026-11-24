@@ -722,13 +722,13 @@ Bez migracji bazy. Odpowiedź `GET /api/admin/posts/failed` dostaje dwa nowe pol
 
 #### Automated
 
-- [x] 6.1 Wszystkie testy E2E przechodzą: `npm run e2e`
-- [x] 6.2 Każdy nowy test E2E był raz czerwony na celowym złamaniu (`evidence/e2e-breaks.md`)
-- [x] 6.3 Testy webu, build, wizualne dwa razy i kopie projektu przechodzą
-- [x] 6.4 Testy backendu przechodzą: `./mvnw -B verify`
-- [x] 6.5 Opis PR zawiera grupy wzorców i `Refs #182` (`gh pr view`)
-- [ ] 6.6 CI PR zielone: `gh pr checks`
-- [x] 6.7 PR env: trzy części i strona przebiegu zgodne z API, bez przewijania przy 375 px (`evidence/pr-env/README.md`)
+- [x] 6.1 Wszystkie testy E2E przechodzą: `npm run e2e` — 5b499b8
+- [x] 6.2 Każdy nowy test E2E był raz czerwony na celowym złamaniu (`evidence/e2e-breaks.md`) — 5b499b8
+- [x] 6.3 Testy webu, build, wizualne dwa razy i kopie projektu przechodzą — 5b499b8
+- [x] 6.4 Testy backendu przechodzą: `./mvnw -B verify` — 5b499b8
+- [x] 6.5 Opis PR zawiera grupy wzorców i `Refs #182` (`gh pr view`) — 5b499b8
+- [x] 6.6 CI PR zielone: `gh pr checks` — 5b499b8
+- [x] 6.7 PR env: trzy części i strona przebiegu zgodne z API, bez przewijania przy 375 px (`evidence/pr-env/README.md`) — 5b499b8
 
 #### Manual
 
